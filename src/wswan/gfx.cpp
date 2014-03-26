@@ -38,6 +38,7 @@ static uint32 ColorMap[16*16*16];
 static uint32 LayerEnabled;
 
 static uint8 wsLine;                 /*current scanline*/
+static uint8 weppy;
 
 static uint8 SpriteTable[0x80][4];
 static uint32 SpriteCountCache;
@@ -376,7 +377,13 @@ uint8 WSwan_GfxRead(uint32 A)
 
 bool wsExecuteLine(MDFN_Surface *surface, bool skip)
 {
-        bool ret = FALSE;
+	static const void* const WEP_Tab[3] = { &&WEP0, &&WEP1, &&WEP2 };	// The things we do for debugger step mode save states!  If we ever add more entries, remember to change the mask stuff in StateAction
+        bool ret;
+
+	weppy = 0;
+        WEP0: ;
+
+	ret = FALSE;
 
          #ifdef WANT_DEBUGGER
          if(GfxDecode_Buf && GfxDecode_Line >=0 && wsLine == GfxDecode_Line)
@@ -422,14 +429,23 @@ bool wsExecuteLine(MDFN_Surface *surface, bool skip)
          }
         }
 
+	weppy = 1;
         v30mz_execute(224);
+        goto *WEP_Tab[weppy];
+	WEP1: ;
+
 	wsLine = (wsLine + 1) % 159;
         if(wsLine == LineCompare)
         {
          WSwan_Interrupt(WSINT_LINE_HIT);
          //printf("Line hit: %d\n", wsLine);
         }
+
+	weppy = 2;
 	v30mz_execute(32);
+	goto *WEP_Tab[weppy];
+	WEP2: ;
+
 	WSwan_RTCClock(256);
 
         if(!wsLine)
@@ -447,7 +463,8 @@ bool wsExecuteLine(MDFN_Surface *surface, bool skip)
                 }
 		wsLine = 0;
         }
-	//if(ret) puts("Frame");
+
+	weppy = 0;
         return(ret);
 }
 
@@ -762,6 +779,7 @@ void wsScanline(uint32 *target)
 
 void WSwan_GfxReset(void)
 {
+ weppy = 0;
  wsLine=0;
  wsSetVideo(0,TRUE);
 
@@ -848,6 +866,8 @@ int WSwan_GfxStateAction(StateMem *sm, int load, int data_only)
   SFVAR(VBCounter),
 
   SFVAR(VideoMode),
+
+  SFVAR(weppy),
   SFEND
  };
 
@@ -856,6 +876,8 @@ int WSwan_GfxStateAction(StateMem *sm, int load, int data_only)
 
  if(load)
  {
+  weppy %= 3;
+
   wsSetVideo(VideoMode >> 5, TRUE);
  }
 

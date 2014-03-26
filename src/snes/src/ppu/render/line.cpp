@@ -85,7 +85,8 @@ inline uint16 PPU::get_pixel_swap(uint32 x) {
 }
 
 inline void PPU::render_line_output() {
-  uint16 *ptr  = (uint16*)output + (line * 512);
+  //printf("RLO: %u\n", line);
+  uint16 *ptr  = line_output;
   uint16 *luma_b  = light_table_b [regs.display_brightness];
   uint16 *luma_gr = light_table_gr[regs.display_brightness];
   uint16 curr;
@@ -117,14 +118,13 @@ inline void PPU::render_line_output() {
         *ptr++ = luma_b[curr >> 10] + luma_gr[curr & 0x3ff];
       }
     }
-    output[line * 512] = (output[line * 512] & 0x7FFF) | (regs.pseudo_hires ? 0x8000 : 0);
+    line_output[0] = (line_output[0] & 0x7FFF) | (regs.pseudo_hires ? 0x8000 : 0);
   }
 }
 
 inline void PPU::render_line_clear() {
-  uint16 *ptr = (uint16*)output + (line * 512);
   uint16 width = (!regs.pseudo_hires && regs.bg_mode != 5 && regs.bg_mode != 6) ? 256 : 512;
-  memset(ptr, 0, width * sizeof(uint16));
+  memset(line_output, 0, width * sizeof(uint16));
 }
 
 #endif

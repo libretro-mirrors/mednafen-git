@@ -5,10 +5,29 @@ DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_builddir)/include/blip -I$(
 
 bin_PROGRAMS	=	mednafen
 mednafen_SOURCES 	= 	debug.cpp error.cpp mempatcher.cpp settings.cpp endian.cpp mednafen.cpp file.cpp general.cpp md5.cpp memory.cpp netplay.cpp state.cpp movie.cpp player.cpp PSFLoader.cpp tests.cpp qtrecord.cpp cdplay.cpp okiadpcm.cpp FileWrapper.cpp Stream.cpp MemoryStream.cpp FileStream.cpp
-mednafen_LDADD 		= 	trio/libtrio.a drivers/libmdfnsdl.a sexyal/libsexyal.a @SDL_LIBS@
-mednafen_DEPENDENCIES	=	trio/libtrio.a drivers/libmdfnsdl.a sexyal/libsexyal.a
+mednafen_LDADD 		= 	trio/libtrio.a
+mednafen_DEPENDENCIES	=	trio/libtrio.a
 
-SUBDIRS			+=	sexyal drivers
+if HAVE_SDL
+SUBDIRS 		+=	drivers
+mednafen_LDADD          +=      drivers/libmdfnsdl.a
+mednafen_DEPENDENCIES   +=      drivers/libmdfnsdl.a
+endif
+
+if DOS
+SUBDIRS			+=	drivers_dos
+mednafen_LDADD		+=	drivers_dos/libmdfndos.a
+mednafen_DEPENDENCIES	+=	drivers_dos/libmdfndos.a
+endif
+
+SUBDIRS			+=	sexyal
+mednafen_LDADD		+=	sexyal/libsexyal.a
+mednafen_DEPENDENCIES	+=	sexyal/libsexyal.a
+
+if HAVE_SDL
+mednafen_LDADD		+=	@SDL_LIBS@
+endif
+
 
 if WANT_DEBUGGER
 mednafen_SOURCES	+=	dis6502.cpp

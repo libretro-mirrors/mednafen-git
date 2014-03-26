@@ -27,7 +27,7 @@
 namespace MDFN_IEN_GBA
 {
 
-int16 sineTable[256] = {
+static const int16 sineTable[256] = {
   (int16)0x0000, (int16)0x0192, (int16)0x0323, (int16)0x04B5, (int16)0x0645, (int16)0x07D5, (int16)0x0964, (int16)0x0AF1,
   (int16)0x0C7C, (int16)0x0E05, (int16)0x0F8C, (int16)0x1111, (int16)0x1294, (int16)0x1413, (int16)0x158F, (int16)0x1708,
   (int16)0x187D, (int16)0x19EF, (int16)0x1B5D, (int16)0x1CC6, (int16)0x1E2B, (int16)0x1F8B, (int16)0x20E7, (int16)0x223D,

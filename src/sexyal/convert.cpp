@@ -28,6 +28,22 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <string.h>
 #include <assert.h>
 #include "convert.h"
+#include <stdlib.h>
+
+static inline uint32_t ConvertRandU32(void)
+{
+ static uint32_t x = 123456789;
+ static uint32_t y = 987654321;
+ static uint32_t z = 43219876;
+ static uint32_t c = 6543217;
+ uint64_t t;
+
+ x = 314527869 * x + 1234567;
+ y ^= y << 5; y ^= y >> 7; y ^= y << 22;
+ t = 4294584393ULL * z + c; c = t >> 32; z = t;
+
+ return(x + y + z);
+}
 
 static inline uint16_t FLIP16(uint16_t b)
 {
@@ -38,15 +54,36 @@ static inline uint32_t FLIP32(uint32_t b)
 {
  return( (b<<24) | ((b>>8)&0xFF00) | ((b<<8)&0xFF0000) | ((b>>24)&0xFF) );
 }
-#include <stdlib.h>
+
+
 template<typename dsf_t, uint32_t dsf>
 static inline dsf_t SAMP_CONVERT(int16_t in_sample)
 {
  if(dsf == SEXYAL_FMT_PCMU8)
-  return((in_sample + 32768 /*+ (rand() & 127)*/ ) >> 8);
+ {
+  int tmp = (in_sample + 32768 + (uint8_t)(ConvertRandU32() & 0xFF)) >> 8;
+
+  if(tmp < 0)
+   tmp = 0;
+
+  if(tmp > 255)
+   tmp = 255;
+
+  return(tmp);
+ }
 
  if(dsf == SEXYAL_FMT_PCMS8)
-  return(in_sample >> 8);
+ {
+  int tmp = (in_sample + (uint8_t)(ConvertRandU32() & 0xFF)) >> 8;
+
+  if(tmp < -128)
+   tmp = -128;
+
+  if(tmp > 127)
+   tmp = 127;
+
+  return(tmp);
+ }
 
  if(dsf == SEXYAL_FMT_PCMU16)
   return(in_sample + 32768);

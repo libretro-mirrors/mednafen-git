@@ -5,7 +5,7 @@ void MDFNPPU_Init(void) MDFN_COLD;
 void MDFNPPU_Close(void) MDFN_COLD;
 void MDFNPPU_Reset(void) MDFN_COLD;
 void MDFNPPU_Power(void) MDFN_COLD;
-int MDFNPPU_Loop(MDFN_Surface *, int skip);
+int MDFNPPU_Loop(EmulateSpecStruct *espec);
 
 void MDFNPPU_LineUpdate();
 

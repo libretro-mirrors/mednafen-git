@@ -2,27 +2,41 @@
 #define __MDFN_DRIVERS_DEBUGGER_H
 
 #ifdef WANT_DEBUGGER
-void Debugger_Draw(MDFN_Surface *surface, MDFN_Rect *rect, const MDFN_Rect *screen_rect);
-void Debugger_ModOpacity(int deltalove);
+// _GT_ = call from game thread
+// _MT_ = call from main(video blitting) thread.
 
-void Debugger_ForceStepIfStepping(); // For synchronizations with save state loading and reset/power toggles.  Should be called from game thread only.
+void Debugger_GT_Draw(void);
+void Debugger_GT_Event(const SDL_Event* event);
+bool Debugger_GT_Toggle(void);
+void Debugger_GT_ModOpacity(int deltalove);
 
-bool Debugger_IsActive(unsigned int *w = NULL, unsigned int *h = NULL);
-void Debugger_Event(const SDL_Event *event);
-bool Debugger_Toggle(void);
-void Debugger_ForceSteppingMode(void);
+bool Debugger_GT_IsInSteppingMode(void);
+void Debugger_GT_ForceSteppingMode(void);
+void Debugger_GT_ForceStepIfStepping(void); // For synchronizations with save state loading and reset/power toggles.
+void Debugger_GT_SyncDisToPC(void);	// Synch disassembly address to current PC/IP/whatever.
 
-extern volatile bool InSteppingMode;
+// Must be called in a specific place in the game thread's execution path.
+void Debugger_GTR_PassBlit(void);
+
+void Debugger_MT_DrawToScreen(const MDFN_PixelFormat& pf, signed screen_w, signed screen_h);
+
+bool Debugger_IsActive(void);
+
 #else
 
-#define Debugger_Event(a)
-#define Debugger_Draw(a, b, c)
-#define Debugger_ForceStepIfStepping()
-//#define Debugger_IsActive(a, b)	0
-#define Debugger_IsActive(...) 0
-#define Debugger_Toggle()
-#define Debugger_ForceSteppingMode()
-#define InSteppingMode 0
+static INLINE void Debugger_GT_Draw(void) { }
+static INLINE void Debugger_GT_Event(const SDL_Event* event) { }
+static INLINE bool Debugger_GT_Toggle(void) { return(false); }
+static INLINE void Debugger_GT_ModOpacity(int deltalove) { }
+
+static INLINE bool Debugger_GT_IsInSteppingMode(void) { return(false); }
+static INLINE void Debugger_GT_ForceSteppingMode(void) { }
+static INLINE void Debugger_GT_ForceStepIfStepping(void) { }
+static INLINE void Debugger_GT_SyncDisToPC(void) { }
+static INLINE void Debugger_GTR_PassBlit(void) { }
+static INLINE void Debugger_MT_DrawToScreen(const MDFN_PixelFormat& pf, signed screen_w, signed screen_h) { }
+static INLINE bool Debugger_IsActive(void) { return(false); }
+
 
 #endif
 

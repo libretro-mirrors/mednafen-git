@@ -26,7 +26,7 @@
 #include "vce.h"
 #include "huc.h"
 #include "huc6270/vdc.h"
-#include "../cdrom/pcecd.h"
+#include "pcecd.h"
 #include "pce_psg/pce_psg.h"
 #include "../cdrom/scsicd.h"
 #include "arcade_card/arcade_card.h"
@@ -44,21 +44,28 @@ static PCE_PSG *psg = NULL;
 
 static bool IsSGX;
 
-static int BTIndex = 0;
+static void RedoDH(void);
 
-#define NUMBT 64 //24
-
-//static uint32 BTEntries[32];
-
+//
+//
+//
+#define NUMBT 64
 struct BTEntry
 {
  uint32 from;
  uint32 to;
  uint32 vector;
  uint32 branch_count;
+ bool valid;
 };
 
+static int BTIndex;
 static BTEntry BTEntries[NUMBT];
+static bool BTEnabled;
+//
+//
+//
+
 
 typedef struct __PCE_BPOINT 
 {
@@ -78,9 +85,9 @@ static bool BreakPointsOpUsed;
 
 static bool NeedExecSimu;	// Cache variable, recalculated in RedoDH().
 
-static void (*CPUCB)(uint32 PC) = NULL;
-static bool FoundBPoint = 0;
-static void (*BPCallB)(uint32 PC) = NULL;
+static void (*CPUCB)(uint32 PC, bool bpoint) = NULL;
+static bool CPUCBContinuous = false;
+static bool FoundBPoint = false;
 static void (*LogFunc)(const char *, const char *);
 bool PCE_LoggingOn = FALSE;
 static uint16 LastPC = 0xBEEF;
@@ -94,7 +101,7 @@ static void AddBranchTrace(uint32 from, uint32 to, uint32 vector)
 
  //if(BTEntries[(BTIndex - 1) & 0xF] == PC) return;
 
- if(prevbt->from == from && prevbt->to == to && prevbt->vector == vector && prevbt->branch_count < 0xFFFFFFFF)
+ if(prevbt->from == from && prevbt->to == to && prevbt->vector == vector && prevbt->branch_count < 0xFFFFFFFF && prevbt->valid)
   prevbt->branch_count++;
  else
  {
@@ -102,11 +109,22 @@ static void AddBranchTrace(uint32 from, uint32 to, uint32 vector)
   BTEntries[BTIndex].to = to;
   BTEntries[BTIndex].vector = vector;
   BTEntries[BTIndex].branch_count = 1;
+  BTEntries[BTIndex].valid = true;
 
   BTIndex = (BTIndex + 1) % NUMBT;
  }
 }
 
+static void EnableBranchTrace(bool enable)
+{
+ BTEnabled = enable;
+ if(!enable)
+ {
+  BTIndex = 0;
+  memset(BTEntries, 0, sizeof(BTEntries));
+ }
+ RedoDH();
+}
 
 static std::vector<BranchTraceResult> GetBranchTrace(void)
 {
@@ -116,6 +134,9 @@ static std::vector<BranchTraceResult> GetBranchTrace(void)
  for(int x = 0; x < NUMBT; x++)
  {
   const BTEntry *bt = &BTEntries[(x + BTIndex) % NUMBT];
+
+  if(!bt->valid)
+   continue;
 
   tmp.count = bt->branch_count;
   trio_snprintf(tmp.from, sizeof(tmp.from), "%04X", bt->from);
@@ -304,9 +325,16 @@ static void TestRWBP(void)
  //assert(!ShadowCPU->IRQlow);
 }
 
-static void CPUHandler(uint32 PC)
+static bool MachineStateChanged = false;
+void PCEDBG_MachineStateChanged(void)
 {
- //PCECD_Run(HuCPU->Timestamp());
+ if(PCE_InDebug)
+  MachineStateChanged = true;
+}
+
+static bool CPUHandler(uint32 PC)
+{
+ // MachineStateChanged can be set to true under CPUCB().
 
  PCE_InDebug++;
 
@@ -315,11 +343,12 @@ static void CPUHandler(uint32 PC)
  if(NeedExecSimu)
   TestRWBP();
 
- if(FoundBPoint)
-  BPCallB(PC);
-
- if(CPUCB)
-  CPUCB(PC);
+ CPUCBContinuous |= FoundBPoint;
+ if(CPUCBContinuous && CPUCB)
+ {
+  vce->Update(HuCPU->Timestamp());
+  CPUCB(PC, FoundBPoint);
+ }
 
  if(PC == 0xe060 && PCE_LoggingOn && PCE_IsCD)
  {
@@ -331,6 +360,10 @@ static void CPUHandler(uint32 PC)
  LastPC = PC;
  PCE_InDebug--;
  assert(!PCE_InDebug);
+
+ bool ret = MachineStateChanged;
+ MachineStateChanged = 0;
+ return(ret);
 }
 
 static DECLFR(ReadHandler)
@@ -413,9 +446,9 @@ static void RedoDH(void)
 		BreakPointsAux0Read.size() || BreakPointsAux0Write.size();
 
  if(BPointsUsed || CPUCB || PCE_LoggingOn)
-  HuCPU->SetCPUHook(CPUHandler, AddBranchTrace);
+  HuCPU->SetCPUHook(CPUHandler, BTEnabled ? AddBranchTrace : NULL);
  else
-  HuCPU->SetCPUHook(NULL, NULL);
+  HuCPU->SetCPUHook(NULL, BTEnabled ? AddBranchTrace : NULL);
 }
 
 void PCEDBG_AddBreakPoint(int type, unsigned int A1, unsigned int A2, bool logical)
@@ -487,15 +520,11 @@ void PCEDBG_FlushBreakPoints(int type)
  RedoDH();
 }
 
-void PCEDBG_SetCPUCallback(void (*callb)(uint32 PC))
+static void SetCPUCallback(void (*callb)(uint32 PC, bool bpoint), bool continuous)
 {
  CPUCB = callb;
+ CPUCBContinuous = continuous;
  RedoDH();
-}
-
-void PCEDBG_SetBPCallback(void (*callb)(uint32 PC))
-{
- BPCallB = callb;
 }
 
 void PCEDBG_DoLog(const char *type, const char *format, ...)
@@ -1076,8 +1105,8 @@ DebuggerInfoStruct PCEDBGInfo =
  NULL, //NESDBG_GetVector,
  PCEDBG_FlushBreakPoints,
  PCEDBG_AddBreakPoint,
- PCEDBG_SetCPUCallback,
- PCEDBG_SetBPCallback,
+ SetCPUCallback,
+ EnableBranchTrace,
  GetBranchTrace,
  SetGraphicsDecode,
  PCEDBG_SetLogFunc,
@@ -1085,6 +1114,10 @@ DebuggerInfoStruct PCEDBGInfo =
 
 bool PCEDBG_Init(bool sgx, PCE_PSG *new_psg)
 {
+ BTIndex = 0;
+ memset(BTEntries, 0, sizeof(BTEntries));
+ BTEnabled = false;
+
  BreakPointsPCUsed = false;
  BreakPointsOpUsed = false;
 

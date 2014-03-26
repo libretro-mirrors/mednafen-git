@@ -23,14 +23,14 @@
 namespace MDFN_IEN_GBA
 {
 
-bool GBA_EEPROM_SaveFile(const char *filename);
-bool GBA_EEPROM_LoadFile(const char *filename);
+bool GBA_EEPROM_SaveFile(const char *filename) MDFN_COLD;
+bool GBA_EEPROM_LoadFile(const char *filename) MDFN_COLD;
 
 
-extern int eepromRead(uint32 address);
-extern void eepromWrite(uint32 address, uint8 value);
-extern void eepromInit();
-extern void eepromReset();
+int eepromRead(uint32 address);
+void eepromWrite(uint32 address, uint8 value);
+void eepromInit(void) MDFN_COLD;
+void eepromReset(void) MDFN_COLD;
 extern bool eepromInUse;
 extern int eepromSize;
 extern uint8 eepromData[0x2000];

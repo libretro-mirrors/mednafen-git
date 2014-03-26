@@ -2458,6 +2458,10 @@ static bool gbUpdateSizes()
   {
    gbWram = (uint8 *)malloc(0x2000);
    memset(gbWram,0,0x2000);
+
+   for(unsigned x = 0; x < 32768; x += 8192)
+    MDFNMP_AddRAM(0x2000, 0x10000 | x, &gbWram[0]);
+
    gbVram = (uint8 *)malloc(0x2000);
    memset(gbVram, 0, 0x2000);
   }
@@ -2760,6 +2764,7 @@ static void Emulate(EmulateSpecStruct *espec)
 			CopyLineSurface<uint32>(espec->surface);
 			break;
 		}
+		MDFN_MidLineUpdate(espec, register_LY);
           }
           gbLcdMode = GBLCDM_HBLANK;
           // only one LCD interrupt per line. may need to generalize...
@@ -2865,6 +2870,7 @@ static void Emulate(EmulateSpecStruct *espec)
 	FillLineSurface<uint32>(espec->surface, y);
 	break;
    }
+   MDFN_MidLineUpdate(espec, y);
   }
  }
 
@@ -2983,6 +2989,168 @@ static InputInfoStruct InputInfo =
  PortInfo
 };
 
+
+static uint8 CharToNibble(char thechar)
+{
+ const char lut[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+
+ thechar = toupper(thechar);
+
+ for(int x = 0; x < 16; x++)
+  if(lut[x] == thechar)
+   return(x);
+
+ return(0xFF);
+}
+
+static bool DecodeGG(const std::string& cheat_string, MemoryPatch* patch)
+{
+ char str[10];
+ unsigned len;
+
+ memset(str, 0, sizeof(str));
+
+ switch(cheat_string.size())
+ {
+  default:
+ 	throw(MDFN_Error(0, _("Game Genie code is of an incorrect length.")));
+	break;
+
+  case 6:
+  case 9:
+	strcpy(str, cheat_string.c_str());
+	break;
+
+  case 11:
+	if(cheat_string[7] != '-' && cheat_string[7] != '_' && cheat_string[7] != ' ')
+	 throw(MDFN_Error(0, _("Game Genie code is malformed.")));
+
+	str[6] = cheat_string[8];
+	str[7] = cheat_string[9];
+	str[8] = cheat_string[10];
+
+  case 7:
+	if(cheat_string[3] != '-' && cheat_string[3] != '_' && cheat_string[3] != ' ')
+	 throw(MDFN_Error(0, _("Game Genie code is malformed.")));
+
+ 	str[0] = cheat_string[0];
+	str[1] = cheat_string[1];
+	str[2] = cheat_string[2];
+
+	str[3] = cheat_string[4];
+	str[4] = cheat_string[5];
+	str[5] = cheat_string[6];
+	break;
+ }
+
+ len = strlen(str);
+
+ for(unsigned x = 0; x < len; x++)
+ {
+  if(CharToNibble(str[x]) == 0xFF)
+  {
+   if(str[x] & 0x80)
+    throw MDFN_Error(0, _("Invalid character in Game Genie code."));
+   else
+    throw MDFN_Error(0, _("Invalid character in Game Genie code: %c"), str[x]);
+  }
+ }
+
+ uint32 tmp_address;
+ uint8 tmp_value;
+ uint8 tmp_compare = 0;
+
+ tmp_address =  (CharToNibble(str[5]) << 12) | (CharToNibble(str[2]) << 8) | (CharToNibble(str[3]) << 4) | (CharToNibble(str[4]) << 0);
+ tmp_address ^= 0xF000;
+ tmp_value = (CharToNibble(str[0]) << 4) | (CharToNibble(str[1]) << 0);
+
+ if(len == 9)
+ {
+  tmp_compare = (CharToNibble(str[6]) << 4) | (CharToNibble(str[8]) << 0);
+  tmp_compare = (tmp_compare >> 2) | ((tmp_compare << 6) & 0xC0);
+  tmp_compare ^= 0xBA;
+ }
+
+ patch->addr = tmp_address;
+ patch->val = tmp_value;
+
+ if(len == 9)
+ {
+  patch->compare = tmp_compare;
+  patch->type = 'C';
+ }
+ else
+ {
+  patch->compare = 0;
+  patch->type = 'S';
+ }
+
+ patch->length = 1;
+
+ return(false);
+}
+
+static bool DecodeGS(const std::string& cheat_string, MemoryPatch* patch)
+{
+ if(cheat_string.size() != 8)
+  throw MDFN_Error(0, _("GameShark code is of an incorrect length."));
+
+ for(unsigned x = 0; x < 8; x++)
+ {
+  if(CharToNibble(cheat_string[x]) == 0xFF)
+  {
+   if(cheat_string[x] & 0x80)
+    throw MDFN_Error(0, _("Invalid character in GameShark code."));
+   else
+    throw MDFN_Error(0, _("Invalid character in GameShark code: %c"), cheat_string[x]);
+  }
+ }
+ uint8 bank = 0;
+ uint16 la = 0;
+
+
+ bank = (CharToNibble(cheat_string[0]) << 4) | (CharToNibble(cheat_string[1]) << 0);
+ for(unsigned x = 0; x < 4; x++)
+  la |= CharToNibble(cheat_string[4 + x]) << ((x ^ 1) * 4);
+
+ if(la >= 0xD000 && la <= 0xDFFF)
+  patch->addr = 0x10000 | ((bank & 0x7) << 12) | (la & 0xFFF);
+ else
+  patch->addr = la;
+
+ patch->val = (CharToNibble(cheat_string[2]) << 4) | (CharToNibble(cheat_string[3]) << 0);
+
+ patch->compare = 0;
+ patch->type = 'R';
+ patch->length = 1;
+
+ return(false);
+}
+
+
+static CheatFormatStruct CheatFormats[] =
+{
+ { "Game Genie", gettext_noop("Genies will eat your goats."), DecodeGG },
+ { "GameShark", gettext_noop("Sharks in your soup."), DecodeGS },
+};
+
+static CheatFormatInfoStruct CheatFormatInfo =
+{
+ 2,
+ CheatFormats
+};
+
+static void InstallReadPatch(uint32 address, uint8 value, int compare)
+{
+
+}
+
+static void RemoveReadPatches(void)
+{
+
+}
+
+
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
  { ".gb", gettext_noop("GameBoy ROM Image") },
@@ -3012,9 +3180,10 @@ MDFNGI EmulatedGB =
  "Background\0Sprites\0Window\0",
  NULL,
  NULL,
+ InstallReadPatch,
+ RemoveReadPatches,
  NULL,
- NULL,
- NULL,
+ &CheatFormatInfo,
  false,
  StateAction,
  Emulate,

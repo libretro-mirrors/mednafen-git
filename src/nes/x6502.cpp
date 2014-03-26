@@ -533,7 +533,6 @@ static void X6502_RunDebug(int32 cycles)
 
 	 X.cpoint = 1;
 
-	 NESDBG_TestFoundBPoint();
 	 if(X.CPUHook) X.CPUHook(_PC);
 	 if(!X.cpoint)
 	  goto PenguinPower;

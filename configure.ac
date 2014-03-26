@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.32.1-WIP'
-MEDNAFEN_VERSION_NUMERIC=0x000932
+MEDNAFEN_VERSION='0.9.33'
+MEDNAFEN_VERSION_NUMERIC=0x000933
 
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
@@ -59,24 +59,6 @@ AC_SEARCH_LIBS(clock_gettime, [rt posix4])
 AC_CHECK_FUNCS(clock_gettime)
 
 AC_DEFINE(MINILZO_HAVE_CONFIG_H, [1], [Define if config.h is present])
-
-AC_CHECK_HEADER([OpenGL/gl.h],HAVE_OPENGL_GL_H=true, HAVE_OPENGL_GL_H=false)
-if $HAVE_OPENGL_GL_H
-then
- AC_DEFINE(HAVE_APPLE_OPENGL_FRAMEWORK, [1], [Define if we should include from OpenGL instead of GL])
-else
- AC_PATH_X
-
- if test "x${x_includes}" != "x"; then
- 	CPPFLAGS="-I${x_includes} ${CPPFLAGS}"
- fi
-
- AC_CHECK_HEADER([GL/gl.h],HAVE_GL_GL_H=true, HAVE_GL_GL_H=false)
-
- if test x$HAVE_GL_GL_H = xfalse; then
-  AC_MSG_ERROR([*** OpenGL header file not found!])
- fi
-fi
 
 AM_ICONV
 AM_GNU_GETTEXT
@@ -417,18 +399,6 @@ AC_HELP_STRING([--enable-jack], [support the JACK audio API [[default=yes]]]),
 CheckALSA
 CheckJACK
 
-SDL_VERSION=1.2.0
-AM_PATH_SDL($SDL_VERSION, HAVE_SDL=true, HAVE_SDL=false)
-if $HAVE_SDL
-then
-	AM_CONDITIONAL(HAVE_SDL, true)
-	AC_DEFINE([HAVE_SDL], [1], [Define if we are compiling with SDL sound support.])
-	AC_SUBST(SDL_LIBS)
-	AC_SUBST(SDL_CFLAGS)
-else
-	AC_MSG_ERROR([*** SDL 1.2.x not found!])
-fi
-
 AC_ARG_WITH([libcdio],
             [AS_HELP_STRING([--with-libcdio],
               [support physical CD reading @<:@default=yes@:>@])],
@@ -453,6 +423,7 @@ AM_CONDITIONAL(WIN32, false)
 AM_CONDITIONAL(UNIX, false)
 AM_CONDITIONAL(HAVE_LIBCDIO, false)
 AM_CONDITIONAL(HAVE_LINUX_JOYSTICK, false)
+NEED_SDL=true
 
 if expr x"$target" : 'x.*-mingw*' > /dev/null; then
 	CPPFLAGS="-mstackrealign $CPPFLAGS"
@@ -490,7 +461,27 @@ if expr x"$target" : 'x.*-mingw*' > /dev/null; then
                 SNDFILE_CFLAGS=""
                 AC_DEFINE([HAVE_LIBSNDFILE], [1], [Define if we are compiling with libsndfile support.])
         fi
+
+elif expr x"$target" : 'x.*djgpp' > /dev/null; then
+       	AC_DEFINE([PSS_STYLE],[2], [Defines the filesystem path-separator type.])
+       	AC_DEFINE([DOS], [1], [Define if we are compiling for DOS.])
+       	AM_CONDITIONAL(DOS, true)
+	NEED_SDL=false
+
+        if test x$with_libcdio = xyes; then
+		LIBS="$LIBS -lcdio"
+		AC_DEFINE([HAVE_LIBCDIO], [1], [Define if we are compiling with libcdio support.])
+		AM_CONDITIONAL(HAVE_LIBCDIO, true)
+	fi
+
+        if test x$with_libsndfile = xyes; then
+                SNDFILE_LIBS="-lsndfile"
+                SNDFILE_CFLAGS=""
+                AC_DEFINE([HAVE_LIBSNDFILE], [1], [Define if we are compiling with libsndfile support.])
+        fi
 else
+	AC_DEFINE([PSS_STYLE],[1], [Defines the filesystem path-separator type.])
+
 	if test x$with_libcdio = xyes; then
 		PKG_CHECK_MODULES(LIBCDIO, libcdio, [], AC_MSG_ERROR([*** libcdio not found!]))
                 AC_DEFINE([HAVE_LIBCDIO], [1], [Define if we are compiling with libcdio support.])
@@ -502,17 +493,25 @@ else
                 AC_DEFINE([HAVE_LIBSNDFILE], [1], [Define if we are compiling with libsndfile support.])
 	fi
 
-	if expr x"$target" : 'x.*-djgpp*' > /dev/null; then
-        	AC_DEFINE([PSS_STYLE],[2], [Defines the filesystem path-separator type.])
-        	AC_DEFINE([DOS], [1], [Define if we are compiling for DOS.])
-        	AM_CONDITIONAL(DOS, true)
-	else
-        	AC_DEFINE([PSS_STYLE],[1], [Defines the filesystem path-separator type.])
-	fi
-
 	AC_CHECK_HEADER([sys/soundcard.h],[AM_CONDITIONAL(HAVE_OSSDSP,true) AC_DEFINE([HAVE_OSSDSP], [1], [Define if we are compiling with OSS support.])])
 	AC_CHECK_HEADER([linux/joystick.h],[AM_CONDITIONAL(HAVE_LINUX_JOYSTICK,true) AC_DEFINE([HAVE_LINUX_JOYSTICK], [1], [Define if we are compiling with Linux joystick support.])])
 fi
+
+if $NEED_SDL
+then
+	SDL_VERSION=1.2.0
+	AM_PATH_SDL($SDL_VERSION, HAVE_SDL=true, HAVE_SDL=false)
+	if $HAVE_SDL
+	then
+		AM_CONDITIONAL(HAVE_SDL, true)
+		AC_DEFINE([HAVE_SDL], [1], [Define if we are compiling with SDL.])
+		AC_SUBST(SDL_LIBS)
+		AC_SUBST(SDL_CFLAGS)
+	else
+		AC_MSG_ERROR([*** SDL 1.2.x not found!])
+	fi
+fi
+
 
 dnl
 dnl FIXME: Make sure POSIX/BSD sockets API detection doesn't have any false positives(like when targeting Windows).
@@ -623,4 +622,4 @@ LIBS="$SNDFILE_LIBS $LIBCDIO_LIBS $LIBS"
 CPPFLAGS="$LIBCDIO_CFLAGS $SNDFILE_CFLAGS $CPPFLAGS"
 
 dnl Output Makefiles
-AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pc/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/snes_perf/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/demo/Makefile src/desa68/Makefile po/Makefile.in  intl/Makefile])
+AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pc/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/snes_perf/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/demo/Makefile src/desa68/Makefile po/Makefile.in  intl/Makefile])

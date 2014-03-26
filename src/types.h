@@ -1,6 +1,8 @@
 #ifndef __MDFN_TYPES
 #define __MDFN_TYPES
 
+#define __STDC_LIMIT_MACROS 1
+
 // Make sure this file is included BEFORE a few common standard C header files(stdio.h, errno.h, math.h, AND OTHERS, but this is not an exhaustive check, nor
 // should it be), so that any defines in config.h that change header file behavior will work properly.
 #if defined(EOF) || defined(EACCES) || defined(F_LOCK) || defined(NULL) || defined(O_APPEND) || defined(M_LOG2E)

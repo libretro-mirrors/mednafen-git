@@ -67,9 +67,7 @@
 
         P_REG[0] = 0; //Zero the Zero Reg!!!
 
-	//v810_timestamp = timestamp_rl;
 	RB_CPUHOOK(RB_GETPC());
-	//timestamp_rl = v810_timestamp;
 
 	{
 	 //printf("%08x\n", RB_GETPC());
@@ -288,12 +286,8 @@
 	BEGIN_OP(SETF);
 		ADDCLOCK(1);
 
-		//SETF may contain bugs
 		P_REG[arg2] = 0;
 
-		//if(arg1 != 0xe)
-		//printf("SETF: %02x\n", arg1);
-		//snortus();
 		switch (arg1 & 0x0F) 
 		{
 			case COND_V:
@@ -837,7 +831,7 @@
              SetPREG(30, (uint32)(temp >> 32));
              SetPREG(arg2, temp);
 	     SetSZ(P_REG[arg2]);
-	     SetFlag(PSW_OV, temp != (uint32)temp);
+	     SetFlag(PSW_OV, temp != (uint64)(int64)(int32)(uint32)temp);
 	     lastop = -1;
 	END_OP_SKIPLO();
 

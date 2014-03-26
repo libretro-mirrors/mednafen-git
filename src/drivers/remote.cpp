@@ -127,11 +127,11 @@ static void ParseSTDIOCommand(char *buf)
   }
   else if(!strcasecmp(arguments[0], "sync_video"))
   {
-   success = MT_FromRemote_VideoSync();
+   success = GT_ReinitVideo();
   }
   else if(!strcasecmp(arguments[0], "sync_sound"))
   {
-   success = MT_FromRemote_SoundSync();
+   success = GT_ReinitSound();
   }
   else if(!strcasecmp(arguments[0], "get_setting"))
   {
@@ -139,12 +139,8 @@ static void ParseSTDIOCommand(char *buf)
    {
     std::string sval;
 
-    LockGameMutex(TRUE);
-
     sval = MDFN_GetSettingS(arguments[1]);
     success = TRUE;
-
-    LockGameMutex(FALSE);
 
     Remote_SendCommand("return", 2, "success", sval.c_str());
     return;
@@ -156,9 +152,7 @@ static void ParseSTDIOCommand(char *buf)
   {
    if(numargs == 3)
    {
-    LockGameMutex(TRUE);
     success = MDFNI_SetSetting(arguments[1], arguments[2]);
-    LockGameMutex(FALSE);
    }
    else
     puts("Invalid number of arguments");

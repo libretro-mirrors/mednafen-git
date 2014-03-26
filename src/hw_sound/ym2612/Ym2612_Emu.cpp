@@ -516,8 +516,8 @@ void Ym2612_Impl::set_rate(void)
 	assert(SIN_LENGHT == 1024);
 	for(int x = 0; x < 256; x++)
 	{
-	 double y = round(-log(sin((x+0.5)*M_PI/256/2))/log(2.0)*256);
-
+	 double y = floor(0.5 + -log(sin((x+0.5)*M_PI/256/2))/log(2.0)*256);
+	 //printf("%f\n", y);
  	 g.SIN_TAB [x] = g.SIN_TAB [(SIN_LENGHT / 2) - x - 1] = y;
  	 g.SIN_TAB [(SIN_LENGHT / 2) + x] = g.SIN_TAB [SIN_LENGHT - x - 1] = TL_LENGHT + y;
 	}

@@ -1,10 +1,10 @@
 #ifndef __MDFN_SURFACE_H
 #define __MDFN_SURFACE_H
 
-typedef struct
+struct MDFN_Rect
 {
  int32 x, y, w, h;
-} MDFN_Rect;
+};
 
 enum
 {

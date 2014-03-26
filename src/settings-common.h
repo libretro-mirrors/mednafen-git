@@ -1,3 +1,10 @@
+/*
+ Notes about MDFNST_FLOAT:
+	The default value should ideally not be equal(numerically) to the minimum or maximum values.
+	If it must be equal, then the default string should be exactly the same as the minimum/maximum string, to work around
+	potential libc strtod() bugs.
+*/
+
 #ifndef _MDFN_SETTINGS_COMMON_H
 #define _MDFN_SETTINGS_COMMON_H
 typedef enum

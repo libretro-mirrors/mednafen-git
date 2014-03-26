@@ -1,8 +1,6 @@
 #ifndef _PCE_PSG_H
 #define _PCE_PSG_H
 
-#include <blip/Blip_Buffer.h>
-
 class PCE_PSG;
 
 struct psg_channel
@@ -104,12 +102,11 @@ class PCE_PSG
 	{
 	 REVISION_HUC6280 = 0,
 	 REVISION_HUC6280A,
-	 REVISION_ENHANCED,
 	 _REVISION_COUNT
 	};
 
 
-        PCE_PSG(Blip_Buffer *bb_l, Blip_Buffer *bb_r, int want_revision);
+        PCE_PSG(int32* hr_l, int32* hr_r, int want_revision);
         ~PCE_PSG();
 
 	int StateAction(StateMem *sm, int load, int data_only);
@@ -119,7 +116,8 @@ class PCE_PSG
 
 	void SetVolume(double new_volume);
 
-	void EndFrame(int32 timestamp);
+	void Update(int32 timestamp);
+	void ResetTS(int32 ts_base = 0);
 
 	// TODO: timestamp
 	uint32 GetRegister(const unsigned int id, char *special, const uint32 special_len);
@@ -130,27 +128,23 @@ class PCE_PSG
 
         private:
 
-	void Update(int32 timestamp);
-
 	void UpdateSubLFO(int32 timestamp);
 	void UpdateSubNonLFO(int32 timestamp);
 
 	void RecalcUOFunc(int chnum);
+        void UpdateOutputSub(const int32 timestamp, psg_channel *ch, const int32 samp0, const int32 samp1);
 	void UpdateOutput_Off(const int32 timestamp, psg_channel *ch);
-	void UpdateOutput_Accum(const int32 timestamp, psg_channel *ch);
+	void UpdateOutput_Accum_HuC6280(const int32 timestamp, psg_channel *ch);
+	void UpdateOutput_Accum_HuC6280A(const int32 timestamp, psg_channel *ch);
         void UpdateOutput_Norm(const int32 timestamp, psg_channel *ch);
         void UpdateOutput_Noise(const int32 timestamp, psg_channel *ch);
-
-//        void UpdateOutput_Norm_IL(const int32 timestamp, psg_channel *ch);
-//        void UpdateOutput_Noise_IL(const int32 timestamp, psg_channel *ch);
-
+        void (PCE_PSG::*UpdateOutput_Accum)(const int32 timestamp, psg_channel *ch);
 
 	int32 GetVL(const int chnum, const int lr);
 
 	void RecalcFreqCache(int chnum);
 	void RecalcNoiseFreqCache(int chnum);
 	void RunChannel(int chc, int32 timestamp, bool LFO_On);
-	double OutputVolume;
 
         uint8 select;               /* Selected channel (0-5) */
         uint8 globalbalance;        /* Global sound balance */
@@ -167,9 +161,7 @@ class PCE_PSG
         int32 lastts;
 	int revision;
 
-	bool SoundEnabled;
-	Blip_Buffer *sbuf[2];
-	Blip_Synth<blip_good_quality, 8192> Synth;
+	int32* HRBufs[2];
 
         int32 dbtable_volonly[32];
 

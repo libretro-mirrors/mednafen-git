@@ -11,7 +11,7 @@ DECLFR(SubHW_ReadFEPage);
 
 void SubHW_Power(void);
 
-void SubHW_EndFrame(const int32 timestamp);
+void SubHW_EndFrame(const int32 timestamp, const int32 ts_base);
 void SubHW_CVSync(void);
 bool SubHW_DisplayLine(uint16 *out_buffer);
 

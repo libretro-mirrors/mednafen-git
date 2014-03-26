@@ -1200,6 +1200,7 @@ MDFNGI EmulatedSNES_Perf =
  NULL, //InstallReadPatch,
  NULL, //RemoveReadPatches,
  NULL, //MemRead,
+ NULL,
  true,
  StateAction,
  Emulate,

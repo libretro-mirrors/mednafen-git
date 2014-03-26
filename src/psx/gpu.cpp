@@ -100,7 +100,7 @@ static const int32 dither_table[4][4] =
  {  3, -1,  2, -2 },
 };
 
-PS_GPU::PS_GPU(bool pal_clock_and_tv) : BlitterFIFO(0x20) // 0x10 on actual PS1 GPU, 0x20 here(see comment at top of gpu.h)	// 0x10)
+PS_GPU::PS_GPU(bool pal_clock_and_tv, int sls, int sle) : BlitterFIFO(0x20) // 0x10 on actual PS1 GPU, 0x20 here(see comment at top of gpu.h)	// 0x10)
 {
  HardwarePALType = pal_clock_and_tv;
 
@@ -136,6 +136,9 @@ PS_GPU::PS_GPU(bool pal_clock_and_tv) : BlitterFIFO(0x20) // 0x10 on actual PS1 
   RGB8SAT[i] = i;
 
  memset(RGB8SAT_Over, 0xFF, sizeof(RGB8SAT_Over));
+
+ LineVisFirst = sls;
+ LineVisLast = sle;
 }
 
 PS_GPU::~PS_GPU()
@@ -1153,8 +1156,8 @@ pscpu_timestamp_t PS_GPU::Update(const pscpu_timestamp_t sys_timestamp)
    }
    else
    {
-    const unsigned int FirstVisibleLine = HardwarePALType ? 20 : 16;
-    const unsigned int VisibleLineCount = HardwarePALType ? 288 : 240;
+    const unsigned int FirstVisibleLine = LineVisFirst + (HardwarePALType ? 20 : 16);
+    const unsigned int VisibleLineCount = LineVisLast + 1 - LineVisFirst; //HardwarePALType ? 288 : 240;
 
     TIMER_SetHRetrace(false);
 
@@ -1173,7 +1176,7 @@ pscpu_timestamp_t PS_GPU::Update(const pscpu_timestamp_t sys_timestamp)
     //
     //
     //
-    if(scanline == (FirstVisibleLine + VisibleLineCount))
+    if(scanline == (HardwarePALType ? 308 : 256))	// Will need to be redone if we ever allow for visible vertical overscan with NTSC.
     {
      if(sl_zero_reached)
      {
@@ -1284,13 +1287,15 @@ pscpu_timestamp_t PS_GPU::Update(const pscpu_timestamp_t sys_timestamp)
      if(sl_zero_reached)
      {
       // Gameplay in Descent(NTSC) has vblank at scanline 236
-      if((!HardwarePALType && scanline >= (FirstVisibleLine + VisibleLineCount - 24)) || (HardwarePALType && scanline >= (FirstVisibleLine + VisibleLineCount - 48)))
+      if(scanline >= (FirstVisibleLine + VisibleLineCount) || (scanline >= (HardwarePALType ? 260 : 232)))
       {
        //printf("Req Exit(vblank case): %u\n", scanline);
        PSX_RequestMLExit();
       }
-      //else
-      // printf("VBlank too early, chickening out early exit!\n");
+      else
+      {
+       //printf("VBlank too early, chickening out early exit!\n");
+      }
      }
 
      //printf("VBLANK: %u\n", scanline);

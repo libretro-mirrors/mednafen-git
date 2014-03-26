@@ -8,20 +8,19 @@ public:
 
 private:
   Mode mode;
-  bool frame_hires;
   bool frame_interlace;
   bool frame_field;
 
-  unsigned pline_width[240];  //progressive
-
   void update();
   void scanline();
+  void render_scanline(unsigned line);
   void init();
 
-  static const uint8_t cursor[15 * 15];
-  void draw_cursor(uint16_t color, int x, int y);
+  static const uint8_t cursor[15][16];
+  void draw_cursor(const int rline, const bool hires, const uint16_t color, const int x, const int y);
 
   friend class System;
+  friend class PPU;	// Just for render_scanline()
 };
 
 extern Video video;

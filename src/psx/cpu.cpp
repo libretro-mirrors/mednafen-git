@@ -454,7 +454,7 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
    {
     ACTIVE_TO_BACKING;
 
-    CPUHook(PC);
+    CPUHook(timestamp, PC);
 
     BACKING_TO_ACTIVE;
    }
@@ -2264,7 +2264,7 @@ pscpu_timestamp_t PS_CPU::Run(pscpu_timestamp_t timestamp_in, bool ILHMode)
  }
 }
 
-void PS_CPU::SetCPUHook(void (*cpuh)(uint32 pc), void (*addbt)(uint32 from, uint32 to, bool exception))
+void PS_CPU::SetCPUHook(void (*cpuh)(const pscpu_timestamp_t timestamp, uint32 pc), void (*addbt)(uint32 from, uint32 to, bool exception))
 {
  ADDBT = addbt;
  CPUHook = cpuh;

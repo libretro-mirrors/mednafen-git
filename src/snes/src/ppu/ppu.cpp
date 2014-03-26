@@ -107,6 +107,11 @@ void PPU::render_scanline() {
      render_line();
     }
   }
+
+  //
+  //
+  //
+  video.render_scanline(line);
 }
 
 void PPU::frame() {
@@ -338,7 +343,7 @@ void PPU::power() {
 
 void PPU::reset() {
   PPUcounter::reset();
-  memset(output, 0, 512 * 480 * sizeof(uint16));
+  memset(line_output, 0, sizeof(line_output));
 
   //PPU::reset();
   PPU::frame();
@@ -365,8 +370,6 @@ void PPU::reset() {
 }
 
 PPU::PPU() {
-  output = new uint16[512 * 480];
-
   status.render_output   = true;
   status.frames_updated  = false;
   status.frames_rendered = 0;
@@ -394,7 +397,6 @@ PPU::PPU() {
 }
 
 PPU::~PPU() {
-  delete[] output;
   free_tiledata_cache();
 }
 

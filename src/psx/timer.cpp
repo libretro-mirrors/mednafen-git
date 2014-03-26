@@ -195,7 +195,7 @@ static void ClockTimer(int i, uint32 clocks)
   if(Timers[i].Mode & 0x10)
   {
    if((Timers[i].Counter - target) > 3)
-    printf("Timer %d IRQ trigger error: %d\n", i, Timers[i].Counter - target);
+    PSX_WARNING("Timer %d IRQ trigger error: %d", i, Timers[i].Counter - target);
   }
 
 #endif

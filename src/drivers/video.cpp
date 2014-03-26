@@ -18,6 +18,7 @@
 #include "main.h"
 #include <math.h>
 #include <string.h>
+#include <stdlib.h>
 #include <trio/trio.h>
 
 #include "video.h"
@@ -110,14 +111,10 @@ static SDL_Surface *IconSurface=NULL;
 
 static MDFN_Rect screen_dest_rect;
 
-static MDFN_Surface *DebuggerSurface = NULL;
-static MDFN_Rect DebuggerRect;
-
 static MDFN_Surface *NetSurface = NULL;
 static MDFN_Rect NetRect;
 
 static MDFN_Surface *CheatSurface = NULL;
-static MDFN_Rect CheatRect;
 
 static MDFN_Surface *HelpSurface = NULL;
 static MDFN_Rect HelpRect;
@@ -178,12 +175,6 @@ void KillVideo(void)
  {
   SDL_FreeSurface(IconSurface);
   IconSurface = NULL;
- }
-
- if(DebuggerSurface)
- {
-  delete DebuggerSurface;
-  DebuggerSurface = NULL;
  }
 
  if(SMSurface)
@@ -338,6 +329,10 @@ static void GenerateDestRect(void)
   }
  }
 
+
+ //screen_dest_rect.y = 0;
+ //screen_dest_rect.x = 0;
+
  // Quick and dirty kludge for VB's "hli" and "vli" 3D modes.
  screen_dest_rect.x &= ~1;
  screen_dest_rect.y &= ~1;
@@ -399,7 +394,7 @@ int GetSpecialScalerID(const std::string &special_string)
  return(ret);
 }
 
-
+static bool weset_glstvb = false; 
 static uint32 real_rs, real_gs, real_bs, real_as;
 
 int InitVideo(MDFNGI *gi)
@@ -412,6 +407,29 @@ int InitVideo(MDFNGI *gi)
 
  MDFNI_printf(_("Initializing video...\n"));
  MDFN_indent(1);
+
+ if(!getenv("__GL_SYNC_TO_VBLANK") || weset_glstvb)
+ {
+  if(MDFN_GetSettingB("video.glvsync"))
+  {
+   #if HAVE_PUTENV
+   static char gl_pe_string[] = "__GL_SYNC_TO_VBLANK=1";
+   putenv(gl_pe_string); 
+   #elif HAVE_SETENV
+   setenv("__GL_SYNC_TO_VBLANK", "1", 1);
+   #endif
+  }
+  else
+  {
+   #if HAVE_PUTENV
+   static char gl_pe_string[] = "__GL_SYNC_TO_VBLANK=0";
+   putenv(gl_pe_string); 
+   #elif HAVE_SETENV
+   setenv("__GL_SYNC_TO_VBLANK", "0", 1);
+   #endif
+  }
+  weset_glstvb = true;
+ }
 
  osd_alpha_blend = MDFN_GetSettingB("osd.alpha_blend");
 
@@ -1100,7 +1118,7 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
  if(vdriver == VDRIVER_OVERLAY)
  {
   bool osd_active = Help_IsActive() || SaveStatesActive() || IsConsoleCheatConfigActive() || Netplay_GetTextView() ||
-		   IsInternalMessageActive() || Debugger_IsActive(NULL, NULL);
+		   IsInternalMessageActive() || Debugger_IsActive();
 
   OverlayOK = (vdriver == VDRIVER_OVERLAY) && !take_ssnapshot && !osd_active && (!CurrentScaler || (CurrentScaler->id != NTVB_HQ2X && CurrentScaler->id != NTVB_HQ3X &&
 		CurrentScaler->id != NTVB_HQ4X));
@@ -1185,11 +1203,22 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
     sub_src_rect.y = last_y;
     sub_src_rect.h = y - last_y;
 
-    sub_dest_rect.x = screen_dest_rect.x;
-    sub_dest_rect.w = screen_dest_rect.w;
+    if(CurGame->rotated)
+    {
+     sub_dest_rect.x = screen_dest_rect.x + (last_y - src_rect.y) * screen_dest_rect.w / src_rect.h;
+     sub_dest_rect.y = screen_dest_rect.y;
 
-    sub_dest_rect.y = screen_dest_rect.y + (last_y - src_rect.y) * screen_dest_rect.h / src_rect.h;
-    sub_dest_rect.h = sub_src_rect.h * screen_dest_rect.h / src_rect.h;
+     sub_dest_rect.w = sub_src_rect.h * screen_dest_rect.w / src_rect.h;
+     sub_dest_rect.h = screen_dest_rect.h;
+     //printf("sdr.x=%f, sdr.w=%f\n", (double)screen_dest_rect.x + (double)(last_y - src_rect.y) * screen_dest_rect.w / src_rect.h, (double)sub_src_rect.h * screen_dest_rect.w / src_rect.h);
+    }
+    else
+    {
+     sub_dest_rect.x = screen_dest_rect.x;
+     sub_dest_rect.w = screen_dest_rect.w;
+     sub_dest_rect.y = screen_dest_rect.y + (last_y - src_rect.y) * screen_dest_rect.h / src_rect.h;
+     sub_dest_rect.h = sub_src_rect.h * screen_dest_rect.h / src_rect.h;
+    }
 
     if(!sub_dest_rect.h) // May occur with small yscale values in certain cases, so prevent triggering an assert()
      sub_dest_rect.h = 1;
@@ -1259,44 +1288,8 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
  }
 
 
- unsigned int debw, debh;
+ Debugger_MT_DrawToScreen(MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as), screen->w, screen->h);
 
- if(Debugger_IsActive(&debw, &debh))
- {
-  if(!DebuggerSurface)
-  {
-   DebuggerSurface = new MDFN_Surface(NULL, 640, 480, 640, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
-  }
-  DebuggerRect.w = debw;
-  DebuggerRect.h = debh;
-  DebuggerRect.x = 0;
-  DebuggerRect.y = 0;
-
-  MDFN_Rect zederect;
-
-  int xm = screen->w / DebuggerRect.w;
-  int ym = screen->h / DebuggerRect.h;
-
-  if(xm < 1) xm = 1;
-  if(ym < 1) ym = 1;
-
-  //if(xm > ym) xm = ym;
-  //if(ym > xm) ym = xm;
-
-  // Allow it to be compacted horizontally, but don't stretch it out, as it's hard(IMHO) to read.
-  if(xm > ym) xm = ym;
-  if(ym > (2 * xm)) ym = 2 * xm;
-
-  zederect.w = DebuggerRect.w * xm;
-  zederect.h = DebuggerRect.h * ym;
-
-  zederect.x = (screen->w - zederect.w) / 2;
-  zederect.y = (screen->h - zederect.h) / 2;
-
-  Debugger_Draw(DebuggerSurface, &DebuggerRect, &zederect);
-
-  BlitRaw(DebuggerSurface, &DebuggerRect, &zederect);
- }
 #if 0
  if(CKGUI_IsActive())
  {
@@ -1356,19 +1349,39 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
 
  if(IsConsoleCheatConfigActive())
  {
-  if(!CheatSurface)
+  MDFN_Rect CheatRect;
+  unsigned crs = 0;
+
+  memset(&CheatRect, 0, sizeof(CheatRect));
+
+  CheatRect.x = 0;
+  CheatRect.y = 0;
+  CheatRect.w = screen->w;
+  CheatRect.h = screen->h;
+
+  while((CheatRect.h >> crs) >= 1024 && (CheatRect.w >> crs) >= 1024)
+   crs++;
+
+  CheatRect.w >>= crs;
+  CheatRect.h >>= crs;
+
+  if(!CheatSurface || CheatSurface->w < CheatRect.w || CheatSurface->h < CheatRect.h)
   {
-   CheatRect.w = screen->w;
-   CheatRect.h = screen->h;
+   if(CheatSurface)
+   {
+    delete CheatSurface;
+    CheatSurface = NULL;
+   }
 
    CheatSurface = new MDFN_Surface(NULL, CheatRect.w, CheatRect.h, CheatRect.w, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
   }
+
   MDFN_Rect zederect;
 
-  zederect.x = CheatRect.x;
-  zederect.y = CheatRect.y;
-  zederect.w = CheatRect.w;
-  zederect.h = CheatRect.h;
+  zederect.x = 0;
+  zederect.y = 0;
+  zederect.w = CheatRect.w << crs;
+  zederect.h = CheatRect.h << crs;
 
   DrawCheatConsole(CheatSurface, &CheatRect);
   BlitRaw(CheatSurface, &CheatRect, &zederect);

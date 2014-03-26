@@ -19,7 +19,7 @@
 
 #include "pce.h"
 #include <errno.h>
-#include "../cdrom/pcecd.h"
+#include "pcecd.h"
 #include "arcade_card/arcade_card.h"
 #include "../md5.h"
 #include "../file.h"
@@ -36,10 +36,8 @@ ArcadeCard *arcade_card = NULL;
 static uint8 *HuCROM = NULL;
 
 static bool IsPopulous;
-bool IsTsushin;
 bool PCE_IsCD;
 
-static uint8 *TsushinRAM = NULL; // 0x8000
 static uint8 SaveRAM[2048];
 
 static DECLFW(ACPhysWrite)
@@ -183,32 +181,6 @@ int HuCLoad(const uint8 *data, uint32 len, uint32 crc32)
    PCEWrite[x] = HuCRAMWrite;
   }
   MDFNMP_AddRAM(32768, 0x40 * 8192, PopRAM);
- }
- else if(crc32 == 0x34dc65c4) // Tsushin Booster
- {
-  gzFile fp;
-
-  if(!(TsushinRAM = (uint8*)MDFN_calloc(1, 0x8000 + 8192, _("Tsushin Booster RAM"))))	// + 8192 for PC-as-ptr safety padding
-  {
-   MDFN_free(HuCROM);
-   return(0);
-  }
-  memset(TsushinRAM, 0xFF, 0x8000);
-
-  if((fp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
-  {
-   gzread(fp, TsushinRAM, 32768);
-   gzclose(fp);
-  }
-  IsTsushin = 1;
-  MDFN_printf("Tsushin Booster\n");
-  for(int x = 0x88; x < 0x8C; x++)
-  {
-   HuCPUFastMap[x] = &TsushinRAM[(x & 3) * 8192] - x * 8192;
-   PCERead[x] = HuCRead;
-   PCEWrite[x] = HuCRAMWrite;
-  }
-  MDFNMP_AddRAM(32768, 0x88 * 8192, TsushinRAM);
  }
  else
  {
@@ -376,8 +348,7 @@ int HuC_StateAction(StateMem *sm, int load, int data_only)
  SFORMAT StateRegs[] = 
  {
   SFARRAY(ROMSpace + 0x40 * 8192, IsPopulous ? 32768 : 0),
-  SFARRAY(TsushinRAM, IsTsushin ? 32768 : 0),
-  SFARRAY(SaveRAM, (IsPopulous || IsTsushin) ? 0 : 2048),
+  SFARRAY(SaveRAM, IsPopulous ? 0 : 2048),
   SFARRAY(ROMSpace + 0x68 * 8192, PCE_IsCD ? 262144 : 0),
   SFVAR(HuCSF2Latch),
   SFEND
@@ -402,15 +373,6 @@ void HuCClose(void)
  if(IsPopulous)
  {
   MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 6, ROMSpace + 0x40 * 8192, 32768);
- }
- else if(IsTsushin)
- {
-  if(TsushinRAM)
-  {
-   MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 6, TsushinRAM, 32768);
-   MDFN_free(TsushinRAM);
-   TsushinRAM = NULL;
-  }
  }
  else if(IsBRAMUsed())
  {

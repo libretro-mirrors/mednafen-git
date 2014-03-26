@@ -112,7 +112,7 @@ extern int VDC_TotalChips;
 
 
 void VDC_SetPixelFormat(const MDFN_PixelFormat &format) MDFN_COLD;
-void VDC_RunFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, MDFN_Rect *LineWidths, int skip);
+void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES);
 void VDC_SetLayerEnableMask(uint64 mask);
 
 DECLFW(VDC_Write);

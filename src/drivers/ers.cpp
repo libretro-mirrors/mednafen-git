@@ -32,7 +32,7 @@ void EmuRealSyncher::SetEmuClock(int64 EmuClock_arg)
 
 bool EmuRealSyncher::NeedFrameSkip(void)
 {
- int64 RealTime = (int64)SDL_GetTicks() * EmuClock / 1000;
+ int64 RealTime = (int64)MDFND_GetTime() * EmuClock / 1000;
 
  // If emulation time has fallen behind real time a bit(due to Mednafen not getting enough host CPU time),
  // indicate a frameskip condition in an effort to reduce Mednafen's host CPU usage so emulation time can catch up
@@ -69,7 +69,7 @@ void EmuRealSyncher::AddEmuTime(const int64 zetime, bool frame_end)
 
 void EmuRealSyncher::SetETtoRT(void)
 {
- int64 RealTime = (int64)SDL_GetTicks() * EmuClock / 1000;
+ int64 RealTime = (int64)MDFND_GetTime() * EmuClock / 1000;
 
  EmuTime = RealTime;
 }
@@ -82,7 +82,7 @@ void EmuRealSyncher::Sync(void)
  {
   int64 SleepTime;
 
-  RealTime = (int64)SDL_GetTicks() * EmuClock / 1000;
+  RealTime = (int64)MDFND_GetTime() * EmuClock / 1000;
 
   // If emulation time has fallen behind real time too far(due to Mednafen not getting enough host CPU time),
   // do a forced catchup, to prevent running way too fast for an excessive period of time(which makes the game as unplayable
@@ -95,7 +95,7 @@ void EmuRealSyncher::Sync(void)
   SleepTime = ((EmuTime - RealTime) * 1000 / EmuClock) - 1;
 
   if(SleepTime >= 0)
-   SDL_Delay(SleepTime);
+   MDFND_Sleep(SleepTime);
 
  } while(RealTime < EmuTime);
 }

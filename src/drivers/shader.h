@@ -23,8 +23,9 @@ class OpenGL_Blitter_Shader
  OpenGL_Blitter_Shader(OpenGL_Blitter *in_oblt, ShaderType pixshader);
  ~OpenGL_Blitter_Shader();
 
- void ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th, int orig_tw, int orig_th, unsigned rotated);
+ void ShaderBegin(const int gl_screen_w, const int gl_screen_h, const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th, int orig_tw, int orig_th, unsigned rotated);
  void ShaderEnd(void);
+ bool ShaderNeedsBTIP(void);
 
  private:
 

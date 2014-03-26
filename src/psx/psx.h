@@ -40,6 +40,7 @@ namespace MDFN_IEN_PSX
  #endif
 
  void PSX_RequestMLExit(void);
+ void ForceEventUpdates(const pscpu_timestamp_t timestamp);
 
  enum
  {

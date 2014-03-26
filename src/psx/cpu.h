@@ -222,7 +222,7 @@ class PS_CPU
  // Mednafen debugger stuff follows:
  //
  public:
- void SetCPUHook(void (*cpuh)(uint32 pc), void (*addbt)(uint32 from, uint32 to, bool exception));
+ void SetCPUHook(void (*cpuh)(const pscpu_timestamp_t timestamp, uint32 pc), void (*addbt)(uint32 from, uint32 to, bool exception));
  void CheckBreakpoints(void (*callback)(bool write, uint32 address, unsigned int len), uint32 instr);
 
  enum
@@ -245,7 +245,7 @@ class PS_CPU
  uint16 PeekMem16(uint32 A);
  uint32 PeekMem32(uint32 A);
  private:
- void (*CPUHook)(uint32 pc);
+ void (*CPUHook)(const pscpu_timestamp_t timestamp, uint32 pc);
  void (*ADDBT)(uint32 from, uint32 to, bool exception);
 };
 

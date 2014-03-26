@@ -19,6 +19,9 @@ Tales of Destiny (Japanese version 1.0)
 	Frequently locks up after random battles in the cave after Mary joins.  US version is reported to not suffer from this problem.
 	Looks like the game is stuck waiting for an SPU IRQ that never happens.  The problem seems to be related to usage of Mary's "Moushuuken" skill.
 
+Simple 1500 Series Vol. 057 - The Maze
+	Locks up during startup;  looks to be poorly programmed and extremely sensitive to seek timing.
+
 ----------------------------------------------------------------------------------------------
 
 ***Medium issues***
@@ -31,9 +34,18 @@ Nicktoons Racing
 	Totally fubared sound effects.  Likely CPU instruction timing-related(decreasing the IPC fixes this problem), or perhaps timing
 	related to SPU RAM writes?
 
+Resident Evil - Director's Cut(non-Dual Shock-version)
+	Controller configuration screen pops up on some screen transitions; probably one of those stupid seek timing-related issues.
+
 -----------------------------------------------------------------------------------------------
 
 ***Lesser issues***
+
+FF8 model flicker at some points in the game - look into it
+
+Tactics Ogre
+	Menu/Overlay elements on the map screen periodically flicker; seems to be a timing thing probably related to the sound engine
+	in the game.
 
 Castrol Honda Superbike Racing
 	Graphical glitches on startup, menus(fixed now probably), and loading screens.  (What is with all
@@ -54,9 +66,6 @@ Adventures of Lomax, The
 
 Nightmare Creatures
 	BIOS reverb sound excessively contaminates beginning of game.
-
-Crusaders of Might and Magic
-	The CD-XA buffering increase for ToD II is apparently exacerbating the early voice cutoff problem in this game.
 
 Shadow Master
 	Might have broken startup images.
@@ -120,13 +129,13 @@ Star Wars Dark Forces notes(for working towards removing a kludge/hack in the DM
 	     if(V == 0x008a0000 && DMAIntStatus == 0x0000000c)
 		DBG_Break(); // V |= 8 << 24; //V |= 4 << 24;
 
+Add a means of grabbing and passing CIRC data, when using a physical CD, from Mednafen core to the PSX module so that the correct
+subheader fields can be chosen when there is a mismatch between the two instances of each field during XA ADPCM playback.
+
 Ensure(long-term, IE a note to the FUTURE) that input device state is latched in independent variables at the start of the
 input device's handling of a state read command, so that when games are reading device state across an MDFNI_Emulate() boundary, the
 data won't change in the middle, which could hypothetically cause problems in some rare circumstances(and make entering 
 button combos in games more finicky).
-
-Investigate CD-XA FIR filter on a PS1, for 4-bit and 8-bit modes, and both playback rates.  Might be difficult without a modchip,
-though...
 
 Respect device(GPU, SPU, etc.) DMA mode/memory access mode bits(more for homebrew's sake than commercial games'). 
 

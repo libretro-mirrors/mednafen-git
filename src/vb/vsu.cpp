@@ -26,15 +26,16 @@ VSU::VSU(Blip_Buffer *bb_l, Blip_Buffer *bb_r)
  sbuf[1] = bb_r;
 
  Synth.volume(1.0 / 6 / 2);
-}
 
-VSU::~VSU()
-{
  for(int ch = 0; ch < 6; ch++)
  {
   for(int lr = 0; lr < 2; lr++)
    last_output[ch][lr] = 0;
  }
+}
+
+VSU::~VSU()
+{
 
 }
 

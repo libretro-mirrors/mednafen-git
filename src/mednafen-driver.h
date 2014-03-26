@@ -73,10 +73,6 @@ bool MDFNI_InitializeModules(const std::vector<MDFNGI *> &ExternalSystems);
 /* Also pass it the base directory to load the configuration file. */
 int MDFNI_Initialize(const char *basedir, const std::vector<MDFNSetting> &DriverSettings);
 
-/* Sets the base directory(save states, snapshots, etc. are saved in directories
-   below this directory. */
-void MDFNI_SetBaseDirectory(const char *dir);
-
 /* Call only when a game is loaded. */
 int MDFNI_NetplayStart(void);
 

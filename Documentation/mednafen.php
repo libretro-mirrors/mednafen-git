@@ -49,9 +49,9 @@
   <li>Network play(utilizing an external dedicated server program).</li>
 </ul>
 
- <?php BeginSection("CD-ROM Emulation", "", FALSE, FALSE, "Section_cdrom_emulation"); ?>
+ <?php BeginSection("CD Emulation", "", FALSE, FALSE, "Section_cdrom_emulation"); ?>
  <p>
-  Mednafen can load CD-ROM games from a physical CD-ROM, or a ripped/dumped copy of the disc, such as CUE+BIN.
+  Mednafen can load CD-ROM games from a physical CD, or a ripped/dumped copy of the disc, such as CUE+BIN.
   Using a ripped copy of the disc is <b>strongly</b> recommended for performance and data consistency.
  </p>
 
@@ -93,22 +93,34 @@
 <?php BeginSection("Multiple-CD Games", "", FALSE, FALSE, "Section_multicd_games"); ?>
  <p>
   To play a game that consists of more than one CD, and you are using ripped disc images, you will need to create an
-  M3U file(plain-text, ".m3u" extension), and enter the filenames of the CUE/TOC sheets, one per line.  Load the M3U file
-  with Mednafen instead of the CUE/TOC files, and use the F6 and F8 keys to switch among the various discs available.
+  M3U file(plain-text, ".m3u" extension), and enter the filenames of the CUE/TOC/CCD files, one per line.  Load the M3U file
+  with Mednafen instead of the CUE/TOC/CCD files, and use the F6 and F8 keys to switch among the various discs available.
   <br>
-  <b>Note:</b> Preferably, your M3U file(s) should reference CUE/TOC files that are in the same directory as the M3U file,
+  <b>Note:</b> Preferably, your M3U file(s) should reference CUE/TOC/CCD files that are in the same directory as the M3U file,
   otherwise you will likely need to alter the <a href="#filesys.untrusted_fip_check">filesys.untrusted_fip_check</a> setting.
  </p>
 
  <p>
   Support for multi-disc games when using physical CDs is somewhat clunky.  To begin with, you'll need to start Mednafen with
   the first disc of the set in the drive.  To switch to a different disc, press the F8 key, which should eject the disc.  If
-  the disc fails to eject, use the drive's eject button.  Place the disc you're switching to in the drive, close
-  the lid/tray/whatever(if applicable), and press the F8 key again.  If you're using a standard PC-type drive with extending
-  tray, you may just press F8 to close the tray instead of manually closing it and then pressing F8.
+  the disc fails to eject, use the drive's eject button, and press F8 again so that Mednafen displays a message like
+  "Virtual CD Drive Tray Open".  Place the disc you're switching to in the drive, close the lid/tray/whatever(if applicable), and press
+  the F8 key again.  If you're using a standard PC-type drive with extending tray, you may just press F8 to close the tray instead
+  of manually closing it and then pressing F8.
  </p>
  <?php EndSection(); ?>
 
+ <?php BeginSection("CD+G", "", FALSE, FALSE, "Section_cdg"); ?>
+  Both the <a href="pce.html">PC Engine (CD)</a> and <a href="pcfx.html">PC-FX</a> emulation modules support CD+G playback; however,
+  the PC-FX BIOS doesn't appear to be as resilient when dealing with scratched discs/damaged data as the PC Engine CD BIOS is.
+  <br><br>
+  <b>Note:</b> CD+G graphics data is stored in the R-W subchannel data of discs.  You must either use a physical CD with this data,
+  or a rip that includes this data(such as in the cdrdao TOC or CloneCD formats; CUE format definitely isn't going to work).
+ <?php EndSection(); ?>
+
+ <?php BeginSection("PhotoCD Portfolio", "", FALSE, FALSE, "Section_photocdportfolio"); ?>
+  The <a href="pcfx.html">PC-FX</a> emulation module supports low-resolution single-session Kodak "PhotoCD Portfolio" disc playback.
+  Hardware features to support multi-session CDs are not fully emulated; they may or may not work.
  <?php EndSection(); ?>
 
  <?php EndSection(); ?>
@@ -166,6 +178,7 @@
  <tr><td>0-9</td><td>Select save state slot.</td><td>"0" through "9"</td></tr>
  <tr><td>-</td><td>Decrement selected save state slot.</td><td>state_slot_dec</td></tr>
  <tr><td>=</td><td>Increment selected save state slot.</td><td>state_slot_inc</td></tr>
+ <tr><td>ALT + S</td><td>Toggle <a href="#srwframes">600-frame(~10 seconds on NES)</a> save-state rewinding functionality, disabled by default.</td><td>state_rewind_toggle</td></tr>
  <tr><td>Shift + F5</td><td>Record movie.</td><td>save_movie</td></tr>
  <tr><td>Shift + F7</td><td>Play movie.</td><td>load_movie</td></tr>
  <tr><td>Shift + 0-9</td><td>Select movie slot.</td><td>"m0" through "m9"</td></tr>
@@ -173,10 +186,10 @@
  <tr><td>ALT + T</td><td>Toggle cheats active.</td><td>togglecheatactive</td></tr>
  <tr><td>T</td><td>Enable network play console input.</td><td>togglenetview</td></tr>
  <tr><td>ALT + D</td><td>Toggle debugger.</td><td>toggle_debugger</td></tr>
+ <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
  <tr><td>ALT + A</td><td>Enter frame advance mode, if not already in it, and advance the frame.</td><td>advance_frame</td></tr>
  <tr><td>ALT + R</td><td>Exit frame advance mode.</td><td>run_normal</td></tr>
  <tr><td>SHIFT + F1</td><td>Toggle frames-per-second display(from top to bottom, the display format is: virtual, rendered, blitted).</td><td>toggle_fps_view</td></tr>
- <tr><td>ALT + S</td><td>Toggle <a href="#srwframes">600-frame(~10 seconds on NES)</a> save-state rewinding functionality, disabled by default.</td><td>state_rewind_toggle</td></tr>
  <tr><td>Backspace</td><td>Rewind emulation, if save-state rewinding functionality is enabled, up to <a href="#srwframes">600 frames</a>.</td><td>state_rewind</td></tr>
  <tr><td>F9</td><td>Save (rawish) screen snapshot.</td><td>take_snapshot</td></tr>
  <tr><td>SHIFT + F9</td><td>Save screen snapshot, taken after all scaling and special filters/shaders are applied.</td><td>take_scaled_snapshot</td></tr>
@@ -201,6 +214,7 @@
  <tr><td>SHIFT + F2</td><td>Like F2, but after configuration completes, to activate the configured command key will require all buttons configured to it to be in a pressed state simultaneously to trigger the action.  Note that keyboard modifier keys(CTRL, ALT, SHIFT) are still treated as modifiers and not discrete keys.<br><br>Especially useful in conjunction with the <a href="#ckdelay">ckdelay</a> setting.</td><td>input_configc_am</td></tr>
  <tr><td nowrap>Scroll Lock</td><td>Toggle input grabbing(use this to use the PC Engine mouse properly in windowed mode).</td><td>toggle_grab_input</td></tr>
  <tr><td>Shift + Scroll Lock</td><td>Toggle input grabbing AND command disabling(used for giving almost unhindered button access to an emulated device; most useful when emulating the Famicom's Family Keyboard).</td><td>toggle_cdisable</td></tr>
+ <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
  <tr><td>F10</td><td>Reset.</td><td>reset</td></tr>
  <tr><td>F11</td><td>Hard reset(toggle power switch).</td><td>power</td></tr>
  <tr><td>Escape/F12</td><td>Exit(the emulator, or netplay chat mode).</td><td>exit</td></tr>
@@ -228,6 +242,27 @@
    <tr><td nowrap>-qtrecord x</td><td>string</td><td>Record video and audio output to the specified filename in the QuickTime format.</td></tr>
   </table>
  <?php EndSection(); ?>
+
+<?php BeginSection("Configuration Files"); ?>
+ <p>
+  Mednafen loads/saves its settings from/to a primary configuration file, named "<b>mednafen-09x.cfg</b>", under the Mednafen
+  <a href="#Section_base_directory">base directory</a>.  This file is created and written to when Mednafen shuts down.
+ </p>
+ <p>
+  Mednafen also loads override settings from optional per-module override configuration files, also located directly under the
+  Mednafen <a href="#Section_base_directory">base directory</a>.  The general pattern for the naming of these user-created
+  files is "&lt;<b>system</b>&gt;<b>.cfg</b>"; e.g. "<b>nes.cfg</b>", "<b>pce.cfg</b>", "<b>gba.cfg</b>", "<b>psx.cfg</b>", etc.  This allows for overriding global settings
+  on a per-module basis.  The configuration override files will <b>NOT</b> be written to by Mednafen, and they will generally not
+  alter the settings in the primary configuration file, unless a user action occurs that causes new setting values to be generated
+  based on the current active setting value(such as toggling full-screen mode inside the emulator, for instance).  Some settings
+  currently cannot be overridden properly:
+  <ul>
+   <li>cd.image_memcache</li>
+   <li>&lt;system&gt;.enable</li>
+  </ul>
+ </p>
+<?php EndSection(); ?>
+
 
 <?php PrintSettings("Global Settings Reference"); ?>
 

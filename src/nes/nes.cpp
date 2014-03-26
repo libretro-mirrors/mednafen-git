@@ -36,6 +36,7 @@
 #include	"vsuni.h"
 #include	"debug.h"
 
+#include	<trio/trio.h>
 
 extern MDFNGI EmulatedNES;
 
@@ -346,7 +347,7 @@ static void Emulate(EmulateSpecStruct *espec)
  if(!Genie_BIOSInstalled())
   MDFNMP_ApplyPeriodicCheats();
 
- MDFNPPU_Loop(espec->surface, espec->skip);
+ MDFNPPU_Loop(espec);
 
  ssize = FlushEmulateSound(espec->NeedSoundReverse, espec->SoundBuf, espec->SoundBufMaxSize);
  espec->NeedSoundReverse = 0;
@@ -487,9 +488,9 @@ static MDFNSetting NESSettings[] =
   { "nes.ggrom", MDFNSF_EMU_STATE, gettext_noop("Path to Game Genie ROM image."), NULL, MDFNST_STRING, "gg.rom" },
   { "nes.clipsides", MDFNSF_NOFLAGS, gettext_noop("Clip left+right 8 pixel columns."), NULL, MDFNST_BOOL, "0" },
   { "nes.slstart", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in NTSC mode."), NULL, MDFNST_UINT, "8", "0", "239" },
-  { "nes.slend", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanlines in NTSC mode."), NULL, MDFNST_UINT, "231", "0", "239" },
+  { "nes.slend", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in NTSC mode."), NULL, MDFNST_UINT, "231", "0", "239" },
   { "nes.slstartp", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in PAL mode."), NULL, MDFNST_UINT, "0", "0", "239" },
-  { "nes.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayedscanlines in PAL mode."), NULL, MDFNST_UINT, "239", "0", "239" },
+  { "nes.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in PAL mode."), NULL, MDFNST_UINT, "239", "0", "239" },
 
   { "nes.correct_aspect", MDFNSF_CAT_VIDEO, gettext_noop("Correct the aspect ratio."), NULL, MDFNST_BOOL, "0" },
   { "nes.ntscblitter", MDFNSF_NOFLAGS, gettext_noop("Enable NTSC color generation and blitter."), 
@@ -543,7 +544,7 @@ static DECLFR(CheatReadFunc)
  return(retval);
 }
 
-static void InstallReadPatch(uint32 address)
+static void InstallReadPatch(uint32 address, uint8 value, int compare)
 {
  if(Genie_BIOSInstalled())
   return;
@@ -563,6 +564,193 @@ static void RemoveReadPatches(void)
   SetReadHandler(A, A, NonCheatARead[A], 0);
  }
 }
+
+
+static int GGtobin(char c)
+{
+ static char lets[16]={'A','P','Z','L','G','I','T','Y','E','O','X','U','K','S','V','N'};
+
+ for(int x = 0; x < 16; x++)
+  if(lets[x] == toupper(c))
+   return(x);
+
+ if(c & 0x80)
+  throw MDFN_Error(0, _("Invalid character in Game Genie code."));
+ else
+  throw MDFN_Error(0, _("Invalid character in Game Genie code: %c"), c);
+}
+
+static bool DecodeGG(const std::string& cheat_string, MemoryPatch* patch)
+{
+ uint16 A;
+ uint8 V,C;
+ uint8 t;
+ const unsigned s = cheat_string.size();
+ const char *str = cheat_string.c_str();
+
+ if(s != 6 && s != 8)
+  throw(MDFN_Error(0, _("Game Genie code is of an incorrect length.")));
+
+ A = 0x8000;
+ V = 0;
+ C = 0;
+
+ t = GGtobin(*str++);
+ V |= (t&0x07);
+ V |= (t&0x08)<<4;
+
+ t = GGtobin(*str++);
+ V |= (t&0x07)<<4;
+ A |= (t&0x08)<<4;
+
+ t = GGtobin(*str++);
+ A |= (t&0x07)<<4;
+ //if(t&0x08) return(0);	/* 8-character code?! */
+
+ t = GGtobin(*str++);
+ A |= (t&0x07)<<12;
+ A |= (t&0x08);
+
+ t = GGtobin(*str++);
+ A |= (t&0x07);
+ A |= (t&0x08)<<8;
+
+ if(s == 6)
+ {
+  t = GGtobin(*str++);
+  A |= (t&0x07)<<8;
+  V |= (t&0x08);
+
+  patch->addr = A;
+  patch->val = V;
+  patch->compare = 0;
+  patch->type = 'S';
+  patch->length = 1;
+ }
+ else
+ {
+  t = GGtobin(*str++);
+  A |= (t&0x07)<<8;
+  C |= (t&0x08);
+
+  t = GGtobin(*str++);
+  C |= (t&0x07);
+  C |= (t&0x08)<<4;
+  
+  t = GGtobin(*str++);
+  C |= (t&0x07)<<4;
+  V |= (t&0x08);
+
+  patch->addr = A;
+  patch->val = V;
+  patch->compare = C;
+  patch->type = 'C';
+  patch->length = 1;
+ }
+ return(false);
+}
+
+
+static bool DecodePAR(const std::string& cheat_string, MemoryPatch* patch)
+{
+ int boo[4];
+
+ if(cheat_string.size() != 8)
+  throw MDFN_Error(0, _("Pro Action Replay code is of an incorrect length."));
+
+ if(trio_sscanf(cheat_string.c_str(), "%02x%02x%02x%02x", boo, boo + 1, boo + 2, boo + 3) != 4)
+  throw MDFN_Error(0, _("Malformed Pro Action Replay code."));
+
+ if(boo[0])
+ {
+  patch->addr = (boo[3] << 8) | ((boo[2] + 0x7F) & 0xFF);
+  patch->val = boo[1];
+  patch->compare = 0;
+  patch->type = 'S';
+ }
+ else
+ {
+  patch->addr = ((boo[1] & 0x07) << 8) | (boo[2] << 0);
+  patch->val = boo[3];
+  patch->compare = 0;
+  patch->type = 'R';
+ }
+
+ patch->length = 1;
+
+ return(false);
+}
+
+static bool DecodeRocky(const std::string& cheat_string, MemoryPatch* patch)
+{
+ if(cheat_string.size() != 8)
+  throw MDFN_Error(0, _("Pro Action Rocky code is of an incorrect length."));
+
+ uint32 ev = 0;
+
+ for(unsigned i = 0; i < 8; i++)
+ {
+  int c = cheat_string[i];
+
+  ev <<= 4;
+
+  if(c >= '0' && c <= '9')
+   ev |= c - '0';
+  else if(c >= 'a' && c <= 'f')
+   ev |= c - 'a' + 0xA;
+  else if(c >= 'A' && c <= 'F')
+   ev |= c - 'A' + 0xA;
+  else
+  {
+   if(c & 0x80)
+    throw MDFN_Error(0, _("Invalid character in Pro Action Rocky code."));
+   else
+    throw MDFN_Error(0, _("Invalid character in Pro Action Rocky code: %c"), c);
+  }
+ }
+
+ uint32 accum = 0xfcbdd275;
+ uint32 result = 0;
+
+ for(signed int b = 30; b >= 0; b--)
+ {
+  const unsigned tmp = (accum ^ ev) >> 31;
+  static const uint8 lut[31] =
+  {
+   3, 13, 14, 1, 6, 9, 5, 0, 12, 7, 2, 8, 10, 11, 4,
+   19, 21, 23, 22, 20, 17, 16, 18,
+   29, 31, 24, 26, 25, 30, 27, 28
+  };
+  result |= tmp << lut[b];
+
+  if(tmp)
+   accum ^= 0xb8309722;
+  accum <<= 1;
+  ev <<= 1;
+ }
+
+ patch->addr = (result & 0x7FFF) | 0x8000;
+ patch->val = (result >> 24) & 0xFF;
+ patch->compare = (result >> 16) & 0xFF;
+ patch->length = 1;
+ patch->type = 'C';
+
+ return(false);
+}
+
+
+static CheatFormatStruct CheatFormats[] =
+{
+ { "Game Genie", gettext_noop("Genies will eat your cheeses."), DecodeGG },
+ { "Pro Action Replay (Incomplete)", gettext_noop("Prooooooooooooooooocom."), DecodePAR },
+ { "Pro Action Rocky", gettext_noop("No pie."), DecodeRocky },
+};
+
+static CheatFormatInfoStruct CheatFormatInfo =
+{
+ 3,
+ CheatFormats
+};
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
@@ -600,6 +788,7 @@ MDFNGI EmulatedNES =
  InstallReadPatch,
  RemoveReadPatches,
  MemRead,
+ &CheatFormatInfo,
  false,
  StateAction,
  Emulate,

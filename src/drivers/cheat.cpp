@@ -19,7 +19,8 @@
 #include <ctype.h>
 #include <trio/trio.h>
 #include "console.h"
-
+#include "../string/trim.h"
+#include <vector>
 
 static SDL_Thread *CheatThread = NULL;
 static SDL_mutex *CheatMutex = NULL;
@@ -33,7 +34,7 @@ class CheatConsoleT : public MDFNConsole
 	CheatConsoleT(void)
 	{
 	 SetShellStyle(1);
-	 SetSmallFont(0);
+	 SetFont(MDFN_FONT_9x18_18x18);
 	}
 
         virtual bool TextHook(UTF8 *text)
@@ -113,10 +114,44 @@ static char CHEAT_getchar(char def)
  return(buf[0]);
 }
 
+
 static void GetString(char *s, int max)
 {
- CHEAT_gets(s,max);
+ CHEAT_gets(s, max);
+ MDFN_trim(s);
 }
+
+#if 0
+
+static std::string GetString(void)
+{
+ SDL_mutexP(CheatMutex);
+ while(!pending_text)
+ {
+  SDL_mutexV(CheatMutex);
+  SDL_Delay(5);
+  SDL_mutexP(CheatMutex);
+ }
+
+ char *lpt = pending_text;
+ pending_text = NULL;
+ try
+ {
+  CheatConsole.AppendLastLine((UTF8*)lpt);
+ }
+ catch(...)
+ {
+
+ }
+ SDL_mutexV(CheatMutex);
+
+ std::string ret = std::string(lpt);
+
+ free(lpt);
+
+ return(ret);
+}
+#endif
 
 static uint64 GetUI(uint64 def)
 {
@@ -145,12 +180,16 @@ static uint64 GetUI(uint64 def)
 static int GetYN(int def)
 {
  char buf[32];
- CHEAT_printf("(Y/N)[%s]: ",def?"Y":"N");
- CHEAT_gets(buf,32);
- if(buf[0]=='y' || buf[0]=='Y')
+
+ CHEAT_printf("(Y/N)[%s]: ", def ? "Y" : "N");
+ CHEAT_gets(buf, 32);
+
+ if(buf[0] == 'y' || buf[0] == 'Y')
   return(1);
- if(buf[0]=='n' || buf[0]=='N')
+
+ if(buf[0] == 'n' || buf[0] == 'N')
   return(0);
+
  return(def);
 }
 
@@ -218,7 +257,7 @@ int EndListShow(void)
 }
 
 /* Returns 0 to stop listing, 1 to continue. */
-int AddToList(char *text, uint32 id)
+int AddToList(const char *text, uint32 id, const char* second_text = NULL)
 {
  if(listcount==10)
  {
@@ -233,9 +272,13 @@ int AddToList(char *text, uint32 id)
   }
   listcount=0;
  }
- mordoe=1;
- listids[listcount]=id;
+ mordoe = 1;
+ listids[listcount] = id;
  CHEAT_printf("%2d) %s",listcount+1,text);
+
+ if(second_text != NULL)
+  CHEAT_printf("  %s", second_text);
+
  listcount++; 
  return(1);
 }
@@ -245,18 +288,28 @@ int AddToList(char *text, uint32 id)
 **	End list code.
 **/
 
-typedef struct MENU {
-	const char *text;
-	void (*func_action)(void);
-	struct MENU *menu_action;
-} MENU;
+struct MENU
+{
+	INLINE MENU(const char* t, void (*f)(void*), std::vector<MENU>* m, void* d = NULL)
+        {
+         text = std::string(t);
+         func_action = f;
+         menu_action = m;
+	 data = d;
+        }
 
-static void SetOC(void)
+	std::string text;
+	void (*func_action)(void*);
+	std::vector<MENU>* menu_action;
+	void* data;
+};
+
+static void SetOC(void* data)
 {
  MDFNI_CheatSearchSetCurrentAsOriginal();
 }
 
-static void UnhideEx(void)
+static void UnhideEx(void* data)
 {
  MDFNI_CheatSearchShowExcluded();
 }
@@ -267,190 +320,278 @@ static void ToggleCheat(int num)
  MDFNI_ToggleCheat(num)?"en":"dis");
 }
 
-static void ModifyCheat(int num)
+static MemoryPatch GetCheatFields(const MemoryPatch &pin)
 {
- char *name;
+ MemoryPatch patch = pin;
  char buf[256];
- uint32 A;
- uint64 V;
- uint64 compare;
- char type;
- int status;
- unsigned int bytelen;
- bool bigendian;
+ const bool support_read_subst = CurGame->InstallReadPatch && CurGame->RemoveReadPatches;
 
- MDFNI_GetCheat(num, &name, &A, &V, &compare, &status, &type, &bytelen, &bigendian);
+ CHEAT_printf("Name [%s]: ", patch.name.c_str());
+ GetString(buf, 256);
+ if(buf[0] != 0)
+  patch.name = std::string(buf);
 
- CHEAT_printf("Name [%s]: ",name);
- GetString(buf,256);
+ CHEAT_printf("Available types:");
+ CHEAT_printf(" R - Replace/RAM write(high-level).");
+ CHEAT_printf(" A - Addition/RAM read->add->write(high-level).");
+ CHEAT_printf(" T - Transfer/RAM copy(high-level).");
 
- /* This obviously doesn't allow for cheats with no names.  Bah.  Who wants
-    nameless cheats anyway... 
- */
-
- if(buf[0])
-  name=buf;	// Change name when MDFNI_SetCheat() is called.
- else
-  name=0;	// Don't change name when MDFNI_SetCheat() is called.
-
- CHEAT_printf("Address [$%08x]: ",(unsigned int)A);
- A=GetUI(A);
-
- CHEAT_printf("Byte length [%d]: ", bytelen);
- bytelen = GetUI(bytelen);
-
- if(bytelen > 1)
+ if(support_read_subst)
  {
-  CHEAT_printf("Big endian? [%c]: ", bigendian ? 'Y' : 'N');
-  bigendian = GetYN(bigendian);
+  CHEAT_printf(" S - Subsitute on reads.");
+  CHEAT_printf(" C - Substitute on reads, with compare.");
+ }
+
+ for(;;)
+ {
+  CHEAT_printf("Type [%c]: ", patch.type);
+  patch.type = toupper(CHEAT_getchar(patch.type));
+
+  if(patch.type == 'R' || patch.type == 'A' || patch.type == 'T')
+   break;
+
+  if(support_read_subst && (patch.type == 'S' || patch.type == 'C'))
+   break;
+ }
+
+ if(patch.type == 'T')
+ {
+  CHEAT_printf("Source address [$%08x]: ", (unsigned int)patch.copy_src_addr);
+  patch.copy_src_addr = GetUI(patch.copy_src_addr);
+
+  CHEAT_printf("Source address inc [%u]: ", patch.copy_src_addr_inc);
+  patch.copy_src_addr_inc = GetUI(patch.copy_src_addr_inc);
+
+  CHEAT_printf("Dest address [$%08x]: ", (unsigned int)patch.addr);
+  patch.addr = GetUI(patch.addr);  
+
+  CHEAT_printf("Dest address inc [%u]: ", patch.mltpl_addr_inc);
+  patch.mltpl_addr_inc = GetUI(patch.mltpl_addr_inc);
+
+  CHEAT_printf("Count [%u]: ", patch.mltpl_count);
+  patch.mltpl_count = GetUI(patch.mltpl_count);
+
  }
  else
-  bigendian = 0;
-
- CHEAT_printf("Value [%03lld]: ",(unsigned int)V);
- V=GetUI(V);
-
- 
- do
  {
-  CHEAT_printf("Type('R'=replace,'S'=Read Substitute(or 'C' with compare)) [%c]: ",type);
-  type = toupper(CHEAT_getchar(type));
- } while(type != 'R' && type !='S' && type !='C');
+  CHEAT_printf("Address [$%08x]: ", (unsigned int)patch.addr);
+  patch.addr = GetUI(patch.addr);
+ }
 
- if(type == 'C')
+ if(patch.type == 'S' || patch.type == 'C')
+  patch.length = 1;	// TODO in the future for GBA: support lengths other than 1 in core.
+ else
  {
-  CHEAT_printf("Compare [%03lld]: ",compare);
-  compare = GetUI(compare);
+  do
+  {
+   if(patch.type == 'T')
+   {
+    //if(patch.length == 1 && patch.copy_src_addr_inc == 1 && patch.mltpl_addr_inc == 1)
+    // break;
+
+    //if((patch.copy_src_addr_inc == patch.mltpl_addr_inc) && patch.copy_src_addr_inc >= 1 && patch.copy_src_addr_inc <= 8)
+    // CHEAT_printf("Transfer unit byte length should probably be \"%u\".", patch.copy_src_addr_inc);
+
+    CHEAT_printf("Transfer unit byte length(1-8) [%u]: ", patch.length);
+   }
+   else 
+    CHEAT_printf("Byte length(1-8) [%u]: ", patch.length);
+   patch.length = GetUI(patch.length);
+  } while(patch.length < 1 || patch.length > 8);
+ }
+
+ if(patch.length > 1 && (patch.type != 'S' && patch.type != 'C'))
+ {
+  CHEAT_printf("Big endian? [%c]: ", patch.bigendian ? 'Y' : 'N');
+  patch.bigendian = GetYN(patch.bigendian);
+ }
+ else
+  patch.bigendian = false;
+
+ if(patch.type != 'T')
+ {
+  CHEAT_printf("Value [%03llu]: ", (unsigned long long)patch.val);
+  patch.val = GetUI(patch.val);
+ }
+
+ // T type loop stuff is handled up above.
+ if((patch.type != 'C' && patch.type != 'S' && patch.type != 'T') && patch.mltpl_count != 1)
+ {
+  CHEAT_printf("Loop count [%u]: ", patch.mltpl_count);
+  patch.mltpl_count = GetUI(patch.mltpl_count);
+
+  CHEAT_printf("Loop address inc [%u]: ", patch.mltpl_addr_inc);
+  patch.mltpl_addr_inc = GetUI(patch.mltpl_addr_inc);
+
+  CHEAT_printf("Loop value inc [%u]: ", patch.mltpl_val_inc);
+  patch.mltpl_val_inc = GetUI(patch.mltpl_val_inc);
+ }
+
+
+ if(patch.type == 'C')
+ {
+  CHEAT_printf("Compare [%03lld]: ", patch.compare);
+  patch.compare = GetUI(patch.compare);
+ }
+
+ if((patch.type != 'C' && patch.type != 'S') && patch.conditions.size())
+ {
+  CHEAT_printf("Conditions: %s", patch.conditions.c_str());	// Just informational for now.
+  //CHEAT_printf("Conditions [%s]: ", );
+  //patch.conditions = GetString();
  }
 
  CHEAT_printf("Enable? ");
- status = GetYN(status);
+ patch.status = GetYN(patch.status);
 
- MDFNI_SetCheat(num, name, A, V, compare, status, type, bytelen, bigendian);
+ return(patch);
 }
 
-bool MDFNI_DecodeGBGG(const char *str, uint32 *a, uint8 *v, uint8 *c, char *type);
-static void AddCheatGGPAR(int which)
+static void ModifyCheat(int num)
 {
- uint32 A;
- uint8 V;
- uint8 C;
- char type;
+ MemoryPatch patch = MDFNI_GetCheat(num);
+
+ patch = GetCheatFields(patch);
+
+ MDFNI_SetCheat(num, patch);
+}
+
+static void AddCodeCheat(void* data)
+{
+ const CheatFormatStruct* cf = (CheatFormatStruct*)data;
  char name[256],code[256];
+ MemoryPatch patch;
+ unsigned iter = 0;
 
- CHEAT_printf("Name: ");
- GetString(name,256); 
- 
- CHEAT_printf("Code: ");
- GetString(code,256);
-
- CHEAT_printf("Add cheat \"%s\" for code \"%s\"?",name,code);
- if(GetYN(0))
+ while(1)
  {
-  if(which)
-  {
-   if(!MDFNI_DecodePAR(code,&A,&V,&C,&type))
-   {
-    CHEAT_puts("Invalid Game Genie code.");
-    return;
-   }
-  }
-  else 
-  {
-   if(!strcmp(CurGame->shortname, "gb"))
-   {
-    if(!MDFNI_DecodeGBGG(code, &A, &V, &C, &type))
-    {
-     CHEAT_puts("Invalid Game Genie code.");
-     return;
-    }
-   }
-   else
-   {
-    if(!MDFNI_DecodeGG(code,&A,&V,&C, &type))
-    {
-     CHEAT_puts("Invalid Game Genie code.");
-     return;
-    }
-   }
-  }
-
-  if(MDFNI_AddCheat(name,A,V,C,type, 1, 0))
-   CHEAT_puts("Cheat added.");
+  if(iter == 0)
+   CHEAT_printf("%s Code: ", cf->FullName);
   else
-   CHEAT_puts("Error adding cheat.");
+   CHEAT_printf("%s Code(part %u): ", cf->FullName, iter + 1);
+
+  GetString(code, 256);
+
+  if(code[0] == 0)
+  {
+   CHEAT_printf("Aborted.");
+   return;
+  }
+
+  try
+  {
+   if(!cf->DecodeCheat(std::string(code), &patch))
+    break;
+
+   iter++;
+  }
+  catch(std::exception &e)
+  {
+   CHEAT_printf("Decode error: %s", e.what());
+  }
  }
-}
 
-static void AddCheatGG(void)
-{
- AddCheatGGPAR(0);
-}
+ if(patch.name.size() == 0)
+  patch.name = std::string(code);
 
-static void AddCheatPAR(void)
-{  
- AddCheatGGPAR(1); 
+ CHEAT_printf("Name[%s]: ", patch.name.c_str());
+ GetString(name, 256); 
+
+ if(name[0] != 0)
+  patch.name = std::string(name);
+
+ patch.status = true;
+
+ CHEAT_printf("Add cheat?");
+ if(GetYN(true))
+ {
+  try
+  {
+   MDFNI_AddCheat(patch);
+  }
+  catch(std::exception &e)
+  {
+   CHEAT_printf("Error adding cheat: %s", e.what());
+   return;
+  }
+  CHEAT_puts("Cheat added.");
+ }
 }
 
 static void AddCheatParam(uint32 A, uint64 V, unsigned int bytelen, bool bigendian)
 {
- char name[256];
+ MemoryPatch patch;
 
- CHEAT_printf("Name: ");
- GetString(name,256);
+ patch.addr = A;
+ patch.val = V;
+ patch.length = bytelen;
+ patch.bigendian = bigendian;
+ patch.type = 'R';
+ patch.status = true;
 
- CHEAT_printf("Address [$%08x]: ", A);
- A=GetUI(A);
+ patch = GetCheatFields(patch);
 
- CHEAT_printf("Byte length [%d]: ", bytelen);
- bytelen = GetUI(bytelen);
-
- if(bytelen > 1)
+ CHEAT_printf("Add cheat \"%s\" for address $%08x with value %llu?", patch.name.c_str(), (unsigned int)patch.addr, (unsigned long long)patch.val);
+ if(GetYN(true))
  {
-  CHEAT_printf("Big endian? [%c]: ", bigendian ? 'Y' : 'N');
-  bigendian = GetYN(bigendian);
- }
- else
-  bigendian = 0;
-
- CHEAT_printf("Value [%llu]: ", V);
- V=GetUI(V);
-
- CHEAT_printf("Add cheat \"%s\" for address $%08x with value %llu?",name,(unsigned int)A,(unsigned long long)V);
- if(GetYN(0))
- {
-  if(MDFNI_AddCheat(name,A,V,0, 'R', bytelen, bigendian))
-   CHEAT_puts("Cheat added.");
-  else
-   CHEAT_puts("Error adding cheat.");
+  try
+  {
+   MDFNI_AddCheat(patch);
+  }
+  catch(std::exception &e)
+  {
+   CHEAT_printf("Error adding cheat: %s", e.what());
+   return;
+  }
+  CHEAT_puts("Cheat added.");
  }
 }
 
-static void AddCheat(void)
+static void AddCheat(void* data)
 {
- AddCheatParam(0, 0, 1, 0);
+ AddCheatParam(0, 0, 1, false);
 }
 
 static int lid;
-static int clistcallb(char *name, uint32 a, uint64 v, uint64 compare, int s, char type, unsigned int length, bool bigendian, void *data)
+static int clistcallb(const MemoryPatch& patch, void *data)
 {
  char tmp[512];
  int ret;
 
- if(type == 'C')
-  trio_snprintf(tmp, 512, "%s   $%08x:%03lld:%03lld - %s",s?"*":" ",a,v,compare,name);
+ if(!lid)
+ {
+  CHEAT_printf("  /---------------------------------------\\");
+  CHEAT_printf("  |  Type  | Affected Addr Range | Name    \\");
+  CHEAT_printf("  |-----------------------------------------\\");
+ }
+
+ if(patch.type == 'C' || patch.type == 'S')
+ {
+  trio_snprintf(tmp, 512, "%c %c    | $%08x           | %s", patch.status ? '*' : ' ', patch.type, patch.addr, patch.name.c_str());
+  //trio_snprintf(tmp, 512, "%s %c $%08x:%lld:%lld - %s", patch.status ? "*" : " ", patch.type, patch.addr, patch.val, patch.compare, patch.name.c_str());
+ }
  else
-  trio_snprintf(tmp, 512, "%s   $%08x:%03lld     - %s",s?"*":" ",a,v,name);
+ {
+  uint32 sa = patch.addr;
+  uint32 ea = patch.addr + ((patch.mltpl_count - 1) * patch.mltpl_addr_inc) + (patch.length - 1);
 
- if(type != 'R')
-  tmp[2]='S';
+  if(patch.mltpl_count == 0 || patch.length == 0)
+   trio_snprintf(tmp, 512, "%c %c%s |                     | %s", patch.status ? '*' : ' ', patch.type, patch.conditions.size() ? "+CC" : "   ", patch.name.c_str());
+  else
+  {
+   if(sa == ea)
+    trio_snprintf(tmp, 512, "%c %c%s | $%08x           | %s", patch.status ? '*' : ' ', patch.type, patch.conditions.size() ? "+CC" : "   ", sa, patch.name.c_str());
+   else
+    trio_snprintf(tmp, 512, "%c %c%s | $%08x-$%08x | %s", patch.status ? '*' : ' ', patch.type, patch.conditions.size() ? "+CC" : "   ", sa, ea, patch.name.c_str());
+  }
+ }
 
- ret = AddToList(tmp,lid);
+ ret = AddToList(tmp, lid);
  lid++;
  return(ret);
 }
 
-static void ListCheats(void)
+static void ListCheats(void* data)
 {
  int which;
  lid=0;
@@ -467,18 +608,27 @@ static void ListCheats(void)
   {
    case 't':ToggleCheat(which);
 	    break;
-   case 'd':if(!MDFNI_DelCheat(which))
- 	     CHEAT_puts("Error deleting cheat!");
-	    else 
-	     CHEAT_puts("Cheat has been deleted.");
+
+   case 'd':
+	    try
+	    {
+             MDFNI_DelCheat(which);
+	    }
+	    catch(std::exception &e)
+	    {
+	     CHEAT_printf("Error deleting cheat: %s", e.what());
+	     break;
+	    }
+	    CHEAT_puts("Cheat has been deleted.");
 	    break;
+
    case 'm':ModifyCheat(which);
 	    break;
   }
  }
 }
 
-static void ResetSearch(void)
+static void ResetSearch(void* data)
 {
  MDFNI_CheatSearchBegin();
  CHEAT_puts("Done.");
@@ -512,7 +662,7 @@ static int srescallb(uint32 a, uint64 last, uint64 current, void *data)
  return(AddToList(tmp,a));
 }
 
-static void ShowRes(void)
+static void ShowRes(void* data)
 {
  int n=MDFNI_CheatSearchGetCount();
  CHEAT_printf(" %d results:",n);
@@ -559,7 +709,7 @@ static int ShowShortList(const char *moe[], unsigned int n, int def)
  }
 }
 
-static void DoSearch(void)
+static void DoSearch(void* data)
 {
  static int v1=0,v2=0;
  static int method=0;
@@ -597,21 +747,18 @@ static void DoSearch(void)
  CHEAT_puts("Search completed.");
 }
 
-static void DoMenu(MENU *men, bool topmost = 0)
+static void DoMenu(const std::vector<MENU>& men, bool topmost = 0)
 {
  bool MenuLoop = TRUE;
 
  while(MenuLoop)
  {
-  int x = 0;
+  int x;
 
   CHEAT_puts("");
 
-  while(men[x].text)
-  {
-   CHEAT_printf("%d) %s",x+1,men[x].text);
-   x++;
-  }
+  for(x = 0; x < (int)men.size(); x++)
+   CHEAT_printf("%d) %s", x + 1, men[x].text.c_str());
 
   CHEAT_puts("D) Display Menu");
 
@@ -645,9 +792,9 @@ static void DoMenu(MENU *men, bool topmost = 0)
     assert(!(men[c_numeral - 1].func_action && men[c_numeral - 1].menu_action));
 
     if(men[c_numeral - 1].func_action)
-     men[c_numeral - 1].func_action();
+     men[c_numeral - 1].func_action(men[c_numeral - 1].data);
     else if(men[c_numeral - 1].menu_action)
-     DoMenu(men[c_numeral - 1].menu_action);	/* Mmm...recursivey goodness. */
+     DoMenu(*men[c_numeral - 1].menu_action);	/* Mmm...recursivey goodness. */
 
     CommandLoop = FALSE;
    }
@@ -661,54 +808,29 @@ static void DoMenu(MENU *men, bool topmost = 0)
 
 int CheatLoop(void *arg)
 {
- MENU NewCheatsMenuNES[] =
+ std::vector<MENU> NewCheatsMenu;
+ std::vector<MENU> MainMenu;
+
+ NewCheatsMenu.push_back( MENU(_("Add Cheat"), AddCheat, NULL) );
+ NewCheatsMenu.push_back( MENU(_("Reset Search"), ResetSearch, NULL) );
+ NewCheatsMenu.push_back( MENU(_("Do Search"), DoSearch, NULL) );
+ NewCheatsMenu.push_back( MENU(_("Set Original to Current"), SetOC, NULL) );
+ NewCheatsMenu.push_back( MENU(_("Unhide Excluded"), UnhideEx, NULL) );
+ NewCheatsMenu.push_back( MENU(_("Show Results"), ShowRes, NULL) );
+
+ MainMenu.push_back( MENU(_("List Cheats"), ListCheats, NULL) );
+ MainMenu.push_back( MENU(_("Cheat Search..."), NULL, &NewCheatsMenu) );
+
+ if(CurGame->CheatFormatInfo != NULL)
  {
-  { "Add Cheat", AddCheat, NULL },
-  { "Reset Search", ResetSearch, NULL },
-  { "Do Search", DoSearch, NULL },
-  { "Set Original to Current", SetOC, NULL },
-  { "Unhide Excluded", UnhideEx, NULL },
-  { "Show Results", ShowRes, NULL },
-  { "Add Game Genie Cheat", AddCheatGG, NULL },
-  { "Add PAR Cheat", AddCheatPAR, NULL },
-  { NULL }
- };
+  for(unsigned i = 0; i < CurGame->CheatFormatInfo->NumFormats; i++)
+  {
+   char buf[256];
+   trio_snprintf(buf, 256, _("Add %s Code"), CurGame->CheatFormatInfo->Formats[i].FullName);
 
- MENU NewCheatsMenuGB[] =
- {
-  { "Add Cheat", AddCheat, NULL },
-  { "Reset Search", ResetSearch, NULL },
-  { "Do Search", DoSearch, NULL },
-  { "Set Original to Current", SetOC, NULL },
-  { "Unhide Excluded", UnhideEx, NULL },
-  { "Show Results", ShowRes, NULL },
-  { "Add Game Genie Cheat", AddCheatGG, NULL },
-  { NULL }
- };
-
- MENU NewCheatsMenu[] =
- {
-  { "Add Cheat", AddCheat, NULL },
-  { "Reset Search", ResetSearch, NULL },
-  { "Do Search", DoSearch, NULL },
-  { "Set Original to Current", SetOC, NULL },
-  { "Unhide Excluded", UnhideEx, NULL },
-  { "Show Results", ShowRes, NULL },
-  { NULL }
- };
-
- MENU *thenewcm = NewCheatsMenu;
-
- if(!strcmp(CurGame->shortname, "nes"))
-  thenewcm = NewCheatsMenuNES;
- else if(!strcmp(CurGame->shortname, "gb"))
-  thenewcm = NewCheatsMenuGB;
-
- MENU MainMenu[] = {
-  { "List Cheats", ListCheats, NULL },
-  { "New Cheats...", NULL, thenewcm },
-  { NULL }
- };
+   MainMenu.push_back( MENU(buf, AddCodeCheat, NULL, (void*)&CurGame->CheatFormatInfo->Formats[i]) );
+  }
+ }
 
  DoMenu(MainMenu, 1);
 
@@ -736,7 +858,17 @@ bool IsConsoleCheatConfigActive(void)
 
 void DrawCheatConsole(MDFN_Surface *surface, const MDFN_Rect *src_rect)
 {
- if(!isactive) return;
+ if(!isactive)
+  return;
+
+ if(src_rect->w < 342 || src_rect->h < 342)
+  CheatConsole.SetFont(MDFN_FONT_5x7);
+ else if(src_rect->w < 512 || src_rect->h < 480)
+  CheatConsole.SetFont(MDFN_FONT_6x13_12x13);
+ else
+  CheatConsole.SetFont(MDFN_FONT_9x18_18x18);
+
+
  CheatConsole.Draw(surface, src_rect);
 }
 

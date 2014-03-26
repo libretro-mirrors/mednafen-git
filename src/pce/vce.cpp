@@ -31,7 +31,7 @@
 #include "huc6270/vdc.h"
 #include "debug.h"
 #include "subhw.h"
-#include "../cdrom/pcecd.h"
+#include "pcecd.h"
 #include <trio/trio.h>
 
 namespace MDFN_IEN_PCE
@@ -292,14 +292,17 @@ bool VCE::RunPartial(void)
 
  }
 
- if(PCE_IsCD)
-  SetCDEvent(PCECD_Run(HuCPU->Timestamp()));
-
- HuCPU->SetEvent(Sync(HuCPU->Timestamp()));
-
- last_ts = 0;
+ Update(HuCPU->Timestamp());
 
  return(FrameDone);
+}
+
+void VCE::Update(const int32 timestamp)
+{
+ if(PCE_IsCD)
+  SetCDEvent(PCECD_Run(timestamp));
+
+ HuCPU->SetEvent(Sync(timestamp));
 }
 
 // If we ignore the return value of Sync(), we must do "HuCPU->SetEvent(CalcNextEvent());"
@@ -404,7 +407,7 @@ void VCE::SetPixelFormat(const MDFN_PixelFormat &format)
   {
    double y;
 
-   y = round(0.300 * r + 0.589 * g + 0.111 * b);
+   y = floor(0.5 + 0.300 * r + 0.589 * g + 0.111 * b);
 
    if(y < 0)
     y = 0;
@@ -489,7 +492,9 @@ uint8 VCE::Read(uint32 A)
 	  ret &= 1;
 	  ret |= 0xFE;
 	  if(!PCE_InDebug)
+	  {
 	   ctaddress++;
+	  }
 	  break;
  }
 
@@ -522,10 +527,12 @@ void VCE::Write(uint32 A, uint8 V)
 
   case 2: ctaddress &= 0x100; ctaddress |= V; break;
   case 3: ctaddress &= 0x0FF; ctaddress |= (V & 1) << 8; break;
+
   case 4: color_table[ctaddress & 0x1FF] &= 0x100;
 	  color_table[ctaddress & 0x1FF] |= V;
 	  FixPCache(ctaddress & 0x1FF);
           break;
+
   case 5: color_table[ctaddress & 0x1FF] &= 0xFF;
 	  color_table[ctaddress & 0x1FF] |= (V & 1) << 8;
 	  FixPCache(ctaddress & 0x1FF);
@@ -666,8 +673,6 @@ int VCE::StateAction(StateMem *sm, int load, int data_only)
   SFVAR(hblank),
   SFVAR(vblank),
   SFVAR(NeedSLReset),
-  
-  SFVAR(last_ts),  
   SFEND
  };
 
@@ -715,7 +720,7 @@ uint32 VCE::GetRegister(const unsigned int id, char *special, const uint32 speci
 		if(special)
 		{
 		 trio_snprintf(special, special_len, "Clock: %.2fMHz, %d lines/frame, Strip colorburst: %s",
-				round(PCE_MASTER_CLOCK / 1e4 / vce_ratios[(value & 0x3) &~ ((value & 0x2) >> 1)]) / 100,
+				floor(0.5 + PCE_MASTER_CLOCK / 1e4 / vce_ratios[(value & 0x3) &~ ((value & 0x2) >> 1)]) / 100,
 				(value & 0x04) ? 263 : 262,
 				(value & 0x80) ? "On" : "Off");
 		}

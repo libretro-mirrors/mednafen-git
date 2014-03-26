@@ -1,17 +1,13 @@
-struct SuperFXBus : Bus {
+struct SuperFXBus
+{
   void init();
-};
-
-struct SuperFXGSUROM : Memory {
-  unsigned size() const;
-  uint8 read(unsigned);
-  void write(unsigned, uint8);
-};
-
-struct SuperFXGSURAM : Memory {
-  unsigned size() const;
-  uint8 read(unsigned);
-  void write(unsigned, uint8);
+  void power();
+  void reset();
+  uint8 read(uint32 addr);
+  void write(uint32 addr, uint8 val);
+  uint8* rom_ptr;
+  uint8* ram_ptr;
+  uint32 ram_mask;
 };
 
 struct SuperFXCPUROM : Memory {
@@ -27,8 +23,6 @@ struct SuperFXCPURAM : Memory {
 };
 
 namespace memory {
-  extern SuperFXGSUROM gsurom;
-  extern SuperFXGSURAM gsuram;
   extern SuperFXCPUROM fxrom;
   extern SuperFXCPURAM fxram;
 }

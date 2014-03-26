@@ -92,14 +92,15 @@ am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
 libpce_a_AR = $(AR) $(ARFLAGS)
 libpce_a_LIBADD =
-am__libpce_a_SOURCES_DIST = vce.cpp pce.cpp input.cpp huc.cpp hes.cpp \
-	tsushin.cpp subhw.cpp mcgenjin.cpp input/gamepad.cpp \
-	input/tsushinkb.cpp input/mouse.cpp debug.cpp
+am__libpce_a_SOURCES_DIST = pce.cpp vce.cpp input.cpp huc.cpp \
+	pcecd.cpp hes.cpp tsushin.cpp subhw.cpp mcgenjin.cpp \
+	input/gamepad.cpp input/tsushinkb.cpp input/mouse.cpp \
+	debug.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
 @WANT_DEBUGGER_TRUE@am__objects_1 = debug.$(OBJEXT)
-am__objects_2 = vce.$(OBJEXT) pce.$(OBJEXT) input.$(OBJEXT) \
-	huc.$(OBJEXT) hes.$(OBJEXT) tsushin.$(OBJEXT) subhw.$(OBJEXT) \
-	mcgenjin.$(OBJEXT) input/gamepad.$(OBJEXT) \
+am__objects_2 = pce.$(OBJEXT) vce.$(OBJEXT) input.$(OBJEXT) \
+	huc.$(OBJEXT) pcecd.$(OBJEXT) hes.$(OBJEXT) tsushin.$(OBJEXT) \
+	subhw.$(OBJEXT) mcgenjin.$(OBJEXT) input/gamepad.$(OBJEXT) \
 	input/tsushinkb.$(OBJEXT) input/mouse.$(OBJEXT) \
 	$(am__objects_1)
 am_libpce_a_OBJECTS = $(am__objects_2)
@@ -284,7 +285,6 @@ WOE32DLL = @WOE32DLL@
 XGETTEXT = @XGETTEXT@
 XGETTEXT_015 = @XGETTEXT_015@
 XGETTEXT_EXTRA_OPTIONS = @XGETTEXT_EXTRA_OPTIONS@
-XMKMF = @XMKMF@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -345,7 +345,7 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_srcdir) -I$(top_srcdir)/src/hw_cpu -I$(top_srcdir)/src/hw_misc -I$(top_srcdir)/src/hw_sound -I$(top_srcdir)/src/hw_video
 noinst_LIBRARIES = libpce.a
-mednafen_SOURCES = vce.cpp pce.cpp input.cpp huc.cpp hes.cpp \
+mednafen_SOURCES = pce.cpp vce.cpp input.cpp huc.cpp pcecd.cpp hes.cpp \
 	tsushin.cpp subhw.cpp mcgenjin.cpp input/gamepad.cpp \
 	input/tsushinkb.cpp input/mouse.cpp $(am__append_1)
 libpce_a_SOURCES = $(mednafen_SOURCES)
@@ -418,6 +418,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/input.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mcgenjin.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pce.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pcecd.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/subhw.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsushin.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vce.Po@am__quote@

@@ -35,7 +35,12 @@ void MCGenjin_CS_Device::Power(void)
 
 }
 
-void MCGenjin_CS_Device::EndFrame(int32 timestamp)
+void MCGenjin_CS_Device::Update(int32 timestamp)
+{
+
+}
+
+void MCGenjin_CS_Device::ResetTS(int32 ts_base)
 {
 
 }
@@ -158,25 +163,27 @@ class MCGenjin_CS_Device_RAM : public MCGenjin_CS_Device
  uint8 bank_select;
 };
 
-#include "mcgenjin_ym2413.inc"
-
 void MCGenjin::Power(void)
 {
  bank_select = 0;
  dlr = 0;
 
- pcm_out_shift = 0;
  stmode_control = 0x00;
- // FIXME: blip buffer update here.
 
  for(unsigned i = 0; i < 2; i++)
   cs[i]->Power();
 }
 
-void MCGenjin::EndFrame(int32 timestamp)
+void MCGenjin::Update(int32 timestamp)
 {
  for(unsigned i = 0; i < 2; i++)
-  cs[i]->EndFrame(timestamp);
+  cs[i]->Update(timestamp);
+}
+
+void MCGenjin::ResetTS(int32 ts_base)
+{
+ for(unsigned i = 0; i < 2; i++)
+  cs[i]->ResetTS(ts_base);
 }
 
 uint32 MCGenjin::GetNVSize(const unsigned di)
@@ -195,7 +202,7 @@ void MCGenjin::WriteNV(const unsigned di, const uint8 *buffer, uint32 offset, ui
  cs[di]->WriteNV(buffer, offset, count);
 }
 
-MCGenjin::MCGenjin(Blip_Buffer *bb, const uint8 *rr, uint32 rr_size) : bsbuf(bb)
+MCGenjin::MCGenjin(const uint8 *rr, uint32 rr_size)
 {
  uint8 revision, num256_pages, region, cs_di[2];
 
@@ -242,10 +249,6 @@ MCGenjin::MCGenjin(Blip_Buffer *bb, const uint8 *rr, uint32 rr_size) : bsbuf(bb)
 	break;
   }
  }
-
- //
- pcm_synth.volume(1.0 / (6 * 256));
- pcm_lastout = 0;
 }
 
 MCGenjin::~MCGenjin()
@@ -260,7 +263,6 @@ int MCGenjin::StateAction(StateMem *sm, int load, int data_only)
  {
   SFVAR(bank_select),
   SFVAR(dlr),
-  SFVAR(pcm_out_shift),
   SFEND
  };
  int ret = 1;

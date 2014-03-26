@@ -3,7 +3,7 @@
 class MDFNConsole
 {
 	public:
-	MDFNConsole(bool shellstyle = 0, bool SmallFont = 0);
+	MDFNConsole(bool shellstyle = 0, unsigned setfont = MDFN_FONT_9x18_18x18);
 	~MDFNConsole();
 
 	void ShowPrompt(bool shown);
@@ -13,7 +13,7 @@ class MDFNConsole
 	void AppendLastLine(UTF8 *text);
         virtual bool TextHook(UTF8 *text);	// Handler must free(text);
 
-	void SetSmallFont(bool newsmallfont) { SmallFont = newsmallfont; }
+	void SetFont(unsigned newfont) { Font = newfont; }
 	void SetShellStyle(bool newsetting) { shellstyle = newsetting; }
 	void Scroll(int32 amount, bool SetPos = FALSE);
 	private:
@@ -23,5 +23,6 @@ class MDFNConsole
 	bool shellstyle;
 	bool prompt_visible;
 	uint32 Scrolled;
-	bool SmallFont;
+	unsigned Font;
+	uint8 opacity;
 };

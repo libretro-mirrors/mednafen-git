@@ -3,7 +3,23 @@
 
 #include <string>
 
-extern uint32 MDFN_RoundUpPow2(uint32);
+#if 0
+class FilePathMaker
+{
+
+
+ void SetBaseDirectory(const char* path);
+ std::string GetBaseDirectory(void);
+
+ void BuildPath(unsigned type, int id1, const char* cd1);
+
+ static void GetFileBase(
+
+};
+#endif
+
+void MDFN_SetBaseDirectory(const char *dir);
+std::string MDFN_GetBaseDirectory(void);
 
 void GetFileBase(const char *f);
 
@@ -11,15 +27,6 @@ void GetFileBase(const char *f);
 bool MDFN_IsFIROPSafe(const std::string &path);
 
 std::string MDFN_MakeFName(int type, int id1, const char *cd1);
-char *MDFN_RemoveControlChars(char *str);
-
-void MDFN_ltrim(char *string);
-void MDFN_rtrim(char *string);
-void MDFN_trim(char *string);
-
-void MDFN_ltrim(std::string &string);
-void MDFN_rtrim(std::string &string);
-void MDFN_trim(std::string &string);
 
 typedef enum
 {

@@ -15,7 +15,8 @@ typedef enum
 
 int HuCLoad(const uint8 *data, uint32 len, uint32 crc32, bool DisableBRAM = false, SysCardType syscard = SYSCARD_NONE);
 
-void HuC_EndFrame(int32 timestamp);
+void HuC_Update(int32 timestamp);
+void HuC_ResetTS(int32 ts_base);
 
 void HuCClose(void);
 int HuC_StateAction(StateMem *sm, int load, int data_only);

@@ -66,7 +66,7 @@ int MDFNDnetplay = 0;  // Only write/read this global variable in the game threa
 
 NetplayConsole::NetplayConsole(void)
 {
- //SetSmallFont(1);
+
 }
 
 // Called from main thread
@@ -293,7 +293,7 @@ int NetplayEventHook(const SDL_Event *event)
 	break;
 
    case CEVT_NP_TOGGLE_TT:
-	NetConsole.SetSmallFont(MDFN_GetSettingB("netplay.smallfont"));	// FIXME: Setting manager mutex needed example!
+	NetConsole.SetFont(MDFN_GetSettingB("netplay.smallfont") ? MDFN_FONT_5x7 : MDFN_FONT_9x18_18x18);	// FIXME: Setting manager mutex needed example!
 	if(viewable && !inputable)
 	{
 	 inputable = TRUE;

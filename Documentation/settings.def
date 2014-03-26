@@ -2377,6 +2377,15 @@ MDFNST_BOOL
 
 
 0
+lynx.forcemono
+MDFNSF_CAT_SOUND MDFNSF_COMMON_TEMPLATE 
+Force monophonic sound output.
+
+MDFNST_BOOL
+0
+
+
+0
 lynx.input.builtin.gamepad.a
 MDFNSF_SUPPRESS_DOC 
 lynx, Built-In, Gamepad: A (outer)
@@ -6262,8 +6271,8 @@ NTSC custom decoder matrix element 0(red, value * V).
 
 MDFNST_FLOAT
 1.539
--2
-2
+-2.000
+2.000
 0
 nes.ntsc.matrix.1
 
@@ -6271,8 +6280,8 @@ NTSC custom decoder matrix element 1(red, value * U).
 
 MDFNST_FLOAT
 -0.622
--2
-2
+-2.000
+2.000
 0
 nes.ntsc.matrix.2
 
@@ -6280,8 +6289,8 @@ NTSC custom decoder matrix element 2(green, value * V).
 
 MDFNST_FLOAT
 -0.571
--2
-2
+-2.000
+2.000
 0
 nes.ntsc.matrix.3
 
@@ -6289,8 +6298,8 @@ NTSC custom decoder matrix element 3(green, value * U).
 
 MDFNST_FLOAT
 -0.185
--2
-2
+-2.000
+2.000
 0
 nes.ntsc.matrix.4
 
@@ -6298,8 +6307,8 @@ NTSC custom decoder matrix element 4(blue, value * V).
 
 MDFNST_FLOAT
 0.000
--2
-2
+-2.000
+2.000
 0
 nes.ntsc.matrix.5
 
@@ -6307,8 +6316,8 @@ NTSC custom decoder matrix element 5(blue, value * U.
 
 MDFNST_FLOAT
 2.000
--2
-2
+-2.000
+2.000
 0
 nes.ntsc.mergefields
 
@@ -6432,7 +6441,7 @@ MDFNST_UINT
 0
 nes.slend
 
-Last displayed scanlines in NTSC mode.
+Last displayed scanline in NTSC mode.
 
 MDFNST_UINT
 231
@@ -6441,7 +6450,7 @@ MDFNST_UINT
 0
 nes.slendp
 
-Last displayedscanlines in PAL mode.
+Last displayed scanline in PAL mode.
 
 MDFNST_UINT
 239
@@ -7132,10 +7141,10 @@ MDFNST_UINT
 0
 15000
 0
-pce.adpcmlp
+pce.adpcmextraprec
 
-Enable dynamic ADPCM lowpass filter.
-This makes ADPCM voices sound less \"harsh\", however, the downside is that it will cause many ADPCM sound effects to sound a bit muffled.
+Output the full 12-bit ADPCM predictor.
+Enabling this option causes the MSM5205 ADPCM predictor to be outputted with full precision of 12-bits, rather than only outputting 10-bits of precision(as an actual MSM5205 does).  Enable this option to reduce whining noise during ADPCM playback.
 MDFNST_BOOL
 0
 
@@ -7144,7 +7153,7 @@ MDFNST_BOOL
 pce.adpcmvolume
 
 ADPCM volume.
-
+Setting this volume control too high may cause sample clipping.
 MDFNST_UINT
 100
 0
@@ -7171,7 +7180,7 @@ syscard3.pce
 pce.cddavolume
 
 CD-DA volume.
-
+Setting this volume control too high may cause sample clipping.
 MDFNST_UINT
 100
 0
@@ -7180,7 +7189,7 @@ MDFNST_UINT
 pce.cdpsgvolume
 
 PSG volume when playing a CD game.
-
+Setting this volume control too high may cause sample clipping.
 MDFNST_UINT
 100
 0
@@ -9234,22 +9243,37 @@ pce.psgrevision
 Select PSG revision.
 WARNING: HES playback will always use the \"huc6280a\" revision if this setting is set to \"match\", since HES playback is always done with SuperGrafx emulation enabled.
 MDFNST_ENUM
-huc6280a
+match
 
 
-4
+3
 huc6280
 HuC6280
 HuC6280 as found in the original PC Engine.
 huc6280a
 HuC6280A
 HuC6280A as found in the SuperGrafx and CoreGrafx I.  Provides proper channel amplitude centering, but may cause clicking in a few games designed with the original HuC6280\'s sound characteristics in mind.
-enhanced
-Enhanced
-Emulator-only pseudo-revision, designed to reduce clicking and audio artifacts in games designed for either real revision.
 match
 Match emulation mode.
 Selects \"huc6280\" for non-SuperGrafx mode, and \"huc6280a\" for SuperGrafx(full) mode.
+pce.resamp_quality
+
+Sound quality.
+Higher values correspond to better SNR and better preservation of higher frequencies(\"brightness\"), at the cost of increased computational complexity and a negligible increase in latency.\n\nHigher values will also slightly increase the probability of sample clipping(relevant if Mednafen\'s volume control settings are set too high), due to increased (time-domain) ringing.
+MDFNST_INT
+3
+0
+5
+0
+pce.resamp_rate_error
+
+Sound output rate tolerance.
+Lower values correspond to better matching of the output rate of the resampler to the actual desired output rate, at the expense of increased RAM usage and poorer CPU cache utilization.
+MDFNST_FLOAT
+0.0000009
+0.0000001
+0.0000350
+0
 pce.scanlines
 MDFNSF_COMMON_TEMPLATE 
 Enable scanlines with specified opacity.
@@ -9419,7 +9443,7 @@ y
 Linear (Y)
 Interpolation only on the Y axis.
 pce.vramsize
-
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE MDFNSF_SUPPRESS_DOC 
 Size of emulated VRAM per VDC in 16-bit words.  DO NOT CHANGE THIS UNLESS YOU KNOW WTF YOU ARE DOING.
 
 MDFNST_UINT
@@ -12253,11 +12277,29 @@ Sharper version of \"ipynotx\".
 pcfx.rainbow.chromaip
 
 Enable bilinear interpolation on the chroma channel of RAINBOW YUV output.
-
+This is an enhancement-related setting.  Enabling it may cause graphical glitches with some games.
 MDFNST_BOOL
-1
+0
 
 
+0
+pcfx.resamp_quality
+
+Sound quality.
+Higher values correspond to better SNR and better preservation of higher frequencies(\"brightness\"), at the cost of increased computational complexity and a negligible increase in latency.
+MDFNST_INT
+3
+0
+5
+0
+pcfx.resamp_rate_error
+
+Output rate tolerance.
+Lower values correspond to better matching of the output rate of the resampler to the actual desired output rate, at the expense of increased RAM usage and poorer CPU cache utilization.
+MDFNST_FLOAT
+0.0000009
+0.0000001
+0.0000350
 0
 pcfx.scanlines
 MDFNSF_COMMON_TEMPLATE 
@@ -22699,6 +22741,42 @@ MDFNST_UINT
 0
 100
 0
+psx.slend
+
+Last displayed scanline in NTSC mode.
+
+MDFNST_INT
+239
+0
+239
+0
+psx.slendp
+
+Last displayed scanline in PAL mode.
+
+MDFNST_INT
+287
+0
+287
+0
+psx.slstart
+
+First displayed scanline in NTSC mode.
+
+MDFNST_INT
+0
+0
+239
+0
+psx.slstartp
+
+First displayed scanline in PAL mode.
+
+MDFNST_INT
+0
+0
+287
+0
 psx.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
@@ -25007,12 +25085,12 @@ Specifies the sound playback rate, in sound frames per second(\"Hz\").
 MDFNST_UINT
 48000
 22050
-1048576
+192000
 0
 sound.volume
 
 Sound volume level, in percent.
-
+Setting this volume control higher than the default of \"100\" may severely distort the sound.
 MDFNST_UINT
 100
 0

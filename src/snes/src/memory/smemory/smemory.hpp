@@ -6,6 +6,21 @@ public:
   void power();
   void reset();
 
+  inline uint8 read(unsigned addr)
+  {
+   uint8 r;
+
+   r = Bus::read(addr);
+
+   #if defined(CHEAT_SYSTEM)
+   if(cheat.active() && cheat.exists(addr)) {
+     cheat.read(addr, r);
+   }
+   #endif
+
+   return r;
+  }
+
   void serialize(serializer&);
   sBus();
   ~sBus();

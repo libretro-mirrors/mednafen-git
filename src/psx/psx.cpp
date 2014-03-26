@@ -280,7 +280,8 @@ void PSX_SetEventNT(const int type, const pscpu_timestamp_t next_timestamp)
  CPU->SetEventNT(events[PSX_EVENT__SYNFIRST].next->event_time & Running);
 }
 
-static void ForceEventUpdates(const pscpu_timestamp_t timestamp)
+// Called from debug.cpp too.
+void ForceEventUpdates(const pscpu_timestamp_t timestamp)
 {
  PSX_SetEventNT(PSX_EVENT_GPU, GPU->Update(timestamp));
  PSX_SetEventNT(PSX_EVENT_CDC, CDC->Update(timestamp));
@@ -1396,6 +1397,7 @@ static bool InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
  unsigned region;
  bool emulate_memcard[8];
  bool emulate_multitap[2];
+ int sls, sle;
 
  for(unsigned i = 0; i < 8; i++)
  {
@@ -1418,9 +1420,19 @@ static bool InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
  if(!MDFN_GetSettingB("psx.region_autodetect"))
   region = MDFN_GetSettingI("psx.region_default");
 
+ sls = MDFN_GetSettingI((region == REGION_EU) ? "psx.slstartp" : "psx.slstart");
+ sle = MDFN_GetSettingI((region == REGION_EU) ? "psx.slendp" : "psx.slend");
+
+ if(sls > sle)
+ {
+  int tmp = sls;
+  sls = sle;
+  sle = tmp;
+ }
+
  CPU = new PS_CPU();
  SPU = new PS_SPU();
- GPU = new PS_GPU(region == REGION_EU);
+ GPU = new PS_GPU(region == REGION_EU, sls, sle);
  CDC = new PS_CDC();
  FIO = new FrontIO(emulate_memcard, emulate_multitap);
  FIO->SetAMCT(MDFN_GetSettingB("psx.input.analog_mode_ct"));
@@ -1436,24 +1448,28 @@ static bool InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
  if(region == REGION_EU)
  {
   EmulatedPSX.lcm_width = 2800;
-  EmulatedPSX.lcm_height = 576;
+  EmulatedPSX.lcm_height = (sle + 1 - sls) * 2; //576;
 
   EmulatedPSX.nominal_width = 377;	// Dunno. :(
-  EmulatedPSX.nominal_height = 288;
+  EmulatedPSX.nominal_height = sle + 1 - sls; //288;
 
   EmulatedPSX.fb_width = 768;
   EmulatedPSX.fb_height = 576;
+
+  MDFNGameInfo->VideoSystem = VIDSYS_PAL;
  }
  else
  {
   EmulatedPSX.lcm_width = 2800;
-  EmulatedPSX.lcm_height = 480;
+  EmulatedPSX.lcm_height = (sle + 1 - sls) * 2; //480;
 
   EmulatedPSX.nominal_width = 320;
-  EmulatedPSX.nominal_height = 240;
+  EmulatedPSX.nominal_height = sle + 1 - sls; //240;
 
   EmulatedPSX.fb_width = 768;
   EmulatedPSX.fb_height = 480;
+
+  MDFNGameInfo->VideoSystem = VIDSYS_NTSC;
  }
 
  if(cdifs)
@@ -1566,7 +1582,10 @@ static void LoadEXE(const uint8 *data, const uint32 size, bool ignore_pcsp = fal
  TextStart = MDFN_de32lsb(&data[0x18]);
  TextSize = MDFN_de32lsb(&data[0x1C]);
 
- printf("PC=0x%08x\nTextStart=0x%08x\nTextSize=0x%08x\nSP=0x%08x\n", PC, TextStart, TextSize, SP);
+ if(ignore_pcsp)
+  MDFN_printf("TextStart=0x%08x\nTextSize=0x%08x\n", TextStart, TextSize);
+ else
+  MDFN_printf("PC=0x%08x\nSP=0x%08x\nTextStart=0x%08x\nTextSize=0x%08x\n", PC, SP, TextStart, TextSize);
 
  TextStart &= 0x1FFFFF;
 
@@ -1693,7 +1712,6 @@ static void LoadEXE(const uint8 *data, const uint32 size, bool ignore_pcsp = fal
  }
  else
  {
-  printf("MEOWPC: %08x\n", PC);
   MDFN_en32lsb(po, (0xF << 26) | (0 << 21) | (1 << 16)  | (SP >> 16));	// LUI
   po += 4;
   MDFN_en32lsb(po, (0xD << 26) | (1 << 21) | (29 << 16) | (SP & 0xFFFF)); 	// ORI
@@ -1755,9 +1773,9 @@ static int Load(const char *name, MDFNFILE *fp)
 
  static std::vector<CDIF *> CDInterfaces;
 
+ //CDInterfaces.push_back(CDIF_Open("/home/sarah-projects/psxdev/tests/cd/adpcm.cue", false, false));
+ //CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Tony Hawk's Pro Skater 2 (USA)/Tony Hawk's Pro Skater 2 (USA).cue", false, false));
  CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Jumping Flash! (USA)/Jumping Flash! (USA).cue", false, false));
- //CDInterfaces.push_back(new CDIF("/extra/games/PSX/Tony Hawk's Pro Skater 2 (USA)/Tony Hawk's Pro Skater 2 (USA).cue"));
-
  if(!InitCommon(&CDInterfaces, !IsPSF, true))
   return(0);
 #else
@@ -1795,10 +1813,6 @@ static int Load(const char *name, MDFNFILE *fp)
 static int LoadCD(std::vector<CDIF *> *CDInterfaces)
 {
  int ret = InitCommon(CDInterfaces);
-
- // TODO: fastboot setting
- //if(MDFN_GetSettingB("psx.fastboot"))
- // BIOSROM->WriteU32(0x6990, 0);
 
  MDFNGameInfo->GameType = GMT_CDROM;
 
@@ -2005,6 +2019,198 @@ static void DoSimpleCommand(int cmd)
  }
 }
 
+static void GSCondCode(MemoryPatch* patch, const char* cc, const unsigned len, const uint32 addr, const uint16 val)
+{
+ char tmp[256];
+
+ if(patch->conditions.size() > 0)
+  patch->conditions.append(", ");
+
+ if(len == 2)
+  trio_snprintf(tmp, 256, "%u L 0x%08x %s 0x%04x", len, addr, cc, val & 0xFFFFU);
+ else
+  trio_snprintf(tmp, 256, "%u L 0x%08x %s 0x%02x", len, addr, cc, val & 0xFFU);
+
+ patch->conditions.append(tmp);
+}
+
+static bool DecodeGS(const std::string& cheat_string, MemoryPatch* patch)
+{
+ uint64 code = 0;
+ unsigned nybble_count = 0;
+
+ for(unsigned i = 0; i < cheat_string.size(); i++)
+ {
+  if(cheat_string[i] == ' ' || cheat_string[i] == '-' || cheat_string[i] == ':')
+   continue;
+
+  nybble_count++;
+  code <<= 4;
+
+  if(cheat_string[i] >= '0' && cheat_string[i] <= '9')
+   code |= cheat_string[i] - '0';
+  else if(cheat_string[i] >= 'a' && cheat_string[i] <= 'f')
+   code |= cheat_string[i] - 'a' + 0xA;
+  else if(cheat_string[i] >= 'A' && cheat_string[i] <= 'F')
+   code |= cheat_string[i] - 'A' + 0xA;  
+  else
+  {
+   if(cheat_string[i] & 0x80)
+    throw MDFN_Error(0, _("Invalid character in GameShark code."));
+   else
+    throw MDFN_Error(0, _("Invalid character in GameShark code: %c"), cheat_string[i]);
+  }
+ }
+
+ if(nybble_count != 12)
+  throw MDFN_Error(0, _("GameShark code is of an incorrect length."));
+
+ const uint8 code_type = code >> 40;
+ const uint64 cl = code & 0xFFFFFFFFFFULL;
+
+ patch->bigendian = false;
+ patch->compare = 0;
+
+ if(patch->type == 'T')
+ {
+  if(code_type != 0x80)
+   throw MDFN_Error(0, _("Unrecognized GameShark code type for second part to copy bytes code."));
+
+  patch->addr = cl >> 16;
+  return(false);
+ }
+
+ switch(code_type)
+ {
+  default:
+	throw MDFN_Error(0, _("GameShark code type 0x%02X is currently not supported."), code_type);
+
+	return(false);
+
+  //
+  //
+  // TODO:
+  case 0x10:	// 16-bit increment
+	patch->length = 2;
+	patch->type = 'A';
+	patch->addr = cl >> 16;
+	patch->val = cl & 0xFFFF;
+	return(false);
+
+  case 0x11:	// 16-bit decrement
+	patch->length = 2;
+	patch->type = 'A';
+	patch->addr = cl >> 16;
+	patch->val = (0 - cl) & 0xFFFF;
+	return(false);
+
+  case 0x20:	// 8-bit increment
+	patch->length = 1;
+	patch->type = 'A';
+	patch->addr = cl >> 16;
+	patch->val = cl & 0xFF;
+	return(false);
+
+  case 0x21:	// 8-bit decrement
+	patch->length = 1;
+	patch->type = 'A';
+	patch->addr = cl >> 16;
+	patch->val = (0 - cl) & 0xFF;
+	return(false);
+  //
+  //
+  //
+
+  case 0x30:	// 8-bit constant
+	patch->length = 1;
+	patch->type = 'R';
+	patch->addr = cl >> 16;
+	patch->val = cl & 0xFF;
+	return(false);
+
+  case 0x80:	// 16-bit constant
+	patch->length = 2;
+	patch->type = 'R';
+	patch->addr = cl >> 16;
+	patch->val = cl & 0xFFFF;
+	return(false);
+
+  case 0x50:	// Repeat thingy
+	{
+	 const uint8 wcount = (cl >> 24) & 0xFF;
+	 const uint8 addr_inc = (cl >> 16) & 0xFF;
+	 const uint8 val_inc = (cl >> 0) & 0xFF;
+
+	 patch->mltpl_count = wcount;
+	 patch->mltpl_addr_inc = addr_inc;
+	 patch->mltpl_val_inc = val_inc;
+	}
+	return(true);
+
+  case 0xC2:	// Copy
+	{
+	 const uint16 ccount = cl & 0xFFFF;
+
+	 patch->type = 'T';
+	 patch->val = 0;
+	 patch->length = 1;
+
+	 patch->copy_src_addr = cl >> 16;
+	 patch->copy_src_addr_inc = 1;
+
+	 patch->mltpl_count = ccount;
+	 patch->mltpl_addr_inc = 1;
+	 patch->mltpl_val_inc = 0;
+	}
+	return(true);
+
+  case 0xD0:	// 16-bit == condition
+	GSCondCode(patch, "==", 2, cl >> 16, cl);
+	return(true);
+
+  case 0xD1:	// 16-bit != condition
+	GSCondCode(patch, "!=", 2, cl >> 16, cl);
+	return(true);
+
+  case 0xD2:	// 16-bit < condition
+	GSCondCode(patch, "<", 2, cl >> 16, cl);
+	return(true);
+
+  case 0xD3:	// 16-bit > condition
+	GSCondCode(patch, ">", 2, cl >> 16, cl);
+	return(true);
+
+
+
+  case 0xE0:	// 8-bit == condition
+	GSCondCode(patch, "==", 1, cl >> 16, cl);
+	return(true);
+
+  case 0xE1:	// 8-bit != condition
+	GSCondCode(patch, "!=", 1, cl >> 16, cl);
+	return(true);
+
+  case 0xE2:	// 8-bit < condition
+	GSCondCode(patch, "<", 1, cl >> 16, cl);
+	return(true);
+
+  case 0xE3:	// 8-bit > condition
+	GSCondCode(patch, ">", 1, cl >> 16, cl);
+	return(true);
+
+ }
+}
+
+static CheatFormatStruct CheatFormats[] =
+{
+ { "GameShark", gettext_noop("Sharks with lamprey eels for eyes."), DecodeGS },
+};
+
+static CheatFormatInfoStruct CheatFormatInfo =
+{
+ 1,
+ CheatFormats
+};
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
@@ -2061,7 +2267,6 @@ static MDFNSetting PSXSettings[] =
  { "psx.input.port7.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 7."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x0080FF", "0x000000", "0x1000000" },
  { "psx.input.port8.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 8."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x8000FF", "0x000000", "0x1000000" },
 
- //{ "psx.fastboot", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Skip BIOS intro sequence."), gettext_noop("MAY BREAK GAMES."), MDFNST_BOOL, "0" },
  { "psx.region_autodetect", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Attempt to auto-detect region of game."), NULL, MDFNST_BOOL, "1" },
  { "psx.region_default", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Default region to use."), gettext_noop("Used if region autodetection fails or is disabled."), MDFNST_ENUM, "jp", NULL, NULL, NULL, NULL, Region_List },
 
@@ -2071,6 +2276,14 @@ static MDFNSetting PSXSettings[] =
 
  { "psx.spu.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("SPU output resampler quality."),
 	gettext_noop("0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the \"sound.rate\" setting, to \"44100\" will bypass the resampler, which will decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors."), MDFNST_UINT, "5", "0", "10" },
+
+
+ { "psx.slstart", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in NTSC mode."), NULL, MDFNST_INT, "0", "0", "239" },
+ { "psx.slend", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in NTSC mode."), NULL, MDFNST_INT, "239", "0", "239" },
+
+ { "psx.slstartp", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in PAL mode."), NULL, MDFNST_INT, "0", "0", "287" },
+ { "psx.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in PAL mode."), NULL, MDFNST_INT, "287", "0", "287" },
+
  { NULL },
 };
 
@@ -2101,6 +2314,7 @@ MDFNGI EmulatedPSX =
  NULL,
  NULL,
  NULL,
+ &CheatFormatInfo,
  false,
  StateAction,
  Emulate,

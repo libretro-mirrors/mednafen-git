@@ -463,6 +463,7 @@ MDFNGI EmulatedLynx =
  NULL,
  NULL,
  NULL,
+ NULL,
  false,
  StateAction,
  Emulate,

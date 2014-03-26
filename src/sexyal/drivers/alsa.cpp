@@ -121,8 +121,6 @@ static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
  return(1);
 }
 
-// TODO:  Provide de-interleaving code in SexyAL outside of individual drivers
-
 static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
 {
  ADStruct *ads = (ADStruct *)device->private_data;

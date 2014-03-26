@@ -23,6 +23,8 @@
 #include "cart.h"
 #include "../dis6502.h"
 
+static void RedoHooks(void);
+
 #define NUMBT 64
 
 struct BTEntry
@@ -31,10 +33,12 @@ struct BTEntry
  uint32 to;
  uint32 vector;
  uint32 branch_count;
+ bool valid;
 };
 
 static BTEntry BTEntries[NUMBT];
-static int BTIndex = 0;
+static int BTIndex;
+static bool BTEnabled;
 
 void NESDBG_AddBranchTrace(uint32 from, uint32 to, uint32 vector)
 {
@@ -45,7 +49,7 @@ void NESDBG_AddBranchTrace(uint32 from, uint32 to, uint32 vector)
 
  //if(BTEntries[(BTIndex - 1) & 0xF] == PC) return;
 
- if(prevbt->from == from && prevbt->to == to && prevbt->vector == vector && prevbt->branch_count < 0xFFFFFFFF)
+ if(prevbt->from == from && prevbt->to == to && prevbt->vector == vector && prevbt->branch_count < 0xFFFFFFFF && prevbt->valid)
   prevbt->branch_count++;
  else
  {
@@ -53,9 +57,21 @@ void NESDBG_AddBranchTrace(uint32 from, uint32 to, uint32 vector)
   BTEntries[BTIndex].to = to;
   BTEntries[BTIndex].vector = vector;
   BTEntries[BTIndex].branch_count = 1;
+  BTEntries[BTIndex].valid = true;
 
   BTIndex = (BTIndex + 1) % NUMBT;
  }
+}
+
+static void EnableBranchTrace(bool enable)
+{
+ BTEnabled = enable;
+ if(!enable)
+ {
+  BTIndex = 0;
+  memset(BTEntries, 0, sizeof(BTEntries));
+ }
+ RedoHooks();
 }
 
 static std::vector<BranchTraceResult> GetBranchTrace(void)
@@ -66,6 +82,9 @@ static std::vector<BranchTraceResult> GetBranchTrace(void)
  for(int x = 0; x < NUMBT; x++)
  {
   const BTEntry *bt = &BTEntries[(x + BTIndex) % NUMBT];
+
+  if(!bt->valid)
+   continue;
 
   tmp.count = bt->branch_count;
   trio_snprintf(tmp.from, sizeof(tmp.from), "%04X", bt->from);
@@ -234,18 +253,9 @@ typedef struct __NES_BPOINT {
 
 static std::vector<NES_BPOINT> BreakPointsPC, BreakPointsRead, BreakPointsWrite;
 
-static void (*CPUHook)(uint32 PC) = NULL;
+static void (*CPUHook)(uint32 PC, bool) = NULL;
+static bool CPUHookContinuous = false;
 static bool FoundBPoint = 0;
-static void (*BPCallB)(uint32 PC) = NULL;
-
-void NESDBG_TestFoundBPoint(void)
-{
- if(FoundBPoint)
- {
-  BPCallB(X.PC);
- }
- FoundBPoint = 0;
-}
 
 static void CPUHandler(uint32 PC)
 {
@@ -256,13 +266,16 @@ static void CPUHandler(uint32 PC)
   {
    if(PC >= bpit->A[0] && PC <= bpit->A[1])
    {
-    BPCallB(PC);
+    FoundBPoint = true;
     break;
    }
   }
 
- if(CPUHook)
-  CPUHook(PC);
+ CPUHookContinuous |= FoundBPoint;
+ if(CPUHookContinuous && CPUHook)
+  CPUHook(PC, FoundBPoint);
+
+ FoundBPoint = false;
 }
 
 static uint8 ReadHandler(X6502 *cur_X, unsigned int A)
@@ -302,6 +315,11 @@ static void WriteHandler(X6502 *cur_X, unsigned int A, uint8 V)
   BWrite[A](A,V);
 }
 
+static void RedoHooks(void)
+{
+ X6502_Debug((CPUHook || BTEnabled) ? CPUHandler : NULL, (CPUHook && BreakPointsRead.size()) ? ReadHandler : NULL, (CPUHook && BreakPointsWrite.size()) ? WriteHandler : 0);
+}
+
 static void AddBreakPoint(int type, unsigned int A1, unsigned int A2, bool logical)
 {
  NES_BPOINT tmp;
@@ -318,7 +336,7 @@ static void AddBreakPoint(int type, unsigned int A1, unsigned int A2, bool logic
  else if(type == BPOINT_PC)
   BreakPointsPC.push_back(tmp);
 
- X6502_Debug(BreakPointsPC.size() ? CPUHandler : CPUHook, BreakPointsRead.size() ? ReadHandler : NULL, BreakPointsWrite.size() ? WriteHandler : 0);
+ RedoHooks();
 }
 
 static void FlushBreakPoints(int type)
@@ -332,18 +350,15 @@ static void FlushBreakPoints(int type)
  else if(type == BPOINT_PC)
   BreakPointsPC.clear();
 
- X6502_Debug(BreakPointsPC.size() ? CPUHandler : CPUHook, BreakPointsRead.size() ? ReadHandler : NULL, BreakPointsWrite.size() ? WriteHandler : 0);
+ RedoHooks();
 }
 
-static void SetCPUCallback(void (*callb)(uint32 PC))
+static void SetCPUCallback(void (*callb)(uint32 PC, bool bpoint), bool continuous)
 {
  CPUHook = callb;
- X6502_Debug(BreakPointsPC.size() ? CPUHandler : CPUHook, BreakPointsRead.size() ? ReadHandler : NULL, BreakPointsWrite.size() ? WriteHandler : 0);
-}
+ CPUHookContinuous = continuous;
 
-static void SetBPCallback(void (*callb)(uint32 PC))
-{
- BPCallB = callb;
+ RedoHooks();
 }
 
 enum
@@ -500,13 +515,17 @@ DebuggerInfoStruct NESDBGInfo =
  FlushBreakPoints,
  AddBreakPoint,
  SetCPUCallback,
- SetBPCallback,
+ EnableBranchTrace,
  GetBranchTrace,
  NESPPU_SetGraphicsDecode,
 };
 
 bool NESDBG_Init(void)
 {
+ memset(BTEntries, 0, sizeof(BTEntries));
+ BTIndex = 0;
+ BTEnabled = false;
+
  MDFNDBG_AddRegGroup(&NESCPURegsGroup);
  MDFNDBG_AddRegGroup(&NESPPURegsGroup);
 

@@ -26,7 +26,7 @@ void INPUT_Write(int32 timestamp, unsigned int A, uint8 V);
 void INPUT_Frame(void);
 int INPUT_StateAction(StateMem *sm, int load, int data_only);
 extern InputInfoStruct PCEInputInfo;
-void INPUT_FixTS(int32 timestamp);
+void INPUT_AdjustTS(int32 delta_timestamp);
 
 uint16 INPUT_HESHack(void);
 

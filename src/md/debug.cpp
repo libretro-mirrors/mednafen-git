@@ -23,11 +23,10 @@ namespace MDFN_IEN_MD
 {
 bool MD_DebugMode = FALSE;
 
-static void (*DriverCPUHook)(uint32);
-
+static void (*DriverCPUHook)(uint32, bool) = NULL;
+static bool DriverCPUHookContinuous = false;
 
 static c68k_struc Main68K_BP;
-static void (*BPCallB)(uint32 PC) = NULL;
 static bool BPActive = FALSE; // Any breakpoints on?
 static bool BPNonPCActive = FALSE;	// Any breakpoints other than PC on?
 static bool FoundBPoint;
@@ -218,11 +217,10 @@ void MDDBG_CPUHook(void)	//uint32 PC, uint16 op)
   MD_HackyHackyMode--;
  }
 
- if(FoundBPoint)
-  BPCallB(PC);
+ DriverCPUHookContinuous |= FoundBPoint;
 
- if(DriverCPUHook)
-  DriverCPUHook(PC);
+ if(DriverCPUHookContinuous && DriverCPUHook)
+  DriverCPUHook(PC, FoundBPoint);
 }
 
 static void RedoCPUHook(void)
@@ -276,15 +274,16 @@ void FlushBreakPoints(int type)
  RedoCPUHook();
 }
 
-void SetCPUCallback(void (*callb)(uint32 PC))
+void SetCPUCallback(void (*callb)(uint32 PC, bool bpoint), bool continuous)
 {
  DriverCPUHook = callb;
+ DriverCPUHookContinuous = continuous;
  RedoCPUHook();
 }
 
-void SetBPCallback(void (*callb)(uint32 PC))
+static void EnableBranchTrace(bool enable)
 {
- BPCallB = callb;
+
 }
 
 std::vector<BranchTraceResult> GetBranchTrace(void)
@@ -465,7 +464,7 @@ DebuggerInfoStruct DBGInfo =
  FlushBreakPoints,
  AddBreakPoint,
  SetCPUCallback,
- SetBPCallback,
+ EnableBranchTrace,
  GetBranchTrace,
  NULL, //SetGraphicsDecode,
  NULL, //GetGraphicsDecodeBuffer,

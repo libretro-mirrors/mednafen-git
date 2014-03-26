@@ -45,86 +45,46 @@ static std::string MakeProgIpolate(unsigned ipolate_axis)	// X & 1, Y & 2, sharp
 	void main(void)\n\
 	{\n\
 	        vec2 texelIndex = vec2(gl_TexCoord[0]) * TexSize - float(0.5);\n\
-	        vec2 texelFract = fract(texelIndex);\n\
-	        texelIndex -= texelFract;\n\
-		texelIndex += float(0.5);\n\
-	        texelIndex *= TexSizeInverse;\n\
-	        vec3 texel[4];\n\
-		texel[0] = texture2D(Tex0, texelIndex).rgb;\n\
-	        texel[1] = texture2D(Tex0, texelIndex + vec2(0, TexSizeInverse.t)).rgb;\n\
-	        texel[2] = texture2D(Tex0, texelIndex + TexSizeInverse).rgb;\n\
-	        texel[3] = texture2D(Tex0, texelIndex + vec2(TexSizeInverse.s, 0)).rgb;\n\
 	");
 
- switch(ipolate_axis & 3)
+ if(ipolate_axis & 3)
  {
-  case 0:
-	ret += std::string("gl_FragColor = texture2D(Tex0, vec2(gl_TexCoord[0]));\n");
+  ret += std::string("vec2 texelInt = floor(texelIndex);\n");
+  ret += std::string("vec2 texelFract = texelIndex - texelInt - float(0.5);\n");
+
+  switch(ipolate_axis & 3)
+  {
+   case 1:
+	if(ipolate_axis & 4)
+    	 ret += std::string("texelFract.s = clamp(texelFract.s * XSharp, -0.5, 0.5) + float(0.5);\n");
+	ret += std::string("texelFract.t = round(texelFract.t + float(0.5));\n");
 	break;
 
-  case 1:
+   case 2:
+	ret += std::string("texelFract.s = round(texelFract.s + float(0.5));\n");
+
+	if(ipolate_axis & 4)
+    	 ret += std::string("texelFract.t = clamp(texelFract.t * YSharp, -0.5, 0.5) + float(0.5);\n");
+	break;
+
+   case 3:
 	if(ipolate_axis & 4)
 	{
-	 ret += std::string("\n\
-	        float w0 = (texelFract.s - float(0.5)) * XSharp + float(0.5);\n\
-	        w0 = clamp(w0, float(0), float(1.0));\n\
-		gl_FragColor = vec4( (texel[0] * (1.0 - w0) + texel[3] * w0), 1.0);\n\
-		");
-	}
-	else
-	{
-	 ret += std::string("\n\
-		gl_FragColor = vec4( (texel[0] * (1.0 - texelFract.s) + texel[3] * texelFract.s), 1.0);\n\
-		");
+    	 ret += std::string("texelFract.s = clamp(texelFract.s * XSharp, -0.5, 0.5) + float(0.5);\n");
+    	 ret += std::string("texelFract.t = clamp(texelFract.t * YSharp, -0.5, 0.5) + float(0.5);\n");
 	}
 	break;
-
-  case 2:
-	if(ipolate_axis & 4)
-	{
-	 ret += std::string("\n\
-	        float w1 = (texelFract.t - float(0.5)) * YSharp + float(0.5);\n\
-		w1 = clamp(w1, float(0), float(1.0));\n\
-		gl_FragColor = vec4( texel[0] * (1.0 - w1) + texel[1] * w1, 1.0);\n\
-		");
-	}
-	else
-	{
-	 ret += std::string("\n\
-		gl_FragColor = vec4( texel[0] * (1.0 - texelFract.t) + texel[1] * texelFract.t, 1.0);\n\
-		");
-	}
-	break;
-
-  case 3:
-	if(ipolate_axis & 4)
-	{
-	 ret += std::string("\n\
-	        float w0 = (texelFract.s - float(0.5)) * XSharp + float(0.5);\n\
-	        float w1 = (texelFract.t - float(0.5)) * YSharp + float(0.5);\n\
-	        w0 = clamp(w0, float(0), float(1.0));\n\
-		w1 = clamp(w1, float(0), float(1.0));\n\
-		");
-	}
-	else
-	{
-	 ret += std::string("\n\
-	        float w0 = texelFract.s;\n\
-	        float w1 = texelFract.t;\n\
-		");
-	}
-
-	ret += std::string("\n\
-        	gl_FragColor = vec4( (texel[0] * (1.0 - w0) + texel[3] * w0) * (1.0 - w1) + (texel[1] * (1.0 - w0) + texel[2] * w0) * w1, 1);\n\
-	       ");
-	break;
-
+  }
+  ret += std::string("texelIndex = texelFract + texelInt;\n");
  }
+ else
+  ret += std::string("texelIndex = round(texelIndex);\n");
+
+ ret += std::string("texelIndex += float(0.5);\n");
+ ret += std::string("texelIndex *= TexSizeInverse;\n");
+ ret += std::string("gl_FragColor = vec4( texture2D(Tex0, texelIndex));\n");
 
  ret += std::string("}");
-
- //if(ipolate_axis == 2)
- // puts(ret.c_str());
 
  return ret;
 }
@@ -268,7 +228,15 @@ OpenGL_Blitter_Shader::OpenGL_Blitter_Shader(OpenGL_Blitter *in_oblt, ShaderType
 	}
 }
 
-void OpenGL_Blitter_Shader::ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th, int orig_tw, int orig_th, unsigned rotated)
+bool OpenGL_Blitter_Shader::ShaderNeedsBTIP(void)
+{
+ if(OurType != SHADER_SCALE2X && OurType != SHADER_SABR)
+  return(true);
+
+ return(false);
+}
+
+void OpenGL_Blitter_Shader::ShaderBegin(const int gl_screen_w, const int gl_screen_h, const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th, int orig_tw, int orig_th, unsigned rotated)
 {
         oblt->p_glEnable(GL_FRAGMENT_PROGRAM_ARB);
 

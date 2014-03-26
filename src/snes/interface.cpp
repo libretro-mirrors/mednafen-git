@@ -15,12 +15,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/*
- FIXME(minor thing): Due to changes made to the bsnes core on Dec 15, 2012 to reduce input latency, there is the possibility
- of 15 lines of garbage being shown at the bottom of the screen when a PAL game switches from the 239-height mode to the 224-height
- mode when the screen isn't black.
-*/
-
 #include "../mednafen.h"
 #include "../md5.h"
 #include "../general.h"
@@ -32,21 +26,15 @@
 #include "../resampler/resampler.h"
 #include <vector>
 
+extern MDFNGI EmulatedSNES;
+
 static void Cleanup(void);
 
 static SpeexResamplerState *resampler = NULL;
 static int32 ResampInPos;
-static int16 ResampInBuffer[4096][2];
+static int16 ResampInBuffer[2048][2];
 static bool PrevFrameInterlaced;
-
-class MeowFace : public bSNES_v059::Interface
-{
-  virtual void video_refresh(uint16_t *data, unsigned pitch, unsigned *line, unsigned width, unsigned height, bool interlaced, bool field);
-  virtual void audio_sample(uint16_t l_sample, uint16_t r_sample);
-  virtual void input_poll();
-  virtual int16_t input_poll(bool port, unsigned device, unsigned index, unsigned id);
-//  virtual int16_t input_poll(unsigned deviceid, unsigned id);
-};
+static int PrevLine;
 
 class SNSFLoader : public PSFLoader
 {
@@ -62,12 +50,12 @@ class SNSFLoader : public PSFLoader
  std::vector<uint8> ROM_Data;
 };
 
+static bSNES_v059::Interface Interface;
 static SNSFLoader *snsf_loader = NULL;
 
 static bool InProperEmu;
 static bool SoundOn;
 static double SoundLastRate = 0;
-static MeowFace meowface;
 
 static int32 CycleCounter;
 static MDFN_Surface *tsurf = NULL;
@@ -165,8 +153,30 @@ static void BuildColorMap(MDFN_PixelFormat &format)
  }
 }
 
-void MeowFace::video_refresh(uint16_t *data, unsigned pitch, unsigned *line, unsigned width, unsigned height, bool interlaced, bool field)
+
+static void BlankMissingLines(int ystart, int ybound, const bool interlaced, const bool field)
 {
+ for(int y = ystart; y < ybound; y++)
+ {
+  //printf("Blanked: %d\n", y);
+  uint32 *dest_line = tsurf->pixels + (field * tsurf->pitch32) + (y * tsurf->pitch32);
+  dest_line[0] = tsurf->MakeColor(0, 0/*rand() & 0xFF*/, 0);
+  tlw[(y << interlaced) + field].x = 0;
+  tlw[(y << interlaced) + field].w = 1;
+ }
+}
+
+void bSNES_v059::Interface::video_scanline(uint16_t *data, unsigned line, unsigned width, unsigned height, bool interlaced, bool field)
+{
+ const int ppline = PrevLine;
+
+ //if(rand() & 1)
+ // return;
+
+ if((int)line <= PrevLine || (PrevLine == -1 && line > 32)) // Second part for PAL 224 line mode
+  return;
+
+ PrevLine = line;
  PrevFrameInterlaced = interlaced;
 
  if(snsf_loader)
@@ -181,61 +191,55 @@ void MeowFace::video_refresh(uint16_t *data, unsigned pitch, unsigned *line, uns
  if(!interlaced)
   field = 0;
 
+
+ BlankMissingLines(ppline + 1, line, interlaced, field);
+ //if(line == 0)
+ // printf("ZOOM: 0x%04x, %d %d, %d\n", data[0], interlaced, field, width);
+
+ const unsigned y = line;
  const uint16 *source_line = data;
- uint32 *dest_line = tsurf->pixels + ((interlaced && field) ? tsurf->pitch32 : 0);
+ uint32 *dest_line = tsurf->pixels + (field * tsurf->pitch32) + ((y << interlaced) * tsurf->pitch32);
 
- assert(!(pitch & 1));
-
- tlw[0].w = 0;	// Mark line widths as valid(since field == 1 would skip it).
-
- for(int y = 0; y < height; y++, source_line += pitch >> 1, dest_line += tsurf->pitch32 << interlaced)
+ //if(rand() & 1)
  {
   tlw[(y << interlaced) + field].x = 0;
-  tlw[(y << interlaced) + field].w = (width == 512) ? line[y] : 256;
+  tlw[(y << interlaced) + field].w = width;
+ }
 
-  if(width == 512 && line[y] == 512 && (source_line[0] & 0x8000))
+ if(width == 512 && (source_line[0] & 0x8000))
+ {
+  tlw[(y << interlaced) + field].w = 256;
+  for(int x = 0; x < 256; x++)
   {
-   tlw[(y << interlaced) + field].w = 256;
-   for(int x = 0; x < 256; x++)
-   {
-    uint16 p1 = source_line[(x << 1) | 0] & 0x7FFF;
-    uint16 p2 = source_line[(x << 1) | 1] & 0x7FFF;
-
-    dest_line[x] = ColorMap[(p1 + p2 - ((p1 ^ p2) & 0x0421)) >> 1];
-   }
+   uint16 p1 = source_line[(x << 1) | 0] & 0x7FFF;
+   uint16 p2 = source_line[(x << 1) | 1] & 0x7FFF;
+   dest_line[x] = ColorMap[(p1 + p2 - ((p1 ^ p2) & 0x0421)) >> 1];
   }
-  else
-  {
-   for(int x = 0; x < width; x++)
-    dest_line[x] = ColorMap[source_line[x] & 0x7FFF];
-  }
+ }
+ else
+ {
+  for(int x = 0; x < width; x++)
+   dest_line[x] = ColorMap[source_line[x] & 0x7FFF];
  }
 
  tdr->w = width;
  tdr->h = height << interlaced;
+
  es->InterlaceOn = interlaced;
- es->InterlaceField = field;
+ es->InterlaceField = (interlaced && field);
+
+ MDFN_MidLineUpdate(es, (y << interlaced) + field);
 }
 
-void MeowFace::audio_sample(uint16_t l_sample, uint16_t r_sample)
+void bSNES_v059::Interface::audio_sample(uint16_t l_sample, uint16_t r_sample)
 {
  CycleCounter++;
 
  if(!SoundOn)
   return;
 
- if(ResampInPos < 4096)
+ if(ResampInPos < 2048)
  {
-#if 0
-  {
-   static int min=0x7FFF;
-   if((int16)r_sample < min)
-   {
-    printf("%d\n", (int16)r_sample);
-    min = (int16)r_sample;
-   }
-  }
-#endif
   //l_sample = (rand() & 0x7FFF) - 0x4000;
   //r_sample = (rand() & 0x7FFF) - 0x4000;
   ResampInBuffer[ResampInPos][0] = (int16)l_sample;
@@ -271,7 +275,7 @@ public:
   };
 #endif
 
-void MeowFace::input_poll()
+void bSNES_v059::Interface::input_poll()
 {
  if(!InProperEmu)
   return;
@@ -318,7 +322,7 @@ static INLINE int16 sats32tos16(int32 val)
  return(val);
 }
 
-int16_t MeowFace::input_poll(bool port, unsigned device, unsigned index, unsigned id)
+int16_t bSNES_v059::Interface::input_poll(bool port, unsigned device, unsigned index, unsigned id)
 {
  if(!HasPolledThisFrame)
   printf("input_poll(...) before input_poll() for frame, %d %d %d %d\n", port, device, index, id);
@@ -369,13 +373,13 @@ int16_t MeowFace::input_poll(bool port, unsigned device, unsigned index, unsigne
 }
 
 #if 0
-void MeowFace::init()
+void bSNES_v059::Interface::init()
 {
 
 
 }
 
-void MeowFace::term()
+void bSNES_v059::Interface::term()
 {
 
 
@@ -671,7 +675,7 @@ static bool LoadSNSF(MDFNFILE *fp)
 {
  bool PAL = false;
 
- bSNES_v059::system.init(&meowface);
+ bSNES_v059::system.init(&Interface);
 
  MultitapEnabled[0] = false;
  MultitapEnabled[1] = false;
@@ -727,6 +731,51 @@ static void Cleanup(void)
  }
 }
 
+static const unsigned cheat_page_size = 1024;
+template<typename T>
+static void CheatMap(bool uics, uint32 addr, T& mr, uint32 offset)
+{
+ assert((offset + cheat_page_size) <= mr.size());
+ MDFNMP_AddRAM(cheat_page_size, addr, mr.data() + offset, uics);
+}
+
+// Intended only for the MapLinear type.
+template<typename T>
+static void CheatMap(bool uics, uint8 bank_lo, uint8 bank_hi, uint16 addr_lo, uint16 addr_hi, T& mr, uint32 offset = 0, uint32 size = 0)
+{
+ assert(bank_lo <= bank_hi);
+ assert(addr_lo <= addr_hi);
+ if((int)mr.size() < cheat_page_size)
+ {
+  if((int)mr.size() > 0)
+   printf("Boop: %d\n", mr.size());
+  return;
+ }
+
+ uint8 page_lo = addr_lo / cheat_page_size;
+ uint8 page_hi = addr_hi / cheat_page_size;
+ unsigned index = 0;
+
+ for(unsigned bank = bank_lo; bank <= bank_hi; bank++)
+ {
+  for(unsigned page = page_lo; page <= page_hi; page++)
+  {
+   if(size)
+   {
+    if(index >= size)
+     uics = false;
+    index %= size;
+   }
+
+   if((offset + index) >= mr.size())
+    uics = false;
+
+   CheatMap(uics, (bank << 16) + (page * cheat_page_size), mr, bSNES_v059::bus.mirror(offset + index, mr.size()));
+   index += cheat_page_size;
+  }
+ }
+}
+
 static int Load(const char *name, MDFNFILE *fp)
 {
  bool PAL = FALSE;
@@ -744,8 +793,9 @@ static int Load(const char *name, MDFNFILE *fp)
 
   const uint32 header_adjust = (((fp->size & 0x7FFF) == 512) ? 512 : 0);
   uint8 *export_ptr;
+  const uint32 csize = fp->size - header_adjust;
 
-  if((fp->size - header_adjust) > (8192 * 1024))
+  if(csize > (8192 * 1024))
   {
    throw MDFN_Error(0, _("SNES ROM image is too large."));
   }
@@ -756,15 +806,28 @@ static int Load(const char *name, MDFNFILE *fp)
   md5.update(fp->data, fp->size);
   md5.finish(MDFNGameInfo->MD5);
 
-  bSNES_v059::system.init(&meowface);
+  bSNES_v059::system.init(&Interface);
 
   //const bSNES_v059::Cartridge::Type rom_type = bSNES_v059::cartridge.detect_image_type((uint8 *)fp->data, fp->size);
 
   export_ptr = new uint8[8192 * 1024];
   memset(export_ptr, 0x00, 8192 * 1024);
-  memcpy(export_ptr, fp->data + header_adjust, fp->size - header_adjust);
+  memcpy(export_ptr, fp->data + header_adjust, csize);
 
-  bSNES_v059::memory::cartrom.map(export_ptr, fp->size - header_adjust);
+  //
+  // Mirror up to an 8MB boundary so we can implement HAPPY FUNTIME YAAAAAAAY optimizations(like with SuperFX).
+  //
+  //uint32 st = MDFND_GetTime();
+  for(uint32 a = (csize + 255) &~255; a < 8192 * 1024; a += 256)
+  {
+   const uint32 oa = bSNES_v059::bus.mirror(a, csize);
+   //printf("%08x->%08x\n",a, oa);
+   memcpy(&export_ptr[a], &export_ptr[oa], 256);
+  }
+
+  //printf("%d\n", MDFND_GetTime() - st);
+
+  bSNES_v059::memory::cartrom.map(export_ptr, csize);
 
   bSNES_v059::cartridge.load(bSNES_v059::Cartridge::ModeNormal);
 
@@ -785,9 +848,72 @@ static int Load(const char *name, MDFNFILE *fp)
 
   //printf(" %d %d\n", FSettings.SndRate, resampler.max_write());
 
-  MDFNMP_Init(1024, (1 << 24) / 1024);
+  MDFNMP_Init(cheat_page_size, (1U << 24) / cheat_page_size);
 
-  MDFNMP_AddRAM(131072, 0x7E << 16, bSNES_v059::memory::wram.data());
+  //
+  // Should more-or-less match what's in: src/memory/smemory/generic.cpp
+  //
+  if((int)bSNES_v059::memory::cartram.size() > 0 && (bSNES_v059::memory::cartram.size() % cheat_page_size) == 0)
+  {
+   if(bSNES_v059::cartridge.mapper() == bSNES_v059::Cartridge::SuperFXROM)
+   {
+
+   }
+   else if(bSNES_v059::cartridge.mapper() == bSNES_v059::Cartridge::SA1ROM)
+   {
+    CheatMap(true,  0x00, 0x3f, 0x3000, 0x37ff, bSNES_v059::memory::iram);    //cpuiram); 
+    CheatMap(false, 0x00, 0x3f, 0x6000, 0x7fff, bSNES_v059::memory::cartram); //cc1bwram);
+    CheatMap(true,  0x40, 0x4f, 0x0000, 0xffff, bSNES_v059::memory::cartram); //cc1bwram);
+    CheatMap(false, 0x80, 0xbf, 0x3000, 0x37ff, bSNES_v059::memory::iram);    //cpuiram);
+    CheatMap(false, 0x80, 0xbf, 0x6000, 0x7fff, bSNES_v059::memory::cartram); //cc1bwram);
+   }
+   else if(bSNES_v059::cartridge.mapper() == bSNES_v059::Cartridge::SPC7110ROM)
+   {
+
+   }
+   else if(bSNES_v059::cartridge.mapper() == bSNES_v059::Cartridge::BSXROM)
+   {
+
+   }
+   else if(bSNES_v059::cartridge.mapper() == bSNES_v059::Cartridge::BSCLoROM)
+   {
+
+   }
+   else if(bSNES_v059::cartridge.mapper() == bSNES_v059::Cartridge::BSCHiROM)
+   {
+
+   }
+   else if(bSNES_v059::cartridge.mapper() == bSNES_v059::Cartridge::STROM)
+   {
+
+   }
+   else
+   {
+    if((int)bSNES_v059::memory::cartram.size() > 0)
+    {
+     CheatMap(false, 0x20, 0x3f, 0x6000, 0x7fff, bSNES_v059::memory::cartram);
+     CheatMap(false, 0xa0, 0xbf, 0x6000, 0x7fff, bSNES_v059::memory::cartram);
+
+     //research shows only games with very large ROM/RAM sizes require MAD-1 memory mapping of RAM
+     //otherwise, default to safer, larger RAM address window
+     uint16 addr_hi = (bSNES_v059::memory::cartrom.size() > 0x200000 || bSNES_v059::memory::cartram.size() > 32 * 1024) ? 0x7fff : 0xffff;
+     const bool meowmeowmoocow = bSNES_v059::memory::cartram.size() <= ((addr_hi + 1) * 14) || bSNES_v059::cartridge.mapper() != bSNES_v059::Cartridge::LoROM;
+
+     CheatMap(meowmeowmoocow, 0x70, 0x7f, 0x0000, addr_hi, bSNES_v059::memory::cartram);
+
+     if(bSNES_v059::cartridge.mapper() == bSNES_v059::Cartridge::LoROM)
+      CheatMap(!meowmeowmoocow, 0xf0, 0xff, 0x0000, addr_hi, bSNES_v059::memory::cartram);
+    }
+   }
+  }
+
+  //
+  // System(WRAM) mappings should be done last, as they'll partially overwrite some of the cart mappings above, matching bsnes' internal semantics.
+  //
+
+  CheatMap(false, 0x00, 0x3f, 0x0000, 0x1fff, bSNES_v059::memory::wram, 0x000000, 0x002000);
+  CheatMap(false, 0x80, 0xbf, 0x0000, 0x1fff, bSNES_v059::memory::wram, 0x000000, 0x002000);
+  CheatMap(true,  0x7e, 0x7f, 0x0000, 0xffff, bSNES_v059::memory::wram);
 
   ColorMap.resize(32768);
 
@@ -818,15 +944,25 @@ static void CloseGame(void)
 
 static void Emulate(EmulateSpecStruct *espec)
 {
- //printf("\nFrame: 0x%02x\n", *(uint8*)InputPtr[0]);
-
  tsurf = espec->surface;
  tlw = espec->LineWidths;
  tdr = &espec->DisplayRect;
  es = espec;
 
+
+ PrevLine = -1;
+
  if(!snsf_loader)
  {
+  if(!espec->skip && tsurf && tlw)
+  {
+   tdr->x = 0;
+   tdr->y = 0;
+   tdr->w = 1;
+   tdr->h = 1;
+   tlw[0].w = 0;	// Mark line widths as valid(ie != ~0; since field == 1 would skip it).
+  }
+
   if(espec->VideoFormatChanged)
    BuildColorMap(espec->surface->format);
  }
@@ -868,6 +1004,17 @@ static void Emulate(EmulateSpecStruct *espec)
  //bSNES_v059::ppu.enable_renderer(!espec->skip || PrevFrameInterlaced);
  bSNES_v059::system.run_mednafen_custom();
  bSNES_v059::ppu.enable_renderer(true);
+
+
+ //
+ // Blank out any missed lines(for e.g. display height change with PAL emulation)
+ //
+ if(!snsf_loader && !es->skip && tsurf && tlw)
+ {
+  //printf("%d\n", PrevLine + 1);
+  BlankMissingLines(PrevLine + 1, tdr->h >> es->InterlaceOn, es->InterlaceOn, es->InterlaceField);
+ }
+
  tsurf = NULL;
  tlw = NULL;
  tdr = NULL;
@@ -889,6 +1036,7 @@ static void Emulate(EmulateSpecStruct *espec)
   spx_uint32_t in_len; // "Number of input samples in the input buffer. Returns the number of samples processed. This is all per-channel."
   spx_uint32_t out_len; // "Size of the output buffer. Returns the number of samples written. This is all per-channel."
 
+  //printf("%d\n", ResampInPos);
   in_len = ResampInPos;
   out_len = 524288; //8192;     // FIXME, real size.
 
@@ -1198,6 +1346,27 @@ static InputInfoStruct SNESInputInfo =
  PortInfo
 };
 
+static void InstallReadPatch(uint32 address, uint8 value, int compare)
+{
+ bSNES_v059::CheatCode tc;
+
+ tc.addr = address;
+ tc.data = value;
+ tc.compare = compare;
+
+ //printf("%08x %02x %d\n", address, value, compare);
+
+ bSNES_v059::cheat.enable(true);
+ bSNES_v059::cheat.install_read_patch(tc);
+}
+
+static void RemoveReadPatches(void)
+{
+ bSNES_v059::cheat.enable(false);
+ bSNES_v059::cheat.remove_read_patches();
+}
+
+
 static const MDFNSetting SNESSettings[] =
 {
  { "snes.input.port1.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on SNES port 1."), NULL, MDFNST_BOOL, "0", NULL, NULL },
@@ -1211,6 +1380,117 @@ static const MDFNSetting SNESSettings[] =
 
  { NULL }
 };
+
+
+static bool DecodeGG(const std::string& cheat_string, MemoryPatch* patch)
+{
+ if(cheat_string.size() != 8 && cheat_string.size() != 9)
+  throw MDFN_Error(0, _("Game Genie code is of an incorrect length."));
+
+ if(cheat_string.size() == 9 && (cheat_string[4] != '-' && cheat_string[4] != '_' && cheat_string[4] != ' '))
+  throw MDFN_Error(0, _("Game Genie code is malformed."));
+
+ uint32 ev = 0;
+
+ for(unsigned i = 0; i < 8; i++)
+ {
+  int c = cheat_string[(i >= 4 && cheat_string.size() == 9) ? (i + 1) : i];
+  static const uint8 subst_table[16] = { 0x4, 0x6, 0xD, 0xE, 0x2, 0x7, 0x8, 0x3,
+				  	 0xB, 0x5, 0xC, 0x9, 0xA, 0x0, 0xF, 0x1 };
+  ev <<= 4;
+
+  if(c >= '0' && c <= '9')
+   ev |= subst_table[c - '0'];
+  else if(c >= 'a' && c <= 'f')
+   ev |= subst_table[c - 'a' + 0xA];
+  else if(c >= 'A' && c <= 'F')
+   ev |= subst_table[c - 'A' + 0xA];
+  else
+  {
+   if(c & 0x80)
+    throw MDFN_Error(0, _("Invalid character in Game Genie code."));
+   else
+    throw MDFN_Error(0, _("Invalid character in Game Genie code: %c"), c);
+  }
+ }
+
+ uint32 addr = 0;
+ uint8 val = 0;;
+ static const uint8 bm[24] = 
+ {
+  0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x0e, 0x0f, 0x00, 0x01, 0x14, 0x15, 0x16, 0x17, 0x02, 0x03, 0x04, 0x05, 0x0a, 0x0b, 0x0c, 0x0d
+ };
+
+
+ val = ev >> 24;
+ for(unsigned i = 0; i < 24; i++)
+  addr |= ((ev >> bm[i]) & 1) << i;
+
+ patch->addr = addr;
+ patch->val = val;
+ patch->length = 1;
+ patch->type = 'S';
+
+ //printf("%08x %02x\n", addr, val);
+
+ return(false);
+}
+
+static bool DecodePAR(const std::string& cheat_string, MemoryPatch* patch)
+{
+ uint32 addr;
+ uint8 val;
+
+ if(cheat_string.size() != 8 && cheat_string.size() != 9)
+  throw MDFN_Error(0, _("Pro Action Replay code is of an incorrect length."));
+
+ if(cheat_string.size() == 9 && (cheat_string[6] != ':' && cheat_string[6] != ';' && cheat_string[6] != ' '))
+  throw MDFN_Error(0, _("Pro Action Replay code is malformed."));
+
+
+ uint32 ev = 0;
+
+ for(unsigned i = 0; i < 8; i++)
+ {
+  int c = cheat_string[(i >= 6 && cheat_string.size() == 9) ? (i + 1) : i];
+
+  ev <<= 4;
+
+  if(c >= '0' && c <= '9')
+   ev |= c - '0';
+  else if(c >= 'a' && c <= 'f')
+   ev |= c - 'a' + 0xA;
+  else if(c >= 'A' && c <= 'F')
+   ev |= c - 'A' + 0xA;
+  else
+  {
+   if(c & 0x80)
+    throw MDFN_Error(0, _("Invalid character in Pro Action Replay code."));
+   else
+    throw MDFN_Error(0, _("Invalid character in Pro Action Replay code: %c"), c);
+  }
+ }
+
+ patch->addr = ev >> 8;
+ patch->val = ev & 0xFF;
+ patch->length = 1;
+ patch->type = 'R';
+
+ return(false);
+}
+
+static CheatFormatStruct CheatFormats[] =
+{
+ { "Game Genie", "", DecodeGG },
+ { "Pro Action Replay", "", DecodePAR },
+};
+
+static CheatFormatInfoStruct CheatFormatInfo =
+{
+ 2,
+ CheatFormats
+};
+
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
@@ -1242,9 +1522,10 @@ MDFNGI EmulatedSNES =
  NULL,	// Layer names, null-delimited
  NULL,
  NULL,
- NULL, //InstallReadPatch,
- NULL, //RemoveReadPatches,
+ InstallReadPatch,
+ RemoveReadPatches,
  NULL, //MemRead,
+ &CheatFormatInfo,
  true,
  StateAction,
  Emulate,

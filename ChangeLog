@@ -1,35 +1,275 @@
-NOTE: 0.9.32.x is a (mostly) simple-bugfix-backport branch from mainline
+-- 0.9.33: --
 
--- 0.9.32.1-WIP: --
+February 25, 2014:
+	PSX: Reworked CD-XA ADPCM playback buffering and sector buffering per tests on a PS1; fixes the problem of cut-off voices
+	in some games("Breath of Fire 4" for example), and *should* increase the playability of some games like "Um Jammer Lammy".
+	Also, these changes seem to have somehow fixed the corrupted boss graphics in the first boss fight in "Captain Commando".
 
-November 23, 2013:
-        PCE_FAST: Fixed a potential crash after a garbage/corrupted ROM image is loaded.
+	PSX: Refactored sector reading code, and added support for reading from the leadout area(the data is synthesized, though).
 
-	PCE, PCE_FAST: Don't generate a command error if a track number too high is specified via CD commands 0xD8 and/or 0xD9; instead,
-	treat it as if the leadout track was specified.  I'm not certain if this is correct behavior as per the actual system, but
-	that'll have to wait until I'm able to run some tests.  Fixes a startup lockup in "Star Mobile".
+February 15, 2014:
+	Implemented simple dithering in the 16-bit->8-bit sound sample conversion code.
 
+	Added checks for legacy DOS device filenames to the untrusted file include path checking code used for Win32 and DOS.
+
+February 11, 2014:
+	Added support for "FOUR_CHANNEL_AUDIO", "TWO_CHANNEL_AUDIO", "COPY", "NO COPY", "PRE_EMPHASIS", and "NO PRE_EMPHASIS" directives
+	in the cdrdao TOC-format file parsing and Q subchannel synthesis code.
+
+	PC-FX, VB: Fixed V810 "mul" instruction overflow flag calculation per tests on a PC-FX.
+
+February 2, 2014:
+	PSX: Added settings "psx.slstart", "psx.slstartp", "psx.slend", and "psx.slendp" to control the vertical positioning and viewable
+	area(more useful with PAL).
+
+	NES: If the value of the nes.slstart? setting is larger than the value of the nes.slend? setting, swap the values when
+	calculating the surface rectangle.
+
+	Rewrote the simple interpolation pixel shader code(for "ipsharper", "ipxnoty", "autoipsharper", etc.) to fix problems
+	with the autoip* shaders sometimes causing diagonal distortion lines in some scenarios.
+
+February 1, 2014:
+	Fixed a bug that caused major graphics corruption when rotation(ALT+O) is used with a multiple-horizontal-resolution source
+	image(emulation modules that can produce such an image include pce, pce_fast, pcfx, psx, and snes).
+
+	Fixed a bug in the SDL soft stretching with rotation code path that effectively caused the source surface rectangle Y offset to be
+	ignored(with varying effects from emulation module to emulation module).
+
+	GBA: Implemented support for 16bpp video output format.
+
+	GBA: Implemented usage of MDFN_MidLineUpdate().
+
+January 29, 2014:
+	GB, NES, PCE_FAST, SNES: Implemented usage of MDFN_MidLineUpdate() call to allow for 0 video frame latency in some environments
+	in the future(though this is not going to be possible for the VB module due to how it renders); and, we still need to figure out
+	the semantics of handling interlaced video this way.
+
+January 24, 2014:
+	Replaced some usage of snprintf() with trio_snprintf().
+
+	Replaced some usage of round(...) with floor(0.5 + ...) where appropriate, to work with the non-C99-compliant libc distributed
+	with the last stable DJGPP release; however, we didn't have too many uses of round(), but it may make sense in the future to
+	just insert our own custom round() function instead to preserve code clarity.	(Note that floor(0.5 + ...) does not always give
+	the same result as round(), as it rounds negative midway points(-0.5,-1.5, etc.) differently).
+
+January 23, 2014:
+	Made some changes to the build system to support a DOS port.
+
+January 18, 2014:
+	VB: Moved initialization of some variables from the VSU emulation class destructor to the constructor(must have been asleep
+	or something when that code first went in); fixes audio "pop" that could sometimes be heard on VB emulation startup.
+
+January 17, 2014:
+	Use XInputGetStateEx() instead of XInputGetState(), if available, to allow for usage of the XBox 360 controller
+	guide button within Mednafen on MS Windows.
+
+January 13, 2014:
+	In the TOC file reading code, set disc type based on CD_DA/CD_ROM/CD_ROM_XA string.
+
+	In the CUE sheet reading code, if any tracks are MODE2, assume the disc type is 0x20(CD-XA).
+
+January 5, 2014:
+	PSX: Moved CD-XA ADPCM resampling code from spu.cpp to cdc.cpp.
+
+	PSX: CD-XA ADPCM audio is now resampled using the proper(ish) impulse responses, as observed from running CD-R-eating-nom-nom-nom
+	tests on a PS1(this improves CD-XA ADPCM quality a bit compared to what it was in previous versions of Mednafen).
+
+	PSX: Don't play CD-XA ADPCM sectors if the "realtime" bit in the subheader isn't set to 1(per an
+	unintentional test on a PS1).
+
+January 1, 2014:
+	Synchronize raw input mapping structures to setting strings when an emulated input device configuration is finished/interrupted,
+	instead of unconditionally on exit or emulated device change, to prevent pollution of the primary settings file
+	when using per-module settings override files(though in that context it doesn't make much sense to override the emulated
+	input device mappings that way, but we're going to add per-game settings override support eventually).
+
+	Allow for overriding the "video.glvsync" setting and command key input mappings via the per-module settings override files.
+
+December 31, 2013:
+	Added support for per-module settings overrides(specified via placing settings in files named such as "nes.cfg", "pce.cfg",
+	"pce_fast.cfg", etc.).  The settings override files will be considered read-only, and should not alter the contents of the primary
+	settings file unless an in-emulator configuration process occurs that builds on the current effective setting value.
+
+        PCE, PCE_FAST: Don't generate a command error if a track number too high is specified via CD commands 0xD8 and/or 0xD9; instead,
+        treat it as if the leadout track was specified.  I'm not certain if this is correct behavior as per the actual system, but
+        that'll have to wait until I'm able to run some tests.  Fixes a startup lockup in "Star Mobile".
+
+December 22, 2013:
+	PC-FX: CD-DA impulse volume is now adjusted based on the current CD-DA playback rate.
+
+	PCE, PC-FX: Recalculated the CD-DA impulse phase adjustment convolution table to fix a tiny quality issue.
+
+December 18, 2013:
+	PC-FX: Implemented ADPCM phase-correction filtering(related to the Dec. 1 resampling changes), and modified the ADPCM volume
+	handling code to not throw away so much ADPCM output sample precision.
+
+December 1, 2013:
+	PCE: Changed default value of "pce.psgrevision" from "huc6280a" to "match"; this causes revision "huc6280" to be used for
+	non-SuperGrafx games, and "huc6280a" to be used for SuperGrafx games and HES playback(since SuperGrafx emulation is forcibly
+	enabled during HES playback).
+
+	PCE, PC-FX: Implemented new sound resampling and filtering code(actually we did this in November, but it's been a definite
+	work-in-progress since then, and still is to a degree);	benefits include better frequency response(especially for CD-DA),
+	and more flexible filtering options(code-wise, for the future).
+	Downsides include increased CPU utilization, and the output sound rate has a degree of error.
+	  Minimum CPU usage(and quality) with the new resampling code can be achieved with the following setting values:
+            pce.resamp_quality 0
+            pce.resamp_rate_error 0.0000350
+            pcfx.resamp_quality 0
+            pcfx.resamp_rate_error 0.0000350
+
+	  Maximum CPU usage(and quality, though arguably overkill) can be achieved with:
+            pce.resamp_quality 5
+            pce.resamp_rate_error 0.0000001
+            pcfx.resamp_quality 5
+            pcfx.resamp_rate_error 0.0000001
+
+
+	PCE: Removed support for the "enhanced" PSG revision(previously selectable by pce.psgrevision setting), as it had
+	negligible benefits, caused problems with at least one game, and made the PSG emulation code slightly more complex.
+
+	PCE: Added setting "pce.adpcmextraprec", default value of 0, that when enabled will do the same thing that the PCE_FAST module
+	is now hardcoded to do with ADPCM predictor precision.
+
+	PCE_FAST: Reduced Blip_Buffer attenuation of upper frequencies with CD-DA playback, and also to a lesser degree PSG sound.
+
+	PCE_FAST: Removed stubish Tsushin Booster code; the regular "PCE" module's better for emulating Tsushin Tool anyway, as it
+	includes keyboard emulation.
+
+        PCE_FAST: Output full 12-bit ADPCM predictor instead of truncating it to 10-bits, for less whining in ADPCM sounds; since we're
+        targetting PCE_FAST more for compatibility and subjective quality than outright accuracy per-se.
+
+        PCE_FAST: Utilizing some macro-magic, only use computed goto on compilers known to support it.
+
+        PCE_FAST: PSG revision changed to HuC6280A instead of "Enhanced".
+
+November 24, 2013:
+	Reduced the maximum supported sound output rate from 1048576Hz to a much more reasonable 192000Hz(significantly eases proper
+	sound processing algorithm design and testing).
+
+November 16, 2013:
+	PCE_FAST: Fixed a potential crash after a garbage/corrupted ROM image is loaded.
+
+November 12, 2013:
+	Reworked the debugger UI code to fix various thread safety issues by running it(drawing, and input processing) in the
+	game/emulation thread instead of the main/video blit thread.
+
+November 9, 2013:
+	PCE: During HES playback initialization, the second emulated VDC's registers are now initialized properly so that the
+	emulation event system isn't overtaxed(which drove up CPU usage considerably during HES playback).  It may be prudent
+	to look into implementing an optimization(based on VDC CR and DCR IRQ enable bits) in the HuC6270 emulation code so that a
+	similar issue doesn't occur when the user has set "pce.forcesgx" to "1" and is emulating a non-SuperGrafx game; however, this
+	could have a performance PENALTY for SuperGrafx games due to the required need to recalculate events on every VDC write(unless
+	we're smart and only recalculate when the IRQ enable bits change?).
+
+November 7, 2013:
+	Reworked settings string->floating-point conversion code to not use ancient(and apparently buggy) code from glibc, and
+	instead rely on the system's libc(which is ostensibly less buggy!); also changed some of the NES setting structure entries so
+	that the default values and minimum/maximum values have the same number of places after the decimal point to forestall
+	any future similar problems with libc strtod().
+
+November 3, 2013:
+	PSX: Implemented forced synchronization before calling debugger interface core hook.
+
+        Changed debugger CPU core hook semantics so that the core emulation code will only call the driver-side debugger interface
+        code when absolutely necessary(which will allow for proper emulator core forced synchronization when in step mode
+	without killing performance, which is a prerequisite for the register view, save states, and reset/power to work properly in
+	step mode; actually implementing said forced synchronization will have to be done carefully on a core-by-core basis, though,
+	in addition to other changes to make major machine state changes work reliably when in step mode).
+
+November 1, 2013:
+	PCE_FAST: Changed CD-DA Blip_Synth treble parameter so that the upper parts of the CD-DA frequency spectrum aren't attenuated
+	so much.
+
+	PCE_FAST: Removed PC-FX-specific code from the CD drive emulation code.
+
+	PCE_FAST: Forked PSG, CD interface unit, and CD drive emulation code so that it's no longer shared with the regular PCE and
+	PC-FX(for CD drive) modules.
+
+October 25, 2013:
+	SNES: Added support for Game Genie codes.
+
+	SNES: Simplified(and hackified gloriously!) and reduced memory usage of SuperFX memory mapping code.
+
+October 22, 2013:
+	A name(used in the window title bar) for loaded CD games will now be extracted from the filepath, as was already done for
+	cart-based games.
+
+October 21, 2013:
+	Reworked cheat loading and saving code to use FileStream.
+
+	Renamed Stream::printf to Stream::print_format to avoid head-desking.
+
+	GBA, PCE, PCE_FAST: Rewrote custom palette loading code to use FileStream, and removed the undocumented gzip'd custom palette
+	support in the process.
+
+October 20, 2013:
+	PSX: Added limited support for entering "GameShark" cheats in the cheat interface(not every code type is supported), and some
+	cheats may not work properly anyway due to differences in the timing of RAM patching in Mednafen vs on a actual GameShark.
+
+	Cheat support:
+		The cheat interface's cheat list now displays less information overall, but is better structured.
+
+		Fixed broken cheat conditions when condition unit size is greater than 4 bytes(due to a missing typecast).
+
+		The interface for adding and modifying a cheat now exposes more of the core cheat engine functionality.
+
+		Added support for RAM copy and RAM repeat/fill type cheats to the cheat engine.
+
+October 18, 2013:
+	NES: Added support for entering "Pro Action Rocky" cheats in the cheat interface.
+
+	GB: Added support for entering "GameShark" cheats in the cheat interface.
+
+	Refactored NES and GameBoy Game Genie decoding code from the Mednafen core into the NES and GameBoy cores respectively.
+
+	Made some changes to the cheat interface:
+		Cheat text size is now larger with higher resolutions(though the size increase is a bit too granular).
+
+		When asking to add a new cheat, the default will now be 'Y' instead of 'N'.
+
+		System-specific cheat format adding support(e.g. Game Genie) has been moved to the main menu.
+
+		When adding a system-specific cheat(e.g. Game Genie), the code is now asked for before the name, and the default
+		for the name is set to the code text.
+
+October 10, 2013:
 	Lynx: Added emulation of Lynx 2 stereo audio registers, based on patches submitted by "sage".
 
-	NES: Reworked some real/floating-point setting's minimum and maximum value strings to try to work around a reported
-	issue with the settings parsing code.
+October 8, 2013:
+	Added a very simple double-precision floating-point range test to tests.cpp.
 
-	PCE: During HES playback initialization, the second emulated VDC's registers are now initialized properly so that the
-	emulation event system isn't overtaxed(which drove up CPU usage considerably during HES playback).
+October 1, 2013:
+	PC-FX: Changed the default value of setting "pcfx.rainbow.chromaip" from "1" to "0".
 
+	When reading the TOC from a physical CD with the READ TOC command, now use response format 0010b instead of response format
+	0000b so that we can get the disc type field stored in the TOC.
+
+September 29, 2013:
+	Fixed a bug that was causing the CD reading code to get confused about whether a disc(or drive dray) was inserted or ejected
+	when the insert/eject MMC command failed, and updated the documentation in regards to physical discs and multiple CD games.
+
+	Added more verbose error messages when errors with libcdio occur in regards to reading a physical CD.
+
+September 27, 2013:
 	PSX: Improved DualShock emulation accuracy per tests on a DualShock; rumble now works in "Final Fantasy 8", and possibly
 	other games where rumble was previously non-working.
 
 	Reworked how joystick/gamepad rumble is handled on Linux, to perform better and hopefully not cause kernel panics
 	anymore(or at least not so often as the old code did).
 
-        PSX: Removed an unnecessary and borked memset() statement from mdec.cpp.
+September 25, 2013:
+	CDPLAY: More Q subchannel information is now displayed.
 
-        Added a very simple double-precision floating-point range test to tests.cpp.
+	PSX: Removed an unnecessary and borked memset() statement from mdec.cpp.
 
-        Compile with "-fno-aggressive-loop-optimizations", if the option is detected to be supported by the compiler.  I don't
-        particularly trust that new optimization in gcc 4.8.x.
+	Compile with "-fno-aggressive-loop-optimizations", if the option is detected to be supported by the compiler.  I don't
+	particularly trust that new optimization in gcc 4.8.x.
 
+September 22, 2013:
+	SNES: Eliminated bsnes' internal framebuffer, and added a scanline render callback into the Mednafen interface code.
+
+	SNES: Reduced size of sound resampling buffer.
 
 -- 0.9.32-WIP: --
 

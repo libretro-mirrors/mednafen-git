@@ -24,6 +24,7 @@
 #endif
 #include "input.h"
 #include "../general.h"
+#include "../string/trim.h"
 #include "../md5.h"
 #include "../mempatcher.h"
 #include <iconv.h>
@@ -388,7 +389,8 @@ static int32 MDFN_FASTCALL EventHandler(const v810_timestamp_t timestamp)
  return(CalcNextTS());
 }
 
-static void ForceEventUpdates(const v810_timestamp_t timestamp)
+// Called externally from debug.cpp in some cases.
+void ForceEventUpdates(const v810_timestamp_t timestamp)
 {
  next_vip_ts = VIP_Update(timestamp);
  next_timer_ts = TIMER_Update(timestamp);
@@ -810,7 +812,7 @@ static void Emulate(EmulateSpecStruct *espec)
 
  RebaseTS(v810_timestamp);
 
- VB_V810->ResetTS();
+ VB_V810->ResetTS(0);
 
 
 #if 0
@@ -847,7 +849,7 @@ static DebuggerInfoStruct DBGInfo =
  VBDBG_FlushBreakPoints,
  VBDBG_AddBreakPoint,
  VBDBG_SetCPUCallback,
- VBDBG_SetBPCallback,
+ VBDBG_EnableBranchTrace,
  VBDBG_GetBranchTrace,
  NULL, 	//KING_SetGraphicsDecode,
  VBDBG_SetLogFunc,
@@ -857,7 +859,9 @@ static DebuggerInfoStruct DBGInfo =
 
 static int StateAction(StateMem *sm, int load, int data_only)
 {
+ const v810_timestamp_t timestamp = VB_V810->v810_timestamp;
  int ret = 1;
+
  SFORMAT StateRegs[] =
  {
   SFARRAY(WRAM, 65536),
@@ -865,13 +869,6 @@ static int StateAction(StateMem *sm, int load, int data_only)
   SFVAR(WCR),
   SFVAR(IRQ_Asserted),
   SFVAR(VSU_CycleFix),
-
-
-  // TODO: Remove these(and recalc on state load)
-  SFVAR(next_vip_ts), 
-  SFVAR(next_timer_ts),
-  SFVAR(next_input_ts),
-
   SFEND
  };
 
@@ -886,7 +883,8 @@ static int StateAction(StateMem *sm, int load, int data_only)
 
  if(load)
  {
-
+  // Needed to recalculate next_*_ts since we don't bother storing their deltas in save states.
+  ForceEventUpdates(timestamp);
  }
  return(ret);
 }
@@ -1036,6 +1034,7 @@ MDFNGI EmulatedVB =
  CloseGame,
  SetLayerEnableMask,
  NULL,		// Layer names, null-delimited
+ NULL,
  NULL,
  NULL,
  NULL,

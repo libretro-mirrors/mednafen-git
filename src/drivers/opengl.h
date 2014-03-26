@@ -129,6 +129,7 @@ typedef void GLAPIENTRY (*glUniform3fARB_Func)(GLint, GLfloat, GLfloat, GLfloat)
 typedef void GLAPIENTRY (*glUniform1iARB_Func)(GLint, GLint);
 typedef void GLAPIENTRY (*glUniform2iARB_Func)(GLint, GLint, GLint);
 typedef void GLAPIENTRY (*glUniform3iARB_Func)(GLint, GLint, GLint, GLint);
+typedef void GLAPIENTRY (*glUniformMatrix2fvARB_Func)(GLint, GLsizei, GLboolean, const GLfloat*);
 typedef void GLAPIENTRY (*glActiveTextureARB_Func)(GLenum);
 typedef void GLAPIENTRY (*glGetInfoLogARB_Func)(GLhandleARB, GLsizei, GLsizei *, GLcharARB *);
 typedef GLint GLAPIENTRY (*glGetUniformLocationARB_Func)(GLhandleARB, const GLcharARB *);
@@ -223,6 +224,7 @@ class OpenGL_Blitter
  glUniform1iARB_Func p_glUniform1iARB;
  glUniform2iARB_Func p_glUniform2iARB;
  glUniform3iARB_Func p_glUniform3iARB;
+ glUniformMatrix2fvARB_Func p_glUniformMatrix2fvARB;
  glActiveTextureARB_Func p_glActiveTextureARB;
  glGetInfoLogARB_Func p_glGetInfoLogARB;
  glGetUniformLocationARB_Func p_glGetUniformLocationARB;

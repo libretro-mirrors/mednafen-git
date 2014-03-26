@@ -83,6 +83,9 @@ V810::V810()
 
  memset(MemReadBus32, 0, sizeof(MemReadBus32));
  memset(MemWriteBus32, 0, sizeof(MemWriteBus32));
+
+ v810_timestamp = 0;
+ next_event_ts = 0x7FFFFFFF;
 }
 
 V810::~V810()
@@ -286,9 +289,6 @@ void V810::Reset()
  if(ADDBT)
   ADDBT(GetPC(), 0xFFFFFFF0, 0xFFF0);
 #endif
- v810_timestamp = 0;
- next_event_ts = 0x7FFFFFFF; // fixme
-
  memset(&Cache, 0, sizeof(Cache));
 
  memset(P_REG, 0, sizeof(P_REG));
@@ -617,12 +617,21 @@ void V810::Run_Accurate(int32 MDFN_FASTCALL (*event_handler)(const v810_timestam
 }
 
 #ifdef WANT_DEBUGGER
+
+/* Make sure class member variable v810_timestamp is synchronized to our local copy, since we'll read it externally if a system
+   reset/power occurs when in step mode or similar.
+*/
+#define RB_CPUHOOK_DBG(n) { if(CPUHook) { v810_timestamp = timestamp_rl; CPUHook(timestamp_rl, n); } }
+
 void V810::Run_Accurate_Debug(int32 MDFN_FASTCALL (*event_handler)(const v810_timestamp_t timestamp))
 {
  const bool RB_AccurateMode = true;
 
- #define RB_ADDBT(n,o,p) ADDBT(n,o,p)
- #define RB_CPUHOOK(n) {if(CPUHook) CPUHook(n); }
+ #define RB_ADDBT(n,o,p) { if(ADDBT) ADDBT(n,o,p); }
+ /* Make sure class member variable v810_timestamp is synchronized to our local copy, since we'll read it externally if a system
+    reset/power occurs when in step mode or similar.
+ */
+ #define RB_CPUHOOK(n) RB_CPUHOOK_DBG(n)
  #define RB_DEBUGMODE
 
  #include "v810_oploop.inc"
@@ -666,8 +675,8 @@ void V810::Run_Fast_Debug(int32 MDFN_FASTCALL (*event_handler)(const v810_timest
 {
  const bool RB_AccurateMode = false;
 
- #define RB_ADDBT(n,o,p) ADDBT(n,o,p)
- #define RB_CPUHOOK(n) { if(CPUHook) CPUHook(n); }
+ #define RB_ADDBT(n,o,p) { if(ADDBT) ADDBT(n,o,p); }
+ #define RB_CPUHOOK(n) RB_CPUHOOK_DBG(n)
  #define RB_DEBUGMODE
 
  #include "v810_oploop.inc"
@@ -689,7 +698,7 @@ v810_timestamp_t V810::Run(int32 MDFN_FASTCALL (*event_handler)(const v810_times
  Running = true;
 
  #ifdef WANT_DEBUGGER
- if(CPUHook)
+ if(CPUHook || ADDBT)
  {
   if(EmuMode == V810_EMU_MODE_FAST)
    Run_Fast_Debug(event_handler);
@@ -713,7 +722,7 @@ void V810::Exit(void)
 }
 
 #ifdef WANT_DEBUGGER
-void V810::SetCPUHook(void (*newhook)(uint32 PC), void (*new_ADDBT)(uint32 old_PC, uint32 new_PC, uint32))
+void V810::SetCPUHook(void (*newhook)(const v810_timestamp_t timestamp, uint32 PC), void (*new_ADDBT)(uint32 old_PC, uint32 new_PC, uint32))
 {
  CPUHook = newhook;
  ADDBT = new_ADDBT;
@@ -1526,6 +1535,8 @@ int V810::StateAction(StateMem *sm, int load, int data_only)
   }
  }
 
+ int32 next_event_ts_delta = next_event_ts - v810_timestamp;
+
  SFORMAT StateRegs[] =
  {
   SFARRAY32(P_REG, 32),
@@ -1539,11 +1550,8 @@ int V810::StateAction(StateMem *sm, int load, int data_only)
   SFARRAY32(cache_data_temp, 128 * 2),
   SFARRAYB(cache_data_valid_temp, 128 * 2),
 
-  SFVAR(ilevel),	// Perhaps remove in future?
-  SFVAR(next_event_ts),	// This too
-
-  //SFVAR(tmp_timestamp),
-  SFVAR(v810_timestamp),
+  SFVAR(ilevel),		// Perhaps remove in future?
+  SFVAR(next_event_ts_delta),
 
   // Bitstring stuff:
   SFVAR(src_cache),
@@ -1560,7 +1568,12 @@ int V810::StateAction(StateMem *sm, int load, int data_only)
 
  if(load)
  {
-  //clamp(&PCFX_V810.v810_timestamp, 0, 30 * 1000 * 1000);
+  // std::max is sanity check for a corrupted save state to not crash emulation,
+  // std::min<int64>(0x7FF... is a sanity check and for the case where next_event_ts is set to an extremely large value to
+  // denote that it's not happening anytime soon, which could cause an overflow if our current timestamp is larger
+  // than what it was when the state was saved.
+  next_event_ts = std::max<int64>(v810_timestamp, std::min<int64>(0x7FFFFFFF, (int64)v810_timestamp + next_event_ts_delta));
+
   RecalcIPendingCache();
 
   SetPC(PC_tmp);

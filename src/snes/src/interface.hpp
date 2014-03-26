@@ -9,6 +9,7 @@ namespace bSNES_v059 {
     virtual bool property(unsigned id, string &name, string &value) = 0;
   };
 
+  #include "cheat/cheat.hpp"
   #include "memory/memory.hpp"
   #include "memory/smemory/smemory.hpp"
 
@@ -26,7 +27,7 @@ namespace bSNES_v059 {
   #include "system/system.hpp"
   #include "chip/chip.hpp"
   #include "cartridge/cartridge.hpp"
-  #include "cheat/cheat.hpp"
+  //#include "cheat/cheat.hpp"
 
   #include "memory/memory-inline.hpp"
   #include "ppu/ppu-inline.hpp"

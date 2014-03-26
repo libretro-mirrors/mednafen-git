@@ -17,7 +17,7 @@
 
 #include "shared.h"
 #include "header.h"
-#include "../general.h"
+#include "../string/trim.h"
 #include <ctype.h>
 
 namespace MDFN_IEN_MD

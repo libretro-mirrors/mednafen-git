@@ -53,8 +53,10 @@ SexyAL_device *SexyALI_ALSA_Open(const char *id, SexyAL_format *format, SexyAL_b
 #endif
 
 #ifdef DOS
-SexyAL_device *SexyALI_DOS_ES1371_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 SexyAL_device *SexyALI_DOS_SB_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
+SexyAL_device *SexyALI_DOS_ES1370_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
+SexyAL_device *SexyALI_DOS_ES1371_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
+SexyAL_device *SexyALI_DOS_CMI8738_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 #endif
 
 static uint32_t FtoB(const SexyAL_format *format, uint32_t frames)
@@ -151,8 +153,10 @@ static SexyAL_driver drivers[] =
         #endif
 
 	#ifdef DOS
-        { SEXYAL_TYPE_DOS_ES1371, "ES1371", "dos_es1371", SexyALI_DOS_ES1371_Open, NULL },
-	{ SEXYAL_TYPE_DOS_SB, "Sound Blaster 2.0/Pro/16", "dos_sb", SexyALI_DOS_SB_Open, NULL },
+	{ SEXYAL_TYPE_DOS_SB, "Sound Blaster 2.0/Pro/16", "sb", SexyALI_DOS_SB_Open, NULL },
+        { SEXYAL_TYPE_DOS_ES1370, "Ensoniq ES1370", "es1370", SexyALI_DOS_ES1370_Open, NULL },
+	{ SEXYAL_TYPE_DOS_ES1371, "Ensoniq ES1371", "es1371", SexyALI_DOS_ES1371_Open, NULL },
+	{ SEXYAL_TYPE_DOS_CMI8738, "CMI8738", "cmi8738", SexyALI_DOS_CMI8738_Open, NULL },
 	#endif
 
         #if HAVE_SDL

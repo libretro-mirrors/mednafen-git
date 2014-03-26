@@ -16,7 +16,7 @@
  */
 
 #include "mednafen.h"
-
+#include <trio/trio.h>
 #include <math.h>
 
 #include "video.h"
@@ -42,8 +42,8 @@ static INLINE void DrawLine(MDFN_Surface *surface, uint32 color, uint32 bmatch, 
 
   if(dy_dx > 0)
   {
-   ys = round(ys);
-   ye = round(ye);
+   ys = floor(0.5 + ys);
+   ye = floor(0.5 + ye);
 
    if(ys < r_ys) ys = r_ys;
    if(ye > r_ye) ye = r_ye;
@@ -61,8 +61,8 @@ static INLINE void DrawLine(MDFN_Surface *surface, uint32 color, uint32 bmatch, 
   }
   else
   {
-   ys = round(ys);
-   ye = round(ye);
+   ys = floor(0.5 + ys);
+   ye = floor(0.5 + ye);
 
    if(ys > r_ys) ys = r_ys;
    if(ye < r_ye) ye = r_ye;
@@ -218,7 +218,7 @@ void Player_Draw(MDFN_Surface *surface, MDFN_Rect *dr, int CurrentSong, int16 *s
  if(TotalSongs > 1)
  {
   char snbuf[32];
-  snprintf(snbuf, 32, "<%d/%d>", CurrentSong + 1, TotalSongs);
+  trio_snprintf(snbuf, 32, "<%d/%d>", CurrentSong + 1, TotalSongs);
   DrawTextTransShadow(XBuf, surface->pitch32 * sizeof(uint32), dr->w, (uint8*)snbuf, text_color, text_shadow_color, 1);
  }
 }

@@ -19,31 +19,58 @@
 #include <trio/trio.h>
 #include <time.h>
 #include <map>
+#include "debugger.h"
 #include "gfxdebugger.h"
 #include "memdebugger.h"
 #include "logdebugger.h"
 #include "prompt.h"
+#include "video.h"
 
 static FILE *TraceLog = NULL;
 static std::string TraceLogSpec;
 static int64 TraceLogEnd;
+static unsigned TraceLogRTO;
 
-static bool NeedInit = 1;
-static bool NeedHooksInstalled = TRUE;
-static bool WatchLogical = 1; // Watch logical memory addresses, not physical
+static bool NeedInit = true;
+static bool WatchLogical = true; // Watch logical memory addresses, not physical
 static bool IsActive = 0;
 static bool CompactMode = FALSE;
 
 static unsigned int WhichMode = 0; // 0 = normal, 1 = gfx, 2 = memory
 
+static bool NeedPCBPToggle = false;
+static int NeedStep = 0;	// 0 =, 1 = , 2 = 
+static int NeedRun = 0;
+static bool InSteppingMode = false;
+
+bool Debugger_GT_IsInSteppingMode(void)
+{
+ return(InSteppingMode);
+}
+
 static std::string ReadBreakpoints, IOReadBreakpoints, AuxReadBreakpoints;
 static std::string WriteBreakpoints, IOWriteBreakpoints, AuxWriteBreakpoints;
 static std::string OpBreakpoints;
+
+static MDFN_Surface* DebuggerSurface[2] = { NULL, NULL };
+static MDFN_Rect DebuggerRect[2];
+
+static int volatile DMTV_BackBuffer = 0;
+static MDFN_Surface* volatile DMTV_Surface = NULL;
+static MDFN_Rect* volatile DMTV_Rect = NULL;
+
+//
+// Used for translating mouse coordinates and whatnot.  Doesn't really matter if it's not atomically updated, there
+// are sanity checks to prevent dividing by zero, and it'll just cause mouse coordinate translation to be wonky for a tiny fraction of a second.
+static MDFN_Rect volatile dlc_screen_dest_rect = { 0 };
+
 static int DebuggerOpacity;
 
 typedef std::vector<std::string> DisComment;
 
 static std::map<uint64, DisComment> Comments; // Lower 32 bits == address, upper 32 bits == 4 bytes data match
+
+static void CPUCallback(uint32 PC, bool bpoint);	// Called from game thread.
 
 static uint32 GetPC(void)
 {
@@ -128,10 +155,59 @@ static uint32 ParsePhysAddr(const char *za)
  return(ret);
 }
 
-static void ParseBreakpoints(const std::string &Breakpoints, int type)
-{
- LockGameMutex(1);
+static std::vector<uint32> PCBreakPoints;
 
+static void UpdateCoreHooks(void)
+{
+ bool BPInUse = PCBreakPoints.size() || ReadBreakpoints.size() || WriteBreakpoints.size() || IOReadBreakpoints.size() ||
+	IOWriteBreakpoints.size() || AuxReadBreakpoints.size() || AuxWriteBreakpoints.size() || OpBreakpoints.size();
+ bool CPUCBNeeded = BPInUse || TraceLog || InSteppingMode || (NeedStep == 2);
+
+ CurGame->Debugger->EnableBranchTrace(BPInUse || TraceLog || IsActive);
+ CurGame->Debugger->SetCPUCallback(CPUCBNeeded ? CPUCallback : NULL, TraceLog || InSteppingMode || (NeedStep == 2));
+}
+
+static void UpdatePCBreakpoints(void)
+{
+ CurGame->Debugger->FlushBreakPoints(BPOINT_PC);
+
+ for(unsigned int x = 0; x < PCBreakPoints.size(); x++)
+ {
+  CurGame->Debugger->AddBreakPoint(BPOINT_PC, PCBreakPoints[x], PCBreakPoints[x], 1);
+ }
+ UpdateCoreHooks();
+}
+
+static INLINE bool IsPCBreakPoint(uint32 A)
+{
+ unsigned int max = PCBreakPoints.size();
+
+ for(unsigned int x = 0; x < max; x++)
+  if(PCBreakPoints[x] == A)
+   return(1);
+ return(0);
+}
+
+static void TogglePCBreakPoint(uint32 A)
+{
+ for(unsigned int x = 0; x < PCBreakPoints.size(); x++)
+ {
+  if(PCBreakPoints[x] == A)
+  {
+   PCBreakPoints.erase(PCBreakPoints.begin() + x);
+
+   UpdatePCBreakpoints();
+
+   return;
+  }
+ }
+ PCBreakPoints.push_back(A);
+
+ UpdatePCBreakpoints();
+}
+
+static void UpdateBreakpoints(const std::string &Breakpoints, int type)
+{
  size_t len = Breakpoints.size();
  const char *zestring = Breakpoints.c_str();
  unsigned int last_x, x;
@@ -191,8 +267,21 @@ static void ParseBreakpoints(const std::string &Breakpoints, int type)
    logical = 1;
   }
  }
- LockGameMutex(0);
+ UpdateCoreHooks();
 }
+
+
+static void UpdateBreakpoints(void)
+{
+ UpdatePCBreakpoints();
+ UpdateBreakpoints(ReadBreakpoints, BPOINT_READ);
+ UpdateBreakpoints(WriteBreakpoints, BPOINT_WRITE);
+ UpdateBreakpoints(IOReadBreakpoints, BPOINT_IO_READ);
+ UpdateBreakpoints(IOWriteBreakpoints, BPOINT_IO_WRITE);
+ UpdateBreakpoints(AuxReadBreakpoints, BPOINT_AUX_READ);
+ UpdateBreakpoints(AuxReadBreakpoints, BPOINT_AUX_READ);
+}
+
 
 static unsigned int RegsPos = 0;
 static uint32 InRegs = 0;
@@ -208,55 +297,10 @@ static int DIS_ENTRIES = 58;
 static int DisFont = MDFN_FONT_5x7;
 static int DisFontHeight = 7;
 
-static std::vector<uint32> PCBreakPoints;
-static void RedoPCBreakPoints(void)
-{
- LockGameMutex(1);
- CurGame->Debugger->FlushBreakPoints(BPOINT_PC);
-
- for(unsigned int x = 0; x < PCBreakPoints.size(); x++)
- {
-  CurGame->Debugger->AddBreakPoint(BPOINT_PC, PCBreakPoints[x], PCBreakPoints[x], 1);
- }
- LockGameMutex(0);
-}
-
-static INLINE bool IsPCBreakPoint(uint32 A)
-{
- unsigned int max = PCBreakPoints.size();
-
- for(unsigned int x = 0; x < max; x++)
-  if(PCBreakPoints[x] == A)
-   return(1);
- return(0);
-}
-
-static void TogglePCBreakPoint(uint32 A)
-{
- for(unsigned int x = 0; x < PCBreakPoints.size(); x++)
- {
-  if(PCBreakPoints[x] == A)
-  {
-   PCBreakPoints.erase(PCBreakPoints.begin() + x);
-   RedoPCBreakPoints();
-   return;
-  }
- }
- PCBreakPoints.push_back(A);
- RedoPCBreakPoints();
-}
-
-
 static uint32 WatchAddr = 0x0000, WatchAddrPhys = 0x0000;
 static uint32 DisAddr = 0x0000;
 static uint32 DisCOffs = 0xFFFFFFFF;
 static int NeedDisAddrChange = 0;
-
-static bool NeedPCBPToggle = 0;
-static int volatile NeedStep = 0;
-static int volatile NeedRun = 0;
-static bool NeedBreak = 0;
-bool volatile InSteppingMode = 0; // R/W in game thread, read in main thread(only when GameMutex is held!)
 
 static std::string CurRegLongName;
 static std::string CurRegDetails;
@@ -444,42 +488,40 @@ class DebuggerPrompt : public HappyPrompt
                   else if(InPrompt == ReadBPS)
                   {
                    ReadBreakpoints = std::string(tmp_c_str);
-                   ParseBreakpoints(ReadBreakpoints, BPOINT_READ);
+                   UpdateBreakpoints(ReadBreakpoints, BPOINT_READ);
                   }
                   else if(InPrompt == WriteBPS)
                   {
                    WriteBreakpoints = std::string(tmp_c_str);
-                   ParseBreakpoints(WriteBreakpoints, BPOINT_WRITE);
+                   UpdateBreakpoints(WriteBreakpoints, BPOINT_WRITE);
                   }
                   else if(InPrompt == IOReadBPS)
                   {
                    IOReadBreakpoints = std::string(tmp_c_str);
-                   ParseBreakpoints(IOReadBreakpoints, BPOINT_IO_READ);
+                   UpdateBreakpoints(IOReadBreakpoints, BPOINT_IO_READ);
                   }
                   else if(InPrompt == IOWriteBPS)
                   {
                    IOWriteBreakpoints = std::string(tmp_c_str);
-                   ParseBreakpoints(IOWriteBreakpoints, BPOINT_IO_WRITE);
+                   UpdateBreakpoints(IOWriteBreakpoints, BPOINT_IO_WRITE);
                   }
                   else if(InPrompt == AuxReadBPS)
                   {
                    AuxReadBreakpoints = std::string(tmp_c_str);
-                   ParseBreakpoints(AuxReadBreakpoints, BPOINT_AUX_READ);
+                   UpdateBreakpoints(AuxReadBreakpoints, BPOINT_AUX_READ);
                   }
                   else if(InPrompt == AuxWriteBPS)
                   {
                    AuxWriteBreakpoints = std::string(tmp_c_str);
-                   ParseBreakpoints(AuxWriteBreakpoints, BPOINT_AUX_WRITE);
+                   UpdateBreakpoints(AuxWriteBreakpoints, BPOINT_AUX_WRITE);
                   }
                   else if(InPrompt == OpBPS)
                   {
                    OpBreakpoints = std::string(tmp_c_str);
-                   ParseBreakpoints(OpBreakpoints, BPOINT_OP);
+                   UpdateBreakpoints(OpBreakpoints, BPOINT_OP);
                   }
 		  else if(InPrompt == TraceLogPrompt)
 		  {
-		   LockGameMutex(1);
-
 		   if(pstring != TraceLogSpec)
 		   {
 		    TraceLogSpec = pstring;
@@ -488,6 +530,7 @@ class DebuggerPrompt : public HappyPrompt
 		    {
 		     fclose(TraceLog);
 		     TraceLog = NULL;
+		     UpdateCoreHooks();
 		    }
 
 		    unsigned int endpc;
@@ -504,20 +547,20 @@ class DebuggerPrompt : public HappyPrompt
 		       trio_fprintf(TraceLog, "\n\n\n");
 
 		      trio_fprintf(TraceLog, "Tracing began: %s", asctime(gmtime(&lovelytime)));
+		      trio_fprintf(TraceLog, "[ADDRESS]: [INSTRUCTION]   [REGISTERS(before instruction exec)]");
 		      if(num == 1)
 		       TraceLogEnd = -1;
 		      else
 		       TraceLogEnd = endpc;
+		      TraceLogRTO = 0;
+		      UpdateCoreHooks();
 		     }
 		    }
 		   }
-                   LockGameMutex(0);
 		  }
                   else if(InPrompt == ForceInt)
                   {
-		   LockGameMutex(1);
                    CurGame->Debugger->IRQ(atoi(tmp_c_str));
-		   LockGameMutex(0);
                   }
                   else if(InPrompt == PokeMe)
                   {
@@ -551,10 +594,8 @@ class DebuggerPrompt : public HappyPrompt
                     if(S < 1) S = 1;
                     if(S > 4) S = 4;
 
-                    LockGameMutex(1);
 		    MemPoke(A, V, S, 0, logical);
                     //CurGame->Debugger->MemPoke(A, V, S, 0, logical);
-                    LockGameMutex(0);
                    }
                   }
                   else if(InPrompt == PokeMeHL)
@@ -577,10 +618,8 @@ class DebuggerPrompt : public HappyPrompt
                     if(S < 1) S = 1;
                     if(S > 4) S = 4;
 
-                    LockGameMutex(1);
 		    MemPoke(A, V, S, 1, logical);
 //                    CurGame->Debugger->MemPoke(A, V, S, 1, logical);
-                    LockGameMutex(0);
                    }
                   }
                   else if(InPrompt == EditRegs)
@@ -588,7 +627,6 @@ class DebuggerPrompt : public HappyPrompt
                    uint32 RegValue = 0;
 
                    trio_sscanf(tmp_c_str, "%08X", &RegValue);
-                   LockGameMutex(1);
 
 		   if(CurRegGroupIP->SetRegister || CurRegGroupIP->GetRegister)
 		   {
@@ -604,8 +642,6 @@ class DebuggerPrompt : public HappyPrompt
                     else
                      puts("Null (OLD)SetRegister!");
                    }     
-
-                   LockGameMutex(0);
                   }
                   else if(InPrompt == WatchGoto)
                   {
@@ -638,30 +674,109 @@ struct DisasmEntry
 
 static DebuggerPrompt *myprompt = NULL;
 
-// Call this function from the main thread
-void Debugger_Draw(MDFN_Surface *surface, MDFN_Rect *rect, const MDFN_Rect *screen_rect)
+//
+//
+//
+void Debugger_GTR_PassBlit(void)
 {
- if(!IsActive) return;
+ DMTV_Rect = &DebuggerRect[DMTV_BackBuffer];
+ DMTV_Surface = DebuggerSurface[DMTV_BackBuffer];
+
+ DMTV_BackBuffer ^= 1;
+}
+
+void Debugger_MT_DrawToScreen(const MDFN_PixelFormat& pf, signed screen_w, signed screen_h)
+{
+ if(!DMTV_Rect || !DMTV_Surface || !DMTV_Rect->w || !DMTV_Rect->h)
+  return;
+
+ MDFN_Surface* debsurf = DMTV_Surface;
+ MDFN_Rect* debrect = DMTV_Rect;
+ MDFN_Rect zederect;
+ int xm = screen_w / debrect->w;
+ int ym = screen_h / debrect->h;
+
+ debsurf->SetFormat(pf, true);
+
+ if(xm < 1) xm = 1;
+ if(ym < 1) ym = 1;
+
+ // Allow it to be compacted horizontally, but don't stretch it out, as it's hard(IMHO) to read.
+ if(xm > ym) xm = ym;
+ if(ym > (2 * xm)) ym = 2 * xm;
+
+ zederect.w = debrect->w * xm;
+ zederect.h = debrect->h * ym;
+
+ zederect.x = (screen_w - zederect.w) / 2;
+ zederect.y = (screen_h - zederect.h) / 2;
+
+ *(MDFN_Rect*)&dlc_screen_dest_rect = zederect;
+ BlitRaw(debsurf, debrect, &zederect);
+}
+
+void Debugger_GT_Draw(void)
+{
+ MDFN_Surface* surface = DebuggerSurface[DMTV_BackBuffer];
+ MDFN_Rect* rect = &DebuggerRect[DMTV_BackBuffer];
+ MDFN_Rect screen_rect = *(MDFN_Rect*)&dlc_screen_dest_rect;
+
+ if(!IsActive)
+ {
+  rect->w = 0;
+  rect->h = 0;
+  return;
+ }
+
+ //
+ // Kludges to prevent div by zero.  We're a little sloppy with the dest rect thingy...
+ //
+ if(!screen_rect.w)
+  screen_rect.w = 1;
+
+ if(!screen_rect.h)
+  screen_rect.h = 1;
+
+
+ switch(WhichMode)
+ {
+  default:
+  case 0: rect->w = CompactMode ? 512 : 640;
+	  rect->h = CompactMode ? 448 : 480;
+	  break;
+
+  case 1: rect->w = 384;
+	  rect->h = 320;
+	  break;
+
+  case 2: rect->w = 320;
+	  rect->h = 240;
+	  break;
+
+  case 3: rect->w = 512;
+	  rect->h = 448;
+	  break;
+ }
 
  if(WhichMode == 1)
  {
   surface->Fill(0, 0, 0, 0);
 
-  GfxDebugger_Draw(surface, rect, screen_rect);
+  GfxDebugger_Draw(surface, rect, &screen_rect);
   return;
  }
  else if(WhichMode == 2)
  {
   surface->Fill(0, 0, 0, DebuggerOpacity);
 
-  MemDebugger_Draw(surface, rect, screen_rect);
+  MemDebugger_Draw(surface, rect, &screen_rect);
   return;
  }
  else if(WhichMode == 3)
  {
   surface->Fill(0, 0, 0, DebuggerOpacity);
 
-  LogDebugger_Draw(surface, rect, screen_rect);
+  LogDebugger_Draw(surface, rect, &screen_rect);
   return;
  }
 
@@ -670,20 +785,6 @@ void Debugger_Draw(MDFN_Surface *surface, MDFN_Rect *rect, const MDFN_Rect *scre
  uint32 pitch32 = surface->pitchinpix;
 
  surface->Fill(0, 0, 0, DebuggerOpacity);
-#if 0
- for(int y = 0; y < rect->h; y++)
- {
-  uint32 *row = pixels + y * pitch32;
-  for(int x = 0; x < rect->w; x++)
-  {
-   //printf("%d %d %d\n", y, x, pixels);
-   row[x] = MK_COLOR_A(0, 0, 0, DebuggerOpacity);
-   //row[x] = MK_COLOR_A(0x00, 0x00, 0x00, 0x7F);
-  }
- }
-#endif
-
- LockGameMutex(1);
 
  // We need to disassemble (maximum_instruction_size * (DIS_ENTRIES / 2) * 3)
  // bytes to make sure we can center our desired DisAddr, and
@@ -1056,33 +1157,14 @@ void Debugger_Draw(MDFN_Surface *surface, MDFN_Rect *rect, const MDFN_Rect *scre
   delete myprompt;
   myprompt = NULL;
  }
- LockGameMutex(0);
 }
 
 static const char HexLUT[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
-// Function called from game thread
-static void CPUCallback(uint32 PC)
+static void DoTraceLog(const uint32 PC)
 {
- if((NeedStep == 2 && !InSteppingMode) || NeedBreak)
- {
-  DisAddr = PC;
-  DisCOffs = 0xFFFFFFFF;
-  NeedStep = 0;
-  InSteppingMode = 1;
-  NeedBreak = 0;
- }
-
- if(NeedStep == 1)
- {
-  DisAddr = PC;
-  DisCOffs = 0xFFFFFFFF;
-  NeedStep = 0;
- }
-
- if(TraceLog)
- {
   uint32 trace_PC = PC;
+
   char dis_text_buf[256 + 64];
   char *distbp = dis_text_buf;
 
@@ -1095,15 +1177,89 @@ static void CPUCallback(uint32 PC)
   *distbp++ = ' ';
 
   CurGame->Debugger->Disassemble(trace_PC, trace_PC, distbp);
-
   fputs(dis_text_buf, TraceLog);
+
+  if(1)
+  {
+   char regs_buf[1024 + 1];
+   unsigned tpos = 0;
+   RegGroupType *rg = (*CurGame->Debugger->RegGroups)[0];
+
+   {
+    unsigned sl = strlen(dis_text_buf);
+
+    if((sl + 3) > TraceLogRTO)
+     TraceLogRTO = sl + 3;
+
+    for(unsigned i = sl; i < TraceLogRTO && tpos < 1024; i++)
+     regs_buf[tpos++] = ' ';
+   }
+
+   for(unsigned i = 0; rg->Regs[i].bsize > 0; i++)
+   {
+    const RegType* rt = &rg->Regs[i];
+    uint32 val;
+
+    if(rg->Regs[i].bsize == 0xFFFF)
+     continue;
+
+    if(rg->GetRegister)
+     val = rg->GetRegister(rt->id, NULL, 0);
+    else
+     val = rg->OLDGetRegister(rt->name, NULL);
+
+    if(i)
+    {
+     if(tpos < 1024)
+      regs_buf[tpos++] = ' ';
+    }
+
+    for(unsigned s = 0; s < rt->name.size() && tpos < 1024; s++)
+    {
+     regs_buf[tpos++] = rt->name[s];
+    }
+
+    if(tpos < 1024)
+     regs_buf[tpos++] = '=';
+
+    for(unsigned n = 0; n < (rt->bsize * 2) && tpos < 1024; n++)
+     regs_buf[tpos++] = HexLUT[(val >> (((rt->bsize * 2) - 1 - n) * 4)) & 0xF];
+   }
+
+   regs_buf[tpos] = 0;
+
+   fputs(regs_buf, TraceLog);
+  }
 
   if(TraceLogEnd >= 0 && (uint32)TraceLogEnd == PC)
   {
    fclose(TraceLog);
    TraceLog = 0;
+   UpdateCoreHooks();
   }
+}
+
+// Function called from game thread
+static void CPUCallback(uint32 PC, bool bpoint)
+{
+ if((NeedStep == 2 && !InSteppingMode) || bpoint)
+ {
+  IsActive |= bpoint;
+  DisAddr = PC;
+  DisCOffs = 0xFFFFFFFF;
+  NeedStep = 0;
+  InSteppingMode = 1;
  }
+
+ if(NeedStep == 1)
+ {
+  DisAddr = PC;
+  DisCOffs = 0xFFFFFFFF;
+  NeedStep = 0;
+ }
+
+ if(TraceLog)
+  DoTraceLog(PC);
 
  while(InSteppingMode && GameThreadRun)
  {
@@ -1119,49 +1275,49 @@ static void CPUCallback(uint32 PC)
    NeedRun = 0;
    InSteppingMode = 0;
   }
+  if(!InSteppingMode)
+   UpdateCoreHooks();
  }
  if(NeedRun) NeedRun = 0;
 }
 
-// Function called from game thread
-static void BPCallback(uint32 PC)
-{
- NeedBreak = 1;
- IsActive = 1;
-}
 
 // Function called from game thread, input driver code.
-void Debugger_ForceStepIfStepping(void)
+void Debugger_GT_ForceStepIfStepping(void)
 {
  if(InSteppingMode)
   NeedStep = 2;
 }
 
-void Debugger_ForceSteppingMode(void)
+// Function called from game thread, input driver code.
+void Debugger_GT_SyncDisToPC(void)
+{
+ if(CurGame->Debugger && !NeedInit)
+ {
+  DisAddr = GetPC();
+  DisCOffs = 0xFFFFFFFF;
+ }
+}
+
+// Called from game thread, or in the main thread game thread creation sequence code.
+void Debugger_GT_ForceSteppingMode(void)
 {
  if(!InSteppingMode)
+ {
   NeedStep = 2;
+  UpdateCoreHooks();
+ }
 }
 
 // Call this function from any thread:
-// Only call with w or h non-NULL in main thread
-bool Debugger_IsActive(unsigned int *w, unsigned int *h)
+bool Debugger_IsActive(void)
 {
- switch(WhichMode)
- {
-  default:
-  case 0: if(w) *w = CompactMode ? 512 : 640; if(h) *h = CompactMode ? 448 : 480; break;
-  case 1: if(w) *w = 384; if(h) *h = 320; break;
-  case 2: if(w) *w = 320; if(h) *h = 240; break;
-  case 3: if(w) *w = 512; if(h) *h = 448; break;
- }
-
  return(IsActive);
 }
 
 
 // Call this function from the game thread:
-bool Debugger_Toggle(void)
+bool Debugger_GT_Toggle(void)
 {
  if(CurGame->Debugger)
  {
@@ -1169,6 +1325,12 @@ bool Debugger_Toggle(void)
 
   if(IsActive)
   {
+   if(!DebuggerSurface[0])
+   {
+    DebuggerSurface[0] = new MDFN_Surface(NULL, 640, 480, 640, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, 0, 8, 16, 24));
+    DebuggerSurface[1] = new MDFN_Surface(NULL, 640, 480, 640, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, 0, 8, 16, 24));
+   }
+
    if(NeedInit)
    {
     std::string des_disfont = MDFN_GetSettingS(std::string(std::string(CurGame->shortname) + "." + std::string("debugger.disfontsize")).c_str());
@@ -1190,8 +1352,6 @@ bool Debugger_Toggle(void)
 #endif
     // End debug remove me
  
-
-    //if(!strcasecmp(CurGame->shortname, "nes") || !strcasecmp(CurGame->shortname, "pce"))
     if(des_disfont == "xsmall")
     {
      DisFont = MDFN_FONT_4x5;
@@ -1279,58 +1439,29 @@ bool Debugger_Toggle(void)
      pw_offset += pw;
     }
     RegsTotalWidth = pw_offset;
-    NeedHooksInstalled = TRUE;
-   }
-
-   if(NeedHooksInstalled)
-   {
-    NeedHooksInstalled = FALSE;
-    CurGame->Debugger->SetCPUCallback(CPUCallback);
-    CurGame->Debugger->SetBPCallback(BPCallback);
-    ParseBreakpoints(ReadBreakpoints, BPOINT_READ);
-    ParseBreakpoints(WriteBreakpoints, BPOINT_WRITE);
-    ParseBreakpoints(IOReadBreakpoints, BPOINT_IO_READ);
-    ParseBreakpoints(IOWriteBreakpoints, BPOINT_IO_WRITE);
-    ParseBreakpoints(AuxReadBreakpoints, BPOINT_AUX_READ);
-    ParseBreakpoints(AuxReadBreakpoints, BPOINT_AUX_READ);
-
-    if(WhichMode == 1)
-     GfxDebugger_SetActive(TRUE);
-    else if(WhichMode == 2)
-     MemDebugger_SetActive(TRUE);
-    else if(WhichMode == 3)
-     LogDebugger_SetActive(TRUE);
    }
   }
-  else // Disabled, yahyahyah
-  {
-   // Only uninstall our hooks if we don't have any active breakpoints, and trace log is off.
-   if(!PCBreakPoints.size() && !ReadBreakpoints.size() && !WriteBreakpoints.size() && !IOReadBreakpoints.size() && 
-	!IOWriteBreakpoints.size() && !AuxReadBreakpoints.size() && !AuxWriteBreakpoints.size() && !OpBreakpoints.size()
-	&& !TraceLog)
-   {
-    NeedHooksInstalled = TRUE;
-    CurGame->Debugger->SetCPUCallback(FALSE);
-    CurGame->Debugger->SetBPCallback(FALSE);
-    GfxDebugger_SetActive(FALSE);
-    MemDebugger_SetActive(FALSE);
-    LogDebugger_SetActive(FALSE);
-   }
-  }
+
+  UpdateCoreHooks();	// Note: Relies on value of IsActive.
+  UpdateBreakpoints();
+
+  GfxDebugger_SetActive((WhichMode == 1) && IsActive);
+  MemDebugger_SetActive((WhichMode == 2) && IsActive);
+  LogDebugger_SetActive((WhichMode == 3) && IsActive);
+
   SDL_MDFN_ShowCursor(IsActive);
  }
  return(IsActive);
 }
 
-void Debugger_ModOpacity(int deltalove)
+void Debugger_GT_ModOpacity(int deltalove)
 {
  DebuggerOpacity += deltalove;
  if(DebuggerOpacity < 0) DebuggerOpacity = 0;
  if(DebuggerOpacity > 0xFF) DebuggerOpacity = 0xFF;
 }
 
-// Called from the main thread
-void Debugger_Event(const SDL_Event *event)
+void Debugger_GT_Event(const SDL_Event *event)
 {
   if(event->type == SDL_KEYDOWN)
   {
@@ -1406,9 +1537,9 @@ void Debugger_Event(const SDL_Event *event)
         else switch(event->key.keysym.sym)
         {
 	 default: break;
-	 case SDLK_MINUS: Debugger_ModOpacity(-8);
+	 case SDLK_MINUS: Debugger_GT_ModOpacity(-8);
         	          break;
-	 case SDLK_EQUALS: Debugger_ModOpacity(8);
+	 case SDLK_EQUALS: Debugger_GT_ModOpacity(8);
 	                   break;
 
 	 case SDLK_HOME:
@@ -1454,6 +1585,7 @@ void Debugger_Event(const SDL_Event *event)
           else
 	   NeedDisAddrChange = -11;
           break;
+
 	 case SDLK_PAGEDOWN: 
           if(event->key.keysym.mod & KMOD_SHIFT) 
 	  {
@@ -1533,20 +1665,19 @@ void Debugger_Event(const SDL_Event *event)
 	 case SDLK_t:
 		if(CurGame->Debugger->ToggleSyntax)
 		{
-		 LockGameMutex(1);
 		 CurGame->Debugger->ToggleSyntax();
-		 LockGameMutex(0);
 		}
 		break;
 
          case SDLK_SPACE:
 		NeedPCBPToggle = 1;
 		break;
+
 	 case SDLK_s:
-		LockGameMutex(1);
 		NeedStep = 2;
-		LockGameMutex(0);
+		UpdateCoreHooks();
 		break;
+
 	 case SDLK_w:
                 if(event->key.keysym.mod & KMOD_SHIFT)
                 {
@@ -1652,15 +1783,12 @@ void Debugger_Event(const SDL_Event *event)
 		    ptext = CurRegIP->name;
 		    int len = CurRegIP->bsize;
 
-		    LockGameMutex(1);
 		    uint32 RegValue;
 
 		    if(CurRegGroupIP->GetRegister)
 		     RegValue = CurRegGroupIP->GetRegister(CurRegIP->id, NULL, 0);
 		    else
 		     RegValue = CurRegGroupIP->OLDGetRegister(CurRegIP->name, NULL);
-
-		    LockGameMutex(0);
 
 		    if(len == 1)
 		     trio_snprintf(buf, 64, "%02X", RegValue);

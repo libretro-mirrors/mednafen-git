@@ -31,7 +31,7 @@ struct XInputFuncPointers
 {
  void WINAPI (*p_XInputEnable)(BOOL);
  DWORD WINAPI (*p_XInputSetState)(DWORD, XINPUT_VIBRATION*);
- DWORD WINAPI (*p_XInputGetState)(DWORD, XINPUT_STATE*);
+ DWORD WINAPI (*p_XInputGetState)(DWORD, XINPUT_STATE*);	// Pointer to XInputGetState or XInputGetStateEx(if available).
  DWORD WINAPI (*p_XInputGetCapabilities)(DWORD, DWORD, XINPUT_CAPABILITIES*);
 };
 
@@ -181,7 +181,7 @@ JoystickDriver_XInput::JoystickDriver_XInput() : joy_count(0), dll_handle(NULL)
  GetXIPA(dll_handle, xfps.p_XInputEnable, "XInputEnable");
 
  if(!GetXIPA(dll_handle, xfps.p_XInputSetState, "XInputSetState") ||
-    !GetXIPA(dll_handle, xfps.p_XInputGetState, "XInputGetState") ||
+    (!GetXIPA(dll_handle, xfps.p_XInputGetState, (const char *)100/*"XInputGetStateEx"*/) && !GetXIPA(dll_handle, xfps.p_XInputGetState, "XInputGetState")) ||
     !GetXIPA(dll_handle, xfps.p_XInputGetCapabilities, "XInputGetCapabilities"))
  {
   FreeLibrary(dll_handle);

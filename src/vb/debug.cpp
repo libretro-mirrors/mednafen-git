@@ -35,8 +35,9 @@ namespace MDFN_IEN_VB
 extern V810 *VB_V810;
 extern VSU *VB_VSU;
 
-static void (*CPUHook)(uint32);
-static void (*BPCallB)(uint32 PC) = NULL;
+static void RedoCPUHook(void);
+static void (*CPUHook)(uint32, bool bpoint) = NULL;
+static bool CPUHookContinuous = false;
 static void (*LogFunc)(const char *, const char *);
 bool VB_LoggingOn = FALSE;
 
@@ -49,44 +50,19 @@ typedef struct __VB_BPOINT {
 static std::vector<VB_BPOINT> BreakPointsPC, BreakPointsRead, BreakPointsWrite;
 static bool FoundBPoint = 0;
 
-
-#if 0
-static int BTIndex = 0;
-static uint32 BTEntries[16];
-
-static void AddBranchTrace(uint32 old_PC, uint32 new_PC, uint32 special)
-{
- if(BTEntries[(BTIndex - 1) & 0xF] == new_PC) return;
-
- BTEntries[BTIndex] = new_PC;
- BTIndex = (BTIndex + 1) & 0xF;
-}
-
-std::vector<std::string> VBDBG_GetBranchTrace(void)
-{
- std::vector<std::string> ret;
-
- for(int x = 0; x < 16; x++)
- {
-  char *tmps = trio_aprintf("%08X", BTEntries[(x + BTIndex) & 0xF]);
-  ret.push_back(std::string(tmps));
-  free(tmps);
- }
- return(ret);
-}
-#endif
-
 struct BTEntry
 {
  uint32 from;
  uint32 to;
  uint32 branch_count;
  uint32 ecode;
+ bool valid;
 };
 
 #define NUMBT 24
 static BTEntry BTEntries[NUMBT];
-static int BTIndex = 0;
+static int BTIndex;
+static bool BTEnabled;
 
 static void AddBranchTrace(uint32 from, uint32 to, uint32 ecode)
 {
@@ -94,7 +70,7 @@ static void AddBranchTrace(uint32 from, uint32 to, uint32 ecode)
 
  //if(BTEntries[(BTIndex - 1) & 0xF] == PC) return;
 
- if(prevbt->from == from && prevbt->to == to && prevbt->ecode == ecode && prevbt->branch_count < 0xFFFFFFFF)
+ if(prevbt->from == from && prevbt->to == to && prevbt->ecode == ecode && prevbt->branch_count < 0xFFFFFFFF && prevbt->valid)
   prevbt->branch_count++;
  else
  {
@@ -102,11 +78,23 @@ static void AddBranchTrace(uint32 from, uint32 to, uint32 ecode)
   BTEntries[BTIndex].to = to;
   BTEntries[BTIndex].ecode = ecode;
   BTEntries[BTIndex].branch_count = 1;
+  BTEntries[BTIndex].valid = true;
 
   BTIndex = (BTIndex + 1) % NUMBT;
  }
 }
 
+void VBDBG_EnableBranchTrace(bool enable)
+{
+ BTEnabled = enable;
+ if(!enable)
+ {
+  BTIndex = 0;
+  memset(BTEntries, 0, sizeof(BTEntries));
+ }
+
+ RedoCPUHook();
+}
 
 std::vector<BranchTraceResult> VBDBG_GetBranchTrace(void)
 {
@@ -116,6 +104,9 @@ std::vector<BranchTraceResult> VBDBG_GetBranchTrace(void)
  for(int x = 0; x < NUMBT; x++)
  {
   const BTEntry *bt = &BTEntries[(x + BTIndex) % NUMBT];
+
+  if(!bt->valid)
+   continue;
 
   tmp.count = bt->branch_count;
   trio_snprintf(tmp.from, sizeof(tmp.from), "%08x", bt->from);
@@ -246,11 +237,9 @@ static uint16 MDFN_FASTCALL MemPeek16(v810_timestamp_t timestamp, uint32 A)
  return(ret);
 }
 
-static void CPUHandler(uint32 PC)
+static void CPUHandler(const v810_timestamp_t timestamp, uint32 PC)
 {
  std::vector<VB_BPOINT>::iterator bpit;
-
- // FIXME/TODO: Call ForceEventUpdates() somewhere
 
  for(bpit = BreakPointsPC.begin(); bpit != BreakPointsPC.end(); bpit++)
  {
@@ -262,27 +251,21 @@ static void CPUHandler(uint32 PC)
  }
  VB_V810->CheckBreakpoints(VBDBG_CheckBP, MemPeek16, NULL);
 
- if(FoundBPoint)
+ CPUHookContinuous |= FoundBPoint;
+
+ if(CPUHook && CPUHookContinuous)
  {
-  BPCallB(PC);
-  FoundBPoint = 0;
+  ForceEventUpdates(timestamp);
+  CPUHook(PC, FoundBPoint);
  }
 
- if(CPUHook)
-  CPUHook(PC);
+ FoundBPoint = false;
 }
 
 static void RedoCPUHook(void)
 {
- bool HappyTest;
-
- HappyTest = VB_LoggingOn || BreakPointsPC.size() || BreakPointsRead.size() || BreakPointsWrite.size();
-
- void (*cpuh)(uint32);
-
- cpuh = HappyTest ? CPUHandler : CPUHook;
-
- VB_V810->SetCPUHook(cpuh, cpuh ? AddBranchTrace : NULL);
+ VB_V810->SetCPUHook((CPUHook || VB_LoggingOn || BreakPointsPC.size() || BreakPointsRead.size() || BreakPointsWrite.size()) ? CPUHandler : NULL,
+	BTEnabled ? AddBranchTrace : NULL);
 }
 
 void VBDBG_FlushBreakPoints(int type)
@@ -430,7 +413,7 @@ uint32 VBDBG_GetRegister(const std::string &name, std::string *special)
   if(special && which_one == PSW)
   {
    char buf[256];
-   snprintf(buf, 256, "Z: %d, S: %d, OV: %d, CY: %d, ID: %d, AE: %d, EP: %d, NP: %d, IA: %2d",
+   trio_snprintf(buf, 256, "Z: %d, S: %d, OV: %d, CY: %d, ID: %d, AE: %d, EP: %d, NP: %d, IA: %2d",
 	(int)(bool)(val & PSW_Z), (int)(bool)(val & PSW_S), (int)(bool)(val & PSW_OV), (int)(bool)(val & PSW_CY),
 	(int)(bool)(val & PSW_ID), (int)(bool)(val & PSW_AE), (int)(bool)(val & PSW_EP), (int)(bool)(val & PSW_NP),
 	(val & PSW_IA) >> 16);
@@ -473,15 +456,11 @@ void VBDBG_SetRegister(const std::string &name, uint32 value)
  }
 }
 
-void VBDBG_SetCPUCallback(void (*callb)(uint32 PC))
+void VBDBG_SetCPUCallback(void (*callb)(uint32 PC, bool bpoint), bool continuous)
 {
  CPUHook = callb;
+ CPUHookContinuous = continuous;
  RedoCPUHook();
-}
-
-void VBDBG_SetBPCallback(void (*callb)(uint32 PC))
-{
- BPCallB = callb;
 }
 
 void VBDBG_DoLog(const char *type, const char *format, ...)
@@ -658,6 +637,10 @@ static RegGroupType RegsGroup_VIP =
 
 bool VBDBG_Init(void)
 {
+ BTEnabled = false;
+ BTIndex = 0;
+ memset(BTEntries, 0, sizeof(BTEntries));
+
  MDFNDBG_AddRegGroup(&V810RegsGroup);
  MDFNDBG_AddRegGroup(&RegsGroup_Misc);
  MDFNDBG_AddRegGroup(&RegsGroup_VIP);

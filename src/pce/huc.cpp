@@ -17,7 +17,7 @@
 
 #include "pce.h"
 #include "huc.h"
-#include "../cdrom/pcecd.h"
+#include "pcecd.h"
 #include "arcade_card/arcade_card.h"
 #include "../md5.h"
 #include "../file.h"
@@ -36,7 +36,6 @@ static bool BRAM_Disabled;       // Cached at game load, don't remove this cachi
 
 ArcadeCard *arcade_card = NULL;
 
-extern Blip_Buffer huc_sbuf;
 static MCGenjin *mcg = NULL;
 static uint8 *HuCROM = NULL;
 static uint8 *ROMMap[0x100] = { NULL };
@@ -251,7 +250,7 @@ int HuCLoad(const uint8 *data, uint32 len, uint32 crc32, bool DisableBRAM, SysCa
 
  if(mcg_mapper)
  {
-  mcg = new MCGenjin(&huc_sbuf, data, len);
+  mcg = new MCGenjin(data, len);
 
   for(unsigned i = 0; i < 128; i++)
   {
@@ -563,10 +562,16 @@ void HuCClose(void)
  Cleanup();
 }
 
-void HuC_EndFrame(int32 timestamp)
+void HuC_Update(int32 timestamp)
 {
  if(mcg)
-  mcg->EndFrame(timestamp);
+  mcg->Update(timestamp);
+}
+
+void HuC_ResetTS(int32 ts_base)
+{
+ if(mcg)
+  mcg->ResetTS(ts_base);
 }
 
 

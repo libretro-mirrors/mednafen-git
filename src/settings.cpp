@@ -21,11 +21,12 @@
 #include <vector>
 #include <string>
 #include <trio/trio.h>
+#include <math.h>
+#include <locale.h>
 #include <map>
 #include <list>
 #include "settings.h"
 #include "md5.h"
-#include "string/world_strtod.h"
 #include "string/escape.h"
 #include "FileStream.h"
 #include "MemoryStream.h"
@@ -74,6 +75,55 @@ static bool TranslateSettingValueI(const char *value, long long &tlated_value)
  return(true);
 }
 
+//
+// This function is a ticking time bomb of (semi-non-reentrant) wrong, but it's OUR ticking time bomb.
+//
+// Note to self: test it with something like: LANG="fr_FR.UTF-8" ./mednafen
+//
+static bool MR_StringToDouble(const char* string_value, double* dvalue) NO_INLINE;	// noinline for *potential* x87 FPU extra precision weirdness in regards to optimizations.
+static bool MR_StringToDouble(const char* string_value, double* dvalue)
+{
+ static char MR_Radix = 0;
+ const unsigned slen = strlen(string_value);
+ char cpi[slen + 1];
+ char* endptr = NULL;
+
+ if(!MR_Radix)
+ {
+  char buf[64]; // Use extra-large buffer since we're using sprintf() instead of snprintf() for portability reasons. //4];
+  // Use libc snprintf() and not trio_snprintf() here for out little abomination.
+  //snprintf(buf, 4, "%.1f", (double)1);
+  sprintf(buf, "%.1f", (double)1);
+  if(buf[0] == '1' && buf[2] == '0' && buf[3] == 0)
+  {
+   MR_Radix = buf[1];
+  }
+  else
+  {
+   lconv* l = localeconv();
+   assert(l != NULL);
+   MR_Radix = *(l->decimal_point);
+  }
+ }
+
+ for(unsigned i = 0; i < slen; i++)
+ {
+  char c = string_value[i];
+
+  if(c == '.' || c == ',')
+   c = MR_Radix;
+
+  cpi[i] = c;
+ }
+ cpi[slen] = 0;
+
+ *dvalue = strtod(cpi, &endptr);
+
+ if(endptr == NULL || *endptr != 0)
+  return(false);
+
+ return(true);
+}
 
 static void ValidateSetting(const char *value, const MDFNSetting *setting)
 {
@@ -140,11 +190,8 @@ static void ValidateSetting(const char *value, const MDFNSetting *setting)
  else if(base_type == MDFNST_FLOAT)
  {
   double dvalue;
-  char *endptr = NULL;
 
-  world_strtod(value, &endptr, &dvalue);
-
-  if(!endptr || *endptr != 0)
+  if(!MR_StringToDouble(value, &dvalue))
   {
    throw MDFN_Error(0, _("Setting \"%s\", value \"%s\", is not set to a floating-point(real) number."), setting->name, value);
   }
@@ -152,7 +199,7 @@ static void ValidateSetting(const char *value, const MDFNSetting *setting)
   {
    double minimum;
 
-   world_strtod(setting->minimum, NULL, &minimum);
+   assert(MR_StringToDouble(setting->minimum, &minimum) == true);
 
    if(dvalue < minimum)
    {
@@ -163,7 +210,8 @@ static void ValidateSetting(const char *value, const MDFNSetting *setting)
   {
    double maximum;
 
-   world_strtod(setting->maximum, NULL, &maximum);
+   assert(MR_StringToDouble(setting->maximum, &maximum) == true);
+
    if(dvalue > maximum)
    {
     throw MDFN_Error(0, _("Setting \"%s\" is set too large(\"%s\"); the maximum acceptable value is \"%s\"."), setting->name, value, setting->maximum);
@@ -280,65 +328,58 @@ static void ParseSettingLine(std::string &linebuf, bool IsOverrideSetting = fals
  }
 }
 
-static void LoadSettings(Stream *fp, const char *section, bool override)
+static void LoadSettings(Stream *fp, bool override)
 {
- bool InCorrectSection = true;	// To also allow for all-game overrides at the start of the override file, might be useful in certain scenarios.
  std::string linebuf;
 
  linebuf.reserve(1024);
 
  while(fp->get_line(linebuf) >= 0)
- {
-  if(linebuf[0] == '[')
-  {
-   if(section)
-   {
-    if(!strcasecmp(linebuf.c_str() + 1, section) && linebuf[1 + strlen(section)] == ']')
-     InCorrectSection = true;
-    else
-     InCorrectSection = false;
-   }
-  }
-  else if(InCorrectSection)
-  {
-   ParseSettingLine(linebuf, override);
-  }
- }
+  ParseSettingLine(linebuf, override);
 }
 
-bool MDFN_LoadSettings(const char *path, const char *section, bool override)
+bool MDFN_LoadSettings(const char *path, bool override)
 {
- MDFN_printf(_("Loading settings from \"%s\"..."), path);
+ if(!override)
+  MDFN_printf(_("Loading settings from \"%s\"..."), path);
 
  try
  {
   MemoryStream mp(new FileStream(path, FileStream::MODE_READ));
-  LoadSettings(&mp, section, override);
+  LoadSettings(&mp, override);
  }
  catch(MDFN_Error &e)
  {
   if(e.GetErrno() == ENOENT)
   {
-   MDFN_indent(1);
-   MDFN_printf(_("Failed: %s\n"), e.what());
-   MDFN_indent(-1);
+   if(!override)
+   {
+    MDFN_indent(1);
+    MDFN_printf(_("Failed: %s\n"), e.what());
+    MDFN_indent(-1);
+   }
    return(true);
   }
   else
   {
-   MDFN_printf("\n");
+   if(!override)
+    MDFN_printf("\n");
+
    MDFN_PrintError(_("Failed to load settings from \"%s\": %s"), path, e.what());
    return(false);
   }
  }
  catch(std::exception &e)
  {
-  MDFN_printf("\n");
+  if(!override)
+   MDFN_printf("\n");
+
   MDFN_PrintError(_("Failed to load settings from \"%s\": %s"), path, e.what());
   return(false);
  }
 
- MDFN_printf("\n");
+ if(!override)
+  MDFN_printf("\n");
 
  return(true);
 }
@@ -354,10 +395,10 @@ static void SaveSettings(Stream *fp)
  std::list<MDFNCS *> SortedList;
  std::list<MDFNCS *>::iterator lit;
 
- fp->printf(";VERSION %s\n", MEDNAFEN_VERSION);
+ fp->print_format(";VERSION %s\n", MEDNAFEN_VERSION);
 
- fp->printf(_(";Edit this file at your own risk!\n"));
- fp->printf(_(";File format: <key><single space><value><LF or CR+LF>\n\n"));
+ fp->print_format(_(";Edit this file at your own risk!\n"));
+ fp->print_format(_(";File format: <key><single space><value><LF or CR+LF>\n\n"));
 
  for(sit = CurrentSettings.begin(); sit != CurrentSettings.end(); sit++)
   SortedList.push_back(&sit->second);
@@ -369,15 +410,15 @@ static void SaveSettings(Stream *fp)
   if((*lit)->desc->type == MDFNST_ALIAS)
    continue;
 
-  fp->printf(";%s\n%s %s\n\n", _((*lit)->desc->description), (*lit)->name, (*lit)->value);
+  fp->print_format(";%s\n%s %s\n\n", _((*lit)->desc->description), (*lit)->name, (*lit)->value);
  }
 
  if(UnknownSettings.size())
  {
-  fp->printf("\n;\n;Unrecognized settings follow:\n;\n\n");
+  fp->print_format("\n;\n;Unrecognized settings follow:\n;\n\n");
   for(unsigned int i = 0; i < UnknownSettings.size(); i++)
   {
-   fp->printf("%s %s\n\n", UnknownSettings[i].name, UnknownSettings[i].value);
+   fp->print_format("%s %s\n\n", UnknownSettings[i].name, UnknownSettings[i].value);
   }
  }
 
@@ -579,7 +620,7 @@ double MDFN_GetSettingF(const char *name)
 {
  double ret;
 
- world_strtod(GetSetting(FindSetting(name)), (char **)NULL, &ret);
+ MR_StringToDouble(GetSetting(FindSetting(name)), &ret);
 
  return ret;
 }
@@ -739,32 +780,32 @@ void MDFNI_DumpSettingsDef(const char *path)
   if(setting->type == MDFNST_ALIAS)
    continue;
 
-  fp.printf("%s\n", setting->name);
+  fp.print_format("%s\n", setting->name);
 
   for(unsigned int i = 0; i < 32; i++)
   {
    if(setting->flags & (1 << i))
-    fp.printf("%s ", fts[1 << i]);
+    fp.print_format("%s ", fts[1 << i]);
   }
-  fp.printf("\n");
+  fp.print_format("\n");
 
   desc_escaped = escape_string(setting->description ? setting->description : "");
   desc_extra_escaped = escape_string(setting->description_extra ? setting->description_extra : "");
 
 
-  fp.printf("%s\n", desc_escaped);
-  fp.printf("%s\n", desc_extra_escaped);
+  fp.print_format("%s\n", desc_escaped);
+  fp.print_format("%s\n", desc_extra_escaped);
 
   free(desc_escaped);
   free(desc_extra_escaped);
 
-  fp.printf("%s\n", tts[setting->type]);
-  fp.printf("%s\n", setting->default_value ? setting->default_value : "");
-  fp.printf("%s\n", setting->minimum ? setting->minimum : "");
-  fp.printf("%s\n", setting->maximum ? setting->maximum : "");
+  fp.print_format("%s\n", tts[setting->type]);
+  fp.print_format("%s\n", setting->default_value ? setting->default_value : "");
+  fp.print_format("%s\n", setting->minimum ? setting->minimum : "");
+  fp.print_format("%s\n", setting->maximum ? setting->maximum : "");
 
   if(!setting->enum_list)
-   fp.printf("0\n");
+   fp.print_format("0\n");
   else
   {
    const MDFNSetting_EnumList *el = setting->enum_list;
@@ -776,7 +817,7 @@ void MDFNI_DumpSettingsDef(const char *path)
     el++;
    }
 
-   fp.printf("%d\n", count);
+   fp.print_format("%d\n", count);
 
    el = setting->enum_list;
    while(el->string)
@@ -784,9 +825,9 @@ void MDFNI_DumpSettingsDef(const char *path)
     desc_escaped = escape_string(el->description ? el->description : "");
     desc_extra_escaped = escape_string(el->description_extra ? el->description_extra : "");
 
-    fp.printf("%s\n", el->string);
-    fp.printf("%s\n", desc_escaped);
-    fp.printf("%s\n", desc_extra_escaped);
+    fp.print_format("%s\n", el->string);
+    fp.print_format("%s\n", desc_escaped);
+    fp.print_format("%s\n", desc_extra_escaped);
 
     free(desc_escaped);
     free(desc_extra_escaped);

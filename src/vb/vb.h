@@ -46,6 +46,8 @@ void VBIRQ_Assert(int source, bool assert);
 
 void VB_ExitLoop(void);
 
+void ForceEventUpdates(const v810_timestamp_t timestamp);
+
 
 uint8 MDFN_FASTCALL MemRead8(v810_timestamp_t &timestamp, uint32 A);
 uint16 MDFN_FASTCALL MemRead16(v810_timestamp_t &timestamp, uint32 A);

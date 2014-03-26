@@ -17,6 +17,7 @@
 
 #include "../mednafen.h"
 #include "../general.h"
+#include "../string/trim.h"
 #include "CDAccess_CCD.h"
 #include <trio/trio.h>
 

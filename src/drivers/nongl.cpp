@@ -329,7 +329,7 @@ static void BlitSScale(const MDFN_Surface *src_surface, const MDFN_Rect *src_rec
   if(rotation_on)
   {
    src_x = src_x_init;
-   src_col_ptr = src_surface->pixels + (src_y >> fract_bits);
+   src_col_ptr = src_pixels + (src_y >> fract_bits);
    if(scanlines_on)
     sl = sl_init;
   }

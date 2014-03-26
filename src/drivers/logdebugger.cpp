@@ -81,12 +81,12 @@ static void TheLogger(const char *type, const char *text)
 }
 
 
-// Call this function from either thread.
+// Call this function from the game thread.
 void LogDebugger_SetActive(bool newia)
 {
  if(CurGame->Debugger)
  {
-  LockGameMutex(1);
+  
 
   IsActive = newia;
   if(newia)
@@ -101,18 +101,18 @@ void LogDebugger_SetActive(bool newia)
    //InEditMode = FALSE;
    //LowNib = FALSE;
   }
-  LockGameMutex(0);
+  
  }
 }
 
 #define MK_COLOR_A(r,g,b,a) ( pf_cache.MakeColor(r, g, b, a) )
 
-// Call this function from the main thread
+// Call this function from the game thread
 void LogDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *screen_rect)
 {
  if(!IsActive) return;
 
- LockGameMutex(1);
+ 
 
  const MDFN_PixelFormat pf_cache = surface->format;
  uint32 * pixels = surface->pixels;
@@ -162,7 +162,7 @@ void LogDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
   DrawTextTrans(pixels + typelen, surface->pitchinpix << 2, rect->w - typelen, (UTF8*)WhichLog->entries[i].text, lifecolors[i & 3], FALSE, MDFN_FONT_6x13_12x13);
   pixels += pitch32 * 13;
  }
- LockGameMutex(0);
+ 
 }
 
 static void ChangePos(int64 delta)
@@ -212,7 +212,7 @@ static void LogGroupSelect(int delta)
 }
 
 
-// Call this from the main thread
+// Call this from the game thread
 int LogDebugger_Event(const SDL_Event *event)
 {
  switch(event->type)
@@ -222,59 +222,59 @@ int LogDebugger_Event(const SDL_Event *event)
 	{
 	 default: break;
 
-         case SDLK_MINUS: Debugger_ModOpacity(-8);
+         case SDLK_MINUS: Debugger_GT_ModOpacity(-8);
                           break;
-         case SDLK_EQUALS: Debugger_ModOpacity(8);
+         case SDLK_EQUALS: Debugger_GT_ModOpacity(8);
                            break;
 
 
-	 case SDLK_HOME: LockGameMutex(1);
+	 case SDLK_HOME: 
 			 WhichLog->LogScroll = 0; 
-			 LockGameMutex(0);
+			 
 			 break;
 
-	 case SDLK_END: LockGameMutex(1);
+	 case SDLK_END: 
 			ChangePos(1 << 30); 
-			LockGameMutex(0);
+			
 			break;
 
 	 case SDLK_LEFT:
-	 case SDLK_COMMA: LockGameMutex(1);
+	 case SDLK_COMMA: 
 			 LogGroupSelect(-1); 
-			 LockGameMutex(0);
+			 
 			 break;
 	 case SDLK_RIGHT:
-	 case SDLK_PERIOD: LockGameMutex(1);
+	 case SDLK_PERIOD: 
 			  LogGroupSelect(1);
-			  LockGameMutex(0);
+			  
 			  break;
 
-	 case SDLK_UP: LockGameMutex(1);
+	 case SDLK_UP: 
 		       ChangePos(-1); 
-		       LockGameMutex(0);
+		       
 		       break;
 
-	 case SDLK_DOWN: LockGameMutex(1);
+	 case SDLK_DOWN: 
 			 ChangePos(1); 
-			 LockGameMutex(0);
+			 
 			 break;
 
-	 case SDLK_PAGEUP: LockGameMutex(1);
+	 case SDLK_PAGEUP: 
 			   ChangePos(-32); 
-			   LockGameMutex(0);
+			   
 			   break;
 
-	 case SDLK_PAGEDOWN: LockGameMutex(1); 
+	 case SDLK_PAGEDOWN:  
 			     ChangePos(32); 
-			     LockGameMutex(0);
+			     
 			     break;
 
 	 case SDLK_t:
-		     LockGameMutex(1);
+		     
 		     LoggingActive = !LoggingActive;
 		     if(CurGame->Debugger->SetLogFunc)
 			CurGame->Debugger->SetLogFunc(LoggingActive ? TheLogger : NULL);
-		     LockGameMutex(0);
+		     
 		     break;
 
 

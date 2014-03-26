@@ -24,6 +24,7 @@
 #include "PSFLoader.h"
 #include "endian.h"
 #include "general.h"
+#include "string/trim.h"
 
 #include <limits.h>
 #include <trio/trio.h>

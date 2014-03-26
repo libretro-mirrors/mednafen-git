@@ -21,7 +21,7 @@
 #include "input.h"
 #include "huc.h"
 #include "subhw.h"
-#include "../cdrom/pcecd.h"
+#include "pcecd.h"
 #include "../cdrom/scsicd.h"
 #include "hes.h"
 #include "debug.h"
@@ -30,9 +30,9 @@
 #include "../mempatcher.h"
 #include "../cdrom/cdromif.h"
 #include "../md5.h"
-
-#include <zlib.h>
-#include <errno.h>
+#include "../FileStream.h"
+#include "../sound/OwlResampler.h"
+#include <math.h>
 
 #define PCE_DEBUG(x, ...) {  /* printf(x, ## __VA_ARGS__); */ }
 
@@ -43,7 +43,6 @@ static const MDFNSetting_EnumList PSGRevisionList[] =
 {
  { "huc6280", PCE_PSG::REVISION_HUC6280, "HuC6280", gettext_noop("HuC6280 as found in the original PC Engine.") },
  { "huc6280a", PCE_PSG::REVISION_HUC6280A, "HuC6280A", gettext_noop("HuC6280A as found in the SuperGrafx and CoreGrafx I.  Provides proper channel amplitude centering, but may cause clicking in a few games designed with the original HuC6280's sound characteristics in mind.") },
- { "enhanced", PCE_PSG::REVISION_ENHANCED, "Enhanced", gettext_noop("Emulator-only pseudo-revision, designed to reduce clicking and audio artifacts in games designed for either real revision.") },
  { "match", PCE_PSG::_REVISION_COUNT, gettext_noop("Match emulation mode."), gettext_noop("Selects \"huc6280\" for non-SuperGrafx mode, and \"huc6280a\" for SuperGrafx(full) mode.") },
  { NULL, 0 },
 };
@@ -60,8 +59,11 @@ static PCE_PSG *psg = NULL;
 
 extern ArcadeCard *arcade_card;	// Bah, lousy globals.
 
-Blip_Buffer huc_sbuf;
-static Blip_Buffer sbuf[2];
+static OwlBuffer* HRBufs[2] = { NULL, NULL };
+static RavenBuffer* ADPCMBuf = NULL;
+static RavenBuffer* CDDABufs[2] = { NULL, NULL };
+static OwlResampler* HRRes = NULL;
+
 static bool SetSoundRate(double rate);
 
 
@@ -282,43 +284,37 @@ static void PCECDIRQCB(bool asserted)
 
 static bool LoadCustomPalette(const char *path)
 {
- uint8 CustomColorMap[1024 * 3];
-
  MDFN_printf(_("Loading custom palette from \"%s\"...\n"),  path);
  MDFN_indent(1);
 
- gzFile gp = gzopen(path, "rb");
- if(!gp)
+ try
  {
-  ErrnoHolder ene(errno);
+  FileStream fp(path, FileStream::MODE_READ);
+  uint8 CustomColorMap[1024 * 3];
+  uint32 CustomColorMapLen = 0;
 
-  MDFN_printf(_("Error opening file: %s\n"), ene.StrError());        // FIXME, zlib and errno...
-  MDFN_indent(-1);
-  return(FALSE);
- }
- else
- {
-  long length_read;
-
-  length_read = gzread(gp, CustomColorMap, 1024 * 3);
-
-  if(length_read == 512 * 3)
-   MDFN_printf("Palette only has 512 entries.  Calculating the strip-colorburst entries.\n");
-
-  if(length_read != 1024 * 3 && length_read != 512 * 3)
+  fp.read(CustomColorMap, 512 * 3, true);
+  if(fp.read(CustomColorMap, 512 * 3, false) == 512 * 3)
+   CustomColorMapLen = 1024;
+  else
   {
-   MDFN_printf(_("Error reading file\n"));
-   MDFN_indent(-1);
-   return(FALSE);
+   MDFN_printf(_("Palette is missing the full set of 512 greyscale entries.  Strip-colorburst entries will be calculated.\n"));
+   CustomColorMapLen = 512;
   }
 
-  vce->SetCustomColorMap(CustomColorMap, length_read / 3);
+  vce->SetCustomColorMap(CustomColorMap, CustomColorMapLen);
  }
+ catch(std::exception &e)
+ {
+  MDFN_printf("%s\n", e.what());
+  MDFN_indent(-1);
+  return(false);
+ }
+
  MDFN_indent(-1);
 
- return(TRUE);
+ return(true);
 }
-
 
 static int LoadCommon(void);
 static void LoadCommonPre(void);
@@ -337,10 +333,8 @@ static void SetCDSettings(bool silent_status = false)
  memset(&cd_settings, 0, sizeof(PCECD_Settings));
 
  cd_settings.CDDA_Volume = (double)MDFN_GetSettingUI("pce.cddavolume") / 100;
- cd_settings.CD_Speed = 1;
-
  cd_settings.ADPCM_Volume = (double)MDFN_GetSettingUI("pce.adpcmvolume") / 100;
- cd_settings.ADPCM_LPF = MDFN_GetSettingB("pce.adpcmlp");
+ cd_settings.ADPCM_ExtraPrecision = MDFN_GetSettingB("pce.adpcmextraprec");
 
  PCECD_SetSettings(&cd_settings);
 
@@ -399,15 +393,16 @@ static int Load(const char *name, MDFNFILE *fp)
   if(!PCE_HESLoad(fp->data, fp->size))
    return(0);
 
+  ADPCMBuf = new RavenBuffer();
   PCE_IsCD = 1;
-  PCECD_Init(NULL, PCECDIRQCB, PCE_MASTER_CLOCK, 1, &sbuf[0], &sbuf[1]);
+  PCECD_Init(NULL, PCECDIRQCB, PCE_MASTER_CLOCK, ADPCMBuf->Buf(), NULL, NULL);
  }
  else
  {
   HuCLoad(fp->data + headerlen, fp->size - headerlen, crc, MDFN_GetSettingB("pce.disable_bram_hucard"));
   #if 0	// For testing
   PCE_IsCD = 1;
-  PCECD_Init(NULL, PCECDIRQCB, PCE_MASTER_CLOCK, 1, &sbuf[0], &sbuf[1]);
+  PCECD_Init(NULL, PCECDIRQCB, PCE_MASTER_CLOCK, &sbuf[0], &sbuf[1]);
   #endif
  }
  if(!strcasecmp(fp->ext, "sgx"))
@@ -452,10 +447,8 @@ static int Load(const char *name, MDFNFILE *fp)
 static void LoadCommonPre(void)
 {
  // Initialize sound buffers
- for(unsigned i = 0; i < 2; i++)
-  sbuf[i].clear();
-
- huc_sbuf.clear();
+ for(unsigned ch = 0; ch < 2; ch++)
+  HRBufs[ch] = new OwlBuffer();
 
  // FIXME:  Make these globals less global!
  PCE_ACEnabled = MDFN_GetSettingB("pce.arcadecard");
@@ -519,15 +512,13 @@ static int LoadCommon(void)
     break;
    }
   }
-  psg = new PCE_PSG(&sbuf[0], &sbuf[1], psgrevision);
+  psg = new PCE_PSG(HRBufs[0]->Buf(), HRBufs[1]->Buf(), psgrevision);
  }
 
  psg->SetVolume(1.0);
 
  if(PCE_IsCD)
   SetCDSettings();
-
- SetSoundRate(0);
 
  PCEINPUT_Init();
 
@@ -722,9 +713,13 @@ static int LoadCD(std::vector<CDIF *> *CDInterfaces)
   return(0);
  }
 
+ ADPCMBuf = new RavenBuffer();
+ for(unsigned lr = 0; lr < 2; lr++)
+  CDDABufs[lr] = new RavenBuffer();
+
  PCE_IsCD = 1;
 
- if(!PCECD_Init(NULL, PCECDIRQCB, PCE_MASTER_CLOCK, 1, &sbuf[0], &sbuf[1]))
+ if(!PCECD_Init(NULL, PCECDIRQCB, PCE_MASTER_CLOCK, ADPCMBuf->Buf(), CDDABufs[0]->Buf(), CDDABufs[1]->Buf()))
  {
   HuCClose();
   return(0);
@@ -777,7 +772,122 @@ static void CloseGame(void)
   delete HuCPU;
   HuCPU = NULL;
  }
+
+ for(unsigned ch = 0; ch < 2; ch++)
+ {
+  if(HRBufs[ch])
+  {
+   delete HRBufs[ch];
+   HRBufs[ch] = NULL;
+  }
+
+  if(CDDABufs[ch])
+  {
+   delete CDDABufs[ch];
+   CDDABufs[ch] = NULL;
+  }
+ }
+
+ if(ADPCMBuf)
+ {
+  delete ADPCMBuf;
+  ADPCMBuf = NULL;
+ }
+
+ if(HRRes)
+ {
+  delete HRRes;
+  HRRes = NULL;
+ }
 }
+
+#if 0
+void TestThing(unsigned count)
+{
+ int poo = 0;
+
+ //for(int x = 0; x < count; x++)
+ {
+  //static const double pinc = 44100.0 / 1789772.7272;
+  //static double p = 0;
+
+  //p += pinc;
+  //if(p >= 1.0)
+  //{
+  // p -= 1.0;
+  static const uint32 ptv = (int64)(1024 * 1024) * 21477272 / 44100;
+  static int64 p = 0;
+
+  //if(x == (count - 1) || 1) //!(rand() & 1))
+  //{
+  // p -= (12 * (x - poo)) << 20;
+  // poo = x;
+  //}
+  //p -= (12 << 20);
+  int x = count;
+
+  p -= ((int64)12 * x) << 20;
+
+  while(p <= 0)
+  {
+   //const int synthtime = x;
+   //const int synthtime_phase = ((((1 << 20) + p) >> 4) - 0x80;
+   //const int synthtime_phase_int = synthtime_phase >> 8;
+   //const int synthtime_phase_fract = synthtime_phase & 0xFF;
+   const uint64 synthtime_ex = ((((uint64)((x + 1) * 12) << 20) + p) / 3) >> (4 + 2);
+   const int synthtime = synthtime_ex >> 16;
+   const int synthtime_phase = (int)(synthtime_ex & 0xFFFF) - 0x80;
+   const int synthtime_phase_int = synthtime_phase >> 8;
+   const int synthtime_phase_fract = synthtime_phase & 0xFF;
+   static unsigned counter = 0;
+   static int32 wv = 0x6000;
+
+   //printf("%d %d %lld\n", x, synthtime, ptv);
+
+   p += ptv;
+
+   if(!counter)
+   {
+    wv = -wv;
+    counter = 8;
+   }
+   else
+    counter--;
+
+//   HRBufs[0][HRBUF_LEFTOVER_PADDING + x + 0] += wv * 41 * 256;
+//   HRBufs[0][HRBUF_LEFTOVER_PADDING + x + 1] += 0 - (wv * 41 * 256);
+#if 1
+   for(unsigned ch = 0; ch < 2; ch++)
+   {
+    int32 prev = 0;
+    for(unsigned c = 0; c < CDDA_Filter_NumConvolutions; c++)
+    {
+     int32 coeff;
+     int32 mr;
+
+     //coeff = CDDA_Filter[1 + synthtime_phase_int + 0][c];
+     coeff = (CDDA_Filter[1 + synthtime_phase_int + 0][c] * (256 - synthtime_phase_fract) +
+              CDDA_Filter[1 + synthtime_phase_int + 1][c] * (synthtime_phase_fract)) >> 8;
+
+     mr = (wv * coeff) >> (16 - 6 - 8);
+     HRBufs[ch][HRBUF_LEFTOVER_PADDING + synthtime + c] += mr - prev;
+     prev = mr;
+    }
+    HRBufs[ch][HRBUF_LEFTOVER_PADDING + synthtime + CDDA_Filter_NumConvolutions] += 0 - prev;
+   }
+#endif
+  }
+ }
+
+#if 0
+ for(unsigned x = 0; x < count; x++)
+ {
+  HRBufs[0][HRBUF_LEFTOVER_PADDING + x] = 0;
+  HRBufs[1][HRBUF_LEFTOVER_PADDING + x] = 0;
+ }
+#endif
+}
+#endif
 
 static EmulateSpecStruct *es;
 static void Emulate(EmulateSpecStruct *espec)
@@ -795,6 +905,8 @@ static void Emulate(EmulateSpecStruct *espec)
  if(espec->SoundFormatChanged)
   SetSoundRate(espec->SoundRate);
 
+ //int t = MDFND_GetTime();
+
  vce->StartFrame(espec->surface, &espec->DisplayRect, espec->LineWidths, IsHES ? 1 : espec->skip);
 
  // Begin loop here:
@@ -802,73 +914,137 @@ static void Emulate(EmulateSpecStruct *espec)
  bool rp_rv;
  do
  {
+  assert(HuCPU->Timestamp() < 12);
+  //printf("ST: %d\n", HuCPU->Timestamp());
+
   INPUT_Frame();
 
   //vce->RunFrame(espec->surface, &espec->DisplayRect, espec->LineWidths, IsHES ? 1 : espec->skip);
   rp_rv = vce->RunPartial();
 
-  INPUT_FixTS(HuCPU->Timestamp());
+  const uint32 end_timestamp = HuCPU->Timestamp();
+  const uint32 end_timestamp_div12 = end_timestamp / 12;
+  const uint32 end_timestamp_mod12 = end_timestamp % 12;
 
-  SubHW_EndFrame(HuCPU->Timestamp());
+  INPUT_AdjustTS((int32)end_timestamp_mod12 - (int32)end_timestamp);	// Careful with this!
 
-  psg->EndFrame(HuCPU->Timestamp() / 3);
+  SubHW_EndFrame(end_timestamp, end_timestamp_mod12);
 
-  HuC_EndFrame(HuCPU->Timestamp());
+  psg->Update(end_timestamp / 3);
+  psg->ResetTS(end_timestamp_mod12 / 3);
 
-  //assert(!(HuCPU->Timestamp() % 3));
+  HuC_Update(end_timestamp);
+  HuC_ResetTS(end_timestamp_mod12);
 
-  if(espec->SoundBuf)
   {
+   const unsigned rsc = std::min<unsigned>(65536, end_timestamp_div12);
    int32 new_sc;
 
-   huc_sbuf.end_frame(HuCPU->Timestamp() / 3);
+   if(ADPCMBuf)
+    PCECD_ProcessADPCMBuffer(rsc);
 
-   for(int y = 0; y < 2; y++)
+   for(unsigned ch = 0; ch < 2; ch++)
    {
-    sbuf[y].end_frame(HuCPU->Timestamp() / 3);
+    if(HRRes)
+    {
+     //
+     // These filter parameters cause much less of a lowpass and much much less of a highpass filter effect than what I've tested on my Turbo Duo,
+     // but I think it's probably broken(in need of capacitor replacements).
+     // 
+     HRBufs[ch]->Integrate(rsc, 2 /* lp shift, lower = less lp effect */, 14 /* hp shift, higher = less hp effect*/, ADPCMBuf, CDDABufs[ch]);
+    }
 
-    new_sc = sbuf[y].read_samples(espec->SoundBuf + espec->SoundBufSize * 2 + y, espec->SoundBufMaxSize - espec->SoundBufSize, 1);
+#if 0
+    for(unsigned x = 0; x < end_timestamp_div12; x++)
+    {
+     static double phase[2] = { 0};
+     static double phase_inc[2] = { 0 };
+     static double phase_inc_inc = 0.000000001; //0.000003;
+
+     if(1)
+     {
+      static int zoom = 32767 * 0.75 * 256 / 4;
+	
+      //if(!(rand() & 0xFFFFFF))
+      // zoom = -zoom;
+      *(float*)&HRBufs[ch]->Buf()[x] = zoom;
+     }
+     // *(float*)&HRBufs[ch]->Buf()[x] = 256 * 32767 * 0.75 * sin(phase[ch]);
+     else
+      *(float*)&HRBufs[ch]->Buf()[x] = 256 * 0.75 * ((int16)rand());
+
+     phase[ch] += phase_inc[ch];
+     phase_inc[ch] += phase_inc_inc;
+    }
+#endif
+
+#if 0
+    for(unsigned x = 0; x < rsc; x++)
+    {
+     static int32 wv[2] = { 0x6000 * 256, 0x6000 * 256 };
+     static int counter[2] = { 0, 0 };
+
+     *(float*)&HRBufs[ch]->Buf()[x] = wv[ch];
+
+     if(!counter[ch])
+     {
+      wv[ch] = -wv[ch];
+      counter[ch] = 80;
+     }
+     else
+      counter[ch]--;
+    }
+
+#endif
+
+
+    if(espec->SoundBuf && HRRes)
+     new_sc = HRRes->Resample(HRBufs[ch], rsc, espec->SoundBuf + (espec->SoundBufSize * 2) + ch, espec->SoundBufMaxSize - espec->SoundBufSize);
+    else
+    {
+     HRBufs[ch]->ResampleSkipped(rsc);
+     new_sc = 0;
+    }
    }
 
-   if(huc_sbuf.clear_modified())
-   {
+   if(ADPCMBuf)
+    ADPCMBuf->Finish(rsc);
 
+   if(CDDABufs[0])
+   {
+    CDDABufs[0]->Finish(rsc);
+    CDDABufs[1]->Finish(rsc);
    }
-   else
-    huc_sbuf.remove_samples(huc_sbuf.samples_avail());
 
    espec->SoundBufSize += new_sc;
   }
 
-  PCE_TimestampBase += HuCPU->Timestamp();
-  espec->MasterCycles += HuCPU->Timestamp();
-
-  HuCPU->SyncAndResetTimestamp();
-
   if(PCE_IsCD)
-   PCECD_ResetTS();
+   PCECD_ResetTS(end_timestamp_mod12);
+
+  vce->ResetTS(end_timestamp_mod12);
+
+  HuCPU->SyncAndResetTimestamp(end_timestamp_mod12);
+
+  //
+  //
+  //
+  PCE_TimestampBase += end_timestamp - end_timestamp_mod12;
+  espec->MasterCycles += end_timestamp - end_timestamp_mod12;
 
   if(!rp_rv)
   {
-   MDFN_MidSync(espec);
+   //MDFN_MidSync(espec);
   }
  } while(!rp_rv);
+
+ //printf("%d\n", MDFND_GetTime() - t);
 
  // End loop here.
  //printf("%d\n", vce->GetScanlineNo());
 
  if(IsHES)
   HES_Update(espec, INPUT_HESHack());	//Draw(espec->skip ? NULL : espec->surface, espec->skip ? NULL : &espec->DisplayRect, espec->SoundBuf, espec->SoundBufSize, INPUT_HESHack());
-
-#if 0
- if(espec->SoundRate)
- {
-  unsigned long long crf = (unsigned long long)sbuf[0].clock_rate_factor(sbuf[0].clock_rate());
-  double real_rate = (double)crf * sbuf[0].clock_rate() / (1ULL << BLIP_BUFFER_ACCURACY);
-
-  printf("%f\n", real_rate);
- }
-#endif
 }
 
 void PCE_MidSync(void)
@@ -892,6 +1068,8 @@ static int StateAction(StateMem *sm, int load, int data_only)
 
   SFEND
  };
+
+ PCEDBG_MachineStateChanged();
 
  int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
 
@@ -920,14 +1098,16 @@ static int StateAction(StateMem *sm, int load, int data_only)
 
 void PCE_Power(void)
 {
+ PCEDBG_MachineStateChanged();
+
  memset(BaseRAM, 0x00, sizeof(BaseRAM));
 
  HuCPU->Power();
- PCE_TimestampBase = 0;
+ PCE_TimestampBase = 0;	// FIXME, move to init.
  const int32 timestamp = HuCPU->Timestamp();
 
  vce->Reset(timestamp);
- psg->Power(timestamp);
+ psg->Power(timestamp / 3);
 
  if(IsHES)
   HES_Reset();
@@ -942,6 +1122,7 @@ void PCE_Power(void)
  {
   vce->SetCDEvent(PCECD_Power(timestamp));
  }
+ //printf("%d\n", HuCPU->Timestamp());
 }
 
 static void CDInsertEject(void)
@@ -1035,16 +1216,17 @@ static MDFNSetting PCESettings[] =
   { "pce.cdbios", MDFNSF_EMU_STATE, gettext_noop("Path to the CD BIOS"), NULL, MDFNST_STRING, "syscard3.pce" },
   { "pce.gecdbios", MDFNSF_EMU_STATE, gettext_noop("Path to the GE CD BIOS"), gettext_noop("Games Express CD Card BIOS (Unlicensed)"), MDFNST_STRING, "gecard.pce" },
 
-  { "pce.adpcmlp", MDFNSF_NOFLAGS, gettext_noop("Enable dynamic ADPCM lowpass filter."),
-	gettext_noop("This makes ADPCM voices sound less \"harsh\", however, the downside is that it will cause many ADPCM sound effects to sound a bit muffled."), MDFNST_BOOL, "0", NULL, NULL, NULL, CDSettingChanged },
+  { "pce.psgrevision", MDFNSF_NOFLAGS, gettext_noop("Select PSG revision."), gettext_noop("WARNING: HES playback will always use the \"huc6280a\" revision if this setting is set to \"match\", since HES playback is always done with SuperGrafx emulation enabled."), MDFNST_ENUM, "match", NULL, NULL, NULL, NULL, PSGRevisionList  },
 
-  { "pce.psgrevision", MDFNSF_NOFLAGS, gettext_noop("Select PSG revision."), gettext_noop("WARNING: HES playback will always use the \"huc6280a\" revision if this setting is set to \"match\", since HES playback is always done with SuperGrafx emulation enabled."), MDFNST_ENUM, "huc6280a", NULL, NULL, NULL, NULL, PSGRevisionList  },
+  { "pce.cdpsgvolume", MDFNSF_NOFLAGS, gettext_noop("PSG volume when playing a CD game."), gettext_noop("Setting this volume control too high may cause sample clipping."), MDFNST_UINT, "100", "0", "200", NULL, CDSettingChanged },
+  { "pce.cddavolume", MDFNSF_NOFLAGS, gettext_noop("CD-DA volume."), gettext_noop("Setting this volume control too high may cause sample clipping."), MDFNST_UINT, "100", "0", "200", NULL, CDSettingChanged },
+  { "pce.adpcmvolume", MDFNSF_NOFLAGS, gettext_noop("ADPCM volume."), gettext_noop("Setting this volume control too high may cause sample clipping."), MDFNST_UINT, "100", "0", "200", NULL, CDSettingChanged },
+  { "pce.adpcmextraprec", MDFNSF_NOFLAGS, gettext_noop("Output the full 12-bit ADPCM predictor."), gettext_noop("Enabling this option causes the MSM5205 ADPCM predictor to be outputted with full precision of 12-bits, rather than only outputting 10-bits of precision(as an actual MSM5205 does).  Enable this option to reduce whining noise during ADPCM playback."), MDFNST_BOOL, "0" },
 
-  { "pce.cdpsgvolume", MDFNSF_NOFLAGS, gettext_noop("PSG volume when playing a CD game."), NULL, MDFNST_UINT, "100", "0", "200", NULL, CDSettingChanged },
-  { "pce.cddavolume", MDFNSF_NOFLAGS, gettext_noop("CD-DA volume."), NULL, MDFNST_UINT, "100", "0", "200", NULL, CDSettingChanged },
-  { "pce.adpcmvolume", MDFNSF_NOFLAGS, gettext_noop("ADPCM volume."), NULL, MDFNST_UINT, "100", "0", "200", NULL, CDSettingChanged },
+  { "pce.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("Sound quality."), gettext_noop("Higher values correspond to better SNR and better preservation of higher frequencies(\"brightness\"), at the cost of increased computational complexity and a negligible increase in latency.\n\nHigher values will also slightly increase the probability of sample clipping(relevant if Mednafen's volume control settings are set too high), due to increased (time-domain) ringing."), MDFNST_INT, "3", "0", "5" },
+  { "pce.resamp_rate_error", MDFNSF_NOFLAGS, gettext_noop("Sound output rate tolerance."), gettext_noop("Lower values correspond to better matching of the output rate of the resampler to the actual desired output rate, at the expense of increased RAM usage and poorer CPU cache utilization."), MDFNST_FLOAT, "0.0000009", "0.0000001", "0.0000350" },
 
-  { "pce.vramsize", MDFNSF_NOFLAGS, gettext_noop("Size of emulated VRAM per VDC in 16-bit words.  DO NOT CHANGE THIS UNLESS YOU KNOW WTF YOU ARE DOING."), NULL, MDFNST_UINT, "32768", "32768", "65536" },
+  { "pce.vramsize", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE | MDFNSF_SUPPRESS_DOC, gettext_noop("Size of emulated VRAM per VDC in 16-bit words.  DO NOT CHANGE THIS UNLESS YOU KNOW WTF YOU ARE DOING."), NULL, MDFNST_UINT, "32768", "32768", "65536" },
   { NULL }
 };
 
@@ -1072,7 +1254,7 @@ static uint8 MemRead(uint32 addr)
  return(NonCheatPCERead[(addr / 8192) & 0xFF](addr));
 }
 
-static void InstallReadPatch(uint32 address)
+static void InstallReadPatch(uint32 address, uint8 value, int compare)
 {
  HuCPU->SetFastRead(address >> 13, NULL);
  HuCPU->SetReadHandler(address >> 13, CheatReadFunc);
@@ -1099,15 +1281,17 @@ static const FileExtensionSpecStruct KnownExtensions[] =
 
 static bool SetSoundRate(double rate)
 {
- huc_sbuf.set_sample_rate(rate ? rate : 44100, 50);
- huc_sbuf.clock_rate((long)(PCE_MASTER_CLOCK / 3));
- huc_sbuf.bass_freq(20);
-
- for(int y = 0; y < 2; y++)
+ if(HRRes)
  {
-  sbuf[y].set_sample_rate(rate ? rate : 44100, 50);
-  sbuf[y].clock_rate((long)(PCE_MASTER_CLOCK / 3));
-  sbuf[y].bass_freq(20);
+  delete HRRes;
+  HRRes = NULL;
+ }
+
+ if(rate > 0)
+ {
+  HRRes = new OwlResampler(PCE_MASTER_CLOCK / 12, rate, MDFN_GetSettingF("pce.resamp_rate_error"), 20, MDFN_GetSettingUI("pce.resamp_quality"));
+  for(unsigned i = 0; i < 2; i++)
+   HRRes->ResetBufResampState(HRBufs[i]);
  }
 
  return(TRUE);
@@ -1141,6 +1325,7 @@ MDFNGI EmulatedPCE =
  InstallReadPatch,
  RemoveReadPatches,
  MemRead,
+ NULL,
  false,
  StateAction,
  Emulate,

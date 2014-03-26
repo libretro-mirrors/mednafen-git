@@ -150,7 +150,7 @@ bool MemDebuggerPrompt::DoBSSearch(uint32 byte_count, uint8 *thebytes)
 	 bool found = FALSE;
 	 uint8 *bbuffer = (uint8 *)calloc(1, byte_count);
 
-	 LockGameMutex(1);
+	 
          do
          {
           ASpace->GetAddressSpaceBytes(ASpace->name, a, byte_count, bbuffer);
@@ -162,7 +162,7 @@ bool MemDebuggerPrompt::DoBSSearch(uint32 byte_count, uint8 *thebytes)
           }
           a = (a + 1) % zemod;
          } while(a != start_a);
-	 LockGameMutex(0);
+	 
 
 	 free(bbuffer);
 	 return(found);
@@ -176,7 +176,7 @@ bool MemDebuggerPrompt::DoRSearch(uint32 byte_count, uint8 *the_bytes)
 	 bool found = FALSE;
 	 uint8 *bbuffer = (uint8 *)calloc(1, byte_count);
 
-	 LockGameMutex(1);
+	 
          do
          {
           ASpace->GetAddressSpaceBytes(ASpace->name, a, byte_count + 1, bbuffer);
@@ -198,7 +198,7 @@ bool MemDebuggerPrompt::DoRSearch(uint32 byte_count, uint8 *the_bytes)
           }
           a = (a + 1) % zemod;
          } while(a != start_a);
-	 LockGameMutex(0);
+	 
 	 free(bbuffer);
 
 	 return(found);
@@ -276,9 +276,9 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
 	 {
 	  if(ICV_Init(pstring.c_str()))
 	  {
-	   LockGameMutex(1);
+	   
 	   MDFNI_SetSetting(std::string(std::string(CurGame->shortname) + "." + std::string("debugger.memcharenc")).c_str(), pstring.c_str());
-	   LockGameMutex(0);
+	   
 	  }
 	 }
          else if(InPrompt == DumpMem)
@@ -298,7 +298,7 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
 
 	  if(acceptable)
           {
-           LockGameMutex(1);
+           
 	   try
 	   {
 	    FileStream fp(fname, FileStream::MODE_WRITE);
@@ -324,7 +324,7 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
             error_string = trio_aprintf("%s", e.what());
             error_time = SDL_GetTicks();
 	   }
-           LockGameMutex(0);
+           
           }
 	  else
 	  {
@@ -348,7 +348,7 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
 
           if(acceptable)
           {
-	   LockGameMutex(1);
+	   
 
 	   try
 	   {
@@ -384,7 +384,7 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
             error_string = trio_aprintf("%s", e.what());
             error_time = SDL_GetTicks();
 	   }
-	   LockGameMutex(0);
+	   
           }
           else
           {
@@ -478,26 +478,23 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
 
 static MemDebuggerPrompt *myprompt = NULL;
 
-// Call this function from either thread.
+// Call this function from the game thread.
 void MemDebugger_SetActive(bool newia)
 {
  if(CurGame->Debugger)
  {
-  LockGameMutex(1);
-
   IsActive = newia;
   if(!newia)
   {
    InEditMode = FALSE;
    LowNib = FALSE;
   }
-  LockGameMutex(0);
  }
 }
 
 #define MK_COLOR_A(r,g,b,a) (pf_cache.MakeColor(r, g, b, a))
 
-// Call this function from the main thread
+// Call this function from the game thread
 void MemDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *screen_rect)
 {
  if(!IsActive) return;
@@ -507,7 +504,7 @@ void MemDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
  uint32 pitch32 = surface->pitchinpix;
  const uint64 zemod = SizeCache[CurASpace];
 
- LockGameMutex(1);
+ 
 
  DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, (UTF8*)ASpace->long_name, MK_COLOR_A(0x20, 0xFF, 0x20, 0xFF), 1, 1);
  pixels += 10 * pitch32;
@@ -745,7 +742,7 @@ void MemDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
  }
 
  }
- LockGameMutex(0);
+ 
 
  if(InPrompt)
   myprompt->Draw(surface, rect);
@@ -787,7 +784,7 @@ static void ChangePos(int64 delta)
 
 static void DoCrazy(void)
 {
- LockGameMutex(1);
+ 
 
  uint32 start = ASpacePos[CurASpace];
  uint32 A = ASpacePos[CurASpace];
@@ -851,10 +848,10 @@ static void DoCrazy(void)
  fprintf(fp, "%08x %08x\n", start, ASpacePos[CurASpace]);
  fclose(fp);
 
- LockGameMutex(0);
+ 
 }
 
-// Call this from the main thread
+// Call this from the game thread
 int MemDebugger_Event(const SDL_Event *event)
 {
  if(!InPrompt && myprompt)
@@ -894,9 +891,9 @@ int MemDebugger_Event(const SDL_Event *event)
 	 {
           to_write_len = obl_start - obl;
 
-	  LockGameMutex(1);
+	  
 	  ASpace->PutAddressSpaceBytes(ASpace->name, ASpacePos[CurASpace], to_write_len, 1, TRUE, to_write);
-	  LockGameMutex(0);
+	  
 
 	  LowNib = 0;
 	  ChangePos(to_write_len);
@@ -913,12 +910,12 @@ int MemDebugger_Event(const SDL_Event *event)
          else if(event->key.keysym.sym >= SDLK_a && event->key.keysym.sym <= SDLK_f)
           tc = 0xA + event->key.keysym.sym - SDLK_a;
 
-	 LockGameMutex(1);
+	 
          ASpace->GetAddressSpaceBytes(ASpace->name, ASpacePos[CurASpace], 1, &meowbyte);
          meowbyte &= 0xF << ((LowNib) * 4);
          meowbyte |= tc << ((!LowNib) * 4);
          ASpace->PutAddressSpaceBytes(ASpace->name, ASpacePos[CurASpace], 1, 1, TRUE, &meowbyte);
-	 LockGameMutex(0);
+	 
 
          LowNib = !LowNib;
          if(!LowNib)
@@ -928,9 +925,9 @@ int MemDebugger_Event(const SDL_Event *event)
 	{
 	 default: break;
 
-         case SDLK_MINUS: Debugger_ModOpacity(-8);
+         case SDLK_MINUS: Debugger_GT_ModOpacity(-8);
                           break;
-         case SDLK_EQUALS: Debugger_ModOpacity(8);
+         case SDLK_EQUALS: Debugger_GT_ModOpacity(8);
                            break;
 
 	 case SDLK_TAB:

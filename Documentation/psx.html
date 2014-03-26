@@ -9,7 +9,7 @@
  <body>
   <center><h1><img alt="Mednafen" src="mednafen.png" width="696" height="204"></h1></center>
   <center><h1>Sony PlayStation Documentation</h1></center>
-  <center><i>Last updated September 12, 2013<br>Valid as of 0.9.32-WIP</i></center>
+  <center><i>Last updated February 27, 2014<br>Valid as of 0.9.33</i></center>
  <p></p>
  <b>Table of Contents:</b>
  <ul><li><a href="#Section_intro">Introduction</a><ul></ul></li><li><a href="#Section_firmware_bios">Firmware/BIOS</a><ul></ul></li><li><a href="#Section_multitap">Multitap Usage</a><ul></ul></li><li><a href="#Settings+Reference">Settings Reference</a><ul></ul></li></ul><hr width="100%">
@@ -21,7 +21,12 @@ target(for example, x86_64) rather than 32-bit, if available.<br>
 </p>
 
 <p>
-PSF1 playback is supported.
+Enabling CD image preloading into memory via the <a href="mednafen.html#cd.image_memcache">cd.image_memcache</a> setting is recommended, to
+avoid short emulator pauses and audio pops due to waiting for disk accesses to complete when the emulated CD is accessed.
+</p>
+
+<p>
+<a href="http://www.neillcorlett.com/psf/">PSF1</a> playback is supported.
 </p>
 
 <hr width="100%">
@@ -138,6 +143,10 @@ NOTE: Enabling multitap in games that don't fully support it may cause deleterio
 NOTE: Enabling multitap in games that don't fully support it may cause deleterious effects.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><b>psx.region_autodetect</b></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">1</td><td class="ColE"><a name="psx.region_autodetect">Attempt to auto-detect region of game.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><b>psx.region_default</b></td><td class="ColB">enum</td><td class="ColC">jp<br>na<br>eu</td><td class="ColD">jp</td><td class="ColE"><a name="psx.region_default">Default region to use.</a><p>Used if region autodetection fails or is disabled.</p><ul><li><b>jp</b> - Japan<br></li><br><li><b>na</b> - North America<br></li><br><li><b>eu</b> - Europe<br></li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowB"><td class="ColA">psx.slend</td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 239</td><td class="ColD">239</td><td class="ColE"><a name="psx.slend">Last displayed scanline in NTSC mode.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowA"><td class="ColA">psx.slendp</td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 287</td><td class="ColD">287</td><td class="ColE"><a name="psx.slendp">Last displayed scanline in PAL mode.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowB"><td class="ColA">psx.slstart</td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 239</td><td class="ColD">0</td><td class="ColE"><a name="psx.slstart">First displayed scanline in NTSC mode.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowA"><td class="ColA">psx.slstartp</td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 287</td><td class="ColD">0</td><td class="ColE"><a name="psx.slstartp">First displayed scanline in PAL mode.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA">psx.spu.resamp_quality</td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 10</td><td class="ColD">5</td><td class="ColE"><a name="psx.spu.resamp_quality">SPU output resampler quality.</a><p>0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the "sound.rate" setting, to "44100" will bypass the resampler, which will decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 </table><p></p><table border><tr class="TableHeader"><th>Setting:</th><th>Value Type:</th><th>Possible Values:</th><th>Default Value:</th><th>Description:</th></tr><tr class="RowA"><td class="ColA">psx.debugger.disfontsize</td><td class="ColB">enum</td><td class="ColC">xsmall<br>small<br>medium<br>large</td><td class="ColD">small</td><td class="ColE"><a name="psx.debugger.disfontsize">Disassembly font size.</a><p>Note: Setting the font size to larger than the default may cause text overlap in the debugger.</p><ul><li><b>xsmall</b> - 4x5<br></li><br><li><b>small</b> - 5x7<br></li><br><li><b>medium</b> - 6x13<br></li><br><li><b>large</b> - 9x18<br></li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA">psx.debugger.memcharenc</td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">shift_jis</td><td class="ColE"><a name="psx.debugger.memcharenc">Character encoding for the debugger's memory editor.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>

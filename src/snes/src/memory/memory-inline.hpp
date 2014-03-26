@@ -51,14 +51,8 @@ MappedRAM::MappedRAM() : data_(0), size_(-1U), write_protect_(false) {}
 
 //Bus
 
-uint8 Bus::read(unsigned addr) {
-  #if defined(CHEAT_SYSTEM)
-  if(cheat.active() && cheat.exists(addr)) {
-    uint8 r;
-    if(cheat.read(addr, r)) return r;
-  }
-  #endif
-
+uint8 Bus::read(unsigned addr)
+{
   Page &p = page[addr >> 8];
 
   assert(p.access != NULL);

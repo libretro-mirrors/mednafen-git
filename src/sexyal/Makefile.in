@@ -95,7 +95,8 @@ libsexyal_a_LIBADD =
 am__libsexyal_a_SOURCES_DIST = sexyal.cpp convert.cpp \
 	drivers/dummy.cpp drivers/dsound.cpp drivers/wasapi.cpp \
 	drivers/oss.cpp drivers/jack.cpp drivers/sdl.cpp \
-	drivers/alsa.cpp
+	drivers/alsa.cpp drivers/dos_common.cpp drivers/cmi8738.cpp \
+	drivers/es1370.cpp drivers/es1371.cpp drivers/sb.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_DIRECTSOUND_TRUE@am__objects_1 = drivers/dsound.$(OBJEXT)
 @HAVE_WASAPI_TRUE@am__objects_2 = drivers/wasapi.$(OBJEXT)
@@ -103,10 +104,13 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_JACK_TRUE@am__objects_4 = drivers/jack.$(OBJEXT)
 @HAVE_SDL_TRUE@am__objects_5 = drivers/sdl.$(OBJEXT)
 @HAVE_ALSA_TRUE@am__objects_6 = drivers/alsa.$(OBJEXT)
+@DOS_TRUE@am__objects_7 = drivers/dos_common.$(OBJEXT) \
+@DOS_TRUE@	drivers/cmi8738.$(OBJEXT) drivers/es1370.$(OBJEXT) \
+@DOS_TRUE@	drivers/es1371.$(OBJEXT) drivers/sb.$(OBJEXT)
 am_libsexyal_a_OBJECTS = sexyal.$(OBJEXT) convert.$(OBJEXT) \
 	drivers/dummy.$(OBJEXT) $(am__objects_1) $(am__objects_2) \
 	$(am__objects_3) $(am__objects_4) $(am__objects_5) \
-	$(am__objects_6)
+	$(am__objects_6) $(am__objects_7)
 libsexyal_a_OBJECTS = $(am_libsexyal_a_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -288,7 +292,6 @@ WOE32DLL = @WOE32DLL@
 XGETTEXT = @XGETTEXT@
 XGETTEXT_015 = @XGETTEXT_015@
 XGETTEXT_EXTRA_OPTIONS = @XGETTEXT_EXTRA_OPTIONS@
-XMKMF = @XMKMF@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -351,7 +354,7 @@ DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libsexyal.a
 libsexyal_a_SOURCES = sexyal.cpp convert.cpp drivers/dummy.cpp \
 	$(TMP_DIRECTSOUND) $(TMP_WASAPI) $(TMP_OSSDSP) $(TMP_JACK) \
-	$(TMP_SDL) $(TMP_ALSA)
+	$(TMP_SDL) $(TMP_ALSA) $(TMP_DOS)
 @HAVE_DIRECTSOUND_TRUE@TMP_DIRECTSOUND = drivers/dsound.cpp
 @HAVE_WASAPI_TRUE@TMP_WASAPI = drivers/wasapi.cpp
 @HAVE_OSSDSP_TRUE@TMP_OSSDSP = drivers/oss.cpp
@@ -359,6 +362,7 @@ libsexyal_a_SOURCES = sexyal.cpp convert.cpp drivers/dummy.cpp \
 @HAVE_SDL_TRUE@TMP_SDL = drivers/sdl.cpp
 @HAVE_SDL_TRUE@libsexyal_a_CFLAGS = @SDL_CFLAGS@
 @HAVE_ALSA_TRUE@TMP_ALSA = drivers/alsa.cpp
+@DOS_TRUE@TMP_DOS = drivers/dos_common.cpp drivers/cmi8738.cpp drivers/es1370.cpp drivers/es1371.cpp drivers/sb.cpp
 all: all-am
 
 .SUFFIXES:
@@ -416,6 +420,16 @@ drivers/sdl.$(OBJEXT): drivers/$(am__dirstamp) \
 	drivers/$(DEPDIR)/$(am__dirstamp)
 drivers/alsa.$(OBJEXT): drivers/$(am__dirstamp) \
 	drivers/$(DEPDIR)/$(am__dirstamp)
+drivers/dos_common.$(OBJEXT): drivers/$(am__dirstamp) \
+	drivers/$(DEPDIR)/$(am__dirstamp)
+drivers/cmi8738.$(OBJEXT): drivers/$(am__dirstamp) \
+	drivers/$(DEPDIR)/$(am__dirstamp)
+drivers/es1370.$(OBJEXT): drivers/$(am__dirstamp) \
+	drivers/$(DEPDIR)/$(am__dirstamp)
+drivers/es1371.$(OBJEXT): drivers/$(am__dirstamp) \
+	drivers/$(DEPDIR)/$(am__dirstamp)
+drivers/sb.$(OBJEXT): drivers/$(am__dirstamp) \
+	drivers/$(DEPDIR)/$(am__dirstamp)
 libsexyal.a: $(libsexyal_a_OBJECTS) $(libsexyal_a_DEPENDENCIES) $(EXTRA_libsexyal_a_DEPENDENCIES) 
 	$(AM_V_at)-rm -f libsexyal.a
 	$(AM_V_AR)$(libsexyal_a_AR) libsexyal.a $(libsexyal_a_OBJECTS) $(libsexyal_a_LIBADD)
@@ -424,10 +438,15 @@ libsexyal.a: $(libsexyal_a_OBJECTS) $(libsexyal_a_DEPENDENCIES) $(EXTRA_libsexya
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 	-rm -f drivers/alsa.$(OBJEXT)
+	-rm -f drivers/cmi8738.$(OBJEXT)
+	-rm -f drivers/dos_common.$(OBJEXT)
 	-rm -f drivers/dsound.$(OBJEXT)
 	-rm -f drivers/dummy.$(OBJEXT)
+	-rm -f drivers/es1370.$(OBJEXT)
+	-rm -f drivers/es1371.$(OBJEXT)
 	-rm -f drivers/jack.$(OBJEXT)
 	-rm -f drivers/oss.$(OBJEXT)
+	-rm -f drivers/sb.$(OBJEXT)
 	-rm -f drivers/sdl.$(OBJEXT)
 	-rm -f drivers/wasapi.$(OBJEXT)
 
@@ -437,10 +456,15 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/convert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sexyal.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/alsa.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/cmi8738.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/dos_common.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/dsound.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/dummy.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/es1370.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/es1371.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/jack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/oss.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/sb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/sdl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/wasapi.Po@am__quote@
 

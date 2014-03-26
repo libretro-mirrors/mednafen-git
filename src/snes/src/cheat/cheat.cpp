@@ -11,62 +11,40 @@ bool Cheat::enabled() const {
 
 void Cheat::enable(bool state) {
   system_enabled = state;
-  cheat_enabled = system_enabled && code_enabled;
 }
 
-void Cheat::synchronize() {
-  memset(bitmask, 0x00, sizeof bitmask);
-  code_enabled = false;
-
-  for(unsigned i = 0; i < size(); i++) {
-    const CheatCode &code = operator[](i);
-    if(code.enabled == false) continue;
-
-    for(unsigned n = 0; n < code.addr.size(); n++) {
-      code_enabled = true;
-
-      unsigned addr = mirror(code.addr[n]);
-      bitmask[addr >> 3] |= 1 << (addr & 7);
-      if((addr & 0xffe000) == 0x7e0000) {
-        //mirror $7e:0000-1fff to $00-3f|80-bf:0000-1fff
-        unsigned mirroraddr;
-        for(unsigned x = 0; x <= 0x3f; x++) {
-          mirroraddr = ((0x00 + x) << 16) + (addr & 0x1fff);
-          bitmask[mirroraddr >> 3] |= 1 << (mirroraddr & 7);
-
-          mirroraddr = ((0x80 + x) << 16) + (addr & 0x1fff);
-          bitmask[mirroraddr >> 3] |= 1 << (mirroraddr & 7);
-        }
-      }
-    }
-  }
-
-  cheat_enabled = system_enabled && code_enabled;
+void Cheat::remove_read_patches(void)
+{
+ memset(bitmask, 0x00, sizeof(bitmask));
+ resize(0); 
 }
 
-bool Cheat::read(unsigned addr, uint8 &data) const {
-  addr = mirror(addr);
+void Cheat::install_read_patch(const CheatCode& code)
+{
+ add(code);
 
+ unsigned addr = code.addr;
+ bitmask[addr >> 3] |= 1 << (addr & 7);
+}
+
+
+void Cheat::read(unsigned addr, uint8 &data) const {
   for(unsigned i = 0; i < size(); i++) {
     const CheatCode &code = operator[](i);
-    if(code.enabled == false) continue;
 
-    for(unsigned n = 0; n < code.addr.size(); n++) {
-      if(addr == mirror(code.addr[n])) {
-        data = code.data[n];
-        return true;
-      }
+    if(addr == code.addr && (code.compare < 0 || data == code.compare)) {
+      data = code.data;
+      break;
     }
   }
-
-  return false;
 }
 
 Cheat::Cheat() {
-  system_enabled = true;
-  synchronize();
+  system_enabled = false;
+  memset(bitmask, 0x00, sizeof(bitmask));
 }
 
+#if 0
 //===============
 //encode / decode
 //===============
@@ -150,47 +128,6 @@ bool Cheat::encode(string &s, unsigned addr, uint8 data, Type type) {
     return false;
   }
 }
-
-//========
-//internal
-//========
-
-unsigned Cheat::mirror(unsigned addr) const {
-  //$00-3f|80-bf:0000-1fff -> $7e:0000-1fff
-  if((addr & 0x40e000) == 0x000000) return (0x7e0000 + (addr & 0x1fff));  
-  return addr;
-}
-
-//=========
-//CheatCode
-//=========
-
-bool CheatCode::operator=(string s) {
-  addr.reset();
-  data.reset();
-
-  lstring list;
-  list.split("+", s.replace(" ", ""));
-
-  for(unsigned i = 0; i < list.size(); i++) {
-    unsigned addr_;
-    uint8 data_;
-    Cheat::Type type_;
-    if(Cheat::decode(list[i], addr_, data_, type_) == false) {
-      addr.reset();
-      data.reset();
-      return false;
-    }
-
-    addr.add(addr_);
-    data.add(data_);
-  }
-
-  return true;
-}
-
-CheatCode::CheatCode() {
-  enabled = false;
-}
+#endif
 
 }

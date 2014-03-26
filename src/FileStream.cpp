@@ -1,5 +1,3 @@
-// TODO/WIP
-
 /* Mednafen - Multi-system Emulator
  *
  * This program is free software; you can redistribute it and/or modify
@@ -94,3 +92,21 @@ void FileStream::close(void)
 {
  fw.close();
 }
+
+int FileStream::get_line(std::string &str)
+{
+ int c;
+
+ str.clear();
+
+ while((c = fw.get_char()) >= 0)
+ {
+  if(c == '\r' || c == '\n' || c == 0)
+   return(c);
+
+  str.push_back(c);
+ }
+
+ return(str.length() ? 256 : -1);
+}
+

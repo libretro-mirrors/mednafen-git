@@ -5,6 +5,7 @@
 #include "../state.h"
 #include "../movie.h"
 #include "../general.h"
+#include "../string/trim.h"
 #include "../file.h"
 #include "../md5.h"
 #include "../video.h"

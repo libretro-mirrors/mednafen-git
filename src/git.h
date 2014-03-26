@@ -108,6 +108,27 @@ typedef struct
  const InputPortInfoStruct *Types;
 } InputInfoStruct;
 
+struct MemoryPatch;
+
+struct CheatFormatStruct
+{
+ const char *FullName;		//"Game Genie", "GameShark", "Pro Action Catplay", etc.
+ const char *Description;	// Whatever?
+
+ bool (*DecodeCheat)(const std::string& cheat_string, MemoryPatch* patch);	// *patch should be left as initialized by MemoryPatch::MemoryPatch(), unless this is the
+										// second(or third or whatever) part of a multipart cheat.
+										//
+										// Will throw an std::exception(or derivative) on format error.
+										//
+										// Will return true if this is part of a multipart cheat.
+};
+
+struct CheatFormatInfoStruct
+{
+ unsigned NumFormats;
+
+ CheatFormatStruct *Formats;
+};
 
 // Miscellaneous system/simple commands(power, reset, dip switch toggles, coin insert, etc.)
 // (for DoSimpleCommand() )
@@ -306,9 +327,17 @@ typedef struct
  void (*SetChanEnableMask)(uint64 mask);	// Audio(TODO, placeholder)
  const char *ChanNames;
 
- void (*InstallReadPatch)(uint32 address);
+ //
+ // InstallReadPatch and RemoveReadPatches should be non-NULL(even if only pointing to dummy functions) if the emulator module supports
+ // read-substitution and read-substitution-with-compare style(IE Game Genie-style) cheats.
+ //
+ // See also "SubCheats" global stuff in mempatcher.h.
+ //
+ void (*InstallReadPatch)(uint32 address, uint8 value, int compare); // Compare is >= 0 when utilized.
  void (*RemoveReadPatches)(void);
  uint8 (*MemRead)(uint32 addr);
+
+ CheatFormatInfoStruct *CheatFormatInfo;
 
  bool SaveStateAltersState;	// true for bsnes and some libco-style emulators, false otherwise.
  // Main save state routine, called by the save state code in state.cpp.

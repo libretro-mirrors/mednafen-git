@@ -43,6 +43,7 @@
 #include <trio/trio.h>
 #include <errno.h>
 
+#include "../FileStream.h"
 #include "../PSFLoader.h"
 
 namespace MDFN_IEN_GBA
@@ -52,19 +53,19 @@ class GSFLoader : public PSFLoader
 {
  public:
 
- GSFLoader(MDFNFILE *fp);
- virtual ~GSFLoader();
+ GSFLoader(MDFNFILE *fp) MDFN_COLD;
+ virtual ~GSFLoader() MDFN_COLD;
 
- virtual void HandleEXE(const uint8 *data, uint32 len, bool ignore_pcsp = false);
+ virtual void HandleEXE(const uint8 *data, uint32 len, bool ignore_pcsp = false) MDFN_COLD;
 
  PSFTags tags;
 };
 
 static GSFLoader *gsf_loader = NULL;
 
-
-static bool CPUInit(const std::string bios_fn);
-static void CPUReset(void);
+static bool CPUInit(const std::string bios_fn) MDFN_COLD;
+static void CPUReset(void) MDFN_COLD;
+static void CPUUpdateRender(void);
 
 #define UPDATE_REG(address, value)\
   {\
@@ -160,7 +161,12 @@ static const uint32 myROM[] =
  #include "myrom.h"
 };
 
-static uint32 *systemColorMap32 = NULL; // 65536
+union SysCM
+{
+ uint32 v32[65536];
+ uint16 v16[65536];
+};
+static SysCM* systemColorMap = NULL;
 static uint8 *CustomColorMap = NULL; // 32768 * 3
 static int romSize = 0x2000000;
 
@@ -258,6 +264,7 @@ static SFORMAT Joy_StateRegs[] =
  SFEND
 };
 
+static int StateAction(StateMem *sm, int load, int data_only) MDFN_COLD;
 static int StateAction(StateMem *sm, int load, int data_only)
 {
  int ret = 1;
@@ -430,7 +437,8 @@ static int StateAction(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-bool CPUWriteBatteryFile(const char *filename)
+static bool CPUWriteBatteryFile(const char *filename) MDFN_COLD;
+static bool CPUWriteBatteryFile(const char *filename)
 {
  if(cpuSramEnabled || cpuFlashEnabled)
  {
@@ -449,7 +457,8 @@ bool CPUWriteBatteryFile(const char *filename)
  return(FALSE);
 }
 
-bool CPUReadBatteryFile(const char *filename)
+static bool CPUReadBatteryFile(const char *filename) MDFN_COLD;
+static bool CPUReadBatteryFile(const char *filename)
 {
  gzFile gp = gzopen(filename, "rb");
  long size;
@@ -505,7 +514,8 @@ bool CPUReadBatteryFile(const char *filename)
  return(TRUE);
 }
 
-void CPUCleanUp()
+static void CPUCleanUp(void) MDFN_COLD;
+static void CPUCleanUp(void)
 {
  if(rom) 
  {
@@ -561,10 +571,10 @@ void CPUCleanUp()
   ioMem = NULL;
  }
   
- if(systemColorMap32)
+ if(systemColorMap)
  {
-  MDFN_free(systemColorMap32);
-  systemColorMap32 = NULL;
+  MDFN_free(systemColorMap);
+  systemColorMap = NULL;
  }
 
  GBA_Flash_Kill();
@@ -576,6 +586,7 @@ void CPUCleanUp()
  }
 }
 
+static void CloseGame(void) MDFN_COLD;
 static void CloseGame(void)
 {
  if(!gsf_loader)
@@ -639,34 +650,105 @@ void GSFLoader::HandleEXE(const uint8 *data, uint32 size, bool ignore_pcsp)
 }
 
 
-static void RedoColorMap(const MDFN_PixelFormat &format) //int rshift, int gshift, int bshift)
+static bool LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries) MDFN_COLD;
+static bool LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries)
 {
- if(CustomColorMap)
+ std::string colormap_fn = MDFN_MakeFName(MDFNMKF_PALETTE, 0, syspalname).c_str();
+
+ MDFN_printf(_("Loading custom palette from \"%s\"...\n"),  colormap_fn.c_str());
+ MDFN_indent(1);
+
+ *ptr = NULL;
+ try
  {
-  for(int x = 0; x < 65536; x++)
-  {
-   int r = CustomColorMap[(x & 0x7FFF) * 3 + 0];
-   int g = CustomColorMap[(x & 0x7FFF) * 3 + 1];
-   int b = CustomColorMap[(x & 0x7FFF) * 3 + 2];
+  FileStream fp(colormap_fn.c_str(), FileStream::MODE_READ);
 
-   systemColorMap32[x] = format.MakeColor(r, g, b);
+  if(!(*ptr = (uint8 *)MDFN_malloc(num_entries * 3, _("custom color map"))))
+  {
+   MDFN_indent(-1);
+   return(false);
   }
+
+  fp.read(*ptr, num_entries * 3);
  }
- else
+ catch(MDFN_Error &e)
  {
-  for(int x = 0; x < 65536; x++)
+  if(*ptr)
   {
-   int r, g, b;
-
-   r = (x & 0x1F) << 3;
-   g = ((x & 0x3E0) >> 5) << 3;
-   b = ((x & 0x7C00) >> 10) << 3;
-
-   systemColorMap32[x] = format.MakeColor(r, g, b);
+   MDFN_free(*ptr);
+   *ptr = NULL;
   }
+
+  MDFN_printf(_("Error: %s\n"), e.what());
+  MDFN_indent(-1);
+  return(e.GetErrno() == ENOENT);        // Return fatal error if it's an error other than the file not being found.
  }
+ catch(std::exception &e)
+ {
+  if(*ptr)
+  {
+   MDFN_free(*ptr);
+   *ptr = NULL;
+  }
+
+  MDFN_printf(_("Error: %s\n"), e.what());
+  MDFN_indent(-1);
+  return(false);
+ }
+
+ MDFN_indent(-1);
+
+ return(true);
 }
 
+static void RedoColorMap(const MDFN_PixelFormat &format) MDFN_COLD;
+static void RedoColorMap(const MDFN_PixelFormat &format)
+{
+ for(int x = 0; x < 65536; x++)
+ {
+  int r, g, b;
+
+  if(CustomColorMap)
+  {
+   r = CustomColorMap[(x & 0x7FFF) * 3 + 0];
+   g = CustomColorMap[(x & 0x7FFF) * 3 + 1];
+   b = CustomColorMap[(x & 0x7FFF) * 3 + 2];
+  }
+  else
+  {
+   r = (x & 0x1F);
+   g = ((x & 0x3E0) >> 5);
+   b = ((x & 0x7C00) >> 10);
+
+   if(format.bpp == 16)
+   {
+    r = (r * 255 + 15) / 31;
+    g = (g * 255 + 15) / 31;
+    b = (b * 255 + 15) / 31;
+   }
+   else
+   {
+    r = (r << 3); // | (r >> 2);
+    g = (g << 3); // | (g >> 2);
+    b = (b << 3); // | (b >> 2);
+   }
+  }
+
+  if(format.bpp == 32)
+   systemColorMap->v32[x] = format.MakeColor(r, g, b);
+  else
+   systemColorMap->v16[x] = format.MakeColor(r, g, b);
+ }
+
+ #if 0
+ for(unsigned i = 0; i < 32; i++)
+ {
+  printf("%u %u\n", i, format.MakeColor(0, 0, (i * 255 + 15) / 31));
+ }
+ #endif
+}
+
+static bool TestMagic(const char *name, MDFNFILE *fp) MDFN_COLD;
 static bool TestMagic(const char *name, MDFNFILE *fp)
 {
  if(!memcmp(fp->data, "PSF\x22", 4))
@@ -684,6 +766,7 @@ static bool TestMagic(const char *name, MDFNFILE *fp)
  return(FALSE);
 }
 
+static int Load(const char *name, MDFNFILE *fp) MDFN_COLD;
 static int Load(const char *name, MDFNFILE *fp)
 {
   layerSettings = 0xFF00;
@@ -795,7 +878,7 @@ static int Load(const char *name, MDFNFILE *fp)
    return 0;
   }
 
-  if(!(systemColorMap32 = (uint32*)MDFN_malloc(65536 * sizeof(uint32), _("GBA Color Map"))))
+  if(!(systemColorMap = (SysCM*)MDFN_malloc(sizeof(SysCM), _("GBA Color Map"))))
   {
    CPUCleanUp();
    return(0);
@@ -836,42 +919,10 @@ static int Load(const char *name, MDFNFILE *fp)
     GBA_EEPROM_LoadFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "eep").c_str());
   }
 
-  std::string colormap_fn = MDFN_MakeFName(MDFNMKF_PALETTE, 0, NULL).c_str();
-
+  if(!LoadCPalette(NULL, &CustomColorMap, 32768))
   {
-   MDFN_printf(_("Loading custom palette from \"%s\"...\n"),  colormap_fn.c_str());
-   MDFN_indent(1);
-   gzFile gp = gzopen(colormap_fn.c_str(), "rb");
-   if(!gp)
-   {
-    ErrnoHolder ene(errno);
-
-    MDFN_printf(_("Error opening file: %s\n"), ene.StrError());	// FIXME, zlib and errno...
-    MDFN_indent(-1);
-
-    if(ene.Errno() != ENOENT)
-    {
-     CPUCleanUp();
-     return(0);
-    }
-   }
-   else if((CustomColorMap = (uint8*)MDFN_malloc(32768 * 3, _("custom color map"))))
-   {
-    if(gzread(gp, CustomColorMap, 32768 * 3) != 32768 * 3)
-    {
-     MDFN_printf(_("Error reading file\n"));
-     MDFN_indent(-1);
-     MDFN_free(CustomColorMap);
-     CustomColorMap = NULL;
-     CPUCleanUp();
-     return(0);
-    }
-    else
-    {
-
-    }
-   }
-   MDFN_indent(-1);
+   CPUCleanUp();
+   return(0);
   }
 
  return(1);
@@ -894,7 +945,7 @@ void doMirroring (bool b)
   }
 }
 
-void CPUUpdateRender()
+static void CPUUpdateRender(void)
 {
   switch(DISPCNT & 7) {
   case 0:
@@ -2641,7 +2692,8 @@ static bool CPUInit(const std::string bios_fn)
  return(1);
 }
 
-static void CPUReset()
+static void CPUReset(void) MDFN_COLD;
+static void CPUReset(void)
 {
   if(GBA_RTC)
    GBA_RTC->Reset();
@@ -2876,7 +2928,8 @@ void CPUInterrupt()
 int32 soundTS = 0;
 static uint8 *padq;
 
-void MDFNGBA_SetInput(int port, const char *type, void *ptr)
+static void SetInput(int port, const char *type, void *ptr) MDFN_COLD;
+static void SetInput(int port, const char *type, void *ptr)
 {
  padq = (uint8*)ptr;
 }
@@ -2891,8 +2944,9 @@ int32 MDFNGBA_GetTimerPeriod(int which)
 static int frameready;
 static int HelloSkipper;
 
-void CPULoop(MDFN_Surface *surface, int ticks)
-{  
+static void CPULoop(EmulateSpecStruct* espec, int ticks)
+{
+  MDFN_Surface* surface = espec->surface;
   int clockTicks;
   int timerOverflow = 0;
   // variable used by the CPU core
@@ -3022,18 +3076,37 @@ void CPULoop(MDFN_Surface *surface, int ticks)
             if(!HelloSkipper)
             {
 	      //printf("RL: %d\n", VCOUNT);
-              uint32 *dest = surface->pixels + VCOUNT * surface->pitch32;
-              uint32 *src = lineMix;
+              const uint32 *src = lineMix;
+
               (*renderLine)();
-              for(int x = 120; x; x--)
-              {
-               *dest = systemColorMap32[*src & 0xFFFF];
-               dest++;
-               src++;
-               *dest = systemColorMap32[*src & 0xFFFF];
-               dest++;
-               src++;
-              }
+
+	      if(surface->format.bpp == 32)
+	      {
+	       const uint32* cm = systemColorMap->v32;
+               uint32 *dest = surface->pixels + VCOUNT * surface->pitch32;
+
+               for(int x = 120; x; x--)
+               {
+                *dest = cm[*src & 0xFFFF];
+                dest++;
+                src++;
+                *dest = cm[*src & 0xFFFF];
+                dest++;
+                src++;
+               }
+	      }
+	      else
+	      {
+	       const uint16* cm = systemColorMap->v16;
+	       uint16* dest = surface->pixels16 + VCOUNT * surface->pitchinpix;
+
+               for(int x = 0; x < 240; x += 2)
+               {
+                dest[x + 0] = cm[(uint16)src[x + 0]];
+                dest[x + 1] = cm[(uint16)src[x + 1]];
+               }
+	      }
+	      MDFN_MidLineUpdate(espec, VCOUNT);
             }
             // entering H-Blank
             DISPSTAT |= 2;
@@ -3247,6 +3320,29 @@ static void Emulate(EmulateSpecStruct *espec)
  espec->DisplayRect.w = 240;
  espec->DisplayRect.h = 160;
 
+#if 0
+ {
+  static bool firstcat = true;
+  MDFN_PixelFormat nf;
+
+  nf.bpp = 16;
+  nf.colorspace = MDFN_COLORSPACE_RGB;
+  nf.Rshift = 11;
+  nf.Gshift = 5;
+  nf.Bshift = 0;
+  nf.Ashift = 16;
+  
+  nf.Rprec = 5;
+  nf.Gprec = 5;
+  nf.Bprec = 5;
+  nf.Aprec = 8;
+
+  espec->surface->SetFormat(nf, false);
+  espec->VideoFormatChanged = firstcat;
+  firstcat = false;
+ }
+#endif
+
  if(espec->VideoFormatChanged)
   RedoColorMap(espec->surface->format); //espec->surface->format.Rshift, espec->surface->format.Gshift, espec->surface->format.Bshift);
 
@@ -3269,7 +3365,7 @@ static void Emulate(EmulateSpecStruct *espec)
    char wavepath[256];
    if(last_song != 0)
     MDFNI_EndWaveRecord();
-   snprintf(wavepath, 256, "/meow/mother3-%d.wav", cursong);
+   trio_snprintf(wavepath, 256, "/meow/mother3-%d.wav", cursong);
    MDFNI_BeginWaveRecord(FSettings.SndRate, 2, wavepath);
   }
   last_song = cursong;
@@ -3289,7 +3385,7 @@ static void Emulate(EmulateSpecStruct *espec)
   MDFNMP_ApplyPeriodicCheats();
 
  while(!frameready && (soundTS < 300000))
-  CPULoop(espec->surface, 300000);
+  CPULoop(espec, 300000);
 
  if(GBA_RTC)
   GBA_RTC->AddTime(soundTS);
@@ -3408,10 +3504,11 @@ MDFNGI EmulatedGBA =
  NULL,
  NULL,
  NULL,
+ NULL,
  false,
  StateAction,
  Emulate,
- MDFNGBA_SetInput,
+ SetInput,
  DoSimpleCommand,
  GBASettings,
  MDFN_MASTERCLOCK_FIXED(16777216),

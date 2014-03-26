@@ -32,9 +32,11 @@
 #include "netplay.h"
 #include "netplay-driver.h"
 #include "general.h"
+#include "string/trim.h"
 #include "state.h"
 #include "movie.h"
 #include "md5.h"
+#include "mempatcher.h"
 
 #include "driver.h"
 

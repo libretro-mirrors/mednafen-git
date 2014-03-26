@@ -32,7 +32,8 @@ namespace MDFN_IEN_WSWAN
 
 #define NUMBT 32
 
-static int BTIndex = 0;
+static bool BTEnabled;
+static int BTIndex;
 
 struct BTEntry
 {
@@ -43,6 +44,8 @@ struct BTEntry
 
  bool interrupt;
  uint32 branch_count;
+
+ bool valid;
 };
 
 static BTEntry BTEntries[NUMBT];
@@ -56,9 +59,9 @@ struct WSWAN_BPOINT
 
 static std::vector<WSWAN_BPOINT> BreakPointsPC, BreakPointsRead, BreakPointsWrite, BreakPointsIORead, BreakPointsIOWrite, BreakPointsAux0Read, BreakPointsAux0Write;
 
-static void (*CPUHook)(uint32 PC) = NULL;
+static void (*CPUHook)(uint32 PC, bool bpoint) = NULL;
+static bool CPUHookContinuous = false;
 static bool FoundBPoint = 0;
-static void (*BPCallB)(uint32 PC) = NULL;
 
 void WSwanDBG_IRQ(int level)
 {
@@ -146,44 +149,41 @@ static void CPUHandler(uint32 PC)
   {
    if(PC >= bpit->A[0] && PC <= bpit->A[1])
    {
-    BPCallB(PC);
+    FoundBPoint = true;
     break;
    }
   }
 
- if(FoundBPoint)
+ CPUHookContinuous |= FoundBPoint;
+
+ if(CPUHookContinuous && CPUHook)
  {
-  BPCallB(PC);
-  FoundBPoint = 0;
+  // TODO: Sync devices here.
+  CPUHook(PC, FoundBPoint);
  }
 
- if(CPUHook)
-  CPUHook(PC);
+ FoundBPoint = false;
 }
 
 static void RedoDH(void)
 {
- bool needch = BreakPointsPC.size() || BreakPointsRead.size() || BreakPointsAux0Read.size() || 
+ bool needch = CPUHook || BreakPointsPC.size() || BreakPointsRead.size() || BreakPointsAux0Read.size() || 
 	BreakPointsWrite.size() || BreakPointsAux0Write.size() ||
 	BreakPointsIORead.size() || BreakPointsIOWrite.size();
 
- v30mz_debug(needch ? CPUHandler : CPUHook,
+ v30mz_debug(needch ? CPUHandler : NULL,
         (BreakPointsRead.size() || BreakPointsAux0Read.size()) ? ReadHandler : NULL,
         (BreakPointsWrite.size() || BreakPointsAux0Write.size()) ? WriteHandler : 0,
 	(BreakPointsIORead.size()) ? PortReadHandler : NULL,
 	(BreakPointsIOWrite.size()) ? PortWriteHandler : NULL,
-        (CPUHook) ? WSwanDBG_AddBranchTrace : NULL);
+        BTEnabled ? WSwanDBG_AddBranchTrace : NULL);
 }
 
-void WSwanDBG_SetCPUCallback(void (*callb)(uint32 PC))
+void WSwanDBG_SetCPUCallback(void (*callb)(uint32 PC, bool bpoint), bool continuous)
 {
  CPUHook = callb;
+ CPUHookContinuous = continuous;
  RedoDH();
-}
-
-void WSwanDBG_SetBPCallback(void (*callb)(uint32 PC))
-{
- BPCallB = callb;
 }
 
 void WSwanDBG_FlushBreakPoints(int type)
@@ -258,7 +258,7 @@ void WSwanDBG_AddBranchTrace(uint16 from_CS, uint16 from_IP, uint16 to_CS, uint1
 
  if(prevbt->from_CS == from_CS && prevbt->to_CS == to_CS &&
     prevbt->from_IP == from_IP && prevbt->to_IP == to_IP &&
-	 prevbt->interrupt == interrupt && prevbt->branch_count < 0xFFFFFFFF)
+	 prevbt->interrupt == interrupt && prevbt->branch_count < 0xFFFFFFFF && prevbt->valid)
   prevbt->branch_count++;
  else
  {
@@ -270,8 +270,21 @@ void WSwanDBG_AddBranchTrace(uint16 from_CS, uint16 from_IP, uint16 to_CS, uint1
   BTEntries[BTIndex].interrupt = interrupt;
   BTEntries[BTIndex].branch_count = 1;
 
+  BTEntries[BTIndex].valid = true;
+
   BTIndex = (BTIndex + 1) % NUMBT;
  }
+}
+
+void WSwanDBG_EnableBranchTrace(bool enable)
+{
+ BTEnabled = enable;
+ if(!enable)
+ {
+  BTIndex = 0;
+  memset(BTEntries, 0, sizeof(BTEntries));
+ }
+ RedoDH();
 }
 
 std::vector<BranchTraceResult> WSwanDBG_GetBranchTrace(void)
@@ -282,6 +295,9 @@ std::vector<BranchTraceResult> WSwanDBG_GetBranchTrace(void)
  for(int x = 0; x < NUMBT; x++)
  {
   const BTEntry *bt = &BTEntries[(x + BTIndex) % NUMBT];
+
+  if(!bt->valid)
+   continue;
 
   tmp.count = bt->branch_count;
   trio_snprintf(tmp.from, sizeof(tmp.from), "%04X:%04X", bt->from_CS, bt->from_IP);
@@ -445,6 +461,10 @@ static RegGroupType MiscRegsGroup =
 
 void WSwanDBG_Init(void)
 {
+ BTEnabled = false;
+ BTIndex = 0;
+ memset(BTEntries, 0, sizeof(BTEntries));
+
  MDFNDBG_AddRegGroup(&V30MZRegsGroup);
  MDFNDBG_AddRegGroup(&MiscRegsGroup);
 }

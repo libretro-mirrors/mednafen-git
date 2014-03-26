@@ -29,6 +29,7 @@
 #include        "palette.h"
 #include        "../input.h"  
 #include	"../ntsc/nes_ntsc.h"
+#include	<trio/trio.h>
 #include	<math.h>
 
 #define VBlankON        (PPU[0]&0x80)   /* Generate VBlank NMI */
@@ -1222,16 +1223,22 @@ void MDFNPPU_Power(void)
 }
 
 
-int MDFNPPU_Loop(MDFN_Surface *surface, int skip)
+int MDFNPPU_Loop(EmulateSpecStruct *espec)
 {
+ MDFN_Surface* surface = espec->surface;
+ int skip = espec->skip;
+
   if(!skip && surface->palette)
    memcpy(surface->palette, CM.NESPalette8BPP, sizeof(CM.NESPalette8BPP));
 
   if(ppudead) /* Needed for Knight Rider, Time Lord, possibly others. */
   {
    if(!skip)
+   {
     surface->Fill(0, 0, 0, 0);
-
+    for(int y = 0; y < 240; y++)
+     MDFN_MidLineUpdate(espec, y);
+   }
    X6502_Run(27384 - (256 + 85));
    ppudead = 0;
   }
@@ -1272,6 +1279,7 @@ int MDFNPPU_Loop(MDFN_Surface *surface, int skip)
      if(GfxDecode_Buf && scanline == GfxDecode_Line)
       DoGfxDecode();
      DoLine(surface, skip);
+     MDFN_MidLineUpdate(espec, scanline);
     }
     if(MMC5Hack && (ScreenON || SpriteON)) MMC5_hb(scanline);
    }
@@ -1291,7 +1299,7 @@ uint32 NESPPU_GetRegister(const std::string &name, std::string *special)
   if(special)
   {
    char buf[256];
-   snprintf(buf, 256, "VBlank NMI: %s, Sprite size: 8x%d, BG CHR: 0x%04x, SPR CHR: 0x%04x, VRAM Addr Increment: %d", (PPU[0] & 0x80) ? "On" : "Off",
+   trio_snprintf(buf, 256, "VBlank NMI: %s, Sprite size: 8x%d, BG CHR: 0x%04x, SPR CHR: 0x%04x, VRAM Addr Increment: %d", (PPU[0] & 0x80) ? "On" : "Off",
 	(PPU[0] & 0x20) ? 16 : 8, (PPU[0] & 0x10) ? 0x1000 : 0x0000, (PPU[0] & 0x08) ? 0x1000 : 0x0000,
 	(PPU[0] & 0x04) ? 32 : 1);
    *special = std::string(buf);
@@ -1303,7 +1311,7 @@ uint32 NESPPU_GetRegister(const std::string &name, std::string *special)
   if(special)
   {
    char buf[256];
-   snprintf(buf, 256, "Sprites: %s, Background: %s, Leftmost 8 SPR Pixels: %s, Leftmost 8 BG Pixels: %s",
+   trio_snprintf(buf, 256, "Sprites: %s, Background: %s, Leftmost 8 SPR Pixels: %s, Leftmost 8 BG Pixels: %s",
 	(PPU[1] & 0x10) ? "On" : "Off", (PPU[1] & 0x08) ? "On" : "Off",
 	(PPU[1] & 0x04) ? "On" : "Off", (PPU[1] & 0x02) ? "On" : "Off");
    *special = std::string(buf);
@@ -1439,19 +1447,23 @@ void NESPPU_TranslateMouseXY(uint32 &new_x, uint32 &new_y)
 
 static void RedoRL(void)
 {
+ unsigned sls, sle;
+
  PPUDisplayRect.x = NTSCBlitter ? 4 : 0;
  PPUDisplayRect.w = NTSCBlitter ? 602 - 4 - 2: 256;
 
- if(PAL)
+ sls = MDFN_GetSettingUI(PAL ? "nes.slstartp" : "nes.slstart");
+ sle = MDFN_GetSettingUI(PAL ? "nes.slendp" : "nes.slend");
+
+ if(sls > sle)
  {
-  PPUDisplayRect.y = MDFN_GetSettingUI("nes.slstartp");
-  PPUDisplayRect.h = MDFN_GetSettingUI("nes.slendp") - PPUDisplayRect.y + 1;
+  unsigned tmp = sls;
+  sls = sle;
+  sle = tmp;
  }
- else
- {
-  PPUDisplayRect.y = MDFN_GetSettingUI("nes.slstart");
-  PPUDisplayRect.h = MDFN_GetSettingUI("nes.slend") - PPUDisplayRect.y + 1;
- }
+
+ PPUDisplayRect.y = sls;
+ PPUDisplayRect.h = sle - sls + 1;
 
  if(MDFN_GetSettingUI("nes.clipsides"))
  {

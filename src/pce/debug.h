@@ -8,8 +8,7 @@
 namespace MDFN_IEN_PCE
 {
 
-void PCEDBG_SetCPUCallback(void (*callb)(uint32 PC));
-void PCEDBG_SetBPCallback(void (*callb)(uint32 PC));
+void PCEDBG_MachineStateChanged(void);
 
 void PCEDBG_FlushBreakPoints(int type);
 void PCEDBG_AddBreakPoint(int type, unsigned int A1, unsigned int A2, bool logical);

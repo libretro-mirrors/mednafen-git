@@ -153,9 +153,17 @@ typedef struct
 
  void (*AddBreakPoint)(int type, unsigned int A1, unsigned int A2, bool logical);
 
- void (*SetCPUCallback)(void (*callb)(uint32 PC));
+ // 'bpoint' to callb() will be true if the instruction at this PC triggered a breakpoint(or previous instruction maybe in some
+ // more complex breakpoint cases where we don't have a time machine?).
+ //
+ // If 'continuous' is true, then callb() is called for every instruction; if it's false, it's only called for instructions
+ // that trigger breakpoints AND all instructions afterwards until this function is called with 'continuous' set to false again.
+ //
+ // This function IS legal to call from within callb(), and even necessary for good performance.
+ //
+ void (*SetCPUCallback)(void (*callb)(uint32 PC, bool bpoint), bool continuous);
 
- void (*SetBPCallback)(void (*callb)(uint32 PC));
+ void (*EnableBranchTrace)(bool enable);
 
  std::vector<BranchTraceResult> (*GetBranchTrace)(void);
 

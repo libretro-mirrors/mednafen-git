@@ -32,7 +32,16 @@ Stream::~Stream()
 
 }
 
-void Stream::printf(const char *format, ...)
+void Stream::put_line(const std::string& str)
+{
+ char l = '\n';
+
+ write(&str[0], str.size());
+ write(&l, sizeof(l));
+}
+
+
+void Stream::print_format(const char *format, ...)
 {
  char *str = NULL;
  int rc;
@@ -61,29 +70,6 @@ void Stream::printf(const char *format, ...)
   free(str);
  }
 }
-
-#if 0
-int Stream::scanf(const char *format, ...)
-{
-
-
-}
-
-void Stream::printf(const char *format, ...)
-{
-
-}
-
-void Stream::put_string(const char *str)
-{
- write(str, strlen(str));
-}
-
-void Stream::put_string(const std::string &str)
-{
- write(str.data(), str.size());
-}
-#endif
 
 int Stream::get_line(std::string &str)
 {

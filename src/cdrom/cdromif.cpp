@@ -244,14 +244,13 @@ void CDIF_Queue::Write(const CDIF_Message &message)
 
 void CDIF_MT::RT_EjectDisc(bool eject_status, bool skip_actual_eject)
 {
- int32 old_de = DiscEjected;
-
- DiscEjected = eject_status;
-
- if(old_de != DiscEjected)
+ if(eject_status != DiscEjected)
  {
   if(!skip_actual_eject)
    disc_cdaccess->Eject(eject_status);
+
+  // Set after ->Eject(), since it might throw an exception.
+  DiscEjected = -1;	// For if TOC reading fails or there's something horribly wrong with the disc.
 
   if(!eject_status)	// Re-read the TOC
   {
@@ -262,6 +261,7 @@ void CDIF_MT::RT_EjectDisc(bool eject_status, bool skip_actual_eject)
     throw(MDFN_Error(0, _("TOC first(%d)/last(%d) track numbers bad."), disc_toc.first_track, disc_toc.last_track));
    }
   }
+  DiscEjected = eject_status;
 
   SBWritePos = 0;
   ra_lba = 0;
@@ -411,12 +411,16 @@ CDIF_MT::CDIF_MT(CDAccess *cda) : disc_cdaccess(cda), CDReadThread(NULL), SBMute
   CDIF_Message msg;
   RTS_Args s;
 
-  SBMutex = MDFND_CreateMutex();
+  if(!(SBMutex = MDFND_CreateMutex()))
+   throw MDFN_Error(0, _("Error creating CD read thread mutex."));
+
   UnrecoverableError = false;
 
   s.cdif_ptr = this;
 
-  CDReadThread = MDFND_CreateThread(ReadThreadStart_C, &s);
+  if(!(CDReadThread = MDFND_CreateThread(ReadThreadStart_C, &s)))
+   throw MDFN_Error(0, _("Error creating CD read thread."));
+
   EmuThreadQueue.Read(&msg);
  }
  catch(...)
@@ -675,15 +679,14 @@ bool CDIF_ST::Eject(bool eject_status)
 
  try
  {
-  int32 old_de = DiscEjected;
-
-  DiscEjected = eject_status;
-
-  if(old_de != DiscEjected)
+  if(eject_status != DiscEjected)
   {
    disc_cdaccess->Eject(eject_status);
 
-   if(!eject_status)     // Re-read the TOC
+   // Set after ->Eject(), since it might throw an exception.
+   DiscEjected = -1;	// For if TOC reading fails or there's something horribly wrong with the disc.
+
+   if(!eject_status)	// Re-read the TOC
    {
     disc_cdaccess->Read_TOC(&disc_toc);
 
@@ -692,6 +695,7 @@ bool CDIF_ST::Eject(bool eject_status)
      throw(MDFN_Error(0, _("TOC first(%d)/last(%d) track numbers bad."), disc_toc.first_track, disc_toc.last_track));
     }
    }
+   DiscEjected = eject_status;
   }
  }
  catch(std::exception &e)

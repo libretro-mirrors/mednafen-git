@@ -46,6 +46,7 @@
 #include <math.h>
 #include "../video.h"
 #include "../clamp.h"
+#include "../sound/OwlResampler.h"
 
 #ifdef __MMX__
 #include <mmintrin.h>
@@ -884,14 +885,14 @@ uint8 KING_Read8(const v810_timestamp_t timestamp, uint32 A)
  return(ret);
 }
 
-void KING_EndFrame(v810_timestamp_t timestamp)
+void KING_EndFrame(v810_timestamp_t timestamp, v810_timestamp_t ts_base)
 {
  PCFX_SetEvent(PCFX_EVENT_KING, KING_Update(timestamp));
  scsicd_ne = SCSICD_Run(timestamp);
 
- SCSICD_ResetTS();
+ SCSICD_ResetTS(ts_base);
 
- king->lastts = 0;
+ king->lastts = ts_base;
 
  if(king->dma_cycle_counter & 0x40000000)
  {
@@ -1731,12 +1732,14 @@ uint16 KING_GetADPCMHalfWord(int ch)
 }
 
 static uint32 HighDotClockWidth;
-extern Blip_Buffer FXsbuf[2]; // FIXME, externals are evil!
+extern RavenBuffer* FXCDDABufs[2]; // FIXME, externals are evil!
 
 bool KING_Init(void)
 {
- if(!(king = (king_t*)MDFN_malloc(sizeof(king_t), _("KING Data"))))
+ if(!(king = (king_t*)MDFN_calloc(1, sizeof(king_t), _("KING Data"))))
   return(0);
+
+ king->lastts = 0;
 
  HighDotClockWidth = MDFN_GetSettingUI("pcfx.high_dotclock_width");
  BGLayerDisable = 0;
@@ -1803,7 +1806,7 @@ bool KING_Init(void)
  ASpace_Add(KING_GetAddressSpaceBytes, KING_PutAddressSpaceBytes, "vce", "VCE Palette RAM", 10);
  #endif
 
- SCSICD_Init(SCSICD_PCFX, 3, &FXsbuf[0], &FXsbuf[1], 153600 * MDFN_GetSettingUI("pcfx.cdspeed"), 21477273, KING_CDIRQ, KING_StuffSubchannels);
+ SCSICD_Init(SCSICD_PCFX, 3, FXCDDABufs[0]->Buf(), FXCDDABufs[1]->Buf(), 153600 * MDFN_GetSettingUI("pcfx.cdspeed"), 21477273, KING_CDIRQ, KING_StuffSubchannels);
 
  return(1);
 }
@@ -1819,10 +1822,15 @@ void KING_Close(void)
 }
 
 
-void KING_Reset(void)
+void KING_Reset(const v810_timestamp_t timestamp)
 {
+ KING_Update(timestamp);
+
  memset(&fx_vce, 0, sizeof(fx_vce));
+
+ int32 ltssave = king->lastts;
  memset(king, 0, sizeof(king_t));
+ king->lastts = ltssave;
 
  king->Reg00 = 0;
  king->Reg01 = 0;
@@ -1858,7 +1866,7 @@ void KING_Reset(void)
 
  SoundBox_SetKINGADPCMControl(0);
 
- SCSICD_Power(0);	// FIXME
+ SCSICD_Power(timestamp);
 
  memset(king->KRAM, 0xFF, sizeof(king->KRAM));
 }

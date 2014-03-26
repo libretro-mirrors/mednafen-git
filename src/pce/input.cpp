@@ -25,6 +25,8 @@
 #include "input/mouse.h"
 #include "input/tsushinkb.h"
 
+#include <trio/trio.h>
+
 namespace MDFN_IEN_PCE
 {
 
@@ -163,11 +165,11 @@ void INPUT_Frame(void)
    devices[i]->Update(data_ptr[i]);
 }
 
-void INPUT_FixTS(int32 timestamp)
+void INPUT_AdjustTS(int32 delta_timestamp)
 {
  for(int i = 0; i < 5; i++)
   if(devices[i])
-   devices[i]->AdjustTS(-timestamp);
+   devices[i]->AdjustTS(delta_timestamp);
 }
 
 static INLINE uint8 RealPortRead(int32 timestamp, int which)
@@ -290,7 +292,7 @@ int INPUT_StateAction(StateMem *sm, int load, int data_only)
   if(devices[i])
   {
    char sn[8];
-   snprintf(sn, 8, "INP%d", i);
+   trio_snprintf(sn, 8, "INP%d", i);
    ret &= devices[i]->StateAction(sm, load, data_only, sn);
   }
  }

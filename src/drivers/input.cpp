@@ -54,6 +54,8 @@ static void ConfigDeviceBegin(void);
 static void subcon_begin(std::vector<ButtConfig> &bc);
 static int subcon(const char *text, std::vector<ButtConfig> &bc, int commandkey);
 
+static void ResyncGameInputSettings(unsigned port);
+
 static char keys[MKK_COUNT];
 
 bool DNeedRewind = FALSE;
@@ -556,7 +558,6 @@ static void IncSelectedDevice(unsigned int port)
 
   const char *devname = PortPossibleDevices[CurGame->shortname][port][PortCurrentDeviceIndex[port]]->ShortName;
 
-  ResyncGameInputSettings();
   KillPortInfo(port);
   MDFNI_SetSetting(tmp_setting_name, devname);
   BuildPortInfo(CurGame, port);
@@ -999,7 +1000,7 @@ static void CheckCommandKeys(void)
    {
     if(CK_Check(CK_TOGGLE_DEBUGGER))
     {
-     Debugger_Toggle();
+     Debugger_GT_Toggle();
     }
    }
    if(!Debugger_IsActive() && !MDFNDnetplay)
@@ -1031,12 +1032,14 @@ static void CheckCommandKeys(void)
     {
      if(CK_Check((CommandKey)(CK_INPUT_CONFIG1 + i)))
      {
+      ResyncGameInputSettings(i);
       IConfig = none;
       //SetJoyReadMode(1);
       MDFNI_DispMessage(_("Configuration interrupted."));
      }
      else if(ConfigDevice(i))
      {
+      ResyncGameInputSettings(i);
       ICDeadDelay = CurTicks + 300;
       IConfig = none;
       //SetJoyReadMode(1);
@@ -1052,11 +1055,13 @@ static void CheckCommandKeys(void)
      if(subcon(CKeys[ICLatch].text, CKeysConfig[ICLatch].bc, 1))
      {
       MDFNI_DispMessage(_("Configuration finished."));
+
+      MDFNI_SetSetting(CKeysSettingName[ICLatch], BCsToString(CKeysConfig[ICLatch].bc, CKeysConfig[ICLatch].AND_Mode).c_str());
       ICDeadDelay = CurTicks + 300;
       IConfig = none;
       //SetJoyReadMode(1);
-      CKeysLastState[ICLatch] = 1;	// We don't want to accidentally
-      return;				// trigger the command. :b
+      CKeysLastState[ICLatch] = 1;	// We don't want to accidentally trigger the command. :b
+      return;
      }
     }
     else
@@ -1237,15 +1242,11 @@ static void CheckCommandKeys(void)
   {
    if(CK_Check(CK_SELECT_DISK)) 
    {
-    LockGameMutex(1);
     MDFNI_DiskSelect();
-    LockGameMutex(0);
    }
    if(CK_Check(CK_INSERTEJECT_DISK)) 
    {
-    LockGameMutex(1);
     MDFNI_DiskInsert();
-    LockGameMutex(0);
    }
   }
 
@@ -1274,18 +1275,14 @@ static void CheckCommandKeys(void)
 
    if(CK_Check(CK_LOAD_STATE))
    {
-	LockGameMutex(1);
 	MDFNI_LoadState(NULL, NULL);
-	Debugger_ForceStepIfStepping();
-	LockGameMutex(0);
+	Debugger_GT_SyncDisToPC();
    }
 
    if(CK_Check(CK_LOAD_MOVIE))
    {
-	LockGameMutex(1);
 	MDFNI_LoadMovie(NULL);
-	Debugger_ForceStepIfStepping();
-	LockGameMutex(0);
+	Debugger_GT_SyncDisToPC();
    }
 
    if(CK_Check(CK_TL1))
@@ -1320,18 +1317,14 @@ static void CheckCommandKeys(void)
 
   if(CK_Check(CK_RESET))
   {
-	LockGameMutex(1);
 	MDFNI_Reset();
-	LockGameMutex(0);
-	Debugger_ForceStepIfStepping();
+	Debugger_GT_ForceStepIfStepping();
   }
 
   if(CK_Check(CK_POWER))
   {
-	LockGameMutex(1);
 	MDFNI_Power();
-	LockGameMutex(0);
-	Debugger_ForceStepIfStepping();
+	Debugger_GT_ForceStepIfStepping();
   }
 
   if(CurGame->GameType == GMT_ARCADE)
@@ -1610,15 +1603,11 @@ void InitGameInput(MDFNGI *gi)
  BuildPortsInfo(gi);
 }
 
-
-// Resync butt configs to setting strings
-void ResyncGameInputSettings(void)
+// Update setting strings with butt configs.
+static void ResyncGameInputSettings(unsigned port)
 {
- for(unsigned int port = 0; port < NumPorts; port++)
- {
-  for(unsigned int x = 0; x < PortButtSettingNames[port].size(); x++)
-   MDFNI_SetSetting(PortButtSettingNames[port][x], BCsToString( PortButtConfig[port][x] ).c_str());
- }
+ for(unsigned int x = 0; x < PortButtSettingNames[port].size(); x++)
+  MDFNI_SetSetting(PortButtSettingNames[port][x], BCsToString( PortButtConfig[port][x] ).c_str());
 }
 
 
@@ -1924,11 +1913,10 @@ void MakeInputSettings(std::vector <MDFNSetting> &settings)
 
 void KillGameInput(void)
 {
- ResyncGameInputSettings();
  KillPortsInfo();
 }
 
-bool InitCommandInput(void)
+bool InitCommandInput(MDFNGI* gi)
 {
  // Load the command key mappings from settings
  for(int x = 0; x < _CK_COUNT; x++)
@@ -1940,11 +1928,7 @@ bool InitCommandInput(void)
 
 void KillCommandInput(void)
 {
- // Save the command key mappings to settings
- for(int x = 0; x < _CK_COUNT; x++)
- {
-  MDFNI_SetSetting(CKeysSettingName[x], BCsToString(CKeysConfig[x].bc, CKeysConfig[x].AND_Mode).c_str());
- }
+
 }
 
 void KillInputSettings(void)

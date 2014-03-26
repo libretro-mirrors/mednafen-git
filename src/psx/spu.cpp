@@ -171,9 +171,6 @@ void PS_SPU::Power(void)
 
  CWA = 0;
 
- memset(CDXA_ResampBuffer, 0, sizeof(CDXA_ResampBuffer));
- CDXA_CurPhase = 0;
-
  memset(Regs, 0, sizeof(Regs));
 
  memset(RDSB, 0, sizeof(RDSB));
@@ -286,39 +283,6 @@ void SPU_Sweep::Clock(void)
 INLINE void SPU_Sweep::WriteVolume(int16 value)
 {
  Current = value;
-}
-
-// output should be readable at -2 and -1
-void PS_SPU::DecodeADPCM(const uint8 *input, int16 *output, const unsigned shift, const unsigned weight)
-{
- // 5 through 0xF appear to be 0 on the real thing.
- static const int32 Weights[16][2] =
- {
-  // s-1    s-2
-  {   0,    0 },
-  {  60,    0 },
-  { 115,  -52 },
-  {  98,  -55 },
-  { 122,  -60 },
- };
-
- for(int i = 0; i < 28; i++)
- {
-  int32 sample;
-
-  sample = (int16)(input[i] << 8);
-  sample >>= shift;
-
-  sample += ((output[i - 1] * Weights[weight][0]) >> 6) + ((output[i - 2] * Weights[weight][1]) >> 6);
-
-  if(sample < -32768)
-   sample = -32768;
-
-  if(sample > 32767)
-   sample = 32767;
-
-  output[i] = sample;
- }
 }
 
 void PS_SPU::DecodeSamples(SPU_Voice *voice)
@@ -561,57 +525,6 @@ INLINE uint16 PS_SPU::ReadSPURAM(uint32 addr)
 
 #include "spu_reverb.inc"
 
-INLINE bool PS_SPU::GetCDAudio(int32 &l, int32 &r)
-{
- unsigned freq = CDC->GetCDAudioFreq();
-
- if(!freq)
-  return false;
-
- if(freq == 7 || freq == 14)
- {
-  CDC->GetCDAudio(l, r);
-  if(freq == 14)
-   CDC->GetCDAudio(l, r);
- }
- else
- {
-  const int pi = CDXA_CurPhase * 37;
-  int32 out_tmp[2];
-
-  for(unsigned i = 0; i < 2; i++)
-  {
-   out_tmp[i] = ((CDXA_ResampBuffer[i][0] * FIR_Table[pi][0]) +
-	         (CDXA_ResampBuffer[i][1] * FIR_Table[pi][1]) +
-	         (CDXA_ResampBuffer[i][2] * FIR_Table[pi][2]) +   
-	         (CDXA_ResampBuffer[i][3] * FIR_Table[pi][3])) >> 15;
-  }
-
-  l = out_tmp[0];
-  r = out_tmp[1];
-
-  CDXA_CurPhase += freq;
-
-  if(CDXA_CurPhase >= 7)
-  {
-   int32 raw[2];
-   CDXA_CurPhase -= 7;
-
-   CDC->GetCDAudio(raw[0], raw[1]);
-
-   for(unsigned i = 0; i < 2; i++)
-   {
-    CDXA_ResampBuffer[i][0] = CDXA_ResampBuffer[i][1];
-    CDXA_ResampBuffer[i][1] = CDXA_ResampBuffer[i][2];
-    CDXA_ResampBuffer[i][2] = CDXA_ResampBuffer[i][3];
-    CDXA_ResampBuffer[i][3] = raw[i];
-   }
-  }
- }
-
- return true;
-}
-
 int32 PS_SPU::UpdateFromCDC(int32 clocks)
 //pscpu_timestamp_t PS_SPU::Update(const pscpu_timestamp_t timestamp)
 {
@@ -674,7 +587,9 @@ int32 PS_SPU::UpdateFromCDC(int32 clocks)
 */
   SPUStatus = SPUControl & 0x3F;
   SPUStatus |= IRQAsserted ? 0x40 : 0x00;
-  //SPUStatus |= (CWA & 0x100) ? 0x800 : 0x000;
+
+  if(Regs[0xD6] == 0x4)	// TODO: Investigate more(case 0x2C in global regs r/w handler)
+   SPUStatus |= (CWA & 0x100) ? 0x800 : 0x000;
 
   for(int voice_num = 0; voice_num < 24; voice_num++)
   {
@@ -821,29 +736,29 @@ int32 PS_SPU::UpdateFromCDC(int32 clocks)
 
   // Get CD-DA
   {
-   int32 cda_raw[2] = { 0 };
+   int32 cda_raw[2];
+   int32 cdav[2];
 
-   if(GetCDAudio(cda_raw[0], cda_raw[1]))
-   {
-    int32 cdav[2];
+   CDC->GetCDAudio(cda_raw);	// PS_CDC::GetCDAudio() guarantees the variables passed by reference will be set to 0,
+				// and that their range shall be -32768 through 32767.
 
-    for(unsigned i = 0; i < 2; i++)
-     cdav[i] = (cda_raw[i] * CDVol[i]) >> 15;
-
-    if(SPUControl & 0x0001)
-    {
-     accum_l += cdav[0];
-     accum_r += cdav[1];
-
-     if(SPUControl & 0x0004)	// TODO: Test this bit(and see if it is really dependent on bit0)
-     {
-      accum_fv_l += cdav[0];
-      accum_fv_r += cdav[1];
-     }
-    }
-   }
    WriteSPURAM(CWA | 0x000, cda_raw[0]);
    WriteSPURAM(CWA | 0x200, cda_raw[1]);
+
+   for(unsigned i = 0; i < 2; i++)
+    cdav[i] = (cda_raw[i] * CDVol[i]) >> 15;
+
+   if(SPUControl & 0x0001)
+   {
+    accum_l += cdav[0];
+    accum_r += cdav[1];
+
+    if(SPUControl & 0x0004)	// TODO: Test this bit(and see if it is really dependent on bit0)
+    {
+     accum_fv_l += cdav[0];
+     accum_fv_r += cdav[1];
+    }
+   }
   }
 
   CWA = (CWA + 1) & 0x1FF;
@@ -1344,9 +1259,6 @@ int PS_SPU::StateAction(StateMem *sm, int load, int data_only)
   SFVAR(BlockEnd),
 
   SFVAR(CWA),
-
-  SFARRAY32(&CDXA_ResampBuffer[0][0], sizeof(CDXA_ResampBuffer) / sizeof(CDXA_ResampBuffer[0][0])),
-  SFVAR(CDXA_CurPhase),
 
   SFARRAY16(Regs, sizeof(Regs) / sizeof(Regs[0])),
   SFARRAY16(AuxRegs, sizeof(AuxRegs) / sizeof(AuxRegs[0])),

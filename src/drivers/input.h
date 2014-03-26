@@ -22,9 +22,6 @@ void MainSetEventHook(int (*eh)(const SDL_Event *event));	// TODO: factor out ev
 // Called after a game is loaded.
 void InitGameInput(MDFNGI *GI);
 
-// Called to synch
-void ResyncGameInputSettings(void);
-
 // Called when a game is closed.
 void KillGameInput(void);
 
@@ -35,7 +32,7 @@ void KillInputSettings(void); // Called after MDFNI_Kill() is called
 
 extern bool DNeedRewind; // Only read/write in game thread.
 
-bool InitCommandInput(void);
+bool InitCommandInput(MDFNGI* gi);
 void KillCommandInput(void);
 
 #endif

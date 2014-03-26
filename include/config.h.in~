@@ -641,6 +641,9 @@
 /* Define if we are compiling with SNES emulation. */
 #undef WANT_SNES_EMU
 
+/* Define if we are compiling with separate SNES-perf emulation. */
+#undef WANT_SNES_PERF_EMU
+
 /* Define if we are compiling with Virtual Boy emulation. */
 #undef WANT_VB_EMU
 

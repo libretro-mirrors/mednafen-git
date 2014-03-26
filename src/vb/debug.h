@@ -12,9 +12,9 @@ uint32 VBDBG_MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical);
 uint32 VBDBG_GetRegister(const std::string &name, std::string *special);
 void VBDBG_SetRegister(const std::string &name, uint32 value);
 
-void VBDBG_SetCPUCallback(void (*callb)(uint32 PC));
-void VBDBG_SetBPCallback(void (*callb)(uint32 PC));
+void VBDBG_SetCPUCallback(void (*callb)(uint32 PC, bool bpoint), bool continuous);
 
+void VBDBG_EnableBranchTrace(bool enable);
 std::vector<BranchTraceResult> VBDBG_GetBranchTrace(void);
 
 void VBDBG_CheckBP(int type, uint32 address, uint32 value, unsigned int len);

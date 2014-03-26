@@ -1,2 +1,2 @@
-mednafen_SOURCES	+=	string/world_strtod.c string/escape.cpp string/ConvertUTF.cpp
+mednafen_SOURCES	+=	string/escape.cpp string/trim.cpp string/ConvertUTF.cpp
 

@@ -21,7 +21,9 @@
 #include "../cdrom/scsicd.h"
 #include "pce_psg/pce_psg.h"
 #include "../clamp.h"
+#include "../sound/OwlResampler.h"
 
+#include <trio/trio.h>
 #include <math.h>
 #include <string.h>
 
@@ -39,19 +41,41 @@ static const int StepIndexDeltas[16] =
  -1, -1, -1, -1, 2, 4, 6, 8
 };
 
-
-typedef Blip_Synth<blip_good_quality, 4096> ADSynth;
-static ADSynth ADPCMSynth;
-
-Blip_Buffer FXsbuf[2];		// Used in the CDROM code
+static OwlResampler* FXres = NULL;
+static OwlBuffer* FXsbuf[2] = { NULL, NULL };
+RavenBuffer* FXCDDABufs[2] = { NULL, NULL };	// Used in the CDROM code
 
 static PCE_PSG *pce_psg = NULL;
-
 
 static bool SoundEnabled;
 static uint32 adpcm_lastts;
 
-static t_soundbox psg;
+struct SoundBox
+{
+    uint16 ADPCMControl;
+    uint8 ADPCMVolume[2][2]; // ADPCMVolume[channel(0 or 1)][left(0) or right(1)]
+    uint8 CDDAVolume[2];
+    int32 bigdiv;
+    int32 smalldiv;
+
+    int64 ResetAntiClick[2];
+    double VolumeFiltered[2][2];
+    double vf_xv[2][2][1+1], vf_yv[2][2][1+1];
+
+    int32 ADPCMDelta[2];
+    int32 ADPCMHaveDelta[2];
+
+    int32 ADPCMPredictor[2];
+    int32 StepSizeIndex[2];
+
+    uint32 ADPCMWhichNibble[2];
+    uint16 ADPCMHalfWord[2];
+    bool ADPCMHaveHalfWord[2];
+
+    int32 ADPCM_last[2][2];
+};
+
+static SoundBox sbox;
 static double ADPCMVolTable[0x40];
 
 static bool EmulateBuggyCodec;		// If true, emulate the buggy codec/algorithm used by an official PC-FX ADPCM encoder, rather than how the
@@ -128,45 +152,45 @@ static uint32 SBoxDBG_GetRegister(const unsigned int id, char *special, const ui
  switch(id)
  {
   case GSREG_ADPCM_CTRL:
-	value = psg.ADPCMControl;
+	value = sbox.ADPCMControl;
   	if(special)
 	{
 	 int tmp_freq = 32 / (1 << (value & 0x3));
-	 snprintf(special, special_len, "Frequency: ~%dKHz, Ch0 Interpolation: %s, Ch1 Interpolation: %s, Ch0 Reset: %d, Ch1 Reset: %d", tmp_freq, (value & 0x4) ? "On" : "Off", (value & 0x8) ? "On":"Off",
+	 trio_snprintf(special, special_len, "Frequency: ~%dKHz, Ch0 Interpolation: %s, Ch1 Interpolation: %s, Ch0 Reset: %d, Ch1 Reset: %d", tmp_freq, (value & 0x4) ? "On" : "Off", (value & 0x8) ? "On":"Off",
 		(int)(bool)(value & 0x10), (int)(bool)(value & 0x20));
 	}
 	break;
 
   case GSREG_ADPCM0_LVOL:
-  	value = psg.ADPCMVolume[0][0];
+  	value = sbox.ADPCMVolume[0][0];
 	break;
 
   case GSREG_ADPCM0_RVOL:
-        value = psg.ADPCMVolume[0][1];
+        value = sbox.ADPCMVolume[0][1];
         break;
 
   case GSREG_ADPCM1_LVOL:
-        value = psg.ADPCMVolume[1][0];
+        value = sbox.ADPCMVolume[1][0];
         break;
 
   case GSREG_ADPCM1_RVOL:
-        value = psg.ADPCMVolume[1][1];
+        value = sbox.ADPCMVolume[1][1];
         break;
 
   case GSREG_CDDA_LVOL:
-        value = psg.CDDAVolume[0];
+        value = sbox.CDDAVolume[0];
         break;
 
   case GSREG_CDDA_RVOL:
-        value = psg.CDDAVolume[1];
+        value = sbox.CDDAVolume[1];
         break;
 
   case GSREG_ADPCM0_CUR:
-	value = psg.ADPCMPredictor[0] + 0x4000;
+	value = sbox.ADPCMPredictor[0] + 0x4000;
 	break;
 
   case GSREG_ADPCM1_CUR:
-	value = psg.ADPCMPredictor[1] + 0x4000;
+	value = sbox.ADPCMPredictor[1] + 0x4000;
 	break;
 
   default:
@@ -183,41 +207,41 @@ static void SBoxDBG_SetRegister(const unsigned int id, uint32 value)
  else switch(id)
  {
   case GSREG_ADPCM_CTRL:
-	psg.ADPCMControl = value & 0xFFFF;
+	sbox.ADPCMControl = value & 0xFFFF;
 	break;
 
   case GSREG_ADPCM0_LVOL:
-        psg.ADPCMVolume[0][0] = value & 0x3F;
+        sbox.ADPCMVolume[0][0] = value & 0x3F;
         break;
 
   case GSREG_ADPCM0_RVOL:
-        psg.ADPCMVolume[0][1] = value & 0x3F;
+        sbox.ADPCMVolume[0][1] = value & 0x3F;
         break;
 
   case GSREG_ADPCM1_LVOL:
-        psg.ADPCMVolume[1][0] = value & 0x3F;
+        sbox.ADPCMVolume[1][0] = value & 0x3F;
         break;
 
   case GSREG_ADPCM1_RVOL:
-        psg.ADPCMVolume[1][1] = value & 0x3F;
+        sbox.ADPCMVolume[1][1] = value & 0x3F;
         break;
 
   case GSREG_CDDA_LVOL:
-        psg.CDDAVolume[0] = value & 0x3F;
-	SCSICD_SetCDDAVolume(0.50f * psg.CDDAVolume[0] / 63, 0.50f * psg.CDDAVolume[1] / 63);
+        sbox.CDDAVolume[0] = value & 0x3F;
+	SCSICD_SetCDDAVolume(0.50f * sbox.CDDAVolume[0] / 63, 0.50f * sbox.CDDAVolume[1] / 63);
         break;
 
   case GSREG_CDDA_RVOL:
-        psg.CDDAVolume[1] = value & 0x3F;
-	SCSICD_SetCDDAVolume(0.50f * psg.CDDAVolume[0] / 63, 0.50f * psg.CDDAVolume[1] / 63);
+        sbox.CDDAVolume[1] = value & 0x3F;
+	SCSICD_SetCDDAVolume(0.50f * sbox.CDDAVolume[0] / 63, 0.50f * sbox.CDDAVolume[1] / 63);
         break;
 
   case GSREG_ADPCM0_CUR:
-        psg.ADPCMPredictor[0] = ((int32)value & 0x7FFF) - 0x4000;
+        sbox.ADPCMPredictor[0] = ((int32)value & 0x7FFF) - 0x4000;
         break;
 
   case GSREG_ADPCM1_CUR:
-        psg.ADPCMPredictor[1] = ((int32)value & 0x7FFF) - 0x4000;
+        sbox.ADPCMPredictor[1] = ((int32)value & 0x7FFF) - 0x4000;
         break;
  }
 }
@@ -236,18 +260,25 @@ static RegGroupType SBoxRegsGroup =
 static void RedoVolume(void)
 {
  pce_psg->SetVolume(0.681);	//0.227 * 0.50);
- ADPCMSynth.volume(0.50);
+ //ADPCMSynth.volume(0.50);
 }
 
 bool SoundBox_SetSoundRate(uint32 rate)
 {
  SoundEnabled = (bool)rate;
 
- for(int y = 0; y < 2; y++)
+ if(FXres)
  {
-  FXsbuf[y].set_sample_rate(rate ? rate : 44100, 50);
-  FXsbuf[y].clock_rate((long)(1789772.727272 * 4));
-  FXsbuf[y].bass_freq(20);
+  delete FXres;
+  FXres = NULL;
+ }
+
+ if(rate > 0)
+ {
+  FXres = new OwlResampler(PCFX_MASTER_CLOCK / 12, rate, MDFN_GetSettingF("pcfx.resamp_rate_error"), 20, MDFN_GetSettingUI("pcfx.resamp_quality"));
+
+  for(unsigned i = 0; i < 2; i++)
+   FXres->ResetBufResampState(FXsbuf[i]);
  }
 
  RedoVolume();
@@ -257,24 +288,29 @@ bool SoundBox_SetSoundRate(uint32 rate)
 
 int SoundBox_Init(bool arg_EmulateBuggyCodec, bool arg_ResetAntiClickEnabled)
 {
-    int x;
-
+    adpcm_lastts = 0;
     SoundEnabled = false;
 
     EmulateBuggyCodec = arg_EmulateBuggyCodec;
     ResetAntiClickEnabled = arg_ResetAntiClickEnabled;
 
 
-    pce_psg = new PCE_PSG(&FXsbuf[0], &FXsbuf[1], PCE_PSG::REVISION_HUC6280A);
+    for(unsigned i = 0; i < 2; i++)
+    {
+     FXsbuf[i] = new OwlBuffer();
+     FXCDDABufs[i] = new RavenBuffer();
+    }
+
+    pce_psg = new PCE_PSG(FXsbuf[0]->Buf(), FXsbuf[1]->Buf(), PCE_PSG::REVISION_HUC6280A);
 
     #ifdef WANT_DEBUGGER
     MDFNDBG_AddRegGroup(&SBoxRegsGroup);
     #endif
 
-    memset(&psg, 0, sizeof(psg));
+    memset(&sbox, 0, sizeof(sbox));
 
     // Build ADPCM volume table, 1.5dB per step, ADPCM volume settings of 0x0 through 0x1B result in silence.
-    for(x = 0; x < 0x40; x++)
+    for(int x = 0; x < 0x40; x++)
     {
      double flub = 1;
      int vti = 0x3F - x;
@@ -285,7 +321,7 @@ int SoundBox_Init(bool arg_EmulateBuggyCodec, bool arg_ResetAntiClickEnabled)
      if(vti <= 0x1B)
       ADPCMVolTable[vti] = 0;
      else
-      ADPCMVolTable[vti] = flub / 8;
+      ADPCMVolTable[vti] = flub;
     }
 
     return (1);
@@ -298,6 +334,21 @@ void SoundBox_Kill(void)
   delete pce_psg;
   pce_psg = NULL;
  }
+
+ for(unsigned i = 0; i < 2; i++)
+ {
+  if(FXsbuf[i])
+  {
+   delete FXsbuf[i];
+   FXsbuf[i] = NULL;
+  }
+  if(FXCDDABufs[i])
+  {
+   delete FXCDDABufs[i];
+   FXCDDABufs[i] = NULL;
+  }
+ }
+
 }
 
 /* Macro to access currently selected PSG channel */
@@ -318,48 +369,48 @@ void SoundBox_Write(uint32 A, uint16 V, const v810_timestamp_t timestamp)
 	case 0x20: SoundBox_ADPCMUpdate(timestamp);
 		   for(int ch = 0; ch < 2; ch++)
 		   {
-		    if(!(psg.ADPCMControl & (0x10 << ch)) && (V & (0x10 << ch)))
+		    if(!(sbox.ADPCMControl & (0x10 << ch)) && (V & (0x10 << ch)))
 		    {
 		     //printf("Reset: %d\n", ch);
 
 		     if(ResetAntiClickEnabled)
 		     {
-		      psg.ResetAntiClick[ch] += (int64)psg.ADPCMPredictor[ch] << 32;
-		      if(psg.ResetAntiClick[ch] > ((int64)0x3FFF << 32))
-		       psg.ResetAntiClick[ch] = (int64)0x3FFF << 32;
-		      if(psg.ResetAntiClick[ch] < ((int64)-0x4000 << 32))
-		       psg.ResetAntiClick[ch] = (int64)-0x4000 << 32;
+		      sbox.ResetAntiClick[ch] += (int64)sbox.ADPCMPredictor[ch] << 32;
+		      if(sbox.ResetAntiClick[ch] > ((int64)0x3FFF << 32))
+		       sbox.ResetAntiClick[ch] = (int64)0x3FFF << 32;
+		      if(sbox.ResetAntiClick[ch] < ((int64)-0x4000 << 32))
+		       sbox.ResetAntiClick[ch] = (int64)-0x4000 << 32;
 		     }
 
-		     psg.ADPCMPredictor[ch] = 0;
-		     psg.StepSizeIndex[ch] = 0;
+		     sbox.ADPCMPredictor[ch] = 0;
+		     sbox.StepSizeIndex[ch] = 0;
 		    }
 		   }
-		   psg.ADPCMControl = V; 
+		   sbox.ADPCMControl = V; 
 		   break;
 
 	case 0x22: SoundBox_ADPCMUpdate(timestamp);
-		   psg.ADPCMVolume[0][0] = V & 0x3F; 
+		   sbox.ADPCMVolume[0][0] = V & 0x3F; 
 		   break;
 
 	case 0x24: SoundBox_ADPCMUpdate(timestamp);
-		   psg.ADPCMVolume[0][1] = V & 0x3F;
+		   sbox.ADPCMVolume[0][1] = V & 0x3F;
 		   break;
 
 	case 0x26: SoundBox_ADPCMUpdate(timestamp);
-		   psg.ADPCMVolume[1][0] = V & 0x3F;
+		   sbox.ADPCMVolume[1][0] = V & 0x3F;
 		   break;
 
 	case 0x28: SoundBox_ADPCMUpdate(timestamp);
-		   psg.ADPCMVolume[1][1] = V & 0x3F; 
+		   sbox.ADPCMVolume[1][1] = V & 0x3F; 
 		   break;
 
-	case 0x2A: psg.CDDAVolume[0] = V & 0x3F;
-		   SCSICD_SetCDDAVolume(0.50f * psg.CDDAVolume[0] / 63, 0.50f * psg.CDDAVolume[1] / 63);
+	case 0x2A: sbox.CDDAVolume[0] = V & 0x3F;
+		   SCSICD_SetCDDAVolume(0.50f * sbox.CDDAVolume[0] / 63, 0.50f * sbox.CDDAVolume[1] / 63);
 		   break;
 
-	case 0x2C: psg.CDDAVolume[1] = V & 0x3F;
-		   SCSICD_SetCDDAVolume(0.50f * psg.CDDAVolume[0] / 63, 0.50f * psg.CDDAVolume[1] / 63);
+	case 0x2C: sbox.CDDAVolume[1] = V & 0x3F;
+		   SCSICD_SetCDDAVolume(0.50f * sbox.CDDAVolume[0] / 63, 0.50f * sbox.CDDAVolume[1] / 63);
 		   break;
     }
    }
@@ -376,13 +427,25 @@ void SoundBox_SetKINGADPCMControl(uint32 value)
    Command line: /www/usr/fisher/helpers/mkfilter -Bu -Lp -o 1 -a 1.5888889125e-04 0.0000000000e+00 -l */
 static void DoVolumeFilter(int ch, int lr)
 {
- psg.vf_xv[ch][lr][0] = psg.vf_xv[ch][lr][1]; 
- psg.vf_xv[ch][lr][1] = (double)ADPCMVolTable[psg.ADPCMVolume[ch][lr]] / 2.004348738e+03;
+ sbox.vf_xv[ch][lr][0] = sbox.vf_xv[ch][lr][1]; 
+ sbox.vf_xv[ch][lr][1] = (double)ADPCMVolTable[sbox.ADPCMVolume[ch][lr]] / 2.004348738e+03;
 
- psg.vf_yv[ch][lr][0] = psg.vf_yv[ch][lr][1]; 
- psg.vf_yv[ch][lr][1] = (psg.vf_xv[ch][lr][0] + psg.vf_xv[ch][lr][1]) + (  0.9990021696 * psg.vf_yv[ch][lr][0]);
- psg.VolumeFiltered[ch][lr] = psg.vf_yv[ch][lr][1];
+ sbox.vf_yv[ch][lr][0] = sbox.vf_yv[ch][lr][1]; 
+ sbox.vf_yv[ch][lr][1] = (sbox.vf_xv[ch][lr][0] + sbox.vf_xv[ch][lr][1]) + (  0.9990021696 * sbox.vf_yv[ch][lr][0]);
+ sbox.VolumeFiltered[ch][lr] = sbox.vf_yv[ch][lr][1];
 }
+
+static const int16 ADPCM_PhaseFilter[8][7] =
+{
+ /*   0 */ {    40,   283,   654,   683,   331,    56,     1 }, //  2048
+ /*   1 */ {    28,   238,   618,   706,   381,    75,     2 }, //  2048
+ /*   2 */ {    19,   197,   577,   720,   432,    99,     4 }, //  2048
+ /*   3 */ {    12,   160,   532,   726,   483,   128,     7 }, //  2048
+ /*   4 */ {     7,   128,   483,   726,   532,   160,    12 }, //  2048
+ /*   5 */ {     4,    99,   432,   720,   577,   197,    19 }, //  2048
+ /*   6 */ {     2,    75,   381,   706,   618,   238,    28 }, //  2048
+ /*   7 */ {     1,    56,   331,   683,   654,   283,    40 }, //  2048
+};
 
 v810_timestamp_t SoundBox_ADPCMUpdate(const v810_timestamp_t timestamp)
 {
@@ -390,34 +453,34 @@ v810_timestamp_t SoundBox_ADPCMUpdate(const v810_timestamp_t timestamp)
 
  adpcm_lastts = timestamp;
 
- psg.bigdiv -= run_time * 2;
+ sbox.bigdiv -= run_time * 2;
 
- while(psg.bigdiv <= 0)
+ while(sbox.bigdiv <= 0)
  {
-  psg.smalldiv--;
-  while(psg.smalldiv <= 0)
+  sbox.smalldiv--;
+  while(sbox.smalldiv <= 0)
   {
-   psg.smalldiv += 1 << ((KINGADPCMControl >> 2) & 0x3);
+   sbox.smalldiv += 1 << ((KINGADPCMControl >> 2) & 0x3);
    for(int ch = 0; ch < 2; ch++)
    {
     // Keep playing our last halfword fetched even if KING ADPCM is disabled
-    if(psg.ADPCMHaveHalfWord[ch] || KINGADPCMControl & (1 << ch)) 
+    if(sbox.ADPCMHaveHalfWord[ch] || KINGADPCMControl & (1 << ch)) 
     {
-     if(!psg.ADPCMWhichNibble[ch])
+     if(!sbox.ADPCMWhichNibble[ch])
      {
-      psg.ADPCMHalfWord[ch] = KING_GetADPCMHalfWord(ch);
-      psg.ADPCMHaveHalfWord[ch] = TRUE;
+      sbox.ADPCMHalfWord[ch] = KING_GetADPCMHalfWord(ch);
+      sbox.ADPCMHaveHalfWord[ch] = TRUE;
      }
 
      // If the channel's reset bit is set, don't update its ADPCM state.
-     if(psg.ADPCMControl & (0x10 << ch))
+     if(sbox.ADPCMControl & (0x10 << ch))
      {
-      psg.ADPCMDelta[ch] = 0;
+      sbox.ADPCMDelta[ch] = 0;
      }
      else
      {
-      uint8 nibble = (psg.ADPCMHalfWord[ch] >> (psg.ADPCMWhichNibble[ch])) & 0xF;
-      int32 BaseStepSize = StepSizes[psg.StepSizeIndex[ch]];
+      uint8 nibble = (sbox.ADPCMHalfWord[ch] >> (sbox.ADPCMWhichNibble[ch])) & 0xF;
+      int32 BaseStepSize = StepSizes[sbox.StepSizeIndex[ch]];
 
       //if(!ch)
       //printf("Nibble: %02x\n", nibble);
@@ -427,61 +490,63 @@ v810_timestamp_t SoundBox_ADPCMUpdate(const v810_timestamp_t timestamp)
        if(BaseStepSize == 1552)
         BaseStepSize = 1522;
 
-       psg.ADPCMDelta[ch] = BaseStepSize * ((nibble & 0x7) + 1) * 2;
+       sbox.ADPCMDelta[ch] = BaseStepSize * ((nibble & 0x7) + 1) * 2;
       }
       else
-       psg.ADPCMDelta[ch] = BaseStepSize * ((nibble & 0x7) + 1);
+       sbox.ADPCMDelta[ch] = BaseStepSize * ((nibble & 0x7) + 1);
 
       // Linear interpolation turned on?
-      if(psg.ADPCMControl & (0x4 << ch))
-       psg.ADPCMDelta[ch] >>= (KINGADPCMControl >> 2) & 0x3;
+      if(sbox.ADPCMControl & (0x4 << ch))
+       sbox.ADPCMDelta[ch] >>= (KINGADPCMControl >> 2) & 0x3;
 
       if(nibble & 0x8)
-       psg.ADPCMDelta[ch] = -psg.ADPCMDelta[ch];
+       sbox.ADPCMDelta[ch] = -sbox.ADPCMDelta[ch];
 
-      psg.StepSizeIndex[ch] += StepIndexDeltas[nibble];
+      sbox.StepSizeIndex[ch] += StepIndexDeltas[nibble];
 
-      if(psg.StepSizeIndex[ch] < 0)
-       psg.StepSizeIndex[ch] = 0;
+      if(sbox.StepSizeIndex[ch] < 0)
+       sbox.StepSizeIndex[ch] = 0;
 
-      if(psg.StepSizeIndex[ch] > 48)
-       psg.StepSizeIndex[ch] = 48;
+      if(sbox.StepSizeIndex[ch] > 48)
+       sbox.StepSizeIndex[ch] = 48;
      }
-     psg.ADPCMHaveDelta[ch] = 1;
+     sbox.ADPCMHaveDelta[ch] = 1;
 
      // Linear interpolation turned on?
-     if(psg.ADPCMControl & (0x4 << ch))
-      psg.ADPCMHaveDelta[ch] = 1 << ((KINGADPCMControl >> 2) & 0x3);
+     if(sbox.ADPCMControl & (0x4 << ch))
+      sbox.ADPCMHaveDelta[ch] = 1 << ((KINGADPCMControl >> 2) & 0x3);
 
-     psg.ADPCMWhichNibble[ch] = (psg.ADPCMWhichNibble[ch] + 4) & 0xF;
+     sbox.ADPCMWhichNibble[ch] = (sbox.ADPCMWhichNibble[ch] + 4) & 0xF;
 
-     if(!psg.ADPCMWhichNibble[ch])
-      psg.ADPCMHaveHalfWord[ch] = FALSE;
+     if(!sbox.ADPCMWhichNibble[ch])
+      sbox.ADPCMHaveHalfWord[ch] = FALSE;
     }
    } // for(int ch...)
-  } // while(psg.smalldiv <= 0)
+  } // while(sbox.smalldiv <= 0)
+
+  const uint32 synthtime42 = (timestamp << 1) + sbox.bigdiv;
+  const uint32 synthtime14 = synthtime42 / 3;
+  const uint32 synthtime = synthtime14 >> 3;
+  const unsigned synthtime_phase = synthtime14 & 7;
+
+  //printf("Phase: %d, %d\n", synthtime42 % 24, (synthtime42 / 3) & 7);
 
   for(int ch = 0; ch < 2; ch++)
   {
-   //static int32 last_synthtime = 0;
-   //uint32 synthtime = (timestamp + psg.bigdiv / 2) / 3;
-   // This is as correct as the divide(I think), but may be faster(or maybe not?)
-   uint32 synthtime = (timestamp - ((0 - psg.bigdiv) >> 1)) / 3;
-
    //if(!ch)
    //{
    // printf("%d\n", synthtime - last_synthtime);
    // last_synthtime = synthtime;
    //}
 
-   if(psg.ADPCMHaveDelta[ch]) 
+   if(sbox.ADPCMHaveDelta[ch]) 
    {
-    psg.ADPCMPredictor[ch] += psg.ADPCMDelta[ch];
+    sbox.ADPCMPredictor[ch] += sbox.ADPCMDelta[ch];
 
-    psg.ADPCMHaveDelta[ch]--;
+    sbox.ADPCMHaveDelta[ch]--;
 
-    if(psg.ADPCMPredictor[ch] > 0x3FFF) { psg.ADPCMPredictor[ch] = 0x3FFF; /*printf("Overflow: %d\n", ch);*/ }
-    if(psg.ADPCMPredictor[ch] < -0x4000) { psg.ADPCMPredictor[ch] = -0x4000; /*printf("Underflow: %d\n", ch);*/ }
+    if(sbox.ADPCMPredictor[ch] > 0x3FFF) { sbox.ADPCMPredictor[ch] = 0x3FFF; /*printf("Overflow: %d\n", ch);*/ }
+    if(sbox.ADPCMPredictor[ch] < -0x4000) { sbox.ADPCMPredictor[ch] = -0x4000; /*printf("Underflow: %d\n", ch);*/ }
    }
    else
    {
@@ -494,27 +559,50 @@ v810_timestamp_t SoundBox_ADPCMUpdate(const v810_timestamp_t timestamp)
 
     if(EmulateBuggyCodec)
     {
-     samp[0] = (int32)(((psg.ADPCMPredictor[ch] >> 1) + (psg.ResetAntiClick[ch] >> 33)) * psg.VolumeFiltered[ch][0]);
-     samp[1] = (int32)(((psg.ADPCMPredictor[ch] >> 1) + (psg.ResetAntiClick[ch] >> 33)) * psg.VolumeFiltered[ch][1]);
+     samp[0] = (int32)(((sbox.ADPCMPredictor[ch] >> 1) + (sbox.ResetAntiClick[ch] >> 33)) * sbox.VolumeFiltered[ch][0]);
+     samp[1] = (int32)(((sbox.ADPCMPredictor[ch] >> 1) + (sbox.ResetAntiClick[ch] >> 33)) * sbox.VolumeFiltered[ch][1]);
     }
     else
     {
-     samp[0] = (int32)((psg.ADPCMPredictor[ch] + (psg.ResetAntiClick[ch] >> 32)) * psg.VolumeFiltered[ch][0]);
-     samp[1] = (int32)((psg.ADPCMPredictor[ch] + (psg.ResetAntiClick[ch] >> 32)) * psg.VolumeFiltered[ch][1]);
+     samp[0] = (int32)((sbox.ADPCMPredictor[ch] + (sbox.ResetAntiClick[ch] >> 32)) * sbox.VolumeFiltered[ch][0]);
+     samp[1] = (int32)((sbox.ADPCMPredictor[ch] + (sbox.ResetAntiClick[ch] >> 32)) * sbox.VolumeFiltered[ch][1]);
     }
-    ADPCMSynth.offset(synthtime, samp[0] - psg.ADPCM_last[ch][0], &FXsbuf[0]);
-    ADPCMSynth.offset(synthtime, samp[1] - psg.ADPCM_last[ch][1], &FXsbuf[1]);
+#if 0
+    printf("%d, %f %f\n", ch, sbox.VolumeFiltered[ch][0], sbox.VolumeFiltered[ch][1]);
 
-    psg.ADPCM_last[ch][0] = samp[0];
-    psg.ADPCM_last[ch][1] = samp[1];
+    {
+     static int inv = 0x1FFF;
+
+     samp[0] = samp[1] = inv;
+     
+     if(ch == 1)
+      inv = -inv;
+    }
+#endif
+    for(unsigned y = 0; y < 2; y++)
+    {
+     const int32 delta = samp[y] - sbox.ADPCM_last[ch][y];
+     int32* tb = FXsbuf[y]->Buf() + (synthtime & 0xFFFF);
+     const int16* coeffs = ADPCM_PhaseFilter[synthtime_phase];
+
+     for(unsigned c = 0; c < 7; c++)
+     {
+      int32 tmp = delta * coeffs[c];
+
+      tb[c] += tmp;
+     }
+    }
+
+    sbox.ADPCM_last[ch][0] = samp[0];
+    sbox.ADPCM_last[ch][1] = samp[1];
    }
   }
 
   for(int ch = 0; ch < 2; ch++)
   {
-   psg.ResetAntiClick[ch] -= psg.ResetAntiClick[ch] >> 8;
+   sbox.ResetAntiClick[ch] -= sbox.ResetAntiClick[ch] >> 8;
    //if(ch)
-   // MDFN_DispMessage("%d", (int)(psg.ResetAntiClick[ch] >> 32));
+   // MDFN_DispMessage("%d", (int)(sbox.ResetAntiClick[ch] >> 32));
   }
 
   for(int ch = 0; ch < 2; ch++)
@@ -522,76 +610,81 @@ v810_timestamp_t SoundBox_ADPCMUpdate(const v810_timestamp_t timestamp)
    {
     DoVolumeFilter(ch, lr);
    }
-  psg.bigdiv += 1365 * 2 / 2;
+  sbox.bigdiv += 1365 * 2 / 2;
  }
 
-
- assert((psg.bigdiv + 1) / 2);
- return(timestamp + (psg.bigdiv + 1) / 2);
+ return(timestamp + (sbox.bigdiv + 1) / 2);
 }
 
-int32 SoundBox_Flush(const uint32 v810_timestamp, int16 *SoundBuf, const int32 MaxSoundFrames)
+int32 SoundBox_Flush(const v810_timestamp_t end_timestamp, v810_timestamp_t* new_base_timestamp, int16 *SoundBuf, const int32 MaxSoundFrames)
 {
- int32 timestamp;
+ const uint32 end_timestamp_div3 = end_timestamp / 3;
+ const uint32 end_timestamp_div12 = end_timestamp / 12;
+ const uint32 end_timestamp_mod12 = end_timestamp % 12;
+ const unsigned rsc = std::min<unsigned>(65536, end_timestamp_div12);
  int32 FrameCount = 0;
 
- timestamp = v810_timestamp / 3;
+ *new_base_timestamp = end_timestamp_mod12;
 
- pce_psg->EndFrame(timestamp);
+ pce_psg->Update(end_timestamp_div3);
 
- if(SoundEnabled)
+ for(unsigned y = 0; y < 2; y++)
  {
-  for(int y = 0; y < 2; y++)
+  if(SoundEnabled && FXres)
   {
-   FXsbuf[y].end_frame(timestamp);
-   FrameCount = FXsbuf[y].read_samples(SoundBuf + y, MaxSoundFrames, 1);
+   FXsbuf[y]->Integrate(rsc, 0, 0, FXCDDABufs[y]);
+   FrameCount = FXres->Resample(FXsbuf[y], rsc, SoundBuf + y, MaxSoundFrames);
   }
+  else
+   FXsbuf[y]->ResampleSkipped(rsc);
+
+  FXCDDABufs[y]->Finish(rsc);
  }
 
  return(FrameCount);
 }
 
-void SoundBox_ResetTS(void)
+void SoundBox_ResetTS(const v810_timestamp_t ts_base)
 {
- //assert(adpcm_lastts == PCFX_V810.v810_timestamp);
- adpcm_lastts = 0;
+ pce_psg->ResetTS(ts_base / 3);
+ adpcm_lastts = ts_base;
 }
 
-void SoundBox_Reset(void)
+void SoundBox_Reset(const v810_timestamp_t timestamp)
 {
- pce_psg->Power(0);	// FIXME
+ SoundBox_ADPCMUpdate(timestamp);
+ pce_psg->Power(timestamp / 3);
 
- psg.ADPCMControl = 0;
+ sbox.ADPCMControl = 0;
 
- memset(&psg.vf_xv, 0, sizeof(psg.vf_xv));
- memset(&psg.vf_yv, 0, sizeof(psg.vf_yv));
+ memset(&sbox.vf_xv, 0, sizeof(sbox.vf_xv));
+ memset(&sbox.vf_yv, 0, sizeof(sbox.vf_yv));
 
  for(int lr = 0; lr < 2; lr++)
  {
   for(int ch = 0; ch < 2; ch++)
   {
-   psg.ADPCMVolume[ch][lr] = 0;
-   psg.VolumeFiltered[ch][lr] = 0;
+   sbox.ADPCMVolume[ch][lr] = 0;
+   sbox.VolumeFiltered[ch][lr] = 0;
   }
 
-  psg.CDDAVolume[lr] = 0;
+  sbox.CDDAVolume[lr] = 0;
  }
 
  for(int ch = 0; ch < 2; ch++)
  {
-  psg.ADPCMPredictor[ch] = 0;
-  psg.StepSizeIndex[ch] = 0;
+  sbox.ADPCMPredictor[ch] = 0;
+  sbox.StepSizeIndex[ch] = 0;
  }
 
- memset(psg.ADPCMWhichNibble, 0, sizeof(psg.ADPCMWhichNibble));
- memset(psg.ADPCMHalfWord, 0, sizeof(psg.ADPCMHalfWord));
- memset(psg.ADPCMHaveHalfWord, 0, sizeof(psg.ADPCMHaveHalfWord));
+ memset(sbox.ADPCMWhichNibble, 0, sizeof(sbox.ADPCMWhichNibble));
+ memset(sbox.ADPCMHalfWord, 0, sizeof(sbox.ADPCMHalfWord));
+ memset(sbox.ADPCMHaveHalfWord, 0, sizeof(sbox.ADPCMHaveHalfWord));
 
- SCSICD_SetCDDAVolume(0.50f * psg.CDDAVolume[0] / 63, 0.50f * psg.CDDAVolume[1] / 63);
+ SCSICD_SetCDDAVolume(0.50f * sbox.CDDAVolume[0] / 63, 0.50f * sbox.CDDAVolume[1] / 63);
 
- psg.bigdiv = 2;	// TODO: KING->SBOX ADPCM Synch //(1365 - 85 * 4) * 2; //1365 * 2 / 2;
- psg.smalldiv = 0;
- adpcm_lastts = 0;
+ sbox.bigdiv = 2;	// TODO: KING->SBOX ADPCM Synch //(1365 - 85 * 4) * 2; //1365 * 2 / 2;
+ sbox.smalldiv = 0;
 }
 
 int SoundBox_StateAction(StateMem *sm, int load, int data_only)
@@ -602,26 +695,26 @@ int SoundBox_StateAction(StateMem *sm, int load, int data_only)
 
  SFORMAT SoundBox_StateRegs[] =
  {
-  SFVARN(psg.ADPCMControl, "ADPCMControl"),
-  SFARRAYN(&psg.ADPCMVolume[0][0], 2 * 2, "ADPCMVolume"),
-  SFARRAYN(psg.CDDAVolume, 2, "CDDAVolume"),
-  SFVARN(psg.bigdiv, "bigdiv"),
-  SFVARN(psg.smalldiv, "smalldiv"),
+  SFVARN(sbox.ADPCMControl, "ADPCMControl"),
+  SFARRAYN(&sbox.ADPCMVolume[0][0], 2 * 2, "ADPCMVolume"),
+  SFARRAYN(sbox.CDDAVolume, 2, "CDDAVolume"),
+  SFVARN(sbox.bigdiv, "bigdiv"),
+  SFVARN(sbox.smalldiv, "smalldiv"),
 
-  SFARRAY64N(&psg.ResetAntiClick[0], 2, "ResetAntiClick"),
-  SFARRAYDN(&psg.VolumeFiltered[0][0], 2 * 2, "VolumeFiltered"),
-  SFARRAYDN(&psg.vf_xv[0][0][0], 2 * 2 * (1 + 1), "vf_xv"),
-  SFARRAYDN(&psg.vf_yv[0][0][0], 2 * 2 * (1 + 1), "vf_yv"),
+  SFARRAY64N(&sbox.ResetAntiClick[0], 2, "ResetAntiClick"),
+  SFARRAYDN(&sbox.VolumeFiltered[0][0], 2 * 2, "VolumeFiltered"),
+  SFARRAYDN(&sbox.vf_xv[0][0][0], 2 * 2 * (1 + 1), "vf_xv"),
+  SFARRAYDN(&sbox.vf_yv[0][0][0], 2 * 2 * (1 + 1), "vf_yv"),
 
-  SFARRAY32N(psg.ADPCMDelta, 2, "ADPCMDelta"),
-  SFARRAY32N(psg.ADPCMHaveDelta, 2, "ADPCMHaveDelta"),
+  SFARRAY32N(sbox.ADPCMDelta, 2, "ADPCMDelta"),
+  SFARRAY32N(sbox.ADPCMHaveDelta, 2, "ADPCMHaveDelta"),
 
-  SFARRAY32N(&psg.ADPCMPredictor[0], 2, "ADPCMPredictor"),
-  SFARRAY32N(&psg.StepSizeIndex[0], 2, "ADPCMStepSizeIndex"),
+  SFARRAY32N(&sbox.ADPCMPredictor[0], 2, "ADPCMPredictor"),
+  SFARRAY32N(&sbox.StepSizeIndex[0], 2, "ADPCMStepSizeIndex"),
 
-  SFARRAY32N(psg.ADPCMWhichNibble, 2, "ADPCMWNibble"),
-  SFARRAY16N(psg.ADPCMHalfWord, 2, "ADPCMHalfWord"),
-  SFARRAYBN(psg.ADPCMHaveHalfWord, 2, "ADPCMHHW"),
+  SFARRAY32N(sbox.ADPCMWhichNibble, 2, "ADPCMWNibble"),
+  SFARRAY16N(sbox.ADPCMHalfWord, 2, "ADPCMHalfWord"),
+  SFARRAYBN(sbox.ADPCMHaveHalfWord, 2, "ADPCMHHW"),
 
   SFEND
  };
@@ -632,23 +725,23 @@ int SoundBox_StateAction(StateMem *sm, int load, int data_only)
  {
   for(int ch = 0; ch < 2; ch++)
   {
-   clamp(&psg.ADPCMPredictor[ch], -0x4000, 0x3FFF);
-   clamp(&psg.ResetAntiClick[ch], (int64)-0x4000 << 32, (int64)0x3FFF << 32);
+   clamp(&sbox.ADPCMPredictor[ch], -0x4000, 0x3FFF);
+   clamp(&sbox.ResetAntiClick[ch], (int64)-0x4000 << 32, (int64)0x3FFF << 32);
 
    if(!ResetAntiClickEnabled)
-    psg.ResetAntiClick[ch] = 0;
+    sbox.ResetAntiClick[ch] = 0;
 
-   clamp(&psg.StepSizeIndex[ch], 0, 48);
+   clamp(&sbox.StepSizeIndex[ch], 0, 48);
 
-   clamp(&psg.bigdiv, 1, 1365);
-   clamp(&psg.smalldiv, 1, 8);
+   clamp(&sbox.bigdiv, 1, 1365);
+   clamp(&sbox.smalldiv, 1, 8);
 
    for(int lr = 0; lr < 2; lr++)
    {
 
    }
   }
-  SCSICD_SetCDDAVolume(0.50f * psg.CDDAVolume[0] / 63, 0.50f * psg.CDDAVolume[1] / 63);
+  SCSICD_SetCDDAVolume(0.50f * sbox.CDDAVolume[0] / 63, 0.50f * sbox.CDDAVolume[1] / 63);
  }
  return(ret); 
 }

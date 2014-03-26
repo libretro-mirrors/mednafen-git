@@ -23,12 +23,12 @@
 namespace MDFN_IEN_GBA
 {
 
-bool GBA_Flash_Init(void);
-void GBA_Flash_Kill(void);
-void GBA_Flash_Reset(void);
+bool GBA_Flash_Init(void) MDFN_COLD;
+void GBA_Flash_Kill(void) MDFN_COLD;
+void GBA_Flash_Reset(void) MDFN_COLD;
 
-extern void flashSaveGame(gzFile gzFile);
-extern void flashReadGame(gzFile gzFile, int version);
+extern void flashSaveGame(gzFile gzFile) MDFN_COLD;
+extern void flashReadGame(gzFile gzFile, int version) MDFN_COLD;
 extern uint8 flashRead(uint32 address);
 extern void flashWrite(uint32 address, uint8 byte);
 extern uint8 *flashSaveMemory;

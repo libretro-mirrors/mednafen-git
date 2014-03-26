@@ -148,10 +148,10 @@ static void UpdateM68K(const int32 timestamp)
  }
 }
 
-void SubHW_EndFrame(const int32 timestamp)
+void SubHW_EndFrame(const int32 timestamp, const int32 ts_base)
 {
  UpdateM68K(timestamp);
- lastts = 0;
+ lastts = ts_base;
 }
 
 

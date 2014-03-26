@@ -34,13 +34,11 @@ static void RedoSGD(bool instant = 0)
  CurGame->Debugger->SetGraphicsDecode(gd_surface, instant ? -1 : LayerScanline[CurLayer], CurLayer, 0, LayerScroll[CurLayer], LayerPBN[CurLayer]);
 }
 
-// Call this function from either thread.
+// Call this function from the game thread.
 void GfxDebugger_SetActive(bool newia)
 {
  if(CurGame->Debugger && CurGame->Debugger->SetGraphicsDecode)
  {
-  LockGameMutex(1);
-
   IsActive = newia;
 
   if(IsActive && !LayerCount)
@@ -71,13 +69,12 @@ void GfxDebugger_SetActive(bool newia)
     gd_surface = new MDFN_Surface(NULL, 128, 128, 128 * 3, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, 0, 8, 16, 24));
   }
   RedoSGD();
-  LockGameMutex(0);
  }
 }
 
 #define MK_COLOR_A(r,g,b,a) (pf_cache.MakeColor(r, g, b, a))
 
-// Call this function from the main thread
+// Call this function from the game thread
 void GfxDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *screen_rect)
 {
  if(!IsActive)
@@ -87,11 +84,7 @@ void GfxDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
  uint32 *src_pixels;
  uint32 * pixels = surface->pixels;
  uint32 pitch32 = surface->pitchinpix;
- bool ism;
-
- LockGameMutex(1);
-
- ism = InSteppingMode;
+ const bool ism = Debugger_GT_IsInSteppingMode();
 
  if(ism)
  {
@@ -110,7 +103,7 @@ void GfxDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
 
  if(!src_pixels)
  {
-  LockGameMutex(0);
+  
   return;
  }
 
@@ -172,10 +165,10 @@ void GfxDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
   }
  }
 
- LockGameMutex(0);
+ 
 }
 
-// Call this from the main thread
+// Call this from the game thread
 int GfxDebugger_Event(const SDL_Event *event)
 {
  switch(event->type)
@@ -186,76 +179,76 @@ int GfxDebugger_Event(const SDL_Event *event)
 	 default: break;
 
 	 case SDLK_MINUS:
-		       LockGameMutex(1);
+		       
 		       if(LayerScanline[CurLayer])
 		       {
 			LayerScanline[CurLayer]--;
 			RedoSGD();
 		       }
-		       LockGameMutex(0);
+		       
 		       break;
 	 case SDLK_EQUALS:
-		       LockGameMutex(1);
+		       
 		       LayerScanline[CurLayer]++;
 		       RedoSGD();
-		       LockGameMutex(0);
+		       
 		       break;
-         case SDLK_UP: LockGameMutex(1);
+         case SDLK_UP: 
 		       if(LayerScroll[CurLayer])
 		       {
                         LayerScroll[CurLayer]--;
                         RedoSGD();
 		       }
-                       LockGameMutex(0);
+                       
                        break;
 
          case SDLK_PAGEUP:
-                         LockGameMutex(1);
+                         
                          LayerScroll[CurLayer] -= 8;
 			 if(LayerScroll[CurLayer] < 0)
 			  LayerScroll[CurLayer] = 0;
                          RedoSGD();
-                         LockGameMutex(0);
+                         
                          break;
 
 	 case SDLK_PAGEDOWN:
-			 LockGameMutex(1);
+			 
 			 LayerScroll[CurLayer] += 8;
 			 RedoSGD();
-			 LockGameMutex(0);
+			 
 			 break;
-	 case SDLK_DOWN: LockGameMutex(1);
+	 case SDLK_DOWN: 
 			 LayerScroll[CurLayer]++;
 			 RedoSGD();
-			 LockGameMutex(0);
+			 
 			 break;
-	 case SDLK_LEFT: LockGameMutex(1);
+	 case SDLK_LEFT: 
 			 CurLayer = (CurLayer - 1);
 
 			 if(CurLayer < 0) CurLayer = LayerCount - 1;
 
 			 RedoSGD();
-			 LockGameMutex(0);
+			 
 			 break;
-	 case SDLK_RIGHT: LockGameMutex(1);
+	 case SDLK_RIGHT: 
 			  CurLayer = (CurLayer + 1) % LayerCount;
 			  RedoSGD();
-			  LockGameMutex(0);
+			  
 			  break;
 
 
-	 case SDLK_COMMA: LockGameMutex(1);
+	 case SDLK_COMMA: 
 			  if(LayerPBN[CurLayer] >= 0)
 			   LayerPBN[CurLayer]--;
 			  RedoSGD();
-			  LockGameMutex(0);
+			  
 			  break;
 
 	 case SDLK_PERIOD:
-			  LockGameMutex(1);
+			  
 			  LayerPBN[CurLayer]++;
 			  RedoSGD();
-			  LockGameMutex(0);
+			  
 			  break;
 	}
 	break;

@@ -19,7 +19,6 @@
 #define __MDFN_PCE_MCGENJIN_H
 
 #include <vector>
-#include <blip/Blip_Buffer.h>
 #include "../cdrom/SimpleFIFO.h"
 
 class MCGenjin_CS_Device
@@ -30,7 +29,8 @@ class MCGenjin_CS_Device
  virtual ~MCGenjin_CS_Device();
 
  virtual void Power(void);
- virtual void EndFrame(int32 timestamp);
+ virtual void Update(int32 timestamp);
+ virtual void ResetTS(int32 ts_base);
 
  virtual int StateAction(StateMem *sm, int load, int data_only, const char *sname);
 
@@ -46,11 +46,12 @@ class MCGenjin
 {
  public:
 
- MCGenjin(Blip_Buffer *bb, const uint8 *rr, uint32 rr_size);
+ MCGenjin(const uint8 *rr, uint32 rr_size);
  ~MCGenjin();
 
  void Power(void);
- void EndFrame(int32 timestamp);
+ void Update(int32 timestamp);
+ void ResetTS(int32 ts_base);
  int StateAction(StateMem *sm, int load, int data_only);
 
  INLINE unsigned GetNVPDC(void) { return 2; }
@@ -127,13 +128,6 @@ class MCGenjin
 		 else
 		  shadow_avl[i] = avl[i];
 		}
-		pcm_out_shift = (V >> 4) & 0x3;
-		//
-		{
-		 uint8 pcm_out = (((shadow_avl[0] >> 8) & avl_mask[0]) + ((shadow_avl[1] >> 8) & avl_mask[1]) + ((shadow_avl[2] >> 8) & avl_mask[2]) + ((shadow_avl[3] >> 8) & avl_mask[3])) >> pcm_out_shift;
-		 pcm_synth.offset_inline(timestamp, pcm_out - pcm_lastout, bsbuf);
-		 pcm_lastout = pcm_out;
-		}
 		break;
 
 	 case 0xD:
@@ -190,8 +184,6 @@ class MCGenjin
 
  enum { STMODEC_MASK_ENABLE = 0x80 };
 
- Blip_Buffer *bsbuf;
-
  //
  //
  //
@@ -202,11 +194,6 @@ class MCGenjin
  uint16 avl[4];
  uint8 avl_mask[4];
  uint16 shadow_avl[4];
- uint8 pcm_out_shift;
-
- //
- int32 pcm_lastout;
- Blip_Synth <blip_good_quality, 1> pcm_synth;
 };
 
 #endif

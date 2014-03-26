@@ -47,90 +47,89 @@
    #endif
 
    if(!skipframe)
-  {
-   #ifdef VCE_SGFX_MODE
    {
-    for(int32 i = 0; i < div_clocks; i++) // * vce_ratios[dot_clock]; i++)
+    #ifdef VCE_SGFX_MODE
     {
-     static const int prio_select[4] = { 1, 1, 0, 0 };
-     static const int prio_shift[4] = { 4, 0, 4, 0 };
-     uint32 pix;
-     int in_window = 0;
-
-     if(window_counter[0] > 0x40)
+     for(int32 i = 0; i < div_clocks; i++) // * vce_ratios[dot_clock]; i++)
      {
-      in_window |= 1;
-      window_counter[0]--;
-     }
+      static const int prio_select[4] = { 1, 1, 0, 0 };
+      static const int prio_shift[4] = { 4, 0, 4, 0 };
+      uint32 pix;
+      int in_window = 0;
 
-     if(window_counter[1] > 0x40)
-     {
-      in_window |= 2;
-      window_counter[1]--;
-     }
+      if(window_counter[0] > 0x40)
+      {
+       in_window |= 1;
+       window_counter[0]--;
+      }
 
-     uint8 pb = (priority[prio_select[in_window]] >> prio_shift[in_window]) & 0xF;
-     uint32 vdc2_pixel, vdc1_pixel;
+      if(window_counter[1] > 0x40)
+      {
+       in_window |= 2;
+       window_counter[1]--;
+      }
 
-     vdc2_pixel = vdc1_pixel = 0;
+      uint8 pb = (priority[prio_select[in_window]] >> prio_shift[in_window]) & 0xF;
+      uint32 vdc2_pixel, vdc1_pixel;
 
-     if(pb & 1)
-      vdc1_pixel = pixels[0][i];
-     if(pb & 2)
-      vdc2_pixel = pixels[1][i];
+      vdc2_pixel = vdc1_pixel = 0;
 
-     /* Dai MakaiMura uses setting 1, and expects VDC #2 sprites in front of VDC #1 background, but
+      if(pb & 1)
+       vdc1_pixel = pixels[0][i];
+      if(pb & 2)
+       vdc2_pixel = pixels[1][i];
+
+      /* Dai MakaiMura uses setting 1, and expects VDC #2 sprites in front of VDC #1 background, but
         behind VDC #1's sprites.
-     */
-     switch(pb >> 2)
-     {
-      case 1:
+      */
+      switch(pb >> 2)
+      {
+       case 1:
                 if((vdc2_pixel & 0x100) && !(vdc1_pixel & 0x100) && (vdc2_pixel & 0xF))
                         vdc1_pixel = 0; //amask;
                 break;
-      case 2:
+       case 2:
                 if((vdc1_pixel & 0x100) && !(vdc2_pixel & 0x100) && (vdc2_pixel & 0xF))
                         vdc1_pixel = 0; //|= amask;
                 break;
-     }
-     pix = color_table_cache[((vdc1_pixel & 0xF) ? vdc1_pixel : vdc2_pixel) & 0x1FF];
+      }
+      pix = color_table_cache[((vdc1_pixel & 0xF) ? vdc1_pixel : vdc2_pixel) & 0x1FF];
 
-     #if SUPERDUPERMODE
-     for(int32 s_i = 0; s_i < dot_clock_ratio; s_i++)
-     #endif
-     {
-      scanline_out_ptr[pixel_offset] = pix;
-      pixel_offset++;
-     }
-    }
-   }
-   #else
-   {
-    #if SUPERDUPERMODE
-    for(int32 i = 0; i < div_clocks; i++)
-    {
-     for(int32 si = 0; si < dot_clock_ratio; si++)
-     {
-      uint32 pix = color_table_cache[pixels[0][i] & 0x3FF];
-
-      scanline_out_ptr[pixel_offset] = pix;
-      pixel_offset++;
+      #if SUPERDUPERMODE
+      for(int32 s_i = 0; s_i < dot_clock_ratio; s_i++)
+      #endif
+      {
+       scanline_out_ptr[pixel_offset & 2047] = pix;
+       pixel_offset++;
+      }
      }
     }
     #else
-    for(int32 i = 0; i < div_clocks; i++) // * vce_ratios[dot_clock]; i++)
     {
-     uint32 pix = color_table_cache[pixels[0][i] & 0x3FF];
-     scanline_out_ptr[pixel_offset] = pix;
-     pixel_offset++;
+     #if SUPERDUPERMODE
+     for(int32 i = 0; i < div_clocks; i++)
+     {
+      for(int32 si = 0; si < dot_clock_ratio; si++)
+      {
+       uint32 pix = color_table_cache[pixels[0][i] & 0x3FF];
+
+       scanline_out_ptr[pixel_offset & 2047] = pix;
+       pixel_offset++;
+      }
+     }
+     #else
+     for(int32 i = 0; i < div_clocks; i++) // * vce_ratios[dot_clock]; i++)
+     {
+      uint32 pix = color_table_cache[pixels[0][i] & 0x3FF];
+      scanline_out_ptr[pixel_offset & 2047] = pix;
+      pixel_offset++;
+     }
+     #endif
+
     }
     #endif
-
-   }
-   #endif
-  }
-   //pixel_offset += div_clocks * dot_clock_ratio;
-  }
+   }	// end if(!skipframe)
+  } // end if(div_clocks > 0)
 
   clocks -= chunk_clocks;
   hblank_counter -= chunk_clocks;

@@ -89,12 +89,12 @@ bool GBA_EEPROM_LoadFile(const char *filename)
 }
 
 
-void eepromInit()
+void eepromInit(void)
 {
   memset(eepromData, 0xFF, sizeof(eepromData));
 }
 
-void eepromReset()
+void eepromReset(void)
 {
   eepromMode = EEPROM_IDLE;
   eepromByte = 0;

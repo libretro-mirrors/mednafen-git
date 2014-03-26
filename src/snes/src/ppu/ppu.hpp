@@ -54,7 +54,7 @@ private:
 
 class PPU : public PPUcounter, public MMIO {
 public:
-  uint16 *output;
+  uint16 line_output[512];
 
   struct {
     bool render_output;

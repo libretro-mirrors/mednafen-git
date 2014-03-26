@@ -18,13 +18,12 @@
 #include "pce.h"
 #include <zlib.h>
 #include "vdc.h"
-#include "pce_psg/pce_psg.h"
+#include "psg.h"
 #include "input.h"
 #include "huc.h"
-#include "../cdrom/pcecd.h"
-#include "../cdrom/scsicd.h"
+#include "pcecd.h"
+#include "pcecd_drive.h"
 #include "hes.h"
-#include "tsushin.h"
 #include "arcade_card/arcade_card.h"
 #include "../mempatcher.h"
 #include "../cdrom/cdromif.h"
@@ -32,7 +31,7 @@
 namespace PCE_Fast
 {
 
-static PCE_PSG *psg = NULL;
+static PCEFast_PSG *psg = NULL;
 extern ArcadeCard *arcade_card; // Bah, lousy globals.
 
 static Blip_Buffer sbuf[2];
@@ -111,47 +110,43 @@ static DECLFW(IOWrite)
 {
  A &= 0x1FFF;
   
- switch(A & 0x1c00)
+ switch(A >> 10)
  {
-  case 0x0000: HuC6280_StealCycle();
+  case 0: HuC6280_StealCycle();
 	       VDC_Write(A, V);
 	       break;
-  case 0x0400: HuC6280_StealCycle();
+
+  case 1: HuC6280_StealCycle();
 	       VCE_Write(A, V);
 	       break;
 
-  case 0x0800: PCEIODataBuffer = V;
+  case 2: PCEIODataBuffer = V;
 	       psg->Write(HuCPU.timestamp / pce_overclocked, A, V);
 	       break;
 
-  case 0x0c00: PCEIODataBuffer = V;
+  case 3: PCEIODataBuffer = V;
 	       HuC6280_TimerWrite(A, V);
 	       break;
 
-  case 0x1000: PCEIODataBuffer = V; INPUT_Write(A, V); break;
-  case 0x1400: PCEIODataBuffer = V; HuC6280_IRQStatusWrite(A, V); break;
-  case 0x1800: if(IsTsushin)
-                PCE_TsushinWrite(A, V);
+  case 4: PCEIODataBuffer = V; INPUT_Write(A, V); break;
+  case 5: PCEIODataBuffer = V; HuC6280_IRQStatusWrite(A, V); break;
+  case 6: 
+	  if(!PCE_IsCD)
+	   break;
 
-	       if(!PCE_IsCD)
-		break;
+	  if((A & 0x1E00) == 0x1A00)
+	  {
+	   if(arcade_card)
+	    arcade_card->Write(A & 0x1FFF, V);
+	  }
+	  else
+	  {
+	   PCECD_Write(HuCPU.timestamp * 3, A, V);
+	  }
+	  break;
 
-	       if((A & 0x1E00) == 0x1A00)
-	       {
-		if(arcade_card)
-		 arcade_card->Write(A & 0x1FFF, V);
-	       }
-	       else
-	       {
-	        int32 dummy_ne;
-
-		dummy_ne = PCECD_Write(HuCPU.timestamp * 3, A, V);
-	       }
-	       break;
-  //case 0x1C00: break; // Expansion
-  //default: printf("Eep: %04x\n", A); break;
+  case 7: break;	// Expansion.
  }
-
 }
 
 static void PCECDIRQCB(bool asserted)
@@ -335,7 +330,7 @@ static int LoadCommon(void)
 
  HuC6280_Init();
 
- psg = new PCE_PSG(&sbuf[0], &sbuf[1], PCE_PSG::REVISION_ENHANCED);	//HUC6280A);
+ psg = new PCEFast_PSG(&sbuf[0], &sbuf[1]);
 
  psg->SetVolume(1.0);
 
@@ -447,8 +442,8 @@ static int LoadCD(std::vector<CDIF *> *CDInterfaces)
  if(!HuCLoadCD(bios_path.c_str()))
   return(0);
 
- SCSICD_SetDisc(true, NULL, true);
- SCSICD_SetDisc(false, (*CDInterfaces)[0], true);
+ PCECD_Drive_SetDisc(true, NULL, true);
+ PCECD_Drive_SetDisc(false, (*CDInterfaces)[0], true);
 
  return(LoadCommon());
 }
@@ -531,16 +526,14 @@ static void Emulate(EmulateSpecStruct *espec)
   {
    sbuf[y].set_sample_rate(espec->SoundRate ? espec->SoundRate : 44100, 50);
    sbuf[y].clock_rate((long)(PCE_MASTER_CLOCK / 3));
-   sbuf[y].bass_freq(20);
+   sbuf[y].bass_freq(10);
   }
  }
- VDC_RunFrame(espec->surface, &espec->DisplayRect, espec->LineWidths, IsHES ? 1 : espec->skip);
+ VDC_RunFrame(espec, IsHES);
 
  if(PCE_IsCD)
  {
-  int32 dummy_ne;
-
-  dummy_ne = PCECD_Run(HuCPU.timestamp * 3);
+  PCECD_Run(HuCPU.timestamp * 3);
  }
 
  psg->EndFrame(HuCPU.timestamp / pce_overclocked);
@@ -616,9 +609,7 @@ void PCE_Power(void)
 
  if(PCE_IsCD)
  {
-  int32 dummy_ne;
-
-  dummy_ne = PCECD_Power(HuCPU.timestamp * 3);
+  PCECD_Power(HuCPU.timestamp * 3);
  }
 }
 
@@ -633,14 +624,6 @@ static void DoSimpleCommand(int cmd)
 
 static MDFNSetting PCESettings[] = 
 {
-/*
-  { "pce_fast.input.port1", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Input device for input port 1."), NULL, MDFNST_STRING, "gamepad", NULL, NULL },
-  { "pce_fast.input.port2", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Input device for input port 2."), NULL, MDFNST_STRING, "gamepad", NULL, NULL },
-  { "pce_fast.input.port3", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Input device for input port 3."), NULL, MDFNST_STRING, "gamepad", NULL, NULL },
-  { "pce_fast.input.port4", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Input device for input port 4."), NULL, MDFNST_STRING, "gamepad", NULL, NULL },
-  { "pce_fast.input.port5", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Input device for input port 5."), NULL, MDFNST_STRING, "gamepad", NULL, NULL },
-*/
-
   { "pce_fast.correct_aspect", MDFNSF_CAT_VIDEO, gettext_noop("Correct the aspect ratio."), NULL, MDFNST_BOOL, "1" },
   { "pce_fast.slstart", MDFNSF_NOFLAGS, gettext_noop("First rendered scanline."), NULL, MDFNST_UINT, "4", "0", "239" },
   { "pce_fast.slend", MDFNSF_NOFLAGS, gettext_noop("Last rendered scanline."), NULL, MDFNST_UINT, "235", "0", "239" },
@@ -653,6 +636,7 @@ static MDFNSetting PCESettings[] =
   { "pce_fast.nospritelimit", MDFNSF_NOFLAGS, gettext_noop("Remove 16-sprites-per-scanline hardware limit."), NULL, MDFNST_BOOL, "0" },
 
   { "pce_fast.cdbios", MDFNSF_EMU_STATE, gettext_noop("Path to the CD BIOS"), NULL, MDFNST_STRING, "syscard3.pce" },
+
   { "pce_fast.adpcmlp", MDFNSF_NOFLAGS, gettext_noop("Enable dynamic ADPCM lowpass filter."), NULL, MDFNST_BOOL, "0" },
   { "pce_fast.cdpsgvolume", MDFNSF_NOFLAGS, gettext_noop("PSG volume when playing a CD game."), NULL, MDFNST_UINT, "100", "0", "200" },
   { "pce_fast.cddavolume", MDFNSF_NOFLAGS, gettext_noop("CD-DA volume."), NULL, MDFNST_UINT, "100", "0", "200" },
@@ -695,6 +679,7 @@ MDFNGI EmulatedPCE_Fast =
  NULL,
  NULL,
  MemRead,
+ NULL,
  false,
  StateAction,
  Emulate,

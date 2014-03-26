@@ -15,9 +15,6 @@ void NESDBG_Disassemble(uint32 &a, uint32 SpecialA, char *);
 uint32 NESDBG_GetRegister(const std::string &name, std::string *special);
 void NESDBG_SetRegister(const std::string &name, uint32 value);
 
-
-void NESDBG_TestFoundBPoint(void);
-
 void NESDBG_AddBranchTrace(uint32 from, uint32 to, uint32 vector);
 
 void NESDBG_GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint8 *Buffer);

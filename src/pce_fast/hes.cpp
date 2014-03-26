@@ -18,7 +18,7 @@
 #include "pce.h"
 #include "hes.h"
 #include "huc.h"
-#include "../cdrom/pcecd.h"
+#include "pcecd.h"
 #include "../player.h"
 #include "../endian.h"
 

@@ -61,18 +61,15 @@ extern bool pending_save_state, pending_ssnapshot, pending_snapshot, pending_sav
 void DoRunNormal(void);
 void DoFrameAdvance(void);
 
-
-void LockGameMutex(bool lock);
 void DebuggerFudge(void);
 
 extern volatile int GameThreadRun;
 
 extern int sdlhaveogl;
 
-bool MT_FromRemote_VideoSync(void);
-bool MT_FromRemote_SoundSync(void);
 
 void GT_ToggleFS(void);
-void GT_ReinitVideo(void);
+bool GT_ReinitVideo(void);
+bool GT_ReinitSound(void);
 
 #endif

@@ -81,6 +81,9 @@ Video:
 	screen to jitter/bounce slightly in certain cases in some games(Seiken Densetsu 3 dialogue boxes are a good example).
 	TODO is to fix it, obviously. ;)
 
+	Pixel shaders have precision issues leading to graphics distortion(in the shape of a diagonal line across the screen) for some
+	texture size versus source rectangle dimensions versus destination rectangle dimensions.
+
 	Refactor hq2x, scale2x, 2xsai, etc. filtering code into classes based off an abstract base class.
 
 	Add a "tblur.handle_gamma" setting that, when enabled, will cause gamma-correct temporal blurring.
@@ -88,7 +91,7 @@ Video:
 Sound:
 	Handle sound being disabled.
 
-	Handle sound device failures(e.g. USB device removals, or a doofy user disabling the device in Windows whil Mednafen
+	Handle sound device failures(e.g. USB device removals, or a doofy user disabling the device in Windows while Mednafen
 	is using it) more gracefully.
 
 	Open sound device in the game thread, and close it in the game thread, since the game thread is what writes to it.
@@ -169,6 +172,8 @@ Genesis:
 
 	Implement "Virtua Racing" SVP emulation via code supplied by notaz.
 
+	Look into the problem of some broken sound effects in Mortal Kombat.
+
 PC-FX:
 	cdrom/scsicd.cpp
 		Allow commands that require medium access to complete successfully if there's no disc present and 
@@ -208,15 +213,11 @@ PC-FX:
 
 	Figure out 1M/4M DRAM mode differences on KING [low priority]
 
-	Set pcfx.rainbow.chromaip default to 0 if the glitch in Deep Blue Fleet when viewing a ship from the side doesn't occur on a real PC-FX.
-
 	Determine correct relative volume levels between ADPCM, CD-DA, and PSG.
 
 	Investigate reported discrepancy between real PC-FX and Mednafen when uploading waveform to PSG by rewriting
 	the channel number/index before each sample write(on a real PC-FX, it doesn't work; IE, likely either the sample
 	writes are being ignored, or the waveform memory index is being reset on channel number/index write).
-
-	V810 MUL or MULU overflow flag logic is likely wrong(can't remember which off hand ATM; confirm, and fix).
 
 NES:
 	Add some kind of protection against FDS corruption when exiting the emulator in the middle of a disk write.

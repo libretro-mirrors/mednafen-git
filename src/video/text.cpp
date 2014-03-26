@@ -47,6 +47,11 @@ static FontDescriptor_t FontDescriptors[_MDFN_FONT_COUNT] =
 
 static uint16 FontDataIndexCache[_MDFN_FONT_COUNT][65536];
 
+uint32 GetFontHeight(unsigned which_font)
+{
+ return(FontDescriptors[which_font].glyph_height);
+}
+
 void MDFN_InitFontData(void)
 {
  unsigned int x;

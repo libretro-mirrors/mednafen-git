@@ -49,9 +49,6 @@
 /* Define if altivec.h is present and usable. */
 #undef HAVE_ALTIVEC_H
 
-/* Define if we should include from OpenGL instead of GL */
-#undef HAVE_APPLE_OPENGL_FRAMEWORK
-
 /* Define to 1 if you have the `argz_count' function. */
 #undef HAVE_ARGZ_COUNT
 
@@ -301,7 +298,7 @@
 /* Define to 1 if you have the `recv' function. */
 #undef HAVE_RECV
 
-/* Define if we are compiling with SDL sound support. */
+/* Define if we are compiling with SDL. */
 #undef HAVE_SDL
 
 /* Define to 1 if you have the `select' function. */

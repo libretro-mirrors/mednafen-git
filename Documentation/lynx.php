@@ -17,7 +17,6 @@ directory.
  <table border>
   <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
   <tr><td>ALT + SHIFT + 1</td><td>Activate in-game input configuration process for Lynx pad.</td><td>input_config1</td></tr>
-  <tr><td>ALT + O</td><td>Rotate the screen<i>(and optionally input controlled, by setting lynx.rotateinput)</i></td><td>rotate_screen</td></tr>
  </table>
  <p>
  <table border>

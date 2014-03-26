@@ -393,6 +393,7 @@ MDFNGI EmulatedNGP =
  NULL,
  NULL,
  NULL,
+ NULL,
  false,
  StateAction,
  Emulate,

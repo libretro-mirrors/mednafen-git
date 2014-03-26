@@ -501,7 +501,7 @@ static DebuggerInfoStruct DBGInfo =
  WSwanDBG_FlushBreakPoints,
  WSwanDBG_AddBreakPoint,
  WSwanDBG_SetCPUCallback,
- WSwanDBG_SetBPCallback,
+ WSwanDBG_EnableBranchTrace,
  WSwanDBG_GetBranchTrace,
  WSwan_GfxSetGraphicsDecode,
 };
@@ -538,6 +538,7 @@ MDFNGI EmulatedWSwan =
  CloseGame,
  WSwan_SetLayerEnableMask,
  "Background\0Foreground\0Sprites\0",
+ NULL,
  NULL,
  NULL,
  NULL,

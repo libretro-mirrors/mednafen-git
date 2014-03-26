@@ -18,7 +18,7 @@
 #include "pce.h"
 #include "hes.h"
 #include "huc.h"
-#include "../cdrom/pcecd.h"
+#include "pcecd.h"
 #include "../player.h"
 
 namespace MDFN_IEN_PCE
@@ -162,6 +162,17 @@ int PCE_HESLoad(const uint8 *buf, uint32 size)
  }
 
  memcpy(rom_backup, rom, 0x88 * 8192);
+
+ //
+ // Try to detect SuperGrafx rips in the future?
+ //
+ //for(unsigned i = 0; i < 0x80; i++)
+ //{
+ // printf("0x%02x: 0x%08x\n", i, (uint32)crc32(0, &rom[i * 8192], 8192));
+ //}
+ //
+ //
+ //
 
  CurrentSong = StartingSong;
  TotalSongs = 256;

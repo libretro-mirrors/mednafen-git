@@ -737,7 +737,7 @@ static void IO_CTHULHU(char *test_string) //int evil_babies)
 
 static void mem_op(char* fmt, ...)
 {
-	static char lovelykoala[65536];
+	static char lovelykoala[262144];
 	va_list args;
 
     if (opcode_file == NULL) return;
@@ -747,7 +747,8 @@ static void mem_op(char* fmt, ...)
 //	va_end(args);
 
     va_start(args, fmt);
-    vsnprintf(lovelykoala, sizeof(lovelykoala), fmt, args);
+    //vsnprintf(lovelykoala, sizeof(lovelykoala), fmt, args);
+    vsprintf(lovelykoala, fmt, args);
     va_end(args);
 
     IO_CTHULHU(lovelykoala);

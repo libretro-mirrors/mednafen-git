@@ -278,9 +278,9 @@ bool InitSound(MDFNGI *gi)
   return(FALSE);
  }
 
- if(format.rate < 22050 || format.rate > 1048576)
+ if(format.rate < 22050 || format.rate > 192000)
  {
-  MDFND_PrintError(_("Set rate is out of range [22050-1048576]"));
+  MDFND_PrintError(_("Set rate is out of range [22050-192000]"));
   KillSound();
   MDFN_indent(-2);
   return(FALSE);

@@ -570,6 +570,7 @@ MDFNGI EmulatedMD =
  NULL, //InstallReadPatch,
  NULL, //RemoveReadPatches,
  NULL, //MemRead,
+ NULL,
  false,
  StateAction,
  Emulate,

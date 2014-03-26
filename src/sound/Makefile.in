@@ -93,7 +93,7 @@ libmdfnsound_a_AR = $(AR) $(ARFLAGS)
 libmdfnsound_a_LIBADD =
 am_libmdfnsound_a_OBJECTS = Blip_Buffer.$(OBJEXT) \
 	Stereo_Buffer.$(OBJEXT) Fir_Resampler.$(OBJEXT) \
-	WAVRecord.$(OBJEXT)
+	WAVRecord.$(OBJEXT) OwlResampler.$(OBJEXT)
 libmdfnsound_a_OBJECTS = $(am_libmdfnsound_a_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -275,7 +275,6 @@ WOE32DLL = @WOE32DLL@
 XGETTEXT = @XGETTEXT@
 XGETTEXT_015 = @XGETTEXT_015@
 XGETTEXT_EXTRA_OPTIONS = @XGETTEXT_EXTRA_OPTIONS@
-XMKMF = @XMKMF@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -336,7 +335,8 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_builddir)/include/blip
 noinst_LIBRARIES = libmdfnsound.a
-libmdfnsound_a_SOURCES = Blip_Buffer.cpp Stereo_Buffer.cpp Fir_Resampler.cpp WAVRecord.cpp
+libmdfnsound_a_SOURCES = Blip_Buffer.cpp Stereo_Buffer.cpp \
+	Fir_Resampler.cpp WAVRecord.cpp OwlResampler.cpp
 all: all-am
 
 .SUFFIXES:
@@ -387,6 +387,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Blip_Buffer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Fir_Resampler.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/OwlResampler.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Stereo_Buffer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WAVRecord.Po@am__quote@
 

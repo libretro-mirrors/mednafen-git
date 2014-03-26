@@ -92,7 +92,8 @@ am__v_at_0 = @
 libpce_fast_a_AR = $(AR) $(ARFLAGS)
 libpce_fast_a_LIBADD =
 am__objects_1 = huc6280.$(OBJEXT) pce.$(OBJEXT) vdc.$(OBJEXT) \
-	input.$(OBJEXT) huc.$(OBJEXT) hes.$(OBJEXT) tsushin.$(OBJEXT)
+	input.$(OBJEXT) huc.$(OBJEXT) hes.$(OBJEXT) pcecd.$(OBJEXT) \
+	pcecd_drive.$(OBJEXT) psg.$(OBJEXT)
 am_libpce_fast_a_OBJECTS = $(am__objects_1)
 libpce_fast_a_OBJECTS = $(am_libpce_fast_a_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -275,7 +276,6 @@ WOE32DLL = @WOE32DLL@
 XGETTEXT = @XGETTEXT@
 XGETTEXT_015 = @XGETTEXT_015@
 XGETTEXT_EXTRA_OPTIONS = @XGETTEXT_EXTRA_OPTIONS@
-XMKMF = @XMKMF@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -336,7 +336,7 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_srcdir)/src/hw_misc -I$(top_srcdir)/src/hw_sound
 noinst_LIBRARIES = libpce_fast.a
-mednafen_SOURCES = huc6280.cpp pce.cpp vdc.cpp input.cpp huc.cpp hes.cpp tsushin.cpp
+mednafen_SOURCES = huc6280.cpp pce.cpp vdc.cpp input.cpp huc.cpp hes.cpp pcecd.cpp pcecd_drive.cpp psg.cpp
 libpce_fast_a_SOURCES = $(mednafen_SOURCES)
 all: all-am
 
@@ -391,7 +391,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/huc6280.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/input.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pce.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsushin.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pcecd.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pcecd_drive.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/psg.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdc.Po@am__quote@
 
 .cpp.o:

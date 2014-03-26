@@ -106,9 +106,6 @@ class PS_SPU
  int32 UpdateFromCDC(int32 clocks);
  //pscpu_timestamp_t Update(pscpu_timestamp_t timestamp);
 
-
- static void DecodeADPCM(const uint8 *input, int16 *output, const unsigned shift, const unsigned weight);
-
  private:
 
  void CheckIRQAddr(uint32 addr);
@@ -156,9 +153,6 @@ class PS_SPU
  uint32 BlockEnd;
 
  uint32 CWA;
-
- int32 CDXA_ResampBuffer[2][4];
- int32 CDXA_CurPhase;
 
  union
  {

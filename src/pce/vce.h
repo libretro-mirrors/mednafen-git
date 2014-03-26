@@ -44,12 +44,17 @@ class VCE : public HuC6280_Support
 	void StartFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, MDFN_Rect *LineWidths, int skip);
 	bool RunPartial(void);
 
+        void Update(const int32 timestamp);
+
+	INLINE void ResetTS(int ts_base)
+	{
+	 last_ts = ts_base;
+	}
+
 	inline int GetScanlineNo(void)
 	{
 	 return(scanline);
 	}
-
-	virtual int32 Sync(const int32 timestamp);
 
 	void Reset(const int32 timestamp);
 
@@ -201,6 +206,7 @@ class VCE : public HuC6280_Support
 
 	private:
 
+        int32 Sync(const int32 timestamp);
         void FixPCache(int entry);
         void SetVCECR(uint8 V);
 
@@ -275,7 +281,6 @@ class VCE : public HuC6280_Support
         uint16 color_table[0x200];
         uint32 color_table_cache[0x200 * 2];	// * 2 for user layer disabling stuff.
         uint16 ctaddress;
-
 
 	uint8 *CustomColorMap; // 1024 * 3
 	uint32 CustomColorMapLen;        // 512 or 1024

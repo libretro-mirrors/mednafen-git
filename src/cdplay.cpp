@@ -15,6 +15,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+// TODO: Clear Q subchannel data on disc change and manual track change, add Q subchannel mode have variable(s).
+
 //#include <mednafen/mednafen.h>
 #include "mednafen.h"
 #include "cdrom/cdromif.h"
@@ -153,6 +155,8 @@ static void CloseGame(void)
 }
 
 static uint8 SubQBuf[3][0xC];
+//static bool SubQHave[3];
+static uint8 SubQBuf_LastValid[0xC];
 
 static void GenSubQFromSubPW(uint8 *SubPWBuf)
 {
@@ -171,6 +175,8 @@ static void GenSubQFromSubPW(uint8 *SubPWBuf)
 
   if(adr <= 0x3)
    memcpy(SubQBuf[adr], sq, 0xC);
+
+  memcpy(SubQBuf_LastValid, sq, 0xC);
  }
 }
 static const int lobes = 2;
@@ -397,9 +403,6 @@ static void Emulate(EmulateSpecStruct *espec)
   pixels += 13 * espec->surface->pitch32;
 
 
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)"SubQ", text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
-  pixels += 13 * espec->surface->pitch32;
-
   //trio_snprintf(tmpbuf, 256, "Q-Mode: %01x", SubQBuf[1][0] & 0xF);
   //DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
   //pixels += 13 * espec->surface->pitch32;
@@ -418,6 +421,20 @@ static void Emulate(EmulateSpecStruct *espec)
   pixels += 13 * espec->surface->pitch32;
 
   trio_snprintf(tmpbuf, 256, "Absolute: %02d:%02d:%02d", BCD_to_U8(SubQBuf[1][7]), BCD_to_U8(SubQBuf[1][8]), BCD_to_U8(SubQBuf[1][9]));
+  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  pixels += 13 * espec->surface->pitch32;
+
+  trio_snprintf(tmpbuf, 256, "Control: 0x%02x", (SubQBuf_LastValid[0] >> 4) & 0xF);
+  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  pixels += 13 * espec->surface->pitch32;
+
+
+  // Catalog
+  trio_snprintf(tmpbuf, 256, "Catalog: %x%x%x%x%x%x%x%x%x%x%x%x%x",
+						(SubQBuf[2][1] >> 4) & 0xF, (SubQBuf[2][1] >> 0) & 0xF, (SubQBuf[2][2] >> 4) & 0xF, (SubQBuf[2][2] >> 0) & 0xF,
+					        (SubQBuf[2][3] >> 4) & 0xF, (SubQBuf[2][3] >> 0) & 0xF, (SubQBuf[2][4] >> 4) & 0xF, (SubQBuf[2][4] >> 0) & 0xF,
+					        (SubQBuf[2][5] >> 4) & 0xF, (SubQBuf[2][5] >> 0) & 0xF, (SubQBuf[2][6] >> 4) & 0xF, (SubQBuf[2][6] >> 0) & 0xF,
+						(SubQBuf[2][7] >> 4) & 0xF);
   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
   pixels += 13 * espec->surface->pitch32;
  }
@@ -562,6 +579,7 @@ MDFNGI EmulatedCDPlay =
  CloseGame,
  NULL,
  NULL,            // Layer names, null-delimited
+ NULL,
  NULL,
  NULL,
  NULL,

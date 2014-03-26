@@ -29,8 +29,9 @@ The spectrum peaked at 15734 Hz.  21477272.727272... / 3 / 15734 = 455.00(CPU cy
 #include "../video.h"
 #include "vdc.h"
 #include "huc.h"
-#include "../cdrom/pcecd.h"
+#include "pcecd.h"
 #include "../cputest/cputest.h"
+#include "../FileStream.h"
 #include <trio/trio.h>
 #include <math.h>
 
@@ -389,7 +390,7 @@ void VDC_SetPixelFormat(const MDFN_PixelFormat &format)
   {
    double y;
 
-   y = round(0.300 * r + 0.589 * g + 0.111 * b);
+   y = floor(0.5 + (0.300 * r + 0.589 * g + 0.111 * b));
 
    if(y < 0)
     y = 0;
@@ -1296,10 +1297,14 @@ void DrawOverscan(const vdc_t *vdc, T *target, const MDFN_Rect *lw, const bool f
  }
 }
 
-void VDC_RunFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, MDFN_Rect *LineWidths, int skip)
+void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
 {
  vdc_t *vdc = vdc_chips[0];
  int max_dc = 0;
+ MDFN_Surface *surface = espec->surface;
+ MDFN_Rect *DisplayRect = &espec->DisplayRect;
+ MDFN_Rect *LineWidths = espec->LineWidths;
+ bool skip = espec->skip || IsHES;
 
  // x and w should be overwritten in the big loop
 
@@ -1445,6 +1450,8 @@ void VDC_RunFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, MDFN_Rect *Line
 
   HuC6280_Run(line_leadin1);
 
+  const bool fc_vrm = (frame_counter >= 14 && frame_counter < (14 + 242));
+
   for(int chip = 0; chip < VDC_TotalChips; chip++)
   {
    MDFN_ALIGN(8) uint8 bg_linebuf[8 + 1024];
@@ -1468,22 +1475,19 @@ void VDC_RunFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, MDFN_Rect *Line
      target_ptr = surface->pixels + (frame_counter - 14) * surface->pitchinpix;
    }
 
-   if(frame_counter >= 14 && frame_counter < (14 + 242) && !skip)
+   if(fc_vrm && !skip)
     LineWidths[frame_counter - 14] = *DisplayRect;
 
    if(vdc->burst_mode)
    {
-    if(frame_counter >= 14 && frame_counter < (14 + 242))
+    if(fc_vrm && SHOULD_DRAW)
     {
-     if(SHOULD_DRAW)
-     {
-      if(target_ptr8)
-       DrawOverscan(vdc, target_ptr8, DisplayRect);
-      else if(target_ptr16)
-       DrawOverscan(vdc, target_ptr16, DisplayRect);
-      else
-       DrawOverscan(vdc, target_ptr, DisplayRect);
-     }
+     if(target_ptr8)
+      DrawOverscan(vdc, target_ptr8, DisplayRect);
+     else if(target_ptr16)
+      DrawOverscan(vdc, target_ptr16, DisplayRect);
+     else
+      DrawOverscan(vdc, target_ptr, DisplayRect);
     }
    }
    else if(vdc->display_counter >= (VDS + VSW) && vdc->display_counter < (VDS + VSW + VDW + 1))
@@ -1494,7 +1498,7 @@ void VDC_RunFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, MDFN_Rect *Line
      vdc->BG_YOffset++;
     vdc->BG_XOffset = vdc->BXR;
 
-    if(frame_counter >= 14 && frame_counter < (14 + 242))
+    if(fc_vrm)
     {
      uint32 start, end;
 
@@ -1602,35 +1606,32 @@ void VDC_RunFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, MDFN_Rect *Line
        DrawOverscan(vdc, target_ptr, DisplayRect, false, target_offset, target_offset + width);
      } // end if(SHOULD_DRAW)
     }
-
    }
-   else // Hmm, overscan...
+   else if(SHOULD_DRAW && fc_vrm) // Hmm, overscan...
    {
-    if(frame_counter >= 14 && frame_counter < (14 + 242))
-    {
-     if(SHOULD_DRAW)
-     {
-      if(target_ptr8)
-       DrawOverscan(vdc, target_ptr8, DisplayRect);
-      else if(target_ptr16)
-       DrawOverscan(vdc, target_ptr16, DisplayRect);
-      else
-       DrawOverscan(vdc, target_ptr, DisplayRect);
-     }
-    }
+    if(target_ptr8)
+     DrawOverscan(vdc, target_ptr8, DisplayRect);
+    else if(target_ptr16)
+     DrawOverscan(vdc, target_ptr16, DisplayRect);
+    else
+     DrawOverscan(vdc, target_ptr, DisplayRect);
    }
   }
 
-  if(VDC_TotalChips == 2 && SHOULD_DRAW)
-   if(frame_counter >= 14 && frame_counter < (14 + 242))
-   {
-    if(surface->format.bpp == 8)
-     MixVPC(DisplayRect->w, line_buffer[0] + DisplayRect->x, line_buffer[1] + DisplayRect->x, surface->pixels8 + (frame_counter - 14) * surface->pitchinpix + DisplayRect->x);
-    else if(surface->format.bpp == 16)
-     MixVPC(DisplayRect->w, line_buffer[0] + DisplayRect->x, line_buffer[1] + DisplayRect->x, surface->pixels16 + (frame_counter - 14) * surface->pitchinpix + DisplayRect->x);
-    else
-     MixVPC(DisplayRect->w, line_buffer[0] + DisplayRect->x, line_buffer[1] + DisplayRect->x, surface->pixels + (frame_counter - 14) * surface->pitchinpix + DisplayRect->x);
-   } 
+  if(VDC_TotalChips == 2 && SHOULD_DRAW && fc_vrm)
+  {
+   if(surface->format.bpp == 8)
+    MixVPC(DisplayRect->w, line_buffer[0] + DisplayRect->x, line_buffer[1] + DisplayRect->x, surface->pixels8 + (frame_counter - 14) * surface->pitchinpix + DisplayRect->x);
+   else if(surface->format.bpp == 16)
+    MixVPC(DisplayRect->w, line_buffer[0] + DisplayRect->x, line_buffer[1] + DisplayRect->x, surface->pixels16 + (frame_counter - 14) * surface->pitchinpix + DisplayRect->x);
+   else
+    MixVPC(DisplayRect->w, line_buffer[0] + DisplayRect->x, line_buffer[1] + DisplayRect->x, surface->pixels + (frame_counter - 14) * surface->pitchinpix + DisplayRect->x);
+  } 
+
+  if(SHOULD_DRAW && fc_vrm)
+  {
+   MDFN_MidLineUpdate(espec, frame_counter - 14);
+  }
 
   for(int chip = 0; chip < VDC_TotalChips; chip++)
    if((vdc_chips[chip]->CR & 0x08) && need_vbi[chip])
@@ -1649,10 +1650,9 @@ void VDC_RunFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, MDFN_Rect *Line
 
   if(PCE_IsCD)
   {
-   int32 dummy_ne;
-
-   dummy_ne = PCECD_Run(HuCPU.timestamp * 3);
+   PCECD_Run(HuCPU.timestamp * 3);
   }
+
   for(int chip = 0; chip < VDC_TotalChips; chip++)
   {
    vdc = vdc_chips[chip];
@@ -1711,6 +1711,8 @@ void VDC_RunFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, MDFN_Rect *Line
      DrawOverscan(vdc_chips[0], target_ptr16, DisplayRect);
     else
      DrawOverscan(vdc_chips[0], target_ptr, DisplayRect);
+
+    MDFN_MidLineUpdate(espec, y);
    }
   }
  }
@@ -1739,43 +1741,47 @@ void VDC_Power(void)
  VDC_Reset();
 }
 
-#include <errno.h>
 // Warning:  As of 0.8.x, this custom colormap function will only work if it's called from VDC_Init(), in the Load()
 // game load path.
+static bool LoadCustomPalette(const char *path) MDFN_COLD;
 static bool LoadCustomPalette(const char *path)
 {
  MDFN_printf(_("Loading custom palette from \"%s\"...\n"),  path);
  MDFN_indent(1);
- gzFile gp = gzopen(path, "rb");
- if(!gp)
+
+ CustomColorMap = NULL;
+
+ try
  {
-  MDFN_printf(_("Error opening file: %m\n"));        // FIXME, zlib and errno...
-  MDFN_indent(-1);
-  return(FALSE);
- }
- else if((CustomColorMap = (uint8*)MDFN_malloc(1024 * 3, _("custom color map"))))
- {
-  long length_read;
+  FileStream fp(path, FileStream::MODE_READ);
 
-  length_read = gzread(gp, CustomColorMap, 1024 * 3);
+  CustomColorMap = new uint8[1024 * 3];
 
-  if(length_read == 512 * 3)
-   MDFN_printf("Palette only has 512 entries.  Calculating the strip-colorburst entries.\n");
-
-  if(length_read != 1024 * 3 && length_read != 512 * 3)
+  fp.read(CustomColorMap, 512 * 3, true);
+  if(fp.read(CustomColorMap, 512 * 3, false) == 512 * 3)
+   CustomColorMapLen = 1024;
+  else
   {
-   MDFN_printf(_("Error reading file\n"));
-   MDFN_indent(-1);
+   MDFN_printf(_("Palette is missing the full set of 512 greyscale entries.  Strip-colorburst entries will be calculated.\n"));
+   CustomColorMapLen = 512;
+  }
+ }
+ catch(std::exception &e)
+ {
+  if(CustomColorMap)
+  {
    MDFN_free(CustomColorMap);
    CustomColorMap = NULL;
-   return(FALSE);
   }
 
-  CustomColorMapLen = length_read / 3;
+  MDFN_printf("%s\n", e.what());
+  MDFN_indent(-1);
+  return(false);
  }
+
  MDFN_indent(-1);
 
- return(TRUE);
+ return(true);
 }
 
 

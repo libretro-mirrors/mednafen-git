@@ -2,13 +2,15 @@
 
 <?php BeginPage('wswan', 'WonderSwan'); ?>
 
-<p>
+<?php BeginSection('Introduction'); ?>
+
 Mednafen's WonderSwan (Color) emulation is based off of <a href="http://cygne.emuunlim.com/">Cygne</a>.
-</p>
 
 <p>
 WSR(WonderSwan sound rip format) playback is supported.
 </p>
+
+<?php EndSection(); ?>
 
 <?php BeginSection('Default Key Assignments'); ?>
 
@@ -22,7 +24,6 @@ WSR(WonderSwan sound rip format) playback is supported.
  <table border>
   <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
   <tr><td>ALT + SHIFT + 1</td><td>Activate in-game input configuration process for WonderSwan pad.</td><td>input_config1</td></tr>
-  <tr><td>ALT + O</td><td>Rotate the screen<i>(and optionally input controlled, by setting wswan.rotateinput)</i></td><td>rotate_screen</td></tr>
  </table>
  </p>
  <p>

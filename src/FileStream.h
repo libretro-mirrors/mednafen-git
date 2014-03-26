@@ -49,6 +49,8 @@ class FileStream : public Stream
  virtual int64 size(void);
  virtual void close(void);
 
+ virtual int get_line(std::string &str);
+
  private:
  FileWrapper fw;
  const int OpenedMode;

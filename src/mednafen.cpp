@@ -17,6 +17,7 @@
 
 #include        "mednafen.h"
 
+#include	<math.h>
 #include        <string.h>
 #include	<stdarg.h>
 #include	<errno.h>
@@ -30,6 +31,7 @@
 #include	"netplay.h"
 #include	"netplay-driver.h"
 #include	"general.h"
+#include	"string/trim.h"
 
 #include	"state.h"
 #include	"movie.h"
@@ -286,7 +288,7 @@ void MDFNI_CloseGame(void)
   if(MDFNGameInfo->name)
   {
    free(MDFNGameInfo->name);
-   MDFNGameInfo->name=0;
+   MDFNGameInfo->name = NULL;
   }
   MDFNMP_Kill();
 
@@ -458,6 +460,32 @@ static void ReadM3U(std::vector<std::string> &file_list, std::string path, unsig
  }
 }
 
+static void MakeGIName(MDFNGI* gi, const char* path)
+{
+ char* ns = NULL;
+ char* tmp;
+
+ if((ns = strdup(GetFNComponent(path))))
+ {
+  unsigned nslen = strlen(ns);
+
+  for(unsigned x = 0; x < nslen; x++)
+  {
+   if(ns[x] == '_')
+    ns[x] = ' ';
+   else if(ns[x] < 0x20)
+    ns[x] = ' ';
+  }
+
+  if((tmp = strrchr(ns, '.')))
+   *tmp = 0;
+
+  MDFN_trim(ns);
+
+  gi->name = (UTF8*)ns;
+ }
+}
+
 // TODO: LoadCommon()
 
 MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename, const bool is_device)
@@ -529,12 +557,19 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename, const boo
   MDFN_printf(_("CD %d Layout:\n"), i + 1);
   MDFN_indent(1);
 
+  MDFN_printf(_("Disc Type: 0x%02x\n"), toc.disc_type);
+
   for(int32 track = toc.first_track; track <= toc.last_track; track++)
   {
    MDFN_printf(_("Track %2d, LBA: %6d  %s\n"), track, toc.tracks[track].lba, (toc.tracks[track].control & 0x4) ? "DATA" : "AUDIO");
   }
 
-  MDFN_printf("Leadout: %6d\n", toc.tracks[100].lba);
+  MDFN_printf(_("Leadout: %6d  %s\n"), toc.tracks[100].lba, (toc.tracks[100].control & 0x4) ? "DATA" : "AUDIO");
+
+  if((toc.tracks[toc.last_track].control & 0x4) != (toc.tracks[100].control & 0x4))
+   MDFN_printf(_("WARNING:  DATA/AUDIO TYPE MISMATCH BETWEEN LAST TRACK AND LEADOUT AREA."));
+
+
   MDFN_indent(-1);
   MDFN_printf("\n");
  }
@@ -625,9 +660,20 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename, const boo
 
         MDFN_printf(_("Using module: %s(%s)\n\n"), MDFNGameInfo->shortname, MDFNGameInfo->fullname);
 
-
  // TODO: include module name in hash
  memcpy(MDFNGameInfo->MD5, LayoutMD5, 16);
+
+ std::string modoverride_settings_file_path = MDFN_GetBaseDirectory() + std::string(PSS) + std::string(MDFNGameInfo->shortname) + std::string(".cfg");
+
+ if(!MDFN_LoadSettings(modoverride_settings_file_path.c_str(), true))
+ {
+  for(unsigned i = 0; i < CDInterfaces.size(); i++)
+   delete CDInterfaces[i];
+  CDInterfaces.clear();
+
+  MDFNGameInfo = NULL;
+  return(0);
+ }
 
  if(!(MDFNGameInfo->LoadCD(&CDInterfaces)))
  {
@@ -638,6 +684,9 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename, const boo
   MDFNGameInfo = NULL;
   return(0);
  }
+
+ if(!MDFNGameInfo->name && !is_device)
+  MakeGIName(MDFNGameInfo, devicename);
 
  MDFNI_SetLayerEnableMask(~0ULL);
 
@@ -661,8 +710,8 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename, const boo
   MDFNMP_InstallReadPatches();
  }
 
-  last_sound_rate = -1;
-  memset(&last_pixel_format, 0, sizeof(MDFN_PixelFormat));
+ last_sound_rate = -1;
+ memset(&last_pixel_format, 0, sizeof(MDFN_PixelFormat));
 
  return(MDFNGameInfo);
 }
@@ -810,7 +859,7 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char *name)
 	 if(force_module)
           MDFN_PrintError(_("Unrecognized system \"%s\"!"), force_module);
 	 else
-          MDFN_PrintError(_("Unrecognized file format.  Sorry."));
+          MDFN_PrintError(_("Unrecognized file format."));
 
          MDFN_indent(-1);
          MDFNGameInfo = NULL;
@@ -826,20 +875,16 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char *name)
         MDFNGameInfo->name = NULL;
         MDFNGameInfo->rotated = 0;
 
+	std::string modoverride_settings_file_path = MDFN_GetBaseDirectory() + std::string(PSS) + std::string(MDFNGameInfo->shortname) + std::string(".cfg");
 
-	//
-	// Load per-game settings
-	//
-	// Maybe we should make a "pgcfg" subdir, and automatically load all files in it?
-#if 0
+	if(!MDFN_LoadSettings(modoverride_settings_file_path.c_str(), true))
 	{
-	 char hash_string[n + 1];
-	 const char *section_names[3] = { MDFNGameInfo->shortname, hash_string, NULL };
-	//asdfasdfMDFN_LoadSettings(std::string(basedir) + std::string(PSS) + std::string("pergame.cfg");
+	 GameFile.Close();
+
+	 MDFN_indent(-2);
+	 MDFNGameInfo = NULL;
+	 return(0);
 	}
-#endif
-	// End load per-game settings
-	//
 
         if(MDFNGameInfo->Load(name, &GameFile) <= 0)
 	{
@@ -869,20 +914,7 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char *name)
 	MDFN_indent(-2);
 
 	if(!MDFNGameInfo->name)
-        {
-         unsigned int x;
-         char *tmp;
-
-         MDFNGameInfo->name = (UTF8 *)strdup(GetFNComponent(name));
-
-         for(x=0;x<strlen((char *)MDFNGameInfo->name);x++)
-         {
-          if(MDFNGameInfo->name[x] == '_')
-           MDFNGameInfo->name[x] = ' ';
-         }
-         if((tmp = strrchr((char *)MDFNGameInfo->name, '.')))
-          *tmp = 0;
-        }
+	 MakeGIName(MDFNGameInfo, name); 
 
 	PrevInterlaced = false;
 	deint.ClearState();
@@ -1117,7 +1149,7 @@ int MDFNI_Initialize(const char *basedir, const std::vector<MDFNSetting> &Driver
 
 	lzo_init();
 
-	MDFNI_SetBaseDirectory(basedir);
+	MDFN_SetBaseDirectory(basedir);
 
 	MDFN_InitFontData();
 
@@ -1210,6 +1242,54 @@ static void ProcessAudio(EmulateSpecStruct *espec)
    for(int i = 0; i < SoundBufSize * MDFNGameInfo->soundchan; i++)
     SoundBufPristine[orig_size + i] = SoundBuf[i];
   }
+
+#if 0
+  //
+  // Sine wave sweep for test purposes.
+  //
+  {
+   static double phase = 0;
+   static double phase_inc = 0.000;
+   static double phase_inc_inc = 0.000003;
+   static int32 scounter = 0;
+
+   int16 *sbuf = SoundBuf;
+   int32 slen = SoundBufSize;
+
+
+   if(MDFNGameInfo->soundchan == 2)
+   {
+    for(int i = 0; i < slen; i++)
+    {
+     int16 tmp = 127 * 256 * sin(phase);
+
+     tmp = (scounter & 8) ? 127 * 256 : -127 * 256;
+
+     sbuf[i * 2 + 0] = tmp;
+     sbuf[i * 2 + 1] = tmp;
+     phase += phase_inc;
+     phase_inc += phase_inc_inc;
+     scounter++;
+    }
+   }
+   else
+   {
+    for(int i = 0; i < slen; i++)
+    {
+     int16 tmp = 127 * 256 * sin(phase);
+
+     tmp = (scounter & 8) ? 127 * 256 : -127 * 256;
+
+     sbuf[i] = tmp;
+
+     phase += phase_inc;
+     phase_inc += phase_inc_inc;
+     scounter++;
+    }
+   }
+  }
+
+#endif
 
   if(espec->NeedSoundReverse)
   {
@@ -1358,6 +1438,11 @@ void MDFN_MidSync(EmulateSpecStruct *espec)
  espec->MasterCyclesALMS = espec->MasterCycles;
 }
 
+void MDFN_MidLineUpdate(EmulateSpecStruct *espec, int y)
+{
+ //MDFND_MidLineUpdate(espec, y);
+}
+
 void MDFNI_Emulate(EmulateSpecStruct *espec)
 {
  multiplier_save = 1;
@@ -1446,6 +1531,51 @@ void MDFNI_Emulate(EmulateSpecStruct *espec)
 
  MDFNGameInfo->Emulate(espec);
 
+#if 0
+ static const unsigned SpeculativeRender = 6;
+
+ if(SpeculativeRender == 0)
+  MDFNGameInfo->Emulate(espec);
+ else
+ {
+  StateMem shoe;
+
+  for(unsigned ra = 0; ra <= SpeculativeRender; ra++)
+  {
+   EmulateSpecStruct tmp_espec = *espec;
+
+   if(ra != SpeculativeRender)
+   {
+    if(ra == 1)
+    {
+     memset(&shoe, 0, sizeof(shoe));
+     MDFNSS_SaveSM(&shoe, false, false);
+    }
+    tmp_espec.skip = true;
+    tmp_espec.NeedSoundReverse = false;
+//    tmp_espec.SoundBuf = NULL;
+//    tmp_espec.SoundBufMaxSize = 0;
+    MDFNGameInfo->Emulate(&tmp_espec);
+    espec->VideoFormatChanged = false;
+    espec->SoundFormatChanged = false;
+   }
+   else
+   {
+    MDFNGameInfo->Emulate(espec);
+
+    shoe.loc = 0;
+    MDFNSS_LoadSM(&shoe, false, false);
+
+    if(shoe.data)
+    {
+     free(shoe.data);
+     shoe.data = NULL;
+    }
+   }
+  }
+ }
+#endif
+
  //
  // Sanity checks
  //
@@ -1453,9 +1583,20 @@ void MDFNI_Emulate(EmulateSpecStruct *espec)
  {
   if(espec->DisplayRect.h == 0)
   {
-   fprintf(stderr, "espec->DisplayRect.h == 0\n");
+   fprintf(stderr, "[BUG] espec->DisplayRect.h == 0\n");
   }
  }
+
+ if(!espec->MasterCycles)
+ {
+  fprintf(stderr, "[BUG] espec->MasterCycles == 0\n");
+ }
+
+ if(espec->MasterCycles < espec->MasterCyclesALMS)
+ {
+  fprintf(stderr, "[BUG] espec->MasterCycles < espec->MasterCyclesALMS\n");
+ }
+
  //
  //
  //

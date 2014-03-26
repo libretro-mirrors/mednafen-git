@@ -11,7 +11,12 @@ target(for example, x86_64) rather than 32-bit, if available.<br>
 </p>
 
 <p>
-PSF1 playback is supported.
+Enabling CD image preloading into memory via the <a href="mednafen.html#cd.image_memcache">cd.image_memcache</a> setting is recommended, to
+avoid short emulator pauses and audio pops due to waiting for disk accesses to complete when the emulated CD is accessed.
+</p>
+
+<p>
+<a href="http://www.neillcorlett.com/psf/">PSF1</a> playback is supported.
 </p>
 
 <?php EndSection(); ?>

@@ -88,11 +88,6 @@ extern bool armState;
 extern int armMode;
 extern void (*cpuSaveGameFunc)(uint32,uint8);
 
-extern bool CPUWriteBatteryFile(const char *);
-extern bool CPUReadBatteryFile(const char *);
-
-extern void CPUCleanUp();
-extern void CPUUpdateRender();
 extern void doMirroring(bool);
 extern void CPUUpdateRegister(uint32, uint16);
 extern void applyTimer ();
@@ -101,7 +96,6 @@ void CPUWriteMemory(uint32 address, uint32 value);
 void CPUWriteHalfWord(uint32, uint16);
 void CPUWriteByte(uint32, uint8);
 
-extern void CPULoop(int);
 extern void CPUCheckDMA(int,int);
 
 extern void CPUSwitchMode(int mode, bool saveState, bool breakLoop);

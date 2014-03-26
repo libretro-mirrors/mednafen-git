@@ -312,10 +312,12 @@ void OpenGL_Blitter::Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, 
  unsigned int tmpheight;
  uint32 *src_pixies;
 
- // When using pixel shader, disable texture interpolation, otherwise our pixel shaders won't work properly.
  if(shader)
  {
-  UsingIP = 0;
+  if(shader->ShaderNeedsBTIP())
+   UsingIP = VIDEOIP_BILINEAR;
+  else
+   UsingIP = VIDEOIP_OFF;
  }
 
  if(src_rect->w == 0 || src_rect->h == 0 || dest_rect->w == 0 || dest_rect->h == 0 || original_src_rect->w == 0 || original_src_rect->h == 0)
@@ -415,7 +417,7 @@ void OpenGL_Blitter::Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, 
  MakeSourceCoords(&tex_src_rect, src_coords, tmpwidth, tmpheight);
 
  if(shader)
-  shader->ShaderBegin(src_rect, dest_rect, tmpwidth, tmpheight, round((double)tmpwidth * original_src_rect->w / src_rect->w), round((double)tmpheight * original_src_rect->h / src_rect->h), rotated);
+  shader->ShaderBegin(gl_screen_w, gl_screen_h, src_rect, dest_rect, tmpwidth, tmpheight, round((double)tmpwidth * original_src_rect->w / src_rect->w), round((double)tmpheight * original_src_rect->h / src_rect->h), rotated);
 
  p_glPixelStorei(GL_UNPACK_ROW_LENGTH, src_surface->pitchinpix);
 
@@ -713,6 +715,7 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
   LFG(glUniform1iARB);
   LFG(glUniform2iARB);
   LFG(glUniform3iARB);
+  LFG(glUniformMatrix2fvARB);
   LFG(glActiveTextureARB);
   LFG(glGetInfoLogARB);
   LFG(glGetUniformLocationARB);
@@ -722,7 +725,7 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
   LFG(glGetObjectParameterivARB);
 
   shader = new OpenGL_Blitter_Shader(this, pixshader);
-  SupportNPOT = 0; 	 // Our pixel shaders don't work right with NPOT textures:  FIXME
+  SupportNPOT = 0; 	 // Our pixel shaders don't work right with NPOT textures(for them to do so would probably necessitate rewriting them to use texelFetch)
   p_glActiveTextureARB(GL_TEXTURE0_ARB);
  }
 

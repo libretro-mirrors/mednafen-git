@@ -32,6 +32,21 @@ class FileWrapper
 
  void put_char(int c);
 
+ INLINE int get_char(void)
+ {
+  int ret;
+
+  errno = 0;
+  ret = fgetc(fp);
+
+  if(MDFN_UNLIKELY(errno != 0))
+  {
+   ErrnoHolder ene(errno);
+   throw(MDFN_Error(ene.Errno(), _("Error reading from opened file \"%s\": %s"), path_save.c_str(), ene.StrError()));
+  }
+  return(ret);
+ }
+
  void put_string(const char *str);
  void put_string(const std::string &str);
 

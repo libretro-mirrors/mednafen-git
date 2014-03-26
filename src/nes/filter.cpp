@@ -598,10 +598,10 @@ NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_
   {
    count++;
    findo += s_ratio;
-  } while( fabs(1.0 - ((round(findo) / count) / s_ratio)) > rate_error);
+  } while( fabs(1.0 - ((floor(0.5 + findo) / count) / s_ratio)) > rate_error);
 
-  s_ratio = round(findo) / count;
-  findo_i = (uint32) round(findo);
+  s_ratio = floor(0.5 + findo) / count;
+  findo_i = (uint32) floor(0.5 + findo);
   ratio = 1 / s_ratio;
   NumPhases = count;
 

@@ -9,7 +9,10 @@ libmdfnsdl_a_SOURCES += console.cpp cheat.cpp fps.cpp video-state.cpp remote.cpp
 
 libmdfnsdl_a_SOURCES += opengl.cpp shader.cpp
 libmdfnsdl_a_SOURCES += overlay.cpp
-libmdfnsdl_a_SOURCES += video.cpp nongl.cpp nnx.cpp
+
+libmdfnsdl_a_SOURCES += video.cpp
+
+libmdfnsdl_a_SOURCES += nongl.cpp nnx.cpp
 
 if WANT_FANCY_SCALERS
 libmdfnsdl_a_SOURCES += hqxx-common.cpp hq2x.cpp hq3x.cpp hq4x.cpp scale2x.c scale3x.c scalebit.c 2xSaI.cpp

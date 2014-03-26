@@ -338,7 +338,7 @@ MPCReader::MPCReader(Stream *fp) : fw(fp)
 	{
          mpc_demux_exit(demux);
          demux = NULL;
-	 throw MDFN_Error(0, _("MusePack stream has wrong samplerate(%u Hz); the current samplerate is 44100 Hz."), si.sample_freq);
+	 throw MDFN_Error(0, _("MusePack stream has wrong samplerate(%u Hz); the correct samplerate is 44100 Hz."), si.sample_freq);
 	}
 }
 
