@@ -61,7 +61,7 @@
 JoystickManager *joy_manager = NULL;
 bool MDFNDHaveFocus;
 static bool RemoteOn = FALSE;
-bool pending_save_state, pending_snapshot, pending_save_movie;
+bool pending_save_state, pending_snapshot, pending_ssnapshot, pending_save_movie;
 static Uint32 volatile MainThreadID = 0;
 static bool ffnosound;
 
@@ -137,6 +137,8 @@ static MDFNSetting_EnumList Special_List[] =
     { "nny2x",	-1, "Nearest-neighbor 2x, y axis only" },
     { "nny3x",	-1, "Nearest-neighbor 3x, y axis only" }, 
     { "nny4x",	-1, "Nearest-neighbor 4x, y axis only" },
+//    { "scanlines", -1, "Scanlines" },
+
     { NULL, 0 },
 };
 
@@ -146,7 +148,7 @@ static MDFNSetting_EnumList Pixshader_List[] =
     { "autoip", 	SHADER_AUTOIP,	"Auto Interpolation", gettext_noop("Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.") },
     { "autoipsharper",	SHADER_AUTOIPSHARPER,	"Sharper Auto Interpolation", gettext_noop("Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.") },
     { "scale2x", 	SHADER_SCALE2X,    "Scale2x" },
-
+    { "sabr",		SHADER_SABR,	"SABR v3.0", gettext_noop("GPU-intensive.") },
     { "ipsharper", 	SHADER_IPSHARPER,  "Sharper bilinear interpolation." },
     { "ipxnoty", 	SHADER_IPXNOTY,    "Linear interpolation on X axis only." },
     { "ipynotx", 	SHADER_IPYNOTX,    "Linear interpolation on Y axis only." },
@@ -166,10 +168,6 @@ static MDFNSetting DriverSettings[] =
 
   { "netplay.host", MDFNSF_NOFLAGS, gettext_noop("Server hostname."), NULL, MDFNST_STRING, "netplay.fobby.net" },
   { "netplay.port", MDFNSF_NOFLAGS, gettext_noop("Server port."), NULL, MDFNST_UINT, "4046", "1", "65535" },
-  { "netplay.password", MDFNSF_NOFLAGS, gettext_noop("Server password."), gettext_noop("Password to connect to the netplay server."), MDFNST_STRING, "" },
-  { "netplay.localplayers", MDFNSF_NOFLAGS, gettext_noop("Local player count."), gettext_noop("Number of local players for network play.  This number is advisory to the server, and the server may assign fewer players if the number of players requested is higher than the number of controllers currently available."), MDFNST_UINT, "1", "0", "16" },
-  { "netplay.nick", MDFNSF_NOFLAGS, gettext_noop("Nickname."), gettext_noop("Nickname to use for network play chat."), MDFNST_STRING, "" },
-  { "netplay.gamekey", MDFNSF_NOFLAGS, gettext_noop("Key to hash with the MD5 hash of the game."), NULL, MDFNST_STRING, "" },
   { "netplay.smallfont", MDFNSF_NOFLAGS, gettext_noop("Use small(tiny!) font for netplay chat console."), NULL, MDFNST_BOOL, "0" },
 
   { "video.fs", MDFNSF_NOFLAGS, gettext_noop("Enable fullscreen mode."), NULL, MDFNST_BOOL, "0", },
@@ -383,6 +381,7 @@ static SDL_Thread *GameThread;
 static MDFN_Surface *VTBuffer[2] = { NULL, NULL };
 static MDFN_Rect *VTLineWidths[2] = { NULL, NULL };
 
+static int volatile VTSSnapshot = 0;
 static int volatile VTBackBuffer = 0;
 static SDL_mutex *VTMutex = NULL, *EVMutex = NULL, *GameMutex = NULL;
 static SDL_mutex *StdoutMutex = NULL;
@@ -748,6 +747,7 @@ static int LoadGame(const char *force_module, const char *path)
 	pending_save_state = 0;
 	pending_save_movie = 0;
 	pending_snapshot = 0;
+	pending_ssnapshot = 0;
 
 	if(loadcd)
 	{
@@ -985,7 +985,7 @@ int GameLoop(void *arg)
 	 if(!MDFN_GetSettingB("video.frameskip"))
 	  fskip = 0;
 
-	 if(pending_snapshot || pending_save_state || pending_save_movie || NeedFrameAdvance)
+	 if(pending_ssnapshot || pending_snapshot || pending_save_state || pending_save_movie || NeedFrameAdvance)
 	  fskip = 0;
 
  	 NeedFrameAdvance = 0;
@@ -1696,6 +1696,10 @@ int main(int argc, char *argv[])
          VTBuffer[1] = new MDFN_Surface(NULL, CurGame->fb_width, CurGame->fb_height, pitch32, nf);
          VTLineWidths[0] = (MDFN_Rect *)calloc(CurGame->fb_height, sizeof(MDFN_Rect));
          VTLineWidths[1] = (MDFN_Rect *)calloc(CurGame->fb_height, sizeof(MDFN_Rect));
+
+         for(int i = 0; i < 2; i++)
+          ((MDFN_Surface *)VTBuffer[i])->Fill(0, 0, 0, 0);
+
          NeedVideoChange = -1;
          FPS_Init();
         }
@@ -1714,9 +1718,6 @@ int main(int argc, char *argv[])
          if(NeedVideoChange)
          {
           KillVideo();
-
-	  for(int i = 0; i < 2; i++)
-	   ((MDFN_Surface *)VTBuffer[i])->Fill(0, 0, 0, 0);
 
           if(NeedVideoChange == -1)
           {
@@ -1746,7 +1747,7 @@ int main(int argc, char *argv[])
 	  //static int last_time;
 	  //int curtime;
 
-          BlitScreen(VTReady, VTDRReady, VTLWReady);
+          BlitScreen(VTReady, VTDRReady, VTLWReady, VTSSnapshot);
 
           //curtime = SDL_GetTicks();
           //printf("%d\n", curtime - last_time);
@@ -1829,13 +1830,17 @@ static void UpdateSoundSync(int16 *Buffer, int Count)
 
   WriteSound(Buffer, Count);
 
+  //printf("%u\n", GetWriteSound());
   if(MDFNDnetplay && GetWriteSound() >= Count * 1.00) // Cheap code to fix sound buffer underruns due to accumulation of timer error during netplay.
   {
    int16 zbuf[128 * 2];
-   for(int x = 0; x < 128 * 2; x++) zbuf[x] = 0;
+
+   for(int x = 0; x < 128 * 2; x++)
+    zbuf[x] = 0;
+
    int t = GetWriteSound();
-   t /= CurGame->soundchan;
-   while(t > 0) 
+
+   while(t > 0)
    {
     WriteSound(zbuf, (t > 128 ? 128 : t));
     t -= 128;
@@ -1871,7 +1876,7 @@ static void PassBlit(MDFN_Surface *surface)
   */
  if(surface)
  {
-  if((last_btime + 100) < SDL_GetTicks())
+  if((last_btime + 100) < SDL_GetTicks() || pending_ssnapshot)
   {
    //puts("Eep");
    while(VTReady && GameThreadRun) SDL_Delay(1);
@@ -1879,11 +1884,13 @@ static void PassBlit(MDFN_Surface *surface)
 
   if(!VTReady)
   {
+   VTSSnapshot = pending_ssnapshot;
    VTLWReady = VTLineWidths[VTBackBuffer];
    VTDRReady = &VTDisplayRects[VTBackBuffer];
    VTReady = VTBuffer[VTBackBuffer];
 
    VTBackBuffer ^= 1;
+   pending_ssnapshot = 0;
    last_btime = SDL_GetTicks();
    FPS_IncBlitted();
   }

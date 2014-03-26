@@ -619,6 +619,9 @@
 /* Define if we are compiling with PC-FX emulation. */
 #undef WANT_PCFX_EMU
 
+/* Define if we are compiling with PC/AT Compatible emulation. */
+#undef WANT_PC_EMU
+
 /* Define if we are compiling with PlayStation emulation. */
 #undef WANT_PSX_EMU
 

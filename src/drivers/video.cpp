@@ -90,6 +90,8 @@ static ScalerDefinition Scalers[] =
 	{"2xsai", NTVB_2XSAI, 2, 2 },
 	{"super2xsai", NTVB_SUPER2XSAI, 2, 2 },
 	{"supereagle", NTVB_SUPEREAGLE, 2, 2 },
+
+	//{ "scanlines", NTVB_SCANLINES, 1, 2 },
 	{ 0 }
 };
 
@@ -800,9 +802,16 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
   tmp_blur_surface = new MDFN_Surface(NULL, src_rect.w, src_rect.h, src_rect.w, source_surface->format);
 
   sb_spec.red_threshold = 8;
+  sb_spec.green_threshold = 8;
+  sb_spec.blue_threshold = 8;
+  sb_spec.radius = 1;
+
+#if 0
+  sb_spec.red_threshold = 8;
   sb_spec.green_threshold = 7;
   sb_spec.blue_threshold = 10;
   sb_spec.radius = 3;
+#endif
   sb_spec.source = source_surface->pixels + eff_src_rect.x + eff_src_rect.y * source_surface->pitchinpix;
   sb_spec.source_pitch32 = source_surface->pitchinpix;
   sb_spec.dest = tmp_blur_surface->pixels;
@@ -864,6 +873,28 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
     {
      nnyx(CurrentScaler->id - NTVB_NNY2X + 2, eff_source_surface, &eff_src_rect, bah_surface, &boohoo_rect);
     }
+#if 0
+    else if(CurrentScaler->id == NTVB_SCANLINES)
+    {
+     for(int y = 0; y < eff_src_rect.h; y++)
+     {
+      memcpy(&bah_surface->pixels[(boohoo_rect.y + y * 2) * bah_surface->pitchinpix + boohoo_rect.x],
+	     &eff_source_surface->pixels[(eff_src_rect.y + y) * eff_source_surface->pitchinpix + eff_src_rect.x],
+	     sizeof(uint32) * eff_src_rect.w);
+      uint32 *line_a = &eff_source_surface->pixels[(eff_src_rect.y + y) * eff_source_surface->pitchinpix + eff_src_rect.x];
+      uint32 *line_b = (y == (eff_src_rect.h - 1)) ? line_a : (line_a + eff_source_surface->pitchinpix);
+      uint32 *tline = &bah_surface->pixels[(boohoo_rect.y + y * 2 + 1) * bah_surface->pitchinpix + boohoo_rect.x];
+
+      for(int x = 0; x < eff_src_rect.w; x++)
+      {
+       uint32 a = line_a[x];
+       uint32 b = line_b[x];
+
+       tline[x] = (((((uint64)a + b) - ((a ^ b) & 0x01010101))) >> 3) & 0x3F3F3F3F;
+      }
+     }
+    }
+#endif
     else
     {
      uint8 *source_pixies = (uint8 *)(eff_source_surface->pixels + eff_src_rect.x + eff_src_rect.y * eff_source_surface->pitchinpix);
@@ -988,7 +1019,7 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
  }
 }
 
-void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN_Rect *LineWidths)
+void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN_Rect *LineWidths, const bool take_ssnapshot)
 {
  MDFN_Rect src_rect;
  const MDFN_PixelFormat *pf_needed = &pf_normal;
@@ -1006,7 +1037,7 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
   bool osd_active = Help_IsActive() || SaveStatesActive() || IsConsoleCheatConfigActive() || Netplay_GetTextView() ||
 		   IsInternalMessageActive() || Debugger_IsActive(NULL, NULL);
 
-  OverlayOK = (vdriver == VDRIVER_OVERLAY) && !osd_active && (!CurrentScaler || (CurrentScaler->id != NTVB_HQ2X && CurrentScaler->id != NTVB_HQ3X &&
+  OverlayOK = (vdriver == VDRIVER_OVERLAY) && !take_ssnapshot && !osd_active && (!CurrentScaler || (CurrentScaler->id != NTVB_HQ2X && CurrentScaler->id != NTVB_HQ3X &&
 		CurrentScaler->id != NTVB_HQ4X));
 
   if(OverlayOK && LineWidths[0].w != ~0)
@@ -1111,6 +1142,56 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
    }
   }
  }
+
+ if(take_ssnapshot)
+ {
+  try
+  {
+   MDFN_Surface *ib = NULL;
+   MDFN_Rect sr;
+   MDFN_Rect tr;
+
+   sr = screen_dest_rect;
+   if(sr.x < 0) { sr.w += sr.x; sr.x = 0; }
+   if(sr.y < 0) { sr.h += sr.y; sr.y = 0; }
+   if(sr.w < 0) sr.w = 0;
+   if(sr.h < 0) sr.h = 0;
+   if(sr.w > screen->w) sr.w = screen->w;
+   if(sr.h > screen->h) sr.h = screen->h;
+
+   ib = new MDFN_Surface(NULL, sr.w, sr.h, sr.w, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
+
+   if(cur_flags & SDL_OPENGL)
+    ReadPixelsGL(ib, &sr);
+   else
+   {
+    if(SDL_MUSTLOCK(screen))
+     SDL_LockSurface(screen);
+
+    for(int y = 0; y < sr.h; y++)
+    {
+     for(int x = 0; x < sr.w; x++)
+     {
+      ib->pixels[y * ib->pitchinpix + x] = ((uint32*)((uint8*)screen->pixels + (sr.y + y) * screen->pitch))[sr.x + x];
+     }
+    }
+
+    if(SDL_MUSTLOCK(screen))
+     SDL_UnlockSurface(screen);
+   }
+
+
+   tr.x = tr.y = 0;
+   tr.w = ib->w;
+   tr.h = ib->h;
+   MDFNI_SaveSnapshot(ib, &tr, NULL);
+  }
+  catch(std::exception &e)
+  {
+   MDFN_DispMessage("%s", e.what());
+  }
+ }
+
 
  unsigned int debw, debh;
 

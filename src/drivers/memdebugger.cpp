@@ -883,7 +883,7 @@ int MemDebugger_Event(const SDL_Event *event)
 	 size_t result = iconv(ict_utf16_to_game, (ICONV_CONST char **)&inbuf, &ibl, &outbuf, &obl);
 	 if(result != (size_t)-1)
 	 {
-          to_write_len = 16 - obl;
+          to_write_len = obl_start - obl;
 
 	  LockGameMutex(1);
 	  ASpace->PutAddressSpaceBytes(ASpace->name, ASpacePos[CurASpace], to_write_len, 1, TRUE, to_write);

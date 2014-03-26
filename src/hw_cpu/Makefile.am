@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = subdir-objects
-DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@ @MATH_OPTIMIZER_FLAGS@ 
+DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@  
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_builddir)/include/blip -I$(top_srcdir)
 
 noinst_LIBRARIES        =       libmdfnhwcpu.a
@@ -15,9 +15,8 @@ gen68k_SOURCES = c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c
 gen68k_CFLAGS = -DC68K_GEN
 gen68k_LDFLAGS = -DC68K_GEN
 nodist_pkgdata_DATA = c68k/c68k_op0.inc
-c68k/c68k_op0.inc: gen68k$(EXEEXT)
-	cd c68k && ../gen68k$(EXEEXT)
-
+c68k/c68k_op0.inc: c68k/*.h c68k/*.c c68k/c68k_ini.inc c68k/c68kmac.inc c68k/gen68k.inc
+	make gen68k && cd c68k && ../gen68k$(EXEEXT)
 
 libmdfnhwcpu_a_SOURCES 	=       c68k/c68kexec.c c68k/c68k.c
 

@@ -47,6 +47,9 @@ typedef uint64_t uint64;
 
 #ifdef __GNUC__
 
+  #define MDFN_MAKE_GCCV(maj,min,pl) (((maj)*100*100) + ((min) * 100) + (pl))
+  #define MDFN_GCC_VERSION	MDFN_MAKE_GCCV(__GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
+
   #define INLINE inline __attribute__((always_inline))
   #define NO_INLINE __attribute__((noinline))
 
@@ -64,6 +67,14 @@ typedef uint64_t uint64;
  #define MDFN_UNLIKELY(n) __builtin_expect((n) != 0, 0)
  #define MDFN_LIKELY(n) __builtin_expect((n) != 0, 1)
 
+ #if MDFN_GCC_VERSION >= MDFN_MAKE_GCCV(4,3,0)
+  #define MDFN_COLD __attribute__((cold))
+ #else
+  #define MDFN_COLD
+ #endif
+
+ #undef MDFN_MAKE_GCCV
+ #undef MDFN_GCC_VERSION
 #elif defined(_MSC_VER)
 
   #warning "Compiling with MSVC, untested"
@@ -80,8 +91,10 @@ typedef uint64_t uint64;
 
   #define MDFN_NOWARN_UNUSED
 
- #define MDFN_UNLIKELY(n) ((n) != 0)
- #define MDFN_LIKELY(n) ((n) != 0)
+  #define MDFN_UNLIKELY(n) ((n) != 0)
+  #define MDFN_LIKELY(n) ((n) != 0)
+
+  #define MDFN_COLD
 #else
   #error "Not compiling with GCC nor MSVC"
   #define INLINE inline
@@ -97,8 +110,10 @@ typedef uint64_t uint64;
 
   #define MDFN_NOWARN_UNUSED
 
- #define MDFN_UNLIKELY(n) ((n) != 0)
- #define MDFN_LIKELY(n) ((n) != 0)
+  #define MDFN_UNLIKELY(n) ((n) != 0)
+  #define MDFN_LIKELY(n) ((n) != 0)
+
+  #define MDFN_COLD
 #endif
 
 

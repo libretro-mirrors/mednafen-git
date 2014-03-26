@@ -665,6 +665,8 @@ UNIX_FALSE
 UNIX_TRUE
 WIN32_FALSE
 WIN32_TRUE
+DOS_FALSE
+DOS_TRUE
 SDL_LIBS
 SDL_CFLAGS
 SDL_CONFIG
@@ -720,7 +722,6 @@ GBA_EXTRA_FLAGS
 SNES_EXTRA_CXXFLAGS
 SNES_EXTRA_FLAGS
 WARNING_FLAGS
-MATH_OPTIMIZER_FLAGS
 POSUB
 LTLIBINTL
 LIBINTL
@@ -4320,8 +4321,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.27-WIP'
-MEDNAFEN_VERSION_NUMERIC=0x000927
+MEDNAFEN_VERSION='0.9.28-WIP'
+MEDNAFEN_VERSION_NUMERIC=0x000928
 
 ac_aux_dir=
 for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do
@@ -23446,7 +23447,133 @@ LIBS="$LIBS -lz"
 
 OPTIMIZER_FLAGS=""
 
-MATH_OPTIMIZER_FLAGS="-ffast-math"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking OPTIMIZER_FLAGS for gcc -fno-fast-math" >&5
+$as_echo_n "checking OPTIMIZER_FLAGS for gcc -fno-fast-math... " >&6; }
+if ${ax_cv_cflags_gcc_option__fno_fast_math+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_cflags_gcc_option__fno_fast_math="no, unknown"
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ ac_save_CFLAGS="$CFLAGS"
+for ac_arg in "-pedantic -Werror % -fno-fast-math"     "-pedantic % -fno-fast-math %% no, obsolete"     #
+do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_cflags_gcc_option__fno_fast_math=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+ CFLAGS="$ac_save_CFLAGS"
+ ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__fno_fast_math" >&5
+$as_echo "$ax_cv_cflags_gcc_option__fno_fast_math" >&6; }
+var=$ax_cv_cflags_gcc_option__fno_fast_math
+case ".$var" in
+     .ok|.ok,*)  ;;
+   .|.no|.no,*)  ;;
+   *)
+   if echo " $OPTIMIZER_FLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : OPTIMIZER_FLAGS does contain \$var"; } >&5
+  (: OPTIMIZER_FLAGS does contain $var) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : OPTIMIZER_FLAGS=\"\$OPTIMIZER_FLAGS \$var\""; } >&5
+  (: OPTIMIZER_FLAGS="$OPTIMIZER_FLAGS $var") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+                      OPTIMIZER_FLAGS="$OPTIMIZER_FLAGS $var"
+   fi
+ ;;
+esac
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking OPTIMIZER_FLAGS for gcc -fno-unsafe-math-optimizations" >&5
+$as_echo_n "checking OPTIMIZER_FLAGS for gcc -fno-unsafe-math-optimizations... " >&6; }
+if ${ax_cv_cflags_gcc_option__fno_unsafe_math_optimizations+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_cflags_gcc_option__fno_unsafe_math_optimizations="no, unknown"
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ ac_save_CFLAGS="$CFLAGS"
+for ac_arg in "-pedantic -Werror % -fno-unsafe-math-optimizations"     "-pedantic % -fno-unsafe-math-optimizations %% no, obsolete"     #
+do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_cflags_gcc_option__fno_unsafe_math_optimizations=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+ CFLAGS="$ac_save_CFLAGS"
+ ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__fno_unsafe_math_optimizations" >&5
+$as_echo "$ax_cv_cflags_gcc_option__fno_unsafe_math_optimizations" >&6; }
+var=$ax_cv_cflags_gcc_option__fno_unsafe_math_optimizations
+case ".$var" in
+     .ok|.ok,*)  ;;
+   .|.no|.no,*)  ;;
+   *)
+   if echo " $OPTIMIZER_FLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : OPTIMIZER_FLAGS does contain \$var"; } >&5
+  (: OPTIMIZER_FLAGS does contain $var) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : OPTIMIZER_FLAGS=\"\$OPTIMIZER_FLAGS \$var\""; } >&5
+  (: OPTIMIZER_FLAGS="$OPTIMIZER_FLAGS $var") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+                      OPTIMIZER_FLAGS="$OPTIMIZER_FLAGS $var"
+   fi
+ ;;
+esac
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking OPTIMIZER_FLAGS for gcc -fomit-frame-pointer" >&5
@@ -26109,6 +26236,14 @@ fi
 
 
  if false; then
+  DOS_TRUE=
+  DOS_FALSE='#'
+else
+  DOS_TRUE='#'
+  DOS_FALSE=
+fi
+
+ if false; then
   WIN32_TRUE=
   WIN32_FALSE='#'
 else
@@ -26370,8 +26505,26 @@ $as_echo "#define HAVE_LIBSNDFILE 1" >>confdefs.h
 
 	fi
 
+	if expr x"$target" : 'x.*-djgpp*' > /dev/null; then
+
+$as_echo "#define PSS_STYLE 2" >>confdefs.h
+
+
+$as_echo "#define DOS 1" >>confdefs.h
+
+        	 if true; then
+  DOS_TRUE=
+  DOS_FALSE='#'
+else
+  DOS_TRUE='#'
+  DOS_FALSE=
+fi
+
+	else
 
 $as_echo "#define PSS_STYLE 1" >>confdefs.h
+
+	fi
 
 	ac_fn_cxx_check_header_mongrel "$LINENO" "sys/soundcard.h" "ac_cv_header_sys_soundcard_h" "$ac_includes_default"
 if test "x$ac_cv_header_sys_soundcard_h" = xyes; then :
@@ -26403,9 +26556,6 @@ $as_echo "#define HAVE_LINUX_JOYSTICK 1" >>confdefs.h
 fi
 
 
-	if expr x"$target" : 'x.*beos' > /dev/null; then
-	        CPPFLAGS="-no-fpic $CPPFLAGS"
-	fi
 fi
 
  if false; then
@@ -26658,6 +26808,9 @@ else
   ARCH_X86_32_TRUE='#'
   ARCH_X86_32_FALSE=
 fi
+
+
+								                CPPFLAGS="-fno-pic -fno-pie $CPPFLAGS"
 
 		MMX_CFLAGS="-mmmx"
 		SSE_CFLAGS="-msse"
@@ -27453,6 +27606,10 @@ if test -z "${HAVE_SDL_TRUE}" && test -z "${HAVE_SDL_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_SDL\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${DOS_TRUE}" && test -z "${DOS_FALSE}"; then
+  as_fn_error $? "conditional \"DOS\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${WIN32_TRUE}" && test -z "${WIN32_FALSE}"; then
   as_fn_error $? "conditional \"WIN32\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
@@ -27483,6 +27640,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_LIBCDIO_TRUE}" && test -z "${HAVE_LIBCDIO_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_LIBCDIO\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${DOS_TRUE}" && test -z "${DOS_FALSE}"; then
+  as_fn_error $? "conditional \"DOS\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_OSSDSP_TRUE}" && test -z "${HAVE_OSSDSP_FALSE}"; then

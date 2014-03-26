@@ -1165,10 +1165,6 @@ bool PCEDBG_Init(bool sgx, PCE_PSG *new_psg)
      newt.long_name = strdup(tmpinfo);
      newt.TotalBits = 5;
      newt.NP2Size = 0;
-     newt.IsSegmented = FALSE;
-     newt.SegmentBits = 0;
-     newt.OffsetBits = 0;
-     newt.BitsOverlapped = 0;
 
      newt.IsWave = TRUE;
      newt.WaveFormat = ASPACE_WFMT_UNSIGNED;

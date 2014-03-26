@@ -156,7 +156,7 @@ std::vector<BranchTraceResult> PCFXDBG_GetBranchTrace(void)
  return(ret);
 }
 
-void PCFXDBG_CheckBP(int type, uint32 address, unsigned int len)
+void PCFXDBG_CheckBP(int type, uint32 address, uint32 value, unsigned int len)
 {
  std::vector<PCFX_BPOINT>::iterator bpit, bpit_end;
 
@@ -164,21 +164,77 @@ void PCFXDBG_CheckBP(int type, uint32 address, unsigned int len)
  {
   bpit = BreakPointsRead.begin();
   bpit_end = BreakPointsRead.end();
+
+  if(MDFN_UNLIKELY(address >= 0xA4000000 && address <= 0xABFFFFFF))
+  {
+   VDC_SimulateResult result;
+   unsigned which_vdc = (bool)(address & 0x8000000);
+
+   fx_vdc_chips[which_vdc]->SimulateRead16(1, &result);
+
+   if(result.ReadCount)
+    PCFXDBG_CheckBP(BPOINT_AUX_READ, 0x80000 | (which_vdc << 16) | result.ReadStart, 0, result.ReadCount);
+
+   if(result.WriteCount)
+    PCFXDBG_CheckBP(BPOINT_AUX_WRITE, 0x80000 | (which_vdc << 16) | result.WriteStart, 0/*FIXME(HOW? :b)*/, result.WriteCount);
+  }
  }
  else if(type == BPOINT_WRITE)
  {
   bpit = BreakPointsWrite.begin();
   bpit_end = BreakPointsWrite.end();
+
+  if(MDFN_UNLIKELY(address >= 0xB4000000 && address <= 0xBBFFFFFF))
+  {
+   VDC_SimulateResult result;
+   unsigned which_vdc = (bool)(address & 0x8000000);
+
+   fx_vdc_chips[which_vdc]->SimulateWrite16(1, value, &result);
+
+   if(result.ReadCount)
+    PCFXDBG_CheckBP(BPOINT_AUX_READ, 0x80000 | (which_vdc << 16) | result.ReadStart, 0, result.ReadCount);
+
+   if(result.WriteCount)
+    PCFXDBG_CheckBP(BPOINT_AUX_WRITE, 0x80000 | (which_vdc << 16) | result.WriteStart, 0/*FIXME(HOW? :b)*/, result.WriteCount);
+  }
  }
  else if(type == BPOINT_IO_READ)
  {
   bpit = BreakPointsIORead.begin();
   bpit_end = BreakPointsIORead.end();
+
+  if(address >= 0x400 && address <= 0x5FF)
+  {
+   VDC_SimulateResult result;
+   unsigned which_vdc = (bool)(address & 0x100);
+
+   fx_vdc_chips[which_vdc]->SimulateRead16((bool)(address & 4), &result);
+
+   if(result.ReadCount)
+    PCFXDBG_CheckBP(BPOINT_AUX_READ, 0x80000 | (which_vdc << 16) | result.ReadStart, 0, result.ReadCount);
+
+   if(result.WriteCount)
+    PCFXDBG_CheckBP(BPOINT_AUX_WRITE, 0x80000 | (which_vdc << 16) | result.WriteStart, 0/*FIXME(HOW? :b)*/, result.WriteCount);
+  }
  }
  else if(type == BPOINT_IO_WRITE)
  {
   bpit = BreakPointsIOWrite.begin();
   bpit_end = BreakPointsIOWrite.end();
+
+  if(address >= 0x400 && address <= 0x5FF)
+  {
+   VDC_SimulateResult result;
+   unsigned which_vdc = (bool)(address & 0x100);
+
+   fx_vdc_chips[which_vdc]->SimulateWrite16((bool)(address & 4), value, &result);
+
+   if(result.ReadCount)
+    PCFXDBG_CheckBP(BPOINT_AUX_READ, 0x80000 | (which_vdc << 16) | result.ReadStart, 0, result.ReadCount);
+
+   if(result.WriteCount)
+    PCFXDBG_CheckBP(BPOINT_AUX_WRITE, 0x80000 | (which_vdc << 16) | result.WriteStart, 0/*FIXME(HOW? :b)*/, result.WriteCount);
+  }
  }
  else if(type == BPOINT_AUX_READ)
  {
@@ -364,6 +420,10 @@ static void CPUHandler(uint32 PC)
    break;
   }
  }
+
+ fx_vdc_chips[0]->ResetSimulate();
+ fx_vdc_chips[1]->ResetSimulate();
+
  PCFX_V810.CheckBreakpoints(PCFXDBG_CheckBP, mem_peekhword, NULL);	// FIXME: mem_peekword
 
  if(PCFX_LoggingOn)

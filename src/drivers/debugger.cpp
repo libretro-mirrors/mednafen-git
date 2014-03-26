@@ -499,7 +499,11 @@ class DebuggerPrompt : public HappyPrompt
 		     {
 		      time_t lovelytime;
 		      lovelytime = time(NULL);
-		      trio_fprintf(TraceLog, "Tracing began: %s\n", asctime(gmtime(&lovelytime)));
+
+		      if(ftell(TraceLog) != 0)
+		       trio_fprintf(TraceLog, "\n\n\n");
+
+		      trio_fprintf(TraceLog, "Tracing began: %s", asctime(gmtime(&lovelytime)));
 		      if(num == 1)
 		       TraceLogEnd = -1;
 		      else
@@ -1079,27 +1083,20 @@ static void CPUCallback(uint32 PC)
  if(TraceLog)
  {
   uint32 trace_PC = PC;
-  char dis_text_buf[256 + 32];
+  char dis_text_buf[256 + 64];
   char *distbp = dis_text_buf;
 
-  if(CurGame->Debugger->LogAddrBits == 32)
-  {
+  *distbp++ = '\n';
 
-  }
-  else
-  {
-   *distbp++ = HexLUT[(trace_PC >> 12) & 0xF];
-   *distbp++ = HexLUT[(trace_PC >>  8) & 0xF];
-   *distbp++ = HexLUT[(trace_PC >>  4) & 0xF];
-   *distbp++ = HexLUT[(trace_PC >>  0) & 0xF];
-  }
+  for(unsigned i = 0; i < CurGame->Debugger->LogAddrBits; i += 4)
+   *distbp++ = HexLUT[(trace_PC >> (CurGame->Debugger->LogAddrBits - i - 4)) & 0xF];
+
   *distbp++ = ':';
   *distbp++ = ' ';
 
   CurGame->Debugger->Disassemble(trace_PC, trace_PC, distbp);
 
   fputs(dis_text_buf, TraceLog);
-  fputc('\n', TraceLog);
 
   if(TraceLogEnd >= 0 && (uint32)TraceLogEnd == PC)
   {

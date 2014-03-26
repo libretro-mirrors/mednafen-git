@@ -4,6 +4,7 @@
 typedef enum {
 	SHADER_NONE = 0,
 	SHADER_SCALE2X,
+	SHADER_SABR,
         SHADER_AUTOIP,
 	SHADER_AUTOIPSHARPER,
 	SHADER_IPSHARPER,
@@ -15,7 +16,7 @@ typedef enum {
 
 
 bool InitShader(ShaderType pixshader);
-bool ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th);
+bool ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th, int orig_tw, int orig_th);
 bool ShaderEnd(void);
 bool KillShader(void);
 

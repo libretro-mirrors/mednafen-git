@@ -129,11 +129,13 @@ void GfxDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
 
  // Draw layer name
  {
-  for(unsigned int y = 256; y < 256 + 18; y++)
-   for(unsigned int x = 0; x < rect->w; x++)
+  for(int y = 256; y < 256 + 18; y++)
+  {
+   for(int x = 0; x < rect->w; x++)
    {
     pixels[y * pitch32 + x] = MK_COLOR_A(0x00, 0x00, 0x00, 0xC0);
    }
+  }
   char buf[256];
 
   if(ism)
@@ -157,8 +159,8 @@ void GfxDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
  {
   if(src_pixels[vx + vy * 128 * 3] & (0xFF << surface->format.Ashift))
   {
-   for(unsigned int y = 278; y < 278 + 18; y++)
-    for(unsigned int x = 0; x < rect->w; x++)
+   for(int y = 278; y < 278 + 18; y++)
+    for(int x = 0; x < rect->w; x++)
     {
      pixels[y * pitch32 + x] = MK_COLOR_A(0x00, 0x00, 0x00, 0xC0);
     }

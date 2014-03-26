@@ -6,7 +6,7 @@
 
 AUTOMAKE_OPTIONS = subdir-objects
 AM_CFLAGS = @AM_CFLAGS@ -Wno-multichar
-DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@ @MATH_OPTIMIZER_FLAGS@
+DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@ 
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl
 
 noinst_LIBRARIES	=	libdesa68.a

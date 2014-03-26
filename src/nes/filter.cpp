@@ -34,6 +34,10 @@
  #include <altivec.h>
 #endif
 
+#ifdef __FAST_MATH__
+ #error "filter.cpp not compatible with unsafe math optimizations!"
+#endif
+
 static void kaiser_window( double* io, int count, double beta )
 {
         int const accuracy = 16; //12;

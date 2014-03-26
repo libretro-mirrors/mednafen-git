@@ -476,6 +476,52 @@ static void Emulate(EmulateSpecStruct *espec)
 
  MDFNMP_ApplyPeriodicCheats();
 
+ #if 0
+ {
+  static bool firstcat = true;
+  MDFN_PixelFormat nf;
+
+  nf.bpp = 16;
+  nf.colorspace = MDFN_COLORSPACE_RGB;
+  nf.Rshift = 11;
+  nf.Gshift = 5;
+  nf.Bshift = 0;
+  nf.Ashift = 16;
+  
+  nf.Rprec = 5;
+  nf.Gprec = 6;
+  nf.Bprec = 5;
+  nf.Aprec = 8;
+
+  espec->surface->SetFormat(nf, false);
+  espec->VideoFormatChanged = firstcat;
+  firstcat = false;
+ }
+ #endif
+
+#if 0
+ static bool firstcat = true;
+
+ MDFN_PixelFormat tmp_pf;
+
+ tmp_pf.Rshift = 0;
+ tmp_pf.Gshift = 0;
+ tmp_pf.Bshift = 0;
+ tmp_pf.Ashift = 8;
+
+ tmp_pf.Rprec = 0;
+ tmp_pf.Gprec = 0;
+ tmp_pf.Bprec = 0;
+ tmp_pf.Aprec = 0;
+
+ tmp_pf.bpp = 8;
+ tmp_pf.colorspace = MDFN_COLORSPACE_RGB;
+
+ espec->surface->SetFormat(tmp_pf, false);
+ espec->VideoFormatChanged = firstcat;
+ firstcat = false;
+#endif
+
  if(espec->VideoFormatChanged)
   VDC_SetPixelFormat(espec->surface->format); //.Rshift, espec->surface->format.Gshift, espec->surface->format.Bshift);
 
@@ -489,7 +535,6 @@ static void Emulate(EmulateSpecStruct *espec)
   }
  }
  VDC_RunFrame(espec->surface, &espec->DisplayRect, espec->LineWidths, IsHES ? 1 : espec->skip);
-
 
  if(PCE_IsCD)
  {

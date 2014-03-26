@@ -24,6 +24,9 @@ seeking being too fast?
 
 -----------------------------------------------------------------------------------------------
 
+Investigate CD-XA FIR filter on a PS1, for 4-bit and 8-bit modes, and both playback rates.  Might be difficult without a modchip,
+though...
+
 Respect device(GPU, SPU, etc.) DMA mode/memory access mode bits(more for homebrew's sake than commercial games'). 
 
 Test if Dual Analog vibration compatibility mode can be restored with DualShock after using DualShock extended features if the "Analog"

@@ -1,10 +1,10 @@
 #ifndef __NES_PPU_H
 #define __NES_PPU_H
 
-void MDFNPPU_Init(void);
-void MDFNPPU_Close(void);
-void MDFNPPU_Reset(void);
-void MDFNPPU_Power(void);
+void MDFNPPU_Init(void) MDFN_COLD;
+void MDFNPPU_Close(void) MDFN_COLD;
+void MDFNPPU_Reset(void) MDFN_COLD;
+void MDFNPPU_Power(void) MDFN_COLD;
 int MDFNPPU_Loop(MDFN_Surface *, int skip);
 
 void MDFNPPU_LineUpdate();
@@ -26,7 +26,7 @@ void MDFNPPU_LoadState(int version);
 
 extern int scanline;
 
-void MDFNNES_SetPixelFormat(const MDFN_PixelFormat &nf);
+void MDFNNES_SetPixelFormat(const MDFN_PixelFormat &nf) MDFN_COLD;
 int MDFNPPU_StateAction(StateMem *sm, int load, int data_only);
 void MDFNNES_SetLayerEnableMask(uint64 mask);
 
@@ -47,14 +47,14 @@ enum
 // FIXME, todo
 //uint32 NESPPU_GetRegister(const unsigned int id, char *special, const uint32 special_len);
 //void NESPPU_SetRegister(const unsigned int id, uint32 value);
-uint32 NESPPU_GetRegister(const std::string &name, std::string *special);
-void NESPPU_SetRegister(const std::string &name, uint32 value);
+uint32 NESPPU_GetRegister(const std::string &name, std::string *special) MDFN_COLD;
+void NESPPU_SetRegister(const std::string &name, uint32 value) MDFN_COLD;
 
 
-void NESPPU_SetGraphicsDecode(MDFN_Surface *surface, int line, int which, int xscroll, int yscroll, int pbn);
-void NESPPU_SettingChanged(const char *name);
+void NESPPU_SetGraphicsDecode(MDFN_Surface *surface, int line, int which, int xscroll, int yscroll, int pbn) MDFN_COLD;
+void NESPPU_SettingChanged(const char *name) MDFN_COLD;
 
-void NESPPU_GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint8 *Buffer);
-void NESPPU_PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint32 Granularity, bool hl, const uint8 *Buffer);
+void NESPPU_GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint8 *Buffer) MDFN_COLD;
+void NESPPU_PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint32 Granularity, bool hl, const uint8 *Buffer) MDFN_COLD;
 
 #endif

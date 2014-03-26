@@ -194,7 +194,7 @@ class V810
  int StateAction(StateMem *sm, int load, int data_only);
 
  #ifdef WANT_DEBUGGER
- void CheckBreakpoints(void (*callback)(int type, uint32 address, unsigned int len), uint16 MDFN_FASTCALL (*peek16)(const v810_timestamp_t, uint32), uint32 MDFN_FASTCALL (*peek32)(const v810_timestamp_t, uint32));
+ void CheckBreakpoints(void (*callback)(int type, uint32 address, uint32 value, unsigned int len), uint16 MDFN_FASTCALL (*peek16)(const v810_timestamp_t, uint32), uint32 MDFN_FASTCALL (*peek32)(const v810_timestamp_t, uint32));
  void SetCPUHook(void (*newhook)(uint32 PC), void (*new_ADDBT)(uint32, uint32, uint32));
  #endif
  uint32 GetPC(void);

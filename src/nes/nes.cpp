@@ -309,6 +309,30 @@ static void Emulate(EmulateSpecStruct *espec)
 {
  int ssize;
 
+#if 0
+ static bool firstcat = true;
+
+ MDFN_PixelFormat tmp_pf;
+
+ tmp_pf.Rshift = 0;
+ tmp_pf.Gshift = 0;
+ tmp_pf.Bshift = 0;
+ tmp_pf.Ashift = 8;
+
+ tmp_pf.Rprec = 0;
+ tmp_pf.Gprec = 0;
+ tmp_pf.Bprec = 0;
+ tmp_pf.Aprec = 0;
+
+ tmp_pf.bpp = 8;
+ tmp_pf.colorspace = MDFN_COLORSPACE_RGB;
+
+ espec->surface->SetFormat(tmp_pf, false);
+ espec->VideoFormatChanged = firstcat;
+ firstcat = false;
+#endif
+
+
  if(espec->VideoFormatChanged)
   MDFNNES_SetPixelFormat(espec->surface->format); //.Rshift, espec->surface->format.Gshift, espec->surface->format.Bshift);
 
@@ -452,8 +476,8 @@ static MDFNSetting NESSettings[] =
   { "nes.no8lim", MDFNSF_NOFLAGS, gettext_noop("Remove 8-sprites-per-scanline hardware limit."), 
 	gettext_noop("WARNING: Enabling this option will cause graphical glitches in some games, including \"Solstice\"."), MDFNST_BOOL, "0", NULL, NULL, NULL, NESPPU_SettingChanged },
 
-  { "nes.soundq", MDFNSF_NOFLAGS, gettext_noop("Sound quality."), NULL, MDFNST_INT, "0", "-2", "3" },
-  { "nes.sound_rate_error", MDFNSF_NOFLAGS, gettext_noop("Output rate tolerance."), NULL, MDFNST_FLOAT, "0.00004", "0.0000001", "0.01" },
+  { "nes.soundq", MDFNSF_NOFLAGS, gettext_noop("Sound quality."), gettext_noop("Higher values correspond to better SNR and better preservation of higher frequencies(\"brightness\"), at the cost of increased computational complexity and a negligible(<0.5ms) increase in latency."), MDFNST_INT, "0", "-2", "3" },
+  { "nes.sound_rate_error", MDFNSF_NOFLAGS, gettext_noop("Output rate tolerance."), gettext_noop("Lower values correspond to better matching of the output rate of the resampler to the actual desired output rate, at the expense of increased RAM usage and poorer CPU cache utilization.  DO NOT INCREASE THIS VALUE, OR SOUND WILL LIKELY BE OFF-KEY AND THE WRONG TEMPO, AMONG OTHER PROBLEMS."), MDFNST_FLOAT, "0.00004", "0.0000001", "0.01" },
   { "nes.n106bs", MDFNSF_NOFLAGS, gettext_noop("Enable less-accurate, but better sounding, Namco 106(mapper 19) sound emulation."), NULL, MDFNST_BOOL, "0" },
   { "nes.fnscan", MDFNSF_EMU_STATE, gettext_noop("Scan filename for (U),(J),(E),etc. strings to en/dis-able PAL emulation."), 
 	gettext_noop("Warning: This option may break NES network play when enabled IF the players are using ROM images with different filenames."), MDFNST_BOOL, "1" },

@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.27-WIP'
-MEDNAFEN_VERSION_NUMERIC=0x000927
+MEDNAFEN_VERSION='0.9.28-WIP'
+MEDNAFEN_VERSION_NUMERIC=0x000928
 
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
@@ -92,9 +92,13 @@ dnl -fno-unit-at-a-time
 
 OPTIMIZER_FLAGS=""
 
-dnl MATH_OPTIMIZER_FLAGS is used in the automake files where it doesn't break code
-MATH_OPTIMIZER_FLAGS="-ffast-math"
-AC_SUBST(MATH_OPTIMIZER_FLAGS)
+dnl -ffast-math removed January 12, 2013.  Don't re-add it, nor any of its sub-options(ESPECIALLY not -funsafe-math-optimizations),
+dnl it messes up certain code(NES resampler, for example) under certain conditions and alignments of the great celestial squid.
+dnl
+dnl In fact, let's explicitly disable it here with -fno-fast-math.
+dnl
+AX_CFLAGS_GCC_OPTION([-fno-fast-math], OPTIMIZER_FLAGS)
+AX_CFLAGS_GCC_OPTION([-fno-unsafe-math-optimizations], OPTIMIZER_FLAGS)
 
 AX_CFLAGS_GCC_OPTION([-fomit-frame-pointer], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-finline-limit=6000], OPTIMIZER_FLAGS)
@@ -400,6 +404,7 @@ AC_ARG_WITH([libsndfile],
 #            [with_oggvorbis=yes])
 
 
+AM_CONDITIONAL(DOS, false)
 AM_CONDITIONAL(WIN32, false)
 AM_CONDITIONAL(UNIX, false)
 AM_CONDITIONAL(HAVE_LIBCDIO, false)
@@ -445,12 +450,16 @@ else
                 AC_DEFINE([HAVE_LIBSNDFILE], [1], [Define if we are compiling with libsndfile support.])
 	fi
 
-        AC_DEFINE([PSS_STYLE],[1], [Defines the filesystem path-separator type.])
+	if expr x"$target" : 'x.*-djgpp*' > /dev/null; then
+        	AC_DEFINE([PSS_STYLE],[2], [Defines the filesystem path-separator type.])
+        	AC_DEFINE([DOS], [1], [Define if we are compiling for DOS.])
+        	AM_CONDITIONAL(DOS, true)
+	else
+        	AC_DEFINE([PSS_STYLE],[1], [Defines the filesystem path-separator type.])
+	fi
+
 	AC_CHECK_HEADER([sys/soundcard.h],[AM_CONDITIONAL(HAVE_OSSDSP,true) AC_DEFINE([HAVE_OSSDSP], [1], [Define if we are compiling with OSS support.])])
 	AC_CHECK_HEADER([linux/joystick.h],[AM_CONDITIONAL(HAVE_LINUX_JOYSTICK,true) AC_DEFINE([HAVE_LINUX_JOYSTICK], [1], [Define if we are compiling with Linux joystick support.])])
-	if expr x"$target" : 'x.*beos' > /dev/null; then
-	        CPPFLAGS="-no-fpic $CPPFLAGS"
-	fi
 fi
 
 dnl
@@ -506,6 +515,13 @@ case "$target_cpu" in
                 AM_CONDITIONAL(ARCH_X86, true)
                 AC_DEFINE([ARCH_X86_32], [1], [Define if we are compiling for 32-bit x86 architectures.])
                 AM_CONDITIONAL(ARCH_X86_32, true)
+
+		dnl
+		dnl Make sure we're not compiling with PIC, otherwise some inline assembly might break.
+		dnl Additionally, PICcyness will slow things down especially on a register-starved architecture like 32-bit x86.
+		dnl
+                CPPFLAGS="-fno-pic -fno-pie $CPPFLAGS"
+
 		MMX_CFLAGS="-mmmx"
 		SSE_CFLAGS="-msse"
 		SSE2_CFLAGS="-msse2"

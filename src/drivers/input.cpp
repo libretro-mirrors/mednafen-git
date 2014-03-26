@@ -589,6 +589,7 @@ typedef enum {
 	CK_M0,CK_M1,CK_M2,CK_M3,CK_M4,CK_M5,CK_M6,CK_M7,CK_M8,CK_M9,
 	CK_TL1, CK_TL2, CK_TL3, CK_TL4, CK_TL5, CK_TL6, CK_TL7, CK_TL8, CK_TL9,
 	CK_TAKE_SNAPSHOT,
+	CK_TAKE_SCALED_SNAPSHOT,
 	CK_TOGGLE_FS,
 	CK_FAST_FORWARD,
 	CK_SLOW_FORWARD,
@@ -690,6 +691,8 @@ static const COKE CKeys[_CK_COUNT]	=
         { MK_CK_CTRL(9), "tl9", ~0U, 1, gettext_noop("Toggle graphics layer 9") },
 
 	{ MK_CK(F9), "take_snapshot", ~0U, 1, gettext_noop("Take screen snapshot") },
+	{ MK_CK_SHIFT(F9), "take_scaled_snapshot", ~0U, 1, gettext_noop("Take scaled(and filtered) screen snapshot") },
+
 	{ MK_CK_ALT(RETURN), "toggle_fs", ~0U, 1, gettext_noop("Toggle fullscreen mode") },
 	{ MK_CK(BACKQUOTE), "fast_forward", ~0U, 1, gettext_noop("Fast-forward") },
         { MK_CK(BACKSLASH), "slow_forward", ~0U, 1, gettext_noop("Slow-forward") },
@@ -697,7 +700,7 @@ static const COKE CKeys[_CK_COUNT]	=
 	{ MK_CK(F8), "insert_coin", ~0U, 1, gettext_noop("Insert coin") },
 	{ MK_CK(F6), "toggle_dipview", ~0U, 1, gettext_noop("Toggle DIP switch view") },
 	{ MK_CK(F6), "select_disk", ~0U, 1, gettext_noop("Select disk/disc") },
-	{ MK_CK(F8), "insert_eject_disk", ~0U, 1, gettext_noop("Insert/Eject disk/disc") },
+	{ MK_CK(F8), "insert_eject_disk", ~0U, 0, gettext_noop("Insert/Eject disk/disc") },
 	{ MK_CK(F8), "activate_barcode", ~0U, 1, gettext_noop("Activate barcode(for Famicom)") },
 	{ MK_CK(SCROLLOCK), "toggle_grab_input", ~0U, 1, gettext_noop("Grab input") },
 	{ MK_CK_SHIFT(SCROLLOCK), "toggle_cidisable", ~0U, 1, gettext_noop("Grab input and disable commands") },
@@ -1257,6 +1260,9 @@ static void CheckCommandKeys(void)
 
   if(CK_Check(CK_TAKE_SNAPSHOT)) 
 	pending_snapshot = 1;
+
+  if(CK_Check(CK_TAKE_SCALED_SNAPSHOT))
+	pending_ssnapshot = 1;
 
 //  if(CurGame->GameType != GMT_PLAYER)
   {

@@ -35,6 +35,8 @@ CD emulation/handling:
 
 	Support for indexes other than 0 and 1 in CUE and TOC sheets(maybe using std::map?).
 
+	Musepack support is deprecated; remove it entirely in 2015?
+
 YM2612:
 	Timer fixes?
 

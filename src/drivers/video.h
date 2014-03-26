@@ -19,7 +19,8 @@ enum
 void PtoV(const int in_x, const int in_y, int32 *out_x, int32 *out_y);
 int InitVideo(MDFNGI *gi);
 void KillVideo(void);
-void BlitScreen(MDFN_Surface *, const MDFN_Rect *DisplayRect, const MDFN_Rect *LineWidths);
+void BlitScreen(MDFN_Surface *, const MDFN_Rect *DisplayRect, const MDFN_Rect *LineWidths, const bool take_ssnapshot);
+
 void ToggleFS();
 void ClearVideoSurfaces(void);
 
@@ -42,6 +43,8 @@ void ClearVideoSurfaces(void);
 #define NTVB_2XSAI       13
 #define NTVB_SUPER2XSAI  14
 #define NTVB_SUPEREAGLE  15
+
+//#define NTVB_SCANLINES	 16
 
 int VideoResize(int nw, int nh);
 

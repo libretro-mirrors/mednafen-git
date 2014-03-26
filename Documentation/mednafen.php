@@ -67,7 +67,7 @@
  <p>
   For ripped disc images, Mednafen supports "CUE" sheets and cdrdao "TOC" files; though only a very limited subset of the
   latter's full capabilities is supported.  Mednafen supports raw, simple storage formats supported by
-  libsndfile(MS WAV, AIFF/AIFC, AU/SND, etc.), Ogg Vorbis, and MusePack audio files referenced by CUE sheets.
+  <a href="http://www.mega-nerd.com/libsndfile/">libsndfile</a>(MS WAV, AIFF/AIFC, AU/SND, etc.), and <a href="http://xiph.org/vorbis/">Ogg Vorbis</a> audio files referenced by CUE sheets.
   MP3 is not supported, and will not be supported.
  </p>
  <p>
@@ -173,7 +173,8 @@
  <tr><td>SHIFT + F1</td><td>Toggle frames-per-second display(from top to bottom, the display format is: virtual, rendered, blitted).</td><td>toggle_fps_view</td></tr>
  <tr><td>ALT + S</td><td>Toggle <a href="#srwframes">600-frame(~10 seconds on NES)</a> save-state rewinding functionality, disabled by default.</td><td>state_rewind_toggle</td></tr>
  <tr><td>Backspace</td><td>Rewind emulation, if save-state rewinding functionality is enabled, up to <a href="#srwframes">600 frames</a>.</td><td>state_rewind</td></tr>
- <tr><td>F9</td><td>Save screen snapshot.</td><td>take_snapshot</td></tr>
+ <tr><td>F9</td><td>Save (rawish) screen snapshot.</td><td>take_snapshot</td></tr>
+ <tr><td>SHIFT + F9</td><td>Save screen snapshot, taken after all scaling and special filters/shaders are applied.</td><td>take_scaled_snapshot</td></tr>
  <tr><td>ALT + O</td><td>Rotate the screen</td><td>rotate_screen</td></tr>
  <tr><td>Alt + Enter</td><td>Toggle fullscreen mode.</td><td>toggle_fs</td></tr>
  <tr><td nowrap>Ctrl + 1<br>through<br>Ctrl + 9</td><td>Toggle layer.</td><td>"tl1" through "tl9"</td></tr>
@@ -428,7 +429,6 @@ has the minimum amount of processing done to it before being passed to the DAC o
   <li><a href="http://www.gnu.org/software/libcdio/">libcdio</a></li>
   <li><a href="http://www.mega-nerd.com/libsndfile/">libsndfile</a></li>
   <li><a href="http://www.libsdl.org/">SDL</a></li>
-  <li><a href="http://www.libsdl.org/projects/SDL_net/">SDL_net</a></li>
   <li><a href="http://www.zlib.org">zlib</a></li>
  </ul>
  </p>
@@ -1337,6 +1337,32 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 </pre>
 </blockquote>
  <?php EndSection(); ?>
+
+<?php BeginSection("SABR v3.0 Shader"); ?>
+<blockquote>
+<pre>
+        SABR v3.0 Shader
+        Joshua Street
+
+        Portions of this algorithm were taken from Hyllian's 5xBR v3.7c
+        shader.
+
+        This program is free software; you can redistribute it and/or
+        modify it under the terms of the GNU General Public License
+        as published by the Free Software Foundation; either version 2
+        of the License, or (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program; if not, write to the Free Software
+        Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+</pre>
+</blockquote>
+<?php EndSection(); ?>
 
 <?php EndPage(); ?>
 

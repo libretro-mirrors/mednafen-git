@@ -225,7 +225,7 @@ CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
-DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@ @MATH_OPTIMIZER_FLAGS@ 
+DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@  
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
@@ -288,7 +288,6 @@ LTLIBPTH = @LTLIBPTH@
 LTLIBTHREAD = @LTLIBTHREAD@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
-MATH_OPTIMIZER_FLAGS = @MATH_OPTIMIZER_FLAGS@
 MKDIR_P = @MKDIR_P@
 MMX_CFLAGS = @MMX_CFLAGS@
 MSGFMT = @MSGFMT@
@@ -880,8 +879,8 @@ uninstall-am: uninstall-nodist_pkgdataDATA
 	pdf pdf-am ps ps-am tags uninstall uninstall-am \
 	uninstall-nodist_pkgdataDATA
 
-c68k/c68k_op0.inc: gen68k$(EXEEXT)
-	cd c68k && ../gen68k$(EXEEXT)
+c68k/c68k_op0.inc: c68k/*.h c68k/*.c c68k/c68k_ini.inc c68k/c68kmac.inc c68k/gen68k.inc
+	make gen68k && cd c68k && ../gen68k$(EXEEXT)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

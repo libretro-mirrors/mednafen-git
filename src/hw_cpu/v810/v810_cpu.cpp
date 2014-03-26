@@ -449,7 +449,7 @@ INLINE void V810::SetSZ(uint32 value)
 }
 
 #ifdef WANT_DEBUGGER
-void V810::CheckBreakpoints(void (*callback)(int type, uint32 address, unsigned int len), uint16 MDFN_FASTCALL (*peek16)(const v810_timestamp_t, uint32), uint32 MDFN_FASTCALL (*peek32)(const v810_timestamp_t, uint32))
+void V810::CheckBreakpoints(void (*callback)(int type, uint32 address, uint32 value, unsigned int len), uint16 MDFN_FASTCALL (*peek16)(const v810_timestamp_t, uint32), uint32 MDFN_FASTCALL (*peek32)(const v810_timestamp_t, uint32))
 {
  unsigned int opcode;
  uint16 tmpop;
@@ -472,21 +472,21 @@ void V810::CheckBreakpoints(void (*callback)(int type, uint32 address, unsigned 
 
 	default: break;
 
-	case LD_B: callback(BPOINT_READ, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFF, 1); break;
-	case LD_H: callback(BPOINT_READ, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFE, 2); break;
-	case LD_W: callback(BPOINT_READ, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFC, 4); break;
+	case LD_B: callback(BPOINT_READ, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFF, 0, 1); break;
+	case LD_H: callback(BPOINT_READ, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFE, 0, 2); break;
+	case LD_W: callback(BPOINT_READ, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFC, 0, 4); break;
 
-	case ST_B: callback(BPOINT_WRITE, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFF, 1); break;
-	case ST_H: callback(BPOINT_WRITE, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFE, 2); break;
-	case ST_W: callback(BPOINT_WRITE, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFC, 4); break;
+	case ST_B: callback(BPOINT_WRITE, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFF, P_REG[(tmpop >> 5) & 0x1F] & 0x00FF, 1); break;
+	case ST_H: callback(BPOINT_WRITE, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFE, P_REG[(tmpop >> 5) & 0x1F] & 0xFFFF, 2); break;
+	case ST_W: callback(BPOINT_WRITE, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFC, P_REG[(tmpop >> 5) & 0x1F], 4); break;
 
-	case IN_B: callback(BPOINT_IO_READ, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFF, 1); break;
-	case IN_H: callback(BPOINT_IO_READ, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFE, 2); break;
-	case IN_W: callback(BPOINT_IO_READ, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFC, 4); break;
+	case IN_B: callback(BPOINT_IO_READ, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFF, 0, 1); break;
+	case IN_H: callback(BPOINT_IO_READ, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFE, 0, 2); break;
+	case IN_W: callback(BPOINT_IO_READ, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFC, 0, 4); break;
 
-	case OUT_B: callback(BPOINT_IO_WRITE, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFF, 1); break; 
-	case OUT_H: callback(BPOINT_IO_WRITE, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFE, 2); break;
-	case OUT_W: callback(BPOINT_IO_WRITE, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFC, 4); break;
+	case OUT_B: callback(BPOINT_IO_WRITE, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFF, P_REG[(tmpop >> 5) & 0x1F] & 0xFF, 1); break; 
+	case OUT_H: callback(BPOINT_IO_WRITE, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFE, P_REG[(tmpop >> 5) & 0x1F] & 0xFFFF, 2); break;
+	case OUT_W: callback(BPOINT_IO_WRITE, (sign_16(tmpop_high)+P_REG[tmpop & 0x1F])&0xFFFFFFFC, P_REG[(tmpop >> 5) & 0x1F], 4); break;
  }
 
 }
@@ -949,6 +949,104 @@ bool V810::bstr_subop(v810_timestamp_t &timestamp, int sub_op, int arg1)
 	uint32 len =     P_REG[28];
 	uint32 dst =    (P_REG[29] & 0xFFFFFFFC);
 	uint32 src =    (P_REG[30] & 0xFFFFFFFC);
+
+#if 0
+	// Be careful not to cause 32-bit integer overflow, and careful about not shifting by 32.
+	// TODO:
+
+	// Read src[0], src[4] into shifter.
+	// Read dest[0].
+	DO_BSTR_PROLOGUE();	// if(len) { blah blah blah masking blah }
+                src_cache = BSTR_RWORD(timestamp, src);
+
+		if((uint64)(srcoff + len) > 0x20)
+                 src_cache |= (uint64)BSTR_RWORD(timestamp, src + 4) << 32;
+
+                dst_cache = BSTR_RWORD(timestamp, dst);
+
+		if(len)
+		{
+		 uint32 dst_preserve_mask;
+		 uint32 dst_change_mask;
+
+		 dst_preserve_mask = (1U << dstoff) - 1;
+
+		 if((uint64)(dstoff + len) < 0x20)
+ 		  dst_preserve_mask |= ((1U << ((0x20 - (dstoff + len)) & 0x1F)) - 1) << (dstoff + len);
+
+		 dst_change_mask = ~dst_preserve_mask;
+
+		 src_cache = BSTR_RWORD(timestamp, src);
+		 src_cache |= (uint64)BSTR_RWORD(timestamp, src + 4) << 32;
+		 dst_cache = BSTR_RWORD(timestamp, dst);
+
+		 dst_cache = (dst_cache & dst_preserve_mask) | ((dst_cache OP_THINGY_HERE (src_cache >> srcoff)) & dst_change_mask);
+		 BSTR_WWORD(timestamp, dst, dst_cache);
+
+		 if((uint64)(dstoff + len) < 0x20)
+		 {
+	          srcoff += len;
+		  dstoff += len;
+		  len = 0;
+		 }
+		 else
+		 {
+		  srcoff += (0x20 - dstoff);
+		  dstoff = 0;
+		  len -= (0x20 - dstoff);
+		  dst += 4;
+		 }
+
+		 if(srcoff >= 0x20)
+		 {
+		  srcoff &= 0x1F;
+		  src += 4;
+
+		  if(len)
+		  {
+		   src_cache >>= 32;
+		   src_cache |= (uint64)BSTR_RWORD(timestamp, src + 4) << 32;
+		  }
+		 }
+		}
+
+	DO_BSTR_PRIMARY();	// while(len >= 32) (do allow interruption; interrupt and emulator-return -
+				// they must be handled differently!)
+		while(len >= 32)
+  		{
+                 dst_cache = BSTR_RWORD(timestamp, dst);
+                 dst_cache = OP_THINGY_HERE(dst_cache, src_cache >> srcoff);
+		 BSTR_WWORD(timestamp, dst, dst_cache);
+		 len -= 32;
+		 dst += 4;
+		 src += 4;
+                 src_cache >>= 32;
+                 src_cache |= (uint64)BSTR_RWORD(timestamp, src + 4) << 32;
+		}
+
+	DO_BSTR_EPILOGUE();	// if(len) { blah blah blah masking blah }
+		if(len)
+		{
+		 uint32 dst_preserve_mask;
+		 uint32 dst_change_mask;
+
+		 dst_preserve_mask = (1U << ((0x20 - len) & 0x1F) << len;
+		 dst_change_mask = ~dst_preserve_mask;
+
+                 dst_cache = BSTR_RWORD(timestamp, dst);
+		 dst_cache = OP_THINGY_HERE(dst_cache, src_cache >> srcoff);
+		 BSTR_WWORD(timestamp, dst, dst_cache);
+		 dstoff += len;
+		 srcoff += len;
+
+                 if(srcoff >= 0x20)
+                 {
+                  srcoff &= 0x1F;
+                  src += 4;
+                 }
+		 len = 0;
+		}
+#endif
 
 	switch(sub_op)
 	{

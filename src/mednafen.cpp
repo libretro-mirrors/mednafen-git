@@ -85,6 +85,11 @@ static const char *fname_extra = gettext_noop("See fname_format.txt for more inf
 
 static MDFNSetting MednafenSettings[] =
 {
+  { "netplay.password", MDFNSF_NOFLAGS, gettext_noop("Server password."), gettext_noop("Password to connect to the netplay server."), MDFNST_STRING, "" },
+  { "netplay.localplayers", MDFNSF_NOFLAGS, gettext_noop("Local player count."), gettext_noop("Number of local players for network play.  This number is advisory to the server, and the server may assign fewer players if the number of players requested is higher than the number of controllers currently available."), MDFNST_UINT, "1", "0", "16" },
+  { "netplay.nick", MDFNSF_NOFLAGS, gettext_noop("Nickname."), gettext_noop("Nickname to use for network play chat."), MDFNST_STRING, "" },
+  { "netplay.gamekey", MDFNSF_NOFLAGS, gettext_noop("Key to hash with the MD5 hash of the game."), NULL, MDFNST_STRING, "" },
+
   { "srwcompressor", MDFNSF_NOFLAGS, gettext_noop("Compressor to use with state rewinding"), NULL, MDFNST_ENUM, "quicklz", NULL, NULL, NULL, NULL, CompressorList },
 
   { "srwframes", MDFNSF_NOFLAGS, gettext_noop("Number of frames to keep states for when state rewinding is enabled."), 
@@ -203,6 +208,7 @@ bool MDFNI_StartAVRecord(const char *path, double SoundRate)
   spec.VideoWidth = MDFNGameInfo->lcm_width;
   spec.VideoHeight = MDFNGameInfo->lcm_height;
   spec.VideoCodec = MDFN_GetSettingI("qtrecord.vcodec");
+  spec.MasterClock = MDFNGameInfo->MasterClock;
 
   if(spec.VideoWidth < MDFN_GetSettingUI("qtrecord.w_double_threshold"))
    spec.VideoWidth *= 2;
@@ -220,8 +226,15 @@ bool MDFNI_StartAVRecord(const char *path, double SoundRate)
   MDFN_printf(_("Video width: %u\n"), spec.VideoWidth);
   MDFN_printf(_("Video height: %u\n"), spec.VideoHeight);
   MDFN_printf(_("Video codec: %s\n"), MDFN_GetSettingS("qtrecord.vcodec").c_str());
-  MDFN_printf(_("Sound rate: %u\n"), spec.SoundRate);
-  MDFN_printf(_("Sound channels: %u\n"), spec.SoundChan);
+
+  if(spec.SoundRate && spec.SoundChan)
+  {
+   MDFN_printf(_("Sound rate: %u\n"), spec.SoundRate);
+   MDFN_printf(_("Sound channels: %u\n"), spec.SoundChan);
+  }
+  else
+   MDFN_printf(_("Sound: Disabled\n"));
+
   MDFN_indent(-1);
   MDFN_printf("\n");
 
@@ -300,9 +313,9 @@ void MDFNI_CloseGame(void)
  memset(PortDeviceCache, 0, sizeof(PortDeviceCache));
 }
 
-int MDFNI_NetplayStart(uint32 local_players, const std::string &nickname, const std::string &game_key, const std::string &connect_password)
+int MDFNI_NetplayStart(void)
 {
- return(NetplayStart((const char**)PortDeviceCache, PortDataLenCache, local_players, nickname, game_key, connect_password));
+ return(NetplayStart((const char**)PortDeviceCache, PortDataLenCache));
 }
 
 
@@ -1459,7 +1472,7 @@ void MDFNI_Emulate(EmulateSpecStruct *espec)
 
   try
   {
-   qtrecorder->WriteFrame(espec->surface, espec->DisplayRect, espec->LineWidths, espec->SoundBuf, espec->SoundBufSize);
+   qtrecorder->WriteFrame(espec->surface, espec->DisplayRect, espec->LineWidths, espec->SoundBuf, espec->SoundBufSize, espec->MasterCycles);
   }
   catch(std::exception &e)
   {

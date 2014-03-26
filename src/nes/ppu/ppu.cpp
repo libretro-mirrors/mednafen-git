@@ -29,6 +29,7 @@
 #include        "palette.h"
 #include        "../input.h"  
 #include	"../ntsc/nes_ntsc.h"
+#include	<math.h>
 
 #define VBlankON        (PPU[0]&0x80)   /* Generate VBlank NMI */
 #define Sprite16        (PPU[0]&0x20)   /* Sprites 8x16/8x8        */
@@ -149,17 +150,116 @@ uint8 NTARAM[0x800],PALRAM[0x20],PALRAMCache[0x20];
 uint8 SPRAM[0x100];
 static SPRB SPRBUF[64];	// 8] if we didn't have an excess sprites option.
 
-static uint32 PALRAMLUTCache[0x200];
+static union
+{
+ uint32 PALRAMLUTCache[0x200];
+
+ struct
+ {
+  uint8 PALRAMLUTCache8[0x200];
+  MDFN_PaletteEntry NESPalette8BPP[0x100];
+ };
+} CM;
+
+static uint8 FindClose(uint8 r, uint8 g, uint8 b) MDFN_COLD;
+static uint8 FindClose(uint8 r, uint8 g, uint8 b)
+{
+ double rl, gl, bl;
+ int closest = -1;
+ double closest_cs = 1000;
+
+ rl = pow((double)r / 255, 2.2 / 1.0);
+ gl = pow((double)g / 255, 2.2 / 1.0);
+ bl = pow((double)b / 255, 2.2 / 1.0);
+
+ for(unsigned x = 0; x < 256; x++)
+ {
+  double rcl, gcl, bcl;
+  double cs;
+
+  rcl = pow((double)CM.NESPalette8BPP[x].r / 255, 2.2 / 1.0);
+  gcl = pow((double)CM.NESPalette8BPP[x].g / 255, 2.2 / 1.0);
+  bcl = pow((double)CM.NESPalette8BPP[x].b / 255, 2.2 / 1.0);
+
+  cs = fabs(rcl - rl) * 0.2126 + fabs(gcl - gl) * 0.7152 + fabs(bcl - bl) * 0.0722;
+  if(cs < closest_cs)
+  {
+   closest_cs = cs;
+   closest = x;
+  }
+ }
+
+ return(closest);
+}
 
 void MDFNNES_SetPixelFormat(const MDFN_PixelFormat &pixel_format)
 {
- for(int x = 0; x < 0x200; x++)
+ if(pixel_format.bpp == 8)
  {
-  int r = ActiveNESPalette[x].r;
-  int g = ActiveNESPalette[x].g;
-  int b = ActiveNESPalette[x].b;
+#if 1
+  for(int x = 0; x < 0x40; x++)
+  {
+   CM.NESPalette8BPP[x].r = ActiveNESPalette[x].r;
+   CM.NESPalette8BPP[x].g = ActiveNESPalette[x].g;
+   CM.NESPalette8BPP[x].b = ActiveNESPalette[x].b;
+   CM.PALRAMLUTCache8[x] = x;
+  }
 
-  PALRAMLUTCache[x] = pixel_format.MakeColor(r, g, b);
+  for(int x = 0x80; x < 0xC0; x++)
+  {
+   CM.NESPalette8BPP[0x40 | (x & 0x3F)].r = ActiveNESPalette[x].r;
+   CM.NESPalette8BPP[0x40 | (x & 0x3F)].g = ActiveNESPalette[x].g;
+   CM.NESPalette8BPP[0x40 | (x & 0x3F)].b = ActiveNESPalette[x].b;
+   CM.PALRAMLUTCache8[x] = 0x40 | (x & 0x3F);
+  }
+
+  for(int x = 0x100; x < 0x140; x++)
+  {
+   CM.NESPalette8BPP[0x80 | (x & 0x3F)].r = ActiveNESPalette[x].r;
+   CM.NESPalette8BPP[0x80 | (x & 0x3F)].g = ActiveNESPalette[x].g;
+   CM.NESPalette8BPP[0x80 | (x & 0x3F)].b = ActiveNESPalette[x].b;
+   CM.PALRAMLUTCache8[x] = 0x80 | (x & 0x3F);
+  }
+
+  for(int x = 0x1C0; x < 0x200; x++)
+  {
+   CM.NESPalette8BPP[0xC0 | (x & 0x3F)].r = ActiveNESPalette[x].r;
+   CM.NESPalette8BPP[0xC0 | (x & 0x3F)].g = ActiveNESPalette[x].g;
+   CM.NESPalette8BPP[0xC0 | (x & 0x3F)].b = ActiveNESPalette[x].b;
+   CM.PALRAMLUTCache8[x] = 0xC0 | (x & 0x3F);
+  }
+
+  for(int x = 0x40; x < 0x80; x++)
+   CM.PALRAMLUTCache8[x] = FindClose(ActiveNESPalette[x].r, ActiveNESPalette[x].g, ActiveNESPalette[x].b);
+
+  for(int x = 0xC0; x < 0x100; x++)
+   CM.PALRAMLUTCache8[x] = FindClose(ActiveNESPalette[x].r, ActiveNESPalette[x].g, ActiveNESPalette[x].b);
+
+  for(int x = 0x140; x < 0x1C0; x++)
+   CM.PALRAMLUTCache8[x] = FindClose(ActiveNESPalette[x].r, ActiveNESPalette[x].g, ActiveNESPalette[x].b);
+#else
+  for(int x = 0; x < 0x100; x++)
+  {
+   CM.NESPalette8BPP[x].r = ((x >> 0) & 0x7) * 255 / 7;
+   CM.NESPalette8BPP[x].g = ((x >> 3) & 0x7) * 255 / 7;
+   CM.NESPalette8BPP[x].b = ((x >> 6) & 0x3) * 255 / 3;
+  }
+
+  for(int x = 0; x < 0x200; x++)
+   CM.PALRAMLUTCache8[x] = FindClose(ActiveNESPalette[x].r, ActiveNESPalette[x].g, ActiveNESPalette[x].b);
+#endif
+
+ }
+ else
+ {
+  for(int x = 0; x < 0x200; x++)
+  {
+   int r = ActiveNESPalette[x].r;
+   int g = ActiveNESPalette[x].g;
+   int b = ActiveNESPalette[x].b;
+
+   CM.PALRAMLUTCache[x] = pixel_format.MakeColor(r, g, b);
+  }
  }
 }
 
@@ -803,15 +903,6 @@ static void DoLine(MDFN_Surface *surface, int skip)
 
  if(scanline >= 0)
  {
-  uint32 *real_target = NULL;
-  uint16 *real_target16 = NULL;
-
-  if(surface->pixels)
-   real_target = surface->pixels + scanline * surface->pitchinpix;
-
-  if(surface->pixels16)
-   real_target16 = surface->pixels16 + scanline * surface->pitchinpix;
-
   if(NTSCBlitter)
   {
    if(!skip)
@@ -833,7 +924,7 @@ static void DoLine(MDFN_Surface *surface, int skip)
 
      surface->SetFormat(nf, false);
     }
-    nes_ntsc_blit(surface->format, NTSCBlitter, target, emphlinebuf, nes_ntsc_min_in_width, setup.merge_fields ? scanline % 3 : BurstPhase, nes_ntsc_min_out_width, 1, real_target, surface->pitch32 * sizeof(uint32));
+    nes_ntsc_blit(surface->format, NTSCBlitter, target, emphlinebuf, nes_ntsc_min_in_width, setup.merge_fields ? scanline % 3 : BurstPhase, nes_ntsc_min_out_width, 1, surface->pixels + scanline * surface->pitchinpix, surface->pitch32 * sizeof(uint32));
    }
    BurstPhase = (BurstPhase + 1) % 3;
   }
@@ -841,12 +932,36 @@ static void DoLine(MDFN_Surface *surface, int skip)
   {
    if(!skip) 
    {
-    if(real_target16)
-     for(int x = 0; x < 256; x++)
-      real_target16[x] = PALRAMLUTCache[(target[x] & 0x3F) | (emphlinebuf[x] << 6)];
-    else
-     for(int x = 0; x < 256; x++)
-      real_target[x] = PALRAMLUTCache[(target[x] & 0x3F) | (emphlinebuf[x] << 6)];
+    switch(surface->format.bpp)
+    {
+     default:
+     case 32:
+	{
+         uint32 *real_target = surface->pixels + scanline * surface->pitchinpix;
+
+         for(int x = 0; x < 256; x++)
+          real_target[x] = CM.PALRAMLUTCache[(target[x] & 0x3F) | (emphlinebuf[x] << 6)];
+	}
+	break;
+
+     case 16:
+	{
+	 uint16 *real_target16 = surface->pixels16 + scanline * surface->pitchinpix;
+
+         for(int x = 0; x < 256; x++)
+          real_target16[x] = CM.PALRAMLUTCache[(target[x] & 0x3F) | (emphlinebuf[x] << 6)];
+	}
+	break;
+
+     case 8:
+	{
+	 uint8 *real_target8 = surface->pixels8 + scanline * surface->pitchinpix;
+
+         for(int x = 0; x < 256; x++)
+          real_target8[x] = CM.PALRAMLUTCache8[(target[x] & 0x3F) | (emphlinebuf[x] << 6)];
+	}
+	break;
+    }
    }
   }
  }
@@ -1109,6 +1224,9 @@ void MDFNPPU_Power(void)
 
 int MDFNPPU_Loop(MDFN_Surface *surface, int skip)
 {
+  if(!skip && surface->palette)
+   memcpy(surface->palette, CM.NESPalette8BPP, sizeof(CM.NESPalette8BPP));
+
   if(ppudead) /* Needed for Knight Rider, Time Lord, possibly others. */
   {
    if(!skip)
@@ -1158,6 +1276,7 @@ int MDFNPPU_Loop(MDFN_Surface *surface, int skip)
     if(MMC5Hack && (ScreenON || SpriteON)) MMC5_hb(scanline);
    }
   } /* else... to if(ppudead) */
+
 
   if(skip)
    return(0);
@@ -1533,7 +1652,7 @@ static void DoGfxDecode(void)
  }
  else
   for(int x = 0; x < 4; x++)
-   neo_palette[x] = PALRAMLUTCache[PALRAMCache[pbn * 4 + x] & 0x3F] | GfxDecode_Buf->format.MakeColor(0, 0, 0, 0xFF);
+   neo_palette[x] = CM.PALRAMLUTCache[PALRAMCache[pbn * 4 + x] & 0x3F] | GfxDecode_Buf->format.MakeColor(0, 0, 0, 0xFF);
 
   for(int y = 0; y < GfxDecode_Buf->h; y++)
   {

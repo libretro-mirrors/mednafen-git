@@ -32,6 +32,68 @@ extern MDFNGI EmulatedPSX;
 namespace MDFN_IEN_PSX
 {
 
+
+struct MDFN_PseudoRNG	// Based off(but not the same as) public-domain "JKISS" PRNG.
+{
+ MDFN_PseudoRNG()
+ {
+  ResetState();
+ }
+
+ uint32 RandU32(void)
+ {
+  uint64 t;
+
+  x = 314527869 * x + 1234567;
+  y ^= y << 5; y ^= y >> 7; y ^= y << 22;
+  t = 4294584393ULL * z + c; c = t >> 32; z = t;
+  lcgo = (19073486328125ULL * lcgo) + 1;
+
+  return (x + y + z) ^ (lcgo >> 16);
+ }
+
+ uint32 RandU32(uint32 mina, uint32 maxa)
+ {
+  const uint32 range_m1 = maxa - mina;
+  uint32 range_mask;
+  uint32 tmp;
+
+  range_mask = range_m1;
+  range_mask |= range_mask >> 1;
+  range_mask |= range_mask >> 2;
+  range_mask |= range_mask >> 4;
+  range_mask |= range_mask >> 8;
+  range_mask |= range_mask >> 16;
+
+  do
+  {
+   tmp = RandU32() & range_mask;
+  } while(tmp > range_m1);
+ 
+  return(mina + tmp);
+ }
+
+ void ResetState(void)	// Must always reset to the same state.
+ {
+  x = 123456789;
+  y = 987654321;
+  z = 43219876;
+  c = 6543217;
+  lcgo = 0xDEADBEEFCAFEBABEULL;
+ }
+
+ uint32 x,y,z,c;
+ uint64 lcgo;
+};
+
+static MDFN_PseudoRNG PSX_PRNG;
+
+uint32 PSX_GetRandU32(uint32 mina, uint32 maxa)
+{
+ return PSX_PRNG.RandU32(mina, maxa);
+}
+
+
 class PSF1Loader : public PSFLoader
 {
  public:
@@ -733,6 +795,29 @@ uint32 PSX_MemPeek32(uint32 A)
 // FIXME: Add PSX_Reset() and FrontIO::Reset() so that emulated input devices don't get power-reset on reset-button reset.
 static void PSX_Power(void)
 {
+ PSX_PRNG.ResetState();	// Should occur first!
+
+#if 0
+ const uint32 counterer = 262144;
+ uint64 averageizer = 0;
+ uint32 maximizer = 0;
+ uint32 minimizer = ~0U;
+ for(int i = 0; i < counterer; i++)
+ {
+  uint32 tmp = PSX_GetRandU32(0, 20000);
+  if(tmp < minimizer)
+   minimizer = tmp;
+
+  if(tmp > maximizer)
+   maximizer = tmp;
+
+  averageizer += tmp;
+  printf("%8u\n", tmp);
+ }
+ printf("Average: %f\nMinimum: %u\nMaximum: %u\n", (double)averageizer / counterer, minimizer, maximizer);
+ exit(1);
+#endif
+
  memset(MainRAM.data32, 0, 2048 * 1024);
  memset(ScratchRAM.data32, 0, 1024);
 
@@ -1186,6 +1271,9 @@ static bool InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
 
  if(region == REGION_EU)
  {
+  EmulatedPSX.lcm_width = 2800;
+  EmulatedPSX.lcm_height = 576;
+
   EmulatedPSX.nominal_width = 377;	// Dunno. :(
   EmulatedPSX.nominal_height = 288;
 
@@ -1194,7 +1282,7 @@ static bool InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
  }
  else
  {
-  EmulatedPSX.lcm_width = 2720;
+  EmulatedPSX.lcm_width = 2800;
   EmulatedPSX.lcm_height = 480;
 
   EmulatedPSX.nominal_width = 320;
@@ -1496,7 +1584,7 @@ static int Load(const char *name, MDFNFILE *fp)
 
  static std::vector<CDIF *> CDInterfaces;
 
- CDInterfaces.push_back(new CDIF_MT("/extra/games/PSX/Jumping Flash! (USA)/Jumping Flash! (USA).cue"));
+ CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Jumping Flash! (USA)/Jumping Flash! (USA).cue", false));
  //CDInterfaces.push_back(new CDIF("/extra/games/PSX/Tony Hawk's Pro Skater 2 (USA)/Tony Hawk's Pro Skater 2 (USA).cue"));
 
  if(!InitCommon(&CDInterfaces, !IsPSF))

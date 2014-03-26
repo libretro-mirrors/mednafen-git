@@ -114,7 +114,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -127,6 +127,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -877,6 +880,15 @@ keyboard 61
 
 
 0
+command.take_scaled_snapshot
+MDFNSF_SUPPRESS_DOC 
+Take scaled(and filtered) screen snapshot
+
+MDFNST_STRING
+keyboard 290+shift
+
+
+0
 command.take_snapshot
 MDFNSF_SUPPRESS_DOC 
 Take screen snapshot
@@ -1335,7 +1347,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -1348,6 +1360,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -1731,7 +1746,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -1744,6 +1759,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -2070,7 +2088,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -2083,6 +2101,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -2481,7 +2502,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -2494,6 +2515,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -3600,7 +3624,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -3613,6 +3637,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -6354,7 +6381,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -6367,6 +6394,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -6430,7 +6460,7 @@ MDFNST_UINT
 nes.sound_rate_error
 
 Output rate tolerance.
-
+Lower values correspond to better matching of the output rate of the resampler to the actual desired output rate, at the expense of increased RAM usage and poorer CPU cache utilization.  DO NOT INCREASE THIS VALUE, OR SOUND WILL LIKELY BE OFF-KEY AND THE WRONG TEMPO, AMONG OTHER PROBLEMS.
 MDFNST_FLOAT
 0.00004
 0.0000001
@@ -6439,7 +6469,7 @@ MDFNST_FLOAT
 nes.soundq
 
 Sound quality.
-
+Higher values correspond to better SNR and better preservation of higher frequencies(\"brightness\"), at the cost of increased computational complexity and a negligible(<0.5ms) increase in latency.
 MDFNST_INT
 0
 -2
@@ -6831,7 +6861,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -6844,6 +6874,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -9156,7 +9189,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -9169,6 +9202,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -10434,7 +10470,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -10447,6 +10483,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -12171,7 +12210,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -12184,6 +12223,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -12438,7 +12480,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -12451,6 +12493,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -22578,7 +22623,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -22591,6 +22636,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -23097,7 +23145,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -23110,6 +23158,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -24630,7 +24681,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -24643,6 +24694,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -25323,7 +25377,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -25336,6 +25390,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 
@@ -25878,7 +25935,7 @@ MDFNST_ENUM
 none
 
 
-9
+10
 none
 None/Disabled
 
@@ -25891,6 +25948,9 @@ Same as \"autoip\", but when interpolation is done, it is done in a manner that 
 scale2x
 Scale2x
 
+sabr
+SABR v3.0
+GPU-intensive.
 ipsharper
 Sharper bilinear interpolation.
 

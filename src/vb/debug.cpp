@@ -188,7 +188,7 @@ std::vector<BranchTraceResult> VBDBG_GetBranchTrace(void)
 }
 
 
-void VBDBG_CheckBP(int type, uint32 address, unsigned int len)
+void VBDBG_CheckBP(int type, uint32 address, uint32 value, unsigned int len)
 {
  std::vector<VB_BPOINT>::iterator bpit, bpit_end;
 
@@ -325,7 +325,7 @@ static uint16 dis_readhw(uint32 A)
 
 void VBDBG_Disassemble(uint32 &a, uint32 SpecialA, char *TextBuf)
 {
- return(v810_dis(a, 1, TextBuf, dis_readhw));
+ return(v810_dis(a, 1, TextBuf, dis_readhw, true));
 }
 
 uint32 VBDBG_MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical)
@@ -683,10 +683,6 @@ bool VBDBG_Init(void)
      newt.long_name = strdup(tmpinfo);
      newt.TotalBits = 5;
      newt.NP2Size = 0;
-     newt.IsSegmented = FALSE;
-     newt.SegmentBits = 0;
-     newt.OffsetBits = 0;
-     newt.BitsOverlapped = 0;
 
      newt.IsWave = TRUE;
      newt.WaveFormat = ASPACE_WFMT_UNSIGNED;

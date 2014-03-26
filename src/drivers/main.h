@@ -33,20 +33,10 @@
 #define CEVT_WANT_EXIT		0x80 // Emulator exit or GUI exit or bust!
 
 
-#define CEVT_NP_TEXT_TO_SERVER	0x100
 #define CEVT_NP_DISPLAY_TEXT	0x101
-#define CEVT_NP_TOGGLE_VIEWABLE	0x102
 #define CEVT_NP_TOGGLE_TT	0x103
-#define CEVT_NP_CONNECT		0x104
-#define CEVT_NP_SETNICK		0x105
-#define CEVT_NP_PING		0x106
-#define CEVT_NP_INTEGRITY	0x107
-#define CEVT_NP_DISCONNECT      0x108
-#define CEVT_NP_SWAP		0x109
-#define CEVT_NP_LIST		0x10A
-#define CEVT_NP_DUPE		0x10B
-#define CEVT_NP_DROP		0x10C
-#define CEVT_NP_TAKE		0x10D
+#define CEVT_NP_LINE            0x180
+#define CEVT_NP_LINE_RESPONSE   0x181
 
 #define CEVT_SET_INPUT_FOCUS	0x1000	// Main thread to game thread.
 
@@ -66,7 +56,7 @@ void RefreshThrottleFPS(double);
 void PumpWrap(void);
 void MainRequestExit(void);
 
-extern bool pending_save_state, pending_snapshot, pending_save_movie;
+extern bool pending_save_state, pending_ssnapshot, pending_snapshot, pending_save_movie;
 
 void DoRunNormal(void);
 void DoFrameAdvance(void);

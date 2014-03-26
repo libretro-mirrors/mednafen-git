@@ -88,6 +88,7 @@ typedef void GLAPIENTRY (*glPushMatrix_Func)(void);
 typedef void GLAPIENTRY (*glPopMatrix_Func)(void);
 typedef void GLAPIENTRY (*glRotated_Func)(GLdouble angle, GLdouble x, GLdouble y, GLdouble z);
 typedef void GLAPIENTRY (*glScalef_Func)(GLfloat x, GLfloat y, GLfloat z);
+typedef void GLAPIENTRY (*glReadPixels_Func)(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *data);
 
 #if MDFN_WANT_OPENGL_SHADERS
 typedef GLhandleARB GLAPIENTRY (*glCreateShaderObjectARB_Func)(GLenum);
@@ -150,6 +151,7 @@ extern glPushMatrix_Func p_glPushMatrix;
 extern glPopMatrix_Func p_glPopMatrix;
 extern glRotated_Func p_glRotated;
 extern glScalef_Func p_glScalef;
+extern glReadPixels_Func p_glReadPixels;
 
 #if MDFN_WANT_OPENGL_SHADERS
 extern glCreateShaderObjectARB_Func p_glCreateShaderObjectARB;
@@ -182,5 +184,6 @@ void KillOpenGL(void);
 int InitOpenGL(int ipolate, int scanlines, ShaderType pixshader, SDL_Surface *screen, int *rs, int *gs, int *bs, int *as);
 void ClearBackBufferOpenGL(void);
 void FlipOpenGL(void);
+void ReadPixelsGL(MDFN_Surface *surface, const MDFN_Rect *rect);
 
 #endif

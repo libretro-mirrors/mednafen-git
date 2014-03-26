@@ -287,6 +287,9 @@ static void Emulate(EmulateSpecStruct *espec)
    espec->SoundBufSize = out_len;
   }
  }
+ else
+  ResampBufferPos = 0;
+
 // for(int i = 0; i < espec->SoundBufSize * 2; i++)
 //  espec->SoundBuf[i] = (rand() & 0x7FFF) - 0x4000;	//(rand() * 192) >> 8
 

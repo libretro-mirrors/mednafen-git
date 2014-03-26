@@ -535,10 +535,79 @@ uint8 KING_MemPeek(uint32 A)
  return(ret);
 }
 
+static void Do16BitGet(const char *name, uint32 Address, uint32 Length, uint8 *Buffer)
+{
+ int wc = 0;
+
+ if(!strcmp(name, "vdcvram0"))
+  wc = 0;
+ else if(!strcmp(name, "vdcvram1"))
+  wc = 1;
+
+ while(Length)
+ {
+  uint16 data;
+
+  data = fx_vdc_chips[wc & 1]->PeekVRAM((Address >> 1) & 0xFFFF);
+
+  if((Address & 1) || Length == 1)
+  {
+   *Buffer = data >> ((Address & 1) << 3);
+   Buffer++;
+   Address++;
+   Length--;
+  }
+  else
+  {
+   Buffer[0] = data & 0xFF;
+   Buffer[1] = data >> 8;
+
+   Buffer += 2;
+   Address += 2;
+   Length -= 2;
+  }
+ }
+}
+
+static void Do16BitPut(const char *name, uint32 Address, uint32 Length, uint32 Granularity, bool hl, const uint8 *Buffer)
+{
+ int wc = 0;
+
+ if(!strcmp(name, "vdcvram0"))
+  wc = 0;
+ else if(!strcmp(name, "vdcvram1"))
+  wc = 1;
+
+ while(Length)
+ {
+  uint16 data;
+  int inc_amount;
+
+  if((Address & 1) || Length == 1)
+  {
+   data = fx_vdc_chips[wc & 1]->PeekVRAM((Address >> 1) & 0xFFFF);
+
+   data &= ~(0xFF << ((Address & 1) << 3));
+   data |= *Buffer << ((Address & 1) << 3);
+
+   inc_amount = 1;
+  }
+  else
+  {
+   data = Buffer[0] | (Buffer[1] << 8);
+   inc_amount = 2;
+  }
+
+  fx_vdc_chips[wc & 1]->PokeVRAM((Address >> 1) & 0xFFFF, data);
+
+  Buffer += inc_amount;
+  Address += inc_amount;
+  Length -= inc_amount;
+ }
+}
+
 static void KING_GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint8 *Buffer)
 {
- int which;
-
  if(!strcmp(name, "kram0") || !strcmp(name, "kram1"))
  {
   int wk = name[4] - '0';
@@ -560,17 +629,10 @@ static void KING_GetAddressSpaceBytes(const char *name, uint32 Address, uint32 L
    Buffer++;
   }
  }
- else if(trio_sscanf(name, "vdcvram%d", &which) == 1)
- {
-  //FXVDC_GetAddressSpaceBytes(fx_vdc_chips[which], "vram", Address, Length, Buffer);
- }
-
 }
 
 static void KING_PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint32 Granularity, bool hl, const uint8 *Buffer)
 {
- int which;
-
  if(!strcmp(name, "kram0") || !strcmp(name, "kram1"))
  {
   int wk = name[4] - '0';
@@ -593,11 +655,6 @@ static void KING_PutAddressSpaceBytes(const char *name, uint32 Address, uint32 L
    Buffer++;
   }
  }
- else if(trio_sscanf(name, "vdcvram%d", &which) == 1)
- {
-  //FXVDC_PutAddressSpaceBytes(fx_vdc_chips[which], "vram", Address, Length, Granularity, hl, Buffer);
- }
-
 }
 #endif
 
@@ -1163,7 +1220,7 @@ uint16 KING_Read16(const v810_timestamp_t timestamp, uint32 A)
 
 	                 #ifdef WANT_DEBUGGER 
 			 if(KRAMReadBPE) 
-			  PCFXDBG_CheckBP(BPOINT_AUX_READ, (king->KRAMRA & 0x3FFFF) | (page ? 0x40000 : 0), 1);
+			  PCFXDBG_CheckBP(BPOINT_AUX_READ, (king->KRAMRA & 0x3FFFF) | (page ? 0x40000 : 0), 0, 1);
 			 #endif
 	
                          king->KRAMRA = (king->KRAMRA &~ 0x1FFFF) | ((king->KRAMRA + inc_amount) & 0x1FFFF);
@@ -1439,7 +1496,7 @@ void KING_Write16(const v810_timestamp_t timestamp, uint32 A, uint16 V)
 
 		           #ifdef WANT_DEBUGGER 
                            if(KRAMWriteBPE)
-                            PCFXDBG_CheckBP(BPOINT_AUX_WRITE, (king->KRAMWA & 0x3FFFF) | (page ? 0x40000 : 0), 1);
+                            PCFXDBG_CheckBP(BPOINT_AUX_WRITE, (king->KRAMWA & 0x3FFFF) | (page ? 0x40000 : 0), V, 1);
 			   #endif
 
 			   king->KRAM[page][king->KRAMWA & 0x3FFFF] = V;
@@ -1741,8 +1798,8 @@ bool KING_Init(void)
  #ifdef WANT_DEBUGGER
  ASpace_Add(KING_GetAddressSpaceBytes, KING_PutAddressSpaceBytes, "kram0", "KRAM Page 0", 19);
  ASpace_Add(KING_GetAddressSpaceBytes, KING_PutAddressSpaceBytes, "kram1", "KRAM Page 1", 19);
- ASpace_Add(KING_GetAddressSpaceBytes, KING_PutAddressSpaceBytes, "vdcvram0", "VDC-A VRAM", 17);
- ASpace_Add(KING_GetAddressSpaceBytes, KING_PutAddressSpaceBytes, "vdcvram1", "VDC-B VRAM", 17);
+ ASpace_Add(Do16BitGet, Do16BitPut, "vdcvram0", "VDC-A VRAM", 17);
+ ASpace_Add(Do16BitGet, Do16BitPut, "vdcvram1", "VDC-B VRAM", 17);
  ASpace_Add(KING_GetAddressSpaceBytes, KING_PutAddressSpaceBytes, "vce", "VCE Palette RAM", 10);
  #endif
 
@@ -2347,7 +2404,6 @@ static void RebuildUVLUT(const MDFN_PixelFormat &format)
 
 // FIXME
 static int rs, gs, bs;
-
 static uint32 INLINE YUV888_TO_RGB888(uint32 yuv)
 {
  int32 r, g, b;
@@ -2362,6 +2418,18 @@ static uint32 INLINE YUV888_TO_RGB888(uint32 yuv)
  b = clamp_to_u8(b);
 
  return((r << rs) | (g << gs) | (b << bs));
+}
+
+static uint32 INLINE YUV888_TO_PF(const uint32 yuv, const MDFN_PixelFormat &pf, const uint8 a = 0x00)
+{
+ const uint8 y = yuv >> 16;
+ uint8 r, g, b;
+
+ r = clamp_to_u8((int32)(y + UVLUT[yuv & 0xFFFF][0]));
+ g = clamp_to_u8((int32)(y + UVLUT[yuv & 0xFFFF][1]));
+ b = clamp_to_u8((int32)(y + UVLUT[yuv & 0xFFFF][2]));
+
+ return pf.MakeColor(r, g, b, a);
 }
 
 static uint32 INLINE YUV888_TO_YCbCr888(uint32 yuv)
@@ -3853,7 +3921,6 @@ void KING_SetGraphicsDecode(MDFN_Surface *decode_surface, int line, int which, i
 
 static void DoGfxDecode(void)
 {
- const uint32 alpha_or = (0xFF << GfxDecode_Buf->format.Ashift);
  int pbn = GfxDecode_PBN;
 
  if(GfxDecode_Layer >= 4 && GfxDecode_Layer <= 7)
@@ -3878,10 +3945,9 @@ static void DoGfxDecode(void)
    palette_ptr += pbn * 16;
 
    for(int x = 0; x < 16; x++) 
-    neo_palette[x] = YUV888_TO_RGB888(palette_ptr[x]) | alpha_or;
+    neo_palette[x] = YUV888_TO_PF(palette_ptr[x], GfxDecode_Buf->format, 0xFF);
   }
 
-  //FXVDC_DoGfxDecode(fx_vdc_chips[(GfxDecode_Layer - 4) / 2], neo_palette, GfxDecode_Buf, GfxDecode_Scroll, (GfxDecode_Layer - 4) & 1);
   fx_vdc_chips[(GfxDecode_Layer - 4) / 2]->DoGfxDecode(GfxDecode_Buf->pixels, neo_palette, GfxDecode_Buf->MakeColor(0, 0, 0, 0xFF), (GfxDecode_Layer - 4) & 1, GfxDecode_Buf->w, GfxDecode_Buf->h, GfxDecode_Scroll);
  }
  else if(GfxDecode_Layer < 4)
@@ -3933,6 +3999,9 @@ static void DoGfxDecode(void)
       int which_tile = (x / 8) + (GfxDecode_Scroll + (y / 8)) * (GfxDecode_Buf->w / 8);
       uint16 cg = king->KRAM[bat_and_cg_page][(cg_offset + (which_tile * 8) + (y & 0x7)) & 0x3FFFF];
 
+      target[x + 0] = target[x + 1] = target[x + 2] = target[x + 3] =
+	target[x + 4] = target[x + 5] = target[x + 6] = target[x + 7] = 0x008080;	// For transparent pixels
+
       DRAWBG8x1_4(target + x, &cg, palette_ptr + pbn, layer_or);
 
       target[x + GfxDecode_Buf->w * 2 + 0] = target[x + GfxDecode_Buf->w * 2 + 1] = target[x + GfxDecode_Buf->w * 2 + 2] = target[x + GfxDecode_Buf->w * 2 + 3] =
@@ -3942,7 +4011,7 @@ static void DoGfxDecode(void)
       target[x + GfxDecode_Buf->w*1 + 4]=target[x + GfxDecode_Buf->w*1 + 5]=target[x + GfxDecode_Buf->w*1 + 6]=target[x + GfxDecode_Buf->w*1 + 7] = which_tile;
      }
      for(int x = 0; x < GfxDecode_Buf->w; x++)
-      target[x] = YUV888_TO_RGB888(target[x]) | alpha_or;
+      target[x] = YUV888_TO_PF(target[x], GfxDecode_Buf->format, 0xFF);
      target += GfxDecode_Buf->w * 3;
     }
    }
@@ -3959,6 +4028,9 @@ static void DoGfxDecode(void)
       int which_tile = (x / 8) + (GfxDecode_Scroll + (y / 8)) * (GfxDecode_Buf->w / 8);
       uint16 *cgptr = &king->KRAM[bat_and_cg_page][(cg_offset + (which_tile * 16) + (y & 0x7) * 2) & 0x3FFFF];
 
+      target[x + 0] = target[x + 1] = target[x + 2] = target[x + 3] =
+        target[x + 4] = target[x + 5] = target[x + 6] = target[x + 7] = 0x008080;       // For transparent pixels
+
       DRAWBG8x1_16(target + x, cgptr, palette_ptr + pbn, layer_or);
 
       target[x + GfxDecode_Buf->w*2 + 0] = target[x + GfxDecode_Buf->w*2 + 1] = target[x + GfxDecode_Buf->w*2 + 2] = target[x + GfxDecode_Buf->w*2 + 3] =
@@ -3968,7 +4040,7 @@ static void DoGfxDecode(void)
       target[x + GfxDecode_Buf->w*1 + 4]=target[x + GfxDecode_Buf->w*1 + 5]=target[x + GfxDecode_Buf->w*1 + 6]=target[x + GfxDecode_Buf->w*1 + 7] = which_tile;
      }
      for(int x = 0; x < GfxDecode_Buf->w; x++)
-      target[x] = YUV888_TO_RGB888(target[x]) | alpha_or;
+      target[x] = YUV888_TO_PF(target[x], GfxDecode_Buf->format, 0xFF);
      target += GfxDecode_Buf->w * 3;
     }
    }
@@ -3983,6 +4055,9 @@ static void DoGfxDecode(void)
       int which_tile = (x / 8) + (GfxDecode_Scroll + (y / 8)) * (GfxDecode_Buf->w / 8);
       uint16 *cgptr = &king->KRAM[bat_and_cg_page][(cg_offset + (which_tile * 32) + (y & 0x7) * 4) & 0x3FFFF];
 
+      target[x + 0] = target[x + 1] = target[x + 2] = target[x + 3] =
+        target[x + 4] = target[x + 5] = target[x + 6] = target[x + 7] = 0x008080;       // For transparent pixels
+
       DRAWBG8x1_256(target + x, cgptr, palette_ptr, layer_or);
 
       target[x + GfxDecode_Buf->w*2 + 0] = target[x + GfxDecode_Buf->w*2 + 1] = target[x + GfxDecode_Buf->w*2 + 2] = target[x + GfxDecode_Buf->w*2 + 3] =
@@ -3993,7 +4068,7 @@ static void DoGfxDecode(void)
      }
 
      for(int x = 0; x < GfxDecode_Buf->w; x++)
-      target[x] = YUV888_TO_RGB888(target[x]) | alpha_or;
+      target[x] = YUV888_TO_PF(target[x], GfxDecode_Buf->format, 0xFF);
 
      target += GfxDecode_Buf->w * 3;
     }
@@ -4008,11 +4083,14 @@ static void DoGfxDecode(void)
       int which_tile = (x / 8) + (GfxDecode_Scroll + (y / 8)) * (GfxDecode_Buf->w / 8);
       uint16 *cgptr = &king->KRAM[bat_and_cg_page][(cg_offset + (which_tile * 64) + (y & 0x7) * 8) & 0x3FFFF];
 
+      target[x + 0] = target[x + 1] = target[x + 2] = target[x + 3] =
+        target[x + 4] = target[x + 5] = target[x + 6] = target[x + 7] = 0x008080;       // For transparent pixels
+
       DRAWBG8x1_64K(target + x, cgptr, palette_ptr, layer_or);
      }
 
      for(int x = 0; x < GfxDecode_Buf->w; x++)
-      target[x] = YUV888_TO_RGB888(target[x]) | alpha_or;
+      target[x] = YUV888_TO_PF(target[x], GfxDecode_Buf->format, 0xFF);
 
      target += GfxDecode_Buf->w * 3;
     }
@@ -4026,11 +4104,14 @@ static void DoGfxDecode(void)
       int which_tile = (x / 8) + (GfxDecode_Scroll + (y / 8)) * (GfxDecode_Buf->w / 8);
       uint16 *cgptr = &king->KRAM[bat_and_cg_page][(cg_offset + (which_tile * 64) + (y & 0x7) * 8) & 0x3FFFF];
 
+      target[x + 0] = target[x + 1] = target[x + 2] = target[x + 3] =
+        target[x + 4] = target[x + 5] = target[x + 6] = target[x + 7] = 0x008080;       // For transparent pixels
+
       DRAWBG8x1_16M(target + x, cgptr, palette_ptr, layer_or);
      }
 
      for(int x = 0; x < GfxDecode_Buf->w; x++)
-      target[x] = YUV888_TO_RGB888(target[x]) | alpha_or;
+      target[x] = YUV888_TO_PF(target[x], GfxDecode_Buf->format, 0xFF);
 
      target += GfxDecode_Buf->w * 3;
     }

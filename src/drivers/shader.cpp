@@ -164,6 +164,7 @@ void main()\n\
  gl_FragColor = col;\n\
 }";
 
+#include "shader_sabr.inc"
 
 static void SLP(GLhandleARB moe)
 {
@@ -231,6 +232,10 @@ bool InitShader(ShaderType shader_type)
 		CompileShader(CSP[0], vertexProg, fragScale2X);
 		break;
 
+	  case SHADER_SABR:
+		CompileShader(CSP[0], vertSABR, fragSABR);
+		break;
+
 	  default:
 		for(unsigned i = 0; i < 8; i++)
 		{
@@ -253,10 +258,11 @@ bool InitShader(ShaderType shader_type)
 	return(1);
 }
 
-bool ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th)
+bool ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th, int orig_tw, int orig_th)
 {
         p_glEnable(GL_FRAGMENT_PROGRAM_ARB);
 
+	//printf("%d:%d, %d:%d\n", tw, th, orig_tw, orig_th);
 	//printf("%f\n", (double)dest_rect->w / rect->w);
         //printf("%f\n", (double)dest_rect->h / rect->h);
 	if(OurType == SHADER_SCALE2X)
@@ -266,6 +272,13 @@ bool ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int 
          p_glUniform1iARB(p_glGetUniformLocationARB(CSP[0].p, "Tex0"), 0);
          p_glUniform2fARB(p_glGetUniformLocationARB(CSP[0].p, "TexSize"), tw, th);
          p_glUniform2fARB(p_glGetUniformLocationARB(CSP[0].p, "TexSizeInverse"), (float)1 / tw, (float) 1 / th);
+	}
+	else if(OurType == SHADER_SABR)
+	{
+ 	 p_glUseProgramObjectARB(CSP[0].p);
+
+         p_glUniform1iARB(p_glGetUniformLocationARB(CSP[0].p, "rubyTexture"), 0);
+         p_glUniform2fARB(p_glGetUniformLocationARB(CSP[0].p, "rubyTextureSize"), tw, th);
 	}
 	else
 	{

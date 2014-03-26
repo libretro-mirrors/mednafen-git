@@ -163,6 +163,70 @@ class VDC
 	 }
 	}
 
+        INLINE void SimulateRead16(bool A, VDC_SimulateResult *result)
+        {
+         result->ReadCount = 0;
+         result->WriteCount = 0;
+         result->ReadStart = 0;
+         result->WriteStart = 0;
+
+         if(A && Simulate_select == 0x02)
+         {
+          Simulate_MARR += vram_inc_tab[(Simulate_CR >> 11) & 0x3];
+
+          result->ReadStart = Simulate_MARR;
+          result->ReadCount = 1;
+         }
+        }
+
+
+	INLINE void SimulateWrite16(bool A, uint16 V, VDC_SimulateResult *result)
+	{
+         result->ReadCount = 0;
+         result->WriteCount = 0;
+	 result->ReadStart = 0;
+	 result->WriteStart = 0;
+
+	 if(!A)
+	  Simulate_select = V & 0x1F;
+	 else
+	 {
+		  switch(Simulate_select)
+		  {
+	          	case 0x00: Simulate_MAWR = V;
+				   break;
+
+	         	case 0x01: Simulate_MARR = V;
+	                           Simulate_MARR += vram_inc_tab[(Simulate_CR >> 11) & 0x3];
+
+				   result->ReadStart = Simulate_MARR;
+				   result->ReadCount = 1;
+				   break;
+
+			case 0x02: result->WriteStart = Simulate_MAWR;
+				   result->WriteCount = 1;
+
+				   Simulate_MAWR += vram_inc_tab[(Simulate_CR >> 11) & 0x3];
+				   break;
+
+			case 0x12: Simulate_LENR = V;
+                                   result->ReadStart = SOUR;
+                                   result->ReadCount = Simulate_LENR + 1;
+
+				   if(DCR & 0x4)
+				    result->ReadStart = (result->ReadStart - (result->ReadCount - 1)) & 0xFFFF;
+
+                                   result->WriteStart = DESR;
+                                   result->WriteCount = Simulate_LENR + 1;      
+
+				   if(DCR & 0x8)
+				    result->WriteStart = (result->WriteStart - (result->WriteCount - 1)) & 0xFFFF;
+				   break;
+
+		  }
+	 }
+	}
+
 
 	int32 HSync(bool);
 	int32 VSync(bool);

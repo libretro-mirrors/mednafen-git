@@ -1,3 +1,81 @@
+-- 0.9.28-WIP: --
+
+January 13, 2013:
+	PSX: Corrected lcm_width and lcm_height emulation module structure values(affects QuickTime movie recording).
+
+	Fixed a bug in the netplay sound buffer underrun mitigation code that was causing it to only write 1/2 the data it should
+	be writing when the emulated system has stereo sound output.
+
+	Make netplay text line command processing only able to make the netplay text area visible or refresh its visibility, and not
+	able to hide it; fixes a problem of the netplay text area disappearing before the command response text
+	(like the disconnect message after /quit) can be seen.
+
+	Un-documented Musepack support for ripped CD images as the feature doesn't get much testing, and the support will eventually
+	be removed(someday ;)).
+
+	Removed some ancient unused members of a debugger-related address space data structure.
+
+	Fixed a major bug in the CD image audio decoding code that broke repeated playback of
+	CD audio tracks that are encoded in files handled by libsndfile(e.g. FLAC, WAV), although it may not have affected all
+	formats, the problem was noted to occur with FLAC at least.
+	(The bug is a regression apparently introduced in 0.9.25-WIP)
+
+January 12, 2013:
+	PCE_FAST: Fixed some problems with the 8bpp palette generation routine.
+
+	Don't compile with -ffast-math anymore, as it was noted to mess up the NES sound resampler code when
+	__attribute__((cold)) was used on the filter class constructor, to the extent that it was clearly audible.
+
+January 10, 2013:
+	Don't needlessly clear the software video buffers to black when changing video modes; fixes the problem of the screen going
+	black when in frame advance mode and toggling fullscreen.
+
+January 8, 2013:
+	Fixed a crash(due to a buffer overflow) in Mednafen's test CD-DA player when sound is disabled.
+
+	Fixed recording of QuickTime movies when sound is disabled(it was producing unplayably broken QuickTime files before).
+
+	PSX: Added a pseudorandom component to command processing and seek timing, to prevent a lockup in "Legend of Dragoon".
+
+January 6, 2013:
+	NES, PCE_FAST: Made limited use of MDFN_COLD.
+
+	Added "MDFN_COLD" define, expanding to "__attribute__((cold))" on sufficiently-recent versions of gcc.
+
+	NES, PCE_FAST: Implemented 8-bit rendering internally(for ports, not used by Mednafen proper), using static(in the sense
+	that the palettes won't change while emulation is in progress) palettes.  The limitations of palettized 8bpp don't
+	really affect the NES too much in practice, except for at least one homebrew demo.  The PC Engine, on the other hand, is
+	a different story...
+
+January 5, 2013:
+	PC-FX, VB, PSX: Fixed debugger trace log PC address recording.
+
+	VB: Corrected (lack of) disassembly of "di" and "ei" instructions.
+
+	PC-FX: Fixed broken VDC-A/VDC-B VRAM read/write aux debugger breakpoint support.
+
+	PC-FX: Fixed debugger's graphics viewer weirdness when viewing transparent KING BG pixels(by forcing them to black).
+
+	PC-FX: Fixed totally broken VDC VRAM debugger memory editor functionality
+
+January 4, 2013:
+	Only rebuild and re-run the 68K core generator program when necessary, hopefully fixing one big problem when doing
+	a pure cross-compiled build.
+
+January 3, 2013:
+	Added "SABR"( http://board.byuu.org/viewtopic.php?f=3&t=3416 ) pixel shader, as an option for the *.pixshader settings.
+
+December 24, 2012:
+	Added "WYSIWYG"-style(except for the "overlay" video.driver) scaled, filtered, maimed, diced, and so forth screen snapshots,
+	taken with the SHIFT+F9 key
+
+	Marked "Insert/Eject disk/disc" key function assigned to key F8 as being "dangerous" and subject to the delay specified by
+	the "ckdelay" setting, since many games respond very poorly to the disk/disc being ejected in the middle of a disc/disk
+	operation.
+
+December 23, 2012:
+	Simplified(less multithreaded message moving madness) and moved some driver-side netplay code into the Mednafen core.
+
 -- 0.9.27-WIP: --
 
 December 20, 2012:

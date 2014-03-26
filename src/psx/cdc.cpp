@@ -332,11 +332,13 @@ void PS_CDC::RecalcIRQ(void)
 {
  IRQ_Assert(IRQ_CD, (bool)(IRQBuffer & (IRQOutTestMask & 0x1F)));
 }
-
+//static int32 doom_ts;
 void PS_CDC::WriteIRQ(uint8 V)
 {
  assert(CDCReadyReceiveCounter <= 0);
  assert(!IRQBuffer);
+
+ //PSX_WARNING("[CDC] ***IRQTHINGY: 0x%02x -- %u", V, doom_ts);
 
  CDCReadyReceiveCounter = 1024;
 
@@ -657,6 +659,8 @@ void PS_CDC::SetAIP(unsigned irq, uint8 result0, uint8 result1)
 pscpu_timestamp_t PS_CDC::Update(const pscpu_timestamp_t timestamp)
 {
  int32 clocks = timestamp - lastts;
+
+ //doom_ts = timestamp;
 
  while(clocks > 0)
  {
@@ -1031,7 +1035,7 @@ void PS_CDC::Write(const pscpu_timestamp_t timestamp, uint32 A, uint8 V)
   const unsigned reg_index = ((RegSelector & 0x3) * 3) + (A - 1);
 
   Update(timestamp);
-  //PSX_WARNING("[CDC] Write to register 0x%02x: 0x%02x @ %d --- 0x%02x\n", reg_index, V, timestamp, DMABuffer.CanRead());
+  //PSX_WARNING("[CDC] Write to register 0x%02x: 0x%02x @ %d --- 0x%02x 0x%02x\n", reg_index, V, timestamp, DMABuffer.CanRead(), IRQBuffer);
 
   switch(reg_index)
   {
@@ -1048,7 +1052,7 @@ void PS_CDC::Write(const pscpu_timestamp_t timestamp, uint32 A, uint8 V)
 
 		if(IRQBuffer)
 		{
-		 PSX_WARNING("[CDC] Attempting to start command(0x%02x) while IRQBuffer is not clear.", V);
+		 PSX_WARNING("[CDC] Attempting to start command(0x%02x) while IRQBuffer(0x%02x) is not clear.", V, IRQBuffer);
 		}
 
 		if(ResultsIn > 0)
@@ -1056,7 +1060,8 @@ void PS_CDC::Write(const pscpu_timestamp_t timestamp, uint32 A, uint8 V)
 		 PSX_WARNING("[CDC] Attempting to start command(0x%02x) while command results(count=%d) still in buffer.", V, ResultsIn);
 		}
 
-         	PendingCommandCounter = 8192; //1024; //128; //256; //16; //1024;
+		// Real times are more like 20000+, test and FIXME when we add more complete pipeline stall emulation to the CPU core.
+         	PendingCommandCounter = 8192 + PSX_GetRandU32(0, 4000);	
 	 	PendingCommand = V;
          	PendingCommandPhase = 0;
 		break;
@@ -1119,6 +1124,14 @@ void PS_CDC::Write(const pscpu_timestamp_t timestamp, uint32 A, uint8 V)
 		break;
 
 	 case 0x05:
+		if((IRQBuffer &~ V) != IRQBuffer && ResultsIn)
+		{
+		 // To debug icky race-condition related problems in "Psychic Detective", and to see if any games suffer from the same potential issue
+		 // (to know what to test when we emulate CPU more accurately in regards to pipeline stalls and timing, which could throw off our kludge
+		 //  for this issue)
+		 PSX_WARNING("[CDC] Acknowledged IRQ(wrote 0x%02x, before_IRQBuffer=0x%02x) while %u bytes in results buffer.", V, IRQBuffer, ResultsIn);
+		}
+
 	 	IRQBuffer &= ~V;
 	 	RecalcIRQ();
 
@@ -1325,9 +1338,11 @@ int32 PS_CDC::CalcSeekTime(int32 initial, int32 target, bool motor_on, bool paus
   //else
   {
    // Take twice as long for 1x mode.
-   ret += 1247952 * ((Mode & MODE_SPEED) ? 1 : 2);
+   ret += 1237952 * ((Mode & MODE_SPEED) ? 1 : 2);
   }
  }
+
+ ret += PSX_GetRandU32(0, 20000);
 
  printf("%d\n", ret);
 

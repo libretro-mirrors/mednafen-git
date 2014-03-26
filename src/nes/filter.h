@@ -15,9 +15,9 @@ class NES_Resampler
 	// A value of 0 will disable it entirely.
 	//
 	// quality is an arbitrary control of quality(-3 for lowest quality, 3 for highest quality)
-	NES_Resampler(double input_rate, double output_rate, double rate_error, double debias_corner, int quality);
-	NES_Resampler(const NES_Resampler &resamp);
-	~NES_Resampler();
+	NES_Resampler(double input_rate, double output_rate, double rate_error, double debias_corner, int quality) MDFN_COLD;
+	NES_Resampler(const NES_Resampler &resamp) MDFN_COLD;
+	~NES_Resampler() MDFN_COLD;
 
 	// Specify volume in percent amplitude(range 0 through 1.000..., inclusive).  Default: SetVolume(1.0);
 	void SetVolume(double newvolume);

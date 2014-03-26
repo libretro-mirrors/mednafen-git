@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = subdir-objects
-DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@ @GBA_EXTRA_FLAGS@ @MATH_OPTIMIZER_FLAGS@
+DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@ @GBA_EXTRA_FLAGS@ 
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_builddir)/include/blip  -I$(top_srcdir)/src/hw_sound -I$(top_srcdir)
 
 noinst_LIBRARIES        =       libgba.a

@@ -16,7 +16,7 @@ void PCFXDBG_SetBPCallback(void (*callb)(uint32 PC));
 
 std::vector<BranchTraceResult> PCFXDBG_GetBranchTrace(void);
 
-void PCFXDBG_CheckBP(int type, uint32 address, unsigned int len);
+void PCFXDBG_CheckBP(int type, uint32 address, uint32 value, unsigned int len);
 
 void PCFXDBG_SetLogFunc(void (*func)(const char *, const char *));
 

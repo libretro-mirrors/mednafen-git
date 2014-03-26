@@ -19,6 +19,7 @@
 
 #include <string.h>
 #include <trio/trio.h>
+#include <math.h>
 
 #include "video.h"
 #include "opengl.h"
@@ -63,6 +64,7 @@ glPushMatrix_Func p_glPushMatrix;
 glPopMatrix_Func p_glPopMatrix;
 glRotated_Func p_glRotated;
 glScalef_Func p_glScalef;
+glReadPixels_Func p_glReadPixels;
 
 #if MDFN_WANT_OPENGL_SHADERS
 glCreateShaderObjectARB_Func p_glCreateShaderObjectARB;
@@ -105,6 +107,22 @@ static int UsingIP;	// See VIDEOIP_* enums defined in video.h
 
 static uint32 *DummyBlack = NULL; // Black/Zeroed image data for cleaning textures
 static uint32 DummyBlackSize;
+
+void ReadPixelsGL(MDFN_Surface *surface, const MDFN_Rect *rect)
+{
+ p_glPixelStorei(GL_UNPACK_ROW_LENGTH, surface->pitchinpix);
+ p_glReadPixels(rect->x, gl_screen->h - rect->h - rect->y, rect->w, rect->h, PixelFormat, PixelType, surface->pixels);
+
+ for(int y = 0; y < surface->h / 2; y++)
+ {
+  uint32 tmp_buffer[surface->w];
+
+  memcpy(tmp_buffer, &surface->pixels[y * surface->pitchinpix], surface->pitchinpix * sizeof(uint32));
+  memcpy(&surface->pixels[y * surface->pitchinpix], &surface->pixels[(surface->h - 1 - y) * surface->pitchinpix], surface->pitchinpix * sizeof(uint32));
+  memcpy(&surface->pixels[(surface->h - 1 - y) * surface->pitchinpix], tmp_buffer, surface->pitchinpix * sizeof(uint32));
+ }
+}
+
 
 void BlitOpenGLRaw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *dest_rect, const bool source_alpha)
 {
@@ -377,6 +395,13 @@ void BlitOpenGL(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN
  unsigned int tmpheight;
  uint32 *src_pixies;
 
+ if(src_rect->w == 0 || src_rect->h == 0 || dest_rect->w == 0 || dest_rect->h == 0 || original_src_rect->w == 0 || original_src_rect->h == 0)
+ {
+  printf("[BUG] OpenGL blitting nothing? --- %d:%d %d:%d %d:%d\n", src_rect->w, src_rect->h, dest_rect->w, dest_rect->h, original_src_rect->w, original_src_rect->h);
+  return;
+ }
+
+
  src_pixies = src_surface->pixels + tex_src_rect.x + tex_src_rect.y * src_surface->pitchinpix;
  tex_src_rect.x = 0;
  tex_src_rect.y = 0;
@@ -466,7 +491,7 @@ void BlitOpenGL(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN
 
  #if MDFN_WANT_OPENGL_SHADERS
  if(UsingShader)
-  ShaderBegin(src_rect, dest_rect, tmpwidth, tmpheight);
+  ShaderBegin(src_rect, dest_rect, tmpwidth, tmpheight, round((double)tmpwidth * original_src_rect->w / src_rect->w), round((double)tmpheight * original_src_rect->h / src_rect->h));
  #endif
 
  p_glPixelStorei(GL_UNPACK_ROW_LENGTH, src_surface->pitchinpix);
@@ -647,6 +672,7 @@ int InitOpenGL(int ipolate, int scanlines, ShaderType pixshader, SDL_Surface *sc
  LFG(glPopMatrix);
  LFG(glRotated);
  LFG(glScalef);
+ LFG(glReadPixels);
 
  gl_screen = screen;
 

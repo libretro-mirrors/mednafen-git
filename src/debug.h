@@ -60,12 +60,6 @@ typedef struct
 	// The number of address bits for this address space.
 	uint32 TotalBits;
 
-	// (Segmentation bits TODO)
-	bool IsSegmented;
-	uint32 SegmentBits;
-	uint32 OffsetBits;
-	uint32 BitsOverlapped; // For future use, maybe.
-
 	// Non-power-of-2 size.  Normally 0, unless the size of the address space isn't a power of 2!
 	uint32 NP2Size;
 
@@ -183,7 +177,7 @@ typedef struct
 // An address space should only be added during Load() or LoadCD().
 int ASpace_Add(void (*gasb)(const char *name, uint32 Address, uint32 Length, uint8 *Buffer),
         void (*pasb)(const char *name, uint32 Address, uint32 Length, uint32 Granularity, bool hl, const uint8 *Buffer), const char *name, const char *long_name,
-        uint32 TotalBits, uint32 NP2Size = 0, bool IsSegmented = 0, uint32 SegmentBits = 0, uint32 OffsetBits = 0, uint32 BitsOverlapped = 0);
+        uint32 TotalBits, uint32 NP2Size = 0);
 
 int ASpace_Add(const AddressSpaceType &);
 

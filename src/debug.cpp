@@ -55,7 +55,7 @@ void MDFNDBG_Kill(void)
 
 int ASpace_Add(void (*gasb)(const char *name, uint32 Address, uint32 Length, uint8 *Buffer),
         void (*pasb)(const char *name, uint32 Address, uint32 Length, uint32 Granularity, bool hl, const uint8 *Buffer), const char *name, const char *long_name,
-        uint32 TotalBits, uint32 NP2Size, bool IsSegmented, uint32 SegmentBits, uint32 OffsetBits, uint32 BitsOverlapped)
+        uint32 TotalBits, uint32 NP2Size)
 {
  AddressSpaceType newt;
 
@@ -68,10 +68,7 @@ int ASpace_Add(void (*gasb)(const char *name, uint32 Address, uint32 Length, uin
  newt.long_name = strdup(long_name);
  newt.TotalBits = TotalBits;
  newt.NP2Size = NP2Size;
- newt.IsSegmented = IsSegmented;
- newt.SegmentBits = SegmentBits;
- newt.OffsetBits = OffsetBits;
- newt.BitsOverlapped = BitsOverlapped;
+
  AddressSpaces.push_back(newt);
 
  return(AddressSpaces.size() - 1);
