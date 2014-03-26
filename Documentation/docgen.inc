@@ -1,6 +1,6 @@
 <?php
 
-$mednafen_version = "0.9.31-WIP";
+$mednafen_version = "0.9.32-WIP";
 $mod_list = array();
 
 $sections = array();

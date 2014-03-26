@@ -1,3 +1,9 @@
+-- 0.9.32-WIP: --
+
+September 12, 2013:
+	PSX: Reworked GPU interlacing and double-height mode emulation code a bit; fixes lockups in "iS: Internal Section" and
+	"The Next Tetris".
+
 -- 0.9.31-WIP: --
 
 September 4, 2013:
