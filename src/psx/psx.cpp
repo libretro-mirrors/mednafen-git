@@ -27,10 +27,30 @@
 #include "../player.h"
 #include "../cputest/cputest.h"
 
+#include <stdarg.h>
+
 extern MDFNGI EmulatedPSX;
 
 namespace MDFN_IEN_PSX
 {
+
+#if PSX_DBGPRINT_ENABLE
+static unsigned psx_dbg_level = 0;
+
+void PSX_DBG(unsigned level, const char *format, ...) throw()
+{
+ if(psx_dbg_level >= level)
+ {
+  va_list ap;
+
+  va_start(ap, format);
+
+  trio_vprintf(format, ap);
+
+  va_end(ap);
+ }
+}
+#endif
 
 
 struct MDFN_PseudoRNG	// Based off(but not the same as) public-domain "JKISS" PRNG.
@@ -175,8 +195,6 @@ static struct
 //
 // Event stuff
 //
-// Comment out this define for extra speeeeed.
-#define PSX_EVENT_SYSTEM_CHECKS	1
 
 static pscpu_timestamp_t Running;	// Set to -1 when not desiring exit, and 0 when we are.
 
@@ -298,7 +316,7 @@ void ForceEventUpdates(const pscpu_timestamp_t timestamp)
 bool MDFN_FASTCALL PSX_EventHandler(const pscpu_timestamp_t timestamp)
 {
  event_list_entry *e = events[PSX_EVENT__SYNFIRST].next;
-#ifdef PSX_EVENT_SYSTEM_CHECKS
+#if PSX_EVENT_SYSTEM_CHECKS
  pscpu_timestamp_t prev_event_time = 0;
 #endif
 #if 0
@@ -313,7 +331,7 @@ bool MDFN_FASTCALL PSX_EventHandler(const pscpu_timestamp_t timestamp)
  }
 #endif
 
-#ifdef PSX_EVENT_SYSTEM_CHECKS
+#if PSX_EVENT_SYSTEM_CHECKS
  assert(Running == 0 || timestamp >= e->event_time);	// If Running == 0, our EventHandler 
 #endif
 
@@ -322,7 +340,7 @@ bool MDFN_FASTCALL PSX_EventHandler(const pscpu_timestamp_t timestamp)
   event_list_entry *prev = e->prev;
   pscpu_timestamp_t nt;
 
-#ifdef PSX_EVENT_SYSTEM_CHECKS
+#if PSX_EVENT_SYSTEM_CHECKS
  // Sanity test to make sure events are being evaluated in temporal order.
   if(e->event_time < prev_event_time)
    abort();
@@ -330,7 +348,7 @@ bool MDFN_FASTCALL PSX_EventHandler(const pscpu_timestamp_t timestamp)
 #endif
 
   //printf("Event: %u %8d\n", e->which, e->event_time);
-#ifdef PSX_EVENT_SYSTEM_CHECKS
+#if PSX_EVENT_SYSTEM_CHECKS
   if((timestamp - e->event_time) > 50)
    printf("Late: %u %d --- %8d\n", e->which, timestamp - e->event_time, timestamp);
 #endif
@@ -359,7 +377,7 @@ bool MDFN_FASTCALL PSX_EventHandler(const pscpu_timestamp_t timestamp)
 	nt = FIO->Update(e->event_time);
 	break;
   }
-#ifdef PSX_EVENT_SYSTEM_CHECKS
+#if PSX_EVENT_SYSTEM_CHECKS
   assert(nt > e->event_time);
 #endif
 
@@ -369,7 +387,7 @@ bool MDFN_FASTCALL PSX_EventHandler(const pscpu_timestamp_t timestamp)
   e = prev->next;
  }
 
-#ifdef PSX_EVENT_SYSTEM_CHECKS
+#if PSX_EVENT_SYSTEM_CHECKS
  for(int i = PSX_EVENT__SYNFIRST + 1; i < PSX_EVENT__SYNLAST; i++)
  {
   if(timestamp >= events[i].event_time)
@@ -388,10 +406,6 @@ bool MDFN_FASTCALL PSX_EventHandler(const pscpu_timestamp_t timestamp)
   }
  }
 #endif
-
-//#ifdef PSX_EVENT_SYSTEM_CHECKS
-// abort();
-//#endif
 
  return(Running);
 }
@@ -1038,7 +1052,7 @@ static void Emulate(EmulateSpecStruct *espec)
 
  ForceEventUpdates(timestamp);
  if(GPU->GetScanlineNum() < 100)
-  printf("[BUUUUUUUG] Frame timing end glitch; scanline=%u, st=%u\n", GPU->GetScanlineNum(), timestamp);
+  PSX_DBG(PSX_DBG_ERROR, "[BUUUUUUUG] Frame timing end glitch; scanline=%u, st=%u\n", GPU->GetScanlineNum(), timestamp);
 
  //printf("scanline=%u, st=%u\n", GPU->GetScanlineNum(), timestamp);
 
@@ -1079,7 +1093,7 @@ static void Emulate(EmulateSpecStruct *espec)
    Memcard_SaveDelay[i] += timestamp;
    if(Memcard_SaveDelay[i] >= (33868800 * 2))	// Wait until about 2 seconds of no new writes.
    {
-    fprintf(stderr, "Saving memcard %d...\n", i);
+    PSX_DBG(PSX_DBG_SPARSE, "Saving memcard %d...\n", i);
     try
     {
      char ext[64];
@@ -1330,7 +1344,7 @@ if(cdifs)
 
    fbuf[opos++] = 0;
 
-   puts((char *)fbuf);
+   PSX_DBG(PSX_DBG_SPARSE, "License string: %s", (char *)fbuf);
 
    if(strstr((char *)fbuf, "licensedby") != NULL)
    {
@@ -1392,12 +1406,16 @@ if(cdifs)
  return ret_region;
 }
 
-static bool InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemcards = true, const bool WantPIOMem = false)
+static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemcards = true, const bool WantPIOMem = false)
 {
  unsigned region;
  bool emulate_memcard[8];
  bool emulate_multitap[2];
  int sls, sle;
+
+#if PSX_DBGPRINT_ENABLE
+ psx_dbg_level = MDFN_GetSettingUI("psx.dbg_level");
+#endif
 
  for(unsigned i = 0; i < 8; i++)
  {
@@ -1518,37 +1536,32 @@ static bool InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
  MDFNMP_AddRAM(2048 * 1024, 0x00000000, MainRAM.data8);
  //MDFNMP_AddRAM(1024, 0x1F800000, ScratchRAM.data8);
 
- try
+ //
+ //
+ //
+ const char *biospath_sname;
+
+ if(region == REGION_JP)
+  biospath_sname = "psx.bios_jp";
+ else if(region == REGION_EU)
+  biospath_sname = "psx.bios_eu";
+ else if(region == REGION_NA)
+  biospath_sname = "psx.bios_na";
+ else
+  abort();
+
  {
-  const char *biospath_sname;
+  std::string biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(biospath_sname).c_str());
+  FileStream BIOSFile(biospath.c_str(), FileStream::MODE_READ);
 
-  if(region == REGION_JP)
-   biospath_sname = "psx.bios_jp";
-  else if(region == REGION_EU)
-   biospath_sname = "psx.bios_eu";
-  else if(region == REGION_NA)
-   biospath_sname = "psx.bios_na";
-  else
-   abort();
-
-  {
-   std::string biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(biospath_sname).c_str());
-   FileStream BIOSFile(biospath.c_str(), FileStream::MODE_READ);
-
-   BIOSFile.read(BIOSROM->data8, 512 * 1024);
-  }
-
-  for(int i = 0; i < 8; i++)
-  {
-   char ext[64];
-   trio_snprintf(ext, sizeof(ext), "%d.mcr", i);
-   FIO->LoadMemcard(i, MDFN_MakeFName(MDFNMKF_SAV, 0, ext).c_str());
-  }
+  BIOSFile.read(BIOSROM->data8, 512 * 1024);
  }
- catch(std::exception &e)
+
+ for(int i = 0; i < 8; i++)
  {
-  MDFN_PrintError("%s", e.what());
-  return(false);
+  char ext[64];
+  trio_snprintf(ext, sizeof(ext), "%d.mcr", i);
+  FIO->LoadMemcard(i, MDFN_MakeFName(MDFNMKF_SAV, 0, ext).c_str());
  }
 
  for(int i = 0; i < 8; i++)
@@ -1563,8 +1576,6 @@ static bool InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
  #endif
 
  PSX_Power();
-
- return(true);
 }
 
 static void LoadEXE(const uint8 *data, const uint32 size, bool ignore_pcsp = false)
@@ -1610,7 +1621,7 @@ static void LoadEXE(const uint8 *data, const uint32 size, bool ignore_pcsp = fal
  {
   uint32 old_size = TextMem.size();
 
-  printf("RESIZE: 0x%08x\n", TextMem_Start - TextStart);
+  //printf("RESIZE: 0x%08x\n", TextMem_Start - TextStart);
 
   TextMem.resize(old_size + TextMem_Start - TextStart);
   memmove(&TextMem[TextMem_Start - TextStart], &TextMem[0], old_size);
@@ -1758,35 +1769,30 @@ void PSF1Loader::HandleEXE(const uint8 *data, uint32 size, bool ignore_pcsp)
 static void Cleanup(void);
 static int Load(const char *name, MDFNFILE *fp)
 {
- const bool IsPSF = PSFLoader::TestMagic(0x01, fp);
-
- if(!TestMagic(name, fp))
+ try
  {
-  MDFN_PrintError(_("File format is unknown to module \"%s\"."), MDFNGameInfo->shortname);
-  return(0);
- }
+  const bool IsPSF = PSFLoader::TestMagic(0x01, fp);
+
+  if(!TestMagic(name, fp))
+   throw MDFN_Error(0, _("File format is unknown to module \"%s\"."), MDFNGameInfo->shortname);
 
 // For testing.
 #if 0
- #warning "GREMLINS GREMLINS EVERYWHEREE IYEEEEEE"
- #warning "Seriously, GREMLINS!  Or peanut butter.  Or maybe...DINOSAURS."
+  #warning "GREMLINS GREMLINS EVERYWHEREE IYEEEEEE"
+  #warning "Seriously, GREMLINS!  Or peanut butter.  Or maybe...DINOSAURS."
 
- static std::vector<CDIF *> CDInterfaces;
+  static std::vector<CDIF *> CDInterfaces;
 
- //CDInterfaces.push_back(CDIF_Open("/home/sarah-projects/psxdev/tests/cd/adpcm.cue", false, false));
- //CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Tony Hawk's Pro Skater 2 (USA)/Tony Hawk's Pro Skater 2 (USA).cue", false, false));
- CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Jumping Flash! (USA)/Jumping Flash! (USA).cue", false, false));
- if(!InitCommon(&CDInterfaces, !IsPSF, true))
-  return(0);
+  //CDInterfaces.push_back(CDIF_Open("/home/sarah-projects/psxdev/tests/cd/adpcm.cue", false, false));
+  //CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Tony Hawk's Pro Skater 2 (USA)/Tony Hawk's Pro Skater 2 (USA).cue", false, false));
+  CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Jumping Flash! (USA)/Jumping Flash! (USA).cue", false, false));
+  InitCommon(&CDInterfaces, !IsPSF, true);
 #else
- if(!InitCommon(NULL, !IsPSF, true))
-  return(0);
+  InitCommon(NULL, !IsPSF, true);
 #endif
 
- TextMem.resize(0);
+  TextMem.resize(0);
 
- try
- {
   if(IsPSF)
   {
    psf_loader = new PSF1Loader(fp);
@@ -1804,7 +1810,7 @@ static int Load(const char *name, MDFNFILE *fp)
  {
   MDFND_PrintError(e.what());
   Cleanup();
-  return 0;
+  return(0);
  }
 
  return(1);
@@ -1812,11 +1818,20 @@ static int Load(const char *name, MDFNFILE *fp)
 
 static int LoadCD(std::vector<CDIF *> *CDInterfaces)
 {
- int ret = InitCommon(CDInterfaces);
+ try
+ {
+  InitCommon(CDInterfaces);
 
- MDFNGameInfo->GameType = GMT_CDROM;
+  MDFNGameInfo->GameType = GMT_CDROM;
+ }
+ catch(std::exception &e)
+ {
+  MDFND_PrintError(e.what());
+  Cleanup();
+  return(0);
+ }
 
- return(ret);
+ return(1);
 }
 
 static void Cleanup(void)
@@ -2283,6 +2298,10 @@ static MDFNSetting PSXSettings[] =
 
  { "psx.slstartp", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in PAL mode."), NULL, MDFNST_INT, "0", "0", "287" },
  { "psx.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in PAL mode."), NULL, MDFNST_INT, "287", "0", "287" },
+
+#if PSX_DBGPRINT_ENABLE
+ { "psx.dbg_level", MDFNSF_NOFLAGS, gettext_noop("Debug printf verbosity level."), NULL, MDFNST_UINT, "0", "0", "4" },
+#endif
 
  { NULL },
 };

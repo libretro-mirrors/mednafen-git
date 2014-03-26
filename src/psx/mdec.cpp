@@ -483,7 +483,7 @@ void MDEC_DMAWrite(uint32 V)
 	break;
 
    default:
-	printf("MYSTERY1: %08x\n", V);
+	PSX_DBG(PSX_DBG_WARNING, "MYSTERY1: %08x\n", V);
 	break;
   }
  }
@@ -499,7 +499,7 @@ uint32 MDEC_DMARead(void)
  }
  else
  {
-  puts("BONUS GNOMES");
+  PSX_DBG(PSX_DBG_WARNING, "[MDEC] BONUS GNOMES\n");
   V = rand();
  }
  return(V);

@@ -54,6 +54,9 @@ PS_CDC::PS_CDC() : DMABuffer(4096)
 {
  IsPSXDisc = false;
  Cur_CDIF = NULL;
+
+ DriveStatus = DS_STOPPED;
+ PendingCommandPhase = 0;
 }
 
 PS_CDC::~PS_CDC()
@@ -971,7 +974,7 @@ void PS_CDC::HandlePlayRead(void)
      }
 
      if(!(Mode & 0x30) && (buf[12 + 6] & 0x20))
-      PSX_WARNING("BORK: %d", CurSector);
+      PSX_WARNING("[CDC] BORK: %d", CurSector);
 
      int32 offs = (Mode & 0x20) ? 0 : 12;
      int32 size = (Mode & 0x20) ? 2340 : 2048;
@@ -1205,10 +1208,10 @@ pscpu_timestamp_t PS_CDC::Update(const pscpu_timestamp_t timestamp)
      {
       BeginResults();
 
-      PSX_WARNING("[CDC] Bad number(%d) of args(first check) for command 0x%02x", ArgsReceiveIn, PendingCommand);
+      PSX_DBG(PSX_DBG_WARNING, "[CDC] Bad number(%d) of args(first check) for command 0x%02x", ArgsReceiveIn, PendingCommand);
       for(unsigned int i = 0; i < ArgsReceiveIn; i++)
-       printf(" 0x%02x", ArgsReceiveBuf[i]);
-      printf("\n");
+       PSX_DBG(PSX_DBG_WARNING, " 0x%02x", ArgsReceiveBuf[i]);
+      PSX_DBG(PSX_DBG_WARNING, "\n");
 
       WriteResult(MakeStatus(true));
       WriteResult(ERRCODE_BAD_NUMARGS);
@@ -1219,14 +1222,12 @@ pscpu_timestamp_t PS_CDC::Update(const pscpu_timestamp_t timestamp)
       BeginResults();
 
       const CDC_CTEntry *command = &Commands[PendingCommand];
-      //PSX_WARNING("[CDC] Command: %s --- %d", command->name, Results.CanRead());
 
-#if 1
-      printf("[CDC] Command: %s --- ", command->name);
+      PSX_DBG(PSX_DBG_SPARSE, "[CDC] Command: %s --- ", command->name);
       for(unsigned int i = 0; i < ArgsReceiveIn; i++)
-       printf(" 0x%02x", ArgsReceiveBuf[i]);
-      printf("\n");
-#endif
+       PSX_DBG(PSX_DBG_SPARSE, " 0x%02x", ArgsReceiveBuf[i]);
+      PSX_DBG(PSX_DBG_SPARSE, "\n");
+
       next_time = (this->*(command->func))(ArgsReceiveIn, ArgsReceiveBuf);
       PendingCommandPhase = 2;
      }
@@ -1579,7 +1580,7 @@ int32 PS_CDC::CalcSeekTime(int32 initial, int32 target, bool motor_on, bool paus
 
  ret += PSX_GetRandU32(0, 25000);
 
- PSX_WARNING("[CDC] CalcSeekTime() = %d", ret);
+ PSX_DBG(PSX_DBG_SPARSE, "[CDC] CalcSeekTime() = %d\n", ret);
 
  return(ret);
 }
@@ -1924,7 +1925,6 @@ int32 PS_CDC::Command_Setfilter(const int arg_count, const uint8 *args)
 
 int32 PS_CDC::Command_Setmode(const int arg_count, const uint8 *args)
 {
- PSX_DBGINFO("[CDC] Set mode 0x%02x", args[0]);
  Mode = args[0];
 
  WriteResult(MakeStatus());

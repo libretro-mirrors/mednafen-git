@@ -98,7 +98,7 @@ static int Write(SexyAL_device *device, void *data, uint32_t frames)
 
   while(frames)
   {
-   int32_t convert_this_iteration;
+   uint32_t convert_this_iteration;
 
    convert_this_iteration = frames;
 
@@ -120,6 +120,12 @@ static int Write(SexyAL_device *device, void *data, uint32_t frames)
 
 static int Close(SexyAL_device *device)
 {
+ if(device->convert_buffer)
+ {
+  free(device->convert_buffer);
+  device->convert_buffer = NULL;
+ }
+
  return(device->RawClose(device));
 }
 

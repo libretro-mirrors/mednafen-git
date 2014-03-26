@@ -209,7 +209,7 @@ void PS_CPU::SetBIU(uint32 val)
   }
  }
 
- PSX_WARNING("[CPU] Set BIU=0x%08x", BIU);
+ PSX_DBG(PSX_DBG_SPARSE, "[CPU] Set BIU=0x%08x\n", BIU);
 }
 
 uint32 PS_CPU::GetBIU(void)
@@ -376,9 +376,8 @@ uint32 PS_CPU::Exception(uint32 code, uint32 PC, const uint32 NPM)
 
  if(code != EXCEPTION_INT && code != EXCEPTION_BP && code != EXCEPTION_SYSCALL)
  {
-  printf("Exception: %08x @ PC=0x%08x(IBDS=%d) -- IPCache=0x%02x -- IPEND=0x%02x -- SR=0x%08x ; IRQC_Status=0x%04x -- IRQC_Mask=0x%04x\n", code, PC, InBDSlot, IPCache, (CP0.CAUSE >> 8) & 0xFF, CP0.SR,
+  PSX_DBG(PSX_DBG_WARNING, "Exception: %08x @ PC=0x%08x(IBDS=%d) -- IPCache=0x%02x -- IPEND=0x%02x -- SR=0x%08x ; IRQC_Status=0x%04x -- IRQC_Mask=0x%04x\n", code, PC, InBDSlot, IPCache, (CP0.CAUSE >> 8) & 0xFF, CP0.SR,
 	IRQ_GetRegister(IRQ_GSREG_STATUS, NULL, 0), IRQ_GetRegister(IRQ_GSREG_MASK, NULL, 0));
-  //assert(0);
  }
 
  if(CP0.SR & (1 << 22))	// BEV
@@ -463,16 +462,9 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
    {
     if(PC == 0xB0)
     {
-     if(GPR[9] == 0x3D)
+     if(MDFN_UNLIKELY(GPR[9] == 0x3D))
      {
-      //if(GPR[4] == 'L')
-      // DBG_Break();
-      fputc(GPR[4], stderr);
-      //if(GPR[4] == '\n')
-      //{
-      // fputc('%', stderr);
-      // fputc(' ', stderr);
-      //}
+      PSX_DBG(PSX_DBG_BIOS_PRINT, "%c", GPR[4]);
      }
     }
    }
@@ -987,7 +979,7 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
 
 		  case CP0REG_SR:
 			if((CP0.SR ^ val) & 0x10000)
-			 PSX_WARNING("[CPU] IsC %u->%u", (bool)(CP0.SR & (1U << 16)), (bool)(val & (1U << 16)));
+			 PSX_DBG(PSX_DBG_SPARSE, "[CPU] IsC %u->%u\n", (bool)(CP0.SR & (1U << 16)), (bool)(val & (1U << 16)));
 
 			CP0.SR = val & ~( (0x3 << 26) | (0x3 << 23) | (0x3 << 6));
 			RecalcIPCache();
@@ -1234,8 +1226,6 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
 
         if(!GPR[rt])
         {
-         //PSX_WARNING("[CPU] Division(signed) by zero at PC=%08x", PC);
-
 	 if(GPR[rs] & 0x80000000)
 	  LO = 1;
 	 else
@@ -1273,8 +1263,6 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
 
 	if(!GPR[rt])
 	{
-	 //PSX_WARNING("[CPU] Division(unsigned) by zero at PC=%08x", PC);
-
 	 LO = 0xFFFFFFFF;
 	 HI = GPR[rs];
 	}

@@ -842,8 +842,7 @@ INLINE void PS_GPU::WriteCB(uint32 InData)
 {
  if(BlitterFIFO.CanRead() >= 0x10 && (InCmd != INCMD_NONE || (BlitterFIFO.CanRead() - 0x10) >= Commands[0][BlitterFIFO.ReadUnit(true) >> 24].fifo_fb_len))
  {
-  MDFN_DispMessage("GPU FIFO overflow!!!");
-  //fprintf(stderr, "GPU FIFO overflow!!!");
+  PSX_DBG(PSX_DBG_WARNING, "GPU FIFO overflow!!!\n");
   return;
  }
 

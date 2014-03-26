@@ -123,7 +123,7 @@ static int32 CalcNextEvent(int32 next_event)
   count_delta = target - Timers[i].Counter;
   if(count_delta <= 0)
   {
-   fprintf(stderr, "timer %d count_delta <= 0!!! %d %d\n", i, target, Timers[i].Counter);
+   PSX_DBG(PSX_DBG_ERROR, "timer %d count_delta <= 0!!! %d %d\n", i, target, Timers[i].Counter);
    continue;
   }
 

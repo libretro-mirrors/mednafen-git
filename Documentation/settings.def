@@ -12766,6 +12766,15 @@ scph5501.bin
 
 
 0
+psx.dbg_level
+
+Debug printf verbosity level.
+
+MDFNST_UINT
+0
+0
+4
+0
 psx.debugger.disfontsize
 MDFNSF_COMMON_TEMPLATE 
 Disassembly font size.

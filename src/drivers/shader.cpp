@@ -57,11 +57,11 @@ static std::string MakeProgIpolate(unsigned ipolate_axis)	// X & 1, Y & 2, sharp
    case 1:
 	if(ipolate_axis & 4)
     	 ret += std::string("texelFract.s = clamp(texelFract.s * XSharp, -0.5, 0.5) + float(0.5);\n");
-	ret += std::string("texelFract.t = round(texelFract.t + float(0.5));\n");
+	ret += std::string("texelFract.t = floor(texelFract.t + float(1.0));\n");
 	break;
 
    case 2:
-	ret += std::string("texelFract.s = round(texelFract.s + float(0.5));\n");
+	ret += std::string("texelFract.s = floor(texelFract.s + float(1.0));\n");
 
 	if(ipolate_axis & 4)
     	 ret += std::string("texelFract.t = clamp(texelFract.t * YSharp, -0.5, 0.5) + float(0.5);\n");
@@ -78,7 +78,7 @@ static std::string MakeProgIpolate(unsigned ipolate_axis)	// X & 1, Y & 2, sharp
   ret += std::string("texelIndex = texelFract + texelInt;\n");
  }
  else
-  ret += std::string("texelIndex = round(texelIndex);\n");
+  ret += std::string("texelIndex = floor(texelIndex + float(0.5));\n");
 
  ret += std::string("texelIndex += float(0.5);\n");
  ret += std::string("texelIndex *= TexSizeInverse;\n");

@@ -9,11 +9,41 @@
 #include "../general.h"
 #include "../FileStream.h"
 
-#define PSX_WARNING(format, ...) { printf(format "\n", ## __VA_ARGS__); }
-#define PSX_DBGINFO(format, ...) { /*printf(format "\n", ## __VA_ARGS__);*/ }
+//
+// Comment out these 2 defines for extra speeeeed.
+//
+#define PSX_DBGPRINT_ENABLE    1
+#define PSX_EVENT_SYSTEM_CHECKS 1
+
+//
+// It's highly unlikely the user will want these if they're intentionally compiling without the debugger.
+#ifndef WANT_DEBUGGER
+ #undef PSX_DBGPRINT_ENABLE
+ #undef PSX_EVENT_SYSTEM_CHECKS
+#endif
+//
+//
+//
 
 namespace MDFN_IEN_PSX
 {
+ #define PSX_DBG_ERROR		0	// Emulator-level error.
+ #define PSX_DBG_WARNING	1	// Warning about game doing questionable things/hitting stuff that might not be emulated correctly.
+ #define PSX_DBG_BIOS_PRINT	2	// BIOS printf/putchar output.
+ #define PSX_DBG_SPARSE		3	// Sparse(relatively) information debug messages(CDC commands).
+ #define PSX_DBG_FLOOD		4	// Heavy informational debug messages(GPU commands; TODO).
+
+#if PSX_DBGPRINT_ENABLE
+ void PSX_DBG(unsigned level, const char *format, ...) throw() MDFN_COLD MDFN_FORMATSTR(printf, 2, 3);
+
+ #define PSX_WARNING(format, ...) { PSX_DBG(PSX_DBG_WARNING, format "\n", ## __VA_ARGS__); }
+ #define PSX_DBGINFO(format, ...) { }
+#else
+ static INLINE void PSX_DBG(unsigned level, const char* format, ...) { }
+ static INLINE void PSX_WARNING(const char* format, ...) { }
+ static INLINE void PSX_DBGINFO(const char* format, ...) { }
+#endif
+
  typedef int32 pscpu_timestamp_t;
 
  bool MDFN_FASTCALL PSX_EventHandler(const pscpu_timestamp_t timestamp);

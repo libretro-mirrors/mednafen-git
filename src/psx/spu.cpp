@@ -102,8 +102,11 @@ PS_SPU::PS_SPU()
 
 PS_SPU::~PS_SPU()
 {
-
-
+ if(resampler)
+ {
+  speex_resampler_destroy(resampler);
+  resampler = NULL;
+ }
 }
 
 void PS_SPU::Power(void)
@@ -673,7 +676,7 @@ int32 PS_SPU::UpdateFromCDC(int32 clocks)
      phase_inc = voice->Pitch + (((int16)voice->Pitch * ((voice - 1)->PreLRSample)) >> 15);
      if(phase_inc < 0)
      {
-      printf("phase_inc < 0 (THIS SHOULD NOT HAPPEN)\n");
+      PSX_DBG(PSX_DBG_ERROR, "[SPU] phase_inc < 0 (THIS SHOULD NOT HAPPEN)\n");
       phase_inc = 0;
      }
     }
@@ -796,14 +799,12 @@ int32 PS_SPU::UpdateFromCDC(int32 clocks)
   clamp(&output_l, -32768, 32767);
   clamp(&output_r, -32768, 32767);
 
-  assert(IntermediateBufferPos < 4096);
-  IntermediateBuffer[IntermediateBufferPos][0] = output_l;
-  IntermediateBuffer[IntermediateBufferPos][1] = output_r;
-  IntermediateBufferPos++;
-
-  //resampler.buffer()[0] = (int16)(rand() & 0xFFFF) >> 1;
-  //resampler.buffer()[1] = (int16)(rand() & 0xFFFF) >> 1;
-  //resampler.write(2);
+  if(IntermediateBufferPos < 4096)	// Overflow might occur in some debugger use cases.
+  {
+   IntermediateBuffer[IntermediateBufferPos][0] = output_l;
+   IntermediateBuffer[IntermediateBufferPos][1] = output_r;
+   IntermediateBufferPos++;
+  }
 
   sample_clocks--;
 
@@ -1103,8 +1104,6 @@ void PS_SPU::StartFrame(double rate, uint32 quality)
 {
  if((int)rate != last_rate || quality != last_quality)
  {
-  //double ratio = (double)44100 / (rate ? rate : 44100);
-  //resampler.time_ratio(ratio, 0.9965);
   int err = 0;
 
   if(resampler)

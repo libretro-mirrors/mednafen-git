@@ -1,3 +1,24 @@
+-- 0.9.33.1: --
+
+March 8, 2014:
+	Fixed compiler errors when compiling without the debugger.
+
+	Fixed a couple of memory leaks.
+
+	PSX: Made better use of exceptions in the loading and initialization code paths(and avoid leaking memory if a part of the
+	process fails).
+
+	PSX: Protect against sound buffer overflow without causing a call to abort() so that using save states(when they're added)
+	or power toggling/resetting in the debugger while in step mode is safer.
+
+	PSX: Output of debug messages to stdout and stderr is now controlled via the "psx.dbg_level" setting, whose default
+	value of "0" disables almost all debug messages.  Set the setting to "3" to obtain roughly the same output as previous
+	versions of Mednafen.
+
+March 1, 2014:
+	Modified the simple interpolation pixel shader code to avoid using the GLSL 1.3 function "round()", for better compatibility
+	with some OpenGL implementations.
+
 -- 0.9.33: --
 
 February 25, 2014:

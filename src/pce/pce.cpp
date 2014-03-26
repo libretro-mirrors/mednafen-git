@@ -1069,7 +1069,9 @@ static int StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
+#ifdef WANT_DEBUGGER
  PCEDBG_MachineStateChanged();
+#endif
 
  int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
 
@@ -1098,7 +1100,9 @@ static int StateAction(StateMem *sm, int load, int data_only)
 
 void PCE_Power(void)
 {
+#ifdef WANT_DEBUGGER
  PCEDBG_MachineStateChanged();
+#endif
 
  memset(BaseRAM, 0x00, sizeof(BaseRAM));
 

@@ -41,11 +41,16 @@ Resident Evil - Director's Cut(non-Dual Shock-version)
 
 ***Lesser issues***
 
-FF8 model flicker at some points in the game - look into it
+Thousand Arms
+	Many dialogue voices cut off a half second or so early; related to SPU IRQs and playback SPU RAM read timing I think.
+
+Final Fantasy 8
+	Reported 3D model(character) flicker at some points in the game - look into it.
 
 Tactics Ogre
 	Menu/Overlay elements on the map screen periodically flicker; seems to be a timing thing probably related to the sound engine
-	in the game.
+	in the game.  Although upon further inspection, it may be a GPU command timing issue in that we're emulating the GPU primitive
+	drawing faster than occurs on an actual PS1.  Might require texture cache simulation to some degree.
 
 Castrol Honda Superbike Racing
 	Graphical glitches on startup, menus(fixed now probably), and loading screens.  (What is with all
