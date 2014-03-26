@@ -133,7 +133,7 @@ void VSU::Write(int32 timestamp, uint32 A, uint8 V)
 
 	      WavePos[ch] = 0;
 
-	      if(ch == 5)
+	      if(ch == 5)	// Not sure if this is correct.
 	       lfsr = 1;
 
 	      //if(!(IntlControl[ch] & 0x80))
@@ -171,7 +171,10 @@ void VSU::Write(int32 timestamp, uint32 A, uint8 V)
 	     if(ch == 4)
 	      EnvControl[ch] |= (V & 0x73) << 8;
 	     else if(ch == 5)
+	     {
 	      EnvControl[ch] |= (V & 0x73) << 8;
+	      lfsr = 1;
+	     }
 	     else
 	      EnvControl[ch] |= (V & 0x03) << 8;
 	     break;
@@ -280,7 +283,7 @@ void VSU::Update(int32 timestamp)
    {
     if(ch == 5)
     {
-     int feedback = ((lfsr >> 7) & 1) ^ ((lfsr >> Tap_LUT[(EnvControl[5] >> 12) & 0x7]) & 1);
+     int feedback = ((lfsr >> 7) & 1) ^ ((lfsr >> Tap_LUT[(EnvControl[5] >> 12) & 0x7]) & 1) ^ 1;
      lfsr = ((lfsr << 1) & 0x7FFF) | feedback;
  
      FreqCounter[ch] += 10 * (2048 - EffFreq[ch]);

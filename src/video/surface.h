@@ -170,6 +170,19 @@ class MDFN_Surface //typedef struct
  uint16 *pixels16;
  uint32 *pixels;
 
+ template<typename T>
+ T* pix(void)
+ {
+  if(sizeof(T) == 1)
+   return (T*)pixels8;
+  else if(sizeof(T) == 2)
+   return (T*)pixels16;
+  else if(sizeof(T) == 4)
+   return (T*)pixels;
+  else
+   return NULL;
+ }
+
  MDFN_PaletteEntry *palette;
 
  bool pixels_is_external;

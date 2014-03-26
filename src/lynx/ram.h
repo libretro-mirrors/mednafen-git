@@ -63,12 +63,12 @@ class CRam : public CLynxBase
 	// Function members
 
 	public:
-		CRam(const uint8 *filememory,uint32 filesize);
-		~CRam();
+		CRam(const uint8 *filememory,uint32 filesize) MDFN_COLD;
+		~CRam() MDFN_COLD;
 
 	public:
 
-		void	Reset(void);
+		void	Reset(void) MDFN_COLD;
 
 		void	Poke(uint32 addr, uint8 data){ mRamData[addr]=data;};
 		uint8	Peek(uint32 addr){ return(mRamData[addr]);};

@@ -653,7 +653,7 @@ static MDFNSetting PCESettings[] =
   { "pce_fast.nospritelimit", MDFNSF_NOFLAGS, gettext_noop("Remove 16-sprites-per-scanline hardware limit."), NULL, MDFNST_BOOL, "0" },
 
   { "pce_fast.cdbios", MDFNSF_EMU_STATE, gettext_noop("Path to the CD BIOS"), NULL, MDFNST_STRING, "syscard3.pce" },
-  { "pce_fast.adpcmlp", MDFNSF_NOFLAGS, gettext_noop("Enable lowpass filter dependent on playback-frequency."), NULL, MDFNST_BOOL, "0" },
+  { "pce_fast.adpcmlp", MDFNSF_NOFLAGS, gettext_noop("Enable dynamic ADPCM lowpass filter."), NULL, MDFNST_BOOL, "0" },
   { "pce_fast.cdpsgvolume", MDFNSF_NOFLAGS, gettext_noop("PSG volume when playing a CD game."), NULL, MDFNST_UINT, "100", "0", "200" },
   { "pce_fast.cddavolume", MDFNSF_NOFLAGS, gettext_noop("CD-DA volume."), NULL, MDFNST_UINT, "100", "0", "200" },
   { "pce_fast.adpcmvolume", MDFNSF_NOFLAGS, gettext_noop("ADPCM volume."), NULL, MDFNST_UINT, "100", "0", "200" },

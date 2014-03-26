@@ -60,10 +60,10 @@ class CRom : public CLynxBase
 	// Function members
 
 	public:
-		CRom(const char *);
+		CRom(const char *) MDFN_COLD;
 
 	public:
-		void	Reset(void);
+		void	Reset(void) MDFN_COLD;
 		void	Poke(uint32 addr,uint8 data) { if(mWriteEnable) mRomData[addr&ROM_ADDR_MASK]=data;};
 		uint8	Peek(uint32 addr) { return(mRomData[addr&ROM_ADDR_MASK]);};
 		uint32	ReadCycle(void) {return 5;};

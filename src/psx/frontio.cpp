@@ -17,7 +17,6 @@
 
 #include "psx.h"
 #include "frontio.h"
-#include "../FileWrapper.h"
 
 #include "input/gamepad.h"
 #include "input/dualanalog.h"
@@ -126,53 +125,80 @@ void InputDevice::ResetNVDirtyCount(void)
 
 }
 
-static INLINE unsigned EP_to_MP(unsigned ep)
+static unsigned EP_to_MP(bool emulate_multitap[2], unsigned ep)
 {
-#if 0
- return((bool)(ep & 0x4));
-#else
- return(ep == 1 || ep >= 5);
-#endif
+ if(!emulate_multitap[0] && emulate_multitap[1])
+ {
+  if(ep == 0 || ep >= 5)
+   return(0);
+  else
+   return(1);
+ }
+ else
+  return(ep >= 4);
 }
 
-static INLINE unsigned EP_to_SP(unsigned ep)
+static INLINE unsigned EP_to_SP(bool emulate_multitap[2], unsigned ep)
 {
-#if 0
- return(ep & 0x3);
-#else
- if(ep < 2)
-  return(0);
- else if(ep < 5)
-  return(ep - 2 + 1);
+ if(!emulate_multitap[0] && emulate_multitap[1])
+ {
+  if(ep == 0)
+   return(0);
+  else if(ep < 5)
+   return(ep - 1);
+  else
+   return(ep - 4);
+ }
  else
-  return(ep - 5 + 1);
-#endif
+  return(ep & 0x3);
 }
 
 void FrontIO::MapDevicesToPorts(void)
 {
- for(unsigned i = 0; i < 2; i++)
+ if(emulate_multitap[0] && emulate_multitap[1])
  {
-  if(emulate_multitap[i])
+  for(unsigned i = 0; i < 2; i++)
   {
    Ports[i] = DevicesTap[i];
    MCPorts[i] = DummyDevice;
   }
-  else
+ }
+ else if(!emulate_multitap[0] && emulate_multitap[1])
+ {
+  Ports[0] = Devices[0];
+  MCPorts[0] = emulate_memcards[0] ? DevicesMC[0] : DummyDevice;
+
+  Ports[1] = DevicesTap[1];
+  MCPorts[1] = DummyDevice;
+ }
+ else if(emulate_multitap[0] && !emulate_multitap[1])
+ {
+  Ports[0] = DevicesTap[0];
+  MCPorts[0] = DummyDevice;
+
+  Ports[1] = Devices[4];
+  MCPorts[1] = emulate_memcards[4] ? DevicesMC[4] : DummyDevice;
+ }
+ else
+ {
+  for(unsigned i = 0; i < 2; i++)
   {
    Ports[i] = Devices[i];
    MCPorts[i] = emulate_memcards[i] ? DevicesMC[i] : DummyDevice;
   }
  }
 
+ //printf("\n");
  for(unsigned i = 0; i < 8; i++)
  {
-  unsigned mp = EP_to_MP(i);
+  unsigned mp = EP_to_MP(emulate_multitap, i);
   
   if(emulate_multitap[mp])
-   DevicesTap[mp]->SetSubDevice(EP_to_SP(i), Devices[i], emulate_memcards[i] ? DevicesMC[i] : DummyDevice);
+   DevicesTap[mp]->SetSubDevice(EP_to_SP(emulate_multitap, i), Devices[i], emulate_memcards[i] ? DevicesMC[i] : DummyDevice);
   else
-   DevicesTap[mp]->SetSubDevice(EP_to_SP(i), DummyDevice, DummyDevice);
+   DevicesTap[mp]->SetSubDevice(EP_to_SP(emulate_multitap, i), DummyDevice, DummyDevice);
+
+  //printf("%d-> multitap: %d, sub-port: %d\n", i, mp, EP_to_SP(emulate_multitap, i));
  }
 }
 
@@ -271,6 +297,8 @@ pscpu_timestamp_t FrontIO::CalcNextEventTS(pscpu_timestamp_t timestamp, int32 ne
  return(ret);
 }
 
+static const uint8 ScaleShift[4] = { 0, 0, 4, 6 };
+
 void FrontIO::CheckStartStopPending(pscpu_timestamp_t timestamp, bool skip_event_set)
 {
  //const bool prior_ReceiveInProgress = ReceiveInProgress;
@@ -297,7 +325,8 @@ void FrontIO::CheckStartStopPending(pscpu_timestamp_t timestamp, bool skip_event
    TransmitBitCounter = 0;
   }
 
-  ClockDivider = 0x44;
+  ClockDivider = std::max<uint32>(0x20, (Baudrate << ScaleShift[Mode & 0x3]) & ~1); // Minimum of 0x20 is an emulation sanity check to prevent severe performance degradation.
+  //printf("CD: 0x%02x\n", ClockDivider);
  }
 
  if(!(Control & 0x5))
@@ -436,6 +465,7 @@ uint32 FrontIO::Read(pscpu_timestamp_t timestamp, uint32 A)
  switch(A & 0xF)
  {
   case 0x0:
+	//printf("FIO Read: 0x%02x\n", ReceiveBuffer);
 	ret = ReceiveBuffer | (ReceiveBuffer << 8) | (ReceiveBuffer << 16) | (ReceiveBuffer << 24);
 	ReceiveBufferAvail = false;
 	ReceivePending = true;
@@ -560,7 +590,7 @@ pscpu_timestamp_t FrontIO::Update(pscpu_timestamp_t timestamp)
       }
      }
     }
-    ClockDivider += 0x44; //88; //99;
+    ClockDivider += std::max<uint32>(0x20, (Baudrate << ScaleShift[Mode & 0x3]) & ~1); // Minimum of 0x20 is an emulation sanity check to prevent severe performance degradation.
    }
    else
     break;
@@ -720,7 +750,7 @@ void FrontIO::LoadMemcard(unsigned int which, const char *path)
  {
   if(DevicesMC[which]->GetNVSize())
   {
-   FileWrapper mf(path, FileWrapper::MODE_READ);
+   FileStream mf(path, FileStream::MODE_READ);
    std::vector<uint8> tmpbuf;
 
    tmpbuf.resize(DevicesMC[which]->GetNVSize());
@@ -747,7 +777,7 @@ void FrontIO::SaveMemcard(unsigned int which, const char *path)
 
  if(DevicesMC[which]->GetNVSize() && DevicesMC[which]->GetNVDirtyCount())
  {
-  FileWrapper mf(path, FileWrapper::MODE_WRITE);	// TODO: MODE_WRITE_ATOMIC_OVERWRITE
+  FileStream mf(path, FileStream::MODE_WRITE);	// TODO: MODE_WRITE_ATOMIC_OVERWRITE
   std::vector<uint8> tmpbuf;
 
   tmpbuf.resize(DevicesMC[which]->GetNVSize());
@@ -896,14 +926,14 @@ static InputDeviceInfoStruct InputDeviceInfoPSXPort[] =
 
 static const InputPortInfoStruct PortInfo[] =
 {
- { "port1", "Port 1/1A", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
- { "port2", "Port 2/2A", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
- { "port3", "Port 1B", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
- { "port4", "Port 1C", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
- { "port5", "Port 1D", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
- { "port6", "Port 2B", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
- { "port7", "Port 2C", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
- { "port8", "Port 2D", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
+ { "port1", "Virtual Port 1", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
+ { "port2", "Virtual Port 2", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
+ { "port3", "Virtual Port 3", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
+ { "port4", "Virtual Port 4", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
+ { "port5", "Virtual Port 5", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
+ { "port6", "Virtual Port 6", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
+ { "port7", "Virtual Port 7", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
+ { "port8", "Virtual Port 8", sizeof(InputDeviceInfoPSXPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPSXPort, "gamepad" },
 };
 
 InputInfoStruct FIO_InputInfo =

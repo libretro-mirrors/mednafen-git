@@ -154,16 +154,16 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	cdrom/scsicd.cpp cdrom/pcecd.cpp cdrom/CDUtility.cpp \
 	cdrom/crc32.cpp cdrom/galois.cpp cdrom/l-ec.cpp \
 	cdrom/recover-raw.cpp cdrom/lec.cpp cdrom/CDAccess.cpp \
-	cdrom/CDAccess_Image.cpp cdrom/CDAccess_Physical.cpp \
-	compress/minilzo.c compress/quicklz.c compress/blz.cpp \
-	compress/ioapi.c compress/unzip.c string/world_strtod.c \
-	string/escape.cpp string/ConvertUTF.cpp video/surface.cpp \
-	video/font-data.cpp video/font-data-18x18.c \
-	video/font-data-12x13.c video/png.cpp video/primitives.cpp \
-	video/text.cpp video/video.cpp video/tblur.cpp \
-	video/selblur.cpp video/resize.cpp video/Deinterlacer.cpp \
-	resampler/resample.c cputest/cputest.c cputest/x86_cpu.c \
-	cputest/ppc_cpu.c
+	cdrom/CDAccess_Image.cpp cdrom/CDAccess_CCD.cpp \
+	cdrom/CDAccess_Physical.cpp compress/minilzo.c \
+	compress/quicklz.c compress/blz.cpp compress/ioapi.c \
+	compress/unzip.c string/world_strtod.c string/escape.cpp \
+	string/ConvertUTF.cpp video/surface.cpp video/font-data.cpp \
+	video/font-data-18x18.c video/font-data-12x13.c video/png.cpp \
+	video/primitives.cpp video/text.cpp video/video.cpp \
+	video/tblur.cpp video/selblur.cpp video/resize.cpp \
+	video/Deinterlacer.cpp resampler/resample.c cputest/cputest.c \
+	cputest/x86_cpu.c cputest/ppc_cpu.c
 @WANT_DEBUGGER_TRUE@am__objects_1 = dis6502.$(OBJEXT)
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_LIBCDIO_TRUE@am__objects_2 = cdrom/CDAccess_Physical.$(OBJEXT)
@@ -183,13 +183,13 @@ am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	cdrom/crc32.$(OBJEXT) cdrom/galois.$(OBJEXT) \
 	cdrom/l-ec.$(OBJEXT) cdrom/recover-raw.$(OBJEXT) \
 	cdrom/lec.$(OBJEXT) cdrom/CDAccess.$(OBJEXT) \
-	cdrom/CDAccess_Image.$(OBJEXT) $(am__objects_2) \
-	compress/minilzo.$(OBJEXT) compress/quicklz.$(OBJEXT) \
-	compress/blz.$(OBJEXT) compress/ioapi.$(OBJEXT) \
-	compress/unzip.$(OBJEXT) string/world_strtod.$(OBJEXT) \
-	string/escape.$(OBJEXT) string/ConvertUTF.$(OBJEXT) \
-	video/surface.$(OBJEXT) video/font-data.$(OBJEXT) \
-	video/font-data-18x18.$(OBJEXT) \
+	cdrom/CDAccess_Image.$(OBJEXT) cdrom/CDAccess_CCD.$(OBJEXT) \
+	$(am__objects_2) compress/minilzo.$(OBJEXT) \
+	compress/quicklz.$(OBJEXT) compress/blz.$(OBJEXT) \
+	compress/ioapi.$(OBJEXT) compress/unzip.$(OBJEXT) \
+	string/world_strtod.$(OBJEXT) string/escape.$(OBJEXT) \
+	string/ConvertUTF.$(OBJEXT) video/surface.$(OBJEXT) \
+	video/font-data.$(OBJEXT) video/font-data-18x18.$(OBJEXT) \
 	video/font-data-12x13.$(OBJEXT) video/png.$(OBJEXT) \
 	video/primitives.$(OBJEXT) video/text.$(OBJEXT) \
 	video/video.$(OBJEXT) video/tblur.$(OBJEXT) \
@@ -512,15 +512,16 @@ mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	cdrom/scsicd.cpp cdrom/pcecd.cpp cdrom/CDUtility.cpp \
 	cdrom/crc32.cpp cdrom/galois.cpp cdrom/l-ec.cpp \
 	cdrom/recover-raw.cpp cdrom/lec.cpp cdrom/CDAccess.cpp \
-	cdrom/CDAccess_Image.cpp $(am__append_53) compress/minilzo.c \
-	compress/quicklz.c compress/blz.cpp compress/ioapi.c \
-	compress/unzip.c string/world_strtod.c string/escape.cpp \
-	string/ConvertUTF.cpp video/surface.cpp video/font-data.cpp \
-	video/font-data-18x18.c video/font-data-12x13.c video/png.cpp \
-	video/primitives.cpp video/text.cpp video/video.cpp \
-	video/tblur.cpp video/selblur.cpp video/resize.cpp \
-	video/Deinterlacer.cpp resampler/resample.c cputest/cputest.c \
-	$(am__append_54) $(am__append_55)
+	cdrom/CDAccess_Image.cpp cdrom/CDAccess_CCD.cpp \
+	$(am__append_53) compress/minilzo.c compress/quicklz.c \
+	compress/blz.cpp compress/ioapi.c compress/unzip.c \
+	string/world_strtod.c string/escape.cpp string/ConvertUTF.cpp \
+	video/surface.cpp video/font-data.cpp video/font-data-18x18.c \
+	video/font-data-12x13.c video/png.cpp video/primitives.cpp \
+	video/text.cpp video/video.cpp video/tblur.cpp \
+	video/selblur.cpp video/resize.cpp video/Deinterlacer.cpp \
+	resampler/resample.c cputest/cputest.c $(am__append_54) \
+	$(am__append_55)
 mednafen_LDADD = trio/libtrio.a drivers/libmdfnsdl.a \
 	sexyal/libsexyal.a @SDL_LIBS@ demo/libdemo.a $(am__append_3) \
 	$(am__append_6) $(am__append_9) $(am__append_12) \
@@ -653,6 +654,8 @@ cdrom/CDAccess.$(OBJEXT): cdrom/$(am__dirstamp) \
 	cdrom/$(DEPDIR)/$(am__dirstamp)
 cdrom/CDAccess_Image.$(OBJEXT): cdrom/$(am__dirstamp) \
 	cdrom/$(DEPDIR)/$(am__dirstamp)
+cdrom/CDAccess_CCD.$(OBJEXT): cdrom/$(am__dirstamp) \
+	cdrom/$(DEPDIR)/$(am__dirstamp)
 cdrom/CDAccess_Physical.$(OBJEXT): cdrom/$(am__dirstamp) \
 	cdrom/$(DEPDIR)/$(am__dirstamp)
 compress/$(am__dirstamp):
@@ -740,6 +743,7 @@ mednafen$(EXEEXT): $(mednafen_OBJECTS) $(mednafen_DEPENDENCIES) $(EXTRA_mednafen
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 	-rm -f cdrom/CDAccess.$(OBJEXT)
+	-rm -f cdrom/CDAccess_CCD.$(OBJEXT)
 	-rm -f cdrom/CDAccess_Image.$(OBJEXT)
 	-rm -f cdrom/CDAccess_Physical.$(OBJEXT)
 	-rm -f cdrom/CDUtility.$(OBJEXT)
@@ -805,6 +809,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/state.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tests.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/CDAccess.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/CDAccess_CCD.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/CDAccess_Image.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/CDAccess_Physical.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/CDUtility.Po@am__quote@

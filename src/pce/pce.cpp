@@ -1035,7 +1035,7 @@ static MDFNSetting PCESettings[] =
   { "pce.cdbios", MDFNSF_EMU_STATE, gettext_noop("Path to the CD BIOS"), NULL, MDFNST_STRING, "syscard3.pce" },
   { "pce.gecdbios", MDFNSF_EMU_STATE, gettext_noop("Path to the GE CD BIOS"), gettext_noop("Games Express CD Card BIOS (Unlicensed)"), MDFNST_STRING, "gecard.pce" },
 
-  { "pce.adpcmlp", MDFNSF_NOFLAGS, gettext_noop("Enable lowpass filter with rolloff dependent on playback-frequency."), 
+  { "pce.adpcmlp", MDFNSF_NOFLAGS, gettext_noop("Enable dynamic ADPCM lowpass filter."),
 	gettext_noop("This makes ADPCM voices sound less \"harsh\", however, the downside is that it will cause many ADPCM sound effects to sound a bit muffled."), MDFNST_BOOL, "0", NULL, NULL, NULL, CDSettingChanged },
 
   { "pce.psgrevision", MDFNSF_NOFLAGS, gettext_noop("Select PSG revision."), gettext_noop("WARNING: HES playback will always use the \"huc6280a\" revision if this setting is set to \"match\", since HES playback is always done with SuperGrafx emulation enabled."), MDFNST_ENUM, "huc6280a", NULL, NULL, NULL, NULL, PSGRevisionList  },

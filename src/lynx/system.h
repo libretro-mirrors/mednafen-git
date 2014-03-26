@@ -117,11 +117,11 @@ class CSystem;
 class CSystem : public CSystemBase
 {
 	public:
-		CSystem(const uint8 *, int32);
-		~CSystem();
+		CSystem(const uint8 *, int32) MDFN_COLD;
+		~CSystem() MDFN_COLD;
 
 	public:
-		void	Reset(void);
+		void	Reset(void) MDFN_COLD;
 
 		inline void Update(void)
 		{
@@ -198,7 +198,7 @@ class CSystem : public CSystemBase
 
 // Mikey system interfacing
 
-		void	DisplaySetAttributes(const MDFN_PixelFormat &format, uint32 Pitch) { mMikie->DisplaySetAttributes(format, Pitch); };
+		void	DisplaySetAttributes(const MDFN_PixelFormat &format) { mMikie->DisplaySetAttributes(format); };
 
 		void	ComLynxCable(int status) { mMikie->ComLynxCable(status); };
 		void	ComLynxRxData(int data)  { mMikie->ComLynxRxData(data); };

@@ -1,6 +1,30 @@
+/* Mednafen - Multi-system Emulator
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #include "../psx.h"
 #include "../frontio.h"
 #include "multitap.h"
+
+/*
+ TODO: PS1 multitap appears to have some internal knowledge of controller IDs, so it won't get "stuck" waiting for data from a controller that'll never
+       come.  We currently sort of "cheat" due to how the dsr_pulse_delay stuff works, but in the future we should try to emulate this multitap functionality.
+
+       Also, full-mode read startup and subport controller ID read timing isn't quite right, so we should fix that too.
+*/
 
 /*
  Notes from tests on real thing(not necessarily emulated the same way here):
@@ -17,8 +41,7 @@
 		to write the byte necessary to enter full-read mode; but once the third byte with the bit set has been written, no controller in
 		that port is required for doing full reads(and the manual port selection is ignored when doing a full read).
 
-		However, if there are no controllers plugged in, or the first byte written in a full-mode communication has one or more bits in the upper
-		nybble set to 1, the returned data will be short:
+		However, if there are no controllers plugged in, the returned data will be short:
 			% 0: 0xff
 			% 1: 0x80
 			% 2: 0x5a
@@ -105,6 +128,12 @@ void InputDevice_Multitap::Power(void)
  full_mode = false;
  full_mode_setting = false;
 
+ fm_dp = 0;
+ memset(fm_buffer, 0, sizeof(fm_buffer));
+ fm_deferred_error_temp = false;
+ fm_deferred_error = false;
+ fm_command_error = false;
+
  for(int i = 0; i < 4; i++)
  {
   if(pad_devices[i])
@@ -122,8 +151,12 @@ void InputDevice_Multitap::SetDTR(bool new_dtr)
 
  if(!dtr)
  {
+  if(old_dtr)
+  {
+   //printf("Multitap stop.\n");
+  }
+
   bit_counter = 0;
-  byte_counter = 0;
   receive_buffer = 0;
   selected_device = -1;
   mc_mode = false;
@@ -133,8 +166,11 @@ void InputDevice_Multitap::SetDTR(bool new_dtr)
  if(!old_dtr && dtr)
  {
   full_mode = full_mode_setting;
-  //if(full_mode) {
-  // printf("Full mode start\n"); }
+
+  byte_counter = 0;
+
+  //if(full_mode)
+  // printf("Multitap start: %d\n", full_mode);
  }
 
  for(int i = 0; i < 4; i++)
@@ -155,7 +191,6 @@ bool InputDevice_Multitap::Clock(bool TxD, int32 &dsr_pulse_delay)
   return(1);
 
  bool ret = 1;
- bool mangled_txd = TxD;
  int32 tmp_pulse_delay[2][4] = { { 0, 0, 0, 0 }, { 0, 0, 0, 0 } };
 
  //printf("Receive bit: %d\n", TxD);
@@ -166,102 +201,86 @@ bool InputDevice_Multitap::Clock(bool TxD, int32 &dsr_pulse_delay)
 
  if(1)
  {
-  uint8 sub_clock = 0;
-  uint8 sub_rxd_ignore = 0;
-
-  if(full_mode)
+  if(byte_counter == 0)
   {
-   if(byte_counter == 0)
-   {
-    sub_clock = 0;
-    sub_rxd_ignore = 0xF;
-   }
-   else if(byte_counter == 1)
-   {
-    ret = (0x80 >> bit_counter) & 1;
-    sub_clock = false;
-    sub_rxd_ignore = 0xF;
-   }
-   else if(byte_counter == 2)
-   {
-    ret = (0x5A >> bit_counter) & 1;
-    sub_rxd_ignore = 0xF;
+   bool mangled_txd = TxD;
 
-    if(!mc_mode)
-    {
-     sub_clock = 0xF;
-     mangled_txd = (0x01 >> bit_counter) & 1;
-    }
-   }
-   else if(byte_counter == 0x03 || byte_counter == (0x03 + 0x08 * 1) || byte_counter == (0x03 + 0x08 * 2) || byte_counter == (0x03 + 0x08 * 3))
+   if(bit_counter < 4)
+    mangled_txd = (0x01 >> bit_counter) & 1;
+
+   for(unsigned i = 0; i < 4; i++)
    {
-    sub_clock = 1 << selected_device;
-    sub_rxd_ignore = 0;
-    mangled_txd = (command >> bit_counter) & 1;
-   }
-   else
-   {
-    sub_clock = 1 << selected_device;
-    sub_rxd_ignore = 0;
-    // Not sure about this, would need to test with rumble-capable device on real thing?
-    //mangled_txd = (0x00 >> bit_counter) & 1;
+    pad_devices[i]->Clock(mangled_txd, tmp_pulse_delay[0][i]);
+    mc_devices[i]->Clock(mangled_txd, tmp_pulse_delay[1][i]);
    }
   }
   else
   {
-   if(byte_counter == 0)
+   if(full_mode)
    {
-    if(bit_counter < 4)
-     mangled_txd = (0x01 >> bit_counter) & 1;
+    if(byte_counter == 1)
+    {
+     ret = (0x80 >> bit_counter) & 1;
 
-    sub_clock = 0xF;
-    sub_rxd_ignore = 0xF;
+     for(unsigned i = 0; i < 4; i++)
+     { 
+      fm_buffer[i][0] &= (pad_devices[i]->Clock(TxD, tmp_pulse_delay[0][i]) << bit_counter) | (~(1U << bit_counter));
+     }
+    }
+    else if(byte_counter == 2)
+    {
+     ret = (0x5A >> bit_counter) & 1;
+    }
+    // || byte_counter == (0x03 + 0x08 * 1) || byte_counter == (0x03 + 0x08 * 2) || byte_counter == (0x03 + 0x08 * 3))
+    else if(byte_counter >= 0x03 && byte_counter < 0x03 + 0x08 * 4)
+    {
+     if(!fm_command_error && byte_counter >= (0x03 + 1) && byte_counter < (0x03 + 0x08))
+     {
+      for(unsigned i = 0; i < 4; i++)
+      { 
+       fm_buffer[i][byte_counter - 0x03] &= (pad_devices[i]->Clock(0, tmp_pulse_delay[0][i]) << bit_counter) | (~(1U << bit_counter));
+      }
+     }
+     ret &= ((&fm_buffer[0][0])[byte_counter - 0x03] >> bit_counter) & 1;
+    }
    }
-   else if((unsigned)selected_device < 4)
+   else // to if(full_mode)
    {
-    sub_clock = 1 << selected_device;
-    sub_rxd_ignore = 0;
+    if((unsigned)selected_device < 4)
+    {
+     ret &= pad_devices[selected_device]->Clock(TxD, tmp_pulse_delay[0][selected_device]);
+     ret &= mc_devices[selected_device]->Clock(TxD, tmp_pulse_delay[1][selected_device]);
+    }
    }
-  }
-
-  for(int i = 0; i < 4; i++)
-  {
-   if(sub_clock & (1 << i))
-   {
-    ret &= pad_devices[i]->Clock(mangled_txd, tmp_pulse_delay[0][i]) | ((sub_rxd_ignore >> i) & 1);
-    ret &= mc_devices[i]->Clock(mangled_txd, tmp_pulse_delay[1][i]) | ((sub_rxd_ignore >> i) & 1);
-   }
-  }
+  } // end else to if(byte_counter == 0)
  }
 
-  
-#if 0
- {
-  static uint8 sendy = 0;
-
-  sendy &= ~(1 << bit_counter);
-  sendy |= ret << bit_counter;
-
-  if(bit_counter == 7)
-   printf("Multitap to PSX: 0x%02x\n", sendy);
- }
-#endif
-
+ //
+ //
+ //
 
  bit_counter = (bit_counter + 1) & 0x7;
  if(bit_counter == 0)
  {
+  //printf("Receive: 0x%02x\n", receive_buffer);
   if(byte_counter == 0)
   {
    mc_mode = (bool)(receive_buffer & 0xF0);
+   if(mc_mode)
+    full_mode = false;
 
+   //printf("Zoomba: 0x%02x\n", receive_buffer);
    //printf("Full mode: %d %d %d\n", full_mode, bit_counter, byte_counter);
 
    if(full_mode)
+   {
+    memset(fm_buffer, 0xFF, sizeof(fm_buffer));
     selected_device = 0;
+   }
    else
    {
     //printf("Device select: %02x\n", receive_buffer);
+    fm_deferred_error = false;
     selected_device = ((receive_buffer & 0xF) - 1) & 0xFF;
    }
   }
@@ -269,40 +288,89 @@ bool InputDevice_Multitap::Clock(bool TxD, int32 &dsr_pulse_delay)
   if(byte_counter == 1)
   {
    command = receive_buffer;
+
    //printf("Multitap sub-command: %02x\n", command);
+
+   if(full_mode)
+   {
+    if(command != 0x42)
+     fm_command_error = true;
+    else
+     fm_command_error = fm_deferred_error;
+   }
+   else
+   {
+    fm_command_error = false;
+   }
+   fm_deferred_error = false;
   }
 
-  if((!mc_mode || full_mode) && byte_counter == 2 && command == 0x42)
+  if((!mc_mode || full_mode) && byte_counter == 2)
   {
    //printf("Full mode setting: %02x\n", receive_buffer);
    full_mode_setting = receive_buffer & 0x01;
   }
 
+  if(full_mode)
+  {
+   if(byte_counter == (3 + 8 * 0) || byte_counter == (3 + 8 * 1) || byte_counter == (3 + 8 * 2) || byte_counter == (3 + 8 * 3))
+   {
+    unsigned index = (byte_counter - 3) >> 3;
+    assert(index < 4);
+
+    if(index == 0)
+     fm_deferred_error_temp = false;     
+
+    if((fm_dp & (1U << index)) && receive_buffer != 0x42)
+    {
+     //printf("Multitap command check failed: %u, 0x%02x\n", byte_counter, receive_buffer);
+     fm_deferred_error_temp = true;
+    }
+   }
+
+   if(byte_counter == 33)
+    fm_deferred_error = fm_deferred_error_temp;
+  }
+
   // Handle DSR stuff
   if(full_mode)
   {
-   if(byte_counter == 0 || byte_counter == 1)
-    dsr_pulse_delay = 0x40;
-   else if(byte_counter == 2 || byte_counter == 3)
+   if(byte_counter == 0)	// Next byte: 0x80
    {
-    //int32 td = 0;
-    //for(int i = 0; i < 4; i++)
-    //{
-    // td = std::max<int32>(td, tmp_pulse_delay[0][i]);
-    // td = std::max<int32>(td, tmp_pulse_delay[1][i]);
-    //}
-    //dsr_pulse_delay = td;
-    //printf("%d %d\n", byte_counter, dsr_pulse_delay);
+    dsr_pulse_delay = 1000;
 
-    // Just route the first port's DSR through here; at least one game relies on this(Formula One 2000), or else it freezes.  Well, even when it doesn't
-    // freeze, the game crashes(as of Jan 20, 2012), but that's not the multitap emulation's fault. :b
-    dsr_pulse_delay = std::max<int32>(tmp_pulse_delay[0][0], tmp_pulse_delay[1][0]);
+    fm_dp = 0;
+    for(unsigned i = 0; i < 4; i++)
+     fm_dp |= (((bool)(tmp_pulse_delay[0][i])) << i);
    }
-   else if(byte_counter > 3 && byte_counter < 34)
+   else if(byte_counter == 1)	// Next byte: 0x5A
+    dsr_pulse_delay = 0x40;
+   else if(byte_counter == 2)	// Next byte(typically, controller-dependent): 0x41
    {
-    dsr_pulse_delay = 0x80;
+    if(fm_dp)
+     dsr_pulse_delay = 0x40;
+    else
+     dsr_pulse_delay = 0;
    }
-  }
+   else if(byte_counter >= 3 && byte_counter < 34)	// Next byte when byte_counter==3 (typically, controller-dependent): 0x5A
+   {
+    if(byte_counter < 10)
+    { 
+     int d = 0x40;
+
+     for(unsigned i = 0; i < 4; i++)
+      if(tmp_pulse_delay[0][i] > d)
+       d = tmp_pulse_delay[0][i];
+
+     dsr_pulse_delay = d;
+    }
+    else
+     dsr_pulse_delay = 0x20;
+
+    if(byte_counter == 3 && fm_command_error)
+     dsr_pulse_delay = 0;
+   }
+  } // end if(full_mode)
   else
   {
    if((unsigned)selected_device < 4)
@@ -319,12 +387,6 @@ bool InputDevice_Multitap::Clock(bool TxD, int32 &dsr_pulse_delay)
   //printf("Byte Counter Increment\n");
   if(byte_counter < 255)
    byte_counter++;
-
-  if(full_mode && (byte_counter == (0x03 + 0x08 * 1) || byte_counter == (0x03 + 0x08 * 2) || byte_counter == (0x03 + 0x08 * 3)))
-  {
-   //printf("Device Select Increment\n");
-   selected_device++;
-  }
  }
 
 

@@ -23,14 +23,6 @@
  #endif
 #endif
 
-#if GL_VERSION_1_3 && GL_ARB_vertex_program && GL_ARB_fragment_program
-#define MDFN_WANT_OPENGL_SHADERS 1
-#else
-
-#endif
-
-#define MDFN_GL_TRY(x, ...) { x; GLenum errcode = p_glGetError(); if(errcode != GL_NO_ERROR) { __VA_ARGS__; throw(errcode); } }
-
 typedef GLenum GLAPIENTRY (*glGetError_Func)(void);
 
 typedef void GLAPIENTRY (*glBindTexture_Func)(GLenum target,GLuint texture);
@@ -124,8 +116,6 @@ typedef void GLAPIENTRY (*glWaitSync_Func)(GLsync sync, GLbitfield flags, GLuint
 typedef void GLAPIENTRY (*glGetInteger64v_Func)(GLenum pname, GLint64 *params);
 typedef void GLAPIENTRY (*glGetSynciv_Func)(GLsync sync, GLenum pname, GLsizei bufSize, GLsizei *length, GLint *values);
 
-
-#if MDFN_WANT_OPENGL_SHADERS
 typedef GLhandleARB GLAPIENTRY (*glCreateShaderObjectARB_Func)(GLenum);
 typedef void GLAPIENTRY (*glShaderSourceARB_Func)(GLhandleARB, GLsizei, const GLcharARB* *, const GLint *);
 typedef void GLAPIENTRY (*glCompileShaderARB_Func)(GLhandleARB);
@@ -146,88 +136,121 @@ typedef void GLAPIENTRY (*glDeleteObjectARB_Func)(GLhandleARB);
 typedef void GLAPIENTRY (*glDetachObjectARB_Func)(GLhandleARB, GLhandleARB);
 
 typedef void GLAPIENTRY (*glGetObjectParameterivARB_Func)(GLhandleARB, GLenum, GLint *);
-#endif
 
-extern glGetError_Func p_glGetError;
-
-extern glBindTexture_Func p_glBindTexture;
-extern glColorTableEXT_Func p_glColorTableEXT;
-extern glTexImage2D_Func p_glTexImage2D;
-extern glBegin_Func p_glBegin;
-extern glVertex2f_Func p_glVertex2f;
-extern glTexCoord2f_Func p_glTexCoord2f;
-extern glEnd_Func p_glEnd;
-extern glEnable_Func p_glEnable;
-extern glBlendFunc_Func p_glBlendFunc;
-extern glGetString_Func p_glGetString;
-extern glViewport_Func p_glViewport;
-extern glGenTextures_Func p_glGenTextures;
-extern glDeleteTextures_Func p_glDeleteTextures;
-extern glTexParameteri_Func p_glTexParameteri;
-extern glClearColor_Func p_glClearColor;
-extern glLoadIdentity_Func p_glLoadIdentity;
-extern glClear_Func p_glClear;
-extern glMatrixMode_Func p_glMatrixMode;
-extern glDisable_Func p_glDisable;
-
-extern glPixelStorei_Func p_glPixelStorei;
-extern glTexSubImage2D_Func p_glTexSubImage2D;
-extern glFinish_Func p_glFinish;
-extern glOrtho_Func p_glOrtho;
-extern glPixelTransferf_Func p_glPixelTransferf;
-extern glColorMask_Func p_glColorMask;
-extern glTexEnvf_Func p_glTexEnvf;
-extern glGetIntegerv_Func p_glGetIntegerv;
-extern glTexGend_Func p_glTexGend;
-extern glGetTexLevelParameteriv_Func p_glGetTexLevelParameteriv;
-extern glAccum_Func p_glAccum;
-extern glClearAccum_Func p_glClearAccum;
-extern glPushMatrix_Func p_glPushMatrix;
-extern glPopMatrix_Func p_glPopMatrix;
-extern glRotated_Func p_glRotated;
-extern glScalef_Func p_glScalef;
-extern glReadPixels_Func p_glReadPixels;
-
-extern glFenceSync_Func p_glFenceSync;
-extern glIsSync_Func p_glIsSync;
-extern glDeleteSync_Func p_glDeleteSync;
-extern glClientWaitSync_Func p_glClientWaitSync;
-extern glWaitSync_Func p_glWaitSync;
-extern glGetInteger64v_Func p_glGetInteger64v;
-extern glGetSynciv_Func p_glGetSynciv;
-
-
-#if MDFN_WANT_OPENGL_SHADERS
-extern glCreateShaderObjectARB_Func p_glCreateShaderObjectARB;
-extern glShaderSourceARB_Func p_glShaderSourceARB;
-extern glCompileShaderARB_Func p_glCompileShaderARB;
-extern glCreateProgramObjectARB_Func p_glCreateProgramObjectARB;
-extern glAttachObjectARB_Func p_glAttachObjectARB;
-extern glLinkProgramARB_Func p_glLinkProgramARB;
-extern glUseProgramObjectARB_Func p_glUseProgramObjectARB;
-extern glUniform1fARB_Func p_glUniform1fARB;
-extern glUniform2fARB_Func p_glUniform2fARB;
-extern glUniform3fARB_Func p_glUniform3fARB;
-extern glUniform1iARB_Func p_glUniform1iARB;
-extern glUniform2iARB_Func p_glUniform2iARB;
-extern glUniform3iARB_Func p_glUniform3iARB;
-extern glActiveTextureARB_Func p_glActiveTextureARB;
-extern glGetInfoLogARB_Func p_glGetInfoLogARB;
-extern glGetUniformLocationARB_Func p_glGetUniformLocationARB;
-extern glDeleteObjectARB_Func p_glDeleteObjectARB;
-extern glDetachObjectARB_Func p_glDetachObjectARB;
-
-extern glGetObjectParameterivARB_Func p_glGetObjectParameterivARB;
-#endif
 
 #include "shader.h"
 
-void BlitOpenGLRaw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *dest_rect, const bool source_alpha);
-void BlitOpenGL(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Rect *dest_rect, const MDFN_Rect *original_src_rect);
-void KillOpenGL(void);
-int InitOpenGL(int ipolate, int scanlines, ShaderType pixshader, SDL_Surface *screen, int *rs, int *gs, int *bs, int *as);
-void ClearBackBufferOpenGL(void);
-void FlipOpenGL(void);
-void ReadPixelsGL(MDFN_Surface *surface, const MDFN_Rect *rect);
+class OpenGL_Blitter
+{
+ public:
+
+ OpenGL_Blitter(int scanlines, ShaderType pixshader, const int screen_w, const int screen_h, int *rs, int *gs, int *bs, int *as);
+ ~OpenGL_Blitter();
+
+ void BlitRaw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *dest_rect, const bool source_alpha);
+ void Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Rect *dest_rect, const MDFN_Rect *original_src_rect, int UsingIP = 0, int rotated = MDFN_ROTATE0);
+ void ClearBackBuffer(void);
+
+ //void HardSync(uint64 timeout);
+
+ void ReadPixels(MDFN_Surface *surface, const MDFN_Rect *rect);
+
+ private:
+
+ void Cleanup(void);
+ void DrawQuad(float src_coords[4][2], int dest_coords[4][2]);
+ void DrawLinearIP(const unsigned UsingIP, const unsigned rotated, const MDFN_Rect *tex_src_rect, const MDFN_Rect *dest_rect, const uint32 tmpwidth, const uint32 tmpheight);
+
+ glGetError_Func p_glGetError;
+ glBindTexture_Func p_glBindTexture;
+ glColorTableEXT_Func p_glColorTableEXT;
+ glTexImage2D_Func p_glTexImage2D;
+ glBegin_Func p_glBegin;
+ glVertex2f_Func p_glVertex2f;
+ glTexCoord2f_Func p_glTexCoord2f;
+ glEnd_Func p_glEnd;
+ glEnable_Func p_glEnable;
+ glBlendFunc_Func p_glBlendFunc;
+ glGetString_Func p_glGetString;
+ glViewport_Func p_glViewport;
+ glGenTextures_Func p_glGenTextures;
+ glDeleteTextures_Func p_glDeleteTextures;
+ glTexParameteri_Func p_glTexParameteri;
+ glClearColor_Func p_glClearColor;
+ glLoadIdentity_Func p_glLoadIdentity;
+ glClear_Func p_glClear;
+ glMatrixMode_Func p_glMatrixMode;
+ glDisable_Func p_glDisable;
+ glPixelStorei_Func p_glPixelStorei;
+ glTexSubImage2D_Func p_glTexSubImage2D;
+ glFinish_Func p_glFinish;
+ glOrtho_Func p_glOrtho;
+ glPixelTransferf_Func p_glPixelTransferf;
+ glColorMask_Func p_glColorMask;
+ glTexEnvf_Func p_glTexEnvf;
+ glGetIntegerv_Func p_glGetIntegerv;
+ glTexGend_Func p_glTexGend;
+ glDrawPixels_Func p_glDrawPixels;
+ glRasterPos2i_Func p_glRasterPos2i;
+ glPixelZoom_Func p_glPixelZoom;
+ glGetTexLevelParameteriv_Func p_glGetTexLevelParameteriv;
+ glAccum_Func p_glAccum;
+ glClearAccum_Func p_glClearAccum;
+ glPushMatrix_Func p_glPushMatrix;
+ glPopMatrix_Func p_glPopMatrix;
+ glRotated_Func p_glRotated;
+ glScalef_Func p_glScalef;
+ glReadPixels_Func p_glReadPixels;
+
+ glFenceSync_Func p_glFenceSync;
+ glIsSync_Func p_glIsSync;
+ glDeleteSync_Func p_glDeleteSync;
+ glClientWaitSync_Func p_glClientWaitSync;
+ glWaitSync_Func p_glWaitSync;
+ glGetInteger64v_Func p_glGetInteger64v;
+ glGetSynciv_Func p_glGetSynciv;
+
+ glCreateShaderObjectARB_Func p_glCreateShaderObjectARB;
+ glShaderSourceARB_Func p_glShaderSourceARB;
+ glCompileShaderARB_Func p_glCompileShaderARB;
+ glCreateProgramObjectARB_Func p_glCreateProgramObjectARB;
+ glAttachObjectARB_Func p_glAttachObjectARB;
+ glLinkProgramARB_Func p_glLinkProgramARB;
+ glUseProgramObjectARB_Func p_glUseProgramObjectARB;
+ glUniform1fARB_Func p_glUniform1fARB;
+ glUniform2fARB_Func p_glUniform2fARB;
+ glUniform3fARB_Func p_glUniform3fARB;
+ glUniform1iARB_Func p_glUniform1iARB;
+ glUniform2iARB_Func p_glUniform2iARB;
+ glUniform3iARB_Func p_glUniform3iARB;
+ glActiveTextureARB_Func p_glActiveTextureARB;
+ glGetInfoLogARB_Func p_glGetInfoLogARB;
+ glGetUniformLocationARB_Func p_glGetUniformLocationARB;
+ glDeleteObjectARB_Func p_glDeleteObjectARB;
+ glDetachObjectARB_Func p_glDetachObjectARB;
+ glGetObjectParameterivARB_Func p_glGetObjectParameterivARB;
+
+ uint32 MaxTextureSize;		// Maximum power-of-2 texture width/height(we assume they're the same, and if they're not, this is set to the lower value of the two)
+ bool SupportNPOT; 		// True if the OpenGL implementation supports non-power-of-2-sized textures
+ bool SupportARBSync;
+ GLenum PixelFormat;		// For glTexSubImage2D()
+ GLenum PixelType;		// For glTexSubImage2D()
+
+ const int gl_screen_w, gl_screen_h;
+ GLuint textures[4];		// emulated fb, scanlines, osd, raw(netplay)
+ GLuint rgb_mask; 		// TODO:  RGB mask texture for LCD RGB triad simulation
+
+ bool using_scanlines;
+ unsigned int last_w, last_h;
+
+ uint32 OSDLastWidth, OSDLastHeight;
+
+ OpenGL_Blitter_Shader *shader;
+
+ uint32 *DummyBlack;		 // Black/Zeroed image data for cleaning textures
+ uint32 DummyBlackSize;
+
+ friend class OpenGL_Blitter_Shader;
+};
 
 #endif

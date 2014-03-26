@@ -57,8 +57,7 @@ extern int emulating;
 
 extern int gbDmaTicks;
 
-extern void gbRenderLine();
-extern void gbDrawSprites();
+void gbRenderLine(void);
 
 extern uint32 gblayerSettings;
 extern uint8 (*gbSerialFunction)(uint8);

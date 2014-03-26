@@ -259,7 +259,7 @@ static void Emulate(EmulateSpecStruct *espec)
  espec->DisplayRect.h = 102;
 
  if(espec->VideoFormatChanged)
-  lynxie->DisplaySetAttributes(espec->surface->format, espec->surface->pitch32); // FIXME, pitch
+  lynxie->DisplaySetAttributes(espec->surface->format); // FIXME, pitch
 
  if(espec->SoundFormatChanged)
  {
@@ -278,7 +278,7 @@ static void Emulate(EmulateSpecStruct *espec)
  memset(LynxLineDrawn, 0, sizeof(LynxLineDrawn[0]) * 102);
 
  lynxie->mMikie->mpSkipFrame = espec->skip;
- lynxie->mMikie->mpDisplayCurrent = espec->surface->pixels;
+ lynxie->mMikie->mpDisplayCurrent = espec->surface;
  lynxie->mMikie->mpDisplayCurrentLine = 0;
  lynxie->mMikie->startTS = gSystemCycleCount;
 
@@ -294,12 +294,25 @@ static void Emulate(EmulateSpecStruct *espec)
 
   for(int y = 0; y < 102; y++)
   {
-   uint32 *row = espec->surface->pixels + y * espec->surface->pitch32;
-
-   if(!LynxLineDrawn[y])
+   if(espec->surface->format.bpp == 16)
    {
-    for(int x = 0; x < 160; x++)
-     row[x] = color_black;
+    uint16 *row = espec->surface->pixels16 + y * espec->surface->pitchinpix;
+
+    if(!LynxLineDrawn[y])
+    {
+     for(int x = 0; x < 160; x++)
+      row[x] = color_black;
+    }
+   }
+   else
+   {
+    uint32 *row = espec->surface->pixels + y * espec->surface->pitchinpix;
+
+    if(!LynxLineDrawn[y])
+    {
+     for(int x = 0; x < 160; x++)
+      row[x] = color_black;
+    }
    }
   }
  }

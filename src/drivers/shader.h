@@ -1,7 +1,8 @@
 #ifndef __DRIVERS_SHADER_H
 #define __DRIVERS_SHADER_H
 
-typedef enum {
+enum ShaderType
+{
 	SHADER_NONE = 0,
 	SHADER_SCALE2X,
 	SHADER_SABR,
@@ -12,12 +13,36 @@ typedef enum {
         SHADER_IPXNOTYSHARPER,
         SHADER_IPYNOTX,
         SHADER_IPYNOTXSHARPER,
-} ShaderType;
+};
 
+class OpenGL_Blitter;
+class OpenGL_Blitter_Shader
+{
+ public:
 
-bool InitShader(ShaderType pixshader);
-bool ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th, int orig_tw, int orig_th, unsigned rotated);
-bool ShaderEnd(void);
-bool KillShader(void);
+ OpenGL_Blitter_Shader(OpenGL_Blitter *in_oblt, ShaderType pixshader);
+ ~OpenGL_Blitter_Shader();
+
+ void ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th, int orig_tw, int orig_th, unsigned rotated);
+ void ShaderEnd(void);
+
+ private:
+
+ struct CompiledShader
+ {
+  GLhandleARB v, f, p;
+  bool v_valid, f_valid, p_valid;
+ };
+
+ enum { CSP_COUNT = 8 };
+
+ void Cleanup(void);
+ void SLP(GLhandleARB moe);
+ void CompileShader(CompiledShader &s, const char *vertex_prog, const char *frag_prog);
+
+ ShaderType OurType;
+ CompiledShader CSP[CSP_COUNT];
+ OpenGL_Blitter* const oblt;
+};
 
 #endif

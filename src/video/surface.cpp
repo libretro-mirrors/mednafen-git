@@ -17,6 +17,7 @@
 
 #include <mednafen/mednafen.h>
 #include "surface.h"
+#include <math.h>
 
 MDFN_PixelFormat::MDFN_PixelFormat()
 {
@@ -419,4 +420,3 @@ MDFN_Surface::~MDFN_Surface()
    free(palette);
  }
 }
-

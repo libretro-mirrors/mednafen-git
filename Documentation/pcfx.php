@@ -12,6 +12,24 @@
   </ul>
 <?php EndSection(); ?>
 
+<?php BeginSection("Firmware/BIOS", "", FALSE, FALSE, "Section_firmware_bios"); ?>
+<p>
+Place a correct BIOS image file in the <a href="mednafen.html#Section_firmware_bios">correct location</a>.
+</p>
+
+<p>
+The filename listed below is per default <a href="#pcfx.bios">pcfx.bios</a> setting.
+</p>
+<table border>
+ <tr><th>Filename:</th><th>SHA-1:</th><th>Description:</th></tr>
+ <tr><td rowspan="3">pcfx.rom</td><td>1a77fd83e337f906aecab27a1604db064cf10074</td><td>PC-FX BIOS version 1.00.  Recommended BIOS version.</td></tr>
+<!--
+ <tr>                             <td>8b662f7548078be52a871565e19511ccca28c5c8</td><td>PC-FX BIOS version 1.01.</td></tr>
+ <tr>                             <td>a9372202a5db302064c994fcda9b24d29bb1b41c</td><td>PC-FXGA BIOS.  Not recommended.</td></tr>
+-->
+</table>
+<?php EndSection(); ?>
+
 
 <?php BeginSection('Default Key Assignments'); ?>
 

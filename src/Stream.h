@@ -29,9 +29,15 @@ class Stream
 				// (the returned pointer must be cached, and returned on any subsequent calls to map() without an unmap()
 				// in-between, to facilitate a sort of "feature-testing", to determine if an alternative like "MemoryStream"
 				// should be used).
+				//
+				// If the mapping fails for whatever reason, return NULL rather than throwing an exception.
+				//
 
  virtual void unmap(void) = 0;	// Unmap the stream data from the address space.  (Possibly invalidating the pointer returned from map()).
 				// (must automatically be called, if necessary, from the destructor).
+				//
+				// If the data can't be "unmapped" as such because it was never mmap()'d or similar in the first place(such as with MemoryStream),
+				// then this will be a nop.
 
  virtual uint64 read(void *data, uint64 count, bool error_on_eos = true) = 0;
  virtual void write(const void *data, uint64 count) = 0;
@@ -147,7 +153,8 @@ class Stream
   #endif
  }
 
- // Reads a line into "str", overwriting its contents; returns the line-end char('\n' or '\r' or '\0'), or -1 on EOF.
+ // Reads a line into "str", overwriting its contents; returns the line-end char('\n' or '\r' or '\0'), or 256 on EOF and
+ // data has been read into "str", and -1 on EOF when no data has been read into "str".
  // The line-end char won't be added to "str".
  // It's up to the caller to handle extraneous empty lines caused by DOS-format text lines(\r\n).
  // ("str" is passed by reference for the possibility of improved performance by reusing alloced memory for the std::string, though part

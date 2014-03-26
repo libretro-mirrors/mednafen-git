@@ -25,9 +25,10 @@
 #include <fcntl.h>
 
 // Code for the stdio emulator interface.
-static char *InputBuffer;
-static int64 InputBufferLen;
-static int64 InputBufferOffset;
+static char *OutputKey = NULL;
+static char *InputBuffer = NULL;
+static int64 InputBufferLen = 0;
+static int64 InputBufferOffset = 0;
 
 // This kludge gives me nightmares.
 //static bool CaptureErrorMessages = FALSE;
@@ -38,7 +39,7 @@ static void Remote_SendCommand(const char *command, int nargs, ...)
  va_list ap;
  va_start(ap, nargs);
 
- printf("%s ", command);
+ printf("%s%s ", OutputKey, command);
 
  for(int i = 0; i < nargs; i++)
  {
@@ -119,6 +120,10 @@ static void ParseSTDIOCommand(char *buf)
   {
    MainRequestExit();
    suppress_success = TRUE;
+  }
+  else if(!strcasecmp(arguments[0], "nop"))
+  {
+   success = true;
   }
   else if(!strcasecmp(arguments[0], "sync_video"))
   {
@@ -239,7 +244,7 @@ void CheckForSTDIOMessages(void)
  }
 }
 
-bool InitSTDIOInterface(void)
+bool InitSTDIOInterface(const char *key)
 {
  if(fcntl(fileno(stdin), F_SETFL, O_NONBLOCK | O_RDONLY))
  {
@@ -250,7 +255,8 @@ bool InitSTDIOInterface(void)
  InputBuffer = NULL;
  InputBufferLen = 0; 
  InputBufferOffset = 0;
- 
+ OutputKey = strdup(key);
+
  return(TRUE);
 }
 
@@ -272,7 +278,7 @@ void CheckForSTDIOMessages(void)
 
 }
 
-bool InitSTDIOInterface(void)
+bool InitSTDIOInterface(const char *key)
 {
  return(0);
 }

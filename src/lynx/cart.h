@@ -71,8 +71,8 @@ class CCart : public CLynxBase
 	// Function members
 
 	public:
-		CCart(const uint8 *gamedata, uint32 gamesize);
-		~CCart();
+		CCart(const uint8 *gamedata, uint32 gamesize) MDFN_COLD;
+		~CCart() MDFN_COLD;
 
 	public:
 
@@ -82,7 +82,7 @@ class CCart : public CLynxBase
 		static LYNX_HEADER DecodeHeader(const uint8 *data);
 		static bool TestMagic(const uint8 *data, uint32 size);
 
-		void	Reset(void);
+		void	Reset(void) MDFN_COLD;
 		void	Poke(uint32 addr,uint8 data);
 		uint8	Peek(uint32 addr);
 		uint32	ReadCycle(void) {return 15;};

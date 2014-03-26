@@ -4,9 +4,12 @@ DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_srcdir
 
 noinst_LIBRARIES	=	libmdfnsdl.a
 
-libmdfnsdl_a_SOURCES = input.cpp opengl.cpp main.cpp ers.cpp sound.cpp video.cpp netplay.cpp input-config.cpp
-libmdfnsdl_a_SOURCES += args.cpp nnx.cpp nongl.cpp overlay.cpp console.cpp cheat.cpp fps.cpp 
-libmdfnsdl_a_SOURCES += help.cpp video-state.cpp shader.cpp remote.cpp
+libmdfnsdl_a_SOURCES = input.cpp main.cpp args.cpp help.cpp ers.cpp sound.cpp netplay.cpp input-config.cpp
+libmdfnsdl_a_SOURCES += console.cpp cheat.cpp fps.cpp video-state.cpp remote.cpp
+
+libmdfnsdl_a_SOURCES += opengl.cpp shader.cpp
+libmdfnsdl_a_SOURCES += overlay.cpp
+libmdfnsdl_a_SOURCES += video.cpp nongl.cpp nnx.cpp
 
 if WANT_FANCY_SCALERS
 libmdfnsdl_a_SOURCES += hqxx-common.cpp hq2x.cpp hq3x.cpp hq4x.cpp scale2x.c scale3x.c scalebit.c 2xSaI.cpp

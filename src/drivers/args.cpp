@@ -166,10 +166,13 @@ void ShowArgumentsHelpSub(ARGPSTRUCT *argsps, bool show_linked)
   }
   else
   {
-   if(argsps->subs)
-    printf(" -%s <parameter>\n\t%s\n", argsps->name, argsps->description);
-   else
-    printf(" -%s\n\t%s\n", argsps->name, argsps->description);
+   if(argsps->description)
+   {
+    if(argsps->subs)
+     printf(" -%s <parameter>\n\t%s\n", argsps->name, argsps->description);
+    else
+     printf(" -%s\n\t%s\n", argsps->name, argsps->description);
+   }
   }
   argsps++;
  }

@@ -98,15 +98,15 @@ am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
 libmdfnsdl_a_AR = $(AR) $(ARFLAGS)
 libmdfnsdl_a_LIBADD =
-am__libmdfnsdl_a_SOURCES_DIST = input.cpp opengl.cpp main.cpp ers.cpp \
-	sound.cpp video.cpp netplay.cpp input-config.cpp args.cpp \
-	nnx.cpp nongl.cpp overlay.cpp console.cpp cheat.cpp fps.cpp \
-	help.cpp video-state.cpp shader.cpp remote.cpp hqxx-common.cpp \
-	hq2x.cpp hq3x.cpp hq4x.cpp scale2x.c scale3x.c scalebit.c \
-	2xSaI.cpp Joystick.cpp Joystick_SDL.cpp Joystick_Linux.cpp \
-	NetClient_POSIX.cpp Joystick_XInput.cpp Joystick_DX5.cpp \
-	NetClient_WS2.cpp debugger.cpp gfxdebugger.cpp memdebugger.cpp \
-	logdebugger.cpp prompt.cpp
+am__libmdfnsdl_a_SOURCES_DIST = input.cpp main.cpp args.cpp help.cpp \
+	ers.cpp sound.cpp netplay.cpp input-config.cpp console.cpp \
+	cheat.cpp fps.cpp video-state.cpp remote.cpp opengl.cpp \
+	shader.cpp overlay.cpp video.cpp nongl.cpp nnx.cpp \
+	hqxx-common.cpp hq2x.cpp hq3x.cpp hq4x.cpp scale2x.c scale3x.c \
+	scalebit.c 2xSaI.cpp Joystick.cpp Joystick_SDL.cpp \
+	Joystick_Linux.cpp NetClient_POSIX.cpp Joystick_XInput.cpp \
+	Joystick_DX5.cpp NetClient_WS2.cpp debugger.cpp \
+	gfxdebugger.cpp memdebugger.cpp logdebugger.cpp prompt.cpp
 @WANT_FANCY_SCALERS_TRUE@am__objects_1 = hqxx-common.$(OBJEXT) \
 @WANT_FANCY_SCALERS_TRUE@	hq2x.$(OBJEXT) hq3x.$(OBJEXT) \
 @WANT_FANCY_SCALERS_TRUE@	hq4x.$(OBJEXT) scale2x.$(OBJEXT) \
@@ -120,15 +120,15 @@ am__libmdfnsdl_a_SOURCES_DIST = input.cpp opengl.cpp main.cpp ers.cpp \
 @WANT_DEBUGGER_TRUE@	gfxdebugger.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@	memdebugger.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@	logdebugger.$(OBJEXT) prompt.$(OBJEXT)
-am_libmdfnsdl_a_OBJECTS = input.$(OBJEXT) opengl.$(OBJEXT) \
-	main.$(OBJEXT) ers.$(OBJEXT) sound.$(OBJEXT) video.$(OBJEXT) \
-	netplay.$(OBJEXT) input-config.$(OBJEXT) args.$(OBJEXT) \
-	nnx.$(OBJEXT) nongl.$(OBJEXT) overlay.$(OBJEXT) \
-	console.$(OBJEXT) cheat.$(OBJEXT) fps.$(OBJEXT) help.$(OBJEXT) \
-	video-state.$(OBJEXT) shader.$(OBJEXT) remote.$(OBJEXT) \
-	$(am__objects_1) Joystick.$(OBJEXT) Joystick_SDL.$(OBJEXT) \
-	$(am__objects_2) $(am__objects_3) $(am__objects_4) \
-	$(am__objects_5)
+am_libmdfnsdl_a_OBJECTS = input.$(OBJEXT) main.$(OBJEXT) \
+	args.$(OBJEXT) help.$(OBJEXT) ers.$(OBJEXT) sound.$(OBJEXT) \
+	netplay.$(OBJEXT) input-config.$(OBJEXT) console.$(OBJEXT) \
+	cheat.$(OBJEXT) fps.$(OBJEXT) video-state.$(OBJEXT) \
+	remote.$(OBJEXT) opengl.$(OBJEXT) shader.$(OBJEXT) \
+	overlay.$(OBJEXT) video.$(OBJEXT) nongl.$(OBJEXT) \
+	nnx.$(OBJEXT) $(am__objects_1) Joystick.$(OBJEXT) \
+	Joystick_SDL.$(OBJEXT) $(am__objects_2) $(am__objects_3) \
+	$(am__objects_4) $(am__objects_5)
 libmdfnsdl_a_OBJECTS = $(am_libmdfnsdl_a_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -387,10 +387,10 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_srcdir)
 noinst_LIBRARIES = libmdfnsdl.a
-libmdfnsdl_a_SOURCES = input.cpp opengl.cpp main.cpp ers.cpp sound.cpp \
-	video.cpp netplay.cpp input-config.cpp args.cpp nnx.cpp \
-	nongl.cpp overlay.cpp console.cpp cheat.cpp fps.cpp help.cpp \
-	video-state.cpp shader.cpp remote.cpp $(am__append_1) \
+libmdfnsdl_a_SOURCES = input.cpp main.cpp args.cpp help.cpp ers.cpp \
+	sound.cpp netplay.cpp input-config.cpp console.cpp cheat.cpp \
+	fps.cpp video-state.cpp remote.cpp opengl.cpp shader.cpp \
+	overlay.cpp video.cpp nongl.cpp nnx.cpp $(am__append_1) \
 	Joystick.cpp Joystick_SDL.cpp $(am__append_2) $(am__append_3) \
 	$(am__append_4) $(am__append_5)
 all: all-am

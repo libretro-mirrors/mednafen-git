@@ -47,8 +47,6 @@ private:
 	
 	void mix_stereo( blip_sample_t*, long );
 	void mix_mono( blip_sample_t*, long );
-        void mix_stereo( float*, long );
-        void mix_mono( float*, long );
 };
 
 	inline Blip_Buffer* Stereo_Buffer::left() {

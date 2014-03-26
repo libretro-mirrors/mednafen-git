@@ -370,10 +370,18 @@ static void Emulate(EmulateSpecStruct *espec)
 
   {
    TOC toc;
+   const char *disctype_string = "";
 
    (*cdifs)[AudioTrackList[CurrentATLI].disc]->ReadTOC(&toc);
 
-   trio_snprintf(tmpbuf, 256, "Disc: %d/%d", AudioTrackList[CurrentATLI].disc + 1, cdifs->size());
+   if(toc.disc_type == 0x10)
+    disctype_string = "(CD-i)";
+   else if(toc.disc_type == 0x20)
+    disctype_string = "(CD-ROM XA)";
+   else if(toc.disc_type != 0x00)
+    disctype_string = "(unknown type)";
+
+   trio_snprintf(tmpbuf, 256, "Disc: %d/%d %s", AudioTrackList[CurrentATLI].disc + 1, cdifs->size(), disctype_string);
    DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
    pixels += 13 * espec->surface->pitch32;
 

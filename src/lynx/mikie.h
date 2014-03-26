@@ -179,14 +179,14 @@ typedef Blip_Synth<blip_good_quality, 256 * 4> Synth;
 class CMikie : public CLynxBase
 {
 	public:
-		CMikie(CSystem& parent);
-		~CMikie();
+		CMikie(CSystem& parent) MDFN_COLD;
+		~CMikie() MDFN_COLD;
 	
 		uint32 startTS;
 		Synth miksynth;
 		Blip_Buffer mikbuf;
 
-		void	Reset(void);
+		void	Reset(void) MDFN_COLD;
 
 		uint8	Peek(uint32 addr);
 		void	Poke(uint32 addr,uint8 data);
@@ -201,7 +201,7 @@ class CMikie : public CLynxBase
 		void	ComLynxTxLoopback(int data);
 		void	ComLynxTxCallback(void (*function)(int data,uint32 objref),uint32 objref);
 		
-		void	DisplaySetAttributes(const MDFN_PixelFormat &format, uint32 Pitch);
+		void	DisplaySetAttributes(const MDFN_PixelFormat &format);
 		
 		void	BlowOut(void);
 
@@ -217,7 +217,7 @@ class CMikie : public CLynxBase
 		void Update(void);
 
 		bool		mpSkipFrame;
-                uint32         *mpDisplayCurrent;
+                MDFN_Surface*   mpDisplayCurrent;
 		uint32		mpDisplayCurrentLine;
 
 	private:
@@ -395,11 +395,7 @@ class CMikie : public CLynxBase
 		uint32		mLynxLineDMACounter;
 		uint32		mLynxAddr;
 
-		uint32		mDisplayRotate;
-		uint32		mDisplayFormat;
-		uint32		mDisplayPitch;
-		uint8*		(*mpDisplayCallback)(uint32 objref);
-		uint32		mDisplayCallbackObject;
+		template<typename T> void CopyLineSurface(void);
 };
 
 

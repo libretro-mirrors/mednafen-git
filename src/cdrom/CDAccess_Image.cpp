@@ -30,7 +30,6 @@
 	Trying to read sectors at an LBA of less than 0 is not supported.  TODO: support it(at least up to -150).
 */
 
-#define _CDROMFILE_INTERNAL
 #include "../mednafen.h"
 
 #include <sys/types.h>
@@ -110,48 +109,65 @@ static const char *DI_CUE_Strings[7] =
  "MODE2/2352"
 };
 
-static char *UnQuotify(char *src, char *dest)
+// Should return an offset to the start of the next argument(past any whitespace), or if there isn't a next argument,
+// it'll return the length of the src string.
+static size_t UnQuotify(const std::string &src, size_t source_offset, std::string &dest, bool parse_quotes = true)
 {
+ const size_t source_len = src.length();
  bool in_quote = 0;
  bool already_normal = 0;
 
- while(*src)
+ dest.clear();
+
+ while(source_offset < source_len)
  {
-  if(*src == ' ' || *src == '\t')
+  if(src[source_offset] == ' ' || src[source_offset] == '\t')
   {
    if(!in_quote)
    {
-    if(already_normal)
+    if(already_normal)	// Trailing whitespace(IE we're done with this argument)
      break;
-    else
+    else		// Leading whitespace, ignore it.
     {
-     src++;
+     source_offset++;
      continue;
     }
    }
   }
 
-  if(*src == '"')
+  if(src[source_offset] == '"' && parse_quotes)
   {
    if(in_quote)
    {
-    src++;
+    source_offset++;
+// Not sure which behavior is most useful(or correct :b).
+#if 0
+    in_quote = false;
+    already_normal = true;
+#else
     break;
+#endif
    }
    else
     in_quote = 1;
   }
   else
   {
-   *dest = *src;
+   dest.push_back(src[source_offset]);
    already_normal = 1;
-   dest++;
   }
-  src++;
+  source_offset++;
  }
 
- *dest = 0;
- return(src);
+ while(source_offset < source_len)
+ {
+  if(src[source_offset] != ' ' && src[source_offset] != '\t')
+   break;
+
+  source_offset++;
+ }
+
+ return source_offset;
 }
 
 uint32 CDAccess_Image::GetSectorCount(CDRFILE_TRACK_INFO *track)
@@ -181,21 +197,40 @@ uint32 CDAccess_Image::GetSectorCount(CDRFILE_TRACK_INFO *track)
  return(0);
 }
 
-void CDAccess_Image::ParseTOCFileLineInfo(CDRFILE_TRACK_INFO *track, const int tracknum, const char *filename, const char *binoffset, const char *msfoffset, const char *length, bool image_memcache)
+void CDAccess_Image::ParseTOCFileLineInfo(CDRFILE_TRACK_INFO *track, const int tracknum, const std::string &filename, const char *binoffset, const char *msfoffset, const char *length, bool image_memcache, std::map<std::string, Stream*> &toc_streamcache)
 {
  long offset = 0; // In bytes!
  long tmp_long;
  int m, s, f;
  uint32 sector_mult;
  long sectors;
- std::string efn;
+ std::map<std::string, Stream*>::iterator ribbit;
 
- efn = MDFN_EvalFIP(base_dir, filename);
- track->fp = new FileStream(efn.c_str(), FileStream::MODE_READ);
- if(image_memcache)
-  track->fp = new MemoryStream(track->fp);
+ ribbit = toc_streamcache.find(filename);
 
- if(strlen(filename) >= 4 && !strcasecmp(filename + strlen(filename) - 4, ".wav"))
+ if(ribbit != toc_streamcache.end())
+ {
+  track->FirstFileInstance = 0;
+
+  track->fp = ribbit->second;
+ }
+ else
+ {
+  std::string efn;
+
+  track->FirstFileInstance = 1;
+
+  efn = MDFN_EvalFIP(base_dir, filename);
+
+  if(image_memcache)
+   track->fp = new MemoryStream(new FileStream(efn.c_str(), FileStream::MODE_READ));
+  else
+   track->fp = new FileStream(efn.c_str(), FileStream::MODE_READ);
+
+  toc_streamcache[filename] = track->fp;
+ }
+
+ if(filename.length() >= 4 && !strcasecmp(filename.c_str() + filename.length() - 4, ".wav"))
  {
   track->AReader = AR_Open(track->fp);
 
@@ -251,21 +286,66 @@ void CDAccess_Image::ParseTOCFileLineInfo(CDRFILE_TRACK_INFO *track, const int t
   sectors = tmp_long;
  }
 
- track->FirstFileInstance = 1;
  track->sectors = sectors;
 }
 
 
+static void MDFN_strtoupper(char *str)
+{
+ for(size_t x = 0; str[x]; x++)
+ {
+  if(str[x] >= 'a' && str[x] <= 'z')
+  {
+   str[x] = str[x] - 'a' + 'A';
+  }
+ }
+}
+
+static void MDFN_strtoupper(std::string &str)
+{
+ const size_t len = str.length();
+
+ for(size_t x = 0; x < len; x++)
+ {
+  if(str[x] >= 'a' && str[x] <= 'z')
+  {
+   str[x] = str[x] - 'a' + 'A';
+  }
+ }
+}
+
+#if 0
+std::string MDFN_toupper(const std::string &str)
+{
+ const size_t len = str.length();
+ std::string new_str;
+
+ new_str.reserve(len);
+
+ for(size_t x = 0; x < len; x++)
+ {
+  int c = str[x];
+
+  if(c >= 'a' && c <= 'z')
+   c = c - 'a' + 'A';
+
+  new_str.push_back(c);
+ }
+}
+#endif
 
 void CDAccess_Image::ImageOpen(const char *path, bool image_memcache)
 {
- FileWrapper fp(path, FileWrapper::MODE_READ);
+ MemoryStream fp(new FileStream(path, FileStream::MODE_READ));
+ static const unsigned max_args = 4;
+ std::string linebuf;
+ std::string cmdbuf, args[max_args];
  bool IsTOC = FALSE;
- char linebuf[512];
  int32 active_track = -1;
  int32 AutoTrackInc = 1; // For TOC
  CDRFILE_TRACK_INFO TmpTrack;
  std::string file_base, file_ext;
+ std::map<std::string, Stream*> toc_streamcache;
 
  memset(&TmpTrack, 0, sizeof(TmpTrack));
 
@@ -273,7 +353,7 @@ void CDAccess_Image::ImageOpen(const char *path, bool image_memcache)
 
  if(!strcasecmp(file_ext.c_str(), ".toc"))
  {
-  puts("TOC file detected.");
+  MDFN_printf(_("TOC file detected.\n"));
   IsTOC = true;
  }
 
@@ -296,53 +376,46 @@ void CDAccess_Image::ImageOpen(const char *path, bool image_memcache)
  FirstTrack = 99;
  LastTrack = 0;
 
- while(fp.get_line(linebuf, 512) != NULL)
+ linebuf.reserve(1024);
+ while(fp.get_line(linebuf) >= 0)
  {
-   char cmdbuf[512], raw_args[512], args[4][512];
-   int argcount = 0;
-
-   raw_args[0] = 0;
-   cmdbuf[0] = 0;
-
-   args[0][0] = args[1][0] = args[2][0] = args[3][0] = 0;
-
-   MDFN_trim(linebuf);
+   unsigned argcount = 0;
 
    if(IsTOC)
    {
     // Handle TOC format comments
-    char *ss_loc = strstr(linebuf, "//");
-    if(ss_loc)
-    {
-     ss_loc[0] = '\n';
-     ss_loc[1] = 0;
-    }
+    size_t ss_loc = linebuf.find("//");
+
+    if(ss_loc != std::string::npos)
+     linebuf.resize(ss_loc);
    }
 
-   if(trio_sscanf(linebuf, "%s %[^\r\n]", cmdbuf, raw_args) < 1)
-    continue;	// Skip blank lines
-   
-   UnQuotify(UnQuotify(UnQuotify(UnQuotify(raw_args, args[0]), args[1]), args[2]), args[3]);
-   if(args[0][0])
+   // Call trim AFTER we handle TOC-style comments, so we'll be sure to remove trailing whitespace in lines like: MONKEY  // BABIES
+   MDFN_trim(linebuf);
+
+   if(linebuf.length() == 0)	// Skip blank lines.
+    continue;
+
+   // Grab command and arguments.
    {
-    argcount++;
-    if(args[1][0])
-    {
-     argcount++;
-     if(args[2][0])
-     {
-      argcount++;
-      if(args[3][0])
-      {
-       argcount++;
-      }
-     }
-    } 
+    size_t offs = 0;
+
+    offs = UnQuotify(linebuf, offs, cmdbuf, false);
+    for(argcount = 0; argcount < max_args && offs < linebuf.length(); argcount++)
+     offs = UnQuotify(linebuf, offs, args[argcount]);
+
+    // Make sure unused arguments are cleared out so we don't have inter-line leaks!
+    for(unsigned x = argcount; x < max_args; x++)
+     args[x].clear();
+
+    MDFN_strtoupper(cmdbuf);
    }
+
+   //printf("%s\n", cmdbuf.c_str()); //: %s %s %s %s\n", cmdbuf.c_str(), args[0].c_str(), args[1].c_str(), args[2].c_str(), args[3].c_str());
 
    if(IsTOC)
    {
-    if(!strcasecmp(cmdbuf, "TRACK"))
+    if(cmdbuf == "TRACK")
     {
      if(active_track >= 0)
      {
@@ -365,7 +438,7 @@ void CDAccess_Image::ImageOpen(const char *path, bool image_memcache)
      int format_lookup;
      for(format_lookup = 0; format_lookup < _DI_FORMAT_COUNT; format_lookup++)
      {
-      if(!strcasecmp(args[0], DI_CDRDAO_Strings[format_lookup]))
+      if(!strcasecmp(args[0].c_str(), DI_CDRDAO_Strings[format_lookup]))
       {
        TmpTrack.DIFormat = format_lookup;
        break;
@@ -374,92 +447,92 @@ void CDAccess_Image::ImageOpen(const char *path, bool image_memcache)
 
      if(format_lookup == _DI_FORMAT_COUNT)
      {
-      throw(MDFN_Error(0, _("Invalid track format: %s"), args[0]));
+      throw(MDFN_Error(0, _("Invalid track format: %s"), args[0].c_str()));
      }
 
      if(TmpTrack.DIFormat == DI_FORMAT_AUDIO)
       TmpTrack.RawAudioMSBFirst = TRUE; // Silly cdrdao...
 
-     if(!strcasecmp(args[1], "RW"))
+     if(!strcasecmp(args[1].c_str(), "RW"))
      {
       TmpTrack.SubchannelMode = CDRF_SUBM_RW;
       throw(MDFN_Error(0, _("\"RW\" format subchannel data not supported, only \"RW_RAW\" is!")));
      }
-     else if(!strcasecmp(args[1], "RW_RAW"))
+     else if(!strcasecmp(args[1].c_str(), "RW_RAW"))
       TmpTrack.SubchannelMode = CDRF_SUBM_RW_RAW;
 
     } // end to TRACK
-    else if(!strcasecmp(cmdbuf, "SILENCE"))
+    else if(cmdbuf == "SILENCE")
     {
 
     }
-    else if(!strcasecmp(cmdbuf, "ZERO"))
+    else if(cmdbuf == "ZERO")
     {
 
     }
-    else if(!strcasecmp(cmdbuf, "FILE") || !strcasecmp(cmdbuf, "AUDIOFILE"))
+    else if(cmdbuf == "FILE" || cmdbuf == "AUDIOFILE")
     {
      const char *binoffset = NULL;
      const char *msfoffset = NULL;
      const char *length = NULL;
 
-     if(args[1][0] == '#')
+     if(args[1].c_str()[0] == '#')
      {
-      binoffset = args[1] + 1;
-      msfoffset = args[2];
-      length = args[3];
+      binoffset = args[1].c_str() + 1;
+      msfoffset = args[2].c_str();
+      length = args[3].c_str();
      }
      else
      {
-      msfoffset = args[1];
-      length = args[2];
+      msfoffset = args[1].c_str();
+      length = args[2].c_str();
      }
-     //printf("%s, %s, %s, %s\n", args[0], binoffset, msfoffset, length);
-     ParseTOCFileLineInfo(&TmpTrack, active_track, args[0], binoffset, msfoffset, length, image_memcache);
+     //printf("%s, %s, %s, %s\n", args[0].c_str(), binoffset, msfoffset, length);
+     ParseTOCFileLineInfo(&TmpTrack, active_track, args[0], binoffset, msfoffset, length, image_memcache, toc_streamcache);
     }
-    else if(!strcasecmp(cmdbuf, "DATAFILE"))
+    else if(cmdbuf == "DATAFILE")
     {
      const char *binoffset = NULL;
      const char *length = NULL;
   
-     if(args[1][0] == '#') 
+     if(args[1].c_str()[0] == '#') 
      {
-      binoffset = args[1] + 1;
-      length = args[2];
+      binoffset = args[1].c_str() + 1;
+      length = args[2].c_str();
      }
      else
-      length = args[1];
+      length = args[1].c_str();
 
-     ParseTOCFileLineInfo(&TmpTrack, active_track, args[0], binoffset, NULL, length, image_memcache);
+     ParseTOCFileLineInfo(&TmpTrack, active_track, args[0], binoffset, NULL, length, image_memcache, toc_streamcache);
     }
-    else if(!strcasecmp(cmdbuf, "INDEX"))
+    else if(cmdbuf == "INDEX")
     {
 
     }
-    else if(!strcasecmp(cmdbuf, "PREGAP"))
+    else if(cmdbuf == "PREGAP")
     {
      if(active_track < 0)
      {
-      throw(MDFN_Error(0, _("Command %s is outside of a TRACK definition!\n"), cmdbuf));
+      throw(MDFN_Error(0, _("Command %s is outside of a TRACK definition!\n"), cmdbuf.c_str()));
      }
      int m,s,f;
-     trio_sscanf(args[0], "%d:%d:%d", &m, &s, &f);
+     trio_sscanf(args[0].c_str(), "%d:%d:%d", &m, &s, &f);
      TmpTrack.pregap = (m * 60 + s) * 75 + f;
     } // end to PREGAP
-    else if(!strcasecmp(cmdbuf, "START"))
+    else if(cmdbuf == "START")
     {
      if(active_track < 0)
      {
-      throw(MDFN_Error(0, _("Command %s is outside of a TRACK definition!\n"), cmdbuf));
+      throw(MDFN_Error(0, _("Command %s is outside of a TRACK definition!\n"), cmdbuf.c_str()));
      }
      int m,s,f;
-     trio_sscanf(args[0], "%d:%d:%d", &m, &s, &f);
+     trio_sscanf(args[0].c_str(), "%d:%d:%d", &m, &s, &f);
      TmpTrack.pregap = (m * 60 + s) * 75 + f;
     }
    } /*********** END TOC HANDLING ************/
    else // now for CUE sheet handling
    {
-    if(!strcasecmp(cmdbuf, "FILE"))
+    if(cmdbuf == "FILE")
     {
      if(active_track >= 0)
      {
@@ -470,7 +543,7 @@ void CDAccess_Image::ImageOpen(const char *path, bool image_memcache)
 
      if(!MDFN_IsFIROPSafe(args[0]))
      {
-      throw(MDFN_Error(0, _("Referenced path \"%s\" is potentially unsafe.  See \"filesys.untrusted_fip_check\" setting.\n"), args[0]));
+      throw(MDFN_Error(0, _("Referenced path \"%s\" is potentially unsafe.  See \"filesys.untrusted_fip_check\" setting.\n"), args[0].c_str()));
      }
 
      std::string efn = MDFN_EvalFIP(base_dir, args[0]);
@@ -480,28 +553,28 @@ void CDAccess_Image::ImageOpen(const char *path, bool image_memcache)
      if(image_memcache)
       TmpTrack.fp = new MemoryStream(TmpTrack.fp);
 
-     if(!strcasecmp(args[1], "BINARY"))
+     if(!strcasecmp(args[1].c_str(), "BINARY"))
      {
       //TmpTrack.Format = TRACK_FORMAT_DATA;
       //struct stat stat_buf;
       //fstat(fileno(TmpTrack.fp), &stat_buf);
       //TmpTrack.sectors = stat_buf.st_size; // / 2048;
      }
-     else if(!strcasecmp(args[1], "OGG") || !strcasecmp(args[1], "VORBIS") || !strcasecmp(args[1], "WAVE") || !strcasecmp(args[1], "WAV") || !strcasecmp(args[1], "PCM")
-	|| !strcasecmp(args[1], "MPC") || !strcasecmp(args[1], "MP+"))
+     else if(!strcasecmp(args[1].c_str(), "OGG") || !strcasecmp(args[1].c_str(), "VORBIS") || !strcasecmp(args[1].c_str(), "WAVE") || !strcasecmp(args[1].c_str(), "WAV") || !strcasecmp(args[1].c_str(), "PCM")
+	|| !strcasecmp(args[1].c_str(), "MPC") || !strcasecmp(args[1].c_str(), "MP+"))
      {
       TmpTrack.AReader = AR_Open(TmpTrack.fp);
       if(!TmpTrack.AReader)
       {
-       throw(MDFN_Error(0, _("Unsupported audio track file format: %s\n"), args[0]));
+       throw(MDFN_Error(0, _("Unsupported audio track file format: %s\n"), args[0].c_str()));
       }
      }
      else
      {
-      throw(MDFN_Error(0, _("Unsupported track format: %s\n"), args[1]));
+      throw(MDFN_Error(0, _("Unsupported track format: %s\n"), args[1].c_str()));
      }
     }
-    else if(!strcasecmp(cmdbuf, "TRACK"))
+    else if(cmdbuf == "TRACK")
     {
      if(active_track >= 0)
      {
@@ -513,7 +586,7 @@ void CDAccess_Image::ImageOpen(const char *path, bool image_memcache)
       TmpTrack.index[0] = -1;
       TmpTrack.index[1] = 0;
      }
-     active_track = atoi(args[0]);
+     active_track = atoi(args[0].c_str());
 
      if(active_track < FirstTrack)
       FirstTrack = active_track;
@@ -523,7 +596,7 @@ void CDAccess_Image::ImageOpen(const char *path, bool image_memcache)
      int format_lookup;
      for(format_lookup = 0; format_lookup < _DI_FORMAT_COUNT; format_lookup++)
      {
-      if(!strcasecmp(args[1], DI_CUE_Strings[format_lookup]))
+      if(!strcasecmp(args[1].c_str(), DI_CUE_Strings[format_lookup]))
       {
        TmpTrack.DIFormat = format_lookup;
        break;
@@ -532,7 +605,7 @@ void CDAccess_Image::ImageOpen(const char *path, bool image_memcache)
 
      if(format_lookup == _DI_FORMAT_COUNT)
      {
-      throw(MDFN_Error(0, _("Invalid track format: %s\n"), args[1]));
+      throw(MDFN_Error(0, _("Invalid track format: %s\n"), args[1].c_str()));
      }
 
      if(active_track < 0 || active_track > 99)
@@ -540,63 +613,63 @@ void CDAccess_Image::ImageOpen(const char *path, bool image_memcache)
       throw(MDFN_Error(0, _("Invalid track number: %d\n"), active_track));
      }
     }
-    else if(!strcasecmp(cmdbuf, "INDEX"))
+    else if(cmdbuf == "INDEX")
     {
      if(active_track >= 0)
      {
       unsigned int m,s,f;
 
-      if(trio_sscanf(args[1], "%u:%u:%u", &m, &s, &f) != 3)
+      if(trio_sscanf(args[1].c_str(), "%u:%u:%u", &m, &s, &f) != 3)
       {
-       throw MDFN_Error(0, _("Malformed m:s:f time in \"%s\" directive: %s"), cmdbuf, args[0]);
+       throw MDFN_Error(0, _("Malformed m:s:f time in \"%s\" directive: %s"), cmdbuf.c_str(), args[0].c_str());
       }
 
-      if(!strcasecmp(args[0], "01") || !strcasecmp(args[0], "1"))
+      if(!strcasecmp(args[0].c_str(), "01") || !strcasecmp(args[0].c_str(), "1"))
        TmpTrack.index[1] = (m * 60 + s) * 75 + f;
-      else if(!strcasecmp(args[0], "00") || !strcasecmp(args[0], "0"))
+      else if(!strcasecmp(args[0].c_str(), "00") || !strcasecmp(args[0].c_str(), "0"))
        TmpTrack.index[0] = (m * 60 + s) * 75 + f;
      }
     }
-    else if(!strcasecmp(cmdbuf, "PREGAP"))
+    else if(cmdbuf == "PREGAP")
     {
      if(active_track >= 0)
      {
       unsigned int m,s,f;
 
-      if(trio_sscanf(args[0], "%u:%u:%u", &m, &s, &f) != 3)
+      if(trio_sscanf(args[0].c_str(), "%u:%u:%u", &m, &s, &f) != 3)
       {
-       throw MDFN_Error(0, _("Malformed m:s:f time in \"%s\" directive: %s"), cmdbuf, args[0]);
+       throw MDFN_Error(0, _("Malformed m:s:f time in \"%s\" directive: %s"), cmdbuf.c_str(), args[0].c_str());
       }
 
       TmpTrack.pregap = (m * 60 + s) * 75 + f;
      }
     }
-    else if(!strcasecmp(cmdbuf, "POSTGAP"))
+    else if(cmdbuf == "POSTGAP")
     {
      if(active_track >= 0)
      {
       unsigned int m,s,f;
 
-      if(trio_sscanf(args[0], "%u:%u:%u", &m, &s, &f) != 3)
+      if(trio_sscanf(args[0].c_str(), "%u:%u:%u", &m, &s, &f) != 3)
       {
-       throw MDFN_Error(0, _("Malformed m:s:f time in \"%s\" directive: %s"), cmdbuf, args[0]);
+       throw MDFN_Error(0, _("Malformed m:s:f time in \"%s\" directive: %s"), cmdbuf.c_str(), args[0].c_str());
       }      
 
       TmpTrack.postgap = (m * 60 + s) * 75 + f;
      }
     }
-    else if(!strcasecmp(cmdbuf, "REM"))
+    else if(cmdbuf == "REM")
     {
 
     }
-    else if(!strcasecmp(cmdbuf, "CDTEXTFILE") || !strcasecmp(cmdbuf, "FLAGS") || !strcasecmp(cmdbuf, "CATALOG") || !strcasecmp(cmdbuf, "ISRC") ||
-	!strcasecmp(cmdbuf, "TITLE") || !strcasecmp(cmdbuf, "PERFORMER") || !strcasecmp(cmdbuf, "SONGWRITER"))
+    else if(cmdbuf == "CDTEXTFILE" || cmdbuf == "FLAGS" || cmdbuf == "CATALOG" || cmdbuf == "ISRC" ||
+	    cmdbuf == "TITLE" || cmdbuf == "PERFORMER" || cmdbuf == "SONGWRITER")
     {
-     MDFN_printf(_("Unsupported CUE sheet directive: \"%s\".\n"), cmdbuf);	// FIXME, generic logger passed by pointer to constructor
+     MDFN_printf(_("Unsupported CUE sheet directive: \"%s\".\n"), cmdbuf.c_str());	// FIXME, generic logger passed by pointer to constructor
     }
     else
     {
-     throw MDFN_Error(0, _("Unknown CUE sheet directive \"%s\".\n"), cmdbuf);
+     throw MDFN_Error(0, _("Unknown CUE sheet directive \"%s\".\n"), cmdbuf.c_str());
     }
    } // end of CUE sheet handling
  } // end of fgets() loop

@@ -105,6 +105,7 @@ static int cur_xres, cur_yres, cur_flags;
 static ScalerDefinition *CurrentScaler = NULL;
 
 static SDL_Surface *screen = NULL;
+static OpenGL_Blitter *ogl_blitter = NULL;
 static SDL_Surface *IconSurface=NULL;
 
 static MDFN_Rect screen_dest_rect;
@@ -143,9 +144,9 @@ static void MarkNeedBBClear(void)
 static void ClearBackBuffer(void)
 {
  //printf("WOO: %u\n", MDFND_GetTime());
- if(cur_flags & SDL_OPENGL)
+ if(ogl_blitter)
  {
-  ClearBackBufferOpenGL();
+  ogl_blitter->ClearBackBuffer();
  }
  else
  {
@@ -209,13 +210,19 @@ void KillVideo(void)
   NetSurface = NULL;
  }
 
- if(cur_flags & SDL_OPENGL)
-  KillOpenGL();
+ if(ogl_blitter)
+ {
+  delete ogl_blitter;
+  ogl_blitter = NULL;
+ }
 
  if(vdriver == VDRIVER_OVERLAY)
   OV_Kill();
 
+ screen = NULL;
  VideoGI = NULL;
+ cur_xres = 0;
+ cur_yres = 0;
  cur_flags = 0;
 }
 
@@ -428,11 +435,7 @@ int InitVideo(MDFNGI *gi)
 
  _video.special = GetSpecialScalerID(special_string);
 
- #ifdef MDFN_WANT_OPENGL_SHADERS
  _video.pixshader = (ShaderType)MDFN_GetSettingI(std::string(sn + "." + std::string("pixshader")).c_str());
- #else
- _video.pixshader = SHADER_NONE;
- #endif
 
  CurrentScaler = _video.special ? &Scalers[_video.special - 1] : NULL;
 
@@ -614,8 +617,13 @@ int InitVideo(MDFNGI *gi)
 
  if(cur_flags & SDL_OPENGL)
  {
-  if(!InitOpenGL(evideoip, _video.scanlines, _video.pixshader, screen, &rs, &gs, &bs, &as))
+  try
   {
+   ogl_blitter = new OpenGL_Blitter(_video.scanlines, _video.pixshader, screen->w, screen->h, &rs, &gs, &bs, &as);
+  }
+  catch(std::exception &e)
+  {
+   MDFND_PrintError(e.what());
    KillVideo();
    MDFN_indent(-1);
    return(0);
@@ -726,7 +734,10 @@ int InitVideo(MDFNGI *gi)
   ClearBackBuffer();
 
   if(cur_flags & SDL_OPENGL)
-   FlipOpenGL();
+  {
+   SDL_GL_SwapBuffers();
+   //ogl_blitter->HardSync();
+  }
   else
    SDL_Flip(screen);
  }
@@ -757,8 +768,8 @@ void VideoShowMessage(UTF8 *text)
 
 void BlitRaw(MDFN_Surface *src, const MDFN_Rect *src_rect, const MDFN_Rect *dest_rect, int source_alpha)
 {
- if(cur_flags & SDL_OPENGL)
-  BlitOpenGLRaw(src, src_rect, dest_rect, (source_alpha != 0) && osd_alpha_blend);
+ if(ogl_blitter)
+  ogl_blitter->BlitRaw(src, src_rect, dest_rect, (source_alpha != 0) && osd_alpha_blend);
  else
  {
   SDL_to_MDFN_Surface_Wrapper m_surface(screen);
@@ -1008,8 +1019,8 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
     }
 #endif
 
-    if(cur_flags & SDL_OPENGL)
-     BlitOpenGL(bah_surface, &boohoo_rect, &dest_rect, &eff_src_rect);
+    if(ogl_blitter)
+     ogl_blitter->Blit(bah_surface, &boohoo_rect, &dest_rect, &eff_src_rect, evideoip, CurGame->rotated);
     else
     {
      if(OverlayOK)
@@ -1034,8 +1045,8 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
    }
    else // No special scaler:
    {
-    if(cur_flags & SDL_OPENGL)
-     BlitOpenGL(eff_source_surface, &eff_src_rect, &dest_rect, &eff_src_rect);
+    if(ogl_blitter)
+     ogl_blitter->Blit(eff_source_surface, &eff_src_rect, &dest_rect, &eff_src_rect, evideoip, CurGame->rotated);
     else
     {
      if(OverlayOK)
@@ -1085,6 +1096,7 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
   ClearBackBuffer();
  }
 
+ OverlayOK = false;
  if(vdriver == VDRIVER_OVERLAY)
  {
   bool osd_active = Help_IsActive() || SaveStatesActive() || IsConsoleCheatConfigActive() || Netplay_GetTextView() ||
@@ -1215,8 +1227,8 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
 
    ib = new MDFN_Surface(NULL, sr.w, sr.h, sr.w, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
 
-   if(cur_flags & SDL_OPENGL)
-    ReadPixelsGL(ib, &sr);
+   if(ogl_blitter)
+    ogl_blitter->ReadPixels(ib, &sr);
    else
    {
     if(SDL_MUSTLOCK(screen))
@@ -1408,7 +1420,11 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
    SDL_Flip(screen);
  }
  else
-  FlipOpenGL();
+ {
+  PumpWrap();
+  SDL_GL_SwapBuffers();
+  //ogl_blitter->HardSync();
+ }
 }
 
 void PtoV(const int in_x, const int in_y, int32 *out_x, int32 *out_y)

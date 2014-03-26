@@ -6,32 +6,37 @@
  <body>
   <center><h1><img alt="Mednafen" src="mednafen.png" width="696" height="204" /></h1></center>
   <center><h1>Debugger Documentation</h1></center>
-  <center><i>Last updated January 5, 2013<br />Valid as of Mednafen 0.9.28-WIP</i></center>
+  <center><i>Last updated September 5, 2013<br />Valid as of Mednafen 0.9.31-WIP</i></center>
   <hr>
    <h2>Notes and Cautions:</h2>
    <p>
-    Saving and loading states in step mode may lead to malfunctions or emulator crashes/aborts, due to
+    <u><b>Save States, Power/Reset</b></u>: Saving and loading states in step mode may lead to malfunctions or emulator crashes/aborts, due to
       deficiencies in the emulation models coupled with debugger hooks; hence, it is not recommended(though it may work
       adequately on some emulated systems).  This issue will be corrected in a future version.
       <br />
       A similar issue occurs on some emulated systems(e.g. PSX) in regards to triggering power/reset while in step mode.
   </p>
   <p>
-   High-frequency counters(for timers) as seen in the register section of the CPU debugger view may not be updated properly
+   <u><b>Register Updates</b></u>: High-frequency counters(for timers) as seen in the register section of the CPU debugger view may not be updated properly
    after each step while in step mode on all emulated systems and devices, due to the event system and performance
    optimizations and deficiencies in the current driver->core interface.  This issue will be corrected in a future version.
   </p>
   <p>
-    Opcode, operand, and prefix(in WonderSwan case) fetches will trigger read breakpoints in the NES, PC Engine, and WonderSwan
+   <u><b>Video Updates</b></u>: The last valid(non-skipped) video frame is drawn while in step mode.  Older versions of Mednafen would
+   attempt to draw the current, incomplete frame as emulation progressed, but this was rather buggy because the emulation code was not
+   designed with it in mind.
+  </p>
+  <p>
+   <u><b>Read Breakpoints</b></u>: Opcode, operand, and prefix(in WonderSwan case) fetches will trigger read breakpoints in the NES, PC Engine, and WonderSwan
     debuggers.
   </p>
   <p>
-   PC breakpoints are evaluated only for the state of PC at the start of the instruction(or start of prefixes for an instruction
+   <u><b>PC Breakpoints</b></u>: PC breakpoints are evaluated only for the state of PC at the start of the instruction(or start of prefixes for an instruction
    in the case of V30MZ); IE, a PC breakpoint set on the address of an operand byte(6502, HuC6280, V30MZ) or the second
    16-bits of a 32-bit instruction(V810) will not be triggered when the instruction is executed.
   </p>
   <p>
-   When the CPU debugger view is not active, the branch history will only be updated reliably when at least one breakpoint
+   <u><b>Branch History</b></u>: When the CPU debugger view is not active, the branch history will only be updated reliably when at least one breakpoint
    is active/installed.
   </p>
   <hr>

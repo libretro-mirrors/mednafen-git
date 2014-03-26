@@ -24,6 +24,9 @@ void PS_GPU::DrawSprite(int32 x_arg, int32 y_arg, int32 w, int32 h, uint8 u_arg,
   u = u_arg;
   v = v_arg;
 
+  //if(FlipX || FlipY || (u & 1) || (v & 1) || ((TexMode_TA == 0) && ((u & 3) || (v & 3))))
+  // fprintf(stderr, "Flippy: %d %d 0x%02x 0x%02x\n", FlipX, FlipY, u, v);
+
   if(FlipX)
   {
    u_inc = -1;

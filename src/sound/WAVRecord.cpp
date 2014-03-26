@@ -19,7 +19,7 @@
 #include "WAVRecord.h"
 #include <algorithm>
 
-WAVRecord::WAVRecord(const char *path, double SoundRate_arg, uint32 SoundChan_arg) : wavfile(path, FileWrapper::MODE_WRITE_SAFE)
+WAVRecord::WAVRecord(const char *path, double SoundRate_arg, uint32 SoundChan_arg) : wavfile(path, FileStream::MODE_WRITE_SAFE)
 {
  Finished = false;
  PCMBytesWritten = 0;

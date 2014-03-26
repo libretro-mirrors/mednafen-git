@@ -1,3 +1,145 @@
+-- 0.9.31-WIP: --
+
+September 4, 2013:
+	PSX: Separated the memory map peeking functionality(for the debugger) from the main memory read/write handler, as previous
+	timing changes broke peeking functionality, and the peeking code was making the read/write handler too complicated and hard
+	to read.
+
+	When in the debugger's step mode, blit the previous valid frame, instead of trying to blit an incomplete frame(which
+	was buggy and prone to various modes of failure).  In the future, blitting incomplete frames may be re-added as a "feature",
+	but it will require work and guarantees in the emulation modules to make sure it works properly.
+
+	Slightly refactored code that passes around video buffers(in the driver-side code) to be a bit cleaner and more clear as
+	to what it does.
+
+September 3, 2013:
+	PSX: Slow down CDC DMA a bit, but nowhere near how long it is on an actual PS1(that will have to wait for further tests so
+	we don't overshoot the time required).  Fixes broken music in the intro movie in "Legend of Mana" (a regression from the
+	DMA changes on Aug 13).
+
+September 2, 2013:
+	PSX: Various multitap changes:
+		Improved multitap emulation, so that multitap will work properly with the "Tales of <XXX>" games.
+
+		Reworked how Mednafen's virtual port numbers are assigned to emulated PS1 and multitap ports(see the documentation
+		for details on the new mapping), so multitap is not so user-unfriendly and will work better with netplay when
+		save states are finally implemented.  Note that if you have used Mednafen's PS1 multitap emulation before for more than
+		2-player support, this change will cause your multitap-connected configured controllers to be a bit jumbled up in
+		regards to controller order.
+
+		Renamed the "psx.input.port1.multitap" and "psx.input.port2.multitap" settings to "psx.input.pport1.multitap" and
+		"psx.input.pport2.multitap", respectively.
+
+August 29, 2013:
+	Changed the semantics of the experimental "-remote" command-line argument such that it now takes a value, that is used as
+	a "key" of sorts to differentiate between debug garbage written to stdout and properly-formatted messages.  Example:
+		mednafen -remote gAsafYghGb50gAKSFskIAMARANDOMSTRINGRAWRGH SomeGame.pce
+	...and the frontend would use something like:
+		char *good_line = strstr(line_buffer, "gAsafYghGb50gAKSFskIAMARANDOMSTRINGRAWRGH");
+	...and also changed where the "remote" initialization occurs, so that startup messages will be properly
+	formatted.
+
+	Fixed a double-free bug in file.cpp that could be triggered if an error occurred while reading a non-compressed file
+	into memory.
+
+	Refactored handling of physical CD loading:
+		Removed physical CD device detection heuristics from the normal game file loading path.  This means you
+		can't do something like "mednafen /dev/sr0" to load a physical CD anymore.
+
+		Deprecated -loadcd.
+
+		Added new command-line option "-physcd".  It takes no arguments, makes it so that the typically-required "filename"
+		argument is optional, and treats the "filename" argument as the device name.  Examples of syntax:
+
+			mednafen -physcd
+			mednafen -physcd /dev/sr0
+			mednafen -physcd \\.\E:
+			mednafen -force_module pce_fast -physcd
+
+August 28, 2013:
+	Added experimental support for CloneCD-format disc images, based on my own observations and nocash notes.
+
+August 27, 2013:
+	Fixed minor line-reading logic errors(we were discarding the last line read if it ended because of a stream EOF) with settings
+	file and CUE/TOC file reading(with CUE/TOC file reading, it's a regression introduced on Aug 23) by changing the semantics of
+	Stream::get_line()
+
+August 25, 2013:
+	VB: Return a known good value on reads from the VIP version control register.
+
+	VB: Tweaked noise generation algorithm a bit per VB dev observations from PVB forum members.
+
+August 23, 2013:
+	Reworked the CUE and TOC CD image loading code to use FileStream instead of FileWrapper, to remove the 512-byte line length limit,
+	and to fix a bug that was causing multiple copies of the sector data file to be loaded into memory with multi-track TOC images
+	when "cd.image_memcache" is set to 1.
+
+August 18, 2013:
+	PSX: With MDEC, added emulation of quantization multiplier quirks per tests on a PS1, reversed the order of the 1D-IDCTs
+	to match what was observed occurring on the PS1, and improved command word parsing.  The overall MDEC emulation model is
+	still far from what it should be, though(not that commercially-released games really care), not to mention that the IDCT
+	and colorspace conversion algorithms are still off in some test cases(looks to be precision and saturation related).
+	(nocash notes were useful in devising tests, and for improving command word parsing)
+
+August 13, 2013:
+	PSX: Slow down one type of DMA to the GPU, and add a cycle penalty to CPU memory reads when they occur during this type of DMA
+	(almost fixes the glitchy "Sony Computer Entertainment" logo at the start of FF7).
+
+August 11, 2013:
+	Made conditional cheats work on all emulation modules where cheat support is implemented(previously, they were limited
+	to NES and PCE).
+
+	PSX: Fixed improper vertical screen offset in non-interlaced mode caused by the August 9 internal GPU field toggle change.
+	Though come to think of it, maybe it's not so improper after all, but emulating that way does introduce practical problems,
+	and I doubt any PS1 games will be switching between interlaced and non-interlaced modes every 16ms...
+
+August 10, 2013:
+	PSX: MDEC 2D IDCT is now done via multiple 1D IDCTs, reducing computational complexity(and CPU usage).
+
+	PSX: Return data with all bits set on reads from the PIO memory area when it's not in use(for PSFs or whatnot); fixes game
+	lockup in "Tetris with Cardcaptor Sakura".
+
+August 9, 2013:
+	PSX: Corrected value of internal GPU field toggle when in non-interlaced mode; fixes "Toobin" in "Arcade Party Pak"(but
+	I don't know why...)
+
+	PSX: Don't flush the DMA sector data buffer on Read* command start; fixes a lockup that occurred after a while in the
+	course selection screen of "Crash Team Racing".
+
+August 8, 2013:
+	PSX: Made some optimizations to the new memory load pipeline stall emulation code.
+
+	PSX: Improved CDC emulation model in regards to command argument FIFO handling, per tests and nocash notes.
+
+August 6, 2013:
+	PSX: Brought pad/memcard serial I/O timing closer to that of an actual PS1; made practical(IE games don't flip out) by the
+	aforementioned mess of a solution for pipeline stalls.
+
+	PSX: Implemented hackish, ugly, kludgish, abominational, horrible, terrible, and just downright bad pipeline stall
+	emulation for divides, multiplies, and loads from memory.
+
+August 3, 2013:
+	Lynx: Added 16bpp video output format support.
+
+	Added 8bpp and 16bpp video format support to the deinterlacing code.
+
+	MD: Added 16bpp video output format support.
+
+	Encapsulated mostly-platform-independent OpenGL blitting and shader code into classes.
+
+August 2, 2013:
+	In the deinterlacer code, if the current field surface pixel format does not equal the field history surface pixel format,
+	convert the field history surface to the current pixel format.  Fixes minor graphical glitches in some circumstances when using
+	the "overlay" "video.driver" setting.
+
+July 31, 2013:
+	Fixed a few minor issues in Stereo_Buffer.
+
+	GB: Made minor optimizations to graphics rendering code.
+
+	GB: Added support for 8bpp and 16bpp video output formats(color gamut is heavily degraded in CGB games when rendering for 8bpp,
+	though).
+
 -- 0.9.29-WIP: --
 
 July 26, 2013:

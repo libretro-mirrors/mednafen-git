@@ -69,10 +69,10 @@ class CMemMap : public CLynxBase
 	// Function members
 
 	public:
-		CMemMap(CSystem& parent);
+		CMemMap(CSystem& parent) MDFN_COLD;
 
 	public:
-		void	Reset(void);
+		void	Reset(void) MDFN_COLD;
 
 		void	Poke(uint32 addr,uint8 data);
 		uint8	Peek(uint32 addr);

@@ -28,19 +28,8 @@
 #include <unistd.h>
 #include <math.h>
 
-#if MDFN_WANT_OPENGL_SHADERS
+#define MDFN_GL_TRY(x, ...) { x; GLenum errcode = oblt->p_glGetError(); if(errcode != GL_NO_ERROR) { __VA_ARGS__; throw(MDFN_Error(0, _("OpenGL Error: %d\n"), (int)(long long)errcode)); /* FIXME: Throw an error string and not an arcane number. */ } }
 
-static ShaderType OurType;
-
-struct CompiledShader
-{
- GLhandleARB v, f, p;
- bool v_valid, f_valid, p_valid;
-};
-
-#define CSP_COUNT 8
-static CompiledShader CSP[CSP_COUNT] = { { 0, 0, 0, false, false, false }, { 0, 0, 0, false, false, false }, { 0, 0, 0, false, false, false }, { 0, 0, 0, false, false, false },
-					 { 0, 0, 0, false, false, false }, { 0, 0, 0, false, false, false }, { 0, 0, 0, false, false, false }, { 0, 0, 0, false, false, false } };
 static const char *vertexProg = "void main(void)\n{\ngl_Position = ftransform();\ngl_TexCoord[0] = gl_MultiTexCoord0;\n}";
 
 static std::string MakeProgIpolate(unsigned ipolate_axis)	// X & 1, Y & 2, sharp & 4
@@ -166,63 +155,91 @@ void main()\n\
 
 #include "shader_sabr.inc"
 
-static void SLP(GLhandleARB moe)
+void OpenGL_Blitter_Shader::SLP(GLhandleARB moe)
 {
  char buf[1000];
  GLsizei buflen = 0;
 
- p_glGetInfoLogARB(moe, 999, &buflen, buf);
+ oblt->p_glGetInfoLogARB(moe, 999, &buflen, buf);
  buf[buflen] = 0;
 
  if(buflen)
-  MDFN_PrintError("%s\n", buf);
+ {
+  throw MDFN_Error(0, "Shader compilation error:\n%s\n", buf);
+ }
 }
 
-static void CompileShader(CompiledShader &s, const char *vertex_prog, const char *frag_prog)
+void OpenGL_Blitter_Shader::CompileShader(CompiledShader &s, const char *vertex_prog, const char *frag_prog)
 {
 	 int opi;
 
-         p_glEnable(GL_FRAGMENT_PROGRAM_ARB);
+         oblt->p_glEnable(GL_FRAGMENT_PROGRAM_ARB);
 
-         MDFN_GL_TRY(s.v = p_glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB));
+         MDFN_GL_TRY(s.v = oblt->p_glCreateShaderObjectARB(GL_VERTEX_SHADER_ARB));
 	 s.v_valid = true;
 
-         MDFN_GL_TRY(s.f = p_glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB));
+         MDFN_GL_TRY(s.f = oblt->p_glCreateShaderObjectARB(GL_FRAGMENT_SHADER_ARB));
 	 s.f_valid = true;
 
-         MDFN_GL_TRY(p_glShaderSourceARB(s.v, 1, &vertex_prog, NULL), SLP(s.v));
-         MDFN_GL_TRY(p_glShaderSourceARB(s.f, 1, &frag_prog, NULL), SLP(s.f));
+         MDFN_GL_TRY(oblt->p_glShaderSourceARB(s.v, 1, &vertex_prog, NULL), SLP(s.v));
+         MDFN_GL_TRY(oblt->p_glShaderSourceARB(s.f, 1, &frag_prog, NULL), SLP(s.f));
 
-         MDFN_GL_TRY(p_glCompileShaderARB(s.v), SLP(s.v));
-	 MDFN_GL_TRY(p_glGetObjectParameterivARB(s.v, GL_OBJECT_COMPILE_STATUS_ARB, &opi));
+         MDFN_GL_TRY(oblt->p_glCompileShaderARB(s.v), SLP(s.v));
+	 MDFN_GL_TRY(oblt->p_glGetObjectParameterivARB(s.v, GL_OBJECT_COMPILE_STATUS_ARB, &opi));
 	 if(GL_FALSE == opi)
 	 {
 	  SLP(s.v);
-	  throw((void *)NULL);
 	 }
 
-         MDFN_GL_TRY(p_glCompileShaderARB(s.f), SLP(s.f));
-         MDFN_GL_TRY(p_glGetObjectParameterivARB(s.f, GL_OBJECT_COMPILE_STATUS_ARB, &opi));
+         MDFN_GL_TRY(oblt->p_glCompileShaderARB(s.f), SLP(s.f));
+         MDFN_GL_TRY(oblt->p_glGetObjectParameterivARB(s.f, GL_OBJECT_COMPILE_STATUS_ARB, &opi));
          if(GL_FALSE == opi)
 	 {
 	  SLP(s.f);
-          throw((void *)NULL);
 	 }
 
-         MDFN_GL_TRY(s.p = p_glCreateProgramObjectARB(), SLP(s.p));
+         MDFN_GL_TRY(s.p = oblt->p_glCreateProgramObjectARB(), SLP(s.p));
 	 s.p_valid = true;
 
-         MDFN_GL_TRY(p_glAttachObjectARB(s.p, s.v));
-         MDFN_GL_TRY(p_glAttachObjectARB(s.p, s.f));
+         MDFN_GL_TRY(oblt->p_glAttachObjectARB(s.p, s.v));
+         MDFN_GL_TRY(oblt->p_glAttachObjectARB(s.p, s.f));
 
-         MDFN_GL_TRY(p_glLinkProgramARB(s.p), SLP(s.p));
+         MDFN_GL_TRY(oblt->p_glLinkProgramARB(s.p), SLP(s.p));
 
-         MDFN_GL_TRY(p_glDisable(GL_FRAGMENT_PROGRAM_ARB));
+         MDFN_GL_TRY(oblt->p_glDisable(GL_FRAGMENT_PROGRAM_ARB));
 }
 
-bool InitShader(ShaderType shader_type)
+void OpenGL_Blitter_Shader::Cleanup(void)
+{
+        oblt->p_glUseProgramObjectARB(0);
+
+	for(unsigned i = 0; i < CSP_COUNT; i++)
+	{
+	 if(CSP[i].p_valid)
+	 {
+	  if(CSP[i].f_valid)
+	   oblt->p_glDetachObjectARB(CSP[i].p, CSP[i].f);
+	  if(CSP[i].v_valid)
+  	   oblt->p_glDetachObjectARB(CSP[i].p, CSP[i].v);
+	 }
+	 if(CSP[i].f_valid)
+	  oblt->p_glDeleteObjectARB(CSP[i].f);
+	 if(CSP[i].v_valid)
+	  oblt->p_glDeleteObjectARB(CSP[i].v);
+	 if(CSP[i].p_valid)
+	  oblt->p_glDeleteObjectARB(CSP[i].p);
+
+	 CSP[i].f_valid = CSP[i].v_valid = CSP[i].p_valid = false;
+	}
+
+        oblt->p_glDisable(GL_FRAGMENT_PROGRAM_ARB);
+}
+
+OpenGL_Blitter_Shader::OpenGL_Blitter_Shader(OpenGL_Blitter *in_oblt, ShaderType shader_type) : oblt(in_oblt)
 {
 	OurType = shader_type;
+
+	memset(&CSP, 0, sizeof(CSP));
 
 	try
 	{
@@ -244,41 +261,34 @@ bool InitShader(ShaderType shader_type)
 		break;
 	 }
 	}
-	catch(GLenum errcode)
+	catch(...)
 	{
-	 MDFN_PrintError("OpenGL Error: %d\n", (int)(long long)errcode); // FIXME: Print an error string and not an arcane number.
-	 KillShader();
-	 return(0);
+	 Cleanup();
+	 throw;
 	}
-	catch(void *)
-	{
-	 KillShader();
-	 return(0);
-	}
-	return(1);
 }
 
-bool ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th, int orig_tw, int orig_th, unsigned rotated)
+void OpenGL_Blitter_Shader::ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th, int orig_tw, int orig_th, unsigned rotated)
 {
-        p_glEnable(GL_FRAGMENT_PROGRAM_ARB);
+        oblt->p_glEnable(GL_FRAGMENT_PROGRAM_ARB);
 
 	//printf("%d:%d, %d:%d\n", tw, th, orig_tw, orig_th);
 	//printf("%f\n", (double)dest_rect->w / rect->w);
         //printf("%f\n", (double)dest_rect->h / rect->h);
 	if(OurType == SHADER_SCALE2X)
 	{
- 	 p_glUseProgramObjectARB(CSP[0].p);
+ 	 oblt->p_glUseProgramObjectARB(CSP[0].p);
 
-         p_glUniform1iARB(p_glGetUniformLocationARB(CSP[0].p, "Tex0"), 0);
-         p_glUniform2fARB(p_glGetUniformLocationARB(CSP[0].p, "TexSize"), tw, th);
-         p_glUniform2fARB(p_glGetUniformLocationARB(CSP[0].p, "TexSizeInverse"), (float)1 / tw, (float) 1 / th);
+         oblt->p_glUniform1iARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "Tex0"), 0);
+         oblt->p_glUniform2fARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "TexSize"), tw, th);
+         oblt->p_glUniform2fARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "TexSizeInverse"), (float)1 / tw, (float) 1 / th);
 	}
 	else if(OurType == SHADER_SABR)
 	{
- 	 p_glUseProgramObjectARB(CSP[0].p);
+ 	 oblt->p_glUseProgramObjectARB(CSP[0].p);
 
-         p_glUniform1iARB(p_glGetUniformLocationARB(CSP[0].p, "rubyTexture"), 0);
-         p_glUniform2fARB(p_glGetUniformLocationARB(CSP[0].p, "rubyTextureSize"), tw, th);
+         oblt->p_glUniform1iARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "rubyTexture"), 0);
+         oblt->p_glUniform2fARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "rubyTextureSize"), tw, th);
 	}
 	else
 	{
@@ -370,53 +380,27 @@ bool ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int 
 	 if(ysh > 1 && ip_y)
 	  csi |= 4;
 
- 	 p_glUseProgramObjectARB(CSP[csi].p);
+ 	 oblt->p_glUseProgramObjectARB(CSP[csi].p);
 
 //	printf("%d:%d, %d\n", ip_x, ip_y, csi);
 
-         p_glUniform1iARB(p_glGetUniformLocationARB(CSP[csi].p, "Tex0"), 0);
-         p_glUniform2fARB(p_glGetUniformLocationARB(CSP[csi].p, "TexSize"), tw, th);
-         p_glUniform2fARB(p_glGetUniformLocationARB(CSP[csi].p, "TexSizeInverse"), (float)1 / tw, (float) 1 / th);
+         oblt->p_glUniform1iARB(oblt->p_glGetUniformLocationARB(CSP[csi].p, "Tex0"), 0);
+         oblt->p_glUniform2fARB(oblt->p_glGetUniformLocationARB(CSP[csi].p, "TexSize"), tw, th);
+         oblt->p_glUniform2fARB(oblt->p_glGetUniformLocationARB(CSP[csi].p, "TexSizeInverse"), (float)1 / tw, (float) 1 / th);
 
-         p_glUniform1fARB(p_glGetUniformLocationARB(CSP[csi].p, "XSharp"), xsh);
-         p_glUniform1fARB(p_glGetUniformLocationARB(CSP[csi].p, "YSharp"), ysh);
+         oblt->p_glUniform1fARB(oblt->p_glGetUniformLocationARB(CSP[csi].p, "XSharp"), xsh);
+         oblt->p_glUniform1fARB(oblt->p_glGetUniformLocationARB(CSP[csi].p, "YSharp"), ysh);
 	}
-	return(1);
 }
 
-bool ShaderEnd(void)
+void OpenGL_Blitter_Shader::ShaderEnd(void)
 {
-	p_glUseProgramObjectARB(0);
-	p_glDisable(GL_FRAGMENT_PROGRAM_ARB);
-	return(1);
+	oblt->p_glUseProgramObjectARB(0);
+	oblt->p_glDisable(GL_FRAGMENT_PROGRAM_ARB);
 }
 
-bool KillShader(void)
+OpenGL_Blitter_Shader::~OpenGL_Blitter_Shader()
 {
-        p_glUseProgramObjectARB(0);
-
-	for(unsigned i = 0; i < CSP_COUNT; i++)
-	{
-	 if(CSP[i].p_valid)
-	 {
-	  if(CSP[i].f_valid)
-	   p_glDetachObjectARB(CSP[i].p, CSP[i].f);
-	  if(CSP[i].v_valid)
-  	   p_glDetachObjectARB(CSP[i].p, CSP[i].v);
-	 }
-	 if(CSP[i].f_valid)
-	  p_glDeleteObjectARB(CSP[i].f);
-	 if(CSP[i].v_valid)
-	  p_glDeleteObjectARB(CSP[i].v);
-	 if(CSP[i].p_valid)
-	  p_glDeleteObjectARB(CSP[i].p);
-
-	 CSP[i].f_valid = CSP[i].v_valid = CSP[i].p_valid = false;
-	}
-
-        p_glDisable(GL_FRAGMENT_PROGRAM_ARB);
-
-	return(1);
+	Cleanup();
 }
 
-#endif

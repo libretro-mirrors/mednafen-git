@@ -40,10 +40,10 @@ class PS_GPU
 {
  public:
 
- PS_GPU(bool pal_clock_and_tv);
- ~PS_GPU();
+ PS_GPU(bool pal_clock_and_tv) MDFN_COLD;
+ ~PS_GPU() MDFN_COLD;
 
- void Power(void);
+ void Power(void) MDFN_COLD;
 
  void ResetTS(void);
 

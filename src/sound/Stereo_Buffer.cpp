@@ -15,6 +15,8 @@ Public License along with Stereo_Buffer; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 
 Stereo_Buffer::Stereo_Buffer() {
+	stereo_added = false;
+	was_stereo = false;
 }
 
 Stereo_Buffer::~Stereo_Buffer() {
@@ -100,56 +102,29 @@ long Stereo_Buffer::read_samples( blip_sample_t* out, long max_samples )
 
 void Stereo_Buffer::mix_stereo( blip_sample_t* out, long count )
 {
-	Blip_Reader left; 
-	Blip_Reader right; 
-	Blip_Reader center;
+	Blip_Reader l_left; 
+	Blip_Reader l_right; 
+	Blip_Reader l_center;
 	
-	left.begin( bufs [1] );
-	right.begin( bufs [2] );
-	int bass = center.begin( bufs [0] );
+	l_left.begin( bufs [1] );
+	l_right.begin( bufs [2] );
+	int bass = l_center.begin( bufs [0] );
 	
 	while ( count-- )
 	{
-		int c = center.read();
-		out [0] = c + left.read();
-		out [1] = c + right.read();
+		int c = l_center.read();
+		out [0] = c + l_left.read();
+		out [1] = c + l_right.read();
 		out += 2;
 		
-		center.next( bass );
-		left.next( bass );
-		right.next( bass );
+		l_center.next( bass );
+		l_left.next( bass );
+		l_right.next( bass );
 	}
 	
-	center.end( bufs [0] );
-	right.end( bufs [2] );
-	left.end( bufs [1] );
-}
-
-void Stereo_Buffer::mix_stereo( float* out, long count )
-{
-        Blip_Reader left;
-        Blip_Reader right;
-        Blip_Reader center;
-
-        left.begin( bufs [1] );
-        right.begin( bufs [2] );
-        int bass = center.begin( bufs [0] );
-
-        while ( count-- )
-        {
-                int c = center.read();
-                out [0] = (float)(c + left.read()) / 32768;
-                out [1] = (float)(c + right.read()) / 32768;
-                out += 2;
-
-                center.next( bass );
-                left.next( bass );
-                right.next( bass );
-        }
-
-        center.end( bufs [0] );
-        right.end( bufs [2] );
-        left.end( bufs [1] );
+	l_center.end( bufs [0] );
+	l_right.end( bufs [2] );
+	l_left.end( bufs [1] );
 }
 
 void Stereo_Buffer::mix_mono( blip_sample_t* out, long count )
@@ -167,22 +142,5 @@ void Stereo_Buffer::mix_mono( blip_sample_t* out, long count )
 	}
 	
 	in.end( bufs [0] );
-}
-
-void Stereo_Buffer::mix_mono( float* out, long count )
-{
-        Blip_Reader in;
-        int bass = in.begin( bufs [0] );
-
-        while ( count-- )
-        {
-                int sample = in.read();
-                out [0] = (float)(sample) / 32768;
-                out [1] = (float)(sample) / 32768;
-                out += 2;
-                in.next( bass );
-        }
-
-        in.end( bufs [0] );
 }
 

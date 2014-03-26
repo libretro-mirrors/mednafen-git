@@ -1,6 +1,6 @@
 <?php
 
-$mednafen_version = "0.9.29-WIP";
+$mednafen_version = "0.9.31-WIP";
 $mod_list = array();
 
 $sections = array();
@@ -160,7 +160,7 @@ function EndPage()
 }
 
 
-function BeginSection($name, $nonlink_text = "", $link = FALSE, $header_link = FALSE)
+function BeginSection($name, $nonlink_text = "", $link = FALSE, $header_link = FALSE, $anchor_override = FALSE)
 {
  global $mednafen_version, $curmod, $cursection, $ps_string, $toc_string, $section_depth, $sections, $section_endhtml;
 
@@ -187,6 +187,9 @@ function BeginSection($name, $nonlink_text = "", $link = FALSE, $header_link = F
 
    $aname .= $sections[$i];
   }
+
+  if($anchor_override !== FALSE)
+   $aname = $anchor_override;
 
   $toc_string .= '<li><a href="#' . urlencode($aname) . '">' . htmlspecialchars($name) . '</a>' . htmlspecialchars($nonlink_text) . '<ul>';
 
@@ -342,8 +345,8 @@ for($display_ct = 0; $display_ct < 2; $display_ct++)
    $magiccowpower .= "</ul>";
   }
 
-  printf("<tr class=\"%s\"><td class=\"ColA\"><a name=\"%s\">%s%s%s</a>%s</td><td class=\"ColB\">%s</td><td class=\"ColC\">", 
-	($row_ff ? "RowB" : "RowA"), $name, (spis($flags, "MDFNSF_EMU_STATE") ? "<b>" : ""), $name,
+  printf("<tr class=\"%s\"><td class=\"ColA\">%s%s%s%s</td><td class=\"ColB\">%s</td><td class=\"ColC\">", 
+	($row_ff ? "RowB" : "RowA"), (spis($flags, "MDFNSF_EMU_STATE") ? "<b>" : ""), $name,
                                         (spis($flags, "MDFNSF_EMU_STATE") ? "</b>" : ""), $magiccowpower,
                                         $value_types[$type]);
 
@@ -385,8 +388,13 @@ for($display_ct = 0; $display_ct < 2; $display_ct++)
   if($setting['name'] == "sound.buffer_time")
    $default_value .= " (52 on MS Windows)";
 
-  printf("</td><td class=\"ColD\">%s</td><td class=\"ColE\">%s<p>%s</p>", $default_value,
-                                        $description, $description_extra);
+  printf("</td><td class=\"ColD\">%s</td><td class=\"ColE\"><a name=\"%s\">%s</a>", $default_value,
+                                        $name, $description);
+
+  if($description_extra != "")
+  {
+   printf("<p>%s</p>", $description_extra);
+  }
 
   if($type == 'MDFNST_ENUM')
   {

@@ -47,12 +47,12 @@ class MDVDP
  public:
 
  /* Function prototypes */
- MDVDP(void);
- ~MDVDP();
+ MDVDP(void) MDFN_COLD;
+ ~MDVDP() MDFN_COLD;
 
  void SetSettings(bool PAL, bool PAL_reported, bool auto_aspect);
 
- void Reset(void);
+ void Reset(void) MDFN_COLD;
  void vdp_ctrl_w(uint16 data);
  uint16 vdp_ctrl_r(void);
  void vdp_data_w(uint16 data);
@@ -225,12 +225,12 @@ class MDVDP
  void update_bg_pattern_cache(void);
  void get_hscroll(int line, uint16 *scrolla, uint16 *scrollb);
  void window_clip(int line);
- int make_lut_bg(int bx, int ax);
- int make_lut_obj(int bx, int sx);
- int make_lut_bg_ste(int bx, int ax);
- int make_lut_obj_ste(int bx, int sx);
- int make_lut_bgobj_ste(int bx, int sx);
- void remap_32(uint8 *src, uint32 *dst, uint32 *table, int length);
+ int make_lut_bg(int bx, int ax) MDFN_COLD;
+ int make_lut_obj(int bx, int sx) MDFN_COLD;
+ int make_lut_bg_ste(int bx, int ax) MDFN_COLD;
+ int make_lut_obj_ste(int bx, int sx) MDFN_COLD;
+ int make_lut_bgobj_ste(int bx, int sx) MDFN_COLD;
+ template<typename T> void CopyLineSurface(const uint8 *src, const unsigned cvp_line, const unsigned vp_w);
  void merge(uint8 *srca, uint8 *srcb, uint8 *dst, uint8 *table, int width);
  void color_update(int index, uint16 data);
  void make_name_lut(void);

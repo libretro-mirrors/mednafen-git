@@ -144,7 +144,7 @@ static void CPUHandler(uint32 PC)
   }
  }
 
- CPU->CheckBreakpoints(CheckCPUBPCallB, PSX_MemPeek32(PC));
+ CPU->CheckBreakpoints(CheckCPUBPCallB, CPU->PeekMem32(PC));
 
  if(FoundBPoint)
  {
@@ -216,7 +216,7 @@ static void GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
   while(Length--)
   {
    Address &= 0xFFFFFFFF;
-   *Buffer = PSX_MemPeek8(Address);
+   *Buffer = CPU->PeekMem8(Address);
    Address++;
    Buffer++;
   }
@@ -226,7 +226,7 @@ static void GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
   while(Length--)
   {
    Address &= 0x1FFFFF;
-   *Buffer = PSX_MemPeek8(Address);
+   *Buffer = CPU->PeekMem8(Address);
    Address++;
    Buffer++;
   }
@@ -260,10 +260,11 @@ static void PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
  {
   while(Length--)
   {
+   pscpu_timestamp_t dummy = 0;
    Address &= 0xFFFFFFFF;
 
    // TODO
-   PSX_MemWrite8(0, Address, *Buffer);
+   PSX_MemWrite8(dummy, Address, *Buffer);
 
    Address++;
    Buffer++;
@@ -303,7 +304,7 @@ static uint32 MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical)
  uint32 ret = 0;
 
  for(unsigned int i = 0; i < bsize; i++)
-  ret |= PSX_MemPeek8(A + i) << (i * 8);
+  ret |= CPU->PeekMem8(A + i) << (i * 8);
 
  return(ret);
 }
@@ -312,7 +313,7 @@ static void Disassemble(uint32 &A, uint32 SpecialA, char *TextBuf)
 {
  assert(!(A & 0x3));
 
- uint32 instr = PSX_MemPeek32(A);
+ uint32 instr = CPU->PeekMem32(A);
 
  CPU->PeekCheckICache(A, &instr);
 

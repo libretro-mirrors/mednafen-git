@@ -16,6 +16,9 @@ class Deinterlacer
 
  private:
 
+ template<typename T>
+ void InternalProcess(MDFN_Surface *surface, const MDFN_Rect &DisplayRect, MDFN_Rect *LineWidths, const bool field);
+
  MDFN_Surface *FieldBuffer;
  std::vector<int32> LWBuffer;
  bool StateValid;

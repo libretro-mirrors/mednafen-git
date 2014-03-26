@@ -1,6 +1,43 @@
 #ifndef __MDFN_PSX_CPU_H
 #define __MDFN_PSX_CPU_H
 
+/*
+ Load delay notes:
+
+	// Takes 1 less
+	".set noreorder\n\t"
+	".set nomacro\n\t"
+	"lw %0, 0(%2)\n\t"
+	"nop\n\t"
+	"nop\n\t"
+	"or %0, %1, %1\n\t"
+
+	// cycle than this:
+	".set noreorder\n\t"
+	".set nomacro\n\t"
+	"lw %0, 0(%2)\n\t"
+	"nop\n\t"
+	"or %0, %1, %1\n\t"
+	"nop\n\t"
+
+
+	// Both of these
+	".set noreorder\n\t"
+	".set nomacro\n\t"
+	"lw %0, 0(%2)\n\t"
+	"nop\n\t"
+	"nop\n\t"
+	"or %1, %0, %0\n\t"
+
+	// take same...(which is kind of odd).
+	".set noreorder\n\t"
+	".set nomacro\n\t"
+	"lw %0, 0(%2)\n\t"
+	"nop\n\t"
+	"or %1, %0, %0\n\t"
+	"nop\n\t"
+*/
+
 #include "gte.h"
 
 namespace MDFN_IEN_PSX
@@ -63,22 +100,19 @@ class PS_CPU
 
  uint32 BACKED_LDWhich;
  uint32 BACKED_LDValue;
+ uint32 LDAbsorb;
 
  pscpu_timestamp_t next_event_ts;
  pscpu_timestamp_t gte_ts_done;
+ pscpu_timestamp_t muldiv_ts_done;
 
  uint32 BIU;
 
-#if PS_CPU_EMULATE_ICACHE
  struct __ICache
  {
   uint32 TV;
   uint32 Data;
  } ICache[1024];
-#endif
-
- uint8 *FastMap[1 << (32 - FAST_MAP_SHIFT)];
- uint8 DummyPage[FAST_MAP_PSIZE];
 
  enum
  {
@@ -123,7 +157,40 @@ class PS_CPU
   };
  } CP0;
 
+#if 1
+ //uint32 WrAbsorb;
+ //uint8 WrAbsorbShift;
+
+ // On read:
+ //WrAbsorb = 0;
+ //WrAbsorbShift = 0;
+
+ // On write:
+ //WrAbsorb >>= (WrAbsorbShift >> 2) & 8;
+ //WrAbsorbShift -= (WrAbsorbShift >> 2) & 8;
+
+ //WrAbsorb |= (timestamp - pre_write_timestamp) << WrAbsorbShift;
+ //WrAbsorbShift += 8;
+#endif
+
+ struct
+ {
+  uint8 ReadAbsorb[0x20];
+  uint8 ReadAbsorbDummy;
+ };
+ uint8 ReadAbsorbWhich;
+ uint8 ReadFudge;
+
+ //uint32 WriteAbsorb;
+ //uint8 WriteAbsorbCount;
+ //uint8 WriteAbsorbMonkey;
+
+ MultiAccessSizeMem<1024, uint32, false> ScratchRAM;
+
  //PS_GTE GTE;
+
+ uint8 *FastMap[1 << (32 - FAST_MAP_SHIFT)];
+ uint8 DummyPage[FAST_MAP_PSIZE];
 
  enum
  {
@@ -146,7 +213,8 @@ class PS_CPU
 
  template<bool DebugMode, bool ILHMode> pscpu_timestamp_t RunReal(pscpu_timestamp_t timestamp_in);
 
- template<typename T> T ReadMemory(pscpu_timestamp_t &timestamp, uint32 address, bool DS24 = false);
+ template<typename T> T PeekMemory(uint32 address) MDFN_COLD;
+ template<typename T> T ReadMemory(pscpu_timestamp_t &timestamp, uint32 address, bool DS24 = false, bool LWC_timing = false);
  template<typename T> void WriteMemory(pscpu_timestamp_t &timestamp, uint32 address, uint32 value, bool DS24 = false);
 
 
@@ -173,7 +241,9 @@ class PS_CPU
  uint32 GetRegister(unsigned int which, char *special, const uint32 special_len);
  void SetRegister(unsigned int which, uint32 value);
  bool PeekCheckICache(uint32 PC, uint32 *iw);
-
+ uint8 PeekMem8(uint32 A);
+ uint16 PeekMem16(uint32 A);
+ uint32 PeekMem32(uint32 A);
  private:
  void (*CPUHook)(uint32 pc);
  void (*ADDBT)(uint32 from, uint32 to, bool exception);

@@ -287,7 +287,7 @@ static void LoadSettings(Stream *fp, const char *section, bool override)
 
  linebuf.reserve(1024);
 
- while(fp->get_line(linebuf) != -1)
+ while(fp->get_line(linebuf) >= 0)
  {
   if(linebuf[0] == '[')
   {

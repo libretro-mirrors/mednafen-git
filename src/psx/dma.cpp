@@ -20,6 +20,8 @@
 #include "cdc.h"
 #include "spu.h"
 
+//#include <map>
+
 // Notes: DMA tested to abort when 
 
 /* Notes:
@@ -128,6 +130,41 @@ void DMA_Power(void)
  RecalcIRQOut();
 }
 
+void PSX_SetDMASuckSuck(unsigned);
+
+static INLINE bool ChCan(const unsigned ch, const uint32 CRModeCache)
+{
+ switch(ch)
+ {
+  default:
+	abort();
+
+  case CH_MDEC_IN:
+	return(MDEC_DMACanWrite());
+
+  case CH_MDEC_OUT:
+	return(MDEC_DMACanRead());
+  
+  case CH_GPU: 
+	if(CRModeCache & 0x1)
+	 return(GPU->DMACanWrite());
+	else
+	 return(true);
+
+  case CH_CDC:
+	return(true);
+
+  case CH_SPU:
+	return(true);
+
+  case CH_FIVE:
+	return(false);
+
+  case CH_OT:
+	 return((bool)(DMACH[ch].ChanControl & (1U << 28)));
+ }
+}
+
 static void RecalcHalt(void)
 {
  bool Halt = false;
@@ -184,6 +221,21 @@ static void RecalcHalt(void)
 #endif
 
  //printf("Halt: %d\n", Halt);
+
+ if(!Halt && (DMACH[2].ChanControl & (1U << 24)) && ((DMACH[2].ChanControl & 0x700) == 0x200) && ChCan(2, DMACH[2].ChanControl))
+ {
+  unsigned tmp = DMACH[2].BlockControl & 0xFFFF;
+
+  if(tmp > 0)
+   tmp--;
+
+  if(tmp > 200)	// Due to 8-bit limitations in the CPU core.
+   tmp = 200;
+
+  PSX_SetDMASuckSuck(tmp);
+ }
+ else
+  PSX_SetDMASuckSuck(0);
 
  CPU->SetHalt(Halt);
 }
@@ -244,7 +296,10 @@ static INLINE void ChRW(const unsigned ch, const uint32 CRModeCache, uint32 *V)
 	  {
 	  }
 	  else
-	   *V = CDC->DMARead();
+	  {
+	   extra_cyc_overhead = 8;	// FIXME: Test.
+	   *V = CDC->DMARead();		// Note: Legend of Mana's opening movie is sensitive to DMA timing, including CDC.
+	  }
 	  break;
 
   case CH_SPU:
@@ -291,39 +346,6 @@ static INLINE void ChRW(const unsigned ch, const uint32 CRModeCache, uint32 *V)
 
  // GROSS APPROXIMATION, shoehorning multiple effects together, TODO separate(especially SPU and CDC)
  DMACH[ch].ClockCounter -= std::max<int>(extra_cyc_overhead, (CRModeCache & 0x100) ? 7 : 0);
-}
-
-static INLINE bool ChCan(const unsigned ch, const uint32 CRModeCache)
-{
- switch(ch)
- {
-  default:
-	abort();
-
-  case CH_MDEC_IN:
-	return(MDEC_DMACanWrite());
-
-  case CH_MDEC_OUT:
-	return(MDEC_DMACanRead());
-  
-  case CH_GPU: 
-	if(CRModeCache & 0x1)
-	 return(GPU->DMACanWrite());
-	else
-	 return(true);
-
-  case CH_CDC:
-	return(true);
-
-  case CH_SPU:
-	return(true);
-
-  case CH_FIVE:
-	return(false);
-
-  case CH_OT:
-	 return((bool)(DMACH[ch].ChanControl & (1U << 28)));
- }
 }
 
 //
@@ -384,7 +406,12 @@ static INLINE void RunChannelI(const unsigned ch, const uint32 CRModeCache, int3
     DMACH[ch].WordCounter = DMACH[ch].BlockControl & 0xFFFF;
 
     if(CRModeCache & (1U << 9))
+    {
+     if(ch == 2)	// Technically should apply to all channels, but since we don't implement CPU read penalties for channels other than 2 yet, it's like this to avoid making DMA longer than what games can handle.
+      DMACH[ch].ClockCounter -= 7;
+
      DMACH[ch].BlockControl = (DMACH[ch].BlockControl & 0xFFFF) | ((DMACH[ch].BlockControl - (1U << 16)) & 0xFFFF0000);
+    }
    }
   }	// End WordCounter reload.
   else if(CRModeCache & 0x100) // BLARGH BLARGH FISHWHALE
@@ -578,6 +605,28 @@ pscpu_timestamp_t DMA_Update(const pscpu_timestamp_t timestamp)
 
  return(timestamp + CalcNextEvent(0x10000000));
 }
+
+#if 0
+static void CheckLinkedList(uint32 addr)
+{
+ std::map<uint32, bool> zoom;
+
+ do
+ {
+  if(zoom[addr])
+  {
+   printf("Bad linked list: 0x%08x\n", addr);
+   break;
+  }
+  zoom[addr] = 1;
+
+  uint32 header = MainRAM.ReadU32(addr & 0x1FFFFC);
+
+  addr = header & 0xFFFFFF;
+
+ } while(addr != 0xFFFFFF && !(addr & 0x800000));
+}
+#endif
 
 void DMA_Write(const pscpu_timestamp_t timestamp, uint32 A, uint32 V)
 {

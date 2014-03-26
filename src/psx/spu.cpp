@@ -674,7 +674,7 @@ int32 PS_SPU::UpdateFromCDC(int32 clocks)
 */
   SPUStatus = SPUControl & 0x3F;
   SPUStatus |= IRQAsserted ? 0x40 : 0x00;
-
+  //SPUStatus |= (CWA & 0x100) ? 0x800 : 0x000;
 
   for(int voice_num = 0; voice_num < 24; voice_num++)
   {
@@ -1075,7 +1075,10 @@ void PS_SPU::Write(pscpu_timestamp_t timestamp, uint32 A, uint16 V)
 	      CheckIRQAddr(RWAddr);
 	      break;
 
-   case 0x2A: SPUControl = V;
+   case 0x2A: //if((SPUControl & 0x80) && !(V & 0x80))
+	      // printf("\n\n\n\n ************** REVERB PROCESSING DISABLED\n\n\n\n");
+
+	      SPUControl = V;
 	      //SPUIRQ_DBG("Set SPUControl=0x%04x -- IRQA=%06x, RWA=%06x", V, IRQAddr, RWAddr);
 	      //printf("SPU control write: %04x\n", V);
 	      if(!(V & 0x40))

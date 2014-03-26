@@ -142,8 +142,6 @@ MultiAccessSizeMem<2048 * 1024, uint32, false> MainRAM;
 static uint32 TextMem_Start;
 static std::vector<uint8> TextMem;
 
-static MultiAccessSizeMem<1024, uint32, false> ScratchRAM;
-
 static const uint32 SysControl_Mask[9] = { 0x00ffffff, 0x00ffffff, 0xffffffff, 0x2f1fffff,
 					   0xffffffff, 0x2f1fffff, 0x2f1fffff, 0xffffffff,
 					   0x0003ffff };
@@ -411,25 +409,25 @@ void PSX_RequestMLExit(void)
 
 void DMA_CheckReadDebug(uint32 A);
 
-template<typename T, bool IsWrite, bool Access24, bool Peek> static INLINE void MemRW(const pscpu_timestamp_t timestamp, uint32 A, uint32 &V)
+static unsigned sucksuck = 0;
+void PSX_SetDMASuckSuck(unsigned suckage)
 {
- static const uint32 mask[8] = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
-				 0x7FFFFFFF, 0x1FFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF };
+ sucksuck = suckage;
+}
 
- //if(IsWrite)
- // V = (T)V;
 
- if(!Peek)
- {
-  #if 0
-  if(IsWrite)
-   printf("Write%d: %08x(orig=%08x), %08x\n", (int)(sizeof(T) * 8), A & mask[A >> 29], A, V);
-  else
-   printf("Read%d: %08x(orig=%08x)\n", (int)(sizeof(T) * 8), A & mask[A >> 29], A);
-  #endif
- }
+// Remember to update MemPeek<>() when we change address decoding in MemRW()
+template<typename T, bool IsWrite, bool Access24> static INLINE void MemRW(pscpu_timestamp_t &timestamp, uint32 A, uint32 &V)
+{
+ #if 0
+ if(IsWrite)
+  printf("Write%d: %08x(orig=%08x), %08x\n", (int)(sizeof(T) * 8), A & mask[A >> 29], A, V);
+ else
+  printf("Read%d: %08x(orig=%08x)\n", (int)(sizeof(T) * 8), A & mask[A >> 29], A);
+ #endif
 
- A &= mask[A >> 29];
+ if(!IsWrite)
+  timestamp += sucksuck;
 
  //if(A == 0xa0 && IsWrite)
  // DBG_Break();
@@ -437,6 +435,15 @@ template<typename T, bool IsWrite, bool Access24, bool Peek> static INLINE void 
  if(A < 0x00800000)
  //if(A <= 0x1FFFFF)
  {
+  if(IsWrite)
+  {
+   //timestamp++;	// Best-case timing.
+  }
+  else
+  {
+   timestamp += 3;
+  }
+
   //DMA_CheckReadDebug(A);
   //assert(A <= 0x1FFFFF);
   if(Access24)
@@ -457,25 +464,6 @@ template<typename T, bool IsWrite, bool Access24, bool Peek> static INLINE void 
   return;
  }
 
- if(A >= 0x1F800000 && A <= 0x1F8003FF)
- {
-  if(Access24)
-  {
-   if(IsWrite)
-    ScratchRAM.WriteU24(A & 0x3FF, V);
-   else
-    V = ScratchRAM.ReadU24(A & 0x3FF);
-  }
-  else
-  {
-   if(IsWrite)
-    ScratchRAM.Write<T>(A & 0x3FF, V);
-   else
-    V = ScratchRAM.Read<T>(A & 0x3FF);
-  }
-  return;
- }
-
  if(A >= 0x1FC00000 && A <= 0x1FC7FFFF)
  {
   if(!IsWrite)
@@ -492,7 +480,7 @@ template<typename T, bool IsWrite, bool Access24, bool Peek> static INLINE void 
  if(timestamp >= events[PSX_EVENT__SYNFIRST].next->event_time)
   PSX_EventHandler(timestamp);
 
- if(A >= 0x1F801000 && A <= 0x1F802FFF && !Peek)	// Hardware register region. (TODO: Implement proper peek suppor)
+ if(A >= 0x1F801000 && A <= 0x1F802FFF)
  {
 #if 0
   if(!IsWrite)
@@ -515,26 +503,57 @@ template<typename T, bool IsWrite, bool Access24, bool Peek> static INLINE void 
    {
     if(IsWrite)
     {
+     //timestamp += 15;
+
+     //if(timestamp >= events[PSX_EVENT__SYNFIRST].next->event_time)
+     // PSX_EventHandler(timestamp);
+
      SPU->Write(timestamp, A | 0, V);
      SPU->Write(timestamp, A | 2, V >> 16);
     }
     else
     {
+     timestamp += 36;
+
+     if(timestamp >= events[PSX_EVENT__SYNFIRST].next->event_time)
+      PSX_EventHandler(timestamp);
+
      V = SPU->Read(timestamp, A) | (SPU->Read(timestamp, A | 2) << 16);
     }
    }
    else
    {
     if(IsWrite)
+    {
+     //timestamp += 8;
+
+     //if(timestamp >= events[PSX_EVENT__SYNFIRST].next->event_time)
+     // PSX_EventHandler(timestamp);
+
      SPU->Write(timestamp, A & ~1, V);
+    }
     else
+    {
+     timestamp += 16; // Just a guess, need to test.
+
+     if(timestamp >= events[PSX_EVENT__SYNFIRST].next->event_time)
+      PSX_EventHandler(timestamp);
+
      V = SPU->Read(timestamp, A & ~1);
+    }
    }
    return;
   }		// End SPU
 
+
+  // CDC: TODO - 8-bit access.
   if(A >= 0x1f801800 && A <= 0x1f80180F)
   {
+   if(!IsWrite) 
+   {
+    timestamp += 6 * sizeof(T); //24;
+   }
+
    if(IsWrite)
     CDC->Write(timestamp, A & 0x3, V);
    else
@@ -545,6 +564,9 @@ template<typename T, bool IsWrite, bool Access24, bool Peek> static INLINE void 
 
   if(A >= 0x1F801810 && A <= 0x1F801817)
   {
+   if(!IsWrite)
+    timestamp++;
+
    if(IsWrite)
     GPU->Write(timestamp, A, V);
    else
@@ -555,6 +577,9 @@ template<typename T, bool IsWrite, bool Access24, bool Peek> static INLINE void 
 
   if(A >= 0x1F801820 && A <= 0x1F801827)
   {
+   if(!IsWrite)
+    timestamp++;
+
    if(IsWrite)
     MDEC_Write(timestamp, A, V);
    else
@@ -566,6 +591,9 @@ template<typename T, bool IsWrite, bool Access24, bool Peek> static INLINE void 
   if(A >= 0x1F801000 && A <= 0x1F801023)
   {
    unsigned index = (A & 0x1F) >> 2;
+
+   if(!IsWrite)
+    timestamp++;
 
    //if(A == 0x1F801014 && IsWrite)
    // fprintf(stderr, "%08x %08x\n",A,V);
@@ -585,6 +613,9 @@ template<typename T, bool IsWrite, bool Access24, bool Peek> static INLINE void 
 
   if(A >= 0x1F801040 && A <= 0x1F80104F)
   {
+   if(!IsWrite)
+    timestamp++;
+
    if(IsWrite)
     FIO->Write(timestamp, A, V);
    else
@@ -594,6 +625,20 @@ template<typename T, bool IsWrite, bool Access24, bool Peek> static INLINE void 
 
   if(A >= 0x1F801050 && A <= 0x1F80105F)
   {
+   if(!IsWrite)
+    timestamp++;
+
+#if 0
+   if(IsWrite)
+   {
+    PSX_WARNING("[SIO] Write: 0x%08x 0x%08x %u", A, V, (unsigned)sizeof(T));
+   }
+   else
+   {
+    PSX_WARNING("[SIO] Read: 0x%08x", A);
+   }
+#endif
+
    if(IsWrite)
     SIO_Write(timestamp, A, V);
    else
@@ -619,6 +664,9 @@ template<typename T, bool IsWrite, bool Access24, bool Peek> static INLINE void 
 
   if(A >= 0x1F801070 && A <= 0x1F801077)	// IRQ
   {
+   if(!IsWrite)
+    timestamp++;
+
    if(IsWrite)
     IRQ_Write(A, V);
    else
@@ -628,6 +676,9 @@ template<typename T, bool IsWrite, bool Access24, bool Peek> static INLINE void 
 
   if(A >= 0x1F801080 && A <= 0x1F8010FF) 	// DMA
   {
+   if(!IsWrite)
+    timestamp++;
+
    if(IsWrite)
     DMA_Write(timestamp, A, V);
    else
@@ -638,6 +689,9 @@ template<typename T, bool IsWrite, bool Access24, bool Peek> static INLINE void 
 
   if(A >= 0x1F801100 && A <= 0x1F80113F)	// Root counters
   {
+   if(!IsWrite)
+    timestamp++;
+
    if(IsWrite)
     TIMER_Write(timestamp, A, V);
    else
@@ -653,26 +707,29 @@ template<typename T, bool IsWrite, bool Access24, bool Peek> static INLINE void 
   if(!IsWrite)
   {
    //if((A & 0x7FFFFF) <= 0x84)
-   // PSX_WARNING("[PIO] Read%d from %08x at time %d", (int)(sizeof(T) * 8), A, timestamp);
+   //PSX_WARNING("[PIO] Read%d from 0x%08x at time %d", (int)(sizeof(T) * 8), A, timestamp);
 
-   V = 0;
+   V = ~0U;	// A game this affects:  Tetris with Cardcaptor Sakura
 
-   if((A & 0x7FFFFF) < 65536)
+   if(PIOMem)
    {
-    if(Access24)
-     V = PIOMem->ReadU24(A & 0x7FFFFF);
-    else
-     V = PIOMem->Read<T>(A & 0x7FFFFF);
-   }
-   else if((A & 0x7FFFFF) < (65536 + TextMem.size()))
-   {
-    if(Access24)
-     V = MDFN_de24lsb(&TextMem[(A & 0x7FFFFF) - 65536]);
-    else switch(sizeof(T))
+    if((A & 0x7FFFFF) < 65536)
     {
-     case 1: V = TextMem[(A & 0x7FFFFF) - 65536]; break;
-     case 2: V = MDFN_de16lsb(&TextMem[(A & 0x7FFFFF) - 65536]); break;
-     case 4: V = MDFN_de32lsb(&TextMem[(A & 0x7FFFFF) - 65536]); break;
+     if(Access24)
+      V = PIOMem->ReadU24(A & 0x7FFFFF);
+     else
+      V = PIOMem->Read<T>(A & 0x7FFFFF);
+    }
+    else if((A & 0x7FFFFF) < (65536 + TextMem.size()))
+    {
+     if(Access24)
+      V = MDFN_de24lsb(&TextMem[(A & 0x7FFFFF) - 65536]);
+     else switch(sizeof(T))
+     {
+      case 1: V = TextMem[(A & 0x7FFFFF) - 65536]; break;
+      case 2: V = MDFN_de16lsb(&TextMem[(A & 0x7FFFFF) - 65536]); break;
+      case 4: V = MDFN_de32lsb(&TextMem[(A & 0x7FFFFF) - 65536]); break;
+     }
     }
    }
   }
@@ -689,107 +746,204 @@ template<typename T, bool IsWrite, bool Access24, bool Peek> static INLINE void 
   return;
  }
 
- if(!Peek)
+ if(IsWrite)
  {
-  if(IsWrite)
-  {
-   PSX_WARNING("[MEM] Unknown write%d to %08x at time %d, =%08x(%d)", (int)(sizeof(T) * 8), A, timestamp, V, V);
-  }
-  else
-  {
-   V = 0;
-   PSX_WARNING("[MEM] Unknown read%d from %08x at time %d", (int)(sizeof(T) * 8), A, timestamp);
-  }
+  PSX_WARNING("[MEM] Unknown write%d to %08x at time %d, =%08x(%d)", (int)(sizeof(T) * 8), A, timestamp, V, V);
  }
  else
+ {
   V = 0;
-
+  PSX_WARNING("[MEM] Unknown read%d from %08x at time %d", (int)(sizeof(T) * 8), A, timestamp);
+ }
 }
 
-void MDFN_FASTCALL PSX_MemWrite8(const pscpu_timestamp_t timestamp, uint32 A, uint32 V)
+void MDFN_FASTCALL PSX_MemWrite8(pscpu_timestamp_t timestamp, uint32 A, uint32 V)
 {
- MemRW<uint8, true, false, false>(timestamp, A, V);
+ MemRW<uint8, true, false>(timestamp, A, V);
 }
 
-void MDFN_FASTCALL PSX_MemWrite16(const pscpu_timestamp_t timestamp, uint32 A, uint32 V)
+void MDFN_FASTCALL PSX_MemWrite16(pscpu_timestamp_t timestamp, uint32 A, uint32 V)
 {
- MemRW<uint16, true, false, false>(timestamp, A, V);
+ MemRW<uint16, true, false>(timestamp, A, V);
 }
 
-void MDFN_FASTCALL PSX_MemWrite24(const pscpu_timestamp_t timestamp, uint32 A, uint32 V)
+void MDFN_FASTCALL PSX_MemWrite24(pscpu_timestamp_t timestamp, uint32 A, uint32 V)
 {
  //assert(0);
- MemRW<uint32, true, true, false>(timestamp, A, V);
+ MemRW<uint32, true, true>(timestamp, A, V);
 }
 
-void MDFN_FASTCALL PSX_MemWrite32(const pscpu_timestamp_t timestamp, uint32 A, uint32 V)
+void MDFN_FASTCALL PSX_MemWrite32(pscpu_timestamp_t timestamp, uint32 A, uint32 V)
 {
- MemRW<uint32, true, false, false>(timestamp, A, V);
+ MemRW<uint32, true, false>(timestamp, A, V);
 }
 
-uint8 MDFN_FASTCALL PSX_MemRead8(const pscpu_timestamp_t timestamp, uint32 A)
+uint8 MDFN_FASTCALL PSX_MemRead8(pscpu_timestamp_t &timestamp, uint32 A)
 {
  uint32 V;
 
- MemRW<uint8, false, false, false>(timestamp, A, V);
+ MemRW<uint8, false, false>(timestamp, A, V);
 
  return(V);
 }
 
-uint16 MDFN_FASTCALL PSX_MemRead16(const pscpu_timestamp_t timestamp, uint32 A)
+uint16 MDFN_FASTCALL PSX_MemRead16(pscpu_timestamp_t &timestamp, uint32 A)
 {
  uint32 V;
 
- MemRW<uint16, false, false, false>(timestamp, A, V);
+ MemRW<uint16, false, false>(timestamp, A, V);
 
  return(V);
 }
 
-uint32 MDFN_FASTCALL PSX_MemRead24(const pscpu_timestamp_t timestamp, uint32 A)
+uint32 MDFN_FASTCALL PSX_MemRead24(pscpu_timestamp_t &timestamp, uint32 A)
 {
  uint32 V;
 
- //assert(0);
- MemRW<uint32, false, true, false>(timestamp, A, V);
+ MemRW<uint32, false, true>(timestamp, A, V);
 
  return(V);
 }
 
-uint32 MDFN_FASTCALL PSX_MemRead32(const pscpu_timestamp_t timestamp, uint32 A)
+uint32 MDFN_FASTCALL PSX_MemRead32(pscpu_timestamp_t &timestamp, uint32 A)
 {
  uint32 V;
 
- MemRW<uint32, false, false, false>(timestamp, A, V);
+ MemRW<uint32, false, false>(timestamp, A, V);
 
  return(V);
 }
 
+template<typename T, bool Access24> static INLINE uint32 MemPeek(pscpu_timestamp_t timestamp, uint32 A)
+{
+ if(A < 0x00800000)
+ {
+  if(Access24)
+   return(MainRAM.ReadU24(A & 0x1FFFFF));
+  else
+   return(MainRAM.Read<T>(A & 0x1FFFFF));
+ }
+
+ if(A >= 0x1FC00000 && A <= 0x1FC7FFFF)
+ {
+  if(Access24)
+   return(BIOSROM->ReadU24(A & 0x7FFFF));
+  else
+   return(BIOSROM->Read<T>(A & 0x7FFFF));
+ }
+
+ if(A >= 0x1F801000 && A <= 0x1F802FFF)
+ {
+  if(A >= 0x1F801C00 && A <= 0x1F801FFF) // SPU
+  {
+   // TODO
+
+  }		// End SPU
+
+
+  // CDC: TODO - 8-bit access.
+  if(A >= 0x1f801800 && A <= 0x1f80180F)
+  {
+   // TODO
+
+  }
+
+  if(A >= 0x1F801810 && A <= 0x1F801817)
+  {
+   // TODO
+
+  }
+
+  if(A >= 0x1F801820 && A <= 0x1F801827)
+  {
+   // TODO
+
+  }
+
+  if(A >= 0x1F801000 && A <= 0x1F801023)
+  {
+   unsigned index = (A & 0x1F) >> 2;
+   return((SysControl.Regs[index] | SysControl_OR[index]) >> ((A & 3) * 8));
+  }
+
+  if(A >= 0x1F801040 && A <= 0x1F80104F)
+  {
+   // TODO
+
+  }
+
+  if(A >= 0x1F801050 && A <= 0x1F80105F)
+  {
+   // TODO
+
+  }
+
+
+  if(A >= 0x1F801070 && A <= 0x1F801077)	// IRQ
+  {
+   // TODO
+
+  }
+
+  if(A >= 0x1F801080 && A <= 0x1F8010FF) 	// DMA
+  {
+   // TODO
+
+  }
+
+  if(A >= 0x1F801100 && A <= 0x1F80113F)	// Root counters
+  {
+   // TODO
+
+  }
+ }
+
+
+ if(A >= 0x1F000000 && A <= 0x1F7FFFFF)
+ {
+  if(PIOMem)
+  {
+   if((A & 0x7FFFFF) < 65536)
+   {
+    if(Access24)
+     return(PIOMem->ReadU24(A & 0x7FFFFF));
+    else
+     return(PIOMem->Read<T>(A & 0x7FFFFF));
+   }
+   else if((A & 0x7FFFFF) < (65536 + TextMem.size()))
+   {
+    if(Access24)
+     return(MDFN_de24lsb(&TextMem[(A & 0x7FFFFF) - 65536]));
+    else switch(sizeof(T))
+    {
+     case 1: return(TextMem[(A & 0x7FFFFF) - 65536]); break;
+     case 2: return(MDFN_de16lsb(&TextMem[(A & 0x7FFFFF) - 65536])); break;
+     case 4: return(MDFN_de32lsb(&TextMem[(A & 0x7FFFFF) - 65536])); break;
+    }
+   }
+  }
+  return(~0U);
+ }
+
+ if(A == 0xFFFE0130)
+  return CPU->GetBIU();
+
+ return(0);
+}
 
 uint8 PSX_MemPeek8(uint32 A)
 {
- uint32 V;
-
- MemRW<uint8, false, false, true>(0, A, V);
-
- return(V);
+ return MemPeek<uint8, false>(0, A);
 }
 
 uint16 PSX_MemPeek16(uint32 A)
 {
- uint32 V;
-
- MemRW<uint16, false, false, true>(0, A, V);
-
- return(V);
+ return MemPeek<uint16, false>(0, A);
 }
 
 uint32 PSX_MemPeek32(uint32 A)
 {
- uint32 V;
-
- MemRW<uint32, false, false, true>(0, A, V);
-
- return(V);
+ return MemPeek<uint32, false>(0, A);
 }
 
 // FIXME: Add PSX_Reset() and FrontIO::Reset() so that emulated input devices don't get power-reset on reset-button reset.
@@ -819,7 +973,6 @@ static void PSX_Power(void)
 #endif
 
  memset(MainRAM.data32, 0, 2048 * 1024);
- memset(ScratchRAM.data32, 0, 1024);
 
  for(unsigned i = 0; i < 9; i++)
   SysControl.Regs[i] = 0;
@@ -997,6 +1150,17 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  //for(int i = 0; i < 2048; i++)
  // printf("%d, %02x %c\n", i, buf[i], buf[i]);
  //exit(1);
+
+#if 0
+ {
+  uint8 buf[2048 * 7];
+
+  if((*cdifs)[0]->ReadSector(buf, 5, 7) == 0x2)
+  {
+   printf("CRC32: 0x%08x\n", (uint32)crc32(0, &buf[0], 0x3278));
+  }
+ }
+#endif
 
  return(true);
 }
@@ -1227,7 +1391,7 @@ if(cdifs)
  return ret_region;
 }
 
-static bool InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemcards = true)
+static bool InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemcards = true, const bool WantPIOMem = false)
 {
  unsigned region;
  bool emulate_memcard[8];
@@ -1243,7 +1407,7 @@ static bool InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
  for(unsigned i = 0; i < 2; i++)
  {
   char buf[64];
-  trio_snprintf(buf, sizeof(buf), "psx.input.port%u.multitap", i + 1);
+  trio_snprintf(buf, sizeof(buf), "psx.input.pport%u.multitap", i + 1);
   emulate_multitap[i] = MDFN_GetSettingB(buf);
  }
 
@@ -1309,7 +1473,11 @@ static bool InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
 
 
  BIOSROM = new MultiAccessSizeMem<512 * 1024, uint32, false>();
- PIOMem = new MultiAccessSizeMem<65536, uint32, false>();
+
+ if(WantPIOMem)
+  PIOMem = new MultiAccessSizeMem<65536, uint32, false>();
+ else
+  PIOMem = NULL;
 
  for(uint32 ma = 0x00000000; ma < 0x00800000; ma += 2048 * 1024)
  {
@@ -1322,19 +1490,21 @@ static bool InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
  CPU->SetFastMap(BIOSROM->data32, 0x9FC00000, 512 * 1024);
  CPU->SetFastMap(BIOSROM->data32, 0xBFC00000, 512 * 1024);
 
- CPU->SetFastMap(PIOMem->data32, 0x1F000000, 65536);
- CPU->SetFastMap(PIOMem->data32, 0x9F000000, 65536);
- CPU->SetFastMap(PIOMem->data32, 0xBF000000, 65536);
+ if(PIOMem)
+ {
+  CPU->SetFastMap(PIOMem->data32, 0x1F000000, 65536);
+  CPU->SetFastMap(PIOMem->data32, 0x9F000000, 65536);
+  CPU->SetFastMap(PIOMem->data32, 0xBF000000, 65536);
+ }
 
 
  MDFNMP_Init(1024, ((uint64)1 << 29) / 1024);
  MDFNMP_AddRAM(2048 * 1024, 0x00000000, MainRAM.data8);
- MDFNMP_AddRAM(1024, 0x1F800000, ScratchRAM.data8);
+ //MDFNMP_AddRAM(1024, 0x1F800000, ScratchRAM.data8);
 
  try
  {
   const char *biospath_sname;
-  std::string biospath;
 
   if(region == REGION_JP)
    biospath_sname = "psx.bios_jp";
@@ -1345,11 +1515,12 @@ static bool InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
   else
    abort();
 
-  biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(biospath_sname).c_str());
+  {
+   std::string biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(biospath_sname).c_str());
+   FileStream BIOSFile(biospath.c_str(), FileStream::MODE_READ);
 
-  FileWrapper BIOSFile(biospath.c_str(), FileWrapper::MODE_READ);
-
-  BIOSFile.read(BIOSROM->data8, 512 * 1024);
+   BIOSFile.read(BIOSROM->data8, 512 * 1024);
+  }
 
   for(int i = 0; i < 8; i++)
   {
@@ -1584,13 +1755,13 @@ static int Load(const char *name, MDFNFILE *fp)
 
  static std::vector<CDIF *> CDInterfaces;
 
- CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Jumping Flash! (USA)/Jumping Flash! (USA).cue", false));
+ CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Jumping Flash! (USA)/Jumping Flash! (USA).cue", false, false));
  //CDInterfaces.push_back(new CDIF("/extra/games/PSX/Tony Hawk's Pro Skater 2 (USA)/Tony Hawk's Pro Skater 2 (USA).cue"));
 
- if(!InitCommon(&CDInterfaces, !IsPSF))
+ if(!InitCommon(&CDInterfaces, !IsPSF, true))
   return(0);
 #else
- if(!InitCommon(NULL, !IsPSF))
+ if(!InitCommon(NULL, !IsPSF, true))
   return(0);
 #endif
 
@@ -1733,7 +1904,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
   SFVAR(CD_TrayOpen),
   SFVAR(CD_SelectedDisc),
   SFARRAY(MainRAM.data8, 1024 * 2048),
-  SFARRAY(ScratchRAM.data8, 1024),
+  //SFARRAY(ScratchRAM.data8, 1024),
   SFARRAY32(SysControl.Regs, 9),
   //SFARRAY32(next_timestamps, sizeof(next_timestamps) / sizeof(next_timestamps[0])),
   SFEND
@@ -1852,33 +2023,43 @@ static const MDFNSetting_EnumList Region_List[] =
  { NULL, 0 },
 };
 
+#if 0
+static const MDFNSetting_EnumList MultiTap_List[] =
+{
+ { "0", 0, gettext_noop("Disabled") },
+ { "1", 1, gettext_noop("Enabled") },
+ { "auto", 0, gettext_noop("Automatically-enable multitap."), gettext_noop("NOT IMPLEMENTED YET(currently equivalent to 0)") },
+ { NULL, 0 },
+};
+#endif
+
 static MDFNSetting PSXSettings[] =
 {
  { "psx.input.mouse_sensitivity", MDFNSF_NOFLAGS, gettext_noop("Emulated mouse sensitivity."), NULL, MDFNST_FLOAT, "1.00", NULL, NULL },
 
  { "psx.input.analog_mode_ct", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable analog mode combo-button alternate toggle."), gettext_noop("When enabled, instead of the configured Analog mode toggle button for the emulated DualShock, use a combination of buttons to toggle it instead.  When Select, Start, and all four shoulder buttons are held down for about 1 second, the mode will toggle."), MDFNST_BOOL, "0", NULL, NULL },
 
- { "psx.input.port1.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on PSX port 1."), gettext_noop("Makes ports 1B-1D available."), MDFNST_BOOL, "0", NULL, NULL },
- { "psx.input.port2.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on PSX port 2."), gettext_noop("Makes ports 2B-2D available."), MDFNST_BOOL, "0", NULL, NULL },
+ { "psx.input.pport1.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on PSX port 1."), gettext_noop("Makes 3 more virtual ports available.\n\nNOTE: Enabling multitap in games that don't fully support it may cause deleterious effects."), MDFNST_BOOL, "0", NULL, NULL }, //MDFNST_ENUM, "auto", NULL, NULL, NULL, NULL, MultiTap_List },
+ { "psx.input.pport2.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on PSX port 2."), gettext_noop("Makes 3 more virtual ports available.\n\nNOTE: Enabling multitap in games that don't fully support it may cause deleterious effects."), MDFNST_BOOL, "0", NULL, NULL },
 
- { "psx.input.port1.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on port 1/1A."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
- { "psx.input.port2.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on port 2/2A."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
- { "psx.input.port3.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on port 1B."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
- { "psx.input.port4.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on port 1C."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
- { "psx.input.port5.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on port 1D."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
- { "psx.input.port6.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on port 2B."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
- { "psx.input.port7.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on port 2C."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
- { "psx.input.port8.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on port 2D."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port1.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 1."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port2.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 2."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port3.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 3."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port4.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 4."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port5.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 5."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port6.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 6."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port7.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 7."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port8.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 8."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
 
 
- { "psx.input.port1.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on port 1/1A."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0xFF0000", "0x000000", "0x1000000" },
- { "psx.input.port2.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on port 2/2A."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x00FF00", "0x000000", "0x1000000" },
- { "psx.input.port3.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on port 1B."),   gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0xFF00FF", "0x000000", "0x1000000" },
- { "psx.input.port4.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on port 1C."),   gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0xFF8000", "0x000000", "0x1000000" },
- { "psx.input.port5.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on port 1D."),   gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0xFFFF00", "0x000000", "0x1000000" },
- { "psx.input.port6.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on port 2B."),   gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x00FFFF", "0x000000", "0x1000000" },
- { "psx.input.port7.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on port 2C."),   gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x0080FF", "0x000000", "0x1000000" },
- { "psx.input.port8.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on port 2D."),   gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x8000FF", "0x000000", "0x1000000" },
+ { "psx.input.port1.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 1."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0xFF0000", "0x000000", "0x1000000" },
+ { "psx.input.port2.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 2."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x00FF00", "0x000000", "0x1000000" },
+ { "psx.input.port3.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 3."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0xFF00FF", "0x000000", "0x1000000" },
+ { "psx.input.port4.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 4."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0xFF8000", "0x000000", "0x1000000" },
+ { "psx.input.port5.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 5."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0xFFFF00", "0x000000", "0x1000000" },
+ { "psx.input.port6.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 6."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x00FFFF", "0x000000", "0x1000000" },
+ { "psx.input.port7.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 7."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x0080FF", "0x000000", "0x1000000" },
+ { "psx.input.port8.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 8."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x8000FF", "0x000000", "0x1000000" },
 
  //{ "psx.fastboot", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Skip BIOS intro sequence."), gettext_noop("MAY BREAK GAMES."), MDFNST_BOOL, "0" },
  { "psx.region_autodetect", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Attempt to auto-detect region of game."), NULL, MDFNST_BOOL, "1" },

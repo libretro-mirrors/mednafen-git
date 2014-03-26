@@ -15,50 +15,36 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "../mednafen.h"
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
-
+#include "../FileStream.h"
+#include "../MemoryStream.h"
 #include "CDAccess.h"
-#include "CDAccess_Image.h"
-#include "CDAccess_CCD.h"
 
-#ifdef HAVE_LIBCDIO
-#include "CDAccess_Physical.h"
-#endif
+#include <vector>
 
-using namespace CDUtility;
-
-CDAccess::CDAccess()
+class CDAccess_CCD : public CDAccess
 {
+ public:
 
-}
+ CDAccess_CCD(const char *path, bool image_memcache);
+ virtual ~CDAccess_CCD();
 
-CDAccess::~CDAccess()
-{
+ virtual void Read_Raw_Sector(uint8 *buf, int32 lba);
 
-}
+ virtual void Read_TOC(CDUtility::TOC *toc);
 
-CDAccess *cdaccess_open_image(const char *path, bool image_memcache)
-{
- CDAccess *ret = NULL;
+ virtual bool Is_Physical(void) throw();
 
- if(strlen(path) >= 4 && !strcasecmp(path + strlen(path) - 4, ".ccd"))
-  ret = new CDAccess_CCD(path, image_memcache);
- else
-  ret = new CDAccess_Image(path, image_memcache);
+ virtual void Eject(bool eject_status);
 
- return ret;
-}
+ private:
 
-CDAccess *cdaccess_open_phys(const char *devicename)
-{
- #ifdef HAVE_LIBCDIO
- return new CDAccess_Physical(devicename);
- #else
- throw MDFN_Error(0, _("Physical CD access support not compiled in."));
- #endif
-}
+ void Load(const char *path, bool image_memcache);
+ void Cleanup(void);
+
+ void CheckSubQSanity(void);
+
+ Stream* img_stream;
+ Stream* sub_stream;
+ size_t img_numsectors;
+ CDUtility::TOC tocd;
+};

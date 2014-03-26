@@ -7,7 +7,7 @@
 
 #include "../cdrom/cdromif.h"
 #include "../general.h"
-#include "../FileWrapper.h"
+#include "../FileStream.h"
 
 #define PSX_WARNING(format, ...) { printf(format "\n", ## __VA_ARGS__); }
 #define PSX_DBGINFO(format, ...) { /*printf(format "\n", ## __VA_ARGS__);*/ }
@@ -18,15 +18,15 @@ namespace MDFN_IEN_PSX
 
  bool MDFN_FASTCALL PSX_EventHandler(const pscpu_timestamp_t timestamp);
 
- void MDFN_FASTCALL PSX_MemWrite8(const pscpu_timestamp_t timestamp, uint32 A, uint32 V);
- void MDFN_FASTCALL PSX_MemWrite16(const pscpu_timestamp_t timestamp, uint32 A, uint32 V);
- void MDFN_FASTCALL PSX_MemWrite24(const pscpu_timestamp_t timestamp, uint32 A, uint32 V);
- void MDFN_FASTCALL PSX_MemWrite32(const pscpu_timestamp_t timestamp, uint32 A, uint32 V);
+ void MDFN_FASTCALL PSX_MemWrite8(pscpu_timestamp_t timestamp, uint32 A, uint32 V);
+ void MDFN_FASTCALL PSX_MemWrite16(pscpu_timestamp_t timestamp, uint32 A, uint32 V);
+ void MDFN_FASTCALL PSX_MemWrite24(pscpu_timestamp_t timestamp, uint32 A, uint32 V);
+ void MDFN_FASTCALL PSX_MemWrite32(pscpu_timestamp_t timestamp, uint32 A, uint32 V);
 
- uint8 MDFN_FASTCALL PSX_MemRead8(const pscpu_timestamp_t timestamp, uint32 A);
- uint16 MDFN_FASTCALL PSX_MemRead16(const pscpu_timestamp_t timestamp, uint32 A);
- uint32 MDFN_FASTCALL PSX_MemRead24(const pscpu_timestamp_t timestamp, uint32 A);
- uint32 MDFN_FASTCALL PSX_MemRead32(const pscpu_timestamp_t timestamp, uint32 A);
+ uint8 MDFN_FASTCALL PSX_MemRead8(pscpu_timestamp_t &timestamp, uint32 A);
+ uint16 MDFN_FASTCALL PSX_MemRead16(pscpu_timestamp_t &timestamp, uint32 A);
+ uint32 MDFN_FASTCALL PSX_MemRead24(pscpu_timestamp_t &timestamp, uint32 A);
+ uint32 MDFN_FASTCALL PSX_MemRead32(pscpu_timestamp_t &timestamp, uint32 A);
 
  uint8 PSX_MemPeek8(uint32 A);
  uint16 PSX_MemPeek16(uint32 A);

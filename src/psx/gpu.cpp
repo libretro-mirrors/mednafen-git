@@ -1191,7 +1191,7 @@ pscpu_timestamp_t PS_GPU::Update(const pscpu_timestamp_t sys_timestamp)
      if(DisplayMode & 0x20)
       field = !field;
      else
-      field = 0; // May not be correct.
+      field = 1; // May not be correct.
     }
 
     if(scanline == 0)
@@ -1210,7 +1210,7 @@ pscpu_timestamp_t PS_GPU::Update(const pscpu_timestamp_t sys_timestamp)
      }
      else
      {
-      field = 0;	// May not be correct.
+      field = 1;	// May not be correct.
 
       if(DisplayMode & 0x08)	// PAL
        LinesPerField = 314;
@@ -1252,7 +1252,7 @@ pscpu_timestamp_t PS_GPU::Update(const pscpu_timestamp_t sys_timestamp)
        const uint32 black = surface->MakeColor(0, 0, 0);
 
        espec->InterlaceOn = (bool)(DisplayMode & 0x20);
-       espec->InterlaceField = field;
+       espec->InterlaceField = (bool)(DisplayMode & 0x20) && field;
 
        DisplayRect->x = 0;
        DisplayRect->y = 0;

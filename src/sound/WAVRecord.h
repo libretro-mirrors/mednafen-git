@@ -2,7 +2,7 @@
 #define __MDFN_WAVERECORD_H
 
 #include "../mednafen.h"
-#include "../FileWrapper.h"
+#include "../FileStream.h"
 
 class WAVRecord
 {
@@ -18,7 +18,7 @@ class WAVRecord
 
  private:
 
- FileWrapper wavfile;
+ FileStream wavfile;
  bool Finished;
 
  uint8 raw_headers[0x2C];

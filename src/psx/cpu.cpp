@@ -92,6 +92,7 @@ void PS_CPU::Power(void)
  HI = 0;
 
  gte_ts_done = 0;
+ muldiv_ts_done = 0;
 
  BACKED_PC = 0xBFC00000;
  BACKED_new_PC = 4;
@@ -99,7 +100,15 @@ void PS_CPU::Power(void)
 
  BACKED_LDWhich = 0x20;
  BACKED_LDValue = 0;
- 
+ LDAbsorb = 0;
+ memset(ReadAbsorb, 0, sizeof(ReadAbsorb));
+ ReadAbsorbWhich = 0;
+ ReadFudge = 0;
+
+ //WriteAbsorb = 0;
+ //WriteAbsorbCount = 0;
+ //WriteAbsorbMonkey = 0;
+
  CP0.SR |= (1 << 22);	// BEV
  CP0.SR |= (1 << 21);	// TS
 
@@ -110,18 +119,19 @@ void PS_CPU::Power(void)
 
  BIU = 0;
 
-#if PS_CPU_EMULATE_ICACHE
+ memset(ScratchRAM.data32, 0, 1024);
+
  // Not quite sure about these poweron/reset values:
  for(unsigned i = 0; i < 1024; i++)
  {
   ICache[i].TV = 0x2 | ((BIU & 0x800) ? 0x0 : 0x1);
   ICache[i].Data = 0;
  }
-#endif
 
  GTE_Power();
 }
 
+// FIXME: save/restore icache data.
 int PS_CPU::StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
@@ -138,9 +148,18 @@ int PS_CPU::StateAction(StateMem *sm, int load, int data_only)
 
   SFVAR(BACKED_LDWhich),
   SFVAR(BACKED_LDValue),
+  SFVAR(LDAbsorb),
+
+  SFARRAY(ReadAbsorb, 0x20),
+  SFVAR(ReadAbsorbDummy),
+  SFVAR(ReadAbsorbWhich),
+  SFVAR(ReadFudge),
+
+  SFARRAY(ScratchRAM.data8, 1024),
 
   SFVAR(next_event_ts),
   SFVAR(gte_ts_done),
+  SFVAR(muldiv_ts_done),
 
   SFARRAY32(CP0.Regs, 32),
 
@@ -176,7 +195,6 @@ void PS_CPU::SetBIU(uint32 val)
 
  BIU = val & ~(0x440);
 
-#if PS_CPU_EMULATE_ICACHE
  if((BIU ^ old_BIU) & 0x800)
  {
   if(BIU & 0x800)	// ICache enabled
@@ -190,7 +208,7 @@ void PS_CPU::SetBIU(uint32 val)
     ICache[i].TV |= 0x1;
   }
  }
-#endif
+
  PSX_WARNING("[CPU] Set BIU=0x%08x", BIU);
 }
 
@@ -199,29 +217,79 @@ uint32 PS_CPU::GetBIU(void)
  return BIU;
 }
 
+static const uint32 addr_mask[8] = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+				     0x7FFFFFFF, 0x1FFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF };
+
 template<typename T>
-INLINE T PS_CPU::ReadMemory(pscpu_timestamp_t &timestamp, uint32 address, bool DS24)
+INLINE T PS_CPU::PeekMemory(uint32 address)
 {
  T ret;
+ address &= addr_mask[address >> 29];
 
- //if((address - 0x1F800000) > 0x400)
- timestamp += 2;
- //else
- // printf("MOO: 0x%08x\n", address);
- //timestamp++;
+ if(address >= 0x1F800000 && address <= 0x1F8003FF)
+  return ScratchRAM.Read<T>(address & 0x3FF);
+
  //assert(!(CP0.SR & 0x10000));
 
  if(sizeof(T) == 1)
-  ret = PSX_MemRead8(timestamp, address);
+  ret = PSX_MemPeek8(address);
  else if(sizeof(T) == 2)
-  ret = PSX_MemRead16(timestamp, address);
+  ret = PSX_MemPeek16(address);
+ else
+  ret = PSX_MemPeek32(address);
+
+ return(ret);
+}
+
+template<typename T>
+INLINE T PS_CPU::ReadMemory(pscpu_timestamp_t &timestamp, uint32 address, bool DS24, bool LWC_timing)
+{
+ T ret;
+
+ //WriteAbsorb >>= WriteAbsorbMonkey * 8;
+ //WriteAbsorbCount -= WriteAbsorbMonkey;
+ //WriteAbsorbMonkey = WriteAbsorbCount;
+
+ ReadAbsorb[ReadAbsorbWhich] = 0;
+ ReadAbsorbWhich = 0;
+
+ address &= addr_mask[address >> 29];
+
+ if(address >= 0x1F800000 && address <= 0x1F8003FF)
+ {
+  LDAbsorb = 0;
+
+  if(DS24)
+   return ScratchRAM.ReadU24(address & 0x3FF);
+  else
+   return ScratchRAM.Read<T>(address & 0x3FF);
+ }
+
+ timestamp += (ReadFudge >> 4) & 2;
+
+ //assert(!(CP0.SR & 0x10000));
+
+ pscpu_timestamp_t lts = timestamp;
+
+ if(sizeof(T) == 1)
+  ret = PSX_MemRead8(lts, address);
+ else if(sizeof(T) == 2)
+  ret = PSX_MemRead16(lts, address);
  else
  {
   if(DS24)
-   ret = PSX_MemRead24(timestamp, address) & 0xFFFFFF;
+   ret = PSX_MemRead24(lts, address) & 0xFFFFFF;
   else
-   ret = PSX_MemRead32(timestamp, address);
+   ret = PSX_MemRead32(lts, address);
  }
+
+ if(LWC_timing)
+  lts += 1;
+ else
+  lts += 2;
+
+ LDAbsorb = (lts - timestamp);
+ timestamp = lts;
 
  return(ret);
 }
@@ -231,6 +299,30 @@ INLINE void PS_CPU::WriteMemory(pscpu_timestamp_t &timestamp, uint32 address, ui
 {
  if(MDFN_LIKELY(!(CP0.SR & 0x10000)))
  {
+  address &= addr_mask[address >> 29];
+
+  if(address >= 0x1F800000 && address <= 0x1F8003FF)
+  {
+   if(DS24)
+    ScratchRAM.WriteU24(address & 0x3FF, value);
+   else
+    ScratchRAM.Write<T>(address & 0x3FF, value);
+
+   return;
+  }
+
+  //if(WriteAbsorbCount == 4)
+  //{
+  // WriteAbsorb >>= 8;
+  // WriteAbsorbCount--;
+  //
+  // if(WriteAbsorbMonkey)
+  //  WriteAbsorbMonkey--;
+  //}
+  //timestamp += 3;
+  //WriteAbsorb |= (3U << (WriteAbsorbCount * 8));
+  //WriteAbsorbCount++;
+
   if(sizeof(T) == 1)
    PSX_MemWrite8(timestamp, address, value);
   else if(sizeof(T) == 2)
@@ -245,7 +337,6 @@ INLINE void PS_CPU::WriteMemory(pscpu_timestamp_t &timestamp, uint32 address, ui
  }
  else
  {
-#if PS_CPU_EMULATE_ICACHE
   if(BIU & 0x800)	// Instruction cache is enabled/active
   {
    if(BIU & 0x4)	// TAG test mode.
@@ -265,11 +356,13 @@ INLINE void PS_CPU::WriteMemory(pscpu_timestamp_t &timestamp, uint32 address, ui
    }
   }
 
-  if((BIU & 0x081) == 0x080)	// Writes to the scratchpad(TODO)
+  if((BIU & 0x081) == 0x080)	// Writes to the scratchpad(TODO test)
   {
-
+   if(DS24)
+    ScratchRAM.WriteU24(address & 0x3FF, value);
+   else
+    ScratchRAM.Write<T>(address & 0x3FF, value);
   }
-#endif
   //printf("IsC WRITE%d 0x%08x 0x%08x -- CP0.SR=0x%08x\n", (int)sizeof(T), address, value, CP0.SR);
  }
 }
@@ -328,6 +421,11 @@ uint32 PS_CPU::Exception(uint32 code, uint32 PC, const uint32 NPM)
 	BACKED_LDWhich = LDWhich;		\
 	BACKED_LDValue = LDValue;
 
+#define GPR_DEPRES_BEGIN { uint8 back = ReadAbsorb[0];
+#define GPR_DEP(n) { unsigned tn = (n); ReadAbsorb[tn] = 0; }
+#define GPR_RES(n) { unsigned tn = (n); ReadAbsorb[tn] = 0; }
+#define GPR_DEPRES_END ReadAbsorb[0] = back; }
+
 template<bool DebugMode, bool ILHMode>
 pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
 {
@@ -379,18 +477,16 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     }
    }
 
-/*
-   if(PC == 0xB0)
-   {
-    if(GPR[9] != 0xB)
-    PSX_WARNING("[BIOS] 0xB0 t1=0x%02x", GPR[9]);
-   }
-*/
-#if PS_CPU_EMULATE_ICACHE
    instr = ICache[(PC & 0xFFC) >> 2].Data;
 
    if(ICache[(PC & 0xFFC) >> 2].TV != PC)
    {
+    //WriteAbsorb = 0;
+    //WriteAbsorbCount = 0;
+    //WriteAbsorbMonkey = 0;
+    ReadAbsorb[ReadAbsorbWhich] = 0;
+    ReadAbsorbWhich = 0;
+
     // FIXME: Handle executing out of scratchpad.
     if(PC >= 0xA0000000 || !(BIU & 0x800))
     {
@@ -433,9 +529,6 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
      instr = ICache[(PC & 0xFFC) >> 2].Data;
     }
    }
-#else
-   instr = LoadU32_LE((uint32 *)&FastMap[PC >> FAST_MAP_SHIFT][PC]);
-#endif
 
    //printf("PC=%08x, SP=%08x - op=0x%02x - funct=0x%02x - instr=0x%08x\n", PC, GPR[29], instr >> 26, instr & 0x3F, instr);
    //for(int i = 0; i < 32; i++)
@@ -449,9 +542,31 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
 
    opf |= IPCache;
 
-   timestamp++;
+#if 0
+   {
+    uint32 tmp = (ReadAbsorb[ReadAbsorbWhich] + 0x7FFFFFFF) >> 31;
+    ReadAbsorb[ReadAbsorbWhich] -= tmp;
+    timestamp = timestamp + 1 - tmp;
+   }
+#else
+   if(ReadAbsorb[ReadAbsorbWhich])
+    ReadAbsorb[ReadAbsorbWhich]--;
+   //else if((uint8)WriteAbsorb)
+   //{
+   // WriteAbsorb--;
+   // if(!WriteAbsorb)
+   // {
+   //  WriteAbsorbCount--;
+   //  if(WriteAbsorbMonkey)
+   //   WriteAbsorbMonkey--;
+   //  WriteAbsorb >>= 8;
+   // }
+   //}
+   else
+    timestamp++;
+#endif
 
-   #define DO_LDS() { GPR[LDWhich] = LDValue; LDWhich = 0x20; }
+   #define DO_LDS() { GPR[LDWhich] = LDValue; ReadAbsorb[LDWhich] = LDAbsorb; ReadFudge = LDWhich; ReadAbsorbWhich |= LDWhich & 0x1F; LDWhich = 0x20; }
    #define BEGIN_OPF(name, arg_op, arg_funct) { op_##name: /*assert( ((arg_op) ? (0x40 | (arg_op)) : (arg_funct)) == opf); */
    #define END_OPF goto OpDone; }
 
@@ -546,6 +661,13 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(ADD, 0, 0x20);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = GPR[rs] + GPR[rt];
 	bool ep = ((~(GPR[rs] ^ GPR[rt])) & (GPR[rs] ^ result)) & 0x80000000;
 
@@ -566,6 +688,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(ADDI, 0x08, 0);
 	ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_RES(rt);
+	GPR_DEPRES_END
+
         uint32 result = GPR[rs] + immediate;
 	bool ep = ((~(GPR[rs] ^ immediate)) & (GPR[rs] ^ result)) & 0x80000000;
 
@@ -586,6 +714,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(ADDIU, 0x09, 0);
 	ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_RES(rt);
+	GPR_DEPRES_END
+
 	uint32 result = GPR[rs] + immediate;
 
 	DO_LDS();
@@ -599,6 +733,13 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(ADDU, 0, 0x21);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = GPR[rs] + GPR[rt];
 
 	DO_LDS();
@@ -612,6 +753,13 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(AND, 0, 0x24);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = GPR[rs] & GPR[rt];
 
 	DO_LDS();
@@ -625,6 +773,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(ANDI, 0x0C, 0);
 	ITYPE_ZE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_RES(rt);
+	GPR_DEPRES_END
+
 	uint32 result = GPR[rs] & immediate;
 
 	DO_LDS();
@@ -638,6 +792,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(BEQ, 0x04, 0);
 	ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+	GPR_DEPRES_END
+
 	bool result = (GPR[rs] == GPR[rt]);
 
 	DO_LDS();
@@ -655,8 +815,15 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
 	uint32 riv = (instr >> 16) & 0x1F;
 	int32 immediate = (int16)(instr & 0xFFFF);
 	bool result = (int32)(tv ^ (riv << 31)) < 0;
-	//if(riv & ~(0x11))
-	 //PSX_WARNING("[CPU] Unknown instruction %08x, op=%02x, funct=%02x", instr, instr >> 26, (instr & 0x3F))
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP((instr >> 21) & 0x1F);
+
+	if(riv & 0x10)
+ 	 GPR_RES(31);
+
+	GPR_DEPRES_END
+
 
 	DO_LDS();
 
@@ -676,6 +843,11 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(BGTZ, 0x07, 0);
 	ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEPRES_END
+
 	bool result = (int32)GPR[rs] > 0;
 
 	DO_LDS();
@@ -691,6 +863,11 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(BLEZ, 0x06, 0);
 	ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEPRES_END
+
 	bool result = (int32)GPR[rs] <= 0;
 
 	DO_LDS();
@@ -707,6 +884,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(BNE, 0x05, 0);
 	ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+	GPR_DEPRES_END
+
 	bool result = GPR[rs] != GPR[rt];
 
 	DO_LDS();
@@ -753,6 +936,7 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
 		 //printf("MFC0: rt=%d <- rd=%d(%08x)\n", rt, rd, CP0.Regs[rd]);
 		 DO_LDS();
 
+		 LDAbsorb = 0;
 		 LDWhich = rt;
 		 LDValue = CP0.Regs[rd];
 		}
@@ -848,10 +1032,15 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
 		 uint32 rt = (instr >> 16) & 0x1F;
 		 uint32 rd = (instr >> 11) & 0x1F;
 
-	         if(timestamp < gte_ts_done)
-	          timestamp = gte_ts_done;
-
  	 	 DO_LDS();
+
+	         if(timestamp < gte_ts_done)
+		 {
+		  LDAbsorb = gte_ts_done - timestamp;
+	          timestamp = gte_ts_done;
+		 }
+		 else
+		  LDAbsorb = 0;
 
 		 LDWhich = rt;
 		 LDValue = GTE_ReadDR(rd);
@@ -878,13 +1067,19 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
 		 uint32 rt = (instr >> 16) & 0x1F;
 		 uint32 rd = (instr >> 11) & 0x1F;
 
-	         if(timestamp < gte_ts_done)
-	          timestamp = gte_ts_done;
-
 	 	 DO_LDS();
+
+	         if(timestamp < gte_ts_done)
+		 {
+		  LDAbsorb = gte_ts_done - timestamp;
+	          timestamp = gte_ts_done;
+		 }
+		 else
+		  LDAbsorb = 0;
 
 		 LDWhich = rt;
 		 LDValue = GTE_ReadCR(rd);
+
 		//printf("GTE ReadCR: %d %d\n", rd, GPR[rt]);
 		}		
 		break;
@@ -949,6 +1144,8 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
         ITYPE;
         uint32 address = GPR[rs] + immediate;
 
+	DO_LDS();
+
         if(MDFN_UNLIKELY(address & 3))
 	{
          new_PC = Exception(EXCEPTION_ADEL, PC, new_PC_mask);
@@ -959,9 +1156,8 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
          if(timestamp < gte_ts_done)
           timestamp = gte_ts_done;
 
-         GTE_WriteDR(rt, PSX_MemRead32(timestamp, address));
+         GTE_WriteDR(rt, ReadMemory<uint32>(timestamp, address, false, true));
 	}
-	DO_LDS();
 	// GTE stuff here
     END_OPF;
 
@@ -1031,6 +1227,11 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     BEGIN_OPF(DIV, 0, 0x1A);
 	RTYPE;
 
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+	GPR_DEPRES_END
+
         if(!GPR[rt])
         {
          //PSX_WARNING("[CPU] Division(signed) by zero at PC=%08x", PC);
@@ -1052,6 +1253,7 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
          LO = (int32)GPR[rs] / (int32)GPR[rt];
          HI = (int32)GPR[rs] % (int32)GPR[rt];
         }
+	muldiv_ts_done = timestamp + 37;
 
 	DO_LDS();
 
@@ -1063,6 +1265,11 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(DIVU, 0, 0x1B);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+	GPR_DEPRES_END
 
 	if(!GPR[rt])
 	{
@@ -1076,6 +1283,7 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
 	 LO = GPR[rs] / GPR[rt];
 	 HI = GPR[rs] % GPR[rt];
 	}
+ 	muldiv_ts_done = timestamp + 37;
 
 	DO_LDS();
     END_OPF;
@@ -1097,6 +1305,10 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     BEGIN_OPF(JAL, 0x03, 0);
 	JTYPE;
 
+	//GPR_DEPRES_BEGIN
+	GPR_RES(31);
+	//GPR_DEPRES_END
+
 	DO_LDS();
 
 	GPR[31] = PC + 8;
@@ -1109,6 +1321,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(JALR, 0, 0x09);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 tmp = GPR[rs];
 
 	DO_LDS();
@@ -1124,6 +1342,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(JR, 0, 0x08);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 bt = GPR[rs];
 
 	DO_LDS();
@@ -1138,6 +1362,10 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     BEGIN_OPF(LUI, 0x0F, 0);
 	ITYPE_ZE;		// Actually, probably would be sign-extending...if we were emulating a 64-bit MIPS chip :b
 
+	GPR_DEPRES_BEGIN
+	GPR_RES(rt);
+	GPR_DEPRES_END
+
 	DO_LDS();
 
 	GPR[rt] = immediate << 16;
@@ -1150,7 +1378,26 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     BEGIN_OPF(MFHI, 0, 0x10);
 	RTYPE;
 
+	GPR_DEPRES_BEGIN
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	DO_LDS();
+
+	if(timestamp < muldiv_ts_done)
+	{
+	 if(timestamp == muldiv_ts_done - 1)
+	  muldiv_ts_done--;
+	 else
+	 {
+	  do
+	  {
+	   if(ReadAbsorb[ReadAbsorbWhich])
+	    ReadAbsorb[ReadAbsorbWhich]--;
+	   timestamp++;
+	  } while(timestamp < muldiv_ts_done);
+	 }
+	}
 
 	GPR[rd] = HI;
 
@@ -1163,7 +1410,26 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     BEGIN_OPF(MFLO, 0, 0x12);
 	RTYPE;
 
+	GPR_DEPRES_BEGIN
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	DO_LDS();
+
+	if(timestamp < muldiv_ts_done)
+	{
+	 if(timestamp == muldiv_ts_done - 1)
+	  muldiv_ts_done--;
+	 else
+	 {
+	  do
+	  {
+	   if(ReadAbsorb[ReadAbsorbWhich])
+	    ReadAbsorb[ReadAbsorbWhich]--;
+	   timestamp++;
+	  } while(timestamp < muldiv_ts_done);
+	 }
+	}
 
 	GPR[rd] = LO;
 
@@ -1175,6 +1441,10 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(MTHI, 0, 0x11);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEPRES_END
 
 	HI = GPR[rs];
 
@@ -1188,6 +1458,10 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     BEGIN_OPF(MTLO, 0, 0x13);
 	RTYPE;
 
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEPRES_END
+
 	LO = GPR[rs];
 
 	DO_LDS();
@@ -1200,9 +1474,16 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(MULT, 0, 0x18);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+	GPR_DEPRES_END
+
 	uint64 result;
 
 	result = (int64)(int32)GPR[rs] * (int32)GPR[rt];
+	muldiv_ts_done = timestamp + 7;
 
 	DO_LDS();
 
@@ -1216,9 +1497,16 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(MULTU, 0, 0x19);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+	GPR_DEPRES_END
+
 	uint64 result;
 
 	result = (uint64)GPR[rs] * GPR[rt];
+	muldiv_ts_done = timestamp + 7;
 
 	DO_LDS();
 
@@ -1233,6 +1521,13 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(NOR, 0, 0x27);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = ~(GPR[rs] | GPR[rt]);
 
 	DO_LDS();
@@ -1246,6 +1541,13 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(OR, 0, 0x25);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = GPR[rs] | GPR[rt];
 
 	DO_LDS();
@@ -1260,6 +1562,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(ORI, 0x0D, 0);
 	ITYPE_ZE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_RES(rt);
+	GPR_DEPRES_END
+
 	uint32 result = GPR[rs] | immediate;
 
 	DO_LDS();
@@ -1274,6 +1582,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SLL, 0, 0x00);	// SLL
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = GPR[rt] << shamt;
 
 	DO_LDS();
@@ -1288,6 +1602,13 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SLLV, 0, 0x04);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = GPR[rt] << (GPR[rs] & 0x1F);
 
 	DO_LDS();
@@ -1301,6 +1622,13 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SLT, 0, 0x2A);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = (bool)((int32)GPR[rs] < (int32)GPR[rt]);
 
 	DO_LDS();
@@ -1315,6 +1643,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SLTI, 0x0A, 0);
 	ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_RES(rt);
+	GPR_DEPRES_END
+
 	uint32 result = (bool)((int32)GPR[rs] < immediate);
 
 	DO_LDS();
@@ -1329,6 +1663,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SLTIU, 0x0B, 0);
 	ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_RES(rt);
+	GPR_DEPRES_END
+
 	uint32 result = (bool)(GPR[rs] < (uint32)immediate);
 
 	DO_LDS();
@@ -1343,6 +1683,13 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SLTU, 0, 0x2B);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = (bool)(GPR[rs] < GPR[rt]);
 
 	DO_LDS();
@@ -1357,6 +1704,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SRA, 0, 0x03);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = ((int32)GPR[rt]) >> shamt;
 
 	DO_LDS();
@@ -1371,6 +1724,13 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SRAV, 0, 0x07);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = ((int32)GPR[rt]) >> (GPR[rs] & 0x1F);
 
 	DO_LDS();
@@ -1385,6 +1745,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SRL, 0, 0x02);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = GPR[rt] >> shamt;
 
 	DO_LDS();
@@ -1398,6 +1764,13 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SRLV, 0, 0x06);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = GPR[rt] >> (GPR[rs] & 0x1F);
 
 	DO_LDS();
@@ -1412,6 +1785,13 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SUB, 0, 0x22);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = GPR[rs] - GPR[rt];
 	bool ep = (((GPR[rs] ^ GPR[rt])) & (GPR[rs] ^ result)) & 0x80000000;
 
@@ -1433,6 +1813,13 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SUBU, 0, 0x23); // SUBU
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = GPR[rs] - GPR[rt];
 
 	DO_LDS();
@@ -1458,6 +1845,13 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(XOR, 0, 0x26);
 	RTYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+ 	GPR_RES(rd);
+	GPR_DEPRES_END
+
 	uint32 result = GPR[rs] ^ GPR[rt];
 
 	DO_LDS();
@@ -1471,6 +1865,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(XORI, 0x0E, 0);
 	ITYPE_ZE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_RES(rt);
+	GPR_DEPRES_END
+
 	uint32 result = GPR[rs] ^ immediate;
 
 	DO_LDS();
@@ -1487,6 +1887,11 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(LB, 0x20, 0);
 	ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEPRES_END
+
 	uint32 address = GPR[rs] + immediate;
 
 	DO_LDS();
@@ -1500,6 +1905,11 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(LBU, 0x24, 0);
         ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEPRES_END
+
         uint32 address = GPR[rs] + immediate;
 
 	DO_LDS();
@@ -1513,6 +1923,11 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(LH, 0x21, 0);
         ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEPRES_END
+
         uint32 address = GPR[rs] + immediate;
 
 	DO_LDS();
@@ -1534,6 +1949,11 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(LHU, 0x25, 0);
         ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEPRES_END
+
         uint32 address = GPR[rs] + immediate;
 
 	DO_LDS();
@@ -1556,6 +1976,11 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(LW, 0x23, 0);
         ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEPRES_END
+
         uint32 address = GPR[rs] + immediate;
 
 	DO_LDS();
@@ -1577,6 +2002,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SB, 0x28, 0);
 	ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+	GPR_DEPRES_END
+
 	uint32 address = GPR[rs] + immediate;
 
 	WriteMemory<uint8>(timestamp, address, GPR[rt]);
@@ -1589,6 +2020,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SH, 0x29, 0);
         ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+	GPR_DEPRES_END
+
         uint32 address = GPR[rs] + immediate;
 
 	if(MDFN_UNLIKELY(address & 0x1))
@@ -1607,6 +2044,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SW, 0x2B, 0);
         ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+	GPR_DEPRES_END
+
         uint32 address = GPR[rs] + immediate;
 
 	if(MDFN_UNLIKELY(address & 0x3))
@@ -1627,12 +2070,19 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(LWL, 0x22, 0);
 	ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	//GPR_DEP(rt);
+	GPR_DEPRES_END
+
 	uint32 address = GPR[rs] + immediate;
 	uint32 v = GPR[rt];
 
 	if(LDWhich == rt)
 	{
 	 v = LDValue;
+	 ReadFudge = 0;
 	}
 	else
 	{
@@ -1661,6 +2111,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SWL, 0x2A, 0);
         ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+	GPR_DEPRES_END
+
         uint32 address = GPR[rs] + immediate;
 
 	switch(address & 0x3)
@@ -1686,12 +2142,19 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(LWR, 0x26, 0);
         ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	//GPR_DEP(rt);
+	GPR_DEPRES_END
+
         uint32 address = GPR[rs] + immediate;
 	uint32 v = GPR[rt];
 
 	if(LDWhich == rt)
 	{
 	 v = LDValue;
+	 ReadFudge = 0;
 	}
 	else
 	{
@@ -1720,6 +2183,12 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
     //
     BEGIN_OPF(SWR, 0x2E, 0);
         ITYPE;
+
+	GPR_DEPRES_BEGIN
+	GPR_DEP(rs);
+	GPR_DEP(rt);
+	GPR_DEPRES_END
+
         uint32 address = GPR[rs] + immediate;
 
 	switch(address & 0x3)
@@ -1773,6 +2242,9 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
 
  if(gte_ts_done > 0)
   gte_ts_done -= timestamp;
+
+ if(muldiv_ts_done > 0)
+  muldiv_ts_done -= timestamp;
 
  ACTIVE_TO_BACKING;
 
@@ -1889,6 +2361,22 @@ bool PS_CPU::PeekCheckICache(uint32 PC, uint32 *iw)
  }
 
  return(false);
+}
+
+
+uint8 PS_CPU::PeekMem8(uint32 A)
+{
+ return PeekMemory<uint8>(A);
+}
+
+uint16 PS_CPU::PeekMem16(uint32 A)
+{
+ return PeekMemory<uint16>(A);
+}
+
+uint32 PS_CPU::PeekMem32(uint32 A)
+{
+ return PeekMemory<uint32>(A);
 }
 
 

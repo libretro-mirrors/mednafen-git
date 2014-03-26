@@ -659,22 +659,27 @@ static void MakeMednafenArgsStruct(void)
 }
 
 static int netconnect = 0;
-static char * loadcd = NULL;
+static char* loadcd = NULL;	// Deprecated
+static int physcd = 0;
+
 static char * force_module_arg = NULL;
 static int DoArgs(int argc, char *argv[], char **filename)
 {
 	int ShowCLHelp = 0;
-	int DoSetRemote = 0;
 
 	char *dsfn = NULL;
 	char *dmfn = NULL;
+	char *dummy_remote = NULL;
 
         ARGPSTRUCT MDFNArgs[] = 
 	{
 	 { "help", _("Show help!"), &ShowCLHelp, 0, 0 },
-	 { "remote", _("Enable remote mode(EXPERIMENTAL AND INCOMPLETE)."), &DoSetRemote, 0, 0 },
+	 { "remote", _("Enable remote mode with the specified stdout key(EXPERIMENTAL AND INCOMPLETE)."), 0, &dummy_remote, SUBSTYPE_STRING_ALLOC },
 
-	 { "loadcd", _("Load and boot a CD for the specified system."), 0, &loadcd, SUBSTYPE_STRING_ALLOC },
+	 // -loadcd is deprecated and only still supported because it's been around for yeaaaars.
+	 { "loadcd", NULL/*_("Load and boot a CD for the specified system.")*/, 0, &loadcd, SUBSTYPE_STRING_ALLOC },
+
+	 { "physcd", _("Load and boot from a physical CD, treating [FILE] as the optional device name."), &physcd, 0, 0 },
 
 	 { "force_module", _("Force usage of specified emulation module."), 0, &force_module_arg, SUBSTYPE_STRING_ALLOC },
 
@@ -704,6 +709,12 @@ static int DoArgs(int argc, char *argv[], char **filename)
 	 if(!ParseArguments(argc - 1, &argv[1], MDFNArgs, filename))
 	  return(0);
 
+	 if(dummy_remote)
+	 {
+	  free(dummy_remote);
+	  dummy_remote = NULL;
+	 }
+
 	 if(ShowCLHelp)
 	 {
           printf(usage_string, argv[0]);
@@ -725,9 +736,9 @@ static int DoArgs(int argc, char *argv[], char **filename)
 	 if(dsfn || dmfn)
 	  return(0);
 
-	 if(*filename == NULL && loadcd == NULL)
+	 if(*filename == NULL && loadcd == NULL && physcd == 0)
 	 {
-	  puts(_("No game filename specified!"));
+	  MDFN_PrintError(_("No game filename specified!"));
 	  return(0);
 	 }
 	}
@@ -737,7 +748,7 @@ static int DoArgs(int argc, char *argv[], char **filename)
 static int volatile NeedVideoChange = 0;
 int GameLoop(void *arg);
 int volatile GameThreadRun = 0;
-void MDFND_Update(MDFN_Surface *surface, int16 *Buffer, int Count);
+bool MDFND_Update(MDFN_Surface *surface, MDFN_Rect *rect, MDFN_Rect *lw, int16 *Buffer, int Count);
 
 bool sound_active;	// true if sound is enabled and initialized
 
@@ -755,14 +766,36 @@ static int LoadGame(const char *force_module, const char *path)
 	pending_snapshot = 0;
 	pending_ssnapshot = 0;
 
-	if(loadcd)
+	if(physcd)
+	{
+	 if(!(tmp = MDFNI_LoadCD(force_module, path, true)))
+		return(0);
+	}
+	else if(loadcd)	// Deprecated
 	{
 	 const char *system = loadcd;
+         bool is_physical = false;
 
 	 if(!system)
 	  system = force_module;
 
-	 if(!(tmp = MDFNI_LoadCD(system, path)))
+	 if(path == NULL)
+	  is_physical = true;
+	 else
+	 {
+	  int sr;
+	  //int se;
+	  struct stat sb;
+
+	  sr = stat(path, &sb);
+	  //se = errno;	  
+
+	  if(!sr && !S_ISREG(sb.st_mode))
+	  //if(sr || !S_ISREG(sb.st_mode))
+	   is_physical = true;
+	 }
+
+	 if(!(tmp = MDFNI_LoadCD(system, path, is_physical)))
 		return(0);
 	}
 	else
@@ -901,16 +934,32 @@ void DebuggerFudge(void)
 {
           LockGameMutex(0);
 
-	  int MeowCowHowFlown = VTBackBuffer;
+#if 0
+	  bool VBValid = true;
 
-	  // FIXME.
-	  if(!VTDisplayRects[VTBackBuffer].h)
-	   VTDisplayRects[VTBackBuffer].h = 10;
-          if(!VTDisplayRects[VTBackBuffer].w)
-           VTDisplayRects[VTBackBuffer].w = 10;
+	  if(VTDisplayRects[VTBackBuffer].h == 0 || ((int64)VTDisplayRects[VTBackBuffer].y + VTDisplayRects[VTBackBuffer].h) > VTBuffer[VTBackBuffer]->h)
+	   VBValid = false;
+	  else if(VTLineWidths[VTBackBuffer][0].w != ~0)
+	  {
+	   for(int32 y = VTDisplayRects[VTBackBuffer].y; y < (VTDisplayRects[VTBackBuffer].y + VTDisplayRects[VTBackBuffer].h); y++)
+	   {
+	    if(VTLineWidths[VTBackBuffer][y].w == 0 || ((int64)VTLineWidths[VTBackBuffer][y].x + VTLineWidths[VTBackBuffer][y].w) > VTBuffer[VTBackBuffer]->w)
+	    {
+	     VBValid = false;
+	     break;
+	    }
+	   }
+	  }
+	  else if(VTDisplayRects[VTBackBuffer].w == 0 || ((int64)VTDisplayRects[VTBackBuffer].x + VTDisplayRects[VTBackBuffer].w) > VTBuffer[VTBackBuffer]->w)
+	   VBValid = false;
 
-          MDFND_Update((MDFN_Surface *)VTBuffer[VTBackBuffer], NULL, 0);
-	  VTBackBuffer = MeowCowHowFlown;
+	  if(VBValid)
+           MDFND_Update((MDFN_Surface *)VTBuffer[VTBackBuffer], (MDFN_Rect*)&VTDisplayRects[VTBackBuffer], (MDFN_Rect*)VTLineWidths[VTBackBuffer], NULL, 0);
+	  else
+#endif
+	  {
+	   MDFND_Update((MDFN_Surface *)VTBuffer[VTBackBuffer ^ 1], (MDFN_Rect*)&VTDisplayRects[VTBackBuffer ^ 1], (MDFN_Rect*)VTLineWidths[VTBackBuffer ^ 1], NULL, 0);
+	  }
 
 	  if(sound_active)
 	   WriteSoundSilence(10);
@@ -930,7 +979,7 @@ int64 Time64(void)
  if(clock_gettime(CLOCK_MONOTONIC, &tp) == -1)
  {
   if(!cgt_fail_warning)
-   printf("clock_gettime() failed: %s\n", strerror(errno));
+   fprintf(stderr, "clock_gettime() failed: %s\n", strerror(errno));
   cgt_fail_warning = 1;
  }
  else
@@ -947,7 +996,7 @@ int64 Time64(void)
 
  if(gettimeofday(&tv, NULL) == -1)
  {
-  puts("gettimeofday() error");
+  fprintf(stderr, "gettimeofday() error");
   return(0);
  }
 
@@ -987,7 +1036,7 @@ int GameLoop(void *arg)
 	  ers.SetETtoRT();
 
 	 fskip = ers.NeedFrameSkip();
-
+	
 	 if(!MDFN_GetSettingB("video.frameskip"))
 	  fskip = 0;
 
@@ -1044,10 +1093,30 @@ int GameLoop(void *arg)
 	 if(!fskip)
 	  FPS_IncDrawn();
 
+
 	 do
 	 {
 	  VTBackBuffer = ThisBackBuffer;
-          MDFND_Update(fskip ? NULL : (MDFN_Surface *)VTBuffer[ThisBackBuffer], sound, ssize);
+
+ 	  if(fskip && GameLoopPaused)
+	  {
+	   // If this frame was skipped, and the game loop is paused(IE cheat interface is active), just blit the previous "successful" frame so the cheat
+	   // interface actually gets drawn.
+	   //
+	   // Needless to say, do not do "VTBackBuffer ^= 1;" here.
+	   //
+	   // Possible problems with this kludgery:
+	   //	Will fail spectacularly if there is no previous successful frame.  BOOOOOOM.  (But there always should be, especially since we initialize some
+  	   //   of the video buffer and rect structures during startup)
+	   //
+           MDFND_Update((MDFN_Surface *)VTBuffer[VTBackBuffer ^ 1], (MDFN_Rect*)&VTDisplayRects[VTBackBuffer ^ 1], (MDFN_Rect*)VTLineWidths[VTBackBuffer ^ 1], sound, ssize);
+	  }
+	  else
+	  {
+           if(MDFND_Update(fskip ? NULL : (MDFN_Surface *)VTBuffer[VTBackBuffer], (MDFN_Rect*)&VTDisplayRects[VTBackBuffer], (MDFN_Rect*)VTLineWidths[VTBackBuffer], sound, ssize))
+	    VTBackBuffer ^= 1;
+	  }
+
           if((InFrameAdvance && !NeedFrameAdvance) || GameLoopPaused)
 	  {
            if(ssize)
@@ -1528,23 +1597,31 @@ int main(int argc, char *argv[])
 	 return(0);
 	}
 #endif
-	//struct sched_param sp;
-
-	//sp.sched_priority = 25;
-
-	//if(sched_setscheduler(getpid(), SCHED_RR, &sp))
-	//{
-	// printf("%m\n");
-	// return(-1);
-	//}
-
 	std::vector<MDFNGI *> ExternalSystems;
-	int ret;
 	char *needie = NULL;
 
 	MDFNDHaveFocus = false;
 
 	DrBaseDirectory=GetBaseDirectory();
+
+	#ifdef ENABLE_NLS
+	setlocale(LC_ALL, "");
+
+	#ifdef WIN32
+        bindtextdomain(PACKAGE, DrBaseDirectory);
+	#else
+	bindtextdomain(PACKAGE, LOCALEDIR);
+	#endif
+
+	bind_textdomain_codeset(PACKAGE, "UTF-8");
+	textdomain(PACKAGE);
+	#endif
+
+	if(argc >= 3 && (!strcasecmp(argv[1], "-remote") || !strcasecmp(argv[1], "--remote")))
+	{
+         RemoteOn = TRUE;
+ 	 InitSTDIOInterface(argv[2]);
+	}
 
 	MDFNI_printf(_("Starting Mednafen %s\n"), MEDNAFEN_VERSION);
 	MDFN_indent(1);
@@ -1559,19 +1636,6 @@ int main(int argc, char *argv[])
         MDFN_indent(-2);
 
         MDFN_printf(_("Base directory: %s\n"), DrBaseDirectory);
-
-	#ifdef ENABLE_NLS
-	setlocale(LC_ALL, "");
-
-	#ifdef WIN32
-        bindtextdomain(PACKAGE, DrBaseDirectory);
-	#else
-	bindtextdomain(PACKAGE, LOCALEDIR);
-	#endif
-
-	bind_textdomain_codeset(PACKAGE, "UTF-8");
-	textdomain(PACKAGE);
-	#endif
 
 	if(SDL_Init(SDL_INIT_VIDEO)) /* SDL_INIT_VIDEO Needed for (joystick config) event processing? */
 	{
@@ -1595,12 +1659,6 @@ int main(int argc, char *argv[])
 	if(!MDFNI_InitializeModules(ExternalSystems))
 	 return(-1);
 
-	if(argc >= 2 && (!strcasecmp(argv[1], "-remote") || !strcasecmp(argv[1], "--remote")))
-         RemoteOn = TRUE;
-
-	if(RemoteOn)
- 	 InitSTDIOInterface();
-
 	for(unsigned int x = 0; x < sizeof(DriverSettings) / sizeof(MDFNSetting); x++)
 	 NeoDriverSettings.push_back(DriverSettings[x]);
 
@@ -1608,7 +1666,7 @@ int main(int argc, char *argv[])
 	MakeVideoSettings(NeoDriverSettings);
 	MakeInputSettings(NeoDriverSettings);
 
-        if(!(ret=MDFNI_Initialize(DrBaseDirectory, NeoDriverSettings)))
+        if(!MDFNI_Initialize(DrBaseDirectory, NeoDriverSettings))
          return(-1);
 
         SDL_EnableUNICODE(1);
@@ -1666,6 +1724,7 @@ int main(int argc, char *argv[])
 	   secondary thread to run the game in(and do sound output, since we use
 	   separate sound code which should be thread safe(?)).
 	*/
+	int ret = 0;
 
 	//InitVideo(NULL);
 
@@ -1709,13 +1768,25 @@ int main(int argc, char *argv[])
          VTLineWidths[1] = (MDFN_Rect *)calloc(CurGame->fb_height, sizeof(MDFN_Rect));
 
          for(int i = 0; i < 2; i++)
+	 {
           ((MDFN_Surface *)VTBuffer[i])->Fill(0, 0, 0, 0);
+
+	  //
+	  // Debugger step mode, and cheat interface, rely on the previous backbuffer being valid in certain situations.  Initialize some stuff here so that
+	  // reliance will still work even immediately after startup.
+	  VTDisplayRects[i].w = std::min<int32>(16, VTBuffer[i]->w);
+	  VTDisplayRects[i].h = std::min<int32>(16, VTBuffer[i]->h);
+	  VTLineWidths[i][0].w = ~0;
+	 }
 
          NeedVideoChange = -1;
          FPS_Init();
         }
 	else
+	{
+	 ret = -1;
 	 NeedExitNow = 1;
+	}
 
 	while(!NeedExitNow)
 	{
@@ -1734,6 +1805,7 @@ int main(int argc, char *argv[])
           {
            if(!InitVideo(CurGame))
            {
+	    ret = -1;
             NeedExitNow = 1;
             break;
            }
@@ -1813,7 +1885,7 @@ int main(int argc, char *argv[])
 	DeleteInternalArgs();
 	KillInputSettings();
 
-        return(0);
+        return(ret);
 }
 
 
@@ -1878,8 +1950,10 @@ void MDFND_MidSync(const EmulateSpecStruct *espec)
  MDFND_UpdateInput(true, false);
 }
 
-static void PassBlit(MDFN_Surface *surface)
+static bool PassBlit(MDFN_Surface *surface, MDFN_Rect *rect, MDFN_Rect *lw)
 {
+ bool ret = false;
+
   /* If it's been >= 100ms since the last blit, assume that the blit
      thread is being time-slice starved, and let it run.  This is especially necessary
      for fast-forwarding to respond well(since keyboard updates are
@@ -1896,32 +1970,29 @@ static void PassBlit(MDFN_Surface *surface)
   if(!VTReady)
   {
    VTSSnapshot = pending_ssnapshot;
-   VTLWReady = VTLineWidths[VTBackBuffer];
-   VTDRReady = &VTDisplayRects[VTBackBuffer];
-   VTReady = VTBuffer[VTBackBuffer];
+   VTLWReady = lw;
+   VTDRReady = rect;
+   VTReady = surface;
+   ret = true;
 
-   VTBackBuffer ^= 1;
    pending_ssnapshot = 0;
    last_btime = SDL_GetTicks();
    FPS_IncBlitted();
   }
  }
- else if(IsConsoleCheatConfigActive() && !VTReady)
- {
-  VTBackBuffer ^= 1;
-  VTLWReady = VTLineWidths[VTBackBuffer];
-  VTReady = VTBuffer[VTBackBuffer];
-  VTBackBuffer ^= 1;
- }
+
+ return(ret);
 }
 
 
-void MDFND_Update(MDFN_Surface *surface, int16 *Buffer, int Count)
+bool MDFND_Update(MDFN_Surface *surface, MDFN_Rect *rect, MDFN_Rect *lw, int16 *Buffer, int Count)
 {
+ bool ret = false;
+
  if(false == sc_blit_timesync)
  {
   //puts("ABBYNORMAL");
-  PassBlit(surface);
+  ret |= PassBlit(surface, rect, lw);
  }
 
  UpdateSoundSync(Buffer, Count);
@@ -1932,15 +2003,15 @@ void MDFND_Update(MDFN_Surface *surface, int16 *Buffer, int Count)
  if(surface)
  {
   if(pending_snapshot)
-   MDFNI_SaveSnapshot(surface, (MDFN_Rect *)&VTDisplayRects[VTBackBuffer], (MDFN_Rect *)VTLineWidths[VTBackBuffer]);
+   MDFNI_SaveSnapshot(surface, rect, lw);
 
   if(pending_save_state || pending_save_movie)
    LockGameMutex(1);
 
   if(pending_save_state)
-   MDFNI_SaveState(NULL, NULL, surface, (MDFN_Rect *)&VTDisplayRects[VTBackBuffer], (MDFN_Rect *)VTLineWidths[VTBackBuffer]);
+   MDFNI_SaveState(NULL, NULL, surface, rect, lw);
   if(pending_save_movie)
-   MDFNI_SaveMovie(NULL, surface, (MDFN_Rect *)&VTDisplayRects[VTBackBuffer], (MDFN_Rect *)VTLineWidths[VTBackBuffer]);
+   MDFNI_SaveMovie(NULL, surface, rect, lw);
 
   if(pending_save_state || pending_save_movie)
    LockGameMutex(0);
@@ -1951,8 +2022,10 @@ void MDFND_Update(MDFN_Surface *surface, int16 *Buffer, int Count)
  if(true == sc_blit_timesync)
  {
   //puts("NORMAL");
-  PassBlit(surface);
+  ret |= PassBlit(surface, rect, lw);
  }
+
+ return(ret);
 }
 
 void MDFND_DispMessage(UTF8 *text)

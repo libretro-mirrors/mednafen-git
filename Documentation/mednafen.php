@@ -12,7 +12,7 @@
   The terms "audio/video movie", "QuickTime movie", and variations thereof refer to audio and video data recorded and stored in a file, and
   usable with external programs.
  </p>
-  <?php BeginSection("Base Directory"); ?>
+  <?php BeginSection("Base Directory", "", FALSE, FALSE, "Section_base_directory"); ?>
    <p>
     Mednafen's "base directory" is the directory under which Mednafen stores its data and
     looks for various auxillary data by default.  If the "<b>HOME</b>" environment variable is set, it will be suffixed with "/.mednafen"
@@ -49,7 +49,7 @@
   <li>Network play(utilizing an external dedicated server program).</li>
 </ul>
 
- <?php BeginSection("CD-ROM Emulation"); ?>
+ <?php BeginSection("CD-ROM Emulation", "", FALSE, FALSE, "Section_cdrom_emulation"); ?>
  <p>
   Mednafen can load CD-ROM games from a physical CD-ROM, or a ripped/dumped copy of the disc, such as CUE+BIN.
   Using a ripped copy of the disc is <b>strongly</b> recommended for performance and data consistency.
@@ -65,8 +65,8 @@
 
 <?php BeginSection("Ripped Disc Images"); ?>
  <p>
-  For ripped disc images, Mednafen supports "CUE" sheets and cdrdao "TOC" files; though only a very limited subset of the
-  latter's full capabilities is supported.  Mednafen supports raw, simple storage formats supported by
+  For ripped disc images, Mednafen supports "CUE" sheets, CloneCD "CCD/IMG/SUB" rips, and cdrdao "TOC" files; though only a very limited
+  subset of the latter's full capabilities is supported.  Mednafen supports raw, simple storage formats supported by
   <a href="http://www.mega-nerd.com/libsndfile/">libsndfile</a>(MS WAV, AIFF/AIFC, AU/SND, etc.), and <a href="http://xiph.org/vorbis/">Ogg Vorbis</a> audio files referenced by CUE sheets.
   MP3 is not supported, and will not be supported.
  </p>
@@ -83,9 +83,14 @@
   <b>This may cause problems with naive patches that don't update the error-correction data(at least the 32-bit EDC, if that's correct, the L-EC data will
   be ignored)!</b>
  </p>
+ <p>
+  Enabling the <a href="#cd.image_memcache">cd.image_memcache</a> option is recommended in many situations; read the setting description
+  for more details.<br><b>CAUTION:</b> When using a 32-bit build of Mednafen on Windows or a 32-bit operating system, Mednafen may run out of address
+  space(and error out, possibly in the middle of emulation) if this option is enabled when loading large disc sets(e.g. 3+ discs) via M3U files.
+ </p>
 <?php EndSection(); ?>
 
-<?php BeginSection("Multiple-CD Games"); ?>
+<?php BeginSection("Multiple-CD Games", "", FALSE, FALSE, "Section_multicd_games"); ?>
  <p>
   To play a game that consists of more than one CD, and you are using ripped disc images, you will need to create an
   M3U file(plain-text, ".m3u" extension), and enter the filenames of the CUE/TOC sheets, one per line.  Load the M3U file
@@ -108,11 +113,11 @@
 
  <?php EndSection(); ?>
 
- <?php BeginSection("Security Issues"); ?>
+ <?php BeginSection("Security Issues", "", FALSE, FALSE, "Section_security"); ?>
 
  This section discusses various known design flaws/choices, bugs, and limitations in Mednafen that have security implications.
 
- <?php BeginSection("Save States"); ?>
+ <?php BeginSection("Save States", "", FALSE, FALSE, "Section_security_savestates"); ?>
  Causing Mednafen to lock-up, abort, or consume large amounts of CPU time via loading a specially-constructed save state is
  a trivial exercise.  It is hypothetically possible to overflow some buffers on some emulated systems by clever
  manipulation of saved timekeeping variables.  In combination with custom emulated machine code and state, it may therefore
@@ -133,7 +138,7 @@
  </p>
  <?php EndSection(); ?>
 
- <?php BeginSection("Network Play"); ?>
+ <?php BeginSection("Network Play", "", FALSE, FALSE, "Section_security_netplay"); ?>
  <p>
  Mednafen's network play automatically utilizes save states to synchronize state among newly connected players, and
  thereafter at connected players' command.  Hence, any security issues relating to save states apply to network play as well.
@@ -205,20 +210,20 @@
 
  <?php BeginSection("Command-line"); ?>
  <p>
-  Mednafen supports arguments passed on the command line.   Arguments
-  are taken in the form of "-parameter value".  Some arguments are valueless.
+  Mednafen supports options passed on the command line.   Options
+  are taken in the form of "-option value".  Some options are valueless.
  </p>
  <p>
-  In addition to the arguments listed in the table below, any setting listed in the "Settings" section of this document and any system emulation module sub-document can be set by prefixing it with
-  a hyphen(-), followed by the parameter, such as: -nes.slstart 8
+  In addition to the options listed in the table below, any setting listed in the "Settings" section of this document and any system emulation module sub-document can be set by prefixing it with
+  a hyphen(-), followed by the value, such as: -nes.slstart 8
 </p>
   <table border>
-   <tr><th>Argument:</th><th>Parameter Type:</th><th>Description:</th></tr>
-   <tr><td>-loadcd x</td><td>string</td><td>Load and boot a CD for system "x"(not available for all emulated systems).  This argument modifies the usage of the filename component of the command-line.  For example, "mednafen -loadcd pce /somewhere/over/the/rainbow/game.cue" will load the CUE sheet as the emulated CD.
-"mednafen -loadcd pce" will load from the default physical CDROM device. </td></tr>
+   <tr><th>Option:</th><th>Value Type:</th><th>Description:</th></tr>
+   <tr><td>-physcd</td><td><i>(n/a)</i></td><td><a name="physcd">Load and boot from a physical CD.</a><br><br>This argument modifies the usage of the filename component of the command-line, making it optional and treating it as the optical disc drive device name.<br>Examples:
+<ul><li>mednafen -physcd</li><li>mednafen -physcd /dev/sr0</li><li>mednafen -physcd \\.\E:</li></ul></td></tr>
    <tr><td nowrap>-force_module x</td><td>string</td><td>Force usage of specified emulation module.</td></tr>
 
-   <tr><td>-connect</td><td></td><td>Trigger to connect to remote host after the game is loaded.</td></tr>
+   <tr><td>-connect</td><td><i>(n/a)</i></td><td>Trigger to connect to remote host after the game is loaded.</td></tr>
    <tr><td nowrap>-soundrecord x</td><td>string</td><td>Record sound output to the specified filename in the MS WAV format.</td></tr>
    <tr><td nowrap>-qtrecord x</td><td>string</td><td>Record video and audio output to the specified filename in the QuickTime format.</td></tr>
   </table>
@@ -226,19 +231,18 @@
 
 <?php PrintSettings("Global Settings Reference"); ?>
 
- <?php BeginSection("Firmware/BIOS"); ?>
+ <?php BeginSection("Firmware/BIOS", "", FALSE, FALSE, "Section_firmware_bios"); ?>
 <p>
 Some emulation modules require firmware/BIOS images to function.  If a firmware path is non-absolute(doesn't begin with
-C:\ or / or similar), Mednafen will try to load the file relative to the "firmware" directory under the Mednafen base
-directory.  If it doesn't find it there, it will be loaded relative to the Mednafen base directory itself.  Of course,
+C:\ or / or similar), Mednafen will try to load the file relative to the "firmware" directory under the Mednafen <a href="#Section_base_directory">base directory</a>.  If it doesn't find it there, it will be loaded relative to the Mednafen <a href="#Section_base_directory">base directory</a> itself.  Of course,
 if the "path_firmware" setting is set to a custom value, the firmware files will be searched relative to that path.
 </p>
  <?php EndSection(); ?>
 
- <?php BeginSection("Custom Palettes"); ?>
+ <?php BeginSection("Custom Palettes", "", FALSE, FALSE, "Section_custom_palettes"); ?>
 <p>
 Custom palettes for a system should be named <sysname>.pal, IE "nes.pal", "pce.pal", etc., and placed in the
-"palettes" directory beneath the Mednafen base directory.
+"palettes" directory beneath the Mednafen <a href="#Section_base_directory">base directory</a>.
 </p>
 <p>
 Per-game custom palettes are also supported, and should be

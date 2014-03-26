@@ -6,8 +6,11 @@
 !!! Initialize statically-allocated Blip_Buffer objects(via clear() method) and reset any corresponding last-value variables
 on game load for each emulated system.
 
-Rewrite MDFNFILE in file.cpp to separate classes, ArchiveReader(takes a directory or archive filename) and ArchiveMemberReader(reads a file in a directory or a file
-in an archive).
+Audit code to ensure proper handling of pointer variables when a constructor or new throws an exception(IE make sure cleanup code doesn't
+delete an uninitialized pointer).
+
+Write StreamSpace(or StreamArchive?) class, write ZIPReader and GZReader, write MappedMemoryStream(derived from MemoryStream), and
+rewrite file.cpp and other code to use these instead of MDFNFILE.
 
 Switch hotkey/command key processing over to be event-based rather than instantaneous-state based?  Consider implications for ckdelay, hotkey
 logical AND mode.
@@ -181,6 +184,9 @@ PC-FX:
 		Determine what data command 0xDE, mode 0x03, match 0xB0 is returning(the PhotoCD player uses it, it may
 		contain information encoding the LBA of the filesystem).
 		Doing this will require obtaining various CD-i, CD-i Ready, and PhotoCD discs for examination.
+
+		Command 0xDE(GETDIRINFO):
+			Add handling for disc type specifier(CD, CD-XA, CD-i) for mode 3.
 
 		Command 0x42(READ SUB-CHANNEL):
 			Add proper MCN and ISRC support.

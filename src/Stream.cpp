@@ -99,7 +99,7 @@ int Stream::get_line(std::string &str)
   str.push_back(c);
  }
 
- return(-1);
+ return(str.length() ? 256 : -1);
 }
 
 StreamFilter::StreamFilter()

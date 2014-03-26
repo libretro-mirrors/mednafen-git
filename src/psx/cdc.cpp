@@ -74,7 +74,7 @@ void PS_CDC::SetDisc(bool tray_open, CDIF *cdif, const char *disc_id)
  {
   PSRCounter = 0;
 
-  if((DriveStatus != DS_PAUSED && DriveStatus != DS_STOPPED) || PendingCommandPhase > 0)
+  if((DriveStatus != DS_PAUSED && DriveStatus != DS_STOPPED) || PendingCommandPhase >= 2)
   {
    PendingCommand = 0x00;
    PendingCommandCounter = 0;
@@ -138,7 +138,7 @@ void PS_CDC::SoftReset(void)
 
  RegSelector = 0;
  memset(ArgsBuf, 0, sizeof(ArgsBuf));
- ArgsIn = 0;
+ ArgsWP = ArgsRP = 0;
 
  memset(ResultsBuffer, 0, sizeof(ResultsBuffer));
  ResultsWP = 0;
@@ -235,7 +235,8 @@ int PS_CDC::StateAction(StateMem *sm, int load, int data_only)
 
  SFVAR(RegSelector),
  SFARRAY(ArgsBuf, 16),
- SFVAR(ArgsIn),
+ SFVAR(ArgsWP),
+ SFVAR(ArgsRP),
 
  SFARRAY(ResultsBuffer, 16),
  SFVAR(ResultsIn),
@@ -340,7 +341,7 @@ void PS_CDC::WriteIRQ(uint8 V)
 
  //PSX_WARNING("[CDC] ***IRQTHINGY: 0x%02x -- %u", V, doom_ts);
 
- CDCReadyReceiveCounter = 1024;
+ CDCReadyReceiveCounter = 2000; //1024;
 
  IRQBuffer = V;
  RecalcIRQ();
@@ -557,7 +558,9 @@ void PS_CDC::XA_ProcessSector(const uint8 *sdata, CD_Audio_Buffer *ab)
    int16 obuffer[2 + 28];
 
    if(param != param_copy)
-    printf("%d %02x %02x\n", unit, param, param_copy);
+   {
+    PSX_WARNING("[CDC] CD-XA param != param_copy --- %d %02x %02x\n", unit, param, param_copy);
+   }
 
    for(unsigned i = 0; i < 28; i++)
    {
@@ -817,7 +820,9 @@ pscpu_timestamp_t PS_CDC::Update(const pscpu_timestamp_t timestamp)
         if(XA_Test(buf))
         {
 	 if(AudioBuffer_ReadPos & 0xFFF)
-	  printf("readpos=%04x(rabl=%04x) writepos=%04x\n", AudioBuffer_ReadPos, AudioBuffer[AudioBuffer_ReadPos >> 12].Size, AudioBuffer_WritePos);
+	 {
+	  PSX_WARNING("[CDC] CD-XA readpos=%04x(rabl=%04x) writepos=%04x", AudioBuffer_ReadPos, AudioBuffer[AudioBuffer_ReadPos >> 12].Size, AudioBuffer_WritePos);
+	 }
 
 	 //if(AudioBuffer_UsedCount == 0)
 	 // AudioBuffer_InPrebuffer = true;
@@ -971,49 +976,89 @@ pscpu_timestamp_t PS_CDC::Update(const pscpu_timestamp_t timestamp)
    {
     int32 next_time = 0;
 
-    BeginResults();
-
-    if(PendingCommandPhase)
+    if(PendingCommandPhase == -1)
     {
+     if(ArgsRP != ArgsWP)
+     {
+      ArgsReceiveLatch = ArgsBuf[ArgsRP & 0x0F];
+      ArgsRP = (ArgsRP + 1) & 0x1F;
+      PendingCommandPhase += 1;
+      next_time = 1815;
+     }
+     else
+     {
+      PendingCommandPhase += 2;
+      next_time = 8500;
+     }
+    }
+    else if(PendingCommandPhase == 0)	// Command phase 0
+    {
+     if(ArgsReceiveIn < 32)
+      ArgsReceiveBuf[ArgsReceiveIn++] = ArgsReceiveLatch;
+
+     if(ArgsRP != ArgsWP)
+     {
+      ArgsReceiveLatch = ArgsBuf[ArgsRP & 0x0F];
+      ArgsRP = (ArgsRP + 1) & 0x1F;
+      next_time = 1815;
+     }
+     else
+     {
+      PendingCommandPhase++;
+      next_time = 8500;
+     }
+    }
+    else if(PendingCommandPhase >= 2)	// Command phase 2+
+    {
+     BeginResults();
+
      const CDC_CTEntry *command = &Commands[PendingCommand];
 
      next_time = (this->*(command->func2))();
     }
-    else if(PendingCommand >= 0x20 || !Commands[PendingCommand].func)
+    else	// Command phase 1
     {
-     PSX_WARNING("[CDC] Unknown command: 0x%02x", PendingCommand);
+     if(PendingCommand >= 0x20 || !Commands[PendingCommand].func)
+     {
+      BeginResults();
 
-     WriteResult(MakeStatus(true));
-     WriteResult(ERRCODE_BAD_COMMAND);
-     WriteIRQ(CDCIRQ_DISC_ERROR);
+      PSX_WARNING("[CDC] Unknown command: 0x%02x", PendingCommand);
 
-     ArgsIn = 0;
-    }
-    else if(ArgsIn < Commands[PendingCommand].args_min || ArgsIn > Commands[PendingCommand].args_max)
-    {
-     PSX_WARNING("[CDC] Bad number(%d) of args(first check) for command 0x%02x", ArgsIn, PendingCommand);
+      WriteResult(MakeStatus(true));
+      WriteResult(ERRCODE_BAD_COMMAND);
+      WriteIRQ(CDCIRQ_DISC_ERROR);
+     }
+     else if(ArgsReceiveIn < Commands[PendingCommand].args_min || ArgsReceiveIn > Commands[PendingCommand].args_max)
+     {
+      BeginResults();
 
-     WriteResult(MakeStatus(true));
-     WriteResult(ERRCODE_BAD_NUMARGS);
-     WriteIRQ(CDCIRQ_DISC_ERROR);
+      PSX_WARNING("[CDC] Bad number(%d) of args(first check) for command 0x%02x", ArgsReceiveIn, PendingCommand);
+      for(unsigned int i = 0; i < ArgsReceiveIn; i++)
+       printf(" 0x%02x", ArgsReceiveBuf[i]);
+      printf("\n");
 
-     ArgsIn = 0;
-    }
-    else
-    {
-     const CDC_CTEntry *command = &Commands[PendingCommand];
-     //PSX_WARNING("[CDC] Command: %s --- %d", command->name, Results.CanRead());
+      WriteResult(MakeStatus(true));
+      WriteResult(ERRCODE_BAD_NUMARGS);
+      WriteIRQ(CDCIRQ_DISC_ERROR);
+     }
+     else
+     {
+      BeginResults();
+
+      const CDC_CTEntry *command = &Commands[PendingCommand];
+      //PSX_WARNING("[CDC] Command: %s --- %d", command->name, Results.CanRead());
 
 #if 1
-     printf("[CDC] Command: %s --- ", command->name);
-     for(unsigned int i = 0; i < ArgsIn; i++)
-      printf(" 0x%02x", ArgsBuf[i]);
-     printf("\n");
+      printf("[CDC] Command: %s --- ", command->name);
+      for(unsigned int i = 0; i < ArgsReceiveIn; i++)
+       printf(" 0x%02x", ArgsReceiveBuf[i]);
+      printf("\n");
 #endif
-     next_time = (this->*(command->func))(ArgsIn, ArgsBuf);
-     PendingCommandPhase = 1;
-     ArgsIn = 0;
-    }
+      next_time = (this->*(command->func))(ArgsReceiveIn, ArgsReceiveBuf);
+      PendingCommandPhase = 2;
+     }
+     ArgsReceiveIn = 0;
+    } // end command phase 1
 
     if(!next_time)
      PendingCommandCounter = 0;
@@ -1072,17 +1117,17 @@ void PS_CDC::Write(const pscpu_timestamp_t timestamp, uint32 A, uint8 V)
 		 PSX_WARNING("[CDC] Attempting to start command(0x%02x) while command results(count=%d) still in buffer.", V, ResultsIn);
 		}
 
-		// Real times are more like 20000+, test and FIXME when we add more complete pipeline stall emulation to the CPU core.
-         	PendingCommandCounter = 8192 + PSX_GetRandU32(0, 4000);	
+         	PendingCommandCounter = 10500 + PSX_GetRandU32(0, 3000) + 1815;
 	 	PendingCommand = V;
-         	PendingCommandPhase = 0;
+         	PendingCommandPhase = -1;
+		ArgsReceiveIn = 0;
 		break;
 
 	 case 0x01:
-		ArgsBuf[ArgsIn & 0xF] = V;
-		ArgsIn = (ArgsIn + 1) & 0x1F;
-
-		if(!(ArgsIn & 0x0F))
+		ArgsBuf[ArgsWP & 0xF] = V;
+		ArgsWP = (ArgsWP + 1) & 0x1F;
+		
+		if(!((ArgsWP - ArgsRP) & 0x0F))
 		{
 		 PSX_WARNING("[CDC] Argument buffer overflow");
 		}
@@ -1155,7 +1200,7 @@ void PS_CDC::Write(const pscpu_timestamp_t timestamp, uint32 A, uint8 V)
 
 		if(V & 0x40)	// Does it clear more than arguments buffer?  Doesn't appear to clear results buffer.
 		{
-		 ArgsIn = 0;
+		 ArgsWP = ArgsRP = 0;
 		}
 		break;
 
@@ -1206,7 +1251,11 @@ uint8 PS_CDC::Read(const pscpu_timestamp_t timestamp, uint32 A)
  {
 	ret = RegSelector & 0x3;
 
-	ret |= 0x18;	// Unknown purpose
+	if(ArgsWP == ArgsRP)
+	 ret |= 0x08;	// Args FIFO empty.
+
+	if(!((ArgsWP - ArgsRP) & 0x10))
+	 ret |= 0x10;	// Args FIFO has room.
 
 	if(ResultsIn)
 	 ret |= 0x20;
@@ -1214,7 +1263,7 @@ uint8 PS_CDC::Read(const pscpu_timestamp_t timestamp, uint32 A)
 	if(DMABuffer.CanRead())
 	 ret |= 0x40;
 
-        if(PendingCommandCounter > 0 && PendingCommandPhase == 0)
+        if(PendingCommandCounter > 0 && PendingCommandPhase <= 1)
 	 ret |= 0x80;
  }
  else
@@ -1226,6 +1275,7 @@ uint8 PS_CDC::Read(const pscpu_timestamp_t timestamp, uint32 A)
 	break;
 
    case 0x02:
+	//PSX_WARNING("[CDC] DMA Buffer manual read");
 	if(DMABuffer.CanRead())
 	 ret = DMABuffer.ReadByte();
 	else
@@ -1329,7 +1379,7 @@ int32 PS_CDC::CalcSeekTime(int32 initial, int32 target, bool motor_on, bool paus
   ret += 33868800;
  }
 
- ret += std::max<int64>((int64)abs(initial - target) * 33868800 * 1000 / (72 * 60 * 75) / 1000, 10000);
+ ret += std::max<int64>((int64)abs(initial - target) * 33868800 * 1000 / (72 * 60 * 75) / 1000, 20000);
 
  if(abs(initial - target) >= 2250)
   ret += (int64)33868800 * 300 / 1000;
@@ -1354,9 +1404,9 @@ int32 PS_CDC::CalcSeekTime(int32 initial, int32 target, bool motor_on, bool paus
   }
  }
 
- ret += PSX_GetRandU32(0, 20000);
+ ret += PSX_GetRandU32(0, 25000);
 
- printf("%d\n", ret);
+ PSX_WARNING("[CDC] CalcSeekTime() = %d", ret);
 
  return(ret);
 }
@@ -1430,7 +1480,8 @@ int32 PS_CDC::Command_Play(const int arg_count, const uint8 *args)
 
   PlayTrackMatch = track;
 
-  printf("[CDC] Play track: %d\n", track);
+  PSX_WARNING("[CDC] Play track: %d", track);
+
   SeekTarget = toc.tracks[track].lba;
   PSRCounter = CalcSeekTime(CurSector, SeekTarget, DriveStatus != DS_STOPPED, DriveStatus == DS_PAUSED);
   HeaderBufValid = false;
@@ -1507,9 +1558,9 @@ void PS_CDC::ReadBase(void)
 
  if(CommandLoc_Dirty || DriveStatus != DS_READING)
  {
+  // Don't flush the DMABuffer here; see CTR course selection screen.
   ClearAIP();
   ClearAudioBuffers();
-  DMABuffer.Flush();
   SB_In = 0;
 
   // TODO: separate motor start from seek phase?
@@ -1743,6 +1794,8 @@ int32 PS_CDC::Command_GetlocP(const int arg_count, const uint8 *args)
 {
  if(!CommandCheckDiscPresent())
   return(0);
+
+ //printf("%2x:%2x %2x:%2x:%2x %2x:%2x:%2x\n", SubQBuf_Safe[0x1], SubQBuf_Safe[0x2], SubQBuf_Safe[0x3], SubQBuf_Safe[0x4], SubQBuf_Safe[0x5], SubQBuf_Safe[0x7], SubQBuf_Safe[0x8], SubQBuf_Safe[0x9]);
 
  WriteResult(SubQBuf_Safe[0x1]);	// Track
  WriteResult(SubQBuf_Safe[0x2]);	// Index
@@ -2063,22 +2116,36 @@ int32 PS_CDC::Command_Init(const int arg_count, const uint8 *args)
 
 int32 PS_CDC::Command_ReadTOC(const int arg_count, const uint8 *args)
 {
- // Tested; ReadTOC doesn't error out if the tray is open, and it completes rather quickly in that case.
- //
- //if(!CommandCheckDiscPresent())
- // return(0);
+ int32 ret_time;
 
  HeaderBufValid = false;
  WriteResult(MakeStatus());
  WriteIRQ(CDCIRQ_ACKNOWLEDGE);
+
+ // ReadTOC doesn't error out if the tray is open, and it completes rather quickly in that case.
+ //
+ if(!CommandCheckDiscPresent())
+  return(26000);
  
- return((int64)33868800 * 500 / 1000);
+
+
+ // A gross approximation.  
+ // The penalty for the drive being stopped seems to be rather high(higher than what CalcSeekTime() currently introduces), although
+ // that should be investigated further.
+ //
+ // ...and not to mention the time taken varies from disc to disc even!
+ ret_time = 30000000 + CalcSeekTime(CurSector, 0, DriveStatus != DS_STOPPED, DriveStatus == DS_PAUSED);
+
+ DriveStatus = DS_PAUSED;	// Ends up in a pause state when the command is finished.  Maybe we should add DS_READTOC or something...
+ ClearAIP();
+
+ return ret_time;
 }
 
 int32 PS_CDC::Command_ReadTOC_Part2(void)
 {
- DriveStatus = DS_PAUSED;	// or DS_STANDBY?
- ClearAIP();
+ //if(!CommandCheckDiscPresent())
+ // DriveStatus = DS_PAUSED;
 
  WriteResult(MakeStatus());
  WriteIRQ(CDCIRQ_COMPLETE);

@@ -27,6 +27,7 @@
 #include <string.h>
 #include <memory.h>
 #include <zlib.h>
+#include <math.h>
 
 #include "gb.h"
 #include "gbGlobals.h"
@@ -42,7 +43,13 @@ static uint32 gbMonoColorMap[8 + 1];	// Mono color map(+1 = LCD off color)!
 
 static bool gbUpdateSizes();
 static int32 SoundTS = 0;
-extern uint16 gbLineMix[160];
+//extern uint16 gbLineMix[160];
+extern union __gblmt
+{
+ uint16 cgb[160];
+ uint8 dmg[160];
+ uint32 dmg_32[40];
+} gbLineMix;
 
 // mappers
 void (*mapper)(uint16,uint8) = NULL;
@@ -230,50 +237,230 @@ static const int gbRamSizesMasks[6] = { 0x00000000,
 
 static uint8 *Custom_GB_ColorMap = NULL;
 static uint8 *Custom_GBC_ColorMap = NULL;
+static MDFN_PaletteEntry PalTest[256];
 
-static void gbGenFilter(const MDFN_PixelFormat &format) //int rs, int gs, int bs)
+static bool MatchExists(MDFN_PaletteEntry *pt, unsigned n, uint8 r, uint8 g, uint8 b)
 {
- for(int r = 0; r < 32; r++)
-  for(int g = 0; g < 32; g++)
-   for(int b = 0; b < 32; b++)
-   {
-    int nr = r * 226 + g * 29 + b * 0;
-    int ng = r * 29 + g * 197 + b * 29;
-    int nb = r * 30 + g * 73 + b * 152;
-
-    nr /= 31;
-    ng /= 31;
-    nb /= 31;
-
-    if(Custom_GBC_ColorMap)
-    {
-     nr = Custom_GBC_ColorMap[((b << 10) | (g << 5) | r) * 3 + 0];
-     ng = Custom_GBC_ColorMap[((b << 10) | (g << 5) | r) * 3 + 1];
-     nb = Custom_GBC_ColorMap[((b << 10) | (g << 5) | r) * 3 + 2];
-    }
-
-    gbColorFilter[(b << 10) | (g << 5) | r] = format.MakeColor(nr, ng, nb);
-   }
-
- for(int i = 0; i < 4; i++)
+ for(unsigned x = 0; x < n; x++)
  {
-  int r,g,b;
+  if(pt[x].r == r && pt[x].g == g && pt[x].b == b)
+   return(true);
+ }
+ return(false);
+}
 
-  r = (3 - (i & 3)) * 48 + 32;
-  g = (3 - (i & 3)) * 48 + 32;
-  b = (3 - (i & 3)) * 48 + 32;
+class MDFN_PaletteMapper8
+{
+ public:
 
-  if(Custom_GB_ColorMap)
-  {
-   r = Custom_GB_ColorMap[i * 3 + 0];
-   g = Custom_GB_ColorMap[i * 3 + 1];
-   b = Custom_GB_ColorMap[i * 3 + 2];
-  }
+ MDFN_PaletteMapper8(MDFN_PaletteEntry *pal);
 
-  gbMonoColorMap[i] = gbMonoColorMap[i + 4] = format.MakeColor(r, g, b);
+ uint8 FindClose(uint8 r, uint8 g, uint8 b);
+
+ private:
+
+ int rcl[256];
+ int gcl[256];
+ int bcl[256];
+ int ccp_to_ccl[256];
+};
+
+MDFN_PaletteMapper8::MDFN_PaletteMapper8(MDFN_PaletteEntry *pal)
+{
+ for(unsigned i = 0; i < 256; i++)
+ {
+  ccp_to_ccl[i] = 65536U * pow((double)i / 255, 2.2 / 1.0);
  }
 
- gbMonoColorMap[8] = gbMonoColorMap[0];
+ for(unsigned i = 0; i < 256; i++)
+ {
+  rcl[i] = ccp_to_ccl[pal[i].r];
+  gcl[i] = ccp_to_ccl[pal[i].g];
+  bcl[i] = ccp_to_ccl[pal[i].b];
+ }
+}
+
+uint8 MDFN_PaletteMapper8::FindClose(uint8 r, uint8 g, uint8 b)
+{
+ int rl, gl, bl;
+ int closest = -1;
+ int closest_cs = 0x7FFFFFFF;
+
+ rl = ccp_to_ccl[r];
+ gl = ccp_to_ccl[g];
+ bl = ccp_to_ccl[b];
+
+ for(unsigned x = 0; x < 256; x++)
+ {
+  int cs;
+
+  cs = abs(rcl[x] - rl) * 2126 + abs(gcl[x] - gl) * 7152 + abs(bcl[x] - bl) * 722;
+  if(cs < closest_cs)
+  {
+   closest_cs = cs;
+   closest = x;
+  }
+ }
+
+ return(closest);
+}
+
+
+static void SetPixelFormat(const MDFN_PixelFormat &format, bool cgb_mode) MDFN_COLD;
+static void SetPixelFormat(const MDFN_PixelFormat &format, bool cgb_mode)
+{
+ if(cgb_mode)
+ {
+  if(format.bpp == 8)
+  {
+   unsigned pti = 0;
+
+   memset(PalTest, 0, sizeof(PalTest));
+
+   for(int i = 0; i < 8; i++)
+   {
+    PalTest[pti].r = i * 36;
+    PalTest[pti].g = i * 36;
+    PalTest[pti].b = i * 36;
+    pti++;
+
+    if(i)
+    {
+     PalTest[pti].r = i * 36;
+     PalTest[pti].g = 0;
+     PalTest[pti].b = 0;
+     pti++;
+
+     PalTest[pti].r = 0;
+     PalTest[pti].g = i * 36;
+     PalTest[pti].b = 0;
+     pti++;
+
+     PalTest[pti].r = 0;
+     PalTest[pti].g = 0;
+     PalTest[pti].b = i * 36;
+     pti++;
+
+     PalTest[pti].r = i * 36;
+     PalTest[pti].g = i * 36;
+     PalTest[pti].b = 0;
+     pti++;
+
+     PalTest[pti].r = i * 36;
+     PalTest[pti].g = 0;
+     PalTest[pti].b = i * 36;
+     pti++;
+
+     PalTest[pti].r = 0;
+     PalTest[pti].g = i * 36;
+     PalTest[pti].b = i * 36;
+     pti++;
+    }
+   }
+
+   for(int r = 0; r < 8; r++)
+   {
+    for(int g = 0; g < 8; g++)
+    {
+     for(int b = 0; b < 8; b++)
+     {
+      if(MatchExists(PalTest, 256, r * 36, g * 36, b * 36))
+       continue;
+
+      if(g == 6 && b == 6 && r == 5)
+       goto SkipStuff;
+
+      if(g == 6 && b == 3 && r == 5)
+       goto SkipStuff;
+
+      if(g == 4 && b == 5 && r == 3)
+       goto SkipStuff;
+
+      if(!(b & 1))
+       continue;
+
+      if(g == (r + 1))
+       continue;
+
+      //if(g == 7 && r >= 4 && b < 4)
+      // continue;
+
+      if(g == (r + 3) && b >= 5)
+       continue;
+
+      SkipStuff:;
+
+      PalTest[pti].r = r * 36;
+      PalTest[pti].g = g * 36;
+      PalTest[pti].b = b * 36;
+      pti++;
+
+      if(pti == 256) goto EndThingy;
+     }
+    }
+   }
+   EndThingy:;
+   //printf("ZOOMBA: %u\n", pti);
+   //exit(1);
+  }
+
+  MDFN_PaletteMapper8 pm8(PalTest);
+
+  for(int r = 0; r < 32; r++)
+  {
+   for(int g = 0; g < 32; g++)
+   {
+    for(int b = 0; b < 32; b++)
+    {
+     int nr = r * 226 + g * 29 + b * 0;
+     int ng = r * 29 + g * 197 + b * 29;
+     int nb = r * 30 + g * 73 + b * 152;
+
+     nr /= 31;
+     ng /= 31;
+     nb /= 31;
+
+     if(Custom_GBC_ColorMap)
+     {
+      nr = Custom_GBC_ColorMap[((b << 10) | (g << 5) | r) * 3 + 0];
+      ng = Custom_GBC_ColorMap[((b << 10) | (g << 5) | r) * 3 + 1];
+      nb = Custom_GBC_ColorMap[((b << 10) | (g << 5) | r) * 3 + 2];
+     }
+
+     if(format.bpp == 8)
+      gbColorFilter[(b << 10) | (g << 5) | r] = pm8.FindClose(nr, ng, nb);
+     else
+      gbColorFilter[(b << 10) | (g << 5) | r] = format.MakeColor(nr, ng, nb);
+    }
+   }
+  }
+ }
+ else
+ {
+  for(int i = 0; i < 4; i++)
+  {
+   int r,g,b;
+
+   r = (3 - (i & 3)) * 48 + 32;
+   g = (3 - (i & 3)) * 48 + 32;
+   b = (3 - (i & 3)) * 48 + 32;
+
+   if(Custom_GB_ColorMap)
+   {
+    r = Custom_GB_ColorMap[i * 3 + 0];
+    g = Custom_GB_ColorMap[i * 3 + 1];
+    b = Custom_GB_ColorMap[i * 3 + 2];
+   }
+
+   gbMonoColorMap[i] = gbMonoColorMap[i + 4] = format.MakeColor(r, g, b);
+   PalTest[i].r = PalTest[i + 4].r = r;
+   PalTest[i].g = PalTest[i + 4].g = g;
+   PalTest[i].b = PalTest[i + 4].b = b;
+  }
+
+  gbMonoColorMap[8] = gbMonoColorMap[0];
+  PalTest[8] = PalTest[0];
+ }
 }
 
 static bool LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries)
@@ -2295,6 +2482,62 @@ static bool gbUpdateSizes()
   return true;
 }
 
+
+template<typename T>
+static void CopyLineSurface(MDFN_Surface *surface)
+{
+	T *dest = surface->pix<T>() + register_LY * surface->pitchinpix;
+
+	if(gbCgbMode)
+	{
+         for(int x = 0; x < 160;) 
+	 {
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+                      
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+                      *dest++ = gbColorFilter[gbLineMix.cgb[x++]];
+         }              
+	}
+	else // to if(gbCgbMode)
+	{
+	 if(sizeof(T) == 1)
+	 {
+          for(int x = 0; x < 160; x++)
+	   dest[x] = gbLineMix.dmg[x];
+	 }
+	 else
+	 {
+          for(int x = 0; x < 160; x++)
+	   dest[x] = gbMonoColorMap[gbLineMix.dmg[x]];
+	 }
+	}
+}
+
+template<typename T>
+static void FillLineSurface(MDFN_Surface *surface, int y)
+{
+ T* dest = surface->pix<T>() + y * surface->pitchinpix;
+ uint32 fill_color = gbCgbMode ? gbColorFilter[gbPalette[0]] : ((sizeof(T) == 1) ? 8 : gbMonoColorMap[8]);
+
+ for(int x = 0; x < 160; x++)
+  dest[x] = fill_color;
+}
+
 static uint8 *paddie;
 
 static void MDFNGB_SetInput(int port, const char *type, void *ptr)
@@ -2306,8 +2549,31 @@ static void Emulate(EmulateSpecStruct *espec)
 {
  bool linedrawn[144];
 
+#if 0
+ {
+  static bool firstcat = true;
+  MDFN_PixelFormat nf;
+
+  nf.bpp = 8;
+  nf.colorspace = MDFN_COLORSPACE_RGB;
+  nf.Rshift = 0;
+  nf.Gshift = 0;
+  nf.Bshift = 0;
+  nf.Ashift = 8;
+  
+  nf.Rprec = 0;
+  nf.Gprec = 0;
+  nf.Bprec = 0;
+  nf.Aprec = 0;
+
+  espec->surface->SetFormat(nf, false);
+  espec->VideoFormatChanged = firstcat;
+  firstcat = false;
+ }
+#endif
+
  if(espec->VideoFormatChanged)
-  gbGenFilter(espec->surface->format);	//.Rshift, espec->surface->format.Gshift, espec->surface->format.Bshift);
+  SetPixelFormat(espec->surface->format, gbCgbMode);
 
  if(espec->SoundFormatChanged)
   MDFNGB_SetSoundRate(espec->SoundRate);
@@ -2320,6 +2586,9 @@ static void Emulate(EmulateSpecStruct *espec)
  espec->DisplayRect.h = 144;
 
  memset(linedrawn, 0, sizeof(linedrawn));
+
+ if(!espec->skip && espec->surface->palette)
+  memcpy(espec->surface->palette, PalTest, sizeof(PalTest));
 
  //if(gbRom[0x147] == 0x22)
  //{
@@ -2474,41 +2743,22 @@ static void Emulate(EmulateSpecStruct *espec)
           // next mode is H-Blank
           if(register_LY < 144) 
 	  {
-                uint32 *dest = (uint32 *)espec->surface->pixels + register_LY * espec->surface->pitch32;
-
 		linedrawn[register_LY] = 1;
                 gbRenderLine();
-                gbDrawSprites();
-             
-		if(gbCgbMode)
-		{
-                 for(int x = 0; x < 160;) 
-		 {
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
-                      
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
 
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
-
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
-                      *dest++ = gbColorFilter[gbLineMix[x++]];
-                 }              
-		}
-		else // to if(gbCgbMode)
+		switch(espec->surface->format.bpp)
 		{
-                 for(int x = 0; x < 160; x++)
-	          dest[x] = gbMonoColorMap[gbLineMix[x]];
+		 case 8:
+			CopyLineSurface<uint8>(espec->surface);
+			break;
+
+		 case 16:
+			CopyLineSurface<uint16>(espec->surface);
+			break;
+
+		 case 32:
+			CopyLineSurface<uint32>(espec->surface);
+			break;
 		}
           }
           gbLcdMode = GBLCDM_HBLANK;
@@ -2601,10 +2851,20 @@ static void Emulate(EmulateSpecStruct *espec)
  {
   if(!linedrawn[y])
   {
-   uint32 * dest = (uint32 *)espec->surface->pixels + y * espec->surface->pitch32;
-   uint32 fill_color = gbCgbMode ? gbColorFilter[gbPalette[0]] : gbMonoColorMap[8];
+   switch(espec->surface->format.bpp)
+   {
+    case 8:
+	FillLineSurface<uint8>(espec->surface, y);
+	break;
 
-   MDFN_FastU32MemsetM8(dest, fill_color, 160);
+    case 16:
+	FillLineSurface<uint16>(espec->surface, y);
+	break;
+
+    case 32:
+	FillLineSurface<uint32>(espec->surface, y);
+	break;
+   }
   }
  }
 

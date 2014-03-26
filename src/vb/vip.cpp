@@ -537,6 +537,9 @@ static INLINE uint16 ReadRegister(int32 &timestamp, uint32 A)
 	     }
 	     break;     // XPSTTS, read-only
 
+  case 0x44: ret = 2;	// VIP version.  2 is a known valid version, while the validity of other numbers is unknown, so we'll just go with 2.
+	     break;
+
   case 0x48:
   case 0x4a:
   case 0x4c:

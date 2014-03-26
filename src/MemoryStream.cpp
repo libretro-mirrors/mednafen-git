@@ -252,6 +252,6 @@ int MemoryStream::get_line(std::string &str)
   str.push_back(c);	// Should be faster than str.append(1, c)
  }
 
- return(-1);
+ return(str.length() ? 256 : -1);
 }
 

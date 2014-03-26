@@ -312,10 +312,10 @@ typedef struct
 class CSusie : public CLynxBase
 {
 	public:
-		CSusie(CSystem& parent);
-		~CSusie();
+		CSusie(CSystem& parent) MDFN_COLD;
+		~CSusie() MDFN_COLD;
 
-		void	Reset(void);
+		void	Reset(void) MDFN_COLD;
 
 		uint8	Peek(uint32 addr);
 		void	Poke(uint32 addr,uint8 data);

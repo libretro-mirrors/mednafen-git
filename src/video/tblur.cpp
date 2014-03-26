@@ -53,6 +53,12 @@ void TBlur_Run(EmulateSpecStruct *espec)
  uint32 *pXBuf = surface->pixels;
  const uint32 bb_pitch = MDFNGameInfo->fb_width;
 
+ if(surface->format.bpp != 32)
+ {
+  puts("Temporal blur not implemented for non-32bpp formats yet."); // Mostly for debugging purposes.
+  return;
+ }
+
  //printf("%d %d %d %d\n", espec->surface->format.Rshift, espec->surface->format.Gshift, espec->surface->format.Bshift, espec->surface->format.Ashift);
  if(AccumBlurBuf)
  {

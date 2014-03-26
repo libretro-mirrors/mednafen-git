@@ -1002,26 +1002,16 @@ void MDVDP::render_line(int line)
 
     if(cvp_line < 240)
     {
-     int width = (reg[12] & 1) ? 320 : 256;
-     uint32 *out = &surface->pixels[(cvp_line * (espec->InterlaceOn ? 2 : 1) + espec->InterlaceField) * surface->pitch32];
-
-	//printf("ION: %d, IFIELD: %d --- %d, %d, im2f=%d\n", espec->InterlaceOn, espec->InterlaceField, line, ((line + ((240 - visible_frame_end) >> 1)) * (espec->InterlaceOn ? 2 : 1) + espec->InterlaceField), im2_flag);
-	//printf("%d, %d %d\n", line, espec->InterlaceOn, espec->InterlaceField);
-
-     if(!WantAutoAspect)
+     //printf("ION: %d, IFIELD: %d --- %d, %d, im2f=%d\n", espec->InterlaceOn, espec->InterlaceField, line, ((line + ((240 - visible_frame_end) >> 1)) * (espec->InterlaceOn ? 2 : 1) + espec->InterlaceField), im2_flag);
+     //printf("%d, %d %d\n", line, espec->InterlaceOn, espec->InterlaceField);
+     switch(surface->format.bpp)
      {
-      int half_diff = (320 - vp_w) >> 1;
-      const uint32 cb = pixel_32[0x40 | border]; //surface->MakeColor(0,0,0);
+	case 16:CopyLineSurface<uint16>(&lb[vp_x], cvp_line, vp_w);
+		break;
 
-      for(int i = 0; i < half_diff; i++)
-      {
-       out[i] = cb;
-       out[half_diff + vp_w + i] = cb;
-      }
-      out += (320 - vp_w) >> 1;
+	case 32:CopyLineSurface<uint32>(&lb[vp_x], cvp_line, vp_w);
+		break;
      }
-
-     remap_32(lb + 0x20, out, pixel_32, width);
     }
 }
 /*--------------------------------------------------------------------------*/
@@ -1642,14 +1632,26 @@ int MDVDP::make_lut_bgobj_ste(int bx, int sx)
 /*--------------------------------------------------------------------------*/
 /* Remap functions                                                          */
 /*--------------------------------------------------------------------------*/
-
-void MDVDP::remap_32(uint8 *src, uint32 *dst, uint32 *table, int length)
+template<typename T>
+void MDVDP::CopyLineSurface(const uint8 *src, const unsigned cvp_line, const unsigned width)
 {
-    int count;
-    for(count = 0; count < length; count += 1)
-    {
-        *dst++ = table[*src++];
-    }
+     T *out = &surface->pix<T>()[(cvp_line * (espec->InterlaceOn ? 2 : 1) + espec->InterlaceField) * surface->pitchinpix];
+
+     if(!WantAutoAspect)
+     {
+      int half_diff = (320 - width) >> 1;
+      const uint32 cb = pixel_32[0x40 | border]; //surface->MakeColor(0,0,0);
+
+      for(int i = 0; i < half_diff; i++)
+      {
+       out[i] = cb;
+       out[half_diff + width + i] = cb;
+      }
+      out += (320 - width) >> 1;
+     }
+
+     for(unsigned i = 0; i < width; i++)
+      out[i] = pixel_32[src[i]];
 }
 
 /*--------------------------------------------------------------------------*/
