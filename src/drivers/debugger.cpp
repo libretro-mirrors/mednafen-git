@@ -1674,9 +1674,13 @@ void Debugger_Event(const SDL_Event *event)
 		   }
 		   else
 		   {
+		    char addr_text_fs[64];	 // Format string.
+
+		    trio_snprintf(addr_text_fs, 64, "%%0%uX", (CurGame->Debugger->LogAddrBits + 3) / 4);
+
 		    InPrompt = DisGoto;
 		    ptext = "Disassembly Address";
-                    trio_snprintf(buf, 64, "%04X", DisAddr);
+		    trio_snprintf(buf, 64, addr_text_fs, DisAddr);
 		   }
 		  }
 

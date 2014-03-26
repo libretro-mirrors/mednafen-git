@@ -534,9 +534,9 @@ NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_
 
  if(quality == -2)
  {
-  k_beta = 3.384;
-  k_d = 2.23;
-  NumCoeffs = 128;
+  k_beta = 4.538;
+  k_d = 2.93;
+  NumCoeffs = 192;
  }
  else if(quality == -1)
  {

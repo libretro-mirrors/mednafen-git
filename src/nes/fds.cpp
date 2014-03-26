@@ -25,6 +25,7 @@
 #include "cart.h"
 #include "nsf.h"
 #include "fds-sound.h"
+#include "../FileStream.h"
 
 /*	TODO:  Add code to put a delay in between the time a disk is inserted
 	and the when it can be successfully read/written to.  This should
@@ -739,22 +740,17 @@ void FDSClose(void)
 {
  if(DiskWritten)
  {
-  FILE *fp;
-
-  if((fp=fopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "fds").c_str(),"wb")))
+  try
   {
+   FileStream fp(MDFN_MakeFName(MDFNMKF_SAV, 0, "fds").c_str(), FileStream::MODE_WRITE);
+
    for(unsigned int x = 0; x < TotalSides; x++)
-   {
-    if(fwrite(diskdata[x], 1, 65500, fp) != 65500)
-    {
-     MDFN_PrintError("Error saving FDS image!");
-     break;
-    }
-   }
-   fclose(fp);
+    fp.write(diskdata[x], 65500);
   }
-  else
-   MDFN_PrintError("Error saving FDS image!");
+  catch(std::exception &e)
+  {
+   MDFN_PrintError("Error saving FDS image: %s", e.what());
+  }
  }
 
  FreeFDSMemory();
@@ -763,10 +759,6 @@ void FDSClose(void)
 
 static void FDSInit(void)
 {
- setprg8r(0, 0xe000, 0);          // BIOS
- setprg32r(1, 0x6000, 0);         // 32KB RAM
- setchr8(0);			  // 8KB CHR RAM
-
  MapIRQHook = FDSFix;
 
  SetReadHandler(0x4030, 0x4030, FDSRead4030);
@@ -785,6 +777,10 @@ static void FDSInit(void)
 
 static void FDSPower(void)
 {
+ setprg8r(0, 0xe000, 0);          // BIOS
+ setprg32r(1, 0x6000, 0);         // 32KB RAM
+ setchr8(0);                      // 8KB CHR RAM
+
  writeskip=DiskPtr=DiskSeekIRQ=0;
 
  Control = 0;

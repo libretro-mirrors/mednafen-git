@@ -18,6 +18,8 @@
 #include "pce.h"
 #include "mcgenjin.h"
 
+using namespace MDFN_IEN_PCE;
+
 MCGenjin_CS_Device::MCGenjin_CS_Device()
 {
 
@@ -163,6 +165,10 @@ void MCGenjin::Power(void)
  bank_select = 0;
  dlr = 0;
 
+ pcm_out_shift = 0;
+ stmode_control = 0x00;
+ // FIXME: blip buffer update here.
+
  for(unsigned i = 0; i < 2; i++)
   cs[i]->Power();
 }
@@ -189,7 +195,7 @@ void MCGenjin::WriteNV(const unsigned di, const uint8 *buffer, uint32 offset, ui
  cs[di]->WriteNV(buffer, offset, count);
 }
 
-MCGenjin::MCGenjin(Blip_Buffer *bb, const uint8 *rr, uint32 rr_size)
+MCGenjin::MCGenjin(Blip_Buffer *bb, const uint8 *rr, uint32 rr_size) : bsbuf(bb)
 {
  uint8 revision, num256_pages, region, cs_di[2];
 
@@ -208,6 +214,10 @@ MCGenjin::MCGenjin(Blip_Buffer *bb, const uint8 *rr, uint32 rr_size)
  region = rom[0x1FDA];
  cs_di[0] = rom[0x1FDB];
  cs_di[1] = rom[0x1FDC];
+
+ // Don't set addr_write_mask to larger than 0xF unless code in mcgenjin.h is adjusted as well.
+ if(revision >= 0x80)
+  addr_write_mask = 0xF;
 
  for(unsigned i = 0; i < 2; i++)
  {
@@ -232,6 +242,10 @@ MCGenjin::MCGenjin(Blip_Buffer *bb, const uint8 *rr, uint32 rr_size)
 	break;
   }
  }
+
+ //
+ pcm_synth.volume(1.0 / (6 * 256));
+ pcm_lastout = 0;
 }
 
 MCGenjin::~MCGenjin()
@@ -246,6 +260,7 @@ int MCGenjin::StateAction(StateMem *sm, int load, int data_only)
  {
   SFVAR(bank_select),
   SFVAR(dlr),
+  SFVAR(pcm_out_shift),
   SFEND
  };
  int ret = 1;

@@ -71,7 +71,7 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-static INPUTCFC FamilyTrainer={FT_Read,FT_Write,0,FT_Update,0,0, StateActionFC, 1, sizeof(uint32) };
+static INPUTCFC FamilyTrainer={FT_Read,FT_Write,0,FT_Update,0,0, StateActionFC };
 
 INPUTCFC *MDFN_InitFamilyTrainerA(void)
 {

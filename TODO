@@ -1,31 +1,7 @@
 !!! Make sure all legal notices and licenses for DLLs are included in the Win32 binary distribution !!!
 
-Document the major changes in Mednafen 0.9.0 over Mednafen 0.8.x somewhere(NEWS?).  A list to get started:
-	Sega Genesis/Mega Drive emulation, from Genesis Plus, Genesis Plus GX(EEPROM emulator, general information), Yabause(68K emulator), Gens(YM2612 emulator), and
-	of course the Z80 emulator core from FUSE already used in SMS and NGP emulation.
-
-	Virtual Boy emulation(using the V810 emulator forked(and optimized and otherwise improved!) from Reality Boy ages ago for use in PC-FX emulation, along
-	with original code for everything else).
-
-	Multi-threaded CD-ROM reading code.
-
-	Significantly more accurate(though not entirely perfect, and slower) PCE emulation.
-	
-	The "pce_fast" emulation module, which is a fork of 0.8.x optimized for speed, at the expense of *generally*-unimportant accuracy.
-
-	Various accuracy improvements to PC-FX emulation, including ADPCM IRQ generation(fixes Sparkling Feather),
-	correcting the ADPCM decoding algorithm, a new slightly more accurate V810 emulation mode to fix glitches in
-	Chip Chan Kick and Kishin Douji Zenki FX, greatly improved accuracy of KING->RAINBOW block transfers, and an 
-	interrupt controller fix that allows for the BIOS PhotoCD player to work.  The 2 switches on gamepads are also emulated
-	now.
-
-	A new experimental/unstable video driver, "overlay".
-
-	"Slow forwarding" feature.  Mednafen is too good for "slow-mo". ;b
-
-	Support for WSR(WonderSwan sound rip format) playback.
-
-	Support for RTC in GBA games(requires a "type" file).
+!!! Phase out compression of save game files(but not save states, those should be compressed), and make save game file loading
+    more strict in regards to error checking.
 
 !!! Initialize statically-allocated Blip_Buffer objects(via clear() method) and reset any corresponding last-value variables
 on game load for each emulated system.
@@ -44,13 +20,20 @@ blitting, and do testing for the vdriver=overlay case.
 In drivers/video.cpp, allocate video scaler pixel buffers separately from the SDL_Surface itself, and realloc() to larger
 sizes when necessary(but never realloc() to smaller sizes), and free() only on video deinitialization.
 
-Add a setting to disallow joystick(or keyboard even) input when focus is lost.
-
-Switch hotkey/command key processing over to be event-based rather than instantaneous-state based.  Consider implications for ckdelay, hotkey
+Switch hotkey/command key processing over to be event-based rather than instantaneous-state based?  Consider implications for ckdelay, hotkey
 logical AND mode.
 
 Systems with RTC emulation: Fix code to NOT use localtime(), which has consistency issues due to relying on external state(IE time zones), at
 			    any time other than virtual power toggle/init.
+
+CD emulation/handling:
+	Add fixes for drives that don't support raw subchannel reading and/or raw reading.  Add fixes
+	for drives that return borked(from the wrong sectors) subchannel data.  Add fixes for drives that refuse to read garbage mode 1 sectors(or fix readahead to not read
+	the pregap between audio and data tracks).
+
+	Stricter CUE and TOC sheet parsing.
+
+	Support for indexes other than 0 and 1 in CUE and TOC sheets(maybe using std::map?).
 
 YM2612:
 	Timer fixes?
@@ -252,10 +235,6 @@ Add dummy copy constructors to lots of our new classes.
 
 TODO:  Add a "SaveStateMD5" member to the MDFNGI struct, to allow the sharing of battery-backed save files between PCE and PCE_FAST
 without allowing save states to be shared.
-
-TODO: Clean up multithreaded CD-ROM reading code.  Add fixes for drives that don't support raw subchannel reading and/or raw reading.  Add fixes
-for drives that return borked(from the wrong sectors) subchannel data.  Add fixes for drives that refuse to read garbage mode 1 sectors(or fix readahead to not read
-the pregap between audio and data tracks).
 
 TODO: Do locking in drivers/remote.cpp
 

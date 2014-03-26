@@ -2,7 +2,7 @@ Compilation notes:
 	gcc is generally required(Intel's compiler might work), and the compilers specified via CC and CXX must be the same
 	version.
 
-	Using gcc 4.4.x(or newer, though Mednafen doesn't get as much testing with newer versions) is recommended; anything
+	Using gcc 4.4.x(or newer, though Mednafen doesn't get as much testing with versions newer than 4.7.x) is recommended; anything
 	older than gcc 4.2.x may not work, and gcc 4.2.x has a nasty code generation bug that may pop up and trigger a
 	program abort in an internal compiler regression test routine in Mednafen; though there is now some logic in the
 	configure script to try to choose optimization options that won't trigger the bad code generation.

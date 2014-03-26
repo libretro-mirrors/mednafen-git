@@ -42,8 +42,6 @@ static int SoundPAL;
 static uint32 wlookup1[32];
 static uint32 wlookup2[203];
 
-static double wlookup1_d[32], wlookup2_d[203];
-
 static MDFN_ALIGN(16) int16 WaveHi[40000];
 MDFN_ALIGN(16) int16 WaveHiEx[40000];
 
@@ -712,7 +710,7 @@ static void DoNoiseAndPCM(void)
  ChannelBC[3]=SOUNDTS;
 }
 
-static double capacimoo = 0;
+static int64 capacimoo = 0;
 int FlushEmulateSound(int reverse, int16 *SoundBuf, int32 MaxSoundFrames)
 {
   int32 end,left;
@@ -741,7 +739,7 @@ int FlushEmulateSound(int reverse, int16 *SoundBuf, int32 MaxSoundFrames)
    if(HasHiFill)
    {
     int16 *intmpoex = &WaveHiEx[soundtsoffs];
-    const double mult = (double)94/1789772.72727272;
+    const int32 mult = (int64)(1U << 20) * 94 / 1789772.72727272;
 
     for(std::vector<EXPSOUND>::iterator ep = GameExpSound.begin(); ep != GameExpSound.end(); ep++)
      if(ep->HiFill)
@@ -749,19 +747,18 @@ int FlushEmulateSound(int reverse, int16 *SoundBuf, int32 MaxSoundFrames)
 
     for(int x=timestamp;x;x--)
     {
-	uint32 b=*intmpo;
-	double sample;
-        double delta;
+	const uint32 b = *intmpo;
+	const int32 sample = wlookup2[(b >> TRINPCM_SHIFT) & 0xFF] + wlookup1[b >> SQ_SHIFT];
+        int64 delta;
 
-	sample = wlookup2_d[(b>>TRINPCM_SHIFT) & 255]+wlookup1_d[b>>SQ_SHIFT];
-	delta = (sample - capacimoo);
+	delta = ((int64)sample << 20) - capacimoo;
 
-	*tmpo= (int16)(delta - *intmpoex);       
+	*tmpo= (int16)((delta >> 20) - *intmpoex);
 					// Invert expansion sound channels relative to main sound.
                                        // I think the VRC6 is like this, but the MMC5 is not(exception handled in mmc5.c)
                                         // Namco 106 *appears* to be like the MMC5.
                                         // Unsure about other chips.
-	capacimoo += delta * mult;
+	capacimoo += (delta * mult) >> 20;
 
 	tmpo++;
 	intmpo++;
@@ -972,7 +969,6 @@ int MDFNSND_Init(bool IsPAL)
   //val = 4323 * (double)x / 31;
 
   wlookup1[x] = (uint32)val;
-  wlookup1_d[x] = val;
  }
 
  wlookup2[0] = 0;
@@ -980,7 +976,6 @@ int MDFNSND_Init(bool IsPAL)
  {
   double val = ((double)16*16*16*4*163.67/((double)24329/(double)x+100));
   wlookup2[x] = (uint32)val;
-  wlookup2_d[x] = val;
  }
 
  fhinc = SoundPAL ? 16626 : 14915;   // *2 CPU clock rate
@@ -1065,7 +1060,7 @@ int MDFNSND_StateAction(StateMem *sm, int load, int data_only)
   SFVARN(DMCAddressLatch, "5ADL"),
   SFVARN(DMCFormat, "5FMT"),
   SFVARN(RawDALatch, "RWDA"),
-  SFVARN(capacimoo, "CMOO"),
+  SFVARN(capacimoo, "CMOOI64"),
   SFEND
  };
 

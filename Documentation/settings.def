@@ -7,6 +7,15 @@ MDFNST_BOOL
 
 
 0
+cd.image_memcache
+
+Cache entire CD images in memory.
+Reads the entire CD image(s) into memory at startup(which will cause a small delay).  Can help obviate emulation hiccups due to emulated CD access.  May cause more harm than good on low memory systems, systems with swap enabled, and/or when the disc images in question are on a fast SSD.
+MDFNST_BOOL
+0
+
+
+0
 cdplay.enable
 MDFNSF_COMMON_TEMPLATE 
 Enable (automatic) usage of this module.
@@ -100,7 +109,7 @@ keyboard 13
 cdplay.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -294,7 +303,7 @@ MDFNST_UINT
 0
 cdplay.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 2.000000
@@ -321,7 +330,7 @@ MDFNST_UINT
 0
 cdplay.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 2.000000
@@ -1321,7 +1330,7 @@ keyboard 119
 gb.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -1536,7 +1545,7 @@ MDFNST_UINT
 0
 gb.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 4.000000
@@ -1563,7 +1572,7 @@ MDFNST_UINT
 0
 gb.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 4.000000
@@ -1717,7 +1726,7 @@ keyboard 119
 gba.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -1911,7 +1920,7 @@ MDFNST_UINT
 0
 gba.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -1938,7 +1947,7 @@ MDFNST_UINT
 0
 gba.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -2056,7 +2065,7 @@ keyboard 119
 gg.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -2250,7 +2259,7 @@ MDFNST_UINT
 0
 gg.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 4.000000
@@ -2277,7 +2286,7 @@ MDFNST_UINT
 0
 gg.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 4.000000
@@ -2467,7 +2476,7 @@ MDFNST_BOOL
 lynx.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -2670,7 +2679,7 @@ MDFNST_UINT
 0
 lynx.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 4.000000
@@ -2697,7 +2706,7 @@ MDFNST_UINT
 0
 lynx.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 4.000000
@@ -3586,7 +3595,7 @@ MDFNST_STRING
 md.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -3831,7 +3840,7 @@ MDFNST_UINT
 0
 md.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -3858,7 +3867,7 @@ MDFNST_UINT
 0
 md.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -3877,6 +3886,15 @@ MDFNST_FLOAT
 nes.clipsides
 
 Clip left+right 8 pixel columns.
+
+MDFNST_BOOL
+0
+
+
+0
+nes.correct_aspect
+MDFNSF_CAT_VIDEO 
+Correct the aspect ratio.
 
 MDFNST_BOOL
 0
@@ -6331,7 +6349,7 @@ MDFNST_BOOL
 nes.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -6579,7 +6597,7 @@ MDFNST_UINT
 0
 nes.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -6606,7 +6624,7 @@ MDFNST_UINT
 0
 nes.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -6808,7 +6826,7 @@ English
 ngp.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -7002,7 +7020,7 @@ MDFNST_UINT
 0
 ngp.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 4.000000
@@ -7029,7 +7047,7 @@ MDFNST_UINT
 0
 ngp.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 4.000000
@@ -9133,7 +9151,7 @@ MDFNST_BOOL
 pce.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -9375,7 +9393,7 @@ MDFNST_UINT
 0
 pce.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -9402,7 +9420,7 @@ MDFNST_UINT
 0
 pce.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -10411,7 +10429,7 @@ MDFNST_UINT
 pce_fast.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -10623,7 +10641,7 @@ MDFNST_UINT
 0
 pce_fast.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -10650,7 +10668,7 @@ MDFNST_UINT
 0
 pce_fast.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -12148,7 +12166,7 @@ MDFNST_BOOL
 pcfx.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -12369,7 +12387,7 @@ MDFNST_UINT
 0
 pcfx.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -12396,7 +12414,7 @@ MDFNST_UINT
 0
 pcfx.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -12415,7 +12433,7 @@ MDFNST_FLOAT
 player.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -12582,7 +12600,7 @@ MDFNST_UINT
 0
 player.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 2.000000
@@ -12609,7 +12627,7 @@ MDFNST_UINT
 0
 player.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 2.000000
@@ -12735,7 +12753,7 @@ Digital Gamepad
 PlayStation digital gamepad; SCPH-1080.
 dualshock
 DualShock
-DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.
+DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.  Rumble is emulated, but currently only supported on Linux, and MS Windows via the XInput API and XInput-compatible gamepads/joysticks.  If you\'re having trouble getting rumble to work on Linux, see if Mednafen is printing out error messages during startup regarding /dev/input/event*, and resolve the issue(s) as necessary.
 dualanalog
 Dual Analog
 Dual Analog gamepad; SCPH-1180.  It is the predecessor/prototype to the more advanced DualShock.  Emulated in Mednafen as forced to analog mode, and without rumble.
@@ -12988,42 +13006,6 @@ psx, Port 1/1A, Dance Pad: LEFT ←
 
 MDFNST_STRING
 keyboard 260
-
-
-0
-psx.input.port1.dancepad.rapid_circle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1/1A, Dance Pad: Rapid ○ (upper right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port1.dancepad.rapid_cross
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1/1A, Dance Pad: Rapid x (upper left)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port1.dancepad.rapid_square
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1/1A, Dance Pad: Rapid □ (lower right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port1.dancepad.rapid_triangle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1/1A, Dance Pad: Rapid △ (lower left)
-
-MDFNST_STRING
-
 
 
 0
@@ -14007,7 +13989,7 @@ Digital Gamepad
 PlayStation digital gamepad; SCPH-1080.
 dualshock
 DualShock
-DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.
+DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.  Rumble is emulated, but currently only supported on Linux, and MS Windows via the XInput API and XInput-compatible gamepads/joysticks.  If you\'re having trouble getting rumble to work on Linux, see if Mednafen is printing out error messages during startup regarding /dev/input/event*, and resolve the issue(s) as necessary.
 dualanalog
 Dual Analog
 Dual Analog gamepad; SCPH-1180.  It is the predecessor/prototype to the more advanced DualShock.  Emulated in Mednafen as forced to analog mode, and without rumble.
@@ -14257,42 +14239,6 @@ MDFNST_STRING
 psx.input.port2.dancepad.left
 MDFNSF_SUPPRESS_DOC 
 psx, Port 2/2A, Dance Pad: LEFT ←
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port2.dancepad.rapid_circle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2/2A, Dance Pad: Rapid ○ (upper right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port2.dancepad.rapid_cross
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2/2A, Dance Pad: Rapid x (upper left)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port2.dancepad.rapid_square
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2/2A, Dance Pad: Rapid □ (lower right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port2.dancepad.rapid_triangle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2/2A, Dance Pad: Rapid △ (lower left)
 
 MDFNST_STRING
 
@@ -15279,7 +15225,7 @@ Digital Gamepad
 PlayStation digital gamepad; SCPH-1080.
 dualshock
 DualShock
-DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.
+DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.  Rumble is emulated, but currently only supported on Linux, and MS Windows via the XInput API and XInput-compatible gamepads/joysticks.  If you\'re having trouble getting rumble to work on Linux, see if Mednafen is printing out error messages during startup regarding /dev/input/event*, and resolve the issue(s) as necessary.
 dualanalog
 Dual Analog
 Dual Analog gamepad; SCPH-1180.  It is the predecessor/prototype to the more advanced DualShock.  Emulated in Mednafen as forced to analog mode, and without rumble.
@@ -15529,42 +15475,6 @@ MDFNST_STRING
 psx.input.port3.dancepad.left
 MDFNSF_SUPPRESS_DOC 
 psx, Port 1B, Dance Pad: LEFT ←
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port3.dancepad.rapid_circle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1B, Dance Pad: Rapid ○ (upper right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port3.dancepad.rapid_cross
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1B, Dance Pad: Rapid x (upper left)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port3.dancepad.rapid_square
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1B, Dance Pad: Rapid □ (lower right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port3.dancepad.rapid_triangle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1B, Dance Pad: Rapid △ (lower left)
 
 MDFNST_STRING
 
@@ -16542,7 +16452,7 @@ Digital Gamepad
 PlayStation digital gamepad; SCPH-1080.
 dualshock
 DualShock
-DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.
+DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.  Rumble is emulated, but currently only supported on Linux, and MS Windows via the XInput API and XInput-compatible gamepads/joysticks.  If you\'re having trouble getting rumble to work on Linux, see if Mednafen is printing out error messages during startup regarding /dev/input/event*, and resolve the issue(s) as necessary.
 dualanalog
 Dual Analog
 Dual Analog gamepad; SCPH-1180.  It is the predecessor/prototype to the more advanced DualShock.  Emulated in Mednafen as forced to analog mode, and without rumble.
@@ -16792,42 +16702,6 @@ MDFNST_STRING
 psx.input.port4.dancepad.left
 MDFNSF_SUPPRESS_DOC 
 psx, Port 1C, Dance Pad: LEFT ←
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port4.dancepad.rapid_circle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1C, Dance Pad: Rapid ○ (upper right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port4.dancepad.rapid_cross
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1C, Dance Pad: Rapid x (upper left)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port4.dancepad.rapid_square
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1C, Dance Pad: Rapid □ (lower right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port4.dancepad.rapid_triangle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1C, Dance Pad: Rapid △ (lower left)
 
 MDFNST_STRING
 
@@ -17805,7 +17679,7 @@ Digital Gamepad
 PlayStation digital gamepad; SCPH-1080.
 dualshock
 DualShock
-DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.
+DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.  Rumble is emulated, but currently only supported on Linux, and MS Windows via the XInput API and XInput-compatible gamepads/joysticks.  If you\'re having trouble getting rumble to work on Linux, see if Mednafen is printing out error messages during startup regarding /dev/input/event*, and resolve the issue(s) as necessary.
 dualanalog
 Dual Analog
 Dual Analog gamepad; SCPH-1180.  It is the predecessor/prototype to the more advanced DualShock.  Emulated in Mednafen as forced to analog mode, and without rumble.
@@ -18055,42 +17929,6 @@ MDFNST_STRING
 psx.input.port5.dancepad.left
 MDFNSF_SUPPRESS_DOC 
 psx, Port 1D, Dance Pad: LEFT ←
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port5.dancepad.rapid_circle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1D, Dance Pad: Rapid ○ (upper right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port5.dancepad.rapid_cross
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1D, Dance Pad: Rapid x (upper left)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port5.dancepad.rapid_square
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1D, Dance Pad: Rapid □ (lower right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port5.dancepad.rapid_triangle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 1D, Dance Pad: Rapid △ (lower left)
 
 MDFNST_STRING
 
@@ -19068,7 +18906,7 @@ Digital Gamepad
 PlayStation digital gamepad; SCPH-1080.
 dualshock
 DualShock
-DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.
+DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.  Rumble is emulated, but currently only supported on Linux, and MS Windows via the XInput API and XInput-compatible gamepads/joysticks.  If you\'re having trouble getting rumble to work on Linux, see if Mednafen is printing out error messages during startup regarding /dev/input/event*, and resolve the issue(s) as necessary.
 dualanalog
 Dual Analog
 Dual Analog gamepad; SCPH-1180.  It is the predecessor/prototype to the more advanced DualShock.  Emulated in Mednafen as forced to analog mode, and without rumble.
@@ -19318,42 +19156,6 @@ MDFNST_STRING
 psx.input.port6.dancepad.left
 MDFNSF_SUPPRESS_DOC 
 psx, Port 2B, Dance Pad: LEFT ←
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port6.dancepad.rapid_circle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2B, Dance Pad: Rapid ○ (upper right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port6.dancepad.rapid_cross
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2B, Dance Pad: Rapid x (upper left)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port6.dancepad.rapid_square
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2B, Dance Pad: Rapid □ (lower right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port6.dancepad.rapid_triangle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2B, Dance Pad: Rapid △ (lower left)
 
 MDFNST_STRING
 
@@ -20331,7 +20133,7 @@ Digital Gamepad
 PlayStation digital gamepad; SCPH-1080.
 dualshock
 DualShock
-DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.
+DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.  Rumble is emulated, but currently only supported on Linux, and MS Windows via the XInput API and XInput-compatible gamepads/joysticks.  If you\'re having trouble getting rumble to work on Linux, see if Mednafen is printing out error messages during startup regarding /dev/input/event*, and resolve the issue(s) as necessary.
 dualanalog
 Dual Analog
 Dual Analog gamepad; SCPH-1180.  It is the predecessor/prototype to the more advanced DualShock.  Emulated in Mednafen as forced to analog mode, and without rumble.
@@ -20581,42 +20383,6 @@ MDFNST_STRING
 psx.input.port7.dancepad.left
 MDFNSF_SUPPRESS_DOC 
 psx, Port 2C, Dance Pad: LEFT ←
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port7.dancepad.rapid_circle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2C, Dance Pad: Rapid ○ (upper right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port7.dancepad.rapid_cross
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2C, Dance Pad: Rapid x (upper left)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port7.dancepad.rapid_square
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2C, Dance Pad: Rapid □ (lower right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port7.dancepad.rapid_triangle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2C, Dance Pad: Rapid △ (lower left)
 
 MDFNST_STRING
 
@@ -21594,7 +21360,7 @@ Digital Gamepad
 PlayStation digital gamepad; SCPH-1080.
 dualshock
 DualShock
-DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.
+DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.  Rumble is emulated, but currently only supported on Linux, and MS Windows via the XInput API and XInput-compatible gamepads/joysticks.  If you\'re having trouble getting rumble to work on Linux, see if Mednafen is printing out error messages during startup regarding /dev/input/event*, and resolve the issue(s) as necessary.
 dualanalog
 Dual Analog
 Dual Analog gamepad; SCPH-1180.  It is the predecessor/prototype to the more advanced DualShock.  Emulated in Mednafen as forced to analog mode, and without rumble.
@@ -21844,42 +21610,6 @@ MDFNST_STRING
 psx.input.port8.dancepad.left
 MDFNSF_SUPPRESS_DOC 
 psx, Port 2D, Dance Pad: LEFT ←
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port8.dancepad.rapid_circle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2D, Dance Pad: Rapid ○ (upper right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port8.dancepad.rapid_cross
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2D, Dance Pad: Rapid x (upper left)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port8.dancepad.rapid_square
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2D, Dance Pad: Rapid □ (lower right)
-
-MDFNST_STRING
-
-
-
-0
-psx.input.port8.dancepad.rapid_triangle
-MDFNSF_SUPPRESS_DOC 
-psx, Port 2D, Dance Pad: Rapid △ (lower left)
 
 MDFNST_STRING
 
@@ -22843,7 +22573,7 @@ MDFNST_STRING
 psx.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -23073,7 +22803,7 @@ MDFNST_UINT
 0
 psx.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -23100,7 +22830,7 @@ MDFNST_UINT
 0
 psx.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -23362,7 +23092,7 @@ MDFNST_STRING
 sms.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -23571,7 +23301,7 @@ MDFNST_UINT
 0
 sms.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -23598,7 +23328,7 @@ MDFNST_UINT
 0
 sms.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -24895,7 +24625,7 @@ MDFNST_FLOAT
 snes.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -25089,7 +24819,7 @@ MDFNST_UINT
 0
 snes.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -25116,7 +24846,7 @@ MDFNST_UINT
 0
 snes.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -25189,7 +24919,7 @@ Somewhat experimental driver, unusably buggy until Mednafen 0.8.C. The \"sound.b
 sound.period_time
 
 Desired period size in microseconds.
-Currently only affects OSS and ALSA output.  A value of 0 defers to the default in the driver code in SexyAL.\n\nNote: This is not the \"sound buffer size\" setting, that would be \"sound.buffer_time\".
+Currently only affects OSS, ALSA, and SDL output.  A value of 0 defers to the default in the driver code in SexyAL.\n\nNote: This is not the \"sound buffer size\" setting, that would be \"sound.buffer_time\".
 MDFNST_UINT
 0
 0
@@ -25588,7 +25318,7 @@ MDFNST_UINT
 vb.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -25791,7 +25521,7 @@ MDFNST_UINT
 0
 vb.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 2.000000
@@ -25818,7 +25548,7 @@ MDFNST_UINT
 0
 vb.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 2.000000
@@ -25845,7 +25575,7 @@ MDFNST_BOOL
 0
 video.driver
 
-Select video driver, \"opengl\" or \"sdl\".
+Video output method/driver.
 
 MDFNST_ENUM
 opengl
@@ -26143,7 +25873,7 @@ Mednafen
 wswan.pixshader
 MDFNSF_COMMON_TEMPLATE 
 Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen\'s pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.
 MDFNST_ENUM
 none
 
@@ -26370,7 +26100,7 @@ MDFNST_UINT
 0
 wswan.xscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the X axis.
+Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000
@@ -26397,7 +26127,7 @@ MDFNST_UINT
 0
 wswan.yscale
 MDFNSF_COMMON_TEMPLATE 
-Scaling factor for the Y axis.
+Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
 3.000000

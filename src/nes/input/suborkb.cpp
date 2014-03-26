@@ -100,7 +100,7 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-static INPUTCFC SuborKB={SuborKB_Read,SuborKB_Write,SuborKB_Strobe,SuborKB_Update,0,0, StateActionFC, 0x60, sizeof(uint8) };
+static INPUTCFC SuborKB={SuborKB_Read,SuborKB_Write,SuborKB_Strobe,SuborKB_Update,0,0, StateActionFC };
 
 INPUTCFC *MDFN_InitSuborKB(void)
 {

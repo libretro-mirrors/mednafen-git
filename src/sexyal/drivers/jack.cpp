@@ -103,7 +103,7 @@ static bool DoActivate(SexyAL_device *device)
 
  free(ports);
 
- printf("%d\n", (int)jack_port_get_total_latency(jw->client, jw->output_port[0]));
+ //printf("%d\n", (int)jack_port_get_total_latency(jw->client, jw->output_port[0]));
 
  return(1);
 }
@@ -221,7 +221,7 @@ static int Get_RCW(SexyAL_device *device, uint32_t *can_write, bool want_nega = 
 
   return(1);
  }
- else if(cw > jw->RealBufferSize * sizeof(float))
+ else if((uint32_t)cw > jw->RealBufferSize * sizeof(float))
   cw = jw->RealBufferSize * sizeof(float);
 
  *can_write = cw * device->format.channels;
@@ -432,7 +432,7 @@ SexyAL_device *SexyALI_JACK_Open(const char *id, SexyAL_format *format, SexyAL_b
 
  jw->NeedActivate = 1;
 
- buffering->latency = jw->BufferSize;
+ buffering->latency = jw->BufferSize;	// FIXME, jw->BufferSize + jack_port_get_latency_range() ???
  buffering->period_size = 0;
 
  memcpy(&device->format,format,sizeof(SexyAL_format));
@@ -444,6 +444,20 @@ SexyAL_device *SexyALI_JACK_Open(const char *id, SexyAL_format *format, SexyAL_b
  device->Clear = Clear;
  device->Pause = Pause;
 
+#if 0
+ //
+ DoActivate(device);
+ //
+ {
+  jack_latency_range_t rn;
+
+  memset(&rn, 0, sizeof(rn));
+  jack_port_get_latency_range(jw->output_port[0], JackPlaybackLatency, &rn);
+
+  //printf("%d\n", (int)jack_port_get_total_latency(jw->client, jw->output_port[0]));
+  buffering->latency = jw->BufferSize + rn.max;
+ }
+#endif
  return(device);
 }
 

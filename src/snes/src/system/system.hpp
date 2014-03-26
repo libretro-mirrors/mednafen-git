@@ -53,6 +53,8 @@ private:
   friend class Input;
   friend class StateManager;
   friend void threadentry_cop();
+
+  unsigned exit_line_counter;
 };
 
 extern System system;

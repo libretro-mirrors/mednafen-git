@@ -7,7 +7,7 @@
 Mednafen's Atari Lynx emulation is based off of <a href="http://homepage.ntlworld.com/dystopia/">Handy</a>.
 </p>
 <p>
-Atari Lynx emulation requires the 512 Lynx boot ROM image, named as "lynxboot.img", and placed in the Mednafen base
+Atari Lynx emulation requires the 512-byte Lynx boot ROM image, named as "lynxboot.img", and placed in the Mednafen base
 directory.
 </p>
 <?php EndSection(); ?>

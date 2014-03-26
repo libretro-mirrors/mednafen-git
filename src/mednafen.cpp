@@ -90,6 +90,8 @@ static MDFNSetting MednafenSettings[] =
   { "srwframes", MDFNSF_NOFLAGS, gettext_noop("Number of frames to keep states for when state rewinding is enabled."), 
 	gettext_noop("WARNING: Setting this to a large value may cause excessive RAM usage in some circumstances, such as with games that stream large volumes of data off of CDs."), MDFNST_UINT, "600", "10", "99999" },
 
+  { "cd.image_memcache", MDFNSF_NOFLAGS, gettext_noop("Cache entire CD images in memory."), gettext_noop("Reads the entire CD image(s) into memory at startup(which will cause a small delay).  Can help obviate emulation hiccups due to emulated CD access.  May cause more harm than good on low memory systems, systems with swap enabled, and/or when the disc images in question are on a fast SSD."), MDFNST_BOOL, "0" },
+
   { "filesys.untrusted_fip_check", MDFNSF_NOFLAGS, gettext_noop("Enable untrusted file-inclusion path security check."),
 	gettext_noop("When this setting is set to \"1\", the default, paths to files referenced from files like CUE sheets and PSF rips are checked for certain characters that can be used in directory traversal, and if found, loading is aborted.  Set it to \"0\" if you want to allow constructs like absolute paths in CUE sheets, but only if you understand the security implications of doing so(see \"Security Issues\" section in the documentation)."), MDFNST_BOOL, "1" },
 
@@ -332,6 +334,10 @@ extern MDFNGI EmulatedMD;
 extern MDFNGI EmulatedNGP;
 #endif
 
+#ifdef WANT_PC_EMU
+extern MDFNGI EmulatedPC;
+#endif
+
 #ifdef WANT_PCE_EMU
 extern MDFNGI EmulatedPCE;
 #endif
@@ -453,22 +459,15 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename)
 
    for(unsigned i = 0; i < file_list.size(); i++)
    {
-#if 1
-    CDInterfaces.push_back(new CDIF_MT(file_list[i].c_str()));
-#else
-    CDInterfaces.push_back(new CDIF_ST(file_list[i].c_str()));
-#endif
+    CDInterfaces.push_back(CDIF_Open(file_list[i].c_str(), MDFN_GetSettingB("cd.image_memcache")));
    }
 
    GetFileBase(devicename);
   }
   else
   {
-#if 1
-   CDInterfaces.push_back(new CDIF_MT(devicename));
-#else
-   CDInterfaces.push_back(new CDIF_ST(devicename));
-#endif
+   CDInterfaces.push_back(CDIF_Open(devicename, MDFN_GetSettingB("cd.image_memcache")));
+
    if(CDInterfaces[0]->IsPhysical())
    {
     GetFileBase("cdrom");
@@ -988,6 +987,10 @@ bool MDFNI_InitializeModules(const std::vector<MDFNGI *> &ExternalSystems)
   &EmulatedGBA,
   #endif
 
+  #ifdef WANT_PC_EMU
+  &EmulatedPC,
+  #endif
+
   #ifdef WANT_PCE_EMU
   &EmulatedPCE,
   #endif
@@ -1032,6 +1035,8 @@ bool MDFNI_InitializeModules(const std::vector<MDFNGI *> &ExternalSystems)
   &EmulatedCDPlay
  };
  std::string i_modules_string, e_modules_string;
+
+ assert(MEDNAFEN_VERSION_NUMERIC >= 0x0927);
 
  for(unsigned int i = 0; i < sizeof(InternalSystems) / sizeof(MDFNGI *); i++)
  {

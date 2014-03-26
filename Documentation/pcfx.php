@@ -8,6 +8,7 @@
    <li>Motion decoder RLE and JPEG-like modes are emulated.</li>
    <li>KING Background 0 scaling+rotation mode is supported.</li>
    <li>Mouse emulation.</li>
+   <li>Working CD+G playback.</li>
   </ul>
 <?php EndSection(); ?>
 

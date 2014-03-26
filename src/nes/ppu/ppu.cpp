@@ -1348,7 +1348,7 @@ static void RedoRL(void)
   }
  }
 
- MDFNGameInfo->nominal_width = NTSCBlitter ? PPUDisplayRect.w / 2 : PPUDisplayRect.w;
+ MDFNGameInfo->nominal_width = NTSCBlitter ? (PPUDisplayRect.w * (MDFN_GetSettingB("nes.correct_aspect") ? 292 : 298) / 596) : (PPUDisplayRect.w * (MDFN_GetSettingB("nes.correct_aspect") ? (PAL ? 344 : 292) : 256) / 256);
  MDFNGameInfo->nominal_height = PPUDisplayRect.h;
 
  MDFNGameInfo->lcm_width = PPUDisplayRect.w;

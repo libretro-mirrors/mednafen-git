@@ -345,10 +345,6 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
      case IDIT_BUTTON_CAN_RAPID: bit_offset += 1;
 				 break;
 
-     case IDIT_BUTTON_BYTE: bit_offset = ((bit_offset + 7) & ~7) + 8;
-			    break;
-
- 
      case IDIT_BYTE_SPECIAL: bit_offset += 8;
 			       break;
     }
@@ -356,13 +352,11 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
    }   // End of handling dummy/padding entries
    
 
-   if(zedevice->IDII[x].Type == IDIT_BUTTON || zedevice->IDII[x].Type == IDIT_BUTTON_CAN_RAPID || zedevice->IDII[x].Type == IDIT_BUTTON_BYTE
+   if(zedevice->IDII[x].Type == IDIT_BUTTON || zedevice->IDII[x].Type == IDIT_BUTTON_CAN_RAPID
 	 || zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG)
    {
     if(zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG)
      bit_offset = (bit_offset + 31) &~ 31; // Align to a 32-bit boundary
-    else if(zedevice->IDII[x].Type == IDIT_BUTTON_BYTE)
-     bit_offset = (bit_offset + 7) &~ 7; // Align to an 8-bit boundary
 
     std::vector<ButtConfig> buttc;
     char buttsn[512];
@@ -409,10 +403,6 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
     if(zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG)
     {
      bit_offset += 32;
-    }
-    else if(zedevice->IDII[x].Type == IDIT_BUTTON_BYTE)
-    {
-     bit_offset += 8;
     }
     else
     {
@@ -522,11 +512,6 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
       PortButtExclusionBitOffsets[port].push_back(0xFFFFFFFF);
       PortButtRotateOffsets[port].push_back(NullRotate);
      }
-    }
-    else if(zedevice->IDII[x].Type == IDIT_BUTTON_BYTE)
-    {
-     PortButtExclusionBitOffsets[port].push_back(0xFFFFFFFF);
-     PortButtRotateOffsets[port].push_back(NullRotate);
     }
    }
   } // End search for exclusion buttons and rotated inputs.
@@ -1766,7 +1751,7 @@ static void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, const MDF
 
  for(int x = 0; x < info->NumInputs; x++)
  {
-  if(info->IDII[x].Type != IDIT_BUTTON && info->IDII[x].Type != IDIT_BUTTON_CAN_RAPID && info->IDII[x].Type != IDIT_BUTTON_BYTE && info->IDII[x].Type != IDIT_BUTTON_ANALOG)
+  if(info->IDII[x].Type != IDIT_BUTTON && info->IDII[x].Type != IDIT_BUTTON_CAN_RAPID && info->IDII[x].Type != IDIT_BUTTON_ANALOG)
    continue;
 
   if(NULL == info->IDII[x].SettingName)

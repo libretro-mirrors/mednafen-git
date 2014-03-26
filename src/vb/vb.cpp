@@ -28,8 +28,6 @@
 #include "../mempatcher.h"
 #include <iconv.h>
 
-//#define VB_SUPPORT_BIN_EXT		// Even with this enabled, any *.bin file loaded must be in the internal database to be recognized as a VB game.
-
 namespace MDFN_IEN_VB
 {
 
@@ -500,63 +498,10 @@ static void ReadHeader(MDFNFILE *fp, VB_HeaderInfo *hi)
  hi->version = fp->data[0xFFFFFDFF & (fp->size - 1)];
 }
 
-#ifdef VB_SUPPORT_BIN_EXT
-static bool FindGame(MDFNFILE *fp)
-{
- static const char *GameNames[] =
- {
-  "POLYGOBLOCK",	// 3D Tetris
-  "BOUND HIGH",
-  "GALACTIC PINBALL",
-  "GOLF",
-  "ｲﾝｽﾏｳｽ ﾉ ﾔｶﾀ",
-  "JACK BROS",
-  "MARIO CLASH",
-  "Mario's Tennis",
-  "NESTER'S FUNKY BOWLI",
-  "Panic Bomber",
-  "REDALARM",
-  "VB SDｶﾞﾝﾀﾞﾑ",
-  "SPACE INVADERS V.C.",
-  "SPACE SQUASH",
-  "TELEROBOXER",
-  "T&EVIRTUALGOLF",
-  "ﾄﾋﾞﾀﾞｾ!ﾊﾟﾆﾎﾞﾝ",
-  "VERTICAL FORCE",
-  "VIRTUAL BOWLING",
-  "VB ﾜﾘｵﾗﾝﾄﾞ",
-  "VIRTUAL FISHING JPN",
-  "ﾊﾞ-ﾁｬﾙLAB",
-  "VIRTUAL LEAGUE BB",
-  "ﾊﾞｰﾁｬﾙﾌﾟﾛﾔｷｭｳ'95",
-  "V･TETRIS",
-  "WATERWORLD",
-  NULL
- };
- VB_HeaderInfo hinfo;
-
- ReadHeader(fp, &hinfo);
-
- const char **gni = GameNames;
- while(*gni)
- {
-  if(!strcmp(hinfo.game_title, *gni))
-   return(true);
-  gni++;
- }
- return(false);
-}
-#endif
-
 static bool TestMagic(const char *name, MDFNFILE *fp)
 {
  if(!strcasecmp(fp->ext, "vb") || !strcasecmp(fp->ext, "vboy"))
   return(true);
-
- #ifdef VB_SUPPORT_BIN_EXT
- if(!strcasecmp(fp->ext, "bin") && FindGame(fp))
-  return(true);
- #endif
 
  return(false);
 }
@@ -1069,9 +1014,6 @@ static const FileExtensionSpecStruct KnownExtensions[] =
 {
  { ".vb", gettext_noop("Nintendo Virtual Boy") },
  { ".vboy", gettext_noop("Nintendo Virtual Boy") },
- #ifdef VB_SUPPORT_BIN_EXT
- { ".bin", gettext_noop("Nintendo Virtual Boy (Deprecated)") },
- #endif
  { NULL, NULL }
 };
 

@@ -178,6 +178,7 @@
  <tr><td>Alt + Enter</td><td>Toggle fullscreen mode.</td><td>toggle_fs</td></tr>
  <tr><td nowrap>Ctrl + 1<br>through<br>Ctrl + 9</td><td>Toggle layer.</td><td>"tl1" through "tl9"</td></tr>
  <tr><td>`</td><td>Fast-forward.</td><td>fast_forward</td></tr>
+ <tr><td>\</td><td>Slow-forward.</td><td>slow_forward</td></tr>
  <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
  <tr><td>F3</td><td>Detect analog buttons on physical joysticks/gamepads(for use with the input configuration process).
 <p>
@@ -213,7 +214,7 @@
 </p>
   <table border>
    <tr><th>Argument:</th><th>Parameter Type:</th><th>Description:</th></tr>
-   <tr><td>-loadcd x</td><td>string</td><td>Load and boot a CD for system "x"(not available for all emulated systems).  This argument modifies the usage of the filename component of the command-line.  For example, "mednafen -loadcd pce /somewhere/over/the/rainbow/game.cue" will load the CUE sheet as the emulated CDROM.
+   <tr><td>-loadcd x</td><td>string</td><td>Load and boot a CD for system "x"(not available for all emulated systems).  This argument modifies the usage of the filename component of the command-line.  For example, "mednafen -loadcd pce /somewhere/over/the/rainbow/game.cue" will load the CUE sheet as the emulated CD.
 "mednafen -loadcd pce" will load from the default physical CDROM device. </td></tr>
    <tr><td nowrap>-force_module x</td><td>string</td><td>Force usage of specified emulation module.</td></tr>
 

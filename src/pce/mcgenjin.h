@@ -20,6 +20,7 @@
 
 #include <vector>
 #include <blip/Blip_Buffer.h>
+#include "../cdrom/SimpleFIFO.h"
 
 class MCGenjin_CS_Device
 {
@@ -73,9 +74,22 @@ class MCGenjin
   switch(ar)
   {
    case 0: ret = combobble(rom[A & 0x3FFFF & (rom.size() - 1)]);
-   case 1: ret = combobble(rom[((A & 0x3FFFF) | (bank_select << 18)) & (rom.size() - 1)]);
-   case 2: ret = cs[0]->Read(timestamp, A & 0x3FFFF);
-   case 3: ret = cs[1]->Read(timestamp, A & 0x3FFFF);
+	   break;
+
+   case 1: {
+	    const uint32 rom_addr_or = bank_select << 18;
+	    const uint32 rom_addr_xor = ((stmode_control & 0x7E) << 6) | (stmode_control & STMODEC_MASK_ENABLE);
+	    uint32 rom_addr_and = (rom.size() - 1);
+
+	    if((stmode_control & 0x80) && !(A & 0x1))
+	     rom_addr_and &= ~0x1FFC;
+
+	    ret = combobble(rom[(((A & 0x3FFFF) | rom_addr_or) ^ rom_addr_xor) & rom_addr_and]);
+	   }
+	   break;
+
+   case 2: ret = cs[0]->Read(timestamp, A & 0x3FFFF); break;
+   case 3: ret = cs[1]->Read(timestamp, A & 0x3FFFF); break;
   }
 
   return ret;
@@ -88,10 +102,52 @@ class MCGenjin
   {
    case 0:
    case 1:
-	if(A & 1)
-	 bank_select = V;
-	else
-	 dlr = V & 0x01;
+	switch((A & addr_write_mask) | (~addr_write_mask & 0xF))
+	{
+	 case 0x0: avl_mask[0] = V; break;
+	 case 0x1: avl_mask[1] = V; break;
+	 case 0x2: avl_mask[2] = V; break;
+	 case 0x3: avl_mask[3] = V; break;
+
+         case 0x4: avl[0] &= 0xFF00; avl[0] |= V; break;
+         case 0x5: avl[1] &= 0xFF00; avl[1] |= V; break;
+         case 0x6: avl[2] &= 0xFF00; avl[2] |= V; break;
+         case 0x7: avl[3] &= 0xFF00; avl[3] |= V; break;
+
+         case 0x8: avl[0] &= 0x00FF; avl[0] |= V << 8; break;
+         case 0x9: avl[1] &= 0x00FF; avl[1] |= V << 8; break;
+         case 0xA: avl[2] &= 0x00FF; avl[2] |= V << 8; break;
+         case 0xB: avl[3] &= 0x00FF; avl[3] |= V << 8; break;
+
+	 case 0xC:
+		for(unsigned i = 0; i < 4; i++)
+		{
+		 if(V & (1U << i))
+		  shadow_avl[i] += avl[i];
+		 else
+		  shadow_avl[i] = avl[i];
+		}
+		pcm_out_shift = (V >> 4) & 0x3;
+		//
+		{
+		 uint8 pcm_out = (((shadow_avl[0] >> 8) & avl_mask[0]) + ((shadow_avl[1] >> 8) & avl_mask[1]) + ((shadow_avl[2] >> 8) & avl_mask[2]) + ((shadow_avl[3] >> 8) & avl_mask[3])) >> pcm_out_shift;
+		 pcm_synth.offset_inline(timestamp, pcm_out - pcm_lastout, bsbuf);
+		 pcm_lastout = pcm_out;
+		}
+		break;
+
+	 case 0xD:
+		stmode_control = V;
+		break;
+
+	 case 0xE:
+		dlr = V & 0x1;
+		break;
+
+	 case 0xF:
+		bank_select = V;
+		break;
+	}
 	break;
 
    case 2: return cs[0]->Write(timestamp, A & 0x3FFFF, V);
@@ -131,6 +187,26 @@ class MCGenjin
 
  uint8 bank_select;
  uint8 dlr;
+
+ enum { STMODEC_MASK_ENABLE = 0x80 };
+
+ Blip_Buffer *bsbuf;
+
+ //
+ //
+ //
+ uint8 addr_write_mask;
+
+ uint8 stmode_control;
+
+ uint16 avl[4];
+ uint8 avl_mask[4];
+ uint16 shadow_avl[4];
+ uint8 pcm_out_shift;
+
+ //
+ int32 pcm_lastout;
+ Blip_Synth <blip_good_quality, 1> pcm_synth;
 };
 
 #endif

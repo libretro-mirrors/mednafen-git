@@ -151,8 +151,8 @@ static int StateAction(int w, StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-static INPUTC ZAPC={ReadZapper,0,0,UpdateZapper,ZapperFrapper,DrawZapper, StateAction, 3, sizeof(uint32) };
-static INPUTC ZAPVSC={ReadZapperVS,0,StrobeZapperVS,UpdateZapper,ZapperFrapper,DrawZapper, StateAction, 3, sizeof(uint32) };
+static INPUTC ZAPC={ReadZapper,0,0,UpdateZapper,ZapperFrapper,DrawZapper, StateAction };
+static INPUTC ZAPVSC={ReadZapperVS,0,StrobeZapperVS,UpdateZapper,ZapperFrapper,DrawZapper, StateAction };
 
 INPUTC *MDFN_InitZapper(int w)
 {

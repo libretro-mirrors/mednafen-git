@@ -15,6 +15,7 @@
 #include "neopop.h"
 #include "../general.h"
 #include "../md5.h"
+#include "../FileStream.h"
 
 #include "TLCS900h_interpret.h"
 #include "TLCS900h_registers.h"
@@ -296,32 +297,33 @@ static MDFNSetting NGPSettings[] =
 
 bool system_io_flash_read(uint8* buffer, uint32 bufferLength)
 {
- FILE *fp = fopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "flash").c_str(), "rb");
- if(!fp) return(0);
-
- if(!fread(buffer, 1, bufferLength, fp))
+ try
  {
-  fclose(fp);
+  FileStream fp(MDFN_MakeFName(MDFNMKF_SAV, 0, "flash").c_str(), FileStream::MODE_READ);
+
+  fp.read(buffer, bufferLength);
+ }
+ catch(std::exception &e)
+ {
+  //if(ene.Errno() == ENOENT)  . asdf
   return(0);
  }
-
- fclose(fp);
 
  return(1);
 }
 
 bool system_io_flash_write(uint8* buffer, uint32 bufferLength)
 {
- FILE *fp = fopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "flash").c_str(), "wb");
- if(!fp) return(0);
-
- if(!fwrite(buffer, 1, bufferLength, fp))
+ try
  {
-  fclose(fp);
+  FileStream fp(MDFN_MakeFName(MDFNMKF_SAV, 0, "flash").c_str(), FileStream::MODE_WRITE);
+
+  fp.write(buffer, bufferLength);
+ }
+ catch(std::exception &e)
+ {
   return(0);
  }
-
- fclose(fp);
 
  return(1);
 }

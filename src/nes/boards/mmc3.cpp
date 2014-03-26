@@ -1636,6 +1636,67 @@ int TQROM_Init(CartInfo *info)
  return(0);
 }
 
+static void M37PW(uint32 A, uint8 V)
+{
+ uint32 NV = V;
+ const unsigned Q = (EXPREGS[0] >> 2) & 1;
+ const unsigned B = EXPREGS[0] & 0x3;
+
+ NV &= (Q << 3) | 0x7;
+ NV |= Q << 4;
+ NV |= (B + 5) & 0x8;
+
+ setprg8(A, NV);
+}
+
+static void M37CW(uint32 A, uint8 V)
+{
+ uint32 NV = V;
+ const unsigned Q = (EXPREGS[0] >> 2) & 1;
+
+ NV &= 0x7F;
+ NV |= Q << 7;
+
+ setchr1(A, NV);
+}
+
+static DECLFW(M37Write)
+{
+ EXPREGS[0] = V & 0x7;
+ FixMMC3PRG(MMC3_cmd);
+ FixMMC3CHR(MMC3_cmd);
+}
+
+static void M37_Power(CartInfo *info)
+{
+ EXPREGS[0] = 0;
+ GenMMC3Power(info);
+}
+
+static void M37_Reset(CartInfo *info)
+{
+ EXPREGS[0] = 0;
+ FixMMC3PRG(MMC3_cmd);
+ FixMMC3CHR(MMC3_cmd);
+}
+
+int Mapper37_Init(CartInfo *info)
+{
+ if(!(GenMMC3_Init(info, 256, 256, 0, 0)))
+  return(0);
+
+ SetWriteHandler(0x6000, 0x7FFF, M37Write);
+ SetReadHandler(0x6000, 0x7FFF, 0);
+
+ pwrap = M37PW;
+ cwrap = M37CW;
+ info->Power = M37_Power;
+ info->Reset = M37_Reset;
+ EXPRCount = 1;
+
+ return(0);
+}
+
 /* MMC6 board */
 int HKROM_Init(CartInfo *info)
 {

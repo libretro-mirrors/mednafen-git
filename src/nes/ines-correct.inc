@@ -1,4 +1,5 @@
-{0, 101, -1, 0x58d32b2e1ba753e1 },	/* Urusei Yatsura */
+{0,  37, -1, 0xa4057e574307d204ULL },	/* Super Mario Bros + Tetris + Nintendo World Cup (Europe) */
+{0, 101, -1, 0x58d32b2e1ba753e1ULL },	/* Urusei Yatsura */
 {0x1b71ccdb, 4, 8},	/* Gauntlet 2 */
 {0xfebf5dc1, 0, 1},	/* Onyako Town(Bootleg) */
 

@@ -34,6 +34,9 @@ typedef struct
 	uint32_t latency;	/* Estimated total latency(between first Write() and actual sound output; essentially equal to the maximum value of
 				   CanWrite() plus any additional internal or external buffering). In frames. */
 
+	uint32_t bt_gran;	/* Buffer timing granularity(RawWrite() blocking, RawCanWrite() granularity), best-case.  In frames.
+				   If 0, period_size is the granularity. */
+
         //uint32_t ms;            /* Milliseconds of buffering, approximate(application code should set this value to control buffer size). */
 	//uint32_t period_time;	/* If non-zero, specifies the desired period/fragment size, in frames. */
 	//uint32_t size;		/* Shouldn't be filled in by application code. */

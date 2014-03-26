@@ -37,6 +37,7 @@
 
 #ifdef WIN32
  #include "Joystick_DX5.h"
+ //#include "Joystick_DX8.h"
  #include "Joystick_XInput.h"
 #endif
 
@@ -134,6 +135,21 @@ JoystickManager::JoystickManager()
 
  MDFNI_printf(_("Initializing joysticks...\n"));
  MDFN_indent(1);
+
+#if 0 && defined(WIN32)
+ {
+  JoystickDriver *dx5_driver = JoystickDriver_DX5_New(false);
+  JoystickDriver *dx8_driver = JoystickDriver_DX8_New(false);
+
+  while(1)
+  {
+   dx5_driver->UpdateJoysticks();
+   dx8_driver->UpdateJoysticks();
+
+
+  }
+ }
+#endif
 
  try
  {

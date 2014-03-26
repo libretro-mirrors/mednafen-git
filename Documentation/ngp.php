@@ -2,7 +2,17 @@
 
 <?php BeginPage('ngp', 'Neo Geo Pocket (Color)'); ?>
 
+<?php BeginSection('Introduction'); ?>
 Mednafen's Neo Geo Pocket emulation is based off of <a href="http://neopop.emuxhaven.net/">NeoPop</a>.
+<p>
+The Neo Geo Pocket (Color) emulation in Mednafen is not very accurate in terms of low-level details; BIOS is HLE'd, CPU instruction
+timing is totally fubared, some CPU instructions are likely emulated incorrectly, and there are a couple of per-game hacks.
+It's sufficient to play most of the commercially released games fairly well, but if you want to do NGP(C) homebrew development,
+you're better off at looking at something like <a href="http://www.mess.org">M.E.S.S.</a>.
+</p>
+
+
+<?php EndSection(); ?>
 
 <?php BeginSection('Default Key Assignments'); ?>
  <table border>

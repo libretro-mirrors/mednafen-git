@@ -47,8 +47,6 @@ typedef struct {
 	void (*SLHook)(int w, uint8 *bg, uint8 *spr, uint32 linets, int final);
 	void (*Draw)(int w, MDFN_Surface *surface);
 	int (*StateAction)(int w, StateMem *sm, int load, int data_only);
-	int InDataElements;
-	int InDataElementSize;
 } INPUTC;
 
 typedef struct {
@@ -59,8 +57,6 @@ typedef struct {
         void (*SLHook)(uint8 *bg, uint8 *spr, uint32 linets, int final);
         void (*Draw)(MDFN_Surface *surface);
         int (*StateAction)(StateMem *sm, int load, int data_only);
-        int InDataElements;
-        int InDataElementSize;
 } INPUTCFC;
 
 void MDFN_DrawInput(MDFN_Surface *surface);

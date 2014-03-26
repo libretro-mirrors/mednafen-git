@@ -278,7 +278,7 @@ static void PCFX_Reset(void)
 
  for(int i = 0; i < 2; i++)
  {
-  int32 dummy_ne;
+  int32 dummy_ne MDFN_NOWARN_UNUSED;
 
   dummy_ne = fx_vdc_chips[i]->Reset();
  }
@@ -1355,7 +1355,7 @@ static DebuggerInfoStruct DBGInfo =
  32,
  32,
  0x00000000,
- ~0,
+ ~0U,
 
  PCFXDBG_MemPeek,
  PCFXDBG_Disassemble,

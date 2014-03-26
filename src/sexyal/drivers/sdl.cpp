@@ -167,7 +167,7 @@ static int Get_RCW(SexyAL_device *device, uint32_t *can_write, bool want_nega = 
  if(cw < 0)
  {
   if(want_nega)
-   *can_write = ~0U;
+   *can_write = (uint32_t)(int32_t)cw;
   else
    *can_write = 0;
  }
@@ -219,8 +219,13 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
 
  uint32_t cw_tmp;
 
- while(Get_RCW(device, &cw_tmp, true) && cw_tmp == ~0U)
+ while(Get_RCW(device, &cw_tmp, true) && (int32_t)cw_tmp < 0)
+ {
+  //int64_t tt = (int64_t)(int32_t)cw_tmp * -1 * 1000 * 1000 * 1000 / (device->format.channels * (device->format.sampformat >> 4) * device->format.rate);
+  //usleep(tt / 1000);
+  //printf("%f\n", (double)tt / 1000 / 1000 / 1000);
   SDL_Delay(1);
+ }
 
  return(1);
 }
@@ -323,12 +328,15 @@ SexyAL_device *SexyALI_SDL_Open(const char *id, SexyAL_format *format, SexyAL_bu
  memset(&desired, 0, sizeof(SDL_AudioSpec));
  memset(&obtained, 0, sizeof(SDL_AudioSpec));
 
+ int desired_pt = buffering->period_us ? buffering->period_us : 5333;
+ int psize = SexyAL_rnearestpow2((int64_t)desired_pt * format->rate / (1000 * 1000), false);
+
  desired.freq = format->rate;
  desired.format = AUDIO_S16;
  desired.channels = format->channels;
  desired.callback = fillaudio;
  desired.userdata = (void *)device;
- desired.samples = 256; //512;	// FIXME
+ desired.samples = psize;
 
  if(SDL_OpenAudio(&desired, &obtained) < 0)
  {
@@ -381,7 +389,8 @@ SexyAL_device *SexyALI_SDL_Open(const char *id, SexyAL_format *format, SexyAL_bu
  buffering->buffer_size = sw->BufferSize;
 
  buffering->latency = (obtained.samples * 2 + sw->BufferSize);
- buffering->period_size = 0;
+ buffering->period_size = obtained.samples;
+ buffering->bt_gran = 1;
 
  //printf("%d\n", buffering->latency);
 

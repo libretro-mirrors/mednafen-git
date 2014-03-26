@@ -25,6 +25,7 @@
 #include "x6502.h"
 
 #include "../mempatcher.h"
+#include "../FileStream.h"
 
 /* 
    This file contains all code for coordinating the mapping in of the
@@ -739,48 +740,50 @@ void Genie_Power(void)
 
 
 void MDFN_SaveGameSave(CartInfo *LocalHWInfo)
-{  
- if(LocalHWInfo->battery && LocalHWInfo->SaveGame[0])
- { 
-  FILE *sp;
-  std::string soot;
-
-  soot = MDFN_MakeFName(MDFNMKF_SAV,0,"sav");
-
-  if((sp=fopen(soot.c_str(),"wb"))==NULL)
-  {
-   MDFN_PrintError(_("WRAM file \"%s\" cannot be written to.\n"),soot.c_str());
-  }
-  else
-  {
-   int x;
-  
-   for(x=0;x<4;x++)
-    if(LocalHWInfo->SaveGame[x])
-    {
-     fwrite(LocalHWInfo->SaveGame[x],1,
-      LocalHWInfo->SaveGameLen[x],sp); 
-    }
-  }
- } 
-}  
-   
-void MDFN_LoadGameSave(CartInfo *LocalHWInfo)
 {
  if(LocalHWInfo->battery && LocalHWInfo->SaveGame[0])
  {
-  FILE *sp;
-  std::string soot;
-  
-  soot = MDFN_MakeFName(MDFNMKF_SAV,0,"sav");
-  sp = fopen(soot.c_str(),"rb");
-  if(sp!=NULL)
+  try
   {
-   int x;
-   for(x=0;x<4;x++)
+   FileStream sp(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), FileStream::MODE_WRITE);
+
+   for(unsigned x = 0; x < 4; x++)
     if(LocalHWInfo->SaveGame[x])
-     fread(LocalHWInfo->SaveGame[x],1,LocalHWInfo->SaveGameLen[x],sp);
+     sp.write(LocalHWInfo->SaveGame[x], LocalHWInfo->SaveGameLen[x]);
   }
- } 
-}  
+  catch(std::exception &e)
+  {
+   MDFN_PrintError(_("Error saving save game file: %s\n"), e.what());
+  }
+ }
+}
+
+bool MDFN_LoadGameSave(CartInfo *LocalHWInfo)
+{
+ if(LocalHWInfo->battery && LocalHWInfo->SaveGame[0])
+ {
+  try
+  {
+   FileStream sp(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), FileStream::MODE_READ);
+
+   for(unsigned x = 0; x < 4; x++)
+    if(LocalHWInfo->SaveGame[x])
+     sp.read(LocalHWInfo->SaveGame[x], LocalHWInfo->SaveGameLen[x]);
+  }
+  catch(MDFN_Error &e)
+  {
+   if(e.GetErrno() == ENOENT)
+    return(true);
+
+   MDFN_PrintError(_("Error loading save game file: %s\n"), e.what());
+   return(false);
+  }
+  catch(std::exception &e)
+  {
+   MDFN_PrintError(_("Error loading save game file: %s\n"), e.what());
+   return(false);
+  }
+ }
+ return(true);
+}
 

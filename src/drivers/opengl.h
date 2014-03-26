@@ -87,6 +87,7 @@ typedef void GLAPIENTRY (*glClearAccum_Func)(GLfloat, GLfloat, GLfloat, GLfloat)
 typedef void GLAPIENTRY (*glPushMatrix_Func)(void);
 typedef void GLAPIENTRY (*glPopMatrix_Func)(void);
 typedef void GLAPIENTRY (*glRotated_Func)(GLdouble angle, GLdouble x, GLdouble y, GLdouble z);
+typedef void GLAPIENTRY (*glScalef_Func)(GLfloat x, GLfloat y, GLfloat z);
 
 #if MDFN_WANT_OPENGL_SHADERS
 typedef GLhandleARB GLAPIENTRY (*glCreateShaderObjectARB_Func)(GLenum);
@@ -148,6 +149,7 @@ extern glClearAccum_Func p_glClearAccum;
 extern glPushMatrix_Func p_glPushMatrix;
 extern glPopMatrix_Func p_glPopMatrix;
 extern glRotated_Func p_glRotated;
+extern glScalef_Func p_glScalef;
 
 #if MDFN_WANT_OPENGL_SHADERS
 extern glCreateShaderObjectARB_Func p_glCreateShaderObjectARB;

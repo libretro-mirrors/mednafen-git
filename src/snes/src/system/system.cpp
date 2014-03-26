@@ -32,6 +32,8 @@ void System::coprocessor_enter() {
 
 void System::run_mednafen_custom()
 {
+ exit_line_counter = 0;
+
  //if(scheduler.exit_reason() == Scheduler::FrameEvent)	// Commenting this out, causes latency when state rewinding is enabled.
  input.update();
 
@@ -45,6 +47,7 @@ void System::run_mednafen_custom()
 }
 
 void System::run() {
+  exit_line_counter = 0;
   scheduler.sync = Scheduler::SyncNone;
 
   scheduler.enter();
@@ -55,6 +58,8 @@ void System::run() {
 }
 
 void System::runtosave() {
+  exit_line_counter = 0;
+
   scheduler.sync = Scheduler::SyncCpu;
   runthreadtosave();
 
@@ -231,7 +236,14 @@ void System::unload() {
 
 void System::scanline() {
   video.scanline();
-  if(cpu.vcounter() == 241) scheduler.exit(Scheduler::FrameEvent);
+  exit_line_counter++;
+
+//  if(cpu.vcounter() == 241) scheduler.exit(Scheduler::FrameEvent);
+ if((cpu.vcounter() == 241 && exit_line_counter > 100) || (!ppu.overscan() && cpu.vcounter() == 226))	// Input latency reduction fun.
+ {
+  //printf("Exit: %u\n", cpu.vcounter());
+  scheduler.exit(Scheduler::FrameEvent);
+ }
 }
 
 void System::frame() {

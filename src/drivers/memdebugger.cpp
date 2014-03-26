@@ -19,6 +19,7 @@
 #include "memdebugger.h"
 #include "debugger.h"
 #include "prompt.h"
+#include "../FileStream.h"
 
 #include <ctype.h>
 #include <trio/trio.h>
@@ -41,8 +42,6 @@ static int CurASpace; // Current address space number
 static bool LowNib = FALSE;
 static bool InEditMode = FALSE;
 static bool InTextArea = FALSE; // Right side text vs left side numbers, selected via TAB
-static bool InMarkMode = FALSE;
-static uint32 MarkModeBegin;
 
 static std::string BSS_String, RS_String, TS_String;
 static char *error_string;
@@ -288,7 +287,7 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
           char fname[256];
 	  bool acceptable = FALSE;
 
-	  
+
           if(trio_sscanf(pstring.c_str(), "%08x %08x %255[^\r\n]", &A1, &A2, fname) == 3)
 	   acceptable = TRUE;
           else if(trio_sscanf(pstring.c_str(), "%08x +%08x %255[^\r\n]", &A1, &tmpsize, fname) == 3)
@@ -296,16 +295,18 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
 	   acceptable = TRUE;
 	   A2 = A1 + tmpsize - 1;
 	  }
+
 	  if(acceptable)
           {
-           FILE *fp = fopen(fname, "wb");
-           if(fp)
-           {
-	    uint8 write_buffer[256];
-	    uint64 a = A1;
+           LockGameMutex(1);
+	   try
+	   {
+	    FileStream fp(fname, FileStream::MODE_WRITE);
+            uint8 write_buffer[256];
+            uint64 a = A1;
+
 	    //printf("%08x %08x\n", A1, A2);
 
-            LockGameMutex(1);
 	    while(a <= A2)
 	    {
              size_t to_write;
@@ -314,30 +315,28 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
 
 	     ASpace->GetAddressSpaceBytes(ASpace->name, a, to_write, write_buffer);
 
-	     if(fwrite(write_buffer, 1, to_write, fp) != to_write)
-	     {
-              error_string = trio_aprintf("File write error: %m", errno);
-              error_time = SDL_GetTicks();
-	      break;
-	     }
+	     fp.write(write_buffer, to_write);
 	     a += to_write;
 	    }
-            LockGameMutex(0);
-            fclose(fp);
            }
-	   else
+	   catch(std::exception &e)
 	   {
-            error_string = trio_aprintf("File open error: %m", errno);
+            error_string = trio_aprintf("%s", e.what());
             error_time = SDL_GetTicks();
 	   }
+           LockGameMutex(0);
           }
+	  else
+	  {
+	   error_string = trio_aprintf("Invalid memory dump specification.");
+	   error_time = SDL_GetTicks();
+	  }
          }
          else if(InPrompt == LoadMem)
          {
           uint32 A1, A2, tmpsize;
           char fname[256];
           bool acceptable = FALSE;
-
 
           if(trio_sscanf(pstring.c_str(), "%08x %08x %255[^\r\n]", &A1, &A2, fname) == 3)
            acceptable = TRUE;
@@ -346,13 +345,14 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
            acceptable = TRUE;
            A2 = A1 + tmpsize - 1;
           }
+
           if(acceptable)
           {
-           FILE *fp = fopen(fname, "rb");
-           if(fp)
-           {
-            LockGameMutex(1);
+	   LockGameMutex(1);
 
+	   try
+	   {
+            FileStream fp(fname, FileStream::MODE_READ);
 	    uint8 read_buffer[256];
 	    uint64 a = A1;
 
@@ -364,7 +364,7 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
 	     to_read = A2 - a + 1;
 	     if(to_read > 256) to_read = 256;
 
-	     read_len = fread(read_buffer, 1, to_read, fp);
+	     read_len = fp.read(read_buffer, to_read, false);
 
 	     if(read_len > 0)
               ASpace->PutAddressSpaceBytes(ASpace->name, a, read_len, 1, TRUE, read_buffer);
@@ -373,27 +373,23 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
 
 	     if(read_len != to_read)
 	     {
-	      if(ferror(fp))
-	      {
-	       error_string = trio_aprintf("File read error: %m", errno);
-       	       error_time = SDL_GetTicks();
-              }
-	      else if(feof(fp))
-	      {
-	       error_string = trio_aprintf("Warning: unexpected EOF(short by %08x byte(s))", A2 - a + 1);
-	       error_time = SDL_GetTicks();
-	      }
+	      error_string = trio_aprintf("Warning: unexpected EOF(short by %08x byte(s))", A2 - a + 1);
+	      error_time = SDL_GetTicks();
 	      break;
 	     }
 	    }
-            LockGameMutex(0);
-            fclose(fp);
            }
-	   else
+	   catch(std::exception &e)
 	   {
-            error_string = trio_aprintf("File open error: %m", errno);
+            error_string = trio_aprintf("%s", e.what());
             error_time = SDL_GetTicks();
 	   }
+	   LockGameMutex(0);
+          }
+          else
+          {
+           error_string = trio_aprintf("Invalid memory load specification.");
+           error_time = SDL_GetTicks();
           }
          }
 	 else if(InPrompt == TextSearch)
@@ -577,22 +573,6 @@ void MemDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
 
    test_match_pos = ASpacePos[CurASpace] % zemod;
 
-   if(InMarkMode)
-   {
-    if(MarkModeBegin < test_match_pos && Ameow < test_match_pos && Ameow >= MarkModeBegin)
-    {
-     if(InTextArea)
-     {
-      acolor = MK_COLOR_A(0xFF, 0x00, 0x00, 0xFF);
-      bcolor = MK_COLOR_A(0xFF, 0x80, 0x80, 0xFF);
-     }
-     else
-     { 
-      acolor = MK_COLOR_A(0xFF, 0x80, 0x80, 0xFF);
-      bcolor = MK_COLOR_A(0xFF, 0x00, 0x00, 0xFF);
-     }
-    }
-   }
    if(Ameow == test_match_pos)
    {
     if(InEditMode)
@@ -1051,19 +1031,7 @@ int MemDebugger_Event(const SDL_Event *event)
 			LowNib = FALSE;
 			break;
 
-	 case SDLK_b: //InMarkMode = !InMarkMode;
-		      //if(InMarkMode)
- 		      // MarkModeBegin = ASpacePos[CurASpace];
-		      DoCrazy();
-		      break;
-
-	 case SDLK_e: if(InMarkMode)
-		      {
-		       FILE *fp = fopen("markers.txt", "ab");
-		       fprintf(fp, "%08x %08x\n", MarkModeBegin, ASpacePos[CurASpace]);
-		       fclose(fp);
-		       InMarkMode = FALSE;
-		      }
+	 case SDLK_b: DoCrazy();
 		      break;
 	}
 	break;

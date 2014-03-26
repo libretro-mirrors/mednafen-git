@@ -23,10 +23,9 @@ endif
 if WIN32
 libmdfnsdl_a_SOURCES += Joystick_XInput.cpp
 libmdfnsdl_a_SOURCES += Joystick_DX5.cpp
+#Joystick_DX8.cpp
 libmdfnsdl_a_SOURCES += NetClient_WS2.cpp
 endif
-
-# libmdfnsdl_a_SOURCES += netconnection.cpp netconnection_sdlnet.cpp
 
 if WANT_DEBUGGER
 libmdfnsdl_a_SOURCES += debugger.cpp gfxdebugger.cpp memdebugger.cpp logdebugger.cpp prompt.cpp

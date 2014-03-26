@@ -575,7 +575,8 @@ bool UNIFLoad(const char *name, MDFNFILE *fp, NESGameType *gt)
         if(!InitializeBoard())
 	 goto aborto;
 
-	MDFN_LoadGameSave(&UNIFCart);
+	if(!MDFN_LoadGameSave(&UNIFCart))
+	 goto aborto;
 
 	gt->Power = UNIF_Power;
 	gt->Reset = UNIF_Reset;

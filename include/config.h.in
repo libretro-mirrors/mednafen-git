@@ -619,6 +619,9 @@
 /* Define if we are compiling with PC-FX emulation. */
 #undef WANT_PCFX_EMU
 
+/* Define if we are compiling with PC/AT Compatible emulation. */
+#undef WANT_PC_EMU
+
 /* Define if we are compiling with PlayStation emulation. */
 #undef WANT_PSX_EMU
 
@@ -647,6 +650,11 @@
 # ifndef WORDS_BIGENDIAN
 #  undef WORDS_BIGENDIAN
 # endif
+#endif
+
+/* Enable large inode numbers on Mac OS X 10.5.  */
+#ifndef _DARWIN_USE_64_BIT_INODE
+# define _DARWIN_USE_64_BIT_INODE 1
 #endif
 
 /* Number of bits in a file offset, on hosts where this is settable. */

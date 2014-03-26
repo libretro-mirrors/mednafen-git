@@ -59,11 +59,15 @@ typedef uint64_t uint64;
   #define MDFN_ALIGN(n)	__attribute__ ((aligned (n)))
   #define MDFN_FORMATSTR(a,b,c) __attribute__ ((format (a, b, c)));
   #define MDFN_WARN_UNUSED_RESULT __attribute__ ((warn_unused_result))
+  #define MDFN_NOWARN_UNUSED __attribute__((unused))
+
+ #define MDFN_UNLIKELY(n) __builtin_expect((n) != 0, 0)
+ #define MDFN_LIKELY(n) __builtin_expect((n) != 0, 1)
 
 #elif defined(_MSC_VER)
 
   #warning "Compiling with MSVC, untested"
-  #define INLINE inline __forceinline
+  #define INLINE __forceinline
   #define NO_INLINE __declspec(noinline)
 
   #define MDFN_FASTCALL __fastcall
@@ -74,6 +78,10 @@ typedef uint64_t uint64;
 
   #define MDFN_WARN_UNUSED_RESULT
 
+  #define MDFN_NOWARN_UNUSED
+
+ #define MDFN_UNLIKELY(n) ((n) != 0)
+ #define MDFN_LIKELY(n) ((n) != 0)
 #else
   #error "Not compiling with GCC nor MSVC"
   #define INLINE inline
@@ -87,6 +95,10 @@ typedef uint64_t uint64;
 
   #define MDFN_WARN_UNUSED_RESULT
 
+  #define MDFN_NOWARN_UNUSED
+
+ #define MDFN_UNLIKELY(n) ((n) != 0)
+ #define MDFN_LIKELY(n) ((n) != 0)
 #endif
 
 

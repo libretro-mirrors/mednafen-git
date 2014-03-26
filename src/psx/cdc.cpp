@@ -830,8 +830,10 @@ pscpu_timestamp_t PS_CDC::Update(const pscpu_timestamp_t timestamp)
      if(CurSector >= (int32)toc.tracks[100].lba)
      {
       HeaderBufValid = false;
-      DriveStatus = DS_STOPPED;
-      SetAIP(CDCIRQ_DISC_ERROR, MakeStatus() | 0x04, 0x04);	// TODO: Verify
+
+      // Status in this end-of-disc context here should be generated after we're in the pause state.
+      DriveStatus = DS_PAUSED;
+      SetAIP(CDCIRQ_DATA_END, MakeStatus());
      }
      else
      {
@@ -1344,10 +1346,11 @@ void PS_CDC::BeginSeek(uint32 target, int after_seek)
 
 // Remove this function when we have better seek emulation; it's here because the Rockman complete works games(at least 2 and 4) apparently have finicky fubared CD
 // access code.
-void PS_CDC::PreSeekHack(uint32 target)
+void PS_CDC::PreSeekHack(bool logical, uint32 target)
 {
  uint8 buf[2352 + 96];
  int max_try = 32;
+ bool NeedHBuf = logical;
 
  CurSector = target;
 
@@ -1356,6 +1359,14 @@ void PS_CDC::PreSeekHack(uint32 target)
   do
   {
    Cur_CDIF->ReadRawSector(buf, target++);
+
+   // GetLocL related kludge, for Gran Turismo 1 music, perhaps others?
+   if(NeedHBuf)
+   {
+    NeedHBuf = false;
+    memcpy(HeaderBuf, buf + 12, 12);
+    HeaderBufValid = true;
+   }
   } while(!DecodeSubQ(buf + 2352) && --max_try > 0 && target < toc.tracks[100].lba);
  }
 }
@@ -1395,7 +1406,7 @@ int32 PS_CDC::Command_Play(const int arg_count, const uint8 *args)
   SeekTarget = toc.tracks[track].lba;
   PSRCounter = CalcSeekTime(CurSector, SeekTarget, DriveStatus != DS_STOPPED, DriveStatus == DS_PAUSED);
   HeaderBufValid = false;
-  PreSeekHack(SeekTarget);
+  PreSeekHack(false, SeekTarget);
 
   DriveStatus = DS_SEEKING;
   StatusAfterSeek = DS_PLAYING;
@@ -1410,7 +1421,7 @@ int32 PS_CDC::Command_Play(const int arg_count, const uint8 *args)
 
    PSRCounter = CalcSeekTime(CurSector, SeekTarget, DriveStatus != DS_STOPPED, DriveStatus == DS_PAUSED);
    HeaderBufValid = false;
-   PreSeekHack(SeekTarget);
+   PreSeekHack(false, SeekTarget);
 
    DriveStatus = DS_SEEKING;
    StatusAfterSeek = DS_PLAYING;
@@ -1423,7 +1434,7 @@ int32 PS_CDC::Command_Play(const int arg_count, const uint8 *args)
 
    PSRCounter = CalcSeekTime(CurSector, SeekTarget, DriveStatus != DS_STOPPED, DriveStatus == DS_PAUSED);
    HeaderBufValid = false;
-   PreSeekHack(SeekTarget);
+   PreSeekHack(false, SeekTarget);
 
    DriveStatus = DS_SEEKING;
    StatusAfterSeek = DS_PLAYING;
@@ -1493,7 +1504,7 @@ void PS_CDC::ReadBase(void)
 
   PSRCounter = CalcSeekTime(CurSector, SeekTarget, DriveStatus != DS_STOPPED, DriveStatus == DS_PAUSED);
   HeaderBufValid = false;
-  PreSeekHack(SeekTarget);
+  PreSeekHack(true, SeekTarget);
 
   DriveStatus = DS_SEEKING_LOGICAL;
   StatusAfterSeek = DS_READING;
@@ -1804,7 +1815,7 @@ int32 PS_CDC::Command_SeekL(const int arg_count, const uint8 *args)
 
  PSRCounter = CalcSeekTime(CurSector, SeekTarget, DriveStatus != DS_STOPPED, DriveStatus == DS_PAUSED);
  HeaderBufValid = false;
- PreSeekHack(SeekTarget);
+ PreSeekHack(true, SeekTarget);
  DriveStatus = DS_SEEKING_LOGICAL;
  StatusAfterSeek = DS_STANDBY;
  ClearAIP();
@@ -1824,7 +1835,7 @@ int32 PS_CDC::Command_SeekP(const int arg_count, const uint8 *args)
 
  PSRCounter = CalcSeekTime(CurSector, SeekTarget, DriveStatus != DS_STOPPED, DriveStatus == DS_PAUSED);
  HeaderBufValid = false;
- PreSeekHack(SeekTarget);
+ PreSeekHack(false, SeekTarget);
  DriveStatus = DS_SEEKING;
  StatusAfterSeek = DS_STANDBY;
  ClearAIP();
@@ -1983,11 +1994,6 @@ int32 PS_CDC::Command_ID(const int arg_count, const uint8 *args)
  WriteResult(MakeStatus());
  WriteIRQ(CDCIRQ_ACKNOWLEDGE);
 
- HeaderBufValid = false;
- PSRCounter = 0;
- DriveStatus = DS_PAUSED;	// or DS_STANDBY?
- ClearAIP();
-
  return(33868);
 }
 
@@ -2023,7 +2029,10 @@ int32 PS_CDC::Command_ID_Part2(void)
   WriteResult(0);
  }
 
- WriteIRQ(CDCIRQ_COMPLETE);
+ if(IsPSXDisc)
+  WriteIRQ(CDCIRQ_COMPLETE);
+ else
+  WriteIRQ(CDCIRQ_DISC_ERROR);
 
  return(0);
 }

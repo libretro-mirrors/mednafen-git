@@ -282,7 +282,7 @@ static INLINE std::set<uint32> GetXInputVidPid(void)
   unsigned int alloc_num_devices = 0;
   unsigned int num_devices = 0;
 
-  p_GetRawInputDeviceList(NULL, &alloc_num_devices, 0);
+  p_GetRawInputDeviceList(NULL, &alloc_num_devices, sizeof(RAWINPUTDEVICELIST));
   ridl.resize(alloc_num_devices);
 
   if((num_devices = p_GetRawInputDeviceList(&ridl[0], &alloc_num_devices, sizeof(RAWINPUTDEVICELIST))) > 0)

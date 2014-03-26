@@ -1017,7 +1017,7 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
    {
     if(LineWidths[suby].w != first_rect.w || LineWidths[suby].x != first_rect.x)
     {
-     puts("Skippidy");
+     //puts("Skippidy");
      OverlayOK = FALSE;
      break;
     }

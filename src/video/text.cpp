@@ -39,8 +39,8 @@ static FontDescriptor_t FontDescriptors[_MDFN_FONT_COUNT] =
  { 18, 18, 	-1,			sizeof(FontData18x18[0]),	&FontData18x18[0].data[0] },
  #else
  { 9, 18,	-1,			sizeof(FontData9x18[0]),	&FontData9x18[0].data[0] },
- { 5, 7, 	-1,			sizeof(FontData5x7[0]),		&FontData5x7[0].data[0]) },
- { 4, 5,	-1,			sizeof(FontData4x5[0]),		&FontData4x5[0].data[0]) },
+ { 5, 7, 	-1,			sizeof(FontData5x7[0]),		&FontData5x7[0].data[0] },
+ { 4, 5,	-1,			sizeof(FontData4x5[0]),		&FontData4x5[0].data[0] },
  { 6, 13, 	-1,			sizeof(FontData6x13[0]),	&FontData6x13[0].data[0] },
  #endif
 };

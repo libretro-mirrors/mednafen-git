@@ -31,7 +31,7 @@ typedef struct __CartInfo {
 } CartInfo;
 
 void MDFN_SaveGameSave(CartInfo *LocalHWInfo);
-void MDFN_LoadGameSave(CartInfo *LocalHWInfo);
+bool MDFN_LoadGameSave(CartInfo *LocalHWInfo);
 
 extern uint8 *Page[32],*VPage[8],*MMC5SPRVPage[8],*MMC5BGVPage[8];
 

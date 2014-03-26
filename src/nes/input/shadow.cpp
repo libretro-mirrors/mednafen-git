@@ -153,7 +153,7 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-static INPUTCFC SHADOWC={ReadZapper,0,StrobeShadow,UpdateZapper,ZapperFrapper, DrawZapper, StateActionFC, 3, sizeof(uint32) };
+static INPUTCFC SHADOWC={ReadZapper,0,StrobeShadow,UpdateZapper,ZapperFrapper, DrawZapper, StateActionFC };
 
 INPUTCFC *MDFN_InitSpaceShadow(void)
 {

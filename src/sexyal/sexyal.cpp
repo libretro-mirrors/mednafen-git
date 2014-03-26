@@ -217,6 +217,7 @@ static SexyAL_device *Open(SexyAL *iface, const char *id, SexyAL_format *format,
  assert(0 == buffering->buffer_size);
  assert(0 == buffering->period_size);
  assert(0 == buffering->latency);
+ assert(0 == buffering->bt_gran);
 
  if(!(ret = driver->Open(id, format, buffering)))
   return(0);

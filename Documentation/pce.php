@@ -14,6 +14,7 @@
   <li>Support for Populous's backup RAM.</li>
   <li>6-button pad emulation.</li>
   <li>Mouse emulation.</li>
+  <li>Working CD+G playback.</li>
  </ul>
 <?php EndSection(); ?>
 

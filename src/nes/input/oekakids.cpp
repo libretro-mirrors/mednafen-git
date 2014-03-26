@@ -107,7 +107,7 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-static INPUTCFC OekaKids={OK_Read,OK_Write,0,OK_Update,0,DrawOeka, StateActionFC, 3, sizeof(uint32) };
+static INPUTCFC OekaKids={OK_Read,OK_Write,0,OK_Update,0,DrawOeka, StateActionFC };
 
 INPUTCFC *MDFN_InitOekaKids(void)
 {

@@ -68,7 +68,7 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-static INPUTCFC TopRider={Read,Write,0,Update,0,0, StateActionFC, 1, sizeof(uint8) };
+static INPUTCFC TopRider={Read,Write,0,Update,0,0, StateActionFC };
 
 INPUTCFC *MDFN_InitTopRider(void)
 {

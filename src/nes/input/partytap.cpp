@@ -82,7 +82,7 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-static INPUTCFC PartyTap = { QZ_Read,QZ_Write,QZ_Strobe,QZ_Update,0,0, StateActionFC, 1, sizeof(uint8) };
+static INPUTCFC PartyTap = { QZ_Read,QZ_Write,QZ_Strobe,QZ_Update,0,0, StateActionFC };
 
 INPUTCFC *MDFN_InitPartyTap(void)
 {

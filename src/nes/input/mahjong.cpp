@@ -85,7 +85,7 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-static INPUTCFC Mahjong={MJ_Read,MJ_Write,0,MJ_Update,0,0, StateActionFC, 1, sizeof(uint32) };
+static INPUTCFC Mahjong={MJ_Read,MJ_Write,0,MJ_Update,0,0, StateActionFC };
 
 INPUTCFC *MDFN_InitMahjong(void)
 {

@@ -26,6 +26,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/joystick.h>
+#include <linux/input.h>
 #include <sys/types.h>
 #include <dirent.h>
 
@@ -96,11 +97,31 @@ Joystick_Linux::Joystick_Linux(const char *jsdev_path, const char *evdev_path) :
   {
    ErrnoHolder ene(errno);
 
-   throw MDFN_Error(ene.Errno(), _("Error opening event device \"%s\": %s"), evdev_path, ene.StrError());
+   if(ene.Errno() == EACCES)
+   {
+    evdev_fd = open(evdev_path, O_RDONLY);
+    if(evdev_fd == -1)
+    {
+     ErrnoHolder ene2(errno);
+
+     fprintf(stderr, _("WARNING: Failed to open event device \"%s\": %s --- !!!!! BASE JOYSTICK FUNCTIONALITY WILL BE AVAILABLE, BUT FORCE-FEEDBACK(E.G. RUMBLE) WILL BE UNAVAILABLE, AND THE CALCULATED JOYSTICK ID WILL BE DIFFERENT. !!!!!\n"), evdev_path, ene2.StrError());
+    }
+    else
+    {
+     fprintf(stderr, _("WARNING: Could only open event device \"%s\" for reading, and not reading+writing: %s --- !!!!! FORCE-FEEDBACK(E.G. RUMBLE) WILL BE UNAVAILABLE. !!!!!\n"), evdev_path, ene.StrError());
+    }
+   }
+   else
+    fprintf(stderr, _("WARNING: Failed to open event device \"%s\": %s --- !!!!! BASE JOYSTICK FUNCTIONALITY WILL BE AVAILABLE, BUT FORCE-FEEDBACK(E.G. RUMBLE) WILL BE UNAVAILABLE, AND THE CALCULATED JOYSTICK ID WILL BE DIFFERENT. !!!!!\n"), evdev_path, ene.StrError());
   }
-  else
-   fcntl(evdev_fd, F_SETFL, fcntl(evdev_fd, F_GETFL) | O_NONBLOCK);
  }
+ else
+  fprintf(stderr, _("WARNING: Failed to find a valid corresponding event device to joystick device \"%s\" --- !!!!! BASE JOYSTICK FUNCTIONALITY WILL BE AVAILABLE, BUT FORCE-FEEDBACK(E.G. RUMBLE) WILL BE UNAVAILABLE, AND THE CALCULATED JOYSTICK ID WILL BE DIFFERENT. !!!!!\n"), jsdev_path);
+
+ if(evdev_fd != -1)
+  fcntl(evdev_fd, F_SETFL, fcntl(evdev_fd, F_GETFL) | O_NONBLOCK);
+
+
 
  num_rel_axes = 0;
 
@@ -283,7 +304,7 @@ void Joystick_Linux::SetRumble(uint8 weak_intensity, uint8 strong_intensity)
   else
   {
    write(evdev_fd, (const void *)&stop_play, sizeof(stop_play));
-   ioctl(evdev_fd, EVIOCRMFF, (void *)old_rumble.id);
+   ioctl(evdev_fd, EVIOCRMFF, (void *)(intptr_t)old_rumble.id);
   }
 #else
   play.type = EV_FF;
@@ -292,7 +313,7 @@ void Joystick_Linux::SetRumble(uint8 weak_intensity, uint8 strong_intensity)
   write(evdev_fd, (const void *)&play, sizeof(play));
 
   if(old_rumble.id != -1)
-   ioctl(evdev_fd, EVIOCRMFF, (void *)old_rumble.id);
+   ioctl(evdev_fd, EVIOCRMFF, (void *)(intptr_t)old_rumble.id);
 #endif
  }
 }

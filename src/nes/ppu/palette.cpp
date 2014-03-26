@@ -21,6 +21,7 @@
 #include "../nes.h"
 #include <math.h>
 #include "palette.h"
+#include "../../FileStream.h"
 
 static const MDFNPalStruct rp2c04_0001[64] = {
  #include "palettes/rp2c04-0001.h"
@@ -64,32 +65,25 @@ static const MDFNPalStruct *Palettes[6] =
 static bool LoadCPalette(MDFNPalStruct *palette, const char *sys)
 {
  uint8 ptmp[192];
- FILE *fp;
 
  std::string cpalette_fn = MDFN_MakeFName(MDFNMKF_PALETTE, 0, sys).c_str();
 
  MDFN_printf(_("Loading custom palette from \"%s\"...\n"),  cpalette_fn.c_str());
  MDFN_indent(1);
 
- if(!(fp = fopen(cpalette_fn.c_str(), "rb")))
+ try
  {
-  ErrnoHolder ene(errno);
+  FileStream fp(cpalette_fn.c_str(), FileStream::MODE_READ);
 
-  MDFN_printf(_("Error opening file: %s\n"), ene.StrError());
+  fp.read(ptmp, 192);
+ }
+ catch(std::exception &e)
+ {
+  MDFN_printf(_("Error: %s\n"), e.what());
   MDFN_indent(-1);
   return(false);
  }
-
- if(fread(ptmp, 1, 192, fp) != 192)
- {
-  ErrnoHolder ene(errno);
-
-  MDFN_PrintError(_("Error reading file: %s\n"), feof(fp) ? _("File length is too short") : ene.StrError());
-  fclose(fp);
-  return(false);
- }
-
- fclose(fp);
+ MDFN_indent(-1);
 
  for(int x = 0; x < 64; x++)
  {

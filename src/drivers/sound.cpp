@@ -138,6 +138,7 @@ static bool RunSexyALTest(SexyAL *interface, SexyAL_buffering *buffering, const 
      buffering->buffer_size = 0;
      buffering->period_size = 0;
      buffering->latency = 0;
+     buffering->bt_gran = 0;
 
      if(!(Output=Interface->Open(Interface, device, &format, buffering, driver_type)))
      {
@@ -289,14 +290,18 @@ bool InitSound(MDFNGI *gi)
 
  if(buffering.period_size)
  {
-  int64_t pt_test_result = ((int64_t)buffering.period_size * (1000 * 1000) / format.rate);
-
+  //int64_t pt_test_result = ((int64_t)buffering.period_size * (1000 * 1000) / format.rate);
+  int64_t bt_test_result = ((int64_t)(buffering.bt_gran ? buffering.bt_gran : buffering.period_size) * (1000 * 1000) / format.rate);
   MDFNI_printf(_("Period size: %u sample frames(%f ms)\n"), buffering.period_size, (double)buffering.period_size * 1000 / format.rate);
 
-  if(pt_test_result > 5333)
+  if(bt_test_result > 5333)
   {
    MDFN_indent(1);
-   MDFN_printf(_("Warning: Period time is too large(it should be <= ~5.333ms).  Video will appear very jerky.\n"));
+
+   if(!buffering.bt_gran)
+    MDFN_printf(_("Warning: Period time is too large(it should be <= ~5.333ms).  Video will appear very jerky.\n"));
+   else
+    MDFN_printf(_("Warning: Buffer update timing granularity is too large(%f; it should be <= ~5.333ms).  Video will appear very jerky.\n"), (double)buffering.bt_gran * 1000 / format.rate);
    MDFN_indent(-1);
   }
  }

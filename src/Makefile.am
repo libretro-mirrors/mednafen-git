@@ -54,6 +54,12 @@ mednafen_LDADD          +=      ngp/libngp.a
 mednafen_DEPENDENCIES   +=      ngp/libngp.a
 endif
 
+if WANT_PC_EMU
+SUBDIRS += pc
+mednafen_LDADD          +=      pc/libpc.a
+mednafen_DEPENDENCIES   +=      pc/libpc.a
+endif
+
 if WANT_PCE_EMU
 SUBDIRS += pce
 mednafen_LDADD          +=      pce/libpce.a

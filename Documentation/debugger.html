@@ -6,13 +6,15 @@
  <body>
   <center><h1><img alt="Mednafen" src="mednafen.png" width="696" height="204" /></h1></center>
   <center><h1>Debugger Documentation</h1></center>
-  <center><i>Last updated July 4, 2011<br />Valid as of Mednafen 0.9.18-WIP</i></center>
+  <center><i>Last updated December 16, 2012<br />Valid as of Mednafen 0.9.17-WIP</i></center>
   <hr>
    <h2>Notes and Cautions:</h2>
    <p>
     Saving and loading states in step mode may lead to malfunctions or emulator crashes/aborts, due to
       deficiencies in the emulation models coupled with debugger hooks; hence, it is not recommended(though it may work
       adequately on some emulated systems).  This issue will be corrected in a future version.
+      <br />
+      A similar issue occurs on some emulated systems(e.g. PSX) in regards to triggering power/reset while in step mode.
   </p>
   <p>
    High-frequency counters(for timers) as seen in the register section of the CPU debugger view may not be updated properly

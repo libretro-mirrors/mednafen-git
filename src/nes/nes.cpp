@@ -466,6 +466,8 @@ static MDFNSetting NESSettings[] =
   { "nes.slend", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanlines in NTSC mode."), NULL, MDFNST_UINT, "231", "0", "239" },
   { "nes.slstartp", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in PAL mode."), NULL, MDFNST_UINT, "0", "0", "239" },
   { "nes.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayedscanlines in PAL mode."), NULL, MDFNST_UINT, "239", "0", "239" },
+
+  { "nes.correct_aspect", MDFNSF_CAT_VIDEO, gettext_noop("Correct the aspect ratio."), NULL, MDFNST_BOOL, "0" },
   { "nes.ntscblitter", MDFNSF_NOFLAGS, gettext_noop("Enable NTSC color generation and blitter."), 
 	gettext_noop("NOTE: If your refresh rate isn't very close to 60.1Hz(+-0.1), you will need to set the nes.ntsc.mergefields setting to \"1\" to avoid excessive flickering."), MDFNST_BOOL, "0" },
 

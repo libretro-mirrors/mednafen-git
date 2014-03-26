@@ -1,3 +1,151 @@
+-- 0.9.27-WIP: --
+
+December 20, 2012:
+	Removed some old unused code from the memory debugger.
+
+	PSX: The debugger's disassembler will now pull instructions from the instruction cache, if it's valid(and fall back
+	to the memory map data if it's not).
+
+	NES: Fixed a bug in the FDS state loading routine that could cause sound issues(wrong volume of FDS sound channel).
+
+	NES: Replaced a floating-point filter used when expansion sound is in use with a 64-bit fixed-point integer math filter,
+	to fix a problem of massive performance degradation in some circumstances(probably due to denormals).
+
+	NES: Fixed a bug that was causing a crash when Game Genie emulation was enabled while trying to emulate an FDS game.
+
+	Don't make use of errno in FileWrapper::read when handling an unexpected EOF.
+
+	NES, SNES: Replaced usage of stdio file access with FileStream usage.
+
+December 19, 2012:
+	Fixed a startup multithreading race condition with QuickTime and WAV file recording.
+
+	PC-FX: Resolved a few compiler warnings.
+
+	Replaced usage of stdio file access with FileStream usage in:
+		Memory debugger.
+		NGP FLASH memory saving/loading routines.
+
+December 17, 2012:
+	NES: Added setting "nes.correct_aspect".
+
+	Attempt to open a Linux (joystick) event device read-only if opening it for read+write fails, so at least some of the
+	enhanced functionality will be available on Linux distributions with partially broken device permissions.
+
+December 16, 2012:
+	PSX: Run EXE-loading MIPS binary code from a cacheable segment so it doesn't take so long to run.
+
+December 15, 2012:
+	SNES: Changed frame/system synchronization point logic, to reduce input latency by 1 video frame(~17ms).
+
+	SNES: The setting "snes.correct_aspect" setting now supports the unique PAL aspect ratio with PAL games(rather than just correcting the
+	aspect ratio per NTSC as before)
+
+	SNES: Fixed a bug that was causing distorted vertical scaling with PAL games.
+
+December 12, 2012:
+	PSX: Improved CDC "ID" command emulation, fixes a problem with music in "WipEout 3".
+
+	PSX: Changed how end-of-disc is handled while CD-DA is playing, per tests on a PS1; fixes a major problem with
+	"Wu-Tang - Shaolin Style" during its startup.
+
+December 11, 2012:
+	PSX: Added a kludge to the CDC logical seek emulation code to fix the problem of missing music in "Gran Turismo 1".
+
+	PSX: More DMA emulation revising.
+
+December 10, 2012:
+	PSX: Force DMA channel 6's channel control register bit1 to 1, per tests on a PS1.
+
+December 9, 2012:
+	PSX: Added use of MDFN_LIKELY() and MDFN_UNLIKELY() to the CPU core.
+
+	Added MDFN_LIKELY() and MDFN_UNLIKELY() macros to provide crude branch prediction hints to the compiler.
+
+	PSX: Improved DMA controller emulation, per tests on a PS1 and nocash documentation.  Fixes major problems with "Final Fantasy 7",
+	"Final Fantasy 9", "Chrono Cross", "Legacy of Kain - Soul Reaver", and "Dragon Quest 7".
+
+December 8, 2012:
+	PSX: Added preliminary instruction cache emulation, fixes problems with "Formula One 99", "Formula One 2000", and "Formula One 2001".
+
+	PSX: Corrected the value in the CPU product ID register.
+
+December 5, 2012:
+	PSX: Improved GPU info control port command emulation, per tests on a PS1.
+
+	PSX: Reset more GPU state on software(via control port) reset, per tests on a PS1.
+
+December 2, 2012:
+	PSX: Initialize NTSC vertical and horizontal GPU display timings properly on software reset(via the GPU control port),
+	per tests on a PS1(the horizontal timings might not be 100% correct, but they probably are).
+
+	PSX: Increased the amount of NTSC horizontal overscan shown.
+
+	PSX: Revamped GPU vertical display timing model, per tests on a PS1(the old model was Quite Wrong), and made the visible 
+	vertical 240-pixel "viewport" match standard PS1 NTSC game vertical timings.
+
+	PSX: Ignore lower bit of the GPU framebuffer X readout coordinate, per tests on a PS1.
+
+	Made CUE sheet parser slightly stricter.
+
+	Added setting, "cd.image_memcache", default value of "0", that when enabled will cause any referenced data files in CUE and
+	TOC sheets to be loaded entirely into memory on startup, and cause the non-multithreaded CD reader interface to be used
+	rather than the reader interface that uses an additional thread, for that emulated CD.
+
+November 16, 2012:
+	Replaced various instances of "__attribute__((unused))" with MDFN_NOWARN_UNUSED, a macro defined in types.h.
+
+	Removed nonutilized file "git-virtb.h".
+
+November 13, 2012:
+	PCE_FAST: Comment out a debug print statement in the CPU emulation core.
+
+	PCE_FAST: Fixed a heap overflow bug when loading excessively large ROM images.
+
+November 6, 2012:
+	Fixed a compiler warning in the Linux joystick code that could hypothetically be treated as an error by some compiler(configurations).
+
+	In the Linux joystick code, Directly include <linux/input.h> instead of relying on it being included by <linux/joystick.h>.
+
+November 5, 2012:
+	Removed internal input button data encoding method "IDIT_BUTTON_BYTE", as the sole user of it(Family Keyboard) has been changed
+	to not use it, and it is wasteful(especially with netplay).
+
+	NES: Simplified Family Keyboard emulation, and compacted the key state.
+
+	NES: Removed unused members from emulated input device definition structures.
+
+November 4, 2012:
+	Don't error out if the corresponding evdev to a jsdev device can't be opened, and instead rely
+	on legacy jsdev functionality only, as Mednafen versions prior to 0.9.25-WIP would.
+
+November 3, 2012:
+	The "SDL" audio driver/output method now respects the "sound.period_time" setting.
+
+November 2, 2012:
+	PCE: Fixed a rather obvious major problem with the (incomplete/preliminary) MCGenjin emulation code.
+
+	Added missing sizeof(RAWINPUTDEVICELIST) parameter to a GetRawInputDeviceList() call in the Win32 DirectX joystick code.  It's
+	probably not strictly necessary now when viewed in context, but may be in the future if Microsoft does something weird, which Microsoft
+	tends to do, so better safe than sorry.  Thanks to zeromus for pointing it out.
+
+October 28, 2012:
+	Fixed typos that broke compilation without internal CJK fonts.  Thanks to zeromus for pointing it out.
+
+October 25, 2012:
+	VB: Completely removed the deprecated and disabled code for support for ".bin" file extension.
+
+	NES: Added support for iNES mapper 37.
+
+October 24, 2012:
+	NES: Changed filter parameters for a "nes.soundq" setting of "-2", increasing the computational complexity slightly, so that
+	games like "Solstice" and "Mega Man 2" don't sound like whining messes.
+
+October 19, 2012:
+	Cleaned up TODO file a bit, migrating some of the useful data into the general documentation.
+
+	PCE_FAST: Brought aspect ratio correction in line with the "pce" module(which is about what it should be).
+
 -- 0.9.26-WIP: --
 
 October 13, 2012:

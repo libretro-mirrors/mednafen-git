@@ -70,8 +70,8 @@ static const char *CSD_yres = gettext_noop("Full-screen vertical resolution.");
 static const char *CSDE_xres = gettext_noop("A value of \"0\" will cause the desktop horizontal resolution to be used.");
 static const char *CSDE_yres = gettext_noop("A value of \"0\" will cause the desktop vertical resolution to be used.");
 
-static const char *CSD_xscale = gettext_noop("Scaling factor for the X axis.");
-static const char *CSD_yscale = gettext_noop("Scaling factor for the Y axis.");
+static const char *CSD_xscale = gettext_noop("Scaling factor for the X axis in windowed mode.");
+static const char *CSD_yscale = gettext_noop("Scaling factor for the Y axis in windowed mode.");
 
 static const char *CSD_xscalefs = gettext_noop("Scaling factor for the X axis in fullscreen mode.");
 static const char *CSD_yscalefs = gettext_noop("Scaling factor for the Y axis in fullscreen mode.");
@@ -88,7 +88,7 @@ static const char *CSD_special = gettext_noop("Enable specified special video sc
 static const char *CSDE_special = gettext_noop("The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).");
 
 static const char *CSD_pixshader = gettext_noop("Enable specified OpenGL pixel shader.");
-static const char *CSDE_pixshader = gettext_noop("Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.");
+static const char *CSDE_pixshader = gettext_noop("Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen's pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.");
 
 static MDFNSetting_EnumList VDriver_List[] =
 {
@@ -173,7 +173,7 @@ static MDFNSetting DriverSettings[] =
   { "netplay.smallfont", MDFNSF_NOFLAGS, gettext_noop("Use small(tiny!) font for netplay chat console."), NULL, MDFNST_BOOL, "0" },
 
   { "video.fs", MDFNSF_NOFLAGS, gettext_noop("Enable fullscreen mode."), NULL, MDFNST_BOOL, "0", },
-  { "video.driver", MDFNSF_NOFLAGS, gettext_noop("Select video driver, \"opengl\" or \"sdl\"."), NULL, MDFNST_ENUM, "opengl", NULL, NULL, NULL,NULL, VDriver_List },
+  { "video.driver", MDFNSF_NOFLAGS, gettext_noop("Video output method/driver."), NULL, MDFNST_ENUM, "opengl", NULL, NULL, NULL,NULL, VDriver_List },
   { "video.glvsync", MDFNSF_NOFLAGS, gettext_noop("Attempt to synchronize OpenGL page flips to vertical retrace period."), 
 			       gettext_noop("Note: Additionally, if the environment variable \"__GL_SYNC_TO_VBLANK\" does not exist, then it will be created and set to the value specified for this setting.  This has the effect of forcibly enabling or disabling vblank synchronization when running under Linux with NVidia's drivers."),
 				MDFNST_BOOL, "1" },
@@ -198,7 +198,7 @@ static MDFNSetting DriverSettings[] =
   { "sound.device", MDFNSF_NOFLAGS, gettext_noop("Select sound output device."), gettext_noop("When using ALSA sound output under Linux, the \"sound.device\" setting \"default\" is Mednafen's default, IE \"hw:0\", not ALSA's \"default\". If you want to use ALSA's \"default\", use \"sexyal-literal-default\"."), MDFNST_STRING, "default", NULL, NULL },
   { "sound.volume", MDFNSF_NOFLAGS, gettext_noop("Sound volume level, in percent."), NULL, MDFNST_UINT, "100", "0", "150" },
   { "sound", MDFNSF_NOFLAGS, gettext_noop("Enable sound output."), NULL, MDFNST_BOOL, "1" },
-  { "sound.period_time", MDFNSF_NOFLAGS, gettext_noop("Desired period size in microseconds."), gettext_noop("Currently only affects OSS and ALSA output.  A value of 0 defers to the default in the driver code in SexyAL.\n\nNote: This is not the \"sound buffer size\" setting, that would be \"sound.buffer_time\"."), MDFNST_UINT,  "0", "0", "100000" },
+  { "sound.period_time", MDFNSF_NOFLAGS, gettext_noop("Desired period size in microseconds."), gettext_noop("Currently only affects OSS, ALSA, and SDL output.  A value of 0 defers to the default in the driver code in SexyAL.\n\nNote: This is not the \"sound buffer size\" setting, that would be \"sound.buffer_time\"."), MDFNST_UINT,  "0", "0", "100000" },
   { "sound.buffer_time", MDFNSF_NOFLAGS, gettext_noop("Desired total buffer size in milliseconds."), NULL, MDFNST_UINT, 
    #ifdef WIN32
    "52"
@@ -793,11 +793,14 @@ static int LoadGame(const char *force_module, const char *path)
 
 	ers.SetEmuClock(CurGame->MasterClock >> 32);
 
-	GameThreadRun = 1;
-	GameThread = SDL_CreateThread(GameLoop, NULL);
-
-	ffnosound = MDFN_GetSettingB("ffnosound");
-
+        #ifdef WANT_DEBUGGER
+        MemDebugger_Init();
+	if(MDFN_GetSettingB("debugger.autostepmode"))
+	{
+	 Debugger_Toggle();
+	 Debugger_ForceSteppingMode();
+	}
+        #endif
 
 	if(qtrecfn)
 	{
@@ -821,6 +824,14 @@ static int LoadGame(const char *force_module, const char *path)
 	  return(0);
          }
         }
+
+	ffnosound = MDFN_GetSettingB("ffnosound");
+
+	//
+	// Game thread creation should come lastish.
+	//
+	GameThreadRun = 1;
+	GameThread = SDL_CreateThread(GameLoop, NULL);
 
 	return 1;
 }
@@ -1687,15 +1698,6 @@ int main(int argc, char *argv[])
          VTLineWidths[1] = (MDFN_Rect *)calloc(CurGame->fb_height, sizeof(MDFN_Rect));
          NeedVideoChange = -1;
          FPS_Init();
-
-         #ifdef WANT_DEBUGGER
-         MemDebugger_Init();
-	 if(MDFN_GetSettingB("debugger.autostepmode"))
-	 {
-	  Debugger_Toggle();
-	  Debugger_ForceSteppingMode();
-	 }
-         #endif
         }
 	else
 	 NeedExitNow = 1;

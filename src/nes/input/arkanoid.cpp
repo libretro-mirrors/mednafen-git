@@ -116,7 +116,7 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
 }
 
 
-static INPUTCFC ARKCFC={ReadARKFC,0,StrobeARKFC,UpdateARKFC,0,0, StateActionFC, 3, sizeof(uint32) };
+static INPUTCFC ARKCFC={ReadARKFC,0,StrobeARKFC,UpdateARKFC,0,0, StateActionFC };
 
 INPUTCFC *MDFN_InitArkanoidFC(void)
 {
@@ -155,7 +155,7 @@ static void UpdateARK(int w, void *data)
  NESArk[w].mzb=ptr[4]?1:0;
 }
 
-static INPUTC ARKC={ReadARK, 0, StrobeARK, UpdateARK, 0, 0, StateAction, 3, sizeof(uint32) };
+static INPUTC ARKC={ReadARK, 0, StrobeARK, UpdateARK, 0, 0, StateAction };
 
 INPUTC *MDFN_InitArkanoid(int w)
 {

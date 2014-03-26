@@ -502,6 +502,8 @@ int FDSSound_StateAction(StateMem *sm, int load, int data_only)
  {
   for(int i = 0; i < 0x40; i++)
    cwave[i] &= 0x3F;
+
+  CalcCOV();
  }
  return(ret);
 }

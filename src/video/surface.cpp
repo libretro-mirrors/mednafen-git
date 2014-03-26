@@ -67,6 +67,29 @@ MDFN_Surface::MDFN_Surface(void *const p_pixels, const uint32 p_width, const uin
  Init(p_pixels, p_width, p_height, p_pitchinpix, nf);
 }
 
+#if 0
+void MDFN_Surface::Resize(const uint32 p_width, const uint32 p_height, const uint32 p_pitchinpix)
+{
+ void *ptr = (format.bpp == 16) ? pixels16 : pixels;
+ uint64 old_asize = ((uint64)pitchinpix * (format.bpp >> 3)) * h;
+ uint64 new_asize = ((uint64)p_pitchinpix * (format.bpp >> 3)) * p_height;
+
+ if(!(ptr = realloc(ptr, new_asize)))
+  throw MDFN_Error(ErrnoHolder(errno));
+
+ if(new_asize > old_asize)
+  memset((uint8*)ptr + old_asize, 0x00, new_asize - old_asize);
+
+ if(format.bpp == 16)
+  pixels16 = (uint16*)ptr;
+ else
+  pixels = (uint32*)ptr;
+
+ pitchinpix = p_pitchinpix;
+ w = p_width;
+ h = p_height;
+}
+#endif
 void MDFN_Surface::Init(void *const p_pixels, const uint32 p_width, const uint32 p_height, const uint32 p_pitchinpix, const MDFN_PixelFormat &nf)
 {
  void *rpix = NULL;

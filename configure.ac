@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.26-WIP'
-MEDNAFEN_VERSION_NUMERIC=0x000926
+MEDNAFEN_VERSION='0.9.27-WIP'
+MEDNAFEN_VERSION_NUMERIC=0x000927
 
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
@@ -171,6 +171,7 @@ AM_CONDITIONAL(WANT_MD_EMU, false)
 AM_CONDITIONAL(WANT_SMS_EMU, false)
 AM_CONDITIONAL(WANT_NES_EMU, false)
 AM_CONDITIONAL(WANT_NGP_EMU, false)
+AM_CONDITIONAL(WANT_PC_EMU, false)
 AM_CONDITIONAL(WANT_PCE_EMU, false)
 AM_CONDITIONAL(WANT_PCE_FAST_EMU, false)
 AM_CONDITIONAL(WANT_PCFX_EMU, false)
@@ -233,6 +234,16 @@ if test x$enable_ngp = xyes; then
                 AC_DEFINE([WANT_NGP_EMU], [1], [Define if we are compiling with NGP emulation.])
 		AM_CONDITIONAL(WANT_NGP_EMU, true)
 fi
+
+AC_ARG_ENABLE(pc,
+ AC_HELP_STRING([--enable-pc], [build with IBM PC/AT Compatible emulation(NOT IMPLEMENTED) [[default=no]]]),
+                  , enable_pc=no)
+
+if test x$enable_pc = xyes; then
+                AC_DEFINE([WANT_PC_EMU], [1], [Define if we are compiling with PC/AT Compatible emulation.])
+                AM_CONDITIONAL(WANT_PC_EMU, true)
+fi
+
 
 AC_ARG_ENABLE(pce,
  AC_HELP_STRING([--enable-pce], [build with PC Engine(TurboGrafx 16) emulation [[default=yes]]]),
@@ -544,4 +555,4 @@ LIBS="$SNDFILE_LIBS $LIBCDIO_LIBS $LIBS"
 CPPFLAGS="$LIBCDIO_CFLAGS $SNDFILE_CFLAGS $CPPFLAGS"
 
 dnl Output Makefiles
-AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/demo/Makefile src/desa68/Makefile po/Makefile.in  intl/Makefile])
+AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pc/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/demo/Makefile src/desa68/Makefile po/Makefile.in  intl/Makefile])

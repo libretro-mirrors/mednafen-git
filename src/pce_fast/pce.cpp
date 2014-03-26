@@ -365,7 +365,7 @@ static int LoadCommon(void)
 
  if(!IsHES)
  {
-  MDFNGameInfo->nominal_width = MDFN_GetSettingB("pce_fast.correct_aspect") ? 320 : 341;
+  MDFNGameInfo->nominal_width = MDFN_GetSettingB("pce_fast.correct_aspect") ? 288 : 341;
   MDFNGameInfo->nominal_height = MDFN_GetSettingUI("pce_fast.slend") - MDFN_GetSettingUI("pce_fast.slstart") + 1;
 
   MDFNGameInfo->lcm_width = MDFN_GetSettingB("pce_fast.correct_aspect") ? 1024 : 341;
@@ -665,7 +665,7 @@ MDFNGI EmulatedPCE_Fast =
  0,   // lcm_height           
  NULL,  // Dummy
 
- 320,   // Nominal width
+ 288,   // Nominal width
  232,   // Nominal height
 
  512,	// Framebuffer width

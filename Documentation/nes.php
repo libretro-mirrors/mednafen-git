@@ -96,6 +96,8 @@ Custom palettes should contain 64 8-bit-per-color-component RGB triplets.
  <tr><td>32</td><td>IREM G-101</td><td>Image Fight 2, Perman</td></tr>
  <tr><td>33</td><td>Taito TC0190/TC0350</td><td>Don Doko Don</td></tr>
  <tr><td>34</td><td>NINA-001 and BNROM</td><td>Impossible Mission 2, Deadly Towers, Bug Honey</td></tr>
+ <tr><td>37</td><td>??</td><td>Super Mario Bros/Tetris/Nintendo World Cup</td></tr>
+ <tr><td>38</td><td>??</td><td>Crime Busters</td></tr>
  <tr><td>41</td><td>Caltron 6-in-1</td><td>Caltron 6-in-1</td></tr>
  <tr><td>42</td><td>(bootleg)</td><td>Mario Baby</td></tr>
  <tr><td>44</td><td>Multi-cart(bootleg)</td><td>Super HiK 7 in 1</td></tr>

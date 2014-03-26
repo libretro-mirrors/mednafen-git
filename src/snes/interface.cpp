@@ -15,6 +15,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/*
+ FIXME(minor thing): Due to changes made to the bsnes core on Dec 15, 2012 to reduce input latency, there is the possibility
+ of 15 lines of garbage being shown at the bottom of the screen when a PAL game switches from the 239-height mode to the 224-height
+ mode when the screen isn't black.
+*/
+
 #include "../mednafen.h"
 #include "../md5.h"
 #include "../general.h"
@@ -22,6 +28,7 @@
 #include "../mempatcher.h"
 #include "../PSFLoader.h"
 #include "../player.h"
+#include "../FileStream.h"
 #include "Fir_Resampler.h"
 #include <vector>
 
@@ -80,45 +87,47 @@ static std::vector<uint32> ColorMap;
 static bool LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries)
 {
  std::string colormap_fn = MDFN_MakeFName(MDFNMKF_PALETTE, 0, syspalname).c_str();
- FILE *fp;
 
  MDFN_printf(_("Loading custom palette from \"%s\"...\n"),  colormap_fn.c_str());
  MDFN_indent(1);
 
- if(!(fp = fopen(colormap_fn.c_str(), "rb")))
+ *ptr = NULL;
+ try
  {
-  ErrnoHolder ene(errno);
+  FileStream fp(colormap_fn.c_str(), FileStream::MODE_READ);
 
-  MDFN_printf(_("Error opening file: %s\n"), ene.StrError());
+  if(!(*ptr = (uint8 *)MDFN_malloc(num_entries * 3, _("custom color map"))))
+  {
+   MDFN_indent(-1);
+   return(false);
+  }
 
-  MDFN_indent(-1);
-
-  return(ene.Errno() == ENOENT);        // Return fatal error if it's an error other than the file not being found.
+  fp.read(*ptr, num_entries * 3);
  }
-
- if(!(*ptr = (uint8 *)MDFN_malloc(num_entries * 3, _("custom color map"))))
+ catch(MDFN_Error &e)
  {
-  MDFN_indent(-1);
+  if(*ptr)
+  {
+   MDFN_free(*ptr);
+   *ptr = NULL;
+  }
 
-  fclose(fp);
+  MDFN_printf(_("Error: %s\n"), e.what());
+  MDFN_indent(-1);
+  return(e.GetErrno() == ENOENT);        // Return fatal error if it's an error other than the file not being found.
+ }
+ catch(std::exception &e)
+ {
+  if(*ptr)
+  {
+   MDFN_free(*ptr);
+   *ptr = NULL;
+  }
+
+  MDFN_printf(_("Error: %s\n"), e.what());
+  MDFN_indent(-1);
   return(false);
  }
-
- if(fread(*ptr, 1, num_entries * 3, fp) != (num_entries * 3))
- {
-  ErrnoHolder ene(errno);
-
-  MDFN_printf(_("Error reading file: %s\n"), feof(fp) ? "EOF" : ene.StrError());
-  MDFN_indent(-1);
-
-  MDFN_free(*ptr);
-  *ptr = NULL;
-  fclose(fp);
-
-  return(false);
- }
-
- fclose(fp);
 
  MDFN_indent(-1);
 
@@ -180,6 +189,7 @@ void MeowFace::video_refresh(uint16_t *data, unsigned pitch, unsigned *line, uns
 
  tdr->w = width;
  tdr->h = height;
+ //printf("%u\n", height);
 }
 
 void MeowFace::audio_sample(uint16_t l_sample, uint16_t r_sample)
@@ -467,12 +477,14 @@ static bool TestMagic(const char *name, MDFNFILE *fp)
 
 static void SetupMisc(bool PAL)
 {
+ SNES::video.set_mode(PAL ? SNES::Video::ModePAL : SNES::Video::ModeNTSC);
+
  MDFNGameInfo->fps = PAL ? 838977920 : 1008307711;
  MDFNGameInfo->MasterClock = MDFN_MASTERCLOCK_FIXED(32040.40);  //MDFN_MASTERCLOCK_FIXED(21477272);     //PAL ? PAL_CPU : NTSC_CPU);
 
  if(!snsf_loader)
  {
-  MDFNGameInfo->nominal_width = MDFN_GetSettingB("snes.correct_aspect") ? 292 : 256;
+  MDFNGameInfo->nominal_width = MDFN_GetSettingB("snes.correct_aspect") ? (PAL ? 344/*354*/ : 292) : 256;
   MDFNGameInfo->nominal_height = PAL ? 239 : 224;
   MDFNGameInfo->lcm_height = MDFNGameInfo->nominal_height * 2;
  }
@@ -761,6 +773,8 @@ static void CloseGame(void)
 
 static void Emulate(EmulateSpecStruct *espec)
 {
+ //printf("\nFrame: 0x%02x\n", *(uint8*)InputPtr[0]);
+
  tsurf = espec->surface;
  tlw = espec->LineWidths;
  tdr = &espec->DisplayRect;

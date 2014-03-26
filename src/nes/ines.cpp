@@ -732,7 +732,11 @@ bool iNESLoad(const char *name, MDFNFILE *fp, NESGameType *gt)
 	 return(0);
 	}
 
-	MDFN_LoadGameSave(&iNESCart);
+	if(!MDFN_LoadGameSave(&iNESCart))
+	{
+	 iNESFree();
+	 return(0);
+	}
 
 	gt->Power = iNES_Power;
 	gt->Reset = iNES_Reset;
@@ -789,6 +793,7 @@ static const BMAPPING bmap[] = {
 	{ 32, Mapper32_Init, 0},
 	{ 33, Mapper33_Init, 0},
 	{ 34, Mapper34_Init, 0},
+	{ 37, Mapper37_Init, 0},
 	{ 38, Mapper38_Init, 0},
         { 41, Mapper41_Init, 0},
 	{ 42, BioMiracleA_Init, 0},

@@ -20,15 +20,14 @@
 
 #include "share.h"
 #include "fkb.h"
-#define AK2(x,y)	( (FKB_##x) | (FKB_##y <<8) )
-#define AK(x) 		FKB_##x
 
-static uint8 bufit[0x49];
+#define AK(x) 		((FKB_##x) - 1)
+
+static uint8 bufit[0x9];
 static uint8 ksmode;
 static uint8 ksindex;
 
-
-static const uint16 matrix[9][2][4]=
+static const uint8 matrix[9][2][4]=
 {
 {{AK(F8),AK(RETURN),AK(BRACKETLEFT),AK(BRACKETRIGHT)},   
 	{AK(KANA),AK(RIGHTSHIFT),AK(BACKSLASH),AK(STOP)}},
@@ -66,15 +65,17 @@ static uint8 FKB_Read(int w, uint8 ret)
  //printf("$%04x, %d, %d\n",w+0x4016,ksindex,ksmode&1);
  if(w)
  {
-  int x;
+  ret |= 0x1E;
 
-  ret&=~0x1E;
-  for(x=0;x<4;x++)
-    if(bufit[ matrix[ksindex][ksmode&1][x]&0xFF ] || bufit[ matrix[ksindex][ksmode&1][x]>>8])
-    {
-     ret|=1<<(x+1);
-    }
-  ret^=0x1E;
+  for(int x = 0; x < 4; x++)
+  {
+   unsigned bi = matrix[ksindex][ksmode&1][x];
+
+   if(bufit[bi >> 3] & (1U << (bi & 0x7)))
+   {
+    ret ^= 1U << (x + 1);
+   }
+  }
  }
  return(ret);
 }
@@ -88,14 +89,14 @@ static void FKB_Strobe(void)
 
 static void FKB_Update(void *data)
 {
- memcpy(bufit+1,data,0x48);
+ memcpy(bufit, data, 0x9);
 }
 
 static int StateActionFC(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-   SFARRAY(bufit, 0x49),
+   SFARRAY(bufit, 0x9),
    SFVAR(ksmode),
    SFVAR(ksindex),
    SFEND
@@ -109,11 +110,11 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
 }
 
 
-static INPUTCFC FKB={FKB_Read,FKB_Write,FKB_Strobe,FKB_Update,0,0, StateActionFC, 0x48, sizeof(uint8) };
+static INPUTCFC FKB={FKB_Read,FKB_Write,FKB_Strobe,FKB_Update,0,0, StateActionFC };
 
 INPUTCFC *MDFN_InitFKB(void)
 {
- memset(bufit,0,sizeof(bufit));
+ memset(bufit, 0, sizeof(bufit));
  ksmode=ksindex=0;
  return(&FKB);
 }

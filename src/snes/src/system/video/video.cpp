@@ -58,7 +58,7 @@ void Video::update() {
 
   unsigned yoffset = 1;  //scanline 0 is always black, skip this line for video output
   if(mode == ModeNTSC && ppu.overscan()) yoffset += 8;  //NTSC overscan centers x240 height image
-
+//printf("%u\n", ppu.overscan());
   switch(mode) { default:
     case ModeNTSC: { width = 256; height = 224; } break;
     case ModePAL:  { width = 256; height = 239; } break;

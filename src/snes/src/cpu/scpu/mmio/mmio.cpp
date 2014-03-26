@@ -55,6 +55,7 @@ void sCPU::mmio_w4016(uint8 data) {
 uint8 sCPU::mmio_r4016() {
   uint8 r = regs.mdr & 0xfc;
   r |= input.port_read(0) & 3;
+  //printf("JOYSER0_L2: 0x%02x\n", r & 0x3);
   return r;
 }
 
@@ -65,6 +66,7 @@ uint8 sCPU::mmio_r4016() {
 uint8 sCPU::mmio_r4017() {
   uint8 r = (regs.mdr & 0xe0) | 0x1c;
   r |= input.port_read(1) & 3;
+  //printf("JOYSER1_L2: 0x%02x\n", r & 0x3);
   return r;
 }
 
@@ -231,8 +233,8 @@ uint8 sCPU::mmio_r4217() {
 }
 
 //TODO: handle reads during joypad polling (v=225-227)
-uint8 sCPU::mmio_r4218() { return status.joy1l; } //JOY1L
-uint8 sCPU::mmio_r4219() { return status.joy1h; } //JOY1H
+uint8 sCPU::mmio_r4218() { /*printf("read joy1l=0x%02x\n", status.joy1l);*/ return status.joy1l; } //JOY1L
+uint8 sCPU::mmio_r4219() { /*printf("read joy1h=0x%02x\n", status.joy1h);*/ return status.joy1h; } //JOY1H
 uint8 sCPU::mmio_r421a() { return status.joy2l; } //JOY2L
 uint8 sCPU::mmio_r421b() { return status.joy2h; } //JOY2H
 uint8 sCPU::mmio_r421c() { return status.joy3l; } //JOY3L

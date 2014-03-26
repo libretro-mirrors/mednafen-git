@@ -78,7 +78,7 @@ static int StateAction(int w, StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-static INPUTC PwrPadCtrl={ReadPP,0,StrobePP,UpdatePP,0,0, StateAction, 1, sizeof(uint32) };
+static INPUTC PwrPadCtrl={ReadPP,0,StrobePP,UpdatePP,0,0, StateAction };
 
 static INPUTC *MDFN_InitPowerpad(int w)
 {

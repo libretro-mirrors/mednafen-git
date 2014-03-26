@@ -130,7 +130,7 @@ int HuCLoad(const uint8 *data, uint32 len, uint32 crc32)
  }
 
  memset(HuCROM, 0xFF, m_len);
- memcpy(HuCROM, data, len);
+ memcpy(HuCROM, data, (m_len < len) ? m_len : len);
 
  memset(ROMSpace, 0xFF, 0x88 * 8192 + 8192);
 

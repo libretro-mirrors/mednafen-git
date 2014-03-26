@@ -62,6 +62,7 @@ glClearAccum_Func p_glClearAccum;
 glPushMatrix_Func p_glPushMatrix;
 glPopMatrix_Func p_glPopMatrix;
 glRotated_Func p_glRotated;
+glScalef_Func p_glScalef;
 
 #if MDFN_WANT_OPENGL_SHADERS
 glCreateShaderObjectARB_Func p_glCreateShaderObjectARB;
@@ -242,6 +243,44 @@ static INLINE void MakeDestCoords(const MDFN_Rect *dest_rect, int dest_coords[4]
   //	dest_coords[2][1], dest_coords[3][0], dest_coords[3][1]);
 }
 
+//#define MDFN_TRIANGLE_STRIP_TEST
+
+#ifdef MDFN_TRIANGLE_STRIP_TEST
+static INLINE void DrawQuad(float src_coords[4][2], int dest_coords[4][2])
+{
+ puts("TRIANGLESSSS");
+#if 0
+  // Lower left
+  p_glTexCoord2f(src_coords[3][0], src_coords[3][1]);
+   p_glVertex2f(dest_coords[3][0], dest_coords[3][1]);
+
+  // Upper left
+  p_glTexCoord2f(src_coords[0][0], src_coords[0][1]);
+   p_glVertex2f(dest_coords[0][0], dest_coords[0][1]);
+
+  // Lower right
+  p_glTexCoord2f(src_coords[2][0], src_coords[2][1]);
+   p_glVertex2f(dest_coords[2][0], dest_coords[2][1]);
+
+#endif
+
+  // Upper right
+  p_glTexCoord2f(src_coords[1][0], src_coords[1][1]);
+   p_glVertex2f(dest_coords[1][0], dest_coords[1][1]);
+
+  // Upper left
+  p_glTexCoord2f(src_coords[0][0], src_coords[0][1]);
+   p_glVertex2f(dest_coords[0][0], dest_coords[0][1]);
+
+  // Lower right
+  p_glTexCoord2f(src_coords[2][0], src_coords[2][1]);
+   p_glVertex2f(dest_coords[2][0], dest_coords[2][1]);
+
+  // Lower left
+  p_glTexCoord2f(src_coords[3][0], src_coords[3][1]);
+   p_glVertex2f(dest_coords[3][0], dest_coords[3][1]);
+}
+#else
 static INLINE void DrawQuad(float src_coords[4][2], int dest_coords[4][2])
 {
   // Lower left
@@ -260,6 +299,7 @@ static INLINE void DrawQuad(float src_coords[4][2], int dest_coords[4][2])
   p_glTexCoord2f(src_coords[0][0], src_coords[0][1]);
    p_glVertex2f(dest_coords[0][0], dest_coords[0][1]);
 }
+#endif
 
 void DrawLinearIP(const unsigned UsingIP, const unsigned rotated, const MDFN_Rect *tex_src_rect, const MDFN_Rect *dest_rect, const uint32 tmpwidth, const uint32 tmpheight)
 {
@@ -436,7 +476,11 @@ void BlitOpenGL(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN
  //
  // Draw texture
  //
+#ifdef MDFN_TRIANGLE_STRIP_TEST
+ p_glBegin(GL_TRIANGLE_STRIP);
+#else
  p_glBegin(GL_QUADS);
+#endif
 
  if(UsingIP == VIDEOIP_LINEAR_X || UsingIP == VIDEOIP_LINEAR_Y)	// Linear interpolation, on one axis
  {
@@ -602,6 +646,7 @@ int InitOpenGL(int ipolate, int scanlines, ShaderType pixshader, SDL_Surface *sc
  LFG(glPushMatrix);
  LFG(glPopMatrix);
  LFG(glRotated);
+ LFG(glScalef);
 
  gl_screen = screen;
 

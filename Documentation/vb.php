@@ -5,6 +5,11 @@
 <?php BeginSection('Introduction'); ?>
 
 <p>
+Virtual Boy emulation in Mednafen is original code, except for an extremely modified(optimizations, bug fixes, and better all-around emulation) V810 emulator core taken from Reality Boy years
+ago for PC-FX emulation.
+</p>
+
+<p>
 Virtual Boy ROM images must each have an extension of ".vb" or ".vboy" to be recognized as such.  Mednafen versions prior to 0.9.13 allowed ".bin" as well, but this conflicts with the Sega Megadrive emulation module.
 </p>
 

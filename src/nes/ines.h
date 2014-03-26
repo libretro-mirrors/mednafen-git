@@ -41,6 +41,7 @@ int Mapper26_Init(CartInfo *);
 int Mapper32_Init(CartInfo *);
 int Mapper33_Init(CartInfo *);
 int Mapper34_Init(CartInfo *);
+int Mapper37_Init(CartInfo *);
 int Mapper38_Init(CartInfo *);
 int Mapper41_Init(CartInfo *);
 int Mapper44_Init(CartInfo *);

@@ -2203,7 +2203,7 @@ static void DrawBG(uint32 *target, int n, bool sub)
                           {                                     	\
                            uint32 eff_bat_loc = bat_offset;     	\
                            uint16 bat = 0;                      	\
-                           uint16 pbn = 0;                      	\
+                           uint16 pbn MDFN_NOWARN_UNUSED = 0;           \
   		  	   const uint16 *cgptr[2];			\
 			   uint16 cg[cg_needed];			\
 									\
@@ -2233,7 +2233,7 @@ static void DrawBG(uint32 *target, int n, bool sub)
 			  {										\
                            uint32 eff_bat_loc = bat_sub_offset;         \
                            uint16 bat = 0;                              \
-                           uint16 pbn = 0;                              \
+                           uint16 pbn MDFN_NOWARN_UNUSED = 0;           \
                            const uint16 *cgptr[2];                      \
                            uint16 cg[cg_needed];                        \
                                                                         \
@@ -2593,8 +2593,8 @@ static INLINE void VDC_PIXELMIX(bool SPRCOMBO_ON, bool BGCOMBO_ON)
 {
     static const uint32 vdc_layer_num[2] = { LAYER_VDC_BG << 28, LAYER_VDC_SPR << 28};
     const uint32 vdc_poffset[2] = {
-                                ((fx_vce.palette_offset[0] >> 0) & 0xFF) << 1, // BG
-                                ((fx_vce.palette_offset[0] >> 8) & 0xFF) << 1 // SPR
+                                (((uint32)fx_vce.palette_offset[0] >> 0) & 0xFF) << 1, // BG
+                                (((uint32)fx_vce.palette_offset[0] >> 8) & 0xFF) << 1 // SPR
                                };
 
     const int width = fx_vce.dot_clock ? 342 : 256; // 342, not 341, to prevent garbage pixels in high dot clock mode.

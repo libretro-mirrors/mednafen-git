@@ -80,7 +80,7 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
 }
 
 
-static INPUTCFC BarcodeWorld={Read,Write,0,Update,0,0, StateActionFC, 13, sizeof(uint8) };
+static INPUTCFC BarcodeWorld={Read,Write,0,Update,0,0, StateActionFC };
 
 INPUTCFC *MDFN_InitBarcodeWorld(void)
 {
