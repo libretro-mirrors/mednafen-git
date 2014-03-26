@@ -60,6 +60,7 @@ extern bool pending_save_state, pending_ssnapshot, pending_snapshot, pending_sav
 
 void DoRunNormal(void);
 void DoFrameAdvance(void);
+bool IsInFrameAdvance(void);
 
 void DebuggerFudge(void);
 

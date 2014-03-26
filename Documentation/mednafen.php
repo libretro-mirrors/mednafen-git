@@ -169,15 +169,21 @@
  
  </p>
  <?php BeginSection("Key Assignments"); ?>
- <p></p>
+ <p>
+  A single-press (un)pause function can be achieved by mapping the <a href="#command.advance_frame">frame advance</a> and
+  <a href="#command.run_normal">exit frame advance mode/run normal</a> functions to the same key via the
+  <a href="#command.input_configc">command key mapping</a> function.
+ </p>
+ <p>
+ </p>
  <table border>
  <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
- <tr><td>F1</td><td>Toggle in-game quick help screen.</td><td>toggle_help</td></tr>
- <tr><td>F5</td><td>Save state.</td><td>save_state</td></tr>
- <tr><td>F7</td><td>Load state.</td><td>load_state</td></tr>
+ <tr><td>F1</td><td><a name="command.toggle_help">Toggle in-game quick help screen.</a></td><td>toggle_help</td></tr>
+ <tr><td>F5</td><td><a name="command.save_state">Save state.</a></td><td>save_state</td></tr>
+ <tr><td>F7</td><td><a name="command.load_state">Load state.</a></td><td>load_state</td></tr>
  <tr><td>0-9</td><td>Select save state slot.</td><td>"0" through "9"</td></tr>
- <tr><td>-</td><td>Decrement selected save state slot.</td><td>state_slot_dec</td></tr>
- <tr><td>=</td><td>Increment selected save state slot.</td><td>state_slot_inc</td></tr>
+ <tr><td>-</td><td><a name="command.state_slot_dec">Decrement selected save state slot.</a></td><td>state_slot_dec</td></tr>
+ <tr><td>=</td><td><a name="command.state_slot_inc">Increment selected save state slot.</a></td><td>state_slot_inc</td></tr>
  <tr><td>ALT + S</td><td>Toggle <a href="#srwframes">600-frame(~10 seconds on NES)</a> save-state rewinding functionality, disabled by default.</td><td>state_rewind_toggle</td></tr>
  <tr><td>Shift + F5</td><td>Record movie.</td><td>save_movie</td></tr>
  <tr><td>Shift + F7</td><td>Play movie.</td><td>load_movie</td></tr>
@@ -187,8 +193,8 @@
  <tr><td>T</td><td>Enable network play console input.</td><td>togglenetview</td></tr>
  <tr><td>ALT + D</td><td>Toggle debugger.</td><td>toggle_debugger</td></tr>
  <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
- <tr><td>ALT + A</td><td>Enter frame advance mode, if not already in it, and advance the frame.</td><td>advance_frame</td></tr>
- <tr><td>ALT + R</td><td>Exit frame advance mode.</td><td>run_normal</td></tr>
+ <tr><td>ALT + A</td><td><a name="command.advance_frame">Enter frame advance mode, or advance the frame if already in it.</a></td><td>advance_frame</td></tr>
+ <tr><td>ALT + R</td><td><a name="command.run_normal">Exit frame advance mode.</a></td><td>run_normal</td></tr>
  <tr><td>SHIFT + F1</td><td>Toggle frames-per-second display(from top to bottom, the display format is: virtual, rendered, blitted).</td><td>toggle_fps_view</td></tr>
  <tr><td>Backspace</td><td>Rewind emulation, if save-state rewinding functionality is enabled, up to <a href="#srwframes">600 frames</a>.</td><td>state_rewind</td></tr>
  <tr><td>F9</td><td>Save (rawish) screen snapshot.</td><td>take_snapshot</td></tr>
@@ -199,7 +205,7 @@
  <tr><td>`</td><td>Fast-forward.</td><td>fast_forward</td></tr>
  <tr><td>\</td><td>Slow-forward.</td><td>slow_forward</td></tr>
  <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
- <tr><td>F3</td><td>Detect analog buttons on physical joysticks/gamepads(for use with the input configuration process).
+ <tr><td>F3</td><td><a name="command.input_config_abd">Detect analog buttons on physical joysticks/gamepads(for use with the input configuration process).</a>
 <p>
                   Twirl all sticks and D-pads and press all analog buttons on any physical gamepads/joysticks with analog buttons you want
                   to use in the input configuration process, then press F3.  Then, configure input as normal.  The detected analog buttons
@@ -210,7 +216,7 @@
 
  <tr><td nowrap>ALT + SHIFT + [<i>n</i>]</td><td>Configure buttons for emulated device on input port <i>n</i>(1-8).</td><td>input_config<i>n</i></td></tr>
  <tr><td nowrap>CTRL + SHIFT + [<i>n</i>]</td><td>Select input device on input port <i>n</i>(1-8).<br /><br /><b>Note:</b> Many games do not expect input devices to change while the game is running, and thus may require a hard reset.</td><td>device_select<i>n</i></td></tr>
- <tr><td>F2</td><td>Activate in-game input configuration process for a command key.</td><td>input_configc</td></tr>
+ <tr><td>F2</td><td><a name="command.input_configc">Activate in-game input configuration process for a command key.</a></td><td>input_configc</td></tr>
  <tr><td>SHIFT + F2</td><td>Like F2, but after configuration completes, to activate the configured command key will require all buttons configured to it to be in a pressed state simultaneously to trigger the action.  Note that keyboard modifier keys(CTRL, ALT, SHIFT) are still treated as modifiers and not discrete keys.<br><br>Especially useful in conjunction with the <a href="#ckdelay">ckdelay</a> setting.</td><td>input_configc_am</td></tr>
  <tr><td nowrap>Scroll Lock</td><td>Toggle input grabbing(use this to use the PC Engine mouse properly in windowed mode).</td><td>toggle_grab_input</td></tr>
  <tr><td>Shift + Scroll Lock</td><td>Toggle input grabbing AND command disabling(used for giving almost unhindered button access to an emulated device; most useful when emulating the Famicom's Family Keyboard).</td><td>toggle_cdisable</td></tr>
@@ -390,7 +396,7 @@ a native resolution).
 
    <?php BeginSection("Settings to Minimize Audio Lag"); ?>
 <p>
-<u>Mednafen:</u> Select a <a href="#sound.driver">sound driver</a> that is closer to the actual hardware, such as "ALSA" on Linux, and "OSS" on other UN*X platforms.  If you choose to use "OSS", heed the advice regarding osscore.conf and max_intrate.
+<u>Mednafen:</u> Select a <a href="#sound.driver">sound driver</a> that is closer to the actual hardware, such as "alsa" on Linux, "oss" on other UN*X platforms, and "wasapi" on Windows Vista and newer.  If you choose to use "OSS", heed the advice regarding osscore.conf and max_intrate.
 </p>
 <p>
 <u>Mednafen:</u> Select a <a href="#sound.device">sound device</a> that is closest to the actual hardware; IE "hw:0", "hw:1", "hw:2", etc. on ALSA.<br>
@@ -1045,7 +1051,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("Cygne", "", FALSE, "http://http://cygne.emuunlim.com/"); ?>
+<?php BeginSection("Cygne", "", FALSE, "http://cygne.emuunlim.com/"); ?>
 <p>
 Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyright 2002 Dox, dox@space.pl.
 </p>

@@ -73,7 +73,7 @@ CSystem::CSystem(const uint8 *filememory, int32 filesize)
 	mFileType=HANDY_FILETYPE_LNX;
 
 	if(filesize < 11)
-	 MDFN_Error(0, _("Lynx ROM image is too short: %u bytes"), filesize);
+	 throw MDFN_Error(0, _("Lynx ROM image is too short: %u bytes"), filesize);
 
 	char clip[11];
 	memcpy(clip,filememory,11);
@@ -201,53 +201,65 @@ static bool TestMagic(const char *name, MDFNFILE *fp)
  return(CCart::TestMagic(fp->data, fp->size));
 }
 
-static int Load(const char *name, MDFNFILE *fp)
-{
- try
- {
-  lynxie = new CSystem(fp->data, fp->size);
- }
- catch(std::exception &e)
- {
-  MDFN_PrintError("%s", e.what());
-
-  // FIXME:  erhm, free memory here? 
-  return(0);
- }
-
- int rot = lynxie->CartGetRotate();
- if(rot == CART_ROTATE_LEFT) MDFNGameInfo->rotated = MDFN_ROTATE270;
- else if(rot == CART_ROTATE_RIGHT) MDFNGameInfo->rotated = MDFN_ROTATE90;
-
- gAudioEnabled = 1;
-
- memcpy(MDFNGameInfo->MD5, lynxie->mCart->MD5, 16);
- MDFNGameInfo->GameSetMD5Valid = FALSE;
-
- MDFN_printf(_("ROM:       %dKiB\n"), (lynxie->mCart->InfoROMSize + 1023) / 1024);
- MDFN_printf(_("ROM CRC32: 0x%08x\n"), lynxie->mCart->CRC32());
- MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
-
- MDFNGameInfo->fps = (uint32)(59.8 * 65536 * 256);
-
- if(MDFN_GetSettingB("lynx.lowpass"))
- {
-  lynxie->mMikie->miksynth.treble_eq(-35);
- }
- else
- {
-  lynxie->mMikie->miksynth.treble_eq(0);
- }
- return(1);
-}
-
-static void CloseGame(void)
+static void Cleanup(void)
 {
  if(lynxie)
  {
   delete lynxie;
   lynxie = NULL;
  }
+}
+
+static int Load(const char *name, MDFNFILE *fp)
+{
+ try
+ {
+  lynxie = new CSystem(fp->data, fp->size);
+
+  switch(lynxie->CartGetRotate())
+  {
+   case CART_ROTATE_LEFT:
+	MDFNGameInfo->rotated = MDFN_ROTATE270;
+	break;
+
+   case CART_ROTATE_RIGHT:
+	MDFNGameInfo->rotated = MDFN_ROTATE90;
+	break;
+  }
+
+  memcpy(MDFNGameInfo->MD5, lynxie->mCart->MD5, 16);
+  MDFNGameInfo->GameSetMD5Valid = FALSE;
+
+  MDFN_printf(_("ROM:       %dKiB\n"), (lynxie->mCart->InfoROMSize + 1023) / 1024);
+  MDFN_printf(_("ROM CRC32: 0x%08x\n"), lynxie->mCart->CRC32());
+  MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
+
+  MDFNGameInfo->fps = (uint32)(59.8 * 65536 * 256);
+
+  if(MDFN_GetSettingB("lynx.lowpass"))
+  {
+   lynxie->mMikie->miksynth.treble_eq(-35);
+  }
+  else
+  {
+   lynxie->mMikie->miksynth.treble_eq(0);
+  }
+ }
+ catch(std::exception &e)
+ {
+  MDFN_PrintError("%s", e.what());
+
+  Cleanup();
+
+  return(0);
+ }
+
+ return(1);
+}
+
+static void CloseGame(void)
+{
+ Cleanup();
 }
 
 static uint8 *chee;

@@ -11,3 +11,7 @@ Added
 to:
 
 mpc_types.h
+
+
+
+Renamed "log2" LUT in mpc_bits_reader.c to "log2_tab"

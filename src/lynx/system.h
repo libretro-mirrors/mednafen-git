@@ -73,8 +73,6 @@
 	uint32	gSystemNMI=FALSE;
 	uint32	gSystemCPUSleep=FALSE;
 	uint32	gSystemHalt=FALSE;
-
-	uint32	gAudioEnabled=FALSE;
 #else
 	extern uint32	gSystemCycleCount;
 	extern uint32	gSuzieDoneTime;
@@ -84,8 +82,6 @@
 	extern uint32	gSystemNMI;
 	extern uint32	gSystemCPUSleep;
 	extern uint32	gSystemHalt;
-
-	extern uint32	gAudioEnabled;
 #endif
 
 //

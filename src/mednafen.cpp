@@ -1807,9 +1807,22 @@ void MDFNI_Reset(void)
 }
 
 // Arcade-support functions
+
+
+//
+// Quick and dirty kludge until we can (re-)abstract DIP switch handling properly.
+//
+#ifdef WANT_NES_EMU
+void MDFN_VSUniToggleDIPView(void);
+#endif
 void MDFNI_ToggleDIPView(void)
 {
-
+#ifdef WANT_NES_EMU
+ if(MDFNGameInfo == &EmulatedNES)
+ {
+  MDFN_VSUniToggleDIPView();
+ }
+#endif
 }
 
 void MDFNI_ToggleDIP(int which)

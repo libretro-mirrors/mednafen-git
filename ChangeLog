@@ -1,3 +1,26 @@
+-- 0.9.33.2: --
+
+March 24, 2014:
+	PSX: Fixed a small MDEC emulation bug; fixes the hang during startup in "SimCity 2000".
+
+March 17, 2014:
+	The order of evaluation of the frame advance and run normal command keys/hotkeys is now based on whether or not we're
+	currently in frame advance mode, to allow for the derivation of a single-press pause/unpause key(effected by the user mapping both
+	functions to a single key).
+
+March 15, 2014:
+	Renamed the log2 LUT array in the mpcdec code to avoid shadowing the math library function log2().
+
+	NES: Fixed the problem of the VS Unisystem DIP switch position display(accessed via the "F6" key) being invisible.
+
+	PCE: Fixed broken MCGenjin support.
+
+March 13, 2014:
+	CDPLAY: Tweaked visualization code to reduce memory and CPU usage.
+
+March 11, 2014:
+        Lynx: Minor code cleanups.
+
 -- 0.9.33.1: --
 
 March 8, 2014:

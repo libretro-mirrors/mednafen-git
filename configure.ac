@@ -6,7 +6,7 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.33.1'
+MEDNAFEN_VERSION='0.9.33.2'
 MEDNAFEN_VERSION_NUMERIC=0x000933
 
 AC_CANONICAL_HOST
@@ -449,6 +449,9 @@ if expr x"$target" : 'x.*-mingw*' > /dev/null; then
 	AM_CONDITIONAL(WIN32, true)
 
 	LIBS="-mwindows -lws2_32 -ldxguid -lwinmm -ldinput $LIBS -lwinmm"
+
+	# Uncomment out this LDFLAGS line for 0.9.34
+	#LDFLAGS="$LDFLAGS -Wl,--large-address-aware"
 
         if test x$with_libcdio = xyes; then
 		LIBS="$LIBS -lcdio"

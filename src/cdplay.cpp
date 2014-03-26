@@ -33,8 +33,7 @@ using namespace CDUtility;
 namespace MDFN_IEN_CDPLAY
 {
 
-static std::vector<double> sqrt_lut; //[65536];
-static std::vector<double> sin_lut; //[65536];
+static std::vector<float> sin_lut; //[65536];
 static SpeexResamplerState *resampler = NULL;
 
 static uint8 *controller_ptr;
@@ -117,8 +116,6 @@ static int LoadCD(std::vector<CDIF *> *CDInterfaces)
   resampler = speex_resampler_init(2, 44100, (int)48000, 5, &err);
   PrevRate = 48000;
  }
- //resampler.buffer_size(588 * 2 + 100);
- //resampler.time_ratio((double)44100 / 48000, 0.9965);
  ResampBufferPos = 0;
 
  InitLUT();
@@ -151,7 +148,6 @@ static void CloseGame(void)
   resampler = NULL;
  }
  sin_lut.resize(0);
- sqrt_lut.resize(0);
 }
 
 static uint8 SubQBuf[3][0xC];
@@ -180,17 +176,13 @@ static void GenSubQFromSubPW(uint8 *SubPWBuf)
  }
 }
 static const int lobes = 2;
-static const int oversample_shift = 7;	//1; //7;
+static const int oversample_shift = 5;	//1; //7;
 static const int oversample = 1 << oversample_shift;
 static const int oversample_mo = oversample - 1;
 
 static void InitLUT(void)
 {
- sqrt_lut.resize(65536);
  sin_lut.resize(65536);
-
- for(int i = 0; i < 65536; i++)
-  sqrt_lut[i] = sqrt((double)i / 65536);
 
  for(int i = 0; i < 65536; i++)
   sin_lut[i] = sin((double)i * M_PI * 2 / 65536);
@@ -329,20 +321,20 @@ static void Emulate(EmulateSpecStruct *espec)
 
    for(int osi = 0; osi < oversample; osi++)
    {
-    double sample;
+    float sample;
     int x;
     int y;
-    double x_raw, y_raw;
-    double x_raw2, y_raw2;
-    double x_raw_prime, y_raw_prime;
+    float x_raw, y_raw;
+    float x_raw2, y_raw2;
+    float x_raw_prime, y_raw_prime;
 
-    sample = (double)(unip_samp * (oversample - osi) + next_unip_samp * osi) / (oversample * 65536);
+    sample = (float)(unip_samp * (oversample - osi) + next_unip_samp * osi) / (oversample * 65536);
 
     int32 theta_i = (int64)65536 * (i * oversample + osi) / (oversample * 588);
     int32 theta_i_alt = (int64)65536 * (i * oversample + osi) / (oversample * 588);
 
-    double radius = sin_lut[(lobes * theta_i) & 0xFFFF];	//	 * sin_lut[(16384 + (theta_i)) & 0xFFFF];
-    double radius2 = sin_lut[(lobes * (theta_i + 1)) & 0xFFFF];	// * sin_lut[(16384 + ((theta_i + 1))) & 0xFFFF];
+    float radius = sin_lut[(lobes * theta_i) & 0xFFFF];
+    float radius2 = sin_lut[(lobes * (theta_i + 1)) & 0xFFFF];
 
     x_raw = radius * sin_lut[(16384 + theta_i_alt) & 0xFFFF];
     y_raw = radius * sin_lut[theta_i_alt & 0xFFFF];
@@ -354,7 +346,7 @@ static void Emulate(EmulateSpecStruct *espec)
     x_raw_prime = (x_raw2 - x_raw) / (1 * M_PI * 2 / 65536);
     y_raw_prime = (y_raw2 - y_raw) / (1 * M_PI * 2 / 65536);
 
-//    printf("%f %f\n", y_raw_prime, sin_lut[(16384 + lobes * theta_i_alt) & 0xFFFF] + sin_lut[(16384 + theta_i_alt) & 0xFFFF]);
+    //printf("%f %f\n", y_raw_prime, sin_lut[(16384 + lobes * theta_i_alt) & 0xFFFF] + sin_lut[(16384 + theta_i_alt) & 0xFFFF]);
 
     if(x_raw_prime || y_raw_prime)
     {

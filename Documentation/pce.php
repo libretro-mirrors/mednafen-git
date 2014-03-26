@@ -9,7 +9,6 @@
   <li>16-sprites per line limit emulated.</li>
   <li>Accurate HuC6280 flags emulation.</li>
   <li>Dot-clock emulation for more accurate aspect ratios.</li>
-  <li>Very accurate and tonally-correct(thanks to Blip_Synth) PSG emulation.</li>
   <li>Support for Street Fighter 2's HuCard hardware.</li>
   <li>Support for Populous's backup RAM.</li>
   <li>6-button pad emulation.</li>

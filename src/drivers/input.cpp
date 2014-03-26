@@ -1147,11 +1147,22 @@ static void CheckCommandKeys(void)
   
   if(!MDFNDnetplay)
   {
-   if(CK_Check(CK_ADVANCE_FRAME))
+   bool ck_af = CK_Check(CK_ADVANCE_FRAME);
+   bool ck_rn = CK_Check(CK_RUN_NORMAL);
+   bool iifa = IsInFrameAdvance();
+
+   //
+   // Change the order of processing based on being in frame advance mode to allow for the derivation of single-key (un)pause functionality.
+   //
+
+   if(ck_af & iifa)
     DoFrameAdvance();
 
-   if(CK_Check(CK_RUN_NORMAL))
+   if(ck_rn)
     DoRunNormal();
+
+   if(ck_af & !iifa)
+    DoFrameAdvance();
   }
 
   if(!Debugger_IsActive()) // We don't want to start button configuration when the debugger is active!

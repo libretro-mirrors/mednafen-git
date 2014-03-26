@@ -33,10 +33,6 @@ YM2612:
 	Timer fixes?
 
 Internationalization issues:
-	Radix(decimal point) character:
-		Remove world_strtod().
-		Use trio functions solely for string<->floating-point conversion(in settings code), and ensure that trio is using the current locale.
-
 	Alter similar translatable strings in various emulation modules to be the same strings.
 	
 	Ensure all important translatable strings are marked as such.
@@ -81,9 +77,6 @@ Video:
 	screen to jitter/bounce slightly in certain cases in some games(Seiken Densetsu 3 dialogue boxes are a good example).
 	TODO is to fix it, obviously. ;)
 
-	Pixel shaders have precision issues leading to graphics distortion(in the shape of a diagonal line across the screen) for some
-	texture size versus source rectangle dimensions versus destination rectangle dimensions.
-
 	Refactor hq2x, scale2x, 2xsai, etc. filtering code into classes based off an abstract base class.
 
 	Add a "tblur.handle_gamma" setting that, when enabled, will cause gamma-correct temporal blurring.
@@ -105,6 +98,9 @@ PCE_FAST:
 
 
 PCE:
+	Improve accuracy of PSG ultrasonic playback frequency optimization kludge(particularly when going from a really
+	low frequency directly to a ultrasonic frequency).
+
 	<AamirM> <Ki_> one thing about timer inside the HuC6280
 	<AamirM> <Ki_> the 7-bit timer is decremented when MSB of the prescaler changes from 1 to 0.
 	<AamirM> <Ki_> (assuming the prescaler is an up counter)
@@ -127,10 +123,6 @@ PCE:
 	Fix VRAM->VRAM DMA, SAT DMA timing, and CPU-halting handling with new information from tests on a real system.
 
 	Fix broken SuperGrafx window emulation.
-
-	If power/reset is triggered in the debugger, force a return from MDFNI_Emulate(); either that or clear
-	the audio buffer on power/reset.  To fix a potential sound buffer overflow issue.  (Actually, that won't happen
-	as-is, but
 
 	Emulate disabled button/output when CLR is active on gamepad reads(might need to adjust the multitap code
 	to buffer data in this case?).
@@ -233,7 +225,7 @@ Safety fopen() replacement for preventing overwriting of files.
 smem_seek() offset signedness fix
 
 Reexamine the code for choosing which emulation module to use.  Highest priority to file extension(as long as the extension is unique to a system,
-"bin" is no unique for example), and special magic test functions if that fails.
+"bin" is not unique for example), and special magic test functions if that fails.
 
 Investigate reports of undefined symbols(in V810 FPU emulation code, and the WonderSwan x86 disassembler, and possibly other places).  There ARE references to
 undefined symbols, but the symbols that reference them are never referenced themselves.  We should probably fix this.
@@ -267,9 +259,6 @@ Clean up intialization/deinitialization code so that more than one game can be l
 Debugger(general):
 	Disassembly address forcible resynchronization has inconsistent results across different emulated systems; make
 	them consistent.
-
-	assert() in cdrom/scsicd.cpp on line 2629 is being triggered; "loading a save state while
-	stopped in the debugger brings up the message"
 
 	Breakpoint logger mode(instead of breaking, output the instruction address that caused the breakpoint,
 	and which breakpoint was triggered(assuming that address+breakpoint pair wasn't outputted to the text file already).

@@ -4,7 +4,8 @@
 
 <?php BeginSection('Introduction'); ?>
 
-Mednafen's WonderSwan (Color) emulation is based off of <a href="http://cygne.emuunlim.com/">Cygne</a>.
+Mednafen's WonderSwan (Color) emulation is based off of <a href="http://cygne.emuunlim.com/">Cygne</a>, modified with bug fixes
+and to add sound emulation(though the noise channel emulation is currently flawed).
 
 <p>
 WSR(WonderSwan sound rip format) playback is supported.

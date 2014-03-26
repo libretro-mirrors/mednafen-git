@@ -506,9 +506,10 @@ uint32 MDEC_DMARead(void)
 }
 
 // Test case related to this: GameShark Version 4.0 intro movie(coupled with (clever) abuse of DMA channel 0).
+//			also: SimCity 2000 startup.
 bool MDEC_DMACanWrite(void)
 {
- return(InCounter > 0 || ((Command >> 29) & 0x7) == 0 || ((Command >> 29) & 0x7) >= 4);
+ return(InCounter > 0 && ((Command >> 29) & 0x7) >= 1 && ((Command >> 29) & 0x7) <= 3);
 }
 
 bool MDEC_DMACanRead(void)

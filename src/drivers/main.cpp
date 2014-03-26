@@ -88,7 +88,7 @@ static const char *CSD_special = gettext_noop("Enable specified special video sc
 static const char *CSDE_special = gettext_noop("The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).");
 
 static const char *CSD_pixshader = gettext_noop("Enable specified OpenGL pixel shader.");
-static const char *CSDE_pixshader = gettext_noop("Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.\n\nNote: Mednafen's pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.");
+static const char *CSDE_pixshader = gettext_noop("Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.");
 
 static MDFNSetting_EnumList VDriver_List[] =
 {
@@ -911,15 +911,21 @@ void MainRequestExit(void)
 static bool InFrameAdvance = 0;
 static bool NeedFrameAdvance = 0;
 
+bool IsInFrameAdvance(void)
+{
+ return InFrameAdvance;
+}
+
 void DoRunNormal(void)
 {
+ NeedFrameAdvance = 0;
  InFrameAdvance = 0;
 }
 
 void DoFrameAdvance(void)
 {
+ NeedFrameAdvance |= InFrameAdvance;
  InFrameAdvance = 1;
- NeedFrameAdvance = 1;
 }
 
 static int GameLoopPaused = 0;

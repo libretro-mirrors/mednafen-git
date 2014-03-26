@@ -225,10 +225,17 @@ MCGenjin::MCGenjin(const uint8 *rr, uint32 rr_size)
  // Don't set addr_write_mask to larger than 0xF unless code in mcgenjin.h is adjusted as well.
  if(revision >= 0x80)
   addr_write_mask = 0xF;
+ else
+  addr_write_mask = 0x3;
 
  for(unsigned i = 0; i < 2; i++)
  {
-  switch(cs_di[i])
+  if((cs_di[i] >= 0x10 && cs_di[i] <= 0x18) || (cs_di[i] >= 0x20 && cs_di[i] <= 0x28))
+  {
+   MDFN_printf(_("CS%d: %uKiB %sRAM\n"), i, 8 << (cs_di[i] & 0xF), (cs_di[i] & 0x20) ? "Nonvolatile " : "");
+   cs[i] = new MCGenjin_CS_Device_RAM(8192 << (cs_di[i] & 0xF), (bool)(cs_di[i] & 0x20));
+  }
+  else switch(cs_di[i])
   {
    default:
 	for(unsigned si = 0; si < i; si++) // FIXME: auto ptr to make this not necessary
@@ -240,12 +247,6 @@ MCGenjin::MCGenjin(const uint8 *rr, uint32 rr_size)
    case 0x00:
 	MDFN_printf(_("CS%d: Unused\n"), i);
 	cs[i] = new MCGenjin_CS_Device();
-	break;
-
-   case 0x10 ... 0x18:
-   case 0x20 ... 0x28:
-	MDFN_printf(_("CS%d: %uKiB %sRAM\n"), i, 8 << (cs_di[i] & 0xF), (cs_di[i] & 0x20) ? "Nonvolatile " : "");
-	cs[i] = new MCGenjin_CS_Device_RAM(8192 << (cs_di[i] & 0xF), (bool)(cs_di[i] & 0x20));
 	break;
   }
  }
