@@ -244,6 +244,9 @@ void Joystick_Linux::InitFF(void)
 
 Joystick_Linux::~Joystick_Linux()
 {
+ if(rumble_supported)
+  SetRumble(0, 0);
+
  if(jsdev_fd != -1)
  {
   close(jsdev_fd);
@@ -259,62 +262,27 @@ Joystick_Linux::~Joystick_Linux()
 
 void Joystick_Linux::SetRumble(uint8 weak_intensity, uint8 strong_intensity)
 {
-// "Type 0" can cause the rumble motors to be off when they really shouldn't be and can make the rumble effect less stable.
-// So we'll go with "type 1", and resolve any possible bug reports on a case-by-case basis.
-// (Note that "type 0" and "type 1" have no greater meaning, they're just names I use in Mednafen for the different upload and play strategies here ;))
-#define RUMBLIES_UPDATE_TYPE 1
-
  if(rumble_supported)
  {
-  uint32 scaled_weak = weak_intensity * 65535 /*32767*/ / 255;
-  uint32 scaled_strong = strong_intensity * 65535/*32767*/ / 255;
-  struct ff_effect old_rumble;
-#if RUMBLIES_UPDATE_TYPE == 0
-  input_event stop_play[2];
-#else
+  uint32 scaled_weak = weak_intensity * (65535 / 255);
+  uint32 scaled_strong = strong_intensity * (65535 / 255);
   input_event play;
-#endif
 
-  memcpy(&old_rumble, &current_rumble, sizeof(ff_effect));
-  current_rumble.id = -1;
   current_rumble.u.rumble.weak_magnitude = scaled_weak;
   current_rumble.u.rumble.strong_magnitude = scaled_strong;
 
   if(ioctl(evdev_fd, EVIOCSFF, &current_rumble) == -1)
   {
-   // Restore.
-   printf("EEK: %m\n");
-   memcpy(&current_rumble, &old_rumble, sizeof(ff_effect));
+   printf("EVIOCSFF failed: %m\n");
    return;
   }
 
-#if RUMBLIES_UPDATE_TYPE == 0
-  stop_play[0].type = EV_FF;
-  stop_play[0].code = old_rumble.id;
-  stop_play[0].value = 0;
+  memset(&play, 0, sizeof(play));
 
-  stop_play[1].type = EV_FF;
-  stop_play[1].code = current_rumble.id;
-  stop_play[1].value = 1;
-
-  if(old_rumble.id == -1)
-  {
-   write(evdev_fd, (const void *)&stop_play[1], sizeof(stop_play[1]));
-  }
-  else
-  {
-   write(evdev_fd, (const void *)&stop_play, sizeof(stop_play));
-   ioctl(evdev_fd, EVIOCRMFF, (void *)(intptr_t)old_rumble.id);
-  }
-#else
   play.type = EV_FF;
   play.code = current_rumble.id;
   play.value = 1;
   write(evdev_fd, (const void *)&play, sizeof(play));
-
-  if(old_rumble.id != -1)
-   ioctl(evdev_fd, EVIOCRMFF, (void *)(intptr_t)old_rumble.id);
-#endif
  }
 }
 

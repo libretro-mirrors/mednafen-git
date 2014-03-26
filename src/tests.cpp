@@ -399,9 +399,21 @@ static void fptest0(void)
  assert(mdfn_fptest0_sub(36, 2) == 9);
 }
 
+volatile double mdfn_fptest1_v;
+static void fptest1(void)
+{
+ mdfn_fptest1_v = 1.0;
+
+ for(int i = 0; i < 128; i++)
+  mdfn_fptest1_v *= 2;
+
+ assert(mdfn_fptest1_v == 340282366920938463463374607431768211456.0);
+}
+
 static void RunFPTests(void)
 {
  fptest0();
+ fptest1();
 }
 
 bool MDFN_RunMathTests(void)

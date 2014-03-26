@@ -322,7 +322,7 @@ static void Emulate(EmulateSpecStruct *espec)
  if(espec->SoundBuf)
  {
   lynxie->mMikie->mikbuf.end_frame((gSystemCycleCount - lynxie->mMikie->startTS) >> 2);
-  espec->SoundBufSize = lynxie->mMikie->mikbuf.read_samples(espec->SoundBuf, espec->SoundBufMaxSize);
+  espec->SoundBufSize = lynxie->mMikie->mikbuf.read_samples(espec->SoundBuf, espec->SoundBufMaxSize) / 2; // divide by nr audio chn
  }
  else
   espec->SoundBufSize = 0;
@@ -485,6 +485,6 @@ MDFNGI EmulatedLynx =
  160,	// Framebuffer width
  102,	// Framebuffer height
 
- 1,     // Number of output sound channels
+ 2,     // Number of output sound channels
 };
 

@@ -1,3 +1,36 @@
+NOTE: 0.9.32.x is a (mostly) simple-bugfix-backport branch from mainline
+
+-- 0.9.32.1-WIP: --
+
+November 23, 2013:
+        PCE_FAST: Fixed a potential crash after a garbage/corrupted ROM image is loaded.
+
+	PCE, PCE_FAST: Don't generate a command error if a track number too high is specified via CD commands 0xD8 and/or 0xD9; instead,
+	treat it as if the leadout track was specified.  I'm not certain if this is correct behavior as per the actual system, but
+	that'll have to wait until I'm able to run some tests.  Fixes a startup lockup in "Star Mobile".
+
+	Lynx: Added emulation of Lynx 2 stereo audio registers, based on patches submitted by "sage".
+
+	NES: Reworked some real/floating-point setting's minimum and maximum value strings to try to work around a reported
+	issue with the settings parsing code.
+
+	PCE: During HES playback initialization, the second emulated VDC's registers are now initialized properly so that the
+	emulation event system isn't overtaxed(which drove up CPU usage considerably during HES playback).
+
+	PSX: Improved DualShock emulation accuracy per tests on a DualShock; rumble now works in "Final Fantasy 8", and possibly
+	other games where rumble was previously non-working.
+
+	Reworked how joystick/gamepad rumble is handled on Linux, to perform better and hopefully not cause kernel panics
+	anymore(or at least not so often as the old code did).
+
+        PSX: Removed an unnecessary and borked memset() statement from mdec.cpp.
+
+        Added a very simple double-precision floating-point range test to tests.cpp.
+
+        Compile with "-fno-aggressive-loop-optimizations", if the option is detected to be supported by the compiler.  I don't
+        particularly trust that new optimization in gcc 4.8.x.
+
+
 -- 0.9.32-WIP: --
 
 September 12, 2013:

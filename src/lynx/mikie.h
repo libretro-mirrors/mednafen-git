@@ -172,7 +172,7 @@ enum
 	MIKIE_PIXEL_FORMAT_32BPP,
 };
 
-#include <blip/Blip_Buffer.h>
+#include <blip/Stereo_Buffer.h>
 
 typedef Blip_Synth<blip_good_quality, 256 * 4> Synth;
 
@@ -184,7 +184,7 @@ class CMikie : public CLynxBase
 	
 		uint32 startTS;
 		Synth miksynth;
-		Blip_Buffer mikbuf;
+		Stereo_Buffer mikbuf;
 
 		void	Reset(void) MDFN_COLD;
 

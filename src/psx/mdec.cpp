@@ -301,8 +301,6 @@ static void IDCT(int16 *in_coeff, int16 *out_coeff)
 {
  int16 tmpbuf[64] MDFN_ALIGN(16);
 
- memset(out_coeff, 0, sizeof(out_coeff));
-
  IDCT_1D_Multi<0>(in_coeff, tmpbuf);
  IDCT_1D_Multi<1>(tmpbuf, out_coeff);
 }

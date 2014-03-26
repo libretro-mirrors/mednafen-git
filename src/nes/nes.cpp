@@ -507,12 +507,12 @@ static MDFNSetting NESSettings[] =
   { "nes.ntsc.matrix", MDFNSF_NOFLAGS, gettext_noop("Enable NTSC custom decoder matrix."), NULL, MDFNST_BOOL, "0" },
 
   /* Default custom decoder matrix(not plain default matrix) is from Sony */
-  { "nes.ntsc.matrix.0", MDFNSF_NOFLAGS, gettext_noop("NTSC custom decoder matrix element 0(red, value * V)."), NULL, MDFNST_FLOAT, "1.539", "-2", "2", NULL, NESPPU_SettingChanged },
-  { "nes.ntsc.matrix.1", MDFNSF_NOFLAGS, gettext_noop("NTSC custom decoder matrix element 1(red, value * U)."), NULL, MDFNST_FLOAT, "-0.622", "-2", "2", NULL, NESPPU_SettingChanged },
-  { "nes.ntsc.matrix.2", MDFNSF_NOFLAGS, gettext_noop("NTSC custom decoder matrix element 2(green, value * V)."), NULL, MDFNST_FLOAT, "-0.571", "-2", "2", NULL, NESPPU_SettingChanged },
-  { "nes.ntsc.matrix.3", MDFNSF_NOFLAGS, gettext_noop("NTSC custom decoder matrix element 3(green, value * U)."), NULL, MDFNST_FLOAT, "-0.185", "-2", "2", NULL, NESPPU_SettingChanged },
-  { "nes.ntsc.matrix.4", MDFNSF_NOFLAGS, gettext_noop("NTSC custom decoder matrix element 4(blue, value * V)."), NULL, MDFNST_FLOAT, "0.000", "-2", "2", NULL, NESPPU_SettingChanged },
-  { "nes.ntsc.matrix.5", MDFNSF_NOFLAGS, gettext_noop("NTSC custom decoder matrix element 5(blue, value * U."), NULL, MDFNST_FLOAT, "2.000", "-2", "2", NULL, NESPPU_SettingChanged },
+  { "nes.ntsc.matrix.0", MDFNSF_NOFLAGS, gettext_noop("NTSC custom decoder matrix element 0(red, value * V)."), NULL, MDFNST_FLOAT, "1.539", "-2.000", "2.000", NULL, NESPPU_SettingChanged },
+  { "nes.ntsc.matrix.1", MDFNSF_NOFLAGS, gettext_noop("NTSC custom decoder matrix element 1(red, value * U)."), NULL, MDFNST_FLOAT, "-0.622", "-2.000", "2.000", NULL, NESPPU_SettingChanged },
+  { "nes.ntsc.matrix.2", MDFNSF_NOFLAGS, gettext_noop("NTSC custom decoder matrix element 2(green, value * V)."), NULL, MDFNST_FLOAT, "-0.571", "-2.000", "2.000", NULL, NESPPU_SettingChanged },
+  { "nes.ntsc.matrix.3", MDFNSF_NOFLAGS, gettext_noop("NTSC custom decoder matrix element 3(green, value * U)."), NULL, MDFNST_FLOAT, "-0.185", "-2.000", "2.000", NULL, NESPPU_SettingChanged },
+  { "nes.ntsc.matrix.4", MDFNSF_NOFLAGS, gettext_noop("NTSC custom decoder matrix element 4(blue, value * V)."), NULL, MDFNST_FLOAT, "0.000", "-2.000", "2.000", NULL, NESPPU_SettingChanged },
+  { "nes.ntsc.matrix.5", MDFNSF_NOFLAGS, gettext_noop("NTSC custom decoder matrix element 5(blue, value * U."), NULL, MDFNST_FLOAT, "2.000", "-2.000", "2.000", NULL, NESPPU_SettingChanged },
   { NULL }
 };
 

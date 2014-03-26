@@ -6,7 +6,7 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.32-WIP'
+MEDNAFEN_VERSION='0.9.32.1-WIP'
 MEDNAFEN_VERSION_NUMERIC=0x000932
 
 AC_CANONICAL_HOST
@@ -100,6 +100,7 @@ dnl
 AX_CFLAGS_GCC_OPTION([-fno-fast-math], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-unsafe-math-optimizations], OPTIMIZER_FLAGS)
 
+AX_CFLAGS_GCC_OPTION([-fno-aggressive-loop-optimizations], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fomit-frame-pointer], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-finline-limit=6000], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([--param large-function-growth=800], OPTIMIZER_FLAGS)
