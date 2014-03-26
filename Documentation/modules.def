@@ -1,0 +1,64 @@
+nes
+Nintendo Entertainment System/Famicom
+256
+240
+snes
+Super Nintendo Entertainment System/Super Famicom
+256
+240
+gb
+GameBoy (Color)
+160
+144
+gba
+GameBoy Advance
+240
+160
+pce
+PC Engine (CD)/TurboGrafx 16 (CD)/SuperGrafx
+320
+232
+pce_fast
+PC Engine (CD)/TurboGrafx 16 (CD)/SuperGrafx
+320
+232
+lynx
+Atari Lynx
+160
+102
+md
+Sega Genesis/MegaDrive
+320
+240
+pcfx
+PC-FX
+288
+240
+ngp
+Neo Geo Pocket (Color)
+160
+152
+psx
+Sony PlayStation
+310
+240
+vb
+Virtual Boy
+384
+224
+wswan
+WonderSwan
+224
+144
+sms
+Sega Master System
+256
+240
+gg
+Sega Game Gear
+160
+144
+cdplay
+Mednafen Test CD-DA Player
+320
+240
