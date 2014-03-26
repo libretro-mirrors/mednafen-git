@@ -7,7 +7,7 @@
 
 #define TN typename
 
-namespace nall {
+namespace nall_v059 {
   template<typename T> class function;
 }
 
@@ -101,7 +101,7 @@ namespace nall {
 
 //function implementation template class
 
-namespace nall {
+namespace nall_v059 {
   template<TL>
   class function<R (PL)> {
   private:

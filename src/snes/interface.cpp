@@ -29,15 +29,19 @@
 #include "../PSFLoader.h"
 #include "../player.h"
 #include "../FileStream.h"
-#include "Fir_Resampler.h"
+#include "../resampler/resampler.h"
 #include <vector>
 
 static void Cleanup(void);
 
-static Fir_Resampler<24> resampler;
-class MeowFace : public SNES::Interface
+static SpeexResamplerState *resampler = NULL;
+static int32 ResampInPos;
+static int16 ResampInBuffer[4096][2];
+static bool PrevFrameInterlaced;
+
+class MeowFace : public bSNES_v059::Interface
 {
-  virtual void video_refresh(uint16_t *data, unsigned pitch, unsigned *line, unsigned width, unsigned height);
+  virtual void video_refresh(uint16_t *data, unsigned pitch, unsigned *line, unsigned width, unsigned height, bool interlaced, bool field);
   virtual void audio_sample(uint16_t l_sample, uint16_t r_sample);
   virtual void input_poll();
   virtual int16_t input_poll(bool port, unsigned device, unsigned index, unsigned id);
@@ -69,6 +73,7 @@ static int32 CycleCounter;
 static MDFN_Surface *tsurf = NULL;
 static MDFN_Rect *tlw = NULL;
 static MDFN_Rect *tdr = NULL;
+static EmulateSpecStruct *es = NULL;
 
 static int InputType[2];
 static uint8 *InputPtr[8] = { NULL };
@@ -160,36 +165,56 @@ static void BuildColorMap(MDFN_PixelFormat &format)
  }
 }
 
-void MeowFace::video_refresh(uint16_t *data, unsigned pitch, unsigned *line, unsigned width, unsigned height)
+void MeowFace::video_refresh(uint16_t *data, unsigned pitch, unsigned *line, unsigned width, unsigned height, bool interlaced, bool field)
 {
+ PrevFrameInterlaced = interlaced;
+
  if(snsf_loader)
   return;
 
  if(!tsurf || !tlw || !tdr)
   return;
 
+ if(es->skip && !interlaced)
+  return;
+
+ if(!interlaced)
+  field = 0;
+
  const uint16 *source_line = data;
- uint32 *dest_line = tsurf->pixels;
+ uint32 *dest_line = tsurf->pixels + ((interlaced && field) ? tsurf->pitch32 : 0);
 
  assert(!(pitch & 1));
 
- //if(height != 224)
- // printf("%d\n", height);
+ tlw[0].w = 0;	// Mark line widths as valid(since field == 1 would skip it).
 
- //if(tsurf->format.bpp == 32)
- //{
- //
- //}
- //else
+ for(int y = 0; y < height; y++, source_line += pitch >> 1, dest_line += tsurf->pitch32 << interlaced)
  {
-  for(int y = 0; y < height; y++, source_line += pitch >> 1, dest_line += tsurf->pitch32)
-   for(int x = 0; x < width; tlw[y].x = 0, tlw[y].w = (width == 512) ? line[y] : 256, x++)
+  tlw[(y << interlaced) + field].x = 0;
+  tlw[(y << interlaced) + field].w = (width == 512) ? line[y] : 256;
+
+  if(width == 512 && line[y] == 512 && (source_line[0] & 0x8000))
+  {
+   tlw[(y << interlaced) + field].w = 256;
+   for(int x = 0; x < 256; x++)
+   {
+    uint16 p1 = source_line[(x << 1) | 0] & 0x7FFF;
+    uint16 p2 = source_line[(x << 1) | 1] & 0x7FFF;
+
+    dest_line[x] = ColorMap[(p1 + p2 - ((p1 ^ p2) & 0x0421)) >> 1];
+   }
+  }
+  else
+  {
+   for(int x = 0; x < width; x++)
     dest_line[x] = ColorMap[source_line[x] & 0x7FFF];
+  }
  }
 
  tdr->w = width;
- tdr->h = height;
- //printf("%u\n", height);
+ tdr->h = height << interlaced;
+ es->InterlaceOn = interlaced;
+ es->InterlaceField = field;
 }
 
 void MeowFace::audio_sample(uint16_t l_sample, uint16_t r_sample)
@@ -199,11 +224,23 @@ void MeowFace::audio_sample(uint16_t l_sample, uint16_t r_sample)
  if(!SoundOn)
   return;
 
- if(resampler.max_write() >= 2)
+ if(ResampInPos < 4096)
  {
-  resampler.buffer()[0] = l_sample;
-  resampler.buffer()[1] = r_sample;
-  resampler.write(2);
+#if 0
+  {
+   static int min=0x7FFF;
+   if((int16)r_sample < min)
+   {
+    printf("%d\n", (int16)r_sample);
+    min = (int16)r_sample;
+   }
+  }
+#endif
+  //l_sample = (rand() & 0x7FFF) - 0x4000;
+  //r_sample = (rand() & 0x7FFF) - 0x4000;
+  ResampInBuffer[ResampInPos][0] = (int16)l_sample;
+  ResampInBuffer[ResampInPos][1] = (int16)r_sample;
+  ResampInPos++;
  }
  else
  {
@@ -245,11 +282,11 @@ void MeowFace::input_poll()
  {
   switch(InputType[port])
   {
-   case SNES::Input::DeviceJoypad:
+   case bSNES_v059::Input::DeviceJoypad:
 	PadLatch[port] = MDFN_de16lsb(InputPtr[port]);
 	break;
 
-   case SNES::Input::DeviceMultitap:
+   case bSNES_v059::Input::DeviceMultitap:
 	for(int index = 0; index < 4; index++)
         {
          if(!index)
@@ -262,7 +299,7 @@ void MeowFace::input_poll()
         }
         break;
 
-   case SNES::Input::DeviceMouse:
+   case bSNES_v059::Input::DeviceMouse:
 	MouseXLatch[port] = (int32)MDFN_de32lsb(InputPtr[port] + 0);
 	MouseYLatch[port] = (int32)MDFN_de32lsb(InputPtr[port] + 4);
 	MouseBLatch[port] = *(uint8 *)(InputPtr[port] + 8);
@@ -288,13 +325,13 @@ int16_t MeowFace::input_poll(bool port, unsigned device, unsigned index, unsigne
 
  switch(device)
  {
- 	case SNES::Input::DeviceJoypad:
+ 	case bSNES_v059::Input::DeviceJoypad:
 	{
 	  return((PadLatch[port] >> id) & 1);
 	}
 	break;
 
-	case SNES::Input::DeviceMultitap:
+	case bSNES_v059::Input::DeviceMultitap:
 	{
 	 if(!index)
           return((PadLatch[port] >> id) & 1);
@@ -303,24 +340,24 @@ int16_t MeowFace::input_poll(bool port, unsigned device, unsigned index, unsigne
 	}
 	break;
 
-	case SNES::Input::DeviceMouse:
+	case bSNES_v059::Input::DeviceMouse:
 	{
 	 assert(port < 2);
 	 switch(id)
 	 {
-	  case SNES::Input::MouseX:
+	  case bSNES_v059::Input::MouseX:
 		return(sats32tos16(MouseXLatch[port]));
 		break;
 
-	  case SNES::Input::MouseY:
+	  case bSNES_v059::Input::MouseY:
 		return(sats32tos16(MouseYLatch[port]));
 		break;
 
-	  case SNES::Input::MouseLeft:
+	  case bSNES_v059::Input::MouseLeft:
 		return((int)(bool)(MouseBLatch[port] & 1));
 		break;
 
-	  case SNES::Input::MouseRight:
+	  case bSNES_v059::Input::MouseRight:
 		return((int)(bool)(MouseBLatch[port] & 2));
 		break;
 	 }
@@ -358,7 +395,7 @@ namespace memory {
 #endif
 
 // For loading: Return false on fatal error during loading, or true on success(or file not found)
-static bool SaveMemorySub(bool load, const char *extension, SNES::MappedRAM *memoryA, SNES::MappedRAM *memoryB = NULL)
+static bool SaveMemorySub(bool load, const char *extension, bSNES_v059::MappedRAM *memoryA, bSNES_v059::MappedRAM *memoryB = NULL)
 {
  const std::string path = MDFN_MakeFName(MDFNMKF_SAV, 0, extension);
  std::vector<PtrLengthPair> MemToSave;
@@ -421,38 +458,38 @@ static bool SaveMemorySub(bool load, const char *extension, SNES::MappedRAM *mem
 
 static bool SaveLoadMemory(bool load)
 {
-  if(SNES::cartridge.loaded() == false)
+  if(bSNES_v059::cartridge.loaded() == false)
    return(FALSE);
 
   bool ret = true;
 
-  switch(SNES::cartridge.mode())
+  switch(bSNES_v059::cartridge.mode())
   {
-    case SNES::Cartridge::ModeNormal:
-    case SNES::Cartridge::ModeBsxSlotted: 
+    case bSNES_v059::Cartridge::ModeNormal:
+    case bSNES_v059::Cartridge::ModeBsxSlotted: 
     {
-      ret &= SaveMemorySub(load, "srm", &SNES::memory::cartram);
-      ret &= SaveMemorySub(load, "rtc", &SNES::memory::cartrtc);
+      ret &= SaveMemorySub(load, "srm", &bSNES_v059::memory::cartram);
+      ret &= SaveMemorySub(load, "rtc", &bSNES_v059::memory::cartrtc);
     }
     break;
 
-    case SNES::Cartridge::ModeBsx:
+    case bSNES_v059::Cartridge::ModeBsx:
     {
-      ret &= SaveMemorySub(load, "srm", &SNES::memory::bsxram );
-      ret &= SaveMemorySub(load, "psr", &SNES::memory::bsxpram);
+      ret &= SaveMemorySub(load, "srm", &bSNES_v059::memory::bsxram );
+      ret &= SaveMemorySub(load, "psr", &bSNES_v059::memory::bsxpram);
     }
     break;
 
-    case SNES::Cartridge::ModeSufamiTurbo:
+    case bSNES_v059::Cartridge::ModeSufamiTurbo:
     {
-     ret &= SaveMemorySub(load, "srm", &SNES::memory::stAram, &SNES::memory::stBram);
+     ret &= SaveMemorySub(load, "srm", &bSNES_v059::memory::stAram, &bSNES_v059::memory::stBram);
     }
     break;
 
-    case SNES::Cartridge::ModeSuperGameBoy:
+    case bSNES_v059::Cartridge::ModeSuperGameBoy:
     {
-     ret &= SaveMemorySub(load, "sav", &SNES::memory::gbram);
-     ret &= SaveMemorySub(load, "rtc", &SNES::memory::gbrtc);
+     ret &= SaveMemorySub(load, "sav", &bSNES_v059::memory::gbram);
+     ret &= SaveMemorySub(load, "rtc", &bSNES_v059::memory::gbrtc);
     }
     break;
   }
@@ -477,10 +514,13 @@ static bool TestMagic(const char *name, MDFNFILE *fp)
 
 static void SetupMisc(bool PAL)
 {
- SNES::video.set_mode(PAL ? SNES::Video::ModePAL : SNES::Video::ModeNTSC);
+ PrevFrameInterlaced = false;
 
+ bSNES_v059::video.set_mode(PAL ? bSNES_v059::Video::ModePAL : bSNES_v059::Video::ModeNTSC);
+
+ // Nominal FPS values are a bit off, FIXME(and contemplate the effect on netplay sound buffer overruns/underruns)
  MDFNGameInfo->fps = PAL ? 838977920 : 1008307711;
- MDFNGameInfo->MasterClock = MDFN_MASTERCLOCK_FIXED(32040.40);  //MDFN_MASTERCLOCK_FIXED(21477272);     //PAL ? PAL_CPU : NTSC_CPU);
+ MDFNGameInfo->MasterClock = MDFN_MASTERCLOCK_FIXED(32040.5);
 
  if(!snsf_loader)
  {
@@ -489,8 +529,7 @@ static void SetupMisc(bool PAL)
   MDFNGameInfo->lcm_height = MDFNGameInfo->nominal_height * 2;
  }
 
- resampler.buffer_size(32040 / 10);
- //resampler.time_ratio((double)32040.40 / 48000, 0.9965);
+ ResampInPos = 0;
  SoundLastRate = 0;
 }
 
@@ -508,10 +547,10 @@ SNSFLoader::SNSFLoader(MDFNFILE *fp)
  export_ptr = new uint8[8192 * 1024];
  memset(export_ptr, 0x00, 8192 * 1024);
  memcpy(export_ptr, &ROM_Data[0], size_tmp);
- SNES::memory::cartrom.map(export_ptr, size_tmp);
+ bSNES_v059::memory::cartrom.map(export_ptr, size_tmp);
  ROM_Data.resize(0);
 
- SNES::cartridge.load(SNES::Cartridge::ModeNormal);
+ bSNES_v059::cartridge.load(bSNES_v059::Cartridge::ModeNormal);
 }
 
 SNSFLoader::~SNSFLoader()
@@ -576,7 +615,7 @@ void SNSFLoader::HandleReserved(const uint8 *data, uint32 len)
 	 }
 
 	 printf("SRAM(not implemented yet): %08x %08x\n", srd_offset, srd_size);
-	printf("%d\n", SNES::memory::cartram.size());
+	printf("%d\n", bSNES_v059::memory::cartram.size());
 	}
 	break;
   }
@@ -632,7 +671,7 @@ static bool LoadSNSF(MDFNFILE *fp)
 {
  bool PAL = false;
 
- SNES::system.init(&meowface);
+ bSNES_v059::system.init(&meowface);
 
  MultitapEnabled[0] = false;
  MultitapEnabled[1] = false;
@@ -655,8 +694,8 @@ static bool LoadSNSF(MDFNFILE *fp)
   return 0;
  }
 
- SNES::system.power();
- PAL = (SNES::system.region() == SNES::System::PAL);
+ bSNES_v059::system.power();
+ PAL = (bSNES_v059::system.region() == bSNES_v059::System::PAL);
 
  SetupMisc(PAL);
 
@@ -665,7 +704,7 @@ static bool LoadSNSF(MDFNFILE *fp)
 
 static void Cleanup(void)
 {
- SNES::memory::cartrom.map(NULL, 0); // So it delete[]s the pointer it took ownership of.
+ bSNES_v059::memory::cartrom.map(NULL, 0); // So it delete[]s the pointer it took ownership of.
 
  if(CustomColorMap)
  {
@@ -680,6 +719,12 @@ static void Cleanup(void)
  }
 
  ColorMap.resize(0);
+
+ if(resampler)
+ {
+  speex_resampler_destroy(resampler);
+  resampler = NULL;
+ }
 }
 
 static int Load(const char *name, MDFNFILE *fp)
@@ -711,21 +756,21 @@ static int Load(const char *name, MDFNFILE *fp)
   md5.update(fp->data, fp->size);
   md5.finish(MDFNGameInfo->MD5);
 
-  SNES::system.init(&meowface);
+  bSNES_v059::system.init(&meowface);
 
-  //const SNES::Cartridge::Type rom_type = SNES::cartridge.detect_image_type((uint8 *)fp->data, fp->size);
+  //const bSNES_v059::Cartridge::Type rom_type = bSNES_v059::cartridge.detect_image_type((uint8 *)fp->data, fp->size);
 
   export_ptr = new uint8[8192 * 1024];
   memset(export_ptr, 0x00, 8192 * 1024);
   memcpy(export_ptr, fp->data + header_adjust, fp->size - header_adjust);
 
-  SNES::memory::cartrom.map(export_ptr, fp->size - header_adjust);
+  bSNES_v059::memory::cartrom.map(export_ptr, fp->size - header_adjust);
 
-  SNES::cartridge.load(SNES::Cartridge::ModeNormal);
+  bSNES_v059::cartridge.load(bSNES_v059::Cartridge::ModeNormal);
 
-  SNES::system.power();
+  bSNES_v059::system.power();
 
-  PAL = (SNES::system.region() == SNES::System::PAL);
+  PAL = (bSNES_v059::system.region() == bSNES_v059::System::PAL);
 
   SetupMisc(PAL);
 
@@ -742,7 +787,7 @@ static int Load(const char *name, MDFNFILE *fp)
 
   MDFNMP_Init(1024, (1 << 24) / 1024);
 
-  MDFNMP_AddRAM(131072, 0x7E << 16, SNES::memory::wram.data());
+  MDFNMP_AddRAM(131072, 0x7E << 16, bSNES_v059::memory::wram.data());
 
   ColorMap.resize(32768);
 
@@ -778,6 +823,7 @@ static void Emulate(EmulateSpecStruct *espec)
  tsurf = espec->surface;
  tlw = espec->LineWidths;
  tdr = &espec->DisplayRect;
+ es = espec;
 
  if(!snsf_loader)
  {
@@ -787,10 +833,19 @@ static void Emulate(EmulateSpecStruct *espec)
 
  if(SoundLastRate != espec->SoundRate)
  {
-  double ratio = (double)32040.40 / (espec->SoundRate ? espec->SoundRate : 48000);
-  resampler.time_ratio(ratio, 0.9965);
-  printf("%f, %f\n", ratio, resampler.ratio());
+  if(resampler)
+  {
+   speex_resampler_destroy(resampler);
+   resampler = NULL;
+  }
+  int err = 0;
+  int quality = MDFN_GetSettingUI("snes.apu.resamp_quality");
+
+  resampler = speex_resampler_init_frac(2, 64081, 2 * (int)(espec->SoundRate ? espec->SoundRate : 48000),
+					   32040.5, (int)(espec->SoundRate ? espec->SoundRate : 48000), quality, &err);
   SoundLastRate = espec->SoundRate;
+
+  //printf("%f ms\n", 1000.0 * speex_resampler_get_input_latency(resampler) / 32040.5);
  }
 
  if(!snsf_loader)
@@ -801,26 +856,53 @@ static void Emulate(EmulateSpecStruct *espec)
  // Make sure to trash any leftover samples, generated from system.runtosave() in save state saving, if sound is now disabled.
  if(SoundOn && !espec->SoundBuf)
  {
-  resampler.clear();
+  ResampInPos = 0;
  }
 
  SoundOn = espec->SoundBuf ? true : false;
 
  HasPolledThisFrame = false;
  InProperEmu = TRUE;
- SNES::system.run_mednafen_custom();
+
+ // More aggressive frameskipping disabled until we can rule out undesirable side-effects and interactions.
+ //bSNES_v059::ppu.enable_renderer(!espec->skip || PrevFrameInterlaced);
+ bSNES_v059::system.run_mednafen_custom();
+ bSNES_v059::ppu.enable_renderer(true);
  tsurf = NULL;
  tlw = NULL;
  tdr = NULL;
+ es = NULL;
  InProperEmu = FALSE;
 
  espec->MasterCycles = CycleCounter;
  CycleCounter = 0;
 
+ //if(!espec->MasterCycles)
+ //{
+ // puts("BOGUS GNOMES");
+ // espec->MasterCycles = 1;
+ //}
  //printf("%d\n", espec->MasterCycles);
 
  if(espec->SoundBuf)
-  espec->SoundBufSize = resampler.read(espec->SoundBuf, resampler.avail()) >> 1;
+ {
+  spx_uint32_t in_len; // "Number of input samples in the input buffer. Returns the number of samples processed. This is all per-channel."
+  spx_uint32_t out_len; // "Size of the output buffer. Returns the number of samples written. This is all per-channel."
+
+  in_len = ResampInPos;
+  out_len = 524288; //8192;     // FIXME, real size.
+
+  speex_resampler_process_interleaved_int(resampler, (const spx_int16_t *)ResampInBuffer, &in_len, (spx_int16_t *)espec->SoundBuf, &out_len);
+
+  assert(in_len <= ResampInPos);
+
+  if((ResampInPos - in_len) > 0)
+   memmove(ResampInBuffer, ResampInBuffer + in_len, (ResampInPos - in_len) * sizeof(int16) * 2);
+
+  ResampInPos -= in_len;
+
+  espec->SoundBufSize = out_len;
+ }
 
  MDFNGameInfo->mouse_sensitivity = MDFN_GetSettingF("snes.mouse_sensitivity");
 
@@ -832,29 +914,41 @@ static void Emulate(EmulateSpecStruct *espec)
    Player_Draw(espec->surface, &espec->DisplayRect, 0, espec->SoundBuf, espec->SoundBufSize);
   }
  }
+
+
+#if 0
+ {
+  static int skipframe = 3;
+
+  if(skipframe)
+   skipframe--;
+  else
+  {
+   static unsigned fc = 0;
+   static uint64 cc = 0;
+   static uint64 cc2 = 0;
+
+   fc++;
+   cc += espec->MasterCycles;
+   cc2 += espec->SoundBufSize;
+
+   printf("%f %f\n", (double)fc / ((double)cc / 32040.5), (double)fc / ((double)cc2 / espec->SoundRate));
+  }
+ }
+#endif
 }
 
 static int StateAction(StateMem *sm, int load, int data_only)
 {
- //if(!SNES::Cartridge::saveStatesSupported())
-  //return(0);
+ const uint32 length = bSNES_v059::system.serialize_size();
 
  if(load)
  {
-  uint32 length;
   uint8 *ptr;
 
-  SFORMAT StateLengthCat[] =
-  {
-   SFVARN(length, "length"),
-   SFEND
-  };
-
-  if(!MDFNSS_StateAction(sm, 1, data_only, StateLengthCat, "LEN"))
+  if(!(ptr = (uint8 *)MDFN_calloc(1, length, _("SNES save state buffer"))))
    return(0);
 
-  ptr = (uint8 *)MDFN_calloc(1, length, _("SNES save state buffer"));
- 
   SFORMAT StateRegs[] =
   {
    SFARRAYN(ptr, length, "OmniCat"),
@@ -871,33 +965,26 @@ static int StateAction(StateMem *sm, int load, int data_only)
    return(0);
   }
 
+  //srand(99);
+  //for(int i = 16; i < length; i++)
+  // ptr[i] = rand() & 0x3;
+
   serializer state(ptr, length);
   int result;
-  
-  result = SNES::system.unserialize(state);
+
+  result = bSNES_v059::system.unserialize(state);
 
   free(ptr);
   return(result);
  }
  else // save:
  {
-  uint32 length;
+  if(bSNES_v059::scheduler.sync != bSNES_v059::Scheduler::SyncAll)
+   bSNES_v059::system.runtosave();
 
-  if(SNES::scheduler.sync != SNES::Scheduler::SyncAll)
-   SNES::system.runtosave();
+  serializer state = bSNES_v059::system.serialize();
 
-  serializer state = SNES::system.serialize();
-
-  length = state.size();
-
-  SFORMAT StateLengthCat[] =
-  {
-   SFVARN(length, "length"),
-   SFEND
-  };
-
-  if(!MDFNSS_StateAction(sm, 0, data_only, StateLengthCat, "LEN"))
-   return(0);
+  assert(state.size() == length);
 
   uint8 *ptr = const_cast<uint8 *>(state.data());
 
@@ -927,13 +1014,13 @@ struct StrToBSIT_t
 
 static const StrToBSIT_t StrToBSIT[] =
 {
- { "none",   	SNES::Input::DeviceNone },
- { "gamepad",   SNES::Input::DeviceJoypad },
- { "multitap",  SNES::Input::DeviceMultitap },
- { "mouse",   	SNES::Input::DeviceMouse },
- { "superscope",   SNES::Input::DeviceSuperScope },
- { "justifier",   SNES::Input::DeviceJustifier },
- { "justifiers",   SNES::Input::DeviceJustifiers },
+ { "none",   	bSNES_v059::Input::DeviceNone },
+ { "gamepad",   bSNES_v059::Input::DeviceJoypad },
+ { "multitap",  bSNES_v059::Input::DeviceMultitap },
+ { "mouse",   	bSNES_v059::Input::DeviceMouse },
+ { "superscope",   bSNES_v059::Input::DeviceSuperScope },
+ { "justifier",   bSNES_v059::Input::DeviceJustifier },
+ { "justifiers",   bSNES_v059::Input::DeviceJustifiers },
  { NULL,	-1	},
 };
 
@@ -960,7 +1047,7 @@ static void SetInput(int port, const char *type, void *ptr)
 
   InputType[port] = id;
 
-  SNES::input.port_set_device(port, id);
+  bSNES_v059::input.port_set_device(port, id);
 
 #if 0
   switch(config().input.port1) { default:
@@ -999,8 +1086,8 @@ static void DoSimpleCommand(int cmd)
 {
  switch(cmd)
  {
-  case MDFN_MSC_RESET: SNES::system.reset(); break;
-  case MDFN_MSC_POWER: SNES::system.power(); break;
+  case MDFN_MSC_RESET: bSNES_v059::system.reset(); break;
+  case MDFN_MSC_POWER: bSNES_v059::system.power(); break;
  }
 }
 
@@ -1028,6 +1115,12 @@ static const InputDeviceInputInfoStruct MouseIDII[0x4] =
  { "right", "Right Button", 1, IDIT_BUTTON, NULL },
 };
 
+#if 0
+static const InputDeviceInputInfoStruct SuperScopeIDII[] =
+{
+
+};
+#endif
 
 static InputDeviceInfoStruct InputDeviceInfoSNESPort[] =
 {
@@ -1060,7 +1153,16 @@ static InputDeviceInfoStruct InputDeviceInfoSNESPort[] =
   sizeof(MouseIDII) / sizeof(InputDeviceInputInfoStruct),
   MouseIDII,
  },
-
+#if 0
+ {
+  "superscope",
+  "Super Scope",
+  gettext_noop("Monkey!"),
+  NULL,
+  sizeof(SuperScopeIDII) / sizeof(InputDeviceInputInfoStruct),
+  SuperScopeIDII
+ },
+#endif
 };
 
 
@@ -1104,6 +1206,8 @@ static const MDFNSetting SNESSettings[] =
  { "snes.mouse_sensitivity", MDFNSF_NOFLAGS, gettext_noop("Emulated mouse sensitivity."), NULL, MDFNST_FLOAT, "0.50", NULL, NULL, NULL },
 
  { "snes.correct_aspect", MDFNSF_CAT_VIDEO, gettext_noop("Correct the aspect ratio."), gettext_noop("Note that regardless of this setting's value, \"512\" and \"256\" width modes will be scaled to the same dimensions for display."), MDFNST_BOOL, "0" },
+
+ { "snes.apu.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("APU output resampler quality."), gettext_noop("0 is lowest quality and latency and CPU usage, 10 is highest quality and latency and CPU usage.\n\nWith a Mednafen sound output rate of about 32041Hz or higher: Quality \"0\" resampler has approximately 0.125ms of latency, quality \"5\" resampler has approximately 1.25ms of latency, and quality \"10\" resampler has approximately 3.99ms of latency."), MDFNST_UINT, "5", "0", "10" },
 
  { NULL }
 };

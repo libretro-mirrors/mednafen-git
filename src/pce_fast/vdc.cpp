@@ -30,6 +30,7 @@ The spectrum peaked at 15734 Hz.  21477272.727272... / 3 / 15734 = 455.00(CPU cy
 #include "vdc.h"
 #include "huc.h"
 #include "../cdrom/pcecd.h"
+#include "../cputest/cputest.h"
 #include <trio/trio.h>
 #include <math.h>
 
@@ -52,9 +53,8 @@ static bool correct_aspect;
 #define ULE_BG1		4
 #define ULE_SPR1	8
 
-static const unsigned int bat_width_tab[4] = { 32, 64, 128, 128 };
-static const unsigned int bat_width_shift_tab[4] = { 5, 6, 7, 7 };
-static const unsigned int bat_height_tab[2] = { 32, 64 };
+static const uint8 bat_width_shift_tab[4] = { 5, 6, 7, 7 };
+static const uint8 bat_height_mask_tab[2] = { 32 - 1, 64 - 1 };
 
 static unsigned int VDS;
 static unsigned int VSW;
@@ -719,10 +719,9 @@ static const uint64 cblock_exlut[16] =  {
 static void DrawBG(const vdc_t *vdc, const uint32 count, uint8 *target) NO_INLINE;
 static void DrawBG(const vdc_t *vdc, const uint32 count, uint8 *target)
 {
- int bat_width = bat_width_tab[(vdc->MWR >> 4) & 3];
- int bat_width_mask = bat_width - 1;
  int bat_width_shift = bat_width_shift_tab[(vdc->MWR >> 4) & 3];
- int bat_height_mask = bat_height_tab[(vdc->MWR >> 6) & 1] - 1;
+ int bat_width_mask = (1U << bat_width_shift) - 1;
+ int bat_height_mask = bat_height_mask_tab[(vdc->MWR >> 6) & 1];
  uint64 *target64 = (uint64 *)target;
 
  {
@@ -1107,13 +1106,10 @@ void MixBGSPR_x86(const uint32 count, const uint8 *bg_linebuf, const uint16 *spr
         "testl $15, %%eax\n\t"
         "bt $15, %%ebx\n\t"
 
-        "cmovbe %%ebx, %%eax\n\t"
+        "jnbe SkipMove\n\t"
+        "movl %%ebx, %%eax\n\t"
         "andl $511, %%eax\n\t"
-
-        //"jnbe SkipMove\n\t"
-        //"movl %%ebx, %%eax\n\t"
-        //"andl $511, %%eax\n\t"
-        //"SkipMove:\n\t"
+        "SkipMove:\n\t"
 
         "movl (%%ebp, %%eax, 4), %%ebx\n\t"
         "movl %%ebx, (%%edi, %%ecx, 4)\n\t"
@@ -1127,6 +1123,50 @@ void MixBGSPR_x86(const uint32 count, const uint8 *bg_linebuf, const uint16 *spr
  : "memory", "cc", "ebp"
  );
 }
+
+void MixBGSPR_x86_CMOV(const uint32 count, const uint8 *bg_linebuf, const uint16 *spr_linebuf, uint32 *target)
+{
+ // edx: bg_linebuf
+ // esi: spr_linebuf
+ // ebp: vce.color_table_cache
+ // edi: target
+ // ecx: count
+
+ // eax: bg pixel
+ // ebx: spr pixel
+ int dummy;
+
+ asm volatile(
+        "push %%ebx\n\t"
+
+        "movl %%eax, %%ebp\n\t"
+        "negl %%ecx\n\t"
+        "xorl %%eax, %%eax\n\t"
+        "xorl %%ebx, %%ebx\n\t"
+
+        "BoomBuggyCMOV:\n\t"
+        "movzbl (%%edx, %%ecx, 1), %%eax\n\t"
+        "movswl (%%esi, %%ecx, 2), %%ebx\n\t"
+
+        "testl $15, %%eax\n\t"
+        "bt $15, %%ebx\n\t"
+
+        "cmovbe %%ebx, %%eax\n\t"
+        "andl $511, %%eax\n\t"
+
+        "movl (%%ebp, %%eax, 4), %%ebx\n\t"
+        "movl %%ebx, (%%edi, %%ecx, 4)\n\t"
+
+        "addl $1, %%ecx\n\t"
+        "jnz BoomBuggyCMOV\n\t"
+
+	"pop %%ebx\n\t"
+ : "=c" (dummy), "=a" (dummy)
+ : "d" (bg_linebuf + count), "S" (spr_linebuf + count), "D" (target + count), "c" (count), "a" (vce.color_table_cache)
+ : "memory", "cc", "ebp"
+ );
+}
+
 #endif
 
 #endif // ARCH_X86
@@ -1756,10 +1796,17 @@ void VDC_Init(int sgx)
 
  MixBGSPR = MixBGSPR_Generic<uint32>;
 
- #ifdef ARCH_X86
- // FIXME: cmov
- MixBGSPR = MixBGSPR_x86;
+#ifdef ARCH_X86
+ #ifndef __x86_64__
+ if(cputest_get_flags() & CPUTEST_FLAG_CMOV)
+ {
+  puts("CMOV");
+  MixBGSPR = MixBGSPR_x86_CMOV;
+ }
+ else
  #endif
+  MixBGSPR = MixBGSPR_x86;
+#endif
 
 }
 

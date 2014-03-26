@@ -200,7 +200,7 @@ void QTRecord::atom_end(void)
  qtfile.seek(cur_offset, SEEK_SET);
 }
 
-QTRecord::QTRecord(const char *path, const VideoSpec &spec) : qtfile(path, FileWrapper::MODE_WRITE_SAFE)
+QTRecord::QTRecord(const char *path, const VideoSpec &spec) : qtfile(path, FileWrapper::MODE_WRITE_SAFE), resampler(NULL)
 {
  Finished = false;
 
@@ -208,6 +208,32 @@ QTRecord::QTRecord(const char *path, const VideoSpec &spec) : qtfile(path, FileW
 
  SoundRate = spec.SoundRate;
  SoundChan = spec.SoundChan;
+
+ // If we change the rate threshold for resampling here, remember to change the std::min in the informational printf in
+ // mednafen.cpp
+ if(SoundRate > 64000)
+ {
+  int err = 0;
+
+  ResampInRate = spec.SoundRate;
+  SoundRate = 64000;
+  if(!(resampler = speex_resampler_init(spec.SoundChan, spec.SoundRate, SoundRate, 5, &err)))
+  {
+   throw MDFN_Error(0, _("Error initializing audio resampler."));
+  }
+  //printf("%f ms\n", 1000.0 * speex_resampler_get_input_latency(resampler) / spec.SoundRate);
+ }
+ else
+  resampler = NULL;
+
+ ResampInBufferFramesInCount = 0;
+ ResampInBuffer.resize(0);
+ ResampOutBuffer.resize(0);
+
+ //ResampInBuffer.resize((uint32)((100 * spec.SoundRate + 999) / 1000) * SoundChan);
+ //ResampOutBuffer.resize((uint32)((100 * SoundRate + 999) / 1000) * SoundChan);
+
+ //printf("%u %u\n", ResampInBuffer.size(), ReampOutBuffer.size());
 
  TimeIndex = 0;
  if(SoundRate && SoundChan)
@@ -441,23 +467,77 @@ void QTRecord::WriteFrame(const MDFN_Surface *surface, const MDFN_Rect &DisplayR
  qts.audio_foffset = qtfile.tell();
 
  // Write audio here
+ //
+ //
+ int32 SoundBufROSize;
+
+ if(resampler)
  {
-  int16 abuf[SoundBufSize * SoundChan];
+  spx_uint32_t in_len;
+  spx_uint32_t out_len;
+
+  if((ResampInBuffer.size() - (ResampInBufferFramesInCount * SoundChan)) < SoundBufSize * SoundChan)
+   ResampInBuffer.resize((ResampInBufferFramesInCount + SoundBufSize) * SoundChan);
 
   for(int i = 0; i < SoundBufSize * SoundChan; i++)
-   MDFN_en16msb((uint8 *)&abuf[i], SoundBuf[i]);
+   ResampInBuffer[ResampInBufferFramesInCount * SoundChan + i] = SoundBuf[i];
 
-  qtfile.write(abuf, sizeof(abuf));
+  ResampInBufferFramesInCount += SoundBufSize;
+
+  {
+   // *2 for padding for potential precision issues related to the resampling ratio.
+   size_t needed_out_size = (uint64_t)ResampInBuffer.size() / SoundChan * 2 * SoundRate / ResampInRate * SoundChan;
+
+   //printf("Zoom: %u %u\n", (unsigned)ResampInBuffer.size(), (unsigned)needed_out_size);
+
+   if(ResampOutBuffer.size() < needed_out_size)
+    ResampOutBuffer.resize(needed_out_size);
+
+   // Very crude, but works because we're only downsampling.  TODO make it more precise?
+   //if(ResampOutBuffer.size() < ResampInBuffer.size())
+   // ResampOutBuffer.resize(ResampInBuffer.size());
+  }
+
+  in_len = ResampInBufferFramesInCount;
+  out_len = ResampOutBuffer.size() / SoundChan;
+
+  speex_resampler_process_interleaved_int(resampler, (const spx_int16_t *)&ResampInBuffer[0], &in_len, (spx_int16_t *)&ResampOutBuffer[0], &out_len);
+
+  if((ResampInBufferFramesInCount - in_len) > 0)	// Shouldn't happen, unless there's not enough room in the output buffer.
+  {
+   printf("%u\n", ResampInBufferFramesInCount - in_len);
+   memmove(&ResampInBuffer[0], &ResampInBuffer[in_len * SoundChan], (ResampInBufferFramesInCount - in_len) * sizeof(int16) * SoundChan);
+  }
+
+  ResampInBufferFramesInCount -= in_len;
+  SoundBufROSize = out_len;
+
+  for(int i = 0; i < SoundBufROSize * SoundChan; i++)
+   MDFN_en16msb((uint8 *)&ResampOutBuffer[i], ResampOutBuffer[i]);
+ }
+ else
+ {
+  SoundBufROSize = SoundBufSize;
+
+  if(ResampOutBuffer.size() < SoundBufSize * SoundChan)
+   ResampOutBuffer.resize(SoundBufSize * SoundChan);
+
+  for(int i = 0; i < SoundBufROSize * SoundChan; i++)
+   MDFN_en16msb((uint8 *)&ResampOutBuffer[i], SoundBuf[i]);
  }
 
+ qtfile.write(&ResampOutBuffer[0], sizeof(int16) * SoundBufROSize * SoundChan);
+ //
+ //
+ //
  qts.audio_byte_size = qtfile.tell() - qts.audio_foffset;
 
- SoundFramesWritten += SoundBufSize;
+ SoundFramesWritten += SoundBufROSize;
 
  if(SoundRate && SoundChan)
  {
   qts.time_length = qts.audio_byte_size / SoundChan / sizeof(int16);
-  TimeIndex += SoundBufSize;
+  TimeIndex += SoundBufROSize;
  }
  else
  {
@@ -1023,5 +1103,11 @@ QTRecord::~QTRecord(void)
  catch(std::exception &e)
  {
   MDFND_PrintError(e.what());
+ }
+
+ if(resampler)
+ {
+  speex_resampler_destroy(resampler);
+  resampler = NULL;
  }
 }

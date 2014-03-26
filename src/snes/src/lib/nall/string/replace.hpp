@@ -1,7 +1,7 @@
 #ifndef NALL_STRING_REPLACE_HPP
 #define NALL_STRING_REPLACE_HPP
 
-namespace nall {
+namespace nall_v059 {
 
 string& string::replace(const char *key, const char *token) {
   int i, z, ksl = strlen(key), tsl = strlen(token), ssl = length();

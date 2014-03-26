@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define SRTC_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 SRTC srtc;
 

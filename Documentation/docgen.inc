@@ -1,6 +1,6 @@
 <?php
 
-$mednafen_version = "0.9.28-WIP";
+$mednafen_version = "0.9.29-WIP";
 $mod_list = array();
 
 $sections = array();
@@ -113,20 +113,21 @@ function BeginPage($module_name, $module_description)
 
  $section_depth++;
 
- $ps_string = '
+ $ps_string = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
  <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>Mednafen ' . htmlspecialchars($module_description) . ' Documentation</title>
-  <link rel="stylesheet" type="text/css" media="screen, projection" href="mednafen.css" />
+  <link rel="stylesheet" type="text/css" media="screen, projection" href="mednafen.css">
  </head>
  <body>
-  <center><h1><img alt="Mednafen" src="mednafen.png" width="696" height="204" /></h1></center>
+  <center><h1><img alt="Mednafen" src="mednafen.png" width="696" height="204"></h1></center>
   <center><h1>' . htmlspecialchars($module_description) . ' Documentation</h1></center>
-  <center><i>Last updated ' . strftime("%B %e, %Y", GetMTime()) . '<br />Valid as of ' . htmlspecialchars($mednafen_version) . '</i></center>';
+  <center><i>Last updated ' . strftime("%B %e, %Y", GetMTime()) . '<br>Valid as of ' . htmlspecialchars($mednafen_version) . '</i></center>';
 
 
  $toc_string = '
- <p>
+ <p></p>
  <b>Table of Contents:</b>
  <ul>';
 
@@ -138,7 +139,7 @@ function EndPage()
 {
  global $mednafen_version, $curmod, $cursection, $ps_string, $toc_string, $section_depth;
 
- $toc_string .= '</ul></p><hr width="100%" />';
+ $toc_string .= '</ul><hr width="100%">';
 
 
  $end_string = ' </body>
@@ -169,9 +170,9 @@ function BeginSection($name, $nonlink_text = "", $link = FALSE, $header_link = F
  if($link !== FALSE)
  {
   if($link == "")
-   $toc_string .= '<li />' . htmlspecialchars($name . $nonlink_text) . '<ul>';
+   $toc_string .= '<li>' . htmlspecialchars($name . $nonlink_text) . '<ul>';
   else
-   $toc_string .= '<li /><a href="' . urlencode($link) . '">' . htmlspecialchars($name) . '</a>' . htmlspecialchars($nonlink_text) . '<ul>';
+   $toc_string .= '<li><a href="' . urlencode($link) . '">' . htmlspecialchars($name) . '</a>' . htmlspecialchars($nonlink_text) . '<ul>';
 
   $section_endhtml = '';
  }
@@ -187,9 +188,9 @@ function BeginSection($name, $nonlink_text = "", $link = FALSE, $header_link = F
    $aname .= $sections[$i];
   }
 
-  $toc_string .= '<li /><a href="#' . urlencode($aname) . '">' . htmlspecialchars($name) . '</a>' . htmlspecialchars($nonlink_text) . '<ul>';
+  $toc_string .= '<li><a href="#' . urlencode($aname) . '">' . htmlspecialchars($name) . '</a>' . htmlspecialchars($nonlink_text) . '<ul>';
 
-  echo('<a name="' . urlencode($aname) . '"><h' . $section_depth . '>');
+  echo('<h' . $section_depth . '>' . '<a name="' . urlencode($aname) . '">');
 
   if($header_link !== FALSE)
    echo('<a href="' . $header_link . '">');
@@ -199,9 +200,9 @@ function BeginSection($name, $nonlink_text = "", $link = FALSE, $header_link = F
   if($header_link !== FALSE)
    echo('</a>');
 
-  echo('</h' . $section_depth . '></a><p>');
+  echo('</a></h' . $section_depth . '><p></p>');
 
-  $section_endhtml = '</p><hr width="' . (100 - ($section_depth - 2) * 25) . '%">';
+  $section_endhtml = '<hr width="' . (100 - ($section_depth - 2) * 25) . '%">';
  }
 }
 
@@ -210,7 +211,7 @@ function EndSection()
 {
  global $mednafen_version, $curmod, $cursection, $ps_string, $toc_string, $section_depth, $sections, $section_endhtml;
 
- $toc_string .= '</ul>';
+ $toc_string .= '</ul></li>';
 
  echo($section_endhtml);
 
@@ -231,7 +232,7 @@ function PrintSettings($section_name = "Settings Reference")
  global $mednafen_version, $curmod, $cursection, $ps_string, $toc_string, $section_string, $settings_g, $mod_list;
 
  $de_search = array("\n",	 "fname_format.txt" );
- $de_replace = array("<br />\n", '<a href="fname_format.txt">fname_format.txt</a>' );
+ $de_replace = array("<br>\n", '<a href="fname_format.txt">fname_format.txt</a>' );
 
 
  $magic_settings = array();
@@ -254,7 +255,7 @@ function PrintSettings($section_name = "Settings Reference")
 
 for($display_ct = 0; $display_ct < 2; $display_ct++)
 {
- echo('<p><table border><tr class="TableHeader"><th>Setting:</th><th>Value Type:</th><th>Possible Values:</th><th>Default Value:</th><th>Description:</th></tr>');
+ echo('<p></p><table border><tr class="TableHeader"><th>Setting:</th><th>Value Type:</th><th>Possible Values:</th><th>Default Value:</th><th>Description:</th></tr>');
 
  $settings = $settings_g;
 
@@ -333,7 +334,7 @@ for($display_ct = 0; $display_ct < 2; $display_ct++)
 
   if(isset($magic_moo[$name]) && sizeof($magic_moo[$name]) != sizeof($mod_list))
   {
-   $magiccowpower = "<br /><ul>";
+   $magiccowpower = "<br><ul>";
    foreach($magic_moo[$name] as $moomod)
    {
     $magiccowpower .= "<li>" . $moomod . "</li>";
@@ -341,9 +342,9 @@ for($display_ct = 0; $display_ct < 2; $display_ct++)
    $magiccowpower .= "</ul>";
   }
 
-  printf("<tr class=\"%s\"><td class=\"ColA\"><a name=\"%s\">%s%s%s</a></td><td class=\"ColB\">%s</td><td class=\"ColC\">", 
-	($row_ff ? "RowB" : "RowA"), $name, (spis($flags, "MDFNSF_EMU_STATE") ? "<b>" : ""), $name . $magiccowpower,
-                                        (spis($flags, "MDFNSF_EMU_STATE") ? "</b>" : ""),
+  printf("<tr class=\"%s\"><td class=\"ColA\"><a name=\"%s\">%s%s%s</a>%s</td><td class=\"ColB\">%s</td><td class=\"ColC\">", 
+	($row_ff ? "RowB" : "RowA"), $name, (spis($flags, "MDFNSF_EMU_STATE") ? "<b>" : ""), $name,
+                                        (spis($flags, "MDFNSF_EMU_STATE") ? "</b>" : ""), $magiccowpower,
                                         $value_types[$type]);
 
 
@@ -370,7 +371,7 @@ for($display_ct = 0; $display_ct < 2; $display_ct++)
 
 		      echo($pending_br);
                       printf("%s", $ele['string']);
-		      $pending_br = '<br />';
+		      $pending_br = '<br>';
                      }
                     }
                     break;
@@ -401,7 +402,7 @@ for($display_ct = 0; $display_ct < 2; $display_ct++)
     echo($pending_br);
     printf("<li><b>%s</b> - %s<br>%s</li>", $ele['string'], $ele['description'], str_replace($de_search, $de_replace, $ele['description_extra']));
 
-    $pending_br = '<br />';
+    $pending_br = '<br>';
    }
 
    printf("</ul>");
@@ -419,7 +420,7 @@ for($display_ct = 0; $display_ct < 2; $display_ct++)
   $row_ff = !$row_ff;
  } 
 
- echo('</table></p>');
+ echo('</table>');
 }
 
 

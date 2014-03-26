@@ -90,6 +90,41 @@ typedef void GLAPIENTRY (*glRotated_Func)(GLdouble angle, GLdouble x, GLdouble y
 typedef void GLAPIENTRY (*glScalef_Func)(GLfloat x, GLfloat y, GLfloat z);
 typedef void GLAPIENTRY (*glReadPixels_Func)(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *data);
 
+#ifndef GL_ARB_sync
+#define GL_ARB_sync 1
+typedef int64_t GLint64;
+typedef uint64_t GLuint64;
+typedef struct __GLsync *GLsync;
+
+#define        GL_MAX_SERVER_WAIT_TIMEOUT         0x9111
+#define        GL_OBJECT_TYPE                     0x9112
+#define        GL_SYNC_CONDITION                  0x9113
+#define        GL_SYNC_STATUS                     0x9114
+#define        GL_SYNC_FLAGS                      0x9115
+#define        GL_SYNC_FENCE                      0x9116
+#define        GL_SYNC_GPU_COMMANDS_COMPLETE      0x9117
+#define        GL_UNSIGNALED                      0x9118
+#define        GL_SIGNALED                        0x9119
+#define        GL_SYNC_FLUSH_COMMANDS_BIT         0x00000001
+#define        GL_TIMEOUT_IGNORED                 0xFFFFFFFFFFFFFFFFull
+#define        GL_ALREADY_SIGNALED                0x911A
+#define        GL_TIMEOUT_EXPIRED                 0x911B
+#define        GL_CONDITION_SATISFIED             0x911C
+#define        GL_WAIT_FAILED                     0x911D
+
+#endif
+
+typedef GLsync GLAPIENTRY (*glFenceSync_Func)(GLenum condition, GLbitfield flags);
+typedef GLboolean GLAPIENTRY (*glIsSync_Func)(GLsync sync);
+typedef void GLAPIENTRY (*glDeleteSync_Func)(GLsync sync);
+
+typedef GLenum GLAPIENTRY (*glClientWaitSync_Func)(GLsync sync, GLbitfield flags, GLuint64 timeout);
+typedef void GLAPIENTRY (*glWaitSync_Func)(GLsync sync, GLbitfield flags, GLuint64 timeout);
+
+typedef void GLAPIENTRY (*glGetInteger64v_Func)(GLenum pname, GLint64 *params);
+typedef void GLAPIENTRY (*glGetSynciv_Func)(GLsync sync, GLenum pname, GLsizei bufSize, GLsizei *length, GLint *values);
+
+
 #if MDFN_WANT_OPENGL_SHADERS
 typedef GLhandleARB GLAPIENTRY (*glCreateShaderObjectARB_Func)(GLenum);
 typedef void GLAPIENTRY (*glShaderSourceARB_Func)(GLhandleARB, GLsizei, const GLcharARB* *, const GLint *);
@@ -152,6 +187,15 @@ extern glPopMatrix_Func p_glPopMatrix;
 extern glRotated_Func p_glRotated;
 extern glScalef_Func p_glScalef;
 extern glReadPixels_Func p_glReadPixels;
+
+extern glFenceSync_Func p_glFenceSync;
+extern glIsSync_Func p_glIsSync;
+extern glDeleteSync_Func p_glDeleteSync;
+extern glClientWaitSync_Func p_glClientWaitSync;
+extern glWaitSync_Func p_glWaitSync;
+extern glGetInteger64v_Func p_glGetInteger64v;
+extern glGetSynciv_Func p_glGetSynciv;
+
 
 #if MDFN_WANT_OPENGL_SHADERS
 extern glCreateShaderObjectARB_Func p_glCreateShaderObjectARB;

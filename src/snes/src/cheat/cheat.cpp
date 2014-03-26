@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define CHEAT_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 Cheat cheat;
 

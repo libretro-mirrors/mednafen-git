@@ -937,7 +937,7 @@ static void CloseGame(void)
   EvilRams.push_back(PtrLengthPair(BackupRAM, 0x8000));
   EvilRams.push_back(PtrLengthPair(ExBackupRAM, 0x8000));
 
-  MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 6, EvilRams);
+  MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 0, EvilRams);
  }
 
  for(int i = 0; i < 2; i++)

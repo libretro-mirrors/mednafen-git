@@ -5,7 +5,7 @@
 #include <nall/string.hpp>
 #include <nall/utility.hpp>
 
-namespace nall {
+namespace nall_v059 {
   class dictionary : noncopyable {
   public:
     string operator[](const char *input) {

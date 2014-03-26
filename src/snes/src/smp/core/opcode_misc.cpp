@@ -1,17 +1,17 @@
 #ifdef SMPCORE_CPP
 
-void SMPcore::op_nop() {
+alwaysinline void SMP::op_nop() {
   op_io();
 }
 
-void SMPcore::op_wait() {
+alwaysinline void SMP::op_wait() {
   while(true) {
     op_io();
     op_io();
   }
 }
 
-void SMPcore::op_xcn() {
+alwaysinline void SMP::op_xcn() {
   op_io();
   op_io();
   op_io();
@@ -21,7 +21,7 @@ void SMPcore::op_xcn() {
   regs.p.z = (regs.a == 0);
 }
 
-void SMPcore::op_daa() {
+alwaysinline void SMP::op_daa() {
   op_io();
   op_io();
   if(regs.p.c || (regs.a) > 0x99) {
@@ -35,7 +35,7 @@ void SMPcore::op_daa() {
   regs.p.z = (regs.a == 0);
 }
 
-void SMPcore::op_das() {
+alwaysinline void SMP::op_das() {
   op_io();
   op_io();
   if(!regs.p.c || (regs.a) > 0x99) {
@@ -49,55 +49,55 @@ void SMPcore::op_das() {
   regs.p.z = (regs.a == 0);
 }
 
-template<int mask, int value> void SMPcore::op_setbit() {
+template<int mask, int value>  alwaysinline void SMP::op_setbit() {
   op_io();
   regs.p = (regs.p & ~mask) | value;
 }
 
-void SMPcore::op_notc() {
+alwaysinline void SMP::op_notc() {
   op_io();
   op_io();
   regs.p.c = !regs.p.c;
 }
 
-template<int value> void SMPcore::op_seti() {
+template<int value> alwaysinline void SMP::op_seti() {
   op_io();
   op_io();
   regs.p.i = value;
 }
 
-template<int op, int value> void SMPcore::op_setbit_dp() {
+ template<int op, int value> alwaysinline void SMP::op_setbit_dp() {
   dp = op_readpc();
   rd = op_readdp(dp);
   rd = (op ? rd | value : rd & ~value);
   op_writedp(dp, rd);
 }
 
-template<int n> void SMPcore::op_push_reg() {
+ template<int n> alwaysinline void SMP::op_push_reg() {
   op_io();
   op_io();
   op_writestack(regs.r[n]);
 }
 
-void SMPcore::op_push_p() {
+ alwaysinline void SMP::op_push_p() {
   op_io();
   op_io();
   op_writestack(regs.p);
 }
 
-template<int n> void SMPcore::op_pop_reg() {
+ template<int n> alwaysinline void SMP::op_pop_reg() {
   op_io();
   op_io();
   regs.r[n] = op_readstack();
 }
 
-void SMPcore::op_pop_p() {
+ alwaysinline void SMP::op_pop_p() {
   op_io();
   op_io();
   regs.p = op_readstack();
 }
 
-void SMPcore::op_mul_ya() {
+ alwaysinline void SMP::op_mul_ya() {
   op_io();
   op_io();
   op_io();
@@ -114,7 +114,7 @@ void SMPcore::op_mul_ya() {
   regs.p.z = (regs.y == 0);
 }
 
-void SMPcore::op_div_ya_x() {
+ alwaysinline void SMP::op_div_ya_x() {
   op_io();
   op_io();
   op_io();

@@ -1,7 +1,7 @@
 #ifndef NALL_STRING_CORE_HPP
 #define NALL_STRING_CORE_HPP
 
-namespace nall {
+namespace nall_v059 {
 
 inline string string::printf(const char *fmt, ...) {
   static char text[4096];
@@ -89,7 +89,7 @@ bool string::readfile(const char *filename) {
   #if !defined(_WIN32)
   FILE *fp = fopen(filename, "rb");
   #else
-  FILE *fp = _wfopen(nall::utf16_t(filename), L"rb");
+  FILE *fp = _wfopen(nall_v059::utf16_t(filename), L"rb");
   #endif
   if(!fp) return false;
 

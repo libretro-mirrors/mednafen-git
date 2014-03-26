@@ -111,6 +111,8 @@ static MDFNSetting_EnumList SDriver_List[] =
  { "alsa", -1, "ALSA", gettext_noop("A recommended driver, and the default for Linux(if available).") },
  { "oss", -1, "Open Sound System", gettext_noop("A recommended driver, and the default for non-Linux UN*X/POSIX/BSD systems, or anywhere ALSA is unavailable. If the ALSA driver gives you problems, you can try using this one instead.\n\nIf you are using OSSv4 or newer, you should edit \"/usr/lib/oss/conf/osscore.conf\", uncomment the max_intrate= line, and change the value from 100(default) to 1000(or higher if you know what you're doing), and restart OSS. Otherwise, performance will be poor, and the sound buffer size in Mednafen will be orders of magnitude larger than specified.\n\nIf the sound buffer size is still excessively larger than what is specified via the \"sound.buffer_time\" setting, you can try setting \"sound.period_time\" to 2666, and as a last resort, 5333, to work around a design flaw/limitation/choice in the OSS API and OSS implementation.") },
  { "dsound", -1, "DirectSound", gettext_noop("A recommended driver, and the default for Microsoft Windows.") },
+ { "wasapi", -1, "WASAPI", gettext_noop("Experimental exclusive-mode WASAPI driver, usable on Windows Vista and newer.  Use it for lower-latency sound(though you'll of course need to lower the sound.buffer_time setting to take full advantage of it).  May not work properly on all sound cards.") },
+
  { "sdl", -1, "Simple Directmedia Layer", gettext_noop("This driver is not recommended, but it serves as a backup driver if the others aren't available. Its performance is generally sub-par, requiring higher latency or faster CPUs/SMP for glitch-free playback, except where the OS provides a sound callback API itself, such as with Mac OS X and BeOS.") },
  { "jack", -1, "JACK", gettext_noop("Somewhat experimental driver, unusably buggy until Mednafen 0.8.C. The \"sound.buffer_time\" setting controls the size of the local sound buffer, not the server's sound buffer, and the latency reported during startup is for the local sound buffer only. Please note that video card drivers(in the kernel or X), and hardware-accelerated OpenGL, may interfere with jackd's ability to effectively run with realtime response.") },
 
@@ -121,6 +123,8 @@ static MDFNSetting_EnumList Special_List[] =
 {
     { "0", 	-1 },
     { "none", 	-1, "None/Disabled" },
+
+#ifdef WANT_FANCY_SCALERS
     { "hq2x", 	-1, "hq2x" },
     { "hq3x", 	-1, "hq3x" },
     { "hq4x", 	-1, "hq4x" },
@@ -131,6 +135,8 @@ static MDFNSetting_EnumList Special_List[] =
     { "2xsai", 	-1, "2xSaI" },
     { "super2xsai", -1, "Super 2xSaI" },
     { "supereagle", -1, "Super Eagle" },
+#endif
+
     { "nn2x",	-1, "Nearest-neighbor 2x" },
     { "nn3x",	-1, "Nearest-neighbor 3x" },
     { "nn4x",	-1, "Nearest-neighbor 4x" },
@@ -196,7 +202,7 @@ static MDFNSetting DriverSettings[] =
   { "sound.device", MDFNSF_NOFLAGS, gettext_noop("Select sound output device."), gettext_noop("When using ALSA sound output under Linux, the \"sound.device\" setting \"default\" is Mednafen's default, IE \"hw:0\", not ALSA's \"default\". If you want to use ALSA's \"default\", use \"sexyal-literal-default\"."), MDFNST_STRING, "default", NULL, NULL },
   { "sound.volume", MDFNSF_NOFLAGS, gettext_noop("Sound volume level, in percent."), NULL, MDFNST_UINT, "100", "0", "150" },
   { "sound", MDFNSF_NOFLAGS, gettext_noop("Enable sound output."), NULL, MDFNST_BOOL, "1" },
-  { "sound.period_time", MDFNSF_NOFLAGS, gettext_noop("Desired period size in microseconds."), gettext_noop("Currently only affects OSS, ALSA, and SDL output.  A value of 0 defers to the default in the driver code in SexyAL.\n\nNote: This is not the \"sound buffer size\" setting, that would be \"sound.buffer_time\"."), MDFNST_UINT,  "0", "0", "100000" },
+  { "sound.period_time", MDFNSF_NOFLAGS, gettext_noop("Desired period size in microseconds."), gettext_noop("Currently only affects OSS, ALSA, WASAPI, and SDL output.  A value of 0 defers to the default in the driver code in SexyAL.\n\nNote: This is not the \"sound buffer size\" setting, that would be \"sound.buffer_time\"."), MDFNST_UINT,  "0", "0", "100000" },
   { "sound.buffer_time", MDFNSF_NOFLAGS, gettext_noop("Desired total buffer size in milliseconds."), NULL, MDFNST_UINT, 
    #ifdef WIN32
    "52"
@@ -704,7 +710,7 @@ static int DoArgs(int argc, char *argv[], char **filename)
           ShowArgumentsHelp(MDFNArgs, false);
 	  printf("\n");
 	  printf(_("Each setting(listed in the documentation) can also be passed as an argument by prefixing the name with a hyphen,\nand specifying the value to change the setting to as the next argument.\n\n"));
-	  printf(_("For example:\n\t%s -pce.xres 1680 -pce.yres 1050 -pce.stretch aspect -pce.pixshader autoipsharper \"Hyper Bonk Soldier.pce\"\n\n"), argv[0]);
+	  printf(_("For example:\n\t%s -pce.stretch aspect -pce.pixshader autoipsharper \"Hyper Bonk Soldier.pce\"\n\n"), argv[0]);
 	  printf(_("Settings specified in this manner are automatically saved to the configuration file, hence they\ndo not need to be passed to future invocations of the Mednafen executable.\n"));
 	  printf("\n");
 	  return(0);
@@ -1271,6 +1277,11 @@ void PumpWrap(void)
    			if(event.active.state & SDL_APPINPUTFOCUS)
 			{
 			 SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)event.active.gain, NULL);
+			}
+
+			if(event.active.state & SDL_APPACTIVE)
+			{
+			 VideoAppActive((bool)(event.active.gain));
 			}
 			break;
 
@@ -1999,13 +2010,6 @@ void MDFND_WaitThread(MDFN_Thread *thread, int *status)
 {
  SDL_WaitThread(thread->sdl_thread, status);
  thread->sdl_thread = NULL;	// To make accidental use-after-free() more apparent.
- free(thread);
-}
-
-void MDFND_KillThread(MDFN_Thread *thread)
-{
- SDL_KillThread(thread->sdl_thread);
- thread->sdl_thread = NULL;
  free(thread);
 }
 

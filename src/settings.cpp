@@ -39,8 +39,6 @@ typedef struct
 std::multimap <uint32, MDFNCS> CurrentSettings;
 std::vector<UnknownSetting_t> UnknownSettings;
 
-static std::string fname; // TODO: remove
-
 static MDFNCS *FindSetting(const char *name, bool deref_alias = true, bool dont_freak_out_on_fail = false);
 
 
@@ -144,7 +142,7 @@ static void ValidateSetting(const char *value, const MDFNSetting *setting)
   double dvalue;
   char *endptr = NULL;
 
-  dvalue = world_strtod(value, &endptr);
+  world_strtod(value, &endptr, &dvalue);
 
   if(!endptr || *endptr != 0)
   {
@@ -154,7 +152,8 @@ static void ValidateSetting(const char *value, const MDFNSetting *setting)
   {
    double minimum;
 
-   minimum = world_strtod(setting->minimum, NULL);
+   world_strtod(setting->minimum, NULL, &minimum);
+
    if(dvalue < minimum)
    {
     throw MDFN_Error(0, _("Setting \"%s\" is set too small(\"%s\"); the minimum acceptable value is \"%s\"."), setting->name, value, setting->minimum);
@@ -164,7 +163,7 @@ static void ValidateSetting(const char *value, const MDFNSetting *setting)
   {
    double maximum;
 
-   maximum = world_strtod(setting->maximum, NULL);
+   world_strtod(setting->maximum, NULL, &maximum);
    if(dvalue > maximum)
    {
     throw MDFN_Error(0, _("Setting \"%s\" is set too large(\"%s\"); the maximum acceptable value is \"%s\"."), setting->name, value, setting->maximum);
@@ -328,14 +327,14 @@ bool MDFN_LoadSettings(const char *path, const char *section, bool override)
   else
   {
    MDFN_printf("\n");
-   MDFN_PrintError(_("Failed to load settings from \"%s\": %s"), fname.c_str(), e.what());
+   MDFN_PrintError(_("Failed to load settings from \"%s\": %s"), path, e.what());
    return(false);
   }
  }
  catch(std::exception &e)
  {
   MDFN_printf("\n");
-  MDFN_PrintError(_("Failed to load settings from \"%s\": %s"), fname.c_str(), e.what());
+  MDFN_PrintError(_("Failed to load settings from \"%s\": %s"), path, e.what());
   return(false);
  }
 
@@ -578,7 +577,11 @@ int64 MDFN_GetSettingI(const char *name)
 
 double MDFN_GetSettingF(const char *name)
 {
- return(world_strtod(GetSetting(FindSetting(name)), (char **)NULL));
+ double ret;
+
+ world_strtod(GetSetting(FindSetting(name)), (char **)NULL, &ret);
+
+ return ret;
 }
 
 bool MDFN_GetSettingB(const char *name)

@@ -295,6 +295,15 @@ Interpolation only on the X axis.
 y
 Linear (Y)
 Interpolation only on the Y axis.
+cdplay.visualization
+
+Enable simple waveform visualization.
+
+MDFNST_BOOL
+1
+
+
+0
 cdplay.xres
 MDFNSF_COMMON_TEMPLATE 
 Full-screen horizontal resolution.
@@ -309,7 +318,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
-2.000000
+4.000000
 0.01
 256
 0
@@ -336,7 +345,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
-2.000000
+4.000000
 0.01
 256
 0
@@ -2841,7 +2850,7 @@ MDFNSF_SUPPRESS_DOC
 md, Port 1, 3-Button Gamepad: A
 
 MDFNST_STRING
-keyboard 259
+keyboard 257
 
 
 0
@@ -2850,7 +2859,7 @@ MDFNSF_SUPPRESS_DOC
 md, Port 1, 3-Button Gamepad: B
 
 MDFNST_STRING
-keyboard 257
+keyboard 258
 
 
 0
@@ -2859,7 +2868,7 @@ MDFNSF_SUPPRESS_DOC
 md, Port 1, 3-Button Gamepad: C
 
 MDFNST_STRING
-keyboard 258
+keyboard 259
 
 
 0
@@ -23395,6 +23404,15 @@ MDFNST_FLOAT
 0.01
 256
 0
+snes.apu.resamp_quality
+
+APU output resampler quality.
+0 is lowest quality and latency and CPU usage, 10 is highest quality and latency and CPU usage.\n\nWith a Mednafen sound output rate of about 32041Hz or higher: Quality \"0\" resampler has approximately 0.125ms of latency, quality \"5\" resampler has approximately 1.25ms of latency, and quality \"10\" resampler has approximately 3.99ms of latency.
+MDFNST_UINT
+5
+0
+10
+0
 snes.correct_aspect
 MDFNSF_CAT_VIDEO 
 Correct the aspect ratio.
@@ -24951,7 +24969,7 @@ MDFNST_ENUM
 default
 
 
-6
+7
 default
 Default
 Default sound driver.
@@ -24964,6 +24982,9 @@ A recommended driver, and the default for non-Linux UN*X/POSIX/BSD systems, or a
 dsound
 DirectSound
 A recommended driver, and the default for Microsoft Windows.
+wasapi
+WASAPI
+Experimental exclusive-mode WASAPI driver, usable on Windows Vista and newer.  Use it for lower-latency sound(though you\'ll of course need to lower the sound.buffer_time setting to take full advantage of it).  May not work properly on all sound cards.
 sdl
 Simple Directmedia Layer
 This driver is not recommended, but it serves as a backup driver if the others aren\'t available. Its performance is generally sub-par, requiring higher latency or faster CPUs/SMP for glitch-free playback, except where the OS provides a sound callback API itself, such as with Mac OS X and BeOS.
@@ -24973,7 +24994,7 @@ Somewhat experimental driver, unusably buggy until Mednafen 0.8.C. The \"sound.b
 sound.period_time
 
 Desired period size in microseconds.
-Currently only affects OSS, ALSA, and SDL output.  A value of 0 defers to the default in the driver code in SexyAL.\n\nNote: This is not the \"sound buffer size\" setting, that would be \"sound.buffer_time\".
+Currently only affects OSS, ALSA, WASAPI, and SDL output.  A value of 0 defers to the default in the driver code in SexyAL.\n\nNote: This is not the \"sound buffer size\" setting, that would be \"sound.buffer_time\".
 MDFNST_UINT
 0
 0

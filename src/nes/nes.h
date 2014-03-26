@@ -9,8 +9,11 @@
 #include "../md5.h"
 #include "../video.h"
 
-typedef void (*writefunc)(uint32 A, uint8 V);
-typedef uint8 (*readfunc)(uint32 A);
+//#define MDFN_NES_FASTCALL MDFN_FASTCALL
+#define MDFN_NES_FASTCALL
+
+typedef void (MDFN_NES_FASTCALL *writefunc)(uint32 A, uint8 V);
+typedef uint8 (MDFN_NES_FASTCALL *readfunc)(uint32 A);
 
 void ResetMapping(void);
 void ResetNES(void);
@@ -36,8 +39,8 @@ extern uint8 PAL;
 extern int fceuindbg;
 void ResetGameLoaded(void);
 
-#define DECLFR(x) uint8 x (uint32 A)
-#define DECLFW(x) void x (uint32 A, uint8 V)
+#define DECLFR(x) uint8 MDFN_NES_FASTCALL x (uint32 A)
+#define DECLFW(x) void MDFN_NES_FASTCALL x (uint32 A, uint8 V)
 
 DECLFR(ANull);
 DECLFW(BNull);

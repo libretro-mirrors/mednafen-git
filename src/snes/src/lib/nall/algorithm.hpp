@@ -4,7 +4,7 @@
 #undef min
 #undef max
 
-namespace nall {
+namespace nall_v059 {
   template<typename T, typename U> T min(const T& t, const U& u) {
     return t < u ? t : u;
   }

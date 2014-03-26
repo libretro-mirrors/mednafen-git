@@ -402,6 +402,9 @@
    declarations. */
 #undef HAVE_VISIBILITY
 
+/* Define if we are compiling with WASAPI support. */
+#undef HAVE_WASAPI
+
 /* Define if you have the 'wchar_t' type. */
 #undef HAVE_WCHAR_T
 
@@ -592,6 +595,10 @@
 /* Define if we are compiling with debugger. */
 #undef WANT_DEBUGGER
 
+/* Define if we are compiling with with fancy CPU-intensive software video
+   scalers. */
+#undef WANT_FANCY_SCALERS
+
 /* Define if we are compiling with GBA emulation. */
 #undef WANT_GBA_EMU
 
@@ -633,6 +640,9 @@
 
 /* Define if we are compiling with SNES emulation. */
 #undef WANT_SNES_EMU
+
+/* Define if we are compiling with separate SNES-perf emulation. */
+#undef WANT_SNES_PERF_EMU
 
 /* Define if we are compiling with Virtual Boy emulation. */
 #undef WANT_VB_EMU

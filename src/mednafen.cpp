@@ -229,7 +229,7 @@ bool MDFNI_StartAVRecord(const char *path, double SoundRate)
 
   if(spec.SoundRate && spec.SoundChan)
   {
-   MDFN_printf(_("Sound rate: %u\n"), spec.SoundRate);
+   MDFN_printf(_("Sound rate: %u\n"), std::min<uint32>(spec.SoundRate, 64000));
    MDFN_printf(_("Sound channels: %u\n"), spec.SoundChan);
   }
   else
@@ -325,6 +325,10 @@ extern MDFNGI EmulatedNES;
 
 #ifdef WANT_SNES_EMU
 extern MDFNGI EmulatedSNES;
+#endif
+
+#ifdef WANT_SNES_PERF_EMU
+extern MDFNGI EmulatedSNES_Perf;
 #endif
 
 #ifdef WANT_GBA_EMU
@@ -990,6 +994,10 @@ bool MDFNI_InitializeModules(const std::vector<MDFNGI *> &ExternalSystems)
 
   #ifdef WANT_SNES_EMU
   &EmulatedSNES,
+  #endif
+
+  #ifdef WANT_SNES_PERF_EMU
+  &EmulatedSNES_Perf,
   #endif
 
   #ifdef WANT_GB_EMU

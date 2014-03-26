@@ -10,9 +10,9 @@ private:
   Mode mode;
   bool frame_hires;
   bool frame_interlace;
+  bool frame_field;
 
   unsigned pline_width[240];  //progressive
-  unsigned iline_width[480];  //interlace
 
   void update();
   void scanline();

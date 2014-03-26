@@ -53,10 +53,22 @@ typedef uint64_t uint64;
   #define INLINE inline __attribute__((always_inline))
   #define NO_INLINE __attribute__((noinline))
 
-  #if defined(__386__) || defined(__i386__) || defined(__i386) || defined(_M_IX86) || defined(_M_I386)
-    #define MDFN_FASTCALL __attribute__((fastcall))
+  //
+  // Just avoid using fastcall with gcc before 4.1.0, as it(and similar regparm)
+  // tend to generate bad code on the older versions(between about 3.1.x and 4.0.x, at least)
+  //
+  // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=12236
+  // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=7574
+  // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=17025
+  //
+  #if MDFN_GCC_VERSION >= MDFN_MAKE_GCCV(4,1,0)
+   #if defined(__386__) || defined(__i386__) || defined(__i386) || defined(_M_IX86) || defined(_M_I386)
+     #define MDFN_FASTCALL __attribute__((fastcall))
+   #else
+     #define MDFN_FASTCALL
+   #endif
   #else
-    #define MDFN_FASTCALL
+   #define MDFN_FASTCALL
   #endif
 
   #define MDFN_ALIGN(n)	__attribute__ ((aligned (n)))
@@ -77,7 +89,8 @@ typedef uint64_t uint64;
  #undef MDFN_GCC_VERSION
 #elif defined(_MSC_VER)
 
-  #warning "Compiling with MSVC, untested"
+  #pragma message("Compiling with MSVC, untested")
+
   #define INLINE __forceinline
   #define NO_INLINE __declspec(noinline)
 

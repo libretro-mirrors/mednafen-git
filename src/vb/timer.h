@@ -9,7 +9,7 @@ void TIMER_ResetTS(void);
 uint8 TIMER_Read(const v810_timestamp_t &timestamp, uint32 A);
 void TIMER_Write(const v810_timestamp_t &timestamp, uint32 A, uint8 V);
 
-void TIMER_Power(void);
+void TIMER_Power(void) MDFN_COLD;
 
 int TIMER_StateAction(StateMem *sm, int load, int data_only);
 

@@ -3,7 +3,7 @@
 #include <nall/sha256.hpp>
 
 #define CARTRIDGE_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 #include "header.cpp"
 #include "gameboyheader.cpp"

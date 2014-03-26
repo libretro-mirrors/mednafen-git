@@ -60,6 +60,9 @@ uint8 Bus::read(unsigned addr) {
   #endif
 
   Page &p = page[addr >> 8];
+
+  assert(p.access != NULL);
+
   return p.access->read(p.offset + addr);
 }
 

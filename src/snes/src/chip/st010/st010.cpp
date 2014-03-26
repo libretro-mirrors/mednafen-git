@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define ST010_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 ST010 st010;
 

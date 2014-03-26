@@ -1,7 +1,7 @@
 #ifndef NALL_STRING_SPLIT_HPP
 #define NALL_STRING_SPLIT_HPP
 
-namespace nall {
+namespace nall_v059 {
 
 void lstring::split(const char *key, const char *src, unsigned limit) {
   reset();
@@ -11,7 +11,7 @@ void lstring::split(const char *key, const char *src, unsigned limit) {
 
   for(int i = 0; i <= ssl - ksl;) {
     if(!memcmp(src + i, key, ksl)) {
-      strlcpy(operator[](split_count++), src + lp, i - lp + 1);
+      nall_strlcpy(operator[](split_count++), src + lp, i - lp + 1);
       i += ksl;
       lp = i;
       if(!--limit) break;
@@ -41,7 +41,7 @@ void lstring::qsplit(const char *key, const char *src, unsigned limit) {
     }
 
     if(!memcmp(src + i, key, ksl)) {
-      strlcpy(operator[](split_count++), src + lp, i - lp + 1);
+      nall_strlcpy(operator[](split_count++), src + lp, i - lp + 1);
       i += ksl;
       lp = i;
       if(!--limit) break;

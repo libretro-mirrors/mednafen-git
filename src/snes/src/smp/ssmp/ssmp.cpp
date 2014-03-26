@@ -1,38 +1,40 @@
-#include <../base.hpp>
+//#include <../base.hpp>
 
 #define SSMP_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 #if defined(DEBUGGER)
   #include "debugger/debugger.cpp"
   sSMPDebugger smp;
 #else
-  sSMP smp;
+  SMP smp;
 #endif
 
 #include "serialization.cpp"
 #include "memory/memory.cpp"
 #include "timing/timing.cpp"
 
-void sSMP::enter() {
+#ifndef DEBUGGER
+inline
+#endif
+void SMP::op_step() {
+  do_op(op_readpc());
+}
+
+void SMP::enter() {
   while(true) {
     while(scheduler.sync == Scheduler::SyncAll) {
       scheduler.exit(Scheduler::SynchronizeEvent);
       //if(scheduler.clock.cpusmp >= 0 && scheduler.sync != Scheduler::SyncAll) {
       //	puts("BLAHBLAH");
       //}
-
     }
 
     op_step();
   }
 }
 
-void sSMP::op_step() {
-  (this->*opcode_table[op_readpc()])();
-}
-
-void sSMP::power() {
+void SMP::power() {
   //targets not initialized/changed upon reset
   t0.target = 0;
   t1.target = 0;
@@ -41,7 +43,7 @@ void sSMP::power() {
   reset();
 }
 
-void sSMP::reset() {
+void SMP::reset() {
   regs.pc = 0xffc0;
   regs.a  = 0x00;
   regs.x  = 0x00;
@@ -86,12 +88,6 @@ void sSMP::reset() {
   t0.stage3_ticks = 0;
   t1.stage3_ticks = 0;
   t2.stage3_ticks = 0;
-}
-
-sSMP::sSMP() {
-}
-
-sSMP::~sSMP() {
 }
 
 };

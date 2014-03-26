@@ -1,6 +1,7 @@
 #ifdef SUPERFX_CPP
 
-void SuperFX::initialize_opcode_table() {
+inline void SuperFX::do_op(unsigned iopv)
+{
   #define op4(id, name) \
     op(id+ 0, name< 1>) op(id+ 1, name< 2>) op(id+ 2, name< 3>) op(id+ 3, name< 4>)
 
@@ -30,12 +31,18 @@ void SuperFX::initialize_opcode_table() {
     op(id+ 4, name< 4>) op(id+ 5, name< 5>) op(id+ 6, name< 6>) op(id+ 7, name< 7>) \
     op(id+ 8, name< 8>) op(id+ 9, name< 9>) op(id+10, name<10>) op(id+11, name<11>) \
     op(id+12, name<12>) op(id+13, name<13>) op(id+14, name<14>) op(id+15, name<15>)
-
   //======
   // ALT0
   //======
+//struct
+//{
+// const unsigned moo:10;
+//} cow = { iopv };
 
-  #define op(id, name) opcode_table[  0 + id] = &SuperFX::op_##name;
+switch(iopv) //(iopv << (32 - 10)) >> (32 - 10)) //iopv)
+{
+  #define op(id, name) case  0 + id: SuperFX::op_##name(); break;
+
   op   (0x00, stop)
   op   (0x01, nop)
   op   (0x02, cache)
@@ -92,7 +99,7 @@ void SuperFX::initialize_opcode_table() {
   // ALT1
   //======
 
-  #define op(id, name) opcode_table[256 + id] = &SuperFX::op_##name;
+  #define op(id, name) case 256 + id: SuperFX::op_##name(); break;
   op   (0x00, stop)
   op   (0x01, nop)
   op   (0x02, cache)
@@ -149,7 +156,7 @@ void SuperFX::initialize_opcode_table() {
   // ALT2
   //======
 
-  #define op(id, name) opcode_table[512 + id] = &SuperFX::op_##name;
+  #define op(id, name) case 512 + id: SuperFX::op_##name(); break;
   op   (0x00, stop)
   op   (0x01, nop)
   op   (0x02, cache)
@@ -206,7 +213,7 @@ void SuperFX::initialize_opcode_table() {
   // ALT3
   //======
 
-  #define op(id, name) opcode_table[768 + id] = &SuperFX::op_##name;
+  #define op(id, name) case 768 + id: SuperFX::op_##name(); break;
   op   (0x00, stop)
   op   (0x01, nop)
   op   (0x02, cache)
@@ -258,6 +265,7 @@ void SuperFX::initialize_opcode_table() {
   op   (0xef, getbs)
   op16 (0xf0, lm_r)
   #undef op
+}
 
   #undef op4
   #undef op6

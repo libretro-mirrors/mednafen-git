@@ -656,6 +656,41 @@ void PS_CDC::SetAIP(unsigned irq, uint8 result0, uint8 result1)
 }
 
 
+void PS_CDC::EnbufferizeCDDASector(const uint8 *buf)
+{
+	CD_Audio_Buffer *ab = &AudioBuffer[AudioBuffer_WritePos >> 12];
+
+        ab->Freq = 7 * ((Mode & MODE_SPEED) ? 2 : 1);
+        ab->Size = 588;
+
+	if(SubQBuf_Safe[0] & 0x40)
+	{
+	 for(int i = 0; i < 588; i++)
+	 {
+	  ab->Samples[0][i] = 0;
+	  ab->Samples[1][i] = 0;
+	 }
+	}
+	else
+	{
+	 for(int i = 0; i < 588; i++)
+	 {
+	  ab->Samples[0][i] = (int16)MDFN_de16lsb(&buf[i * sizeof(int16) * 2 + 0]);
+	  ab->Samples[1][i] = (int16)MDFN_de16lsb(&buf[i * sizeof(int16) * 2 + 2]);
+	 }
+	}
+
+	//if(AudioBuffer_UsedCount == 0)
+ 	// AudioBuffer_InPrebuffer = true;
+
+	AudioBuffer_UsedCount++;
+
+	if(AudioBuffer_UsedCount == AudioBuffer_PreBufferCount)
+	 AudioBuffer_InPrebuffer = false;
+
+	AudioBuffer_WritePos = (AudioBuffer_WritePos & 0xFFF) | ((((AudioBuffer_WritePos >> 12) + 1) % AudioBuffer_Count) << 12);
+}
+
 pscpu_timestamp_t PS_CDC::Update(const pscpu_timestamp_t timestamp)
 {
  int32 clocks = timestamp - lastts;
@@ -772,57 +807,67 @@ pscpu_timestamp_t PS_CDC::Update(const pscpu_timestamp_t timestamp)
       Cur_CDIF->ReadRawSector(buf, CurSector);	// FIXME: error out on error.
       DecodeSubQ(buf + 2352);
 
-      memcpy(HeaderBuf, buf + 12, 12);
-      HeaderBufValid = true;
-
-      if((Mode & MODE_STRSND) && (buf[12 + 3] == 0x2) && (buf[12 + 6] & 0x20) && (buf[12 + 6] & 0x04))
+      if(SubQBuf_Safe[0] & 0x40)
       {
-       if(XA_Test(buf))
+       memcpy(HeaderBuf, buf + 12, 12);
+       HeaderBufValid = true;
+
+       if((Mode & MODE_STRSND) && (buf[12 + 3] == 0x2) && (buf[12 + 6] & 0x20) && (buf[12 + 6] & 0x04))
        {
-	if(AudioBuffer_ReadPos & 0xFFF)
-	 printf("readpos=%04x(rabl=%04x) writepos=%04x\n", AudioBuffer_ReadPos, AudioBuffer[AudioBuffer_ReadPos >> 12].Size, AudioBuffer_WritePos);
+        if(XA_Test(buf))
+        {
+	 if(AudioBuffer_ReadPos & 0xFFF)
+	  printf("readpos=%04x(rabl=%04x) writepos=%04x\n", AudioBuffer_ReadPos, AudioBuffer[AudioBuffer_ReadPos >> 12].Size, AudioBuffer_WritePos);
 
-	//if(AudioBuffer_UsedCount == 0)
-	// AudioBuffer_InPrebuffer = true;
+	 //if(AudioBuffer_UsedCount == 0)
+	 // AudioBuffer_InPrebuffer = true;
 
-        XA_ProcessSector(buf, &AudioBuffer[AudioBuffer_WritePos >> 12]);
-	AudioBuffer_UsedCount++;
+         XA_ProcessSector(buf, &AudioBuffer[AudioBuffer_WritePos >> 12]);
+	 AudioBuffer_UsedCount++;
 
-	if(AudioBuffer_UsedCount == AudioBuffer_PreBufferCount)
-	 AudioBuffer_InPrebuffer = false;
+	 if(AudioBuffer_UsedCount == AudioBuffer_PreBufferCount)
+	  AudioBuffer_InPrebuffer = false;
 
-	AudioBuffer_WritePos = (AudioBuffer_WritePos & 0xFFF) | ((((AudioBuffer_WritePos >> 12) + 1) % AudioBuffer_Count) << 12);
+	 AudioBuffer_WritePos = (AudioBuffer_WritePos & 0xFFF) | ((((AudioBuffer_WritePos >> 12) + 1) % AudioBuffer_Count) << 12);
+        }
+       }
+       else
+       {
+        // maybe if(!(Mode & 0x30)) too?
+        if(!(buf[12 + 6] & 0x20))
+        {
+	 if(!edc_lec_check_and_correct(buf, true))
+	 {
+	  MDFN_DispMessage("Bad sector? - %d", CurSector);
+	 }
+        }
+
+        if(!(Mode & 0x30) && (buf[12 + 6] & 0x20))
+	 PSX_WARNING("BORK: %d", CurSector);
+
+        {
+ 	 int32 offs = (Mode & 0x20) ? 0 : 12;
+	 int32 size = (Mode & 0x20) ? 2340 : 2048;
+
+	 if(Mode & 0x10)
+	 {
+	  offs = 12;
+	  size = 2328;
+	 }
+
+ 	 memcpy(SB, buf + 12 + offs, size);
+ 	 SB_In = size;
+        }
+
+        SetAIP(CDCIRQ_DATA_READY, MakeStatus());
        }
       }
-      else
+      else // else to if(SubQBuf_Safe[0] & 0x40)
       {
-       // maybe if(!(Mode & 0x30)) too?
-       if(!(buf[12 + 6] & 0x20))
+       if(Mode & MODE_CDDA)
        {
-	if(!edc_lec_check_correct(buf, true))
-	{
-	 MDFN_DispMessage("Bad sector? - %d", CurSector);
-	}
+        EnbufferizeCDDASector(buf);
        }
-
-       if(!(Mode & 0x30) && (buf[12 + 6] & 0x20))
-	PSX_WARNING("BORK: %d", CurSector);
-
-       {
-	int32 offs = (Mode & 0x20) ? 0 : 12;
-	int32 size = (Mode & 0x20) ? 2340 : 2048;
-
-	if(Mode & 0x10)
-	{
-	 offs = 12;
-	 size = 2328;
-	}
-
- 	memcpy(SB, buf + 12 + offs, size);
- 	SB_In = size;
-       }
-
-       SetAIP(CDCIRQ_DATA_READY, MakeStatus());
       }
 
       PSRCounter += 33868800 / (75 * ((Mode & MODE_SPEED) ? 2 : 1));
@@ -850,40 +895,7 @@ pscpu_timestamp_t PS_CDC::Update(const pscpu_timestamp_t timestamp)
        if(PlayTrackMatch == -1 && SubQChecksumOK)
 	PlayTrackMatch = SubQBuf_Safe[0x1];
 
-       if(1)	//if(Mode & MODE_CDDA)  MODE_CDDA doesn't seem to be required for CD-DA playback, so then what is it for?
-       {
-        CD_Audio_Buffer *ab = &AudioBuffer[AudioBuffer_WritePos >> 12];
-
-        ab->Freq = 7 * ((Mode & MODE_SPEED) ? 2 : 1);
-        ab->Size = 588;
-
-	if(SubQBuf_Safe[0] & 0x40)
-	{
-	 for(int i = 0; i < 588; i++)
-	 {
-	  ab->Samples[0][i] = 0;
-	  ab->Samples[1][i] = 0;
-	 }
-	}
-	else
-	{
-	 for(int i = 0; i < 588; i++)
-	 {
-	  ab->Samples[0][i] = (int16)MDFN_de16lsb(&buf[i * sizeof(int16) * 2 + 0]);
-	  ab->Samples[1][i] = (int16)MDFN_de16lsb(&buf[i * sizeof(int16) * 2 + 2]);
-	 }
-	}
-
-	//if(AudioBuffer_UsedCount == 0)
- 	// AudioBuffer_InPrebuffer = true;
-
-	AudioBuffer_UsedCount++;
-
-	if(AudioBuffer_UsedCount == AudioBuffer_PreBufferCount)
-	 AudioBuffer_InPrebuffer = false;
-
-	AudioBuffer_WritePos = (AudioBuffer_WritePos & 0xFFF) | ((((AudioBuffer_WritePos >> 12) + 1) % AudioBuffer_Count) << 12);
-       }
+       EnbufferizeCDDASector(buf);
 
        PSRCounter += 33868800 / (75 * ((Mode & MODE_SPEED) ? 2 : 1));
 
@@ -1367,8 +1379,9 @@ void PS_CDC::PreSeekHack(bool logical, uint32 target)
  int max_try = 32;
  bool NeedHBuf = logical;
 
- CurSector = target;
+ CurSector = target;	// If removing/changing this, take into account how it will affect ReadN/ReadS/Play/etc command calls that interrupt a seek.
 
+ // If removing this SubQ reading bit, think about how it will interact with a Read command of data(or audio :b) sectors when Mode bit0 is 1.
  if(target < toc.tracks[100].lba)
  {
   do
@@ -1426,34 +1439,23 @@ int32 PS_CDC::Command_Play(const int arg_count, const uint8 *args)
   DriveStatus = DS_SEEKING;
   StatusAfterSeek = DS_PLAYING;
  }
- else
+ else if(CommandLoc_Dirty || DriveStatus != DS_PLAYING)
  {
-  if(CommandLoc_Dirty || (DriveStatus != DS_PLAYING && DriveStatus != DS_PAUSED && DriveStatus != DS_STANDBY))
-  {
-   ClearAudioBuffers();
+  ClearAudioBuffers();
+
+  if(CommandLoc_Dirty)
    SeekTarget = CommandLoc;
-   PlayTrackMatch = -1;
-
-   PSRCounter = CalcSeekTime(CurSector, SeekTarget, DriveStatus != DS_STOPPED, DriveStatus == DS_PAUSED);
-   HeaderBufValid = false;
-   PreSeekHack(false, SeekTarget);
-
-   DriveStatus = DS_SEEKING;
-   StatusAfterSeek = DS_PLAYING;
-  }
-  else if(DriveStatus != DS_PLAYING)
-  {
-   ClearAudioBuffers();
+  else
    SeekTarget = CurSector;
-   PlayTrackMatch = -1;
 
-   PSRCounter = CalcSeekTime(CurSector, SeekTarget, DriveStatus != DS_STOPPED, DriveStatus == DS_PAUSED);
-   HeaderBufValid = false;
-   PreSeekHack(false, SeekTarget);
+  PlayTrackMatch = -1;
 
-   DriveStatus = DS_SEEKING;
-   StatusAfterSeek = DS_PLAYING;
-  }
+  PSRCounter = CalcSeekTime(CurSector, SeekTarget, DriveStatus != DS_STOPPED, DriveStatus == DS_PAUSED);
+  HeaderBufValid = false;
+  PreSeekHack(false, SeekTarget);
+
+  DriveStatus = DS_SEEKING;
+  StatusAfterSeek = DS_PLAYING;
  }
 
  CommandLoc_Dirty = false;
@@ -1505,9 +1507,6 @@ void PS_CDC::ReadBase(void)
 
  if(CommandLoc_Dirty || DriveStatus != DS_READING)
  {
-  CommandLoc_Dirty = false;
-
-
   ClearAIP();
   ClearAudioBuffers();
   DMABuffer.Flush();
@@ -1515,7 +1514,10 @@ void PS_CDC::ReadBase(void)
 
   // TODO: separate motor start from seek phase?
 
-  SeekTarget = CommandLoc;
+  if(CommandLoc_Dirty)
+   SeekTarget = CommandLoc;
+  else
+   SeekTarget = CurSector;
 
   PSRCounter = CalcSeekTime(CurSector, SeekTarget, DriveStatus != DS_STOPPED, DriveStatus == DS_PAUSED);
   HeaderBufValid = false;
@@ -1524,6 +1526,8 @@ void PS_CDC::ReadBase(void)
   DriveStatus = DS_SEEKING_LOGICAL;
   StatusAfterSeek = DS_READING;
  }
+
+ CommandLoc_Dirty = false;
 }
 
 int32 PS_CDC::Command_ReadN(const int arg_count, const uint8 *args)

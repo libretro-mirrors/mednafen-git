@@ -239,6 +239,7 @@ class PS_CDC
  bool DecodeSubQ(uint8 *subpw);
  bool CommandCheckDiscPresent(void);
 
+ void EnbufferizeCDDASector(const uint8 *buf);
  bool XA_Test(const uint8 *sdata);
  void XA_ProcessSector(const uint8 *sdata, CD_Audio_Buffer *ab);
  int16 xa_previous[2][2];

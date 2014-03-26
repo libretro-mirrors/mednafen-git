@@ -102,6 +102,8 @@ int NetplayStart(const char *PortDeviceCache[16], const uint32 PortDataLenCache[
  const std::string game_key = MDFN_GetSettingS("netplay.gamekey");
  const std::string connect_password = MDFN_GetSettingS("netplay.password");
 
+ MDFNnetplay = true;
+
  try
  {
   sblen = 4 + 16 + 16 + 64 + 1 + nickname.size() + strlen(emu_id);
@@ -177,7 +179,6 @@ int NetplayStart(const char *PortDeviceCache[16], const uint32 PortDataLenCache[
  Joined = 0;
 
  MDFN_FlushGameCheats(0);	/* Save our pre-netplay cheats. */
- MDFNnetplay = 1;
 
  if(MDFNMOV_IsPlaying())		/* Recording's ok during netplay, playback is not. */
   MDFNMOV_Stop();
@@ -927,7 +928,7 @@ static bool CC_server(const UTF8 *arg)
 
  server[0] = 0;
 
- switch(trio_sscanf((char*)arg, "%.299s %u", server, port))
+ switch(trio_sscanf((char*)arg, "%.299s %u", server, &port))
  {
   default:
   case 0:

@@ -5,7 +5,7 @@
 #include <nall/traits.hpp>
 #include <nall/utility.hpp>
 
-namespace nall {
+namespace nall_v059 {
 
   //serializer: a class designed to save and restore the state of classes.
   //

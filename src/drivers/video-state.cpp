@@ -35,17 +35,15 @@ void DrawStateMovieRow(MDFN_Surface *surface, int *nstatus, int cur, int recentl
 {
  uint32 *XBuf = surface->pixels;
  uint32 pitch32 = surface->pitchinpix;
- int x, y;
 
- for(y=0; y<40; y++)
-  for(x=0;x<230;x++)
-   XBuf[x + y * pitch32] = MK_COLOR_A(surface, 0x00, 0x00, 0x00, 170);
+ MDFN_DrawFillRect(surface, 0, 0, 230, 40, surface->MakeColor(0x00, 0x00, 0x00, 170));
 
  // nstatus
  for(int i = 1; i < 11; i++)
  {
   char stringie[2];
   uint32 bordercol;
+  uint32 rect_bg_color = MK_COLOR_A(surface, 0x00, 0x00, 0x00, 0xFF);
 
   if(cur == (i % 10))
    bordercol = MK_COLOR_A(surface, 0x60, 0x20, 0xb0, 0xFF);
@@ -55,21 +53,15 @@ void DrawStateMovieRow(MDFN_Surface *surface, int *nstatus, int cur, int recentl
   stringie[0] = '0' + (i % 10);
   stringie[1] = 0;
 
-  //if(nstatus[i % 10])
+  if(nstatus[i % 10])
   {
-   uint32 rect_bg_color = MK_COLOR_A(surface, 0x00, 0x00, 0x00, 0xFF);
+   rect_bg_color = MK_COLOR_A(surface, 0x00, 0x38, 0x28, 0xFF);
 
-   if(nstatus[i % 10])
-   {
-    rect_bg_color = MK_COLOR_A(surface, 0x00, 0x38, 0x28, 0xFF);
-
-    if(recently_saved == (i % 10))
-     rect_bg_color = MK_COLOR_A(surface, 0x48, 0x00, 0x34, 0xFF);
-   }
-   MDFN_DrawRectangleFill(XBuf, pitch32, (i - 1) * 23, 0, bordercol, rect_bg_color, 23, 18 + 1);
+   if(recently_saved == (i % 10))
+    rect_bg_color = MK_COLOR_A(surface, 0x48, 0x00, 0x34, 0xFF);
   }
-  //else
-  // MDFN_DrawRectangle(XBuf, pitch32, (i - 1) * 23, 0, bordercol, 23, 18 + 1);
+
+  MDFN_DrawFillRect(surface, (i - 1) * 23, 0, 23, 18 + 1, bordercol, rect_bg_color);
 
   DrawTextTransShadow(XBuf + (i - 1) * 23 + 7, pitch32 << 2, 230, (UTF8*)stringie, MK_COLOR_A(surface, 0xE0, 0xFF, 0xE0, 0xFF), MK_COLOR_A(surface, 0x00, 0x00, 0x00, 0xFF), FALSE);
  }
@@ -127,7 +119,8 @@ void DrawSaveStates(SDL_Surface *screen, double exs, double eys, int rs, int gs,
    PreviewRect.x = PreviewRect.y = 0;
    PreviewRect.w = StateStatus->w + 2;
    PreviewRect.h = StateStatus->h + 2;
-   MDFN_DrawRectangleAlpha(PreviewSurface->pixels, PreviewSurface->pitchinpix, 0, 0, MK_COLOR_A(PreviewSurface, 0x00, 0x00, 0x9F, 0xFF), MK_COLOR_A(PreviewSurface, 0x00, 0x00, 0x00, 0x80), StateStatus->w + 2, StateStatus->h + 2);
+
+   MDFN_DrawFillRect(PreviewSurface, 0, 0, StateStatus->w + 2, StateStatus->h + 2, MK_COLOR_A(PreviewSurface, 0x00, 0x00, 0x9F, 0xFF), MK_COLOR_A(PreviewSurface, 0x00, 0x00, 0x00, 0x80));
 
    uint32 *psp = PreviewSurface->pixels;
 

@@ -1,21 +1,21 @@
 #ifdef SMPCORE_CPP
 
-template<uint8 (SMPcore::*op)(uint8), int n>
-void SMPcore::op_adjust_reg() {
+template<uint8 (SMP::*op)(uint8), int n>
+alwaysinline void SMP::op_adjust_reg() {
   op_io();
   regs.r[n] = (this->*op)(regs.r[n]);
 }
 
-template<uint8 (SMPcore::*op)(uint8)>
-void SMPcore::op_adjust_dp() {
+template<uint8 (SMP::*op)(uint8)>
+alwaysinline void SMP::op_adjust_dp() {
   dp = op_readpc();
   rd = op_readdp(dp);
   rd = (this->*op)(rd);
   op_writedp(dp, rd);
 }
 
-template<uint8 (SMPcore::*op)(uint8)>
-void SMPcore::op_adjust_dpx() {
+template<uint8 (SMP::*op)(uint8)>
+alwaysinline void SMP::op_adjust_dpx() {
   dp = op_readpc();
   op_io();
   rd = op_readdp(dp + regs.x);
@@ -23,8 +23,8 @@ void SMPcore::op_adjust_dpx() {
   op_writedp(dp + regs.x, rd);
 }
 
-template<uint8 (SMPcore::*op)(uint8)>
-void SMPcore::op_adjust_addr() {
+template<uint8 (SMP::*op)(uint8)>
+alwaysinline void SMP::op_adjust_addr() {
   dp  = op_readpc() << 0;
   dp |= op_readpc() << 8;
   rd  = op_readaddr(dp);
@@ -33,7 +33,7 @@ void SMPcore::op_adjust_addr() {
 }
 
 template<int op>
-void SMPcore::op_adjust_addr_a() {
+alwaysinline void SMP::op_adjust_addr_a() {
   dp  = op_readpc() << 0;
   dp |= op_readpc() << 8;
   rd  = op_readaddr(dp);
@@ -44,7 +44,7 @@ void SMPcore::op_adjust_addr_a() {
 }
 
 template<int adjust>
-void SMPcore::op_adjustw_dp() {
+alwaysinline void SMP::op_adjustw_dp() {
   dp  = op_readpc();
   rd  = op_readdp(dp) << 0;
   rd += adjust;

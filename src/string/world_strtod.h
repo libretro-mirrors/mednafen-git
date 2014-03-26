@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-double world_strtod (const char *nptr, char **endptr);
+void world_strtod(const char *nptr, char **endptr, double *ret_out);
 
 #ifdef __cplusplus
 }

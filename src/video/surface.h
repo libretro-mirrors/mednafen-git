@@ -162,7 +162,7 @@ class MDFN_Surface //typedef struct
  public:
 
  MDFN_Surface();
- MDFN_Surface(void *const p_pixels, const uint32 p_width, const uint32 p_height, const uint32 p_pitchinpix, const MDFN_PixelFormat &nf);
+ MDFN_Surface(void *const p_pixels, const uint32 p_width, const uint32 p_height, const uint32 p_pitchinpix, const MDFN_PixelFormat &nf, const bool alloc_init_pixels = true);
 
  ~MDFN_Surface();
 
@@ -208,7 +208,7 @@ class MDFN_Surface //typedef struct
   DecodeColor(value, r, g, b, dummy_a);
  }
  private:
- void Init(void *const p_pixels, const uint32 p_width, const uint32 p_height, const uint32 p_pitchinpix, const MDFN_PixelFormat &nf);
+ void Init(void *const p_pixels, const uint32 p_width, const uint32 p_height, const uint32 p_pitchinpix, const MDFN_PixelFormat &nf, const bool alloc_init_pixels);
 };
 
 #endif

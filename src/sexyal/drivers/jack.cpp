@@ -33,6 +33,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <assert.h>
+#include <algorithm>
 
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>
@@ -237,43 +238,46 @@ static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
 static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
 {
  JACKWrap *jw = (JACKWrap *)device->private_data;
-
+ uint8_t *data8 = (uint8_t*)data;
  DoActivate(device);
 
  if(jw->closed)
   return(0);
 
- if(device->format.channels == 2)
- {
-  const int32_t frame_count = len / 2 / sizeof(float);
-  float chdata[2][frame_count];
-  const float *in_data = (float *)data;
+ //printf("%u %u\n", len / 2, jack_ringbuffer_write_space(jw->tmpbuf[0]));
 
-  for(int x = 0; x < frame_count; x++)
+ while(len)
+ {
+  uint32_t sublen = len / device->format.channels;
+
+  for(unsigned int ch = 0; ch < device->format.channels; ch++)
   {
-   chdata[0][x] = *in_data++;
-   chdata[1][x] = *in_data++;
+   // Avoid causing a float misalignment issue...
+   size_t ws = jack_ringbuffer_write_space(jw->tmpbuf[ch]) / sizeof(float) * sizeof(float);
+
+   if(sublen > ws)
+   {
+    sublen = ws;
+    //printf("SPOOOON: %u %u\n", ch, sublen);
+   }
   }
 
-  for(int ch = 0; ch < 2; ch++)
+  for(unsigned ch = 0; ch < device->format.channels; ch++)
   {
-   if(jack_ringbuffer_write(jw->tmpbuf[ch], (const char *)chdata[ch], len / 2) != len / 2)
+   if(jack_ringbuffer_write(jw->tmpbuf[ch], (const char *)data8 + (ch * sublen), sublen) != sublen)
    {
     puts("JACK ringbuffer write failure?");
     return(0);
    }
   }
-  jw->write_space -= len / 2;
- }
- else
- {
-  if(jack_ringbuffer_write(jw->tmpbuf[0], (const char *)data, len) != len)
-  {
-   puts("JACK ringbuffer write failure?");
-   return(0);
-  }
-  jw->write_space -= len;
- }
+
+  jw->write_space -= sublen;
+  data8 += sublen;
+  len -= sublen * device->format.channels;
+
+  if(len)
+   usleep(1000);
+ } // end while(len)
 
  uint32_t cw_tmp;
 
@@ -380,8 +384,10 @@ SexyAL_device *SexyALI_JACK_Open(const char *id, SexyAL_format *format, SexyAL_b
   return(0);
  }
 
+ format->noninterleaved = false;
  if(format->channels == 2)
  {
+  format->noninterleaved = true;
   if(!(jw->output_port[1] = jack_port_register(jw->client, "output-right", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0)))
   {
    RawClose(device);
@@ -396,12 +402,12 @@ SexyAL_device *SexyALI_JACK_Open(const char *id, SexyAL_format *format, SexyAL_b
  if(buffering->ms > 1000)
   buffering->ms = 1000;
 
- jw->EPMaxVal = 8192;
+ // about 50ms extra precision, maximum.
+ jw->EPMaxVal = (50 * format->rate + 999) / 1000;
 
  jw->BufferSize = format->rate * buffering->ms / 1000;
 
- // *2 for safety, perhaps make more precise in the future
- jw->RealBufferSize = SexyAL_rupow2(jw->BufferSize + (jw->EPMaxVal + 2048) * 2);
+ jw->RealBufferSize = SexyAL_rupow2(jw->BufferSize + jw->EPMaxVal + ((30 * format->rate + 999) / 1000));
 
  buffering->buffer_size = jw->BufferSize;
 

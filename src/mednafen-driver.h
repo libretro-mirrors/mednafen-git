@@ -45,7 +45,6 @@ struct MDFN_Mutex;
 
 MDFN_Thread *MDFND_CreateThread(int (*fn)(void *), void *data);
 void MDFND_WaitThread(MDFN_Thread *thread, int *status);
-void MDFND_KillThread(MDFN_Thread *thread);
 
 MDFN_Mutex *MDFND_CreateMutex(void);
 void MDFND_DestroyMutex(MDFN_Mutex *mutex);
@@ -97,6 +96,9 @@ void MDFNI_DoRewind(void);
 
 void MDFNI_SetLayerEnableMask(uint64 mask);
 
+// Only call during startup or when the device on the specified port is changing/changed; do NOT call otherwise(such as on every frame),
+// as the call causes the destruction and recreation of the virtual device, which disrupts the game if it occurs in the middle of
+// the game's polling of the device.
 void MDFNI_SetInput(int port, const char *type, void *ptr, uint32 dsize);
 
 //int MDFNI_DiskInsert(int oride);

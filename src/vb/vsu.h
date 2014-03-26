@@ -7,10 +7,10 @@ class VSU
 {
  public:
 
- VSU(Blip_Buffer *bb_l, Blip_Buffer *bb_r);
- ~VSU();
+ VSU(Blip_Buffer *bb_l, Blip_Buffer *bb_r) MDFN_COLD;
+ ~VSU() MDFN_COLD;
 
- void Power(void);
+ void Power(void) MDFN_COLD;
 
  void Write(int32 timestamp, uint32 A, uint8 V);
 

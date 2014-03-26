@@ -16,7 +16,7 @@ typedef enum {
 
 
 bool InitShader(ShaderType pixshader);
-bool ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th, int orig_tw, int orig_th);
+bool ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th, int orig_tw, int orig_th, unsigned rotated);
 bool ShaderEnd(void);
 bool KillShader(void);
 

@@ -24,7 +24,9 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "sexyal.h"
 
+#include <stdio.h>
 #include <string.h>
+#include <assert.h>
 #include "convert.h"
 
 static inline uint16_t FLIP16(uint16_t b)
@@ -70,20 +72,15 @@ static inline dsf_t SAMP_CONVERT(int16_t in_sample)
 
 
 template<typename dsf_t, uint32_t dsf>
-static void ConvertLoop(const int16_t *src, dsf_t *dest, const int src_chan, const int dest_chan, int32_t frames)
+static void ConvertLoop(const int16_t *src, dsf_t *dest, const int src_chan, const int dest_chan, const bool dest_noninterleaved, int32_t frames)
 {
- if(src_chan == 1 && dest_chan >= 2)
+ if(src_chan == 1 && dest_chan == 1)
  {
   for(int i = 0; i < frames; i++)
   {
-   dsf_t temp = SAMP_CONVERT<dsf_t, dsf>(*src);
-   dest[0] = temp;
-   dest[1] = temp;
-   src += 1;
-   dest += 2;
-
-   for(int padc = 2; padc < dest_chan; padc++)
-    *dest++ = SAMP_CONVERT<dsf_t, dsf>(0);
+   dest[0] = SAMP_CONVERT<dsf_t, dsf>(src[0]);
+   src++;
+   dest++;
   }
  }
  else if(src_chan == 2 && dest_chan == 1)
@@ -97,18 +94,67 @@ static void ConvertLoop(const int16_t *src, dsf_t *dest, const int src_chan, con
    dest += 1;
   }
  }
+ else if(src_chan == 1 && dest_chan >= 2)
+ {
+  if(dest_noninterleaved)
+  {
+   for(int i = 0; i < frames; i++)
+   {
+    dsf_t temp = SAMP_CONVERT<dsf_t, dsf>(*src);
+
+    dest[0 * frames] = temp;
+    dest[1 * frames] = temp;
+
+    src += 1;
+    dest += 1;
+
+    for(int padc = 2; padc < dest_chan; padc++)
+     dest[padc * frames] = SAMP_CONVERT<dsf_t, dsf>(0);
+   }
+  }
+  else
+  {
+   for(int i = 0; i < frames; i++)
+   {
+    dsf_t temp = SAMP_CONVERT<dsf_t, dsf>(*src);
+    dest[0] = temp;
+    dest[1] = temp;
+    src += 1;
+    dest += 2;
+
+    for(int padc = 2; padc < dest_chan; padc++)
+     *dest++ = SAMP_CONVERT<dsf_t, dsf>(0);
+   }
+  }
+ }
  else //if(src_chan == 2 && dest_chan >= 2)
  {
-  for(int i = 0; i < frames; i++)
+  if(dest_noninterleaved)
   {
-   dest[0] = SAMP_CONVERT<dsf_t, dsf>(src[0]);
-   dest[1] = SAMP_CONVERT<dsf_t, dsf>(src[1]);
-   src += 2;
-   dest += 2;
-  }
+   for(int i = 0; i < frames; i++)
+   {
+    dest[0 * frames] = SAMP_CONVERT<dsf_t, dsf>(src[0]);
+    dest[1 * frames] = SAMP_CONVERT<dsf_t, dsf>(src[1]);
+    src += 2;
+    dest += 1;
+   }
 
-  for(int padc = 2; padc < dest_chan; padc++)
-   *dest++ = SAMP_CONVERT<dsf_t, dsf>(0);
+   for(int padc = 2; padc < dest_chan; padc++)
+    dest[padc * frames] = SAMP_CONVERT<dsf_t, dsf>(0);
+  }
+  else
+  {
+   for(int i = 0; i < frames; i++)
+   {
+    dest[0] = SAMP_CONVERT<dsf_t, dsf>(src[0]);
+    dest[1] = SAMP_CONVERT<dsf_t, dsf>(src[1]);
+    src += 2;
+    dest += 2;
+   }
+
+   for(int padc = 2; padc < dest_chan; padc++)
+    *dest++ = SAMP_CONVERT<dsf_t, dsf>(0);
+  }
  }
 }
 
@@ -118,50 +164,53 @@ void SexiALI_Convert(const SexyAL_format *srcformat, const SexyAL_format *destfo
 {
  const int16_t *src = (int16_t *)vsrc;
 
+ assert(srcformat->noninterleaved == false);
+
  if(destformat->sampformat == srcformat->sampformat)
   if(destformat->channels == srcformat->channels)
    if(destformat->revbyteorder == srcformat->revbyteorder)
-   {
-    memcpy(vdest, vsrc, frames * (destformat->sampformat >> 4) * destformat->channels);
-    return;
-   }
+    if(destformat->noninterleaved == srcformat->noninterleaved)
+    {
+     memcpy(vdest, vsrc, frames * (destformat->sampformat >> 4) * destformat->channels);
+     return;
+    }
 
  switch(destformat->sampformat)
  {
   case SEXYAL_FMT_PCMU8:
-	ConvertLoop<uint8_t, SEXYAL_FMT_PCMU8>(src, (uint8_t*)vdest, srcformat->channels, destformat->channels, frames);
+	ConvertLoop<uint8_t, SEXYAL_FMT_PCMU8>(src, (uint8_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMS8:
-	ConvertLoop<int8_t, SEXYAL_FMT_PCMS8>(src, (int8_t*)vdest, srcformat->channels, destformat->channels, frames);
+	ConvertLoop<int8_t, SEXYAL_FMT_PCMS8>(src, (int8_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMU16:
-	ConvertLoop<uint16_t, SEXYAL_FMT_PCMU16>(src, (uint16_t*)vdest, srcformat->channels, destformat->channels, frames);
+	ConvertLoop<uint16_t, SEXYAL_FMT_PCMU16>(src, (uint16_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMS16:
-	ConvertLoop<int16_t, SEXYAL_FMT_PCMS16>(src, (int16_t*)vdest, srcformat->channels, destformat->channels, frames);
+	ConvertLoop<int16_t, SEXYAL_FMT_PCMS16>(src, (int16_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMU24:
-	ConvertLoop<uint32_t, SEXYAL_FMT_PCMU24>(src, (uint32_t*)vdest, srcformat->channels, destformat->channels, frames);
+	ConvertLoop<uint32_t, SEXYAL_FMT_PCMU24>(src, (uint32_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMS24:
-	ConvertLoop<int32_t, SEXYAL_FMT_PCMS24>(src, (int32_t*)vdest, srcformat->channels, destformat->channels, frames);
+	ConvertLoop<int32_t, SEXYAL_FMT_PCMS24>(src, (int32_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMU32:
-	ConvertLoop<uint32_t, SEXYAL_FMT_PCMU32>(src, (uint32_t*)vdest, srcformat->channels, destformat->channels, frames);
+	ConvertLoop<uint32_t, SEXYAL_FMT_PCMU32>(src, (uint32_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMS32:
-	ConvertLoop<int32_t, SEXYAL_FMT_PCMS32>(src, (int32_t*)vdest, srcformat->channels, destformat->channels, frames);
+	ConvertLoop<int32_t, SEXYAL_FMT_PCMS32>(src, (int32_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMFLOAT:
-	ConvertLoop<float, SEXYAL_FMT_PCMFLOAT>(src, (float*)vdest, srcformat->channels, destformat->channels, frames);
+	ConvertLoop<float, SEXYAL_FMT_PCMFLOAT>(src, (float*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
  }
 

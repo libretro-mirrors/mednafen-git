@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define SPC7110_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 SPC7110 spc7110;
 

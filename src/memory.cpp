@@ -68,4 +68,3 @@ void MDFN_free(void *ptr)
 {
  free(ptr);
 }
-

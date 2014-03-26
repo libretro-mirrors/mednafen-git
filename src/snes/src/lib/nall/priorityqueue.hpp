@@ -6,7 +6,7 @@
 #include <nall/serializer.hpp>
 #include <nall/utility.hpp>
 
-namespace nall {
+namespace nall_v059 {
   template<typename type_t> void priority_queue_nocallback(type_t) {}
 
   //priority queue implementation using binary min-heap array;
@@ -24,6 +24,12 @@ namespace nall {
     //counter is relative to current time (eg enqueue(64, ...) fires in 64 ticks);
     //counter cannot exceed std::numeric_limits<unsigned>::max() >> 1.
     void enqueue(unsigned counter, type_t event) {
+      if(heapsize >= heapcapacity)
+      {
+       //puts("IYEEE");
+       return;
+      }
+
       unsigned child = heapsize++;
       counter += basecounter;
 
@@ -69,14 +75,54 @@ namespace nall {
     void serialize(serializer &s) {
       s.integer(basecounter);
       s.integer(heapsize);
+
       for(unsigned n = 0; n < heapcapacity; n++) {
         s.integer(heap[n].counter);
         s.integer(heap[n].event);
       }
+
+      if(s.mode() == serializer::Load)
+      {
+       bool error_condition = false;
+       unsigned prev;
+
+       if(heapsize > heapcapacity)
+       {
+	heapsize = 0;	// So the loop isn't iterated through below.
+        error_condition = true;
+       }
+
+#if 0
+       prev = heap[0].counter - basecounter;
+       for(unsigned n = 0; n < heapsize; n++)
+       {
+	unsigned cur = heap[n].counter - basecounter;
+
+        if(cur > heaptimesanity)
+	{
+	 error_condition = true;
+	 break;
+	}
+
+	if(cur < prev)
+	{
+	 error_condition = true;
+	 break;
+	}
+
+	prev = cur;
+       }
+#endif
+       if(error_condition)
+       {
+	puts("Priority queue error");
+	reset();
+       }
+      }
     }
 
-    priority_queue(unsigned size, function<void (type_t)> callback_ = &priority_queue_nocallback<type_t>)
-    : callback(callback_) {
+    priority_queue(unsigned size, function<void (type_t)> callback_ = &priority_queue_nocallback<type_t>, unsigned time_sanity = (std::numeric_limits<unsigned>::max() >> 1))
+    : callback(callback_), heaptimesanity(time_sanity) {
       heap = new heap_t[size];
       heapcapacity = size;
       reset();
@@ -91,6 +137,7 @@ namespace nall {
     unsigned basecounter;
     unsigned heapsize;
     unsigned heapcapacity;
+    unsigned heaptimesanity;
     struct heap_t {
       unsigned counter;
       type_t event;

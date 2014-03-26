@@ -184,7 +184,7 @@ namespace CDUtility
  //  Returns "true" if errors weren't detected, or they were corrected succesfully.
  //  Returns "false" if errors couldn't be corrected.
  //  sector_data should contain 2352 bytes of raw sector data.
- bool edc_lec_check_correct(uint8 *sector_data, bool xa);
+ bool edc_lec_check_and_correct(uint8 *sector_data, bool xa);
 
  //
  // Subchannel(Q in particular) functions

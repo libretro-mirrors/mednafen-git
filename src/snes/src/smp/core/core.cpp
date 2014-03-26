@@ -1,7 +1,7 @@
-#include <../base.hpp>
+//#include <../base.hpp>
 
 #define SMPCORE_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 #include "serialization.cpp"
 #include "algorithms.cpp"
@@ -23,9 +23,5 @@ namespace SNES {
 #undef X
 #undef Y
 #undef SP
-
-SMPcore::SMPcore() {
-  initialize_opcode_table();
-}
 
 };

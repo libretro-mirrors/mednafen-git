@@ -204,11 +204,11 @@ void MDFNConsole::Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect)
   if(pw > tmp_surface->w)
   {
    delete tmp_surface;
-   tmp_surface = new MDFN_Surface(NULL, pw, font_height + 1, 1024, surface->format);
+   tmp_surface = new MDFN_Surface(NULL, pw, font_height + 1, pw, surface->format);
   }
 
   tmp_surface->Fill(0, 0, 0, 0xC0);
-  DrawTextTransShadow(tmp_surface->pixels, tmp_surface->pitchinpix << 2, tmp_surface->w, (UTF8 *)TextLog[vec_index].c_str(), MK_COLOR_A(0xff, 0xff, 0xff, 0xFF), MK_COLOR_A(0x00, 0x00, 0x01, 0xFF), 0, SmallFont);
+  DrawTextTransShadow(tmp_surface->pixels, tmp_surface->pitchinpix << 2, tmp_surface->w, (UTF8 *)TextLog[vec_index].c_str(), MK_COLOR_A(0xff, 0xff, 0xff, 0xFF), MK_COLOR_A(0x00, 0x00, 0x01, 0xFF), 0, SmallFont ? MDFN_FONT_5x7 : MDFN_FONT_9x18_18x18);
   int32 numlines = (uint32)ceil((double)pw / w);
 
   while(numlines > 0 && destline >= 0)
@@ -271,7 +271,7 @@ void MDFNConsole::Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect)
 
   MDFN_Rect tmp_rect, dest_rect;
 
-  tmp_rect.w = DrawTextTransShadow(tmp_surface->pixels, tmp_surface->pitchinpix << 2, tmp_surface->w, (UTF8*)concat_str.c_str(),MK_COLOR_A(0xff, 0xff, 0xff, 0xff), MK_COLOR_A(0x00, 0x00, 0x01, 0xFF), 0, SmallFont);
+  tmp_rect.w = DrawTextTransShadow(tmp_surface->pixels, tmp_surface->pitchinpix << 2, tmp_surface->w, (UTF8*)concat_str.c_str(),MK_COLOR_A(0xff, 0xff, 0xff, 0xff), MK_COLOR_A(0x00, 0x00, 0x01, 0xFF), 0, SmallFont ? MDFN_FONT_5x7 : MDFN_FONT_9x18_18x18);
   tmp_rect.h = dest_rect.h = font_height;
   tmp_rect.x = 0;
   tmp_rect.y = 0;

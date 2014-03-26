@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define SYSTEM_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 System system;
 

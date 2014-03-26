@@ -3,6 +3,7 @@
 
 #include "mednafen.h"
 #include "FileWrapper.h"
+#include "resampler/resampler.h"
 
 #include <vector>
 #include <list>
@@ -120,6 +121,12 @@ class QTRecord
  uint64 MC;
 
  bool Finished;
+
+ SpeexResamplerState *resampler;
+ uint32 ResampInRate;
+ std::vector<int16> ResampInBuffer;
+ uint32 ResampInBufferFramesInCount;
+ std::vector<int16> ResampOutBuffer;
 };
 
 #endif

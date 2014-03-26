@@ -29,7 +29,7 @@
   #include <stdint.h>
 #endif
 
-namespace nall {
+namespace nall_v059 {
   static nall_static_assert<sizeof(int8_t)   == 1> int8_t_assert;
   static nall_static_assert<sizeof(int16_t)  == 2> int16_t_assert;
   static nall_static_assert<sizeof(int32_t)  == 4> int32_t_assert;

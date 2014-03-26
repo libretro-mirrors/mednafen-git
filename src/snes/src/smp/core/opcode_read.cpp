@@ -1,43 +1,43 @@
 #ifdef SMPCORE_CPP
 
-template<uint8 (SMPcore::*op)(uint8, uint8), int n>
-void SMPcore::op_read_reg_const() {
+template<uint8 (SMP::*op)(uint8, uint8), int n>
+alwaysinline void SMP::op_read_reg_const() {
   rd = op_readpc();
   regs.r[n] = (this->*op)(regs.r[n], rd);
 }
 
-template<uint8 (SMPcore::*op)(uint8, uint8)>
-void SMPcore::op_read_a_ix() {
+template<uint8 (SMP::*op)(uint8, uint8)>
+alwaysinline void SMP::op_read_a_ix() {
   op_io();
   rd = op_readdp(regs.x);
   regs.a = (this->*op)(regs.a, rd);
 }
 
-template<uint8 (SMPcore::*op)(uint8, uint8), int n>
-void SMPcore::op_read_reg_dp() {
+template<uint8 (SMP::*op)(uint8, uint8), int n>
+alwaysinline void SMP::op_read_reg_dp() {
   dp = op_readpc();
   rd = op_readdp(dp);
   regs.r[n] = (this->*op)(regs.r[n], rd);
 }
 
-template<uint8 (SMPcore::*op)(uint8, uint8)>
-void SMPcore::op_read_a_dpx() {
+template<uint8 (SMP::*op)(uint8, uint8)>
+alwaysinline void SMP::op_read_a_dpx() {
   dp = op_readpc();
   op_io();
   rd = op_readdp(dp + regs.x);
   regs.a = (this->*op)(regs.a, rd);
 }
 
-template<uint8 (SMPcore::*op)(uint8, uint8), int n>
-void SMPcore::op_read_reg_addr() {
+template<uint8 (SMP::*op)(uint8, uint8), int n>
+alwaysinline void SMP::op_read_reg_addr() {
   dp  = op_readpc() << 0;
   dp |= op_readpc() << 8;
   rd  = op_readaddr(dp);
   regs.r[n] = (this->*op)(regs.r[n], rd);
 }
 
-template<uint8 (SMPcore::*op)(uint8, uint8), int i>
-void SMPcore::op_read_a_addrr() {
+template<uint8 (SMP::*op)(uint8, uint8), int i>
+alwaysinline void SMP::op_read_a_addrr() {
   dp  = op_readpc() << 0;
   dp |= op_readpc() << 8;
   op_io();
@@ -45,8 +45,8 @@ void SMPcore::op_read_a_addrr() {
   regs.a = (this->*op)(regs.a, rd);
 }
 
-template<uint8 (SMPcore::*op)(uint8, uint8)>
-void SMPcore::op_read_a_idpx() {
+template<uint8 (SMP::*op)(uint8, uint8)>
+alwaysinline void SMP::op_read_a_idpx() {
   dp  = op_readpc() + regs.x;
   op_io();
   sp  = op_readdp(dp + 0) << 0;
@@ -55,8 +55,8 @@ void SMPcore::op_read_a_idpx() {
   regs.a = (this->*op)(regs.a, rd);
 }
 
-template<uint8 (SMPcore::*op)(uint8, uint8)>
-void SMPcore::op_read_a_idpy() {
+template<uint8 (SMP::*op)(uint8, uint8)>
+alwaysinline void SMP::op_read_a_idpy() {
   dp  = op_readpc();
   op_io();
   sp  = op_readdp(dp + 0) << 0;
@@ -65,39 +65,39 @@ void SMPcore::op_read_a_idpy() {
   regs.a = (this->*op)(regs.a, rd);
 }
 
-template<uint8 (SMPcore::*op)(uint8, uint8)>
-void SMPcore::op_read_ix_iy() {
+template<uint8 (SMP::*op)(uint8, uint8)>
+alwaysinline void SMP::op_read_ix_iy() {
   op_io();
   rd = op_readdp(regs.y);
   wr = op_readdp(regs.x);
   wr = (this->*op)(wr, rd);
-  static uint8 (SMPcore::*cmp)(uint8, uint8) = &SMPcore::op_cmp;
+  static uint8 (SMP::*cmp)(uint8, uint8) = &SMP::op_cmp;
   (op != cmp) ? op_writedp(regs.x, wr) : op_io();
 }
 
-template<uint8 (SMPcore::*op)(uint8, uint8)>
-void SMPcore::op_read_dp_dp() {
+template<uint8 (SMP::*op)(uint8, uint8)>
+alwaysinline void SMP::op_read_dp_dp() {
   sp = op_readpc();
   rd = op_readdp(sp);
   dp = op_readpc();
   wr = op_readdp(dp);
   wr = (this->*op)(wr, rd);
-  static uint8 (SMPcore::*cmp)(uint8, uint8) = &SMPcore::op_cmp;
+  static uint8 (SMP::*cmp)(uint8, uint8) = &SMP::op_cmp;
   (op != cmp) ? op_writedp(dp, wr) : op_io();
 }
 
-template<uint8 (SMPcore::*op)(uint8, uint8)>
-void SMPcore::op_read_dp_const() {
+template<uint8 (SMP::*op)(uint8, uint8)>
+alwaysinline void SMP::op_read_dp_const() {
   rd = op_readpc();
   dp = op_readpc();
   wr = op_readdp(dp);
   wr = (this->*op)(wr, rd);
-  static uint8 (SMPcore::*cmp)(uint8, uint8) = &SMPcore::op_cmp;
+  static uint8 (SMP::*cmp)(uint8, uint8) = &SMP::op_cmp;
   (op != cmp) ? op_writedp(dp, wr) : op_io();
 }
 
-template<uint16 (SMPcore::*op)(uint16, uint16)>
-void SMPcore::op_read_ya_dp() {
+template<uint16 (SMP::*op)(uint16, uint16)>
+alwaysinline void SMP::op_read_ya_dp() {
   dp  = op_readpc();
   rd  = op_readdp(dp + 0) << 0;
   op_io();
@@ -105,14 +105,14 @@ void SMPcore::op_read_ya_dp() {
   regs.ya = (this->*op)(regs.ya, rd);
 }
 
-void SMPcore::op_cmpw_ya_dp() {
+alwaysinline void SMP::op_cmpw_ya_dp() {
   dp  = op_readpc();
   rd  = op_readdp(dp + 0) << 0;
   rd |= op_readdp(dp + 1) << 8;
   op_cmpw(regs.ya, rd);
 }
 
-template<int op> void SMPcore::op_and1_bit() {
+template<int op> alwaysinline void SMP::op_and1_bit() {
   dp  = op_readpc() << 0;
   dp |= op_readpc() << 8;
   bit = dp >> 13;
@@ -121,7 +121,7 @@ template<int op> void SMPcore::op_and1_bit() {
   regs.p.c = regs.p.c & ((bool)(rd & (1 << bit)) ^ op);
 }
 
-void SMPcore::op_eor1_bit() {
+alwaysinline void SMP::op_eor1_bit() {
   dp  = op_readpc() << 0;
   dp |= op_readpc() << 8;
   bit = dp >> 13;
@@ -131,7 +131,7 @@ void SMPcore::op_eor1_bit() {
   regs.p.c = regs.p.c ^ (bool)(rd & (1 << bit));
 }
 
-void SMPcore::op_not1_bit() {
+alwaysinline void SMP::op_not1_bit() {
   dp  = op_readpc() << 0;
   dp |= op_readpc() << 8;
   bit = dp >> 13;
@@ -141,7 +141,7 @@ void SMPcore::op_not1_bit() {
   op_writeaddr(dp, rd);
 }
 
-template<int op> void SMPcore::op_or1_bit() {
+template<int op> alwaysinline void SMP::op_or1_bit() {
   dp  = op_readpc() << 0;
   dp |= op_readpc() << 8;
   bit = dp >> 13;

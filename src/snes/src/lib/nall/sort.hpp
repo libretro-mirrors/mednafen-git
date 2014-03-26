@@ -17,7 +17,7 @@
 //2: it lacks O(n^2) worst-case overhead.
 //(* which is also O(n log n) in the average case.)
 
-namespace nall {
+namespace nall_v059 {
   template<typename T>
   void sort(T list[], unsigned length) {
     if(length <= 1) return;  //nothing to sort

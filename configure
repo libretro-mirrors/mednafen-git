@@ -678,6 +678,8 @@ HAVE_JACK_FALSE
 HAVE_JACK_TRUE
 HAVE_SDL_FALSE
 HAVE_SDL_TRUE
+HAVE_WASAPI_FALSE
+HAVE_WASAPI_TRUE
 HAVE_DIRECTSOUND_FALSE
 HAVE_DIRECTSOUND_TRUE
 HAVE_ALSA_FALSE
@@ -688,6 +690,8 @@ WANT_WSWAN_EMU_FALSE
 WANT_WSWAN_EMU_TRUE
 WANT_VB_EMU_FALSE
 WANT_VB_EMU_TRUE
+WANT_SNES_PERF_EMU_FALSE
+WANT_SNES_PERF_EMU_TRUE
 WANT_SNES_EMU_FALSE
 WANT_SNES_EMU_TRUE
 WANT_PSX_EMU_FALSE
@@ -714,11 +718,15 @@ WANT_GBA_EMU_FALSE
 WANT_GBA_EMU_TRUE
 WANT_GB_EMU_FALSE
 WANT_GB_EMU_TRUE
+WANT_FANCY_SCALERS_FALSE
+WANT_FANCY_SCALERS_TRUE
 WANT_DEBUGGER_FALSE
 WANT_DEBUGGER_TRUE
 AM_CXXFLAGS
 AM_CFLAGS
 GBA_EXTRA_FLAGS
+SNES_PERF_EXTRA_CXXFLAGS
+SNES_PERF_EXTRA_FLAGS
 SNES_EXTRA_CXXFLAGS
 SNES_EXTRA_FLAGS
 WARNING_FLAGS
@@ -926,6 +934,7 @@ with_included_gettext
 with_libintl_prefix
 enable_debugger
 enable_cjk_fonts
+enable_fancy_scalers
 enable_altivec
 enable_gb
 enable_gba
@@ -940,6 +949,7 @@ enable_pcfx
 enable_psx
 enable_sms
 enable_snes
+enable_snes_perf
 enable_vb
 enable_wswan
 enable_alsa
@@ -1616,6 +1626,8 @@ Optional Features:
   --enable-debugger       build with internal debugger [[default=yes]]
   --enable-cjk-fonts      build with internal CJK(Chinese, Japanese, Korean)
                           fonts [[default=yes]]
+  --enable-fancy-scalers  build with fancy(2xsai, hq2x, etc.) CPU-intensive
+                          software video scalers [[default=yes]]
   --enable-altivec        use AltiVec extensions on PowerPC/POWER ISA
                           processors [[default=yes]]
   --enable-gb             build with GameBoy emulation [[default=yes]]
@@ -1636,6 +1648,9 @@ Optional Features:
   --enable-psx            build with PlayStation emulation [[default=yes]]
   --enable-sms            build with SMS+GG emulation [[default=yes]]
   --enable-snes           build with SNES emulation [[default=yes]]
+  --enable-snes-perf      build the separate, performance SNES emulation
+                          core(EXPERIMENTAL, DO NOT USE LEST YOU FORFEIT YOUR
+                          TOES) [[default=no]]
   --enable-vb             build with Virtual Boy emulation [[default=yes]]
   --enable-wswan          build with WonderSwan emulation [[default=yes]]
   --enable-alsa           support the ALSA audio API [[default=yes]]
@@ -4321,8 +4336,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.28-WIP'
-MEDNAFEN_VERSION_NUMERIC=0x000928
+MEDNAFEN_VERSION='0.9.29-WIP'
+MEDNAFEN_VERSION_NUMERIC=0x000929
 
 ac_aux_dir=
 for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do
@@ -18930,6 +18945,13 @@ fi
 
 
 
+    ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
 
 
 
@@ -18968,19 +18990,21 @@ else
     am_cv_lib_iconv=no
     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
+
 #include <stdlib.h>
 #include <iconv.h>
+
 int
 main ()
 {
 iconv_t cd = iconv_open("","");
-       iconv(cd,NULL,NULL,NULL,NULL);
-       iconv_close(cd);
+           iconv(cd,NULL,NULL,NULL,NULL);
+           iconv_close(cd);
   ;
   return 0;
 }
 _ACEOF
-if ac_fn_cxx_try_link "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   am_cv_func_iconv=yes
 fi
 rm -f core conftest.err conftest.$ac_objext \
@@ -18990,19 +19014,21 @@ rm -f core conftest.err conftest.$ac_objext \
       LIBS="$LIBS $LIBICONV"
       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
+
 #include <stdlib.h>
 #include <iconv.h>
+
 int
 main ()
 {
 iconv_t cd = iconv_open("","");
-         iconv(cd,NULL,NULL,NULL,NULL);
-         iconv_close(cd);
+             iconv(cd,NULL,NULL,NULL,NULL);
+             iconv_close(cd);
   ;
   return 0;
 }
 _ACEOF
-if ac_fn_cxx_try_link "$LINENO"; then :
+if ac_fn_c_try_link "$LINENO"; then :
   am_cv_lib_iconv=yes
         am_cv_func_iconv=yes
 fi
@@ -19021,15 +19047,17 @@ if ${am_cv_func_iconv_works+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-            am_save_LIBS="$LIBS"
+                  am_save_LIBS="$LIBS"
       if test $am_cv_lib_iconv = yes; then
         LIBS="$LIBS $LIBICONV"
       fi
       if test "$cross_compiling" = yes; then :
-  case "$host_os" in
+
+         case "$host_os" in
            aix* | hpux*) am_cv_func_iconv_works="guessing no" ;;
            *)            am_cv_func_iconv_works="guessing yes" ;;
          esac
+
 else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -19038,6 +19066,7 @@ else
 #include <string.h>
 int main ()
 {
+  int result = 0;
   /* Test against AIX 5.1 bug: Failures are not distinguishable from successful
      returns.  */
   {
@@ -19054,7 +19083,8 @@ int main ()
                             (char **) &inptr, &inbytesleft,
                             &outptr, &outbytesleft);
         if (res == 0)
-          return 1;
+          result |= 1;
+        iconv_close (cd_utf8_to_88591);
       }
   }
   /* Test against Solaris 10 bug: Failures are not distinguishable from
@@ -19073,7 +19103,27 @@ int main ()
                             (char **) &inptr, &inbytesleft,
                             &outptr, &outbytesleft);
         if (res == 0)
-          return 1;
+          result |= 2;
+        iconv_close (cd_ascii_to_88591);
+      }
+  }
+  /* Test against AIX 6.1..7.1 bug: Buffer overrun.  */
+  {
+    iconv_t cd_88591_to_utf8 = iconv_open ("UTF-8", "ISO-8859-1");
+    if (cd_88591_to_utf8 != (iconv_t)(-1))
+      {
+        static const char input[] = "\304";
+        static char buf[2] = { (char)0xDE, (char)0xAD };
+        const char *inptr = input;
+        size_t inbytesleft = 1;
+        char *outptr = buf;
+        size_t outbytesleft = 1;
+        size_t res = iconv (cd_88591_to_utf8,
+                            (char **) &inptr, &inbytesleft,
+                            &outptr, &outbytesleft);
+        if (res != (size_t)(-1) || outptr - buf > 1 || buf[1] != (char)0xAD)
+          result |= 4;
+        iconv_close (cd_88591_to_utf8);
       }
   }
 #if 0 /* This bug could be worked around by the caller.  */
@@ -19092,7 +19142,8 @@ int main ()
                             (char **) &inptr, &inbytesleft,
                             &outptr, &outbytesleft);
         if ((int)res > 0)
-          return 1;
+          result |= 8;
+        iconv_close (cd_88591_to_utf8);
       }
   }
 #endif
@@ -19106,11 +19157,11 @@ int main ()
       && iconv_open ("UTF-8", "IBM-eucJP") == (iconv_t)(-1)
       /* Try HP-UX names.  */
       && iconv_open ("utf8", "eucJP") == (iconv_t)(-1))
-    return 1;
-  return 0;
+    result |= 16;
+  return result;
 }
 _ACEOF
-if ac_fn_cxx_try_run "$LINENO"; then :
+if ac_fn_c_try_run "$LINENO"; then :
   am_cv_func_iconv_works=yes
 else
   am_cv_func_iconv_works=no
@@ -19149,6 +19200,13 @@ $as_echo "$LIBICONV" >&6; }
 
 
 
+    ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
   if test "$am_cv_func_iconv" = yes; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for iconv declaration" >&5
 $as_echo_n "checking for iconv declaration... " >&6; }
@@ -19165,7 +19223,7 @@ extern
 #ifdef __cplusplus
 "C"
 #endif
-#if defined(__STDC__) || defined(__cplusplus)
+#if defined(__STDC__) || defined(_MSC_VER) || defined(__cplusplus)
 size_t iconv (iconv_t cd, char * *inbuf, size_t *inbytesleft, char * *outbuf, size_t *outbytesleft);
 #else
 size_t iconv();
@@ -19197,6 +19255,7 @@ $as_echo "
 cat >>confdefs.h <<_ACEOF
 #define ICONV_CONST $am_cv_proto_iconv_arg1
 _ACEOF
+
 
   fi
 
@@ -24404,6 +24463,10 @@ esac
 
 
 
+# -----------------------------------
+# Begin snes/snes_perf flags
+#
+
 SNES_EXTRA_FLAGS=""
 SNES_EXTRA_CXXFLAGS=""
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking SNES_EXTRA_FLAGS for gcc -Wno-unused" >&5
@@ -25049,6 +25112,402 @@ esac
 
 
 
+SNES_PERF_EXTRA_FLAGS="$SNES_EXTRA_FLAGS"
+SNES_PERF_EXTRA_CXXFLAGS="$SNES_EXTRA_CXXFLAGS"
+
+# AX_CFLAGS_GCC_OPTION([-finline-functions], SNES_PERF_EXTRA_CXXFLAGS)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking SNES_PERF_EXTRA_CXXFLAGS for gcc -funswitch-loops" >&5
+$as_echo_n "checking SNES_PERF_EXTRA_CXXFLAGS for gcc -funswitch-loops... " >&6; }
+if ${ax_cv_cflags_gcc_option__funswitch_loops+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_cflags_gcc_option__funswitch_loops="no, unknown"
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ ac_save_CFLAGS="$CFLAGS"
+for ac_arg in "-pedantic -Werror % -funswitch-loops"     "-pedantic % -funswitch-loops %% no, obsolete"     #
+do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_cflags_gcc_option__funswitch_loops=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+ CFLAGS="$ac_save_CFLAGS"
+ ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__funswitch_loops" >&5
+$as_echo "$ax_cv_cflags_gcc_option__funswitch_loops" >&6; }
+var=$ax_cv_cflags_gcc_option__funswitch_loops
+case ".$var" in
+     .ok|.ok,*)  ;;
+   .|.no|.no,*)  ;;
+   *)
+   if echo " $SNES_PERF_EXTRA_CXXFLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : SNES_PERF_EXTRA_CXXFLAGS does contain \$var"; } >&5
+  (: SNES_PERF_EXTRA_CXXFLAGS does contain $var) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : SNES_PERF_EXTRA_CXXFLAGS=\"\$SNES_PERF_EXTRA_CXXFLAGS \$var\""; } >&5
+  (: SNES_PERF_EXTRA_CXXFLAGS="$SNES_PERF_EXTRA_CXXFLAGS $var") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+                      SNES_PERF_EXTRA_CXXFLAGS="$SNES_PERF_EXTRA_CXXFLAGS $var"
+   fi
+ ;;
+esac
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking SNES_PERF_EXTRA_CXXFLAGS for gcc -fpredictive-commoning" >&5
+$as_echo_n "checking SNES_PERF_EXTRA_CXXFLAGS for gcc -fpredictive-commoning... " >&6; }
+if ${ax_cv_cflags_gcc_option__fpredictive_commoning+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_cflags_gcc_option__fpredictive_commoning="no, unknown"
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ ac_save_CFLAGS="$CFLAGS"
+for ac_arg in "-pedantic -Werror % -fpredictive-commoning"     "-pedantic % -fpredictive-commoning %% no, obsolete"     #
+do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_cflags_gcc_option__fpredictive_commoning=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+ CFLAGS="$ac_save_CFLAGS"
+ ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__fpredictive_commoning" >&5
+$as_echo "$ax_cv_cflags_gcc_option__fpredictive_commoning" >&6; }
+var=$ax_cv_cflags_gcc_option__fpredictive_commoning
+case ".$var" in
+     .ok|.ok,*)  ;;
+   .|.no|.no,*)  ;;
+   *)
+   if echo " $SNES_PERF_EXTRA_CXXFLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : SNES_PERF_EXTRA_CXXFLAGS does contain \$var"; } >&5
+  (: SNES_PERF_EXTRA_CXXFLAGS does contain $var) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : SNES_PERF_EXTRA_CXXFLAGS=\"\$SNES_PERF_EXTRA_CXXFLAGS \$var\""; } >&5
+  (: SNES_PERF_EXTRA_CXXFLAGS="$SNES_PERF_EXTRA_CXXFLAGS $var") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+                      SNES_PERF_EXTRA_CXXFLAGS="$SNES_PERF_EXTRA_CXXFLAGS $var"
+   fi
+ ;;
+esac
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking SNES_PERF_EXTRA_CXXFLAGS for gcc -fgcse-after-reload" >&5
+$as_echo_n "checking SNES_PERF_EXTRA_CXXFLAGS for gcc -fgcse-after-reload... " >&6; }
+if ${ax_cv_cflags_gcc_option__fgcse_after_reload+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_cflags_gcc_option__fgcse_after_reload="no, unknown"
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ ac_save_CFLAGS="$CFLAGS"
+for ac_arg in "-pedantic -Werror % -fgcse-after-reload"     "-pedantic % -fgcse-after-reload %% no, obsolete"     #
+do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_cflags_gcc_option__fgcse_after_reload=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+ CFLAGS="$ac_save_CFLAGS"
+ ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__fgcse_after_reload" >&5
+$as_echo "$ax_cv_cflags_gcc_option__fgcse_after_reload" >&6; }
+var=$ax_cv_cflags_gcc_option__fgcse_after_reload
+case ".$var" in
+     .ok|.ok,*)  ;;
+   .|.no|.no,*)  ;;
+   *)
+   if echo " $SNES_PERF_EXTRA_CXXFLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : SNES_PERF_EXTRA_CXXFLAGS does contain \$var"; } >&5
+  (: SNES_PERF_EXTRA_CXXFLAGS does contain $var) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : SNES_PERF_EXTRA_CXXFLAGS=\"\$SNES_PERF_EXTRA_CXXFLAGS \$var\""; } >&5
+  (: SNES_PERF_EXTRA_CXXFLAGS="$SNES_PERF_EXTRA_CXXFLAGS $var") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+                      SNES_PERF_EXTRA_CXXFLAGS="$SNES_PERF_EXTRA_CXXFLAGS $var"
+   fi
+ ;;
+esac
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking SNES_PERF_EXTRA_CXXFLAGS for gcc -ftree-vectorize" >&5
+$as_echo_n "checking SNES_PERF_EXTRA_CXXFLAGS for gcc -ftree-vectorize... " >&6; }
+if ${ax_cv_cflags_gcc_option__ftree_vectorize+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_cflags_gcc_option__ftree_vectorize="no, unknown"
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ ac_save_CFLAGS="$CFLAGS"
+for ac_arg in "-pedantic -Werror % -ftree-vectorize"     "-pedantic % -ftree-vectorize %% no, obsolete"     #
+do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_cflags_gcc_option__ftree_vectorize=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+ CFLAGS="$ac_save_CFLAGS"
+ ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__ftree_vectorize" >&5
+$as_echo "$ax_cv_cflags_gcc_option__ftree_vectorize" >&6; }
+var=$ax_cv_cflags_gcc_option__ftree_vectorize
+case ".$var" in
+     .ok|.ok,*)  ;;
+   .|.no|.no,*)  ;;
+   *)
+   if echo " $SNES_PERF_EXTRA_CXXFLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : SNES_PERF_EXTRA_CXXFLAGS does contain \$var"; } >&5
+  (: SNES_PERF_EXTRA_CXXFLAGS does contain $var) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : SNES_PERF_EXTRA_CXXFLAGS=\"\$SNES_PERF_EXTRA_CXXFLAGS \$var\""; } >&5
+  (: SNES_PERF_EXTRA_CXXFLAGS="$SNES_PERF_EXTRA_CXXFLAGS $var") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+                      SNES_PERF_EXTRA_CXXFLAGS="$SNES_PERF_EXTRA_CXXFLAGS $var"
+   fi
+ ;;
+esac
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking SNES_PERF_EXTRA_CXXFLAGS for gcc -fipa-cp-clone" >&5
+$as_echo_n "checking SNES_PERF_EXTRA_CXXFLAGS for gcc -fipa-cp-clone... " >&6; }
+if ${ax_cv_cflags_gcc_option__fipa_cp_clone+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_cflags_gcc_option__fipa_cp_clone="no, unknown"
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ ac_save_CFLAGS="$CFLAGS"
+for ac_arg in "-pedantic -Werror % -fipa-cp-clone"     "-pedantic % -fipa-cp-clone %% no, obsolete"     #
+do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_cflags_gcc_option__fipa_cp_clone=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+ CFLAGS="$ac_save_CFLAGS"
+ ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__fipa_cp_clone" >&5
+$as_echo "$ax_cv_cflags_gcc_option__fipa_cp_clone" >&6; }
+var=$ax_cv_cflags_gcc_option__fipa_cp_clone
+case ".$var" in
+     .ok|.ok,*)  ;;
+   .|.no|.no,*)  ;;
+   *)
+   if echo " $SNES_PERF_EXTRA_CXXFLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : SNES_PERF_EXTRA_CXXFLAGS does contain \$var"; } >&5
+  (: SNES_PERF_EXTRA_CXXFLAGS does contain $var) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : SNES_PERF_EXTRA_CXXFLAGS=\"\$SNES_PERF_EXTRA_CXXFLAGS \$var\""; } >&5
+  (: SNES_PERF_EXTRA_CXXFLAGS="$SNES_PERF_EXTRA_CXXFLAGS $var") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+                      SNES_PERF_EXTRA_CXXFLAGS="$SNES_PERF_EXTRA_CXXFLAGS $var"
+   fi
+ ;;
+esac
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking SNES_PERF_EXTRA_CXXFLAGS for gcc -fno-stack-protector" >&5
+$as_echo_n "checking SNES_PERF_EXTRA_CXXFLAGS for gcc -fno-stack-protector... " >&6; }
+if ${ax_cv_cflags_gcc_option__fno_stack_protector+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_cflags_gcc_option__fno_stack_protector="no, unknown"
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ ac_save_CFLAGS="$CFLAGS"
+for ac_arg in "-pedantic -Werror % -fno-stack-protector"     "-pedantic % -fno-stack-protector %% no, obsolete"     #
+do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_cflags_gcc_option__fno_stack_protector=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+ CFLAGS="$ac_save_CFLAGS"
+ ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__fno_stack_protector" >&5
+$as_echo "$ax_cv_cflags_gcc_option__fno_stack_protector" >&6; }
+var=$ax_cv_cflags_gcc_option__fno_stack_protector
+case ".$var" in
+     .ok|.ok,*)  ;;
+   .|.no|.no,*)  ;;
+   *)
+   if echo " $SNES_PERF_EXTRA_CXXFLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : SNES_PERF_EXTRA_CXXFLAGS does contain \$var"; } >&5
+  (: SNES_PERF_EXTRA_CXXFLAGS does contain $var) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : SNES_PERF_EXTRA_CXXFLAGS=\"\$SNES_PERF_EXTRA_CXXFLAGS \$var\""; } >&5
+  (: SNES_PERF_EXTRA_CXXFLAGS="$SNES_PERF_EXTRA_CXXFLAGS $var") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+                      SNES_PERF_EXTRA_CXXFLAGS="$SNES_PERF_EXTRA_CXXFLAGS $var"
+   fi
+ ;;
+esac
+
+
+
+
+
+#
+# End snes/snes_perf flags
+# -----------------------------------
+
 GBA_EXTRA_FLAGS=""
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking GBA_EXTRA_FLAGS for gcc -fno-unit-at-a-time" >&5
 $as_echo_n "checking GBA_EXTRA_FLAGS for gcc -fno-unit-at-a-time... " >&6; }
@@ -25195,6 +25654,14 @@ else
   WANT_DEBUGGER_FALSE=
 fi
 
+ if false; then
+  WANT_FANCY_SCALERS_TRUE=
+  WANT_FANCY_SCALERS_FALSE='#'
+else
+  WANT_FANCY_SCALERS_TRUE='#'
+  WANT_FANCY_SCALERS_FALSE=
+fi
+
 
 # Check whether --enable-debugger was given.
 if test "${enable_debugger+set}" = set; then :
@@ -25229,6 +25696,28 @@ fi
 if test x$enable_cjk_fonts = xyes; then
 
 $as_echo "#define WANT_INTERNAL_CJK 1" >>confdefs.h
+
+fi
+
+# Check whether --enable-fancy-scalers was given.
+if test "${enable_fancy_scalers+set}" = set; then :
+  enableval=$enable_fancy_scalers;
+else
+  enable_fancy_scalers=yes
+fi
+
+
+if test x$enable_fancy_scalers = xyes; then
+
+$as_echo "#define WANT_FANCY_SCALERS 1" >>confdefs.h
+
+		 if true; then
+  WANT_FANCY_SCALERS_TRUE=
+  WANT_FANCY_SCALERS_FALSE='#'
+else
+  WANT_FANCY_SCALERS_TRUE='#'
+  WANT_FANCY_SCALERS_FALSE=
+fi
 
 fi
 
@@ -25351,6 +25840,14 @@ fi
 else
   WANT_SNES_EMU_TRUE='#'
   WANT_SNES_EMU_FALSE=
+fi
+
+ if false; then
+  WANT_SNES_PERF_EMU_TRUE=
+  WANT_SNES_PERF_EMU_FALSE='#'
+else
+  WANT_SNES_PERF_EMU_TRUE='#'
+  WANT_SNES_PERF_EMU_FALSE=
 fi
 
  if false; then
@@ -25657,6 +26154,28 @@ fi
 
 fi
 
+# Check whether --enable-snes_perf was given.
+if test "${enable_snes_perf+set}" = set; then :
+  enableval=$enable_snes_perf;
+else
+  enable_snes_perf=no
+fi
+
+
+if test x$enable_snes_perf = xyes; then
+
+$as_echo "#define WANT_SNES_PERF_EMU 1" >>confdefs.h
+
+                 if true; then
+  WANT_SNES_PERF_EMU_TRUE=
+  WANT_SNES_PERF_EMU_FALSE='#'
+else
+  WANT_SNES_PERF_EMU_TRUE='#'
+  WANT_SNES_PERF_EMU_FALSE=
+fi
+
+fi
+
 # Check whether --enable-vb was given.
 if test "${enable_vb+set}" = set; then :
   enableval=$enable_vb;
@@ -25724,6 +26243,14 @@ fi
 else
   HAVE_DIRECTSOUND_TRUE='#'
   HAVE_DIRECTSOUND_FALSE=
+fi
+
+ if false; then
+  HAVE_WASAPI_TRUE=
+  HAVE_WASAPI_FALSE='#'
+else
+  HAVE_WASAPI_TRUE='#'
+  HAVE_WASAPI_FALSE=
 fi
 
  if false; then
@@ -26286,6 +26813,14 @@ else
 fi
 
 
+        ac_fn_cxx_check_header_mongrel "$LINENO" "audioclient.h" "ac_cv_header_audioclient_h" "$ac_includes_default"
+if test "x$ac_cv_header_audioclient_h" = xyes; then :
+  HAVE_WASAPI=true
+else
+  HAVE_WASAPI=false
+fi
+
+
 
         if $HAVE_DIRECTSOUND
         then
@@ -26301,6 +26836,22 @@ fi
 $as_echo "#define HAVE_DIRECTSOUND 1" >>confdefs.h
 
                 LIBS="-ldxguid -lwinmm -ldsound $LIBS"
+        fi
+
+        if $HAVE_WASAPI
+        then
+                 if true; then
+  HAVE_WASAPI_TRUE=
+  HAVE_WASAPI_FALSE='#'
+else
+  HAVE_WASAPI_TRUE='#'
+  HAVE_WASAPI_FALSE=
+fi
+
+
+$as_echo "#define HAVE_WASAPI 1" >>confdefs.h
+
+		LIBS="-lole32 $LIBS"
         fi
 
 
@@ -27307,7 +27858,7 @@ $as_echo "#define MPC_FIXED_POINT 1" >>confdefs.h
 LIBS="$SNDFILE_LIBS $LIBCDIO_LIBS $LIBS"
 CPPFLAGS="$LIBCDIO_CFLAGS $SNDFILE_CFLAGS $CPPFLAGS"
 
-ac_config_files="$ac_config_files Makefile src/Makefile src/drivers/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pc/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/demo/Makefile src/desa68/Makefile po/Makefile.in intl/Makefile"
+ac_config_files="$ac_config_files Makefile src/Makefile src/drivers/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pc/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/snes_perf/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/demo/Makefile src/desa68/Makefile po/Makefile.in intl/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -27446,8 +27997,16 @@ if test -z "${WANT_DEBUGGER_TRUE}" && test -z "${WANT_DEBUGGER_FALSE}"; then
   as_fn_error $? "conditional \"WANT_DEBUGGER\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${WANT_FANCY_SCALERS_TRUE}" && test -z "${WANT_FANCY_SCALERS_FALSE}"; then
+  as_fn_error $? "conditional \"WANT_FANCY_SCALERS\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${WANT_DEBUGGER_TRUE}" && test -z "${WANT_DEBUGGER_FALSE}"; then
   as_fn_error $? "conditional \"WANT_DEBUGGER\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${WANT_FANCY_SCALERS_TRUE}" && test -z "${WANT_FANCY_SCALERS_FALSE}"; then
+  as_fn_error $? "conditional \"WANT_FANCY_SCALERS\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_GB_EMU_TRUE}" && test -z "${WANT_GB_EMU_FALSE}"; then
@@ -27504,6 +28063,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_SNES_EMU_TRUE}" && test -z "${WANT_SNES_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_SNES_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${WANT_SNES_PERF_EMU_TRUE}" && test -z "${WANT_SNES_PERF_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"WANT_SNES_PERF_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_VB_EMU_TRUE}" && test -z "${WANT_VB_EMU_FALSE}"; then
@@ -27564,6 +28127,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_SNES_EMU_TRUE}" && test -z "${WANT_SNES_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_SNES_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${WANT_SNES_PERF_EMU_TRUE}" && test -z "${WANT_SNES_PERF_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"WANT_SNES_PERF_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_VB_EMU_TRUE}" && test -z "${WANT_VB_EMU_FALSE}"; then
@@ -27584,6 +28151,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_DIRECTSOUND_TRUE}" && test -z "${HAVE_DIRECTSOUND_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_DIRECTSOUND\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_WASAPI_TRUE}" && test -z "${HAVE_WASAPI_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_WASAPI\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_SDL_TRUE}" && test -z "${HAVE_SDL_FALSE}"; then
@@ -27628,6 +28199,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_DIRECTSOUND_TRUE}" && test -z "${HAVE_DIRECTSOUND_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_DIRECTSOUND\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_WASAPI_TRUE}" && test -z "${HAVE_WASAPI_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_WASAPI\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WIN32_TRUE}" && test -z "${WIN32_FALSE}"; then
@@ -28705,6 +29280,7 @@ do
     "src/wswan/Makefile") CONFIG_FILES="$CONFIG_FILES src/wswan/Makefile" ;;
     "src/nes/Makefile") CONFIG_FILES="$CONFIG_FILES src/nes/Makefile" ;;
     "src/snes/Makefile") CONFIG_FILES="$CONFIG_FILES src/snes/Makefile" ;;
+    "src/snes_perf/Makefile") CONFIG_FILES="$CONFIG_FILES src/snes_perf/Makefile" ;;
     "src/ngp/Makefile") CONFIG_FILES="$CONFIG_FILES src/ngp/Makefile" ;;
     "src/sound/Makefile") CONFIG_FILES="$CONFIG_FILES src/sound/Makefile" ;;
     "src/hw_cpu/Makefile") CONFIG_FILES="$CONFIG_FILES src/hw_cpu/Makefile" ;;

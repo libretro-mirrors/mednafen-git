@@ -9,17 +9,6 @@ on game load for each emulated system.
 Rewrite MDFNFILE in file.cpp to separate classes, ArchiveReader(takes a directory or archive filename) and ArchiveMemberReader(reads a file in a directory or a file
 in an archive).
 
-Fix C68K generator to work correctly when cross-compiling to a platform whose binaries can't run(through automatic emulation)
-on the build platform.
-
-In drivers/video.cpp, see if replacing "SDL_FillRect(screen, NULL, 0);" in ClearBackBuffer() with custom software-only
-code to clear it fixes framerate degradation problems on Windows when env var SDL_VIDEODRIVER=directx and setting vdriver=sdl
-Additionally, optimize ClearBackBuffer() to not clear parts of the screen that will be overwritten by normal non-OSD
-blitting, and do testing for the vdriver=overlay case.
-
-In drivers/video.cpp, allocate video scaler pixel buffers separately from the SDL_Surface itself, and realloc() to larger
-sizes when necessary(but never realloc() to smaller sizes), and free() only on video deinitialization.
-
 Switch hotkey/command key processing over to be event-based rather than instantaneous-state based?  Consider implications for ckdelay, hotkey
 logical AND mode.
 
@@ -84,6 +73,11 @@ Settings:
 	
 
 Video:
+	Mixed-horizontal-resolution screens have Y coordinate precision issues in regards to rendering(in drivers/video.cpp), which
+	can cause vertical subscreen positioning to be off in the case of non-integer vertical scaling, which will cause parts of the
+	screen to jitter/bounce slightly in certain cases in some games(Seiken Densetsu 3 dialogue boxes are a good example).
+	TODO is to fix it, obviously. ;)
+
 	Refactor hq2x, scale2x, 2xsai, etc. filtering code into classes based off an abstract base class.
 
 	Add a "tblur.handle_gamma" setting that, when enabled, will cause gamma-correct temporal blurring.
@@ -91,10 +85,14 @@ Video:
 Sound:
 	Handle sound being disabled.
 
+	Handle sound device failures(e.g. USB device removals, or a doofy user disabling the device in Windows whil Mednafen
+	is using it) more gracefully.
+
 	Open sound device in the game thread, and close it in the game thread, since the game thread is what writes to it.
 
 Backup memory:
-	SRAM delta log and/or backing up of previous save game files.
+	Create a backup of the non-volatile memory(save-RAM) file the first time it is overwritten/replaced since emulator
+	startup(incidentally, in cases other than for PSX, this first time will generally occur on emulator exit).
 
 PCE_FAST:
 	MWR latching!

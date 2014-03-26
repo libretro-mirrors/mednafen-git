@@ -3,14 +3,17 @@
 void SuperFX::disassemble_opcode(char *output) {
   *output = 0;
 
-  if(!regs.sfr.alt2) {
-    if(!regs.sfr.alt1) {
+  //if(!regs.sfr.alt2) {
+  if(!(regs.sfr.alt & 0x200)) {
+    //if(!regs.sfr.alt1) {
+    if(!(regs.sfr.alt & 0x100)) {
       disassemble_alt0(output);
     } else {
       disassemble_alt1(output);
     }
   } else {
-    if(!regs.sfr.alt1) {
+    //if(!regs.sfr.alt1) {
+    if(!(regs.sfr.alt & 0x100)) {
       disassemble_alt2(output);
     } else {
       disassemble_alt3(output);

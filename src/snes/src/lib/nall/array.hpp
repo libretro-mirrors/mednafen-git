@@ -6,7 +6,7 @@
 #include <nall/algorithm.hpp>
 #include <nall/bit.hpp>
 
-namespace nall {
+namespace nall_v059 {
   //dynamic vector array
   //neither constructor nor destructor is ever invoked;
   //thus, this should only be used for POD objects.

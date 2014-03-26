@@ -9,6 +9,9 @@ SNES emulation is based off of <a href="http://byuu.org/">bsnes</a> v0.59, with 
  <li>blargg_libco_ppc64-5</li>
  <li>nall serializer 64-bit type bugfix backport</li>
  <li>a few minor timing/scheduler related changes</li>
+ <li>Minor SuperFX emulation optimizations</li>
+ <li>Minor S-SMP emulation optimizations</li>
+ <li>Modified blending behavior when in hi-res modes</li>
 </ul>
 <p>
 SNSF playback is supported to a degree; however, its implementation in Mednafen is incomplete.

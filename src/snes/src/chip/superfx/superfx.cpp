@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define SUPERFX_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 #include "serialization.cpp"
 #include "bus/bus.cpp"
@@ -25,7 +25,9 @@ void SuperFX::enter() {
       continue;
     }
 
-    (this->*opcode_table[(regs.sfr & 0x0300) + peekpipe()])();
+    //(this->*opcode_table[(regs.sfr & 0x0300) + peekpipe()])();
+    //do_op((regs.sfr & 0x0300) + peekpipe());
+    do_op((regs.sfr.alt & 1023) | peekpipe());
     if(r15_modified == false) regs.r[15]++;
 
     if(++instruction_counter >= 128) {
@@ -36,7 +38,6 @@ void SuperFX::enter() {
 }
 
 void SuperFX::init() {
-  initialize_opcode_table();
   regs.r[14].on_modify = bind(&SuperFX::r14_modify, this);
   regs.r[15].on_modify = bind(&SuperFX::r15_modify, this);
 }

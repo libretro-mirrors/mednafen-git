@@ -1,7 +1,7 @@
 #ifndef NALL_BIT_HPP
 #define NALL_BIT_HPP
 
-namespace nall {
+namespace nall_v059 {
   template<int bits> inline unsigned uclamp(const unsigned x) {
     enum { y = (1U << bits) - 1 };
     return y + ((x - y) & -(x < y));  //min(x, y);

@@ -181,6 +181,12 @@ static int EventFilter(const SDL_Event *event)
                                 efbc.ButtType = BUTTC_KEYBOARD;
                                 efbc.DeviceNum = 0;
                                 efbc.ButtonNum = event->key.keysym.sym;
+
+				if(0 == event->key.keysym.sym)
+				 printf("*** NULL KEYSYM! ***\n");
+
+				//printf("%u\n", event->key.keysym.sym);
+
                                 if(efck)
                                         efbc.ButtonNum |= ((event->key.keysym.mod & KMOD_ALT) ? (ICSS_ALT<<24):0) | ((event->key.keysym.mod & KMOD_SHIFT) ? (ICSS_SHIFT<<24):0) | ((event->key.keysym.mod & KMOD_CTRL) ? (ICSS_CTRL<<24):0);
 				efbcdone = 1;

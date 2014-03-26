@@ -1221,8 +1221,8 @@ int32 PS_SPU::EndFrame(int16 *SoundBuf)
  }
  else if(resampler)
  {
-  spx_uint32_t in_len;
-  spx_uint32_t out_len;
+  spx_uint32_t in_len; // "Number of input samples in the input buffer. Returns the number of samples processed. This is all per-channel."
+  spx_uint32_t out_len; // "Size of the output buffer. Returns the number of samples written. This is all per-channel."
 
   in_len = IntermediateBufferPos;
   out_len = 524288; //8192;	// FIXME, real size.

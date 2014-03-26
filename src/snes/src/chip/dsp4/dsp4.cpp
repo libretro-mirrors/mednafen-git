@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define DSP4_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 DSP4 dsp4;
 

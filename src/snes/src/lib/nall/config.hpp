@@ -5,7 +5,7 @@
 #include <nall/string.hpp>
 #include <nall/vector.hpp>
 
-namespace nall {
+namespace nall_v059 {
   namespace configuration_traits {
     template<typename T> struct is_boolean { enum { value = false }; };
     template<> struct is_boolean<bool> { enum { value = true }; };

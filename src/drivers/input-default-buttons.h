@@ -364,7 +364,7 @@ static const ButtConfig CDPlayInputConfig[] =
 
 static const ButtConfig MDPad3Config[2][8] =
 {
- { MK(w), MK(s), MK(a), MK(d), MK(KP1), MK(KP2), MK(KP3), MK(RETURN) },
+ { MK(w), MK(s), MK(a), MK(d), MK(KP2), MK(KP3), MK(KP1), MK(RETURN) },
  { MKZ(), MKZ(), MKZ(), MKZ(), MKZ(),   MKZ(),   MKZ(),   MKZ() },
 
 };
@@ -558,6 +558,10 @@ static DefaultSettingsMeow defset[] =
  { "snes.input.port1.gamepad", SNESPadConfig, sizeof(SNESPadConfig) / sizeof(ButtConfig) },
  { "snes.input.port1.mouse", SNESMouseConfig, sizeof(SNESMouseConfig) / sizeof(ButtConfig) },
  { "snes.input.port2.mouse", SNESMouseConfig, sizeof(SNESMouseConfig) / sizeof(ButtConfig) },
+
+ { "snes_perf.input.port1.gamepad", SNESPadConfig, sizeof(SNESPadConfig) / sizeof(ButtConfig) },
+ { "snes_perf.input.port1.mouse", SNESMouseConfig, sizeof(SNESMouseConfig) / sizeof(ButtConfig) },
+ { "snes_perf.input.port2.mouse", SNESMouseConfig, sizeof(SNESMouseConfig) / sizeof(ButtConfig) },
 
  { "psx.input.port1.gamepad", PSXPadConfig, sizeof(PSXPadConfig) / sizeof(ButtConfig) },
 

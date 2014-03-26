@@ -11,6 +11,7 @@ static const unsigned bsnesSerializerVersion = 4;
 
 //enable debugging extensions (~15% speed hit)
 //#define DEBUGGER
+#undef DEBUGGER
 
 #include <libco/libco.h>
 
@@ -32,7 +33,8 @@ static const unsigned bsnesSerializerVersion = 4;
 #include <nall/string.hpp>
 #include <nall/utility.hpp>
 #include <nall/vector.hpp>
-using namespace nall;
+
+using namespace nall_v059;
 
 typedef int8_t   int8;
 typedef int16_t  int16;

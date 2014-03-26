@@ -8,7 +8,7 @@
 #include <nall/stdint.hpp>
 #include <nall/string.hpp>
 
-namespace nall {
+namespace nall_v059 {
 
 struct Keyboard;
 Keyboard& keyboard(unsigned = 0);

@@ -4,7 +4,7 @@
   #define debugvirtual
 #endif
 
-namespace SNES {
+namespace bSNES_v059 {
   struct ChipDebugger {
     virtual bool property(unsigned id, string &name, string &value) = 0;
   };
@@ -13,15 +13,12 @@ namespace SNES {
   #include "memory/smemory/smemory.hpp"
 
   #include "ppu/ppu.hpp"
-  #include "ppu/bppu/bppu.hpp"
 
   #include "cpu/cpu.hpp"
   #include "cpu/core/core.hpp"
   #include "cpu/scpu/scpu.hpp"
 
   #include "smp/smp.hpp"
-  #include "smp/core/core.hpp"
-  #include "smp/ssmp/ssmp.hpp"
 
   #include "dsp/dsp.hpp"
   #include "dsp/sdsp/sdsp.hpp"

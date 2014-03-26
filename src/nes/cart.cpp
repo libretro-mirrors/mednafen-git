@@ -549,8 +549,6 @@ bool Genie_Init(void)
  }
 
  GenieBIOSHooksInstalled = FALSE;
- memset(AReadGG, 0, sizeof(AReadGG));
- memset(BWriteGG, 0, sizeof(BWriteGG));
 
  for(int x = 0; x < 3; x++)
  {

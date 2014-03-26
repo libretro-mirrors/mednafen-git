@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define SMP_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 //this is the IPLROM for the S-SMP coprocessor.
 //the S-SMP does not allow writing to the IPLROM.
@@ -45,3 +45,6 @@ const uint8_t SMP::iplrom[64] = {
 };
 
 };
+
+#include "core/core.cpp"
+#include "ssmp/ssmp.cpp"

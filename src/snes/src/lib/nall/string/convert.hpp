@@ -160,7 +160,7 @@ size_t strhex(char *str, uintmax_t value, size_t length /* = 0 */) {
   int digits = digits_integral;
   if(!str) return digits + 1;  //only computing required length?
 
-  length = nall::min(digits, length - 1);
+  length = nall_v059::min(digits, length - 1);
   str += length;  //seek to end of target string
   *str = 0;  //set null terminator
 
@@ -170,7 +170,7 @@ size_t strhex(char *str, uintmax_t value, size_t length /* = 0 */) {
     *--str = x < 10 ? (x + '0') : (x + 'a' - 10);  //iterate backwards to write string
   }
 
-  return nall::min(initial_length, digits + 1);
+  return nall_v059::min(initial_length, digits + 1);
 }
 
 size_t strsigned(char *str, intmax_t value_, size_t length /* = 0 */) {
@@ -188,7 +188,7 @@ size_t strsigned(char *str, intmax_t value_, size_t length /* = 0 */) {
   int digits = (negate ? 1 : 0) + digits_integral;
   if(!str) return digits + 1;  //only computing required length?
 
-  length = nall::min(digits, length - 1);
+  length = nall_v059::min(digits, length - 1);
   str += length;  //seek to end of target string
   *str = 0;  //set null terminator
   while(length && digits_integral--) {
@@ -202,7 +202,7 @@ size_t strsigned(char *str, intmax_t value_, size_t length /* = 0 */) {
     *--str = '-';
   }
 
-  return nall::min(initial_length, digits + 1);
+  return nall_v059::min(initial_length, digits + 1);
 }
 
 size_t strunsigned(char *str, uintmax_t value, size_t length /* = 0 */) {
@@ -217,7 +217,7 @@ size_t strunsigned(char *str, uintmax_t value, size_t length /* = 0 */) {
   int digits = digits_integral;
   if(!str) return digits_integral + 1;  //only computing required length?
 
-  length = nall::min(digits, length - 1);
+  length = nall_v059::min(digits, length - 1);
   str += length;  //seek to end of target string
   *str = 0;  //set null terminator
 
@@ -227,7 +227,7 @@ size_t strunsigned(char *str, uintmax_t value, size_t length /* = 0 */) {
     *--str = x;  //iterate backwards to write string
   }
 
-  return nall::min(initial_length, digits + 1);
+  return nall_v059::min(initial_length, digits + 1);
 }
 
 size_t strbin(char *str, uintmax_t value, size_t length /* = 0 */) {
@@ -242,7 +242,7 @@ size_t strbin(char *str, uintmax_t value, size_t length /* = 0 */) {
   int digits = digits_integral;
   if(!str) return digits + 1;  //only computing required length?
 
-  length = nall::min(digits, length - 1);
+  length = nall_v059::min(digits, length - 1);
   str += length;  //seek to end of target string
   *str = 0;  //set null terminator
 
@@ -252,7 +252,7 @@ size_t strbin(char *str, uintmax_t value, size_t length /* = 0 */) {
     *--str = x;  //iterate backwards to write string
   }
 
-  return nall::min(initial_length, digits + 1);
+  return nall_v059::min(initial_length, digits + 1);
 }
 
 //using sprintf is certainly not the most ideal method to convert

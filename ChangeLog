@@ -1,3 +1,165 @@
+-- 0.9.29-WIP: --
+
+July 26, 2013:
+	Manually replaced m4/iconv.m4 with the copy from the latest gettext, and modified it slightly, to fix build errors on
+	some non-glibc-utilizing platforms(e.g. my Win32 toolchain setup).
+
+	Fixed a bug that broke(sometimes crashing Mednafen) displaying of long lines in the console viewport(cheats, netplay).
+
+July 24, 2013:
+	SNES: Fixed a couple of bugs that could cause memory corruption when a corrupted/bad save state is loaded.  (Bad save states being
+	loaded can still cause the emulator to lock up or trigger an assert(), and that's probably never going to be fixed, at least
+	with the SNES emulation core).
+
+July 22, 2013:
+	SNES: Implemented code for more aggressive frameskipping, but currently disabled pending further contemplation.
+
+	Removed some unused files from the SNES emulation code tree.
+
+July 17, 2013:
+	SNES: Changed hires blending algorithm, and only blend when in pseudo-hires mode(which is "cheating" a bit, but is ultimately
+	the best solution I've found to blend/blur what needs to be while preserving pixel clarity).
+
+July 15, 2013:
+	SNES: Implemented partial frameskipping support(won't affect emulation from the view of the emulated program/game, and it is disabled
+	when interlacing is enabled).
+
+	SNES: Changed it so the Mednafen core does deinterlacing, instead of the bsnes core; improves performance slightly when games
+	are in interlaced mode.
+
+July 14, 2013:
+	WASAPI: Prevent complete Mednafen lockup when a device invalidation error occurs after successful initialization.
+
+	WASAPI: Fixed sample format conversion/volume issues with > 16-bit formats.
+
+July 13, 2013:
+	SNES: Smashed some PPU emulation files together just 'cause.
+
+	SNES: Made minor structural optimizations to S-SMP emulation.
+
+July 12, 2013:
+	SNES: Made minor structural(shouldn't affect emulation accuracy) optimizations to SuperFX emulation.
+
+July 11, 2013:
+	Added support for additional formats and rates to the new, experimental WASAPI exclusive-mode driver; fixes audio output on my
+	Echo Mia MIDI sound card.
+	
+May 28, 2013:
+	CDPLAY: Added boolean setting "cdplay.visualization", default value of "1", to allow disabling of the CPU-intensive
+	simplistic waveform visualization effect.
+
+	CDPLAY: Reduced horizontal and vertical resolutions to 60% of their previous values, to reduce CPU usage.
+
+April 20, 2013:
+	Fixed a typo-bug that would cause Mednafen to crash when, in addition to the host, the port was specified via the
+	/server command in the netplay console.
+
+April 3, 2013:
+	Lynx:  Fixed an audio bug(or alternatively, replaced with kludges ;)) that was breaking the "mwahahaha" audio from the spiderthing in Gates of Zendocon, per a bug
+	report and code patch from "sage".
+
+	The "autoip" and "autoipsharper" pixel shaders weren't working properly when the screen was rotated(such as via ALT+O); fixed.
+
+March 23, 2013:
+	PSX: Changed Read* and Play CD command processing, and added support for playing CD-DA via the Read* commands coupled with
+	bit0 of the mode set via SetMode; fixes music resumption after pause issue in "Mortal Kombat Trilogy".
+
+March 19, 2013:
+	Rearranged the psg_channel struct in pce_psg.h a bit to potentially allow for tiny performance improvements on some
+	architectures.
+
+	PCE_FAST:  Made a few micro-optimizations to the BG rendering code.
+
+March 17, 2013:
+	PCE_FAST:  Added a runtime check for "cmov" instruction availability on 32-bit x86, and an alternate VDC BG/SPR mixing function
+	that avoids using it when it's not available.  Fixes an illegal instruction-related crash on older 
+	non-Intel CPUs(like AMD K6-III+), and Intel CPUs older than Pentium Pro(though I doubt that even a 233MHz Pentium MMX is fast enough to
+	run it fullspeed anyway).
+
+	Added a compiler version check to avoid utilization of "fastcall" calling convention when compiling with a version of
+	gcc older than 4.1.0, as the older versions of gcc have code generation bugs relating to fastcall/regparm(though I'm not
+	sure if Mednafen will even compile at all with those older versions...).
+
+	Repositioned the FPS display position when in SDL software rendering mode such that it won't cause a potentially
+	expensive backbuffer clear operation for every frame which would compromise the accuracy/usefulness of the FPS display.
+
+	Fixed some bugs with the SDL software rendering mode fallback used when the "opengl" vdriver is selected but OpenGL initialization
+	failed(doubled-buffered video wasn't being specified in this fallback case, which led to massive screen flickering when an OSD
+	element was active).
+
+March 14, 2013:
+	Added a configure script option to build without fancy software scalers(hq2x, 2xsai, scale2x, and the like).
+
+	Replaced ancient rectangle drawing code with newer, slightly different code!
+
+February 24, 2013:
+	Renamed edc_lec_check_correct() to edc_lec_check_and_correct().
+
+February 19, 2013:
+	SNES: Use higher-quality, but more CPU-intensive(and slightly higher latency, on the order of about 1ms), speex resampler
+	instead of Fir_Resampler.
+
+	PC-FX: Save-game RAM is no longer stored compressed.
+
+	PCE, PCE_FAST: BRAM save-game RAM is no longer stored compressed.
+
+	Optimized special scalers slightly by not initializing dynamically allocated memory for pixel data, since it's overwritten in
+	totality by the special scalers anyway.
+
+	Added a parameter to MDFN_Surface()'s constructor to allow the creation of a surface without initializing its pixel
+	data to zero.
+
+	Added a kludge to try to clear all OpenGL backbuffers(when necessary) when an OpenGL implementation with forced
+	triple-buffering is used.
+
+	Changed code so that the video backbuffer won't be needlessly cleared due to OSD presence if the OSD is only
+	displayed in portions of the screen that are overwritten each frame anyway during normal emulated video blitting.
+
+February 18, 2013:
+	When recording a QuickTime movie and the sound output rate is greater than 64000Hz, resample the audio stream written
+	to the QuickTime file to 64000Hz, as the QuickTime format has issues with sound rates greater than 65535Hz.
+
+February 14, 2013:
+	Removed MDFND_KillThread().
+
+	Worked around x87 excess-precision problems that were causing nonsensical error messages to be printed in some circumstances
+	when parsing the settings file.  I'm so tempted to just compile with -mfpmath=sse when compiling for 32-bit x86...
+
+	Fixed broken error messages printed out when an error occurs when loading the settings file.
+
+	SexyAL:
+		Changed DirectSound buffer writing algorithm to write up to an extra ~30ms of sound data beyond the
+		effective buffer size on sound writes, and then synchronize(IE wait) to the effective buffer size 
+		after the data is written, to slightly reduce the chance of sound buffer underruns and sound glitches on a loaded
+		system.
+
+		Changed DirectSound buffer underrun handling to better preserve the flow of emulated time.
+
+		Use a dynamically-allocated buffer sized to fit 25ms of output-device-format audio as the sound conversion target
+		buffer, rather than a statically-allocated fixed-size buffer that could only fit a very small amount of audio data
+		(time-wise) at higher output sample rates.
+
+		Added channel deinterleaving into the main audio format conversion code, and removed the driver-specific deinterleaving
+		code from the "ALSA" and "JACK" driver code.
+
+		Fixed a potential buffer overrun bug when converting 1-channel audio from one sample format to another(it's unlikely to
+		have triggered a crash though, due to the size of the sound buffers used and doing the conversion in chunks).
+
+		Added logic to the "SDL" and "JACK" output driver code so that the internal software buffers won't overflow if a
+		large amount of data is passed to it at once(which wouldn't have happened anyway, since there's protection code
+		in the SexyAL core to prevent that, but that protection code is in need of removal or updating).
+
+January 27, 2013:
+	Added a floating-point-related compiler code generation bug test to tests.cpp.
+
+January 20, 2013:
+	Changed endian detection in tremor header files to hopefully fix a compilation problem on Haiku.
+
+January 19, 2013:
+	SNES: Renamed some functions to fix a compilation problem on "ALT Linux".
+
+	MD: Fixed broken default key assignments for emulated 3-button gamepads(for the A, B, and C buttons).
+
 -- 0.9.28-WIP: --
 
 January 13, 2013:

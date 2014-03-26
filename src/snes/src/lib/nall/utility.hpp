@@ -1,7 +1,7 @@
 #ifndef NALL_UTILITY_HPP
 #define NALL_UTILITY_HPP
 
-namespace nall {
+namespace nall_v059 {
   template<typename T>
   inline void swap(T &x, T &y) {
     T temp(x);

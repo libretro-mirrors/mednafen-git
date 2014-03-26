@@ -204,7 +204,10 @@ INLINE T PS_CPU::ReadMemory(pscpu_timestamp_t &timestamp, uint32 address, bool D
 {
  T ret;
 
+ //if((address - 0x1F800000) > 0x400)
  timestamp += 2;
+ //else
+ // printf("MOO: 0x%08x\n", address);
  //timestamp++;
  //assert(!(CP0.SR & 0x10000));
 

@@ -48,7 +48,7 @@
 //writeonly<foo> bar;
 //bar = true;
 
-namespace nall {
+namespace nall_v059 {
   template<typename C> struct property {
     template<typename T> struct traits { typedef T type; };
 

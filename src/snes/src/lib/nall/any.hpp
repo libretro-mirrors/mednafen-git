@@ -5,7 +5,7 @@
 #include <nall/static.hpp>
 #include <nall/traits.hpp>
 
-namespace nall {
+namespace nall_v059 {
   class any {
   public:
     bool empty() const { return container; }

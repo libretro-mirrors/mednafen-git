@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define SA1_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 SA1 sa1;
 

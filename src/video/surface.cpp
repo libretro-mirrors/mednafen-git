@@ -64,9 +64,9 @@ MDFN_Surface::MDFN_Surface()
  h = 0;
 }
 
-MDFN_Surface::MDFN_Surface(void *const p_pixels, const uint32 p_width, const uint32 p_height, const uint32 p_pitchinpix, const MDFN_PixelFormat &nf)
+MDFN_Surface::MDFN_Surface(void *const p_pixels, const uint32 p_width, const uint32 p_height, const uint32 p_pitchinpix, const MDFN_PixelFormat &nf, const bool alloc_init_pixels)
 {
- Init(p_pixels, p_width, p_height, p_pitchinpix, nf);
+ Init(p_pixels, p_width, p_height, p_pitchinpix, nf, alloc_init_pixels);
 }
 
 #if 0
@@ -92,7 +92,8 @@ void MDFN_Surface::Resize(const uint32 p_width, const uint32 p_height, const uin
  h = p_height;
 }
 #endif
-void MDFN_Surface::Init(void *const p_pixels, const uint32 p_width, const uint32 p_height, const uint32 p_pitchinpix, const MDFN_PixelFormat &nf)
+
+void MDFN_Surface::Init(void *const p_pixels, const uint32 p_width, const uint32 p_height, const uint32 p_pitchinpix, const MDFN_PixelFormat &nf, const bool alloc_init_pixels)
 {
  void *rpix = NULL;
  assert(nf.bpp == 8 || nf.bpp == 16 || nf.bpp == 32);
@@ -133,7 +134,12 @@ void MDFN_Surface::Init(void *const p_pixels, const uint32 p_width, const uint32
  }
  else
  {
-  if(!(rpix = calloc(1, p_pitchinpix * p_height * (nf.bpp / 8))))
+  if(alloc_init_pixels)
+   rpix = calloc(1, p_pitchinpix * p_height * (nf.bpp / 8));
+  else
+   rpix = malloc(p_pitchinpix * p_height * (nf.bpp / 8));
+
+  if(!rpix)
   {
    ErrnoHolder ene(errno);
 

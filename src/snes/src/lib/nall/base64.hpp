@@ -4,7 +4,7 @@
 #include <string.h>
 #include <nall/stdint.hpp>
 
-namespace nall {
+namespace nall_v059 {
   class base64 {
   public:
     static bool encode(char *&output, const uint8_t* input, unsigned inlength) {

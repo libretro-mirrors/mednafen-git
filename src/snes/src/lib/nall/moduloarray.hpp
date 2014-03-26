@@ -3,7 +3,7 @@
 
 #include <nall/serializer.hpp>
 
-namespace nall {
+namespace nall_v059 {
   template<typename T, int size> class modulo_array {
   public:
     inline T operator[](int index) const {

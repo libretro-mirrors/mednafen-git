@@ -1,3 +1,8 @@
+/*
+ Modified Feb 14, 2013, to write through a pointer variable instead of returning a double, to work around some
+ excess-precision problems with x87 FPU math.
+*/
+
 /* Copyright (C) 1991, 1992, 1997, 1999 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
@@ -62,7 +67,7 @@ extern int errno;
 
 /* Convert NPTR to a double.  If ENDPTR is not NULL, a pointer to the
    character after the last one used in the number is put in *ENDPTR.  */
-double world_strtod (const char *nptr, char **endptr)
+void world_strtod(const char *nptr, char **endptr, double *ret_out)
 {
   register const char *s;
   short int sign;
@@ -167,7 +172,7 @@ double world_strtod (const char *nptr, char **endptr)
     *endptr = (char *) s;
 
   if (num == 0.0)
-    return 0.0;
+    { *ret_out = 0.0; return; }
 
   /* Multiply NUM by 10 to the EXPONENT power,
      checking for overflow and underflow.  */
@@ -185,23 +190,24 @@ double world_strtod (const char *nptr, char **endptr)
 
   num *= pow (10.0, (double) exponent);
 
-  return num * sign;
+  { *ret_out = num * sign; return; }
 
 overflow:
   /* Return an overflow error.  */
   errno = ERANGE;
-  return HUGE_VAL * sign;
+  { *ret_out = HUGE_VAL * sign; return; }
 
 underflow:
   /* Return an underflow error.  */
   if (endptr != NULL)
     *endptr = (char *) nptr;
   errno = ERANGE;
-  return 0.0;
+  { *ret_out = 0.0; return; }
 
 noconv:
   /* There was no number.  */
   if (endptr != NULL)
     *endptr = (char *) nptr;
-  return 0.0;
+  { *ret_out = 0.0; return; }
 }
+

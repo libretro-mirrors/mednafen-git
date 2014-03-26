@@ -3,7 +3,7 @@
 
 //author: vladitx
 
-namespace nall {
+namespace nall_v059 {
   #define PTR(t, a) ((t*)(a))
 
   #define SWAP32(x) ((uint32_t)(           \

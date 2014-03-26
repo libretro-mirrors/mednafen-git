@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define MEMORY_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 namespace memory {
   MMIOAccess mmio;

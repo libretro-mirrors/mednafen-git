@@ -5,7 +5,7 @@
 #include <nall/static.hpp>
 #include <nall/traits.hpp>
 
-namespace nall {
+namespace nall_v059 {
   template<unsigned bits> class uint_t {
   private:
     enum { bytes = (bits + 7) >> 3 };  //minimum number of bytes needed to store value

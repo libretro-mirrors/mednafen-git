@@ -5,7 +5,7 @@
 #include <nall/new.hpp>
 #include <nall/stdint.hpp>
 
-namespace nall {
+namespace nall_v059 {
   class lzss {
   public:
     static bool encode(uint8_t *&output, unsigned &outlength, const uint8_t *input, unsigned inlength) {

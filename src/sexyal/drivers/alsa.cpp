@@ -46,7 +46,6 @@ typedef struct
 	snd_pcm_t *alsa_pcm;
 
 	uint32_t period_size;
-	int interleaved;
 	//bool heavy_sync;
 } ADStruct;
 
@@ -128,6 +127,8 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
 {
  ADStruct *ads = (ADStruct *)device->private_data;
 
+ //printf("%u\n", len);
+
  #if 0
  RawCanWrite(device);
  #endif
@@ -145,47 +146,16 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
 
   do
   {
-   if(ads->interleaved)
+   if(device->format.noninterleaved == false)
     snore = snd_pcm_writei(ads->alsa_pcm, data, len / (device->format.sampformat>>4) / device->format.channels);
    else
    {
-    if(device->format.channels == 1)
-    {
-     const void *foodata[1];
-     foodata[0] = data;
-     snore = snd_pcm_writen(ads->alsa_pcm, (void **)foodata, len / (device->format.sampformat>>4) / device->format.channels);
-    }
-    else
-    {
-     uint8_t meowdata[device->format.channels][len / device->format.channels] __attribute__ ((aligned(4)));
-     void *foodata[device->format.channels];
-     int i, ch;
-     int max_moo = len / (device->format.sampformat>>4) / device->format.channels;
-     int max_ch = device->format.channels;
+    void *foodata[device->format.channels];
 
-     for(ch = 0; ch < max_ch; ch++)
-      foodata[ch] = meowdata[ch];
+    for(unsigned ch = 0; ch < device->format.channels; ch++)
+     foodata[ch] = (uint8_t*)data + ch * (len / device->format.channels);
 
-     if((device->format.sampformat>>4) == 1)
-     {
-      for(ch = 0; ch < max_ch; ch++)
-       for(i = 0; i < max_moo; i++)
-        ((uint8_t *)meowdata[ch])[i] = ((const uint8_t *)data)[i * max_ch + ch];
-     }
-     else if((device->format.sampformat>>4) == 2)
-     {
-      for(ch = 0; ch < max_ch; ch++)
-       for(i = 0; i < max_moo; i++)
-        ((uint16_t *)meowdata[ch])[i] = ((const uint16_t *)data)[i * max_ch + ch];
-     }
-     else if((device->format.sampformat>>4) == 4)
-     {
-      for(ch = 0; ch < max_ch; ch++)
-       for(i = 0; i < max_moo; i++)
-        ((uint32_t *)meowdata[ch])[i] = ((const uint32_t *)data)[i * max_ch + ch];
-     }
-     snore = snd_pcm_writen(ads->alsa_pcm, foodata, max_moo);
-    }
+    snore = snd_pcm_writen(ads->alsa_pcm, foodata, len / (device->format.sampformat>>4) / device->format.channels);
    }
 
    if(snore <= 0)
@@ -214,7 +184,10 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
 
   } while(snore <= 0);
 
-  data = (const uint8_t*)data + snore * (device->format.sampformat>>4) * device->format.channels;
+  if(device->format.noninterleaved == false)
+   data = (const uint8_t*)data + snore * (device->format.sampformat>>4) * device->format.channels;
+  else
+   data = (const uint8_t*)data + snore * (device->format.sampformat>>4);
 
   len -= snore * (device->format.sampformat>>4) * device->format.channels;
 
@@ -321,7 +294,6 @@ SexyAL_device *SexyALI_ALSA_Open(const char *id, SexyAL_format *format, SexyAL_b
  snd_pcm_t *alsa_pcm = NULL;
  snd_pcm_hw_params_t *hw_params = NULL;
  snd_pcm_sw_params_t *sw_params = NULL;
- int interleaved = 1;
  int desired_pt;		// Desired period time, in MICROseconds.
  int desired_buffertime;	// Desired buffer time, in milliseconds
  //bool heavy_sync = FALSE;
@@ -349,11 +321,12 @@ SexyAL_device *SexyALI_ALSA_Open(const char *id, SexyAL_format *format, SexyAL_b
  ALSA_TRY(snd_pcm_hw_params_any(alsa_pcm, hw_params));
  ALSA_TRY(snd_pcm_hw_params_set_periods_integer(alsa_pcm, hw_params));
 
+ format->noninterleaved = false;
  if(snd_pcm_hw_params_set_access(alsa_pcm, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED) < 0)
  {
   puts("Interleaved format not supported, trying non-interleaved instead. :(");
   ALSA_TRY(snd_pcm_hw_params_set_access(alsa_pcm, hw_params, SND_PCM_ACCESS_RW_NONINTERLEAVED));
-  interleaved = 0;
+  format->noninterleaved = true;
  }
 
  if(snd_pcm_hw_params_set_format(alsa_pcm, hw_params, sampformat) < 0)
@@ -504,7 +477,6 @@ SexyAL_device *SexyALI_ALSA_Open(const char *id, SexyAL_format *format, SexyAL_b
 
  ads->alsa_pcm = alsa_pcm;
  ads->period_size = period_size;
- ads->interleaved = interleaved;
  //ads->heavy_sync = heavy_sync;
 
  device->private_data = ads;

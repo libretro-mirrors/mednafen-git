@@ -216,7 +216,7 @@ bool InitSound(MDFNGI *gi)
  format.channels = gi->soundchan;
 
  format.revbyteorder = 0;
-
+ format.noninterleaved = false;
  format.rate = gi->soundrate ? gi->soundrate : MDFN_GetSettingUI("sound.rate");
 
  buffering.ms = MDFN_GetSettingUI("sound.buffer_time");
@@ -285,7 +285,7 @@ bool InitSound(MDFNGI *gi)
   MDFN_indent(-2);
   return(FALSE);
  }
- MDFNI_printf(_("\nBits: %u\nRate: %u\nChannels: %u\nByte order: CPU %s\nBuffer size: %u sample frames(%f ms)\n"), (format.sampformat>>4)*8,format.rate,format.channels,format.revbyteorder?"Reversed":"Native", buffering.buffer_size, (double)buffering.buffer_size * 1000 / format.rate);
+ MDFNI_printf(_("\nBits: %u%s\nRate: %u\nChannels: %u%s\nByte order: CPU %s\nBuffer size: %u sample frames(%f ms)\n"), (format.sampformat>>4)*8, (format.sampformat == SEXYAL_FMT_PCMFLOAT) ? _(" (floating-point)") : "",format.rate,format.channels,format.noninterleaved ? _(" (non-interleaved) ") : "", format.revbyteorder?"Reversed":"Native", buffering.buffer_size, (double)buffering.buffer_size * 1000 / format.rate);
  MDFNI_printf(_("Latency: %u sample frames(%f ms)\n"), buffering.latency, (double)buffering.latency * 1000 / format.rate);
 
  if(buffering.period_size)
@@ -305,10 +305,11 @@ bool InitSound(MDFNGI *gi)
    MDFN_indent(-1);
   }
  }
- format.sampformat=SEXYAL_FMT_PCMS16;
- format.channels=gi->soundchan?gi->soundchan:1;
- format.revbyteorder=0;
 
+ format.sampformat = SEXYAL_FMT_PCMS16;
+ format.channels = gi->soundchan?gi->soundchan:1;
+ format.revbyteorder = 0;
+ format.noninterleaved = false;
  //format.rate=gi->soundrate?gi->soundrate:soundrate;
 
  Output->SetConvert(Output, &format);

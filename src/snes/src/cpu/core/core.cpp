@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define CPUCORE_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 #include "serialization.cpp"
 #include "algorithms.cpp"

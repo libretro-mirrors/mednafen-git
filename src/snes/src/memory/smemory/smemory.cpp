@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define SMEMORY_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 sBus bus;
 

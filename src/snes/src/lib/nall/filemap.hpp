@@ -16,7 +16,7 @@
   #include <sys/types.h>
 #endif
 
-namespace nall {
+namespace nall_v059 {
   class filemap {
   public:
     enum filemode { mode_read, mode_write, mode_readwrite, mode_writeread };

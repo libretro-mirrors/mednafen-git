@@ -1,6 +1,6 @@
 #ifdef SSMP_CPP
 
-void sSMP::add_clocks(unsigned clocks) {
+void SMP::add_clocks(unsigned clocks) {
   scheduler.addclocks_smp(clocks);
   #if !defined(DSP_STATE_MACHINE)
   scheduler.sync_smpdsp();
@@ -12,7 +12,7 @@ void sSMP::add_clocks(unsigned clocks) {
   scheduler.sync_smpcpu();
 }
 
-void sSMP::tick_timers() {
+void SMP::tick_timers() {
   t0.tick();
   t1.tick();
   t2.tick();

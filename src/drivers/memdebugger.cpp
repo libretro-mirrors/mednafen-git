@@ -664,7 +664,16 @@ void MemDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
 
    DrawTextTrans(pixels - 5, surface->pitchinpix << 2, rect->w, (UTF8 *)"Full waveform:", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
    pixels += 9 * pitch32;
-   MDFN_DrawRectangleFill(pixels, surface->pitchinpix, 0, 0, MK_COLOR_A(0xA0,0xA0,0xA0,0xFF), MK_COLOR_A(0,0,0,0xFF), 2 + wf_size * 2 + 2, 2 + (pcm_max + 1) + 2);
+
+   // BLECK, FIXME to not be so crazy.
+   {
+    uint32 tx, ty;
+
+    tx = (pixels - surface->pixels) % surface->pitchinpix;
+    ty = (pixels - surface->pixels) / surface->pitchinpix;
+
+    MDFN_DrawFillRect(surface, tx, ty, 2 + wf_size * 2 + 2, 2 + (pcm_max + 1) + 2, MK_COLOR_A(0xA0,0xA0,0xA0,0xFF), MK_COLOR_A(0,0,0,0xFF));
+   }
 
    ASpace->GetAddressSpaceBytes(ASpace->name, 0, wf_size, waveform);
 

@@ -34,13 +34,10 @@ void Video::draw_cursor(uint16_t color, int x, int y) {
       uint16_t pixelcolor = (pixel == 1) ? 0 : color;
 
       if(hires == false) {
-        *((uint16_t*)ppu.output + vy * 1024 +   0 + vx) = pixelcolor;
-        *((uint16_t*)ppu.output + vy * 1024 + 512 + vx) = pixelcolor;
+        *((uint16_t*)ppu.output + vy * 512 + vx) = pixelcolor;
       } else {
-        *((uint16_t*)ppu.output + vy * 1024 +   0 + vx * 2 + 0) = pixelcolor;
-        *((uint16_t*)ppu.output + vy * 1024 + 512 + vx * 2 + 0) = pixelcolor;
-        *((uint16_t*)ppu.output + vy * 1024 +   0 + vx * 2 + 1) = pixelcolor;
-        *((uint16_t*)ppu.output + vy * 1024 + 512 + vx * 2 + 1) = pixelcolor;
+        *((uint16_t*)ppu.output + vy * 512 + vx * 2 + 0) = pixelcolor;
+        *((uint16_t*)ppu.output + vy * 512 + vx * 2 + 1) = pixelcolor;
       }
     }
   }
@@ -65,13 +62,12 @@ void Video::update() {
   }
 
   if(frame_hires) width <<= 1;
-  if(frame_interlace) height <<= 1;
 
   system.interface->video_refresh(
-    data + yoffset * 1024,
-    /* pitch  = */ height <= 240 ? 2048 : 1024,
-    /* line[] = */ height <= 240 ? (pline_width + yoffset) : (iline_width + yoffset * 2),
-    width, height
+    data + yoffset * 512,
+    /* pitch  = */ 512 * sizeof(uint16),
+    /* line[] = */ pline_width + yoffset,
+    width, height, frame_interlace, frame_field
   );
 
   frame_hires = false;
@@ -82,9 +78,11 @@ void Video::scanline() {
   unsigned y = cpu.vcounter();
   if(y >= 240) return;
 
+  if(y == 0)
+   frame_field = cpu.field();
+
   unsigned width = (ppu.hires() == false ? 256 : 512);
   pline_width[y] = width;
-  iline_width[y * 2 + (int)cpu.field()] = width;
 
   frame_hires |= ppu.hires();
   frame_interlace |= ppu.interlace();
@@ -96,9 +94,9 @@ void Video::set_mode(Mode mode_) {
 
 void Video::init() {
   for(unsigned i = 0; i < 240; i++) pline_width[i] = 256;
-  for(unsigned i = 0; i < 480; i++) iline_width[i] = 256;
   frame_hires = false;
   frame_interlace = false;
+  frame_field = false;
   set_mode(ModeNTSC);
 }
 

@@ -93,17 +93,20 @@ am__v_at_0 = @
 libsexyal_a_AR = $(AR) $(ARFLAGS)
 libsexyal_a_LIBADD =
 am__libsexyal_a_SOURCES_DIST = sexyal.cpp convert.cpp \
-	drivers/dummy.cpp drivers/dsound.cpp drivers/oss.cpp \
-	drivers/jack.cpp drivers/sdl.cpp drivers/alsa.cpp
+	drivers/dummy.cpp drivers/dsound.cpp drivers/wasapi.cpp \
+	drivers/oss.cpp drivers/jack.cpp drivers/sdl.cpp \
+	drivers/alsa.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_DIRECTSOUND_TRUE@am__objects_1 = drivers/dsound.$(OBJEXT)
-@HAVE_OSSDSP_TRUE@am__objects_2 = drivers/oss.$(OBJEXT)
-@HAVE_JACK_TRUE@am__objects_3 = drivers/jack.$(OBJEXT)
-@HAVE_SDL_TRUE@am__objects_4 = drivers/sdl.$(OBJEXT)
-@HAVE_ALSA_TRUE@am__objects_5 = drivers/alsa.$(OBJEXT)
+@HAVE_WASAPI_TRUE@am__objects_2 = drivers/wasapi.$(OBJEXT)
+@HAVE_OSSDSP_TRUE@am__objects_3 = drivers/oss.$(OBJEXT)
+@HAVE_JACK_TRUE@am__objects_4 = drivers/jack.$(OBJEXT)
+@HAVE_SDL_TRUE@am__objects_5 = drivers/sdl.$(OBJEXT)
+@HAVE_ALSA_TRUE@am__objects_6 = drivers/alsa.$(OBJEXT)
 am_libsexyal_a_OBJECTS = sexyal.$(OBJEXT) convert.$(OBJEXT) \
 	drivers/dummy.$(OBJEXT) $(am__objects_1) $(am__objects_2) \
-	$(am__objects_3) $(am__objects_4) $(am__objects_5)
+	$(am__objects_3) $(am__objects_4) $(am__objects_5) \
+	$(am__objects_6)
 libsexyal_a_OBJECTS = $(am_libsexyal_a_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -268,6 +271,8 @@ SNDFILE_CFLAGS = @SNDFILE_CFLAGS@
 SNDFILE_LIBS = @SNDFILE_LIBS@
 SNES_EXTRA_CXXFLAGS = @SNES_EXTRA_CXXFLAGS@
 SNES_EXTRA_FLAGS = @SNES_EXTRA_FLAGS@
+SNES_PERF_EXTRA_CXXFLAGS = @SNES_PERF_EXTRA_CXXFLAGS@
+SNES_PERF_EXTRA_FLAGS = @SNES_PERF_EXTRA_FLAGS@
 SSE2_CFLAGS = @SSE2_CFLAGS@
 SSE3_CFLAGS = @SSE3_CFLAGS@
 SSE_CFLAGS = @SSE_CFLAGS@
@@ -345,9 +350,10 @@ AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libsexyal.a
 libsexyal_a_SOURCES = sexyal.cpp convert.cpp drivers/dummy.cpp \
-	$(TMP_DIRECTSOUND) $(TMP_OSSDSP) $(TMP_JACK) $(TMP_SDL) \
-	$(TMP_ALSA)
+	$(TMP_DIRECTSOUND) $(TMP_WASAPI) $(TMP_OSSDSP) $(TMP_JACK) \
+	$(TMP_SDL) $(TMP_ALSA)
 @HAVE_DIRECTSOUND_TRUE@TMP_DIRECTSOUND = drivers/dsound.cpp
+@HAVE_WASAPI_TRUE@TMP_WASAPI = drivers/wasapi.cpp
 @HAVE_OSSDSP_TRUE@TMP_OSSDSP = drivers/oss.cpp
 @HAVE_JACK_TRUE@TMP_JACK = drivers/jack.cpp
 @HAVE_SDL_TRUE@TMP_SDL = drivers/sdl.cpp
@@ -400,6 +406,8 @@ drivers/dummy.$(OBJEXT): drivers/$(am__dirstamp) \
 	drivers/$(DEPDIR)/$(am__dirstamp)
 drivers/dsound.$(OBJEXT): drivers/$(am__dirstamp) \
 	drivers/$(DEPDIR)/$(am__dirstamp)
+drivers/wasapi.$(OBJEXT): drivers/$(am__dirstamp) \
+	drivers/$(DEPDIR)/$(am__dirstamp)
 drivers/oss.$(OBJEXT): drivers/$(am__dirstamp) \
 	drivers/$(DEPDIR)/$(am__dirstamp)
 drivers/jack.$(OBJEXT): drivers/$(am__dirstamp) \
@@ -421,6 +429,7 @@ mostlyclean-compile:
 	-rm -f drivers/jack.$(OBJEXT)
 	-rm -f drivers/oss.$(OBJEXT)
 	-rm -f drivers/sdl.$(OBJEXT)
+	-rm -f drivers/wasapi.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
@@ -433,6 +442,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/jack.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/oss.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/sdl.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/wasapi.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\

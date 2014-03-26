@@ -416,6 +416,7 @@ if(!((Control & 0x2) && (Control & 0x2000)))
 
   case 0xe:
 	Baudrate = V;
+	//printf("%02x\n", V);
 	//MDFN_DispMessage("%02x\n", V);
 	break;
  }

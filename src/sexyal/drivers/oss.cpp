@@ -339,7 +339,7 @@ SexyAL_device *SexyALI_OSS_Open(const char *id, SexyAL_format *format, SexyAL_bu
  }
  format->rate = temp;
 
- device = (SexyAL_device *)malloc(sizeof(SexyAL_device));
+ device = (SexyAL_device *)calloc(1, sizeof(SexyAL_device));
  memcpy(&device->format,format,sizeof(SexyAL_format));
  memcpy(&device->buffering,buffering,sizeof(SexyAL_buffering));
 

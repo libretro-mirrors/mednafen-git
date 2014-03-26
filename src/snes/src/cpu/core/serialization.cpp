@@ -1,7 +1,7 @@
 #ifdef CPUCORE_CPP
 
 void CPUcore::core_serialize(serializer &s) {
-  s.integer(regs.pc.d);
+  s.integer(regs.pc); //.d);
 
   s.integer(regs.a.w);
   s.integer(regs.x.w);
@@ -25,8 +25,8 @@ void CPUcore::core_serialize(serializer &s) {
   s.integer(regs.wai);
   s.integer(regs.mdr);
 
-  s.integer(aa.d);
-  s.integer(rd.d);
+  s.integer(aa); //.d);
+  s.integer(rd); //.d);
   s.integer(sp);
   s.integer(dp);
 

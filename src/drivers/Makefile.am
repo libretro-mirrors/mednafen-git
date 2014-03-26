@@ -4,11 +4,13 @@ DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_srcdir
 
 noinst_LIBRARIES	=	libmdfnsdl.a
 
-#libmdfnsdl_a_CXXFLAGS = @SDL_CFLAGS@
 libmdfnsdl_a_SOURCES = input.cpp opengl.cpp main.cpp ers.cpp sound.cpp video.cpp netplay.cpp input-config.cpp
-libmdfnsdl_a_SOURCES += hqxx-common.cpp hq2x.cpp hq3x.cpp hq4x.cpp scale2x.c scale3x.c scalebit.c 2xSaI.cpp
 libmdfnsdl_a_SOURCES += args.cpp nnx.cpp nongl.cpp overlay.cpp console.cpp cheat.cpp fps.cpp 
 libmdfnsdl_a_SOURCES += help.cpp video-state.cpp shader.cpp remote.cpp
+
+if WANT_FANCY_SCALERS
+libmdfnsdl_a_SOURCES += hqxx-common.cpp hq2x.cpp hq3x.cpp hq4x.cpp scale2x.c scale3x.c scalebit.c 2xSaI.cpp
+endif
 
 libmdfnsdl_a_SOURCES += Joystick.cpp Joystick_SDL.cpp
 

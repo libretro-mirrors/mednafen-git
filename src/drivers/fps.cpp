@@ -137,7 +137,7 @@ void FPS_Draw(MDFN_Surface *target, const int xpos, const int ypos)
 
  CalcFramerates(virtfps, drawnfps, blitfps, 64);
 
- MDFN_DrawRectangleFill(target->pixels, target->pitch32, xpos, ypos, bg_color, bg_color, box_width, box_height);
+ MDFN_DrawFillRect(target, xpos, ypos, box_width, box_height, bg_color);
 
  DrawTextTrans(target->pixels + xpos + ypos * target->pitch32, target->pitch32 << 2, box_width, (UTF8*)virtfps, text_color, FALSE, TRUE);
  DrawTextTrans(target->pixels + xpos + (ypos + 7) * target->pitch32, target->pitch32 << 2, box_width, (UTF8*)drawnfps, text_color, FALSE, TRUE);
@@ -145,7 +145,7 @@ void FPS_Draw(MDFN_Surface *target, const int xpos, const int ypos)
 }
 
 #define MK_COLOR_A(surface, r,g,b,a) ( surface->MakeColor(r, g, b, a))
-void FPS_DrawToScreen(SDL_Surface *screen, int rs, int gs, int bs, int as)
+void FPS_DrawToScreen(SDL_Surface *screen, int rs, int gs, int bs, int as, unsigned offsx, unsigned offsy)
 {
  if(!isactive) 
  {
@@ -176,8 +176,8 @@ void FPS_DrawToScreen(SDL_Surface *screen, int rs, int gs, int bs, int as)
  DrawTextTrans(FPSSurface->pixels + 7 * 2 * FPSSurface->pitchinpix, FPSSurface->pitchinpix << 2, FPSSurface->w, (UTF8*)blitfps, MK_COLOR_A(FPSSurface, 0xFF, 0xFF, 0xFF, 0xFF), FALSE, TRUE);
 
  MDFN_Rect drect;
- drect.x = 0;
- drect.y = 0;
+ drect.x = offsx;
+ drect.y = offsy;
  drect.w = FPSRect.w;
  drect.h = FPSRect.h;
 

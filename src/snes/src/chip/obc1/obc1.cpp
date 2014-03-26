@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define OBC1_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 OBC1 obc1;
 

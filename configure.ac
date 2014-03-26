@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.28-WIP'
-MEDNAFEN_VERSION_NUMERIC=0x000928
+MEDNAFEN_VERSION='0.9.29-WIP'
+MEDNAFEN_VERSION_NUMERIC=0x000929
 
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
@@ -116,6 +116,10 @@ AX_CFLAGS_GCC_OPTION([-Wempty-body], WARNING_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wignored-qualifiers], WARNING_FLAGS)
 AC_SUBST(WARNING_FLAGS)
 
+# -----------------------------------
+# Begin snes/snes_perf flags
+#
+
 SNES_EXTRA_FLAGS=""
 SNES_EXTRA_CXXFLAGS=""
 AX_CFLAGS_GCC_OPTION([-Wno-unused], SNES_EXTRA_FLAGS)
@@ -131,6 +135,24 @@ AX_CFLAGS_GCC_OPTION([-Wno-switch], SNES_EXTRA_FLAGS)
 AC_SUBST(SNES_EXTRA_FLAGS)
 AC_SUBST(SNES_EXTRA_CXXFLAGS)
 
+SNES_PERF_EXTRA_FLAGS="$SNES_EXTRA_FLAGS"
+SNES_PERF_EXTRA_CXXFLAGS="$SNES_EXTRA_CXXFLAGS"
+
+# AX_CFLAGS_GCC_OPTION([-finline-functions], SNES_PERF_EXTRA_CXXFLAGS)
+AX_CFLAGS_GCC_OPTION([-funswitch-loops], SNES_PERF_EXTRA_CXXFLAGS)
+AX_CFLAGS_GCC_OPTION([-fpredictive-commoning], SNES_PERF_EXTRA_CXXFLAGS)
+AX_CFLAGS_GCC_OPTION([-fgcse-after-reload], SNES_PERF_EXTRA_CXXFLAGS)
+AX_CFLAGS_GCC_OPTION([-ftree-vectorize], SNES_PERF_EXTRA_CXXFLAGS)
+AX_CFLAGS_GCC_OPTION([-fipa-cp-clone], SNES_PERF_EXTRA_CXXFLAGS)
+AX_CFLAGS_GCC_OPTION([-fno-stack-protector], SNES_PERF_EXTRA_CXXFLAGS)
+
+AC_SUBST(SNES_PERF_EXTRA_FLAGS)
+AC_SUBST(SNES_PERF_EXTRA_CXXFLAGS)
+
+#
+# End snes/snes_perf flags
+# -----------------------------------
+
 GBA_EXTRA_FLAGS=""
 AX_CFLAGS_GCC_OPTION([-fno-unit-at-a-time], GBA_EXTRA_FLAGS)
 AC_SUBST(GBA_EXTRA_FLAGS)
@@ -142,6 +164,7 @@ AC_SUBST([AM_CFLAGS], "$MDFN_COMPAT_FLAGS $WARNING_FLAGS $OPTIMIZER_FLAGS $NO_ST
 AC_SUBST([AM_CXXFLAGS], "$MDFN_COMPAT_FLAGS $WARNING_FLAGS $OPTIMIZER_FLAGS $NO_STRICT_OVERFLOW_FLAGS")
 
 AM_CONDITIONAL(WANT_DEBUGGER, false)
+AM_CONDITIONAL(WANT_FANCY_SCALERS, false)
 
 AC_ARG_ENABLE(debugger,
  AC_HELP_STRING([--enable-debugger], [build with internal debugger [[default=yes]]]),
@@ -158,6 +181,15 @@ AC_ARG_ENABLE(cjk-fonts,
 
 if test x$enable_cjk_fonts = xyes; then
                 AC_DEFINE([WANT_INTERNAL_CJK], [1], [Define if we are compiling with internal CJK fonts.])
+fi
+
+AC_ARG_ENABLE(fancy-scalers,
+ AC_HELP_STRING([--enable-fancy-scalers], [build with fancy(2xsai, hq2x, etc.) CPU-intensive software video scalers [[default=yes]]]),
+                  , enable_fancy_scalers=yes)
+
+if test x$enable_fancy_scalers = xyes; then
+                AC_DEFINE([WANT_FANCY_SCALERS], [1], [Define if we are compiling with with fancy CPU-intensive software video scalers.])
+		AM_CONDITIONAL(WANT_FANCY_SCALERS, true)
 fi
 
 dnl
@@ -182,6 +214,7 @@ AM_CONDITIONAL(WANT_PCFX_EMU, false)
 AM_CONDITIONAL(WANT_PSX_EMU, false)
 AM_CONDITIONAL(WANT_SMS_EMU, false)
 AM_CONDITIONAL(WANT_SNES_EMU, false)
+AM_CONDITIONAL(WANT_SNES_PERF_EMU, false)
 AM_CONDITIONAL(WANT_VB_EMU, false)
 AM_CONDITIONAL(WANT_WSWAN_EMU, false)
 
@@ -303,6 +336,15 @@ if test x$enable_snes = xyes; then
                 AM_CONDITIONAL(WANT_SNES_EMU, true)
 fi
 
+AC_ARG_ENABLE(snes_perf,
+ AC_HELP_STRING([--enable-snes-perf], [build the separate, performance SNES emulation core(EXPERIMENTAL, DO NOT USE LEST YOU FORFEIT YOUR TOES) [[default=no]]]),
+                  , enable_snes_perf=no)
+
+if test x$enable_snes_perf = xyes; then
+                AC_DEFINE([WANT_SNES_PERF_EMU], [1], [Define if we are compiling with separate SNES-perf emulation.])
+                AM_CONDITIONAL(WANT_SNES_PERF_EMU, true)
+fi
+
 AC_ARG_ENABLE(vb,
  AC_HELP_STRING([--enable-vb], [build with Virtual Boy emulation [[default=yes]]]),
                   , enable_vb=yes)
@@ -325,6 +367,7 @@ fi
 AM_CONDITIONAL(HAVE_OSSDSP, false)
 AM_CONDITIONAL(HAVE_ALSA, false)
 AM_CONDITIONAL(HAVE_DIRECTSOUND, false)
+AM_CONDITIONAL(HAVE_WASAPI, false)
 AM_CONDITIONAL(HAVE_SDL, false)
 AM_CONDITIONAL(HAVE_JACK, false)
 
@@ -413,12 +456,20 @@ AM_CONDITIONAL(HAVE_LINUX_JOYSTICK, false)
 if expr x"$target" : 'x.*-mingw*' > /dev/null; then
 	CPPFLAGS="-mstackrealign $CPPFLAGS"
         AC_CHECK_HEADER([dsound.h],HAVE_DIRECTSOUND=true, HAVE_DIRECTSOUND=false)
+        AC_CHECK_HEADER([audioclient.h],HAVE_WASAPI=true, HAVE_WASAPI=false)
 
         if $HAVE_DIRECTSOUND
         then
                 AM_CONDITIONAL(HAVE_DIRECTSOUND,true)
                 AC_DEFINE([HAVE_DIRECTSOUND], [1], [Define if we are compiling with DirectSound support.])
                 LIBS="-ldxguid -lwinmm -ldsound $LIBS"
+        fi
+
+        if $HAVE_WASAPI
+        then
+                AM_CONDITIONAL(HAVE_WASAPI,true)
+                AC_DEFINE([HAVE_WASAPI], [1], [Define if we are compiling with WASAPI support.])
+		LIBS="-lole32 $LIBS"
         fi
 
         AC_DEFINE([PSS_STYLE],[2], [Defines the filesystem path-separator type.])
@@ -571,4 +622,4 @@ LIBS="$SNDFILE_LIBS $LIBCDIO_LIBS $LIBS"
 CPPFLAGS="$LIBCDIO_CFLAGS $SNDFILE_CFLAGS $CPPFLAGS"
 
 dnl Output Makefiles
-AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pc/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/demo/Makefile src/desa68/Makefile po/Makefile.in  intl/Makefile])
+AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pc/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/snes_perf/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/demo/Makefile src/desa68/Makefile po/Makefile.in  intl/Makefile])

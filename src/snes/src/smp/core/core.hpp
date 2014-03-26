@@ -1,5 +1,3 @@
-class SMPcore {
-public:
   #include "registers.hpp"
   #include "memory.hpp"
   #include "disassembler/disassembler.hpp"
@@ -7,9 +5,9 @@ public:
   regs_t regs;
   uint16 dp, sp, rd, wr, bit, ya;
 
-  virtual void op_io() = 0;
-  virtual uint8 op_read(uint16 addr) = 0;
-  virtual void op_write(uint16 addr, uint8 data) = 0;
+  //void op_io();
+  //uint8 op_read(uint16 addr);
+  //void op_write(uint16 addr, uint8 data);
 
   uint8  op_adc (uint8  x, uint8  y);
   uint16 op_addw(uint16 x, uint16 y);
@@ -69,28 +67,28 @@ public:
   void op_ret();
   void op_reti();
 
-  template<uint8 (SMPcore::*)(uint8, uint8), int> void op_read_reg_const();
-  template<uint8 (SMPcore::*)(uint8, uint8)> void op_read_a_ix();
-  template<uint8 (SMPcore::*)(uint8, uint8), int> void op_read_reg_dp();
-  template<uint8 (SMPcore::*)(uint8, uint8)> void op_read_a_dpx();
-  template<uint8 (SMPcore::*)(uint8, uint8), int> void op_read_reg_addr();
-  template<uint8 (SMPcore::*)(uint8, uint8), int> void op_read_a_addrr();
-  template<uint8 (SMPcore::*)(uint8, uint8)> void op_read_a_idpx();
-  template<uint8 (SMPcore::*)(uint8, uint8)> void op_read_a_idpy();
-  template<uint8 (SMPcore::*)(uint8, uint8)> void op_read_ix_iy();
-  template<uint8 (SMPcore::*)(uint8, uint8)> void op_read_dp_dp();
-  template<uint8 (SMPcore::*)(uint8, uint8)> void op_read_dp_const();
-  template<uint16 (SMPcore::*)(uint16, uint16)> void op_read_ya_dp();
+  template<uint8 (SMP::*)(uint8, uint8), int> void op_read_reg_const();
+  template<uint8 (SMP::*)(uint8, uint8)> void op_read_a_ix();
+  template<uint8 (SMP::*)(uint8, uint8), int> void op_read_reg_dp();
+  template<uint8 (SMP::*)(uint8, uint8)> void op_read_a_dpx();
+  template<uint8 (SMP::*)(uint8, uint8), int> void op_read_reg_addr();
+  template<uint8 (SMP::*)(uint8, uint8), int> void op_read_a_addrr();
+  template<uint8 (SMP::*)(uint8, uint8)> void op_read_a_idpx();
+  template<uint8 (SMP::*)(uint8, uint8)> void op_read_a_idpy();
+  template<uint8 (SMP::*)(uint8, uint8)> void op_read_ix_iy();
+  template<uint8 (SMP::*)(uint8, uint8)> void op_read_dp_dp();
+  template<uint8 (SMP::*)(uint8, uint8)> void op_read_dp_const();
+  template<uint16 (SMP::*)(uint16, uint16)> void op_read_ya_dp();
   void op_cmpw_ya_dp();
   template<int> void op_and1_bit();
   void op_eor1_bit();
   void op_not1_bit();
   template<int> void op_or1_bit();
 
-  template<uint8 (SMPcore::*)(uint8), int> void op_adjust_reg();
-  template<uint8 (SMPcore::*)(uint8)> void op_adjust_dp();
-  template<uint8 (SMPcore::*)(uint8)> void op_adjust_dpx();
-  template<uint8 (SMPcore::*)(uint8)> void op_adjust_addr();
+  template<uint8 (SMP::*)(uint8), int> void op_adjust_reg();
+  template<uint8 (SMP::*)(uint8)> void op_adjust_dp();
+  template<uint8 (SMP::*)(uint8)> void op_adjust_dpx();
+  template<uint8 (SMP::*)(uint8)> void op_adjust_addr();
   template<int> void op_adjust_addr_a();
   template<int> void op_adjustw_dp();
 
@@ -110,9 +108,6 @@ public:
   void op_mul_ya();
   void op_div_ya_x();
 
-  void (SMPcore::*opcode_table[256])();
-  void initialize_opcode_table();
+  void do_op(uint8 opv);
 
   void core_serialize(serializer&);
-  SMPcore();
-};

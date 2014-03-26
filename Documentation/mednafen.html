@@ -1,18 +1,19 @@
 
-
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
  <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>Mednafen General Documentation</title>
-  <link rel="stylesheet" type="text/css" media="screen, projection" href="mednafen.css" />
+  <link rel="stylesheet" type="text/css" media="screen, projection" href="mednafen.css">
  </head>
  <body>
-  <center><h1><img alt="Mednafen" src="mednafen.png" width="696" height="204" /></h1></center>
+  <center><h1><img alt="Mednafen" src="mednafen.png" width="696" height="204"></h1></center>
   <center><h1>General Documentation</h1></center>
-  <center><i>Last updated January 13, 2013<br />Valid as of 0.9.28-WIP</i></center>
- <p>
+  <center><i>Last updated July 26, 2013<br>Valid as of 0.9.29-WIP</i></center>
+ <p></p>
  <b>Table of Contents:</b>
- <ul><li /><a href="#Introduction">Introduction</a><ul><li /><a href="#Introduction%01Base+Directory">Base Directory</a><ul></ul></ul><li /><a href="#Core+Features">Core Features</a><ul><li /><a href="#Core+Features%01CD-ROM+Emulation">CD-ROM Emulation</a><ul><li /><a href="#Core+Features%01CD-ROM+Emulation%01Physical+CDs">Physical CDs</a><ul></ul><li /><a href="#Core+Features%01CD-ROM+Emulation%01Ripped+Disc+Images">Ripped Disc Images</a><ul></ul><li /><a href="#Core+Features%01CD-ROM+Emulation%01Multiple-CD+Games">Multiple-CD Games</a><ul></ul></ul></ul><li /><a href="#Security+Issues">Security Issues</a><ul><li /><a href="#Security+Issues%01Save+States">Save States</a><ul></ul><li /><a href="#Security+Issues%01CD+rips+and+PSF%28PSF1%2C+GSF%2C+etc.%29+Files">CD rips and PSF(PSF1, GSF, etc.) Files</a><ul></ul><li /><a href="#Security+Issues%01Network+Play">Network Play</a><ul></ul></ul><li /><a href="#Using+Mednafen">Using Mednafen</a><ul><li /><a href="#Using+Mednafen%01Key+Assignments">Key Assignments</a><ul></ul><li /><a href="#Using+Mednafen%01Command-line">Command-line</a><ul></ul><li /><a href="#Using+Mednafen%01Global+Settings+Reference">Global Settings Reference</a><ul></ul><li /><a href="#Using+Mednafen%01Firmware%2FBIOS">Firmware/BIOS</a><ul></ul><li /><a href="#Using+Mednafen%01Custom+Palettes">Custom Palettes</a><ul></ul><li /><a href="#Using+Mednafen%01Automatic+IPS+Patching">Automatic IPS Patching</a><ul></ul></ul><li /><a href="#Advanced+Usage">Advanced Usage</a><ul><li /><a href="#Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag">Minimizing video/audio/input Lag</a><ul><li /><a href="#Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag%01Hardware+Selection">Hardware Selection</a><ul></ul><li /><a href="#Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag%01Settings+to+Minimize+Video+Lag">Settings to Minimize Video Lag</a><ul></ul><li /><a href="#Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag%01Settings+to+Minimize+Audio+Lag">Settings to Minimize Audio Lag</a><ul></ul></ul></ul><li />Emulation Module Documentation<ul><li /><a href="lynx.html">Atari Lynx</a> [lynx]<ul></ul><li /><a href="gb.html">GameBoy (Color)</a> [gb]<ul></ul><li /><a href="gba.html">GameBoy Advance</a> [gba]<ul></ul><li /><a href="ngp.html">Neo Geo Pocket (Color)</a> [ngp]<ul></ul><li /><a href="nes.html">Nintendo Entertainment System/Famicom</a> [nes]<ul></ul><li /><a href="pce.html">PC Engine (CD)/TurboGrafx 16 (CD)/SuperGrafx</a> [pce]<ul></ul><li /><a href="pce_fast.html">PC Engine (CD)/TurboGrafx 16 (CD)/SuperGrafx</a> [pce_fast]<ul></ul><li /><a href="pcfx.html">PC-FX</a> [pcfx]<ul></ul><li /><a href="gg.html">Sega Game Gear</a> [gg]<ul></ul><li /><a href="md.html">Sega Genesis/MegaDrive</a> [md]<ul></ul><li /><a href="sms.html">Sega Master System</a> [sms]<ul></ul><li /><a href="psx.html">Sony PlayStation</a> [psx]<ul></ul><li /><a href="snes.html">Super Nintendo Entertainment System/Super Famicom</a> [snes]<ul></ul><li /><a href="vb.html">Virtual Boy</a> [vb]<ul></ul><li /><a href="wswan.html">WonderSwan</a> [wswan]<ul></ul></ul><li /><a href="cheat.html">Cheat Guide</a><ul></ul><li /><a href="debugger.html">Debugger</a><ul></ul><li /><a href="netplay.html">Network Play</a><ul></ul><li /><a href="#Credits">Credits</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits">Licenses, Copyright Notices, and Code Credits</a><ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01libmpcdec">libmpcdec</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Tremor">Tremor</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Gb_Snd_Emu">Gb_Snd_Emu</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Blip_Buffer">Blip_Buffer</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Sms_Snd_Emu%28base+for+T6W28_Apu+NGP+code%29">Sms_Snd_Emu(base for T6W28_Apu NGP code)</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Handy">Handy</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01PC2e+%28Used+in+portions+of+PC+Engine+CD+emulation%29">PC2e (Used in portions of PC Engine CD emulation)</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Scale2x">Scale2x</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01hq2x%2C+hq3x%2C+hq4x">hq2x, hq3x, hq4x</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01nes_ntsc">nes_ntsc</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%012xSaI">2xSaI</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01VisualBoyAdvance+GameBoy+and+GBA+code">VisualBoyAdvance GameBoy and GBA code</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01trio">trio</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01ConvertUTF">ConvertUTF</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01MD5+Hashing">MD5 Hashing</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01V810+Emulator">V810 Emulator</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Unzipping+Code">Unzipping Code</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01MiniLZO">MiniLZO</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Fuse+Z80+emulation+code">Fuse Z80 emulation code</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01NeoPop+Neo+Geo+Pocket+%28Color%29+Code">NeoPop Neo Geo Pocket (Color) Code</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01SoftFloat+%28Used+in+V810+FPU+Emulation%29">SoftFloat (Used in V810 FPU Emulation)</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01PC-FX+MJPEG+Decoding">PC-FX MJPEG Decoding</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01VRC7+Sound+Emulation">VRC7 Sound Emulation</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01NEC+V30MZ+Emulator">NEC V30MZ Emulator</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01NEC+V30MZ+disassembler%28modified+BOCHS+x86+disassembler%29">NEC V30MZ disassembler(modified BOCHS x86 disassembler)</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Cygne">Cygne</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01FCE+Ultra">FCE Ultra</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01QuickLZ">QuickLZ</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Q-Subchannel+CRC16+Code">Q-Subchannel CRC16 Code</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01SMS+Plus">SMS Plus</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Genesis+Plus">Genesis Plus</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Genesis+Plus+GX">Genesis Plus GX</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01EMU2413%28used+in+SMS+emulation%29">EMU2413(used in SMS emulation)</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01blz">blz</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01CD-ROM+data+correction+code">CD-ROM data correction code</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01C68K">C68K</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01YM2612+Emulator">YM2612 Emulator</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Sega+Genesis+SVP%2FSSP16+Emulator">Sega Genesis SVP/SSP16 Emulator</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Speex+Resampler">Speex Resampler</a><ul></ul><li /><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01SABR+v3.0+Shader">SABR v3.0 Shader</a><ul></ul></ul></p><hr width="100%" />
- <a name="Introduction"><h2>Introduction</h2></a><p> <p>
+ <ul><li><a href="#Introduction">Introduction</a><ul><li><a href="#Introduction%01Base+Directory">Base Directory</a><ul></ul></li></ul></li><li><a href="#Core+Features">Core Features</a><ul><li><a href="#Core+Features%01CD-ROM+Emulation">CD-ROM Emulation</a><ul><li><a href="#Core+Features%01CD-ROM+Emulation%01Physical+CDs">Physical CDs</a><ul></ul></li><li><a href="#Core+Features%01CD-ROM+Emulation%01Ripped+Disc+Images">Ripped Disc Images</a><ul></ul></li><li><a href="#Core+Features%01CD-ROM+Emulation%01Multiple-CD+Games">Multiple-CD Games</a><ul></ul></li></ul></li></ul></li><li><a href="#Security+Issues">Security Issues</a><ul><li><a href="#Security+Issues%01Save+States">Save States</a><ul></ul></li><li><a href="#Security+Issues%01CD+rips+and+PSF%28PSF1%2C+GSF%2C+etc.%29+Files">CD rips and PSF(PSF1, GSF, etc.) Files</a><ul></ul></li><li><a href="#Security+Issues%01Network+Play">Network Play</a><ul></ul></li></ul></li><li><a href="#Using+Mednafen">Using Mednafen</a><ul><li><a href="#Using+Mednafen%01Key+Assignments">Key Assignments</a><ul></ul></li><li><a href="#Using+Mednafen%01Command-line">Command-line</a><ul></ul></li><li><a href="#Using+Mednafen%01Global+Settings+Reference">Global Settings Reference</a><ul></ul></li><li><a href="#Using+Mednafen%01Firmware%2FBIOS">Firmware/BIOS</a><ul></ul></li><li><a href="#Using+Mednafen%01Custom+Palettes">Custom Palettes</a><ul></ul></li><li><a href="#Using+Mednafen%01Automatic+IPS+Patching">Automatic IPS Patching</a><ul></ul></li></ul></li><li><a href="#Advanced+Usage">Advanced Usage</a><ul><li><a href="#Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag">Minimizing video/audio/input Lag</a><ul><li><a href="#Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag%01Hardware+Selection">Hardware Selection</a><ul></ul></li><li><a href="#Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag%01Settings+to+Minimize+Video+Lag">Settings to Minimize Video Lag</a><ul></ul></li><li><a href="#Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag%01Settings+to+Minimize+Audio+Lag">Settings to Minimize Audio Lag</a><ul></ul></li></ul></li></ul></li><li>Emulation Module Documentation<ul><li><a href="lynx.html">Atari Lynx</a> [lynx]<ul></ul></li><li><a href="gb.html">GameBoy (Color)</a> [gb]<ul></ul></li><li><a href="gba.html">GameBoy Advance</a> [gba]<ul></ul></li><li><a href="ngp.html">Neo Geo Pocket (Color)</a> [ngp]<ul></ul></li><li><a href="nes.html">Nintendo Entertainment System/Famicom</a> [nes]<ul></ul></li><li><a href="pce.html">PC Engine (CD)/TurboGrafx 16 (CD)/SuperGrafx</a> [pce]<ul></ul></li><li><a href="pce_fast.html">PC Engine (CD)/TurboGrafx 16 (CD)/SuperGrafx</a> [pce_fast]<ul></ul></li><li><a href="pcfx.html">PC-FX</a> [pcfx]<ul></ul></li><li><a href="gg.html">Sega Game Gear</a> [gg]<ul></ul></li><li><a href="md.html">Sega Genesis/MegaDrive</a> [md]<ul></ul></li><li><a href="sms.html">Sega Master System</a> [sms]<ul></ul></li><li><a href="psx.html">Sony PlayStation</a> [psx]<ul></ul></li><li><a href="snes.html">Super Nintendo Entertainment System/Super Famicom</a> [snes]<ul></ul></li><li><a href="vb.html">Virtual Boy</a> [vb]<ul></ul></li><li><a href="wswan.html">WonderSwan</a> [wswan]<ul></ul></li></ul></li><li><a href="cheat.html">Cheat Guide</a><ul></ul></li><li><a href="debugger.html">Debugger</a><ul></ul></li><li><a href="netplay.html">Network Play</a><ul></ul></li><li><a href="#Credits">Credits</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits">Licenses, Copyright Notices, and Code Credits</a><ul><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01libmpcdec">libmpcdec</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Tremor">Tremor</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Gb_Snd_Emu">Gb_Snd_Emu</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Blip_Buffer">Blip_Buffer</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Sms_Snd_Emu%28base+for+T6W28_Apu+NGP+code%29">Sms_Snd_Emu(base for T6W28_Apu NGP code)</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Handy">Handy</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01PC2e+%28Used+in+portions+of+PC+Engine+CD+emulation%29">PC2e (Used in portions of PC Engine CD emulation)</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Scale2x">Scale2x</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01hq2x%2C+hq3x%2C+hq4x">hq2x, hq3x, hq4x</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01nes_ntsc">nes_ntsc</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%012xSaI">2xSaI</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01VisualBoyAdvance+GameBoy+and+GBA+code">VisualBoyAdvance GameBoy and GBA code</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01trio">trio</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01ConvertUTF">ConvertUTF</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01MD5+Hashing">MD5 Hashing</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01V810+Emulator">V810 Emulator</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Unzipping+Code">Unzipping Code</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01MiniLZO">MiniLZO</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Fuse+Z80+emulation+code">Fuse Z80 emulation code</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01NeoPop+Neo+Geo+Pocket+%28Color%29+Code">NeoPop Neo Geo Pocket (Color) Code</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01SoftFloat+%28Used+in+V810+FPU+Emulation%29">SoftFloat (Used in V810 FPU Emulation)</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01PC-FX+MJPEG+Decoding">PC-FX MJPEG Decoding</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01VRC7+Sound+Emulation">VRC7 Sound Emulation</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01NEC+V30MZ+Emulator">NEC V30MZ Emulator</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01NEC+V30MZ+disassembler%28modified+BOCHS+x86+disassembler%29">NEC V30MZ disassembler(modified BOCHS x86 disassembler)</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Cygne">Cygne</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01FCE+Ultra">FCE Ultra</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01QuickLZ">QuickLZ</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Q-Subchannel+CRC16+Code">Q-Subchannel CRC16 Code</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01SMS+Plus">SMS Plus</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Genesis+Plus">Genesis Plus</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Genesis+Plus+GX">Genesis Plus GX</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01EMU2413%28used+in+SMS+emulation%29">EMU2413(used in SMS emulation)</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01blz">blz</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01CD-ROM+data+correction+code">CD-ROM data correction code</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01C68K">C68K</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01YM2612+Emulator">YM2612 Emulator</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Sega+Genesis+SVP%2FSSP16+Emulator">Sega Genesis SVP/SSP16 Emulator</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Speex+Resampler">Speex Resampler</a><ul></ul></li><li><a href="#Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01SABR+v3.0+Shader">SABR v3.0 Shader</a><ul></ul></li></ul></li></ul><hr width="100%">
+ <h2><a name="Introduction">Introduction</a></h2><p></p> <p>
  This main document covers general Mednafen usage, generally regardless of which system is being emulated.  Documentation covering key assignments, settings, and related information for each system emulation module is linked to in the table of contents under "Emulation Module Documentation".
  </p>
 
@@ -21,7 +22,7 @@
   The terms "audio/video movie", "QuickTime movie", and variations thereof refer to audio and video data recorded and stored in a file, and
   usable with external programs.
  </p>
-  <a name="Introduction%01Base+Directory"><h3>Base Directory</h3></a><p>   <p>
+  <h3><a name="Introduction%01Base+Directory">Base Directory</a></h3><p></p>   <p>
     Mednafen's "base directory" is the directory under which Mednafen stores its data and
     looks for various auxillary data by default.  If the "<b>HOME</b>" environment variable is set, it will be suffixed with "/.mednafen"
     and used as the base directory(in other words ~/.mednafen, or $HOME/.mednafen).  If the "<b>MEDNAFEN_HOME</b>" environment variable is set,
@@ -39,9 +40,9 @@
     If none of the preceding conditions were met, then you're doomed, doomy doomy DOOMED, GOTO DOOM.
    </p>
 
-  </p><hr width="75%">
- </p><hr width="75%">
- <a name="Core+Features"><h2>Core Features</h2></a><p> <ul>
+  <hr width="75%">
+ <hr width="75%">
+ <h2><a name="Core+Features">Core Features</a></h2><p></p> <ul>
   <li>Physical joystick/gamepad support.</li>
   <li>Versatile input configuration system; assign multiple physical buttons to a virtual button or action.</li>
   <li>Multiple graphics filters and scaling modes.</li>
@@ -54,18 +55,18 @@
   <li>Network play(utilizing an external dedicated server program).</li>
 </ul>
 
- <a name="Core+Features%01CD-ROM+Emulation"><h3>CD-ROM Emulation</h3></a><p> <p>
+ <h3><a name="Core+Features%01CD-ROM+Emulation">CD-ROM Emulation</a></h3><p></p> <p>
   Mednafen can load CD-ROM games from a physical CD-ROM, or a ripped/dumped copy of the disc, such as CUE+BIN.
   Using a ripped copy of the disc is <b>strongly</b> recommended for performance and data consistency.
  </p>
 
-<a name="Core+Features%01CD-ROM+Emulation%01Physical+CDs"><h4>Physical CDs</h4></a><p> Physical CD access is done via <a href="http://www.gnu.org/s/libcdio/">libcdio</a>, using SCSI Multimedia Commands.
+<h4><a name="Core+Features%01CD-ROM+Emulation%01Physical+CDs">Physical CDs</a></h4><p></p> Physical CD access is done via <a href="http://www.gnu.org/s/libcdio/">libcdio</a>, using SCSI Multimedia Commands.
  Only drives that support reading and returning raw P-W subchannel data, CD-DA data, and 2352-byte raw data sector data
  are supported.  Note that some drives have buggy firmware and may return subchannel data
  for a following or preceding sector/frame, sometimes out of order, and this can compromise or break the program
  being emulated.
-</p><hr width="50%">
-<a name="Core+Features%01CD-ROM+Emulation%01Ripped+Disc+Images"><h4>Ripped Disc Images</h4></a><p> <p>
+<hr width="50%">
+<h4><a name="Core+Features%01CD-ROM+Emulation%01Ripped+Disc+Images">Ripped Disc Images</a></h4><p></p> <p>
   For ripped disc images, Mednafen supports "CUE" sheets and cdrdao "TOC" files; though only a very limited subset of the
   latter's full capabilities is supported.  Mednafen supports raw, simple storage formats supported by
   <a href="http://www.mega-nerd.com/libsndfile/">libsndfile</a>(MS WAV, AIFF/AIFC, AU/SND, etc.), and <a href="http://xiph.org/vorbis/">Ogg Vorbis</a> audio files referenced by CUE sheets.
@@ -84,8 +85,8 @@
   <b>This may cause problems with naive patches that don't update the error-correction data(at least the 32-bit EDC, if that's correct, the L-EC data will
   be ignored)!</b>
  </p>
-</p><hr width="50%">
-<a name="Core+Features%01CD-ROM+Emulation%01Multiple-CD+Games"><h4>Multiple-CD Games</h4></a><p> <p>
+<hr width="50%">
+<h4><a name="Core+Features%01CD-ROM+Emulation%01Multiple-CD+Games">Multiple-CD Games</a></h4><p></p> <p>
   To play a game that consists of more than one CD, and you are using ripped disc images, you will need to create an
   M3U file(plain-text, ".m3u" extension), and enter the filenames of the CUE/TOC sheets, one per line.  Load the M3U file
   with Mednafen instead of the CUE/TOC files, and use the F6 and F8 keys to switch among the various discs available.
@@ -101,19 +102,19 @@
   the lid/tray/whatever(if applicable), and press the F8 key again.  If you're using a standard PC-type drive with extending
   tray, you may just press F8 to close the tray instead of manually closing it and then pressing F8.
  </p>
- </p><hr width="50%">
- </p><hr width="50%">
- </p><hr width="50%">
- <a name="Security+Issues"><h2>Security Issues</h2></a><p>
+ <hr width="50%">
+ <hr width="50%">
+ <hr width="50%">
+ <h2><a name="Security+Issues">Security Issues</a></h2><p></p>
  This section discusses various known design flaws/choices, bugs, and limitations in Mednafen that have security implications.
 
- <a name="Security+Issues%01Save+States"><h3>Save States</h3></a><p> Causing Mednafen to lock-up, abort, or consume large amounts of CPU time via loading a specially-constructed save state is
+ <h3><a name="Security+Issues%01Save+States">Save States</a></h3><p></p> Causing Mednafen to lock-up, abort, or consume large amounts of CPU time via loading a specially-constructed save state is
  a trivial exercise.  It is hypothetically possible to overflow some buffers on some emulated systems by clever
  manipulation of saved timekeeping variables.  In combination with custom emulated machine code and state, it may therefore
  be possible to run arbitrary host code, compromising the host system. <b>Therefore, loading save states from parties
  you have reason to distrust, or not trust, is advised against.</b>
- </p><hr width="75%">
- <a name="Security+Issues%01CD+rips+and+PSF%28PSF1%2C+GSF%2C+etc.%29+Files"><h3>CD rips and PSF(PSF1, GSF, etc.) Files</h3></a><p> <p>
+ <hr width="75%">
+ <h3><a name="Security+Issues%01CD+rips+and+PSF%28PSF1%2C+GSF%2C+etc.%29+Files">CD rips and PSF(PSF1, GSF, etc.) Files</a></h3><p></p> <p>
  CUE and TOC, and PSF(PSF1, GSF, etc.) files can reference arbitrary files for inclusion and parsing.  Inclusion of
  device files may cause odd system behavior, particularly if you are running Mednafen as root(which you shouldn't be!) on a
  UN*X system, or cause Mednafen to lockup or abort.  <b>In combination with save states, this file inclusion presents
@@ -123,8 +124,8 @@
  system.  The setting <a href="#filesys.untrusted_fip_check">filesys.untrusted_fip_check</a>, when set to 1(the default), will enable
  checks that mitigate this potential problem.
  </p>
- </p><hr width="75%">
- <a name="Security+Issues%01Network+Play"><h3>Network Play</h3></a><p> <p>
+ <hr width="75%">
+ <h3><a name="Security+Issues%01Network+Play">Network Play</a></h3><p></p> <p>
  Mednafen's network play automatically utilizes save states to synchronize state among newly connected players, and
  thereafter at connected players' command.  Hence, any security issues relating to save states apply to network play as well.
  </p>
@@ -133,12 +134,12 @@
  Additionally, network problems, or a malicious network play server or player, may cause Mednafen to lock up or consume large
  amounts of CPU time processing received data.
  </p>
- </p><hr width="75%">
- </p><hr width="75%">
- <a name="Using+Mednafen"><h2>Using Mednafen</h2></a><p> <p>
+ <hr width="75%">
+ <hr width="75%">
+ <h2><a name="Using+Mednafen">Using Mednafen</a></h2><p></p> <p>
  
  </p>
- <a name="Using+Mednafen%01Key+Assignments"><h3>Key Assignments</h3></a><p> <p>
+ <h3><a name="Using+Mednafen%01Key+Assignments">Key Assignments</a></h3><p></p> <p></p>
  <table border>
  <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
  <tr><td>F1</td><td>Toggle in-game quick help screen.</td><td>toggle_help</td></tr>
@@ -186,10 +187,9 @@
  <tr><td>F11</td><td>Hard reset(toggle power switch).</td><td>power</td></tr>
  <tr><td>Escape/F12</td><td>Exit(the emulator, or netplay chat mode).</td><td>exit</td></tr>
  </table>
- </p>
 
- </p><hr width="75%">
- <a name="Using+Mednafen%01Command-line"><h3>Command-line</h3></a><p> <p>
+ <hr width="75%">
+ <h3><a name="Using+Mednafen%01Command-line">Command-line</a></h3><p></p> <p>
   Mednafen supports arguments passed on the command line.   Arguments
   are taken in the form of "-parameter value".  Some arguments are valueless.
  </p>
@@ -207,11 +207,11 @@
    <tr><td nowrap>-soundrecord x</td><td>string</td><td>Record sound output to the specified filename in the MS WAV format.</td></tr>
    <tr><td nowrap>-qtrecord x</td><td>string</td><td>Record video and audio output to the specified filename in the QuickTime format.</td></tr>
   </table>
- </p><hr width="75%">
-<a name="Using+Mednafen%01Global+Settings+Reference"><h3>Global Settings Reference</h3></a><p><p>
+ <hr width="75%">
+<h3><a name="Using+Mednafen%01Global+Settings+Reference">Global Settings Reference</a></h3><p></p><p>
 <b>Caution:</b> Any settings that change emulation behavior as seen from the emulated game are shown with the setting name bolded in the table. One should be conscious of these settings if one has changed them from the default values when using network play or movies, as they can cause desychronizations if not set the same among hosts(or between the recording emulator and the playing emulator). 
 </p>
-<p><table border><tr class="TableHeader"><th>Setting:</th><th>Value Type:</th><th>Possible Values:</th><th>Default Value:</th><th>Description:</th></tr><tr class="RowA"><td class="ColA"><a name="autosave">autosave</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE">Automatic load/save state on game load/save.<p>Automatically save and load save states when a game is closed or loaded, respectively.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<p></p><table border><tr class="TableHeader"><th>Setting:</th><th>Value Type:</th><th>Possible Values:</th><th>Default Value:</th><th>Description:</th></tr><tr class="RowA"><td class="ColA"><a name="autosave">autosave</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE">Automatic load/save state on game load/save.<p>Automatically save and load save states when a game is closed or loaded, respectively.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="cd.image_memcache">cd.image_memcache</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE">Cache entire CD images in memory.<p>Reads the entire CD image(s) into memory at startup(which will cause a small delay).  Can help obviate emulation hiccups due to emulated CD access.  May cause more harm than good on low memory systems, systems with swap enabled, and/or when the disc images in question are on a fast SSD.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><a name="cheats">cheats</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">1</td><td class="ColE">Enable cheats.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="debugger.autostepmode">debugger.autostepmode</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE">Automatically go into the debugger's step mode after a game is loaded.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
@@ -220,11 +220,11 @@
 <tr class="RowA"><td class="ColA"><a name="fftoggle">fftoggle</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE">Treat the fast-forward button as a toggle.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="filesys.disablesavegz">filesys.disablesavegz</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE">Disable gzip compression when saving save states and backup memory.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><a name="filesys.fname_movie">filesys.fname_movie</a></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">%f.%M%p.%x</td><td class="ColE">Format string for movie filename.<p>See <a href="fname_format.txt">fname_format.txt</a> for more information.  Edit at your own risk.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowB"><td class="ColA"><a name="filesys.fname_sav">filesys.fname_sav</a></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">%F.%M%x</td><td class="ColE">Format string for save games filename.<p>WARNING: %x should always be included, otherwise you run the risk of overwriting save data for games that create multiple save data files.<br />
-<br />
+<tr class="RowB"><td class="ColA"><a name="filesys.fname_sav">filesys.fname_sav</a></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">%F.%M%x</td><td class="ColE">Format string for save games filename.<p>WARNING: %x should always be included, otherwise you run the risk of overwriting save data for games that create multiple save data files.<br>
+<br>
 See <a href="fname_format.txt">fname_format.txt</a> for more information.  Edit at your own risk.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowA"><td class="ColA"><a name="filesys.fname_snap">filesys.fname_snap</a></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">%f-%p.%x</td><td class="ColE">Format string for screen snapshot filenames.<p>WARNING: %x or %p should always be included, otherwise there will be a conflict between the numeric counter text file and the image data file.<br />
-<br />
+<tr class="RowA"><td class="ColA"><a name="filesys.fname_snap">filesys.fname_snap</a></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">%f-%p.%x</td><td class="ColE">Format string for screen snapshot filenames.<p>WARNING: %x or %p should always be included, otherwise there will be a conflict between the numeric counter text file and the image data file.<br>
+<br>
 See <a href="fname_format.txt">fname_format.txt</a> for more information.  Edit at your own risk.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="filesys.fname_state">filesys.fname_state</a></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">%f.%M%X</td><td class="ColE">Format string for state filename.<p>See <a href="fname_format.txt">fname_format.txt</a> for more information.  Edit at your own risk.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><a name="filesys.path_cheat">filesys.path_cheat</a></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">cheats</td><td class="ColE">Path to directory for cheats.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
@@ -250,60 +250,60 @@ See <a href="fname_format.txt">fname_format.txt</a> for more information.  Edit 
 <tr class="RowA"><td class="ColA"><a name="osd.alpha_blend">osd.alpha_blend</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">1</td><td class="ColE">Enable alpha blending for OSD elements.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="osd.state_display_time">osd.state_display_time</a></td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 15000</td><td class="ColD">2000</td><td class="ColE">The length of time, in milliseconds, to display the save state or the movie selector after selecting a state or movie.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><a name="qtrecord.h_double_threshold">qtrecord.h_double_threshold</a></td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 1073741824</td><td class="ColD">256</td><td class="ColE">Double the raw image's height if it's below this threshold.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowB"><td class="ColA"><a name="qtrecord.vcodec">qtrecord.vcodec</a></td><td class="ColB">enum</td><td class="ColC">raw<br />cscd<br />png</td><td class="ColD">cscd</td><td class="ColE">Video codec to use.<p></p><ul><li><b>raw</b> - Raw<br>A fast codec, computationally, but will cause enormous file size and may exceed your storage medium's sustained write rate.</li><br /><li><b>cscd</b> - CamStudio Screen Codec<br>A good balance between performance and compression ratio.</li><br /><li><b>png</b> - PNG<br>Has a better compression ratio than "cscd", but is much more CPU intensive.  Use for compatibility with official QuickTime in cases where you have insufficient disk space for "raw".</li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowB"><td class="ColA"><a name="qtrecord.vcodec">qtrecord.vcodec</a></td><td class="ColB">enum</td><td class="ColC">raw<br>cscd<br>png</td><td class="ColD">cscd</td><td class="ColE">Video codec to use.<p></p><ul><li><b>raw</b> - Raw<br>A fast codec, computationally, but will cause enormous file size and may exceed your storage medium's sustained write rate.</li><br><li><b>cscd</b> - CamStudio Screen Codec<br>A good balance between performance and compression ratio.</li><br><li><b>png</b> - PNG<br>Has a better compression ratio than "cscd", but is much more CPU intensive.  Use for compatibility with official QuickTime in cases where you have insufficient disk space for "raw".</li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><a name="qtrecord.w_double_threshold">qtrecord.w_double_threshold</a></td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 1073741824</td><td class="ColD">384</td><td class="ColE">Double the raw image's width if it's below this threshold.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="sfspeed">sfspeed</a></td><td class="ColB">real</td><td class="ColC">0.25 <i>through</i> 1</td><td class="ColD">0.75</td><td class="ColE">SLOW-forwarding speed multiplier.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><a name="sftoggle">sftoggle</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE">Treat the SLOW-forward button as a toggle.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="sound">sound</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">1</td><td class="ColE">Enable sound output.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><a name="sound.buffer_time">sound.buffer_time</a></td><td class="ColB">integer</td><td class="ColC">1 <i>through</i> 1000</td><td class="ColD">32 (52 on MS Windows)</td><td class="ColE">Desired total buffer size in milliseconds.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="sound.device">sound.device</a></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">default</td><td class="ColE">Select sound output device.<p>When using ALSA sound output under Linux, the "sound.device" setting "default" is Mednafen's default, IE "hw:0", not ALSA's "default". If you want to use ALSA's "default", use "sexyal-literal-default".</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowA"><td class="ColA"><a name="sound.driver">sound.driver</a></td><td class="ColB">enum</td><td class="ColC">default<br />alsa<br />oss<br />dsound<br />sdl<br />jack</td><td class="ColD">default</td><td class="ColE">Select sound driver.<p>The following choices are possible, sorted by preference, high to low, when "default" driver is used, but dependent on being compiled in.</p><ul><li><b>default</b> - Default<br>Default sound driver.</li><br /><li><b>alsa</b> - ALSA<br>A recommended driver, and the default for Linux(if available).</li><br /><li><b>oss</b> - Open Sound System<br>A recommended driver, and the default for non-Linux UN*X/POSIX/BSD systems, or anywhere ALSA is unavailable. If the ALSA driver gives you problems, you can try using this one instead.<br />
-<br />
-If you are using OSSv4 or newer, you should edit "/usr/lib/oss/conf/osscore.conf", uncomment the max_intrate= line, and change the value from 100(default) to 1000(or higher if you know what you're doing), and restart OSS. Otherwise, performance will be poor, and the sound buffer size in Mednafen will be orders of magnitude larger than specified.<br />
-<br />
-If the sound buffer size is still excessively larger than what is specified via the "sound.buffer_time" setting, you can try setting "sound.period_time" to 2666, and as a last resort, 5333, to work around a design flaw/limitation/choice in the OSS API and OSS implementation.</li><br /><li><b>dsound</b> - DirectSound<br>A recommended driver, and the default for Microsoft Windows.</li><br /><li><b>sdl</b> - Simple Directmedia Layer<br>This driver is not recommended, but it serves as a backup driver if the others aren't available. Its performance is generally sub-par, requiring higher latency or faster CPUs/SMP for glitch-free playback, except where the OS provides a sound callback API itself, such as with Mac OS X and BeOS.</li><br /><li><b>jack</b> - JACK<br>Somewhat experimental driver, unusably buggy until Mednafen 0.8.C. The "sound.buffer_time" setting controls the size of the local sound buffer, not the server's sound buffer, and the latency reported during startup is for the local sound buffer only. Please note that video card drivers(in the kernel or X), and hardware-accelerated OpenGL, may interfere with jackd's ability to effectively run with realtime response.</li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowB"><td class="ColA"><a name="sound.period_time">sound.period_time</a></td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 100000</td><td class="ColD">0</td><td class="ColE">Desired period size in microseconds.<p>Currently only affects OSS, ALSA, and SDL output.  A value of 0 defers to the default in the driver code in SexyAL.<br />
-<br />
+<tr class="RowA"><td class="ColA"><a name="sound.driver">sound.driver</a></td><td class="ColB">enum</td><td class="ColC">default<br>alsa<br>oss<br>dsound<br>wasapi<br>sdl<br>jack</td><td class="ColD">default</td><td class="ColE">Select sound driver.<p>The following choices are possible, sorted by preference, high to low, when "default" driver is used, but dependent on being compiled in.</p><ul><li><b>default</b> - Default<br>Default sound driver.</li><br><li><b>alsa</b> - ALSA<br>A recommended driver, and the default for Linux(if available).</li><br><li><b>oss</b> - Open Sound System<br>A recommended driver, and the default for non-Linux UN*X/POSIX/BSD systems, or anywhere ALSA is unavailable. If the ALSA driver gives you problems, you can try using this one instead.<br>
+<br>
+If you are using OSSv4 or newer, you should edit "/usr/lib/oss/conf/osscore.conf", uncomment the max_intrate= line, and change the value from 100(default) to 1000(or higher if you know what you're doing), and restart OSS. Otherwise, performance will be poor, and the sound buffer size in Mednafen will be orders of magnitude larger than specified.<br>
+<br>
+If the sound buffer size is still excessively larger than what is specified via the "sound.buffer_time" setting, you can try setting "sound.period_time" to 2666, and as a last resort, 5333, to work around a design flaw/limitation/choice in the OSS API and OSS implementation.</li><br><li><b>dsound</b> - DirectSound<br>A recommended driver, and the default for Microsoft Windows.</li><br><li><b>wasapi</b> - WASAPI<br>Experimental exclusive-mode WASAPI driver, usable on Windows Vista and newer.  Use it for lower-latency sound(though you'll of course need to lower the sound.buffer_time setting to take full advantage of it).  May not work properly on all sound cards.</li><br><li><b>sdl</b> - Simple Directmedia Layer<br>This driver is not recommended, but it serves as a backup driver if the others aren't available. Its performance is generally sub-par, requiring higher latency or faster CPUs/SMP for glitch-free playback, except where the OS provides a sound callback API itself, such as with Mac OS X and BeOS.</li><br><li><b>jack</b> - JACK<br>Somewhat experimental driver, unusably buggy until Mednafen 0.8.C. The "sound.buffer_time" setting controls the size of the local sound buffer, not the server's sound buffer, and the latency reported during startup is for the local sound buffer only. Please note that video card drivers(in the kernel or X), and hardware-accelerated OpenGL, may interfere with jackd's ability to effectively run with realtime response.</li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowB"><td class="ColA"><a name="sound.period_time">sound.period_time</a></td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 100000</td><td class="ColD">0</td><td class="ColE">Desired period size in microseconds.<p>Currently only affects OSS, ALSA, WASAPI, and SDL output.  A value of 0 defers to the default in the driver code in SexyAL.<br>
+<br>
 Note: This is not the "sound buffer size" setting, that would be "sound.buffer_time".</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><a name="sound.rate">sound.rate</a></td><td class="ColB">integer</td><td class="ColC">22050 <i>through</i> 1048576</td><td class="ColD">48000</td><td class="ColE">Specifies the sound playback rate, in sound frames per second("Hz").<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="sound.volume">sound.volume</a></td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 150</td><td class="ColD">100</td><td class="ColE">Sound volume level, in percent.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowA"><td class="ColA"><a name="srwcompressor">srwcompressor</a></td><td class="ColB">enum</td><td class="ColC">minilzo<br />quicklz<br />blz</td><td class="ColD">quicklz</td><td class="ColE">Compressor to use with state rewinding<p></p><ul><li><b>minilzo</b> - MiniLZO<br></li><br /><li><b>quicklz</b> - QuickLZ<br></li><br /><li><b>blz</b> - BLZ<br></li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowA"><td class="ColA"><a name="srwcompressor">srwcompressor</a></td><td class="ColB">enum</td><td class="ColC">minilzo<br>quicklz<br>blz</td><td class="ColD">quicklz</td><td class="ColE">Compressor to use with state rewinding<p></p><ul><li><b>minilzo</b> - MiniLZO<br></li><br><li><b>quicklz</b> - QuickLZ<br></li><br><li><b>blz</b> - BLZ<br></li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="srwframes">srwframes</a></td><td class="ColB">integer</td><td class="ColC">10 <i>through</i> 99999</td><td class="ColD">600</td><td class="ColE">Number of frames to keep states for when state rewinding is enabled.<p>WARNING: Setting this to a large value may cause excessive RAM usage in some circumstances, such as with games that stream large volumes of data off of CDs.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowA"><td class="ColA"><a name="video.blit_timesync">video.blit_timesync</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">1</td><td class="ColE">Enable time synchronization(waiting) for frame blitting.<p>Disable to reduce latency, at the cost of potentially increased video "juddering", with the maximum reduction in latency being about 1 video frame's time.<br />
+<tr class="RowA"><td class="ColA"><a name="video.blit_timesync">video.blit_timesync</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">1</td><td class="ColE">Enable time synchronization(waiting) for frame blitting.<p>Disable to reduce latency, at the cost of potentially increased video "juddering", with the maximum reduction in latency being about 1 video frame's time.<br>
 Will work best with emulated systems that are not very computationally expensive to emulate, combined with running on a relatively fast CPU.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowB"><td class="ColA"><a name="video.driver">video.driver</a></td><td class="ColB">enum</td><td class="ColC">opengl<br />sdl<br />overlay</td><td class="ColD">opengl</td><td class="ColE">Video output method/driver.<p></p><ul><li><b>opengl</b> - OpenGL + SDL<br>This output method is preferred, as all features are available with it.</li><br /><li><b>sdl</b> - SDL Surface<br>Slower with lower-quality scaling than OpenGL, but if you don't have hardware-accelerated OpenGL rendering, it will be faster than software OpenGL rendering. Bilinear interpolation not available. Pixel shaders do not work with this output method, of course.</li><br /><li><b>overlay</b> - SDL Overlay<br>As fast as OpenGL, perhaps faster in some situations, *if* it's hardware-accelerated. Scanline effects are not available. hq2x, hq3x, hq4x are not available. The OSD may be missing or glitchy. Bilinear interpolation can't be turned off. Harsh chroma subsampling blurring in some picture types.  If you use this output method, it is strongly recommended to use a special scaler with it, such as nn2x.</li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowB"><td class="ColA"><a name="video.driver">video.driver</a></td><td class="ColB">enum</td><td class="ColC">opengl<br>sdl<br>overlay</td><td class="ColD">opengl</td><td class="ColE">Video output method/driver.<p></p><ul><li><b>opengl</b> - OpenGL + SDL<br>This output method is preferred, as all features are available with it.</li><br><li><b>sdl</b> - SDL Surface<br>Slower with lower-quality scaling than OpenGL, but if you don't have hardware-accelerated OpenGL rendering, it will be faster than software OpenGL rendering. Bilinear interpolation not available. Pixel shaders do not work with this output method, of course.</li><br><li><b>overlay</b> - SDL Overlay<br>As fast as OpenGL, perhaps faster in some situations, *if* it's hardware-accelerated. Scanline effects are not available. hq2x, hq3x, hq4x are not available. The OSD may be missing or glitchy. Bilinear interpolation can't be turned off. Harsh chroma subsampling blurring in some picture types.  If you use this output method, it is strongly recommended to use a special scaler with it, such as nn2x.</li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><a name="video.frameskip">video.frameskip</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">1</td><td class="ColE">Enable frameskip during emulation rendering.<p>Disable for rendering code performance testing.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="video.fs">video.fs</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE">Enable fullscreen mode.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><a name="video.glvsync">video.glvsync</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">1</td><td class="ColE">Attempt to synchronize OpenGL page flips to vertical retrace period.<p>Note: Additionally, if the environment variable "__GL_SYNC_TO_VBLANK" does not exist, then it will be created and set to the value specified for this setting.  This has the effect of forcibly enabling or disabling vblank synchronization when running under Linux with NVidia's drivers.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-</table></p><p><table border><tr class="TableHeader"><th>Setting:</th><th>Value Type:</th><th>Possible Values:</th><th>Default Value:</th><th>Description:</th></tr><tr class="RowA"><td class="ColA"><a name="&lt;system&gt;.enable">&lt;system&gt;.enable</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">1</td><td class="ColE">Enable (automatic) usage of this module.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowB"><td class="ColA"><a name="&lt;system&gt;.forcemono">&lt;system&gt;.forcemono<br /><ul><li>cdplay</li><li>gb</li><li>gba</li><li>gg</li><li>md</li><li>ngp</li><li>pce</li><li>pce_fast</li><li>pcfx</li><li>psx</li><li>sms</li><li>snes</li><li>vb</li><li>wswan</li></ul></a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE">Force monophonic sound output.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowA"><td class="ColA"><a name="&lt;system&gt;.pixshader">&lt;system&gt;.pixshader</a></td><td class="ColB">enum</td><td class="ColC">none<br />autoip<br />autoipsharper<br />scale2x<br />sabr<br />ipsharper<br />ipxnoty<br />ipynotx<br />ipxnotysharper<br />ipynotxsharper</td><td class="ColD">none</td><td class="ColE">Enable specified OpenGL pixel shader.<p>Obviously, this will only work with the OpenGL "video.driver" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.<br />
-<br />
-Note: Mednafen's pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.</p><ul><li><b>none</b> - None/Disabled<br></li><br /><li><b>autoip</b> - Auto Interpolation<br>Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.</li><br /><li><b>autoipsharper</b> - Sharper Auto Interpolation<br>Same as "autoip", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.</li><br /><li><b>scale2x</b> - Scale2x<br></li><br /><li><b>sabr</b> - SABR v3.0<br>GPU-intensive.</li><br /><li><b>ipsharper</b> - Sharper bilinear interpolation.<br></li><br /><li><b>ipxnoty</b> - Linear interpolation on X axis only.<br></li><br /><li><b>ipynotx</b> - Linear interpolation on Y axis only.<br></li><br /><li><b>ipxnotysharper</b> - Sharper version of "ipxnoty".<br></li><br /><li><b>ipynotxsharper</b> - Sharper version of "ipynotx".<br></li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+</table><p></p><table border><tr class="TableHeader"><th>Setting:</th><th>Value Type:</th><th>Possible Values:</th><th>Default Value:</th><th>Description:</th></tr><tr class="RowA"><td class="ColA"><a name="&lt;system&gt;.enable">&lt;system&gt;.enable</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">1</td><td class="ColE">Enable (automatic) usage of this module.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowB"><td class="ColA"><a name="&lt;system&gt;.forcemono">&lt;system&gt;.forcemono</a><br><ul><li>cdplay</li><li>gb</li><li>gba</li><li>gg</li><li>md</li><li>ngp</li><li>pce</li><li>pce_fast</li><li>pcfx</li><li>psx</li><li>sms</li><li>snes</li><li>vb</li><li>wswan</li></ul></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE">Force monophonic sound output.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowA"><td class="ColA"><a name="&lt;system&gt;.pixshader">&lt;system&gt;.pixshader</a></td><td class="ColB">enum</td><td class="ColC">none<br>autoip<br>autoipsharper<br>scale2x<br>sabr<br>ipsharper<br>ipxnoty<br>ipynotx<br>ipxnotysharper<br>ipynotxsharper</td><td class="ColD">none</td><td class="ColE">Enable specified OpenGL pixel shader.<p>Obviously, this will only work with the OpenGL "video.driver" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.<br>
+<br>
+Note: Mednafen's pixel shaders do not work properly on some AMD graphics cards(there is a diagonal line of distortion) for an unknown reason, possibly a hardware bug.</p><ul><li><b>none</b> - None/Disabled<br></li><br><li><b>autoip</b> - Auto Interpolation<br>Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.</li><br><li><b>autoipsharper</b> - Sharper Auto Interpolation<br>Same as "autoip", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.</li><br><li><b>scale2x</b> - Scale2x<br></li><br><li><b>sabr</b> - SABR v3.0<br>GPU-intensive.</li><br><li><b>ipsharper</b> - Sharper bilinear interpolation.<br></li><br><li><b>ipxnoty</b> - Linear interpolation on X axis only.<br></li><br><li><b>ipynotx</b> - Linear interpolation on Y axis only.<br></li><br><li><b>ipxnotysharper</b> - Sharper version of "ipxnoty".<br></li><br><li><b>ipynotxsharper</b> - Sharper version of "ipynotx".<br></li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="&lt;system&gt;.scanlines">&lt;system&gt;.scanlines</a></td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 100</td><td class="ColD">0</td><td class="ColE">Enable scanlines with specified opacity.<p>Opacity is specified in %; IE a value of "100" will give entirely black scanlines.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowA"><td class="ColA"><a name="&lt;system&gt;.special">&lt;system&gt;.special</a></td><td class="ColB">enum</td><td class="ColC">none<br />hq2x<br />hq3x<br />hq4x<br />scale2x<br />scale3x<br />scale4x<br />2xsai<br />super2xsai<br />supereagle<br />nn2x<br />nn3x<br />nn4x<br />nny2x<br />nny3x<br />nny4x</td><td class="ColD">none</td><td class="ColE">Enable specified special video scaler.<p>The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to "2", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).</p><ul><li><b>none</b> - None/Disabled<br></li><br /><li><b>hq2x</b> - hq2x<br></li><br /><li><b>hq3x</b> - hq3x<br></li><br /><li><b>hq4x</b> - hq4x<br></li><br /><li><b>scale2x</b> - scale2x<br></li><br /><li><b>scale3x</b> - scale3x<br></li><br /><li><b>scale4x</b> - scale4x<br></li><br /><li><b>2xsai</b> - 2xSaI<br></li><br /><li><b>super2xsai</b> - Super 2xSaI<br></li><br /><li><b>supereagle</b> - Super Eagle<br></li><br /><li><b>nn2x</b> - Nearest-neighbor 2x<br></li><br /><li><b>nn3x</b> - Nearest-neighbor 3x<br></li><br /><li><b>nn4x</b> - Nearest-neighbor 4x<br></li><br /><li><b>nny2x</b> - Nearest-neighbor 2x, y axis only<br></li><br /><li><b>nny3x</b> - Nearest-neighbor 3x, y axis only<br></li><br /><li><b>nny4x</b> - Nearest-neighbor 4x, y axis only<br></li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowB"><td class="ColA"><a name="&lt;system&gt;.stretch">&lt;system&gt;.stretch</a></td><td class="ColB">enum</td><td class="ColC">0<br />full<br />aspect<br />aspect_int<br />aspect_mult2</td><td class="ColD">aspect_mult2</td><td class="ColE">Stretch to fill screen.<p></p><ul><li><b>0</b> - Disabled<br></li><br /><li><b>full</b> - Full<br>Full-screen stretch, disregarding aspect ratio.</li><br /><li><b>aspect</b> - Aspect Preserve<br>Full-screen stretch as far as the aspect ratio(in this sense, the equivalent xscalefs == yscalefs) can be maintained.</li><br /><li><b>aspect_int</b> - Aspect Preserve + Integer Scale<br>Full-screen stretch, same as "aspect" except that the equivalent xscalefs and yscalefs are rounded down to the nearest integer.</li><br /><li><b>aspect_mult2</b> - Aspect Preserve + Integer Multiple-of-2 Scale<br>Full-screen stretch, same as "aspect_int", but rounds down to the nearest multiple of 2.</li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowA"><td class="ColA"><a name="&lt;system&gt;.special">&lt;system&gt;.special</a></td><td class="ColB">enum</td><td class="ColC">none<br>hq2x<br>hq3x<br>hq4x<br>scale2x<br>scale3x<br>scale4x<br>2xsai<br>super2xsai<br>supereagle<br>nn2x<br>nn3x<br>nn4x<br>nny2x<br>nny3x<br>nny4x</td><td class="ColD">none</td><td class="ColE">Enable specified special video scaler.<p>The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to "2", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).</p><ul><li><b>none</b> - None/Disabled<br></li><br><li><b>hq2x</b> - hq2x<br></li><br><li><b>hq3x</b> - hq3x<br></li><br><li><b>hq4x</b> - hq4x<br></li><br><li><b>scale2x</b> - scale2x<br></li><br><li><b>scale3x</b> - scale3x<br></li><br><li><b>scale4x</b> - scale4x<br></li><br><li><b>2xsai</b> - 2xSaI<br></li><br><li><b>super2xsai</b> - Super 2xSaI<br></li><br><li><b>supereagle</b> - Super Eagle<br></li><br><li><b>nn2x</b> - Nearest-neighbor 2x<br></li><br><li><b>nn3x</b> - Nearest-neighbor 3x<br></li><br><li><b>nn4x</b> - Nearest-neighbor 4x<br></li><br><li><b>nny2x</b> - Nearest-neighbor 2x, y axis only<br></li><br><li><b>nny3x</b> - Nearest-neighbor 3x, y axis only<br></li><br><li><b>nny4x</b> - Nearest-neighbor 4x, y axis only<br></li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowB"><td class="ColA"><a name="&lt;system&gt;.stretch">&lt;system&gt;.stretch</a></td><td class="ColB">enum</td><td class="ColC">0<br>full<br>aspect<br>aspect_int<br>aspect_mult2</td><td class="ColD">aspect_mult2</td><td class="ColE">Stretch to fill screen.<p></p><ul><li><b>0</b> - Disabled<br></li><br><li><b>full</b> - Full<br>Full-screen stretch, disregarding aspect ratio.</li><br><li><b>aspect</b> - Aspect Preserve<br>Full-screen stretch as far as the aspect ratio(in this sense, the equivalent xscalefs == yscalefs) can be maintained.</li><br><li><b>aspect_int</b> - Aspect Preserve + Integer Scale<br>Full-screen stretch, same as "aspect" except that the equivalent xscalefs and yscalefs are rounded down to the nearest integer.</li><br><li><b>aspect_mult2</b> - Aspect Preserve + Integer Multiple-of-2 Scale<br>Full-screen stretch, same as "aspect_int", but rounds down to the nearest multiple of 2.</li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><a name="&lt;system&gt;.tblur">&lt;system&gt;.tblur</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE">Enable video temporal blur(50/50 previous/current frame by default).<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="&lt;system&gt;.tblur.accum">&lt;system&gt;.tblur.accum</a></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE">Accumulate color data rather than discarding it.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><a name="&lt;system&gt;.tblur.accum.amount">&lt;system&gt;.tblur.accum.amount</a></td><td class="ColB">real</td><td class="ColC">0 <i>through</i> 100</td><td class="ColD">50</td><td class="ColE">Blur amount in accumulation mode, specified in percentage of accumulation buffer to mix with the current frame.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowB"><td class="ColA"><a name="&lt;system&gt;.videoip">&lt;system&gt;.videoip</a></td><td class="ColB">enum</td><td class="ColC">0<br />1<br />x<br />y</td><td class="ColD"><i>(variable)</i></td><td class="ColE">Enable (bi)linear interpolation.<p></p><ul><li><b>0</b> - Disabled<br></li><br /><li><b>1</b> - Bilinear<br></li><br /><li><b>x</b> - Linear (X)<br>Interpolation only on the X axis.</li><br /><li><b>y</b> - Linear (Y)<br>Interpolation only on the Y axis.</li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowB"><td class="ColA"><a name="&lt;system&gt;.videoip">&lt;system&gt;.videoip</a></td><td class="ColB">enum</td><td class="ColC">0<br>1<br>x<br>y</td><td class="ColD"><i>(variable)</i></td><td class="ColE">Enable (bi)linear interpolation.<p></p><ul><li><b>0</b> - Disabled<br></li><br><li><b>1</b> - Bilinear<br></li><br><li><b>x</b> - Linear (X)<br>Interpolation only on the X axis.</li><br><li><b>y</b> - Linear (Y)<br>Interpolation only on the Y axis.</li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><a name="&lt;system&gt;.xres">&lt;system&gt;.xres</a></td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 65536</td><td class="ColD">0</td><td class="ColE">Full-screen horizontal resolution.<p>A value of "0" will cause the desktop horizontal resolution to be used.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="&lt;system&gt;.xscale">&lt;system&gt;.xscale</a></td><td class="ColB">real</td><td class="ColC">0.01 <i>through</i> 256</td><td class="ColD"><i>(variable)</i></td><td class="ColE">Scaling factor for the X axis in windowed mode.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><a name="&lt;system&gt;.xscalefs">&lt;system&gt;.xscalefs</a></td><td class="ColB">real</td><td class="ColC">0.01 <i>through</i> 256</td><td class="ColD">1.000000</td><td class="ColE">Scaling factor for the X axis in fullscreen mode.<p>For this settings to have any effect, the "<system>.stretch" setting must be set to "0".</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="&lt;system&gt;.yres">&lt;system&gt;.yres</a></td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 65536</td><td class="ColD">0</td><td class="ColE">Full-screen vertical resolution.<p>A value of "0" will cause the desktop vertical resolution to be used.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA"><a name="&lt;system&gt;.yscale">&lt;system&gt;.yscale</a></td><td class="ColB">real</td><td class="ColC">0.01 <i>through</i> 256</td><td class="ColD"><i>(variable)</i></td><td class="ColE">Scaling factor for the Y axis in windowed mode.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><a name="&lt;system&gt;.yscalefs">&lt;system&gt;.yscalefs</a></td><td class="ColB">real</td><td class="ColC">0.01 <i>through</i> 256</td><td class="ColD">1.000000</td><td class="ColE">Scaling factor for the Y axis in fullscreen mode.<p>For this settings to have any effect, the "<system>.stretch" setting must be set to "0".</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowA"><td class="ColA"><a name="&lt;system&gt;.debugger.disfontsize">&lt;system&gt;.debugger.disfontsize<br /><ul><li>md</li><li>nes</li><li>pce</li><li>pcfx</li><li>psx</li><li>vb</li><li>wswan</li></ul></a></td><td class="ColB">enum</td><td class="ColC">xsmall<br />small<br />medium<br />large</td><td class="ColD">small</td><td class="ColE">Disassembly font size.<p>Note: Setting the font size to larger than the default may cause text overlap in the debugger.</p><ul><li><b>xsmall</b> - 4x5<br></li><br /><li><b>small</b> - 5x7<br></li><br /><li><b>medium</b> - 6x13<br></li><br /><li><b>large</b> - 9x18<br></li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowB"><td class="ColA"><a name="&lt;system&gt;.debugger.memcharenc">&lt;system&gt;.debugger.memcharenc<br /><ul><li>md</li><li>nes</li><li>pce</li><li>pcfx</li><li>psx</li><li>vb</li><li>wswan</li></ul></a></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD"><i>(variable)</i></td><td class="ColE">Character encoding for the debugger's memory editor.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-</table></p></p><hr width="75%">
- <a name="Using+Mednafen%01Firmware%2FBIOS"><h3>Firmware/BIOS</h3></a><p><p>
+<tr class="RowA"><td class="ColA"><a name="&lt;system&gt;.debugger.disfontsize">&lt;system&gt;.debugger.disfontsize</a><br><ul><li>md</li><li>nes</li><li>pce</li><li>pcfx</li><li>psx</li><li>vb</li><li>wswan</li></ul></td><td class="ColB">enum</td><td class="ColC">xsmall<br>small<br>medium<br>large</td><td class="ColD">small</td><td class="ColE">Disassembly font size.<p>Note: Setting the font size to larger than the default may cause text overlap in the debugger.</p><ul><li><b>xsmall</b> - 4x5<br></li><br><li><b>small</b> - 5x7<br></li><br><li><b>medium</b> - 6x13<br></li><br><li><b>large</b> - 9x18<br></li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowB"><td class="ColA"><a name="&lt;system&gt;.debugger.memcharenc">&lt;system&gt;.debugger.memcharenc</a><br><ul><li>md</li><li>nes</li><li>pce</li><li>pcfx</li><li>psx</li><li>vb</li><li>wswan</li></ul></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD"><i>(variable)</i></td><td class="ColE">Character encoding for the debugger's memory editor.<p></p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+</table><hr width="75%">
+ <h3><a name="Using+Mednafen%01Firmware%2FBIOS">Firmware/BIOS</a></h3><p></p><p>
 Some emulation modules require firmware/BIOS images to function.  If a firmware path is non-absolute(doesn't begin with
 C:\ or / or similar), Mednafen will try to load the file relative to the "firmware" directory under the Mednafen base
 directory.  If it doesn't find it there, it will be loaded relative to the Mednafen base directory itself.  Of course,
 if the "path_firmware" setting is set to a custom value, the firmware files will be searched relative to that path.
 </p>
- </p><hr width="75%">
- <a name="Using+Mednafen%01Custom+Palettes"><h3>Custom Palettes</h3></a><p><p>
+ <hr width="75%">
+ <h3><a name="Using+Mednafen%01Custom+Palettes">Custom Palettes</a></h3><p></p><p>
 Custom palettes for a system should be named <sysname>.pal, IE "nes.pal", "pce.pal", etc., and placed in the
 "palettes" directory beneath the Mednafen base directory.
 </p>
@@ -322,8 +322,8 @@ Not all emulated systems support custom palettes.  Currently, the following emul
  <li>snes</li>
 </ul>
 </p>
- </p><hr width="75%">
- <a name="Using+Mednafen%01Automatic+IPS+Patching"><h3>Automatic IPS Patching</h3></a><p> <p>
+ <hr width="75%">
+ <h3><a name="Using+Mednafen%01Automatic+IPS+Patching">Automatic IPS Patching</a></h3><p></p> <p>
         Place the IPS file in the same directory as the file to load,
         and name it &lt;FullFileName&gt;.ips.
         <pre>
@@ -340,9 +340,9 @@ Not all emulated systems support custom palettes.  Currently, the following emul
         Patching is applied in a file format-agnostic way; however, dynamic patching is not done with CD images, nor with
 	firmware.
  </p>
- </p><hr width="75%"> 
- </p><hr width="75%">
- <a name="Advanced+Usage"><h2>Advanced Usage</h2></a><p>  <a name="Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag"><h3>Minimizing video/audio/input Lag</h3></a><p>This section is a work-in-progress, tips given may not cover all cases, latency reduction is a black art on modern
+ <hr width="75%"> 
+ <hr width="75%">
+ <h2><a name="Advanced+Usage">Advanced Usage</a></h2><p></p>  <h3><a name="Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag">Minimizing video/audio/input Lag</a></h3><p></p>This section is a work-in-progress, tips given may not cover all cases, latency reduction is a black art on modern
 PCs, etc etc.
 <p>
 Miscellaneous relevant external links:
@@ -356,7 +356,7 @@ Miscellaneous relevant external links:
  <li><a href="http://www.tomshardware.com/reviews/ultrasharp-u2711-ds-277w-multisync-pa271w,2968-14.html">http://www.tomshardware.com/reviews/ultrasharp-u2711-ds-277w-multisync-pa271w,2968-14.html</a></li>
 </ul>
 </p>
-   <a name="Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag%01Hardware+Selection"><h4>Hardware Selection</h4></a><p>    <ul>
+   <h4><a name="Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag%01Hardware+Selection">Hardware Selection</a></h4><p></p>    <ul>
     <li><u><b>Video Card:</b></u><blockquote>Higher-performing discrete video cards are preferable, but anything with similar
 or better OpenGL performance to an NVidia GeForce 9500GT should be fine.</blockquote></li>
     <li><u><b>Monitor:</b></u><blockquote>Choose a monitor with the lowest input lag(AKA display lag), as well as as a low response time(though response time isn't as an important metric to consider, since it's usually acceptably small on modern end-user PC monitors).
@@ -373,11 +373,11 @@ refresh rate of at least 120Hz.
 </blockquote></li>
     <li><u><b>Sound Card:</b></u>  <i>(To be written)</i></li>
    </ul>
-   </p><hr width="50%">
+   <hr width="50%">
    <p>
 
    </p>
-   <a name="Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag%01Settings+to+Minimize+Video+Lag"><h4>Settings to Minimize Video Lag</h4></a><p>    <p>
+   <h4><a name="Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag%01Settings+to+Minimize+Video+Lag">Settings to Minimize Video Lag</a></h4><p></p>    <p>
     Disabling vsync can also help to reduce keyboard and mouse input lag to a degree, due to the design of common GUI environments and SDL.
     </p>
     <table border="1">
@@ -405,8 +405,8 @@ a native resolution).
      <u>Mednafen:</u> Avoid using special video filters and scalers(hq2x, 2xsai, scale2x, temporal blur, etc.) in Mednafen.  Mednafen's simple pixel shaders are ok, provided you have a decent video card as specified in the
      hardware selection section above.
     </p>
-   </p><hr width="50%">
-   <a name="Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag%01Settings+to+Minimize+Audio+Lag"><h4>Settings to Minimize Audio Lag</h4></a><p><p>
+   <hr width="50%">
+   <h4><a name="Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag%01Settings+to+Minimize+Audio+Lag">Settings to Minimize Audio Lag</a></h4><p></p><p>
 <u>Mednafen:</u> Select a <a href="#sound.driver">sound driver</a> that is closer to the actual hardware, such as "ALSA" on Linux, and "OSS" on other UN*X platforms.  If you choose to use "OSS", heed the advice regarding osscore.conf and max_intrate.
 </p>
 <p>
@@ -433,12 +433,12 @@ has the minimum amount of processing done to it before being passed to the DAC o
 </p>
 
 
-   </p><hr width="50%">
-  </p><hr width="50%"> </p><hr width="50%">
+   <hr width="50%">
+  <hr width="50%"> <hr width="50%">
  
       
 
- <a name="Credits"><h2>Credits</h2></a><p> <p>
+ <h2><a name="Credits">Credits</a></h2><p></p> <p>
   (This section is woefully outdated, being mostly copied from FCE Ultra)
  <table border width="100%">
   <tr><th>Name:</th><th>Contribution(s):</th></tr>
@@ -461,8 +461,8 @@ has the minimum amount of processing done to it before being passed to the DAC o
   <tr><th colspan="2" align="right">...and everyone whose name my mind has misplaced.</th></tr>
  </table>
  </p>
- </p><hr width="100%">
- <a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits"><h2>Licenses, Copyright Notices, and Code Credits</h2></a><p> <p>
+ <hr width="100%">
+ <h2><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits">Licenses, Copyright Notices, and Code Credits</a></h2><p></p> <p>
   Mednafen makes use of much open-source code from other people, and could not be what it is without their work.  Feel
   free to give them your thanks, but keep in mind most have nothing to do with the Mednafen project, so don't ask
   them questions regarding Mednafen unless appropriate in context.
@@ -480,7 +480,7 @@ has the minimum amount of processing done to it before being passed to the DAC o
  <hr>
 
  <p>
-  <a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01libmpcdec"><h3><a href="http://www.musepack.net/">libmpcdec</a></h3></a><p>  <blockquote>
+  <h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01libmpcdec"><a href="http://www.musepack.net/">libmpcdec</a></a></h3><p></p>  <blockquote>
   <pre>
   Copyright (c) 2005, The Musepack Development Team
   All rights reserved.
@@ -515,8 +515,8 @@ has the minimum amount of processing done to it before being passed to the DAC o
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   </pre>
   </blockquote>
-  </p><hr width="75%">
-  <a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Tremor"><h3><a href="http://xiph.org/">Tremor</a></h3></a><p>  <blockquote>
+  <hr width="75%">
+  <h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Tremor"><a href="http://xiph.org/">Tremor</a></a></h3><p></p>  <blockquote>
 <pre>
 Copyright (c) 2002, Xiph.org Foundation
 
@@ -548,8 +548,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 </pre>
   </blockquote>
-  </p><hr width="75%">
- <a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Gb_Snd_Emu"><h3><a href="http://slack.net/~ant/libs/audio.html">Gb_Snd_Emu</a></h3></a><p><blockquote>
+  <hr width="75%">
+ <h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Gb_Snd_Emu"><a href="http://slack.net/~ant/libs/audio.html">Gb_Snd_Emu</a></a></h3><p></p><blockquote>
 <pre>
 /* Library Copyright (C) 2003-2004 Shay Green. Gb_Snd_Emu is free
 software; you can redistribute it and/or modify it under the terms of the
@@ -563,8 +563,8 @@ License along with Gb_Snd_Emu; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 </pre>
 </blockquote>
- </p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Blip_Buffer"><h3><a href="http://www.slack.net/~ant/libs/">Blip_Buffer</a></h3></a><p><blockquote>
+ <hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Blip_Buffer"><a href="http://www.slack.net/~ant/libs/">Blip_Buffer</a></a></h3><p></p><blockquote>
 <pre>
 Copyright (C) 2003-2006 Shay Green. This module is free software; you
 can redistribute it and/or modify it under the terms of the GNU Lesser
@@ -578,8 +578,8 @@ Public License along with this module; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 </pre>
 </blockquote>
- </p><hr width="75%">
- <a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Sms_Snd_Emu%28base+for+T6W28_Apu+NGP+code%29"><h3><a href="http://slack.net/~ant/libs/audio.html">Sms_Snd_Emu(base for T6W28_Apu NGP code)</a></h3></a><p><blockquote>
+ <hr width="75%">
+ <h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Sms_Snd_Emu%28base+for+T6W28_Apu+NGP+code%29"><a href="http://slack.net/~ant/libs/audio.html">Sms_Snd_Emu(base for T6W28_Apu NGP code)</a></a></h3><p></p><blockquote>
 <pre>
 Copyright (C) 2003-2006 Shay Green. This module is free software; you
 can redistribute it and/or modify it under the terms of the GNU Lesser
@@ -593,8 +593,8 @@ Public License along with this module; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 </pre>
 </blockquote>
- </p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Handy"><h3><a href="http://homepage.ntlworld.com/dystopia/">Handy</a></h3></a><p><blockquote>
+ <hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Handy"><a href="http://homepage.ntlworld.com/dystopia/">Handy</a></a></h3><p></p><blockquote>
 <pre>
 Copyright (c) 2004 K. Wilkins
 
@@ -617,8 +617,8 @@ freely, subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 </pre>
 </blockquote>
- </p><hr width="75%">
- <a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01PC2e+%28Used+in+portions+of+PC+Engine+CD+emulation%29"><h3>PC2e (Used in portions of PC Engine CD emulation)</h3></a><p><blockquote>
+ <hr width="75%">
+ <h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01PC2e+%28Used+in+portions+of+PC+Engine+CD+emulation%29">PC2e (Used in portions of PC Engine CD emulation)</a></h3><p></p><blockquote>
 <pre>
         Copyright (C) 2004 Ki
 
@@ -633,8 +633,8 @@ freely, subject to the following restrictions:
     GNU General Public License for more details.
 </pre>
 </blockquote>
- </p><hr width="75%">
- <a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Scale2x"><h3><a href="http://scale2x.sf.net/">Scale2x</a></h3></a><p><blockquote>
+ <hr width="75%">
+ <h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Scale2x"><a href="http://scale2x.sf.net/">Scale2x</a></a></h3><p></p><blockquote>
 <pre>
  * Copyright (C) 2001, 2002, 2003, 2004 Andrea Mazzoleni
  *
@@ -653,8 +653,8 @@ freely, subject to the following restrictions:
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 </pre>
 </blockquote>
- </p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01hq2x%2C+hq3x%2C+hq4x"><h3><a href="http://www.hiend3d.com/hq2x.html">hq2x, hq3x, hq4x</a></h3></a><p><blockquote>
+ <hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01hq2x%2C+hq3x%2C+hq4x"><a href="http://www.hiend3d.com/hq2x.html">hq2x, hq3x, hq4x</a></a></h3><p></p><blockquote>
 <pre>
 //Copyright (C) 2003 MaxSt ( maxst@hiend3d.com )
 
@@ -673,8 +673,8 @@ freely, subject to the following restrictions:
 //Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 </pre>
 </blockquote>
- </p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01nes_ntsc"><h3><a href="http://www.slack.net/~ant/libs/ntsc.html#nes_ntsc">nes_ntsc</a></h3></a><p><blockquote>
+ <hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01nes_ntsc"><a href="http://www.slack.net/~ant/libs/ntsc.html#nes_ntsc">nes_ntsc</a></a></h3><p></p><blockquote>
 <pre>
 /* Copyright (C) 2006 Shay Green. This module is free software; you
 can redistribute it and/or modify it under the terms of the GNU Lesser
@@ -688,8 +688,8 @@ Public License along with this module; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 </pre>
 </blockquote>
- </p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%012xSaI"><h3>2xSaI</h3></a><p><blockquote>
+ <hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%012xSaI">2xSaI</a></h3><p></p><blockquote>
 <pre>
 /* 2xSaI
  * Copyright (c) Derek Liauw Kie Fa, 1999-2002
@@ -711,8 +711,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 /* http://lists.fedoraproject.org/pipermail/legal/2009-October/000928.html */
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01VisualBoyAdvance+GameBoy+and+GBA+code"><h3><a href="http://vba.sf.net/">VisualBoyAdvance GameBoy and GBA code</a></h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01VisualBoyAdvance+GameBoy+and+GBA+code"><a href="http://vba.sf.net/">VisualBoyAdvance GameBoy and GBA code</a></a></h3><p></p><blockquote>
 <pre>
 // VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
 // Copyright (C) 1999-2003 Forgotten
@@ -733,8 +733,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 // Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 </pre>
 </blockquote>
- </p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01trio"><h3><a href="http://daniel.haxx.se/projects/trio/">trio</a></h3></a><p><blockquote>
+ <hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01trio"><a href="http://daniel.haxx.se/projects/trio/">trio</a></a></h3><p></p><blockquote>
 <pre>
  * Copyright (C) 1998, 2009 Bjorn Reese and Daniel Stenberg.
  * Copyright (C) 2001 Bjorn Reese <breese@users.sourceforge.net>
@@ -752,8 +752,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 </pre>
 </blockquote>
 
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01ConvertUTF"><h3>ConvertUTF</h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01ConvertUTF">ConvertUTF</a></h3><p></p><blockquote>
 <pre>
  * Copyright 2001-2004 Unicode, Inc.
  *
@@ -776,8 +776,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
  * remains attached.
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01MD5+Hashing"><h3>MD5 Hashing</h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01MD5+Hashing">MD5 Hashing</a></h3><p></p><blockquote>
 <pre>
 /*
  * RFC 1321 compliant MD5 implementation,
@@ -786,8 +786,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
  */
 </pre>
 </blockquote>
- </p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01V810+Emulator"><h3>V810 Emulator</h3></a><p><blockquote>
+ <hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01V810+Emulator">V810 Emulator</a></h3><p></p><blockquote>
 <pre>
  * Copyright (C) 2006 David Tucker
  *
@@ -806,8 +806,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Unzipping+Code"><h3>Unzipping Code</h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Unzipping+Code">Unzipping Code</a></h3><p></p><blockquote>
 <pre>
 /* unzip.c -- IO for uncompress .zip files using zlib
    Version 1.01e, February 12th, 2005
@@ -832,8 +832,8 @@ woven in by Terry Thorsen 1/2003.
 </pre>
 </blockquote>
 
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01MiniLZO"><h3><a href="http://www.oberhumer.com/opensource/lzo/">MiniLZO</a></h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01MiniLZO"><a href="http://www.oberhumer.com/opensource/lzo/">MiniLZO</a></a></h3><p></p><blockquote>
 <pre>
    Copyright (C) 2011 Markus Franz Xaver Johannes Oberhumer
    Copyright (C) 2010 Markus Franz Xaver Johannes Oberhumer
@@ -873,8 +873,8 @@ woven in by Terry Thorsen 1/2003.
    http://www.oberhumer.com/opensource/lzo/
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Fuse+Z80+emulation+code"><h3><a href="http://fuse-emulator.sourceforge.net/">Fuse Z80 emulation code</a></h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Fuse+Z80+emulation+code"><a href="http://fuse-emulator.sourceforge.net/">Fuse Z80 emulation code</a></a></h3><p></p><blockquote>
 <pre>
    Copyright (c) 1999-2005 Philip Kendall, Witold Filipczyk
    Copyright (c) 1999-2011 Philip Kendall
@@ -898,8 +898,8 @@ woven in by Terry Thorsen 1/2003.
    E-mail: philip-fuse@shadowmagic.org.uk
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01NeoPop+Neo+Geo+Pocket+%28Color%29+Code"><h3><a href="http://neopop.emuxhaven.net/">NeoPop Neo Geo Pocket (Color) Code</a></h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01NeoPop+Neo+Geo+Pocket+%28Color%29+Code"><a href="http://neopop.emuxhaven.net/">NeoPop Neo Geo Pocket (Color) Code</a></a></h3><p></p><blockquote>
 <pre>
 //---------------------------------------------------------------------------
 // NEOPOP : Emulator as in Dreamland
@@ -913,8 +913,8 @@ woven in by Terry Thorsen 1/2003.
 //      additional informations.
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01SoftFloat+%28Used+in+V810+FPU+Emulation%29"><h3>SoftFloat (Used in V810 FPU Emulation)</h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01SoftFloat+%28Used+in+V810+FPU+Emulation%29">SoftFloat (Used in V810 FPU Emulation)</a></h3><p></p><blockquote>
 <pre>
 /*============================================================================
 
@@ -948,8 +948,8 @@ these four paragraphs for those parts of this code that are retained.
 =============================================================================*/
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01PC-FX+MJPEG+Decoding"><h3>PC-FX MJPEG Decoding</h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01PC-FX+MJPEG+Decoding">PC-FX MJPEG Decoding</a></h3><p></p><blockquote>
 <pre>
 /*
  * jrevdct.c
@@ -962,8 +962,8 @@ these four paragraphs for those parts of this code that are retained.
 <i>(The file is included in the Mednafen source distribution as mednafen/Documentation/README.jpeg4a)</i>
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01VRC7+Sound+Emulation"><h3>VRC7 Sound Emulation</h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01VRC7+Sound+Emulation">VRC7 Sound Emulation</a></h3><p></p><blockquote>
 <pre>
 /*
 YM2413 emulator written by Mitsutaka Okazaki 2001
@@ -974,16 +974,16 @@ if the origin of this software is not misrepresented.
 */
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01NEC+V30MZ+Emulator"><h3>NEC V30MZ Emulator</h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01NEC+V30MZ+Emulator">NEC V30MZ Emulator</a></h3><p></p><blockquote>
 <pre>
 /* This NEC V30MZ emulator may be used for purposes both commercial and noncommercial if you give the author, Bryan McPhail,
    a small credit somewhere(such as in the documentation for an executable package).
 */
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01NEC+V30MZ+disassembler%28modified+BOCHS+x86+disassembler%29"><h3>NEC V30MZ disassembler(modified BOCHS x86 disassembler)</h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01NEC+V30MZ+disassembler%28modified+BOCHS+x86+disassembler%29">NEC V30MZ disassembler(modified BOCHS x86 disassembler)</a></h3><p></p><blockquote>
 <i>Caution:  Bochs' code is under the LGPL, but it is unclear if "or (at your option) any later version." applies to the x86 disassembler code.</i>
 <pre>
 This library is free software; you can redistribute it and/or
@@ -1001,12 +1001,12 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Cygne"><h3><a href="http://http://cygne.emuunlim.com/">Cygne</a></h3></a><p><p>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Cygne"><a href="http://http://cygne.emuunlim.com/">Cygne</a></a></h3><p></p><p>
 Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyright 2002 Dox, dox@space.pl.
 </p>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01FCE+Ultra"><h3><a href="http://fceultra.sourceforge.net/">FCE Ultra</a></h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01FCE+Ultra"><a href="http://fceultra.sourceforge.net/">FCE Ultra</a></a></h3><p></p><blockquote>
 <pre>
 /* FCE Ultra - NES/Famicom Emulator
  *
@@ -1031,8 +1031,8 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
  */
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01QuickLZ"><h3><a href="http://www.quicklz.com/">QuickLZ</a></h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01QuickLZ"><a href="http://www.quicklz.com/">QuickLZ</a></a></h3><p></p><blockquote>
 <pre>
 // QuickLZ data compression library
 // Copyright (C) 2006-2008 Lasse Mikkel Reinhold
@@ -1044,8 +1044,8 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
 // does not cover derived or ported versions created by third parties under GPL.
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Q-Subchannel+CRC16+Code"><h3><a href="http://cdrdao.sourceforge.net/">Q-Subchannel CRC16 Code</a></h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Q-Subchannel+CRC16+Code"><a href="http://cdrdao.sourceforge.net/">Q-Subchannel CRC16 Code</a></a></h3><p></p><blockquote>
 <pre>
 /*  cdrdao - write audio CD-Rs in disc-at-once mode
  *
@@ -1068,8 +1068,8 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
 </pre>
 </blockquote>
 
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01SMS+Plus"><h3><a href="http://cgfm2.emuviews.com/">SMS Plus</a></h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01SMS+Plus"><a href="http://cgfm2.emuviews.com/">SMS Plus</a></a></h3><p></p><blockquote>
 <pre>
     Copyright (C) 1998-2004  Charles MacDonald
 
@@ -1088,8 +1088,8 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Genesis+Plus"><h3><a href="http://cgfm2.emuviews.com/">Genesis Plus</a></h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Genesis+Plus"><a href="http://cgfm2.emuviews.com/">Genesis Plus</a></a></h3><p></p><blockquote>
 <pre>
 /*
     Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003  Charles Mac Donald
@@ -1110,8 +1110,8 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
 */
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Genesis+Plus+GX"><h3><a href="http://code.google.com/p/genplus-gx/">Genesis Plus GX</a></h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Genesis+Plus+GX"><a href="http://code.google.com/p/genplus-gx/">Genesis Plus GX</a></a></h3><p></p><blockquote>
 <prE>
  *
  *  Copyright (C) 2007, 2008, 2009 EkeEke
@@ -1131,8 +1131,8 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01EMU2413%28used+in+SMS+emulation%29"><h3>EMU2413(used in SMS emulation)</h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01EMU2413%28used+in+SMS+emulation%29">EMU2413(used in SMS emulation)</a></h3><p></p><blockquote>
 <pre>
   Copyright (C) Mitsutaka Okazaki 2004
 
@@ -1153,8 +1153,8 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
   3. This notice may not be removed or altered from any source distribution.
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01blz"><h3>blz</h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01blz">blz</a></h3><p></p><blockquote>
 <pre>
 /* Copyright (C) 2007 Shay Green. This module is free software; you can
 redistribute it and/or modify it under the terms of the GNU General Public
@@ -1167,8 +1167,8 @@ along with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01CD-ROM+data+correction+code"><h3>CD-ROM data correction code</h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01CD-ROM+data+correction+code">CD-ROM data correction code</a></h3><p></p><blockquote>
 <pre>
 /*  dvdisaster: Additional error correction for optical media.
  *  Copyright (C) 2004-2007 Carsten Gnoerlich.
@@ -1195,8 +1195,8 @@ along with this program; if not, write to the Free Software Foundation, Inc.,
  */
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01C68K"><h3>C68K</h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01C68K">C68K</a></h3><p></p><blockquote>
 <pre>
 /*  Copyright 2003-2004 Stephane Dallongeville
 
@@ -1218,8 +1218,8 @@ along with this program; if not, write to the Free Software Foundation, Inc.,
 */
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01YM2612+Emulator"><h3>YM2612 Emulator</h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01YM2612+Emulator">YM2612 Emulator</a></h3><p></p><blockquote>
 <pre>
 /* Copyright (C) 2002 St�phane Dallongeville (gens AT consolemul.com) */
 /* Copyright (C) 2004-2006 Shay Green. This module is free software; you
@@ -1234,8 +1234,8 @@ License along with this module; if not, write to the Free Software Foundation,
 Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Sega+Genesis+SVP%2FSSP16+Emulator"><h3>Sega Genesis SVP/SSP16 Emulator</h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Sega+Genesis+SVP%2FSSP16+Emulator">Sega Genesis SVP/SSP16 Emulator</a></h3><p></p><blockquote>
 <pre>
 /*
  * basic, incomplete SSP160x (SSP1601?) interpreter
@@ -1267,8 +1267,8 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
  */
 </pre>
 </blockquote>
-</p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Speex+Resampler"><h3><a href="http://speex.org/">Speex Resampler</a></h3></a><p><blockquote>
+<hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01Speex+Resampler"><a href="http://speex.org/">Speex Resampler</a></a></h3><p></p><blockquote>
 <pre>
 /* Copyright (C) 2007-2008 Jean-Marc Valin
    Copyright (C) 2008      Thorvald Natvig
@@ -1304,8 +1304,8 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 */
 </pre>
 </blockquote>
- </p><hr width="75%">
-<a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01SABR+v3.0+Shader"><h3>SABR v3.0 Shader</h3></a><p><blockquote>
+ <hr width="75%">
+<h3><a name="Licenses%2C+Copyright+Notices%2C+and+Code+Credits%01SABR+v3.0+Shader">SABR v3.0 Shader</a></h3><p></p><blockquote>
 <pre>
         SABR v3.0 Shader
         Joshua Street
@@ -1328,6 +1328,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
         Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 </pre>
 </blockquote>
-</p><hr width="75%">
+<hr width="75%">
+<hr width="75%">
  </body>
 </html>

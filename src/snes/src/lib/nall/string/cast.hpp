@@ -1,7 +1,7 @@
 #ifndef NALL_STRING_CAST_HPP
 #define NALL_STRING_CAST_HPP
 
-namespace nall {
+namespace nall_v059 {
   //this is needed, as C++98 does not support explicit template specialization inside classes;
   //redundant memory allocation should hopefully be avoided via compiler optimizations.
   template<> inline string to_string<bool>         (bool v)          { return v ? "true" : "false"; }

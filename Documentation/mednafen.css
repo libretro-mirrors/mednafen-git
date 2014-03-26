@@ -117,27 +117,31 @@ img
  border: 0px;
 }
 
+/*
 .RowA
 {
- abackground-color: #000000;
+ background-color: #000000;
 }
 
 .RowB
 {
- abackground-color: #002010;
+ background-color: #002010;
 }
 
 .RowB .ColC, .RowB .ColD
 {
- abackground-color: #001020;
+ background-color: #001020;
 }
+*/
 
 .RowSpacer
 {
  height: 1em;
  background-color: #002010;
- abackground-image: url('headerbg.png');
- abackground-repeat: repeat-x;
+/*
+ background-image: url('headerbg.png');
+ background-repeat: repeat-x;
+*/
 }
 
 tr.TableHeader

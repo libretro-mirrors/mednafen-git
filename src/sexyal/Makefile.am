@@ -10,6 +10,10 @@ if HAVE_DIRECTSOUND
 TMP_DIRECTSOUND	=	drivers/dsound.cpp
 endif
 
+if HAVE_WASAPI
+TMP_WASAPI	=	drivers/wasapi.cpp
+endif
+
 if HAVE_OSSDSP
 TMP_OSSDSP	=	drivers/oss.cpp
 endif
@@ -27,4 +31,4 @@ if HAVE_ALSA
 TMP_ALSA	=	drivers/alsa.cpp
 endif
 
-libsexyal_a_SOURCES	+=	$(TMP_DIRECTSOUND) $(TMP_OSSDSP) $(TMP_JACK) $(TMP_SDL) $(TMP_ALSA)
+libsexyal_a_SOURCES	+=	$(TMP_DIRECTSOUND) $(TMP_WASAPI) $(TMP_OSSDSP) $(TMP_JACK) $(TMP_SDL) $(TMP_ALSA)

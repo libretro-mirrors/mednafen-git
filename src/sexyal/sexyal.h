@@ -19,7 +19,7 @@ typedef struct
 				   channels) */
 	uint32_t rate;		/* Number of frames per second, 22050, 44100, etc. */
 	bool revbyteorder;	/* 0 = Native(to CPU), 1 = Reversed.  PDP can go to hell. */
-	bool split_stereo;	/* TODO: 0 = Interleaved stereo, 1 = split streams. */
+	bool noninterleaved;	/* 0 = Interleaved multichannel audio(stereo), 1 = Non-Interleaved */
 } SexyAL_format;
 
 typedef struct
@@ -131,6 +131,9 @@ typedef struct __SexyAL_device
 	SexyAL_format srcformat;
 	SexyAL_buffering buffering;
 	void *private_data;
+
+	void *convert_buffer;
+	uint32_t convert_buffer_fsize;
 } SexyAL_device;
 
 typedef struct __SexyAL_enumdevice
@@ -154,7 +157,10 @@ enum
 {
  SEXYAL_TYPE_OSSDSP = 0x001,
  SEXYAL_TYPE_ALSA = 0x002,
+
  SEXYAL_TYPE_DIRECTSOUND = 0x010,
+ SEXYAL_TYPE_WASAPI = 0x011,
+
  SEXYAL_OSX_COREAUDIO = 0x030,	/* TODO */
 
  SEXYAL_TYPE_ESOUND = 0x100,

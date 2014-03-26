@@ -36,8 +36,9 @@ struct sfr_t {
   bool b;     //WITH flag
   bool ih;    //immediate higher 8-bit flag
   bool il;    //immediate lower 8-bit flag
-  bool alt2;  //ALT2 mode
-  bool alt1;  //ALT2 instruction mode
+  uint32 alt; //:10;
+  //bool alt2;  //ALT2 mode
+  //bool alt1;  //ALT2 instruction mode
   bool r;     //ROM r14 read flag
   bool g;     //GO flag
   bool ov;    //overflow flag
@@ -46,7 +47,7 @@ struct sfr_t {
   bool z;     //zero flag
 
   operator unsigned() const {
-    return (irq << 15) | (b << 12) | (ih << 11) | (il << 10) | (alt2 << 9) | (alt1 << 8)
+    return (irq << 15) | (b << 12) | (ih << 11) | (il << 10) | alt /*(alt2 << 9) | (alt1 << 8)*/
          | (r << 6) | (g << 5) | (ov << 4) | (s << 3) | (cy << 2) | (z << 1);
   }
 
@@ -55,8 +56,9 @@ struct sfr_t {
     b    = data & 0x1000;
     ih   = data & 0x0800;
     il   = data & 0x0400;
-    alt2 = data & 0x0200;
-    alt1 = data & 0x0100;
+    alt  = data & 0x0300;
+    //alt2 = data & 0x0200;
+    //alt1 = data & 0x0100;
     r    = data & 0x0040;
     g    = data & 0x0020;
     ov   = data & 0x0010;
@@ -155,8 +157,9 @@ struct regs_t {
 
   void reset() {
     sfr.b    = 0;
-    sfr.alt1 = 0;
-    sfr.alt2 = 0;
+    sfr.alt  = 0;
+    //sfr.alt1 = 0;
+    //sfr.alt2 = 0;
 
     sreg = 0;
     dreg = 0;

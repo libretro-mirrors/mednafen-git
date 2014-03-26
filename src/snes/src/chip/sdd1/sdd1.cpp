@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define SDD1_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 SDD1 sdd1;
 

@@ -44,6 +44,7 @@ SexyAL_device *SexyALI_OSS_Open(const char *id, SexyAL_format *format, SexyAL_bu
 SexyAL_device *SexyALI_JACK_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 SexyAL_device *SexyALI_SDL_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 SexyAL_device *SexyALI_DSound_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
+SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 SexyAL_device *SexyALI_Dummy_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 
 #ifdef HAVE_ALSA
@@ -78,34 +79,16 @@ static uint32_t CanWrite(SexyAL_device *device)
 
 static int Write(SexyAL_device *device, void *data, uint32_t frames)
 {
- // The number of frames to convert and write to the output at once, and the chunk size
- // of writes to the device when no conversion is done.
- // Don't change this much, the drivers aren't written to handle enormous lengths passed to RawWrite().
- #define CONVERT_CHUNK_SIZE	512 //2048	//2048
-
- static uint8_t buffer[CONVERT_CHUNK_SIZE * 4 * 8]; // Maximum frame size, 4 bytes * 8 channels
+ assert(device->srcformat.noninterleaved == false);
 
  if(device->srcformat.sampformat == device->format.sampformat &&
 	device->srcformat.channels == device->format.channels &&
 	device->srcformat.rate == device->format.rate &&
-	device->srcformat.revbyteorder == device->format.revbyteorder)
+	device->srcformat.revbyteorder == device->format.revbyteorder &&
+	device->srcformat.noninterleaved == device->format.noninterleaved)
  {
-  const uint8_t *data_in = (const uint8_t *)data;
-
-  while(frames)
-  {
-   int32_t write_this_iteration;
-
-   write_this_iteration = frames;
-   if(write_this_iteration > CONVERT_CHUNK_SIZE)
-    write_this_iteration = CONVERT_CHUNK_SIZE;
-
-   if(!device->RawWrite(device, data_in, FtoB(&device->format, write_this_iteration)))
-    return(0);
-
-   frames -= write_this_iteration;
-   data_in += FtoB(&device->srcformat, write_this_iteration);
-  }
+  if(!device->RawWrite(device, data, FtoB(&device->format, frames)))
+   return(0);
  }
  else
  {
@@ -116,12 +99,13 @@ static int Write(SexyAL_device *device, void *data, uint32_t frames)
    int32_t convert_this_iteration;
 
    convert_this_iteration = frames;
-   if(convert_this_iteration > CONVERT_CHUNK_SIZE) 
-    convert_this_iteration = CONVERT_CHUNK_SIZE;
 
-   SexiALI_Convert(&device->srcformat, &device->format, data_in, buffer, convert_this_iteration);
+   if(convert_this_iteration > device->convert_buffer_fsize)
+    convert_this_iteration = device->convert_buffer_fsize;
 
-   if(!device->RawWrite(device, buffer, FtoB(&device->format, convert_this_iteration)))
+   SexiALI_Convert(&device->srcformat, &device->format, data_in, device->convert_buffer, convert_this_iteration);
+
+   if(!device->RawWrite(device, device->convert_buffer, FtoB(&device->format, convert_this_iteration)))
     return(0);
 
    frames -= convert_this_iteration;
@@ -160,6 +144,10 @@ static SexyAL_driver drivers[] =
 
         #if HAVE_DIRECTSOUND
         { SEXYAL_TYPE_DIRECTSOUND, "DirectSound", "dsound", SexyALI_DSound_Open, NULL },
+        #endif
+
+        #if HAVE_WASAPI
+        { SEXYAL_TYPE_WASAPI, "WASAPI", "wasapi", SexyALI_WASAPI_Open, NULL },
         #endif
 
 	#ifdef DOS
@@ -214,6 +202,11 @@ static SexyAL_device *Open(SexyAL *iface, const char *id, SexyAL_format *format,
    id += strlen("sexyal-literal-");
  }
 
+ assert(format->rate >= 8192 && format->rate <= (1024 * 1024));
+ assert(format->channels == 1 || format->channels == 2);
+ assert(0 == format->noninterleaved);
+ assert(0 == format->revbyteorder);
+
  assert(0 == buffering->buffer_size);
  assert(0 == buffering->period_size);
  assert(0 == buffering->latency);
@@ -228,6 +221,13 @@ static SexyAL_device *Open(SexyAL *iface, const char *id, SexyAL_format *format,
 
  buffering->ms = (uint64_t)buffering->buffer_size * 1000 / format->rate;
  buffering->period_us = (uint64_t)buffering->period_size * (1000 * 1000) / format->rate;
+
+ ret->convert_buffer_fsize = (25 * format->rate + 999) / 1000;
+ if(!(ret->convert_buffer = calloc(format->channels * (format->sampformat >> 4), ret->convert_buffer_fsize)))
+ {
+  ret->RawClose(ret);
+  return(0);
+ }
 
  ret->Write = Write;
  ret->Close = Close;

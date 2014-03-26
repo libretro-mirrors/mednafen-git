@@ -1,12 +1,61 @@
+***Major issues***
+
 Battle Arena Toshinden and Zero Divide runs too fast(related to CPU or GPU emulation speed?).
 
 Tiny Toon Adventures - Plucky's Big Adventure is failing and BREAK'ing for some reason during startup, probably because the emulated CPU
 is running too fast.
 
-Resident Evil 2 - Lockup on second disc in a certain place; probably related to seek timing.
+Tetris with Cardcaptor Sakura - Locks up at the room-lighting warning screen.
+
+Ballblazer Champions - Locks up during startup; probably a CPU timing issue.
 
 Tomb Raider(PAL) - (reported, not personally investigated yet) "was fighting Tomb Raider PAL this night, when you get out of pool in Lara's home the game bugs out: issues GetlocP, waits for it to complete and expects seek to be NOT complete (i.e. older location)"
+
+Monkey Hero - Locks up during/after title screen.
+
+Freestyle Motocross: McGrath vs. Pastrana - Random fairly long(but finite) freezes during gameplay.  Possibly CPU instruction-timing
+related.  Possibly CDC-timing related(emulating the currently-missing delay between command/args received and command executed might fix it).
+
+	[CDC] Command: ReadN --- 
+	[CDC] Command: Standby --- 
+	[CDC] Command: Nop --- 
+	[CDC] Command: Setmode ---  0xa0
+	[CDC] Command: Setloc ---  0x08 0x13 0x53
+	[CDC] Command: ReadN --- 
+	20076
+	[CDC] Command: Standby --- 
+	[CDC] Command: Nop --- 
+	[CDC] Command: Setmode ---  0xa0
+	[CDC] Command: Setloc ---  0x08 0x13 0x61
+
+		0x800668B8
+
+
+Tales of Destiny (Japanese version 1.0) - Reported to have random freezes after battles(not confirmed yet).  US version is reported
+to not suffer from this problem.
+
+FIFA - Road to Worldcup 98 (USA) - Locks up after legal screen is displayed at startup; probably CPU instruction timing-related(decreasing
+the IPC fixes this problem).
+
+----------------------------------------------------------------------------------------------
+
+***Medium issues***
+
+Championship Motocross 2001 - Invisible driver.  GHOSTRIDER~  The palette data in RAM is apparently being selectively zero'd out between
+the DMA from CDC and the DMA to GPU for some reason.  Timing issue related maybe?  (Probably CPU instruction timing issue)
+
+Incredible Crisis - Garbled in-game dialogue text boxes.  Probably CPU instruction timing-related(decreasing the IPC fixes this problem).
+
+Nicktoons Racing - Fubared sound effects.  Probably CPU instruction timing-related(decreasing the IPC fixes this problem).
+
+Wing Commander III - Music during flight sounds screwed up, with missing notes and notes cut off too early.  Maybe it's supposed to be
+like that; need to test it on a PS1 to find out.
+
 -----------------------------------------------------------------------------------------------
+
+***Lesser issues***
+
+Resident Evil 2 - Lockup on second disc in a certain place; probably related to seek timing(might be fixed now?).
 
 Shadow Master might have broken startup images.
 
@@ -20,9 +69,20 @@ Nightmare Creatures - BIOS reverb sound excessively contaminates beginning of ga
 accurately might fix it.
 
 Eldergate - Screen garbage after "world creation", disappears if town is entered; might be caused by CD reading or
-seeking being too fast?
+seeking being too fast?  Or possibly a CPU instruction timing issue...hmm.
+
+Castrol Honda Superbike Racing - Graphical glitches on menus.
+
+Vigilante 8 - Has weird red and green(and a few blue) garbage pixels in patches sometimes during gameplay; "garbage" pixel placement
+is somewhat sparse, so it might not even be noticeable if it were to occur on a PS1 with composite or S-video output, due to limited
+chroma bandwidth.
 
 -----------------------------------------------------------------------------------------------
+
+Ensure(long-term, IE a note to the FUTURE) that input device state is latched in independent variables at the start of the
+input device's handling of a state read command, so that when games are reading device state across an MDFNI_Emulate() boundary, the
+data won't change in the middle, which could hypothetically cause problems in some rare circumstances(and make entering 
+button combos in games more finicky).
 
 Investigate CD-XA FIR filter on a PS1, for 4-bit and 8-bit modes, and both playback rates.  Might be difficult without a modchip,
 though...
@@ -46,8 +106,6 @@ if it's not too large.
 Test 0x0 and 1x1 polygon throughput for all triangle and quad drawing commands.
 
 Fix line drawing algorithm to match test results on the real thing.
-
-Instruction cache emulation(MAYBE).
 
 
 Test time between voice on and envelope reset; test time between voice on and first ADPCM block memory fetch.

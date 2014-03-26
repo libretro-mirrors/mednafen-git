@@ -14,7 +14,7 @@
 #include <nall/utf8.hpp>
 #include <nall/utility.hpp>
 
-namespace nall {
+namespace nall_v059 {
   inline FILE* fopen_utf8(const char *utf8_filename, const char *mode) {
     #if !defined(_WIN32)
     return fopen(utf8_filename, mode);

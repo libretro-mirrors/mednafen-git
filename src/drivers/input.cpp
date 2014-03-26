@@ -955,7 +955,7 @@ static uint8 BarcodeWorldData[1 + 13];
 static void DoKeyStateZeroing(void)
 {
   if(IConfig == none && !(cidisabled & 0x1))	// Match the statement in CheckCommandKeys for when DoKeyStateZeroing()
-						// is called insterad of CheckCommandKeys
+						// is called instead of CheckCommandKeys
   {
    if(Netplay_IsTextInput() || IsConsoleCheatConfigActive())
    {

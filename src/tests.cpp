@@ -29,6 +29,7 @@
 
 #undef NDEBUG
 #include <assert.h>
+#include <math.h>
 
 #define FATALME	 { printf("Math test failed: %s:%d\n", __FILE__, __LINE__); fprintf(stderr, "Math test failed: %s:%d\n", __FILE__, __LINE__); return(0); }
 
@@ -384,6 +385,25 @@ unsigned int mdfn_shifty_test[4] =
 
 #include "general.h"
 
+// Don't make static.
+double mdfn_fptest0_sub(double x, double n) MDFN_COLD NO_INLINE;
+double mdfn_fptest0_sub(double x, double n)
+{
+ double u = x / (n * n);
+
+ return(u);
+}
+
+static void fptest0(void)
+{
+ assert(mdfn_fptest0_sub(36, 2) == 9);
+}
+
+static void RunFPTests(void)
+{
+ fptest0();
+}
+
 bool MDFN_RunMathTests(void)
 {
  MathTestEntry *itoo = math_test_vals;
@@ -625,6 +645,8 @@ bool MDFN_RunMathTests(void)
  assert(uilog2(0xFFFFFFFF) == 31);
 
  QuickEndianRBOTest();
+
+ RunFPTests();
 
 #if 0
 // Not really a math test.

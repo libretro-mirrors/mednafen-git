@@ -1,8 +1,8 @@
 #ifdef SSMP_CPP
 
-void sSMP::serialize(serializer &s) {
-  SMP::serialize(s);
-  SMPcore::core_serialize(s);
+void SMP::serialize(serializer &s) {
+  //SMP::serialize(s);
+  core_serialize(s);
 
   s.integer(status.opcode);
   s.integer(status.in_opcode);

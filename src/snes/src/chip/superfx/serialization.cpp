@@ -30,8 +30,17 @@ void SuperFX::serialize(serializer &s) {
   s.integer(regs.sfr.b);
   s.integer(regs.sfr.ih);
   s.integer(regs.sfr.il);
-  s.integer(regs.sfr.alt2);
-  s.integer(regs.sfr.alt1);
+
+  {
+   bool alt1 = regs.sfr.alt & 0x100;
+   bool alt2 = regs.sfr.alt & 0x200;
+
+   s.integer(alt2);
+   s.integer(alt1);
+
+   regs.sfr.alt = (alt1 << 8) | (alt2 << 9);
+  }
+
   s.integer(regs.sfr.r);
   s.integer(regs.sfr.g);
   s.integer(regs.sfr.ov);

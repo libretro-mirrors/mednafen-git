@@ -6,7 +6,7 @@
 #include <nall/bit.hpp>
 #include <nall/utility.hpp>
 
-namespace nall {
+namespace nall_v059 {
   //linear_vector
   //memory: O(capacity * 2)
   //

@@ -258,7 +258,7 @@ bool InitShader(ShaderType shader_type)
 	return(1);
 }
 
-bool ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th, int orig_tw, int orig_th)
+bool ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th, int orig_tw, int orig_th, unsigned rotated)
 {
         p_glEnable(GL_FRAGMENT_PROGRAM_ARB);
 
@@ -288,6 +288,19 @@ bool ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int 
 	 float ysh;
 	 unsigned ip_x;
 	 unsigned ip_y;
+	 double drw_div_rw;
+	 double drh_div_rh;
+
+	 if(rotated == MDFN_ROTATE90 || rotated == MDFN_ROTATE270)
+	 {
+          drw_div_rw = (double)dest_rect->h / rect->w;
+          drh_div_rh = (double)dest_rect->w / rect->h;
+	 }
+	 else
+	 {
+          drw_div_rw = (double)dest_rect->w / rect->w;
+          drh_div_rh = (double)dest_rect->h / rect->h;
+	 }
 
 	 ip_x = 1;
 	 ip_y = 1;
@@ -299,8 +312,8 @@ bool ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int 
 	 }
 	 else
 	 {
-	  xsh = (float)dest_rect->w / rect->w / sharpness;
-	  ysh = (float)dest_rect->h / rect->h / sharpness;
+	  xsh = drw_div_rw / sharpness;
+	  ysh = drh_div_rh / sharpness;
 	 }
 
 	 if(OurType == SHADER_IPXNOTY || OurType == SHADER_IPXNOTYSHARPER)
@@ -331,14 +344,14 @@ bool ShaderBegin(const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int 
 	 else
 	 {
 	  // Scaling X by an integer?
-	  if(floor((double)dest_rect->w / rect->w) == (double)dest_rect->w / rect->w)
+	  if(floor(drw_div_rw) == drw_div_rw)
 	  {
 	   xsh = 0;
 	   ip_x = 0;
 	  }
 
 	  // Scaling Y by an integer?
-	  if(floor((double)dest_rect->h / rect->h) == (double)dest_rect->h / rect->h)
+	  if(floor(drh_div_rh) == drh_div_rh)
 	  {
 	   ysh = 0;
 	   ip_y = 0;

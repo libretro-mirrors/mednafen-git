@@ -24,6 +24,8 @@ void BlitScreen(MDFN_Surface *, const MDFN_Rect *DisplayRect, const MDFN_Rect *L
 void ToggleFS();
 void ClearVideoSurfaces(void);
 
+void VideoAppActive(bool gain);
+
 #define NTVB_HQ2X       1
 #define NTVB_HQ3X       2
 #define NTVB_HQ4X	3

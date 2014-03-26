@@ -7,7 +7,7 @@
 #include <../base.hpp>
 
 #define CX4_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 Cx4 cx4;
 

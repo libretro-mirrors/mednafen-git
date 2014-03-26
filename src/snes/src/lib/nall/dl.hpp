@@ -15,7 +15,7 @@
   #include <nall/utf8.hpp>
 #endif
 
-namespace nall {
+namespace nall_v059 {
   struct library : noncopyable {
     bool opened() const { return handle; }
     bool open(const char*);

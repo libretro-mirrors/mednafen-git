@@ -13,7 +13,7 @@
 #include <windows.h>
 #undef interface
 
-namespace nall {
+namespace nall_v059 {
   //UTF-8 to UTF-16
   class utf16_t {
   public:

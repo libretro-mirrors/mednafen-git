@@ -4,8 +4,8 @@
 namespace MDFN_IEN_VB
 {
 
-bool VIP_Init(void);
-void VIP_Power(void);
+bool VIP_Init(void) MDFN_COLD;
+void VIP_Power(void) MDFN_COLD;
 
 void VIP_SetInstantDisplayHack(bool);
 void VIP_SetAllowDrawSkip(bool);

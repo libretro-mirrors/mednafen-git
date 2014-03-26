@@ -44,7 +44,9 @@ typedef struct
 	WAVEFORMATEX wf;		/* Format of the primary and secondary buffers. */
 	long DSBufferSize;		/* The size of the buffer that we can write to, in bytes. */
 
-	long BufHowMuch;		/* How many bytes we should try to buffer. */
+	long BufHowMuch;		/* How many bytes of buffering we sync/wait to. */
+	long BufHowMuchOBM;		/* How many bytes of buffering we actually do(at least temporarily). */
+
 	DWORD ToWritePos;		/* Position which the next write to the buffer
 					   should write to.
 					*/
@@ -92,9 +94,8 @@ SexyAL_device *SexyALI_DSound_Open(const char *id, SexyAL_format *format, SexyAL
  DSCAPS dscaps;
  //DSBCAPS dsbcaps;
 
- dev = (SexyAL_device *)malloc(sizeof(SexyAL_device));
- fobby = (DSFobby *)malloc(sizeof(DSFobby));
- memset(fobby,0,sizeof(DSFobby));
+ dev = (SexyAL_device *)calloc(1, sizeof(SexyAL_device));
+ fobby = (DSFobby *)calloc(1, sizeof(DSFobby));
 
  memset(&fobby->wf,0,sizeof(WAVEFORMATEX));
  fobby->wf.wFormatTag = WAVE_FORMAT_PCM;
@@ -161,21 +162,23 @@ SexyAL_device *SexyALI_DSound_Open(const char *id, SexyAL_format *format, SexyAL
   buffering->ms=53;
 
  buffering->buffer_size = (int64_t)format->rate * buffering->ms / 1000;
+
  fobby->BufHowMuch = buffering->buffer_size * format->channels * (format->sampformat >> 4);
+ fobby->BufHowMuchOBM = fobby->BufHowMuch + ((30 * format->rate + 999) / 1000) * format->channels * (format->sampformat >> 4);
 
  buffering->latency = buffering->buffer_size; // TODO:  Add estimated WaveOut latency when using an emulated DirectSound device.
  buffering->period_size = 0;
 
  /* Create secondary sound buffer */
  {
-  int64_t padding_extra = ((int64_t)format->rate * 280 / 1000) * format->channels * (format->sampformat >> 4);
+  int64_t padding_extra = (((int64_t)format->rate * 200 + 999) / 1000) * format->channels * (format->sampformat >> 4);
 
-  if(padding_extra < (fobby->BufHowMuch * 2))
-   padding_extra = fobby->BufHowMuch * 2;
+  if(padding_extra < (fobby->BufHowMuchOBM * 2))
+   padding_extra = fobby->BufHowMuchOBM * 2;
 
-  fobby->DSBufferSize = SexyAL_rupow2(fobby->BufHowMuch + padding_extra);
+  fobby->DSBufferSize = SexyAL_rupow2(fobby->BufHowMuchOBM + padding_extra);
 
-  //printf("%u\n", fobby->DSBufferSize);
+  //printf("Bufferbytesizenomnom: %u --- BufHowMuch: %u, BufHowMuchOBM: %u\n", fobby->DSBufferSize, fobby->BufHowMuch, fobby->BufHowMuchOBM);
 
   if(fobby->DSBufferSize < 65536)
    fobby->DSBufferSize = 65536;
@@ -215,7 +218,7 @@ SexyAL_device *SexyALI_DSound_Open(const char *id, SexyAL_format *format, SexyAL
  return(dev);
 }
 
-static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
+static int RawCanWriteInternal(SexyAL_device *device, uint32_t *can_write, const bool OBM, const bool signal_nega = false)
 {
  DSFobby *tmp = (DSFobby *)device->private_data;
  DWORD CurWritePos, CurPlayPos = 0;
@@ -229,12 +232,12 @@ static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
  {
    //MDFN_DispMessage("%d",CurWritePos-CurPlayPos);
  }
- CurWritePos=(CurPlayPos+tmp->BufHowMuch)%tmp->DSBufferSize;
+
+ CurWritePos = (CurPlayPos + tmp->BufHowMuchOBM) % tmp->DSBufferSize;
 
  /*  If the current write pos is >= half the buffer size less than the to write pos,
      assume DirectSound has wrapped around.
  */
-
  if(((int32_t)tmp->ToWritePos-(int32_t)CurWritePos) >= (tmp->DSBufferSize/2))
  {
   CurWritePos += tmp->DSBufferSize;
@@ -245,17 +248,39 @@ static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
  {
   int32_t howmuch = (int32_t)CurWritePos - (int32_t)tmp->ToWritePos;
 
-  if(howmuch > tmp->BufHowMuch)      /* Oopsie.  Severe buffer overflow... */
+  //printf(" HM: %u\n", howmuch);
+
+  // Handle (probably severe) buffer-underflow condition.
+  if(howmuch > tmp->BufHowMuchOBM)
   {
-   tmp->ToWritePos = CurWritePos % tmp->DSBufferSize;
+   //printf("Underrun: %d %d --- %d --- CWP=%d, TWP=%d\n", howmuch, tmp->BufHowMuchOBM, OBM, CurWritePos, tmp->ToWritePos);
+
+   howmuch = tmp->BufHowMuchOBM;
+   tmp->ToWritePos = (CurWritePos + tmp->DSBufferSize - tmp->BufHowMuchOBM) % tmp->DSBufferSize;
   }
 
-  *can_write = CurWritePos - tmp->ToWritePos;
+  if(false == OBM)
+   howmuch -= tmp->BufHowMuchOBM - tmp->BufHowMuch;
+
+  if(howmuch < 0)
+  {
+   if(signal_nega)
+    howmuch = ~0U;
+   else
+    howmuch = 0;
+  }
+
+  *can_write = howmuch;
  }
  else
   *can_write = 0;
 
  return(1);
+}
+
+static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
+{
+ return RawCanWriteInternal(device, can_write, false);
 }
 
 static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
@@ -278,8 +303,11 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
   uint32_t curlen;
   int rcw_rv;
 
-  while((rcw_rv = RawCanWrite(device, &curlen)) && !curlen)
+  while((rcw_rv = RawCanWriteInternal(device, &curlen, true)) && !curlen)
+  {
+   //puts("WAITER1");
    Sleep(1);
+  }
 
   // If RawCanWrite() failed, RawWrite must fail~
   if(!rcw_rv)
@@ -313,6 +341,22 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
   if(len)
    Sleep(1);
  } // end while(len) loop
+
+
+ // Synchronize to effective buffer size.
+ {
+  uint32_t curlen;
+  int rcw_rv;
+
+  while((rcw_rv = RawCanWriteInternal(device, &curlen, false, true)) && (curlen == ~0U))
+  {
+   //puts("WAITER2");
+   Sleep(1);
+  }
+  // If RawCanWrite() failed, RawWrite must fail~
+  if(!rcw_rv)
+   return(0);
+ }
 
 
  return(1);

@@ -117,7 +117,7 @@ bool edc_check(const uint8 *sector_data, bool xa)
  return(CheckEDC(sector_data, xa));
 }
 
-bool edc_lec_check_correct(uint8 *sector_data, bool xa)
+bool edc_lec_check_and_correct(uint8 *sector_data, bool xa)
 {
  CDUtility_Init();
 

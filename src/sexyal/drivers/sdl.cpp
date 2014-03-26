@@ -193,6 +193,8 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
  SDLWrap *sw = (SDLWrap *)device->private_data;
  const uint8_t *data_u8 = (const uint8_t *)data;
 
+ //printf("Write: %u, %u %u\n", len, sw->BufferIn, sw->RealBufferSize_Raw);
+
  SDL_LockAudio();
  while(len)
  {
@@ -201,6 +203,18 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
   if((maxcopy + sw->BufferWrite) > sw->RealBufferSize_Raw)
    maxcopy = sw->RealBufferSize_Raw - sw->BufferWrite;
 
+  if((maxcopy + sw->BufferIn) > sw->RealBufferSize_Raw)
+  {
+   maxcopy = sw->RealBufferSize_Raw - sw->BufferIn;
+   if(!maxcopy)
+   {
+    SDL_UnlockAudio();
+    SDL_Delay(1);
+    //puts("BJORK");
+    SDL_LockAudio();
+    continue;
+   }
+  }
   memcpy((char*)sw->Buffer + sw->BufferWrite, data_u8, maxcopy);
 
   sw->BufferWrite = (sw->BufferWrite + maxcopy) % sw->RealBufferSize_Raw;
@@ -321,8 +335,7 @@ SexyAL_device *SexyALI_SDL_Open(const char *id, SexyAL_format *format, SexyAL_bu
 
  sw->StandAlone = StandAlone;
 
- device = (SexyAL_device *)malloc(sizeof(SexyAL_device));
- memset(device, 0, sizeof(SexyAL_device));
+ device = (SexyAL_device *)calloc(1, sizeof(SexyAL_device));
  device->private_data = sw;
 
  memset(&desired, 0, sizeof(SDL_AudioSpec));
@@ -381,8 +394,8 @@ SexyAL_device *SexyALI_SDL_Open(const char *id, SexyAL_format *format, SexyAL_bu
 
  //printf("%d\n", sw->BufferSize);
 
- // *2 for safety room, FIXME?
- sw->RealBufferSize = SexyAL_rupow2(sw->BufferSize + (sw->EPMaxVal + 2048) * 2);
+ // *2 for safety room, and 30ms extra.
+ sw->RealBufferSize = SexyAL_rupow2(sw->BufferSize + sw->EPMaxVal * 2 + ((30 * format->rate + 999) / 1000) );
 
  sw->BufferIn = sw->BufferRead = sw->BufferWrite = 0;
 

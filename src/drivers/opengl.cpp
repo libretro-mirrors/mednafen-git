@@ -66,6 +66,15 @@ glRotated_Func p_glRotated;
 glScalef_Func p_glScalef;
 glReadPixels_Func p_glReadPixels;
 
+glFenceSync_Func p_glFenceSync;
+glIsSync_Func p_glIsSync;
+glDeleteSync_Func p_glDeleteSync;
+glClientWaitSync_Func p_glClientWaitSync;
+glWaitSync_Func p_glWaitSync;
+glGetInteger64v_Func p_glGetInteger64v;
+glGetSynciv_Func p_glGetSynciv;
+
+
 #if MDFN_WANT_OPENGL_SHADERS
 glCreateShaderObjectARB_Func p_glCreateShaderObjectARB;
 glShaderSourceARB_Func p_glShaderSourceARB;
@@ -90,6 +99,7 @@ glGetObjectParameterivARB_Func p_glGetObjectParameterivARB;
 
 static uint32 MaxTextureSize; // Maximum power-of-2 texture width/height(we assume they're the same, and if they're not, this is set to the lower value of the two)
 static bool SupportNPOT; 		// True if the OpenGL implementation supports non-power-of-2-sized textures
+static bool SupportARBSync;
 static GLenum PixelFormat;		// For glTexSubImage2D()
 static GLenum PixelType;		// For glTexSubImage2D()
 
@@ -491,7 +501,7 @@ void BlitOpenGL(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN
 
  #if MDFN_WANT_OPENGL_SHADERS
  if(UsingShader)
-  ShaderBegin(src_rect, dest_rect, tmpwidth, tmpheight, round((double)tmpwidth * original_src_rect->w / src_rect->w), round((double)tmpheight * original_src_rect->h / src_rect->h));
+  ShaderBegin(src_rect, dest_rect, tmpwidth, tmpheight, round((double)tmpwidth * original_src_rect->w / src_rect->w), round((double)tmpheight * original_src_rect->h / src_rect->h), CurGame->rotated);
  #endif
 
  p_glPixelStorei(GL_UNPACK_ROW_LENGTH, src_surface->pitchinpix);
@@ -558,8 +568,28 @@ void BlitOpenGL(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN
 
 void FlipOpenGL(void)
 {
+ GLsync s;
+
  PumpWrap();
  SDL_GL_SwapBuffers();
+
+ if(SupportARBSync)
+ {
+  if((s = p_glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0)) != NULL)
+  {
+   p_glBegin(GL_POINTS);
+   p_glVertex2f(0.0, 0.0);
+   p_glEnd();
+
+   uint32 before = MDFND_GetTime();
+
+   p_glClientWaitSync(s, 0, 50ULL * 1000 * 1000);	// 50 milliseconds.
+
+   printf("Waited: %u\n", MDFND_GetTime() - before);
+
+   p_glDeleteSync(s);
+  }
+ }
 }
 
 void KillOpenGL(void)
@@ -698,12 +728,28 @@ int InitOpenGL(int ipolate, int scanlines, ShaderType pixshader, SDL_Surface *sc
  MDFN_indent(1);
 
  SupportNPOT = FALSE;
+ SupportARBSync = false;
 
  if(CheckExtension(extensions, "GL_ARB_texture_non_power_of_two"))
  {
   MDFN_printf(_("GL_ARB_texture_non_power_of_two found.\n"));
   SupportNPOT = TRUE;
  }
+
+#if 0
+ if(CheckExtension(extensions, "GL_ARB_sync"))
+ {
+  MDFN_printf(_("GL_ARB_sync found.\n"));
+  LFG(glFenceSync);
+  LFG(glIsSync);
+  LFG(glDeleteSync);
+  LFG(glClientWaitSync);
+  LFG(glWaitSync);
+  LFG(glGetInteger64v);
+  LFG(glGetSynciv);
+  SupportARBSync = true;
+ }
+#endif
  MDFN_indent(-1);
 
  p_glViewport(0, 0, screen->w, screen->h);

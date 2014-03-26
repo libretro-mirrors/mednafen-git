@@ -1,13 +1,13 @@
 #ifdef SMPCORE_CPP
 
-void SMPcore::op_bra() {
+alwaysinline void SMP::op_bra() {
   rd = op_readpc();
   op_io();
   op_io();
   regs.pc += (int8)rd;
 }
 
-template<int flag, int value> void SMPcore::op_branch() {
+template<int flag, int value> alwaysinline void SMP::op_branch() {
   rd = op_readpc();
   if((bool)(regs.p & flag) != value) return;
   op_io();
@@ -15,7 +15,7 @@ template<int flag, int value> void SMPcore::op_branch() {
   regs.pc += (int8)rd;
 }
 
-template<int mask, int value> void SMPcore::op_bitbranch() {
+template<int mask, int value> alwaysinline void SMP::op_bitbranch() {
   dp = op_readpc();
   sp = op_readdp(dp);
   rd = op_readpc();
@@ -26,7 +26,7 @@ template<int mask, int value> void SMPcore::op_bitbranch() {
   regs.pc += (int8)rd;
 }
 
-void SMPcore::op_cbne_dp() {
+alwaysinline void SMP::op_cbne_dp() {
   dp = op_readpc();
   sp = op_readdp(dp);
   rd = op_readpc();
@@ -37,7 +37,7 @@ void SMPcore::op_cbne_dp() {
   regs.pc += (int8)rd;
 }
 
-void SMPcore::op_cbne_dpx() {
+alwaysinline void SMP::op_cbne_dpx() {
   dp = op_readpc();
   op_io();
   sp = op_readdp(dp + regs.x);
@@ -49,7 +49,7 @@ void SMPcore::op_cbne_dpx() {
   regs.pc += (int8)rd;   
 }
 
-void SMPcore::op_dbnz_dp() {
+alwaysinline void SMP::op_dbnz_dp() {
   dp = op_readpc();
   wr = op_readdp(dp);
   op_writedp(dp, --wr);
@@ -60,7 +60,7 @@ void SMPcore::op_dbnz_dp() {
   regs.pc += (int8)rd;
 }
 
-void SMPcore::op_dbnz_y() {
+alwaysinline void SMP::op_dbnz_y() {
   rd = op_readpc();
   op_io();
   regs.y--;
@@ -71,13 +71,13 @@ void SMPcore::op_dbnz_y() {
   regs.pc += (int8)rd;
 }
 
-void SMPcore::op_jmp_addr() {
+alwaysinline void SMP::op_jmp_addr() {
   rd  = op_readpc() << 0;
   rd |= op_readpc() << 8;
   regs.pc = rd;
 }
 
-void SMPcore::op_jmp_iaddrx() {
+alwaysinline void SMP::op_jmp_iaddrx() {
   dp  = op_readpc() << 0;
   dp |= op_readpc() << 8;
   op_io();
@@ -87,7 +87,7 @@ void SMPcore::op_jmp_iaddrx() {
   regs.pc = rd;
 }
 
-void SMPcore::op_call() {
+alwaysinline void SMP::op_call() {
   rd  = op_readpc() << 0;
   rd |= op_readpc() << 8;
   op_io();
@@ -98,7 +98,7 @@ void SMPcore::op_call() {
   regs.pc = rd;
 }
 
-void SMPcore::op_pcall() {
+alwaysinline void SMP::op_pcall() {
   rd = op_readpc();
   op_io();
   op_io();
@@ -107,7 +107,7 @@ void SMPcore::op_pcall() {
   regs.pc = 0xff00 | rd;
 }
 
-template<int n> void SMPcore::op_tcall() {
+template<int n> alwaysinline void SMP::op_tcall() {
   dp  = 0xffde - (n << 1);
   rd  = op_readaddr(dp + 0) << 0;
   rd |= op_readaddr(dp + 1) << 8;
@@ -119,7 +119,7 @@ template<int n> void SMPcore::op_tcall() {
   regs.pc = rd;
 }
 
-void SMPcore::op_brk() {
+alwaysinline void SMP::op_brk() {
   rd  = op_readaddr(0xffde) << 0;
   rd |= op_readaddr(0xffdf) << 8;
   op_io();
@@ -132,7 +132,7 @@ void SMPcore::op_brk() {
   regs.p.i = 0;
 }
 
-void SMPcore::op_ret() {
+alwaysinline void SMP::op_ret() {
   rd  = op_readstack() << 0;
   rd |= op_readstack() << 8;
   op_io();
@@ -140,7 +140,7 @@ void SMPcore::op_ret() {
   regs.pc = rd;
 }
 
-void SMPcore::op_reti() {
+alwaysinline void SMP::op_reti() {
   regs.p = op_readstack();
   rd  = op_readstack() << 0;
   rd |= op_readstack() << 8;

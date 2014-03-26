@@ -11,9 +11,6 @@ meow			=	interface.cpp
 
 meow	+=	src/lib/libco/libco.c
 
-
-#meow	+=	src/lib/nall/string.cpp
-
 #################
 ### utilities ###
 #################
@@ -36,20 +33,19 @@ meow	+=	src/cpu/cpu.cpp src/cpu/core/core.cpp src/cpu/scpu/scpu.cpp
 ### smp ###
 ###########
 
-meow	+=	src/smp/smp.cpp src/smp/core/core.cpp src/smp/ssmp/ssmp.cpp
+meow	+=	src/smp/smp.cpp
 
 ###########
 ### dsp ###
 ###########
 
-# src/dsp/adsp/adsp.cpp
 meow	+=	src/dsp/sdsp/sdsp.cpp
 
 ###########
 ### ppu ###
 ###########
 
-meow	+=	src/ppu/ppu.cpp src/ppu/bppu/bppu.cpp
+meow	+=	src/ppu/ppu.cpp
 
 ##############
 ### system ###

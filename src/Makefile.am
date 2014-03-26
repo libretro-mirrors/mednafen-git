@@ -97,6 +97,12 @@ mednafen_LDADD          +=      snes/libsnes.a
 mednafen_DEPENDENCIES   +=      snes/libsnes.a
 endif
 
+if WANT_SNES_PERF_EMU
+SUBDIRS += snes_perf
+mednafen_LDADD          +=      snes_perf/libsnes_perf.a
+mednafen_DEPENDENCIES   +=      snes_perf/libsnes_perf.a
+endif
+
 if WANT_VB_EMU
 SUBDIRS += vb
 mednafen_LDADD		+=	vb/libvb.a

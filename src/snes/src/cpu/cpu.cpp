@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define CPU_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 #if defined(DEBUGGER)
   #include "cpu-debugger.cpp"

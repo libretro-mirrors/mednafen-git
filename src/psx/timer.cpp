@@ -67,6 +67,10 @@
  Dec. 26, 2011 Note
 	Due to problems I've had with my GPU timing test program, timer2 appears to be unreliable(clocks are skipped?) when target mode is enabled and the full
 	33MHz clock is used(rather than 33MHz / 8).  TODO: Investigate further and confirm(or not).
+
+ Jan. 15, 2013 Note:
+	Counters using GPU clock sources(hretrace,dot clock) reportedly will with a low probability return wrong count values on an actual PS1, so keep this in mind
+	when writing test programs(IE keep reading the count value until two consecutive reads return the same value).
 */
 
 /*

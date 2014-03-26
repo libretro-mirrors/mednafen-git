@@ -351,6 +351,8 @@ void PSG_SetRegister(const unsigned int id, const uint32 value)
 
 PCE_PSG::PCE_PSG(Blip_Buffer *bb_l, Blip_Buffer *bb_r, int want_revision)
 {
+	//printf("Test: %u, %u\n", sizeof(psg_channel), (uint8*)&channel[0].balance - (uint8*)&channel[0].waveform[0]);
+
 	revision = want_revision;
 
 	sbuf[0] = bb_l;

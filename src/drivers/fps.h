@@ -6,7 +6,7 @@ void FPS_IncDrawn(void);
 void FPS_IncBlitted(void);
 void FPS_Init(void);
 void FPS_Draw(MDFN_Surface *target, const int xpos, const int ypos);
-void FPS_DrawToScreen(SDL_Surface *screen, int rs, int gs, int bs, int as);
+void FPS_DrawToScreen(SDL_Surface *screen, int rs, int gs, int bs, int as, unsigned offsx, unsigned offsy);
 bool FPS_IsActive(int *w, int *h);
 void FPS_ToggleView(void);
 

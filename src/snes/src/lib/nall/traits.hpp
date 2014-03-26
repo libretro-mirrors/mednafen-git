@@ -1,7 +1,7 @@
 #ifndef NALL_TRAITS_HPP
 #define NALL_TRAITS_HPP
 
-namespace nall {
+namespace nall_v059 {
   //==
   //is
   //==

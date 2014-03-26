@@ -8,7 +8,7 @@
 #include <nall/file.hpp>
 #include <nall/stdint.hpp>
 
-namespace nall {
+namespace nall_v059 {
   class ups {
   public:
     enum result {

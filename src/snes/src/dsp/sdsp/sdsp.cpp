@@ -5,7 +5,7 @@
 #include <../base.hpp>
 
 #define SDSP_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 #if defined(DEBUGGER)
   #include "debugger/debugger.cpp"

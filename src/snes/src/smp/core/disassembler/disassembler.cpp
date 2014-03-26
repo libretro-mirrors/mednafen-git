@@ -1,11 +1,11 @@
 #ifdef SMPCORE_CPP
 
-uint16 SMPcore::__relb(int8 offset, int op_len) {
+uint16 SMP::__relb(int8 offset, int op_len) {
   uint16 pc = regs.pc + op_len;
   return pc + offset;
 }
 
-void SMPcore::disassemble_opcode(char *output, uint16 addr) {
+void SMP::disassemble_opcode(char *output, uint16 addr) {
   char *s, t[512];
   uint8  op, op0, op1;
   uint16 opw, opdp0, opdp1;

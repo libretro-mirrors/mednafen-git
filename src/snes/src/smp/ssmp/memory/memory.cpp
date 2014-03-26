@@ -1,29 +1,29 @@
 #ifdef SSMP_CPP
 
-alwaysinline uint8 sSMP::ram_read(uint16 addr) {
+alwaysinline uint8 SMP::ram_read(uint16 addr) {
   if(addr < 0xffc0) return memory::apuram[addr];
   if(status.iplrom_enabled == false) return memory::apuram[addr];
   return iplrom[addr & 0x3f];
 }
 
-alwaysinline void sSMP::ram_write(uint16 addr, uint8 data) {
+alwaysinline void SMP::ram_write(uint16 addr, uint8 data) {
   //writes to $ffc0-$ffff always go to spcram, even if the iplrom is enabled
   memory::apuram[addr] = data;
 }
 
 //
 
-alwaysinline uint8 sSMP::port_read(uint8 port) {
+uint8 SMP::port_read(uint8 port) {
   return memory::apuram[0xf4 + (port & 3)];
 }
 
-alwaysinline void sSMP::port_write(uint8 port, uint8 data) {
+void SMP::port_write(uint8 port, uint8 data) {
   memory::apuram[0xf4 + (port & 3)] = data;
 }
 
 //
 
-alwaysinline uint8 sSMP::op_busread(uint16 addr) {
+alwaysinline uint8 SMP::op_busread(uint16 addr) {
   uint8 r;
   if((addr & 0xfff0) == 0x00f0) {
     //addr >= 0x00f0 && addr <= 0x00ff
@@ -89,7 +89,7 @@ alwaysinline uint8 sSMP::op_busread(uint16 addr) {
   return r;
 }
 
-alwaysinline void sSMP::op_buswrite(uint16 addr, uint8 data) {
+alwaysinline void SMP::op_buswrite(uint16 addr, uint8 data) {
   if((addr & 0xfff0) == 0x00f0) {
     //addr >= 0x00f0 && addr >= 0x00ff
     if(status.mmio_disabled == true) return;
@@ -204,12 +204,12 @@ alwaysinline void sSMP::op_buswrite(uint16 addr, uint8 data) {
 
 //
 
-void sSMP::op_io() {
+void SMP::op_io() {
   add_clocks(24);
   tick_timers();
 }
 
-uint8 sSMP::op_read(uint16 addr) {
+uint8 SMP::op_read(uint16 addr) {
   add_clocks(12);
   uint8 r = op_busread(addr);
   add_clocks(12);
@@ -217,7 +217,7 @@ uint8 sSMP::op_read(uint16 addr) {
   return r;
 }
 
-void sSMP::op_write(uint16 addr, uint8 data) {
+void SMP::op_write(uint16 addr, uint8 data) {
   add_clocks(24);
   op_buswrite(addr, data);
   tick_timers();

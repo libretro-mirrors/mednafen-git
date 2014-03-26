@@ -557,7 +557,7 @@ void HuCClose(void)
  }
  else if(!BRAM_Disabled && IsBRAMUsed())
  {
-  MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 6, SaveRAM, 2048);
+  MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 0, SaveRAM, 2048);
  }
 
  Cleanup();

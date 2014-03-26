@@ -527,13 +527,6 @@ void CMikie::Poke(uint32 addr,uint8 data)
 	 switch(addr & 0x7)
 	 {
                 case (AUD0VOL&0x7):
-                        // Counter is disabled when volume is zero for optimisation
-                        // reasons, we must update the last use position to stop problems
-                        if(!mAUDIO_VOLUME[which] && data)
-                        {
-                                mAUDIO_LAST_COUNT[which]=gSystemCycleCount;
-                                gNextTimerEvent=gSystemCycleCount;
-                        }
                         mAUDIO_VOLUME[which]=(int8)data;
                         TRACE_MIKIE2("Poke(AUD0VOL,%02x) at PC=%04x",data,mSystem.mCpu->GetPC());
                         CombobulateSound(gSystemCycleCount - startTS);
@@ -556,14 +549,6 @@ void CMikie::Poke(uint32 addr,uint8 data)
                         CombobulateSound(gSystemCycleCount - startTS);
                         break;
                 case (AUD0TBACK&0x7):
-                        // Counter is disabled when backup is zero for optimisation
-                        // due to the fact that the output frequency will be above audio
-                        // range, we must update the last use position to stop problems
-                        if(!mAUDIO_BKUP[which] && data)
-                        {
-                                mAUDIO_LAST_COUNT[which]=gSystemCycleCount;
-                                gNextTimerEvent=gSystemCycleCount;
-                        }
                         mAUDIO_BKUP[which]=data;
                         TRACE_MIKIE2("Poke(AUD0TBACK,%02x) at PC=%04x",data,mSystem.mCpu->GetPC());
                         CombobulateSound(gSystemCycleCount - startTS);
@@ -2639,10 +2624,10 @@ void CMikie::Update(void)
 			  int y;
 			  for(y = 0; y < 4; y++)
 			  {
-				if(mAUDIO_ENABLE_COUNT[y] && (mAUDIO_ENABLE_RELOAD[y] || !mAUDIO_TIMER_DONE[y]) && mAUDIO_VOLUME[y] && mAUDIO_BKUP[y])
+				if(mAUDIO_ENABLE_COUNT[y] && (mAUDIO_ENABLE_RELOAD[y] || !mAUDIO_TIMER_DONE[y]))
 				{
 					decval=0;
-		
+
 					if(mAUDIO_LINKING[y]==0x07)
 					{
 						int bort;
@@ -2688,7 +2673,8 @@ void CMikie::Update(void)
 							//
 							// Update audio circuitry
 							//
-							mAUDIO_WAVESHAPER[y] = GetLfsrNext(mAUDIO_WAVESHAPER[y]);
+							if(mAUDIO_BKUP[y] || mAUDIO_LINKING[y])
+							 mAUDIO_WAVESHAPER[y] = GetLfsrNext(mAUDIO_WAVESHAPER[y]);
 
 							if(mAUDIO_INTEGRATE_ENABLE[y])
 							{

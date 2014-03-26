@@ -1,5 +1,3 @@
-class sSMP : public SMP, public SMPcore {
-public:
   void enter();
   debugvirtual void op_step();
 
@@ -35,15 +33,5 @@ public:
   void reset();
 
   void serialize(serializer&);
-  sSMP();
-  ~sSMP();
 
   friend class sSMPDebug;
-};
-
-#if defined(DEBUGGER)
-  #include "debugger/debugger.hpp"
-  extern sSMPDebugger smp;
-#else
-  extern sSMP smp;
-#endif

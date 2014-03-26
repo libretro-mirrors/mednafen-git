@@ -1,7 +1,7 @@
 #ifndef NALL_FILENAME_HPP
 #define NALL_FILENAME_HPP
 
-namespace nall {
+namespace nall_v059 {
   // "foo/bar.c" -> "foo/", "bar.c" -> "./"
   inline string dir(char const *name) {
     string result = name;

@@ -8,7 +8,7 @@
 
 #include <nall/stdint.hpp>
 
-namespace nall {
+namespace nall_v059 {
   class serial {
   public:
     //-1 on error, otherwise return bytes read

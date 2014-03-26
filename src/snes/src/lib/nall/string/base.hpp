@@ -34,8 +34,8 @@ inline size_t strdouble  (char *str, double    value, size_t length = 0);
 inline bool match(const char *pattern, const char *str);
 inline bool strint (const char *str, int &result);
 inline bool strmath(const char *str, int &result);
-inline size_t strlcpy(char *dest, const char *src, size_t length);
-inline size_t strlcat(char *dest, const char *src, size_t length);
+inline size_t nall_strlcpy(char *dest, const char *src, size_t length);
+inline size_t nall_strlcat(char *dest, const char *src, size_t length);
 inline char* ltrim(char *str, const char *key = " ");
 inline char* rtrim(char *str, const char *key = " ");
 inline char* trim (char *str, const char *key = " ");
@@ -43,7 +43,7 @@ inline char* ltrim_once(char *str, const char *key = " ");
 inline char* rtrim_once(char *str, const char *key = " ");
 inline char* trim_once (char *str, const char *key = " ");
 
-namespace nall {
+namespace nall_v059 {
   class string;
   template<typename T> inline string to_string(T);
 
@@ -100,23 +100,23 @@ namespace nall {
   };
 };
 
-inline size_t strlcpy(nall::string &dest, const char *src, size_t length);
-inline size_t strlcat(nall::string &dest, const char *src, size_t length);
-inline nall::string& strlower(nall::string &str);
-inline nall::string& strupper(nall::string &str);
-inline nall::string& strtr(nall::string &dest, const char *before, const char *after);
-inline nall::string& ltrim(nall::string &str, const char *key = " ");
-inline nall::string& rtrim(nall::string &str, const char *key = " ");
-inline nall::string& trim (nall::string &str, const char *key = " ");
-inline nall::string& ltrim_once(nall::string &str, const char *key = " ");
-inline nall::string& rtrim_once(nall::string &str, const char *key = " ");
-inline nall::string& trim_once (nall::string &str, const char *key = " ");
+inline size_t nall_strlcpy(nall_v059::string &dest, const char *src, size_t length);
+inline size_t nall_strlcat(nall_v059::string &dest, const char *src, size_t length);
+inline nall_v059::string& strlower(nall_v059::string &str);
+inline nall_v059::string& strupper(nall_v059::string &str);
+inline nall_v059::string& strtr(nall_v059::string &dest, const char *before, const char *after);
+inline nall_v059::string& ltrim(nall_v059::string &str, const char *key = " ");
+inline nall_v059::string& rtrim(nall_v059::string &str, const char *key = " ");
+inline nall_v059::string& trim (nall_v059::string &str, const char *key = " ");
+inline nall_v059::string& ltrim_once(nall_v059::string &str, const char *key = " ");
+inline nall_v059::string& rtrim_once(nall_v059::string &str, const char *key = " ");
+inline nall_v059::string& trim_once (nall_v059::string &str, const char *key = " ");
 
-inline nall::string substr(const char *src, size_t start = 0, size_t length = 0);
-inline nall::string strhex     (uintmax_t value);
-inline nall::string strsigned  (intmax_t  value);
-inline nall::string strunsigned(uintmax_t value);
-inline nall::string strbin     (uintmax_t value);
-inline nall::string strdouble  (double    value);
+inline nall_v059::string substr(const char *src, size_t start = 0, size_t length = 0);
+inline nall_v059::string strhex     (uintmax_t value);
+inline nall_v059::string strsigned  (intmax_t  value);
+inline nall_v059::string strunsigned(uintmax_t value);
+inline nall_v059::string strbin     (uintmax_t value);
+inline nall_v059::string strdouble  (double    value);
 
 #endif

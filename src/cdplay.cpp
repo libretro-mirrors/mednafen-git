@@ -300,28 +300,19 @@ static void Emulate(EmulateSpecStruct *espec)
   uint32 *pixels = espec->surface->pixels;
   uint32 text_color = format.MakeColor(0xE0, 0xE0, 0xE0);
   uint32 text_shadow_color = format.MakeColor(0x20, 0x20, 0x20);
+  uint32 wf_color = format.MakeColor(0xE0, 0x00, 0xE0);
   uint32 cur_sector = PlaySector;
 
   espec->DisplayRect.x = 0;
   espec->DisplayRect.y = 0;
 
-  espec->DisplayRect.w = 320;
-  espec->DisplayRect.h = 240;
+  espec->DisplayRect.w = 192;
+  espec->DisplayRect.h = 144;
 
   espec->surface->Fill(0, 0, 0, 0);
 
+  if(MDFN_GetSettingB("cdplay.visualization"))
   {
-   uint32 color_table[256];
-
-   for(int i = 0; i < 170; i++)
-   {
-    int m = 255 * i / 170;
-
-    color_table[i] = format.MakeColor(m, 0, m);
-
-    //printf("%d %d %08x\n", m, i, color_table[i]);
-   }
-
   for(int i = 0; i < 588; i++)
   {
    int32 unip_samp;
@@ -368,11 +359,11 @@ static void Emulate(EmulateSpecStruct *espec)
     x_raw += (sample - 0.5) * y_raw_prime / 2;
     y_raw += (sample - 0.5) * -x_raw_prime / 2;
 
-    x = 160 + 100 * x_raw;
-    y = 120 + 100 * y_raw;
+    x = 96 + 60 * x_raw;
+    y = 72 + 60 * y_raw;
 
-    if((x >= 0 && x < 320) && (y >= 0 && y < 240))
-     pixels[x + y * espec->surface->pitch32] = format.MakeColor(255, 255, 255);	//color_table[(int)(sample * 150)];	//x * x + y * y; //format.MakeColor(sample * 255, 0, sample * 255);
+    if((x >= 0 && x < 192) && (y >= 0 && y < 144))
+     pixels[x + y * espec->surface->pitch32] = wf_color;
    }
   }
   }
@@ -383,44 +374,44 @@ static void Emulate(EmulateSpecStruct *espec)
    (*cdifs)[AudioTrackList[CurrentATLI].disc]->ReadTOC(&toc);
 
    trio_snprintf(tmpbuf, 256, "Disc: %d/%d", AudioTrackList[CurrentATLI].disc + 1, cdifs->size());
-   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 320, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_9x18_18x18);
-   pixels += 22 * espec->surface->pitch32;
+   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+   pixels += 13 * espec->surface->pitch32;
 
    trio_snprintf(tmpbuf, 256, "Track: %d/%d", AudioTrackList[CurrentATLI].track, toc.last_track);
-   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 320, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_9x18_18x18);
-   pixels += 22 * espec->surface->pitch32;
+   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+   pixels += 13 * espec->surface->pitch32;
 
    trio_snprintf(tmpbuf, 256, "Sector: %d/%d", cur_sector, toc.tracks[100].lba - 1);
-   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 320, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_9x18_18x18);
-   pixels += 22 * espec->surface->pitch32;
+   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+   pixels += 13 * espec->surface->pitch32;
   }
 
-  pixels += 22 * espec->surface->pitch32;
+  pixels += 13 * espec->surface->pitch32;
 
 
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 320, (UTF8 *)"SubQ", text_color, text_shadow_color, 0, MDFN_FONT_9x18_18x18);
-  pixels += 22 * espec->surface->pitch32;
+  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)"SubQ", text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  pixels += 13 * espec->surface->pitch32;
 
   //trio_snprintf(tmpbuf, 256, "Q-Mode: %01x", SubQBuf[1][0] & 0xF);
-  //DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 320, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_9x18_18x18);
-  //pixels += 22 * espec->surface->pitch32;
+  //DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  //pixels += 13 * espec->surface->pitch32;
 
   trio_snprintf(tmpbuf, 256, "Track: %d", BCD_to_U8(SubQBuf[1][1]));
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 320, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_9x18_18x18);
-  pixels += 22 * espec->surface->pitch32;
+  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  pixels += 13 * espec->surface->pitch32;
 
   trio_snprintf(tmpbuf, 256, "Index: %d", BCD_to_U8(SubQBuf[1][2]));
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 320, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_9x18_18x18);
-  pixels += 22 * espec->surface->pitch32;
+  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  pixels += 13 * espec->surface->pitch32;
 
 
   trio_snprintf(tmpbuf, 256, "Relative: %02d:%02d:%02d", BCD_to_U8(SubQBuf[1][3]), BCD_to_U8(SubQBuf[1][4]), BCD_to_U8(SubQBuf[1][5]));
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 320, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_9x18_18x18);
-  pixels += 22 * espec->surface->pitch32;
+  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  pixels += 13 * espec->surface->pitch32;
 
   trio_snprintf(tmpbuf, 256, "Absolute: %02d:%02d:%02d", BCD_to_U8(SubQBuf[1][7]), BCD_to_U8(SubQBuf[1][8]), BCD_to_U8(SubQBuf[1][9]));
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 320, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_9x18_18x18);
-  pixels += 22 * espec->surface->pitch32;
+  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  pixels += 13 * espec->surface->pitch32;
  }
 
  if(PlayMode != PLAYMODE_STOP && PlayMode != PLAYMODE_PAUSE)
@@ -499,6 +490,7 @@ static void DoSimpleCommand(int cmd)
 
 static MDFNSetting CDPlaySettings[] =
 {
+ { "cdplay.visualization", MDFNSF_NOFLAGS, gettext_noop("Enable simple waveform visualization."), NULL, MDFNST_BOOL, "1" },
  { NULL }
 };
 
@@ -577,15 +569,16 @@ MDFNGI EmulatedCDPlay =
  75 * 65536 * 256,
  false, // Multires possible?
 
- 320,   // lcm_width
- 240,   // lcm_height           
+ 192,   // lcm_width
+ 144,   // lcm_height
  NULL,  // Dummy
 
 
- 320,   // Nominal width
- 240,    // Nominal height
- 512, 			// Framebuffer width
- 256,                  	// Framebuffer height
+ 192,   // Nominal width
+ 144,    // Nominal height
+
+ 192, 			// Framebuffer width
+ 144 + 1,                  	// Framebuffer height
 
  2,     // Number of output sound channels
 };

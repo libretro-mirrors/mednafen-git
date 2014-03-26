@@ -47,7 +47,7 @@
 //(auto-increment read port)
 
 #define S21FX_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 S21fx s21fx;
 

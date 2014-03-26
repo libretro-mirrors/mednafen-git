@@ -1,7 +1,7 @@
 #include <../base.hpp>
 
 #define DSP2_CPP
-namespace SNES {
+namespace bSNES_v059 {
 
 DSP2 dsp2;
 

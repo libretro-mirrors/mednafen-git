@@ -1,0 +1,6 @@
+*.so
+*.o
+*.dll
+*.manifest
+*.a
+*.dylib
