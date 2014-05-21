@@ -53,7 +53,6 @@ uint8 *internalRAM = NULL;
 uint8 *workRAM = NULL;
 uint8 *paletteRAM = NULL;
 uint8 *vram = NULL;
-uint8 *pix = NULL;
 uint8 *oam = NULL;
 uint8 *ioMem = NULL;
 

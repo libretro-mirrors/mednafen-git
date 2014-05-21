@@ -11,7 +11,7 @@ void RAINBOW_DecodeBlock(bool arg_FirstDecode, bool Skip);
 int RAINBOW_FetchRaster(uint32 *, uint32 layer_or, uint32 *palette_ptr);
 int RAINBOW_StateAction(StateMem *sm, int load, int data_only);
 
-bool RAINBOW_Init(bool arg_ChromaIP);
+void RAINBOW_Init(bool arg_ChromaIP);
 void RAINBOW_Close(void);
 void RAINBOW_Reset(void);
 

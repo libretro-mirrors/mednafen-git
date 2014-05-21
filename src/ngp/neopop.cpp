@@ -13,12 +13,10 @@
 //---------------------------------------------------------------------------
 
 #include "neopop.h"
-#include "../general.h"
-#include "../md5.h"
-#include "../FileStream.h"
+#include <mednafen/general.h>
+#include <mednafen/md5.h>
+#include <mednafen/FileStream.h>
 
-#include "TLCS900h_interpret.h"
-#include "TLCS900h_registers.h"
 #include "Z80_interface.h"
 #include "interrupt.h"
 #include "mem.h"
@@ -32,7 +30,7 @@
 
 extern uint8 CPUExRAM[16384];
 
-NGPGFX_CLASS *NGPGfx;
+NGPGFX_CLASS *NGPGfx = NULL;
 
 COLOURMODE system_colour = COLOURMODE_AUTO;
 
@@ -151,15 +149,15 @@ static void Emulate(EmulateSpecStruct *espec)
 	espec->SoundBufSize = MDFNNGPCSOUND_Flush(espec->SoundBuf, espec->SoundBufMaxSize);
 }
 
-static bool TestMagic(const char *name, MDFNFILE *fp)
+static bool TestMagic(MDFNFILE *fp)
 {
  if(strcasecmp(fp->ext, "ngp") && strcasecmp(fp->ext, "ngpc") && strcasecmp(fp->ext, "ngc") && strcasecmp(fp->ext, "npc"))
-  return(FALSE);
+  return(false);
 
- return(TRUE);
+ return(true);
 }
 
-static int Load(const char *name, MDFNFILE *fp)
+static int Load(MDFNFILE *fp)
 {
  if(!(ngpc_rom.data = (uint8 *)MDFN_malloc(fp->size, _("Cart ROM"))))
   return(0);
@@ -202,6 +200,12 @@ static int Load(const char *name, MDFNFILE *fp)
 static void CloseGame(void)
 {
  rom_unload();
+
+ if(NGPGfx != NULL)
+ {
+  delete NGPGfx;
+  NGPGfx = NULL;
+ }
 }
 
 static void SetInput(int port, const char *type, void *ptr)

@@ -23,10 +23,10 @@
 #include "debug.h"
 #endif
 #include "input.h"
-#include "../general.h"
-#include "../string/trim.h"
-#include "../md5.h"
-#include "../mempatcher.h"
+#include <mednafen/general.h>
+#include <mednafen/string/trim.h>
+#include <mednafen/md5.h>
+#include <mednafen/mempatcher.h>
 #include <iconv.h>
 
 namespace MDFN_IEN_VB
@@ -501,7 +501,7 @@ static void ReadHeader(MDFNFILE *fp, VB_HeaderInfo *hi)
  hi->version = fp->data[0xFFFFFDFF & (fp->size - 1)];
 }
 
-static bool TestMagic(const char *name, MDFNFILE *fp)
+static bool TestMagic(MDFNFILE *fp)
 {
  if(!strcasecmp(fp->ext, "vb") || !strcasecmp(fp->ext, "vboy"))
   return(true);
@@ -509,7 +509,7 @@ static bool TestMagic(const char *name, MDFNFILE *fp)
  return(false);
 }
 
-static int Load(const char *name, MDFNFILE *fp)
+static int Load(MDFNFILE *fp)
 {
  V810_Emu_Mode cpu_mode;
  md5_context md5;

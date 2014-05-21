@@ -1,5 +1,5 @@
 #include "pce.h"
-#include "c68k/c68k.h"
+#include <mednafen/hw_cpu/c68k/c68k.h>
 
 static inline uint8 READ8_MSB(const uint8 *base, const unsigned int addr)
 {

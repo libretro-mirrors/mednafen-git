@@ -22,7 +22,6 @@
 #include "king.h"
 #include "interrupt.h"
 #include "jrevdct.h"
-#include "../clamp.h"
 
 static bool ChromaIP;	// Bilinearly interpolate chroma channel
 
@@ -643,43 +642,7 @@ static uint32 LastLine[256];
 static bool FirstDecode;
 static bool GarbageData;
 
-bool RAINBOW_Init(bool arg_ChromaIP)
-{
- #ifdef WANT_DEBUGGER
- MDFNDBG_AddRegGroup(&RainbowRegsGroup);
- #endif
-
- ChromaIP = arg_ChromaIP;
-
- for(int i = 0; i < 2; i++)
- {
-  if(!(DecodeBuffer[i] = (uint8*)MDFN_malloc(0x2000 * 4, _("RAINBOW buffer RAM"))))
-   return(0);
-  memset(DecodeBuffer[i], 0, 0x2000 * 4);
- }
-
- if(!BuildHuffmanLUT(&dc_y_table, &dc_y_qlut, 9))
-  return(FALSE);
-
- if(!BuildHuffmanLUT(&dc_uv_table, &dc_uv_qlut, 8))
-  return(FALSE);
-
- if(!BuildHuffmanLUT(&ac_y_table, &ac_y_qlut, 12))
-  return(FALSE);
-
- if(!BuildHuffmanLUT(&ac_uv_table, &ac_uv_qlut, 12))
-  return(FALSE);
-
- DecodeFormat[0] = DecodeFormat[1] = -1;
- DecodeBufferWhichRead = 0;
- GarbageData = FALSE;
- FirstDecode = TRUE;
- RasterReadPos = 0;
-
- return(1);
-}
-
-void RAINBOW_Close(void)
+static void Cleanup(void)
 {
  for(int i = 0; i < 2; i++)
   if(DecodeBuffer[i])
@@ -692,6 +655,45 @@ void RAINBOW_Close(void)
  KillHuffmanLUT(&dc_uv_qlut);
  KillHuffmanLUT(&ac_y_qlut);
  KillHuffmanLUT(&ac_uv_qlut);
+}
+
+void RAINBOW_Init(bool arg_ChromaIP)
+{
+ try
+ {
+  #ifdef WANT_DEBUGGER
+  MDFNDBG_AddRegGroup(&RainbowRegsGroup);
+  #endif
+
+  ChromaIP = arg_ChromaIP;
+
+  for(int i = 0; i < 2; i++)
+  {
+   DecodeBuffer[i] = (uint8*)MDFN_malloc_T(0x2000 * 4, _("RAINBOW buffer RAM"));
+   memset(DecodeBuffer[i], 0, 0x2000 * 4);
+  }
+
+  BuildHuffmanLUT(&dc_y_table, &dc_y_qlut, 9);
+  BuildHuffmanLUT(&dc_uv_table, &dc_uv_qlut, 8);
+  BuildHuffmanLUT(&ac_y_table, &ac_y_qlut, 12);
+  BuildHuffmanLUT(&ac_uv_table, &ac_uv_qlut, 12);
+
+  DecodeFormat[0] = DecodeFormat[1] = -1;
+  DecodeBufferWhichRead = 0;
+  GarbageData = FALSE;
+  FirstDecode = TRUE;
+  RasterReadPos = 0;
+ }
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
+}
+
+void RAINBOW_Close(void)
+{
+ Cleanup();
 }
 
 // RAINBOW base I/O port address: 0x200

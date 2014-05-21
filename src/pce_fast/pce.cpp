@@ -24,9 +24,9 @@
 #include "pcecd.h"
 #include "pcecd_drive.h"
 #include "hes.h"
-#include "arcade_card/arcade_card.h"
-#include "../mempatcher.h"
-#include "../cdrom/cdromif.h"
+#include <mednafen/hw_misc/arcade_card/arcade_card.h>
+#include <mednafen/mempatcher.h>
+#include <mednafen/cdrom/cdromif.h>
 
 namespace PCE_Fast
 {
@@ -178,10 +178,10 @@ bool PCE_InitCD(void)
 }
 
 
-static int LoadCommon(void);
+static void LoadCommon(void);
 static void LoadCommonPre(void);
 
-static bool TestMagic(const char *name, MDFNFILE *fp)
+static bool TestMagic(MDFNFILE *fp)
 {
  if(memcmp(fp->data, "HESM", 4) && strcasecmp(fp->ext, "pce") && strcasecmp(fp->ext, "sgx"))
   return(FALSE);
@@ -189,82 +189,110 @@ static bool TestMagic(const char *name, MDFNFILE *fp)
  return(TRUE);
 }
 
-static int Load(const char *name, MDFNFILE *fp)
+static void Cleanup(void) MDFN_COLD;
+static void Cleanup(void)
 {
- uint32 headerlen = 0;
- uint32 r_size;
-
- IsHES = 0;
- IsSGX = 0;
-
- if(!memcmp(fp->data, "HESM", 4))
-  IsHES = 1;
-
- LoadCommonPre();
-
- if(!IsHES)
- {
-  if(fp->size & 0x200) // 512 byte header!
-   headerlen = 512;
- }
-
- r_size = fp->size - headerlen;
- if(r_size > 4096 * 1024) r_size = 4096 * 1024;
-
- for(int x = 0; x < 0x100; x++)
- {
-  PCERead[x] = PCEBusRead;
-  PCEWrite[x] = PCENullWrite;
- }
-
- uint32 crc = crc32(0, fp->data + headerlen, fp->size - headerlen);
-
-
  if(IsHES)
- {
-  if(!PCE_HESLoad(fp->data, fp->size))
-   return(0);
- }
+  HES_Close();
  else
-  HuCLoad(fp->data + headerlen, fp->size - headerlen, crc);
-
- if(!strcasecmp(fp->ext, "sgx"))
-  IsSGX = TRUE;
-
- if(fp->size >= 8192 && !memcmp(fp->data + headerlen, "DARIUS Version 1.11b", strlen("DARIUS VERSION 1.11b")))
  {
-  MDFN_printf("SuperGfx:  Darius Plus\n");
-  IsSGX = 1;
+  HuC_Close();
  }
 
- if(crc == 0x4c2126b0)
- {
-  MDFN_printf("SuperGfx:  Aldynes\n");
-  IsSGX = 1;
- }
+ VDC_Close();
 
- if(crc == 0x8c4588e2)
+ if(psg)
  {
-  MDFN_printf("SuperGfx:  1941 - Counter Attack\n");
-  IsSGX = 1;
+  delete psg;
+  psg = NULL;
  }
- if(crc == 0x1f041166)
- {
-  MDFN_printf("SuperGfx:  Madouou Granzort\n");
-  IsSGX = 1;
- }
- if(crc == 0xb486a8ed)
- {
-  MDFN_printf("SuperGfx:  Daimakaimura\n");
-  IsSGX = 1;
- }
- if(crc == 0x3b13af61)
- {
-  MDFN_printf("SuperGfx:  Battle Ace\n");
-  IsSGX = 1;
- }
+}
 
- return(LoadCommon());
+static int Load(MDFNFILE *fp)
+{
+ try
+ {
+  uint32 headerlen = 0;
+  uint32 r_size;
+
+  IsHES = 0;
+  IsSGX = 0;
+
+  if(!memcmp(fp->data, "HESM", 4))
+   IsHES = 1;
+
+  LoadCommonPre();
+
+  if(!IsHES)
+  {
+   if(fp->size & 0x200) // 512 byte header!
+    headerlen = 512;
+  }
+
+  r_size = fp->size - headerlen;
+  if(r_size > 4096 * 1024) r_size = 4096 * 1024;
+
+  for(int x = 0; x < 0x100; x++)
+  {
+   PCERead[x] = PCEBusRead;
+   PCEWrite[x] = PCENullWrite;
+  }
+
+  uint32 crc = crc32(0, fp->data + headerlen, fp->size - headerlen);
+
+
+  if(IsHES)
+   HES_Load(fp->data, fp->size);
+  else
+   HuC_Load(fp->data + headerlen, fp->size - headerlen, crc);
+
+  if(!strcasecmp(fp->ext, "sgx"))
+   IsSGX = TRUE;
+
+  if(fp->size >= 8192 && !memcmp(fp->data + headerlen, "DARIUS Version 1.11b", strlen("DARIUS VERSION 1.11b")))
+  {
+   MDFN_printf("SuperGfx:  Darius Plus\n");
+   IsSGX = 1;
+  }
+
+  if(crc == 0x4c2126b0)
+  {
+   MDFN_printf("SuperGfx:  Aldynes\n");
+   IsSGX = 1;
+  }
+
+  if(crc == 0x8c4588e2)
+  {
+   MDFN_printf("SuperGfx:  1941 - Counter Attack\n");
+   IsSGX = 1;
+  }
+
+  if(crc == 0x1f041166)
+  {
+   MDFN_printf("SuperGfx:  Madouou Granzort\n");
+   IsSGX = 1;
+  }
+
+  if(crc == 0xb486a8ed)
+  {
+   MDFN_printf("SuperGfx:  Daimakaimura\n");
+   IsSGX = 1;
+  }
+
+  if(crc == 0x3b13af61)
+  {
+   MDFN_printf("SuperGfx:  Battle Ace\n");
+   IsSGX = 1;
+  }
+
+  LoadCommon();
+ }
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
+ return(1);
 }
 
 static void LoadCommonPre(void)
@@ -289,7 +317,7 @@ static void LoadCommonPre(void)
  MDFNMP_Init(1024, (1 << 21) / 1024);
 }
 
-static int LoadCommon(void)
+static void LoadCommon(void)
 { 
  IsSGX |= MDFN_GetSettingB("pce_fast.forcesgx") ? 1 : 0;
 
@@ -366,8 +394,6 @@ static int LoadCommon(void)
   MDFNGameInfo->lcm_width = MDFN_GetSettingB("pce_fast.correct_aspect") ? 1024 : 341;
   MDFNGameInfo->lcm_height = MDFNGameInfo->nominal_height;
  }
-
- return(1);
 }
 
 static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
@@ -430,39 +456,35 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  return(ret);
 }
 
-static int LoadCD(std::vector<CDIF *> *CDInterfaces)
+static void LoadCD(std::vector<CDIF *> *CDInterfaces)
 {
- std::string bios_path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("pce_fast.cdbios").c_str() );
+ try
+ {
+  std::string bios_path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("pce_fast.cdbios").c_str() );
 
- IsHES = 0;
- IsSGX = 0;
+  IsHES = 0;
+  IsSGX = 0;
 
- LoadCommonPre();
+  LoadCommonPre();
 
- if(!HuCLoadCD(bios_path.c_str()))
-  return(0);
+  HuC_LoadCD(bios_path.c_str());
 
- PCECD_Drive_SetDisc(true, NULL, true);
- PCECD_Drive_SetDisc(false, (*CDInterfaces)[0], true);
+  PCECD_Drive_SetDisc(true, NULL, true);
+  PCECD_Drive_SetDisc(false, (*CDInterfaces)[0], true);
 
- return(LoadCommon());
+  LoadCommon();
+ }
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
 }
 
 
 static void CloseGame(void)
 {
- if(IsHES)
-  HES_Close();
- else
- {
-  HuCClose();
- }
- VDC_Close();
- if(psg)
- {
-  delete psg;
-  psg = NULL;
- }
+ Cleanup();
 }
 
 static void Emulate(EmulateSpecStruct *espec)

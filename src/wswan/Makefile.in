@@ -345,7 +345,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libwswan.a
 wswan_SOURCES = gfx.cpp main.cpp memory.cpp v30mz.cpp sound.cpp \
 	tcache.cpp interrupt.cpp eeprom.cpp rtc.cpp $(am__append_1)

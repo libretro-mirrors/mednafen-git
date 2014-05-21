@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@  @SDL_CFLAGS@
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 
 noinst_LIBRARIES        =       libsexyal.a
 
@@ -11,7 +11,7 @@ TMP_DIRECTSOUND	=	drivers/dsound.cpp
 endif
 
 if HAVE_WASAPI
-TMP_WASAPI	=	drivers/wasapi.cpp
+TMP_WASAPI	=	drivers/wasapi.cpp drivers/wasapish.cpp
 endif
 
 if HAVE_OSSDSP

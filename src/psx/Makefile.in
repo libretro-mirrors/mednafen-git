@@ -348,7 +348,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_srcdir)
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libpsx.a
 libpsx_a_SOURCES = psx.cpp irq.cpp timer.cpp dma.cpp frontio.cpp \
 	sio.cpp cpu.cpp gte.cpp dis.cpp cdc.cpp spu.cpp gpu.cpp \

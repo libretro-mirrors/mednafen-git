@@ -24,7 +24,7 @@
 #include "v30mz.h"
 #include "memory.h"
 
-#include <blip/Blip_Buffer.h>
+#include <mednafen/sound/Blip_Buffer.h>
 
 namespace MDFN_IEN_WSWAN
 {
@@ -35,7 +35,6 @@ static Blip_Synth<blip_med_quality, 256> NoiseSynth;
 static Blip_Synth<blip_good_quality, 256 * 15> VoiceSynth;
 
 static Blip_Buffer *sbuf[2] = { NULL };
-static int32 OutputChannels; // 1 or 2, used to be: bool forcemono;
 
 static uint16 period[4];
 static uint8 volume[4]; // left volume in upper 4 bits, right in lower 4 bits
@@ -326,10 +325,10 @@ int32 WSwan_SoundFlush(int16 *SoundBuf, const int32 MaxSoundFrames)
 
 	if(SoundBuf)
 	{
-	 for(int y = 0; y < OutputChannels; y++)
+	 for(int y = 0; y < 2; y++)
 	 {
 	  sbuf[y]->end_frame(v30mz_timestamp);
- 	  FrameCount = sbuf[y]->read_samples(SoundBuf + y, MaxSoundFrames, (OutputChannels == 2));
+ 	  FrameCount = sbuf[y]->read_samples(SoundBuf + y, MaxSoundFrames, true);
 	 }
 	}
 
@@ -349,9 +348,6 @@ static void RedoVolume(void)
 {
  double eff_volume = 1.0 / 4;
 
- if(OutputChannels == 1)
-  eff_volume /= 2;
-
  WaveSynth.volume(eff_volume);
  NoiseSynth.volume(eff_volume);
  VoiceSynth.volume(eff_volume);
@@ -359,9 +355,7 @@ static void RedoVolume(void)
 
 void WSwan_SoundInit(void)
 {
- OutputChannels = 2;
-
- for(int i = 0; i < OutputChannels; i++)
+ for(int i = 0; i < 2; i++)
  {
   sbuf[i] = new Blip_Buffer();
 
@@ -370,15 +364,25 @@ void WSwan_SoundInit(void)
   sbuf[i]->bass_freq(20);
  }
 
- if(OutputChannels == 1)
-  sbuf[1] = sbuf[0];
-
  RedoVolume();
+}
+
+void WSwan_SoundKill(void)
+{
+ for(int i = 0; i < 2; i++)
+ {
+  if(sbuf[i])
+  {
+   delete sbuf[i];
+   sbuf[i] = NULL;
+  }
+ }
+
 }
 
 bool WSwan_SetSoundRate(uint32 rate)
 {
- for(int i = 0; i < OutputChannels; i++)
+ for(int i = 0; i < 2; i++)
   sbuf[i]->set_sample_rate(rate?rate:44100, 60);
 
  return(TRUE);
@@ -437,7 +441,7 @@ void WSwan_SoundReset(void)
  HyperVoice = 0;
  last_hv_val = 0;
 
- for(int y = 0; y < OutputChannels; y++)
+ for(int y = 0; y < 2; y++)
   sbuf[y]->clear();
 }
 

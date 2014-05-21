@@ -16,8 +16,8 @@
 // along with this program; if not, write to the Free Software Foundation,
 // Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#include "../mednafen.h"
-#include "../mempatcher.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/mempatcher.h>
 #include "gbGlobals.h"
 #include "memory.h"
 
@@ -31,6 +31,25 @@ mapperMBC1 gbDataMBC1 = {
   0, // memory model
 };
 
+static void SetROMMap(uint32 tmpAddress)
+{
+ tmpAddress &= gbRomSizeMask;
+ gbMemoryMap[0x04] = &gbRom[tmpAddress + 0x0000];
+ gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
+ gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
+ gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
+}
+
+static void SetRAM8K(uint8 bank)
+{
+ if(gbRamSize)
+ {
+  gbMemoryMap[0x0a] = &gbRam[((bank << 13) + 0x0000) & gbRamSizeMask];
+  gbMemoryMap[0x0b] = &gbRam[((bank << 13) + 0x1000) & gbRamSizeMask];
+  MDFNMP_AddRAM((gbRamSize > 8192) ? 8192 : gbRamSize, 0xA000, &gbRam[(bank << 13) & gbRamSizeMask]);
+ }
+}
+
 void memoryUpdateMapMBC1()
 {
   int tmpAddress = gbDataMBC1.mapperROMBank << 14;
@@ -41,26 +60,12 @@ void memoryUpdateMapMBC1()
     tmpAddress |= gbDataMBC1.mapperRAMBank << 19;
   }
 
-  gbMemoryMap[0x0a] = &gbRam[0];
-  gbMemoryMap[0x0b] = &gbRam[0x1000];
+  SetROMMap(tmpAddress);
 
-  tmpAddress &= gbRomSizeMask;
-  gbMemoryMap[0x04] = &gbRom[tmpAddress];
-  gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
-  gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
-  gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
-
-  if((gbRamSize) && (gbDataMBC1.mapperMemoryModel == 1))
-  {
-   tmpAddress = gbDataMBC1.mapperRAMBank << 13;
-   tmpAddress &= gbRamSizeMask;
-
-   MDFNMP_AddRAM(8192, 0xA000, &gbRam[tmpAddress]);
-   gbMemoryMap[0x0a] = &gbRam[tmpAddress];
-   gbMemoryMap[0x0b] = &gbRam[tmpAddress + 0x1000];
-  }
+  if(gbDataMBC1.mapperMemoryModel == 1)
+   SetRAM8K(gbDataMBC1.mapperRAMBank);
   else
-   MDFNMP_AddRAM(8192, 0xA000, gbRam);
+   SetRAM8K(0);
 
 }
 
@@ -126,15 +131,7 @@ void mapperMBC2ROM(uint16 address, uint8 value)
         value = 1;
       if(gbDataMBC2.mapperROMBank != value) {
         gbDataMBC2.mapperROMBank = value;
-
-        int tmpAddress = value << 14;
-
-        tmpAddress &= gbRomSizeMask;
-
-        gbMemoryMap[0x04] = &gbRom[tmpAddress];
-        gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
-        gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
-        gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
+	SetROMMap(value << 14);
       }
     }
     break;
@@ -153,21 +150,13 @@ void mapperMBC2RAM(uint16 address, uint8 value)
 
 void memoryUpdateMapMBC2()
 {
-  int tmpAddress = gbDataMBC2.mapperROMBank << 14;
-
-  tmpAddress &= gbRomSizeMask;
-
-  gbMemoryMap[0x04] = &gbRom[tmpAddress];
-  gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
-  gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
-  gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
+  SetROMMap(gbDataMBC2.mapperROMBank << 14);
 }
 
 mapperMBC3 gbDataMBC3 = {
   0, // RAM enable
   1, // ROM bank
   0, // RAM bank
-  0, // RAM address
   0, // timer clock latch
   0, // timer clock register
   0, // timer seconds
@@ -228,9 +217,8 @@ void memoryUpdateMBC3Clock()
 // MBC3 ROM write registers
 void mapperMBC3ROM(uint16 address, uint8 value)
 {
-  int tmpAddress = 0;
-
-  switch(address & 0x6000) {
+  switch(address & 0x6000)
+  {
   case 0x0000: // RAM enable register
     gbDataMBC3.mapperRAMEnable = ( ( value & 0x0a) == 0x0a ? 1 : 0);
     break;
@@ -241,27 +229,17 @@ void mapperMBC3ROM(uint16 address, uint8 value)
     if(value == gbDataMBC3.mapperROMBank)
       break;
 
-    tmpAddress = value << 14;
-
-    tmpAddress &= gbRomSizeMask;
+    SetROMMap(value << 14);
     gbDataMBC3.mapperROMBank = value;
-    gbMemoryMap[0x04] = &gbRom[tmpAddress];
-    gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
-    gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
-    gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
-
     break;
+
   case 0x4000: // RAM bank select
     if(value < 8) {
       if(value == gbDataMBC3.mapperRAMBank)
         break;
-      tmpAddress = value << 13;
-      tmpAddress &= gbRamSizeMask;
-      MDFNMP_AddRAM(8192, 0xA000, &gbRam[tmpAddress]);
-      gbMemoryMap[0x0a] = &gbRam[tmpAddress];
-      gbMemoryMap[0x0b] = &gbRam[tmpAddress + 0x1000];
+
+      SetRAM8K(value);
       gbDataMBC3.mapperRAMBank = value;
-      gbDataMBC3.mapperRAMAddress = tmpAddress;
     } else {
       if(gbDataMBC3.mapperRAMEnable) {
         gbDataMBC3.mapperRAMBank = -1;
@@ -352,21 +330,11 @@ uint8 mapperMBC3ReadRAM(uint16 address)
 
 void memoryUpdateMapMBC3()
 {
-  int tmpAddress = gbDataMBC3.mapperROMBank << 14;
+  SetROMMap(gbDataMBC3.mapperROMBank << 14);
 
-  tmpAddress &= gbRomSizeMask;
-
-  gbMemoryMap[0x04] = &gbRom[tmpAddress];
-  gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
-  gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
-  gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
-
-  if(gbDataMBC3.mapperRAMBank >= 0 && gbRamSize) {
-    tmpAddress = gbDataMBC3.mapperRAMBank << 13;
-    tmpAddress &= gbRamSizeMask;
-    MDFNMP_AddRAM(8192, 0xA000, &gbRam[tmpAddress]);
-    gbMemoryMap[0x0a] = &gbRam[tmpAddress];
-    gbMemoryMap[0x0b] = &gbRam[tmpAddress + 0x1000];
+  if(gbDataMBC3.mapperRAMBank >= 0 && gbRamSize)
+  {
+   SetRAM8K(gbDataMBC3.mapperRAMBank);
   }
 }
 
@@ -375,49 +343,37 @@ mapperMBC5 gbDataMBC5 = {
   1, // ROM bank
   0, // RAM bank
   0, // ROM high address
-  0, // RAM address
   0  // is rumble cartridge?
 };
 
 // MBC5 ROM write registers
 void mapperMBC5ROM(uint16 address, uint8 value)
 {
-  int tmpAddress = 0;
+  switch(address & 0x6000)
+  {
 
-  switch(address & 0x6000) {
   case 0x0000: // RAM enable register
     gbDataMBC5.mapperRAMEnable = ( ( value & 0x0a) == 0x0a ? 1 : 0);
     break;
+
   case 0x2000: // ROM bank select
     if(address < 0x3000) {
       value = value & 0xff;
       if(value == gbDataMBC5.mapperROMBank)
         break;
 
-      tmpAddress = (value << 14) | (gbDataMBC5.mapperROMHighAddress << 22) ;
-
-      tmpAddress &= gbRomSizeMask;
       gbDataMBC5.mapperROMBank = value;
-      gbMemoryMap[0x04] = &gbRom[tmpAddress];
-      gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
-      gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
-      gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
-
+      SetROMMap((value << 14) | (gbDataMBC5.mapperROMHighAddress << 22));
     } else {
       value = value & 1;
       if(value == gbDataMBC5.mapperROMHighAddress)
         break;
 
-      tmpAddress = (gbDataMBC5.mapperROMBank << 14) | (value << 22);
-
-      tmpAddress &= gbRomSizeMask;
       gbDataMBC5.mapperROMHighAddress = value;
-      gbMemoryMap[0x04] = &gbRom[tmpAddress];
-      gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
-      gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
-      gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
+      SetROMMap((gbDataMBC5.mapperROMBank << 14) | (value << 22));
     }
     break;
+
   case 0x4000: // RAM bank select
     if(gbDataMBC5.isRumbleCartridge)
       value &= 0x07;
@@ -425,16 +381,9 @@ void mapperMBC5ROM(uint16 address, uint8 value)
       value &= 0x0f;
     if(value == gbDataMBC5.mapperRAMBank)
       break;
-    tmpAddress = value << 13;
-    tmpAddress &= gbRamSizeMask;
-    if(gbRamSize) {
-      MDFNMP_AddRAM(8192, 0xA000, &gbRam[tmpAddress]);
-      gbMemoryMap[0x0a] = &gbRam[tmpAddress];
-      gbMemoryMap[0x0b] = &gbRam[tmpAddress + 0x1000];
 
-      gbDataMBC5.mapperRAMBank = value;
-      gbDataMBC5.mapperRAMAddress = tmpAddress;
-    }
+    gbDataMBC5.mapperRAMBank = value;
+    SetRAM8K(value);
     break;
   }
 }
@@ -451,29 +400,12 @@ void mapperMBC5RAM(uint16 address, uint8 value)
 
 void memoryUpdateMapMBC5()
 {
-  int tmpAddress = (gbDataMBC5.mapperROMBank << 14) |
-    (gbDataMBC5.mapperROMHighAddress << 22) ;
-
-  tmpAddress &= gbRomSizeMask;
-  gbMemoryMap[0x04] = &gbRom[tmpAddress];
-  gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
-  gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
-  gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
-
-  if(gbRamSize) {
-    tmpAddress = gbDataMBC5.mapperRAMBank << 13;
-    tmpAddress &= gbRamSizeMask;
-    MDFNMP_AddRAM(8192, 0xA000, &gbRam[tmpAddress]);
-    gbMemoryMap[0x0a] = &gbRam[tmpAddress];
-    gbMemoryMap[0x0b] = &gbRam[tmpAddress + 0x1000];
-  }
+  SetROMMap((gbDataMBC5.mapperROMBank << 14) | (gbDataMBC5.mapperROMHighAddress << 22));
+  SetRAM8K(gbDataMBC5.mapperRAMBank);
 }
 
 mapperMBC7 gbDataMBC7 = {
-  0, // RAM enable
   1, // ROM bank
-  0, // RAM bank
-  0, // RAM address
   0, // chip select
   0, // ??
   0, // mapper state
@@ -489,11 +421,11 @@ mapperMBC7 gbDataMBC7 = {
 // MBC7 ROM write registers
 void mapperMBC7ROM(uint16 address, uint8 value)
 {
-  int tmpAddress = 0;
-
   switch(address & 0x6000) {
+
   case 0x0000:
     break;
+
   case 0x2000: // ROM bank select
     value = value & 0x7f;
     if(value == 0)
@@ -502,28 +434,11 @@ void mapperMBC7ROM(uint16 address, uint8 value)
     if(value == gbDataMBC7.mapperROMBank)
       break;
 
-    tmpAddress = (value << 14);
-
-    tmpAddress &= gbRomSizeMask;
     gbDataMBC7.mapperROMBank = value;
-    gbMemoryMap[0x04] = &gbRom[tmpAddress];
-    gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
-    gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
-    gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
+    SetROMMap(value << 14);
     break;
-  case 0x4000: // RAM bank select/enable
-    if(value < 8) {
-      tmpAddress = (value&3) << 13;
-      tmpAddress &= gbRamSizeMask;
-      gbMemoryMap[0x0a] = &gbRam[0x0000];
-      gbMemoryMap[0x0b] = &gbRam[0x1000];
 
-      gbDataMBC7.mapperRAMBank = value;
-      gbDataMBC7.mapperRAMAddress = tmpAddress;
-      gbDataMBC7.mapperRAMEnable = 0;
-    } else {
-      gbDataMBC7.mapperRAMEnable = 0;
-    }
+  case 0x4000: // ?
     break;
   }
 }
@@ -537,18 +452,23 @@ uint8 mapperMBC7ReadRAM(uint16 address)
   case 0xa060:
   case 0xa070:
     return 0;
+
   case 0xa020:
     // sensor X low byte
-    //return systemGetSensorX() & 255;
+    return((gbDataMBC7.curtiltx >> 0) & 0xFF);
+
   case 0xa030:
     // sensor X high byte
-    //return systemGetSensorX() >> 8;
+    return((gbDataMBC7.curtiltx >> 8) & 0xFF);
+
   case 0xa040:
     // sensor Y low byte
-    //return systemGetSensorY() & 255;
+    return((gbDataMBC7.curtilty >> 0) & 0xFF);
+
   case 0xa050:
     // sensor Y high byte
-    //return systemGetSensorY() >> 8;
+    return((gbDataMBC7.curtilty >> 8) & 0xFF);
+
   case 0xa080:
     return gbDataMBC7.value;
   }
@@ -698,13 +618,7 @@ void mapperMBC7RAM(uint16 address, uint8 value)
 
 void memoryUpdateMapMBC7()
 {
-  int tmpAddress = (gbDataMBC5.mapperROMBank << 14);
-
-  tmpAddress &= gbRomSizeMask;
-  gbMemoryMap[0x04] = &gbRom[tmpAddress];
-  gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
-  gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
-  gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
+  SetROMMap(gbDataMBC7.mapperROMBank << 14);
 }
 
 mapperHuC1 gbDataHuC1 = {
@@ -713,7 +627,6 @@ mapperHuC1 gbDataHuC1 = {
   0, // RAM bank
   0, // memory model
   0, // ROM high address
-  0  // RAM address
 };
 
 // HuC1 ROM write registers
@@ -725,6 +638,7 @@ void mapperHuC1ROM(uint16 address, uint8 value)
   case 0x0000: // RAM enable register
     gbDataHuC1.mapperRAMEnable = ( ( value & 0x0a) == 0x0a ? 1 : 0);
     break;
+
   case 0x2000: // ROM bank select
     value = value & 0x3f;
     if(value == 0)
@@ -732,40 +646,28 @@ void mapperHuC1ROM(uint16 address, uint8 value)
     if(value == gbDataHuC1.mapperROMBank)
       break;
 
-    tmpAddress = value << 14;
-
-    tmpAddress &= gbRomSizeMask;
+    SetROMMap(value << 14);
     gbDataHuC1.mapperROMBank = value;
-    gbMemoryMap[0x04] = &gbRom[tmpAddress];
-    gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
-    gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
-    gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
     break;
+
   case 0x4000: // RAM bank select
     if(gbDataHuC1.mapperMemoryModel == 1) {
       // 4/32 model, RAM bank switching provided
       value = value & 0x03;
       if(value == gbDataHuC1.mapperRAMBank)
         break;
-      tmpAddress = value << 13;
-      tmpAddress &= gbRamSizeMask;
-      MDFNMP_AddRAM(8192, 0xA000, &gbRam[tmpAddress]);
-      gbMemoryMap[0x0a] = &gbRam[tmpAddress];
-      gbMemoryMap[0x0b] = &gbRam[tmpAddress + 0x1000];
+
+      SetRAM8K(value);
       gbDataHuC1.mapperRAMBank = value;
-      gbDataHuC1.mapperRAMAddress = tmpAddress;
     } else {
       // 16/8, set the high address
       gbDataHuC1.mapperROMHighAddress = value & 0x03;
       tmpAddress = gbDataHuC1.mapperROMBank << 14;
       tmpAddress |= (gbDataHuC1.mapperROMHighAddress) << 19;
-      tmpAddress &= gbRomSizeMask;
-      gbMemoryMap[0x04] = &gbRom[tmpAddress];
-      gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
-      gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
-      gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
+      SetROMMap(tmpAddress);
     }
     break;
+
   case 0x6000: // memory model select
     gbDataHuC1.mapperMemoryModel = value & 1;
     break;
@@ -784,29 +686,14 @@ void mapperHuC1RAM(uint16 address, uint8 value)
 
 void memoryUpdateMapHuC1()
 {
-  int tmpAddress = gbDataHuC1.mapperROMBank << 14;
-
-  tmpAddress &= gbRomSizeMask;
-
-  gbMemoryMap[0x04] = &gbRom[tmpAddress];
-  gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
-  gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
-  gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
-
-  if(gbRamSize) {
-    tmpAddress = gbDataHuC1.mapperRAMBank << 13;
-    tmpAddress &= gbRamSizeMask;
-    MDFNMP_AddRAM(8192, 0xA000, &gbRam[tmpAddress]);
-    gbMemoryMap[0x0a] = &gbRam[tmpAddress];
-    gbMemoryMap[0x0b] = &gbRam[tmpAddress + 0x1000];
-  }
+  SetROMMap(gbDataHuC1.mapperROMBank << 14);
+  SetRAM8K(gbDataHuC1.mapperRAMBank);
 }
 
 mapperHuC3 gbDataHuC3 = {
   0, // RAM enable
   1, // ROM bank
   0, // RAM bank
-  0, // RAM address
   0, // RAM flag
   0  // RAM read value
 };
@@ -815,8 +702,6 @@ mapperHuC3 gbDataHuC3 = {
 // HuC3 ROM write registers
 void mapperHuC3ROM(uint16 address, uint8 value)
 {
-  int tmpAddress = 0;
-
   switch(address & 0x6000) {
   case 0x0000: // RAM enable register
     gbDataHuC3.mapperRAMEnable = ( value == 0x0a ? 1 : 0);
@@ -824,6 +709,7 @@ void mapperHuC3ROM(uint16 address, uint8 value)
     if(gbDataHuC3.mapperRAMFlag != 0x0a)
       gbDataHuC3.mapperRAMBank = -1;
     break;
+
   case 0x2000: // ROM bank select
     value = value & 0x7f;
     if(value == 0)
@@ -831,27 +717,19 @@ void mapperHuC3ROM(uint16 address, uint8 value)
     if(value == gbDataHuC3.mapperROMBank)
       break;
 
-    tmpAddress = value << 14;
-
-    tmpAddress &= gbRomSizeMask;
     gbDataHuC3.mapperROMBank = value;
-    gbMemoryMap[0x04] = &gbRom[tmpAddress];
-    gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
-    gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
-    gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
+    SetROMMap(value << 14);
     break;
+
   case 0x4000: // RAM bank select
     value = value & 0x03;
     if(value == gbDataHuC3.mapperRAMBank)
       break;
-    tmpAddress = value << 13;
-    tmpAddress &= gbRamSizeMask;
-    MDFNMP_AddRAM(8192, 0xA000, &gbRam[tmpAddress]);
-    gbMemoryMap[0x0a] = &gbRam[tmpAddress];
-    gbMemoryMap[0x0b] = &gbRam[tmpAddress + 0x1000];
+
     gbDataHuC3.mapperRAMBank = value;
-    gbDataHuC3.mapperRAMAddress = tmpAddress;
+    SetRAM8K(value);
     break;
+
   case 0x6000: // nothing to do!
     break;
   }
@@ -932,21 +810,8 @@ void mapperHuC3RAM(uint16 address, uint8 value)
 
 void memoryUpdateMapHuC3()
 {
-  int tmpAddress = gbDataHuC3.mapperROMBank << 14;
-
-  tmpAddress &= gbRomSizeMask;
-  gbMemoryMap[0x04] = &gbRom[tmpAddress];
-  gbMemoryMap[0x05] = &gbRom[tmpAddress + 0x1000];
-  gbMemoryMap[0x06] = &gbRom[tmpAddress + 0x2000];
-  gbMemoryMap[0x07] = &gbRom[tmpAddress + 0x3000];
-
-  if(gbRamSize) {
-    tmpAddress = gbDataHuC3.mapperRAMBank << 13;
-    tmpAddress &= gbRamSizeMask;
-    MDFNMP_AddRAM(8192, 0xA000, &gbRam[tmpAddress]);
-    gbMemoryMap[0x0a] = &gbRam[tmpAddress];
-    gbMemoryMap[0x0b] = &gbRam[tmpAddress + 0x1000];
-  }
+  SetROMMap(gbDataHuC3.mapperROMBank << 14);
+  SetRAM8K(gbDataHuC3.mapperRAMBank);
 }
 
 }

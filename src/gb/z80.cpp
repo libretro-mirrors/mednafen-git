@@ -1,5 +1,6 @@
-#include "../mednafen.h"
-#include "../state.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/state.h>
+
 #include "gb.h"
 #include "z80.h"
 #include "gbGlobals.h"

@@ -371,7 +371,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_srcdir)/src/snes_perf/src -I$(top_srcdir)/src/snes_perf/src/snes
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl -I$(top_srcdir)/src/snes_perf/src -I$(top_srcdir)/src/snes_perf/src/snes
 noinst_LIBRARIES = libsnes_perf.a
 #endif
 #meow	+=	src/snes/smp/core/core.cpp

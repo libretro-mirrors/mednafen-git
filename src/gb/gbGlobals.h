@@ -29,7 +29,6 @@ extern uint8 *gbRom;
 extern uint8 *gbRam;
 extern uint8 *gbVram;
 extern uint8 *gbWram;
-extern uint16 *gbLineBuffer;
 
 extern uint8 *gbMemoryMap[16];
 

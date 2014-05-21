@@ -56,10 +56,10 @@
 
 #include "system.h"
 
-#include "../movie.h"
-#include "../general.h"
-#include "../mempatcher.h"
-#include "../md5.h"
+#include <mednafen/movie.h>
+#include <mednafen/general.h>
+#include <mednafen/mempatcher.h>
+#include <mednafen/md5.h>
 
 CSystem::CSystem(const uint8 *filememory, int32 filesize)
 	:mCart(NULL),
@@ -196,7 +196,7 @@ bool LynxLineDrawn[256];
 static CSystem *lynxie = NULL;
 extern MDFNGI EmulatedLynx;
 
-static bool TestMagic(const char *name, MDFNFILE *fp)
+static bool TestMagic(MDFNFILE *fp)
 {
  return(CCart::TestMagic(fp->data, fp->size));
 }
@@ -210,7 +210,7 @@ static void Cleanup(void)
  }
 }
 
-static int Load(const char *name, MDFNFILE *fp)
+static int Load(MDFNFILE *fp)
 {
  try
  {
@@ -247,11 +247,9 @@ static int Load(const char *name, MDFNFILE *fp)
  }
  catch(std::exception &e)
  {
-  MDFN_PrintError("%s", e.what());
-
   Cleanup();
 
-  return(0);
+  throw;
  }
 
  return(1);

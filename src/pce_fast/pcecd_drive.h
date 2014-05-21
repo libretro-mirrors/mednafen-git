@@ -1,7 +1,7 @@
 #ifndef __PCEFAST_PCECD_Drive_H
 #define __PCEFAST_PCECD_Drive_H
 
-#include <blip/Blip_Buffer.h>
+#include <mednafen/sound/Blip_Buffer.h>
 
 namespace PCE_Fast
 {

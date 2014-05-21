@@ -149,7 +149,7 @@ class OpenGL_Blitter
  ~OpenGL_Blitter();
 
  void BlitRaw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *dest_rect, const bool source_alpha);
- void Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Rect *dest_rect, const MDFN_Rect *original_src_rect, int UsingIP = 0, int rotated = MDFN_ROTATE0);
+ void Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Rect *dest_rect, const MDFN_Rect *original_src_rect, int InterlaceField, int UsingIP, int rotated);
  void ClearBackBuffer(void);
 
  //void HardSync(uint64 timeout);
@@ -242,7 +242,7 @@ class OpenGL_Blitter
  GLuint textures[4];		// emulated fb, scanlines, osd, raw(netplay)
  GLuint rgb_mask; 		// TODO:  RGB mask texture for LCD RGB triad simulation
 
- bool using_scanlines;
+ int using_scanlines;	// Don't change to bool.
  unsigned int last_w, last_h;
 
  uint32 OSDLastWidth, OSDLastHeight;

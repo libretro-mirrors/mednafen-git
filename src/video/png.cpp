@@ -43,26 +43,17 @@ void PNGWrite::WriteChunk(FileWrapper &pngfile, uint32 size, const char *type, c
  pngfile.write(tempo, 4);
 }
 
-// int MDFN_SavePNGSnapshot(const char *fname, const MDFN_Surface *src, const MDFN_Rect *rect, const MDFN_Rect *LineWidths)
-
 PNGWrite::~PNGWrite()
 {
 
 }
 
-PNGWrite::PNGWrite(const char *path, const MDFN_Surface *src, const MDFN_Rect &rect, const MDFN_Rect *LineWidths) : ownfile(path, FileWrapper::MODE_WRITE_SAFE)
+PNGWrite::PNGWrite(const char *path, const MDFN_Surface *src, const MDFN_Rect &rect, const int32 *LineWidths) : ownfile(path, FileWrapper::MODE_WRITE_SAFE)
 {
  WriteIt(ownfile, src, rect, LineWidths);
 }
 
-#if 0
-PNGWrite::PNGWrite(FileWrapper &pngfile, const MDFN_Surface *src, const MDFN_Rect &rect, const MDFN_Rect *LineWidths)
-{
- WriteIt(pngfile, src, rect, LineWidths);
-}
-#endif
-
-INLINE void PNGWrite::EncodeImage(const MDFN_Surface *src, const MDFN_PixelFormat &format, const MDFN_Rect &rect, const MDFN_Rect *LineWidths, const int png_width)
+INLINE void PNGWrite::EncodeImage(const MDFN_Surface *src, const MDFN_PixelFormat &format, const MDFN_Rect &rect, const int32 *LineWidths, const int png_width)
 {
  const int32 pitchinpix = src->pitchinpix;
  uint8 *tmp_inc;
@@ -78,10 +69,9 @@ INLINE void PNGWrite::EncodeImage(const MDFN_Surface *src, const MDFN_PixelForma
   int line_width = rect.w;
   int x_base = rect.x;
 
-  if(LineWidths && LineWidths[0].w != ~0)
+  if(LineWidths && LineWidths[0] != ~0)
   {
-   line_width = LineWidths[y + rect.y].w;
-   x_base = LineWidths[y + rect.y].x;
+   line_width = LineWidths[y + rect.y];
   }
 
   for(int x = 0; MDFN_LIKELY(x < line_width); x++)
@@ -123,24 +113,25 @@ INLINE void PNGWrite::EncodeImage(const MDFN_Surface *src, const MDFN_PixelForma
  }
 }
 
-void PNGWrite::WriteIt(FileWrapper &pngfile, const MDFN_Surface *src, const MDFN_Rect &rect_in, const MDFN_Rect *LineWidths)
-
+void PNGWrite::WriteIt(FileWrapper &pngfile, const MDFN_Surface *src, const MDFN_Rect &rect_in, const int32 *LineWidths)
 {
  uLongf compmemsize;
  int png_width;
  const MDFN_PixelFormat format = src->format;
  const MDFN_Rect rect = rect_in;
 
- if(LineWidths && LineWidths[0].w != ~0)
+ if(LineWidths && LineWidths[0] != ~0)
  {
   png_width = 0;
 
   for(int y = 0; y < rect.h; y++)
   {
-   if(LineWidths[rect.y + y].w > png_width)
-    png_width = LineWidths[rect.y + y].w;
+   const int32 cur_width = LineWidths[rect.y + y];
+
+   if(cur_width > png_width)
+    png_width = cur_width;
   }
- }
+ }  
  else
   png_width = rect.w;
 

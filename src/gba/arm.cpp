@@ -361,7 +361,7 @@ unsigned int RunARM(void)
       int base = (opcode >> 16) & 0x0F;\
       int shift = (opcode >> 7) & 0x1F;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       \
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
@@ -405,7 +405,7 @@ unsigned int RunARM(void)
       int base = (opcode >> 16) & 0x0F;\
       int shift = (opcode >> 7) & 0x1F;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -450,7 +450,7 @@ unsigned int RunARM(void)
       int base = (opcode >> 16) & 0x0F;\
       int shift = (opcode >> 7) & 0x1F;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -500,7 +500,7 @@ unsigned int RunARM(void)
       int base = (opcode >> 16) & 0x0F;\
       int shift = (opcode >> 7) & 0x1F;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -542,7 +542,7 @@ unsigned int RunARM(void)
       int base = (opcode >> 16) & 0x0F;\
       int shift = reg[(opcode >> 8)&15].B.B0;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -592,7 +592,7 @@ unsigned int RunARM(void)
       int base = (opcode >> 16) & 0x0F;\
       int shift = reg[(opcode >> 8)&15].B.B0;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -642,7 +642,7 @@ unsigned int RunARM(void)
       int base = (opcode >> 16) & 0x0F;\
       int shift = reg[(opcode >> 8)&15].B.B0;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -694,7 +694,7 @@ unsigned int RunARM(void)
       int base = (opcode >> 16) & 0x0F;\
       int shift = reg[(opcode >> 8)&15].B.B0;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -757,7 +757,7 @@ unsigned int RunARM(void)
       int shift = (opcode & 0xF00) >> 7;\
       int base = (opcode >> 16) & 0x0F;\
       int dest = (opcode >> 12) & 0x0F;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -801,7 +801,7 @@ unsigned int RunARM(void)
       /* OP Rd,Rb,Rm LSL # */ \
       int shift = (opcode >> 7) & 0x1F;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -844,7 +844,7 @@ unsigned int RunARM(void)
        /* OP Rd,Rb,Rm LSR # */ \
       int shift = (opcode >> 7) & 0x1F;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -888,7 +888,7 @@ unsigned int RunARM(void)
        /* OP Rd,Rb,Rm ASR # */\
       int shift = (opcode >> 7) & 0x1F;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -937,7 +937,7 @@ unsigned int RunARM(void)
        /* OP Rd,Rb,Rm ROR # */\
       int shift = (opcode >> 7) & 0x1F;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -978,7 +978,7 @@ unsigned int RunARM(void)
        /* OP Rd,Rb,Rm LSL Rs */\
       int shift = reg[(opcode >> 8)&15].B.B0;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -1027,7 +1027,7 @@ unsigned int RunARM(void)
        /* OP Rd,Rb,Rm LSR Rs */ \
       int shift = reg[(opcode >> 8)&15].B.B0;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -1076,7 +1076,7 @@ unsigned int RunARM(void)
        /* OP Rd,Rb,Rm ASR Rs */ \
       int shift = reg[(opcode >> 8)&15].B.B0;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -1127,7 +1127,7 @@ unsigned int RunARM(void)
        /* OP Rd,Rb,Rm ROR Rs */\
       int shift = reg[(opcode >> 8)&15].B.B0;\
       int dest = (opcode>>12) & 15;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\
@@ -1189,7 +1189,7 @@ unsigned int RunARM(void)
     {\
       int shift = (opcode & 0xF00) >> 7;\
       int dest = (opcode >> 12) & 0x0F;\
-      bool C_OUT = C_FLAG;\
+      bool C_OUT MDFN_NOWARN_UNUSED = C_FLAG;\
       uint32 value;\
       if ((dest == 15)||((opcode & 0x02000010)==0x10))\
       {\

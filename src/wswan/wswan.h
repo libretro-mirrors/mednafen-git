@@ -1,9 +1,9 @@
 #ifndef __WSWAN_H
 #define __WSWAN_H
 
-#include "../mednafen.h"
-#include "../state.h"
-#include "../general.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/state.h>
+#include <mednafen/general.h>
 
 #include "interrupt.h"
 

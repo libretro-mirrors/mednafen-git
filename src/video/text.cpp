@@ -213,18 +213,6 @@ static uint32 DoRealDraw(uint32 *dest, uint32 pitch, uint32 width_limit, uint32 
   dest += poot / 2;
  }
 
-#if 0
- // TODO to prevent writing past width
- // Shadow support kludge
- //
- if(width_limit < ex_offset)
-  return(0);
- dest += ex_offset + pitch;
- width_limit -= ex_offset;
- //
- //
-#endif
-
  pixwidth = 0;
 
  for(uint32 n = 0; n < slen; n++)

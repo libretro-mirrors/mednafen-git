@@ -1,7 +1,7 @@
 #ifndef _PCEFast_PSG_H
 #define _PCEFast_PSG_H
 
-#include <blip/Blip_Buffer.h>
+#include <mednafen/sound/Blip_Buffer.h>
 
 namespace PCE_Fast
 {

@@ -86,7 +86,7 @@ static std::string BCToString(const ButtConfig &bc)
  }
  else if(bc.ButtType == BUTTC_MOUSE)
  {
-  trio_snprintf(tmp, 256, "mouse %d", bc.ButtonNum);
+  trio_snprintf(tmp, 256, "mouse %016llx %08x", bc.DeviceID, bc.ButtonNum);
 
   string = string + std::string(tmp);
  }
@@ -184,7 +184,9 @@ static bool StringToBC(const char *string, std::vector<ButtConfig> &bc)
     tmp_bc.ButtonNum = 0;
     tmp_bc.DeviceID = 0;
   
-    trio_sscanf(extra, "%d", &tmp_bc.ButtonNum);
+    if(trio_sscanf(extra, "%016llx %08x", &tmp_bc.DeviceID, &tmp_bc.ButtonNum) < 2)
+     trio_sscanf(extra, "%d", &tmp_bc.ButtonNum);
+
     bc.push_back(tmp_bc);
    }
   }
@@ -234,7 +236,10 @@ static std::vector<int> PortButtConfigPrettyPrio[16];
 
 static std::vector<uint32> PortBitOffsets[16]; // within PortData, mask with 0x80000000 for rapid buttons
 static std::vector<uint32> PortButtBitOffsets[16];
-static std::vector<bool> PortButtIsAnalog[16];
+static std::vector<int> PortButtType[16];
+static std::vector<unsigned> PortButtFlags[16];
+
+static float PortAxisScale[16];
 
 typedef struct
 {
@@ -267,7 +272,8 @@ static void KillPortInfo(unsigned int port)
  PortButtBitOffsets[port].clear();
  PortButtRotateOffsets[port].clear();
  PortButtExclusionBitOffsets[port].clear();
- PortButtIsAnalog[port].clear();
+ PortButtType[port].clear();
+ PortButtFlags[port].clear();
 
  for(unsigned int x = 0; x < PortButtSettingNames[port].size(); x++)
   free(PortButtSettingNames[port][x]);
@@ -291,6 +297,7 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
  char *port_device_name;
  unsigned int device;
  
+ PortAxisScale[port] = 1.0;
 
   if(PortPossibleDevices[gi->shortname][port].size() > 1)
   {  
@@ -330,6 +337,7 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
   // Figure out how much data should be allocated for each port
   int bit_offset = 0;
   int buttconfig_offset = 0;
+  bool analog_axis_scale_grabbed = false;
 
   if(!zedevice->PortExpanderDeviceInfo)
   for(int x = 0; x < zedevice->NumInputs; x++)
@@ -343,6 +351,11 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
      default: bit_offset = ((bit_offset + 31) &~ 31) + 32;
 	      break;
 
+     case IDIT_BUTTON_ANALOG:
+     case IDIT_RUMBLE:
+		bit_offset = ((bit_offset + 7) &~ 7) + 16;
+		break;
+
      case IDIT_BUTTON:
      case IDIT_BUTTON_CAN_RAPID: bit_offset += 1;
 				 break;
@@ -354,11 +367,22 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
    }   // End of handling dummy/padding entries
    
 
-   if(zedevice->IDII[x].Type == IDIT_BUTTON || zedevice->IDII[x].Type == IDIT_BUTTON_CAN_RAPID
-	 || zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG)
+   if(zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG && (zedevice->IDII[x].Flags & IDIT_BUTTON_ANALOG_FLAG_SQLR) && !analog_axis_scale_grabbed)
    {
-    if(zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG)
+    char tmpsn[512];
+
+    trio_snprintf(tmpsn, sizeof(tmpsn), "%s.input.%s.%s.axis_scale", gi->shortname, gi->InputInfo->Types[port].ShortName, zedevice->ShortName);
+    PortAxisScale[port] = MDFN_GetSettingF(tmpsn);
+    analog_axis_scale_grabbed = true;
+   }
+
+   if(zedevice->IDII[x].Type == IDIT_BUTTON || zedevice->IDII[x].Type == IDIT_BUTTON_CAN_RAPID
+	 || zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG || zedevice->IDII[x].Type == IDIT_X_AXIS || zedevice->IDII[x].Type == IDIT_Y_AXIS)
+   {
+    if(zedevice->IDII[x].Type == IDIT_X_AXIS || zedevice->IDII[x].Type == IDIT_Y_AXIS)
      bit_offset = (bit_offset + 31) &~ 31; // Align to a 32-bit boundary
+    else if(zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG)	// Align to a byte boundary.
+     bit_offset = (bit_offset + 7) &~ 7;
 
     std::vector<ButtConfig> buttc;
     char buttsn[512];
@@ -373,7 +397,8 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
     PortButtConfig[port].push_back(buttc);
     PortBitOffsets[port].push_back(bit_offset);
     PortButtBitOffsets[port].push_back(bit_offset);
-    PortButtIsAnalog[port].push_back(zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG);
+    PortButtType[port].push_back((zedevice->IDII[x].Type == IDIT_BUTTON_CAN_RAPID) ? IDIT_BUTTON : zedevice->IDII[x].Type);
+    PortButtFlags[port].push_back(zedevice->IDII[x].Flags);
 
     PortButtons[port].push_back(strdup(zedevice->IDII[x].Name));
     PortButtConfigOffsets[port].push_back(buttconfig_offset);
@@ -393,7 +418,8 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
      PortButtConfig[port].push_back(buttc);
      //WRONG: PortBitOffsets[port].push_back(bit_offset | 0x80000000);
      PortButtBitOffsets[port].push_back(bit_offset | 0x80000000);
-     PortButtIsAnalog[port].push_back(false);
+     PortButtType[port].push_back(IDIT_BUTTON);
+     PortButtFlags[port].push_back(zedevice->IDII[x].Flags);
 
      PortButtons[port].push_back(trio_aprintf("Rapid %s", zedevice->IDII[x].Name));
      PortButtConfigOffsets[port].push_back(buttconfig_offset);
@@ -402,9 +428,13 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
      buttconfig_offset++;
     }
 
-    if(zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG)
+    if(zedevice->IDII[x].Type == IDIT_X_AXIS || zedevice->IDII[x].Type == IDIT_Y_AXIS)
     {
      bit_offset += 32;
+    }
+    else if(zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG)
+    {
+     bit_offset += 16;
     }
     else
     {
@@ -416,10 +446,15 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
     PortBitOffsets[port].push_back(bit_offset);
     bit_offset += 8;
    }
+   else if(zedevice->IDII[x].Type == IDIT_RUMBLE)
+   {
+    bit_offset = (bit_offset + 7) &~ 7; // Align it to a byte boundary.
+    PortBitOffsets[port].push_back(bit_offset);
+    bit_offset += 16;
+   }
    else // axis and misc, uint32!
    {
     bit_offset = (bit_offset + 31) &~ 31; // Align it to a 32-bit boundary
-
     PortBitOffsets[port].push_back(bit_offset);
     bit_offset += 32;
    }
@@ -471,7 +506,8 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
     if(NULL == zedevice->IDII[x].SettingName)
      continue;
 
-    if(zedevice->IDII[x].Type == IDIT_BUTTON || zedevice->IDII[x].Type == IDIT_BUTTON_CAN_RAPID || zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG)
+    if(zedevice->IDII[x].Type == IDIT_BUTTON || zedevice->IDII[x].Type == IDIT_BUTTON_CAN_RAPID || zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG ||
+	zedevice->IDII[x].Type == IDIT_X_AXIS || zedevice->IDII[x].Type == IDIT_Y_AXIS)
     {
      if(zedevice->IDII[x].ExcludeName)
      {
@@ -520,7 +556,8 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
 
   assert(PortButtExclusionBitOffsets[port].size() == PortButtBitOffsets[port].size());
   assert(PortButtRotateOffsets[port].size() == PortButtBitOffsets[port].size());
-  assert(PortButtBitOffsets[port].size() == PortButtIsAnalog[port].size());
+  assert(PortButtBitOffsets[port].size() == PortButtType[port].size());
+  assert(PortButtBitOffsets[port].size() == PortButtFlags[port].size());
 
   MDFNI_SetInput(port, zedevice->ShortName, PortData[port], PortDataSize[port]);
 }
@@ -789,9 +826,6 @@ static int CK_CheckActive(CommandKey which)
 int NoWaiting = 0;
 
 static bool ViewDIPSwitches = false;
-
-#define KEY(__a) keys[MKK(__a)]
-
 static int cidisabled=0;
 
 static bool inff = 0;
@@ -958,7 +992,7 @@ static void DoKeyStateZeroing(void)
   if(IConfig == none && !(cidisabled & 0x1))	// Match the statement in CheckCommandKeys for when DoKeyStateZeroing()
 						// is called instead of CheckCommandKeys
   {
-   if(Netplay_IsTextInput() || IsConsoleCheatConfigActive())
+   if(Netplay_IsTextInput() || CheatIF_Active())
    {
     memset(keys, 0, sizeof(keys)); // This effectively disables keyboard input, but still
                                    // allows physical joystick input when in the chat mode.
@@ -996,7 +1030,7 @@ static void CheckCommandKeys(void)
    if(CK_Check(CK_TOGGLE_HELP))
     Help_Toggle();
 
-   if(!IsConsoleCheatConfigActive() && !MDFNDnetplay)
+   if(!CheatIF_Active() && !MDFNDnetplay)
    {
     if(CK_Check(CK_TOGGLE_DEBUGGER))
     {
@@ -1006,7 +1040,7 @@ static void CheckCommandKeys(void)
    if(!Debugger_IsActive() && !MDFNDnetplay)
     if(CK_Check(CK_TOGGLECHEATVIEW))
     {
-     ShowConsoleCheatConfig(!IsConsoleCheatConfigActive());
+     CheatIF_GT_Show(!CheatIF_Active());
     }
 
    if(!(cidisabled & 1))
@@ -1019,7 +1053,7 @@ static void CheckCommandKeys(void)
 
    DoKeyStateZeroing();
 
-   if(!IsConsoleCheatConfigActive() && !Debugger_IsActive())
+   if(!CheatIF_Active() && !Debugger_IsActive())
     if(CK_Check(CK_TOGGLENETVIEW))
     {
      Netplay_ToggleTextView();
@@ -1479,13 +1513,13 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
 
     case IDIT_RUMBLE:
 	{
-	 uint32 rumble_data = MDFN_de32lsb(((uint8 *)PortData[x] + PortBitOffsets[x][tmi] / 8));
+	 const uint16 rumble_data = MDFN_de16lsb(((uint8 *)PortData[x] + PortBitOffsets[x][tmi] / 8));
 	 uint8 weak = (rumble_data >> 0) & 0xFF;
 	 uint8 strong = (rumble_data >> 8) & 0xFF;
 
 	 joy_manager->SetRumble(PortButtConfig[x][PortButtConfig[x].size() - 1], weak, strong);
 
-	 //printf("Weak: %02x, Strong: %02x\n", weak, strong);
+	 //printf("Rumble: %04x --- Weak: %02x, Strong: %02x\n", rumble_data, weak, strong);
 	}
 	break;
    }
@@ -1516,12 +1550,24 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
    }
 
    //
-   // Analog button
+   // Mice axes aren't buttons!  Oh well...
    //
-   if(PortButtIsAnalog[x][butt])
+   if(PortButtType[x][butt] == IDIT_X_AXIS || PortButtType[x][butt] == IDIT_Y_AXIS)
    {
     uint8 *tptr = (uint8 *)PortData[x];
     uint32 bo = PortButtBitOffsets[x][butt];
+    uint32 tv = 0;
+
+    if(PortButtConfig[x][butt].size() > 0)
+     tv = DTestMouseAxis(PortButtConfig[x][butt][0], keys, MouseData, (PortButtType[x][butt] == IDIT_Y_AXIS));
+
+    MDFN_en32lsb(&tptr[(bo & 0x7FFFFFFF) / 8], tv);
+   }
+   else if(PortButtType[x][butt] == IDIT_BUTTON_ANALOG)	// Analog button
+   {
+    uint8 *tptr = (uint8 *)PortData[x];
+    uint32 bo = PortButtBitOffsets[x][butt];
+    uint32 intv;
     uint32 tv;
 
     if(CurGame->rotated && PortButtRotateOffsets[x][butt].rotate[CurGame->rotated - 1] != 0xFFFFFFFF)
@@ -1530,9 +1576,14 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
       bo = PortButtRotateOffsets[x][butt].rotate[CurGame->rotated - 1];
     }
 
-    tv = std::min<int>(MDFN_de32lsb(&tptr[(bo & 0x7FFFFFFF) / 8]) + DTestButton(PortButtConfig[x][butt], keys, MouseData, true), 32767);
+    intv = DTestButton(PortButtConfig[x][butt], keys, MouseData, true);
+ 
+    if(PortButtFlags[x][butt] & IDIT_BUTTON_ANALOG_FLAG_SQLR)
+     intv = std::min<unsigned>((unsigned)floor(0.5 + intv * PortAxisScale[x]), 32767);
 
-    MDFN_en32lsb(&tptr[(bo & 0x7FFFFFFF) / 8], tv);
+    tv = std::min<int>(MDFN_de16lsb(&tptr[(bo & 0x7FFFFFFF) / 8]) + intv, 32767);
+
+    MDFN_en16lsb(&tptr[(bo & 0x7FFFFFFF) / 8], tv);
    }
    else if(DTestButton(PortButtConfig[x][butt], keys, MouseData)) // boolean button
    {
@@ -1585,12 +1636,6 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
     case IDIT_Y_AXIS_REL:
                       MDFN_en32lsb(((uint8 *)PortData[x] + PortBitOffsets[x][tmi] / 8), (uint32)((PortDevice[x]->IDII[tmi].Type == IDIT_Y_AXIS_REL) ? MouseDataRel[1] : MouseDataRel[0]));
 		      break;
-    case IDIT_X_AXIS:
-    case IDIT_Y_AXIS:
-		     {
-		      MDFN_en32lsb(((uint8 *)PortData[x] + PortBitOffsets[x][tmi] / 8), (uint32)((PortDevice[x]->IDII[tmi].Type == IDIT_Y_AXIS) ? MouseData[1] : MouseData[0]));
-		     }
-		     break;
    }
   }
  }
@@ -1689,11 +1734,14 @@ int ConfigDevice(int arg)
 
  for(;cd_x < (int)PortButtons[arg].size(); cd_x++)
  {
-  int snooty = 0;
+  int snooty = -1;
 
   for(unsigned int i = 0; i < PortButtons[arg].size(); i++)
    if(PortButtConfigPrettyPrio[arg][i] == cd_x)
     snooty = i;
+
+  if(snooty < 0)
+   continue;
 
   // For Lynx, GB, GBA, NGP, WonderSwan(especially wonderswan!)
   //if(!strcasecmp(PortDevice[arg]->ShortName, "builtin")) // && !arg)
@@ -1754,10 +1802,11 @@ static void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, const MDF
  //}
 
  int butti = 0;
-
+ bool analog_scale_made = false;
  for(int x = 0; x < info->NumInputs; x++)
  {
-  if(info->IDII[x].Type != IDIT_BUTTON && info->IDII[x].Type != IDIT_BUTTON_CAN_RAPID && info->IDII[x].Type != IDIT_BUTTON_ANALOG)
+  if(info->IDII[x].Type != IDIT_BUTTON && info->IDII[x].Type != IDIT_BUTTON_CAN_RAPID && info->IDII[x].Type != IDIT_BUTTON_ANALOG &&
+	info->IDII[x].Type != IDIT_X_AXIS && info->IDII[x].Type != IDIT_Y_AXIS)
    continue;
 
   if(NULL == info->IDII[x].SettingName)
@@ -1770,8 +1819,6 @@ static void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, const MDF
   if(def_bc)
    PendingGarbage.push_back((void *)(default_value = strdup(BCToString(def_bc[butti]).c_str()) ));
 
-  //printf("Maketset: %s %s\n", setting_name, default_value);
-
   memset(&tmp_setting, 0, sizeof(tmp_setting));
 
   PendingGarbage.push_back((void *)(tmp_setting.name = CleanSettingName(trio_aprintf("%s.input.%s.%s.%s", system->shortname, system->InputInfo->Types[w].ShortName, info->ShortName, info->IDII[x].SettingName)) ));
@@ -1779,8 +1826,10 @@ static void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, const MDF
   tmp_setting.type = MDFNST_STRING;
   tmp_setting.default_value = default_value;
   
-  tmp_setting.flags = MDFNSF_SUPPRESS_DOC;
+  tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING;
   tmp_setting.description_extra = NULL;
+
+  //printf("Maketset: %s %s\n", tmp_setting.name, tmp_setting.default_value);
 
   settings.push_back(tmp_setting);
 
@@ -1795,10 +1844,29 @@ static void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, const MDF
 
    tmp_setting.default_value = "";
 
-   tmp_setting.flags = MDFNSF_SUPPRESS_DOC;
+   tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING;
    tmp_setting.description_extra = NULL;
 
    settings.push_back(tmp_setting);
+  }
+  else if(info->IDII[x].Type == IDIT_BUTTON_ANALOG)
+  {
+   if((info->IDII[x].Flags & IDIT_BUTTON_ANALOG_FLAG_SQLR) && !analog_scale_made)
+   {
+    memset(&tmp_setting, 0, sizeof(tmp_setting));
+
+    PendingGarbage.push_back((void *)( tmp_setting.name = CleanSettingName(trio_aprintf("%s.input.%s.%s.axis_scale", system->shortname, system->InputInfo->Types[w].ShortName, info->ShortName)) ));
+    PendingGarbage.push_back((void *)( tmp_setting.description = trio_aprintf("Analog axis scale coefficient for %s on %s.", info->FullName, system->InputInfo->Types[w].FullName) ));
+    tmp_setting.description_extra = NULL;
+
+    tmp_setting.type = MDFNST_FLOAT;
+    tmp_setting.default_value = "1.00";
+    tmp_setting.minimum = "1.00";
+    tmp_setting.maximum = "1.50";
+
+    settings.push_back(tmp_setting);
+    analog_scale_made = true;
+   }
   }
   butti++;
  }
@@ -1914,7 +1982,7 @@ void MakeInputSettings(std::vector <MDFNSetting> &settings)
   tmp_setting.description = CKeys[x].description;
   tmp_setting.type = MDFNST_STRING;
 
-  tmp_setting.flags = MDFNSF_SUPPRESS_DOC;
+  tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING;
   tmp_setting.description_extra = NULL;
 
   PendingGarbage.push_back((void *)( tmp_setting.default_value = strdup(BCsToString(CKeys[x].bc, 2).c_str()) ));

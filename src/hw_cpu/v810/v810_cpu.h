@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "fpu-new/softfloat.h"
+#include "v810_fp_ops.h"
 
 typedef int32 v810_timestamp_t;
 
@@ -137,36 +137,30 @@ typedef enum
  _V810_EMU_MODE_COUNT
 } V810_Emu_Mode;
 
-//
-// WARNING: Do NOT instantiate this class in multiple threads in such a way that both threads can be inside a method of this class at the same time.
-// To fix this, you'll need to put locks or something(re-engineer it to use state passed in through pointers) around the SoftFloat code.
-//
-
-
 class V810
 {
  public:
 
- V810();
- ~V810();
+ V810() MDFN_COLD;
+ ~V810() MDFN_COLD;
 
  // Pass TRUE for vb_mode if we're emulating a VB-specific enhanced V810 CPU core
- bool Init(V810_Emu_Mode mode, bool vb_mode);
- void Kill(void);
+ bool Init(V810_Emu_Mode mode, bool vb_mode) MDFN_COLD;
+ void Kill(void) MDFN_COLD;
 
  void SetInt(int level);
 
- void SetMemWriteBus32(uint8 A, bool value);
- void SetMemReadBus32(uint8 A, bool value);
+ void SetMemWriteBus32(uint8 A, bool value) MDFN_COLD;
+ void SetMemReadBus32(uint8 A, bool value) MDFN_COLD;
 
- void SetMemReadHandlers(uint8 MDFN_FASTCALL (*read8)(v810_timestamp_t &, uint32), uint16 MDFN_FASTCALL (*read16)(v810_timestamp_t &, uint32), uint32 MDFN_FASTCALL (*read32)(v810_timestamp_t &, uint32));
- void SetMemWriteHandlers(void MDFN_FASTCALL (*write8)(v810_timestamp_t &, uint32, uint8), void MDFN_FASTCALL (*write16)(v810_timestamp_t &, uint32, uint16), void MDFN_FASTCALL (*write32)(v810_timestamp_t &, uint32, uint32));
+ void SetMemReadHandlers(uint8 MDFN_FASTCALL (*read8)(v810_timestamp_t &, uint32), uint16 MDFN_FASTCALL (*read16)(v810_timestamp_t &, uint32), uint32 MDFN_FASTCALL (*read32)(v810_timestamp_t &, uint32)) MDFN_COLD;
+ void SetMemWriteHandlers(void MDFN_FASTCALL (*write8)(v810_timestamp_t &, uint32, uint8), void MDFN_FASTCALL (*write16)(v810_timestamp_t &, uint32, uint16), void MDFN_FASTCALL (*write32)(v810_timestamp_t &, uint32, uint32)) MDFN_COLD;
 
- void SetIOReadHandlers(uint8 MDFN_FASTCALL (*read8)(v810_timestamp_t &, uint32), uint16 MDFN_FASTCALL (*read16)(v810_timestamp_t &, uint32), uint32 MDFN_FASTCALL (*read32)(v810_timestamp_t &, uint32));
- void SetIOWriteHandlers(void MDFN_FASTCALL (*write8)(v810_timestamp_t &, uint32, uint8), void MDFN_FASTCALL (*write16)(v810_timestamp_t &, uint32, uint16), void MDFN_FASTCALL (*write32)(v810_timestamp_t &, uint32, uint32));
+ void SetIOReadHandlers(uint8 MDFN_FASTCALL (*read8)(v810_timestamp_t &, uint32), uint16 MDFN_FASTCALL (*read16)(v810_timestamp_t &, uint32), uint32 MDFN_FASTCALL (*read32)(v810_timestamp_t &, uint32)) MDFN_COLD;
+ void SetIOWriteHandlers(void MDFN_FASTCALL (*write8)(v810_timestamp_t &, uint32, uint8), void MDFN_FASTCALL (*write16)(v810_timestamp_t &, uint32, uint16), void MDFN_FASTCALL (*write32)(v810_timestamp_t &, uint32, uint32)) MDFN_COLD;
 
  // Length specifies the number of bytes to map in, at each location specified by addresses[] (for mirroring)
- uint8 *SetFastMap(uint32 addresses[], uint32 length, unsigned int num_addresses, const char *name);
+ uint8 *SetFastMap(uint32 addresses[], uint32 length, unsigned int num_addresses, const char *name) MDFN_COLD;
 
  INLINE void ResetTS(v810_timestamp_t new_base_timestamp)
  {
@@ -189,7 +183,7 @@ class V810
  v810_timestamp_t Run(int32 MDFN_FASTCALL (*event_handler)(const v810_timestamp_t timestamp));
  void Exit(void);
 
- void Reset(void);
+ void Reset(void) MDFN_COLD;
 
  int StateAction(StateMem *sm, int load, int data_only);
 
@@ -340,7 +334,7 @@ class V810
 
 
  bool IsSubnormal(uint32 fpval);
- void FPU_Math_Template(float32 (*func)(float32, float32), uint32 arg1, uint32 arg2);
+ void FPU_Math_Template(uint32 (V810_FP_Ops::*func)(uint32, uint32), uint32 arg1, uint32 arg2);
  void FPU_DoException(void);
  bool CheckFPInputException(uint32 fpval);
  bool FPU_DoesExceptionKillResult(void);
@@ -351,6 +345,7 @@ class V810
  void BSTR_WWORD(v810_timestamp_t &timestamp, uint32 A, uint32 V);
  bool Do_BSTR_Search(v810_timestamp_t &timestamp, const int inc_mul, unsigned int bit_test);
 
+ V810_FP_Ops fpo;
 
  uint8 DummyRegion[V810_FAST_MAP_PSIZE + V810_FAST_MAP_TRAMPOLINE_SIZE];
 };

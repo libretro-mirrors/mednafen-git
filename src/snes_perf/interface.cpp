@@ -21,15 +21,15 @@
  mode when the screen isn't black.
 */
 
-#include "../mednafen.h"
-#include "../md5.h"
-#include "../general.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/md5.h>
+#include <mednafen/general.h>
 #include "src/snes/libsnes/libsnes.hpp"
-#include "../mempatcher.h"
-#include "../PSFLoader.h"
-#include "../player.h"
-#include "../FileStream.h"
-#include "../resampler/resampler.h"
+#include <mednafen/mempatcher.h>
+#include <mednafen/PSFLoader.h>
+#include <mednafen/player.h>
+#include <mednafen/FileStream.h>
+#include <mednafen/resampler/resampler.h>
 #include <vector>
 
 static void Cleanup(void);
@@ -61,7 +61,7 @@ static double SoundLastRate = 0;
 
 static int32 CycleCounter;
 static MDFN_Surface *tsurf = NULL;
-static MDFN_Rect *tlw = NULL;
+static int32 *tlw = NULL;
 static MDFN_Rect *tdr = NULL;
 static EmulateSpecStruct *es = NULL;
 
@@ -79,54 +79,40 @@ static uint8 *CustomColorMap = NULL;
 //static uint32 ColorMap[32768];
 static std::vector<uint32> ColorMap;
 
-static bool LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries)
+static void LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries) MDFN_COLD;
+static void LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries)
 {
  std::string colormap_fn = MDFN_MakeFName(MDFNMKF_PALETTE, 0, syspalname).c_str();
 
  MDFN_printf(_("Loading custom palette from \"%s\"...\n"),  colormap_fn.c_str());
  MDFN_indent(1);
 
- *ptr = NULL;
  try
  {
   FileStream fp(colormap_fn.c_str(), FileStream::MODE_READ);
 
-  if(!(*ptr = (uint8 *)MDFN_malloc(num_entries * 3, _("custom color map"))))
-  {
-   MDFN_indent(-1);
-   return(false);
-  }
+  *ptr = new uint8[num_entries * 3];
 
   fp.read(*ptr, num_entries * 3);
  }
  catch(MDFN_Error &e)
  {
-  if(*ptr)
-  {
-   MDFN_free(*ptr);
-   *ptr = NULL;
-  }
-
   MDFN_printf(_("Error: %s\n"), e.what());
   MDFN_indent(-1);
-  return(e.GetErrno() == ENOENT);        // Return fatal error if it's an error other than the file not being found.
+
+  if(e.GetErrno() != ENOENT)
+   throw;
+
+  return;
  }
  catch(std::exception &e)
  {
-  if(*ptr)
-  {
-   MDFN_free(*ptr);
-   *ptr = NULL;
-  }
-
   MDFN_printf(_("Error: %s\n"), e.what());
   MDFN_indent(-1);
-  return(false);
+  throw;
  }
 
  MDFN_indent(-1);
-
- return(true);
 }
 
 
@@ -174,18 +160,17 @@ static void video_refresh(const uint16_t *data, unsigned *line, unsigned height,
  const uint16 *source_line = data;
  uint32 *dest_line = tsurf->pixels + ((interlaced && field) ? tsurf->pitch32 : 0);
 
- tlw[0].w = 0;	// Mark line widths as valid(since field == 1 would skip it).
+ tlw[0] = 0;	// Mark line widths as valid(since field == 1 would skip it).
 
  for(int y = 0; y < height; y++, source_line += 512, dest_line += tsurf->pitch32 << interlaced)
  {
-  tlw[(y << interlaced) + field].x = 0;
-  tlw[(y << interlaced) + field].w = line[y];
+  tlw[(y << interlaced) + field] = line[y];
 
   if(line[y] == 512 && (source_line[0] & 0x8000))
   {
    //source_line[0] &= ~0x8000;
 
-   tlw[(y << interlaced) + field].w = 256;
+   tlw[(y << interlaced) + field] = 256;
    for(int x = 0; x < 256; x++)
    {
     uint16 p1 = source_line[(x << 1) | 0] & 0x7FFF;
@@ -491,7 +476,7 @@ static bool SaveLoadMemory(bool load)
 }
 #endif
 
-static bool TestMagic(const char *name, MDFNFILE *fp)
+static bool TestMagic(MDFNFILE *fp)
 {
  if(PSFLoader::TestMagic(0x23, fp))
   return(true);
@@ -706,7 +691,7 @@ static void Cleanup(void)
 
  if(CustomColorMap)
  {
-  MDFN_free(CustomColorMap);
+  delete[] CustomColorMap;
   CustomColorMap = NULL;
  }
 
@@ -728,7 +713,7 @@ static void Cleanup(void)
  snes_term();
 }
 
-static int Load(const char *name, MDFNFILE *fp)
+static int Load(MDFNFILE *fp)
 {
  bool PAL = FALSE;
 
@@ -782,17 +767,12 @@ static int Load(const char *name, MDFNFILE *fp)
 
   ColorMap.resize(32768);
 
-  if(!LoadCPalette(NULL, &CustomColorMap, 32768))
-  {
-   Cleanup();
-   return(0);
-  }
+  LoadCPalette(NULL, &CustomColorMap, 32768);
  }
  catch(std::exception &e)
  {
-  MDFND_PrintError(e.what());
   Cleanup();
-  return 0;
+  throw;
  }
 
  return(1);
@@ -894,7 +874,7 @@ static void Emulate(EmulateSpecStruct *espec)
  {
   if(!espec->skip)
   {
-   espec->LineWidths[0].w = ~0;
+   espec->LineWidths[0] = ~0;
    Player_Draw(espec->surface, &espec->DisplayRect, 0, espec->SoundBuf, espec->SoundBufSize);
   }
  }

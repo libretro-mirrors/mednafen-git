@@ -50,7 +50,7 @@
 
 #include "system.h"
 #include "ram.h"
-#include "../mempatcher.h"
+#include <mednafen/mempatcher.h>
 
 CRam::CRam(const uint8 *filememory,uint32 filesize)
 {

@@ -1,3 +1,174 @@
+-- 0.9.34.1: --
+
+May 11, 2014:
+	Fixed a bug in the sound format conversion code that caused garbled audio when using the new shared-mode WASAPI driver
+	with a sound device configured with more than 2 speakers.
+
+-- 0.9.34: --
+
+May 10, 2014:
+	CDPLAY: Optimized the visualization code.
+
+	Added a new shared-mode WASAPI sound driver named "wasapish".
+
+	For consistency, the "wasapi" and "sdl" sound drivers no longer subtract the overhead latency from the desired buffer size
+	when calculating the size of the buffer to use.
+
+	Changed the default value of setting "sound.buffer_time" to "0", to enable usage of partially-new code that calculates a buffer
+	size automatically based on emulated system characteristics and the sound driver in use.
+
+May 8, 2014:
+	GB: Fixed tilt sensor emulation that was broken in the May 6 IDIT_BUTTON_ANALOG packing change.
+
+	Updated the embedded copy of libmpcdec to the latest SVN copy; fixes problems with playback of older SV7 format files(with
+	the CD emulation code).
+
+	Wrote threading code to target Win32 APIs directly, rather than rely on SDL's threading support, for the Windows build.
+
+May 7, 2014:
+	GBA, NES: Resolved some compiler warnings.
+
+	No longer compile with -mstackrealign for the Windows build, instead using "__attribute__((force_align_arg_pointer))" where
+	appropriate(e.g. Win32 and SDL callbacks).
+
+	Updated the cheat console-interface code to use a condition variable instead of sleep-waiting.
+
+	Remove an erroneous extra mutex unlock around a driver-side message queue.
+
+May 6, 2014:
+	Pack "IDIT_BUTTON_ANALOG" and "IDIT_RUMBLE" type input device data more tightly(only aligning to a byte-boundary now,
+	and packing as 16-bits rather than 32-bits).
+
+	Calculate and send a device type number for each emulated port with the netplay login data(the data is not used currently by
+	mednafen-server, but will be in the future).
+
+May 5, 2014:
+	Reworked the multithreaded CD reading code to use condition variables, rather than repeatedly unlocking, sleeping, and
+	locking mutexes.  This should help with performance a bit, and will prevent a lot of unnecessary CPU/CPU core wakeups, especially
+	after loading multiple disc images with M3U files(since a read thread is created for each disc image, at least when CD image
+	memcaching is disabled, the default).
+
+	Moved common parts of the MDFNI_Load and MDFNI_LoadCD functions into a separate function to reduce code duplication.
+
+	Emulation modules' LoadCD functions all now throw exceptions on error, so changed the function pointer prototype to remove
+	the return type(void all the way!).
+
+May 4, 2014:
+	PCE, PCE_FAST, PC-FX, MD: Make better use of exceptions(and handle some that were not handled properly before) in the game
+	loading and initialization code paths.
+
+	Emulation modules' Load and LoadCD functions may now throw exceptions upwards instead of calling MDFN_PrintError() and
+	returning 0.
+
+	Reworked IPS parsing and applying code to use exceptions, and Stream instead of stdio file access.
+
+	Reworked MDFNFILE to use exceptions to signal errors on file loading(the memory-stream functions provided primarily for the NES
+	module's use still don't throw exceptions, however).
+
+	Lynx: Removed undocumented(and largely pointless) support for loading a gzip or ZIP-compressed "lynxboot.img" firmware file.
+
+	GB: Made game loading code more resilient to avoid leaking memory if an error occurs during game load.
+
+	Added a gcc format string check attribute to an MDFN_Error constructor, and fixed a few minor format string problems this
+	checking exposed.
+
+May 3, 2014:
+	GBA: Reworked save file type parsing code to use FileStream instead of stdio.
+
+	GBA: Sanitize a few variables in the flash memory save state loading code to prevent malicious save states blah blah blah.
+
+	GBA: Added masks to array access in the EEPROM emulation code to prevent malicious save states from corrupting the heap.
+
+	GBA: EEPROM file loading code now errors out if there's an error opening or reading the file(but not if the error is that it
+	simply does not exist), or the file is of an unexpected/incorrect size.
+
+May 2, 2014:
+	NES:  The filename scanning to select region/video standard(NTSC or PAL), controlled via the "nes.fnscan" setting, now
+	uses the filename and path stored in the ZIP file(when loading a NES game from a ZIP file) rather than the name of the ZIP file
+	itself.	 Additionally, the filename scanning feature no longer is affected by strings in the file extension(though I doubt this
+	will affect anyone, as you'd have to be pretty deranged to name a NES game file like that).
+
+May 1, 2014:
+	PSX: Made CD-DA playback position report code more correct and resilient in regards to Q subchannel checksum errors.
+
+April 30, 2014:
+	PSX: Added settings to allow for scaling the analog stick axis values, to work around the issue of different logical ranges of 
+	motion for PS1 DualShock and Dual Analog controllers versus more modern PC-compatible gamepads.
+
+April 29, 2014:
+	Added logic to gracefully fall back to other fullscreen stretch modes if the current fullscreen resolution is too low to support the
+	stretch mode selected.
+
+April 28, 2014:
+	Added support for mapping joystick axes to lightgun screen coordinates; however, the configuration must be done manually
+	by editing the configuration file.  (Additionally, the translation will not function properly if the software-rotation
+	feature(via ALT+O) is used.)
+	Example:
+		psx.input.port2.guncon.x_axis joystick 630f0eab74165481 00008000
+		psx.input.port2.guncon.y_axis joystick 630f0eab74165481 00008001
+	Alternate coordinate translation for fullscreen mode, intended for physical modern lightgun and pointer devices:
+		psx.input.port2.guncon.x_axis joystick 630f0eab74165481 00048000
+		psx.input.port2.guncon.y_axis joystick 630f0eab74165481 00048001
+
+April 27, 2014:
+	GB: Cleaned up the memory-mapper code, fixing a few bugs that allowed some games(like "Best of the Best Championship Karate")
+	to cause Mednafen itself to crash.
+
+	GB: Fixed MBC7 support(it's been broken in Mednafen for a loooong time).
+
+	GB: Disabled the broken simulation of HDMA overhead that seemed to be doing more harm than good; fixes problems with
+	unstable framerates and inaccurate slowdown on some GBC games(such as "Shantae").
+
+	MD, NGP, WonderSwan: Fixed potential memory leaks(memory was not really leaked due to how Mednafen is currently structured,
+	but they could have become problematic leaks in the future).
+
+	Merge clamp.h into math_ops.h.
+
+	More #include statement changes in emulation module sources to use #include <mednafen/BLAH> style instead of #include "../BLAH".
+
+April 26, 2014:
+	Fixed a bug that was causing the output image to be distorted when rotation(via ALT+O) was used in conjunction with
+	a *.videoip setting value of "x" or "y".
+
+	Added a test/demo module to help work out bugs in the video processing code paths.
+
+April 25, 2014:
+	Reworked the build system and numerous source code and header files to allow for less sloppiness with -I include paths.
+
+	GB: Statically-allocate a 320-byte graphics buffer instead of malloc()'ing it.
+
+April 24, 2014:
+	Fixed a problem with the configure script so it will (hopefully) no longer error out when cross-compiling.
+
+	MD: memset() line buffer padding areas to prevent sprite rendering from reading from uninitialized memory.
+
+	MD: Fixed violations of strict aliasing in the 68K CPU core.
+
+	PC-FX, VB: Replaced SoftFloat, used in FPU emulation, with newly-written-while-sleep-deprived code.  It's possible this may
+	cause regressions, since floating-point stuff is rather hairy...
+
+	Fixed an ancient bug that made iterative multibyte-value cheat searches extremely unreliable.
+
+	Fixed a bug that broke the output image when displaying a source image with multiple horizontal resolutions at a specific
+	rotation angle(selected via ALT+O).
+
+	Added support for negative <system>.scanlines setting values, which will change scanline behavior and size to overlay/obscure
+	the previous field's line data if "video.deinterlacer" is set to "weave".
+
+	Added setting "video.deinterlacer", default value of "weave".
+
+	NES: Align a temporary line buffer array to prevent the possibility of a CPU fault and/or poor performance on non-x86 platforms.
+
+	Simplified handling of muli-horizontal-resolution frames by changing "LineWidths"'s type from MDFN_Rect(representing
+	x offset and width) to a simple int32(representing just width).
+
+April 23, 2014:
+	GB: Added support for custom palettes that specify BGP, OBP0, and OBP1 colors independently.
+
+April 18, 2014:
+	PC-FX, VB: Corrected the debugger's disassembly of the 5-bit sign-extended immediate form of "mov"
+	(the disassembler was failing to sign-extend).
+
 -- 0.9.33.3: --
 
 April 16, 2014:

@@ -50,8 +50,8 @@
 #include <string.h>
 #include <zlib.h>
 #include "cart.h"
-#include "../state.h"
-#include "../md5.h"
+#include <mednafen/state.h>
+#include <mednafen/md5.h>
 
 LYNX_HEADER CCart::DecodeHeader(const uint8 *data)
 {

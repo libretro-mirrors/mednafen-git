@@ -25,11 +25,11 @@
 #include "rainbow.h"
 #include "huc6273.h"
 #include "fxscsi.h"
-#include "../cdrom/scsicd.h"
-#include "../mempatcher.h"
-#include "../cdrom/cdromif.h"
-#include "../md5.h"
-#include "../clamp.h"
+#include <mednafen/cdrom/scsicd.h>
+#include <mednafen/mempatcher.h>
+#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/md5.h>
+#include <mednafen/FileStream.h>
 
 #include <trio/trio.h>
 #include <errno.h>
@@ -490,19 +490,34 @@ static void VDCB_IRQHook(bool asserted)
 
 static void SetRegGroups(void);
 
-static bool LoadCommon(std::vector<CDIF *> *CDInterfaces)
+static void Cleanup(void)
 {
- std::string biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("pcfx.bios").c_str());
- std::string fxscsi_path = MDFN_GetSettingS("pcfx.fxscsi");	// For developers only, so don't make it convenient.
- MDFNFILE BIOSFile;
+ for(int i = 0; i < 2; i++)
+ {
+  if(fx_vdc_chips[i])
+  {
+   delete fx_vdc_chips[i];
+   fx_vdc_chips[i] = NULL;
+  }
+ }
+
+ RAINBOW_Close();
+ KING_Close();
+ SoundBox_Kill();
+ PCFX_V810.Kill();
+
+ // The allocated memory RAM and BIOSROM is free'd in V810_Kill()
+ RAM = NULL;
+ BIOSROM = NULL;
+}
+
+static void LoadCommon(std::vector<CDIF *> *CDInterfaces)
+{
  V810_Emu_Mode cpu_mode;
 
  #ifdef WANT_DEBUGGER
  SetRegGroups();
  #endif
-
- if(!BIOSFile.Open(biospath, NULL, "BIOS"))
-  return(0);
 
  cpu_mode = (V810_Emu_Mode)MDFN_GetSettingI("pcfx.cpu_emulation");
  if(cpu_mode == _V810_EMU_MODE_COUNT)
@@ -521,50 +536,33 @@ static bool LoadCommon(std::vector<CDIF *> *CDInterfaces)
  uint32 RAM_Map_Addresses[1] = { 0x00000000 };
  uint32 BIOSROM_Map_Addresses[1] = { 0xFFF00000 };
 
- // todo: cleanup on error
- if(!(RAM = PCFX_V810.SetFastMap(RAM_Map_Addresses, 0x00200000, 1, _("RAM"))))
+ RAM = PCFX_V810.SetFastMap(RAM_Map_Addresses, 0x00200000, 1, _("RAM"));
+ BIOSROM = PCFX_V810.SetFastMap(BIOSROM_Map_Addresses, 0x00100000, 1, _("BIOS ROM"));
+
  {
-  return(0);
+  std::string biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("pcfx.bios").c_str());
+  MDFNFILE BIOSFile(biospath.c_str(), NULL, "BIOS");
+
+  if(BIOSFile.Size() != 1024 * 1024)
+   throw MDFN_Error(0, _("BIOS ROM file is incorrect size.\n"));
+
+  memcpy(BIOSROM, BIOSFile.Data(), 1024 * 1024);
+
+  BIOSFile.Close();
  }
 
- if(!(BIOSROM = PCFX_V810.SetFastMap(BIOSROM_Map_Addresses, 0x00100000, 1, _("BIOS ROM"))))
  {
-  return(0);
- }
+  std::string fxscsi_path = MDFN_GetSettingS("pcfx.fxscsi");	// For developers only, so don't make it convenient.
 
- if(BIOSFile.Size() != 1024 * 1024)
- {
-  MDFN_PrintError(_("BIOS ROM file is incorrect size.\n"));
-  return(0);
- }
-
- memcpy(BIOSROM, BIOSFile.Data(), 1024 * 1024);
-
- BIOSFile.Close();
-
- if(fxscsi_path != "0" && fxscsi_path != "" && fxscsi_path != "none")
- {
-  MDFNFILE FXSCSIFile;
-
-  if(!FXSCSIFile.Open(fxscsi_path, NULL, "FX-SCSI ROM"))
-   return(0);
-
-  if(FXSCSIFile.Size() != 1024 * 512)
+  if(fxscsi_path != "0" && fxscsi_path != "" && fxscsi_path != "none")
   {
-   MDFN_PrintError(_("BIOS ROM file is incorrect size.\n"));
-   return(0);
+   FileStream FXSCSIFile(fxscsi_path.c_str(), FileStream::MODE_READ);
+   uint32 FXSCSI_Map_Addresses[1] = { 0x80780000 };
+
+   FXSCSIROM = PCFX_V810.SetFastMap(FXSCSI_Map_Addresses, 0x0080000, 1, _("FX-SCSI ROM"));
+
+   FXSCSIFile.read(FXSCSIROM, 1024 * 512);
   }
-
-  uint32 FXSCSI_Map_Addresses[1] = { 0x80780000 };
-
-  if(!(FXSCSIROM = PCFX_V810.SetFastMap(FXSCSI_Map_Addresses, 0x0080000, 1, _("FX-SCSI ROM"))))
-  {
-   return(0);
-  }
-
-  memcpy(FXSCSIROM, FXSCSIFile.Data(), 1024 * 512);
-
-  FXSCSIFile.Close();
  }
 
  #ifdef WANT_DEBUGGER
@@ -593,14 +591,7 @@ static bool LoadCommon(std::vector<CDIF *> *CDInterfaces)
  if(WantHuC6273)
   HuC6273_Init();
 
- if(!KING_Init())
- {
-  MDFN_free(BIOSROM);
-  MDFN_free(RAM);
-  BIOSROM = NULL;
-  RAM = NULL;
-  return(0);
- }
+ KING_Init();
 
  CD_TrayOpen = false;
  CD_SelectedDisc = 0;
@@ -724,10 +715,6 @@ static bool LoadCommon(std::vector<CDIF *> *CDInterfaces)
 
  PCFX_V810.SetIOReadHandlers(port_rbyte, port_rhword, NULL);
  PCFX_V810.SetIOWriteHandlers(port_wbyte, port_whword, NULL);
-
-
-
- return(1);
 }
 
 static void DoMD5CDVoodoo(std::vector<CDIF *> *CDInterfaces)
@@ -881,24 +868,29 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  return(FALSE);
 }
 
-static int LoadCD(std::vector<CDIF *> *CDInterfaces)
+static void LoadCD(std::vector<CDIF *> *CDInterfaces)
 {
- EmuFlags = 0;
+ try
+ {
+  EmuFlags = 0;
 
- cdifs = CDInterfaces;
+  cdifs = CDInterfaces;
 
- DoMD5CDVoodoo(CDInterfaces);
+  DoMD5CDVoodoo(CDInterfaces);
 
- if(!LoadCommon(CDInterfaces))
-  return(0);
+  LoadCommon(CDInterfaces);
 
- MDFN_printf(_("Emulated CD-ROM drive speed: %ux\n"), (unsigned int)MDFN_GetSettingUI("pcfx.cdspeed"));
+  MDFN_printf(_("Emulated CD-ROM drive speed: %ux\n"), (unsigned int)MDFN_GetSettingUI("pcfx.cdspeed"));
 
- MDFNGameInfo->GameType = GMT_CDROM;
+  MDFNGameInfo->GameType = GMT_CDROM;
 
- PCFX_Power();
-
- return(1);
+  PCFX_Power();
+ }
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
 }
 
 static void PCFX_CDInsertEject(void)
@@ -956,20 +948,7 @@ static void CloseGame(void)
   MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 0, EvilRams);
  }
 
- for(int i = 0; i < 2; i++)
-  if(fx_vdc_chips[i])
-  {
-   delete fx_vdc_chips[i];
-   fx_vdc_chips[i] = NULL;
-  }
-
- RAINBOW_Close();
- KING_Close();
- PCFX_V810.Kill();
-
- // The allocated memory RAM and BIOSROM is free'd in V810_Kill()
- RAM = NULL;
- BIOSROM = NULL;
+ Cleanup();
 }
 
 static void DoSimpleCommand(int cmd)

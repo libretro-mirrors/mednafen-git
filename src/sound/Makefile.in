@@ -93,7 +93,7 @@ libmdfnsound_a_AR = $(AR) $(ARFLAGS)
 libmdfnsound_a_LIBADD =
 am_libmdfnsound_a_OBJECTS = Blip_Buffer.$(OBJEXT) \
 	Stereo_Buffer.$(OBJEXT) Fir_Resampler.$(OBJEXT) \
-	WAVRecord.$(OBJEXT) OwlResampler.$(OBJEXT)
+	WAVRecord.$(OBJEXT) OwlResampler.$(OBJEXT) okiadpcm.$(OBJEXT)
 libmdfnsound_a_OBJECTS = $(am_libmdfnsound_a_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -333,10 +333,10 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_builddir)/include/blip
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libmdfnsound.a
 libmdfnsound_a_SOURCES = Blip_Buffer.cpp Stereo_Buffer.cpp \
-	Fir_Resampler.cpp WAVRecord.cpp OwlResampler.cpp
+	Fir_Resampler.cpp WAVRecord.cpp OwlResampler.cpp okiadpcm.cpp
 all: all-am
 
 .SUFFIXES:
@@ -390,6 +390,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/OwlResampler.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Stereo_Buffer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WAVRecord.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/okiadpcm.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\

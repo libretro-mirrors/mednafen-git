@@ -330,6 +330,7 @@ struct enum_device_list
  unsigned valid_count;
 };
 
+static BOOL CALLBACK GLOB_EnumJoysticksProc(LPCDIDEVICEINSTANCE ddi, LPVOID private_data) __attribute__((force_align_arg_pointer));
 static BOOL CALLBACK GLOB_EnumJoysticksProc(LPCDIDEVICEINSTANCE ddi, LPVOID private_data)
 {
  enum_device_list *edl = (enum_device_list*)private_data;

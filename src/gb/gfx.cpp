@@ -16,8 +16,7 @@
 // along with this program; if not, write to the Free Software Foundation,
 // Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#include "../mednafen.h"
-#include <memory.h>
+#include <mednafen/mednafen.h>
 
 #include "gbGlobals.h"
 #include "gb.h"
@@ -68,7 +67,7 @@ union __gblmt
  uint32 dmg_32[40];
 } gbLineMix;
 
-//uint16 gbLineMix[160];
+static uint16 gbLineBuffer[160];
 
 template<bool cgb_mode>
 static INLINE void DrawBG(void)
@@ -329,7 +328,7 @@ static INLINE void DrawBG(void)
   }
   else 
   {
-   int fill_color = cgb_mode ? gbPalette[0] : 8;
+   const uint8 fill_color = cgb_mode ? gbPalette[0] : 12;
 
    for(int i = 0; i < 160; i++) 
    {
@@ -445,9 +444,7 @@ static INLINE void DrawSpriteTile(int tile, int x,int y,int t, int flags,
     } 
     else 
     {
-     c = pal[c];
-     c += 4;
-     gbLineMix.dmg[xxx] = c;
+     gbLineMix.dmg[xxx] = pal[c];
     }
   }
 }

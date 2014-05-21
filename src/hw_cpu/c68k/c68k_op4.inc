@@ -16,7 +16,7 @@ case 0x4000:
 	CPU->flag_V = res & src;
 	CPU->flag_N = CPU->flag_X = CPU->flag_C = res;
 	CPU->flag_notZ |= res & 0xFF;
-	*(BYTE_OFF + (u8*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(BYTE_OFF + (u8*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(4)
 case 0x4011:
@@ -231,7 +231,7 @@ case 0x4040:
 	CPU->flag_V = (res & src) >> 8;
 	CPU->flag_N = CPU->flag_X = CPU->flag_C = res >> 8;
 	CPU->flag_notZ |= res & 0xFFFF;
-	*(WORD_OFF + (u16*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(WORD_OFF + (u16*)((u32*)&CPU->D16 + ((Opcode >> 0) & 7))) = res;
 }
 RET(4)
 case 0x4051:
@@ -447,7 +447,7 @@ case 0x4080:
 	CPU->flag_V = (res & src) >> 24;
 	CPU->flag_X = CPU->flag_C = (src | res) >> 23;
 	CPU->flag_N = res >> 24;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(6)
 case 0x4091:
@@ -667,7 +667,7 @@ case 0x4200:
 	u32 res;
 	res = 0;
 	CPU->flag_N = CPU->flag_notZ = CPU->flag_V = CPU->flag_C = 0;
-	*(BYTE_OFF + (u8*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(BYTE_OFF + (u8*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(4)
 case 0x4211:
@@ -842,7 +842,7 @@ case 0x4240:
 	u32 res;
 	res = 0;
 	CPU->flag_N = CPU->flag_notZ = CPU->flag_V = CPU->flag_C = 0;
-	*(WORD_OFF + (u16*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(WORD_OFF + (u16*)((u32*)&CPU->D16 + ((Opcode >> 0) & 7))) = res;
 }
 RET(4)
 case 0x4251:
@@ -1017,7 +1017,7 @@ case 0x4280:
 	u32 res;
 	res = 0;
 	CPU->flag_N = CPU->flag_notZ = CPU->flag_V = CPU->flag_C = 0;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(6)
 case 0x4291:
@@ -1196,7 +1196,7 @@ case 0x4400:
 	CPU->flag_V = res & src;
 	CPU->flag_N = CPU->flag_X = CPU->flag_C = res;
 	CPU->flag_notZ = res & 0xFF;
-	*(BYTE_OFF + (u8*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(BYTE_OFF + (u8*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(4)
 case 0x4411:
@@ -1411,7 +1411,7 @@ case 0x4440:
 	CPU->flag_V = (res & src) >> 8;
 	CPU->flag_N = CPU->flag_X = CPU->flag_C = res >> 8;
 	CPU->flag_notZ = res & 0xFFFF;
-	*(WORD_OFF + (u16*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(WORD_OFF + (u16*)((u32*)&CPU->D16 + ((Opcode >> 0) & 7))) = res;
 }
 RET(4)
 case 0x4451:
@@ -1627,7 +1627,7 @@ case 0x4480:
 	CPU->flag_V = (res & src) >> 24;
 	CPU->flag_X = CPU->flag_C = (src | res) >> 23;
 	CPU->flag_N = res >> 24;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(6)
 case 0x4491:
@@ -1852,7 +1852,7 @@ case 0x4600:
 	CPU->flag_V = 0;
 	CPU->flag_N = res;
 	CPU->flag_notZ = res & 0xFF;
-	*(BYTE_OFF + (u8*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(BYTE_OFF + (u8*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(4)
 case 0x4611:
@@ -2077,7 +2077,7 @@ case 0x4640:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res & 0xFFFF;
 	CPU->flag_N = res >> 8;
-	*(WORD_OFF + (u16*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(WORD_OFF + (u16*)((u32*)&CPU->D16 + ((Opcode >> 0) & 7))) = res;
 }
 RET(4)
 case 0x4651:
@@ -2302,7 +2302,7 @@ case 0x4680:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(6)
 case 0x4691:
@@ -2521,7 +2521,7 @@ case 0x40C0:
 {
 	u32 res;
 	res = GET_SR;
-	*(WORD_OFF + (u16*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(WORD_OFF + (u16*)((u32*)&CPU->D16 + ((Opcode >> 0) & 7))) = res;
 }
 RET(6)
 case 0x40D1:
@@ -3387,7 +3387,7 @@ case 0x4800:
 	{
 		if ((res & 0x0f) == 0xa) res = (res & 0xf0) + 0x10;
 		res &= 0xFF;
-	*(BYTE_OFF + (u8*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(BYTE_OFF + (u8*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 		CPU->flag_notZ |= res;
 		CPU->flag_X = CPU->flag_C = C68K_SR_C;
 	}
@@ -3751,7 +3751,7 @@ case 0x4840:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(4)
 case 0x4891:
@@ -3767,13 +3767,11 @@ case 0x4890:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7];
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -3797,13 +3795,11 @@ case 0x48A0:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7];
 	src = 15;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -3829,14 +3825,12 @@ case 0x48A8:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7] + (s32)(s16)FETCH_WORD;
 	PC += 2;
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -3861,14 +3855,12 @@ case 0x48B0:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7];
 	DECODE_EXT_WORD
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -3886,14 +3878,12 @@ case 0x48B8:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = (s32)(s16)FETCH_WORD;
 	PC += 2;
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -3911,14 +3901,12 @@ case 0x48B9:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = (s32)FETCH_LONG;
 	PC += 4;
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -3936,13 +3924,11 @@ case 0x48A7:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[7];
 	src = 15;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -3968,13 +3954,11 @@ case 0x48D0:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7];
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -3998,13 +3982,11 @@ case 0x48E0:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7];
 	src = 15;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -4030,14 +4012,12 @@ case 0x48E8:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7] + (s32)(s16)FETCH_WORD;
 	PC += 2;
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -4062,14 +4042,12 @@ case 0x48F0:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7];
 	DECODE_EXT_WORD
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -4087,14 +4065,12 @@ case 0x48F8:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = (s32)(s16)FETCH_WORD;
 	PC += 2;
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -4112,14 +4088,12 @@ case 0x48F9:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = (s32)FETCH_LONG;
 	PC += 4;
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -4137,13 +4111,11 @@ case 0x48E7:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[7];
 	src = 15;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -4173,7 +4145,7 @@ case 0x4880:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res;
-	*(WORD_OFF + (u16*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(WORD_OFF + (u16*)((u32*)&CPU->D16 + ((Opcode >> 0) & 7))) = res;
 }
 RET(4)
 case 0x48C1:
@@ -4193,7 +4165,7 @@ case 0x48C0:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 8;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(4)
 case 0x4A01:
@@ -4820,7 +4792,7 @@ case 0x4AC0:
 	CPU->flag_notZ = res;
 	CPU->flag_N = res;
 	res |= 0x80;
-	*(BYTE_OFF + (u8*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(BYTE_OFF + (u8*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(4)
 case 0x4AD1:
@@ -5075,13 +5047,11 @@ case 0x4C90:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7];
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5105,13 +5075,11 @@ case 0x4C98:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7];
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5137,14 +5105,12 @@ case 0x4CA8:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7] + (s32)(s16)FETCH_WORD;
 	PC += 2;
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5169,14 +5135,12 @@ case 0x4CB0:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7];
 	DECODE_EXT_WORD
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5194,14 +5158,12 @@ case 0x4CB8:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = (s32)(s16)FETCH_WORD;
 	PC += 2;
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5219,14 +5181,12 @@ case 0x4CB9:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = (s32)FETCH_LONG;
 	PC += 4;
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5244,14 +5204,12 @@ case 0x4CBA:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = PC + (s32)(s16)FETCH_WORD;
 	PC += 2;
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5269,14 +5227,12 @@ case 0x4CBB:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = PC;
 	DECODE_EXT_WORD
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5294,13 +5250,11 @@ case 0x4C9F:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[7];
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5326,13 +5280,11 @@ case 0x4CD0:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7];
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5356,13 +5308,11 @@ case 0x4CD8:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7];
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5388,14 +5338,12 @@ case 0x4CE8:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7] + (s32)(s16)FETCH_WORD;
 	PC += 2;
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5420,14 +5368,12 @@ case 0x4CF0:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[(Opcode >> 0) & 7];
 	DECODE_EXT_WORD
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5445,14 +5391,12 @@ case 0x4CF8:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = (s32)(s16)FETCH_WORD;
 	PC += 2;
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5470,14 +5414,12 @@ case 0x4CF9:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = (s32)FETCH_LONG;
 	PC += 4;
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5495,14 +5437,12 @@ case 0x4CFA:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = PC + (s32)(s16)FETCH_WORD;
 	PC += 2;
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5520,14 +5460,12 @@ case 0x4CFB:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = PC;
 	DECODE_EXT_WORD
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)
@@ -5545,13 +5483,11 @@ case 0x4CDF:
 {
 	u32 adr;
 	u32 res;
-	u32 dst;
 	u32 src;
 	res = FETCH_WORD;
 	PC += 2;
 	adr = CPU->A[7];
 	src = 0;
-	dst = adr;
 	do
 	{
 		if (res & 1)

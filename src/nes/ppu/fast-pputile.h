@@ -2,9 +2,8 @@
         register uint8 cc;
         uint32 vadr;
        
-	#ifndef PPUT_MMC5SP
+	#if !defined(PPUT_MMC5SP) && !defined(PPUT_MMC5CHR1)
 	register uint8 zz;
-	#else
 	#endif
 	
         {
@@ -39,7 +38,9 @@
         #ifdef PPUT_MMC5SP
         vadr=(MMC5HackExNTARAMPtr[xs|(ys<<5)]<<4)+(vofs&7);
 	#else
+	#ifndef PPUT_MMC5CHR1
         zz=RefreshAddr&0x1F;
+	#endif
         C=vnapage[(RefreshAddr>>10)&3];
         vadr=(C[RefreshAddr&0x3ff]<<4)+vofs;   /* Fetch name table byte. */
 	#endif

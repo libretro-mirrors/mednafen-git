@@ -136,7 +136,11 @@ typedef struct
     {   
      struct
      {
-      u32 D[8];       // 32 bytes aligned
+      union
+      {
+       u16 D16[16];
+       u32 D[8];       // 32 bytes aligned
+      };
       u32 A[8];       // 16 bytes aligned
      };
      u32 DA[16];

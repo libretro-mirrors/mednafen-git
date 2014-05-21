@@ -1,7 +1,7 @@
 #ifndef __PCE_CDROM_H
 #define __PCE_CDROM_H
 
-#include <blip/Blip_Buffer.h>
+#include <mednafen/sound/Blip_Buffer.h>
 
 namespace PCE_Fast
 {

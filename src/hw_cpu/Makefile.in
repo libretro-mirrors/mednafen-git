@@ -97,14 +97,14 @@ libmdfnhwcpu_a_AR = $(AR) $(ARFLAGS)
 libmdfnhwcpu_a_LIBADD =
 am__libmdfnhwcpu_a_SOURCES_DIST = c68k/c68kexec.c c68k/c68k.c \
 	z80-fuse/z80.cpp z80-fuse/z80_ops.cpp v810/v810_cpu.cpp \
-	v810/v810_cpuD.cpp v810/fpu-new/softfloat.c \
-	huc6280/huc6280.cpp huc6280/dis6280.cpp
+	v810/v810_cpuD.cpp v810/v810_fp_ops.cpp huc6280/huc6280.cpp \
+	huc6280/dis6280.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
 @WANT_DEBUGGER_TRUE@am__objects_1 = huc6280/dis6280.$(OBJEXT)
 am_libmdfnhwcpu_a_OBJECTS = c68k/c68kexec.$(OBJEXT) \
 	c68k/c68k.$(OBJEXT) z80-fuse/z80.$(OBJEXT) \
 	z80-fuse/z80_ops.$(OBJEXT) v810/v810_cpu.$(OBJEXT) \
-	v810/v810_cpuD.$(OBJEXT) v810/fpu-new/softfloat.$(OBJEXT) \
+	v810/v810_cpuD.$(OBJEXT) v810/v810_fp_ops.$(OBJEXT) \
 	huc6280/huc6280.$(OBJEXT) $(am__objects_1)
 libmdfnhwcpu_a_OBJECTS = $(am_libmdfnhwcpu_a_OBJECTS)
 PROGRAMS = $(noinst_PROGRAMS)
@@ -398,7 +398,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_builddir)/include/blip -I$(top_srcdir)
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libmdfnhwcpu.a
 gen68k_SOURCES = c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c
 gen68k_CFLAGS = -DC68K_GEN
@@ -406,7 +406,7 @@ gen68k_LDFLAGS = -DC68K_GEN
 nodist_pkgdata_DATA = c68k/c68k_op0.inc
 libmdfnhwcpu_a_SOURCES = c68k/c68kexec.c c68k/c68k.c z80-fuse/z80.cpp \
 	z80-fuse/z80_ops.cpp v810/v810_cpu.cpp v810/v810_cpuD.cpp \
-	v810/fpu-new/softfloat.c huc6280/huc6280.cpp $(am__append_1)
+	v810/v810_fp_ops.cpp huc6280/huc6280.cpp $(am__append_1)
 all: all-am
 
 .SUFFIXES:
@@ -474,14 +474,8 @@ v810/v810_cpu.$(OBJEXT): v810/$(am__dirstamp) \
 	v810/$(DEPDIR)/$(am__dirstamp)
 v810/v810_cpuD.$(OBJEXT): v810/$(am__dirstamp) \
 	v810/$(DEPDIR)/$(am__dirstamp)
-v810/fpu-new/$(am__dirstamp):
-	@$(MKDIR_P) v810/fpu-new
-	@: > v810/fpu-new/$(am__dirstamp)
-v810/fpu-new/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) v810/fpu-new/$(DEPDIR)
-	@: > v810/fpu-new/$(DEPDIR)/$(am__dirstamp)
-v810/fpu-new/softfloat.$(OBJEXT): v810/fpu-new/$(am__dirstamp) \
-	v810/fpu-new/$(DEPDIR)/$(am__dirstamp)
+v810/v810_fp_ops.$(OBJEXT): v810/$(am__dirstamp) \
+	v810/$(DEPDIR)/$(am__dirstamp)
 huc6280/$(am__dirstamp):
 	@$(MKDIR_P) huc6280
 	@: > huc6280/$(am__dirstamp)
@@ -524,9 +518,9 @@ mostlyclean-compile:
 	-rm -f c68k/gen68k-gen68k.$(OBJEXT)
 	-rm -f huc6280/dis6280.$(OBJEXT)
 	-rm -f huc6280/huc6280.$(OBJEXT)
-	-rm -f v810/fpu-new/softfloat.$(OBJEXT)
 	-rm -f v810/v810_cpu.$(OBJEXT)
 	-rm -f v810/v810_cpuD.$(OBJEXT)
+	-rm -f v810/v810_fp_ops.$(OBJEXT)
 	-rm -f z80-fuse/z80.$(OBJEXT)
 	-rm -f z80-fuse/z80_ops.$(OBJEXT)
 
@@ -542,7 +536,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@huc6280/$(DEPDIR)/huc6280.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@v810/$(DEPDIR)/v810_cpu.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@v810/$(DEPDIR)/v810_cpuD.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@v810/fpu-new/$(DEPDIR)/softfloat.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@v810/$(DEPDIR)/v810_fp_ops.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@z80-fuse/$(DEPDIR)/z80.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@z80-fuse/$(DEPDIR)/z80_ops.Po@am__quote@
 
@@ -784,8 +778,6 @@ distclean-generic:
 	-rm -f huc6280/$(am__dirstamp)
 	-rm -f v810/$(DEPDIR)/$(am__dirstamp)
 	-rm -f v810/$(am__dirstamp)
-	-rm -f v810/fpu-new/$(DEPDIR)/$(am__dirstamp)
-	-rm -f v810/fpu-new/$(am__dirstamp)
 	-rm -f z80-fuse/$(DEPDIR)/$(am__dirstamp)
 	-rm -f z80-fuse/$(am__dirstamp)
 
@@ -798,7 +790,7 @@ clean-am: clean-generic clean-libtool clean-noinstLIBRARIES \
 	clean-noinstPROGRAMS mostlyclean-am
 
 distclean: distclean-am
-	-rm -rf c68k/$(DEPDIR) huc6280/$(DEPDIR) v810/$(DEPDIR) v810/fpu-new/$(DEPDIR) z80-fuse/$(DEPDIR)
+	-rm -rf c68k/$(DEPDIR) huc6280/$(DEPDIR) v810/$(DEPDIR) z80-fuse/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -844,7 +836,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -rf c68k/$(DEPDIR) huc6280/$(DEPDIR) v810/$(DEPDIR) v810/fpu-new/$(DEPDIR) z80-fuse/$(DEPDIR)
+	-rm -rf c68k/$(DEPDIR) huc6280/$(DEPDIR) v810/$(DEPDIR) z80-fuse/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -880,7 +872,7 @@ uninstall-am: uninstall-nodist_pkgdataDATA
 	pdf pdf-am ps ps-am tags uninstall uninstall-am \
 	uninstall-nodist_pkgdataDATA
 
-c68k/c68k_op0.inc: c68k/*.h c68k/*.c c68k/c68k_ini.inc c68k/c68kmac.inc c68k/gen68k.inc
+c68k/c68k_op0.inc: $(srcdir)/c68k/*.h $(srcdir)/c68k/*.c $(srcdir)/c68k/c68k_ini.inc $(srcdir)/c68k/c68kmac.inc $(srcdir)/c68k/gen68k.inc
 	make gen68k && cd c68k && ../gen68k$(EXEEXT)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

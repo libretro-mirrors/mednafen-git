@@ -304,10 +304,8 @@ static void DoNamcoSoundBS(void)
   if((IRAM[0x44+(P<<3)]&0xE0) && (IRAM[0x47+(P<<3)]&0xF))
   {
    uint32 freq;
-   int32 vco;
    uint32 duff2,lengo,envelope;
 
-   vco = vcount[P];
    freq = FreqCache[P] * 1024 / cyclesuck;
 
    envelope = EnvCache[P];

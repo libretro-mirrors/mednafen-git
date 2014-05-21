@@ -25,7 +25,7 @@
 #include "cart.h"
 #include "nsf.h"
 #include "fds-sound.h"
-#include "../FileStream.h"
+#include <mednafen/FileStream.h>
 
 /*	TODO:  Add code to put a delay in between the time a disk is inserted
 	and the when it can be successfully read/written to.  This should
@@ -324,7 +324,7 @@ static void FreeFDSMemory(void)
  }
 }
 
-static int SubLoad(MDFNFILE *fp)
+static void SubLoad(MDFNFILE *fp)
 {
  uint8 header[16];
 
@@ -332,40 +332,31 @@ static int SubLoad(MDFNFILE *fp)
 
  if(memcmp(header,"FDS\x1a",4))
  {
-  if(!(memcmp(header+1,"*NINTENDO-HVC*",14)))
-  {
-   long t;
+  long t;
 
-   t = fp->Size();
+  t = fp->Size();
 
-   if(t < 65500)
-    t = 65500;
+  if(t < 65500)
+   t = 65500;
 
-   TotalSides=t/65500;
+  TotalSides=t/65500;
 
-   fp->rewind();
-  }
-  else
-   return(FALSE);
+  fp->rewind();
  }
  else
   TotalSides=header[4];
 
- if(TotalSides > 8) TotalSides=8;
- if(TotalSides < 1) TotalSides=1;
+ if(TotalSides > 8)
+  TotalSides = 8;
+
+ if(TotalSides < 1)
+  TotalSides = 1;
 
  for(unsigned int x = 0; x < TotalSides; x++)
  {
-  diskdata[x] = (uint8 *)MDFN_malloc(65500, _("FDS Disk Data"));
-
-  if(!diskdata[x])
-  {
-   return(0);
-  }
+  diskdata[x] = (uint8 *)MDFN_malloc_T(65500, _("FDS Disk Data"));
   fp->fread(diskdata[x], 1, 65500);
  }
-
- return(1);
 }
 
 static int FDS_StateAction(StateMem *sm, int load, int data_only)
@@ -602,7 +593,7 @@ static const char* GetManName(uint8 code)
  return(_("Unknown"));
 }
 
-bool FDS_TestMagic(const char *name, MDFNFILE *fp)
+bool FDS_TestMagic(MDFNFILE *fp)
 {
  if(fp->size < 16)
   return(FALSE);
@@ -614,85 +605,59 @@ bool FDS_TestMagic(const char *name, MDFNFILE *fp)
 }
 
 
-bool FDSLoad(const char *name, MDFNFILE *fp, NESGameType *gt)
+bool FDSLoad(MDFNFILE *fp, NESGameType *gt)
 {
- MDFNFILE bios_fp;
- int32 romoff = 0;
-
- fp->rewind();
-
- if(!SubLoad(fp))
+ try
  {
-  FreeFDSMemory();
-  return(FALSE);
- }
+  MDFNFILE bios_fp(MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, "disksys.rom").c_str(), NULL, _("FDS BIOS"));
+  int32 romoff = 0;
 
- md5_context md5;
- md5.starts();
+  fp->rewind();
 
- for(unsigned int x = 0; x < TotalSides; x++)
- {
-  md5.update(diskdata[x],65500);
+  SubLoad(fp);
 
-  diskdatao[x] = (uint8 *)MDFN_malloc(65500, _("FDS Disk Data"));
-  memcpy(diskdatao[x],diskdata[x],65500);
- }
- md5.finish(MDFNGameInfo->MD5);
+  md5_context md5;
+  md5.starts();
 
- if(!bios_fp.Open(MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, "disksys.rom").c_str(), NULL, _("FDS BIOS")))
- {
-  FreeFDSMemory();
-  return 0;
- }
+  for(unsigned int x = 0; x < TotalSides; x++)
+  {
+   md5.update(diskdata[x],65500);
 
- if(bios_fp.Size() < 8192)
- {
-  MDFN_PrintError(_("FDS BIOS ROM image is too small."));
+   diskdatao[x] = (uint8 *)MDFN_malloc_T(65500, _("FDS Disk Data"));
+   memcpy(diskdatao[x],diskdata[x],65500);
+  }
+  md5.finish(MDFNGameInfo->MD5);
+
+  if(bios_fp.Size() < 8192)
+   throw MDFN_Error(0, _("FDS BIOS ROM image is too small."));
+
+  if(!memcmp(bios_fp.Data(), "NES\x1a", 4)) // Encapsulated in iNES format?
+  {
+   romoff = 16 + 8192;
+
+   if(bios_fp.Data()[4] == 2)
+    romoff += 16384;
+
+   if((bios_fp.Size() - romoff) < 8192)
+    throw MDFN_Error(0, _("FDS BIOS ROM image is too small."));
+  }
+
+  memcpy(FDSBIOS, bios_fp.Data() + romoff, 8192);
 
   bios_fp.Close();
-  FreeFDSMemory();
-  return(0);
- }
 
- if(!memcmp(bios_fp.Data(), "NES\x1a", 4)) // Encapsulated in iNES format?
- {
-  romoff = 16 + 8192;
+  FDSRAM = (uint8*)MDFN_malloc_T(32768, _("FDS RAM"));
+  CHRRAM = (uint8*)MDFN_malloc_T(8192, _("CHR RAM"));
 
-  if(bios_fp.Data()[4] == 2)
-   romoff += 16384;
+  DiskWritten = false;
 
-  if((bios_fp.Size() - romoff) < 8192)
+  //
+  //
+  //
+  try
   {
-   MDFN_PrintError(_("FDS BIOS ROM image is too small."));
-   bios_fp.Close();
-   FreeFDSMemory();
-   return(0);
-  }
- }
-
- memcpy(FDSBIOS, bios_fp.Data() + romoff, 8192);
-
- bios_fp.Close();
-
- if(!(FDSRAM = (uint8*)MDFN_malloc(32768, _("FDS RAM"))))
- {
-  FreeFDSMemory();
-  return(0);
- }
-
- if(!(CHRRAM = (uint8*)MDFN_malloc(8192, _("CHR RAM"))))
- {
-  FreeFDSMemory();
-  return(0);
- }
-
- DiskWritten = false;
-
- {
-  MDFNFILE tp;
-
-  if(tp.Open(MDFN_MakeFName(MDFNMKF_SAV, 0, "fds").c_str(), NULL, _("auxillary FDS data")))
-  {
+   MDFNFILE tp(MDFN_MakeFName(MDFNMKF_SAV, 0, "fds").c_str(), NULL, _("auxillary FDS data"));
+ 
    for(unsigned int x = 0; x < TotalSides; x++)
    {
     if(diskdata[x])
@@ -702,38 +667,47 @@ bool FDSLoad(const char *name, MDFNFILE *fp, NESGameType *gt)
     }
    }
 
-   if(!SubLoad(&tp))
-   {
-    MDFN_PrintError("Error reading auxillary FDS file.");
-    FreeFDSMemory();
-    return(0);
-   }
-   tp.Close();
+   SubLoad(&tp);
    DiskWritten = true;	/* For save state handling. */
   }
+  catch(MDFN_Error &e)
+  {
+   if(e.GetErrno() != ENOENT)
+    throw;
+  }
+  //
+  //
+  //
+
+  MDFNGameInfo->GameType = GMT_DISK;
+
+  SelectDisk=0;
+  InDisk=255;
+
+  ResetCartMapping();
+  SetupCartCHRMapping(0,CHRRAM,8192,1);
+  SetupCartMirroring(0,0,0);
+  memset(CHRRAM,0,8192);
+  memset(FDSRAM,0,32768);
+
+  MDFN_printf(_("Sides: %d\n"),TotalSides);
+  MDFN_printf(_("Manufacturer Code: %02x (%s)\n"), diskdata[0][0xF], GetManName(diskdata[0][0xF]));
+  MDFN_printf(_("MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
+
+  FDSInit();
+
+  gt->Close = FDSClose;
+  gt->Power = FDSPower;
+  gt->StateAction = FDS_StateAction;
  }
+ catch(std::exception &e)
+ {
+  MDFN_PrintError("%s", e.what());
 
- MDFNGameInfo->GameType = GMT_DISK;
-
- SelectDisk=0;
- InDisk=255;
-
- ResetCartMapping();
- SetupCartCHRMapping(0,CHRRAM,8192,1);
- SetupCartMirroring(0,0,0);
- memset(CHRRAM,0,8192);
- memset(FDSRAM,0,32768);
-
- MDFN_printf(_("Sides: %d\n"),TotalSides);
- MDFN_printf(_("Manufacturer Code: %02x (%s)\n"), diskdata[0][0xF], GetManName(diskdata[0][0xF]));
- MDFN_printf(_("MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
-
- FDSInit();
-
- gt->Close = FDSClose;
- gt->Power = FDSPower;
- gt->StateAction = FDS_StateAction;
- return 1;
+  FreeFDSMemory();
+  return(false);
+ }
+ return(true);
 }
 
 void FDSClose(void)

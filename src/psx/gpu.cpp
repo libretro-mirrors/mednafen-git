@@ -1237,8 +1237,7 @@ pscpu_timestamp_t PS_GPU::Update(const pscpu_timestamp_t sys_timestamp)
        {
         uint32 *dest = surface->pixels + y * surface->pitch32;
 
-        LineWidths[y].x = 0;
-        LineWidths[y].w = 384;
+        LineWidths[y] = 384;
 
         for(int32 x = 0; x < 384; x++)
         {
@@ -1264,14 +1263,13 @@ pscpu_timestamp_t PS_GPU::Update(const pscpu_timestamp_t sys_timestamp)
        DisplayRect->h = VisibleLineCount << (bool)(DisplayMode & 0x20);
 
        // Clear ~0 state.
-       LineWidths[0].x = LineWidths[0].w = 0;
+       LineWidths[0] = 0;
 
        for(int i = 0; i < (DisplayRect->y + DisplayRect->h); i++)
        {
 	surface->pixels[i * surface->pitch32 + 0] =
 	surface->pixels[i * surface->pitch32 + 1] = black;
-        LineWidths[i].x = 0;
-        LineWidths[i].w = 2;
+        LineWidths[i] = 2;
        }
       }
      }
@@ -1367,8 +1365,7 @@ pscpu_timestamp_t PS_GPU::Update(const pscpu_timestamp_t sys_timestamp)
      // Also, it shouldn't be here per-se, since this code won't be all if we're frameskipping or there's a video standard mismatch
      //DrawTimeAvail -= (dx_end - dx_start) + ((DisplayMode & 0x10) ? ((dx_end - dx_start + 1) >> 1) : 0);
 
-     LineWidths[dest_line].x = 0;
-     LineWidths[dest_line].w = dmw;
+     LineWidths[dest_line] = dmw;
 
      {
       const uint16 *src = GPURAM[DisplayFB_CurLineYReadout];

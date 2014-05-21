@@ -11,7 +11,17 @@ extern std::vector<MDFNGI *>MDFNSystems;
 
 /* Indent stdout newlines +- "indent" amount */
 void MDFN_indent(int indent);
-void MDFN_printf(const char *format, ...) throw() MDFN_FORMATSTR(printf, 1, 2);
+struct MDFN_AutoIndent
+{
+ INLINE MDFN_AutoIndent() : indented(0) { }
+ INLINE MDFN_AutoIndent(int amount) : indented(amount) { MDFN_indent(indented); }
+ INLINE ~MDFN_AutoIndent() { MDFN_indent(-indented); }
+
+ //INLINE void indent(int indoot) { indented += indoot; MDFN_indent(indoot); }
+ private:
+ int indented;
+};
+void MDFN_printf(const char *format, ...) throw() MDFN_FORMATSTR(gnu_printf, 1, 2);
 
 #define MDFNI_printf MDFN_printf
 
@@ -36,22 +46,38 @@ void MDFND_Sleep(uint32 ms);
 // will subtly break at least one PC Engine game(Takeda Shingen), and raise input latency on some other PC Engine games.
 void MDFND_MidSync(const EmulateSpecStruct *espec);
 
-/* Being threading support. */
+//
+// Begin threading support.
+//
 // Mostly based off SDL's prototypes and semantics.
 // Driver code should actually define MDFN_Thread and MDFN_Mutex.
-
+//
+// Caution: Do not attempt to use the synchronization primitives(mutex, cond variables, etc.) for inter-process synchronization, they'll only work reliably with
+// intra-process synchronization(the "mutex" is implemented as a a critical section under Windows, for example).
+//
 struct MDFN_Thread;
 struct MDFN_Mutex;
+struct MDFN_Cond;	// mmm condiments
 
 MDFN_Thread *MDFND_CreateThread(int (*fn)(void *), void *data);
 void MDFND_WaitThread(MDFN_Thread *thread, int *status);
+uint32 MDFND_ThreadID(void);
 
-MDFN_Mutex *MDFND_CreateMutex(void);
-void MDFND_DestroyMutex(MDFN_Mutex *mutex);
+MDFN_Mutex *MDFND_CreateMutex(void) MDFN_COLD;
+void MDFND_DestroyMutex(MDFN_Mutex *mutex) MDFN_COLD;
+
 int MDFND_LockMutex(MDFN_Mutex *mutex);
 int MDFND_UnlockMutex(MDFN_Mutex *mutex);
 
-/* End threading support. */
+MDFN_Cond* MDFND_CreateCond(void) MDFN_COLD;
+void MDFND_DestroyCond(MDFN_Cond* cond) MDFN_COLD;
+
+int MDFND_SignalCond(MDFN_Cond* cond);
+int MDFND_WaitCond(MDFN_Cond* cond, MDFN_Mutex* mutex);
+
+//
+// End threading support.
+//
 
 void MDFNI_Reset(void);
 void MDFNI_Power(void);
@@ -85,7 +111,7 @@ void MDFNI_CloseGame(void);
 /* Deallocates all allocated memory.  Call after MDFNI_Emulate() returns. */
 void MDFNI_Kill(void);
 
-void MDFN_DispMessage(const char *format, ...) throw() MDFN_FORMATSTR(printf, 1, 2);
+void MDFN_DispMessage(const char *format, ...) throw() MDFN_FORMATSTR(gnu_printf, 1, 2);
 #define MDFNI_DispMessage MDFN_DispMessage
 
 uint32 MDFNI_CRC32(uint32 crc, uint8 *buf, uint32 len);

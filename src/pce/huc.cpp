@@ -18,11 +18,11 @@
 #include "pce.h"
 #include "huc.h"
 #include "pcecd.h"
-#include "arcade_card/arcade_card.h"
-#include "../md5.h"
-#include "../file.h"
-#include "../cdrom/cdromif.h"
-#include "../mempatcher.h"
+#include <mednafen/hw_misc/arcade_card/arcade_card.h>
+#include <mednafen/md5.h>
+#include <mednafen/file.h>
+#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/mempatcher.h>
 
 #include <errno.h>
 #include <string.h>
@@ -87,6 +87,12 @@ static void Cleanup(void)
  {
   delete arcade_card;
   arcade_card = NULL;
+ }
+
+ if(mcg)
+ {
+  delete mcg;
+  mcg = NULL;
  }
 }
 
@@ -180,7 +186,7 @@ static DECLFW(MCG_WriteHandler)
  mcg->Write(HuCPU->Timestamp(), A, V);
 }
 
-int HuCLoad(const uint8 *data, uint32 len, uint32 crc32, bool DisableBRAM, SysCardType syscard)
+void HuC_Load(const uint8 *data, uint32 len, uint32 crc32, bool DisableBRAM, SysCardType syscard)
 {
  const uint32 sf2_threshold = 2048 * 1024;
  uint32 m_len = (len + 8191) &~ 8191;
@@ -188,282 +194,263 @@ int HuCLoad(const uint8 *data, uint32 len, uint32 crc32, bool DisableBRAM, SysCa
  bool mcg_mapper = FALSE;
  bool UseBRAM = FALSE;
 
- if(len >= 8192 && !memcmp(data + 0x1FD0, "MCGENJIN", 8))
-  mcg_mapper = TRUE;
-
- if(!syscard && m_len >= sf2_threshold && !mcg_mapper)
+ //
+ // Obvious, but anyway: catch exceptions and free any allocated memory here, otherwise when code higher up calls HuC_Close(), it might wipe out save game files.
+ //
+ try
  {
-  sf2_mapper = TRUE;
+  if(len >= 8192 && !memcmp(data + 0x1FD0, "MCGENJIN", 8))
+   mcg_mapper = TRUE;
 
-  // Only used the "extended" SF2 mapper if it's considerably larger than the normal SF2 mapper size.
-  if(m_len < (512 * 1024 * 6))
-   m_len = 512 * 1024 * 5;
-  else
-   m_len = round_up_pow2(m_len - 512 * 1024) + 512 * 1024;
-
-  if(m_len > 8912896)
+  if(!syscard && m_len >= sf2_threshold && !mcg_mapper)
   {
-   MDFN_PrintError(_("ROM image is too large!"));
-   m_len = 8912896;
+   sf2_mapper = TRUE;
+
+   // Only used the "extended" SF2 mapper if it's considerably larger than the normal SF2 mapper size.
+   if(m_len < (512 * 1024 * 6))
+    m_len = 512 * 1024 * 5;
+   else
+    m_len = round_up_pow2(m_len - 512 * 1024) + 512 * 1024;
+
+   if(m_len > 8912896)
+    throw MDFN_Error(0, _("ROM image is too large for extended SF2 mapper!"));
+
+   HuCSF2BankMask = ((m_len - 512 * 1024) / (512 * 1024)) - 1;
+
+   //printf("%d %d, %02x\n", len, m_len, HuCSF2BankMask);
   }
 
-  HuCSF2BankMask = ((m_len - 512 * 1024) / (512 * 1024)) - 1;
+  IsPopulous = 0;
+  PCE_IsCD = 0;
 
-  //printf("%d %d, %02x\n", len, m_len, HuCSF2BankMask);
- }
-
- IsPopulous = 0;
- PCE_IsCD = 0;
-
- if(syscard == SYSCARD_NONE)
- {
-  md5_context md5;
-  md5.starts();
-  md5.update(data, len);
-  md5.finish(MDFNGameInfo->MD5);
-
-  MDFN_printf(_("ROM:       %dKiB\n"), (len + 1023) / 1024);
-  MDFN_printf(_("ROM CRC32: 0x%08x\n"), crc32);
-  MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
- }
-
- if(syscard != SYSCARD_NONE)
- {
-  if(!(CDRAM = (uint8 *)MDFN_calloc(1, 8 * 8192, _("CD RAM"))))
+  if(syscard == SYSCARD_NONE)
   {
-   Cleanup();
-   return(0);
+   md5_context md5;
+   md5.starts();
+   md5.update(data, len);
+   md5.finish(MDFNGameInfo->MD5);
+
+   MDFN_printf(_("ROM:       %dKiB\n"), (len + 1023) / 1024);
+   MDFN_printf(_("ROM CRC32: 0x%08x\n"), crc32);
+   MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
   }
 
-  for(int x = 0x80; x < 0x88; x++)
+  if(syscard != SYSCARD_NONE)
   {
-   ROMMap[x] = &CDRAM[(x - 0x80) * 8192] - x * 8192;
-   HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
+   CDRAM = (uint8 *)MDFN_calloc_T(1, 8 * 8192, _("CD RAM"));
 
-   HuCPU->SetReadHandler(x, CDRAMRead);
-   HuCPU->SetWriteHandler(x, CDRAMWrite);
-  }
-  MDFNMP_AddRAM(8 * 8192, 0x80 * 8192, CDRAM);
-
-  UseBRAM = TRUE;
- }
-
- if(mcg_mapper)
- {
-  mcg = new MCGenjin(data, len);
-
-  for(unsigned i = 0; i < 128; i++)
-  {
-   HuCPU->SetFastRead(i, NULL);
-   HuCPU->SetReadHandler(i, MCG_ReadHandler);
-   HuCPU->SetWriteHandler(i, MCG_WriteHandler);
-  }
-
-  goto BRAM_Init; // SO EVIL YES EVVIIIIIL(FIXME)
- }
-
- if(!(HuCROM = (uint8 *)MDFN_malloc(m_len, _("HuCard ROM"))))
- {
-  return(0);
- }
-
- memset(HuCROM, 0xFF, m_len);
- memcpy(HuCROM, data, (m_len < len) ? m_len : len);
-
- if(m_len == 0x60000)
- {
-  for(int x = 0; x < 128; x++)
-  {
-   ROMMap[x] = &HuCROM[(x & 0x1F) * 8192] - x * 8192;
-
-   HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
-   HuCPU->SetReadHandler(x, HuCRead);
-  }
-
-  for(int x = 64; x < 128; x++)
-  {
-   ROMMap[x] = &HuCROM[((x & 0xF) + 32) * 8192] - x * 8192;
-
-   HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
-   HuCPU->SetReadHandler(x, HuCRead);
-  }
- }
- else if(m_len == 0x80000)
- {
-  for(int x = 0; x < 64; x++)
-  {
-   ROMMap[x] = &HuCROM[(x & 0x3F) * 8192] - x * 8192;
-
-   HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
-   HuCPU->SetReadHandler(x, HuCRead);
-  }
-  for(int x = 64; x < 128; x++)
-  {
-   ROMMap[x] = &HuCROM[((x & 0x1F) + 32) * 8192] - x * 8192;
-
-   HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
-   HuCPU->SetReadHandler(x, HuCRead);
-  }
- }
- else
- {
-  for(int x = 0; x < 128; x++)
-  {
-   uint8 bank = x % (m_len / 8192);
-   
-   ROMMap[x] = &HuCROM[bank * 8192] - x * 8192;
-
-   HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
-   HuCPU->SetReadHandler(x, HuCRead);
-  }
- }
-
- if(syscard)
- {
-  if(syscard == SYSCARD_3 || syscard == SYSCARD_ARCADE)
-  {
-   if(!(SysCardRAM = (uint8 *)MDFN_calloc(1, 24 * 8192, _("System Card RAM"))))
+   for(int x = 0x80; x < 0x88; x++)
    {
-    Cleanup();
-    return(0);
-   }
-
-   for(int x = 0x68; x < 0x80; x++)
-   {
-    ROMMap[x] = &SysCardRAM[(x - 0x68) * 8192] - x * 8192;
+    ROMMap[x] = &CDRAM[(x - 0x80) * 8192] - x * 8192;
     HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
 
-    HuCPU->SetReadHandler(x, SysCardRAMRead);
-    HuCPU->SetWriteHandler(x, SysCardRAMWrite);
-   } 
-   MDFNMP_AddRAM(24 * 8192, 0x68 * 8192, SysCardRAM); 
+    HuCPU->SetReadHandler(x, CDRAMRead);
+    HuCPU->SetWriteHandler(x, CDRAMWrite);
+   }
+   MDFNMP_AddRAM(8 * 8192, 0x80 * 8192, CDRAM);
+
+   UseBRAM = TRUE;
   }
 
-  if(syscard == SYSCARD_ARCADE)
+  if(mcg_mapper)
   {
-   try
+   mcg = new MCGenjin(data, len);
+
+   for(unsigned i = 0; i < 128; i++)
+   {
+    HuCPU->SetFastRead(i, NULL);
+    HuCPU->SetReadHandler(i, MCG_ReadHandler);
+    HuCPU->SetWriteHandler(i, MCG_WriteHandler);
+   }
+
+   goto BRAM_Init; // SO EVIL YES EVVIIIIIL(FIXME)
+  }
+
+  HuCROM = (uint8 *)MDFN_malloc_T(m_len, _("HuCard ROM"));
+
+  memset(HuCROM, 0xFF, m_len);
+  memcpy(HuCROM, data, (m_len < len) ? m_len : len);
+
+  if(m_len == 0x60000)
+  {
+   for(int x = 0; x < 128; x++)
+   {
+    ROMMap[x] = &HuCROM[(x & 0x1F) * 8192] - x * 8192;
+
+    HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
+    HuCPU->SetReadHandler(x, HuCRead);
+   }
+
+   for(int x = 64; x < 128; x++)
+   {
+    ROMMap[x] = &HuCROM[((x & 0xF) + 32) * 8192] - x * 8192;
+
+    HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
+    HuCPU->SetReadHandler(x, HuCRead);
+   }
+  }
+  else if(m_len == 0x80000)
+  {
+   for(int x = 0; x < 64; x++)
+   {
+    ROMMap[x] = &HuCROM[(x & 0x3F) * 8192] - x * 8192;
+
+    HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
+    HuCPU->SetReadHandler(x, HuCRead);
+   }
+   for(int x = 64; x < 128; x++)
+   {
+    ROMMap[x] = &HuCROM[((x & 0x1F) + 32) * 8192] - x * 8192;
+
+    HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
+    HuCPU->SetReadHandler(x, HuCRead);
+   }
+  }
+  else
+  {
+   for(int x = 0; x < 128; x++)
+   {
+    uint8 bank = x % (m_len / 8192);
+   
+    ROMMap[x] = &HuCROM[bank * 8192] - x * 8192;
+
+    HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
+    HuCPU->SetReadHandler(x, HuCRead);
+   }
+  }
+
+  if(syscard)
+  {
+   if(syscard == SYSCARD_3 || syscard == SYSCARD_ARCADE)
+   {
+    SysCardRAM = (uint8 *)MDFN_calloc_T(1, 24 * 8192, _("System Card RAM"));
+
+    for(int x = 0x68; x < 0x80; x++)
+    {
+     ROMMap[x] = &SysCardRAM[(x - 0x68) * 8192] - x * 8192;
+     HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
+
+     HuCPU->SetReadHandler(x, SysCardRAMRead);
+     HuCPU->SetWriteHandler(x, SysCardRAMWrite);
+    } 
+    MDFNMP_AddRAM(24 * 8192, 0x68 * 8192, SysCardRAM); 
+   }
+
+   if(syscard == SYSCARD_ARCADE)
    {
     arcade_card = new ArcadeCard();
-   }
-   catch(std::exception &e)
-   {
-    MDFN_PrintError(_("Error creating %s object: %s"), "ArcadeCard", e.what());
-    Cleanup();
-    return(0);
-   }
 
-   for(int x = 0x40; x < 0x44; x++)
-   {
-    ROMMap[x] = NULL;
-    HuCPU->SetFastRead(x, NULL);
+    for(int x = 0x40; x < 0x44; x++)
+    {
+     ROMMap[x] = NULL;
+     HuCPU->SetFastRead(x, NULL);
 
-    HuCPU->SetReadHandler(x, AC_PhysRead);
-    HuCPU->SetWriteHandler(x, AC_PhysWrite);
+     HuCPU->SetReadHandler(x, AC_PhysRead);
+     HuCPU->SetWriteHandler(x, AC_PhysWrite);
+    }
    }
-  }
- }
- else
- {
-  if(!memcmp(HuCROM + 0x1F26, "POPULOUS", strlen("POPULOUS")))
-  {
-   gzFile fp;
-  
-   if(!(PopRAM = (uint8 *)MDFN_malloc(32768, _("Populous RAM"))))
-   {
-    Cleanup();
-    return(0);
-   }
-   memset(PopRAM, 0xFF, 32768);
-   if((fp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
-   {
-    gzread(fp, PopRAM, 32768);
-    gzclose(fp);
-   }
-   IsPopulous = 1;
-   MDFN_printf("Populous\n");
-   for(int x = 0x40; x < 0x44; x++)
-   {
-    ROMMap[x] = &PopRAM[(x & 3) * 8192] - x * 8192;
-    HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
-
-    HuCPU->SetReadHandler(x, HuCRead);
-    HuCPU->SetWriteHandler(x, HuCRAMWrite);
-   }
-   MDFNMP_AddRAM(32768, 0x40 * 8192, PopRAM);
-  }
-  else if(crc32 == 0x34dc65c4) // Tsushin Booster
-  {
-   gzFile fp;
-
-   if(!(TsushinRAM = (uint8*)MDFN_malloc(0x8000, _("Tsushin Booster RAM"))))
-   {
-    Cleanup();
-    return(0);
-   }
-   memset(TsushinRAM, 0xFF, 0x8000);
-
-   if((fp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
-   {
-    gzread(fp, TsushinRAM, 32768);
-    gzclose(fp);
-   }
-   IsTsushin = 1;
-   MDFN_printf("Tsushin Booster\n");
-   for(int x = 0x88; x < 0x8C; x++)
-   {
-    ROMMap[x] = &TsushinRAM[(x & 3) * 8192] - x * 8192;
-    HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
-
-    HuCPU->SetReadHandler(x, HuCRead);
-    HuCPU->SetWriteHandler(x, HuCRAMWrite);
-   }
-   MDFNMP_AddRAM(32768, 0x88 * 8192, TsushinRAM);
   }
   else
-   UseBRAM = TRUE;
-
-  // 0x1A558
-  if(sf2_mapper)
   {
-   for(int x = 0x20; x < 0x40; x++)
-    HuCPU->SetReadHandler(x, HuCSF2ReadLow);
-   for(int x = 0x40; x < 0x80; x++)
+   if(!memcmp(HuCROM + 0x1F26, "POPULOUS", strlen("POPULOUS")))
    {
-    HuCPU->SetFastRead(x, NULL);		// Make sure our reads go through our read function, and not a table lookup
-    HuCPU->SetReadHandler(x, HuCSF2Read);
+    gzFile fp;
+  
+    PopRAM = (uint8 *)MDFN_malloc_T(32768, _("Populous RAM"));
+    memset(PopRAM, 0xFF, 32768);
+
+    if((fp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
+    {
+     gzread(fp, PopRAM, 32768);
+     gzclose(fp);
+    }
+
+    IsPopulous = 1;
+    MDFN_printf("Populous\n");
+    for(int x = 0x40; x < 0x44; x++)
+    {
+     ROMMap[x] = &PopRAM[(x & 3) * 8192] - x * 8192;
+     HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
+
+     HuCPU->SetReadHandler(x, HuCRead);
+     HuCPU->SetWriteHandler(x, HuCRAMWrite);
+    }
+    MDFNMP_AddRAM(32768, 0x40 * 8192, PopRAM);
    }
-   HuCPU->SetWriteHandler(0, HuCSF2Write);
+   else if(crc32 == 0x34dc65c4) // Tsushin Booster
+   {
+    gzFile fp;
 
-   MDFN_printf("Street Fighter 2 Mapper\n");
-   HuCSF2Latch = 0;
-  }
- }	// end else to if(syscard)
+    TsushinRAM = (uint8*)MDFN_malloc_T(0x8000, _("Tsushin Booster RAM"));
+    memset(TsushinRAM, 0xFF, 0x8000);
 
- BRAM_Init:
+    if((fp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
+    {
+     gzread(fp, TsushinRAM, 32768);
+     gzclose(fp);
+    }
 
- BRAM_Disabled = DisableBRAM;
- if(BRAM_Disabled)
-  UseBRAM = false;
+    IsTsushin = 1;
+    MDFN_printf("Tsushin Booster\n");
+    for(int x = 0x88; x < 0x8C; x++)
+    {
+     ROMMap[x] = &TsushinRAM[(x & 3) * 8192] - x * 8192;
+     HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
 
- if(UseBRAM)
- {
-  gzFile fp;
+     HuCPU->SetReadHandler(x, HuCRead);
+     HuCPU->SetWriteHandler(x, HuCRAMWrite);
+    }
+    MDFNMP_AddRAM(32768, 0x88 * 8192, TsushinRAM);
+   }
+   else
+    UseBRAM = TRUE;
 
-  memset(SaveRAM, 0x00, 2048);
-  memcpy(SaveRAM, BRAM_Init_String, 8);                	// So users don't have to manually intialize the file cabinet
-                                                	// in the CD BIOS screen.
-  if((fp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
+   // 0x1A558
+   if(sf2_mapper)
+   {
+    for(int x = 0x20; x < 0x40; x++)
+     HuCPU->SetReadHandler(x, HuCSF2ReadLow);
+    for(int x = 0x40; x < 0x80; x++)
+    {
+     HuCPU->SetFastRead(x, NULL);		// Make sure our reads go through our read function, and not a table lookup
+     HuCPU->SetReadHandler(x, HuCSF2Read);
+    }
+    HuCPU->SetWriteHandler(0, HuCSF2Write);
+
+    MDFN_printf("Street Fighter 2 Mapper\n");
+    HuCSF2Latch = 0;
+   }
+  }	// end else to if(syscard)
+
+  BRAM_Init:
+
+  BRAM_Disabled = DisableBRAM;
+  if(BRAM_Disabled)
+   UseBRAM = false;
+
+  if(UseBRAM)
   {
-   gzread(fp, SaveRAM, 2048);
-   gzclose(fp);
+   gzFile fp;
+
+   memset(SaveRAM, 0x00, 2048);
+   memcpy(SaveRAM, BRAM_Init_String, 8);                	// So users don't have to manually intialize the file cabinet
+                                                	// in the CD BIOS screen.
+   if((fp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
+   {
+    gzread(fp, SaveRAM, 2048);
+    gzclose(fp);
+   }
+
+   HuCPU->SetWriteHandler(0xF7, SaveRAMWrite);
+   HuCPU->SetReadHandler(0xF7, SaveRAMRead);
+   MDFNMP_AddRAM(2048, 0xF7 * 8192, SaveRAM);
   }
-
-  HuCPU->SetWriteHandler(0xF7, SaveRAMWrite);
-  HuCPU->SetReadHandler(0xF7, SaveRAMRead);
-  MDFNMP_AddRAM(2048, 0xF7 * 8192, SaveRAM);
  }
-
- return(1);
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
 }
 
 bool IsBRAMUsed(void)
@@ -512,7 +499,7 @@ int HuC_StateAction(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-void HuCClose(void)
+void HuC_Close(void)
 {
  if(mcg)
  {
@@ -533,9 +520,6 @@ void HuCClose(void)
     MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, buf).c_str(), 6, &tmp_buf[0], tmp_buf.size());
    }
   }
-
-  delete mcg;
-  mcg = NULL;
  }
 
  if(IsPopulous)

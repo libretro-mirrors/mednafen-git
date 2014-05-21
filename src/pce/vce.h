@@ -18,8 +18,8 @@
 #ifndef __PCE_VCE_H
 #define __PCE_VCE_H
 
-#include "huc6280/huc6280.h"
-#include "huc6270/vdc.h"
+#include <mednafen/hw_cpu/huc6280/huc6280.h>
+#include <mednafen/hw_video/huc6270/vdc.h>
 
 namespace MDFN_IEN_PCE
 {
@@ -41,7 +41,7 @@ class VCE : public HuC6280_Support
 	void SetPixelFormat(const MDFN_PixelFormat &format);
 	bool SetCustomColorMap(const uint8 *triplets, const uint32 count);	// count = 512 or 1024
 
-	void StartFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, MDFN_Rect *LineWidths, int skip);
+	void StartFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, int32 *LineWidths, int skip);
 	bool RunPartial(void);
 
         void Update(const int32 timestamp);

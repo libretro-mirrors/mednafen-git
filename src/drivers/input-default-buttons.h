@@ -146,18 +146,26 @@ static const ButtConfig FTrainerButtons[12]=
                                MK(m),MK(COMMA),MK(PERIOD),MK(SLASH)
 };
 
-static ButtConfig OekaKidsConfig[1] =
+static ButtConfig OekaKidsConfig[3] =
 {
+ { BUTTC_MOUSE, 0, 0x8000, 0 },
+ { BUTTC_MOUSE, 0, 0x8001, 0 },
+
  { BUTTC_MOUSE, 0, 0, 0 },
 };
 
-static ButtConfig ArkanoidConfig[1] =
+static ButtConfig ArkanoidConfig[2] =
 {
+ { BUTTC_MOUSE, 0, 0x8000, 0 },
+
  { BUTTC_MOUSE, 0, 0, 0 },
 };
 
-static ButtConfig NESZapperConfig[2] =
+static ButtConfig NESZapperConfig[4] =
 {
+ { BUTTC_MOUSE, 0, 0x8000, 0 },
+ { BUTTC_MOUSE, 0, 0x8001, 0 },
+
  { BUTTC_MOUSE, 0, 0, 0 },
  { BUTTC_MOUSE, 0, 2, 0 },
 };
@@ -454,16 +462,22 @@ static ButtConfig PSXMouseConfig[2] =
  { BUTTC_MOUSE, 0, 0, 0 },
 };
 
-static ButtConfig PSXGunConConfig[4] =
+static ButtConfig PSXGunConConfig[6] =
 {
+ { BUTTC_MOUSE, 0, 0x8000, 0 },
+ { BUTTC_MOUSE, 0, 0x8001, 0 },
+
  { BUTTC_MOUSE, 0, 0, 0 },
  { BUTTC_MOUSE, 0, 2, 0 },
  { BUTTC_MOUSE, 0, 1, 0 },
  MK(SPACE)
 };
 
-static ButtConfig PSXJustifierConfig[4] =
+static ButtConfig PSXJustifierConfig[6] =
 {
+ { BUTTC_MOUSE, 0, 0x8000, 0 },
+ { BUTTC_MOUSE, 0, 0x8001, 0 },
+
  { BUTTC_MOUSE, 0, 0, 0 },
  { BUTTC_MOUSE, 0, 2, 0 },
  { BUTTC_MOUSE, 0, 1, 0 },

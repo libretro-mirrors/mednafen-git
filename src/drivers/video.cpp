@@ -25,6 +25,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <trio/trio.h>
+#include <algorithm>
 
 #include "video.h"
 #include "opengl.h"
@@ -248,16 +249,33 @@ static void GenerateDestRect(void)
 
    if(_video.stretch == 3 || _video.stretch == 4)	// Round down to nearest int.
    {
-    exs = floor(exs);
-    eys = floor(eys);
+    double floor_exs = floor(exs);
+    double floor_eys = floor(eys);
 
-    if(_video.stretch == 4)	// Round down to nearest multiple of 2.
+    if(!floor_exs || !floor_eys)
     {
-     exs = (int)exs & ~1;
-     eys = (int)eys & ~1;
+     MDFN_printf(_("WARNING: Resolution is too low for stretch mode selected.  Falling back to \"aspect\" mode.\n"));
+    }
+    else
+    {
+     exs = floor_exs;
+     eys = floor_eys;
 
-     if(!exs) exs = 1;
-     if(!eys) eys = 1;
+     if(_video.stretch == 4)	// Round down to nearest multiple of 2.
+     {
+      int even_exs = (int)exs & ~1;
+      int even_eys = (int)eys & ~1;
+
+      if(!even_exs || !even_eys)
+      {
+       MDFN_printf(_("WARNING: Resolution is too low for stretch mode selected.  Falling back to \"aspect_int\" mode.\n"));
+      }
+      else
+      {
+       exs = even_exs;
+       eys = even_eys;
+      }
+     }
     }
    }
 
@@ -499,7 +517,7 @@ int InitVideo(MDFNGI *gi)
  _video.yscalefs = MDFN_GetSettingF(std::string(sn + "." + std::string("yscalefs")).c_str());
  _video.videoip = MDFN_GetSettingI(std::string(sn + "." + std::string("videoip")).c_str());
  _video.stretch = MDFN_GetSettingUI(std::string(sn + "." + std::string("stretch")).c_str());
- _video.scanlines = MDFN_GetSettingUI(std::string(sn + "." + std::string("scanlines")).c_str());
+ _video.scanlines = MDFN_GetSettingI(std::string(sn + "." + std::string("scanlines")).c_str());
 
  _video.special = GetSpecialScalerID(special_string);
 
@@ -588,8 +606,6 @@ int InitVideo(MDFNGI *gi)
   }
  }
 
- GenerateDestRect();
-
  if(_fullscreen)
  {
   if(!screen || cur_xres != _video.xres || cur_yres != _video.yres || cur_flags != flags || curbpp != desbpp)
@@ -604,6 +620,7 @@ int InitVideo(MDFNGI *gi)
  }
  else
  {
+  GenerateDestRect();
   if(!screen || cur_xres != screen_dest_rect.w || cur_yres != screen_dest_rect.h || cur_flags != flags || curbpp != desbpp)
   {
    if(!(screen = SDL_SetVideoMode(screen_dest_rect.w, screen_dest_rect.h, desbpp, flags)))
@@ -652,7 +669,7 @@ int InitVideo(MDFNGI *gi)
  if(!_video.scanlines)
   MDFN_printf(_("Scanlines: Off\n"));
  else
-  MDFN_printf(_("Scanlines: %d%% opacity\n"), _video.scanlines);
+  MDFN_printf(_("Scanlines: %d%% opacity%s\n"), abs(_video.scanlines), (_video.scanlines < 0) ? _(" (with interlace field obscure)") : "");
 
  MDFN_printf(_("Destination Rectangle: X=%d, Y=%d, W=%d, H=%d\n"), screen_dest_rect.x, screen_dest_rect.y, screen_dest_rect.w, screen_dest_rect.h);
  if(screen_dest_rect.x < 0 || screen_dest_rect.y < 0 || (screen_dest_rect.x + screen_dest_rect.w) > screen->w || (screen_dest_rect.y + screen_dest_rect.h) > screen->h)
@@ -880,7 +897,7 @@ static bool OverlayOK;	// Set to TRUE when vdriver == "overlay", and it's safe t
 			// Otherwise, set to FALSE.
 			// (Set in the BlitScreen function before any calls to SubBlit())
 
-static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, const MDFN_Rect &dest_rect)
+static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, const MDFN_Rect &dest_rect, const int InterlaceField)
 {
  MDFN_Surface *eff_source_surface = source_surface;
  MDFN_Rect eff_src_rect = src_rect;
@@ -1073,7 +1090,7 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
 #endif
 
     if(ogl_blitter)
-     ogl_blitter->Blit(bah_surface, &boohoo_rect, &dest_rect, &eff_src_rect, evideoip, CurGame->rotated);
+     ogl_blitter->Blit(bah_surface, &boohoo_rect, &dest_rect, &eff_src_rect, InterlaceField, evideoip, CurGame->rotated);
     else
     {
      if(OverlayOK)
@@ -1091,7 +1108,7 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
      {
       SDL_to_MDFN_Surface_Wrapper m_surface(screen);
 
-      MDFN_StretchBlitSurface(bah_surface, &boohoo_rect, &m_surface, &dest_rect, false, _video.scanlines, &eff_src_rect, CurGame->rotated);
+      MDFN_StretchBlitSurface(bah_surface, &boohoo_rect, &m_surface, &dest_rect, false, _video.scanlines, &eff_src_rect, CurGame->rotated, InterlaceField);
      }
     }
     delete bah_surface;
@@ -1099,7 +1116,7 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
    else // No special scaler:
    {
     if(ogl_blitter)
-     ogl_blitter->Blit(eff_source_surface, &eff_src_rect, &dest_rect, &eff_src_rect, evideoip, CurGame->rotated);
+     ogl_blitter->Blit(eff_source_surface, &eff_src_rect, &dest_rect, &eff_src_rect, InterlaceField, evideoip, CurGame->rotated);
     else
     {
      if(OverlayOK)
@@ -1117,7 +1134,7 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
      {
       SDL_to_MDFN_Surface_Wrapper m_surface(screen);
 
-      MDFN_StretchBlitSurface(eff_source_surface, &eff_src_rect, &m_surface, &dest_rect, false, _video.scanlines, &eff_src_rect, CurGame->rotated);
+      MDFN_StretchBlitSurface(eff_source_surface, &eff_src_rect, &m_surface, &dest_rect, false, _video.scanlines, &eff_src_rect, CurGame->rotated, InterlaceField);
      }
     }
    }
@@ -1129,7 +1146,7 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
  }
 }
 
-void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN_Rect *LineWidths, const bool take_ssnapshot)
+void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int32 *LineWidths, const int InterlaceField, const bool take_ssnapshot)
 {
  MDFN_Rect src_rect;
  const MDFN_PixelFormat *pf_needed = &pf_normal;
@@ -1152,19 +1169,19 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
  OverlayOK = false;
  if(vdriver == VDRIVER_OVERLAY)
  {
-  bool osd_active = Help_IsActive() || SaveStatesActive() || IsConsoleCheatConfigActive() || Netplay_GetTextView() ||
+  bool osd_active = Help_IsActive() || SaveStatesActive() || CheatIF_Active() || Netplay_GetTextView() ||
 		   IsInternalMessageActive() || Debugger_IsActive();
 
   OverlayOK = (vdriver == VDRIVER_OVERLAY) && !take_ssnapshot && !osd_active && (!CurrentScaler || (CurrentScaler->id != NTVB_HQ2X && CurrentScaler->id != NTVB_HQ3X &&
 		CurrentScaler->id != NTVB_HQ4X));
 
-  if(OverlayOK && LineWidths[0].w != ~0)
+  if(OverlayOK && LineWidths[0] != ~0)
   {
-   MDFN_Rect first_rect = LineWidths[DisplayRect->y];
+   const int32 first_width = LineWidths[DisplayRect->y];
 
    for(int suby = DisplayRect->y; suby < DisplayRect->y + DisplayRect->h; suby++)
    {
-    if(LineWidths[suby].w != first_rect.w || LineWidths[suby].x != first_rect.x)
+    if(LineWidths[suby] != first_width)
     {
      //puts("Skippidy");
      OverlayOK = FALSE;
@@ -1194,16 +1211,15 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
   {
    int fps_xpos = DisplayRect->x;
    int fps_ypos = DisplayRect->y;
-   int w_bound = DisplayRect->w;
-   int h_bound = DisplayRect->h;
+   int x_bound = DisplayRect->x + DisplayRect->w;
+   int y_bound = DisplayRect->y + DisplayRect->h;
 
-   if(LineWidths[0].w != ~0)
+   if(LineWidths[0] != ~0)
    {
-    fps_xpos = LineWidths[DisplayRect->y].x;
-    w_bound = LineWidths[DisplayRect->y].w;
+    x_bound = DisplayRect->x + LineWidths[DisplayRect->y];
    }
 
-   if((fps_xpos + fps_w) > w_bound || (fps_ypos + fps_h) > h_bound)
+   if((fps_xpos + fps_w) > x_bound || (fps_ypos + fps_h) > y_bound)
    {
     puts("FPS draw error");
    }
@@ -1215,30 +1231,29 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
   }
  }
 
- if(LineWidths[0].w == ~0) // Skip multi line widths code?
+ if(LineWidths[0] == ~0) // Skip multi line widths code?
  {
-  SubBlit(msurface, src_rect, screen_dest_rect);
+  SubBlit(msurface, src_rect, screen_dest_rect, InterlaceField);
  }
  else
  {
   int y;
   int last_y = src_rect.y;
-  int last_x = LineWidths[src_rect.y].x;
-  int last_width = LineWidths[src_rect.y].w;
+  int last_width = LineWidths[src_rect.y];
 
   MDFN_Rect sub_src_rect;
   MDFN_Rect sub_dest_rect;
 
   for(y = src_rect.y; y < (src_rect.y + src_rect.h + 1); y++)
   {
-   if(y == (src_rect.y + src_rect.h) || LineWidths[y].x != last_x || LineWidths[y].w != last_width)
+   if(y == (src_rect.y + src_rect.h) || LineWidths[y] != last_width)
    {
-    sub_src_rect.x = last_x;
+    sub_src_rect.x = src_rect.x;
     sub_src_rect.w = last_width;
     sub_src_rect.y = last_y;
     sub_src_rect.h = y - last_y;
 
-    if(CurGame->rotated)
+    if(CurGame->rotated == MDFN_ROTATE90)
     {
      sub_dest_rect.x = screen_dest_rect.x + (last_y - src_rect.y) * screen_dest_rect.w / src_rect.h;
      sub_dest_rect.y = screen_dest_rect.y;
@@ -1246,6 +1261,14 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
      sub_dest_rect.w = sub_src_rect.h * screen_dest_rect.w / src_rect.h;
      sub_dest_rect.h = screen_dest_rect.h;
      //printf("sdr.x=%f, sdr.w=%f\n", (double)screen_dest_rect.x + (double)(last_y - src_rect.y) * screen_dest_rect.w / src_rect.h, (double)sub_src_rect.h * screen_dest_rect.w / src_rect.h);
+    }
+    else if(CurGame->rotated == MDFN_ROTATE270)
+    {
+     sub_dest_rect.x = screen_dest_rect.x + (src_rect.h - (y - src_rect.y)) * screen_dest_rect.w / src_rect.h;
+     sub_dest_rect.y = screen_dest_rect.y;
+
+     sub_dest_rect.w = sub_src_rect.h * screen_dest_rect.w / src_rect.h;
+     sub_dest_rect.h = screen_dest_rect.h;
     }
     else
     {
@@ -1259,14 +1282,13 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
      sub_dest_rect.h = 1;
 
     // Blit here!
-    SubBlit(msurface, sub_src_rect, sub_dest_rect);
+    SubBlit(msurface, sub_src_rect, sub_dest_rect, InterlaceField);
 
     last_y = y;
 
     if(y != (src_rect.y + src_rect.h))
     {
-     last_width = LineWidths[y].w;
-     last_x =  LineWidths[y].x;
+     last_width = LineWidths[y];
     }
 
    }
@@ -1382,7 +1404,7 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
 
  DrawSaveStates(screen, exs, eys, real_rs, real_gs, real_bs, real_as);
 
- if(IsConsoleCheatConfigActive())
+ if(CheatIF_Active())
  {
   MDFN_Rect CheatRect;
   unsigned crs = 0;
@@ -1418,7 +1440,7 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const MDFN
   zederect.w = CheatRect.w << crs;
   zederect.h = CheatRect.h << crs;
 
-  DrawCheatConsole(CheatSurface, &CheatRect);
+  CheatIF_MT_Draw(CheatSurface, &CheatRect);
   BlitRaw(CheatSurface, &CheatRect, &zederect);
  }
  else if(CheatSurface)
@@ -1499,5 +1521,24 @@ void PtoV(const int in_x, const int in_y, int32 *out_x, int32 *out_y)
  {
   *out_x = (int32)round(65536 * (double)(in_x - screen_dest_rect.x) / exs);
   *out_y = (int32)round(65536 * (double)(in_y - screen_dest_rect.y) / eys);
+ }
+}
+
+int32 PtoV_J(const int32 inv, const bool axis, const bool scr_scale)
+{
+ assert(VideoGI);
+ if(!scr_scale)
+ {
+  return((inv - 32768) * std::max(VideoGI->nominal_width, VideoGI->nominal_height) + (32768 * (axis ? VideoGI->nominal_height : VideoGI->nominal_width)));
+ }
+ else
+ {
+  int32 prescale = (axis ? screen->h : screen->w);
+  int32 offs = -(axis ? screen_dest_rect.y : screen_dest_rect.x);
+  double postscale = 65536.0 / (axis ? eys : exs);
+
+  //printf("%.64f\n", floor(0.5 + ((((((int64)inv * prescale) + 0x8000) >> 16) + offs) * postscale)) / 65536.0);
+
+  return (int32)floor(0.5 + ((((((int64)inv * prescale) + 0x8000) >> 16) + offs) * postscale));
  }
 }

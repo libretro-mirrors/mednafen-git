@@ -360,7 +360,7 @@ static void GenMOVEPWaD()
     mem_op("\tREAD_BYTE_F(adr + 0, res)\n");
     mem_op("\tREAD_BYTE_F(adr + 2, src)\n");
     // write
-    wf_op("\t*(WORD_OFF + (u16*)(&CPU->D[(Opcode >> %d) & 7])) = (res << 8) | src;\n", current_op->reg2_sft);
+    wf_op("\t*(WORD_OFF + (u16*)(&CPU->D16[(Opcode >> %d) & 7])) = (res << 8) | src;\n", current_op->reg2_sft);
 
     terminate_op(16);
 }
@@ -775,7 +775,7 @@ static void GenSWAP()
 static void GenMOVEMaR()
 {
     // generate jump table & opcode declaration
-    start_all(GEN_ALL);
+    start_all(GEN_ADR | GEN_RES | GEN_SRC);
     
     // get register mask
     wf_op("\tres = FETCH_WORD;\n");
@@ -785,8 +785,6 @@ static void GenMOVEMaR()
     else if (current_ea == EA_AINC7) wf_op("\tadr = CPU->A[7];\n");
     else _ea_calc(current_ea, current_op->reg_sft);
     wf_op("\tsrc = 0;\n");
-
-    wf_op("\tdst = adr;\n");
     
     wf_op("\tdo\n");
     wf_op("\t{\n");
@@ -816,7 +814,7 @@ static void GenMOVEMaR()
 static void GenMOVEMRa()
 {
     // generate jump table & opcode declaration
-    start_all(GEN_ALL);
+    start_all(GEN_ADR | GEN_RES | GEN_SRC);
 
     // get register mask
     wf_op("\tres = FETCH_WORD;\n");
@@ -827,8 +825,6 @@ static void GenMOVEMRa()
     else _ea_calc(current_ea, current_op->reg_sft);
     if ((current_ea == EA_ADEC) || (current_ea == EA_ADEC7)) wf_op("\tsrc = 15;\n");
     else wf_op("\tsrc = 0;\n");
-
-    wf_op("\tdst = adr;\n");
     
     wf_op("\tdo\n");
     wf_op("\t{\n");
@@ -1321,7 +1317,7 @@ static void GenDBCC()
         // generate jump table
         gen_opjumptable(base + (cond << 8));
         // generate label & declarations
-        start_op(base + (cond << 8), GEN_RES);
+        start_op(base + (cond << 8), (cond != COND_TR) ? GEN_RES : 0);
         
         if (cond != COND_TR)
         {

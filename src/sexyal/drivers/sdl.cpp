@@ -37,6 +37,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <sys/time.h>
 #include <time.h>
 
+#include <algorithm>
+
 #include <SDL.h>
 
 static int64_t Time64(void)
@@ -74,6 +76,9 @@ typedef struct
 	int64_t last_time;
 } SDLWrap;
 
+#ifdef WIN32
+static void fillaudio(void *udata, uint8_t *stream, int len) __attribute__((force_align_arg_pointer));
+#endif
 static void fillaudio(void *udata, uint8_t *stream, int len)
 {
  SexyAL_device *device = (SexyAL_device *)udata;
@@ -385,9 +390,9 @@ SexyAL_device *SexyALI_SDL_Open(const char *id, SexyAL_format *format, SexyAL_bu
  else if(buffering->ms > 1000)
   buffering->ms = 1000;
 
- sw->EPMaxVal = obtained.samples; //8192;
+ sw->EPMaxVal = obtained.samples;
 
- sw->BufferSize = (format->rate * buffering->ms / 1000) - obtained.samples * 2;
+ sw->BufferSize = (format->rate * buffering->ms / 1000);
 
  if(sw->BufferSize < obtained.samples)
   sw->BufferSize = obtained.samples;
@@ -401,7 +406,7 @@ SexyAL_device *SexyALI_SDL_Open(const char *id, SexyAL_format *format, SexyAL_bu
 
  buffering->buffer_size = sw->BufferSize;
 
- buffering->latency = (obtained.samples * 2 + sw->BufferSize);
+ buffering->latency = sw->BufferSize + obtained.samples;
  buffering->period_size = obtained.samples;
  buffering->bt_gran = 1;
 

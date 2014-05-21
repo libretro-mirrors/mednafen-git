@@ -20,7 +20,7 @@
 #ifndef VBA_GBA_H
 #define VBA_GBA_H
 
-#include "../mednafen.h"
+#include <mednafen/mednafen.h>
 #include <zlib.h>
 
 namespace MDFN_IEN_GBA

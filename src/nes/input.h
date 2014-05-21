@@ -37,7 +37,7 @@
 #define SIS_VSUNISYSTEM 3
 #define SIS_NSF         4
 
-#include "../state.h"
+#include <mednafen/state.h>
 
 typedef struct {
         uint8 (*Read)(int w);

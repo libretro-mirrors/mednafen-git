@@ -52,7 +52,7 @@
    }	\
 }
 
-bool MDFN_ResizeSurface(const MDFN_Surface *src, const MDFN_Rect *src_rect, const MDFN_Rect *LineWidths, MDFN_Surface *dest, const MDFN_Rect *dest_rect)
+bool MDFN_ResizeSurface(const MDFN_Surface *src, const MDFN_Rect *src_rect, const int32 *LineWidths, MDFN_Surface *dest, const MDFN_Rect *dest_rect)
 {
  double src_x_inc, src_y_inc;
  double src_x, src_y;
@@ -80,19 +80,18 @@ bool MDFN_ResizeSurface(const MDFN_Surface *src, const MDFN_Rect *src_rect, cons
   }
   else
   {
-   if(LineWidths)
-   {
-    src_x = LineWidths[INT(src_y)].x;
-    src_x_inc = (double)LineWidths[INT(src_y)].w / dest_rect->w;
-    x_ip_limit = LineWidths[INT(src_y)].x + LineWidths[INT(src_y)].w;
+   src_x = src_rect->x;
 
-    if(LineWidths[INT(src_y)].w == 0)
+   if(LineWidths[0] != ~0)
+   {
+    src_x_inc = (double)LineWidths[INT(src_y)] / dest_rect->w;
+    x_ip_limit = src_rect->x + LineWidths[INT(src_y)];
+
+    if(LineWidths[INT(src_y)] == 0)
      ZeroDimensionSource = true;
    }
    else
    {
-    src_x = src_rect->x;
-
     if(src_rect->w == 0)
      ZeroDimensionSource = true;
    }

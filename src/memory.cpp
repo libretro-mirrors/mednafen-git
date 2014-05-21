@@ -22,7 +22,7 @@
 
 #include "memory.h"
 
-void *MDFN_calloc_real(uint32 nmemb, uint32 size, const char *purpose, const char *_file, const int _line)
+void *MDFN_calloc_real(bool dothrow, uint32 nmemb, uint32 size, const char *purpose, const char *_file, const int _line)
 {
  void *ret;
 
@@ -30,13 +30,22 @@ void *MDFN_calloc_real(uint32 nmemb, uint32 size, const char *purpose, const cha
 
  if(!ret)
  {
-  MDFN_PrintError(_("Error allocating(calloc) %u bytes for \"%s\" in %s(%d)!"), size, purpose, _file, _line);
-  return(0);
+  if(dothrow)
+  {
+   ErrnoHolder ene;
+
+   throw MDFN_Error(ene.Errno(), _("Error allocating(calloc) %u bytes for \"%s\" in %s(%d)!"), size, purpose, _file, _line);
+  }
+  else
+  {
+   MDFN_PrintError(_("Error allocating(calloc) %u bytes for \"%s\" in %s(%d)!"), size, purpose, _file, _line);
+   return(0);
+  }
  }
  return ret;
 }
 
-void *MDFN_malloc_real(uint32 size, const char *purpose, const char *_file, const int _line)
+void *MDFN_malloc_real(bool dothrow, uint32 size, const char *purpose, const char *_file, const int _line)
 {
  void *ret;
 
@@ -44,13 +53,22 @@ void *MDFN_malloc_real(uint32 size, const char *purpose, const char *_file, cons
 
  if(!ret)
  {
-  MDFN_PrintError(_("Error allocating(malloc) %u bytes for \"%s\" in %s(%d)!"), size, purpose, _file, _line);
-  return(0);
+  if(dothrow)
+  {
+   ErrnoHolder ene;
+
+   throw MDFN_Error(ene.Errno(), _("Error allocating(malloc) %u bytes for \"%s\" in %s(%d)!"), size, purpose, _file, _line);
+  }
+  else
+  {
+   MDFN_PrintError(_("Error allocating(malloc) %u bytes for \"%s\" in %s(%d)!"), size, purpose, _file, _line);
+   return(0);
+  }
  }
  return ret;
 }
 
-void *MDFN_realloc_real(void *ptr, uint32 size, const char *purpose, const char *_file, const int _line)
+void *MDFN_realloc_real(bool dothrow, void *ptr, uint32 size, const char *purpose, const char *_file, const int _line)
 {
  void *ret;
 
@@ -58,8 +76,17 @@ void *MDFN_realloc_real(void *ptr, uint32 size, const char *purpose, const char 
 
  if(!ret)
  {
-  MDFN_PrintError(_("Error allocating(realloc) %u bytes for \"%s\" in %s(%d)!"), size, purpose, _file, _line);
-  return(0);
+  if(dothrow)
+  {
+   ErrnoHolder ene;
+
+   throw MDFN_Error(ene.Errno(), _("Error allocating(realloc) %u bytes for \"%s\" in %s(%d)!"), size, purpose, _file, _line);
+  }
+  else
+  {
+   MDFN_PrintError(_("Error allocating(realloc) %u bytes for \"%s\" in %s(%d)!"), size, purpose, _file, _line);
+   return(0);
+  }
  }
  return ret;
 }

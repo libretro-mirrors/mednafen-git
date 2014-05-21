@@ -138,6 +138,8 @@ int NetplayStart(const char *PortDeviceCache[16], const uint32 PortDataLenCache[
    memcpy(sendbuf + 4 + 16, md5out, 16);
   }
 
+  assert(MDFNGameInfo->InputInfo->InputPorts <= 16);
+
   uint8 *extra = sendbuf + 4 + 16 + 16;
 
   extra[0] = 3; // Protocol version
@@ -148,9 +150,27 @@ int NetplayStart(const char *PortDeviceCache[16], const uint32 PortDataLenCache[
   // The size of the giganto string with the controller types
   MDFN_en32lsb(&extra[4], strlen(emu_id));
 
-  // 16-32, controller data sizes
+  // 16-31, controller data sizes
   for(int x = 0; x < MDFNGameInfo->InputInfo->InputPorts; x++)
    extra[16 + x] = PortDataLenCache[x];
+
+  // 48-63, controller data types
+  for(int x = 0; x < MDFNGameInfo->InputInfo->InputPorts; x++)
+  {
+   unsigned ct = 0;
+
+   for(int d = 0; d < MDFNGameInfo->InputInfo->Types[x].NumTypes; d++)
+   {
+    if(!strcasecmp(MDFNGameInfo->InputInfo->Types[x].DeviceInfo[d].ShortName, PortDeviceCache[x]))
+    {
+     ct = d;
+     break;
+    }
+   }
+   //printf("%d, 0x%02x\n", x, ct);
+
+   extra[48 + x] = ct;
+  }
 
 
   sendbuf[4 + 16 + 16 + 64] = local_players;
@@ -441,7 +461,7 @@ static void RecvState(const uint32 clen)
  uLongf len = MDFN_de32lsb(&cbuf[0]);
  if(len > 12 * 1024 * 1024) // Uncompressed length sanity check - 12 MiB max.
  {
-  throw MDFN_Error(0, _("Uncompressed save state data is too large: %u"), len);
+  throw MDFN_Error(0, _("Uncompressed save state data is too large: %llu"), (unsigned long long)len);
  }
 
  buf.resize(len);

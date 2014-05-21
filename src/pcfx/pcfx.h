@@ -1,11 +1,11 @@
 #ifndef __PCFX_PCFX_H
 #define __PCFX_PCFX_H
 
-#include "../mednafen.h"
-#include "../state.h"
-#include "../general.h"
-#include "v810/v810_cpu.h"
-#include "huc6270/vdc.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/state.h>
+#include <mednafen/general.h>
+#include <mednafen/hw_cpu/v810/v810_cpu.h>
+#include <mednafen/hw_video/huc6270/vdc.h>
 
 #define PCFX_MASTER_CLOCK	21477272.72
 

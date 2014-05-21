@@ -25,7 +25,7 @@
 #include "eeprom.h"
 #include "rtc.h"
 #include "v30mz.h"
-#include "../mempatcher.h"
+#include <mednafen/mempatcher.h>
 #include <time.h>
 #include <math.h>
 #include <trio/trio.h>

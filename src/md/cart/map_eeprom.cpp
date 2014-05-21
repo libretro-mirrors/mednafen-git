@@ -184,12 +184,7 @@ MD_Cart_Type_EEPROM::MD_Cart_Type_EEPROM(const md_game_info *ginfo, const uint8 
   throw(0);
 
  /* set SRAM start & end address */
- if(!(sram = (uint8 *)MDFN_malloc(type.size_mask + 1, _("Cart EEPROM"))))
- {
-  // FIXME
-  throw(-1);
- }
-
+ sram = (uint8 *)MDFN_malloc_T(type.size_mask + 1, _("Cart EEPROM"));
  memset(sram, 0xFF, type.size_mask + 1);
 }
 

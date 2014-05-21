@@ -159,7 +159,13 @@ SexyAL_device *SexyALI_DSound_Open(const char *id, SexyAL_format *format, SexyAL
  // Buffers yay!
  //
  if(!buffering->ms)
-  buffering->ms=53;
+ {
+  buffering->ms = 52;
+ }
+ else if(buffering->overhead_kludge)
+ {
+  buffering->ms += 20;
+ }
 
  buffering->buffer_size = (int64_t)format->rate * buffering->ms / 1000;
 

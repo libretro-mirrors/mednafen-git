@@ -1,14 +1,14 @@
 #ifndef _NES_H
 #define _NES_H
 
-#include "../mednafen.h"
-#include "../state.h"
-#include "../movie.h"
-#include "../general.h"
-#include "../string/trim.h"
-#include "../file.h"
-#include "../md5.h"
-#include "../video.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/state.h>
+#include <mednafen/movie.h>
+#include <mednafen/general.h>
+#include <mednafen/string/trim.h>
+#include <mednafen/file.h>
+#include <mednafen/md5.h>
+#include <mednafen/video.h>
 
 //#define MDFN_NES_FASTCALL MDFN_FASTCALL
 #define MDFN_NES_FASTCALL

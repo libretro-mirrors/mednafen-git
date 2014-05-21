@@ -18,7 +18,7 @@
 #include "psx.h"
 #include "mdec.h"
 
-#include "../cdrom/SimpleFIFO.h"
+#include <mednafen/cdrom/SimpleFIFO.h>
 #include <math.h>
 
 #if defined(__SSE2__)

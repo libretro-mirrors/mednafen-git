@@ -37,6 +37,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
 
 #include "Ym2612_Emu.h"
+#include <mednafen/math_ops.h>
 
 #include <assert.h>
 #include <stdlib.h>
@@ -576,7 +577,7 @@ Ym2612_Emu::~Ym2612_Emu()
  delete impl;
 }
 
-inline void Ym2612_Impl::write0( int opn_addr, int data )
+void Ym2612_Impl::write0( int opn_addr, int data )
 {
 	assert( (unsigned) data <= 0xFF );
 	
@@ -596,7 +597,7 @@ inline void Ym2612_Impl::write0( int opn_addr, int data )
 	}
 }
 
-inline void Ym2612_Impl::write1( int opn_addr, int data )
+void Ym2612_Impl::write1( int opn_addr, int data )
 {
 	assert( (unsigned) data <= 0xFF );
 	
@@ -875,7 +876,7 @@ void Ym2612_Impl::run_timer(void)
 		 }
 		}
 }
-#include "../../math_ops.h"
+
 void Ym2612_Impl::run( Ym2612_Emu::sample_t* out )
 {
 	if ( YM2612.Mode & 3 )

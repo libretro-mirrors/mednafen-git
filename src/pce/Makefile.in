@@ -343,7 +343,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_srcdir) -I$(top_srcdir)/src/hw_cpu -I$(top_srcdir)/src/hw_misc -I$(top_srcdir)/src/hw_sound -I$(top_srcdir)/src/hw_video
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libpce.a
 mednafen_SOURCES = pce.cpp vce.cpp input.cpp huc.cpp pcecd.cpp hes.cpp \
 	tsushin.cpp subhw.cpp mcgenjin.cpp input/gamepad.cpp \

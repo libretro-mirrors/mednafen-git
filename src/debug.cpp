@@ -42,15 +42,22 @@ void MDFNDBG_PostGameLoad(void)
 // Called on game close.
 void MDFNDBG_Kill(void)
 {
- for(unsigned int x = 0; x < AddressSpaces.size(); x++)
- {
-  if(AddressSpaces[x].name)
-   free(AddressSpaces[x].name);
-  if(AddressSpaces[x].long_name)
-   free(AddressSpaces[x].long_name);
- }
  AddressSpaces.clear();
  RegGroups.clear();
+}
+
+
+
+AddressSpaceType::AddressSpaceType() : TotalBits(0), NP2Size(0), IsWave(false), WaveFormat(ASPACE_WFMT_UNSIGNED), WaveBits(0),
+				GetAddressSpaceBytes(NULL), PutAddressSpaceBytes(NULL), private_data(NULL), EnableUsageMap(NULL),
+				UsageMapRead(NULL), UsageMapWrite(NULL), UsageReadMemUsed(0), UsageWriteMemUsed(0)
+{
+
+}
+
+AddressSpaceType::~AddressSpaceType()
+{
+
 }
 
 int ASpace_Add(void (*gasb)(const char *name, uint32 Address, uint32 Length, uint8 *Buffer),
@@ -59,13 +66,11 @@ int ASpace_Add(void (*gasb)(const char *name, uint32 Address, uint32 Length, uin
 {
  AddressSpaceType newt;
 
- memset(&newt, 0, sizeof(newt));
-
  newt.GetAddressSpaceBytes = gasb;
  newt.PutAddressSpaceBytes = pasb;
 
- newt.name = strdup(name);
- newt.long_name = strdup(long_name);
+ newt.name = std::string(name);
+ newt.long_name = std::string(long_name);
  newt.TotalBits = TotalBits;
  newt.NP2Size = NP2Size;
 

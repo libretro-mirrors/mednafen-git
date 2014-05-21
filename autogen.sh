@@ -4,7 +4,7 @@ libtoolize --force --copy
 #gettextize --force --copy --intl
 autoheader
 aclocal -I m4
-autoconf
+autoconf -W syntax,cross
 automake -a -c -f
 
 rm autom4te.cache/*

@@ -4,7 +4,7 @@
 #ifndef __MDFN_PSX_GPU_H
 #define __MDFN_PSX_GPU_H
 
-#include "../cdrom/SimpleFIFO.h"
+#include <mednafen/cdrom/SimpleFIFO.h>
 
 namespace MDFN_IEN_PSX
 {
@@ -294,7 +294,7 @@ class PS_GPU
  EmulateSpecStruct *espec;
  MDFN_Surface *surface;
  MDFN_Rect *DisplayRect;
- MDFN_Rect *LineWidths;
+ int32 *LineWidths;
  bool skip;
  bool HardwarePALType;
  int LineVisFirst, LineVisLast;

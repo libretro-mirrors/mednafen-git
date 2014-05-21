@@ -146,20 +146,20 @@ void NGPGFX_CLASS::draw_scanline_colour(int layer_enable, int ngpc_scanline)
 	int16 lastSpriteX;
 	int16 lastSpriteY;
 	int spr;
-	uint16 data16;
+	uint16 win_color;
 
 	memset(cfb_scanline, 0, SCREEN_WIDTH * sizeof(uint16));
 	memset(zbuffer, 0, SCREEN_WIDTH);
 
 	//Window colour
-	data16 = LoadU16_LE((uint16*)(ColorPaletteRAM + 0x01F0 + (oowc << 1)));
-	if (negative) data16 = ~data16;
+	win_color = LoadU16_LE((uint16*)(ColorPaletteRAM + 0x01F0 + (oowc << 1)));
+	if (negative) win_color = ~win_color;
 
 	//Top
 	if (ngpc_scanline < winy)
 	{
 		for (int x = 0; x < SCREEN_WIDTH; x++)
-			cfb_scanline[x] = data16;
+			cfb_scanline[x] = win_color;
 	}
 	else
 	{
@@ -167,15 +167,15 @@ void NGPGFX_CLASS::draw_scanline_colour(int layer_enable, int ngpc_scanline)
 		if (ngpc_scanline < winy + winh)
 		{
 			for (int x = 0; x < min(winx, SCREEN_WIDTH); x++)
-				cfb_scanline[x] = data16;
+				cfb_scanline[x] = win_color;
 			
 			for (int x = min(winx + winw, SCREEN_WIDTH); x < SCREEN_WIDTH; x++)
-				cfb_scanline[x] = data16;
+				cfb_scanline[x] = win_color;
 		}
 		else	//Bottom
 		{
 			for (int x = 0; x < SCREEN_WIDTH; x++)
-				cfb_scanline[x] = data16;
+				cfb_scanline[x] = win_color;
 		}
 	}
 
@@ -185,15 +185,15 @@ void NGPGFX_CLASS::draw_scanline_colour(int layer_enable, int ngpc_scanline)
 		//Background colour Enabled?	HACK: 01 AUG 2002 - Always on!
 	//	if ((bgc & 0xC0) == 0x80)
 		{
-			data16 = LoadU16_LE((uint16*)(uint8*)(ColorPaletteRAM + 0x01E0 + ((bgc & 7) << 1)));
+			win_color = LoadU16_LE((uint16*)(uint8*)(ColorPaletteRAM + 0x01E0 + ((bgc & 7) << 1)));
 		}
-	//	else data16 = 0;
+	//	else win_color = 0;
 
-		if (negative) data16 = ~data16;
+		if (negative) win_color = ~win_color;
 		
 		//Draw background!
 		for (int x = winx; x < min(winx + winw, SCREEN_WIDTH); x++)	
-			cfb_scanline[x] = data16;
+			cfb_scanline[x] = win_color;
 
 		//Swap Front/Back scroll planes?
 		if (planeSwap)

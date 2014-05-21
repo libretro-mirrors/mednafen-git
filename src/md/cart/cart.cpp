@@ -32,11 +32,12 @@
 #include "map_yase.h"
 
 #include "../header.h"
-#include "../../md5.h"
-#include "../../general.h"
+#include <mednafen/md5.h>
+#include <mednafen/general.h>
 #include <ctype.h>
 
 static MD_Cart_Type *cart_hardware = NULL;
+static uint8 *cart_rom = NULL;
 static uint32 Cart_ROM_Size;
 
 void MDCart_Write8(uint32 A, uint8 V)
@@ -323,7 +324,7 @@ static BoardHandler_t BoardHandlers[] =
  { NULL, NULL, 0, NULL },
 };
 
-bool MDCart_TestMagic(const char *name, MDFNFILE *fp)
+bool MDCart_TestMagic(MDFNFILE *fp)
 {
  if(fp->size < 512)
   return(FALSE);
@@ -343,133 +344,153 @@ bool MDCart_TestMagic(const char *name, MDFNFILE *fp)
  return(FALSE);
 }
 
-int MDCart_Load(md_game_info *ginfo, const char *name, MDFNFILE *fp)
+static void Cleanup(void)
 {
- const char *mapper = NULL;
- md5_context md5;
-
- MD_ReadSegaHeader(fp->data + 0x100, ginfo);
- Cart_ROM_Size = fp->size;
-
- cart_rom = (uint8 *)MDFN_calloc(1, Cart_ROM_Size, _("Cart ROM"));
- memcpy(cart_rom, fp->data, fp->size);
-
- ginfo->rom_size = Cart_ROM_Size = fp->size;
-
- md5.starts();
- md5.update(fp->data, fp->size);
- md5.finish(ginfo->md5);
-
- md5.starts();
- md5.update(fp->data + 0x100, 0x100);
- md5.finish(ginfo->info_header_md5);
-
- ginfo->checksum_real = 0;
- for(uint32 i = 0x200; i < fp->size; i += 2)
+ if(cart_hardware)
  {
-  ginfo->checksum_real += cart_rom[i + 0] << 8;
-  ginfo->checksum_real += cart_rom[i + 1] << 0;
+  delete cart_hardware;
+  cart_hardware = NULL;
  }
 
- // Rockman MegaWorld: 5241e840
- // Sonic 3: 5241f820
-
- uint32 sram_type = READ_32_MSB(cart_rom, 0x1B0);
- uint32 sram_start = READ_32_MSB(cart_rom, 0x1B4);
- uint32 sram_end = READ_32_MSB(cart_rom, 0x1B8);
-
+ if(cart_rom)
  {
-  uint64 hmd5_partial = 0;
-  uint64 md5_partial = 0;
-
-  for(int i = 0; i < 8; i++)
-  {
-   hmd5_partial |= (uint64)ginfo->info_header_md5[15 - i] << (8 * i);
-   md5_partial |= (uint64)ginfo->md5[15 - i] << (8 * i);
-  }
-  printf("Real: 0x%016llxULL    Header: 0x%016llxULL\n", (unsigned long long)md5_partial, (unsigned long long)hmd5_partial);
-
-  for(unsigned int i = 0; i < sizeof(GamesDB) / sizeof(game_db_t); i++)
-  {
-   bool found = true;
-
-   if(GamesDB[i].header_md5 && GamesDB[i].header_md5 != hmd5_partial)
-    found = false;
-
-   if(GamesDB[i].md5 && GamesDB[i].md5 != md5_partial)
-    found = false;
-
-   if(GamesDB[i].id && strcmp(GamesDB[i].id, ginfo->product_code))
-    found = false;
-
-   if(found)
-   {
-    if(GamesDB[i].mapper)
-     mapper = GamesDB[i].mapper;
-
-    if(GamesDB[i].sram_type != ~0U)
-     sram_type = GamesDB[i].sram_type;
-    if(GamesDB[i].sram_start > 0)
-     sram_start = GamesDB[i].sram_start;
-    if(GamesDB[i].sram_end > 0)
-     sram_end = GamesDB[i].sram_end;
-
-    if(GamesDB[i].region_support > 0)
-     ginfo->region_support = GamesDB[i].region_support;
-
-    break;
-   }
-  }
+  MDFN_free(cart_rom);
+  cart_rom = NULL;
  }
-
- printf("%08x, %08x, %08x\n", sram_type, sram_start, sram_end);
- 
- if(sram_type == 0x5241f820 && sram_start == 0x20202020)
-  sram_type = 0x20202020;
-
- ginfo->sram_type = sram_type;
- ginfo->sram_start = sram_start;
- ginfo->sram_end = sram_end;
-
- if(!mapper)
- {
-  if(sram_type == 0x5241f820)
-   mapper = "SRAM";
-  else if(sram_type == 0x5241e840)
-   mapper = "Sega_24C01";
-  else
-   mapper = "ROM";
- }
-
- {
-  const BoardHandler_t *bh = BoardHandlers;
-  bool BoardFound = FALSE;
-
-  printf("Mapper: %s\n", mapper);
-  while(bh->boardname)
-  {
-   if(!strcasecmp(bh->boardname, mapper))
-   {
-    cart_hardware = bh->MapperMake(ginfo, cart_rom, Cart_ROM_Size, bh->iparam, bh->sparam);
-    BoardFound = TRUE;
-    break;
-   }
-   bh++;
-  }
-  if(!BoardFound)
-  {
-   MDFN_printf(_("Handler for mapper/board \"%s\" not found!\n"), mapper);
-   return(0);
-  }
- }
-
- //MD_Cart_Type* (*MapperMake)(const md_game_info *ginfo, const uint8 *ROM, const uint32 ROM_size) = NULL;
- //cart_hardware = MapperMake(ginfo, cart_rom, Cart_ROM_Size);
-
- return(1);
 }
 
-bool MDCart_LoadNV(void)
+void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp)
+{
+ try
+ {
+  const char *mapper = NULL;
+  md5_context md5;
+
+  MD_ReadSegaHeader(fp->data + 0x100, ginfo);
+  Cart_ROM_Size = fp->size;
+
+  cart_rom = (uint8 *)MDFN_calloc_T(1, Cart_ROM_Size, _("Cart ROM"));
+  memcpy(cart_rom, fp->data, fp->size);
+
+  ginfo->rom_size = Cart_ROM_Size = fp->size;
+
+  md5.starts();
+  md5.update(fp->data, fp->size);
+  md5.finish(ginfo->md5);
+
+  md5.starts();
+  md5.update(fp->data + 0x100, 0x100);
+  md5.finish(ginfo->info_header_md5);
+
+  ginfo->checksum_real = 0;
+  for(uint32 i = 0x200; i < fp->size; i += 2)
+  {
+   ginfo->checksum_real += cart_rom[i + 0] << 8;
+   ginfo->checksum_real += cart_rom[i + 1] << 0;
+  }
+
+  // Rockman MegaWorld: 5241e840
+  // Sonic 3: 5241f820
+
+  uint32 sram_type = READ_32_MSB(cart_rom, 0x1B0);
+  uint32 sram_start = READ_32_MSB(cart_rom, 0x1B4);
+  uint32 sram_end = READ_32_MSB(cart_rom, 0x1B8);
+
+  {
+   uint64 hmd5_partial = 0;
+   uint64 md5_partial = 0;
+
+   for(int i = 0; i < 8; i++)
+   {
+    hmd5_partial |= (uint64)ginfo->info_header_md5[15 - i] << (8 * i);
+    md5_partial |= (uint64)ginfo->md5[15 - i] << (8 * i);
+   }
+   printf("Real: 0x%016llxULL    Header: 0x%016llxULL\n", (unsigned long long)md5_partial, (unsigned long long)hmd5_partial);
+
+   for(unsigned int i = 0; i < sizeof(GamesDB) / sizeof(game_db_t); i++)
+   {
+    bool found = true;
+
+    if(GamesDB[i].header_md5 && GamesDB[i].header_md5 != hmd5_partial)
+     found = false;
+
+    if(GamesDB[i].md5 && GamesDB[i].md5 != md5_partial)
+     found = false;
+
+    if(GamesDB[i].id && strcmp(GamesDB[i].id, ginfo->product_code))
+     found = false;
+
+    if(found)
+    {
+     if(GamesDB[i].mapper)
+      mapper = GamesDB[i].mapper;
+
+     if(GamesDB[i].sram_type != ~0U)
+      sram_type = GamesDB[i].sram_type;
+     if(GamesDB[i].sram_start > 0)
+      sram_start = GamesDB[i].sram_start;
+     if(GamesDB[i].sram_end > 0)
+      sram_end = GamesDB[i].sram_end;
+
+     if(GamesDB[i].region_support > 0)
+      ginfo->region_support = GamesDB[i].region_support;
+
+     break;
+    }
+   }
+  }
+
+  printf("%08x, %08x, %08x\n", sram_type, sram_start, sram_end);
+ 
+  if(sram_type == 0x5241f820 && sram_start == 0x20202020)
+   sram_type = 0x20202020;
+
+  ginfo->sram_type = sram_type;
+  ginfo->sram_start = sram_start;
+  ginfo->sram_end = sram_end;
+
+  if(!mapper)
+  {
+   if(sram_type == 0x5241f820)
+    mapper = "SRAM";
+   else if(sram_type == 0x5241e840)
+    mapper = "Sega_24C01";
+   else
+    mapper = "ROM";
+  }
+
+  {
+   const BoardHandler_t *bh = BoardHandlers;
+   bool BoardFound = FALSE;
+
+   printf("Mapper: %s\n", mapper);
+   while(bh->boardname)
+   {
+    if(!strcasecmp(bh->boardname, mapper))
+    {
+     cart_hardware = bh->MapperMake(ginfo, cart_rom, Cart_ROM_Size, bh->iparam, bh->sparam);
+     BoardFound = TRUE;
+     break;
+    }
+    bh++;
+   }
+   if(!BoardFound)
+   {
+    throw MDFN_Error(0, _("Handler for mapper/board \"%s\" not found!\n"), mapper);
+   }
+  }
+
+  //MD_Cart_Type* (*MapperMake)(const md_game_info *ginfo, const uint8 *ROM, const uint32 ROM_size) = NULL;
+  //cart_hardware = MapperMake(ginfo, cart_rom, Cart_ROM_Size);
+ }
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
+}
+
+void MDCart_LoadNV(void)
 {
  // Load any saved RAM/EEPROM now!
  if(cart_hardware->GetNVMemorySize())
@@ -488,10 +509,9 @@ bool MDCart_LoadNV(void)
    gzclose(sp);
   }
  }
- return(TRUE);
 }
 
-bool MDCart_Close(void)
+void MDCart_SaveNV(void)
 {
  if(cart_hardware)
  {
@@ -503,12 +523,12 @@ bool MDCart_Close(void)
 
    MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 6, buf, sizeof(buf));
   }
-
-  delete cart_hardware;
-
-  cart_hardware = NULL;
  }
- return(TRUE);
+}
+
+void MDCart_Kill(void)
+{
+ Cleanup();
 }
 
 int MDCart_StateAction(StateMem *sm, int load, int data_only)

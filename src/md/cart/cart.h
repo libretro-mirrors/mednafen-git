@@ -10,10 +10,11 @@ uint16 MDCart_Read16(uint32 address);
 
 void MDCart_Reset(void);
 
-int MDCart_Load(md_game_info *ginfo, const char *name, MDFNFILE *fp);
-bool MDCart_TestMagic(const char *name, MDFNFILE *fp);
-bool MDCart_LoadNV(void);
-bool MDCart_Close(void);
+void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp);
+bool MDCart_TestMagic(MDFNFILE *fp);
+void MDCart_LoadNV(void);
+void MDCart_SaveNV(void);
+void MDCart_Kill(void);
 
 int MDCart_StateAction(StateMem *sm, int load, int data_only);
 

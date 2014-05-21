@@ -222,8 +222,8 @@
      }
      #endif
 
-     LW[scanline].x = rect_x;
-     LW[scanline].w = rect_w;
+     pixel_offset = (0 - rect_x) & 2047;
+     LW[scanline] = rect_w;
 
      if(SubTValid && prev_sop)
      {

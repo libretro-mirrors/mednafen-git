@@ -657,13 +657,11 @@ bool VBDBG_Init(void)
      trio_snprintf(tmpname, 128, "vsuwd%d", x);
      trio_snprintf(tmpinfo, 128, "VSU Wave Data %d", x);
 
-     memset(&newt, 0, sizeof(AddressSpaceType));
-
      newt.GetAddressSpaceBytes = GetAddressSpaceBytes;
      newt.PutAddressSpaceBytes = PutAddressSpaceBytes;
 
-     newt.name = strdup(tmpname);
-     newt.long_name = strdup(tmpinfo);
+     newt.name = std::string(tmpname);
+     newt.long_name = std::string(tmpinfo);
      newt.TotalBits = 5;
      newt.NP2Size = 0;
 

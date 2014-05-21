@@ -1,8 +1,12 @@
 #ifndef _SHARED_H_
 #define _SHARED_H_
 
-#include "../mednafen.h"
-#include "../masmem.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/masmem.h>
+
+#include <mednafen/hw_cpu/c68k/c68k.h>
+#include <mednafen/hw_cpu/z80-fuse/z80.h>
+#include <mednafen/state.h>
 
 #include <stdio.h>
 #include <math.h>
@@ -16,9 +20,6 @@ enum
 };
 
 #include "macros.h"
-#include "c68k/c68k.h"
-#include "z80-fuse/z80.h"
-#include "../state.h"
 #include "header.h"
 #include "debug.h"
 #include "genesis.h"

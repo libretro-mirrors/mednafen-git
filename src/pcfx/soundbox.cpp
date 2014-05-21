@@ -18,10 +18,9 @@
 #include "pcfx.h"
 #include "soundbox.h"
 #include "king.h"
-#include "../cdrom/scsicd.h"
-#include "pce_psg/pce_psg.h"
-#include "../clamp.h"
-#include "../sound/OwlResampler.h"
+#include <mednafen/cdrom/scsicd.h>
+#include <mednafen/hw_sound/pce_psg/pce_psg.h>
+#include <mednafen/sound/OwlResampler.h>
 
 #include <trio/trio.h>
 #include <math.h>
@@ -286,14 +285,44 @@ bool SoundBox_SetSoundRate(uint32 rate)
  return(TRUE);
 }
 
-int SoundBox_Init(bool arg_EmulateBuggyCodec, bool arg_ResetAntiClickEnabled)
+static void Cleanup(void)
 {
+ if(pce_psg)
+ {
+  delete pce_psg;
+  pce_psg = NULL;
+ }
+
+ for(unsigned i = 0; i < 2; i++)
+ {
+  if(FXsbuf[i])
+  {
+   delete FXsbuf[i];
+   FXsbuf[i] = NULL;
+  }
+  if(FXCDDABufs[i])
+  {
+   delete FXCDDABufs[i];
+   FXCDDABufs[i] = NULL;
+  }
+ }
+
+ if(FXres)
+ {
+  delete FXres;
+  FXres = NULL;
+ }
+}
+
+void SoundBox_Init(bool arg_EmulateBuggyCodec, bool arg_ResetAntiClickEnabled)
+{
+ try
+ {
     adpcm_lastts = 0;
     SoundEnabled = false;
 
     EmulateBuggyCodec = arg_EmulateBuggyCodec;
     ResetAntiClickEnabled = arg_ResetAntiClickEnabled;
-
 
     for(unsigned i = 0; i < 2; i++)
     {
@@ -323,32 +352,17 @@ int SoundBox_Init(bool arg_EmulateBuggyCodec, bool arg_ResetAntiClickEnabled)
      else
       ADPCMVolTable[vti] = flub;
     }
-
-    return (1);
+ }
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
 }
 
 void SoundBox_Kill(void)
 {
- if(pce_psg)
- {
-  delete pce_psg;
-  pce_psg = NULL;
- }
-
- for(unsigned i = 0; i < 2; i++)
- {
-  if(FXsbuf[i])
-  {
-   delete FXsbuf[i];
-   FXsbuf[i] = NULL;
-  }
-  if(FXCDDABufs[i])
-  {
-   delete FXCDDABufs[i];
-   FXCDDABufs[i] = NULL;
-  }
- }
-
+ Cleanup();
 }
 
 /* Macro to access currently selected PSG channel */

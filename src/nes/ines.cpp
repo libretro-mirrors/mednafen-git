@@ -555,7 +555,7 @@ static void CheckHInfo(void)
 
 
 
-bool iNES_TestMagic(const char *name, MDFNFILE *fp)
+bool iNES_TestMagic(MDFNFILE *fp)
 {
  if(fp->size < 16)
   return(FALSE);
@@ -566,11 +566,11 @@ bool iNES_TestMagic(const char *name, MDFNFILE *fp)
  return(TRUE);
 }
 
-bool iNESLoad(const char *name, MDFNFILE *fp, NESGameType *gt)
+bool iNESLoad(MDFNFILE *fp, NESGameType *gt)
 {
         md5_context md5;
 
-	if(!iNES_TestMagic(name, fp))
+	if(!iNES_TestMagic(fp))
 	 return(FALSE);
 
 	/* File size is too small to be an iNES file */

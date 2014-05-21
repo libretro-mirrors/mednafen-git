@@ -4,10 +4,10 @@
 */
 
 #include "shared.h"
-#include "ym2612/Ym2612_Emu.h"
-#include "sms_apu/Sms_Apu.h"
-#include <blip/Blip_Buffer.h>
-#include <blip/Stereo_Buffer.h>
+#include <mednafen/hw_sound/ym2612/Ym2612_Emu.h>
+#include <mednafen/hw_sound/sms_apu/Sms_Apu.h>
+#include <mednafen/sound/Blip_Buffer.h>
+#include <mednafen/sound/Stereo_Buffer.h>
 
 static Stereo_Buffer zebuf;
 static Sms_Apu apu;

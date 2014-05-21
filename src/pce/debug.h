@@ -3,7 +3,7 @@
 
 #ifdef WANT_DEBUGGER
 
-#include "pce_psg/pce_psg.h"
+#include <mednafen/hw_sound/pce_psg/pce_psg.h>
 
 namespace MDFN_IEN_PCE
 {
@@ -38,7 +38,8 @@ extern bool PCE_UsageMapOn;
 
 extern DebuggerInfoStruct PCEDBGInfo;
 
-bool PCEDBG_Init(bool sgx, PCE_PSG *psg);
+void PCEDBG_Init(bool sgx, PCE_PSG *psg);
+void PCEDBG_Kill(void);
 
 };
 

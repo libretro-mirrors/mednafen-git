@@ -95,7 +95,7 @@ libmpcdec_a_LIBADD =
 am_libmpcdec_a_OBJECTS = huffman.$(OBJEXT) mpc_decoder.$(OBJEXT) \
 	mpc_reader.$(OBJEXT) requant.$(OBJEXT) streaminfo.$(OBJEXT) \
 	synth_filter.$(OBJEXT) mpc_bits_reader.$(OBJEXT) \
-	mpc_demux.$(OBJEXT) crc32.$(OBJEXT) huffman-bcl.$(OBJEXT)
+	mpc_demux.$(OBJEXT) crc32.$(OBJEXT)
 libmpcdec_a_OBJECTS = $(am_libmpcdec_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/include
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -163,7 +163,7 @@ CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
-DEFS = @DEFS@ @CFLAG_VISIBILITY@
+DEFS = @DEFS@ @CFLAG_VISIBILITY@ -DMPC_FIXED_POINT=1
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
@@ -337,9 +337,8 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 noinst_LIBRARIES = libmpcdec.a
 libmpcdec_a_SOURCES = huffman.c mpc_decoder.c mpc_reader.c \
-        requant.c       streaminfo.c synth_filter.c mpc_bits_reader.c mpc_demux.c \
-        mpc_bits_reader.h huffman.h decoder.h internal.h requant.h mpcdec_math.h \
-	crc32.c huffman-bcl.c
+        requant.c streaminfo.c synth_filter.c mpc_bits_reader.c mpc_demux.c \
+	crc32.c
 
 all: all-am
 
@@ -390,7 +389,6 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/crc32.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/huffman-bcl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/huffman.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mpc_bits_reader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mpc_decoder.Po@am__quote@

@@ -62,7 +62,7 @@ JoystickManager *joy_manager = NULL;
 bool MDFNDHaveFocus;
 static bool RemoteOn = FALSE;
 bool pending_save_state, pending_snapshot, pending_ssnapshot, pending_save_movie;
-static Uint32 volatile MainThreadID = 0;
+static uint32 volatile MainThreadID = 0;
 static bool ffnosound;
 
 static const char *CSD_xres = gettext_noop("Full-screen horizontal resolution.");
@@ -78,7 +78,7 @@ static const char *CSD_yscalefs = gettext_noop("Scaling factor for the Y axis in
 static const char *CSDE_xyscalefs = gettext_noop("For this settings to have any effect, the \"<system>.stretch\" setting must be set to \"0\".");
 
 static const char *CSD_scanlines = gettext_noop("Enable scanlines with specified opacity.");
-static const char *CSDE_scanlines = gettext_noop("Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.");
+static const char *CSDE_scanlines = gettext_noop("Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field's lines(only if the video.deinterlacer setting is set to \"weave\", the default).");
 
 static const char *CSD_stretch = gettext_noop("Stretch to fill screen.");
 static const char *CSD_videoip = gettext_noop("Enable (bi)linear interpolation.");
@@ -106,15 +106,20 @@ static MDFNSetting_EnumList VDriver_List[] =
 
 static MDFNSetting_EnumList SDriver_List[] =
 {
- { "default", -1, "Default", gettext_noop("Default sound driver.") },
+ { "default", -1, "Default", gettext_noop("Selects the default sound driver.") },
 
- { "alsa", -1, "ALSA", gettext_noop("A recommended driver, and the default for Linux(if available).") },
- { "oss", -1, "Open Sound System", gettext_noop("A recommended driver, and the default for non-Linux UN*X/POSIX/BSD systems, or anywhere ALSA is unavailable. If the ALSA driver gives you problems, you can try using this one instead.\n\nIf you are using OSSv4 or newer, you should edit \"/usr/lib/oss/conf/osscore.conf\", uncomment the max_intrate= line, and change the value from 100(default) to 1000(or higher if you know what you're doing), and restart OSS. Otherwise, performance will be poor, and the sound buffer size in Mednafen will be orders of magnitude larger than specified.\n\nIf the sound buffer size is still excessively larger than what is specified via the \"sound.buffer_time\" setting, you can try setting \"sound.period_time\" to 2666, and as a last resort, 5333, to work around a design flaw/limitation/choice in the OSS API and OSS implementation.") },
- { "dsound", -1, "DirectSound", gettext_noop("A recommended driver, and the default for Microsoft Windows.") },
- { "wasapi", -1, "WASAPI", gettext_noop("Experimental exclusive-mode WASAPI driver, usable on Windows Vista and newer.  Use it for lower-latency sound(though you'll of course need to lower the sound.buffer_time setting to take full advantage of it).  May not work properly on all sound cards.") },
+ { "alsa", -1, "ALSA", gettext_noop("The default for Linux(if available).") },
+ { "oss", -1, "Open Sound System", gettext_noop("The default for non-Linux UN*X/POSIX/BSD systems, or anywhere ALSA is unavailable. If the ALSA driver gives you problems, you can try using this one instead.\n\nIf you are using OSSv4 or newer, you should edit \"/usr/lib/oss/conf/osscore.conf\", uncomment the max_intrate= line, and change the value from 100(default) to 1000(or higher if you know what you're doing), and restart OSS. Otherwise, performance will be poor, and the sound buffer size in Mednafen will be orders of magnitude larger than specified.\n\nIf the sound buffer size is still excessively larger than what is specified via the \"sound.buffer_time\" setting, you can try setting \"sound.period_time\" to 2666, and as a last resort, 5333, to work around a design flaw/limitation/choice in the OSS API and OSS implementation.") },
+
+ { "dsound", -1, "DirectSound", gettext_noop("The default for Microsoft Windows.") },
+
+ { "wasapish", -1, "WASAPI(Shared Mode)", gettext_noop("Shared-mode WASAPI driver, usable on Windows Vista and newer.") },
+
+ { "wasapi", -1, "WASAPI(Exclusive Mode)", gettext_noop("Experimental exclusive-mode WASAPI driver, usable on Windows Vista and newer.  Use it for lower-latency sound.  May not work properly on all sound cards.") },
 
  { "sdl", -1, "Simple Directmedia Layer", gettext_noop("This driver is not recommended, but it serves as a backup driver if the others aren't available. Its performance is generally sub-par, requiring higher latency or faster CPUs/SMP for glitch-free playback, except where the OS provides a sound callback API itself, such as with Mac OS X and BeOS.") },
- { "jack", -1, "JACK", gettext_noop("Somewhat experimental driver, unusably buggy until Mednafen 0.8.C. The \"sound.buffer_time\" setting controls the size of the local sound buffer, not the server's sound buffer, and the latency reported during startup is for the local sound buffer only. Please note that video card drivers(in the kernel or X), and hardware-accelerated OpenGL, may interfere with jackd's ability to effectively run with realtime response.") },
+
+ { "jack", -1, "JACK", gettext_noop("The latency reported during startup is for the local sound buffer only and does not include server-side latency.  Please note that video card drivers(in the kernel or X), and hardware-accelerated OpenGL, may interfere with jackd's ability to effectively run with realtime response.") },
 
  { NULL, 0 },
 };
@@ -202,14 +207,8 @@ static MDFNSetting DriverSettings[] =
   { "sound.device", MDFNSF_NOFLAGS, gettext_noop("Select sound output device."), gettext_noop("When using ALSA sound output under Linux, the \"sound.device\" setting \"default\" is Mednafen's default, IE \"hw:0\", not ALSA's \"default\". If you want to use ALSA's \"default\", use \"sexyal-literal-default\"."), MDFNST_STRING, "default", NULL, NULL },
   { "sound.volume", MDFNSF_NOFLAGS, gettext_noop("Sound volume level, in percent."), gettext_noop("Setting this volume control higher than the default of \"100\" may severely distort the sound."), MDFNST_UINT, "100", "0", "150" },
   { "sound", MDFNSF_NOFLAGS, gettext_noop("Enable sound output."), NULL, MDFNST_BOOL, "1" },
-  { "sound.period_time", MDFNSF_NOFLAGS, gettext_noop("Desired period size in microseconds."), gettext_noop("Currently only affects OSS, ALSA, WASAPI, and SDL output.  A value of 0 defers to the default in the driver code in SexyAL.\n\nNote: This is not the \"sound buffer size\" setting, that would be \"sound.buffer_time\"."), MDFNST_UINT,  "0", "0", "100000" },
-  { "sound.buffer_time", MDFNSF_NOFLAGS, gettext_noop("Desired total buffer size in milliseconds."), NULL, MDFNST_UINT, 
-   #ifdef WIN32
-   "52"
-   #else
-   "32"
-   #endif
-   ,"1", "1000" },
+  { "sound.period_time", MDFNSF_NOFLAGS, gettext_noop("Desired period size in microseconds(μs)."), gettext_noop("Currently only affects OSS, ALSA, WASAPI(exclusive mode), and SDL output.  A value of 0 defers to the default in the driver code in SexyAL.\n\nNote: This is not the \"sound buffer size\" setting, that would be \"sound.buffer_time\"."), MDFNST_UINT,  "0", "0", "100000" },
+  { "sound.buffer_time", MDFNSF_NOFLAGS, gettext_noop("Desired buffer size in milliseconds(ms)."), gettext_noop("The default value of 0 enables automatic buffer size selection."), MDFNST_UINT, "0", "0", "1000" },
   { "sound.rate", MDFNSF_NOFLAGS, gettext_noop("Specifies the sound playback rate, in sound frames per second(\"Hz\")."), NULL, MDFNST_UINT, "48000", "22050", "192000"},
 
   #ifdef WANT_DEBUGGER
@@ -365,7 +364,7 @@ void MakeVideoSettings(std::vector <MDFNSetting> &settings)
   BuildSystemSetting(&setting, sysname, "yscalefs", CSD_yscalefs, CSDE_xyscalefs, MDFNST_FLOAT, strdup(default_value), "0.01", "256");
   settings.push_back(setting);
 
-  BuildSystemSetting(&setting, sysname, "scanlines", CSD_scanlines, CSDE_scanlines, MDFNST_UINT, "0", "0", "100");
+  BuildSystemSetting(&setting, sysname, "scanlines", CSD_scanlines, CSDE_scanlines, MDFNST_INT, "0", "-100", "100");
   settings.push_back(setting);
 
   BuildSystemSetting(&setting, sysname, "stretch", CSD_stretch, NULL, MDFNST_ENUM, "aspect_mult2", NULL, NULL, NULL, NULL, StretchMode_List);
@@ -383,18 +382,19 @@ void MakeVideoSettings(std::vector <MDFNSetting> &settings)
 
 }
 
-static SDL_Thread *GameThread;
+static MDFN_Thread* GameThread;
 static MDFN_Surface *VTBuffer[2] = { NULL, NULL };
-static MDFN_Rect *VTLineWidths[2] = { NULL, NULL };
+static int32 *VTLineWidths[2] = { NULL, NULL };
 
 static int volatile VTSSnapshot = 0;
 static int volatile VTBackBuffer = 0;
-static SDL_mutex *VTMutex = NULL, *EVMutex = NULL;
-static SDL_mutex *StdoutMutex = NULL;
+static MDFN_Mutex *VTMutex = NULL, *EVMutex = NULL;
+static MDFN_Mutex *StdoutMutex = NULL;
 
 static MDFN_Surface * volatile VTReady;
-static MDFN_Rect * volatile VTLWReady;
+static int32 * volatile VTLWReady;
 static MDFN_Rect * volatile VTDRReady;
+static int volatile VTInterlaceField;
 static MDFN_Rect VTDisplayRects[2];
 static bool sc_blit_timesync;
 
@@ -413,7 +413,7 @@ void MDFND_PrintError(const char *s)
  else
  {
   if(StdoutMutex)
-   SDL_mutexP(StdoutMutex);
+   MDFND_LockMutex(StdoutMutex);
  
   puts(s);
   fflush(stdout);
@@ -425,7 +425,7 @@ void MDFND_PrintError(const char *s)
 #endif
 
   if(StdoutMutex)
-   SDL_mutexV(StdoutMutex);
+   MDFND_UnlockMutex(StdoutMutex);
  }
 }
 
@@ -436,13 +436,13 @@ void MDFND_Message(const char *s)
  else
  {
   if(StdoutMutex)
-   SDL_mutexP(StdoutMutex);
+   MDFND_LockMutex(StdoutMutex);
 
   fputs(s,stdout);
   fflush(stdout);
 
   if(StdoutMutex)
-   SDL_mutexV(StdoutMutex);
+   MDFND_UnlockMutex(StdoutMutex);
  }
 }
 
@@ -740,7 +740,7 @@ static int DoArgs(int argc, char *argv[], char **filename)
 static int volatile NeedVideoChange = 0;
 int GameLoop(void *arg);
 int volatile GameThreadRun = 0;
-bool MDFND_Update(MDFN_Surface *surface, MDFN_Rect *rect, MDFN_Rect *lw, int16 *Buffer, int Count);
+bool MDFND_Update(MDFN_Surface *surface, MDFN_Rect *rect, int32 *lw, int InterlaceField, int16 *Buffer, int Count);
 
 bool sound_active;	// true if sound is enabled and initialized
 
@@ -801,11 +801,11 @@ static int LoadGame(const char *force_module, const char *path)
 
         RefreshThrottleFPS(1);
 
-        SDL_mutexP(VTMutex);
+        MDFND_LockMutex(VTMutex);
         NeedVideoChange = -1;
-        SDL_mutexV(VTMutex);
+        MDFND_UnlockMutex(VTMutex);
 
-        if(SDL_ThreadID() != MainThreadID)
+        if(MDFND_ThreadID() != MainThreadID)
           while(NeedVideoChange)
 	  {
            SDL_Delay(1);
@@ -825,14 +825,7 @@ static int LoadGame(const char *force_module, const char *path)
 
 	ers.SetEmuClock(CurGame->MasterClock >> 32);
 
-        #ifdef WANT_DEBUGGER
-        MemDebugger_Init();
-	if(MDFN_GetSettingB("debugger.autostepmode"))
-	{
-	 Debugger_GT_Toggle();
-	 Debugger_GT_ForceSteppingMode();
-	}
-        #endif
+	Debugger_Init();
 
 	if(qtrecfn)
 	{
@@ -863,7 +856,7 @@ static int LoadGame(const char *force_module, const char *path)
 	// Game thread creation should come lastish.
 	//
 	GameThreadRun = 1;
-	GameThread = SDL_CreateThread(GameLoop, NULL);
+	GameThread = MDFND_CreateThread(GameLoop, NULL);
 
 	return 1;
 }
@@ -875,7 +868,7 @@ int CloseGame(void)
 
 	GameThreadRun = 0;
 
-	SDL_WaitThread(GameThread, NULL);
+	MDFND_WaitThread(GameThread, NULL);
 
         if(qtrecfn)	// Needs to be before MDFNI_Closegame() for now
          MDFNI_StopAVRecord();
@@ -887,6 +880,8 @@ int CloseGame(void)
 	 MDFNI_SaveState(NULL, "mcq", NULL, NULL, NULL);
 
 	MDFND_NetworkClose();
+
+	Debugger_Kill();
 
 	MDFNI_CloseGame();
 
@@ -932,32 +927,7 @@ static int GameLoopPaused = 0;
 
 void DebuggerFudge(void)
 {
-#if 0
-	  bool VBValid = true;
-
-	  if(VTDisplayRects[VTBackBuffer].h == 0 || ((int64)VTDisplayRects[VTBackBuffer].y + VTDisplayRects[VTBackBuffer].h) > VTBuffer[VTBackBuffer]->h)
-	   VBValid = false;
-	  else if(VTLineWidths[VTBackBuffer][0].w != ~0)
-	  {
-	   for(int32 y = VTDisplayRects[VTBackBuffer].y; y < (VTDisplayRects[VTBackBuffer].y + VTDisplayRects[VTBackBuffer].h); y++)
-	   {
-	    if(VTLineWidths[VTBackBuffer][y].w == 0 || ((int64)VTLineWidths[VTBackBuffer][y].x + VTLineWidths[VTBackBuffer][y].w) > VTBuffer[VTBackBuffer]->w)
-	    {
-	     VBValid = false;
-	     break;
-	    }
-	   }
-	  }
-	  else if(VTDisplayRects[VTBackBuffer].w == 0 || ((int64)VTDisplayRects[VTBackBuffer].x + VTDisplayRects[VTBackBuffer].w) > VTBuffer[VTBackBuffer]->w)
-	   VBValid = false;
-
-	  if(VBValid)
-           MDFND_Update((MDFN_Surface *)VTBuffer[VTBackBuffer], (MDFN_Rect*)&VTDisplayRects[VTBackBuffer], (MDFN_Rect*)VTLineWidths[VTBackBuffer], NULL, 0);
-	  else
-#endif
-	  {
-	   MDFND_Update((MDFN_Surface *)VTBuffer[VTBackBuffer ^ 1], (MDFN_Rect*)&VTDisplayRects[VTBackBuffer ^ 1], (MDFN_Rect*)VTLineWidths[VTBackBuffer ^ 1], NULL, 0);
-	  }
+	  MDFND_Update((MDFN_Surface *)VTBuffer[VTBackBuffer ^ 1], (MDFN_Rect*)&VTDisplayRects[VTBackBuffer ^ 1], (int32*)VTLineWidths[VTBackBuffer ^ 1], VTInterlaceField, NULL, 0);
 
 	  if(sound_active)
 	   WriteSoundSilence(10);
@@ -1028,6 +998,10 @@ int GameLoop(void *arg)
 	  }
 	 } while(InFrameAdvance && !NeedFrameAdvance);
 
+
+	 if(Sound_NeedReInit())
+	  GT_ReinitSound();
+
 	 if(MDFNDnetplay && !(NoWaiting & 0x2))	// TODO: Hacky, clean up.
 	  ers.SetETtoRT();
 
@@ -1044,44 +1018,40 @@ int GameLoop(void *arg)
          if(NoWaiting)
 	  fskip = 1;
 
-	 VTLineWidths[VTBackBuffer][0].w = ~0;
+	 VTLineWidths[VTBackBuffer][0] = ~0;
 
 	 int ThisBackBuffer = VTBackBuffer;
 
-	 {
-	  EmulateSpecStruct espec;
- 	  memset(&espec, 0, sizeof(EmulateSpecStruct));
+	 //
+	 //
+	 //
+	 EmulateSpecStruct espec;
 
-          espec.surface = (MDFN_Surface *)VTBuffer[VTBackBuffer];
-          espec.LineWidths = (MDFN_Rect *)VTLineWidths[VTBackBuffer];
-	  espec.skip = fskip;
-	  espec.soundmultiplier = CurGameSpeed;
-	  espec.NeedRewind = DNeedRewind;
+ 	 memset(&espec, 0, sizeof(EmulateSpecStruct));
 
- 	  espec.SoundRate = GetSoundRate();
-	  espec.SoundBuf = GetEmuModSoundBuffer(&espec.SoundBufMaxSize);
- 	  espec.SoundVolume = (double)MDFN_GetSettingUI("sound.volume") / 100;
+         espec.surface = (MDFN_Surface *)VTBuffer[VTBackBuffer];
+         espec.LineWidths = (int32 *)VTLineWidths[VTBackBuffer];
+	 espec.skip = fskip;
+	 espec.soundmultiplier = CurGameSpeed;
+	 espec.NeedRewind = DNeedRewind;
 
-	  int64 before_time = Time64();
-	  int64 after_time;
+ 	 espec.SoundRate = GetSoundRate();
+	 espec.SoundBuf = GetEmuModSoundBuffer(&espec.SoundBufMaxSize);
+ 	 espec.SoundVolume = (double)MDFN_GetSettingUI("sound.volume") / 100;
 
-	  static double average_time = 0;
+         MDFNI_Emulate(&espec);
 
-          MDFNI_Emulate(&espec);
+	 ers.AddEmuTime((espec.MasterCycles - espec.MasterCyclesALMS) / CurGameSpeed);
 
-	  after_time = Time64();
 
-          average_time += ((after_time - before_time) - average_time) * 0.10;
+	 VTDisplayRects[VTBackBuffer] = espec.DisplayRect;
 
-	  ers.AddEmuTime((espec.MasterCycles - espec.MasterCyclesALMS) / CurGameSpeed);
+	 sound = espec.SoundBuf + (espec.SoundBufSizeALMS * CurGame->soundchan);
+	 ssize = espec.SoundBufSize - espec.SoundBufSizeALMS;
+	 //
+	 //
+	 //
 
-	  //printf("%lld %f\n", (long long)(after_time - before_time), average_time);
-
-	  VTDisplayRects[VTBackBuffer] = espec.DisplayRect;
-
-	  sound = espec.SoundBuf + (espec.SoundBufSizeALMS * CurGame->soundchan);
-	  ssize = espec.SoundBufSize - espec.SoundBufSizeALMS;
-	 }
 	 FPS_IncVirtual();
 	 if(!fskip)
 	  FPS_IncDrawn();
@@ -1102,11 +1072,11 @@ int GameLoop(void *arg)
 	   //	Will fail spectacularly if there is no previous successful frame.  BOOOOOOM.  (But there always should be, especially since we initialize some
   	   //   of the video buffer and rect structures during startup)
 	   //
-           MDFND_Update((MDFN_Surface *)VTBuffer[VTBackBuffer ^ 1], (MDFN_Rect*)&VTDisplayRects[VTBackBuffer ^ 1], (MDFN_Rect*)VTLineWidths[VTBackBuffer ^ 1], sound, ssize);
+           MDFND_Update((MDFN_Surface *)VTBuffer[VTBackBuffer ^ 1], (MDFN_Rect*)&VTDisplayRects[VTBackBuffer ^ 1], (int32*)VTLineWidths[VTBackBuffer ^ 1], VTInterlaceField, sound, ssize);
 	  }
 	  else
 	  {
-           if(MDFND_Update(fskip ? NULL : (MDFN_Surface *)VTBuffer[VTBackBuffer], (MDFN_Rect*)&VTDisplayRects[VTBackBuffer], (MDFN_Rect*)VTLineWidths[VTBackBuffer], sound, ssize))
+           if(MDFND_Update(fskip ? NULL : (MDFN_Surface *)VTBuffer[VTBackBuffer], (MDFN_Rect*)&VTDisplayRects[VTBackBuffer], (int32*)VTLineWidths[VTBackBuffer], espec.InterlaceOn ? espec.InterlaceField : -1, sound, ssize))
 	    VTBackBuffer ^= 1;
 	  }
 
@@ -1191,7 +1161,7 @@ static void GameThread_HandleEvents(void)
  SDL_Event gtevents_temp[gtevents_size];
  unsigned int numevents = 0;
 
- SDL_mutexP(EVMutex);
+ MDFND_LockMutex(EVMutex);
  while(gte_read != gte_write)
  {
   memcpy(&gtevents_temp[numevents], (void *)&gtevents[gte_read], sizeof(SDL_Event));
@@ -1199,7 +1169,7 @@ static void GameThread_HandleEvents(void)
   numevents++;
   gte_read = (gte_read + 1) & (gtevents_size - 1);
  }
- SDL_mutexV(EVMutex);
+ MDFND_UnlockMutex(EVMutex);
 
  for(unsigned int i = 0; i < numevents; i++)
  {
@@ -1225,7 +1195,6 @@ static void GameThread_HandleEvents(void)
 
   NetplayEventHook_GT(event);
  }
- SDL_mutexV(EVMutex);
 }
 
 void PauseGameLoop(bool p)
@@ -1252,10 +1221,10 @@ void SendCEvent_to_GT(unsigned int code, void *data1, void *data2)
  evt.user.data1 = data1;
  evt.user.data2 = data2;
 
- SDL_mutexP(EVMutex);
+ MDFND_LockMutex(EVMutex);
  memcpy((void *)&gtevents[gte_write], &evt, sizeof(SDL_Event));
  gte_write = (gte_write + 1) & (gtevents_size - 1);
- SDL_mutexV(EVMutex);
+ MDFND_UnlockMutex(EVMutex);
 }
 
 void SDL_MDFN_ShowCursor(int toggle)
@@ -1273,11 +1242,11 @@ void SDL_MDFN_ShowCursor(int toggle)
 
 void GT_ToggleFS(void)
 {
- SDL_mutexP(VTMutex);
+ MDFND_LockMutex(VTMutex);
  NeedVideoChange = 1;
- SDL_mutexV(VTMutex);
+ MDFND_UnlockMutex(VTMutex);
 
- if(SDL_ThreadID() != MainThreadID)
+ if(MDFND_ThreadID() != MainThreadID)
   while(NeedVideoChange)
   {
    SDL_Delay(1);
@@ -1286,11 +1255,11 @@ void GT_ToggleFS(void)
 
 bool GT_ReinitVideo(void)
 {
- SDL_mutexP(VTMutex);
+ MDFND_LockMutex(VTMutex);
  NeedVideoChange = -1;
- SDL_mutexV(VTMutex);
+ MDFND_UnlockMutex(VTMutex);
 
- if(SDL_ThreadID() != MainThreadID)
+ if(MDFND_ThreadID() != MainThreadID)
  {
   while(NeedVideoChange)
   {
@@ -1329,7 +1298,7 @@ void PumpWrap(void)
 
  NITI = Netplay_IsTextInput();
 
- if(Debugger_IsActive() || NITI || IsConsoleCheatConfigActive() || Help_IsActive())
+ if(Debugger_IsActive() || NITI || CheatIF_Active() || Help_IsActive())
  {
   if(!krepeat)
    SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
@@ -1349,8 +1318,8 @@ void PumpWrap(void)
 
  while(SDL_PollEvent(&event))
  {
-  if(IsConsoleCheatConfigActive())
-   CheatEventHook(&event);
+  if(CheatIF_Active())
+   CheatIF_MT_EventHook(&event);
 
   NetplayEventHook(&event);
 
@@ -1416,13 +1385,13 @@ void PumpWrap(void)
   }
  }
 
- SDL_mutexP(EVMutex);
+ MDFND_LockMutex(EVMutex);
  for(int i = 0; i < numevents; i++)
  {
   memcpy((void *)&gtevents[gte_write], &gtevents_temp[i], sizeof(SDL_Event));
   gte_write = (gte_write + 1) & (gtevents_size - 1);
  }
- SDL_mutexV(EVMutex);
+ MDFND_UnlockMutex(EVMutex);
 
  if(!CurGame)
   GameThread_HandleEvents();
@@ -1534,9 +1503,103 @@ char *GetFileDialog(void)
 }
 #endif
 
+#if 0
+static MDFN_Mutex* milk_mutex = NULL;
+static MDFN_Cond* milk_cond = NULL;
+static volatile unsigned cow_milk = 0;
+static volatile unsigned farmer_milk = 0;
+static volatile unsigned calf_milk = 0;
+static volatile unsigned am3000_milk = 0;
+
+static int CowEntry(void*)
+{
+ uint32 start_time = SDL_GetTicks();
+
+ for(unsigned i = 0; i < 1000 * 1000; i++)
+ {
+  MDFND_LockMutex(milk_mutex);
+  cow_milk++;
+
+  MDFND_SignalCond(milk_cond);
+  MDFND_UnlockMutex(milk_mutex);
+
+  while(cow_milk != 0);
+ }
+
+ while(cow_milk != 0);
+
+ return(SDL_GetTicks() - start_time);
+}
+
+static int FarmerEntry(void*)
+{
+ MDFND_LockMutex(milk_mutex);
+ while(1)
+ {
+  MDFND_WaitCond(milk_cond, milk_mutex);
+
+  farmer_milk += cow_milk;
+  cow_milk = 0;
+ }
+ MDFND_UnlockMutex(milk_mutex);
+ return(0);
+}
+
+static int CalfEntry(void*)
+{
+ MDFND_LockMutex(milk_mutex);
+ while(1)
+ {
+  MDFND_WaitCond(milk_cond, milk_mutex);
+
+  calf_milk += cow_milk;
+  cow_milk = 0;
+ }
+ MDFND_UnlockMutex(milk_mutex);
+ return(0);
+}
+
+static int AutoMilker3000Entry(void*)
+{
+ MDFND_LockMutex(milk_mutex);
+ while(1)
+ {
+  MDFND_WaitCond(milk_cond, milk_mutex);
+
+  am3000_milk += cow_milk;
+  cow_milk = 0;
+ }
+ MDFND_UnlockMutex(milk_mutex);
+ return(0);
+}
+
+static void ThreadTest(void)
+{
+ MDFN_Thread *cow_thread, *farmer_thread, *calf_thread, *am3000_thread;
+ int rec;
+
+ milk_mutex = MDFND_CreateMutex();
+ milk_cond = MDFND_CreateCond();
+
+ //farmer_thread = MDFND_CreateThread(FarmerEntry, NULL);
+ //calf_thread = MDFND_CreateThread(CalfEntry, NULL);
+ //am3000_thread = MDFND_CreateThread(AutoMilker3000Entry, NULL);
+
+ cow_thread = MDFND_CreateThread(CowEntry, NULL);
+ MDFND_WaitThread(cow_thread, &rec);
+
+ printf("%8u %8u %8u --- %8u, time=%u\n", farmer_milk, calf_milk, am3000_milk, farmer_milk + calf_milk + am3000_milk, rec);
+
+ exit(0);
+}
+
+#endif
+
 
 int main(int argc, char *argv[])
 {
+	//ThreadTest();
+
 #if 0
 	// Special helper mode. (TODO)
 	if(argc == 3 && !strcmp(argv[1], "-joy_config_helper"))
@@ -1626,14 +1689,14 @@ int main(int argc, char *argv[])
 	}
 	SDL_JoystickEventState(SDL_IGNORE);
 
-	if(!(StdoutMutex = SDL_CreateMutex()))
+	if(!(StdoutMutex = MDFND_CreateMutex()))
 	{
 	 MDFN_PrintError(_("Could not create mutex: %s\n"), SDL_GetError());
 	 MDFNI_Kill();
 	 return(-1);
 	}
 
-        MainThreadID = SDL_ThreadID();
+        MainThreadID = MDFND_ThreadID();
 
         // Look for external emulation modules here.
 
@@ -1687,17 +1750,23 @@ int main(int argc, char *argv[])
 
 	//InitVideo(NULL);
 
-	VTMutex = SDL_CreateMutex();
-        EVMutex = SDL_CreateMutex();
+	VTMutex = MDFND_CreateMutex();
+        EVMutex = MDFND_CreateMutex();
+
+	joy_manager = new JoystickManager();
+	joy_manager->SetAnalogThreshold(MDFN_GetSettingF("analogthreshold") / 100);
+
+#if 0
+for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
+{
+ needie = argv[zgi];
+#endif
 
 	VTReady = NULL;
 	VTDRReady = NULL;
 	VTLWReady = NULL;
 
 	NeedVideoChange = -1;
-
-	joy_manager = new JoystickManager();
-	joy_manager->SetAnalogThreshold(MDFN_GetSettingF("analogthreshold") / 100);
 
 	NeedExitNow = 0;
 
@@ -1720,8 +1789,8 @@ int main(int argc, char *argv[])
 
 	 VTBuffer[0] = new MDFN_Surface(NULL, CurGame->fb_width, CurGame->fb_height, pitch32, nf);
          VTBuffer[1] = new MDFN_Surface(NULL, CurGame->fb_width, CurGame->fb_height, pitch32, nf);
-         VTLineWidths[0] = (MDFN_Rect *)calloc(CurGame->fb_height, sizeof(MDFN_Rect));
-         VTLineWidths[1] = (MDFN_Rect *)calloc(CurGame->fb_height, sizeof(MDFN_Rect));
+         VTLineWidths[0] = (int32 *)calloc(CurGame->fb_height, sizeof(int32));
+         VTLineWidths[1] = (int32 *)calloc(CurGame->fb_height, sizeof(int32));
 
          for(int i = 0; i < 2; i++)
 	 {
@@ -1732,7 +1801,7 @@ int main(int argc, char *argv[])
 	  // reliance will still work even immediately after startup.
 	  VTDisplayRects[i].w = std::min<int32>(16, VTBuffer[i]->w);
 	  VTDisplayRects[i].h = std::min<int32>(16, VTBuffer[i]->h);
-	  VTLineWidths[i][0].w = ~0;
+	  VTLineWidths[i][0] = ~0;
 	 }
 
          NeedVideoChange = -1;
@@ -1748,7 +1817,7 @@ int main(int argc, char *argv[])
 	{
 	 bool DidVideoChange = false;
 
-	 SDL_mutexP(VTMutex);	/* Lock mutex */
+	 MDFND_LockMutex(VTMutex);	/* Lock mutex */
 
          if(NeedVideoChange)
          {
@@ -1760,6 +1829,7 @@ int main(int argc, char *argv[])
            {
 	    ret = -1;
             NeedExitNow = 1;
+	    MDFND_UnlockMutex(VTMutex);   /* Unlock mutex */
             break;
            }
           }
@@ -1783,7 +1853,7 @@ int main(int argc, char *argv[])
 	  //static int last_time;
 	  //int curtime;
 
-          BlitScreen(VTReady, VTDRReady, VTLWReady, VTSSnapshot);
+          BlitScreen(VTReady, VTDRReady, VTLWReady, VTInterlaceField, VTSSnapshot);
 
           //curtime = SDL_GetTicks();
           //printf("%d\n", curtime - last_time);
@@ -1796,14 +1866,11 @@ int main(int argc, char *argv[])
 	 if(DidVideoChange)	// Do it after PumpWrap() in case there are stale SDL_ActiveEvent in the SDL event queue.
 	  SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)(SDL_GetAppState() & SDL_APPINPUTFOCUS), NULL);
 
-         SDL_mutexV(VTMutex);   /* Unlock mutex */
+         MDFND_UnlockMutex(VTMutex);   /* Unlock mutex */
          SDL_Delay(1);
 	}
 
 	CloseGame();
-
-	SDL_DestroyMutex(VTMutex);
-        SDL_DestroyMutex(EVMutex);
 
 	for(int x = 0; x < 2; x++)
 	{
@@ -1819,6 +1886,11 @@ int main(int argc, char *argv[])
 	  VTLineWidths[x] = NULL;
 	 }
 	}
+#if 0
+} // end game load test loop
+#endif
+	MDFND_DestroyMutex(VTMutex);
+        MDFND_DestroyMutex(EVMutex);
 
 	#if defined(HAVE_SIGNAL) || defined(HAVE_SIGACTION)
 	SetSignals(SIG_IGN);
@@ -1901,7 +1973,7 @@ void MDFND_MidSync(const EmulateSpecStruct *espec)
  MDFND_UpdateInput(true, false);
 }
 
-static bool PassBlit(MDFN_Surface *surface, MDFN_Rect *rect, MDFN_Rect *lw)
+static bool PassBlit(MDFN_Surface *surface, MDFN_Rect *rect, int32 *lw, int InterlaceField)
 {
  bool ret = false;
 
@@ -1923,6 +1995,7 @@ static bool PassBlit(MDFN_Surface *surface, MDFN_Rect *rect, MDFN_Rect *lw)
    Debugger_GTR_PassBlit();	// Call before the VTReady = surface
 
    VTSSnapshot = pending_ssnapshot;
+   VTInterlaceField = InterlaceField;
    VTLWReady = lw;
    VTDRReady = rect;
    VTReady = surface;
@@ -1941,7 +2014,7 @@ static bool PassBlit(MDFN_Surface *surface, MDFN_Rect *rect, MDFN_Rect *lw)
 //
 // Called from game thread.
 //
-bool MDFND_Update(MDFN_Surface *surface, MDFN_Rect *rect, MDFN_Rect *lw, int16 *Buffer, int Count)
+bool MDFND_Update(MDFN_Surface *surface, MDFN_Rect *rect, int32 *lw, int InterlaceField, int16 *Buffer, int Count)
 {
  bool ret = false;
 
@@ -1951,7 +2024,7 @@ bool MDFND_Update(MDFN_Surface *surface, MDFN_Rect *rect, MDFN_Rect *lw, int16 *
  if(false == sc_blit_timesync)
  {
   //puts("ABBYNORMAL");
-  ret |= PassBlit(surface, rect, lw);
+  ret |= PassBlit(surface, rect, lw, InterlaceField);
  }
 
  UpdateSoundSync(Buffer, Count);
@@ -1979,7 +2052,7 @@ bool MDFND_Update(MDFN_Surface *surface, MDFN_Rect *rect, MDFN_Rect *lw, int16 *
  if(true == sc_blit_timesync)
  {
   //puts("NORMAL");
-  ret |= PassBlit(surface, rect, lw);
+  ret |= PassBlit(surface, rect, lw, InterlaceField);
  }
 
  return(ret);
@@ -2009,69 +2082,3 @@ void MDFND_Sleep(uint32 ms)
 {
  SDL_Delay(ms);
 }
-
-struct MDFN_Thread
-{
- SDL_Thread *sdl_thread;
-};
-
-struct MDFN_Mutex
-{
- SDL_mutex *sdl_mutex;
-};
-
-MDFN_Thread *MDFND_CreateThread(int (*fn)(void *), void *data)
-{
- MDFN_Thread *thread;
-
- if(!(thread = (MDFN_Thread *)calloc(1, sizeof(MDFN_Thread))))
-  return(NULL);
-
- if(!(thread->sdl_thread = SDL_CreateThread(fn, data)))
- {
-  free(thread);
-  return(NULL);
- }
-
- return(thread);
-}
-
-void MDFND_WaitThread(MDFN_Thread *thread, int *status)
-{
- SDL_WaitThread(thread->sdl_thread, status);
- thread->sdl_thread = NULL;	// To make accidental use-after-free() more apparent.
- free(thread);
-}
-
-MDFN_Mutex *MDFND_CreateMutex(void)
-{
- MDFN_Mutex *mutex;
-
- if(!(mutex = (MDFN_Mutex *)calloc(1, sizeof(MDFN_Mutex))))
-  return(NULL);
-
- if(!(mutex->sdl_mutex = SDL_CreateMutex()))
- {
-  free(mutex);
-  return(NULL);
- }
-
- return(mutex);
-}
-
-void MDFND_DestroyMutex(MDFN_Mutex *mutex)
-{
- SDL_DestroyMutex(mutex->sdl_mutex);
- free(mutex);
-}
-
-int MDFND_LockMutex(MDFN_Mutex *mutex)
-{
- return SDL_mutexP(mutex->sdl_mutex);
-}
-
-int MDFND_UnlockMutex(MDFN_Mutex *mutex)
-{
- return SDL_mutexV(mutex->sdl_mutex);
-}
-

@@ -31,7 +31,7 @@
 #include	"fds.h"
 #include	"ines.h"
 #include	"unif.h"
-#include        "../mempatcher.h"
+#include        <mednafen/mempatcher.h>
 #include	"input.h"
 #include	"vsuni.h"
 #include	"debug.h"
@@ -162,7 +162,7 @@ static void CloseGame(void)
  MDFNPPU_Close();
 }
 
-static void InitCommon(const char *name)
+static void InitCommon(const char *fbase)
 {
         NESIsVSUni = FALSE;
         PPU_hook = 0;
@@ -181,13 +181,11 @@ static void InitCommon(const char *name)
 
         if(MDFN_GetSettingB("nes.fnscan"))
         {
-	 const char *fn = GetFNComponent(name);	// TODO: This seems awfully spaghetti-like/inefficient.  Fixme?
-
-         if(strstr(fn, "(U)") || strstr(fn, "(USA)"))
+         if(strstr(fbase, "(U)") || strstr(fbase, "(USA)"))
           MDFNGameInfo->VideoSystem = VIDSYS_NTSC;
-         else if(strstr(fn, "(J)") || strstr(fn, "(Japan)"))
+         else if(strstr(fbase, "(J)") || strstr(fbase, "(Japan)"))
           MDFNGameInfo->VideoSystem = VIDSYS_NTSC;
-         else if(strstr(fn, "(E)") || strstr(fn, "(G)") || strstr(fn, "(Europe)") || strstr(fn, "(Germany)") )
+         else if(strstr(fbase, "(E)") || strstr(fbase, "(G)") || strstr(fbase, "(Europe)") || strstr(fbase, "(Germany)") )
           MDFNGameInfo->VideoSystem = VIDSYS_PAL;
         }
 
@@ -216,28 +214,30 @@ static void InitCommon(const char *name)
         #endif
 }
 
-bool UNIFLoad(const char *name, MDFNFILE *fp, NESGameType *);
-bool iNESLoad(const char *name, MDFNFILE *fp, NESGameType *);
-bool FDSLoad(const char *name, MDFNFILE *fp, NESGameType *);
-bool NSFLoad(const char *name, MDFNFILE *fp, NESGameType *);
+bool UNIFLoad(MDFNFILE *fp, NESGameType *);
+bool iNESLoad(MDFNFILE *fp, NESGameType *);
+bool FDSLoad(MDFNFILE *fp, NESGameType *);
+bool NSFLoad(MDFNFILE *fp, NESGameType *);
 
-bool iNES_TestMagic(const char *name, MDFNFILE *fp);
-bool UNIF_TestMagic(const char *name, MDFNFILE *fp);
-bool FDS_TestMagic(const char *name, MDFNFILE *fp);
-bool NSF_TestMagic(const char *name, MDFNFILE *fp);
+bool iNES_TestMagic(MDFNFILE *fp);
+bool UNIF_TestMagic(MDFNFILE *fp);
+bool FDS_TestMagic(MDFNFILE *fp);
+bool NSF_TestMagic(MDFNFILE *fp);
 
-typedef bool (*LoadFunction_t)(const char *name, MDFNFILE *fp, NESGameType *);
+typedef bool (*LoadFunction_t)(MDFNFILE *fp, NESGameType *);
 
-static LoadFunction_t GetLoadFunctionByMagic(const char *name, MDFNFILE *fp)
+static LoadFunction_t GetLoadFunctionByMagic(MDFNFILE *fp)
 {
- bool (*MagicFunctions[4])(const char *name, MDFNFILE *fp) = { iNES_TestMagic, UNIF_TestMagic, NSF_TestMagic, FDS_TestMagic };
+ bool (*MagicFunctions[4])(MDFNFILE *fp) = { iNES_TestMagic, UNIF_TestMagic, NSF_TestMagic, FDS_TestMagic };
  LoadFunction_t LoadFunctions[4] = { iNESLoad, UNIFLoad, NSFLoad, FDSLoad };
  LoadFunction_t ret = NULL;
 
  for(int x = 0; x < 4; x++)
  {
-  if(MagicFunctions[x](name, fp))
+  fp->rewind();
+  if(MagicFunctions[x](fp))
   {
+   fp->rewind();
    ret = LoadFunctions[x];
    break;
   }
@@ -245,24 +245,24 @@ static LoadFunction_t GetLoadFunctionByMagic(const char *name, MDFNFILE *fp)
  return(ret);
 }
 
-static bool TestMagic(const char *name, MDFNFILE *fp)
+static bool TestMagic(MDFNFILE *fp)
 {
- return(GetLoadFunctionByMagic(name, fp) != NULL);
+ return(GetLoadFunctionByMagic(fp) != NULL);
 }
 
-static int Load(const char *name, MDFNFILE *fp)
+static int Load(MDFNFILE *fp)
 {
 	LoadFunction_t LoadFunction = NULL;
 
-	LoadFunction = GetLoadFunctionByMagic(name, fp);
+	LoadFunction = GetLoadFunctionByMagic(fp);
 
 	// If the file type isn't recognized, return -1!
 	if(!LoadFunction)
 	 return(-1);
 
-	InitCommon(name);
+	InitCommon(fp->fbase);
 
-	if(!LoadFunction(name, fp, GameInterface))
+	if(!LoadFunction(fp, GameInterface))
 	{
 	 free(GameInterface);
 	 GameInterface = NULL;

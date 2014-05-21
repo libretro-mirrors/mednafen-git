@@ -21,13 +21,12 @@
 #include "Sound.h"
 #include "Port.h"
 
-#include <memory.h>
 #include <math.h>
 
-#include <blip/Blip_Buffer.h>
-#include "gb_apu/Gb_Apu.h"
+#include <mednafen/sound/Blip_Buffer.h>
+#include <mednafen/hw_sound/gb_apu/Gb_Apu.h>
 
-#include <blip/Stereo_Buffer.h>
+#include <mednafen/sound/Stereo_Buffer.h>
 
 namespace MDFN_IEN_GBA
 {
@@ -73,8 +72,6 @@ GBADigiSound DSChans[2]; // Digital sound channels, not Nintendo DS :b
 #define soundDSBTimer DSChans[1].Timer
 #define soundDSFifoB DSChans[1].Fifo
 #define soundDSBValue DSChans[1].Value
-
-#include "../state.h"
 
 int MDFNGBASOUND_StateAction(StateMem *sm, int load, int data_only)
 {

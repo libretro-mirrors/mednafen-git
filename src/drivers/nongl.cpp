@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <math.h>
+#include <stdlib.h>
 
 //
 // Source rectangle sanity checking(more strict than dest rectangle sanity checking).	*/					
@@ -191,7 +192,7 @@ static void BlitIScale(const MDFN_Surface *src_surface, const MDFN_Rect &sr, MDF
 }
 
 template<typename T, int alpha_shift, bool scanlines_on, bool rotation_on>
-static void BlitSScale(const MDFN_Surface *src_surface, const MDFN_Rect *src_rect, MDFN_Surface *dest_surface, const MDFN_Rect *dest_rect, const MDFN_Rect *original_src_rect, unsigned scanlines = 0, unsigned rotation = 0)
+static void BlitSScale(const MDFN_Surface *src_surface, const MDFN_Rect *src_rect, MDFN_Surface *dest_surface, const MDFN_Rect *dest_rect, const MDFN_Rect *original_src_rect, int scanlines = 0, unsigned rotation = 0, int InterlaceField = -1)
 {
  SFTBLT_SETUP(T);
 
@@ -290,26 +291,36 @@ static void BlitSScale(const MDFN_Surface *src_surface, const MDFN_Rect *src_rec
 
  if(scanlines_on)
  {
-  sl_mult = 256 - 256 * scanlines / 100;
+  unsigned o_sr_h_ps = 0;
+  int sl_init_offs = 0;
+
+  sl_mult = 256 - 256 * abs(scanlines) / 100;
+
+  if(scanlines < 0 && InterlaceField >= 0)
+  {
+   o_sr_h_ps = 1;
+   sl_init_offs = InterlaceField;
+  }
 
   if(rotation_on)
   {
    if(rotation == MDFN_ROTATE90)
    {
-    sl_inc = ((o_sr_h << fract_bits) + dr_w - 1) / dr_w * 2;
-    sl_init = dest_pixels_fudge_x * sl_inc;
+    sl_inc = (((o_sr_h >> o_sr_h_ps) << fract_bits) + dr_w - 1) / dr_w * 2;
+    sl_init = (sl_init_offs * (dr_w / o_sr_h) + dest_pixels_fudge_x) * sl_inc;
    }
    else
    {
-    sl_inc = -((o_sr_h << fract_bits) + dr_w - 1) / dr_w * 2;
-    sl_init = (iter_w + dest_pixels_fudge_x - 1) * -sl_inc;
+    sl_inc = -(((o_sr_h >> o_sr_h_ps) << fract_bits) + dr_w - 1) / dr_w * 2;
+    sl_init = (sl_init_offs * (dr_w / o_sr_h) + iter_w + dest_pixels_fudge_x - 1) * -sl_inc;
    }
   }
   else
   {
-   sl_inc = ((o_sr_h << fract_bits) + dr_h - 1) / dr_h * 2;
-   sl_init = 0;
+   sl_inc = (((o_sr_h >> o_sr_h_ps) << fract_bits) + dr_h - 1) / dr_h * 2;
+   sl_init = (sl_init_offs * (dr_h / o_sr_h)) * sl_inc;
   }
+
   if(!rotation_on)
    sl = sl_init;
   //printf("%08x, %d\n", sl_init, sl_init >> fract_bits);
@@ -371,7 +382,7 @@ static void BlitSScale(const MDFN_Surface *src_surface, const MDFN_Rect *src_rec
  }
 }
 
-void MDFN_StretchBlitSurface(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, MDFN_Surface *dest_surface, const MDFN_Rect *dest_rect, bool source_alpha, int scanlines, const MDFN_Rect *original_src_rect, int rotated)
+void MDFN_StretchBlitSurface(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, MDFN_Surface *dest_surface, const MDFN_Rect *dest_rect, bool source_alpha, int scanlines, const MDFN_Rect *original_src_rect, int rotated, int InterlaceField)
 {
  if(!CheckSourceRect(src_surface, src_rect))
   return;
@@ -396,7 +407,7 @@ void MDFN_StretchBlitSurface(MDFN_Surface *src_surface, const MDFN_Rect *src_rec
  if(rotated != MDFN_ROTATE0)
  {
   if(scanlines)
-   BlitSScale<uint32, 31, true, true>(src_surface, src_rect, dest_surface, dest_rect, original_src_rect, scanlines, rotated);
+   BlitSScale<uint32, 31, true, true>(src_surface, src_rect, dest_surface, dest_rect, original_src_rect, scanlines, rotated, InterlaceField);
   else
    BlitSScale<uint32, 31, true, true>(src_surface, src_rect, dest_surface, dest_rect, original_src_rect,	 0, rotated);
 
@@ -443,7 +454,7 @@ void MDFN_StretchBlitSurface(MDFN_Surface *src_surface, const MDFN_Rect *src_rec
  {
   if(scanlines)
   {
-   BlitSScale<uint32, 31, true, false>(src_surface, src_rect, dest_surface, dest_rect, original_src_rect, scanlines);
+   BlitSScale<uint32, 31, true, false>(src_surface, src_rect, dest_surface, dest_rect, original_src_rect, scanlines, 0, InterlaceField);
   }
   else switch(source_alpha ? (int)src_surface->format.Ashift : -1)
   {

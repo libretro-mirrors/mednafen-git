@@ -965,7 +965,7 @@ void MDVDP::render_line(int line)
         if(reg[12] & 8)
         {
             merge(&nta_buf[0x20], &ntb_buf[0x20], &bg_buf[0x20], lut[2], (reg[12] & 1) ? 320 : 256);
-            memset(&obj_buf[0x20], 0, (reg[12] & 1) ? 320 : 256);
+            memset(&obj_buf[0], 0, 0x20 + ((reg[12] & 1) ? 320 : 256) + 0x20);	// Need to clear left and right padding areas to prevent uninitialized memory usage.
 
             if(im2_flag)
                 render_obj_im2(line, obj_buf, lut[3]);
@@ -979,8 +979,15 @@ void MDVDP::render_line(int line)
         }
         else
         {
+	  // So sprite rendering won't read from uninitialized memory.
+	  memset(&lb[0x00], 0, 0x20);
+	  memset(&lb[0x20 + ((reg[12] & 1) ? 320 : 256)], 0, 0x20);
+
+
 	  if(UserLE & 0x4)
            merge(&nta_buf[0x20], &ntb_buf[0x20], &lb[0x20], lut[0], (reg[12] & 1) ? 320 : 256);
+	  else
+	   memset(&lb[0x20], 0, (reg[12] & 1) ? 320 : 256);
 
           if(im2_flag)
            render_obj_im2(line, lb, lut[1]);

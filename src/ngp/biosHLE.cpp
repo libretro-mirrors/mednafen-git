@@ -14,8 +14,6 @@
 
 #include "neopop.h"
 #include "bios.h"
-#include "TLCS900h_registers.h"
-#include "TLCS900h_interpret.h"
 #include "mem.h"
 #include "flash.h"
 #include "dma.h"

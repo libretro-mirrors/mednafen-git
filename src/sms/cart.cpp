@@ -19,8 +19,8 @@
 #include "shared.h"
 #include "romdb.h"
 #include "cart.h"
-#include "../general.h"
-#include "../md5.h"
+#include <mednafen/general.h>
+#include <mednafen/md5.h>
 
 namespace MDFN_IEN_SMS
 {

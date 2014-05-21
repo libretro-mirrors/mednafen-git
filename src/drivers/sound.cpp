@@ -38,6 +38,12 @@ static int16 *EmuModBuffer = NULL;
 static int32 EmuModBufferSize = 0;	// In frames.
 
 static double SoundRate = 0;
+static bool NeedReInit = false;
+
+bool Sound_NeedReInit(void)
+{
+ return NeedReInit;
+}
 
 double GetSoundRate(void)
 {
@@ -65,6 +71,10 @@ void WriteSound(int16 *Buffer, int Count)
 
  if(!Output->Write(Output, Buffer, Count))
  {
+  //
+  // TODO; We need to take assert()'s out of the wasapi and wasapish code before we can safely enable this
+  //
+  //NeedReInit = true;
   //printf("Output->Write failure? %d\n", Count);
  }
 }
@@ -202,6 +212,7 @@ static bool RunSexyALTest(SexyAL *interface, SexyAL_buffering *buffering, const 
 
 bool InitSound(MDFNGI *gi)
 {
+ NeedReInit = false;
  SoundRate = 0;
 
  memset(&format,0,sizeof(format));
@@ -220,6 +231,15 @@ bool InitSound(MDFNGI *gi)
  format.rate = gi->soundrate ? gi->soundrate : MDFN_GetSettingUI("sound.rate");
 
  buffering.ms = MDFN_GetSettingUI("sound.buffer_time");
+
+ if(!buffering.ms)
+ {
+  buffering.overhead_kludge = true;
+  buffering.ms = 7 + floor(0.5 + 1.5 * 1000.0 / gi->fps * (256 * 65536));
+ }
+ else
+  buffering.overhead_kludge = false;
+
  buffering.period_us = MDFN_GetSettingUI("sound.period_time");
 
  std::string zedevice = MDFN_GetSettingS("sound.device");

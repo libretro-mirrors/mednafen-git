@@ -94,12 +94,14 @@ libsexyal_a_AR = $(AR) $(ARFLAGS)
 libsexyal_a_LIBADD =
 am__libsexyal_a_SOURCES_DIST = sexyal.cpp convert.cpp \
 	drivers/dummy.cpp drivers/dsound.cpp drivers/wasapi.cpp \
-	drivers/oss.cpp drivers/jack.cpp drivers/sdl.cpp \
-	drivers/alsa.cpp drivers/dos_common.cpp drivers/cmi8738.cpp \
-	drivers/es1370.cpp drivers/es1371.cpp drivers/sb.cpp
+	drivers/wasapish.cpp drivers/oss.cpp drivers/jack.cpp \
+	drivers/sdl.cpp drivers/alsa.cpp drivers/dos_common.cpp \
+	drivers/cmi8738.cpp drivers/es1370.cpp drivers/es1371.cpp \
+	drivers/sb.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_DIRECTSOUND_TRUE@am__objects_1 = drivers/dsound.$(OBJEXT)
-@HAVE_WASAPI_TRUE@am__objects_2 = drivers/wasapi.$(OBJEXT)
+@HAVE_WASAPI_TRUE@am__objects_2 = drivers/wasapi.$(OBJEXT) \
+@HAVE_WASAPI_TRUE@	drivers/wasapish.$(OBJEXT)
 @HAVE_OSSDSP_TRUE@am__objects_3 = drivers/oss.$(OBJEXT)
 @HAVE_JACK_TRUE@am__objects_4 = drivers/jack.$(OBJEXT)
 @HAVE_SDL_TRUE@am__objects_5 = drivers/sdl.$(OBJEXT)
@@ -350,13 +352,13 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libsexyal.a
 libsexyal_a_SOURCES = sexyal.cpp convert.cpp drivers/dummy.cpp \
 	$(TMP_DIRECTSOUND) $(TMP_WASAPI) $(TMP_OSSDSP) $(TMP_JACK) \
 	$(TMP_SDL) $(TMP_ALSA) $(TMP_DOS)
 @HAVE_DIRECTSOUND_TRUE@TMP_DIRECTSOUND = drivers/dsound.cpp
-@HAVE_WASAPI_TRUE@TMP_WASAPI = drivers/wasapi.cpp
+@HAVE_WASAPI_TRUE@TMP_WASAPI = drivers/wasapi.cpp drivers/wasapish.cpp
 @HAVE_OSSDSP_TRUE@TMP_OSSDSP = drivers/oss.cpp
 @HAVE_JACK_TRUE@TMP_JACK = drivers/jack.cpp
 @HAVE_SDL_TRUE@TMP_SDL = drivers/sdl.cpp
@@ -412,6 +414,8 @@ drivers/dsound.$(OBJEXT): drivers/$(am__dirstamp) \
 	drivers/$(DEPDIR)/$(am__dirstamp)
 drivers/wasapi.$(OBJEXT): drivers/$(am__dirstamp) \
 	drivers/$(DEPDIR)/$(am__dirstamp)
+drivers/wasapish.$(OBJEXT): drivers/$(am__dirstamp) \
+	drivers/$(DEPDIR)/$(am__dirstamp)
 drivers/oss.$(OBJEXT): drivers/$(am__dirstamp) \
 	drivers/$(DEPDIR)/$(am__dirstamp)
 drivers/jack.$(OBJEXT): drivers/$(am__dirstamp) \
@@ -449,6 +453,7 @@ mostlyclean-compile:
 	-rm -f drivers/sb.$(OBJEXT)
 	-rm -f drivers/sdl.$(OBJEXT)
 	-rm -f drivers/wasapi.$(OBJEXT)
+	-rm -f drivers/wasapish.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
@@ -467,6 +472,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/sb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/sdl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/wasapi.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/wasapish.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\

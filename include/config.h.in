@@ -123,6 +123,9 @@
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
 
+/* Define to 1 if you have the <fenv.h> header file. */
+#undef HAVE_FENV_H
+
 /* Define to 1 if you have the `fopen64' function. */
 #undef HAVE_FOPEN64
 
@@ -274,6 +277,12 @@
 /* Define to 1 if you have the `nanosleep' function. */
 #undef HAVE_NANOSLEEP
 
+/* Define to 1 if you have the `nearbyint' function. */
+#undef HAVE_NEARBYINT
+
+/* Define to 1 if you have the `nearbyintf' function. */
+#undef HAVE_NEARBYINTF
+
 /* Define to 1 if you have the `newlocale' function. */
 #undef HAVE_NEWLOCALE
 
@@ -297,6 +306,15 @@
 
 /* Define to 1 if you have the `recv' function. */
 #undef HAVE_RECV
+
+/* Define to 1 if you have the `rint' function. */
+#undef HAVE_RINT
+
+/* Define to 1 if you have the `rintf' function. */
+#undef HAVE_RINTF
+
+/* Define to 1 if you have the `round' function. */
+#undef HAVE_ROUND
 
 /* Define if we are compiling with SDL. */
 #undef HAVE_SDL
@@ -492,6 +510,9 @@
 
 /* Define if the pthread_in_use() detection is hard. */
 #undef PTHREAD_IN_USE_DETECTION_HARD
+
+/* The size of `char', as computed by sizeof. */
+#undef SIZEOF_CHAR
 
 /* The size of `double', as computed by sizeof. */
 #undef SIZEOF_DOUBLE

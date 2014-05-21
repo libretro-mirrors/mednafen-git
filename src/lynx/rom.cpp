@@ -50,6 +50,8 @@
 #include "system.h"
 #include "rom.h"
 
+#include <mednafen/FileStream.h>
+
 #include <errno.h>
 
 CRom::CRom(const char *romfile)
@@ -61,22 +63,16 @@ CRom::CRom(const char *romfile)
 	for(int loop=0;loop<ROM_SIZE;loop++) mRomData[loop]=DEFAULT_ROM_CONTENTS;
 
 	// Load up the file
-
-	MDFNFILE BIOSFile;
-
-	if(!BIOSFile.Open(romfile, NULL, _("Lynx Boot ROM")))
 	{
-	 throw MDFN_Error(0, "");	// FIXME: (make MDFNFILE throw exceptions instead of calling MDFN_PrintError())
+	 FileStream BIOSFile(romfile, FileStream::MODE_READ);
+
+	 if(BIOSFile.size() < 512)
+	 {
+	  throw MDFN_Error(0, _("The Lynx Boot ROM Image is an incorrect size."));
+	 }
+
+	 BIOSFile.read(mRomData, 512);
 	}
-
-	if(BIOSFile.Size() < 512)
-	{
-	 throw MDFN_Error(0, _("The Lynx Boot ROM Image is an incorrect size."));
-	}
-
-	memcpy(mRomData, BIOSFile.Data(), 512);
-
-	BIOSFile.Close();
 }
 
 void CRom::Reset(void)

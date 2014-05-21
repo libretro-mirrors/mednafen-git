@@ -17,9 +17,11 @@ enum
 };
 
 void PtoV(const int in_x, const int in_y, int32 *out_x, int32 *out_y);
+int32 PtoV_J(const int32 inv, const bool axis, const bool scr_scale);
+
 int InitVideo(MDFNGI *gi);
 void KillVideo(void);
-void BlitScreen(MDFN_Surface *, const MDFN_Rect *DisplayRect, const MDFN_Rect *LineWidths, const bool take_ssnapshot);
+void BlitScreen(MDFN_Surface *, const MDFN_Rect *DisplayRect, const int32 *LineWidths, const int InterlaceField, const bool take_ssnapshot);
 
 void ToggleFS();
 void ClearVideoSurfaces(void);

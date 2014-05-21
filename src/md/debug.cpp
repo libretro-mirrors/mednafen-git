@@ -17,7 +17,7 @@
 
 #include "shared.h"
 #include "debug.h"
-#include <desa68/desa68.h>
+#include <mednafen/desa68/desa68.h>
 
 namespace MDFN_IEN_MD
 {

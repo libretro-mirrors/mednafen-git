@@ -3,7 +3,7 @@
 <?php BeginPage('snes', 'Super Nintendo Entertainment System/Super Famicom'); ?>
 
 <?php BeginSection('Introduction'); ?>
-SNES emulation is based off of <a href="http://byuu.org/">bsnes</a> v0.59, with the following (unofficial) modifications:
+SNES emulation is based off of <a href="http://byuu.org/">bsnes</a> v0.059, with the following (unofficial) modifications:
 <ul>
  <li>Cx4 Op10 fix patch</li>
  <li>blargg_libco_ppc64-5</li>

@@ -4,15 +4,15 @@
 namespace MDFN_IEN_GB
 {
 
-uint32 MDFNGBSOUND_Read(int ts, uint32_t addr);
-void MDFNGBSOUND_Write(int ts, uint32 addr, uint8 val);
+uint32 SOUND_Read(int ts, uint32_t addr);
+void SOUND_Write(int ts, uint32 addr, uint8 val);
 
-int32 MDFNGBSOUND_Flush(int ts, int16 *SoundBuf, const int32 MaxSoundFrames);
-void MDFNGBSOUND_Init(void);
-void MDFNGBSOUND_Reset(void);
-int MDFNGBSOUND_StateAction(StateMem *sm, int load, int data_only);
+int32 SOUND_Flush(int ts, int16 *SoundBuf, const int32 MaxSoundFrames);
+void SOUND_Init(void) MDFN_COLD;
+void SOUND_Kill(void) MDFN_COLD;
+void SOUND_Reset(void) MDFN_COLD;
+int SOUND_StateAction(StateMem *sm, int load, int data_only);
 
-void MDFNGB_SetSoundVolume(uint32 volume);
 bool MDFNGB_SetSoundRate(uint32 rate);
 
 }

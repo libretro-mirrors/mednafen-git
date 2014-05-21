@@ -80,13 +80,13 @@
 		timekeeping variables will get out of sync and everything will go boom.
 */
 
-#include "../mednafen.h"
-#include "../cdrom/cdromif.h"
-#include "../cdrom/scsicd.h"
-#include "../okiadpcm.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/cdrom/scsicd.h>
+#include <mednafen/sound/okiadpcm.h>
+#include <mednafen/cdrom/SimpleFIFO.h>
 
 #include "pcecd.h"
-#include "../cdrom/SimpleFIFO.h"
 
 //#define PCECD_DEBUG
 
@@ -419,8 +419,20 @@ bool PCECD_SetSettings(const PCECD_Settings *settings)
 	return true;
 }
 
-bool PCECD_Init(const PCECD_Settings *settings, void (*irqcb)(bool), double master_clock, int32* adbuf, int32* hrbuf_l, int32* hrbuf_r)
+static void Cleanup(void)
 {
+        if(ADPCM.RAM)
+        {
+         MDFN_free(ADPCM.RAM);
+         ADPCM.RAM = NULL;
+	}
+ 	SCSICD_Close();
+}
+
+void PCECD_Init(const PCECD_Settings *settings, void (*irqcb)(bool), double master_clock, int32* adbuf, int32* hrbuf_l, int32* hrbuf_r)
+{
+ try
+ {
 	ADPCM.last_pcm = 0;
 	ADPCM.integrate_accum = 0;
 	ADPCM.lp1p_fstate = 0;
@@ -434,27 +446,23 @@ bool PCECD_Init(const PCECD_Settings *settings, void (*irqcb)(bool), double mast
 
 	SCSICD_Init(SCSICD_PCE, 3, hrbuf_l, hrbuf_r, 126000, master_clock, CDIRQ, StuffSubchannel);
 
-        if(!(ADPCM.RAM = (uint8 *)MDFN_malloc(0x10000, _("PCE ADPCM RAM"))))
-        {
-         return(0);
-        }
+        ADPCM.RAM = (uint8 *)MDFN_malloc_T(0x10000, _("PCE ADPCM RAM"));
 
 	PCECD_SetSettings(settings);
 
         ADPCM.bigdivacc = (int64)((double)master_clock * 65536 / 32087.5);
-
-	return(TRUE);
+ }
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
 }
 
 
 void PCECD_Close(void)
 {
-        if(ADPCM.RAM)
-        {
-         MDFN_free(ADPCM.RAM);
-         ADPCM.RAM = NULL;
-        }
-	SCSICD_Close();
+	Cleanup();
 }
 
 

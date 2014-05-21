@@ -12,8 +12,8 @@
 //	additional informations.
 //---------------------------------------------------------------------------
 
-#ifndef __INTERRUPT__
-#define __INTERRUPT__
+#ifndef __NEOPOP_INTERRUPT__
+#define __NEOPOP_INTERRUPT__
 //=============================================================================
 
 void interrupt(uint8 index);

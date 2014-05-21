@@ -4,4 +4,4 @@
 #include	"../sound.h"
 #include	"../cart.h"
 #include        "../unif.h"
-#include	"../../mempatcher.h"
+#include	<mednafen/mempatcher.h>

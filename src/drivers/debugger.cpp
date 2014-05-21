@@ -26,28 +26,25 @@
 #include "prompt.h"
 #include "video.h"
 
+static MemDebugger* memdbg = NULL;
 static FILE *TraceLog = NULL;
 static std::string TraceLogSpec;
 static int64 TraceLogEnd;
 static unsigned TraceLogRTO;
 
-static bool NeedInit = true;
-static bool WatchLogical = true; // Watch logical memory addresses, not physical
-static bool IsActive = 0;
+static bool NeedInit;
+static bool WatchLogical; // Watch logical memory addresses, not physical
+static bool IsActive;
 static bool CompactMode = FALSE;
 
-static unsigned int WhichMode = 0; // 0 = normal, 1 = gfx, 2 = memory
+static unsigned int WhichMode; // 0 = normal, 1 = gfx, 2 = memory
 
-static bool NeedPCBPToggle = false;
-static int NeedStep = 0;	// 0 =, 1 = , 2 = 
-static int NeedRun = 0;
-static bool InSteppingMode = false;
+static bool NeedPCBPToggle;
+static int NeedStep;	// 0 =, 1 = , 2 = 
+static int NeedRun;
+static bool InSteppingMode;
 
-bool Debugger_GT_IsInSteppingMode(void)
-{
- return(InSteppingMode);
-}
-
+static std::vector<uint32> PCBreakPoints;
 static std::string ReadBreakpoints, IOReadBreakpoints, AuxReadBreakpoints;
 static std::string WriteBreakpoints, IOWriteBreakpoints, AuxWriteBreakpoints;
 static std::string OpBreakpoints;
@@ -55,22 +52,27 @@ static std::string OpBreakpoints;
 static MDFN_Surface* DebuggerSurface[2] = { NULL, NULL };
 static MDFN_Rect DebuggerRect[2];
 
-static int volatile DMTV_BackBuffer = 0;
-static MDFN_Surface* volatile DMTV_Surface = NULL;
-static MDFN_Rect* volatile DMTV_Rect = NULL;
+static int volatile DMTV_BackBuffer;
+static MDFN_Surface* volatile DMTV_Surface;
+static MDFN_Rect* volatile DMTV_Rect;
 
 //
 // Used for translating mouse coordinates and whatnot.  Doesn't really matter if it's not atomically updated, there
 // are sanity checks to prevent dividing by zero, and it'll just cause mouse coordinate translation to be wonky for a tiny fraction of a second.
+//
 static MDFN_Rect volatile dlc_screen_dest_rect = { 0 };
 
 static int DebuggerOpacity;
 
 typedef std::vector<std::string> DisComment;
-
 static std::map<uint64, DisComment> Comments; // Lower 32 bits == address, upper 32 bits == 4 bytes data match
 
 static void CPUCallback(uint32 PC, bool bpoint);	// Called from game thread.
+
+bool Debugger_GT_IsInSteppingMode(void)
+{
+ return(InSteppingMode);
+}
 
 static uint32 GetPC(void)
 {
@@ -89,7 +91,7 @@ static void MemPoke(uint32 A, uint32 V, uint32 Size, bool hl, bool logical)
  if(logical)
  {
   for(unsigned int x = 0; x < CurGame->Debugger->AddressSpaces->size(); x++)
-   if(!strcasecmp((*CurGame->Debugger->AddressSpaces)[x].name, "logical"))
+   if((*CurGame->Debugger->AddressSpaces)[x].name == "logical")
    {
     found = &(*CurGame->Debugger->AddressSpaces)[x];
     break;
@@ -98,7 +100,7 @@ static void MemPoke(uint32 A, uint32 V, uint32 Size, bool hl, bool logical)
  else
  {
   for(unsigned int x = 0; x < CurGame->Debugger->AddressSpaces->size(); x++)
-   if(!strcasecmp((*CurGame->Debugger->AddressSpaces)[x].name, "physical"))
+   if((*CurGame->Debugger->AddressSpaces)[x].name == "physical")
    {
     found = &(*CurGame->Debugger->AddressSpaces)[x];
     break;
@@ -108,7 +110,7 @@ static void MemPoke(uint32 A, uint32 V, uint32 Size, bool hl, bool logical)
  if(!found)
  {
   for(unsigned int x = 0; x < CurGame->Debugger->AddressSpaces->size(); x++)
-   if(!strcasecmp((*CurGame->Debugger->AddressSpaces)[x].name, "cpu"))
+   if((*CurGame->Debugger->AddressSpaces)[x].name == "cpu")
    {
     found = &(*CurGame->Debugger->AddressSpaces)[x];
     break;
@@ -124,7 +126,7 @@ static void MemPoke(uint32 A, uint32 V, uint32 Size, bool hl, bool logical)
   tmp_buffer[1] = V >> 8;
   tmp_buffer[2] = V >> 16;
   tmp_buffer[3] = V >> 24;
-  found->PutAddressSpaceBytes(found->name, A, Size, Size, hl, tmp_buffer);
+  found->PutAddressSpaceBytes(found->name.c_str(), A, Size, Size, hl, tmp_buffer);
  }
  else
   puts("Error");
@@ -154,8 +156,6 @@ static uint32 ParsePhysAddr(const char *za)
 
  return(ret);
 }
-
-static std::vector<uint32> PCBreakPoints;
 
 static void UpdateCoreHooks(void)
 {
@@ -282,30 +282,91 @@ static void UpdateBreakpoints(void)
  UpdateBreakpoints(AuxReadBreakpoints, BPOINT_AUX_READ);
 }
 
-
-static unsigned int RegsPos = 0;
-static uint32 InRegs = 0;
-static uint32 RegsCols = 0;
+static unsigned int RegsPos;
+static uint32 InRegs;
+static uint32 RegsCols;
 static uint32 RegsColsCounts[16];	// FIXME[5];
 static uint32 RegsColsPixOffset[16];	//[5];
 static uint32 RegsWhichFont[16];	//[5];
 static uint32 RegsTotalWidth;
 
-#define MK_COLOR_A(r,g,b,a) (pf_cache.MakeColor(r, g, b, a))
-
-static int DIS_ENTRIES = 58;
-static int DisFont = MDFN_FONT_5x7;
-static int DisFontHeight = 7;
-
-static uint32 WatchAddr = 0x0000, WatchAddrPhys = 0x0000;
-static uint32 DisAddr = 0x0000;
-static uint32 DisCOffs = 0xFFFFFFFF;
-static int NeedDisAddrChange = 0;
-
 static std::string CurRegLongName;
 static std::string CurRegDetails;
 
-static void DrawRegs(RegGroupType *rg, MDFN_Surface *surface, uint32 *pixels, int highlight, uint32 which_font)
+#define MK_COLOR_A(r,g,b,a) (pf_cache.MakeColor(r, g, b, a))
+
+static void Regs_Init(const int max_height_hint)
+{
+ RegsPos = 0;
+ InRegs = 0;
+ RegsCols = 0;
+
+ memset(RegsColsCounts, 0, sizeof(RegsColsCounts));
+ memset(RegsColsPixOffset, 0, sizeof(RegsColsPixOffset));
+ memset(RegsWhichFont, 0, sizeof(RegsWhichFont));
+ RegsTotalWidth = 0;
+
+ CurRegLongName = "";
+ CurRegDetails = "";
+
+ //
+ //
+ //
+ RegsCols = 0;
+ RegsTotalWidth = 0;
+
+ memset(RegsColsCounts, 0, sizeof(RegsColsCounts));
+
+ int pw_offset = 0;
+ for(unsigned int r = 0; r < CurGame->Debugger->RegGroups->size(); r++)
+ {
+     uint32 pw = 0;
+     int x;
+
+     for(x = 0; (*CurGame->Debugger->RegGroups)[r]->Regs[x].bsize; x++)
+     {
+      if((*CurGame->Debugger->RegGroups)[r]->Regs[x].bsize != 0xFFFF)
+      {
+       uint32 tmp_pw = strlen((*CurGame->Debugger->RegGroups)[r]->Regs[x].name.c_str());
+       unsigned int bsize = (*CurGame->Debugger->RegGroups)[r]->Regs[x].bsize;
+
+       if(bsize & 0x100)
+	tmp_pw += ((bsize & 0xFF) + 3) / 4 + 2 + 2;
+       else
+        tmp_pw += bsize * 2 + 2 + 2;
+
+       if(tmp_pw > pw)
+        pw = tmp_pw;
+      }
+
+      RegsColsCounts[r]++;
+     }
+
+     if(r == (CurGame->Debugger->RegGroups->size() - 1))
+      pw -= 2;
+
+     if(x * 7 > max_height_hint)
+     {
+      pw *= 4;
+      RegsWhichFont[r] = MDFN_FONT_4x5;
+     }
+     else
+     {
+      pw *= 5;
+      RegsWhichFont[r] = MDFN_FONT_5x7;
+     }
+
+     RegsCols++;
+     RegsColsPixOffset[r] = pw_offset;
+
+     //printf("Column %d, Offset %d\n", r, pw_offset);
+
+     pw_offset += pw;
+ }
+ RegsTotalWidth = pw_offset;
+}
+
+static void Regs_DrawGroup(RegGroupType *rg, MDFN_Surface *surface, uint32 *pixels, int highlight, uint32 which_font)
 {
   const MDFN_PixelFormat pf_cache = surface->format;
   uint32 pitch32 = surface->pitchinpix;
@@ -384,6 +445,18 @@ static void DrawRegs(RegGroupType *rg, MDFN_Surface *surface, uint32 *pixels, in
    meowcow++;
   }
 }
+
+
+
+
+static int DIS_ENTRIES = 58;
+static int DisFont = MDFN_FONT_5x7;
+static int DisFontHeight = 7;
+
+static uint32 WatchAddr = 0x0000, WatchAddrPhys = 0x0000;
+static uint32 DisAddr = 0x0000;
+static uint32 DisCOffs = 0xFFFFFFFF;
+static int NeedDisAddrChange = 0;
 
 static void DrawZP(MDFN_Surface *surface, uint32 *pixels)
 {
@@ -769,7 +842,7 @@ void Debugger_GT_Draw(void)
  {
   surface->Fill(0, 0, 0, DebuggerOpacity);
 
-  MemDebugger_Draw(surface, rect, &screen_rect);
+  memdbg->Draw(surface, rect, &screen_rect);
   return;
  }
  else if(WhichMode == 3)
@@ -982,7 +1055,7 @@ void Debugger_GT_Draw(void)
  CurRegDetails = "";
 
  for(unsigned int rp = 0; rp < CurGame->Debugger->RegGroups->size(); rp++)
-  DrawRegs((*CurGame->Debugger->RegGroups)[rp], surface, pixels + rect->w - RegsTotalWidth + RegsColsPixOffset[rp], (InRegs == rp + 1) ? (int)RegsPos : -1, RegsWhichFont[rp]); // 175
+  Regs_DrawGroup((*CurGame->Debugger->RegGroups)[rp], surface, pixels + rect->w - RegsTotalWidth + RegsColsPixOffset[rp], (InRegs == rp + 1) ? (int)RegsPos : -1, RegsWhichFont[rp]); // 175
 
  if(CurGame->Debugger->ZPAddr != (uint32)~0UL)
   DrawZP(surface, pixels + 324 + 224 * pitch32);
@@ -1387,58 +1460,7 @@ bool Debugger_GT_Toggle(void)
     // else
     //  DisAddr = (*CurGame->Debugger->RegGroups)[0]->OLDGetRegister("PC", NULL); // FIXME
 
-    RegsCols = 0;
-    RegsTotalWidth = 0;
-
-    memset(RegsColsCounts, 0, sizeof(RegsColsCounts));
-
-    int pw_offset = 0;
-    for(unsigned int r = 0; r < CurGame->Debugger->RegGroups->size(); r++)
-    {
-     uint32 pw = 0;
-     int x;
-
-     for(x = 0; (*CurGame->Debugger->RegGroups)[r]->Regs[x].bsize; x++)
-     {
-      if((*CurGame->Debugger->RegGroups)[r]->Regs[x].bsize != 0xFFFF)
-      {
-       uint32 tmp_pw = strlen((*CurGame->Debugger->RegGroups)[r]->Regs[x].name.c_str());
-       unsigned int bsize = (*CurGame->Debugger->RegGroups)[r]->Regs[x].bsize;
-
-       if(bsize & 0x100)
-	tmp_pw += ((bsize & 0xFF) + 3) / 4 + 2 + 2;
-       else
-        tmp_pw += bsize * 2 + 2 + 2;
-
-       if(tmp_pw > pw)
-        pw = tmp_pw;
-      }
-
-      RegsColsCounts[r]++;
-     }
-
-     if(r == (CurGame->Debugger->RegGroups->size() - 1))
-      pw -= 2;
-
-     if(x * 7 > (DIS_ENTRIES * DisFontHeight))
-     {
-      pw *= 4;
-      RegsWhichFont[r] = MDFN_FONT_4x5;
-     }
-     else
-     {
-      pw *= 5;
-      RegsWhichFont[r] = MDFN_FONT_5x7;
-     }
-
-     RegsCols++;
-     RegsColsPixOffset[r] = pw_offset;
-
-     //printf("Column %d, Offset %d\n", r, pw_offset);
-
-     pw_offset += pw;
-    }
-    RegsTotalWidth = pw_offset;
+    Regs_Init(DIS_ENTRIES * DisFontHeight);
    }
   }
 
@@ -1446,7 +1468,7 @@ bool Debugger_GT_Toggle(void)
   UpdateBreakpoints();
 
   GfxDebugger_SetActive((WhichMode == 1) && IsActive);
-  MemDebugger_SetActive((WhichMode == 2) && IsActive);
+  memdbg->SetActive((WhichMode == 2) && IsActive);
   LogDebugger_SetActive((WhichMode == 3) && IsActive);
 
   SDL_MDFN_ShowCursor(IsActive);
@@ -1471,19 +1493,19 @@ void Debugger_GT_Event(const SDL_Event *event)
     {
      case SDLK_1: WhichMode = 0; 
  		  GfxDebugger_SetActive(FALSE);
- 		  MemDebugger_SetActive(FALSE);
+ 		  memdbg->SetActive(FALSE);
 		  LogDebugger_SetActive(FALSE);
 		  break;
      case SDLK_2: WhichMode = 1;
 		  GfxDebugger_SetActive(TRUE); 
-		  MemDebugger_SetActive(FALSE);
+		  memdbg->SetActive(FALSE);
 		  LogDebugger_SetActive(FALSE);
 		  break;
      case SDLK_3: if(CurGame->Debugger->AddressSpaces->size())
 		  {
 		   WhichMode = 2;
 		   GfxDebugger_SetActive(FALSE);
-		   MemDebugger_SetActive(TRUE);
+		   memdbg->SetActive(TRUE);
 		   LogDebugger_SetActive(FALSE);
 		  }
 		  break;
@@ -1491,7 +1513,7 @@ void Debugger_GT_Event(const SDL_Event *event)
 		  {
 		   WhichMode = 3;
 		   GfxDebugger_SetActive(FALSE);
-		   MemDebugger_SetActive(FALSE);
+		   memdbg->SetActive(FALSE);
 		   LogDebugger_SetActive(TRUE);
 		  }
 		  break;
@@ -1508,7 +1530,7 @@ void Debugger_GT_Event(const SDL_Event *event)
   }
   else if(WhichMode == 2)
   {
-   MemDebugger_Event(event);
+   memdbg->Event(event);
    return;
   }
   else if(WhichMode == 3)
@@ -1817,3 +1839,76 @@ void Debugger_GT_Event(const SDL_Event *event)
   }
 }
 
+//
+// Note: A lot of the more expensive initialization is deferred to when the debugger is first activated after a game is loaded.
+//
+void Debugger_Init(void)
+{
+	memdbg = new MemDebugger();
+
+	TraceLogSpec = "";
+	TraceLogEnd = 0;
+	TraceLogRTO = 0;
+
+	NeedInit = true;
+	WatchLogical = true;
+	IsActive = false;
+	CompactMode = false;
+
+	WhichMode = 0;
+
+	NeedPCBPToggle = false;
+	NeedStep = 0;
+	NeedRun = 0;
+	InSteppingMode = false;
+
+	ReadBreakpoints = "";
+	IOReadBreakpoints = "";
+	AuxReadBreakpoints = "";
+	WriteBreakpoints = "";
+	IOWriteBreakpoints = "";
+	AuxWriteBreakpoints = "";
+	OpBreakpoints = "";
+	PCBreakPoints.clear();
+
+	Comments.clear();
+
+	//
+
+	DMTV_BackBuffer = 0;
+	DMTV_Surface = NULL;
+	DMTV_Rect = NULL;
+
+	//
+	//
+	//
+	if(MDFN_GetSettingB("debugger.autostepmode"))
+	{
+	 Debugger_GT_Toggle();
+	 Debugger_GT_ForceSteppingMode();
+	}
+}
+
+void Debugger_Kill(void)
+{
+	if(TraceLog)
+	{
+	 fclose(TraceLog);
+	 TraceLog = NULL;
+	}
+
+	if(memdbg != NULL)
+	{
+	 delete memdbg;
+	 memdbg = NULL;
+	}
+
+	for(unsigned i = 0; i < 2; i++)
+	{
+	 if(DebuggerSurface[i] != NULL)
+	 {
+	  delete DebuggerSurface[i];
+	  DebuggerSurface[i] = NULL;
+	 }
+	}
+}

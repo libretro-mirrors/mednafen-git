@@ -834,10 +834,8 @@ void MDFNI_CheatSearchSetCurrentAsOriginal(void)
   {
    for(uint32 addr = 0; addr < PageSize; addr++)
    {
-    if(!CheatComp[page][addr].excluded)
-    {
-     CheatComp[page][addr].value = RAMPtrs[page][addr];
-    }
+    // Don't check for .excluded here, or we'll break multi-byte iterative cheat searching!
+    CheatComp[page][addr].value = RAMPtrs[page][addr];
    }
   }
  }

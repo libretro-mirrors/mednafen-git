@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@  @SDL_CFLAGS@
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_srcdir)
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 
 noinst_LIBRARIES	=	libmdfndos.a
 

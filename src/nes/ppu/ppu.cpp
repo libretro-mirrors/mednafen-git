@@ -32,6 +32,10 @@
 #include	<trio/trio.h>
 #include	<math.h>
 
+#ifdef	__MMX__
+ #include "mmintrin.h"
+#endif
+
 #define VBlankON        (PPU[0]&0x80)   /* Generate VBlank NMI */
 #define Sprite16        (PPU[0]&0x20)   /* Sprites 8x16/8x8        */
 #define BGAdrHI         (PPU[0]&0x10)   /* BG pattern adr $0000/$1000 */
@@ -849,7 +853,7 @@ static int BurstPhase = 0;
 void MMC5_hb(int);     /* Ugh ugh ugh. */
 static void DoLine(MDFN_Surface *surface, int skip)
 {
- uint8 target[256];
+ uint8 MDFN_ALIGN(8) target[256];
 
  if(InputScanlineHook) // Frame skipping will break zapper emulation soooo muchlybadlydoubleplusungoodly.
   skip = 0;

@@ -131,6 +131,7 @@ static uint8 ZNTable[256];
  else _PC++;	\
 }
 
+#define ARNOP	   (void)x
 
 #define LDA	   _A=x;X_ZN(_A)
 #define LDX	   _X=x;X_ZN(_X)

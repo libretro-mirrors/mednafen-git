@@ -75,6 +75,7 @@ class CDIF_Queue
  private:
  std::queue<CDIF_Message> ze_queue;
  MDFN_Mutex *ze_mutex;
+ MDFN_Cond *ze_cond;
 };
 
 
@@ -123,6 +124,7 @@ class CDIF_MT : public CDIF
  uint32 SBWritePos;
  
  MDFN_Mutex *SBMutex;
+ MDFN_Cond *SBCond;
 
 
  //
@@ -193,50 +195,67 @@ CDIF_Message::~CDIF_Message()
 CDIF_Queue::CDIF_Queue()
 {
  ze_mutex = MDFND_CreateMutex();
+ ze_cond = MDFND_CreateCond();
 }
 
 CDIF_Queue::~CDIF_Queue()
 {
  MDFND_DestroyMutex(ze_mutex);
+ MDFND_DestroyCond(ze_cond);
 }
 
 // Returns FALSE if message not read, TRUE if it was read.  Will always return TRUE if "blocking" is set.
 // Will throw MDFN_Error if the read message code is CDIF_MSG_FATAL_ERROR
 bool CDIF_Queue::Read(CDIF_Message *message, bool blocking)
 {
-  TryAgain:
+ bool ret = true;
 
-  MDFND_LockMutex(ze_mutex);
-  
-  if(ze_queue.size() > 0)
-  {
-   *message = ze_queue.front();
-   ze_queue.pop();
-   MDFND_UnlockMutex(ze_mutex);
+ //
+ //
+ //
+ MDFND_LockMutex(ze_mutex);
 
-   if(message->message == CDIF_MSG_FATAL_ERROR)
-    throw MDFN_Error(0, "%s", message->str_message.c_str());
+ if(blocking)
+ {
+  while(ze_queue.size() == 0)	// while, not just if.
+  {
+   MDFND_WaitCond(ze_cond, ze_mutex);
+  }
+ }
 
-   return(TRUE);
-  }
-  else if(blocking)
-  {
-   MDFND_UnlockMutex(ze_mutex);
-   MDFND_Sleep(1);
-   goto TryAgain;
-  }
-  else
-  {
-   MDFND_UnlockMutex(ze_mutex);
-   return(FALSE);
-  }
+ if(ze_queue.size() == 0)
+  ret = false;
+ else
+ {
+  *message = ze_queue.front();
+  ze_queue.pop();
+ }  
+
+ MDFND_UnlockMutex(ze_mutex);
+ //
+ //
+ //
+
+ if(ret && message->message == CDIF_MSG_FATAL_ERROR)
+  throw MDFN_Error(0, "%s", message->str_message.c_str());
+
+ return(ret);
 }
 
 void CDIF_Queue::Write(const CDIF_Message &message)
 {
  MDFND_LockMutex(ze_mutex);
 
- ze_queue.push(message);
+ try
+ {
+  ze_queue.push(message);
+ }
+ catch(...)
+ {
+  fprintf(stderr, "\n\nCDIF_Message queue push failed!!!  (We now return you to your regularly unscheduled lockup)\n\n");
+ }
+
+ MDFND_SignalCond(ze_cond);	// Signal while the mutex is held to prevent icky race conditions.
 
  MDFND_UnlockMutex(ze_mutex);
 }
@@ -386,6 +405,8 @@ int CDIF_MT::ReadThreadStart()
     error_condition = true;
    }
    
+   //
+   //
    MDFND_LockMutex(SBMutex);
 
    SectorBuffers[SBWritePos].lba = ra_lba;
@@ -394,7 +415,11 @@ int CDIF_MT::ReadThreadStart()
    SectorBuffers[SBWritePos].error = error_condition;
    SBWritePos = (SBWritePos + 1) % SBSize;
 
+   MDFND_SignalCond(SBCond);
+
    MDFND_UnlockMutex(SBMutex);
+   //
+   //
 
    ra_lba++;
    ra_count--;
@@ -404,7 +429,7 @@ int CDIF_MT::ReadThreadStart()
  return(1);
 }
 
-CDIF_MT::CDIF_MT(CDAccess *cda) : disc_cdaccess(cda), CDReadThread(NULL), SBMutex(NULL)
+CDIF_MT::CDIF_MT(CDAccess *cda) : disc_cdaccess(cda), CDReadThread(NULL), SBMutex(NULL), SBCond(NULL)
 {
  try
  {
@@ -413,6 +438,9 @@ CDIF_MT::CDIF_MT(CDAccess *cda) : disc_cdaccess(cda), CDReadThread(NULL), SBMute
 
   if(!(SBMutex = MDFND_CreateMutex()))
    throw MDFN_Error(0, _("Error creating CD read thread mutex."));
+
+  if(!(SBCond = MDFND_CreateCond()))
+   throw MDFN_Error(0, _("Error creating CD read thread condition variable."));
 
   UnrecoverableError = false;
 
@@ -435,6 +463,12 @@ CDIF_MT::CDIF_MT(CDAccess *cda) : disc_cdaccess(cda), CDReadThread(NULL), SBMute
   {
    MDFND_DestroyMutex(SBMutex);
    SBMutex = NULL;
+  }
+
+  if(SBCond)
+  {
+   MDFND_DestroyCond(SBCond);
+   SBCond = NULL;
   }
 
   if(disc_cdaccess)
@@ -469,6 +503,12 @@ CDIF_MT::~CDIF_MT()
  {
   MDFND_DestroyMutex(SBMutex);
   SBMutex = NULL;
+ }
+
+ if(SBCond)
+ {
+  MDFND_DestroyCond(SBCond);
+  SBCond = NULL;
  }
 
  if(disc_cdaccess)
@@ -512,10 +552,13 @@ bool CDIF_MT::ReadRawSector(uint8 *buf, uint32 lba)
 
  ReadThreadQueue.Write(CDIF_Message(CDIF_MSG_READ_SECTOR, lba));
 
+ //
+ //
+ //
+ MDFND_LockMutex(SBMutex);
+
  do
  {
-  MDFND_LockMutex(SBMutex);
-
   for(int i = 0; i < SBSize; i++)
   {
    if(SectorBuffers[i].valid && SectorBuffers[i].lba == lba)
@@ -526,11 +569,19 @@ bool CDIF_MT::ReadRawSector(uint8 *buf, uint32 lba)
    }
   }
 
-  MDFND_UnlockMutex(SBMutex);
-
   if(!found)
-   MDFND_Sleep(1);
+  {
+   //int32 swt = MDFND_GetTime();
+   MDFND_WaitCond(SBCond, SBMutex);
+   //printf("SB Waited: %d\n", MDFND_GetTime() - swt);
+  }
  } while(!found);
+
+ MDFND_UnlockMutex(SBMutex);
+ //
+ //
+ //
+
 
  return(!error_condition);
 }

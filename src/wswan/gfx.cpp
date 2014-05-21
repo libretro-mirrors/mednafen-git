@@ -23,7 +23,7 @@
 #include "memory.h"
 #include "v30mz.h"
 #include "rtc.h"
-#include "../video.h"
+#include <mednafen/video.h>
 #include <trio/trio.h>
 
 namespace MDFN_IEN_WSWAN

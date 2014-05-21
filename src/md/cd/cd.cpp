@@ -16,8 +16,9 @@
  */
 
 #include "../shared.h"
-#include "../../cdrom/cdromif.h"
-#include "../../general.h"
+#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/general.h>
+#include <mednafen/FileStream.h>
 #include <errno.h>
 #include "cd.h"
 #include "pcm.h"
@@ -855,12 +856,18 @@ void MDCD_Run(int32 md_master_cycles)
  }
 }
 
-void MDCD_Close(void)
+static void Cleanup(void)
 {
  if(BIOS)
  {
   MDFN_free(BIOS);
   BIOS = NULL;
+ }
+
+ if(BRAM)
+ {
+  MDFN_free(BRAM);
+  BRAM = NULL;
  }
 
  if(PRAM)
@@ -876,67 +883,44 @@ void MDCD_Close(void)
  }
 }
 
-bool MDCD_Init(void)
+void MDCD_Close(void)
 {
- if(!(BIOS = (uint8 *)MDFN_calloc(1, 0x20000, _("BIOS ROM"))))
- {
-  return(FALSE);
- }
+ Cleanup();
+}
 
- if(!(BRAM = (uint8 *)MDFN_calloc(1, 0x2000, _("Battery-backed RAM"))))
- {
-  return(FALSE);
- }
- memset(BRAM, 0xFF, 8192);
+static void MDCD_Init(void)
+{
+  BIOS = (uint8 *)MDFN_calloc_T(1, 0x20000, _("BIOS ROM"));
+  BRAM = (uint8 *)MDFN_calloc_T(1, 0x2000, _("Battery-backed RAM"));
+  memset(BRAM, 0xFF, 8192);
 
- if(!(PRAM = (uint8 *)MDFN_calloc(1, 0x80000, _("Program RAM"))))
- {
-  return(FALSE);
- }
+  PRAM = (uint8 *)MDFN_calloc_T(1, 0x80000, _("Program RAM"));
 
- if(!(WordRAM = (uint8 *)MDFN_calloc(1, 0x40000, _("Word RAM"))))
- {
-  return(FALSE);
- }
+  WordRAM = (uint8 *)MDFN_calloc_T(1, 0x40000, _("Word RAM"));
 
  // Load the BIOS
- static const FileExtensionSpecStruct KnownBIOSExtensions[] =
- {
-  { ".bin", gettext_noop("BIOS Image") },
-  { ".bios", gettext_noop("BIOS Image") },
-  { NULL, NULL }
- };
- std::string bios_path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("md.cdbios").c_str());
- MDFNFILE bios_fp;
+  {
+   std::string bios_path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("md.cdbios").c_str());
+   FileStream bios_fp(bios_path.c_str(), FileStream::MODE_READ);
 
- if(!bios_fp.Open(bios_path.c_str(), KnownBIOSExtensions))
- {
-  MDFN_PrintError(_("Could not open CD BIOS file \"%s\": %s\n"), bios_path.c_str(), strerror(errno));
-  return(0);
- }
+   if(bios_fp.size() != 0x20000)
+    throw MDFN_Error(0, _("BIOS is incorrect size."));
 
- if(bios_fp.Size() != 0x20000)
- {
-  MDFN_PrintError(_("BIOS is incorrect size."));
-  return(0);
- }
+   bios_fp.read(BIOS, 0x20000);
 
- memcpy(BIOS, bios_fp.Data(), 0x20000);
+   bios_fp.close();
+  }
 
- bios_fp.Close();
+  MD_ExtRead8 = MDCD_MainRead8;
+  MD_ExtRead16 = MDCD_MainRead16;
+  MD_ExtWrite8 = MDCD_MainWrite8;
+  MD_ExtWrite16 = MDCD_MainWrite16;
 
- MD_ExtRead8 = MDCD_MainRead8;
- MD_ExtRead16 = MDCD_MainRead16;
- MD_ExtWrite8 = MDCD_MainWrite8;
- MD_ExtWrite16 = MDCD_MainWrite16;
-
- C68k_Init(&Sub68K, MDCD_InterruptAck);
- C68k_Set_ReadB(&Sub68K, MDCD_SubRead8);
- C68k_Set_ReadW(&Sub68K, MDCD_SubRead16);
- C68k_Set_WriteB(&Sub68K, MDCD_SubWrite8);
- C68k_Set_WriteW(&Sub68K, MDCD_SubWrite16);
-
- return(TRUE);
+  C68k_Init(&Sub68K, MDCD_InterruptAck);
+  C68k_Set_ReadB(&Sub68K, MDCD_SubRead8);
+  C68k_Set_ReadW(&Sub68K, MDCD_SubRead16);
+  C68k_Set_WriteB(&Sub68K, MDCD_SubWrite8);
+  C68k_Set_WriteW(&Sub68K, MDCD_SubWrite16);
 }
 
 static int32 CheckValidTrack(CDIF *cdiface, uint8 *sector_buffer)
@@ -975,25 +959,24 @@ bool MDCD_TestMagic(std::vector<CDIF *> *CDInterfaces)
  return((bool)CheckValidTrack((*CDInterfaces)[0], sector_buffer));
 }
 
-bool MDCD_Load(std::vector<CDIF *> *CDInterfaces, md_game_info *ginfo)
+void MDCD_Load(std::vector<CDIF *> *CDInterfaces, md_game_info *ginfo)
 {
- uint8 sector_buffer[2048];
+ try
+ {
+  uint8 sector_buffer[2048];
 
- if(!CheckValidTrack((*CDInterfaces)[0], sector_buffer))
-  return(FALSE);
+  if(CheckValidTrack((*CDInterfaces)[0], sector_buffer))
+  {
+   MD_ReadSegaHeader(sector_buffer + 0x100, ginfo);
+  }
 
- MD_ReadSegaHeader(sector_buffer + 0x100, ginfo);
-
- //uint8 sector_buffer[2048];
- //for(int x = 0; x < 128; x++)
- //{
- // memset(sector_buffer, 0, 2048);
- // CDIF_ReadSector(sector_buffer, NULL, start_sector + x, 1);
- // md5.update(sector_buffer, 2048);
- //}
- //}
-
- return(MDCD_Init()); 
+  MDCD_Init();
+ }
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
 }
 
  

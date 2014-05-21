@@ -272,6 +272,7 @@ void JoystickManager::Reset_BC_ChangeCheck(void)
  for(unsigned i = 0; i < JoystickCache.size(); i++)
   JoystickCache[i].prev_state_valid = false;
 
+ memset(&BCPending, 0, sizeof(BCPending));
  BCPending.ButtType = BUTTC_NONE;
  BCPending_Prio = -1;
  BCPending_CCCC = 0;

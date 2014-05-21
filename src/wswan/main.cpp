@@ -19,9 +19,9 @@
  */
 
 #include "wswan.h"
-#include "../md5.h"
-#include "../mempatcher.h"
-#include "../player.h"
+#include <mednafen/md5.h>
+#include <mednafen/mempatcher.h>
+#include <mednafen/player.h>
 
 #include <fcntl.h>
 #include <sys/types.h>
@@ -198,7 +198,7 @@ static const DLEntry Developers[] =
  { 0x36, "Capcom" },
 };
 
-static bool TestMagic(const char *name, MDFNFILE *fp)
+static bool TestMagic(MDFNFILE *fp)
 {
  if(strcasecmp(fp->ext, "ws") && strcasecmp(fp->ext, "wsc") && strcasecmp(fp->ext, "wsr"))
   return(FALSE);
@@ -209,7 +209,7 @@ static bool TestMagic(const char *name, MDFNFILE *fp)
  return(TRUE);
 }
 
-static int Load(const char *name, MDFNFILE *fp)
+static int Load(MDFNFILE *fp)
 {
  uint32 real_rom_size;
 
@@ -339,6 +339,8 @@ static int Load(const char *name, MDFNFILE *fp)
 static void CloseGame(void)
 {
  WSwan_MemoryKill(); // saves sram/eeprom
+
+ WSwan_SoundKill();
 
  if(wsCartROM)
  {

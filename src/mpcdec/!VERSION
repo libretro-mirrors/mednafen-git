@@ -1,4 +1,6 @@
-libmpcdec from r475
+http://svn.musepack.net/libmpc/trunk/
+
+libmpcdec from r484
 
 perl -p -i -e "s/include <mpc\/([^>]*)>/include \"\1\"/" *.c *.h
 

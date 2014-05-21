@@ -454,12 +454,16 @@ int TIMER_StateAction(StateMem *sm, int load, int data_only)
 			SFVARN(Timers[n].Counter, #n "Counter"),		\
 			SFVARN(Timers[n].Target, #n "Target"),			\
 			SFVARN(Timers[n].Div8Counter, #n "Div8Counter"),	\
-			SFVARN(Timers[n].IRQDone, #n "IRQDone")
+			SFVARN(Timers[n].IRQDone, #n "IRQDone"),		\
+			SFVARN(Timers[n].DoZeCounting, #n "DoZeCounting")
   SFTIMER(0),
   SFTIMER(1),
   SFTIMER(2),
 #undef SFTIMER
-  SFVAR(lastts),
+
+  SFVAR(vblank),
+  SFVAR(hretrace),
+
   SFEND
  };
  int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "TIMER");

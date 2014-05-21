@@ -46,12 +46,13 @@
 #include	"video/tblur.h"
 #include	"qtrecord.h"
 #include	"md5.h"
-#include	"clamp.h"
-#include	"Fir_Resampler.h"
+#include	"sound/Fir_Resampler.h"
 
 #include	"string/escape.h"
 
 #include	"cdrom/CDUtility.h"
+
+static void SettingChanged(const char* name);
 
 static const char *CSD_forcemono = gettext_noop("Force monophonic sound output.");
 static const char *CSD_enable = gettext_noop("Enable (automatic) usage of this module.");
@@ -79,6 +80,15 @@ static MDFNSetting_EnumList VCodec_List[] =
 
  { "png", (int)QTRecord::VCODEC_PNG, "PNG",
 	gettext_noop("Has a better compression ratio than \"cscd\", but is much more CPU intensive.  Use for compatibility with official QuickTime in cases where you have insufficient disk space for \"raw\".") },
+
+ { NULL, 0 },
+};
+
+static MDFNSetting_EnumList Deinterlacer_List[] =
+{
+ { "weave", Deinterlacer::DEINT_WEAVE, gettext_noop("Good for low-motion video; can be used in conjunction with negative <system>.scanlines setting values.") },
+ { "bob", Deinterlacer::DEINT_BOB, gettext_noop("Good for causing a headache.  All glory to Bob.") },
+ { "bob_offset", Deinterlacer::DEINT_BOB_OFFSET, gettext_noop("Good for high-motion video, but is a bit flickery; reduces the subjective vertical resolution.") },
 
  { NULL, 0 },
 };
@@ -122,6 +132,9 @@ static MDFNSetting MednafenSettings[] =
   { "qtrecord.h_double_threshold", MDFNSF_NOFLAGS, gettext_noop("Double the raw image's height if it's below this threshold."), NULL, MDFNST_UINT, "256", "0", "1073741824" },
 
   { "qtrecord.vcodec", MDFNSF_NOFLAGS, gettext_noop("Video codec to use."), NULL, MDFNST_ENUM, "cscd", NULL, NULL, NULL, NULL, VCodec_List },
+
+  { "video.deinterlacer", MDFNSF_CAT_VIDEO, gettext_noop("Deinterlacer to use for interlaced video."), NULL, MDFNST_ENUM, "weave", NULL, NULL, NULL, SettingChanged, Deinterlacer_List },
+
   { NULL }
 };
 
@@ -185,6 +198,12 @@ static bool PrevInterlaced;
 static Deinterlacer deint;
 
 static std::vector<CDIF *> CDInterfaces;	// FIXME: Cleanup on error out.
+
+static void SettingChanged(const char* name)
+{
+ if(!strcmp(name, "video.deinterlacer"))
+  deint.SetType(MDFN_GetSettingUI(name));
+}
 
 bool MDFNI_StartWAVRecord(const char *path, double SoundRate)
 {
@@ -390,6 +409,7 @@ extern MDFNGI EmulatedSMS, EmulatedGG;
 #endif
 
 extern MDFNGI EmulatedCDPlay;
+extern MDFNGI EmulatedDEMO;
 
 std::vector<MDFNGI *> MDFNSystems;
 static std::list<MDFNGI *> MDFNSystemsPrio;
@@ -407,9 +427,6 @@ static void AddSystem(MDFNGI *system)
  MDFNSystems.push_back(system);
 }
 
-
-bool CDIF_DumpCD(const char *fn);
-
 void MDFNI_DumpModulesDef(const char *fn)
 {
  FILE *fp = fopen(fn, "wb");
@@ -421,7 +438,6 @@ void MDFNI_DumpModulesDef(const char *fn)
   fprintf(fp, "%d\n", MDFNSystems[i]->nominal_width);
   fprintf(fp, "%d\n", MDFNSystems[i]->nominal_height);
  }
-
 
  fclose(fp);
 }
@@ -486,15 +502,103 @@ static void MakeGIName(MDFNGI* gi, const char* path)
  }
 }
 
-// TODO: LoadCommon()
+static void PrintDiscsLayout(std::vector<CDIF *> *ifaces)
+{
+ MDFN_AutoIndent aind(1);
+
+ for(unsigned i = 0; i < (*ifaces).size(); i++)
+ {
+  CDUtility::TOC toc;
+
+  (*ifaces)[i]->ReadTOC(&toc);
+
+  MDFN_printf(_("CD %u Layout:\n"), i + 1);
+  {
+   MDFN_AutoIndent aindd(1);
+
+   MDFN_printf(_("Disc Type: 0x%02x\n"), toc.disc_type);
+
+   for(int32 track = toc.first_track; track <= toc.last_track; track++)
+   {
+    MDFN_printf(_("Track %2d, LBA: %6d  %s\n"), track, toc.tracks[track].lba, (toc.tracks[track].control & 0x4) ? "DATA" : "AUDIO");
+   }
+
+   MDFN_printf(_("Leadout: %6d  %s\n"), toc.tracks[100].lba, (toc.tracks[100].control & 0x4) ? "DATA" : "AUDIO");
+
+   if((toc.tracks[toc.last_track].control & 0x4) != (toc.tracks[100].control & 0x4))
+    MDFN_printf(_("WARNING:  DATA/AUDIO TYPE MISMATCH BETWEEN LAST TRACK AND LEADOUT AREA."));
+
+   MDFN_printf("\n");
+  }
+ }
+}
+
+static void CalcDiscsLayoutMD5(std::vector<CDIF *> *ifaces, uint8 out_md5[16])
+{
+  md5_context layout_md5;
+
+  layout_md5.starts();
+
+  for(unsigned i = 0; i < (*ifaces).size(); i++)
+  {
+   CD_TOC toc;
+
+   (*ifaces)[i]->ReadTOC(&toc);
+
+   layout_md5.update_u32_as_lsb(toc.first_track);
+   layout_md5.update_u32_as_lsb(toc.last_track);
+   layout_md5.update_u32_as_lsb(toc.tracks[100].lba);
+
+   for(uint32 track = toc.first_track; track <= toc.last_track; track++)
+   {
+    layout_md5.update_u32_as_lsb(toc.tracks[track].lba);
+    layout_md5.update_u32_as_lsb(toc.tracks[track].control & 0x4);
+   }
+  }
+
+  layout_md5.finish(out_md5);
+}
+
+static void LoadCommonPost(const char* name)
+{
+	if(MDFNGameInfo->GameType != GMT_PLAYER)
+	{
+	 MDFN_LoadGameCheats(NULL);
+	 MDFNMP_InstallReadPatches();
+	}
+
+	MDFNI_SetLayerEnableMask(~0ULL);
+
+	#ifdef WANT_DEBUGGER
+	MDFNDBG_PostGameLoad(); 
+	#endif
+
+	MDFNSS_CheckStates();
+	MDFNMOV_CheckMovies();
+
+	MDFN_ResetMessages();   // Save state, status messages, etc.
+
+	if(!MDFNGameInfo->name && name)
+	 MakeGIName(MDFNGameInfo, name); 
+
+	PrevInterlaced = false;
+	deint.ClearState();
+	SettingChanged("video.deinterlacer");
+
+	TBlur_Init();
+
+	MDFN_StateEvilBegin();
+
+	LastSoundMultiplier = 1;
+	last_sound_rate = -1;
+	memset(&last_pixel_format, 0, sizeof(MDFN_PixelFormat));
+}
 
 MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename, const bool is_device)
 {
  uint8 LayoutMD5[16];
 
  MDFNI_CloseGame();
-
- LastSoundMultiplier = 1;
 
  if(is_device)
  {
@@ -515,7 +619,9 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename, const boo
 
   if(is_device)
   {
-   CDInterfaces.push_back(CDIF_Open(devicename, true, image_memcache));
+   CDInterfaces.resize(1);
+   CDInterfaces[0] = CDIF_Open(devicename, true, image_memcache);
+
    GetFileBase("cdrom");
   }
   else
@@ -526,14 +632,16 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename, const boo
 
     ReadM3U(file_list, devicename);
 
+    CDInterfaces.resize(file_list.size());
     for(unsigned i = 0; i < file_list.size(); i++)
     {
-     CDInterfaces.push_back(CDIF_Open(file_list[i].c_str(), false, image_memcache));
+     CDInterfaces[i] = CDIF_Open(file_list[i].c_str(), false, image_memcache);
     }
    }
    else
    {
-    CDInterfaces.push_back(CDIF_Open(devicename, false, image_memcache));
+    CDInterfaces.resize(1);
+    CDInterfaces[0] = CDIF_Open(devicename, false, image_memcache);
    }
    GetFileBase(devicename);
   }
@@ -541,78 +649,39 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename, const boo
  catch(std::exception &e)
  {
   MDFN_PrintError(_("Error opening CD: %s"), e.what());
-  return(0);
+
+  for(unsigned i = 0; i < CDInterfaces.size(); i++)
+  {
+   if(CDInterfaces[i])
+   {
+    delete CDInterfaces[i];
+    CDInterfaces[i] = NULL;
+   }
+  }
+  CDInterfaces.clear();
+
+  MDFNGameInfo = NULL;
+
+  return(NULL);
  }
 
  //
  // Print out a track list for all discs.
  //
- MDFN_indent(1);
- for(unsigned i = 0; i < CDInterfaces.size(); i++)
- {
-  CDUtility::TOC toc;
+ PrintDiscsLayout(&CDInterfaces);
 
-  CDInterfaces[i]->ReadTOC(&toc);
-
-  MDFN_printf(_("CD %d Layout:\n"), i + 1);
-  MDFN_indent(1);
-
-  MDFN_printf(_("Disc Type: 0x%02x\n"), toc.disc_type);
-
-  for(int32 track = toc.first_track; track <= toc.last_track; track++)
-  {
-   MDFN_printf(_("Track %2d, LBA: %6d  %s\n"), track, toc.tracks[track].lba, (toc.tracks[track].control & 0x4) ? "DATA" : "AUDIO");
-  }
-
-  MDFN_printf(_("Leadout: %6d  %s\n"), toc.tracks[100].lba, (toc.tracks[100].control & 0x4) ? "DATA" : "AUDIO");
-
-  if((toc.tracks[toc.last_track].control & 0x4) != (toc.tracks[100].control & 0x4))
-   MDFN_printf(_("WARNING:  DATA/AUDIO TYPE MISMATCH BETWEEN LAST TRACK AND LEADOUT AREA."));
-
-
-  MDFN_indent(-1);
-  MDFN_printf("\n");
- }
- MDFN_indent(-1);
  //
- //
-
-
-
  // Calculate layout MD5.  The system emulation LoadCD() code is free to ignore this value and calculate
  // its own, or to use it to look up a game in its database.
+ //
+ CalcDiscsLayoutMD5(&CDInterfaces, LayoutMD5);
+
+ try
  {
-  md5_context layout_md5;
-
-  layout_md5.starts();
-
-  for(unsigned i = 0; i < CDInterfaces.size(); i++)
-  {
-   CD_TOC toc;
-
-   CDInterfaces[i]->ReadTOC(&toc);
-
-   layout_md5.update_u32_as_lsb(toc.first_track);
-   layout_md5.update_u32_as_lsb(toc.last_track);
-   layout_md5.update_u32_as_lsb(toc.tracks[100].lba);
-
-   for(uint32 track = toc.first_track; track <= toc.last_track; track++)
-   {
-    layout_md5.update_u32_as_lsb(toc.tracks[track].lba);
-    layout_md5.update_u32_as_lsb(toc.tracks[track].control & 0x4);
-   }
-  }
-
-  layout_md5.finish(LayoutMD5);
- }
-
 	MDFNGameInfo = NULL;
 
         for(std::list<MDFNGI *>::iterator it = MDFNSystemsPrio.begin(); it != MDFNSystemsPrio.end(); it++)  //_unsigned int x = 0; x < MDFNSystems.size(); x++)
         {
-         char tmpstr[256];
-         trio_snprintf(tmpstr, 256, "%s.enable", (*it)->shortname);
-
          if(force_module)
          {
           if(!strcmp(force_module, (*it)->shortname))
@@ -623,9 +692,15 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename, const boo
          }
          else
          {
+          char tmpstr[256];
+          trio_snprintf(tmpstr, 256, "%s.enable", (*it)->shortname);
+
           // Is module enabled?
           if(!MDFN_GetSettingB(tmpstr))
+	  {
+	   MDFN_printf(_("Skipping module \"%s\" per \"%s\" setting.\n"), (*it)->shortname, tmpstr);
            continue; 
+	  }
 
           if(!(*it)->LoadCD || !(*it)->TestMagicCD)
            continue;
@@ -641,136 +716,92 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename, const boo
         if(!MDFNGameInfo)
         {
 	 if(force_module)
-	 {
-	  MDFN_PrintError(_("Unrecognized system \"%s\"!"), force_module);
-	  return(0);
-	 }
-
-	 // This code path should never be taken, thanks to "cdplay"
- 	 MDFN_PrintError(_("Could not find a system that supports this CD."));
-	 return(0);
+	  throw MDFN_Error(0, _("Unrecognized system \"%s\"!"), force_module);
+	 else
+ 	  throw MDFN_Error(0, _("Could not find a system that supports this CD."));
         }
 
 	// This if statement will be true if force_module references a system without CDROM support.
         if(!MDFNGameInfo->LoadCD)
-	{
-         MDFN_PrintError(_("Specified system \"%s\" doesn't support CDs!"), force_module);
-	 return(0);
-	}
+         throw MDFN_Error(0, _("Specified system \"%s\" doesn't support CDs!"), force_module);
 
         MDFN_printf(_("Using module: %s(%s)\n\n"), MDFNGameInfo->shortname, MDFNGameInfo->fullname);
 
- // TODO: include module name in hash
- memcpy(MDFNGameInfo->MD5, LayoutMD5, 16);
+	memcpy(MDFNGameInfo->MD5, LayoutMD5, 16);
 
- std::string modoverride_settings_file_path = MDFN_GetBaseDirectory() + std::string(PSS) + std::string(MDFNGameInfo->shortname) + std::string(".cfg");
+	std::string modoverride_settings_file_path = MDFN_GetBaseDirectory() + std::string(PSS) + std::string(MDFNGameInfo->shortname) + std::string(".cfg");
 
- if(!MDFN_LoadSettings(modoverride_settings_file_path.c_str(), true))
- {
-  for(unsigned i = 0; i < CDInterfaces.size(); i++)
-   delete CDInterfaces[i];
-  CDInterfaces.clear();
+	MDFN_LoadSettings(modoverride_settings_file_path.c_str(), true);
 
-  MDFNGameInfo = NULL;
-  return(0);
+	MDFNGameInfo->LoadCD(&CDInterfaces);
+
+	LoadCommonPost(is_device ? NULL : devicename);
  }
-
- if(!(MDFNGameInfo->LoadCD(&CDInterfaces)))
+ catch(std::exception &e)
  {
-  for(unsigned i = 0; i < CDInterfaces.size(); i++)
-   delete CDInterfaces[i];
-  CDInterfaces.clear();
+	MDFN_PrintError("%s", e.what());
 
-  MDFNGameInfo = NULL;
-  return(0);
+	for(unsigned i = 0; i < CDInterfaces.size(); i++)
+	{
+	 if(CDInterfaces[i])
+	 {
+	  delete CDInterfaces[i];
+	  CDInterfaces[i] = NULL;
+	 }
+	}
+	CDInterfaces.clear();
+
+	MDFNGameInfo = NULL;
+	return(NULL);
  }
-
- if(!MDFNGameInfo->name && !is_device)
-  MakeGIName(MDFNGameInfo, devicename);
-
- MDFNI_SetLayerEnableMask(~0ULL);
-
- #ifdef WANT_DEBUGGER
- MDFNDBG_PostGameLoad(); 
- #endif
-
- MDFNSS_CheckStates();
- MDFNMOV_CheckMovies();
-
- MDFN_ResetMessages();   // Save state, status messages, etc.
-
- TBlur_Init();
-
- MDFN_StateEvilBegin();
-
-
- if(MDFNGameInfo->GameType != GMT_PLAYER)
- {
-  MDFN_LoadGameCheats(NULL);
-  MDFNMP_InstallReadPatches();
- }
-
- last_sound_rate = -1;
- memset(&last_pixel_format, 0, sizeof(MDFN_PixelFormat));
 
  return(MDFNGameInfo);
 }
 
-// Return FALSE on fatal error(IPS file found but couldn't be applied),
-// or TRUE on success(IPS patching succeeded, or IPS file not found).
-static bool LoadIPS(MDFNFILE &GameFile, const char *path)
+static void LoadIPS(MDFNFILE* GameFile, const char *path)
 {
- FILE *IPSFile;
-
  MDFN_printf(_("Applying IPS file \"%s\"...\n"), path);
 
- IPSFile = fopen(path, "rb");
- if(!IPSFile)
+ try
  {
-  ErrnoHolder ene(errno);
+  FileStream IPSFile(path, FileStream::MODE_READ);
 
+  GameFile->ApplyIPS(&IPSFile);
+ }
+ catch(MDFN_Error &e)
+ {
   MDFN_indent(1);
-  MDFN_printf(_("Failed: %s\n"), ene.StrError());
+  MDFN_printf(_("Failed: %s\n"), e.what());
   MDFN_indent(-1);
-
-  if(ene.Errno() == ENOENT)
-   return(1);
-  else
-  {
-   MDFN_PrintError(_("Error opening IPS file: %s\n"), ene.StrError());
-   return(0);
-  }  
+  if(e.GetErrno() != ENOENT)
+   throw;
  }
-
- if(!GameFile.ApplyIPS(IPSFile))
+ catch(std::exception &e)
  {
-  fclose(IPSFile);
-  return(0);
+  MDFN_indent(1);
+  MDFN_printf(_("Failed: %s\n"), e.what());
+  MDFN_indent(-1);
+  throw;
  }
- fclose(IPSFile);
-
- return(1);
 }
 
 MDFNGI *MDFNI_LoadGame(const char *force_module, const char *name)
 {
-        MDFNFILE GameFile;
+ if(strlen(name) > 4 && (!strcasecmp(name + strlen(name) - 4, ".cue") || !strcasecmp(name + strlen(name) - 4, ".toc") || !strcasecmp(name + strlen(name) - 4, ".ccd") || !strcasecmp(name + strlen(name) - 4, ".m3u")))
+ {
+  return(MDFNI_LoadCD(force_module, name, false));
+ }
+
+ MDFNI_CloseGame();
+
+ MDFN_printf(_("Loading %s...\n"), name);
+
+ try
+ {
+	MDFN_AutoIndent aind(1);
 	std::vector<FileExtensionSpecStruct> valid_iae;
 
-	if(strlen(name) > 4 && (!strcasecmp(name + strlen(name) - 4, ".cue") || !strcasecmp(name + strlen(name) - 4, ".toc") || !strcasecmp(name + strlen(name) - 4, ".ccd") || !strcasecmp(name + strlen(name) - 4, ".m3u")))
-	{
-	 return(MDFNI_LoadCD(force_module, name, false));
-	}
-
-	MDFNI_CloseGame();
-
-	LastSoundMultiplier = 1;
-
 	MDFNGameInfo = NULL;
-
-	MDFN_printf(_("Loading %s...\n"), name);
-
-	MDFN_indent(1);
 
         GetFileBase(name);
 
@@ -795,41 +826,25 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char *name)
 	 valid_iae.push_back(tmpext);
 	}
 
-	if(!GameFile.Open(name, &valid_iae[0], _("game")))
-        {
-	 MDFNGameInfo = NULL;
-	 return 0;
-	}
+	MDFNFILE GameFile(name, &valid_iae[0], _("game"));
+	//printf("FBASE=%s,EXT=%s\n", GameFile.fbase, GameFile.ext);
 
-	if(!LoadIPS(GameFile, MDFN_MakeFName(MDFNMKF_IPS, 0, 0).c_str()))
-	{
-	 MDFNGameInfo = NULL;
-         GameFile.Close();
-         return(0);
-	}
+	LoadIPS(&GameFile, MDFN_MakeFName(MDFNMKF_IPS, 0, 0).c_str());
 
 	MDFNGameInfo = NULL;
 
 	for(std::list<MDFNGI *>::iterator it = MDFNSystemsPrio.begin(); it != MDFNSystemsPrio.end(); it++)  //_unsigned int x = 0; x < MDFNSystems.size(); x++)
 	{
-	 char tmpstr[256];
-	 trio_snprintf(tmpstr, 256, "%s.enable", (*it)->shortname);
-
 	 if(force_module)
 	 {
           if(!strcmp(force_module, (*it)->shortname))
           {
 	   if(!(*it)->Load)
 	   {
-            GameFile.Close();
-
 	    if((*it)->LoadCD)
-             MDFN_PrintError(_("Specified system only supports CD(physical, or image files, such as *.cue and *.toc) loading."));
+             throw MDFN_Error(0, _("Specified system only supports CD(physical, or image files, such as *.cue and *.toc) loading."));
 	    else
-             MDFN_PrintError(_("Specified system does not support normal file loading."));
-            MDFN_indent(-1);
-            MDFNGameInfo = NULL;
-            return 0;
+             throw MDFN_Error(0, _("Specified system does not support normal file loading."));
 	   }
            MDFNGameInfo = *it;
            break;
@@ -837,14 +852,22 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char *name)
 	 }
 	 else
 	 {
+	  char tmpstr[256];
+	  trio_snprintf(tmpstr, 256, "%s.enable", (*it)->shortname);
+
 	  // Is module enabled?
 	  if(!MDFN_GetSettingB(tmpstr))
+	  {
+	   MDFN_printf(_("Skipping module \"%s\" per \"%s\" setting.\n"), (*it)->shortname, tmpstr);
 	   continue; 
+	  }
 
 	  if(!(*it)->Load || !(*it)->TestMagic)
 	   continue;
 
-	  if((*it)->TestMagic(name, &GameFile))
+	  GameFile.rewind();
+
+	  if((*it)->TestMagic(&GameFile))
 	  {
 	   MDFNGameInfo = *it;
 	   break;
@@ -854,80 +877,46 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char *name)
 
         if(!MDFNGameInfo)
         {
-	 GameFile.Close();
-
 	 if(force_module)
-          MDFN_PrintError(_("Unrecognized system \"%s\"!"), force_module);
+          throw MDFN_Error(0, _("Unrecognized system \"%s\"!"), force_module);
 	 else
-          MDFN_PrintError(_("Unrecognized file format."));
-
-         MDFN_indent(-1);
-         MDFNGameInfo = NULL;
-         return 0;
+          throw MDFN_Error(0, _("Unrecognized file format."));
         }
 
 	MDFN_printf(_("Using module: %s(%s)\n\n"), MDFNGameInfo->shortname, MDFNGameInfo->fullname);
-	MDFN_indent(1);
-
-	assert(MDFNGameInfo->soundchan != 0);
-
-        MDFNGameInfo->soundrate = 0;
-        MDFNGameInfo->name = NULL;
-        MDFNGameInfo->rotated = 0;
-
-	std::string modoverride_settings_file_path = MDFN_GetBaseDirectory() + std::string(PSS) + std::string(MDFNGameInfo->shortname) + std::string(".cfg");
-
-	if(!MDFN_LoadSettings(modoverride_settings_file_path.c_str(), true))
 	{
-	 GameFile.Close();
+	 MDFN_AutoIndent aindentgm(1);
 
-	 MDFN_indent(-2);
-	 MDFNGameInfo = NULL;
-	 return(0);
+	 assert(MDFNGameInfo->soundchan != 0);
+
+         MDFNGameInfo->soundrate = 0;
+         MDFNGameInfo->name = NULL;
+         MDFNGameInfo->rotated = 0;
+
+	 std::string modoverride_settings_file_path = MDFN_GetBaseDirectory() + std::string(PSS) + std::string(MDFNGameInfo->shortname) + std::string(".cfg");
+
+	 MDFN_LoadSettings(modoverride_settings_file_path.c_str(), true);
+
+	 GameFile.rewind();
+         if(MDFNGameInfo->Load(&GameFile) <= 0)
+	 {
+          MDFNGameInfo = NULL;
+          return(NULL);
+         }
 	}
 
-        if(MDFNGameInfo->Load(name, &GameFile) <= 0)
-	{
-         GameFile.Close();
-         MDFN_indent(-2);
-         MDFNGameInfo = NULL;
-         return(0);
-        }
+	LoadCommonPost(name);
+ }
+ catch(std::exception &e)
+ {
+  MDFN_PrintError("%s", e.what());
 
-        if(MDFNGameInfo->GameType != GMT_PLAYER)
-	{
-	 MDFN_LoadGameCheats(NULL);
-	 MDFNMP_InstallReadPatches();
-	}
+  MDFNGameInfo = NULL;
 
-	MDFNI_SetLayerEnableMask(~0ULL);
+  return(NULL);
+ }
 
-	#ifdef WANT_DEBUGGER
-	MDFNDBG_PostGameLoad();
-	#endif
-
-	MDFNSS_CheckStates();
-	MDFNMOV_CheckMovies();
-
-	MDFN_ResetMessages();	// Save state, status messages, etc.
-
-	MDFN_indent(-2);
-
-	if(!MDFNGameInfo->name)
-	 MakeGIName(MDFNGameInfo, name); 
-
-	PrevInterlaced = false;
-	deint.ClearState();
-
-	TBlur_Init();
-
-        MDFN_StateEvilBegin();
-
-
-        last_sound_rate = -1;
-        memset(&last_pixel_format, 0, sizeof(MDFN_PixelFormat));
-
-        return(MDFNGameInfo);
+ return(MDFNGameInfo);
 }
 
 static void BuildDynamicSetting(MDFNSetting *setting, const char *system_name, const char *name, uint32 flags, const char *description, MDFNSettingType type,
@@ -1095,7 +1084,8 @@ bool MDFNI_InitializeModules(const std::vector<MDFNGI *> &ExternalSystems)
   &EmulatedGG,
   #endif
 
-  &EmulatedCDPlay
+  &EmulatedCDPlay,
+  &EmulatedDEMO
  };
  std::string i_modules_string, e_modules_string;
 
@@ -1199,9 +1189,16 @@ int MDFNI_Initialize(const char *basedir, const std::vector<MDFNSetting> &Driver
 
 	MDFN_MergeSettings(RenamedSettings);
 
-	settings_file_path = std::string(basedir) + std::string(PSS) + std::string("mednafen-09x.cfg");
-	if(!MDFN_LoadSettings(settings_file_path.c_str()))
+	try
+	{
+	 settings_file_path = std::string(basedir) + std::string(PSS) + std::string("mednafen-09x.cfg");
+	 MDFN_LoadSettings(settings_file_path.c_str());
+	}
+	catch(std::exception &e)
+	{
+	 MDFN_PrintError("%s", e.what());
 	 return(0);
+	}
 
 	#ifdef WANT_DEBUGGER
 	MDFNDBG_Init();
@@ -1608,10 +1605,13 @@ void MDFNI_Emulate(EmulateSpecStruct *espec)
 
   deint.Process(espec->surface, espec->DisplayRect, espec->LineWidths, espec->InterlaceField);
 
-  PrevInterlaced = true;
+  if(deint.GetType() != Deinterlacer::DEINT_WEAVE)
+  {
+   espec->InterlaceOn = false;
+   espec->InterlaceField = 0;
+  }
 
-  espec->InterlaceOn = false;
-  espec->InterlaceField = 0;
+  PrevInterlaced = true;
  }
  else
   PrevInterlaced = false;
@@ -1689,6 +1689,11 @@ static int curindent = 0;
 void MDFN_indent(int indent)
 {
  curindent += indent;
+ if(curindent < 0)
+ {
+  fprintf(stderr, "MDFN_indent negative!\n");
+  curindent = 0;
+ }
 }
 
 static uint8 lastchar = 0;

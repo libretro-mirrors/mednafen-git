@@ -19,9 +19,9 @@
 #include "shared.h"
 #include "cart/cart.h"
 #include "cd/cd.h"
-#include "../md5.h"
-#include "../general.h"
-#include "../mempatcher.h"
+#include <mednafen/md5.h>
+#include <mednafen/general.h>
+#include <mednafen/mempatcher.h>
 
 namespace MDFN_IEN_MD
 {
@@ -204,9 +204,16 @@ static void Emulate(EmulateSpecStruct *espec)
  //MainVDP.SetSurface(NULL);
 }
 
+static void Cleanup(void)
+{
+ MDCart_Kill();
+}
+
 static void CloseGame(void)
 {
- MDCart_Close();
+ MDCart_SaveNV();
+
+ Cleanup();
 }
 
 static bool decode_region_setting(const int setting, bool &overseas, bool &pal)
@@ -238,8 +245,8 @@ static bool decode_region_setting(const int setting, bool &overseas, bool &pal)
  }
 }
 
-static int LoadCommonPost(const md_game_info &ginfo);
-static int LoadCommonPost(const md_game_info &ginfo)
+static void LoadCommonPost(const md_game_info &ginfo);
+static void LoadCommonPost(const md_game_info &ginfo)
 {
  MDFN_printf(_("ROM:       %dKiB\n"), (ginfo.rom_size + 1023) / 1024);
  MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(ginfo.md5, 0).c_str());
@@ -377,57 +384,57 @@ static int LoadCommonPost(const md_game_info &ginfo)
  MDFNGameInfo->LayerNames = "BG0\0BG1\0OBJ\0";
 
  system_reset(true);
-
- return(1);
 }
 
-static int Load(const char *name, MDFNFILE *fp)
+static int Load(MDFNFILE *fp)
 {
- md_game_info ginfo;
- int ret;
-
- memset(&ginfo, 0, sizeof(md_game_info));
- ret = MDCart_Load(&ginfo, name, fp);
- if(ret <= 0)
-  return(ret);
-
- memcpy(MDFNGameInfo->MD5, ginfo.md5, 16);
-
- MD_IsCD = FALSE;
-
- MD_ExtRead8 = MDCart_Read8;
- MD_ExtRead16 = MDCart_Read16;
- MD_ExtWrite8 = MDCart_Write8;
- MD_ExtWrite16 = MDCart_Write16;
-
- MDCart_LoadNV();
-
- if(!LoadCommonPost(ginfo))
-  return(0);
-
- return(1);
-}
-
-static int LoadCD(std::vector<CDIF *> *CDInterfaces)
-{
- md_game_info ginfo;
-
- memset(&ginfo, 0, sizeof(md_game_info));
-
- MD_IsCD = TRUE;
-
- if(!MDCD_Load(CDInterfaces, &ginfo))
+ try
  {
-  puts("BOOM");
-  return(FALSE);
+  md_game_info ginfo;
+
+  memset(&ginfo, 0, sizeof(md_game_info));
+  MDCart_Load(&ginfo, fp);
+
+  memcpy(MDFNGameInfo->MD5, ginfo.md5, 16);
+
+  MD_IsCD = FALSE;
+
+  MD_ExtRead8 = MDCart_Read8;
+  MD_ExtRead16 = MDCart_Read16;
+  MD_ExtWrite8 = MDCart_Write8;
+  MD_ExtWrite16 = MDCart_Write16;
+
+  MDCart_LoadNV();
+
+  LoadCommonPost(ginfo);
  }
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
+ return(1);
+}
 
- memcpy(MDFNGameInfo->MD5, ginfo.md5, 16);
+static void LoadCD(std::vector<CDIF *> *CDInterfaces)
+{
+ try
+ {
+  md_game_info ginfo;
 
- if(!LoadCommonPost(ginfo))
-  return(0);
+  memset(&ginfo, 0, sizeof(md_game_info));
 
- return(TRUE);
+  MD_IsCD = TRUE;
+
+  MDCD_Load(CDInterfaces, &ginfo);
+
+  LoadCommonPost(ginfo);
+ }
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
 }
 
 static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)

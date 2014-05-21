@@ -17,7 +17,7 @@
 */
 
 #include "shared.h"
-#include "../mempatcher.h"
+#include <mednafen/mempatcher.h>
 
 namespace MDFN_IEN_SMS
 {
@@ -194,7 +194,7 @@ static void CloseGame(void)
  SMS_SoundClose();
 }
 
-static int LoadCommon(const char *name, MDFNFILE *fp)
+static int LoadCommon(MDFNFILE *fp)
 {
  int32 size = fp->size;
  const uint8 *data_ptr = fp->data;
@@ -257,7 +257,7 @@ static int LoadCommon(const char *name, MDFNFILE *fp)
  return(1);
 }
 
-static bool TestMagicSMS(const char *name, MDFNFILE *fp)
+static bool TestMagicSMS(MDFNFILE *fp)
 {
  if(strcasecmp(fp->ext, "sms") && strcasecmp(fp->ext, "sg") && strcasecmp(fp->ext, "sc"))
   return(FALSE);
@@ -265,7 +265,7 @@ static bool TestMagicSMS(const char *name, MDFNFILE *fp)
  return(TRUE);
 }
 
-static bool TestMagicGG(const char *name, MDFNFILE *fp)
+static bool TestMagicGG(MDFNFILE *fp)
 {
  if(strcasecmp(fp->ext, "gg"))
   return(FALSE);
@@ -274,18 +274,18 @@ static bool TestMagicGG(const char *name, MDFNFILE *fp)
 }
 
 
-static int LoadSMS(const char *name, MDFNFILE *fp)
+static int LoadSMS(MDFNFILE *fp)
 {
  sms.console = CONSOLE_SMS;
 
- return(LoadCommon(name, fp));
+ return(LoadCommon(fp));
 }
 
-static int LoadGG(const char *name, MDFNFILE *fp)
+static int LoadGG(MDFNFILE *fp)
 {
  sms.console = CONSOLE_GG;
 
- return(LoadCommon(name, fp));
+ return(LoadCommon(fp));
 }
 
 }

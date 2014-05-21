@@ -17,21 +17,21 @@
 
 #include "pce.h"
 #include "vce.h"
-#include "pce_psg/pce_psg.h"
+#include <mednafen/hw_sound/pce_psg/pce_psg.h>
 #include "input.h"
 #include "huc.h"
 #include "subhw.h"
 #include "pcecd.h"
-#include "../cdrom/scsicd.h"
+#include <mednafen/cdrom/scsicd.h>
 #include "hes.h"
 #include "debug.h"
 #include "tsushin.h"
-#include "arcade_card/arcade_card.h"
-#include "../mempatcher.h"
-#include "../cdrom/cdromif.h"
-#include "../md5.h"
-#include "../FileStream.h"
-#include "../sound/OwlResampler.h"
+#include <mednafen/hw_misc/arcade_card/arcade_card.h>
+#include <mednafen/mempatcher.h>
+#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/md5.h>
+#include <mednafen/FileStream.h>
+#include <mednafen/sound/OwlResampler.h>
 #include <math.h>
 
 #define PCE_DEBUG(x, ...) {  /* printf(x, ## __VA_ARGS__); */ }
@@ -66,6 +66,7 @@ static OwlResampler* HRRes = NULL;
 
 static bool SetSoundRate(double rate);
 
+static void Cleanup(void);
 
 bool PCE_ACEnabled;
 uint32 PCE_InDebug = 0;
@@ -319,7 +320,7 @@ static bool LoadCustomPalette(const char *path)
 static int LoadCommon(void);
 static void LoadCommonPre(void);
 
-static bool TestMagic(const char *name, MDFNFILE *fp)
+static bool TestMagic(MDFNFILE *fp)
 {
  if(memcmp(fp->data, "HESM", 4) && strcasecmp(fp->ext, "pce") && strcasecmp(fp->ext, "sgx"))
   return(FALSE);
@@ -363,85 +364,97 @@ static void CDSettingChanged(const char *name)
  SetCDSettings(true);
 }
 
-static int Load(const char *name, MDFNFILE *fp)
+static int Load(MDFNFILE *fp)
 {
- uint32 headerlen = 0;
- uint32 r_size;
-
- IsHES = 0;
- IsSGX = 0;
-
- if(!memcmp(fp->data, "HESM", 4))
-  IsHES = 1;
-
- LoadCommonPre();
-
- if(!IsHES)
+ try
  {
-  if(fp->size & 0x200) // 512 byte header!
-   headerlen = 512;
+  uint32 headerlen = 0;
+  uint32 r_size;
+
+  IsHES = 0;
+  IsSGX = 0;
+
+  if(!memcmp(fp->data, "HESM", 4))
+   IsHES = 1;
+
+  LoadCommonPre();
+
+  if(!IsHES)
+  {
+   if(fp->size & 0x200) // 512 byte header!
+    headerlen = 512;
+  }
+
+  r_size = fp->size - headerlen;
+  if(r_size > 4096 * 1024) r_size = 4096 * 1024;
+
+  uint32 crc = crc32(0, fp->data + headerlen, fp->size - headerlen);
+
+  if(IsHES)
+  {
+   HES_Load(fp->data, fp->size);
+
+   ADPCMBuf = new RavenBuffer();
+   PCE_IsCD = 1;
+   PCECD_Init(NULL, PCECDIRQCB, PCE_MASTER_CLOCK, ADPCMBuf->Buf(), NULL, NULL);
+  }
+  else
+  {
+   HuC_Load(fp->data + headerlen, fp->size - headerlen, crc, MDFN_GetSettingB("pce.disable_bram_hucard"));
+   #if 0	// For testing
+   PCE_IsCD = 1;
+   PCECD_Init(NULL, PCECDIRQCB, PCE_MASTER_CLOCK, &sbuf[0], &sbuf[1]);
+   #endif
+  }
+
+  if(!strcasecmp(fp->ext, "sgx"))
+   IsSGX = TRUE;
+
+  if(fp->size >= 8192 && !memcmp(fp->data + headerlen, "DARIUS Version 1.11b", strlen("DARIUS VERSION 1.11b")))
+  {
+   MDFN_printf("SuperGfx:  Darius Plus\n");
+   IsSGX = 1;
+  }
+
+  if(crc == 0x4c2126b0)
+  {
+   MDFN_printf("SuperGfx:  Aldynes\n");
+   IsSGX = 1;
+  }
+
+  if(crc == 0x8c4588e2)
+  {
+   MDFN_printf("SuperGfx:  1941 - Counter Attack\n");
+   IsSGX = 1;
+  }
+
+  if(crc == 0x1f041166)
+  {
+   MDFN_printf("SuperGfx:  Madouou Granzort\n");
+   IsSGX = 1;
+  }
+
+  if(crc == 0xb486a8ed)
+  {
+   MDFN_printf("SuperGfx:  Daimakaimura\n");
+   IsSGX = 1;
+  }
+
+  if(crc == 0x3b13af61)
+  {
+   MDFN_printf("SuperGfx:  Battle Ace\n");
+   IsSGX = 1;
+  }
+
+  LoadCommon();
+ }
+ catch(...)
+ {
+  Cleanup();
+  throw;
  }
 
- r_size = fp->size - headerlen;
- if(r_size > 4096 * 1024) r_size = 4096 * 1024;
-
- uint32 crc = crc32(0, fp->data + headerlen, fp->size - headerlen);
-
-
- if(IsHES)
- {
-  if(!PCE_HESLoad(fp->data, fp->size))
-   return(0);
-
-  ADPCMBuf = new RavenBuffer();
-  PCE_IsCD = 1;
-  PCECD_Init(NULL, PCECDIRQCB, PCE_MASTER_CLOCK, ADPCMBuf->Buf(), NULL, NULL);
- }
- else
- {
-  HuCLoad(fp->data + headerlen, fp->size - headerlen, crc, MDFN_GetSettingB("pce.disable_bram_hucard"));
-  #if 0	// For testing
-  PCE_IsCD = 1;
-  PCECD_Init(NULL, PCECDIRQCB, PCE_MASTER_CLOCK, &sbuf[0], &sbuf[1]);
-  #endif
- }
- if(!strcasecmp(fp->ext, "sgx"))
-  IsSGX = TRUE;
-
- if(fp->size >= 8192 && !memcmp(fp->data + headerlen, "DARIUS Version 1.11b", strlen("DARIUS VERSION 1.11b")))
- {
-  MDFN_printf("SuperGfx:  Darius Plus\n");
-  IsSGX = 1;
- }
-
- if(crc == 0x4c2126b0)
- {
-  MDFN_printf("SuperGfx:  Aldynes\n");
-  IsSGX = 1;
- }
-
- if(crc == 0x8c4588e2)
- {
-  MDFN_printf("SuperGfx:  1941 - Counter Attack\n");
-  IsSGX = 1;
- }
- if(crc == 0x1f041166)
- {
-  MDFN_printf("SuperGfx:  Madouou Granzort\n");
-  IsSGX = 1;
- }
- if(crc == 0xb486a8ed)
- {
-  MDFN_printf("SuperGfx:  Daimakaimura\n");
-  IsSGX = 1;
- }
- if(crc == 0x3b13af61)
- {
-  MDFN_printf("SuperGfx:  Battle Ace\n");
-  IsSGX = 1;
- }
-
- return(LoadCommon());
+ return(true);
 }
 
 static void LoadCommonPre(void)
@@ -667,82 +680,78 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  return(ret);
 }
 
-static int LoadCD(std::vector<CDIF *> *CDInterfaces)
+static void LoadCD(std::vector<CDIF *> *CDInterfaces)
 {
- static const FileExtensionSpecStruct KnownBIOSExtensions[] =
+ try
  {
-  { ".pce", gettext_noop("PC Engine ROM Image") },
-  { ".bin", gettext_noop("PC Engine ROM Image") },
-  { ".bios", gettext_noop("BIOS Image") },
-  { NULL, NULL }
- };
- md5_context md5;
- uint32 headerlen = 0;
+  static const FileExtensionSpecStruct KnownBIOSExtensions[] =
+  {
+   { ".pce", gettext_noop("PC Engine ROM Image") },
+   { ".bin", gettext_noop("PC Engine ROM Image") },
+   { ".bios", gettext_noop("BIOS Image") },
+   { NULL, NULL }
+  };
+  md5_context md5;
+  uint32 headerlen = 0;
 
- MDFNFILE fp;
+  IsHES = 0;
+  IsSGX = 0;
 
- IsHES = 0;
- IsSGX = 0;
+  LoadCommonPre();
 
- LoadCommonPre();
+  const char *bios_sname = DetectGECD((*CDInterfaces)[0]) ? "pce.gecdbios" : "pce.cdbios";
+  std::string bios_path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(bios_sname).c_str() );
+  MDFNFILE fp(bios_path.c_str(), KnownBIOSExtensions, _("CD BIOS"));
 
- const char *bios_sname = DetectGECD((*CDInterfaces)[0]) ? "pce.gecdbios" : "pce.cdbios";
- std::string bios_path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(bios_sname).c_str() );
+  if(fp.Size() & 0x200)
+   headerlen = 512;
 
- if(!fp.Open(bios_path, KnownBIOSExtensions, _("CD BIOS")))
- {
-  return(0);
+  //md5.starts();
+  //md5.update(fp.Data(), fp.Size());
+  //md5.update(MDFNGameInfo->MD5, 16);
+  //md5.finish(MDFNGameInfo->MD5);
+
+  bool disable_bram_cd = MDFN_GetSettingB("pce.disable_bram_cd");
+
+  if(disable_bram_cd)
+   MDFN_printf(_("Warning: BRAM is disabled per pcfx.disable_bram_cd setting.  This is simulating a malfunction.\n"));
+
+  HuC_Load(fp.Data() + headerlen, fp.Size() - headerlen, 0, disable_bram_cd, PCE_ACEnabled ? SYSCARD_ARCADE : SYSCARD_3);
+
+  ADPCMBuf = new RavenBuffer();
+  for(unsigned lr = 0; lr < 2; lr++)
+   CDDABufs[lr] = new RavenBuffer();
+
+  PCE_IsCD = 1;
+  PCECD_Init(NULL, PCECDIRQCB, PCE_MASTER_CLOCK, ADPCMBuf->Buf(), CDDABufs[0]->Buf(), CDDABufs[1]->Buf());
+
+  MDFNGameInfo->GameType = GMT_CDROM;
+  CD_TrayOpen = false;
+  CD_SelectedDisc = 0;
+  cdifs = CDInterfaces;
+
+  SCSICD_SetDisc(true, NULL, true);
+  SCSICD_SetDisc(false, (*CDInterfaces)[0], true);
+
+
+  MDFN_printf(_("CD Layout:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
+  MDFN_printf(_("Arcade Card Emulation:  %s\n"), PCE_ACEnabled ? _("Enabled") : _("Disabled"));
+
+  LoadCommon();
  }
-
- if(fp.Size() & 0x200)
-  headerlen = 512;
-
-
- //md5.starts();
- //md5.update(fp.Data(), fp.Size());
- //md5.update(MDFNGameInfo->MD5, 16);
- //md5.finish(MDFNGameInfo->MD5);
-
- bool disable_bram_cd = MDFN_GetSettingB("pce.disable_bram_cd");
-
- if(disable_bram_cd)
-  MDFN_printf(_("Warning: BRAM is disabled per pcfx.disable_bram_cd setting.  This is simulating a malfunction.\n"));
-
- if(!HuCLoad(fp.Data() + headerlen, fp.Size() - headerlen, 0, disable_bram_cd, PCE_ACEnabled ? SYSCARD_ARCADE : SYSCARD_3))
+ catch(...)
  {
-  return(0);
+  Cleanup();
+  throw;
  }
-
- ADPCMBuf = new RavenBuffer();
- for(unsigned lr = 0; lr < 2; lr++)
-  CDDABufs[lr] = new RavenBuffer();
-
- PCE_IsCD = 1;
-
- if(!PCECD_Init(NULL, PCECDIRQCB, PCE_MASTER_CLOCK, ADPCMBuf->Buf(), CDDABufs[0]->Buf(), CDDABufs[1]->Buf()))
- {
-  HuCClose();
-  return(0);
- }
-
- MDFNGameInfo->GameType = GMT_CDROM;
- CD_TrayOpen = false;
- CD_SelectedDisc = 0;
- cdifs = CDInterfaces;
-
- SCSICD_SetDisc(true, NULL, true);
- SCSICD_SetDisc(false, (*CDInterfaces)[0], true);
-
-
- MDFN_printf(_("CD Layout:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
- MDFN_printf(_("Arcade Card Emulation:  %s\n"), PCE_ACEnabled ? _("Enabled") : _("Disabled"));
-
- return(LoadCommon());
 }
 
-
-static void CloseGame(void)
+static void Cleanup(void)
 {
+ #ifdef WANT_DEBUGGER
+ PCEDBG_Kill();
+ #endif
+
  if(PCE_IsCD)
  {
   PCECD_Close();
@@ -752,7 +761,7 @@ static void CloseGame(void)
   HES_Close();
  else
  {
-  HuCClose();
+  HuC_Close();
  }
 
  if(vce)
@@ -799,6 +808,11 @@ static void CloseGame(void)
   delete HRRes;
   HRRes = NULL;
  }
+}
+
+static void CloseGame(void)
+{
+ Cleanup();
 }
 
 #if 0

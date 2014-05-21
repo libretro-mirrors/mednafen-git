@@ -67,10 +67,9 @@ void TBlur_Run(EmulateSpecStruct *espec)
    int xw = espec->DisplayRect.w;
    int xs = espec->DisplayRect.x;
 
-   if(espec->LineWidths[0].w != ~0)
+   if(espec->LineWidths[0] != ~0)
    {
-    xw = espec->LineWidths[espec->DisplayRect.y + y].w;
-    xs = espec->LineWidths[espec->DisplayRect.y + y].x;
+    xw = espec->LineWidths[espec->DisplayRect.y + y];
    }
 
    if(AccumBlurAmount == 8192)
@@ -124,10 +123,9 @@ void TBlur_Run(EmulateSpecStruct *espec)
    int xw = espec->DisplayRect.w;
    int xs = espec->DisplayRect.x;
 
-   if(espec->LineWidths[0].w != ~0)
+   if(espec->LineWidths[0] != ~0)
    {
-    xw = espec->LineWidths[espec->DisplayRect.y + y].w;
-    xs = espec->LineWidths[espec->DisplayRect.y + y].x;
+    xw = espec->LineWidths[espec->DisplayRect.y + y];
    }
 
    for(int x = 0; x < xw; x++)

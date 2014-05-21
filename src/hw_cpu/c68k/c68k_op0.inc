@@ -20,7 +20,7 @@ case 0x0000:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res;
-	*(BYTE_OFF + (u8*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(BYTE_OFF + (u8*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(0)
 case 0x0011:
@@ -275,7 +275,7 @@ case 0x0040:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 8;
-	*(WORD_OFF + (u16*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(WORD_OFF + (u16*)((u32*)&CPU->D16 + ((Opcode >> 0) & 7))) = res;
 }
 RET(0)
 case 0x0051:
@@ -530,7 +530,7 @@ case 0x0080:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(8)
 case 0x0091:
@@ -824,7 +824,7 @@ case 0x0200:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res;
-	*(BYTE_OFF + (u8*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(BYTE_OFF + (u8*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(0)
 case 0x0211:
@@ -1079,7 +1079,7 @@ case 0x0240:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 8;
-	*(WORD_OFF + (u16*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(WORD_OFF + (u16*)((u32*)&CPU->D16 + ((Opcode >> 0) & 7))) = res;
 }
 RET(0)
 case 0x0251:
@@ -1334,7 +1334,7 @@ case 0x0280:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(8)
 case 0x0291:
@@ -1634,7 +1634,7 @@ case 0x0A00:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res;
-	*(BYTE_OFF + (u8*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(BYTE_OFF + (u8*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(0)
 case 0x0A11:
@@ -1889,7 +1889,7 @@ case 0x0A40:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 8;
-	*(WORD_OFF + (u16*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(WORD_OFF + (u16*)((u32*)&CPU->D16 + ((Opcode >> 0) & 7))) = res;
 }
 RET(0)
 case 0x0A51:
@@ -2144,7 +2144,7 @@ case 0x0A80:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(8)
 case 0x0A91:
@@ -2444,7 +2444,7 @@ case 0x0400:
 	CPU->flag_N = CPU->flag_X = CPU->flag_C = res;
 	CPU->flag_V = (src ^ dst) & (res ^ dst);
 	CPU->flag_notZ = res & 0xFF;
-	*(BYTE_OFF + (u8*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(BYTE_OFF + (u8*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(0)
 case 0x0411:
@@ -2699,7 +2699,7 @@ case 0x0440:
 	CPU->flag_V = ((src ^ dst) & (res ^ dst)) >> 8;
 	CPU->flag_N = CPU->flag_X = CPU->flag_C = res >> 8;
 	CPU->flag_notZ = res & 0xFFFF;
-	*(WORD_OFF + (u16*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(WORD_OFF + (u16*)((u32*)&CPU->D16 + ((Opcode >> 0) & 7))) = res;
 }
 RET(0)
 case 0x0451:
@@ -2955,7 +2955,7 @@ case 0x0480:
 	CPU->flag_X = CPU->flag_C = ((src & res) | (~dst & (src | res))) >> 23;
 	CPU->flag_V = ((src ^ dst) & (res ^ dst)) >> 24;
 	CPU->flag_N = res >> 24;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(8)
 case 0x0491:
@@ -3219,7 +3219,7 @@ case 0x0600:
 	CPU->flag_N = CPU->flag_X = CPU->flag_C = res;
 	CPU->flag_V = (src ^ res) & (dst ^ res);
 	CPU->flag_notZ = res & 0xFF;
-	*(BYTE_OFF + (u8*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(BYTE_OFF + (u8*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(0)
 case 0x0611:
@@ -3474,7 +3474,7 @@ case 0x0640:
 	CPU->flag_V = ((src ^ res) & (dst ^ res)) >> 8;
 	CPU->flag_N = CPU->flag_X = CPU->flag_C = res >> 8;
 	CPU->flag_notZ = res & 0xFFFF;
-	*(WORD_OFF + (u16*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*(WORD_OFF + (u16*)((u32*)&CPU->D16 + ((Opcode >> 0) & 7))) = res;
 }
 RET(0)
 case 0x0651:
@@ -3730,7 +3730,7 @@ case 0x0680:
 	CPU->flag_X = CPU->flag_C = ((src & dst) | (~res & (src | dst))) >> 23;
 	CPU->flag_V = ((src ^ res) & (dst ^ res)) >> 24;
 	CPU->flag_N = res >> 24;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(8)
 case 0x0691:
@@ -4982,7 +4982,7 @@ case 0x0840:
 	res = (u32)CPU->D[(Opcode >> 0) & 7];
 	CPU->flag_notZ = res & src;
 	res ^= src;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(8)
 case 0x0851:
@@ -5217,7 +5217,7 @@ case 0x0880:
 	res = (u32)CPU->D[(Opcode >> 0) & 7];
 	CPU->flag_notZ = res & src;
 	res &= ~src;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(10)
 case 0x0891:
@@ -5452,7 +5452,7 @@ case 0x08C0:
 	res = (u32)CPU->D[(Opcode >> 0) & 7];
 	CPU->flag_notZ = res & src;
 	res |= src;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(8)
 case 0x08D1:
@@ -6363,7 +6363,7 @@ case 0x0140:
 	res = (u32)CPU->D[(Opcode >> 0) & 7];
 	CPU->flag_notZ = res & src;
 	res ^= src;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(4)
 case 0x0350:
@@ -6935,7 +6935,7 @@ case 0x0180:
 	res = (u32)CPU->D[(Opcode >> 0) & 7];
 	CPU->flag_notZ = res & src;
 	res &= ~src;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(6)
 case 0x0390:
@@ -7507,7 +7507,7 @@ case 0x01C0:
 	res = (u32)CPU->D[(Opcode >> 0) & 7];
 	CPU->flag_notZ = res & src;
 	res |= src;
-	*((u32*)(&CPU->D[(Opcode >> 0) & 7])) = res;
+	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
 }
 RET(4)
 case 0x03D0:
@@ -8079,7 +8079,7 @@ case 0x0108:
 	timestamp += 4;
 	READ_BYat_F(adr + 0, res)
 	READ_BYTE_F(adr + 2, src)
-	*(WORD_OFF + (u16*)(&CPU->D[(Opcode >> 9) & 7])) = (res << 8) | src;
+	*(WORD_OFF + (u16*)(&CPU->D16[(Opcode >> 9) & 7])) = (res << 8) | src;
 }
 RET(16)
 case 0x0348:

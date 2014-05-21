@@ -67,7 +67,7 @@
  <p>
   For ripped disc images, Mednafen supports "CUE" sheets, CloneCD "CCD/IMG/SUB" rips, and cdrdao "TOC" files; though only a very limited
   subset of the latter's full capabilities is supported.  Mednafen supports raw, simple storage formats supported by
-  <a href="http://www.mega-nerd.com/libsndfile/">libsndfile</a>(MS WAV, AIFF/AIFC, AU/SND, etc.), and <a href="http://xiph.org/vorbis/">Ogg Vorbis</a> audio files referenced by CUE sheets.
+  <a href="http://www.mega-nerd.com/libsndfile/">libsndfile</a>(MS WAV, AIFF/AIFC, AU/SND, etc.), and <a href="http://xiph.org/vorbis/">Ogg Vorbis</a> and <a href="http://www.musepack.net/">Musepack</a> audio files referenced by CUE sheets.
   MP3 is not supported, and will not be supported.
  </p>
  <p>
@@ -427,38 +427,40 @@ has the minimum amount of processing done to it before being passed to the DAC o
   <?php EndSection(); ?>
  <?php EndSection(); ?>
 
+ <?php BeginSection("Troubleshooting and Common Solutions"); ?>
+  <p>
+   When Mednafen encounters a fatal error, it will print details of the error to stdout and/or stderr before exiting.  On the Microsoft Windows builds of Mednafen,
+   stdout and stderr are redirected to files "<b>stdout.txt</b>" and "<b>stderr.txt</b>", respectively.
+  </p>
+  <?php BeginSection("No sound output on Linux."); ?>
+   <p>
+    Due to historical Linux distribution design decisions and problems with various software audio mixing solutions on Linux, Mednafen's ALSA output code
+    attempts to output to device "<b>hw:0</b>" by default.  This may cause problems if your sound card does not support hardware mixing of streams and your system is
+    running another program that is monopolizing the sound device(like the PulseAudio server), or you have used multiple sound cards.
+   </p>
+   <p>
+    For the case of PulseAudio, you can utilize the <a href="http://linux.die.net/man/1/pasuspender">pasuspender</a> tool, or set the <a href="#sound.device">sound.device</a> setting to
+    "<b>sexyal-literal-default</b>" to try to use PulseAudio through ALSA(assuming your distribution has things configured properly); the use of pasuspender
+    is the recommended option.
+   </p>
+   <p>
+    For the case of multiple sound cards, select a different "<b>hw:?</b>" device, where <b>?</b> is an integer representing the device number/index(check the contents of file "<b>/proc/asound/cards</b>").
+   </p>
+  <?php EndSection(); ?>
+
+  <?php BeginSection("Configuration file is a mess in Notepad in Windows."); ?>
+   <p>
+    Mednafen's settings file currently uses UN*X-style line breaks, which Notepad does not handle very well.  Use
+    <a href="http://notepad-plus-plus.org/">Notepad++</a> instead.
+   </p>
+  <?php EndSection(); ?>
+ <?php EndSection(); ?>
+
  <?php DoModDocLinks(); ?>
 
  <?php BeginSection("Cheat Guide", "", "cheat.html"); ?> <?php EndSection(); ?>
  <?php BeginSection("Debugger", "", "debugger.html"); ?> <?php EndSection(); ?>
  <?php BeginSection("Network Play", "", "netplay.html"); ?> <?php EndSection(); ?>
-
-
- <?php BeginSection("Credits"); ?>
- <p>
-  (This section is woefully outdated, being mostly copied from FCE Ultra)
- <table border width="100%">
-  <tr><th>Name:</th><th>Contribution(s):</th></tr>
-  <tr><td>\Firebug\</td><td>High-level mapper information.</td></tr>
-  <tr><td>Bero</td><td>Original FCE source code.</td></tr>
-  <tr><td>Brad Taylor</td><td>NES sound information.</td></tr>
-  <tr><td>Charles MacDonald</td><td>PC Engine technical information.</td></tr>
-  <tr><td>EFX</td><td>Testing.</td></tr>
-  <tr><td>Fredrik Olson</td><td>NES four-player adapter information.</td></tr>
-  <tr><td>goroh</td><td>Various documents.</td></tr>
-  <tr><td>Jeremy Chadwick</td><td>General NES information.</td></tr>
-  <tr><td>kevtris</td><td>Low-level NES information and sound information.</td></tr>
-  <tr><td>Ki</td><td>Various technical information.</td></tr>
-  <tr><td>Mark Knibbs</td><td>Various NES information.</td></tr>
-  <tr><td>Marat Fayzullin</td><td>General NES information.</td></tr>
-  <tr><td>Matthew Conte</td><td>Sound information.</td></tr>
-  <tr><td>nori</td><td>FDS sound information.</td></tr>
-  <tr><td>rahga</td><td>Famicom four-player adapter information.</td></tr>
-  <tr><td>TheRedEye</td><td>ROM images, testing.</td></tr>
-  <tr><th colspan="2" align="right">...and everyone whose name my mind has misplaced.</th></tr>
- </table>
- </p>
- <?php EndSection(); ?>
 
  <?php BeginSection("Licenses, Copyright Notices, and Code Credits"); ?>
  <p>
@@ -949,43 +951,6 @@ woven in by Terry Thorsen 1/2003.
 //      the Free Software Foundation; either version 2 of the License, or
 //      (at your option) any later version. See also the license.txt file for
 //      additional informations.
-</pre>
-</blockquote>
-<?php EndSection(); ?>
-
-<?php BeginSection("SoftFloat (Used in V810 FPU Emulation)"); ?>
-<blockquote>
-<pre>
-/*============================================================================
-
-This C source file is part of the SoftFloat IEC/IEEE Floating-point Arithmetic
-Package, Release 2b.
-
-Written by John R. Hauser.  This work was made possible in part by the
-International Computer Science Institute, located at Suite 600, 1947 Center
-Street, Berkeley, California 94704.  Funding was partially provided by the
-National Science Foundation under grant MIP-9311980.  The original version
-of this code was written as part of a project to build a fixed-point vector
-processor in collaboration with the University of California at Berkeley,
-overseen by Profs. Nelson Morgan and John Wawrzynek.  More information
-is available through the Web page `http://www.cs.berkeley.edu/~jhauser/
-arithmetic/SoftFloat.html'.
-
-THIS SOFTWARE IS DISTRIBUTED AS IS, FOR FREE.  Although reasonable effort has
-been made to avoid it, THIS SOFTWARE MAY CONTAIN FAULTS THAT WILL AT TIMES
-RESULT IN INCORRECT BEHAVIOR.  USE OF THIS SOFTWARE IS RESTRICTED TO PERSONS
-AND ORGANIZATIONS WHO CAN AND WILL TAKE FULL RESPONSIBILITY FOR ALL LOSSES,
-COSTS, OR OTHER PROBLEMS THEY INCUR DUE TO THE SOFTWARE, AND WHO FURTHERMORE
-EFFECTIVELY INDEMNIFY JOHN HAUSER AND THE INTERNATIONAL COMPUTER SCIENCE
-INSTITUTE (possibly via similar legal warning) AGAINST ALL LOSSES, COSTS, OR
-OTHER PROBLEMS INCURRED BY THEIR CUSTOMERS AND CLIENTS DUE TO THE SOFTWARE.
-
-Derivative works are acceptable, even for commercial purposes, so long as
-(1) the source code for the derivative work includes prominent notice that
-the work is derivative, and (2) the source code includes prominent notice with
-these four paragraphs for those parts of this code that are retained.
-
-=============================================================================*/
 </pre>
 </blockquote>
 <?php EndSection(); ?>

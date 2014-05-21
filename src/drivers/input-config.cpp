@@ -26,6 +26,39 @@
 
 extern JoystickManager *joy_manager;
 
+int32 DTestMouseAxis(ButtConfig &bc, const char* KeyState, const uint32* MouseData, const bool axis_hint)	// UNDOCUMENTED INCOMPLETE FUN
+{
+ if(bc.ButtType == BUTTC_JOYSTICK)	// HAXY
+ {
+  int32 ret = 0;
+  ButtConfig tmp_bc = bc;
+
+  tmp_bc.ButtonNum ^= 0x4000;
+
+  ret = joy_manager->TestAnalogButton(bc);
+  ret -= joy_manager->TestAnalogButton(tmp_bc);
+  ret += 32768;
+
+  ret = PtoV_J(ret, axis_hint, (bool)(tmp_bc.ButtonNum & (1 << 18)));
+
+  return(ret);
+ }
+ else if(bc.ButtType == BUTTC_MOUSE)
+ {
+  if(bc.DeviceNum == 0)
+  {
+   if(bc.ButtonNum & 0x8000)
+    return(MouseData[bc.ButtonNum & 1]);
+   else
+    return(0);
+  }
+  else
+   return(0);
+ }
+ else					// UNSUPPORTED
+  return(0);
+}
+
 static bool DTestButtonMouse(const ButtConfig &bc, const uint32 *MouseData)
 {
  if(bc.ButtonNum & 0x8000)

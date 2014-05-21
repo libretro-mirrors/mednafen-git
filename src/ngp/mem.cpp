@@ -13,7 +13,6 @@
 //---------------------------------------------------------------------------
 
 #include "neopop.h"
-#include "TLCS900h_registers.h"
 #include "Z80_interface.h"
 #include "bios.h"
 #include "gfx.h"

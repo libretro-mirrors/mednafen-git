@@ -45,6 +45,7 @@ SexyAL_device *SexyALI_JACK_Open(const char *id, SexyAL_format *format, SexyAL_b
 SexyAL_device *SexyALI_SDL_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 SexyAL_device *SexyALI_DSound_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
+SexyAL_device *SexyALI_WASAPISH_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 SexyAL_device *SexyALI_Dummy_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 
 #ifdef HAVE_ALSA
@@ -155,7 +156,8 @@ static SexyAL_driver drivers[] =
         #endif
 
         #if HAVE_WASAPI
-        { SEXYAL_TYPE_WASAPI, "WASAPI", "wasapi", SexyALI_WASAPI_Open, NULL },
+        { SEXYAL_TYPE_WASAPISH, "WASAPI(Shared mode)", "wasapish", SexyALI_WASAPISH_Open, NULL },
+        { SEXYAL_TYPE_WASAPI, "WASAPI(Exclusive mode)", "wasapi", SexyALI_WASAPI_Open, NULL },
         #endif
 
 	#ifdef DOS

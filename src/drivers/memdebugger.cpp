@@ -19,55 +19,13 @@
 #include "memdebugger.h"
 #include "debugger.h"
 #include "prompt.h"
-#include "../FileStream.h"
+#include <mednafen/FileStream.h>
 
 #include <ctype.h>
 #include <trio/trio.h>
 #include <errno.h>
 
-#include <iconv.h>
-
-// Local cache variable set after game load to reduce dereferences and make the code nicer.
-// (the game structure's debugger info struct doesn't change during emulation, so this is safe)
-static const std::vector<AddressSpaceType> *AddressSpaces;
-static const AddressSpaceType *ASpace; // Current address space
-
-static bool IsActive = 0;
-static uint32 *ASpacePos = NULL;
-static uint64 *SizeCache = NULL;
-static uint64 *GoGoPowerDD = NULL;
-
-static int CurASpace; // Current address space number
-
-static bool LowNib = FALSE;
-static bool InEditMode = FALSE;
-static bool InTextArea = FALSE; // Right side text vs left side numbers, selected via TAB
-
-static std::string BSS_String, RS_String, TS_String;
-static char *error_string;
-static uint32 error_time;
-
-typedef enum
-{
- None = 0,
- Goto,
- GotoDD,
- ByteStringSearch,
- RelSearch,
- TextSearch,
- DumpMem,
- LoadMem,
- SetCharset,
-} PromptType;
-
-static iconv_t ict = (iconv_t)-1;
-static iconv_t ict_to_utf8 = (iconv_t)-1;
-
-static iconv_t ict_utf16_to_game = (iconv_t)-1;
-
-static char *GameCode = NULL;
-
-static bool ICV_Init(const char *newcode)
+bool MemDebugger::ICV_Init(const char *newcode)
 {
  if((size_t)ict != (size_t)-1)
  {
@@ -111,21 +69,15 @@ static bool ICV_Init(const char *newcode)
   return(0);
  }
 
-
- if(GameCode)
-  free(GameCode);
-
- GameCode = strdup(newcode);
+ GameCode = std::string(newcode);
  return(1);
 }
-
-static PromptType InPrompt = None;
 
 class MemDebuggerPrompt : public HappyPrompt
 {
         public:
 
-        MemDebuggerPrompt(const std::string &ptext, const std::string &zestring) : HappyPrompt(ptext, zestring)
+        MemDebuggerPrompt(MemDebugger* memdbg_in, const std::string &ptext, const std::string &zestring) : HappyPrompt(ptext, zestring), memdbg(memdbg_in)
         {
 
         }
@@ -136,13 +88,18 @@ class MemDebuggerPrompt : public HappyPrompt
 
         private:
 
-        bool DoBSSearch(uint32 byte_count, uint8 *thebytes);
-	bool DoRSearch(uint32 byte_count, uint8 *the_bytes);
-        uint8 *TextToBS(const char *text, size_t *TheCount);
         void TheEnd(const std::string &pstring);
+
+	MemDebugger* memdbg;
 };
 
-bool MemDebuggerPrompt::DoBSSearch(uint32 byte_count, uint8 *thebytes)
+void MemDebuggerPrompt::TheEnd(const std::string &pstring)
+{
+	memdbg->PromptFinish(pstring);
+}
+
+
+bool MemDebugger::DoBSSearch(uint32 byte_count, uint8 *thebytes)
 {
 	 const uint64 zemod = SizeCache[CurASpace];
          const uint32 start_a = ASpacePos[CurASpace] % zemod;
@@ -153,7 +110,7 @@ bool MemDebuggerPrompt::DoBSSearch(uint32 byte_count, uint8 *thebytes)
 	 
          do
          {
-          ASpace->GetAddressSpaceBytes(ASpace->name, a, byte_count, bbuffer);
+          ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), a, byte_count, bbuffer);
           if(!memcmp(bbuffer, thebytes, byte_count))
           {
            ASpacePos[CurASpace] = a;
@@ -168,7 +125,7 @@ bool MemDebuggerPrompt::DoBSSearch(uint32 byte_count, uint8 *thebytes)
 	 return(found);
 }
 
-bool MemDebuggerPrompt::DoRSearch(uint32 byte_count, uint8 *the_bytes)
+bool MemDebugger::DoRSearch(uint32 byte_count, uint8 *the_bytes)
 {
 	 const uint64 zemod = SizeCache[CurASpace];
          const uint32 start_a = (ASpacePos[CurASpace] - 1) % zemod;
@@ -179,7 +136,7 @@ bool MemDebuggerPrompt::DoRSearch(uint32 byte_count, uint8 *the_bytes)
 	 
          do
          {
-          ASpace->GetAddressSpaceBytes(ASpace->name, a, byte_count + 1, bbuffer);
+          ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), a, byte_count + 1, bbuffer);
           bool match = TRUE;
 
           for(uint32 i = 1; i <= byte_count; i++)
@@ -204,7 +161,7 @@ bool MemDebuggerPrompt::DoRSearch(uint32 byte_count, uint8 *the_bytes)
 	 return(found);
 }
 
-uint8 *MemDebuggerPrompt::TextToBS(const char *text, size_t *TheCount)
+uint8 *MemDebugger::TextToBS(const char *text, size_t *TheCount)
 {
           size_t byte_count;
           uint8 *thebytes = NULL;
@@ -253,7 +210,7 @@ uint8 *MemDebuggerPrompt::TextToBS(const char *text, size_t *TheCount)
 	  return(thebytes);
 }
 
-void MemDebuggerPrompt::TheEnd(const std::string &pstring)
+void MemDebugger::PromptFinish(const std::string &pstring)
 {
 	 if(error_string)
 	 {
@@ -313,7 +270,7 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
              to_write = A2 - a + 1;
              if(to_write > 256) to_write = 256;
 
-	     ASpace->GetAddressSpaceBytes(ASpace->name, a, to_write, write_buffer);
+	     ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), a, to_write, write_buffer);
 
 	     fp.write(write_buffer, to_write);
 	     a += to_write;
@@ -367,7 +324,7 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
 	     read_len = fp.read(read_buffer, to_read, false);
 
 	     if(read_len > 0)
-              ASpace->PutAddressSpaceBytes(ASpace->name, a, read_len, 1, TRUE, read_buffer);
+              ASpace->PutAddressSpaceBytes(ASpace->name.c_str(), a, read_len, 1, TRUE, read_buffer);
 
              a += read_len;
 
@@ -476,10 +433,8 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
          InPrompt = None;
 }
 
-static MemDebuggerPrompt *myprompt = NULL;
-
 // Call this function from the game thread.
-void MemDebugger_SetActive(bool newia)
+void MemDebugger::SetActive(bool newia)
 {
  if(CurGame->Debugger)
  {
@@ -495,7 +450,7 @@ void MemDebugger_SetActive(bool newia)
 #define MK_COLOR_A(r,g,b,a) (pf_cache.MakeColor(r, g, b, a))
 
 // Call this function from the game thread
-void MemDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *screen_rect)
+void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *screen_rect)
 {
  if(!IsActive) return;
 
@@ -506,7 +461,7 @@ void MemDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
 
  
 
- DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, (UTF8*)ASpace->long_name, MK_COLOR_A(0x20, 0xFF, 0x20, 0xFF), 1, 1);
+ DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, (UTF8*)ASpace->long_name.c_str(), MK_COLOR_A(0x20, 0xFF, 0x20, 0xFF), 1, 1);
  pixels += 10 * pitch32;
 
  uint32 A;
@@ -533,7 +488,7 @@ void MemDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
 
   Ameow %= zemod;
 
-  ASpace->GetAddressSpaceBytes(ASpace->name, Ameow, 16, byte_buffer);
+  ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), Ameow, 16, byte_buffer);
 
   if(zemod <= (1 << 16))
    trio_snprintf(abuf, 32, "%04X:", Ameow);
@@ -614,7 +569,7 @@ void MemDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
 
   curpos %= zemod;
 
-  ASpace->GetAddressSpaceBytes(ASpace->name, curpos, 4, zebytes);
+  ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), curpos, 4, zebytes);
 
   pixels += 8 + 5 * pitch32;
 
@@ -672,7 +627,7 @@ void MemDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
     MDFN_DrawFillRect(surface, tx, ty, 2 + wf_size * 2 + 2, 2 + (pcm_max + 1) + 2, MK_COLOR_A(0xA0,0xA0,0xA0,0xFF), MK_COLOR_A(0,0,0,0xFF));
    }
 
-   ASpace->GetAddressSpaceBytes(ASpace->name, 0, wf_size, waveform);
+   ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), 0, wf_size, waveform);
 
    for(int i = 0; i < wf_size; i++)
    {
@@ -717,14 +672,14 @@ void MemDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
   cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, (UTF8*)"4-byte value(MSB): ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
   DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, (UTF8*)cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
 
-  trio_snprintf(cpstr, 32, "%s text: ", GameCode);
+  trio_snprintf(cpstr, 32, "%s text: ", GameCode.c_str());
   cpplen = DrawTextTrans(pixels + 10 * pitch32, surface->pitchinpix << 2, rect->w, (UTF8*)cpstr, MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, MDFN_FONT_5x7);
 
   {
    char rawbuf[64];
    char textbuf[256];
 
-   ASpace->GetAddressSpaceBytes(ASpace->name, curpos, 64, (uint8*)rawbuf);
+   ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), curpos, 64, (uint8*)rawbuf);
 
    size_t ibl, obl, obl_start;
    char *inbuf, *outbuf;
@@ -766,7 +721,7 @@ void MemDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
  }
 }
 
-static void ChangePos(int64 delta)
+void MemDebugger::ChangePos(int64 delta)
 {
  int64 prevpos = ASpacePos[CurASpace];
  int64 newpos;
@@ -782,10 +737,8 @@ static void ChangePos(int64 delta)
  LowNib = FALSE;
 }
 
-static void DoCrazy(void)
+void MemDebugger::DoCrazy(void)
 {
- 
-
  uint32 start = ASpacePos[CurASpace];
  uint32 A = ASpacePos[CurASpace];
 
@@ -793,7 +746,7 @@ static void DoCrazy(void)
  {
   uint8 zebyte;
 
-  ASpace->GetAddressSpaceBytes(ASpace->name, A, 1, &zebyte);
+  ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), A, 1, &zebyte);
 
   // Simple control codes
   if(zebyte < 0x20)
@@ -852,7 +805,7 @@ static void DoCrazy(void)
 }
 
 // Call this from the game thread
-int MemDebugger_Event(const SDL_Event *event)
+int MemDebugger::Event(const SDL_Event *event)
 {
  if(!InPrompt && myprompt)
  {
@@ -892,7 +845,7 @@ int MemDebugger_Event(const SDL_Event *event)
           to_write_len = obl_start - obl;
 
 	  
-	  ASpace->PutAddressSpaceBytes(ASpace->name, ASpacePos[CurASpace], to_write_len, 1, TRUE, to_write);
+	  ASpace->PutAddressSpaceBytes(ASpace->name.c_str(), ASpacePos[CurASpace], to_write_len, 1, TRUE, to_write);
 	  
 
 	  LowNib = 0;
@@ -911,10 +864,10 @@ int MemDebugger_Event(const SDL_Event *event)
           tc = 0xA + event->key.keysym.sym - SDLK_a;
 
 	 
-         ASpace->GetAddressSpaceBytes(ASpace->name, ASpacePos[CurASpace], 1, &meowbyte);
+         ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), ASpacePos[CurASpace], 1, &meowbyte);
          meowbyte &= 0xF << ((LowNib) * 4);
          meowbyte |= tc << ((!LowNib) * 4);
-         ASpace->PutAddressSpaceBytes(ASpace->name, ASpacePos[CurASpace], 1, 1, TRUE, &meowbyte);
+         ASpace->PutAddressSpaceBytes(ASpace->name.c_str(), ASpacePos[CurASpace], 1, 1, TRUE, &meowbyte);
 	 
 
          LowNib = !LowNib;
@@ -937,11 +890,11 @@ int MemDebugger_Event(const SDL_Event *event)
 
 	 case SDLK_d:
                 InPrompt = DumpMem;
-                myprompt = new MemDebuggerPrompt("Dump Memory(start end filename)", "");
+                myprompt = new MemDebuggerPrompt(this, "Dump Memory(start end filename)", "");
 		break;
 	 case SDLK_l:
                 InPrompt = LoadMem;
-                myprompt = new MemDebuggerPrompt("Load Memory(start end filename)", "");
+                myprompt = new MemDebuggerPrompt(this, "Load Memory(start end filename)", "");
                 break;
 	 case SDLK_s:
 	        if(SizeCache[CurASpace] > (1 << 24))
@@ -952,7 +905,7 @@ int MemDebugger_Event(const SDL_Event *event)
 		else
 		{
 		 InPrompt = ByteStringSearch;
-		 myprompt = new MemDebuggerPrompt("Byte String Search", BSS_String);
+		 myprompt = new MemDebuggerPrompt(this, "Byte String Search", BSS_String);
 		}
 		break;
 	 case SDLK_r:
@@ -964,13 +917,13 @@ int MemDebugger_Event(const SDL_Event *event)
                 else
                 {
 		 InPrompt = RelSearch;
-		 myprompt = new MemDebuggerPrompt("Byte String Relative/Delta Search", RS_String);
+		 myprompt = new MemDebuggerPrompt(this, "Byte String Relative/Delta Search", RS_String);
 		}
 		break;
 
 	 case SDLK_c:
 		InPrompt = SetCharset;
-		myprompt = new MemDebuggerPrompt("Charset", GameCode);
+		myprompt = new MemDebuggerPrompt(this, "Charset", GameCode);
 		break;
 
          case SDLK_t:
@@ -982,7 +935,7 @@ int MemDebugger_Event(const SDL_Event *event)
                 else
                 {
                  InPrompt = TextSearch;
-                 myprompt = new MemDebuggerPrompt("Text Search", TS_String);
+                 myprompt = new MemDebuggerPrompt(this, "Text Search", TS_String);
                 }
                 break;
 
@@ -990,12 +943,12 @@ int MemDebugger_Event(const SDL_Event *event)
 	        if(event->key.keysym.mod & KMOD_SHIFT)
 		{
                  InPrompt = GotoDD;
-                 myprompt = new MemDebuggerPrompt("Goto Address(DD)", "");
+                 myprompt = new MemDebuggerPrompt(this, "Goto Address(DD)", "");
 		}
 		else
 		{
 		 InPrompt = Goto;
-		 myprompt = new MemDebuggerPrompt("Goto Address", "");
+		 myprompt = new MemDebuggerPrompt(this, "Goto Address", "");
 		}
 		break;
 
@@ -1047,7 +1000,9 @@ int MemDebugger_Event(const SDL_Event *event)
 
 
 // Called after a game is loaded.
-bool MemDebugger_Init(void)
+MemDebugger::MemDebugger() : AddressSpaces(NULL), ASpace(NULL), IsActive(false), CurASpace(0),
+			     LowNib(false), InEditMode(false), InTextArea(false), error_string(NULL), error_time(0),
+			     ict((iconv_t)-1), ict_to_utf8((iconv_t)-1), ict_utf16_to_game((iconv_t)-1), InPrompt(None), myprompt(NULL)			     
 {
  if(CurGame->Debugger)
  {
@@ -1058,9 +1013,9 @@ bool MemDebugger_Init(void)
 
   size_t num = AddressSpaces->size();
 
-  ASpacePos = (uint32 *)calloc(sizeof(uint32), num);
-  SizeCache = (uint64 *)calloc(sizeof(uint64), num);
-  GoGoPowerDD = (uint64 *)calloc(sizeof(uint64), num);
+  ASpacePos.resize(num);
+  SizeCache.resize(num);
+  GoGoPowerDD.resize(num);
 
   for(size_t i = 0; i < num; i++)
   {
@@ -1076,7 +1031,31 @@ bool MemDebugger_Init(void)
 
   ICV_Init( MDFN_GetSettingS(std::string(std::string(CurGame->shortname) + "." + std::string("debugger.memcharenc")).c_str()).c_str() );
  }
- else
-  AddressSpaces = NULL;
- return(TRUE);
+}
+
+MemDebugger::~MemDebugger()
+{
+ if(ict != (iconv_t)-1)
+ {
+  iconv_close(ict);
+  ict = (iconv_t)-1;
+ }
+
+ if(ict_to_utf8 != (iconv_t)-1)
+ {
+  iconv_close(ict_to_utf8);
+  ict_to_utf8 = (iconv_t)-1;
+ }
+
+ if(ict_utf16_to_game != (iconv_t)-1)
+ {
+  iconv_close(ict_utf16_to_game);
+  ict_utf16_to_game = (iconv_t)-1;
+ }
+
+ if(error_string)
+ {
+  free(error_string);
+  error_string = NULL;
+ }
 }

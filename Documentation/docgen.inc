@@ -1,6 +1,6 @@
 <?php
 
-$mednafen_version = "0.9.33.3";
+$mednafen_version = "0.9.34";
 $mod_list = array();
 
 $sections = array();
@@ -384,10 +384,6 @@ for($display_ct = 0; $display_ct < 2; $display_ct++)
 
   $default_value = $setting['default_value'];
 
-  // HACK
-  if($setting['name'] == "sound.buffer_time")
-   $default_value .= " (52 on MS Windows)";
-
   printf("</td><td class=\"ColD\">%s</td><td class=\"ColE\"><a name=\"%s\">%s</a>", $default_value,
                                         $name, $description);
 
@@ -454,7 +450,7 @@ function DoModDocLinks()
  {
   $mod_def = $mod_list[$name];
 
-  if($name == "cdplay")
+  if($name == "cdplay" || $name == "demo")
    continue;
 
   BeginSection($mod_def['fullname'], " [" . $name . "]", $name . ".html");

@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.33.3'
-MEDNAFEN_VERSION_NUMERIC=0x000933
+MEDNAFEN_VERSION='0.9.34.1'
+MEDNAFEN_VERSION_NUMERIC=0x000934
 
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
@@ -34,6 +34,7 @@ AC_FUNC_FSEEKO
 
 AC_CHECK_TYPE(ptrdiff_t,long)
 AC_TYPE_SIZE_T
+AC_CHECK_SIZEOF(char)
 AC_CHECK_SIZEOF(short)
 AC_CHECK_SIZEOF(int)
 AC_CHECK_SIZEOF(long)
@@ -47,8 +48,12 @@ AC_CHECK_SIZEOF(off_t)
 AC_C_CONST
 AC_CHECK_FUNCS(memcmp memcpy memmove memset mmap munmap madvise signal sigaction fcntl getenv putenv setenv gettimeofday getpwuid getuid nanosleep usleep strerror strerror_r ftello fopen64 fseeko64 ftello64 fstat64)
 AC_CHECK_HEADERS(fcntl.h)
+AC_CHECK_HEADERS(stdint.h inttypes.h)
 AC_FUNC_MKDIR
 PKG_PROG_PKG_CONFIG
+
+AC_CHECK_FUNCS(round nearbyint nearbyintf rint rintf)
+AC_CHECK_HEADERS(fenv.h)
 
 #
 # Check for any libraries that need to be linked against for clock_gettime().
@@ -427,7 +432,6 @@ NEED_SDL=true
 
 if expr x"$target" : 'x.*-mingw*' > /dev/null; then
 	AC_CHECK_TOOL([WINDRES], [windres])
-	CPPFLAGS="-mstackrealign $CPPFLAGS"
         AC_CHECK_HEADER([dsound.h],HAVE_DIRECTSOUND=true, HAVE_DIRECTSOUND=false)
         AC_CHECK_HEADER([audioclient.h],HAVE_WASAPI=true, HAVE_WASAPI=false)
 
@@ -450,9 +454,6 @@ if expr x"$target" : 'x.*-mingw*' > /dev/null; then
 	AM_CONDITIONAL(WIN32, true)
 
 	LIBS="-mwindows -lws2_32 -ldxguid -lwinmm -ldinput $LIBS -lwinmm"
-
-	# Uncomment out this LDFLAGS line for 0.9.34
-	#LDFLAGS="$LDFLAGS -Wl,--large-address-aware"
 
         if test x$with_libcdio = xyes; then
 		LIBS="$LIBS -lcdio"
@@ -550,6 +551,7 @@ MMX_CFLAGS=""
 SSE_CFLAGS=""
 SSE2_CFLAGS=""
 SSE3_CFLAGS=""
+
 case "$target_cpu" in
 	x86_64|amd64)
 	        AC_DEFINE([ARCH_X86], [1], [Define if we are compiling for 32-bit or 64-bit x86 architectures.])
@@ -626,4 +628,4 @@ LIBS="$SNDFILE_LIBS $LIBCDIO_LIBS $LIBS"
 CPPFLAGS="$LIBCDIO_CFLAGS $SNDFILE_CFLAGS $CPPFLAGS"
 
 dnl Output Makefiles
-AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pc/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/snes_perf/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/demo/Makefile src/desa68/Makefile po/Makefile.in  intl/Makefile])
+AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pc/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/snes_perf/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/cdplay/Makefile src/demo/Makefile src/desa68/Makefile po/Makefile.in  intl/Makefile])

@@ -927,7 +927,7 @@ void VDC::DrawBG(uint16 *target, int enabled)
     VDC_UNDEFINED("Unmapped BG tile read");
 
    #ifdef LSB_FIRST
-    #if SIZEOF_LONG == 8
+    #ifdef HAVE_NATIVE64BIT
     uint64 doh = *(uint64 *)pix_lut;
 
     (target + 0)[x] = (doh & 0xFF) | pal_or;

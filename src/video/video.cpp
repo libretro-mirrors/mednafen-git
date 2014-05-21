@@ -25,9 +25,37 @@
 
 #include <trio/trio.h>
 
+#include <vector>
+
 #include "png.h"
 
-void MDFNI_SaveSnapshot(const MDFN_Surface *src, const MDFN_Rect *rect, const MDFN_Rect *LineWidths)
+#if 0
+void MDFNI_CollapseMultiWidthSurface(MDFN_Surface* surface, MDFN_Rect* rect, int32* LineWidths, int32 lcm)
+{
+ if(LineWidths[0] == ~0)
+  return;
+
+ std:vector<uint32> LineBuffer;
+
+ LineBuffer.resize(surface->fb_width);
+
+
+ for(int32 y = rect->y; y < (rect->y + rect->y; y++)
+ {
+  uint32* pixels = surface->pixels + y * surface->pitchinpix + rect->x;
+  int32 sf = lcm / LineWidths[y];
+
+  memcpy(&LineBuffer[0], pixels, LineWidths[y] * sizeof(*pixels));
+
+  for(int x = 0; x < LineWidths[y]; x++)
+
+ }
+
+ LineWidths[0] = ~0;
+}
+#endif
+
+void MDFNI_SaveSnapshot(const MDFN_Surface *src, const MDFN_Rect *rect, const int32 *LineWidths)
 {
  FileWrapper *pp = NULL;
 

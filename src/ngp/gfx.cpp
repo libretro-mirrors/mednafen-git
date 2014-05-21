@@ -17,11 +17,10 @@
 #include "gfx.h"
 #include "interrupt.h"
 #include "dma.h"
-#include "TLCS900h_registers.h"
 
 NGPGFX_CLASS::NGPGFX_CLASS(void)
 {
- layer_enable = 1 | 2 | 4;
+ layer_enable_setting = 1 | 2 | 4;
 }
 
 NGPGFX_CLASS::~NGPGFX_CLASS()
@@ -137,8 +136,8 @@ bool NGPGFX_CLASS::draw(MDFN_Surface *surface, bool skip)
         //Draw the scanline
         if (raster_line < SCREEN_HEIGHT && !skip)
         {
-                if (!K2GE_MODE)        draw_scanline_colour(layer_enable, raster_line);
-                else                   draw_scanline_mono(layer_enable, raster_line);
+                if (!K2GE_MODE)        draw_scanline_colour(layer_enable_setting, raster_line);
+                else                   draw_scanline_mono(layer_enable_setting, raster_line);
 
                 uint32 *dest = surface->pixels + surface->pitch32 * raster_line;
                 for(int x = 0; x < SCREEN_WIDTH; x++)
@@ -214,7 +213,7 @@ int NGPGFX_CLASS::StateAction(StateMem *sm, int load, int data_only)
 
 void NGPGFX_CLASS::SetLayerEnableMask(uint64 mask)
 {
- layer_enable = mask;
+ layer_enable_setting = mask;
 }
 
 //extern uint32 ngpc_soundTS;

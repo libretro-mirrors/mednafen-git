@@ -48,14 +48,19 @@ typedef enum
  ASPACE_WFMT_SIGNED_ONES,	// Signed one's complement
 } ASpace_WFMT;
 
+//
 // Visible to CPU, physical, RAM, ROM, ADPCM RAM, etc etc.
-typedef struct
+//
+struct AddressSpaceType
 {
+	AddressSpaceType() MDFN_COLD;
+	~AddressSpaceType() MDFN_COLD;
+
 	// The short name, all lowercase, 0-9 a-z _
-	char *name;
+	std::string name;
 
 	// The longer, descriptive name for this address space.
-	char *long_name;
+	std::string long_name;
 
 	// The number of address bits for this address space.
 	uint32 TotalBits;
@@ -80,7 +85,7 @@ typedef struct
 
 	uint64 UsageReadMemUsed;	// Keep track of how much memory we've allocated for UsageMap, so we don't go kaka-kookoo and use up an 					// excessive amount of RAM.
 	uint64 UsageWriteMemUsed;
-} AddressSpaceType;
+};
 
 // TODO: newer branch trace interface not implemented yet.
 struct BranchTraceResult

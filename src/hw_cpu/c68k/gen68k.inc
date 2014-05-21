@@ -1492,8 +1492,8 @@ static void _ea_write_sarsie(u32 ea, u32 rsft, int move_pd)
 	else switch (ea)
 	{
 		case EA_DREG:
-            wf_op("\t%s(&CPU->D[(Opcode >> %d) & 7])) = res;\n", szcf, 
-rsft);
+//            wf_op("\t%s(&CPU->D%s[(Opcode >> %d) & 7])) = res;\n", szcf, (current_sft_mask == 15) ? "16" : "", rsft);
+            wf_op("\t%s((u32*)&CPU->D%s + ((Opcode >> %d) & 7))) = res;\n", szcf, (current_sft_mask == 15) ? "16" : "", rsft);
 			break;
 
 		case EA_AREG:

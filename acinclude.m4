@@ -577,8 +577,9 @@ int main(int argc, char *argv[])
       CPPFLAGS="$CPPFLAGS -fno-strict-overflow"
       AC_TRY_RUN([$nsof_test_prog], [NO_STRICT_OVERFLOW_FLAGS="-fno-strict-overflow"], [
 	CPPFLAGS="$ac_save_CPPFLAGS -fwrapv"
-	AC_TRY_RUN([$nsof_test_prog], [NO_STRICT_OVERFLOW_FLAGS="-fwrapv"], [AC_MSG_ERROR(Could not find working option to disable strict overflow.)])
-      ])
+	AC_TRY_RUN([$nsof_test_prog], [NO_STRICT_OVERFLOW_FLAGS="-fwrapv"], [AC_MSG_ERROR(Could not find working option to disable strict overflow.)],
+	 [NO_STRICT_OVERFLOW_FLAGS="-fwrapv"])
+      ], [NO_STRICT_OVERFLOW_FLAGS="-fwrapv"])
 
       CPPFLAGS="$ac_save_CPPFLAGS"
 

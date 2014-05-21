@@ -141,28 +141,6 @@ static EXCLUDE_ARM_FROM_INLINE int dataTicksAccesint32(uint32 address) // DATA 3
   return value;
 }
 
-static EXCLUDE_ARM_FROM_INLINE int dataTicksAccessSeq16(uint32 address)// DATA 8/16bits SEQ
-{
-  int addr = (address>>24)&15;
-  int value = memoryWaitSeq[addr];
-
-  if (addr>=0x08)
-  {
-    busPrefetchCount=0;
-    busPrefetch=false;
-  }
-  else if (busPrefetch)
-  {
-    int waitState = value;
-    if (waitState>0)
-      waitState--;
-    waitState++;
-    busPrefetchCount = (busPrefetchCount<<waitState) | (0xFF>>(8-waitState));
-  }
-
-  return value;
-}
-
 static EXCLUDE_ARM_FROM_INLINE int dataTicksAccessSeq32(uint32 address)// DATA 32bits SEQ
 {
   int addr = (address>>24)&15;

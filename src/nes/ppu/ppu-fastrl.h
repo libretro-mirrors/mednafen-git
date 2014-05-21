@@ -192,9 +192,30 @@ static void FastCopySprites(int firsttile, uint8 *target, int skip)
 
       if(n < (firsttile << 3)) n = firsttile << 3;
 
-      loopskie:
+#if 0 //defined(__MMX__)
       {
-       #if (SIZEOF_LONG == 8)
+       __m64 foofoo = _mm_set1_pi8(0xFF);
+       __m64 fourfour = _mm_set1_pi8(0x40);
+
+       do
+       {
+	__m64 t = *(__m64*)&sprlinebuf[n];
+	__m64 poo = *(__m64*)&P[n];
+	__m64 choo, bgmask, sprmask;
+
+	choo = _mm_srli_pi32(_mm_and_si64(_mm_or_si64(_mm_xor_si64(_mm_or_si64(poo, t), foofoo), _mm_srli_pi32(t, 1)), fourfour), 6);
+	bgmask = _mm_add_pi8(choo, foofoo);
+	sprmask = _mm_xor_si64(bgmask, foofoo);
+
+	*(__m64*)&P[n] = _mm_or_si64(_mm_and_si64(t, bgmask), _mm_and_si64(poo, sprmask));
+	n += 8;
+       } while(n);
+       _mm_empty();
+      }
+#else
+      do
+      {
+       #ifdef HAVE_NATIVE64BIT
        uint64 t=*(uint64 *)(sprlinebuf+n);
        uint64 poo = *(uint64 *)(P + n);
        uint64 choo = (((~(poo | t)) | (t >> 1)) & 0x4040404040404040) >> 6;
@@ -203,6 +224,7 @@ static void FastCopySprites(int firsttile, uint8 *target, int skip)
        uint64 sprmask = ~bgmask;
 
        *(uint64 *)(P + n) = (t & bgmask) | (poo & sprmask);
+       n += 8;
        #else
        uint32 t=*(uint32 *)(sprlinebuf+n);
        uint32 poo = *(uint32 *)(P + n);
@@ -211,12 +233,8 @@ static void FastCopySprites(int firsttile, uint8 *target, int skip)
        uint32 sprmask = ~bgmask;
        
        *(uint32 *)(P + n) = (t & bgmask) | (poo & sprmask);
+       n += 4;
        #endif
-      }
-      #if (SIZEOF_LONG == 8)
-      n+=8;
-      #else
-      n+=4;
-      #endif
-      if(n) goto loopskie;
+      } while(n);
+#endif
 }

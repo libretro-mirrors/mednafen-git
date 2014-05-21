@@ -39,7 +39,7 @@ class QTRecord
  void Finish();
  ~QTRecord();
 
- void WriteFrame(const MDFN_Surface *surface, const MDFN_Rect &DisplayRect, const MDFN_Rect *LineWidths,
+ void WriteFrame(const MDFN_Surface *surface, const MDFN_Rect &DisplayRect, const int32 *LineWidths,
                           const int16 *SoundBuf, const int32 SoundBufSize, const int64 MasterCycles);
  private:
 

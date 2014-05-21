@@ -338,7 +338,7 @@ static void LoadSettings(Stream *fp, bool override)
   ParseSettingLine(linebuf, override);
 }
 
-bool MDFN_LoadSettings(const char *path, bool override)
+void MDFN_LoadSettings(const char *path, bool override)
 {
  if(!override)
   MDFN_printf(_("Loading settings from \"%s\"..."), path);
@@ -358,15 +358,14 @@ bool MDFN_LoadSettings(const char *path, bool override)
     MDFN_printf(_("Failed: %s\n"), e.what());
     MDFN_indent(-1);
    }
-   return(true);
+   return;
   }
   else
   {
    if(!override)
     MDFN_printf("\n");
 
-   MDFN_PrintError(_("Failed to load settings from \"%s\": %s"), path, e.what());
-   return(false);
+   throw MDFN_Error(0, _("Failed to load settings from \"%s\": %s"), path, e.what());
   }
  }
  catch(std::exception &e)
@@ -374,14 +373,11 @@ bool MDFN_LoadSettings(const char *path, bool override)
   if(!override)
    MDFN_printf("\n");
 
-  MDFN_PrintError(_("Failed to load settings from \"%s\": %s"), path, e.what());
-  return(false);
+  throw MDFN_Error(0, _("Failed to load settings from \"%s\": %s"), path, e.what());
  }
 
  if(!override)
   MDFN_printf("\n");
-
- return(true);
 }
 
 static bool compare_sname(MDFNCS *first, MDFNCS *second)

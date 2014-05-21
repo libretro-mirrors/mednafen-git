@@ -17,11 +17,11 @@
 */
 
 #include "shared.h"
-#include <blip/Blip_Buffer.h>
-#include <blip/Stereo_Buffer.h>
+#include <mednafen/sound/Blip_Buffer.h>
+#include <mednafen/sound/Stereo_Buffer.h>
 
-#include "sms_apu/Sms_Apu.h"
-#include "ym2413/emu2413.h"
+#include <mednafen/hw_sound/sms_apu/Sms_Apu.h>
+#include <mednafen/hw_sound/ym2413/emu2413.h>
 
 namespace MDFN_IEN_SMS
 {

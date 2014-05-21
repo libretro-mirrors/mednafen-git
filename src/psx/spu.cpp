@@ -74,8 +74,6 @@
 #include "cdc.h"
 #include "spu.h"
 
-#include "../clamp.h"
-
 namespace MDFN_IEN_PSX
 {
 

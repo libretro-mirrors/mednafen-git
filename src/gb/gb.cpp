@@ -16,18 +16,20 @@
 // along with this program; if not, write to the Free Software Foundation,
 // Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#include "../mednafen.h"
-#include "../file.h"
-#include "../general.h"
-#include "../state.h"
-#include "../movie.h"
-#include "../mempatcher.h"
-#include "../md5.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/file.h>
+#include <mednafen/general.h>
+#include <mednafen/state.h>
+#include <mednafen/movie.h>
+#include <mednafen/mempatcher.h>
+#include <mednafen/md5.h>
+#include <mednafen/FileStream.h>
 
 #include <string.h>
-#include <memory.h>
 #include <zlib.h>
 #include <math.h>
+
+#include <algorithm>
 
 #include "gb.h"
 #include "gbGlobals.h"
@@ -38,10 +40,12 @@
 namespace MDFN_IEN_GB
 {
 
-static uint32 *gbColorFilter = NULL; //[32768];
-static uint32 gbMonoColorMap[8 + 1];	// Mono color map(+1 = LCD off color)!
+static void Cleanup(void) MDFN_COLD;
 
-static bool gbUpdateSizes();
+static uint32 *gbColorFilter = NULL;
+static uint32 gbMonoColorMap[12 + 1];	// Mono color map(+1 = LCD off color)!
+
+static void gbUpdateSizes(const uint8* in_rom_data, int64 in_rom_size);
 static int32 SoundTS = 0;
 //extern uint16 gbLineMix[160];
 extern union __gblmt
@@ -60,26 +64,26 @@ static uint8 HRAM[0x80];
 uint8 gbOAM[0xA0];
 
 // 0xff00
-uint8 register_P1    = 0;
+static uint8 register_P1    = 0;
 
 // 0xff01
-uint8 register_SB    = 0;
+static uint8 register_SB    = 0;
 // 0xff02
 uint8 register_SC    = 0;
 // 0xff04
 uint8 register_DIV   = 0;
 // 0xff05
-uint8 register_TIMA  = 0;
+static uint8 register_TIMA  = 0;
 // 0xff06
-uint8 register_TMA   = 0;
+static uint8 register_TMA   = 0;
 // 0xff07
-uint8 register_TAC   = 0;
+static uint8 register_TAC   = 0;
 // 0xff0f
 uint8 register_IF    = 0;
 // 0xff40
 uint8 register_LCDC  = 0;
 // 0xff41
-uint8 register_STAT  = 0;
+static uint8 register_STAT  = 0;
 // 0xff42
 uint8 register_SCY   = 0;
 // 0xff43
@@ -99,41 +103,41 @@ uint8 register_KEY1  = 0;
 // 0xff4f
 uint8 register_VBK   = 0;
 // 0xff51
-uint8 register_HDMA1 = 0;
+static uint8 register_HDMA1 = 0;
 // 0xff52
-uint8 register_HDMA2 = 0;
+static uint8 register_HDMA2 = 0;
 // 0xff53
-uint8 register_HDMA3 = 0;
+static uint8 register_HDMA3 = 0;
 // 0xff54
-uint8 register_HDMA4 = 0;
+static uint8 register_HDMA4 = 0;
 // 0xff55
-uint8 register_HDMA5 = 0;
+static uint8 register_HDMA5 = 0;
 
 // 0xff56
-uint8 register_RP = 0;
+static uint8 register_RP = 0;
 
 // 0xff68
-uint8 register_BCPS = 0;
+static uint8 register_BCPS = 0;
 // 0xff69
-uint8 register_BCPD = 0;
+static uint8 register_BCPD = 0;
 // 0xff6a
-uint8 register_OCPS = 0;
+static uint8 register_OCPS = 0;
 // 0xff6b
-uint8 register_OCPD = 0;
+static uint8 register_OCPD = 0;
 
 // 0xff6c
-uint8 register_FF6C = 0;
+static uint8 register_FF6C = 0;
 // 0xff72
-uint8 register_FF72 = 0;
+static uint8 register_FF72 = 0;
 // 0xff73
-uint8 register_FF73 = 0;
+static uint8 register_FF73 = 0;
 // 0xff74
-uint8 register_FF74 = 0;
+static uint8 register_FF74 = 0;
 // 0xff75
-uint8 register_FF75 = 0;
+static uint8 register_FF75 = 0;
 
 // 0xff70
-uint8 register_SVBK  = 0;
+static uint8 register_SVBK  = 0;
 // 0xffff
 uint8 register_IE    = 0;
 
@@ -181,7 +185,6 @@ int gbLcdLYIncrementTicks = 0;
 // div
 int gbDivTicks = GBDIV_CLOCK_TICKS;
 // cgb
-int gbVramBank = 0;
 int gbWramBank = 1;
 int gbHdmaSource = 0x0000;
 int gbHdmaDestination = 0x8000;
@@ -437,9 +440,9 @@ static void SetPixelFormat(const MDFN_PixelFormat &format, bool cgb_mode)
  }
  else
  {
-  for(int i = 0; i < 4; i++)
+  for(int i = 0; i < 12; i++)
   {
-   int r,g,b;
+   int r, g, b;
 
    r = (3 - (i & 3)) * 48 + 32;
    g = (3 - (i & 3)) * 48 + 32;
@@ -452,78 +455,90 @@ static void SetPixelFormat(const MDFN_PixelFormat &format, bool cgb_mode)
     b = Custom_GB_ColorMap[i * 3 + 2];
    }
 
-   gbMonoColorMap[i] = gbMonoColorMap[i + 4] = format.MakeColor(r, g, b);
-   PalTest[i].r = PalTest[i + 4].r = r;
-   PalTest[i].g = PalTest[i + 4].g = g;
-   PalTest[i].b = PalTest[i + 4].b = b;
+   gbMonoColorMap[i] = format.MakeColor(r, g, b);
+   PalTest[i].r = r;
+   PalTest[i].g = g;
+   PalTest[i].b = b;
   }
 
-  gbMonoColorMap[8] = gbMonoColorMap[0];
-  PalTest[8] = PalTest[0];
+  gbMonoColorMap[12] = gbMonoColorMap[0];
+  PalTest[12] = PalTest[0];
  }
 }
 
-static bool LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries)
+static void LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries, bool dmg) MDFN_COLD;
+static void LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries, bool dmg)
 {
- std::string colormap_fn = MDFN_MakeFName(MDFNMKF_PALETTE, 0, syspalname).c_str();
- FILE *fp;
+ std::string colormap_fn = MDFN_MakeFName(MDFNMKF_PALETTE, 0, syspalname);
+
+ if(dmg)
+ {
+  assert(num_entries == 12);
+ }
 
  MDFN_printf(_("Loading custom palette from \"%s\"...\n"),  colormap_fn.c_str());
  MDFN_indent(1);
 
- if(!(fp = fopen(colormap_fn.c_str(), "rb")))
+ try
  {
-  ErrnoHolder ene(errno);
+  FileStream fp(colormap_fn.c_str(), FileStream::MODE_READ);
+  unsigned num_read;
 
-  MDFN_printf(_("Error opening file: %s\n"), ene.StrError());
+  *ptr = new uint8[num_entries * 3];
 
-  MDFN_indent(-1);
+  num_read = fp.read(*ptr, num_entries * 3, false);
 
-  return(ene.Errno() == ENOENT);	// Return fatal error if it's an error other than the file not being found.
- }
+  if((!dmg && num_read != (num_entries * 3)) || (dmg && num_read != 4 * 3 && num_read != 8 * 3 && num_read != 12 * 3))
+   throw MDFN_Error(0, _("Custom palette is an incorrect size."));
 
- if(!(*ptr = (uint8 *)MDFN_malloc(num_entries * 3, _("custom color map"))))
- {
-  MDFN_indent(-1);
-
-  fclose(fp);
-  return(false);
- }
-
- if(fread(*ptr, 1, num_entries * 3, fp) != (num_entries * 3))
- {
-  ErrnoHolder ene(errno);
-
-  MDFN_printf(_("Error reading file: %s\n"), feof(fp) ? "EOF" : ene.StrError());
-  MDFN_indent(-1);
-
-  MDFN_free(*ptr);
-  *ptr = NULL;
-  fclose(fp);
-
-  return(false);
- }
-
- // Print a warning message about unused trailing data
- {
-  int64 rs;
-
-  fseek(fp, 0, SEEK_END);
-  if((rs = ftell(fp)) > (num_entries * 3))
+  if(dmg)
   {
-   MDFN_printf(_("Warning: %lld byte(s) of trailing unused data.\n"), (long long)(rs - (num_entries * 3)));
+   if(num_read == 4 * 3)
+   {
+    for(unsigned i = 4 * 3; i < 12 * 3; i++)
+    {
+     (*ptr)[i] = (*ptr)[i % (4 * 3)];
+    }
+   }
+   else if(num_read == 8 * 3)
+   {
+    for(unsigned i = 8 * 3; i < 12 * 3; i++)
+     (*ptr)[i] = (*ptr)[(4 * 3) + (i % (4 * 3))];
+   }
+  }
+
+  // Print a warning message about unused trailing data
+  {
+   int64 rs = fp.size();
+
+   if(rs > (num_entries * 3))
+   {
+    MDFN_printf(_("Warning: %lld byte(s) of trailing unused data.\n"), (long long)(rs - (num_entries * 3)));
+   }
   }
  }
+ catch(MDFN_Error &e)
+ {
+  MDFN_printf(_("Error: %s\n"), e.what());
+  MDFN_indent(-1);
 
- fclose(fp);
+  if(e.GetErrno() != ENOENT)
+   throw;
+
+  return;
+ }
+ catch(std::exception &e)
+ {
+  MDFN_printf(_("Error: %s\n"), e.what());
+  MDFN_indent(-1);
+  throw;
+ }
 
  MDFN_indent(-1);
-
- return(true);
 }
 
 
-void gbCopyMemory(uint16 d, uint16 s, int count)
+static void gbCopyMemory(uint16 d, uint16 s, int count)
 {
   while(count) 
   {
@@ -534,7 +549,7 @@ void gbCopyMemory(uint16 d, uint16 s, int count)
   }
 }
 
-void gbDoHdma()
+static void gbDoHdma()
 {
   gbCopyMemory(gbHdmaDestination,
                gbHdmaSource,
@@ -558,7 +573,7 @@ void gbDoHdma()
 }
 
 // fix for Harley and Lego Racers
-void gbCompareLYToLYC()
+static void gbCompareLYToLYC()
 {
  if(register_LY == register_LYC) 
  {
@@ -706,7 +721,7 @@ void gbWriteMemory(uint16 address, uint8 value)
   
   case 0x10 ... 0x3f:
   {
-    MDFNGBSOUND_Write(SoundTS, address, value);
+    SOUND_Write(SoundTS, address, value);
     return;
   }
   case 0x40: {
@@ -796,19 +811,19 @@ void gbWriteMemory(uint16 address, uint8 value)
   
   // OBP0
   case 0x48: {
-    gbObp0[0] = value & 0x03;
-    gbObp0[1] = (value & 0x0c)>>2;
-    gbObp0[2] = (value & 0x30)>>4;
-    gbObp0[3] = (value & 0xc0)>>6;
+    gbObp0[0] = 4 | (value & 0x03);
+    gbObp0[1] = 4 | ((value & 0x0c)>>2);
+    gbObp0[2] = 4 | ((value & 0x30)>>4);
+    gbObp0[3] = 4 | ((value & 0xc0)>>6);
     return;
   }
 
   // OBP1
   case 0x49: {
-    gbObp1[0] = value & 0x03;
-    gbObp1[1] = (value & 0x0c)>>2;
-    gbObp1[2] = (value & 0x30)>>4;
-    gbObp1[3] = (value & 0xc0)>>6;
+    gbObp1[0] = 8 | (value & 0x03);
+    gbObp1[1] = 8 | ((value & 0x0c)>>2);
+    gbObp1[2] = 8 | ((value & 0x30)>>4);
+    gbObp1[3] = 8 | ((value & 0xc0)>>6);
     return;
   }
 
@@ -833,14 +848,11 @@ void gbWriteMemory(uint16 address, uint8 value)
   case 0x4f: {
     if(gbCgbMode) {
       value = value & 1;
-      if(value == gbVramBank)
-        return;
       
-      int vramAddress = value * 0x2000;
+      unsigned vramAddress = value * 0x2000;
       gbMemoryMap[0x08] = &gbVram[vramAddress];
       gbMemoryMap[0x09] = &gbVram[vramAddress + 0x1000];
       
-      gbVramBank = value;
       register_VBK = value;
     }
     return;
@@ -1085,7 +1097,10 @@ uint8 gbReadMemory(uint16 address)
    if(mapperReadRAM)
     retval = mapperReadRAM(address);
    else if(mapper && gbMemoryMap[address >> 12])
+   {
+    //printf("%04x %d\n", address, gbRamSizeMask);
     retval = gbMemoryMap[address >> 12][address & 0x0fff & gbRamSizeMask];
+   }
   }
   else if(address < 0xfe00)
   {
@@ -1143,7 +1158,7 @@ uint8 gbReadMemory(uint16 address)
 	retval = 0xe0 | register_IF;
 	break;
     case 0x10 ... 0x3f:
-	retval = MDFNGBSOUND_Read(SoundTS, address);
+	retval = SOUND_Read(SoundTS, address);
 	break;
     case 0x40:
 	retval = register_LCDC;
@@ -1170,10 +1185,10 @@ uint8 gbReadMemory(uint16 address)
 	retval = gbBgp[0] | (gbBgp[1] << 2) | (gbBgp[2] << 4) | (gbBgp[3] << 6);
 	break;
     case 0x48:
-	retval = gbObp0[0] | (gbObp0[1] << 2) | (gbObp0[2] << 4) | (gbObp0[3] << 6);
+	retval = (gbObp0[0] & 3) | ((gbObp0[1] & 3) << 2) | ((gbObp0[2] & 3) << 4) | ((gbObp0[3] & 3) << 6);
 	break;
     case 0x49:
-	retval = gbObp1[0] | (gbObp1[1] << 2) | (gbObp1[2] << 4) | (gbObp1[3] << 6);
+	retval = (gbObp1[0] & 3) | ((gbObp1[1] & 3) << 2) | ((gbObp1[2] & 3) << 4) | ((gbObp1[3] & 3) << 6);
 	break;
     case 0x4a:
 	retval = register_WY;
@@ -1390,7 +1405,6 @@ void gbReset()
     gbHdmaOn = 0;
     gbHdmaSource = 0x0000;
     gbHdmaDestination = 0x8000;
-    gbVramBank = 0;
     gbWramBank = 1;
     register_LY = 0x90;
     gbLcdMode = GBLCDM_VBLANK;
@@ -1398,8 +1412,12 @@ void gbReset()
       gbPalette[i] = 0x7fff;
   }
 
-  for(int i =0; i < 4; i++)
-    gbBgp[i] = gbObp0[i] = gbObp1[i] = i;
+  for(int i = 0; i < 4; i++)
+  {
+   gbBgp[i] = i;
+   gbObp0[i] = 4 | i;
+   gbObp1[i] = 8 | i;
+  }
 
   memset(&gbDataMBC1,0, sizeof(gbDataMBC1));
   gbDataMBC1.mapperROMBank = 1;
@@ -1446,14 +1464,14 @@ void gbReset()
    gbMemoryMap[0x0b] = gbMemoryMap[0x0a];
  }
 
- MDFNGBSOUND_Reset();
+ SOUND_Reset();
 
  // BIOS simulate
- MDFNGBSOUND_Write(0, 0xFF26, 0x80);
- MDFNGBSOUND_Write(0, 0xFF11, 0x80);
- MDFNGBSOUND_Write(0, 0xFF12, 0xF3);
- MDFNGBSOUND_Write(0, 0xFF25, 0xF3);
- MDFNGBSOUND_Write(0, 0xFF24, 0x77);
+ SOUND_Write(0, 0xFF26, 0x80);
+ SOUND_Write(0, 0xFF11, 0x80);
+ SOUND_Write(0, 0xFF12, 0xF3);
+ SOUND_Write(0, 0xFF25, 0xF3);
+ SOUND_Write(0, 0xFF24, 0x77);
 }
 
 static void gbPower(void)
@@ -1524,7 +1542,7 @@ void gbWriteSaveMBC5(const char * name)
 
 void gbWriteSaveMBC7(const char * name)
 {
- MDFN_DumpToFile(name, 6, gbRam, 256);
+ MDFN_DumpToFile(name, 0, gbRam, 256);
 }
 
 bool gbReadSaveMBC1(const char * name)
@@ -1834,7 +1852,6 @@ static SFORMAT MBC3_StateRegs[] =
  SFVARN(gbDataMBC3.mapperRAMEnable, "RAME"),
  SFVARN(gbDataMBC3.mapperROMBank, "ROMB"),
  SFVARN(gbDataMBC3.mapperRAMBank, "RAMB"),
- SFVARN(gbDataMBC3.mapperRAMAddress, "RAMA"),
  SFVARN(gbDataMBC3.mapperClockLatch, "CLKL"),
  SFVARN(gbDataMBC3.mapperClockRegister, "CLKR"),
  SFVARN(gbDataMBC3.mapperSeconds, "SEC"),
@@ -1856,17 +1873,13 @@ static SFORMAT MBC5_StateRegs[] =
  SFVAR(gbDataMBC5.mapperROMBank),
  SFVAR(gbDataMBC5.mapperRAMBank),
  SFVAR(gbDataMBC5.mapperROMHighAddress),
- SFVAR(gbDataMBC5.mapperRAMAddress),
  SFVAR(gbDataMBC5.isRumbleCartridge),
  SFEND
 };
 
 static SFORMAT MBC7_StateRegs[] =
 {
- SFVARN(gbDataMBC7.mapperRAMEnable, "RAME"),
  SFVARN(gbDataMBC7.mapperROMBank, "ROMB"),
- SFVARN(gbDataMBC7.mapperRAMBank, "RAMB"),
- SFVARN(gbDataMBC7.mapperRAMAddress, "RAMA"),
  SFVARN(gbDataMBC7.cs, "CS"),
  SFVARN(gbDataMBC7.sk, "SK"),
  SFVARN(gbDataMBC7.state, "STTE"),
@@ -1877,6 +1890,10 @@ static SFORMAT MBC7_StateRegs[] =
  SFVARN(gbDataMBC7.address, "ADDR"),
  SFVARN(gbDataMBC7.writeEnable, "WRE"),
  SFVARN(gbDataMBC7.value, "VALU"),
+
+ SFVARN(gbDataMBC7.curtiltx, "TILTX"),
+ SFVARN(gbDataMBC7.curtilty, "TILTY"),
+
  SFEND
 };
 
@@ -1887,7 +1904,6 @@ static SFORMAT HuC1_StateRegs[] =
  SFVARN(gbDataHuC1.mapperRAMBank, "RAMB"),
  SFVARN(gbDataHuC1.mapperMemoryModel, "MEMM"),
  SFVARN(gbDataHuC1.mapperROMHighAddress, "ROMH"),
- SFVARN(gbDataHuC1.mapperRAMAddress, "RAMA"),
  SFEND
 };
 
@@ -1896,7 +1912,6 @@ static SFORMAT HuC3_StateRegs[] =
  SFVARN(gbDataHuC3.mapperRAMEnable, "RAME"),
  SFVARN(gbDataHuC3.mapperROMBank, "ROMB"),
  SFVARN(gbDataHuC3.mapperRAMBank, "RAMB"),
- SFVARN(gbDataHuC3.mapperRAMAddress, "RAMA"),
  SFVARN(gbDataHuC3.mapperAddress, "ADDR"),
  SFVARN(gbDataHuC3.mapperRAMFlag, "RAMF"),
  SFVARN(gbDataHuC3.mapperRAMValue, "RAMV"),
@@ -1945,7 +1960,6 @@ static SFORMAT gbSaveGameStruct[] =
   SFVAR(gbSerialOn),
   SFVAR(gbWindowLine),
   //SFVAR(gbCgbMode),
-  SFVAR(gbVramBank),
   SFVAR(gbWramBank),
   SFVAR(gbHdmaSource),
   SFVAR(gbHdmaDestination),
@@ -1990,63 +2004,25 @@ static SFORMAT gbSaveGameStruct[] =
   SFEND
 };
 
+static void CloseGame(void) MDFN_COLD;
 static void CloseGame(void)
 {
  gbWriteBatteryFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str());
 
- if(gbRam != NULL) 
- {
-  free(gbRam);
-  gbRam = NULL;
- }
-
- if(gbRom != NULL) 
- {
-  free(gbRom);
-  gbRom = NULL;
- }
-
- if(gbLineBuffer != NULL) 
- {
-  free(gbLineBuffer);
-  gbLineBuffer = NULL;
- }
-
- if(gbVram != NULL) 
- {
-  free(gbVram);
-  gbVram = NULL;
- }
-
- if(gbWram != NULL) 
- {
-  free(gbWram);
-  gbWram = NULL;
- }
-
- if(gbColorFilter)
- {
-  free(gbColorFilter);
-  gbColorFilter = NULL;
- }
-
- if(Custom_GB_ColorMap)
- {
-  MDFN_free(Custom_GB_ColorMap);
-  Custom_GB_ColorMap = NULL;
- }
-
- if(Custom_GBC_ColorMap)
- {
-  MDFN_free(Custom_GBC_ColorMap);
-  Custom_GBC_ColorMap = NULL;
- }
+ Cleanup();
 }
 
 static void StateRest(int version)
 {
  register_SVBK &= 7;
  register_VBK &= 1;
+
+ for(unsigned i = 0; i < 4; i++)
+ {
+  gbBgp[i] = gbBgp[i] & 0x3;
+  gbObp0[i] = (gbObp0[i] & 0x3) | 4;
+  gbObp1[i] = (gbObp1[i] & 0x3) | 8;
+ }
 
   gbMemoryMap[0x00] = &gbRom[0x0000];
   gbMemoryMap[0x01] = &gbRom[0x1000];
@@ -2134,7 +2110,6 @@ static void StateRest(int version)
     gbMemoryMap[0x09] = &gbVram[register_VBK * 0x2000 + 0x1000];
     gbMemoryMap[0x0d] = &gbWram[value * 0x1000];
 
-    gbVramBank = register_VBK;
     gbWramBank = value;
   }
 
@@ -2243,7 +2218,7 @@ static const char *GetGBTypeString(uint8 t)
  return(type);
 }
 
-static bool TestMagic(const char *name, MDFNFILE *fp)
+static bool TestMagic(MDFNFILE *fp)
 {
  static const uint8 GBMagic[8] = { 0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B };
 
@@ -2256,92 +2231,134 @@ static bool TestMagic(const char *name, MDFNFILE *fp)
  return(TRUE);
 }
 
-static int Load(const char *name, MDFNFILE *fp)
+static void Cleanup(void)
 {
- if(!(gbColorFilter = (uint32 *)MDFN_malloc(32768 * sizeof(uint32), _("GB Color Map"))))
+ SOUND_Kill();
+
+ if(gbRam != NULL) 
  {
-  return(0);
+  delete[] gbRam;
+  gbRam = NULL;
  }
 
- if(fp->size < 0x200)
+ if(gbRom != NULL) 
  {
-  MDFN_PrintError(_("GameBoy (Color) ROM image is too small: %llu bytes(at least 512 is required)"), (unsigned long long)fp->size);
-  return(0);
+  delete[] gbRom;
+  gbRom = NULL;
  }
 
- gbEmulatorType = MDFN_GetSettingI("gb.system_type");
-
- gbRom = (uint8 *)malloc(fp->size);
- memcpy(gbRom, fp->data, fp->size);
- gbRomSize = fp->size;
-
- md5_context md5;
- md5.starts();
- md5.update(gbRom, gbRomSize);
- md5.finish(MDFNGameInfo->MD5);
-
- MDFNGameInfo->GameSetMD5Valid = FALSE;
-
- MDFN_printf(_("ROM:       %dKiB\n"), (gbRomSize + 1023) / 1024);
- MDFN_printf(_("ROM CRC32: 0x%08x\n"), (unsigned int)crc32(0, gbRom, gbRomSize));
- MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
- MDFN_printf(_("Type:      0x%02x(%s)\n"), gbRom[0x147], GetGBTypeString(gbRom[0x147]));
- MDFN_printf(_("RAM Size:  0x%02x(%s)\n"), gbRom[0x149], GetGBRAMSizeString(gbRom[0x149]));
- MDFN_printf(_("Version:   0x%02x\n"), gbRom[0x14C]);
-
- MDFNMP_Init(128, (65536 + 32768) / 128); // + 32768 for GBC WRAM for supported GameShark cheats with RAM page numbers
-
- MDFNGBSOUND_Init();
-
- if(!gbUpdateSizes())
+ if(gbVram != NULL) 
  {
-  return(0);
+  delete[] gbVram;
+  gbVram = NULL;
  }
 
- gbReadBatteryFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str());
- gblayerSettings = 0xFF;
-
- // Custom palettes
- if(gbCgbMode)
+ if(gbWram != NULL) 
  {
-  if(!LoadCPalette("gbc", &Custom_GBC_ColorMap, 32768))
-  return(0);
- }
- else
- {
-  if(!LoadCPalette("gb", &Custom_GB_ColorMap, 4))
-   return(0);
+  delete[] gbWram;
+  gbWram = NULL;
  }
 
+ if(gbColorFilter)
+ {
+  delete[] gbColorFilter;
+  gbColorFilter = NULL;
+ }
+
+ if(Custom_GB_ColorMap)
+ {
+  delete[] Custom_GB_ColorMap;
+  Custom_GB_ColorMap = NULL;
+ }
+
+ if(Custom_GBC_ColorMap)
+ {
+  delete[] Custom_GBC_ColorMap;
+  Custom_GBC_ColorMap = NULL;
+ }
+}
+
+static int Load(MDFNFILE *fp) MDFN_COLD;
+static int Load(MDFNFILE *fp)
+{
+ try
+ {
+  if(fp->size < 0x200)
+   throw MDFN_Error(0, _("GameBoy (Color) ROM image is too small: %llu bytes(at least 512 is required)"), (unsigned long long)fp->size);
+
+  gbColorFilter = new uint32[32768];
+
+  gbEmulatorType = MDFN_GetSettingI("gb.system_type");
+
+  MDFNMP_Init(128, (65536 + 32768) / 128); // + 32768 for GBC WRAM for supported GameShark cheats with RAM page numbers
+
+  SOUND_Init();
+
+  //
+  //
+  //
+  gbUpdateSizes(fp->data, fp->size);
+
+  md5_context md5;
+  md5.starts();
+  md5.update(fp->data, fp->size); 	// Use fp->data and fp->size for backwards compatibility with save/save states from earlier versions of Mednafen.	//gbRom, gbRomSize);
+  md5.finish(MDFNGameInfo->MD5);
+
+  MDFNGameInfo->GameSetMD5Valid = FALSE;
+
+  MDFN_printf(_("ROM:       %dKiB\n"), (gbRomSize + 1023) / 1024);
+  MDFN_printf(_("ROM CRC32: 0x%08x\n"), (unsigned int)crc32(0, fp->data, fp->size));
+  MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
+  MDFN_printf(_("Type:      0x%02x(%s)\n"), gbRom[0x147], GetGBTypeString(gbRom[0x147]));
+  MDFN_printf(_("RAM Size:  0x%02x(%s)\n"), gbRom[0x149], GetGBRAMSizeString(gbRom[0x149]));
+  MDFN_printf(_("Version:   0x%02x\n"), gbRom[0x14C]);
+
+  //
+  //
+  //
+
+  gbReadBatteryFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str());
+  gblayerSettings = 0xFF;
+
+  // Custom palettes
+  if(gbCgbMode)
+  {
+   LoadCPalette("gbc", &Custom_GBC_ColorMap, 32768, false);
+  }
+  else
+  {
+   LoadCPalette("gb", &Custom_GB_ColorMap, 12, true);
+  }
+ }
+ catch(std::exception &e)
+ {
+  Cleanup();
+  throw;
+ }
  return(1);
 }
 
-static bool gbUpdateSizes()
+static void gbUpdateSizes(const uint8* in_rom_data, int64 in_rom_size)
 {
-  if(gbRom[0x148] > 8) 
-  {
-    MDFN_PrintError(_("Invalid ROM size"));
-    return false;
-  }
+ const uint8* header = &in_rom_data[0];
+
+  if(header[0x148] > 8) 
+   throw MDFN_Error(0, _("Unsupported ROM size specified in GB header."));
 
   //MDFN_printf("ROM Size: %d\n", gbRomSizes[gbRom[0x148]]);
+  gbRomSize = gbRomSizes[header[0x148]];
+  gbRomSizeMask = gbRomSizesMasks[header[0x148]];
+  gbRom = new uint8[gbRomSize];
+  memset(gbRom, 0xFF, gbRomSize);
+  memcpy(gbRom, in_rom_data, std::min<int64>(in_rom_size, gbRomSize));
+  
+  if(header[0x149] > 5) 
+   throw MDFN_Error(0, _("Unsupported RAM size specified in GB header."));
 
-  if(gbRomSize < gbRomSizes[gbRom[0x148]]) {
-    gbRom = (uint8 *)realloc(gbRom, gbRomSizes[gbRom[0x148]]);
-  }
-  gbRomSize = gbRomSizes[gbRom[0x148]];
-  gbRomSizeMask = gbRomSizesMasks[gbRom[0x148]];
+  gbRamSize = gbRamSizes[header[0x149]];
+  gbRamSizeMask = gbRamSizesMasks[header[0x149]];
 
-  if(gbRom[0x149] > 5) 
-  {
-    MDFN_PrintError(_("Invalid RAM size"));
-    return false;
-  }
-
-  gbRamSize = gbRamSizes[gbRom[0x149]];
-  gbRamSizeMask = gbRamSizesMasks[gbRom[0x149]];
-
-  int type = gbRom[0x147];
+  int type = header[0x147];
 
   mapperReadRAM = NULL;
   
@@ -2391,6 +2408,8 @@ static bool gbUpdateSizes()
     mapper = mapperMBC7ROM;
     mapperRAM = mapperMBC7RAM;
     mapperReadRAM = mapperMBC7ReadRAM;
+    gbRamSize = 0x200;
+    gbRamSizeMask = 0x1ff;
     break;
   case 0xfe:
     // HuC3
@@ -2404,7 +2423,7 @@ static bool gbUpdateSizes()
     mapperRAM = mapperHuC1RAM;
     break;
   default:
-    return false;
+    throw MDFN_Error(0, _("Unsupported mapper type specified in GB header."));
   }
 
   switch(type) {
@@ -2423,12 +2442,12 @@ static bool gbUpdateSizes()
   }
 
   if(gbRamSize) {
-    gbRam = (uint8 *)malloc(gbRamSize);
+    gbRam = new uint8[gbRamSize];
     memset(gbRam, 0xFF, gbRamSize);
   }
 
   // CGB bit
-  if(gbRom[0x143] & 0x80)
+  if(header[0x143] & 0x80)
   {
     if(gbEmulatorType == 0 ||
        gbEmulatorType == 1 ||
@@ -2445,22 +2464,22 @@ static bool gbUpdateSizes()
 
   if(gbCgbMode)
   {
-   gbWram = (uint8 *)malloc(0x8000);
-   memset(gbWram,0,0x8000);
+   gbWram = new uint8[0x8000];
+   memset(gbWram, 0, 0x8000);
    MDFNMP_AddRAM(0x8000, 0x10000, gbWram);
 
-   gbVram = (uint8 *)malloc(0x4000);
+   gbVram = new uint8[0x4000];
    memset(gbVram, 0, 0x4000);
   }
   else
   {
-   gbWram = (uint8 *)malloc(0x2000);
+   gbWram = new uint8[0x2000];
    memset(gbWram,0,0x2000);
 
    for(unsigned x = 0; x < 32768; x += 8192)
     MDFNMP_AddRAM(0x2000, 0x10000 | x, &gbWram[0]);
 
-   gbVram = (uint8 *)malloc(0x2000);
+   gbVram = new uint8[0x2000];
    memset(gbVram, 0, 0x2000);
   }
 
@@ -2470,8 +2489,6 @@ static bool gbUpdateSizes()
   if(gbRam)
    MDFNMP_AddRAM(gbRamSize > 8192 ? 8192 : gbRamSize, 0xA000, gbRam);
 
-  gbLineBuffer = (uint16 *)malloc(160 * sizeof(uint16));
-
   switch(type) {
   case 0x1c:
   case 0x1d:
@@ -2480,8 +2497,6 @@ static bool gbUpdateSizes()
   }
 
   gbPower();
-
-  return true;
 }
 
 
@@ -2534,17 +2549,20 @@ template<typename T>
 static void FillLineSurface(MDFN_Surface *surface, int y)
 {
  T* dest = surface->pix<T>() + y * surface->pitchinpix;
- uint32 fill_color = gbCgbMode ? gbColorFilter[gbPalette[0]] : ((sizeof(T) == 1) ? 8 : gbMonoColorMap[8]);
+ uint32 fill_color = gbCgbMode ? gbColorFilter[gbPalette[0]] : ((sizeof(T) == 1) ? 12 : gbMonoColorMap[12]);
 
  for(int x = 0; x < 160; x++)
   dest[x] = fill_color;
 }
 
-static uint8 *paddie;
+static uint8 *paddie, *tilt_paddie;
 
 static void MDFNGB_SetInput(int port, const char *type, void *ptr)
 {
- paddie = (uint8*)ptr;
+ if(port)
+  tilt_paddie = (uint8*)ptr;
+ else
+  paddie = (uint8*)ptr;
 }
 
 static void Emulate(EmulateSpecStruct *espec)
@@ -2592,10 +2610,11 @@ static void Emulate(EmulateSpecStruct *espec)
  if(!espec->skip && espec->surface->palette)
   memcpy(espec->surface->palette, PalTest, sizeof(PalTest));
 
- //if(gbRom[0x147] == 0x22)
- //{
- //  systemUpdateMotionSensor();
- //}
+ if(gbRom[0x147] == 0x22)
+ {
+  gbDataMBC7.curtiltx = 2048 + ((int32)MDFN_de16lsb(&tilt_paddie[0x4]) - (int32)MDFN_de16lsb(&tilt_paddie[0x6])) / 200;
+  gbDataMBC7.curtilty = 2048 + ((int32)MDFN_de16lsb(&tilt_paddie[0x0]) - (int32)MDFN_de16lsb(&tilt_paddie[0x2])) / 200;
+ }
 
  if(*paddie != gbJoymask)
  {
@@ -2774,11 +2793,10 @@ static void Emulate(EmulateSpecStruct *espec)
           if(gbHdmaOn) 
 	  {
             gbDoHdma();
+	    //gbDmaTicks += GBLCD_MODE_0_CLOCK_TICKS - 4;
           }
-	  else
-	  {
-	   gbLcdTicks += GBLCD_MODE_0_CLOCK_TICKS;
-	  }
+
+	  gbLcdTicks += GBLCD_MODE_0_CLOCK_TICKS;
           break;
         }
         // mark the correct lcd mode on STAT register
@@ -2874,7 +2892,7 @@ static void Emulate(EmulateSpecStruct *espec)
 
  espec->MasterCycles = SoundTS;
 
- espec->SoundBufSize = MDFNGBSOUND_Flush(SoundTS, espec->SoundBuf, espec->SoundBufMaxSize);
+ espec->SoundBufSize = SOUND_Flush(SoundTS, espec->SoundBuf, espec->SoundBufMaxSize);
  SoundTS = 0;
 }
 
@@ -2911,7 +2929,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
  if(load)
   StateRest(load);
 
- if(!MDFNGBSOUND_StateAction(sm, load, data_only))
+ if(!SOUND_StateAction(sm, load, data_only))
   return(0);
 
  return(ret);
@@ -2976,9 +2994,31 @@ static InputDeviceInfoStruct InputDeviceInfo[] =
  }
 };
 
+static const InputDeviceInputInfoStruct Tilt_IDII[] =
+{
+ { "up", "UP ↑", 	0, IDIT_BUTTON_ANALOG },
+ { "down", "DOWN ↓",	1, IDIT_BUTTON_ANALOG },
+ { "left", "LEFT ←",	2, IDIT_BUTTON_ANALOG },
+ { "right", "RIGHT →",	3, IDIT_BUTTON_ANALOG },
+};
+
+
+static InputDeviceInfoStruct Tilt_InputDeviceInfo[] =
+{
+ {
+  "tilt",
+  "Tilt",
+  NULL,
+  NULL,
+  sizeof(Tilt_IDII) / sizeof(InputDeviceInputInfoStruct),
+  Tilt_IDII,
+ }
+};
+
 static const InputPortInfoStruct PortInfo[] =
 {
- { "builtin", "Built-In", sizeof(InputDeviceInfo) / sizeof(InputDeviceInfoStruct), InputDeviceInfo, "gamepad" }
+ { "builtin", "Built-In", sizeof(InputDeviceInfo) / sizeof(InputDeviceInfoStruct), InputDeviceInfo, "gamepad" },
+ { "tilt", "Tilt", sizeof(Tilt_InputDeviceInfo) / sizeof(InputDeviceInfoStruct), Tilt_InputDeviceInfo, "tilt" }
 };
 
 static InputInfoStruct InputInfo =

@@ -6,6 +6,9 @@
 !!! Initialize statically-allocated Blip_Buffer objects(via clear() method) and reset any corresponding last-value variables
 on game load for each emulated system.
 
+!!! Systems with RTC emulation: Fix code to NOT use localtime(), which has consistency issues due to relying on external state(IE time zones), at
+			    any time other than virtual power toggle/init.
+
 Audit code to ensure proper handling of pointer variables when a constructor or new throws an exception(IE make sure cleanup code doesn't
 delete an uninitialized pointer).
 
@@ -15,8 +18,6 @@ rewrite file.cpp and other code to use these instead of MDFNFILE.
 Switch hotkey/command key processing over to be event-based rather than instantaneous-state based?  Consider implications for ckdelay, hotkey
 logical AND mode.
 
-Systems with RTC emulation: Fix code to NOT use localtime(), which has consistency issues due to relying on external state(IE time zones), at
-			    any time other than virtual power toggle/init.
 
 CD emulation/handling:
 	Add fixes for drives that don't support raw subchannel reading and/or raw reading.  Add fixes
@@ -26,8 +27,6 @@ CD emulation/handling:
 	Stricter CUE and TOC sheet parsing.
 
 	Support for indexes other than 0 and 1 in CUE and TOC sheets(maybe using std::map?).
-
-	Musepack support is deprecated; remove it entirely in 2015?
 
 YM2612:
 	Timer fixes?
@@ -74,8 +73,9 @@ Settings:
 Video:
 	Mixed-horizontal-resolution screens have Y coordinate precision issues in regards to rendering(in drivers/video.cpp), which
 	can cause vertical subscreen positioning to be off in the case of non-integer vertical scaling, which will cause parts of the
-	screen to jitter/bounce slightly in certain cases in some games(Seiken Densetsu 3 dialogue boxes are a good example).
-	TODO is to fix it, obviously. ;)
+	screen to jitter/bounce slightly in certain cases in some games(Seiken Densetsu 3 dialogue boxes are a good example).  ALSO, such screens highlight
+	the border color blending issue when OpenGL texture interpolation is enabled.
+	TODO is to fix it, obviously. ;)  
 
 	Refactor hq2x, scale2x, 2xsai, etc. filtering code into classes based off an abstract base class.
 
@@ -282,39 +282,3 @@ Debugger(general):
 Input macro recording.
 
 Return -1 on game load error in main(), -2(maybe!) for unknown format.
-
-
-
-************
-**Old TODO**:
-************
-
-The following games are broken to some extent:
-
-Crystalis:		Mostly working, but the screen jumps around during
-			dialogue.  It apparently resets the MMC3 IRQ counter
-			mid-scanline.  It'll require low-level PPU and MMC3
-			IRQ counter emulation to function properly.
-
-Kickmaster:		IRQ occurs a few CPU cycles too late, interferes with NMI routine,
-			and causes the game to lock up after the second boss.  Luckily, there
-			are passwords, at least.
-			*"FIXED" BY HACK*
-
-Star Wars(PAL Beam Software version):
-			MMC3 IRQ occurs when it shouldn't, similar to the problem in
-			Kickmaster.
-			*"FIXED" BY HACK*
-
-*** General Features:
-
- Fix possible UNIF crashes(if no PRGx or CHRx chunks exist, it may crash,
- due to changes made in 0.92).
-
-*** Emulation:
-
- Figure out what mapper 113 really is.
-
- Sound frame count stuff on PAL games(is it correct?).
- 
- Fix Zapper emulation(one version of Chiller still doesn't always work correctly).

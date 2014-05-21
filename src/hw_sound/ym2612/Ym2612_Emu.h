@@ -2,19 +2,19 @@
 #ifndef YM2612_EMU_H
 #define YM2612_EMU_H
 
-#include "../../mednafen.h"
-#include "../../lepacker.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/lepacker.h>
 
 struct Ym2612_Impl;
 
 class Ym2612_Emu  {
 	Ym2612_Impl* impl;
 public:
-	Ym2612_Emu();
-	~Ym2612_Emu();
+	Ym2612_Emu() MDFN_COLD;
+	~Ym2612_Emu() MDFN_COLD;
 
 	// Reset to power-up state
-	void reset();
+	void reset() MDFN_COLD;
 	
 	// Mute voice n if bit n (1 << n) of mask is set
 	enum { channel_count = 6 };

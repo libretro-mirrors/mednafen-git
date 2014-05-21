@@ -38,7 +38,6 @@ struct mapperMBC3 {
   int mapperRAMEnable;
   int mapperROMBank;
   int mapperRAMBank;
-  int mapperRAMAddress;
   int mapperClockLatch;
   int mapperClockRegister;
   int mapperSeconds;
@@ -59,15 +58,11 @@ struct mapperMBC5 {
   int mapperROMBank;
   int mapperRAMBank;
   int mapperROMHighAddress;
-  int mapperRAMAddress;
   int isRumbleCartridge;
 };
 
 struct mapperMBC7 {
-  int mapperRAMEnable;
   int mapperROMBank;
-  int mapperRAMBank;
-  int mapperRAMAddress;
   int cs;
   int sk;
   int state;
@@ -75,9 +70,11 @@ struct mapperMBC7 {
   int idle;
   int count;
   int code;
-  int address;
+  uint8 address;
   int writeEnable;
   int value;
+  int curtiltx;
+  int curtilty;
 };
 
 struct mapperHuC1 {
@@ -86,14 +83,12 @@ struct mapperHuC1 {
   int mapperRAMBank;
   int mapperMemoryModel;
   int mapperROMHighAddress;
-  int mapperRAMAddress;
 };
 
 struct mapperHuC3 {
   int mapperRAMEnable;
   int mapperROMBank;
   int mapperRAMBank;
-  int mapperRAMAddress;
   int mapperAddress;
   int mapperRAMFlag;
   int mapperRAMValue;

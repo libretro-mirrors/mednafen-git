@@ -445,7 +445,7 @@ SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL
   //printf("MOOMOOOOO: %u\n", (unsigned)raw_ac_latency);
 
   int32_t dtbfs = (int64_t)(buffering->ms ? buffering->ms : 32) * wfe.Format.nSamplesPerSec / 1000;
-  int32_t des_local_bufsize = std::max<int32_t>((int32_t)dtbfs - (w->bfc * 2), w->bfc);
+  int32_t des_local_bufsize = std::max<int32_t>(dtbfs, w->bfc);
   int32_t des_local_bufsize_super = des_local_bufsize + ((30 * wfe.Format.nSamplesPerSec + 999) / 1000);
 
   w->BufferRBC = 0;
@@ -462,7 +462,7 @@ SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL
 
   buffering->buffer_size = des_local_bufsize;
   buffering->period_size = w->bfc;
-  buffering->latency = des_local_bufsize + w->bfc * 2;
+  buffering->latency = des_local_bufsize + w->bfc;
   buffering->bt_gran = 0;
  }
 
@@ -487,6 +487,7 @@ SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL
 
  TRYHR(w->ac->GetService(LV_IID_IAudioRenderClient, (void**)&w->arc));
 
+ memcpy(&dev->buffering, buffering, sizeof(SexyAL_buffering));
  memcpy(&dev->format, format, sizeof(SexyAL_format));
  dev->RawWrite = RawWrite;
  dev->RawCanWrite = RawCanWrite;

@@ -19,7 +19,7 @@
 #include "hes.h"
 #include "huc.h"
 #include "pcecd.h"
-#include "../player.h"
+#include <mednafen/player.h>
 
 namespace MDFN_IEN_PCE
 {
@@ -72,123 +72,23 @@ static DECLFR(HESROMRead)
  return(rom[A]);
 }
 
-int PCE_HESLoad(const uint8 *buf, uint32 size)
+static void Cleanup(void)
 {
- uint32 LoadAddr, LoadSize;
- uint32 CurPos;
- uint16 InitAddr;
- uint8 StartingSong;
- int TotalSongs;
-
- if(size < 0x10)
+ if(rom)
  {
-  MDFN_PrintError(_("HES header is too small."));
-  return(0);
+  MDFN_free(rom);
+  rom = NULL;
  }
 
- if(memcmp(buf, "HESM", 4))
+ if(rom_backup)
  {
-  MDFN_PrintError(_("HES header magic is invalid."));
-  return(0);
+  MDFN_free(rom_backup);
+  rom_backup = NULL;
  }
+}
 
- InitAddr = MDFN_de16lsb(&buf[0x6]);
-
- CurPos = 0x10;
- 
- if(!(rom = (uint8 *)MDFN_malloc(0x88 * 8192, _("HES ROM"))))
- {
-  return(0);
- }
-
- if(!(rom_backup = (uint8 *)MDFN_malloc(0x88 * 8192, _("HES ROM"))))
- {
-  return(0);
- }
-
- MDFN_printf(_("HES Information:\n"));
- MDFN_indent(1);
-
- StartingSong = buf[5];
-
- MDFN_printf(_("Init address: 0x%04x\n"), InitAddr);
- MDFN_printf(_("Starting song: %d\n"), StartingSong + 1);
-
- for(int x = 0; x < 8; x++)
- {
-  mpr_start[x] = buf[0x8 + x];
-  MDFN_printf("MPR%d: %02x\n", x, mpr_start[x]);
- }
-
- memset(rom, 0, 0x88 * 8192);
- memset(rom_backup, 0, 0x88 * 8192);
-
- while(CurPos < (size - 0x10))
- {
-  LoadSize = MDFN_de32lsb(&buf[CurPos + 0x4]);
-  LoadAddr = MDFN_de32lsb(&buf[CurPos + 0x8]);
-
-  //printf("Size: %08x(%d), Addr: %08x, La: %02x\n", LoadSize, LoadSize, LoadAddr, LoadAddr / 8192);
-  MDFN_printf(_("Chunk load:\n"));
-  MDFN_indent(1);
-  MDFN_printf(_("File offset:  0x%08x\n"), CurPos);
-  MDFN_printf(_("Load size:  0x%08x\n"), LoadSize);
-  MDFN_printf(_("Load target address:  0x%08x\n"), LoadAddr);
-
-  CurPos += 0x10;
-
-  if(((uint64)LoadSize + CurPos) > size)
-  {
-   uint32 NewLoadSize = size - CurPos;
-
-   MDFN_printf(_("Warning:  HES is trying to load more data than is present in the file(%u attempted, %u left)!\n"), LoadSize, NewLoadSize);
-
-   LoadSize = NewLoadSize;
-  }
-
-  // 0x88 * 8192 = 0x110000
-  if(((uint64)LoadAddr + LoadSize) > 0x110000)
-  {
-   MDFN_printf(_("Warning:  HES is trying to load data past boundary.\n"));
-
-   if(LoadAddr >= 0x110000)
-    break;
-
-   LoadSize = 0x110000 - LoadAddr;
-  }
-  MDFN_indent(-1);
-  memcpy(rom + LoadAddr, &buf[CurPos], LoadSize);
-  CurPos += LoadSize;
- }
-
- memcpy(rom_backup, rom, 0x88 * 8192);
-
- //
- // Try to detect SuperGrafx rips in the future?
- //
- //for(unsigned i = 0; i < 0x80; i++)
- //{
- // printf("0x%02x: 0x%08x\n", i, (uint32)crc32(0, &rom[i * 8192], 8192));
- //}
- //
- //
- //
-
- CurrentSong = StartingSong;
- TotalSongs = 256;
- uint8 *IBP_WR = IBP;
-
- for(int i = 0; i < 8; i++)
- {
-  *IBP_WR++ = 0xA9;		// LDA (immediate)
-  *IBP_WR++ = mpr_start[i];
-  *IBP_WR++ = 0x53;		// TAM
-  *IBP_WR++ = 1 << i;
- }
-
- // Initialize VDC registers.
- {
-  const uint8 vdc_init_rom[] = {
+static const uint8 vdc_init_rom[] =
+{
 	0xA0, 0x01,
 
 	0x8C, 0x0E, 0x00,	// SGFX ST_mode
@@ -233,41 +133,145 @@ int PCE_HESLoad(const uint8 *buf, uint32 size)
 	// VCE init
 	0xA9, 0x04,
 	0x8D, 0x00, 0x04,
-       };
+};
 
+void HES_Load(const uint8 *buf, uint32 size)
+{
+ try
+ {
+  uint32 LoadAddr, LoadSize;
+  uint32 CurPos;
+  uint16 InitAddr;
+  uint8 StartingSong;
+  int TotalSongs;
+
+  if(size < 0x10)
+   throw MDFN_Error(0, _("HES header is too small."));
+
+  if(memcmp(buf, "HESM", 4))
+   throw MDFN_Error(0, _("HES header magic is invalid."));
+
+  InitAddr = MDFN_de16lsb(&buf[0x6]);
+
+  CurPos = 0x10;
+ 
+  rom = (uint8 *)MDFN_malloc_T(0x88 * 8192, _("HES ROM"));
+  rom_backup = (uint8 *)MDFN_malloc_T(0x88 * 8192, _("HES ROM"));
+
+  MDFN_printf(_("HES Information:\n"));
+  MDFN_AutoIndent aind(1);
+
+  StartingSong = buf[5];
+
+  MDFN_printf(_("Init address: 0x%04x\n"), InitAddr);
+  MDFN_printf(_("Starting song: %d\n"), StartingSong + 1);
+
+  for(int x = 0; x < 8; x++)
+  {
+   mpr_start[x] = buf[0x8 + x];
+   MDFN_printf("MPR%d: %02x\n", x, mpr_start[x]);
+  }
+
+  memset(rom, 0, 0x88 * 8192);
+  memset(rom_backup, 0, 0x88 * 8192);
+
+  while(CurPos < (size - 0x10))
+  {
+   LoadSize = MDFN_de32lsb(&buf[CurPos + 0x4]);
+   LoadAddr = MDFN_de32lsb(&buf[CurPos + 0x8]);
+
+   //printf("Size: %08x(%d), Addr: %08x, La: %02x\n", LoadSize, LoadSize, LoadAddr, LoadAddr / 8192);
+   MDFN_printf(_("Chunk load:\n"));
+
+   MDFN_AutoIndent aindc(1);
+   MDFN_printf(_("File offset:  0x%08x\n"), CurPos);
+   MDFN_printf(_("Load size:  0x%08x\n"), LoadSize);
+   MDFN_printf(_("Load target address:  0x%08x\n"), LoadAddr);
+
+   CurPos += 0x10;
+
+   if(((uint64)LoadSize + CurPos) > size)
+   {
+    uint32 NewLoadSize = size - CurPos;
+
+    MDFN_printf(_("Warning:  HES is trying to load more data than is present in the file(%u attempted, %u left)!\n"), LoadSize, NewLoadSize);
+
+    LoadSize = NewLoadSize;
+   }
+
+   // 0x88 * 8192 = 0x110000
+   if(((uint64)LoadAddr + LoadSize) > 0x110000)
+   {
+    MDFN_printf(_("Warning:  HES is trying to load data past boundary.\n"));
+
+    if(LoadAddr >= 0x110000)
+     break;
+
+    LoadSize = 0x110000 - LoadAddr;
+   }
+   memcpy(rom + LoadAddr, &buf[CurPos], LoadSize);
+   CurPos += LoadSize;
+  }
+
+  memcpy(rom_backup, rom, 0x88 * 8192);
+
+  //
+  // Try to detect SuperGrafx rips in the future?
+  //
+  //for(unsigned i = 0; i < 0x80; i++)
+  //{
+  // printf("0x%02x: 0x%08x\n", i, (uint32)crc32(0, &rom[i * 8192], 8192));
+  //}
+  //
+  //
+  //
+
+  CurrentSong = StartingSong;
+  TotalSongs = 256;
+  uint8 *IBP_WR = IBP;
+
+  for(int i = 0; i < 8; i++)
+  {
+   *IBP_WR++ = 0xA9;		// LDA (immediate)
+   *IBP_WR++ = mpr_start[i];
+   *IBP_WR++ = 0x53;		// TAM
+   *IBP_WR++ = 1 << i;
+  }
+
+  // Initialize VDC registers.
   memcpy(IBP_WR, vdc_init_rom, sizeof(vdc_init_rom));
   IBP_WR += sizeof(vdc_init_rom);
+
+  *IBP_WR++ = 0xAD;		// LDA(absolute)
+  *IBP_WR++ = 0x00;		//
+  *IBP_WR++ = 0x1D;		//
+  *IBP_WR++ = 0x20;               // JSR
+  *IBP_WR++ = InitAddr;           //  JSR target LSB
+  *IBP_WR++ = InitAddr >> 8;      //  JSR target MSB
+  *IBP_WR++ = 0x58;               // CLI
+  *IBP_WR++ = 0xCB;               // (Mednafen Special)
+  *IBP_WR++ = 0x80;               // BRA
+  *IBP_WR++ = 0xFD;               //  -3
+
+  assert((unsigned int)(IBP_WR - IBP) <= sizeof(IBP));
+
+  Player_Init(TotalSongs, "", "", ""); //NULL, NULL, NULL, NULL); //UTF8 **snames);
+
+  for(int x = 0; x < 0x88; x++)
+  {
+   if(x)
+    HuCPU->SetFastRead(x, rom + x * 8192);
+   HuCPU->SetReadHandler(x, HESROMRead);
+   HuCPU->SetWriteHandler(x, HESROMWrite);
+  }
+
+  ROMWriteWarningGiven = FALSE;
  }
-
-
- *IBP_WR++ = 0xAD;		// LDA(absolute)
- *IBP_WR++ = 0x00;		//
- *IBP_WR++ = 0x1D;		//
- *IBP_WR++ = 0x20;               // JSR
- *IBP_WR++ = InitAddr;           //  JSR target LSB
- *IBP_WR++ = InitAddr >> 8;      //  JSR target MSB
- *IBP_WR++ = 0x58;               // CLI
- *IBP_WR++ = 0xCB;               // (Mednafen Special)
- *IBP_WR++ = 0x80;               // BRA
- *IBP_WR++ = 0xFD;               //  -3
-
- assert((unsigned int)(IBP_WR - IBP) <= sizeof(IBP));
-
- Player_Init(TotalSongs, "", "", ""); //NULL, NULL, NULL, NULL); //UTF8 **snames);
-
- for(int x = 0; x < 0x88; x++)
+ catch(...)
  {
-  if(x)
-   HuCPU->SetFastRead(x, rom + x * 8192);
-  HuCPU->SetReadHandler(x, HESROMRead);
-  HuCPU->SetWriteHandler(x, HESROMWrite);
+  Cleanup();
+  throw;
  }
-
- ROMWriteWarningGiven = FALSE;
-
- MDFN_indent(-1);
-
- return(1);
 }
 
 void HES_Reset(void)
@@ -320,17 +324,7 @@ void HES_Update(EmulateSpecStruct *espec, uint16 jp_data)
 
 void HES_Close(void)
 {
- if(rom)
- {
-  MDFN_free(rom);
-  rom = NULL;
- }
-
- if(rom_backup)
- {
-  MDFN_free(rom_backup);
-  rom_backup = NULL;
- }
+ Cleanup();
 }
 
 

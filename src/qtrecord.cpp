@@ -285,7 +285,7 @@ QTRecord::QTRecord(const char *path, const VideoSpec &spec) : qtfile(path, FileW
 }
 
 
-void QTRecord::WriteFrame(const MDFN_Surface *surface, const MDFN_Rect &DisplayRect, const MDFN_Rect *LineWidths,
+void QTRecord::WriteFrame(const MDFN_Surface *surface, const MDFN_Rect &DisplayRect, const int32 *LineWidths,
 			  const int16 *SoundBuf, const int32 SoundBufSize, const int64 MasterCycles)
 {
  QTChunk qts;
@@ -325,16 +325,12 @@ void QTRecord::WriteFrame(const MDFN_Surface *surface, const MDFN_Rect &DisplayR
    else
     dest_line = &RawVideoBuffer[dest_y * QTVideoWidth * 3];
 
-   if(LineWidths[0].w == ~0)
-   {
-    x_start = DisplayRect.x;
+   x_start = DisplayRect.x;
+
+   if(LineWidths[0] == ~0)
     width = DisplayRect.w;
-   }
    else
-   {
-    x_start = LineWidths[y].x;
-    width = LineWidths[y].w;
-   }
+    width = LineWidths[y];
 
    xscale_factor = QTVideoWidth / width;
 

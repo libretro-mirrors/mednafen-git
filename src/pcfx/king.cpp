@@ -35,7 +35,7 @@
 
 #include "pcfx.h"
 #include "king.h"
-#include "../cdrom/scsicd.h"
+#include <mednafen/cdrom/scsicd.h>
 #include "interrupt.h"
 #include "rainbow.h"
 #include "soundbox.h"
@@ -44,9 +44,8 @@
 #include "debug.h"
 #include <trio/trio.h>
 #include <math.h>
-#include "../video.h"
-#include "../clamp.h"
-#include "../sound/OwlResampler.h"
+#include <mednafen/video.h>
+#include <mednafen/sound/OwlResampler.h>
 
 #ifdef __MMX__
 #include <mmintrin.h>
@@ -1734,91 +1733,102 @@ uint16 KING_GetADPCMHalfWord(int ch)
 static uint32 HighDotClockWidth;
 extern RavenBuffer* FXCDDABufs[2]; // FIXME, externals are evil!
 
-bool KING_Init(void)
-{
- if(!(king = (king_t*)MDFN_calloc(1, sizeof(king_t), _("KING Data"))))
-  return(0);
-
- king->lastts = 0;
-
- HighDotClockWidth = MDFN_GetSettingUI("pcfx.high_dotclock_width");
- BGLayerDisable = 0;
-
- BuildCMT();
-
- // Build VCE priority map.
- // Don't change this unless you know what you're doing!
- // There may appear to be a bug in the pixel mixing
- // code elsewhere, because it accesses this array like [vdc][bg][rainbow], but it's not a bug.
- // This multi-dimensional array has no concept of bg, vdc, rainbow, or their orders per-se, it just
- // contains priority information for 3 different layers.
-
- for(int bg_prio = 0; bg_prio < 8; bg_prio++)
-  for(int vdc_prio = 0; vdc_prio < 8; vdc_prio++)
-   for(int rainbow_prio = 0; rainbow_prio < 8; rainbow_prio++)
-   {
-    int bg_prio_test = bg_prio ? bg_prio : 0x10;
-    int vdc_prio_test = vdc_prio ? vdc_prio : 0x10;
-    int rainbow_prio_test = rainbow_prio ? rainbow_prio : 0x10;
-
-    if(bg_prio_test >= 8)
-     VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][0] = 3;
-    else
-    {
-     if(bg_prio_test < vdc_prio_test && bg_prio_test < rainbow_prio_test)
-      VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][0] = 0;
-     else if(bg_prio_test > vdc_prio_test && bg_prio_test > rainbow_prio_test)
-      VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][0] = 2;
-     else 
-      VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][0] = 1;
-    }
-
-    if(vdc_prio_test >= 8)
-     VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][1] = 3;
-    else
-    {
-     if(vdc_prio_test < bg_prio_test && vdc_prio_test < rainbow_prio_test)
-      VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][1] = 0;
-     else if(vdc_prio_test > bg_prio_test && vdc_prio_test > rainbow_prio_test)
-      VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][1] = 2;
-     else
-      VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][1] = 1;
-    }
-
-    if(rainbow_prio_test >= 8)
-     VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][2] = 3;
-    else
-    {
-     if(rainbow_prio_test < bg_prio_test && rainbow_prio_test < vdc_prio_test)
-      VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][2] = 0;
-     else if(rainbow_prio_test > bg_prio_test && rainbow_prio_test > vdc_prio_test)
-      VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][2] = 2;
-     else
-      VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][2] = 1;
-    }
-   }
-
- #ifdef WANT_DEBUGGER
- ASpace_Add(KING_GetAddressSpaceBytes, KING_PutAddressSpaceBytes, "kram0", "KRAM Page 0", 19);
- ASpace_Add(KING_GetAddressSpaceBytes, KING_PutAddressSpaceBytes, "kram1", "KRAM Page 1", 19);
- ASpace_Add(Do16BitGet, Do16BitPut, "vdcvram0", "VDC-A VRAM", 17);
- ASpace_Add(Do16BitGet, Do16BitPut, "vdcvram1", "VDC-B VRAM", 17);
- ASpace_Add(KING_GetAddressSpaceBytes, KING_PutAddressSpaceBytes, "vce", "VCE Palette RAM", 10);
- #endif
-
- SCSICD_Init(SCSICD_PCFX, 3, FXCDDABufs[0]->Buf(), FXCDDABufs[1]->Buf(), 153600 * MDFN_GetSettingUI("pcfx.cdspeed"), 21477273, KING_CDIRQ, KING_StuffSubchannels);
-
- return(1);
-}
-
-void KING_Close(void)
+static void Cleanup(void)
 {
  if(king)
  {
   free(king);
   king = NULL;
  }
+
  SCSICD_Close();
+}
+
+void KING_Init(void)
+{
+ try
+ {
+  king = (king_t*)MDFN_calloc_T(1, sizeof(king_t), _("KING Data"));
+
+  king->lastts = 0;
+
+  HighDotClockWidth = MDFN_GetSettingUI("pcfx.high_dotclock_width");
+  BGLayerDisable = 0;
+
+  BuildCMT();
+
+  // Build VCE priority map.
+  // Don't change this unless you know what you're doing!
+  // There may appear to be a bug in the pixel mixing
+  // code elsewhere, because it accesses this array like [vdc][bg][rainbow], but it's not a bug.
+  // This multi-dimensional array has no concept of bg, vdc, rainbow, or their orders per-se, it just
+  // contains priority information for 3 different layers.
+
+  for(int bg_prio = 0; bg_prio < 8; bg_prio++)
+   for(int vdc_prio = 0; vdc_prio < 8; vdc_prio++)
+    for(int rainbow_prio = 0; rainbow_prio < 8; rainbow_prio++)
+    {
+     int bg_prio_test = bg_prio ? bg_prio : 0x10;
+     int vdc_prio_test = vdc_prio ? vdc_prio : 0x10;
+     int rainbow_prio_test = rainbow_prio ? rainbow_prio : 0x10;
+
+     if(bg_prio_test >= 8)
+      VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][0] = 3;
+     else
+     {
+      if(bg_prio_test < vdc_prio_test && bg_prio_test < rainbow_prio_test)
+       VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][0] = 0;
+      else if(bg_prio_test > vdc_prio_test && bg_prio_test > rainbow_prio_test)
+       VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][0] = 2;
+      else 
+       VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][0] = 1;
+     }
+
+     if(vdc_prio_test >= 8)
+      VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][1] = 3;
+     else
+     {
+      if(vdc_prio_test < bg_prio_test && vdc_prio_test < rainbow_prio_test)
+       VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][1] = 0;
+      else if(vdc_prio_test > bg_prio_test && vdc_prio_test > rainbow_prio_test)
+       VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][1] = 2;
+      else
+       VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][1] = 1;
+     }
+
+     if(rainbow_prio_test >= 8)
+      VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][2] = 3;
+     else
+     {
+      if(rainbow_prio_test < bg_prio_test && rainbow_prio_test < vdc_prio_test)
+       VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][2] = 0;
+      else if(rainbow_prio_test > bg_prio_test && rainbow_prio_test > vdc_prio_test)
+       VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][2] = 2;
+      else
+       VCEPrioMap[bg_prio][vdc_prio][rainbow_prio][2] = 1;
+     }
+    }
+
+  #ifdef WANT_DEBUGGER
+  ASpace_Add(KING_GetAddressSpaceBytes, KING_PutAddressSpaceBytes, "kram0", "KRAM Page 0", 19);
+  ASpace_Add(KING_GetAddressSpaceBytes, KING_PutAddressSpaceBytes, "kram1", "KRAM Page 1", 19);
+  ASpace_Add(Do16BitGet, Do16BitPut, "vdcvram0", "VDC-A VRAM", 17);
+  ASpace_Add(Do16BitGet, Do16BitPut, "vdcvram1", "VDC-B VRAM", 17);
+  ASpace_Add(KING_GetAddressSpaceBytes, KING_PutAddressSpaceBytes, "vce", "VCE Palette RAM", 10);
+  #endif
+
+  SCSICD_Init(SCSICD_PCFX, 3, FXCDDABufs[0]->Buf(), FXCDDABufs[1]->Buf(), 153600 * MDFN_GetSettingUI("pcfx.cdspeed"), 21477273, KING_CDIRQ, KING_StuffSubchannels);
+ }
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
+}
+
+void KING_Close(void)
+{
+ Cleanup();
 }
 
 
@@ -2454,10 +2464,10 @@ static uint32 INLINE YUV888_TO_YCbCr888(uint32 yuv)
 static VDC **vdc_chips;
 static MDFN_Surface *surface;
 static MDFN_Rect *DisplayRect;
-static MDFN_Rect *LineWidths;
+static int32 *LineWidths;
 static int skip;
 
-void KING_StartFrame(VDC **arg_vdc_chips, EmulateSpecStruct *espec)	//MDFN_Surface *arg_surface, MDFN_Rect *arg_DisplayRect, MDFN_Rect *arg_LineWidths, int arg_skip)
+void KING_StartFrame(VDC **arg_vdc_chips, EmulateSpecStruct *espec)
 {
  ::vdc_chips = arg_vdc_chips;
  ::surface = espec->surface;
@@ -2469,8 +2479,7 @@ void KING_StartFrame(VDC **arg_vdc_chips, EmulateSpecStruct *espec)	//MDFN_Surfa
  //MDFN_DispMessage("%d %d\n", SCSICD_GetACK(), SCSICD_GetREQ());
 
  // For the case of interlaced mode(clear ~0 state)
- LineWidths[0].x = 0;
- LineWidths[0].w = 0;
+ LineWidths[0] = 0;
 
  // These 2 should be overwritten in the big loop below.
  DisplayRect->x = 0;
@@ -2951,9 +2960,9 @@ static void MixLayers(void)
 
 	// FIXME
     if(fx_vce.frame_interlaced)
-     LineWidths[(fx_vce.raster_counter - 22) * 2 + fx_vce.odd_field] = *DisplayRect;
+     LineWidths[(fx_vce.raster_counter - 22) * 2 + fx_vce.odd_field] = DisplayRect->w;
     else
-     LineWidths[fx_vce.raster_counter - 22] = *DisplayRect;
+     LineWidths[fx_vce.raster_counter - 22] = DisplayRect->w;
 }
 
 static INLINE void RunVDCs(const int master_cycles, uint16 *pixels0, uint16 *pixels1)

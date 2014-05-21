@@ -75,18 +75,17 @@ MD_Cart_Type_SRAM::MD_Cart_Type_SRAM(const md_game_info *ginfo, const uint8 *ROM
 
  printf("%08x %08x %08x\n", sram_start, sram_end, sram_size);
 
- if(!(sram = (uint8 *)MDFN_malloc(sram_size, _("Cart SRAM"))))
- {
-  // FIXME
-  throw(-1);
- }
+ sram = (uint8 *)MDFN_malloc_T(sram_size, _("Cart SRAM"));
  memset(sram, 0xFF, sram_size);
 }
 
 MD_Cart_Type_SRAM::~MD_Cart_Type_SRAM()
 {
  if(sram)
-  free(sram);
+ {
+  MDFN_free(sram);
+  sram = NULL;
+ }
 }
 
 void MD_Cart_Type_SRAM::Reset(void)

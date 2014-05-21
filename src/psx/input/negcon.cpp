@@ -30,6 +30,7 @@ class InputDevice_neGcon : public InputDevice
  virtual ~InputDevice_neGcon();
 
  virtual void Power(void);
+ virtual int StateAction(StateMem* sm, int load, int data_only, const char* section_name);
  virtual void UpdateInput(const void *data);
 
  //
@@ -92,6 +93,43 @@ void InputDevice_neGcon::Power(void)
  transmit_count = 0;
 }
 
+int InputDevice_neGcon::StateAction(StateMem* sm, int load, int data_only, const char* section_name)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(dtr),
+
+  SFARRAY(buttons, sizeof(buttons)),
+  SFVAR(twist),
+  SFARRAY(anabuttons, sizeof(anabuttons)),
+
+  SFVAR(command_phase),
+  SFVAR(bitpos),
+  SFVAR(receive_buffer),
+
+  SFVAR(command),
+
+  SFARRAY(transmit_buffer, sizeof(transmit_buffer)),
+  SFVAR(transmit_pos),
+  SFVAR(transmit_count),
+
+  SFEND
+ };
+ int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name);
+
+ if(load)
+ {
+  if((transmit_pos + transmit_count) > sizeof(transmit_buffer))
+  {
+   transmit_pos = 0;
+   transmit_count = 0;
+  }
+ }
+
+ return(ret);
+}
+
+
 void InputDevice_neGcon::UpdateInput(const void *data)
 {
  uint8 *d8 = (uint8 *)data;
@@ -99,11 +137,11 @@ void InputDevice_neGcon::UpdateInput(const void *data)
  buttons[0] = d8[0];
  buttons[1] = d8[1];
 
- twist = ((32768 + MDFN_de32lsb((const uint8 *)data + 4) - (((int32)MDFN_de32lsb((const uint8 *)data + 8) * 32768 + 16383) / 32767)) * 255 + 32767) / 65535;
+ twist = ((32768 + MDFN_de16lsb((const uint8 *)data + 2) - (((int32)MDFN_de16lsb((const uint8 *)data + 4) * 32768 + 16383) / 32767)) * 255 + 32767) / 65535;
 
- anabuttons[0] = (MDFN_de32lsb((const uint8 *)data + 12) * 255 + 16383) / 32767; 
- anabuttons[1] = (MDFN_de32lsb((const uint8 *)data + 16) * 255 + 16383) / 32767;
- anabuttons[2] = (MDFN_de32lsb((const uint8 *)data + 20) * 255 + 16383) / 32767;
+ anabuttons[0] = (MDFN_de16lsb((const uint8 *)data + 6) * 255 + 16383) / 32767; 
+ anabuttons[1] = (MDFN_de16lsb((const uint8 *)data + 8) * 255 + 16383) / 32767;
+ anabuttons[2] = (MDFN_de16lsb((const uint8 *)data + 10) * 255 + 16383) / 32767;
 
  //printf("%02x %02x %02x %02x\n", twist, anabuttons[0], anabuttons[1], anabuttons[2]);
 }

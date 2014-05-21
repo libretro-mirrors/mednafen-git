@@ -25,7 +25,7 @@
 #include "fds-sound.h"
 #include "cart.h"
 #include "input.h"
-#include "../player.h"
+#include <mednafen/player.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -175,7 +175,7 @@ int LoadNSF(MDFNFILE *fp)
 }
 
 
-bool NSF_TestMagic(const char *name, MDFNFILE *fp)
+bool NSF_TestMagic(MDFNFILE *fp)
 {
  if(fp->size < 5)
   return(FALSE);
@@ -186,7 +186,7 @@ bool NSF_TestMagic(const char *name, MDFNFILE *fp)
  return(TRUE);
 } 
 
-bool NSFLoad(const char *name, MDFNFILE *fp, NESGameType *gt)
+bool NSFLoad(MDFNFILE *fp, NESGameType *gt)
 {
  char magic[5];
  int x;

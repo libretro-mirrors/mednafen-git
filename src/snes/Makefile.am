@@ -2,7 +2,7 @@ AM_CFLAGS = @AM_CFLAGS@ @SNES_EXTRA_FLAGS@
 AM_CXXFLAGS = @AM_CXXFLAGS@ @SNES_EXTRA_FLAGS@ @SNES_EXTRA_CXXFLAGS@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@  -DNOMINMAX
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_srcdir)/src/snes/src/lib
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl -I$(srcdir)/src/lib
 
 noinst_LIBRARIES	=	libsnes.a
 

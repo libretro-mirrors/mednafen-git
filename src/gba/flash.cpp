@@ -21,8 +21,6 @@
 #include "flash.h"
 #include "sram.h"
 
-#include <memory.h>
-
 namespace MDFN_IEN_GBA
 {
 
@@ -38,14 +36,14 @@ namespace MDFN_IEN_GBA
 #define FLASH_SETBANK            9
 
 uint8 *flashSaveMemory = NULL;
-int flashState = FLASH_READ_ARRAY;
-int flashReadState = FLASH_READ_ARRAY;
-int flashSize = 0x10000;
+static int flashState = FLASH_READ_ARRAY;
+static int flashReadState = FLASH_READ_ARRAY;
+uint32 flashSize = 0x10000;
 static int flashDeviceID = 0x1b;
 static int flashManufacturerID = 0x32;
 static int flashBank = 0;
 
-int GBA_Flash_StateAction(StateMem *sm, int load, int data_only)
+int Flash_StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT flashSaveData[] =
  {
@@ -59,28 +57,33 @@ int GBA_Flash_StateAction(StateMem *sm, int load, int data_only)
 
  int ret = MDFNSS_StateAction(sm, load, data_only, flashSaveData, "FLSH");
 
+ if(load)
+ {
+  flashBank &= 1;
+
+  if(flashSize > 0x20000)
+   flashSize = 0x20000;
+ }
+
  return(ret);
 };
 
-bool GBA_Flash_Init(void)
+void Flash_Init(void)
 {
- if(!(flashSaveMemory = (uint8 *)MDFN_malloc(0x20000, _("flash memory"))))
-  return(0);
-
+ flashSaveMemory = new uint8[0x20000];
  memset(flashSaveMemory, 0x00, 0x20000);
- return(1);
 }
 
-void GBA_Flash_Kill(void)
+void Flash_Kill(void)
 {
  if(flashSaveMemory)
  {
-  free(flashSaveMemory);
+  delete[] flashSaveMemory;
   flashSaveMemory = NULL;
  }
 }
 
-void GBA_Flash_Reset(void)
+void Flash_Reset(void)
 {
   flashState = FLASH_READ_ARRAY;
   flashReadState = FLASH_READ_ARRAY;

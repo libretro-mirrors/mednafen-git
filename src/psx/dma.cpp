@@ -803,8 +803,6 @@ int DMA_StateAction(StateMem *sm, int load, int data_only)
 
 #undef SFDMACH
 
-  SFVAR(lastts),
-
   SFEND
  };
  int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "DMA");

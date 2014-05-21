@@ -65,7 +65,6 @@ extern uint8 *internalRAM;
 extern uint8 *workRAM;
 extern uint8 *paletteRAM;
 extern uint8 *vram;
-extern uint8 *pix;
 extern uint8 *oam;
 extern uint8 *ioMem;
 

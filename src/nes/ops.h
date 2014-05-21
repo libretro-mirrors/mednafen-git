@@ -478,13 +478,13 @@ case 0x9E: ST_ABY(_X&(((A-_Y)>>8)+1));
 case 0x9B: _S=_A&_X;ST_ABY(_S& (((A-_Y)>>8)+1) );
 
 /* TOP */
-case 0x0C: LD_AB(;);
+case 0x0C: LD_AB(ARNOP);
 case 0x1C: 
 case 0x3C: 
 case 0x5C: 
 case 0x7C: 
 case 0xDC: 
-case 0xFC: LD_ABX(;);
+case 0xFC: LD_ABX(ARNOP);
 
 /* XAA - BIG QUESTION MARK HERE */
 case 0x8B: _A|=0xEE; _A&=_X; LD_IM(AND);

@@ -16,8 +16,8 @@
 #define __NEOPOP__
 //=============================================================================
 
-#include "../mednafen.h"
-#include "../mempatcher.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/mempatcher.h>
 #include <mednafen/masmem.h>
 
 #include <stdio.h>
@@ -25,13 +25,13 @@
 #include <string.h>
 #include <stdarg.h>
 
-#include "TLCS900h_disassemble.h"
-#include "TLCS900h_interpret_dst.h"
-#include "TLCS900h_interpret.h"
-#include "TLCS900h_interpret_reg.h"
-#include "TLCS900h_interpret_single.h"
-#include "TLCS900h_interpret_src.h"
-#include "TLCS900h_registers.h"
+#include "TLCS-900h/TLCS900h_disassemble.h"
+#include "TLCS-900h/TLCS900h_interpret_dst.h"
+#include "TLCS-900h/TLCS900h_interpret.h"
+#include "TLCS-900h/TLCS900h_interpret_reg.h"
+#include "TLCS-900h/TLCS900h_interpret_single.h"
+#include "TLCS-900h/TLCS900h_interpret_src.h"
+#include "TLCS-900h/TLCS900h_registers.h"
 
 
 // I put the TLCS900h code in its own namespace, so it doesn't
@@ -127,18 +127,6 @@ typedef struct
 	
 	void system_message(char* vaMessage,...);
 
-/*! Called at the start of the vertical blanking period, this function is
-	designed to perform many of the critical hardware interface updates
-	Here is a list of recommended actions to take:
-	
-	- The frame buffer should be copied to the screen.
-	- The frame rate should be throttled to 59.95hz
-	- The sound chips should be polled for the next chunk of data
-	- Input should be polled and the current status written to "ram[0x6F82]" */
-	
-	void system_VBL(void);
-
-
 //-----------------------------------------------------------------------------
 // Core <--> System-Graphics Interface
 //-----------------------------------------------------------------------------
@@ -150,26 +138,6 @@ typedef struct
 	extern COLOURMODE system_colour;
 
 	
-//-----------------------------------------------------------------------------
-// Core <--> System-Sound Interface
-//-----------------------------------------------------------------------------
-
-	// Speed of DAC playback
-#define DAC_FREQUENCY		8000 //hz
-
-	extern bool mute;
-
-/*!	Fills the given buffer with sound data */
-
-	void sound_update(uint16* chip_buffer, int length_bytes);
-	void dac_update(uint8* dac_buffer, int length_bytes);
-
-/*! Initialises the sound chips using the given SampleRate */
-	
-	void sound_init(int SampleRate);
-
-		//=========================================
-
 //-----------------------------------------------------------------------------
 // Core <--> System-IO Interface
 //-----------------------------------------------------------------------------

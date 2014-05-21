@@ -78,16 +78,6 @@ static mpc_int32_t mpc_unread_bytes_unchecked(mpc_demux * d) {
 	return d->bytes_total + d->buffer - d->bits_reader.buff - ((8 - d->bits_reader.count) >> 3);
 }
 
-// Returns the amount of unread bytes in the demux buffer.
-static mpc_uint32_t mpc_unread_bytes(mpc_demux * d) {
-	mpc_int32_t unread_bytes = mpc_unread_bytes_unchecked(d);
-
-	if (unread_bytes < 0) return 0;
-	
-	return (mpc_uint32_t) unread_bytes;
-}
-
-
 
 // Returns the number of bytes available in the buffer.
 static mpc_uint32_t
@@ -96,8 +86,8 @@ mpc_demux_fill(mpc_demux * d, mpc_uint32_t min_bytes, int flags)
 	mpc_uint32_t unread_bytes = (mpc_uint32_t) mpc_unread_bytes_unchecked(d);
 	int offset = 0;
 
-	if ((mpc_int32_t)
-		unread_bytes < 0) return 0; // Error - we've been reading past the end of the buffer - abort
+	if ((mpc_int32_t) unread_bytes < 0)
+		return 0; // Error - we've been reading past the end of the buffer - abort
 
 	if (min_bytes == 0 || min_bytes > DEMUX_BUFFER_SIZE ||
 		    (unread_bytes < min_bytes && (flags & MPC_BUFFER_FULL) != 0 ))
@@ -637,10 +627,15 @@ static mpc_status mpc_demux_decode_inner(mpc_demux * d, mpc_frame_info * i)
 }
 
 mpc_status mpc_demux_decode(mpc_demux * d, mpc_frame_info * i) {
-	mpc_status s = mpc_demux_decode_inner(d, i);
-	if (MPC_IS_FAILURE(s))
-		i->bits = -1; // we pretend it's end of file
-	return s;
+	for(;;) {
+		// mpc_demux_decode_inner may return 0 samples and require repeated calls after a seek. Loop over until we have data to return.
+		mpc_status s = mpc_demux_decode_inner(d, i);
+		if (MPC_IS_FAILURE(s))
+			i->bits = -1; // we pretend it's end of file
+
+		if (i->bits == -1 || i->samples > 0)
+			return s;
+	}
 }
 
 mpc_status mpc_demux_seek_second(mpc_demux * d, double seconds)

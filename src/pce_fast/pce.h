@@ -1,10 +1,9 @@
 #ifndef _PCE_H
 
-#include "../types.h"
-#include "../mednafen.h"
-#include "../state.h"
-#include "../general.h"
-#include "../memory.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/state.h>
+#include <mednafen/general.h>
+#include <mednafen/memory.h>
 
 #define PCE_MASTER_CLOCK        21477272.727273
 

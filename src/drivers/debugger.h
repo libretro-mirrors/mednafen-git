@@ -22,6 +22,9 @@ void Debugger_MT_DrawToScreen(const MDFN_PixelFormat& pf, signed screen_w, signe
 
 bool Debugger_IsActive(void);
 
+void Debugger_Init(void);
+
+void Debugger_Kill(void);
 #else
 
 static INLINE void Debugger_GT_Draw(void) { }
@@ -37,7 +40,8 @@ static INLINE void Debugger_GTR_PassBlit(void) { }
 static INLINE void Debugger_MT_DrawToScreen(const MDFN_PixelFormat& pf, signed screen_w, signed screen_h) { }
 static INLINE bool Debugger_IsActive(void) { return(false); }
 
-
+static INLINE void Debugger_Init(void) { }
+static INLINE void Debugger_Kill(void) { }
 #endif
 
 #endif

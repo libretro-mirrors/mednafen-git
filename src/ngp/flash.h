@@ -12,8 +12,8 @@
 //	additional informations.
 //---------------------------------------------------------------------------
 
-#ifndef __FLASH__
-#define __FLASH__
+#ifndef __NEOPOP_FLASH__
+#define __NEOPOP_FLASH__
 //=============================================================================
 
 void flash_read(void);

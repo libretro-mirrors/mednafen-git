@@ -19,7 +19,6 @@
 #define __MDFN_PCE_MCGENJIN_H
 
 #include <vector>
-#include "../cdrom/SimpleFIFO.h"
 
 class MCGenjin_CS_Device
 {

@@ -6,7 +6,7 @@ extern c68k_struc Sub68K;
 void MDCD_Run(int32 md_master_cycles);
 void MDCD_PCM_Run(int32 cycles);
 void MDCD_Reset(bool poweron);
-bool MDCD_Load(std::vector<CDIF *> *CDInterfaces, md_game_info *);
+void MDCD_Load(std::vector<CDIF *> *CDInterfaces, md_game_info *);
 bool MDCD_TestMagic(std::vector<CDIF *> *CDInterfaces);
 void MDCD_Close(void);
 

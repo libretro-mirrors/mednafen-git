@@ -491,5 +491,30 @@ necessarily 100% accurate or complete):
 
 <?php PrintSettings(); ?>
 
+ <?php BeginSection("Credits"); ?>
+ <p>
+  (This section is woefully outdated, being mostly copied from FCE Ultra)
+ <table border width="100%">
+  <tr><th>Name:</th><th>Contribution(s):</th></tr>
+  <tr><td>\Firebug\</td><td>High-level mapper information.</td></tr>
+  <tr><td>Bero</td><td>Original FCE source code.</td></tr>
+  <tr><td>Brad Taylor</td><td>NES sound information.</td></tr>
+  <tr><td>EFX</td><td>Testing.</td></tr>
+  <tr><td>Fredrik Olson</td><td>NES four-player adapter information.</td></tr>
+  <tr><td>goroh</td><td>Various documents.</td></tr>
+  <tr><td>Jeremy Chadwick</td><td>General NES information.</td></tr>
+  <tr><td>kevtris</td><td>Low-level NES information and sound information.</td></tr>
+  <tr><td>Ki</td><td>Various technical information.</td></tr>
+  <tr><td>Mark Knibbs</td><td>Various NES information.</td></tr>
+  <tr><td>Marat Fayzullin</td><td>General NES information.</td></tr>
+  <tr><td>Matthew Conte</td><td>Sound information.</td></tr>
+  <tr><td>nori</td><td>FDS sound information.</td></tr>
+  <tr><td>rahga</td><td>Famicom four-player adapter information.</td></tr>
+  <tr><td>TheRedEye</td><td>ROM images, testing.</td></tr>
+  <tr><th colspan="2" align="right">...and everyone whose name my mind has misplaced.</th></tr>
+ </table>
+ </p>
+ <?php EndSection(); ?>
+
 <?php EndPage(); ?>
 

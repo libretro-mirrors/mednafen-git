@@ -575,7 +575,7 @@ static void UNIF_Close(void)
  FreeUNIF();
 }
 
-bool UNIF_TestMagic(const char *name, MDFNFILE *fp)
+bool UNIF_TestMagic(MDFNFILE *fp)
 {
  if(fp->size < 4)
   return(FALSE);
@@ -587,9 +587,9 @@ bool UNIF_TestMagic(const char *name, MDFNFILE *fp)
 }
 
 
-bool UNIFLoad(const char *name, MDFNFILE *fp, NESGameType *gt)
+bool UNIFLoad(MDFNFILE *fp, NESGameType *gt)
 {
-	if(!UNIF_TestMagic(name, fp))
+	if(!UNIF_TestMagic(fp))
 	 return(FALSE);
 
 	fp->fseek(4, SEEK_SET);

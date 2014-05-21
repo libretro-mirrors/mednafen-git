@@ -19,9 +19,11 @@ class Stream
 
  enum
  {
-  ATTRIBUTE_READABLE = 0,
-  ATTRIBUTE_WRITEABLE,
-  ATTRIBUTE_SEEKABLE
+  ATTRIBUTE_READABLE = 	1U <<  0,
+  ATTRIBUTE_WRITEABLE =	1U <<  1,
+  ATTRIBUTE_SEEKABLE =	1U <<  2,
+  ATTRIBUTE_SLOW_SEEK =	1U <<  3,
+  ATTRIBUTE_SLOW_SIZE =	1U <<  4
  };
  virtual uint64 attributes(void) = 0;
 
@@ -42,7 +44,11 @@ class Stream
  virtual uint64 read(void *data, uint64 count, bool error_on_eos = true) = 0;
  virtual void write(const void *data, uint64 count) = 0;
 
- virtual void seek(int64 offset, int whence) = 0;
+ virtual void seek(int64 offset, int whence = SEEK_SET) = 0;
+ inline void rewind(void)
+ {
+  seek(0, SEEK_SET);
+ }
  virtual int64 tell(void) = 0;
  virtual int64 size(void) = 0;
  virtual void close(void) = 0;	// Flushes(in the case of writeable streams) and closes the stream.
@@ -164,10 +170,10 @@ class Stream
 
  virtual void put_line(const std::string& str);
 
- virtual void print_format(const char *format, ...) MDFN_FORMATSTR(printf, 2, 3);
+ virtual void print_format(const char *format, ...) MDFN_FORMATSTR(gnu_printf, 2, 3);
 
 #if 0
- int scanf(const char *format, ...) MDFN_FORMATSTR(scanf, 2, 3);
+ int scanf(const char *format, ...) MDFN_FORMATSTR(gnu_scanf, 2, 3);
  void put_string(const char *str);
  void put_string(const std::string &str);
 #endif

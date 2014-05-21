@@ -22,12 +22,12 @@
 #include "sio.h"
 #include "cdc.h"
 #include "spu.h"
-#include "../mempatcher.h"
-#include "../PSFLoader.h"
-#include "../player.h"
-#include "../cputest/cputest.h"
+#include <mednafen/mempatcher.h>
+#include <mednafen/PSFLoader.h>
+#include <mednafen/player.h>
 
 #include <stdarg.h>
+#include <ctype.h>
 
 extern MDFNGI EmulatedPSX;
 
@@ -132,12 +132,6 @@ enum
  REGION_NA = 1,
  REGION_EU = 2,
 };
-
-#if 0
-static uint32 PortReadCounter[0x4000] = { 0 };	// Debugging(performance)
-static uint32 ReadCounter = 0;
-static uint32 WriteCounter = 0;
-#endif
 
 static PSF1Loader *psf_loader = NULL;
 static std::vector<CDIF*> *cdifs = NULL;
@@ -497,16 +491,6 @@ template<typename T, bool IsWrite, bool Access24> static INLINE void MemRW(pscpu
 
  if(A >= 0x1F801000 && A <= 0x1F802FFF)
  {
-#if 0
-  if(!IsWrite)
-  {
-   ReadCounter++;
-   PortReadCounter[A & 0x3FFF]++;
-  }
-  else
-   WriteCounter++;
-#endif
-
   //if(IsWrite)
   // printf("HW Write%d: %08x %08x\n", (unsigned int)(sizeof(T)*8), (unsigned int)A, (unsigned int)V);
   //else
@@ -1072,7 +1056,7 @@ static void Emulate(EmulateSpecStruct *espec)
  {
   if(!espec->skip)
   {
-   espec->LineWidths[0].w = ~0;
+   espec->LineWidths[0] = ~0;
    Player_Draw(espec->surface, &espec->DisplayRect, 0, espec->SoundBuf, espec->SoundBufSize);
   }
  }
@@ -1111,23 +1095,9 @@ static void Emulate(EmulateSpecStruct *espec)
    }
   }
  }
-
- #if 0
- printf("read=%6d, write=%6d\n", ReadCounter, WriteCounter);
- ReadCounter = 0;
- WriteCounter = 0;
- printf("HW Port reads for this frame:\n");
- for(unsigned i = 0; i < 0x4000; i++)
- {
-  if(PortReadCounter[i] > 100)
-   printf("0x%08x: %d\n", 0x1f800000 + i, PortReadCounter[i]);
- }
- memset(PortReadCounter, 0, sizeof(PortReadCounter));
- printf("\n");
- #endif
 }
 
-static bool TestMagic(const char *name, MDFNFILE *fp)
+static bool TestMagic(MDFNFILE *fp)
 {
  if(PSFLoader::TestMagic(0x01, fp))
   return(true);
@@ -1474,6 +1444,8 @@ static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
   EmulatedPSX.fb_width = 768;
   EmulatedPSX.fb_height = 576;
 
+  EmulatedPSX.fps = 836203078;
+
   MDFNGameInfo->VideoSystem = VIDSYS_PAL;
  }
  else
@@ -1486,6 +1458,8 @@ static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
 
   EmulatedPSX.fb_width = 768;
   EmulatedPSX.fb_height = 480;
+
+  EmulatedPSX.fps = 1005643085;
 
   MDFNGameInfo->VideoSystem = VIDSYS_NTSC;
  }
@@ -1767,13 +1741,13 @@ void PSF1Loader::HandleEXE(const uint8 *data, uint32 size, bool ignore_pcsp)
 }
 
 static void Cleanup(void);
-static int Load(const char *name, MDFNFILE *fp)
+static int Load(MDFNFILE *fp)
 {
  try
  {
   const bool IsPSF = PSFLoader::TestMagic(0x01, fp);
 
-  if(!TestMagic(name, fp))
+  if(!TestMagic(fp))
    throw MDFN_Error(0, _("File format is unknown to module \"%s\"."), MDFNGameInfo->shortname);
 
 // For testing.
@@ -1785,7 +1759,9 @@ static int Load(const char *name, MDFNFILE *fp)
 
   //CDInterfaces.push_back(CDIF_Open("/home/sarah-projects/psxdev/tests/cd/adpcm.cue", false, false));
   //CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Tony Hawk's Pro Skater 2 (USA)/Tony Hawk's Pro Skater 2 (USA).cue", false, false));
-  CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Jumping Flash! (USA)/Jumping Flash! (USA).cue", false, false));
+  //CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Jumping Flash! (USA)/Jumping Flash! (USA).cue", false, false));
+  //CDInterfaces.push_back(CDIF_Open("/extra/games/PC-FX/Blue Breaker.cue", false, false));
+  CDInterfaces.push_back(CDIF_Open("/dev/cdrom2", true, false));
   InitCommon(&CDInterfaces, !IsPSF, true);
 #else
   InitCommon(NULL, !IsPSF, true);
@@ -1808,15 +1784,14 @@ static int Load(const char *name, MDFNFILE *fp)
  }
  catch(std::exception &e)
  {
-  MDFND_PrintError(e.what());
   Cleanup();
-  return(0);
+  throw;
  }
 
  return(1);
 }
 
-static int LoadCD(std::vector<CDIF *> *CDInterfaces)
+static void LoadCD(std::vector<CDIF *> *CDInterfaces)
 {
  try
  {
@@ -1826,12 +1801,9 @@ static int LoadCD(std::vector<CDIF *> *CDInterfaces)
  }
  catch(std::exception &e)
  {
-  MDFND_PrintError(e.what());
   Cleanup();
-  return(0);
+  throw;
  }
-
- return(1);
 }
 
 static void Cleanup(void)
@@ -1928,14 +1900,20 @@ static void SetInput(int port, const char *type, void *ptr)
 static int StateAction(StateMem *sm, int load, int data_only)
 {
  return(0);
+
  SFORMAT StateRegs[] =
  {
   SFVAR(CD_TrayOpen),
   SFVAR(CD_SelectedDisc),
   SFARRAY(MainRAM.data8, 1024 * 2048),
-  //SFARRAY(ScratchRAM.data8, 1024),
   SFARRAY32(SysControl.Regs, 9),
-  //SFARRAY32(next_timestamps, sizeof(next_timestamps) / sizeof(next_timestamps[0])),
+
+  SFVAR(PSX_PRNG.lcgo),
+  SFVAR(PSX_PRNG.x),
+  SFVAR(PSX_PRNG.y),
+  SFVAR(PSX_PRNG.z),
+  SFVAR(PSX_PRNG.c),
+
   SFEND
  };
 
@@ -1954,15 +1932,20 @@ static int StateAction(StateMem *sm, int load, int data_only)
  ret &= DMA_StateAction(sm, load, data_only);
  ret &= TIMER_StateAction(sm, load, data_only);
  ret &= CDC->StateAction(sm, load, data_only);
- ret &= MDEC_StateAction(sm, load, data_only);
- ret &= SPU->StateAction(sm, load, data_only);
- //ret &= FIO->StateAction(sm, load, data_only);
+
+ // These need some work still:
+ //ret &= MDEC_StateAction(sm, load, data_only);
+ //ret &= SPU->StateAction(sm, load, data_only);
+ ret &= FIO->StateAction(sm, load, data_only);
+ //ret &= SIO_StateAction(sm, load, data_only);
  //ret &= GPU->StateAction(sm, load, data_only);
- ret &= IRQ_StateAction(sm, load, data_only);
+ // End needing work.
+
+ ret &= IRQ_StateAction(sm, load, data_only);	// Do it last.
 
  if(load)
  {
-
+  ForceEventUpdates(0);	// FIXME to work with debugger step mode.
  }
 
  return(ret);

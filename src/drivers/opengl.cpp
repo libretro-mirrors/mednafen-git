@@ -20,6 +20,7 @@
 #include <string.h>
 #include <trio/trio.h>
 #include <math.h>
+#include <stdlib.h>
 
 #include "video.h"
 #include "opengl.h"
@@ -265,6 +266,8 @@ void OpenGL_Blitter::DrawLinearIP(const unsigned UsingIP, const unsigned rotated
   sr_y = !rotate_side;
  }
 
+ //printf("Start: %4d, Bound: %4d sr_y=%d, reversi=%d\n", start_pos, bound_pos, sr_y, reversi);
+
  reversi = (rotated == MDFN_ROTATE270 && UsingIP == VIDEOIP_LINEAR_X) || (rotated == MDFN_ROTATE90 && UsingIP == VIDEOIP_LINEAR_Y);
 
  for(int i = start_pos; i < bound_pos; i++)
@@ -287,12 +290,12 @@ void OpenGL_Blitter::DrawLinearIP(const unsigned UsingIP, const unsigned rotated
 
   if(sr_y)
   {
-   tmp_sr.y = sr_goon * (rotate_side ? tex_src_rect->w : tex_src_rect->h) / dest_rect->h;
+   tmp_sr.y = sr_goon * tex_src_rect->h / (rotate_side ? dest_rect->w : dest_rect->h);
    tmp_sr.h = 1;
   }
   else
   {
-   tmp_sr.x = sr_goon * (rotate_side ? tex_src_rect->h : tex_src_rect->w) / dest_rect->w;
+   tmp_sr.x = sr_goon * tex_src_rect->w / (rotate_side ? dest_rect->h : dest_rect->w);
    tmp_sr.w = 1;
   }
 
@@ -303,7 +306,7 @@ void OpenGL_Blitter::DrawLinearIP(const unsigned UsingIP, const unsigned rotated
  }
 }
 
-void OpenGL_Blitter::Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Rect *dest_rect, const MDFN_Rect *original_src_rect, int UsingIP, int rotated)
+void OpenGL_Blitter::Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Rect *dest_rect, const MDFN_Rect *original_src_rect, int InterlaceField, int UsingIP, int rotated)
 {
  MDFN_Rect tex_src_rect = *src_rect;
  float src_coords[4][2];
@@ -448,6 +451,16 @@ void OpenGL_Blitter::Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, 
 
  if(using_scanlines)
  {
+  float yif_offset = 0;
+  int yh_shift = 0;
+
+  if(using_scanlines < 0 && InterlaceField >= 0)
+  {
+   yif_offset = (float)InterlaceField / 512;
+   yh_shift = 1;
+  }
+
+
   p_glEnable(GL_BLEND);
 
   p_glBindTexture(GL_TEXTURE_2D, textures[1]);
@@ -455,16 +468,16 @@ void OpenGL_Blitter::Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, 
 
   p_glBegin(GL_QUADS);
 
-  p_glTexCoord2f(0.0f, 1.0f * original_src_rect->h / 256);  // Bottom left of our picture.
+  p_glTexCoord2f(0.0f, yif_offset + (original_src_rect->h >> yh_shift) / 256.0f);  // Bottom left of our picture.
   p_glVertex2f((signed)dest_coords[3][0], (signed)dest_coords[3][1]);
 
-  p_glTexCoord2f(1.0f, 1.0f * original_src_rect->h / 256); // Bottom right of our picture.
+  p_glTexCoord2f(1.0f, yif_offset + (original_src_rect->h >> yh_shift) / 256.0f); // Bottom right of our picture.
   p_glVertex2f((signed)dest_coords[2][0], (signed)dest_coords[2][1]);
 
-  p_glTexCoord2f(1.0f, 0.0f);    // Top right of our picture.
+  p_glTexCoord2f(1.0f, yif_offset);    // Top right of our picture.
   p_glVertex2f((signed)dest_coords[1][0], (signed)dest_coords[1][1]);
 
-  p_glTexCoord2f(0.0f, 0.0f);     // Top left of our picture.
+  p_glTexCoord2f(0.0f, yif_offset);     // Top left of our picture.
   p_glVertex2f((signed)dest_coords[0][0], (signed)dest_coords[0][1]);
 
   p_glEnd();
@@ -736,7 +749,7 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
  else
   MDFN_printf(_("Using power-of-2 sized textures.\n"));
 
- if(scanlines)	// Check for scanlines, and disable them if vertical scaling isn't large enough.
+ if(scanlines)
  {
   int slcount;
 
@@ -756,7 +769,7 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
     int sl_alpha;
 
     if(slcount)
-     sl_alpha = 0xFF - (0xFF * scanlines / 100);
+     sl_alpha = 0xFF - (0xFF * abs(scanlines) / 100);
     else
      sl_alpha = 0xFF;
 
@@ -783,6 +796,8 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
      
  p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
  p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+ //p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, 0x812F);
+ //p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, 0x812F);
 
  p_glBindTexture(GL_TEXTURE_2D, textures[2]);
 

@@ -4327,8 +4327,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.33.3'
-MEDNAFEN_VERSION_NUMERIC=0x000933
+MEDNAFEN_VERSION='0.9.34.1'
+MEDNAFEN_VERSION_NUMERIC=0x000934
 
 ac_aux_dir=
 for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do
@@ -17338,6 +17338,39 @@ fi
 # version HP92453-01 B.11.11.23709.GP, which incorrectly rejects
 # declarations like `int a3[[(sizeof (unsigned char)) >= 0]];'.
 # This bug is HP SR number 8606223364.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking size of char" >&5
+$as_echo_n "checking size of char... " >&6; }
+if ${ac_cv_sizeof_char+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if ac_fn_cxx_compute_int "$LINENO" "(long int) (sizeof (char))" "ac_cv_sizeof_char"        "$ac_includes_default"; then :
+
+else
+  if test "$ac_cv_type_char" = yes; then
+     { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error 77 "cannot compute sizeof (char)
+See \`config.log' for more details" "$LINENO" 5; }
+   else
+     ac_cv_sizeof_char=0
+   fi
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_sizeof_char" >&5
+$as_echo "$ac_cv_sizeof_char" >&6; }
+
+
+
+cat >>confdefs.h <<_ACEOF
+#define SIZEOF_CHAR $ac_cv_sizeof_char
+_ACEOF
+
+
+# The cast to long int works around a bug in the HP C Compiler
+# version HP92453-01 B.11.11.23709.GP, which incorrectly rejects
+# declarations like `int a3[[(sizeof (unsigned char)) >= 0]];'.
+# This bug is HP SR number 8606223364.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking size of short" >&5
 $as_echo_n "checking size of short... " >&6; }
 if ${ac_cv_sizeof_short+:} false; then :
@@ -17770,6 +17803,19 @@ fi
 
 done
 
+for ac_header in stdint.h inttypes.h
+do :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_cxx_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
+
 for ac_func in mkdir _mkdir
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
@@ -17938,6 +17984,31 @@ $as_echo "no" >&6; }
 		PKG_CONFIG=""
 	fi
 fi
+
+for ac_func in round nearbyint nearbyintf rint rintf
+do :
+  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
+ac_fn_cxx_check_func "$LINENO" "$ac_func" "$as_ac_var"
+if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+done
+
+for ac_header in fenv.h
+do :
+  ac_fn_cxx_check_header_mongrel "$LINENO" "fenv.h" "ac_cv_header_fenv_h" "$ac_includes_default"
+if test "x$ac_cv_header_fenv_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_FENV_H 1
+_ACEOF
+
+fi
+
+done
+
 
 #
 # Check for any libraries that need to be linked against for clock_gettime().
@@ -23917,10 +23988,7 @@ int main(int argc, char *argv[])
 
       CPPFLAGS="$CPPFLAGS -fno-strict-overflow"
       if test "$cross_compiling" = yes; then :
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "cannot run test program while cross compiling
-See \`config.log' for more details" "$LINENO" 5; }
+  NO_STRICT_OVERFLOW_FLAGS="-fwrapv"
 else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -23932,10 +24000,7 @@ else
 
 	CPPFLAGS="$ac_save_CPPFLAGS -fwrapv"
 	if test "$cross_compiling" = yes; then :
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "cannot run test program while cross compiling
-See \`config.log' for more details" "$LINENO" 5; }
+  NO_STRICT_OVERFLOW_FLAGS="-fwrapv"
 else
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -26597,7 +26662,6 @@ else
   WINDRES="$ac_cv_prog_WINDRES"
 fi
 
-	CPPFLAGS="-mstackrealign $CPPFLAGS"
         ac_fn_cxx_check_header_mongrel "$LINENO" "dsound.h" "ac_cv_header_dsound_h" "$ac_includes_default"
 if test "x$ac_cv_header_dsound_h" = xyes; then :
   HAVE_DIRECTSOUND=true
@@ -26663,9 +26727,6 @@ fi
 
 
 	LIBS="-mwindows -lws2_32 -ldxguid -lwinmm -ldinput $LIBS -lwinmm"
-
-	# Uncomment out this LDFLAGS line for 0.9.34
-	#LDFLAGS="$LDFLAGS -Wl,--large-address-aware"
 
         if test x$with_libcdio = xyes; then
 		LIBS="$LIBS -lcdio"
@@ -27259,6 +27320,7 @@ MMX_CFLAGS=""
 SSE_CFLAGS=""
 SSE2_CFLAGS=""
 SSE3_CFLAGS=""
+
 case "$target_cpu" in
 	x86_64|amd64)
 
@@ -27810,7 +27872,7 @@ $as_echo "#define MPC_FIXED_POINT 1" >>confdefs.h
 LIBS="$SNDFILE_LIBS $LIBCDIO_LIBS $LIBS"
 CPPFLAGS="$LIBCDIO_CFLAGS $SNDFILE_CFLAGS $CPPFLAGS"
 
-ac_config_files="$ac_config_files Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pc/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/snes_perf/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/demo/Makefile src/desa68/Makefile po/Makefile.in intl/Makefile"
+ac_config_files="$ac_config_files Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pc/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/snes_perf/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/cdplay/Makefile src/demo/Makefile src/desa68/Makefile po/Makefile.in intl/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -29245,6 +29307,7 @@ do
     "src/hw_sound/Makefile") CONFIG_FILES="$CONFIG_FILES src/hw_sound/Makefile" ;;
     "src/hw_video/Makefile") CONFIG_FILES="$CONFIG_FILES src/hw_video/Makefile" ;;
     "src/md/Makefile") CONFIG_FILES="$CONFIG_FILES src/md/Makefile" ;;
+    "src/cdplay/Makefile") CONFIG_FILES="$CONFIG_FILES src/cdplay/Makefile" ;;
     "src/demo/Makefile") CONFIG_FILES="$CONFIG_FILES src/demo/Makefile" ;;
     "src/desa68/Makefile") CONFIG_FILES="$CONFIG_FILES src/desa68/Makefile" ;;
     "po/Makefile.in") CONFIG_FILES="$CONFIG_FILES po/Makefile.in" ;;

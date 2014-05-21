@@ -12,8 +12,8 @@
 //	additional informations.
 //---------------------------------------------------------------------------
 
-#ifndef __SOUND__
-#define __SOUND__
+#ifndef __NEOPOP_SOUND__
+#define __NEOPOP_SOUND__
 
 void Write_SoundChipLeft(uint8 data);
 void Write_SoundChipRight(uint8 data);

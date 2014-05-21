@@ -13,7 +13,6 @@ extern void (*MD_ExtWrite16)(uint32 address, uint16 value);
 class MDVDP;
 
 /* Global variables */
-extern uint8 *cart_rom; //[0x400000];
 extern uint8 work_ram[0x10000];
 extern uint8 zram[0x2000];
 extern uint8 zbusreq;

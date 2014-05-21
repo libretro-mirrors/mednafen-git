@@ -22,10 +22,12 @@
 #include "../string/trim.h"
 #include <vector>
 
-static SDL_Thread *CheatThread = NULL;
-static SDL_mutex *CheatMutex = NULL;
+static MDFN_Thread *CheatThread = NULL;
+static MDFN_Mutex *CheatMutex = NULL;
+static MDFN_Cond *CheatCond = NULL;
 static bool isactive = 0;
 static char * volatile pending_text = NULL;
+static bool volatile need_thread_exit;
 
 class CheatConsoleT : public MDFNConsole
 {
@@ -39,33 +41,42 @@ class CheatConsoleT : public MDFNConsole
 
         virtual bool TextHook(UTF8 *text)
         {
-	 SDL_mutexP(CheatMutex);
-	 pending_text = strdup((char *)text);
-	 SDL_mutexV(CheatMutex);
+	 char* tmp_ptr = strdup((char *)text);
+
+	 MDFND_LockMutex(CheatMutex);
+	 if(!pending_text)
+	 {
+	  pending_text = tmp_ptr;
+	  MDFND_SignalCond(CheatCond);
+	 }
+	 MDFND_UnlockMutex(CheatMutex);
+
          return(1);
         }
+
         void Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect)
 	{
-	 SDL_mutexP(CheatMutex);
+	 MDFND_LockMutex(CheatMutex);
 	 MDFNConsole::Draw(surface, src_rect);
-	 SDL_mutexV(CheatMutex);
+	 MDFND_UnlockMutex(CheatMutex);
 	}
+
 	void WriteLine(UTF8 *text)
 	{
-	 SDL_mutexP(CheatMutex);
+	 MDFND_LockMutex(CheatMutex);
 	 MDFNConsole::WriteLine(text);
- 	 SDL_mutexV(CheatMutex);
+ 	 MDFND_UnlockMutex(CheatMutex);
 	}
+
         void AppendLastLine(UTF8 *text)
         {
-         SDL_mutexP(CheatMutex);
+         MDFND_LockMutex(CheatMutex);
          MDFNConsole::AppendLastLine(text);
-         SDL_mutexV(CheatMutex);
+         MDFND_UnlockMutex(CheatMutex);
         }
 };
 
 static CheatConsoleT CheatConsole;
-
 
 static void CHEAT_printf(const char *format, ...)
 {
@@ -89,19 +100,38 @@ static void CHEAT_puts(const char *string)
 
 static void CHEAT_gets(char *s, int size)
 {
- SDL_mutexP(CheatMutex);
- while(!pending_text)
+ char* lpt = NULL;
+
+ //
+ //
+ //
+ MDFND_LockMutex(CheatMutex);
+ while(!pending_text && !need_thread_exit)
  {
-  SDL_mutexV(CheatMutex);
-  SDL_Delay(5);
-  SDL_mutexP(CheatMutex);
+  MDFND_WaitCond(CheatCond, CheatMutex);
  }
- strncpy(s, pending_text, size - 1);
- s[size - 1] = 0;
- free(pending_text);
+
+ lpt = pending_text;
  pending_text = NULL;
- CheatConsole.AppendLastLine((UTF8*)s);
- SDL_mutexV(CheatMutex);
+ MDFND_UnlockMutex(CheatMutex);
+ //
+ //
+ //
+
+ if(lpt)
+ {
+  strncpy(s, lpt, size - 1);
+  s[size - 1] = 0;
+  free(lpt);
+
+  CheatConsole.AppendLastLine((UTF8*)s);
+ }
+
+ if(need_thread_exit)
+ {
+  puts("WHEEE");
+  throw(0);	// Sloppy laziness, but it works!  SWEAT PANTS OF PRAGMATISM.
+ }
 }
 
 static char CHEAT_getchar(char def)
@@ -120,38 +150,6 @@ static void GetString(char *s, int max)
  CHEAT_gets(s, max);
  MDFN_trim(s);
 }
-
-#if 0
-
-static std::string GetString(void)
-{
- SDL_mutexP(CheatMutex);
- while(!pending_text)
- {
-  SDL_mutexV(CheatMutex);
-  SDL_Delay(5);
-  SDL_mutexP(CheatMutex);
- }
-
- char *lpt = pending_text;
- pending_text = NULL;
- try
- {
-  CheatConsole.AppendLastLine((UTF8*)lpt);
- }
- catch(...)
- {
-
- }
- SDL_mutexV(CheatMutex);
-
- std::string ret = std::string(lpt);
-
- free(lpt);
-
- return(ret);
-}
-#endif
 
 static uint64 GetUI(uint64 def)
 {
@@ -290,19 +288,27 @@ int AddToList(const char *text, uint32 id, const char* second_text = NULL)
 
 struct MENU
 {
-	INLINE MENU(const char* t, void (*f)(void*), std::vector<MENU>* m, void* d = NULL)
-        {
-         text = std::string(t);
-         func_action = f;
-         menu_action = m;
-	 data = d;
-        }
+	MENU(const char* t, void (*f)(void*), std::vector<MENU>* m, void* d = NULL);
+	~MENU();
 
 	std::string text;
 	void (*func_action)(void*);
 	std::vector<MENU>* menu_action;
 	void* data;
 };
+
+MENU::MENU(const char* t, void (*f)(void*), std::vector<MENU>* m, void* d)
+{
+         text = std::string(t);
+         func_action = f;
+         menu_action = m;
+	 data = d;
+}
+
+MENU::~MENU()
+{
+
+}
 
 static void SetOC(void* data)
 {
@@ -832,31 +838,44 @@ int CheatLoop(void *arg)
   }
  }
 
- DoMenu(MainMenu, 1);
+ try
+ {
+  DoMenu(MainMenu, 1);
+ }
+ catch(...)
+ {
+
+ }
 
  return(1);
 }
 
-void ShowConsoleCheatConfig(bool show)
+void CheatIF_GT_Show(bool show)
 {
  if(!CheatMutex)
-  CheatMutex = SDL_CreateMutex();
+  CheatMutex = MDFND_CreateMutex();
+
+ if(!CheatCond)
+  CheatCond = MDFND_CreateCond();
 
  PauseGameLoop(show);
  if(show)
  {
   if(!CheatThread)
-   CheatThread = SDL_CreateThread(CheatLoop, NULL);
+  {
+   need_thread_exit = false;
+   CheatThread = MDFND_CreateThread(CheatLoop, NULL);
+  }
  }
  isactive = show;
 }
 
-bool IsConsoleCheatConfigActive(void)
+bool CheatIF_Active(void)
 {
  return(isactive);
 }
 
-void DrawCheatConsole(MDFN_Surface *surface, const MDFN_Rect *src_rect)
+void CheatIF_MT_Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect)
 {
  if(!isactive)
   return;
@@ -872,10 +891,43 @@ void DrawCheatConsole(MDFN_Surface *surface, const MDFN_Rect *src_rect)
  CheatConsole.Draw(surface, src_rect);
 }
 
-int CheatEventHook(const SDL_Event *event)
+int CheatIF_MT_EventHook(const SDL_Event *event)
 {
  if(!isactive) return(1);
 
  return(CheatConsole.Event(event));
 }
 
+#if 0
+// TODO:
+void CheatIF_Kill(void)
+{
+ if(CheatThread != NULL)
+ {
+  MDFND_LockMutex(CheatMutex);
+  need_thread_exit = true;
+  MDFND_SignalCond(CheatCond);
+  MDFND_UnlockMutex(CheatMutex);
+ 
+  MDFND_WaitThread(CheatThread, NULL);
+ }
+
+ if(CheatCond != NULL)
+ {
+  MDFND_DestroyCond(CheatCond);
+  CheatCond = NULL;
+ }
+
+ if(CheatMutex != NULL)
+ {
+  MDFND_DestroyMutex(CheatMutex);
+  CheatMutex = NULL;
+ }
+
+ if(pending_text)
+ {
+  free(pending_text);
+  pending_text = NULL;
+ }
+}
+#endif

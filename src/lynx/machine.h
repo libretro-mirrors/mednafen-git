@@ -46,7 +46,7 @@
 #ifndef MACHINE_H
 #define MACHINE_H
 
-#include "../mednafen.h"
+#include <mednafen/mednafen.h>
 
 // Read/Write Cycle definitions
 #define CPU_RDWR_CYC	5

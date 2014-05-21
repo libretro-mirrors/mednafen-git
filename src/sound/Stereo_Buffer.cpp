@@ -1,7 +1,7 @@
 
 // Blip_Buffer 0.3.0. http://www.slack.net/~ant/nes-emu/
 
-#include <blip/Stereo_Buffer.h>
+#include "Stereo_Buffer.h"
 
 /* Library Copyright (C) 2004 Shay Green. Blip_Buffer is free software;
 you can redistribute it and/or modify it under the terms of the GNU

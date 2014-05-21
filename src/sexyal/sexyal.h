@@ -27,6 +27,10 @@ typedef struct
 	/* Inputs(requested) and Outputs(obtained; dev-note: ms and period_us outputs calculated by core SexyAL code, not sound device interface/driver code) */
 	uint32_t ms;		/* Desired buffer size, in milliseconds. */
 	uint32_t period_us;	/* Desired period size, in MICROseconds */
+	bool overhead_kludge;	/* If true, and ms is non-zero, and we're using driver "dsound", add 20 to ms when calculating the buffer size.
+
+				   Implemented this way to preserve "sound.buffer_time" setting semantics from older versions of Mednafen.
+				*/
 
 	/* Outputs Only(obtained) */
 	uint32_t buffer_size;	/* Buffer size(as in the maximum value returned by CanWrite()). In frames. */
@@ -160,6 +164,7 @@ enum
 
  SEXYAL_TYPE_DIRECTSOUND = 0x010,
  SEXYAL_TYPE_WASAPI = 0x011,
+ SEXYAL_TYPE_WASAPISH = 0x012,
 
  SEXYAL_OSX_COREAUDIO = 0x030,	/* TODO */
 

@@ -1,9 +1,8 @@
 #ifndef __MDFN_PSX_CDC_H
 #define __MDFN_PSX_CDC_H
 
-#include "../cdrom/cdromif.h"
-#include "../cdrom/SimpleFIFO.h"
-#include "../clamp.h"
+#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/cdrom/SimpleFIFO.h>
 
 namespace MDFN_IEN_PSX
 {
@@ -207,6 +206,8 @@ class PS_CDC
  bool xa_cur_set;
  uint8 xa_cur_file;
  uint8 xa_cur_chan;
+
+ uint8 ReportLastF;
 
  void HandlePlayRead(void);
 

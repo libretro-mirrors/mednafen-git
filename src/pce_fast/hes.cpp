@@ -19,8 +19,8 @@
 #include "hes.h"
 #include "huc.h"
 #include "pcecd.h"
-#include "../player.h"
-#include "../endian.h"
+#include <mednafen/player.h>
+#include <mednafen/endian.h>
 
 namespace PCE_Fast
 {
@@ -64,114 +64,131 @@ static DECLFR(HESROMRead)
  return(rom[A]);
 }
 
-int PCE_HESLoad(const uint8 *buf, uint32 size)
+static void Cleanup(void) MDFN_COLD;
+static void Cleanup(void)
 {
- uint32 LoadAddr, LoadSize;
- uint32 CurPos;
- uint16 InitAddr;
- uint8 StartingSong;
- int TotalSongs;
+ PCECD_Close();
 
- InitAddr = MDFN_de16lsb(&buf[0x6]);
+ if(rom)
+ {
+  MDFN_free(rom);
+  rom = NULL;
+ }
 
- CurPos = 0x10;
+ if(rom_backup)
+ {
+  MDFN_free(rom_backup);
+  rom_backup = NULL;
+ }
+}
+
+void HES_Load(const uint8 *buf, uint32 size)
+{
+ try
+ {
+  uint32 LoadAddr, LoadSize;
+  uint32 CurPos;
+  uint16 InitAddr;
+  uint8 StartingSong;
+  int TotalSongs;
+
+  InitAddr = MDFN_de16lsb(&buf[0x6]);
+
+  CurPos = 0x10;
  
- if(!(rom = (uint8 *)MDFN_malloc(0x88 * 8192, _("HES ROM"))))
- {
-  return(0);
- }
+  rom = (uint8 *)MDFN_malloc_T(0x88 * 8192, _("HES ROM"));
+  rom_backup = (uint8 *)MDFN_malloc_T(0x88 * 8192, _("HES ROM"));
 
- if(!(rom_backup = (uint8 *)MDFN_malloc(0x88 * 8192, _("HES ROM"))))
- {
-  return(0);
- }
+  memset(rom, 0, 0x88 * 8192);
+  memset(rom_backup, 0, 0x88 * 8192);
 
- memset(rom, 0, 0x88 * 8192);
- memset(rom_backup, 0, 0x88 * 8192);
-
- while(CurPos < (size - 0x10))
- {
-  LoadSize = MDFN_de32lsb(&buf[CurPos + 0x4]);
-  LoadAddr = MDFN_de32lsb(&buf[CurPos + 0x8]);
-
-  //printf("Size: %08x(%d), Addr: %08x, La: %02x\n", LoadSize, LoadSize, LoadAddr, LoadAddr / 8192);
-
-  CurPos += 0x10;
-
-  if(((uint64)LoadSize + CurPos) > size)
+  while(CurPos < (size - 0x10))
   {
-   uint32 NewLoadSize = size - CurPos;
+   LoadSize = MDFN_de32lsb(&buf[CurPos + 0x4]);
+   LoadAddr = MDFN_de32lsb(&buf[CurPos + 0x8]);
 
-   MDFN_printf(_("Warning:  HES is trying to load more data than is present in the file(%u attempted, %u left)!\n"), LoadSize, NewLoadSize);
+   //printf("Size: %08x(%d), Addr: %08x, La: %02x\n", LoadSize, LoadSize, LoadAddr, LoadAddr / 8192);
 
-   LoadSize = NewLoadSize;
+   CurPos += 0x10;
+
+   if(((uint64)LoadSize + CurPos) > size)
+   {
+    uint32 NewLoadSize = size - CurPos;
+
+    MDFN_printf(_("Warning:  HES is trying to load more data than is present in the file(%u attempted, %u left)!\n"), LoadSize, NewLoadSize);
+
+    LoadSize = NewLoadSize;
+   }
+
+   // 0x88 * 8192 = 0x110000
+   if(((uint64)LoadAddr + LoadSize) > 0x110000)
+   {
+    MDFN_printf(_("Warning:  HES is trying to load data past boundary.\n"));
+
+    if(LoadAddr >= 0x110000)
+     break;
+
+    LoadSize = 0x110000 - LoadAddr;
+   }
+
+   memcpy(rom + LoadAddr, &buf[CurPos], LoadSize);
+   CurPos += LoadSize;
   }
 
-  // 0x88 * 8192 = 0x110000
-  if(((uint64)LoadAddr + LoadSize) > 0x110000)
+  for(int x = 0; x < 8; x++)
+   mpr_start[x] = buf[0x8 + x];
+
+  memcpy(rom_backup, rom, 0x88 * 8192);
+
+  CurrentSong = StartingSong = buf[5];
+  TotalSongs = 256;
+
+  memset(IBP_Bank, 0, 0x2000);
+
+  uint8 *IBP_WR = IBP_Bank + 0x1C00;
+
+  for(int i = 0; i < 8; i++)
   {
-   MDFN_printf(_("Warning:  HES is trying to load data past boundary.\n"));
-
-   if(LoadAddr >= 0x110000)
-    break;
-
-   LoadSize = 0x110000 - LoadAddr;
+   *IBP_WR++ = 0xA9;             // LDA (immediate)
+   *IBP_WR++ = mpr_start[i];
+   *IBP_WR++ = 0x53;             // TAM
+   *IBP_WR++ = 1 << i;
   }
 
-  memcpy(rom + LoadAddr, &buf[CurPos], LoadSize);
-  CurPos += LoadSize;
+  *IBP_WR++ = 0xAD;              // LDA(absolute)
+  *IBP_WR++ = 0x00;              //
+  *IBP_WR++ = 0x1D;              //
+  *IBP_WR++ = 0x20;               // JSR
+  *IBP_WR++ = InitAddr;           //  JSR target LSB
+  *IBP_WR++ = InitAddr >> 8;      //  JSR target MSB
+  *IBP_WR++ = 0x58;               // CLI
+  *IBP_WR++ = 0xFC;               // (Mednafen Special)
+  *IBP_WR++ = 0x80;               // BRA
+  *IBP_WR++ = 0xFD;               //  -3
+
+  Player_Init(TotalSongs, "", "", ""); //NULL, NULL, NULL, NULL); //UTF8 **snames);
+
+  for(int x = 0; x < 0x80; x++)
+  {
+   HuCPUFastMap[x] = rom;
+   PCERead[x] = HESROMRead;
+   PCEWrite[x] = HESROMWrite;
+  }
+
+  HuCPUFastMap[0xFF] = IBP_Bank - (0xFF * 8192);
+
+  // FIXME:  If a HES rip tries to execute a SCSI command, the CD emulation code will probably crash.  Obviously, a HES rip shouldn't do this,
+  // but Mednafen shouldn't crash either. ;)
+  PCE_IsCD = 1;
+  PCE_InitCD();
+
+  ROMWriteWarningGiven = FALSE;
  }
-
- for(int x = 0; x < 8; x++)
-  mpr_start[x] = buf[0x8 + x];
-
- memcpy(rom_backup, rom, 0x88 * 8192);
-
- CurrentSong = StartingSong = buf[5];
- TotalSongs = 256;
-
- memset(IBP_Bank, 0, 0x2000);
-
- uint8 *IBP_WR = IBP_Bank + 0x1C00;
-
- for(int i = 0; i < 8; i++)
+ catch(...)
  {
-  *IBP_WR++ = 0xA9;             // LDA (immediate)
-  *IBP_WR++ = mpr_start[i];
-  *IBP_WR++ = 0x53;             // TAM
-  *IBP_WR++ = 1 << i;
+  Cleanup();
+  throw;
  }
-
- *IBP_WR++ = 0xAD;              // LDA(absolute)
- *IBP_WR++ = 0x00;              //
- *IBP_WR++ = 0x1D;              //
- *IBP_WR++ = 0x20;               // JSR
- *IBP_WR++ = InitAddr;           //  JSR target LSB
- *IBP_WR++ = InitAddr >> 8;      //  JSR target MSB
- *IBP_WR++ = 0x58;               // CLI
- *IBP_WR++ = 0xFC;               // (Mednafen Special)
- *IBP_WR++ = 0x80;               // BRA
- *IBP_WR++ = 0xFD;               //  -3
-
- Player_Init(TotalSongs, "", "", ""); //NULL, NULL, NULL, NULL); //UTF8 **snames);
-
- for(int x = 0; x < 0x80; x++)
- {
-  HuCPUFastMap[x] = rom;
-  PCERead[x] = HESROMRead;
-  PCEWrite[x] = HESROMWrite;
- }
-
- HuCPUFastMap[0xFF] = IBP_Bank - (0xFF * 8192);
-
- // FIXME:  If a HES rip tries to execute a SCSI command, the CD emulation code will probably crash.  Obviously, a HES rip shouldn't do this,
- // but Mednafen shouldn't crash either. ;)
- PCE_IsCD = 1;
- PCE_InitCD();
-
- ROMWriteWarningGiven = FALSE;
-
- return(1);
 }
 
 
@@ -229,19 +246,7 @@ void HES_Draw(MDFN_Surface *surface, MDFN_Rect *DisplayRect, int16 *SoundBuf, in
 
 void HES_Close(void)
 {
- PCECD_Close();
-
- if(rom)
- {
-  MDFN_free(rom);
-  rom = NULL;
- }
-
- if(rom_backup)
- {
-  MDFN_free(rom_backup);
-  rom_backup = NULL;
- }
+ Cleanup();
 }
 
 

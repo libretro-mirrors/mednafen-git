@@ -55,16 +55,24 @@ typedef enum
 {
  IDIT_BUTTON,		// 1-bit
  IDIT_BUTTON_CAN_RAPID, // 1-bit
- IDIT_X_AXIS,	   // (mouse) 32-bits, signed, fixed-point: 1.15.16 - in-screen/window range: [0.0, nominal_width)
- IDIT_Y_AXIS,	   // (mouse) 32-bits, signed, fixed-point: 1.15.16 - in-screen/window range: [0.0, nominal_height)
- IDIT_X_AXIS_REL,  // (mouse) 32-bits, signed
- IDIT_Y_AXIS_REL,  // (mouse) 32-bits, signed
+
+ IDIT_X_AXIS,		// (mouse) 32-bits, signed, fixed-point: 1.15.16 - in-screen/window range: [0.0, nominal_width)
+ IDIT_Y_AXIS,		// (mouse) 32-bits, signed, fixed-point: 1.15.16 - in-screen/window range: [0.0, nominal_height)
+
+ IDIT_X_AXIS_REL,	// (mouse) 32-bits, signed
+ IDIT_Y_AXIS_REL,	// (mouse) 32-bits, signed
+
  IDIT_BYTE_SPECIAL,
- IDIT_BUTTON_ANALOG, // 32-bits, 0 - 32767
- IDIT_RUMBLE,	// 32-bits, lower 8 bits are weak rumble(0-255), next 8 bits are strong rumble(0-255), 0=no rumble, 255=max rumble.  Somewhat subjective, too...
-		// May extend to 16-bit each in the future.
-		// It's also rather a special case of game module->driver code communication.
+
+ IDIT_BUTTON_ANALOG,	// 16-bits, 0 - 32767
+
+ IDIT_RUMBLE,		// 16-bits, lower 8 bits are weak rumble(0-255), next 8 bits are strong rumble(0-255), 0=no rumble, 255=max rumble.  Somewhat subjective, too...
+			// It's a rather special case of game module->driver code communication.
 } InputDeviceInputType;
+
+
+#define IDIT_BUTTON_ANALOG_FLAG_SQLR	0x00000001	// Denotes analog data that may need to be scaled to ensure a more squareish logical range(for emulated
+							// analog sticks).
 
 typedef struct
 {
@@ -76,8 +84,7 @@ typedef struct
 					// due to physical limitations.
 
 	const char *RotateName[3];	// 90, 180, 270
-	//const char *Rotate180Name;
-	//const char *Rotate270Name;
+	unsigned Flags;
 } InputDeviceInputInfoStruct;
 
 typedef struct
@@ -198,15 +205,15 @@ typedef struct
 	bool VideoFormatChanged;
 
 	// Set by the system emulation code every frame, to denote the horizontal and vertical offsets of the image, and the size
-	// of the image.  If the emulated system sets the elements of LineWidths, then the horizontal offset(x) and width(w) of this structure
-	// are ignored while drawing the image.
+	// of the image.  If the emulated system sets the elements of LineWidths, then the width(w) of this structure
+	// is ignored while drawing the image.
 	MDFN_Rect DisplayRect;
 
-	// Pointer to an array of MDFN_Rect, number of elements = fb_height, set by the driver code.  Individual MDFN_Rect structs written
+	// Pointer to an array of int32, number of elements = fb_height, set by the driver code.  Individual elements written
 	// to by system emulation code.  If the emulated system doesn't support multiple screen widths per frame, or if you handle
 	// such a situation by outputting at a constant width-per-frame that is the least-common-multiple of the screen widths, then
 	// you can ignore this.  If you do wish to use this, you must set all elements every frame.
-	MDFN_Rect *LineWidths;
+	int32 *LineWidths;
 
 	// TODO
 	bool *IsFMV;
@@ -308,15 +315,27 @@ typedef struct
  #endif
  InputInfoStruct *InputInfo;
 
- // Returns 1 on successful load, 0 on fatal error(deprecated: -1 on unrecognized format)
- int (*Load)(const char *name, MDFNFILE *fp);
+ //
+ // Returns 1 on successful load.
+ // throws exception on fatal error.
+ //
+ //  DEPRECATED: Return 0 on fatal error.
+ //  DEPRECATED: Return -1 on unrecognized format.
+ //
+ // fp's stream position is guaranteed to be 0 when this function is called.
+ //
+ int (*Load)(MDFNFILE *fp);
 
- // Return TRUE if the file is a recognized type, FALSE if not.
- bool (*TestMagic)(const char *name, MDFNFILE *fp);
+ //
+ // Return true if the file is a recognized type, false if not.
+ //
+ // fp's stream position is guaranteed to be 0 when this function is called.
+ //
+ bool (*TestMagic)(MDFNFILE *fp);
 
  //
  // (*CDInterfaces).size() is guaranteed to be >= 1.
- int (*LoadCD)(std::vector<CDIF *> *CDInterfaces);
+ void (*LoadCD)(std::vector<CDIF *> *CDInterfaces);
  bool (*TestMagicCD)(std::vector<CDIF *> *CDInterfaces);
 
  void (*CloseGame)(void);

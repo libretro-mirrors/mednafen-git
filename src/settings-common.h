@@ -26,9 +26,10 @@ typedef enum
 #define MDFNSF_NOFLAGS		0	  // Always 0, makes setting definitions prettier...maybe.
 
 // TODO(cats)
-#define MDFNSF_CAT_INPUT        (1 << 8)
-#define MDFNSF_CAT_SOUND	(1 << 9)
-#define MDFNSF_CAT_VIDEO	(1 << 10)
+#define MDFNSF_CAT_INPUT        	(1 << 8)
+#define MDFNSF_CAT_SOUND		(1 << 9)
+#define MDFNSF_CAT_VIDEO		(1 << 10)
+#define MDFNSF_CAT_INPUT_MAPPING	(1 << 11)	// User-configurable physical->virtual button/axes and hotkey mappings(driver-side code category mainly).
 
 #define MDFNSF_EMU_STATE	(1 << 17) // If the setting affects emulation from the point of view of the emulated program
 #define MDFNSF_UNTRUSTED_SAFE	(1 << 18) // If it's safe for an untrusted source to modify it, probably only used in conjunction with

@@ -52,12 +52,14 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-@WANT_FANCY_SCALERS_TRUE@am__append_1 = hqxx-common.cpp hq2x.cpp hq3x.cpp hq4x.cpp scale2x.c scale3x.c scalebit.c 2xSaI.cpp
-@HAVE_LINUX_JOYSTICK_TRUE@am__append_2 = Joystick_Linux.cpp
-@HAVE_POSIX_SOCKETS_TRUE@am__append_3 = NetClient_POSIX.cpp
-@WIN32_TRUE@am__append_4 = Joystick_XInput.cpp Joystick_DX5.cpp \
+@WIN32_TRUE@am__append_1 = thread_win32.cpp
+@WIN32_FALSE@am__append_2 = thread_sdl.cpp
+@WANT_FANCY_SCALERS_TRUE@am__append_3 = hqxx-common.cpp hq2x.cpp hq3x.cpp hq4x.cpp scale2x.c scale3x.c scalebit.c 2xSaI.cpp
+@HAVE_LINUX_JOYSTICK_TRUE@am__append_4 = Joystick_Linux.cpp
+@HAVE_POSIX_SOCKETS_TRUE@am__append_5 = NetClient_POSIX.cpp
+@WIN32_TRUE@am__append_6 = Joystick_XInput.cpp Joystick_DX5.cpp \
 @WIN32_TRUE@	NetClient_WS2.cpp
-@WANT_DEBUGGER_TRUE@am__append_5 = debugger.cpp gfxdebugger.cpp memdebugger.cpp logdebugger.cpp prompt.cpp
+@WANT_DEBUGGER_TRUE@am__append_7 = debugger.cpp gfxdebugger.cpp memdebugger.cpp logdebugger.cpp prompt.cpp
 subdir = src/drivers
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -97,37 +99,41 @@ am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
 libmdfnsdl_a_AR = $(AR) $(ARFLAGS)
 libmdfnsdl_a_LIBADD =
-am__libmdfnsdl_a_SOURCES_DIST = input.cpp main.cpp args.cpp help.cpp \
+am__libmdfnsdl_a_SOURCES_DIST = main.cpp input.cpp args.cpp help.cpp \
 	ers.cpp sound.cpp netplay.cpp input-config.cpp console.cpp \
 	cheat.cpp fps.cpp video-state.cpp remote.cpp opengl.cpp \
 	shader.cpp overlay.cpp video.cpp nongl.cpp nnx.cpp \
-	hqxx-common.cpp hq2x.cpp hq3x.cpp hq4x.cpp scale2x.c scale3x.c \
-	scalebit.c 2xSaI.cpp Joystick.cpp Joystick_SDL.cpp \
-	Joystick_Linux.cpp NetClient_POSIX.cpp Joystick_XInput.cpp \
-	Joystick_DX5.cpp NetClient_WS2.cpp debugger.cpp \
-	gfxdebugger.cpp memdebugger.cpp logdebugger.cpp prompt.cpp
-@WANT_FANCY_SCALERS_TRUE@am__objects_1 = hqxx-common.$(OBJEXT) \
+	thread_win32.cpp thread_sdl.cpp hqxx-common.cpp hq2x.cpp \
+	hq3x.cpp hq4x.cpp scale2x.c scale3x.c scalebit.c 2xSaI.cpp \
+	Joystick.cpp Joystick_SDL.cpp Joystick_Linux.cpp \
+	NetClient_POSIX.cpp Joystick_XInput.cpp Joystick_DX5.cpp \
+	NetClient_WS2.cpp debugger.cpp gfxdebugger.cpp memdebugger.cpp \
+	logdebugger.cpp prompt.cpp
+@WIN32_TRUE@am__objects_1 = thread_win32.$(OBJEXT)
+@WIN32_FALSE@am__objects_2 = thread_sdl.$(OBJEXT)
+@WANT_FANCY_SCALERS_TRUE@am__objects_3 = hqxx-common.$(OBJEXT) \
 @WANT_FANCY_SCALERS_TRUE@	hq2x.$(OBJEXT) hq3x.$(OBJEXT) \
 @WANT_FANCY_SCALERS_TRUE@	hq4x.$(OBJEXT) scale2x.$(OBJEXT) \
 @WANT_FANCY_SCALERS_TRUE@	scale3x.$(OBJEXT) scalebit.$(OBJEXT) \
 @WANT_FANCY_SCALERS_TRUE@	2xSaI.$(OBJEXT)
-@HAVE_LINUX_JOYSTICK_TRUE@am__objects_2 = Joystick_Linux.$(OBJEXT)
-@HAVE_POSIX_SOCKETS_TRUE@am__objects_3 = NetClient_POSIX.$(OBJEXT)
-@WIN32_TRUE@am__objects_4 = Joystick_XInput.$(OBJEXT) \
+@HAVE_LINUX_JOYSTICK_TRUE@am__objects_4 = Joystick_Linux.$(OBJEXT)
+@HAVE_POSIX_SOCKETS_TRUE@am__objects_5 = NetClient_POSIX.$(OBJEXT)
+@WIN32_TRUE@am__objects_6 = Joystick_XInput.$(OBJEXT) \
 @WIN32_TRUE@	Joystick_DX5.$(OBJEXT) NetClient_WS2.$(OBJEXT)
-@WANT_DEBUGGER_TRUE@am__objects_5 = debugger.$(OBJEXT) \
+@WANT_DEBUGGER_TRUE@am__objects_7 = debugger.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@	gfxdebugger.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@	memdebugger.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@	logdebugger.$(OBJEXT) prompt.$(OBJEXT)
-am_libmdfnsdl_a_OBJECTS = input.$(OBJEXT) main.$(OBJEXT) \
+am_libmdfnsdl_a_OBJECTS = main.$(OBJEXT) input.$(OBJEXT) \
 	args.$(OBJEXT) help.$(OBJEXT) ers.$(OBJEXT) sound.$(OBJEXT) \
 	netplay.$(OBJEXT) input-config.$(OBJEXT) console.$(OBJEXT) \
 	cheat.$(OBJEXT) fps.$(OBJEXT) video-state.$(OBJEXT) \
 	remote.$(OBJEXT) opengl.$(OBJEXT) shader.$(OBJEXT) \
 	overlay.$(OBJEXT) video.$(OBJEXT) nongl.$(OBJEXT) \
-	nnx.$(OBJEXT) $(am__objects_1) Joystick.$(OBJEXT) \
-	Joystick_SDL.$(OBJEXT) $(am__objects_2) $(am__objects_3) \
-	$(am__objects_4) $(am__objects_5)
+	nnx.$(OBJEXT) $(am__objects_1) $(am__objects_2) \
+	$(am__objects_3) Joystick.$(OBJEXT) Joystick_SDL.$(OBJEXT) \
+	$(am__objects_4) $(am__objects_5) $(am__objects_6) \
+	$(am__objects_7)
 libmdfnsdl_a_OBJECTS = $(am_libmdfnsdl_a_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -383,14 +389,15 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/intl -I$(top_srcdir)
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libmdfnsdl.a
-libmdfnsdl_a_SOURCES = input.cpp main.cpp args.cpp help.cpp ers.cpp \
+libmdfnsdl_a_SOURCES = main.cpp input.cpp args.cpp help.cpp ers.cpp \
 	sound.cpp netplay.cpp input-config.cpp console.cpp cheat.cpp \
 	fps.cpp video-state.cpp remote.cpp opengl.cpp shader.cpp \
 	overlay.cpp video.cpp nongl.cpp nnx.cpp $(am__append_1) \
-	Joystick.cpp Joystick_SDL.cpp $(am__append_2) $(am__append_3) \
-	$(am__append_4) $(am__append_5)
+	$(am__append_2) $(am__append_3) Joystick.cpp Joystick_SDL.cpp \
+	$(am__append_4) $(am__append_5) $(am__append_6) \
+	$(am__append_7)
 all: all-am
 
 .SUFFIXES:
@@ -476,6 +483,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/scalebit.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/shader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sound.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/thread_sdl.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/thread_win32.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/video-state.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/video.Po@am__quote@
 

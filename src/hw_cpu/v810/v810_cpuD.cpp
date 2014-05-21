@@ -279,7 +279,7 @@ void v810_dis(uint32 &tPC, int num, char *buf, uint16 (*rhword)(uint32), bool vb
 				sprintf(&buf[strlen(buf)],"%s    %s, %s", optable[opcode].opname, pretty_preg_names[arg1], pretty_sreg_names[arg2]);
 			} else if(opcode == STSR) {
 				sprintf(&buf[strlen(buf)],"%s     %s, %s", optable[opcode].opname, pretty_sreg_names[arg2], pretty_preg_names[arg1]);
-			} else if(opcode == ADD_I || opcode == CMP_I) {
+			} else if(opcode == ADD_I || opcode == CMP_I || opcode == MOV_I) {
 				sprintf(&buf[strlen(buf)],"%s    %d, %s", optable[opcode].opname, sign_5(arg2), pretty_preg_names[arg1]);
 			} else {
                                 sprintf(&buf[strlen(buf)],"%s    %d, %s", optable[opcode].opname, arg2, pretty_preg_names[arg1]);

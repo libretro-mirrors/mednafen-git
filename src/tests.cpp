@@ -100,6 +100,16 @@ static bool DoSizeofTests(void)
    FATALME;
  }
 
+ assert(sizeof(char) == 1);
+ assert(sizeof(int) == 4);
+ assert(sizeof(long) >= 4);
+
+ assert(sizeof(char) == SIZEOF_CHAR);
+ assert(sizeof(short) == SIZEOF_SHORT);
+ assert(sizeof(int) == SIZEOF_INT);
+ assert(sizeof(long) == SIZEOF_LONG);
+ assert(sizeof(long long) == SIZEOF_LONG_LONG);
+
  return(1);
 }
 
@@ -410,10 +420,37 @@ static void fptest1(void)
  assert(mdfn_fptest1_v == 340282366920938463463374607431768211456.0);
 }
 
+#if defined(HAVE_FENV_H) && defined(HAVE_NEARBYINTF)
+#include <fenv.h>
+
+// For advisory/debug purposes, don't error out on failure.
+static void libc_rounding_test(void)
+{
+ unsigned old_rm = fegetround();
+ float tv = 4118966.75;
+ float goodres = 4118967.0;
+ float res;
+
+ fesetround(FE_TONEAREST);
+
+ if((res = nearbyintf(tv)) != goodres)
+  fprintf(stderr, "\n***** Buggy libc nearbyintf() detected(%f != %f). *****\n\n", res, goodres);
+
+ fesetround(old_rm);
+}
+#else
+static void libc_rounding_test(void)
+{
+
+}
+#endif
+
 static void RunFPTests(void)
 {
  fptest0();
  fptest1();
+
+ libc_rounding_test();
 }
 
 const char* MDFN_tests_stringA = "AB\0C";

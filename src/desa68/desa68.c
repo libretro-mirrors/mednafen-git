@@ -34,7 +34,7 @@
 #	include <stdlib.h>
 #endif
 
-#include "desa68/desa68.h"
+#include "desa68.h"
 
 /**********************************************************
  * Defines my types :                                      *

@@ -26,9 +26,9 @@
 #include "pce.h"
 #include "huc.h"
 #include <math.h>
-#include "../video.h"
+#include <mednafen/video.h>
 #include "vce.h"
-#include "huc6270/vdc.h"
+#include <mednafen/hw_video/huc6270/vdc.h>
 #include "debug.h"
 #include "subhw.h"
 #include "pcecd.h"
@@ -206,7 +206,7 @@ void VCE::Reset(const int32 timestamp)
  SubTValid = false;
 }
 
-static MDFN_Rect *LW;
+static int32 *LW;
 
 static bool skipframe;
 
@@ -216,7 +216,7 @@ static bool skipframe;
  there will be graphics distortion, and maybe memory corruption.
 */
 
-void VCE::StartFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, MDFN_Rect *LineWidths, int skip)
+void VCE::StartFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, int32 *LineWidths, int skip)
 {
  uint32 *pXBuf = surface->pixels;
 
@@ -237,7 +237,7 @@ void VCE::StartFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, MDFN_Rect *L
   DisplayRect->h = MDFN_GetSettingUI("pce.slend") - MDFN_GetSettingUI("pce.slstart") + 1;
 
   for(int y = 0; y < 263; y++)
-   LineWidths[y].w = 0;
+   LineWidths[y] = 0;
 
   pitch32 = surface->pitch32;
   fb = pXBuf;
@@ -267,17 +267,12 @@ bool VCE::RunPartial(void)
 
  if(!skipframe)
  {
-  MDFN_Rect LW_Fix;
-
   // Worst-case fallback
-  LW_Fix.x = 0;
-  LW_Fix.w = 256;
-  LW_Fix.y = 0;
-  LW_Fix.h = 0;
+  int32 LW_Fix = 256;
 
   for(int y = 0; y < 263; y++)
   {
-   if(LW[y].w)
+   if(LW[y])
    {
     LW_Fix = LW[y];
     break;
@@ -286,10 +281,9 @@ bool VCE::RunPartial(void)
 
   for(int y = 0; y < 263; y++)
   {
-   if(!LW[y].w)
+   if(!LW[y])
     LW[y] = LW_Fix;
   }
-
  }
 
  Update(HuCPU->Timestamp());

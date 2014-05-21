@@ -27,7 +27,6 @@ uint16 (*MD_ExtRead16)(uint32 address) = NULL;
 void (*MD_ExtWrite8)(uint32 address, uint8 value) = NULL;
 void (*MD_ExtWrite16)(uint32 address, uint16 value) = NULL;
 
-uint8 *cart_rom = NULL; //[0x400000];   /* Cartridge ROM */
 uint8 work_ram[0x10000];    /* 68K work RAM */
 uint8 zram[0x2000];         /* Z80 work RAM */
 uint8 zbusreq;              /* /BUSREQ from Z80 */

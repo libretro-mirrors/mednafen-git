@@ -23,12 +23,12 @@
 #include <iconv.h>
 
 #include "debug.h"
-#include "v810/v810_cpuD.h"
+#include <mednafen/hw_cpu/v810/v810_cpuD.h>
 #include "interrupt.h"
 #include "timer.h"
 #include "king.h"
 #include "input.h"
-#include "../cdrom/scsicd.h"
+#include <mednafen/cdrom/scsicd.h>
 
 static void (*CPUHook)(uint32, bool bpoint) = NULL;
 static bool CPUHookContinuous = false;

@@ -24,8 +24,8 @@
 #include "cart.h"
 #include "x6502.h"
 
-#include "../mempatcher.h"
-#include "../FileStream.h"
+#include <mednafen/mempatcher.h>
+#include <mednafen/FileStream.h>
 
 /* 
    This file contains all code for coordinating the mapping in of the
@@ -488,80 +488,86 @@ static void InstallGenieBIOSHooks(void)
 /* Called when a game(file) is opened successfully. */
 bool Genie_Init(void)
 {
- MDFNFILE fp;
-
- if(!GENIEROM)
+ try
  {
-  if(!(GENIEROM=(uint8 *)MDFN_malloc(4096+1024, _("Game Genie ROM image")))) 
-   return(FALSE);
-
-  std::string fn = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("nes.ggrom").c_str());
-
-  if(!fp.Open(fn.c_str(), NULL, _("Game Genie ROM Image")))
+  if(!GENIEROM)
   {
-   free(GENIEROM);
-   GENIEROM=0;
-   return(FALSE);
-  }
+   if(!(GENIEROM=(uint8 *)MDFN_malloc(4096+1024, _("Game Genie ROM image")))) 
+    return(FALSE);
 
-  if(fp.fread(GENIEROM, 1, 16) != 16)
-  {
-   grerr:
-   MDFN_PrintError(_("Error reading from Game Genie ROM image!"));
-   free(GENIEROM);
-   GENIEROM = NULL;
+   std::string fn = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("nes.ggrom").c_str());
+   MDFNFILE fp(fn.c_str(), NULL, _("Game Genie ROM Image"));
+
+   if(fp.fread(GENIEROM, 1, 16) != 16)
+   {
+    grerr:
+    throw MDFN_Error(0, _("Error reading from Game Genie ROM image!"));
+   }
+
+   if(!memcmp(GENIEROM, "NES\x1A", 4))	/* iNES ROM image */
+   {
+    if(fp.fread(GENIEROM,1,4096) != 4096)
+     goto grerr;
+
+    if(fp.fseek(16384 - 4096, SEEK_CUR))
+     goto grerr;
+
+    if(fp.fread(GENIEROM + 4096, 1, 256) != 256)
+     goto grerr;
+   }
+   else
+   {
+    if(fp.fread(GENIEROM + 16, 1, 4352-16) != (4352 - 16))
+     goto grerr;
+   }
    fp.Close();
-   return(FALSE);
-  }
-
-  if(!memcmp(GENIEROM, "NES\x1A", 4))	/* iNES ROM image */
-  {
-   if(fp.fread(GENIEROM,1,4096) != 4096)
-    goto grerr;
-
-   if(fp.fseek(16384 - 4096, SEEK_CUR))
-    goto grerr;
-
-   if(fp.fread(GENIEROM + 4096, 1, 256) != 256)
-    goto grerr;
-  }
-  else
-  {
-   if(fp.fread(GENIEROM + 16, 1, 4352-16) != (4352 - 16))
-    goto grerr;
-  }
-  fp.Close();
  
-  /* Workaround for the Mednafen CHR page size only being 1KB */
-  for(int x = 0; x < 4; x++)
-   memcpy(GENIEROM + 4096 + (x<<8), GENIEROM + 4096, 256);
- }
+   /* Workaround for the Mednafen CHR page size only being 1KB */
+   for(int x = 0; x < 4; x++)
+    memcpy(GENIEROM + 4096 + (x<<8), GENIEROM + 4096, 256);
+  }
 
- if(!(AReadGG = (readfunc *)MDFN_calloc(sizeof(readfunc), 32768, _("Game Genie Read Map Backup"))) ||
-    !(BWriteGG = (writefunc *)MDFN_calloc(sizeof(writefunc), 32768, _("Game Genie Write Map Backup"))) )
+  AReadGG = (readfunc *)MDFN_calloc_T(sizeof(readfunc), 32768, _("Game Genie Read Map Backup"));
+  BWriteGG = (writefunc *)MDFN_calloc_T(sizeof(writefunc), 32768, _("Game Genie Write Map Backup"));
+
+  GenieBIOSHooksInstalled = FALSE;
+
+  for(int x = 0; x < 3; x++)
+  {
+   GenieBackup[x] = NULL;
+
+   genieval[x] = 0xFF;
+   geniech[x] = 0xFF;
+   genieaddr[x] = 0xFFFF;
+  }
+
+  geniestage=1;
+ }
+ catch(std::exception &e)
  {
+  MDFN_PrintError("%s", e.what());
+
   if(GENIEROM)
   {
-   free(GENIEROM);
+   MDFN_free(GENIEROM);
    GENIEROM = NULL;
   }
-  return(FALSE);
+
+  if(AReadGG)
+  {
+   MDFN_free(AReadGG);
+   AReadGG = NULL;
+  }
+
+  if(BWriteGG)
+  {
+   MDFN_free(BWriteGG);
+   BWriteGG = NULL;
+  }
+
+  return(false);
  }
-
- GenieBIOSHooksInstalled = FALSE;
-
- for(int x = 0; x < 3; x++)
- {
-  GenieBackup[x] = NULL;
-
-  genieval[x] = 0xFF;
-  geniech[x] = 0xFF;
-  genieaddr[x] = 0xFFFF;
- }
-
- geniestage=1;
-
- return(1);
+ return(true);
 }
 
 
@@ -573,7 +579,7 @@ void Genie_Kill(void)
 
  if(GENIEROM)
  {
-  free(GENIEROM);
+  MDFN_free(GENIEROM);
   GENIEROM = NULL;
  }
 

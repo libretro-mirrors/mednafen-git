@@ -1,8 +1,8 @@
 #ifndef __PCFX_KING_H
 #define __PCFX_KING_H
 
-void KING_StartFrame(VDC **, EmulateSpecStruct *espec);	//MDFN_Surface *surface, MDFN_Rect *DisplayRect, MDFN_Rect *LineWidths, int skip);
-void KING_SetPixelFormat(const MDFN_PixelFormat &format); //int rshift, int gshift, int bshift);
+void KING_StartFrame(VDC **, EmulateSpecStruct *espec);
+void KING_SetPixelFormat(const MDFN_PixelFormat &format);
 uint16 FXVCE_Read16(uint32 A);
 void FXVCE_Write16(uint32 A, uint16 V);
 
@@ -16,7 +16,7 @@ uint16 KING_Read16(const v810_timestamp_t timestamp, uint32 A);
 
 void KING_Write8(const v810_timestamp_t timestamp, uint32 A, uint8 V);
 void KING_Write16(const v810_timestamp_t timestamp, uint32 A, uint16 V);
-bool KING_Init(void);
+void KING_Init(void);
 void KING_Close(void);
 void KING_Reset(const v810_timestamp_t timestamp);
 

@@ -21,7 +21,7 @@
 #include "debug.h"
 #include "ppu/ppu.h"
 #include "cart.h"
-#include "../dis6502.h"
+#include <mednafen/dis6502.h>
 
 static void RedoHooks(void);
 

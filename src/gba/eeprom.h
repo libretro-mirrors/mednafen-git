@@ -23,24 +23,15 @@
 namespace MDFN_IEN_GBA
 {
 
-bool GBA_EEPROM_SaveFile(const char *filename) MDFN_COLD;
-bool GBA_EEPROM_LoadFile(const char *filename) MDFN_COLD;
+void EEPROM_Init(void) MDFN_COLD;
+void EEPROM_Reset(void) MDFN_COLD;
+int EEPROM_StateAction(StateMem *sm, int load, int data_only) MDFN_COLD;
+bool EEPROM_SaveFile(const char *filename) MDFN_COLD;
+void EEPROM_LoadFile(const char *filename) MDFN_COLD;
 
 
 int eepromRead(uint32 address);
 void eepromWrite(uint32 address, uint8 value);
-void eepromInit(void) MDFN_COLD;
-void eepromReset(void) MDFN_COLD;
-extern bool eepromInUse;
-extern int eepromSize;
-extern uint8 eepromData[0x2000];
-
-#define EEPROM_IDLE           0
-#define EEPROM_READADDRESS    1
-#define EEPROM_READDATA       2
-#define EEPROM_READDATA2      3
-#define EEPROM_WRITEDATA      4
-
 }
 
 #endif // VBA_EEPROM_H

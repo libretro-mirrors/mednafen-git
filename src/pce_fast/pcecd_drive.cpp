@@ -15,13 +15,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "../mednafen.h"
-#include "../clamp.h"
+#include <mednafen/mednafen.h>
 #include <math.h>
 #include <trio/trio.h>
 #include "pcecd_drive.h"
-#include "../cdrom/cdromif.h"
-#include "../cdrom/SimpleFIFO.h"
+#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/cdrom/SimpleFIFO.h>
 
 namespace PCE_Fast
 {

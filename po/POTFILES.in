@@ -348,7 +348,6 @@ src/drivers/console.cpp
 src/drivers/remote.cpp
 src/drivers/shader.cpp
 src/hw_video/huc6270/vdc.cpp
-src/hw_video/huc6270/backup/vdc.cpp
 src/lynx/system.cpp
 src/lynx/memmap.cpp
 src/lynx/c65c02.cpp
@@ -509,7 +508,7 @@ src/drivers_dos/Joystick.cpp
 src/drivers_dos/main.cpp
 src/drivers_dos/Video_VGA.cpp
 src/error.cpp
-src/okiadpcm.cpp
+src/sound/okiadpcm.cpp
 src/ngp/T6W28_Apu.cpp
 src/ngp/dma.cpp
 src/ngp/interrupt.cpp
@@ -561,10 +560,10 @@ src/sexyal/drivers/dsound.cpp
 src/sexyal/drivers/sb.cpp
 src/sexyal/sexyal.cpp
 src/FileWrapper.cpp
-src/okiadpcm_generate.cpp
+src/sound/okiadpcm_generate.cpp
 src/dis6502.cpp
 src/memory.cpp
-src/cdplay.cpp
+src/cdplay/cdplay.cpp
 src/tests.cpp
 src/demo/demo.cpp
 src/pce/vce_sync.inc
@@ -602,8 +601,6 @@ src/hw_cpu/huc6280/huc6280_step.inc
 src/hw_cpu/huc6280/ops.inc
 src/hw_cpu/v810/v810_oploop.inc
 src/hw_cpu/v810/v810_op_table.inc
-src/hw_cpu/v810/fpu-new/timesoftfloat.c
-src/hw_cpu/v810/fpu-new/softfloat.c
 src/hw_cpu/c68k/c68k_op1.inc
 src/hw_cpu/c68k/c68k_op4.inc
 src/hw_cpu/c68k/c68k_opA.inc

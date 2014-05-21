@@ -22,8 +22,7 @@
 
 */
 
-#include "../mednafen.h"
-#include "../clamp.h"
+#include <mednafen/mednafen.h>
 #include <math.h>
 #include <algorithm>
 #include <trio/trio.h>

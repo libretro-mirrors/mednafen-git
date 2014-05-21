@@ -1,8 +1,8 @@
 #ifndef _PCE_H
 
-#include "../mednafen.h"
-#include "../state.h"
-#include "../general.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/state.h>
+#include <mednafen/general.h>
 
 namespace MDFN_IEN_PCE
 {
@@ -14,7 +14,7 @@ namespace MDFN_IEN_PCE
 
 };
 
-#include "huc6280/huc6280.h"
+#include <mednafen/hw_cpu/huc6280/huc6280.h>
 
 namespace MDFN_IEN_PCE
 {

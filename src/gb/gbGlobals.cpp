@@ -16,7 +16,7 @@
 // along with this program; if not, write to the Free Software Foundation,
 // Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-#include "../mednafen.h"
+#include <mednafen/mednafen.h>
 
 namespace MDFN_IEN_GB
 {
@@ -32,12 +32,12 @@ uint8 *gbVram = NULL;
 uint8 *gbRom = NULL;
 uint8 *gbRam = NULL;
 uint8 *gbWram = NULL;
-uint16 *gbLineBuffer = NULL;
 
 uint16 gbPalette[128];
-uint8 gbBgp[4]  = { 0, 1, 2, 3};
-uint8 gbObp0[4] = { 0, 1, 2, 3};
-uint8 gbObp1[4] = { 0, 1, 2, 3};
+uint8 gbBgp[4];
+uint8 gbObp0[4];
+uint8 gbObp1[4];
+
 int gbWindowLine = -1;
 
 int gbCgbMode = 0;

@@ -1,10 +1,10 @@
 SUBDIRS	= trio
 AUTOMAKE_OPTIONS = subdir-objects
 DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_builddir)/include/blip -I$(top_srcdir)/intl -I$(top_srcdir)
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 
 bin_PROGRAMS	=	mednafen
-mednafen_SOURCES 	= 	debug.cpp error.cpp mempatcher.cpp settings.cpp endian.cpp mednafen.cpp file.cpp general.cpp md5.cpp memory.cpp netplay.cpp state.cpp movie.cpp player.cpp PSFLoader.cpp tests.cpp qtrecord.cpp cdplay.cpp okiadpcm.cpp FileWrapper.cpp Stream.cpp MemoryStream.cpp FileStream.cpp
+mednafen_SOURCES 	= 	debug.cpp error.cpp mempatcher.cpp settings.cpp endian.cpp mednafen.cpp file.cpp general.cpp md5.cpp memory.cpp netplay.cpp state.cpp movie.cpp player.cpp PSFLoader.cpp tests.cpp qtrecord.cpp FileWrapper.cpp Stream.cpp MemoryStream.cpp FileStream.cpp
 mednafen_LDADD 		= 	trio/libtrio.a
 mednafen_DEPENDENCIES	=	trio/libtrio.a
 
@@ -43,6 +43,10 @@ endif
 if WANT_DEBUGGER
 mednafen_SOURCES	+=	dis6502.cpp
 endif
+
+SUBDIRS	+= cdplay
+mednafen_LDADD		+=	cdplay/libcdplay.a
+mednafen_DEPENDENCIES	+=	cdplay/libcdplay.a
 
 SUBDIRS += demo
 mednafen_LDADD		+=	demo/libdemo.a

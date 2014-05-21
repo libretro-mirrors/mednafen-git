@@ -21,7 +21,7 @@
 #include "../nes.h"
 #include <math.h>
 #include "palette.h"
-#include "../../FileStream.h"
+#include <mednafen/FileStream.h>
 
 static const MDFNPalStruct rp2c04_0001[64] = {
  #include "palettes/rp2c04-0001.h"

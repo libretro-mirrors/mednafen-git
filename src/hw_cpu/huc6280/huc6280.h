@@ -39,11 +39,11 @@ class HuC6280
 	// If emulate_wai is true, then the "0xCB" opcode will be handled by waiting for the next high-level event, NOT 
 	// for the IRQ line to be asserted as on a 65816.
 	// It's mainly a hack intended for less CPU-intensive HES playback.
-	HuC6280(const bool emulate_wai = false);
-	~HuC6280();
+	HuC6280(const bool emulate_wai = false) MDFN_COLD;
+	~HuC6280() MDFN_COLD;
 
-	void Reset(void);
-	void Power(void);
+	void Reset(void) MDFN_COLD;
+	void Power(void) MDFN_COLD;
 
 	enum { IQIRQ1 = 0x002 };
 	enum { IQIRQ2 = 0x001 };
@@ -351,7 +351,7 @@ class HuC6280
 	 return(PeekPhysical((wmpr << 13) | (address & 0x1FFF)));
 	}
 
-	void DumpMem(char *filename, uint32 start, uint32 end); // For debugging
+	void DumpMem(char *filename, uint32 start, uint32 end) MDFN_COLD; // For debugging
 	//
 	// End Debugger Support Methods
 	//

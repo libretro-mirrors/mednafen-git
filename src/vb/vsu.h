@@ -1,7 +1,7 @@
 #ifndef __VB_VSU_H
 #define __VB_VSU_H
 
-#include <blip/Blip_Buffer.h>
+#include <mednafen/sound/Blip_Buffer.h>
 
 class VSU
 {

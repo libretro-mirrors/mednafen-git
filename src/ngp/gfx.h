@@ -12,8 +12,8 @@
 //	additional informations.
 //---------------------------------------------------------------------------
 
-#ifndef __GFX__
-#define __GFX__
+#ifndef __NEOPOP_GFX__
+#define __NEOPOP_GFX__
 //=============================================================================
 
 #define ZDEPTH_BACK_SPRITE			2
@@ -100,7 +100,7 @@ class NGPGFX_CLASS
 
  uint32 ColorMap[4096];
 
- int layer_enable;
+ int layer_enable_setting;
 };
 
 #endif

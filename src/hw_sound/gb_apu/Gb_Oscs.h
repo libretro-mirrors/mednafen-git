@@ -5,7 +5,7 @@
 #define GB_OSCS_H
 
 #include "blargg_common.h"
-#include "Blip_Buffer.h"
+#include <mednafen/sound/Blip_Buffer.h>
 
 #ifndef GB_APU_OVERCLOCK
 	#define GB_APU_OVERCLOCK 1

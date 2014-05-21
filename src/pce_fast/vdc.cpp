@@ -26,12 +26,12 @@ The spectrum peaked at 15734 Hz.  21477272.727272... / 3 / 15734 = 455.00(CPU cy
 */
 
 #include "pce.h"
-#include "../video.h"
+#include <mednafen/video.h>
 #include "vdc.h"
 #include "huc.h"
 #include "pcecd.h"
-#include "../cputest/cputest.h"
-#include "../FileStream.h"
+#include <mednafen/cputest/cputest.h>
+#include <mednafen/FileStream.h>
 #include <trio/trio.h>
 #include <math.h>
 
@@ -1303,7 +1303,7 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
  int max_dc = 0;
  MDFN_Surface *surface = espec->surface;
  MDFN_Rect *DisplayRect = &espec->DisplayRect;
- MDFN_Rect *LineWidths = espec->LineWidths;
+ int32 *LineWidths = espec->LineWidths;
  bool skip = espec->skip || IsHES;
 
  // x and w should be overwritten in the big loop
@@ -1321,7 +1321,7 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
 
   // Hack for the input latency-reduction hack, part 1.
   for(int y = DisplayRect->y; y < DisplayRect->y + DisplayRect->h; y++)
-   LineWidths[y].w = 0;
+   LineWidths[y] = 0;
  }
 
  do
@@ -1400,7 +1400,7 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
 				{ 256, 341, 512 }
 			       };
 
-   DisplayRect->x = 0;	//128 + 8 + xs[correct_aspect][vce.dot_clock];
+   DisplayRect->x = 0;
    DisplayRect->w = ws[correct_aspect][vce.dot_clock];
   }
 
@@ -1476,7 +1476,7 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
    }
 
    if(fc_vrm && !skip)
-    LineWidths[frame_counter - 14] = *DisplayRect;
+    LineWidths[frame_counter - 14] = DisplayRect->w;
 
    if(vdc->burst_mode)
    {
@@ -1690,7 +1690,7 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
  {
   for(int y = DisplayRect->y; y < DisplayRect->y + DisplayRect->h; y++)
   {
-   if(!LineWidths[y].w)
+   if(!LineWidths[y])
    {
     uint32 *target_ptr = NULL;
     uint16 *target_ptr16 = NULL;
@@ -1703,7 +1703,7 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
     else
      target_ptr = surface->pixels + y * surface->pitchinpix;
 
-    LineWidths[y] = *DisplayRect;
+    LineWidths[y] = DisplayRect->w;
 
     if(target_ptr8)
      DrawOverscan(vdc_chips[0], target_ptr8, DisplayRect);

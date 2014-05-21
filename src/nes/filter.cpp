@@ -25,10 +25,10 @@
 #define FIR_TABLE_EXTRA_BITS  	3
 #define FIR_TABLE_EXTRA_BITS_S	"3"
 
-#include "../mednafen.h"
+#include <mednafen/mednafen.h>
 #include <math.h>
 #include "filter.h"
-#include "../cputest/cputest.h"
+#include <mednafen/cputest/cputest.h>
 
 #if defined(ARCH_POWERPC_ALTIVEC) && defined(HAVE_ALTIVEC_H)
  #include <altivec.h>

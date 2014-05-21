@@ -43,7 +43,7 @@ typedef uint32_t uint32;
 typedef uint64_t uint64;
 
 
-#if !defined(HAVE_NATIVE64BIT) && SIZEOF_VOID_P >= 8
+#if !defined(HAVE_NATIVE64BIT) && (SIZEOF_VOID_P >= 8 || defined(__x86_64__))
 #define HAVE_NATIVE64BIT 1
 #endif
 

@@ -20,16 +20,16 @@
 #include <trio/trio.h>
 #include <iconv.h>
 
-#include "huc6280/huc6280.h"
-#include "huc6280/dis6280.h"
+#include <mednafen/hw_cpu/huc6280/huc6280.h>
+#include <mednafen/hw_cpu/huc6280/dis6280.h>
 #include "debug.h"
 #include "vce.h"
 #include "huc.h"
-#include "huc6270/vdc.h"
+#include <mednafen/hw_video/huc6270/vdc.h>
 #include "pcecd.h"
-#include "pce_psg/pce_psg.h"
-#include "../cdrom/scsicd.h"
-#include "arcade_card/arcade_card.h"
+#include <mednafen/hw_sound/pce_psg/pce_psg.h>
+#include <mednafen/cdrom/scsicd.h>
+#include <mednafen/hw_misc/arcade_card/arcade_card.h>
 
 namespace MDFN_IEN_PCE
 {
@@ -1112,90 +1112,104 @@ DebuggerInfoStruct PCEDBGInfo =
  PCEDBG_SetLogFunc,
 };
 
-bool PCEDBG_Init(bool sgx, PCE_PSG *new_psg)
+static void Cleanup(void)
 {
- BTIndex = 0;
- memset(BTEntries, 0, sizeof(BTEntries));
- BTEnabled = false;
-
- BreakPointsPCUsed = false;
- BreakPointsOpUsed = false;
-
- memset(BreakPointsOp, 0, sizeof(BreakPointsOp));
- memset(BreakPointsPC, 0, sizeof(BreakPointsPC));
-
- ShadowCPU = new HuC6280();
-
- for(int x = 0; x < 0x100; x++)
+ if(ShadowCPU != NULL)
  {
-  ShadowCPU->SetFastRead(x, NULL);
-
-  ShadowCPU->SetReadHandler(x, ReadHandler);
-  ShadowCPU->SetWriteHandler(x, WriteHandler);
+  delete ShadowCPU;
+  ShadowCPU = NULL;
  }
+}
 
- ShadowCPU->Power();
+void PCEDBG_Kill(void)
+{
+ Cleanup();
+}
 
- psg = new_psg;
-
- IsSGX = sgx;
-
- MDFNDBG_AddRegGroup(&RegsGroup_HuC6280);
- MDFNDBG_AddRegGroup(&RegsGroup_VDC);
-
- if(IsSGX)
-  MDFNDBG_AddRegGroup(&RegsGroup_SGXVDC);
-
- ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "cpu", "CPU Logical", 16);
- ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "physical", "CPU Physical", 21);
- ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "ram", "RAM", IsSGX ? 15 : 13);
-
- ASpace_Add(Do16BitGet, Do16BitPut, "pram", "VCE Palette RAM", 10);
-
- if(IsSGX)
+void PCEDBG_Init(bool sgx, PCE_PSG *new_psg)
+{
+ try
  {
-  ASpace_Add(Do16BitGet, Do16BitPut, "vram0", "VDC-A VRAM", 15 + 1);
-  ASpace_Add(Do16BitGet, Do16BitPut, "sat0", "VDC-A SAT", 8 + 1);
-  ASpace_Add(Do16BitGet, Do16BitPut, "vram1", "VDC-B VRAM", 15 + 1);
-  ASpace_Add(Do16BitGet, Do16BitPut, "sat1", "VDC-B SAT", 8 + 1);
- }
- else
- {
-  ASpace_Add(Do16BitGet, Do16BitPut, "vram0", "VDC VRAM", 15 + 1);
-  ASpace_Add(Do16BitGet, Do16BitPut, "sat0", "VDC SAT", 8 + 1);
- }
+  BTIndex = 0;
+  memset(BTEntries, 0, sizeof(BTEntries));
+  BTEnabled = false;
 
- if(PCE_IsCD)
- {
-  ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "adpcm", "ADPCM RAM", 16);
-  MDFNDBG_AddRegGroup(&RegsGroup_CD);
- }
+  BreakPointsPCUsed = false;
+  BreakPointsOpUsed = false;
 
- if(arcade_card)
- {
-  ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "acram", "Arcade Card RAM", 21);
- }
+  memset(BreakPointsOp, 0, sizeof(BreakPointsOp));
+  memset(BreakPointsPC, 0, sizeof(BreakPointsPC));
 
- if(HuC_IsBRAMAvailable())
- {
-  ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "bram", "BRAM", 11);
- }
+  ShadowCPU = new HuC6280();
 
- for(int x = 0; x < 6; x++)
- {
+  for(int x = 0; x < 0x100; x++)
+  {
+   ShadowCPU->SetFastRead(x, NULL);
+
+   ShadowCPU->SetReadHandler(x, ReadHandler);
+   ShadowCPU->SetWriteHandler(x, WriteHandler);
+  }
+
+  ShadowCPU->Power();
+
+  psg = new_psg;
+
+  IsSGX = sgx;
+
+  MDFNDBG_AddRegGroup(&RegsGroup_HuC6280);
+  MDFNDBG_AddRegGroup(&RegsGroup_VDC);
+
+  if(IsSGX)
+   MDFNDBG_AddRegGroup(&RegsGroup_SGXVDC);
+
+  ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "cpu", "CPU Logical", 16);
+  ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "physical", "CPU Physical", 21);
+  ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "ram", "RAM", IsSGX ? 15 : 13);
+
+  ASpace_Add(Do16BitGet, Do16BitPut, "pram", "VCE Palette RAM", 10);
+
+  if(IsSGX)
+  {
+   ASpace_Add(Do16BitGet, Do16BitPut, "vram0", "VDC-A VRAM", 15 + 1);
+   ASpace_Add(Do16BitGet, Do16BitPut, "sat0", "VDC-A SAT", 8 + 1);
+   ASpace_Add(Do16BitGet, Do16BitPut, "vram1", "VDC-B VRAM", 15 + 1);
+   ASpace_Add(Do16BitGet, Do16BitPut, "sat1", "VDC-B SAT", 8 + 1);
+  }
+  else
+  {
+   ASpace_Add(Do16BitGet, Do16BitPut, "vram0", "VDC VRAM", 15 + 1);
+   ASpace_Add(Do16BitGet, Do16BitPut, "sat0", "VDC SAT", 8 + 1);
+  }
+
+  if(PCE_IsCD)
+  {
+   ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "adpcm", "ADPCM RAM", 16);
+   MDFNDBG_AddRegGroup(&RegsGroup_CD);
+  }
+
+  if(arcade_card)
+  {
+   ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "acram", "Arcade Card RAM", 21);
+  }
+
+  if(HuC_IsBRAMAvailable())
+  {
+   ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "bram", "BRAM", 11);
+  }
+
+  for(int x = 0; x < 6; x++)
+  {
      AddressSpaceType newt;
      char tmpname[128], tmpinfo[128];
 
      trio_snprintf(tmpname, 128, "psgram%d", x);
      trio_snprintf(tmpinfo, 128, "PSG Ch %d RAM", x);
 
-     memset(&newt, 0, sizeof(AddressSpaceType));
-
      newt.GetAddressSpaceBytes = GetAddressSpaceBytes;
      newt.PutAddressSpaceBytes = PutAddressSpaceBytes;
 
-     newt.name = strdup(tmpname);
-     newt.long_name = strdup(tmpinfo);
+     newt.name = std::string(tmpname);
+     newt.long_name = std::string(tmpinfo);
      newt.TotalBits = 5;
      newt.NP2Size = 0;
 
@@ -1203,10 +1217,14 @@ bool PCEDBG_Init(bool sgx, PCE_PSG *new_psg)
      newt.WaveFormat = ASPACE_WFMT_UNSIGNED;
      newt.WaveBits = 5;
      ASpace_Add(newt); //PSG_GetAddressSpaceBytes, PSG_PutAddressSpaceBytes, tmpname, tmpinfo, 5);
+  }
+  MDFNDBG_AddRegGroup(&RegsGroup_PSG);
  }
- MDFNDBG_AddRegGroup(&RegsGroup_PSG);
-
- return(TRUE);
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
 }
 
 

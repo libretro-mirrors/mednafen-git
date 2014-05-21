@@ -129,7 +129,7 @@ void LoadNSFE(NSFINFO *nfe, const uint8 *buf, int32 size, int info_only)
    int songcount = 0;
 
    if(!nfe->TotalSongs)
-    throw MDFN_Error(0, _("NSFE chunk \"%.4s\" is out of order."));	// Out of order chunk.
+    throw MDFN_Error(0, _("NSFE chunk \"%.4s\" is out of order."), (char*)&tb[0]);	// Out of order chunk.
 
    while(chunk_size > 0)
    {

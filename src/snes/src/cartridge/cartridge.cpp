@@ -1,6 +1,5 @@
 #include <../base.hpp>
 #include <nall/crc32.hpp>
-#include <nall/sha256.hpp>
 
 #define CARTRIDGE_CPP
 namespace bSNES_v059 {

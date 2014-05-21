@@ -39,6 +39,20 @@ The filenames listed below are per default psx.bios_* settings.
 </table>
 <?php EndSection(); ?>
 
+<?php BeginSection("Analog Sticks Range Issues"); ?>
+The DualShock and Dual Analog controllers' analog sticks have a circular physical range of movement, but a much more squareish(corners are a bit rounded for
+DualShock) logical range, likely due to conservative calibration in the gamepads' hardware and firmware design.  Modern PC(compatible) gamepads with a circular
+physical range of motion for their analog sticks(e.g. XBox 360 type controllers) tend to be more tightly-calibrated in hardware, and thus their logical range
+of motion will be closer to circles than squares.  This can cause problems with movement in some PS1 games(e.g. "Mega Man Legends 2") that care not for proper trigonometry, as they are expecting larger
+values at ordinal angles of the sticks than the aforementioned type of PC gamepad can provide due to its design.
+
+<p>
+An "axis_scale" setting(named like "<a href="#psx.input.port1.dualshock.axis_scale">psx.input.port1.dualshock.axis_scale</a>") is provided for each possible
+emulated DualShock and Dual Analog controller on each port.  To work around this range issue with DualShock emulation, an "axis_scale" setting of "1.33" is
+recommended as a starting point.  Smaller values(such as "1.20") may be sufficient and provide for more precise control, so try experimenting to find the ideal for your combination of gamepad and games.
+</p>
+
+<?php EndSection(); ?>
 
 <?php BeginSection("Multitap Usage", "", FALSE, FALSE, "Section_multitap"); ?>
 <p>

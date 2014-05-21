@@ -187,10 +187,10 @@ static void ConvertLoop(const int16_t *src, dsf_t *dest, const int src_chan, con
     dest[1] = SAMP_CONVERT<dsf_t, dsf>(src[1]);
     src += 2;
     dest += 2;
-   }
 
-   for(int padc = 2; padc < dest_chan; padc++)
-    *dest++ = SAMP_CONVERT<dsf_t, dsf>(0);
+    for(int padc = 2; padc < dest_chan; padc++)
+     *dest++ = SAMP_CONVERT<dsf_t, dsf>(0);
+   }
   }
  }
 }

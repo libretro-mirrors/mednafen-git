@@ -17,13 +17,17 @@
 // Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 #include "GBA.h"
-#include "../general.h"
-#include "../player.h"
-#include "../file.h"
-#include "../state.h"
-#include "../movie.h"
-#include "../mempatcher.h"
-#include "../md5.h"
+
+#include <mednafen/general.h>
+#include <mednafen/player.h>
+#include <mednafen/file.h>
+#include <mednafen/state.h>
+#include <mednafen/movie.h>
+#include <mednafen/mempatcher.h>
+#include <mednafen/md5.h>
+#include <mednafen/FileStream.h>
+#include <mednafen/PSFLoader.h>
+
 #include "GBAinline.h"
 #include "Globals.h"
 #include "Gfx.h"
@@ -37,14 +41,10 @@
 #include "arm.h"
 #include "thumb.h"
 
-#include <memory.h>
 #include <stdarg.h>
 #include <string.h>
 #include <trio/trio.h>
 #include <errno.h>
-
-#include "../FileStream.h"
-#include "../PSFLoader.h"
 
 namespace MDFN_IEN_GBA
 {
@@ -72,9 +72,6 @@ static void CPUUpdateRender(void);
     WRITE16LE(((uint16 *)&ioMem[address]),value);\
   }\
 
-#ifdef __GNUC__
-#define _stricmp strcasecmp
-#endif
 
 RTC *GBA_RTC = NULL;
 
@@ -168,7 +165,7 @@ union SysCM
 };
 static SysCM* systemColorMap = NULL;
 static uint8 *CustomColorMap = NULL; // 32768 * 3
-static int romSize = 0x2000000;
+static const int romSize = 0x2000000;
 
 static INLINE int CPUUpdateTicks()
 {
@@ -254,8 +251,6 @@ void CPUUpdateRenderBuffers(bool force)
     CLEAR_ARRAY(line3);
   }
 }
-
-extern SFORMAT eepromSaveData[];
 
 static uint16 padbufblah;
 static SFORMAT Joy_StateRegs[] =
@@ -407,9 +402,9 @@ static int StateAction(StateMem *sm, int load, int data_only)
  ret &= MDFNSS_StateAction(sm, load, data_only, RAMState, "RAM");
 
  if(cpuEEPROMEnabled)
-  ret &= MDFNSS_StateAction(sm, load, data_only, eepromSaveData, "EEPR");
+  ret &= EEPROM_StateAction(sm, load, data_only);
 
- ret &= GBA_Flash_StateAction(sm, load, data_only);
+ ret &= Flash_StateAction(sm, load, data_only);
 
  if(GBA_RTC)
   ret &= GBA_RTC->StateAction(sm, load, data_only);
@@ -477,7 +472,7 @@ static bool CPUReadBatteryFile(const char *filename)
   if(cpuEEPROMEnabled)
   {
    puts("note:  Loading sav file as eeprom data");
-   GBA_EEPROM_LoadFile(filename);
+   EEPROM_LoadFile(filename);
   }
   return(FALSE);
  }
@@ -519,65 +514,65 @@ static void CPUCleanUp(void)
 {
  if(rom) 
  {
-  MDFN_free(rom);
+  delete[] rom;
   rom = NULL;
  }
 
  if(vram)
  {
-  MDFN_free(vram);
+  delete[] vram;
   vram = NULL;
  }
 
  if(paletteRAM)
  {
-  MDFN_free(paletteRAM);
+  delete[] paletteRAM;
   paletteRAM = NULL;
  }
   
  if(internalRAM) 
  {
-  MDFN_free(internalRAM);
+  delete[] internalRAM;
   internalRAM = NULL;
  }
 
  if(workRAM) 
  {
-  MDFN_free(workRAM);
+  delete[] workRAM;
   workRAM = NULL;
  }
 
  if(bios) 
  {
-  MDFN_free(bios);
+  delete[] bios;
   bios = NULL;
- }
-
- if(pix)
- {
-  MDFN_free(pix);
-  pix = NULL;
  }
 
  if(oam) 
  {
-  MDFN_free(oam);
+  delete[] oam;
   oam = NULL;
  }
 
  if(ioMem)
  {
-  MDFN_free(ioMem);
+  delete[] ioMem;
   ioMem = NULL;
  }
   
  if(systemColorMap)
  {
-  MDFN_free(systemColorMap);
+  delete systemColorMap;
   systemColorMap = NULL;
  }
 
- GBA_Flash_Kill();
+ if(CustomColorMap)
+ {
+  delete[] CustomColorMap;
+  CustomColorMap = NULL;
+ }
+
+ Flash_Kill();
 
  if(GBA_RTC)
  {
@@ -591,7 +586,7 @@ static void CloseGame(void)
 {
  if(!gsf_loader)
  {
-  GBA_EEPROM_SaveFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "eep").c_str());
+  EEPROM_SaveFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "eep").c_str());
   CPUWriteBatteryFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str());
  }
 
@@ -626,6 +621,7 @@ void GSFLoader::HandleEXE(const uint8 *data, uint32 size, bool ignore_pcsp)
  gsf_offset = MDFN_de32lsb(data + 4);
  copy_size = MDFN_de32lsb(data + 8);
 
+ (void)entry_point;
  //printf("0x%08x\n", entry_point);
 
  if(copy_size > (size - 12))
@@ -650,55 +646,40 @@ void GSFLoader::HandleEXE(const uint8 *data, uint32 size, bool ignore_pcsp)
 }
 
 
-static bool LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries) MDFN_COLD;
-static bool LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries)
+static void LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries) MDFN_COLD;
+static void LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries)
 {
  std::string colormap_fn = MDFN_MakeFName(MDFNMKF_PALETTE, 0, syspalname).c_str();
 
  MDFN_printf(_("Loading custom palette from \"%s\"...\n"),  colormap_fn.c_str());
  MDFN_indent(1);
 
- *ptr = NULL;
  try
  {
   FileStream fp(colormap_fn.c_str(), FileStream::MODE_READ);
 
-  if(!(*ptr = (uint8 *)MDFN_malloc(num_entries * 3, _("custom color map"))))
-  {
-   MDFN_indent(-1);
-   return(false);
-  }
+  *ptr = new uint8[num_entries * 3];
 
   fp.read(*ptr, num_entries * 3);
  }
  catch(MDFN_Error &e)
  {
-  if(*ptr)
-  {
-   MDFN_free(*ptr);
-   *ptr = NULL;
-  }
-
   MDFN_printf(_("Error: %s\n"), e.what());
   MDFN_indent(-1);
-  return(e.GetErrno() == ENOENT);        // Return fatal error if it's an error other than the file not being found.
+
+  if(e.GetErrno() != ENOENT)
+   throw;
+
+  return;
  }
  catch(std::exception &e)
  {
-  if(*ptr)
-  {
-   MDFN_free(*ptr);
-   *ptr = NULL;
-  }
-
   MDFN_printf(_("Error: %s\n"), e.what());
   MDFN_indent(-1);
-  return(false);
+  throw;
  }
 
  MDFN_indent(-1);
-
- return(true);
 }
 
 static void RedoColorMap(const MDFN_PixelFormat &format) MDFN_COLD;
@@ -748,13 +729,13 @@ static void RedoColorMap(const MDFN_PixelFormat &format)
  #endif
 }
 
-static bool TestMagic(const char *name, MDFNFILE *fp) MDFN_COLD;
-static bool TestMagic(const char *name, MDFNFILE *fp)
+static bool TestMagic(MDFNFILE *fp) MDFN_COLD;
+static bool TestMagic(MDFNFILE *fp)
 {
- if(!memcmp(fp->data, "PSF\x22", 4))
+ if(!strcasecmp(fp->ext, "gba") || !strcasecmp(fp->ext, "agb"))
   return(TRUE);
 
- if(!strcasecmp(fp->ext, "gba") || !strcasecmp(fp->ext, "agb"))
+ if(PSFLoader::TestMagic(0x22, fp))
   return(TRUE);
 
  if(fp->size >= 192 && !strcasecmp(fp->ext, "bin"))
@@ -766,42 +747,28 @@ static bool TestMagic(const char *name, MDFNFILE *fp)
  return(FALSE);
 }
 
-static int Load(const char *name, MDFNFILE *fp) MDFN_COLD;
-static int Load(const char *name, MDFNFILE *fp)
+static int Load(MDFNFILE *fp) MDFN_COLD;
+static int Load(MDFNFILE *fp)
 {
+ try
+ {
   layerSettings = 0xFF00;
 
-  if(!(rom = (uint8 *)MDFN_malloc(0x2000000, _("ROM"))))
-   return(0);
-
+  rom = new uint8[0x2000000];
   memset(rom, 0xFF, 0x2000000);
 
-  if(!(workRAM = (uint8 *)MDFN_calloc(1, 0x40000, _("Work RAM"))))
+  workRAM = new uint8[0x40000];
+  memset(workRAM, 0x00, 0x40000);
+
+  if(PSFLoader::TestMagic(0x22, fp))
   {
-   MDFN_free(rom);
-   return(0);
-  }
+   gsf_loader = new GSFLoader(fp);
 
+   std::vector<std::string> SongNames;
 
-  if(!memcmp(fp->data, "PSF\x22", 4))
-  {
-   try
-   {
-    gsf_loader = new GSFLoader(fp);
+   SongNames.push_back(gsf_loader->tags.GetTag("title"));
 
-    std::vector<std::string> SongNames;
-
-    SongNames.push_back(gsf_loader->tags.GetTag("title"));
-
-    Player_Init(1, gsf_loader->tags.GetTag("game"), gsf_loader->tags.GetTag("artist"), gsf_loader->tags.GetTag("copyright"), SongNames);
-   }
-   catch(std::exception &e)
-   {
-    MDFN_PrintError("%s\n", e.what());
-    MDFN_free(workRAM);
-    MDFN_free(rom);
-    return(0);
-   }
+   Player_Init(1, gsf_loader->tags.GetTag("game"), gsf_loader->tags.GetTag("artist"), gsf_loader->tags.GetTag("copyright"), SongNames);
   }
   else
   {
@@ -842,47 +809,13 @@ static int Load(const char *name, MDFNFILE *fp)
    }
   }
 
-  if(!(bios = (uint8 *)MDFN_calloc(1, 0x4000, _("BIOS ROM"))))
-  {
-   CPUCleanUp();
-   return 0;
-  }
-
-  if(!(internalRAM = (uint8 *)MDFN_calloc(1, 0x8000, _("Internal RAM"))))
-  {
-   CPUCleanUp();
-   return 0;
-  }
-
-  if(!(paletteRAM = (uint8 *)MDFN_calloc(1, 0x400, _("Palette RAM"))))
-  {
-   CPUCleanUp();
-   return 0;
-  }
-
-  if(!(vram = (uint8 *)MDFN_calloc(1, 0x20000, _("VRAM"))))
-  {
-   CPUCleanUp();
-   return 0;
-  }
-
-  if(!(oam = (uint8 *)MDFN_calloc(1, 0x400, _("OAM"))))
-  {
-   CPUCleanUp();
-   return 0;
-  }
-
-  if(!(ioMem = (uint8 *)MDFN_calloc(1, 0x400, _("IO"))))
-  {
-   CPUCleanUp();
-   return 0;
-  }
-
-  if(!(systemColorMap = (SysCM*)MDFN_malloc(sizeof(SysCM), _("GBA Color Map"))))
-  {
-   CPUCleanUp();
-   return(0);
-  }
+  bios = new uint8[0x4000];
+  internalRAM = new uint8[0x8000];
+  paletteRAM = new uint8[0x400];
+  vram = new uint8[0x20000];
+  oam = new uint8[0x400];
+  ioMem = new uint8[0x400];
+  systemColorMap = new SysCM;
 
   CPUUpdateRenderBuffers(true);
 
@@ -905,26 +838,27 @@ static int Load(const char *name, MDFNFILE *fp)
   }
   CPUReset();
 
-  GBA_Flash_Init();
-  eepromInit();
+  Flash_Init();
+  EEPROM_Init();
 
   if(!gsf_loader)
   {
-   // EEPROM might be loaded from within CPUReadBatteryFile for support for Mednafen < 0.8.2, so call before GBA_EEPROM_LoadFile(), which
+   // EEPROM might be loaded from within CPUReadBatteryFile for support for Mednafen < 0.8.2, so call before EEPROM_LoadFile(), which
    // is more specific...kinda.
    if(cpuSramEnabled || cpuFlashEnabled)
     CPUReadBatteryFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str());
 
    if(cpuEEPROMEnabled)
-    GBA_EEPROM_LoadFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "eep").c_str());
+    EEPROM_LoadFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "eep").c_str());
   }
 
-  if(!LoadCPalette(NULL, &CustomColorMap, 32768))
-  {
-   CPUCleanUp();
-   return(0);
-  }
-
+  LoadCPalette(NULL, &CustomColorMap, 32768);
+ }
+ catch(std::exception &e)
+ {
+  CPUCleanUp();
+  throw;
+ }
  return(1);
 }
 
@@ -2522,29 +2456,38 @@ uint8 cpuLowestBitSet[256];
 
 static bool CPUInit(const std::string bios_fn)
 {
- FILE *memfp;
-
  FlashSizeSet = FALSE;
 
- memfp = fopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "type").c_str(), "rb");
- if(memfp)
+ cpuSramEnabled = true;
+ cpuFlashEnabled = true;
+ cpuEEPROMEnabled = true;
+ cpuEEPROMSensorEnabled = true;
+
+ try
  {
-  char linebuffer[256];
+  FileStream memfp(MDFN_MakeFName(MDFNMKF_SAV, 0, "type").c_str(), FileStream::MODE_READ);
+  std::string linebuffer;
+
+  //
+  //
+  //
 
   cpuSramEnabled = FALSE;
   cpuFlashEnabled = FALSE;
   cpuEEPROMEnabled = FALSE;
   cpuEEPROMSensorEnabled = FALSE;
 
-  while(fgets(linebuffer, 256, memfp))
+  linebuffer.reserve(256);
+
+  while(memfp.get_line(linebuffer) >= 0)
   {
    char args[2][256];
-   int acount = trio_sscanf(linebuffer, "%.255s %.255s", args[0], args[1]);
+   int acount = trio_sscanf(linebuffer.c_str(), "%.255s %.255s", args[0], args[1]);
 
    if(acount < 1)
     continue;
 
-   //MDFN_printf(_("Backup memory type override: %s %s\n"), linebuffer, (acount > 1) ? args[1] : "");
+   //MDFN_printf(_("Backup memory type override: %s %s\n"), args[0], (acount > 1) ? args[1] : "");
 
    if(!strcasecmp(args[0], "sram"))
    {
@@ -2578,14 +2521,11 @@ static bool CPUInit(const std::string bios_fn)
    else if(!strcasecmp(args[0], "rtc"))
     GBA_RTC = new RTC();
   }
-  fclose(memfp);
  }
- else
+ catch(MDFN_Error &e)
  {
-  cpuSramEnabled = true;
-  cpuFlashEnabled = true;
-  cpuEEPROMEnabled = true;
-  cpuEEPROMSensorEnabled = true;
+  if(e.GetErrno() != ENOENT)
+   throw;
  }
 
  useBios = false;
@@ -2600,24 +2540,12 @@ static bool CPUInit(const std::string bios_fn)
    { ".bios", gettext_noop("BIOS Image") },
    { NULL, NULL }
   };
-
-  MDFNFILE bios_fp;
-
-  if(!bios_fp.Open(MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, bios_fn.c_str()), KnownBIOSExtensions, _("GBA BIOS")))
-  {
-   return(0);
-  }
+  MDFNFILE bios_fp(MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, bios_fn.c_str()).c_str(), KnownBIOSExtensions, _("GBA BIOS"));
   
   if(bios_fp.Size() != 0x4000)
-  {
-   MDFN_PrintError(_("Invalid BIOS file size"));
-   bios_fp.Close();
-   return(0);
-  }
+   throw MDFN_Error(0, _("Invalid BIOS file size"));
 
   memcpy(bios, bios_fp.Data(), 0x4000);
-
-  bios_fp.Close();
   useBios = true;
  }
 
@@ -2708,6 +2636,13 @@ static void CPUReset(void)
   memset(vram, 0, 0x20000);
   // clean io memory
   memset(ioMem, 0, 0x400);
+  //
+  memset(internalRAM, 0, 0x8000);
+
+  if(!gsf_loader)
+  {
+   memset(workRAM, 0x00, 0x40000);
+  }
 
   DISPCNT  = 0x0080;
   DISPSTAT = 0x0000;
@@ -2876,8 +2811,8 @@ static void CPUReset(void)
   map[14].address = flashSaveMemory;
   map[14].mask = 0xFFFF;
 
-  eepromReset();
-  GBA_Flash_Reset();
+  EEPROM_Reset();
+  Flash_Reset();
   
   soundReset();
 
@@ -2925,7 +2860,7 @@ void CPUInterrupt()
   biosProtected[3] = 0xe5;
 }
 
-int32 soundTS = 0;
+uint32 soundTS = 0;
 static uint8 *padq;
 
 static void SetInput(int port, const char *type, void *ptr) MDFN_COLD;

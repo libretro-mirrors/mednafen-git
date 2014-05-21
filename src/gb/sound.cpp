@@ -15,13 +15,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "../mednafen.h"
-#include "../state.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/state.h>
+#include <mednafen/hw_sound/gb_apu/Gb_Apu.h>
+#include <mednafen/sound/Stereo_Buffer.h>
+
 #include "gb.h"
 #include "gbGlobals.h"
 #include "sound.h"
-#include "gb_apu/Gb_Apu.h"
-#include <blip/Stereo_Buffer.h>
 
 namespace MDFN_IEN_GB
 {
@@ -29,7 +30,7 @@ namespace MDFN_IEN_GB
 static Gb_Apu gb_apu;
 static Stereo_Buffer *gb_buf = NULL;
 
-void MDFNGBSOUND_Reset(void)
+void SOUND_Reset(void)
 {
 	Gb_Apu::mode_t gbmode = Gb_Apu::mode_cgb;
 
@@ -51,7 +52,7 @@ void MDFNGBSOUND_Reset(void)
 	gb_apu.reset(gbmode);
 }
 
-uint32 MDFNGBSOUND_Read(int ts, uint32 addr)
+uint32 SOUND_Read(int ts, uint32 addr)
 {
 	uint32 ret;
 
@@ -60,7 +61,7 @@ uint32 MDFNGBSOUND_Read(int ts, uint32 addr)
 	return(ret);
 }
 
-void MDFNGBSOUND_Write(int ts, uint32 addr, uint8 val)
+void SOUND_Write(int ts, uint32 addr, uint8 val)
 {
 	//if(addr == 0xFF26)
  	// printf("%04x %02x\n", addr, val);
@@ -97,7 +98,7 @@ bool MDFNGB_SetSoundRate(uint32 rate)
 	return(TRUE);
 }
 
-int MDFNGBSOUND_StateAction(StateMem *sm, int load, int data_only)
+int SOUND_StateAction(StateMem *sm, int load, int data_only)
 {
  gb_apu_state_t gb_state;
  int ret = 1;
@@ -125,14 +126,23 @@ int MDFNGBSOUND_StateAction(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-void MDFNGBSOUND_Init(void)
+void SOUND_Init(void)
 {
         gb_apu.volume(0.5);
 
 	RedoBuffer(0);
 }
 
-int32 MDFNGBSOUND_Flush(int ts, int16 *SoundBuf, const int32 MaxSoundFrames)
+void SOUND_Kill(void)
+{
+ if(gb_buf != NULL)
+ {
+  delete gb_buf;
+  gb_buf = NULL;
+ }
+}
+
+int32 SOUND_Flush(int ts, int16 *SoundBuf, const int32 MaxSoundFrames)
 {
 	int32 SoundFrames = 0;
 
