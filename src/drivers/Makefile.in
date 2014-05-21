@@ -55,7 +55,6 @@ target_triplet = @target@
 @WANT_FANCY_SCALERS_TRUE@am__append_1 = hqxx-common.cpp hq2x.cpp hq3x.cpp hq4x.cpp scale2x.c scale3x.c scalebit.c 2xSaI.cpp
 @HAVE_LINUX_JOYSTICK_TRUE@am__append_2 = Joystick_Linux.cpp
 @HAVE_POSIX_SOCKETS_TRUE@am__append_3 = NetClient_POSIX.cpp
-#Joystick_DX8.cpp
 @WIN32_TRUE@am__append_4 = Joystick_XInput.cpp Joystick_DX5.cpp \
 @WIN32_TRUE@	NetClient_WS2.cpp
 @WANT_DEBUGGER_TRUE@am__append_5 = debugger.cpp gfxdebugger.cpp memdebugger.cpp logdebugger.cpp prompt.cpp

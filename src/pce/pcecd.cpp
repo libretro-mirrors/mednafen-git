@@ -477,6 +477,7 @@ int32 PCECD_Power(uint32 timestamp)
 
 	ADPCM.ReadPending = ADPCM.WritePending = 0;
 	ADPCM.ReadBuffer = 0;
+	ADPCM.PlayBuffer = 0;
 
         ADPCM.LastCmd = 0;
 	MSM5205.SetSample(0x800);
@@ -1275,6 +1276,7 @@ static int ADPCM_StateAction(StateMem *sm, int load, int data_only)
 
         SFVAR(ADPCM.ReadPending),
         SFVAR(ADPCM.ReadBuffer),
+	SFVAR(ADPCM.PlayBuffer),
 
         SFVAR(ADPCM.WritePending),
         SFVAR(ADPCM.WritePendingValue),

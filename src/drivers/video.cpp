@@ -16,6 +16,11 @@
  */
 
 #include "main.h"
+
+#ifdef WIN32
+#include <windows.h>
+#endif
+
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
@@ -171,11 +176,13 @@ static void ClearBackBuffer(void)
 /* Return 1 if video was killed, 0 otherwise(video wasn't initialized). */
 void KillVideo(void)
 {
+ /*
  if(IconSurface)
  {
   SDL_FreeSurface(IconSurface);
   IconSurface = NULL;
  }
+ */
 
  if(SMSurface)
  {
@@ -408,6 +415,49 @@ int InitVideo(MDFNGI *gi)
  MDFNI_printf(_("Initializing video...\n"));
  MDFN_indent(1);
 
+
+ #ifdef WIN32
+ {
+  static bool dwm_already_try_disable = false;
+
+  if(!dwm_already_try_disable)
+  {
+   HMODULE dwmdll;
+
+   dwm_already_try_disable = true;
+
+   if((dwmdll = LoadLibrary("Dwmapi.dll")) != NULL)
+   {
+    HRESULT WINAPI (*p_DwmEnableComposition)(UINT) = (HRESULT WINAPI (*)(UINT))GetProcAddress(dwmdll, "DwmEnableComposition");
+
+    if(p_DwmEnableComposition != NULL)
+    {
+     p_DwmEnableComposition(0);
+    }
+   }
+  }
+ }
+ #endif
+
+ if(!IconSurface)
+ {
+  #ifdef WIN32
+   #ifdef LSB_FIRST
+   IconSurface=SDL_CreateRGBSurfaceFrom((void *)mednafen_playicon.pixel_data,32,32,32,32*4,0xFF,0xFF00,0xFF0000,0xFF000000);
+   #else
+   IconSurface=SDL_CreateRGBSurfaceFrom((void *)mednafen_playicon.pixel_data,32,32,32,32*4,0xFF000000,0xFF0000,0xFF00,0xFF);
+   #endif
+  #else
+   #ifdef LSB_FIRST
+   IconSurface=SDL_CreateRGBSurfaceFrom((void *)mednafen_playicon128.pixel_data,128,128,32,128*4,0xFF,0xFF00,0xFF0000,0xFF000000);
+   #else
+   IconSurface=SDL_CreateRGBSurfaceFrom((void *)mednafen_playicon128.pixel_data,128,128,32,128*4,0xFF000000,0xFF0000,0xFF00,0xFF);
+   #endif
+  #endif
+
+  SDL_WM_SetIcon(IconSurface, 0);
+ }
+
  if(!getenv("__GL_SYNC_TO_VBLANK") || weset_glstvb)
  {
   if(MDFN_GetSettingB("video.glvsync"))
@@ -615,21 +665,6 @@ int InitVideo(MDFNGI *gi)
   SDL_WM_SetCaption((char *)gi->name,(char *)gi->name);
  else
   SDL_WM_SetCaption("Mednafen","Mednafen");
-
- #ifdef WIN32
-  #ifdef LSB_FIRST
-  IconSurface=SDL_CreateRGBSurfaceFrom((void *)mednafen_playicon.pixel_data,32,32,32,32*4,0xFF,0xFF00,0xFF0000,0xFF000000);
-  #else
-  IconSurface=SDL_CreateRGBSurfaceFrom((void *)mednafen_playicon.pixel_data,32,32,32,32*4,0xFF000000,0xFF0000,0xFF00,0xFF);
-  #endif
- #else
-  #ifdef LSB_FIRST
-  IconSurface=SDL_CreateRGBSurfaceFrom((void *)mednafen_playicon128.pixel_data,128,128,32,128*4,0xFF,0xFF00,0xFF0000,0xFF000000);
-  #else
-  IconSurface=SDL_CreateRGBSurfaceFrom((void *)mednafen_playicon128.pixel_data,128,128,32,128*4,0xFF000000,0xFF0000,0xFF00,0xFF);
-  #endif
- #endif
- SDL_WM_SetIcon(IconSurface,0);
 
  int rs, gs, bs, as;
 

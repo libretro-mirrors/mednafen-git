@@ -743,17 +743,20 @@ int MDFNSS_LoadSM(StateMem *st, int haspreview, int data_only)
           return(0);
 
 	 stateversion = MDFN_de32lsb(header + 16);
+
+	 if((int)stateversion < 0x900)	// Ensuring that (int)stateversion is > 0 is the most important part.
+	  return(0);
+
+	 if(haspreview)
+         {
+          uint32 width = MDFN_de32lsb(header + 24);
+          uint32 height = MDFN_de32lsb(header + 28);
+	  uint32 psize;
+
+	  psize = width * height * 3;
+	  smem_seek(st, psize, SEEK_CUR);	// Skip preview
+ 	 }
 	}
-
-	if(haspreview)
-        {
-         uint32 width = MDFN_de32lsb(header + 24);
-         uint32 height = MDFN_de32lsb(header + 28);
-	 uint32 psize;
-
-	 psize = width * height * 3;
-	 smem_seek(st, psize, SEEK_CUR);	// Skip preview
- 	}
 
 	// State rewinding code path hack, FIXME
 	if(data_only)

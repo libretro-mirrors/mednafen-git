@@ -6,8 +6,10 @@
 class OwlResampler;
 class RavenBuffer;
 
-struct OwlBuffer
+class OwlBuffer
 {
+ public:
+
  enum { HRBUF_LEFTOVER_PADDING = 8192 };
  enum { HRBUF_OVERFLOW_PADDING =   32 }; // For deltas and impulse responses and whatnot that are dangling off the end(>= final timestamp) sorta.
 
@@ -58,8 +60,10 @@ struct OwlBuffer
  friend class OwlResampler;
 };
 
-struct RavenBuffer
+class RavenBuffer
 {
+ public:
+
  RavenBuffer();
  ~RavenBuffer();
 

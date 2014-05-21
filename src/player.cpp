@@ -187,9 +187,6 @@ void Player_Draw(MDFN_Surface *surface, MDFN_Rect *dr, int CurrentSong, int16 *s
   }
  }
 
- // Quick warning:  DrawTextTransShadow() has the possibility of drawing past the visible display area by 1 pixel on each axis.  This should only be a cosmetic issue
- // if 1-pixel line overflowing occurs onto the next line.  Fixme in the future?
-
  XBuf += 2 * surface->pitch32;
  DrawTextTransShadow(XBuf, surface->pitch32 * sizeof(uint32), dr->w, AlbumName, text_color, text_shadow_color, 1);
 

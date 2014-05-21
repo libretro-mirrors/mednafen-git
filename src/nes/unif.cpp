@@ -24,28 +24,33 @@
 #include	"input.h"
 #include	"vsuni.h"
 
-typedef struct {
+struct UNIF_HEADER
+{
            char ID[4];
            uint32 info;
-} UNIF_HEADER;
+};
 
-typedef struct {
+struct BMAPPING
+{
            const char *name;
+	   uint16 prg_rm;
            int (*init)(CartInfo *);
 	   int flags;
-} BMAPPING;
+};
 
-typedef struct {
+struct BFMAPPING
+{
            const char *name;
            int (*init)(MDFNFILE *fp);
-} BFMAPPING;
+	   const uint32 info_ms;
+};
 
 static CartInfo UNIFCart;
 
 static int vramo;
 static int mirrortodo;
-static uint8 *boardname;
-static uint8 *sboardname;
+static uint8 *boardname = NULL;
+static uint8 *sboardname = NULL;
 
 static uint32 CHRRAMSize;
 uint8 *UNIFchrrama = NULL;
@@ -55,19 +60,19 @@ static UNIF_HEADER unhead;
 static UNIF_HEADER uchead;
 
 
-static uint8 *malloced[32];
-static uint32 mallocedsizes[32];
+static uint8 *malloced[32] = { NULL };
+static uint32 mallocedsizes[32] = { 0 };
 
-//static uint32 checksums[32];
-
-static int FixRomSize(uint32 size, uint32 minimum)
+static uint32 FixRomSize(uint32 size, uint32 minimum)
 {
-  uint32 x=1;
+  uint32 x = 1;
 
-  if(size<minimum)
+  if(size < minimum)
    return minimum;
-  while(x<size)
-   x<<=1;
+
+  while(x < size)
+   x <<= 1;
+
   return x;
 }
 
@@ -92,25 +97,39 @@ static int UNIF_StateAction(StateMem *sm, int load, int data_only)
 
 static void FreeUNIF(void)
 {
- int x;
  if(UNIFchrrama)
-  {free(UNIFchrrama);UNIFchrrama=0;}
+ {
+  free(UNIFchrrama);
+  UNIFchrrama = NULL;
+ }
+
  if(exntar)
- { free(exntar); exntar = 0; }
+ {
+  free(exntar);
+  exntar = NULL;
+ }
+
  if(boardname)
-  {free(boardname);boardname=0;}
- for(x=0;x<32;x++)
+ {
+  free(boardname);
+  boardname = NULL;
+ }
+
+ for(int x = 0; x < 32; x++)
  {
   if(malloced[x])
-   {free(malloced[x]);malloced[x]=0;}
+  {
+   free(malloced[x]);
+   malloced[x] = NULL;
+  }
  }
 }
 
 static void ResetUNIF(void)
 {
- int x;
- for(x=0;x<32;x++)
-  malloced[x]=0;
+ for(int x = 0; x < 32; x++)
+  malloced[x] = NULL;
+
  vramo=0;
  boardname=0;
  mirrortodo=0;
@@ -147,25 +166,32 @@ static int DoMirroring(MDFNFILE *fp)
 
 static int NAME(MDFNFILE *fp)
 {
- char namebuf[100];
- int index;
- int t;
+ char* namebuf = NULL;
 
- MDFN_printf(_("Name: "));
- index=0;
+ assert(uchead.info <= (SIZE_MAX - 1));
+ namebuf = (char*)malloc((size_t)uchead.info + 1);
 
- while((t = fp->fgetc())>0)
-  if(index<99)
-   namebuf[index++]=t;
+ if(fp->fread(namebuf, 1, uchead.info) != uchead.info)
+ {
+  free(namebuf);
+  namebuf = NULL;
 
- namebuf[index]=0;
- MDFN_printf("%s\n",namebuf);
+  return(0);
+ }
+
+ namebuf[uchead.info] = 0;
+ MDFN_RemoveControlChars(namebuf);
+
+ MDFN_printf(_("Name: %s\n"), namebuf);
 
  if(!MDFNGameInfo->name)
+  MDFNGameInfo->name = (uint8*)namebuf;
+ else
  {
-  MDFNGameInfo->name=(uint8 *)malloc(strlen(namebuf)+1);
-  strcpy((char *)MDFNGameInfo->name,namebuf);
+  free(namebuf);
+  namebuf = NULL;
  }
+
  return(1);
 }
 static int DINF(MDFNFILE *fp)
@@ -188,6 +214,10 @@ static int DINF(MDFNFILE *fp)
  if(fp->fread(method, 1, 100)!=100)
   return(0);
  name[99]=method[99]=0;
+
+ MDFN_RemoveControlChars(name);
+ MDFN_RemoveControlChars(method);
+
  MDFN_printf(_("Dumped by: %s\n"),name);
  MDFN_printf(_("Dumped with: %s\n"),method);
  {
@@ -255,23 +285,18 @@ static int EnableBattery(MDFNFILE *fp)
  return(1);
 }
 
-#if 0
-static int PCK(MDFNFILE *fp)
-{
- int z;
- z=uchead.ID[3]-'0';
- if(z<0 || z>15) return(0);
-}
-#endif
-
 static int LoadPRG(MDFNFILE *fp)
 {
- int z,t;
- z=uchead.ID[3]-'0';
+ uint32 t;
+ int z;
 
- if(z<0 || z>15)
+ z = uchead.ID[3] - '0';
+
+ if(z < 0 || z > 15)
   return(0);
- MDFN_printf(_("PRG ROM %d size: %d"),z,(int) uchead.info);
+
+ MDFN_printf(_("PRG ROM %d size: %u"), z, uchead.info);
+
  if(malloced[z])
   free(malloced[z]);
  t=FixRomSize(uchead.info,2048);
@@ -293,13 +318,16 @@ static int LoadPRG(MDFNFILE *fp)
 
 static int SetBoardName(MDFNFILE *fp)
 {
- if(!(boardname=(uint8 *)malloc(uchead.info+1)))
+ assert(uchead.info <= (SIZE_MAX - 1));
+
+ if(!(boardname=(uint8 *)malloc((size_t)uchead.info + 1)))
   return(0);
 
- fp->fread(boardname,1,uchead.info);
+ fp->fread(boardname, 1, uchead.info);
+ boardname[uchead.info] = 0;
+ MDFN_RemoveControlChars((char*)boardname);
 
- boardname[uchead.info]=0;
- MDFN_printf(_("Board name: %s\n"),boardname);
+ MDFN_printf(_("Board name: %s\n"), boardname);
  sboardname=boardname;
  if(!memcmp(boardname,"NES-",4) || !memcmp(boardname,"UNL-",4) || !memcmp(boardname,"HVC-",4) || !memcmp(boardname,"BTL-",4) || !memcmp(boardname,"BMC-",4))
   sboardname+=4;
@@ -308,14 +336,20 @@ static int SetBoardName(MDFNFILE *fp)
 
 static int LoadCHR(MDFNFILE *fp)
 {
- int z,t;
- z=uchead.ID[3]-'0';
- if(z<0 || z>15)
+ uint32 t;
+ int z;
+
+ z = uchead.ID[3] - '0';
+
+ if(z < 0 || z > 15)
   return(0);
- MDFN_printf(_("CHR ROM %d size: %d"),z,(int) uchead.info);
+
+ MDFN_printf(_("CHR ROM %d size: %u"), z, uchead.info);
+
  if(malloced[16+z])
   free(malloced[16+z]);
- t=FixRomSize(uchead.info,8192);
+
+ t=FixRomSize(uchead.info, 8192);
  if(!(malloced[16+z]=(uint8 *)malloc(t)))
   return(0);
  mallocedsizes[16+z]=t;
@@ -338,99 +372,100 @@ static int LoadCHR(MDFNFILE *fp)
 
 static const BMAPPING bmap[] = 
 {
- { "BTR", BTR_Init, 0 },
+ { "BTR", 0x0001U, BTR_Init, 0 },
 
  /* MMC2 */
- { "PNROM", PNROM_Init, 0 },
- { "PEEOROM", PNROM_Init, 0},
+ { "PNROM", 0x0001U, PNROM_Init, 0 },
+ { "PEEOROM", 0x0001U, PNROM_Init, 0},
 
 /* Sachen Carts */
- { "TC-U01-1.5M", TCU01_Init,0},
- { "Sachen-8259B", S8259B_Init, 0},
- { "Sachen-8259A", S8259A_Init,0},
- { "Sachen-74LS374N", S74LS374N_Init,0},
- { "SA-016-1M", SA0161M_Init,0},
- { "SA-72007", SA72007_Init,0},
- { "SA-72008", SA72008_Init,0},
- { "SA-0036", SA0036_Init,0},
- { "SA-0037", SA0037_Init,0},
+ { "TC-U01-1.5M", 0x0001U, TCU01_Init,0},
+ { "Sachen-8259B", 0x0001U, S8259B_Init, 0},
+ { "Sachen-8259A", 0x0001U, S8259A_Init,0},
+ { "Sachen-74LS374N", 0x0001U, S74LS374N_Init,0},
+ { "SA-016-1M", 0x0001U, SA0161M_Init,0},
+ { "SA-72007", 0x0001U, SA72007_Init,0},
+ { "SA-72008", 0x0001U, SA72008_Init,0},
+ { "SA-0036", 0x0001U, SA0036_Init,0},
+ { "SA-0037", 0x0001U, SA0037_Init,0},
 
- { "H2288", H2288_Init,0},
- { "8237", UNL8237_Init,0},
+ { "H2288", 0x0001U, H2288_Init,0},
+ { "8237", 0x0001U, UNL8237_Init,0},
 
 // /* AVE carts. */
-// { "MB-91", MB91_Init,0},	// DeathBots
- { "NINA-06", NINA06_Init,0},	// F-15 City War
+// { "MB-91", 0x0001U, MB91_Init,0},	// DeathBots
+ { "NINA-06", 0x0001U, NINA06_Init,0},	// F-15 City War
 // { "NINA-03", NINA03_Init,0},	// Tiles of Fate
 // { "NINA-001", NINA001_Init,0}, // Impossible Mission 2
 
- { "HKROM", HKROM_Init,0},
+ { "HKROM", 0x0001U, HKROM_Init,0},
 
- { "EWROM", EWROM_Init,0},
- { "EKROM", EKROM_Init,0},
- { "ELROM", ELROM_Init,0},
- { "ETROM", ETROM_Init,0},
+ { "EWROM", 0x0001U, EWROM_Init,0},
+ { "EKROM", 0x0001U, EKROM_Init,0},
+ { "ELROM", 0x0001U, ELROM_Init,0},
+ { "ETROM", 0x0001U, ETROM_Init,0},
 
- { "SAROM", SAROM_Init,0},
- { "SBROM", SBROM_Init,0},
- { "SCROM", SCROM_Init,0},
- { "SEROM", SEROM_Init,0},
- { "SGROM", SGROM_Init,0},
- { "SKROM", SKROM_Init,0},
- { "SLROM", SLROM_Init,0},
- { "SL1ROM", SL1ROM_Init,0},
- { "SNROM", SNROM_Init,0},
- { "SOROM", SOROM_Init,0},
+ { "SAROM", 0x0001U, SAROM_Init,0},
+ { "SBROM", 0x0001U, SBROM_Init,0},
+ { "SCROM", 0x0001U, SCROM_Init,0},
+ { "SEROM", 0x0001U, SEROM_Init,0},
+ { "SGROM", 0x0001U, SGROM_Init,0},
+ { "SKROM", 0x0001U, SKROM_Init,0},
+ { "SLROM", 0x0001U, SLROM_Init,0},
+ { "SL1ROM", 0x0001U, SL1ROM_Init,0},
+ { "SNROM", 0x0001U, SNROM_Init,0},
+ { "SOROM", 0x0001U, SOROM_Init,0},
 
- { "TGROM", TGROM_Init,0},
- { "TR1ROM", TFROM_Init,BMCFLAG_FORCE4},
+ { "TGROM", 0x0001U, TGROM_Init,0},
+ { "TR1ROM", 0x0001U, TFROM_Init,BMCFLAG_FORCE4},
 
- { "TEROM", TEROM_Init,0},
- { "TFROM", TFROM_Init,0},
- { "TLROM", TLROM_Init,0},
- { "TKROM", TKROM_Init,0},
- { "TSROM", TSROM_Init,0},
+ { "TEROM", 0x0001U, TEROM_Init,0},
+ { "TFROM", 0x0001U, TFROM_Init,0},
+ { "TLROM", 0x0001U, TLROM_Init,0},
+ { "TKROM", 0x0001U, TKROM_Init,0},
+ { "TSROM", 0x0001U, TSROM_Init,0},
 
- { "TLSROM", TLSROM_Init,0},
- { "TKSROM", TKSROM_Init,0},
- { "TQROM", TQROM_Init,0},
- { "TVROM", TLROM_Init,BMCFLAG_FORCE4},
+ { "TLSROM", 0x0001U, TLSROM_Init,0},
+ { "TKSROM", 0x0001U, TKSROM_Init,0},
+ { "TQROM", 0x0001U, TQROM_Init,0},
+ { "TVROM", 0x0001U, TLROM_Init,BMCFLAG_FORCE4},
 
- { "AOROM", AOROM_Init, 0},
- { "CPROM", CPROM_Init, BMCFLAG_32KCHRR},
- { "CNROM", CNROM_Init,0},
- { "GNROM", GNROM_Init,0},
- { "NROM", NROM256_Init,0 },
- { "RROM", NROM128_Init,0 },
- { "RROM-128", NROM128_Init,0 },
- { "NROM-128", NROM128_Init,0 },
- { "NROM-256", NROM256_Init,0 },
- { "MHROM", MHROM_Init,0},
- { "UNROM", UNROM_Init, 0},
+ { "AOROM", 0x0001U, AOROM_Init, 0},
+ { "CPROM", 0x0001U, CPROM_Init, BMCFLAG_32KCHRR},
+ { "CNROM", 0x0001U, CNROM_Init,0},
+ { "GNROM", 0x0001U, GNROM_Init,0},
+ { "NROM", 0x0001U, NROM256_Init,0 },
+ { "RROM", 0x0001U, NROM128_Init,0 },
+ { "RROM-128", 0x0001U, NROM128_Init,0 },
+ { "NROM-128", 0x0001U, NROM128_Init,0 },
+ { "NROM-256", 0x0001U, NROM256_Init,0 },
+ { "MHROM", 0x0001U, MHROM_Init,0},
+ { "UNROM", 0x0001U, UNROM_Init, 0},
 
- { "MARIO1-MALEE2", MALEE_Init, 0},
- { "Supervision16in1", Supervision16_Init,0},
- { "NovelDiamond9999999in1", Novel_Init,0},
- { "Super24in1SC03", Super24_Init,0},
- { "BioMiracleA", BioMiracleA_Init, 0},
+ { "MARIO1-MALEE2", 0x0003U, MALEE_Init, 0},
+ { "Supervision16in1", 0x001FU, Supervision16_Init,0},
+ { "NovelDiamond9999999in1", 0x0001U, Novel_Init,0},
+ { "Super24in1SC03", 0x001FU, Super24_Init,0},
+ { "BioMiracleA", 0x0001U, BioMiracleA_Init, 0},
 
- { "603-5052", UNL6035052_Init, 0},
- {0,0,0}
+ { "603-5052", 0x0001U, UNL6035052_Init, 0},
+
+ {0,0,0,0}
 };
 
 static const BFMAPPING bfunc[] = {
- { "CTRL", CTRL },
- { "TVCI", TVCI },
- { "BATR", EnableBattery },
- { "MIRR", DoMirroring },
- { "PRG",  LoadPRG },
- { "CHR",  LoadCHR },
- //{ "CCK",  CCK	   },
- //{ "PCK",  PCK	   },
- { "NAME", NAME	},
- { "MAPR", SetBoardName },
- { "DINF", DINF },
- { 0, 0 }
+ { "CTRL", CTRL,		~0U },
+ { "TVCI", TVCI,		~0U },
+ { "BATR", EnableBattery,	~0U },
+ { "MIRR", DoMirroring,		~0U },
+ { "DINF", DINF,		~0U },
+
+ { "PRG",  LoadPRG,		512 * 1024 * 1024 },
+ { "CHR",  LoadCHR,		512 * 1024 * 1024 },
+ { "MAPR", SetBoardName,	512 * 1024 * 1024 },
+ { "NAME", NAME,		512 * 1024 * 1024 },
+
+ { 0, 0, 0 }
 };
 
 int LoadUNIFChunks(MDFNFILE *fp)
@@ -455,6 +490,12 @@ int LoadUNIFChunks(MDFNFILE *fp)
     {
      if(!memcmp(&uchead,bfunc[x].name,strlen(bfunc[x].name)))
      {
+      if(uchead.info > bfunc[x].info_ms)
+      {
+       MDFN_PrintError("Value(%u) in length field of chunk \"%.4s\" is too large.", uchead.info, &uchead.ID[0]);
+       return(0);
+      }
+
       if(!bfunc[x].init(fp))
        return 0;
       t=1;
@@ -478,6 +519,15 @@ static int InitializeBoard(void)
    {
     if(!strcmp((char *)sboardname,(char *)bmap[x].name))
     {
+     for(unsigned i = 0; i < 16; i++)
+     {
+      if((bmap[x].prg_rm & (1U << i)) && !malloced[i])
+      {
+       MDFN_PrintError(_("Missing PRG ROM %u."), i);
+       return(0);
+      }
+     }
+
      if(!malloced[16])
      {
       if(bmap[x].flags & BMCFLAG_32KCHRR)

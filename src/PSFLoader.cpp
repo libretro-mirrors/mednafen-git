@@ -229,11 +229,11 @@ PSFTags PSFLoader::LoadInternal(uint8 version, uint32 max_exe_size, MDFNFILE *fp
  compressed_size = MDFN_de32lsb(fp->data + 8);
  compressed_crc32 = MDFN_de32lsb(fp->data + 12);
 
- if(fp->size < (16 + reserved_size + compressed_size))
-  throw(MDFN_Error(0, _("PSF is missing at least %u bytes of data!"), 16 + reserved_size + compressed_size - fp->size));
+ if(fp->size < ((int64)16 + reserved_size + compressed_size))
+  throw MDFN_Error(0, _("PSF is missing at least %lld bytes of data!"), (long long)((int64)16 + reserved_size + compressed_size - fp->size));
 
  if(crc32(0, fp->data + 16 + reserved_size, compressed_size) != compressed_crc32)
-  throw(MDFN_Error(0, _("PSF compressed CRC32 mismatch(data is corrupt)!")));
+  throw MDFN_Error(0, _("PSF compressed CRC32 mismatch(data is corrupt)!"));
 
 
  {

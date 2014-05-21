@@ -6,7 +6,7 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.33.2'
+MEDNAFEN_VERSION='0.9.33.3'
 MEDNAFEN_VERSION_NUMERIC=0x000933
 
 AC_CANONICAL_HOST
@@ -426,6 +426,7 @@ AM_CONDITIONAL(HAVE_LINUX_JOYSTICK, false)
 NEED_SDL=true
 
 if expr x"$target" : 'x.*-mingw*' > /dev/null; then
+	AC_CHECK_TOOL([WINDRES], [windres])
 	CPPFLAGS="-mstackrealign $CPPFLAGS"
         AC_CHECK_HEADER([dsound.h],HAVE_DIRECTSOUND=true, HAVE_DIRECTSOUND=false)
         AC_CHECK_HEADER([audioclient.h],HAVE_WASAPI=true, HAVE_WASAPI=false)

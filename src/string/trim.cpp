@@ -130,12 +130,17 @@ void MDFN_trim(std::string &string)
 char *MDFN_RemoveControlChars(char *str)
 {
  char *orig = str;
+
  if(str)
+ {
   while(*str)
   {
-   if(*str < 0x20) *str = 0x20;
+   if((unsigned char)*str < 0x20)
+    *str = 0x20;
    str++;
   }
+ }
+
  return(orig);
 }
 

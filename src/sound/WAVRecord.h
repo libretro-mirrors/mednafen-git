@@ -1,5 +1,5 @@
 #ifndef __MDFN_WAVRECORD_H
-#define __MDFN_WAVERECORD_H
+#define __MDFN_WAVRECORD_H
 
 #include "../mednafen.h"
 #include "../FileStream.h"

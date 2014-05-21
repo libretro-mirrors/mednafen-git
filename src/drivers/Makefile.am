@@ -31,7 +31,6 @@ endif
 if WIN32
 libmdfnsdl_a_SOURCES += Joystick_XInput.cpp
 libmdfnsdl_a_SOURCES += Joystick_DX5.cpp
-#Joystick_DX8.cpp
 libmdfnsdl_a_SOURCES += NetClient_WS2.cpp
 endif
 

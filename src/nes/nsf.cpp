@@ -210,9 +210,14 @@ bool NSFLoad(const char *name, MDFNFILE *fp, NESGameType *gt)
  }
  else if(!memcmp(magic, "NSFE", 4))
  {
-  if(!LoadNSFE(NSFInfo, fp->data, fp->Size(), 0))
+  try
+  {
+   LoadNSFE(NSFInfo, fp->data, fp->Size(), 0);
+  }
+  catch(std::exception &e)
   {
    FreeNSF();
+   MDFN_PrintError("%s", e.what());
    return(0);
   }
  }

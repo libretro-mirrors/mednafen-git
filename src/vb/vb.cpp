@@ -490,6 +490,7 @@ static void ReadHeader(MDFNFILE *fp, VB_HeaderInfo *hi)
 
   *out_ptr = 0;
 
+  MDFN_RemoveControlChars(hi->game_title);
   MDFN_trim(hi->game_title);
  }
  else

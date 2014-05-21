@@ -86,6 +86,7 @@ void MD_ReadSegaHeader(const uint8 *header, md_game_info *ginfo)
  ginfo->copyright[16] = 0;
  MDFN_RemoveControlChars(ginfo->copyright);
 
+ // FIXME: SJIS to UTF8 conversion.
  memcpy(ginfo->domestic_name, header + 0x20, 0x30);
  ginfo->domestic_name[0x30] = 0;
  MDFN_RemoveControlChars(ginfo->domestic_name);

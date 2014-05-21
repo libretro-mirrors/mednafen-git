@@ -22,6 +22,7 @@
 
 static uint8 cmd;
 static uint8 latch[8];
+
 static int cmd_save, latch_save;
 static void (*SachSync)(int version);
 
@@ -173,6 +174,9 @@ int S8259B_Init(CartInfo *info)
  info->Power=S8259Reset;
  StateInit(info, S8259Restore, 1, 8);
  type=1;
+
+ SetReadHandler(0x8000,0xFFFF,CartBR);
+ SetWriteHandler(0x4100,0x7FFF,S8259Write);
 
  return(1);
 }

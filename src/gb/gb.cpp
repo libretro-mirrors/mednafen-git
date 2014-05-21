@@ -551,8 +551,6 @@ void gbDoHdma()
   if(register_HDMA4 == 0x00)
     register_HDMA3++;
   
-  if(gbHdmaDestination == 0x96b0)
-    gbHdmaBytes = gbHdmaBytes;
   gbHdmaBytes -= 0x10;
   register_HDMA5--;
   if(register_HDMA5 == 0xff)

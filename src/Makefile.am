@@ -12,6 +12,17 @@ if HAVE_SDL
 SUBDIRS 		+=	drivers
 mednafen_LDADD          +=      drivers/libmdfnsdl.a
 mednafen_DEPENDENCIES   +=      drivers/libmdfnsdl.a
+
+#
+# Resource file wasn't linking in properly when it was in an archive, so we resort to this!
+#
+if WIN32
+.rc.o:
+	@WINDRES@ -o $@ $<
+
+mednafen_SOURCES	+=	drivers/win-resource.rc
+endif
+
 endif
 
 if DOS

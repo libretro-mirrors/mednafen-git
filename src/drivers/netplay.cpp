@@ -56,7 +56,6 @@ class NetplayConsole : public MDFNConsole
 
 static NetplayConsole NetConsole;
 static const int PopupTime = 3750;
-static const int PopupFadeStartTime = 3250;
 
 static int volatile inputable = 0;
 static int volatile viewable = 0;

@@ -56,62 +56,63 @@ bin_PROGRAMS = mednafen$(EXEEXT)
 @HAVE_SDL_TRUE@am__append_1 = drivers
 @HAVE_SDL_TRUE@am__append_2 = drivers/libmdfnsdl.a
 @HAVE_SDL_TRUE@am__append_3 = drivers/libmdfnsdl.a
-@DOS_TRUE@am__append_4 = drivers_dos
-@DOS_TRUE@am__append_5 = drivers_dos/libmdfndos.a
+@HAVE_SDL_TRUE@@WIN32_TRUE@am__append_4 = drivers/win-resource.rc
+@DOS_TRUE@am__append_5 = drivers_dos
 @DOS_TRUE@am__append_6 = drivers_dos/libmdfndos.a
-@HAVE_SDL_TRUE@am__append_7 = @SDL_LIBS@
-@WANT_DEBUGGER_TRUE@am__append_8 = dis6502.cpp
-@WANT_GB_EMU_TRUE@am__append_9 = gb
-@WANT_GB_EMU_TRUE@am__append_10 = gb/libgb.a
+@DOS_TRUE@am__append_7 = drivers_dos/libmdfndos.a
+@HAVE_SDL_TRUE@am__append_8 = @SDL_LIBS@
+@WANT_DEBUGGER_TRUE@am__append_9 = dis6502.cpp
+@WANT_GB_EMU_TRUE@am__append_10 = gb
 @WANT_GB_EMU_TRUE@am__append_11 = gb/libgb.a
-@WANT_GBA_EMU_TRUE@am__append_12 = gba
-@WANT_GBA_EMU_TRUE@am__append_13 = gba/libgba.a
+@WANT_GB_EMU_TRUE@am__append_12 = gb/libgb.a
+@WANT_GBA_EMU_TRUE@am__append_13 = gba
 @WANT_GBA_EMU_TRUE@am__append_14 = gba/libgba.a
-@WANT_LYNX_EMU_TRUE@am__append_15 = lynx
-@WANT_LYNX_EMU_TRUE@am__append_16 = lynx/liblynx.a
+@WANT_GBA_EMU_TRUE@am__append_15 = gba/libgba.a
+@WANT_LYNX_EMU_TRUE@am__append_16 = lynx
 @WANT_LYNX_EMU_TRUE@am__append_17 = lynx/liblynx.a
-@WANT_MD_EMU_TRUE@am__append_18 = md
-@WANT_MD_EMU_TRUE@am__append_19 = md/libmd.a
+@WANT_LYNX_EMU_TRUE@am__append_18 = lynx/liblynx.a
+@WANT_MD_EMU_TRUE@am__append_19 = md
 @WANT_MD_EMU_TRUE@am__append_20 = md/libmd.a
-@WANT_NES_EMU_TRUE@am__append_21 = nes
-@WANT_NES_EMU_TRUE@am__append_22 = nes/libnes.a
+@WANT_MD_EMU_TRUE@am__append_21 = md/libmd.a
+@WANT_NES_EMU_TRUE@am__append_22 = nes
 @WANT_NES_EMU_TRUE@am__append_23 = nes/libnes.a
-@WANT_NGP_EMU_TRUE@am__append_24 = ngp
-@WANT_NGP_EMU_TRUE@am__append_25 = ngp/libngp.a
+@WANT_NES_EMU_TRUE@am__append_24 = nes/libnes.a
+@WANT_NGP_EMU_TRUE@am__append_25 = ngp
 @WANT_NGP_EMU_TRUE@am__append_26 = ngp/libngp.a
-@WANT_PC_EMU_TRUE@am__append_27 = pc
-@WANT_PC_EMU_TRUE@am__append_28 = pc/libpc.a
+@WANT_NGP_EMU_TRUE@am__append_27 = ngp/libngp.a
+@WANT_PC_EMU_TRUE@am__append_28 = pc
 @WANT_PC_EMU_TRUE@am__append_29 = pc/libpc.a
-@WANT_PCE_EMU_TRUE@am__append_30 = pce
-@WANT_PCE_EMU_TRUE@am__append_31 = pce/libpce.a
+@WANT_PC_EMU_TRUE@am__append_30 = pc/libpc.a
+@WANT_PCE_EMU_TRUE@am__append_31 = pce
 @WANT_PCE_EMU_TRUE@am__append_32 = pce/libpce.a
-@WANT_PCE_FAST_EMU_TRUE@am__append_33 = pce_fast
-@WANT_PCE_FAST_EMU_TRUE@am__append_34 = pce_fast/libpce_fast.a
+@WANT_PCE_EMU_TRUE@am__append_33 = pce/libpce.a
+@WANT_PCE_FAST_EMU_TRUE@am__append_34 = pce_fast
 @WANT_PCE_FAST_EMU_TRUE@am__append_35 = pce_fast/libpce_fast.a
-@WANT_PCFX_EMU_TRUE@am__append_36 = pcfx
-@WANT_PCFX_EMU_TRUE@am__append_37 = pcfx/libpcfx.a
+@WANT_PCE_FAST_EMU_TRUE@am__append_36 = pce_fast/libpce_fast.a
+@WANT_PCFX_EMU_TRUE@am__append_37 = pcfx
 @WANT_PCFX_EMU_TRUE@am__append_38 = pcfx/libpcfx.a
-@WANT_PSX_EMU_TRUE@am__append_39 = psx
-@WANT_PSX_EMU_TRUE@am__append_40 = psx/libpsx.a
+@WANT_PCFX_EMU_TRUE@am__append_39 = pcfx/libpcfx.a
+@WANT_PSX_EMU_TRUE@am__append_40 = psx
 @WANT_PSX_EMU_TRUE@am__append_41 = psx/libpsx.a
-@WANT_SMS_EMU_TRUE@am__append_42 = sms
-@WANT_SMS_EMU_TRUE@am__append_43 = sms/libsms.a
+@WANT_PSX_EMU_TRUE@am__append_42 = psx/libpsx.a
+@WANT_SMS_EMU_TRUE@am__append_43 = sms
 @WANT_SMS_EMU_TRUE@am__append_44 = sms/libsms.a
-@WANT_SNES_EMU_TRUE@am__append_45 = snes
-@WANT_SNES_EMU_TRUE@am__append_46 = snes/libsnes.a
+@WANT_SMS_EMU_TRUE@am__append_45 = sms/libsms.a
+@WANT_SNES_EMU_TRUE@am__append_46 = snes
 @WANT_SNES_EMU_TRUE@am__append_47 = snes/libsnes.a
-@WANT_SNES_PERF_EMU_TRUE@am__append_48 = snes_perf
-@WANT_SNES_PERF_EMU_TRUE@am__append_49 = snes_perf/libsnes_perf.a
+@WANT_SNES_EMU_TRUE@am__append_48 = snes/libsnes.a
+@WANT_SNES_PERF_EMU_TRUE@am__append_49 = snes_perf
 @WANT_SNES_PERF_EMU_TRUE@am__append_50 = snes_perf/libsnes_perf.a
-@WANT_VB_EMU_TRUE@am__append_51 = vb
-@WANT_VB_EMU_TRUE@am__append_52 = vb/libvb.a
+@WANT_SNES_PERF_EMU_TRUE@am__append_51 = snes_perf/libsnes_perf.a
+@WANT_VB_EMU_TRUE@am__append_52 = vb
 @WANT_VB_EMU_TRUE@am__append_53 = vb/libvb.a
-@WANT_WSWAN_EMU_TRUE@am__append_54 = wswan
-@WANT_WSWAN_EMU_TRUE@am__append_55 = wswan/libwswan.a
+@WANT_VB_EMU_TRUE@am__append_54 = vb/libvb.a
+@WANT_WSWAN_EMU_TRUE@am__append_55 = wswan
 @WANT_WSWAN_EMU_TRUE@am__append_56 = wswan/libwswan.a
-@WANT_DEBUGGER_TRUE@am__append_57 = desa68
-@WANT_DEBUGGER_TRUE@am__append_58 = desa68/libdesa68.a
+@WANT_WSWAN_EMU_TRUE@am__append_57 = wswan/libwswan.a
+@WANT_DEBUGGER_TRUE@am__append_58 = desa68
 @WANT_DEBUGGER_TRUE@am__append_59 = desa68/libdesa68.a
+@WANT_DEBUGGER_TRUE@am__append_60 = desa68/libdesa68.a
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/cdrom/Makefile.am.inc \
 	$(srcdir)/compress/Makefile.am.inc \
@@ -119,9 +120,9 @@ DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/resampler/Makefile.am.inc \
 	$(srcdir)/string/Makefile.am.inc \
 	$(srcdir)/video/Makefile.am.inc
-@HAVE_LIBCDIO_TRUE@am__append_60 = cdrom/CDAccess_Physical.cpp
-@ARCH_X86_TRUE@am__append_61 = cputest/x86_cpu.c
-@ARCH_POWERPC_TRUE@am__append_62 = cputest/ppc_cpu.c
+@HAVE_LIBCDIO_TRUE@am__append_61 = cdrom/CDAccess_Physical.cpp
+@ARCH_X86_TRUE@am__append_62 = cputest/x86_cpu.c
+@ARCH_POWERPC_TRUE@am__append_63 = cputest/ppc_cpu.c
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
@@ -157,25 +158,27 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	md5.cpp memory.cpp netplay.cpp state.cpp movie.cpp player.cpp \
 	PSFLoader.cpp tests.cpp qtrecord.cpp cdplay.cpp okiadpcm.cpp \
 	FileWrapper.cpp Stream.cpp MemoryStream.cpp FileStream.cpp \
-	dis6502.cpp cdrom/audioreader.cpp cdrom/cdromif.cpp \
-	cdrom/scsicd.cpp cdrom/CDUtility.cpp cdrom/crc32.cpp \
-	cdrom/galois.cpp cdrom/l-ec.cpp cdrom/recover-raw.cpp \
-	cdrom/lec.cpp cdrom/CDAccess.cpp cdrom/CDAccess_Image.cpp \
-	cdrom/CDAccess_CCD.cpp cdrom/CDAccess_Physical.cpp \
-	compress/minilzo.c compress/quicklz.c compress/blz.cpp \
-	compress/ioapi.c compress/unzip.c string/escape.cpp \
-	string/trim.cpp string/ConvertUTF.cpp video/surface.cpp \
-	video/font-data.cpp video/font-data-18x18.c \
-	video/font-data-12x13.c video/png.cpp video/primitives.cpp \
-	video/text.cpp video/video.cpp video/tblur.cpp \
-	video/selblur.cpp video/resize.cpp video/Deinterlacer.cpp \
-	resampler/resample.c cputest/cputest.c cputest/x86_cpu.c \
-	cputest/ppc_cpu.c
-@WANT_DEBUGGER_TRUE@am__objects_1 = dis6502.$(OBJEXT)
+	drivers/win-resource.rc dis6502.cpp cdrom/audioreader.cpp \
+	cdrom/cdromif.cpp cdrom/scsicd.cpp cdrom/CDUtility.cpp \
+	cdrom/crc32.cpp cdrom/galois.cpp cdrom/l-ec.cpp \
+	cdrom/recover-raw.cpp cdrom/lec.cpp cdrom/CDAccess.cpp \
+	cdrom/CDAccess_Image.cpp cdrom/CDAccess_CCD.cpp \
+	cdrom/CDAccess_Physical.cpp compress/minilzo.c \
+	compress/quicklz.c compress/blz.cpp compress/ioapi.c \
+	compress/unzip.c string/escape.cpp string/trim.cpp \
+	string/ConvertUTF.cpp video/surface.cpp video/font-data.cpp \
+	video/font-data-18x18.c video/font-data-12x13.c video/png.cpp \
+	video/primitives.cpp video/text.cpp video/video.cpp \
+	video/tblur.cpp video/selblur.cpp video/resize.cpp \
+	video/Deinterlacer.cpp resampler/resample.c cputest/cputest.c \
+	cputest/x86_cpu.c cputest/ppc_cpu.c
 am__dirstamp = $(am__leading_dot)dirstamp
-@HAVE_LIBCDIO_TRUE@am__objects_2 = cdrom/CDAccess_Physical.$(OBJEXT)
-@ARCH_X86_TRUE@am__objects_3 = cputest/x86_cpu.$(OBJEXT)
-@ARCH_POWERPC_TRUE@am__objects_4 = cputest/ppc_cpu.$(OBJEXT)
+@HAVE_SDL_TRUE@@WIN32_TRUE@am__objects_1 =  \
+@HAVE_SDL_TRUE@@WIN32_TRUE@	drivers/win-resource.$(OBJEXT)
+@WANT_DEBUGGER_TRUE@am__objects_2 = dis6502.$(OBJEXT)
+@HAVE_LIBCDIO_TRUE@am__objects_3 = cdrom/CDAccess_Physical.$(OBJEXT)
+@ARCH_X86_TRUE@am__objects_4 = cputest/x86_cpu.$(OBJEXT)
+@ARCH_POWERPC_TRUE@am__objects_5 = cputest/ppc_cpu.$(OBJEXT)
 am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	mempatcher.$(OBJEXT) settings.$(OBJEXT) endian.$(OBJEXT) \
 	mednafen.$(OBJEXT) file.$(OBJEXT) general.$(OBJEXT) \
@@ -184,13 +187,13 @@ am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	PSFLoader.$(OBJEXT) tests.$(OBJEXT) qtrecord.$(OBJEXT) \
 	cdplay.$(OBJEXT) okiadpcm.$(OBJEXT) FileWrapper.$(OBJEXT) \
 	Stream.$(OBJEXT) MemoryStream.$(OBJEXT) FileStream.$(OBJEXT) \
-	$(am__objects_1) cdrom/audioreader.$(OBJEXT) \
+	$(am__objects_1) $(am__objects_2) cdrom/audioreader.$(OBJEXT) \
 	cdrom/cdromif.$(OBJEXT) cdrom/scsicd.$(OBJEXT) \
 	cdrom/CDUtility.$(OBJEXT) cdrom/crc32.$(OBJEXT) \
 	cdrom/galois.$(OBJEXT) cdrom/l-ec.$(OBJEXT) \
 	cdrom/recover-raw.$(OBJEXT) cdrom/lec.$(OBJEXT) \
 	cdrom/CDAccess.$(OBJEXT) cdrom/CDAccess_Image.$(OBJEXT) \
-	cdrom/CDAccess_CCD.$(OBJEXT) $(am__objects_2) \
+	cdrom/CDAccess_CCD.$(OBJEXT) $(am__objects_3) \
 	compress/minilzo.$(OBJEXT) compress/quicklz.$(OBJEXT) \
 	compress/blz.$(OBJEXT) compress/ioapi.$(OBJEXT) \
 	compress/unzip.$(OBJEXT) string/escape.$(OBJEXT) \
@@ -202,7 +205,7 @@ am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	video/video.$(OBJEXT) video/tblur.$(OBJEXT) \
 	video/selblur.$(OBJEXT) video/resize.$(OBJEXT) \
 	video/Deinterlacer.$(OBJEXT) resampler/resample.$(OBJEXT) \
-	cputest/cputest.$(OBJEXT) $(am__objects_3) $(am__objects_4)
+	cputest/cputest.$(OBJEXT) $(am__objects_4) $(am__objects_5)
 mednafen_OBJECTS = $(am_mednafen_OBJECTS)
 am__DEPENDENCIES_1 =
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -501,13 +504,13 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-SUBDIRS = trio $(am__append_1) $(am__append_4) sexyal demo \
-	$(am__append_9) $(am__append_12) $(am__append_15) \
-	$(am__append_18) $(am__append_21) $(am__append_24) \
-	$(am__append_27) $(am__append_30) $(am__append_33) \
-	$(am__append_36) $(am__append_39) $(am__append_42) \
-	$(am__append_45) $(am__append_48) $(am__append_51) \
-	$(am__append_54) $(am__append_57) hw_cpu hw_misc hw_sound \
+SUBDIRS = trio $(am__append_1) $(am__append_5) sexyal demo \
+	$(am__append_10) $(am__append_13) $(am__append_16) \
+	$(am__append_19) $(am__append_22) $(am__append_25) \
+	$(am__append_28) $(am__append_31) $(am__append_34) \
+	$(am__append_37) $(am__append_40) $(am__append_43) \
+	$(am__append_46) $(am__append_49) $(am__append_52) \
+	$(am__append_55) $(am__append_58) hw_cpu hw_misc hw_sound \
 	hw_video tremor mpcdec sound
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_builddir)/include/blip -I$(top_srcdir)/intl -I$(top_srcdir)
@@ -516,44 +519,45 @@ mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	memory.cpp netplay.cpp state.cpp movie.cpp player.cpp \
 	PSFLoader.cpp tests.cpp qtrecord.cpp cdplay.cpp okiadpcm.cpp \
 	FileWrapper.cpp Stream.cpp MemoryStream.cpp FileStream.cpp \
-	$(am__append_8) cdrom/audioreader.cpp cdrom/cdromif.cpp \
-	cdrom/scsicd.cpp cdrom/CDUtility.cpp cdrom/crc32.cpp \
-	cdrom/galois.cpp cdrom/l-ec.cpp cdrom/recover-raw.cpp \
-	cdrom/lec.cpp cdrom/CDAccess.cpp cdrom/CDAccess_Image.cpp \
-	cdrom/CDAccess_CCD.cpp $(am__append_60) compress/minilzo.c \
-	compress/quicklz.c compress/blz.cpp compress/ioapi.c \
-	compress/unzip.c string/escape.cpp string/trim.cpp \
-	string/ConvertUTF.cpp video/surface.cpp video/font-data.cpp \
-	video/font-data-18x18.c video/font-data-12x13.c video/png.cpp \
-	video/primitives.cpp video/text.cpp video/video.cpp \
-	video/tblur.cpp video/selblur.cpp video/resize.cpp \
-	video/Deinterlacer.cpp resampler/resample.c cputest/cputest.c \
-	$(am__append_61) $(am__append_62)
-mednafen_LDADD = trio/libtrio.a $(am__append_2) $(am__append_5) \
-	sexyal/libsexyal.a $(am__append_7) demo/libdemo.a \
-	$(am__append_10) $(am__append_13) $(am__append_16) \
-	$(am__append_19) $(am__append_22) $(am__append_25) \
-	$(am__append_28) $(am__append_31) $(am__append_34) \
-	$(am__append_37) $(am__append_40) $(am__append_43) \
-	$(am__append_46) $(am__append_49) $(am__append_52) \
-	$(am__append_55) $(am__append_58) hw_cpu/libmdfnhwcpu.a \
+	$(am__append_4) $(am__append_9) cdrom/audioreader.cpp \
+	cdrom/cdromif.cpp cdrom/scsicd.cpp cdrom/CDUtility.cpp \
+	cdrom/crc32.cpp cdrom/galois.cpp cdrom/l-ec.cpp \
+	cdrom/recover-raw.cpp cdrom/lec.cpp cdrom/CDAccess.cpp \
+	cdrom/CDAccess_Image.cpp cdrom/CDAccess_CCD.cpp \
+	$(am__append_61) compress/minilzo.c compress/quicklz.c \
+	compress/blz.cpp compress/ioapi.c compress/unzip.c \
+	string/escape.cpp string/trim.cpp string/ConvertUTF.cpp \
+	video/surface.cpp video/font-data.cpp video/font-data-18x18.c \
+	video/font-data-12x13.c video/png.cpp video/primitives.cpp \
+	video/text.cpp video/video.cpp video/tblur.cpp \
+	video/selblur.cpp video/resize.cpp video/Deinterlacer.cpp \
+	resampler/resample.c cputest/cputest.c $(am__append_62) \
+	$(am__append_63)
+mednafen_LDADD = trio/libtrio.a $(am__append_2) $(am__append_6) \
+	sexyal/libsexyal.a $(am__append_8) demo/libdemo.a \
+	$(am__append_11) $(am__append_14) $(am__append_17) \
+	$(am__append_20) $(am__append_23) $(am__append_26) \
+	$(am__append_29) $(am__append_32) $(am__append_35) \
+	$(am__append_38) $(am__append_41) $(am__append_44) \
+	$(am__append_47) $(am__append_50) $(am__append_53) \
+	$(am__append_56) $(am__append_59) hw_cpu/libmdfnhwcpu.a \
 	hw_misc/libmdfnhwmisc.a hw_sound/libmdfnhwsound.a \
 	hw_video/libmdfnhwvideo.a tremor/libvorbisidec.a \
 	mpcdec/libmpcdec.a sound/libmdfnsound.a @LIBINTL@ @LIBICONV@
-mednafen_DEPENDENCIES = trio/libtrio.a $(am__append_3) $(am__append_6) \
-	sexyal/libsexyal.a demo/libdemo.a $(am__append_11) \
-	$(am__append_14) $(am__append_17) $(am__append_20) \
-	$(am__append_23) $(am__append_26) $(am__append_29) \
-	$(am__append_32) $(am__append_35) $(am__append_38) \
-	$(am__append_41) $(am__append_44) $(am__append_47) \
-	$(am__append_50) $(am__append_53) $(am__append_56) \
-	$(am__append_59) hw_cpu/libmdfnhwcpu.a hw_misc/libmdfnhwmisc.a \
+mednafen_DEPENDENCIES = trio/libtrio.a $(am__append_3) $(am__append_7) \
+	sexyal/libsexyal.a demo/libdemo.a $(am__append_12) \
+	$(am__append_15) $(am__append_18) $(am__append_21) \
+	$(am__append_24) $(am__append_27) $(am__append_30) \
+	$(am__append_33) $(am__append_36) $(am__append_39) \
+	$(am__append_42) $(am__append_45) $(am__append_48) \
+	$(am__append_51) $(am__append_54) $(am__append_57) \
+	$(am__append_60) hw_cpu/libmdfnhwcpu.a hw_misc/libmdfnhwmisc.a \
 	hw_sound/libmdfnhwsound.a hw_video/libmdfnhwvideo.a \
 	tremor/libvorbisidec.a mpcdec/libmpcdec.a sound/libmdfnsound.a
 all: all-recursive
 
 .SUFFIXES:
-.SUFFIXES: .c .cpp .lo .o .obj
+.SUFFIXES: .c .cpp .lo .o .obj .rc
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am $(srcdir)/cdrom/Makefile.am.inc $(srcdir)/compress/Makefile.am.inc $(srcdir)/string/Makefile.am.inc $(srcdir)/video/Makefile.am.inc $(srcdir)/resampler/Makefile.am.inc $(srcdir)/cputest/Makefile.am.inc $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -631,6 +635,14 @@ clean-binPROGRAMS:
 	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
 	echo " rm -f" $$list; \
 	rm -f $$list
+drivers/$(am__dirstamp):
+	@$(MKDIR_P) drivers
+	@: > drivers/$(am__dirstamp)
+drivers/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) drivers/$(DEPDIR)
+	@: > drivers/$(DEPDIR)/$(am__dirstamp)
+drivers/win-resource.$(OBJEXT): drivers/$(am__dirstamp) \
+	drivers/$(DEPDIR)/$(am__dirstamp)
 cdrom/$(am__dirstamp):
 	@$(MKDIR_P) cdrom
 	@: > cdrom/$(am__dirstamp)
@@ -768,6 +780,7 @@ mostlyclean-compile:
 	-rm -f cputest/cputest.$(OBJEXT)
 	-rm -f cputest/ppc_cpu.$(OBJEXT)
 	-rm -f cputest/x86_cpu.$(OBJEXT)
+	-rm -f drivers/win-resource.$(OBJEXT)
 	-rm -f resampler/resample.$(OBJEXT)
 	-rm -f string/ConvertUTF.$(OBJEXT)
 	-rm -f string/escape.$(OBJEXT)
@@ -1134,6 +1147,8 @@ distclean-generic:
 	-rm -f compress/$(am__dirstamp)
 	-rm -f cputest/$(DEPDIR)/$(am__dirstamp)
 	-rm -f cputest/$(am__dirstamp)
+	-rm -f drivers/$(DEPDIR)/$(am__dirstamp)
+	-rm -f drivers/$(am__dirstamp)
 	-rm -f resampler/$(DEPDIR)/$(am__dirstamp)
 	-rm -f resampler/$(am__dirstamp)
 	-rm -f string/$(DEPDIR)/$(am__dirstamp)
@@ -1233,6 +1248,12 @@ uninstall-am: uninstall-binPROGRAMS
 	tags tags-recursive uninstall uninstall-am \
 	uninstall-binPROGRAMS
 
+
+#
+# Resource file wasn't linking in properly when it was in an archive, so we resort to this!
+#
+@HAVE_SDL_TRUE@@WIN32_TRUE@.rc.o:
+@HAVE_SDL_TRUE@@WIN32_TRUE@	@WINDRES@ -o $@ $<
 
 #if ARCH_ARM
 #mednafen_SOURCES	+= cputest/arm_cpu.c

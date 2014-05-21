@@ -18,39 +18,46 @@
 #include "main.h"
 #include "video.h"
 #include <trio/trio.h>
+#include <algorithm>
 
-static uint32 VirtualTime[128], DrawnTime[128], BlittedTime[128];
-static uint32 VirtualIndex, DrawnIndex, BlittedIndex;
+static struct
+{
+ uint32 t;
+ uint8 mask;
+} TimeDrawn[128];
+
+static unsigned TDIndex;
 static MDFN_Surface *FPSSurface = NULL;
 static MDFN_Rect FPSRect;
+static volatile float cur_vfps, cur_dfps, cur_bfps;
+static uint8 inc_mask;
 
 void FPS_Init(void)
 {
- VirtualIndex = 0;
- DrawnIndex = 0;
- BlittedIndex = 0;
+ TDIndex = 0;
 
- memset(VirtualTime, 0, sizeof(VirtualTime));
- memset(DrawnTime, 0, sizeof(DrawnTime));
- memset(BlittedTime, 0, sizeof(BlittedTime));
+ inc_mask = 0;
+
+ cur_vfps = 0;
+ cur_dfps = 0;
+ cur_bfps = 0;
+
+ memset(TimeDrawn, 0, sizeof(TimeDrawn));
 }
 
 void FPS_IncVirtual(void)
 {
- VirtualTime[VirtualIndex] = SDL_GetTicks();
- VirtualIndex = (VirtualIndex + 1) & 127;
+ inc_mask |= 1;
 }
 
 void FPS_IncDrawn(void)
 {
- DrawnTime[DrawnIndex] = SDL_GetTicks();
- DrawnIndex = (DrawnIndex + 1) & 127;
+ inc_mask |= 2;
 }
 
 void FPS_IncBlitted(void)
 {
- BlittedTime[BlittedIndex] = SDL_GetTicks();
- BlittedIndex = (BlittedIndex + 1) & 127;
+ inc_mask |= 4;
 }
 
 static bool isactive = 0;
@@ -77,51 +84,68 @@ bool FPS_IsActive(int *w, int *h)
  return(TRUE);
 }
 
-static void CalcFramerates(char *virtfps, char *drawnfps, char *blitfps, size_t maxlen)
+void FPS_UpdateCalc(void)
 {
  uint32 curtime = SDL_GetTicks();
- uint32 vt_frames_drawn = 0, dt_frames_drawn = 0, bt_frames_drawn = 0;
- uint32 vt_mintime, dt_mintime, bt_mintime;
+ uint32 mintime = ~0U;
 
- vt_mintime = dt_mintime = bt_mintime = curtime;
+ TimeDrawn[TDIndex].t = curtime;
+ TimeDrawn[TDIndex].mask = inc_mask;
+ TDIndex = (TDIndex + 1) & 127;
+ inc_mask = 0;
+ 
+ if(!isactive)
+  return;
+
+ uint32 vt_frames_drawn = 0, dt_frames_drawn = 0, bt_frames_drawn = 0;
 
  for(int x = 0; x < 128; x++)
  {
-  uint32 vt = VirtualTime[x];
-  uint32 dt = DrawnTime[x];
-  uint32 bt = BlittedTime[x];
+  int qi = (x + TDIndex) & 127;
 
-  if(vt >= (curtime - 1000))
+  if(TimeDrawn[qi].t >= (curtime - 1000))
   {
-   if(vt < vt_mintime) vt_mintime = vt;
-   vt_frames_drawn++;
-  }
+   if(mintime != ~0U)
+   {
+    vt_frames_drawn += (bool)(TimeDrawn[qi].mask & 0x1);
+    dt_frames_drawn += (bool)(TimeDrawn[qi].mask & 0x2);
+    bt_frames_drawn += (bool)(TimeDrawn[qi].mask & 0x4);
+   }
 
-  if(dt >= (curtime - 1000))
-  {
-   if(dt < dt_mintime) dt_mintime = dt;
-   dt_frames_drawn++;
-  }
-
-  if(bt >= (curtime - 1000))
-  {
-   if(bt < bt_mintime) bt_mintime = bt;
-   bt_frames_drawn++;
+   mintime = std::min<uint32>(TimeDrawn[qi].t, mintime);
   }
  }
 
- if(curtime - vt_mintime)
-  trio_snprintf(virtfps, maxlen, "%f", (double)vt_frames_drawn * 1000 / (curtime - vt_mintime));
+ if(curtime > mintime)
+ {
+  cur_vfps = (float)vt_frames_drawn * 1000 / (curtime - mintime);
+  cur_dfps = (float)dt_frames_drawn * 1000 / (curtime - mintime);
+  cur_bfps = (float)bt_frames_drawn * 1000 / (curtime - mintime);
+ }
+ else
+ {
+  cur_vfps = 0;
+  cur_dfps = 0;
+  cur_bfps = 0;
+ }
+}
+
+static void CalcFramerates(char *virtfps, char *drawnfps, char *blitfps, size_t maxlen)
+{
+ double vf = cur_vfps, df = cur_dfps, bf = cur_bfps;
+
+ if(vf != 0)
+  trio_snprintf(virtfps, maxlen, "%f", vf);
  else
   trio_snprintf(virtfps, maxlen, "?");
 
- if(curtime - dt_mintime)
-  trio_snprintf(drawnfps, maxlen, "%f", (double)dt_frames_drawn * 1000 / (curtime - dt_mintime));
+ if(df != 0)
+  trio_snprintf(drawnfps, maxlen, "%f", df);
  else
   trio_snprintf(drawnfps, maxlen, "?");
 
- if(curtime - bt_mintime)
-  trio_snprintf(blitfps, maxlen, "%f", (double)bt_frames_drawn * 1000 / (curtime - bt_mintime));
+ if(bf != 0)
+  trio_snprintf(blitfps, maxlen, "%f", bf);
  else
   trio_snprintf(blitfps, maxlen, "?");
 }
@@ -133,9 +157,9 @@ void FPS_Draw(MDFN_Surface *target, const int xpos, const int ypos)
 
  const uint32 bg_color = target->MakeColor(0, 0, 0);
  const uint32 text_color = target->MakeColor(0xFF, 0xFF, 0xFF);
- char virtfps[64], drawnfps[64], blitfps[64];
+ char virtfps[32], drawnfps[32], blitfps[32];
 
- CalcFramerates(virtfps, drawnfps, blitfps, 64);
+ CalcFramerates(virtfps, drawnfps, blitfps, 32);
 
  MDFN_DrawFillRect(target, xpos, ypos, box_width, box_height, bg_color);
 
@@ -165,9 +189,9 @@ void FPS_DrawToScreen(SDL_Surface *screen, int rs, int gs, int bs, int as, unsig
   FPSRect.x = FPSRect.y = 0;
  }
 
- char virtfps[64], drawnfps[64], blitfps[64];
+ char virtfps[32], drawnfps[32], blitfps[32];
 
- CalcFramerates(virtfps, drawnfps, blitfps, 64);
+ CalcFramerates(virtfps, drawnfps, blitfps, 32);
 
  FPSSurface->Fill(0, 0, 0, 0x80);
 

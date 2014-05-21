@@ -263,7 +263,6 @@ static uint32 DoRealDraw(uint32 *dest, uint32 pitch, uint32 width_limit, uint32 
  return(pixwidth);
 }
 
-// FIXME/TODO: maximum text pixel width should be signed, not unsigned.
 uint32 DrawTextTrans(uint32 *dest, int pitch, uint32 width, const UTF8 *msg, uint32 fgcolor, int centered, uint32 which_font)
 {
  uint32 slen;
@@ -301,7 +300,7 @@ uint32 DrawTextTrans(uint32 *dest, int pitch, uint32 width, const UTF32 *msg, ui
 
 uint32 DrawTextTransShadow(uint32 *dest, int pitch, uint32 width, const UTF8 *textmsg, uint32 fgcolor, uint32 shadcolor, int centered, uint32 which_font)
 {
- DrawTextTrans(dest + 1 + (pitch >> 2), pitch, width, textmsg, shadcolor, centered, which_font);
+ DrawTextTrans(dest + 1 + (pitch >> 2), pitch, width ? (width - 1) : 0, textmsg, shadcolor, centered, which_font);
  return(DrawTextTrans(dest, pitch, width, textmsg, fgcolor, centered, which_font));
 }
 
@@ -309,7 +308,7 @@ uint32 DrawTextTransShadow(uint32 *dest, int pitch, uint32 width, const std::str
 {
  const char *tmp = textmsg.c_str();
 
- DrawTextTrans(dest + 1 + (pitch >> 2), pitch, width, (const UTF8 *)tmp, shadcolor, centered, which_font);
+ DrawTextTrans(dest + 1 + (pitch >> 2), pitch, width ? (width - 1) : 0, (const UTF8 *)tmp, shadcolor, centered, which_font);
  return(DrawTextTrans(dest, pitch, width, (const UTF8 *)tmp, fgcolor, centered, which_font));
 }
 

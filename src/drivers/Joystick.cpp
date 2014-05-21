@@ -37,7 +37,6 @@
 
 #ifdef WIN32
  #include "Joystick_DX5.h"
- //#include "Joystick_DX8.h"
  #include "Joystick_XInput.h"
 #endif
 

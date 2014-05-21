@@ -21,12 +21,6 @@ typedef struct {
         uint8 *NSFRawData;
         uint32 NSFRawDataSize;
 
-        /* Currently used only by the NSFE code.  All unrecognized chunks will be stuck in
-           here.
-        */
-        uint8 *NSFExtra;
-        uint32 NSFExtraSize;
-
         uint8 *NSFDATA;
         int NSFMaxBank;
         int NSFSize;

@@ -346,7 +346,6 @@ src/drivers/Joystick.cpp
 src/drivers/main.cpp
 src/drivers/console.cpp
 src/drivers/remote.cpp
-src/drivers/Joystick_DX8.cpp
 src/drivers/shader.cpp
 src/hw_video/huc6270/vdc.cpp
 src/hw_video/huc6270/backup/vdc.cpp

@@ -1110,6 +1110,8 @@ int GameLoop(void *arg)
 	    VTBackBuffer ^= 1;
 	  }
 
+	  FPS_UpdateCalc();
+
           if((InFrameAdvance && !NeedFrameAdvance) || GameLoopPaused)
 	  {
            if(ssize)

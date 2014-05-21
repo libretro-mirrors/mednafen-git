@@ -1,3 +1,42 @@
+-- 0.9.33.3: --
+
+April 16, 2014:
+	Reworked the FPS calculation algorithm to produce more accurate FPS values.
+
+	Added a manifest file that's embedded into the Windows executable, to ensure that noxious DPI virtualization and scaling available
+	on Windows Vista and newer will not be used with Mednafen.
+
+	Added code to disable DWM composition when running on pre-Windows 8 systems, to ensure better performance and less
+	video juddering.  (Sadly, it's not possible to disable desktop composition in this manner on Windows 8 and later)
+
+	PCE, PCE_FAST: Added a missing ADPCM playback variable to save states; fixes the problem of severe ADPCM sound
+	distortion when loading save states that are saved during ADPCM playback(especially noticeable with the state rewinding feature).
+
+April 15, 2014:
+	Modified MDFN_RemoveControlChars() to not kill non-7-bit-ASCII text.
+
+April 12, 2014:
+	Misc minor code cleanups and fixes for some compiler warnings.
+
+April 11, 2014:
+	NES: Fixed broken emulation of board "UNL-Sachen-8259B"(used in the game "Silver Eagle").
+
+April 10, 2014:
+	Fixed the with-drop-shadow internal text drawing routine to not draw horizontally one pixel beyond the specified maximum width
+	in some circumstances.
+
+April 9, 2014:
+	SNES: Altered a code construct to hopefully resolve a reported compiler error with clang.
+
+	Error out of save state loading when the version specified in the save state is invalid.
+
+	Call SDL_WM_SetIcon() before SDL_SetVideoMode(), to fix the problem of the missing Mednafen icon on some platforms/window
+	managers.
+
+	Fixed a minor integer overflow issue in the core PSF loading code.
+
+	NES: Fixed some problems in the ROM image file loading code, including a potential heap overflow vulnerability.
+
 -- 0.9.33.2: --
 
 March 24, 2014:
