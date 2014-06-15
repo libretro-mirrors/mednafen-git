@@ -1029,7 +1029,6 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
  *
  *  Copyright (C) 1998 BERO
  *  Copyright (C) 2002 Xodnizel
- *  Copyright (C) 2002 Paul Kuliniewicz
  *  Copyright (C) 2003 CaH4e3
  *
  * This program is free software; you can redistribute it and/or modify

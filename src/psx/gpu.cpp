@@ -543,15 +543,27 @@ INLINE void PS_GPU::Command_FBCopy(const uint32 *cb)
 
  for(int32 y = 0; y < height; y++)
  {
-  for(int32 x = 0; x < width; x++)
+  for(int32 x = 0; x < width; x += 128)
   {
-   int32 s_y = (y + sourceY) & 511;
-   int32 s_x = (x + sourceX) & 1023;
-   int32 d_y = (y + destY) & 511;
-   int32 d_x = (x + destX) & 1023;
+   const int32 chunk_x_max = std::min<int32>(width - x, 128);
+   uint16 tmpbuf[128];	// TODO: Check and see if the GPU is actually (ab)using the CLUT or texture cache.
 
-   if(!(GPURAM[d_y][d_x] & MaskEvalAND))
-    GPURAM[d_y][d_x] = GPURAM[s_y][s_x] | MaskSetOR;
+   for(int32 chunk_x = 0; chunk_x < chunk_x_max; chunk_x++)
+   {
+    int32 s_y = (y + sourceY) & 511;
+    int32 s_x = (x + chunk_x + sourceX) & 1023;
+
+    tmpbuf[chunk_x] = GPURAM[s_y][s_x];
+   }
+
+   for(int32 chunk_x = 0; chunk_x < chunk_x_max; chunk_x++)
+   {
+    int32 d_y = (y + destY) & 511;
+    int32 d_x = (x + chunk_x + destX) & 1023;
+
+    if(!(GPURAM[d_y][d_x] & MaskEvalAND))
+     GPURAM[d_y][d_x] = tmpbuf[chunk_x] | MaskSetOR;
+   }
   }
  }
 

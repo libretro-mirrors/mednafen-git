@@ -1,3 +1,9 @@
+-- 0.9.35.1: --
+
+June 5, 2014:
+	PSX: Improved accuracy of the GPU framebuffer rectangle copy command(0x80) per tests on a PS1; fixes graphical glitches in the
+	water effect of stage 4 of "Einhander".
+
 -- 0.9.35: --
 
 May 31, 2014:
