@@ -20,7 +20,9 @@
 
 #include "share.h"
 
-static int seq,ptr,bit,cnt,have;
+static int seq;
+static uint8 ptr, bit, cnt;
+static bool have;
 static uint8 bdata[20];
 
 
@@ -30,10 +32,23 @@ static uint8 Read(int w, uint8 ret)
  {
   switch(seq)
   {
-   case 0: seq++; ptr=0; ret|=0x4; break;
-   case 1: seq++; bit=bdata[ptr]; cnt=0; ret|=0x4; break;
-   case 2: ret|=((bit&0x01)^0x01)<<2; bit>>=1; if(++cnt > 7) seq++;
+   case 0: seq++;
+	   ptr=0;
+	   ret|=0x4;
 	   break;
+
+   case 1: seq++;
+	   bit=bdata[ptr];
+	   cnt=0;
+	   ret|=0x4;
+	   break;
+
+   case 2: ret|=((bit&0x01)^0x01)<<2;
+	   bit>>=1;
+	   if(++cnt > 7)
+            seq++;
+	   break;
+
    case 3: if(++ptr > 19)
 	   {
 	    seq=-1;
@@ -41,6 +56,8 @@ static uint8 Read(int w, uint8 ret)
 	   }
 	   else
 	    seq=1;
+	   break;
+
    default: break;
   }
  }
@@ -59,8 +76,8 @@ static void Update(void *data)
   *(uint8 *)data=0;
   seq=ptr=0;
   have=1;
-  strcpy((char *)bdata,(char *)data+1);
-  memcpy((char *)&bdata[13],"SUNSOFT", strlen("SUNSOFT"));
+  strncpy((char *)bdata, (char *)data+1, 13);
+  memcpy((char *)&bdata[13], "SUNSOFT", strlen("SUNSOFT"));
  }
 }
 
@@ -68,14 +85,25 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-   SFARRAY(bdata, 0x20),
-   SFEND
+  SFVAR(seq),
+  SFVAR(ptr),
+  SFVAR(bit),
+  SFVAR(cnt),
+  SFVAR(have),
+  SFARRAY(bdata, 20),
+  SFEND
  };
  int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF");
+
  if(load)
  {
-
+  if(ptr > 19)	// Sanity check.
+  {
+   have = false;
+   seq = -1;
+  }
  }
+
  return(ret);
 }
 

@@ -40,6 +40,8 @@
 #include <cdio/version.h>
 #endif
 
+#include <algorithm>
+
 #include "input.h"
 #include "Joystick.h"
 #include "video.h"
@@ -50,7 +52,6 @@
 #include "cheat.h"
 #include "fps.h"
 #include "debugger.h"
-#include "memdebugger.h"
 #include "help.h"
 #include "video-state.h"
 #include "remote.h"
@@ -111,9 +112,9 @@ static MDFNSetting_EnumList SDriver_List[] =
  { "alsa", -1, "ALSA", gettext_noop("The default for Linux(if available).") },
  { "oss", -1, "Open Sound System", gettext_noop("The default for non-Linux UN*X/POSIX/BSD systems, or anywhere ALSA is unavailable. If the ALSA driver gives you problems, you can try using this one instead.\n\nIf you are using OSSv4 or newer, you should edit \"/usr/lib/oss/conf/osscore.conf\", uncomment the max_intrate= line, and change the value from 100(default) to 1000(or higher if you know what you're doing), and restart OSS. Otherwise, performance will be poor, and the sound buffer size in Mednafen will be orders of magnitude larger than specified.\n\nIf the sound buffer size is still excessively larger than what is specified via the \"sound.buffer_time\" setting, you can try setting \"sound.period_time\" to 2666, and as a last resort, 5333, to work around a design flaw/limitation/choice in the OSS API and OSS implementation.") },
 
- { "dsound", -1, "DirectSound", gettext_noop("The default for Microsoft Windows.") },
+ { "wasapish", -1, "WASAPI(Shared Mode)", gettext_noop("The default when it's available(running on Microsoft Windows Vista and newer).") },
 
- { "wasapish", -1, "WASAPI(Shared Mode)", gettext_noop("Shared-mode WASAPI driver, usable on Windows Vista and newer.") },
+ { "dsound", -1, "DirectSound", gettext_noop("The default for Microsoft Windows XP and older.") },
 
  { "wasapi", -1, "WASAPI(Exclusive Mode)", gettext_noop("Experimental exclusive-mode WASAPI driver, usable on Windows Vista and newer.  Use it for lower-latency sound.  May not work properly on all sound cards.") },
 
@@ -391,6 +392,7 @@ static int volatile VTBackBuffer = 0;
 static MDFN_Mutex *VTMutex = NULL, *EVMutex = NULL;
 static MDFN_Mutex *StdoutMutex = NULL;
 
+static MDFN_Sem* VTWakeupSem;
 static MDFN_Surface * volatile VTReady;
 static int32 * volatile VTLWReady;
 static MDFN_Rect * volatile VTDRReady;
@@ -806,16 +808,19 @@ static int LoadGame(const char *force_module, const char *path)
         MDFND_UnlockMutex(VTMutex);
 
         if(MDFND_ThreadID() != MainThreadID)
-          while(NeedVideoChange)
-	  {
-           SDL_Delay(1);
-	  }
+        {
+	 MDFND_PostSem(VTWakeupSem);
+         while(NeedVideoChange)
+	 {
+          SDL_Delay(2);
+	 }
+        }
 	sound_active = 0;
 
         sc_blit_timesync = MDFN_GetSettingB("video.blit_timesync");
 
 	if(MDFN_GetSettingB("sound"))
-	 sound_active = InitSound(tmp);
+	 sound_active = Sound_Init(tmp);
 
         if(MDFN_GetSettingB("autosave"))
 	 MDFNI_LoadState(NULL, "mcq");
@@ -830,7 +835,7 @@ static int LoadGame(const char *force_module, const char *path)
 	if(qtrecfn)
 	{
 	// MDFNI_StartAVRecord() needs to be called after MDFNI_Load(Game/CD)
-         if(!MDFNI_StartAVRecord(qtrecfn, GetSoundRate()))
+         if(!MDFNI_StartAVRecord(qtrecfn, Sound_GetRate()))
 	 {
 	  free(qtrecfn);
 	  qtrecfn = NULL;
@@ -841,7 +846,7 @@ static int LoadGame(const char *force_module, const char *path)
 
         if(soundrecfn)
         {
- 	 if(!MDFNI_StartWAVRecord(soundrecfn, GetSoundRate()))
+ 	 if(!MDFNI_StartWAVRecord(soundrecfn, Sound_GetRate()))
          {
           free(soundrecfn);
           soundrecfn = NULL;
@@ -887,7 +892,7 @@ int CloseGame(void)
 
 	KillCommandInput();
         KillGameInput();
-	KillSound();
+	Sound_Kill();
 
 	CurGame = NULL;
 
@@ -930,7 +935,7 @@ void DebuggerFudge(void)
 	  MDFND_Update((MDFN_Surface *)VTBuffer[VTBackBuffer ^ 1], (MDFN_Rect*)&VTDisplayRects[VTBackBuffer ^ 1], (int32*)VTLineWidths[VTBackBuffer ^ 1], VTInterlaceField, NULL, 0);
 
 	  if(sound_active)
-	   WriteSoundSilence(10);
+	   Sound_WriteSilence(10);
 	  else
 	   SDL_Delay(10);
 }
@@ -988,7 +993,7 @@ int GameLoop(void *arg)
 	 while(NeedVideoChange)
 	 {
 	  if(!GameThreadRun) return(1);	// Might happen if video initialization failed
-	  SDL_Delay(1);
+	  SDL_Delay(2);
 	  }
          do
          {
@@ -1035,8 +1040,8 @@ int GameLoop(void *arg)
 	 espec.soundmultiplier = CurGameSpeed;
 	 espec.NeedRewind = DNeedRewind;
 
- 	 espec.SoundRate = GetSoundRate();
-	 espec.SoundBuf = GetEmuModSoundBuffer(&espec.SoundBufMaxSize);
+ 	 espec.SoundRate = Sound_GetRate();
+	 espec.SoundBuf = Sound_GetEmuModBuffer(&espec.SoundBufMaxSize);
  	 espec.SoundVolume = (double)MDFN_GetSettingUI("sound.volume") / 100;
 
          MDFNI_Emulate(&espec);
@@ -1247,10 +1252,13 @@ void GT_ToggleFS(void)
  MDFND_UnlockMutex(VTMutex);
 
  if(MDFND_ThreadID() != MainThreadID)
+ {
+  MDFND_PostSem(VTWakeupSem);
   while(NeedVideoChange)
   {
-   SDL_Delay(1);
+   SDL_Delay(2);
   }
+ }
 }
 
 bool GT_ReinitVideo(void)
@@ -1261,9 +1269,10 @@ bool GT_ReinitVideo(void)
 
  if(MDFND_ThreadID() != MainThreadID)
  {
+  MDFND_PostSem(VTWakeupSem);
   while(NeedVideoChange)
   {
-   SDL_Delay(1);
+   SDL_Delay(2);
   }
  }
 
@@ -1274,12 +1283,12 @@ bool GT_ReinitSound(void)
 {
  bool ret = true;
 
- KillSound();
+ Sound_Kill();
  sound_active = 0;
 
  if(MDFN_GetSettingB("sound"))
  {
-  sound_active = InitSound(CurGame);
+  sound_active = Sound_Init(CurGame);
   if(!sound_active)
    ret = false;
  }
@@ -1385,13 +1394,16 @@ void PumpWrap(void)
   }
  }
 
- MDFND_LockMutex(EVMutex);
- for(int i = 0; i < numevents; i++)
+ if(numevents > 0)
  {
-  memcpy((void *)&gtevents[gte_write], &gtevents_temp[i], sizeof(SDL_Event));
-  gte_write = (gte_write + 1) & (gtevents_size - 1);
+  MDFND_LockMutex(EVMutex);
+  for(int i = 0; i < numevents; i++)
+  {
+   memcpy((void *)&gtevents[gte_write], &gtevents_temp[i], sizeof(SDL_Event));
+   gte_write = (gte_write + 1) & (gtevents_size - 1);
+  }
+  MDFND_UnlockMutex(EVMutex);
  }
- MDFND_UnlockMutex(EVMutex);
 
  if(!CurGame)
   GameThread_HandleEvents();
@@ -1753,6 +1765,8 @@ int main(int argc, char *argv[])
 	VTMutex = MDFND_CreateMutex();
         EVMutex = MDFND_CreateMutex();
 
+	VTWakeupSem = MDFND_CreateSem();
+
 	joy_manager = new JoystickManager();
 	joy_manager->SetAnalogThreshold(MDFN_GetSettingF("analogthreshold") / 100);
 
@@ -1867,7 +1881,8 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 	  SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)(SDL_GetAppState() & SDL_APPINPUTFOCUS), NULL);
 
          MDFND_UnlockMutex(VTMutex);   /* Unlock mutex */
-         SDL_Delay(1);
+
+	 MDFND_WaitSemTimeout(VTWakeupSem, 1);
 	}
 
 	CloseGame();
@@ -1889,6 +1904,9 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 #if 0
 } // end game load test loop
 #endif
+
+	MDFND_DestroySem(VTWakeupSem);
+
 	MDFND_DestroyMutex(VTMutex);
         MDFND_DestroyMutex(EVMutex);
 
@@ -1923,35 +1941,45 @@ static void UpdateSoundSync(int16 *Buffer, int Count)
    for(int x = 0; x < Count * CurGame->soundchan; x++)
     Buffer[x] = 0;
   }
-  int32 max = GetWriteSound();
+  int32 max = Sound_CanWrite();
   if(Count > max)
   {
-   if(NoWaiting)
+   if(NoWaiting) 
+   {
+    //printf("NW C to M; count=%d, max=%d\n", Count, max);
     Count = max;
+   }
   }
   if(Count >= (max * 0.95))
   {
    ers.SetETtoRT();
   }
 
-  WriteSound(Buffer, Count);
+  Sound_Write(Buffer, Count);
 
-  //printf("%u\n", GetWriteSound());
-  if(MDFNDnetplay && GetWriteSound() >= Count * 1.00) // Cheap code to fix sound buffer underruns due to accumulation of timer error during netplay.
+  //printf("%u\n", Sound_CanWrite());
+
+  //
+  // Cheap code to fix sound buffer underruns due to accumulation of time error during netplay.
+  //
+  if(MDFNDnetplay)
   {
-   int16 zbuf[128 * 2];
+   int cw = Sound_CanWrite();
 
-   for(int x = 0; x < 128 * 2; x++)
-    zbuf[x] = 0;
-
-   int t = GetWriteSound();
-
-   while(t > 0)
+   if(cw >= Count * 1.00)
    {
-    WriteSound(zbuf, (t > 128 ? 128 : t));
-    t -= 128;
+    int16 zbuf[128 * 2];	// *2 for stereo case.
+
+    //printf("SNOO: %d %d\n", cw, Count);
+    memset(zbuf, 0, sizeof(zbuf));
+
+    while(cw > 0)
+    {
+     Sound_Write(zbuf, std::min<int>(128, cw));
+     cw -= 128;
+    }
+    ers.SetETtoRT();
    }
-   ers.SetETtoRT();
   }
  }
  else
@@ -2004,6 +2032,8 @@ static bool PassBlit(MDFN_Surface *surface, MDFN_Rect *rect, int32 *lw, int Inte
    pending_ssnapshot = 0;
    last_btime = SDL_GetTicks();
    FPS_IncBlitted();
+
+   MDFND_PostSem(VTWakeupSem);
   }
  }
 

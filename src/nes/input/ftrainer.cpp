@@ -52,7 +52,7 @@ static void FT_Write(uint8 V)
 
 static void FT_Update(void *data)
 {
- FTVal=*(uint32 *)data;
+ FTVal = MDFN_de16lsb((uint8*)data);
 }
 
 static int StateActionFC(StateMem *sm, int load, int data_only)

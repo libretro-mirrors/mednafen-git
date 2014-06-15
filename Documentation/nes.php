@@ -83,7 +83,7 @@ Custom palettes should contain 64 8-bit-per-color-component RGB triplets.
  <tr><td>12</td><td>??</td><td>Dragon Ball Z 5 ("bootleg" original)</td></tr>
  <tr><td>13</td><td>CPROM</td><td>Videomation</td></tr>
  <tr><td>15</td><td>Multi-cart(bootleg)</td><td>100-in-1: Contra Function 16</td></tr>
- <tr><td>16</td><td>Bandai ??</td><td>Dragon Ball Z, SD Gundam Gaiden **EEPROM is not emulated</td></tr>
+ <tr><td>16</td><td>Bandai ??(X24C01P EEPROM)</td><td>Dragon Ball Z 3</td></tr>
  <tr><td>17</td><td>FFE F8 Series(hacked, bootleg)</td><td></td></tr>
  <tr><td>18</td><td>Jaleco SS806</td><td>Pizza Pop, Plasma Ball</td></tr>
  <tr><td>19</td><td>Namco 106</td><td>Splatter House, Mappy Kids</td></tr>
@@ -163,6 +163,7 @@ Custom palettes should contain 64 8-bit-per-color-component RGB triplets.
  <tr><td>156</td><td>??</td><td>Buzz and Waldog</td></tr>
  <tr><td>157</td><td>Bandai Datach ??</td><td>Datach DBZ, Datach SD Gundam Wars, **EEPROM is not emulated</td></tr>
  <tr><td>158</td><td nowrap>RAMBO 1 Derivative</td><td>Alien Syndrome</td></tr>
+ <tr><td>159</td><td>Bandai ??(X24C02P EEPROM)</td><td>Magical Taruruuto-kun</td></tr>
  <tr><td>160</td><td>(same as mapper 90)</td><td>(same as mapper 90)</td></tr>
  <tr><td>180</td><td>??</td><td>Crazy Climber</td></tr>
  <tr><td>182</td><td>??</td><td>Super Donkey Kong</td></tr>

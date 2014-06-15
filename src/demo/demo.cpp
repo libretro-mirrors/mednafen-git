@@ -205,7 +205,7 @@ static void Emulate(EmulateSpecStruct* espec)
   int sc = 0;
 
   {
-   static const double phase_inc_inc = 0.000000001;
+   static const double phase_inc_inc = 0.000000002;
 
    for(int r = 0; r < hrc; r++)
    {

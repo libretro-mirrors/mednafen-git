@@ -15,13 +15,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/*
- TODO:
-
-  CDDAReadPos == 588, GetCDDAValues(), mess.
-
-*/
-
 #include <mednafen/mednafen.h>
 #include <math.h>
 #include <algorithm>
@@ -30,17 +23,15 @@
 #include "cdromif.h"
 #include "SimpleFIFO.h"
 
+#if defined(__SSE2__)
+#include <xmmintrin.h>
+#include <emmintrin.h>
+#endif
+
 #define SCSIDBG(format, ...) { printf("[SCSICD] " format "\n",  ## __VA_ARGS__); }
 //#define SCSIDBG(format, ...) { }
 
 using namespace CDUtility;
-
-static const unsigned CDDA_Filter_NumConvolutions = 7;
-
-static const int16 CDDA_Filter[1 + 256 + 1][CDDA_Filter_NumConvolutions] =
-{
- #include "scsicd_cdda_filter.inc"
-};
 
 static uint32 CD_DATA_TRANSFER_RATE;
 static uint32 System_Clock;
@@ -138,7 +129,7 @@ typedef struct
  uint32 scan_sec_end;
 
  uint8 PlayMode;
- int32 CDDAVolume[2];	// 32768 = 1.0, maximum
+ int32 CDDAVolume[2];		// 65536 = 1.0, the maximum.
  int16 CDDASectorBuffer[1176];
  uint32 CDDAReadPos;
 
@@ -147,9 +138,16 @@ typedef struct
  int64 CDDADiv;
  int CDDATimeDiv;
 
+ int16 OversampleBuffer[2][0x10 * 2];	// *2 so our MAC loop can blast through without masking the index.
+ unsigned OversamplePos;
+
+ int16 sr[2];
+
  uint8 OutPortChSelect[2];
  uint32 OutPortChSelectCache[2];
  int32 OutPortVolumeCache[2];
+
+ float DeemphState[2][2];
 } cdda_t;
 
 void MakeSense(uint8 * target, uint8 key, uint8 asc, uint8 ascq, uint8 fru)
@@ -206,7 +204,7 @@ static void FixOPV(void)
 {
  for(int port = 0; port < 2; port++)
  {
-  int32 tmpvol = cdda.CDDAVolume[port] * 100 / cdda.CDDADivAccVolFudge;
+  int32 tmpvol = cdda.CDDAVolume[port] * 100 / (2 * cdda.CDDADivAccVolFudge);
 
   //printf("TV: %d\n", tmpvol);
 
@@ -246,6 +244,10 @@ static void VirtualReset(void)
  cdda.ScanMode = 0;
  cdda.scan_sec_end = 0;
 
+ cdda.OversamplePos = 0;
+ memset(cdda.sr, 0, sizeof(cdda.sr));
+ memset(cdda.OversampleBuffer, 0, sizeof(cdda.OversampleBuffer));
+ memset(cdda.DeemphState, 0, sizeof(cdda.DeemphState));
 
  memset(cd.data_out, 0, sizeof(cd.data_out));
  cd.data_out_pos = 0;
@@ -733,10 +735,10 @@ static void UpdateMPCacheP(const ModePage* mp)
 	     // No game is known to use the CD-DA playback speed control.  It may be useful in homebrew to lower the rate for fitting more CD-DA onto the disc,
 	     // is implemented on the PC-FX in such a way that it degrades audio quality, so it wouldn't really make sense to increase the rate in homebrew.
 	     //
-	     // Due to performance considerations, we don't even try to emulate the CD-DA oversampling filters used on the PC Engine and PC-FX, and instead
+	     // Due to performance considerations, we only partially emulate the CD-DA oversampling filters used on the PC Engine and PC-FX, and instead
 	     // blast impulses into the 1.78MHz buffer, relying on the final sound resampler to kill spectrum mirrors.  This is less than ideal, but generally
-	     // works well in practice, except when lowering CD-DA playback rate...which causes the spectrum mirrors to enter the audible, non-murder zone, causing
-	     // harshness and the sound output amplitude to approach overflow levels.
+	     // works well in practice, except when lowering CD-DA playback rate...which causes the spectrum mirrors to enter the non-murder zone, causing
+	     // the sound output amplitude to approach overflow levels.
 	     // But, until there's a killer PC-FX homebrew game that necessitates more computationally-expensive CD-DA handling,
 	     // I don't see a good reason to change how CD-DA resampling is currently implemented.
 	     // 
@@ -744,7 +746,7 @@ static void UpdateMPCacheP(const ModePage* mp)
 	     rate = 44100 + 441 * speed;
 
              //printf("[SCSICD] Speed: %d(pre-clamped=%d) %d\n", speed, (int8)mp->current_value[0], rate);
-             cdda.CDDADivAcc = ((int64)System_Clock * (1024 * 1024) / rate);
+             cdda.CDDADivAcc = ((int64)System_Clock * (1024 * 1024) / (2 * rate));
 	     cdda.CDDADivAccVolFudge = 100 + speed;
 	     FixOPV();	// Resampler impulse amplitude volume adjustment(call after setting cdda.CDDADivAccVolFudge)
 	    }
@@ -2417,232 +2419,302 @@ void SCSICD_ResetTS(uint32 ts_base)
  lastts = ts_base;
 }
 
-// FIXME: pause/stopped clear clear cleaaaar?
 void SCSICD_GetCDDAValues(int16 &left, int16 &right)
 {
  if(cdda.CDDAStatus)
  {
-  left = cdda.CDDASectorBuffer[cdda.CDDAReadPos * 2 + 0];
-  right = cdda.CDDASectorBuffer[cdda.CDDAReadPos * 2 + 1];
+  left = cdda.sr[0];
+  right = cdda.sr[1];
  }
  else
   left = right = 0;
 }
 
+#define CDDA_FILTER_NUMCONVOLUTIONS		7
+#define CDDA_FILTER_NUMCONVOLUTIONS_PADDED	8
+
+#define CDDA_FILTER_NUMPHASES_SHIFT		6
+#define CDDA_FILTER_NUMPHASES	       		(1 << CDDA_FILTER_NUMPHASES_SHIFT)
+
+static const int16 CDDA_Filter[1 + CDDA_FILTER_NUMPHASES + 1][CDDA_FILTER_NUMCONVOLUTIONS_PADDED] MDFN_ALIGN(16) =
+{
+ #include "scsicd_cdda_filter.inc"
+};
+
+static const int16 OversampleFilter[2][0x10] MDFN_ALIGN(16) =
+{
+ {    -82,    217,   -463,    877,  -1562,   2783,  -5661,  29464,   9724,  -3844,   2074,  -1176,    645,   -323,    138,    -43,  }, /* sum=32768, sum_abs=59076 */
+ {    -43,    138,   -323,    645,  -1176,   2074,  -3844,   9724,  29464,  -5661,   2783,  -1562,    877,   -463,    217,    -82,  }, /* sum=32768, sum_abs=59076 */
+};
+
 static INLINE void RunCDDA(uint32 system_timestamp, int32 run_time)
 {
  if(cdda.CDDAStatus == CDDASTATUS_PLAYING || cdda.CDDAStatus == CDDASTATUS_SCANNING)
  {
-  int32 sample_va[2];
-
   cdda.CDDADiv -= (int64)run_time << 20;
 
   while(cdda.CDDADiv <= 0)
   {
-   const uint64 synthtime_ex = ((((uint64)system_timestamp << 20) + (int64)cdda.CDDADiv) / cdda.CDDATimeDiv) >> (4 + 2);
-   const int synthtime = synthtime_ex >> 16;
+   const uint32 synthtime_ex = (((uint64)system_timestamp << 20) + (int64)cdda.CDDADiv) / cdda.CDDATimeDiv;
+   const int synthtime = (synthtime_ex >> 16) & 0xFFFF;	// & 0xFFFF(or equivalent) to prevent overflowing HRBufs[]
    const int synthtime_phase = (int)(synthtime_ex & 0xFFFF) - 0x80;
-   const int synthtime_phase_int = synthtime_phase >> 8;
-   const int synthtime_phase_fract = synthtime_phase & 0xFF;
+   const int synthtime_phase_int = synthtime_phase >> (16 - CDDA_FILTER_NUMPHASES_SHIFT);
+   const int synthtime_phase_fract = synthtime_phase & ((1 << (16 - CDDA_FILTER_NUMPHASES_SHIFT)) - 1);
+   int32 sample_va[2];
 
    cdda.CDDADiv += cdda.CDDADivAcc;
 
-   //MDFN_DispMessage("%d %d %d\n", read_sec_start, read_sec, read_sec_end);
-
-   if(cdda.CDDAReadPos == 588)
+   if(!(cdda.OversamplePos & 1))
    {
-    if(read_sec >= read_sec_end || (cdda.CDDAStatus == CDDASTATUS_SCANNING && read_sec == cdda.scan_sec_end))
+    if(cdda.CDDAReadPos == 588)
     {
-     switch(cdda.PlayMode)
+     if(read_sec >= read_sec_end || (cdda.CDDAStatus == CDDASTATUS_SCANNING && read_sec == cdda.scan_sec_end))
      {
-      case PLAYMODE_SILENT:
-      case PLAYMODE_NORMAL:
-       cdda.CDDAStatus = CDDASTATUS_STOPPED;
-       break;
+      switch(cdda.PlayMode)
+      {
+       case PLAYMODE_SILENT:
+       case PLAYMODE_NORMAL:
+        cdda.CDDAStatus = CDDASTATUS_STOPPED;
+        break;
 
-      case PLAYMODE_INTERRUPT:
-       cdda.CDDAStatus = CDDASTATUS_STOPPED;
-       CDIRQCallback(SCSICD_IRQ_DATA_TRANSFER_DONE);
-       break;
+       case PLAYMODE_INTERRUPT:
+        cdda.CDDAStatus = CDDASTATUS_STOPPED;
+        CDIRQCallback(SCSICD_IRQ_DATA_TRANSFER_DONE);
+        break;
 
-      case PLAYMODE_LOOP:
-       read_sec = read_sec_start;
+       case PLAYMODE_LOOP:
+        read_sec = read_sec_start;
+        break;
+      }
+
+      // If CDDA playback is stopped, break out of our while(CDDADiv ...) loop and don't play any more sound!
+      if(cdda.CDDAStatus == CDDASTATUS_STOPPED)
        break;
      }
 
-     // If CDDA playback is stopped, break out of our while(CDDADiv ...) loop and don't play any more sound!
-     if(cdda.CDDAStatus == CDDASTATUS_STOPPED)
-      break;
-    }
-
-    // Don't play past the user area of the disc.
-    if(read_sec >= toc.tracks[100].lba)
-    {
-     cdda.CDDAStatus = CDDASTATUS_STOPPED;
-     break;
-    }
-
-    if(cd.TrayOpen)
-    {
-     cdda.CDDAStatus = CDDASTATUS_STOPPED;
-
-     #if 0
-     cd.data_transfer_done = FALSE;
-     cd.key_pending = SENSEKEY_NOT_READY;
-     cd.asc_pending = ASC_MEDIUM_NOT_PRESENT;
-     cd.ascq_pending = 0x00;
-     cd.fru_pending = 0x00;
-     SendStatusAndMessage(STATUS_CHECK_CONDITION, 0x00);
-     #endif
-
-     break;
-    }
-
-
-    cdda.CDDAReadPos = 0;
-
-    {
-     uint8 tmpbuf[2352 + 96];
-
-     Cur_CDIF->ReadRawSector(tmpbuf, read_sec);	//, read_sec_end, read_sec_start);
-
-     for(int i = 0; i < 588 * 2; i++)
-      cdda.CDDASectorBuffer[i] = MDFN_de16lsb(&tmpbuf[i * 2]);
-
-     memcpy(cd.SubPWBuf, tmpbuf + 2352, 96);
-    }
-    GenSubQFromSubPW();
-
-    if(cdda.CDDAStatus == CDDASTATUS_SCANNING)
-    {
-     int64 tmp_read_sec = read_sec;
-
-     if(cdda.ScanMode & 1)
+     // Don't play past the user area of the disc.
+     if(read_sec >= toc.tracks[100].lba)
      {
-      tmp_read_sec -= 24;
-      if(tmp_read_sec < cdda.scan_sec_end)
-       tmp_read_sec = cdda.scan_sec_end;
+      cdda.CDDAStatus = CDDASTATUS_STOPPED;
+      break;
+     }
+
+     if(cd.TrayOpen)
+     {
+      cdda.CDDAStatus = CDDASTATUS_STOPPED;
+
+      #if 0
+      cd.data_transfer_done = FALSE;
+      cd.key_pending = SENSEKEY_NOT_READY;
+      cd.asc_pending = ASC_MEDIUM_NOT_PRESENT;
+      cd.ascq_pending = 0x00;
+      cd.fru_pending = 0x00;
+      SendStatusAndMessage(STATUS_CHECK_CONDITION, 0x00);
+      #endif
+
+      break;
+     }
+
+
+     cdda.CDDAReadPos = 0;
+
+     {
+      uint8 tmpbuf[2352 + 96];
+
+      Cur_CDIF->ReadRawSector(tmpbuf, read_sec);	//, read_sec_end, read_sec_start);
+
+      for(int i = 0; i < 588 * 2; i++)
+       cdda.CDDASectorBuffer[i] = MDFN_de16lsb(&tmpbuf[i * 2]);
+
+      memcpy(cd.SubPWBuf, tmpbuf + 2352, 96);
+     }
+     GenSubQFromSubPW();
+
+     if(!(cd.SubQBuf_Last[0] & 0x10))
+     {
+      // Not using de-emphasis, so clear the de-emphasis filter state.
+      memset(cdda.DeemphState, 0, sizeof(cdda.DeemphState));
+     }
+
+     if(cdda.CDDAStatus == CDDASTATUS_SCANNING)
+     {
+      int64 tmp_read_sec = read_sec;
+
+      if(cdda.ScanMode & 1)
+      {
+       tmp_read_sec -= 24;
+       if(tmp_read_sec < cdda.scan_sec_end)
+        tmp_read_sec = cdda.scan_sec_end;
+      }
+      else
+      {
+       tmp_read_sec += 24;
+       if(tmp_read_sec > cdda.scan_sec_end)
+        tmp_read_sec = cdda.scan_sec_end;
+      }
+      read_sec = tmp_read_sec;
      }
      else
-     {
-      tmp_read_sec += 24;
-      if(tmp_read_sec > cdda.scan_sec_end)
-       tmp_read_sec = cdda.scan_sec_end;
-     }
-     read_sec = tmp_read_sec;
-    }
-    else
-     read_sec++;
-   } // End    if(CDDAReadPos == 588)
+      read_sec++;
+    } // End    if(CDDAReadPos == 588)
 
-   // If the last valid sub-Q data decoded indicate that the corresponding sector is a data sector, don't output the
-   // current sector as audio.
-   sample_va[0] = 0;
-   sample_va[1] = 0;
-
-   if(!(cd.SubQBuf_Last[0] & 0x40) && cdda.PlayMode != PLAYMODE_SILENT)
-   {
-#if 0
-    static double phase = 0;
-    static double phase_inc = 0;
-    static const double phase_inc_inc = 0.000003;
-
- #if 0
-    sample_va[0] = 32767 * 0.75 * sin(phase);
-    sample_va[1] = 32767 * 0.75 * sin(phase);
-
-    phase += phase_inc;
-    phase_inc += phase_inc_inc;
- #else
+    if(!(cdda.CDDAReadPos % 6))
     {
+     int subindex = cdda.CDDAReadPos / 6 - 2;
+
+     if(subindex >= 0)
+      CDStuffSubchannels(cd.SubPWBuf[subindex], subindex);
+     else // The system-specific emulation code should handle what value the sync bytes are.
+      CDStuffSubchannels(0x00, subindex);
+    }
+
+    // If the last valid sub-Q data decoded indicate that the corresponding sector is a data sector, don't output the
+    // current sector as audio.
+    if(!(cd.SubQBuf_Last[0] & 0x40) && cdda.PlayMode != PLAYMODE_SILENT)
+    {
+     cdda.sr[0] = cdda.CDDASectorBuffer[cdda.CDDAReadPos * 2 + cdda.OutPortChSelectCache[0]];
+     cdda.sr[1] = cdda.CDDASectorBuffer[cdda.CDDAReadPos * 2 + cdda.OutPortChSelectCache[1]];
+    }
+
+#if 0
+    {
+     static int16 wv = 0x7FFF; //0x5000;
      static unsigned counter = 0;
-     static int32 wv = 0x7000 * 1.5;
+     static double phase = 0;
+     static double phase_inc = 0;
+     static const double phase_inc_inc = 0.000003 / 2;
 
-     if(!counter)
+     cdda.sr[0] = 32767 * sin(phase);
+     cdda.sr[1] = 32767 * sin(phase);
+
+     //cdda.sr[0] = wv;
+     //cdda.sr[1] = wv;
+
+     if(counter == 0)
       wv = -wv;
-
      counter = (counter + 1) & 1;
-
-     sample_va[0] = sample_va[1] = wv;
+     phase += phase_inc;
+     phase_inc += phase_inc_inc;
     }
- #endif
+#endif
 
-    
-#else
-    // OPVC can have a maximum value of 65536, which is equivalent to 2.0.
-    // raw CD-DA samples are -32768 through 32767
-    // Output of this stage will be (max ranges) -131072 through 131068.
     {
-     int16 sr[2];
-
-     sr[0] = cdda.CDDASectorBuffer[cdda.CDDAReadPos * 2 + cdda.OutPortChSelectCache[0]];
-     sr[1] = cdda.CDDASectorBuffer[cdda.CDDAReadPos * 2 + cdda.OutPortChSelectCache[1]];
-
-#if 0
-     {
-      static int16 wv = 0x7000;
-      static unsigned counter = 0;
-
-      sr[0] = wv;
-      sr[1] = wv;
-      if(counter == 0)
-       wv = -wv;
-      counter = (counter + 1) & 1;
-     }
-#endif
-
-     sample_va[0] = (sr[0] * cdda.OutPortVolumeCache[0]) >> (15 - 1);
-     sample_va[1] = (sr[1] * cdda.OutPortVolumeCache[1]) >> (15 - 1);
+     const unsigned obwp = cdda.OversamplePos >> 1;
+     cdda.OversampleBuffer[0][obwp] = cdda.OversampleBuffer[0][0x10 + obwp] = cdda.sr[0];
+     cdda.OversampleBuffer[1][obwp] = cdda.OversampleBuffer[1][0x10 + obwp] = cdda.sr[1];
     }
-#endif
-   }
 
-   if(!(cdda.CDDAReadPos % 6))
+    cdda.CDDAReadPos++;
+   } // End if(!(cdda.OversamplePos & 1))
+
    {
-    int subindex = cdda.CDDAReadPos / 6 - 2;
+    const int16* f = OversampleFilter[cdda.OversamplePos & 1];
+#if defined(__SSE2__)
+    __m128i f0 = _mm_load_si128((__m128i *)&f[0]);
+    __m128i f1 = _mm_load_si128((__m128i *)&f[8]);
+#endif
+      
+    for(unsigned lr = 0; lr < 2; lr++)
+    {
+     const int16* b = &cdda.OversampleBuffer[lr][((cdda.OversamplePos >> 1) + 1) & 0xF];
+#if defined(__SSE2__)
+     union
+     {
+      int32 accum;
+      float accum_f;
+      //__m128i accum_m128;
+     };
 
-    if(subindex >= 0)
-     CDStuffSubchannels(cd.SubPWBuf[subindex], subindex);
-    else // The system-specific emulation code should handle what value the sync bytes are.
-     CDStuffSubchannels(0x00, subindex);
+     {
+      __m128i b0;
+      __m128i b1;
+      __m128i sum;
+
+      b0 = _mm_loadu_si128((__m128i *)&b[0]);
+      b1 = _mm_loadu_si128((__m128i *)&b[8]);
+
+      sum = _mm_add_epi32(_mm_madd_epi16(f0, b0), _mm_madd_epi16(f1, b1));
+      sum = _mm_add_epi32(sum, _mm_shuffle_epi32(sum, (3 << 0) | (2 << 2) | (1 << 4) | (0 << 6)));
+      sum = _mm_add_epi32(sum, _mm_shuffle_epi32(sum, (1 << 0) | (0 << 2) | (3 << 4) | (2 << 6)));
+      _mm_store_ss(&accum_f, (__m128)sum);
+      //_mm_store_si128(&accum_m128, sum);
+     }
+#else
+     int32 accum = 0;
+
+     for(unsigned i = 0; i < 0x10; i++)
+      accum += f[i] * b[i];
+#endif
+     // sum_abs * cdda_min =
+     // 59076 * -32768 = -1935802368
+     // OPVC can have a maximum value of 65536.
+     // -1935802368 * 65536 = -126864743989248
+     //
+     // -126864743989248 / 65536 = -1935802368
+     sample_va[lr] = ((int64)accum * cdda.OutPortVolumeCache[lr]) >> 16;
+     // Output of this stage will be (approximate max ranges) -2147450880 through 2147385345.
+    }
    }
 
    //
+   // This de-emphasis filter's frequency response isn't totally correct, but it's much better than nothing(and it's not like any known PCE CD/TG16 CD/PC-FX games
+   // utilize pre-emphasis anyway).
    //
-   //  YEAH YEAH, I know resampling like this isn't quite 100% awesome-good, as the upper part of the CD-DA spectrum is going to be mirrored on the other
-   //  side of the Nyquist frequency(we're simulating zero-stuffing style resampling, using a fairly flat-response filter for phase correction).
-   //  But it's not that big of a deal for reasons I'm too tired to elucidate at the moment!
-   //
-   //
+   if(MDFN_UNLIKELY(cd.SubQBuf_Last[0] & 0x10))
+   {
+    //puts("Deemph");
+    for(unsigned lr = 0; lr < 2; lr++)
+    {
+     float inv = sample_va[lr] * 0.35971507338824012f;
+
+     cdda.DeemphState[lr][1] = (cdda.DeemphState[lr][0] - 0.4316395666f * inv) + (0.7955522347f * cdda.DeemphState[lr][1]);
+     cdda.DeemphState[lr][0] = inv;
+
+     sample_va[lr] = std::max<float>(-2147483648.0, std::min<float>(2147483647.0, cdda.DeemphState[lr][1]));
+     //printf("%u: %f, %d\n", lr, cdda.DeemphState[lr][1], sample_va[lr]);
+    }
+   }
+
+
    if(HRBufs[0] && HRBufs[1])
    {
-    //printf("%4d %4d\n", synthtime_phase_int, synthtime_phase_fract);
-    for(unsigned ch = 0; ch < 2; ch++)
+    //
+    // FINAL_OUT_SHIFT should be 32 so we can take advantage of 32x32->64 multipliers on 32-bit CPUs.
+    //
+    #define FINAL_OUT_SHIFT 32
+    #define MULT_SHIFT_ADJ (32 - (26 + (8 - CDDA_FILTER_NUMPHASES_SHIFT)))
+
+    #if (((1 << (16 - CDDA_FILTER_NUMPHASES_SHIFT)) - 0) << MULT_SHIFT_ADJ) > 32767
+     #error "COEFF MULT OVERFLOW"
+    #endif
+
+    const int16 mult_a = ((1 << (16 - CDDA_FILTER_NUMPHASES_SHIFT)) - synthtime_phase_fract) << MULT_SHIFT_ADJ;
+    const int16 mult_b = synthtime_phase_fract << MULT_SHIFT_ADJ;
+    int32 coeff[CDDA_FILTER_NUMCONVOLUTIONS];
+
+    //if(synthtime_phase_fract == 0)
+    // printf("%5d: %d %d\n", synthtime_phase_fract, mult_a, mult_b);
+
+    for(unsigned c = 0; c < CDDA_FILTER_NUMCONVOLUTIONS; c++)
     {
-     //int32 prev = 0;
-     int32* tb = &HRBufs[ch][synthtime & 0xFFFF];
-
-     for(unsigned c = 0; c < CDDA_Filter_NumConvolutions; c++)
-     {
-      int32 coeff;
-      int32 mr;
-
-      //coeff = CDDA_Filter[1 + synthtime_phase_int + 0][c];
-      coeff = (CDDA_Filter[1 + synthtime_phase_int + 0][c] * (256 - synthtime_phase_fract) +
-              CDDA_Filter[1 + synthtime_phase_int + 1][c] * (synthtime_phase_fract)) >> 8;
-
-      // sample_va == -131072, -131072 * 16383 = -2147352576.
-
-      mr = (sample_va[ch] * coeff) >> (16 - 6 - 8 + 1);	// +1 for sample_va extra bit.
-
-      tb[c] += mr; // - prev;
-      //prev = mr;
-     }
-     //tb[CDDA_Filter_NumConvolutions] += 0 - prev;
+     coeff[c] = (CDDA_Filter[1 + synthtime_phase_int + 0][c] * mult_a + 
+		 CDDA_Filter[1 + synthtime_phase_int + 1][c] * mult_b);
     }
+
+    int32* tb0 = &HRBufs[0][synthtime];
+    int32* tb1 = &HRBufs[1][synthtime];
+
+    for(unsigned c = 0; c < CDDA_FILTER_NUMCONVOLUTIONS; c++)
+    {
+     tb0[c] += ((int64)coeff[c] * sample_va[0]) >> FINAL_OUT_SHIFT;
+     tb1[c] += ((int64)coeff[c] * sample_va[1]) >> FINAL_OUT_SHIFT;
+    }
+    #undef FINAL_OUT_SHIFT
+    #undef MULT_SHIFT_ADJ
    }
-   cdda.CDDAReadPos++;
-  }
+
+   cdda.OversamplePos = (cdda.OversamplePos + 1) & 0x1F;
+  } // end while(cdda.CDDADiv <= 0)
  }
 }
 
@@ -2846,7 +2918,20 @@ uint32 SCSICD_Run(scsicd_timestamp_t system_timestamp)
        }
        else
        {
+	bool prev_ps = (cdda.CDDAStatus == CDDASTATUS_PLAYING || cdda.CDDAStatus == CDDASTATUS_SCANNING);
+
         cmd_info_ptr->func(cd.command_buffer);
+
+	bool new_ps = (cdda.CDDAStatus == CDDASTATUS_PLAYING || cdda.CDDAStatus == CDDASTATUS_SCANNING);
+
+	// A bit kludgey, but ehhhh.
+	if(!prev_ps && new_ps)
+	{
+	 memset(cdda.sr, 0, sizeof(cdda.sr));
+	 memset(cdda.OversampleBuffer, 0, sizeof(cdda.OversampleBuffer));
+	 memset(cdda.DeemphState, 0, sizeof(cdda.DeemphState));
+	 //printf("CLEAR BUFFERS LALALA\n");
+	}
        }
 
        cd.command_buffer_pos = 0;
@@ -2974,7 +3059,7 @@ uint32 SCSICD_Run(scsicd_timestamp_t system_timestamp)
 
  if(cdda.CDDAStatus == CDDASTATUS_PLAYING || cdda.CDDAStatus == CDDASTATUS_SCANNING)
  {
-  int32 cdda_div_sexytime = (cdda.CDDADiv + ((1 << 20) - 1)) >> 20;
+  int32 cdda_div_sexytime = (cdda.CDDADiv + (cdda.CDDADivAcc * (cdda.OversamplePos & 1)) + ((1 << 20) - 1)) >> 20;
   if(cdda_div_sexytime > 0 && cdda_div_sexytime < next_time)
    next_time = cdda_div_sexytime;
  }
@@ -3022,11 +3107,12 @@ void SCSICD_Init(int type, int cdda_time_div, int32* left_hrbuf, int32* right_hr
 
  WhichSystem = type;
 
- cdda.CDDADivAcc = (int64)System_Clock * (1024 * 1024) / 44100;
+ cdda.CDDADivAcc = (int64)System_Clock * (1024 * 1024) / 88200;
  cdda.CDDADivAccVolFudge = 100;
- cdda.CDDATimeDiv = cdda_time_div;
- cdda.CDDAVolume[0] = 32768;
- cdda.CDDAVolume[1] = 32768;
+ cdda.CDDATimeDiv = cdda_time_div * (1 << (4 + 2));
+
+ cdda.CDDAVolume[0] = 65536;
+ cdda.CDDAVolume[1] = 65536;
 
  FixOPV();
 
@@ -3041,15 +3127,15 @@ void SCSICD_Init(int type, int cdda_time_div, int32* left_hrbuf, int32* right_hr
 
 void SCSICD_SetCDDAVolume(double left, double right)
 {
- cdda.CDDAVolume[0] = 32768 * left;
- cdda.CDDAVolume[1] = 32768 * right;
+ cdda.CDDAVolume[0] = 65536 * left;
+ cdda.CDDAVolume[1] = 65536 * right;
 
  for(int i = 0; i < 2; i++)
  {
-  if(cdda.CDDAVolume[i] > 32768)
+  if(cdda.CDDAVolume[i] > 65536)
   {
    printf("[SCSICD] Debug Warning: CD-DA volume %d too large: %d\n", i, cdda.CDDAVolume[i]);
-   cdda.CDDAVolume[i] = 32768;
+   cdda.CDDAVolume[i] = 65536;
   }
  }
 
@@ -3106,6 +3192,15 @@ int SCSICD_StateAction(StateMem * sm, int load, int data_only, const char *sname
   SFVAR(cdda.ScanMode),
   SFVAR(cdda.scan_sec_end),
 
+  SFVAR(cdda.OversamplePos),
+  SFARRAY16(&cdda.sr[0], sizeof(cdda.sr) / sizeof(cdda.sr[0])),
+  SFARRAY16(&cdda.OversampleBuffer[0][0], sizeof(cdda.OversampleBuffer) / sizeof(cdda.OversampleBuffer[0][0])),
+
+  SFVAR(cdda.DeemphState[0][0]),
+  SFVAR(cdda.DeemphState[0][1]),
+  SFVAR(cdda.DeemphState[1][0]),
+  SFVAR(cdda.DeemphState[1][1]),
+
   SFARRAYN(&cd.SubQBuf[0][0], sizeof(cd.SubQBuf), "SubQBufs"),
   SFARRAYN(cd.SubQBuf_Last, sizeof(cd.SubQBuf_Last), "SubQBufLast"),
   SFARRAYN(cd.SubPWBuf, sizeof(cd.SubPWBuf), "SubPWBuf"),
@@ -3133,8 +3228,13 @@ int SCSICD_StateAction(StateMem * sm, int load, int data_only, const char *sname
   din->write_pos = (din->read_pos + din->in_count) & (din->size - 1);
   //printf("%d %d %d\n", din->in_count, din->read_pos, din->write_pos);
 
+  if(load < 0x0935)
+   cdda.CDDADiv /= 2;
+
   if(cdda.CDDADiv <= 0)
    cdda.CDDADiv = 1;
+
+  cdda.OversamplePos &= 0x1F;
 
   for(int i = 0; i < NumModePages; i++)
    UpdateMPCacheP(&ModePages[i]);

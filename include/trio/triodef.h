@@ -264,6 +264,12 @@ typedef void * trio_pointer_t;
 # define TRIO_VA_END(x) va_end(x)
 #endif
 
+#if defined(TRIO_COMPILER_GCC)
+  #define TRIO_FORMATSTR(a,b,c) __attribute__ ((format (a, b, c)))
+#else
+  #define TRIO_FORMATSTR(a,b,c)
+#endif
+
 #if defined(PREDEF_STANDARD_C99) || defined(PREDEF_STANDARD_CXX)
 # define TRIO_INLINE inline
 #else

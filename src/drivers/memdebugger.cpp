@@ -48,7 +48,7 @@ bool MemDebugger::ICV_Init(const char *newcode)
  ict = iconv_open(newcode, "UTF-8");
  if((size_t)ict == (size_t)-1)
  {
-  error_string = trio_aprintf("iconv_open() error: %m", errno);
+  error_string = trio_aprintf("iconv_open() error: %m");
   error_time = SDL_GetTicks();
   return(0);
  }
@@ -56,7 +56,7 @@ bool MemDebugger::ICV_Init(const char *newcode)
  ict_to_utf8 = iconv_open("UTF-8", newcode);
  if((size_t)ict_to_utf8 == (size_t)-1)
  {
-  error_string = trio_aprintf("iconv_open() error: %m", errno);
+  error_string = trio_aprintf("iconv_open() error: %m");
   error_time = SDL_GetTicks();
   return(0);
  }
@@ -64,7 +64,7 @@ bool MemDebugger::ICV_Init(const char *newcode)
  ict_utf16_to_game = iconv_open(newcode, "UTF-16");
  if((size_t)ict_utf16_to_game == (size_t)-1)
  {
-  error_string = trio_aprintf("iconv_open() error: %m", errno);
+  error_string = trio_aprintf("iconv_open() error: %m");
   error_time = SDL_GetTicks();
   return(0);
  }
@@ -330,7 +330,7 @@ void MemDebugger::PromptFinish(const std::string &pstring)
 
 	     if(read_len != to_read)
 	     {
-	      error_string = trio_aprintf("Warning: unexpected EOF(short by %08x byte(s))", A2 - a + 1);
+	      error_string = trio_aprintf("Warning: unexpected EOF(short by %08llx byte(s))", (unsigned long long)(A2 - a + 1));
 	      error_time = SDL_GetTicks();
 	      break;
 	     }
@@ -374,7 +374,7 @@ void MemDebugger::PromptFinish(const std::string &pstring)
 
           if(result == (size_t)-1)
           {
-           error_string = trio_aprintf("iconv() error: %m", errno);
+           error_string = trio_aprintf("iconv() error: %m");
            error_time = SDL_GetTicks();
            InPrompt = None;
 	   free(utf8_string);
@@ -590,11 +590,11 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
    char ggddstr[32];
 
    if(zemod <= (1 << 16))
-    trio_snprintf(ggddstr, 32, "%04X", curpos - GoGoPowerDD[CurASpace]);
+    trio_snprintf(ggddstr, 32, "%04llX", (unsigned long long)(curpos - GoGoPowerDD[CurASpace]));
    else if(zemod <= (1 << 24))
-    trio_snprintf(ggddstr, 32, "%06X", curpos - GoGoPowerDD[CurASpace]);
+    trio_snprintf(ggddstr, 32, "%06llX", (unsigned long long)(curpos - GoGoPowerDD[CurASpace]));
    else
-    trio_snprintf(ggddstr, 32, "%08X", curpos - GoGoPowerDD[CurASpace]);
+    trio_snprintf(ggddstr, 32, "%08llX", (unsigned long long)(curpos - GoGoPowerDD[CurASpace]));
 
    DrawTextTrans(pixels + cpplen + cplen + 8, surface->pitchinpix << 2, rect->w, (UTF8*)ggddstr, MK_COLOR_A(0xFF, 0x80, 0x80, 0xFF), 0, 1);
   }

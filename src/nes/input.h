@@ -44,8 +44,8 @@ typedef struct {
 	void (*Write)(uint8 v);
         void (*Strobe)(int w);
 	void (*Update)(int w, void *data);
-	void (*SLHook)(int w, uint8 *bg, uint8 *spr, uint32 linets, int final);
-	void (*Draw)(int w, MDFN_Surface *surface);
+	void (*SLHook)(int w, uint8 *pix, uint32 linets, int final);
+	void (*Draw)(int w, uint8* pix, int pix_y);
 	int (*StateAction)(int w, StateMem *sm, int load, int data_only);
 } INPUTC;
 
@@ -54,22 +54,23 @@ typedef struct {
 	void (*Write)(uint8 v);
 	void (*Strobe)(void);
         void (*Update)(void *data);
-        void (*SLHook)(uint8 *bg, uint8 *spr, uint32 linets, int final);
-        void (*Draw)(MDFN_Surface *surface);
+        void (*SLHook)(uint8 *pix, uint32 linets, int final);
+        void (*Draw)(uint8* pix, int pix_y);
         int (*StateAction)(StateMem *sm, int load, int data_only);
 } INPUTCFC;
 
-void MDFN_DrawInput(MDFN_Surface *surface);
+void MDFN_DrawInput(uint8* pix, int pix_y);
 void MDFN_UpdateInput(void);
-void NESINPUT_Power(void);
-void NESINPUT_Init(void);
+void NESINPUT_Power(void) MDFN_COLD;
+void NESINPUT_Init(void) MDFN_COLD;
+void NESINPUT_PaletteChanged(void) MDFN_COLD;
 int NESINPUT_StateAction(StateMem *sm, int load, int data_only);
 
 extern void (*PStrobe[2])(void);
-extern void (*InputScanlineHook)(uint8 *bg, uint8 *spr, uint32 linets, int final);
+extern void (*InputScanlineHook)(uint8 *pix, uint32 linets, int final);
 
 void MDFNNES_DoSimpleCommand(int cmd);
-void MDFNNES_SetInput(int port, const char *type, void *ptr);
+void MDFNNES_SetInput(int port, const char *type, void *ptr) MDFN_COLD;
 
 extern InputInfoStruct NESInputInfo;
 

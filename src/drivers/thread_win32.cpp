@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <windows.h>
+#include <limits.h>
 
 #if 0
 typedef struct
@@ -83,6 +84,11 @@ struct MDFN_Cond
  };
 #endif
  HANDLE evt;
+};
+
+struct MDFN_Sem
+{
+ HANDLE sem;
 };
 
 struct MDFN_Mutex
@@ -295,4 +301,111 @@ int MDFND_WaitCond(MDFN_Cond* cond, MDFN_Mutex* mutex)
  }
 }
 
+int MDFND_WaitCondTimeout(MDFN_Cond* cond, MDFN_Mutex* mutex, unsigned ms)
+{
+ int ret = 0;
+
+#if 0
+ if(use_cv)
+ {
+  if(p_SleepConditionVariableCS(&cond->cv, &mutex->cs, ms) == 0)
+  {
+   fprintf(stderr, "SleepConditionVariableCS() failed.\n");
+   ret = -1;
+  }
+ }
+ else
+#endif
+ {
+  ResetEvent(cond->evt);	// Reset before unlocking mutex.
+  LeaveCriticalSection(&mutex->cs);
+
+  switch(WaitForSingleObject(cond->evt, ms))
+  {
+   case WAIT_OBJECT_0:
+	ret = 0;
+	break;
+
+   case WAIT_TIMEOUT:
+	ret = MDFND_COND_TIMEDOUT;
+	break;
+
+   default:
+	ret = -1;
+	break;
+  }
+
+  EnterCriticalSection(&mutex->cs);
+ }
+
+ return(ret);
+}
+
+//
+//
+//
+
+MDFN_Sem* MDFND_CreateSem(void)
+{
+ MDFN_Sem* ret;
+
+ if(!(ret = (MDFN_Sem*)calloc(1, sizeof(MDFN_Sem))))
+ {
+  fprintf(stderr, "Error allocating memory for semaphore.");
+  return(NULL);
+ }
+
+ if(!(ret->sem = CreateSemaphore(NULL, 0, INT_MAX, NULL)))
+ {
+  fprintf(stderr, "CreateSemaphore() failed.\n");
+  free(ret);
+  return(NULL);
+ }
+
+ return(ret);
+}
+
+void MDFND_DestroySem(MDFN_Sem* sem)
+{
+ CloseHandle(sem->sem);
+ sem->sem = NULL;
+ free(sem);
+}
+
+int MDFND_PostSem(MDFN_Sem* sem)
+{
+ if(ReleaseSemaphore(sem->sem, 1, NULL) != 0)
+  return(0);
+ else
+  return(-1);
+}
+
+int MDFND_WaitSem(MDFN_Sem* sem)
+{
+ if(WaitForSingleObject(sem->sem, INFINITE) == WAIT_OBJECT_0)
+  return(0);
+ else
+  return(-1);
+}
+
+int MDFND_WaitSemTimeout(MDFN_Sem* sem, unsigned ms)
+{
+ int ret = 0;
+
+ switch(WaitForSingleObject(sem->sem, ms))
+ {
+   case WAIT_OBJECT_0:
+	ret = 0;
+	break;
+
+   case WAIT_TIMEOUT:
+	ret = MDFND_SEM_TIMEDOUT;
+	break;
+
+   default:
+	ret = -1;
+	break;
+ }
+ return(ret);
+}
 

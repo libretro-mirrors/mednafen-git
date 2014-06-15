@@ -49,7 +49,6 @@ static void Power(CartInfo *info)
  Sync();
  setchr8(0);
  setprg16(0xc000, 0xF);
- setprg8r(0x10, 0x6000, 0);
 }
 
 static int StateAction(StateMem *sm, int load, int data_only)
@@ -73,7 +72,7 @@ int Mapper71_Init(CartInfo *info)
 {
  info->Power = Power;
  info->StateAction = StateAction;
- SetReadHandler(0x6000, 0xFFFF, CartBR);
+ SetReadHandler(0x8000, 0xFFFF, CartBR);
  SetWriteHandler(0x6000, 0x7FFF, CartBW);
  SetWriteHandler(0xC000, 0xFFFF, WriteHi);
 

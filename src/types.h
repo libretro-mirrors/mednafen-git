@@ -74,7 +74,7 @@ typedef uint64_t uint64;
   #endif
 
   #define MDFN_ALIGN(n)	__attribute__ ((aligned (n)))
-  #define MDFN_FORMATSTR(a,b,c) __attribute__ ((format (a, b, c)));
+  #define MDFN_FORMATSTR(a,b,c) __attribute__ ((format (a, b, c)))
   #define MDFN_WARN_UNUSED_RESULT __attribute__ ((warn_unused_result))
   #define MDFN_NOWARN_UNUSED __attribute__((unused))
 

@@ -19,7 +19,6 @@
 
 #include <mednafen/mednafen.h>
 #include <mednafen/cdrom/cdromif.h>
-#include <mednafen/netplay.h>
 #include <trio/trio.h>
 #include <vector>
 #include <math.h>
@@ -303,7 +302,6 @@ static void Emulate(EmulateSpecStruct *espec)
    static const int lobes = 2;
    static const int oversample_shift = 5;	// Don't increase without resolving integer overflow issues.
    static const int oversample = 1 << oversample_shift;
-   static const int oversample_mo = oversample - 1;
 
    for(int i = 0; i < 588; i++)
    { 
@@ -363,7 +361,7 @@ static void Emulate(EmulateSpecStruct *espec)
    else if(toc.disc_type != 0x00)
     disctype_string = "(unknown type)";
 
-   trio_snprintf(tmpbuf, 256, "Disc: %d/%d %s", AudioTrackList[CurrentATLI].disc + 1, cdifs->size(), disctype_string);
+   trio_snprintf(tmpbuf, 256, "Disc: %d/%d %s", AudioTrackList[CurrentATLI].disc + 1, (int)cdifs->size(), disctype_string);
    DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
    pixels += 13 * espec->surface->pitch32;
 
@@ -484,8 +482,8 @@ static void DoSimpleCommand(int cmd)
 {
  switch(cmd)
  {
-  case MDFNNPCMD_POWER:
-  case MDFNNPCMD_RESET: break;
+  case MDFN_MSC_POWER:
+  case MDFN_MSC_RESET: break;
  }
 }
 

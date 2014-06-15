@@ -58,6 +58,7 @@ void MDFND_MidSync(const EmulateSpecStruct *espec);
 struct MDFN_Thread;
 struct MDFN_Mutex;
 struct MDFN_Cond;	// mmm condiments
+struct MDFN_Sem;
 
 MDFN_Thread *MDFND_CreateThread(int (*fn)(void *), void *data);
 void MDFND_WaitThread(MDFN_Thread *thread, int *status);
@@ -72,9 +73,21 @@ int MDFND_UnlockMutex(MDFN_Mutex *mutex);
 MDFN_Cond* MDFND_CreateCond(void) MDFN_COLD;
 void MDFND_DestroyCond(MDFN_Cond* cond) MDFN_COLD;
 
+/* MDFND_SignalCond() *MUST* be called with a lock on the mutex used with MDFND_WaitCond() or MDFND_WaitCondTimeout() */
 int MDFND_SignalCond(MDFN_Cond* cond);
 int MDFND_WaitCond(MDFN_Cond* cond, MDFN_Mutex* mutex);
 
+#define MDFND_COND_TIMEDOUT	1
+int MDFND_WaitCondTimeout(MDFN_Cond* cond, MDFN_Mutex* mutex, unsigned ms);
+
+
+MDFN_Sem* MDFND_CreateSem(void);
+void MDFND_DestroySem(MDFN_Sem* sem);
+
+int MDFND_WaitSem(MDFN_Sem* sem);
+#define MDFND_SEM_TIMEDOUT	1
+int MDFND_WaitSemTimeout(MDFN_Sem* sem, unsigned ms);
+int MDFND_PostSem(MDFN_Sem* sem);
 //
 // End threading support.
 //
@@ -104,6 +117,17 @@ int MDFNI_NetplayStart(void);
 
 /* Emulates a frame. */
 void MDFNI_Emulate(EmulateSpecStruct *espec);
+
+#if 0
+/* Support function for scaling multiple-horizontal-resolution frames to a single width; mostly intended for unofficial ports.
+   The driver code really ought to handle multi-horizontal-resolution frames natively and properly itself, however.
+
+   WARNING: If you use this function, you'll need to create the video surface with a width of something like:
+	std::max<int32>(fb_width, lcm_width)
+   instead of just fb_width, otherwise you'll get memory corruption/crashes.
+*/
+void MDFNI_AutoScaleMRFrame(EmulateSpecStruct *espec);
+#endif
 
 /* Closes currently loaded game */
 void MDFNI_CloseGame(void);

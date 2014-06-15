@@ -71,45 +71,45 @@ TRIO_CONST char *trio_strerror TRIO_PROTO((int));
  * Print Functions
  */
 
-int trio_printf TRIO_PROTO((TRIO_CONST char *format, ...));
+int trio_printf TRIO_PROTO((TRIO_CONST char *format, ...)) TRIO_FORMATSTR(gnu_printf, 1, 2);
 int trio_vprintf TRIO_PROTO((TRIO_CONST char *format, va_list args));
 int trio_printfv TRIO_PROTO((TRIO_CONST char *format, void **args));
 
-int trio_fprintf TRIO_PROTO((FILE *file, TRIO_CONST char *format, ...));
+int trio_fprintf TRIO_PROTO((FILE *file, TRIO_CONST char *format, ...)) TRIO_FORMATSTR(gnu_printf, 2, 3);
 int trio_vfprintf TRIO_PROTO((FILE *file, TRIO_CONST char *format, va_list args));
 int trio_fprintfv TRIO_PROTO((FILE *file, TRIO_CONST char *format, void **args));
 
-int trio_dprintf TRIO_PROTO((int fd, TRIO_CONST char *format, ...));
+int trio_dprintf TRIO_PROTO((int fd, TRIO_CONST char *format, ...)) TRIO_FORMATSTR(gnu_printf, 2, 3);
 int trio_vdprintf TRIO_PROTO((int fd, TRIO_CONST char *format, va_list args));
 int trio_dprintfv TRIO_PROTO((int fd, TRIO_CONST char *format, void **args));
 
 int trio_cprintf TRIO_PROTO((trio_outstream_t stream, trio_pointer_t closure,
-			     TRIO_CONST char *format, ...));
+			     TRIO_CONST char *format, ...)) TRIO_FORMATSTR(gnu_printf, 3, 4);
 int trio_vcprintf TRIO_PROTO((trio_outstream_t stream, trio_pointer_t closure,
 			      TRIO_CONST char *format, va_list args));
 int trio_cprintfv TRIO_PROTO((trio_outstream_t stream, trio_pointer_t closure,
 			      TRIO_CONST char *format, void **args));
 
-int trio_sprintf TRIO_PROTO((char *buffer, TRIO_CONST char *format, ...));
+int trio_sprintf TRIO_PROTO((char *buffer, TRIO_CONST char *format, ...)) TRIO_FORMATSTR(gnu_printf, 2, 3);
 int trio_vsprintf TRIO_PROTO((char *buffer, TRIO_CONST char *format, va_list args));
 int trio_sprintfv TRIO_PROTO((char *buffer, TRIO_CONST char *format, void **args));
 
-int trio_snprintf TRIO_PROTO((char *buffer, size_t max, TRIO_CONST char *format, ...));
+int trio_snprintf TRIO_PROTO((char *buffer, size_t max, TRIO_CONST char *format, ...)) TRIO_FORMATSTR(gnu_printf, 3, 4);
 int trio_vsnprintf TRIO_PROTO((char *buffer, size_t bufferSize, TRIO_CONST char *format,
 		   va_list args));
 int trio_snprintfv TRIO_PROTO((char *buffer, size_t bufferSize, TRIO_CONST char *format,
 		   void **args));
 
-int trio_snprintfcat TRIO_PROTO((char *buffer, size_t max, TRIO_CONST char *format, ...));
+int trio_snprintfcat TRIO_PROTO((char *buffer, size_t max, TRIO_CONST char *format, ...)) TRIO_FORMATSTR(gnu_printf, 3, 4);
 int trio_vsnprintfcat TRIO_PROTO((char *buffer, size_t bufferSize, TRIO_CONST char *format,
                       va_list args));
 
 #if defined(TRIO_DEPRECATED)
-char *trio_aprintf TRIO_PROTO((TRIO_CONST char *format, ...));
+char *trio_aprintf TRIO_PROTO((TRIO_CONST char *format, ...)) TRIO_FORMATSTR(gnu_printf, 1, 2);
 char *trio_vaprintf TRIO_PROTO((TRIO_CONST char *format, va_list args));
 #endif
 
-int trio_asprintf TRIO_PROTO((char **ret, TRIO_CONST char *format, ...));
+int trio_asprintf TRIO_PROTO((char **ret, TRIO_CONST char *format, ...)) TRIO_FORMATSTR(gnu_printf, 2, 3);
 int trio_vasprintf TRIO_PROTO((char **ret, TRIO_CONST char *format, va_list args));
 int trio_asprintfv TRIO_PROTO((char **result, TRIO_CONST char *format, trio_pointer_t * args));
 

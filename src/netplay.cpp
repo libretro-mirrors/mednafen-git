@@ -29,6 +29,9 @@
 #include <math.h>
 #include <trio/trio.h>
 
+#include <vector>
+#include <list>
+
 #include "netplay.h"
 #include "netplay-driver.h"
 #include "general.h"
@@ -44,10 +47,10 @@ int MDFNnetplay=0;
 
 static char *OurNick = NULL;
 
-static bool Joined = 0;
+static bool Joined = false;
 static uint32 LocalPlayersMask = 0;
-static uint32 TotalInputStateSize = 0;
 static uint32 LocalInputStateSize = 0;
+static uint32 TotalInputStateSize = 0;
 
 static void NetError(const char *format, ...)
 {
@@ -94,25 +97,74 @@ void MDFNI_NetplayStop(void)
 	else puts("Check your code!");
 }
 
+struct login_data_t
+{
+ uint8 gameid[16];
+ uint8 password[16];
+
+ uint8 protocol_version;
+ uint8 total_controllers;
+ uint8 padding0[2];
+
+ uint8 emu_name_len[4];			// Length of emulator name and version string(up to 64 bytes) - (note that any non-0
+					// bytes < 0x20 in this string will be replaced by 0x20).
+
+ uint8 padding1[8];
+
+ uint8 controller_data_size[16];
+
+ uint8 padding3[16];
+
+ uint8 controller_type[16];
+
+ uint8 local_players;
+};
+
+#if 0
+// WIP, mostly just ideas now, nothing to justify implementing it.
+struct p4_login_data_t
+{
+ uint8 magic[16];		// MEDNAFEN_NETPLAY
+ uint8 protocol_version[4];	// uint32
+
+ //
+ //
+ //
+ uint8 password[16];		//
+ uint8 nickname[256];		//
+
+ //
+ //
+ //
+ uint8 game_id[32];
+ uint8 emu_id[256];
+
+ uint8 total_controllers;	// Total number of controllers(max 32)
+ uint8 controller_type[32];
+ uint8 controller_data_size[32];
+ uint8 local_controllers;	// Number of local controllers.
+};
+#endif
+
 int NetplayStart(const char *PortDeviceCache[16], const uint32 PortDataLenCache[16])
 {
- uint8 *sendbuf;
- uint32 sblen;
- const char *emu_id = PACKAGE " " MEDNAFEN_VERSION;
- const uint32 local_players = MDFN_GetSettingUI("netplay.localplayers");
- const std::string nickname = MDFN_GetSettingS("netplay.nick");
- const std::string game_key = MDFN_GetSettingS("netplay.gamekey");
- const std::string connect_password = MDFN_GetSettingS("netplay.password");
-
- MDFNnetplay = true;
-
  try
  {
-  sblen = 4 + 16 + 16 + 64 + 1 + nickname.size() + strlen(emu_id);
-  sendbuf = (uint8 *)malloc(sblen);
-  memset(sendbuf, 0, sblen);
+  const char *emu_id = PACKAGE " " MEDNAFEN_VERSION;
+  const uint32 local_players = MDFN_GetSettingUI("netplay.localplayers");
+  const std::string nickname = MDFN_GetSettingS("netplay.nick");
+  const std::string game_key = MDFN_GetSettingS("netplay.gamekey");
+  const std::string connect_password = MDFN_GetSettingS("netplay.password");
+  login_data_t *ld = NULL;
+  std::vector<uint8> sendbuf;
 
-  MDFN_en32lsb(sendbuf, sblen - 4);
+  MDFNnetplay = true;
+
+  sendbuf.resize(4 + sizeof(login_data_t) + nickname.size() + strlen(emu_id));
+
+  MDFN_en32lsb(&sendbuf[0], sendbuf.size() - 4);
+  ld = (login_data_t*)&sendbuf[4];
+
   if(game_key != "")
   {
    md5_context md5;
@@ -122,10 +174,10 @@ int NetplayStart(const char *PortDeviceCache[16], const uint32 PortDataLenCache[
    md5.update(MDFNGameInfo->MD5, 16);
    md5.update((uint8 *)game_key.c_str(), game_key.size());
    md5.finish(md5out);
-   memcpy(sendbuf + 4, md5out, 16);
+   memcpy(ld->gameid, md5out, 16);
   }
   else
-   memcpy(sendbuf + 4, MDFNGameInfo->MD5, 16);
+   memcpy(ld->gameid, MDFNGameInfo->MD5, 16);
 
   if(connect_password != "")
   {
@@ -135,26 +187,23 @@ int NetplayStart(const char *PortDeviceCache[16], const uint32 PortDataLenCache[
    md5.starts();
    md5.update((uint8*)connect_password.c_str(), connect_password.size());
    md5.finish(md5out);
-   memcpy(sendbuf + 4 + 16, md5out, 16);
+   memcpy(ld->password, md5out, 16);
   }
 
   assert(MDFNGameInfo->InputInfo->InputPorts <= 16);
 
-  uint8 *extra = sendbuf + 4 + 16 + 16;
-
-  extra[0] = 3; // Protocol version
+  ld->protocol_version = 3;
 
   // Set input device number thingies here.
-  extra[1] = MDFNGameInfo->InputInfo->InputPorts; // Total number of ports
+  ld->total_controllers = MDFNGameInfo->InputInfo->InputPorts; // Total number of ports
 
-  // The size of the giganto string with the controller types
-  MDFN_en32lsb(&extra[4], strlen(emu_id));
+  MDFN_en32lsb(ld->emu_name_len, strlen(emu_id));
 
-  // 16-31, controller data sizes
+  // Controller data sizes.
   for(int x = 0; x < MDFNGameInfo->InputInfo->InputPorts; x++)
-   extra[16 + x] = PortDataLenCache[x];
+   ld->controller_data_size[x] = PortDataLenCache[x];
 
-  // 48-63, controller data types
+  // Controller types
   for(int x = 0; x < MDFNGameInfo->InputInfo->InputPorts; x++)
   {
    unsigned ct = 0;
@@ -169,18 +218,39 @@ int NetplayStart(const char *PortDeviceCache[16], const uint32 PortDataLenCache[
    }
    //printf("%d, 0x%02x\n", x, ct);
 
-   extra[48 + x] = ct;
+   ld->controller_type[x] = ct;
   }
 
-
-  sendbuf[4 + 16 + 16 + 64] = local_players;
+  ld->local_players = local_players;
 
   if(nickname != "")
-   memcpy(sendbuf + 4 + 16 + 16 + 64 + 1, nickname.c_str(), nickname.size());
+   memcpy(&sendbuf[4 + sizeof(login_data_t)], nickname.c_str(), nickname.size());
 
-  memcpy(sendbuf + 4 + 16 + 16 + 64 + 1 + nickname.size(), emu_id, strlen(emu_id));
+  memcpy(&sendbuf[4 + sizeof(login_data_t) + nickname.size()], emu_id, strlen(emu_id));
 
-  MDFND_SendData(sendbuf, sblen);
+  MDFND_SendData(&sendbuf[0], sendbuf.size());
+
+  TotalInputStateSize = 0;
+  for(int x = 0; x < MDFNGameInfo->InputInfo->InputPorts; x++)
+    TotalInputStateSize += PortDataLenCache[x];
+
+  // Hack so the server can always encode its command data length properly(a matching "hack" exists in the server).
+  if(TotalInputStateSize < 4)
+   TotalInputStateSize = 4;
+
+  TotalInputStateSize = TotalInputStateSize;
+
+  LocalPlayersMask = 0;
+  LocalInputStateSize = 0; 
+  Joined = false;
+
+  //
+  //
+  //
+  MDFN_FlushGameCheats(0);	/* Save our pre-netplay cheats. */
+
+  if(MDFNMOV_IsPlaying())		/* Recording's ok during netplay, playback is not. */
+   MDFNMOV_Stop();
  }
  catch(std::exception &e)
  {
@@ -188,29 +258,12 @@ int NetplayStart(const char *PortDeviceCache[16], const uint32 PortDataLenCache[
   return(false);
  }
 
- TotalInputStateSize = 0;
- for(int x = 0; x < MDFNGameInfo->InputInfo->InputPorts; x++)
-   TotalInputStateSize += PortDataLenCache[x];
-
- // Hack so the server can always encode its command data length properly(a matching "hack" exists in the server).
- if(TotalInputStateSize < 4)
-  TotalInputStateSize = 4;
-
- LocalPlayersMask = 0;
- LocalInputStateSize = 0; 
- Joined = 0;
-
- MDFN_FlushGameCheats(0);	/* Save our pre-netplay cheats. */
-
- if(MDFNMOV_IsPlaying())		/* Recording's ok during netplay, playback is not. */
-  MDFNMOV_Stop();
-
  //printf("%d\n", TotalInputStateSize);
 
  return(1);
 }
 
-static void SendCommand(uint8 cmd, uint32 len)
+static void SendCommand(uint8 cmd, uint32 len, const void* data = NULL)
 {
  uint8 buf[1 + LocalInputStateSize + 4]; // Command, unused, command length
 
@@ -219,6 +272,14 @@ static void SendCommand(uint8 cmd, uint32 len)
  buf[0] = cmd;
  MDFN_en32lsb(&buf[1 + LocalInputStateSize], len);
  MDFND_SendData(buf,LocalInputStateSize + 1 + 4);
+
+ if(data != NULL)
+ {
+  MDFND_SendData(data, len);
+ }
+
+ //DelayBuffer.push_back(std::vector<uint8>());
+ //DelayBuffer.
 }
 
 bool NetplaySendCommand(uint8 cmd, uint32 len)
@@ -304,10 +365,8 @@ void MDFNI_NetplayPing(void)
 
   now_time = MDFND_GetTime();
 
-  SendCommand(MDFNNPCMD_ECHO, sizeof(now_time));
-
   // Endianness doesn't matter, since it will be echoed back only to us.
-  MDFND_SendData(&now_time, sizeof(now_time));
+  SendCommand(MDFNNPCMD_ECHO, sizeof(now_time), &now_time);
  }
  catch(std::exception &e)
  {
@@ -337,9 +396,7 @@ void MDFNI_NetplayText(const uint8 *text)
 
   len = strlen((char *)text);
 
-  SendCommand(MDFNNPCMD_TEXT, len);
-
-  MDFND_SendData(text,len);
+  SendCommand(MDFNNPCMD_TEXT, len, text);
  }
  catch(std::exception &e)
  {
@@ -357,9 +414,7 @@ void MDFNI_NetplayChangeNick(UTF8 *newnick)
 
   len = strlen((char *)newnick);
 
-  SendCommand(MDFNNPCMD_SETNICK, len);
-
-  MDFND_SendData(newnick, len);
+  SendCommand(MDFNNPCMD_SETNICK, len, newnick);
  }
  catch(std::exception &e)
  {
@@ -371,8 +426,7 @@ void MDFNI_NetplayQuit(const char *quit_message)
 {
  try
  {
-  SendCommand(MDFNNPCMD_QUIT, strlen(quit_message));
-  MDFND_SendData(quit_message, strlen(quit_message));
+  SendCommand(MDFNNPCMD_QUIT, strlen(quit_message), quit_message);
  }
  catch(std::exception &e)
  {
@@ -406,8 +460,7 @@ static int SendIntegrity(void)
  // printf("%02x", digest[i]);
  //puts("");
 
- SendCommand(MDFNNPCMD_INTEGRITY_RES, 16);
- MDFND_SendData(digest, 16);
+ SendCommand(MDFNNPCMD_INTEGRITY_RES, 16, digest);
 
  return(1);
 }
@@ -432,8 +485,7 @@ static void SendState(void)
  compress2((Bytef *)&cbuf[0] + 4, &clen, (Bytef *)sm.data, sm.len, 7);
  free(sm.data);
 
- SendCommand(MDFNNPCMD_LOADSTATE, clen + 4);
- MDFND_SendData(&cbuf[0], clen + 4);
+ SendCommand(MDFNNPCMD_LOADSTATE, clen + 4, &cbuf[0]);
 }
 
 static void RecvState(const uint32 clen)
@@ -526,55 +578,14 @@ void NetplaySendState(void)
  }
 }
 
-void NetplayUpdate(const char **PortDNames, void *PortData[], uint32 PortLen[], int NumPorts)
+static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const char **PortDNames, void *PortData[], uint32 PortLen[], int NumPorts)
 {
- uint8 buf[TotalInputStateSize + 1];
-
-//
-//
-try
-{
- if(Joined)
- {
-  uint8 outgoing_buffer[1 + LocalInputStateSize];
-  bool Taken[NumPorts];
-
-  memset(Taken, 0, sizeof(Taken));
-
-  outgoing_buffer[0] = 0; // This is not a command, duh!
-
-  int wpos = 1;
-
-  for(int x = 0; x < NumPorts; x++)
-  {
-   if(LocalPlayersMask & (1 << x))
-   {
-
-    for(int n = 0; n <= x; n++)
-    {
-     if(!Taken[n] && !strcmp(PortDNames[n], PortDNames[x]))
-     {
-      memcpy(outgoing_buffer + wpos, PortData[n], PortLen[n]);
-      Taken[n] = TRUE;
-      wpos += PortLen[n];
-      break;
-     }
-    }
-
-   }
-  }
-  MDFND_SendData(outgoing_buffer, 1 + LocalInputStateSize);
- }
-
- do
- {
-  MDFND_RecvData(buf, TotalInputStateSize + 1);
-
-  switch(buf[TotalInputStateSize])
+  switch(cmd)
   {
    case 0: break; // No command
 
-   default: MDFN_DoSimpleCommand(buf[TotalInputStateSize]);break;
+   default: MDFN_DoSimpleCommand(cmd);
+	    break;
 
    case MDFNNPCMD_INTEGRITY:
 			SendIntegrity();
@@ -585,7 +596,7 @@ try
 	  	 	break;
 
    case MDFNNPCMD_LOADSTATE:
-			RecvState(MDFN_de32lsb(buf));
+			RecvState(raw_len);
 			MDFN_DispMessage(_("Remote state loaded."));
 			break;
 
@@ -594,7 +605,7 @@ try
 			 static const uint32 MaxLength = 2000;
                          uint8 neobuf[MaxLength + 1];
                          char *textbuf = NULL;
-                         const uint32 totallen = MDFN_de32lsb(buf);
+                         const uint32 totallen = raw_len;
 
                          if(totallen > MaxLength) // Sanity check
                          {
@@ -612,7 +623,7 @@ try
 
    case MDFNNPCMD_ECHO:
 			{
-                         uint32 totallen = MDFN_de32lsb(buf);
+                         uint32 totallen = raw_len;
 			 uint64 then_time;
 			 uint64 now_time;
 
@@ -626,7 +637,7 @@ try
 			 now_time = MDFND_GetTime();
 
                          char *textbuf = NULL;
-			 trio_asprintf(&textbuf, _("*** Round-trip time: %llu ms"), now_time - then_time);
+			 trio_asprintf(&textbuf, _("*** Round-trip time: %llu ms"), (unsigned long long)(now_time - then_time));
                          MDFND_NetplayText((UTF8*)textbuf, FALSE);
                          free(textbuf);
 			}
@@ -636,7 +647,7 @@ try
 			{
 			 static const uint32 MaxLength = 2000;
 			 uint8 neobuf[MaxLength + 1];
-			 const uint32 totallen = MDFN_de32lsb(buf);
+			 const uint32 totallen = raw_len;
                          uint32 nicklen;
                          bool NetEcho = false;
                          char *textbuf = NULL;
@@ -689,7 +700,7 @@ try
                          uint8 neobuf[MaxLength + 1];
                          uint8 *newnick;
                          char *textbuf = NULL;
-			 const uint32 len = MDFN_de32lsb(buf);
+			 const uint32 len = raw_len;
 
                          if(len > MaxLength) // Sanity check
                          {
@@ -727,7 +738,7 @@ try
 
     case MDFNNPCMD_CTRL_CHANGE:
 			{
-			 const uint32 len = MDFN_de32lsb(buf);
+			 const uint32 len = raw_len;
 
 			 //
                          // Joined = true;
@@ -747,7 +758,7 @@ try
 
    case MDFNNPCMD_CTRLR_SWAP_NOTIF:
 			{
-			 const uint32 cm = MDFN_de32lsb(buf);
+			 const uint32 cm = raw_len;
 			 char textbuf[512];
 
 			 trio_snprintf(textbuf, sizeof(textbuf), _("* All instances of controllers %u and %u have been swapped."), ((cm & 0xFF) + 1), ((cm >> 8) & 0xFF) + 1);
@@ -762,7 +773,7 @@ try
 			 static const uint32 MaxNicknameLength = 1000;
 			 static const uint32 MaxLength = 12 + MaxNicknameLength;
 			 const char *fstr = NULL;
-			 const uint32 len = MDFN_de32lsb(buf);
+			 const uint32 len = raw_len;
 			 uint8 ntf_buf[MaxLength + 1];
 			 char *textbuf = NULL;
 
@@ -775,7 +786,7 @@ try
 			 MDFND_RecvData(ntf_buf, len);
 			 ntf_buf[len] = 0;
 
- 	 	 	 switch(buf[TotalInputStateSize])
+ 	 	 	 switch(cmd)
 			 {
 			  case MDFNNPCMD_CTRLR_TAKE_NOTIF:
 			  	fstr = _("* <%s> took all instances of %s, and is now %s.");
@@ -805,7 +816,7 @@ try
                          char *textbuf = NULL;
 			 uint32 mps;
                          std::string mps_string;
-	                 const uint32 len = MDFN_de32lsb(buf);
+			 const uint32 len = raw_len;
 
 			 if(len < 8)
 			 {
@@ -824,14 +835,14 @@ try
 
 			 mps_string = GenerateMPSString(mps);
 
-			 if(buf[TotalInputStateSize] == MDFNNPCMD_YOULEFT)
+			 if(cmd == MDFNNPCMD_YOULEFT)
 			 {
 			  // Uhm, not supported yet!
 			  LocalPlayersMask = 0;
 			  LocalInputStateSize = 0;
 			  Joined = FALSE;
 			 }
-			 else if(buf[TotalInputStateSize] == MDFNNPCMD_YOUJOINED)
+			 else if(cmd == MDFNNPCMD_YOUJOINED)
 			 {
 			  if(OurNick) // This shouldn't happen, really...
 			  {
@@ -842,18 +853,18 @@ try
 
                           trio_asprintf(&textbuf, _("* You, %s, have connected as: %s"), neobuf + 8, mps_string.c_str());
 
-			  LocalInputStateSize = 0;
 			  LocalPlayersMask = mps;
-
+			  LocalInputStateSize = 0;
 			  for(int x = 0; x < MDFNGameInfo->InputInfo->InputPorts; x++)
 			  {
-			   if(LocalPlayersMask & (1 << x))
+			   if(LocalPlayersMask & (1U << x))
 			    LocalInputStateSize += PortLen[x];
 			  }
 			  Joined = TRUE;
+
 			  SendCommand(MDFNNPCMD_SETFPS, MDFNGameInfo->fps);
 			 }
-			 else if(buf[TotalInputStateSize] == MDFNNPCMD_PLAYERLEFT)
+			 else if(cmd == MDFNNPCMD_PLAYERLEFT)
 			 {
                                   trio_asprintf(&textbuf, _("* %s(%s) has left"), neobuf + 8, mps_string.c_str());
 			 }
@@ -866,24 +877,80 @@ try
 			}
 			break;
   }
- } while(buf[TotalInputStateSize]);
-
- int rpos = 0;
- for(int x = 0; x < NumPorts; x++)
- {
-  //printf("%d %d\n", x, PortLen[x]);
-  //memset(PortData[x], 0, PortLen[x]);
-  memcpy(PortData[x], buf + rpos, PortLen[x]);
-  rpos += PortLen[x];
- }
 }
-catch(std::exception &e)
+
+void NetplayUpdate(const char **PortDNames, void *PortData[], uint32 PortLen[], int NumPorts)
 {
- NetError("%s", e.what());
-}
-//
-//
+ uint8 buf[TotalInputStateSize + 1];
 
+ try
+ {
+  //
+  //
+  //
+  if(Joined)
+  {
+   uint8 outgoing_buffer[1 + LocalInputStateSize];
+   bool Taken[NumPorts];
+
+   memset(Taken, 0, sizeof(Taken));
+
+   outgoing_buffer[0] = 0; // This is not a command, duh!
+
+   int wpos = 1;
+
+   for(int x = 0; x < NumPorts; x++)
+   {
+    if(LocalPlayersMask & (1 << x))
+    {
+     for(int n = 0; n <= x; n++)
+     {
+      if(!Taken[n] && !strcmp(PortDNames[n], PortDNames[x]))
+      {
+       memcpy(outgoing_buffer + wpos, PortData[n], PortLen[n]);
+       Taken[n] = TRUE;
+       wpos += PortLen[n];
+       break;
+      }
+     }
+    }
+   }
+   MDFND_SendData(outgoing_buffer, 1 + LocalInputStateSize);
+  }
+  //
+  //
+  //
+  uint8 cmd;
+  uint32 cmd_raw_len;
+
+  do
+  {
+   MDFND_RecvData(buf, TotalInputStateSize + 1);
+
+   cmd = buf[TotalInputStateSize];
+   cmd_raw_len = MDFN_de32lsb(&buf[0]);
+
+   if(cmd != 0)
+    ProcessCommand(cmd, cmd_raw_len, PortDNames, PortData, PortLen, NumPorts);
+  } while(cmd != 0);
+
+  //
+  // Update local port data buffers with data received.
+  //
+  {
+   unsigned rpos = 0;
+
+   for(int x = 0; x < NumPorts; x++)
+   {
+    memcpy(PortData[x], buf + rpos, PortLen[x]);
+    rpos += PortLen[x];
+   }
+  }
+ }
+ catch(std::exception &e)
+ {
+  NetError("%s", e.what());
+ }
 }
 
 

@@ -30,7 +30,7 @@ typedef struct {
 
 static ZAPPER ZD[2];
 
-static void ZapperFrapper(int w, uint8 *bg, uint8 *spr, uint32 linets, int final)
+static void ZapperFrapper(int w, uint8 *bg, uint32 linets, int final)
 {
  int xs,xe;
  int zx,zy;
@@ -38,7 +38,9 @@ static void ZapperFrapper(int w, uint8 *bg, uint8 *spr, uint32 linets, int final
  xs=linets;
  xe=final;
 
- if(xe > 256) xe = 256;
+ if(xe > 256)
+  xe = 256;
+
  zx=ZD[w].mzx;
  zy=ZD[w].mzy;
 
@@ -50,10 +52,9 @@ static void ZapperFrapper(int w, uint8 *bg, uint8 *spr, uint32 linets, int final
     uint32 sum;
     if(xs<=(zx+4) && xs>=(zx-4))
     {
-     a1=bg[xs];
-     a1 &= 0x3F;
-
+     a1 = bg[xs] & 0x3F;
      sum = ActiveNESPalette[a1].r + ActiveNESPalette[a1].g + ActiveNESPalette[a1].b;
+
      if(sum>=100*3)
      {
       ZD[w].zaphit = timestampbase + timestamp;
@@ -104,24 +105,22 @@ static uint8 ReadZapper(int w)
                 return ret;
 }
 
-static void DrawZapper(int w, MDFN_Surface *surface)
+static void DrawZapper(int w, uint8* pix, int pix_y)
 {
- MDFN_DrawGunSight(surface, ZD[w].mzx, ZD[w].mzy);
+ NESCURSOR_DrawGunSight(w, pix, pix_y, ZD[w].mzx, ZD[w].mzy);
 }
 
 static void UpdateZapper(int w, void *data)
 {
  uint8 *data_8 = (uint8 *)data;
- uint32 new_x = (int32)MDFN_de32lsb(data_8 + 0) >> 16;
- uint32 new_y = (int32)MDFN_de32lsb(data_8 + 4) >> 16;
- uint8 new_b = *(uint8 *)(data_8 + 8);
-
- NESPPU_TranslateMouseXY(new_x, new_y);
+ uint32 new_x = (int16)MDFN_de16lsb(data_8 + 0);
+ uint32 new_y = (int16)MDFN_de16lsb(data_8 + 2);
+ uint8 new_b = *(uint8 *)(data_8 + 4);
 
  if(ZD[w].bogo)
   ZD[w].bogo--;
 
- if(new_b&3 && (!(ZD[w].mzb&3)))
+ if((new_b&3) && (!(ZD[w].mzb&3)))
   ZD[w].bogo=5;
 
  ZD[w].mzx = new_x;

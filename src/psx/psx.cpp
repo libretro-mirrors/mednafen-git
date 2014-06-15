@@ -997,9 +997,9 @@ static void PSX_Power(void)
 }
 
 
-void PSX_GPULineHook(const pscpu_timestamp_t timestamp, const pscpu_timestamp_t line_timestamp, bool vsync, uint32 *pixels, const MDFN_PixelFormat* const format, const unsigned width, const unsigned pix_clock_offset, const unsigned pix_clock)
+void PSX_GPULineHook(const pscpu_timestamp_t timestamp, const pscpu_timestamp_t line_timestamp, bool vsync, uint32 *pixels, const MDFN_PixelFormat* const format, const unsigned width, const unsigned pix_clock_offset, const unsigned pix_clock, const unsigned pix_clock_divider)
 {
- FIO->GPULineHook(timestamp, line_timestamp, vsync, pixels, format, width, pix_clock_offset, pix_clock);
+ FIO->GPULineHook(timestamp, line_timestamp, vsync, pixels, format, width, pix_clock_offset, pix_clock, pix_clock_divider);
 }
 
 }
@@ -1433,36 +1433,7 @@ static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
 
  DMA_Init();
 
- if(region == REGION_EU)
- {
-  EmulatedPSX.lcm_width = 2800;
-  EmulatedPSX.lcm_height = (sle + 1 - sls) * 2; //576;
-
-  EmulatedPSX.nominal_width = 377;	// Dunno. :(
-  EmulatedPSX.nominal_height = sle + 1 - sls; //288;
-
-  EmulatedPSX.fb_width = 768;
-  EmulatedPSX.fb_height = 576;
-
-  EmulatedPSX.fps = 836203078;
-
-  MDFNGameInfo->VideoSystem = VIDSYS_PAL;
- }
- else
- {
-  EmulatedPSX.lcm_width = 2800;
-  EmulatedPSX.lcm_height = (sle + 1 - sls) * 2; //480;
-
-  EmulatedPSX.nominal_width = 320;
-  EmulatedPSX.nominal_height = sle + 1 - sls; //240;
-
-  EmulatedPSX.fb_width = 768;
-  EmulatedPSX.fb_height = 480;
-
-  EmulatedPSX.fps = 1005643085;
-
-  MDFNGameInfo->VideoSystem = VIDSYS_NTSC;
- }
+ GPU->FillVideoParams(&EmulatedPSX);
 
  if(cdifs)
  {

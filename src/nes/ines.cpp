@@ -77,18 +77,18 @@ static int iNES_StateAction(StateMem *sm, int load, int data_only)
   SFARRAY(WRAM, WRAM ? 8192 : 0),
   SFEND
  };
+ int ret = 1;
 
  if(NESIsVSUni)
-  if(!MDFNNES_VSUNIStateAction(sm,load, data_only))
-   return(0);
+  ret &= MDFNNES_VSUNIStateAction(sm,load, data_only);
 
  if(head.ROM_type & 8 || !VROM_size)
-  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, "iNES"))
-   return(0);
+  ret &= MDFNSS_StateAction(sm, load, data_only, StateRegs, "iNES");
 
- if(iNESCart.StateAction)
-  return(iNESCart.StateAction(sm, load, data_only));
- return(1);
+ if(iNESCart.StateAction)	// Call after loading/saving VS Uni and iNES sections.
+  ret &= iNESCart.StateAction(sm, load, data_only);
+
+ return(ret);
 }
 static void iNESFree(void)
 {
@@ -390,51 +390,56 @@ static void CheckHInfo(void)
 
  static uint64 savie[]=
         {
-         0x498c10dc463cfe95LL,  /* Battle Fleet */
-         0x6917ffcaca2d8466LL,  /* Famista '90 */
+	 0x58abd7c8990c4e25ULL, /* Taito Grand Prix - Eikou e no License */
+	 0x82000965f04a71bbULL, /* Mirai Shinwa Jarvas */
+	 0x38ed9483242b252dULL, /* Honoo no Toukyuuji - Dodge Danpei 2 */
+	 0x01c6be88b105e2dbULL,	/* Barcode World */
 
-         0xd63dcc68c2b20adcLL,    /* Final Fantasy J */
-         0x012df596e2b31174LL,    /* Final Fantasy 1+2 */
-         0xf6b359a720549ecdLL,    /* Final Fantasy 2 */
-         0x5a30da1d9b4af35dLL,    /* Final Fantasy 3 */
+         0x498c10dc463cfe95ULL,  /* Battle Fleet */
+         0x6917ffcaca2d8466ULL,  /* Famista '90 */
 
-         0x2ee3417ba8b69706LL,  /* Hydlide 3*/
+         0xd63dcc68c2b20adcULL,    /* Final Fantasy J */
+         0x012df596e2b31174ULL,    /* Final Fantasy 1+2 */
+         0xf6b359a720549ecdULL,    /* Final Fantasy 2 */
+         0x5a30da1d9b4af35dULL,    /* Final Fantasy 3 */
 
-         0xebbce5a54cf3ecc0LL,  /* Justbreed */
+         0x2ee3417ba8b69706ULL,  /* Hydlide 3*/
 
-         0x6a858da551ba239eLL,  /* Kaijuu Monogatari */
-         0xa40666740b7d22feLL,  /* Mindseeker */
+         0xebbce5a54cf3ecc0ULL,  /* Justbreed */
 
-         0x77b811b2760104b9LL,    /* Mouryou Senki Madara */
+         0x6a858da551ba239eULL,  /* Kaijuu Monogatari */
+         0xa40666740b7d22feULL,  /* Mindseeker */
 
-         0x11b69122efe86e8cLL,  /* RPG Jinsei Game */
+         0x77b811b2760104b9ULL,    /* Mouryou Senki Madara */
 
-         0xa70b495314f4d075LL,  /* Ys 3 */
+         0x11b69122efe86e8cULL,  /* RPG Jinsei Game */
+
+         0xa70b495314f4d075ULL,  /* Ys 3 */
 
 
-         0xc04361e499748382LL,  /* AD&D Heroes of the Lance */
-         0xb72ee2337ced5792LL,  /* AD&D Hillsfar */
-         0x2b7103b7a27bd72fLL,  /* AD&D Pool of Radiance */
+         0xc04361e499748382ULL,  /* AD&D Heroes of the Lance */
+         0xb72ee2337ced5792ULL,  /* AD&D Hillsfar */
+         0x2b7103b7a27bd72fULL,  /* AD&D Pool of Radiance */
 
-         0x854d7947a3177f57LL,    /* Crystalis */
+         0x854d7947a3177f57ULL,    /* Crystalis */
 
-         0xb0bcc02c843c1b79LL,  /* DW */
-         0x4a1f5336b86851b6LL,  /* DW */
+         0xb0bcc02c843c1b79ULL,  /* DW */
+         0x4a1f5336b86851b6ULL,  /* DW */
 
-         0x2dcf3a98c7937c22LL,  /* DW 2 */
-         0x733026b6b72f2470LL,  /* Dw 3 */
-         0x98e55e09dfcc7533LL,  /* DW 4*/
-         0x8da46db592a1fcf4LL,  /* Faria */
-         0x91a6846d3202e3d6LL,  /* Final Fantasy */
-         0xedba17a2c4608d20LL,  /* ""           */
+         0x2dcf3a98c7937c22ULL,  /* DW 2 */
+         0x733026b6b72f2470ULL,  /* Dw 3 */
+         0x98e55e09dfcc7533ULL,  /* DW 4*/
+         0x8da46db592a1fcf4ULL,  /* Faria */
+         0x91a6846d3202e3d6ULL,  /* Final Fantasy */
+         0xedba17a2c4608d20ULL,  /* ""           */
 
-         0x94b9484862a26cbaLL,    /* Legend of Zelda */
-         0x04a31647de80fdabLL,    /*      ""      */
+         0x94b9484862a26cbaULL,    /* Legend of Zelda */
+         0x04a31647de80fdabULL,    /*      ""      */
 
-         0x9aa1dc16c05e7de5LL,    /* Startropics */
-         0x1b084107d0878bd0LL,    /* Startropics 2*/
+         0x9aa1dc16c05e7de5ULL,    /* Startropics */
+         0x1b084107d0878bd0ULL,    /* Startropics 2*/
 
-         0x836c0ff4f3e06e45LL,    /* Zelda 2 */
+         0x836c0ff4f3e06e45ULL,    /* Zelda 2 */
 
          0                      /* Abandon all hope if the game has 0 in the lower 64-bits of its MD5 hash */
         };
@@ -861,6 +866,7 @@ static const BMAPPING bmap[] = {
 	{ 156, Mapper156_Init, 0},
 	{ 157, Mapper157_Init, 0},
 	{ 158, Mapper158_Init, 0},
+        { 159, Mapper159_Init, 0 },
         { 160, Mapper90_Init, 0},
 	{ 163, Mapper163_Init, 0 },
 	{ 180, Mapper180_Init, 0},

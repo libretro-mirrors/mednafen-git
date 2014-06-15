@@ -330,33 +330,41 @@ static bool TestMagic(MDFNFILE *fp)
 
 static void SetCDSettings(bool silent_status = false)
 {
+ double cdpsgvolume;
  PCECD_Settings cd_settings;
  memset(&cd_settings, 0, sizeof(PCECD_Settings));
 
+ cdpsgvolume = (double)MDFN_GetSettingUI("pce.cdpsgvolume") / 100;
  cd_settings.CDDA_Volume = (double)MDFN_GetSettingUI("pce.cddavolume") / 100;
  cd_settings.ADPCM_Volume = (double)MDFN_GetSettingUI("pce.adpcmvolume") / 100;
  cd_settings.ADPCM_ExtraPrecision = MDFN_GetSettingB("pce.adpcmextraprec");
 
- PCECD_SetSettings(&cd_settings);
+#if 0
+ if(IsHES)
+ {
+  double new_cdpsgvolume = 1.0 / 0.678;
+
+  if(new_cdpsgvolume > cdpsgvolume)
+  {
+   cd_settings.ADPCM_Volume *= new_cdpsgvolume / (cdpsgvolume ? cdpsgvolume : 1.0);
+   cd_settings.ADPCM_Volume = std::min<double>(cd_settings.ADPCM_Volume, 2.0);
+   cdpsgvolume = new_cdpsgvolume;
+  }
+ }
+#endif
 
  if(!silent_status)
  {
-  if(cd_settings.CDDA_Volume != 1.0)
+  if(cd_settings.CDDA_Volume != 1.0 || cd_settings.ADPCM_Volume != 1.0 || cdpsgvolume != 1.0)
+  {
    MDFN_printf(_("CD-DA Volume: %d%%\n"), (int)(100 * cd_settings.CDDA_Volume));
-
-  if(cd_settings.ADPCM_Volume != 1.0)
    MDFN_printf(_("ADPCM Volume: %d%%\n"), (int)(100 * cd_settings.ADPCM_Volume));
+   MDFN_printf(_("CD PSG Volume: %d%%\n"), (int)(100 * cdpsgvolume));
+  }
  }
 
-
- unsigned int cdpsgvolume = MDFN_GetSettingUI("pce.cdpsgvolume");
-
- if(cdpsgvolume != 100)
- {
-  MDFN_printf(_("CD PSG Volume: %d%%\n"), cdpsgvolume);
- }
-
- psg->SetVolume(0.678 * cdpsgvolume / 100);
+ PCECD_SetSettings(&cd_settings);
+ psg->SetVolume(0.678 * cdpsgvolume);
 }
 
 static void CDSettingChanged(const char *name)

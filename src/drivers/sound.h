@@ -3,16 +3,15 @@
 
 bool Sound_NeedReInit(void);
 
-bool InitSound(MDFNGI *gi);
-void WriteSound(int16 *Buffer, int Count);
-void WriteSoundSilence(int ms);
-bool KillSound(void);
-uint32 GetMaxSound(void);
-uint32 GetWriteSound(void);
-void SilenceSound(int s);
+bool Sound_Init(MDFNGI *gi);
+void Sound_Write(int16 *Buffer, int Count);
+void Sound_WriteSilence(int ms);
+bool Sound_Kill(void);
 
-int16 *GetEmuModSoundBuffer(int32 *max_size);
+uint32 Sound_CanWrite(void);
 
-double GetSoundRate(void);
+int16 *Sound_GetEmuModBuffer(int32 *max_size);
+
+double Sound_GetRate(void);
 
 #endif

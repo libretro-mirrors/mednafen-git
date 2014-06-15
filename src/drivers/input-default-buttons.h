@@ -98,18 +98,12 @@ static const ButtConfig WSwanPadConfig[12] =
 };
 
 
-static const ButtConfig powerpadsc[2][12]={
-                              {
-                                MK(o),MK(p),MK(LEFTBRACKET),MK(RIGHTBRACKET),
-                                MK(k),MK(l),MK(SEMICOLON),MK(QUOTE),
-                                MK(m),MK(COMMA),MK(PERIOD),MK(SLASH)
-                              },
-                              {
-                                MK(o),MK(p),MK(LEFTBRACKET),MK(RIGHTBRACKET),
-                                MK(k),MK(l),MK(SEMICOLON),MK(QUOTE),
-                                MK(m),MK(COMMA),MK(PERIOD),MK(SLASH)
-                              }
-                             };
+static const ButtConfig PowerPadConfig[12] =
+{
+ MK(o),MK(p),MK(LEFTBRACKET),MK(RIGHTBRACKET),
+ MK(k),MK(l),MK(SEMICOLON),MK(QUOTE),
+ MK(m),MK(COMMA),MK(PERIOD),MK(SLASH)
+};
 
 static const ButtConfig fkbmap[0x48]=
 {
@@ -160,6 +154,16 @@ static ButtConfig ArkanoidConfig[2] =
 
  { BUTTC_MOUSE, 0, 0, 0 },
 };
+
+static ButtConfig ShadowConfig[4] =
+{
+ { BUTTC_MOUSE, 0, 0x8000, 0 },
+ { BUTTC_MOUSE, 0, 0x8001, 0 },
+
+ { BUTTC_MOUSE, 0, 0, 0 },
+ { BUTTC_MOUSE, 0, 2, 0 },
+};
+
 
 static ButtConfig NESZapperConfig[4] =
 {
@@ -513,11 +517,10 @@ static DefaultSettingsMeow defset[] =
  { "nes.input.port3.gamepad", NESGamePadConfig[2], sizeof(NESGamePadConfig[2]) / sizeof(ButtConfig) },
  { "nes.input.port4.gamepad", NESGamePadConfig[3], sizeof(NESGamePadConfig[3]) / sizeof(ButtConfig) },
 
-
- { "nes.input.port1.powerpada", powerpadsc[0], sizeof(powerpadsc[0]) / sizeof(ButtConfig) },
- { "nes.input.port2.powerpada", powerpadsc[1], sizeof(powerpadsc[1]) / sizeof(ButtConfig) },
- { "nes.input.port3.powerpadb", powerpadsc[0], sizeof(powerpadsc[0]) / sizeof(ButtConfig) },
- { "nes.input.port4.powerpadb", powerpadsc[1], sizeof(powerpadsc[1]) / sizeof(ButtConfig) },
+ { "nes.input.port1.powerpada", PowerPadConfig, sizeof(PowerPadConfig) / sizeof(ButtConfig) },
+ { "nes.input.port2.powerpada", PowerPadConfig, sizeof(PowerPadConfig) / sizeof(ButtConfig) },
+ { "nes.input.port1.powerpadb", PowerPadConfig, sizeof(PowerPadConfig) / sizeof(ButtConfig) },
+ { "nes.input.port2.powerpadb", PowerPadConfig, sizeof(PowerPadConfig) / sizeof(ButtConfig) },
 
  { "nes.input.port1.zapper", NESZapperConfig, sizeof(NESZapperConfig) / sizeof(ButtConfig) },
  { "nes.input.port2.zapper", NESZapperConfig, sizeof(NESZapperConfig) / sizeof(ButtConfig) },
@@ -531,6 +534,8 @@ static DefaultSettingsMeow defset[] =
  { "nes.input.fcexp.partytap", PartyTapButtons, sizeof(PartyTapButtons) / sizeof(ButtConfig) },
 
  { "nes.input.fcexp.oekakids", OekaKidsConfig, sizeof(OekaKidsConfig) / sizeof(ButtConfig) },
+
+ { "nes.input.fcexp.shadow", ShadowConfig, sizeof(ShadowConfig) / sizeof(ButtConfig) },
 
  { "nes.input.port1.arkanoid", ArkanoidConfig, sizeof(ArkanoidConfig) / sizeof(ArkanoidConfig) },
  { "nes.input.port2.arkanoid", ArkanoidConfig, sizeof(ArkanoidConfig) / sizeof(ArkanoidConfig) },

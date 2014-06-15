@@ -1,15 +1,36 @@
+/* Mednafen - Multi-system Emulator
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
 #include <inttypes.h>
 
-typedef struct
+#include <vector>
+#include <string>
+
+struct SexyAL_DriverInfo
 {
-        int type;
-        const char *name;
-	const char *short_name;
-} SexyAL_enumtype;
+	// Pointers to statically-allocated strings, DO NOT FREE.
+	const char* short_name;
+	const char* name;
+	int type;
+};
 
 typedef struct
 {
@@ -147,16 +168,6 @@ typedef struct __SexyAL_enumdevice
         struct __SexyAL_enumdevice *next;
 } SexyAL_enumdevice;
 
-typedef struct
-{
-	int type;
-	const char *name;
-	const char *short_name;
-
-	SexyAL_device * (*Open)(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
-	SexyAL_enumdevice *(*EnumerateDevices)(void);
-} SexyAL_driver;
-
 enum
 {
  SEXYAL_TYPE_OSSDSP = 0x001,
@@ -180,18 +191,27 @@ enum
  SEXYAL_TYPE_DUMMY = 0x1FF
 };
 
-typedef struct __SexyAL {
-        SexyAL_device * (*Open)(struct __SexyAL *, const char *id, SexyAL_format *, SexyAL_buffering *buffering, int type);
-	SexyAL_enumdevice *(*EnumerateDevices)(struct __SexyAL *, int type);
+class SexyAL
+{
+	public:
 
-	SexyAL_enumtype * (*EnumerateTypes)(struct __SexyAL *);
-	void (*Destroy)(struct __SexyAL *);
-} SexyAL;
+	SexyAL();
+	~SexyAL();
 
-/* Initializes the library, requesting the interface of the version specified and output type. */
-void *SexyAL_Init(int version);
+	SexyAL_device* Open(const char *id, SexyAL_format *, SexyAL_buffering *buffering, int type);
 
+	SexyAL_enumdevice* EnumerateDevices(int type);
 
+	//
+	// Returns a list(vector :p) describing drivers that are compiled-in.
+	//
+	std::vector<SexyAL_DriverInfo> GetDriverList(void);
+
+	//
+	// To find the default driver, set name to NULL or "default"
+	//
+	bool FindDriver(SexyAL_DriverInfo* out_di, const char* name);
+};
 
 /* Utility functions: */
 uint32_t SexyAL_rupow2(uint32_t v);

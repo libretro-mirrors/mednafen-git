@@ -20,17 +20,16 @@
 
 #include        "share.h"
 
-typedef struct {
+struct SPACE_SHADOW
+{
         uint32 mzx,mzy,mzb;
-        int zap_readbit;
         int bogo;
-        int zappo;
         uint64 zaphit;
-} ZAPPER;
+};
 
-static ZAPPER ZD;
+static SPACE_SHADOW ZD;
 
-static void ZapperFrapper(uint8 *bg, uint8 *spr, uint32  linets, int final)
+static void ShadowLinehook(uint8 *bg, uint32 linets, int final)
 {
  int xs,xe;   
  int zx,zy;
@@ -43,50 +42,43 @@ static void ZapperFrapper(uint8 *bg, uint8 *spr, uint32  linets, int final)
  
  if(xe>256) xe=256;
  
- if(scanline>=(zy-4) && scanline<=(zy+4))
+ if(scanline>=(zy-6) && scanline<=(zy+6))
  {
+  int32 sum = 0;
+
   while(xs<xe)
   {
-    uint8 a1,a2;
-    uint32 sum;
-    if(xs<=(zx+4) && xs>=(zx-4))
+   uint8 a1;
+   if(xs<=(zx+7) && xs>=(zx-7))
+   {
+    a1=bg[xs] & 0x3F;
+    sum += (((ActiveNESPalette[a1].r+ActiveNESPalette[a1].g+ActiveNESPalette[a1].b) << 8) - sum) >> 2;
+
+    if(sum >= 256 * 220*3)
     {
-     a1=bg[xs];
-     if(spr)
-     {
-      a2=spr[xs];  
- 
-      if(!(a2&0x80))
-       if(!(a2&0x40) || (a1&64))
-        a1=a2; 
-     }
-     a1&=63;
- 
-     sum=ActiveNESPalette[a1].r+ActiveNESPalette[a1].g+ActiveNESPalette[a1].b;
-     if(sum>=100*3)
-     {
-      ZD.zaphit=timestampbase + timestamp;
-      goto endo;
-     }
+     //puts("K");
+     ZD.zaphit=timestampbase + timestamp;
+     goto endo;
     }
+   }
    xs++;
-  }  
+  }
  }
- endo:
- ZD.zappo=final;
+ endo: ;
 }
 
 static INLINE int CheckColor(void)
 { 
  MDFNPPU_LineUpdate();
  
- if((ZD.zaphit+10)>=(timestampbase+timestamp)) return(0);
+ if((ZD.zaphit+10)>=(timestampbase+timestamp) && !(ZD.mzb & 0x2))
+  return(0);
  
  return(1);   
 }
 
 
-static uint8 ReadZapper(int w, uint8 ret)
+static uint8 ReadShadow(int w, uint8 ret)
 {
 		if(w)
 		{
@@ -98,40 +90,35 @@ static uint8 ReadZapper(int w, uint8 ret)
 		}
 		else
 		{
-		 //printf("Kayo: %d\n",ZD.zap_readbit);
 		 ret&=~2;
-		 //if(ZD.zap_readbit==4) ret|=ZD.mzb&2;
 		 ret|=(ret&1)<<1;
-		 //ZD.zap_readbit++;
 		}
                 return ret;
 }
 
-static void DrawZapper(MDFN_Surface *surface)
+static void DrawShadow(uint8 *pix, int pix_y)
 {
-  MDFN_DrawGunSight(surface, ZD.mzx, ZD.mzy);
+ NESCURSOR_DrawGunSight(1, pix, pix_y, ZD.mzx, ZD.mzy);
 }
 
-static void UpdateZapper(void *data)
+static void UpdateShadow(void *data)
 {
   uint8 *ptr=(uint8*)data;
 
   if(ZD.bogo)
    ZD.bogo--;
 
-  if(ptr[8]&7 && (!(ZD.mzb&7)))
+  if((ptr[4] & 0x3) && !(ZD.mzb & 0x3))
    ZD.bogo=5;
 
-  ZD.mzx = (int32)MDFN_de32lsb(ptr + 0) >> 16;
-  ZD.mzy = (int32)MDFN_de32lsb(ptr + 4) >> 16;
-  ZD.mzb=ptr[8];
-
-  NESPPU_TranslateMouseXY(ZD.mzx, ZD.mzy);
+  ZD.mzx = (int16)MDFN_de16lsb(ptr + 0);
+  ZD.mzy = (int16)MDFN_de16lsb(ptr + 2);
+  ZD.mzb=ptr[4];
 }
 
 static void StrobeShadow(void)
 {
- ZD.zap_readbit=0;
+
 }
 
 static int StateActionFC(StateMem *sm, int load, int data_only)
@@ -153,11 +140,11 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-static INPUTCFC SHADOWC={ReadZapper,0,StrobeShadow,UpdateZapper,ZapperFrapper, DrawZapper, StateActionFC };
+static INPUTCFC SHADOWC = { ReadShadow, 0, StrobeShadow, UpdateShadow, ShadowLinehook, DrawShadow, StateActionFC };
 
 INPUTCFC *MDFN_InitSpaceShadow(void)
 {
-  memset(&ZD,0,sizeof(ZAPPER));
+  memset(&ZD, 0, sizeof(SPACE_SHADOW));
   return(&SHADOWC);
 }
 

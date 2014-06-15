@@ -1,3 +1,6 @@
+#ifndef __MDFN_NES_INPUT_SHARE_H
+#define __MDFN_NES_INPUT_SHARE_H
+
 #include "../nes.h"
 #include "../input.h"
 #include "../ppu/ppu.h"
@@ -5,5 +8,6 @@
 #include "../ppu/palette.h"
 #include <mednafen/endian.h>
 
-void MDFN_DrawCursor(MDFN_Surface *surface, int xc, int yc);
-void MDFN_DrawGunSight(MDFN_Surface *surface, int xc, int yc);
+#include "cursor.h"
+
+#endif

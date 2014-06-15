@@ -15,10 +15,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/*
- Noise emulation is almost certainly wrong wrong wrong.  Testing on a real system is needed to determine LFSR(assuming it uses an LFSR) taps.
-*/
-
 #include "wswan.h"
 #include "sound.h"
 #include "v30mz.h"
@@ -169,12 +165,10 @@ void WSwan_SoundUpdate(void)
    period_counter[ch] -= run_time;
    while(period_counter[ch] <= 0)
    {
-    // Yay, random numbers, so let's use totally wrong numbers to make them!
-    const int bstab1[8] = { 14, 13, 12, 14, 12, 13, 14, 14 };
-    const int bstab2[8] = { 13, 12,  9, 12,  1,  1,  5, 11 };
-    //const int bstab1[8] = { 14, 13, 12, 14, 10, 9, 8, 13 };
-    //const int bstab2[8] = { 13, 12, 9, 12, 1, 6, 4, 11 };
-    nreg = (~((nreg << 1) | ( ((nreg >> bstab1[noise_control & 0x7]) & 1) ^ ((nreg >> bstab2[noise_control & 0x7]) & 1)))) & 0x7FFF;
+    static const uint8 stab[8] = { 14, 10, 13, 4, 8, 6, 9, 11 };
+
+    nreg = ((nreg << 1) | ((1 ^ (nreg >> 7) ^ (nreg >> stab[noise_control & 0x7])) & 1)) & 0x7FFF;
+
     if(control & 0x80)
     {
      MK_SAMPLE_CACHE_NOISE;
@@ -233,6 +227,8 @@ void WSwan_SoundWrite(uint32 A, uint8 V)
    period[ch] = (period[ch] & 0x00FF) | ((V & 0x07) << 8);
   else
    period[ch] = (period[ch] & 0x0700) | ((V & 0xFF) << 0);
+
+  //printf("Period %d: 0x%04x --- %f\n", ch, period[ch], 3072000.0 / (2048 - period[ch]));
  }
  else if(A >= 0x88 && A <= 0x8B)
  {
@@ -248,18 +244,22 @@ void WSwan_SoundWrite(uint32 A, uint8 V)
  }
  else if(A == 0x8E)
  {
-  noise_control = V;
-  if(V & 0x8) nreg = 1;
   //printf("NOISECONTROL: %02x\n", V);
+  if(V & 0x8)
+   nreg = 0;
+
+  noise_control = V & 0x17;
  }
  else if(A == 0x90)
  {
   for(int n = 0; n < 4; n++)
+  {
    if(!(control & (1 << n)) && (V & (1 << n)))
    {
     period_counter[n] = 0;
     sample_pos[n] = 0x1F;
    }
+  }
   control = V;
   //printf("Sound Control: %02x\n", V);
  }
@@ -432,7 +432,7 @@ void WSwan_SoundReset(void)
  SampleRAMPos = 0;
  memset(period_counter, 0, sizeof(period_counter));
  memset(sample_pos, 0, sizeof(sample_pos));
- nreg = 1;
+ nreg = 0;
 
  memset(sample_cache, 0, sizeof(sample_cache));
  memset(last_val, 0, sizeof(last_val));

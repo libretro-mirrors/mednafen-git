@@ -73,18 +73,17 @@ static void OK_Write(uint8 V)
 
 static void OK_Update(void *data)
 {
- //puts("Sync");
- OKX = (int32)MDFN_de32lsb((uint8 *)data + 0) >> 16;
- OKY = (int32)MDFN_de32lsb((uint8 *)data + 4) >> 16;
- OKB=((uint8*)data)[8];
+ OKX = (int16)MDFN_de16lsb((uint8 *)data + 0);
+ OKY = (int16)MDFN_de16lsb((uint8 *)data + 2);
+ OKB=((uint8*)data)[4];
 
- NESPPU_TranslateMouseXY(OKX, OKY);
+ //printf("%d\n", OKX);
 }
 
-static void DrawOeka(MDFN_Surface *surface)
+static void DrawOeka(uint8 *pix, int pix_y)
 {
  if(OKY<44)
-  MDFN_DrawCursor(surface, OKX, OKY);
+  NESCURSOR_DrawCursor(pix, pix_y, OKX, OKY);
 }  
 
 static int StateActionFC(StateMem *sm, int load, int data_only)

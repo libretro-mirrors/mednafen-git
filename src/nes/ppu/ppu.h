@@ -10,7 +10,6 @@ int MDFNPPU_Loop(EmulateSpecStruct *espec);
 void MDFNPPU_LineUpdate();
 
 void NESPPU_GetDisplayRect(MDFN_Rect *DisplayRect);
-void NESPPU_TranslateMouseXY(uint32 &new_x, uint32 &new_y);
 
 
 extern void (*PPU_hook)(uint32 A);

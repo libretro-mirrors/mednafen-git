@@ -80,13 +80,13 @@ static std::string BCToString(const ButtConfig &bc)
  }
  else if(bc.ButtType == BUTTC_JOYSTICK)
  {
-  trio_snprintf(tmp, 256, "joystick %016llx %08x", bc.DeviceID, bc.ButtonNum);
+  trio_snprintf(tmp, 256, "joystick %016llx %08x", (unsigned long long)bc.DeviceID, bc.ButtonNum);
 
   string = string + std::string(tmp);
  }
  else if(bc.ButtType == BUTTC_MOUSE)
  {
-  trio_snprintf(tmp, 256, "mouse %016llx %08x", bc.DeviceID, bc.ButtonNum);
+  trio_snprintf(tmp, 256, "mouse %016llx %08x", (unsigned long long)bc.DeviceID, bc.ButtonNum);
 
   string = string + std::string(tmp);
  }
@@ -351,6 +351,8 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
      default: bit_offset = ((bit_offset + 31) &~ 31) + 32;
 	      break;
 
+     case IDIT_X_AXIS:
+     case IDIT_Y_AXIS:
      case IDIT_BUTTON_ANALOG:
      case IDIT_RUMBLE:
 		bit_offset = ((bit_offset + 7) &~ 7) + 16;
@@ -379,9 +381,7 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
    if(zedevice->IDII[x].Type == IDIT_BUTTON || zedevice->IDII[x].Type == IDIT_BUTTON_CAN_RAPID
 	 || zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG || zedevice->IDII[x].Type == IDIT_X_AXIS || zedevice->IDII[x].Type == IDIT_Y_AXIS)
    {
-    if(zedevice->IDII[x].Type == IDIT_X_AXIS || zedevice->IDII[x].Type == IDIT_Y_AXIS)
-     bit_offset = (bit_offset + 31) &~ 31; // Align to a 32-bit boundary
-    else if(zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG)	// Align to a byte boundary.
+    if(zedevice->IDII[x].Type == IDIT_X_AXIS || zedevice->IDII[x].Type == IDIT_Y_AXIS || zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG)	// Align to a byte boundary.
      bit_offset = (bit_offset + 7) &~ 7;
 
     std::vector<ButtConfig> buttc;
@@ -428,11 +428,7 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
      buttconfig_offset++;
     }
 
-    if(zedevice->IDII[x].Type == IDIT_X_AXIS || zedevice->IDII[x].Type == IDIT_Y_AXIS)
-    {
-     bit_offset += 32;
-    }
-    else if(zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG)
+    if(zedevice->IDII[x].Type == IDIT_X_AXIS || zedevice->IDII[x].Type == IDIT_Y_AXIS || zedevice->IDII[x].Type == IDIT_BUTTON_ANALOG)
     {
      bit_offset += 16;
     }
@@ -1556,12 +1552,17 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
    {
     uint8 *tptr = (uint8 *)PortData[x];
     uint32 bo = PortButtBitOffsets[x][butt];
-    uint32 tv = 0;
+    float tv = 0;
 
     if(PortButtConfig[x][butt].size() > 0)
      tv = DTestMouseAxis(PortButtConfig[x][butt][0], keys, MouseData, (PortButtType[x][butt] == IDIT_Y_AXIS));
 
-    MDFN_en32lsb(&tptr[(bo & 0x7FFFFFFF) / 8], tv);
+    if(PortButtType[x][butt] == IDIT_Y_AXIS)
+     tv = floor(0.5 + (tv * (1.0 / 65536) * CurGame->mouse_scale_y) + CurGame->mouse_offs_y);
+    else
+     tv = floor(0.5 + (tv * (1.0 / 65536) * CurGame->mouse_scale_x) + CurGame->mouse_offs_x);
+
+    MDFN_en16lsb(&tptr[(bo & 0x7FFFFFFF) / 8], (int16)std::max<float>(-32768, std::min<float>(tv, 32767)));
    }
    else if(PortButtType[x][butt] == IDIT_BUTTON_ANALOG)	// Analog button
    {
@@ -1638,6 +1639,12 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
 		      break;
    }
   }
+
+#if 0
+  // Input fuzzing!
+  for(unsigned i = 0; i < PortDataSize[x]; i++)
+   ((uint8*)PortData[x])[i] = rand() >> 8;
+#endif
  }
 
  memset(BarcodeWorldData, 0, sizeof(BarcodeWorldData));

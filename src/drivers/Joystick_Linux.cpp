@@ -45,6 +45,11 @@ class Joystick_Linux : public Joystick
 
  void SetRumble(uint8 weak_intensity, uint8 strong_intensity);
 
+ inline bool RumbleUsed(void)
+ {
+  return rumble_used;
+ }
+
  private:
 
  void InitFF(void);
@@ -59,6 +64,7 @@ class Joystick_Linux : public Joystick
 
  bool rumble_supported;
  struct ff_effect current_rumble;
+ bool rumble_used;
 };
 
 unsigned Joystick_Linux::HatToAxisCompat(unsigned hat)
@@ -214,6 +220,7 @@ Joystick_Linux::Joystick_Linux(const char *jsdev_path, const char *evdev_path) :
 #endif
 
  rumble_supported = false;
+ rumble_used = false;
  if(evdev_fd != -1)
   InitFF();
 }
@@ -232,21 +239,12 @@ void Joystick_Linux::InitFF(void)
    current_rumble.type = FF_RUMBLE;
    current_rumble.replay.length = 3000;
    current_rumble.replay.delay = 0;
-
-   //SetRumble(0xFF, 0x00);
-   //for(;;)
-   //{
-   // SetRumble(0xFF, 0x00);
-   //}
   }
  }
 }
 
 Joystick_Linux::~Joystick_Linux()
 {
- if(rumble_supported)
-  SetRumble(0, 0);
-
  if(jsdev_fd != -1)
  {
   close(jsdev_fd);
@@ -268,6 +266,11 @@ void Joystick_Linux::SetRumble(uint8 weak_intensity, uint8 strong_intensity)
   uint32 scaled_strong = strong_intensity * (65535 / 255);
   input_event play;
 
+  if(!scaled_weak && !scaled_strong && !rumble_used)
+   return;
+
+  //printf("RUMBLE SET: %d %d\n", weak_intensity, strong_intensity);
+  rumble_used = true;
   current_rumble.u.rumble.weak_magnitude = scaled_weak;
   current_rumble.u.rumble.strong_magnitude = scaled_strong;
 
@@ -532,6 +535,42 @@ JoystickDriver_Linux::JoystickDriver_Linux()
 
 JoystickDriver_Linux::~JoystickDriver_Linux()
 {
+ bool any_rumble_used = false;
+
+ /*
+  Try to work around bugs in the Linux kernel that can lead to a kernel panic.
+  (and turns rumble off on the controllers in the process)
+ */
+ for(unsigned int n = 0; n < joys.size(); n++)
+ {
+  if(joys[n]->RumbleUsed())
+  {
+   any_rumble_used = true;
+   break;
+  }
+ }
+
+ if(any_rumble_used)
+ {
+  usleep(20000);
+
+  for(unsigned int n = 0; n < joys.size(); n++)
+  {
+   if(joys[n]->RumbleUsed())
+    joys[n]->SetRumble(1, 1);
+  }
+
+  usleep(50000);
+
+  for(unsigned int n = 0; n < joys.size(); n++)
+  {
+   if(joys[n]->RumbleUsed())
+    joys[n]->SetRumble(0, 0);
+  }
+
+  usleep(50000);
+ }
+
  for(unsigned int n = 0; n < joys.size(); n++)
  {
   delete joys[n];

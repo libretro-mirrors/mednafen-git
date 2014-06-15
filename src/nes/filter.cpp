@@ -16,12 +16,15 @@
  */
 
 /* This resampler has only been designed with NES CPU frequencies(NTSC and PAL) as the input rate, and output rates of
-   22050-1048576 in mind, up to 1024 coefficient multiply-accumulates per output sample.
+   22050-192000 in mind, up to 1024 coefficient multiply-accumulates per output sample.
+
+   An SSE2-utilizing MAC-loop is written, but is commented out as it is likely to perform significantly worse than the MMX
+   version on a large number of common x86 CPU architectures.
 */
 
+//
 // Don't set these higher than 3, the accumulation variables will overflow if you do.
-// If you want to use this resampler as a more general-purpose downsampler(with input and output rates closer together), you will probably want
-// to set these to 0.
+//
 #define FIR_TABLE_EXTRA_BITS  	3
 #define FIR_TABLE_EXTRA_BITS_S	"3"
 
@@ -167,6 +170,102 @@ static INLINE void DoMAC(int16 *wave, int16 *coeffs, int32 count, int32 *accum_o
 #define X86_REGAT "l"
 #endif
 
+#if 0
+static INLINE void DoMAC_SSE2(int16 *wave, int16 *coeffs, int32 count, int32 *accum_output)
+{
+ // Multiplies 32 coefficients at a time.
+ int dummy;
+
+/*
+	?di = wave pointer
+	?si = coeffs pointer
+	ecx = count / 32
+	edx = 32-bit int output pointer
+
+	
+*/
+ // Will read 16 bytes of input waveform past end.
+ asm volatile(
+"pxor %%xmm3, %%xmm3\n\t"	// For a loop optimization
+
+"pxor %%xmm4, %%xmm4\n\t"
+"pxor %%xmm5, %%xmm5\n\t"
+"pxor %%xmm6, %%xmm6\n\t"
+"pxor %%xmm7, %%xmm7\n\t"
+
+"movups  0(%%" X86_REGC "di), %%xmm0\n\t"
+"SSE_Loop:\n\t"
+
+"movups  16(%%" X86_REGC "di), %%xmm1\n\t"
+"pmaddwd  0(%%" X86_REGC "si), %%xmm0\n\t"
+"paddd   %%xmm3, %%xmm7\n\t"
+
+"movups  32(%%" X86_REGC "di), %%xmm2\n\t"
+"pmaddwd 16(%%" X86_REGC "si), %%xmm1\n\t"
+"paddd   %%xmm0, %%xmm4\n\t"
+
+"movups  48(%%" X86_REGC "di), %%xmm3\n\t"
+"pmaddwd 32(%%" X86_REGC "si), %%xmm2\n\t"
+"paddd   %%xmm1, %%xmm5\n\t"
+
+"movups  64(%%" X86_REGC "di), %%xmm0\n\t"
+"pmaddwd 48(%%" X86_REGC "si), %%xmm3\n\t"
+"paddd   %%xmm2, %%xmm6\n\t"
+
+"add" X86_REGAT " $64, %%" X86_REGC "si\n\t"
+"add" X86_REGAT " $64, %%" X86_REGC "di\n\t"
+"subl $1, %%ecx\n\t"
+"jnz SSE_Loop\n\t"
+
+"paddd  %%xmm3, %%xmm7\n\t"	// For a loop optimization
+
+"psrad $" FIR_TABLE_EXTRA_BITS_S ", %%xmm4\n\t"
+"psrad $" FIR_TABLE_EXTRA_BITS_S ", %%xmm5\n\t"
+"psrad $" FIR_TABLE_EXTRA_BITS_S ", %%xmm6\n\t"
+"psrad $" FIR_TABLE_EXTRA_BITS_S ", %%xmm7\n\t"
+
+//
+// Add the four summation xmm regs together into one xmm register, xmm7
+//
+"paddd  %%xmm4, %%xmm5\n\t"
+"paddd  %%xmm6, %%xmm7\n\t"
+"paddd  %%xmm5, %%xmm7\n\t"
+
+//
+// Pre shift right by 1(and shift the rest, 15 bits, later) so we don't overflow during horizontal addition(could occur with large input
+// amplitudes approaching the limits of the signed 16-bit range)
+//
+"psrad      $1, %%xmm7\n\t"
+
+//
+// Now for the "fun" horizontal addition...
+//
+// 
+"movaps %%xmm7, %%xmm4\n\t"
+// (3 * 2^0) + (2 * 2^2) + (1 * 2^4) + (0 * 2^6) = 27
+"shufps $27, %%xmm7, %%xmm4\n\t"
+"paddd  %%xmm4, %%xmm7\n\t"
+
+// At this point, xmm7:
+// (3 + 0), (2 + 1), (1 + 2), (0 + 3)
+//
+// (1 * 2^0) + (0 * 2^2) = 1
+"movaps %%xmm7, %%xmm4\n\t"
+"shufps $1, %%xmm7, %%xmm4\n\t"
+"paddd %%xmm4, %%xmm7\n\t"
+"psrad $15, %%xmm7\n\t"
+"movss %%xmm7, (%%" X86_REGC "dx)\n\t"
+ : "=D" (dummy), "=S" (dummy), "=c" (dummy)
+ : "D" (wave), "S" (coeffs), "c" (count >> 5), "d" (accum_output)
+#ifdef __SSE__
+ : "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "cc", "memory"
+#else
+ : "cc", "memory"
+#endif
+);
+}
+#endif
+
 static INLINE void DoMAC_MMX(int16 *wave, int16 *coeffs, int32 count, int32 *accum_output)
 {
  // Multiplies 16 coefficients at a time.
@@ -242,12 +341,11 @@ static INLINE void DoMAC_MMX(int16 *wave, int16 *coeffs, int32 count, int32 *acc
 "movd %%mm1, (%%" X86_REGC "dx)\n\t"
  : "=D" (dummy), "=S" (dummy), "=c" (dummy)
  : "D" (wave), "S" (coeffs), "c" ((count + 0xF) >> 4), "d" (accum_output)
-#ifdef __x86_64__
- : "mm0", "mm1", "mm2", "mm3", "mm4", "mm5", "mm6", "mm7", "cc"
+ : "cc", "memory"
+#ifdef __MMX__
+ 		 , "mm0", "mm1", "mm2", "mm3", "mm4", "mm5", "mm6", "mm7"
 #else
- // FIXME.  Do we need to compile with -mmmx or something?
- // st(0), st(1), st(2), st(3), st(4), st(5), st(6), st(7)
- : "cc"
+ 		 // gcc has a bug or weird design flaw or something in it that keeps this from working properly: , "st", "st(1)", "st(2)", "st(3)", "st(4)", "st(5)", "st(6)", "st(7)"	
 #endif
 );
 }
@@ -350,13 +448,32 @@ int32 NES_Resampler::Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, i
 
 	}
         #ifdef ARCH_X86
+#if 0
+	else if((cpuext & CPUTEST_FLAG_SSE2) && !(cpuext & CPUTEST_FLAG_SSE2SLOW))
+	{
+         while(InputIndex < max)
+         {
+          int16 *wave = &in[InputIndex];
+          int16 *coeffs = &FIR_ENTRY(0, InputPhase, 0);
+          int32 coeff_count = FIR_CoCounts[0];
+
+          DoMAC_SSE2(wave, coeffs, coeff_count, I32Out);
+
+          I32Out++;
+          count++;
+
+          InputPhase = PhaseNext[InputPhase];
+          InputIndex += PhaseStep[InputPhase];
+         }
+	}
+#endif
         else if(cpuext & CPUTEST_FLAG_MMX)
         {
  	 while(InputIndex < max)
          {
           const unsigned int align_index = InputIndex & 0x3; //((int)(unsigned long long)wave & 0x6) >> 1;
           int16 *wave = &in[InputIndex &~ 0x3];
-          int16 *coeffs = &FIR_ENTRY(align_index, PhaseWhich[InputPhase], 0);
+          int16 *coeffs = &FIR_ENTRY(align_index, InputPhase, 0);
 	  int32 coeff_count = FIR_CoCounts[align_index];
 
  	  DoMAC_MMX(wave, coeffs, coeff_count, I32Out);
@@ -377,7 +494,7 @@ int32 NES_Resampler::Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, i
          {
           const unsigned int align_index = InputIndex & 0x7;
           int16 *wave = &in[InputIndex &~ 0x7];
-          int16 *coeffs = &FIR_ENTRY(align_index, PhaseWhich[InputPhase], 0);
+          int16 *coeffs = &FIR_ENTRY(align_index, InputPhase, 0);
           int32 coeff_count = FIR_CoCounts[align_index];
 
           DoMAC_AltiVec(wave, coeffs, coeff_count, I32Out);
@@ -395,7 +512,7 @@ int32 NES_Resampler::Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, i
          while(InputIndex < max)
          {
           int16 *wave = &in[InputIndex];
-          int16 *coeffs = &FIR_ENTRY(0, PhaseWhich[InputPhase], 0);
+          int16 *coeffs = &FIR_ENTRY(0, InputPhase, 0);
           int32 coeff_count = FIR_CoCounts[0];
 
           DoMAC(wave, coeffs, coeff_count, I32Out);
@@ -447,17 +564,11 @@ int32 NES_Resampler::Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, i
 
 NES_Resampler::~NES_Resampler()
 {
- if(PhaseWhich)
-  free(PhaseWhich);
-
  if(PhaseNext)
   free(PhaseNext);
 
  if(PhaseStep)
   free(PhaseStep);
-
- if(PhaseStepSave)
-  free(PhaseStepSave);
 
  if(FIR_Coeffs_Real)
  {
@@ -479,21 +590,6 @@ void NES_Resampler::SetVolume(double newvolume)
 {
  SoundVolume = (int32)(newvolume * 256);
 }
-
-// Copy constructor
-#if 0
-// Bah, it's obviously screwed up, make a base initialization function to call or just don't implement a copy constructor!
-NES_Resampler::NES_Resampler(const NES_Resampler &resamp)
-{
- NES_Resampler(resamp.InputRate, resamp.OutputRate, resamp.RateError, resamp.DebiasCorner, resamp.Quality);
-
- SoundVolume = resamp.SoundVolume;
- for(unsigned int i = 0; i < NumPhases; i++)
- {
-  PhaseStep[i] = resamp.PhaseStep[i];
- }
-}
-#endif
 
 NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_error, double debias_corner, int quality)
 {
@@ -517,19 +613,31 @@ NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_
  MDFN_printf("filter.cpp debug info:\n");
  MDFN_indent(1);
 
+ if(0)
+ {
+  abort();
+ }
  #ifdef ARCH_X86
- if(cpuext & CPUTEST_FLAG_MMX)
+#if 0
+ else if((cpuext & CPUTEST_FLAG_SSE2) && !(cpuext & CPUTEST_FLAG_SSE2SLOW))
+ {
+  MDFN_printf("SSE2\n");
+  NumAlignments = 1;
+ }
+#endif
+ else if(cpuext & CPUTEST_FLAG_MMX)
  {
   MDFN_printf("MMX\n");
   NumAlignments = 4;
- } else
+ }
  #elif ARCH_POWERPC_ALTIVEC
- if(cpuext & CPUTEST_FLAG_ALTIVEC)
+ else if(cpuext & CPUTEST_FLAG_ALTIVEC)
  {
   puts("AltiVec");
   NumAlignments = 8;
- } else
+ }
  #endif
+ else
  {
   NumAlignments = 1;
   puts("None");
@@ -605,22 +713,19 @@ NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_
   ratio = 1 / s_ratio;
   NumPhases = count;
 
-  PhaseWhich = (uint32 *)malloc(sizeof(uint32) * NumPhases);
   PhaseNext = (uint32 *)malloc(sizeof(uint32) * NumPhases);
   PhaseStep = (uint32 *)malloc(sizeof(uint32) * NumPhases);
-  PhaseStepSave = (uint32 *)malloc(sizeof(uint32) * NumPhases);
 
   uint32 last_indoo = 0;
   for(unsigned int i = 0; i < NumPhases; i++)
   {
    uint32 index_pos = i * findo_i / NumPhases;
 
-   PhaseWhich[i] = (i * findo_i) % NumPhases;
    PhaseNext[i] = (i + 1) % (NumPhases);
-   PhaseStepSave[i] = PhaseStep[i] = index_pos - last_indoo;
+   PhaseStep[i] = index_pos - last_indoo;
    last_indoo = index_pos;
   }
-  PhaseStepSave[0] = PhaseStep[0] = findo_i - last_indoo;
+  PhaseStep[0] = findo_i - last_indoo;
 
   Ratio_Dividend = findo_i;
   Ratio_Divisor = NumPhases;
@@ -694,17 +799,27 @@ NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_
   int32 pos_sum = 0;
   int32 sum = 0;
   int32 sum_absv = 0;
+  int32 sum_absv8[8] = { 0 };
+  int32 sum_absv8_alt[2][8] = { { 0 } };
+  int32 sum_absv16[16] = { 0 };
   int32 max = 0, min = 0;
   double amp_mult = 65536 * NumPhases * (1 << FIR_TABLE_EXTRA_BITS);
 
+  const unsigned sp = (NumPhases - 1 - (((uint64)phase * Ratio_Dividend) % NumPhases));
+  const unsigned tp = phase;
+
+
   for(unsigned int i = 0; i < NumCoeffs; i++)
   {
-   int32 tmpco = (int32)(FilterBuf[i * NumPhases + phase] * amp_mult);
+   int32 tmpco = (int32)(FilterBuf[i * NumPhases + sp] * amp_mult);
 
-   FIR_ENTRY(0, NumPhases - 1 - phase, i) = (int16)tmpco;
+   FIR_ENTRY(0, tp, i) = (int16)tmpco;
 
    sum += tmpco;
    sum_absv += abs(tmpco);
+   sum_absv8[i & 0x7] += abs(tmpco);
+   sum_absv8_alt[i >= (NumCoeffs >> 1)][i & 0x7] += abs(tmpco);
+   sum_absv16[i & 0xF] += abs(tmpco);
 
    if(tmpco > max)
     max = tmpco;
@@ -721,11 +836,41 @@ NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_
   assert(min >= -32768);
   assert(max <= 32767);
 
-  double ira = ((double)(65536 << FIR_TABLE_EXTRA_BITS) / sum_absv) * 2; // * 2 since we shift right by one in loops now
-								         // to prevent distortions when input samples are near
-								         // maximum absolute magnitude.
 
-  MDFN_printf("Phase %d: min=%d max=%d, neg_sum=%d, pos_sum=%d, sum=%d, sum_absv=%d -- worst-case ira=%.2f%%\n", phase, min, max, neg_sum, pos_sum, sum, sum_absv, ira * 100); //65536 * count / amp_mult * NumPhases);
+  double wcru = 0;
+
+  for(int i = 0; i < 8; i++)
+  {
+   double tmp_wcru = (-32768.0 * sum_absv8[i] / 2) / -2147483648.0;
+
+   if(tmp_wcru > wcru)
+    wcru = tmp_wcru;
+  }
+
+  for(int a = 0; a < 2; a++)
+  {
+   for(int i = 0; i < 8; i++)
+   {
+    double tmp_wcru = (-32768.0 * sum_absv8_alt[a][i]) / -2147483648.0;
+
+    if(tmp_wcru > wcru)
+     wcru = tmp_wcru;
+   }
+  }
+
+  for(int i = 0; i < 16; i++)
+  {
+   double tmp_wcru = (-32768.0 * sum_absv16[i]) / -2147483648.0;
+
+   if(tmp_wcru > wcru)
+    wcru = tmp_wcru;
+  }
+
+  //
+  // If wcru > 1.0, it indicates that the MAC loop(s) may suffer from integer overflows.
+  // though as long as it's < 1.05, it shouldn't cause problems(at least not with the NES sound emulation code this resampler is currently paired with).
+  //
+  MDFN_printf("Phase %d: min=%d max=%d, neg_sum=%d, pos_sum=%d, sum=%d, sum_absv=%d, wcru=%.4f\n", phase, min, max, neg_sum, pos_sum, sum, sum_absv, wcru);
  }
 
  for(unsigned int ali = 1; ali < NumAlignments; ali++)

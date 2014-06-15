@@ -1,3 +1,15 @@
+
+{ 0, 159, 8, 0xdbe23478bb1f8326ULL },	/* Magical Taruruuto-kun */
+{ 0, 159, 8, 0xeb656a7a02dcbfb2ULL },	/* Magical Taruruuto-kun */
+{ 0, 159, 8, 0x224f9b6d97a65a5cULL }, 	/* Magical Taruruuto-kun 2 */
+
+{ 0, 159, 8, 0x9c751033d0fe983aULL },	/* Dragon Ball Z - Kyoushuu Saiyajin */
+{ 0, 159, 8, 0xa87fc767b93cc611ULL },	/* Dragon Ball Z - Kyoushuu Saiyajin (UNOFFICIAL TRANSLATION) */
+
+{ 0, 159, 8, 0x8daf8dd17cfc0b25ULL },	/* SD Gundam Gaiden - Knight Gundam Monogatari */
+{ 0, 159, 8, 0xb788abef0b537d9cULL },   /* SD Gundam Gaiden - Knight Gundam Monogatari (UNOFFICIAL PARTIAL TRANSLATION) */
+
+
 {0,  37, -1, 0xa4057e574307d204ULL },	/* Super Mario Bros + Tetris + Nintendo World Cup (Europe) */
 {0, 101, -1, 0x58d32b2e1ba753e1ULL },	/* Urusei Yatsura */
 {0x1b71ccdb, 4, 8},	/* Gauntlet 2 */

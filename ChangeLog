@@ -1,3 +1,118 @@
+-- 0.9.35: --
+
+May 31, 2014:
+	Use a semaphore to allow for tighter emulation-thread->video-thread blit timing granularity.
+
+May 29, 2014:
+	PC-FX: Battery-backed save game memory is now saved to a file during runtime if the memory contents have changed, rather than only
+	saved on exit as before.
+
+	NES: Fixed unusably-broken emulation of iNES mapper 80's internal battery-backed save-game RAM(used by "Minelvation Saga", "Mirai Shinwa Jarvas", and
+	"Taito Grand Prix").
+
+	NES: Implemented battery-backed save game support for iNES mapper 69(for the two or so games that need it).
+
+	NES: Fixed multiple major issues with the iNES mapper 69 save state code.
+
+	NES: Added missing PowerPad default button assignments.
+
+	NES: Fixed how Mahjong, Family Trainer, and PowerPad input device code reads input data, to fix brokenness on big-endian platforms, and to prevent
+	(mostly benign) buffer overflows.
+
+	NES: Fixed some buffer overflow issues in the "Barcode World" barcode reader input device emulation code.
+
+	NES: Changed how save state loading works so that failure to load one section will not abort loading, but signal a deferred error(most useful
+	with missing input device sections).
+
+May 28, 2014:
+	Fixed some careless unsafe instances of "-2147483648" added since 0.9.34.1.
+
+	PSX: Draw lightgun crosshairs in a separate pass to the lightgun color/brightness evaluation logic, so that crosshairs from a lightgun on a lower port
+	won't mess up the color evaluation logic of a lightgun on a higher port.
+
+	PSX: Refactored the lightgun crosshair drawing code to reduce code duplication, and made some changes to the drawing algorithm to increase
+	visibility(and make the crosshairs not lopsided anymore).
+
+	Pack IDIT_X_AXIS and IDIT_Y_AXIS input types in 2 bytes, 1-byte-aligned, instead of 4 bytes, 4-byte-aligned.
+
+	NES: Fixed some minor issues with the lightgun coordinate translation calculations(hopefully for the last time :p).
+
+	PSX: Fixed a bug in the Guncon and Justifier emulation code that resulted in memory corruption when the crosshairs were
+	positioned near the upper left corner of the screen.
+
+	NES: Fixed a bug in the iNES mapper 71 code that was causing Mednafen to crash when trying to play "Dreamworld Pogie".
+
+May 27, 2014:
+	NES: Made some improvements to the new X24C01P/X24C02P EEPROM emulation code, though it's still a bit messy.
+
+May 26, 2014:
+	NES: Added support for iNES mapper 159.
+
+	NES: Added emulation of mapper 16's EEPROM.
+
+	NES: Fixed a bug that was causing some of the Bandai Datach games to have corrupt graphics.
+
+	NES: Reworked how the Zapper crosshairs are drawn to fix the problem of them being drawn at the wrong position
+	if "nes.clipsides" is set to "1"(and to render with 8bpp and 16bpp video output, and to update properly in respect
+	to MDFN_MidLineUpdate(); though neither is currently used by Mednafen per-se, they are useful for ports).
+
+	NES: Fixed a design flaw that could easily cause desync during netplay with an emulated Zapper if different clients' video settings
+	are different.
+
+May 25, 2014:
+	Cleaned up some of the netplay code to increase maintainability.
+
+May 24, 2014:
+	Changed how the Linux joystick code de-initializes joysticks when rumble has been used, to try to minimize the
+	probability of a kernel panic due to buggy(race conditions) Linux kernel drivers.
+
+	PSX: Added emulation of GPU IRQs.
+
+	PSX: Implemented support for GPU command number mirrors.
+
+May 23, 2014:
+	NES: Added SSE2 code to the sound resampler, but currently disabled(#if 0'd out) as it will probably perform
+	worse than the MMX version on a large number of CPU models.
+
+	NES: Made some general minor optimizations to the sound resampling code.
+
+	NES: Add "memory" to the clobber list of the sound resampler's MMX inline assembly MAC loop code.
+
+May 22, 2014:
+	PSX: Improved accuracy of GPU line drawing algorithm.
+
+	WonderSwan: Improved noise(sound) emulation(thanks to trap15).
+
+May 20, 2014:
+	PSX: Optimized(reduced memory usage) layout of the GPU command table.
+
+May 19, 2014:
+	Added gcc format string check attributes to the applicable trio function prototypes, and fixed a few minor problems the
+	checks uncovered.
+
+	Fixed a compilation error when compiling without the debugger(--disable-debugger passed to the configure script).
+
+	PSX: Fixed a glitch/bug in the triangle rasterization code that was causing some textured rectangular quads to have incorrect
+	distortion of the texture(see "I" of "OPTIONS" in the Twisted Metal 2 title screen).
+
+May 18, 2014:
+	Implemented MDFND_WaitCondTimeout() (currently unused by anything, though).
+
+May 14, 2014:
+	Make the "wasapish"(WASAPI shared-mode) sound driver the default sound driver for where it's available(Windows Vista and newer).
+
+May 13, 2014:
+	PCE, PC-FX: Implemented CD-DA de-emphasis filter support(though the filter is a rough approximation).
+
+	PCE, PC-FX: Optimized CD-DA filtering code, and implemented an SSE2 version of the oversampling filter code, to partially
+	mask the performance hit that the oversampling filter causes.
+
+May 12, 2014:
+	PCE, PCFX: Loosened output resampling filter design constraints so that the resampler doesn't take excessive amounts of
+	CPU time with higher(96KHz+) output rates(made feasible by implementing CD-DA oversampling).
+
+	PCE, PC-FX: CD-DA is now run through a 2x oversampling filter(this does have a minor performance penalty to it though, sadly).
+
 -- 0.9.34.1: --
 
 May 11, 2014:

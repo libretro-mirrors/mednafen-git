@@ -58,7 +58,7 @@ static uint8 IRQFrameMode;	/* $4017 / xx000000 */
 static uint8 PSG[0x10];
 static uint8 RawDALatch;	/* $4011 0xxxxxxx */
 
-uint8 EnabledChannels;		/* Byte written to $4015 */
+static uint8 EnabledChannels;	/* Byte written to $4015 */
 
 typedef struct {
 	uint8 Speed;
@@ -779,7 +779,7 @@ static double phase = 0;
 static double phase_inc = 0.000;
 static double phase_inc_inc = 0.000000001;
 
- *tmpo = 16384 * sin(phase);
+ *tmpo = 20000 * sin(phase);
  phase += phase_inc;
  phase_inc += phase_inc_inc;
 

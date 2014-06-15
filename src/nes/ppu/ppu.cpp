@@ -757,8 +757,8 @@ static void RefreshLine(int lastpixel)
   //pshift[0] = pshift[1] = atlatch = 0;
  }
 
- if(InputScanlineHook)
-  InputScanlineHook(Pline,0,firstpixel,lastpixel);
+ if(InputScanlineHook && scanline >= 0)
+  InputScanlineHook(Pline, firstpixel, lastpixel);
  firstpixel = lastpixel;
 
  norecurse = 0;
@@ -894,8 +894,8 @@ static void DoLine(MDFN_Surface *surface, int skip)
   if(!skip)
    FastLineEffects(newfirst >> 3, target);
 
-  if(InputScanlineHook)
-   InputScanlineHook(target, 0, newfirst, 256);
+  if(InputScanlineHook && scanline >= 0)
+   InputScanlineHook(target, newfirst, 256);
 
   firstpixel = 256;
   if(ScreenON || SpriteON)
@@ -908,6 +908,9 @@ static void DoLine(MDFN_Surface *surface, int skip)
 
  if(scanline >= 0)
  {
+  if(!skip)
+   MDFN_DrawInput(target, scanline);
+
   if(NTSCBlitter)
   {
    if(!skip)
@@ -1439,16 +1442,6 @@ void NESPPU_GetDisplayRect(MDFN_Rect *DisplayRect)
  memcpy(DisplayRect, &PPUDisplayRect, sizeof(MDFN_Rect));
 }
 
-void NESPPU_TranslateMouseXY(uint32 &new_x, uint32 &new_y)
-{
- MDFN_Rect dr;
-
- NESPPU_GetDisplayRect(&dr);
-
- new_x = (uint32)(((new_x + ((double)dr.x * MDFNGameInfo->nominal_width) / dr.w) * 256 / MDFNGameInfo->nominal_width));
- new_y = new_y + dr.y;
-}
-
 static void RedoRL(void)
 {
  unsigned sls, sle;
@@ -1486,10 +1479,17 @@ static void RedoRL(void)
  MDFNGameInfo->nominal_width = NTSCBlitter ? (PPUDisplayRect.w * (MDFN_GetSettingB("nes.correct_aspect") ? 292 : 298) / 596) : (PPUDisplayRect.w * (MDFN_GetSettingB("nes.correct_aspect") ? (PAL ? 344 : 292) : 256) / 256);
  MDFNGameInfo->nominal_height = PPUDisplayRect.h;
 
+ MDFNGameInfo->mouse_scale_x = (float)PPUDisplayRect.w / MDFNGameInfo->nominal_width * (NTSCBlitter ? 256.0 / 596.0 : 1.0);
+ MDFNGameInfo->mouse_offs_x = (float)PPUDisplayRect.x * (NTSCBlitter ? 256.0 / 596.0 : 1.0);
+ MDFNGameInfo->mouse_scale_y = 1.0;
+ MDFNGameInfo->mouse_offs_y = (float)PPUDisplayRect.y;
+
+ //printf("%f %f\n", MDFNGameInfo->mouse_scale_x, MDFNGameInfo->mouse_offs_x);
+
  MDFNGameInfo->lcm_width = PPUDisplayRect.w;
  MDFNGameInfo->lcm_height = MDFNGameInfo->nominal_height;
 
- MDFNGameInfo->fb_width = (NTSCBlitter ? 768 : 256);
+ MDFNGameInfo->fb_width = (NTSCBlitter ? 768 : 256); 
 }
 
 void MDFNPPU_Close(void)

@@ -64,7 +64,7 @@ static void MJ_Write(uint8 v)
 
 static void MJ_Update(void *data)
 {
- MReal=*(uint32*)data;
+ MReal = MDFN_de24lsb((uint8*)data);
  //printf("%08x\n",MReal>>13);
  //HSVal=*(uint8*)data;
 }

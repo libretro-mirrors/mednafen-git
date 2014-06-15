@@ -67,6 +67,46 @@ int MDFND_WaitCond(MDFN_Cond* cond, MDFN_Mutex* mutex)
  return SDL_CondWait((SDL_cond*)cond, (SDL_mutex*)mutex);
 }
 
+int MDFND_WaitCondTimeout(MDFN_Cond* cond, MDFN_Mutex* mutex, unsigned ms)
+{
+ int ret = SDL_CondWaitTimeout((SDL_cond*)cond, (SDL_mutex*)mutex, ms);
+
+ if(ret == SDL_MUTEX_TIMEDOUT)
+  return(MDFND_COND_TIMEDOUT);
+ else
+  return(ret);
+}
+
+MDFN_Sem* MDFND_CreateSem(void)
+{
+ return (MDFN_Sem*)SDL_CreateSemaphore(0);
+}
+
+void MDFND_DestroySem(MDFN_Sem* sem)
+{
+ SDL_DestroySemaphore((SDL_sem*)sem);
+}
+
+int MDFND_PostSem(MDFN_Sem* sem)
+{
+ return SDL_SemPost((SDL_sem*)sem);
+}
+
+int MDFND_WaitSem(MDFN_Sem* sem)
+{
+ return SDL_SemWait((SDL_sem*)sem);
+}
+
+int MDFND_WaitSemTimeout(MDFN_Sem* sem, unsigned ms)
+{
+ int ret = SDL_SemWaitTimeout((SDL_sem*)sem, ms);
+
+ if(ret == SDL_MUTEX_TIMEDOUT)
+  return(MDFND_SEM_TIMEDOUT);
+ else
+  return(ret);
+}
+
 uint32 MDFND_ThreadID(void)
 {
  return SDL_ThreadID();

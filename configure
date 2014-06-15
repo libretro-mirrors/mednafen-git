@@ -4327,8 +4327,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.34.1'
-MEDNAFEN_VERSION_NUMERIC=0x000934
+MEDNAFEN_VERSION='0.9.35'
+MEDNAFEN_VERSION_NUMERIC=0x000935
 
 ac_aux_dir=
 for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do

@@ -25,6 +25,7 @@
 #include "input.h"
 #include "vsuni.h"
 #include "fds.h"
+#include "input/cursor.h"
 
 static const InputDeviceInputInfoStruct GamepadIDII[] =
 {
@@ -496,7 +497,7 @@ static int FSDisable=0;	/* Set to 1 if NES-style four-player adapter is disabled
 static const char *JPType[5] = { "none", "none", "none", "none", "none" };
 static void *InputDataPtr[5];
 
-void (*InputScanlineHook)(uint8 *bg, uint8 *spr, uint32 linets, int final);
+void (*InputScanlineHook)(uint8 *bg, uint32 linets, int final);
 
 
 static INPUTC DummyJPort = {0, 0, 0, 0, 0, NULL};
@@ -651,17 +652,16 @@ static INPUTCFC FAMI4C = { ReadFami4,0,StrobeFami4,0,0,0, StateActionGPFC };
 static INPUTC GPC = {ReadGP,0,StrobeGP,UpdateGamepad,0,0, StateActionGP };
 static INPUTC GPCVS = {ReadGPVS,0,StrobeGP,UpdateGamepad,0,0, StateActionGP };
 
-void MDFN_DrawInput(MDFN_Surface *surface)
+void MDFN_DrawInput(uint8* pix, int pix_y)
 {
- int x;
+ for(unsigned i = 0; i < 2; i++)
+ {
+  if(JPorts[i]->Draw)
+   JPorts[i]->Draw(i, pix, pix_y);
+ }
 
- for(x=0;x<2;x++)
-  if(JPorts[x]->Draw)
-   JPorts[x]->Draw(x, surface);
-
- if(FCExp)
-  if(FCExp->Draw)
-   FCExp->Draw(surface);
+ if(FCExp && FCExp->Draw)
+  FCExp->Draw(pix, pix_y);
 }
 
 void MDFN_UpdateInput(void)
@@ -710,16 +710,16 @@ static DECLFR(VSUNIRead1)
         return ret;
 } 
 
-static void SLHLHook(uint8 *bg, uint8 *spr, uint32 linets, int final)
+static void SLHLHook(uint8 *pix, uint32 linets, int final)
 {
  int x;
 
  for(x=0;x<2;x++)
   if(JPorts[x]->SLHook)
-   JPorts[x]->SLHook(x,bg,spr,linets,final);
+   JPorts[x]->SLHook(x, pix, linets, final);
  if(FCExp) 
   if(FCExp->SLHook)
-   FCExp->SLHook(bg,spr,linets,final);
+   FCExp->SLHook(pix, linets, final);
 }
 
 static void CheckSLHook(void)
@@ -836,6 +836,11 @@ static DECLFW(B4016_Chained)
 {
  Other4016WHandler(A, V);
  B4016(A, V);
+}
+
+void NESINPUT_PaletteChanged(void)
+{
+ NESCURSOR_PaletteChanged();
 }
 
 void NESINPUT_Init(void)

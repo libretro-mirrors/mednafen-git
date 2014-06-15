@@ -57,8 +57,6 @@ class NES_Resampler
 	// Current input phase
 	uint32 InputPhase;
 
-	uint32 *PhaseWhich;
-
 	// In the FIR loop:  InputPhase = PhaseNext[InputPhase]
 	uint32 *PhaseNext;
 

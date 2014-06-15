@@ -68,6 +68,17 @@ static uint8 ExBusReset; // I/O Register at 0x0700
 
 static bool BRAMDisabled;	// Cached at game load, don't remove this caching behavior or save game loss may result(if we ever get a GUI).
 
+//
+// Set BackupSignalDirty to true on writes to BackupRAM[] and ExBackupRAM[], and on save state load.
+// Set to false on save game load, and on periodic evaluation during emulation.
+//
+// Set BackupSaveDelay to 0 on save game load.
+//
+static bool BackupSignalDirty;
+static uint32 BackupSaveDelay;
+
+static void SaveBackupMemory(void);
+
 // Checks to see if this main-RAM-area access
 // is in the same DRAM page as the last access.
 #define RAMLPCHECK	\
@@ -267,6 +278,35 @@ static void Emulate(EmulateSpecStruct *espec)
  espec->MasterCycles = v810_timestamp - new_base_ts;
 
  PCFX_V810.ResetTS(new_base_ts);
+
+ //
+ //
+ //
+ if(BackupSignalDirty)
+ {
+  BackupSaveDelay = 120;
+  BackupSignalDirty = false;
+ }
+ else if(BackupSaveDelay)
+ {
+  BackupSaveDelay--;
+
+  if(!BackupSaveDelay)
+  {
+   //puts("SAVE");
+   try
+   {
+    SaveBackupMemory();
+   }
+   catch(std::exception &e)
+   {
+    MDFN_PrintError(_("Error saving save-game memory: %s"), e.what());
+    MDFN_DispMessage(_("Error saving save-game memory: %s"), e.what());
+    BackupSaveDelay = 60 * 60;	// Try it again in about 60 seconds emulated time(unless more writes occur to the backup memory before then, then the regular delay
+				// will be used from that time).
+   }
+  }
+ }
 }
 
 static void PCFX_Reset(void)
@@ -422,12 +462,18 @@ static void PCFXDBG_PutAddressSpaceBytes(const char *name, uint32 Address, uint3
    else if(Address >= 0xE0000000 && Address <= 0xE7FFFFFF)
    {
     if(!(Address & 1))
+    {
+     BackupSignalDirty |= (BackupRAM[(Address & 0xFFFF) >> 1] != *Buffer);
      BackupRAM[(Address & 0xFFFF) >> 1] = *Buffer;
+    }
    }
    else if(Address >= 0xE8000000 && Address <= 0xE9FFFFFF)
    {
     if(!(Address & 1))
+    {
+     BackupSignalDirty |= (ExBackupRAM[(Address & 0xFFFF) >> 1] != *Buffer);
      ExBackupRAM[(Address & 0xFFFF) >> 1] = *Buffer;
+    }
    }
    Address++;
    Buffer++;
@@ -448,6 +494,7 @@ static void PCFXDBG_PutAddressSpaceBytes(const char *name, uint32 Address, uint3
   while(Length--)
   {
    Address &= 0x7FFF;
+   BackupSignalDirty |= (BackupRAM[Address] != *Buffer);
    BackupRAM[Address] = *Buffer;
    Address++;
    Buffer++;
@@ -458,6 +505,7 @@ static void PCFXDBG_PutAddressSpaceBytes(const char *name, uint32 Address, uint3
   while(Length--)
   {
    Address &= 0x7FFF;
+   BackupSignalDirty |= (ExBackupRAM[Address] != *Buffer);
    ExBackupRAM[Address] = *Buffer;
    Address++;
    Buffer++;
@@ -615,7 +663,7 @@ static void LoadCommon(std::vector<CDIF *> *CDInterfaces)
     uint32 sectors;
 
     trio_snprintf(tmpn, 256, "track%d-%d-%d", disc, track, toc.tracks[track].lba);
-    trio_snprintf(tmpln, 256, "CD - Disc %d/%d - Track %d/%d", disc + 1, CDInterfaces->size(), track, toc.last_track - toc.first_track + 1);
+    trio_snprintf(tmpln, 256, "CD - Disc %d/%d - Track %d/%d", disc + 1, (int)CDInterfaces->size(), track, toc.last_track - toc.first_track + 1);
 
     sectors = toc.tracks[track + 1].lba - toc.tracks[track].lba;
     ASpace_Add(PCFXDBG_GetAddressSpaceBytes, PCFXDBG_PutAddressSpaceBytes, tmpn, tmpln, 0, sectors * 2048);
@@ -638,6 +686,9 @@ static void LoadCommon(std::vector<CDIF *> *CDInterfaces)
  MDFNMP_Init(1024 * 1024, ((uint64)1 << 32) / (1024 * 1024));
  MDFNMP_AddRAM(2048 * 1024, 0x00000000, RAM);
 
+
+ BackupSignalDirty = false;
+ BackupSaveDelay = 0;
 
  BRAMDisabled = MDFN_GetSettingB("pcfx.disable_bram");
 
@@ -936,16 +987,28 @@ static void PCFX_CDSelect(void)
  }
 }
 
-static void CloseGame(void)
+static void SaveBackupMemory(void)
 {
  if(!BRAMDisabled)
  {
-  std::vector<PtrLengthPair> EvilRams;
- 
-  EvilRams.push_back(PtrLengthPair(BackupRAM, 0x8000));
-  EvilRams.push_back(PtrLengthPair(ExBackupRAM, 0x8000));
+  FileStream fp(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), FileStream::MODE_WRITE);
 
-  MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 0, EvilRams);
+  fp.write(BackupRAM, 0x8000);
+  fp.write(ExBackupRAM, 0x8000);
+
+  fp.close();
+ }
+}
+
+static void CloseGame(void)
+{
+ try
+ {
+  SaveBackupMemory();
+ }
+ catch(std::exception &e)
+ {
+  MDFN_PrintError(_("Error saving save-game memory: %s"), e.what());
  }
 
  Cleanup();
@@ -1021,6 +1084,9 @@ static int StateAction(StateMem *sm, int load, int data_only)
 
    SCSICD_SetDisc(CD_TrayOpen, (CD_SelectedDisc >= 0 && !CD_TrayOpen) ? (*cdifs)[CD_SelectedDisc] : NULL, true);
   }
+
+  if(!BRAMDisabled)
+   BackupSignalDirty = true;
  }
 
  //printf("0x%08x, %d %d %d %d\n", load, next_pad_ts, next_timer_ts, next_adpcm_ts, next_king_ts);

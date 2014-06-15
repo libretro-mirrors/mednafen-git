@@ -98,6 +98,9 @@ PCE_FAST:
 
 
 PCE:
+	Fix emulation of CD-DA current amplitude register used by the BIOS CD-DA player(right now L and R appear to be reversed,
+	but I think there are more problems with its emulation than just that).
+
 	Improve accuracy of PSG ultrasonic playback frequency optimization kludge(particularly when going from a really
 	low frequency directly to a ultrasonic frequency).
 

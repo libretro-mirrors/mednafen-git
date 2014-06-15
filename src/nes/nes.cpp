@@ -302,6 +302,7 @@ static int Load(MDFNFILE *fp)
         PowerNES();
 
         MDFN_InitPalette(NESIsVSUni ? MDFN_VSUniGetPaletteNum() : 0);
+	NESINPUT_PaletteChanged();
 
         return(1);
 }
@@ -368,7 +369,6 @@ static void Emulate(EmulateSpecStruct *espec)
   if(NESIsVSUni)
    MDFN_VSUniDraw(espec->surface);
  }
- MDFN_DrawInput(espec->surface);
 }
 
 void ResetNES(void)
@@ -431,29 +431,19 @@ static int StateAction(StateMem *sm, int load, int data_only)
    MDFN_DispMessage(_("Cannot use states in GG Screen."));
   return(0);
  }
+ int ret = 1;
 
- if(!X6502_StateAction(sm, load, data_only))
-  return(0);
-
- if(!MDFNPPU_StateAction(sm, load, data_only))
-  return(0);
-
- if(!MDFNSND_StateAction(sm, load, data_only))
-  return(0);
-
- if(!load || load >= 0x0500)
- {
-  if(!NESINPUT_StateAction(sm, load, data_only))
-   return(0);
- }
+ ret &= X6502_StateAction(sm, load, data_only);
+ ret &= MDFNPPU_StateAction(sm, load, data_only);
+ ret &= MDFNSND_StateAction(sm, load, data_only);
+ ret &= NESINPUT_StateAction(sm, load, data_only);
 
  if(GameInterface->StateAction)
  {
-  if(!GameInterface->StateAction(sm, load, data_only))
-   return(0);
+  ret &= GameInterface->StateAction(sm, load, data_only);
  }
 
- return(1);
+ return(ret);
 }
 
 // TODO: Actual enum vals

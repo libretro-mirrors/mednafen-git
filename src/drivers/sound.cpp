@@ -1,8 +1,5 @@
 /* Mednafen - Multi-system Emulator
  *
- * Copyright notice for this file:
- *  Copyright (C) 2002 Xodnizel
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -31,8 +28,6 @@ static SexyAL *Interface = NULL;
 static SexyAL_device *Output = NULL;
 static SexyAL_format format;
 static SexyAL_buffering buffering;
-static SexyAL_enumtype *DriverTypes = NULL;
-static int CurDriverIndex = 0;
 
 static int16 *EmuModBuffer = NULL;
 static int32 EmuModBufferSize = 0;	// In frames.
@@ -45,26 +40,20 @@ bool Sound_NeedReInit(void)
  return NeedReInit;
 }
 
-double GetSoundRate(void)
+double Sound_GetRate(void)
 {
  return(SoundRate);
 }
 
-uint32 GetMaxSound(void)
+uint32 Sound_CanWrite(void)
 {
  if(!Output)
   return(0);
 
- return(buffering.buffer_size);
-}
-
-uint32 GetWriteSound(void)
-{
- if(!Output) return(0);
  return(Output->CanWrite(Output));
 }
 
-void WriteSound(int16 *Buffer, int Count)
+void Sound_Write(int16 *Buffer, int Count)
 {
  if(!Output)
   return;
@@ -79,7 +68,7 @@ void WriteSound(int16 *Buffer, int Count)
  }
 }
 
-void WriteSoundSilence(int ms)
+void Sound_WriteSilence(int ms)
 {
  unsigned int frames = (uint64)format.rate * ms / 1000;
  int16 SBuffer[frames * format.channels];
@@ -210,16 +199,17 @@ static bool RunSexyALTest(SexyAL *interface, SexyAL_buffering *buffering, const 
 }
 #endif
 
-bool InitSound(MDFNGI *gi)
+bool Sound_Init(MDFNGI *gi)
 {
+ SexyAL_DriverInfo CurDriver;
+
  NeedReInit = false;
  SoundRate = 0;
 
- memset(&format,0,sizeof(format));
- memset(&buffering,0,sizeof(buffering));
+ memset(&format, 0, sizeof(format));
+ memset(&buffering, 0, sizeof(buffering));
 
- Interface = (SexyAL *)SexyAL_Init(0);
- DriverTypes = Interface->EnumerateTypes(Interface);
+ Interface = new SexyAL();
 
  format.sampformat = SEXYAL_FMT_PCMS16;
 
@@ -245,55 +235,44 @@ bool InitSound(MDFNGI *gi)
  std::string zedevice = MDFN_GetSettingS("sound.device");
  std::string zedriver = MDFN_GetSettingS("sound.driver");
 
- CurDriverIndex = -1;
-
- if(!strcasecmp(zedriver.c_str(), "default"))
-  CurDriverIndex = 0;
- else
- {
-  for(int x = 0; DriverTypes[x].short_name; x++)
-  {
-   if(!strcasecmp(zedriver.c_str(), DriverTypes[x].short_name))
-   {
-    CurDriverIndex = x;
-    break;
-   }
-  }
- }
-
  MDFNI_printf(_("\nInitializing sound...\n"));
  MDFN_indent(1);
 
- if(CurDriverIndex == -1)
+ if(!Interface->FindDriver(&CurDriver, zedriver.c_str()))
  {
-  MDFN_printf(_("\nUnknown sound driver \"%s\".  Supported sound drivers:\n"), zedriver.c_str());
+  std::vector<SexyAL_DriverInfo> DriverTypes = Interface->GetDriverList();
+
+  MDFN_printf(_("\nUnknown sound driver \"%s\".  Compiled-in sound drivers:\n"), zedriver.c_str());
 
   MDFN_indent(2);
-  for(int x = 0; DriverTypes[x].short_name; x++)
+  for(unsigned x = 0; x < DriverTypes.size(); x++)
   {
    MDFN_printf("%s\n", DriverTypes[x].short_name);
   }
   MDFN_indent(-2);
   MDFN_printf("\n");
-  Interface->Destroy(Interface);
+
+  delete Interface;
   Interface = NULL;
+
   MDFN_indent(-1);
   return(FALSE);
  }
 
  if(!strcasecmp(zedevice.c_str(), "default"))
-  MDFNI_printf(_("Using \"%s\" audio driver with SexyAL's default device selection."), DriverTypes[CurDriverIndex].name);
+  MDFNI_printf(_("Using \"%s\" audio driver with SexyAL's default device selection."), CurDriver.name);
  else
-  MDFNI_printf(_("Using \"%s\" audio driver with device \"%s\":"), DriverTypes[CurDriverIndex].name, zedevice.c_str());
+  MDFNI_printf(_("Using \"%s\" audio driver with device \"%s\":"), CurDriver.name, zedevice.c_str());
  MDFN_indent(1);
 
- //RunSexyALTest(Interface, &buffering, zedevice.c_str(), DriverTypes[CurDriverIndex].type);
+ //RunSexyALTest(Interface, &buffering, zedevice.c_str(), CurDriver.type);
  //exit(1);
- if(!(Output=Interface->Open(Interface, zedevice.c_str(), &format, &buffering, DriverTypes[CurDriverIndex].type)))
+ if(!(Output=Interface->Open(zedevice.c_str(), &format, &buffering, CurDriver.type)))
  {
   MDFND_PrintError(_("Error opening a sound device."));
-  Interface->Destroy(Interface);
-  Interface=0;
+
+  delete Interface;
+  Interface = NULL;
   MDFN_indent(-2);
   return(FALSE);
  }
@@ -301,7 +280,7 @@ bool InitSound(MDFNGI *gi)
  if(format.rate < 22050 || format.rate > 192000)
  {
   MDFND_PrintError(_("Set rate is out of range [22050-192000]"));
-  KillSound();
+  Sound_Kill();
   MDFN_indent(-2);
   return(FALSE);
  }
@@ -343,12 +322,7 @@ bool InitSound(MDFNGI *gi)
  return(1);
 }
 
-void SilenceSound(int n)
-{
-
-}
-
-bool KillSound(void)
+bool Sound_Kill(void)
 {
  SoundRate = 0;
 
@@ -364,9 +338,10 @@ bool KillSound(void)
   Output->Close(Output);
 
  if(Interface)
-  Interface->Destroy(Interface);
-
- Interface = NULL;
+ {
+  delete Interface;
+  Interface = NULL;
+ }
 
  if(!Output)
   return(FALSE);
@@ -377,7 +352,7 @@ bool KillSound(void)
 }
 
 
-int16 *GetEmuModSoundBuffer(int32 *max_size_bytes)
+int16 *Sound_GetEmuModBuffer(int32 *max_size_bytes)
 {
  *max_size_bytes = EmuModBufferSize;
 

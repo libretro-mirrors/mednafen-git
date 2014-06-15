@@ -107,6 +107,7 @@ int Mapper155_Init(CartInfo *);
 int Mapper156_Init(CartInfo *);
 int Mapper157_Init(CartInfo *);
 int Mapper158_Init(CartInfo *);
+int Mapper159_Init(CartInfo *);
 int Mapper163_Init(CartInfo *);
 int Mapper164_Init(CartInfo *);
 int Mapper180_Init(CartInfo *);

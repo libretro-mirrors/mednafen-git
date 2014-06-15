@@ -1650,6 +1650,108 @@ void MDFNI_Emulate(EmulateSpecStruct *espec)
   TBlur_Run(espec);
 }
 
+#if 0
+template<typename T>
+static void AutoScaleBody(EmulateSpecStruct* espec)
+{
+ int32 lcm_width = MDFNGameInfo->lcm_width;
+ std::vector<T> srcbuf;
+
+ srcbuf.resize(MDFNGameInfo->fb_width);
+
+ for(int y = espec->DisplayRect.y; MDFN_LIKELY(y < (espec->DisplayRect.y + espec->DisplayRect.h)); y++)
+ {
+  T* const surf_src_pixels = espec->surface->pix<T>() + (y * espec->surface->pitchinpix) + espec->DisplayRect.x;
+  //
+  // Strip out the x offset when we write back to the surface, since the surface is only guaranteed to be at least lcm_width wide,
+  // and an x offset could push us out of bounds.
+  T* const surf_dest_pixels = espec->surface->pix<T>() + (y * espec->surface->pitchinpix);
+  int32 lw = espec->LineWidths[y];
+
+  if(lw <= 0)
+  {
+   fprintf(stderr, "[BUG] lw <= 0\n");
+   continue;
+  }
+
+  int32 scale = (lcm_width + (lw >> 1)) / lw;
+  int32 spc = std::min<int32>(lcm_width / scale, lw);
+  T* ssp = &srcbuf[0];
+  T* stp = surf_dest_pixels;
+
+  assert(lw <= (int32)srcbuf.size());
+
+  memcpy(&srcbuf[0], surf_src_pixels, lw * sizeof(T));
+
+  for(int32 i = 0; MDFN_LIKELY(i < spc); i++)
+  {
+   T turtle = *ssp++;
+
+   for(int32 s = 0; s < scale; s++)
+    *stp++ = turtle;
+  }
+
+  {
+   T fpix = srcbuf[lw - 1];
+
+   while(stp < &surf_dest_pixels[lcm_width])
+    *stp++ = fpix;
+  }
+  //printf("%d\n", (int)(stp - surf_dest_pixels));
+ }
+
+ espec->DisplayRect.x = 0;
+ espec->DisplayRect.w = lcm_width;
+ espec->LineWidths[0] = ~0;
+}
+
+void MDFNI_AutoScaleMRFrame(EmulateSpecStruct *espec)
+{
+ if(espec->skip || !espec->surface)
+  return;
+
+ if(espec->LineWidths[0] == ~0)
+  return;
+
+ assert(espec->surface->w >= MDFNGameInfo->lcm_width);
+ assert(espec->surface->w >= MDFNGameInfo->fb_width);
+
+ bool mr_frame = false;
+ int32 prev_width = espec->LineWidths[espec->DisplayRect.y];
+ for(int y = espec->DisplayRect.y; y < espec->DisplayRect.y + espec->DisplayRect.h; y++)
+ {
+  if(espec->LineWidths[y] != prev_width)
+  {
+   //printf("%d %d\n", prev_width, espec->LineWidths[y]);
+   mr_frame = true;
+   break;
+  }
+  prev_width = espec->LineWidths[y];
+ }
+
+ //printf("MR: %d\n", mr_frame);
+
+ if(!mr_frame)
+ {
+  espec->DisplayRect.w = prev_width;
+  espec->LineWidths[0] = ~0;
+  return;
+ }
+
+ switch(espec->surface->format.bpp)
+ {
+  case  8: AutoScaleBody<uint8>(espec);
+	   break;
+
+  case 16: AutoScaleBody<uint16>(espec);
+	   break;
+
+  case 32: AutoScaleBody<uint32>(espec);
+	   break;
+ }
+}
+#endif
+
 // This function should only be called for state rewinding.
 // FIXME:  Add a macro for SFORMAT structure access instead of direct access
 int MDFN_RawInputStateAction(StateMem *sm, int load, int data_only)

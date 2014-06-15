@@ -56,10 +56,7 @@ static uint8 ReadARKFC(int w,uint8 ret)
 
 static uint32 FixX(uint32 in_x)
 {
- uint32 dummy = 0;
  int32 x;
-
- NESPPU_TranslateMouseXY(in_x, dummy);
 
  x = (int32)in_x + 98 - 32;
 
@@ -77,8 +74,8 @@ static void UpdateARKFC(void *data)
 {
  uint8 *ptr = (uint8*)data;
 
- FCArk.mzx=FixX((int32)MDFN_de32lsb(ptr + 0) >> 16);
- FCArk.mzb=ptr[4]?1:0;
+ FCArk.mzx = FixX((int16)MDFN_de16lsb(ptr + 0));
+ FCArk.mzb = (bool)ptr[2];
 }
 
 static int StateAction(int w, StateMem *sm, int load, int data_only)
@@ -151,8 +148,8 @@ static void UpdateARK(int w, void *data)
 {
  uint8 *ptr = (uint8*)data;
 
- NESArk[w].mzx=FixX((int32)MDFN_de32lsb(ptr + 0) >> 16);
- NESArk[w].mzb=ptr[4]?1:0;
+ NESArk[w].mzx = FixX((int16)MDFN_de16lsb(ptr + 0));
+ NESArk[w].mzb = (bool)ptr[2];
 }
 
 static INPUTC ARKC={ReadARK, 0, StrobeARK, UpdateARK, 0, 0, StateAction };

@@ -25,6 +25,7 @@ static void DoAYSQHQ(int x);
 
 static uint16 IRQCount;
 static uint8 IRQa;
+static uint8 CHRRegs[8];
 static uint8 PRGRegs[3];
 static uint8 Mirroring;
 
@@ -50,6 +51,12 @@ static DECLFR(SUN5AWRAM)
  if((wram_control&0xC0)==0x40)
   return X.DB; 
  return CartBR(A);
+}
+
+static void SyncCHR(void)
+{
+ for(unsigned x = 0; x < 8; x++)
+  setchr1(x << 10, CHRRegs[x]);
 }
 
 static void SyncPRG(void)
@@ -114,7 +121,10 @@ static DECLFW(Mapper69_write)
   case 0xa000:
               reg_select&=0xF;
               if(reg_select < 8)
-               setchr1(reg_select<<10,V);
+	      {
+	       CHRRegs[reg_select] = V;
+	       SyncCHR();
+              }
               else
                switch(reg_select&0x0f)
                {
@@ -188,15 +198,23 @@ static void SunIRQHook(int a)
 
 static int StateAction(StateMem *sm, int load, int data_only)
 {
- SFORMAT StateRegs[] = {
+ SFORMAT StateRegs[] =
+ {
         SFVARN(reg_select, "FM7S"),
         SFVARN(wram_control, "FM7W"),
         SFARRAYN(sr, 0x10, "FM7SR"),
         SFVARN(sr_index, "FM7I"),
 	SFARRAY(PRGRegs, 3),
+	SFARRAY(CHRRegs, 8),
 	SFVAR(Mirroring),
 	SFARRAY32(vcount, 3),
 	SFARRAY32(dcount, 3),
+
+	SFVAR(IRQa),
+	SFVAR(IRQCount),
+	
+	SFARRAY(WRAM, 8192),
+
 	SFEND
  };
 
@@ -204,6 +222,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
 
  if(load)
  {
+  SyncCHR();
   SyncPRG();
   SyncMirroring();
  }
@@ -256,14 +275,26 @@ static void Reset(CartInfo *info)
  wram_control = 0;
  memset(sr, 0xFF, sizeof(sr));  // Setting all bits will cause sound output to be disabled on reset.
 
+ for(unsigned x = 0; x < 8; x++)
+  CHRRegs[x] = x;
+
  PRGRegs[0] = PRGRegs[1] = PRGRegs[2] = 0x3F;
 
  Mirroring = info->mirror ? 0 : 1; // Do any mapper 69 boards use hardware-fixed mirroring?
 
+ SyncCHR();
  SyncPRG();
  SyncMirroring();
 
  setprg8(0xe000, 0x3F);
+}
+
+static void Power(CartInfo *info)
+{
+ if(!info->battery)
+  memset(WRAM, 0x00, 8192);
+
+ Reset(info);
 }
 
 int BTR_Init(CartInfo *info)
@@ -277,8 +308,15 @@ int BTR_Init(CartInfo *info)
  SetReadHandler(0x6000,0x7fff,SUN5AWRAM);
  SetReadHandler(0x8000, 0xFFFF, CartBR);
 
- info->Power = info->Reset = Reset;
+ info->Power = Power;
+ info->Reset = Reset;
  info->StateAction = StateAction;
+
+ if(info->battery)
+ {
+  info->SaveGame[0] = WRAM;
+  info->SaveGameLen[0] = 8192;
+ }
 
  Mapper69_ESI(&info->CartExpSound);
 

@@ -199,6 +199,7 @@ static void MDFN_FASTCALL mem_wbyte(v810_timestamp_t &timestamp, uint32 A, uint8
 
   if(BackupControl & 0x1)
   {
+   BackupSignalDirty |= (BackupRAM[(A & 0xFFFF) >> 1] != V);
    BackupRAM[(A & 0xFFFF) >> 1] = V;
   }
  }
@@ -210,6 +211,7 @@ static void MDFN_FASTCALL mem_wbyte(v810_timestamp_t &timestamp, uint32 A, uint8
 
   if(BackupControl & 0x2)
   {
+   BackupSignalDirty |= (ExBackupRAM[(A & 0xFFFF) >> 1] != V);
    ExBackupRAM[(A & 0xFFFF) >> 1] = V;
   }
  }
@@ -244,6 +246,7 @@ static void MDFN_FASTCALL mem_whword(v810_timestamp_t &timestamp, uint32 A, uint
 
   if(BackupControl & 0x1)
   {
+   BackupSignalDirty |= (BackupRAM[(A & 0xFFFF) >> 1] != (uint8)V);
    BackupRAM[(A & 0xFFFF) >> 1] = (uint8)V;
   }
  }
@@ -255,6 +258,7 @@ static void MDFN_FASTCALL mem_whword(v810_timestamp_t &timestamp, uint32 A, uint
 
   if(BackupControl & 0x2)
   {
+   BackupSignalDirty |= (ExBackupRAM[(A & 0xFFFF) >> 1] != (uint8)V);
    ExBackupRAM[(A & 0xFFFF) >> 1] = (uint8)V;
   }
  }

@@ -20,11 +20,12 @@
 
 #include "mapinc.h"
 
-static uint8 Mirroring, PRGBanks[3], CHRBanks[6], WRAM[8192];
+static uint8 Mirroring, PRGBanks[3], CHRBanks[6], IRAM[128];
 static uint32 lastA;
 static bool isfu;
 static uint8 CCache[8];
 static int32 lastmc;
+static uint8 IRAM_Control;
 
 static void Fudou_PPU(uint32 A)
 {
@@ -73,24 +74,57 @@ static void DoCHR(void)
  for(int x = 0; x < 4; x++)
   setchr1(0x1000 + x * 1024, CHRBanks[2 + x]);
 }
+
+static DECLFR(IRAM_Read)
+{
+ //printf("%04x\n", A);
+
+ if(IRAM_Control == 0xA3)
+  return IRAM[A & 0x7F];
+
+ return(X.DB);
+}
+
+static DECLFW(IRAM_Write)
+{
+ //printf("%04x:%02x\n", A, V);
+
+ if(IRAM_Control == 0xA3)
+  IRAM[A & 0x7F] = V;
+}
+
 static DECLFW(Mapper80_write)
 {
- switch(A)
- {
-  case 0x7ef0: CHRBanks[0]=V;DoCHR();mira();break;
-  case 0x7ef1: CHRBanks[1]=V;DoCHR();mira();break;
+ //if((A & 0xF) == 0x7 || ((A & 0xE) == 0x8))
+ // printf("%04x:%02x\n", A, V);
 
-  case 0x7ef2: CHRBanks[2]=V;DoCHR();mira();break;
-  case 0x7ef3: CHRBanks[3]=V;DoCHR();mira();break;
-  case 0x7ef4: CHRBanks[4]=V;DoCHR();mira();break;
-  case 0x7ef5: CHRBanks[5]=V;DoCHR();mira();break;
-  case 0x7ef6: Mirroring = V & 1;mira();break;
-  case 0x7efa:
-  case 0x7efb: PRGBanks[0] = V; DoPRG();break;
-  case 0x7efd:
-  case 0x7efc: PRGBanks[1] = V; DoPRG();break;
-  case 0x7efe:
-  case 0x7eff: PRGBanks[2] = V; DoPRG();break;
+ switch(A & 0xF)
+ {
+  case 0x0: CHRBanks[0]=V;DoCHR();mira();break;
+  case 0x1: CHRBanks[1]=V;DoCHR();mira();break;
+
+  case 0x2: CHRBanks[2]=V;DoCHR();mira();break;
+  case 0x3: CHRBanks[3]=V;DoCHR();mira();break;
+  case 0x4: CHRBanks[4]=V;DoCHR();mira();break;
+  case 0x5: CHRBanks[5]=V;DoCHR();mira();break;
+
+  case 0x6:
+  case 0x7: Mirroring = V & 1;
+	    mira();
+            break;
+
+  case 0x8:
+  case 0x9: IRAM_Control = V;
+	    break;
+
+  case 0xa:
+  case 0xb: PRGBanks[0] = V; DoPRG();break;
+
+  case 0xc:
+  case 0xd: PRGBanks[1] = V; DoPRG();break;
+
+  case 0xe:
+  case 0xf: PRGBanks[2] = V; DoPRG();break;
  }
 }
 
@@ -103,6 +137,10 @@ static int StateAction(StateMem *sm, int load, int data_only)
   SFVAR(lastA),
   SFVAR(lastmc),
   SFARRAY(CHRBanks, 6),
+
+  SFARRAY(IRAM, 128),
+  SFVAR(IRAM_Control),
+
   SFEND
  };
 
@@ -136,7 +174,9 @@ static void Power(CartInfo *info)
  DoCHR();
  mira();
 
- memset(WRAM, 0xFF, 8192);
+ if(!info->battery)
+  memset(IRAM, 0xFF, 128);
+
  setprg8r(0x10, 0x6000, 0);
 }
 
@@ -145,18 +185,20 @@ int Mapper80_Init(CartInfo *info)
  info->Power = Power;
  info->StateAction = StateAction;
 
- SetWriteHandler(0x7ef0,0x7eff,Mapper80_write);
- SetWriteHandler(0x6000, 0x7eef, CartBW);
- SetWriteHandler(0x7f00, 0x7fff, CartBW);
- SetReadHandler(0x6000, 0xFFFF, CartBR);
+ SetReadHandler(0x8000, 0xFFFF, CartBR);
+ SetWriteHandler(0x7ef0, 0x7eff, Mapper80_write);
+
+ SetWriteHandler(0x7f00, 0x7fff, IRAM_Write);
+ SetReadHandler(0x7f00, 0x7fff, IRAM_Read);
+
  isfu = false;
- SetupCartPRGMapping(0x10, WRAM, 8192, 1); // For Minelvation Saga, at least.  Total amount of RAM on the actual board is unknown, though...
 
  if(info->battery)
  {
-  info->SaveGame[0] = WRAM;
-  info->SaveGameLen[0] = 8192;
+  info->SaveGame[0] = IRAM;
+  info->SaveGameLen[0] = 128;
  }
+
  return(1);
 }
 

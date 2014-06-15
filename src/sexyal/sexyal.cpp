@@ -1,26 +1,19 @@
-/* SexyAL - Simple audio abstraction library.
-
-Copyright (c) 2005-2007 Mednafen Team
-
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
-
-The above copyright notice and this permission notice shall be included
-in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
+/* Mednafen - Multi-system Emulator
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 
 #include "sexyal.h"
 
@@ -44,9 +37,14 @@ SexyAL_device *SexyALI_OSS_Open(const char *id, SexyAL_format *format, SexyAL_bu
 SexyAL_device *SexyALI_JACK_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 SexyAL_device *SexyALI_SDL_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 SexyAL_device *SexyALI_DSound_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
+
+#if HAVE_WASAPI
 SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 SexyAL_device *SexyALI_WASAPISH_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
-SexyAL_device *SexyALI_Dummy_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
+
+bool SexyALI_WASAPI_Avail(void);
+bool SexyALI_WASAPISH_Avail(void);
+#endif
 
 #ifdef HAVE_ALSA
 SexyAL_enumdevice *SexyALI_ALSA_EnumerateDevices(void);
@@ -58,7 +56,18 @@ SexyAL_device *SexyALI_DOS_SB_Open(const char *id, SexyAL_format *format, SexyAL
 SexyAL_device *SexyALI_DOS_ES1370_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 SexyAL_device *SexyALI_DOS_ES1371_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 SexyAL_device *SexyALI_DOS_CMI8738_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
+
+//
+// Doing it this way results in questionable semantics with multiple sound cards of the same type coupled with user-configured non-default device selection,
+// but it'll suffice for now.
+bool SexyALI_DOS_SB_Avail(void);
+bool SexyALI_DOS_ES1370_Avail(void);
+bool SexyALI_DOS_ES1371_Avail(void);
+bool SexyALI_DOS_CMI8738_Avail(void);
 #endif
+
+SexyAL_device *SexyALI_Dummy_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
+
 
 static uint32_t FtoB(const SexyAL_format *format, uint32_t frames)
 {
@@ -136,10 +145,16 @@ int SetConvert(struct __SexyAL_device *device, SexyAL_format *format)
  return(1);
 }
 
-void Destroy(SexyAL *iface)
+struct SexyAL_driver
 {
- free(iface);
-}
+	int type;
+	const char *name;
+	const char *short_name;
+
+	SexyAL_device * (*Open)(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
+	SexyAL_enumdevice *(*EnumerateDevices)(void);
+	bool (*Avail)(void);	// Optional.  Returns true if API/layer is available, false if not.
+};
 
 static SexyAL_driver drivers[] = 
 {
@@ -151,22 +166,34 @@ static SexyAL_driver drivers[] =
 	{ SEXYAL_TYPE_OSSDSP, "OSS(/dev/dsp*)", "oss", SexyALI_OSS_Open, SexyALI_OSS_EnumerateDevices },
 	#endif
 
+	//
+	// WASAPISH should have higher priority(comes before in this array) than dsound.
+	//
+        #if HAVE_WASAPI
+        { SEXYAL_TYPE_WASAPISH, "WASAPI(Shared mode)", "wasapish", SexyALI_WASAPISH_Open, NULL, SexyALI_WASAPISH_Avail },
+        #endif
+
         #if HAVE_DIRECTSOUND
         { SEXYAL_TYPE_DIRECTSOUND, "DirectSound", "dsound", SexyALI_DSound_Open, NULL },
         #endif
 
         #if HAVE_WASAPI
-        { SEXYAL_TYPE_WASAPISH, "WASAPI(Shared mode)", "wasapish", SexyALI_WASAPISH_Open, NULL },
-        { SEXYAL_TYPE_WASAPI, "WASAPI(Exclusive mode)", "wasapi", SexyALI_WASAPI_Open, NULL },
+        { SEXYAL_TYPE_WASAPI, "WASAPI(Exclusive mode)", "wasapi", SexyALI_WASAPI_Open, 	NULL, SexyALI_WASAPI_Avail },
         #endif
 
 	#ifdef DOS
-	{ SEXYAL_TYPE_DOS_SB, "Sound Blaster 2.0/Pro/16", "sb", SexyALI_DOS_SB_Open, NULL },
-        { SEXYAL_TYPE_DOS_ES1370, "Ensoniq ES1370", "es1370", SexyALI_DOS_ES1370_Open, NULL },
-	{ SEXYAL_TYPE_DOS_ES1371, "Ensoniq ES1371", "es1371", SexyALI_DOS_ES1371_Open, NULL },
-	{ SEXYAL_TYPE_DOS_CMI8738, "CMI8738", "cmi8738", SexyALI_DOS_CMI8738_Open, NULL },
+	//
+	// List SB first, to try to prevent fubaring a PCI sound card's active Sound Blaster emulation(if present) by directly programming its PCI registers.
+	//
+	{ SEXYAL_TYPE_DOS_SB, "Sound Blaster 2.0/Pro/16", "sb", SexyALI_DOS_SB_Open, 	NULL, SexyALI_DOS_SB_Avail },
+        { SEXYAL_TYPE_DOS_ES1370, "Ensoniq ES1370", "es1370", SexyALI_DOS_ES1370_Open, 	NULL, SexyALI_DOS_ES1370_Avail },
+	{ SEXYAL_TYPE_DOS_ES1371, "Ensoniq ES1371", "es1371", SexyALI_DOS_ES1371_Open, 	NULL, SexyALI_DOS_ES1371_Avail },
+	{ SEXYAL_TYPE_DOS_CMI8738, "CMI8738", "cmi8738", SexyALI_DOS_CMI8738_Open, 	NULL, SexyALI_DOS_CMI8738_Avail },
 	#endif
 
+	//
+	// Keep SDL higher priority than JACK.
+	//
         #if HAVE_SDL
         { SEXYAL_TYPE_SDL, "SDL", "sdl", SexyALI_SDL_Open, NULL },
         #endif
@@ -194,12 +221,12 @@ static SexyAL_driver *FindDriver(int type)
  return(0);
 }
 
-static SexyAL_device *Open(SexyAL *iface, const char *id, SexyAL_format *format, SexyAL_buffering *buffering, int type)
+SexyAL_device *SexyAL::Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering, int type)
 {
  SexyAL_device *ret;
  SexyAL_driver *driver;
 
- driver = FindDriver(type);
+ driver = ::FindDriver(type);
  if(!driver)
   return(0);
 
@@ -249,32 +276,53 @@ static SexyAL_device *Open(SexyAL *iface, const char *id, SexyAL_format *format,
  return(ret);
 }
 
-static SexyAL_enumtype *EnumerateTypes(SexyAL *sal)
+std::vector<SexyAL_DriverInfo> SexyAL::GetDriverList(void)
 {
- SexyAL_enumtype *typies;
- int numdrivers = sizeof(drivers) / sizeof(SexyAL_driver);
- int x;
+ std::vector<SexyAL_DriverInfo> ret;
 
- typies = (SexyAL_enumtype *)malloc(numdrivers * sizeof(SexyAL_enumtype));
- memset(typies, 0, numdrivers * sizeof(SexyAL_enumtype));
-
- x = 0;
-
- do
+ for(int x = 0; drivers[x].name; x++)
  {
-  typies[x].name = drivers[x].name;
-  typies[x].short_name = drivers[x].short_name;
-  typies[x].type = drivers[x].type;
- } while(drivers[x++].name);
+  SexyAL_DriverInfo di;
 
- return(typies);
+  di.short_name = drivers[x].short_name;
+  di.name = drivers[x].name;
+  di.type = drivers[x].type;
+
+  ret.push_back(di);
+ }
+
+ return(ret);
 }
 
-static SexyAL_enumdevice * EnumerateDevices(SexyAL *iface, int type)
+bool SexyAL::FindDriver(SexyAL_DriverInfo* out_di, const char* name)
+{
+ bool need_default = ((name == NULL) || !strcasecmp(name, "default"));
+
+ for(int x = 0; drivers[x].name; x++)
+ {
+  if(need_default)
+  {
+   if(drivers[x].Avail && !drivers[x].Avail())
+    continue;
+  }
+  else if(strcasecmp(drivers[x].short_name, name))
+   continue;
+
+  out_di->short_name = drivers[x].short_name;
+  out_di->name = drivers[x].name;
+  out_di->type = drivers[x].type;
+
+  return(true);
+ }
+
+ return(false);
+}
+
+SexyAL_enumdevice* SexyAL::EnumerateDevices(int type)
 {
  SexyAL_driver *driver;
 
- driver = FindDriver(type);
+ driver = ::FindDriver(type);
 
  if(!driver)
   return(0);
@@ -285,20 +333,15 @@ static SexyAL_enumdevice * EnumerateDevices(SexyAL *iface, int type)
  return(0);
 }
 
-void *SexyAL_Init(int version)
+SexyAL::SexyAL()
 {
- SexyAL *iface;
 
- iface = (SexyAL *)malloc(sizeof(SexyAL));
-
- iface->Open=Open;
- iface->Destroy=Destroy;
-
- iface->EnumerateTypes = EnumerateTypes;
- iface->EnumerateDevices = EnumerateDevices;
- return((void *)iface);
 }
 
+SexyAL::~SexyAL()
+{
+
+}
 
 // Source: http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
 // Rounds up to the nearest power of 2.

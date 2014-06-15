@@ -21,7 +21,7 @@
 #include	"share.h"
 
 
-static char side;
+static bool side;	// false = A, true = B
 static uint32 pprsb[2];
 static uint32 pprdata[2];
 
@@ -48,18 +48,18 @@ static void StrobePP(int w)
 
 void UpdatePP(int w, void *data)
 {
- static const char shifttableA[12]={8,9,0,1,11,7,4,2,10,6,5,3};
- static const char shifttableB[12]={1,0,9,8,2,4,7,11,3,5,6,10};
- int x;
+ static const unsigned char shifttable[2][12] =
+ {
+  {8,9,0,1,11,7,4,2,10,6,5,3},
+  {1,0,9,8,2,4,7,11,3,5,6,10}
+ };
+ const uint16 ind16 = MDFN_de16lsb((uint8*)data);
 
- pprdata[w]=0;
-
- if(side=='A')
-  for(x=0;x<12;x++)
-   pprdata[w]|=(((*(uint32 *)data)>>x)&1)<<shifttableA[x];
- else
-  for(x=0;x<12;x++)
-   pprdata[w]|=(((*(uint32 *)data)>>x)&1)<<shifttableB[x];
+ pprdata[w] = 0;
+ for(int x = 0; x < 12; x++)
+ {
+  pprdata[w] |= ((ind16 >> x) & 1) << shifttable[side][x];
+ }
 }
 
 static int StateAction(int w, StateMem *sm, int load, int data_only)
@@ -88,12 +88,12 @@ static INPUTC *MDFN_InitPowerpad(int w)
 
 INPUTC *MDFN_InitPowerpadA(int w)
 {
- side='A';
+ side = false;
  return(MDFN_InitPowerpad(w));
 }
 
 INPUTC *MDFN_InitPowerpadB(int w)
 {
- side='B';
+ side = true;
  return(MDFN_InitPowerpad(w));
 }
