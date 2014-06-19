@@ -4,11 +4,14 @@
 namespace MDFN_IEN_WSWAN
 {
 
-void WSwan_RTCWrite(uint32 A, uint8 V);
-uint8 WSwan_RTCRead(uint32 A);
-void WSwan_RTCReset(void);
-void WSwan_RTCClock(uint32 cycles);
-int WSwan_RTCStateAction(StateMem *sm, int load, int data_only);
+void RTC_Write(uint8 A, uint8 V);
+uint8 RTC_Read(uint8 A);
+
+void RTC_Init(void);
+void RTC_Reset(void);
+
+void RTC_Clock(uint32 cycles);
+int RTC_StateAction(StateMem *sm, int load, int data_only);
 
 }
 

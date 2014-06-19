@@ -52,12 +52,26 @@ class InputDevice_Memcard : public InputDevice
 
  private:
 
+ void Format(void);
+
  bool presence_new;
 
  uint8 card_data[1 << 17];
  uint8 rw_buffer[128];
  uint8 write_xor;
 
+ //
+ // Used to avoid saving unused memory cards' card data in save states.
+ // Set to false on object initialization, set to true when data is written to card_data that differs
+ // from existing data(either from loading a memory card saved to disk, or from a game writing to the memory card).
+ //
+ // Save and load its state to/from save states.
+ //
+ bool data_used;
+
+ //
+ // Do not save dirty_count in save states!
+ //
  uint64 dirty_count;
 
  bool dtr;
@@ -73,14 +87,8 @@ class InputDevice_Memcard : public InputDevice
  uint32 transmit_count;
 };
 
-InputDevice_Memcard::InputDevice_Memcard()
+void InputDevice_Memcard::Format(void)
 {
- Power();
-
- dirty_count = 0;
-
- // Init memcard as formatted.
- assert(sizeof(card_data) == (1 << 17));
  memset(card_data, 0x00, sizeof(card_data));
 
  card_data[0x00] = 0x4D;
@@ -104,7 +112,18 @@ InputDevice_Memcard::InputDevice_Memcard()
   card_data[A + 0x08] = 0xFF;
   card_data[A + 0x09] = 0xFF;
  }
+}
 
+InputDevice_Memcard::InputDevice_Memcard()
+{
+ Power();
+
+ data_used = false;
+ dirty_count = 0;
+
+ // Init memcard as formatted.
+ assert(sizeof(card_data) == (1 << 17));
+ Format();
 }
 
 InputDevice_Memcard::~InputDevice_Memcard()
@@ -142,7 +161,6 @@ int InputDevice_Memcard::StateAction(StateMem* sm, int load, int data_only, cons
  {
   SFVAR(presence_new),
 
-  SFARRAY(card_data, sizeof(card_data)),
   SFARRAY(rw_buffer, sizeof(rw_buffer)),
   SFVAR(write_xor),
 
@@ -158,14 +176,41 @@ int InputDevice_Memcard::StateAction(StateMem* sm, int load, int data_only, cons
   SFVAR(transmit_buffer),
   SFVAR(transmit_count),
 
+  SFVAR(data_used),
+
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name);
 
- if(load)
+ SFORMAT CD_StateRegs[] =
  {
-  dirty_count++;
+  SFARRAY(card_data, sizeof(card_data)),
+  SFEND
+ };
+ int ret = 1;
+
+ if(MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name) != 0)
+ {
+  //printf("%s data_used=%d\n", section_name, data_used);
+  if(data_used)
+  {
+   std::string tmp_name = std::string(section_name) + "_DT";
+
+   ret &= MDFNSS_StateAction(sm, load, data_only, CD_StateRegs, tmp_name.c_str());
+  }
+
+  if(load)
+  {
+   if(data_used)
+    dirty_count++;
+   else
+   {
+    //printf("Format: %s\n", section_name);
+    Format();
+   }
+  }
  }
+ else
+  ret = 0;
 
  return(ret);
 }
@@ -417,6 +462,7 @@ bool InputDevice_Memcard::Clock(bool TxD, int32 &dsr_pulse_delay)
 	 {
 	  memcpy(&card_data[addr << 7], rw_buffer, 128);
 	  dirty_count++;
+	  data_used = true;
 	 }
 	}
 
@@ -456,10 +502,15 @@ void InputDevice_Memcard::ReadNV(uint8 *buffer, uint32 offset, uint32 size)
 void InputDevice_Memcard::WriteNV(const uint8 *buffer, uint32 offset, uint32 size)
 {
  if(size)
+ {
   dirty_count++;
+ }
 
  while(size--)
  {
+  if(card_data[offset & (sizeof(card_data) - 1)] != *buffer)
+   data_used = true;
+
   card_data[offset & (sizeof(card_data) - 1)] = *buffer;
   buffer++;
   offset++;

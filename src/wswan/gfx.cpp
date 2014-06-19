@@ -23,6 +23,7 @@
 #include "memory.h"
 #include "v30mz.h"
 #include "rtc.h"
+#include "comm.h"
 #include <mednafen/video.h>
 #include <trio/trio.h>
 
@@ -396,6 +397,7 @@ bool wsExecuteLine(MDFN_Surface *surface, bool skip)
           wsScanline(surface->pixels + wsLine * surface->pitch32);
 	}
 
+	Comm_Process();
 	WSwan_CheckSoundDMA();
 
         // Update sprite data table
@@ -446,7 +448,7 @@ bool wsExecuteLine(MDFN_Surface *surface, bool skip)
 	goto *WEP_Tab[weppy];
 	WEP2: ;
 
-	WSwan_RTCClock(256);
+	RTC_Clock(256);
 
         if(!wsLine)
         {

@@ -1,3 +1,35 @@
+-- 0.9.36: --
+
+June 17, 2014:
+	PSX: Rewrote SPU ADPCM decoding code per tests on a PS1; fixes the early voice cutoff problem in "Thousand Arms", and possibly some other
+	games as well.  Seems to fix the post-battle quasi-random lockup problem in the Japanese version of Tales of Destiny.
+
+June 15, 2014:
+	WonderSwan: Added experimental, undocumented support for interfacing with trap15's WonderFence program, which provides MobileWonderGate emulation;
+	controlled via settings "wswan.excomm" and "wswan.excomm.path".  This support is currently only available on UN*X-like platforms.
+
+	WonderSwan: Added SRAM size calculation for the raw header value of 0x05(used by MobileWonderGate).
+
+	WonderSwan: Corrected the SRAM size calculation for the raw header value of 0x04(used by Dicing Knight and Judgement Silversword).
+
+	WonderSwan: Rewrote RTC emulation code to avoid runtime use of C library time functions(fixing potential desync issues when using netplay and input-recording
+	movies), and fixed the time initialization code to reflect the current local time instead of UTC.
+
+June 14, 2014:
+	PSX: Implemented experimental support for save states.
+
+	PSX: Rewrote MDEC execution loop; the MDEC emulation model still is far from perfect, though.  Fixes the lockup during the intro FMV of
+	a corrupt copy of "Dragon Knight 4" that's floating around the Internet.
+
+June 10, 2014:
+	Ripped out incomplete "snes_perf" emulation module, and ripped out the unimplemented PC emulation stub module.
+
+June 9, 2014:
+	PSX: Improvements to SPU volume sweep emulation accuracy per tests on a PS1.  Fixes sound/music wonkiness in "WipEout 3".
+
+June 6, 2014:
+	PSX: Minor improvements to MDEC YCbCr to RGB color conversion accuracy, per tests on a PS1.
+
 -- 0.9.35.1: --
 
 June 5, 2014:

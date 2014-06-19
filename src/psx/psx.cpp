@@ -1870,7 +1870,10 @@ static void SetInput(int port, const char *type, void *ptr)
 
 static int StateAction(StateMem *sm, int load, int data_only)
 {
- return(0);
+ if(!MDFN_GetSettingB("psx.clobbers_lament"))
+ {
+  return(0);
+ }
 
  SFORMAT StateRegs[] =
  {
@@ -1893,6 +1896,9 @@ static int StateAction(StateMem *sm, int load, int data_only)
  // Call SetDisc() BEFORE we load CDC state, since SetDisc() has emulation side effects.  We might want to clean this up in the future.
  if(load)
  {
+  if(CD_SelectedDisc >= (int)cdifs->size())
+   CD_SelectedDisc = -1;
+
   CDC->SetDisc(CD_TrayOpen, (CD_SelectedDisc >= 0 && !CD_TrayOpen) ? (*cdifs)[CD_SelectedDisc] : NULL,
 	(CD_SelectedDisc >= 0 && !CD_TrayOpen) ? cdifs_scex_ids[CD_SelectedDisc] : NULL);
  }
@@ -1902,15 +1908,14 @@ static int StateAction(StateMem *sm, int load, int data_only)
  ret &= CPU->StateAction(sm, load, data_only);
  ret &= DMA_StateAction(sm, load, data_only);
  ret &= TIMER_StateAction(sm, load, data_only);
- ret &= CDC->StateAction(sm, load, data_only);
+ ret &= SIO_StateAction(sm, load, data_only);
 
- // These need some work still:
- //ret &= MDEC_StateAction(sm, load, data_only);
- //ret &= SPU->StateAction(sm, load, data_only);
+ ret &= CDC->StateAction(sm, load, data_only);
+ ret &= MDEC_StateAction(sm, load, data_only);
+ ret &= GPU->StateAction(sm, load, data_only);
+ ret &= SPU->StateAction(sm, load, data_only);
+
  ret &= FIO->StateAction(sm, load, data_only);
- //ret &= SIO_StateAction(sm, load, data_only);
- //ret &= GPU->StateAction(sm, load, data_only);
- // End needing work.
 
  ret &= IRQ_StateAction(sm, load, data_only);	// Do it last.
 
@@ -2244,7 +2249,7 @@ static MDFNSetting PSXSettings[] =
  { "psx.bios_eu", MDFNSF_EMU_STATE, gettext_noop("Path to the Europe SCPH-5502 ROM BIOS"), NULL, MDFNST_STRING, "scph5502.bin" },
 
  { "psx.spu.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("SPU output resampler quality."),
-	gettext_noop("0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the \"sound.rate\" setting, to \"44100\" will bypass the resampler, which will decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors."), MDFNST_UINT, "5", "0", "10" },
+	gettext_noop("0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors."), MDFNST_UINT, "5", "0", "10" },
 
 
  { "psx.slstart", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in NTSC mode."), NULL, MDFNST_INT, "0", "0", "239" },
@@ -2256,6 +2261,8 @@ static MDFNSetting PSXSettings[] =
 #if PSX_DBGPRINT_ENABLE
  { "psx.dbg_level", MDFNSF_NOFLAGS, gettext_noop("Debug printf verbosity level."), NULL, MDFNST_UINT, "0", "0", "4" },
 #endif
+
+ { "psx.clobbers_lament", MDFNSF_NOFLAGS, gettext_noop("Enable experimental save state functionality."), gettext_noop("Save states will destroy your saved game/memory card data if you're careless, and that will make clobber sad.  Poor clobber."), MDFNST_BOOL, "0" },
 
  { NULL },
 };

@@ -1,3 +1,5 @@
+{ 0, 135, 8, 0x6ae12e21239c2688ULL },	/* Super Pang */
+
 
 { 0, 159, 8, 0xdbe23478bb1f8326ULL },	/* Magical Taruruuto-kun */
 { 0, 159, 8, 0xeb656a7a02dcbfb2ULL },	/* Magical Taruruuto-kun */
