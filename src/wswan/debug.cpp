@@ -1,7 +1,4 @@
-/* Cygne
- *
- * Copyright notice for this file:
- *  Copyright (C) 2002 Dox dox@space.pl
+/* Mednafen - Multi-system Emulator
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,6 +72,7 @@ void WSwanDBG_IRQ(int level)
 static uint8 ReadHandler(uint32 A)
 {
  std::vector<WSWAN_BPOINT>::iterator bpit;
+ uint8 ret;
 
  for(bpit = BreakPointsRead.begin(); bpit != BreakPointsRead.end(); bpit++)
  {
@@ -87,7 +85,11 @@ static uint8 ReadHandler(uint32 A)
   }
  }
 
- return(WSwan_readmem20(A));
+ WS_InDebug++;
+ ret = WSwan_readmem20(A);
+ WS_InDebug--;
+
+ return(ret);
 }
 
 static void WriteHandler(uint32 A, uint8 V)
@@ -109,6 +111,7 @@ static void WriteHandler(uint32 A, uint8 V)
 static uint8 PortReadHandler(uint32 A)
 {
  std::vector<WSWAN_BPOINT>::iterator bpit;
+ uint8 ret;
 
  for(bpit = BreakPointsIORead.begin(); bpit != BreakPointsIORead.end(); bpit++)
  {
@@ -121,7 +124,11 @@ static uint8 PortReadHandler(uint32 A)
   }
  }
 
- return(WSwan_readport(A));
+ WS_InDebug++;
+ ret = WSwan_readport(A);
+ WS_InDebug--;
+
+ return(ret);
 }
 
 static void PortWriteHandler(uint32 A, uint8 V)
@@ -238,6 +245,8 @@ uint32 WSwanDBG_MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical)
  uint32 ss = v30mz_get_reg(NEC_SS);
  uint32 ret = 0;
 
+ WS_InDebug++;
+
  for(unsigned int i = 0; i < bsize; i++)
  {
   uint8 zebyte;
@@ -248,6 +257,8 @@ uint32 WSwanDBG_MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical)
    zebyte = WSwan_readmem20((A + i) & 0xFFFFF);
   ret |= zebyte << (i * 8);
  }
+
+ WS_InDebug--;
 
  return(ret);
 }
@@ -338,10 +349,12 @@ void WSwanDBG_Disassemble(uint32 &a, uint32 SpecialA, char *text_buffer)
  uint32 ps = v30mz_get_reg(NEC_PS);
  int consumed;
 
+ WS_InDebug++;
  for(unsigned int i = 0; i < mis; i++)
  {
   instr_buffer[i] = WSwan_readmem20(((ps << 4) + a + i) & 0xFFFFF);
  }
+ WS_InDebug--;
 
  consumed = zedis.disasm(0x0000, a, instr_buffer, text_buffer);
 
@@ -428,6 +441,7 @@ static RegType MiscRegs[] =
  { MEMORY_GSREG_BNK2SLCT, "BNK2SLCT", "ROM Bank Selector for 64KiB bank 0x2", 1 },
  { MEMORY_GSREG_BNK3SLCT, "BNK3SLCT", "ROM Bank Selector for 64KiB bank 0x3", 1 },
 
+ { 0x8000 | INT_GSREG_IASSERTED, "IAsserted", "Interrupt Asserted", 1 },
  { 0x8000 | INT_GSREG_ISTATUS, "IStatus", "Interrupt Status", 1 },
  { 0x8000 | INT_GSREG_IENABLE, "IEnable", "Interrupt Enable", 1 },
  { 0x8000 | INT_GSREG_IVECTORBASE, "IVectorBase", "Interrupt Vector Base", 1 },
@@ -461,6 +475,8 @@ static RegGroupType MiscRegsGroup =
 
 void WSwanDBG_Init(void)
 {
+ WS_InDebug = 0;
+
  BTEnabled = false;
  BTIndex = 0;
  memset(BTEntries, 0, sizeof(BTEntries));

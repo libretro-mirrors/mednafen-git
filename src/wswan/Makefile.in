@@ -92,9 +92,9 @@ am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
 libwswan_a_AR = $(AR) $(ARFLAGS)
 libwswan_a_LIBADD =
-am__libwswan_a_SOURCES_DIST = gfx.cpp main.cpp memory.cpp v30mz.cpp \
-	sound.cpp tcache.cpp interrupt.cpp eeprom.cpp rtc.cpp \
-	dis/dis_decode.cpp dis/dis_groups.cpp dis/resolve.cpp \
+am__libwswan_a_SOURCES_DIST = gfx.cpp main.cpp memory.cpp comm.cpp \
+	v30mz.cpp sound.cpp tcache.cpp interrupt.cpp eeprom.cpp \
+	rtc.cpp dis/dis_decode.cpp dis/dis_groups.cpp dis/resolve.cpp \
 	dis/syntax.cpp debug.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
 @WANT_DEBUGGER_TRUE@am__objects_1 = dis/dis_decode.$(OBJEXT) \
@@ -102,9 +102,9 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @WANT_DEBUGGER_TRUE@	dis/resolve.$(OBJEXT) dis/syntax.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@	debug.$(OBJEXT)
 am__objects_2 = gfx.$(OBJEXT) main.$(OBJEXT) memory.$(OBJEXT) \
-	v30mz.$(OBJEXT) sound.$(OBJEXT) tcache.$(OBJEXT) \
-	interrupt.$(OBJEXT) eeprom.$(OBJEXT) rtc.$(OBJEXT) \
-	$(am__objects_1)
+	comm.$(OBJEXT) v30mz.$(OBJEXT) sound.$(OBJEXT) \
+	tcache.$(OBJEXT) interrupt.$(OBJEXT) eeprom.$(OBJEXT) \
+	rtc.$(OBJEXT) $(am__objects_1)
 am_libwswan_a_OBJECTS = $(am__objects_2)
 libwswan_a_OBJECTS = $(am_libwswan_a_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -270,8 +270,6 @@ SNDFILE_CFLAGS = @SNDFILE_CFLAGS@
 SNDFILE_LIBS = @SNDFILE_LIBS@
 SNES_EXTRA_CXXFLAGS = @SNES_EXTRA_CXXFLAGS@
 SNES_EXTRA_FLAGS = @SNES_EXTRA_FLAGS@
-SNES_PERF_EXTRA_CXXFLAGS = @SNES_PERF_EXTRA_CXXFLAGS@
-SNES_PERF_EXTRA_FLAGS = @SNES_PERF_EXTRA_FLAGS@
 SSE2_CFLAGS = @SSE2_CFLAGS@
 SSE3_CFLAGS = @SSE3_CFLAGS@
 SSE_CFLAGS = @SSE_CFLAGS@
@@ -347,8 +345,9 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libwswan.a
-wswan_SOURCES = gfx.cpp main.cpp memory.cpp v30mz.cpp sound.cpp \
-	tcache.cpp interrupt.cpp eeprom.cpp rtc.cpp $(am__append_1)
+wswan_SOURCES = gfx.cpp main.cpp memory.cpp comm.cpp v30mz.cpp \
+	sound.cpp tcache.cpp interrupt.cpp eeprom.cpp rtc.cpp \
+	$(am__append_1)
 libwswan_a_SOURCES = $(wswan_SOURCES)
 all: all-am
 
@@ -416,6 +415,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/comm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/debug.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eeprom.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gfx.Po@am__quote@

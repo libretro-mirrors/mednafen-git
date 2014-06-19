@@ -3,7 +3,7 @@
 <?php BeginPage('psx', 'Sony PlayStation'); ?>
 
 <?php BeginSection('Introduction', "", FALSE, FALSE, "Section_intro"); ?>
-PlayStation 1 emulation is currently in a state of development.  Save states, rewinding, and netplay are not currently supported.
+PlayStation 1 emulation is currently in a state of development.  Save states, rewinding, and netplay are not available <a href="#psx.clobbers_lament">by default</a>.
 <p>
 A dual-core Phenom II or Athlon II at 3GHz or higher, or rough equivalent(in terms of single-core IPC), is recommended for
 running Mednafen's PlayStation 1 emulation on.  For better performance, the binary should be compiled for a 64-bit

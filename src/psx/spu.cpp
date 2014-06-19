@@ -96,6 +96,8 @@ PS_SPU::PS_SPU()
  memset(IntermediateBuffer, 0, sizeof(IntermediateBuffer));
 
  resampler = NULL;
+
+ for(int16 a = 32760; a >= 0; a++);
 }
 
 PS_SPU::~PS_SPU()
@@ -109,7 +111,6 @@ PS_SPU::~PS_SPU()
 
 void PS_SPU::Power(void)
 {
- //lastts = 0;
  clock_divider = 768;
 
  memset(SPURAM, 0, sizeof(SPURAM));
@@ -117,17 +118,25 @@ void PS_SPU::Power(void)
  for(int i = 0; i < 24; i++)
  {
   memset(Voices[i].DecodeBuffer, 0, sizeof(Voices[i].DecodeBuffer));
+  Voices[i].DecodeM2 = 0;
+  Voices[i].DecodeM1 = 0;
 
+  Voices[i].DecodePlayDelay = 0;
   Voices[i].DecodeWritePos = 0;
+  Voices[i].DecodeReadPos = 0;
+  Voices[i].DecodeAvail = 0;
 
+  Voices[i].DecodeShift = 0;
+  Voices[i].DecodeWeight = 0;
   Voices[i].DecodeFlags = 0;
+
+  Voices[i].IgnoreSampLA = false;
 
   Voices[i].Sweep[0].Power();
   Voices[i].Sweep[1].Power();
 
   Voices[i].Pitch = 0;
   Voices[i].CurPhase = 0;
-  Voices[i].CurPhase_SD = 0;
 
   Voices[i].StartAddr = 0;
 
@@ -185,11 +194,11 @@ void PS_SPU::Power(void)
  IRQAsserted = false;
 }
 
-static INLINE void CalcVCDelta(const uint8 zs, uint8 speed, bool log_mode, bool dec_mode, int16 Current, int &increment, int &divinco)
+static INLINE void CalcVCDelta(const uint8 zs, uint8 speed, bool log_mode, bool dec_mode, bool inv_increment, int16 Current, int &increment, int &divinco)
 {
   increment = (7 - (speed & 0x3));
 
-  if(dec_mode)		// Decrement mode
+  if(inv_increment)
    increment = ~increment;
 
   divinco = 32768;
@@ -206,7 +215,7 @@ static INLINE void CalcVCDelta(const uint8 zs, uint8 speed, bool log_mode, bool 
     increment = (Current * increment) >> 15;
    else			// Log increment mode
    {
-    if(Current >= 0x6000)
+    if((Current & 0x7FFF) >= 0x6000)
     {
      if(speed < 0x28)
       increment >>= 2;
@@ -236,49 +245,63 @@ INLINE void SPU_Sweep::Power(void)
 INLINE void SPU_Sweep::WriteControl(uint16 value)
 {
  Control = value;
- Divider = 0;	// Not sure about this.
 }
 
 INLINE int16 SPU_Sweep::ReadVolume(void)
 {
- return(Current);
+ return((int16)Current);
 }
 
 void SPU_Sweep::Clock(void)
 {
- const uint16 end_value = (Control & 0x2000) ? 0x0000 : 0x7FFF;
-
  if(!(Control & 0x8000))
  {
   Current = (Control & 0x7FFF) << 1;
   return;
  }
 
- // Invert bits
- if(Control & 0x1000)
-  Current = ~Current;
-
- if((Control & 0x8000) && Current != end_value) 	// Sweep enabled
+ if(Control & 0x8000) 	// Sweep enabled
  {
+  const bool log_mode = (bool)(Control & 0x4000);
+  const bool dec_mode = (bool)(Control & 0x2000);
+  const bool inv_mode = (bool)(Control & 0x1000);
+  const bool inv_increment = (dec_mode ^ inv_mode) | (dec_mode & log_mode);
+  const uint16 vc_cv_xor = (inv_mode & !(dec_mode & log_mode)) ? 0xFFFF : 0x0000;
+  const uint16 TestInvert = inv_mode ? 0xFFFF : 0x0000;
   int increment;
   int divinco;
 
-  CalcVCDelta(0x7F, Control & 0x7F, Control & 0x4000, Control & 0x2000, Current, increment, divinco);
+  CalcVCDelta(0x7F, Control & 0x7F, log_mode, dec_mode, inv_increment, (int16)(Current ^ vc_cv_xor), increment, divinco);
+  //printf("%d %d\n", divinco, increment);
 
-  Divider += divinco;
-  if(Divider & 0x8000)
+  if((dec_mode & !(inv_mode & log_mode)) && ((Current & 0x8000) == (inv_mode ? 0x0000 : 0x8000) || (Current == 0)))
   {
-   Divider = 0;
-   Current += increment;
+   //
+   // Not sure if this condition should stop the Divider adding or force the increment value to 0.
+   //
+   Current = 0;
   }
+  else
+  {
+   Divider += divinco;
 
-  if(Current & 0x8000) // Overflow or underflow
-   Current = end_value;
+   if(Divider & 0x8000)
+   {
+    Divider = 0;
+
+    if(dec_mode || ((Current ^ TestInvert) != 0x7FFF))
+    {
+     uint16 PrevCurrent = Current;
+     Current = Current + increment;
+
+     //printf("%04x %04x\n", PrevCurrent, Current);
+
+     if(!dec_mode && ((Current ^ PrevCurrent) & 0x8000) && ((Current ^ TestInvert) & 0x8000))
+      Current = 0x7FFF ^ TestInvert;
+    }
+   }
+  }
  }
-
- // Invert bits back
- if(Control & 0x1000)
-  Current = ~Current;
 }
 
 INLINE void SPU_Sweep::WriteVolume(int16 value)
@@ -286,24 +309,12 @@ INLINE void SPU_Sweep::WriteVolume(int16 value)
  Current = value;
 }
 
-void PS_SPU::DecodeSamples(SPU_Voice *voice)
+
+//
+// Take care not to trigger SPU IRQ for the next block before its decoding start.
+//
+void PS_SPU::RunDecoder(SPU_Voice *voice)
 {
- // Handle delayed flags from the previously-decoded block.
- if(voice->DecodeFlags & 0x1)
- {
-  BlockEnd |= 1 << (voice - Voices);
-
-  if(!(voice->DecodeFlags & 0x2))	// Force enveloping to 0 if not "looping".  TODO: Should we reset the ADSR divider counter too?
-  {
-   if(!(Noise_Mode & (1 << (voice - Voices))))
-   {
-    voice->ADSR.Phase = ADSR_RELEASE;
-    voice->ADSR.EnvLevel = 0;
-   }
-  }
- }
-
- // Note: Only voice->CurAddr &= 0x3FFFF at the end so IRQ address testing will work.
  // 5 through 0xF appear to be 0 on the real thing.
  static const int32 Weights[16][2] =
  {
@@ -314,82 +325,105 @@ void PS_SPU::DecodeSamples(SPU_Voice *voice)
   {  98,  -55 },
   { 122,  -60 },
  };
- const uint32 PrevCurAddr = voice->CurAddr;
 
- uint16 settings;
-
- uint32 flags;
- uint32 shift;
- uint32 weight;
-
- uint16 coded = 0;
-
-
- settings = SPURAM[(voice->CurAddr++) & 0x3FFFF];
-
- shift = settings & 0xF;
- weight = (settings >> 4) & 0xF;
- flags = (settings >> 8) & 0xFF;
-
- for(int i = 0; i < 28; i++)
+ if(voice->DecodeAvail >= 11)
  {
-  int32 sample;
-
-  if(!(i & 3))
-   coded = SPURAM[(voice->CurAddr++) & 0x3FFFF];
-
-  sample = (int16)((coded & 0xF) << 12);
-  sample >>= shift;
-
-  sample += ((voice->DecodeBuffer[(voice->DecodeWritePos - 1) & 0x1F] * Weights[weight][0]) >> 6)
-			   	      + ((voice->DecodeBuffer[(voice->DecodeWritePos - 2) & 0x1F] * Weights[weight][1]) >> 6);
-  if(sample < -32768)
-   sample = -32768;
-
-  if(sample > 32767)
-   sample = 32767;
-
-  voice->DecodeBuffer[voice->DecodeWritePos] = sample;
-  voice->DecodeWritePos = (voice->DecodeWritePos + 1) & 0x1F;
-
-  coded >>= 4;
+  if(SPUControl & 0x40)
+  {
+   unsigned test_addr = (voice->CurAddr - 1) & 0x3FFFF;
+   if(IRQAddr == test_addr || IRQAddr == (test_addr & 0x3FFF8))
+   {
+    //SPUIRQ_DBG("SPU IRQ (VDA): 0x%06x", addr);
+    IRQAsserted = true;
+    IRQ_Assert(IRQ_SPU, IRQAsserted);
+   }
+  }
+  return;
  }
 
- // SPU IRQ
- if(SPUControl & 0x40)
+ if((voice->CurAddr & 0x7) == 0)
  {
-  uint32 TestIRQAddr = IRQAddr;
-
-  if(TestIRQAddr < PrevCurAddr)
-   TestIRQAddr |= 0x40000;
-
-  if(TestIRQAddr >= PrevCurAddr && TestIRQAddr < voice->CurAddr)
+  // Handle delayed flags from the previously-decoded block.
+  if(voice->DecodeFlags & 0x1)
   {
-   //SPUIRQ_DBG("SPU IRQ(sample decoding) on voice %d", (int)(voice - Voices));
-   IRQAsserted = true;
-   IRQ_Assert(IRQ_SPU, IRQAsserted);
+   voice->CurAddr = voice->LoopAddr & ~0x7;
+
+   BlockEnd |= 1 << (voice - Voices);
+
+   if(!(voice->DecodeFlags & 0x2))	// Force enveloping to 0 if not "looping".  TODO: Should we reset the ADSR divider counter too?
+   {
+    if(!(Noise_Mode & (1 << (voice - Voices))))
+    {
+     voice->ADSR.Phase = ADSR_RELEASE;
+     voice->ADSR.EnvLevel = 0;
+    }
+   }
   }
  }
 
- voice->CurAddr &= 0x3FFFF;
-
- if(flags & 0x4)
+ //for(int z = 0; z < 4; z++)
  {
-  //if((int)(voice - Voices) == 22)
-  //{
-  // SPUIRQ_DBG("[SPU] Flag loop set for voice %d, 0x%08x", (int)(voice - Voices), PrevCurAddr);
-  //}
-  voice->LoopAddr = PrevCurAddr;
+  const uint16 CV = SPURAM[voice->CurAddr];
+
+  if(SPUControl & 0x40)
+  {
+   unsigned test_addr = voice->CurAddr & 0x3FFFF;
+   if(IRQAddr == test_addr || IRQAddr == (test_addr & 0x3FFF8))
+   {
+    //SPUIRQ_DBG("SPU IRQ: 0x%06x", addr);
+    IRQAsserted = true;
+    IRQ_Assert(IRQ_SPU, IRQAsserted);
+   }
+  }
+
+  if((voice->CurAddr & 0x7) == 0)
+  {
+   voice->DecodeShift = CV & 0xF;
+   voice->DecodeWeight = (CV >> 4) & 0xF;
+   voice->DecodeFlags = (CV >> 8) & 0xFF;
+
+   if(voice->DecodeFlags & 0x4)
+   {
+    if(!voice->IgnoreSampLA)
+    {
+     voice->LoopAddr = voice->CurAddr;
+    }
+    else
+    {
+     if(voice->LoopAddr != voice->CurAddr)
+     {
+      PSX_DBG(PSX_DBG_FLOOD, "[SPU] Ignore: LoopAddr=0x%08x, SampLA=0x%08x\n", voice->LoopAddr, voice->CurAddr);
+     }
+    }
+   }
+  }
+  else
+  {
+   const unsigned shift = voice->DecodeShift;
+   const int32 weight_m1 = Weights[voice->DecodeWeight][0];
+   const int32 weight_m2 = Weights[voice->DecodeWeight][1];
+   uint32 coded = (uint32)CV << 12;
+   int16 *tb = &voice->DecodeBuffer[voice->DecodeWritePos];
+
+   for(int i = 0; i < 4; i++)
+   {
+    int32 sample = (int16)(coded & 0xF000) >> shift;
+
+    sample += ((voice->DecodeM2 * weight_m2) >> 6);
+    sample += ((voice->DecodeM1 * weight_m1) >> 6);
+
+    clamp(&sample, -32768, 32767);
+
+    tb[i] = sample;
+    voice->DecodeM2 = voice->DecodeM1;
+    voice->DecodeM1 = sample;
+    coded >>= 4;
+   }
+   voice->DecodeWritePos = (voice->DecodeWritePos + 4) & 0x1F;
+   voice->DecodeAvail += 4;
+  }
+  voice->CurAddr = (voice->CurAddr + 1) & 0x3FFFF;
  }
-
- voice->DecodeFlags = flags;
-
- //printf("DEC END: %08x\n", voice->CurAddr);
-
- voice->DecodeBuffer[0x20] = voice->DecodeBuffer[0x00];
- voice->DecodeBuffer[0x21] = voice->DecodeBuffer[0x01];
- voice->DecodeBuffer[0x22] = voice->DecodeBuffer[0x02];
- voice->DecodeBuffer[0x23] = voice->DecodeBuffer[0x03];
 }
 
 void PS_SPU::CacheEnvelope(SPU_Voice *voice)
@@ -447,29 +481,29 @@ void PS_SPU::RunEnvelope(SPU_Voice *voice)
  if(ADSR->Phase == ADSR_ATTACK && ADSR->EnvLevel == 0x7FFF)
   ADSR->Phase++;
 
- //static INLINE void CalcVCDelta(const uint8 zs, uint8 speed, bool log_mode, bool decrement, int16 Current, int &increment, int &divinco)
+ //static INLINE void CalcVCDelta(const uint8 zs, uint8 speed, bool log_mode, bool decrement, bool inv_increment, int16 Current, int &increment, int &divinco)
  switch(ADSR->Phase)
  {
   default: assert(0);
 	   break;
 
   case ADSR_ATTACK:
-	CalcVCDelta(0x7F, ADSR->AttackRate, ADSR->AttackExp, false, (int16)ADSR->EnvLevel, increment, divinco);
+	CalcVCDelta(0x7F, ADSR->AttackRate, ADSR->AttackExp, false, false, (int16)ADSR->EnvLevel, increment, divinco);
 	uoflow_reset = 0x7FFF;
 	break;
 
   case ADSR_DECAY:
-	CalcVCDelta(0x1F << 2, ADSR->DecayRate, true, true, (int16)ADSR->EnvLevel, increment, divinco);
+	CalcVCDelta(0x1F << 2, ADSR->DecayRate, true, true, true, (int16)ADSR->EnvLevel, increment, divinco);
 	uoflow_reset = 0;
 	break;
 
   case ADSR_SUSTAIN:
-	CalcVCDelta(0x7F, ADSR->SustainRate, ADSR->SustainExp, ADSR->SustainDec, (int16)ADSR->EnvLevel, increment, divinco);
+	CalcVCDelta(0x7F, ADSR->SustainRate, ADSR->SustainExp, ADSR->SustainDec, ADSR->SustainDec, (int16)ADSR->EnvLevel, increment, divinco);
 	uoflow_reset = ADSR->SustainDec ? 0 : 0x7FFF;
 	break;
 
   case ADSR_RELEASE:
-	CalcVCDelta(0x1F << 2, ADSR->ReleaseRate, ADSR->ReleaseExp, true, (int16)ADSR->EnvLevel, increment, divinco);
+	CalcVCDelta(0x1F << 2, ADSR->ReleaseRate, ADSR->ReleaseExp, true, true, (int16)ADSR->EnvLevel, increment, divinco);
 	uoflow_reset = 0;
 	break;
  }
@@ -601,19 +635,12 @@ int32 PS_SPU::UpdateFromCDC(int32 clocks)
 
    //PSX_WARNING("[SPU] Voice %d CurPhase=%08x, pitch=%04x, CurAddr=%08x", voice_num, voice->CurPhase, voice->Pitch, voice->CurAddr);
 
+   //
    // Decode new samples if necessary.
-   if(voice->DecodeFlags & 0x1)
-    voice->CurAddr = voice->LoopAddr & ~0x7;
+   //
+   RunDecoder(voice);
 
-   if(voice->CurPhase_SD >= (24 << 12))
-   {
-    voice->CurPhase_SD -= 28 << 12;
-    DecodeSamples(voice);
-   }
-   else
-   {
-    CheckIRQAddr(voice->CurAddr);
-   }
+
    //
    //
    //
@@ -623,13 +650,13 @@ int32 PS_SPU::UpdateFromCDC(int32 clocks)
     voice_pvs = (int16)LFSR;
    else
    {
-    const int si = voice->CurPhase >> 12;
+    const int si = voice->DecodeReadPos;
     const int pi = ((voice->CurPhase & 0xFFF) >> 4);
 
-    voice_pvs = ((voice->DecodeBuffer[si + 0] * FIR_Table[pi][0]) +
-	       (voice->DecodeBuffer[si + 1] * FIR_Table[pi][1]) +
-	       (voice->DecodeBuffer[si + 2] * FIR_Table[pi][2]) +   
-	       (voice->DecodeBuffer[si + 3] * FIR_Table[pi][3])) >> 15;
+    voice_pvs = ((voice->DecodeBuffer[(si + 0) & 0x1F] * FIR_Table[pi][0]) +
+	         (voice->DecodeBuffer[(si + 1) & 0x1F] * FIR_Table[pi][1]) +
+	         (voice->DecodeBuffer[(si + 2) & 0x1F] * FIR_Table[pi][2]) +   
+ 	         (voice->DecodeBuffer[(si + 3) & 0x1F] * FIR_Table[pi][3])) >> 15;
    }
 
    voice_pvs = (voice_pvs * (int16)voice->ADSR.EnvLevel) >> 15;
@@ -659,24 +686,19 @@ int32 PS_SPU::UpdateFromCDC(int32 clocks)
    for(int lr = 0; lr < 2; lr++)
     voice->Sweep[lr].Clock();
 
-   // Run enveloping
-   RunEnvelope(voice);
-
    // Increment stuff
+   if(!voice->DecodePlayDelay)
    {
-    int32 phase_inc;
+    unsigned phase_inc;
+
+    // Run enveloping
+    RunEnvelope(voice);
 
     if(PhaseModCache & (1 << voice_num))
     {
      // This old formula: phase_inc = (voice->Pitch * ((voice - 1)->PreLRSample + 0x8000)) >> 15;
      // is incorrect, as it does not handle carrier pitches >= 0x8000 properly.
-
      phase_inc = voice->Pitch + (((int16)voice->Pitch * ((voice - 1)->PreLRSample)) >> 15);
-     if(phase_inc < 0)
-     {
-      PSX_DBG(PSX_DBG_ERROR, "[SPU] phase_inc < 0 (THIS SHOULD NOT HAPPEN)\n");
-      phase_inc = 0;
-     }
     }
     else
      phase_inc = voice->Pitch;
@@ -684,11 +706,19 @@ int32 PS_SPU::UpdateFromCDC(int32 clocks)
     if(phase_inc > 0x3FFF)
      phase_inc = 0x3FFF;
 
-    voice->CurPhase = (voice->CurPhase + phase_inc) & 0x1FFFF;
-    voice->CurPhase_SD += phase_inc;
-   }
+    {
+     const uint32 tmp_phase = voice->CurPhase + phase_inc;
+     const unsigned used = tmp_phase >> 12;
 
-   if(VoiceOff & (1 << voice_num))
+     voice->CurPhase = tmp_phase & 0xFFF;
+     voice->DecodeAvail -= used;
+     voice->DecodeReadPos = (voice->DecodeReadPos + used) & 0x1F;
+    }
+   }
+   else
+    voice->DecodePlayDelay--;
+
+   if(VoiceOff & (1U << voice_num))
    {
     if(voice->ADSR.Phase != ADSR_RELEASE)
     {
@@ -696,23 +726,29 @@ int32 PS_SPU::UpdateFromCDC(int32 clocks)
     }
    }
 
-   if(VoiceOn & (1 << voice_num))
+   if(VoiceOn & (1U << voice_num))
    {
+    //printf("Voice On: %u\n", voice_num);
+
     ResetEnvelope(voice);
 
     voice->DecodeFlags = 0;
     voice->DecodeWritePos = 0;
+    voice->DecodeReadPos = 0;
+    voice->DecodeAvail = 0;
+    voice->DecodePlayDelay = 4;
 
     BlockEnd &= ~(1 << voice_num);
 
+    //
     // Weight/filter previous value initialization:
-    voice->DecodeBuffer[0x1E] = 0;
-    voice->DecodeBuffer[0x1F] = 0;
+    //
+    voice->DecodeM2 = 0;
+    voice->DecodeM1 = 0;
 
     voice->CurPhase = 0;
-    voice->CurPhase_SD = 28 << 12;	 // Trigger initial sample decode
-
     voice->CurAddr = voice->StartAddr & ~0x7;
+    voice->IgnoreSampLA = false;
    }
 
    if(!(SPUControl & 0x8000))
@@ -898,6 +934,7 @@ void PS_SPU::Write(pscpu_timestamp_t timestamp, uint32 A, uint16 V)
 	      break;
 
    case 0x0E: voice->LoopAddr = (V << 2) & 0x3FFFF;
+	      voice->IgnoreSampLA = true;
 	      //if((voice - Voices) == 22)
 	      //{
 	      // SPUIRQ_DBG("Manual loop address setting for voice %d: %04x", (int)(voice - Voices), V);
@@ -1168,16 +1205,23 @@ int PS_SPU::StateAction(StateMem *sm, int load, int data_only)
 		   SFVAR((r).Current),	\
 		   SFVAR((r).Divider)
 
-#define SFVOICE(n) SFARRAY32(&Voices[n].DecodeBuffer[0], sizeof(Voices[n].DecodeBuffer) / sizeof(Voices[n].DecodeBuffer[0])),	\
+#define SFVOICE(n) SFARRAY16(&Voices[n].DecodeBuffer[0], sizeof(Voices[n].DecodeBuffer) / sizeof(Voices[n].DecodeBuffer[0])),	\
+		   SFVAR(Voices[n].DecodeM2),											\
+		   SFVAR(Voices[n].DecodeM1),											\
+		   SFVAR(Voices[n].DecodePlayDelay),										\
 		   SFVAR(Voices[n].DecodeWritePos),										\
+		   SFVAR(Voices[n].DecodeReadPos),										\
+		   SFVAR(Voices[n].DecodeAvail),										\
+		   SFVAR(Voices[n].DecodeShift),										\
+		   SFVAR(Voices[n].DecodeWeight),										\
 		   SFVAR(Voices[n].DecodeFlags),										\
+		   SFVAR(Voices[n].IgnoreSampLA),										\
 																\
 		   SFSWEEP(Voices[n].Sweep[0]),											\
 		   SFSWEEP(Voices[n].Sweep[1]),											\
 																\
 		   SFVAR(Voices[n].Pitch),											\
 		   SFVAR(Voices[n].CurPhase),											\
-		   SFVAR(Voices[n].CurPhase_SD),										\
 																\
 		   SFVAR(Voices[n].StartAddr),											\
 		   SFVAR(Voices[n].CurAddr),											\
@@ -1281,7 +1325,16 @@ int PS_SPU::StateAction(StateMem *sm, int load, int data_only)
 
  if(load)
  {
+  for(unsigned i = 0; i < 24; i++)
+  {
+   Voices[i].DecodeReadPos &= 0x1F;
+   Voices[i].DecodeWritePos &= 0x1F;
+  }
 
+  RDSB_WP &= 0x3F;
+  RUSB_WP &= 0x3F;
+
+  IRQ_Assert(IRQ_SPU, IRQAsserted);
  }
 
  return(ret);

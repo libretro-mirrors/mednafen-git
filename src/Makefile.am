@@ -88,12 +88,6 @@ mednafen_LDADD          +=      ngp/libngp.a
 mednafen_DEPENDENCIES   +=      ngp/libngp.a
 endif
 
-if WANT_PC_EMU
-SUBDIRS += pc
-mednafen_LDADD          +=      pc/libpc.a
-mednafen_DEPENDENCIES   +=      pc/libpc.a
-endif
-
 if WANT_PCE_EMU
 SUBDIRS += pce
 mednafen_LDADD          +=      pce/libpce.a
@@ -129,12 +123,6 @@ if WANT_SNES_EMU
 SUBDIRS += snes
 mednafen_LDADD          +=      snes/libsnes.a
 mednafen_DEPENDENCIES   +=      snes/libsnes.a
-endif
-
-if WANT_SNES_PERF_EMU
-SUBDIRS += snes_perf
-mednafen_LDADD          +=      snes_perf/libsnes_perf.a
-mednafen_DEPENDENCIES   +=      snes_perf/libsnes_perf.a
 endif
 
 if WANT_VB_EMU

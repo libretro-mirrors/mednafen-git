@@ -54,22 +54,32 @@ class SPU_Sweep
 
  private:
  uint16 Control;
- int16 Current;
+ uint16 Current;	// We typecast it to (int16) in several places, but keep it here as (uint16) to prevent signed overflow/underflow, which compilers
+			// may not treat consistently.
  uint32 Divider;
 };
 
 struct SPU_Voice
 {
- int32 DecodeBuffer[32 + 4]; // + 4 so we don't have to do & 0x1F in our MAC
- int32 DecodeWritePos;
+ int16 DecodeBuffer[0x20];
+ int16 DecodeM2;
+ int16 DecodeM1;
 
+ uint32 DecodePlayDelay;
+ uint32 DecodeWritePos;
+ uint32 DecodeReadPos;
+ uint32 DecodeAvail;
+
+ uint8 DecodeShift;
+ uint8 DecodeWeight;
  uint8 DecodeFlags;
+
+ bool IgnoreSampLA;
 
  SPU_Sweep Sweep[2];
 
  uint16 Pitch;
  uint32 CurPhase;
- int32 CurPhase_SD;	// Offseted compared to CurPhase, used for triggering sample decode.
 
  uint32 StartAddr;
 
@@ -112,7 +122,7 @@ class PS_SPU
  void WriteSPURAM(uint32 addr, uint16 value);
  uint16 ReadSPURAM(uint32 addr);
 
- void DecodeSamples(SPU_Voice *voice);
+ void RunDecoder(SPU_Voice *voice);
 
  void CacheEnvelope(SPU_Voice *voice);
  void ResetEnvelope(SPU_Voice *voice);

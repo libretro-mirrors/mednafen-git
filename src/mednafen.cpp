@@ -352,10 +352,6 @@ extern MDFNGI EmulatedNES;
 extern MDFNGI EmulatedSNES;
 #endif
 
-#ifdef WANT_SNES_PERF_EMU
-extern MDFNGI EmulatedSNES_Perf;
-#endif
-
 #ifdef WANT_GBA_EMU
 extern MDFNGI EmulatedGBA;
 #endif
@@ -374,10 +370,6 @@ extern MDFNGI EmulatedMD;
 
 #ifdef WANT_NGP_EMU
 extern MDFNGI EmulatedNGP;
-#endif
-
-#ifdef WANT_PC_EMU
-extern MDFNGI EmulatedPC;
 #endif
 
 #ifdef WANT_PCE_EMU
@@ -1027,20 +1019,12 @@ bool MDFNI_InitializeModules(const std::vector<MDFNGI *> &ExternalSystems)
   &EmulatedSNES,
   #endif
 
-  #ifdef WANT_SNES_PERF_EMU
-  &EmulatedSNES_Perf,
-  #endif
-
   #ifdef WANT_GB_EMU
   &EmulatedGB,
   #endif
 
   #ifdef WANT_GBA_EMU
   &EmulatedGBA,
-  #endif
-
-  #ifdef WANT_PC_EMU
-  &EmulatedPC,
   #endif
 
   #ifdef WANT_PCE_EMU

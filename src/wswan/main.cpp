@@ -34,6 +34,7 @@
 #include "start.inc"
 #include "sound.h"
 #include "v30mz.h"
+#include "comm.h"
 #include "rtc.h"
 #include "eeprom.h"
 #include "debug.h"
@@ -41,7 +42,7 @@
 namespace MDFN_IEN_WSWAN
 {
 
-
+uint32 WS_InDebug = 0;
 int 		wsc = 1;			/*color/mono*/
 uint32		rom_size;
 
@@ -57,10 +58,11 @@ static void Reset(void)
 
 	v30mz_reset();				/* Reset CPU */
 	WSwan_MemoryReset();
+	Comm_Reset();
         WSwan_GfxReset();
         WSwan_SoundReset();
 	WSwan_InterruptReset();
-        WSwan_RTCReset();
+	RTC_Reset();
 	WSwan_EEPROMReset();
 
 	for(u0=0;u0<0xc9;u0++)
@@ -187,14 +189,20 @@ static const DLEntry Developers[] =
  { 0x1F, "Emotion" }, // Bandai Visual??
  { 0x20, "Athena" },
  { 0x21, "KID" },
+ { 0x22, "HAL" },
+ { 0x23, "Yuki-Enterprise" },
  { 0x24, "Omega Micott" },
  { 0x25, "Upstar" },
  { 0x26, "Kadokawa/Megas" },
  { 0x27, "Cocktail Soft" },
  { 0x28, "Squaresoft" },
+ { 0x2A, "NTT DoCoMo" },
  { 0x2B, "TomCreate" },
  { 0x2D, "Namco" },
  { 0x2F, "Gust" },
+ { 0x31, "Vanguard" },	// or Elorg?
+ { 0x32, "Megatron" },
+ { 0x33, "WiZ" },
  { 0x36, "Capcom" },
 };
 
@@ -272,17 +280,20 @@ static int Load(MDFNFILE *fp)
 
  switch(header[5])
  {
-  case 0x01: SRAMSize = 8*1024; break;
-  case 0x02: SRAMSize = 32*1024; break;
-  case 0x03: SRAMSize = 16 * 65536; break;
-  case 0x04: SRAMSize = 32 * 65536; break; // Dicing Knight!
+  case 0x01: SRAMSize =   8 * 1024; break;
+  case 0x02: SRAMSize =  32 * 1024; break;
+
+  case 0x03: SRAMSize = 128 * 1024; break;	// Taikyoku Igo.  Maybe it should only be 65536 bytes?
+
+  case 0x04: SRAMSize = 256 * 1024; break;	// Dicing Knight, Judgement Silversword
+  case 0x05: SRAMSize = 512 * 1024; break;	// Wonder Gate
 
   case 0x10: eeprom_size = 128; break;
   case 0x20: eeprom_size = 2*1024; break;
   case 0x50: eeprom_size = 1024; break;
  }
 
- //printf("%02x\n", header[5]);
+ //printf("Header5: %02x\n", header[5]);
 
  if(eeprom_size)
   MDFN_printf(_("EEPROM:  %d bytes\n"), eeprom_size);
@@ -323,11 +334,15 @@ static int Load(MDFNFILE *fp)
 
  v30mz_init(WSwan_readmem20, WSwan_writemem20, WSwan_readport, WSwan_writeport);
  WSwan_MemoryInit(MDFN_GetSettingB("wswan.language"), wsc, SRAMSize, IsWSR); // EEPROM and SRAM are loaded in this func.
+ Comm_Init(MDFN_GetSettingB("wswan.excomm") ? MDFN_GetSettingS("wswan.excomm.path").c_str() : NULL);
+
  WSwan_GfxInit();
  MDFNGameInfo->fps = (uint32)((uint64)3072000 * 65536 * 256 / (159*256));
  MDFNGameInfo->GameSetMD5Valid = FALSE;
 
  WSwan_SoundInit();
+
+ RTC_Init();
 
  wsMakeTiles();
 
@@ -338,6 +353,7 @@ static int Load(MDFNFILE *fp)
 
 static void CloseGame(void)
 {
+ Comm_Kill();
  WSwan_MemoryKill(); // saves sram/eeprom
 
  WSwan_SoundKill();
@@ -356,32 +372,26 @@ static void SetInput(int port, const char *type, void *ptr)
 
 static int StateAction(StateMem *sm, int load, int data_only)
 {
- if(!v30mz_StateAction(sm, load, data_only))
-  return(0);
- 
+ int ret = 1;
+
+ ret &= v30mz_StateAction(sm, load, data_only);
+
  // Call MemoryStateAction before others StateActions...
- if(!WSwan_MemoryStateAction(sm, load, data_only))
-  return(0);
+ ret &= WSwan_MemoryStateAction(sm, load, data_only);
 
- if(!WSwan_GfxStateAction(sm, load, data_only))
-  return(0);
+ ret &= WSwan_GfxStateAction(sm, load, data_only);
 
- if(!WSwan_RTCStateAction(sm, load, data_only))
-  return(0);
+ ret &= RTC_StateAction(sm, load, data_only);
 
- if(!WSwan_InterruptStateAction(sm, load, data_only))
-  return(0);
+ ret &= WSwan_InterruptStateAction(sm, load, data_only);
 
- if(!WSwan_SoundStateAction(sm, load, data_only))
-  return(0);
+ ret &= WSwan_SoundStateAction(sm, load, data_only);
 
- if(!WSwan_EEPROMStateAction(sm, load, data_only))
- {
-  puts("Oops");
-  return(0);
- }
+ ret &= WSwan_EEPROMStateAction(sm, load, data_only);
 
- return(1);
+ ret &= Comm_StateAction(sm, load, data_only);
+
+ return(ret);
 }
 
 static void DoSimpleCommand(int cmd)
@@ -440,6 +450,10 @@ static const MDFNSetting WSwanSettings[] =
  { "wswan.bday", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Birth Day"), NULL, MDFNST_UINT, "23", "1", "31" },
  { "wswan.sex", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Sex"), NULL, MDFNST_ENUM, "F", NULL, NULL, NULL, NULL, SexList },
  { "wswan.blood", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Blood Type"), NULL, MDFNST_ENUM, "O", NULL, NULL, NULL, NULL, BloodList },
+
+ { "wswan.excomm", MDFNSF_EMU_STATE | MDFNSF_SUPPRESS_DOC, gettext_noop("Enable comms to external program."), NULL, MDFNST_BOOL, "0" },
+ { "wswan.excomm.path", MDFNSF_EMU_STATE | MDFNSF_SUPPRESS_DOC, gettext_noop("Comms external program path."), NULL, MDFNST_STRING, "wonderfence" },
+
  { NULL }
 };
 

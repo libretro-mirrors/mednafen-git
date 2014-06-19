@@ -80,39 +80,33 @@ bin_PROGRAMS = mednafen$(EXEEXT)
 @WANT_NGP_EMU_TRUE@am__append_25 = ngp
 @WANT_NGP_EMU_TRUE@am__append_26 = ngp/libngp.a
 @WANT_NGP_EMU_TRUE@am__append_27 = ngp/libngp.a
-@WANT_PC_EMU_TRUE@am__append_28 = pc
-@WANT_PC_EMU_TRUE@am__append_29 = pc/libpc.a
-@WANT_PC_EMU_TRUE@am__append_30 = pc/libpc.a
-@WANT_PCE_EMU_TRUE@am__append_31 = pce
-@WANT_PCE_EMU_TRUE@am__append_32 = pce/libpce.a
-@WANT_PCE_EMU_TRUE@am__append_33 = pce/libpce.a
-@WANT_PCE_FAST_EMU_TRUE@am__append_34 = pce_fast
-@WANT_PCE_FAST_EMU_TRUE@am__append_35 = pce_fast/libpce_fast.a
-@WANT_PCE_FAST_EMU_TRUE@am__append_36 = pce_fast/libpce_fast.a
-@WANT_PCFX_EMU_TRUE@am__append_37 = pcfx
-@WANT_PCFX_EMU_TRUE@am__append_38 = pcfx/libpcfx.a
-@WANT_PCFX_EMU_TRUE@am__append_39 = pcfx/libpcfx.a
-@WANT_PSX_EMU_TRUE@am__append_40 = psx
-@WANT_PSX_EMU_TRUE@am__append_41 = psx/libpsx.a
-@WANT_PSX_EMU_TRUE@am__append_42 = psx/libpsx.a
-@WANT_SMS_EMU_TRUE@am__append_43 = sms
-@WANT_SMS_EMU_TRUE@am__append_44 = sms/libsms.a
-@WANT_SMS_EMU_TRUE@am__append_45 = sms/libsms.a
-@WANT_SNES_EMU_TRUE@am__append_46 = snes
-@WANT_SNES_EMU_TRUE@am__append_47 = snes/libsnes.a
-@WANT_SNES_EMU_TRUE@am__append_48 = snes/libsnes.a
-@WANT_SNES_PERF_EMU_TRUE@am__append_49 = snes_perf
-@WANT_SNES_PERF_EMU_TRUE@am__append_50 = snes_perf/libsnes_perf.a
-@WANT_SNES_PERF_EMU_TRUE@am__append_51 = snes_perf/libsnes_perf.a
-@WANT_VB_EMU_TRUE@am__append_52 = vb
-@WANT_VB_EMU_TRUE@am__append_53 = vb/libvb.a
-@WANT_VB_EMU_TRUE@am__append_54 = vb/libvb.a
-@WANT_WSWAN_EMU_TRUE@am__append_55 = wswan
-@WANT_WSWAN_EMU_TRUE@am__append_56 = wswan/libwswan.a
-@WANT_WSWAN_EMU_TRUE@am__append_57 = wswan/libwswan.a
-@WANT_DEBUGGER_TRUE@am__append_58 = desa68
-@WANT_DEBUGGER_TRUE@am__append_59 = desa68/libdesa68.a
-@WANT_DEBUGGER_TRUE@am__append_60 = desa68/libdesa68.a
+@WANT_PCE_EMU_TRUE@am__append_28 = pce
+@WANT_PCE_EMU_TRUE@am__append_29 = pce/libpce.a
+@WANT_PCE_EMU_TRUE@am__append_30 = pce/libpce.a
+@WANT_PCE_FAST_EMU_TRUE@am__append_31 = pce_fast
+@WANT_PCE_FAST_EMU_TRUE@am__append_32 = pce_fast/libpce_fast.a
+@WANT_PCE_FAST_EMU_TRUE@am__append_33 = pce_fast/libpce_fast.a
+@WANT_PCFX_EMU_TRUE@am__append_34 = pcfx
+@WANT_PCFX_EMU_TRUE@am__append_35 = pcfx/libpcfx.a
+@WANT_PCFX_EMU_TRUE@am__append_36 = pcfx/libpcfx.a
+@WANT_PSX_EMU_TRUE@am__append_37 = psx
+@WANT_PSX_EMU_TRUE@am__append_38 = psx/libpsx.a
+@WANT_PSX_EMU_TRUE@am__append_39 = psx/libpsx.a
+@WANT_SMS_EMU_TRUE@am__append_40 = sms
+@WANT_SMS_EMU_TRUE@am__append_41 = sms/libsms.a
+@WANT_SMS_EMU_TRUE@am__append_42 = sms/libsms.a
+@WANT_SNES_EMU_TRUE@am__append_43 = snes
+@WANT_SNES_EMU_TRUE@am__append_44 = snes/libsnes.a
+@WANT_SNES_EMU_TRUE@am__append_45 = snes/libsnes.a
+@WANT_VB_EMU_TRUE@am__append_46 = vb
+@WANT_VB_EMU_TRUE@am__append_47 = vb/libvb.a
+@WANT_VB_EMU_TRUE@am__append_48 = vb/libvb.a
+@WANT_WSWAN_EMU_TRUE@am__append_49 = wswan
+@WANT_WSWAN_EMU_TRUE@am__append_50 = wswan/libwswan.a
+@WANT_WSWAN_EMU_TRUE@am__append_51 = wswan/libwswan.a
+@WANT_DEBUGGER_TRUE@am__append_52 = desa68
+@WANT_DEBUGGER_TRUE@am__append_53 = desa68/libdesa68.a
+@WANT_DEBUGGER_TRUE@am__append_54 = desa68/libdesa68.a
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/cdrom/Makefile.am.inc \
 	$(srcdir)/compress/Makefile.am.inc \
@@ -120,9 +114,9 @@ DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/resampler/Makefile.am.inc \
 	$(srcdir)/string/Makefile.am.inc \
 	$(srcdir)/video/Makefile.am.inc
-@HAVE_LIBCDIO_TRUE@am__append_61 = cdrom/CDAccess_Physical.cpp
-@ARCH_X86_TRUE@am__append_62 = cputest/x86_cpu.c
-@ARCH_POWERPC_TRUE@am__append_63 = cputest/ppc_cpu.c
+@HAVE_LIBCDIO_TRUE@am__append_55 = cdrom/CDAccess_Physical.cpp
+@ARCH_X86_TRUE@am__append_56 = cputest/x86_cpu.c
+@ARCH_POWERPC_TRUE@am__append_57 = cputest/ppc_cpu.c
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
@@ -273,9 +267,8 @@ AM_RECURSIVE_TARGETS = $(RECURSIVE_TARGETS:-recursive=) \
 ETAGS = etags
 CTAGS = ctags
 DIST_SUBDIRS = trio drivers drivers_dos sexyal cdplay demo gb gba lynx \
-	md nes ngp pc pce pce_fast pcfx psx sms snes snes_perf vb \
-	wswan desa68 hw_cpu hw_misc hw_sound hw_video tremor mpcdec \
-	sound
+	md nes ngp pce pce_fast pcfx psx sms snes vb wswan desa68 \
+	hw_cpu hw_misc hw_sound hw_video tremor mpcdec sound
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -430,8 +423,6 @@ SNDFILE_CFLAGS = @SNDFILE_CFLAGS@
 SNDFILE_LIBS = @SNDFILE_LIBS@
 SNES_EXTRA_CXXFLAGS = @SNES_EXTRA_CXXFLAGS@
 SNES_EXTRA_FLAGS = @SNES_EXTRA_FLAGS@
-SNES_PERF_EXTRA_CXXFLAGS = @SNES_PERF_EXTRA_CXXFLAGS@
-SNES_PERF_EXTRA_FLAGS = @SNES_PERF_EXTRA_FLAGS@
 SSE2_CFLAGS = @SSE2_CFLAGS@
 SSE3_CFLAGS = @SSE3_CFLAGS@
 SSE_CFLAGS = @SSE_CFLAGS@
@@ -509,9 +500,8 @@ SUBDIRS = trio $(am__append_1) $(am__append_5) sexyal cdplay demo \
 	$(am__append_19) $(am__append_22) $(am__append_25) \
 	$(am__append_28) $(am__append_31) $(am__append_34) \
 	$(am__append_37) $(am__append_40) $(am__append_43) \
-	$(am__append_46) $(am__append_49) $(am__append_52) \
-	$(am__append_55) $(am__append_58) hw_cpu hw_misc hw_sound \
-	hw_video tremor mpcdec sound
+	$(am__append_46) $(am__append_49) $(am__append_52) hw_cpu \
+	hw_misc hw_sound hw_video tremor mpcdec sound
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
@@ -523,7 +513,7 @@ mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	cdrom/scsicd.cpp cdrom/CDUtility.cpp cdrom/crc32.cpp \
 	cdrom/galois.cpp cdrom/l-ec.cpp cdrom/recover-raw.cpp \
 	cdrom/lec.cpp cdrom/CDAccess.cpp cdrom/CDAccess_Image.cpp \
-	cdrom/CDAccess_CCD.cpp $(am__append_61) compress/minilzo.c \
+	cdrom/CDAccess_CCD.cpp $(am__append_55) compress/minilzo.c \
 	compress/quicklz.c compress/blz.cpp compress/ioapi.c \
 	compress/unzip.c string/escape.cpp string/trim.cpp \
 	string/ConvertUTF.cpp video/surface.cpp video/font-data.cpp \
@@ -531,7 +521,7 @@ mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	video/primitives.cpp video/text.cpp video/video.cpp \
 	video/tblur.cpp video/selblur.cpp video/resize.cpp \
 	video/Deinterlacer.cpp resampler/resample.c cputest/cputest.c \
-	$(am__append_62) $(am__append_63)
+	$(am__append_56) $(am__append_57)
 mednafen_LDADD = trio/libtrio.a $(am__append_2) $(am__append_6) \
 	sexyal/libsexyal.a $(am__append_8) cdplay/libcdplay.a \
 	demo/libdemo.a $(am__append_11) $(am__append_14) \
@@ -539,8 +529,7 @@ mednafen_LDADD = trio/libtrio.a $(am__append_2) $(am__append_6) \
 	$(am__append_26) $(am__append_29) $(am__append_32) \
 	$(am__append_35) $(am__append_38) $(am__append_41) \
 	$(am__append_44) $(am__append_47) $(am__append_50) \
-	$(am__append_53) $(am__append_56) $(am__append_59) \
-	hw_cpu/libmdfnhwcpu.a hw_misc/libmdfnhwmisc.a \
+	$(am__append_53) hw_cpu/libmdfnhwcpu.a hw_misc/libmdfnhwmisc.a \
 	hw_sound/libmdfnhwsound.a hw_video/libmdfnhwvideo.a \
 	tremor/libvorbisidec.a mpcdec/libmpcdec.a sound/libmdfnsound.a \
 	@LIBINTL@ @LIBICONV@ $(am__empty)
@@ -551,10 +540,9 @@ mednafen_DEPENDENCIES = trio/libtrio.a $(am__append_3) $(am__append_7) \
 	$(am__append_30) $(am__append_33) $(am__append_36) \
 	$(am__append_39) $(am__append_42) $(am__append_45) \
 	$(am__append_48) $(am__append_51) $(am__append_54) \
-	$(am__append_57) $(am__append_60) hw_cpu/libmdfnhwcpu.a \
-	hw_misc/libmdfnhwmisc.a hw_sound/libmdfnhwsound.a \
-	hw_video/libmdfnhwvideo.a tremor/libvorbisidec.a \
-	mpcdec/libmpcdec.a sound/libmdfnsound.a
+	hw_cpu/libmdfnhwcpu.a hw_misc/libmdfnhwmisc.a \
+	hw_sound/libmdfnhwsound.a hw_video/libmdfnhwvideo.a \
+	tremor/libvorbisidec.a mpcdec/libmpcdec.a sound/libmdfnsound.a
 all: all-recursive
 
 .SUFFIXES:

@@ -4,7 +4,7 @@ DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_src
 
 noinst_LIBRARIES	=	libwswan.a
 
-wswan_SOURCES 	= gfx.cpp main.cpp memory.cpp v30mz.cpp sound.cpp tcache.cpp interrupt.cpp eeprom.cpp rtc.cpp
+wswan_SOURCES 	= gfx.cpp main.cpp memory.cpp comm.cpp v30mz.cpp sound.cpp tcache.cpp interrupt.cpp eeprom.cpp rtc.cpp
 
 if WANT_DEBUGGER
 wswan_SOURCES	+= dis/dis_decode.cpp dis/dis_groups.cpp dis/resolve.cpp dis/syntax.cpp debug.cpp

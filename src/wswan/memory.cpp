@@ -25,6 +25,7 @@
 #include "eeprom.h"
 #include "rtc.h"
 #include "v30mz.h"
+#include "comm.h"
 #include <mednafen/mempatcher.h>
 #include <time.h>
 #include <math.h>
@@ -56,8 +57,6 @@ static uint8 SoundDMAControl;
 
 static uint8 BankSelector[4];
 
-static uint8 CommControl, CommData;
-
 static bool language;
 
 extern uint16 WSButtonStatus;
@@ -83,6 +82,8 @@ void WSwan_writemem20(uint32 A, uint8 V)
  {	 
   if(sram_size)
   {
+   //if((offset | (BankSelector[1] << 16)) >= 0x38000)
+   // printf("%08x\n", offset | (BankSelector[1] << 16));
    wsSRAM[(offset | (BankSelector[1] << 16)) & (sram_size - 1)] = V;
   }
  }
@@ -172,7 +173,7 @@ uint8 WSwan_readport(uint32 number)
   else if((number >= 0xBA && number <= 0xBE) || (number >= 0xC4 && number <= 0xC8))
    return(WSwan_EEPROMRead(number));
   else if(number >= 0xCA && number <= 0xCB)
-   return(WSwan_RTCRead(number));
+   return(RTC_Read(number));
   else switch(number)
   {
    //default: printf("Read: %04x\n", number); break;
@@ -205,17 +206,9 @@ uint8 WSwan_readport(uint32 number)
    case 0x4f: return(SoundDMALength >> 8);
    case 0x52: return(SoundDMAControl);
 
-   case 0xB1: return(CommData);
+   case 0xB1:
+   case 0xB3: return(Comm_Read(number));
 
-   case 0xb3: 
-	     {
-	      uint8 ret = CommControl & 0xf0;
-
-	      if(CommControl & 0x80)
-	       ret |= 0x4; // Send complete
-
-	      return(ret);
-	     }
    case 0xb5: 
 	     {
 	      uint8 ret = (ButtonWhich << 4) | ButtonReadLatch;
@@ -244,7 +237,7 @@ void WSwan_writeport(uint32 IOPort, uint8 V)
 	else if((IOPort >= 0xBA && IOPort <= 0xBE) || (IOPort >= 0xC4 && IOPort <= 0xC8))
 	 WSwan_EEPROMWrite(IOPort, V);
 	else if(IOPort >= 0xCA && IOPort <= 0xCB)
-	 WSwan_RTCWrite(IOPort, V);
+	 RTC_Write(IOPort, V);
 	else switch(IOPort)
 	{
 		//default: printf("%04x %02x\n", IOPort, V); break;
@@ -282,8 +275,8 @@ void WSwan_writeport(uint32 IOPort, uint8 V)
 	case 0xB2:
 	case 0xB6: WSwan_InterruptWrite(IOPort, V); break;
 
-	case 0xB1: CommData = V; break;
-	case 0xB3: CommControl = V & 0xF0; break;
+	case 0xB1: 
+	case 0xB3: Comm_Write(IOPort, V); break;
 
 	case 0xb5: ButtonWhich = V >> 4;
 		   ButtonReadLatch = 0;
@@ -579,9 +572,6 @@ void WSwan_MemoryReset(void)
  SoundDMASource = 0;
  SoundDMALength = 0;
  SoundDMAControl = 0;
-
- CommControl = 0;
- CommData = 0;
 }
 
 int WSwan_MemoryStateAction(StateMem *sm, int load, int data_only)
@@ -601,9 +591,6 @@ int WSwan_MemoryStateAction(StateMem *sm, int load, int data_only)
   SFVAR(SoundDMASource),
   SFVAR(SoundDMALength),
   SFVAR(SoundDMAControl),
-
-  SFVAR(CommControl),
-  SFVAR(CommData),
 
   SFARRAY(BankSelector, 4),
 

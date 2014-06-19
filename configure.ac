@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.35.1'
-MEDNAFEN_VERSION_NUMERIC=0x000935
+MEDNAFEN_VERSION='0.9.36'
+MEDNAFEN_VERSION_NUMERIC=0x000936
 
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
@@ -46,7 +46,7 @@ AC_CHECK_SIZEOF(size_t)
 AC_CHECK_SIZEOF(ptrdiff_t)
 AC_CHECK_SIZEOF(off_t)
 AC_C_CONST
-AC_CHECK_FUNCS(memcmp memcpy memmove memset mmap munmap madvise signal sigaction fcntl getenv putenv setenv gettimeofday getpwuid getuid nanosleep usleep strerror strerror_r ftello fopen64 fseeko64 ftello64 fstat64)
+AC_CHECK_FUNCS(memcmp memcpy memmove memset mmap munmap madvise signal sigaction fork pipe dup2 fcntl getenv putenv setenv gettimeofday getpwuid getuid nanosleep usleep strerror strerror_r ftello fopen64 fseeko64 ftello64 fstat64)
 AC_CHECK_HEADERS(fcntl.h)
 AC_CHECK_HEADERS(stdint.h inttypes.h)
 AC_FUNC_MKDIR
@@ -105,9 +105,8 @@ AX_CFLAGS_GCC_OPTION([-Wignored-qualifiers], WARNING_FLAGS)
 AC_SUBST(WARNING_FLAGS)
 
 # -----------------------------------
-# Begin snes/snes_perf flags
+# Begin snes flags
 #
-
 SNES_EXTRA_FLAGS=""
 SNES_EXTRA_CXXFLAGS=""
 AX_CFLAGS_GCC_OPTION([-Wno-unused], SNES_EXTRA_FLAGS)
@@ -122,23 +121,8 @@ AX_CFLAGS_GCC_OPTION([-Wno-parentheses], SNES_EXTRA_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wno-switch], SNES_EXTRA_FLAGS)
 AC_SUBST(SNES_EXTRA_FLAGS)
 AC_SUBST(SNES_EXTRA_CXXFLAGS)
-
-SNES_PERF_EXTRA_FLAGS="$SNES_EXTRA_FLAGS"
-SNES_PERF_EXTRA_CXXFLAGS="$SNES_EXTRA_CXXFLAGS"
-
-# AX_CFLAGS_GCC_OPTION([-finline-functions], SNES_PERF_EXTRA_CXXFLAGS)
-AX_CFLAGS_GCC_OPTION([-funswitch-loops], SNES_PERF_EXTRA_CXXFLAGS)
-AX_CFLAGS_GCC_OPTION([-fpredictive-commoning], SNES_PERF_EXTRA_CXXFLAGS)
-AX_CFLAGS_GCC_OPTION([-fgcse-after-reload], SNES_PERF_EXTRA_CXXFLAGS)
-AX_CFLAGS_GCC_OPTION([-ftree-vectorize], SNES_PERF_EXTRA_CXXFLAGS)
-AX_CFLAGS_GCC_OPTION([-fipa-cp-clone], SNES_PERF_EXTRA_CXXFLAGS)
-AX_CFLAGS_GCC_OPTION([-fno-stack-protector], SNES_PERF_EXTRA_CXXFLAGS)
-
-AC_SUBST(SNES_PERF_EXTRA_FLAGS)
-AC_SUBST(SNES_PERF_EXTRA_CXXFLAGS)
-
 #
-# End snes/snes_perf flags
+# End snes flags
 # -----------------------------------
 
 GBA_EXTRA_FLAGS=""
@@ -195,14 +179,12 @@ AM_CONDITIONAL(WANT_MD_EMU, false)
 AM_CONDITIONAL(WANT_SMS_EMU, false)
 AM_CONDITIONAL(WANT_NES_EMU, false)
 AM_CONDITIONAL(WANT_NGP_EMU, false)
-AM_CONDITIONAL(WANT_PC_EMU, false)
 AM_CONDITIONAL(WANT_PCE_EMU, false)
 AM_CONDITIONAL(WANT_PCE_FAST_EMU, false)
 AM_CONDITIONAL(WANT_PCFX_EMU, false)
 AM_CONDITIONAL(WANT_PSX_EMU, false)
 AM_CONDITIONAL(WANT_SMS_EMU, false)
 AM_CONDITIONAL(WANT_SNES_EMU, false)
-AM_CONDITIONAL(WANT_SNES_PERF_EMU, false)
 AM_CONDITIONAL(WANT_VB_EMU, false)
 AM_CONDITIONAL(WANT_WSWAN_EMU, false)
 
@@ -260,16 +242,6 @@ if test x$enable_ngp = xyes; then
 		AM_CONDITIONAL(WANT_NGP_EMU, true)
 fi
 
-AC_ARG_ENABLE(pc,
- AC_HELP_STRING([--enable-pc], [build with IBM PC/AT Compatible emulation(NOT IMPLEMENTED) [[default=no]]]),
-                  , enable_pc=no)
-
-if test x$enable_pc = xyes; then
-                AC_DEFINE([WANT_PC_EMU], [1], [Define if we are compiling with PC/AT Compatible emulation.])
-                AM_CONDITIONAL(WANT_PC_EMU, true)
-fi
-
-
 AC_ARG_ENABLE(pce,
  AC_HELP_STRING([--enable-pce], [build with PC Engine(TurboGrafx 16) emulation [[default=yes]]]),
                   , enable_pce=yes)
@@ -322,15 +294,6 @@ AC_ARG_ENABLE(snes,
 if test x$enable_snes = xyes; then
                 AC_DEFINE([WANT_SNES_EMU], [1], [Define if we are compiling with SNES emulation.])
                 AM_CONDITIONAL(WANT_SNES_EMU, true)
-fi
-
-AC_ARG_ENABLE(snes_perf,
- AC_HELP_STRING([--enable-snes-perf], [build the separate, performance SNES emulation core(EXPERIMENTAL, DO NOT USE LEST YOU FORFEIT YOUR TOES) [[default=no]]]),
-                  , enable_snes_perf=no)
-
-if test x$enable_snes_perf = xyes; then
-                AC_DEFINE([WANT_SNES_PERF_EMU], [1], [Define if we are compiling with separate SNES-perf emulation.])
-                AM_CONDITIONAL(WANT_SNES_PERF_EMU, true)
 fi
 
 AC_ARG_ENABLE(vb,
@@ -628,4 +591,4 @@ LIBS="$SNDFILE_LIBS $LIBCDIO_LIBS $LIBS"
 CPPFLAGS="$LIBCDIO_CFLAGS $SNDFILE_CFLAGS $CPPFLAGS"
 
 dnl Output Makefiles
-AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pc/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/snes_perf/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/cdplay/Makefile src/demo/Makefile src/desa68/Makefile po/Makefile.in  intl/Makefile])
+AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/cdplay/Makefile src/demo/Makefile src/desa68/Makefile po/Makefile.in  intl/Makefile])

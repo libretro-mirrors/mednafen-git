@@ -117,6 +117,9 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
+/* Define to 1 if you have the `dup2' function. */
+#undef HAVE_DUP2
+
 /* Define to 1 if you have the `fcntl' function. */
 #undef HAVE_FCNTL
 
@@ -128,6 +131,9 @@
 
 /* Define to 1 if you have the `fopen64' function. */
 #undef HAVE_FOPEN64
+
+/* Define to 1 if you have the `fork' function. */
+#undef HAVE_FORK
 
 /* Define to 1 if you have the `freeaddrinfo' function. */
 #undef HAVE_FREEADDRINFO
@@ -288,6 +294,9 @@
 
 /* Define if we are compiling with OSS support. */
 #undef HAVE_OSSDSP
+
+/* Define to 1 if you have the `pipe' function. */
+#undef HAVE_PIPE
 
 /* Define if your printf() function supports format strings with positions. */
 #undef HAVE_POSIX_PRINTF
@@ -647,9 +656,6 @@
 /* Define if we are compiling with PC-FX emulation. */
 #undef WANT_PCFX_EMU
 
-/* Define if we are compiling with PC/AT Compatible emulation. */
-#undef WANT_PC_EMU
-
 /* Define if we are compiling with PlayStation emulation. */
 #undef WANT_PSX_EMU
 
@@ -658,9 +664,6 @@
 
 /* Define if we are compiling with SNES emulation. */
 #undef WANT_SNES_EMU
-
-/* Define if we are compiling with separate SNES-perf emulation. */
-#undef WANT_SNES_PERF_EMU
 
 /* Define if we are compiling with Virtual Boy emulation. */
 #undef WANT_VB_EMU

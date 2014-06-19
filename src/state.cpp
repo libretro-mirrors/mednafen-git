@@ -405,7 +405,7 @@ static int ReadStateChunk(StateMem *st, SFORMAT *sf, int size, int data_only)
 
     if(recorded_size != expected_size)
     {
-     printf("Variable in save state wrong size: %s.  Need: %d, got: %d\n", toa + 1, expected_size, recorded_size);
+     printf("Variable in save state wrong size: %s.  Need: %u, got: %u\n", toa + 1, expected_size, recorded_size);
      if(smem_seek(st, recorded_size, SEEK_CUR) < 0)
      {
       puts("Seek error");
@@ -1035,9 +1035,7 @@ static int32 bcspos;
 
 void MDFN_StateEvilBegin(void)
 {
- int x;
  std::string srwcompstring;
-
 
  if(!EvilEnabled)
   return;
@@ -1057,7 +1055,7 @@ void MDFN_StateEvilBegin(void)
  bcs = (StateMemPacket *)calloc(SRW_NUM, sizeof(StateMemPacket));
  bcspos = 0;
 
- for(x=0;x<SRW_NUM;x++)
+ for(int x = 0; x < SRW_NUM; x++)
  {
   bcs[x].data = NULL;
   bcs[x].compressed_len = 0;
@@ -1073,8 +1071,6 @@ bool MDFN_StateEvilIsRunning(void)
 
 void MDFN_StateEvilEnd(void)
 {
- int x;
-
  if(!EvilEnabled)
   return;
 
@@ -1083,21 +1079,22 @@ void MDFN_StateEvilEnd(void)
   if(MDFNMOV_IsRecording())
    MDFN_StateEvilFlushMovieLove();
 
-  for(x = 0;x < SRW_NUM; x++)
+  for(int x = 0; x < SRW_NUM; x++)
   {
-
    if(bcs[x].data)
     free(bcs[x].data);
    bcs[x].data = NULL;
    bcs[x].compressed_len = 0;
   }
   free(bcs);
+  bcs = NULL;
  }
 }
 
 void MDFN_StateEvilFlushMovieLove(void)
 {
  int bahpos = (bcspos + 1) % SRW_NUM;
+
  for(int x = 0; x < SRW_NUM; x++)
  {
   if(bcs[bahpos].MovieLove.data)
