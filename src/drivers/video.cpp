@@ -977,9 +977,13 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
     if(CurrentScaler->id == NTVB_SCALE4X || CurrentScaler->id == NTVB_SCALE3X || CurrentScaler->id == NTVB_SCALE2X)
     {
 #ifdef WANT_FANCY_SCALERS
+     //
      // scale2x and scale3x apparently can't handle source heights less than 2.
      // scale4x, it's less than 4
-     if(eff_src_rect.h < 2 || (CurrentScaler->id == NTVB_SCALE4X && eff_src_rect.h < 4))
+     //
+     // None can handle source widths less than 2.
+     //
+     if(eff_src_rect.w < 2 || eff_src_rect.h < 2 || (CurrentScaler->id == NTVB_SCALE4X && eff_src_rect.h < 4))
      {
       nnx(CurrentScaler->id - NTVB_SCALE2X + 2, eff_source_surface, &eff_src_rect, bah_surface, &boohoo_rect);
      }

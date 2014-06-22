@@ -128,11 +128,21 @@ static void Draw(EmulateSpecStruct* espec)
    int y1 = espec->DisplayRect.y + (espec->DisplayRect.h - middle_size) / 3;
    int y2 = espec->DisplayRect.y + (espec->DisplayRect.h - middle_size) / 3 + middle_size;
    int y3 = espec->DisplayRect.y + espec->DisplayRect.h;
-   static const int w2_tab[8] = { 200, 160, 100, 80, 50, 40, 25, 20 };
+   static const int w2_tab[16] = { 200, 160, 100, 80, 50, 40, 32, 25,
+				   20,  16,  10,  8,  5,  4,  2,  1 };
    int w0 = 400;
    int w1 = 800;
-   int w2 = w2_tab[((w2_select >> 8) & 0x7)];
+   int w2 = w2_tab[((w2_select >> 8) & 0xF)];
+   int w2_font = MDFN_FONT_9x18_18x18;
    char w2_text[16];
+
+   if(w2 < 8)
+    w2_font = MDFN_FONT_4x5;
+   else if(w2 < 16)
+    w2_font = MDFN_FONT_5x7;
+   else if(w2 < 20)
+    w2_font = MDFN_FONT_6x13_12x13;
+
 
    trio_snprintf(w2_text, sizeof(w2_text), "%d", w2);
 
@@ -159,7 +169,7 @@ static void Draw(EmulateSpecStruct* espec)
    DrawTextTransShadow(espec->surface->pixels + espec->DisplayRect.x + (y1 + (y2 - y1) / 2 - 9) * espec->surface->pitchinpix, espec->surface->pitchinpix << 2, w1, "800", espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), true, MDFN_FONT_9x18_18x18);
 
    MDFN_DrawFillRect(espec->surface, espec->DisplayRect.x, y2, w2, y3 - y2, espec->surface->MakeColor(0xFF, 0xFF, 0xFF), espec->surface->MakeColor(0x00, 0x00, 0xFF));
-   DrawTextTransShadow(espec->surface->pixels + espec->DisplayRect.x + (y2 + (y3 - y2) / 2 - 9) * espec->surface->pitchinpix, espec->surface->pitchinpix << 2, w2, w2_text, espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), true, MDFN_FONT_9x18_18x18);
+   DrawTextTransShadow(espec->surface->pixels + espec->DisplayRect.x + (y2 + (y3 - y2) / 2 - 9) * espec->surface->pitchinpix, espec->surface->pitchinpix << 2, w2, w2_text, espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), true, w2_font);
   }
  }
  middle_size += middle_size_inc;
@@ -168,7 +178,7 @@ static void Draw(EmulateSpecStruct* espec)
  if(middle_size <= 0)
   middle_size_inc = 1;
 
- w2_select += 7;
+ w2_select += 9;
 }
 
 

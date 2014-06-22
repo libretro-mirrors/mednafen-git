@@ -1,3 +1,15 @@
+-- 0.9.36.1: --
+
+June 22, 2014:
+	Fixed a bug that could cause an assert() to trigger under certain circumstances when the scale2x/scale3x/scale4x special scaler is used with
+	SNES emulation.
+
+	PSX: Fixed a major SPU emulation regression in 0.9.36 that completely broke sample playback on a channel when the playback rate
+	was set near the maximum.
+
+	PSX: Fixed noise emulation playback frequency calculation(particularly for the lowest noise playback frequencies), per tests on a PS1.
+	It's unlikely to have any audible effect on games, though.
+
 -- 0.9.36: --
 
 June 17, 2014:
