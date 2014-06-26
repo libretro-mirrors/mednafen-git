@@ -28,7 +28,7 @@ class MD_Cart_Type_SSF2 : public MD_Cart_Type
         virtual void Reset(void);
 
         virtual void Write8(uint32 A, uint8 V);
-        virtual void Write16(uint32 A, uint8 V);
+        virtual void Write16(uint32 A, uint16 V);
         virtual uint8 Read8(uint32 A);
         virtual uint16 Read16(uint32 A);
         virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name);
@@ -70,7 +70,9 @@ void MD_Cart_Type_SSF2::Write8(uint32 A, uint8 V)
 {
  switch(A)
  {
-  default: printf("Write8: %08x %02x\n", A, V); break;
+  default:	MD_DBG(MD_DBG_WARNING, "[MAP_SSF2] Unknown write8 to 0x%08x, =0x%02x\n", A, V);
+  		break;
+
   case 0xA130F1: control = V & 0x3; break;
   case 0xA130F3: sf2_banks[1] = V & 0x3F; break;
   case 0xA130F5: sf2_banks[2] = V & 0x3F; break;
@@ -82,12 +84,14 @@ void MD_Cart_Type_SSF2::Write8(uint32 A, uint8 V)
  }
 }
 
-void MD_Cart_Type_SSF2::Write16(uint32 A, uint8 V)
+void MD_Cart_Type_SSF2::Write16(uint32 A, uint16 V)
 {
  // Just a guess
  switch(A)
  {
-  default: printf("Write16: %08x %04x\n", A, V); break;
+  default:	MD_DBG(MD_DBG_WARNING, "[MAP_SSF2] Unknown write16 to 0x%08x, =0x%04x\n", A, V);
+		break;
+
   case 0xA130F0: control = V & 0x3; break;
   case 0xA130F2: sf2_banks[1] = V & 0x3F; break;
   case 0xA130F4: sf2_banks[2] = V & 0x3F; break;

@@ -30,7 +30,7 @@ class MD_Cart_Type_SRAM : public MD_Cart_Type
 	virtual void Reset(void);
 
         virtual void Write8(uint32 A, uint8 V);
-        virtual void Write16(uint32 A, uint8 V);
+        virtual void Write16(uint32 A, uint16 V);
         virtual uint8 Read8(uint32 A);
         virtual uint16 Read16(uint32 A);
         virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name);
@@ -73,7 +73,7 @@ MD_Cart_Type_SRAM::MD_Cart_Type_SRAM(const md_game_info *ginfo, const uint8 *ROM
  }
  sram_size = sram_end - sram_start + 1;
 
- printf("%08x %08x %08x\n", sram_start, sram_end, sram_size);
+ //printf("%08x %08x %08x\n", sram_start, sram_end, sram_size);
 
  sram = (uint8 *)MDFN_malloc_T(sram_size, _("Cart SRAM"));
  memset(sram, 0xFF, sram_size);
@@ -107,7 +107,7 @@ void MD_Cart_Type_SRAM::Write8(uint32 A, uint8 V)
  }
 }
 
-void MD_Cart_Type_SRAM::Write16(uint32 A, uint8 V)
+void MD_Cart_Type_SRAM::Write16(uint32 A, uint16 V)
 {
  if(A == 0xA130F0)
   sram_enabled = V & 1;
@@ -129,7 +129,7 @@ uint8 MD_Cart_Type_SRAM::Read8(uint32 A)
  {
   if(A > rom_size)
   {
-   printf("Moo: %08x\n", A);
+   MD_DBG(MD_DBG_WARNING, "[MAP_SRAM] Unknown read8 from 0x%08x\n", A);
    return(0);
   }
   return(READ_BYTE_MSB(rom, A));
@@ -148,7 +148,7 @@ uint16 MD_Cart_Type_SRAM::Read16(uint32 A)
  {
   if(A > rom_size)
   {
-   printf("Moo: %08x\n", A);
+   MD_DBG(MD_DBG_WARNING, "[MAP_SRAM] Unknown read16 from 0x%08x\n", A);
    return(0);
   }
   return(READ_WORD_MSB(rom, A));

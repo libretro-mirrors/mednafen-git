@@ -11,8 +11,6 @@
 #include <stdio.h>
 #include <math.h>
 
-#define error(...)
-
 enum
 {
  CLOCK_NTSC = 53693175,

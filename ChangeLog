@@ -1,3 +1,35 @@
+-- 0.9.36.2: --
+
+June 25, 2014:
+	SNES: Save extra input device state in save states that the bsnes core fails to save.
+
+	Removed computationally-expensive and unnecessary(it's already done in the state load code path) duplicate-variable check debug code
+	in the save state saving code.
+
+	SNES: Hooked up Super Scope emulation.
+
+June 24, 2014:
+	PCE_FAST: Removed debug puts() in VPC mixing inner loop, and added compiler hints to some of the rendering and mixing loops.
+
+	Fixed an ancient regression introduced around version 0.9.16-WIP.  Said regression caused the file extension of the save state used by the auto save
+	state save/load	feature(setting "autosave") to be the same as the extension used for the currently selected save state slot, effectively overwriting that
+	save state slot on exit.
+
+	Added setting "video.disable_composition", to allow the user to override Mednafen's default behavior of disabling desktop composition on
+	Windows Vista and Windows 7.
+
+June 23, 2014:
+	MD: Fixed a 68K emulation regression introduced in 0.9.34, that broke save game	loading in "Sonic the Hedgehog 3",
+	and possibly broke other games in subtle ways.
+
+	MD: Fixed prototype for cart mapper 16-bit write function.
+
+	MD: Cleaned up debug printf()s.
+
+	PSX, PCE, MD, CDPLAY: Resolved a few compiler warnings.
+
+	PC-FX: Fixed an old bug that, when coupled with changes made in 0.9.35, caused low-volume crackling in the CD-DA sound output.
+
 -- 0.9.36.1: --
 
 June 22, 2014:

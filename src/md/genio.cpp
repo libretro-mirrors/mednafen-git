@@ -190,7 +190,7 @@ int gen_io_r(int offset)
     {
 	default:
 	    ret = 0x00;
-	    printf("Unmapped I/O Read: %04x\n", offset);
+	    MD_DBG(MD_DBG_WARNING, "[IO] Unmapped I/O Read: %04x\n", offset);
 	    break;
 
         case 0x00: /* Version */

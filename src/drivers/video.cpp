@@ -435,6 +435,7 @@ int InitVideo(MDFNGI *gi)
 
 
  #ifdef WIN32
+ if(MDFN_GetSettingB("video.disable_composition"))
  {
   static bool dwm_already_try_disable = false;
 

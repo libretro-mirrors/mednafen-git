@@ -53,7 +53,7 @@ public:
     }
   }
 
-private:
+//private:
   bool iobit;
   int16_t latchx, latchy;
 

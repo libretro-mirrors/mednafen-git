@@ -484,9 +484,7 @@ void PS_SPU::RunEnvelope(SPU_Voice *voice)
  //static INLINE void CalcVCDelta(const uint8 zs, uint8 speed, bool log_mode, bool decrement, bool inv_increment, int16 Current, int &increment, int &divinco)
  switch(ADSR->Phase)
  {
-  default: assert(0);
-	   break;
-
+  default:	// Won't happen, but helps shut up gcc warnings.
   case ADSR_ATTACK:
 	CalcVCDelta(0x7F, ADSR->AttackRate, ADSR->AttackExp, false, false, (int16)ADSR->EnvLevel, increment, divinco);
 	uoflow_reset = 0x7FFF;

@@ -46,6 +46,18 @@ SNSF playback is supported to a degree; however, its implementation in Mednafen 
  </table>
  </p>
 
+ <p>
+ <table border>
+  <tr><th colspan="2">Virtual Super Scope</th></tr>
+  <tr><th>Key:</th><th nowrap>Button:</th></tr>
+  <tr><td>Mouse Left</td><td>Trigger</td></tr>
+  <tr><td>Mouse Right</td><td>Cursor</td></tr>
+  <tr><td>Mouse Middle</td><td>Pause</td></tr>
+  <tr><td>End</td><td>Turbo</td></tr>
+  <tr><td>Space</td><td>Offscreen Shot(Simulated)</td></tr>
+ </table>
+ </p>
+
 
 <?php EndSection(); ?>
 

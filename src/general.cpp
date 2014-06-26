@@ -337,7 +337,7 @@ std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
                       {
 		       dir = MDFN_GetSettingS("filesys.path_state");
                        fstring = MDFN_GetSettingS("filesys.fname_state");
-		       fmap['x'] = "mcs";
+		       fmap['x'] = (cd1 ? cd1 : "mcs");
                       }
                       else if(type == MDFNMKF_SAV)
                       {
@@ -348,7 +348,7 @@ std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
 
 		      fmap['X'] = fmap['x'];
 
-		      if(type != MDFNMKF_SAV)
+		      if(type != MDFNMKF_SAV && !cd1)
 		      {
                        trio_snprintf(numtmp, sizeof(numtmp), "%d", id1);
                        fmap['p'] = std::string(numtmp);

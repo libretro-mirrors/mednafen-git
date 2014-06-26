@@ -22,9 +22,9 @@ const uint8_t Video::cursor[15][16] = {
 
 void Video::draw_cursor(const int rline, const bool hires, const uint16_t color, const int x, const int y)
 {
- const int cy = y - rline + 7;
+ const int cy = rline - y + 7;
 
- if(cy < 0 || cy > 15)
+ if(cy < 0 || cy > 14)
   return;
 
  for(int cx = 0; cx < 15; cx++) {

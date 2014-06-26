@@ -27,7 +27,7 @@ class MD_Cart_Type_YaSe : public MD_Cart_Type
         virtual ~MD_Cart_Type_YaSe();
 
         virtual void Write8(uint32 A, uint8 V);
-        virtual void Write16(uint32 A, uint8 V);
+        virtual void Write16(uint32 A, uint16 V);
         virtual uint8 Read8(uint32 A);
         virtual uint16 Read16(uint32 A);
         virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name);
@@ -68,7 +68,7 @@ void MD_Cart_Type_YaSe::Write8(uint32 A, uint8 V)
  }
 }
 
-void MD_Cart_Type_YaSe::Write16(uint32 A, uint8 V)
+void MD_Cart_Type_YaSe::Write16(uint32 A, uint16 V)
 {
  if(A >= 0x200000 && A <= 0x201fff)
  {
@@ -88,7 +88,7 @@ uint8 MD_Cart_Type_YaSe::Read8(uint32 A)
  {
   if(A > rom_size)
   {
-   printf("Moo8: %08x\n", A);
+   MD_DBG(MD_DBG_WARNING, "[MAP_YASE] Unknown read8 from 0x%08x\n", A);
    return(0);
   }
   return(READ_BYTE_MSB(rom, A));
@@ -103,7 +103,7 @@ uint8 MD_Cart_Type_YaSe::Read8(uint32 A)
  if(A == 0x400006)
   return(0x18);
 
- printf("Moo8: %08x\n", A);
+ MD_DBG(MD_DBG_WARNING, "[MAP_YASE] Unknown read8 from 0x%08x\n", A);
  return(m68k_read_bus_8(A));
 }
 
@@ -116,7 +116,7 @@ uint16 MD_Cart_Type_YaSe::Read16(uint32 A)
  {
   if(A > rom_size)
   {
-   printf("Moo16: %08x\n", A);
+   MD_DBG(MD_DBG_WARNING, "[MAP_YASE] Unknown read16 from 0x%08x\n", A);
    return(0);
   }
   return(READ_WORD_MSB(rom, A));
@@ -131,7 +131,7 @@ uint16 MD_Cart_Type_YaSe::Read16(uint32 A)
  if(A == 0x400006)
   return(0x18);
 
- printf("Moo16: %08x\n", A);
+ MD_DBG(MD_DBG_WARNING, "[MAP_YASE] Unknown read16 from 0x%08x\n", A);
  return(m68k_read_bus_16(A));
 }
 

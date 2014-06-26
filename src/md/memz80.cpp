@@ -210,17 +210,13 @@ void z80_vdp_w(int address, int data)
 
 uint8 MD_Z80_ReadPort(uint16 address)
 {
-#if LOG_PORT
-    error("Z80 read port %04X (%04X)\n", port, z80_get_reg(Z80_PC));
-#endif    
+    MD_DBG(MD_DBG_WARNING, "[MEMZ80] read port %04X (%04X)\n", address, z80_getpc());
     return 0xFF;
 }
 
 void MD_Z80_WritePort(uint16 address, uint8 data)
 {
-#if LOG_PORT
-    error("Z80 write %02X to port %04X (%04X)\n", data, port, z80_get_reg(Z80_PC));
-#endif
+    MD_DBG(MD_DBG_WARNING, "[MEMZ80] write %02X to port %04X (%04X)\n", data, address, z80_getpc());
 }
 
 
@@ -230,18 +226,18 @@ void MD_Z80_WritePort(uint16 address, uint8 data)
 */
 void z80_unused_w(int address, int data)
 {
-    printf("Z80 unused write %04X = %02X (%04X)\n", address, data, z80_getpc());
+    MD_DBG(MD_DBG_WARNING, "[MEMZ80] unused write %04X = %02X (%04X)\n", address, data, z80_getpc());
 }
 
 int z80_unused_r(int address)
 {
-    printf("Z80 unused read %04X (%04X)\n", address, z80_getpc());
+    MD_DBG(MD_DBG_WARNING, "[MEMZ80] unused read %04X (%04X)\n", address, z80_getpc());
     return 0xFF;
 }
 
 void z80_lockup_w(int address, int data)
 {
-    printf("Z80 lockup write %04X = %02X (%04X)\n", address, data, z80_getpc());    
+    MD_DBG(MD_DBG_WARNING, "[MEMZ80] lockup write %04X = %02X (%04X)\n", address, data, z80_getpc());    
     gen_running = 0;
     //z80_end_timeslice();
     // FIXME/TODO
@@ -249,7 +245,7 @@ void z80_lockup_w(int address, int data)
 
 int z80_lockup_r(int address)
 {
-    printf("Z80 lockup read %04X (%04X)\n", address, z80_getpc());
+    MD_DBG(MD_DBG_WARNING, "[MEMZ80] lockup read %04X (%04X)\n", address, z80_getpc());
     gen_running = 0;
     //z80_end_timeslice();
     // FIXME/TODO

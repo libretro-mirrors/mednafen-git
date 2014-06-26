@@ -295,18 +295,18 @@ int z80bank_vdp_r(int address)
 */
 void z80bank_unused_w(int address, int data)
 {
-    error("Z80 bank unused write %06X = %02X (%04X)\n", address, data, z80_get_reg(Z80_PC));
+    MD_DBG(MD_DBG_WARNING, "[MEMBNK] unused write %06X = %02X (%04X)\n", address, data, z80_getpc());
 }
 
 int z80bank_unused_r(int address)
 {
-    error("Z80 bank unused read %06X (%04X)\n", address, z80_get_reg(Z80_PC));
+    MD_DBG(MD_DBG_WARNING, "[MEMBNK] unused read %06X (%04X)\n", address, z80_getpc());
     return (address & 1) ? 0x00 : 0xFF;
 }
 
 void z80bank_lockup_w(int address, int data)
 {
-    printf("Z80 bank lockup write %06X = %02X (%04X)\n", address, data, z80_getpc()); //_reg(Z80_PC));
+    MD_DBG(MD_DBG_WARNING, "[MEMBNK] lockup write %06X = %02X (%04X)\n", address, data, z80_getpc());
     gen_running = 0;
     // FIXME/TODO
     //z80_end_timeslice();
@@ -314,7 +314,7 @@ void z80bank_lockup_w(int address, int data)
 
 int z80bank_lockup_r(int address)
 {
-    printf("Z80 bank lockup read %06X (%04X)\n", address, z80_getpc()); //reg(Z80_PC));
+    MD_DBG(MD_DBG_WARNING, "[MEMBNK] lockup read %06X (%04X)\n", address, z80_getpc());
     gen_running = 0;
     //z80_end_timeslice();
     // FIXME/TODO

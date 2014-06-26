@@ -27,7 +27,7 @@ class MD_Cart_Type_FF : public MD_Cart_Type
         virtual ~MD_Cart_Type_FF();
 	virtual void Reset(void);
         virtual void Write8(uint32 A, uint8 V);
-        virtual void Write16(uint32 A, uint8 V);
+        virtual void Write16(uint32 A, uint16 V);
         virtual uint8 Read8(uint32 A);
         virtual uint16 Read16(uint32 A);
         virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name);
@@ -73,18 +73,21 @@ void MD_Cart_Type_FF::Write8(uint32 A, uint8 V)
  else if(A == 0x400006)
   latch = V;
  else
-  printf("Write8: %08x %02x\n", A, V);
-
+ {
+  MD_DBG(MD_DBG_WARNING, "[MAP_FF] Unknown write8 to 0x%08x, =0x%02x\n", A, V);
+ }
 }
 
-void MD_Cart_Type_FF::Write16(uint32 A, uint8 V)
+void MD_Cart_Type_FF::Write16(uint32 A, uint16 V)
 {
  if(A >= 0x200000 && A <= 0x203fff)
  {
   sram[(A >> 1) & 0x1FFF] = V;
  }
  else
-  printf("Write16: %08x %04x\n", A, V);
+ {
+  MD_DBG(MD_DBG_WARNING, "[MAP_FF] Unknown write16 to 0x%08x, =0x%04x\n", A, V);
+ }
 }
 
 uint8 MD_Cart_Type_FF::Read8(uint32 A)
@@ -99,7 +102,7 @@ uint8 MD_Cart_Type_FF::Read8(uint32 A)
 
   if(A > rom_size)
   {
-   printf("Moo8: %08x\n", A);
+   MD_DBG(MD_DBG_WARNING, "[MAP_FF] Unknown read8 from 0x%08x\n", A);
    return(0);
   }
   return(READ_BYTE_MSB(rom, A));
@@ -109,7 +112,9 @@ uint8 MD_Cart_Type_FF::Read8(uint32 A)
   return(latch);
 
  if(A > 0x410000)
-  printf("Moo8: %08x\n", A);
+ {
+  MD_DBG(MD_DBG_WARNING, "[MAP_FF] Unknown read8 from 0x%08x\n", A);
+ }
 
  if(A >= 0x400000)
   return(READ_BYTE_MSB(rom, (A & 0xFFFFF) + (61 * 32768)));
@@ -126,13 +131,13 @@ uint16 MD_Cart_Type_FF::Read16(uint32 A)
 
   if(A > rom_size)
   {
-   printf("Moo16: %08x\n", A);
+   MD_DBG(MD_DBG_WARNING, "[MAP_FF] Unknown read16 from 0x%08x\n", A);
    return(0);
   }
   return(READ_WORD_MSB(rom, A));
  }
 
- printf("Moo16: %08x\n", A);
+ MD_DBG(MD_DBG_WARNING, "[MAP_FF] Unknown read16 from 0x%08x\n", A);
  return(m68k_read_bus_16(A));
 }
 

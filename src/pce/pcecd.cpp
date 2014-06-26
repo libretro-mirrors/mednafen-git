@@ -219,9 +219,6 @@ static int32 CalcNextEvent(int32 base)
  return(next_event);
 }
 
-
-#ifndef __MDFN_INCLUDED_FROM_PCE_FAST
-
 uint32 PCECD_GetRegister(const unsigned int id, char *special, const uint32 special_len)
 {
  uint32 value = 0xDEADBEEF;
@@ -323,8 +320,6 @@ void ADPCM_PokeRAM(uint32 Address, uint32 Length, const uint8 *Buffer)
   Buffer++;
  }
 }
-
-#endif
 
 static void update_irq_state()
 {
@@ -1204,11 +1199,7 @@ static INLINE void ADPCM_Run(const int32 clocks, const int32 timestamp)
 
 // The return value of this function is ignored in PCECD_Read() and PCECD_Write() for speed reasons, and the
 // fact that reading and writing can change the next potential event,
-#ifdef __MDFN_INCLUDED_FROM_PCE_FAST
-void PCECD_Run(uint32 in_timestamp)
-#else
 int32 PCECD_Run(uint32 in_timestamp)
-#endif
 {
  int32 clocks = in_timestamp - lastts;
  int32 running_ts = lastts;
@@ -1253,10 +1244,7 @@ int32 PCECD_Run(uint32 in_timestamp)
  //puts("Run End");
  //fflush(stdout);
 
-
- #ifndef __MDFN_INCLUDED_FROM_PCE_FAST
  return(CalcNextEvent(0x7FFFFFFF));
- #endif
 }
 
 void PCECD_ResetTS(uint32 ts_base)

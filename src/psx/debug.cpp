@@ -332,11 +332,6 @@ static int GfxDecode_PBN = 0;
 
 static void DoGfxDecode(void)
 {
- unsigned tp_w, tp_h;
-
- tp_w = 256;
- tp_h = 256;
-
  if(GfxDecode_Buf)
  {
   for(int sy = 0; sy < GfxDecode_Buf->h; sy++)
@@ -344,7 +339,7 @@ static void DoGfxDecode(void)
    for(int sx = 0; sx < GfxDecode_Buf->w; sx++)
    {
     unsigned fb_x = ((sx % GfxDecode_Buf->w) + ((sy + GfxDecode_Scroll) / GfxDecode_Buf->w * GfxDecode_Buf->w)) & 1023;
-    unsigned fb_y = (((sy + GfxDecode_Scroll) % GfxDecode_Buf->w) + ((((sx % GfxDecode_Buf->w) + ((sy + GfxDecode_Scroll) / GfxDecode_Buf->w * GfxDecode_Buf->w)) / 1024) * 256)) & 511;
+    unsigned fb_y = (((sy + GfxDecode_Scroll) % GfxDecode_Buf->w) + ((((sx % GfxDecode_Buf->w) + ((sy + GfxDecode_Scroll) / GfxDecode_Buf->w * GfxDecode_Buf->w)) / 1024) * GfxDecode_Buf->w)) & 511;
 
     uint16 pixel = GPU->PeekRAM(fb_y * 1024 + fb_x);
 

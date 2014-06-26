@@ -222,8 +222,7 @@ void Input::update() {
     case DeviceSuperScope: {
       int x = system.interface->input_poll(1, p.device, 0, SuperScopeX);
       int y = system.interface->input_poll(1, p.device, 0, SuperScopeY);
-      x += p.superscope.x;
-      y += p.superscope.y;
+
       p.superscope.x = max(-16, min(256 + 16, x));
       p.superscope.y = max(-16, min(240 + 16, y));
 
@@ -284,8 +283,8 @@ void Input::port_set_device(bool portnumber, unsigned device) {
   latchy = -1;
 
   if(device == DeviceSuperScope) {
-    p.superscope.x = 256 / 2;
-    p.superscope.y = 240 / 2;
+    p.superscope.x = 0;
+    p.superscope.y = 0;
 
     p.superscope.trigger   = false;
     p.superscope.cursor    = false;

@@ -1,7 +1,7 @@
 
  int32 cycles = md_timestamp - vdp_last_ts;
  bool hcell_mode = (reg[0x0C] & 1); // True on H40, FALSE on H32
- bool do_skip = FALSE;
+ //bool do_skip = FALSE;
 
  /* Maximum FIFO wait times(there is no wait during vblank):
 	5.98uSec - H32 cell mode
@@ -56,7 +56,7 @@
 
 	28 
  */
- const int divider = hcell_mode ? 8 : 10;
+ //const int divider = hcell_mode ? 8 : 10;
  const int lines_per_frame = is_pal ? 313 : 262;
  static const int event_count = 8;
 
