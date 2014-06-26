@@ -220,20 +220,20 @@ void MDVDP::vdp_ctrl_w(uint16 data)
                 case 0x00: /* V bus to VDP DMA */
                 case 0x40: /* V bus to VDP DMA */
 		    if((code & 0x0F) != 0x1 && (code & 0x0F) != 0x3 && (code & 0x0F) != 0x5)
-                     printf("Invalid code for V bus to VDP dma: %02x\n", code);
+                     MD_DBG(MD_DBG_WARNING, "[VDP] Invalid code for V bus to VDP dma: %02x\n", code);
 		    status |= 0x2;
 		    Recalc68KSuspend();
                     break;
 
                 case 0x80: /* VRAM fill */
                     if((code & 0x0F) != 0x1)
-                     printf("Invalid code for fill dma: %02x\n", code);
+                     MD_DBG(MD_DBG_WARNING, "[VDP] Invalid code for fill dma: %02x\n", code);
                     dma_fill = 1;
                     break;
 
                 case 0xC0: /* VRAM copy */
                     if((code & 0x0F) != 0x0)
-                     printf("Invalid code for copy dma: %02x\n", code);
+                     MD_DBG(MD_DBG_WARNING, "[VDP] Invalid code for copy dma: %02x\n", code);
 		    status |= 0x2;
                     break;
             }
@@ -1780,7 +1780,6 @@ void MDVDP::render_obj(int line, uint8 *buf, uint8 *table)
     int pixellimit = (reg[12] & 1) ? 320 : 256;
     int pixelcount = 0;
     int width;
-    int height;
     int v_line;
     int column;
     int sol_flag = 0;
@@ -1818,7 +1817,6 @@ void MDVDP::render_obj(int line, uint8 *buf, uint8 *table)
             attr = object_info[count].attr;
             attr_mask = (attr & 0x1800);
 
-            height = sizetab[size & 3];
             palette = (attr >> 9) & 0x70;
 
             v_line = (line - ypos);
@@ -1829,8 +1827,6 @@ void MDVDP::render_obj(int line, uint8 *buf, uint8 *table)
             s = &name_lut[((attr >> 3) & 0x300) | (size << 4) | (nt_row << 2)];
 
             lb = (uint8 *)&buf[0x20 + (xpos - 0x80)];
-	    if((0x20 + (xpos - 0x80)) < 0 || xpos >= 0x300)
-		printf("BLAH: %d\n", 0x20 + (xpos - 0x80));
             width >>= 3;
             for(column = 0; column < width; column += 1, lb+=8)
             {
@@ -1855,7 +1851,6 @@ void MDVDP::render_obj_im2(int line, uint8 *buf, uint8 *table)
     int pixellimit = (reg[12] & 1) ? 320 : 256;
     int pixelcount = 0;
     int width;
-    int height;
     int v_line;
     int column;
     int sol_flag = 0;
@@ -1894,7 +1889,6 @@ void MDVDP::render_obj_im2(int line, uint8 *buf, uint8 *table)
             attr = object_info[count].attr;
             attr_mask = (attr & 0x1800);
 
-            height = sizetab[size & 3];
             palette = (attr >> 9) & 0x70;
 
             v_line = (line - ypos);

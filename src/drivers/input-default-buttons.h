@@ -404,6 +404,17 @@ static ButtConfig SNESMouseConfig[2] =
  { BUTTC_MOUSE, 0, 2, 0 },
 };
 
+static ButtConfig SNESSuperScopeConfig[7] =
+{
+ { BUTTC_MOUSE, 0, 0x8000, 0 },
+ { BUTTC_MOUSE, 0, 0x8001, 0 },
+
+ { BUTTC_MOUSE, 0, 0, 0 },	// Trigger
+ MK(SPACE),			// Away trigger
+ { BUTTC_MOUSE, 0, 1, 0 },	// Pause
+ MK(END),			// Turbo
+ { BUTTC_MOUSE, 0, 2, 0 },	// Cursor
+};
 
 /*
  { "select", "SELECT", 4, IDIT_BUTTON, NULL },
@@ -592,10 +603,7 @@ static DefaultSettingsMeow defset[] =
  { "snes.input.port1.gamepad", SNESPadConfig, sizeof(SNESPadConfig) / sizeof(ButtConfig) },
  { "snes.input.port1.mouse", SNESMouseConfig, sizeof(SNESMouseConfig) / sizeof(ButtConfig) },
  { "snes.input.port2.mouse", SNESMouseConfig, sizeof(SNESMouseConfig) / sizeof(ButtConfig) },
-
- { "snes_perf.input.port1.gamepad", SNESPadConfig, sizeof(SNESPadConfig) / sizeof(ButtConfig) },
- { "snes_perf.input.port1.mouse", SNESMouseConfig, sizeof(SNESMouseConfig) / sizeof(ButtConfig) },
- { "snes_perf.input.port2.mouse", SNESMouseConfig, sizeof(SNESMouseConfig) / sizeof(ButtConfig) },
+ { "snes.input.port2.superscope", SNESSuperScopeConfig, sizeof(SNESSuperScopeConfig) / sizeof(ButtConfig) },
 
  { "psx.input.port1.gamepad", PSXPadConfig, sizeof(PSXPadConfig) / sizeof(ButtConfig) },
 

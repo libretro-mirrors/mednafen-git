@@ -55,7 +55,7 @@ static uint32 PrevRate;
 
 static std::vector<CDIF *> *cdifs;
 
-static int32 CurrentATLI;
+static uint32 CurrentATLI;
 
 struct AudioTrackInfo
 {
@@ -361,7 +361,7 @@ static void Emulate(EmulateSpecStruct *espec)
    else if(toc.disc_type != 0x00)
     disctype_string = "(unknown type)";
 
-   trio_snprintf(tmpbuf, 256, "Disc: %d/%d %s", AudioTrackList[CurrentATLI].disc + 1, (int)cdifs->size(), disctype_string);
+   trio_snprintf(tmpbuf, 256, "Disc: %u/%u %s", AudioTrackList[CurrentATLI].disc + 1, (unsigned)cdifs->size(), disctype_string);
    DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
    pixels += 13 * espec->surface->pitch32;
 
@@ -454,13 +454,13 @@ static void Emulate(EmulateSpecStruct *espec)
 
  if(!(last_controller & 0x10) && (new_controller & 0x10))
  {
-  CurrentATLI = std::min<int>(CurrentATLI + 10, AudioTrackList.size() - 1);
+  CurrentATLI = std::min<unsigned>(CurrentATLI + 10, AudioTrackList.size() - 1);
   PlaySector = AudioTrackList[CurrentATLI].lba;
  }
 
  if(!(last_controller & 0x20) && (new_controller & 0x20))
  {
-  CurrentATLI = std::max<int>(CurrentATLI - 10, 0);
+  CurrentATLI -= std::min<unsigned>(CurrentATLI, 10);
   PlaySector = AudioTrackList[CurrentATLI].lba;
  }
 

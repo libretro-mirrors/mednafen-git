@@ -100,7 +100,7 @@ static MDFNSetting_EnumList VDriver_List[] =
 
  { "opengl", VDRIVER_OPENGL, "OpenGL + SDL", gettext_noop("This output method is preferred, as all features are available with it.") },
  { "sdl", VDRIVER_SOFTSDL, "SDL Surface", gettext_noop("Slower with lower-quality scaling than OpenGL, but if you don't have hardware-accelerated OpenGL rendering, it will be faster than software OpenGL rendering. Bilinear interpolation not available. Pixel shaders do not work with this output method, of course.") },
- { "overlay", VDRIVER_OVERLAY, "SDL Overlay", gettext_noop("As fast as OpenGL, perhaps faster in some situations, *if* it's hardware-accelerated. Scanline effects are not available. hq2x, hq3x, hq4x are not available. The OSD may be missing or glitchy. Bilinear interpolation can't be turned off. Harsh chroma subsampling blurring in some picture types.  If you use this output method, it is strongly recommended to use a special scaler with it, such as nn2x.") },
+ { "overlay", VDRIVER_OVERLAY, "SDL Overlay", gettext_noop("As fast as OpenGL, perhaps faster in some situations, *if* it's hardware-accelerated. Scanline effects are not available. hq2x, hq3x, hq4x are not available. The OSD may be missing or glitchy. PSX emulation will not display properly. Bilinear interpolation can't be turned off. Harsh chroma subsampling blurring in some picture types.  If you use this output method, it is strongly recommended to use a special scaler with it, such as nn2x.") },
 
  { NULL, 0 },
 };
@@ -194,6 +194,8 @@ static MDFNSetting DriverSettings[] =
   { "video.blit_timesync", MDFNSF_NOFLAGS, gettext_noop("Enable time synchronization(waiting) for frame blitting."),
 					gettext_noop("Disable to reduce latency, at the cost of potentially increased video \"juddering\", with the maximum reduction in latency being about 1 video frame's time.\nWill work best with emulated systems that are not very computationally expensive to emulate, combined with running on a relatively fast CPU."),
 					MDFNST_BOOL, "1" },
+
+  { "video.disable_composition", MDFNSF_NOFLAGS, gettext_noop("Attempt to disable desktop composition."), gettext_noop("Currently, this setting only has an effect on Windows Vista and Windows 7(and probably the equivalent server versions as well)."), MDFNST_BOOL, "1" },
 
   { "ffspeed", MDFNSF_NOFLAGS, gettext_noop("Fast-forwarding speed multiplier."), NULL, MDFNST_FLOAT, "4", "1", "15" },
   { "fftoggle", MDFNSF_NOFLAGS, gettext_noop("Treat the fast-forward button as a toggle."), NULL, MDFNST_BOOL, "0" },
@@ -823,7 +825,7 @@ static int LoadGame(const char *force_module, const char *path)
 	 sound_active = Sound_Init(tmp);
 
         if(MDFN_GetSettingB("autosave"))
-	 MDFNI_LoadState(NULL, "mcq");
+	 MDFNI_LoadState(NULL, "mca");
 
 	if(netconnect)
 	 MDFND_NetworkConnect();
@@ -882,7 +884,7 @@ int CloseGame(void)
          MDFNI_StopWAVRecord();
 
 	if(MDFN_GetSettingB("autosave"))
-	 MDFNI_SaveState(NULL, "mcq", NULL, NULL, NULL);
+	 MDFNI_SaveState(NULL, "mca", NULL, NULL, NULL);
 
 	MDFND_NetworkClose();
 

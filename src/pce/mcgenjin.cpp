@@ -222,6 +222,15 @@ MCGenjin::MCGenjin(const uint8 *rr, uint32 rr_size)
  cs_di[0] = rom[0x1FDB];
  cs_di[1] = rom[0x1FDC];
 
+ MDFN_printf(_("MCGenjin Header:\n"));
+ MDFN_indent(1);
+ MDFN_printf(_("Revision: 0x%02x\n"), revision);
+ MDFN_printf(_("ROM Size: %u\n"), num256_pages * 262144);
+ MDFN_printf(_("Region: 0x%02x\n"), region);
+ MDFN_printf(_("CS0 Type: 0x%02x\n"), cs_di[0]);
+ MDFN_printf(_("CS1 Type: 0x%02x\n"), cs_di[1]);
+ MDFN_indent(-1);
+
  // Don't set addr_write_mask to larger than 0xF unless code in mcgenjin.h is adjusted as well.
  if(revision >= 0x80)
   addr_write_mask = 0xF;

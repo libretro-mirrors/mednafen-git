@@ -435,6 +435,7 @@ static uint16 MDCD_MainRead16(uint32 A)
  }
 
  printf("Unknown main Read16: %08x\n", A);
+ return(0);
 }
 
 //////////////////////////////////
@@ -469,7 +470,7 @@ static void MDCD_SubWrite8(uint32 A, uint8 V)
   }
   else
   {
-   uint32 base = ((MM_RET ^ 1) << 17);
+   //uint32 base = ((MM_RET ^ 1) << 17);
 
   }
  }
@@ -578,7 +579,7 @@ static void MDCD_SubWrite16(uint32 A, uint16 V)
   }
   else
   {
-   uint32 base = ((MM_RET ^ 1) << 17);
+   //uint32 base = ((MM_RET ^ 1) << 17);
 
   }
  }
@@ -665,7 +666,7 @@ static uint8 MDCD_SubRead8(uint32 A)
   }
   else
   {
-   uint32 base = ((MM_RET ^ 1) << 17);
+   //uint32 base = ((MM_RET ^ 1) << 17);
 
   }
  }
@@ -765,7 +766,7 @@ static uint16 MDCD_SubRead16(uint32 A)
   }
   else
   {
-   uint32 base = ((MM_RET ^ 1) << 17);
+   //uint32 base = ((MM_RET ^ 1) << 17);
 
   }
  }

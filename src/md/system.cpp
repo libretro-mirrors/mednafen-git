@@ -23,6 +23,8 @@
 #include <mednafen/general.h>
 #include <mednafen/mempatcher.h>
 
+#include <trio/trio.h>
+
 namespace MDFN_IEN_MD
 {
 
@@ -92,11 +94,6 @@ static void system_reset(bool poweron)
  MDSound_Power();
 }
 
-static void system_shutdown(void)
-{
-    gen_shutdown();
-}
-
 void MD_ExitCPULoop(void)
 {
  run_cpu = FALSE;
@@ -135,6 +132,23 @@ void MD_UpdateSubStuff(void)
  //if(MD_IsCD)
  // MDCD_Run(master_cycles);
 }
+
+void MD_DBG(unsigned level, const char *format, ...) throw()
+{
+#if 0
+ //if(md_dbg_level >= level)
+ {
+  va_list ap;
+
+  va_start(ap, format);
+
+  trio_vprintf(format, ap);
+
+  va_end(ap);
+ }
+#endif
+}
+
 
 static int system_frame(int do_skip)
 {

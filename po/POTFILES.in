@@ -589,7 +589,6 @@ src/snes/src/lib/libco/amd64.c
 src/psx/gpu_polygon.inc
 src/psx/spu_fir_table.inc
 src/psx/spu_reverb.inc
-src/psx/spu_nft.inc
 src/psx/gpu_line.inc
 src/psx/gpu_sprite.inc
 src/psx/gte_divrecip.inc
@@ -675,10 +674,7 @@ src/mpcdec/mpc_demux.c
 src/mpcdec/mpc_decoder.c
 src/mpcdec/mpc_bits_reader.c
 src/mpcdec/crc32.c
-src/mpcdec/tags.c
-src/mpcdec/huffman-bcl.c
 src/mpcdec/synth_filter.c
-src/mpcdec/fastmath.c
 src/mpcdec/streaminfo.c
 src/mpcdec/huffman.c
 src/mpcdec/requant.c
@@ -703,7 +699,6 @@ src/vb/vip_draw.inc
 src/psx/gpu_polygon.inc
 src/psx/spu_fir_table.inc
 src/psx/spu_reverb.inc
-src/psx/spu_nft.inc
 src/psx/gpu_line.inc
 src/psx/gpu_sprite.inc
 src/psx/gte_divrecip.inc

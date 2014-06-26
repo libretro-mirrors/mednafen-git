@@ -27,6 +27,10 @@ namespace MDFN_IEN_MD
 
 extern int32 md_timestamp;
 
+#define MD_DBG_ERROR          0       // Emulator-level error.
+#define MD_DBG_WARNING        1       // Warning about game doing questionable things/hitting stuff that might not be emulated correctly.
+void MD_DBG(unsigned level, const char *format, ...) throw() MDFN_COLD MDFN_FORMATSTR(gnu_printf, 2, 3);
+
 void MD_ExitCPULoop(void);
 void MD_Suspend68K(bool state);
 void MD_68KHALTHack(void);

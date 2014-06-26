@@ -1,8 +1,6 @@
 #ifdef SYSTEM_CPP
 
-serializer System::serialize() {
-  serializer s(serialize_size);
-
+void System::serialize(serializer &s) {
   unsigned signature = 0x31545342, version = bsnesSerializerVersion, crc32 = cartridge.crc32();
   char description[512];
 
@@ -14,7 +12,6 @@ serializer System::serialize() {
   s.array(description);
 
   serialize_all(s);
-  return s;
 }
 
 bool System::unserialize(serializer &s) {
@@ -39,7 +36,12 @@ bool System::unserialize(serializer &s) {
 //internal
 //========
 
-void System::serialize(serializer &s) {
+void System::serialize_all(serializer &s) {
+  bus.serialize(s);
+  cartridge.serialize(s);
+
+  //
+  //
   s.integer((unsigned&)region);
   s.integer((unsigned&)expansion);
 
@@ -50,12 +52,9 @@ void System::serialize(serializer &s) {
   s.integer(scheduler.clock.cpuppu);
   s.integer(scheduler.clock.cpusmp);
   s.integer(scheduler.clock.smpdsp);
-}
+  //
+  //
 
-void System::serialize_all(serializer &s) {
-  bus.serialize(s);
-  cartridge.serialize(s);
-  system.serialize(s);
   cpu.serialize(s);
   smp.serialize(s);
   ppu.serialize(s);

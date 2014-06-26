@@ -119,7 +119,7 @@ class MD_Cart_Type_EEPROM : public MD_Cart_Type
 	virtual void Reset(void);
 
         virtual void Write8(uint32 A, uint8 V);
-        virtual void Write16(uint32 A, uint8 V);
+        virtual void Write16(uint32 A, uint16 V);
         virtual uint8 Read8(uint32 A);
         virtual uint16 Read16(uint32 A);
         virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name);
@@ -550,7 +550,7 @@ void MD_Cart_Type_EEPROM::Write8(uint32 A, uint8 V)
   WriteEEPROM(A, V, false);
 }
 
-void MD_Cart_Type_EEPROM::Write16(uint32 A, uint8 V)
+void MD_Cart_Type_EEPROM::Write16(uint32 A, uint16 V)
 {
  if((A == (type.sda_in_adr & 0xFFFFFE)) || (A == (type.scl_adr & 0xFFFFFE)))
   WriteEEPROM(A, V, true);
@@ -567,7 +567,7 @@ uint8 MD_Cart_Type_EEPROM::Read8(uint32 A)
  {
   if(A > rom_size)
   {
-   printf("Moo: %08x\n", A);
+   MD_DBG(MD_DBG_WARNING, "[MAP_EEPROM] Unknown read8 from 0x%08x\n", A);
    return(0);
   }
   return(READ_BYTE_MSB(rom, A));
@@ -586,7 +586,7 @@ uint16 MD_Cart_Type_EEPROM::Read16(uint32 A)
  {
   if(A > rom_size)
   {
-   printf("Moo: %08x\n", A);
+   MD_DBG(MD_DBG_WARNING, "[MAP_EEPROM] Unknown read16 from 0x%08x\n", A);
    return(0);
   }
   return(READ_WORD_MSB(rom, A));

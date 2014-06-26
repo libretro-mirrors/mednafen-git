@@ -405,7 +405,7 @@ void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp)
     hmd5_partial |= (uint64)ginfo->info_header_md5[15 - i] << (8 * i);
     md5_partial |= (uint64)ginfo->md5[15 - i] << (8 * i);
    }
-   printf("Real: 0x%016llxULL    Header: 0x%016llxULL\n", (unsigned long long)md5_partial, (unsigned long long)hmd5_partial);
+   //printf("Real: 0x%016llxULL    Header: 0x%016llxULL\n", (unsigned long long)md5_partial, (unsigned long long)hmd5_partial);
 
    for(unsigned int i = 0; i < sizeof(GamesDB) / sizeof(game_db_t); i++)
    {
@@ -439,8 +439,6 @@ void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp)
     }
    }
   }
-
-  printf("%08x, %08x, %08x\n", sram_type, sram_start, sram_end);
  
   if(sram_type == 0x5241f820 && sram_start == 0x20202020)
    sram_type = 0x20202020;
@@ -463,7 +461,10 @@ void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp)
    const BoardHandler_t *bh = BoardHandlers;
    bool BoardFound = FALSE;
 
-   printf("Mapper: %s\n", mapper);
+   MDFN_printf(_("Mapper: %s\n"), mapper);
+   MDFN_printf(_("SRAM Type:  0x%08x\n"), sram_type);
+   MDFN_printf(_("SRAM Start: 0x%08x\n"), sram_start);
+   MDFN_printf(_("SRAM End:   0x%08x\n"), sram_end);
    while(bh->boardname)
    {
     if(!strcasecmp(bh->boardname, mapper))
@@ -502,7 +503,7 @@ void MDCart_LoadNV(void)
 
   if((sp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
   {
-   if(gzread(sp, buf, sizeof(buf)) == sizeof(buf))
+   if((size_t)gzread(sp, buf, sizeof(buf)) == sizeof(buf))
    {
     cart_hardware->WriteNVMemory(buf);
    }

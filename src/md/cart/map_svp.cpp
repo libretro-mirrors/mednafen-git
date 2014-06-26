@@ -29,7 +29,7 @@ class MD_Cart_Type_SVP : public MD_Cart_Type
         virtual ~MD_Cart_Type_SVP();
 
         virtual void Write8(uint32 A, uint8 V);
-        virtual void Write16(uint32 A, uint8 V);
+        virtual void Write16(uint32 A, uint16 V);
         virtual uint8 Read8(uint32 A);
         virtual uint16 Read16(uint32 A);
         virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name);
@@ -64,7 +64,7 @@ void MD_Cart_Type_SVP::Write8(uint32 A, uint8 V)
  printf("Write8: %08x %02x\n", A, V);
 }
 
-void MD_Cart_Type_SVP::Write16(uint32 A, uint8 V)
+void MD_Cart_Type_SVP::Write16(uint32 A, uint16 V)
 {
  printf("Write16: %08x %04x\n", A, V);
 }

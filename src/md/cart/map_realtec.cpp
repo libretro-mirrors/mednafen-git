@@ -28,7 +28,7 @@ class MD_Cart_Type_REALTEC : public MD_Cart_Type
         virtual void Reset(void);
 
         virtual void Write8(uint32 A, uint8 V);
-        virtual void Write16(uint32 A, uint8 V);
+        virtual void Write16(uint32 A, uint16 V);
         virtual uint8 Read8(uint32 A);
         virtual uint16 Read16(uint32 A);
         virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name);
@@ -87,7 +87,7 @@ void MD_Cart_Type_REALTEC::Write8(uint32 A, uint8 V)
  }
 }
 
-void MD_Cart_Type_REALTEC::Write16(uint32 A, uint8 V)
+void MD_Cart_Type_REALTEC::Write16(uint32 A, uint16 V)
 {
  //printf("Write16: %08x %04x\n", A, V);
  switch(A & 0xC06000)

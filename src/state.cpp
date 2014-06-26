@@ -125,38 +125,8 @@ int smem_read32le(StateMem *st, uint32 *b)
  return(4);
 }
 
-
-static bool ValidateSFStructure(SFORMAT *sf)
-{
- SFORMAT *saved_sf = sf;
-
- while(sf->size || sf->name)
- {
-  SFORMAT *sub_sf = saved_sf;
-  while(sub_sf->size || sub_sf->name)
-  {
-   if(sf != sub_sf)
-   {
-    if(!strncmp(sf->name, sub_sf->name, 32))
-    {
-     printf("Duplicate state variable name: %.32s\n", sf->name);
-    }
-   }
-   sub_sf++;
-  }
-
-  sf++;
- }
- return(1);
-}
-
-
 static bool SubWrite(StateMem *st, SFORMAT *sf, int data_only, const char *name_prefix = NULL)
 {
- // FIXME?  It's kind of slow, and we definitely don't want it on with state rewinding...
- if(!data_only) 
-  ValidateSFStructure(sf);
-
  while(sf->size || sf->name)	// Size can sometimes be zero, so also check for the text name.  These two should both be zero only at the end of a struct.
  {
   if(!sf->size || !sf->v)
@@ -572,7 +542,7 @@ int MDFNSS_SaveSM(StateMem *st, int wantpreview_and_ts, int data_only, const MDF
 	  for(int y = 0; y < DisplayRect->h; y++)
 	   if(LineWidths[DisplayRect->y + y] != first_w)
 	   {
-	    puts("Multires!");
+	    //puts("Multires!");
 	    is_multires = TRUE;
 	   }
 	 }
@@ -660,7 +630,6 @@ int MDFNSS_Save(const char *fname, const char *suffix, const MDFN_Surface *surfa
 
 	memset(&st, 0, sizeof(StateMem));
 
-
 	if(!MDFNGameInfo->StateAction)
 	{
 	 MDFN_DispMessage(_("Module \"%s\" doesn't support save states."), MDFNGameInfo->shortname);
@@ -689,11 +658,12 @@ int MDFNSS_Save(const char *fname, const char *suffix, const MDFN_Surface *surfa
 
 	free(st.data);
 
-	SaveStateStatus[CurrentState] = 1;
-	RecentlySavedState = CurrentState;
-
 	if(!fname && !suffix)
+	{
+	 SaveStateStatus[CurrentState] = 1;
+	 RecentlySavedState = CurrentState;
 	 MDFN_DispMessage(_("State %d saved."),CurrentState);
+	}
 
 	return(1);
 }

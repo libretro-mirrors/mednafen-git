@@ -8079,7 +8079,7 @@ case 0x0108:
 	timestamp += 4;
 	READ_BYat_F(adr + 0, res)
 	READ_BYTE_F(adr + 2, src)
-	*(WORD_OFF + (u16*)(&CPU->D16[(Opcode >> 9) & 7])) = (res << 8) | src;
+	*(WORD_OFF + (u16*)((u32*)&CPU->D16 + ((Opcode >> 9) & 7))) = (res << 8) | src;
 }
 RET(16)
 case 0x0348:

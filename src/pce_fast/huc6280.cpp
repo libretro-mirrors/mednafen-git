@@ -124,8 +124,6 @@ static uint8 dummy_bank[8192 + 8192];  // + 8192 for PC-as-ptr safety padding
  const unsigned int wmpr = arg_i, wbank = arg_v;	\
  if(wmpr == 1)						\
  {							\
-  if(wbank != 0xF8 || !HuCPUFastMap[wbank])		\
-    printf("Crazy page 1: %02x\n", wbank);		\
   HU_Page1 = HuCPUFastMap[wbank] ? HuCPUFastMap[wbank] + wbank * 8192 : dummy_bank;	\
  }							\
  HuCPU.MPR[wmpr] = wbank;					\

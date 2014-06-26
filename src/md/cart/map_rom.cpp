@@ -29,7 +29,7 @@ class MD_Cart_Type_ROM : public MD_Cart_Type
         virtual ~MD_Cart_Type_ROM();
 
         virtual void Write8(uint32 A, uint8 V);
-        virtual void Write16(uint32 A, uint8 V);
+        virtual void Write16(uint32 A, uint16 V);
         virtual uint8 Read8(uint32 A);
         virtual uint16 Read16(uint32 A);
         virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name);
@@ -61,12 +61,12 @@ MD_Cart_Type_ROM::~MD_Cart_Type_ROM()
 
 void MD_Cart_Type_ROM::Write8(uint32 A, uint8 V)
 {
- printf("Write8: %08x %02x\n", A, V);
+ MD_DBG(MD_DBG_WARNING, "[MAP_ROM] Unknown write8 to 0x%08x, =0x%02x\n", A, V);
 }
 
-void MD_Cart_Type_ROM::Write16(uint32 A, uint8 V)
+void MD_Cart_Type_ROM::Write16(uint32 A, uint16 V)
 {
- printf("Write16: %08x %04x\n", A, V);
+ MD_DBG(MD_DBG_WARNING, "[MAP_ROM] Unknown write16 to 0x%08x, =0x%04x\n", A, V);
 }
 
 uint8 MD_Cart_Type_ROM::Read8(uint32 A)
@@ -75,12 +75,13 @@ uint8 MD_Cart_Type_ROM::Read8(uint32 A)
  {
   if(A > rom_size)
   {
-   printf("Read8: %08x\n", A);
+   MD_DBG(MD_DBG_WARNING, "[MAP_ROM] Unknown read8 from 0x%08x\n", A);
    return(0);
   }
   return(READ_BYTE_MSB(rom, A));
  }
- printf("Read8: %08x\n", A);
+
+ MD_DBG(MD_DBG_WARNING, "[MAP_ROM] Unknown read8 from 0x%08x\n", A);
  return(m68k_read_bus_8(A));
 }
 
@@ -90,13 +91,13 @@ uint16 MD_Cart_Type_ROM::Read16(uint32 A)
  {
   if(A > rom_size)
   {
-   printf("Read16: %08x\n", A);
+   MD_DBG(MD_DBG_WARNING, "[MAP_ROM] Unknown read16 from 0x%08x\n", A);
    return(0);
   }
   return(READ_WORD_MSB(rom, A));
  }
 
- printf("Read16: %08x\n", A);
+ MD_DBG(MD_DBG_WARNING, "[MAP_ROM] Unknown read16 from 0x%08x\n", A);
 
  return(m68k_read_bus_16(A));
 }

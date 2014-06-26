@@ -203,7 +203,7 @@ void MemoryStream::write(const void *data, uint64 count)
 {
  uint64 nrs = position + count;
 
- if(nrs < position)
+ if((int64)nrs < position)
   throw MDFN_Error(ErrnoHolder(EFBIG));
 
  grow_if_necessary(nrs);
@@ -263,7 +263,7 @@ int MemoryStream::get_line(std::string &str)
 {
  str.clear();	// or str.resize(0)??
 
- while(position < data_buffer_size)
+ while((uint64)position < data_buffer_size)
  {
   uint8 c = data_buffer[position++];
 

@@ -41,7 +41,8 @@ void KING_NotifyOfBPE(bool read, bool write);
 
 void KING_SetLogFunc(void (*logfunc)(const char *, const char *, ...));
 
-void KING_EndFrame(v810_timestamp_t timestamp, v810_timestamp_t ts_base);
+void KING_EndFrame(v810_timestamp_t timestamp);
+void KING_ResetTS(v810_timestamp_t ts_base);
 
 v810_timestamp_t MDFN_FASTCALL KING_Update(const v810_timestamp_t timestamp);
 #endif

@@ -24687,7 +24687,7 @@ MDFNST_ENUM
 gamepad
 
 
-3
+4
 none
 none
 
@@ -24697,6 +24697,9 @@ Gamepad
 mouse
 Mouse
 
+superscope
+Super Scope
+Monkey!
 snes.input.port2.gamepad.a
 (nil) MDFNSF_SUPPRESS_DOC 
 snes, Port 2/2A, Gamepad: A (right)
@@ -24865,6 +24868,69 @@ Enable multitap on SNES port 2.
 
 MDFNST_BOOL
 0
+
+
+0
+snes.input.port2.superscope.cursor
+(nil) MDFNSF_SUPPRESS_DOC 
+snes, Port 2/2A, Super Scope: Cursor
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+snes.input.port2.superscope.offscreen_shot
+(nil) MDFNSF_SUPPRESS_DOC 
+snes, Port 2/2A, Super Scope: Offscreen Shot(Simulated)
+
+MDFNST_STRING
+keyboard 32
+
+
+0
+snes.input.port2.superscope.pause
+(nil) MDFNSF_SUPPRESS_DOC 
+snes, Port 2/2A, Super Scope: Pause
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+snes.input.port2.superscope.trigger
+(nil) MDFNSF_SUPPRESS_DOC 
+snes, Port 2/2A, Super Scope: Trigger
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+snes.input.port2.superscope.turbo
+(nil) MDFNSF_SUPPRESS_DOC 
+snes, Port 2/2A, Super Scope: Turbo
+
+MDFNST_STRING
+keyboard 279
+
+
+0
+snes.input.port2.superscope.x_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+snes, Port 2/2A, Super Scope: X Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008000
+
+
+0
+snes.input.port2.superscope.y_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+snes, Port 2/2A, Super Scope: Y Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008001
 
 
 0
@@ -26722,6 +26788,15 @@ Good for causing a headache.  All glory to Bob.
 bob_offset
 Good for high-motion video, but is a bit flickery; reduces the subjective vertical resolution.
 
+video.disable_composition
+
+Attempt to disable desktop composition.
+Currently, this setting only has an effect on Windows Vista and Windows 7(and probably the equivalent server versions as well).
+MDFNST_BOOL
+1
+
+
+0
 video.driver
 
 Video output method/driver.
@@ -26745,7 +26820,7 @@ SDL Surface
 Slower with lower-quality scaling than OpenGL, but if you don\'t have hardware-accelerated OpenGL rendering, it will be faster than software OpenGL rendering. Bilinear interpolation not available. Pixel shaders do not work with this output method, of course.
 overlay
 SDL Overlay
-As fast as OpenGL, perhaps faster in some situations, *if* it\'s hardware-accelerated. Scanline effects are not available. hq2x, hq3x, hq4x are not available. The OSD may be missing or glitchy. Bilinear interpolation can\'t be turned off. Harsh chroma subsampling blurring in some picture types.  If you use this output method, it is strongly recommended to use a special scaler with it, such as nn2x.
+As fast as OpenGL, perhaps faster in some situations, *if* it\'s hardware-accelerated. Scanline effects are not available. hq2x, hq3x, hq4x are not available. The OSD may be missing or glitchy. PSX emulation will not display properly. Bilinear interpolation can\'t be turned off. Harsh chroma subsampling blurring in some picture types.  If you use this output method, it is strongly recommended to use a special scaler with it, such as nn2x.
 video.frameskip
 
 Enable frameskip during emulation rendering.

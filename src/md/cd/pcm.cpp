@@ -41,7 +41,7 @@ static pcm_channel_t Channels[8];
 
 
 // Last timestamp
-static int32 last_ts;
+//static int32 last_ts;
 
 // Divide by (4 * 384) counter
 static int32 div_count;

@@ -32,7 +32,7 @@ public:
   readonly<unsigned> expansion;
   readonly<unsigned> serialize_size;
 
-  serializer serialize();
+  void serialize(serializer&);
   bool unserialize(serializer&);
 
   System();
@@ -43,7 +43,6 @@ private:
   void coprocessor_enter();
   void runthreadtosave();
 
-  void serialize(serializer&);
   void serialize_all(serializer&);
   void serialize_init();
 

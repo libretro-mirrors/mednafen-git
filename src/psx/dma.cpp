@@ -84,7 +84,7 @@ static Channel DMACH[7];
 static pscpu_timestamp_t lastts;
 
 
-static const char *PrettyChannelNames[7] = { "MDEC IN", "MDEC OUT", "GPU", "CDC", "SPU", "PIO", "OTC" };
+// static const char *PrettyChannelNames[7] = { "MDEC IN", "MDEC OUT", "GPU", "CDC", "SPU", "PIO", "OTC" };
 
 void DMA_Init(void)
 {

@@ -43,12 +43,12 @@ unsigned int m68k_read_bus_16(unsigned int address)
 
 void m68k_unused_8_w(unsigned int address, unsigned int value)
 {
- printf("Unused %08X = %02X\n", address, value);
+ MD_DBG(MD_DBG_WARNING, "[MEM68K] Unused %08X = %02X\n", address, value);
 }
 
 void m68k_unused_16_w(unsigned int address, unsigned int value)
 {
- printf("Unused %08X = %04X\n", address, value);
+ MD_DBG(MD_DBG_WARNING, "[MEM68K] Unused %08X = %04X\n", address, value);
 }
 
 /*
@@ -59,24 +59,24 @@ void m68k_unused_16_w(unsigned int address, unsigned int value)
 
 void m68k_lockup_w_8(unsigned int address, unsigned int value)
 {
-    printf("Lockup %08X = %02X (%08X)\n", address, value, C68k_Get_PC(&Main68K));
+ MD_DBG(MD_DBG_WARNING, "[MEM68K] Lockup %08X = %02X (%08X)\n", address, value, C68k_Get_PC(&Main68K));
 }
 
 void m68k_lockup_w_16(unsigned int address, unsigned int value)
 {
-    printf("Lockup %08X = %04X (%08X)\n", address, value, C68k_Get_PC(&Main68K));
+ MD_DBG(MD_DBG_WARNING, "[MEM68K] Lockup %08X = %04X (%08X)\n", address, value, C68k_Get_PC(&Main68K));
 }
 
 unsigned int m68k_lockup_r_8(unsigned int address)
 {
-    printf("Lockup %08X.b (%08X)\n", address, C68k_Get_PC(&Main68K));
-    return -1;
+ MD_DBG(MD_DBG_WARNING, "[MEM68K] Lockup %08X.b (%08X)\n", address, C68k_Get_PC(&Main68K));
+ return -1;
 }
 
 unsigned int m68k_lockup_r_16(unsigned int address)
 {
-    printf("Lockup %08X.w (%08X)\n", address, C68k_Get_PC(&Main68K));
-    return -1;
+ MD_DBG(MD_DBG_WARNING, "[MEM68K] Lockup %08X.w (%08X)\n", address, C68k_Get_PC(&Main68K));
+ return -1;
 }
 
 /*--------------------------------------------------------------------------*/
@@ -246,10 +246,10 @@ uint16 MD_ReadMemory16(uint32 address)
 {
  MD_UpdateSubStuff();
 
- if(address & 1)
+ if(MDFN_UNLIKELY(address & 1))
  {
   // TODO: Generate 68K exception(and remove address &= ~1)
-  printf("16-bit unaligned read: %08x\n", address);
+  MD_DBG(MD_DBG_WARNING, "[MEM68K] 16-bit unaligned read from 0x%08x\n", address);
   address &= ~1;
  }
  address &= 0xFFFFFF;
@@ -563,10 +563,10 @@ void MD_WriteMemory16(uint32 address, uint16 value)
 {
  MD_UpdateSubStuff();
 
- if(address & 1)
+ if(MDFN_UNLIKELY(address & 1))
  {
   // TODO: Generate 68K exception(and remove address &= ~1)
-  printf("16-bit unaligned write: %08x %04x\n", address, value);
+  MD_DBG(MD_DBG_WARNING, "[MEM68K] 16-bit unaligned write to 0x%08x, =0x%04x\n", address, value);
   address &= ~1;
  }
  address &= 0xFFFFFF;
@@ -611,7 +611,7 @@ void MD_WriteMemory16(uint32 address, uint16 value)
                         switch(address & 0x7F00)
                         {
                             case 0x6000: /* Bank register */
-                                        printf("Bank16: %04x\n", value);
+				MD_DBG(MD_DBG_WARNING, "[MEM68K] 16-bit bank register write: 0x%04x\n", value);
                                 gen_bank_w((value >> 8) & 1);
                                 return;
 

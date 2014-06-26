@@ -64,7 +64,7 @@ static uint8 get_region_numeric(uint8 code)
 {
  code = toupper(code);
 
- for(int i = 0; i < sizeof(region_lut) / sizeof(region_lut_t); i++)
+ for(unsigned i = 0; i < sizeof(region_lut) / sizeof(region_lut_t); i++)
  {
   if(region_lut[i].ascii == code)
   {

@@ -738,7 +738,7 @@ static void DrawBG(const vdc_t *vdc, const uint32 count, uint8 *target)
   {
    const uint64 cg_mask = (vdc->MWR & 0x80) ? 0xCCCCCCCCCCCCCCCCULL : 0x3333333333333333ULL;
 
-   for(int x = count - 1; x >= 0; x -= 8)
+   for(int x = count - 1; MDFN_LIKELY(x >= 0); x -= 8)
    {
     const uint16 bat = BAT_Base[bat_boom];
     const uint64 color_or = cblock_exlut[bat >> 12];
@@ -751,7 +751,7 @@ static void DrawBG(const vdc_t *vdc, const uint32 count, uint8 *target)
   } // End 2-bit CG rendering
   else
   {
-   for(int x = count - 1; x >= 0; x -= 8)
+   for(int x = count - 1; MDFN_LIKELY(x >= 0); x -= 8)
    {
     const uint16 bat = BAT_Base[bat_boom];
     const uint64 color_or = cblock_exlut[bat >> 12];
@@ -1204,7 +1204,7 @@ static void MixVPC(const uint32 count, const uint32 *lb0, const uint32 *lb1, T *
 	static const int prio_shift[4] = { 4, 0, 4, 0 };
 
 	// Windowing disabled.
-	if(vpc.winwidths[0] <= 0x40 && vpc.winwidths[1] <= 0x40)
+	if(MDFN_LIKELY(vpc.winwidths[0] <= 0x40 && vpc.winwidths[1] <= 0x40))
 	{
 	 const uint8 pb = (vpc.priority[prio_select[0]] >> prio_shift[0]) & 0xF;
 
@@ -1212,35 +1212,35 @@ static void MixVPC(const uint32 count, const uint32 *lb0, const uint32 *lb1, T *
 	 {
 	  default:
 	  	  //printf("%02x\n", pb);
-		  for(int x = 0; x < (int)count; x++)
+		  for(int x = 0; MDFN_LIKELY(x < (int)count); x++)
 		  {	 
 		   #include "vpc_mix_inner.inc"
 		  }
 		  break;
 
 	  case 0x3:
-		  for(int x = 0; x < (int)count; x++)
+		  for(int x = 0; MDFN_LIKELY(x < (int)count); x++)
 		  {	 
 		   #include "vpc_mix_inner.inc"
 		  }
 		  break;
 
 	  case 0x7:
-		  for(int x = 0; x < (int)count; x++)
+		  for(int x = 0; MDFN_LIKELY(x < (int)count); x++)
 		  {	 
 		   #include "vpc_mix_inner.inc"
 		  }
 		  break;
 
 	  case 0xB:
-		  for(int x = 0; x < (int)count; x++)
+		  for(int x = 0; MDFN_LIKELY(x < (int)count); x++)
 		  {	 
 		   #include "vpc_mix_inner.inc"
 		  }
 		  break;
 
 	  case 0xF:
-		  for(int x = 0; x < (int)count; x++)
+		  for(int x = 0; MDFN_LIKELY(x < (int)count); x++)
 		  {	 
 		   #include "vpc_mix_inner.inc"
 		  }

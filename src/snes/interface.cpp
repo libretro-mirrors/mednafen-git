@@ -74,6 +74,14 @@ static int16 MouseXLatch[2];
 static int16 MouseYLatch[2];
 static uint8 MouseBLatch[2];
 
+static int16 ScopeXLatch[2];
+static int16 ScopeYLatch[2];
+static uint8 ScopeBLatch[2];
+static uint8 ScopeOSCounter[2];
+static const uint8 ScopeOSCounter_StartVal = 10;
+static const uint8 ScopeOSCounter_TriggerStartThresh = 6;
+static const uint8 ScopeOSCounter_TriggerEndThresh = 2;
+
 static uint8 *CustomColorMap = NULL;
 //static uint32 ColorMap[32768];
 static std::vector<uint32> ColorMap;
@@ -293,6 +301,19 @@ void bSNES_v059::Interface::input_poll()
 	MouseYLatch[port] = (int32)MDFN_de32lsb(InputPtr[port] + 4);
 	MouseBLatch[port] = *(uint8 *)(InputPtr[port] + 8);
 	break;
+
+   case bSNES_v059::Input::DeviceSuperScope:
+	{
+	 bool old_ost = (ScopeBLatch[port] & 0x02);
+
+	 ScopeXLatch[port] = (int16)MDFN_de16lsb(InputPtr[port] + 0);
+	 ScopeYLatch[port] = (int16)MDFN_de16lsb(InputPtr[port] + 2);
+	 ScopeBLatch[port] = *(uint8 *)(InputPtr[port] + 4);
+
+	 if(!old_ost && (ScopeBLatch[port] & 0x02))
+	  ScopeOSCounter[port] = ScopeOSCounter_StartVal;
+	}
+	break;
   }
  }
 }
@@ -348,6 +369,48 @@ int16_t bSNES_v059::Interface::input_poll(bool port, unsigned device, unsigned i
 
 	  case bSNES_v059::Input::MouseRight:
 		return((int)(bool)(MouseBLatch[port] & 2));
+		break;
+	 }
+	}
+	break;
+
+	case bSNES_v059::Input::DeviceSuperScope:
+	{
+	 assert(port < 2);
+	 switch(id)
+	 {
+	  case bSNES_v059::Input::SuperScopeX:
+		return(ScopeOSCounter[port] ? 1000 : ScopeXLatch[port]);
+		break;
+
+	  case bSNES_v059::Input::SuperScopeY:
+		return(ScopeOSCounter[port] ? 1000 : ScopeYLatch[port]);
+		break;
+
+	  case bSNES_v059::Input::SuperScopeTrigger:
+		{
+		 bool trigo = (bool)(ScopeBLatch[port] & 0x01);
+
+		 if(ScopeOSCounter[port] >= ScopeOSCounter_TriggerEndThresh)
+		  trigo = 1;
+
+		 if(ScopeOSCounter[port] >= ScopeOSCounter_TriggerStartThresh)
+		  trigo = 0;
+
+		 return(trigo);
+		}
+		break;
+
+	  case bSNES_v059::Input::SuperScopeCursor:
+		return((bool)(ScopeBLatch[port] & 0x10));
+		break;
+
+	  case bSNES_v059::Input::SuperScopeTurbo:
+		return((bool)(ScopeBLatch[port] & 0x08));
+		break;
+
+	  case bSNES_v059::Input::SuperScopePause:
+		return((bool)(ScopeBLatch[port] & 0x04));
 		break;
 	 }
 	}
@@ -516,6 +579,14 @@ static void SetupMisc(bool PAL)
   MDFNGameInfo->nominal_width = MDFN_GetSettingB("snes.correct_aspect") ? (PAL ? 344/*354*/ : 292) : 256;
   MDFNGameInfo->nominal_height = PAL ? 239 : 224;
   MDFNGameInfo->lcm_height = MDFNGameInfo->nominal_height * 2;
+
+  //
+  // SuperScope coordinate translation stuff:
+  //
+  MDFNGameInfo->mouse_scale_x = 256.0 / MDFNGameInfo->nominal_width;
+  MDFNGameInfo->mouse_scale_y = 1.0;
+  MDFNGameInfo->mouse_offs_x = 0.0;
+  MDFNGameInfo->mouse_offs_y = 0.0;
  }
 
  ResampInPos = 0;
@@ -929,6 +1000,8 @@ static void Emulate(EmulateSpecStruct *espec)
  tdr = &espec->DisplayRect;
  es = espec;
 
+ for(unsigned i = 0; i < 2; i++)
+  ScopeOSCounter[i] -= (bool)ScopeOSCounter[i];
 
  PrevLine = -1;
 
@@ -1069,6 +1142,44 @@ static void Emulate(EmulateSpecStruct *espec)
 static int StateAction(StateMem *sm, int load, int data_only)
 {
  const uint32 length = bSNES_v059::system.serialize_size();
+ bSNES_v059::Input* inpp = &bSNES_v059::input;
+
+ SFORMAT ExtraStateRegs[] =
+ {
+   SFARRAY16(PadLatch, 8),
+
+   SFARRAY16(MouseXLatch, 2),
+   SFARRAY16(MouseYLatch, 2),
+   SFARRAY(MouseBLatch, 2),
+
+   SFARRAY16(ScopeXLatch, 2),
+   SFARRAY16(ScopeYLatch, 2),
+   SFARRAY(ScopeBLatch, 2),
+   SFARRAY(ScopeOSCounter, 2),
+
+   SFVAR(inpp->latchx),
+   SFVAR(inpp->latchy),
+#define INPP_HELPER(n)				\
+   SFVAR(inpp->port[n].counter0),		\
+   SFVAR(inpp->port[n].counter1),		\
+   SFVAR(inpp->port[n].superscope.x),		\
+   SFVAR(inpp->port[n].superscope.y),		\
+   SFVAR(inpp->port[n].superscope.trigger),	\
+   SFVAR(inpp->port[n].superscope.cursor),	\
+   SFVAR(inpp->port[n].superscope.turbo),	\
+   SFVAR(inpp->port[n].superscope.pause),	\
+   SFVAR(inpp->port[n].superscope.offscreen),	\
+   SFVAR(inpp->port[n].superscope.turbolock),	\
+   SFVAR(inpp->port[n].superscope.triggerlock),	\
+   SFVAR(inpp->port[n].superscope.pauselock)
+
+   INPP_HELPER(0),
+   INPP_HELPER(1),
+
+#undef INPP_HELPER
+
+   SFEND
+ };
 
  if(load)
  {
@@ -1080,10 +1191,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
   SFORMAT StateRegs[] =
   {
    SFARRAYN(ptr, length, "OmniCat"),
-   SFARRAY16(PadLatch, 8),
-   SFARRAY16(MouseXLatch, 2),
-   SFARRAY16(MouseYLatch, 2),
-   SFARRAY(MouseBLatch, 2),
+   { ExtraStateRegs, ~0U, 0, NULL },
    SFEND
   };
 
@@ -1110,7 +1218,9 @@ static int StateAction(StateMem *sm, int load, int data_only)
   if(bSNES_v059::scheduler.sync != bSNES_v059::Scheduler::SyncAll)
    bSNES_v059::system.runtosave();
 
-  serializer state = bSNES_v059::system.serialize();
+  serializer state(length);
+
+  bSNES_v059::system.serialize(state);
 
   assert(state.size() == length);
 
@@ -1119,10 +1229,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
   SFORMAT StateRegs[] =
   {
    SFARRAYN(ptr, length, "OmniCat"),
-   SFARRAY16(PadLatch, 8),
-   SFARRAY16(MouseXLatch, 2),
-   SFARRAY16(MouseYLatch, 2),
-   SFARRAY(MouseBLatch, 2),
+   { ExtraStateRegs, ~0U, 0, NULL },
    SFEND
   };
 
@@ -1243,14 +1350,19 @@ static const InputDeviceInputInfoStruct MouseIDII[0x4] =
  { "right", "Right Button", 1, IDIT_BUTTON, NULL },
 };
 
-#if 0
 static const InputDeviceInputInfoStruct SuperScopeIDII[] =
 {
+ { "x_axis", "X Axis", -1, IDIT_X_AXIS },
+ { "y_axis", "Y Axis", -1, IDIT_Y_AXIS },
 
+ { "trigger", "Trigger", 0, IDIT_BUTTON, NULL  },
+ { "offscreen_shot", "Offscreen Shot(Simulated)", 1, IDIT_BUTTON, NULL  },
+ { "pause", "Pause", 2, IDIT_BUTTON, NULL },
+ { "turbo", "Turbo", 3, IDIT_BUTTON, NULL },
+ { "cursor", "Cursor", 4, IDIT_BUTTON, NULL },
 };
-#endif
 
-static InputDeviceInfoStruct InputDeviceInfoSNESPort[] =
+static InputDeviceInfoStruct InputDeviceInfoSNESPort1[] =
 {
  // None
  {
@@ -1281,7 +1393,41 @@ static InputDeviceInfoStruct InputDeviceInfoSNESPort[] =
   sizeof(MouseIDII) / sizeof(InputDeviceInputInfoStruct),
   MouseIDII,
  },
-#if 0
+};
+
+static InputDeviceInfoStruct InputDeviceInfoSNESPort2[] =
+{
+ // None
+ {
+  "none",
+  "none",
+  NULL,
+  NULL,
+  0,
+  NULL
+ },
+
+ // Gamepad
+ {
+  "gamepad",
+  "Gamepad",
+  NULL,
+  NULL,
+  sizeof(GamepadIDII) / sizeof(InputDeviceInputInfoStruct),
+  GamepadIDII,
+ },
+
+ // Mouse
+ {
+  "mouse",
+  "Mouse",
+  NULL,
+  NULL,
+  sizeof(MouseIDII) / sizeof(InputDeviceInputInfoStruct),
+  MouseIDII,
+ },
+
+ // Super Scope
  {
   "superscope",
   "Super Scope",
@@ -1290,7 +1436,6 @@ static InputDeviceInfoStruct InputDeviceInfoSNESPort[] =
   sizeof(SuperScopeIDII) / sizeof(InputDeviceInputInfoStruct),
   SuperScopeIDII
  },
-#endif
 };
 
 
@@ -1310,8 +1455,8 @@ static InputDeviceInfoStruct InputDeviceInfoTapPort[] =
 
 static const InputPortInfoStruct PortInfo[] =
 {
- { "port1", "Port 1/1A", sizeof(InputDeviceInfoSNESPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoSNESPort, "gamepad" },
- { "port2", "Port 2/2A", sizeof(InputDeviceInfoSNESPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoSNESPort, "gamepad" },
+ { "port1", "Port 1/1A", sizeof(InputDeviceInfoSNESPort1) / sizeof(InputDeviceInfoStruct), InputDeviceInfoSNESPort1, "gamepad" },
+ { "port2", "Port 2/2A", sizeof(InputDeviceInfoSNESPort2) / sizeof(InputDeviceInfoStruct), InputDeviceInfoSNESPort2, "gamepad" },
  { "port3", "Port 2B", sizeof(InputDeviceInfoTapPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoTapPort, "gamepad" },
  { "port4", "Port 2C", sizeof(InputDeviceInfoTapPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoTapPort, "gamepad" },
  { "port5", "Port 2D", sizeof(InputDeviceInfoTapPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoTapPort, "gamepad" },

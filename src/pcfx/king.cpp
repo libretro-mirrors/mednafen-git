@@ -884,11 +884,14 @@ uint8 KING_Read8(const v810_timestamp_t timestamp, uint32 A)
  return(ret);
 }
 
-void KING_EndFrame(v810_timestamp_t timestamp, v810_timestamp_t ts_base)
+void KING_EndFrame(v810_timestamp_t timestamp)
 {
  PCFX_SetEvent(PCFX_EVENT_KING, KING_Update(timestamp));
  scsicd_ne = SCSICD_Run(timestamp);
+}
 
+void KING_ResetTS(v810_timestamp_t ts_base)
+{
  SCSICD_ResetTS(ts_base);
 
  king->lastts = ts_base;

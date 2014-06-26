@@ -44,7 +44,7 @@ class MD_Cart_Type
 	{
 	}
 
-        virtual void Write16(uint32 A, uint8 V)
+        virtual void Write16(uint32 A, uint16 V)
 	{
 	}
 
