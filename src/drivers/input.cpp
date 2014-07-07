@@ -690,7 +690,7 @@ static const COKE CKeys[_CK_COUNT]	=
 	{ MK_CK(F7), "load_state", ~0U, 0, gettext_noop("Load state") },
 	{ MK_CK_SHIFT(F5), "save_movie", ~0U, 1, gettext_noop("Save movie") },
 	{ MK_CK_SHIFT(F7), "load_movie", ~0U, 0, gettext_noop("Load movie") },
-	{ MK_CK_ALT(s), "toggle_state_rewind", ~0U, 1, gettext_noop("Toggle state rewind functionality") },
+       { MK_CK_ALT(S), "toggle_state_rewind", ~0U, 1, gettext_noop("Toggle state rewind functionality") },
 
 	{ MK_CK(0), "0", ~0U, 1, gettext_noop("Save state 0 select")},
         { MK_CK(1), "1", ~0U, 1, gettext_noop("Save state 1 select")},
@@ -728,7 +728,7 @@ static const COKE CKeys[_CK_COUNT]	=
 	{ MK_CK_SHIFT(F9), "take_scaled_snapshot", ~0U, 1, gettext_noop("Take scaled(and filtered) screen snapshot") },
 
 	{ MK_CK_ALT(RETURN), "toggle_fs", ~0U, 1, gettext_noop("Toggle fullscreen mode") },
-	{ MK_CK(BACKQUOTE), "fast_forward", ~0U, 1, gettext_noop("Fast-forward") },
+       { MK_CK(GRAVE), "fast_forward", ~0U, 1, gettext_noop("Fast-forward") },
         { MK_CK(BACKSLASH), "slow_forward", ~0U, 1, gettext_noop("Slow-forward") },
 
 	{ MK_CK(F8), "insert_coin", ~0U, 1, gettext_noop("Insert coin") },
@@ -736,8 +736,8 @@ static const COKE CKeys[_CK_COUNT]	=
 	{ MK_CK(F6), "select_disk", ~0U, 1, gettext_noop("Select disk/disc") },
 	{ MK_CK(F8), "insert_eject_disk", ~0U, 0, gettext_noop("Insert/Eject disk/disc") },
 	{ MK_CK(F8), "activate_barcode", ~0U, 1, gettext_noop("Activate barcode(for Famicom)") },
-	{ MK_CK(SCROLLOCK), "toggle_grab_input", ~0U, 1, gettext_noop("Grab input") },
-	{ MK_CK_SHIFT(SCROLLOCK), "toggle_cidisable", ~0U, 1, gettext_noop("Grab input and disable commands") },
+       { MK_CK(SCROLLLOCK), "toggle_grab_input", ~0U, 1, gettext_noop("Grab input") },
+       { MK_CK_SHIFT(SCROLLLOCK), "toggle_cidisable", ~0U, 1, gettext_noop("Grab input and disable commands") },
 	{ MK_CK_ALT_SHIFT(1), "input_config1", ~0U, 0, gettext_noop("Configure buttons on virtual port 1") },
 	{ MK_CK_ALT_SHIFT(2), "input_config2", ~0U, 0, gettext_noop("Configure buttons on virtual port 2")  },
         { MK_CK_ALT_SHIFT(3), "input_config3", ~0U, 0, gettext_noop("Configure buttons on virtual port 3")  },
@@ -755,15 +755,15 @@ static const COKE CKeys[_CK_COUNT]	=
 	{ MK_CK(F11), "power", ~0U, 0, gettext_noop("Power toggle") },
 	{ MK_CK2(F12, ESCAPE), "exit", ~0U, 0, gettext_noop("Exit") },
 	{ MK_CK(BACKSPACE), "state_rewind", ~0U, 1, gettext_noop("Rewind") },
-	{ MK_CK_ALT(o), "rotate_screen", ~0U, 1, gettext_noop("Rotate screen") },
+       { MK_CK_ALT(O), "rotate_screen", ~0U, 1, gettext_noop("Rotate screen") },
 
-	{ MK_CK(t), "togglenetview", ~0U, 1, gettext_noop("Toggle netplay console")},
-	{ MK_CK_ALT(a), "advance_frame", ~0U, 1, gettext_noop("Advance frame") },
-	{ MK_CK_ALT(r), "run_normal", ~0U, 1, gettext_noop("Return to normal mode after advancing frames") },
-	{ MK_CK_ALT(c), "togglecheatview", ~0U, 1, gettext_noop("Toggle cheat console") },
-	{ MK_CK_ALT(t), "togglecheatactive", ~0U, 1, gettext_noop("Enable/Disable cheats") },
+       { MK_CK(T), "togglenetview", ~0U, 1, gettext_noop("Toggle netplay console")},
+       { MK_CK_ALT(A), "advance_frame", ~0U, 1, gettext_noop("Advance frame") },
+       { MK_CK_ALT(R), "run_normal", ~0U, 1, gettext_noop("Return to normal mode after advancing frames") },
+       { MK_CK_ALT(C), "togglecheatview", ~0U, 1, gettext_noop("Toggle cheat console") },
+       { MK_CK_ALT(T), "togglecheatactive", ~0U, 1, gettext_noop("Enable/Disable cheats") },
         { MK_CK_SHIFT(F1), "toggle_fps_view", ~0U, 1, gettext_noop("Toggle frames-per-second display") },
-	{ MK_CK_ALT(d), "toggle_debugger", ~0U, 1, gettext_noop("Toggle debugger") },
+       { MK_CK_ALT(D), "toggle_debugger", ~0U, 1, gettext_noop("Toggle debugger") },
 	{ MK_CK(MINUS), "state_slot_dec", ~0U, 1, gettext_noop("Decrease selected save state slot by 1") },
 	{ MK_CK(EQUALS), "state_slot_inc", ~0U, 1, gettext_noop("Increase selected save state slot by 1") },
 	{ MK_CK(F1), "toggle_help", ~0U, 1, gettext_noop("Toggle help screen") },
@@ -932,7 +932,7 @@ static void UpdatePhysicalDeviceState(void)
  //
 
 
- memcpy(keys, SDL_GetKeyState(0), MKK_COUNT);
+ memcpy(keys, SDL_GetKeyboardState(0), MKK_COUNT);
 
  if(MDFNDHaveFocus || MDFN_GetSettingB("input.joystick.global_focus"))
   joy_manager->UpdateJoysticks();
@@ -1000,21 +1000,21 @@ static void DoKeyStateZeroing(void)
     memcpy(keys_backup, keys, MKK_COUNT);
     memset(keys, 0, sizeof(keys));
 
-    keys[SDLK_F1] = keys_backup[SDLK_F1];
-    keys[SDLK_F2] = keys_backup[SDLK_F2];
-    keys[SDLK_F3] = keys_backup[SDLK_F3];
-    keys[SDLK_F4] = keys_backup[SDLK_F4];
-    keys[SDLK_F5] = keys_backup[SDLK_F5];
-    keys[SDLK_F6] = keys_backup[SDLK_F6];
-    keys[SDLK_F7] = keys_backup[SDLK_F7];
-    keys[SDLK_F8] = keys_backup[SDLK_F8];
-    keys[SDLK_F9] = keys_backup[SDLK_F9];
-    keys[SDLK_F10] = keys_backup[SDLK_F10];
-    keys[SDLK_F11] = keys_backup[SDLK_F11];
-    keys[SDLK_F12] = keys_backup[SDLK_F12];
-    keys[SDLK_F13] = keys_backup[SDLK_F13];
-    keys[SDLK_F14] = keys_backup[SDLK_F14];
-    keys[SDLK_F15] = keys_backup[SDLK_F15];
+    keys[SDL_SCANCODE_F1] = keys_backup[SDL_SCANCODE_F1];
+    keys[SDL_SCANCODE_F2] = keys_backup[SDL_SCANCODE_F2];
+    keys[SDL_SCANCODE_F3] = keys_backup[SDL_SCANCODE_F3];
+    keys[SDL_SCANCODE_F4] = keys_backup[SDL_SCANCODE_F4];
+    keys[SDL_SCANCODE_F5] = keys_backup[SDL_SCANCODE_F5];
+    keys[SDL_SCANCODE_F6] = keys_backup[SDL_SCANCODE_F6];
+    keys[SDL_SCANCODE_F7] = keys_backup[SDL_SCANCODE_F7];
+    keys[SDL_SCANCODE_F8] = keys_backup[SDL_SCANCODE_F8];
+    keys[SDL_SCANCODE_F9] = keys_backup[SDL_SCANCODE_F9];
+    keys[SDL_SCANCODE_F10] = keys_backup[SDL_SCANCODE_F10];
+    keys[SDL_SCANCODE_F11] = keys_backup[SDL_SCANCODE_F11];
+    keys[SDL_SCANCODE_F12] = keys_backup[SDL_SCANCODE_F12];
+    keys[SDL_SCANCODE_F13] = keys_backup[SDL_SCANCODE_F13];
+    keys[SDL_SCANCODE_F14] = keys_backup[SDL_SCANCODE_F14];
+    keys[SDL_SCANCODE_F15] = keys_backup[SDL_SCANCODE_F15];
    }
  }
 }

@@ -55,7 +55,7 @@ Joystick_SDL::Joystick_SDL(unsigned index) : sdl_joy(NULL)
   throw MDFN_Error(0, "SDL_JoystickOpen(%u) failed: %s", index, SDL_GetError());
  }
 
- strncpy(name, SDL_JoystickName(index), sizeof(name));
+ strncpy(name, SDL_JoystickNameForIndex(index), sizeof(name));
  name[sizeof(name) - 1] = 0;
 
  sdl_num_axes = SDL_JoystickNumAxes(sdl_joy);

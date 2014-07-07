@@ -77,6 +77,8 @@ bool Video_ScreenBlitReady(void);
 // Called from the main thread.
 void Video_BlitToScreen(void);
 
+extern SDL_Renderer* renderer;
+extern SDL_Window *window;
 
 class SDL_to_MDFN_Surface_Wrapper : public MDFN_Surface
 {

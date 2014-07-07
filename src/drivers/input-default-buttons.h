@@ -5,8 +5,8 @@
 static const ButtConfig NESGamePadConfig[4][8]={
         /* Gamepad 1 */
         {
-         MK(KP3), MK(KP2), MK(TAB), MK(RETURN), MK(w),MK(s),
-                MK(a), MK(d)
+         MK(KP_3), MK(KP_2), MK(TAB), MK(RETURN), MK(W),MK(S),
+                MK(A), MK(D)
         },
 
         /* Gamepad 2 */
@@ -22,14 +22,14 @@ static const ButtConfig NESGamePadConfig[4][8]={
 
 static const ButtConfig GBPadConfig[8] =
 {
-         MK(KP3), MK(KP2), MK(TAB), MK(RETURN), MK(d),MK(a),
-                MK(w), MK(s)
+         MK(KP_3), MK(KP_2), MK(TAB), MK(RETURN), MK(D),MK(A),
+                MK(W), MK(S)
 };
 
 static const ButtConfig GBAPadConfig[10] =
 {
-         MK(KP3), MK(KP2), MK(TAB), MK(RETURN), MK(d),MK(a),
-                MK(w), MK(s), MK(KP6), MK(KP5)
+         MK(KP_3), MK(KP_2), MK(TAB), MK(RETURN), MK(D),MK(A),
+                MK(W), MK(S), MK(KP_6), MK(KP_5)
 };
 
 #define GPZ()   {MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ()}
@@ -37,9 +37,9 @@ static const ButtConfig PCFXPadConfig[2][15]=
 {
         /* Gamepad 1 */
         {
-         MK(KP3), MK(KP2), MK(KP1), MK(KP4), MK(KP5), MK(KP6), MK(TAB), MK(RETURN),
-         MK(w), MK(d), MK(s), MK(a),
-	 MK(KP8), MK(KP9),
+         MK(KP_3), MK(KP_2), MK(KP_1), MK(KP_4), MK(KP_5), MK(KP_6), MK(TAB), MK(RETURN),
+         MK(W), MK(D), MK(S), MK(A),
+        MK(KP_8), MK(KP_9),
         },
 
         /* Gamepad 2 */
@@ -51,13 +51,13 @@ static const ButtConfig PCFXPadConfig[2][15]=
 static const ButtConfig PCEPadConfig[5][13]={
         /* Gamepad 1 */
         {
-         MK(KP3), MK(KP2), MK(TAB), MK(RETURN), MK(w), MK(d), MK(s), MK(a),
+         MK(KP_3), MK(KP_2), MK(TAB), MK(RETURN), MK(W), MK(D), MK(S), MK(A),
 
          // Extra 4 buttons on 6-button pad
-         MK(KP1), MK(KP4), MK(KP5), MK(KP6),
+         MK(KP_1), MK(KP_4), MK(KP_5), MK(KP_6),
 
          // ..and special 2/6 mode select
-         MK(m),
+         MK(M),
         },
 
         /* Gamepad 2 */
@@ -77,14 +77,14 @@ static const ButtConfig PCEPadConfig[5][13]={
 static const ButtConfig LynxPadConfig[9] =
 {
         // A, B, Option 2, Option 1, Left, Right, Up, Down, Pause
-         MK(KP3), MK(KP2), MK(KP1), MK(KP7), MK(a),MK(d),
-                MK(w), MK(s), MK(RETURN)
+         MK(KP_3), MK(KP_2), MK(KP_1), MK(KP_7), MK(A),MK(D),
+                MK(W), MK(S), MK(RETURN)
 };
 
 static const ButtConfig NGPPadConfig[7 + 2] =
 {
         // Up, down, left, right, a(inner), b(outer), option
-        MK(w), MK(s), MK(a), MK(d), MK(KP2), MK(KP3), MK(RETURN), MK(KP5), MK(KP6)
+        MK(W), MK(S), MK(A), MK(D), MK(KP_2), MK(KP_3), MK(RETURN), MK(KP_5), MK(KP_6)
 };
 
 static const ButtConfig WSwanPadConfig[12] =
@@ -92,52 +92,52 @@ static const ButtConfig WSwanPadConfig[12] =
         // Up, right, down, left,
         // up-y, right-y, down-y, left-y,
 	//  start, a(outer), b(inner), option
-        MK(w), MK(d), MK(s), MK(a), 
+        MK(W), MK(D), MK(S), MK(A),
 	MK(UP), MK(RIGHT), MK(DOWN), MK(LEFT),
-	MK(RETURN), MK(KP3), MK(KP2), MK(RETURN)
+       MK(RETURN), MK(KP_3), MK(KP_2), MK(RETURN)
 };
 
 
 static const ButtConfig PowerPadConfig[12] =
 {
- MK(o),MK(p),MK(LEFTBRACKET),MK(RIGHTBRACKET),
- MK(k),MK(l),MK(SEMICOLON),MK(QUOTE),
- MK(m),MK(COMMA),MK(PERIOD),MK(SLASH)
+ MK(O),MK(P),MK(LEFTBRACKET),MK(RIGHTBRACKET),
+ MK(K),MK(L),MK(SEMICOLON),MK(APOSTROPHE),
+ MK(M),MK(COMMA),MK(PERIOD),MK(SLASH)
 };
 
 static const ButtConfig fkbmap[0x48]=
 {
  MK(F1),MK(F2),MK(F3),MK(F4),MK(F5),MK(F6),MK(F7),MK(F8),
  MK(1),MK(2),MK(3),MK(4),MK(5),MK(6),MK(7),MK(8),MK(9),MK(0),MK(MINUS),MK(EQUALS),MK(BACKSLASH),MK(BACKSPACE),
- MK(ESCAPE),MK(q),MK(w),MK(e),MK(r),MK(t),MK(y),MK(u),MK(i),MK(o),MK(p),MK(BACKQUOTE),MK(LEFTBRACKET),MK(RETURN),
- MK(LCTRL),MK(a),MK(s),MK(d),MK(f),MK(g),MK(h),MK(j),MK(k),MK(l),MK(SEMICOLON),MK(QUOTE),MK(RIGHTBRACKET),MK(INSERT),
- MK(LSHIFT),MK(z),MK(x),MK(c),MK(v),MK(b),MK(n),MK(m),MK(COMMA),MK(PERIOD),MK(SLASH),MK(RALT),MK(RSHIFT),MK(LALT),MK(SPACE),
+ MK(ESCAPE),MK(Q),MK(W),MK(E),MK(R),MK(T),MK(Y),MK(U),MK(I),MK(O),MK(P),MK(GRAVE),MK(LEFTBRACKET),MK(RETURN),
+ MK(LCTRL),MK(A),MK(S),MK(D),MK(F),MK(G),MK(H),MK(J),MK(K),MK(L),MK(SEMICOLON),MK(APOSTROPHE),MK(RIGHTBRACKET),MK(INSERT),
+ MK(LSHIFT),MK(Z),MK(X),MK(C),MK(V),MK(B),MK(N),MK(M),MK(COMMA),MK(PERIOD),MK(SLASH),MK(RALT),MK(RSHIFT),MK(LALT),MK(SPACE),
  MK(DELETE),MK(END),MK(PAGEDOWN),MK(UP),MK(LEFT),MK(RIGHT),MK(DOWN)
 };
 
 static const ButtConfig HyperShotButtons[4]=
 {
- MK(q),MK(w),MK(e),MK(r)
+ MK(Q),MK(W),MK(E),MK(R)
 };
 
 static const ButtConfig MahjongButtons[21]=
 {
- MK(q),MK(w),MK(e),MK(r),MK(t),
- MK(a),MK(s),MK(d),MK(f),MK(g),MK(h),MK(j),MK(k),MK(l),
- MK(z),MK(x),MK(c),MK(v),MK(b),MK(n),MK(m)
+ MK(Q),MK(W),MK(E),MK(R),MK(T),
+ MK(A),MK(S),MK(D),MK(F),MK(G),MK(H),MK(J),MK(K),MK(L),
+ MK(Z),MK(X),MK(C),MK(V),MK(B),MK(N),MK(M)
 };
 
 static const ButtConfig PartyTapButtons[6]=
 {
- MK(q),MK(w),MK(e),MK(r),MK(t),MK(y)
+ MK(Q),MK(W),MK(E),MK(R),MK(T),MK(Y)
 };
 
 static const ButtConfig FTrainerButtons[12]=
 {
-                               MK(o),MK(p),MK(LEFTBRACKET),
-                               MK(RIGHTBRACKET),MK(k),MK(l),MK(SEMICOLON),
-                                MK(QUOTE),
-                               MK(m),MK(COMMA),MK(PERIOD),MK(SLASH)
+                               MK(O),MK(P),MK(LEFTBRACKET),
+                               MK(RIGHTBRACKET),MK(K),MK(L),MK(SEMICOLON),
+                                MK(APOSTROPHE),
+                               MK(M),MK(COMMA),MK(PERIOD),MK(SLASH)
 };
 
 static ButtConfig OekaKidsConfig[3] =
@@ -192,7 +192,7 @@ static const ButtConfig SMSPadConfig[2][12]=
 {
         /* Gamepad 1 */
         {
-	 MK(w), MK(s), MK(a), MK(d), MK(KP2), MK(KP3), MK(RETURN)
+        MK(W), MK(S), MK(A), MK(D), MK(KP_2), MK(KP_3), MK(RETURN)
         },
 
         /* Gamepad 2 */
@@ -201,23 +201,23 @@ static const ButtConfig SMSPadConfig[2][12]=
 
 static const ButtConfig GGPadConfig[12]=
 {
-         MK(w), MK(s), MK(a), MK(d), MK(KP2), MK(KP3), MK(RETURN)
+         MK(W), MK(S), MK(A), MK(D), MK(KP_2), MK(KP_3), MK(RETURN)
 };
 
 static const ButtConfig TsushinKBConfig[0x80]=
 {
  // 0
- MK(KP0),
- MK(KP1),
- MK(KP2),
- MK(KP3),
- MK(KP4),
- MK(KP5),
- MK(KP6),
+ MK(KP_0),
+ MK(KP_1),
+ MK(KP_2),
+ MK(KP_3),
+ MK(KP_4),
+ MK(KP_5),
+ MK(KP_6),
 
 // 1
- MK(KP8),
- MK(KP9),
+ MK(KP_8),
+ MK(KP_9),
  MK(KP_MULTIPLY),		// Keypad Multiply
  MK(KP_PLUS),			// Keypad Plus
  MK(KP_EQUALS),			// Keypad Equals
@@ -225,38 +225,38 @@ static const ButtConfig TsushinKBConfig[0x80]=
  MK(KP_PERIOD),			// Keypad Period
 
 // 2
- MK(BACKQUOTE),		// @
- MK(a),
- MK(b),
- MK(c),
- MK(d),
- MK(e),
- MK(f),
+ MK(GRAVE),            // @
+ MK(A),
+ MK(B),
+ MK(C),
+ MK(D),
+ MK(E),
+ MK(F),
 
 // 3
- MK(h),
- MK(i),
- MK(j),
- MK(k),
- MK(l),
- MK(m),
- MK(n),
+ MK(H),
+ MK(I),
+ MK(J),
+ MK(K),
+ MK(L),
+ MK(M),
+ MK(N),
 
 // 4
- MK(p),
- MK(q),
- MK(r),
- MK(s),
- MK(t),
- MK(u),
- MK(v),
+ MK(P),
+ MK(Q),
+ MK(R),
+ MK(S),
+ MK(T),
+ MK(U),
+ MK(V),
 
 // 5
- MK(x),
- MK(y),
- MK(z),
+ MK(X),
+ MK(Y),
+ MK(Z),
  MK(LEFTBRACKET),	// Left bracket
- MK(PLUS),		// Yen
+ MK(GRAVE),            // Yen
  MK(RIGHTBRACKET),	// Right bracket
  MK(EQUALS),		// Caret
 
@@ -272,7 +272,7 @@ static const ButtConfig TsushinKBConfig[0x80]=
 // 7
  MK(8),
  MK(9),
- MK(QUOTE),		// Colon
+ MK(APOSTROPHE),               // Colon
  MK(SEMICOLON),		// Semicolon
  MK(COMMA),		// Comma
  MK(PERIOD),		// Period
@@ -284,11 +284,11 @@ static const ButtConfig TsushinKBConfig[0x80]=
  MK(RIGHT),
  //MK(UNKNOWN),
  MK(UNKNOWN),		// GRPH
- MK(LSUPER),		// カナ
+ //MK(LSUPER),         // カナ
  //MK(UNKNOWN),
 
 // 9
- MK(BREAK),		// STOP
+ MK(STOP),             // STOP
  MK(F1),
  MK(F2),
  MK(F3),
@@ -301,7 +301,7 @@ static const ButtConfig TsushinKBConfig[0x80]=
  MK(DOWN),
  MK(LEFT),
  MK(END),		// HELP
- MK(PRINT),		// COPY
+ MK(PRINTSCREEN),              // COPY
  MK(KP_MINUS),
  MK(KP_DIVIDE),
 
@@ -310,9 +310,9 @@ static const ButtConfig TsushinKBConfig[0x80]=
  MK(PAGEUP),		// ROLL UP
  //MK(UNKNOWN),
  //MK(UNKNOWN),
- MK(o),
+ MK(O),
  MK(UNKNOWN),	// TODO: Underscore
- MK(g),
+ MK(G),
 
 // C
  MK(F6),
@@ -326,11 +326,11 @@ static const ButtConfig TsushinKBConfig[0x80]=
 // D
  MK(RALT),		// 変換
  MK(LALT),		// 決定
- MK(RSUPER),		// PC
+ //MK(RSUPER),         // PC
  MK(RCTRL),		// 変換
  MK(LCTRL),		// CTRL
- MK(KP7),
- MK(w),
+ MK(KP_7),
+ MK(W),
 
 // E
  MK(RETURN),
@@ -354,7 +354,7 @@ static const ButtConfig TsushinKBConfig[0x80]=
 
 static const ButtConfig MMPlayInputConfig[] =
 {
-	MK(p),
+       MK(P),
 	MK(LEFT),
 	MK(RIGHT),
 	MK(DOWN),
@@ -376,25 +376,25 @@ static const ButtConfig CDPlayInputConfig[] =
 
 static const ButtConfig MDPad3Config[2][8] =
 {
- { MK(w), MK(s), MK(a), MK(d), MK(KP2), MK(KP3), MK(KP1), MK(RETURN) },
+ { MK(W), MK(S), MK(A), MK(D), MK(KP_2), MK(KP_3), MK(KP_1), MK(RETURN) },
  { MKZ(), MKZ(), MKZ(), MKZ(), MKZ(),   MKZ(),   MKZ(),   MKZ() },
 
 };
 
 static const ButtConfig SNESPadConfig[12] =
 {
- MK(KP2),
- MK(KP4),
+ MK(KP_2),
+ MK(KP_4),
  MK(TAB),
  MK(RETURN),
- MK(w),
- MK(s),
- MK(a),
- MK(d),
- MK(KP6),
- MK(KP8),
- MK(KP7),
- MK(KP9),
+ MK(W),
+ MK(S),
+ MK(A),
+ MK(D),
+ MK(KP_6),
+ MK(KP_8),
+ MK(KP_7),
+ MK(KP_9),
 };
 
 
@@ -440,35 +440,35 @@ static const ButtConfig PSXPadConfig[14] =
 {
  MK(TAB),
  MK(RETURN),
- MK(w),
- MK(d),
- MK(s),
- MK(a),
+ MK(W),
+ MK(D),
+ MK(S),
+ MK(A),
 
- MK(KP7),
- MK(KP9),
- MK(KP1),
- MK(KP3),
+ MK(KP_7),
+ MK(KP_9),
+ MK(KP_1),
+ MK(KP_3),
 
- MK(KP8),
- MK(KP6),
- MK(KP2),
- MK(KP4),
+ MK(KP_8),
+ MK(KP_6),
+ MK(KP_2),
+ MK(KP_4),
 };
 
 static const ButtConfig PSXDancePadConfig[10] =
 {
  MK(KP_DIVIDE),
  MK(KP_MULTIPLY),
- MK(KP8),
- MK(KP6),
- MK(KP2),
- MK(KP4),
+ MK(KP_8),
+ MK(KP_6),
+ MK(KP_2),
+ MK(KP_4),
 
- MK(KP1),
- MK(KP9),
- MK(KP7),
- MK(KP3),
+ MK(KP_1),
+ MK(KP_9),
+ MK(KP_7),
+ MK(KP_3),
 };
 
 static ButtConfig PSXMouseConfig[2] =

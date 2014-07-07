@@ -25,6 +25,7 @@ HappyPrompt::HappyPrompt(void)
         PromptText = "";
 	kb_buffer.clear();
         kb_cursor_pos = 0;
+        firstText = true;
 }
 
 HappyPrompt::HappyPrompt(const std::string &ptext, const std::string &zestring)
@@ -32,6 +33,7 @@ HappyPrompt::HappyPrompt(const std::string &ptext, const std::string &zestring)
         PromptText = "";
         kb_buffer.clear();
         kb_cursor_pos = 0;
+        firstText = true;
 	SetText(ptext);
 	SetKBB(zestring);
 }
@@ -197,13 +199,15 @@ void HappyPrompt::Event(const SDL_Event *event)
                  kb_buffer.erase(kb_buffer.begin() + kb_cursor_pos, kb_buffer.begin() + kb_cursor_pos + 1);
                 }
                 break;
-          default:
-	        if(event->key.keysym.unicode)
-        	{
-	         kb_buffer.insert(kb_buffer.begin() + kb_cursor_pos, event->key.keysym.unicode);
-        	 kb_cursor_pos++;
-	        }
-        	break;
   }
+ }
+ if(event->type == SDL_TEXTINPUT) {
+   //Ignore the first textinput event as it contains the keypress that opened the prompt
+   if(firstText) {
+     firstText = false;
+   } else {
+     kb_buffer.insert(kb_buffer.begin() + kb_cursor_pos, event->text.text[0]);
+     kb_cursor_pos++;
+   }
  }
 }

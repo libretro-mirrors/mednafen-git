@@ -22,17 +22,17 @@
 #include "nnx.h"
 #include <math.h>
 
-static SDL_Overlay *ov = NULL;
-
+static SDL_Texture *ov = NULL;
 
 void OV_Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Rect *original_src_rect,
-	const SDL_Rect *dest_rect, SDL_Surface *dest_surface, int softscale, int scanlines, int rotated)
+       const SDL_Rect *dest_rect, int softscale, int scanlines, int rotated)
 {
  const uint32 spitch32 = src_surface->pitchinpix;
- SDL_Rect drect = *dest_rect;
  uint16 *dpixels;
  uint32 dpitch16;
  int32 need_w, need_h;
+ int32 ov_w=0;
+ int32 ov_h=0;
 
  if(softscale < 1)
   softscale = 1;
@@ -53,31 +53,39 @@ void OV_Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Re
 
  need_w = (need_w + 1) & ~1;
 
- if(!ov || ov->w != need_w || ov->h != need_h)
+ if(ov) {
+    SDL_QueryTexture(ov, NULL, NULL, &ov_w, &ov_h);
+ }
+
+ if(!ov || ov_w != need_w || ov_h != need_h)
  {
   if(ov)
   {
-   SDL_FreeYUVOverlay(ov);
+   SDL_DestroyTexture(ov);
    ov = NULL;
   } 
-  if(!(ov = SDL_CreateYUVOverlay(need_w, need_h, SDL_YUY2_OVERLAY, dest_surface)))
+  if(!(ov = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_YUY2, SDL_TEXTUREACCESS_STREAMING, need_w, need_h)))
   {
    puts("Overlay creation failure");
    return;
   }
-  printf("Overlay Created: %d %d %d\n", ov->hw_overlay, ov->w, ov->h);
+  SDL_QueryTexture(ov, NULL, NULL, &ov_w, &ov_h);
+  printf("Overlay Created: %d %d\n", ov_w, ov_h);
  }
 
- if(SDL_LockYUVOverlay(ov) != 0)
+ void* pixels;
+ int pitch;
+ if(SDL_LockTexture(ov, NULL, &pixels, &pitch) != 0)
  {
   puts("Lock failure");
   return;
  }
- dpixels = (uint16 *)ov->pixels[0];
 
- assert(!(ov->pitches[0] & 1));
+ dpixels = (uint16 *)pixels;
 
- dpitch16 = ov->pitches[0] >> 1;
+ assert(!(pitch & 1));
+
+ dpitch16 = pitch >> 1;
 
  if(rotated == MDFN_ROTATE90)
  {
@@ -286,19 +294,21 @@ void OV_Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Re
    }
   } // End else to softscale
  }
- SDL_UnlockYUVOverlay(ov);
+ SDL_UnlockTexture(ov);
 
- if(SDL_DisplayYUVOverlay(ov, &drect) != 0)
+ if(SDL_UpdateTexture(ov, NULL, dpixels, pitch) != 0)
  {
   puts("Blit error");
  }
+ SDL_RenderCopy(renderer, ov, NULL, dest_rect);
+ SDL_RenderPresent(renderer);
 }
 
 void OV_Kill(void)
 {
  if(ov)
  {
-  SDL_FreeYUVOverlay(ov);
+  SDL_DestroyTexture(ov);
   ov = NULL;
  }
 }

@@ -39,12 +39,6 @@ bool MemDebugger::ICV_Init(const char *newcode)
   ict_to_utf8 = (iconv_t)-1;
  }
 
- if((size_t)ict_utf16_to_game != (size_t)-1)
- {
-  iconv_close(ict_utf16_to_game);
-  ict_utf16_to_game = (iconv_t)-1;
- }
-
  ict = iconv_open(newcode, "UTF-8");
  if((size_t)ict == (size_t)-1)
  {
@@ -55,14 +49,6 @@ bool MemDebugger::ICV_Init(const char *newcode)
 
  ict_to_utf8 = iconv_open("UTF-8", newcode);
  if((size_t)ict_to_utf8 == (size_t)-1)
- {
-  error_string = trio_aprintf("iconv_open() error: %m");
-  error_time = SDL_GetTicks();
-  return(0);
- }
-
- ict_utf16_to_game = iconv_open(newcode, "UTF-16");
- if((size_t)ict_utf16_to_game == (size_t)-1)
  {
   error_string = trio_aprintf("iconv_open() error: %m");
   error_time = SDL_GetTicks();
@@ -825,32 +811,9 @@ int MemDebugger::Event(const SDL_Event *event)
          myprompt->Event(event);
         }
 	else if(InEditMode && InTextArea && keysym != SDLK_TAB && keysym != SDLK_INSERT && keysym != SDLK_UP && keysym != SDLK_DOWN && keysym != SDLK_LEFT
-	 && keysym != SDLK_RIGHT && (event->key.keysym.unicode >= 0x20))
+        && keysym != SDLK_RIGHT)
 	{
-	 uint8 to_write[16];
-	 int to_write_len;
-
-	 size_t ibl, obl, obl_start;
-	 char *inbuf, *outbuf;
-
-	 ibl = 2;
-	 obl_start = obl = 16;
-
-	 inbuf = (char *)&event->key.keysym.unicode;
-	 outbuf = (char*)to_write;
-
-	 size_t result = iconv(ict_utf16_to_game, (ICONV_CONST char **)&inbuf, &ibl, &outbuf, &obl);
-	 if(result != (size_t)-1)
-	 {
-          to_write_len = obl_start - obl;
-
-	  
-	  ASpace->PutAddressSpaceBytes(ASpace->name.c_str(), ASpacePos[CurASpace], to_write_len, 1, TRUE, to_write);
-	  
-
-	  LowNib = 0;
-	  ChangePos(to_write_len);
-	 }
+            //Handled by SDL_TEXTINPUT Event
 	}
 	else if(InEditMode && ((event->key.keysym.sym >= SDLK_0 && event->key.keysym.sym <= SDLK_9)	|| 
 	   (event->key.keysym.sym >= SDLK_a && event->key.keysym.sym <= SDLK_f)))
@@ -994,6 +957,37 @@ int MemDebugger::Event(const SDL_Event *event)
 		      break;
 	}
 	break;
+
+  case SDL_TEXTINPUT:
+   if(InPrompt)
+   {
+    myprompt->Event(event);
+   }
+   else if(InEditMode && InTextArea) {
+    uint8 to_write[16];
+    int to_write_len;
+
+    size_t ibl, obl, obl_start;
+    char *inbuf, *outbuf;
+
+    inbuf = (char *)&event->text.text;
+    outbuf = (char*)to_write;
+
+    ibl = strlen(inbuf);
+    obl_start = obl = (ibl + 1) * 8; // Hehe, ugly maximum estimation!
+
+    size_t result = iconv(ict, (ICONV_CONST char **)&inbuf, &ibl, &outbuf, &obl);
+    if(result != (size_t)-1)
+    {
+      to_write_len = obl_start - obl;
+
+      ASpace->PutAddressSpaceBytes(ASpace->name.c_str(), ASpacePos[CurASpace], to_write_len, 1, TRUE, to_write);
+
+      LowNib = 0;
+      ChangePos(to_write_len);
+    }
+   }
+   break;
  }
  return(1);
 }
@@ -1002,7 +996,7 @@ int MemDebugger::Event(const SDL_Event *event)
 // Called after a game is loaded.
 MemDebugger::MemDebugger() : AddressSpaces(NULL), ASpace(NULL), IsActive(false), CurASpace(0),
 			     LowNib(false), InEditMode(false), InTextArea(false), error_string(NULL), error_time(0),
-			     ict((iconv_t)-1), ict_to_utf8((iconv_t)-1), ict_utf16_to_game((iconv_t)-1), InPrompt(None), myprompt(NULL)			     
+                            ict((iconv_t)-1), ict_to_utf8((iconv_t)-1), InPrompt(None), myprompt(NULL)                      
 {
  if(CurGame->Debugger)
  {
@@ -1045,12 +1039,6 @@ MemDebugger::~MemDebugger()
  {
   iconv_close(ict_to_utf8);
   ict_to_utf8 = (iconv_t)-1;
- }
-
- if(ict_utf16_to_game != (iconv_t)-1)
- {
-  iconv_close(ict_utf16_to_game);
-  ict_utf16_to_game = (iconv_t)-1;
  }
 
  if(error_string)

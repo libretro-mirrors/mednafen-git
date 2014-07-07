@@ -1298,29 +1298,11 @@ bool GT_ReinitSound(void)
  return(ret);
 }
 
-static bool krepeat = 0;
 void PumpWrap(void)
 {
  SDL_Event event;
  SDL_Event gtevents_temp[gtevents_size];
  int numevents = 0;
-
- bool NITI;
-
- NITI = Netplay_IsTextInput();
-
- if(Debugger_IsActive() || NITI || CheatIF_Active() || Help_IsActive())
- {
-  if(!krepeat)
-   SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-  krepeat = 1;
- }
- else
- {
-  if(krepeat)
-   SDL_EnableKeyRepeat(0, 0);
-  krepeat = 0;
- }
 
  #if defined(HAVE_SIGNAL) || defined(HAVE_SIGACTION)
  if(SignalSafeExitWanted)
@@ -1337,24 +1319,34 @@ void PumpWrap(void)
   /* Handle the event, and THEN hand it over to the GUI. Order is important due to global variable mayhem(CEVT_TOGGLEFS. */
   switch(event.type)
   {
-   case SDL_ACTIVEEVENT:
-   			if(event.active.state & SDL_APPINPUTFOCUS)
-			{
-			 SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)event.active.gain, NULL);
-			}
-
-			if(event.active.state & SDL_APPACTIVE)
-			{
-			 VideoAppActive((bool)(event.active.gain));
-			}
+   case SDL_WINDOWEVENT:
+               switch(event.window.event) {
+                  case SDL_WINDOWEVENT_ENTER:
+                  case SDL_WINDOWEVENT_SHOWN:
+                        VideoAppActive((bool)(1));
+                               //printf("windowevent enter/shown\n");
+                       break;
+                  case SDL_WINDOWEVENT_LEAVE:
+                  case SDL_WINDOWEVENT_HIDDEN:
+                               //printf("windowevent leave/hidden\n");
+                        VideoAppActive((bool)(0));
+                       break;
+                  case SDL_WINDOWEVENT_FOCUS_GAINED:
+                               //printf("windowevent focus gained\n");
+                        SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)1, NULL);
+                       break;
+                  case SDL_WINDOWEVENT_FOCUS_LOST:
+                               //printf("windowevent focus lost\n");
+                        SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)0, NULL);
 			break;
+               }
+               break;
 
    case SDL_SYSWMEVENT: break;
    //case SDL_VIDEORESIZE: //if(VideoResize(event.resize.w, event.resize.h))
 			 // NeedVideoChange = -1;
    //			 break;
 
-   case SDL_VIDEOEXPOSE: break;
    case SDL_QUIT: NeedExitNow = 1;break;
    case SDL_USEREVENT:
 		switch(event.user.code)
@@ -1370,12 +1362,18 @@ void PumpWrap(void)
 		     }
 		     break;
 	         case CEVT_SET_GRAB_INPUT:
-                         SDL_WM_GrabInput(*(int *)event.user.data1 ? SDL_GRAB_ON : SDL_GRAB_OFF);
+                         if(window != NULL) {
+                             SDL_SetWindowGrab(window ,*(int *)event.user.data1 ? SDL_TRUE : SDL_FALSE);
+                         }
                          free(event.user.data1);
                          break;
 		 //case CEVT_TOGGLEFS: NeedVideoChange = 1; break;
 		 //case CEVT_VIDEOSYNC: NeedVideoChange = -1; break;
-		 case CEVT_SHOWCURSOR: SDL_ShowCursor(*(int *)event.user.data1); free(event.user.data1); break;
+                case CEVT_SHOWCURSOR:
+                        SDL_SetRelativeMouseMode((int *)event.user.data1 ? SDL_FALSE : SDL_TRUE);
+                       SDL_ShowCursor(*(int *)event.user.data1);
+                       free(event.user.data1);
+                       break;
 	  	 case CEVT_DISP_MESSAGE: VideoShowMessage((UTF8*)event.user.data1); break;
 		 default: 
 			if(numevents < gtevents_size)
@@ -1425,9 +1423,13 @@ void PrintCompilerVersion(void)
 
 void PrintSDLVersion(void)
 {
- const SDL_version *sver = SDL_Linked_Version();
+ SDL_version sver_compiled;
+ SDL_version sver_linked;
 
- MDFN_printf(_("Compiled against SDL %u.%u.%u, running with SDL %u.%u.%u\n"), SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL, sver->major, sver->minor, sver->patch);
+ SDL_VERSION(&sver_compiled);
+ SDL_GetVersion(&sver_linked);
+
+ MDFN_printf(_("Compiled against SDL %u.%u.%u, running with SDL %u.%u.%u\n"), sver_compiled.major, sver_compiled.minor, sver_compiled.patch, sver_linked.major, sver_linked.minor, sver_linked.patch);
 }
 
 #ifdef HAVE_LIBSNDFILE
@@ -1727,8 +1729,6 @@ int main(int argc, char *argv[])
         if(!MDFNI_Initialize(DrBaseDirectory, NeoDriverSettings))
          return(-1);
 
-        SDL_EnableUNICODE(1);
-
         #if defined(HAVE_SIGNAL) || defined(HAVE_SIGACTION)
         SetSignals(CloseStuff);
         #endif
@@ -1879,8 +1879,11 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
          }
 
 	 PumpWrap();
-	 if(DidVideoChange)	// Do it after PumpWrap() in case there are stale SDL_ActiveEvent in the SDL event queue.
-	  SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)(SDL_GetAppState() & SDL_APPINPUTFOCUS), NULL);
+         //FIXME: Is this necessary? Got no problems without it.
+        /*if(DidVideoChange) { // Do it after PumpWrap() in case there are stale SDL_ActiveEvent in the SDL event queue.
+         //SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)(SDL_GetAppState() & SDL_APPINPUTFOCUS), NULL);
+         SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)(1), NULL);
+         }*/
 
          MDFND_UnlockMutex(VTMutex);   /* Unlock mutex */
 

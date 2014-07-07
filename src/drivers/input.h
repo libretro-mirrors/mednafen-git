@@ -13,8 +13,8 @@ typedef struct {
 #define BUTTC_JOYSTICK          0x02
 #define BUTTC_MOUSE             0x03
 
-#define MKK(k) SDLK_##k
-#define MKK_COUNT (SDLK_LAST+1)
+#define MKK(k) SDL_SCANCODE_##k
+#define MKK_COUNT (SDL_NUM_SCANCODES+1)
 
 void Input_Event(const SDL_Event *event);
 void MainSetEventHook(int (*eh)(const SDL_Event *event));	// TODO: factor out eventually.
