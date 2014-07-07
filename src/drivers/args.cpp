@@ -146,7 +146,7 @@ int ParseArguments(int argc, char *argv[], ARGPSTRUCT *argsps, char **first_not)
   else if(!retval)
   {
    printf("Unrecognized argument: %s\n", argv[x]);
-   return(1);
+   return(0);
   }
   else
    x += retval;
