@@ -446,12 +446,22 @@ int GetSpecialScalerID(const std::string &special_string)
 
 static bool weset_glstvb = false; 
 static uint32 real_rs, real_gs, real_bs, real_as;
+extern int displayNumber;
 
 int InitVideo(MDFNGI *gi)
 {
  SDL_DisplayMode mode;
  int window_flags = 0; //SDL_RESIZABLE;
  int desbpp;
+ 
+  // debug jc
+  int numdisplays; 
+  numdisplays = SDL_GetNumVideoDisplays();
+ 
+  for (int i=0;i<numdisplays;i++)
+  {
+    MDFN_printf(_("debug jc: display %d is called '%s'\n"),i,SDL_GetDisplayName(i));
+  }
 
  VideoGI = gi;
 
@@ -676,13 +686,31 @@ int InitVideo(MDFNGI *gi)
  }
 
  if(windowchanged) {
+   
+    //debug jc
+    MDFN_printf(_("debug jc: SDL_CreateWindow\n"));
+   
+    if (displayNumber != -1)
+    {
+      MDFN_printf(_("debug jc: Mednafen is running on display %d (%s)\n"),displayNumber,SDL_GetDisplayName(displayNumber));
+      if(!(window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED_DISPLAY(displayNumber), SDL_WINDOWPOS_UNDEFINED, newwidth, newheight, window_flags)))
+      {
+        MDFND_PrintError(SDL_GetError()); 
+        MDFN_indent(-1);
+        return(0);
+      }
+    } 
+    else
+    {
+      if(!(window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, newwidth, newheight, window_flags)))
+      {
+        MDFND_PrintError(SDL_GetError()); 
+        MDFN_indent(-1);
+        return(0);
+      }
+    }
 
-   if(!(window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, newwidth, newheight, window_flags)))
-   {
-    MDFND_PrintError(SDL_GetError()); 
-    MDFN_indent(-1);
-    return(0);
-   }
+   
 
    SDL_SetWindowIcon(window, IconSurface);
 

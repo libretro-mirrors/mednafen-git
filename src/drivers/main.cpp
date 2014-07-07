@@ -1611,7 +1611,7 @@ static void ThreadTest(void)
 
 #endif
 
-
+int displayNumber = -1;
 int main(int argc, char *argv[])
 {
 	//ThreadTest();
@@ -1676,7 +1676,18 @@ int main(int argc, char *argv[])
 	bind_textdomain_codeset(PACKAGE, "UTF-8");
 	textdomain(PACKAGE);
 	#endif
-
+	
+	// debug jc
+	bool found = false;
+	for (int i = 0; i<argc;i++)
+	{ 
+	  if (found)
+	  {
+	    displayNumber = atoi (argv[i]);
+	  }
+	  found = !strcasecmp(argv[i], "-DISPLAY");
+	}
+	
 	if(argc >= 3 && (!strcasecmp(argv[1], "-remote") || !strcasecmp(argv[1], "--remote")))
 	{
          RemoteOn = TRUE;
