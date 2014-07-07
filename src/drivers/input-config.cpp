@@ -107,8 +107,10 @@ int DTestButton(std::vector<ButtConfig> &bc, const char *KeyState, const uint32 
  {
   if(bc[x].ButtType == BUTTC_KEYBOARD)
   {
-   if(KeyState[bc[x].ButtonNum])
+   if(KeyState[bc[x].ButtonNum & 0xFF]) {
+    //printf("bc[x].ButtonNum: %d\n", bc[x].ButtonNum);
     ret += maxv;
+   }
   }
   else if(bc[x].ButtType == BUTTC_JOYSTICK)
   {
@@ -207,18 +209,18 @@ static int EventFilter(const SDL_Event *event)
 
  switch(event->type)
  {
-   case SDL_KEYDOWN:    if(!efck || (event->key.keysym.sym != MKK(LALT) && event->key.keysym.sym != MKK(RALT) &&
-                         event->key.keysym.sym != MKK(LSHIFT) && event->key.keysym.sym != MKK(RSHIFT) &&
-			 event->key.keysym.sym != MKK(LCTRL) && event->key.keysym.sym != MKK(RCTRL)))
+   case SDL_KEYDOWN:    if(!efck || (event->key.keysym.sym != SDLK_LALT && event->key.keysym.sym != SDLK_RALT &&
+                         event->key.keysym.sym != SDLK_LSHIFT && event->key.keysym.sym != SDLK_RSHIFT &&
+                        event->key.keysym.sym != SDLK_LCTRL && event->key.keysym.sym != SDLK_RCTRL))
                         {
                                 efbc.ButtType = BUTTC_KEYBOARD;
                                 efbc.DeviceNum = 0;
-                                efbc.ButtonNum = event->key.keysym.sym;
+                                efbc.ButtonNum = event->key.keysym.scancode;
 
-				if(0 == event->key.keysym.sym)
+                               if(0 == event->key.keysym.scancode)
 				 printf("*** NULL KEYSYM! ***\n");
 
-				//printf("%u\n", event->key.keysym.sym);
+                               //printf("%u\n", event->key.keysym.scancode);
 
                                 if(efck)
                                         efbc.ButtonNum |= ((event->key.keysym.mod & KMOD_ALT) ? (ICSS_ALT<<24):0) | ((event->key.keysym.mod & KMOD_SHIFT) ? (ICSS_SHIFT<<24):0) | ((event->key.keysym.mod & KMOD_CTRL) ? (ICSS_CTRL<<24):0);

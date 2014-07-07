@@ -467,8 +467,8 @@ fi
 
 if $NEED_SDL
 then
-	SDL_VERSION=1.2.0
-	AM_PATH_SDL($SDL_VERSION, HAVE_SDL=true, HAVE_SDL=false)
+       SDL_VERSION=2.0.0
+       AM_PATH_SDL2($SDL_VERSION, HAVE_SDL=true, HAVE_SDL=false)
 	if $HAVE_SDL
 	then
 		AM_CONDITIONAL(HAVE_SDL, true)
@@ -476,7 +476,7 @@ then
 		AC_SUBST(SDL_LIBS)
 		AC_SUBST(SDL_CFLAGS)
 	else
-		AC_MSG_ERROR([*** SDL 1.2.x not found!])
+               AC_MSG_ERROR([*** SDL 2.0.x not found!])
 	fi
 fi
 

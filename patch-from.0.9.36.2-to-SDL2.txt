@@ -1,0 +1,1972 @@
+diff --git a/configure.ac b/configure.ac
+index 4337cd3..e2791e3 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -467,8 +467,8 @@ fi
+ 
+ if $NEED_SDL
+ then
+-       SDL_VERSION=1.2.0
+-       AM_PATH_SDL($SDL_VERSION, HAVE_SDL=true, HAVE_SDL=false)
++       SDL_VERSION=2.0.0
++       AM_PATH_SDL2($SDL_VERSION, HAVE_SDL=true, HAVE_SDL=false)
+        if $HAVE_SDL
+        then
+                AM_CONDITIONAL(HAVE_SDL, true)
+@@ -476,7 +476,7 @@ then
+                AC_SUBST(SDL_LIBS)
+                AC_SUBST(SDL_CFLAGS)
+        else
+-               AC_MSG_ERROR([*** SDL 1.2.x not found!])
++               AC_MSG_ERROR([*** SDL 2.0.x not found!])
+        fi
+ fi
+ 
+diff --git a/m4/sdl2.m4 b/m4/sdl2.m4
+new file mode 100644
+index 0000000..a03b2d2
+--- /dev/null
++++ b/m4/sdl2.m4
+@@ -0,0 +1,202 @@
++# Configure paths for SDL
++# Sam Lantinga 9/21/99
++# stolen from Manish Singh
++# stolen back from Frank Belew
++# stolen from Manish Singh
++# Shamelessly stolen from Owen Taylor
++
++# serial 1
++
++dnl AM_PATH_SDL2([MINIMUM-VERSION, [ACTION-IF-FOUND [, ACTION-IF-NOT-FOUND]]])
++dnl Test for SDL, and define SDL_CFLAGS and SDL_LIBS
++dnl
++AC_DEFUN([AM_PATH_SDL2],
++[dnl
++dnl Get the cflags and libraries from the sdl2-config script
++dnl
++AC_ARG_WITH(sdl-prefix,[  --with-sdl-prefix=PFX   Prefix where SDL is installed (optional)],
++            sdl_prefix="$withval", sdl_prefix="")
++AC_ARG_WITH(sdl-exec-prefix,[  --with-sdl-exec-prefix=PFX Exec prefix where SDL is installed (optional)],
++            sdl_exec_prefix="$withval", sdl_exec_prefix="")
++AC_ARG_ENABLE(sdltest, [  --disable-sdltest       Do not try to compile and run a test SDL program],
++                   , enable_sdltest=yes)
++
++  min_sdl_version=ifelse([$1], ,2.0.0,$1)
++
++  if test "x$sdl_prefix$sdl_exec_prefix" = x ; then
++    PKG_CHECK_MODULES([SDL], [sdl2 >= $min_sdl_version],
++           [sdl_pc=yes],
++           [sdl_pc=no])
++  else
++    sdl_pc=no
++    if test x$sdl_exec_prefix != x ; then
++      sdl_config_args="$sdl_config_args --exec-prefix=$sdl_exec_prefix"
++      if test x${SDL2_CONFIG+set} != xset ; then
++        SDL2_CONFIG=$sdl_exec_prefix/bin/sdl2-config
++      fi
++    fi
++    if test x$sdl_prefix != x ; then
++      sdl_config_args="$sdl_config_args --prefix=$sdl_prefix"
++      if test x${SDL2_CONFIG+set} != xset ; then
++        SDL2_CONFIG=$sdl_prefix/bin/sdl2-config
++      fi
++    fi
++  fi
++
++  if test "x$sdl_pc" = xyes ; then
++    no_sdl=""
++    SDL2_CONFIG="pkg-config sdl2"
++  else
++    as_save_PATH="$PATH"
++    if test "x$prefix" != xNONE && test "$cross_compiling" != yes; then
++      PATH="$prefix/bin:$prefix/usr/bin:$PATH"
++    fi
++    AC_PATH_PROG(SDL2_CONFIG, sdl2-config, no, [$PATH])
++    PATH="$as_save_PATH"
++    AC_MSG_CHECKING(for SDL - version >= $min_sdl_version)
++    no_sdl=""
++
++    if test "$SDL2_CONFIG" = "no" ; then
++      no_sdl=yes
++    else
++      SDL_CFLAGS=`$SDL2_CONFIG $sdl_config_args --cflags`
++      SDL_LIBS=`$SDL2_CONFIG $sdl_config_args --libs`
++
++      sdl_major_version=`$SDL2_CONFIG $sdl_config_args --version | \
++             sed 's/\([[0-9]]*\).\([[0-9]]*\).\([[0-9]]*\)//'`
++      sdl_minor_version=`$SDL2_CONFIG $sdl_config_args --version | \
++             sed 's/\([[0-9]]*\).\([[0-9]]*\).\([[0-9]]*\)/\2/'`
++      sdl_micro_version=`$SDL2_CONFIG $sdl_config_args --version | \
++             sed 's/\([[0-9]]*\).\([[0-9]]*\).\([[0-9]]*\)/\3/'`
++      if test "x$enable_sdltest" = "xyes" ; then
++        ac_save_CFLAGS="$CFLAGS"
++        ac_save_CXXFLAGS="$CXXFLAGS"
++        ac_save_LIBS="$LIBS"
++        CFLAGS="$CFLAGS $SDL_CFLAGS"
++        CXXFLAGS="$CXXFLAGS $SDL_CFLAGS"
++        LIBS="$LIBS $SDL_LIBS"
++dnl
++dnl Now check if the installed SDL is sufficiently new. (Also sanity
++dnl checks the results of sdl2-config to some extent
++dnl
++      rm -f conf.sdltest
++      AC_TRY_RUN([
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include "SDL.h"
++
++char*
++my_strdup (char *str)
++{
++  char *new_str;
++  
++  if (str)
++    {
++      new_str = (char *)malloc ((strlen (str) + 1) * sizeof(char));
++      strcpy (new_str, str);
++    }
++  else
++    new_str = NULL;
++  
++  return new_str;
++}
++
++int main (int argc, char *argv[])
++{
++  int major, minor, micro;
++  char *tmp_version;
++
++  /* This hangs on some systems (?)
++  system ("touch conf.sdltest");
++  */
++  { FILE *fp = fopen("conf.sdltest", "a"); if ( fp ) fclose(fp); }
++
++  /* HP/UX 9 (%@#!) writes to sscanf strings */
++  tmp_version = my_strdup("$min_sdl_version");
++  if (sscanf(tmp_version, "%d.%d.%d", &major, &minor, &micro) != 3) {
++     printf("%s, bad version string\n", "$min_sdl_version");
++     exit(1);
++   }
++
++   if (($sdl_major_version > major) ||
++      (($sdl_major_version == major) && ($sdl_minor_version > minor)) ||
++      (($sdl_major_version == major) && ($sdl_minor_version == minor) && ($sdl_micro_version >= micro)))
++    {
++      return 0;
++    }
++  else
++    {
++      printf("\n*** 'sdl2-config --version' returned %d.%d.%d, but the minimum version\n", $sdl_major_version, $sdl_minor_version, $sdl_micro_version);
++      printf("*** of SDL required is %d.%d.%d. If sdl2-config is correct, then it is\n", major, minor, micro);
++      printf("*** best to upgrade to the required version.\n");
++      printf("*** If sdl2-config was wrong, set the environment variable SDL2_CONFIG\n");
++      printf("*** to point to the correct copy of sdl2-config, and remove the file\n");
++      printf("*** config.cache before re-running configure\n");
++      return 1;
++    }
++}
++
++],, no_sdl=yes,[echo $ac_n "cross compiling; assumed OK... $ac_c"])
++        CFLAGS="$ac_save_CFLAGS"
++        CXXFLAGS="$ac_save_CXXFLAGS"
++        LIBS="$ac_save_LIBS"
++      fi
++    fi
++    if test "x$no_sdl" = x ; then
++      AC_MSG_RESULT(yes)
++    else
++      AC_MSG_RESULT(no)
++    fi
++  fi
++  if test "x$no_sdl" = x ; then
++     ifelse([$2], , :, [$2])
++  else
++     if test "$SDL2_CONFIG" = "no" ; then
++       echo "*** The sdl2-config script installed by SDL could not be found"
++       echo "*** If SDL was installed in PREFIX, make sure PREFIX/bin is in"
++       echo "*** your path, or set the SDL2_CONFIG environment variable to the"
++       echo "*** full path to sdl2-config."
++     else
++       if test -f conf.sdltest ; then
++        :
++       else
++          echo "*** Could not run SDL test program, checking why..."
++          CFLAGS="$CFLAGS $SDL_CFLAGS"
++          CXXFLAGS="$CXXFLAGS $SDL_CFLAGS"
++          LIBS="$LIBS $SDL_LIBS"
++          AC_TRY_LINK([
++#include <stdio.h>
++#include "SDL.h"
++
++int main(int argc, char *argv[])
++{ return 0; }
++#undef  main
++#define main K_and_R_C_main
++],      [ return 0; ],
++        [ echo "*** The test program compiled, but did not run. This usually means"
++          echo "*** that the run-time linker is not finding SDL or finding the wrong"
++          echo "*** version of SDL. If it is not finding SDL, you'll need to set your"
++          echo "*** LD_LIBRARY_PATH environment variable, or edit /etc/ld.so.conf to point"
++          echo "*** to the installed location  Also, make sure you have run ldconfig if that"
++          echo "*** is required on your system"
++         echo "***"
++          echo "*** If you have an old version installed, it is best to remove it, although"
++          echo "*** you may also be able to get things to work by modifying LD_LIBRARY_PATH"],
++        [ echo "*** The test program failed to compile or link. See the file config.log for the"
++          echo "*** exact error that occured. This usually means SDL was incorrectly installed"
++          echo "*** or that you have moved SDL since it was installed. In the latter case, you"
++          echo "*** may want to edit the sdl2-config script: $SDL2_CONFIG" ])
++          CFLAGS="$ac_save_CFLAGS"
++          CXXFLAGS="$ac_save_CXXFLAGS"
++          LIBS="$ac_save_LIBS"
++       fi
++     fi
++     SDL_CFLAGS=""
++     SDL_LIBS=""
++     ifelse([$3], , :, [$3])
++  fi
++  AC_SUBST(SDL_CFLAGS)
++  AC_SUBST(SDL_LIBS)
++  rm -f conf.sdltest
++])
+diff --git a/src/drivers/Joystick_SDL.cpp b/src/drivers/Joystick_SDL.cpp
+index 6c16b8b..dbd90ab 100644
+--- a/src/drivers/Joystick_SDL.cpp
++++ b/src/drivers/Joystick_SDL.cpp
+@@ -55,7 +55,7 @@ Joystick_SDL::Joystick_SDL(unsigned index) : sdl_joy(NULL)
+   throw MDFN_Error(0, "SDL_JoystickOpen(%u) failed: %s", index, SDL_GetError());
+  }
+ 
+- strncpy(name, SDL_JoystickName(index), sizeof(name));
++ strncpy(name, SDL_JoystickNameForIndex(index), sizeof(name));
+  name[sizeof(name) - 1] = 0;
+ 
+  sdl_num_axes = SDL_JoystickNumAxes(sdl_joy);
+diff --git a/src/drivers/console.cpp b/src/drivers/console.cpp
+index 03289e0..276aae2 100644
+--- a/src/drivers/console.cpp
++++ b/src/drivers/console.cpp
+@@ -127,20 +127,18 @@ int MDFNConsole::Event(const SDL_Event *event)
+                         kb_buffer.erase(kb_buffer.begin() + kb_cursor_pos, kb_buffer.begin() + kb_cursor_pos + 1);
+                        }
+                        break;
+-                     default:
+-                    if(event->key.keysym.unicode >= 0x20)
+-                     {
+-                      uint8 utf8_buffer[8];
+-                      UTF8 *dest_ptr = utf8_buffer;
+-                      memset(utf8_buffer, 0, sizeof(utf8_buffer));
+-                      const UTF16 *start_utf16 = &event->key.keysym.unicode;
+-                      ConvertUTF16toUTF8(&start_utf16, (UTF16 *)&event->key.keysym.unicode + 1, &dest_ptr, &utf8_buffer[8], lenientConversion);
+-                     kb_buffer.insert(kb_buffer.begin() + kb_cursor_pos, std::string((char *)utf8_buffer));
+-                     kb_cursor_pos++;
+-                     }
+-                     break;
+                     }
+                     break;
++    case SDL_TEXTINPUT:
++     {
++      uint8 utf8_buffer[8];
++      UTF8 *dest_ptr = utf8_buffer;
++      memset(utf8_buffer, 0, sizeof(utf8_buffer));
++      strncpy((char*)utf8_buffer, event->text.text, sizeof(utf8_buffer));
++      kb_buffer.insert(kb_buffer.begin() + kb_cursor_pos, std::string((char *)utf8_buffer));
++      kb_cursor_pos++;
++     }
++    break;
+   }
+  return(1);
+ }
+diff --git a/src/drivers/input-config.cpp b/src/drivers/input-config.cpp
+index 22cc556..ef05510 100644
+--- a/src/drivers/input-config.cpp
++++ b/src/drivers/input-config.cpp
+@@ -107,8 +107,10 @@ int DTestButton(std::vector<ButtConfig> &bc, const char *KeyState, const uint32
+  {
+   if(bc[x].ButtType == BUTTC_KEYBOARD)
+   {
+-   if(KeyState[bc[x].ButtonNum])
++   if(KeyState[bc[x].ButtonNum & 0xFF]) {
++    //printf("bc[x].ButtonNum: %d\n", bc[x].ButtonNum);
+     ret += maxv;
++   }
+   }
+   else if(bc[x].ButtType == BUTTC_JOYSTICK)
+   {
+@@ -207,18 +209,18 @@ static int EventFilter(const SDL_Event *event)
+ 
+  switch(event->type)
+  {
+-   case SDL_KEYDOWN:    if(!efck || (event->key.keysym.sym != MKK(LALT) && event->key.keysym.sym != MKK(RALT) &&
+-                         event->key.keysym.sym != MKK(LSHIFT) && event->key.keysym.sym != MKK(RSHIFT) &&
+-                        event->key.keysym.sym != MKK(LCTRL) && event->key.keysym.sym != MKK(RCTRL)))
++   case SDL_KEYDOWN:    if(!efck || (event->key.keysym.sym != SDLK_LALT && event->key.keysym.sym != SDLK_RALT &&
++                         event->key.keysym.sym != SDLK_LSHIFT && event->key.keysym.sym != SDLK_RSHIFT &&
++                        event->key.keysym.sym != SDLK_LCTRL && event->key.keysym.sym != SDLK_RCTRL))
+                         {
+                                 efbc.ButtType = BUTTC_KEYBOARD;
+                                 efbc.DeviceNum = 0;
+-                                efbc.ButtonNum = event->key.keysym.sym;
++                                efbc.ButtonNum = event->key.keysym.scancode;
+ 
+-                               if(0 == event->key.keysym.sym)
++                               if(0 == event->key.keysym.scancode)
+                                 printf("*** NULL KEYSYM! ***\n");
+ 
+-                               //printf("%u\n", event->key.keysym.sym);
++                               //printf("%u\n", event->key.keysym.scancode);
+ 
+                                 if(efck)
+                                         efbc.ButtonNum |= ((event->key.keysym.mod & KMOD_ALT) ? (ICSS_ALT<<24):0) | ((event->key.keysym.mod & KMOD_SHIFT) ? (ICSS_SHIFT<<24):0) | ((event->key.keysym.mod & KMOD_CTRL) ? (ICSS_CTRL<<24):0);
+diff --git a/src/drivers/input-default-buttons.h b/src/drivers/input-default-buttons.h
+index 4f26aaa..de31b40 100644
+--- a/src/drivers/input-default-buttons.h
++++ b/src/drivers/input-default-buttons.h
+@@ -5,8 +5,8 @@
+ static const ButtConfig NESGamePadConfig[4][8]={
+         /* Gamepad 1 */
+         {
+-         MK(KP3), MK(KP2), MK(TAB), MK(RETURN), MK(w),MK(s),
+-                MK(a), MK(d)
++         MK(KP_3), MK(KP_2), MK(TAB), MK(RETURN), MK(W),MK(S),
++                MK(A), MK(D)
+         },
+ 
+         /* Gamepad 2 */
+@@ -22,14 +22,14 @@ static const ButtConfig NESGamePadConfig[4][8]={
+ 
+ static const ButtConfig GBPadConfig[8] =
+ {
+-         MK(KP3), MK(KP2), MK(TAB), MK(RETURN), MK(d),MK(a),
+-                MK(w), MK(s)
++         MK(KP_3), MK(KP_2), MK(TAB), MK(RETURN), MK(D),MK(A),
++                MK(W), MK(S)
+ };
+ 
+ static const ButtConfig GBAPadConfig[10] =
+ {
+-         MK(KP3), MK(KP2), MK(TAB), MK(RETURN), MK(d),MK(a),
+-                MK(w), MK(s), MK(KP6), MK(KP5)
++         MK(KP_3), MK(KP_2), MK(TAB), MK(RETURN), MK(D),MK(A),
++                MK(W), MK(S), MK(KP_6), MK(KP_5)
+ };
+ 
+ #define GPZ()   {MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ()}
+@@ -37,9 +37,9 @@ static const ButtConfig PCFXPadConfig[2][15]=
+ {
+         /* Gamepad 1 */
+         {
+-         MK(KP3), MK(KP2), MK(KP1), MK(KP4), MK(KP5), MK(KP6), MK(TAB), MK(RETURN),
+-         MK(w), MK(d), MK(s), MK(a),
+-        MK(KP8), MK(KP9),
++         MK(KP_3), MK(KP_2), MK(KP_1), MK(KP_4), MK(KP_5), MK(KP_6), MK(TAB), MK(RETURN),
++         MK(W), MK(D), MK(S), MK(A),
++        MK(KP_8), MK(KP_9),
+         },
+ 
+         /* Gamepad 2 */
+@@ -51,13 +51,13 @@ static const ButtConfig PCFXPadConfig[2][15]=
+ static const ButtConfig PCEPadConfig[5][13]={
+         /* Gamepad 1 */
+         {
+-         MK(KP3), MK(KP2), MK(TAB), MK(RETURN), MK(w), MK(d), MK(s), MK(a),
++         MK(KP_3), MK(KP_2), MK(TAB), MK(RETURN), MK(W), MK(D), MK(S), MK(A),
+ 
+          // Extra 4 buttons on 6-button pad
+-         MK(KP1), MK(KP4), MK(KP5), MK(KP6),
++         MK(KP_1), MK(KP_4), MK(KP_5), MK(KP_6),
+ 
+          // ..and special 2/6 mode select
+-         MK(m),
++         MK(M),
+         },
+ 
+         /* Gamepad 2 */
+@@ -77,14 +77,14 @@ static const ButtConfig PCEPadConfig[5][13]={
+ static const ButtConfig LynxPadConfig[9] =
+ {
+         // A, B, Option 2, Option 1, Left, Right, Up, Down, Pause
+-         MK(KP3), MK(KP2), MK(KP1), MK(KP7), MK(a),MK(d),
+-                MK(w), MK(s), MK(RETURN)
++         MK(KP_3), MK(KP_2), MK(KP_1), MK(KP_7), MK(A),MK(D),
++                MK(W), MK(S), MK(RETURN)
+ };
+ 
+ static const ButtConfig NGPPadConfig[7 + 2] =
+ {
+         // Up, down, left, right, a(inner), b(outer), option
+-        MK(w), MK(s), MK(a), MK(d), MK(KP2), MK(KP3), MK(RETURN), MK(KP5), MK(KP6)
++        MK(W), MK(S), MK(A), MK(D), MK(KP_2), MK(KP_3), MK(RETURN), MK(KP_5), MK(KP_6)
+ };
+ 
+ static const ButtConfig WSwanPadConfig[12] =
+@@ -92,52 +92,52 @@ static const ButtConfig WSwanPadConfig[12] =
+         // Up, right, down, left,
+         // up-y, right-y, down-y, left-y,
+        //  start, a(outer), b(inner), option
+-        MK(w), MK(d), MK(s), MK(a),
++        MK(W), MK(D), MK(S), MK(A),
+        MK(UP), MK(RIGHT), MK(DOWN), MK(LEFT),
+-       MK(RETURN), MK(KP3), MK(KP2), MK(RETURN)
++       MK(RETURN), MK(KP_3), MK(KP_2), MK(RETURN)
+ };
+ 
+ 
+ static const ButtConfig PowerPadConfig[12] =
+ {
+- MK(o),MK(p),MK(LEFTBRACKET),MK(RIGHTBRACKET),
+- MK(k),MK(l),MK(SEMICOLON),MK(QUOTE),
+- MK(m),MK(COMMA),MK(PERIOD),MK(SLASH)
++ MK(O),MK(P),MK(LEFTBRACKET),MK(RIGHTBRACKET),
++ MK(K),MK(L),MK(SEMICOLON),MK(APOSTROPHE),
++ MK(M),MK(COMMA),MK(PERIOD),MK(SLASH)
+ };
+ 
+ static const ButtConfig fkbmap[0x48]=
+ {
+  MK(F1),MK(F2),MK(F3),MK(F4),MK(F5),MK(F6),MK(F7),MK(F8),
+  MK(1),MK(2),MK(3),MK(4),MK(5),MK(6),MK(7),MK(8),MK(9),MK(0),MK(MINUS),MK(EQUALS),MK(BACKSLASH),MK(BACKSPACE),
+- MK(ESCAPE),MK(q),MK(w),MK(e),MK(r),MK(t),MK(y),MK(u),MK(i),MK(o),MK(p),MK(BACKQUOTE),MK(LEFTBRACKET),MK(RETURN),
+- MK(LCTRL),MK(a),MK(s),MK(d),MK(f),MK(g),MK(h),MK(j),MK(k),MK(l),MK(SEMICOLON),MK(QUOTE),MK(RIGHTBRACKET),MK(INSERT),
+- MK(LSHIFT),MK(z),MK(x),MK(c),MK(v),MK(b),MK(n),MK(m),MK(COMMA),MK(PERIOD),MK(SLASH),MK(RALT),MK(RSHIFT),MK(LALT),MK(SPACE),
++ MK(ESCAPE),MK(Q),MK(W),MK(E),MK(R),MK(T),MK(Y),MK(U),MK(I),MK(O),MK(P),MK(GRAVE),MK(LEFTBRACKET),MK(RETURN),
++ MK(LCTRL),MK(A),MK(S),MK(D),MK(F),MK(G),MK(H),MK(J),MK(K),MK(L),MK(SEMICOLON),MK(APOSTROPHE),MK(RIGHTBRACKET),MK(INSERT),
++ MK(LSHIFT),MK(Z),MK(X),MK(C),MK(V),MK(B),MK(N),MK(M),MK(COMMA),MK(PERIOD),MK(SLASH),MK(RALT),MK(RSHIFT),MK(LALT),MK(SPACE),
+  MK(DELETE),MK(END),MK(PAGEDOWN),MK(UP),MK(LEFT),MK(RIGHT),MK(DOWN)
+ };
+ 
+ static const ButtConfig HyperShotButtons[4]=
+ {
+- MK(q),MK(w),MK(e),MK(r)
++ MK(Q),MK(W),MK(E),MK(R)
+ };
+ 
+ static const ButtConfig MahjongButtons[21]=
+ {
+- MK(q),MK(w),MK(e),MK(r),MK(t),
+- MK(a),MK(s),MK(d),MK(f),MK(g),MK(h),MK(j),MK(k),MK(l),
+- MK(z),MK(x),MK(c),MK(v),MK(b),MK(n),MK(m)
++ MK(Q),MK(W),MK(E),MK(R),MK(T),
++ MK(A),MK(S),MK(D),MK(F),MK(G),MK(H),MK(J),MK(K),MK(L),
++ MK(Z),MK(X),MK(C),MK(V),MK(B),MK(N),MK(M)
+ };
+ 
+ static const ButtConfig PartyTapButtons[6]=
+ {
+- MK(q),MK(w),MK(e),MK(r),MK(t),MK(y)
++ MK(Q),MK(W),MK(E),MK(R),MK(T),MK(Y)
+ };
+ 
+ static const ButtConfig FTrainerButtons[12]=
+ {
+-                               MK(o),MK(p),MK(LEFTBRACKET),
+-                               MK(RIGHTBRACKET),MK(k),MK(l),MK(SEMICOLON),
+-                                MK(QUOTE),
+-                               MK(m),MK(COMMA),MK(PERIOD),MK(SLASH)
++                               MK(O),MK(P),MK(LEFTBRACKET),
++                               MK(RIGHTBRACKET),MK(K),MK(L),MK(SEMICOLON),
++                                MK(APOSTROPHE),
++                               MK(M),MK(COMMA),MK(PERIOD),MK(SLASH)
+ };
+ 
+ static ButtConfig OekaKidsConfig[3] =
+@@ -192,7 +192,7 @@ static const ButtConfig SMSPadConfig[2][12]=
+ {
+         /* Gamepad 1 */
+         {
+-        MK(w), MK(s), MK(a), MK(d), MK(KP2), MK(KP3), MK(RETURN)
++        MK(W), MK(S), MK(A), MK(D), MK(KP_2), MK(KP_3), MK(RETURN)
+         },
+ 
+         /* Gamepad 2 */
+@@ -201,23 +201,23 @@ static const ButtConfig SMSPadConfig[2][12]=
+ 
+ static const ButtConfig GGPadConfig[12]=
+ {
+-         MK(w), MK(s), MK(a), MK(d), MK(KP2), MK(KP3), MK(RETURN)
++         MK(W), MK(S), MK(A), MK(D), MK(KP_2), MK(KP_3), MK(RETURN)
+ };
+ 
+ static const ButtConfig TsushinKBConfig[0x80]=
+ {
+  // 0
+- MK(KP0),
+- MK(KP1),
+- MK(KP2),
+- MK(KP3),
+- MK(KP4),
+- MK(KP5),
+- MK(KP6),
++ MK(KP_0),
++ MK(KP_1),
++ MK(KP_2),
++ MK(KP_3),
++ MK(KP_4),
++ MK(KP_5),
++ MK(KP_6),
+ 
+ // 1
+- MK(KP8),
+- MK(KP9),
++ MK(KP_8),
++ MK(KP_9),
+  MK(KP_MULTIPLY),              // Keypad Multiply
+  MK(KP_PLUS),                  // Keypad Plus
+  MK(KP_EQUALS),                        // Keypad Equals
+@@ -225,38 +225,38 @@ static const ButtConfig TsushinKBConfig[0x80]=
+  MK(KP_PERIOD),                        // Keypad Period
+ 
+ // 2
+- MK(BACKQUOTE),                // @
+- MK(a),
+- MK(b),
+- MK(c),
+- MK(d),
+- MK(e),
+- MK(f),
++ MK(GRAVE),            // @
++ MK(A),
++ MK(B),
++ MK(C),
++ MK(D),
++ MK(E),
++ MK(F),
+ 
+ // 3
+- MK(h),
+- MK(i),
+- MK(j),
+- MK(k),
+- MK(l),
+- MK(m),
+- MK(n),
++ MK(H),
++ MK(I),
++ MK(J),
++ MK(K),
++ MK(L),
++ MK(M),
++ MK(N),
+ 
+ // 4
+- MK(p),
+- MK(q),
+- MK(r),
+- MK(s),
+- MK(t),
+- MK(u),
+- MK(v),
++ MK(P),
++ MK(Q),
++ MK(R),
++ MK(S),
++ MK(T),
++ MK(U),
++ MK(V),
+ 
+ // 5
+- MK(x),
+- MK(y),
+- MK(z),
++ MK(X),
++ MK(Y),
++ MK(Z),
+  MK(LEFTBRACKET),      // Left bracket
+- MK(PLUS),             // Yen
++ MK(GRAVE),            // Yen
+  MK(RIGHTBRACKET),     // Right bracket
+  MK(EQUALS),           // Caret
+ 
+@@ -272,7 +272,7 @@ static const ButtConfig TsushinKBConfig[0x80]=
+ // 7
+  MK(8),
+  MK(9),
+- MK(QUOTE),            // Colon
++ MK(APOSTROPHE),               // Colon
+  MK(SEMICOLON),                // Semicolon
+  MK(COMMA),            // Comma
+  MK(PERIOD),           // Period
+@@ -284,11 +284,11 @@ static const ButtConfig TsushinKBConfig[0x80]=
+  MK(RIGHT),
+  //MK(UNKNOWN),
+  MK(UNKNOWN),          // GRPH
+- MK(LSUPER),           // カナ
++ //MK(LSUPER),         // カナ
+  //MK(UNKNOWN),
+ 
+ // 9
+- MK(BREAK),            // STOP
++ MK(STOP),             // STOP
+  MK(F1),
+  MK(F2),
+  MK(F3),
+@@ -301,7 +301,7 @@ static const ButtConfig TsushinKBConfig[0x80]=
+  MK(DOWN),
+  MK(LEFT),
+  MK(END),              // HELP
+- MK(PRINT),            // COPY
++ MK(PRINTSCREEN),              // COPY
+  MK(KP_MINUS),
+  MK(KP_DIVIDE),
+ 
+@@ -310,9 +310,9 @@ static const ButtConfig TsushinKBConfig[0x80]=
+  MK(PAGEUP),           // ROLL UP
+  //MK(UNKNOWN),
+  //MK(UNKNOWN),
+- MK(o),
++ MK(O),
+  MK(UNKNOWN),  // TODO: Underscore
+- MK(g),
++ MK(G),
+ 
+ // C
+  MK(F6),
+@@ -326,11 +326,11 @@ static const ButtConfig TsushinKBConfig[0x80]=
+ // D
+  MK(RALT),             // 変換
+  MK(LALT),             // 決定
+- MK(RSUPER),           // PC
++ //MK(RSUPER),         // PC
+  MK(RCTRL),            // 変換
+  MK(LCTRL),            // CTRL
+- MK(KP7),
+- MK(w),
++ MK(KP_7),
++ MK(W),
+ 
+ // E
+  MK(RETURN),
+@@ -354,7 +354,7 @@ static const ButtConfig TsushinKBConfig[0x80]=
+ 
+ static const ButtConfig MMPlayInputConfig[] =
+ {
+-       MK(p),
++       MK(P),
+        MK(LEFT),
+        MK(RIGHT),
+        MK(DOWN),
+@@ -376,25 +376,25 @@ static const ButtConfig CDPlayInputConfig[] =
+ 
+ static const ButtConfig MDPad3Config[2][8] =
+ {
+- { MK(w), MK(s), MK(a), MK(d), MK(KP2), MK(KP3), MK(KP1), MK(RETURN) },
++ { MK(W), MK(S), MK(A), MK(D), MK(KP_2), MK(KP_3), MK(KP_1), MK(RETURN) },
+  { MKZ(), MKZ(), MKZ(), MKZ(), MKZ(),   MKZ(),   MKZ(),   MKZ() },
+ 
+ };
+ 
+ static const ButtConfig SNESPadConfig[12] =
+ {
+- MK(KP2),
+- MK(KP4),
++ MK(KP_2),
++ MK(KP_4),
+  MK(TAB),
+  MK(RETURN),
+- MK(w),
+- MK(s),
+- MK(a),
+- MK(d),
+- MK(KP6),
+- MK(KP8),
+- MK(KP7),
+- MK(KP9),
++ MK(W),
++ MK(S),
++ MK(A),
++ MK(D),
++ MK(KP_6),
++ MK(KP_8),
++ MK(KP_7),
++ MK(KP_9),
+ };
+ 
+ 
+@@ -440,35 +440,35 @@ static const ButtConfig PSXPadConfig[14] =
+ {
+  MK(TAB),
+  MK(RETURN),
+- MK(w),
+- MK(d),
+- MK(s),
+- MK(a),
++ MK(W),
++ MK(D),
++ MK(S),
++ MK(A),
+ 
+- MK(KP7),
+- MK(KP9),
+- MK(KP1),
+- MK(KP3),
++ MK(KP_7),
++ MK(KP_9),
++ MK(KP_1),
++ MK(KP_3),
+ 
+- MK(KP8),
+- MK(KP6),
+- MK(KP2),
+- MK(KP4),
++ MK(KP_8),
++ MK(KP_6),
++ MK(KP_2),
++ MK(KP_4),
+ };
+ 
+ static const ButtConfig PSXDancePadConfig[10] =
+ {
+  MK(KP_DIVIDE),
+  MK(KP_MULTIPLY),
+- MK(KP8),
+- MK(KP6),
+- MK(KP2),
+- MK(KP4),
+-
+- MK(KP1),
+- MK(KP9),
+- MK(KP7),
+- MK(KP3),
++ MK(KP_8),
++ MK(KP_6),
++ MK(KP_2),
++ MK(KP_4),
++
++ MK(KP_1),
++ MK(KP_9),
++ MK(KP_7),
++ MK(KP_3),
+ };
+ 
+ static ButtConfig PSXMouseConfig[2] =
+diff --git a/src/drivers/input.cpp b/src/drivers/input.cpp
+index be2756f..cbfcfab 100644
+--- a/src/drivers/input.cpp
++++ b/src/drivers/input.cpp
+@@ -690,7 +690,7 @@ static const COKE CKeys[_CK_COUNT]  =
+        { MK_CK(F7), "load_state", ~0U, 0, gettext_noop("Load state") },
+        { MK_CK_SHIFT(F5), "save_movie", ~0U, 1, gettext_noop("Save movie") },
+        { MK_CK_SHIFT(F7), "load_movie", ~0U, 0, gettext_noop("Load movie") },
+-       { MK_CK_ALT(s), "toggle_state_rewind", ~0U, 1, gettext_noop("Toggle state rewind functionality") },
++       { MK_CK_ALT(S), "toggle_state_rewind", ~0U, 1, gettext_noop("Toggle state rewind functionality") },
+ 
+        { MK_CK(0), "0", ~0U, 1, gettext_noop("Save state 0 select")},
+         { MK_CK(1), "1", ~0U, 1, gettext_noop("Save state 1 select")},
+@@ -728,7 +728,7 @@ static const COKE CKeys[_CK_COUNT]  =
+        { MK_CK_SHIFT(F9), "take_scaled_snapshot", ~0U, 1, gettext_noop("Take scaled(and filtered) screen snapshot") },
+ 
+        { MK_CK_ALT(RETURN), "toggle_fs", ~0U, 1, gettext_noop("Toggle fullscreen mode") },
+-       { MK_CK(BACKQUOTE), "fast_forward", ~0U, 1, gettext_noop("Fast-forward") },
++       { MK_CK(GRAVE), "fast_forward", ~0U, 1, gettext_noop("Fast-forward") },
+         { MK_CK(BACKSLASH), "slow_forward", ~0U, 1, gettext_noop("Slow-forward") },
+ 
+        { MK_CK(F8), "insert_coin", ~0U, 1, gettext_noop("Insert coin") },
+@@ -736,8 +736,8 @@ static const COKE CKeys[_CK_COUNT]  =
+        { MK_CK(F6), "select_disk", ~0U, 1, gettext_noop("Select disk/disc") },
+        { MK_CK(F8), "insert_eject_disk", ~0U, 0, gettext_noop("Insert/Eject disk/disc") },
+        { MK_CK(F8), "activate_barcode", ~0U, 1, gettext_noop("Activate barcode(for Famicom)") },
+-       { MK_CK(SCROLLOCK), "toggle_grab_input", ~0U, 1, gettext_noop("Grab input") },
+-       { MK_CK_SHIFT(SCROLLOCK), "toggle_cidisable", ~0U, 1, gettext_noop("Grab input and disable commands") },
++       { MK_CK(SCROLLLOCK), "toggle_grab_input", ~0U, 1, gettext_noop("Grab input") },
++       { MK_CK_SHIFT(SCROLLLOCK), "toggle_cidisable", ~0U, 1, gettext_noop("Grab input and disable commands") },
+        { MK_CK_ALT_SHIFT(1), "input_config1", ~0U, 0, gettext_noop("Configure buttons on virtual port 1") },
+        { MK_CK_ALT_SHIFT(2), "input_config2", ~0U, 0, gettext_noop("Configure buttons on virtual port 2")  },
+         { MK_CK_ALT_SHIFT(3), "input_config3", ~0U, 0, gettext_noop("Configure buttons on virtual port 3")  },
+@@ -755,15 +755,15 @@ static const COKE CKeys[_CK_COUNT]        =
+        { MK_CK(F11), "power", ~0U, 0, gettext_noop("Power toggle") },
+        { MK_CK2(F12, ESCAPE), "exit", ~0U, 0, gettext_noop("Exit") },
+        { MK_CK(BACKSPACE), "state_rewind", ~0U, 1, gettext_noop("Rewind") },
+-       { MK_CK_ALT(o), "rotate_screen", ~0U, 1, gettext_noop("Rotate screen") },
++       { MK_CK_ALT(O), "rotate_screen", ~0U, 1, gettext_noop("Rotate screen") },
+ 
+-       { MK_CK(t), "togglenetview", ~0U, 1, gettext_noop("Toggle netplay console")},
+-       { MK_CK_ALT(a), "advance_frame", ~0U, 1, gettext_noop("Advance frame") },
+-       { MK_CK_ALT(r), "run_normal", ~0U, 1, gettext_noop("Return to normal mode after advancing frames") },
+-       { MK_CK_ALT(c), "togglecheatview", ~0U, 1, gettext_noop("Toggle cheat console") },
+-       { MK_CK_ALT(t), "togglecheatactive", ~0U, 1, gettext_noop("Enable/Disable cheats") },
++       { MK_CK(T), "togglenetview", ~0U, 1, gettext_noop("Toggle netplay console")},
++       { MK_CK_ALT(A), "advance_frame", ~0U, 1, gettext_noop("Advance frame") },
++       { MK_CK_ALT(R), "run_normal", ~0U, 1, gettext_noop("Return to normal mode after advancing frames") },
++       { MK_CK_ALT(C), "togglecheatview", ~0U, 1, gettext_noop("Toggle cheat console") },
++       { MK_CK_ALT(T), "togglecheatactive", ~0U, 1, gettext_noop("Enable/Disable cheats") },
+         { MK_CK_SHIFT(F1), "toggle_fps_view", ~0U, 1, gettext_noop("Toggle frames-per-second display") },
+-       { MK_CK_ALT(d), "toggle_debugger", ~0U, 1, gettext_noop("Toggle debugger") },
++       { MK_CK_ALT(D), "toggle_debugger", ~0U, 1, gettext_noop("Toggle debugger") },
+        { MK_CK(MINUS), "state_slot_dec", ~0U, 1, gettext_noop("Decrease selected save state slot by 1") },
+        { MK_CK(EQUALS), "state_slot_inc", ~0U, 1, gettext_noop("Increase selected save state slot by 1") },
+        { MK_CK(F1), "toggle_help", ~0U, 1, gettext_noop("Toggle help screen") },
+@@ -932,7 +932,7 @@ static void UpdatePhysicalDeviceState(void)
+  //
+ 
+ 
+- memcpy(keys, SDL_GetKeyState(0), MKK_COUNT);
++ memcpy(keys, SDL_GetKeyboardState(0), MKK_COUNT);
+ 
+  if(MDFNDHaveFocus || MDFN_GetSettingB("input.joystick.global_focus"))
+   joy_manager->UpdateJoysticks();
+@@ -1000,21 +1000,21 @@ static void DoKeyStateZeroing(void)
+     memcpy(keys_backup, keys, MKK_COUNT);
+     memset(keys, 0, sizeof(keys));
+ 
+-    keys[SDLK_F1] = keys_backup[SDLK_F1];
+-    keys[SDLK_F2] = keys_backup[SDLK_F2];
+-    keys[SDLK_F3] = keys_backup[SDLK_F3];
+-    keys[SDLK_F4] = keys_backup[SDLK_F4];
+-    keys[SDLK_F5] = keys_backup[SDLK_F5];
+-    keys[SDLK_F6] = keys_backup[SDLK_F6];
+-    keys[SDLK_F7] = keys_backup[SDLK_F7];
+-    keys[SDLK_F8] = keys_backup[SDLK_F8];
+-    keys[SDLK_F9] = keys_backup[SDLK_F9];
+-    keys[SDLK_F10] = keys_backup[SDLK_F10];
+-    keys[SDLK_F11] = keys_backup[SDLK_F11];
+-    keys[SDLK_F12] = keys_backup[SDLK_F12];
+-    keys[SDLK_F13] = keys_backup[SDLK_F13];
+-    keys[SDLK_F14] = keys_backup[SDLK_F14];
+-    keys[SDLK_F15] = keys_backup[SDLK_F15];
++    keys[SDL_SCANCODE_F1] = keys_backup[SDL_SCANCODE_F1];
++    keys[SDL_SCANCODE_F2] = keys_backup[SDL_SCANCODE_F2];
++    keys[SDL_SCANCODE_F3] = keys_backup[SDL_SCANCODE_F3];
++    keys[SDL_SCANCODE_F4] = keys_backup[SDL_SCANCODE_F4];
++    keys[SDL_SCANCODE_F5] = keys_backup[SDL_SCANCODE_F5];
++    keys[SDL_SCANCODE_F6] = keys_backup[SDL_SCANCODE_F6];
++    keys[SDL_SCANCODE_F7] = keys_backup[SDL_SCANCODE_F7];
++    keys[SDL_SCANCODE_F8] = keys_backup[SDL_SCANCODE_F8];
++    keys[SDL_SCANCODE_F9] = keys_backup[SDL_SCANCODE_F9];
++    keys[SDL_SCANCODE_F10] = keys_backup[SDL_SCANCODE_F10];
++    keys[SDL_SCANCODE_F11] = keys_backup[SDL_SCANCODE_F11];
++    keys[SDL_SCANCODE_F12] = keys_backup[SDL_SCANCODE_F12];
++    keys[SDL_SCANCODE_F13] = keys_backup[SDL_SCANCODE_F13];
++    keys[SDL_SCANCODE_F14] = keys_backup[SDL_SCANCODE_F14];
++    keys[SDL_SCANCODE_F15] = keys_backup[SDL_SCANCODE_F15];
+    }
+  }
+ }
+diff --git a/src/drivers/input.h b/src/drivers/input.h
+index b18a693..667b2d1 100644
+--- a/src/drivers/input.h
++++ b/src/drivers/input.h
+@@ -13,8 +13,8 @@ typedef struct {
+ #define BUTTC_JOYSTICK          0x02
+ #define BUTTC_MOUSE             0x03
+ 
+-#define MKK(k) SDLK_##k
+-#define MKK_COUNT (SDLK_LAST+1)
++#define MKK(k) SDL_SCANCODE_##k
++#define MKK_COUNT (SDL_NUM_SCANCODES+1)
+ 
+ void Input_Event(const SDL_Event *event);
+ void MainSetEventHook(int (*eh)(const SDL_Event *event));      // TODO: factor out eventually.
+diff --git a/src/drivers/main.cpp b/src/drivers/main.cpp
+index 5235428..c487b72 100644
+--- a/src/drivers/main.cpp
++++ b/src/drivers/main.cpp
+@@ -1298,30 +1298,12 @@ bool GT_ReinitSound(void)
+  return(ret);
+ }
+ 
+-static bool krepeat = 0;
+ void PumpWrap(void)
+ {
+  SDL_Event event;
+  SDL_Event gtevents_temp[gtevents_size];
+  int numevents = 0;
+ 
+- bool NITI;
+-
+- NITI = Netplay_IsTextInput();
+-
+- if(Debugger_IsActive() || NITI || CheatIF_Active() || Help_IsActive())
+- {
+-  if(!krepeat)
+-   SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+-  krepeat = 1;
+- }
+- else
+- {
+-  if(krepeat)
+-   SDL_EnableKeyRepeat(0, 0);
+-  krepeat = 0;
+- }
+-
+  #if defined(HAVE_SIGNAL) || defined(HAVE_SIGACTION)
+  if(SignalSafeExitWanted)
+   NeedExitNow = true;
+@@ -1337,24 +1319,34 @@ void PumpWrap(void)
+   /* Handle the event, and THEN hand it over to the GUI. Order is important due to global variable mayhem(CEVT_TOGGLEFS. */
+   switch(event.type)
+   {
+-   case SDL_ACTIVEEVENT:
+-                       if(event.active.state & SDL_APPINPUTFOCUS)
+-                       {
+-                        SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)event.active.gain, NULL);
+-                       }
+-
+-                       if(event.active.state & SDL_APPACTIVE)
+-                       {
+-                        VideoAppActive((bool)(event.active.gain));
+-                       }
++   case SDL_WINDOWEVENT:
++               switch(event.window.event) {
++                  case SDL_WINDOWEVENT_ENTER:
++                  case SDL_WINDOWEVENT_SHOWN:
++                        VideoAppActive((bool)(1));
++                               //printf("windowevent enter/shown\n");
++                       break;
++                  case SDL_WINDOWEVENT_LEAVE:
++                  case SDL_WINDOWEVENT_HIDDEN:
++                               //printf("windowevent leave/hidden\n");
++                        VideoAppActive((bool)(0));
++                       break;
++                  case SDL_WINDOWEVENT_FOCUS_GAINED:
++                               //printf("windowevent focus gained\n");
++                        SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)1, NULL);
++                       break;
++                  case SDL_WINDOWEVENT_FOCUS_LOST:
++                               //printf("windowevent focus lost\n");
++                        SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)0, NULL);
+                        break;
++               }
++               break;
+ 
+    case SDL_SYSWMEVENT: break;
+    //case SDL_VIDEORESIZE: //if(VideoResize(event.resize.w, event.resize.h))
+                         // NeedVideoChange = -1;
+    //                   break;
+ 
+-   case SDL_VIDEOEXPOSE: break;
+    case SDL_QUIT: NeedExitNow = 1;break;
+    case SDL_USEREVENT:
+                switch(event.user.code)
+@@ -1370,12 +1362,18 @@ void PumpWrap(void)
+                     }
+                     break;
+                 case CEVT_SET_GRAB_INPUT:
+-                         SDL_WM_GrabInput(*(int *)event.user.data1 ? SDL_GRAB_ON : SDL_GRAB_OFF);
++                         if(window != NULL) {
++                             SDL_SetWindowGrab(window ,*(int *)event.user.data1 ? SDL_TRUE : SDL_FALSE);
++                         }
+                          free(event.user.data1);
+                          break;
+                 //case CEVT_TOGGLEFS: NeedVideoChange = 1; break;
+                 //case CEVT_VIDEOSYNC: NeedVideoChange = -1; break;
+-                case CEVT_SHOWCURSOR: SDL_ShowCursor(*(int *)event.user.data1); free(event.user.data1); break;
++                case CEVT_SHOWCURSOR:
++                        SDL_SetRelativeMouseMode((int *)event.user.data1 ? SDL_FALSE : SDL_TRUE);
++                       SDL_ShowCursor(*(int *)event.user.data1);
++                       free(event.user.data1);
++                       break;
+                 case CEVT_DISP_MESSAGE: VideoShowMessage((UTF8*)event.user.data1); break;
+                 default:
+                        if(numevents < gtevents_size)
+@@ -1425,9 +1423,13 @@ void PrintCompilerVersion(void)
+ 
+ void PrintSDLVersion(void)
+ {
+- const SDL_version *sver = SDL_Linked_Version();
++ SDL_version sver_compiled;
++ SDL_version sver_linked;
+ 
+- MDFN_printf(_("Compiled against SDL %u.%u.%u, running with SDL %u.%u.%u\n"), SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL, sver->major, sver->minor, sver->patch);
++ SDL_VERSION(&sver_compiled);
++ SDL_GetVersion(&sver_linked);
++
++ MDFN_printf(_("Compiled against SDL %u.%u.%u, running with SDL %u.%u.%u\n"), sver_compiled.major, sver_compiled.minor, sver_compiled.patch, sver_linked.major, sver_linked.minor, sver_linked.patch);
+ }
+ 
+ #ifdef HAVE_LIBSNDFILE
+@@ -1727,8 +1729,6 @@ int main(int argc, char *argv[])
+         if(!MDFNI_Initialize(DrBaseDirectory, NeoDriverSettings))
+          return(-1);
+ 
+-        SDL_EnableUNICODE(1);
+-
+         #if defined(HAVE_SIGNAL) || defined(HAVE_SIGACTION)
+         SetSignals(CloseStuff);
+         #endif
+@@ -1879,8 +1879,11 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
+          }
+ 
+         PumpWrap();
+-        if(DidVideoChange)     // Do it after PumpWrap() in case there are stale SDL_ActiveEvent in the SDL event queue.
+-         SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)(SDL_GetAppState() & SDL_APPINPUTFOCUS), NULL);
++         //FIXME: Is this necessary? Got no problems without it.
++        /*if(DidVideoChange) { // Do it after PumpWrap() in case there are stale SDL_ActiveEvent in the SDL event queue.
++         //SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)(SDL_GetAppState() & SDL_APPINPUTFOCUS), NULL);
++         SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)(1), NULL);
++         }*/
+ 
+          MDFND_UnlockMutex(VTMutex);   /* Unlock mutex */
+ 
+diff --git a/src/drivers/memdebugger.cpp b/src/drivers/memdebugger.cpp
+index 5cd80e8..105abf1 100644
+--- a/src/drivers/memdebugger.cpp
++++ b/src/drivers/memdebugger.cpp
+@@ -39,12 +39,6 @@ bool MemDebugger::ICV_Init(const char *newcode)
+   ict_to_utf8 = (iconv_t)-1;
+  }
+ 
+- if((size_t)ict_utf16_to_game != (size_t)-1)
+- {
+-  iconv_close(ict_utf16_to_game);
+-  ict_utf16_to_game = (iconv_t)-1;
+- }
+-
+  ict = iconv_open(newcode, "UTF-8");
+  if((size_t)ict == (size_t)-1)
+  {
+@@ -61,14 +55,6 @@ bool MemDebugger::ICV_Init(const char *newcode)
+   return(0);
+  }
+ 
+- ict_utf16_to_game = iconv_open(newcode, "UTF-16");
+- if((size_t)ict_utf16_to_game == (size_t)-1)
+- {
+-  error_string = trio_aprintf("iconv_open() error: %m");
+-  error_time = SDL_GetTicks();
+-  return(0);
+- }
+-
+  GameCode = std::string(newcode);
+  return(1);
+ }
+@@ -825,32 +811,9 @@ int MemDebugger::Event(const SDL_Event *event)
+          myprompt->Event(event);
+         }
+        else if(InEditMode && InTextArea && keysym != SDLK_TAB && keysym != SDLK_INSERT && keysym != SDLK_UP && keysym != SDLK_DOWN && keysym != SDLK_LEFT
+-        && keysym != SDLK_RIGHT && (event->key.keysym.unicode >= 0x20))
++        && keysym != SDLK_RIGHT)
+        {
+-        uint8 to_write[16];
+-        int to_write_len;
+-
+-        size_t ibl, obl, obl_start;
+-        char *inbuf, *outbuf;
+-
+-        ibl = 2;
+-        obl_start = obl = 16;
+-
+-        inbuf = (char *)&event->key.keysym.unicode;
+-        outbuf = (char*)to_write;
+-
+-        size_t result = iconv(ict_utf16_to_game, (ICONV_CONST char **)&inbuf, &ibl, &outbuf, &obl);
+-        if(result != (size_t)-1)
+-        {
+-          to_write_len = obl_start - obl;
+-
+-        
+-         ASpace->PutAddressSpaceBytes(ASpace->name.c_str(), ASpacePos[CurASpace], to_write_len, 1, TRUE, to_write);
+-        
+-
+-         LowNib = 0;
+-         ChangePos(to_write_len);
+-        }
++            //Handled by SDL_TEXTINPUT Event
+        }
+        else if(InEditMode && ((event->key.keysym.sym >= SDLK_0 && event->key.keysym.sym <= SDLK_9)     ||
+           (event->key.keysym.sym >= SDLK_a && event->key.keysym.sym <= SDLK_f)))
+@@ -994,6 +957,37 @@ int MemDebugger::Event(const SDL_Event *event)
+                      break;
+        }
+        break;
++
++  case SDL_TEXTINPUT:
++   if(InPrompt)
++   {
++    myprompt->Event(event);
++   }
++   else if(InEditMode && InTextArea) {
++    uint8 to_write[16];
++    int to_write_len;
++
++    size_t ibl, obl, obl_start;
++    char *inbuf, *outbuf;
++
++    inbuf = (char *)&event->text.text;
++    outbuf = (char*)to_write;
++
++    ibl = strlen(inbuf);
++    obl_start = obl = (ibl + 1) * 8; // Hehe, ugly maximum estimation!
++
++    size_t result = iconv(ict, (ICONV_CONST char **)&inbuf, &ibl, &outbuf, &obl);
++    if(result != (size_t)-1)
++    {
++      to_write_len = obl_start - obl;
++
++      ASpace->PutAddressSpaceBytes(ASpace->name.c_str(), ASpacePos[CurASpace], to_write_len, 1, TRUE, to_write);
++
++      LowNib = 0;
++      ChangePos(to_write_len);
++    }
++   }
++   break;
+  }
+  return(1);
+ }
+@@ -1002,7 +996,7 @@ int MemDebugger::Event(const SDL_Event *event)
+ // Called after a game is loaded.
+ MemDebugger::MemDebugger() : AddressSpaces(NULL), ASpace(NULL), IsActive(false), CurASpace(0),
+                             LowNib(false), InEditMode(false), InTextArea(false), error_string(NULL), error_time(0),
+-                            ict((iconv_t)-1), ict_to_utf8((iconv_t)-1), ict_utf16_to_game((iconv_t)-1), InPrompt(None), myprompt(NULL)                      
++                            ict((iconv_t)-1), ict_to_utf8((iconv_t)-1), InPrompt(None), myprompt(NULL)                      
+ {
+  if(CurGame->Debugger)
+  {
+@@ -1047,12 +1041,6 @@ MemDebugger::~MemDebugger()
+   ict_to_utf8 = (iconv_t)-1;
+  }
+ 
+- if(ict_utf16_to_game != (iconv_t)-1)
+- {
+-  iconv_close(ict_utf16_to_game);
+-  ict_utf16_to_game = (iconv_t)-1;
+- }
+-
+  if(error_string)
+  {
+   free(error_string);
+diff --git a/src/drivers/memdebugger.h b/src/drivers/memdebugger.h
+index 36d69d5..4b71e55 100644
+--- a/src/drivers/memdebugger.h
++++ b/src/drivers/memdebugger.h
+@@ -65,7 +65,6 @@ class MemDebugger
+ 
+  iconv_t ict;
+  iconv_t ict_to_utf8;
+- iconv_t ict_utf16_to_game;
+ 
+  std::string GameCode;
+ 
+diff --git a/src/drivers/opengl.cpp b/src/drivers/opengl.cpp
+index 379e009..ba01c5b 100644
+--- a/src/drivers/opengl.cpp
++++ b/src/drivers/opengl.cpp
+@@ -587,7 +587,7 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
+  {
+  const char *extensions;
+  const char *vendor;
+- const char *renderer;
++ const char *glrenderer;
+  const char *version;
+  uint32 version_h;
+ 
+@@ -660,7 +660,7 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
+  LFG(glReadPixels);
+ 
+  vendor = (const char *)p_glGetString(GL_VENDOR);
+- renderer = (const char *)p_glGetString(GL_RENDERER);
++ glrenderer = (const char *)p_glGetString(GL_RENDERER);
+  version = (const char *)p_glGetString(GL_VERSION);
+ 
+  {
+@@ -673,7 +673,7 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
+   //printf("%08x\n", version_h);
+  }
+ 
+- MDFN_printf(_("OpenGL Implementation: %s %s %s\n"), vendor, renderer, version);
++ MDFN_printf(_("OpenGL Implementation: %s %s %s\n"), vendor, glrenderer, version);
+ 
+  extensions = (const char*)p_glGetString(GL_EXTENSIONS);
+ 
+diff --git a/src/drivers/overlay.cpp b/src/drivers/overlay.cpp
+index 207926f..62582cc 100644
+--- a/src/drivers/overlay.cpp
++++ b/src/drivers/overlay.cpp
+@@ -22,17 +22,17 @@
+ #include "nnx.h"
+ #include <math.h>
+ 
+-static SDL_Overlay *ov = NULL;
+-
++static SDL_Texture *ov = NULL;
+ 
+ void OV_Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Rect *original_src_rect,
+-       const SDL_Rect *dest_rect, SDL_Surface *dest_surface, int softscale, int scanlines, int rotated)
++       const SDL_Rect *dest_rect, int softscale, int scanlines, int rotated)
+ {
+  const uint32 spitch32 = src_surface->pitchinpix;
+- SDL_Rect drect = *dest_rect;
+  uint16 *dpixels;
+  uint32 dpitch16;
+  int32 need_w, need_h;
++ int32 ov_w=0;
++ int32 ov_h=0;
+ 
+  if(softscale < 1)
+   softscale = 1;
+@@ -53,31 +53,39 @@ void OV_Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Re
+ 
+  need_w = (need_w + 1) & ~1;
+ 
+- if(!ov || ov->w != need_w || ov->h != need_h)
++ if(ov) {
++    SDL_QueryTexture(ov, NULL, NULL, &ov_w, &ov_h);
++ }
++
++ if(!ov || ov_w != need_w || ov_h != need_h)
+  {
+   if(ov)
+   {
+-   SDL_FreeYUVOverlay(ov);
++   SDL_DestroyTexture(ov);
+    ov = NULL;
+   }
+-  if(!(ov = SDL_CreateYUVOverlay(need_w, need_h, SDL_YUY2_OVERLAY, dest_surface)))
++  if(!(ov = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_YUY2, SDL_TEXTUREACCESS_STREAMING, need_w, need_h)))
+   {
+    puts("Overlay creation failure");
+    return;
+   }
+-  printf("Overlay Created: %d %d %d\n", ov->hw_overlay, ov->w, ov->h);
++  SDL_QueryTexture(ov, NULL, NULL, &ov_w, &ov_h);
++  printf("Overlay Created: %d %d\n", ov_w, ov_h);
+  }
+ 
+- if(SDL_LockYUVOverlay(ov) != 0)
++ void* pixels;
++ int pitch;
++ if(SDL_LockTexture(ov, NULL, &pixels, &pitch) != 0)
+  {
+   puts("Lock failure");
+   return;
+  }
+- dpixels = (uint16 *)ov->pixels[0];
+ 
+- assert(!(ov->pitches[0] & 1));
++ dpixels = (uint16 *)pixels;
++
++ assert(!(pitch & 1));
+ 
+- dpitch16 = ov->pitches[0] >> 1;
++ dpitch16 = pitch >> 1;
+ 
+  if(rotated == MDFN_ROTATE90)
+  {
+@@ -286,19 +294,21 @@ void OV_Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Re
+    }
+   } // End else to softscale
+  }
+- SDL_UnlockYUVOverlay(ov);
++ SDL_UnlockTexture(ov);
+ 
+- if(SDL_DisplayYUVOverlay(ov, &drect) != 0)
++ if(SDL_UpdateTexture(ov, NULL, dpixels, pitch) != 0)
+  {
+   puts("Blit error");
+  }
++ SDL_RenderCopy(renderer, ov, NULL, dest_rect);
++ SDL_RenderPresent(renderer);
+ }
+ 
+ void OV_Kill(void)
+ {
+  if(ov)
+  {
+-  SDL_FreeYUVOverlay(ov);
++  SDL_DestroyTexture(ov);
+   ov = NULL;
+  }
+ }
+diff --git a/src/drivers/overlay.h b/src/drivers/overlay.h
+index 7c5f53d..d4d04f4 100644
+--- a/src/drivers/overlay.h
++++ b/src/drivers/overlay.h
+@@ -2,7 +2,7 @@
+ #define __MDFN_DRIVERS_OVERLAY_H
+ 
+ void OV_Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Rect *original_src_rect,
+-        const SDL_Rect *dest_rect, SDL_Surface *dest_surface, int softscale, int scanlines, int rotated);
++        const SDL_Rect *dest_rect, int softscale, int scanlines, int rotated);
+ 
+ void OV_Kill(void);
+ 
+diff --git a/src/drivers/prompt.cpp b/src/drivers/prompt.cpp
+index 43bea5b..afd1576 100644
+--- a/src/drivers/prompt.cpp
++++ b/src/drivers/prompt.cpp
+@@ -25,6 +25,7 @@ HappyPrompt::HappyPrompt(void)
+         PromptText = "";
+        kb_buffer.clear();
+         kb_cursor_pos = 0;
++        firstText = true;
+ }
+ 
+ HappyPrompt::HappyPrompt(const std::string &ptext, const std::string &zestring)
+@@ -32,6 +33,7 @@ HappyPrompt::HappyPrompt(const std::string &ptext, const std::string &zestring)
+         PromptText = "";
+         kb_buffer.clear();
+         kb_cursor_pos = 0;
++        firstText = true;
+        SetText(ptext);
+        SetKBB(zestring);
+ }
+@@ -197,13 +199,15 @@ void HappyPrompt::Event(const SDL_Event *event)
+                  kb_buffer.erase(kb_buffer.begin() + kb_cursor_pos, kb_buffer.begin() + kb_cursor_pos + 1);
+                 }
+                 break;
+-          default:
+-               if(event->key.keysym.unicode)
+-               {
+-                kb_buffer.insert(kb_buffer.begin() + kb_cursor_pos, event->key.keysym.unicode);
+-                kb_cursor_pos++;
+-               }
+-               break;
+   }
+  }
++ if(event->type == SDL_TEXTINPUT) {
++   //Ignore the first textinput event as it contains the keypress that opened the prompt
++   if(firstText) {
++     firstText = false;
++   } else {
++     kb_buffer.insert(kb_buffer.begin() + kb_cursor_pos, event->text.text[0]);
++     kb_cursor_pos++;
++   }
++ }
+ }
+diff --git a/src/drivers/prompt.h b/src/drivers/prompt.h
+index 4e66957..353f4ce 100644
+--- a/src/drivers/prompt.h
++++ b/src/drivers/prompt.h
+@@ -25,6 +25,7 @@ class HappyPrompt
+ 
+        std::vector<uint32> kb_buffer;
+        unsigned int kb_cursor_pos;
++        bool firstText;
+ };
+ 
+ #endif
+diff --git a/src/drivers/thread_sdl.cpp b/src/drivers/thread_sdl.cpp
+index de4920a..6d5ae98 100644
+--- a/src/drivers/thread_sdl.cpp
++++ b/src/drivers/thread_sdl.cpp
+@@ -19,7 +19,7 @@
+ 
+ MDFN_Thread *MDFND_CreateThread(int (*fn)(void *), void *data)
+ {
+- return (MDFN_Thread*)SDL_CreateThread(fn, data);
++ return (MDFN_Thread*)SDL_CreateThread(fn, NULL, data);
+ }
+ 
+ void MDFND_WaitThread(MDFN_Thread *thread, int *status)
+diff --git a/src/drivers/video.cpp b/src/drivers/video.cpp
+index 901a916..c3cef24 100644
+--- a/src/drivers/video.cpp
++++ b/src/drivers/video.cpp
+@@ -107,11 +107,16 @@ static MDFNGI *VideoGI;
+ 
+ static int best_xres = 0, best_yres = 0;
+ 
+-static int cur_xres, cur_yres, cur_flags;
++static int window_w, window_h, cur_window_flags;
+ 
+ static ScalerDefinition *CurrentScaler = NULL;
+ 
+ static SDL_Surface *screen = NULL;
++static SDL_Texture *texture = NULL;
++SDL_Window *window = NULL;
++static SDL_GLContext glcontext = NULL;
++SDL_Renderer *renderer = NULL;
++static Uint32 renderer_flags;
+ static OpenGL_Blitter *ogl_blitter = NULL;
+ static SDL_Surface *IconSurface=NULL;
+ 
+@@ -158,11 +163,11 @@ static void ClearBackBuffer(void)
+   //
+   // We'll do an icky #ifdef kludge instead for now.
+ #ifdef WIN32
+-  if(screen->flags & SDL_HWSURFACE)
++  if(renderer_flags & SDL_RENDERER_ACCELERATED)
+   {
+    if(SDL_MUSTLOCK(screen))
+     SDL_LockSurface(screen);
+-   memset(screen->pixels, 0, screen->pitch * screen->h);
++   memset(screen->pixels, 0, screen->pitch * window_h);
+    if(SDL_MUSTLOCK(screen))
+     SDL_UnlockSurface(screen);
+   }
+@@ -220,9 +225,29 @@ void KillVideo(void)
+ 
+  screen = NULL;
+  VideoGI = NULL;
+- cur_xres = 0;
+- cur_yres = 0;
+- cur_flags = 0;
++ window_w = 0;
++ window_h = 0;
++ cur_window_flags = 0;
++ renderer_flags = 0;
++
++ if(renderer != NULL) {
++    SDL_DestroyRenderer(renderer);
++    renderer = NULL;
++ }
++
++ if(window != NULL) {
++    SDL_DestroyWindow(window);
++    window = NULL;
++ }
++
++ if(glcontext != NULL) {
++    SDL_GL_DeleteContext(glcontext);
++ }
++
++ if(texture != NULL) {
++    SDL_DestroyTexture(texture);
++    texture = NULL;
++ }
+ }
+ 
+ static void GenerateDestRect(void)
+@@ -244,8 +269,8 @@ static void GenerateDestRect(void)
+ 
+   if (_video.stretch == 2 || _video.stretch == 3 || _video.stretch == 4)       // Aspect-preserve stretch
+   {
+-   exs = (double)cur_xres / nom_width;
+-   eys = (double)cur_yres / nom_height;
++   exs = (double)window_w / nom_width;
++   eys = (double)window_h / nom_height;
+ 
+    if(_video.stretch == 3 || _video.stretch == 4)      // Round down to nearest int.
+    {
+@@ -297,32 +322,32 @@ static void GenerateDestRect(void)
+    screen_dest_rect.h = (int)(eys*nom_height + 0.5); // +0.5 for rounding
+ 
+    // Centering:
+-   int nx = (int)((cur_xres - screen_dest_rect.w) / 2);
++   int nx = (int)((window_w - screen_dest_rect.w) / 2);
+    if(nx < 0) nx = 0;
+    screen_dest_rect.x = nx;
+ 
+-   int ny = (int)((cur_yres - screen_dest_rect.h) / 2);
++   int ny = (int)((window_h - screen_dest_rect.h) / 2);
+    if(ny < 0) ny = 0;
+    screen_dest_rect.y = ny;
+   }
+   else         // Full-stretch
+   {
+    screen_dest_rect.x = 0;
+-   screen_dest_rect.w = cur_xres;
++   screen_dest_rect.w = window_w;
+ 
+    screen_dest_rect.y = 0;
+-   screen_dest_rect.h = cur_yres;
++   screen_dest_rect.h = window_h;
+ 
+-   exs = (double)cur_xres / nom_width;
+-   eys = (double)cur_yres / nom_height;
++   exs = (double)window_w / nom_width;
++   eys = (double)window_h / nom_height;
+   }
+  }
+  else
+  {
+   if(VideoGI->rotated)
+   {
+-   int32 ny = (int)((cur_yres - VideoGI->nominal_width * exs) / 2);
+-   int32 nx = (int)((cur_xres - VideoGI->nominal_height * eys) / 2);
++   int32 ny = (int)((window_h - VideoGI->nominal_width * exs) / 2);
++   int32 nx = (int)((window_w - VideoGI->nominal_height * eys) / 2);
+ 
+    //if(ny < 0) ny = 0;
+    //if(nx < 0) nx = 0;
+@@ -334,8 +359,8 @@ static void GenerateDestRect(void)
+   }
+   else
+   {
+-   int nx = (int)((cur_xres - VideoGI->nominal_width * exs) / 2);
+-   int ny = (int)((cur_yres - VideoGI->nominal_height * eys) / 2);
++   int nx = (int)((window_w - VideoGI->nominal_width * exs) / 2);
++   int ny = (int)((window_h - VideoGI->nominal_height * eys) / 2);
+ 
+    // Don't check to see if the coordinates go off screen here, offscreen coordinates are valid(though weird that the user would want them...)
+    // in OpenGL mode, and are clipped to valid coordinates in SDL blit mode code.
+@@ -424,8 +449,8 @@ static uint32 real_rs, real_gs, real_bs, real_as;
+ 
+ int InitVideo(MDFNGI *gi)
+ {
+- const SDL_VideoInfo *vinf;
+- int flags = 0; //SDL_RESIZABLE;
++ SDL_DisplayMode mode;
++ int window_flags = 0; //SDL_RESIZABLE;
+  int desbpp;
+ 
+  VideoGI = gi;
+@@ -473,8 +498,6 @@ int InitVideo(MDFNGI *gi)
+    IconSurface=SDL_CreateRGBSurfaceFrom((void *)mednafen_playicon128.pixel_data,128,128,32,128*4,0xFF000000,0xFF0000,0xFF00,0xFF);
+    #endif
+   #endif
+-
+-  SDL_WM_SetIcon(IconSurface, 0);
+  }
+ 
+  if(!getenv("__GL_SYNC_TO_VBLANK") || weset_glstvb)
+@@ -526,12 +549,16 @@ int InitVideo(MDFNGI *gi)
+ 
+  CurrentScaler = _video.special ? &Scalers[_video.special - 1] : NULL;
+ 
+- vinf=SDL_GetVideoInfo();
++ //FIXME only for single screen :/
++ if(SDL_GetDesktopDisplayMode(0, &mode) != 0) {
++    printf("could not get display mode info\n");
++    return 0;
++ }
+ 
+  if(!best_xres)
+  {
+-  best_xres = vinf->current_w;
+-  best_yres = vinf->current_h;
++  best_xres = mode.w;
++  best_yres = mode.h;
+ 
+   if(!best_xres || !best_yres)
+   {
+@@ -540,12 +567,8 @@ int InitVideo(MDFNGI *gi)
+   }
+  }
+ 
+-
+- if(vinf->hw_available)
+-  flags |= SDL_HWSURFACE | SDL_DOUBLEBUF;
+-
+  if(_fullscreen)
+-  flags |= SDL_FULLSCREEN;
++  window_flags |= SDL_WINDOW_FULLSCREEN; //FIXME Maybe use fullscreen desktop?
+ 
+  vdriver = MDFN_GetSettingI("video.driver");
+ 
+@@ -569,21 +592,19 @@ int InitVideo(MDFNGI *gi)
+ 
+  if(vdriver == VDRIVER_OPENGL)
+  {
+-  flags |= SDL_OPENGL;
++  window_flags |= SDL_WINDOW_OPENGL;
+ 
+   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1 );
+ 
+-  #if SDL_VERSION_ATLEAST(1, 2, 10)
+-  SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, MDFN_GetSettingB("video.glvsync"));
+-  #endif
++  SDL_GL_SetSwapInterval(MDFN_GetSettingB("video.glvsync"));
+  }
+  else if(vdriver == VDRIVER_SOFTSDL)
+  {
+-
++    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "");
+  }
+  else if(vdriver == VDRIVER_OVERLAY)
+  {
+-
++    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "");
+  }
+ 
+  exs = _fullscreen ? _video.xscalefs : _video.xscale;
+@@ -607,46 +628,132 @@ int InitVideo(MDFNGI *gi)
+   }
+  }
+ 
++ GenerateDestRect();
++
++ const char* title;
++
++ if(gi && gi->name)
++  title=(char *)gi->name;
++ else
++  title="Mednafen";
++
++  Uint32 rmask, gmask, bmask, amask;
++
++#if SDL_BYTEORDER == SDL_BIG_ENDIAN
++    rmask = 0xff000000;
++    gmask = 0x00ff0000;
++    bmask = 0x0000ff00;
++    amask = 0x000000ff;
++#else
++    rmask = 0x000000ff;
++    gmask = 0x0000ff00;
++    bmask = 0x00ff0000;
++    amask = 0xff000000;
++#endif
++
++ int newwidth = window_w;
++ int newheight = window_h;
++ int windowchanged = 0;
++
++ /*printf("window_w: %d window_h: %d\n", window_w, window_h);
++ printf("screen_dest_rect.w: %d screen_dest_rect.h: %d\n", screen_dest_rect.w, screen_dest_rect.h);*/
++
+  if(_fullscreen)
+  {
+-  if(!screen || cur_xres != _video.xres || cur_yres != _video.yres || cur_flags != flags || curbpp != desbpp)
++  if(!window || window_w != _video.xres || window_h != _video.yres || cur_window_flags != window_flags || curbpp != desbpp)
+   {
+-   if(!(screen = SDL_SetVideoMode(_video.xres ? _video.xres : best_xres, _video.yres ? _video.yres : best_yres, desbpp, flags)))
++    newwidth = _video.xres ? _video.xres : best_xres;
++    newheight = _video.yres ? _video.yres : best_yres;
++    windowchanged = 1;
++  }
++ } else {
++  if(!window || window_w != screen_dest_rect.w || window_h != screen_dest_rect.h || cur_window_flags != window_flags || curbpp != desbpp)
++  {
++    newwidth = screen_dest_rect.w;
++    newheight = screen_dest_rect.h;
++    windowchanged = 1;
++  }
++ }
++
++ if(windowchanged) {
++
++   if(!(window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, newwidth, newheight, window_flags)))
+    {
+     MDFND_PrintError(SDL_GetError());
+     MDFN_indent(-1);
+     return(0);
+    }
+-  }
+- }
+- else
+- {
+-  GenerateDestRect();
+-  if(!screen || cur_xres != screen_dest_rect.w || cur_yres != screen_dest_rect.h || cur_flags != flags || curbpp != desbpp)
+-  {
+-   if(!(screen = SDL_SetVideoMode(screen_dest_rect.w, screen_dest_rect.h, desbpp, flags)))
++
++   SDL_SetWindowIcon(window, IconSurface);
++
++   /*const char* viddriver = SDL_GetCurrentVideoDriver();
++
++   printf("Video Driver: %s\n", viddriver ? viddriver : "null");*/
++
++   if(vdriver == VDRIVER_OPENGL) {
++    if(!(glcontext = SDL_GL_CreateContext(window))) {
++     MDFND_PrintError(SDL_GetError());
++     MDFN_indent(-1);
++     return(0);
++    }
++   }
++
++   if(!(screen = SDL_CreateRGBSurface(0, newwidth, newheight, desbpp, rmask, gmask, bmask, amask)))
+    {
+     MDFND_PrintError(SDL_GetError());
+     MDFN_indent(-1);
+     return(0);
+    }
+-  }
++
++   if(vdriver != VDRIVER_OPENGL) {
++       if(!(renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED)))
++       {
++        MDFND_PrintError(SDL_GetError());
++        MDFN_indent(-1);
++        return(0);
++       }
++
++       SDL_RendererInfo rinfo;
++
++       if(SDL_GetRendererInfo(renderer, &rinfo) < 0) {
++        printf("Could not get renderer info: %s\n", SDL_GetError());
++       } else {
++        renderer_flags = rinfo.flags;
++        /*printf("Renderer name: %s\n", rinfo.name);
++        printf("Renderer flags: %x\n", rinfo.flags);
++        printf("Renderer Number of texture formats: %d\n", rinfo.num_texture_formats);
++        for(uint i=0;i < rinfo.num_texture_formats;i++) {
++            printf("Renderer Supported texture format %d -- %s\n", i, SDL_GetPixelFormatName(rinfo.texture_formats[i]));
++        }
++        printf("Renderer maxtexture width: %d\n", rinfo.max_texture_width);
++        printf("Renderer maxtexture height: %d\n", rinfo.max_texture_height);*/
++       }
++
++       if(!(texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, newwidth, newheight)))
++       {
++        MDFND_PrintError(SDL_GetError());
++        MDFN_indent(-1);
++        return(0);
++       }
++   }
+  }
+ 
+- cur_xres = screen->w;
+- cur_yres = screen->h;
+- cur_flags = flags;
++ SDL_GetWindowSize(window, &window_w, &window_h);
++ cur_window_flags = window_flags;
+  curbpp = screen->format->BitsPerPixel;
+ 
+- // Kludgey, we need to clean this up(vdriver vs cur_flags and whatnot).
+- if(vdriver != VDRIVER_OVERLAY)
+-  vdriver = (cur_flags & SDL_OPENGL) ? VDRIVER_OPENGL : VDRIVER_SOFTSDL;
++ // Kludgey, we need to clean this up(vdriver vs cur_window_flags and whatnot).
++ if(vdriver != VDRIVER_OVERLAY) {
++  if(!(cur_window_flags & SDL_WINDOW_OPENGL)) {
++    vdriver = VDRIVER_SOFTSDL;
++  }
++ }
+ 
+  GenerateDestRect();
+ 
+- MDFN_printf(_("Video Driver: %s\n"), (cur_flags & SDL_OPENGL) ? _("OpenGL") : (vdriver == VDRIVER_OVERLAY ? _("Overlay") :_("Software SDL") ) );
++ MDFN_printf(_("Video Driver: %s\n"), (cur_window_flags & SDL_WINDOW_OPENGL) ? _("OpenGL") : (vdriver == VDRIVER_OVERLAY ? _("Overlay") :_("Software SDL") ) );
+ 
+- MDFN_printf(_("Video Mode: %d x %d x %d bpp\n"),screen->w,screen->h,screen->format->BitsPerPixel);
++ MDFN_printf(_("Video Mode: %d x %d x %d bpp\n"),window_w,window_h,curbpp);
+  if(curbpp!=16 && curbpp!=24 && curbpp!=32)
+  {
+   MDFN_printf(_("Sorry, %dbpp modes are not supported by Mednafen.  Supported bit depths are 16bpp, 24bpp, and 32bpp.\n"),curbpp);
+@@ -657,7 +764,7 @@ int InitVideo(MDFNGI *gi)
+ 
+  //MDFN_printf(_("OpenGL: %s\n"), (cur_flags & SDL_OPENGL) ? _("Yes") : _("No"));
+ 
+- if(cur_flags & SDL_OPENGL)
++ if(cur_window_flags & SDL_WINDOW_OPENGL)
+  {
+   MDFN_indent(1);
+   MDFN_printf(_("Pixel shader: %s\n"), MDFN_GetSettingS(std::string(sn + "." + std::string("pixshader")).c_str()).c_str());
+@@ -673,24 +780,20 @@ int InitVideo(MDFNGI *gi)
+   MDFN_printf(_("Scanlines: %d%% opacity%s\n"), abs(_video.scanlines), (_video.scanlines < 0) ? _(" (with interlace field obscure)") : "");
+ 
+  MDFN_printf(_("Destination Rectangle: X=%d, Y=%d, W=%d, H=%d\n"), screen_dest_rect.x, screen_dest_rect.y, screen_dest_rect.w, screen_dest_rect.h);
+- if(screen_dest_rect.x < 0 || screen_dest_rect.y < 0 || (screen_dest_rect.x + screen_dest_rect.w) > screen->w || (screen_dest_rect.y + screen_dest_rect.h) > screen->h)
++ if(screen_dest_rect.x < 0 || screen_dest_rect.y < 0 || (screen_dest_rect.x + screen_dest_rect.w) > window_w || (screen_dest_rect.y + screen_dest_rect.h) > window_h)
+  {
+   MDFN_indent(1);
+   MDFN_printf(_("Warning:  Destination rectangle exceeds screen dimensions.  This is ok if you really do want the clipping...\n"));
+   MDFN_indent(-1);
+  }
+- if(gi && gi->name)
+-  SDL_WM_SetCaption((char *)gi->name,(char *)gi->name);
+- else
+-  SDL_WM_SetCaption("Mednafen","Mednafen");
+ 
+  int rs, gs, bs, as;
+ 
+- if(cur_flags & SDL_OPENGL)
++ if(cur_window_flags & SDL_WINDOW_OPENGL)
+  {
+   try
+   {
+-   ogl_blitter = new OpenGL_Blitter(_video.scanlines, _video.pixshader, screen->w, screen->h, &rs, &gs, &bs, &as);
++   ogl_blitter = new OpenGL_Blitter(_video.scanlines, _video.pixshader, window_w, window_h, &rs, &gs, &bs, &as);
+   }
+   catch(std::exception &e)
+   {
+@@ -714,7 +817,7 @@ int InitVideo(MDFNGI *gi)
+  //printf("%d %d %d %d\n", rs, gs, bs, as);
+ 
+  MDFN_indent(-1);
+- SDL_ShowCursor(0);
++ SDL_ShowCursor(SDL_DISABLE);
+ 
+  real_rs = rs;
+  real_gs = gs;
+@@ -741,9 +844,9 @@ int InitVideo(MDFNGI *gi)
+ #endif
+  }
+ 
+- NetSurface = new MDFN_Surface(NULL, screen->w, 18 * 5, screen->w, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
++ NetSurface = new MDFN_Surface(NULL, window_w, 18 * 5, window_w, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
+ 
+- NetRect.w = screen->w;
++ NetRect.w = window_w;
+  NetRect.h = 18 * 5;
+  NetRect.x = 0;
+  NetRect.y = 0;
+@@ -753,20 +856,20 @@ int InitVideo(MDFNGI *gi)
+   int xmu = 1;
+   int ymu = 1;
+ 
+-  if(screen->w >= 768)
+-   xmu = screen->w / 384;
+-  if(screen->h >= 576)
+-   ymu = screen->h / 288;
++  if(window_w >= 768)
++   xmu = window_w / 384;
++  if(window_h >= 576)
++   ymu = window_h / 288;
+ 
+   SMRect.h = 18 + 2;
+   SMRect.x = 0;
+   SMRect.y = 0;
+-  SMRect.w = screen->w;
++  SMRect.w = window_w;
+ 
+   SMDRect.w = SMRect.w * xmu;
+   SMDRect.h = SMRect.h * ymu;
+-  SMDRect.x = (screen->w - SMDRect.w) / 2;
+-  SMDRect.y = screen->h - SMDRect.h;
++  SMDRect.x = (window_w - SMDRect.w) / 2;
++  SMDRect.y = window_h - SMDRect.h;
+ 
+   if(SMDRect.x < 0)
+   {
+@@ -804,13 +907,17 @@ int InitVideo(MDFNGI *gi)
+  {
+   ClearBackBuffer();
+ 
+-  if(cur_flags & SDL_OPENGL)
++  if(cur_window_flags & SDL_WINDOW_OPENGL)
+   {
+-   SDL_GL_SwapBuffers();
++   SDL_GL_SwapWindow(window);
+    //ogl_blitter->HardSync();
+   }
+-  else
+-   SDL_Flip(screen);
++  else {
++   SDL_UpdateTexture(texture, NULL, screen->pixels, screen->pitch);
++   SDL_RenderClear(renderer);
++   SDL_RenderCopy(renderer, texture, NULL, NULL);
++   SDL_RenderPresent(renderer);
++  }
+  }
+ 
+  MarkNeedBBClear();
+@@ -1107,7 +1214,7 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
+       tr.w = dest_rect.w;
+       tr.h = dest_rect.h;
+ 
+-      OV_Blit(bah_surface, &boohoo_rect, &eff_src_rect, &tr, screen, 0, _video.scanlines, CurGame->rotated);
++      OV_Blit(bah_surface, &boohoo_rect, &eff_src_rect, &tr, 0, _video.scanlines, CurGame->rotated);
+      }
+      else
+      {
+@@ -1133,7 +1240,7 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
+       tr.w = dest_rect.w;
+       tr.h = dest_rect.h;
+ 
+-      OV_Blit(eff_source_surface, &eff_src_rect, &eff_src_rect, &tr, screen, overlay_softscale, _video.scanlines, CurGame->rotated);
++      OV_Blit(eff_source_surface, &eff_src_rect, &eff_src_rect, &tr, overlay_softscale, _video.scanlines, CurGame->rotated);
+      }
+      else
+      {
+@@ -1313,8 +1420,8 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
+    if(sr.y < 0) { sr.h += sr.y; sr.y = 0; }
+    if(sr.w < 0) sr.w = 0;
+    if(sr.h < 0) sr.h = 0;
+-   if(sr.w > screen->w) sr.w = screen->w;
+-   if(sr.h > screen->h) sr.h = screen->h;
++   if(sr.w > window_w) sr.w = window_w;
++   if(sr.h > window_h) sr.h = window_h;
+ 
+    ib = new MDFN_Surface(NULL, sr.w, sr.h, sr.w, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
+ 
+@@ -1350,15 +1457,15 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
+  }
+ 
+ 
+- Debugger_MT_DrawToScreen(MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as), screen->w, screen->h);
++ Debugger_MT_DrawToScreen(MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as), window_w, window_h);
+ 
+ #if 0
+  if(CKGUI_IsActive())
+  {
+   if(!CKGUISurface)
+   {
+-   CKGUIRect.w = screen->w;
+-   CKGUIRect.h = screen->h;
++   CKGUIRect.w = window_w;
++   CKGUIRect.h = window_h;
+ 
+    CKGUISurface = SDL_CreateRGBSurface(SDL_SWSURFACE | SDL_SRCALPHA, CKGUIRect.w, CKGUIRect.h, 32, 0xFF << real_rs, 0xFF << real_gs, 0xFF << real_bs, 0xFF << real_as);
+    SDL_SetColorKey(CKGUISurface, SDL_SRCCOLORKEY, 0);
+@@ -1379,8 +1486,8 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
+  {
+   if(!HelpSurface)
+   {
+-   HelpRect.w = std::min<int>(512, screen->w);
+-   HelpRect.h = std::min<int>(384, screen->h);
++   HelpRect.w = std::min<int>(512, window_w);
++   HelpRect.h = std::min<int>(384, window_h);
+ 
+    HelpSurface = new MDFN_Surface(NULL, 512, 384, 512, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
+ /*
+@@ -1393,11 +1500,11 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
+ 
+   MDFN_Rect zederect;
+ 
+-  zederect.w = HelpRect.w * (screen->w / HelpRect.w);
+-  zederect.h = HelpRect.h * (screen->h / HelpRect.h);
++  zederect.w = HelpRect.w * (window_w / HelpRect.w);
++  zederect.h = HelpRect.h * (window_h / HelpRect.h);
+ 
+-  zederect.x = (screen->w - zederect.w) / 2;
+-  zederect.y = (screen->h - zederect.h) / 2;
++  zederect.x = (window_w - zederect.w) / 2;
++  zederect.y = (window_h - zederect.h) / 2;
+ 
+   BlitRaw(HelpSurface, &HelpRect, &zederect, 0);
+  }
+@@ -1418,8 +1525,8 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
+ 
+   CheatRect.x = 0;
+   CheatRect.y = 0;
+-  CheatRect.w = screen->w;
+-  CheatRect.h = screen->h;
++  CheatRect.w = window_w;
++  CheatRect.h = window_h;
+ 
+   while((CheatRect.h >> crs) >= 1024 && (CheatRect.w >> crs) >= 1024)
+    crs++;
+@@ -1462,7 +1569,7 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
+    MDFN_Rect zederect;
+ 
+    zederect.x = 0;
+-   zederect.y = screen->h - NetRect.h;
++   zederect.y = window_h - NetRect.h;
+    zederect.w = NetRect.w;
+    zederect.h = NetRect.h;
+ 
+@@ -1481,7 +1588,7 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
+   // but that gets awfully complicated and prone to bugs when dealing with double/triple-buffered video...).
+   //
+   // std::max so we don't position it offscreen if the user has selected xscalefs or yscalefs values that are too large.
+-  if(!(cur_flags & SDL_OPENGL))
++  if(!(cur_window_flags & SDL_WINDOW_OPENGL))
+   {
+    fps_offsx = std::max<int32>(screen_dest_rect.x, 0);
+    fps_offsy = std::max<int32>(screen_dest_rect.y, 0);
+@@ -1489,15 +1596,19 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
+   FPS_DrawToScreen(screen, real_rs, real_gs, real_bs, real_as, fps_offsx, fps_offsy);
+  }
+ 
+- if(!(cur_flags & SDL_OPENGL))
++ if(!(cur_window_flags & SDL_WINDOW_OPENGL))
+  {
+-  if(!OverlayOK)
+-   SDL_Flip(screen);
++  if(!OverlayOK) {
++   SDL_UpdateTexture(texture, NULL, screen->pixels, screen->pitch);
++   SDL_RenderClear(renderer);
++   SDL_RenderCopy(renderer, texture, NULL, NULL);
++   SDL_RenderPresent(renderer);
++  }
+  }
+  else
+  {
+   PumpWrap();
+-  SDL_GL_SwapBuffers();
++  SDL_GL_SwapWindow(window);
+   //ogl_blitter->HardSync();
+  }
+ }
+@@ -1547,3 +1658,8 @@ int32 PtoV_J(const int32 inv, const bool axis, const bool scr_scale)
+   return (int32)floor(0.5 + ((((((int64)inv * prescale) + 0x8000) >> 16) + offs) * postscale));
+  }
+ }
++
++void Video_GetSize(int* width, int* height) {
++    *width = window_w;
++    *height = window_h;
++}
+diff --git a/src/drivers/video.h b/src/drivers/video.h
+index e526996..bbcfef0 100644
+--- a/src/drivers/video.h
++++ b/src/drivers/video.h
+@@ -77,6 +77,8 @@ bool Video_ScreenBlitReady(void);
+ // Called from the main thread.
+ void Video_BlitToScreen(void);
+ 
++extern SDL_Renderer* renderer;
++extern SDL_Window *window;
+ 
+ class SDL_to_MDFN_Surface_Wrapper : public MDFN_Surface
+ {

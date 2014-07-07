@@ -127,20 +127,18 @@ int MDFNConsole::Event(const SDL_Event *event)
 	                 kb_buffer.erase(kb_buffer.begin() + kb_cursor_pos, kb_buffer.begin() + kb_cursor_pos + 1);
 	                }
 	                break;
-                     default:
-		     if(event->key.keysym.unicode >= 0x20)
-                     {
-                      uint8 utf8_buffer[8];
-                      UTF8 *dest_ptr = utf8_buffer;
-                      memset(utf8_buffer, 0, sizeof(utf8_buffer));
-                      const UTF16 *start_utf16 = &event->key.keysym.unicode;
-                      ConvertUTF16toUTF8(&start_utf16, (UTF16 *)&event->key.keysym.unicode + 1, &dest_ptr, &utf8_buffer[8], lenientConversion);
-	              kb_buffer.insert(kb_buffer.begin() + kb_cursor_pos, std::string((char *)utf8_buffer));
-	              kb_cursor_pos++;
-                     }
-                     break;
                     }
                     break;
+    case SDL_TEXTINPUT:
+     {
+      uint8 utf8_buffer[8];
+      UTF8 *dest_ptr = utf8_buffer;
+      memset(utf8_buffer, 0, sizeof(utf8_buffer));
+      strncpy((char*)utf8_buffer, event->text.text, sizeof(utf8_buffer));
+      kb_buffer.insert(kb_buffer.begin() + kb_cursor_pos, std::string((char *)utf8_buffer));
+      kb_cursor_pos++;
+     }
+    break;
   }
  return(1);
 }

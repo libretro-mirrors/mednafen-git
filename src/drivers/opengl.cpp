@@ -587,7 +587,7 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
  {
  const char *extensions;
  const char *vendor;
- const char *renderer;
+ const char *glrenderer;
  const char *version;
  uint32 version_h;
 
@@ -660,7 +660,7 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
  LFG(glReadPixels);
 
  vendor = (const char *)p_glGetString(GL_VENDOR);
- renderer = (const char *)p_glGetString(GL_RENDERER);
+ glrenderer = (const char *)p_glGetString(GL_RENDERER);
  version = (const char *)p_glGetString(GL_VERSION);
 
  {
@@ -673,7 +673,7 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
   //printf("%08x\n", version_h);
  }
 
- MDFN_printf(_("OpenGL Implementation: %s %s %s\n"), vendor, renderer, version);
+ MDFN_printf(_("OpenGL Implementation: %s %s %s\n"), vendor, glrenderer, version);
 
  extensions = (const char*)p_glGetString(GL_EXTENSIONS);
 

@@ -25,6 +25,7 @@ class HappyPrompt
 
 	std::vector<uint32> kb_buffer;
 	unsigned int kb_cursor_pos;
+        bool firstText;
 };
 
 #endif
