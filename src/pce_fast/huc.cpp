@@ -385,7 +385,12 @@ int HuC_StateAction(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-void HuC_Close(void)
+void HuC_Kill(void)
+{
+ Cleanup();
+}
+
+void HuC_SaveNV(void)
 {
  if(IsPopulous)
  {
@@ -395,8 +400,6 @@ void HuC_Close(void)
  {
   MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 0, SaveRAM, 2048);
  }
-
- Cleanup();
 }
 
 void HuC_Power(void)

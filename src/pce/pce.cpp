@@ -769,7 +769,7 @@ static void Cleanup(void)
   HES_Close();
  else
  {
-  HuC_Close();
+  HuC_Kill();
  }
 
  if(vce)
@@ -820,6 +820,7 @@ static void Cleanup(void)
 
 static void CloseGame(void)
 {
+ HuC_SaveNV();
  Cleanup();
 }
 
