@@ -124,6 +124,12 @@ void do_flash_read(uint8 *flashdata)
 
 	memcpy(&header, flashdata, sizeof(header));
 
+        if(header.block_count > FLASH_MAX_BLOCKS)
+        {
+         MDFN_PrintError("FLASH header block_count(%u) > FLASH_MAX_BLOCKS!", header.block_count);
+	 return;
+        }
+
 	//Read header
 	block_count = header.block_count;
 	fileptr = flashdata + sizeof(FlashFileHeader);
@@ -179,6 +185,12 @@ void flash_read(void)
                 return;
         }
 
+        if(header.total_file_length < sizeof(FlashFileHeader) || header.total_file_length > 16384 * 1024)
+        {
+                MDFN_PrintError("FLASH header total_file_length is bad!");
+		return;
+        }
+
         //Read the flash data
         flashdata = (uint8*)malloc(header.total_file_length * sizeof(uint8));
         system_io_flash_read(flashdata, header.total_file_length);
@@ -219,10 +231,18 @@ void flash_write(uint32 start_address, uint16 length)
 		}
 	}
 
-	// New block needs to be added
-	blocks[block_count].start_address = start_address;
-	blocks[block_count].data_length = length;
-	block_count++;
+	if(block_count >= FLASH_MAX_BLOCKS)
+	{
+	 MDFN_PrintError("[FLASH] Block list overflow!");
+	 return;
+	}
+	else
+	{
+	 // New block needs to be added
+	 blocks[block_count].start_address = start_address;
+	 blocks[block_count].data_length = length;
+	 block_count++;
+	}
 }
 
 static uint8 *make_flash_commit(int32 *length)
@@ -314,7 +334,12 @@ int FLASH_StateAction(StateMem *sm, int load, int data_only)
  }
 
  if(load)
+ {
+  if(FlashLength > 16384 * 1024)
+   FlashLength = 16384 * 1024;
+
   flashdata = (uint8 *)malloc(FlashLength);
+ }
 
  SFORMAT FLSH_StateRegs[] =
  {

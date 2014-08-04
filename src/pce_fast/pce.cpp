@@ -196,7 +196,7 @@ static void Cleanup(void)
   HES_Close();
  else
  {
-  HuC_Close();
+  HuC_Kill();
  }
 
  VDC_Close();
@@ -484,6 +484,7 @@ static void LoadCD(std::vector<CDIF *> *CDInterfaces)
 
 static void CloseGame(void)
 {
+ HuC_SaveNV();
  Cleanup();
 }
 

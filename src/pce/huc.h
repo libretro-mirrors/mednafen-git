@@ -14,7 +14,8 @@ typedef enum
 } SysCardType;
 
 void HuC_Load(const uint8 *data, uint32 len, uint32 crc32, bool DisableBRAM = false, SysCardType syscard = SYSCARD_NONE);
-void HuC_Close(void);
+void HuC_Kill(void);
+void HuC_SaveNV(void);
 
 void HuC_Update(int32 timestamp);
 void HuC_ResetTS(int32 ts_base);

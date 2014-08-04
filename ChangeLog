@@ -1,3 +1,13 @@
+-- 0.9.36.3: --
+
+August 3, 2014:
+	NGP: Fixed a potentially-exploitable overflow bug in the flash dirty block list code.
+
+	PCE, PCE_FAST: Fixed bug(from sloppy handling of errors) that caused battery-backed save game file destruction
+	if an error(e.g. missing CD BIOS, memory allocation failure, etc.) occurred during game load and initialization.
+
+	PSX: Fixed a bug that caused a crash when trying to use save states during PSF playback/PS-EXE execution.
+
 -- 0.9.36.2: --
 
 June 25, 2014:

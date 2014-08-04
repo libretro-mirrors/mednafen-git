@@ -194,9 +194,6 @@ void HuC_Load(const uint8 *data, uint32 len, uint32 crc32, bool DisableBRAM, Sys
  bool mcg_mapper = FALSE;
  bool UseBRAM = FALSE;
 
- //
- // Obvious, but anyway: catch exceptions and free any allocated memory here, otherwise when code higher up calls HuC_Close(), it might wipe out save game files.
- //
  try
  {
   if(len >= 8192 && !memcmp(data + 0x1FD0, "MCGENJIN", 8))
@@ -499,7 +496,7 @@ int HuC_StateAction(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-void HuC_Close(void)
+void HuC_SaveNV(void)
 {
  if(mcg)
  {
@@ -534,15 +531,16 @@ void HuC_Close(void)
   if(TsushinRAM)
   {
    MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 6, TsushinRAM, 32768);
-   MDFN_free(TsushinRAM);
-   TsushinRAM = NULL;
   }
  }
  else if(!BRAM_Disabled && IsBRAMUsed())
  {
   MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 0, SaveRAM, 2048);
  }
+}
 
+void HuC_Kill(void)
+{
  Cleanup();
 }
 
