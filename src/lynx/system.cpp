@@ -160,6 +160,7 @@ CSystem::~CSystem()
 
 void CSystem::Reset(void)
 {
+	mMikie->startTS -= gSystemCycleCount;
 	gSystemCycleCount=0;
 	gNextTimerEvent=0;
 	gCPUBootAddress=0;

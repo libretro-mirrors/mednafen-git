@@ -74,6 +74,21 @@ static uint8 (*cpu_readport)(uint32) = NULL;
 static void (*cpu_writeport)(uint32, uint8) = NULL;
 static uint8 (*cpu_readmem20)(uint32) = NULL;
 
+static INLINE uint8 PhysRead8(uint32 addr)
+{
+ return cpu_readmem20(addr);
+}
+
+static INLINE uint16 PhysRead16(uint32 addr)
+{
+ uint16 ret;
+
+ ret = cpu_readmem20(addr);
+ ret |= cpu_readmem20(addr + 1) << 8;
+
+ return ret;
+}
+
 /***************************************************************************/
 /* cpu state                                                               */
 /***************************************************************************/

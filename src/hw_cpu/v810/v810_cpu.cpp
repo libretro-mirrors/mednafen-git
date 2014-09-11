@@ -227,7 +227,13 @@ INLINE uint32 V810::RDCACHE(v810_timestamp_t &timestamp, uint32 addr)
    else
    {
     timestamp++;
-    Cache[CI].data[SBI] = MemRead16(timestamp, addr & ~0x3) | ((MemRead16(timestamp, (addr & ~0x3) | 0x2) << 16));
+
+    uint32 tmp;
+
+    tmp = MemRead16(timestamp, addr & ~0x3);
+    tmp |= MemRead16(timestamp, (addr & ~0x3) | 0x2) << 16;
+
+    Cache[CI].data[SBI] = tmp;
    }
    Cache[CI].data_valid[SBI] = TRUE;
   }
@@ -242,7 +248,13 @@ INLINE uint32 V810::RDCACHE(v810_timestamp_t &timestamp, uint32 addr)
   else
   {
    timestamp++;
-   Cache[CI].data[SBI] = MemRead16(timestamp, addr & ~0x3) | ((MemRead16(timestamp, (addr & ~0x3) | 0x2) << 16));
+
+   uint32 tmp;
+
+   tmp = MemRead16(timestamp, addr & ~0x3);
+   tmp |= MemRead16(timestamp, (addr & ~0x3) | 0x2) << 16;
+
+   Cache[CI].data[SBI] = tmp;
   }
   //Cache[CI].data[SBI] = MemRead32(timestamp, addr & ~0x3);
   Cache[CI].data_valid[SBI] = TRUE;

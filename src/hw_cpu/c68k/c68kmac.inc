@@ -169,9 +169,20 @@
 /* */
 /* */
 
+static inline u32 C68k_Read_Long(c68k_struc *cpu, u32 adr)
+{
+    u32 ret;
+
+    ret = cpu->Read_Word(adr) << 16;
+    ret |= cpu->Read_Word(adr + 2);
+
+    return ret;
+}
+
+
 #define FETCH_BYTE          ((u8)CPU->Read_Word(PC))
 #define FETCH_WORD          CPU->Read_Word(PC)
-#define FETCH_LONG          ((CPU->Read_Word(PC) << 16) | (CPU->Read_Word(PC + 2)))
+#define FETCH_LONG          C68k_Read_Long(CPU, PC)
 
 // FIXME?
 #define DECODE_EXT_WORD     \

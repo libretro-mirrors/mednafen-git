@@ -400,7 +400,7 @@ void sngSWI()
 {
 	cycles = 16;
 
-	printf("SWI: %02x\n", first & 0x7);
+	//printf("SWI: %02x\n", first & 0x7);
 	switch(first & 7)
 	{
 		//System Call

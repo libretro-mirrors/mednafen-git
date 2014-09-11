@@ -172,8 +172,14 @@ static uint32 MDFN_FASTCALL mem_rword(v810_timestamp_t &timestamp, uint32 A)
  }
  else
  {
+  uint32 ret;
+
   FXDBG("Warning:  mem_rword() called for 16-bit bus access: %08x", A);
-  return(mem_rhword(timestamp, A) | (mem_rhword(timestamp, A | 2) << 16));
+
+  ret = mem_rhword(timestamp, A);
+  ret |= mem_rhword(timestamp, A | 2) << 16;
+
+  return(ret);
  }
 
  FXDBG("Unknown word read: %08x", A);
