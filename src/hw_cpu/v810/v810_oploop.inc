@@ -638,7 +638,12 @@
 			}
 			else
 			{
-                         SetPREG(arg3, MemRead16(timestamp, tmp2) | (MemRead16(timestamp, tmp2 | 2) << 16));
+			 uint32 rv;
+
+			 rv = MemRead16(timestamp, tmp2);
+			 rv |= MemRead16(timestamp, tmp2 | 2) << 16;
+			
+                         SetPREG(arg3, rv);
 
                          if(lastop >= 0)
                          {
@@ -737,9 +742,14 @@
 	     else
 	     {
 	      uint32 eff_addr = (sign_16(arg1) + P_REG[arg2]) & 0xFFFFFFFC;
+	      uint32 rv;
 
 	      ADDCLOCK(5);
-              SetPREG(arg3, IORead16(timestamp, eff_addr) | ((IORead16(timestamp, eff_addr | 2) << 16)));
+
+	      rv = IORead16(timestamp, eff_addr);
+	      rv |= IORead16(timestamp, eff_addr | 2) << 16;
+
+              SetPREG(arg3, rv);
 	     }
 	     lastop = LASTOP_IN;
 	END_OP_SKIPLO();
@@ -968,7 +978,10 @@
 	     if(MemReadBus32[addr >> 24])
 	      tmp = MemRead32(timestamp, addr);
 	     else
-	      tmp = MemRead16(timestamp, addr) | (MemRead16(timestamp, addr | 2) << 16);
+	     {
+	      tmp = MemRead16(timestamp, addr);
+	      tmp |= MemRead16(timestamp, addr | 2) << 16;
+	     }
 
              compare_temp = P_REG[arg3] - tmp;
 
