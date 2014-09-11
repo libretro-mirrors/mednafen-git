@@ -361,6 +361,11 @@ uint8 NGPGFX_CLASS::read8(uint32 address)
 
 uint16 NGPGFX_CLASS::read16(uint32 address)
 {
- return(read8(address) | (read8(address + 1) << 8));
+ uint16 ret;
+
+ ret = read8(address);
+ ret |= read8(address + 1) << 8;
+
+ return(ret);
 }
 

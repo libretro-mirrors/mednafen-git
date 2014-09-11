@@ -92,7 +92,7 @@ static bool DTestButtonMouse(const ButtConfig &bc, const uint32 *MouseData)
  }
  else 
  {
-  if(MouseData[2] & (1 << SDL_BUTTON(bc.ButtonNum)))
+  if(MouseData[2] & (1U << bc.ButtonNum))
    return(true);
  }
  return(false);

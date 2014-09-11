@@ -151,14 +151,6 @@ void C68K_FASTCALL C68k_Reset_Dummy(void)
 
 }
 
-// Read / Write core functions
-///////////////////////////////
-
-static u32 C68k_Read_Long(c68k_struc *cpu, u32 adr)
-{
-    return (cpu->Read_Word(adr) << 16) | (cpu->Read_Word(adr + 2) & 0xFFFF);
-}
-
 // setting core functions
 //////////////////////////
 

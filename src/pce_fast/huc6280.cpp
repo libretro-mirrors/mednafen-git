@@ -108,10 +108,8 @@ uint8 *HuCPUFastMap[0x100];
 
 #ifdef HUC6280_CRAZY_VERSION
  #define RdAtPC() (*HU_PC)
- //#define RdAtAndIncPC_16() (HU_PC += 2, *(uint16 *)(HU_PC - 2))
 #else
  #define RdAtPC() RdOp(HU_PC)
- //#define RdAtAndIncPC_16() (RdOp(HU_PC++) | ((RdOp(HU_PC++) << 8)))
 #endif
 
 // If we change this definition, we'll need to also fix HuC6280_StealCycle() in huc6280.h
@@ -154,7 +152,12 @@ static INLINE uint8 RdMem(unsigned int A)
 
 static INLINE uint16 RdMem16(unsigned int A)
 {
- return(RdMem(A) | (RdMem(A + 1) << 8));
+ uint16 ret;
+
+ ret = RdMem(A);
+ ret |= RdMem(A + 1) << 8;
+
+ return(ret);
 }
 
 static INLINE void WrMem(unsigned int A, uint8 V)
