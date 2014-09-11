@@ -897,7 +897,7 @@ void CMikie::Poke(uint32 addr,uint8 data)
 			{
 				C6502_REGS regs;
 				mSystem.GetRegs(regs);
-				MDFN_printf("Runtime Alert - System Halted\nCMikie::Poke(SYSCTL1) - Lynx power down occured at PC=$%04x.\nResetting system.",regs.PC);
+				MDFN_printf("Runtime Alert - System Halted\nCMikie::Poke(SYSCTL1) - Lynx power down occured at PC=$%04x.\nResetting system.\n",regs.PC);
 				mSystem.Reset();
 				gSystemHalt=TRUE;
 			}
@@ -1795,24 +1795,24 @@ void CMikie::CombobulateSound(uint32 teatime)
                                 teatime >>= 2;
                                 for(x = 0; x < 4; x++){
                                    /// Assumption (seems there is no documentation for the Attenuation registers)
-                                   /// a) they are linear from $0 to $f
-                                   /// b) an attenuation of $0 is equal to channel OFF (bits in mSTEREO not set)
-                                   /// c) an attenuation of $f is equal to no attenuation (bits in PAN not set)
-                                   /// These assumptions can only checked with an oszilloscope...
+                                   /// a) they are linear from $0 to $f - checked!
+                                   /// b) an attenuation of $0 is equal to channel OFF (bits in mSTEREO not set) - checked!
+                                   /// c) an attenuation of $f is NOT equal to no attenuation (bits in PAN not set), $10 would be - checked!
+                                   /// These assumptions can only checked with an oszilloscope... - done
                                    /// the values stored in mSTEREO are bit-inverted ...
                                    /// mSTEREO was found to be set like that already (why?), but unused
-               
+
                                  if(mSTEREO & (0x10 << x))
                                  {
                                     if(mPAN & (0x10 << x))
-                                      cur_lsample += (mAUDIO_OUTPUT[x]*(mAUDIO_ATTEN[x]&0xF0))/(15*16);
+                                      cur_lsample += (mAUDIO_OUTPUT[x]*(mAUDIO_ATTEN[x]&0xF0))/(16*16); /// NOT /15*16 see remark above
                                     else
                                       cur_lsample += mAUDIO_OUTPUT[x];
                                  }
                                  if(mSTEREO & (0x01 << x))
                                  {
                                     if(mPAN & (0x01 << x))
-                                      cur_rsample += (mAUDIO_OUTPUT[x]*(mAUDIO_ATTEN[x]&0x0F))/15;
+                                      cur_rsample += (mAUDIO_OUTPUT[x]*(mAUDIO_ATTEN[x]&0x0F))/16; /// NOT /15 see remark above
                                     else
                                       cur_rsample += mAUDIO_OUTPUT[x];
                                  }

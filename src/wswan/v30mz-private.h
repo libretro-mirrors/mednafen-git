@@ -1,6 +1,3 @@
-#define cpu_readop cpu_readmem20	
-#define cpu_readop_arg cpu_readmem20	
-
 typedef enum { DS1, PS, SS, DS0 } SREGS;
 typedef enum { AW, CW, DW, BW, SP, BP, IX, IY } WREGS;
 
@@ -66,30 +63,30 @@ typedef enum { AH,AL,CH,CL,DH,DL,BH,BL,SPH,SPL,BPH,BPL,IXH,IXL,IYH,IYL } BREGS;
 
 #define DefaultBase(Seg) ((seg_prefix && (Seg==DS0 || Seg==SS)) ? prefix_base : I.sregs[Seg] << 4)
 
-#define GetMemB(Seg,Off) ((uint8)cpu_readmem20((DefaultBase(Seg)+(Off))))
-#define GetMemW(Seg,Off) ((uint16) cpu_readmem20((DefaultBase(Seg)+(Off))) + (cpu_readmem20((DefaultBase(Seg)+((Off)+1)))<<8) )
+#define GetMemB(Seg,Off) ((uint8)PhysRead8((DefaultBase(Seg)+(Off))))
+#define GetMemW(Seg,Off) ((uint16)PhysRead16((DefaultBase(Seg)+(Off))))
 
 #define PutMemB(Seg,Off,x) { cpu_writemem20((DefaultBase(Seg)+(Off)),(x)); }
 #define PutMemW(Seg,Off,x) { PutMemB(Seg,Off,(x)&0xff); PutMemB(Seg,(Off)+1,(uint8)((x)>>8)); }
 
 /* Todo:  Remove these later - plus readword could overflow */
-#define ReadByte(ea) ((uint8)cpu_readmem20((ea)))
-#define ReadWord(ea) (cpu_readmem20((ea))+(cpu_readmem20(((ea)+1))<<8))
+#define ReadByte(ea) ((uint8)PhysRead8((ea)))
+#define ReadWord(ea) (PhysRead16((ea)))
 #define WriteByte(ea,val) { cpu_writemem20((ea),val); }
 #define WriteWord(ea,val) { cpu_writemem20((ea),(uint8)(val)); cpu_writemem20(((ea)+1),(val)>>8); }
 
 #define read_port(port) cpu_readport(port)
 #define write_port(port,val) cpu_writeport(port,val)
 
-#define FETCH (cpu_readop_arg((I.sregs[PS]<<4)+I.pc++))
-#define FETCHOP (cpu_readop((I.sregs[PS]<<4)+I.pc++))
-#define FETCHuint16(var) { var=cpu_readop_arg((((I.sregs[PS]<<4)+I.pc)))+(cpu_readop_arg((((I.sregs[PS]<<4)+I.pc+1)))<<8); I.pc+=2; }
+#define FETCH (PhysRead8((I.sregs[PS]<<4)+I.pc++))
+#define FETCHOP (PhysRead8((I.sregs[PS]<<4)+I.pc++))
+#define FETCHuint16(var) { var=PhysRead16((((I.sregs[PS]<<4)+I.pc))); I.pc+=2; }
 #define PUSH(val) { I.regs.w[SP]-=2; WriteWord((((I.sregs[SS]<<4)+I.regs.w[SP])),val); }
 #define POP(var) { var = ReadWord((((I.sregs[SS]<<4)+I.regs.w[SP]))); I.regs.w[SP]+=2; }
-#define PEEK(addr) ((uint8)cpu_readop_arg(addr))
-#define PEEKOP(addr) ((uint8)cpu_readop(addr))
+#define PEEK(addr) ((uint8)PhysRead8(addr))
+#define PEEKOP(addr) ((uint8)PhysRead8(addr))
 
-#define GetModRM uint32 ModRM=cpu_readop_arg((I.sregs[PS]<<4)+I.pc++)
+#define GetModRM uint32 ModRM=PhysRead8((I.sregs[PS]<<4)+I.pc++)
 
 /* Cycle count macros:
 	CLK  - cycle count is the same on all processors

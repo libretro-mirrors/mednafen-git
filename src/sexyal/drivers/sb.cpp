@@ -831,7 +831,8 @@ SexyAL_device *SexyALI_DOS_SB_Open(const char *id, SexyAL_format *format, SexyAL
  // Get DSP version.
  //
  dsp_command(ds, 0xE1);
- ds->dsp_version = (dsp_read(ds) << 8) | (dsp_read(ds) << 0);
+ ds->dsp_version = dsp_read(ds) << 8;
+ ds->dsp_version |= dsp_read(ds) << 0;
 
  if(ds->dsp_version < 0x200)
  {

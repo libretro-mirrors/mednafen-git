@@ -783,7 +783,15 @@ void RAINBOW_DecodeBlock(bool arg_FirstDecode, bool Skip)
      icount--;
     } while(block_type != 0xF0 && block_type != 0xF1 && block_type != 0xF2 && block_type != 0xF3 && block_type != 0xF8 && block_type != 0xFF && icount > 0);
 
-    block_size = (int16)((KING_RB_Fetch() << 8) | (KING_RB_Fetch()));
+    {
+     uint16 tmp;
+     
+     tmp = KING_RB_Fetch() << 8;
+     tmp |= KING_RB_Fetch() << 0;
+
+     block_size = (int16)tmp;
+    }
+
     block_size -= 2;
     if(block_type == 0xFF && block_size <= 0)
      for(int i = 0; i < 128; i++,icount--) KING_RB_Fetch();

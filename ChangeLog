@@ -1,3 +1,18 @@
+-- 0.9.36.4: --
+
+September 8, 2014:
+	Fixed a piece of ancient mouse button mapping/reading code that was so broken it worked most of the time; fixes broken mapping of more
+	exotic(other than left, center, and right) physical mouse buttons to virtual buttons.
+
+	Lynx: Fixed a minor stereo sound emulation issue thanks to a patch from "sage".
+
+        Lynx: Fixed a bug that could cause Mednafen to crash when a game attempts to power-down the emulated Lynx(which may occur if a
+	game is left unattended for a prolonged period of time).
+
+	WonderSwan, PC-FX, MD, NGP: Fixed several violations of C/C++ sequence point rules in relation to call order in expressions
+	of functions with side effects, that could lead to undefined/wrong behavior with certain types of compiler optimizations
+	and features(e.g. PC-FX emulation was broken on gcc 4.9.x with -fsanitize=undefined -std=gnu++11).
+
 -- 0.9.36.3: --
 
 August 3, 2014:
