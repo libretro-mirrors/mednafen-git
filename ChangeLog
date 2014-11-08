@@ -1,3 +1,16 @@
+-- 0.9.36.5: --
+
+November 5, 2014:
+	NES: Fixed a minor issue that could break compiling after --disable-nls was passed to the configure script.
+
+	Added support for automatic loading and usage of redump.org "SBI" files when loading CUE sheets; the files should have the same base filename
+	as the CUE sheet, and the file extension case should match the case of the corresponding character in the CUE sheet filename file extension.
+	Example:
+		"Super Bandicoot Luigi (Moon, Niflheim, Australia).CuE" -> "Super Bandicoot Luigi (Moon, Niflheim, Australia).SbI"
+
+	PSX: Fixed half-implemented broken implementation of CDC command 0x00; fixes lockups in the European PAL releases of "Spyro 2" and
+	"Spyro - Year of the Dragon".
+
 -- 0.9.36.4: --
 
 September 8, 2014:
