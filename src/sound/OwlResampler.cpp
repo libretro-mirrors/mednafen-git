@@ -91,13 +91,13 @@ static int32 ProcessLoop(unsigned count, int32 a, int32* b, int32* exmix0 = NULL
 
   if(Lowpass)
   {
-   lp_f += (((int64)tmp << 16) - lp_f) >> lp_shift;
+   lp_f += ((int64)((uint64)(int64)tmp << 16) - lp_f) >> lp_shift;
    tmp = lp_f >> 16;
   }
 
   if(Highpass)
   {
-   hp_f += (((int64)tmp << 16) - hp_f) >> hp_shift;
+   hp_f += ((int64)((uint64)(int64)tmp << 16) - hp_f) >> hp_shift;
    tmp = tmp - (hp_f >> 16);
   }
 
@@ -307,120 +307,6 @@ static INLINE void DoMAC(float *wave, float *coeffs, int32 count, int32 *accum_o
 #define X86_REGAT "l"
 #endif
 
-#if 0 //defined(__x86_64__)
-// X64 x86, and X32 x86
-static INLINE void DoMAC_SSE(float *wave, float *coeffs, int32 count, int32 *accum_output)
-{
- // Multiplies 32 coefficients at a time.
- int dummy;
-
- //printf("%f\n", adj);
-/*
-	?di = wave pointer
-	?si = coeffs pointer
-	ecx = count / 16
-	edx = 32-bit int output pointer
-
-	
-*/
- // Will read 16+16 bytes past wave end.
- asm volatile(
-"xorps %%xmm6, %%xmm6\n\t"	// For a loop optimization
-"xorps %%xmm7, %%xmm7\n\t"	// For a loop optimization
-
-"xorps %%xmm8, %%xmm8\n\t"
-"xorps %%xmm9, %%xmm9\n\t"
-"xorps %%xmm10, %%xmm10\n\t"
-"xorps %%xmm11, %%xmm11\n\t"
-"xorps %%xmm12, %%xmm12\n\t"
-"xorps %%xmm13, %%xmm13\n\t"
-"xorps %%xmm14, %%xmm14\n\t"
-"xorps %%xmm15, %%xmm15\n\t"
-
-"movups  0(%%" X86_REGC "di), %%xmm0\n\t"
-"movups 16(%%" X86_REGC "di), %%xmm1\n\t"
-
-"SSE_Loop:\n\t"
-
-"movups 32(%%" X86_REGC "di), %%xmm2\n\t"
-"mulps   0(%%" X86_REGC "si), %%xmm0\n\t"
-"addps  %%xmm6, %%xmm14\n\t"
-
-"movups 48(%%" X86_REGC "di), %%xmm3\n\t"
-"mulps  16(%%" X86_REGC "si), %%xmm1\n\t"
-"addps  %%xmm7, %%xmm11\n\t"
-
-"movups 64(%%" X86_REGC "di), %%xmm4\n\t"
-"mulps  32(%%" X86_REGC "si), %%xmm2\n\t"
-"addps  %%xmm0, %%xmm8\n\t"
-
-"movups 80(%%" X86_REGC "di), %%xmm5\n\t"
-"mulps  48(%%" X86_REGC "si), %%xmm3\n\t"
-"addps  %%xmm1, %%xmm9\n\t"
-
-"movups 96(%%" X86_REGC "di), %%xmm6\n\t"
-"mulps  64(%%" X86_REGC "si), %%xmm4\n\t"
-"addps  %%xmm2, %%xmm10\n\t"
-
-"movups 112(%%" X86_REGC "di), %%xmm7\n\t"
-"mulps  80(%%" X86_REGC "si), %%xmm5\n\t"
-"addps  %%xmm3, %%xmm11\n\t"
-
-"movups 128(%%" X86_REGC "di), %%xmm0\n\t"
-"mulps  96(%%" X86_REGC "si), %%xmm6\n\t"
-"addps  %%xmm4, %%xmm12\n\t"
-
-"movups 144(%%" X86_REGC "di), %%xmm1\n\t"
-"mulps  112(%%" X86_REGC "si), %%xmm7\n\t"
-"addps  %%xmm5, %%xmm13\n\t"
-
-
-"add" X86_REGAT " $128, %%" X86_REGC "si\n\t"
-"add" X86_REGAT " $128, %%" X86_REGC "di\n\t"
-"subl $1, %%ecx\n\t"
-"jnz SSE_Loop\n\t"
-
-"addps  %%xmm3, %%xmm7\n\t"	// For a loop optimization
-
-//
-// Add the eight summation xmm regs together into one xmm register, xmm15
-//
-"addps  %%xmm8, %%xmm9\n\t"
-"addps  %%xmm10, %%xmm11\n\t"
-"addps  %%xmm12, %%xmm13\n\t"
-"addps  %%xmm14, %%xmm15\n\t"
-
-"addps  %%xmm9, %%xmm11\n\t"
-"addps  %%xmm13, %%xmm15\n\t"
-
-"addps  %%xmm11, %%xmm15\n\t"
-
-//
-// Now for the "fun" horizontal addition...
-//
-// 
-"movaps %%xmm15, %%xmm8\n\t"
-// (3 * 2^0) + (2 * 2^2) + (1 * 2^4) + (0 * 2^6) = 27
-"shufps $27, %%xmm15, %%xmm8\n\t"
-"addps  %%xmm8, %%xmm15\n\t"
-
-// At this point, xmm15:
-// (3 + 0), (2 + 1), (1 + 2), (0 + 3)
-//
-// (1 * 2^0) + (0 * 2^2) = 1
-"movaps %%xmm15, %%xmm8\n\t"
-"shufps $1, %%xmm15, %%xmm8\n\t"
-"addss %%xmm8, %%xmm15\n\t"	// No sense in doing packed addition here.
-
-"cvtss2si %%xmm15, %%ecx\n\t"
-"movl %%ecx, (%%" X86_REGC "dx)\n\t"
- : "=D" (dummy), "=S" (dummy), "=c" (dummy)
- : "D" (wave), "S" (coeffs), "c" (count >> 5), "d" (accum_output)
- : "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "cc", "memory"
-);
-}
-
-#else
 static INLINE void DoMAC_SSE(float *wave, float *coeffs, int32 count, int32 *accum_output)
 {
  // Multiplies 16 coefficients at a time.
@@ -505,8 +391,6 @@ static INLINE void DoMAC_SSE(float *wave, float *coeffs, int32 count, int32 *acc
 #endif
 );
 }
-#endif
-
 #endif
 
 #ifdef ARCH_POWERPC_ALTIVEC
@@ -617,8 +501,27 @@ static T SDP2(T v)
  return ((v + tmp) >> sa);
 }
 
-int32 OwlResampler::Resample(OwlBuffer* in, const uint32 in_count, int16* out, const uint32 max_out_count)
+int32 OwlResampler::Resample(OwlBuffer* in, const uint32 in_count, int16* out, const uint32 max_out_count, const bool reverse)
 {
+	if(reverse)
+	{
+	 int32* a = in->Buf();
+	 int32* b = in->Buf() + in_count - 1;
+
+	 while(MDFN_LIKELY(a < b))
+	 {
+	  int32 tmp = *a;
+
+       	  *a = *b;
+	  *b = tmp;
+	  a++;
+	  b--;
+	 }
+	}
+
+	//
+	//
+	//
 	uint32 count = 0;
 	int32 *boobuf = &IntermediateBuffer[0];
 	int32 *I32Out = boobuf;
@@ -730,7 +633,7 @@ int32 OwlResampler::Resample(OwlBuffer* in, const uint32 in_count, int16* out, c
  	  int32 sample = boobuf[x];
 	  int32 s;
 
-          debias += ((((int64)sample << 16) - debias) * debias_multiplier) >> 16;
+          debias += (((int64)((uint64)(int64)sample << 16) - debias) * debias_multiplier) >> 16;
           s = SDP2<int32, 8>(sample - (debias >> 16));
 	  if(s < -32768 || s > 32767)
 	  {

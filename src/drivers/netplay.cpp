@@ -27,8 +27,6 @@
 #include <math.h>
 #include "netplay.h"
 #include "console.h"
-#include "../md5.h"
-#include "../general.h"
 
 #include <trio/trio.h>
 
@@ -51,7 +49,7 @@ class NetplayConsole : public MDFNConsole
         NetplayConsole(void);
 
         private:
-        virtual bool TextHook(UTF8 *text);
+        virtual bool TextHook(const std::string &text) override;
 };
 
 static NetplayConsole NetConsole;
@@ -69,17 +67,19 @@ NetplayConsole::NetplayConsole(void)
 }
 
 // Called from main thread
-bool NetplayConsole::TextHook(UTF8 *text)
+bool NetplayConsole::TextHook(const std::string &text)
 {
 	LastTextTime = SDL_GetTicks();
-	SendCEvent(CEVT_NP_LINE, text, NULL);
+
+	SendCEvent(CEVT_NP_LINE, strdup(text.c_str()), NULL);
+
 	return(1);
 }
 
 // Call from game thread
 static void PrintNetStatus(const char *s)
 {
- MDFND_NetplayText((uint8 *)s, FALSE);
+ MDFND_NetplayText(s, FALSE);
 }
 
 // Call from game thread
@@ -92,7 +92,7 @@ static void PrintNetError(const char *format, ...)
  va_start(ap, format);
 
  temp = trio_vaprintf(format, ap);
- MDFND_NetplayText((uint8 *)temp, FALSE);
+ MDFND_NetplayText(temp, FALSE);
  free(temp);
 
  va_end(ap);
@@ -152,7 +152,9 @@ void MDFND_SendData(const void *data, uint32 len)
 
   if(len)
   {
-   // TODO: Possibility to break out?
+   if(MainExitPending())
+    throw MDFN_Error(0, _("Mednafen exit pending."));
+
    Connection->CanSend(50000);
   }
  } while(len);
@@ -172,7 +174,9 @@ void MDFND_RecvData(void *data, uint32 len)
 
   if(len)
   {
-   // TODO: Possibility to break out?
+   if(MainExitPending())
+    throw MDFN_Error(0, _("Mednafen exit pending."));
+
    Connection->CanReceive(50000);
   }
  } while(len);
@@ -201,16 +205,17 @@ void MDFND_NetworkClose(void)
 }
 
 // Called from the game thread
-void MDFND_NetplayText(const uint8 *text, bool NetEcho)
+void MDFND_NetplayText(const char* text, bool NetEcho)
 {
- uint8 *tot = (uint8 *)strdup((char *)text);
- uint8 *tmp;
+ char *tot = strdup(text);
+ char *tmp;
 
  tmp = tot;
 
  while(*tmp)
  {
-  if((uint8)*tmp < 0x20) *tmp = ' ';
+  if((uint8)*tmp < 0x20)
+   *tmp = ' ';
   tmp++;
  }
 
@@ -305,7 +310,7 @@ int NetplayEventHook(const SDL_Event *event)
 	break;
 
    case CEVT_NP_DISPLAY_TEXT:
-	NetConsole.WriteLine((UTF8*)event->user.data1);
+	NetConsole.WriteLine((char*)event->user.data1);
 	free(event->user.data1);
 
 	if(!(bool)event->user.data2)

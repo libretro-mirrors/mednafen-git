@@ -533,7 +533,7 @@ static void remap_8_to_32(int line)
     }
 }
 
-void SMS_VDPSetPixelFormat(const MDFN_PixelFormat &format)
+void SMS_VDPSetPixelFormat(const MDFN_PixelFormat &format, const uint8* CustomPalette)
 {
  int r, g, b;
 
@@ -541,10 +541,19 @@ void SMS_VDPSetPixelFormat(const MDFN_PixelFormat &format)
  {
   for(int i = 0; i < 4096; i++)
   {
-   /* ----BBBBGGGGRRRR */
-   r = (i & 0xF) * 17;
-   g = ((i >> 4) & 0xF) * 17;
-   b = ((i >> 8) & 0xF) * 17;
+   if(CustomPalette)
+   {
+    r = CustomPalette[i * 3 + 0];
+    g = CustomPalette[i * 3 + 1];
+    b = CustomPalette[i * 3 + 2];
+   }
+   else
+   {
+    /* ----BBBBGGGGRRRR */
+    r = (i & 0xF) * 17;
+    g = ((i >> 4) & 0xF) * 17;
+    b = ((i >> 8) & 0xF) * 17;
+   }
 
    SystemColorMap[i] = format.MakeColor(r, g, b);
   }
@@ -553,10 +562,19 @@ void SMS_VDPSetPixelFormat(const MDFN_PixelFormat &format)
  {
   for(int i = 0; i < 64; i++)
   {
-   /* --BBGGRR */
-   r = (i & 0x3) * 85;
-   g = ((i >> 2) & 0x3) * 85;
-   b = ((i >> 4) & 0x3) * 85;
+   if(CustomPalette)
+   {
+    r = CustomPalette[i * 3 + 0];
+    g = CustomPalette[i * 3 + 1];
+    b = CustomPalette[i * 3 + 2];
+   }
+   else
+   {
+    /* --BBGGRR */
+    r = (i & 0x3) * 85;
+    g = ((i >> 2) & 0x3) * 85;
+    b = ((i >> 4) & 0x3) * 85;
+   }
 
    SystemColorMap[i] = format.MakeColor(r, g, b);
   }

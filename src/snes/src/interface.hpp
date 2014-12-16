@@ -5,10 +5,6 @@
 #endif
 
 namespace bSNES_v059 {
-  struct ChipDebugger {
-    virtual bool property(unsigned id, string &name, string &value) = 0;
-  };
-
   #include "cheat/cheat.hpp"
   #include "memory/memory.hpp"
   #include "memory/smemory/smemory.hpp"
@@ -21,8 +17,7 @@ namespace bSNES_v059 {
 
   #include "smp/smp.hpp"
 
-  #include "dsp/dsp.hpp"
-  #include "dsp/sdsp/sdsp.hpp"
+  #include "sdsp/sdsp.hpp"
 
   #include "system/system.hpp"
   #include "chip/chip.hpp"

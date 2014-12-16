@@ -99,7 +99,7 @@ struct MDFN_Mutex
 static void TestStackAlign(void) NO_INLINE;
 static void TestStackAlign(void)
 {
- char test_array[17] MDFN_ALIGN(16);
+ alignas(16) char test_array[17];
  unsigned volatile memloc = ((unsigned long long)&test_array[0]);
  assert((memloc & 0xF) == 0);
 

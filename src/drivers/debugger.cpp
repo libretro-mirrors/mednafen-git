@@ -395,7 +395,7 @@ static void Regs_DrawGroup(RegGroupType *rg, MDFN_Surface *surface, uint32 *pixe
      details_ptr = &CurRegDetails;
     }
    }
-   int prew = DrawTextTrans(row, surface->pitchinpix << 2, 128, (UTF8*)rec->name.c_str(), rname_color, 0, which_font);
+   int prew = DrawTextTrans(row, surface->pitchinpix << 2, 128, rec->name.c_str(), rname_color, 0, which_font);
 
    if(rec->bsize != 0xFFFF)
    {
@@ -431,7 +431,7 @@ static void Regs_DrawGroup(RegGroupType *rg, MDFN_Surface *surface, uint32 *pixe
     if(details_ptr && details_string[0])
      *details_ptr = std::string(details_string);
 
-    DrawTextTrans(row + prew, surface->pitchinpix << 2, 64, (UTF8*)nubuf, color, 0, which_font);
+    DrawTextTrans(row + prew, surface->pitchinpix << 2, 64, nubuf, color, 0, which_font);
    }
 
    if(which_font == MDFN_FONT_5x7)
@@ -502,7 +502,7 @@ static void DrawZP(MDFN_Surface *surface, uint32 *pixels)
     NeedInc = TRUE;
    }
 
-   DrawTextTrans(pixels + (x + 1) * 13 + (y + 1) * 10 * surface->pitchinpix, surface->pitchinpix << 2, 1024, (UTF8 *)tbuf, MK_COLOR_A(r, g, b, 0xFF), FALSE, MDFN_FONT_5x7);
+   DrawTextTrans(pixels + (x + 1) * 13 + (y + 1) * 10 * surface->pitchinpix, surface->pitchinpix << 2, 1024, tbuf, MK_COLOR_A(r, g, b, 0xFF), FALSE, MDFN_FONT_5x7);
    if(NeedInc)
     addr++;
   }
@@ -990,9 +990,9 @@ void Debugger_GT_Draw(void)
    //trio_snprintf(textbuf, sizeof(textbuf), "// %s", DisBuffer[dbi].text.c_str());
 
    if(DisBuffer[dbi].A == DisAddr && DisBuffer[dbi].COffs == DisCOffs)
-    DrawTextTrans(pixels + x * DisFontHeight * pitch32, surface->pitchinpix << 2, rect->w, (UTF8*)">", cursor_color, 0, DisFont);
+    DrawTextTrans(pixels + x * DisFontHeight * pitch32, surface->pitchinpix << 2, rect->w, ">", cursor_color, 0, DisFont);
 
-   DrawTextTrans(pixels + 5 + x * DisFontHeight * pitch32, surface->pitchinpix << 2, rect->w, (UTF8*)DisBuffer[dbi].text.c_str(), color, 0, DisFont);
+   DrawTextTrans(pixels + 5 + x * DisFontHeight * pitch32, surface->pitchinpix << 2, rect->w, DisBuffer[dbi].text.c_str(), color, 0, DisFont);
   }
   else						// Disassembly
   {
@@ -1032,8 +1032,8 @@ void Debugger_GT_Draw(void)
 
    int addrpixlen;
 
-   addrpixlen = DrawTextTrans(pixels + x * DisFontHeight * pitch32, surface->pitchinpix << 2, rect->w, (UTF8*)addr_text, addr_color, 0, DisFont);
-   DrawTextTrans(pixels + x * DisFontHeight * pitch32 + addrpixlen, surface->pitchinpix << 2, rect->w - strlen(addr_text) * 5, (UTF8*)dis_str.c_str(), color, 0, DisFont);
+   addrpixlen = DrawTextTrans(pixels + x * DisFontHeight * pitch32, surface->pitchinpix << 2, rect->w, addr_text, addr_color, 0, DisFont);
+   DrawTextTrans(pixels + x * DisFontHeight * pitch32 + addrpixlen, surface->pitchinpix << 2, rect->w - strlen(addr_text) * 5, dis_str.c_str(), color, 0, DisFont);
   }
  }
 
@@ -1067,8 +1067,8 @@ void Debugger_GT_Draw(void)
 
  if(InRegs)
  {
-  DrawTextTrans(pixels + (rect->h - (moo + 2) * 7) * pitch32, surface->pitchinpix << 2, surface->w, (UTF8*)CurRegLongName.c_str(), MK_COLOR_A(0xa0, 0xa0, 0xFF, 0xFF), TRUE, 1);
-  DrawTextTrans(pixels + (rect->h - (moo + 1) * 7) * pitch32, surface->pitchinpix << 2, surface->w, (UTF8*)CurRegDetails.c_str(), MK_COLOR_A(0x60, 0xb0, 0xFF, 0xFF), TRUE, 1);
+  DrawTextTrans(pixels + (rect->h - (moo + 2) * 7) * pitch32, surface->pitchinpix << 2, surface->w, CurRegLongName.c_str(), MK_COLOR_A(0xa0, 0xa0, 0xFF, 0xFF), TRUE, 1);
+  DrawTextTrans(pixels + (rect->h - (moo + 1) * 7) * pitch32, surface->pitchinpix << 2, surface->w, CurRegDetails.c_str(), MK_COLOR_A(0x60, 0xb0, 0xFF, 0xFF), TRUE, 1);
  }
  else if(CurGame->Debugger->GetBranchTrace)
  {
@@ -1107,9 +1107,9 @@ void Debugger_GT_Draw(void)
 
 //trio_snprintf(tmp, sizeof(tmp), "%04X%s%04X(*%d)", bt->from, arrow, bt->to, bt->branch_count);
 
-   strbuf_len = (GetTextPixLength((UTF8*)strbuf[0], MDFN_FONT_5x7) +
-		 GetTextPixLength((UTF8*)strbuf[1], MDFN_FONT_5x7) +
-	         GetTextPixLength((UTF8*)strbuf[2], MDFN_FONT_5x7) + 5 + GetTextPixLength((UTF8*)strbuf[3], MDFN_FONT_5x7) + 4) / 5;
+   strbuf_len = (GetTextPixLength(strbuf[0], MDFN_FONT_5x7) +
+		 GetTextPixLength(strbuf[1], MDFN_FONT_5x7) +
+	         GetTextPixLength(strbuf[2], MDFN_FONT_5x7) + 5 + GetTextPixLength(strbuf[3], MDFN_FONT_5x7) + 4) / 5;
    new_draw_position = draw_position - strbuf_len;
 
    if(new_draw_position < 0)
@@ -1122,14 +1122,14 @@ void Debugger_GT_Draw(void)
    row = new_draw_position / btrace_cols;
 
    pix_tmp = btpixels + col * 5 + row * 10 * pitch32;
-   pix_tmp += DrawTextTrans(pix_tmp, surface->pitchinpix << 2, rect->w, (UTF8*)strbuf[0], (btrace[i].count > 1) ? MK_COLOR_A(0xe0, 0xe0, 0x00, 0xFF) : hcolors[color_osc], false, MDFN_FONT_5x7);
-   pix_tmp += DrawTextTrans(pix_tmp, surface->pitchinpix << 2, rect->w, (UTF8*)strbuf[1], btrace[i].code[0] ? MK_COLOR_A(0xb0, 0xFF, 0xff, 0xFF) : MK_COLOR_A(0xb0, 0xb0, 0xff, 0xFF), false, MDFN_FONT_5x7);
+   pix_tmp += DrawTextTrans(pix_tmp, surface->pitchinpix << 2, rect->w, strbuf[0], (btrace[i].count > 1) ? MK_COLOR_A(0xe0, 0xe0, 0x00, 0xFF) : hcolors[color_osc], false, MDFN_FONT_5x7);
+   pix_tmp += DrawTextTrans(pix_tmp, surface->pitchinpix << 2, rect->w, strbuf[1], btrace[i].code[0] ? MK_COLOR_A(0xb0, 0xFF, 0xff, 0xFF) : MK_COLOR_A(0xb0, 0xb0, 0xff, 0xFF), false, MDFN_FONT_5x7);
 
    color_osc = !color_osc;
 
-   pix_tmp += DrawTextTrans(pix_tmp, surface->pitchinpix << 2, rect->w, (UTF8*)strbuf[2], (btrace[i].count > 1) ? MK_COLOR_A(0xe0, 0xe0, 0x00, 0xFF) : hcolors[color_osc], false, MDFN_FONT_5x7);
+   pix_tmp += DrawTextTrans(pix_tmp, surface->pitchinpix << 2, rect->w, strbuf[2], (btrace[i].count > 1) ? MK_COLOR_A(0xe0, 0xe0, 0x00, 0xFF) : hcolors[color_osc], false, MDFN_FONT_5x7);
    pix_tmp += 2;
-   pix_tmp += DrawTextTrans(pix_tmp, surface->pitchinpix << 2, rect->w, (UTF8*)strbuf[3], MK_COLOR_A(0x60, 0x70, 0x80, 0xFF), false, MDFN_FONT_5x7);
+   pix_tmp += DrawTextTrans(pix_tmp, surface->pitchinpix << 2, rect->w, strbuf[3], MK_COLOR_A(0x60, 0x70, 0x80, 0xFF), false, MDFN_FONT_5x7);
    pix_tmp += 3;
    draw_position = new_draw_position;
   }
@@ -1147,7 +1147,7 @@ void Debugger_GT_Draw(void)
 
    strbuf[strbuf_len - 1] = 0; // Get rid of the trailing space
 
-   DrawTextTrans(btpixels + bt_row * 8 * pitch32, surface->pitchinpix << 2, rect->w, (UTF8*)strbuf, MK_COLOR_A(0x60, 0xb0, 0xfF, 0xFF), TRUE, MDFN_FONT_5x7);
+   DrawTextTrans(btpixels + bt_row * 8 * pitch32, surface->pitchinpix << 2, rect->w, strbuf, MK_COLOR_A(0x60, 0xb0, 0xfF, 0xFF), TRUE, MDFN_FONT_5x7);
   }
 #endif
  }
@@ -1200,7 +1200,7 @@ void Debugger_GT_Draw(void)
    else
     trio_snprintf(tbuf, 256, "%08X: ", (ewa + y * bytes_per_row) & ewa_mask);
 
-   row += DrawTextTrans(row, surface->pitchinpix << 2, rect->w, (UTF8 *)tbuf, MK_COLOR_A(0xa0, 0xa0, 0xFF, 0xFF), FALSE, MDFN_FONT_5x7);
+   row += DrawTextTrans(row, surface->pitchinpix << 2, rect->w, tbuf, MK_COLOR_A(0xa0, 0xa0, 0xFF, 0xFF), FALSE, MDFN_FONT_5x7);
    for(int x = 0; x < bytes_per_row; x++)
    {
     uint8 zebyte = CurGame->Debugger->MemPeek((ewa + y * bytes_per_row + x) & ewa_mask, 1, 1, WatchLogical);
@@ -1217,9 +1217,9 @@ void Debugger_GT_Draw(void)
     if(x == 16) row += 7;
 
     trio_snprintf(tbuf, 256, "%02X", zebyte);
-    row += DrawTextTrans(row, surface->pitchinpix << 2, rect->w, (UTF8*)tbuf, bcolor, 0, 1) + 2;
+    row += DrawTextTrans(row, surface->pitchinpix << 2, rect->w, tbuf, bcolor, 0, 1) + 2;
    }
-   DrawTextTrans(row + 5, surface->pitchinpix << 2, rect->w, (UTF8 *)asciistr, MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, MDFN_FONT_5x7);
+   DrawTextTrans(row + 5, surface->pitchinpix << 2, rect->w, asciistr, MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, MDFN_FONT_5x7);
   }
  }  
 
@@ -1406,7 +1406,7 @@ bool Debugger_GT_Toggle(void)
 
    if(NeedInit)
    {
-    std::string des_disfont = MDFN_GetSettingS(std::string(std::string(CurGame->shortname) + "." + std::string("debugger.disfontsize")).c_str());
+    std::string des_disfont = MDFN_GetSettingS(std::string(std::string(CurGame->shortname) + "." + std::string("debugger.disfontsize")));
     DebuggerOpacity = 0xC0;
 
     // Debug remove me

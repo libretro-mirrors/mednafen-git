@@ -11,7 +11,7 @@ void TIMER_Write(const v810_timestamp_t &timestamp, uint32 A, uint8 V);
 
 void TIMER_Power(void) MDFN_COLD;
 
-int TIMER_StateAction(StateMem *sm, int load, int data_only);
+void TIMER_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 
 enum

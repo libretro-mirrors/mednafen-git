@@ -30,9 +30,8 @@
 
 #include "general.h"
 #include "state.h"
-#include "movie.h"
 
-#include "md5.h"
+#include <mednafen/hash/md5.h>
 
 using namespace std;
 
@@ -41,7 +40,7 @@ static string FileBase;
 static string FileExt;	/* Includes the . character, as in ".nes" */
 static string FileBaseDirectory;
 
-void MDFN_SetBaseDirectory(const char *dir)
+void MDFN_SetBaseDirectory(const std::string& dir)
 {
  BaseDirectory = string(dir);
 }
@@ -89,10 +88,21 @@ static bool IsAbsolutePath(const std::string &path)
 
 bool MDFN_IsFIROPSafe(const std::string &path)
 {
+ //
+ // First, check for any 8-bit characters, and print a warning about portability.
+ //
+ for(size_t x = 0; x < path.size(); x++)
+ {
+  if(path[x] & 0x80)
+  {
+   MDFN_printf(_("WARNING: Referenced path \"%s\" contains at least one 8-bit non-ASCII character; this may cause portability issues.\n"), path.c_str());
+   break;
+  }
+ }
+
  // We could make this more OS-specific, but it shouldn't hurt to try to weed out usage of characters that are path
  // separators in one OS but not in another, and we'd also run more of a risk of missing a special path separator case
  // in some OS.
-
  if(!MDFN_GetSettingB("filesys.untrusted_fip_check"))
   return(true);
 
@@ -385,7 +395,7 @@ std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
 		     std::string fstring = MDFN_GetSettingS("filesys.fname_snap");
 		     std::string fpath;
 
-		     trio_snprintf(numtmp, sizeof(numtmp), "%04d", id1);
+		     trio_snprintf(numtmp, sizeof(numtmp), "%04u", id1);
 
 		     fmap['p'] = std::string(numtmp);
 

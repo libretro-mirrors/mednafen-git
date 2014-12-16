@@ -18,7 +18,7 @@ class FilePathMaker
 };
 #endif
 
-void MDFN_SetBaseDirectory(const char *dir);
+void MDFN_SetBaseDirectory(const std::string& dir);
 std::string MDFN_GetBaseDirectory(void);
 
 void GetFileBase(const char *f);
@@ -44,7 +44,7 @@ typedef enum
 } MakeFName_Type;
 
 std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1);
-
+INLINE std::string MDFN_MakeFName(MakeFName_Type type, int id1, const std::string& cd1) { return MDFN_MakeFName(type, id1, cd1.c_str()); }
 const char * GetFNComponent(const char *str);
 
 void MDFN_GetFilePathComponents(const std::string &file_path, std::string *dir_path_out, std::string *file_base_out = NULL, std::string *file_ext_out = NULL);

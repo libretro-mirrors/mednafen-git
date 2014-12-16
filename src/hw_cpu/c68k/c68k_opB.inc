@@ -2692,7 +2692,7 @@ case 0xB100:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res;
-	*(BYTE_OFF + (u8*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
+	MDFN_ennsb<u8, true>(BYTE_OFF + (u8*)&CPU->D[(Opcode >> 0) & 7], res);
 }
 RET(4)
 case 0xB310:
@@ -3274,7 +3274,7 @@ case 0xB140:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 8;
-	*(WORD_OFF + (u16*)((u32*)&CPU->D16 + ((Opcode >> 0) & 7))) = res;
+	MDFN_ennsb<u16, true>(WORD_OFF + (u16*)&CPU->D[(Opcode >> 0) & 7], res);
 }
 RET(4)
 case 0xB350:
@@ -3856,7 +3856,7 @@ case 0xB180:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)((u32*)&CPU->D + ((Opcode >> 0) & 7))) = res;
+	MDFN_ennsb<u32, true>((u32*)&CPU->D[(Opcode >> 0) & 7], res);
 }
 RET(8)
 case 0xB390:

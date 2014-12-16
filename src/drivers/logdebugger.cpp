@@ -119,8 +119,8 @@ void LogDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
  uint32 pitch32 = surface->pitchinpix;
  char logmessage[256];
  
- trio_snprintf(logmessage, 256, "%s (%d messages)", LoggingActive ? (UTF8*)"Logging Enabled" : (UTF8*)"Logging Disabled", (int)WhichLog->entries.size());
- DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, (UTF8*)logmessage, MK_COLOR_A(0x20, 0xFF, 0x20, 0xFF), 1, MDFN_FONT_6x13_12x13);
+ trio_snprintf(logmessage, 256, "%s (%d messages)", LoggingActive ? "Logging Enabled" : "Logging Disabled", (int)WhichLog->entries.size());
+ DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, logmessage, MK_COLOR_A(0x20, 0xFF, 0x20, 0xFF), 1, MDFN_FONT_6x13_12x13);
  pixels += 13 * pitch32;
 
  std::map<std::string, LogInstance>::iterator dl_iter;
@@ -136,12 +136,12 @@ void LogDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
   if(&dl_iter->second == WhichLog)
    group_color = MK_COLOR_A(0xFF, 0x80, 0x80, 0xFF);
 
-  groups_line += 6 + DrawTextTrans(groups_line, surface->pitchinpix << 2, rect->w, (UTF8*)group_string, group_color, 0, MDFN_FONT_6x13_12x13);
+  groups_line += 6 + DrawTextTrans(groups_line, surface->pitchinpix << 2, rect->w, group_string, group_color, 0, MDFN_FONT_6x13_12x13);
 
 //  printf("%s\n", dl_iter->first.c_str());
  }
 
- //DrawTextTrans(pixels, surface->pitch, rect->w, (UTF8*)logmessage, MK_COLOR_A(0x20, 0xFF, 0x20, 0xFF), 1, MDFN_FONT_6x13_12x13);
+ //DrawTextTrans(pixels, surface->pitch, rect->w, logmessage, MK_COLOR_A(0x20, 0xFF, 0x20, 0xFF), 1, MDFN_FONT_6x13_12x13);
  pixels += 13 * pitch32;
 
 
@@ -154,12 +154,12 @@ void LogDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
   char tmpbuf[64];
 
   trio_snprintf(tmpbuf, 64, "%d", i);
-  typelen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, (UTF8*)tmpbuf, MK_COLOR_A(0x80, 0x80, 0xD0, 0xFF), FALSE, MDFN_FONT_5x7);
+  typelen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, tmpbuf, MK_COLOR_A(0x80, 0x80, 0xD0, 0xFF), FALSE, MDFN_FONT_5x7);
   typelen += 1;
 
-  typelen += DrawTextTrans(pixels + typelen, surface->pitchinpix << 2, rect->w - typelen, (UTF8*)WhichLog->entries[i].type, MK_COLOR_A(0xFF, 0x40, 0x40, 0xFF), FALSE, MDFN_FONT_6x13_12x13);
+  typelen += DrawTextTrans(pixels + typelen, surface->pitchinpix << 2, rect->w - typelen, WhichLog->entries[i].type, MK_COLOR_A(0xFF, 0x40, 0x40, 0xFF), FALSE, MDFN_FONT_6x13_12x13);
   typelen += 5;
-  DrawTextTrans(pixels + typelen, surface->pitchinpix << 2, rect->w - typelen, (UTF8*)WhichLog->entries[i].text, lifecolors[i & 3], FALSE, MDFN_FONT_6x13_12x13);
+  DrawTextTrans(pixels + typelen, surface->pitchinpix << 2, rect->w - typelen, WhichLog->entries[i].text, lifecolors[i & 3], FALSE, MDFN_FONT_6x13_12x13);
   pixels += pitch32 * 13;
  }
  

@@ -1,20 +1,16 @@
 #ifndef _DRIVERS_MAIN_H
 #define _DRIVERS_MAIN_H
 
-#include "../driver.h"
-#include "../mednafen.h"
-#include "../settings.h"
+#include <mednafen/driver.h>
+#include <mednafen/mednafen.h>
+#include <mednafen/settings.h>
 #include "config.h"
 #include "args.h"
 
 #include <SDL.h>
 #include <SDL_thread.h>
 
-#include "../gettext.h"
-
-#ifndef _
-#define _(String) gettext(String)
-#endif
+#include <mednafen/gettext.h>
 
 #define CEVT_TOGGLEGUI	1
 #define CEVT_TOGGLEFS	2
@@ -55,6 +51,7 @@ int CloseGame(void);
 void RefreshThrottleFPS(double);
 void PumpWrap(void);
 void MainRequestExit(void);
+bool MainExitPending(void);
 
 extern bool pending_save_state, pending_ssnapshot, pending_snapshot, pending_save_movie;
 
@@ -66,11 +63,13 @@ void DebuggerFudge(void);
 
 extern volatile int GameThreadRun;
 
-extern int sdlhaveogl;
-
-
 void GT_ToggleFS(void);
 bool GT_ReinitVideo(void);
 bool GT_ReinitSound(void);
 
+
+void BuildSystemSetting(MDFNSetting *setting, const char *system_name, const char *name, const char *description, const char *description_extra, MDFNSettingType type, 
+	const char *default_value, const char *minimum = NULL, const char *maximum = NULL,
+	bool (*validate_func)(const char *name, const char *value) = NULL, void (*ChangeNotification)(const char *name) = NULL, 
+        const MDFNSetting_EnumList *enum_list = NULL);
 #endif

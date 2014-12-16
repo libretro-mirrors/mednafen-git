@@ -56,6 +56,7 @@ subdir = src/snes
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
+	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/codeset.m4 $(top_srcdir)/m4/fcntl-o.m4 \
 	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/glibc2.m4 \
 	$(top_srcdir)/m4/glibc21.m4 $(top_srcdir)/m4/iconv.m4 \
@@ -97,7 +98,7 @@ am__objects_1 = interface.$(OBJEXT) src/lib/libco/libco.$(OBJEXT) \
 	src/memory/memory.$(OBJEXT) \
 	src/memory/smemory/smemory.$(OBJEXT) src/cpu/cpu.$(OBJEXT) \
 	src/cpu/core/core.$(OBJEXT) src/cpu/scpu/scpu.$(OBJEXT) \
-	src/smp/smp.$(OBJEXT) src/dsp/sdsp/sdsp.$(OBJEXT) \
+	src/smp/smp.$(OBJEXT) src/sdsp/sdsp.$(OBJEXT) \
 	src/ppu/ppu.$(OBJEXT) src/system/system.$(OBJEXT) \
 	src/chip/sa1/sa1.$(OBJEXT) src/chip/bsx/bsx.$(OBJEXT) \
 	src/chip/srtc/srtc.$(OBJEXT) src/chip/sdd1/sdd1.$(OBJEXT) \
@@ -105,10 +106,7 @@ am__objects_1 = interface.$(OBJEXT) src/lib/libco/libco.$(OBJEXT) \
 	src/chip/dsp1/dsp1.$(OBJEXT) src/chip/dsp2/dsp2.$(OBJEXT) \
 	src/chip/dsp3/dsp3.$(OBJEXT) src/chip/dsp4/dsp4.$(OBJEXT) \
 	src/chip/obc1/obc1.$(OBJEXT) src/chip/st010/st010.$(OBJEXT) \
-	src/chip/st011/st011.$(OBJEXT) src/chip/st018/st018.$(OBJEXT) \
-	src/chip/superfx/superfx.$(OBJEXT) \
-	src/chip/supergameboy/supergameboy.$(OBJEXT) \
-	src/chip/21fx/21fx.$(OBJEXT)
+	src/chip/superfx/superfx.$(OBJEXT)
 am_libsnes_a_OBJECTS = $(am__objects_1)
 libsnes_a_OBJECTS = $(am_libsnes_a_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -203,7 +201,6 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
-GBA_EXTRA_FLAGS = @GBA_EXTRA_FLAGS@
 GENCAT = @GENCAT@
 GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
 GLIBC2 = @GLIBC2@
@@ -212,6 +209,7 @@ GMSGFMT = @GMSGFMT@
 GMSGFMT_015 = @GMSGFMT_015@
 GREP = @GREP@
 HAVE_ASPRINTF = @HAVE_ASPRINTF@
+HAVE_CXX11 = @HAVE_CXX11@
 HAVE_NEWLOCALE = @HAVE_NEWLOCALE@
 HAVE_POSIX_PRINTF = @HAVE_POSIX_PRINTF@
 HAVE_SNPRINTF = @HAVE_SNPRINTF@
@@ -401,16 +399,14 @@ meow = interface.cpp src/lib/libco/libco.c src/cartridge/cartridge.cpp \
 	src/cheat/cheat.cpp src/memory/memory.cpp \
 	src/memory/smemory/smemory.cpp src/cpu/cpu.cpp \
 	src/cpu/core/core.cpp src/cpu/scpu/scpu.cpp src/smp/smp.cpp \
-	src/dsp/sdsp/sdsp.cpp src/ppu/ppu.cpp src/system/system.cpp \
+	src/sdsp/sdsp.cpp src/ppu/ppu.cpp src/system/system.cpp \
 	src/chip/sa1/sa1.cpp src/chip/bsx/bsx.cpp \
 	src/chip/srtc/srtc.cpp src/chip/sdd1/sdd1.cpp \
 	src/chip/spc7110/spc7110.cpp src/chip/cx4/cx4.cpp \
 	src/chip/dsp1/dsp1.cpp src/chip/dsp2/dsp2.cpp \
 	src/chip/dsp3/dsp3.cpp src/chip/dsp4/dsp4.cpp \
 	src/chip/obc1/obc1.cpp src/chip/st010/st010.cpp \
-	src/chip/st011/st011.cpp src/chip/st018/st018.cpp \
-	src/chip/superfx/superfx.cpp \
-	src/chip/supergameboy/supergameboy.cpp src/chip/21fx/21fx.cpp
+	src/chip/superfx/superfx.cpp
 libsnes_a_SOURCES = $(meow)
 all: all-am
 
@@ -522,14 +518,14 @@ src/smp/$(DEPDIR)/$(am__dirstamp):
 	@: > src/smp/$(DEPDIR)/$(am__dirstamp)
 src/smp/smp.$(OBJEXT): src/smp/$(am__dirstamp) \
 	src/smp/$(DEPDIR)/$(am__dirstamp)
-src/dsp/sdsp/$(am__dirstamp):
-	@$(MKDIR_P) src/dsp/sdsp
-	@: > src/dsp/sdsp/$(am__dirstamp)
-src/dsp/sdsp/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) src/dsp/sdsp/$(DEPDIR)
-	@: > src/dsp/sdsp/$(DEPDIR)/$(am__dirstamp)
-src/dsp/sdsp/sdsp.$(OBJEXT): src/dsp/sdsp/$(am__dirstamp) \
-	src/dsp/sdsp/$(DEPDIR)/$(am__dirstamp)
+src/sdsp/$(am__dirstamp):
+	@$(MKDIR_P) src/sdsp
+	@: > src/sdsp/$(am__dirstamp)
+src/sdsp/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/sdsp/$(DEPDIR)
+	@: > src/sdsp/$(DEPDIR)/$(am__dirstamp)
+src/sdsp/sdsp.$(OBJEXT): src/sdsp/$(am__dirstamp) \
+	src/sdsp/$(DEPDIR)/$(am__dirstamp)
 src/ppu/$(am__dirstamp):
 	@$(MKDIR_P) src/ppu
 	@: > src/ppu/$(am__dirstamp)
@@ -642,22 +638,6 @@ src/chip/st010/$(DEPDIR)/$(am__dirstamp):
 	@: > src/chip/st010/$(DEPDIR)/$(am__dirstamp)
 src/chip/st010/st010.$(OBJEXT): src/chip/st010/$(am__dirstamp) \
 	src/chip/st010/$(DEPDIR)/$(am__dirstamp)
-src/chip/st011/$(am__dirstamp):
-	@$(MKDIR_P) src/chip/st011
-	@: > src/chip/st011/$(am__dirstamp)
-src/chip/st011/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) src/chip/st011/$(DEPDIR)
-	@: > src/chip/st011/$(DEPDIR)/$(am__dirstamp)
-src/chip/st011/st011.$(OBJEXT): src/chip/st011/$(am__dirstamp) \
-	src/chip/st011/$(DEPDIR)/$(am__dirstamp)
-src/chip/st018/$(am__dirstamp):
-	@$(MKDIR_P) src/chip/st018
-	@: > src/chip/st018/$(am__dirstamp)
-src/chip/st018/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) src/chip/st018/$(DEPDIR)
-	@: > src/chip/st018/$(DEPDIR)/$(am__dirstamp)
-src/chip/st018/st018.$(OBJEXT): src/chip/st018/$(am__dirstamp) \
-	src/chip/st018/$(DEPDIR)/$(am__dirstamp)
 src/chip/superfx/$(am__dirstamp):
 	@$(MKDIR_P) src/chip/superfx
 	@: > src/chip/superfx/$(am__dirstamp)
@@ -666,23 +646,6 @@ src/chip/superfx/$(DEPDIR)/$(am__dirstamp):
 	@: > src/chip/superfx/$(DEPDIR)/$(am__dirstamp)
 src/chip/superfx/superfx.$(OBJEXT): src/chip/superfx/$(am__dirstamp) \
 	src/chip/superfx/$(DEPDIR)/$(am__dirstamp)
-src/chip/supergameboy/$(am__dirstamp):
-	@$(MKDIR_P) src/chip/supergameboy
-	@: > src/chip/supergameboy/$(am__dirstamp)
-src/chip/supergameboy/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) src/chip/supergameboy/$(DEPDIR)
-	@: > src/chip/supergameboy/$(DEPDIR)/$(am__dirstamp)
-src/chip/supergameboy/supergameboy.$(OBJEXT):  \
-	src/chip/supergameboy/$(am__dirstamp) \
-	src/chip/supergameboy/$(DEPDIR)/$(am__dirstamp)
-src/chip/21fx/$(am__dirstamp):
-	@$(MKDIR_P) src/chip/21fx
-	@: > src/chip/21fx/$(am__dirstamp)
-src/chip/21fx/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) src/chip/21fx/$(DEPDIR)
-	@: > src/chip/21fx/$(DEPDIR)/$(am__dirstamp)
-src/chip/21fx/21fx.$(OBJEXT): src/chip/21fx/$(am__dirstamp) \
-	src/chip/21fx/$(DEPDIR)/$(am__dirstamp)
 libsnes.a: $(libsnes_a_OBJECTS) $(libsnes_a_DEPENDENCIES) $(EXTRA_libsnes_a_DEPENDENCIES) 
 	$(AM_V_at)-rm -f libsnes.a
 	$(AM_V_AR)$(libsnes_a_AR) libsnes.a $(libsnes_a_OBJECTS) $(libsnes_a_LIBADD)
@@ -692,7 +655,6 @@ mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 	-rm -f src/cartridge/cartridge.$(OBJEXT)
 	-rm -f src/cheat/cheat.$(OBJEXT)
-	-rm -f src/chip/21fx/21fx.$(OBJEXT)
 	-rm -f src/chip/bsx/bsx.$(OBJEXT)
 	-rm -f src/chip/cx4/cx4.$(OBJEXT)
 	-rm -f src/chip/dsp1/dsp1.$(OBJEXT)
@@ -705,18 +667,15 @@ mostlyclean-compile:
 	-rm -f src/chip/spc7110/spc7110.$(OBJEXT)
 	-rm -f src/chip/srtc/srtc.$(OBJEXT)
 	-rm -f src/chip/st010/st010.$(OBJEXT)
-	-rm -f src/chip/st011/st011.$(OBJEXT)
-	-rm -f src/chip/st018/st018.$(OBJEXT)
 	-rm -f src/chip/superfx/superfx.$(OBJEXT)
-	-rm -f src/chip/supergameboy/supergameboy.$(OBJEXT)
 	-rm -f src/cpu/core/core.$(OBJEXT)
 	-rm -f src/cpu/cpu.$(OBJEXT)
 	-rm -f src/cpu/scpu/scpu.$(OBJEXT)
-	-rm -f src/dsp/sdsp/sdsp.$(OBJEXT)
 	-rm -f src/lib/libco/libco.$(OBJEXT)
 	-rm -f src/memory/memory.$(OBJEXT)
 	-rm -f src/memory/smemory/smemory.$(OBJEXT)
 	-rm -f src/ppu/ppu.$(OBJEXT)
+	-rm -f src/sdsp/sdsp.$(OBJEXT)
 	-rm -f src/smp/smp.$(OBJEXT)
 	-rm -f src/system/system.$(OBJEXT)
 
@@ -726,7 +685,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/interface.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/cartridge/$(DEPDIR)/cartridge.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/cheat/$(DEPDIR)/cheat.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/chip/21fx/$(DEPDIR)/21fx.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/chip/bsx/$(DEPDIR)/bsx.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/chip/cx4/$(DEPDIR)/cx4.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/chip/dsp1/$(DEPDIR)/dsp1.Po@am__quote@
@@ -739,18 +697,15 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/chip/spc7110/$(DEPDIR)/spc7110.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/chip/srtc/$(DEPDIR)/srtc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/chip/st010/$(DEPDIR)/st010.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/chip/st011/$(DEPDIR)/st011.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/chip/st018/$(DEPDIR)/st018.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/chip/superfx/$(DEPDIR)/superfx.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/chip/supergameboy/$(DEPDIR)/supergameboy.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/cpu/$(DEPDIR)/cpu.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/cpu/core/$(DEPDIR)/core.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/cpu/scpu/$(DEPDIR)/scpu.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/dsp/sdsp/$(DEPDIR)/sdsp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/lib/libco/$(DEPDIR)/libco.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/memory/$(DEPDIR)/memory.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/memory/smemory/$(DEPDIR)/smemory.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ppu/$(DEPDIR)/ppu.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/sdsp/$(DEPDIR)/sdsp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/smp/$(DEPDIR)/smp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/system/$(DEPDIR)/system.Po@am__quote@
 
@@ -924,8 +879,6 @@ distclean-generic:
 	-rm -f src/cartridge/$(am__dirstamp)
 	-rm -f src/cheat/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/cheat/$(am__dirstamp)
-	-rm -f src/chip/21fx/$(DEPDIR)/$(am__dirstamp)
-	-rm -f src/chip/21fx/$(am__dirstamp)
 	-rm -f src/chip/bsx/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/chip/bsx/$(am__dirstamp)
 	-rm -f src/chip/cx4/$(DEPDIR)/$(am__dirstamp)
@@ -950,22 +903,14 @@ distclean-generic:
 	-rm -f src/chip/srtc/$(am__dirstamp)
 	-rm -f src/chip/st010/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/chip/st010/$(am__dirstamp)
-	-rm -f src/chip/st011/$(DEPDIR)/$(am__dirstamp)
-	-rm -f src/chip/st011/$(am__dirstamp)
-	-rm -f src/chip/st018/$(DEPDIR)/$(am__dirstamp)
-	-rm -f src/chip/st018/$(am__dirstamp)
 	-rm -f src/chip/superfx/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/chip/superfx/$(am__dirstamp)
-	-rm -f src/chip/supergameboy/$(DEPDIR)/$(am__dirstamp)
-	-rm -f src/chip/supergameboy/$(am__dirstamp)
 	-rm -f src/cpu/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/cpu/$(am__dirstamp)
 	-rm -f src/cpu/core/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/cpu/core/$(am__dirstamp)
 	-rm -f src/cpu/scpu/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/cpu/scpu/$(am__dirstamp)
-	-rm -f src/dsp/sdsp/$(DEPDIR)/$(am__dirstamp)
-	-rm -f src/dsp/sdsp/$(am__dirstamp)
 	-rm -f src/lib/libco/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/lib/libco/$(am__dirstamp)
 	-rm -f src/memory/$(DEPDIR)/$(am__dirstamp)
@@ -974,6 +919,8 @@ distclean-generic:
 	-rm -f src/memory/smemory/$(am__dirstamp)
 	-rm -f src/ppu/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/ppu/$(am__dirstamp)
+	-rm -f src/sdsp/$(DEPDIR)/$(am__dirstamp)
+	-rm -f src/sdsp/$(am__dirstamp)
 	-rm -f src/smp/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/smp/$(am__dirstamp)
 	-rm -f src/system/$(DEPDIR)/$(am__dirstamp)
@@ -988,7 +935,7 @@ clean-am: clean-generic clean-libtool clean-noinstLIBRARIES \
 	mostlyclean-am
 
 distclean: distclean-am
-	-rm -rf ./$(DEPDIR) src/cartridge/$(DEPDIR) src/cheat/$(DEPDIR) src/chip/21fx/$(DEPDIR) src/chip/bsx/$(DEPDIR) src/chip/cx4/$(DEPDIR) src/chip/dsp1/$(DEPDIR) src/chip/dsp2/$(DEPDIR) src/chip/dsp3/$(DEPDIR) src/chip/dsp4/$(DEPDIR) src/chip/obc1/$(DEPDIR) src/chip/sa1/$(DEPDIR) src/chip/sdd1/$(DEPDIR) src/chip/spc7110/$(DEPDIR) src/chip/srtc/$(DEPDIR) src/chip/st010/$(DEPDIR) src/chip/st011/$(DEPDIR) src/chip/st018/$(DEPDIR) src/chip/superfx/$(DEPDIR) src/chip/supergameboy/$(DEPDIR) src/cpu/$(DEPDIR) src/cpu/core/$(DEPDIR) src/cpu/scpu/$(DEPDIR) src/dsp/sdsp/$(DEPDIR) src/lib/libco/$(DEPDIR) src/memory/$(DEPDIR) src/memory/smemory/$(DEPDIR) src/ppu/$(DEPDIR) src/smp/$(DEPDIR) src/system/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) src/cartridge/$(DEPDIR) src/cheat/$(DEPDIR) src/chip/bsx/$(DEPDIR) src/chip/cx4/$(DEPDIR) src/chip/dsp1/$(DEPDIR) src/chip/dsp2/$(DEPDIR) src/chip/dsp3/$(DEPDIR) src/chip/dsp4/$(DEPDIR) src/chip/obc1/$(DEPDIR) src/chip/sa1/$(DEPDIR) src/chip/sdd1/$(DEPDIR) src/chip/spc7110/$(DEPDIR) src/chip/srtc/$(DEPDIR) src/chip/st010/$(DEPDIR) src/chip/superfx/$(DEPDIR) src/cpu/$(DEPDIR) src/cpu/core/$(DEPDIR) src/cpu/scpu/$(DEPDIR) src/lib/libco/$(DEPDIR) src/memory/$(DEPDIR) src/memory/smemory/$(DEPDIR) src/ppu/$(DEPDIR) src/sdsp/$(DEPDIR) src/smp/$(DEPDIR) src/system/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1034,7 +981,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -rf ./$(DEPDIR) src/cartridge/$(DEPDIR) src/cheat/$(DEPDIR) src/chip/21fx/$(DEPDIR) src/chip/bsx/$(DEPDIR) src/chip/cx4/$(DEPDIR) src/chip/dsp1/$(DEPDIR) src/chip/dsp2/$(DEPDIR) src/chip/dsp3/$(DEPDIR) src/chip/dsp4/$(DEPDIR) src/chip/obc1/$(DEPDIR) src/chip/sa1/$(DEPDIR) src/chip/sdd1/$(DEPDIR) src/chip/spc7110/$(DEPDIR) src/chip/srtc/$(DEPDIR) src/chip/st010/$(DEPDIR) src/chip/st011/$(DEPDIR) src/chip/st018/$(DEPDIR) src/chip/superfx/$(DEPDIR) src/chip/supergameboy/$(DEPDIR) src/cpu/$(DEPDIR) src/cpu/core/$(DEPDIR) src/cpu/scpu/$(DEPDIR) src/dsp/sdsp/$(DEPDIR) src/lib/libco/$(DEPDIR) src/memory/$(DEPDIR) src/memory/smemory/$(DEPDIR) src/ppu/$(DEPDIR) src/smp/$(DEPDIR) src/system/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) src/cartridge/$(DEPDIR) src/cheat/$(DEPDIR) src/chip/bsx/$(DEPDIR) src/chip/cx4/$(DEPDIR) src/chip/dsp1/$(DEPDIR) src/chip/dsp2/$(DEPDIR) src/chip/dsp3/$(DEPDIR) src/chip/dsp4/$(DEPDIR) src/chip/obc1/$(DEPDIR) src/chip/sa1/$(DEPDIR) src/chip/sdd1/$(DEPDIR) src/chip/spc7110/$(DEPDIR) src/chip/srtc/$(DEPDIR) src/chip/st010/$(DEPDIR) src/chip/superfx/$(DEPDIR) src/cpu/$(DEPDIR) src/cpu/core/$(DEPDIR) src/cpu/scpu/$(DEPDIR) src/lib/libco/$(DEPDIR) src/memory/$(DEPDIR) src/memory/smemory/$(DEPDIR) src/ppu/$(DEPDIR) src/sdsp/$(DEPDIR) src/smp/$(DEPDIR) src/system/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

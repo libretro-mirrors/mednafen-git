@@ -169,7 +169,7 @@
 /* */
 /* */
 
-static inline u32 C68k_Read_Long(c68k_struc *cpu, u32 adr)
+static INLINE u32 C68k_Read_Long(c68k_struc *cpu, u32 adr)
 {
     u32 ret;
 

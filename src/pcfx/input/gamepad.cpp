@@ -22,114 +22,84 @@
 class PCFX_Input_Gamepad : public PCFX_Input_Device
 {
  public:
- PCFX_Input_Gamepad(int which_param)
+ PCFX_Input_Gamepad()
  {
-  old_raw_buttons = 0;
-  mode1 = false;
-  mode2 = false;
   buttons = 0;
-  which = which_param;
  }
 
- virtual ~PCFX_Input_Gamepad()
+ virtual ~PCFX_Input_Gamepad() override
  {
 
  }
 
- virtual uint32 ReadTransferTime(void)
- {
-  return(1536);
- }
-
- virtual uint32 WriteTransferTime(void)
+ virtual uint32 ReadTransferTime(void) override
  {
   return(1536);
  }
 
- virtual uint32 Read(void)
+ virtual uint32 WriteTransferTime(void) override
+ {
+  return(1536);
+ }
+
+ virtual uint32 Read(void) override
  {
   return(buttons | (FX_SIG_PAD << 28));
  }
 
- virtual void Write(uint32 data)
+ virtual void Write(uint32 data) override
  {
 
  }
 
 
- virtual void Power(void)
+ virtual void Power(void) override
  {
   buttons = 0;
  }
 
- virtual void Frame(const void *data)
+ virtual void TransformInput(uint8* data, const bool DisableSR) override
  {
-  uint16 new_buttons = MDFN_de16lsb((uint8 *)data);
-  bool mode_changed = false;
-
-  if((old_raw_buttons ^ new_buttons) & (1 << 12) & new_buttons)
+  if(DisableSR)
   {
-   mode1 = !mode1;
-   mode_changed = true;
+   uint16 tmp = MDFN_de16lsb(data);
+
+   if((tmp & 0xC0) == 0xC0)
+    tmp &= ~0xC0;
+
+   MDFN_en16lsb(data, tmp);
   }
-
-  if((old_raw_buttons ^ new_buttons) & (1 << 14) & new_buttons)
-  {
-   mode2 = !mode2;
-   mode_changed = true;
-  }
-
-  if(mode_changed)
-   MDFN_DispMessage(_("Pad %d - MODE 1: %s, MODE 2: %s"), which + 1, (mode1 ? "B" : "A"), (mode2 ? "B" : "A"));
-
-  buttons = new_buttons & ~( (1 << 12) | (1 << 14));
-  buttons |= mode1 << 12;
-  buttons |= mode2 << 14;
-
-  old_raw_buttons = new_buttons;
-  //printf("%d %08x\n", which, buttons);
  }
 
- virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name)
+ virtual void Frame(const void *data) override
+ {
+  buttons = MDFN_de16lsb((uint8 *)data);
+ }
+
+ virtual void StateAction(StateMem *sm, const unsigned load, const bool data_only, const char *section_name) override
  {
   SFORMAT StateRegs[] =
   {
    SFVAR(buttons),
-   SFVAR(old_raw_buttons),
-   SFVAR(mode1),
-   SFVAR(mode2),
    SFEND
   };
-  int ret =  MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name);
 
-  return(ret);
+  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
+   Power();
  }
 
  private:
 
  uint16 buttons;
- uint16 old_raw_buttons;
- bool mode1;
- bool mode2;
- int which;
 };
 
-#if 0
-int PCFX_Input_Gamepad::StateAction(StateMem *sm, int load, int data_only, const char *section_name)
+static const char* ModeSwitchPositions[] =
 {
- #if 0
- SFORMAT StateRegs[] =
- {
-  SFEND
- };
- int ret =  MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name);
+ "A",
+ "B",
+};
 
- return(ret);
- #endif
-}
-#endif
-// GamepadIDII and GamepadIDII_DSR must be EXACTLY the same except for the RUN+SELECT exclusion in the latter.
-const InputDeviceInputInfoStruct PCFX_GamepadIDII[] =
+const IDIISG PCFX_GamepadIDII =
 {
  { "i", "I", 11, IDIT_BUTTON, NULL },
  { "ii", "II", 10, IDIT_BUTTON, NULL },
@@ -144,32 +114,12 @@ const InputDeviceInputInfoStruct PCFX_GamepadIDII[] =
  { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
  { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
 
- { "mode1", "MODE 1 (Switch)", 12, IDIT_BUTTON, NULL },
+ IDIIS_Switch("mode1", "MODE 1", 12, ModeSwitchPositions, sizeof(ModeSwitchPositions) / sizeof(ModeSwitchPositions[0])),
  { NULL, "empty", 0, IDIT_BUTTON },
- { "mode2", "MODE 2 (Switch)", 13, IDIT_BUTTON, NULL },
+ IDIIS_Switch("mode2", "MODE 2", 13, ModeSwitchPositions, sizeof(ModeSwitchPositions) / sizeof(ModeSwitchPositions[0])),
 };
 
-const InputDeviceInputInfoStruct PCFX_GamepadIDII_DSR[] =
+PCFX_Input_Device *PCFXINPUT_MakeGamepad(void)
 {
- { "i", "I", 11, IDIT_BUTTON, NULL },
- { "ii", "II", 10, IDIT_BUTTON, NULL },
- { "iii", "III", 9, IDIT_BUTTON, NULL },
- { "iv", "IV", 6, IDIT_BUTTON, NULL },
- { "v", "V", 7, IDIT_BUTTON, NULL },
- { "vi", "VI", 8, IDIT_BUTTON, NULL },
- { "select", "SELECT", 4, IDIT_BUTTON, "run" },
- { "run", "RUN", 5, IDIT_BUTTON, "select" },
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
-
- { "mode1", "MODE 1 (Switch)", 12, IDIT_BUTTON, NULL },
- { NULL, "empty", 0, IDIT_BUTTON },
- { "mode2", "MODE 2 (Switch)", 13, IDIT_BUTTON, NULL },
-};
-
-PCFX_Input_Device *PCFXINPUT_MakeGamepad(int which)
-{
- return(new PCFX_Input_Gamepad(which));
+ return(new PCFX_Input_Gamepad());
 }

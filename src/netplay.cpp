@@ -15,11 +15,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-// Protocol versions:
-//  1 - I forgot!
-//  2 - Added support for more versatile input configurations...somewhat
-//  3 -
-
 #include "mednafen.h"
 
 #include <stdarg.h>
@@ -31,6 +26,7 @@
 
 #include <vector>
 #include <list>
+#include <map>
 
 #include "netplay.h"
 #include "netplay-driver.h"
@@ -38,19 +34,70 @@
 #include "string/trim.h"
 #include "state.h"
 #include "movie.h"
-#include "md5.h"
+#include <mednafen/hash/md5.h>
 #include "mempatcher.h"
+
+#include "MemoryStream.h"
 
 #include "driver.h"
 
 int MDFNnetplay=0;
 
+static std::map<std::string, uint32> PlayersList;
 static char *OurNick = NULL;
 
 static bool Joined = false;
 static uint32 LocalPlayersMask = 0;
 static uint32 LocalInputStateSize = 0;
 static uint32 TotalInputStateSize = 0;
+static uint8 PortVtoLVMap[16];
+static uint8 PortLVtoVMap[16];
+static std::vector<uint8> PreNPPortDataPortData[16];
+static std::vector<uint8> PostEmulatePortData[16];
+static bool StateLoaded;	// Set to true/false in Netplay_Update() call paths, used in Netplay_PostProcess()
+				// to determine where to pull switch data from.
+
+static void RebuildPortVtoVMap(const uint32 PortDevIdx[])
+{
+ const unsigned NumPorts = MDFNGameInfo->PortInfo.size();
+
+ memset(PortVtoLVMap, 0xFF, sizeof(PortVtoLVMap));
+ memset(PortLVtoVMap, 0xFF, sizeof(PortLVtoVMap));
+
+ for(unsigned x = 0; x < NumPorts; x++)
+ {
+  if(LocalPlayersMask & (1U << x))
+  {
+   for(unsigned n = 0; n <= x; n++)
+   {
+    auto const* IDII_N = &MDFNGameInfo->PortInfo[n].DeviceInfo[PortDevIdx[n]].IDII;
+    auto const* IDII_X = &MDFNGameInfo->PortInfo[x].DeviceInfo[PortDevIdx[x]].IDII;
+
+    if(PortLVtoVMap[n] == 0xFF && IDII_N == IDII_X)
+    {
+     PortLVtoVMap[n] = x;
+     PortVtoLVMap[x] = n;
+     break;
+    }
+   }
+  }
+ }
+}
+
+static void SetLPM(const uint32 v, const uint32 PortDevIdx[], const uint32 PortLen[])
+{
+ LocalPlayersMask = v;
+ LocalInputStateSize = 0; 
+
+ for(unsigned x = 0; x < MDFNGameInfo->PortInfo.size(); x++)
+ {
+  if(LocalPlayersMask & (1U << x))
+   LocalInputStateSize += PortLen[x];
+ }
+
+ RebuildPortVtoVMap(PortDevIdx);
+}
+
 
 static void NetError(const char *format, ...)
 {
@@ -61,7 +108,7 @@ static void NetError(const char *format, ...)
  temp = trio_vaprintf(format, ap);
  va_end(ap);
 
- MDFND_NetplayText((UTF8 *)temp, FALSE);
+ MDFND_NetplayText(temp, FALSE);
  MDFND_NetworkClose();
  free(temp);
 }
@@ -75,7 +122,7 @@ static void NetPrintText(const char *format, ...)
  temp = trio_vaprintf(format, ap);
  va_end(ap);
 
- MDFND_NetplayText((UTF8 *)temp, FALSE);
+ MDFND_NetplayText(temp, FALSE);
  free(temp);
 }
 
@@ -93,6 +140,7 @@ void MDFNI_NetplayStop(void)
 	  free(OurNick);
 	  OurNick = NULL;
 	 }
+	 PlayersList.clear();
 	}
 	else puts("Check your code!");
 }
@@ -146,7 +194,7 @@ struct p4_login_data_t
 };
 #endif
 
-int NetplayStart(const char *PortDeviceCache[16], const uint32 PortDataLenCache[16])
+int NetplayStart(const uint32 PortDeviceCache[16], const uint32 PortDataLenCache[16])
 {
  try
  {
@@ -158,6 +206,7 @@ int NetplayStart(const char *PortDeviceCache[16], const uint32 PortDataLenCache[
   login_data_t *ld = NULL;
   std::vector<uint8> sendbuf;
 
+  PlayersList.clear();
   MDFNnetplay = true;
 
   sendbuf.resize(4 + sizeof(login_data_t) + nickname.size() + strlen(emu_id));
@@ -190,36 +239,22 @@ int NetplayStart(const char *PortDeviceCache[16], const uint32 PortDataLenCache[
    memcpy(ld->password, md5out, 16);
   }
 
-  assert(MDFNGameInfo->InputInfo->InputPorts <= 16);
+  assert(MDFNGameInfo->PortInfo.size() <= 16);
 
   ld->protocol_version = 3;
 
   // Set input device number thingies here.
-  ld->total_controllers = MDFNGameInfo->InputInfo->InputPorts; // Total number of ports
+  ld->total_controllers = MDFNGameInfo->PortInfo.size(); // Total number of ports
 
   MDFN_en32lsb(ld->emu_name_len, strlen(emu_id));
 
   // Controller data sizes.
-  for(int x = 0; x < MDFNGameInfo->InputInfo->InputPorts; x++)
+  for(unsigned x = 0; x < MDFNGameInfo->PortInfo.size(); x++)
    ld->controller_data_size[x] = PortDataLenCache[x];
 
   // Controller types
-  for(int x = 0; x < MDFNGameInfo->InputInfo->InputPorts; x++)
-  {
-   unsigned ct = 0;
-
-   for(int d = 0; d < MDFNGameInfo->InputInfo->Types[x].NumTypes; d++)
-   {
-    if(!strcasecmp(MDFNGameInfo->InputInfo->Types[x].DeviceInfo[d].ShortName, PortDeviceCache[x]))
-    {
-     ct = d;
-     break;
-    }
-   }
-   //printf("%d, 0x%02x\n", x, ct);
-
-   ld->controller_type[x] = ct;
-  }
+  for(unsigned x = 0; x < MDFNGameInfo->PortInfo.size(); x++)
+   ld->controller_type[x] = PortDeviceCache[x];	// FIXME: expand controller_type from 8-bit -> 32-bit
 
   ld->local_players = local_players;
 
@@ -231,22 +266,25 @@ int NetplayStart(const char *PortDeviceCache[16], const uint32 PortDataLenCache[
   MDFND_SendData(&sendbuf[0], sendbuf.size());
 
   TotalInputStateSize = 0;
-  for(int x = 0; x < MDFNGameInfo->InputInfo->InputPorts; x++)
+  for(unsigned x = 0; x < MDFNGameInfo->PortInfo.size(); x++)
     TotalInputStateSize += PortDataLenCache[x];
 
   // Hack so the server can always encode its command data length properly(a matching "hack" exists in the server).
   if(TotalInputStateSize < 4)
    TotalInputStateSize = 4;
 
-  TotalInputStateSize = TotalInputStateSize;
-
-  LocalPlayersMask = 0;
-  LocalInputStateSize = 0; 
+  SetLPM(0, PortDeviceCache, PortDataLenCache);
   Joined = false;
 
   //
   //
   //
+  for(unsigned x = 0; x < MDFNGameInfo->PortInfo.size(); x++)
+  {
+   PreNPPortDataPortData[x].assign(PortDataLenCache[x], 0);
+   PostEmulatePortData[x].assign(PortDataLenCache[x], 0);
+  }
+
   MDFN_FlushGameCheats(0);	/* Save our pre-netplay cheats. */
 
   if(MDFNMOV_IsPlaying())		/* Recording's ok during netplay, playback is not. */
@@ -282,11 +320,11 @@ static void SendCommand(uint8 cmd, uint32 len, const void* data = NULL)
  //DelayBuffer.
 }
 
-bool NetplaySendCommand(uint8 cmd, uint32 len)
+bool NetplaySendCommand(uint8 cmd, uint32 len, const void* data)
 {
  try
  {
-  SendCommand(cmd, len);
+  SendCommand(cmd, len, data);
  }
  catch(std::exception &e)
  {
@@ -294,242 +332,6 @@ bool NetplaySendCommand(uint8 cmd, uint32 len)
   return(false);
  }
  return(true);
-}
-
-void MDFNI_NetplaySwap(uint8 a, uint8 b)
-{
- try
- {
-  SendCommand(MDFNNPCMD_CTRLR_SWAP, (a << 0) | (b << 8));
- }
- catch(std::exception &e)
- {
-  NetError("%s", e.what());
- }
-}
-
-void MDFNI_NetplayTake(uint32 mask)
-{
- try
- {
-  SendCommand(MDFNNPCMD_CTRLR_TAKE, mask);
- }
- catch(std::exception &e)
- {
-  NetError("%s", e.what());
- }
-}
-
-void MDFNI_NetplayDrop(uint32 mask)
-{
- try
- {
-  SendCommand(MDFNNPCMD_CTRLR_DROP, mask);
- }
- catch(std::exception &e)
- {
-  NetError("%s", e.what());
- }
-}
-
-void MDFNI_NetplayDupe(uint32 mask)
-{
- try
- {
-  SendCommand(MDFNNPCMD_CTRLR_DUPE, mask);
- }
- catch(std::exception &e)
- {
-  NetError("%s", e.what());
- }
-}
-
-void MDFNI_NetplayList(void)
-{
- try
- {
-  SendCommand(MDFNNPCMD_REQUEST_LIST, 0);
- }
- catch(std::exception &e)
- {
-  NetError("%s", e.what());
- }
-}
-
-
-void MDFNI_NetplayPing(void)
-{
- try
- {
-  uint64 now_time;
-
-  now_time = MDFND_GetTime();
-
-  // Endianness doesn't matter, since it will be echoed back only to us.
-  SendCommand(MDFNNPCMD_ECHO, sizeof(now_time), &now_time);
- }
- catch(std::exception &e)
- {
-  NetError("%s", e.what());
- }
-}
-
-void MDFNI_NetplayIntegrity(void)
-{
- try
- {
-  SendCommand(MDFNNPCMD_INTEGRITY, 0);
- }
- catch(std::exception &e)
- {
-  NetError("%s", e.what());
- }
-}
-
-void MDFNI_NetplayText(const uint8 *text)
-{
- try
- {
-  uint32 len;
-
-  if(!Joined) return;
-
-  len = strlen((char *)text);
-
-  SendCommand(MDFNNPCMD_TEXT, len, text);
- }
- catch(std::exception &e)
- {
-  NetError("%s", e.what());
- }
-}
-
-void MDFNI_NetplayChangeNick(UTF8 *newnick)
-{
- try
- {
-  uint32 len;
-
-  if(!Joined) return;
-
-  len = strlen((char *)newnick);
-
-  SendCommand(MDFNNPCMD_SETNICK, len, newnick);
- }
- catch(std::exception &e)
- {
-  NetError("%s", e.what());
- }
-}
-
-void MDFNI_NetplayQuit(const char *quit_message)
-{
- try
- {
-  SendCommand(MDFNNPCMD_QUIT, strlen(quit_message), quit_message);
- }
- catch(std::exception &e)
- {
-  NetError("%s", e.what());
- }
-}
-
-
-// Integrity checking is experimental, and needs work to function properly(in the emulator cores).
-static int SendIntegrity(void)
-{
- StateMem sm;
- md5_context md5;
- uint8 digest[16];
-
- memset(&sm, 0, sizeof(StateMem));
-
- // Do not do a raw/data-only state for speed, due to lack of endian and bool conversion.
- if(!MDFNSS_SaveSM(&sm, 0, false))
- {
-  throw MDFN_Error(0, _("Error during save state generation."));
- }
-
- md5.starts();
- md5.update(sm.data, sm.len);
- md5.finish(digest);
-
- free(sm.data);
-
- //for(int i = 15; i >= 0; i--)
- // printf("%02x", digest[i]);
- //puts("");
-
- SendCommand(MDFNNPCMD_INTEGRITY_RES, 16, digest);
-
- return(1);
-}
-
-
-static void SendState(void)
-{
- StateMem sm;
- uLongf clen;
- std::vector<uint8> cbuf;
-
- memset(&sm, 0, sizeof(StateMem));
-
- if(!MDFNSS_SaveSM(&sm, 0, 0))
- {
-  throw MDFN_Error(0, _("Error during save state generation."));
- }
-
- clen = sm.len + sm.len / 1000 + 12;
- cbuf.resize(4 + clen);
- MDFN_en32lsb(&cbuf[0], sm.len);
- compress2((Bytef *)&cbuf[0] + 4, &clen, (Bytef *)sm.data, sm.len, 7);
- free(sm.data);
-
- SendCommand(MDFNNPCMD_LOADSTATE, clen + 4, &cbuf[0]);
-}
-
-static void RecvState(const uint32 clen)
-{
- StateMem sm;
- std::vector<uint8> cbuf;
- std::vector<uint8> buf;
-
- memset(&sm, 0, sizeof(StateMem));
-
- if(clen < 4)
- {
-  throw MDFN_Error(0, _("Compressed save state data is too small: %u"), clen);
- }
-
- if(clen > 8 * 1024 * 1024) // Compressed length sanity check - 8 MiB max.
- {
-  throw MDFN_Error(0, _("Compressed save state data is too large: %u"), clen);
- }
-
- cbuf.resize(clen);
-
- MDFND_RecvData(&cbuf[0], clen);
-
- uLongf len = MDFN_de32lsb(&cbuf[0]);
- if(len > 12 * 1024 * 1024) // Uncompressed length sanity check - 12 MiB max.
- {
-  throw MDFN_Error(0, _("Uncompressed save state data is too large: %llu"), (unsigned long long)len);
- }
-
- buf.resize(len);
-
- uncompress((Bytef *)&buf[0], &len, (Bytef *)&cbuf[0] + 4, clen - 4);
-
- sm.data = &buf[0];
- sm.len = len;
-
- if(!MDFNSS_LoadSM(&sm, 0, 0))
- {
-  throw MDFN_Error(0, _("Error during save state loading."));
- }
-
- if(MDFNMOV_IsRecording())
-  MDFNMOV_RecordState();
 }
 
 static std::string GenerateMPSString(uint32 mps, bool ctlr_string = false)
@@ -566,6 +368,223 @@ static std::string GenerateMPSString(uint32 mps, bool ctlr_string = false)
  return(std::string(tmpbuf));
 }
 
+static void MDFNI_NetplaySwap(uint8 a, uint8 b)
+{
+ try
+ {
+  SendCommand(MDFNNPCMD_CTRLR_SWAP, (a << 0) | (b << 8));
+ }
+ catch(std::exception &e)
+ {
+  NetError("%s", e.what());
+ }
+}
+
+static void MDFNI_NetplayTake(uint32 mask)
+{
+ try
+ {
+  SendCommand(MDFNNPCMD_CTRLR_TAKE, mask);
+ }
+ catch(std::exception &e)
+ {
+  NetError("%s", e.what());
+ }
+}
+
+static void MDFNI_NetplayDrop(uint32 mask)
+{
+ try
+ {
+  SendCommand(MDFNNPCMD_CTRLR_DROP, mask);
+ }
+ catch(std::exception &e)
+ {
+  NetError("%s", e.what());
+ }
+}
+
+static void MDFNI_NetplayDupe(uint32 mask)
+{
+ try
+ {
+  SendCommand(MDFNNPCMD_CTRLR_DUPE, mask);
+ }
+ catch(std::exception &e)
+ {
+  NetError("%s", e.what());
+ }
+}
+
+static void MDFNI_NetplayList(void)
+{
+ try
+ {
+  for(auto& it : PlayersList)
+  {
+   NetPrintText(_("** <%s> is %s"), it.first.c_str(), GenerateMPSString(it.second).c_str());
+  }
+ }
+ catch(std::exception &e)
+ {
+  NetError("%s", e.what());
+ }
+}
+
+
+static void MDFNI_NetplayPing(void)
+{
+ try
+ {
+  uint64 now_time;
+
+  now_time = MDFND_GetTime();
+
+  // Endianness doesn't matter, since it will be echoed back only to us.
+  SendCommand(MDFNNPCMD_ECHO, sizeof(now_time), &now_time);
+ }
+ catch(std::exception &e)
+ {
+  NetError("%s", e.what());
+ }
+}
+#if 0
+static void MDFNI_NetplayIntegrity(void)
+{
+ try
+ {
+  SendCommand(MDFNNPCMD_INTEGRITY, 0);
+ }
+ catch(std::exception &e)
+ {
+  NetError("%s", e.what());
+ }
+}
+#endif
+static void MDFNI_NetplayText(const char *text)
+{
+ try
+ {
+  uint32 len;
+
+  if(!Joined) return;
+
+  len = strlen(text);
+
+  SendCommand(MDFNNPCMD_TEXT, len, text);
+ }
+ catch(std::exception &e)
+ {
+  NetError("%s", e.what());
+ }
+}
+
+static void MDFNI_NetplayChangeNick(const char* newnick)
+{
+ try
+ {
+  uint32 len;
+
+  if(!Joined) return;
+
+  len = strlen(newnick);
+
+  SendCommand(MDFNNPCMD_SETNICK, len, newnick);
+ }
+ catch(std::exception &e)
+ {
+  NetError("%s", e.what());
+ }
+}
+
+static void MDFNI_NetplayQuit(const char *quit_message)
+{
+ try
+ {
+  SendCommand(MDFNNPCMD_QUIT, strlen(quit_message), quit_message);
+ }
+ catch(std::exception &e)
+ {
+  NetError("%s", e.what());
+ }
+}
+
+
+//
+// Integrity checking is experimental, and needs work to function properly(in the emulator cores).
+//
+static int SendIntegrity(void)
+{
+ MemoryStream sm(65536);
+ md5_context md5;
+ uint8 digest[16];
+
+ // Do not do a raw/data-only state for speed, due to lack of endian and bool conversion.
+ MDFNSS_SaveSM(&sm, false);
+
+ md5.starts();
+ md5.update(sm.map(), sm.size());
+ md5.finish(digest);
+
+ SendCommand(MDFNNPCMD_INTEGRITY_RES, 16, digest);
+
+ return(1);
+}
+
+
+static void SendState(void)
+{
+ std::vector<uint8> cbuf;
+ uLongf clen;
+
+ {
+  MemoryStream sm(65536);
+
+  MDFNSS_SaveSM(&sm, false);
+
+  clen = sm.size() + sm.size() / 1000 + 12;
+  cbuf.resize(4 + clen);
+  MDFN_en32lsb(&cbuf[0], sm.size());
+  compress2((Bytef *)&cbuf[0] + 4, &clen, (Bytef *)sm.map(), sm.size(), 7);
+ }
+
+ SendCommand(MDFNNPCMD_LOADSTATE, clen + 4, &cbuf[0]);
+}
+
+static void RecvState(const uint32 clen)
+{
+ std::vector<uint8> cbuf;
+
+ if(clen < 4)
+ {
+  throw MDFN_Error(0, _("Compressed save state data is too small: %u"), clen);
+ }
+
+ if(clen > 8 * 1024 * 1024) // Compressed length sanity check - 8 MiB max.
+ {
+  throw MDFN_Error(0, _("Compressed save state data is too large: %u"), clen);
+ }
+
+ cbuf.resize(clen);
+
+ MDFND_RecvData(&cbuf[0], clen);
+
+ uLongf len = MDFN_de32lsb(&cbuf[0]);
+ if(len > 12 * 1024 * 1024) // Uncompressed length sanity check - 12 MiB max.
+ {
+  throw MDFN_Error(0, _("Uncompressed save state data is too large: %llu"), (unsigned long long)len);
+ }
+
+ MemoryStream sm(len, -1);
+
+ uncompress((Bytef *)sm.map(), &len, (Bytef *)&cbuf[0] + 4, clen - 4);
+
+ MDFNSS_LoadSM(&sm, false);
+
+ if(MDFNMOV_IsRecording())
+  MDFNMOV_RecordState();
+}
+
 void NetplaySendState(void)
 {
  try
@@ -578,7 +597,7 @@ void NetplaySendState(void)
  }
 }
 
-static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const char **PortDNames, void *PortData[], uint32 PortLen[], int NumPorts)
+static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 PortDevIdx[], uint8* const PortData[], const uint32 PortLen[], int NumPorts)
 {
   switch(cmd)
   {
@@ -597,7 +616,18 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const char **P
 
    case MDFNNPCMD_LOADSTATE:
 			RecvState(raw_len);
+			StateLoaded = true;
 			MDFN_DispMessage(_("Remote state loaded."));
+			break;
+
+   case MDFNNPCMD_SET_MEDIA:
+			{
+			 uint8 buf[4 * 4];
+
+			 MDFND_RecvData(buf, sizeof(buf));
+
+			 MDFN_UntrustedSetMedia(MDFN_de32lsb(&buf[0]), MDFN_de32lsb(&buf[4]), MDFN_de32lsb(&buf[8]), MDFN_de32lsb(&buf[12]));
+			}
 			break;
 
    case MDFNNPCMD_SERVERTEXT:
@@ -616,7 +646,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const char **P
 
 			 neobuf[totallen] = 0;
 			 trio_asprintf(&textbuf, "** %s", neobuf);
-                         MDFND_NetplayText((UTF8*)textbuf, FALSE);
+                         MDFND_NetplayText(textbuf, FALSE);
                          free(textbuf);
 			}
 			break;
@@ -638,7 +668,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const char **P
 
                          char *textbuf = NULL;
 			 trio_asprintf(&textbuf, _("*** Round-trip time: %llu ms"), (unsigned long long)(now_time - then_time));
-                         MDFND_NetplayText((UTF8*)textbuf, FALSE);
+                         MDFND_NetplayText(textbuf, FALSE);
                          free(textbuf);
 			}
 			break;
@@ -674,10 +704,12 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const char **P
 
 			 if(nicklen)
 			 {
-			  uint8 nickbuf[nicklen + 1];
+			  char nickbuf[nicklen + 1];
+
 			  memcpy(nickbuf, neobuf + 4, nicklen);
 			  nickbuf[nicklen] = 0;
-			  if(OurNick && !strcasecmp(OurNick, (char *)nickbuf))
+
+			  if(OurNick && !strcasecmp(OurNick, nickbuf))
 			  {
                            trio_asprintf(&textbuf, "> %s", &neobuf[4 + nicklen]);
 			   NetEcho = true;
@@ -689,7 +721,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const char **P
 			 {
 			  trio_asprintf(&textbuf, "* %s", &neobuf[4]);
 			 }
-                         MDFND_NetplayText((UTF8*)textbuf, NetEcho);
+                         MDFND_NetplayText(textbuf, NetEcho);
 			 free(textbuf);
 			}
 			break;
@@ -730,8 +762,28 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const char **P
 			  }
 			  if(!textbuf)
 			   textbuf = trio_aprintf(_("* <%s> is now known as <%s>"), neobuf, newnick);
-                          MDFND_NetplayText((UTF8*)textbuf, IsMeow);
+                          MDFND_NetplayText(textbuf, IsMeow);
 			  free(textbuf);
+
+			  // Update players list.
+			  {
+			   const std::string ons = std::string((const char*)neobuf);
+			   const std::string nns = std::string((const char*)newnick);
+
+			   if(ons != nns)
+			   {
+	 	 	    auto ons_it = PlayersList.find(ons);
+			    auto nns_it = PlayersList.find(nns);
+
+			    if(ons_it == PlayersList.end() || nns_it != PlayersList.end())
+			     MDFND_NetplayText(_("[BUG] Players list state out of sync."), false);
+			    else
+			    {
+			     PlayersList[nns] = ons_it->second;
+			     PlayersList.erase(ons_it);
+			    }
+			   }
+			  }
 			 }
 			}
 			break;
@@ -746,13 +798,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const char **P
 			 //
 			 //
                          LocalInputStateSize = 0;
-                         LocalPlayersMask = len;
-
-                         for(int x = 0; x < MDFNGameInfo->InputInfo->InputPorts; x++)
-                         {
-                          if(LocalPlayersMask & (1 << x))
-                           LocalInputStateSize += PortLen[x];
-                         }
+			 SetLPM(len, PortDevIdx, PortLen);
 			}
 			break;
 
@@ -760,9 +806,35 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const char **P
 			{
 			 const uint32 cm = raw_len;
 			 char textbuf[512];
+			 const uint8 c0 = cm & 0xFF;
+			 const uint8 c1 = (cm >> 8) & 0xFF;
 
-			 trio_snprintf(textbuf, sizeof(textbuf), _("* All instances of controllers %u and %u have been swapped."), ((cm & 0xFF) + 1), ((cm >> 8) & 0xFF) + 1);
-			 MDFND_NetplayText((UTF8*)textbuf, false);
+			 trio_snprintf(textbuf, sizeof(textbuf), _("* All instances of controllers %u and %u have been swapped."), c0 + 1, c1 + 1);
+			 MDFND_NetplayText(textbuf, false);
+
+			 for(auto& it : PlayersList)
+			 {
+			  uint32 mps = it.second;
+			  bool c0b, c1b;
+
+			  // Grab bits first before any clearing.
+		 	  c0b = ((c0 < sizeof(mps) * 8) ? ((mps >> c0) & 1) : false);
+			  c1b = ((c1 < sizeof(mps) * 8) ? ((mps >> c1) & 1) : false);
+
+			  if(c0 < sizeof(mps) * 8)
+			  {
+			   mps &= ~((uint32)1 << c0);
+			   mps |= (uint32)c1b << c0;
+			  }
+			  
+			  if(c1 < sizeof(mps) * 8)
+			  {
+			   mps &= ~((uint32)1 << c1);
+			   mps |= (uint32)c0b << c1;
+			  }
+
+			  it.second = mps;
+			 }
 			}
 			break;
 
@@ -801,8 +873,18 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const char **P
 				break;
 			 }
                          trio_asprintf(&textbuf, fstr, ntf_buf + 12, GenerateMPSString(MDFN_de32lsb(&ntf_buf[0]), true).c_str(), GenerateMPSString(MDFN_de32lsb(&ntf_buf[4]), false).c_str());
-	                 MDFND_NetplayText((UTF8*)textbuf, false);
+	                 MDFND_NetplayText(textbuf, false);
 			 free(textbuf);
+
+			 // Update players list.
+			 {
+			  auto it = PlayersList.find(std::string((const char*)ntf_buf + 12));
+
+			  if(it == PlayersList.end())
+			   MDFND_NetplayText(_("[BUG] Players list state out of sync."), false);
+			  else
+			   it->second = MDFN_de32lsb(&ntf_buf[4]);
+			 }
 			}
 			break;
 
@@ -838,8 +920,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const char **P
 			 if(cmd == MDFNNPCMD_YOULEFT)
 			 {
 			  // Uhm, not supported yet!
-			  LocalPlayersMask = 0;
-			  LocalInputStateSize = 0;
+			  SetLPM(0, PortDevIdx, PortLen);
 			  Joined = FALSE;
 			 }
 			 else if(cmd == MDFNNPCMD_YOUJOINED)
@@ -853,13 +934,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const char **P
 
                           trio_asprintf(&textbuf, _("* You, %s, have connected as: %s"), neobuf + 8, mps_string.c_str());
 
-			  LocalPlayersMask = mps;
-			  LocalInputStateSize = 0;
-			  for(int x = 0; x < MDFNGameInfo->InputInfo->InputPorts; x++)
-			  {
-			   if(LocalPlayersMask & (1U << x))
-			    LocalInputStateSize += PortLen[x];
-			  }
+			  SetLPM(mps, PortDevIdx, PortLen);
 			  Joined = TRUE;
 
 			  SendCommand(MDFNNPCMD_SETFPS, MDFNGameInfo->fps);
@@ -872,16 +947,72 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const char **P
 			 {
                                   trio_asprintf(&textbuf, _("* %s has connected as: %s"), neobuf + 8, mps_string.c_str());
 			 }
-	                 MDFND_NetplayText((UTF8*)textbuf, FALSE);
+
+	                 MDFND_NetplayText(textbuf, FALSE);
 			 free(textbuf);
+
+			 // Update players list.
+			 if(cmd == MDFNNPCMD_YOUJOINED || cmd == MDFNNPCMD_PLAYERJOINED)
+			 {
+			  PlayersList[std::string((const char*)neobuf + 8)] = mps;
+			 }
+			 else
+			 {
+			  auto it = PlayersList.find(std::string((const char*)neobuf + 8));
+
+			  if(it == PlayersList.end())
+			   MDFND_NetplayText(_("[BUG] Players list state out of sync."), false);
+			  else
+			   PlayersList.erase(it);
+			 }
 			}
 			break;
   }
 }
 
-void NetplayUpdate(const char **PortDNames, void *PortData[], uint32 PortLen[], int NumPorts)
+#if 0
+       for(auto const& idii : *IDII_N)
+       {
+        if(idii.Type == IDIT_SWITCH)
+        {
+	 const uint32 cur = BitsExtract(&PortData[n][0], idii.BitOffset, idii.BitSize);
+         const uint32 prev = BitsExtract(&PrevPortData[n][0], idii.BitOffset, idii.BitSize);
+         const uint32 delta = cur - prev;
+
+	 printf("%d\n", delta);
+
+	 // We mustn't modify PortData with this filter, only outgoing_buffer(because we can load state in the middle of this function,
+	 // which will load new port data that doesn't have this filter applied, and things go boom-boom)!
+	 BitsIntract(&outgoing_buffer[wpos], idii.BitOffset, idii.BitSize, delta);
+        }
+       }
+#endif
+
+#if 0
+    if(LocalPlayersMask & (1 << x))
+    {
+     for(unsigned n = 0; n <= x; n++)
+     {
+      auto const* IDII_N = &MDFNGameInfo->PortInfo[n].DeviceInfo[PortDevIdx[n]].IDII;
+      auto const* IDII_X = &MDFNGameInfo->PortInfo[x].DeviceInfo[PortDevIdx[x]].IDII;
+
+      if(!Taken[n] && IDII_N == IDII_X)
+      {
+       memcpy(outgoing_buffer + wpos, PortData[n], PortLen[n]);
+       Taken[n] = TRUE;
+       wpos += PortLen[n];
+       break;
+      }
+     }
+    }
+#endif
+
+void Netplay_Update(const uint32 PortDevIdx[], uint8* const PortData[], const uint32 PortLen[])
 {
+ const unsigned NumPorts = MDFNGameInfo->PortInfo.size();
  uint8 buf[TotalInputStateSize + 1];
+
+ StateLoaded = false;
 
  try
  {
@@ -891,28 +1022,17 @@ void NetplayUpdate(const char **PortDNames, void *PortData[], uint32 PortLen[], 
   if(Joined)
   {
    uint8 outgoing_buffer[1 + LocalInputStateSize];
-   bool Taken[NumPorts];
+   outgoing_buffer[0] = 0; 	// Not a command
 
-   memset(Taken, 0, sizeof(Taken));
-
-   outgoing_buffer[0] = 0; // This is not a command, duh!
-
-   int wpos = 1;
-
-   for(int x = 0; x < NumPorts; x++)
+   for(unsigned x = 0, wpos = 1; x < NumPorts; x++)
    {
-    if(LocalPlayersMask & (1 << x))
+    memcpy(PreNPPortDataPortData[x].data(), PortData[x], PortLen[x]);
+
+    auto n = PortVtoLVMap[x];
+    if(n != 0xFF)
     {
-     for(int n = 0; n <= x; n++)
-     {
-      if(!Taken[n] && !strcmp(PortDNames[n], PortDNames[x]))
-      {
-       memcpy(outgoing_buffer + wpos, PortData[n], PortLen[n]);
-       Taken[n] = TRUE;
-       wpos += PortLen[n];
-       break;
-      }
-     }
+     memcpy(outgoing_buffer + wpos, PortData[n], PortLen[n]);
+     wpos += PortLen[n];
     }
    }
    MDFND_SendData(outgoing_buffer, 1 + LocalInputStateSize);
@@ -931,20 +1051,16 @@ void NetplayUpdate(const char **PortDNames, void *PortData[], uint32 PortLen[], 
    cmd_raw_len = MDFN_de32lsb(&buf[0]);
 
    if(cmd != 0)
-    ProcessCommand(cmd, cmd_raw_len, PortDNames, PortData, PortLen, NumPorts);
+    ProcessCommand(cmd, cmd_raw_len, PortDevIdx, PortData, PortLen, NumPorts);
   } while(cmd != 0);
 
   //
   // Update local port data buffers with data received.
   //
+  for(unsigned x = 0, rpos = 0; x < NumPorts; x++)
   {
-   unsigned rpos = 0;
-
-   for(int x = 0; x < NumPorts; x++)
-   {
-    memcpy(PortData[x], buf + rpos, PortLen[x]);
-    rpos += PortLen[x];
-   }
+   memcpy(PortData[x], buf + rpos, PortLen[x]);
+   rpos += PortLen[x];
   }
  }
  catch(std::exception &e)
@@ -953,32 +1069,76 @@ void NetplayUpdate(const char **PortDNames, void *PortData[], uint32 PortLen[], 
  }
 }
 
+void Netplay_PostProcess(const uint32 PortDevIdx[], uint8* const PortData[], const uint32 PortLen[])
+{
+ const unsigned NumPorts = MDFNGameInfo->PortInfo.size();
+
+ //
+ // Make a backup copy of the current port data, then zero the port data(specifically for rumble and status bits).
+ //
+ for(unsigned x = 0; x < NumPorts; x++)
+ {
+  assert(PostEmulatePortData[x].size() == PortLen[x]);
+  assert(PreNPPortDataPortData[x].size() == PortLen[x]);
+
+  memcpy(PostEmulatePortData[x].data(), PortData[x], PortLen[x]);
+  memset(PortData[x], 0, PortLen[x]);
+ }
+
+ //
+ // Remap rumble and status(along with other data that doesn't matter), and copy switch state bits
+ // into the current port data from a backup copy saved BEFORE all netplay shenanigans(including load remote save state),
+ // as a kludgey way of keeping switches from getting into a delay/feedback loop and going bonkers.
+ //
+ for(unsigned x = 0; x < NumPorts; x++)
+ {
+  if(PortLVtoVMap[x] != 0xFF)
+   memcpy(PortData[x], PostEmulatePortData[PortLVtoVMap[x]].data(), PortLen[x]);
+
+  for(auto const& idii : MDFNGameInfo->PortInfo[x].DeviceInfo[PortDevIdx[x]].IDII)
+  {
+   switch(idii.Type)
+   {
+    default:
+	break;
+    case IDIT_SWITCH:
+	{
+	 uint32 tmp;
+
+	 tmp = BitsExtract(PreNPPortDataPortData[x].data(), idii.BitOffset, idii.BitSize);
+	 BitsIntract(PortData[x], idii.BitOffset, idii.BitSize, tmp);
+	}
+	break;
+   }
+  }
+ }
+}
 
 //
 //
 //
 //
 
-typedef struct
+struct CommandEntry
 {
  const char *name;
- bool (*func)(const UTF8 *arg);
+ bool (*func)(const char* arg);
  const char *help_args;
  const char *help_desc;
-} CommandEntry;
+};
 
-static bool CC_server(const UTF8 *arg);
-static bool CC_quit(const UTF8 *arg);
-static bool CC_help(const UTF8 *arg);
-static bool CC_nick(const UTF8 *arg);
-static bool CC_ping(const UTF8 *arg);
-static bool CC_integrity(const UTF8 *arg);
-static bool CC_gamekey(const UTF8 *arg);
-static bool CC_swap(const UTF8 *arg);
-static bool CC_dupe(const UTF8 *arg);
-static bool CC_drop(const UTF8 *arg);
-static bool CC_take(const UTF8 *arg);
-static bool CC_list(const UTF8 *arg);
+static bool CC_server(const char *arg);
+static bool CC_quit(const char *arg);
+static bool CC_help(const char *arg);
+static bool CC_nick(const char *arg);
+static bool CC_ping(const char *arg);
+//static bool CC_integrity(const char *arg);
+static bool CC_gamekey(const char *arg);
+static bool CC_swap(const char *arg);
+static bool CC_dupe(const char *arg);
+static bool CC_drop(const char *arg);
+static bool CC_take(const char *arg);
+static bool CC_list(const char *arg);
 
 static CommandEntry ConsoleCommands[]   =
 {
@@ -986,7 +1146,7 @@ static CommandEntry ConsoleCommands[]   =
 
  { "/connect", CC_server,	NULL, NULL },
 
- //{ "/gamekey", CC_gamekey,	gettext_noop("GAMEKEY"), gettext_noop("Changes the game key to the specified GAMEKEY.") },
+ { "/gamekey", CC_gamekey,	gettext_noop("[GAMEKEY]"), gettext_noop("Changes the game key to the specified GAMEKEY.") },
 
  { "/quit", CC_quit,		gettext_noop("[MESSAGE]"), gettext_noop("Disconnects from the netplay server.") },
 
@@ -1000,7 +1160,7 @@ static CommandEntry ConsoleCommands[]   =
  { "/drop", CC_drop,            gettext_noop("[A] [...]"), gettext_noop("Drop all instances of specified controller(s).") },
  { "/take", CC_take,            gettext_noop("[A] [...]"), gettext_noop("Take all instances of specified controller(s).") },
 
- //{ "/list", CC_list,		"", "List players in game." },
+ { "/list", CC_list,		"", "List players in game." },
 
  { "/ping", CC_ping,		"", "Pings the server." },
 
@@ -1010,25 +1170,25 @@ static CommandEntry ConsoleCommands[]   =
 };
 
 
-static bool CC_server(const UTF8 *arg)
+static bool CC_server(const char *arg)
 {
  char server[300];
  unsigned int port = 0;
 
  server[0] = 0;
 
- switch(trio_sscanf((char*)arg, "%.299s %u", server, &port))
+ switch(trio_sscanf(arg, "%.299s %u", server, &port))
  {
   default:
   case 0:
 	break;
 
   case 1:
-	MDFNI_SetSetting("netplay.host", (char*)server);
+	MDFNI_SetSetting("netplay.host", server);
 	break;
 
   case 2:
-	MDFNI_SetSetting("netplay.host", (char*)server);
+	MDFNI_SetSetting("netplay.host", server);
 	MDFNI_SetSettingUI("netplay.port", port);
 	break;
  }
@@ -1038,17 +1198,31 @@ static bool CC_server(const UTF8 *arg)
  return(false);
 }
 
-static bool CC_gamekey(const UTF8 *arg)
+static bool CC_gamekey(const char *arg)
 {
+ MDFNI_SetSetting("netplay.gamekey", arg);
+
+ if(arg[0] == 0)
+  NetPrintText(_("** Game key cleared."));
+ else
+ {
+  NetPrintText(_("** Game key changed to: %s"), arg);
+ }
+
+ if(MDFNnetplay)
+ {
+  NetPrintText(_("** Caution: Changing the game key will not affect the current netplay session."));
+ }
+
 // SendCEvent(CEVT_NP_SETGAMEKEY, strdup(arg), NULL);
  return(true);
 }
 
-static bool CC_quit(const UTF8 *arg)
+static bool CC_quit(const char *arg)
 {
  if(MDFNnetplay)
  {
-  MDFNI_NetplayQuit((const char *)arg);
+  MDFNI_NetplayQuit(arg);
   MDFND_NetworkClose();
  }
  else
@@ -1060,7 +1234,7 @@ static bool CC_quit(const UTF8 *arg)
  return(false);
 }
 
-static bool CC_list(const UTF8 *arg)
+static bool CC_list(const char *arg)
 {
  if(MDFNnetplay)
   MDFNI_NetplayList();
@@ -1073,11 +1247,11 @@ static bool CC_list(const UTF8 *arg)
  return(true);
 }
 
-static bool CC_swap(const UTF8 *arg)
+static bool CC_swap(const char *arg)
 {
  int a = 0, b = 0;
 
- if(sscanf((const char *)arg, "%u %u", &a, &b) == 2 && a && b)
+ if(sscanf(arg, "%u %u", &a, &b) == 2 && a && b)
  {
   uint32 sc = ((a - 1) & 0xFF) | (((b - 1) & 0xFF) << 8);
 
@@ -1098,14 +1272,14 @@ static bool CC_swap(const UTF8 *arg)
  return(false);
 }
 
-static bool CC_dupe(const UTF8 *arg)
+static bool CC_dupe(const char *arg)
 {
  int tmp[32];
  int count;
 
 
  memset(tmp, 0, sizeof(tmp));
- count = sscanf((const char *)arg, "%u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u",
+ count = sscanf(arg, "%u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u",
 			&tmp[0x00], &tmp[0x01], &tmp[0x02], &tmp[0x03], &tmp[0x04], &tmp[0x05], &tmp[0x06], &tmp[0x07],
 			&tmp[0x08], &tmp[0x09], &tmp[0x0A], &tmp[0x0B], &tmp[0x0C], &tmp[0x0D], &tmp[0x0E], &tmp[0x0F],
                         &tmp[0x00], &tmp[0x01], &tmp[0x02], &tmp[0x03], &tmp[0x04], &tmp[0x05], &tmp[0x06], &tmp[0x07],
@@ -1138,14 +1312,14 @@ static bool CC_dupe(const UTF8 *arg)
  return(false);
 }
 
-static bool CC_drop(const UTF8 *arg)
+static bool CC_drop(const char *arg)
 {
  int tmp[32];
  int count;
 
 
  memset(tmp, 0, sizeof(tmp));
- count = sscanf((const char *)arg, "%u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u",
+ count = sscanf(arg, "%u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u",
                         &tmp[0x00], &tmp[0x01], &tmp[0x02], &tmp[0x03], &tmp[0x04], &tmp[0x05], &tmp[0x06], &tmp[0x07],
                         &tmp[0x08], &tmp[0x09], &tmp[0x0A], &tmp[0x0B], &tmp[0x0C], &tmp[0x0D], &tmp[0x0E], &tmp[0x0F],
                         &tmp[0x00], &tmp[0x01], &tmp[0x02], &tmp[0x03], &tmp[0x04], &tmp[0x05], &tmp[0x06], &tmp[0x07],
@@ -1178,14 +1352,14 @@ static bool CC_drop(const UTF8 *arg)
  return(false);
 }
 
-static bool CC_take(const UTF8 *arg)
+static bool CC_take(const char *arg)
 {
  int tmp[32];
  int count;
 
 
  memset(tmp, 0, sizeof(tmp));
- count = sscanf((const char *)arg, "%u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u",
+ count = sscanf(arg, "%u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u %u",
                         &tmp[0x00], &tmp[0x01], &tmp[0x02], &tmp[0x03], &tmp[0x04], &tmp[0x05], &tmp[0x06], &tmp[0x07],
                         &tmp[0x08], &tmp[0x09], &tmp[0x0A], &tmp[0x0B], &tmp[0x0C], &tmp[0x0D], &tmp[0x0E], &tmp[0x0F],
                         &tmp[0x00], &tmp[0x01], &tmp[0x02], &tmp[0x03], &tmp[0x04], &tmp[0x05], &tmp[0x06], &tmp[0x07],
@@ -1218,7 +1392,7 @@ static bool CC_take(const UTF8 *arg)
  return(false);
 }
 
-static bool CC_ping(const UTF8 *arg)
+static bool CC_ping(const char *arg)
 {
  if(MDFNnetplay)
   MDFNI_NetplayPing();
@@ -1231,7 +1405,8 @@ static bool CC_ping(const UTF8 *arg)
  return(false);
 }
 
-static bool CC_integrity(const UTF8 *arg)
+#if 0
+static bool CC_integrity(const char *arg)
 {
  if(MDFNnetplay)
   MDFNI_NetplayIntegrity();
@@ -1243,8 +1418,9 @@ static bool CC_integrity(const UTF8 *arg)
 
  return(FALSE);
 }
+#endif
 
-static bool CC_help(const UTF8 *arg)
+static bool CC_help(const char *arg)
 {
  for(unsigned int x = 0; ConsoleCommands[x].name; x++)
  {
@@ -1252,18 +1428,18 @@ static bool CC_help(const UTF8 *arg)
   {
    char help_buf[512];
    trio_snprintf(help_buf, 512, "%s %s  -  %s", ConsoleCommands[x].name, _(ConsoleCommands[x].help_args), _(ConsoleCommands[x].help_desc));
-   MDFND_NetplayText((UTF8*)help_buf, false);
+   MDFND_NetplayText(help_buf, false);
   }
  }
  return(true);
 }
 
-static bool CC_nick(const UTF8 *arg)
+static bool CC_nick(const char *arg)
 {
- MDFNI_SetSetting("netplay.nick", (char*)arg);
+ MDFNI_SetSetting("netplay.nick", arg);
 
  if(MDFNnetplay)
-  MDFNI_NetplayChangeNick((UTF8*)arg);
+  MDFNI_NetplayChangeNick(arg);
 
  return(true);
 }
@@ -1280,7 +1456,7 @@ void MDFNI_NetplayLine(const char *text, bool &inputable, bool &viewable)
 
 	   MDFN_trim(trim_text);
 
-           inputable = viewable = ConsoleCommands[x].func((UTF8*)trim_text);
+           inputable = viewable = ConsoleCommands[x].func(trim_text);
 
            free(trim_text);
            return;
@@ -1289,7 +1465,7 @@ void MDFNI_NetplayLine(const char *text, bool &inputable, bool &viewable)
 
          if(text[0] != 0)	// Is non-empty line?
 	 {
-	  MDFNI_NetplayText((UTF8*)text);
+	  MDFNI_NetplayText(text);
 	  viewable = true;
          }
 }

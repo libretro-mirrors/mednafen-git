@@ -648,12 +648,22 @@ static void Mapper5_ESI(EXPSOUND *ep)
  ep->HiFill = MMC5RunSoundHQ;
 }
 
+void NSFMMC5_Close(void)
+{
+ if(ExRAM)
+  MDFN_free(ExRAM);
+ ExRAM=NULL;
+}
+
 int NSFMMC5_Init(EXPSOUND *ep, bool MultiChip)
 {
+ try
+ {
   memset(&MMC5Sound,0,sizeof(MMC5Sound));
   mul[0]=mul[1]=0;
-  if(!(ExRAM=(uint8*)MDFN_malloc(1024, _("MMC5 EXRAM"))))
-   return(0);
+
+  ExRAM = (uint8*)MDFN_malloc_T(1024, _("MMC5 EXRAM"));
+
   Mapper5_ESI(ep);
   NSFECSetWriteHandler(0x5c00,0x5fef,MMC5_ExRAMWr);
   SetReadHandler(0x5c00,0x5fef,MMC5_ExRAMRd); 
@@ -661,14 +671,14 @@ int NSFMMC5_Init(EXPSOUND *ep, bool MultiChip)
   NSFECSetWriteHandler(0x5000,0x5015,Mapper5_SW);
   NSFECSetWriteHandler(0x5205,0x5206,Mapper5_write);
   SetReadHandler(0x5205,0x5206,MMC5_read);
-  return(1);
-}
+ }
+ catch(...)
+ {
+  NSFMMC5_Close();
+  throw;
+ }
 
-void NSFMMC5_Close(void)
-{
- if(ExRAM)
-  MDFN_free(ExRAM);
- ExRAM=NULL;
+ return(1);
 }
 
 static void GenMMC5Reset(CartInfo *info)
@@ -704,6 +714,13 @@ static int StateAction(StateMem *sm, int load, int data_only)
          SFARRAY32N(CHRBanksA, 8, "CHRA"),
          SFARRAY32N(CHRBanksB, 4, "CHRB"),
 
+	 SFVAR(MMC5BigCHRSelect),
+	 SFVAR(mmc5psize),
+	 SFVAR(mmc5vsize),
+	 SFARRAY(mul, 2),
+	 SFVAR(MMC5IRQR),
+	 SFVAR(MMC5LineCounter),
+
          SFVARN(WRAMPage, "WRMP"), 
 	 SFARRAYN(WRAMMaskEnable, 2, "WRME"),
 	 SFVARN(ABMode, "ABMD"),
@@ -735,7 +752,11 @@ static int StateAction(StateMem *sm, int load, int data_only)
 	int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MMC5");
 
 	if(load)
+	{
+	 MMC5BigCHRSelect &= 0x3;
+	 MMC5HackCHRBank = MMC5BigCHRSelect;
 	 MMC5Synco();
+	}
 
 	return(ret);
 }
@@ -763,69 +784,65 @@ static void GenMMC5_Close(void)
 
 static int GenMMC5_Init(CartInfo *info, int wsize, int battery)
 {
- info->StateAction = StateAction;
-
- if(wsize)
+ try
  {
-  if(!(WRAM=(uint8*)MDFN_malloc(wsize*1024, _("WRAM"))))
+  info->StateAction = StateAction;
+
+  if(wsize)
   {
-   GenMMC5_Close();
-   return(0);
+   WRAM = (uint8*)MDFN_malloc_T(wsize*1024, _("WRAM"));
+   memset(WRAM, 0x00, wsize * 1024);
+   SetupCartPRGMapping(0x10,WRAM,wsize*1024,1);
   }
-  memset(WRAM, 0x00, wsize * 1024);
-  SetupCartPRGMapping(0x10,WRAM,wsize*1024,1);
- }
 
- if(!(MMC5fill=(uint8*)MDFN_malloc(1024, _("MMC5 Fill"))))
+  MMC5fill = (uint8*)MDFN_malloc_T(1024, _("MMC5 Fill"));
+
+  ExRAM = (uint8*)MDFN_malloc_T(1024, _("MMC5 EXRAM"));
+
+  MMC5WRAMsize=wsize/8; 
+  BuildWRAMSizeTable();
+  info->Power=GenMMC5Reset;
+
+  if(battery)
+  {
+   info->SaveGame[0]=WRAM;
+   if(wsize<=16)
+    info->SaveGameLen[0]=8192;
+   else
+    info->SaveGameLen[0]=32768;
+  }
+
+  MMC5HackVROMMask=CHRmask4[0];
+  MMC5HackExNTARAMPtr=ExRAM;
+  MMC5Hack=1;
+  MMC5HackVROMPTR=CHRptr[0];
+  MMC5HackCHRMode=0;
+  MMC5HackSPMode=MMC5HackSPScroll=MMC5HackSPPage=0;
+
+
+  Mapper5_ESI(&info->CartExpSound);
+
+  SetWriteHandler(0x4020,0x5bff,Mapper5_write);
+  SetReadHandler(0x4020,0x5bff,MMC5_read);
+
+  SetWriteHandler(0x5c00,0x5fff,MMC5_ExRAMWr);
+  SetReadHandler(0x5c00,0x5fff,MMC5_ExRAMRd);
+
+  SetWriteHandler(0x6000,0xFFFF,MMC5_WriteROMRAM);
+  SetReadHandler(0x6000,0xFFFF,MMC5_ReadROMRAM);
+
+  SetWriteHandler(0x5000,0x5015,Mapper5_SW);
+  SetWriteHandler(0x5205,0x5206,Mapper5_write);
+  SetReadHandler(0x5205,0x5206,MMC5_read);
+
+  MDFNMP_AddRAM(8192, 0x6000, WRAM);
+  MDFNMP_AddRAM(1024, 0x5c00, ExRAM);
+ }
+ catch(...)
  {
   GenMMC5_Close();
-  return(0);
+  throw;
  }
-
- if(!(ExRAM = (uint8*)MDFN_malloc(1024, _("MMC5 EXRAM"))))
- {
-  GenMMC5_Close();
-  return(0);
- }
-
- MMC5WRAMsize=wsize/8; 
- BuildWRAMSizeTable();
- info->Power=GenMMC5Reset;
-
- if(battery)
- {
-  info->SaveGame[0]=WRAM;
-  if(wsize<=16)
-   info->SaveGameLen[0]=8192;
-  else
-   info->SaveGameLen[0]=32768;
- }
-
- MMC5HackVROMMask=CHRmask4[0];
- MMC5HackExNTARAMPtr=ExRAM;
- MMC5Hack=1;
- MMC5HackVROMPTR=CHRptr[0];
- MMC5HackCHRMode=0;
- MMC5HackSPMode=MMC5HackSPScroll=MMC5HackSPPage=0;
-
-
- Mapper5_ESI(&info->CartExpSound);
-
- SetWriteHandler(0x4020,0x5bff,Mapper5_write);
- SetReadHandler(0x4020,0x5bff,MMC5_read);
-
- SetWriteHandler(0x5c00,0x5fff,MMC5_ExRAMWr);
- SetReadHandler(0x5c00,0x5fff,MMC5_ExRAMRd);
-
- SetWriteHandler(0x6000,0xFFFF,MMC5_WriteROMRAM);
- SetReadHandler(0x6000,0xFFFF,MMC5_ReadROMRAM);
-
- SetWriteHandler(0x5000,0x5015,Mapper5_SW);
- SetWriteHandler(0x5205,0x5206,Mapper5_write);
- SetReadHandler(0x5205,0x5206,MMC5_read);
-
- MDFNMP_AddRAM(8192, 0x6000, WRAM);
- MDFNMP_AddRAM(1024, 0x5c00, ExRAM);
 
  return(1);
 }

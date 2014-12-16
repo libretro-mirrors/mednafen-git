@@ -54,6 +54,12 @@ void PCE_Input_Device::Power(int32 timestamp)
 
 }
 
+void PCE_Input_Device::TransformInput(uint8* data, const bool DisableSR)
+{
+
+
+}
+
 void PCE_Input_Device::AdjustTS(int32 delta)
 {
 
@@ -85,6 +91,7 @@ static int InputTypes[5] = { 0 };
 static uint8 *data_ptr[5];
 static bool SEL, CLR;
 static uint8 read_index = 0;
+static bool DisableSR = false;
 
 static void RemakeDevices(int which = -1)
 {
@@ -107,7 +114,7 @@ static void RemakeDevices(int which = -1)
   {
    default:
    case PCEINPUT_NONE: break;
-   case PCEINPUT_GAMEPAD: devices[i] = PCEINPUT_MakeGamepad(i); break;
+   case PCEINPUT_GAMEPAD: devices[i] = PCEINPUT_MakeGamepad(); break;
    case PCEINPUT_MOUSE: devices[i] = PCEINPUT_MakeMouse(); break;
    case PCEINPUT_TSUSHINKB: devices[i] = PCEINPUT_MakeTsushinKB(); break;
   }
@@ -128,7 +135,16 @@ void PCEINPUT_Init(void)
  RemakeDevices();
 }
 
-void PCEINPUT_SetInput(int port, const char *type, void *ptr)
+void PCEINPUT_TransformInput(void)
+{
+ for(unsigned i = 0; i < 5; i++)
+ {
+  if(devices[i])
+   devices[i]->TransformInput(data_ptr[i], DisableSR);
+ }
+}
+
+void PCEINPUT_SetInput(unsigned port, const char *type, uint8 *ptr)
 {
  assert(port < 5);
 
@@ -300,19 +316,14 @@ int INPUT_StateAction(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-// If we add more devices to these arrays before "gamepad", REMEMBER TO UPDATE the hackish array indexing in the SyncSettings() function
-// below.
-
-static InputDeviceInfoStruct InputDeviceInfo[] =
+static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
 {
  // None
  {
   "none",
   "none",
   NULL,
-  NULL,
-  0,
-  NULL
+  IDII_Empty
  },
 
  // Gamepad
@@ -320,9 +331,7 @@ static InputDeviceInfoStruct InputDeviceInfo[] =
   "gamepad",
   "Gamepad",
   NULL,
-  NULL,
-  sizeof(PCE_GamepadIDII) / sizeof(InputDeviceInputInfoStruct),
-  PCE_GamepadIDII,
+  PCE_GamepadIDII
  },
 
  // Mouse
@@ -330,22 +339,18 @@ static InputDeviceInfoStruct InputDeviceInfo[] =
   "mouse",
   "Mouse",
   NULL,
-  NULL,
-  sizeof(PCE_MouseIDII) / sizeof(InputDeviceInputInfoStruct),
-  PCE_MouseIDII,
+  PCE_MouseIDII
  },
 };
 
-static InputDeviceInfoStruct InputDeviceInfoPort1[] =
+static const std::vector<InputDeviceInfoStruct> InputDeviceInfoPort1 =
 {
  // None
  {
   "none",
   "none",
   NULL,
-  NULL,
-  0,
-  NULL
+  IDII_Empty
  },
 
  // Gamepad
@@ -353,9 +358,7 @@ static InputDeviceInfoStruct InputDeviceInfoPort1[] =
   "gamepad",
   "Gamepad",
   NULL,
-  NULL,
-  sizeof(PCE_GamepadIDII) / sizeof(InputDeviceInputInfoStruct),
-  PCE_GamepadIDII,
+  PCE_GamepadIDII
  },
 
  // Mouse
@@ -363,9 +366,7 @@ static InputDeviceInfoStruct InputDeviceInfoPort1[] =
   "mouse",
   "Mouse",
   NULL,
-  NULL,
-  sizeof(PCE_MouseIDII) / sizeof(InputDeviceInputInfoStruct),
-  PCE_MouseIDII,
+  PCE_MouseIDII
  },
 
  // Tsushin Keyboard
@@ -373,32 +374,24 @@ static InputDeviceInfoStruct InputDeviceInfoPort1[] =
   "tsushinkb",
   "Tsushin Keyboard",
   NULL,
-  NULL,
-  sizeof(PCE_TsushinKBIDII) / sizeof(InputDeviceInputInfoStruct),
-  PCE_TsushinKBIDII,
+  PCE_TsushinKBIDII
  },
 };
 
-static const InputPortInfoStruct PortInfo[] =
+const std::vector<InputPortInfoStruct> PCEPortInfo =
 {
- { "port1", "Port 1", sizeof(InputDeviceInfoPort1) / sizeof(InputDeviceInfoStruct), InputDeviceInfoPort1, "gamepad" },
- { "port2", "Port 2", sizeof(InputDeviceInfo) / sizeof(InputDeviceInfoStruct), InputDeviceInfo, "gamepad" },
- { "port3", "Port 3", sizeof(InputDeviceInfo) / sizeof(InputDeviceInfoStruct), InputDeviceInfo, "gamepad" },
- { "port4", "Port 4", sizeof(InputDeviceInfo) / sizeof(InputDeviceInfoStruct), InputDeviceInfo, "gamepad" },
- { "port5", "Port 5", sizeof(InputDeviceInfo) / sizeof(InputDeviceInfoStruct), InputDeviceInfo, "gamepad" },
-};
-
-InputInfoStruct PCEInputInfo =
-{
- sizeof(PortInfo) / sizeof(InputPortInfoStruct),
- PortInfo
+ { "port1", "Port 1", InputDeviceInfoPort1, "gamepad" },
+ { "port2", "Port 2", InputDeviceInfo, "gamepad" },
+ { "port3", "Port 3", InputDeviceInfo, "gamepad" },
+ { "port4", "Port 4", InputDeviceInfo, "gamepad" },
+ { "port5", "Port 5", InputDeviceInfo, "gamepad" },
 };
 
 static void SyncSettings(void)
 {
  MDFNGameInfo->mouse_sensitivity = MDFN_GetSettingF("pce.mouse_sensitivity");
- InputDeviceInfo[1].IDII = MDFN_GetSettingB("pce.disable_softreset") ? PCE_GamepadIDII_DSR : PCE_GamepadIDII;
  MultiTapEnabled = MDFN_GetSettingB("pce.input.multitap");
+ DisableSR = MDFN_GetSettingB("pce.disable_softreset");
 }
 
 };

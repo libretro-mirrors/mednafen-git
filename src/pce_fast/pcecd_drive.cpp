@@ -34,7 +34,9 @@ static uint32 System_Clock;
 static void (*CDIRQCallback)(int);
 static void (*CDStuffSubchannels)(uint8, int);
 static Blip_Buffer *sbuf[2];
+
 static CDIF *Cur_CDIF;
+static bool TrayOpen;
 
 // Internal operation to the SCSI CD unit.  Only pass 1 or 0 to these macros!
 #define SetIOP(mask, set)	{ cd_bus.signals &= ~mask; if(set) cd_bus.signals |= mask; }
@@ -85,7 +87,6 @@ typedef struct
  // Used for multiple sector CD reads.
  bool data_transfer_done;
 
- bool TrayOpen;
  bool DiscChanged;
 
  uint8 SubQBuf[4][0xC];		// One for each of the 4 most recent q-Modes.
@@ -141,8 +142,6 @@ static INLINE void MakeSense(uint8 target[18], uint8 key, uint8 asc, uint8 ascq,
  target[13] = ascq;		// Additional Sense Code Qualifier
  target[14] = fru;		// Field Replaceable Unit code
 }
-
-static void (*SCSILog)(const char *, const char *format, ...);
 
 static pcecd_drive_timestamp_t lastts;
 static int64 monotonic_timestamp;
@@ -210,7 +209,7 @@ void PCECD_Drive_Power(pcecd_drive_timestamp_t system_timestamp)
 
  cd.DiscChanged = false;
 
- if(Cur_CDIF && !cd.TrayOpen)
+ if(Cur_CDIF && !TrayOpen)
   Cur_CDIF->ReadTOC(&toc);
 
  CurrentPhase = PHASE_BUS_FREE;
@@ -396,14 +395,14 @@ static void DoSimpleDataIn(const uint8 *data_in, uint32 len)
  ChangePhase(PHASE_DATA_IN);
 }
 
-void PCECD_Drive_SetDisc(bool tray_open, CDIF *cdif, bool no_emu_side_effects)
+void PCECD_Drive_SetDisc(bool new_tray_open, CDIF *cdif, bool no_emu_side_effects)
 {
  Cur_CDIF = cdif;
 
  // Closing the tray.
- if(cd.TrayOpen && !tray_open)
+ if(TrayOpen && !new_tray_open)
  {
-  cd.TrayOpen = false;
+  TrayOpen = false;
 
   if(cdif)
   {
@@ -417,15 +416,15 @@ void PCECD_Drive_SetDisc(bool tray_open, CDIF *cdif, bool no_emu_side_effects)
    }
   }
  }
- else if(!cd.TrayOpen && tray_open)	// Opening the tray
+ else if(!TrayOpen && new_tray_open)	// Opening the tray
  {
-  cd.TrayOpen = true;
+  TrayOpen = true;
  }
 }
 
 static void CommandCCError(int key, int asc = 0, int ascq = 0)
 {
- printf("CC Error: %02x %02x %02x\n", key, asc, ascq);
+ //printf("CC Error: %02x %02x %02x\n", key, asc, ascq);
 
  cd.key_pending = key;
  cd.asc_pending = asc;
@@ -479,13 +478,6 @@ static void DoREADBase(uint32 sa, uint32 sc)
  {
   CommandCCError(SENSEKEY_MEDIUM_ERROR, NSE_HEADER_READ_ERROR);
   return;
- }
-
- if(SCSILog)
- {
-  int Track = toc.FindTrackByLBA(sa);
-  uint32 Offset = sa - toc.tracks[Track].lba; //Cur_CDIF->GetTrackStartPositionLBA(Track);
-  SCSILog("SCSI", "Read: start=0x%08x(track=%d, offs=0x%08x), cnt=0x%08x", sa, Track, Offset, sc);
  }
 
  SectorAddr = sa;
@@ -916,7 +908,7 @@ static INLINE void RunCDDA(uint32 system_timestamp, int32 run_time)
      break;
     }
 
-    if(cd.TrayOpen)
+    if(TrayOpen || !Cur_CDIF)
     {
      cdda.CDDAStatus = CDDASTATUS_STOPPED;
 
@@ -1004,12 +996,16 @@ static INLINE void RunCDRead(uint32 system_timestamp, int32 run_time)
    {
     uint8 tmp_read_buf[2352 + 96];
 
-    if(cd.TrayOpen)
+    if(TrayOpen)
     {
      din.Flush();
      cd.data_transfer_done = FALSE;
 
      CommandCCError(SENSEKEY_NOT_READY, NSE_TRAY_OPEN);
+    }
+    else if(!Cur_CDIF)
+    {
+     CommandCCError(SENSEKEY_NOT_READY, NSE_NO_DISC);
     }
     else if(SectorAddr >= toc.tracks[100].lba)
     {
@@ -1112,37 +1108,17 @@ uint32 PCECD_Drive_Run(pcecd_drive_timestamp_t system_timestamp)
       while(cmd_info_ptr->pretty_name && cmd_info_ptr->cmd != cd.command_buffer[0])
        cmd_info_ptr++;
   
-      if(SCSILog)
-      {
-       char log_buffer[1024];
-       int lb_pos;
-
-       log_buffer[0] = 0;
-       
-       lb_pos = trio_snprintf(log_buffer, 1024, "Command: %02x, %s  ", cd.command_buffer[0], cmd_info_ptr->pretty_name ? cmd_info_ptr->pretty_name : "!!BAD COMMAND!!");
-
-       for(int i = 0; i < RequiredCDBLen[cd.command_buffer[0] >> 4]; i++)
-        lb_pos += trio_snprintf(log_buffer + lb_pos, 1024 - lb_pos, "%02x ", cd.command_buffer[i]);
-
-       SCSILog("SCSI", "%s", log_buffer);
-       //puts(log_buffer);
-      }
-
-
       if(cmd_info_ptr->pretty_name == NULL)	// Command not found!
       {
        CommandCCError(SENSEKEY_ILLEGAL_REQUEST, NSE_INVALID_COMMAND);
 
        SCSIDBG("Bad Command: %02x\n", cd.command_buffer[0]);
 
-       if(SCSILog)
-        SCSILog("SCSI", "Bad Command: %02x", cd.command_buffer[0]);
-
        cd.command_buffer_pos = 0;
       }
       else
       {
-       if(cd.TrayOpen && (cmd_info_ptr->flags & SCF_REQUIRES_MEDIUM))
+       if(TrayOpen && (cmd_info_ptr->flags & SCF_REQUIRES_MEDIUM))
        {
 	CommandCCError(SENSEKEY_NOT_READY, NSE_TRAY_OPEN);
        }
@@ -1245,11 +1221,6 @@ uint32 PCECD_Drive_Run(pcecd_drive_timestamp_t system_timestamp)
  return(next_time);
 }
 
-void PCECD_Drive_SetLog(void (*logfunc)(const char *, const char *, ...))
-{
- SCSILog = logfunc;
-}
-
 void PCECD_Drive_SetTransferRate(uint32 TransferRate)
 {
  CD_DATA_TRANSFER_RATE = TransferRate;
@@ -1263,12 +1234,10 @@ void PCECD_Drive_Close(void)
 void PCECD_Drive_Init(int cdda_time_div, Blip_Buffer *leftbuf, Blip_Buffer *rightbuf, uint32 TransferRate, uint32 SystemClock, void (*IRQFunc)(int), void (*SSCFunc)(uint8, int))
 {
  Cur_CDIF = NULL;
- cd.TrayOpen = false;
+ TrayOpen = true;
 
  monotonic_timestamp = 0;
  lastts = 0;
-
- SCSILog = NULL;
 
  //din = new SimpleFIFO<uint8>(2048);
 
@@ -1318,7 +1287,6 @@ int PCECD_Drive_StateAction(StateMem * sm, int load, int data_only, const char *
   SFVARN(din.in_count, "din_in_count"),
   SFVARN(cd.data_transfer_done, "data_transfer_done"),
 
-  SFVARN(cd.TrayOpen, "TrayOpen"),
   SFVARN(cd.DiscChanged, "DiscChanged"),
 
   SFVAR(cdda.PlayMode),

@@ -16,16 +16,15 @@ uint8 MDFN_FASTCALL mem_peekbyte(const v810_timestamp_t timestamp, const uint32 
 uint16 MDFN_FASTCALL mem_peekhword(const v810_timestamp_t timestamp, const uint32 A) // TODO: Full memory map peeking.
 {
  if(A <= 0x001FFFFF)
-  return(le16toh(*(uint16*)&RAM[A]));
+  return MDFN_de16lsb<true>(&RAM[A]);
  else if(A <= 0x00FFFFFF)
-  return(0xFFFF);
+  return 0xFFFF;
  else if(A >= 0xF0000000)
-  return(le16toh(*(uint16 *)&BIOSROM[A & 0xFFFFF]));
+  return MDFN_de16lsb<true>(&BIOSROM[A & 0xFFFFF]);
  else if(FXSCSIROM && A >= 0x80780000 && A <= 0x807FFFFF)
- {
-  return(le16toh(*(uint16*)&FXSCSIROM[A & 0x7FFFF]));
- }
- return(0xFFFF);
+  return MDFN_de16lsb<true>(&FXSCSIROM[A & 0x7FFFF]);
+
+ return 0xFFFF;
 }
 
 static uint8 MDFN_FASTCALL mem_rbyte(v810_timestamp_t &timestamp, uint32 A)
@@ -80,7 +79,7 @@ static uint16 MDFN_FASTCALL mem_rhword(v810_timestamp_t &timestamp, uint32 A)
  if(A <= 0x001FFFFF)
  {
   RAMLPCHECK;
-  return(le16toh(*(uint16*)&RAM[A]));
+  return MDFN_de16lsb<true>(&RAM[A]);
  }
  else if(A <= 0x00FFFFFF)
  {
@@ -91,7 +90,7 @@ static uint16 MDFN_FASTCALL mem_rhword(v810_timestamp_t &timestamp, uint32 A)
                                 // is at 0xFFF00000
  {
   timestamp += 2;
-  return(le16toh(*(uint16 *)&BIOSROM[A & 0xFFFFF]));
+  return MDFN_de16lsb<true>(&BIOSROM[A & 0xFFFFF]);
  }
  else if(A >= 0xA0000000 && A <= 0xA3FFFFFF)
  {
@@ -159,7 +158,7 @@ static uint32 MDFN_FASTCALL mem_rword(v810_timestamp_t &timestamp, uint32 A)
  if(A <= 0x001FFFFF)
  {
   RAMLPCHECK;
-  return(le32toh(*(uint32*)&RAM[A]));
+  return MDFN_de32lsb<true>(&RAM[A]);
  }
  else if(A <= 0x00FFFFFF)
  {
@@ -239,7 +238,7 @@ static void MDFN_FASTCALL mem_whword(v810_timestamp_t &timestamp, uint32 A, uint
  if(A <= 0x001FFFFF)
  {
   RAMLPCHECK;
-  *(uint16*)&RAM[A] = htole16(V);
+  MDFN_en16lsb<true>(&RAM[A], V);
  }
  else if(A <= 0x00FFFFFF)
  {
@@ -315,7 +314,7 @@ static void MDFN_FASTCALL mem_wword(v810_timestamp_t &timestamp, uint32 A, uint3
  if(A <= 0x001FFFFF)
  {
   RAMLPCHECK;
-  *(uint32*)&RAM[A] = htole32(V);
+  MDFN_en32lsb<true>(&RAM[A], V);
  }
  else if(A <= 0x00FFFFFF)
  {

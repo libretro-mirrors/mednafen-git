@@ -1,12 +1,15 @@
 //accepts a callback binding so r14 writes can trigger ROM buffering transparently
 struct reg16_t : noncopyable {
-  uint16 data;
-  function<void (uint16)> on_modify;
+  uint16 data;	// Don't change to a larger type, especially since we now write 'data' directly in a few places for performance reasons.
+  void (*on_modify)(uint16);	// Only should be used for r14 and r15
 
   inline operator unsigned() const { return data; }
   inline uint16 assign(uint16 i) {
-    if(on_modify) on_modify(i);
-    else data = i;
+    data = i;
+
+    if(on_modify)
+     on_modify(i);
+
     return data;
   }
 
@@ -28,7 +31,7 @@ struct reg16_t : noncopyable {
 
   inline unsigned operator   = (const reg16_t& i) { return assign(i); }
 
-  reg16_t() : data(0) {}
+  reg16_t() : data(0), on_modify(NULL) {}
 };
 
 struct sfr_t {

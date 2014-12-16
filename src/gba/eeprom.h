@@ -26,8 +26,8 @@ namespace MDFN_IEN_GBA
 void EEPROM_Init(void) MDFN_COLD;
 void EEPROM_Reset(void) MDFN_COLD;
 int EEPROM_StateAction(StateMem *sm, int load, int data_only) MDFN_COLD;
-bool EEPROM_SaveFile(const char *filename) MDFN_COLD;
-void EEPROM_LoadFile(const char *filename) MDFN_COLD;
+bool EEPROM_SaveFile(const std::string& path) MDFN_COLD;
+void EEPROM_LoadFile(const std::string& path) MDFN_COLD;
 
 
 int eepromRead(uint32 address);

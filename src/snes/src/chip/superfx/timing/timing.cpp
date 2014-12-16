@@ -24,12 +24,12 @@ void SuperFX::rombuffer_sync() {
   if(regs.romcl) add_clocks(regs.romcl);
 }
 
-void SuperFX::rombuffer_update() {
+alwaysinline void SuperFX::rombuffer_update() {
   regs.sfr.r = 1;
   regs.romcl = memory_access_speed;
 }
 
-uint8 SuperFX::rombuffer_read() {
+alwaysinline uint8 SuperFX::rombuffer_read() {
   rombuffer_sync();
   return regs.romdr;
 }
@@ -50,14 +50,14 @@ void SuperFX::rambuffer_write(uint16 addr, uint8 data) {
   regs.ramdr = data;
 }
 
-void SuperFX::r14_modify(uint16 data) {
-  regs.r[14].data = data;
-  rombuffer_update();
+static void SuperFX_r14_modify(uint16 data)
+{
+ superfx.rombuffer_update();
 }
 
-void SuperFX::r15_modify(uint16 data) {
-  regs.r[15].data = data;
-  r15_modified = true;
+static void SuperFX_r15_modify(uint16 data)
+{
+ superfx.r15_NOT_modified = !true;
 }
 
 void SuperFX::update_speed() {
@@ -84,7 +84,7 @@ void SuperFX::update_speed() {
 
 void SuperFX::timing_reset() {
   update_speed();
-  r15_modified = false;
+  r15_NOT_modified = !false;
 
   regs.romcl = 0;
   regs.romdr = 0;

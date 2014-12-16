@@ -52,7 +52,7 @@ int32 PCECD_Write(uint32 timestamp, uint32, uint8 data) MDFN_WARN_UNUSED_RESULT;
 
 bool PCECD_IsBRAMEnabled();
 
-int PCECD_StateAction(StateMem *sm, int load, int data_only);
+void PCECD_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 void ADPCM_PeekRAM(uint32 Address, uint32 Length, uint8 *Buffer);
 void ADPCM_PokeRAM(uint32 Address, uint32 Length, const uint8 *Buffer);

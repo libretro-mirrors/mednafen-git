@@ -19,10 +19,12 @@
 #include "huc.h"
 #include "pcecd.h"
 #include <mednafen/hw_misc/arcade_card/arcade_card.h>
-#include <mednafen/md5.h>
+#include <mednafen/hash/md5.h>
 #include <mednafen/file.h>
 #include <mednafen/cdrom/cdromif.h>
 #include <mednafen/mempatcher.h>
+#include <mednafen/GZFileStream.h>
+#include <mednafen/FileStream.h>
 
 #include <errno.h>
 #include <string.h>
@@ -186,18 +188,56 @@ static DECLFW(MCG_WriteHandler)
  mcg->Write(HuCPU->Timestamp(), A, V);
 }
 
-void HuC_Load(const uint8 *data, uint32 len, uint32 crc32, bool DisableBRAM, SysCardType syscard)
+static void LoadSaveMemory(const std::string& path, uint8* const data, const uint64 len, bool possibly_gz = true)
 {
+ try
+ {
+  std::unique_ptr<Stream> fp(possibly_gz ? (Stream*)(new GZFileStream(path, GZFileStream::MODE::READ)) : (Stream*)(new FileStream(path, FileStream::MODE_READ)));
+  const uint64 fp_size_tmp = fp->size();
+
+  if(fp_size_tmp != len)
+   throw MDFN_Error(0, _("Save game memory file \"%s\" is an incorrect size(%llu bytes).  The correct size is %llu bytes."), path.c_str(), (unsigned long long)fp_size_tmp, (unsigned long long)len);
+
+  fp->read(data, len);
+ }
+ catch(MDFN_Error &e)
+ {
+  if(e.GetErrno() != ENOENT)
+   throw;
+ }
+}
+
+uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
+{
+ uint32 crc = 0;
  const uint32 sf2_threshold = 2048 * 1024;
- uint32 m_len = (len + 8191) &~ 8191;
  bool sf2_mapper = FALSE;
  bool mcg_mapper = FALSE;
  bool UseBRAM = FALSE;
 
  try
  {
-  if(len >= 8192 && !memcmp(data + 0x1FD0, "MCGENJIN", 8))
-   mcg_mapper = TRUE;
+  uint64 len, m_len;
+
+  len = fp->size();
+  if(len & 512)	// Skip copier header.
+  {
+   len &= ~512;
+   fp->seek(512, SEEK_SET);
+  }
+  m_len = (len + 8191) &~ 8191;
+
+  if(len >= 8192)
+  {
+   uint8 buf[8192];
+
+   fp->read(buf, 8192);
+
+   if(!memcmp(buf + 0x1FD0, "MCGENJIN", 8))
+    mcg_mapper = TRUE;
+
+   fp->seek(-8192, SEEK_CUR);	// Seek backwards so we don't undo skip copier header.
+  }
 
   if(!syscard && m_len >= sf2_threshold && !mcg_mapper)
   {
@@ -220,18 +260,6 @@ void HuC_Load(const uint8 *data, uint32 len, uint32 crc32, bool DisableBRAM, Sys
   IsPopulous = 0;
   PCE_IsCD = 0;
 
-  if(syscard == SYSCARD_NONE)
-  {
-   md5_context md5;
-   md5.starts();
-   md5.update(data, len);
-   md5.finish(MDFNGameInfo->MD5);
-
-   MDFN_printf(_("ROM:       %dKiB\n"), (len + 1023) / 1024);
-   MDFN_printf(_("ROM CRC32: 0x%08x\n"), crc32);
-   MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
-  }
-
   if(syscard != SYSCARD_NONE)
   {
    CDRAM = (uint8 *)MDFN_calloc_T(1, 8 * 8192, _("CD RAM"));
@@ -251,7 +279,7 @@ void HuC_Load(const uint8 *data, uint32 len, uint32 crc32, bool DisableBRAM, Sys
 
   if(mcg_mapper)
   {
-   mcg = new MCGenjin(data, len);
+   mcg = new MCGenjin(fp);
 
    for(unsigned i = 0; i < 128; i++)
    {
@@ -260,13 +288,42 @@ void HuC_Load(const uint8 *data, uint32 len, uint32 crc32, bool DisableBRAM, Sys
     HuCPU->SetWriteHandler(i, MCG_WriteHandler);
    }
 
+   for(unsigned i = 0; i < mcg->GetNVPDC(); i++)
+   {
+    uint32 nvs = mcg->GetNVSize(i);
+
+    if(nvs)
+    {
+     char buf[32];
+     std::vector<uint8> tmp_buf;
+
+     tmp_buf.resize(nvs);
+     trio_snprintf(buf, sizeof(buf), "mg%d", i);
+
+     LoadSaveMemory(MDFN_MakeFName(MDFNMKF_SAV, 0, buf), &tmp_buf[0], tmp_buf.size(), false);
+     mcg->WriteNV(i, &tmp_buf[0], 0, tmp_buf.size());
+    }
+   }
+
    goto BRAM_Init; // SO EVIL YES EVVIIIIIL(FIXME)
   }
 
   HuCROM = (uint8 *)MDFN_malloc_T(m_len, _("HuCard ROM"));
-
   memset(HuCROM, 0xFF, m_len);
-  memcpy(HuCROM, data, (m_len < len) ? m_len : len);
+  fp->read(HuCROM, std::min<uint64>(m_len, len));
+  crc = crc32(0, HuCROM, std::min<uint64>(m_len, len));
+
+  if(syscard == SYSCARD_NONE)
+  {
+   md5_context md5;
+   md5.starts();
+   md5.update(HuCROM, std::min<uint64>(m_len, len));
+   md5.finish(MDFNGameInfo->MD5);
+
+   MDFN_printf(_("ROM:       %lluKiB\n"), (unsigned long long)(std::min<uint64>(m_len, len) / 1024));
+   MDFN_printf(_("ROM CRC32: 0x%08x\n"), crc);
+   MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
+  }
 
   if(m_len == 0x60000)
   {
@@ -350,17 +407,11 @@ void HuC_Load(const uint8 *data, uint32 len, uint32 crc32, bool DisableBRAM, Sys
   else
   {
    if(!memcmp(HuCROM + 0x1F26, "POPULOUS", strlen("POPULOUS")))
-   {
-    gzFile fp;
-  
+   {  
     PopRAM = (uint8 *)MDFN_malloc_T(32768, _("Populous RAM"));
     memset(PopRAM, 0xFF, 32768);
 
-    if((fp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
-    {
-     gzread(fp, PopRAM, 32768);
-     gzclose(fp);
-    }
+    LoadSaveMemory(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), PopRAM, 32768);
 
     IsPopulous = 1;
     MDFN_printf("Populous\n");
@@ -374,18 +425,12 @@ void HuC_Load(const uint8 *data, uint32 len, uint32 crc32, bool DisableBRAM, Sys
     }
     MDFNMP_AddRAM(32768, 0x40 * 8192, PopRAM);
    }
-   else if(crc32 == 0x34dc65c4) // Tsushin Booster
+   else if(crc == 0x34dc65c4) // Tsushin Booster
    {
-    gzFile fp;
-
     TsushinRAM = (uint8*)MDFN_malloc_T(0x8000, _("Tsushin Booster RAM"));
     memset(TsushinRAM, 0xFF, 0x8000);
 
-    if((fp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
-    {
-     gzread(fp, TsushinRAM, 32768);
-     gzclose(fp);
-    }
+    LoadSaveMemory(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), TsushinRAM, 32768);
 
     IsTsushin = 1;
     MDFN_printf("Tsushin Booster\n");
@@ -427,16 +472,12 @@ void HuC_Load(const uint8 *data, uint32 len, uint32 crc32, bool DisableBRAM, Sys
 
   if(UseBRAM)
   {
-   gzFile fp;
-
+   // Initialize BRAM here so users don't have to manually intialize the file cabinet
+   // in the CD BIOS screen.
    memset(SaveRAM, 0x00, 2048);
-   memcpy(SaveRAM, BRAM_Init_String, 8);                	// So users don't have to manually intialize the file cabinet
-                                                	// in the CD BIOS screen.
-   if((fp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
-   {
-    gzread(fp, SaveRAM, 2048);
-    gzclose(fp);
-   }
+   memcpy(SaveRAM, BRAM_Init_String, 8);
+
+   LoadSaveMemory(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), SaveRAM, 2048);
 
    HuCPU->SetWriteHandler(0xF7, SaveRAMWrite);
    HuCPU->SetReadHandler(0xF7, SaveRAMRead);
@@ -448,7 +489,10 @@ void HuC_Load(const uint8 *data, uint32 len, uint32 crc32, bool DisableBRAM, Sys
   Cleanup();
   throw;
  }
+
+ return crc;
 }
+
 
 bool IsBRAMUsed(void)
 {
@@ -464,7 +508,7 @@ bool IsBRAMUsed(void)
  return(0);
 }
 
-int HuC_StateAction(StateMem *sm, int load, int data_only)
+void HuC_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -477,7 +521,7 @@ int HuC_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "HuC");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "HuC");
 
  if(load)
   HuCSF2Latch &= 0xF;
@@ -485,15 +529,13 @@ int HuC_StateAction(StateMem *sm, int load, int data_only)
  if(PCE_IsCD)
  {
   if(arcade_card)
-   ret &= arcade_card->StateAction(sm, load, data_only);
+   arcade_card->StateAction(sm, load, data_only);
 
-  ret &= PCECD_StateAction(sm, load, data_only);
+  PCECD_StateAction(sm, load, data_only);
  }
 
  if(mcg)
-  ret &= mcg->StateAction(sm, load, data_only);
-
- return(ret);
+  mcg->StateAction(sm, load, data_only);
 }
 
 void HuC_SaveNV(void)
@@ -507,14 +549,9 @@ void HuC_SaveNV(void)
    if(nvs)
    {
     char buf[32];
-    std::vector<uint8> tmp_buf;
-
-    tmp_buf.resize(nvs);
-
-    mcg->ReadNV(i, &tmp_buf[0], 0, tmp_buf.size());
 
     trio_snprintf(buf, sizeof(buf), "mg%d", i);
-    MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, buf).c_str(), 6, &tmp_buf[0], tmp_buf.size());
+    MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, buf), mcg->ReadNV(i), nvs);
    }
   }
  }
@@ -523,22 +560,25 @@ void HuC_SaveNV(void)
  {
   if(PopRAM)
   {
-   MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 6, PopRAM, 32768);
+   MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), PopRAM, 32768);
   }
  }
  else if(IsTsushin)
  {
   if(TsushinRAM)
   {
-   MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 6, TsushinRAM, 32768);
+   MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), TsushinRAM, 32768);
   }
  }
  else if(!BRAM_Disabled && IsBRAMUsed())
  {
-  MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 0, SaveRAM, 2048);
+  MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), SaveRAM, 2048);
  }
 }
 
+//
+// HuC_Kill() may be called before HuC_Load*() is called or even after it errors out, so we have a separate HuC_SaveNV()
+// to prevent save game file corruption in case of error.
 void HuC_Kill(void)
 {
  Cleanup();

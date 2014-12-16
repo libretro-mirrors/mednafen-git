@@ -8,7 +8,7 @@ void SIO_Write(pscpu_timestamp_t timestamp, uint32 A, uint32 V);
 uint32 SIO_Read(pscpu_timestamp_t timestamp, uint32 A);
 void SIO_Power(void);
 
-int SIO_StateAction(StateMem *sm, int load, int data_only);
+void SIO_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 }
 

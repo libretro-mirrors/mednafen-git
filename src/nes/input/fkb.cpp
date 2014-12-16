@@ -92,7 +92,7 @@ static void FKB_Update(void *data)
  memcpy(bufit, data, 0x9);
 }
 
-static int StateActionFC(StateMem *sm, int load, int data_only)
+static void StateActionFC(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -101,12 +101,13 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
    SFVAR(ksindex),
    SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF", true);
+
  if(load)
  {
 
  }
- return(ret);
 }
 
 

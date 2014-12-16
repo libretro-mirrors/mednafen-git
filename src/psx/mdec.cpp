@@ -56,7 +56,6 @@
 #include "psx.h"
 #include "mdec.h"
 
-#include <mednafen/masmem.h>
 #include <mednafen/cdrom/SimpleFIFO.h>
 #include <math.h>
 
@@ -88,12 +87,12 @@ static bool InCommand;
 static uint8 QMatrix[2][64];
 static uint32 QMIndex;
 
-static int16 IDCTMatrix[64] MDFN_ALIGN(16);
+alignas(16) static int16 IDCTMatrix[64];
 static uint32 IDCTMIndex;
 
 static uint8 QScale;
 
-static int16 Coeff[64] MDFN_ALIGN(16);
+alignas(16) static int16 Coeff[64];
 static uint32 CoeffIndex;
 static uint32 DecodeWB;
 
@@ -163,7 +162,7 @@ void MDEC_Power(void)
  RAMOffsetWWS = 0;
 }
 
-int MDEC_StateAction(StateMem *sm, int load, int data_only)
+void MDEC_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -212,15 +211,13 @@ int MDEC_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MDEC");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "MDEC");
 
  if(load)
  {
   InFIFO.SaveStatePostLoad();
   OutFIFO.SaveStatePostLoad();
  }
-
- return(ret);
 }
 
 static INLINE int8 Mask9ClampS8(int32 v)
@@ -249,7 +246,7 @@ static void IDCT_1D_Multi(int16 *in_coeff, T *out_coeff)
   {
    __m128i sum;
    __m128i m;
-   int32 tmp[4] MDFN_ALIGN(16);
+   alignas(16) int32 tmp[4];
 
    m = _mm_load_si128((__m128i *)&IDCTMatrix[(x * 8)]);
    sum = _mm_madd_epi16(m, c);
@@ -290,7 +287,7 @@ static void IDCT_1D_Multi(int16 *in_coeff, T *out_coeff)
 static void IDCT(int16 *in_coeff, int8 *out_coeff) NO_INLINE;
 static void IDCT(int16 *in_coeff, int8 *out_coeff)
 {
- int16 tmpbuf[64] MDFN_ALIGN(16);
+ alignas(16) int16 tmpbuf[64];
 
  IDCT_1D_Multi<int16>(in_coeff, tmpbuf);
  IDCT_1D_Multi<int8>(tmpbuf, out_coeff);
@@ -420,7 +417,7 @@ static void EncodeImage(const unsigned ybn)
 
      YCbCr_to_RGB(by[x], cb[x >> 1], cr[x >> 1], r, g, b);
 
-     StoreU16_LE(pix_out, pixel_xor ^ RGB_to_RGB555(r, g, b));
+     MDFN_en16lsb<true>(pix_out, pixel_xor ^ RGB_to_RGB555(r, g, b));
      pix_out++;
     }
    }
@@ -616,7 +613,7 @@ void MDEC_Run(int32 clocks)
      PixelBufferReadOffset = 0;
      while(PixelBufferReadOffset != PixelBufferCount32)
      {
-      MDEC_WRITE_FIFO(LoadU32_LE(&PixelBuffer.pix32[PixelBufferReadOffset++]));
+      MDEC_WRITE_FIFO((MDFN_de32lsb<true>(&PixelBuffer.pix32[PixelBufferReadOffset++])));
      }
     } while(InCounter != 0xFFFF);
    }

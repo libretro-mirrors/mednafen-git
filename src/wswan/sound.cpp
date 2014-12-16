@@ -388,7 +388,7 @@ bool WSwan_SetSoundRate(uint32 rate)
  return(TRUE);
 }
 
-int WSwan_SoundStateAction(StateMem *sm, int load, int data_only)
+void WSwan_SoundStateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -410,10 +410,12 @@ int WSwan_SoundStateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, "PSG"))
-  return(0);
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "PSG");
 
- return(1);
+ if(load)
+ {
+
+ }
 }
 
 void WSwan_SoundReset(void)

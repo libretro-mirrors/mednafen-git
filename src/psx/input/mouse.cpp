@@ -5,25 +5,25 @@
 namespace MDFN_IEN_PSX
 {
 
-class InputDevice_Mouse : public InputDevice
+class InputDevice_Mouse final : public InputDevice
 {
  public:
 
  InputDevice_Mouse();
- virtual ~InputDevice_Mouse();
+ virtual ~InputDevice_Mouse() override;
 
- virtual void Power(void);
- virtual int StateAction(StateMem* sm, int load, int data_only, const char* section_name);
- virtual void UpdateInput(const void *data);
+ virtual void Power(void) override;
+ virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
+ virtual void UpdateInput(const void *data) override;
 
- virtual void Update(const pscpu_timestamp_t timestamp);
- virtual void ResetTS(void);
+ virtual void Update(const pscpu_timestamp_t timestamp) override;
+ virtual void ResetTS(void) override;
 
  //
  //
  //
- virtual void SetDTR(bool new_dtr);
- virtual bool Clock(bool TxD, int32 &dsr_pulse_delay);
+ virtual void SetDTR(bool new_dtr) override;
+ virtual bool Clock(bool TxD, int32 &dsr_pulse_delay) override;
 
  private:
 
@@ -106,7 +106,7 @@ void InputDevice_Mouse::Power(void)
  transmit_count = 0;
 }
 
-int InputDevice_Mouse::StateAction(StateMem* sm, int load, int data_only, const char* section_name)
+void InputDevice_Mouse::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix)
 {
  SFORMAT StateRegs[] =
  {
@@ -131,9 +131,12 @@ int InputDevice_Mouse::StateAction(StateMem* sm, int load, int data_only, const 
 
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name);
+ char section_name[32];
+ trio_snprintf(section_name, sizeof(section_name), "%s_Mouse", sname_prefix);
 
- if(load)
+ if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
+  Power();
+ else if(load)
  {
   if((transmit_pos + transmit_count) > sizeof(transmit_buffer))
   {
@@ -141,8 +144,6 @@ int InputDevice_Mouse::StateAction(StateMem* sm, int load, int data_only, const 
    transmit_count = 0;
   }
  }
-
- return(ret);
 }
 
 
@@ -280,7 +281,7 @@ InputDevice *Device_Mouse_Create(void)
 }
 
 
-InputDeviceInputInfoStruct Device_Mouse_IDII[4] =
+IDIISG Device_Mouse_IDII =
 {
  { "x_axis", "X Axis", -1, IDIT_X_AXIS_REL },
  { "y_axis", "Y Axis", -1, IDIT_Y_AXIS_REL },

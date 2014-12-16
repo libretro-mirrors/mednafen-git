@@ -27,7 +27,7 @@ namespace MDFN_IEN_PCE
 //class VDC;
 //#include "vdc.h"
 
-class VCE : public HuC6280_Support
+class VCE final : public HuC6280_Support
 {
 	public:
 
@@ -36,10 +36,9 @@ class VCE : public HuC6280_Support
 
 	void SetShowHorizOS(bool show);
 
-	int StateAction(StateMem *sm, int load, int data_only);
+	void StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
-	void SetPixelFormat(const MDFN_PixelFormat &format);
-	bool SetCustomColorMap(const uint8 *triplets, const uint32 count);	// count = 512 or 1024
+	void SetPixelFormat(const MDFN_PixelFormat &format, const uint8* CustomColorMap, const uint32 CustomColorMapLen);
 
 	void StartFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, int32 *LineWidths, int skip);
 	bool RunPartial(void);
@@ -249,12 +248,6 @@ class VCE : public HuC6280_Support
 	uint32 pitch32;	// Pitch(in 32-bit pixels)
 	bool FrameDone;
 
-	void (*RunHook)(int32 clocks, uint16 *pixels);
-	
-	// Called when the state changes, with the new state.
-	void (*HBlankHook)(bool status);
-	void (*VBlankHook)(bool status);
-
 	int32 clock_divider;
 
 	int32 scanline;
@@ -282,10 +275,7 @@ class VCE : public HuC6280_Support
         uint32 color_table_cache[0x200 * 2];	// * 2 for user layer disabling stuff.
         uint16 ctaddress;
 
-	uint8 *CustomColorMap; // 1024 * 3
-	uint32 CustomColorMapLen;        // 512 or 1024
-
-	uint32 systemColorMap32[512], bw_systemColorMap32[512];
+	uint32 systemColorMap32[2][512];
 
 	int32 last_ts;
 

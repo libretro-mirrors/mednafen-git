@@ -163,9 +163,9 @@ void FPS_Draw(MDFN_Surface *target, const int xpos, const int ypos)
 
  MDFN_DrawFillRect(target, xpos, ypos, box_width, box_height, bg_color);
 
- DrawTextTrans(target->pixels + xpos + ypos * target->pitch32, target->pitch32 << 2, box_width, (UTF8*)virtfps, text_color, FALSE, TRUE);
- DrawTextTrans(target->pixels + xpos + (ypos + 7) * target->pitch32, target->pitch32 << 2, box_width, (UTF8*)drawnfps, text_color, FALSE, TRUE);
- DrawTextTrans(target->pixels + xpos + (ypos + 7 * 2) * target->pitch32, target->pitch32 << 2, box_width, (UTF8*)blitfps, text_color, FALSE, TRUE);
+ DrawTextTrans(target->pixels + xpos + ypos * target->pitch32, target->pitch32 << 2, box_width, virtfps, text_color, FALSE, TRUE);
+ DrawTextTrans(target->pixels + xpos + (ypos + 7) * target->pitch32, target->pitch32 << 2, box_width, drawnfps, text_color, FALSE, TRUE);
+ DrawTextTrans(target->pixels + xpos + (ypos + 7 * 2) * target->pitch32, target->pitch32 << 2, box_width, blitfps, text_color, FALSE, TRUE);
 }
 
 #define MK_COLOR_A(surface, r,g,b,a) ( surface->MakeColor(r, g, b, a))
@@ -195,9 +195,9 @@ void FPS_DrawToScreen(SDL_Surface *screen, int rs, int gs, int bs, int as, unsig
 
  FPSSurface->Fill(0, 0, 0, 0x80);
 
- DrawTextTrans(FPSSurface->pixels, FPSSurface->pitchinpix << 2, FPSSurface->w, (UTF8*)virtfps, MK_COLOR_A(FPSSurface, 0xFF, 0xFF, 0xFF, 0xFF), FALSE, TRUE);
- DrawTextTrans(FPSSurface->pixels + 7 * FPSSurface->pitchinpix, FPSSurface->pitchinpix << 2, FPSSurface->w, (UTF8*)drawnfps, MK_COLOR_A(FPSSurface, 0xFF, 0xFF, 0xFF, 0xFF), FALSE, TRUE);
- DrawTextTrans(FPSSurface->pixels + 7 * 2 * FPSSurface->pitchinpix, FPSSurface->pitchinpix << 2, FPSSurface->w, (UTF8*)blitfps, MK_COLOR_A(FPSSurface, 0xFF, 0xFF, 0xFF, 0xFF), FALSE, TRUE);
+ DrawTextTrans(FPSSurface->pixels, FPSSurface->pitchinpix << 2, FPSSurface->w, virtfps, MK_COLOR_A(FPSSurface, 0xFF, 0xFF, 0xFF, 0xFF), FALSE, TRUE);
+ DrawTextTrans(FPSSurface->pixels + 7 * FPSSurface->pitchinpix, FPSSurface->pitchinpix << 2, FPSSurface->w, drawnfps, MK_COLOR_A(FPSSurface, 0xFF, 0xFF, 0xFF, 0xFF), FALSE, TRUE);
+ DrawTextTrans(FPSSurface->pixels + 7 * 2 * FPSSurface->pitchinpix, FPSSurface->pitchinpix << 2, FPSSurface->w, blitfps, MK_COLOR_A(FPSSurface, 0xFF, 0xFF, 0xFF, 0xFF), FALSE, TRUE);
 
  MDFN_Rect drect;
  drect.x = offsx;

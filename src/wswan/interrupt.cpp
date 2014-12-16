@@ -195,7 +195,7 @@ void WSwan_InterruptSetRegister(const unsigned int id, uint32 value)
 
 #endif
 
-int WSwan_InterruptStateAction(StateMem *sm, int load, int data_only)
+void WSwan_InterruptStateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -206,8 +206,7 @@ int WSwan_InterruptStateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, "INTR"))
-  return(0);
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "INTR");
 
  if(load)
  {
@@ -216,8 +215,6 @@ int WSwan_InterruptStateAction(StateMem *sm, int load, int data_only)
 
   RecalcInterrupt();
  }
-
- return(1);
 }
 
 }

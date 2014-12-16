@@ -1,5 +1,3 @@
-// TODO/WIP
-
 /* Mednafen - Multi-system Emulator
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,9 +15,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "mednafen.h"
+#include <mednafen/types.h>
 #include "Stream.h"
 
+#include <stdlib.h>
 #include <trio/trio.h>
 
 Stream::Stream()
@@ -28,6 +27,123 @@ Stream::Stream()
 }
 
 Stream::~Stream()
+{
+
+}
+
+uint64 Stream::read_discard(uint64 count)
+{
+ uint8 buf[1024];
+ uint64 tmp;
+ uint64 ret = 0;
+
+ do
+ {
+  tmp = read(buf, std::min<uint64>(count, sizeof(buf)), false);
+  count -= tmp;
+  ret += tmp;
+ } while(tmp == sizeof(buf));
+
+ return ret;
+}
+
+uint64 Stream::alloc_and_read(void** data_out, uint64 size_limit)
+{
+ uint8 *data_buffer = NULL;
+ uint64 data_buffer_size = 0;
+ uint64 data_buffer_alloced = 0;
+
+ try
+ {
+  if(attributes() & ATTRIBUTE_SLOW_SIZE)
+  {
+   uint64 rti;
+
+   data_buffer_size = 0;
+   data_buffer_alloced = 65536;
+
+   if(!(data_buffer = (uint8*)realloc(data_buffer, data_buffer_alloced)))
+    throw MDFN_Error(ErrnoHolder(errno));
+
+   while((rti = read(data_buffer + data_buffer_size, data_buffer_alloced - data_buffer_size, false)) > 0)
+   {
+    uint8* new_data_buffer;
+
+    data_buffer_size += rti;
+
+    if(data_buffer_size == data_buffer_alloced)
+    {
+     data_buffer_alloced <<= 1;
+
+     if(data_buffer_alloced > size_limit)	// So we can test against our size limit without going far far over it in temporary memory allocations.
+      data_buffer_alloced = size_limit + 1;
+
+     if(data_buffer_size > size_limit)
+      throw MDFN_Error(0, _("Size limit of %llu bytes would be exceeded."), (unsigned long long)size_limit);
+
+     if(!(new_data_buffer = (uint8 *)realloc(data_buffer, data_buffer_alloced)))
+      throw MDFN_Error(ErrnoHolder(errno));
+     data_buffer = new_data_buffer;
+    }
+    else	// EOS
+     break;
+   }
+
+   if(data_buffer_alloced > data_buffer_size)
+   {
+    uint8 *new_data_buffer;
+  
+    new_data_buffer = (uint8*)realloc(data_buffer, data_buffer_size);
+
+    if(new_data_buffer != NULL)
+    {
+     data_buffer = new_data_buffer;
+     data_buffer_alloced = data_buffer_size;
+    }
+   }
+  }
+  else
+  {
+   data_buffer_size = size();
+   data_buffer_alloced = data_buffer_size;
+
+   if(data_buffer_size > size_limit)
+    throw MDFN_Error(0, _("Size limit of %llu bytes would be exceeded."), (unsigned long long)size_limit);
+
+   if(data_buffer_alloced > SIZE_MAX)
+    throw MDFN_Error(ErrnoHolder(ENOMEM));
+
+   if(!(data_buffer = (uint8*)realloc(data_buffer, data_buffer_alloced)))
+    throw MDFN_Error(ErrnoHolder(errno));
+
+   read(data_buffer, data_buffer_size);
+  }
+ }
+ catch(...)
+ {
+  if(data_buffer)
+  {
+   free(data_buffer);
+   data_buffer = NULL;
+  }
+  throw;
+ }
+
+ *data_out = data_buffer;
+ return data_buffer_size;
+}
+
+uint8* Stream::map(void) noexcept
+{
+ return(NULL);
+}
+
+uint64 Stream::map_size(void) noexcept
+{
+ return 0;
+}
+
+void Stream::unmap(void) noexcept
 {
 
 }
@@ -88,25 +204,3 @@ int Stream::get_line(std::string &str)
  return(str.length() ? 256 : -1);
 }
 
-StreamFilter::StreamFilter()
-{
- target_stream = NULL;
-}
-
-StreamFilter::StreamFilter(Stream *target_arg)
-{
- target_stream = target_arg;
-}
-
-StreamFilter::~StreamFilter()
-{
- if(target_stream)
-  delete target_stream;
-}
-
-Stream* StreamFilter::steal(void)
-{
- Stream *ret = target_stream;
- target_stream = NULL;
- return ret;
-}

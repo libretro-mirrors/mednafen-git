@@ -70,7 +70,7 @@ class MDVDP
 
  void SetLayerEnableMask(uint64 mask);
 
- int StateAction(StateMem *sm, int load, int data_only);
+ void StateAction(StateMem *sm, const unsigned load, const bool data_only);
  void ResetTS(void);
 
  inline int IntAckCallback(int int_level)
@@ -126,8 +126,8 @@ class MDVDP
  };
 
 
- uint8 sat[0x400];               /* Internal copy of sprite attribute table */
- uint8 vram[0x10000];            /* Video RAM (64Kx8) */
+ alignas(8) uint8 sat[0x400];    /* Internal copy of sprite attribute table */
+ alignas(8) uint8 vram[0x10000]; /* Video RAM (64Kx8) */
  uint16 cram[0x40];              /* On-chip color RAM (64x9) */
  uint16 vsram[0x40];             /* On-chip vertical scroll RAM (40x11) */
  uint8 reg[0x20];                /* Internal VDP registers (23x8) */
@@ -171,7 +171,7 @@ class MDVDP
 
  int32 vdp_cycle_counter;
  int32 vdp_last_ts;
- int32 vdp_line_phase;
+ uint32 vdp_line_phase;
  int32 vdp_hcounter_start_ts;
 
  int32 fifo_simu_count;

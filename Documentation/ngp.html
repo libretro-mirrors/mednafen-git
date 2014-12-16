@@ -9,10 +9,10 @@
  <body>
   <center><h1><img alt="Mednafen" src="mednafen.png" width="696" height="204"></h1></center>
   <center><h1>Neo Geo Pocket (Color) Documentation</h1></center>
-  <center><i>Last updated August  3, 2014<br>Valid as of 0.9.36.3</i></center>
+  <center><i>Last updated December 15, 2014<br>Valid as of 0.9.37-UNSTABLE</i></center>
  <p></p>
  <b>Table of Contents:</b>
- <ul><li><a href="#Introduction">Introduction</a><ul></ul></li><li><a href="#Default+Key+Assignments">Default Key Assignments</a><ul></ul></li><li><a href="#Game-specific+Emulation+Hacks">Game-specific Emulation Hacks</a><ul></ul></li><li><a href="#Settings+Reference">Settings Reference</a><ul></ul></li></ul><hr width="100%">
+ <ul><li><a href="#Introduction">Introduction</a><ul></ul></li><li><a href="#Default+Key+Assignments">Default Key Assignments</a><ul></ul></li><li><a href="#Settings+Reference">Settings Reference</a><ul></ul></li></ul><hr width="100%">
 <h2><a name="Introduction">Introduction</a></h2><p></p>Mednafen's Neo Geo Pocket emulation is based off of <a href="http://neopop.emuxhaven.net/">NeoPop</a>.
 <p>
 The Neo Geo Pocket (Color) emulation in Mednafen is not very accurate in terms of low-level details; BIOS is HLE'd, CPU instruction
@@ -39,13 +39,6 @@ you're better off at looking at something like <a href="http://www.mess.org">M.E
   <tr><td>A</td><td>Left</td></tr>
   <tr><td>D</td><td>Right</td></tr>
  </table>
-<hr width="100%">
-
-<h2><a name="Game-specific+Emulation+Hacks">Game-specific Emulation Hacks</a></h2><p></p> <table border width="100%">
-  <tr><th>Title:</th><th>Description:</th><th>Source code files affected:</th></tr>
-  <tr><td>Metal Slug - 2nd Mission</td><td>Patch to work around lack of one of the side effects of a real BIOS(to be fixed in a future version of Mednafen).</td><td>src/ngp/rom.cpp</td></tr>
-  <tr><td>Puyo Pop</td><td></td><td>src/ngp/rom.cpp</td></tr>
-  </table>
 <hr width="100%">
 <h2><a name="Settings+Reference">Settings Reference</a></h2><p></p><p>
 <b>Caution:</b> Any settings that change emulation behavior as seen from the emulated game are shown with the setting name bolded in the table. One should be conscious of these settings if one has changed them from the default values when using network play or movies, as they can cause desychronizations if not set the same among hosts(or between the recording emulator and the playing emulator). 

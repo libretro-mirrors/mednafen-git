@@ -61,14 +61,14 @@ void MCGenjin_CS_Device::Write(int32 timestamp, uint32 A, uint8 V)
 
 }
 
-uint32 MCGenjin_CS_Device::GetNVSize(void)
+uint32 MCGenjin_CS_Device::GetNVSize(void) const
 {
  return 0;
 }
 
-void MCGenjin_CS_Device::ReadNV(uint8 *buffer, uint32 offset, uint32 count)
+const uint8* MCGenjin_CS_Device::ReadNV(void) const
 {
- memset(buffer, 0, count);
+ return NULL;
 }
 
 void MCGenjin_CS_Device::WriteNV(const uint8 *buffer, uint32 offset, uint32 count)
@@ -88,12 +88,12 @@ class MCGenjin_CS_Device_RAM : public MCGenjin_CS_Device
   nonvolatile = nv;
  }
 
- virtual ~MCGenjin_CS_Device_RAM()
+ virtual ~MCGenjin_CS_Device_RAM() override
  {
 
  }
 
- virtual void Power(void)
+ virtual void Power(void) override
  {
   if(!nonvolatile)
    ram.assign(ram.size(), 0xFF);
@@ -101,7 +101,7 @@ class MCGenjin_CS_Device_RAM : public MCGenjin_CS_Device
   bank_select = 0;
  }
 
- virtual int StateAction(StateMem *sm, int load, int data_only, const char *sname)
+ virtual int StateAction(StateMem *sm, int load, int data_only, const char *sname) override
  {
   SFORMAT StateRegs[] = 
   {
@@ -117,12 +117,12 @@ class MCGenjin_CS_Device_RAM : public MCGenjin_CS_Device
  }
 
 
- virtual uint8 Read(int32 timestamp, uint32 A)
+ virtual uint8 Read(int32 timestamp, uint32 A) override
  {
   return ram[(A | (bank_select << 18)) & (ram.size() - 1)];
  }
 
- virtual void Write(int32 timestamp, uint32 A, uint8 V)
+ virtual void Write(int32 timestamp, uint32 A, uint8 V) override
  {
   if(!A)
    bank_select = V;
@@ -130,23 +130,17 @@ class MCGenjin_CS_Device_RAM : public MCGenjin_CS_Device
   ram[(A | (bank_select << 18)) & (ram.size() - 1)] = V;
  }
 
- virtual uint32 GetNVSize(void)
+ virtual uint32 GetNVSize(void) const override
  {
   return nonvolatile ? ram.size() : 0;
  }
 
- virtual void ReadNV(uint8 *buffer, uint32 offset, uint32 count)
+ virtual const uint8* ReadNV(void) const override
  {
-  while(count)
-  {
-   *buffer = ram[offset % ram.size()];
-   buffer++;
-   offset++;
-   count--;
-  }
+  return &ram[0];
  }
 
- virtual void WriteNV(const uint8 *buffer, uint32 offset, uint32 count)
+ virtual void WriteNV(const uint8 *buffer, uint32 offset, uint32 count) override
  {
   while(count)
   {
@@ -186,15 +180,14 @@ void MCGenjin::ResetTS(int32 ts_base)
   cs[i]->ResetTS(ts_base);
 }
 
-uint32 MCGenjin::GetNVSize(const unsigned di)
+uint32 MCGenjin::GetNVSize(const unsigned di) const
 {
  return cs[di]->GetNVSize();
 }
 
-
-void MCGenjin::ReadNV(const unsigned di, uint8 *buffer, uint32 offset, uint32 count)
+const uint8* MCGenjin::ReadNV(const unsigned di) const
 {
- cs[di]->ReadNV(buffer, offset, count);
+ return cs[di]->ReadNV();
 }
 
 void MCGenjin::WriteNV(const unsigned di, const uint8 *buffer, uint32 offset, uint32 count)
@@ -202,19 +195,22 @@ void MCGenjin::WriteNV(const unsigned di, const uint8 *buffer, uint32 offset, ui
  cs[di]->WriteNV(buffer, offset, count);
 }
 
-MCGenjin::MCGenjin(const uint8 *rr, uint32 rr_size)
+MCGenjin::MCGenjin(MDFNFILE* fp)
 {
+ const uint64 rr_size = fp->size();
  uint8 revision, num256_pages, region, cs_di[2];
+
+ if(rr_size > 1024 * 1024 * 128)
+  throw MDFN_Error(0, _("MCGenjin ROM size is too large!"));
 
  if(rr_size < 8192)
   throw MDFN_Error(0, _("MCGenjin ROM size is too small!"));
 
- if(memcmp(rr + 0x1FD0, "MCGENJIN", 8))
-  throw MDFN_Error(0, _("MC Genjin header magic missing!"));
-
  rom.resize(round_up_pow2(rr_size));
+ fp->read(&rom[0], rr_size);
 
- memcpy(&rom[0], rr, rr_size);
+ if(memcmp(&rom[0x1FD0], "MCGENJIN", 8))
+  throw MDFN_Error(0, _("MC Genjin header magic missing!"));
 
  revision = rom[0x1FD8];
  num256_pages = rom[0x1FD9];
@@ -242,20 +238,17 @@ MCGenjin::MCGenjin(const uint8 *rr, uint32 rr_size)
   if((cs_di[i] >= 0x10 && cs_di[i] <= 0x18) || (cs_di[i] >= 0x20 && cs_di[i] <= 0x28))
   {
    MDFN_printf(_("CS%d: %uKiB %sRAM\n"), i, 8 << (cs_di[i] & 0xF), (cs_di[i] & 0x20) ? "Nonvolatile " : "");
-   cs[i] = new MCGenjin_CS_Device_RAM(8192 << (cs_di[i] & 0xF), (bool)(cs_di[i] & 0x20));
+   cs[i].reset(new MCGenjin_CS_Device_RAM(8192 << (cs_di[i] & 0xF), (bool)(cs_di[i] & 0x20)));
   }
   else switch(cs_di[i])
   {
    default:
-	for(unsigned si = 0; si < i; si++) // FIXME: auto ptr to make this not necessary
-         delete cs[si];
-
 	throw MDFN_Error(0, _("Unsupported MCGENJIN device on CS%d: 0x%02x"), i, cs_di[i]);
 	break;
 
    case 0x00:
 	MDFN_printf(_("CS%d: Unused\n"), i);
-	cs[i] = new MCGenjin_CS_Device();
+	cs[i].reset(new MCGenjin_CS_Device());
 	break;
   }
  }
@@ -263,8 +256,7 @@ MCGenjin::MCGenjin(const uint8 *rr, uint32 rr_size)
 
 MCGenjin::~MCGenjin()
 {
- for(unsigned i = 0; i < 2; i++)
-  delete cs[i];
+
 }
 
 int MCGenjin::StateAction(StateMem *sm, int load, int data_only)

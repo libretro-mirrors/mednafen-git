@@ -15,6 +15,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/*
+  Games to test after changing code affecting CD reading and buffering:
+		Bedlam
+		Rise 2
+
+*/
+
 // TODO: async command counter and async command phase?
 /*
 
@@ -64,6 +71,24 @@ PS_CDC::~PS_CDC()
 
 }
 
+void PS_CDC::DMForceStop(void)
+{
+ PSRCounter = 0;
+
+ if((DriveStatus != DS_PAUSED && DriveStatus != DS_STOPPED) || PendingCommandPhase >= 2)
+ {
+  PendingCommand = 0x00;
+  PendingCommandCounter = 0;
+  PendingCommandPhase = 0;
+ }
+
+ HeaderBufValid = false;
+ DriveStatus = DS_STOPPED;
+ ClearAIP();
+ SectorPipe_Pos = SectorPipe_In = 0;
+ SectorsRead = 0;
+}
+
 void PS_CDC::SetDisc(bool tray_open, CDIF *cdif, const char *disc_id)
 {
  if(tray_open)
@@ -75,19 +100,7 @@ void PS_CDC::SetDisc(bool tray_open, CDIF *cdif, const char *disc_id)
 
  if(!Cur_CDIF)
  {
-  PSRCounter = 0;
-
-  if((DriveStatus != DS_PAUSED && DriveStatus != DS_STOPPED) || PendingCommandPhase >= 2)
-  {
-   PendingCommand = 0x00;
-   PendingCommandCounter = 0;
-   PendingCommandPhase = 0;
-  }
-
-  HeaderBufValid = false;
-  DriveStatus = DS_STOPPED;
-  ClearAIP();
-  SectorPipe_Pos = SectorPipe_In = 0;
+  DMForceStop();
  }
  else
  {
@@ -115,7 +128,7 @@ int32 PS_CDC::CalcNextEvent(void)
  if(PendingCommandCounter > 0 && next_event > PendingCommandCounter)
   next_event = PendingCommandCounter;
 
- if(!IRQBuffer)
+ if(!(IRQBuffer & 0xF))
  {
   if(CDCReadyReceiveCounter > 0 && next_event > CDCReadyReceiveCounter)
    next_event = CDCReadyReceiveCounter;
@@ -158,6 +171,7 @@ void PS_CDC::SoftReset(void)
  DMABuffer.Flush();
  SB_In = 0;
  SectorPipe_Pos = SectorPipe_In = 0;
+ SectorsRead = 0;
 
  memset(SubQBuf, 0, sizeof(SubQBuf));
  memset(SubQBuf_Safe, 0, sizeof(SubQBuf_Safe));
@@ -212,7 +226,7 @@ void PS_CDC::Power(void)
  lastts = 0;
 }
 
-int PS_CDC::StateAction(StateMem *sm, int load, int data_only)
+void PS_CDC::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -299,6 +313,7 @@ int PS_CDC::StateAction(StateMem *sm, int load, int data_only)
   SFVAR(PSRCounter),
 
   SFVAR(CurSector),
+  SFVAR(SectorsRead),
 
   SFVAR(AsyncIRQPending),
   SFARRAY(AsyncResultsPending, sizeof(AsyncResultsPending) / sizeof(AsyncResultsPending[0])),
@@ -326,14 +341,18 @@ int PS_CDC::StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "CDC");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "CDC");
 
  if(load)
  {
   DMABuffer.SaveStatePostLoad();
   SectorPipe_Pos %= SectorPipe_Count;
+
+  //
+  // Handle pre-0.9.37 state loading, and maliciously-constructed/corrupted save states.
+  if(!Cur_CDIF)
+   DMForceStop();
  }
- return(ret);
 }
 
 void PS_CDC::ResetTS(void)
@@ -345,17 +364,18 @@ void PS_CDC::RecalcIRQ(void)
 {
  IRQ_Assert(IRQ_CD, (bool)(IRQBuffer & (IRQOutTestMask & 0x1F)));
 }
+
 //static int32 doom_ts;
 void PS_CDC::WriteIRQ(uint8 V)
 {
  assert(CDCReadyReceiveCounter <= 0);
- assert(!IRQBuffer);
+ assert(!(IRQBuffer & 0xF));
 
  //PSX_WARNING("[CDC] ***IRQTHINGY: 0x%02x -- %u", V, doom_ts);
 
  CDCReadyReceiveCounter = 2000; //1024;
 
- IRQBuffer = V;
+ IRQBuffer = (IRQBuffer & 0x10) | V;
  RecalcIRQ();
 }
 
@@ -857,6 +877,7 @@ void PS_CDC::HandlePlayRead(void)
   PSX_WARNING("[CDC] Read/Play position waaay too far out(%u), forcing STOP", CurSector);
   DriveStatus = DS_STOPPED;
   SectorPipe_Pos = SectorPipe_In = 0;
+  SectorsRead = 0;
   return;
  }
 
@@ -886,6 +907,7 @@ void PS_CDC::HandlePlayRead(void)
   // Status in this end-of-disc context here should be generated after we're in the pause state.
   DriveStatus = DS_PAUSED;
   SectorPipe_Pos = SectorPipe_In = 0;
+  SectorsRead = 0;
   SetAIP(CDCIRQ_DATA_END, MakeStatus());
 
   return;
@@ -904,6 +926,7 @@ void PS_CDC::HandlePlayRead(void)
 
    DriveStatus = DS_PAUSED;
    SectorPipe_Pos = SectorPipe_In = 0;
+   SectorsRead = 0;
    PSRCounter = 0;
    return;
   }
@@ -1039,6 +1062,7 @@ void PS_CDC::HandlePlayRead(void)
  else
   CurSector++;
 
+ SectorsRead++;
 }
 
 pscpu_timestamp_t PS_CDC::Update(const pscpu_timestamp_t timestamp)
@@ -1075,7 +1099,7 @@ pscpu_timestamp_t PS_CDC::Update(const pscpu_timestamp_t timestamp)
 
   //MDFN_DispMessage("%02x %d -- %d %d -- %02x", IRQBuffer, CDCReadyReceiveCounter, PSRCounter, PendingCommandCounter, PendingCommand);
 
-  if(!IRQBuffer)
+  if(!(IRQBuffer & 0xF))
   {
    if(CDCReadyReceiveCounter > 0 && chunk_clocks > CDCReadyReceiveCounter)
     chunk_clocks = CDCReadyReceiveCounter;
@@ -1103,6 +1127,7 @@ pscpu_timestamp_t PS_CDC::Update(const pscpu_timestamp_t timestamp)
 
      SB_In = 0;
      SectorPipe_Pos = SectorPipe_In = 0;
+     SectorsRead = 0;
 
      Mode = 0;
      CurSector = 0;
@@ -1291,7 +1316,7 @@ void PS_CDC::Write(const pscpu_timestamp_t timestamp, uint32 A, uint8 V)
 			PendingCommandCounter, V);
 		}
 
-		if(IRQBuffer)
+		if(IRQBuffer & 0xF)
 		{
 		 PSX_WARNING("[CDC] Attempting to start command(0x%02x) while IRQBuffer(0x%02x) is not clear.", V, IRQBuffer);
 		}
@@ -1356,6 +1381,7 @@ void PS_CDC::Write(const pscpu_timestamp_t timestamp, uint32 A, uint8 V)
 		{
 		 PSX_WARNING("[CDC] Mystery IRQ trigger bit set.");
 		 IRQBuffer |= 0x10;
+		 RecalcIRQ();
 		}
 		break;
 
@@ -1581,10 +1607,12 @@ int32 PS_CDC::CalcSeekTime(int32 initial, int32 target, bool motor_on, bool paus
    ret += 1237952 * ((Mode & MODE_SPEED) ? 1 : 2);
   }
  }
+ //else if(target < initial)
+ // ret += 1000000;
 
  ret += PSX_GetRandU32(0, 25000);
 
- PSX_DBG(PSX_DBG_SPARSE, "[CDC] CalcSeekTime() = %d\n", ret);
+ PSX_DBG(PSX_DBG_SPARSE, "[CDC] CalcSeekTime() %d->%d = %d\n", initial, target, ret);
 
  return(ret);
 }
@@ -1656,6 +1684,7 @@ int32 PS_CDC::Command_Play(const int arg_count, const uint8 *args)
 
   ClearAudioBuffers();
   SectorPipe_Pos = SectorPipe_In = 0;
+  SectorsRead = 0;
 
   PlayTrackMatch = track;
 
@@ -1675,6 +1704,7 @@ int32 PS_CDC::Command_Play(const int arg_count, const uint8 *args)
  {
   ClearAudioBuffers();
   SectorPipe_Pos = SectorPipe_In = 0;
+  SectorsRead = 0;
 
   if(CommandLoc_Dirty)
    SeekTarget = CommandLoc;
@@ -1747,6 +1777,7 @@ void PS_CDC::ReadBase(void)
   ClearAudioBuffers();
   SB_In = 0;
   SectorPipe_Pos = SectorPipe_In = 0;
+  SectorsRead = 0;
 
   // TODO: separate motor start from seek phase?
 
@@ -1795,6 +1826,7 @@ int32 PS_CDC::Command_Stop(const int arg_count, const uint8 *args)
   ClearAudioBuffers();
   ClearAIP();
   SectorPipe_Pos = SectorPipe_In = 0;
+  SectorsRead = 0;
 
   DriveStatus = DS_STOPPED;
   HeaderBufValid = false;
@@ -1832,6 +1864,7 @@ int32 PS_CDC::Command_Standby(const int arg_count, const uint8 *args)
  ClearAudioBuffers();
  ClearAIP();
  SectorPipe_Pos = SectorPipe_In = 0;
+ SectorsRead = 0;
 
  DriveStatus = DS_STANDBY;
 
@@ -1862,6 +1895,9 @@ int32 PS_CDC::Command_Pause(const int arg_count, const uint8 *args)
  }
  else
  {
+  CurSector -= std::min<uint32>(4, SectorsRead);	// See: Bedlam, Rise 2
+  SectorsRead = 0;
+
   // "Viewpoint" flips out and crashes if reading isn't stopped (almost?) immediately.
   //ClearAudioBuffers();
   SectorPipe_Pos = SectorPipe_In = 0;

@@ -4,14 +4,15 @@ DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 
 bin_PROGRAMS	=	mednafen
-mednafen_SOURCES 	= 	debug.cpp error.cpp mempatcher.cpp settings.cpp endian.cpp mednafen.cpp file.cpp general.cpp md5.cpp memory.cpp netplay.cpp state.cpp movie.cpp player.cpp PSFLoader.cpp tests.cpp qtrecord.cpp FileWrapper.cpp Stream.cpp MemoryStream.cpp FileStream.cpp
+
+mednafen_SOURCES 	= 	debug.cpp error.cpp mempatcher.cpp settings.cpp endian.cpp mednafen.cpp git.cpp file.cpp general.cpp memory.cpp netplay.cpp state.cpp state_rewind.cpp movie.cpp player.cpp PSFLoader.cpp tests.cpp qtrecord.cpp Stream.cpp MemoryStream.cpp FileStream.cpp GZFileStream.cpp IPSPatcher.cpp
 mednafen_LDADD 		= 	trio/libtrio.a
 mednafen_DEPENDENCIES	=	trio/libtrio.a
 
 if HAVE_SDL
 SUBDIRS 		+=	drivers
-mednafen_LDADD          +=      drivers/libmdfnsdl.a
-mednafen_DEPENDENCIES   +=      drivers/libmdfnsdl.a
+mednafen_LDADD          +=	drivers/libmdfnsdl.a
+mednafen_DEPENDENCIES   +=	drivers/libmdfnsdl.a
 
 #
 # Resource file wasn't linking in properly when it was in an archive, so we resort to this!
@@ -170,7 +171,12 @@ SUBDIRS			+=	sound
 mednafen_LDADD		+=	sound/libmdfnsound.a
 mednafen_DEPENDENCIES	+=	sound/libmdfnsound.a
 
+SUBDIRS                 +=      quicklz
+mednafen_LDADD          +=      quicklz/libmdfnquicklz.a
+mednafen_DEPENDENCIES   +=      quicklz/libmdfnquicklz.a
+
 include compress/Makefile.am.inc
+include hash/Makefile.am.inc
 include string/Makefile.am.inc
 include video/Makefile.am.inc
 include resampler/Makefile.am.inc

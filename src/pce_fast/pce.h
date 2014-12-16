@@ -19,7 +19,7 @@ typedef uint8 (MDFN_FASTCALL *readfunc)(uint32 A);
 
 extern uint8 PCEIODataBuffer;
 
-bool PCE_InitCD(void) MDFN_COLD;
+void PCE_InitCD(void) MDFN_COLD;
 
 };
 

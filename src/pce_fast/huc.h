@@ -18,10 +18,11 @@
 namespace PCE_Fast
 {
 
-void HuC_Load(const uint8 *data, uint32 len, uint32 crc32) MDFN_COLD;
-void HuC_LoadCD(const char *bios_path) MDFN_COLD;
-void HuC_Kill(void) MDFN_COLD;
+uint32 HuC_Load(MDFNFILE* fp) MDFN_COLD;
+void HuC_LoadCD(const std::string& bios_path) MDFN_COLD;
 void HuC_SaveNV(void) MDFN_COLD;
+void HuC_Kill(void) MDFN_COLD;
+
 int HuC_StateAction(StateMem *sm, int load, int data_only);
 
 void HuC_Power(void) MDFN_COLD;

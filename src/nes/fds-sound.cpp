@@ -23,6 +23,9 @@
 #include "nsf.h"
 #include "fds-sound.h"
 
+namespace MDFN_IEN_NES
+{
+
 static void RenderSoundHQ(void);
 
 static DECLFW(FDSWaveWrite);
@@ -460,7 +463,7 @@ void FDSSound_Power(void)
 }
 
 
-int FDSSound_StateAction(StateMem *sm, int load, int data_only)
+void FDSSound_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -496,7 +499,7 @@ int FDSSound_StateAction(StateMem *sm, int load, int data_only)
 
  }
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "FDSS");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "FDSS");
 
  if(load)
  {
@@ -505,5 +508,6 @@ int FDSSound_StateAction(StateMem *sm, int load, int data_only)
 
   CalcCOV();
  }
- return(ret);
+}
+
 }

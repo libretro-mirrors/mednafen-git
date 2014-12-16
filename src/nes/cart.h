@@ -1,7 +1,10 @@
-#ifndef __NES_CART_H
-#define __NES_CART_H
+#ifndef __MDFN_NES_CART_H
+#define __MDFN_NES_CART_H
 
 #include "sound.h"
+
+namespace MDFN_IEN_NES
+{
 
 typedef struct __CartInfo {
         /* Set by mapper/board code: */
@@ -31,7 +34,7 @@ typedef struct __CartInfo {
 } CartInfo;
 
 void MDFN_SaveGameSave(CartInfo *LocalHWInfo);
-bool MDFN_LoadGameSave(CartInfo *LocalHWInfo);
+void MDFN_LoadGameSave(CartInfo *LocalHWInfo);
 
 extern uint8 *Page[32],*VPage[8],*MMC5SPRVPage[8],*MMC5BGVPage[8];
 
@@ -104,11 +107,11 @@ void setntamem(uint8 *p, int ram, uint32 b);
 
 extern uint8 geniestage;
 
-bool Genie_Init(void);
+void Genie_Init(void);
 void Genie_Kill(void);
 bool Genie_BIOSInstalled(void);
-
+void Genie_StateAction(StateMem* sm, const unsigned load, const bool data_only);
 void Genie_Power(void);
 
-
+}
 #endif

@@ -59,6 +59,7 @@ DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 subdir = src/nes
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
+	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/codeset.m4 $(top_srcdir)/m4/fcntl-o.m4 \
 	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/glibc2.m4 \
 	$(top_srcdir)/m4/glibc21.m4 $(top_srcdir)/m4/iconv.m4 \
@@ -130,7 +131,7 @@ am__libnes_a_SOURCES_DIST = nes.cpp x6502.cpp cart.cpp fds.cpp \
 	input/suborkb.cpp ntsc/nes_ntsc.cpp
 @WANT_DEBUGGER_TRUE@am__objects_1 = debug.$(OBJEXT)
 am__dirstamp = $(am__leading_dot)dirstamp
-am__objects_2 = nes.$(OBJEXT) x6502.$(OBJEXT) cart.$(OBJEXT) \
+am_libnes_a_OBJECTS = nes.$(OBJEXT) x6502.$(OBJEXT) cart.$(OBJEXT) \
 	fds.$(OBJEXT) ines.$(OBJEXT) input.$(OBJEXT) nsf.$(OBJEXT) \
 	nsfe.$(OBJEXT) unif.$(OBJEXT) vsuni.$(OBJEXT) sound.$(OBJEXT) \
 	filter.$(OBJEXT) fds-sound.$(OBJEXT) $(am__objects_1) \
@@ -176,8 +177,8 @@ am__objects_2 = nes.$(OBJEXT) x6502.$(OBJEXT) cart.$(OBJEXT) \
 	input/hypershot.$(OBJEXT) input/mahjong.$(OBJEXT) \
 	input/oekakids.$(OBJEXT) input/ftrainer.$(OBJEXT) \
 	input/partytap.$(OBJEXT) input/toprider.$(OBJEXT) \
-	input/bworld.$(OBJEXT) input/suborkb.$(OBJEXT)
-am_libnes_a_OBJECTS = $(am__objects_2) ntsc/nes_ntsc.$(OBJEXT)
+	input/bworld.$(OBJEXT) input/suborkb.$(OBJEXT) \
+	ntsc/nes_ntsc.$(OBJEXT)
 libnes_a_OBJECTS = $(am_libnes_a_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -271,7 +272,6 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
-GBA_EXTRA_FLAGS = @GBA_EXTRA_FLAGS@
 GENCAT = @GENCAT@
 GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
 GLIBC2 = @GLIBC2@
@@ -280,6 +280,7 @@ GMSGFMT = @GMSGFMT@
 GMSGFMT_015 = @GMSGFMT_015@
 GREP = @GREP@
 HAVE_ASPRINTF = @HAVE_ASPRINTF@
+HAVE_CXX11 = @HAVE_CXX11@
 HAVE_NEWLOCALE = @HAVE_NEWLOCALE@
 HAVE_POSIX_PRINTF = @HAVE_POSIX_PRINTF@
 HAVE_SNPRINTF = @HAVE_SNPRINTF@
@@ -433,7 +434,7 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libnes.a
-mednafen_SOURCES = nes.cpp x6502.cpp cart.cpp fds.cpp ines.cpp \
+libnes_a_SOURCES = nes.cpp x6502.cpp cart.cpp fds.cpp ines.cpp \
 	input.cpp nsf.cpp nsfe.cpp unif.cpp vsuni.cpp sound.cpp \
 	filter.cpp fds-sound.cpp $(am__append_1) ppu/ppu.cpp \
 	ppu/palette.cpp boards/8237.cpp boards/h2288.cpp \
@@ -466,10 +467,7 @@ mednafen_SOURCES = nes.cpp x6502.cpp cart.cpp fds.cpp ines.cpp \
 	input/shadow.cpp input/fkb.cpp input/fkb.h input/hypershot.cpp \
 	input/mahjong.cpp input/oekakids.cpp input/ftrainer.cpp \
 	input/partytap.cpp input/toprider.cpp input/bworld.cpp \
-	input/suborkb.cpp
-
-#include mappers/Makefile.am.inc
-libnes_a_SOURCES = $(mednafen_SOURCES) ntsc/nes_ntsc.cpp
+	input/suborkb.cpp ntsc/nes_ntsc.cpp
 all: all-am
 
 .SUFFIXES:

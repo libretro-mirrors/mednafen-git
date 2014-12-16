@@ -630,7 +630,7 @@ v810_timestamp_t SoundBox_ADPCMUpdate(const v810_timestamp_t timestamp)
  return(timestamp + (sbox.bigdiv + 1) / 2);
 }
 
-int32 SoundBox_Flush(const v810_timestamp_t end_timestamp, v810_timestamp_t* new_base_timestamp, int16 *SoundBuf, const int32 MaxSoundFrames)
+int32 SoundBox_Flush(const v810_timestamp_t end_timestamp, v810_timestamp_t* new_base_timestamp, int16 *SoundBuf, const int32 MaxSoundFrames, const bool reverse)
 {
  const uint32 end_timestamp_div3 = end_timestamp / 3;
  const uint32 end_timestamp_div12 = end_timestamp / 12;
@@ -647,7 +647,7 @@ int32 SoundBox_Flush(const v810_timestamp_t end_timestamp, v810_timestamp_t* new
   if(SoundEnabled && FXres)
   {
    FXsbuf[y]->Integrate(rsc, 0, 0, FXCDDABufs[y]);
-   FrameCount = FXres->Resample(FXsbuf[y], rsc, SoundBuf + y, MaxSoundFrames);
+   FrameCount = FXres->Resample(FXsbuf[y], rsc, SoundBuf + y, MaxSoundFrames, reverse);
   }
   else
    FXsbuf[y]->ResampleSkipped(rsc);
@@ -701,11 +701,9 @@ void SoundBox_Reset(const v810_timestamp_t timestamp)
  sbox.smalldiv = 0;
 }
 
-int SoundBox_StateAction(StateMem *sm, int load, int data_only)
+void SoundBox_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
- int ret = 1;
-
- ret &= pce_psg->StateAction(sm, load, data_only);
+ pce_psg->StateAction(sm, load, data_only);
 
  SFORMAT SoundBox_StateRegs[] =
  {
@@ -733,7 +731,7 @@ int SoundBox_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
  
- ret &= MDFNSS_StateAction(sm, load, data_only, SoundBox_StateRegs, "SBOX");
+ MDFNSS_StateAction(sm, load, data_only, SoundBox_StateRegs, "SBOX");
 
  if(load)
  {
@@ -757,5 +755,4 @@ int SoundBox_StateAction(StateMem *sm, int load, int data_only)
   }
   SCSICD_SetCDDAVolume(0.50f * sbox.CDDAVolume[0] / 63, 0.50f * sbox.CDDAVolume[1] / 63);
  }
- return(ret); 
 }

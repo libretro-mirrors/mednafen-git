@@ -100,7 +100,7 @@ class OwlResampler
 	OwlResampler(const OwlResampler &resamp) MDFN_COLD;
 	~OwlResampler() MDFN_COLD;
 
-	int32 Resample(OwlBuffer* in, const uint32 in_count, int16* out, const uint32 max_out_count);
+	int32 Resample(OwlBuffer* in, const uint32 in_count, int16* out, const uint32 max_out_count, const bool reverse = false);
 	void ResetBufResampState(OwlBuffer* buf);
 
 	// Get the InputRate / OutputRate ratio, expressed as a / b

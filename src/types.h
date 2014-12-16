@@ -17,20 +17,8 @@
 #include <assert.h>
 #include <inttypes.h>
 
-#if HAVE_MKDIR
- #if MKDIR_TAKES_ONE_ARG
-  #define MDFN_mkdir(a, b) mkdir(a)
- #else
-  #define MDFN_mkdir(a, b) mkdir(a, b)
- #endif
-#else
- #if HAVE__MKDIR
-  /* Plain Win32 */
-  #define MDFN_mkdir(a, b) _mkdir(a)
- #else
-  #error "Don't know how to create a directory on this system."
- #endif
-#endif
+#include <type_traits>
+#include <initializer_list>
 
 typedef int8_t int8;
 typedef int16_t int16;
@@ -55,6 +43,12 @@ typedef uint64_t uint64;
   #define INLINE inline __attribute__((always_inline))
   #define NO_INLINE __attribute__((noinline))
 
+  #if MDFN_GCC_VERSION >= MDFN_MAKE_GCCV(4,5,0)
+   #define NO_CLONE __attribute__((noclone))
+  #else
+   #define NO_CLONE
+  #endif
+
   //
   // Just avoid using fastcall with gcc before 4.1.0, as it(and similar regparm)
   // tend to generate bad code on the older versions(between about 3.1.x and 4.0.x, at least)
@@ -73,7 +67,6 @@ typedef uint64_t uint64;
    #define MDFN_FASTCALL
   #endif
 
-  #define MDFN_ALIGN(n)	__attribute__ ((aligned (n)))
   #define MDFN_FORMATSTR(a,b,c) __attribute__ ((format (a, b, c)))
   #define MDFN_WARN_UNUSED_RESULT __attribute__ ((warn_unused_result))
   #define MDFN_NOWARN_UNUSED __attribute__((unused))
@@ -87,19 +80,21 @@ typedef uint64_t uint64;
   #define MDFN_COLD
  #endif
 
- #undef MDFN_MAKE_GCCV
- #undef MDFN_GCC_VERSION
+ #if MDFN_GCC_VERSION >= MDFN_MAKE_GCCV(4,7,0)
+  #define MDFN_ASSUME_ALIGNED(p, align) __builtin_assume_aligned((p), (align))
+ #else
+  #define MDFN_ASSUME_ALIGNED(p, align) (p)
+ #endif
 #elif defined(_MSC_VER)
 
   #pragma message("Compiling with MSVC, untested")
 
   #define INLINE __forceinline
   #define NO_INLINE __declspec(noinline)
+  #define NO_CLONE
 
   #define MDFN_FASTCALL __fastcall
 
-  #define MDFN_ALIGN(n) __declspec(align(n))
-
   #define MDFN_FORMATSTR(a,b,c)
 
   #define MDFN_WARN_UNUSED_RESULT
@@ -110,15 +105,15 @@ typedef uint64_t uint64;
   #define MDFN_LIKELY(n) ((n) != 0)
 
   #define MDFN_COLD
+
+  #define MDFN_ASSUME_ALIGNED(p, align) (p)
 #else
-  #error "Not compiling with GCC nor MSVC"
   #define INLINE inline
   #define NO_INLINE
+  #define NO_CLONE
 
   #define MDFN_FASTCALL
 
-  #define MDFN_ALIGN(n)	// hence the #error.
-
   #define MDFN_FORMATSTR(a,b,c)
 
   #define MDFN_WARN_UNUSED_RESULT
@@ -129,45 +124,9 @@ typedef uint64_t uint64;
   #define MDFN_LIKELY(n) ((n) != 0)
 
   #define MDFN_COLD
+
+  #define MDFN_ASSUME_ALIGNED(p, align) (p)
 #endif
-
-
-typedef struct
-{
- union
- {
-  struct
-  {
-   #ifdef MSB_FIRST
-   uint8   High;
-   uint8   Low;
-   #else
-   uint8   Low;
-   uint8   High;
-   #endif
-  } Union8;
-  uint16 Val16;
- };
-} Uuint16;
-
-typedef struct
-{
- union
- {
-  struct
-  {
-   #ifdef MSB_FIRST
-   Uuint16   High;
-   Uuint16   Low;
-   #else
-   Uuint16   Low;
-   Uuint16   High;
-   #endif
-  } Union16;
-  uint32  Val32;
- };
-} Uuint32;
-
 
 #if PSS_STYLE==2
 
@@ -194,7 +153,6 @@ typedef struct
 typedef uint32   UTF32;  /* at least 32 bits */
 typedef uint16  UTF16;  /* at least 16 bits */
 typedef uint8   UTF8;   /* typically 8 bits */
-typedef unsigned char   Boolean; /* 0 or 1 */
 
 #ifndef FALSE
 #define FALSE 0
@@ -209,6 +167,8 @@ typedef unsigned char   Boolean; /* 0 or 1 */
 
 #if !defined(MSB_FIRST) && !defined(LSB_FIRST)
  #error "Define MSB_FIRST or LSB_FIRST!"
+#elif defined(MSB_FIRST) && defined(LSB_FIRST)
+ #error "Define only one of MSB_FIRST or LSB_FIRST, not both!"
 #endif
 
 #include "error.h"

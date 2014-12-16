@@ -32,7 +32,8 @@
    address space external to the NES.
    It's also (ab)used by the NSF code.
 */
-
+namespace MDFN_IEN_NES
+{
 uint8 *Page[32],*VPage[8];
 uint8 **VPageR=VPage;
 uint8 *VPageG[8];
@@ -62,14 +63,35 @@ uint32 CHRmask2[32];
 uint32 CHRmask4[32];
 uint32 CHRmask8[32];
 
-uint8 geniestage=0;
+//
+//
+//
+//
 
-int modcon;
+/*
+enum
+{
+ GENIESTAGE_UNUSED = 0,
+ GENIESTAGE_ENTRY = 1,
+ GENIESTAGE_GAME = 2
+};
+*/
 
-uint8 genieval[3];
-uint8 geniech[3];
+uint8 geniestage = 0;
+static uint8 modcon;
+static std::array<uint8, 3> genieval;
+static std::array<uint8, 3> geniech;
+static std::array<uint16, 3> genieaddr;
 
-uint32 genieaddr[3];
+static DECLFR(GenieFix1);
+static DECLFR(GenieFix2);
+static DECLFR(GenieFix3);
+static readfunc const GenieFix[3] = { GenieFix1, GenieFix2, GenieFix3 };
+
+//
+//
+//
+//
 
 static INLINE void setpageptr(int s, uint32 A, uint8 *p, int ram)
 {
@@ -475,6 +497,9 @@ static void InstallGenieBIOSHooks(void)
 
  for(int i = 0; i < 0x8000; i++)
  {
+  //assert(AReadGG[i] == NULL);
+  //assert(BWriteGG[i] == NULL);
+
   AReadGG[i] = GetReadHandler(i + 0x8000);
   BWriteGG[i] = GetWriteHandler(i + 0x8000);
  }
@@ -482,43 +507,89 @@ static void InstallGenieBIOSHooks(void)
  SetWriteHandler(0x8000, 0xFFFF, GenieWrite);
  SetReadHandler(0x8000, 0xFFFF, GenieRead);
 
- GenieBIOSHooksInstalled = TRUE;
+ for(int x = 0; x < 8; x++)
+  VPage[x]=GENIEROM+4096-0x400*x;
+
+ VPageR = VPageG;
+
+ GenieBIOSHooksInstalled = true;
+}
+
+static void RemoveGenieBIOSHooks(void)
+{
+ if(!GenieBIOSHooksInstalled)
+  return;
+
+ for(int x = 0; x < 8; x++)
+  VPage[x] = VPageG[x];
+
+ VPageR = VPage;
+
+ for(int i = 0; i < 0x8000; i++)
+ {
+  //assert(GetReadHandler(i + 0x8000) == GenieRead);
+  //assert(GetWriteHandler(i + 0x8000) == GenieWrite);
+
+  SetReadHandler(i + 0x8000, i + 0x8000, AReadGG[i]);
+  SetWriteHandler(i + 0x8000, i + 0x8000, BWriteGG[i]);
+
+  AReadGG[i] = NULL;
+  BWriteGG[i] = NULL;
+ }
+
+ GenieBIOSHooksInstalled = false;
+}
+
+static void InstallGenieReadPatches(void)
+{
+ for(int x = 0; x <= 2; x++)
+ {
+  if((modcon >> (4 + x)) & 1)
+  {
+   //assert(!GenieBackup[x]);
+
+   GenieBackup[x] = GetReadHandler(genieaddr[x]);
+   SetReadHandler(genieaddr[x], genieaddr[x], GenieFix[x]);
+  }
+ }
+}
+
+static void RemoveGenieReadPatches(void)
+{
+ // Remove in reverse order to install in case addrs are the same(corrupted save states could trigger this possibly).
+ for(int x = 2; x >= 0; x--)
+ {
+  if(GenieBackup[x])
+  {
+   SetReadHandler(genieaddr[x], genieaddr[x], GenieBackup[x]);
+   GenieBackup[x] = NULL;
+  }
+ }
 }
 
 /* Called when a game(file) is opened successfully. */
-bool Genie_Init(void)
+void Genie_Init(void)
 {
  try
  {
   if(!GENIEROM)
   {
-   if(!(GENIEROM=(uint8 *)MDFN_malloc(4096+1024, _("Game Genie ROM image")))) 
-    return(FALSE);
+   GENIEROM = (uint8 *)MDFN_malloc_T(4096+1024, _("Game Genie ROM image"));
 
-   std::string fn = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("nes.ggrom").c_str());
+   std::string fn = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("nes.ggrom"));
    MDFNFILE fp(fn.c_str(), NULL, _("Game Genie ROM Image"));
 
-   if(fp.fread(GENIEROM, 1, 16) != 16)
-   {
-    grerr:
-    throw MDFN_Error(0, _("Error reading from Game Genie ROM image!"));
-   }
+   fp.read(GENIEROM, 16);
 
    if(!memcmp(GENIEROM, "NES\x1A", 4))	/* iNES ROM image */
    {
-    if(fp.fread(GENIEROM,1,4096) != 4096)
-     goto grerr;
-
-    if(fp.fseek(16384 - 4096, SEEK_CUR))
-     goto grerr;
-
-    if(fp.fread(GENIEROM + 4096, 1, 256) != 256)
-     goto grerr;
+    fp.read(GENIEROM, 4096);
+    fp.seek(16384 - 4096, SEEK_CUR);
+    fp.read(GENIEROM + 4096, 256);
    }
    else
    {
-    if(fp.fread(GENIEROM + 16, 1, 4352-16) != (4352 - 16))
-     goto grerr;
+    fp.read(GENIEROM + 16, 4352-16);
    }
    fp.Close();
  
@@ -543,10 +614,8 @@ bool Genie_Init(void)
 
   geniestage=1;
  }
- catch(std::exception &e)
+ catch(...)
  {
-  MDFN_PrintError("%s", e.what());
-
   if(GENIEROM)
   {
    MDFN_free(GENIEROM);
@@ -565,11 +634,9 @@ bool Genie_Init(void)
    BWriteGG = NULL;
   }
 
-  return(false);
+  throw;
  }
- return(true);
 }
-
 
 void Genie_Kill(void)
 {
@@ -680,34 +747,16 @@ static DECLFR(GenieFix3)
  return r;
 }
 
-
 static void FixGenieMap(void)
 {
  geniestage = 2;
 
- for(int x = 0; x < 8; x++)
-  VPage[x] = VPageG[x];
-
- VPageR = VPage;
-
  if(!GenieBIOSHooksInstalled)
   return;
 
- for(int i = 0; i < 0x8000; i++)
- {
-  SetReadHandler(i + 0x8000, i + 0x8000, AReadGG[i]);
-  SetWriteHandler(i + 0x8000, i + 0x8000, BWriteGG[i]);
- }
+ RemoveGenieBIOSHooks();
 
- GenieBIOSHooksInstalled = FALSE;
-
- for(int x = 0; x < 3; x++)
-  if((modcon >> (4 + x)) & 1)
-  {
-   readfunc tmp[3] = { GenieFix1, GenieFix2, GenieFix3 };
-   GenieBackup[x]=GetReadHandler(genieaddr[x]);
-   SetReadHandler(genieaddr[x],genieaddr[x],tmp[x]);
-  }
+ InstallGenieReadPatches();
 
  // Call this last, after GenieBIOSHooksInstalled = FALSE and our read cheat hooks are installed.  Yay spaghetti code.
  MDFNMP_InstallReadPatches();
@@ -718,13 +767,10 @@ void Genie_Power(void)
  if(!geniestage)
   return;
 
- for(int x = 0; x < 3; x++)
+ RemoveGenieReadPatches();
+
+ for(unsigned x = 0; x < 3; x++)
  {
-  if(GenieBackup[x])
-  {
-   SetReadHandler(genieaddr[x], genieaddr[x], GenieBackup[x]);
-   GenieBackup[x] = NULL;
-  }
   genieval[x] = 0xFF;
   geniech[x] = 0xFF;
   genieaddr[x] = 0xFFFF;
@@ -735,13 +781,79 @@ void Genie_Power(void)
 
  if(!GenieBIOSHooksInstalled)
   InstallGenieBIOSHooks();
-
- for(int x = 0; x < 8; x++)
-  VPage[x]=GENIEROM+4096-0x400*x;
-
- VPageR=VPageG;
 }
 
+void Genie_StateAction(StateMem *sm, const unsigned load, const bool data_only)
+{
+ auto tmp_modcon = modcon;
+ auto tmp_geniestage = geniestage;
+ auto tmp_genieval = genieval;
+ auto tmp_geniech = geniech;
+ auto tmp_genieaddr = genieaddr;
+
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(tmp_geniestage),
+  SFVAR(tmp_modcon),
+
+  SFARRAY(tmp_genieval.data(), tmp_genieval.size()),
+  SFARRAY(tmp_geniech.data(), tmp_geniech.size()),
+  SFARRAY16(tmp_genieaddr.data(), tmp_genieaddr.size()),
+
+  SFEND
+ };
+
+ bool lsv = MDFNSS_StateAction(sm, load, data_only, StateRegs, "GENIE", load < 0x937);
+
+ if(load)
+ {
+  if(!lsv || !GENIEROM)
+  {
+   if(lsv && tmp_geniestage == 1)
+    throw MDFN_Error(0, _("State saved in Game Genie screen, but GG emulation is currently disabled!"));
+
+   tmp_geniestage = (GENIEROM ? 2 : 0);
+   tmp_modcon = 0;
+
+   for(unsigned x = 0; x < 3; x++)
+   {
+    tmp_genieval[x] = 0xFF;
+    tmp_geniech[x] = 0xFF;
+    tmp_genieaddr[x] = 0xFFFF;
+   }
+  }
+
+  for(unsigned x = 0; x < 3; x++)
+   tmp_genieaddr[x] |= 0x8000;
+
+  MDFNMP_RemoveReadPatches();
+  RemoveGenieReadPatches();
+  RemoveGenieBIOSHooks();
+
+  modcon = tmp_modcon;
+  geniestage = tmp_geniestage;
+  genieval = tmp_genieval;
+  geniech = tmp_geniech;
+  genieaddr = tmp_genieaddr;
+
+  switch(geniestage)
+  {
+   default:
+	geniestage = 0;
+	MDFNMP_InstallReadPatches();
+	break;
+
+   case 1:
+	InstallGenieBIOSHooks();
+	break;
+
+   case 2:
+	InstallGenieReadPatches();
+	MDFNMP_InstallReadPatches();
+	break;
+  }
+ }
+}
 
 void MDFN_SaveGameSave(CartInfo *LocalHWInfo)
 {
@@ -749,26 +861,28 @@ void MDFN_SaveGameSave(CartInfo *LocalHWInfo)
  {
   try
   {
-   FileStream sp(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), FileStream::MODE_WRITE);
+   FileStream sp(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), FileStream::MODE_WRITE_INPLACE);
 
    for(unsigned x = 0; x < 4; x++)
     if(LocalHWInfo->SaveGame[x])
      sp.write(LocalHWInfo->SaveGame[x], LocalHWInfo->SaveGameLen[x]);
+
+   sp.close();
   }
   catch(std::exception &e)
   {
-   MDFN_PrintError(_("Error saving save game file: %s\n"), e.what());
+   throw MDFN_Error(0, _("Error saving save game file: %s\n"), e.what());
   }
  }
 }
 
-bool MDFN_LoadGameSave(CartInfo *LocalHWInfo)
+void MDFN_LoadGameSave(CartInfo *LocalHWInfo)
 {
  if(LocalHWInfo->battery && LocalHWInfo->SaveGame[0])
  {
   try
   {
-   FileStream sp(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), FileStream::MODE_READ);
+   FileStream sp(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), FileStream::MODE_READ);
 
    for(unsigned x = 0; x < 4; x++)
     if(LocalHWInfo->SaveGame[x])
@@ -776,18 +890,14 @@ bool MDFN_LoadGameSave(CartInfo *LocalHWInfo)
   }
   catch(MDFN_Error &e)
   {
-   if(e.GetErrno() == ENOENT)
-    return(true);
-
-   MDFN_PrintError(_("Error loading save game file: %s\n"), e.what());
-   return(false);
+   if(e.GetErrno() != ENOENT)
+    throw MDFN_Error(0, _("Error loading save game file: %s\n"), e.what());
   }
   catch(std::exception &e)
   {
-   MDFN_PrintError(_("Error loading save game file: %s\n"), e.what());
-   return(false);
+   throw MDFN_Error(0, _("Error loading save game file: %s\n"), e.what());
   }
  }
- return(true);
 }
 
+}

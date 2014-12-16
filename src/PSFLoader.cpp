@@ -21,6 +21,8 @@
 	Character set autodetect heuristics and conversion for when the "utf8" tag is missing.
 */
 #include "mednafen.h"
+#include <mednafen/FileStream.h>
+#include <mednafen/compress/ZLInflateFilter.h>
 #include "PSFLoader.h"
 #include "endian.h"
 #include "general.h"
@@ -31,6 +33,7 @@
 #include <ctype.h>
 //#include <iconv.h>
 
+#include <zlib.h>
 
 PSFTags::PSFTags()
 {
@@ -102,8 +105,9 @@ static const char *DetectCharset(const uint8 *data, const uint32 data_size)
 }
 #endif
 
-void PSFTags::LoadTags(const uint8 *data_in, uint32 size)
+void PSFTags::LoadTags(Stream* fp)
 {
+ uint64 size = fp->size() - fp->tell();
  std::vector<char> tags_heap;
  char *data;
  char *spos;
@@ -112,7 +116,7 @@ void PSFTags::LoadTags(const uint8 *data_in, uint32 size)
  tags_heap.resize(size + 1);
  tags_heap[size] = 0;
 
- memcpy(&tags_heap[0], data_in, size);
+ fp->read(&tags_heap[0], size);
 
  data = &tags_heap[0];
  spos = data;
@@ -199,55 +203,59 @@ PSFLoader::~PSFLoader()
 
 }
 
-bool PSFLoader::TestMagic(uint8 version, MDFNFILE *fp)
+bool PSFLoader::TestMagic(uint8 version, Stream* fp)
 {
- if(fp->size < (3 + 1 + 4 + 4 + 4))
+ uint8 buf[3 + 1 + 4 + 4 + 4];
+ uint64 rc;
+
+ rc = fp->read(buf, sizeof(buf), false);
+ fp->rewind();
+
+ if(rc != sizeof(buf))
   return(false);
 
- if(memcmp(fp->data, "PSF", 3))
+ if(memcmp(buf, "PSF", 3))
   return(false);
 
- if(fp->data[3] != version)
+ if(buf[3] != version)
   return(false);
 
  return(true);
 }
 
-PSFTags PSFLoader::LoadInternal(uint8 version, uint32 max_exe_size, MDFNFILE *fp, uint32 level, bool force_ignore_pcsp)
+PSFTags PSFLoader::LoadInternal(uint8 version, uint32 max_exe_size, Stream *fp, uint32 level, bool force_ignore_pcsp)
 {
  uint32 reserved_size, compressed_size, compressed_crc32;
  bool _lib_present = false;
  PSFTags tags;
+ uint8 raw_header[16];
 
- std::vector<uint8> decompress_buffer;
- uLongf decompress_len;
+ fp->read(raw_header, 16);
 
- if(!TestMagic(version, fp))
+ if(memcmp(raw_header, "PSF", 3) || raw_header[3] != version)
   throw(MDFN_Error(0, _("Not a PSF(version=0x%02x) file!"), version));
 
- reserved_size = MDFN_de32lsb(fp->data + 4);
- compressed_size = MDFN_de32lsb(fp->data + 8);
- compressed_crc32 = MDFN_de32lsb(fp->data + 12);
+ reserved_size = MDFN_de32lsb(&raw_header[4]);
+ compressed_size = MDFN_de32lsb(&raw_header[8]);
+ compressed_crc32 = MDFN_de32lsb(&raw_header[12]);
 
- if(fp->size < ((int64)16 + reserved_size + compressed_size))
-  throw MDFN_Error(0, _("PSF is missing at least %lld bytes of data!"), (long long)((int64)16 + reserved_size + compressed_size - fp->size));
+ (void)compressed_crc32;
 
- if(crc32(0, fp->data + 16 + reserved_size, compressed_size) != compressed_crc32)
-  throw MDFN_Error(0, _("PSF compressed CRC32 mismatch(data is corrupt)!"));
-
-
+ //
+ // Load tags.
+ //
  {
-  const uint8 *tag_section = fp->data + 16 + reserved_size + compressed_size;
-  uint32 tag_section_size = fp->size - 16 - reserved_size - compressed_size;
+  uint8 theader[5];
 
-  if(tag_section_size > 5 && !memcmp(tag_section, "[TAG]", 5))
-   tags.LoadTags(tag_section + 5, tag_section_size - 5);
+  fp->seek(16 + reserved_size + compressed_size);
+
+  if(fp->read(theader, 5, false) == 5 && !memcmp(theader, "[TAG]", 5))
+   tags.LoadTags(fp);
  }
 
  //
  // Handle minipsf simple _lib
  //
-
  if(level < 15)
  {
   if(tags.TagExists("_lib"))
@@ -259,7 +267,7 @@ PSFTags PSFLoader::LoadInternal(uint8 version, uint32 max_exe_size, MDFNFILE *fp
     throw(MDFN_Error(0, _("Referenced path \"%s\" is potentially unsafe.  See \"filesys.untrusted_fip_check\" setting."), tp.c_str()));
    }
 
-   MDFNFILE subfile(MDFN_MakeFName(MDFNMKF_AUX, 0, tp.c_str()).c_str(), NULL, NULL);
+   FileStream subfile(MDFN_MakeFName(MDFNMKF_AUX, 0, tp.c_str()).c_str(), FileStream::MODE_READ);
 
    LoadInternal(version, max_exe_size, &subfile, level + 1);
 
@@ -268,31 +276,21 @@ PSFTags PSFLoader::LoadInternal(uint8 version, uint32 max_exe_size, MDFNFILE *fp
  }
 
  //
+ // Handle reserved section.
  //
- //
-
- decompress_buffer.resize(max_exe_size);
- decompress_len = max_exe_size;
- switch( uncompress((Bytef *)&decompress_buffer[0], &decompress_len, (const Bytef *)(fp->data + 16 + reserved_size), compressed_size) )
  {
-  default:
-	throw(MDFN_Error(0, "zlib unknown error"));
-
-  case Z_OK: break;
-
-  case Z_MEM_ERROR:
-	throw(MDFN_Error(0, "zlib Z_MEM_ERROR"));
-
-  case Z_BUF_ERROR:
-	throw(MDFN_Error(0, _("PSF decompressed size exceeds maximum allowed!")));
-
-  case Z_DATA_ERROR:
-	throw(MDFN_Error(0, _("PSF compressed data is bad.")));
+  fp->seek(16);
+  HandleReserved(fp, reserved_size);
  }
 
- HandleReserved(fp->data + 16, reserved_size);
- HandleEXE(&decompress_buffer[0], decompress_len, force_ignore_pcsp | _lib_present);
- decompress_buffer.resize(0);
+ //
+ // Handle compressed EXE section
+ //
+ {
+  fp->seek(16 + reserved_size);
+  ZLInflateFilter ifs(fp, ZLInflateFilter::FORMAT::ZLIB, compressed_size);
+  HandleEXE(&ifs, force_ignore_pcsp | _lib_present);
+ }
 
  //
  // handle libN
@@ -307,7 +305,7 @@ PSFTags PSFLoader::LoadInternal(uint8 version, uint32 max_exe_size, MDFNFILE *fp
 
    if(tags.TagExists(tmpbuf))
    {
-    MDFNFILE subfile(MDFN_MakeFName(MDFNMKF_AUX, 0, tags.GetTag(tmpbuf).c_str()).c_str(), NULL, NULL);
+    FileStream subfile(MDFN_MakeFName(MDFNMKF_AUX, 0, tags.GetTag(tmpbuf).c_str()).c_str(), FileStream::MODE_READ);
 
     LoadInternal(version, max_exe_size, &subfile, level + 1, true);
    }
@@ -319,17 +317,17 @@ PSFTags PSFLoader::LoadInternal(uint8 version, uint32 max_exe_size, MDFNFILE *fp
  return(tags);
 }
 
-PSFTags PSFLoader::Load(uint8 version, uint32 max_exe_size, MDFNFILE *fp)
+PSFTags PSFLoader::Load(uint8 version, uint32 max_exe_size, Stream* fp)
 {
  return(LoadInternal(version, max_exe_size, fp, 0, false));
 }
 
-void PSFLoader::HandleReserved(const uint8 *data, uint32 len)
+void PSFLoader::HandleReserved(Stream* fp, uint32 len)
 {
-
+ fp->seek(SEEK_CUR, len);
 }
 
-void PSFLoader::HandleEXE(const uint8 *data, uint32 len, bool ignore_pcsp)
+void PSFLoader::HandleEXE(Stream* fp, bool ignore_pcsp)
 {
 
 }

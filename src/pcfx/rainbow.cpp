@@ -248,16 +248,13 @@ static void KillHuffmanLUT(HuffmanQuickLUT *qlut)
  qlut->lut_bits = NULL;
 }
 
-static bool BuildHuffmanLUT(const HuffmanTable *table, HuffmanQuickLUT *qlut, const int bitmax)
+static void BuildHuffmanLUT(const HuffmanTable *table, HuffmanQuickLUT *qlut, const int bitmax)
 {
  // TODO: Allocate only (1 << bitmax) entries.
  // TODO: What should we set invalid bitsequences/entries to? 0? ~0?  Something else?
 
- if(!(qlut->lut = (uint8 *)MDFN_calloc(1 << 12, 1, _("Huffman LUT"))))
-  return(FALSE);
-
- if(!(qlut->lut_bits = (uint8 *)MDFN_calloc(1 << 12, 1, _("Huffman LUT"))))
-  return(FALSE);
+ qlut->lut = (uint8 *)MDFN_calloc_T(1 << 12, 1, _("Huffman LUT"));
+ qlut->lut_bits = (uint8 *)MDFN_calloc_T(1 << 12, 1, _("Huffman LUT"));
 
  for(int numbits = 2; numbits <= 12; numbits++)
  {
@@ -284,8 +281,6 @@ static bool BuildHuffmanLUT(const HuffmanTable *table, HuffmanQuickLUT *qlut, co
   //if(!qlut->lut_bits[i])
   // printf("%d %d\n", i, qlut->lut_bits[i]);
  }
-
- return(TRUE);
 }
 
 
@@ -1131,7 +1126,7 @@ void RAINBOW_Reset(void)
 }
 
 
-int RAINBOW_StateAction(StateMem *sm, int load, int data_only)
+void RAINBOW_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -1150,13 +1145,12 @@ int RAINBOW_StateAction(StateMem *sm, int load, int data_only)
    SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "RBOW");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "RBOW");
 
  if(load)
  {
   RasterReadPos &= 0xF;
   CalcHappyColor();
  }
- return(ret);
 }
 

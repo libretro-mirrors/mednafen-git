@@ -1,3 +1,6 @@
+#ifndef __MDFN_NES_UNIF_H
+#define __MDFN_NES_UNIF_H
+
 int UNL6035052_Init(CartInfo *info);
 
 
@@ -72,5 +75,10 @@ int TQROM_Init(CartInfo *info);
 int MMC4_Init(CartInfo *info);
 int PNROM_Init(CartInfo *info);
 
+namespace MDFN_IEN_NES
+{
 extern uint8 *UNIFchrrama;	// Meh.  So I can stop CHR RAM 
 	 			// bank switcherooing with certain boards...
+}
+
+#endif

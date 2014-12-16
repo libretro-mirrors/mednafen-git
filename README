@@ -1,18 +1,15 @@
 Compilation notes:
-	gcc is generally required(Intel's compiler might work), and the compilers specified via CC and CXX must be the same
-	version.
+	gcc is generally required(Intel's compiler might work, and newish versions of LLVM clang do work), and the compilers optionally
+	specified via CC and CXX must be the same version.
 
-	Using gcc 4.7.x(or newer, though Mednafen doesn't get as much testing with versions newer than 4.7.x) is recommended; anything
-	older than gcc 4.2.x may not work, and gcc 4.2.x has a nasty code generation bug that may pop up and trigger a
-	program abort in an internal compiler regression test routine in Mednafen; though there is now some logic in the
-	configure script to try to choose optimization options that won't trigger the bad code generation.
+	With gcc, 4.9.2 or newer is required.
 
 	Reportedly, passing:	--build=x86_64-apple-darwin`uname -r`
 	to the configure script is necessary for building on Mac OS X to work properly.
 
 
 
-Some notes on the source code:
+Some notes(and reminders) on the source code:
 
 	The following system headers are included by including "mednafen.h", and always will be, so don't include them manually.
 		assert.h	(included in "types.h")
@@ -20,3 +17,23 @@ Some notes on the source code:
 		stdlib.h
 		stdio.h
 		string.h
+
+	Avoid %= in save state load variable sanitizing code unless the variable is unsigned.
+
+	memcpy()/memmove()/etc. with NULL pointers is undefined and bad even when length is 0.
+
+	Careful to not do something like: void somefunc(int something[16]); [...] sizeof(something)
+
+	Try to avoid writing new code that violates strict overflow(even though we compile with -fwrapv), especially be mindful
+	of stuff like what's described at http://kqueue.org/blog/2013/09/17/cltq/
+
+	Order of operations != Operator precedence.  Remember sequence point rules, and don't do stuff like:
+		value = FuncWithSideEffects() | (FuncWithSideEffects() << 8);	// BAD BAD
+	See: http://en.cppreference.com/w/cpp/language/eval_order
+
+	Avoid writing new code that shifts left signed integers or negative values to avoid technically undefined behavior; use
+	ugly typecasting, or multiply by powers of 2 instead(remotely modern compilers can optimize it to a shift internally).
+
+	Vanishing temporaries: https://gcc.gnu.org/onlinedocs/gcc/Temporaries.html#Temporaries
+
+	

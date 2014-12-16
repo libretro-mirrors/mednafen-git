@@ -114,7 +114,7 @@ void PCFXIRQ_Write16(uint32 A, uint16 V)
  }
 }
 
-int PCFXIRQ_StateAction(StateMem *sm, int load, int data_only)
+void PCFXIRQ_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -124,12 +124,10 @@ int PCFXIRQ_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "IRQ");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "IRQ");
 
  if(load)
   BuildInterruptCache();
-
- return(ret);
 }
 
 bool PCFXIRQ_SetRegister(const std::string &name, uint32 value)

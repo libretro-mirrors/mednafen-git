@@ -19,7 +19,7 @@ struct flag_t {
   flag_t() : n(0), v(0), m(0), x(0), d(0), i(0), z(0), c(0) {}
 };
 
-struct reg16_t {
+struct reg16_noinit_t {
   union {
     uint16 w;
     struct { uint8 order_lsb2(l, h); };
@@ -37,8 +37,6 @@ struct reg16_t {
   inline unsigned operator  *= (unsigned i) { return w  *= i; }
   inline unsigned operator  /= (unsigned i) { return w  /= i; }
   inline unsigned operator  %= (unsigned i) { return w  %= i; }
-
-  reg16_t() : w(0) {}
 };
 
 struct reg24_t {
@@ -66,7 +64,14 @@ struct reg24_t {
 
 struct regs_t {
   reg24_t pc;
-  reg16_t r[6], &a, &x, &y, &z, &s, &d;
+  union
+  {
+   reg16_noinit_t r[6];
+   struct
+   {
+    reg16_noinit_t a, x, y, z, s, d;
+   };
+  };
   flag_t p;
   uint8 db;
   bool e;
@@ -75,7 +80,13 @@ struct regs_t {
   bool wai;   //raised during wai, cleared after interrupt triggered
   uint8 mdr;  //memory data register
 
-  regs_t() : a(r[0]), x(r[1]), y(r[2]), z(r[3]), s(r[4]), d(r[5]), db(0), e(false), irq(false), wai(false), mdr(0) {
+  regs_t() : db(0), e(false), irq(false), wai(false), mdr(0) {
+    r[0] = 0;
+    r[1] = 0;
+    r[2] = 0;
+    r[3] = 0;
+    r[4] = 0;
+    r[5] = 0;
     z = 0;
   }
 };

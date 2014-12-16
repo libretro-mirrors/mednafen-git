@@ -69,7 +69,7 @@ static void MJ_Update(void *data)
  //HSVal=*(uint8*)data;
 }
 
-static int StateActionFC(StateMem *sm, int load, int data_only)
+static void StateActionFC(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -77,12 +77,13 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
    SFVAR(MRet),
    SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF", true);
+
  if(load)
  {
 
  }
- return(ret);
 }
 
 static INPUTCFC Mahjong={MJ_Read,MJ_Write,0,MJ_Update,0,0, StateActionFC };

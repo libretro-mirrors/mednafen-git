@@ -83,7 +83,7 @@ static void SuborKB_Update(void *data)
  memcpy(bufit+1,data,0x60);
 }
 
-static int StateActionFC(StateMem *sm, int load, int data_only)
+static void StateActionFC(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -92,12 +92,13 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
    SFVAR(ksindex),
    SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF", true);
+
  if(load)
  {
 
  }
- return(ret);
 }
 
 static INPUTCFC SuborKB={SuborKB_Read,SuborKB_Write,SuborKB_Strobe,SuborKB_Update,0,0, StateActionFC };

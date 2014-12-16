@@ -39,7 +39,9 @@ static void (*CDIRQCallback)(int);
 static void (*CDStuffSubchannels)(uint8, int);
 static int32* HRBufs[2];
 static int WhichSystem;
+
 static CDIF *Cur_CDIF;
+static bool TrayOpen;
 
 // Internal operation to the SCSI CD unit.  Only pass 1 or 0 to these macros!
 #define SetIOP(mask, set)	{ cd_bus.signals &= ~mask; if(set) cd_bus.signals |= mask; }
@@ -96,7 +98,6 @@ typedef struct
  uint8 data_out_pos;	// Current index for writing into data_out.
  uint8 data_out_want;	// Total number of bytes to buffer into data_out.
 
- bool TrayOpen;
  bool DiscChanged;
 
  uint8 SubQBuf[4][0xC];		// One for each of the 4 most recent q-Modes.
@@ -268,7 +269,7 @@ void SCSICD_Power(scsicd_timestamp_t system_timestamp)
 
  cd.DiscChanged = false;
 
- if(Cur_CDIF && !cd.TrayOpen)
+ if(Cur_CDIF && !TrayOpen)
   Cur_CDIF->ReadTOC(&toc);
 
  CurrentPhase = PHASE_BUS_FREE;
@@ -486,14 +487,14 @@ static void DoSimpleDataIn(const uint8 *data_in, uint32 len)
  ChangePhase(PHASE_DATA_IN);
 }
 
-void SCSICD_SetDisc(bool tray_open, CDIF *cdif, bool no_emu_side_effects)
+void SCSICD_SetDisc(bool new_tray_open, CDIF *cdif, bool no_emu_side_effects)
 {
  Cur_CDIF = cdif;
 
  // Closing the tray.
- if(cd.TrayOpen && !tray_open)
+ if(TrayOpen && !new_tray_open)
  {
-  cd.TrayOpen = false;
+  TrayOpen = false;
 
   if(cdif)
   {
@@ -507,9 +508,9 @@ void SCSICD_SetDisc(bool tray_open, CDIF *cdif, bool no_emu_side_effects)
    }
   }
  }
- else if(!cd.TrayOpen && tray_open)	// Opening the tray
+ else if(!TrayOpen && new_tray_open)	// Opening the tray
  {
-  cd.TrayOpen = true;
+  TrayOpen = true;
  }
 }
 
@@ -611,9 +612,9 @@ static void DoMODESELECT6(const uint8 *cdb)
 
 struct ModePageParam
 {
- const uint8 default_value;
- const uint8 alterable_mask;	// Alterable mask reported when PC == 1
- const uint8 real_mask;		// Real alterable mask.
+ uint8 default_value;
+ uint8 alterable_mask;	// Alterable mask reported when PC == 1
+ uint8 real_mask;		// Real alterable mask.
 };
 
 struct ModePage
@@ -2436,12 +2437,12 @@ void SCSICD_GetCDDAValues(int16 &left, int16 &right)
 #define CDDA_FILTER_NUMPHASES_SHIFT		6
 #define CDDA_FILTER_NUMPHASES	       		(1 << CDDA_FILTER_NUMPHASES_SHIFT)
 
-static const int16 CDDA_Filter[1 + CDDA_FILTER_NUMPHASES + 1][CDDA_FILTER_NUMCONVOLUTIONS_PADDED] MDFN_ALIGN(16) =
+alignas(16) static const int16 CDDA_Filter[1 + CDDA_FILTER_NUMPHASES + 1][CDDA_FILTER_NUMCONVOLUTIONS_PADDED] =
 {
  #include "scsicd_cdda_filter.inc"
 };
 
-static const int16 OversampleFilter[2][0x10] MDFN_ALIGN(16) =
+alignas(16) static const int16 OversampleFilter[2][0x10] =
 {
  {    -82,    217,   -463,    877,  -1562,   2783,  -5661,  29464,   9724,  -3844,   2074,  -1176,    645,   -323,    138,    -43,  }, /* sum=32768, sum_abs=59076 */
  {    -43,    138,   -323,    645,  -1176,   2074,  -3844,   9724,  29464,  -5661,   2783,  -1562,    877,   -463,    217,    -82,  }, /* sum=32768, sum_abs=59076 */
@@ -2499,7 +2500,7 @@ static INLINE void RunCDDA(uint32 system_timestamp, int32 run_time)
       break;
      }
 
-     if(cd.TrayOpen)
+     if(TrayOpen || !Cur_CDIF)
      {
       cdda.CDDAStatus = CDDASTATUS_STOPPED;
 
@@ -2739,12 +2740,16 @@ static INLINE void RunCDRead(uint32 system_timestamp, int32 run_time)
    {
     uint8 tmp_read_buf[2352 + 96];
 
-    if(cd.TrayOpen)
+    if(TrayOpen)
     {
      din->Flush();
      cd.data_transfer_done = FALSE;
 
      CommandCCError(SENSEKEY_NOT_READY, NSE_TRAY_OPEN);
+    }
+    else if(!Cur_CDIF)
+    {
+     CommandCCError(SENSEKEY_NOT_READY, NSE_NO_DISC);
     }
     else if(SectorAddr >= toc.tracks[100].lba)
     {
@@ -2903,7 +2908,7 @@ uint32 SCSICD_Run(scsicd_timestamp_t system_timestamp)
         SCSIDBG("Untested SCSI command: %02x, %s", cd.command_buffer[0], cmd_info_ptr->pretty_name);
        }
 
-       if(cd.TrayOpen && (cmd_info_ptr->flags & SCF_REQUIRES_MEDIUM))
+       if(TrayOpen && (cmd_info_ptr->flags & SCF_REQUIRES_MEDIUM))
        {
 	CommandCCError(SENSEKEY_NOT_READY, NSE_TRAY_OPEN);
        }
@@ -3091,7 +3096,7 @@ void SCSICD_Close(void)
 void SCSICD_Init(int type, int cdda_time_div, int32* left_hrbuf, int32* right_hrbuf, uint32 TransferRate, uint32 SystemClock, void (*IRQFunc)(int), void (*SSCFunc)(uint8, int))
 {
  Cur_CDIF = NULL;
- cd.TrayOpen = false;
+ TrayOpen = true;
 
  assert(SystemClock < 30000000);	// 30 million, sanity check.
 
@@ -3142,7 +3147,7 @@ void SCSICD_SetCDDAVolume(double left, double right)
  FixOPV();
 }
 
-int SCSICD_StateAction(StateMem * sm, int load, int data_only, const char *sname)
+void SCSICD_StateAction(StateMem* sm, const unsigned load, const bool data_only, const char *sname)
 {
  SFORMAT StateRegs[] = 
  {
@@ -3173,7 +3178,6 @@ int SCSICD_StateAction(StateMem * sm, int load, int data_only, const char *sname
   SFVARN(cd.data_out_pos, "data_out_pos"),
   SFVARN(cd.data_out_want, "data_out_want"),
 
-  SFVARN(cd.TrayOpen, "TrayOpen"),
   SFVARN(cd.DiscChanged, "DiscChanged"),
 
   SFVAR(cdda.PlayMode),
@@ -3219,7 +3223,7 @@ int SCSICD_StateAction(StateMem * sm, int load, int data_only, const char *sname
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, sname);
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, sname);
 
  if(load)
  {
@@ -3239,6 +3243,4 @@ int SCSICD_StateAction(StateMem * sm, int load, int data_only, const char *sname
   for(int i = 0; i < NumModePages; i++)
    UpdateMPCacheP(&ModePages[i]);
  }
-
- return (ret);
 }

@@ -111,7 +111,7 @@ void FXTIMER_Write16(uint32 A, uint16 V, const v810_timestamp_t timestamp)
  }
 }
 
-int FXTIMER_StateAction(StateMem *sm, int load, int data_only)
+void FXTIMER_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -121,13 +121,12 @@ int FXTIMER_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "TIMR");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "TIMR");
 
  if(load)
  {
 
  }
- return(ret);
 }
 
 

@@ -5,7 +5,9 @@
 
 #include "shared.h"
 #include "input/gamepad.h"
-#include "input/mouse.h"
+#include "input/megamouse.h"
+#include "input/multitap.h"
+#include "input/4way.h"
 
 namespace MDFN_IEN_MD
 {
@@ -17,87 +19,176 @@ static bool is_pal_reported;
 
 // 3 internal ports
 enum port_names {PORT_A = 0, PORT_B, PORT_C, PORT_MAX};
-enum device_names {DEVICE_NONE = 0, DEVICE_MS2B, DEVICE_MD3B, DEVICE_MD6B, DEVICE_MM};
-
-static void SetDevice(int i, int type);
 
 static MD_Input_Device *port[PORT_MAX] = { NULL };
 
-static InputDeviceInfoStruct InputDeviceInfo[] =
+static uint8* data_ptr[8];
+static MD_Input_Device *InputDevice[8] = { NULL };
+static MD_Multitap* MultitapDevice[2] = { NULL };
+static MD_4Way* Way4Device = NULL;
+static unsigned MultitapEnabled;
+static MD_Input_Device* DummyDevice = nullptr;
+
+static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
 {
  // None
  {
   "none",
   "none",
   NULL,
-  NULL,
-  0,
-  NULL
+  IDII_Empty
  },
 
  {
   "gamepad2",
   "2-Button Gamepad",
   NULL,
-  NULL,
-  sizeof(Gamepad2IDII) / sizeof(InputDeviceInputInfoStruct),
-  Gamepad2IDII,
+  Gamepad2IDII
  },
 
  {
   "gamepad",
   "3-Button Gamepad",
   NULL,
-  NULL,
-  sizeof(GamepadIDII) / sizeof(InputDeviceInputInfoStruct),
-  GamepadIDII,
+  GamepadIDII
  },
 
  {
   "gamepad6",
   "6-Button Gamepad",
   NULL,
-  NULL,
-  sizeof(Gamepad6IDII) / sizeof(InputDeviceInputInfoStruct),
-  Gamepad6IDII,
+  Gamepad6IDII
  },
 
  {
   "megamouse",
   "Sega Mega Mouse",
   NULL,
-  NULL,
-  sizeof(MegaMouseIDII) / sizeof(InputDeviceInputInfoStruct),
-  MegaMouseIDII,
+  MegaMouseIDII
  },
 
 };
 
-static const InputPortInfoStruct PortInfo[] =
+const std::vector<InputPortInfoStruct> MDPortInfo =
 {
- { "port1", "Port 1", sizeof(InputDeviceInfo) / sizeof(InputDeviceInfoStruct), InputDeviceInfo, "gamepad" },
- { "port2", "Port 2", sizeof(InputDeviceInfo) / sizeof(InputDeviceInfoStruct), InputDeviceInfo, "gamepad" }
-};
-
-InputInfoStruct MDInputInfo =
-{
- sizeof(PortInfo) / sizeof(InputPortInfoStruct),
- PortInfo
+ { "port1", "Virtual Port 1", InputDeviceInfo, "gamepad" },
+ { "port2", "Virtual Port 2", InputDeviceInfo, "gamepad" },
+ { "port3", "Virtual Port 3", InputDeviceInfo, "gamepad" },
+ { "port4", "Virtual Port 4", InputDeviceInfo, "gamepad" },
+ { "port5", "Virtual Port 5", InputDeviceInfo, "gamepad" },
+ { "port6", "Virtual Port 6", InputDeviceInfo, "gamepad" },
+ { "port7", "Virtual Port 7", InputDeviceInfo, "gamepad" },
+ { "port8", "Virtual Port 8", InputDeviceInfo, "gamepad" }
 };
 
 static void UpdateBusThing(const int32 master_timestamp);
 
+static void RebuildPortMap(void)
+{
+ for(unsigned pp = 0, vp = 0; pp < 2; pp++)
+ {
+  MD_Input_Device* nd = nullptr;
+
+  if(MultitapEnabled == MTAP_TP_DUAL || (pp == 0 && MultitapEnabled == MTAP_TP_PRT1) || (pp == 1 && MultitapEnabled == MTAP_TP_PRT2))
+  {
+   nd = MultitapDevice[pp];
+   for(unsigned i = 0; i < 4; i++)
+   {
+    MultitapDevice[pp]->SetSubPort(i, InputDevice[vp] ? InputDevice[vp] : DummyDevice);
+    vp++;
+   }
+  }
+  else if(MultitapEnabled == MTAP_4WAY)
+  {
+   nd = Way4Device->GetShim(pp);
+
+   if(!pp)
+   {
+    for(unsigned i = 0; i < 4; i++)
+    {
+     Way4Device->SetSubPort(i, InputDevice[vp] ? InputDevice[vp] : DummyDevice);
+     vp++;
+    }
+   }
+  }
+  else
+  {
+   nd = InputDevice[vp] ? InputDevice[vp] : DummyDevice;
+   vp++;
+  }
+
+  if(port[pp] != nd)
+  {
+   port[pp] = nd;
+   port[pp]->Power();
+  }
+ }
+
+ port[2] = DummyDevice;
+}
+
 void MDIO_Init(bool overseas, bool PAL, bool overseas_reported, bool PAL_reported)
 {
+ MultitapEnabled = false;
+
  is_overseas = overseas;
  is_pal = PAL;
  is_overseas_reported = overseas_reported;
  is_pal_reported = PAL_reported;
 
- for(int i = 0; i < PORT_MAX; i++)
-  SetDevice(i, DEVICE_NONE);
+ DummyDevice = new MD_Input_Device();
+
+ Way4Device = new MD_4Way();
+
+ for(unsigned i = 0; i < 2; i++)
+  MultitapDevice[i] = new MD_Multitap();
+
+ for(unsigned i = 0; i < 8; i++)
+  InputDevice[i] = nullptr;
+
+ RebuildPortMap();
 
  UpdateBusThing(md_timestamp);
+}
+
+void MDIO_Kill(void)
+{
+ if(DummyDevice)
+ {
+  delete DummyDevice;
+  DummyDevice = nullptr;
+ }
+
+ if(Way4Device)
+ {
+  delete Way4Device;
+  Way4Device = nullptr;
+ }
+
+ for(unsigned i = 0; i < 2; i++)
+ {
+  if(MultitapDevice[i])
+  {
+   delete MultitapDevice[i];
+   MultitapDevice[i] = nullptr;
+  }
+ }
+
+ for(unsigned i = 0; i < 8; i++)
+ {
+  if(InputDevice[i])
+  {
+   delete InputDevice[i];
+   InputDevice[i] = nullptr;
+  }
+ }
+}
+
+void MDINPUT_SetMultitap(unsigned type)
+{
+ MultitapEnabled = type;
+
+ RebuildPortMap();
 }
 
 static uint8 PortData[3];
@@ -126,12 +217,17 @@ void gen_io_reset(void)
   PortCtrl[i] = 0x00;
   PortTxData[i] = 0xFF;
   PortSCtrl[i] = 0x00;
-
-  port[i]->Power();		// Should be called before Write(...)
+  port[i]->Power();
  }
+
  PortTxData[2] = 0xFB;
 
  UpdateBusThing(0);
+
+ for(int i = 0; i < 3; i++)
+ {
+  port[i]->Power();	// Power before and after UpdateBusThing()
+ }
 }
 
 /*--------------------------------------------------------------------------*/
@@ -293,85 +389,58 @@ void MD_Input_Device::EndTimePeriod(const int32 master_timestamp)
 }
 
 
-int MD_Input_Device::StateAction(StateMem *sm, int load, int data_only, const char *section_prefix)
+void MD_Input_Device::StateAction(StateMem *sm, const unsigned load, const bool data_only, const char *section_prefix)
 {
- return(1);
+
 }
-
-
-static void SetDevice(int i, int type)
-{
- if(port[i])
-  delete port[i];
-
-    switch(type)
-    {
-        case DEVICE_NONE:
-	    port[i] = new MD_Input_Device();
-            break;
-
-        case DEVICE_MS2B:
-	    port[i] = MDInput_MakeMS2B();
-            break;
-
-        case DEVICE_MD3B:
-	    port[i] = MDInput_MakeMD3B();
-            break;
-
-        case DEVICE_MD6B:
-	    port[i] = MDInput_MakeMD6B();
-            break;
-
-        case DEVICE_MM:
-	    port[i] = MDInput_MakeMegaMouse();
-            break;
-    }
-
- port[i]->Power();
-}
-
-static void *data_ptr[8];
 
 void MDINPUT_Frame(void)
 {
- for(int i = 0; i < 2; i++)
+ MDFNGameInfo->mouse_sensitivity = MDFN_GetSettingF("md.input.mouse_sensitivity");
+
+ for(unsigned vp = 0; vp < 8; vp++)
  {
-  port[i]->UpdatePhysicalState(data_ptr[i]);
+  if(InputDevice[vp])
+   InputDevice[vp]->UpdatePhysicalState(data_ptr[vp]);
  }
 }
 
-void MDINPUT_SetInput(int aport, const char *type, void *ptr)
+void MDINPUT_SetInput(unsigned vp, const char *type, uint8 *ptr)
 {
- int itype = 0;
+ assert(vp < 8);
+
+ data_ptr[vp] = ptr;
+
+ if(InputDevice[vp])
+ {
+  delete InputDevice[vp];
+  InputDevice[vp] = nullptr;
+ }
 
  if(!strcasecmp(type, "none"))
- {
-  itype = DEVICE_NONE;
- }
- if(!strcasecmp(type, "gamepad"))
- {
-  itype = DEVICE_MD3B;
- }
+  InputDevice[vp] = nullptr;
+ else if(!strcasecmp(type, "gamepad"))
+  InputDevice[vp] = MDInput_MakeMD3B();
  else if(!strcasecmp(type, "gamepad6"))
- {
-  itype = DEVICE_MD6B;
- }
+  InputDevice[vp] = MDInput_MakeMD6B();
  else if(!strcasecmp(type, "gamepad2"))
- {
-  itype = DEVICE_MS2B;
- }
+  InputDevice[vp] = MDInput_MakeMS2B();
  else if(!strcasecmp(type, "megamouse"))
- {
-  itype = DEVICE_MM;
- }
+  InputDevice[vp] = MDInput_MakeMegaMouse();
+ else
+  abort();
 
- data_ptr[aport] = ptr;
- SetDevice(aport, itype);
+ if(InputDevice[vp])
+  InputDevice[vp]->Power();
 
+ RebuildPortMap();
+ //
+ //
+ //
  UpdateBusThing(md_timestamp);
 }
 
-int MDINPUT_StateAction(StateMem *sm, int load, int data_only)
+void MDINPUT_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -384,17 +453,16 @@ int MDINPUT_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "IO");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "IO");
 
- ret &= port[0]->StateAction(sm, load, data_only, "PRTA");
- ret &= port[1]->StateAction(sm, load, data_only, "PRTB");
- ret &= port[2]->StateAction(sm, load, data_only, "PRTC");
+ port[0]->StateAction(sm, load, data_only, "PRTA");
+ port[1]->StateAction(sm, load, data_only, "PRTB");
+ port[2]->StateAction(sm, load, data_only, "PRTC");
 
  if(load)
  {
 
  }
- return(ret);
 }
 
 

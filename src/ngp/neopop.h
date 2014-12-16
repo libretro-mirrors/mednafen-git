@@ -18,7 +18,6 @@
 
 #include <mednafen/mednafen.h>
 #include <mednafen/mempatcher.h>
-#include <mednafen/masmem.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,17 +77,17 @@ RomInfo;
 //RomHeader
 typedef struct
 {
-	uint8		licence[28];		// 0x00 - 0x1B
-	uint32	startPC;			// 0x1C - 0x1F
-	uint16	catalog;			// 0x20 - 0x21
-	uint8		subCatalog;			// 0x22
-	uint8		mode;				// 0x23
-	uint8		name[12];			// 0x24 - 0x2F
+	uint8	licence[28];	// 0x00 - 0x1B
+	uint8	startPC[4];	// 0x1C - 0x1F
+	uint8	catalog[2];	// 0x20 - 0x21
+	uint8	subCatalog;	// 0x22
+	uint8	mode;		// 0x23
+	uint8	name[12];	// 0x24 - 0x2F
 
-	uint32	reserved1;			// 0x30 - 0x33
-	uint32	reserved2;			// 0x34 - 0x37
-	uint32	reserved3;			// 0x38 - 0x3B
-	uint32	reserved4;			// 0x3C - 0x3F
+	uint8	reserved1[4];	// 0x30 - 0x33
+	uint8	reserved2[4];	// 0x34 - 0x37
+	uint8	reserved3[4];	// 0x38 - 0x3B
+	uint8	reserved4[4];	// 0x3C - 0x3F
 } __attribute__((__packed__)) RomHeader;
 
 //=============================================================================
@@ -177,7 +176,7 @@ typedef struct
 /*! Writes the given flash data into an "appropriate" (system specific)
 	place. The emulation core doesn't care where to. */
 
-	bool system_io_flash_write(uint8* buffer, uint32 bufferLength);
+	void system_io_flash_write(uint8* buffer, uint32 bufferLength);
 
 void int_redo_icache(void);
 

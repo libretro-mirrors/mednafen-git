@@ -56,8 +56,8 @@ public:
 	// to the center buffer.
 	bool end_frame( sms_time_t );
 
-	T6W28_ApuState *save_state(void);
-	void load_state(T6W28_ApuState*);
+	void save_state(T6W28_ApuState*);
+	void load_state(const T6W28_ApuState*);
 public:
 	T6W28_Apu();
 	~T6W28_Apu();

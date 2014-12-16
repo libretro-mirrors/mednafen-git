@@ -79,10 +79,10 @@ class HuC6280
 	uint8 IRQStatusRead(unsigned int address, bool peek = FALSE);
 	void IRQStatusWrite(unsigned int address, uint8 V);
 
-	int StateAction(StateMem *sm, int load, int data_only);
+	void StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 	template<bool DebugMode>
-	void RunSub(void);
+	void RunSub(void) NO_INLINE;
 
 	void Run(bool StepMode = FALSE);
 
@@ -350,8 +350,6 @@ class HuC6280
 
 	 return(PeekPhysical((wmpr << 13) | (address & 0x1FFF)));
 	}
-
-	void DumpMem(char *filename, uint32 start, uint32 end) MDFN_COLD; // For debugging
 	//
 	// End Debugger Support Methods
 	//

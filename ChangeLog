@@ -1,8 +1,193 @@
--- 0.9.36.5: --
+-- 0.9.37-UNSTABLE: --
+
+December 15, 2014:
+	MD: Added EA 4-Way Play multitap emulation, based on information from Charles MacDonald.
+
+	MD: Fixed Team Player save states(sub ports weren't getting unique section names).
+
+December 14, 2014:
+	MD: Rewrote the Mega Mouse emulation code so it actually works.
+
+	NGP: Added a couple of missing sound chip emulation variables to save states.
+
+	MD: Fixed some issues with the new multitap support code, including removing Hyper Dunk/Double Dribble from the internal database due to issues
+	the game has with multitap in some game modes.
+
+	PSX: Fixed a potentially-nasty sizeof()-related bug in frontio.cpp.
+
+	PSX: Tweaked Justifier lightgun emulation to fix problems with occasional extremely wrong positioning in "Elemental Gearbolt".
+
+December 13, 2014:
+	PSX: Reworked how overscan is hidden when the psx.h_overscan setting is set to 0 to not cause netplay desync with lightguns
+	if different players have that setting configured differently.
+
+	MD: Added emulation of Sega's Team Player multitap.
+
+	MD: Added default key to button assignments for the emulated 6-button gamepad on virtual port 1.
+
+December 12, 2014:
+	PSX: Fixed SPU audio mixing so that reverb output respects the main volume control, and to correct output precision/ranges/clamping, per tests on a PS1.
+	Fixes excessive reverb volume in some parts of "WipEout", and likely other games as well.
+	Mednafen's PS1 emulation audio output is also now about 3.5dB louder than before, while still maintaing a 2.5dB headroom.
+
+	PSX: Greatly simplified the reverb address wrapping logic, per tests on a PS1.
+
+December 11, 2014:
+	Various const char* to const std::string& changes.
+
+	Added additional MDFN_GetSetting* inline functions that take a const std::string reference instead of a const char*, and call .c_str() internally,
+	to cut down on .c_str() usage elsewhere.
+
+	Added setting "filesys.state_comp_level".
+
+	Removed setting "filesys.disablesavegz".
+
+	GB, GBA, MD, VB, SNES, WonderSwan: Save-game memory files are no longer written gzip-compressed.
+
+	GBA: Removed support for loading EEPROM from the save-game memory file with "sav" extension(last produced by Mednafen version 0.8.1).
+
+	PSX: Made minor precision-related changes to the SPU reverb algorithm code, per tests on a PS1.
+
+December 10, 2014:
+	PSX: Added emulation of unaligned access to the registers controlling the front input/output ports(and no longer triggers an assert() when/if it
+	happens).
+
+	PSX: Fixed broken emulation of an esoteric CDC feature, that could lead to an assert() being triggered under specific circumstances.  Fixes
+	the "Rockman 8" intro FMV(previously, Mednafen would abort out right after the end of the FMV if it was allowed to play all the way through).
+
+December 9, 2014:
+	Reinitialize some input info vectors properly in drivers/input.cpp on emulated device change(so we don't get hilariously bad messages about
+	analog mode being enabled on a lightgun ;)).
+
+	PSX: Added setting psx.h_overscan, default value of "1", that when set to "0" will hide most of the horizontal overscan area(area to the left and
+	right sides of the screen); useful for games like "Captain Commando" that have garbage in that area.
+
+	PSX: Adjusted horizontal positioning of image so that the different pixel clock modes will have the correct relative horizontal positioning(within a +/-1
+	pixel tolerance in some cases, due to performance considerations and rounding issues in Mednafen), per tests on a PS1.
+
+	PSX: Use two small LUTs instead of one gigantic LUT for 15-bit RGB -> 24/32-bit RGB conversion.
+
+	PSX: Split the GPU primitive rendering code into several standalone source code files, to be easier on the compiler and enable more effective
+	parallel building of the source code.
+
+	PSX: Added preliminary emulation of GPU texture cache; (mostly) fixes the flickering graphics problem in the map screen of "Tactics Ogre", and fixes the
+	heat engine effect in "F1 2000".
+
+December 8, 2014:
+	PSX: Reworked various aspects of triangle rasterization to be more accurate, per PS1 tests(though some of the triangle setup code is a bit convoluted now
+	and should probably be simplified/rewritten somehow).
+
+December 7, 2014:
+	PSX: Added emulation of GPU CLUT cache.
+
+December 6, 2014:
+	Print a warning message about portability if an untrusted file include path(such as from a CUE sheet) contains an 8-bit non-ASCII character.
+
+	Fixed a regression that occurred since 0.9.36.x that caused Mednafen to abort out when rotating the screen(via ALT+O) with an emulated system
+	other than Lynx and WonderSwan.
+
+	PSX: Now differentiate between Reset(triggered with F10) and Powering-On(triggered with F11) events, so the former will no longer reset
+	input device state(relevant with controllers with persistent long-lived internal state like the DualShock).
+
+December 5, 2014:
+	PSX: Fixed some precision-related bugs in the triangle rendering code; fixes the flickering-characters issue that occurs at several locations
+	in "Final Fantasy 8".  Unfortunately, this fix does increase CPU usage a bit more that I would like, and it's going to be tricky to optimize the difference
+	away.
+
+December 4, 2014:
+	PSX: Made a minor change to the GPU polygon blitting code with negligible performance impacts, but shaves a few hundred KB off the compiled code size.
+
+	PSX: Reworked how the GPU saturation LUTs are implemented to prevent undefined behavior.
+
+	Lynx: Hooked up(and cleaned up) support for loading homebrew RAM image dumps(such as available at http://handy.sourceforge.net/homebrew.zip and
+	http://pdroms.de/files/atarilynx/chopper )
+
+	NGP: Fixed a couple of shadowed-variable warnings in T6W28_Apu.cpp.
+
+December 3, 2014:
+	Added new class ZLInflateFilter, to be used for stream-based decompression in the PSF file loading code.
+
+	MDFNFILE is now a thin container on top of a Stream-derived object(MemoryStream or FileStream; GZFileStream is not suitable for direct use since we
+	still have to use Stream::size() in a few places).
+
+	MDFNGI::Load() no longer uses return type to signal an error.
+
+	Reworked the emulation modules' file loading code to be stream-oriented, rather than an amalgamation of memory-mapped semantics and stream
+	semantics.
+
+	NES: Utilize exceptions to handle errors during file loading and initialization.
+
+December 1, 2014:
+	Merged(finally) FileWrapper into FileStream.
+
+November 30, 2014:
+	Fixed handling/mapping of rumble, status, and switch input bits during netplay.  The current semantics of input device switch state in regards to netplay
+	save states is still less than ideal, and could be considered a regression from 0.9.36.
+
+November 28, 2014:
+	Fixed a rumble-related crashing bug(due to careless use of a pointer into a vector that was later resized) introduced in changes yesterday.
+
+	VB:  Corrected the value that the timer reload register is initialized with on reset.
+
+	"--large-address-aware" is now passed to the linker when building the Windows build, so that the 32-bit build can use more address space(and RAM), which
+	reduces the probability of running out when state rewinding and/or CD image memory caching is enabled.
+
+	PSX: Avoid left-shifting negative values(which is technically undefined behavior, though I'm hopeful compiler developers aren't foolish enough that this
+	will ever be a real issue) in gte.cpp, spu.cpp, and gpu_polygon.inc.  There are still instances left in dma.cpp, mdec.cpp, and gpu_line.inc, however.
+
+	Compile with -fwrapv instead of -fno-strict-overflow, as the latter has numerous issues.
+
+November 27, 2014:
+	No longer compile with -Winline, it's causing spurious warnings due to design decisions, and if something really should be inlined we use the INLINE
+	macro anyway(which evaluates to include __attribute__((always_inline))).
+
+	Current emulated device raw input state is now saved in save states, so that persistent data like switch state isn't lost.
+
+	Input device input/button descriptors(of type InputDeviceInputInfoStruct) are now packed into IDIISG(derived from std::vector) instead of being plain 
+	C-style arrays, to facilitate, in the future, fixing design flaws and possibly adding neat new functionality.
+
+November 26, 2014:
+	NES: Added some missing MMC5 variables to save states.
+
+	NES: Allow save states to be saved and loaded while in the Game Genie code entry screen.
+
+November 25, 2014:
+	Use shiny new C++11 std::exception_ptr to better handle deferred errors/exceptions in the save state loading code, instead of just using naked
+	error message C-string pointers.
+
+	No longer clear the state-present indicator to 0 when a save state load fails(since it could have led to confusion and the accidental overwriting of a state
+	that is good in a different context).
+
+	PSX: Changed the hashing algorithm used on the BIOS ROM image data(for the database and save states) from SHA-1 to SHA-256.
+
+November 24, 2014:
+	PSX: Save the SHA-1 hash of the BIOS in save states, and on load compare the value recorded with the actual current value, and error out the
+	state loading process if they mismatch(to prevent loading a save state created while running under a different BIOS, which can cause insidiously
+	subtle problems).
+
+	PSX: Implemented a rudimentary internal BIOS database, and now error-out when using a bad BIOS, or a BIOS from the wrong region.
+
+	PCE, PC-FX: Fixed the garbled-sound-while-state-rewinding problem.
+
+	PCE: Fixed a frame mid-sync regression from around 0.9.33 that broke "Takeda Shingen".
+
+	Implemented new netplay commands "/list" and "/gamekey".
+
+	Replaced UTF8* in favor of plain char* in various places where it's still used.
+
+November 21, 2014:
+	PSX: Changed DualShock analog mode status display to use new IDIT_STATUS input/output type, instead of directly calling MDFN_DispMessage().
+
+	PCE_FAST: Changed 6-button mode toggle to use new IDIT_SWITCH input type, instead of IDIT_BUTTON coupled with internal state toggling and MDFN_DispMessage().
+
+November 15, 2014:
+	Fixed virtual analog button input support(e.g. for DualShock analog sticks), broken in an August 4th change.
+
+November 9, 2014:
+	WonderSwan: Added partial emulation(just enough to get it to work) of the WonderWitch's flash ROM, so that the WonderWitch firmware
+	will boot now, and can be used with the "wswan.excomm" and "wswan.excomm.path" settings/functionality.
 
 November 5, 2014:
-	NES: Fixed a minor issue that could break compiling after --disable-nls was passed to the configure script.
-
 	Added support for automatic loading and usage of redump.org "SBI" files when loading CUE sheets; the files should have the same base filename
 	as the CUE sheet, and the file extension case should match the case of the corresponding character in the CUE sheet filename file extension.
 	Example:
@@ -11,30 +196,302 @@ November 5, 2014:
 	PSX: Fixed half-implemented broken implementation of CDC command 0x00; fixes lockups in the European PAL releases of "Spyro 2" and
 	"Spyro - Year of the Dragon".
 
--- 0.9.36.4: --
+November 4, 2014:
+	PCE_FAST, PC-FX: Fixed some mostly-benign violations of strict aliasing.
+
+	MD: C68k code is compiled as C++ now, and fixed the flawed approach at circumventing strict aliasing.
+
+	Replaced MDFN_ALIGN() with C++11 alignas().
+
+	Revamped masmem.h and endian.h, merging functionality into endian.h, and fixed "MultiAccessSizeMem" to actually work properly(the previous
+	code constructs it used violated strict aliasing, due to a misunderstanding of how gcc handles type punning via unions).  "MultiAccessSizeMem" may
+	be phased out now, since its original intended purpose no longer requires it.
+
+November 2, 2014:
+	NES: Partially encapsulated the code in namespace MDFN_IEN_NES to reduce global namespace pollution(in regards to object file linking).
+
+	NES: Use fastcall calling convention for high-call-frequency performance-critical functions when compiling for 32-bit x86.
+
+	PSX: Implemented preliminary support for multiplicand value-dependent MULT/MULTU instruction timing.
+
+	Added more compiler sanity/bug tests to tests.cpp.
+
+	On startup, now print out version information regarding the MinGW-W64 runtime and libiconv, if applicable.
+
+October 30, 2014:
+	Use poll() instead of select() in the POSIX sockets netplay code, to keep netplay from breaking in some quasi-pathological
+	real-world Mednafen usage scenarios.
+
+October 20, 2014:
+	NES: Fixed a minor issue that could break compiling after --disable-nls was passed to the configure script.
+
+	PSX: Reworked disc detection and region detection heuristics to pick up more homebrew PS1 games, and to make better decisions
+	on what region of the PS1 to emulate for heterogenous disc sets and for titles(e.g. homebrew) that don't follow Sony
+	conventions in regards to ISO-9660 system area contents and ISO-9660 filesystem layout.
+
+September 10, 2014:
+	PSX: Generate an AdEL exception when trying to fetch an instruction and PC is mis-misaligned.
+
+	PCE: No longer attempt to load a custom palette after loading an NSF file.
+
+	NES: No longer attempt to load a custom palette after loading an NSF file.
 
 September 8, 2014:
 	Fixed a piece of ancient mouse button mapping/reading code that was so broken it worked most of the time; fixes broken mapping of more
 	exotic(other than left, center, and right) physical mouse buttons to virtual buttons.
 
-	Lynx: Fixed a minor stereo sound emulation issue thanks to a patch from "sage".
+	PSX: Made changes to avoid signed overflow and left shift of signed variables in the CPU core JUST BECAUSE.
 
-        Lynx: Fixed a bug that could cause Mednafen to crash when a game attempts to power-down the emulated Lynx(which may occur if a
-	game is left unattended for a prolonged period of time).
-
-	WonderSwan, PC-FX, MD, NGP: Fixed several violations of C/C++ sequence point rules in relation to call order in expressions
+	Fixed several violations of C/C++ sequence point rules in relation to call order in expressions
 	of functions with side effects, that could lead to undefined/wrong behavior with certain types of compiler optimizations
 	and features(e.g. PC-FX emulation was broken on gcc 4.9.x with -fsanitize=undefined -std=gnu++11).
 
--- 0.9.36.3: --
+August 27, 2014:
+	NES: Handle missing input-related save state sections on load more gracefully.
+
+	NES: Automatically enable emulation of the Famicom 4-player adapter for the "Nekketsu Koukou Dodgeball-bu" game.
+
+August 24, 2014:
+	SNES: Fixed usage of wrong form of std::unique_ptr in the save state code.
+
+August 23, 2014:
+	Made minor optimizations to the music format(NSF, HES, PSF, etc.) waveform visualization code.
+
+	Removed unused selective blur code, as the algorithm is too simplistic to really be useful in Mednafen.  Though on a similar subject, it may be interesting
+	to look into SA-DCT again for PS1 and PC-FX FMV-filtering purposes, but that's an exercise for another day.
+
+	Cleaned up and refactored a bit of code in drivers/*.
+
+August 20, 2014:
+	Changed a few uses MDFN_malloc/MDFN_calloc to MDFN_malloc_T/MDFN_calloc_T, where appropriate.
+
+August 19, 2014:
+	Lynx: Fixed a bug that could cause Mednafen to crash when a game attempts to power-down the emulated Lynx(which may occur if a game is left unattended
+	for a prolonged period of time).
+
+August 17, 2014:
+	GB, GBA: Fixed broken save state structure definitions for saving/loading GB APU state.  This fix will cause save state backwards incompatibility issues
+	(for states created with Mednafen < 0.9.37) on big-endian platforms.
+
+	Save state variable data is now saved in native-endian form for performance reasons(and it fixes a bug introduced from the earlier save state refactoring
+	that could cause state corruption if a state save failed when running on a big-endian platform), repurposing the most-significant bit of the total length
+	field of the header to signal if the data is big-endian or not.
+
+August 16, 2014:
+	NES: Custom palette loading with PAL emulation now loads from file "nes-pal.pal" instead of file "nes.pal"(NTSC custom palette).
+
+	GB, NES, PCE_FAST: Implemented internal support for palettized 8bpp output when the palette color components have a precision of less than 8 bits.
+
+August 13, 2014:
+	PSX: Implemented a very rough simulation of complex, borderline-unstable CDC behavior that "Bedlam" and "Rise 2" rely on(fixes corrupt graphics
+	problems in those two games).
+
+August 12, 2014:
+	Lynx: Fixed a minor stereo sound emulation issue thanks to a patch from "sage".
+
+	SMS, GG: Added support for custom palettes.
+
+	NES: Added support for custom palettes with 512 colors(for de-emphasis bits colors).
+
+	Refactored custom palette loading code out of emulation modules and into Mednafen's core.
+
+August 8, 2014:
+	PCE, PCE_FAST, PC-FX: Fixed a bug that could cause a crash if the emulated CD lid/tray is closed with no disc when loading a pre-0.9.37 save state.
+
+August 5, 2014:
+	Hardcode enabling of DirectSound and WASAPI in configure.ac for mingw builds, rather than enabling it only if the relevant header files
+	are found; this will help ensure that any unofficial Windows builds of Mednafen in the future will not be silently broken/lacking in important features.
+
+August 4, 2014:
+	The input port state data memory is no longer zeroed-out in bulk in the driver-side input code on emulated devices input updating, instead being cleared
+	as needed by each input; this change is to faciliate implementing switches in a more proper and flexible way in the future than they're handled now.
+
+	Changed the types of the arguments to MDFNI_SetInput() and MDFNGI::SetInput to be more sensible.
+
+	Added dummy enum(= 0) to GameMediumTypes to fix a bug introduced from the July 31 GameType change.
+
+	WonderSwan: Add strict checking for proper save game memory file size on game load(NOTE: this will cause problems for Dicing Knight
+	and Judgment Silversword save game memory files written with Mednafen versions prior to 0.9.36).
 
 August 3, 2014:
-	NGP: Fixed a potentially-exploitable overflow bug in the flash dirty block list code.
-
 	PCE, PCE_FAST: Fixed bug(from sloppy handling of errors) that caused battery-backed save game file destruction
 	if an error(e.g. missing CD BIOS, memory allocation failure, etc.) occurred during game load and initialization.
 
+August 2, 2014:
+	PCE: Added missing(oops) code to load MCGenjin non-volatile memory from disk on game load, and no longer compress MCGenjin non-volatile memory
+	files on disk(in gzip format).
+
+	PCE, PCE_FAST, PC-FX: Add strict checking for proper save game memory file size on game load.
+
+August 1, 2014:
+	Removed unused MDFNGI::soundrate.
+
+	PSX: Reworked InputDevice::ReadNV() to reduce overhead in the memory card saving code.
+
+July 31, 2014:
+	Begin phasing out usage of MDFNGI::GameType
+
+July 30, 2014:
+	GBA: No longer compile with -fno-unit-at-a-time as it's no longer the 2000s. ;)
+
+	Implemented a new, more flexible abstraction for removable media changing during runtime, and updated the NES, PCE, PC-FX, PCE_FAST, and
+	PSX modules to use it.
+
+	Removed mostly-unnecessary gcc command-line arguments that control inlining decision parameters from the build system.
+
+July 27, 2014:
+	Removed the recently-added state load error recovery code, as it's not worth the overhead and increased code complexity, especially considering the
+	deferred error and optional-section changes from today.
+
+	Fixed save state loading code to not read past the end of the state while searching for sections(which is important now that we made some guarantees
+	and implications about how the stream passed in is utilized).
+
+	PC-FX, MD: Mark input device state sections as optional to prevent the new state code from erroring out completely when a section is missing(as will
+	happen when loading a state saved when a different device was selected).
+
+	PSX: Restructured save state generation to be hierarchical(in relation to multitaps).
+
+	Reworked MDFNSS_StateAction() to not throw exceptions, instead marking deferred error state, to avoid potential security issues under low memory
+	conditions(due to state variables being loaded without the emulation module-specific sanitizing code being run).
+
+July 26, 2014:
+	Made use of "override" specifier in a few places.
+
+	On save state load(outside of the state rewinding code path), a temporary save state is now created before the load is attempted.  If the load
+	fails, the temporary save state is loaded.
+
+	Now compile QuickLZ with -fno-strict-aliasing to avoid potential future trouble, since it does violate strict aliasing in at least a few places.
+
+July 25, 2014:
+	Fixed broken utility get_BE<>() template function in Stream.
+
+	Moved gzip-reading-into-memory algorithm(exponentially increasing read() sizes along with allocated memory) from MDFNFILE to MemoryStream.
+
+	Moved mmap() functionality from MDFNFILE(file.cpp) to FileWrapper/FileStream.
+
+	Moved IPS patching code out of file.cpp, and made the code patch a Stream instead of raw memory directly(which causes
+	a slight drop in efficiency, but it shouldn't be a problem).
+
+	GB, PCE_FAST: Utilize GZFileStream, and properly error out if there's a fatal error(other than file not found)
+	during save game loading.
+
+July 24, 2014:
+	Changed how missing section errors are handled; an exception is now thrown when loading a save state and a section is missing, unless
+	MDFNSS_StateAction() was called with optional == true.
+
+	Utilize GZFileStream instead of direct zlib gz*() usage in the game/ROM image file loading code.
+
+July 23, 2014:
+	Re-implemented support for state-rewinding during movie recording, and added support for doing it during playback.  Though trying to rewind across
+	a movie state-change(in the sense of recording/playing started or stopped) will cause the rewinder to error out, as should be expected.
+
+	Input-recording movies are no longer written/read gzip-compressed(just plain file access), and the format is now slightly different as well.
+
+	In the fast(state-rewinding) state loading/saving code, align the stream's position to a 16-byte boundary before writing large(>=65536 bytes) variables,
+	to ostensibly improve memory copy performance.
+
+	Save and verify(on load) section names and small canaries in state-rewinding save states, to help prevent save game corruption in case something
+	goes horribly wrong(such as from a severe (de)compressor or compression filter bug).
+
+July 22, 2014:
+	Utilize strongly-typed enum for GZFileStream open modes, to prevent accidental usage of FileStream open modes.
+
+July 21, 2014(accumulated changelog for several days):
+
+	Fixed some subtle bugs in MemoryStream.
+
+	Removed "srwcompressor" setting; only "quicklz", the default of the removed setting, is available and used now for state rewinding.
+
+	Refactored and rewrote state rewinding code, with some optimizations over the old code for systems with large save states(PC-FX, PS1).
+
+	Simplified and cleaned up some of the core save state functions.
+
+	Adapted core save state code to take a Stream(though the save state code does require fast seeking during saving and loading, so that rules out
+	passing in a GZFileStream directly), and to utilize exceptions to signal error conditions(except for missing sections, that still needs to be worked
+	out).
+
+	Made changes to the build system to require and enable C++11(-std=gnu++11).
+
+	SNES, PSX: Reverse sound data before resampling when state-rewinding, to fix the sound crackling.
+
 	PSX: Fixed a bug that caused a crash when trying to use save states during PSF playback/PS-EXE execution.
+
+	NES: Save NSF playback variables in save states(though save states made during NSF playback are still missing expansion chip state data).
+
+	WonderSwan: Resolved a few compiler warnings.
+
+	WonderSwan: Save/Load relevant WSR playback state in save states during WSR playback.
+
+	PCE, PC-FX, SMS, SNES, VB, WonderSwan: Utilize GZFileStream, and properly error out if there's a fatal error(other than file not found)
+	during save game loading.
+
+	Wrote GZFileStream class, derived from Stream, as a wrapper around gzFile.
+
+July 17, 2014:
+	NGP: Added proper error handling(using exceptions) to the FLASH loading and saving code
+
+July 16, 2014:
+	NGP: Initialize XIX, XIY, and XIZ to match what the BIOS leaves them as(as observed via MESS' debugger), and removed the ROM patches/hacks
+	for "Puyo Pop".
+
+	NGP: Utilize exceptions in the ROM image loading and initialization code.
+
+	NGP: Fixed some endian-related issues in regards to reflecting bits of the ROM header to RAM during initialization.
+
+	NGP: Initialize VRAM differently to partially reflect the state the BIOS leaves it in, and removed the "Metal Slug - 2nd Mission" ROM patch/hack
+	(thanks	to "FluBBa" for the tip on what the game was doing/relied on).
+
+	NGP: Fixed a potentially-exploitable overflow bug in the FLASH dirty block list code.
+
+July 15, 2014:
+	Added a truncate() method to the Stream class and derived classes.
+
+July 13, 2014:
+	SMS: Made use of exceptions in the file loading and system initialization code paths.
+
+July 11, 2014:
+	SNES: Removed unused(in this fork) header and build files.
+
+	SNES: Removed nonfunctional stubish(in this old version of bsnes) ST011 and ST018 emulation code.
+
+	SNES: Removed SGB emulation code that was never properly hooked up in Mednafen.
+
+	SNES: Removed unsupported and untested(in Mednafen) 21fx emulation code.
+
+	SNES: Made minor structural optimizations to the S-CPU and SuperFX emulation code.
+
+July 10, 2014:
+	SNES: Made minor structural optimizations to the S-DSP emulation code.
+
+July 8, 2014:
+	VB: Made (better) use of exceptions in the ROM image loading and initialization code.
+
+	NES: Made use of MODE_WRITE_INPLACE to write nonvolatile (saved game) memory to disk.
+
+July 7, 2014:
+	PSX: Made use of MODE_WRITE_INPLACE to write memory cards to disk, to slightly reduce the probability of unrecoverable memory card destruction/corruption
+	under certain pathological system conditions(though in the future we should probably change it to use a temporary filename and rename(), at least on
+	POSIX-compliant systems).
+
+	Added a new file open mode to FileWrapper(and FileStream) named "MODE_WRITE_INPLACE", that is like "MODE_WRITE"(and "wb" with fopen()), EXCEPT that
+	it won't truncate the file if it already exists.
+
+July 4, 2014:
+	PSX: Fixed a longstanding bug(and removed the associated kludge) in the DMA IRQ emulation, per tests on a PS1.
+
+	Added missing relevant copyright statement to pce_psg.cpp and pce_psg.h(since the origin of the skeleton code, TGEmu, isn't
+	listed in the documentation anywhere).
+
+	Cleaned up a few #include statements(#include "mednafen/XXX.h" to #include <mednafen/XXX.h>).
+
+June 30, 2014:
+	PSX: Made optimizations to the SPU reverb resampling code.
+
+	PSX: Added emulation of an SPU quirk/bug regarding its handling of ADPCM blocks with a shift value greater than 12, per tests on a PS1.
+	It's unlikely any commercially-released games use such shift values, though.
+
+June 28, 2014:
+	PSX: Replaced 128KiB GTE division reciprocal table with a 257-byte table and Newton-Raphson reciprocal calculation code.
 
 -- 0.9.36.2: --
 

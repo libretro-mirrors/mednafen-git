@@ -31,7 +31,7 @@ static StateStatusStruct *StateStatus;
 static uint32 StateShow;
 static bool IsMovie;
 
-void DrawStateMovieRow(MDFN_Surface *surface, int *nstatus, int cur, int recently_saved, uint8 *text)
+void DrawStateMovieRow(MDFN_Surface *surface, int *nstatus, int cur, int recently_saved, const char *text)
 {
  uint32 *XBuf = surface->pixels;
  uint32 pitch32 = surface->pitchinpix;
@@ -63,7 +63,7 @@ void DrawStateMovieRow(MDFN_Surface *surface, int *nstatus, int cur, int recentl
 
   MDFN_DrawFillRect(surface, (i - 1) * 23, 0, 23, 18 + 1, bordercol, rect_bg_color);
 
-  DrawTextTransShadow(XBuf + (i - 1) * 23 + 7, pitch32 << 2, 230, (UTF8*)stringie, MK_COLOR_A(surface, 0xE0, 0xFF, 0xE0, 0xFF), MK_COLOR_A(surface, 0x00, 0x00, 0x00, 0xFF), FALSE);
+  DrawTextTransShadow(XBuf + (i - 1) * 23 + 7, pitch32 << 2, 230, stringie, MK_COLOR_A(surface, 0xE0, 0xFF, 0xE0, 0xFF), MK_COLOR_A(surface, 0x00, 0x00, 0x00, 0xFF), FALSE);
  }
  DrawTextTransShadow(XBuf + 20 * pitch32, pitch32 << 2, 230, text, MK_COLOR_A(surface, 0xE0, 0xFF, 0xE0, 0xFF), MK_COLOR_A(surface, 0x00, 0x00, 0x00, 0xFF), TRUE);
 }
@@ -153,19 +153,19 @@ void DrawSaveStates(SDL_Surface *screen, double exs, double eys, int rs, int gs,
 
    if(IsMovie)
    {
-    UTF8 text[256];
+    char text[256];
 
     if(StateStatus->current_movie > 0)
-     trio_snprintf((char *)text, 256, _("-recording movie %d-"), StateStatus->current_movie-1);
+     trio_snprintf(text, 256, _("-recording movie %d-"), StateStatus->current_movie-1);
     else if (StateStatus->current_movie < 0)
-     trio_snprintf((char *)text, 256, _("-playing movie %d-"),-1 - StateStatus->current_movie);
+     trio_snprintf(text, 256, _("-playing movie %d-"),-1 - StateStatus->current_movie);
     else
-     trio_snprintf((char *)text, 256, _("-select movie-"));
+     trio_snprintf(text, 256, _("-select movie-"));
  
     DrawStateMovieRow(TextSurface, StateStatus->status, StateStatus->current, StateStatus->recently_saved, text);
    }
    else
-    DrawStateMovieRow(TextSurface, StateStatus->status, StateStatus->current, StateStatus->recently_saved, (UTF8 *)_("-select state-"));
+    DrawStateMovieRow(TextSurface, StateStatus->status, StateStatus->current, StateStatus->recently_saved, _("-select state-"));
   } 
  } // end if(StateStatus)
 

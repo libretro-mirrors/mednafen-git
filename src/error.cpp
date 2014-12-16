@@ -21,12 +21,12 @@
 #include <stdarg.h>
 #include <trio/trio.h>
 
-MDFN_Error::MDFN_Error() throw()
+MDFN_Error::MDFN_Error() noexcept
 {
  abort();
 }
 
-MDFN_Error::MDFN_Error(int errno_code_new, const char *format, ...) throw()
+MDFN_Error::MDFN_Error(int errno_code_new, const char *format, ...) noexcept
 {
  errno_code = errno_code_new;
 
@@ -45,7 +45,7 @@ MDFN_Error::MDFN_Error(const ErrnoHolder &enh)
 }
 
 
-MDFN_Error::~MDFN_Error() throw()
+MDFN_Error::~MDFN_Error() noexcept
 {
  if(error_message)
  {
@@ -54,7 +54,7 @@ MDFN_Error::~MDFN_Error() throw()
  }
 }
 
-MDFN_Error::MDFN_Error(const MDFN_Error &ze_error) throw()
+MDFN_Error::MDFN_Error(const MDFN_Error &ze_error) noexcept
 {
  if(ze_error.error_message)
   error_message = strdup(ze_error.error_message);
@@ -64,7 +64,7 @@ MDFN_Error::MDFN_Error(const MDFN_Error &ze_error) throw()
  errno_code = ze_error.errno_code;
 }
 
-MDFN_Error& MDFN_Error::operator=(const MDFN_Error &ze_error) throw()
+MDFN_Error& MDFN_Error::operator=(const MDFN_Error &ze_error) noexcept
 {
  char *new_error_message = ze_error.error_message ? strdup(ze_error.error_message) : NULL;
  int new_errno_code = ze_error.errno_code;
@@ -79,7 +79,7 @@ MDFN_Error& MDFN_Error::operator=(const MDFN_Error &ze_error) throw()
 }
 
 
-const char * MDFN_Error::what(void) const throw()
+const char * MDFN_Error::what(void) const noexcept
 {
  if(!error_message)
   return("Error allocating memory for the error message!");
@@ -87,7 +87,7 @@ const char * MDFN_Error::what(void) const throw()
  return(error_message);
 }
 
-int MDFN_Error::GetErrno(void) const throw()
+int MDFN_Error::GetErrno(void) const noexcept
 {
  return(errno_code);
 }

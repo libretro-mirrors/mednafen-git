@@ -57,6 +57,7 @@ subdir = src/pce
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
+	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/codeset.m4 $(top_srcdir)/m4/fcntl-o.m4 \
 	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/glibc2.m4 \
 	$(top_srcdir)/m4/glibc21.m4 $(top_srcdir)/m4/iconv.m4 \
@@ -98,12 +99,11 @@ am__libpce_a_SOURCES_DIST = pce.cpp vce.cpp input.cpp huc.cpp \
 	debug.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
 @WANT_DEBUGGER_TRUE@am__objects_1 = debug.$(OBJEXT)
-am__objects_2 = pce.$(OBJEXT) vce.$(OBJEXT) input.$(OBJEXT) \
+am_libpce_a_OBJECTS = pce.$(OBJEXT) vce.$(OBJEXT) input.$(OBJEXT) \
 	huc.$(OBJEXT) pcecd.$(OBJEXT) hes.$(OBJEXT) tsushin.$(OBJEXT) \
 	subhw.$(OBJEXT) mcgenjin.$(OBJEXT) input/gamepad.$(OBJEXT) \
 	input/tsushinkb.$(OBJEXT) input/mouse.$(OBJEXT) \
 	$(am__objects_1)
-am_libpce_a_OBJECTS = $(am__objects_2)
 libpce_a_OBJECTS = $(am_libpce_a_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -181,7 +181,6 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
-GBA_EXTRA_FLAGS = @GBA_EXTRA_FLAGS@
 GENCAT = @GENCAT@
 GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
 GLIBC2 = @GLIBC2@
@@ -190,6 +189,7 @@ GMSGFMT = @GMSGFMT@
 GMSGFMT_015 = @GMSGFMT_015@
 GREP = @GREP@
 HAVE_ASPRINTF = @HAVE_ASPRINTF@
+HAVE_CXX11 = @HAVE_CXX11@
 HAVE_NEWLOCALE = @HAVE_NEWLOCALE@
 HAVE_POSIX_PRINTF = @HAVE_POSIX_PRINTF@
 HAVE_SNPRINTF = @HAVE_SNPRINTF@
@@ -343,10 +343,9 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libpce.a
-mednafen_SOURCES = pce.cpp vce.cpp input.cpp huc.cpp pcecd.cpp hes.cpp \
+libpce_a_SOURCES = pce.cpp vce.cpp input.cpp huc.cpp pcecd.cpp hes.cpp \
 	tsushin.cpp subhw.cpp mcgenjin.cpp input/gamepad.cpp \
 	input/tsushinkb.cpp input/mouse.cpp $(am__append_1)
-libpce_a_SOURCES = $(mednafen_SOURCES)
 all: all-am
 
 .SUFFIXES:

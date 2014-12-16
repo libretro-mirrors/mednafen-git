@@ -164,37 +164,45 @@ static void DrawTextSub(const UTF32 *utf32_buf, uint32 &slen, const uint8 **glyp
  }
 }
 
-uint32 GetTextPixLength(const UTF8 *msg, uint32 which_font)
+uint32 GetTextPixLength(const char *msg, uint32 which_font)
 {
- uint32 slen;
- uint32 pixwidth;
+ uint32 pixwidth = 0;
  uint32 max_glyph_len = strlen((char *)msg);
- const uint8 *glyph_ptrs[max_glyph_len];
- uint8 glyph_width[max_glyph_len];
- uint8 glyph_ov_width[max_glyph_len];
 
- const UTF8 *src_begin = (UTF8 *)msg;
- UTF32 utf32_buf[max_glyph_len];
- UTF32 *tstart = utf32_buf;
+ if(MDFN_LIKELY(max_glyph_len > 0))
+ {
+  uint32 slen;
+  const uint8 *glyph_ptrs[max_glyph_len];
+  uint8 glyph_width[max_glyph_len];
+  uint8 glyph_ov_width[max_glyph_len];
 
- ConvertUTF8toUTF32(&src_begin, (UTF8*)msg + max_glyph_len, &tstart, &tstart[max_glyph_len], lenientConversion);
- slen = (tstart - utf32_buf);
- DrawTextSub(utf32_buf, slen, glyph_ptrs, glyph_width, glyph_ov_width, pixwidth, which_font);
+  const UTF8 *src_begin = (UTF8 *)msg;
+  UTF32 utf32_buf[max_glyph_len];
+  UTF32 *tstart = utf32_buf;
+
+  ConvertUTF8toUTF32(&src_begin, (UTF8*)msg + max_glyph_len, &tstart, &tstart[max_glyph_len], lenientConversion);
+  slen = (tstart - utf32_buf);
+  DrawTextSub(utf32_buf, slen, glyph_ptrs, glyph_width, glyph_ov_width, pixwidth, which_font);
+ }
 
  return(pixwidth);
 }
 
 uint32 GetTextPixLength(const UTF32 *msg, uint32 which_font)
 {
- uint32 slen;
- uint32 pixwidth;
+ uint32 pixwidth = 0;
  uint32 max_glyph_len = utf32_strlen((UTF32 *)msg);
- const uint8 *glyph_ptrs[max_glyph_len];
- uint8 glyph_width[max_glyph_len];
- uint8 glyph_ov_width[max_glyph_len];
 
- slen = utf32_strlen((UTF32 *)msg);
- DrawTextSub((UTF32*)msg, slen, glyph_ptrs, glyph_width, glyph_ov_width, pixwidth, which_font);
+ if(MDFN_LIKELY(max_glyph_len > 0))
+ {
+  uint32 slen;
+  const uint8 *glyph_ptrs[max_glyph_len];
+  uint8 glyph_width[max_glyph_len];
+  uint8 glyph_ov_width[max_glyph_len];
+
+  slen = utf32_strlen((UTF32 *)msg);
+  DrawTextSub((UTF32*)msg, slen, glyph_ptrs, glyph_width, glyph_ov_width, pixwidth, which_font);
+ }
 
  return(pixwidth);
 }
@@ -251,42 +259,53 @@ static uint32 DoRealDraw(uint32 *dest, uint32 pitch, uint32 width_limit, uint32 
  return(pixwidth);
 }
 
-uint32 DrawTextTrans(uint32 *dest, int pitch, uint32 width, const UTF8 *msg, uint32 fgcolor, int centered, uint32 which_font)
+uint32 DrawTextTrans(uint32 *dest, int pitch, uint32 width, const char *msg, uint32 fgcolor, int centered, uint32 which_font)
 {
- uint32 slen;
- uint32 pixwidth;
  uint32 max_glyph_len = strlen((char *)msg);
- const uint8 *glyph_ptrs[max_glyph_len];
- uint8 glyph_width[max_glyph_len];
- uint8 glyph_ov_width[max_glyph_len];
 
- const UTF8 *src_begin = (UTF8 *)msg;
- UTF32 utf32_buf[max_glyph_len];
- UTF32 *tstart = utf32_buf;
+ if(MDFN_LIKELY(max_glyph_len > 0))
+ {
+  uint32 slen;
+  uint32 pixwidth;
+  const uint8 *glyph_ptrs[max_glyph_len];
+  uint8 glyph_width[max_glyph_len];
+  uint8 glyph_ov_width[max_glyph_len];
 
- ConvertUTF8toUTF32(&src_begin, (UTF8*)msg + max_glyph_len, &tstart, &tstart[max_glyph_len], lenientConversion);
- slen = (tstart - utf32_buf);
- DrawTextSub(utf32_buf, slen, glyph_ptrs, glyph_width, glyph_ov_width, pixwidth, which_font);
+  const UTF8 *src_begin = (UTF8 *)msg;
+  UTF32 utf32_buf[max_glyph_len];
+  UTF32 *tstart = utf32_buf;
 
- return(DoRealDraw(dest, pitch, width, fgcolor, centered, slen, pixwidth, FontDescriptors[which_font].glyph_height, glyph_ptrs, glyph_width, glyph_ov_width));
+  ConvertUTF8toUTF32(&src_begin, (UTF8*)msg + max_glyph_len, &tstart, &tstart[max_glyph_len], lenientConversion);
+  slen = (tstart - utf32_buf);
+  DrawTextSub(utf32_buf, slen, glyph_ptrs, glyph_width, glyph_ov_width, pixwidth, which_font);
+
+  return(DoRealDraw(dest, pitch, width, fgcolor, centered, slen, pixwidth, FontDescriptors[which_font].glyph_height, glyph_ptrs, glyph_width, glyph_ov_width));
+ }
+
+ return 0;
 }
 
 uint32 DrawTextTrans(uint32 *dest, int pitch, uint32 width, const UTF32 *msg, uint32 fgcolor, int centered, uint32 which_font)
 {
- uint32 slen;
- uint32 pixwidth;
  uint32 max_glyph_len = utf32_strlen((UTF32 *)msg);
- const uint8 *glyph_ptrs[max_glyph_len];
- uint8 glyph_width[max_glyph_len];
- uint8 glyph_ov_width[max_glyph_len];
 
- slen = utf32_strlen((UTF32 *)msg);
- DrawTextSub((UTF32*)msg, slen, glyph_ptrs, glyph_width, glyph_ov_width, pixwidth, which_font);
+ if(MDFN_LIKELY(max_glyph_len > 0))
+ {
+  uint32 slen;
+  uint32 pixwidth;
+  const uint8 *glyph_ptrs[max_glyph_len];
+  uint8 glyph_width[max_glyph_len];
+  uint8 glyph_ov_width[max_glyph_len];
 
- return(DoRealDraw(dest, pitch, width, fgcolor, centered, slen, pixwidth, FontDescriptors[which_font].glyph_height, glyph_ptrs, glyph_width, glyph_ov_width));
+  slen = utf32_strlen((UTF32 *)msg);
+  DrawTextSub((UTF32*)msg, slen, glyph_ptrs, glyph_width, glyph_ov_width, pixwidth, which_font);
+
+  return(DoRealDraw(dest, pitch, width, fgcolor, centered, slen, pixwidth, FontDescriptors[which_font].glyph_height, glyph_ptrs, glyph_width, glyph_ov_width));
+ }
+ return 0;
 }
 
-uint32 DrawTextTransShadow(uint32 *dest, int pitch, uint32 width, const UTF8 *textmsg, uint32 fgcolor, uint32 shadcolor, int centered, uint32 which_font)
+uint32 DrawTextTransShadow(uint32 *dest, int pitch, uint32 width, const char *textmsg, uint32 fgcolor, uint32 shadcolor, int centered, uint32 which_font)
 {
  DrawTextTrans(dest + 1 + (pitch >> 2), pitch, width ? (width - 1) : 0, textmsg, shadcolor, centered, which_font);
  return(DrawTextTrans(dest, pitch, width, textmsg, fgcolor, centered, which_font));
@@ -296,8 +315,8 @@ uint32 DrawTextTransShadow(uint32 *dest, int pitch, uint32 width, const std::str
 {
  const char *tmp = textmsg.c_str();
 
- DrawTextTrans(dest + 1 + (pitch >> 2), pitch, width ? (width - 1) : 0, (const UTF8 *)tmp, shadcolor, centered, which_font);
- return(DrawTextTrans(dest, pitch, width, (const UTF8 *)tmp, fgcolor, centered, which_font));
+ DrawTextTrans(dest + 1 + (pitch >> 2), pitch, width ? (width - 1) : 0, tmp, shadcolor, centered, which_font);
+ return(DrawTextTrans(dest, pitch, width, tmp, fgcolor, centered, which_font));
 }
 
 #if 0

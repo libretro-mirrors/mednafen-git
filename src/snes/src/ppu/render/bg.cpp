@@ -1,7 +1,7 @@
 #ifdef PPU_CPP
 
 //called once at the start of every rendered scanline
-void PPU::update_bg_info() {
+alwaysinline void PPU::update_bg_info() {
   const unsigned hires = (regs.bg_mode == 5 || regs.bg_mode == 6);
   const unsigned width = (!hires ? 256 : 512);
 

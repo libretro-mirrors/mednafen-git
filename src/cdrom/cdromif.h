@@ -19,7 +19,7 @@
 #define __MDFN_CDROM_CDROMIF_H
 
 #include "CDUtility.h"
-#include "../Stream.h"
+#include <mednafen/Stream.h>
 
 #include <queue>
 
@@ -65,6 +65,6 @@ class CDIF
  int DiscEjected;	// 0 = inserted, 1 = ejected, -1 = DRAGONS ATE THE DISC. NOM NOM NOM.
 };
 
-CDIF *CDIF_Open(const char *path, const bool is_device, bool image_memcache);
+CDIF *CDIF_Open(const std::string& path, const bool is_device, bool image_memcache);
 
 #endif

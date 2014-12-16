@@ -37,7 +37,7 @@ void WSwan_GfxWSCPaletteRAMWrite(uint32 ws_offset, uint8 data);
 bool wsExecuteLine(MDFN_Surface *surface, bool skip);
 
 void WSwan_SetLayerEnableMask(uint64 mask);
-int WSwan_GfxStateAction(StateMem *sm, int load, int data_only);
+void WSwan_GfxStateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 #ifdef WANT_DEBUGGER
 void WSwan_GfxSetGraphicsDecode(MDFN_Surface *surface, int line, int which, int xscroll, int yscroll, int pbn);

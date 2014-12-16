@@ -194,13 +194,13 @@ static int32 HPhase;
 static int32 HPhaseCounter;
 static int32 vdc_lb_pos;
 
-static MDFN_ALIGN(8) uint16 vdc_linebuffers[2][512];
-static MDFN_ALIGN(8) uint32 vdc_linebuffer[512];
-static MDFN_ALIGN(8) uint32 vdc_linebuffer_yuved[512];
-static MDFN_ALIGN(8) uint32 rainbow_linebuffer[256];
+alignas(8) static uint16 vdc_linebuffers[2][512];
+alignas(8) static uint32 vdc_linebuffer[512];
+alignas(8) static uint32 vdc_linebuffer_yuved[512];
+alignas(8) static uint32 rainbow_linebuffer[256];
 
 // 8 * 2 for left + right padding for scrolling
-static MDFN_ALIGN(8) uint32 bg_linebuffer[256 + 8 + 8];
+alignas(8) static uint32 bg_linebuffer[256 + 8 + 8];
 
 
 
@@ -3168,7 +3168,7 @@ void KING_SetLayerEnableMask(uint64 mask)
 }
 
 
-int KING_StateAction(StateMem *sm, int load, int data_only)
+void KING_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT KINGStateRegs[] =
  {
@@ -3295,9 +3295,9 @@ int KING_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, KINGStateRegs, "KING");
+ MDFNSS_StateAction(sm, load, data_only, KINGStateRegs, "KING");
  
- ret &= MDFNSS_StateAction(sm, load, data_only, VCEStateRegs, "VCE");
+ MDFNSS_StateAction(sm, load, data_only, VCEStateRegs, "VCE");
 
  if(load)
  {
@@ -3321,7 +3321,6 @@ int KING_StateAction(StateMem *sm, int load, int data_only)
   RedoKINGIRQCheck();
   SoundBox_SetKINGADPCMControl(king->ADPCMControl);
  }
- return(ret);
 }
 
 #ifdef WANT_DEBUGGER

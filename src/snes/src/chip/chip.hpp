@@ -1,4 +1,3 @@
-#include "supergameboy/supergameboy.hpp"
 #include "superfx/superfx.hpp"
 #include "sa1/sa1.hpp"
 #include "bsx/bsx.hpp"
@@ -12,6 +11,3 @@
 #include "dsp4/dsp4.hpp"
 #include "obc1/obc1.hpp"
 #include "st010/st010.hpp"
-#include "st011/st011.hpp"
-#include "st018/st018.hpp"
-#include "21fx/21fx.hpp"

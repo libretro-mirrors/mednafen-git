@@ -63,7 +63,7 @@ class CDAccess_Image : public CDAccess
 {
  public:
 
- CDAccess_Image(const char *path, bool image_memcache);
+ CDAccess_Image(const std::string& path, bool image_memcache);
  virtual ~CDAccess_Image();
 
  virtual void Read_Raw_Sector(uint8 *buf, int32 lba);
@@ -82,17 +82,12 @@ class CDAccess_Image : public CDAccess
  uint8 disc_type;
  CDRFILE_TRACK_INFO Tracks[100]; // Track #0(HMM?) through 99
 
- struct cpp11_array_doodad
- {
-  uint8 data[12];
- };
-
- std::map<uint32, cpp11_array_doodad> SubQReplaceMap;
+ std::map<uint32, std::array<uint8, 12>> SubQReplaceMap;
 
  std::string base_dir;
 
- void ImageOpen(const char *path, bool image_memcache);
- void LoadSBI(const char* sbi_path);
+ void ImageOpen(const std::string& path, bool image_memcache);
+ void LoadSBI(const std::string& sbi_path);
  void Cleanup(void);
 
  // MakeSubPQ will OR the simulated P and Q subchannel data into SubPWBuf.

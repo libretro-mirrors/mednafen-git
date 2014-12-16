@@ -75,9 +75,9 @@ void WAVRecord::Finish(void)
  if(Finished)
   return;
 
- MDFN_en32lsb(&raw_headers[0x04], std::min(wavfile.tell() - 8, (int64)0xFFFFFFFFLL));
+ MDFN_en32lsb(&raw_headers[0x04], std::min<uint64>(wavfile.tell() - 8, 0xFFFFFFFF));
 
- MDFN_en32lsb(&raw_headers[0x28], std::min(PCMBytesWritten, (int64)0xFFFFFFFFLL));
+ MDFN_en32lsb(&raw_headers[0x28], std::min<uint64>(PCMBytesWritten, 0xFFFFFFFF));
 
  wavfile.seek(0, SEEK_SET);
  wavfile.write(raw_headers, sizeof(raw_headers));

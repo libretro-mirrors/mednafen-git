@@ -86,7 +86,7 @@ static void DrawOeka(uint8 *pix, int pix_y)
   NESCURSOR_DrawCursor(pix, pix_y, OKX, OKY);
 }  
 
-static int StateActionFC(StateMem *sm, int load, int data_only)
+static void StateActionFC(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -98,12 +98,13 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
    SFVAR(LastWR),
    SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF", true);
+
  if(load)
  {
 
  }
- return(ret);
 }
 
 static INPUTCFC OekaKids={OK_Read,OK_Write,0,OK_Update,0,DrawOeka, StateActionFC };

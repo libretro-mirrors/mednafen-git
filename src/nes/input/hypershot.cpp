@@ -40,19 +40,20 @@ static void HS_Update(void *data)
  HSVal=*(uint8*)data;
 }
 
-static int StateActionFC(StateMem *sm, int load, int data_only)
+static void StateActionFC(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
    SFVAR(HSVal),
    SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "HSHT");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "HSHT", true);
+
  if(load)
  {
 
  }
- return(ret);
 }
 
 static INPUTCFC HyperShot={HS_Read,0,HS_Strobe,HS_Update,0,0, StateActionFC };

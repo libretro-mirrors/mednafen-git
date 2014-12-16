@@ -766,17 +766,17 @@ class CDIF_Stream_Thing : public Stream
  CDIF_Stream_Thing(CDIF *cdintf_arg, uint32 lba_arg, uint32 sector_count_arg);
  ~CDIF_Stream_Thing();
 
- virtual uint64 attributes(void);
- virtual uint8 *map(void);
- virtual void unmap(void);
+ virtual uint64 attributes(void) override;
   
- virtual uint64 read(void *data, uint64 count, bool error_on_eos = true);
- virtual void write(const void *data, uint64 count);
+ virtual uint64 read(void *data, uint64 count, bool error_on_eos = true) override;
+ virtual void write(const void *data, uint64 count) override;
+ virtual void truncate(uint64 length) override;
 
- virtual void seek(int64 offset, int whence);
- virtual int64 tell(void);
- virtual int64 size(void);
- virtual void close(void);
+ virtual void seek(int64 offset, int whence) override;
+ virtual uint64 tell(void) override;
+ virtual uint64 size(void) override;
+ virtual void flush(void) override;
+ virtual void close(void) override;
 
  private:
  CDIF *cdintf;
@@ -798,16 +798,6 @@ CDIF_Stream_Thing::~CDIF_Stream_Thing()
 uint64 CDIF_Stream_Thing::attributes(void)
 {
  return(ATTRIBUTE_READABLE | ATTRIBUTE_SEEKABLE);
-}
-
-uint8 *CDIF_Stream_Thing::map(void)
-{
- return NULL;
-}
-
-void CDIF_Stream_Thing::unmap(void)
-{
-
 }
   
 uint64 CDIF_Stream_Thing::read(void *data, uint64 count, bool error_on_eos)
@@ -848,6 +838,11 @@ void CDIF_Stream_Thing::write(const void *data, uint64 count)
  throw MDFN_Error(ErrnoHolder(EBADF));
 }
 
+void CDIF_Stream_Thing::truncate(uint64 length)
+{
+ throw MDFN_Error(ErrnoHolder(EBADF));
+}
+
 void CDIF_Stream_Thing::seek(int64 offset, int whence)
 {
  int64 new_position;
@@ -877,14 +872,19 @@ void CDIF_Stream_Thing::seek(int64 offset, int whence)
  position = new_position;
 }
 
-int64 CDIF_Stream_Thing::tell(void)
+uint64 CDIF_Stream_Thing::tell(void)
 {
  return position;
 }
 
-int64 CDIF_Stream_Thing::size(void)
+uint64 CDIF_Stream_Thing::size(void)
 {
  return(sector_count * 2048);
+}
+
+void CDIF_Stream_Thing::flush(void)
+{
+
 }
 
 void CDIF_Stream_Thing::close(void)
@@ -899,7 +899,7 @@ Stream *CDIF::MakeStream(uint32 lba, uint32 sector_count)
 }
 
 
-CDIF *CDIF_Open(const char *path, const bool is_device, bool image_memcache)
+CDIF *CDIF_Open(const std::string& path, const bool is_device, bool image_memcache)
 {
  if(is_device)
   return new CDIF_MT(cdaccess_open_phys(path));

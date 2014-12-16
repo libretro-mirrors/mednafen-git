@@ -49,8 +49,8 @@ class PS_CPU
 {
  public:
 
- PS_CPU();
- ~PS_CPU();
+ PS_CPU() MDFN_COLD;
+ ~PS_CPU() MDFN_COLD;
 
  // FAST_MAP_* enums are in BYTES(8-bit), not in 32-bit units("words" in MIPS context), but the sizes
  // will always be multiples of 4.
@@ -64,12 +64,12 @@ class PS_CPU
   next_event_ts = next_event_ts_arg;
  }
 
- pscpu_timestamp_t Run(pscpu_timestamp_t timestamp_in, bool ILHMode);
+ pscpu_timestamp_t Run(pscpu_timestamp_t timestamp_in, bool BIOSPrintMode, bool ILHMode);
 
- void Power(void);
+ void Power(void) MDFN_COLD;
 
  // which ranges 0-5, inclusive
- void AssertIRQ(int which, bool asserted);
+ void AssertIRQ(unsigned which, bool asserted);
 
  void SetHalt(bool status);
 
@@ -77,7 +77,7 @@ class PS_CPU
  void SetBIU(uint32 val);
  uint32 GetBIU(void);
 
- int StateAction(StateMem *sm, int load, int data_only);
+ void StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
  private:
 
@@ -190,8 +190,9 @@ class PS_CPU
  //uint32 WriteAbsorb;
  //uint8 WriteAbsorbCount;
  //uint8 WriteAbsorbMonkey;
+ uint8 MULT_Tab24[24];
 
- MultiAccessSizeMem<1024, uint32, false> ScratchRAM;
+ MultiAccessSizeMem<1024, false> ScratchRAM;
 
  //PS_GTE GTE;
 
@@ -217,7 +218,7 @@ class PS_CPU
 
  uint32 Exception(uint32 code, uint32 PC, const uint32 NPM) MDFN_WARN_UNUSED_RESULT;
 
- template<bool DebugMode, bool ILHMode> pscpu_timestamp_t RunReal(pscpu_timestamp_t timestamp_in);
+ template<bool DebugMode, bool BIOSPrintMode, bool ILHMode> pscpu_timestamp_t RunReal(pscpu_timestamp_t timestamp_in) NO_INLINE;
 
  template<typename T> T PeekMemory(uint32 address) MDFN_COLD;
  template<typename T> T ReadMemory(pscpu_timestamp_t &timestamp, uint32 address, bool DS24 = false, bool LWC_timing = false);

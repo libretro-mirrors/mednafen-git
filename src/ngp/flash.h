@@ -16,16 +16,12 @@
 #define __NEOPOP_FLASH__
 //=============================================================================
 
-void flash_read(void);
-
 //Marks flash blocks for saving.
 void flash_write(uint32 start_address, uint16 length);
 
-//Stores the flash data
-void flash_commit(void);
-
-
-int FLASH_StateAction(StateMem *sm, int load, int data_only);
+void FLASH_LoadNV(void);
+void FLASH_SaveNV(void);
+void FLASH_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 //=============================================================================
 #endif

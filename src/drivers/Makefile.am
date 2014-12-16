@@ -5,7 +5,7 @@ DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_src
 noinst_LIBRARIES	=	libmdfnsdl.a
 
 libmdfnsdl_a_SOURCES = main.cpp input.cpp args.cpp help.cpp ers.cpp sound.cpp netplay.cpp input-config.cpp
-libmdfnsdl_a_SOURCES += console.cpp cheat.cpp fps.cpp video-state.cpp remote.cpp
+libmdfnsdl_a_SOURCES += console.cpp cheat.cpp fps.cpp video-state.cpp remote.cpp rmdui.cpp
 
 libmdfnsdl_a_SOURCES += opengl.cpp shader.cpp
 libmdfnsdl_a_SOURCES += overlay.cpp

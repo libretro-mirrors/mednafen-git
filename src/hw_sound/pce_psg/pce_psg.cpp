@@ -1,5 +1,8 @@
 /* Mednafen - Multi-system Emulator
  *
+ *  Original skeleton write handler and PSG structure definition:
+ *   Copyright (C) 2001 Charles MacDonald
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -15,7 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "mednafen/mednafen.h"
+#include <mednafen/mednafen.h>
 #include "pce_psg.h"
 
 #include <math.h>
@@ -818,10 +821,8 @@ void PCE_PSG::Power(const int32 timestamp)
  vol_update_which = 0;
 }
 
-int PCE_PSG::StateAction(StateMem *sm, int load, int data_only)
+void PCE_PSG::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
- int ret = 1;
-
  for(int ch = 0; ch < 6; ch++)
  {
   char tmpstr[5] = "SCHx";
@@ -843,7 +844,7 @@ int PCE_PSG::StateAction(StateMem *sm, int load, int data_only)
    SFEND
   };
   tmpstr[3] = '0' + ch;
-  ret &= MDFNSS_StateAction(sm, load, data_only, CH_StateRegs, tmpstr);
+  MDFNSS_StateAction(sm, load, data_only, CH_StateRegs, tmpstr);
  }
 
  SFORMAT PSG_StateRegs[] =
@@ -859,7 +860,7 @@ int PCE_PSG::StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
  
- ret &= MDFNSS_StateAction(sm, load, data_only, PSG_StateRegs, "PSG");
+ MDFNSS_StateAction(sm, load, data_only, PSG_StateRegs, "PSG");
 
  if(load)
  {
@@ -901,5 +902,4 @@ int PCE_PSG::StateAction(StateMem *sm, int load, int data_only)
    RecalcUOFunc(ch);
   }
  }
- return(ret); 
 }

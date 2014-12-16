@@ -20,11 +20,6 @@
 #include "gte.h"
 #endif
 
-static uint32 ReciprocalTable[0x8000] =
-{
- #include "gte_divrecip.inc"
-};
-
 /* Notes:
 
  AVSZ3/AVSZ4:
@@ -74,19 +69,6 @@ typedef struct
  int16 X;
  int16 Y;
 } gtexy;
-
-int16 Lm_B(unsigned int which, int32 value, int lm);
-uint8 Lm_C(unsigned int which, int32 value);
-
-
-
-int32 Lm_G(unsigned int which, int32 value);
-int32 Lm_H(int32 value);
-
-void MAC_to_RGB_FIFO(void);
-void MAC_to_IR(int lm);
-
-void MultiplyMatrixByVector(const gtematrix *matrix, const int16 *v, const int32 *crv, uint32 sf, int lm);
 
 static uint32 CR[32];
 static uint32 FLAGS;	// Temporary for instruction execution, copied into CR[31] at end of instruction execution.
@@ -153,41 +135,6 @@ static uint32 LZCR;
 static uint32 Reg23;
 // end DR
 
-int32 RTPS(uint32 instr);
-int32 RTPT(uint32 instr);
-
-int32 NCLIP(uint32 instr);
-
-void NormColor(uint32 sf, int lm, uint32 v);
-int32 NCS(uint32 instr);
-int32 NCT(uint32 instr);
-
-
-void NormColorColor(uint32 v, uint32 sf, int lm);
-int32 NCCS(uint32 instr);
-int32 NCCT(uint32 instr);
-
-void NormColorDepthCue(uint32 v, uint32 sf, int lm);
-int32 NCDS(uint32 instr);
-int32 NCDT(uint32 instr);
-
-int32 AVSZ3(uint32 instr);
-int32 AVSZ4(uint32 instr);
-
-int32 OP(uint32 instr);
-
-int32 GPF(uint32 instr);
-int32 GPL(uint32 instr);
-
-void DepthCue(int mult_IR123, int RGB_from_FIFO, uint32 sf, int lm);
-int32 DCPL(uint32 instr);
-int32 DPCS(uint32 instr);
-int32 DPCT(uint32 instr);
-int32 INTPL(uint32 instr);
-
-int32 SQR(uint32 instr);
-int32 MVMVA(uint32 instr);
-
 static INLINE uint8 Sat5(int16 cc)
 {
  if(cc < 0)
@@ -197,7 +144,38 @@ static INLINE uint8 Sat5(int16 cc)
  return(cc);
 }
 
+//
+// Newton-Raphson division table.  (Initialized at startup; do NOT save in save states!)
+//
+static uint8 DivTable[0x100 + 1];
+static INLINE int32 CalcRecip(uint16 divisor)
+{
+ int32 x = (0x101 + DivTable[(((divisor & 0x7FFF) + 0x40) >> 7)]);
+ int32 tmp = (((int32)divisor * -x) + 0x80) >> 8;
+ int32 tmp2 = ((x * (131072 + tmp)) + 0x80) >> 8;
 
+ return(tmp2);
+}
+
+void GTE_Init(void)
+{
+ for(uint32_t divisor = 0x8000; divisor < 0x10000; divisor += 0x80)
+ {
+  uint32_t xa = 512;
+
+  for(unsigned i = 1; i < 5; i++)
+  {
+   xa = (xa * (1024 * 512 - ((divisor >> 7) * xa))) >> 18;
+  }
+
+  DivTable[(divisor >> 7) & 0xFF] = ((xa + 1) >> 1) - 0x101;
+  //printf("%04x, %02x\n", divisor, ((xa + 1) >> 1) - 0x101);
+ }
+
+ //
+ // To avoid a bounds limiting if statement in the emulation code:
+ DivTable[0x100] = DivTable[0xFF];
+}
 
 void GTE_Power(void)
 {
@@ -234,7 +212,7 @@ void GTE_Power(void)
 }
 
 // TODO: Don't save redundant state, regarding CR cache variables
-int GTE_StateAction(StateMem *sm, int load, int data_only)
+void GTE_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -282,14 +260,13 @@ int GTE_StateAction(StateMem *sm, int load, int data_only)
 
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "GTE");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "GTE");
 
  if(load)
  {
 
  }
-
- return(ret);
 }
 
 
@@ -721,7 +698,7 @@ uint32 GTE_ReadDR(unsigned int which)
 }
 
 #define sign_x_to_s64(_bits, _value) (((int64)((uint64)(_value) << (64 - _bits))) >> (64 - _bits))
-INLINE int64 A_MV(unsigned which, int64 value)
+static INLINE int64 A_MV(unsigned which, int64 value)
 {
  if(value >= (1LL << 43))
   FLAGS |= 1 << (30 - which);
@@ -732,7 +709,7 @@ INLINE int64 A_MV(unsigned which, int64 value)
  return sign_x_to_s64(44, value);
 }
 
-INLINE int64 F(int64 value)
+static INLINE int64 F(int64 value)
 {
  if(value < -2147483648LL)
  {
@@ -749,7 +726,7 @@ INLINE int64 F(int64 value)
 }
 
 
-INLINE int16 Lm_B(unsigned int which, int32 value, int lm)
+static INLINE int16 Lm_B(unsigned int which, int32 value, int lm)
 {
  int32 tmp = lm << 15;
 
@@ -771,7 +748,7 @@ INLINE int16 Lm_B(unsigned int which, int32 value, int lm)
 }
 
 
-INLINE int16 Lm_B_PTZ(unsigned int which, int32 value, int32 ftv_value, int lm)
+static INLINE int16 Lm_B_PTZ(unsigned int which, int32 value, int32 ftv_value, int lm)
 {
  int32 tmp = lm << 15;
 
@@ -798,7 +775,7 @@ INLINE int16 Lm_B_PTZ(unsigned int which, int32 value, int32 ftv_value, int lm)
  return(value);
 }
 
-INLINE uint8 Lm_C(unsigned int which, int32 value)
+static INLINE uint8 Lm_C(unsigned int which, int32 value)
 {
  if(value & ~0xFF)
  {
@@ -815,7 +792,7 @@ INLINE uint8 Lm_C(unsigned int which, int32 value)
  return(value);
 }
 
-INLINE int32 Lm_D(int32 value, int unchained)
+static INLINE int32 Lm_D(int32 value, int unchained)
 {
  // Not sure if we should have it as int64, or just chain on to and special case when the F flags are set.
  if(!unchained)
@@ -849,7 +826,7 @@ INLINE int32 Lm_D(int32 value, int unchained)
  return(value);
 }
 
-INLINE int32 Lm_G(unsigned int which, int32 value)
+static INLINE int32 Lm_G(unsigned int which, int32 value)
 {
  if(value < -1024)
  {
@@ -869,7 +846,7 @@ INLINE int32 Lm_G(unsigned int which, int32 value)
 }
 
 // limit to 4096, not 4095
-INLINE int32 Lm_H(int32 value)
+static INLINE int32 Lm_H(int32 value)
 {
 #if 0
  if(FLAGS & (1 << 15))
@@ -902,7 +879,7 @@ INLINE int32 Lm_H(int32 value)
  return(value);
 }
 
-INLINE void MAC_to_RGB_FIFO(void)
+static INLINE void MAC_to_RGB_FIFO(void)
 {
  RGB_FIFO[0] = RGB_FIFO[1];
  RGB_FIFO[1] = RGB_FIFO[2];
@@ -913,14 +890,14 @@ INLINE void MAC_to_RGB_FIFO(void)
 }
 
 
-INLINE void MAC_to_IR(int lm)
+static INLINE void MAC_to_IR(int lm)
 {
  IR1 = Lm_B(0, MAC[1], lm);
  IR2 = Lm_B(1, MAC[2], lm);
  IR3 = Lm_B(2, MAC[3], lm);
 }
 
-INLINE void MultiplyMatrixByVector(const gtematrix *matrix, const int16 *v, const int32 *crv, uint32 sf, int lm)
+static INLINE void MultiplyMatrixByVector(const gtematrix *matrix, const int16 *v, const int32 *crv, uint32 sf, int lm)
 {
  unsigned i;
 
@@ -929,7 +906,7 @@ INLINE void MultiplyMatrixByVector(const gtematrix *matrix, const int16 *v, cons
   int64 tmp;
   int32 mulr[3];
 
-  tmp = (int64)crv[i] << 12;
+  tmp = (uint64)(int64)crv[i] << 12;
 
   if(matrix == &Matrices.AbbyNormal)
   {
@@ -971,7 +948,7 @@ INLINE void MultiplyMatrixByVector(const gtematrix *matrix, const int16 *v, cons
 }
 
 
-INLINE void MultiplyMatrixByVector_PT(const gtematrix *matrix, const int16 *v, const int32 *crv, uint32 sf, int lm)
+static INLINE void MultiplyMatrixByVector_PT(const gtematrix *matrix, const int16 *v, const int32 *crv, uint32 sf, int lm)
 {
  int64 tmp[3];
  unsigned i;
@@ -980,7 +957,7 @@ INLINE void MultiplyMatrixByVector_PT(const gtematrix *matrix, const int16 *v, c
  {
   int32 mulr[3];
 
-  tmp[i] = (int64)crv[i] << 12;
+  tmp[i] = (uint64)(int64)crv[i] << 12;
 
   mulr[0] = matrix->MX[i][0] * v[0];
   mulr[1] = matrix->MX[i][1] * v[1];
@@ -1026,7 +1003,7 @@ INLINE void MultiplyMatrixByVector_PT(const gtematrix *matrix, const int16 *v, c
  }
 
 
-int32 SQR(uint32 instr)
+static int32 SQR(uint32 instr)
 {
  DECODE_FIELDS;
 
@@ -1040,7 +1017,7 @@ int32 SQR(uint32 instr)
 }
 
 
-int32 MVMVA(uint32 instr)
+static int32 MVMVA(uint32 instr)
 {
  DECODE_FIELDS;
 
@@ -1072,7 +1049,7 @@ static INLINE uint32 Divide(uint32 dividend, uint32 divisor)
   dividend <<= shift_bias;
   divisor <<= shift_bias;
 
-  return ((int64)dividend * ReciprocalTable[divisor & 0x7FFF] + 32768) >> 16;
+  return ((int64)dividend * CalcRecip(divisor | 0x8000) + 32768) >> 16;
  }
  else
  {
@@ -1100,7 +1077,7 @@ static INLINE void TransformDQ(int64 h_div_sz)
  IR0 = Lm_H(((int64)DQB + DQA * h_div_sz) >> 12);
 }
 
-int32 RTPS(uint32 instr)
+static int32 RTPS(uint32 instr)
 {
  DECODE_FIELDS;
  int64 h_div_sz;
@@ -1114,7 +1091,7 @@ int32 RTPS(uint32 instr)
  return(15);
 }
 
-int32 RTPT(uint32 instr)
+static int32 RTPT(uint32 instr)
 {
  DECODE_FIELDS;
  int i;
@@ -1135,7 +1112,7 @@ int32 RTPT(uint32 instr)
  return(23);
 }
 
-INLINE void NormColor(uint32 sf, int lm, uint32 v)
+static INLINE void NormColor(uint32 sf, int lm, uint32 v)
 {
  int16 tmp_vector[3];
 
@@ -1147,7 +1124,7 @@ INLINE void NormColor(uint32 sf, int lm, uint32 v)
  MAC_to_RGB_FIFO();
 }
 
-int32 NCS(uint32 instr)
+static int32 NCS(uint32 instr)
 {
  DECODE_FIELDS;
 
@@ -1156,7 +1133,7 @@ int32 NCS(uint32 instr)
  return(14);
 }
 
-int32 NCT(uint32 instr)
+static int32 NCT(uint32 instr)
 {
  DECODE_FIELDS;
  int i;
@@ -1167,7 +1144,7 @@ int32 NCT(uint32 instr)
  return(30);
 }
 
-INLINE void NormColorColor(uint32 v, uint32 sf, int lm)
+static INLINE void NormColorColor(uint32 v, uint32 sf, int lm)
 {
  int16 tmp_vector[3];
 
@@ -1185,7 +1162,7 @@ INLINE void NormColorColor(uint32 v, uint32 sf, int lm)
  MAC_to_RGB_FIFO();
 }
 
-int32 NCCS(uint32 instr)
+static int32 NCCS(uint32 instr)
 {
  DECODE_FIELDS;
 
@@ -1194,7 +1171,7 @@ int32 NCCS(uint32 instr)
 }
 
 
-int32 NCCT(uint32 instr)
+static int32 NCCT(uint32 instr)
 {
  int i;
  DECODE_FIELDS;
@@ -1205,7 +1182,7 @@ int32 NCCT(uint32 instr)
  return(39);
 }
 
-INLINE void DepthCue(int mult_IR123, int RGB_from_FIFO, uint32 sf, int lm)
+static INLINE void DepthCue(int mult_IR123, int RGB_from_FIFO, uint32 sf, int lm)
 {
  int32 RGB_temp[3];
  int32 IR_temp[3] = { IR1, IR2, IR3 };
@@ -1230,7 +1207,7 @@ INLINE void DepthCue(int mult_IR123, int RGB_from_FIFO, uint32 sf, int lm)
  {
   for(i = 0; i < 3; i++)
   {
-   MAC[1 + i] = A_MV(i, (((int64)CRVectors.FC[i] << 12) - RGB_temp[i] * IR_temp[i])) >> sf;
+   MAC[1 + i] = A_MV(i, ((int64)((uint64)(int64)CRVectors.FC[i] << 12) - RGB_temp[i] * IR_temp[i])) >> sf;
    MAC[1 + i] = A_MV(i, (RGB_temp[i] * IR_temp[i] + IR0 * Lm_B(i, MAC[1 + i], FALSE))) >> sf;
   }
  }
@@ -1238,8 +1215,8 @@ INLINE void DepthCue(int mult_IR123, int RGB_from_FIFO, uint32 sf, int lm)
  {
   for(i = 0; i < 3; i++)
   {
-   MAC[1 + i] = A_MV(i, (((int64)CRVectors.FC[i] << 12) - (RGB_temp[i] << 12))) >> sf;
-   MAC[1 + i] = A_MV(i, (((int64)RGB_temp[i] << 12) + IR0 * Lm_B(i, MAC[1 + i], FALSE))) >> sf;
+   MAC[1 + i] = A_MV(i, ((int64)((uint64)(int64)CRVectors.FC[i] << 12) - (int32)((uint32)RGB_temp[i] << 12))) >> sf;
+   MAC[1 + i] = A_MV(i, ((int64)((uint64)(int64)RGB_temp[i] << 12) + IR0 * Lm_B(i, MAC[1 + i], FALSE))) >> sf;
   }
  }
 
@@ -1249,7 +1226,7 @@ INLINE void DepthCue(int mult_IR123, int RGB_from_FIFO, uint32 sf, int lm)
 }
 
 
-int32 DCPL(uint32 instr)
+static int32 DCPL(uint32 instr)
 {
  DECODE_FIELDS;
 
@@ -1259,7 +1236,7 @@ int32 DCPL(uint32 instr)
 }
 
 
-int32 DPCS(uint32 instr)
+static int32 DPCS(uint32 instr)
 {
  DECODE_FIELDS;
 
@@ -1268,7 +1245,7 @@ int32 DPCS(uint32 instr)
  return(8);
 }
 
-int32 DPCT(uint32 instr)
+static int32 DPCT(uint32 instr)
 {
  int i;
  DECODE_FIELDS;
@@ -1281,17 +1258,17 @@ int32 DPCT(uint32 instr)
  return(17);
 }
 
-int32 INTPL(uint32 instr)
+static int32 INTPL(uint32 instr)
 {
  DECODE_FIELDS;
 
- MAC[1] = A_MV(0, (((int64)CRVectors.FC[0] << 12) - (IR1 << 12))) >> sf;
- MAC[2] = A_MV(1, (((int64)CRVectors.FC[1] << 12) - (IR2 << 12))) >> sf;
- MAC[3] = A_MV(2, (((int64)CRVectors.FC[2] << 12) - (IR3 << 12))) >> sf;
+ MAC[1] = A_MV(0, ((int64)((uint64)(int64)CRVectors.FC[0] << 12) - (int32)((uint32)(int32)IR1 << 12))) >> sf;
+ MAC[2] = A_MV(1, ((int64)((uint64)(int64)CRVectors.FC[1] << 12) - (int32)((uint32)(int32)IR2 << 12))) >> sf;
+ MAC[3] = A_MV(2, ((int64)((uint64)(int64)CRVectors.FC[2] << 12) - (int32)((uint32)(int32)IR3 << 12))) >> sf;
 
- MAC[1] = A_MV(0, (((int64)IR1 << 12) + IR0 * Lm_B(0, MAC[1], FALSE)) >> sf);
- MAC[2] = A_MV(1, (((int64)IR2 << 12) + IR0 * Lm_B(1, MAC[2], FALSE)) >> sf);
- MAC[3] = A_MV(2, (((int64)IR3 << 12) + IR0 * Lm_B(2, MAC[3], FALSE)) >> sf);
+ MAC[1] = A_MV(0, ((int64)((uint64)(int64)IR1 << 12) + IR0 * Lm_B(0, MAC[1], FALSE)) >> sf);
+ MAC[2] = A_MV(1, ((int64)((uint64)(int64)IR2 << 12) + IR0 * Lm_B(1, MAC[2], FALSE)) >> sf);
+ MAC[3] = A_MV(2, ((int64)((uint64)(int64)IR3 << 12) + IR0 * Lm_B(2, MAC[3], FALSE)) >> sf);
 
  MAC_to_IR(lm);
 
@@ -1301,7 +1278,7 @@ int32 INTPL(uint32 instr)
 }
 
 
-INLINE void NormColorDepthCue(uint32 v, uint32 sf, int lm)
+static INLINE void NormColorDepthCue(uint32 v, uint32 sf, int lm)
 {
  int16 tmp_vector[3];
 
@@ -1313,7 +1290,7 @@ INLINE void NormColorDepthCue(uint32 v, uint32 sf, int lm)
  DepthCue(TRUE, FALSE, sf, lm);
 }
 
-int32 NCDS(uint32 instr)
+static int32 NCDS(uint32 instr)
 {
  DECODE_FIELDS;
 
@@ -1322,7 +1299,7 @@ int32 NCDS(uint32 instr)
  return(19);
 }
 
-int32 NCDT(uint32 instr)
+static int32 NCDT(uint32 instr)
 {
  int i;
  DECODE_FIELDS;
@@ -1335,7 +1312,7 @@ int32 NCDT(uint32 instr)
  return(44);
 }
 
-int32 CC(uint32 instr)
+static int32 CC(uint32 instr)
 {
  DECODE_FIELDS;
  int16 tmp_vector[3];
@@ -1354,7 +1331,7 @@ int32 CC(uint32 instr)
  return(11);
 }
 
-int32 CDP(uint32 instr)
+static int32 CDP(uint32 instr)
 {
  DECODE_FIELDS;
  int16 tmp_vector[3];
@@ -1367,7 +1344,7 @@ int32 CDP(uint32 instr)
  return(13);
 }
 
-int32 NCLIP(uint32 instr)
+static int32 NCLIP(uint32 instr)
 {
  DECODE_FIELDS;
 
@@ -1377,7 +1354,7 @@ int32 NCLIP(uint32 instr)
  return(8);
 }
 
-int32 AVSZ3(uint32 instr)
+static int32 AVSZ3(uint32 instr)
 {
  DECODE_FIELDS;
 
@@ -1388,7 +1365,7 @@ int32 AVSZ3(uint32 instr)
  return(5);
 }
 
-int32 AVSZ4(uint32 instr)
+static int32 AVSZ4(uint32 instr)
 {
  DECODE_FIELDS;
 
@@ -1402,7 +1379,7 @@ int32 AVSZ4(uint32 instr)
 
 // -32768 * -32768 - 32767 * -32768 = 2147450880
 // (2 ^ 31) - 1 =		      2147483647
-int32 OP(uint32 instr)
+static int32 OP(uint32 instr)
 {
  DECODE_FIELDS;
 
@@ -1415,7 +1392,7 @@ int32 OP(uint32 instr)
  return(6);
 }
 
-int32 GPF(uint32 instr)
+static int32 GPF(uint32 instr)
 {
  DECODE_FIELDS;
 
@@ -1430,13 +1407,13 @@ int32 GPF(uint32 instr)
  return(5);
 }
 
-int32 GPL(uint32 instr)
+static int32 GPL(uint32 instr)
 {
  DECODE_FIELDS;
 
- MAC[1] = A_MV(0, ((int64)MAC[1] << sf) + (IR0 * IR1)) >> sf;
- MAC[2] = A_MV(1, ((int64)MAC[2] << sf) + (IR0 * IR2)) >> sf;
- MAC[3] = A_MV(2, ((int64)MAC[3] << sf) + (IR0 * IR3)) >> sf;
+ MAC[1] = A_MV(0, (int64)((uint64)(int64)MAC[1] << sf) + (IR0 * IR1)) >> sf;
+ MAC[2] = A_MV(1, (int64)((uint64)(int64)MAC[2] << sf) + (IR0 * IR2)) >> sf;
+ MAC[3] = A_MV(2, (int64)((uint64)(int64)MAC[3] << sf) + (IR0 * IR3)) >> sf;
 
  MAC_to_IR(lm);
 

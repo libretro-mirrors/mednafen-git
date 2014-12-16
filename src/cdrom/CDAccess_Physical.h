@@ -11,7 +11,7 @@ class CDAccess_Physical : public CDAccess
 {
  public:
 
- CDAccess_Physical(const char *path);
+ CDAccess_Physical(const std::string& path);
  virtual ~CDAccess_Physical();
 
  virtual void Read_Raw_Sector(uint8 *buf, int32 lba);
@@ -26,7 +26,6 @@ class CDAccess_Physical : public CDAccess
  void *p_cdio;
 
  void DetermineFeatures(void);
- void PhysOpen(const char *path);
  void ReadPhysDiscInfo(unsigned retry);
 
  void PreventAllowMediumRemoval(bool prevent);

@@ -78,28 +78,28 @@ int EEPROM_StateAction(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-bool EEPROM_SaveFile(const char *filename)
+bool EEPROM_SaveFile(const std::string& path)
 {
  if(eepromInUse)
  {
-  if(!MDFN_DumpToFile(filename, 0, eepromData, eepromSize))
+  if(!MDFN_DumpToFile(path, eepromData, eepromSize))
    return(0);
  }
 
  return(1);
 }
 
-void EEPROM_LoadFile(const char *filename)
+void EEPROM_LoadFile(const std::string& path)
 {
  try
  {
-  FileStream fp(filename, FileStream::MODE_READ);
+  FileStream fp(path, FileStream::MODE_READ);
   int64 size;
 
   size = fp.size();
 
   if(size != 512 && size != 0x2000)
-   throw MDFN_Error(0, _("EEPROM file \"%s\" is an invalid size."), filename);
+   throw MDFN_Error(0, _("EEPROM file \"%s\" is an invalid size."), path.c_str());
 
   fp.read(eepromData, size);
 

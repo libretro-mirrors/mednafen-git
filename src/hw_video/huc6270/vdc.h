@@ -1,7 +1,7 @@
 #ifndef __PCE_VDC_H
 #define __PCE_VDC_H
 
-#include "mednafen/lepacker.h"
+#include <mednafen/lepacker.h>
 
 #define VDC_PIXEL_OUT_MASK	0x01FF
 
@@ -252,7 +252,7 @@ class VDC
 	void HDS_Start(void);
 
 	void StateExtra(MDFN::LEPacker &sl_packer, bool load);
-	int StateAction(StateMem *sm, int load, int data_only, const char *sname);
+	void StateAction(StateMem *sm, const unsigned load, const bool data_only, const char *sname);
 
 	// Peek(VRAM/SAT) and Poke(VRAM/SAT) work in 16-bit VRAM word units.
 	INLINE uint16 PeekVRAM(uint16 Address)

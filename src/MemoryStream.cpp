@@ -16,17 +16,14 @@
  */
 
 #include "MemoryStream.h"
+#include <mednafen/math_ops.h>
 #include <stdlib.h>
 
 /*
- TODO:
-	Write and Seek expansion that fail should not corrupt the state.
-
-	Copy and assignment constructor fixes.
+ TODO:	Copy and assignment constructor fixes.
+	
+	Proper negative position behavior?
 */
-
-// TODO 128-bit integers for range checking?
-
 
 MemoryStream::MemoryStream() : data_buffer(NULL), data_buffer_size(0), data_buffer_alloced(0), position(0)
 {
@@ -36,33 +33,39 @@ MemoryStream::MemoryStream() : data_buffer(NULL), data_buffer_size(0), data_buff
   throw MDFN_Error(ErrnoHolder(errno));
 }
 
-MemoryStream::MemoryStream(uint64 size_hint) : data_buffer(NULL), data_buffer_size(0), data_buffer_alloced(0), position(0)
+MemoryStream::MemoryStream(uint64 alloc_hint, int alloc_hint_is_size) : data_buffer(NULL), data_buffer_size(0), data_buffer_alloced(0), position(0)
 {
- data_buffer_size = 0;
- data_buffer_alloced = (size_hint > SIZE_MAX) ? SIZE_MAX : size_hint;
+ if(alloc_hint_is_size != 0)
+ {
+  data_buffer_size = alloc_hint;
+  data_buffer_alloced = alloc_hint;
+
+  if(alloc_hint > SIZE_MAX)
+   throw MDFN_Error(ErrnoHolder(ENOMEM));
+ }
+ else
+ {
+  data_buffer_size = 0;
+  data_buffer_alloced = (alloc_hint > SIZE_MAX) ? SIZE_MAX : alloc_hint;
+ }
 
  if(!(data_buffer = (uint8*)realloc(data_buffer, data_buffer_alloced)))
   throw MDFN_Error(ErrnoHolder(errno));
+
+ if(alloc_hint_is_size > 0)
+  memset(data_buffer, 0, data_buffer_size);
 }
 
-MemoryStream::MemoryStream(Stream *stream) : data_buffer(NULL), data_buffer_size(0), data_buffer_alloced(0), position(0)
+MemoryStream::MemoryStream(Stream *stream, uint64 size_limit) : data_buffer(NULL), data_buffer_size(0), data_buffer_alloced(0), position(0)
 {
  try
  {
   if((position = stream->tell()) != 0)
    stream->seek(0, SEEK_SET);
 
-  data_buffer_size = stream->size();
-  data_buffer_alloced = data_buffer_size;
-
-  if(data_buffer_alloced > SIZE_MAX)
-   throw MDFN_Error(ErrnoHolder(ENOMEM));
-
-  if(!(data_buffer = (uint8*)realloc(data_buffer, data_buffer_alloced)))
-   throw MDFN_Error(ErrnoHolder(errno));
-
-  stream->read(data_buffer, data_buffer_size);
-
+  void* tp;
+  data_buffer_size = data_buffer_alloced = stream->alloc_and_read(&tp, size_limit);
+  data_buffer = (uint8*)tp;
   stream->close();
  }
  catch(...)
@@ -131,21 +134,28 @@ uint64 MemoryStream::attributes(void)
 }
 
 
-uint8 *MemoryStream::map(void)
+uint8 *MemoryStream::map(void) noexcept
 {
  return data_buffer;
 }
 
-void MemoryStream::unmap(void)
+uint64 MemoryStream::map_size(void) noexcept
+{
+ return data_buffer_size;
+}
+
+void MemoryStream::unmap(void) noexcept
 {
 
 }
 
 
-INLINE void MemoryStream::grow_if_necessary(uint64 new_required_size)
+INLINE void MemoryStream::grow_if_necessary(uint64 new_required_size, uint64 hole_end)
 {
  if(new_required_size > data_buffer_size)
  {
+  const uint64 old_data_buffer_size = data_buffer_size;
+
   if(new_required_size > data_buffer_alloced)
   {
    uint64 new_required_alloced = round_up_pow2(new_required_size);
@@ -172,25 +182,49 @@ INLINE void MemoryStream::grow_if_necessary(uint64 new_required_size)
   }
   else
    data_buffer_size = new_required_size;
+
+  if(hole_end > old_data_buffer_size)
+   memset(data_buffer + old_data_buffer_size, 0, hole_end - old_data_buffer_size);
+ }
+}
+
+void MemoryStream::shrink_to_fit(void) noexcept
+{
+ if(data_buffer_alloced > data_buffer_size)
+ {
+  uint8 *new_data_buffer;
+  
+  new_data_buffer = (uint8*)realloc(data_buffer, data_buffer_size);
+
+  if(new_data_buffer != NULL)
+  {
+   data_buffer = new_data_buffer;
+   data_buffer_alloced = data_buffer_size;
+  }
  }
 }
 
 uint64 MemoryStream::read(void *data, uint64 count, bool error_on_eos)
 {
+ //printf("%llu %llu %llu\n", position, count, data_buffer_size);
+
  if(count > data_buffer_size)
  {
   if(error_on_eos)
-   throw MDFN_Error(0, _("EOF"));
+   throw MDFN_Error(0, _("Unexpected EOF"));
 
   count = data_buffer_size;
  }
 
- if((uint64)position > (data_buffer_size - count))
+ if(position > (data_buffer_size - count))
  {
   if(error_on_eos)
-   throw MDFN_Error(0, _("EOF"));
+   throw MDFN_Error(0, _("Unexpected EOF"));
 
-  count = data_buffer_size - position;
+  if(data_buffer_size > position)
+   count = data_buffer_size - position;
+  else
+   count = 0;
  }
 
  memmove(data, &data_buffer[position], count);
@@ -203,18 +237,29 @@ void MemoryStream::write(const void *data, uint64 count)
 {
  uint64 nrs = position + count;
 
- if((int64)nrs < position)
+ if(nrs < position)
   throw MDFN_Error(ErrnoHolder(EFBIG));
 
- grow_if_necessary(nrs);
+ grow_if_necessary(nrs, position);
 
  memmove(&data_buffer[position], data, count);
  position += count;
 }
 
+//
+// Don't add code to reduce the amount of memory allocated(when possible) without providing a 
+// per-stream setting to disable that behavior.
+//
+void MemoryStream::truncate(uint64 length)
+{
+ grow_if_necessary(length, length);
+
+ data_buffer_size = length;
+}
+
 void MemoryStream::seek(int64 offset, int whence)
 {
- int64 new_position;
+ uint64 new_position;
 
  switch(whence)
  {
@@ -237,20 +282,23 @@ void MemoryStream::seek(int64 offset, int whence)
 
  if(new_position < 0)
   throw MDFN_Error(ErrnoHolder(EINVAL));
- else
-  grow_if_necessary(new_position);
 
  position = new_position;
 }
 
-int64 MemoryStream::tell(void)
+uint64 MemoryStream::tell(void)
 {
  return position;
 }
 
-int64 MemoryStream::size(void)
+uint64 MemoryStream::size(void)
 {
  return data_buffer_size;
+}
+
+void MemoryStream::flush(void)
+{
+
 }
 
 void MemoryStream::close(void)

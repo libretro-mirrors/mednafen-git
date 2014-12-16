@@ -131,7 +131,7 @@ int PCE_Input_TsushinKB::StateAction(StateMem *sm, int load, int data_only, cons
  return(ret);
 }
 
-const InputDeviceInputInfoStruct PCE_TsushinKBIDII[0x80] = 
+const IDIISG PCE_TsushinKBIDII = 
 {
  // 0 - DONE!
  { "kp_0", "Keypad 0", 0, IDIT_BUTTON },

@@ -135,7 +135,7 @@ void GfxDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
    trio_snprintf(buf, 256, "%s, PBN: %d, Scroll: %d, Instant", LayerNames[CurLayer], LayerPBN[CurLayer], LayerScroll[CurLayer]);
   else
    trio_snprintf(buf, 256, "%s, PBN: %d, Scroll: %d, Line: %d", LayerNames[CurLayer], LayerPBN[CurLayer], LayerScroll[CurLayer], LayerScanline[CurLayer]);
-  DrawTextTransShadow(pixels + 256 * pitch32, surface->pitchinpix << 2, rect->w, (UTF8*)buf, MK_COLOR_A(0xF0, 0xF0, 0xF0, 0xFF), MK_COLOR_A(0, 0, 0, 0xFF), 1, FALSE);
+  DrawTextTransShadow(pixels + 256 * pitch32, surface->pitchinpix << 2, rect->w, buf, MK_COLOR_A(0xF0, 0xF0, 0xF0, 0xFF), MK_COLOR_A(0, 0, 0, 0xFF), 1, FALSE);
  }
 
  int mousex, mousey;
@@ -161,7 +161,7 @@ void GfxDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
 
    trio_snprintf(buf, 256, "Tile: %08x, Address: %08x", src_pixels[128 + vx + vy * 128 * 3], src_pixels[256 + vx + vy * 128 * 3]);
 
-   DrawTextTransShadow(pixels + 278 * pitch32, surface->pitchinpix << 2, rect->w, (UTF8*)buf, MK_COLOR_A(0xF0, 0xF0, 0xF0, 0xFF), MK_COLOR_A(0, 0, 0, 0xFF), 1, FALSE);  
+   DrawTextTransShadow(pixels + 278 * pitch32, surface->pitchinpix << 2, rect->w, buf, MK_COLOR_A(0xF0, 0xF0, 0xF0, 0xFF), MK_COLOR_A(0, 0, 0, 0xFF), 1, FALSE);  
   }
  }
 

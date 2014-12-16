@@ -28,8 +28,8 @@
 namespace MDFN_IEN_DEMO
 {
 
-static uint8* controller_ptr = NULL;
-static uint8 last_cstate;
+static uint8* controller_ptr[2] = { NULL, NULL };
+static uint8 last_cstate[2];
 
 static OwlResampler* HRRes = NULL;
 static OwlBuffer* HRBufs[2] = { NULL, NULL };
@@ -49,7 +49,9 @@ static double phase_inc;
 
 static void Power(void)
 {
- last_cstate = 0;
+ for(unsigned i = 0; i < 2; i++)
+  last_cstate[i] = 0;
+
  Interlace = false;
  InterlaceField = 0;
 
@@ -189,24 +191,26 @@ static void Emulate(EmulateSpecStruct* espec)
  if(espec->SoundFormatChanged)
   SetSoundRate(espec->SoundRate);
 
+ for(unsigned i = 0; i < 2; i++)
  {
-  uint8 cur_cstate = *controller_ptr;
+  {
+   uint8 cur_cstate = *controller_ptr[i];
 
-  if((cur_cstate ^ last_cstate) & cur_cstate & 1)
-   Interlace = !Interlace;
+   if((cur_cstate ^ last_cstate[i]) & cur_cstate & 1)
+    Interlace = !Interlace;
 
-  if((cur_cstate ^ last_cstate) & cur_cstate & 2)
-   cur_test_mode = (cur_test_mode + 1) % 2;
+   if((cur_cstate ^ last_cstate[i]) & cur_cstate & 2)
+    cur_test_mode = (cur_test_mode + 1) % 2;
 
-  last_cstate = cur_cstate;
- }
+   last_cstate[i] = cur_cstate;
+  }
 
- {
-  uint8 weak = MDFN_de16lsb(&controller_ptr[3]) >> 7;
-  uint8 strong = MDFN_de16lsb(&controller_ptr[5]) >> 7;
+  {
+   uint8 weak = MDFN_de16lsb(&controller_ptr[i][3]) >> 7;
+   uint8 strong = MDFN_de16lsb(&controller_ptr[i][5]) >> 7;
 
-
-  MDFN_en16lsb(&controller_ptr[1], (weak << 0) | (strong << 8));
+   MDFN_en16lsb(&controller_ptr[i][1], (weak << 0) | (strong << 8));
+  }
  }
 
  Draw(espec);
@@ -258,18 +262,7 @@ static bool TestMagic(MDFNFILE* fp)
  return(false);
 }
 
-static int Load(MDFNFILE* fp)
-{
- for(unsigned ch = 0; ch < 2; ch++)
-  HRBufs[ch] = new OwlBuffer();
-
- Power();
-
- return(1);
-}
-
-
-static void CloseGame(void)
+static void Cleanup(void)
 {
  for(unsigned ch = 0; ch < 2; ch++)
  {
@@ -287,14 +280,78 @@ static void CloseGame(void)
  }
 }
 
+static void Load(MDFNFILE* fp)
+{
+ try
+ {
+  for(unsigned ch = 0; ch < 2; ch++)
+   HRBufs[ch] = new OwlBuffer();
+
+  Power();
+ }
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
+}
+
+
+static void CloseGame(void)
+{
+ Cleanup();
+}
+
+static void StateAction(StateMem* sm, const unsigned load, const bool data_only)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(Interlace),
+  SFVAR(InterlaceField),
+
+  SFVAR(middle_size),
+  SFVAR(middle_size_inc),
+
+  SFVAR(w2_select),
+
+  SFVAR(cur_test_mode),
+
+  SFVAR(phase),
+  SFVAR(phase_inc),  
+
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
+
+ if(load)
+ {
+  if(middle_size_inc != -1 && middle_size_inc != 1)
+   middle_size_inc = 1;
+
+  if(middle_size >= 240)
+  {
+   middle_size = 240;
+   middle_size_inc = -1;
+  }
+
+  if(middle_size <= 0)
+  {
+   middle_size = 0;
+   middle_size_inc = 1;
+  }
+ }
+}
+
+
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
  { NULL, NULL }
 };
 
-static void SetInput(int port, const char *type, void *ptr)
+static void SetInput(unsigned port, const char *type, uint8 *ptr)
 {
- controller_ptr = (uint8 *)ptr;
+ controller_ptr[port] = (uint8 *)ptr;
 }
 
 static void DoSimpleCommand(int cmd)
@@ -313,38 +370,40 @@ static MDFNSetting DEMOSettings[] =
  { NULL }
 };
 
-static const InputDeviceInputInfoStruct IDII[] =
+static const char* SwitchPositions[] =
+{
+ gettext_noop("Waffles 0"),
+ gettext_noop("Oranges 1"),
+ gettext_noop("Monkeys 2"),
+ gettext_noop("Zebra-Z 3"),
+ gettext_noop("Snorkle 4")
+};
+
+static const IDIISG IDII =
 {
  { "toggle_ilace", "Toggle Interlace Mode", 0, IDIT_BUTTON, NULL },
  { "stm", "Select Test Mode", 1, IDIT_BUTTON, NULL },
+ IDIIS_Switch("swt", "Switch Meow", 2, SwitchPositions, sizeof(SwitchPositions) / sizeof(SwitchPositions[0])),
  { "rumble", "RUMBLOOS", -1, IDIT_RUMBLE, NULL },
- { "rcweak", "Rumble Control Weak", 2, IDIT_BUTTON_ANALOG, NULL },
- { "rcstrong", "Rumble Control Strong", 3, IDIT_BUTTON_ANALOG, NULL },
+ { "rcweak", "Rumble Control Weak", 3, IDIT_BUTTON_ANALOG, NULL },
+ { "rcstrong", "Rumble Control Strong", 4, IDIT_BUTTON_ANALOG, NULL },
 };
 
-static InputDeviceInfoStruct InputDeviceInfo[] =
+static std::vector<InputDeviceInfoStruct> InputDeviceInfo =
 {
  {
   "controller",
   "Controller",
   NULL,
-  NULL,
-  sizeof(IDII) / sizeof(InputDeviceInputInfoStruct),
   IDII,
  }
 };
 
-static const InputPortInfoStruct PortInfo[] =
+static const std::vector<InputPortInfoStruct> PortInfo =
 {
- { "builtin", "Built-In", sizeof(InputDeviceInfo) / sizeof(InputDeviceInfoStruct), InputDeviceInfo }
+ { "port1", "Port 1", InputDeviceInfo },
+ { "port2", "Port 2", InputDeviceInfo },
 };
-
-static InputInfoStruct InputInfo =
-{
- sizeof(PortInfo) / sizeof(InputPortInfoStruct),
- PortInfo
-};
-
 }
 
 using namespace MDFN_IEN_DEMO;
@@ -356,24 +415,32 @@ MDFNGI EmulatedDEMO =
  KnownExtensions,
  MODPRIO_INTERNAL_LOW,
  NULL,
- &InputInfo,
+ PortInfo,
  Load,
  TestMagic,
  NULL,
  NULL,
  CloseGame,
+
  NULL, //SetLayerEnableMask,
  NULL, //"Background\0Sprites\0Window\0",
+
  NULL,
  NULL,
+
+ NULL,
+ 0,
+
  NULL, //InstallReadPatch,
  NULL, //RemoveReadPatches,
  NULL,
  NULL, //&CheatFormatInfo,
  false,
- NULL, //StateAction,
+ StateAction,
  Emulate,
+ NULL,
  SetInput,
+ NULL,
  DoSimpleCommand,
  DEMOSettings,
  MDFN_MASTERCLOCK_FIXED(DEMO_MASTER_CLOCK),

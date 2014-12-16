@@ -62,7 +62,7 @@ void UpdatePP(int w, void *data)
  }
 }
 
-static int StateAction(int w, StateMem *sm, int load, int data_only)
+static void StateAction(int w, StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -70,12 +70,13 @@ static int StateAction(int w, StateMem *sm, int load, int data_only)
   SFVAR(pprdata[w]),
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, w ? "INP1" : "INP0");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, w ? "INP1" : "INP0", true);
+
  if(load)
  {
 
  }
- return(ret);
 }
 
 static INPUTC PwrPadCtrl={ReadPP,0,StrobePP,UpdatePP,0,0, StateAction };

@@ -497,21 +497,20 @@ void SubHW_Power(void)
  CommPort[3] = 0xFF;
 }
 
-int SubHW_StateAction(StateMem *sm, int load, int data_only)
+void SubHW_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
- int ret;
-
  SFORMAT VisibleStateRegs[] = 
  {
   SFVAR(HuVisible),
   SFEND
  };
 
- // Since "SubHWV" section is optional, we need to default to not being visible if the section isn't there.
+ // We need to default to not being visible if the section/variable isn't there.
  if(load)
   HuVisible = false;
 
- ret = MDFNSS_StateAction(sm, load, data_only, VisibleStateRegs, "SubHWV", true);
+ if(!load || load >= 0x919)	// Added this section around version 0.9.19-WIP
+  MDFNSS_StateAction(sm, load, data_only, VisibleStateRegs, "SubHWV");
 
  if(HuVisible)
  {
@@ -546,7 +545,8 @@ int SubHW_StateAction(StateMem *sm, int load, int data_only)
   };
   AllocSubHWMem();
 
-  ret &= MDFNSS_StateAction(sm, load, data_only, StateRegs, "SubHW");
+  MDFNSS_StateAction(sm, load, data_only, StateRegs, "SubHW");
+
   if(load)
   {
    C68k_Load_State(&M68K, c68k_state);
@@ -556,9 +556,6 @@ int SubHW_StateAction(StateMem *sm, int load, int data_only)
  {
   FreeSubHWMem();
  }
-
-
- return(ret);
 }
 
 

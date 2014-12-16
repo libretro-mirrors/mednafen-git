@@ -72,7 +72,7 @@ case 0x2000:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)((u32*)&CPU->D + ((Opcode >> 9) & 7))) = res;
+	MDFN_ennsb<u32, true>((u32*)&CPU->D[(Opcode >> 9) & 7], res);
 }
 RET(0)
 case 0x2280:
@@ -632,7 +632,7 @@ case 0x2008:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)((u32*)&CPU->D + ((Opcode >> 9) & 7))) = res;
+	MDFN_ennsb<u32, true>((u32*)&CPU->D[(Opcode >> 9) & 7], res);
 }
 RET(0)
 case 0x2288:
@@ -1194,7 +1194,7 @@ case 0x2010:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)((u32*)&CPU->D + ((Opcode >> 9) & 7))) = res;
+	MDFN_ennsb<u32, true>((u32*)&CPU->D[(Opcode >> 9) & 7], res);
 }
 RET(0)
 case 0x2290:
@@ -1758,7 +1758,7 @@ case 0x2018:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)((u32*)&CPU->D + ((Opcode >> 9) & 7))) = res;
+	MDFN_ennsb<u32, true>((u32*)&CPU->D[(Opcode >> 9) & 7], res);
 }
 RET(0)
 case 0x2298:
@@ -2290,7 +2290,7 @@ case 0x2020:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)((u32*)&CPU->D + ((Opcode >> 9) & 7))) = res;
+	MDFN_ennsb<u32, true>((u32*)&CPU->D[(Opcode >> 9) & 7], res);
 }
 RET(0)
 case 0x22A0:
@@ -2839,7 +2839,7 @@ case 0x2028:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)((u32*)&CPU->D + ((Opcode >> 9) & 7))) = res;
+	MDFN_ennsb<u32, true>((u32*)&CPU->D[(Opcode >> 9) & 7], res);
 }
 RET(0)
 case 0x22A8:
@@ -3430,7 +3430,7 @@ case 0x2030:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)((u32*)&CPU->D + ((Opcode >> 9) & 7))) = res;
+	MDFN_ennsb<u32, true>((u32*)&CPU->D[(Opcode >> 9) & 7], res);
 }
 RET(0)
 case 0x22B0:
@@ -3965,7 +3965,7 @@ case 0x2038:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)((u32*)&CPU->D + ((Opcode >> 9) & 7))) = res;
+	MDFN_ennsb<u32, true>((u32*)&CPU->D[(Opcode >> 9) & 7], res);
 }
 RET(0)
 case 0x22B8:
@@ -4206,7 +4206,7 @@ case 0x2039:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)((u32*)&CPU->D + ((Opcode >> 9) & 7))) = res;
+	MDFN_ennsb<u32, true>((u32*)&CPU->D[(Opcode >> 9) & 7], res);
 }
 RET(0)
 case 0x22B9:
@@ -4447,7 +4447,7 @@ case 0x203A:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)((u32*)&CPU->D + ((Opcode >> 9) & 7))) = res;
+	MDFN_ennsb<u32, true>((u32*)&CPU->D[(Opcode >> 9) & 7], res);
 }
 RET(0)
 case 0x22BA:
@@ -4688,7 +4688,7 @@ case 0x203B:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)((u32*)&CPU->D + ((Opcode >> 9) & 7))) = res;
+	MDFN_ennsb<u32, true>((u32*)&CPU->D[(Opcode >> 9) & 7], res);
 }
 RET(0)
 case 0x22BB:
@@ -4926,7 +4926,7 @@ case 0x203C:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)((u32*)&CPU->D + ((Opcode >> 9) & 7))) = res;
+	MDFN_ennsb<u32, true>((u32*)&CPU->D[(Opcode >> 9) & 7], res);
 }
 RET(8)
 case 0x22BC:
@@ -5153,7 +5153,7 @@ case 0x201F:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)((u32*)&CPU->D + ((Opcode >> 9) & 7))) = res;
+	MDFN_ennsb<u32, true>((u32*)&CPU->D[(Opcode >> 9) & 7], res);
 }
 RET(0)
 case 0x229F:
@@ -5385,7 +5385,7 @@ case 0x2027:
 	CPU->flag_V = 0;
 	CPU->flag_notZ = res;
 	CPU->flag_N = res >> 24;
-	*((u32*)((u32*)&CPU->D + ((Opcode >> 9) & 7))) = res;
+	MDFN_ennsb<u32, true>((u32*)&CPU->D[(Opcode >> 9) & 7], res);
 }
 RET(0)
 case 0x22A7:

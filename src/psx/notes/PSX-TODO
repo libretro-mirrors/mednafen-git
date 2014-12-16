@@ -35,19 +35,11 @@ Nicktoons Racing
 	related to SPU RAM writes?
 
 Resident Evil - Director's Cut(non-Dual Shock-version)
-	Controller configuration screen pops up on some screen transitions; probably one of those stupid seek timing-related issues.
+	Controller configuration screen pops up on some screen transitions; CPU instruction timing issue.
 
 -----------------------------------------------------------------------------------------------
 
 ***Lesser issues***
-
-Final Fantasy 8
-	Reported 3D model(character) flicker at some points in the game - look into it.
-
-Tactics Ogre
-	Menu/Overlay elements on the map screen periodically flicker; seems to be a timing thing probably related to the sound engine
-	in the game.  Although upon further inspection, it may be a GPU command timing issue in that we're emulating the GPU primitive
-	drawing faster than occurs on an actual PS1.  Might require texture cache simulation to some degree.
 
 Castrol Honda Superbike Racing
 	Graphical glitches on startup, menus(fixed now probably), and loading screens.  (What is with all
@@ -91,6 +83,9 @@ Next Tetris, The
 	Extremely sensitive about interlacing semantics, especially in regards to the high bit of the GPU status register when entering
 	interlaced 480-height mode.
 
+X-Men Mutant Academy
+	Sensitive to interlacing semantics and timing.
+
 Ballblazer Champions
 	Excessively sensitive to timing issues; might lock up during startup sometimes.
 
@@ -131,12 +126,25 @@ Nightmare Creatures
 Wing Commander 4
 	Used to lock up sometimes during FMV sequences(might be sensitive to seek delays or SPU IRQ timings).
 
+Capcom games(MMX4, MMX5, etc)
+	Sensitive about CD access and XA ADPCM timing(XA ADPCM early cutoff problems in early versions of Mednafen's PS1 emulation).
+
+Viewpoint
+	Extra-sensitive about GPU LL DMA timing.  (It was generating exceptions for some timings...)
+
+Valkyrie Profile
+	Battle scenes will go all kaka with no graphics updates if GPU LL DMA completes too soon.
+
+Pro Pinball (series)
+	Sensitive to correct interlace and draw line skipping emulation.
+
+Dukes of Hazzard: Racing For Home
+	Sensitive about the GPU busy status flag being set long enough; double-check if we ever make CPU emulation 
+	more timing-accurate(the fix will likely just involve reducing the timing granularity for DMA and GPU updates).
+
 -----------------------------------------------------------------------------------------------
 
-Star Wars Dark Forces notes(for working towards removing a kludge/hack in the DMA IRQ handling)
-	PC=0x8001B124:	[DMA] Write: 1f8010f4 008a0000, DMAIntStatus=0000000c
-	     if(V == 0x008a0000 && DMAIntStatus == 0x0000000c)
-		DBG_Break(); // V |= 8 << 24; //V |= 4 << 24;
+Audit GTE instruction cycle counts.
 
 Add a means of grabbing and passing CIRC data, when using a physical CD, from Mednafen core to the PSX module so that the correct
 subheader fields can be chosen when there is a mismatch between the two instances of each field during XA ADPCM playback.
@@ -159,17 +167,7 @@ Test IRQ with LWC2.
 
 Test IRQ with COP0 instructions(interrupted execution or not?).
 
-Determine maximum quad height and width.  See if drawing is an all-or-nothing thing, or if one triangle of the pair will still be drawn
-if it's not too large.
-
-Test 0x0 and 1x1 polygon throughput for all triangle and quad drawing commands.
-
-Fix line drawing algorithm to match test results on the real thing.
-
-
 The SPU in the PS1 might sometimes drop voice-on events when playing an ADPCM block that loops to itself(and was also the first and only
 ADPCM block, at least in the test program I noticed the issue in); investigate further.
-
-
 
 Make sure debugger COPn disassembly is correct(no typos or whatnot).

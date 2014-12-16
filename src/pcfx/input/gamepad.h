@@ -1,9 +1,9 @@
 #ifndef __PCFX_INPUT_GAMEPAD_H
 #define __PCFX_INPUT_GAMEPAD_H
 
-extern const InputDeviceInputInfoStruct PCFX_GamepadIDII[0xF];
-extern const InputDeviceInputInfoStruct PCFX_GamepadIDII_DSR[0xF];
+extern const IDIISG PCFX_GamepadIDII;
+extern const IDIISG PCFX_GamepadIDII_DSR;
 
-PCFX_Input_Device *PCFXINPUT_MakeGamepad(int which);
+PCFX_Input_Device *PCFXINPUT_MakeGamepad(void);
 
 #endif

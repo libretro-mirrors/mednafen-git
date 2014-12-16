@@ -45,17 +45,9 @@
 #ifndef RAM_H
 #define RAM_H
 
-#define RAM_SIZE				65536
-#define RAM_ADDR_MASK			0xffff
+#define RAM_SIZE		65536
+#define RAM_ADDR_MASK		0xffff
 #define DEFAULT_RAM_CONTENTS	0xff
-
-struct HOME_HEADER
-{
-   uint16   jump;
-   uint16   load_address;
-   uint16   size;
-   uint8   magic[4];
-};
 
 class CRam : public CLynxBase
 {
@@ -63,8 +55,11 @@ class CRam : public CLynxBase
 	// Function members
 
 	public:
-		CRam(const uint8 *filememory,uint32 filesize) MDFN_COLD;
+		enum { HEADER_RAW_SIZE = 10 };
+
+		CRam(Stream* fp) MDFN_COLD;
 		~CRam() MDFN_COLD;
+		static bool TestMagic(const uint8* data, uint64 test_size) MDFN_COLD;
 
 	public:
 
@@ -77,13 +72,14 @@ class CRam : public CLynxBase
 		uint32   ObjectSize(void) {return RAM_SIZE;};
 		uint8*	GetRamPointer(void) { return mRamData; };
 
+		uint8	MD5[16];
+		uint32	InfoRAMSize;
 	// Data members
 
 	private:
 		uint8	mRamData[RAM_SIZE];
-		uint8	*mFileData;
-		uint32	mFileSize;
-
+		std::unique_ptr<uint8[]> mRamXORData;
+		uint16 boot_addr;
 };
 
 #endif

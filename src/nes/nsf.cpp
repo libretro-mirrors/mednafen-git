@@ -31,10 +31,20 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-static uint8 SongReload;
+int NSFVRC6_Init(EXPSOUND *, bool MultiChip);
+int NSFMMC5_Init(EXPSOUND *, bool MultiChip);
+int NSFAY_Init(EXPSOUND *, bool MultiChip);
+int NSFN106_Init(EXPSOUND *, bool MultiChip);
+int NSFVRC7_Init(EXPSOUND *, bool MultiChip);
+
+namespace MDFN_IEN_NES
+{
+
+int NSFFDS_Init(EXPSOUND *, bool MultiChip);
 
 static DECLFW(NSF_write);
 static DECLFR(NSF_read);
+static void NSF_init(void);
 
 static NSFINFO *NSFInfo;
 typedef std::vector<writefunc> NSFWriteEntry;
@@ -71,24 +81,25 @@ static DECLFR(NSFROMRead)
  return (NSFROM-0x3800)[A];
 }
 
-static int doreset=0;
-static int NSFNMIFlags;
 static uint8 BSon;
 
-static uint8 *ExWRAM=0;
+static uint8 SongReload;
+static bool doreset = false;
+static int NSFNMIFlags;
+static uint8 *ExWRAM = NULL;
 
 static void FreeNSF(void)
 {
  if(NSFInfo)
  {
-  if(NSFInfo->GameName) free(NSFInfo->GameName);
-  if(NSFInfo->Artist) free(NSFInfo->Artist);
-  if(NSFInfo->Copyright) free(NSFInfo->Copyright);
-  if(NSFInfo->Ripper) free(NSFInfo->Ripper);
-  if(NSFInfo->NSFDATA) free(NSFInfo->NSFDATA);
-  if(ExWRAM) { free(ExWRAM); ExWRAM = NULL; }
-  free(NSFInfo);
+  delete NSFInfo;
   NSFInfo = NULL;
+ }
+
+ if(ExWRAM)
+ {
+  free(ExWRAM);
+  ExWRAM = NULL;
  }
 
  if(WriteHandlers)
@@ -98,7 +109,7 @@ static void FreeNSF(void)
  }
 }
 
-static void NSF_Close(void)
+static void NSF_Kill(void)
 {
  FreeNSF();
 }
@@ -113,6 +124,29 @@ static void NSF_Power(void)
  NSF_init();
 }
 
+static void NSF_StateAction(StateMem *sm, const unsigned load, const bool data_only)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(SongReload),
+  SFVAR(doreset),
+  SFVAR(NSFNMIFlags),
+  SFARRAY(ExWRAM, ((NSFInfo->SoundChip&4) ? (32768+8192) : 8192)),
+
+  SFVAR(NSFInfo->CurrentSong),
+
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "NSF");
+
+ if(load)
+ {
+  NSFInfo->CurrentSong %= NSFInfo->TotalSongs;
+ }
+}
+
+
 // First 32KB is reserved for sound chip emulation in the iNES mapper code.
 
 static INLINE void BANKSET(uint32 A, uint32 bank)
@@ -124,40 +158,40 @@ static INLINE void BANKSET(uint32 A, uint32 bank)
   setprg4(A,bank);
 }
 
-int LoadNSF(MDFNFILE *fp)
+static void LoadNSF(Stream *fp)
 {
  NSF_HEADER NSFHeader;
 
- fp->rewind();
- fp->fread(&NSFHeader, 1, 0x80);
+ fp->read(&NSFHeader, 0x80);
 
  // NULL-terminate strings just in case.
  NSFHeader.GameName[31] = NSFHeader.Artist[31] = NSFHeader.Copyright[31] = 0;
 
- NSFInfo->GameName = MDFN_RemoveControlChars(strdup((char *)NSFHeader.GameName));
- NSFInfo->Artist = MDFN_RemoveControlChars(strdup((char *)NSFHeader.Artist));
- NSFInfo->Copyright = MDFN_RemoveControlChars(strdup((char *)NSFHeader.Copyright));
+ NSFInfo->GameName = std::string(MDFN_RemoveControlChars((char *)NSFHeader.GameName));
+ NSFInfo->Artist = std::string(MDFN_RemoveControlChars((char *)NSFHeader.Artist));
+ NSFInfo->Copyright = std::string(MDFN_RemoveControlChars((char *)NSFHeader.Copyright));
 
- MDFN_trim((char*)NSFInfo->GameName);
- MDFN_trim((char*)NSFInfo->Artist);
- MDFN_trim((char*)NSFInfo->Copyright);
+ MDFN_trim(NSFInfo->GameName);
+ MDFN_trim(NSFInfo->Artist);
+ MDFN_trim(NSFInfo->Copyright);
 
  NSFInfo->LoadAddr = NSFHeader.LoadAddressLow | (NSFHeader.LoadAddressHigh << 8);
  NSFInfo->InitAddr = NSFHeader.InitAddressLow | (NSFHeader.InitAddressHigh << 8);
  NSFInfo->PlayAddr = NSFHeader.PlayAddressLow | (NSFHeader.PlayAddressHigh << 8);
 
- NSFInfo->NSFSize = fp->Size() - 0x80;
+ uint64 tmp_size = fp->size() - 0x80;
+ if(tmp_size > 16 * 1024 * 1024)
+  throw MDFN_Error(0, _("NSF is too large."));
+
+ NSFInfo->NSFSize = tmp_size;
 
  NSFInfo->NSFMaxBank = ((NSFInfo->NSFSize+(NSFInfo->LoadAddr&0xfff)+4095)/4096);
  NSFInfo->NSFMaxBank = round_up_pow2(NSFInfo->NSFMaxBank);
 
- if(!(NSFInfo->NSFDATA=(uint8 *)MDFN_malloc(NSFInfo->NSFMaxBank*4096, _("NSF data"))))
-  return 0;
-
- fp->fseek(0x80, SEEK_SET);
+ NSFInfo->NSFDATA=(uint8 *)MDFN_malloc_T(NSFInfo->NSFMaxBank*4096, _("NSF data"));
 
  memset(NSFInfo->NSFDATA, 0x00, NSFInfo->NSFMaxBank*4096);
- fp->fread(NSFInfo->NSFDATA+(NSFInfo->LoadAddr&0xfff), 1, NSFInfo->NSFSize);
+ fp->read(NSFInfo->NSFDATA+(NSFInfo->LoadAddr&0xfff), NSFInfo->NSFSize);
  
  NSFInfo->NSFMaxBank--;
 
@@ -170,154 +204,124 @@ int LoadNSF(MDFNFILE *fp)
 
  NSFInfo->StartingSong = NSFHeader.StartingSong - 1;
  memcpy(NSFInfo->BankSwitch, NSFHeader.BankSwitch, 8);
-
- return(1);
 }
 
 
 bool NSF_TestMagic(MDFNFILE *fp)
 {
- if(fp->size < 5)
-  return(FALSE);
+ uint8 magic[5];
 
- if(memcmp(fp->data, "NESM\x1a", 5) && memcmp(fp->data, "NSFE", 4))
-  return(FALSE);
+ if(fp->read(magic, 5, false) != 5 || (memcmp(magic, "NESM\x1a", 5) && memcmp(magic, "NSFE", 4)))
+  return false;
 
- return(TRUE);
+ return true;
 } 
 
-bool NSFLoad(MDFNFILE *fp, NESGameType *gt)
+void NSFLoad(Stream *fp, NESGameType *gt)
 {
- char magic[5];
- int x;
-
- if(!(NSFInfo = (NSFINFO *)MDFN_malloc(sizeof(NSFINFO), _("NSF header"))))
+ try
  {
-  return(0);
- }
- memset(NSFInfo, 0, sizeof(NSFINFO));
+  char magic[5];
+  int x;
 
- fp->rewind();
- fp->fread(magic, 1, 5);
+  NSFInfo = new NSFINFO();
 
- if(!memcmp(magic, "NESM\x1a", 5))
- {
-  if(!LoadNSF(fp))
+  fp->rewind();
+  fp->read(magic, 5);
+
+  if(!memcmp(magic, "NESM\x1a", 5))
   {
-   FreeNSF();
-   return(0);
+   fp->rewind();
+   LoadNSF(fp);
   }
- }
- else if(!memcmp(magic, "NSFE", 4))
- {
-  try
+  else if(!memcmp(magic, "NSFE", 4))
   {
-   LoadNSFE(NSFInfo, fp->data, fp->Size(), 0);
+   fp->rewind();
+   LoadNSFE(NSFInfo, fp, 0);
   }
-  catch(std::exception &e)
+
+  if(NSFInfo->LoadAddr < 0x6000)
+   throw MDFN_Error(0, _("Load address is invalid!"));
+
+  if(NSFInfo->TotalSongs < 1)
+   throw MDFN_Error(0, _("Total number of songs is less than 1!"));
+
+  BSon = 0;
+  for(x=0;x<8;x++)
+   BSon |= NSFInfo->BankSwitch[x];
+
+  MDFNGameInfo->GameType = GMT_PLAYER;
+
+  if(NSFInfo->GameName.size())
+   MDFNGameInfo->name = strdup(NSFInfo->GameName.c_str());
+
+  for(x=0;;x++)
   {
-   FreeNSF();
-   MDFN_PrintError("%s", e.what());
-   return(0);
-  }
- }
- else
- {
-  FreeNSF();
-  return(FALSE);
- }
-
- if(NSFInfo->LoadAddr < 0x6000)
- {
-  MDFNI_printf(_("Load address is invalid!"));
-  FreeNSF();
-  return(0);
- }
-
- if(NSFInfo->TotalSongs < 1)
- {
-  MDFNI_printf(_("Total number of songs is less than 1!"));
-  FreeNSF();
-  return(0);
- }
-
- BSon = 0;
- for(x=0;x<8;x++)
-  BSon |= NSFInfo->BankSwitch[x];
-
- MDFNGameInfo->GameType = GMT_PLAYER;
-
- if(NSFInfo->GameName)
-  MDFNGameInfo->name = (UTF8*)strdup((char*)NSFInfo->GameName);
-
- for(x=0;;x++)
- {
-  if(NSFROM[x]==0x20)
-  {
-   NSFROM[x+1]=NSFInfo->InitAddr&0xFF;
-   NSFROM[x+2]=NSFInfo->InitAddr>>8;
-   NSFROM[x+8]=NSFInfo->PlayAddr&0xFF;
-   NSFROM[x+9]=NSFInfo->PlayAddr>>8;
-   break;
-  }
- }
-
- if(NSFInfo->VideoSystem == 0)
-  MDFNGameInfo->VideoSystem = VIDSYS_NTSC;
- else if(NSFInfo->VideoSystem == 1)
-  MDFNGameInfo->VideoSystem = VIDSYS_PAL;
-
- MDFN_printf(_("NSF Loaded.  File information:\n\n"));
- MDFN_indent(1);
- if(NSFInfo->GameName)
-  MDFN_printf(_("Game/Album Name:\t%s\n"), NSFInfo->GameName);
- if(NSFInfo->Artist)
-  MDFN_printf(_("Music Artist:\t%s\n"), NSFInfo->Artist);
- if(NSFInfo->Copyright)
-  MDFN_printf(_("Copyright:\t\t%s\n"), NSFInfo->Copyright);
- if(NSFInfo->Ripper)
-  MDFN_printf(_("Ripper:\t\t%s\n"), NSFInfo->Ripper);
-
- if(NSFInfo->SoundChip)
- {
-  static const char *tab[6]={"Konami VRCVI","Konami VRCVII","Nintendo FDS","Nintendo MMC5","Namco 106","Sunsoft FME-07"};
-
-  for(x=0;x<6;x++)
-   if(NSFInfo->SoundChip&(1<<x))
+   if(NSFROM[x]==0x20)
    {
-    MDFN_printf(_("Expansion hardware:  %s\n"), tab[x]);
-    //NSFInfo->SoundChip=1<<x;	/* Prevent confusing weirdness if more than one bit is set. */
-    //break;
+    NSFROM[x+1]=NSFInfo->InitAddr&0xFF;
+    NSFROM[x+2]=NSFInfo->InitAddr>>8;
+    NSFROM[x+8]=NSFInfo->PlayAddr&0xFF;
+    NSFROM[x+9]=NSFInfo->PlayAddr>>8;
+    break;
    }
+  }
+
+  if(NSFInfo->VideoSystem == 0)
+   MDFNGameInfo->VideoSystem = VIDSYS_NTSC;
+  else if(NSFInfo->VideoSystem == 1)
+   MDFNGameInfo->VideoSystem = VIDSYS_PAL;
+
+  MDFN_printf(_("NSF Loaded.  File information:\n\n"));
+  MDFN_indent(1);
+  if(NSFInfo->GameName.size())
+   MDFN_printf(_("Game/Album Name:\t%s\n"), NSFInfo->GameName.c_str());
+  if(NSFInfo->Artist.size())
+   MDFN_printf(_("Music Artist:\t%s\n"), NSFInfo->Artist.c_str());
+  if(NSFInfo->Copyright.size())
+   MDFN_printf(_("Copyright:\t\t%s\n"), NSFInfo->Copyright.c_str());
+  if(NSFInfo->Ripper.size())
+   MDFN_printf(_("Ripper:\t\t%s\n"), NSFInfo->Ripper.c_str());
+
+  if(NSFInfo->SoundChip)
+  {
+   static const char *tab[6]={"Konami VRCVI","Konami VRCVII","Nintendo FDS","Nintendo MMC5","Namco 106","Sunsoft FME-07"};
+
+   for(x=0;x<6;x++)
+    if(NSFInfo->SoundChip&(1<<x))
+    {
+     MDFN_printf(_("Expansion hardware:  %s\n"), tab[x]);
+     //NSFInfo->SoundChip=1<<x;	/* Prevent confusing weirdness if more than one bit is set. */
+     //break;
+    }
+  }
+
+  if(BSon)
+   MDFN_printf(_("Bank-switched\n"));
+  MDFN_printf(_("Load address:  $%04x\nInit address:  $%04x\nPlay address:  $%04x\n"),NSFInfo->LoadAddr,NSFInfo->InitAddr,NSFInfo->PlayAddr);
+  MDFN_printf("%s\n",(NSFInfo->VideoSystem&1)?"PAL":"NTSC");
+  MDFN_printf(_("Starting song:  %d / %d\n\n"),NSFInfo->StartingSong + 1,NSFInfo->TotalSongs);
+
+  if(NSFInfo->SoundChip&4)
+   ExWRAM=(uint8 *)MDFN_malloc_T(32768+8192, _("NSF expansion RAM"));
+  else
+   ExWRAM=(uint8 *)MDFN_malloc_T(8192, _("NSF expansion RAM"));
+
+  MDFN_indent(-1);
+
+  gt->Power = NSF_Power;
+  gt->Reset = NSF_Reset;
+  gt->SaveNV = NULL;
+  gt->Kill = NSF_Kill;
+  gt->StateAction = NSF_StateAction;
+
+  Player_Init(NSFInfo->TotalSongs, NSFInfo->GameName, NSFInfo->Artist, NSFInfo->Copyright, NSFInfo->SongNames);
  }
- if(BSon)
-  MDFN_printf(_("Bank-switched\n"));
- MDFN_printf(_("Load address:  $%04x\nInit address:  $%04x\nPlay address:  $%04x\n"),NSFInfo->LoadAddr,NSFInfo->InitAddr,NSFInfo->PlayAddr);
- MDFN_printf("%s\n",(NSFInfo->VideoSystem&1)?"PAL":"NTSC");
- MDFN_printf(_("Starting song:  %d / %d\n\n"),NSFInfo->StartingSong + 1,NSFInfo->TotalSongs);
-
- if(NSFInfo->SoundChip&4)
-  ExWRAM=(uint8 *)MDFN_malloc(32768+8192, _("NSF expansion RAM"));
- else
-  ExWRAM=(uint8 *)MDFN_malloc(8192, _("NSF expansion RAM"));
-
- MDFN_indent(-1);
-
- if(!ExWRAM)
+ catch(...)
  {
-  return(0);
+  FreeNSF();
+  throw;
  }
-
-
- gt->Power = NSF_Power;
- gt->Reset = NSF_Reset;
- gt->Close = NSF_Close;
-
- Player_Init(NSFInfo->TotalSongs, NSFInfo->GameName ? NSFInfo->GameName : "",
-				  NSFInfo->Artist ? NSFInfo->Artist : "",
-				  NSFInfo->Copyright ? NSFInfo->Copyright : "",
-				  NSFInfo->SongNames);
- return 1;
 }
 
 static DECLFR(NSFVectorRead)
@@ -327,7 +331,7 @@ static DECLFR(NSFVectorRead)
   if(A==0xFFFA) return(0x00);
   else if(A==0xFFFB) return(0x38);
   else if(A==0xFFFC) return(0x20);
-  else if(A==0xFFFD) {doreset=0;return(0x38);}
+  else if(A==0xFFFD) { doreset = false; return(0x38); }
   return(X.DB);
  }
  else
@@ -351,16 +355,9 @@ static DECLFW(NSFECWriteHandler)
 
 }
 
-int NSFFDS_Init(EXPSOUND *, bool MultiChip);
-int NSFVRC6_Init(EXPSOUND *, bool MultiChip);
-int NSFMMC5_Init(EXPSOUND *, bool MultiChip);
-int NSFAY_Init(EXPSOUND *, bool MultiChip);
-int NSFN106_Init(EXPSOUND *, bool MultiChip);
-int NSFVRC7_Init(EXPSOUND *, bool MultiChip);
-
-void NSF_init(void)
+static void NSF_init(void)
 {
-  doreset = 1;
+  doreset = true;
 
   WriteHandlers = new NSFWriteEntry[0x10000];
 
@@ -421,12 +418,12 @@ void NSF_init(void)
   int (*InitPointers[8])(EXPSOUND *, bool MultiChip) = { NSFVRC6_Init, NSFVRC7_Init, NSFFDS_Init, NSFMMC5_Init, NSFN106_Init, NSFAY_Init, NULL, NULL };
 
   for(int x = 0; x < 8; x++)
-   if((NSFInfo->SoundChip & (1 << x)) && InitPointers[x])
+   if((NSFInfo->SoundChip & (1U << x)) && InitPointers[x])
    {
     EXPSOUND TmpExpSound;
     memset(&TmpExpSound, 0, sizeof(TmpExpSound));
 
-    InitPointers[x](&TmpExpSound, NSFInfo->SoundChip != (1 << x));
+    InitPointers[x](&TmpExpSound, NSFInfo->SoundChip != (1U << x));
     GameExpSound.push_back(TmpExpSound);
    }
 
@@ -520,34 +517,42 @@ void DoNSFFrame(void)
   tmp=MDFN_GetJoyJoy();
   if((tmp&JOY_RIGHT) && !(last&JOY_RIGHT))
   {
-   if(NSFInfo->CurrentSong<(NSFInfo->TotalSongs - 1))
+   if(NSFInfo->CurrentSong < (NSFInfo->TotalSongs - 1))
    {
     NSFInfo->CurrentSong++;
-    SongReload=0xFF;
+    SongReload = 0xFF;
    }
   }
   else if((tmp&JOY_LEFT) && !(last&JOY_LEFT))
   {
-   if(NSFInfo->CurrentSong>0)
+   if(NSFInfo->CurrentSong > 0)
    {
     NSFInfo->CurrentSong--;
-    SongReload=0xFF;
+    SongReload = 0xFF;
    }
   }
   else if((tmp&JOY_UP) && !(last&JOY_UP))
   {
-   NSFInfo->CurrentSong+=10;
-   if(NSFInfo->CurrentSong>=NSFInfo->TotalSongs) NSFInfo->CurrentSong=NSFInfo->TotalSongs - 1;
-   SongReload=0xFF;
+   unsigned ns = NSFInfo->CurrentSong + std::min<unsigned>(NSFInfo->TotalSongs - 1 - NSFInfo->CurrentSong, 10);
+
+   if(NSFInfo->CurrentSong != ns)
+   {
+    NSFInfo->CurrentSong = ns;
+    SongReload = 0xFF;
+   }
   }
   else if((tmp&JOY_DOWN) && !(last&JOY_DOWN))
   {
-   NSFInfo->CurrentSong-=10;
-   if(NSFInfo->CurrentSong<0) NSFInfo->CurrentSong=0;
-   SongReload=0xFF;
+   unsigned ns = NSFInfo->CurrentSong - std::min<unsigned>(NSFInfo->CurrentSong, 10);
+
+   if(NSFInfo->CurrentSong != ns)
+   {
+    NSFInfo->CurrentSong = ns;
+    SongReload = 0xFF;
+   }
   }
   else if((tmp&JOY_START) && !(last&JOY_START))
-   SongReload=0xFF;
+   SongReload = 0xFF;
   else if((tmp&JOY_A) && !(last&JOY_A))
   {
 
@@ -561,3 +566,4 @@ void MDFNNES_DrawNSF(MDFN_Surface *surface, MDFN_Rect *DisplayRect, int16 *sampl
  Player_Draw(surface, DisplayRect, NSFInfo->CurrentSong, samples, scount);
 }
 
+}

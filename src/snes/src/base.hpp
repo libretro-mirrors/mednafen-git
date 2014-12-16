@@ -20,9 +20,7 @@ static const unsigned bsnesSerializerVersion = 4;
 #include <nall/array.hpp>
 #include <nall/bit.hpp>
 #include <nall/detect.hpp>
-#include <nall/dl.hpp>
 #include <nall/endian.hpp>
-#include <nall/file.hpp>
 #include <nall/function.hpp>
 #include <nall/moduloarray.hpp>
 #include <nall/platform.hpp>
@@ -30,7 +28,6 @@ static const unsigned bsnesSerializerVersion = 4;
 #include <nall/property.hpp>
 #include <nall/serializer.hpp>
 #include <nall/stdint.hpp>
-#include <nall/string.hpp>
 #include <nall/utility.hpp>
 #include <nall/vector.hpp>
 

@@ -22,25 +22,25 @@
 namespace MDFN_IEN_PSX
 {
 
-class InputDevice_GunCon : public InputDevice
+class InputDevice_GunCon final : public InputDevice
 {
  public:
 
  InputDevice_GunCon(void);
- virtual ~InputDevice_GunCon();
+ virtual ~InputDevice_GunCon() override;
 
- virtual void Power(void);
- virtual int StateAction(StateMem* sm, int load, int data_only, const char* section_name);
- virtual void UpdateInput(const void *data);
- virtual bool RequireNoFrameskip(void);
- virtual pscpu_timestamp_t GPULineHook(const pscpu_timestamp_t line_timestamp, bool vsync, uint32 *pixels, const MDFN_PixelFormat* const format, const unsigned width, const unsigned pix_clock_offset, const unsigned pix_clock, const unsigned pix_clock_divider);
+ virtual void Power(void) override;
+ virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
+ virtual void UpdateInput(const void *data) override;
+ virtual bool RequireNoFrameskip(void) override;
+ virtual pscpu_timestamp_t GPULineHook(const pscpu_timestamp_t line_timestamp, bool vsync, uint32 *pixels, const MDFN_PixelFormat* const format, const unsigned width, const unsigned pix_clock_offset, const unsigned pix_clock, const unsigned pix_clock_divider) override;
 
  //
  //
  //
- virtual void SetDTR(bool new_dtr);
- virtual bool GetDSR(void);
- virtual bool Clock(bool TxD, int32 &dsr_pulse_delay);
+ virtual void SetDTR(bool new_dtr) override;
+ virtual bool GetDSR(void) override;
+ virtual bool Clock(bool TxD, int32 &dsr_pulse_delay) override;
 
  private:
 
@@ -114,7 +114,7 @@ void InputDevice_GunCon::Power(void)
  line_counter = 0;
 }
 
-int InputDevice_GunCon::StateAction(StateMem* sm, int load, int data_only, const char* section_name)
+void InputDevice_GunCon::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix)
 {
  SFORMAT StateRegs[] =
  {
@@ -146,9 +146,12 @@ int InputDevice_GunCon::StateAction(StateMem* sm, int load, int data_only, const
 
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name);
+ char section_name[32];
+ trio_snprintf(section_name, sizeof(section_name), "%s_GunCon", sname_prefix);
 
- if(load)
+ if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
+  Power();
+ else if(load)
  {
   if((transmit_pos + transmit_count) > sizeof(transmit_buffer))
   {
@@ -156,8 +159,6 @@ int InputDevice_GunCon::StateAction(StateMem* sm, int load, int data_only, const
    transmit_count = 0;
   }
  }
-
- return(ret);
 }
 
 
@@ -365,7 +366,7 @@ InputDevice *Device_GunCon_Create(void)
 }
 
 
-InputDeviceInputInfoStruct Device_GunCon_IDII[6] =
+IDIISG Device_GunCon_IDII =
 {
  { "x_axis", "X Axis", -1, IDIT_X_AXIS },
  { "y_axis", "Y Axis", -1, IDIT_Y_AXIS },

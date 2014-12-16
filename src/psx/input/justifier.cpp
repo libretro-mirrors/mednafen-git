@@ -22,25 +22,25 @@
 namespace MDFN_IEN_PSX
 {
 
-class InputDevice_Justifier : public InputDevice
+class InputDevice_Justifier final : public InputDevice
 {
  public:
 
  InputDevice_Justifier(void);
- virtual ~InputDevice_Justifier();
+ virtual ~InputDevice_Justifier() override;
 
- virtual void Power(void);
- virtual int StateAction(StateMem* sm, int load, int data_only, const char* section_name);
- virtual void UpdateInput(const void *data);
- virtual bool RequireNoFrameskip(void);
- virtual pscpu_timestamp_t GPULineHook(const pscpu_timestamp_t timestamp, bool vsync, uint32 *pixels, const MDFN_PixelFormat* const format, const unsigned width, const unsigned pix_clock_offset, const unsigned pix_clock, const unsigned pix_clock_divider);
+ virtual void Power(void) override;
+ virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
+ virtual void UpdateInput(const void *data) override;
+ virtual bool RequireNoFrameskip(void) override;
+ virtual pscpu_timestamp_t GPULineHook(const pscpu_timestamp_t timestamp, bool vsync, uint32 *pixels, const MDFN_PixelFormat* const format, const unsigned width, const unsigned pix_clock_offset, const unsigned pix_clock, const unsigned pix_clock_divider) override;
 
  //
  //
  //
- virtual void SetDTR(bool new_dtr);
- virtual bool GetDSR(void);
- virtual bool Clock(bool TxD, int32 &dsr_pulse_delay);
+ virtual void SetDTR(bool new_dtr) override;
+ virtual bool GetDSR(void) override;
+ virtual bool Clock(bool TxD, int32 &dsr_pulse_delay) override;
 
  private:
 
@@ -135,7 +135,7 @@ void InputDevice_Justifier::UpdateInput(const void *data)
  prev_oss = d8[4] & 0x8;
 }
 
-int InputDevice_Justifier::StateAction(StateMem* sm, int load, int data_only, const char* section_name)
+void InputDevice_Justifier::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix)
 {
  SFORMAT StateRegs[] =
  {
@@ -167,9 +167,12 @@ int InputDevice_Justifier::StateAction(StateMem* sm, int load, int data_only, co
 
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name);
+ char section_name[32];
+ trio_snprintf(section_name, sizeof(section_name), "%s_Justifier", sname_prefix);
 
- if(load)
+ if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
+  Power();
+ else if(load)
  {
   if((transmit_pos + transmit_count) > sizeof(transmit_buffer))
   {
@@ -177,8 +180,6 @@ int InputDevice_Justifier::StateAction(StateMem* sm, int load, int data_only, co
    transmit_count = 0;
   }
  }
-
- return(ret);
 }
 
 
@@ -208,15 +209,22 @@ pscpu_timestamp_t InputDevice_Justifier::GPULineHook(const pscpu_timestamp_t tim
   //if(gxa < 0 && gx >= 0)
   // gxa = 0;
 
-  if(!os_shot_counter && need_hit_detect && gxa >= 0 && gxa < (int)width && line_counter >= (avs + gy - 1) && line_counter <= (avs + gy + 1))
+  if(!os_shot_counter && need_hit_detect)
   {
-   int r, g, b, a;
-
-   format->DecodeColor(pixels[gxa], r, g, b, a);
-
-   if((r + g + b) >= 0x40)	// Wrong, but not COMPLETELY ABSOLUTELY wrong, at least. ;)
+   for(int32 ix = gxa; ix < (gxa + (int32)(pix_clock / 762925)); ix++)
    {
-    ret = timestamp + (int64)(gxa + pix_clock_offset) * (44100 * 768) / pix_clock - 177;
+    if(ix >= 0 && ix < (int)width && line_counter >= (avs + gy - 6) && line_counter <= (avs + gy + 6))
+    {
+     int r, g, b, a;
+
+     format->DecodeColor(pixels[ix], r, g, b, a);
+
+     if((r + g + b) >= 0x40)	// Wrong, but not COMPLETELY ABSOLUTELY wrong, at least. ;)
+     {
+      ret = timestamp + (int64)(ix + pix_clock_offset) * (44100 * 768) / pix_clock - 177;
+      break;
+     }
+    }
    }
   }
 
@@ -363,7 +371,7 @@ InputDevice *Device_Justifier_Create(void)
 }
 
 
-InputDeviceInputInfoStruct Device_Justifier_IDII[6] =
+IDIISG Device_Justifier_IDII =
 {
  { "x_axis", "X Axis", -1, IDIT_X_AXIS },
  { "y_axis", "Y Axis", -1, IDIT_Y_AXIS },

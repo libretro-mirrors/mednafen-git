@@ -39,7 +39,7 @@ meow	+=	src/smp/smp.cpp
 ### dsp ###
 ###########
 
-meow	+=	src/dsp/sdsp/sdsp.cpp
+meow	+=	src/sdsp/sdsp.cpp
 
 ###########
 ### ppu ###
@@ -64,13 +64,9 @@ meow	+=	src/chip/dsp1/dsp1.cpp src/chip/dsp2/dsp2.cpp src/chip/dsp3/dsp3.cpp src
 
 meow	+=	src/chip/obc1/obc1.cpp
 
-meow	+=	src/chip/st010/st010.cpp src/chip/st011/st011.cpp src/chip/st018/st018.cpp
+meow	+=	src/chip/st010/st010.cpp
 
 meow	+=	src/chip/superfx/superfx.cpp
-
-meow	+=	src/chip/supergameboy/supergameboy.cpp
-
-meow	+=	src/chip/21fx/21fx.cpp
 
 libsnes_a_SOURCES	=	$(meow)
 

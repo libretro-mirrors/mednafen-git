@@ -249,7 +249,6 @@ static INLINE uint8 RdOp(unsigned int A)
 /*  All of the freaky arithmetic operations. */
 #define AND        HU_A&=x;X_ZN(HU_A);
 
-// FIXME:
 #define BIT        HU_P&=~V_FLAG; X_ZN_BIT(x & HU_A, x); HU_P |= x & V_FLAG;
 #define EOR        HU_A^=x;X_ZN(HU_A);
 #define ORA        HU_A|=x;X_ZN(HU_A);
@@ -324,7 +323,6 @@ static INLINE uint8 RdOp(unsigned int A)
 #define RMB(bitto)	x &= ~(1 << (bitto & 7))
 #define SMB(bitto)	x |= 1 << (bitto & 7)
 
-// FIXME
 #define TSB   { HU_P &= ~V_FLAG; X_ZN_BIT(x | HU_A, x); HU_P |= x & V_FLAG; x |= HU_A; }
 #define TRB     { HU_P &= ~V_FLAG; X_ZN_BIT(x & ~HU_A, x); HU_P |= x & V_FLAG; x &= ~HU_A; }
 #define TST	{ HU_P &= ~V_FLAG; X_ZN_BIT(x & zoomhack, x); HU_P |= x & V_FLAG; }

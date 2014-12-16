@@ -32,9 +32,11 @@
 #include "map_yase.h"
 
 #include "../header.h"
-#include <mednafen/md5.h>
+#include <mednafen/hash/md5.h>
 #include <mednafen/general.h>
 #include <ctype.h>
+
+#include <zlib.h>
 
 static MD_Cart_Type *cart_hardware = NULL;
 static uint8 *cart_rom = NULL;
@@ -275,6 +277,8 @@ static game_db_t GamesDB[] =
  /*
  **  Header region corrections
  */
+ // Gods (Europe)
+ { "T-119036-50", 0, 0, NULL, 0, 0, 0, REGIONMASK_OVERSEAS_PAL },
 /*
  REGIONMASK_JAPAN_NTSC = 1,
  REGIONMASK_JAPAN_PAL = 2,
@@ -326,22 +330,21 @@ static BoardHandler_t BoardHandlers[] =
 
 bool MDCart_TestMagic(MDFNFILE *fp)
 {
- if(fp->size < 512)
-  return(FALSE);
-
- //if((fp->size & 512) && fp->data[0x01] == 0x03 && fp->data[0x08] == 0xAA && fp->data[0x09] == 0xBB && fp->data[0x0A] == 0x06)
- // return(TRUE);
-
- if(!memcmp(fp->data + 0x100, "SEGA MEGA DRIVE", 15) || !memcmp(fp->data + 0x100, "SEGA GENESIS", 12) || !memcmp(fp->data + 0x100, "SEGA 32X", 8))
-  return(TRUE);
-
- if((!memcmp(fp->data + 0x100, "SEGA", 4) || !memcmp(fp->data + 0x100, " SEGA", 5)) && !strcmp(fp->ext, "bin"))
-  return(TRUE);
-
  if(!strcmp(fp->ext, "gen") || !strcmp(fp->ext, "md"))
-  return(TRUE);
+  return true;
 
- return(FALSE);
+ uint8 data[512];
+
+ if(fp->read(data, 512, false) != 512)
+  return false;
+
+ if(!memcmp(data + 0x100, "SEGA MEGA DRIVE", 15) || !memcmp(data + 0x100, "SEGA GENESIS", 12) || !memcmp(data + 0x100, "SEGA 32X", 8))
+  return true;
+
+ if((!memcmp(data + 0x100, "SEGA", 4) || !memcmp(data + 0x100, " SEGA", 5)) && !strcmp(fp->ext, "bin"))
+  return true;
+
+ return false;
 }
 
 static void Cleanup(void)
@@ -364,26 +367,34 @@ void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp)
  try
  {
   const char *mapper = NULL;
-  md5_context md5;
+  const uint64 fp_in_size = fp->size();
 
-  MD_ReadSegaHeader(fp->data + 0x100, ginfo);
-  Cart_ROM_Size = fp->size;
+  if(fp_in_size < 0x200)
+   throw MDFN_Error(0, _("ROM image is too small."));
 
+  if(fp_in_size > 1024 * 1024 * 128)
+   throw MDFN_Error(0, _("ROM image is too large."));
+
+  Cart_ROM_Size = fp_in_size;
   cart_rom = (uint8 *)MDFN_calloc_T(1, Cart_ROM_Size, _("Cart ROM"));
-  memcpy(cart_rom, fp->data, fp->size);
+  fp->read(cart_rom, Cart_ROM_Size);
 
-  ginfo->rom_size = Cart_ROM_Size = fp->size;
+  MD_ReadSegaHeader(cart_rom + 0x100, ginfo);
+  ginfo->rom_size = Cart_ROM_Size;
 
+  md5_context md5;
   md5.starts();
-  md5.update(fp->data, fp->size);
+  md5.update(cart_rom, Cart_ROM_Size);
   md5.finish(ginfo->md5);
 
+  ginfo->crc32 = crc32(0, cart_rom, Cart_ROM_Size);
+
   md5.starts();
-  md5.update(fp->data + 0x100, 0x100);
+  md5.update(cart_rom + 0x100, 0x100);
   md5.finish(ginfo->info_header_md5);
 
   ginfo->checksum_real = 0;
-  for(uint32 i = 0x200; i < fp->size; i += 2)
+  for(uint32 i = 0x200; i < Cart_ROM_Size; i += 2)
   {
    ginfo->checksum_real += cart_rom[i + 0] << 8;
    ginfo->checksum_real += cart_rom[i + 1] << 0;
@@ -392,9 +403,9 @@ void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp)
   // Rockman MegaWorld: 5241e840
   // Sonic 3: 5241f820
 
-  uint32 sram_type = READ_32_MSB(cart_rom, 0x1B0);
-  uint32 sram_start = READ_32_MSB(cart_rom, 0x1B4);
-  uint32 sram_end = READ_32_MSB(cart_rom, 0x1B8);
+  uint32 sram_type = MDFN_de32msb(&cart_rom[0x1B0]);
+  uint32 sram_start = MDFN_de32msb(&cart_rom[0x1B4]);
+  uint32 sram_end = MDFN_de32msb(&cart_rom[0x1B8]);
 
   {
    uint64 hmd5_partial = 0;
@@ -493,37 +504,33 @@ void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp)
 
 void MDCart_LoadNV(void)
 {
- // Load any saved RAM/EEPROM now!
  if(cart_hardware->GetNVMemorySize())
  {
-  uint8 buf[cart_hardware->GetNVMemorySize()];
-
-  memset(buf, 0, sizeof(buf));
-  gzFile sp;
-
-  if((sp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
+  try
   {
-   if((size_t)gzread(sp, buf, sizeof(buf)) == sizeof(buf))
-   {
-    cart_hardware->WriteNVMemory(buf);
-   }
-   gzclose(sp);
+   uint8 buf[cart_hardware->GetNVMemorySize()];
+   std::unique_ptr<Stream> sp = MDFN_AmbigGZOpenHelper(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), std::vector<size_t>({ sizeof(buf) }));
+
+   sp->read(buf, sizeof(buf));
+   cart_hardware->WriteNVMemory(buf);
+  }
+  catch(MDFN_Error &e)
+  {
+   if(e.GetErrno() != ENOENT)
+    throw;
   }
  }
 }
 
 void MDCart_SaveNV(void)
 {
- if(cart_hardware)
+ if(cart_hardware->GetNVMemorySize())
  {
-  if(cart_hardware->GetNVMemorySize())
-  {
-   uint8 buf[cart_hardware->GetNVMemorySize()];
+  uint8 buf[cart_hardware->GetNVMemorySize()];
 
-   cart_hardware->ReadNVMemory(buf);
+  cart_hardware->ReadNVMemory(buf);
 
-   MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 6, buf, sizeof(buf));
-  }
+  MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), buf, sizeof(buf), true);
  }
 }
 

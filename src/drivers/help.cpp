@@ -64,7 +64,7 @@ void Help_Draw(MDFN_Surface *surface, const MDFN_Rect *rect)
 
  unsigned y = 0;
 
- DrawTextTrans(pixels + pitch32 * y, surface->pitch32 << 2, rect->w, (UTF8 *)_("Default key assignments:"), surface->MakeColor(0x00,0xFF,0x00,0xFF), false, MDFN_FONT_9x18_18x18);
+ DrawTextTrans(pixels + pitch32 * y, surface->pitch32 << 2, rect->w, _("Default key assignments:"), surface->MakeColor(0x00,0xFF,0x00,0xFF), false, MDFN_FONT_9x18_18x18);
  y += 18;
 
  for(unsigned int i = 0; i < sizeof(HelpStrings) / sizeof(HelpStrings[0]); i++)
@@ -76,20 +76,20 @@ void Help_Draw(MDFN_Surface *surface, const MDFN_Rect *rect)
   if(HelpStrings[i][0][0] == '-')
   {
    y -= 4;
-   DrawTextTrans(pixels + pitch32 * y, surface->pitch32 << 2, rect->w, (UTF8*)" -------------------------------------------------------", surface->MakeColor(0x60,0x60,0x60,0xFF), FALSE, MDFN_FONT_9x18_18x18);
+   DrawTextTrans(pixels + pitch32 * y, surface->pitch32 << 2, rect->w, " -------------------------------------------------------", surface->MakeColor(0x60,0x60,0x60,0xFF), FALSE, MDFN_FONT_9x18_18x18);
    y += 14;
   }
   else
   {
    x += 9;
 
-   x += DrawTextTrans(pixels + pitch32 * y + x, surface->pitch32 << 2, rect->w - x, (UTF8*)HelpStrings[i][0],
+   x += DrawTextTrans(pixels + pitch32 * y + x, surface->pitch32 << 2, rect->w - x, HelpStrings[i][0],
 	surface->MakeColor(0x40,0xDF,0x40,0xFF), FALSE, MDFN_FONT_9x18_18x18);
 
-   x += DrawTextTrans(pixels + pitch32 * y + x, surface->pitch32 << 2, rect->w - x, (UTF8*)" - ",
+   x += DrawTextTrans(pixels + pitch32 * y + x, surface->pitch32 << 2, rect->w - x, " - ",
         surface->MakeColor(0x40,0x40,0x40,0xFF), FALSE, MDFN_FONT_9x18_18x18);
 
-   x += DrawTextTrans(pixels + pitch32 * y + x, surface->pitch32 << 2, rect->w - x, (UTF8*)_(HelpStrings[i][1]),
+   x += DrawTextTrans(pixels + pitch32 * y + x, surface->pitch32 << 2, rect->w - x, _(HelpStrings[i][1]),
         surface->MakeColor(0xC0,0xC0,0xC0,0xFF), FALSE, MDFN_FONT_9x18_18x18);
 
    y += 18;

@@ -15,10 +15,8 @@ System system;
 #include "input/input.cpp"
 
 void System::coprocessor_enter() {
-  if(cartridge.mode() == Cartridge::ModeSuperGameBoy) supergameboy.enter();
   if(cartridge.has_superfx()) superfx.enter();
   if(cartridge.has_sa1()) sa1.enter();
-  if(cartridge.has_21fx()) s21fx.enter();
 
   while(true) {
     while(scheduler.sync == Scheduler::SyncAll) {
@@ -93,7 +91,6 @@ void System::init(Interface *interface_) {
   interface = interface_;
   assert(interface != 0);
 
-  supergameboy.init();
   superfx.init();
   sa1.init();
   bsxbase.init();
@@ -109,9 +106,6 @@ void System::init(Interface *interface_) {
   dsp4.init();
   obc1.init();
   st010.init();
-  st011.init();
-  st018.init();
-  s21fx.init();
 
   video.init();
   audio.init();
@@ -144,7 +138,6 @@ void System::power() {
   if(expansion() == ExpansionBSX) bsxbase.enable();
   if(memory::bsxflash.data()) bsxflash.enable();
   if(cartridge.mode() == Cartridge::ModeBsx) bsxcart.enable();
-  if(cartridge.mode() == Cartridge::ModeSuperGameBoy) supergameboy.enable();
 
   if(cartridge.has_superfx()) superfx.enable();
   if(cartridge.has_sa1())     sa1.enable();
@@ -158,14 +151,10 @@ void System::power() {
   if(cartridge.has_dsp4())    dsp4.enable();
   if(cartridge.has_obc1())    obc1.enable();
   if(cartridge.has_st010())   st010.enable();
-  if(cartridge.has_st011())   st011.enable();
-  if(cartridge.has_st018())   st018.enable();
-  if(cartridge.has_21fx())    s21fx.enable();
 
   if(expansion() == ExpansionBSX) bsxbase.power();
   if(memory::bsxflash.data()) bsxflash.power();
   if(cartridge.mode() == Cartridge::ModeBsx) bsxcart.power();
-  if(cartridge.mode() == Cartridge::ModeSuperGameBoy) supergameboy.power();
 
   if(cartridge.has_superfx()) superfx.power();
   if(cartridge.has_sa1())     sa1.power();
@@ -179,9 +168,6 @@ void System::power() {
   if(cartridge.has_dsp4())    dsp4.power();
   if(cartridge.has_obc1())    obc1.power();
   if(cartridge.has_st010())   st010.power();
-  if(cartridge.has_st011())   st011.power();
-  if(cartridge.has_st018())   st018.power();
-  if(cartridge.has_21fx())    s21fx.power();
 
   cpu.power();
   smp.power();
@@ -206,7 +192,6 @@ void System::reset() {
   if(expansion() == ExpansionBSX) bsxbase.reset();
   if(memory::bsxflash.data()) bsxflash.reset();
   if(cartridge.mode() == Cartridge::ModeBsx) bsxcart.reset();
-  if(cartridge.mode() == Cartridge::ModeSuperGameBoy) supergameboy.reset();
 
   if(cartridge.has_superfx()) superfx.reset();
   if(cartridge.has_sa1())     sa1.reset();
@@ -220,9 +205,6 @@ void System::reset() {
   if(cartridge.has_dsp4())    dsp4.reset();
   if(cartridge.has_obc1())    obc1.reset();
   if(cartridge.has_st010())   st010.reset();
-  if(cartridge.has_st011())   st011.reset();
-  if(cartridge.has_st018())   st018.reset();
-  if(cartridge.has_21fx())    s21fx.reset();
 
   input.port_set_device(0, config.controller_port1);
   input.port_set_device(1, config.controller_port2);
@@ -231,7 +213,6 @@ void System::reset() {
 }
 
 void System::unload() {
-  if(cartridge.mode() == Cartridge::ModeSuperGameBoy) supergameboy.unload();
 }
 
 void System::scanline() {

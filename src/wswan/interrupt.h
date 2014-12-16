@@ -39,7 +39,7 @@ void WSwan_Interrupt(unsigned);
 void WSwan_InterruptWrite(uint32 A, uint8 V);
 uint8 WSwan_InterruptRead(uint32 A);
 void WSwan_InterruptCheck(void);
-int WSwan_InterruptStateAction(StateMem *sm, int load, int data_only);
+void WSwan_InterruptStateAction(StateMem *sm, const unsigned load, const bool data_only);
 void WSwan_InterruptReset(void);
 void WSwan_InterruptDebugForce(unsigned int level);
 

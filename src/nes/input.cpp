@@ -27,7 +27,27 @@
 #include "fds.h"
 #include "input/cursor.h"
 
-static const InputDeviceInputInfoStruct GamepadIDII[] =
+extern INPUTC *MDFN_InitZapper(int w);
+extern INPUTC *MDFN_InitPowerpadA(int w);
+extern INPUTC *MDFN_InitPowerpadB(int w);
+extern INPUTC *MDFN_InitArkanoid(int w);
+
+extern INPUTCFC *MDFN_InitArkanoidFC(void);
+extern INPUTCFC *MDFN_InitSpaceShadow(void);
+extern INPUTCFC *MDFN_InitFKB(void);
+extern INPUTCFC *MDFN_InitHS(void);
+extern INPUTCFC *MDFN_InitMahjong(void);
+extern INPUTCFC *MDFN_InitPartyTap(void);
+extern INPUTCFC *MDFN_InitFamilyTrainerA(void);
+extern INPUTCFC *MDFN_InitFamilyTrainerB(void);
+extern INPUTCFC *MDFN_InitOekaKids(void);
+extern INPUTCFC *MDFN_InitTopRider(void);
+extern INPUTCFC *MDFN_InitBarcodeWorld(void);
+
+namespace MDFN_IEN_NES
+{
+
+static const IDIISG GamepadIDII =
 {
  { "a", "A", 7, IDIT_BUTTON_CAN_RAPID, NULL },
  { "b", "B", 6, IDIT_BUTTON_CAN_RAPID, NULL },
@@ -39,7 +59,7 @@ static const InputDeviceInputInfoStruct GamepadIDII[] =
  { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
 };
 
-static const InputDeviceInputInfoStruct ZapperIDII[] =
+static const IDIISG ZapperIDII =
 {
  { "x_axis", "X Axis", -1, IDIT_X_AXIS },
  { "y_axis", "Y Axis", -1, IDIT_Y_AXIS },
@@ -47,7 +67,7 @@ static const InputDeviceInputInfoStruct ZapperIDII[] =
  { "away_trigger", "Away Trigger", 1, IDIT_BUTTON, NULL  },
 };
 
-static const InputDeviceInputInfoStruct PowerpadIDII[] =
+static const IDIISG PowerpadIDII =
 {
  { "1", "1", 0, IDIT_BUTTON, NULL },
  { "2", "2", 1, IDIT_BUTTON, NULL },
@@ -63,13 +83,13 @@ static const InputDeviceInputInfoStruct PowerpadIDII[] =
  { "12", "12", 11, IDIT_BUTTON, NULL },
 };
 
-static const InputDeviceInputInfoStruct ArkanoidIDII[] =
+static const IDIISG ArkanoidIDII =
 {
  { "x_axis", "X Axis", -1, IDIT_X_AXIS },
  { "button", "Button", 0, IDIT_BUTTON, NULL },
 };
 
-static const InputDeviceInputInfoStruct FKBIDII[0x48] =
+static const IDIISG FKBIDII =
 {
  { "f1", "F1", 0, IDIT_BUTTON },
  { "f2", "F2", 1, IDIT_BUTTON },
@@ -148,7 +168,7 @@ static const InputDeviceInputInfoStruct FKBIDII[0x48] =
  { "down", "DOWN", 71, IDIT_BUTTON },
 };
 
-static const InputDeviceInputInfoStruct HypershotIDII[] =
+static const IDIISG HypershotIDII =
 {
  { "i_run", "I, RUN", 0, IDIT_BUTTON_CAN_RAPID, NULL },
  { "i_jump", "I, JUMP", 1, IDIT_BUTTON_CAN_RAPID, NULL },
@@ -156,7 +176,7 @@ static const InputDeviceInputInfoStruct HypershotIDII[] =
  { "ii_jump", "II, JUMP", 3, IDIT_BUTTON_CAN_RAPID, NULL },
 };
 
-static const InputDeviceInputInfoStruct MahjongIDII[] =
+static const IDIISG MahjongIDII =
 {
  { "1", "1", 0, IDIT_BUTTON, NULL },
  { "2", "2", 1, IDIT_BUTTON, NULL },
@@ -181,7 +201,7 @@ static const InputDeviceInputInfoStruct MahjongIDII[] =
  { "21", "21", 20, IDIT_BUTTON, NULL },
 };
 
-static const InputDeviceInputInfoStruct PartyTapIDII[] =
+static const IDIISG PartyTapIDII =
 {
  { "buzzer_1", "Buzzer 1", 0, IDIT_BUTTON, NULL },
  { "buzzer_2", "Buzzer 2", 1, IDIT_BUTTON, NULL },
@@ -191,7 +211,7 @@ static const InputDeviceInputInfoStruct PartyTapIDII[] =
  { "buzzer_6", "Buzzer 6", 5, IDIT_BUTTON, NULL },
 };
 
-static const InputDeviceInputInfoStruct FTrainerIDII[] =
+static const IDIISG FTrainerIDII =
 {
  { "1", "1", 0, IDIT_BUTTON, NULL },
  { "2", "2", 1, IDIT_BUTTON, NULL },
@@ -207,14 +227,14 @@ static const InputDeviceInputInfoStruct FTrainerIDII[] =
  { "12", "12", 11, IDIT_BUTTON, NULL },
 };
 
-static const InputDeviceInputInfoStruct OekaIDII[] =
+static const IDIISG OekaIDII =
 {
  { "x_axis", "X Axis", -1, IDIT_X_AXIS },
  { "y_axis", "Y Axis", -1, IDIT_Y_AXIS },
  { "button", "Button", 0, IDIT_BUTTON, NULL },
 };
 
-static const InputDeviceInputInfoStruct BWorldIDII[] =
+static const IDIISG BWorldIDII =
 {
  { "new", "New", -1, IDIT_BYTE_SPECIAL },
  { "bd1", "Barcode Digit 1", -1, IDIT_BYTE_SPECIAL },
@@ -232,16 +252,14 @@ static const InputDeviceInputInfoStruct BWorldIDII[] =
  { "bd13", "Barcode Digit 13", -1, IDIT_BYTE_SPECIAL },
 };
 
-static InputDeviceInfoStruct InputDeviceInfoNESPort34[] =
+static const std::vector<InputDeviceInfoStruct> InputDeviceInfoNESPort34 =
 {
  // None
  {
   "none",
   "none",
   NULL,
-  NULL,
-  0,
-  NULL
+  IDII_Empty
  },
 
  // Gamepad
@@ -249,23 +267,19 @@ static InputDeviceInfoStruct InputDeviceInfoNESPort34[] =
   "gamepad",
   "Gamepad",
   NULL,
-  NULL,
-  sizeof(GamepadIDII) / sizeof(InputDeviceInputInfoStruct),
-  GamepadIDII,
+  GamepadIDII
  },
 
 };
 
-static InputDeviceInfoStruct InputDeviceInfoNESPort[] =
+static const std::vector<InputDeviceInfoStruct> InputDeviceInfoNESPort =
 {
  // None
  {
   "none",
   "none",
   NULL,
-  NULL,
-  0,
-  NULL
+  IDII_Empty
  },
 
  // Gamepad
@@ -273,9 +287,7 @@ static InputDeviceInfoStruct InputDeviceInfoNESPort[] =
   "gamepad",
   "Gamepad",
   NULL,
-  NULL,
-  sizeof(GamepadIDII) / sizeof(InputDeviceInputInfoStruct),
-  GamepadIDII,
+  GamepadIDII
  },
 
  // Zapper
@@ -283,9 +295,7 @@ static InputDeviceInfoStruct InputDeviceInfoNESPort[] =
   "zapper",
   "Zapper",
   NULL,
-  NULL,
-  sizeof(ZapperIDII) / sizeof(InputDeviceInputInfoStruct),
-  ZapperIDII,
+  ZapperIDII
  },
 
  // Powerpad A
@@ -293,9 +303,7 @@ static InputDeviceInfoStruct InputDeviceInfoNESPort[] =
   "powerpada",
   "Power Pad Side A",
   NULL,
-  NULL,
-  sizeof(PowerpadIDII) / sizeof(InputDeviceInputInfoStruct),
-  PowerpadIDII,
+  PowerpadIDII
  },
 
  // Powerpad B
@@ -303,9 +311,7 @@ static InputDeviceInfoStruct InputDeviceInfoNESPort[] =
   "powerpadb",
   "Power Pad Side B",
   NULL,
-  NULL,
-  sizeof(PowerpadIDII) / sizeof(InputDeviceInputInfoStruct),
-  PowerpadIDII,
+  PowerpadIDII
  },
 
  // Arkanoid
@@ -313,24 +319,20 @@ static InputDeviceInfoStruct InputDeviceInfoNESPort[] =
   "arkanoid",
   "Arkanoid Paddle",
   NULL,
-  NULL,
-  sizeof(ArkanoidIDII) / sizeof(InputDeviceInputInfoStruct),
-  ArkanoidIDII,
+  ArkanoidIDII
  },
 
 
 };
 
-static InputDeviceInfoStruct InputDeviceInfoFamicomPort[] =
+static const std::vector<InputDeviceInfoStruct> InputDeviceInfoFamicomPort =
 {
  // None
  {
   "none",
   "none",
   NULL,
-  NULL,
-  0,
-  NULL
+  IDII_Empty
  },
 
  // Arkanoid
@@ -338,9 +340,7 @@ static InputDeviceInfoStruct InputDeviceInfoFamicomPort[] =
   "arkanoid",
   "Arkanoid Paddle",
   NULL,
-  NULL,
-  sizeof(ArkanoidIDII) / sizeof(InputDeviceInputInfoStruct),
-  ArkanoidIDII,
+  ArkanoidIDII
  },
 
  // Space Shadow Gun
@@ -348,9 +348,7 @@ static InputDeviceInfoStruct InputDeviceInfoFamicomPort[] =
   "shadow",
   "Space Shadow Gun",
   NULL,
-  NULL,
-  sizeof(ZapperIDII) / sizeof(InputDeviceInputInfoStruct),
-  ZapperIDII,
+  ZapperIDII
  },
 
  // 4-player
@@ -358,18 +356,15 @@ static InputDeviceInfoStruct InputDeviceInfoFamicomPort[] =
   "4player",
   "4-player Adapter",
   NULL,
-  NULL,
-  0,
-  NULL,
+  IDII_Empty
  },
+
  // Family Keyboard
  {
   "fkb",
   "Family Keyboard",
   NULL,
-  NULL,
-  sizeof(FKBIDII) / sizeof(InputDeviceInputInfoStruct),
-  FKBIDII,
+  FKBIDII
  },
 
  // Hypershot
@@ -377,9 +372,7 @@ static InputDeviceInfoStruct InputDeviceInfoFamicomPort[] =
   "hypershot",
   "Hypershot Paddles",
   NULL,
-  NULL,
-  sizeof(HypershotIDII) / sizeof(InputDeviceInputInfoStruct),
-  HypershotIDII,
+  HypershotIDII
  },
 
  // Mahjong
@@ -387,9 +380,7 @@ static InputDeviceInfoStruct InputDeviceInfoFamicomPort[] =
   "mahjong",
   "Mahjong Controller",
   NULL,
-  NULL,
-  sizeof(MahjongIDII) / sizeof(InputDeviceInputInfoStruct),
-  MahjongIDII,
+  MahjongIDII
  },
 
  // Party Tap
@@ -397,9 +388,7 @@ static InputDeviceInfoStruct InputDeviceInfoFamicomPort[] =
   "partytap",
   "Party Tap",
   NULL,
-  NULL,
-  sizeof(PartyTapIDII) / sizeof(InputDeviceInputInfoStruct),
-  PartyTapIDII,
+  PartyTapIDII
  },
 
  // Family Trainer A
@@ -407,9 +396,7 @@ static InputDeviceInfoStruct InputDeviceInfoFamicomPort[] =
   "ftrainera",
   "Family Trainer Side A",
   NULL,
-  NULL,
-  sizeof(FTrainerIDII) / sizeof(InputDeviceInputInfoStruct),
-  FTrainerIDII,
+  FTrainerIDII
  },
 
  // Family Trainer B
@@ -417,9 +404,7 @@ static InputDeviceInfoStruct InputDeviceInfoFamicomPort[] =
   "ftrainerb",
   "Family Trainer Side B",
   NULL,
-  NULL,
-  sizeof(FTrainerIDII) / sizeof(InputDeviceInputInfoStruct),
-  FTrainerIDII,
+  FTrainerIDII
  },
 
  // Oeka Kids
@@ -427,9 +412,7 @@ static InputDeviceInfoStruct InputDeviceInfoFamicomPort[] =
   "oekakids",
   "Oeka Kids Tablet",
   NULL,
-  NULL,
-  sizeof(OekaIDII) / sizeof(InputDeviceInputInfoStruct),
-  OekaIDII,
+  OekaIDII
  },
 
  // Barcode World
@@ -437,46 +420,21 @@ static InputDeviceInfoStruct InputDeviceInfoFamicomPort[] =
   "bworld",
   "Barcode World Scanner",
   NULL,
-  NULL,
-  sizeof(BWorldIDII) / sizeof(InputDeviceInputInfoStruct),
-  BWorldIDII,
+  BWorldIDII
  },
 
 };
 
 // The temptation is there, but don't change the "fcexp" default setting to anything other than "none", as the presence of a device
 // there by default will cause compatibility problems with games.
-static const InputPortInfoStruct PortInfo[] =
+const std::vector<InputPortInfoStruct> NESPortInfo =
 {
- { "port1", "Port 1", sizeof(InputDeviceInfoNESPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoNESPort, "gamepad" },
- { "port2", "Port 2", sizeof(InputDeviceInfoNESPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoNESPort, "gamepad" },
- { "port3", "Port 3", sizeof(InputDeviceInfoNESPort34) / sizeof(InputDeviceInfoStruct), InputDeviceInfoNESPort34, "gamepad" },
- { "port4", "Port 4", sizeof(InputDeviceInfoNESPort34) / sizeof(InputDeviceInfoStruct), InputDeviceInfoNESPort34, "gamepad" },
- { "fcexp", "Famicom Expansion Port", sizeof(InputDeviceInfoFamicomPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoFamicomPort, "none" },
+ { "port1", "Port 1", InputDeviceInfoNESPort, "gamepad" },
+ { "port2", "Port 2", InputDeviceInfoNESPort, "gamepad" },
+ { "port3", "Port 3", InputDeviceInfoNESPort34, "gamepad" },
+ { "port4", "Port 4", InputDeviceInfoNESPort34, "gamepad" },
+ { "fcexp", "Famicom Expansion Port", InputDeviceInfoFamicomPort, "none" },
 };
-
-InputInfoStruct NESInputInfo = 
-{
- sizeof(PortInfo) / sizeof(InputPortInfoStruct),
- PortInfo
-};
-
-extern INPUTC *MDFN_InitZapper(int w);
-extern INPUTC *MDFN_InitPowerpadA(int w);
-extern INPUTC *MDFN_InitPowerpadB(int w);
-extern INPUTC *MDFN_InitArkanoid(int w);
-
-extern INPUTCFC *MDFN_InitArkanoidFC(void);
-extern INPUTCFC *MDFN_InitSpaceShadow(void);
-extern INPUTCFC *MDFN_InitFKB(void);
-extern INPUTCFC *MDFN_InitHS(void);
-extern INPUTCFC *MDFN_InitMahjong(void);
-extern INPUTCFC *MDFN_InitPartyTap(void);
-extern INPUTCFC *MDFN_InitFamilyTrainerA(void);
-extern INPUTCFC *MDFN_InitFamilyTrainerB(void);
-extern INPUTCFC *MDFN_InitOekaKids(void);
-extern INPUTCFC *MDFN_InitTopRider(void);
-extern INPUTCFC *MDFN_InitBarcodeWorld(void);
 
 static uint8 joy_readbit[2];
 //static 
@@ -593,7 +551,7 @@ static void StrobeGP(int w)
 	joy_readbit[w]=0;
 }
 
-static int StateActionGP(int w, StateMem *sm, int load, int data_only)
+static void StateActionGP(int w, StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -602,16 +560,17 @@ static int StateActionGP(int w, StateMem *sm, int load, int data_only)
   SFVAR(joy[w + 2]),
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, w ? "INP1" : "INP0");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, w ? "INP1" : "INP0", true);
+
  if(load)
  {
 
  }
- return(ret);
 }
 
 static uint8 F4ReadBit[2];
-static int StateActionGPFC(StateMem *sm, int load, int data_only)
+static void StateActionGPFC(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -619,12 +578,13 @@ static int StateActionGPFC(StateMem *sm, int load, int data_only)
   SFARRAY(joy, 4),
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs,"INPF");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs,"INPF", true);
+
  if(load)
  {
 
  }
- return(ret);
 }
 
 static void StrobeFami4(void)
@@ -800,34 +760,41 @@ void NESINPUT_Power(void)
          SetInputStuff(x);
 }
 
-void MDFNNES_SetInput(int port, const char *type, void *ptr)
+void MDFNNES_SetInput(unsigned port, const char *type, uint8 *ptr)
 {
  JPType[port] = type;
  InputDataPtr[port] = ptr;
  SetInputStuff(port);
 }
 
-int NESINPUT_StateAction(StateMem *sm, int load, int data_only)
+void NESINPUT_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
    SFVARN(LastStrobe, "LSTS"),
    SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPT");
+
+ if(load && !data_only)	// Kludgey forced initialization of variables in case a section or variable is missing.
+ {
+  for(unsigned x = 0; x < 5; x++)
+   SetInputStuff(x);
+ }
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPT");
 
  if(JPorts[0]->StateAction)
-  ret &= JPorts[0]->StateAction(0, sm, load, data_only);
+  JPorts[0]->StateAction(0, sm, load, data_only);
  if(JPorts[1]->StateAction)
-  ret &= JPorts[1]->StateAction(1, sm, load, data_only);
+  JPorts[1]->StateAction(1, sm, load, data_only);
+
  if(FCExp && FCExp->StateAction)
-  ret &= FCExp->StateAction(sm, load, data_only);
+  FCExp->StateAction(sm, load, data_only);
 
  if(load)
  {
 
  }
- return(ret);
 }
 
 static writefunc Other4016WHandler;
@@ -858,10 +825,7 @@ void NESINPUT_Init(void)
  Other4016WHandler = GetWriteHandler(0x4016);
  
  if(Other4016WHandler != BNull)
- {
-  puts("Mapper 99 yay?");
   SetWriteHandler(0x4016, 0x4016, B4016_Chained);
- }
  else
   SetWriteHandler(0x4016, 0x4016, B4016);
 }
@@ -872,18 +836,6 @@ void MDFNNES_DoSimpleCommand(int cmd)
 {
  switch(cmd)
  {
-   case MDFN_MSC_INSERT_DISK: 
-		FDS_DiskInsert(-1);
-		break;
-
-   case MDFN_MSC_SELECT_DISK: 
-		FDS_DiskSelect();
-		break;
-
-   case MDFN_MSC_EJECT_DISK: 
-		FDS_DiskEject();
-		break;
-
    case MDFN_MSC_INSERT_COIN: 
 		MDFN_VSUniCoin();
 		break;
@@ -902,3 +854,4 @@ void MDFNNES_DoSimpleCommand(int cmd)
  }
 }
 
+}

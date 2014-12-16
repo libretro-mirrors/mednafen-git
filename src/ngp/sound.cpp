@@ -113,16 +113,9 @@ bool MDFNNGPC_SetSoundRate(uint32 rate)
 
 int MDFNNGPCSOUND_StateAction(StateMem *sm, int load, int data_only)
 {
- T6W28_ApuState *sn_state;
+ T6W28_ApuState sn_state;
 
- if(!load)
- {
-  sn_state = apu.save_state();
- }
- else
- {
-  sn_state = (T6W28_ApuState *)malloc(sizeof(T6W28_ApuState));
- }
+ apu.save_state(&sn_state);
 
  SFORMAT StateRegs[] =
  {
@@ -131,33 +124,31 @@ int MDFNNGPCSOUND_StateAction(StateMem *sm, int load, int data_only)
 
   SFVAR(schipenable),
 
-  SFARRAY32N(sn_state->volume_left, 4, "VolumeLeft"),
-  SFARRAY32N(sn_state->volume_right, 4, "VolumeRight"),
-  SFARRAY32N(sn_state->sq_period, 3, "SQPeriod"),
-  SFARRAY32N(sn_state->sq_phase, 3, "SQPhase"),
-  SFVARN(sn_state->noise_period, "NPeriod"),
-  SFVARN(sn_state->noise_shifter, "NShifter"),
-  SFVARN(sn_state->noise_tap, "NTap"),
-  SFVARN(sn_state->latch_left, "LatchLeft"),
-  SFVARN(sn_state->latch_right, "LatchRight"),
+  SFARRAY32N(sn_state.volume_left, 4, "VolumeLeft"),
+  SFARRAY32N(sn_state.volume_right, 4, "VolumeRight"),
+  SFARRAY32N(sn_state.sq_period, 3, "SQPeriod"),
+  SFARRAY32N(sn_state.sq_phase, 3, "SQPhase"),
+  SFVARN(sn_state.noise_period, "NPeriod"),
+  SFVARN(sn_state.noise_shifter, "NShifter"),
+  SFVARN(sn_state.noise_tap, "NTap"),
+  SFVARN(sn_state.latch_left, "LatchLeft"),
+  SFVARN(sn_state.latch_right, "LatchRight"),
   SFEND
  };
 
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, "SND"))
  {
-  free(sn_state);
   return(0);
  }
 
  if(load)
  {
-  apu.load_state(sn_state);
+  apu.load_state(&sn_state);
   synth.offset(ngpc_soundTS >> 1, CurrentDACLeft - LastDACLeft, st_buf.left());
   synth.offset(ngpc_soundTS >> 1, CurrentDACRight - LastDACRight, st_buf.right());
   LastDACLeft = CurrentDACLeft;
   LastDACRight = CurrentDACRight;
  }
 
- free(sn_state);
  return(1);
 }

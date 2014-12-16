@@ -294,9 +294,11 @@ Not all emulated systems support custom palettes.  Currently, the following emul
 <ul>
  <li>gb - <b>Note:</b> Use "gbc.pal" instead of "gb.pal" for GameBoy Color games per-system custom palette.</li>
  <li>gba</li>
+ <li>gg</li>
  <li>nes</li>
  <li>pce</li>
  <li>pce_fast</li>
+ <li>sms</li>
  <li>snes</li>
 </ul>
 </p>

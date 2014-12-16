@@ -901,7 +901,7 @@ static void MDCD_Init(void)
 
  // Load the BIOS
   {
-   std::string bios_path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("md.cdbios").c_str());
+   std::string bios_path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("md.cdbios"));
    FileStream bios_fp(bios_path.c_str(), FileStream::MODE_READ);
 
    if(bios_fp.size() != 0x20000)

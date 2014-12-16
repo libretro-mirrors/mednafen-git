@@ -65,7 +65,7 @@ static void QZ_Update(void *data)
  QZVal=*(uint8 *)data;
 }
 
-static int StateActionFC(StateMem *sm, int load, int data_only)
+static void StateActionFC(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -74,12 +74,13 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
    SFVAR(FunkyMode),
    SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF", true);
+
  if(load)
  {
 
  }
- return(ret);
 }
 
 static INPUTCFC PartyTap = { QZ_Read,QZ_Write,QZ_Strobe,QZ_Update,0,0, StateActionFC };

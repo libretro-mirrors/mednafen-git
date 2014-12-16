@@ -52,27 +52,27 @@
 namespace MDFN_IEN_PSX
 {
 
-class InputDevice_DualShock : public InputDevice
+class InputDevice_DualShock final : public InputDevice
 {
  public:
 
- InputDevice_DualShock(const std::string &arg_name);
- virtual ~InputDevice_DualShock();
+ InputDevice_DualShock();
+ virtual ~InputDevice_DualShock() override;
 
- virtual void Power(void);
- virtual int StateAction(StateMem* sm, int load, int data_only, const char* section_name);
+ virtual void Power(void) override;
+ virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
 
- virtual void Update(const pscpu_timestamp_t timestamp);
- virtual void ResetTS(void);
- virtual void UpdateInput(const void *data);
+ virtual void Update(const pscpu_timestamp_t timestamp) override;
+ virtual void ResetTS(void) override;
+ virtual void UpdateInput(const void *data) override;
 
- virtual void SetAMCT(bool enabled);
+ virtual void SetAMCT(bool enabled) override;
  //
  //
  //
- virtual void SetDTR(bool new_dtr);
- virtual bool GetDSR(void);
- virtual bool Clock(bool TxD, int32 &dsr_pulse_delay);
+ virtual void SetDTR(bool new_dtr) override;
+ virtual bool GetDSR(void) override;
+ virtual bool Clock(bool TxD, int32 &dsr_pulse_delay) override;
 
  private:
 
@@ -113,9 +113,6 @@ class InputDevice_DualShock : public InputDevice
  //
  //
  //
- bool am_prev_info;
- bool aml_prev_info;
- std::string gp_name;
  pscpu_timestamp_t lastts;
 
  //
@@ -123,12 +120,9 @@ class InputDevice_DualShock : public InputDevice
  bool amct_enabled;
 };
 
-InputDevice_DualShock::InputDevice_DualShock(const std::string &name)
+InputDevice_DualShock::InputDevice_DualShock()
 {
- gp_name = name;
  Power();
- am_prev_info = analog_mode;
- aml_prev_info = analog_mode_locked;
  amct_enabled = false;
 }
 
@@ -190,11 +184,7 @@ void InputDevice_DualShock::CheckManualAnaModeChange(void)
 
   if(need_mode_toggle)
   {
-   if(analog_mode_locked)
-   {
-    MDFN_DispMessage(_("%s: Analog mode is locked %s."), gp_name.c_str(), analog_mode ? _("on") : _("off"));
-   }
-   else
+   if(!analog_mode_locked)
     analog_mode = !analog_mode;
   }
 
@@ -238,7 +228,7 @@ void InputDevice_DualShock::Power(void)
  prev_ana_button_state = false;
 }
 
-int InputDevice_DualShock::StateAction(StateMem* sm, int load, int data_only, const char* section_name)
+void InputDevice_DualShock::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix)
 {
  SFORMAT StateRegs[] =
  {
@@ -273,9 +263,12 @@ int InputDevice_DualShock::StateAction(StateMem* sm, int load, int data_only, co
 
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name);
+ char section_name[32];
+ trio_snprintf(section_name, sizeof(section_name), "%s_DualShock", sname_prefix);
 
- if(load)
+ if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
+  Power();
+ else if(load)
  {
   if((transmit_pos + transmit_count) > sizeof(transmit_buffer))
   {
@@ -283,8 +276,6 @@ int InputDevice_DualShock::StateAction(StateMem* sm, int load, int data_only, co
    transmit_count = 0;
   }
  }
-
- return(ret);
 }
 
 
@@ -342,12 +333,12 @@ void InputDevice_DualShock::UpdateInput(const void *data)
  //
  CheckManualAnaModeChange();
 
- if(am_prev_info != analog_mode || aml_prev_info != analog_mode_locked)
- {
-  MDFN_DispMessage(_("%s: Analog mode is %s(%s)."), gp_name.c_str(), analog_mode ? _("on") : _("off"), analog_mode_locked ? _("locked") : _("unlocked"));
- }
- aml_prev_info = analog_mode_locked;
- am_prev_info = analog_mode;
+ //
+ // Encode analog mode state last.
+ //
+ d8[2] &= ~0x6;
+ d8[2] |= (analog_mode ? 0x02 : 0x00);
+ d8[2] |= (analog_mode_locked ? 0x04 : 0x00);
 }
 
 
@@ -1063,13 +1054,22 @@ bool InputDevice_DualShock::Clock(bool TxD, int32 &dsr_pulse_delay)
  return(ret);
 }
 
-InputDevice *Device_DualShock_Create(const std::string &name)
+InputDevice *Device_DualShock_Create(void)
 {
- return new InputDevice_DualShock(name);
+ return new InputDevice_DualShock();
 }
 
+static const IDIIS_StatusState AM_SS[] =
+{
+ { "off_unlocked", gettext_noop("Off(unlocked)") },
+ { "on_unlocked", gettext_noop("On(unlocked)") },
 
-InputDeviceInputInfoStruct Device_DualShock_IDII[26] =
+ { "off_locked", gettext_noop("Off(locked)") },
+ { "on_locked", gettext_noop("On(locked)") },
+};
+
+
+const IDIISG Device_DualShock_IDII =
 {
  { "select", "SELECT", 4, IDIT_BUTTON, NULL },
  { "l3", "Left Stick, Button(L3)", 18, IDIT_BUTTON, NULL },
@@ -1091,6 +1091,8 @@ InputDeviceInputInfoStruct Device_DualShock_IDII[26] =
  { "square", "□ (left)", 8, IDIT_BUTTON_CAN_RAPID, NULL },
 
  { "analog", "Analog(mode toggle)", 24, IDIT_BUTTON, NULL },
+
+ IDIIS_Status("amstatus", "Analog Mode", AM_SS, sizeof(AM_SS) / sizeof(AM_SS[0])),
 
  { "rstick_right", "Right Stick RIGHT →", 22, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
  { "rstick_left", "Right Stick LEFT ←", 21, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },

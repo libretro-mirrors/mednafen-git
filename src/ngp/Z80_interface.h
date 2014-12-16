@@ -29,6 +29,6 @@ void Z80_SetEnable(bool set);
 bool Z80_IsEnabled(void);
 int Z80_RunOP(void);
 
-int MDFNNGPCZ80_StateAction(StateMem *sm, int load, int data_only);
+void MDFNNGPCZ80_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 #endif

@@ -446,7 +446,7 @@ void TIMER_Power(void)
  memset(Timers, 0, sizeof(Timers));
 }
 
-int TIMER_StateAction(StateMem *sm, int load, int data_only)
+void TIMER_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -466,14 +466,13 @@ int TIMER_StateAction(StateMem *sm, int load, int data_only)
 
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "TIMER");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "TIMER");
 
  if(load)
  {
 
  }
-
- return(ret);
 }
 
 uint32 TIMER_GetRegister(unsigned int which, char *special, const uint32 special_len)

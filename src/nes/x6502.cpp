@@ -20,6 +20,8 @@
 #include "sound.h"
 #include "debug.h"
 
+namespace MDFN_IEN_NES
+{
 X6502 X;
 
 #ifdef WANT_DEBUGGER
@@ -49,8 +51,6 @@ void (*MapIRQHook)(int a);
  _count-=__x*48;        \
  timestamp+=__x;        \
 }
-
-extern uint8 *Page[32];
 
 static INLINE uint8 RdMemNorm(unsigned int A)
 {
@@ -674,7 +674,7 @@ void X6502_Run(int32 cycles)
         _PC=pbackus;
 }
 
-int X6502_StateAction(StateMem *sm, int load, int data_only)
+void X6502_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  extern uint8 RAM[0x800]; // from nes.cpp
 
@@ -700,19 +700,13 @@ int X6502_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- std::vector <SSDescriptor> love;
- love.push_back(SSDescriptor(SFCPU, "CPU"));
- love.push_back(SSDescriptor(SFCPUC, "CPUC"));
-
-
- int ret = MDFNSS_StateAction(sm, load, data_only, love);
+ MDFNSS_StateAction(sm, load, data_only, SFCPU, "CPU");
+ MDFNSS_StateAction(sm, load, data_only, SFCPUC, "CPUC");
 
  if(load)
  {
   X.PC &= 0xFFFF;
  }
-
- return(ret);
 }
 
 #ifdef WANT_DEBUGGER
@@ -731,3 +725,5 @@ void X6502_Debug(void (*CPUHook)(uint32),
   X6502_Run=X6502_RunDebug;
 }
 #endif
+
+}

@@ -1,3 +1,8 @@
+#ifndef __MDFN_NES_INES_H
+#define __MDFN_NES_INES_H
+
+namespace MDFN_IEN_NES
+{
 #ifdef INESPRIV
 extern uint32 iNESGameCRC32;
 #else
@@ -19,6 +24,8 @@ struct iNES_HEADER
 	 uint8 raw[16];
 	};
 };
+
+}
 
 int Mapper1_Init(CartInfo *);
 int Mapper4_Init(CartInfo *);
@@ -138,3 +145,5 @@ int Mapper246_Init(CartInfo *);
 int Mapper248_Init(CartInfo *);
 int Mapper249_Init(CartInfo *);
 int Mapper250_Init(CartInfo *);
+
+#endif

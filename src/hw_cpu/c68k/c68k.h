@@ -28,49 +28,33 @@
 #ifndef _C68K_H_
 #define _C68K_H_
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+#include <mednafen/mednafen.h>
+#include <string.h>
 
 #define C68K_FASTCALL
-#include <inttypes.h>
 
-typedef int64_t s64;
-typedef uint64_t u64;
+typedef int64 s64;
+typedef uint64 u64;
 
-typedef int32_t s32;
-typedef uint32_t u32;
+typedef int32 s32;
+typedef uint32 u32;
 
-typedef int16_t s16;
-typedef uint16_t u16;
+typedef int16 s16;
+typedef uint16 u16;
 
-typedef int8_t s8;
-typedef uint8_t u8;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+typedef int8 s8;
+typedef uint8 u8;
 
 // setting
 ///////////
 
-//#define C68K_GEN
-
 #ifdef MSB_FIRST
-#define C68K_BIG_ENDIAN
-#endif
-
-#ifdef C68K_BIG_ENDIAN
  #define BYTE_OFF 3
  #define WORD_OFF 1
 #else
  #define BYTE_OFF 0
  #define WORD_OFF 0
 #endif
-
-#define C68K_NO_JUMP_TABLE
-//#define C68K_CONST_JUMP_TABLE
-//#define C68K_AUTOVECTOR_CALLBACK
 
 // 68K core types definitions
 //////////////////////////////
@@ -136,11 +120,7 @@ typedef struct
     {   
      struct
      {
-      union
-      {
-       u16 D16[16];
-       u32 D[8];       // 32 bytes aligned
-      };
+      u32 D[8];       // 32 bytes aligned
       u32 A[8];       // 16 bytes aligned
      };
      u32 DA[16];
@@ -202,8 +182,6 @@ void    C68k_Set_ReadW(c68k_struc *cpu, C68K_READ16 *Func);
 void    C68k_Set_WriteB(c68k_struc *cpu, C68K_WRITE8 *Func);
 void    C68k_Set_WriteW(c68k_struc *cpu, C68K_WRITE16 *Func);
 
-void	C68k_Set_Debug(c68k_struc *cpu, void (*exec_hook)(u32 address, u16 opcode));
-
 u32     C68k_Get_DReg(c68k_struc *cpu, u32 num);
 u32     C68k_Get_AReg(c68k_struc *cpu, u32 num);
 u32     C68k_Get_PC(c68k_struc *cpu);
@@ -218,8 +196,6 @@ void    C68k_Set_SR(c68k_struc *cpu, u32 val);
 void    C68k_Set_USP(c68k_struc *cpu, u32 val);
 void    C68k_Set_MSP(c68k_struc *cpu, u32 val);
 
-#include <string.h>
-
 static inline void C68k_Copy_State(const c68k_struc *source, c68k_struc *dest)
 {
  memcpy(&dest->D[0], &source->D[0], (&(source->dirty1)) - (&(source->D[0])));
@@ -228,10 +204,6 @@ static inline void C68k_Copy_State(const c68k_struc *source, c68k_struc *dest)
 unsigned int C68k_Get_State_Max_Len(void);
 void C68k_Save_State(c68k_struc *cpu, u8 *buffer);
 void C68k_Load_State(c68k_struc *cpu, const u8 *buffer);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif  // _C68K_H_
 

@@ -130,7 +130,7 @@ static void UpdateZapper(int w, void *data)
  //printf("La: %08x %08x %08x\n", new_x, new_y, new_b);
 }
 
-static int StateAction(int w, StateMem *sm, int load, int data_only)
+static void StateAction(int w, StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -142,12 +142,13 @@ static int StateAction(int w, StateMem *sm, int load, int data_only)
   SFVAR(ZD[w].zaplatch),
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, w ? "INP1" : "INP0");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, w ? "INP1" : "INP0", true);
+
  if(load)
  {
 
  }
- return(ret);
 }
 
 static INPUTC ZAPC={ReadZapper,0,0,UpdateZapper,ZapperFrapper,DrawZapper, StateAction };

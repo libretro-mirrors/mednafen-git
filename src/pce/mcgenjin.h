@@ -19,6 +19,7 @@
 #define __MDFN_PCE_MCGENJIN_H
 
 #include <vector>
+#include <memory>
 
 class MCGenjin_CS_Device
 {
@@ -34,10 +35,10 @@ class MCGenjin_CS_Device
  virtual int StateAction(StateMem *sm, int load, int data_only, const char *sname);
 
  virtual uint8 Read(int32 timestamp, uint32 A);
- virtual void Write(int32 timestamp, uint32 A, uint8 V);
+ virtual void Write(int32 timestamp, uint32 A, uint8 V) ;
 
- virtual uint32 GetNVSize(void);
- virtual void ReadNV(uint8 *buffer, uint32 offset, uint32 count);
+ virtual uint32 GetNVSize(void) const;
+ virtual const uint8* ReadNV(void) const;
  virtual void WriteNV(const uint8 *buffer, uint32 offset, uint32 count);
 };
 
@@ -45,7 +46,7 @@ class MCGenjin
 {
  public:
 
- MCGenjin(const uint8 *rr, uint32 rr_size);
+ MCGenjin(MDFNFILE* fp);
  ~MCGenjin();
 
  void Power(void);
@@ -54,8 +55,8 @@ class MCGenjin
  int StateAction(StateMem *sm, int load, int data_only);
 
  INLINE unsigned GetNVPDC(void) { return 2; }
- uint32 GetNVSize(const unsigned di);
- void ReadNV(const unsigned di, uint8 *buffer, uint32 offset, uint32 count);
+ uint32 GetNVSize(const unsigned di) const;
+ const uint8* ReadNV(const unsigned di) const;
  void WriteNV(const unsigned di, const uint8 *buffer, uint32 offset, uint32 count);
 
  INLINE uint8 combobble(uint8 v)
@@ -176,7 +177,7 @@ class MCGenjin
 
  std::vector<uint8> rom;
 
- MCGenjin_CS_Device *cs[2];
+ std::unique_ptr<MCGenjin_CS_Device> cs[2];
 
  uint8 bank_select;
  uint8 dlr;

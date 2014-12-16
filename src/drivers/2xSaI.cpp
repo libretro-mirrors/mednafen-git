@@ -18,10 +18,7 @@
 /* http://lists.fedoraproject.org/pipermail/legal/2009-October/000928.html */
 
 #include "2xSaI.h"
-
-//#include "System.h"
 #include "main.h"
-//#include "../gba/Port.h"
 
 #if defined(__GNUC__) && defined(__i386__)
   #define MMX 1

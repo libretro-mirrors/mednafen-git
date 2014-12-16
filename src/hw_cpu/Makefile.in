@@ -54,12 +54,12 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-noinst_PROGRAMS = gen68k$(EXEEXT)
 @WANT_DEBUGGER_TRUE@am__append_1 = huc6280/dis6280.cpp
 subdir = src/hw_cpu
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
+	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/codeset.m4 $(top_srcdir)/m4/fcntl-o.m4 \
 	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/glibc2.m4 \
 	$(top_srcdir)/m4/glibc21.m4 $(top_srcdir)/m4/iconv.m4 \
@@ -95,7 +95,7 @@ am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
 libmdfnhwcpu_a_AR = $(AR) $(ARFLAGS)
 libmdfnhwcpu_a_LIBADD =
-am__libmdfnhwcpu_a_SOURCES_DIST = c68k/c68kexec.c c68k/c68k.c \
+am__libmdfnhwcpu_a_SOURCES_DIST = c68k/c68kexec.cpp c68k/c68k.cpp \
 	z80-fuse/z80.cpp z80-fuse/z80_ops.cpp v810/v810_cpu.cpp \
 	v810/v810_cpuD.cpp v810/v810_fp_ops.cpp huc6280/huc6280.cpp \
 	huc6280/dis6280.cpp
@@ -108,35 +108,19 @@ am_libmdfnhwcpu_a_OBJECTS = c68k/c68kexec.$(OBJEXT) \
 	huc6280/huc6280.$(OBJEXT) $(am__objects_1)
 libmdfnhwcpu_a_OBJECTS = $(am_libmdfnhwcpu_a_OBJECTS)
 PROGRAMS = $(noinst_PROGRAMS)
-am_gen68k_OBJECTS = c68k/gen68k-c68kexec.$(OBJEXT) \
-	c68k/gen68k-c68k.$(OBJEXT) c68k/gen68k-gen68k.$(OBJEXT)
+am__gen68k_SOURCES_DIST = c68k/gen68k.cpp
+@CROSS_COMPILING_FALSE@am_gen68k_OBJECTS = c68k/gen68k.$(OBJEXT)
 gen68k_OBJECTS = $(am_gen68k_OBJECTS)
 gen68k_LDADD = $(LDADD)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
-gen68k_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(gen68k_CFLAGS) $(CFLAGS) \
-	$(gen68k_LDFLAGS) $(LDFLAGS) -o $@
+gen68k_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(gen68k_LDFLAGS) $(LDFLAGS) -o $@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 am__mv = mv -f
-COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
-	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
-LTCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) \
-	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
-	$(AM_CFLAGS) $(CFLAGS)
-AM_V_CC = $(am__v_CC_@AM_V@)
-am__v_CC_ = $(am__v_CC_@AM_DEFAULT_V@)
-am__v_CC_0 = @echo "  CC    " $@;
-CCLD = $(CC)
-LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-AM_V_CCLD = $(am__v_CCLD_@AM_V@)
-am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
-am__v_CCLD_0 = @echo "  CCLD  " $@;
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
 LTCXXCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
@@ -157,7 +141,8 @@ AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN   " $@;
 SOURCES = $(libmdfnhwcpu_a_SOURCES) $(gen68k_SOURCES)
-DIST_SOURCES = $(am__libmdfnhwcpu_a_SOURCES_DIST) $(gen68k_SOURCES)
+DIST_SOURCES = $(am__libmdfnhwcpu_a_SOURCES_DIST) \
+	$(am__gen68k_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -236,7 +221,6 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
-GBA_EXTRA_FLAGS = @GBA_EXTRA_FLAGS@
 GENCAT = @GENCAT@
 GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
 GLIBC2 = @GLIBC2@
@@ -245,6 +229,7 @@ GMSGFMT = @GMSGFMT@
 GMSGFMT_015 = @GMSGFMT_015@
 GREP = @GREP@
 HAVE_ASPRINTF = @HAVE_ASPRINTF@
+HAVE_CXX11 = @HAVE_CXX11@
 HAVE_NEWLOCALE = @HAVE_NEWLOCALE@
 HAVE_POSIX_PRINTF = @HAVE_POSIX_PRINTF@
 HAVE_SNPRINTF = @HAVE_SNPRINTF@
@@ -398,17 +383,19 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libmdfnhwcpu.a
-gen68k_SOURCES = c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c
-gen68k_CFLAGS = -DC68K_GEN
-gen68k_LDFLAGS = -DC68K_GEN
-nodist_pkgdata_DATA = c68k/c68k_op0.inc
-libmdfnhwcpu_a_SOURCES = c68k/c68kexec.c c68k/c68k.c z80-fuse/z80.cpp \
-	z80-fuse/z80_ops.cpp v810/v810_cpu.cpp v810/v810_cpuD.cpp \
-	v810/v810_fp_ops.cpp huc6280/huc6280.cpp $(am__append_1)
+@CROSS_COMPILING_FALSE@noinst_PROGRAMS = gen68k$(EXEEXT)
+@CROSS_COMPILING_FALSE@gen68k_SOURCES = c68k/gen68k.cpp
+@CROSS_COMPILING_FALSE@gen68k_CFLAGS = -DC68K_GEN
+@CROSS_COMPILING_FALSE@gen68k_LDFLAGS = -DC68K_GEN
+@CROSS_COMPILING_FALSE@nodist_pkgdata_DATA = c68k/c68k_op0.inc
+libmdfnhwcpu_a_SOURCES = c68k/c68kexec.cpp c68k/c68k.cpp \
+	z80-fuse/z80.cpp z80-fuse/z80_ops.cpp v810/v810_cpu.cpp \
+	v810/v810_cpuD.cpp v810/v810_fp_ops.cpp huc6280/huc6280.cpp \
+	$(am__append_1)
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .cpp .lo .o .obj
+.SUFFIXES: .cpp .lo .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -497,23 +484,17 @@ clean-noinstPROGRAMS:
 	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
 	echo " rm -f" $$list; \
 	rm -f $$list
-c68k/gen68k-c68kexec.$(OBJEXT): c68k/$(am__dirstamp) \
-	c68k/$(DEPDIR)/$(am__dirstamp)
-c68k/gen68k-c68k.$(OBJEXT): c68k/$(am__dirstamp) \
-	c68k/$(DEPDIR)/$(am__dirstamp)
-c68k/gen68k-gen68k.$(OBJEXT): c68k/$(am__dirstamp) \
+c68k/gen68k.$(OBJEXT): c68k/$(am__dirstamp) \
 	c68k/$(DEPDIR)/$(am__dirstamp)
 gen68k$(EXEEXT): $(gen68k_OBJECTS) $(gen68k_DEPENDENCIES) $(EXTRA_gen68k_DEPENDENCIES) 
 	@rm -f gen68k$(EXEEXT)
-	$(AM_V_CCLD)$(gen68k_LINK) $(gen68k_OBJECTS) $(gen68k_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(gen68k_LINK) $(gen68k_OBJECTS) $(gen68k_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 	-rm -f c68k/c68k.$(OBJEXT)
 	-rm -f c68k/c68kexec.$(OBJEXT)
-	-rm -f c68k/gen68k-c68k.$(OBJEXT)
-	-rm -f c68k/gen68k-c68kexec.$(OBJEXT)
-	-rm -f c68k/gen68k-gen68k.$(OBJEXT)
+	-rm -f c68k/gen68k.$(OBJEXT)
 	-rm -f huc6280/dis6280.$(OBJEXT)
 	-rm -f huc6280/huc6280.$(OBJEXT)
 	-rm -f v810/v810_cpu.$(OBJEXT)
@@ -527,9 +508,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@c68k/$(DEPDIR)/c68k.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@c68k/$(DEPDIR)/c68kexec.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@c68k/$(DEPDIR)/gen68k-c68k.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@c68k/$(DEPDIR)/gen68k-c68kexec.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@c68k/$(DEPDIR)/gen68k-gen68k.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@c68k/$(DEPDIR)/gen68k.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@huc6280/$(DEPDIR)/dis6280.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@huc6280/$(DEPDIR)/huc6280.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@v810/$(DEPDIR)/v810_cpu.Po@am__quote@
@@ -537,72 +516,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@v810/$(DEPDIR)/v810_fp_ops.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@z80-fuse/$(DEPDIR)/z80.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@z80-fuse/$(DEPDIR)/z80_ops.Po@am__quote@
-
-.c.o:
-@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
-@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
-@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ $<
-
-.c.obj:
-@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
-@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
-@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
-
-.c.lo:
-@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.lo$$||'`;\
-@am__fastdepCC_TRUE@	$(LTCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
-@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
-
-c68k/gen68k-c68kexec.o: c68k/c68kexec.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen68k_CFLAGS) $(CFLAGS) -MT c68k/gen68k-c68kexec.o -MD -MP -MF c68k/$(DEPDIR)/gen68k-c68kexec.Tpo -c -o c68k/gen68k-c68kexec.o `test -f 'c68k/c68kexec.c' || echo '$(srcdir)/'`c68k/c68kexec.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) c68k/$(DEPDIR)/gen68k-c68kexec.Tpo c68k/$(DEPDIR)/gen68k-c68kexec.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='c68k/c68kexec.c' object='c68k/gen68k-c68kexec.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen68k_CFLAGS) $(CFLAGS) -c -o c68k/gen68k-c68kexec.o `test -f 'c68k/c68kexec.c' || echo '$(srcdir)/'`c68k/c68kexec.c
-
-c68k/gen68k-c68kexec.obj: c68k/c68kexec.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen68k_CFLAGS) $(CFLAGS) -MT c68k/gen68k-c68kexec.obj -MD -MP -MF c68k/$(DEPDIR)/gen68k-c68kexec.Tpo -c -o c68k/gen68k-c68kexec.obj `if test -f 'c68k/c68kexec.c'; then $(CYGPATH_W) 'c68k/c68kexec.c'; else $(CYGPATH_W) '$(srcdir)/c68k/c68kexec.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) c68k/$(DEPDIR)/gen68k-c68kexec.Tpo c68k/$(DEPDIR)/gen68k-c68kexec.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='c68k/c68kexec.c' object='c68k/gen68k-c68kexec.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen68k_CFLAGS) $(CFLAGS) -c -o c68k/gen68k-c68kexec.obj `if test -f 'c68k/c68kexec.c'; then $(CYGPATH_W) 'c68k/c68kexec.c'; else $(CYGPATH_W) '$(srcdir)/c68k/c68kexec.c'; fi`
-
-c68k/gen68k-c68k.o: c68k/c68k.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen68k_CFLAGS) $(CFLAGS) -MT c68k/gen68k-c68k.o -MD -MP -MF c68k/$(DEPDIR)/gen68k-c68k.Tpo -c -o c68k/gen68k-c68k.o `test -f 'c68k/c68k.c' || echo '$(srcdir)/'`c68k/c68k.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) c68k/$(DEPDIR)/gen68k-c68k.Tpo c68k/$(DEPDIR)/gen68k-c68k.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='c68k/c68k.c' object='c68k/gen68k-c68k.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen68k_CFLAGS) $(CFLAGS) -c -o c68k/gen68k-c68k.o `test -f 'c68k/c68k.c' || echo '$(srcdir)/'`c68k/c68k.c
-
-c68k/gen68k-c68k.obj: c68k/c68k.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen68k_CFLAGS) $(CFLAGS) -MT c68k/gen68k-c68k.obj -MD -MP -MF c68k/$(DEPDIR)/gen68k-c68k.Tpo -c -o c68k/gen68k-c68k.obj `if test -f 'c68k/c68k.c'; then $(CYGPATH_W) 'c68k/c68k.c'; else $(CYGPATH_W) '$(srcdir)/c68k/c68k.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) c68k/$(DEPDIR)/gen68k-c68k.Tpo c68k/$(DEPDIR)/gen68k-c68k.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='c68k/c68k.c' object='c68k/gen68k-c68k.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen68k_CFLAGS) $(CFLAGS) -c -o c68k/gen68k-c68k.obj `if test -f 'c68k/c68k.c'; then $(CYGPATH_W) 'c68k/c68k.c'; else $(CYGPATH_W) '$(srcdir)/c68k/c68k.c'; fi`
-
-c68k/gen68k-gen68k.o: c68k/gen68k.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen68k_CFLAGS) $(CFLAGS) -MT c68k/gen68k-gen68k.o -MD -MP -MF c68k/$(DEPDIR)/gen68k-gen68k.Tpo -c -o c68k/gen68k-gen68k.o `test -f 'c68k/gen68k.c' || echo '$(srcdir)/'`c68k/gen68k.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) c68k/$(DEPDIR)/gen68k-gen68k.Tpo c68k/$(DEPDIR)/gen68k-gen68k.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='c68k/gen68k.c' object='c68k/gen68k-gen68k.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen68k_CFLAGS) $(CFLAGS) -c -o c68k/gen68k-gen68k.o `test -f 'c68k/gen68k.c' || echo '$(srcdir)/'`c68k/gen68k.c
-
-c68k/gen68k-gen68k.obj: c68k/gen68k.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen68k_CFLAGS) $(CFLAGS) -MT c68k/gen68k-gen68k.obj -MD -MP -MF c68k/$(DEPDIR)/gen68k-gen68k.Tpo -c -o c68k/gen68k-gen68k.obj `if test -f 'c68k/gen68k.c'; then $(CYGPATH_W) 'c68k/gen68k.c'; else $(CYGPATH_W) '$(srcdir)/c68k/gen68k.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) c68k/$(DEPDIR)/gen68k-gen68k.Tpo c68k/$(DEPDIR)/gen68k-gen68k.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='c68k/gen68k.c' object='c68k/gen68k-gen68k.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen68k_CFLAGS) $(CFLAGS) -c -o c68k/gen68k-gen68k.obj `if test -f 'c68k/gen68k.c'; then $(CYGPATH_W) 'c68k/gen68k.c'; else $(CYGPATH_W) '$(srcdir)/c68k/gen68k.c'; fi`
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -870,8 +783,8 @@ uninstall-am: uninstall-nodist_pkgdataDATA
 	pdf pdf-am ps ps-am tags uninstall uninstall-am \
 	uninstall-nodist_pkgdataDATA
 
-c68k/c68k_op0.inc: $(srcdir)/c68k/*.h $(srcdir)/c68k/*.c $(srcdir)/c68k/c68k_ini.inc $(srcdir)/c68k/c68kmac.inc $(srcdir)/c68k/gen68k.inc
-	make gen68k && cd c68k && ../gen68k$(EXEEXT)
+@CROSS_COMPILING_FALSE@c68k/c68k_op0.inc: gen68k$(EXEEXT)
+@CROSS_COMPILING_FALSE@	cd c68k && ../gen68k$(EXEEXT)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

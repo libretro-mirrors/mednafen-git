@@ -10,4 +10,6 @@
 
 #include "cursor.h"
 
+using namespace MDFN_IEN_NES;
+
 #endif

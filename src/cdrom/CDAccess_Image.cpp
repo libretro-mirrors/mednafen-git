@@ -224,9 +224,9 @@ void CDAccess_Image::ParseTOCFileLineInfo(CDRFILE_TRACK_INFO *track, const int t
   efn = MDFN_EvalFIP(base_dir, filename);
 
   if(image_memcache)
-   track->fp = new MemoryStream(new FileStream(efn.c_str(), FileStream::MODE_READ));
+   track->fp = new MemoryStream(new FileStream(efn, FileStream::MODE_READ));
   else
-   track->fp = new FileStream(efn.c_str(), FileStream::MODE_READ);
+   track->fp = new FileStream(efn, FileStream::MODE_READ);
 
   toc_streamcache[filename] = track->fp;
  }
@@ -323,9 +323,9 @@ std::string MDFN_toupper(const std::string &str)
 }
 #endif
 
-void CDAccess_Image::LoadSBI(const char* sbi_path)
+void CDAccess_Image::LoadSBI(const std::string& sbi_path)
 {
- MDFN_printf(_("Loading SBI file \"%s\"...\n"), sbi_path);
+ MDFN_printf(_("Loading SBI file \"%s\"...\n"), sbi_path.c_str());
  {
   MDFN_AutoIndent aind(1);
 
@@ -364,7 +364,7 @@ void CDAccess_Image::LoadSBI(const char* sbi_path)
 
     uint32 aba = AMSF_to_ABA(BCD_to_U8(ed[0]), BCD_to_U8(ed[1]), BCD_to_U8(ed[2]));
 
-    memcpy(SubQReplaceMap[aba].data, tmpq, 12);
+    memcpy(SubQReplaceMap[aba].data(), tmpq, 12);
    }
    MDFN_printf(_("Loaded Q subchannel replacements for %zu sectors.\n"), SubQReplaceMap.size());
   }
@@ -383,7 +383,7 @@ void CDAccess_Image::LoadSBI(const char* sbi_path)
 }
 
 
-void CDAccess_Image::ImageOpen(const char *path, bool image_memcache)
+void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
 {
  MemoryStream fp(new FileStream(path, FileStream::MODE_READ));
  static const unsigned max_args = 4;
@@ -641,13 +641,8 @@ void CDAccess_Image::ImageOpen(const char *path, bool image_memcache)
       active_track = -1;
      }
 
-     if(!MDFN_IsFIROPSafe(args[0]))
-     {
-      throw(MDFN_Error(0, _("Referenced path \"%s\" is potentially unsafe.  See \"filesys.untrusted_fip_check\" setting.\n"), args[0].c_str()));
-     }
-
      std::string efn = MDFN_EvalFIP(base_dir, args[0]);
-     TmpTrack.fp = new FileStream(efn.c_str(), FileStream::MODE_READ);
+     TmpTrack.fp = new FileStream(efn, FileStream::MODE_READ);
      TmpTrack.FirstFileInstance = 1;
 
      if(image_memcache)
@@ -939,7 +934,7 @@ void CDAccess_Image::Cleanup(void)
  }
 }
 
-CDAccess_Image::CDAccess_Image(const char *path, bool image_memcache) : NumTracks(0), FirstTrack(0), LastTrack(0), total_sectors(0)
+CDAccess_Image::CDAccess_Image(const std::string& path, bool image_memcache) : NumTracks(0), FirstTrack(0), LastTrack(0), total_sectors(0)
 {
  memset(Tracks, 0, sizeof(Tracks));
 
@@ -1195,12 +1190,12 @@ void CDAccess_Image::MakeSubPQ(int32 lba, uint8 *SubPWBuf)
  if(!SubQReplaceMap.empty())
  {
   //printf("%d\n", lba);
-  std::map<uint32, cpp11_array_doodad>::const_iterator it = SubQReplaceMap.find(LBA_to_ABA(lba));
+  auto it = SubQReplaceMap.find(LBA_to_ABA(lba));
 
   if(it != SubQReplaceMap.end())
   {
    //printf("Replace: %d\n", lba);
-   memcpy(buf, it->second.data, 12);
+   memcpy(buf, it->second.data(), 12);
   }
  }
 

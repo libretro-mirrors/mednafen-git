@@ -4,13 +4,18 @@
 namespace MDFN_IEN_SMS
 {
 
-bool SMS_CartInit(const uint8 *data, uint32 size);
+void Cart_Init(MDFNFILE *fp);
+void Cart_Close(void);
 
-void SMS_CartWrite(uint16 A, uint8 V);
-uint8 SMS_CartRead(uint16 A);
-void SMS_CartReset(void);
-void SMS_CartClose(void);
-int SMS_CartStateAction(StateMem *sm, int load, int data_only);
+void Cart_Reset(void);
+
+void Cart_LoadNV(void);
+void Cart_SaveNV(void);
+
+void Cart_Write(uint16 A, uint8 V);
+uint8 Cart_Read(uint16 A);
+
+int Cart_StateAction(StateMem *sm, int load, int data_only);
 
 }
 #endif

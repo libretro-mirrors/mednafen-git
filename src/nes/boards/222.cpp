@@ -1,7 +1,7 @@
 #include "mapinc.h"
 
 static uint8 PRGBanks[2], CHRBanks[8], IRQCount, IRQLatch, IRQa;
-int32 acount;
+static int32 acount;
 
 static void Sync(void)
 {

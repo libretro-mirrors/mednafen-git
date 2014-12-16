@@ -36,6 +36,8 @@
 #include "vsuni.h"
 #include "input.h"
 
+namespace MDFN_IEN_NES
+{
 
 static uint8 ExtraNTARAM[0x800];
 static uint32 CHRRAMSize;
@@ -51,7 +53,7 @@ static int Mirroring;
 static uint32 ROM_size;
 static uint32 VROM_size;
 
-static int NewiNES_Init(int num);
+static void NewiNES_Init(int num);
 
 static int MapperNo;
 
@@ -67,7 +69,7 @@ static DECLFW(TrainerWrite)
  TrainerRAM[A & 0x1FF] = V;
 }
 
-static int iNES_StateAction(StateMem *sm, int load, int data_only)
+static void iNES_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -77,18 +79,15 @@ static int iNES_StateAction(StateMem *sm, int load, int data_only)
   SFARRAY(WRAM, WRAM ? 8192 : 0),
   SFEND
  };
- int ret = 1;
 
  if(NESIsVSUni)
-  ret &= MDFNNES_VSUNIStateAction(sm,load, data_only);
+  MDFNNES_VSUNIStateAction(sm,load, data_only);
 
  if(head.ROM_type & 8 || !VROM_size)
-  ret &= MDFNSS_StateAction(sm, load, data_only, StateRegs, "iNES");
+  MDFNSS_StateAction(sm, load, data_only, StateRegs, "iNES");
 
  if(iNESCart.StateAction)	// Call after loading/saving VS Uni and iNES sections.
-  ret &= iNESCart.StateAction(sm, load, data_only);
-
- return(ret);
+  iNESCart.StateAction(sm, load, data_only);
 }
 static void iNESFree(void)
 {
@@ -138,10 +137,13 @@ static void iNES_Power(void)
 	 iNESCart.Power(&iNESCart);
 }
 
-static void iNES_Close(void)
+static void iNES_SaveNV(void)
 {
 	MDFN_SaveGameSave(&iNESCart);
+}
 
+static void iNES_Kill(void)
+{
 	if(iNESCart.Close) iNESCart.Close();
 
 	iNESFree();
@@ -257,6 +259,8 @@ static void SetInput(void)
 {
  static struct INPSEL moo[]=
 	{
+	 {0x62c67984, "gamepad", "gamepad", "4player" },	// Nekketsu Koukou Dodgeball-bu
+
          {0x3a1694f9,"gamepad","gamepad","4player"},       /* Nekketsu Kakutou Densetsu */
 
 	 {0xc3c0811d,"gamepad","gamepad","oekakids"},	/* The two "Oeka Kids" games */
@@ -562,27 +566,37 @@ static void CheckHInfo(void)
 
 bool iNES_TestMagic(MDFNFILE *fp)
 {
- if(fp->size < 16)
-  return(FALSE);
+ uint8 header[16];
 
- if(memcmp(fp->data, "NES\x1a", 4))
-  return(FALSE);
+ if(fp->read(header, 16, false) != 16 || memcmp(header, "NES\x1a", 4))
+  return false;
 
- return(TRUE);
+ return true;
 }
 
-bool iNESLoad(MDFNFILE *fp, NESGameType *gt)
+void iNESLoad(Stream *fp, NESGameType *gt)
 {
+  try
+  {
+	const uint64 raw_size = fp->size();
         md5_context md5;
 
-	if(!iNES_TestMagic(fp))
-	 return(FALSE);
+	fp->read(head.raw, 16);
 
-	/* File size is too small to be an iNES file */
-        memcpy(head.raw, fp->data, 16);
-	fp->fseek(16, SEEK_SET);
+	if(memcmp(head.ID, "NES\x1a", 4))
+	 throw MDFN_Error(0, _("Not a valid iNES format file."));
 
-	memset(&iNESCart,0,sizeof(iNESCart));
+	{
+	 const uint64 needed_size = 16 + (head.ROM_size ? head.ROM_size : 256) * 0x4000 + head.VROM_size * 0x2000 + ((head.ROM_type & 4) ? 512 : 0);
+
+	 if(raw_size < needed_size)
+	  throw MDFN_Error(0, _("iNES format file is too small by %llu bytes to contain all data specified by header!"), (unsigned long long)needed_size - raw_size);
+
+	 if(raw_size > needed_size)
+	  MDFN_printf(_("Warning: iNES format file has %llu bytes of unused trailing data.\n"), (unsigned long long)(raw_size - needed_size));
+	}
+
+	memset(&iNESCart, 0, sizeof(iNESCart));
 
 	/* Do some fixes to common strings found in
 	   old iNES-format headers.
@@ -605,15 +619,8 @@ bool iNESLoad(MDFNFILE *fp, NESGameType *gt)
           memset(&head.raw[0xA], 0, 0x6);
         }
 
-        if(!head.ROM_size)
-	{
-	 MDFN_PrintError(_("No PRG ROM present!"));
-	 return(0);
-	}
-
-        ROM_size = head.ROM_size;
+        ROM_size = round_up_pow2((head.ROM_size ? head.ROM_size : 256));
         VROM_size = head.VROM_size;
-	ROM_size = round_up_pow2(ROM_size);
 
         if(VROM_size)
 	 VROM_size = round_up_pow2(VROM_size);
@@ -624,58 +631,41 @@ bool iNESLoad(MDFNFILE *fp, NESGameType *gt)
 
 	if(head.ROM_type&8) Mirroring=2;
 
-        if(!(ROM = (uint8 *)MDFN_malloc(ROM_size<<14, _("PRG ROM data"))))
-	{
-	 iNESFree();
-	 return 0;
-	}
+        ROM = (uint8 *)MDFN_malloc_T(ROM_size<<14, _("PRG ROM"));
 
 	#ifdef WANT_DEBUGGER
 	ASpace_Add(iNES_GetAddressSpaceBytes, iNES_PutAddressSpaceBytes, "prgrom", "PRG ROM", (unsigned int)(log(ROM_size << 14) / log(2)));
 	#endif
 
-        if (VROM_size) 
+        if(VROM_size) 
 	{
-         if(!(VROM = (uint8 *)MDFN_malloc(VROM_size<<13, _("CHR ROM data"))))
-	 {
-	  iNESFree();
-	  return 0;
-	 }
+         VROM = (uint8 *)MDFN_malloc_T(VROM_size<<13, _("CHR ROM"));
 	 #ifdef WANT_DEBUGGER
 	 ASpace_Add(iNES_GetAddressSpaceBytes, iNES_PutAddressSpaceBytes, "chrrom", "CHR ROM", (unsigned int)(log(VROM_size << 13) / log(2)));
 	 #endif
 	}
-        memset(ROM,0xFF,ROM_size<<14);
-        if(VROM_size) memset(VROM,0xFF,VROM_size<<13);
+
+        memset(ROM, 0xFF, ROM_size << 14);
+
+        if(VROM_size)
+         memset(VROM, 0xFF, VROM_size << 13);
+
         if(head.ROM_type&4)     /* Trainer */
-        {
-         if(fp->fread(trainerpoo,512,1) != 1)
-	 {
-	  MDFN_PrintError(_("Error reading trainer."));
-	  return(0);
-	 }
-        }
+	{
+         fp->read(trainerpoo, 512);
+	}
 
 	ResetCartMapping();
 
-	SetupCartPRGMapping(0,ROM,ROM_size*0x4000,0);
+	SetupCartPRGMapping(0, ROM, ROM_size * 0x4000, 0);
 
-        if(fp->fread(ROM,0x4000,head.ROM_size) != head.ROM_size)
-	{
-	 MDFN_PrintError(_("Error reading PRG ROM data"));
-	 iNESFree();
-	 return(0);
-	}
+        fp->read(ROM, 0x4000 * (head.ROM_size ? head.ROM_size : 256));
 
 	if(VROM_size)
 	{
-	 if(fp->fread(VROM,0x2000,head.VROM_size) != head.VROM_size)
-	 {
-	  MDFN_PrintError(_("Error reading CHR ROM data"));
-	  iNESFree();
-	  return(0);
-	 }
+	 fp->read(VROM, 0x2000 * head.VROM_size);
 	}
+
         md5.starts();
         md5.update(ROM,ROM_size<<14);
 
@@ -691,7 +681,7 @@ bool iNESLoad(MDFNFILE *fp, NESGameType *gt)
 
 	iNESCart.CRC32 = iNESGameCRC32;
 
-        MDFN_printf(_("PRG ROM:  %3d x 16KiB\n"), head.ROM_size);
+        MDFN_printf(_("PRG ROM:  %3d x 16KiB\n"), (head.ROM_size ? head.ROM_size : 256));
 	MDFN_printf(_("CHR ROM:  %3d x  8KiB\n"), head.VROM_size);
 	MDFN_printf(_("ROM CRC32:  0x%08x\n"), iNESGameCRC32);
 
@@ -731,21 +721,14 @@ bool iNESLoad(MDFNFILE *fp, NESGameType *gt)
 	iNESCart.battery = (head.ROM_type&2)?1:0;
 	iNESCart.mirror = Mirroring;
 
-	if(!NewiNES_Init(MapperNo))
-	{
-	 iNESFree();
-	 return(0);
-	}
+	NewiNES_Init(MapperNo);
 
-	if(!MDFN_LoadGameSave(&iNESCart))
-	{
-	 iNESFree();
-	 return(0);
-	}
+	MDFN_LoadGameSave(&iNESCart);
 
 	gt->Power = iNES_Power;
 	gt->Reset = iNES_Reset;
-	gt->Close = iNES_Close;
+	gt->SaveNV = iNES_SaveNV;
+	gt->Kill = iNES_Kill;
 	gt->StateAction = iNES_StateAction;
 
 	if(iNESCart.CartExpSound.HiFill)
@@ -756,7 +739,12 @@ bool iNESLoad(MDFNFILE *fp, NESGameType *gt)
          SetReadHandler(0x7000, 0x71FF, TrainerRead);
 	 SetWriteHandler(0x7000, 0x71FF, TrainerWrite);
 	}
-        return 1;
+  }
+  catch(...)
+  {
+   iNESFree();
+   throw;
+  }
 }
 
 
@@ -900,7 +888,7 @@ static const BMAPPING bmap[] = {
 	{ 0, NULL, 0}
 };
 
-static int NewiNES_Init(int num)
+static void NewiNES_Init(int num)
 {
  const BMAPPING *tmp=bmap;
 
@@ -915,8 +903,7 @@ static int NewiNES_Init(int num)
     else
      CHRRAMSize = 8192;
 
-    if(!(VROM = (uint8 *)MDFN_malloc(CHRRAMSize, _("CHR RAM"))))
-     return(0);
+    VROM = (uint8 *)MDFN_malloc_T(CHRRAMSize, _("CHR RAM"));
 
     SetupCartCHRMapping(0x0,VROM,CHRRAMSize,1);
 
@@ -927,8 +914,7 @@ static int NewiNES_Init(int num)
 
    if(iNESCart.battery && (tmp->flags & BMAPF_INESWRAMOK))
    {
-    if(!(WRAM = (uint8 *)MDFN_malloc(8192, _("WRAM"))))
-     return(0);
+    WRAM = (uint8 *)MDFN_malloc_T(8192, _("WRAM"));
 
     memset(WRAM, 0x00, 8192);
 
@@ -944,12 +930,12 @@ static int NewiNES_Init(int num)
    }
 
    tmp->init(&iNESCart);
-
-   return(1);
+   return;
   }
   tmp++;
  }
 
- MDFN_PrintError(_("iNES mapper %d is not supported!"), num);
- return(0);
+ throw MDFN_Error(0, _("iNES mapper %d is not supported!"), num);
+}
+
 }

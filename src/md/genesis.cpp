@@ -27,8 +27,8 @@ uint16 (*MD_ExtRead16)(uint32 address) = NULL;
 void (*MD_ExtWrite8)(uint32 address, uint8 value) = NULL;
 void (*MD_ExtWrite16)(uint32 address, uint16 value) = NULL;
 
-uint8 work_ram[0x10000];    /* 68K work RAM */
-uint8 zram[0x2000];         /* Z80 work RAM */
+alignas(8) uint8 work_ram[0x10000];    /* 68K work RAM */
+alignas(8) uint8 zram[0x2000];         /* Z80 work RAM */
 uint8 zbusreq;              /* /BUSREQ from Z80 */
 uint8 zreset;               /* /RESET to Z80 */
 uint8 zbusack;              /* /BUSACK to Z80 */

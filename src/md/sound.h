@@ -18,7 +18,7 @@ int MDSound_Init(void);
 void MDSound_Kill(void);
 void MDSound_Power(void);
 
-int MDSound_StateAction(StateMem *sm, int load, int data_only);
+void MDSound_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 };
 

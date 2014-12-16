@@ -24,11 +24,6 @@
 #include <time.h>
 #include <zlib.h>
 
-void QTRecord::w8(uint8 val)
-{
- qtfile.put_char(val);
-}
-
 void QTRecord::w16(uint16 val)
 {
  uint8 buf[2];
@@ -128,8 +123,8 @@ void QTRecord::vardata_begin(void)
 
 void QTRecord::vardata_end(void)
 {
- int64 cur_offset = qtfile.tell();
- int64 start_offset = vardata_foffsets.back();
+ uint64 cur_offset = qtfile.tell();
+ uint64 start_offset = vardata_foffsets.back();
 
  vardata_foffsets.pop_back();
 
@@ -178,8 +173,8 @@ void QTRecord::atom_begin(const char *type, bool small_atom)
 
 void QTRecord::atom_end(void)
 {
- int64 cur_offset = qtfile.tell();
- int64 start_offset = atom_foffsets.back();
+ uint64 cur_offset = qtfile.tell();
+ uint64 start_offset = atom_foffsets.back();
  bool small_atom = atom_smalls.back();
 
  atom_foffsets.pop_back();
@@ -200,7 +195,7 @@ void QTRecord::atom_end(void)
  qtfile.seek(cur_offset, SEEK_SET);
 }
 
-QTRecord::QTRecord(const char *path, const VideoSpec &spec) : qtfile(path, FileWrapper::MODE_WRITE_SAFE), resampler(NULL)
+QTRecord::QTRecord(const std::string& path, const VideoSpec &spec) : qtfile(path, FileStream::MODE_WRITE_SAFE), resampler(NULL)
 {
  Finished = false;
 
@@ -414,9 +409,12 @@ void QTRecord::WriteFrame(const MDFN_Surface *surface, const MDFN_Rect &DisplayR
  {
   static uint8 workmem[LZO1X_1_MEM_COMPRESS];
   lzo_uint dst_len = CompressedVideoBuffer.size();
+  uint8 tmp[2];
 
-  qtfile.put_char((0 << 1) | 0x1);
-  qtfile.put_char(0);
+  tmp[0] = (0 << 1) | 0x1;
+  tmp[1] = 0;
+
+  qtfile.write(tmp, 2);
 
   lzo1x_1_compress(&RawVideoBuffer[0], RawVideoBuffer.size(), &CompressedVideoBuffer[0], &dst_len, workmem);
 
@@ -475,7 +473,7 @@ void QTRecord::WriteFrame(const MDFN_Surface *surface, const MDFN_Rect &DisplayR
   if((ResampInBuffer.size() - (ResampInBufferFramesInCount * SoundChan)) < SoundBufSize * SoundChan)
    ResampInBuffer.resize((ResampInBufferFramesInCount + SoundBufSize) * SoundChan);
 
-  for(int i = 0; i < SoundBufSize * SoundChan; i++)
+  for(unsigned i = 0; i < SoundBufSize * SoundChan; i++)
    ResampInBuffer[ResampInBufferFramesInCount * SoundChan + i] = SoundBuf[i];
 
   ResampInBufferFramesInCount += SoundBufSize;
@@ -508,7 +506,7 @@ void QTRecord::WriteFrame(const MDFN_Surface *surface, const MDFN_Rect &DisplayR
   ResampInBufferFramesInCount -= in_len;
   SoundBufROSize = out_len;
 
-  for(int i = 0; i < SoundBufROSize * SoundChan; i++)
+  for(unsigned i = 0; i < SoundBufROSize * SoundChan; i++)
    MDFN_en16msb((uint8 *)&ResampOutBuffer[i], ResampOutBuffer[i]);
  }
  else
@@ -518,7 +516,7 @@ void QTRecord::WriteFrame(const MDFN_Surface *surface, const MDFN_Rect &DisplayR
   if(ResampOutBuffer.size() < SoundBufSize * SoundChan)
    ResampOutBuffer.resize(SoundBufSize * SoundChan);
 
-  for(int i = 0; i < SoundBufROSize * SoundChan; i++)
+  for(unsigned i = 0; i < SoundBufROSize * SoundChan; i++)
    MDFN_en16msb((uint8 *)&ResampOutBuffer[i], SoundBuf[i]);
  }
 
@@ -879,10 +877,10 @@ void QTRecord::Write_stbl(void)
 
  bool need64bit_offset = false;
 
- if(OnAudioTrack && QTChunks.back().audio_foffset >= ((int64)1 << 32))
+ if(OnAudioTrack && QTChunks.back().audio_foffset >= ((uint64)1 << 32))
   need64bit_offset = true;
 
- if(!OnAudioTrack && QTChunks.back().video_foffset >= ((int64)1 << 32))
+ if(!OnAudioTrack && QTChunks.back().video_foffset >= ((uint64)1 << 32))
   need64bit_offset = true;
 
  if(need64bit_offset)

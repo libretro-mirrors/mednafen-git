@@ -1,6 +1,6 @@
 unsigned cache_access_speed;
 unsigned memory_access_speed;
-bool r15_modified;
+uint8 r15_NOT_modified;	// stores 0 and 1 only.
 
 void add_clocks(unsigned clocks);
 

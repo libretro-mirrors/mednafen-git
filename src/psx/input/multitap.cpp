@@ -144,7 +144,7 @@ void InputDevice_Multitap::Power(void)
  } 
 }
 
-int InputDevice_Multitap::StateAction(StateMem* sm, int load, int data_only, const char* section_name)
+void InputDevice_Multitap::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix)
 {
  SFORMAT StateRegs[] =
  {
@@ -170,15 +170,83 @@ int InputDevice_Multitap::StateAction(StateMem* sm, int load, int data_only, con
 
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name);
+ char section_name[32];
+ trio_snprintf(section_name, sizeof(section_name), "%s_MT", sname_prefix);
 
- if(load)
+ if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
+  Power();
+ else if(load)
  {
 
  }
 
+ for(unsigned i = 0; i < 4; i++)
+ {
+  char tmpbuf[32];
+
+  trio_snprintf(tmpbuf, sizeof(tmpbuf), "%sP%u", section_name, i);
+  pad_devices[i]->StateAction(sm, load, data_only, tmpbuf);
+ }
+
+ for(unsigned i = 0; i < 4; i++)
+ {
+  char tmpbuf[32];
+
+  trio_snprintf(tmpbuf, sizeof(tmpbuf), "%sMC%u", section_name, i);
+  mc_devices[i]->StateAction(sm, load, data_only, tmpbuf);
+ }
+}
+
+void InputDevice_Multitap::Update(const pscpu_timestamp_t timestamp)
+{
+ for(unsigned i = 0; i < 4; i++)
+ {
+  pad_devices[i]->Update(timestamp);
+  mc_devices[i]->Update(timestamp);
+ }
+}
+
+void InputDevice_Multitap::ResetTS(void)
+{
+ for(unsigned i = 0; i < 4; i++)
+ {
+  pad_devices[i]->ResetTS();
+  mc_devices[i]->ResetTS();
+ }
+}
+
+
+bool InputDevice_Multitap::RequireNoFrameskip(void)
+{
+ bool ret = false;
+
+ for(unsigned i = 0; i < 4; i++)
+  ret |= pad_devices[i]->RequireNoFrameskip();
+
  return(ret);
 }
+
+pscpu_timestamp_t InputDevice_Multitap::GPULineHook(const pscpu_timestamp_t line_timestamp, bool vsync, uint32 *pixels, const MDFN_PixelFormat* const format, const unsigned width, const unsigned pix_clock_offset, const unsigned pix_clock, const unsigned pix_clock_divider)
+{
+ pscpu_timestamp_t ret = PSX_EVENT_MAXTS;
+
+ for(unsigned i = 0; i < 4; i++)
+ {
+  pscpu_timestamp_t tmp = pad_devices[i]->GPULineHook(line_timestamp, vsync, pixels, format, width, pix_clock_offset, pix_clock, pix_clock_divider);
+
+  if(i == 0)	// FIXME; though the problems the design flaw causes(multitap issues with justifier) are documented at least.
+   ret = tmp;
+ }
+
+ return(ret);
+}
+
+void InputDevice_Multitap::DrawCrosshairs(uint32 *pixels, const MDFN_PixelFormat* const format, const unsigned width, const unsigned pix_clock)
+{
+ for(unsigned i = 0; i < 4; i++)
+  pad_devices[i]->DrawCrosshairs(pixels, format, width, pix_clock);
+}
+
 
 
 void InputDevice_Multitap::SetDTR(bool new_dtr)

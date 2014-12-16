@@ -25,7 +25,7 @@
 
 #include "general.h"
 #include "string/trim.h"
-#include "md5.h"
+#include <mednafen/hash/md5.h>
 #include "mempatcher.h"
 #include "FileStream.h"
 #include "MemoryStream.h"
@@ -214,7 +214,7 @@ void MDFN_LoadGameCheats(Stream* override)
 {
  Stream* fp = NULL;
  int tc = 0;
- std::string fn = MDFN_MakeFName(MDFNMKF_CHEAT,0,0).c_str();
+ std::string fn = MDFN_MakeFName(MDFNMKF_CHEAT,0,0);
 
  if(!override)
  {
@@ -231,7 +231,7 @@ void MDFN_LoadGameCheats(Stream* override)
   if(override)
    fp = override;
   else
-   fp = /*new MemoryStream(*/new FileStream(fn.c_str(), FileStream::MODE_READ)/*)*/;
+   fp = /*new MemoryStream(*/new FileStream(fn, FileStream::MODE_READ)/*)*/;
 
   if(SeekToOurSection(fp))
   {

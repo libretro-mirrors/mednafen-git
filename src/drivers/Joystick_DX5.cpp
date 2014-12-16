@@ -19,7 +19,6 @@
 #include "input.h"
 #include "Joystick.h"
 #include "Joystick_DX5.h"
-#include "../md5.h"
 
 #define DIRECTINPUT_VERSION 0x0500
 #include <windows.h>

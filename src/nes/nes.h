@@ -1,20 +1,19 @@
-#ifndef _NES_H
-#define _NES_H
+#ifndef __MDFN_NES_NES_H
+#define __MDFN_NES_NES_H
 
 #include <mednafen/mednafen.h>
 #include <mednafen/state.h>
-#include <mednafen/movie.h>
 #include <mednafen/general.h>
 #include <mednafen/string/trim.h>
 #include <mednafen/file.h>
-#include <mednafen/md5.h>
+#include <mednafen/hash/md5.h>
 #include <mednafen/video.h>
 
-//#define MDFN_NES_FASTCALL MDFN_FASTCALL
-#define MDFN_NES_FASTCALL
+namespace MDFN_IEN_NES
+{
 
-typedef void (MDFN_NES_FASTCALL *writefunc)(uint32 A, uint8 V);
-typedef uint8 (MDFN_NES_FASTCALL *readfunc)(uint32 A);
+typedef void (MDFN_FASTCALL *writefunc)(uint32 A, uint8 V);
+typedef uint8 (MDFN_FASTCALL *readfunc)(uint32 A);
 
 void ResetMapping(void);
 void ResetNES(void);
@@ -40,8 +39,8 @@ extern uint8 PAL;
 extern int fceuindbg;
 void ResetGameLoaded(void);
 
-#define DECLFR(x) uint8 MDFN_NES_FASTCALL x (uint32 A)
-#define DECLFW(x) void MDFN_NES_FASTCALL x (uint32 A, uint8 V)
+#define DECLFR(x) uint8 MDFN_FASTCALL x (uint32 A)
+#define DECLFW(x) void MDFN_FASTCALL x (uint32 A, uint8 V)
 
 DECLFR(ANull);
 DECLFW(BNull);
@@ -55,11 +54,15 @@ typedef struct
 {
  void (*Power)(void);
  void (*Reset)(void);
- void (*Close)(void);
- int (*StateAction)(StateMem *sm, int load, int data_only);
+ void (*SaveNV)(void);
+ void (*Kill)(void);
+ void (*StateAction)(StateMem *sm, const unsigned load, const bool data_only);
 } NESGameType;
 
 
 extern bool NESIsVSUni;
+}
+
+using namespace MDFN_IEN_NES;
 
 #endif

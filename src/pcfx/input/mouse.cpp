@@ -29,22 +29,22 @@ class PCFX_Input_Mouse : public PCFX_Input_Device
   button = 0;
  }
 
- virtual ~PCFX_Input_Mouse()
+ virtual ~PCFX_Input_Mouse() override
  {
 
  }
 
- virtual uint32 ReadTransferTime(void)
- {
-  return(1536);
- }
-
- virtual uint32 WriteTransferTime(void)
+ virtual uint32 ReadTransferTime(void) override
  {
   return(1536);
  }
 
- virtual uint32 Read(void)
+ virtual uint32 WriteTransferTime(void) override
+ {
+  return(1536);
+ }
+
+ virtual uint32 Read(void) override
  {
   uint32 moo = FX_SIG_MOUSE << 28;
   int32 rel_x = (int32)(x);
@@ -65,27 +65,27 @@ class PCFX_Input_Mouse : public PCFX_Input_Device
   return(moo);
  }
 
- virtual void Write(uint32 data)
+ virtual void Write(uint32 data) override
  {
 
  }
 
 
- virtual void Power(void)
+ virtual void Power(void) override
  {
   button = 0;
   x = 0;
   y = 0;
  }
 
- virtual void Frame(const void *data)
+ virtual void Frame(const void *data) override
  {
   x += (int32)MDFN_de32lsb((uint8 *)data + 0);
   y += (int32)MDFN_de32lsb((uint8 *)data + 4);
   button = *(uint8 *)((uint8 *)data + 8);
  }
 
- virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name)
+ virtual void StateAction(StateMem *sm, const unsigned load, const bool data_only, const char *section_name) override
  {
   SFORMAT StateRegs[] =
   {
@@ -94,9 +94,9 @@ class PCFX_Input_Mouse : public PCFX_Input_Device
    SFVAR(button),
    SFEND
   };
-  int ret =  MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name);
 
-  return(ret);
+  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
+   Power();
  }
 
  private:
@@ -111,7 +111,7 @@ PCFX_Input_Device *PCFXINPUT_MakeMouse(int which)
  return(new PCFX_Input_Mouse(which));
 }
 
-const InputDeviceInputInfoStruct PCFX_MouseIDII[4] =
+const IDIISG PCFX_MouseIDII =
 {
  { "x_axis", "X Axis", -1, IDIT_X_AXIS_REL },
  { "y_axis", "Y Axis", -1, IDIT_Y_AXIS_REL },

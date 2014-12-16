@@ -21,7 +21,7 @@
 #include "png.h"
 #include "../endian.h"
 
-void PNGWrite::WriteChunk(FileWrapper &pngfile, uint32 size, const char *type, const uint8 *data)
+void PNGWrite::WriteChunk(FileStream &pngfile, uint32 size, const char *type, const uint8 *data)
 {
  uint32 crc;
  uint8 tempo[4];
@@ -48,7 +48,7 @@ PNGWrite::~PNGWrite()
 
 }
 
-PNGWrite::PNGWrite(const char *path, const MDFN_Surface *src, const MDFN_Rect &rect, const int32 *LineWidths) : ownfile(path, FileWrapper::MODE_WRITE_SAFE)
+PNGWrite::PNGWrite(const std::string& path, const MDFN_Surface *src, const MDFN_Rect &rect, const int32 *LineWidths) : ownfile(path, FileStream::MODE_WRITE_SAFE)
 {
  WriteIt(ownfile, src, rect, LineWidths);
 }
@@ -113,7 +113,7 @@ INLINE void PNGWrite::EncodeImage(const MDFN_Surface *src, const MDFN_PixelForma
  }
 }
 
-void PNGWrite::WriteIt(FileWrapper &pngfile, const MDFN_Surface *src, const MDFN_Rect &rect_in, const int32 *LineWidths)
+void PNGWrite::WriteIt(FileStream &pngfile, const MDFN_Surface *src, const MDFN_Rect &rect_in, const int32 *LineWidths)
 {
  uLongf compmemsize;
  int png_width;
@@ -177,9 +177,13 @@ void PNGWrite::WriteIt(FileWrapper &pngfile, const MDFN_Surface *src, const MDFN
 
   for(int i = 0; i < 256; i++)
   {
-   chunko[(i * 3) + 0] = src->palette[i].r;
-   chunko[(i * 3) + 1] = src->palette[i].g;
-   chunko[(i * 3) + 2] = src->palette[i].b;
+   uint8 r, g, b;
+
+   src->format.DecodePColor(src->palette[i], r, g, b);
+
+   chunko[(i * 3) + 0] = r;
+   chunko[(i * 3) + 1] = g;
+   chunko[(i * 3) + 2] = b;
   }
 
   WriteChunk(pngfile, 256 * 3, "PLTE", chunko);

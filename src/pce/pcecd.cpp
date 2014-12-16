@@ -1253,7 +1253,7 @@ void PCECD_ResetTS(uint32 ts_base)
  lastts = ts_base;
 }
 
-static int ADPCM_StateAction(StateMem *sm, int load, int data_only)
+static void ADPCM_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  uint32 ad_sample = MSM5205.GetSample();
  int32  ad_ref_index = MSM5205.GetSSI();
@@ -1288,16 +1288,16 @@ static int ADPCM_StateAction(StateMem *sm, int load, int data_only)
         SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "APCM");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "APCM");
+
  if(load)
  {
   MSM5205.SetSample(ad_sample);
   MSM5205.SetSSI(ad_ref_index);
  }
- return(ret);
 }
 
-int PCECD_StateAction(StateMem *sm, int load, int data_only)
+void PCECD_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
 	SFORMAT StateRegs[] =
 	{
@@ -1321,9 +1321,9 @@ int PCECD_StateAction(StateMem *sm, int load, int data_only)
 	 SFEND
 	};
 
-        int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "PECD");
-	ret &= SCSICD_StateAction(sm, load, data_only, "CDRM");
-	ret &= ADPCM_StateAction(sm, load, data_only);
+        MDFNSS_StateAction(sm, load, data_only, StateRegs, "PECD");
+	SCSICD_StateAction(sm, load, data_only, "CDRM");
+	ADPCM_StateAction(sm, load, data_only);
 
 	if(load)
 	{
@@ -1335,5 +1335,4 @@ int PCECD_StateAction(StateMem *sm, int load, int data_only)
 	 SubChannelFIFO.read_pos %= SubChannelFIFO.size;
          SubChannelFIFO.write_pos %= SubChannelFIFO.size;
 	}
-	return(ret);
 }

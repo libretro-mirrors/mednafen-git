@@ -2,7 +2,7 @@
 #define __MDFN_QTRECORD_H
 
 #include "mednafen.h"
-#include "FileWrapper.h"
+#include <mednafen/FileStream.h>
 #include "resampler/resampler.h"
 
 #include <vector>
@@ -35,7 +35,7 @@ class QTRecord
   int VideoCodec;
  };
 
- QTRecord(const char *path, const VideoSpec &spec_arg);
+ QTRecord(const std::string& path, const VideoSpec &spec_arg);
  void Finish();
  ~QTRecord();
 
@@ -80,23 +80,23 @@ class QTRecord
  void Write_moov(void);
 
 
- FileWrapper qtfile;
+ FileStream qtfile;
 
  std::vector<uint8> RawVideoBuffer;
  std::vector<uint8> CompressedVideoBuffer;
 
  std::list<bool> atom_smalls;
- std::list<int64> atom_foffsets;
- std::list<int64> vardata_foffsets;
+ std::list<uint64> atom_foffsets;
+ std::list<uint64> vardata_foffsets;
  bool OnAudioTrack;       // Yay spaghetti code power.
 
  struct QTChunk
  {
-  int64 video_foffset;
-  int64 video_byte_size;
+  uint64 video_foffset;
+  uint64 video_byte_size;
 
-  int64 audio_foffset;
-  int64 audio_byte_size;
+  uint64 audio_foffset;
+  uint64 audio_byte_size;
 
   uint32 time_length;
  };

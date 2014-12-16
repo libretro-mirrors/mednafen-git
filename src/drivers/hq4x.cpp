@@ -26,17 +26,17 @@
 
 static int YUV1, YUV2;
 
-inline void Interp1(unsigned char * pc, int c1, int c2)
+static inline void Interp1(unsigned char * pc, int c1, int c2)
 {
   *((int*)pc) = (c1*3+c2) >> 2;
 }
 
-inline void Interp2(unsigned char * pc, int c1, int c2, int c3)
+static inline void Interp2(unsigned char * pc, int c1, int c2, int c3)
 {
   *((int*)pc) = (c1*2+c2+c3) >> 2;
 }
 
-inline void Interp3(unsigned char * pc, int c1, int c2)
+static inline void Interp3(unsigned char * pc, int c1, int c2)
 {
   //*((int*)pc) = (c1*7+c2)/8;
 
@@ -44,12 +44,12 @@ inline void Interp3(unsigned char * pc, int c1, int c2)
                  (((c1 & 0xFF00FF)*7 + (c2 & 0xFF00FF) ) & 0x07F807F8)) >> 3;
 }
 
-inline void Interp5(unsigned char * pc, int c1, int c2)
+static inline void Interp5(unsigned char * pc, int c1, int c2)
 {
   *((int*)pc) = (c1+c2) >> 1;
 }
 
-inline void Interp6(unsigned char * pc, int c1, int c2, int c3)
+static inline void Interp6(unsigned char * pc, int c1, int c2, int c3)
 {
   //*((int*)pc) = (c1*5+c2*2+c3)/8;
 
@@ -57,7 +57,7 @@ inline void Interp6(unsigned char * pc, int c1, int c2, int c3)
                  (((c1 & 0xFF00FF)*5 + (c2 & 0xFF00FF)*2 + (c3 & 0xFF00FF) ) & 0x07F807F8)) >> 3;
 }
 
-inline void Interp7(unsigned char * pc, int c1, int c2, int c3)
+static inline void Interp7(unsigned char * pc, int c1, int c2, int c3)
 {
   //*((int*)pc) = (c1*6+c2+c3)/8;
 
@@ -65,7 +65,7 @@ inline void Interp7(unsigned char * pc, int c1, int c2, int c3)
                  (((c1 & 0xFF00FF)*6 + (c2 & 0xFF00FF) + (c3 & 0xFF00FF) ) & 0x07F807F8)) >> 3;
 }
 
-inline void Interp8(unsigned char * pc, int c1, int c2)
+static inline void Interp8(unsigned char * pc, int c1, int c2)
 {
   //*((int*)pc) = (c1*5+c2*3)/8;
 
@@ -214,8 +214,7 @@ inline void Interp8(unsigned char * pc, int c1, int c2)
 #define PIXEL33_81    Interp8(pOut+BpL+BpL+BpL+12, w[5], w[6]);
 #define PIXEL33_82    Interp8(pOut+BpL+BpL+BpL+12, w[5], w[8]);
 
-
-inline bool Diff(unsigned int w1, unsigned int w2)
+static int MDFN_FASTCALL Diff(unsigned int w1, unsigned int w2)
 {
   YUV1 = hqxx_RGB_to_YUV(w1);
   YUV2 = hqxx_RGB_to_YUV(w2);

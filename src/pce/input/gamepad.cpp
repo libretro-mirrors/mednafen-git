@@ -25,25 +25,24 @@ namespace MDFN_IEN_PCE
 class PCE_Input_Gamepad : public PCE_Input_Device
 {
  public:
- PCE_Input_Gamepad(int which);
- virtual void Power(int32 timestamp);
- virtual void Write(int32 timestamp, bool old_SEL, bool new_SEL, bool old_CLR, bool new_CLR);
- virtual uint8 Read(int32 timestamp);
- virtual void Update(const void *data);
- virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name);
+ PCE_Input_Gamepad();
+ virtual void TransformInput(uint8* data, const bool DisableSR) override;
+ virtual void Power(int32 timestamp) override;
+ virtual void Write(int32 timestamp, bool old_SEL, bool new_SEL, bool old_CLR, bool new_CLR) override;
+ virtual uint8 Read(int32 timestamp) override;
+ virtual void Update(const void *data) override;
+ virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name) override;
 
 
  private:
  bool SEL, CLR;
  uint16 buttons;
  bool AVPad6Which;
- bool AVPad6Enabled;
- int which_this;
 };
 
-PCE_Input_Gamepad::PCE_Input_Gamepad(int which)
+
+PCE_Input_Gamepad::PCE_Input_Gamepad()
 {
- which_this = which;
  Power(0); // FIXME?
 }
 
@@ -53,27 +52,31 @@ void PCE_Input_Gamepad::Power(int32 timestamp)
  CLR = 0;
  buttons = 0;
  AVPad6Which = 0;
- AVPad6Enabled = 0;
+}
+
+void PCE_Input_Gamepad::TransformInput(uint8* data, const bool DisableSR)
+{
+ if(DisableSR)
+ {
+  uint16 tmp = MDFN_de16lsb(data);
+
+  if((tmp & 0xC) == 0xC)
+   tmp &= ~0xC;
+
+  MDFN_en16lsb(data, tmp);
+ }
 }
 
 void PCE_Input_Gamepad::Update(const void *data)
 {
- uint16 new_data = MDFN_de16lsb((uint8 *)data);
-
- if((new_data & 0x1000) && !(buttons & 0x1000))
- {
-  AVPad6Enabled = !AVPad6Enabled;
-  MDFN_DispMessage("%d-button mode selected for pad %d", AVPad6Enabled ? 6 : 2, which_this + 1);
- }
-
- buttons = new_data;
+ buttons = MDFN_de16lsb((uint8 *)data);
 }
 
 uint8 PCE_Input_Gamepad::Read(int32 timestamp)
 {
  uint8 ret = 0xF;
 
- if(AVPad6Which && AVPad6Enabled)
+ if(AVPad6Which && (buttons & 0x1000))
  {
   if(SEL)
    ret ^= 0xF;
@@ -112,7 +115,6 @@ int PCE_Input_Gamepad::StateAction(StateMem *sm, int load, int data_only, const 
   SFVAR(CLR),
   SFVAR(buttons),
   SFVAR(AVPad6Which),
-  SFVAR(AVPad6Enabled),
   SFEND
  };
  int ret =  MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name);
@@ -120,8 +122,13 @@ int PCE_Input_Gamepad::StateAction(StateMem *sm, int load, int data_only, const 
  return(ret);
 }
 
-// GamepadIDII and GamepadIDII_DSR must be EXACTLY the same except for the RUN+SELECT exclusion in the latter.
-const InputDeviceInputInfoStruct PCE_GamepadIDII[0xD] =
+static const char* ModeSwitchPositions[] =
+{
+ gettext_noop("2-button"),
+ gettext_noop("6-button"),
+};
+
+const IDIISG PCE_GamepadIDII =
 {
  { "i", "I", 12, IDIT_BUTTON_CAN_RAPID, NULL },
  { "ii", "II", 11, IDIT_BUTTON_CAN_RAPID, NULL },
@@ -135,28 +142,12 @@ const InputDeviceInputInfoStruct PCE_GamepadIDII[0xD] =
  { "iv", "IV", 7, IDIT_BUTTON, NULL },
  { "v", "V", 8, IDIT_BUTTON, NULL },
  { "vi", "VI", 9, IDIT_BUTTON, NULL },
- { "mode_select", "2/6 Mode Select", 6, IDIT_BUTTON, NULL },
-};
-const InputDeviceInputInfoStruct PCE_GamepadIDII_DSR[0xD] =
-{
- { "i", "I", 12, IDIT_BUTTON_CAN_RAPID, NULL },
- { "ii", "II", 11, IDIT_BUTTON_CAN_RAPID, NULL },
- { "select", "SELECT", 4, IDIT_BUTTON, "run" },
- { "run", "RUN", 5, IDIT_BUTTON, "select" },
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
- { "iii", "III", 10, IDIT_BUTTON, NULL },
- { "iv", "IV", 7, IDIT_BUTTON, NULL },
- { "v", "V", 8, IDIT_BUTTON, NULL },
- { "vi", "VI", 9, IDIT_BUTTON, NULL },
- { "mode_select", "2/6 Mode Select", 6, IDIT_BUTTON, NULL },
+ IDIIS_Switch("mode_select", "Mode", 6, ModeSwitchPositions, sizeof(ModeSwitchPositions) / sizeof(ModeSwitchPositions[0])),
 };
 
-PCE_Input_Device *PCEINPUT_MakeGamepad(int which)
+PCE_Input_Device *PCEINPUT_MakeGamepad(void)
 {
- return(new PCE_Input_Gamepad(which));
+ return new PCE_Input_Gamepad();
 }
 
 };

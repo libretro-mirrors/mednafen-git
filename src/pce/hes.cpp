@@ -135,69 +135,56 @@ static const uint8 vdc_init_rom[] =
 	0x8D, 0x00, 0x04,
 };
 
-void HES_Load(const uint8 *buf, uint32 size)
+void HES_Load(MDFNFILE* fp)
 {
  try
  {
   uint32 LoadAddr, LoadSize;
-  uint32 CurPos;
   uint16 InitAddr;
   uint8 StartingSong;
   int TotalSongs;
+  uint8 header[0x10];
+  uint8 sub_header[0x10];
 
-  if(size < 0x10)
-   throw MDFN_Error(0, _("HES header is too small."));
+  fp->read(header, 0x10);
 
-  if(memcmp(buf, "HESM", 4))
+  if(memcmp(header, "HESM", 4))
    throw MDFN_Error(0, _("HES header magic is invalid."));
 
-  InitAddr = MDFN_de16lsb(&buf[0x6]);
+  InitAddr = MDFN_de16lsb(&header[0x6]);
 
-  CurPos = 0x10;
- 
   rom = (uint8 *)MDFN_malloc_T(0x88 * 8192, _("HES ROM"));
   rom_backup = (uint8 *)MDFN_malloc_T(0x88 * 8192, _("HES ROM"));
 
   MDFN_printf(_("HES Information:\n"));
   MDFN_AutoIndent aind(1);
 
-  StartingSong = buf[5];
+  StartingSong = header[5];
 
   MDFN_printf(_("Init address: 0x%04x\n"), InitAddr);
   MDFN_printf(_("Starting song: %d\n"), StartingSong + 1);
 
   for(int x = 0; x < 8; x++)
   {
-   mpr_start[x] = buf[0x8 + x];
-   MDFN_printf("MPR%d: %02x\n", x, mpr_start[x]);
+   mpr_start[x] = header[0x8 + x];
+   MDFN_printf("MPR%d: 0x%02x\n", x, mpr_start[x]);
   }
 
   memset(rom, 0, 0x88 * 8192);
   memset(rom_backup, 0, 0x88 * 8192);
 
-  while(CurPos < (size - 0x10))
+  while(fp->read(sub_header, 0x10, false) == 0x10)
   {
-   LoadSize = MDFN_de32lsb(&buf[CurPos + 0x4]);
-   LoadAddr = MDFN_de32lsb(&buf[CurPos + 0x8]);
+   LoadSize = MDFN_de32lsb(&sub_header[0x4]);
+   LoadAddr = MDFN_de32lsb(&sub_header[0x8]);
 
    //printf("Size: %08x(%d), Addr: %08x, La: %02x\n", LoadSize, LoadSize, LoadAddr, LoadAddr / 8192);
    MDFN_printf(_("Chunk load:\n"));
 
    MDFN_AutoIndent aindc(1);
-   MDFN_printf(_("File offset:  0x%08x\n"), CurPos);
+   MDFN_printf(_("File offset:  0x%08llx\n"), (unsigned long long)fp->tell() - 0x10);
    MDFN_printf(_("Load size:  0x%08x\n"), LoadSize);
    MDFN_printf(_("Load target address:  0x%08x\n"), LoadAddr);
-
-   CurPos += 0x10;
-
-   if(((uint64)LoadSize + CurPos) > size)
-   {
-    uint32 NewLoadSize = size - CurPos;
-
-    MDFN_printf(_("Warning:  HES is trying to load more data than is present in the file(%u attempted, %u left)!\n"), LoadSize, NewLoadSize);
-
-    LoadSize = NewLoadSize;
-   }
 
    // 0x88 * 8192 = 0x110000
    if(((uint64)LoadAddr + LoadSize) > 0x110000)
@@ -209,8 +196,12 @@ void HES_Load(const uint8 *buf, uint32 size)
 
     LoadSize = 0x110000 - LoadAddr;
    }
-   memcpy(rom + LoadAddr, &buf[CurPos], LoadSize);
-   CurPos += LoadSize;
+
+   uint64 rc = fp->read(rom + LoadAddr, LoadSize, false);
+   if(rc < LoadSize)
+   {
+    MDFN_printf(_("Warning:  HES tried to load %llu bytes more data than exists!\n"), (unsigned long long)(LoadSize - rc));
+   }
   }
 
   memcpy(rom_backup, rom, 0x88 * 8192);

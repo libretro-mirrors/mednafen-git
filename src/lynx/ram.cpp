@@ -51,80 +51,83 @@
 #include "system.h"
 #include "ram.h"
 #include <mednafen/mempatcher.h>
+#include <mednafen/hash/md5.h>
 
-CRam::CRam(const uint8 *filememory,uint32 filesize)
+bool CRam::TestMagic(const uint8* data, uint64 test_size)
 {
-	HOME_HEADER	header;
+ if(test_size < 10)
+  return false;
 
-	// Take a copy into the backup buffer for restore on reset
-	mFileSize=filesize;
+ if(memcmp(&data[6], "BS93", 4))
+  return false;
 
-	if(filesize)
+ return true;
+}
+
+CRam::CRam(Stream* fp)
+{
+	if(fp)
 	{
-		// Take a copy of the ram data
-		mFileData = new uint8[mFileSize];
-		memcpy(mFileData,filememory,mFileSize);
+		uint8 raw_header[HEADER_RAW_SIZE];
+		md5_context md5;
+		md5.starts();
 
-		// Sanity checks on the header
-		memcpy(&header,mFileData,sizeof(HOME_HEADER));
+		fp->read(raw_header, sizeof(raw_header));
+		fp->rewind();
 
-		if(header.magic[0]!='B' || header.magic[1]!='S' || header.magic[2]!='9' || header.magic[3]!='3')
+		if(memcmp(&raw_header[6], "BS93", 4))
 		{
-			//CLynxException lynxerr;
-			//lynxerr.Message() << "Handy Error: File format invalid (Magic No)";
-			//lynxerr.Description()
-			//	<< "The image you selected was not a recognised homebrew format." << endl
-			//	<< "(see the Handy User Guide for more information).";
-			//throw(lynxerr);
+		 throw MDFN_Error(0, _("Lynx file format invalid (Magic No)"));
 		}
+
+		mRamXORData.reset(new uint8[RAM_SIZE]);
+		memset(&mRamXORData[0], 0, RAM_SIZE);
+
+		const uint16   load_address = MDFN_de16msb(&raw_header[2]) - sizeof(raw_header);
+		const uint16   size = MDFN_de16msb(&raw_header[4]);
+		const unsigned rc0 = std::min<unsigned>((RAM_SIZE - load_address), size);
+		const unsigned rc1 = size - rc0;
+
+		//printf("load_addr=%04x, size=%04x, rc0=%04x, rc1=%04x\n", load_address, size, rc0, rc1);
+
+		fp->read(&mRamXORData[load_address], rc0);
+		md5.update(&mRamXORData[load_address], rc0);
+		fp->read(&mRamXORData[0x0000], rc1);
+		md5.update(&mRamXORData[0x0000], rc1);
+
+		md5.finish(MD5);
+		InfoRAMSize = size;
+
+		for(unsigned i = 0; i < RAM_SIZE; i++)
+		 mRamXORData[i] ^= DEFAULT_RAM_CONTENTS;
+
+		boot_addr = load_address;
 	}
 	else
-	{
-		filememory=NULL;
-	}
-	// Reset will cause the loadup
+	 InfoRAMSize = 0;
 
+	// Reset will cause the loadup
 	Reset();
 }
 
 CRam::~CRam()
 {
-	if(mFileSize)
-	{
-		delete[] mFileData;
-		mFileData=NULL;
-	}
+
 }
 
 void CRam::Reset(void)
 {
 	MDFNMP_AddRAM(65536, 0x0000, mRamData);
 
-	for(int loop=0;loop<RAM_SIZE;loop++)
-		mRamData[loop]=DEFAULT_RAM_CONTENTS;
+	for(unsigned i = 0; i < RAM_SIZE; i++)
+	 mRamData[i] = DEFAULT_RAM_CONTENTS;
 
-	// Open up the file
-
-	if(mFileSize)
+	if(mRamXORData)
 	{
-		HOME_HEADER	header;
-		uint8 tmp;
+	 for(unsigned i = 0; i < RAM_SIZE; i++)
+	  mRamData[i] ^= mRamXORData[i];
 
-		// Zero the RAM
-		for(int loop=0;loop<RAM_SIZE;loop++) mRamData[loop]=0x00;
-
-		// Reverse the bytes in the header words
-		memcpy(&header,mFileData,sizeof(HOME_HEADER));
-		tmp=(header.load_address&0xff00)>>8;
-		header.load_address=(header.load_address<<8)+tmp;
-		tmp=(header.size&0xff00)>>8;
-		header.size=(header.size<<8)+tmp;
-
-		// Now we can safely read/manipulate the data
-		header.load_address-=10;
-
-		memcpy(mRamData+header.load_address,mFileData,header.size);
-		gCPUBootAddress=header.load_address;
+	 gCPUBootAddress = boot_addr;
 	}
 }
 

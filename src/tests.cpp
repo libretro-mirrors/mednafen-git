@@ -27,6 +27,9 @@
 #include "mednafen.h"
 #include "lepacker.h"
 
+#include <mednafen/hash/sha1.h>
+#include <mednafen/hash/sha256.h>
+
 #undef NDEBUG
 #include <assert.h>
 #include <math.h>
@@ -173,6 +176,70 @@ static bool DoAntiNSOBugTest(void)
  return(1);
 }
 
+//
+// Related: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61741
+//
+// Not found to be causing problems in Mednafen(unlike the earlier no-strict-overflow problem and associated test),
+// but better safe than sorry.
+//
+static void DoAntiNSOBugTest2014_SubA(int a) NO_INLINE NO_CLONE;
+static void DoAntiNSOBugTest2014_SubA(int a)
+{
+ char c = 0;
+
+ for(; a; a--)
+ {
+  for(; c >= 0; c++)
+  {
+
+  }
+ }
+
+ assert(c == -128);
+}
+
+static int ANSOBT_CallCount;
+static void DoAntiNSOBugTest2014_SubMx_F(void) NO_INLINE NO_CLONE;
+static void DoAntiNSOBugTest2014_SubMx_F(void)
+{
+ ANSOBT_CallCount++;
+
+ assert(ANSOBT_CallCount < 1000);
+}
+
+static void DoAntiNSOBugTest2014_SubM1(void) NO_INLINE NO_CLONE;
+static void DoAntiNSOBugTest2014_SubM1(void)
+{
+ char a;
+
+ for(a = 127 - 1; a >= 0; a++)
+  DoAntiNSOBugTest2014_SubMx_F();
+}
+
+static void DoAntiNSOBugTest2014_SubM3(void) NO_INLINE NO_CLONE;
+static void DoAntiNSOBugTest2014_SubM3(void)
+{
+ char a;
+
+ for(a = 127 - 3; a >= 0; a++)
+  DoAntiNSOBugTest2014_SubMx_F();
+}
+
+
+static void DoAntiNSOBugTest2014(void)
+{
+ DoAntiNSOBugTest2014_SubA(1);
+
+ ANSOBT_CallCount = 0;
+ DoAntiNSOBugTest2014_SubM1();
+ assert(ANSOBT_CallCount == 2);
+
+ ANSOBT_CallCount = 0;
+ DoAntiNSOBugTest2014_SubM3();
+ assert(ANSOBT_CallCount == 4);
+}
+
+
 bool DoLEPackerTest(void)
 {
  MDFN::LEPacker mizer;
@@ -309,8 +376,25 @@ MathTestTSOEntry MathTestTSOTests[] =
  { 0x7FFFFFFE, 0x7FFFFFFE },
 };
 
+volatile int32 MDFNTestsCPP_SLS_Var = (int32)0xDEADBEEF;
+volatile int8 MDFNTestsCPP_SLS_Var8 = (int8)0xEF;
+volatile int16 MDFNTestsCPP_SLS_Var16 = (int16)0xBEEF;
+
+static uint64 NO_INLINE NO_CLONE Mul_U16U16U32U64_Proper(uint16 a, uint16 b)	// For reference
+{
+ return (uint32)a * (uint32)b;
+}
+
+static uint64 NO_INLINE NO_CLONE Mul_U16U16U32U64(uint16 a, uint16 b)
+{
+ return (uint32)(a * b);
+}
+
 static void TestSignedOverflow(void)
 {
+ assert(Mul_U16U16U32U64_Proper(65535, 65535) == 0xfffe0001ULL);
+ assert(Mul_U16U16U32U64(65535, 65535) == 0xfffe0001ULL);
+
  for(unsigned int i = 0; i < sizeof(MathTestTSOTests) / sizeof(MathTestTSOEntry); i++)
  {
   int32 a = MathTestTSOTests[i].a;
@@ -330,21 +414,197 @@ static void TestSignedOverflow(void)
   assert((int32)(a ^ 0x80000000) < a);
   assert((int32)(b ^ 0x80000000) < b);
  }
+
+ for(unsigned i = 0; i < 64; i++)
+ {
+  MDFNTestsCPP_SLS_Var = (MDFNTestsCPP_SLS_Var << 1) ^ ((MDFNTestsCPP_SLS_Var << 2) + 0x7FFFFFFF) ^ ((MDFNTestsCPP_SLS_Var >> 31) & 0x3);
+  MDFNTestsCPP_SLS_Var8 = (MDFNTestsCPP_SLS_Var8 << 1) ^ ((MDFNTestsCPP_SLS_Var8 << 2) + 0x7F) ^ ((MDFNTestsCPP_SLS_Var8 >> 7) & 0x3);
+  MDFNTestsCPP_SLS_Var16 = (MDFNTestsCPP_SLS_Var16 << 1) ^ ((MDFNTestsCPP_SLS_Var16 << 2) + 0x7FFF) ^ ((MDFNTestsCPP_SLS_Var16 >> 15) & 0x3);
+ }
+
+ {
+  int8 a = MDFNTestsCPP_SLS_Var8;
+  int16 b = MDFNTestsCPP_SLS_Var16;
+  int32 c = MDFNTestsCPP_SLS_Var;
+  int64 d = (int64)MDFNTestsCPP_SLS_Var * (int64)MDFNTestsCPP_SLS_Var;
+  int32 e = c;
+  int64 f = c;
+
+  for(int i = 0; i < 64; i++)
+  {
+   a += a * i + b;
+   b += b * i + c;
+   c += c * i + d;
+   d += d * i + a;
+
+   e += e * i + c;
+   f += f * i + c;
+  }
+  //printf("%08x %16llx - %02x %04x %08x %16llx\n", (uint32)e, (uint64)f, (uint8)a, (uint16)b, (uint32)c, (uint64)d);
+  assert((uint32)e == (uint32)f && (uint32)e == 0x00c37de2 && (uint64)f == 0x5d17261900c37de2);
+  assert((uint8)a == 0xbf);
+  assert((uint16)b == 0xb77c);
+  assert((uint32)c == 0xb4244622U);
+  assert((uint64)d == 0xa966e02ed95c83fULL);
+ }
+
+
+ //printf("%02x %04x %08x\n", (uint8)MDFNTestsCPP_SLS_Var8, (uint16)MDFNTestsCPP_SLS_Var16, (uint32)MDFNTestsCPP_SLS_Var);
+ assert((uint8)MDFNTestsCPP_SLS_Var8 == 0x04);
+ assert((uint16)MDFNTestsCPP_SLS_Var16 == 0xa7d8);
+ assert((uint32)MDFNTestsCPP_SLS_Var == 0x4ef11a23);
+
+ for(signed i = 1; i != 0; i =~-i);	// Not really signed overflow, but meh!
+ for(signed i = -1; i != 0; i <<= 1);
+ for(signed i = 1; i >= 0; i *= 3);
+}
+
+volatile unsigned MDFNTests_OverShiftAmounts[4] = { 8, 16, 32, 64 };
+
+//
+// Test to make sure that shifting == the bitwidth of the variable's type
+// produces an expected value(either the original unshifted value, or 0/-1), since this occurs in the codebase
+// in a few spots(such as the GBA ARM CPU emulator, and the V810 FPU emulation code).
+//
+static void TestOverShift(void)
+{
+ //for(unsigned sa = 0; sa < 4; sa++)
+ {
+  for(unsigned i = 0; i < 2; i++)
+  {
+   uint8 v8 = (uint8)0xDEADCAFEBEEFD00DULL;
+   uint16 v16 = (uint16)0xDEADCAFEBEEFD00DULL;
+   uint32 v32 = (uint32)0xDEADCAFEBEEFD00DULL;
+   uint64 v64 = (uint64)0xDEADCAFEBEEFD00DULL;
+
+   int8 iv8 = (uint8)0xDEADCAFEBEEFD00DULL;
+   int16 iv16 = (uint16)0xDEADCAFEBEEFD00DULL;
+   int32 iv32 = (uint32)0xDEADCAFEBEEFD00DULL;
+   int64 iv64 = (uint64)0xDEADCAFEBEEFD00DULL;
+
+   if(i == 1)
+   {
+    v8 >>= MDFNTests_OverShiftAmounts[0];
+    v16 >>= MDFNTests_OverShiftAmounts[1];
+    v32 >>= MDFNTests_OverShiftAmounts[2];
+    v64 >>= MDFNTests_OverShiftAmounts[3];
+
+    iv8 >>= MDFNTests_OverShiftAmounts[0];
+    iv16 >>= MDFNTests_OverShiftAmounts[1];
+    iv32 >>= MDFNTests_OverShiftAmounts[2];
+    iv64 >>= MDFNTests_OverShiftAmounts[3];
+   }
+   else
+   {
+    v8 <<= MDFNTests_OverShiftAmounts[0];
+    v16 <<= MDFNTests_OverShiftAmounts[1];
+    v32 <<= MDFNTests_OverShiftAmounts[2];
+    v64 <<= MDFNTests_OverShiftAmounts[3];
+
+    iv8 <<= MDFNTests_OverShiftAmounts[0];
+    iv16 <<= MDFNTests_OverShiftAmounts[1];
+    iv32 <<= MDFNTests_OverShiftAmounts[2];
+    iv64 <<= MDFNTests_OverShiftAmounts[3];
+   }
+
+   assert(v8 == 0);
+   assert(v16 == 0);
+   assert(v32 == 0 || v32 == (uint32)0xDEADCAFEBEEFD00DULL);
+   assert(v64 == 0 || v64 == (uint64)0xDEADCAFEBEEFD00DULL);
+
+   assert(iv8 == 0);
+   assert(iv16 == -(int)i);
+   assert(iv32 == -(int)i || iv32 == (int32)0xDEADCAFEBEEFD00DULL);
+   assert(iv64 == -(int)i || iv64 == (int64)0xDEADCAFEBEEFD00DULL);
+  }
+ }
+}
+
+static uint8 BoolConvSupportFunc(void) MDFN_COLD NO_INLINE;
+static uint8 BoolConvSupportFunc(void)
+{
+ return 0xFF;
+}
+
+static bool BoolConv0(void) MDFN_COLD NO_INLINE;
+static bool BoolConv0(void)
+{
+ return BoolConvSupportFunc() & 1;
+}
+
+static void BoolTestThing(unsigned val) MDFN_COLD NO_INLINE;
+static void BoolTestThing(unsigned val)
+{
+ if(val != 1)
+  printf("%u\n", val);
+
+ assert(val == 1);
+}
+
+static void TestBoolConv(void)
+{
+ BoolTestThing(BoolConv0());
+}
+
+unsigned MDFNTests_ModTern_a = 2;
+unsigned MDFNTests_ModTern_b = 0;
+static void ModTernTestEval(unsigned v) NO_INLINE MDFN_COLD;
+static void ModTernTestEval(unsigned v)
+{
+ assert(v == 0);
+}
+
+static void TestModTern(void) NO_INLINE MDFN_COLD;
+static void TestModTern(void)
+{
+ if(!MDFNTests_ModTern_b)
+ {
+  MDFNTests_ModTern_b = MDFNTests_ModTern_a;
+
+  if(1 % (MDFNTests_ModTern_a ? MDFNTests_ModTern_a : 2))
+   MDFNTests_ModTern_b = 0;
+ }
+ ModTernTestEval(MDFNTests_ModTern_b);
+}
+
+static int TestBWNotMask31GTZ_Sub(int a) NO_INLINE NO_CLONE;
+static int TestBWNotMask31GTZ_Sub(int a)
+{
+ a = (((~a) & 0x80000000LL) > 0) + 1;
+ return a;
+}
+
+static void TestBWNotMask31GTZ(void)
+{
+ assert(TestBWNotMask31GTZ_Sub(0) == 2);
+}
+
+int MDFN_tests_TestTernary_val = 0;
+static void NO_INLINE NO_CLONE TestTernary_Sub(void)
+{
+ MDFN_tests_TestTernary_val++;
+}
+
+static void TestTernary(void)
+{
+ int a = ((MDFN_tests_TestTernary_val++) ? (MDFN_tests_TestTernary_val = 20) : (TestTernary_Sub(), MDFN_tests_TestTernary_val));
+
+ assert(a == 2);
 }
 
 
 static void DoAlignmentChecks(void)
 {
  uint8 padding0[3];
- MDFN_ALIGN(16) uint8 aligned0[7];
- MDFN_ALIGN(4) uint8 aligned1[2];
- MDFN_ALIGN(16) uint32 aligned2[2];
+ alignas(16) uint8 aligned0[7];
+ alignas(4)  uint8 aligned1[2];
+ alignas(16) uint32 aligned2[2];
  uint8 padding1[3];
 
  static uint8 g_padding0[3];
- static MDFN_ALIGN(16) uint8 g_aligned0[7];
- static MDFN_ALIGN(4) uint8 g_aligned1[2];
- static MDFN_ALIGN(16) uint32 g_aligned2[2];
+ alignas(16) static uint8 g_aligned0[7];
+ alignas(4)  static uint8 g_aligned1[2];
+ alignas(16) static uint32 g_aligned2[2];
  static uint8 g_padding1[3];
 
  // Make sure compiler doesn't removing padding vars
@@ -372,18 +632,120 @@ static void DoAlignmentChecks(void)
  assert(((uint8 *)&g_aligned2[1] - (uint8 *)&g_aligned2[0]) == 4);
 }
 
-#include "masmem.h"
+#include "psx/masmem.h"
 
-static void QuickEndianRBOTest(void)
+static uint32 NO_INLINE NO_CLONE RunMASMemTests_DoomAndGloom(uint32 offset)
 {
- uint32 test[2] = { 0xDEADBEEF, 0xCAFEBABE };
- uint32 test2 = { 0xD00FD00F };
+ MultiAccessSizeMem<4, false> mt0;
 
- assert(LoadU32_RBO(&test[0]) == 0xEFBEADDE);
- StoreU32_RBO(&test[1], 0x12341235);
- assert(test[1] == 0x35123412);
- assert(LoadU32_RBO(&test[1]) == 0x12341235);
- assert(LoadU32_RBO(&test2) == 0x0FD00FD0);
+ mt0.WriteU32(offset, 4);
+ mt0.WriteU16(offset, 0);
+ mt0.WriteU32(offset, mt0.ReadU32(offset) + 1);
+
+ return mt0.ReadU32(offset);
+}
+
+static void RunMASMemTests(void)
+{
+ // Little endian:
+ {
+  MultiAccessSizeMem<4, false> mt0;
+
+  mt0.WriteU16(0, 0xDEAD);
+  mt0.WriteU32(0, 0xCAFEBEEF);
+  mt0.WriteU16(2, mt0.ReadU16(0));
+  mt0.WriteU8(1, mt0.ReadU8(0));
+  mt0.WriteU16(2, mt0.ReadU16(0));
+  mt0.WriteU32(0, mt0.ReadU32(0) + 0x13121111);
+
+  assert(mt0.ReadU16(0) == 0x0100 && mt0.ReadU16(2) == 0x0302);
+  assert(mt0.ReadU32(0) == 0x03020100);
+ 
+  mt0.WriteU32(0, 0xB0B0AA55);
+  mt0.WriteU24(0, 0xDEADBEEF);
+  assert(mt0.ReadU32(0) == 0xB0ADBEEF);
+  assert(mt0.ReadU24(1) == 0x00B0ADBE);
+ }
+
+ // Big endian:
+ {
+  MultiAccessSizeMem<4, true> mt0;
+
+  mt0.WriteU16(2, 0xDEAD);
+  mt0.WriteU32(0, 0xCAFEBEEF);
+  mt0.WriteU16(0, mt0.ReadU16(2));
+  mt0.WriteU8(2, mt0.ReadU8(3));
+  mt0.WriteU16(0, mt0.ReadU16(2));
+  mt0.WriteU32(0, mt0.ReadU32(0) + 0x13121111);
+
+  assert(mt0.ReadU16(2) == 0x0100 && mt0.ReadU16(0) == 0x0302);
+  assert(mt0.ReadU32(0) == 0x03020100);
+ 
+  mt0.WriteU32(0, 0xB0B0AA55);
+  mt0.WriteU24(1, 0xDEADBEEF);
+  assert(mt0.ReadU32(0) == 0xB0ADBEEF);
+  assert(mt0.ReadU24(0) == 0x00B0ADBE);
+ }
+
+ assert(RunMASMemTests_DoomAndGloom(0) == 1);
+}
+
+static void NO_INLINE NO_CLONE ExceptionTestSub(int v, int n, int* y)
+{
+ if(n)
+ {
+  if(n & 1)
+  {
+   try
+   {
+    ExceptionTestSub(v + n, n - 1, y);
+   }
+   catch(const std::exception &e)
+   {
+    (*y)++;
+    throw;
+   }
+  }
+  else
+   ExceptionTestSub(v + n, n - 1, y);
+ }
+ else
+  throw MDFN_Error(v, "%d", v);
+}
+
+static void RunExceptionTests(void)
+{
+ int y = 0;
+ int z = 0;
+
+ for(int x = -8; x < 8; x++)
+ {
+  try
+  {
+   ExceptionTestSub(x, x & 3, &y);
+  }
+  catch(const MDFN_Error &e)
+  {
+   int epv = x;
+
+   for(unsigned i = x & 3; i; i--)
+    epv += i;
+
+   z += epv;
+
+   assert(e.GetErrno() == epv);
+   assert(atoi(e.what()) == epv);
+   continue;
+  }
+  catch(...)
+  {
+   abort();
+  }
+  abort();
+ }
+
+ assert(y == 16);
+ assert(z == 32);
 }
 
 // don't make this static, and don't make it local scope.  Whole-program optimization might defeat the purpose of this, though...
@@ -445,13 +807,87 @@ static void libc_rounding_test(void)
 }
 #endif
 
+static int pow_test_sub_a(int y, double z) NO_INLINE NO_CLONE;
+static int pow_test_sub_a(int y, double z)
+{
+ return std::min<int>(floor(pow(10, z)), std::min<int>(floor(pow(10, y)), (int)pow(10, y)));
+}
+
+static int pow_test_sub_b(int y) NO_INLINE NO_CLONE;
+static int pow_test_sub_b(int y)
+{
+ return std::min<int>(floor(pow(2, y)), (int)pow(2, y));
+}
+
+static void pow_test(void)
+{
+ unsigned muller10 = 1;
+ unsigned muller2 = 1;
+
+ for(int y = 0; y < 10; y++, muller10 *= 10, muller2 <<= 1)
+ {
+  unsigned res10 = pow_test_sub_a(y, y);
+  unsigned res2 = pow_test_sub_b(y);
+
+  //printf("%u %u\n", res10, res2);
+
+  assert(res10 == muller10);
+  assert(res2 == muller2);
+ }
+}
+
 static void RunFPTests(void)
 {
  fptest0();
  fptest1();
 
  libc_rounding_test();
+ pow_test();
 }
+
+#if 0
+static void NO_CLONE NO_INLINE ThreadSub(int tv)
+{
+ throw MDFN_Error(tv, "%d\n", tv);
+}
+
+
+static int ThreadTestEntry(void* data)
+{
+ const uint32 st = *(uint32*)data;
+
+ while(MDFND_GetTime() < st)
+ {
+  try
+  {
+   ThreadSub(rand());
+  }
+  catch(MDFN_Error &e)
+  {
+   assert(e.GetErrno() == atoi(e.what()));
+  }
+ }
+
+ return 0;
+}
+
+
+static void RunThreadTests(void)
+{
+ MDFN_Thread *a, *b, *c, *d;
+ uint32 t = MDFND_GetTime() + 5000;
+
+ a = MDFND_CreateThread(ThreadTestEntry, &t);
+ b = MDFND_CreateThread(ThreadTestEntry, &t);
+ c = MDFND_CreateThread(ThreadTestEntry, &t);
+ d = MDFND_CreateThread(ThreadTestEntry, &t);
+ 
+ MDFND_WaitThread(a, NULL);
+ MDFND_WaitThread(b, NULL);
+ MDFND_WaitThread(c, NULL);
+ MDFND_WaitThread(d, NULL);
+}
+#endif
 
 const char* MDFN_tests_stringA = "AB\0C";
 const char* MDFN_tests_stringB = "AB\0CD";
@@ -595,6 +1031,11 @@ bool MDFN_RunMathTests(void)
 
  DoAlignmentChecks();
  TestSignedOverflow();
+ TestOverShift();
+ TestBoolConv();
+ TestModTern();
+ TestBWNotMask31GTZ();
+ TestTernary();
 
  if(sign_9_to_s16(itoo->negative_one) != -1 || sign_9_to_s16(itoo->mostneg) != itoo->mostnegresult)
   FATALME;
@@ -691,6 +1132,8 @@ bool MDFN_RunMathTests(void)
  if(!DoAntiNSOBugTest())
   return(0);
 
+ DoAntiNSOBugTest2014();
+
  if(!DoLEPackerTest())
   return(0);
 
@@ -700,9 +1143,16 @@ bool MDFN_RunMathTests(void)
  assert(uilog2(4095) == 11);
  assert(uilog2(0xFFFFFFFF) == 31);
 
- QuickEndianRBOTest();
-
  RunFPTests();
+
+ RunMASMemTests();
+
+ RunExceptionTests();
+
+ //RunThreadTests();
+
+ sha1_test();
+ sha256_test();
 
 #if 0
 // Not really a math test.

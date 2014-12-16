@@ -1,6 +1,8 @@
-#ifndef __NES_PPU_H
-#define __NES_PPU_H
+#ifndef __MDFN_NES_PPU_H
+#define __MDFN_NES_PPU_H
 
+namespace MDFN_IEN_NES
+{
 void MDFNPPU_Init(void) MDFN_COLD;
 void MDFNPPU_Close(void) MDFN_COLD;
 void MDFNPPU_Reset(void) MDFN_COLD;
@@ -20,13 +22,10 @@ extern uint8 NTARAM[0x800],*vnapage[4];
 extern uint8 PPUNTARAM;
 extern uint8 PPUCHRRAM;
 
-void MDFNPPU_SaveState(void);
-void MDFNPPU_LoadState(int version);
-
 extern int scanline;
 
 void MDFNNES_SetPixelFormat(const MDFN_PixelFormat &nf) MDFN_COLD;
-int MDFNPPU_StateAction(StateMem *sm, int load, int data_only);
+void MDFNPPU_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 void MDFNNES_SetLayerEnableMask(uint64 mask);
 
 enum
@@ -55,5 +54,5 @@ void NESPPU_SettingChanged(const char *name) MDFN_COLD;
 
 void NESPPU_GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint8 *Buffer) MDFN_COLD;
 void NESPPU_PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint32 Granularity, bool hl, const uint8 *Buffer) MDFN_COLD;
-
+}
 #endif

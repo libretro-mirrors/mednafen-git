@@ -23,7 +23,9 @@
 #include "input.h"
 #include "vsuni.h"
 #include "cart.h"
-#include "ppu/palette.h"
+
+namespace MDFN_IEN_NES
+{
 
 static uint8 WRAM[8192];
 
@@ -289,9 +291,9 @@ void MDFN_VSUniCheck(uint64 md5partial, int *MapperNo, int *Mirroring)
   if(md5partial == vs->md5partial)
   {
    if(vs->ppu < RCP2C03B) 
-    wpal = vs->ppu;
+    wpal = 1 + vs->ppu;
    else
-    wpal = 5;
+    wpal = 1 + 5;
    //puts(vs->name);
    *MapperNo = vs->mapper;
    *Mirroring = vs->mirroring;
@@ -355,14 +357,14 @@ void MDFN_VSUniDraw(MDFN_Surface *surface)
 
   if(!DIPS) return;
 
-  dest=(uint32 *)(XBuf+256*12+164);
+  dest = XBuf+256*12+164;
   for(y=24;y;y--,dest+=256-72)
   {
    for(x=72;x;x--,dest++) 
     *dest = surface->MakeColor(0, 0, 0);
   }
   
-  dest=(uint32 *)(XBuf+256*(12+4)+164+6 );
+  dest = XBuf+256*(12+4)+164+6;
   for(y=16;y;y--,dest+=256-64)
    for(x=8;x;x--)
    {
@@ -374,7 +376,7 @@ void MDFN_VSUniDraw(MDFN_Surface *surface)
     dest+=8;
    }
   
-  dest=(uint32 *)(XBuf+256*(12+4)+164+6 );
+  dest = XBuf+256*(12+4)+164+6;
   for(x=0;x<8;x++,dest+=8)
   {
    uint32 *da=dest+256;
@@ -389,7 +391,7 @@ void MDFN_VSUniDraw(MDFN_Surface *surface)
  
 }
 
-int MDFNNES_VSUNIStateAction(StateMem *sm, int load, int state_only)
+void MDFNNES_VSUNIStateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[]=
  {
@@ -397,7 +399,7 @@ int MDFNNES_VSUNIStateAction(StateMem *sm, int load, int state_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, state_only, StateRegs, "VSUN");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "VSUN");
+}
 
- return(ret);
 }

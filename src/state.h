@@ -1,41 +1,42 @@
-#ifndef _STATE_H
-#define _STATE_H
-
-#include <zlib.h>
+#ifndef __MDFN_STATE_H
+#define __MDFN_STATE_H
 
 #include "video.h"
 #include "state-common.h"
+#include "Stream.h"
+
+#include <exception>
 
 void MDFNSS_GetStateInfo(const char *filename, StateStatusStruct *status);
 
-int MDFNSS_Save(const char *, const char *suffix, const MDFN_Surface *surface = (MDFN_Surface *)NULL, const MDFN_Rect *DisplayRect = (MDFN_Rect*)NULL, const int32 *LineWidths = (int32*)NULL);
-int MDFNSS_Load(const char *, const char *suffix);
-int MDFNSS_SaveFP(gzFile fp, const MDFN_Surface *surface = (MDFN_Surface *)NULL, const MDFN_Rect *DisplayRect = (MDFN_Rect*)NULL, const int32 *LineWidths = (int32*)NULL);
-int MDFNSS_LoadFP(gzFile fp);
-
-typedef struct
+struct StateMem
 {
-        uint8 *data;
-        uint32 loc;
-        uint32 len;
+ StateMem(Stream*s, int64 bnd = 0, bool svbe_ = false) : st(s), sss_bound(bnd), svbe(svbe_) { };
+ ~StateMem();
 
-        uint32 malloced;
+ Stream* st = NULL;
+ uint64 sss_bound = 0;	// State section search boundary, for state loading only.
+ bool svbe = false;	// State variable data is stored big-endian(for normal-path state loading only).
 
-	uint32 initial_malloc; // A setting!
-} StateMem;
+ std::exception_ptr deferred_error;
+ void ThrowDeferred(void);
+};
 
-// Eh, we abuse the smem_* in-memory stream code
-// in a few other places. :)
-int32 smem_read(StateMem *st, void *buffer, uint32 len);
-int32 smem_write(StateMem *st, void *buffer, uint32 len);
-int32 smem_putc(StateMem *st, int value);
-int32 smem_tell(StateMem *st);
-int32 smem_seek(StateMem *st, uint32 offset, int whence);
-int smem_write32le(StateMem *st, uint32 b);
-int smem_read32le(StateMem *st, uint32 *b);
-
-int MDFNSS_SaveSM(StateMem *st, int wantpreview_and_ts, int data_only, const MDFN_Surface *surface = (MDFN_Surface *)NULL, const MDFN_Rect *DisplayRect = (MDFN_Rect*)NULL, const int32 *LineWidths = (int32*)NULL);
-int MDFNSS_LoadSM(StateMem *st, int haspreview, int data_only);
+//
+// "st" should be MemoryStream, or FileStream if running in a memory-constrained system.  GZFileStream won't work properly due to 
+// the save state saving code relying on reverse-seeking.
+//
+// Pass 'true' for data_only to get faster and leaner save states, at the expense of cross-version and cross-platform compatibility(it's mainly intended for
+// realtime state rewinding).
+//
+// On entry, the position of 'st' IS permitted to be greater than 0.
+//
+// Assuming no errors, and data_only is 'false', the position of 'st' will be just beyond the end of the save state on return.
+//
+// throws exceptions on errors.
+//
+void MDFNSS_SaveSM(Stream *st, bool data_only = false, const MDFN_Surface *surface = (MDFN_Surface *)NULL, const MDFN_Rect *DisplayRect = (MDFN_Rect*)NULL, const int32 *LineWidths = (int32*)NULL);
+void MDFNSS_LoadSM(Stream *st, bool data_only = false);
 
 void MDFNSS_CheckStates(void);
 
@@ -67,26 +68,33 @@ typedef struct {
 	   //uint32 struct_size;	// Only used for MDFNSTATE_ARRAYOFS, sizeof(struct) that members of the linked SFORMAT struct are in.
 } SFORMAT;
 
-INLINE bool SF_IS_BOOL(bool *) { return(1); }
-INLINE bool SF_IS_BOOL(void *) { return(0); }
+static INLINE bool SF_IS_BOOL(bool *) { return(1); }
+static INLINE bool SF_IS_BOOL(void *) { return(0); }
 
-INLINE uint32 SF_FORCE_AB(bool *) { return(0); }
+static INLINE uint32 SF_FORCE_AB(bool *) { return(0); }
 
-INLINE uint32 SF_FORCE_A8(int8 *) { return(0); }
-INLINE uint32 SF_FORCE_A8(uint8 *) { return(0); }
+static INLINE uint32 SF_FORCE_A8(int8 *) { return(0); }
+static INLINE uint32 SF_FORCE_A8(uint8 *) { return(0); }
 
-INLINE uint32 SF_FORCE_A16(int16 *) { return(0); }
-INLINE uint32 SF_FORCE_A16(uint16 *) { return(0); }
+static INLINE uint32 SF_FORCE_A16(int16 *) { return(0); }
+static INLINE uint32 SF_FORCE_A16(uint16 *) { return(0); }
 
-INLINE uint32 SF_FORCE_A32(int32 *) { return(0); }
-INLINE uint32 SF_FORCE_A32(uint32 *) { return(0); }
+static INLINE uint32 SF_FORCE_A32(int32 *) { return(0); }
+static INLINE uint32 SF_FORCE_A32(uint32 *) { return(0); }
 
-INLINE uint32 SF_FORCE_A64(int64 *) { return(0); }
-INLINE uint32 SF_FORCE_A64(uint64 *) { return(0); }
+static INLINE uint32 SF_FORCE_A64(int64 *) { return(0); }
+static INLINE uint32 SF_FORCE_A64(uint64 *) { return(0); }
 
-INLINE uint32 SF_FORCE_D(double *) { return(0); }
+static INLINE uint32 SF_FORCE_D(double *) { return(0); }
 
-#define SFVARN(x, n) { &(x), SF_IS_BOOL(&(x)) ? 1U : (uint32)sizeof(x), MDFNSTATE_RLSB | (SF_IS_BOOL(&(x)) ? MDFNSTATE_BOOL : 0), n }
+template<typename T>
+static INLINE int SF_VAR_OK(const T*)
+{
+ static_assert(std::is_same<T, bool>::value || sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Bad save state variable.");
+ return 0;
+}
+
+#define SFVARN(x, n) { &(x), SF_IS_BOOL(&(x)) ? 1U : (uint32)sizeof(x), MDFNSTATE_RLSB | (SF_IS_BOOL(&(x)) ? MDFNSTATE_BOOL : 0) | SF_VAR_OK(&(x)), n }
 #define SFVAR(x) SFVARN((x), #x)
 
 #define SFARRAYN(x, l, n) { (x), (uint32)(l), 0 | SF_FORCE_A8(x), n }
@@ -113,35 +121,20 @@ INLINE uint32 SF_FORCE_D(double *) { return(0); }
 
 #define SFEND { 0, 0, 0, 0 }
 
-#include <vector>
-
-// State-Section Descriptor
-class SSDescriptor
-{
- public:
- SSDescriptor(SFORMAT *n_sf, const char *n_name, bool n_optional = 0)
- {
-  sf = n_sf;
-  name = n_name;
-  optional = n_optional;
- }
- ~SSDescriptor(void)
- {
-
- }
-
- SFORMAT *sf;
- const char *name;
- bool optional;
-};
-
-int MDFNSS_StateAction(StateMem *st, int load, int data_only, std::vector <SSDescriptor> &sections);
-int MDFNSS_StateAction(StateMem *st, int load, int data_only, SFORMAT *sf, const char *name, bool optional = 0);
-
-void MDFN_StateEvilFlushMovieLove(void);
-bool MDFN_StateEvilIsRunning(void);
-void MDFN_StateEvilBegin(void);
-void MDFN_StateEvilEnd(void);
-int MDFN_StateEvil(int);
+//
+// 'load' is 0 on save, and the version numeric contained in the save state on load.
+//
+// ALWAYS returns 'true' when 'load' is 0(saving), regardless of errors.
+//
+// When 'load' is non-zero:
+//	Normally returns true, but if the section was not found and optional was true, returns false.
+//
+// 	If an error occurs(such as memory allocation error, stream error, or section-missing error when optional == false), this function
+// 	marks deferred error status in *sm, and that call and all future calls with that particular *sm will return false.
+//
+// Does NOT throw exceptions, and must NOT throw exceptions, in order to make sure the emulation-module-specific loaded-variable sanitizing code
+// is run.
+//
+bool MDFNSS_StateAction(StateMem *sm, const unsigned load, const bool data_only, SFORMAT *sf, const char *name, const bool optional = false) noexcept;
 
 #endif

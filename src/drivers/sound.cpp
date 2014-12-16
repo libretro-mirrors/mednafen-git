@@ -22,7 +22,7 @@
 
 #include "sound.h"
 
-#include "../sexyal/sexyal.h"
+#include <mednafen/sexyal/sexyal.h>
 
 static SexyAL *Interface = NULL;
 static SexyAL_device *Output = NULL;
@@ -218,7 +218,7 @@ bool Sound_Init(MDFNGI *gi)
 
  format.revbyteorder = 0;
  format.noninterleaved = false;
- format.rate = gi->soundrate ? gi->soundrate : MDFN_GetSettingUI("sound.rate");
+ format.rate = MDFN_GetSettingUI("sound.rate");
 
  buffering.ms = MDFN_GetSettingUI("sound.buffer_time");
 

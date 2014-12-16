@@ -9,11 +9,17 @@
  <body>
   <center><h1><img alt="Mednafen" src="mednafen.png" width="696" height="204"></h1></center>
   <center><h1>Sony PlayStation Documentation</h1></center>
-  <center><i>Last updated August  3, 2014<br>Valid as of 0.9.36.3</i></center>
+  <center><i>Last updated December 15, 2014<br>Valid as of 0.9.37-UNSTABLE</i></center>
  <p></p>
  <b>Table of Contents:</b>
  <ul><li><a href="#Section_intro">Introduction</a><ul></ul></li><li><a href="#Section_firmware_bios">Firmware/BIOS</a><ul></ul></li><li><a href="#Analog+Sticks+Range+Issues">Analog Sticks Range Issues</a><ul></ul></li><li><a href="#Section_multitap">Multitap Usage</a><ul></ul></li><li><a href="#Settings+Reference">Settings Reference</a><ul></ul></li></ul><hr width="100%">
-<h2><a name="Section_intro">Introduction</a></h2><p></p>PlayStation 1 emulation is currently in a state of development.  Save states, rewinding, and netplay are not available <a href="#psx.clobbers_lament">by default</a>.
+<h2><a name="Section_intro">Introduction</a></h2><p></p><p>
+<font color="red" size="+2">WARNING:</font> Save states(and by extension, state rewinding and netplay) and saved games on emulated memory cards do not mix well unless you are
+extremely careful.  For any given game, either use save states or the game's own save system, but not both, lest you may destroy your saved games.
+</p>
+<p>
+PlayStation 1 emulation is currently in a state of development, so there may occasionally be horrifying SPINE-TINGLING regressions in new versions.
+</p>
 <p>
 A dual-core Phenom II or Athlon II at 3GHz or higher, or rough equivalent(in terms of single-core IPC), is recommended for
 running Mednafen's PlayStation 1 emulation on.  For better performance, the binary should be compiled for a 64-bit
@@ -32,8 +38,8 @@ avoid short emulator pauses and audio pops due to waiting for disk accesses to c
 <hr width="100%">
 
 <h2><a name="Section_firmware_bios">Firmware/BIOS</a></h2><p></p><p>
-Place the correct BIOS image files in the <a href="mednafen.html#Section_firmware_bios">correct location</a>.  <b>DO NOT</b> rename other revisions/regions of the BIOS to match the expected filenames, or you'll likely
-cause emulation glitches.
+Place the correct BIOS image files in the <a href="mednafen.html#Section_firmware_bios">correct location</a>.  Do not rename other revisions/regions of the BIOS to match the expected filenames, or you'll likely
+cause emulation glitches(and cause confusion if you ever distribute or otherwise refer to these misnamed files).
 </p>
 
 <p>
@@ -118,11 +124,11 @@ is enabled when running them.
 <h2><a name="Settings+Reference">Settings Reference</a></h2><p></p><p>
 <b>Caution:</b> Any settings that change emulation behavior as seen from the emulated game are shown with the setting name bolded in the table. One should be conscious of these settings if one has changed them from the default values when using network play or movies, as they can cause desychronizations if not set the same among hosts(or between the recording emulator and the playing emulator). 
 </p>
-<p></p><table border><tr class="TableHeader"><th>Setting:</th><th>Value Type:</th><th>Possible Values:</th><th>Default Value:</th><th>Description:</th></tr><tr class="RowA"><td class="ColA"><b>psx.bios_eu</b></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">scph5502.bin</td><td class="ColE"><a name="psx.bios_eu">Path to the Europe SCPH-5502 ROM BIOS</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowB"><td class="ColA"><b>psx.bios_jp</b></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">scph5500.bin</td><td class="ColE"><a name="psx.bios_jp">Path to the Japan SCPH-5500 ROM BIOS</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowA"><td class="ColA"><b>psx.bios_na</b></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">scph5501.bin</td><td class="ColE"><a name="psx.bios_na">Path to the North America SCPH-5501 ROM BIOS</a><p>SHA1 0555c6fae8906f3f09baf5988f00e55f88e9f30b</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowB"><td class="ColA">psx.clobbers_lament</td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE"><a name="psx.clobbers_lament">Enable experimental save state functionality.</a><p>Save states will destroy your saved game/memory card data if you're careless, and that will make clobber sad.  Poor clobber.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowA"><td class="ColA">psx.dbg_level</td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 4</td><td class="ColD">0</td><td class="ColE"><a name="psx.dbg_level">Debug printf verbosity level.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<p></p><table border><tr class="TableHeader"><th>Setting:</th><th>Value Type:</th><th>Possible Values:</th><th>Default Value:</th><th>Description:</th></tr><tr class="RowA"><td class="ColA"><b>psx.bios_eu</b></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">scph5502.bin</td><td class="ColE"><a name="psx.bios_eu">Path to the Europe SCPH-5502/v3.0E ROM BIOS</a><p>SHA-256 1faaa18fa820a0225e488d9f086296b8e6c46df739666093987ff7d8fd352c09</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowB"><td class="ColA"><b>psx.bios_jp</b></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">scph5500.bin</td><td class="ColE"><a name="psx.bios_jp">Path to the Japan SCPH-5500/v3.0J ROM BIOS</a><p>SHA-256 9c0421858e217805f4abe18698afea8d5aa36ff0727eb8484944e00eb5e7eadb</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowA"><td class="ColA"><b>psx.bios_na</b></td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">scph5501.bin</td><td class="ColE"><a name="psx.bios_na">Path to the North America SCPH-5501/v3.0A ROM BIOS</a><p>SHA-256 11052b6499e466bbf0a709b1f9cb6834a9418e66680387912451e971cf8a1fef</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowB"><td class="ColA">psx.dbg_level</td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 4</td><td class="ColD">0</td><td class="ColE"><a name="psx.dbg_level">Debug printf verbosity level.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowA"><td class="ColA">psx.h_overscan</td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">1</td><td class="ColE"><a name="psx.h_overscan">Show horizontal overscan area.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><b>psx.input.analog_mode_ct</b></td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE"><a name="psx.input.analog_mode_ct">Enable analog mode combo-button alternate toggle.</a><p>When enabled, instead of the configured Analog mode toggle button for the emulated DualShock, use a combination of buttons to toggle it instead.  When Select, Start, and all four shoulder buttons are held down for about 1 second, the mode will toggle.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA">psx.input.mouse_sensitivity</td><td class="ColB">real</td><td class="ColC"> <i>through</i> </td><td class="ColD">1.00</td><td class="ColE"><a name="psx.input.mouse_sensitivity">Emulated mouse sensitivity.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA"><b>psx.input.port1</b></td><td class="ColB">enum</td><td class="ColC">none<br>gamepad<br>dualshock<br>dualanalog<br>analogjoy<br>mouse<br>negcon<br>guncon<br>justifier<br>dancepad</td><td class="ColD">gamepad</td><td class="ColE"><a name="psx.input.port1">Input device for Virtual Port 1</a><ul><li><b>none</b> - none<br></li><br><li><b>gamepad</b> - Digital Gamepad<br>PlayStation digital gamepad; SCPH-1080.</li><br><li><b>dualshock</b> - DualShock<br>DualShock gamepad; SCPH-1200.  Emulation in Mednafen includes the analog mode toggle button.  Rumble is emulated, but currently only supported on Linux, and MS Windows via the XInput API and XInput-compatible gamepads/joysticks.  If you're having trouble getting rumble to work on Linux, see if Mednafen is printing out error messages during startup regarding /dev/input/event*, and resolve the issue(s) as necessary.</li><br><li><b>dualanalog</b> - Dual Analog<br>Dual Analog gamepad; SCPH-1180.  It is the predecessor/prototype to the more advanced DualShock.  Emulated in Mednafen as forced to analog mode, and without rumble.</li><br><li><b>analogjoy</b> - Analog Joystick<br>Flight-game-oriented dual-joystick controller; SCPH-1110.   Emulated in Mednafen as forced to analog mode.</li><br><li><b>mouse</b> - Mouse<br></li><br><li><b>negcon</b> - neGcon<br>Namco's unconventional twisty racing-game-oriented gamepad; NPC-101.</li><br><li><b>guncon</b> - GunCon<br>Namco's light gun; NPC-103.</li><br><li><b>justifier</b> - Konami Justifier<br>Konami's light gun; SLUH-00017.  Rumored to be wrought of the coagulated rage of all who tried to shoot The Dog.  If the game you want to play supports the "GunCon", you should use that instead. NOTE: Currently does not work properly when on any of ports 1B-1D and 2B-2D.</li><br><li><b>dancepad</b> - Dance Pad<br>Dingo Dingo Rodeo!</li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>

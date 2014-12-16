@@ -57,6 +57,7 @@ subdir = src/md
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
+	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/codeset.m4 $(top_srcdir)/m4/fcntl-o.m4 \
 	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/glibc2.m4 \
 	$(top_srcdir)/m4/glibc21.m4 $(top_srcdir)/m4/iconv.m4 \
@@ -98,8 +99,9 @@ am__libmd_a_SOURCES_DIST = vdp.cpp genesis.cpp genio.cpp header.cpp \
 	cart/map_realtec.cpp cart/map_ssf2.cpp cart/map_ff.cpp \
 	cart/map_rom.cpp cart/map_sbb.cpp cart/map_yase.cpp \
 	cart/map_rmx3.cpp cart/map_sram.cpp cart/map_svp.cpp \
-	input/mouse.cpp input/gamepad.cpp cd/cd.cpp cd/timer.cpp \
-	cd/interrupt.cpp cd/pcm.cpp cd/cdc_cdd.cpp debug.cpp
+	input/multitap.cpp input/4way.cpp input/megamouse.cpp \
+	input/gamepad.cpp cd/cd.cpp cd/timer.cpp cd/interrupt.cpp \
+	cd/pcm.cpp cd/cdc_cdd.cpp debug.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
 @WANT_DEBUGGER_TRUE@am__objects_1 = debug.$(OBJEXT)
 am_libmd_a_OBJECTS = vdp.$(OBJEXT) genesis.$(OBJEXT) genio.$(OBJEXT) \
@@ -110,7 +112,8 @@ am_libmd_a_OBJECTS = vdp.$(OBJEXT) genesis.$(OBJEXT) genio.$(OBJEXT) \
 	cart/map_ff.$(OBJEXT) cart/map_rom.$(OBJEXT) \
 	cart/map_sbb.$(OBJEXT) cart/map_yase.$(OBJEXT) \
 	cart/map_rmx3.$(OBJEXT) cart/map_sram.$(OBJEXT) \
-	cart/map_svp.$(OBJEXT) input/mouse.$(OBJEXT) \
+	cart/map_svp.$(OBJEXT) input/multitap.$(OBJEXT) \
+	input/4way.$(OBJEXT) input/megamouse.$(OBJEXT) \
 	input/gamepad.$(OBJEXT) cd/cd.$(OBJEXT) cd/timer.$(OBJEXT) \
 	cd/interrupt.$(OBJEXT) cd/pcm.$(OBJEXT) cd/cdc_cdd.$(OBJEXT) \
 	$(am__objects_1)
@@ -191,7 +194,6 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
-GBA_EXTRA_FLAGS = @GBA_EXTRA_FLAGS@
 GENCAT = @GENCAT@
 GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
 GLIBC2 = @GLIBC2@
@@ -200,6 +202,7 @@ GMSGFMT = @GMSGFMT@
 GMSGFMT_015 = @GMSGFMT_015@
 GREP = @GREP@
 HAVE_ASPRINTF = @HAVE_ASPRINTF@
+HAVE_CXX11 = @HAVE_CXX11@
 HAVE_NEWLOCALE = @HAVE_NEWLOCALE@
 HAVE_POSIX_PRINTF = @HAVE_POSIX_PRINTF@
 HAVE_SNPRINTF = @HAVE_SNPRINTF@
@@ -359,9 +362,10 @@ libmd_a_SOURCES = vdp.cpp genesis.cpp genio.cpp header.cpp mem68k.cpp \
 	cart/cart.cpp cart/map_eeprom.cpp cart/map_realtec.cpp \
 	cart/map_ssf2.cpp cart/map_ff.cpp cart/map_rom.cpp \
 	cart/map_sbb.cpp cart/map_yase.cpp cart/map_rmx3.cpp \
-	cart/map_sram.cpp cart/map_svp.cpp input/mouse.cpp \
-	input/gamepad.cpp cd/cd.cpp cd/timer.cpp cd/interrupt.cpp \
-	cd/pcm.cpp cd/cdc_cdd.cpp $(am__append_1)
+	cart/map_sram.cpp cart/map_svp.cpp input/multitap.cpp \
+	input/4way.cpp input/megamouse.cpp input/gamepad.cpp cd/cd.cpp \
+	cd/timer.cpp cd/interrupt.cpp cd/pcm.cpp cd/cdc_cdd.cpp \
+	$(am__append_1)
 all: all-am
 
 .SUFFIXES:
@@ -433,7 +437,11 @@ input/$(am__dirstamp):
 input/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) input/$(DEPDIR)
 	@: > input/$(DEPDIR)/$(am__dirstamp)
-input/mouse.$(OBJEXT): input/$(am__dirstamp) \
+input/multitap.$(OBJEXT): input/$(am__dirstamp) \
+	input/$(DEPDIR)/$(am__dirstamp)
+input/4way.$(OBJEXT): input/$(am__dirstamp) \
+	input/$(DEPDIR)/$(am__dirstamp)
+input/megamouse.$(OBJEXT): input/$(am__dirstamp) \
 	input/$(DEPDIR)/$(am__dirstamp)
 input/gamepad.$(OBJEXT): input/$(am__dirstamp) \
 	input/$(DEPDIR)/$(am__dirstamp)
@@ -472,8 +480,10 @@ mostlyclean-compile:
 	-rm -f cd/interrupt.$(OBJEXT)
 	-rm -f cd/pcm.$(OBJEXT)
 	-rm -f cd/timer.$(OBJEXT)
+	-rm -f input/4way.$(OBJEXT)
 	-rm -f input/gamepad.$(OBJEXT)
-	-rm -f input/mouse.$(OBJEXT)
+	-rm -f input/megamouse.$(OBJEXT)
+	-rm -f input/multitap.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
@@ -505,8 +515,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@cd/$(DEPDIR)/interrupt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cd/$(DEPDIR)/pcm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cd/$(DEPDIR)/timer.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/4way.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/gamepad.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/mouse.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/megamouse.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/multitap.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\

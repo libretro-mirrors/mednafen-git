@@ -293,8 +293,30 @@ void NGPGFX_CLASS::write16(uint32 address, uint16 data)
  write8(address + 1, data >> 8);
 }
 
+#if 0
+namespace TLCS900H
+{
+ extern uint32 pc;
+};
+#endif
+
 uint8 NGPGFX_CLASS::read8(uint32 address)
 {
+#if 0
+ if(address >= 0x8200 && address <= 0xbfff)
+ {
+  printf("[GFX] Read8: %08x -- %08x\n", address, TLCS900H::pc);
+  if(pc == 0x0028dd3d) //21)
+  {
+   TLCS900H::pc = 0x28DD15;
+   for(int x = 0; x < 256; x++)
+    puts(TLCS900h_disassemble());
+
+   abort();
+  }
+ }
+#endif
+
  if(address >= 0x9000 && address <= 0x9fff)
   return(ScrollVRAM[address - 0x9000]);
  else if(address >= 0xa000 && address <= 0xbfff)

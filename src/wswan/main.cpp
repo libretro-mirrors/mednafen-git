@@ -19,7 +19,7 @@
  */
 
 #include "wswan.h"
-#include <mednafen/md5.h>
+#include <mednafen/hash/md5.h>
 #include <mednafen/mempatcher.h>
 #include <mednafen/player.h>
 
@@ -51,11 +51,10 @@ uint16 WSButtonStatus;
 
 static bool IsWSR;
 static uint8 WSRCurrentSong;
+static uint8 WSRLastButtonStatus;
 
 static void Reset(void)
 {
-	int		u0;
-
 	v30mz_reset();				/* Reset CPU */
 	WSwan_MemoryReset();
 	Comm_Reset();
@@ -65,14 +64,14 @@ static void Reset(void)
 	RTC_Reset();
 	WSwan_EEPROMReset();
 
-	for(u0=0;u0<0xc9;u0++)
+	for(unsigned u0 = 0; u0 < 0xc8; u0++)
 	{
 	 if(u0 != 0xC4 && u0 != 0xC5 && u0 != 0xBA && u0 != 0xBB)
-	  WSwan_writeport(u0,startio[u0]);
+	  WSwan_writeport(u0, startio[u0]);
 	}
 
-	v30mz_set_reg(NEC_SS,0);
-	v30mz_set_reg(NEC_SP,0x2000);
+	v30mz_set_reg(NEC_SS, 0);
+	v30mz_set_reg(NEC_SP, 0x2000);
 
 	if(IsWSR)
 	{
@@ -98,14 +97,12 @@ static void Emulate(EmulateSpecStruct *espec)
 
  WSButtonStatus = butt_data;
  
-
  MDFNMP_ApplyPeriodicCheats();
 
  while(!wsExecuteLine(espec->surface, espec->skip))
  {
 
  }
-
 
  espec->SoundBufSize = WSwan_SoundFlush(espec->SoundBuf, espec->SoundBufMaxSize);
 
@@ -115,39 +112,38 @@ static void Emulate(EmulateSpecStruct *espec)
  if(IsWSR)
  {
   bool needreload = FALSE;
-  static uint16 last;
 
   Player_Draw(espec->surface, &espec->DisplayRect, WSRCurrentSong, espec->SoundBuf, espec->SoundBufSize);
 
-  if((WSButtonStatus & 0x02) && !(last & 0x02))
+  if((WSButtonStatus & 0x02) && !(WSRLastButtonStatus & 0x02))
   {
    WSRCurrentSong++;
    needreload = 1;
   }
 
-  if((WSButtonStatus & 0x08) && !(last & 0x08))
+  if((WSButtonStatus & 0x08) && !(WSRLastButtonStatus & 0x08))
   {
    WSRCurrentSong--;
    needreload = 1;
   }
 
-  if((WSButtonStatus & 0x100) && !(last & 0x100))
+  if((WSButtonStatus & 0x100) && !(WSRLastButtonStatus & 0x100))
    needreload = 1;
 
-  if((WSButtonStatus & 0x01) && !(last & 0x01))
+  if((WSButtonStatus & 0x01) && !(WSRLastButtonStatus & 0x01))
   {
    WSRCurrentSong += 10;
    needreload = 1;
   }
 
-  if((WSButtonStatus & 0x04) && !(last & 0x04))
+  if((WSButtonStatus & 0x04) && !(WSRLastButtonStatus & 0x04))
   {
    WSRCurrentSong -= 10;
    needreload = 1;
   }
 
 
-  last = WSButtonStatus;
+  WSRLastButtonStatus = WSButtonStatus;
 
   if(needreload)
    Reset();
@@ -211,150 +207,16 @@ static bool TestMagic(MDFNFILE *fp)
  if(strcasecmp(fp->ext, "ws") && strcasecmp(fp->ext, "wsc") && strcasecmp(fp->ext, "wsr"))
   return(FALSE);
 
- if(fp->size < 65536)
+ if(fp->size() < 65536)
   return(FALSE);
 
  return(TRUE);
 }
 
-static int Load(MDFNFILE *fp)
-{
- uint32 real_rom_size;
-
- if(fp->size < 65536)
- {
-  MDFN_PrintError(_("%s ROM image is too small."), MDFNGameInfo->fullname);
-  return(0);
- }
-
- if(!memcmp(fp->data + fp->size - 0x20, "WSRF", 4))
- {
-  const uint8 *wsr_footer = fp->data + fp->size - 0x20;
-
-  IsWSR = TRUE;
-  WSRCurrentSong = wsr_footer[0x5];
-
-  Player_Init(256, "", "", "");
- }
- else
-  IsWSR = false;
-
- real_rom_size = (fp->size + 0xFFFF) & ~0xFFFF;
- rom_size = round_up_pow2(real_rom_size); //fp->size);
-
- wsCartROM = (uint8 *)calloc(1, rom_size);
-
-
- // This real_rom_size vs rom_size funny business is intended primarily for handling
- // WSR files.
- if(real_rom_size < rom_size)
-  memset(wsCartROM, 0xFF, rom_size - real_rom_size);
-
- memcpy(wsCartROM + (rom_size - real_rom_size), fp->data, fp->size);
-
- MDFN_printf(_("ROM:       %dKiB\n"), real_rom_size / 1024);
- md5_context md5;
- md5.starts();
- md5.update(wsCartROM, rom_size);
- md5.finish(MDFNGameInfo->MD5);
- MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
-
- uint8 header[10];
- memcpy(header, wsCartROM + rom_size - 10, 10);
-
- {
-  const char *developer_name = "???";
-  for(unsigned int x = 0; x < sizeof(Developers) / sizeof(DLEntry); x++)
-  {
-   if(Developers[x].id == header[0])
-   {
-    developer_name = Developers[x].name;
-    break;
-   }
-  }
-  MDFN_printf(_("Developer: %s (0x%02x)\n"), developer_name, header[0]);
- }
-
- uint32 SRAMSize = 0;
- eeprom_size = 0;
-
- switch(header[5])
- {
-  case 0x01: SRAMSize =   8 * 1024; break;
-  case 0x02: SRAMSize =  32 * 1024; break;
-
-  case 0x03: SRAMSize = 128 * 1024; break;	// Taikyoku Igo.  Maybe it should only be 65536 bytes?
-
-  case 0x04: SRAMSize = 256 * 1024; break;	// Dicing Knight, Judgement Silversword
-  case 0x05: SRAMSize = 512 * 1024; break;	// Wonder Gate
-
-  case 0x10: eeprom_size = 128; break;
-  case 0x20: eeprom_size = 2*1024; break;
-  case 0x50: eeprom_size = 1024; break;
- }
-
- //printf("Header5: %02x\n", header[5]);
-
- if(eeprom_size)
-  MDFN_printf(_("EEPROM:  %d bytes\n"), eeprom_size);
-
- if(SRAMSize)
-  MDFN_printf(_("Battery-backed RAM:  %d bytes\n"), SRAMSize);
-
- MDFN_printf(_("Recorded Checksum:  0x%04x\n"), header[8] | (header[9] << 8));
- {
-  uint16 real_crc = 0;
-  for(unsigned int i = 0; i < rom_size - 2; i++)
-   real_crc += wsCartROM[i];
-  MDFN_printf(_("Real Checksum:      0x%04x\n"), real_crc);
- }
-
- if((header[8] | (header[9] << 8)) == 0x8de1 && (header[0]==0x01)&&(header[2]==0x27)) /* Detective Conan */
- {
-  //puts("HAX");
-  /* WS cpu is using cache/pipeline or there's protected ROM bank where pointing CS */
-  wsCartROM[0xfffe8]=0xea;
-  wsCartROM[0xfffe9]=0x00;
-  wsCartROM[0xfffea]=0x00;
-  wsCartROM[0xfffeb]=0x00;
-  wsCartROM[0xfffec]=0x20;
- }
-
- if(!IsWSR)
- {
-  if(header[6] & 0x1)
-   MDFNGameInfo->rotated = MDFN_ROTATE90;
- }
-
- MDFNMP_Init(16384, (1 << 20) / 1024);
-
- #ifdef WANT_DEBUGGER
- WSwanDBG_Init();
- #endif
-
- v30mz_init(WSwan_readmem20, WSwan_writemem20, WSwan_readport, WSwan_writeport);
- WSwan_MemoryInit(MDFN_GetSettingB("wswan.language"), wsc, SRAMSize, IsWSR); // EEPROM and SRAM are loaded in this func.
- Comm_Init(MDFN_GetSettingB("wswan.excomm") ? MDFN_GetSettingS("wswan.excomm.path").c_str() : NULL);
-
- WSwan_GfxInit();
- MDFNGameInfo->fps = (uint32)((uint64)3072000 * 65536 * 256 / (159*256));
- MDFNGameInfo->GameSetMD5Valid = FALSE;
-
- WSwan_SoundInit();
-
- RTC_Init();
-
- wsMakeTiles();
-
- Reset();
-
- return(1);
-}
-
-static void CloseGame(void)
+static void Cleanup(void)
 {
  Comm_Kill();
- WSwan_MemoryKill(); // saves sram/eeprom
+ WSwan_MemoryKill();
 
  WSwan_SoundKill();
 
@@ -365,33 +227,233 @@ static void CloseGame(void)
  }
 }
 
-static void SetInput(int port, const char *type, void *ptr)
+
+static void CloseGame(void)
+{
+ if(!IsWSR)
+ {
+  try
+  {
+   WSwan_MemorySaveNV();	// Must be called before we free(wsCartRom).
+  }
+  catch(std::exception &e)
+  {
+   MDFN_PrintError("%s", e.what());
+  }
+ }
+
+ Cleanup();
+}
+
+static void Load(MDFNFILE *fp)
+{
+ try
+ {
+  bool IsWW = false;
+  const uint64 fp_in_size = fp->size();
+  uint32 real_rom_size;
+
+  if(fp_in_size < 65536)
+  {
+   throw MDFN_Error(0, _("ROM image is too small."));
+  }
+
+  if(fp_in_size > 64 * 1024 * 1024)
+  {
+   throw MDFN_Error(0, _("ROM image is too large."));
+  }
+
+  real_rom_size = (fp_in_size + 0xFFFF) & ~0xFFFF;
+  rom_size = round_up_pow2(real_rom_size);
+
+  wsCartROM = (uint8 *)MDFN_calloc_T(1, rom_size, "ROM");
+
+  // This real_rom_size vs rom_size funny business is intended primarily for handling
+  // WSR files.
+  if(real_rom_size < rom_size)
+   memset(wsCartROM, 0xFF, rom_size - real_rom_size);
+
+  fp->read(wsCartROM + (rom_size - real_rom_size), fp_in_size);
+
+  if(!memcmp(wsCartROM + (rom_size - real_rom_size) + fp_in_size - 0x20, "WSRF", 4))
+  {
+   const uint8 *wsr_footer = wsCartROM + (rom_size - real_rom_size) + fp_in_size - 0x20;
+
+   IsWSR = TRUE;
+   WSRCurrentSong = wsr_footer[0x5];
+   WSRLastButtonStatus = 0xFF;
+
+   Player_Init(256, "", "", "");
+  }
+  else
+  {
+   IsWSR = false;
+
+   if(rom_size == 524288 && !memcmp(&wsCartROM[0x70000], "ELISA", 5) && crc32(0, &wsCartROM[0x7FFF0], 0x10) == 0x0d05ed64)
+   {
+    uint32 crc32_sans_l64k = crc32(0, wsCartROM, 0x70000);
+    uint32 bl[] = { 0x63f00316, 0x60fd569b, 0xe11538f8 };
+    bool blisted = false;
+
+    //printf("%08x\n", crc32_sans_l64k);
+
+    for(auto ch : bl)
+    {
+     if(crc32_sans_l64k == ch)
+     {
+      blisted = true;
+      break;
+     }
+    }
+ 
+    IsWW = !blisted;
+   }
+  }
+
+  MDFN_printf(_("ROM:       %uKiB\n"), real_rom_size / 1024);
+  md5_context md5;
+  md5.starts();
+  md5.update(wsCartROM, rom_size);
+  md5.finish(MDFNGameInfo->MD5);
+  MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
+
+  uint8 header[10];
+  memcpy(header, wsCartROM + rom_size - 10, 10);
+
+  {
+   const char *developer_name = "???";
+   for(unsigned int x = 0; x < sizeof(Developers) / sizeof(DLEntry); x++)
+   {
+    if(Developers[x].id == header[0])
+    {
+     developer_name = Developers[x].name;
+     break;
+    }
+   }
+   MDFN_printf(_("Developer: %s (0x%02x)\n"), developer_name, header[0]);
+  }
+
+  uint32 SRAMSize = 0;
+  eeprom_size = 0;
+
+  switch(header[5])
+  {
+   case 0x01: SRAMSize =   8 * 1024; break;
+   case 0x02: SRAMSize =  32 * 1024; break;
+
+   case 0x03: SRAMSize = 128 * 1024; break;	// Taikyoku Igo.  Maybe it should only be 65536 bytes?
+
+   case 0x04: SRAMSize = 256 * 1024; break;	// Dicing Knight, Judgement Silversword
+   case 0x05: SRAMSize = 512 * 1024; break;	// Wonder Gate
+
+   case 0x10: eeprom_size = 128; break;
+   case 0x20: eeprom_size = 2*1024; break;
+   case 0x50: eeprom_size = 1024; break;
+  }
+
+  //printf("Header5: %02x\n", header[5]);
+
+  if(eeprom_size)
+   MDFN_printf(_("EEPROM:  %d bytes\n"), eeprom_size);
+
+  if(SRAMSize)
+   MDFN_printf(_("Battery-backed RAM:  %d bytes\n"), SRAMSize);
+
+  MDFN_printf(_("Recorded Checksum:  0x%04x\n"), header[8] | (header[9] << 8));
+  {
+   uint16 real_crc = 0;
+   for(unsigned int i = 0; i < rom_size - 2; i++)
+    real_crc += wsCartROM[i];
+   MDFN_printf(_("Real Checksum:      0x%04x\n"), real_crc);
+  }
+
+  if(IsWW)
+   MDFN_printf(_("WonderWitch firmware detected.\n"));
+
+  if((header[8] | (header[9] << 8)) == 0x8de1 && (header[0]==0x01)&&(header[2]==0x27)) /* Detective Conan */
+  {
+   //puts("HAX");
+   /* WS cpu is using cache/pipeline or there's protected ROM bank where pointing CS */
+   wsCartROM[0xfffe8]=0xea;
+   wsCartROM[0xfffe9]=0x00;
+   wsCartROM[0xfffea]=0x00;
+   wsCartROM[0xfffeb]=0x00;
+   wsCartROM[0xfffec]=0x20;
+  }
+
+  if(!IsWSR)
+  {
+   if(header[6] & 0x1)
+    MDFNGameInfo->rotated = MDFN_ROTATE90;
+  }
+
+  MDFNMP_Init(16384, (1 << 20) / 1024);
+
+  #ifdef WANT_DEBUGGER
+  WSwanDBG_Init();
+  #endif
+
+  WSwan_MemoryInit(MDFN_GetSettingB("wswan.language"), wsc, SRAMSize, IsWW);
+
+  if(!IsWSR)
+   WSwan_MemoryLoadNV();
+
+  Comm_Init(MDFN_GetSettingB("wswan.excomm") ? MDFN_GetSettingS("wswan.excomm.path").c_str() : NULL);
+
+  WSwan_GfxInit();
+  MDFNGameInfo->fps = (uint32)((uint64)3072000 * 65536 * 256 / (159*256));
+  MDFNGameInfo->GameSetMD5Valid = FALSE;
+
+  WSwan_SoundInit();
+
+  RTC_Init();
+
+  wsMakeTiles();
+
+  Reset();
+ }
+ catch(...)
+ {
+  Cleanup();
+
+  throw;
+ }
+}
+
+static void SetInput(unsigned port, const char *type, uint8 *ptr)
 {
  if(!port) chee = (uint8 *)ptr;
 }
 
-static int StateAction(StateMem *sm, int load, int data_only)
+static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
- int ret = 1;
+ if(IsWSR)
+ {
+  SFORMAT StateRegs[] =
+  {
+   SFVAR(WSRCurrentSong),
+   SFVAR(WSRLastButtonStatus),
+   SFEND
+  };
+  MDFNSS_StateAction(sm, load, data_only, StateRegs, "WSRP");
+ }
 
- ret &= v30mz_StateAction(sm, load, data_only);
+ v30mz_StateAction(sm, load, data_only);
 
  // Call MemoryStateAction before others StateActions...
- ret &= WSwan_MemoryStateAction(sm, load, data_only);
+ WSwan_MemoryStateAction(sm, load, data_only);
 
- ret &= WSwan_GfxStateAction(sm, load, data_only);
+ WSwan_GfxStateAction(sm, load, data_only);
 
- ret &= RTC_StateAction(sm, load, data_only);
+ RTC_StateAction(sm, load, data_only);
 
- ret &= WSwan_InterruptStateAction(sm, load, data_only);
+ WSwan_InterruptStateAction(sm, load, data_only);
 
- ret &= WSwan_SoundStateAction(sm, load, data_only);
+ WSwan_SoundStateAction(sm, load, data_only);
 
- ret &= WSwan_EEPROMStateAction(sm, load, data_only);
+ WSwan_EEPROMStateAction(sm, load, data_only);
 
- ret &= Comm_StateAction(sm, load, data_only);
-
- return(ret);
+ Comm_StateAction(sm, load, data_only);
 }
 
 static void DoSimpleCommand(int cmd)
@@ -457,7 +519,7 @@ static const MDFNSetting WSwanSettings[] =
  { NULL }
 };
 
-static const InputDeviceInputInfoStruct IDII[] =
+static const IDIISG IDII =
 {
  { "up-x", "UP ↑, X Cursors", 0, IDIT_BUTTON, "down-x",				{ "right-x", "down-x", "left-x" } },
  { "right-x", "RIGHT →, X Cursors", 3, IDIT_BUTTON, "left-x",			{ "down-x", "left-x", "up-x" } },
@@ -474,29 +536,20 @@ static const InputDeviceInputInfoStruct IDII[] =
  { "b", "B", 9, IDIT_BUTTON_CAN_RAPID, NULL },
 };
 
-static InputDeviceInfoStruct InputDeviceInfo[] =
+static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
 {
  {
   "gamepad",
   "Gamepad",
   NULL,
-  NULL,
-  sizeof(IDII) / sizeof(InputDeviceInputInfoStruct),
   IDII,
  }
 };
 
-static const InputPortInfoStruct PortInfo[] =
+static const std::vector<InputPortInfoStruct> PortInfo =
 {
- { "builtin", "Built-In", sizeof(InputDeviceInfo) / sizeof(InputDeviceInfoStruct), InputDeviceInfo, "gamepad" }
+ { "builtin", "Built-In", InputDeviceInfo, "gamepad" }
 };
-
-static InputInfoStruct InputInfo =
-{
- sizeof(PortInfo) / sizeof(InputPortInfoStruct),
- PortInfo
-};
-
 
 #ifdef WANT_DEBUGGER
 static DebuggerInfoStruct DBGInfo =
@@ -546,16 +599,22 @@ MDFNGI EmulatedWSwan =
  #else
  NULL,
  #endif
- &InputInfo,
+ PortInfo,
  Load,
  TestMagic,
  NULL,
  NULL,
  CloseGame,
+
  WSwan_SetLayerEnableMask,
  "Background\0Foreground\0Sprites\0",
+
  NULL,
  NULL,
+
+ NULL,
+ 0,
+
  NULL,
  NULL,
  NULL,
@@ -563,7 +622,9 @@ MDFNGI EmulatedWSwan =
  false,
  StateAction,
  Emulate,
+ NULL,
  SetInput,
+ NULL,
  DoSimpleCommand,
  WSwanSettings,
  MDFN_MASTERCLOCK_FIXED(3072000),

@@ -36,6 +36,11 @@
  #include "mmintrin.h"
 #endif
 
+void MMC5_hb(int);     /* Ugh ugh ugh. */
+
+namespace MDFN_IEN_NES
+{
+
 #define VBlankON        (PPU[0]&0x80)   /* Generate VBlank NMI */
 #define Sprite16        (PPU[0]&0x20)   /* Sprites 8x16/8x8        */
 #define BGAdrHI         (PPU[0]&0x10)   /* BG pattern adr $0000/$1000 */
@@ -166,16 +171,16 @@ static union
  };
 } CM;
 
-static uint8 FindClose(uint8 r, uint8 g, uint8 b) MDFN_COLD;
-static uint8 FindClose(uint8 r, uint8 g, uint8 b)
+static uint8 FindClose(const MDFN_PaletteEntry& pe) MDFN_COLD;
+static uint8 FindClose(const MDFN_PaletteEntry& pe)
 {
  double rl, gl, bl;
  int closest = -1;
  double closest_cs = 1000;
 
- rl = pow((double)r / 255, 2.2 / 1.0);
- gl = pow((double)g / 255, 2.2 / 1.0);
- bl = pow((double)b / 255, 2.2 / 1.0);
+ rl = pow((double)pe.r / 255, 2.2 / 1.0);
+ gl = pow((double)pe.g / 255, 2.2 / 1.0);
+ bl = pow((double)pe.b / 255, 2.2 / 1.0);
 
  for(unsigned x = 0; x < 256; x++)
  {
@@ -201,59 +206,38 @@ void MDFNNES_SetPixelFormat(const MDFN_PixelFormat &pixel_format)
 {
  if(pixel_format.bpp == 8)
  {
-#if 1
   for(int x = 0; x < 0x40; x++)
   {
-   CM.NESPalette8BPP[x].r = ActiveNESPalette[x].r;
-   CM.NESPalette8BPP[x].g = ActiveNESPalette[x].g;
-   CM.NESPalette8BPP[x].b = ActiveNESPalette[x].b;
+   CM.NESPalette8BPP[x] = pixel_format.MakePColor(ActiveNESPalette[x].r, ActiveNESPalette[x].g, ActiveNESPalette[x].b);
    CM.PALRAMLUTCache8[x] = x;
   }
 
   for(int x = 0x80; x < 0xC0; x++)
   {
-   CM.NESPalette8BPP[0x40 | (x & 0x3F)].r = ActiveNESPalette[x].r;
-   CM.NESPalette8BPP[0x40 | (x & 0x3F)].g = ActiveNESPalette[x].g;
-   CM.NESPalette8BPP[0x40 | (x & 0x3F)].b = ActiveNESPalette[x].b;
+   CM.NESPalette8BPP[0x40 | (x & 0x3F)] = pixel_format.MakePColor(ActiveNESPalette[x].r, ActiveNESPalette[x].g, ActiveNESPalette[x].b);
    CM.PALRAMLUTCache8[x] = 0x40 | (x & 0x3F);
   }
 
   for(int x = 0x100; x < 0x140; x++)
   {
-   CM.NESPalette8BPP[0x80 | (x & 0x3F)].r = ActiveNESPalette[x].r;
-   CM.NESPalette8BPP[0x80 | (x & 0x3F)].g = ActiveNESPalette[x].g;
-   CM.NESPalette8BPP[0x80 | (x & 0x3F)].b = ActiveNESPalette[x].b;
+   CM.NESPalette8BPP[0x80 | (x & 0x3F)] = pixel_format.MakePColor(ActiveNESPalette[x].r, ActiveNESPalette[x].g, ActiveNESPalette[x].b);
    CM.PALRAMLUTCache8[x] = 0x80 | (x & 0x3F);
   }
 
   for(int x = 0x1C0; x < 0x200; x++)
   {
-   CM.NESPalette8BPP[0xC0 | (x & 0x3F)].r = ActiveNESPalette[x].r;
-   CM.NESPalette8BPP[0xC0 | (x & 0x3F)].g = ActiveNESPalette[x].g;
-   CM.NESPalette8BPP[0xC0 | (x & 0x3F)].b = ActiveNESPalette[x].b;
+   CM.NESPalette8BPP[0xC0 | (x & 0x3F)] = pixel_format.MakePColor(ActiveNESPalette[x].r, ActiveNESPalette[x].g, ActiveNESPalette[x].b);
    CM.PALRAMLUTCache8[x] = 0xC0 | (x & 0x3F);
   }
 
   for(int x = 0x40; x < 0x80; x++)
-   CM.PALRAMLUTCache8[x] = FindClose(ActiveNESPalette[x].r, ActiveNESPalette[x].g, ActiveNESPalette[x].b);
+   CM.PALRAMLUTCache8[x] = FindClose(pixel_format.MakePColor(ActiveNESPalette[x].r, ActiveNESPalette[x].g, ActiveNESPalette[x].b));
 
   for(int x = 0xC0; x < 0x100; x++)
-   CM.PALRAMLUTCache8[x] = FindClose(ActiveNESPalette[x].r, ActiveNESPalette[x].g, ActiveNESPalette[x].b);
+   CM.PALRAMLUTCache8[x] = FindClose(pixel_format.MakePColor(ActiveNESPalette[x].r, ActiveNESPalette[x].g, ActiveNESPalette[x].b));
 
   for(int x = 0x140; x < 0x1C0; x++)
-   CM.PALRAMLUTCache8[x] = FindClose(ActiveNESPalette[x].r, ActiveNESPalette[x].g, ActiveNESPalette[x].b);
-#else
-  for(int x = 0; x < 0x100; x++)
-  {
-   CM.NESPalette8BPP[x].r = ((x >> 0) & 0x7) * 255 / 7;
-   CM.NESPalette8BPP[x].g = ((x >> 3) & 0x7) * 255 / 7;
-   CM.NESPalette8BPP[x].b = ((x >> 6) & 0x3) * 255 / 3;
-  }
-
-  for(int x = 0; x < 0x200; x++)
-   CM.PALRAMLUTCache8[x] = FindClose(ActiveNESPalette[x].r, ActiveNESPalette[x].g, ActiveNESPalette[x].b);
-#endif
-
+   CM.PALRAMLUTCache8[x] = FindClose(pixel_format.MakePColor(ActiveNESPalette[x].r, ActiveNESPalette[x].g, ActiveNESPalette[x].b));
  }
  else
  {
@@ -514,8 +498,8 @@ static void ResetRL(uint8 *target)
  //MDFNPPU_LineUpdate();
 }
 
-static MDFN_ALIGN(16) uint8 sprlinebuf[256+8];
-static MDFN_ALIGN(16) uint8 emphlinebuf[256];
+alignas(16) static uint8 sprlinebuf[256+8];
+alignas(16) static uint8 emphlinebuf[256];
 
 void MDFNPPU_LineUpdate(void)
 {
@@ -850,10 +834,9 @@ static void nes_ntsc_blit(const MDFN_PixelFormat &pixel_format, nes_ntsc_emph_t 
 
 static int BurstPhase = 0;
 
-void MMC5_hb(int);     /* Ugh ugh ugh. */
 static void DoLine(MDFN_Surface *surface, int skip)
 {
- uint8 MDFN_ALIGN(8) target[256];
+ alignas(8) uint8 target[256];
 
  if(InputScanlineHook) // Frame skipping will break zapper emulation soooo muchlybadlydoubleplusungoodly.
   skip = 0;
@@ -1385,7 +1368,7 @@ void NESPPU_SetRegister(const std::string &name, uint32 value)
 }
 
 
-int MDFNPPU_StateAction(StateMem *sm, int load, int data_only)
+void MDFNPPU_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  uint16 TempAddrT,RefreshAddrT;
 
@@ -1414,9 +1397,7 @@ int MDFNPPU_StateAction(StateMem *sm, int load, int data_only)
   RefreshAddrT=RefreshAddr;
  }
 
- std::vector <SSDescriptor> love;
- love.push_back(SSDescriptor(PPU_STATEINFO, "PPU"));
- int ret = MDFNSS_StateAction(sm, load, data_only, love);
+ MDFNSS_StateAction(sm, load, data_only, PPU_STATEINFO, "PPU");
 
  if(load)
  {
@@ -1432,7 +1413,6 @@ int MDFNPPU_StateAction(StateMem *sm, int load, int data_only)
   }
   RedoRenderCache();
  }
- return(ret);
 }
 
 static MDFN_Rect PPUDisplayRect;
@@ -1543,9 +1523,63 @@ void MDFNPPU_Init(void)
   else if(preset == "monochrome")
    setup = nes_ntsc_monochrome;
 
+#if 0
+  uint8 palette_tmp[3 * 512];
+  setup.palette_out = palette_tmp;
+#endif
+
   NTSCBlitter = (nes_ntsc_emph_t *)calloc(1, sizeof(nes_ntsc_emph_t));
-  nes_ntsc_init_emph(NTSCBlitter, &setup);  
-  
+  nes_ntsc_init_emph(NTSCBlitter, &setup);
+
+#if 0
+  //FileStream fp("test.pal", FileStream::MODE_WRITE);
+  //fp.write(palette_tmp, sizeof(palette_tmp));
+  //fp.close();
+  double cmul[3][8];
+
+  for(int emph = 0; emph < 8; emph++)
+  {
+   double accum[3] = { 0 };
+   double accum_e[3] = { 0 };
+ 
+   for(int i = 0; i < 64; i++)
+   {
+    double weights[3] = { 0 };
+
+    for(int j = 0; j < 3; j++)
+    {
+     double n = (double)palette_tmp[(emph * 64 + i) * 3 + j];
+     double d = (double)palette_tmp[i * 3 + j];
+
+     //if(fabs(1.0 - n / d) >= 0.04)
+     {
+      accum_e[j] += n;
+      accum[j] += d;
+     }
+
+     if(!n && !d)
+     {
+      weights[j] = 1.0;
+     }
+     else
+     { 
+      weights[j] = n / d;
+     }
+    }
+    //printf("%3d: %f, %f, %f\n", emph * 64 + i, weights[0], weights[1], weights[2]);
+   }
+   for(int j = 0; j < 3; j++)
+    cmul[j][emph] = accum_e[j] / accum[j];
+  }
+
+  for(int j = 0; j < 3; j++)
+  {
+   for(int i = 0; i < 8; i++)
+    printf("%f, ", cmul[j][i]);
+   printf("\n");
+  }
+
+#endif
  }
  else
   NTSCBlitter = NULL;
@@ -1747,7 +1781,6 @@ static void DoGfxDecode(void)
    }
    target += GfxDecode_Buf->w * 3;
   }
-
-
+}
 
 }

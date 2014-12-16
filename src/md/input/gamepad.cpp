@@ -25,14 +25,14 @@
 /*--------------------------------------------------------------------------*/
 /* Master System 2-button gamepad                                           */
 /*--------------------------------------------------------------------------*/
-class Gamepad2 : public MD_Input_Device
+class Gamepad2 final : public MD_Input_Device
 {
         public:
         Gamepad2();
-        virtual ~Gamepad2();
-	virtual void UpdateBus(const int32 master_timestamp, uint8 &bus, const uint8 genesis_asserted);
-        virtual void UpdatePhysicalState(const void *data);
-        virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_prefix);
+        virtual ~Gamepad2() override;
+	virtual void UpdateBus(const int32 master_timestamp, uint8 &bus, const uint8 genesis_asserted) override;
+        virtual void UpdatePhysicalState(const void *data) override;
+        virtual void StateAction(StateMem *sm, const unsigned load, const bool data_only, const char *section_prefix) override;
 
         private:
         uint8 buttons;
@@ -41,14 +41,14 @@ class Gamepad2 : public MD_Input_Device
 /*--------------------------------------------------------------------------*/
 /* Genesis 3-button gamepad                                                 */
 /*--------------------------------------------------------------------------*/
-class Gamepad3 : public MD_Input_Device
+class Gamepad3 final : public MD_Input_Device
 {
         public:
         Gamepad3();
-        virtual ~Gamepad3();
-	virtual void UpdateBus(const int32 master_timestamp, uint8 &bus, const uint8 genesis_asserted);
-        virtual void UpdatePhysicalState(const void *data);
-	virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_prefix);
+        virtual ~Gamepad3() override;
+	virtual void UpdateBus(const int32 master_timestamp, uint8 &bus, const uint8 genesis_asserted) override;
+        virtual void UpdatePhysicalState(const void *data) override;
+	virtual void StateAction(StateMem *sm, const unsigned load, const bool data_only, const char *section_prefix) override;
 
 	private:
 	uint8 buttons;
@@ -57,20 +57,20 @@ class Gamepad3 : public MD_Input_Device
 /*--------------------------------------------------------------------------*/
 /* Fighting Pad 6B                                                          */
 /*--------------------------------------------------------------------------*/
-class Gamepad6 : public MD_Input_Device
+class Gamepad6 final : public MD_Input_Device
 {
         public:
         Gamepad6();
-        virtual ~Gamepad6();
+        virtual ~Gamepad6() override;
 
-	virtual void Power(void);
+	virtual void Power(void) override;
 
-        virtual void UpdateBus(const int32 master_timestamp, uint8 &bus, const uint8 genesis_asserted);
-        virtual void UpdatePhysicalState(const void *data);
-        virtual void BeginTimePeriod(const int32 timestamp_base);
-        virtual void EndTimePeriod(const int32 master_timestamp);
+        virtual void UpdateBus(const int32 master_timestamp, uint8 &bus, const uint8 genesis_asserted) override;
+        virtual void UpdatePhysicalState(const void *data) override;
+        virtual void BeginTimePeriod(const int32 timestamp_base) override;
+        virtual void EndTimePeriod(const int32 master_timestamp) override;
 
-        virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_prefix);
+        virtual void StateAction(StateMem *sm, const unsigned load, const bool data_only, const char *section_prefix) override;
 
         private:
 	void Run(const int32 master_timestamp);
@@ -84,7 +84,7 @@ class Gamepad6 : public MD_Input_Device
 	bool compat_mode;
 };
 
-const InputDeviceInputInfoStruct Gamepad2IDII[7] =
+const IDIISG Gamepad2IDII =
 {
  { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
  { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
@@ -105,7 +105,7 @@ Gamepad2::~Gamepad2()
 
 }
 
-int Gamepad2::StateAction(StateMem *sm, int load, int data_only, const char *section_prefix)
+void Gamepad2::StateAction(StateMem *sm, const unsigned load, const bool data_only, const char *section_prefix)
 {
  SFORMAT StateRegs[] =
  {
@@ -113,18 +113,16 @@ int Gamepad2::StateAction(StateMem *sm, int load, int data_only, const char *sec
   SFEND
  };
 
- int ret = 1;
  char sname[64];
 
  trio_snprintf(sname, sizeof(sname), "%s-gp2", section_prefix);
 
- ret &= MDFNSS_StateAction(sm, load, data_only, StateRegs, sname);
-
- if(load)
+ if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, sname, true) && load)
+  Power();
+ else if(load)
  {
 
  }
- return(ret);
 }
 
 
@@ -138,7 +136,7 @@ void Gamepad2::UpdatePhysicalState(const void *data)
  buttons = *(uint8 *)data;
 }
 
-const InputDeviceInputInfoStruct GamepadIDII[8] =
+const IDIISG GamepadIDII =
 {
  { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
  { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
@@ -178,7 +176,7 @@ void Gamepad3::UpdatePhysicalState(const void *data)
  buttons = *(uint8 *)data;
 }
 
-int Gamepad3::StateAction(StateMem *sm, int load, int data_only, const char *section_prefix)
+void Gamepad3::StateAction(StateMem *sm, const unsigned load, const bool data_only, const char *section_prefix)
 {
  SFORMAT StateRegs[] =
  {
@@ -186,22 +184,20 @@ int Gamepad3::StateAction(StateMem *sm, int load, int data_only, const char *sec
   SFEND
  };
 
- int ret = 1;
  char sname[64];
 
  trio_snprintf(sname, sizeof(sname), "%s-gp3", section_prefix);
 
- ret &= MDFNSS_StateAction(sm, load, data_only, StateRegs, sname);
-
- if(load)
+ if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, sname, true) && load)
+  Power();
+ else if(load)
  {
 
  }
- return(ret);
 }
 
 
-const InputDeviceInputInfoStruct Gamepad6IDII[12] =
+const IDIISG Gamepad6IDII =
 {
  { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
  { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
@@ -239,7 +235,7 @@ void Gamepad6::Power(void)
  compat_mode = (bool)(buttons & (1 << 11));
 }
 
-int Gamepad6::StateAction(StateMem *sm, int load, int data_only, const char *section_prefix)
+void Gamepad6::StateAction(StateMem *sm, const unsigned load, const bool data_only, const char *section_prefix)
 {
  SFORMAT StateRegs[] =
  {
@@ -250,19 +246,16 @@ int Gamepad6::StateAction(StateMem *sm, int load, int data_only, const char *sec
   SFVAR(compat_mode),
   SFEND
  };
- int ret = 1;
  char sname[64];
 
  trio_snprintf(sname, sizeof(sname), "%s-gp6", section_prefix);
 
- ret &= MDFNSS_StateAction(sm, load, data_only, StateRegs, sname);
-
- if(load)
+ if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, sname, true) && load)
+  Power();
+ else if(load)
  {
 
  }
-
- return(ret);
 }
 
 
@@ -335,6 +328,14 @@ void Gamepad6::EndTimePeriod(const int32 master_timestamp)
  ...    TH = 0 : ?0SA00DU    3-button pad return value
  ...    TH = 1 : ?1CBRLDU    3-button pad return value
 
+*/
+
+/*
+ 6-button controller games to test when making changes:
+	Comix Zone
+
+ 6-button controller incompatible games(incomplete):
+	Ms. Pac Man
 */
 
 void Gamepad6::UpdateBus(const int32 master_timestamp, uint8 &bus, const uint8 genesis_asserted)

@@ -10,7 +10,7 @@ void FXTIMER_Reset(void);
 
 void FXTIMER_Init(void);
 
-int FXTIMER_StateAction(StateMem *sm, int load, int data_only);
+void FXTIMER_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 bool FXTIMER_GetRegister(const std::string &name, uint32 &value, std::string *special);
 
 #endif

@@ -19,7 +19,7 @@
 #include "shared.h"
 #include "cart/cart.h"
 #include "cd/cd.h"
-#include <mednafen/md5.h>
+#include <mednafen/hash/md5.h>
 #include <mednafen/general.h>
 #include <mednafen/mempatcher.h>
 
@@ -36,6 +36,20 @@ enum
  REGION_OVERSEAS_PAL,
  REGION_DOMESTIC_NTSC,
  REGION_DOMESTIC_PAL
+};
+
+
+static const MDFNSetting_EnumList MultiTap_List[] =
+{
+ { "none", MTAP_NONE, gettext_noop("No multitap(s).") },
+
+ { "tp1", MTAP_TP_PRT1, gettext_noop("Team Player/Sega Tap on MD/Genesis port 1.") },
+ { "tp2", MTAP_TP_PRT2, gettext_noop("Team Player/Sega Tap on MD/Genesis port 2.") },
+ { "tpd", MTAP_TP_DUAL, gettext_noop("Team Player/Sega Tap on both MD/Genesis ports.") },
+
+ { "4way", MTAP_4WAY, gettext_noop("EA 4-Way Play") },
+
+ { NULL, 0 },
 };
 
 
@@ -221,14 +235,163 @@ static void Emulate(EmulateSpecStruct *espec)
 static void Cleanup(void)
 {
  MDCart_Kill();
+ MDIO_Kill();
 }
 
 static void CloseGame(void)
 {
- MDCart_SaveNV();
+ try
+ {
+  MDCart_SaveNV();
+ }
+ catch(std::exception &e)
+ {
+  MDFN_PrintError("%s", e.what());
+ }
 
  Cleanup();
 }
+
+static const struct 
+{
+ const char* prod_code;
+ uint32 crc32;
+ bool compat_6button;
+ unsigned tap;
+ unsigned max_players;
+}
+InputDB[] =
+{
+ { NULL, 0x2c6cbd77, 		true, MTAP_TP_PRT1, 4 }, // Aq Renkan Awa (China) (Unl)
+ { "MK-1234 -00", 0x8c822884, 	true, MTAP_TP_PRT1, 4 }, // ATP Tour Championship Tennis (USA)
+ { "MK-1234 -50", 0x1a3da8c5, 	true, MTAP_TP_PRT1, 4 }, // ATP Tour (Europe)
+ { "T-172106-01", 0xac5bc26a,	true, MTAP_4WAY,    4 }, // Australian Rugby League (Europe)
+ { "T-119066-01", 0xde27357b, 	true, MTAP_TP_PRT1, 4 }, // Barkley Shut Up and Jam 2 (USA) (Beta)
+ { "T-119186-00", 0x321bb6bd, 	true, MTAP_TP_PRT1, 4 }, // Barkley Shut Up and Jam 2 (USA)
+ { "T-119066-00", 0x63fbf497, 	true, MTAP_TP_PRT1, 4 }, // Barkley Shut Up and Jam! (USA, Europe)
+ { "T-50826 -00", 0xa582f45a, 	true, MTAP_4WAY,    4 }, // Bill Walsh College Football 95 (USA)
+ { "T-50606 -00", 0x3ed83362, 	true, MTAP_4WAY,    4 }, // Bill Walsh College Football (USA, Europe)
+ { "T-172016-00", 0x67c309c6,	true, MTAP_4WAY,    4 }, // Coach K College Basketball (USA)
+ { "T-172046-00", 0xb9075385,	true, MTAP_4WAY,    4 }, // College Football USA 96 (USA)
+ { "T-172126-01", 0x2ebb90a3,	true, MTAP_4WAY,    4 }, // College Football USA 97 (USA)
+ { "MK-1241 -00", 0x65b64413, 	true, MTAP_TP_PRT1, 4 }, // College Football's National Championship II (USA)
+ { "MK-1227 -00", 0x172c5dbb, 	true, MTAP_TP_PRT1, 4 }, // College Football's National Championship (USA)
+ { "T-81576 -00", 0x96a42431, 	true, MTAP_TP_PRT1, 4 }, // College Slam (USA)
+ { "T-23056 -00", 0xdc678f6d, 	true, MTAP_TP_PRT2, 5 }, // Columns III - Revenge of Columns (USA)
+ { "00004801-00", 0xcd07462f, 	true, MTAP_TP_PRT2, 5 }, // Columns III - Taiketsu! Columns World (Japan, Korea)
+ { "T-70276-00", 0x4608f53a,	true, MTAP_TP_PRT2, 4 }, // Dino Dini's Soccer (Europe)
+ /* Can support dual multitap, *BUT* Some game modes are incompatible with multitap
+ { "T-95126-00", 0x8352b1d0, 	true, * }, // Double Dribble - The Playoff Edition (USA)
+ */
+ { "T-70286 -00", 0xfdeed51d, 	true, MTAP_TP_PRT1, 3 }, // Dragon - The Bruce Lee Story (Europe)
+ { "T-81496 -00", 0xefe850e5, 	true, MTAP_TP_PRT1, 3 }, // Dragon - The Bruce Lee Story (USA)
+ { "T-50976 -00", 0xe10a25c0,	true, MTAP_4WAY,    4 }, // Elitserien 95 (Sweden)
+ { "T-172096-00", 0x9821d0a3,	true, MTAP_4WAY,    4 }, // Elitserien 96 (Sweden)
+ { NULL, 0xa427814a, 		true, MTAP_TP_PRT1, 4 }, // ESPN National Hockey Night (USA) (Beta)
+ { "T-93176 -00", 0x1d08828c, 	true, MTAP_TP_PRT1, 4 }, // ESPN National Hockey Night (USA)
+ { "T-79196-50", 0xfac29677, 	true, MTAP_TP_PRT1, 5 }, // Fever Pitch Soccer (Europe) (En,Fr,De,Es,It)
+ { "T-172206-00", 0x96947f57,	true, MTAP_4WAY,    4 }, // FIFA 98 - Road to World Cup (Europe) (En,Fr,Es,It,Sv)
+ { "T-50706 -00", 0xbddbb763,	true, MTAP_4WAY,    4 }, // FIFA International Soccer (USA, Europe) (En,Fr,De,Es)
+ { "T-50916 -01", 0x012591f9,	true, MTAP_4WAY,    4 }, // FIFA Soccer 95 (Korea) (En,Fr,De,Es)
+ { "T-50916 -00", 0xb389d036,	true, MTAP_4WAY,    4 }, // FIFA Soccer 95 (USA, Europe) (En,Fr,De,Es)
+ { "T-172086-00", 0xbad30ffa,	true, MTAP_4WAY,    4 }, // FIFA Soccer 96 (USA, Europe) (En,Fr,De,Es,It,Sv)
+ { "T-172156-01", 0xa33d5803,	true, MTAP_4WAY,    4 }, // FIFA Soccer 97 (USA, Europe) (En,Fr,De,Es,It,Sv)
+ // Maybe port2? { "T-81476 -00", 0x863e0950, true, MTAP_TP_PRT1, 4 }, // Frank Thomas Big Hurt Baseball (USA, Europe)
+ // Maybe port2? { "133037   -00", 0xcdf5678f, true, MTAP_TP_PRT1, 4 }, // From TV Animation Slam Dunk - Kyougou Makkou Taiketsu! (Japan)
+ { "T-48216 -00", 0x3bf46dce, 	true, MTAP_TP_PRT1, 4 }, // Gauntlet IV (USA, Europe) (En,Ja) (August 1993)
+ { "T-48123 -00", 0xf9d60510, 	true, MTAP_TP_PRT1, 4 }, // Gauntlet IV (USA, Europe) (En,Ja) (September 1993)
+ { "T-48123 -00", 0xf9872055, 	true, MTAP_TP_PRT1, 4 }, // Gauntlet (Japan) (En,Ja)
+ { "T-106253-00", 0x05cc7369,	true, MTAP_4WAY,    4 }, // General Chaos (Japan)
+ { "T-50626 -00", 0xf1ecc4df,	true, MTAP_4WAY,    4 }, // General Chaos (USA, Europe)
+ { "T-79196", 0xdcffa327, 	true, MTAP_TP_PRT1, 5 }, // Head-On Soccer (USA)
+ /* Can support dual multitap, *BUT* Some game modes are incompatible with multitap
+ { "T-95126-00", 0xf27c576a, 	true, * }, // Hyper Dunk (Europe)
+ { NULL, 0xdb124bbb, 		true, * }, // Hyper Dunk - The Playoff Edition (Japan) (Beta)
+ { "T-95083-00", 0x5baf53d7, 	true, * }, // Hyper Dunk - The Playoff Edition (Japan)
+ */
+ { "T-50836 -00", 0xe04ffc2b,	true, MTAP_4WAY,    4 }, // IMG International Tour Tennis (USA, Europe)
+ { "T-95196-50", 0x9bb3b180, 	true, MTAP_TP_PRT1, 5 }, // International Superstar Soccer Deluxe (Europe)
+ //{ "G-5540  00", 0x9fe71002, 	true, MTAP_TP_PRT2, 4 }, // J. League Pro Striker 2 (Japan)
+ { "G-5547", 0xe35e25fb, 	true, MTAP_TP_PRT1, 4 }, // J. League Pro Striker Final Stage (Japan)
+ //{ "00005518-00", 0xec229156, 	true, MTAP_TP_PRT1, 4 }, // J. League Pro Striker (Japan) (v1.0)
+ //{ "00005518-03", 0x2d5b7a11, 	true, MTAP_TP_PRT1, 4 }, // J. League Pro Striker (Japan) (v1.3)
+ //{ "00005532-00", 0x0abed379, 	true, MTAP_TP_PRT1, 4 }, // J. League Pro Striker Perfect (Japan)
+ { NULL, 0x17bed25f, 		true, MTAP_TP_PRT1, 3 }, // Lost Vikings, The (Europe) (Beta)
+ { "T-70226-500", 0x1f14efc6, 	true, MTAP_TP_PRT1, 3 }, // Lost Vikings, The (Europe)
+ { "T-125016-00", 0x7ba49edb, 	true, MTAP_TP_PRT1, 3 }, // Lost Vikings, The (USA)
+ { "T-50676 -00", 0xd14b811b,	true, MTAP_4WAY,    4 }, // Madden NFL '94 (USA, Europe)
+ { "T-50926 -00", 0xdb0be0c2,	true, MTAP_4WAY,    4 }, // Madden NFL 95 (USA, Europe)
+ { "T-172076-00", 0xf126918b,	true, MTAP_4WAY,    4 }, // Madden NFL 96 (USA, Europe)
+ { "T-172136-00", 0xc4b4e112,	true, MTAP_4WAY,    4 }, // Madden NFL 97 (USA, Europe)
+ { "T-172196-00", 0xe051ea62,	true, MTAP_4WAY,    4 }, // Madden NFL 98 (USA)
+ { "MK-1573-00", 0x54ab3beb, 	true, MTAP_TP_PRT1, 4 }, // Mega Bomberman (Europe)
+ { "MK-1573-00", 0x4bd6667d, 	true, MTAP_TP_PRT1, 4 }, // Mega Bomberman (USA)
+ { NULL, 0xd41c0d81, 		true, MTAP_TP_DUAL, 8 }, // Mega Bomberman - 8 Player Demo (Unl)
+ { "T-120096-50", 0x01c22a5d, 	false, MTAP_TP_PRT1, 4 }, // Micro Machines 2 - Turbo Tournament (Europe) (J-Cart) (Alt 1)
+ { "T-120096-50", 0x42bfb7eb, 	false, MTAP_TP_PRT1, 4 }, // Micro Machines 2 - Turbo Tournament (Europe) (J-Cart)
+ { NULL, 0xb3abb15e, 		false, MTAP_TP_PRT1, 4 }, // Micro Machines Military (Europe) (J-Cart)
+ { NULL, 0x7492b1de, 		false, MTAP_TP_PRT1, 4 }, // Micro Machines Turbo Tournament 96 (Europe) (J-Cart)
+ { NULL, 0x23319d0d, 		false, MTAP_TP_PRT1, 4 }, // Micro Machines Turbo Tournament 96 (Europe) (v1.1) (J-Cart)
+ { "T-50816 -00", 0x14a8064d,	true, MTAP_4WAY,    4 }, // MLBPA Baseball (USA)
+ { "T-50766 -00", 0x3529180f,	true, MTAP_4WAY,    4 }, // Mutant League Hockey (USA, Europe)
+ { "MK-1221 -00", 0x99c348ba, 	true, MTAP_TP_PRT1, 5 }, // NBA Action '94 (USA)
+ { "MK-1236 -00", 0xaa7006d6, 	true, MTAP_TP_PRT1, 5 }, // NBA Action '95 Starring David Robinson (USA, Europe)
+ { "T-97136 -50", 0xedb4d4aa, 	true, MTAP_TP_PRT1, 4 }, // NBA Hang Time (Europe)
+ { "T-97136 -00", 0x176b0338, 	true, MTAP_TP_PRT1, 4 }, // NBA Hang Time (USA)
+ { "T-81033  00", 0xa6c6305a, 	true, MTAP_TP_PRT1, 4 }, // NBA Jam (Japan)
+ { "T-81406 -00", 0xe9ffcb37, 	true, MTAP_TP_PRT1, 4 }, // NBA Jam Tournament Edition (World)
+ { "T-081326 00", 0x10fa248f, 	true, MTAP_TP_PRT1, 4 }, // NBA Jam (USA, Europe)
+ { "T-081326 01", 0xeb8360e6, 	true, MTAP_TP_PRT1, 4 }, // NBA Jam (USA, Europe) (v1.1)
+ { "T-50936 -00", 0x779c1244,	true, MTAP_4WAY,    4 }, // NBA Live 95 (Korea)
+ { "T-50936 -00", 0x66018abc,	true, MTAP_4WAY,    4 }, // NBA Live 95 (USA, Europe)
+ { "T-172056-00", 0x49de0062,	true, MTAP_4WAY,    4 }, // NBA Live 96 (USA, Europe)
+ { "T-172166-00", 0x7024843a,	true, MTAP_4WAY,    4 }, // NBA Live 97 (USA, Europe)
+ { "T-172186-00", 0x23473a8a, 	true, MTAP_TP_PRT1, 4 }, // NBA Live 98 (USA)
+ { NULL, 0xeea19bce, 		true, MTAP_TP_PRT1, 4 }, // NBA Pro Basketball '94 (Japan)
+ { "T-50756 -00", 0x160b7090,	true, MTAP_4WAY,    4 }, // NBA Showdown '94 (USA, Europe)
+ { "T-158016-00", 0xed0c1303, 	true, MTAP_TP_PRT1, 5 }, // NCAA Final Four Basketball (USA)
+ { "T-87106 -00", 0x081012f0, 	true, MTAP_TP_PRT1, 4 }, // NCAA Football (USA)
+ { "MK-1237 -00", 0xb58e4a81, 	true, MTAP_TP_PRT1, 4 }, // NFL '95 (USA, Europe)
+ { "MK-1243 -00", 0xf73ec54c, 	true, MTAP_TP_PRT1, 4 }, // NFL 98 (USA)
+ { "T-081586-00", 0xd5a37cab, 	true, MTAP_TP_PRT1, 4 }, // NFL Quarterback Club 96 (USA, Europe)
+ { "T-081276 00", 0x94542eaf, 	true, MTAP_TP_PRT1, 4 }, // NFL Quarterback Club (World)
+ { "T-50656 -00", 0x9438f5dd,	true, MTAP_4WAY,    4 }, // NHL '94 (USA, Europe)
+ { "T-50856 -00", 0xe8ee917e,	true, MTAP_4WAY,    4 }, // NHL 95 (USA, Europe)
+ { "T-172036-00", 0x8135702c,	true, MTAP_4WAY,    4 }, // NHL 96 (USA, Europe)
+ { "T-172146-03", 0xf067c103,	true, MTAP_4WAY,    4 }, // NHL 97 (USA, Europe)
+ { "T-172176-00", 0x7b64cd98,	true, MTAP_4WAY,    4 }, // NHL 98 (USA)
+ { "00004107-00", 0x9d4b447a, 	true, MTAP_TP_PRT2, 5 }, // Party Quiz Mega Q (Japan)
+ { "T-119096-00", 0x05a486e9, 	true, MTAP_TP_PRT1, 4 }, // Pele II - World Tournament Soccer (USA, Europe)
+ { "G-4133-00", 0xd1e2324b, 	true, MTAP_TP_PRT2, 4 }, // Pepenga Pengo (Japan)
+ { "T-50796 -00", 0x8ca45acd,	true, MTAP_4WAY,    4 }, // PGA European Tour (USA, Europe)
+ { "T-50946 -00", 0xaeb3f65f,	true, MTAP_4WAY,    4 }, // PGA Tour Golf III (USA, Europe)
+ { "MK-1240 -00", 0x5aa53cbc, 	true, MTAP_TP_PRT1, 4 }, // Prime Time NFL Starring Deion Sanders (USA)
+ { "G-4128  -00", 0x7bdec762, 	true, MTAP_TP_PRT1, 4 }, // Puzzle & Action - Ichidanto-R (Japan)
+ { "G-4118  -00", 0xd2d2d437, 	true, MTAP_TP_PRT1, 4 }, // Puzzle & Action - Tanto-R (Japan)
+ { "T-50956 -00", 0x61f90a8a,	true, MTAP_4WAY,    4 }, // Rugby World Cup 95 (USA, Europe) (En,Fr,It)
+ { "MK-1183 -00", 0x07fedaf1, 	true, MTAP_TP_PRT2, 4 }, // Sega Sports 1 (Europe)
+ { NULL, 0x72dd884f, 		true, MTAP_TP_PRT1, 4 }, // Shi Jie Zhi Bang Zheng Ba Zhan - World Pro Baseball 94 (China) (Unl)
+ { "MK-1233 -00", 0x7e3ecabf, 	true, MTAP_TP_PRT1, 5 }, // Sport Games (Brazil) [b]
+ { "T-177016-00", 0x1a58d5fe, 	true, MTAP_TP_PRT1, 4 }, // Street Racer (Europe)
+ { "T-95146-00", 0x1227b2b2, 	true, MTAP_TP_PRT1, 4 }, // Tiny Toon Adventures - Acme All-Stars (Europe)
+ { "T-95146-00", 0x2f9faa1d, 	true, MTAP_TP_PRT1, 4 }, // Tiny Toon Adventures - Acme All-Stars (USA, Korea)
+ { "T-172026-04", 0xf1748e91,	true, MTAP_4WAY,    4 }, // Triple Play 96 (USA)
+ { "T-172116-00", 0xbbe69017,	true, MTAP_4WAY,    4 }, // Triple Play - Gold Edition (USA)
+ //maybe port2? { NULL, 0x9d451f72, 		true, MTAP_TP_PRT1, 4 }, // Ultimate Soccer (Europe) (En,Fr,De,Es,It) (Beta)
+ //{ "MK1219  -00", 0x83db6e58, 	true, MTAP_TP_PRT1, 4 }, // Ultimate Soccer (Europe) (En,Fr,De,Es,It)
+ { "T-119156-00", 0x9920e7b7, 	true, MTAP_TP_PRT1, 4 }, // Unnecessary Roughness '95 (USA)
+ { "T-048416-00", 0xc2c13b81, 	true, MTAP_TP_PRT1, 4 }, // Wayne Gretzky and the NHLPA All-Stars (USA, Europe)
+ { "MK-1224 -50", 0xb791a435, 	true, MTAP_TP_PRT2, 4 }, // Wimbledon Championship Tennis (Europe)
+ { "G-4110  -00", 0x3e0c9daf, 	true, MTAP_TP_PRT2, 4 }, // Wimbledon Championship Tennis (Japan)
+ { NULL, 0x9febc760, 		true, MTAP_TP_PRT2, 4 }, // Wimbledon Championship Tennis (USA) (Beta)
+ { "MK-1224 -00", 0xf9142aee, 	true, MTAP_TP_PRT2, 4 }, // Wimbledon Championship Tennis (USA)
+ { "MK-1233 -00", 0x6065774d, 	true, MTAP_TP_PRT1, 5 }, // World Championship Soccer II (Europe)
+ { "MK-1233 -00", 0xc1dd1c8e, 	true, MTAP_TP_PRT1, 5 }, // World Championship Soccer II (USA)
+ { "T-79116-00", 0x0171b47f, 	true, MTAP_TP_PRT1, 4 }, // World Cup USA 94 (USA, Europe)
+ { "T-081316-00", 0x4ef5d411, 	true, MTAP_TP_PRT1, 4 }, // WWF Raw (World)
+ { "G-004122-00", 0x71ceac6f, 	true, MTAP_TP_PRT1, 4 }, // Yuu Yuu Hakusho - Makyou Toitsusen (Japan)
+ { "G-004122-00", 0xfe3fb8ee, 	true, MTAP_TP_PRT1, 4 }, // Yuu Yuu Hakusho - Sunset Fighters (Brazil)
+};
 
 static bool decode_region_setting(const int setting, bool &overseas, bool &pal)
 {
@@ -259,10 +422,10 @@ static bool decode_region_setting(const int setting, bool &overseas, bool &pal)
  }
 }
 
-static void LoadCommonPost(const md_game_info &ginfo);
 static void LoadCommonPost(const md_game_info &ginfo)
 {
  MDFN_printf(_("ROM:       %dKiB\n"), (ginfo.rom_size + 1023) / 1024);
+ MDFN_printf(_("ROM CRC32: 0x%08x\n"), ginfo.crc32);
  MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(ginfo.md5, 0).c_str());
  MDFN_printf(_("Header MD5: 0x%s\n"), md5_context::asciistr(ginfo.info_header_md5, 0).c_str());
  MDFN_printf(_("Product Code: %s\n"), ginfo.product_code);
@@ -397,10 +560,47 @@ static void LoadCommonPost(const md_game_info &ginfo)
 
  MDFNGameInfo->LayerNames = "BG0\0BG1\0OBJ\0";
 
+ //
+ //
+ {
+  unsigned mtt = MDFN_GetSettingUI("md.input.multitap");
+
+  if(MDFN_GetSettingB("md.input.auto"))
+  {
+   for(auto const& e : InputDB)
+   {
+    if(e.crc32 == ginfo.crc32 && (!e.prod_code || !strcmp(e.prod_code, ginfo.product_code)))
+    {
+     MDFNGameInfo->DesiredInput.resize(8);
+
+     for(unsigned n = e.max_players; n < 8; n++)	// Particularly for Gauntlet 4.
+      MDFNGameInfo->DesiredInput[n] = "none";
+
+     mtt = e.tap;
+     break;
+    }
+   }
+  }
+
+  for(const auto* mte = MultiTap_List; mte->string; mte++)
+  {
+   if((unsigned)mte->number == mtt)
+   {
+    MDFN_printf(_("Active Multitap(s): %s\n"), mte->description);
+    break;
+   }
+  }
+
+  MDINPUT_SetMultitap(mtt);
+ }
+
+ //
+ //
+
  system_reset(true);
 }
 
-static int Load(MDFNFILE *fp)
+static void Load(MDFNFILE *fp)
 {
  try
  {
@@ -427,7 +627,6 @@ static int Load(MDFNFILE *fp)
   Cleanup();
   throw;
  }
- return(1);
 }
 
 static void LoadCD(std::vector<CDIF *> *CDInterfaces)
@@ -465,9 +664,8 @@ static void DoSimpleCommand(int cmd)
  }
 }
 
-static int StateAction(StateMem *sm, int load, int data_only)
+static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
- int ret = 1;
  unsigned int c68k_state_len = C68k_Get_State_Max_Len();
  uint8 c68k_state[c68k_state_len];
 
@@ -492,20 +690,18 @@ static int StateAction(StateMem *sm, int load, int data_only)
  };
 
 
- ret &= MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
- ret &= z80_state_action(sm, load, data_only, "Z80");
- ret &= MDINPUT_StateAction(sm, load, data_only);
- ret &= MainVDP.StateAction(sm, load, data_only);
- ret &= MDSound_StateAction(sm, load, data_only);
- ret &= MDCart_StateAction(sm, load, data_only);
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
+ z80_state_action(sm, load, data_only, "Z80");
+ MDINPUT_StateAction(sm, load, data_only);
+ MainVDP.StateAction(sm, load, data_only);
+ MDSound_StateAction(sm, load, data_only);
+ MDCart_StateAction(sm, load, data_only);
 
  if(load)
  {
   C68k_Load_State(&Main68K, c68k_state);
   z80_set_interrupt(zirq);
  }
-
- return(ret);
 }
 
 static const MDFNSetting_EnumList RegionList[] =
@@ -545,8 +741,12 @@ static MDFNSetting MDSettings[] =
 
  { "md.correct_aspect", MDFNSF_CAT_VIDEO, gettext_noop("Correct the aspect ratio."), NULL, MDFNST_BOOL, "1" },
 
- // off, teamplay, 4way, auto
- // { "md.input.4player", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE | MDFNSF_CAT_INPUT, gettext_noop("Which 4-player adapter to use."), NULL, MDFNST_STRING, "auto", NULL, NULL },
+ { "md.input.auto", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Automatically select appropriate input devices."),
+	gettext_noop("Automatically select appropriate input devices, based on an internal database.  Currently, only multitap device usage data is contained in the database."),
+	MDFNST_BOOL, "1" },
+ { "md.input.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap(s)."), NULL, MDFNST_ENUM, "none", NULL, NULL, NULL, NULL, MultiTap_List },
+
+ { "md.input.mouse_sensitivity", MDFNSF_NOFLAGS, gettext_noop("Emulated mouse sensitivity."), NULL, MDFNST_FLOAT, "1.00", NULL, NULL },
 
  { NULL }
 };
@@ -578,16 +778,21 @@ MDFNGI EmulatedMD =
  #else
  NULL,
  #endif
- &MDInputInfo,
+ MDPortInfo,
  Load,
  MDCart_TestMagic,
  LoadCD,
  TestMagicCD,
  CloseGame,
+
  SetLayerEnableMask,
  NULL,
+
  NULL,
  NULL,
+
+ NULL,
+ 0,
  NULL, //InstallReadPatch,
  NULL, //RemoveReadPatches,
  NULL, //MemRead,
@@ -595,7 +800,9 @@ MDFNGI EmulatedMD =
  false,
  StateAction,
  Emulate,
+ NULL,
  MDINPUT_SetInput,
+ NULL,
  DoSimpleCommand,
  MDSettings,
  0,	// MasterClock(set in game loading code)

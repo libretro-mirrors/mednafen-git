@@ -84,11 +84,11 @@ void CMemMap::Reset(void)
 {
 
 	// Initialise ALL pointers to RAM then overload to correct
-	for(int loop=0;loop<SYSTEM_SIZE;loop++) mSystem.mMemoryHandlers[loop]=mSystem.mRam;
+	for(int loop=0;loop<SYSTEM_SIZE;loop++) mSystem.mMemoryHandlers[loop]=mSystem.mRam.get();
 
 	// Special case for ourselves.
-	mSystem.mMemoryHandlers[0xFFF8]=mSystem.mRam;
-	mSystem.mMemoryHandlers[0xFFF9]=mSystem.mMemMap;
+	mSystem.mMemoryHandlers[0xFFF8]=mSystem.mRam.get();
+	mSystem.mMemoryHandlers[0xFFF9]=mSystem.mMemMap.get();
 
 	mSusieEnabled=-1;
 	mMikieEnabled=-1;
@@ -115,11 +115,11 @@ INLINE void CMemMap::Poke(uint32 addr, uint8 data)
 
 		if(mSusieEnabled)
 		{
-			for(loop=SUSIE_START;loop<SUSIE_START+SUSIE_SIZE;loop++) mSystem.mMemoryHandlers[loop]=mSystem.mSusie;
+			for(loop=SUSIE_START;loop<SUSIE_START+SUSIE_SIZE;loop++) mSystem.mMemoryHandlers[loop]=mSystem.mSusie.get();
 		}
 		else
 		{
-			for(loop=SUSIE_START;loop<SUSIE_START+SUSIE_SIZE;loop++) mSystem.mMemoryHandlers[loop]=mSystem.mRam;
+			for(loop=SUSIE_START;loop<SUSIE_START+SUSIE_SIZE;loop++) mSystem.mMemoryHandlers[loop]=mSystem.mRam.get();
 		}
 	}
 
@@ -131,11 +131,11 @@ INLINE void CMemMap::Poke(uint32 addr, uint8 data)
 
 		if(mMikieEnabled)
 		{
-			for(loop=MIKIE_START;loop<MIKIE_START+MIKIE_SIZE;loop++) mSystem.mMemoryHandlers[loop]=mSystem.mMikie;
+			for(loop=MIKIE_START;loop<MIKIE_START+MIKIE_SIZE;loop++) mSystem.mMemoryHandlers[loop]=mSystem.mMikie.get();
 		}
 		else
 		{
-			for(loop=MIKIE_START;loop<MIKIE_START+MIKIE_SIZE;loop++) mSystem.mMemoryHandlers[loop]=mSystem.mRam;
+			for(loop=MIKIE_START;loop<MIKIE_START+MIKIE_SIZE;loop++) mSystem.mMemoryHandlers[loop]=mSystem.mRam.get();
 		}
 	}
 
@@ -147,11 +147,11 @@ INLINE void CMemMap::Poke(uint32 addr, uint8 data)
 
 		if(mRomEnabled)
 		{
-			for(loop=BROM_START;loop<BROM_START+(BROM_SIZE-8);loop++) mSystem.mMemoryHandlers[loop]=mSystem.mRom;
+			for(loop=BROM_START;loop<BROM_START+(BROM_SIZE-8);loop++) mSystem.mMemoryHandlers[loop]=mSystem.mRom.get();
 		}
 		else
 		{
-			for(loop=BROM_START;loop<BROM_START+(BROM_SIZE-8);loop++) mSystem.mMemoryHandlers[loop]=mSystem.mRam;
+			for(loop=BROM_START;loop<BROM_START+(BROM_SIZE-8);loop++) mSystem.mMemoryHandlers[loop]=mSystem.mRam.get();
 		}
 	}
 
@@ -163,11 +163,11 @@ INLINE void CMemMap::Poke(uint32 addr, uint8 data)
 
 		if(mVectorsEnabled)
 		{
-			for(loop=VECTOR_START;loop<VECTOR_START+VECTOR_SIZE;loop++) mSystem.mMemoryHandlers[loop]=mSystem.mRom;
+			for(loop=VECTOR_START;loop<VECTOR_START+VECTOR_SIZE;loop++) mSystem.mMemoryHandlers[loop]=mSystem.mRom.get();
 		}
 		else
 		{
-			for(loop=VECTOR_START;loop<VECTOR_START+VECTOR_SIZE;loop++) mSystem.mMemoryHandlers[loop]=mSystem.mRam;
+			for(loop=VECTOR_START;loop<VECTOR_START+VECTOR_SIZE;loop++) mSystem.mMemoryHandlers[loop]=mSystem.mRam.get();
 		}
 	}
 
@@ -186,7 +186,7 @@ INLINE uint8 CMemMap::Peek(uint32 addr)
 	return retval;
 }
 
-int CMemMap::StateAction(StateMem *sm, int load, int data_only)
+void CMemMap::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT MemMapRegs[] =
  {
@@ -196,9 +196,7 @@ int CMemMap::StateAction(StateMem *sm, int load, int data_only)
         SFVAR(mVectorsEnabled),
 	SFEND
  };
- std::vector <SSDescriptor> love;
- love.push_back(SSDescriptor(MemMapRegs, "MMAP"));
- int ret = MDFNSS_StateAction(sm, load, data_only, love);
+ MDFNSS_StateAction(sm, load, data_only, MemMapRegs, "MMAP");
 
  if(load)
  {
@@ -214,8 +212,6 @@ int CMemMap::StateAction(StateMem *sm, int load, int data_only)
         // Set banks correctly
         Poke(0,mystate);
  }
-
- return ret;
 }
 
 

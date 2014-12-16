@@ -266,7 +266,7 @@ uint16 MD_ReadMemory16(uint32 address)
             return(MD_ExtRead16(address));
 
         case 7: /* RAM */
-            return READ_WORD_MSB(work_ram, address & 0xFFFF);
+            return MDFN_de16msb<true>(&work_ram[address & 0xFFFF]);
 
         case 5: /* Z80 & I/O */
             if(address <= 0xA0FFFF)

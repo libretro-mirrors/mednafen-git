@@ -24,8 +24,6 @@ extern uint32 PCE_InDebug;
 extern bool PCE_ACEnabled; // Arcade Card emulation enabled?
 void PCE_Power(void);
 
-void PCE_MidSync(void);
-
 uint8 PCE_PeekMainRAM(uint32 A);
 void PCE_PokeMainRAM(uint32 A, uint8 V);
 

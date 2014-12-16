@@ -2,13 +2,17 @@
 Notes for building Mednafen's code outside of Mednafen's own build system:
     (though you should get most of this if you read configure.ac)
 
- Last updated June 25, 2014
+ Last updated November 28, 2014
 --------------------------------------------------------------------------
 
 gcc or LLVM(clang) is generally required, and ICC may work.  Other compilers will
 require signficant changes to the codebase due to widespread usage of GNU extensions.
 
-Compile with -fno-strict-overflow(or -fwrapv with gcc 4.2.x).
+Compile with -fwrapv
+
+Compile "ngp" module(Neo Geo Pop emulation) with -fno-strict-aliasing
+
+Compile with -fomit-frame-pointer(at least on x86/x86_64).
 
 Compile with -fsigned-char.
 

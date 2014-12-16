@@ -24,18 +24,18 @@ class MD_Cart_Type_RMX3 : public MD_Cart_Type
 	public:
 
         MD_Cart_Type_RMX3(const md_game_info *ginfo, const uint8 *ROM, const uint32 ROM_size);
-        virtual ~MD_Cart_Type_RMX3();
+        virtual ~MD_Cart_Type_RMX3() override;
 
-        virtual void Write8(uint32 A, uint8 V);
-        virtual void Write16(uint32 A, uint16 V);
-        virtual uint8 Read8(uint32 A);
-        virtual uint16 Read16(uint32 A);
-        virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name);
+        virtual void Write8(uint32 A, uint8 V) override;
+        virtual void Write16(uint32 A, uint16 V) override;
+        virtual uint8 Read8(uint32 A) override;
+        virtual uint16 Read16(uint32 A) override;
+        virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name) override;
 
         // In bytes
-        virtual uint32 GetNVMemorySize(void);
-        virtual void ReadNVMemory(uint8 *buffer);
-        virtual void WriteNVMemory(const uint8 *buffer);
+        virtual uint32 GetNVMemorySize(void) override;
+        virtual void ReadNVMemory(uint8 *buffer) override;
+        virtual void WriteNVMemory(const uint8 *buffer) override;
 
 	private:
 
@@ -71,7 +71,7 @@ uint8 MD_Cart_Type_RMX3::Read8(uint32 A)
 {
  if(A < 0x400000)
  {
-  if(A > rom_size)
+  if(A >= rom_size)
   {
    MD_DBG(MD_DBG_WARNING, "[MAP_RMX3] Unknown read8 from 0x%08x\n", A);
    return(0);
@@ -92,7 +92,7 @@ uint16 MD_Cart_Type_RMX3::Read16(uint32 A)
 {
  if(A < 0x400000)
  {
-  if(A > rom_size)
+  if(A >= rom_size)
   {
    MD_DBG(MD_DBG_WARNING, "[MAP_RMX3] Unknown read16 from 0x%08x\n", A);
    return(0);

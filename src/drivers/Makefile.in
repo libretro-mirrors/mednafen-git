@@ -64,6 +64,7 @@ subdir = src/drivers
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
+	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/codeset.m4 $(top_srcdir)/m4/fcntl-o.m4 \
 	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/glibc2.m4 \
 	$(top_srcdir)/m4/glibc21.m4 $(top_srcdir)/m4/iconv.m4 \
@@ -101,8 +102,8 @@ libmdfnsdl_a_AR = $(AR) $(ARFLAGS)
 libmdfnsdl_a_LIBADD =
 am__libmdfnsdl_a_SOURCES_DIST = main.cpp input.cpp args.cpp help.cpp \
 	ers.cpp sound.cpp netplay.cpp input-config.cpp console.cpp \
-	cheat.cpp fps.cpp video-state.cpp remote.cpp opengl.cpp \
-	shader.cpp overlay.cpp video.cpp nongl.cpp nnx.cpp \
+	cheat.cpp fps.cpp video-state.cpp remote.cpp rmdui.cpp \
+	opengl.cpp shader.cpp overlay.cpp video.cpp nongl.cpp nnx.cpp \
 	thread_win32.cpp thread_sdl.cpp hqxx-common.cpp hq2x.cpp \
 	hq3x.cpp hq4x.cpp scale2x.c scale3x.c scalebit.c 2xSaI.cpp \
 	Joystick.cpp Joystick_SDL.cpp Joystick_Linux.cpp \
@@ -128,12 +129,12 @@ am_libmdfnsdl_a_OBJECTS = main.$(OBJEXT) input.$(OBJEXT) \
 	args.$(OBJEXT) help.$(OBJEXT) ers.$(OBJEXT) sound.$(OBJEXT) \
 	netplay.$(OBJEXT) input-config.$(OBJEXT) console.$(OBJEXT) \
 	cheat.$(OBJEXT) fps.$(OBJEXT) video-state.$(OBJEXT) \
-	remote.$(OBJEXT) opengl.$(OBJEXT) shader.$(OBJEXT) \
-	overlay.$(OBJEXT) video.$(OBJEXT) nongl.$(OBJEXT) \
-	nnx.$(OBJEXT) $(am__objects_1) $(am__objects_2) \
-	$(am__objects_3) Joystick.$(OBJEXT) Joystick_SDL.$(OBJEXT) \
-	$(am__objects_4) $(am__objects_5) $(am__objects_6) \
-	$(am__objects_7)
+	remote.$(OBJEXT) rmdui.$(OBJEXT) opengl.$(OBJEXT) \
+	shader.$(OBJEXT) overlay.$(OBJEXT) video.$(OBJEXT) \
+	nongl.$(OBJEXT) nnx.$(OBJEXT) $(am__objects_1) \
+	$(am__objects_2) $(am__objects_3) Joystick.$(OBJEXT) \
+	Joystick_SDL.$(OBJEXT) $(am__objects_4) $(am__objects_5) \
+	$(am__objects_6) $(am__objects_7)
 libmdfnsdl_a_OBJECTS = $(am_libmdfnsdl_a_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -227,7 +228,6 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
-GBA_EXTRA_FLAGS = @GBA_EXTRA_FLAGS@
 GENCAT = @GENCAT@
 GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
 GLIBC2 = @GLIBC2@
@@ -236,6 +236,7 @@ GMSGFMT = @GMSGFMT@
 GMSGFMT_015 = @GMSGFMT_015@
 GREP = @GREP@
 HAVE_ASPRINTF = @HAVE_ASPRINTF@
+HAVE_CXX11 = @HAVE_CXX11@
 HAVE_NEWLOCALE = @HAVE_NEWLOCALE@
 HAVE_POSIX_PRINTF = @HAVE_POSIX_PRINTF@
 HAVE_SNPRINTF = @HAVE_SNPRINTF@
@@ -391,11 +392,11 @@ DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_src
 noinst_LIBRARIES = libmdfnsdl.a
 libmdfnsdl_a_SOURCES = main.cpp input.cpp args.cpp help.cpp ers.cpp \
 	sound.cpp netplay.cpp input-config.cpp console.cpp cheat.cpp \
-	fps.cpp video-state.cpp remote.cpp opengl.cpp shader.cpp \
-	overlay.cpp video.cpp nongl.cpp nnx.cpp $(am__append_1) \
-	$(am__append_2) $(am__append_3) Joystick.cpp Joystick_SDL.cpp \
-	$(am__append_4) $(am__append_5) $(am__append_6) \
-	$(am__append_7)
+	fps.cpp video-state.cpp remote.cpp rmdui.cpp opengl.cpp \
+	shader.cpp overlay.cpp video.cpp nongl.cpp nnx.cpp \
+	$(am__append_1) $(am__append_2) $(am__append_3) Joystick.cpp \
+	Joystick_SDL.cpp $(am__append_4) $(am__append_5) \
+	$(am__append_6) $(am__append_7)
 all: all-am
 
 .SUFFIXES:
@@ -476,6 +477,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/overlay.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/prompt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/remote.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rmdui.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/scale2x.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/scale3x.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/scalebit.Po@am__quote@

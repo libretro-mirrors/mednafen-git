@@ -209,7 +209,7 @@ void WSwan_EEPROMInit(const char *Name, const uint16 BYear, const uint8 BMonth, 
  iEEPROM[0x375] = Blood;
 }
 
-int WSwan_EEPROMStateAction(StateMem *sm, int load, int data_only)
+void WSwan_EEPROMStateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -222,10 +222,12 @@ int WSwan_EEPROMStateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, "EEPR"))
-  return(0);
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "EEPR");
 
- return(1);
+ if(load)
+ {
+
+ }
 }
 
 }

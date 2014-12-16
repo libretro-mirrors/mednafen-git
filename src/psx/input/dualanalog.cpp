@@ -5,23 +5,23 @@
 namespace MDFN_IEN_PSX
 {
 
-class InputDevice_DualAnalog : public InputDevice
+class InputDevice_DualAnalog final : public InputDevice
 {
  public:
 
  InputDevice_DualAnalog(bool joystick_mode_);
- virtual ~InputDevice_DualAnalog();
+ virtual ~InputDevice_DualAnalog() override;
 
- virtual void Power(void);
- virtual int StateAction(StateMem* sm, int load, int data_only, const char* section_name);
- virtual void UpdateInput(const void *data);
+ virtual void Power(void) override;
+ virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
+ virtual void UpdateInput(const void *data) override;
 
  //
  //
  //
- virtual void SetDTR(bool new_dtr);
- virtual bool GetDSR(void);
- virtual bool Clock(bool TxD, int32 &dsr_pulse_delay);
+ virtual void SetDTR(bool new_dtr) override;
+ virtual bool GetDSR(void) override;
+ virtual bool Clock(bool TxD, int32 &dsr_pulse_delay) override;
 
  private:
 
@@ -72,7 +72,7 @@ void InputDevice_DualAnalog::Power(void)
  transmit_count = 0;
 }
 
-int InputDevice_DualAnalog::StateAction(StateMem* sm, int load, int data_only, const char* section_name)
+void InputDevice_DualAnalog::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix)
 {
  SFORMAT StateRegs[] =
  {
@@ -93,9 +93,12 @@ int InputDevice_DualAnalog::StateAction(StateMem* sm, int load, int data_only, c
 
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name);
+ char section_name[32];
+ trio_snprintf(section_name, sizeof(section_name), "%s_DualAnalog", sname_prefix);
 
- if(load)
+ if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
+  Power();
+ else if(load)
  {
   if((transmit_pos + transmit_count) > sizeof(transmit_buffer))
   {
@@ -103,8 +106,6 @@ int InputDevice_DualAnalog::StateAction(StateMem* sm, int load, int data_only, c
    transmit_count = 0;
   }
  }
-
- return(ret);
 }
 
 
@@ -251,7 +252,7 @@ InputDevice *Device_DualAnalog_Create(bool joystick_mode)
 }
 
 
-InputDeviceInputInfoStruct Device_DualAnalog_IDII[24] =
+IDIISG Device_DualAnalog_IDII =
 {
  { "select", "SELECT", 4, IDIT_BUTTON, NULL },
  { "l3", "Left Stick, Button(L3)", 18, IDIT_BUTTON, NULL },
@@ -285,7 +286,7 @@ InputDeviceInputInfoStruct Device_DualAnalog_IDII[24] =
 };
 
 // Not sure if all these buttons are named correctly!
-InputDeviceInputInfoStruct Device_AnalogJoy_IDII[24] =
+IDIISG Device_AnalogJoy_IDII =
 {
  { "select", "SELECT", 8, IDIT_BUTTON, NULL },
  { NULL, "empty", 0, IDIT_BUTTON },

@@ -1,4 +1,5 @@
 #include <vector>
+#include <string>
 
 class MDFNConsole
 {
@@ -8,14 +9,17 @@ class MDFNConsole
 
 	void ShowPrompt(bool shown);
 	void Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect);
+
 	int Event(const SDL_Event *event);
-	void WriteLine(UTF8 *text);
-	void AppendLastLine(UTF8 *text);
-        virtual bool TextHook(UTF8 *text);	// Handler must free(text);
+
+	void WriteLine(const std::string &text);
+	void AppendLastLine(const std::string &text);
+        virtual bool TextHook(const std::string &text);
 
 	void SetFont(unsigned newfont) { Font = newfont; }
 	void SetShellStyle(bool newsetting) { shellstyle = newsetting; }
 	void Scroll(int32 amount, bool SetPos = FALSE);
+
 	private:
 	std::vector<std::string> TextLog;
 	std::vector<std::string> kb_buffer;

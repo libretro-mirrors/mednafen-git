@@ -157,7 +157,7 @@ void TIMER_Power(void)
  TimerLastTS = 0;
 
  TimerCounter = 0xFFFF;
- TimerReloadValue = 0xFFFF;
+ TimerReloadValue = 0;
  TimerDivider = 2000;	//2150;	//2000;
 
  TimerStatus = false;
@@ -169,7 +169,7 @@ void TIMER_Power(void)
  VBIRQ_Assert(VBIRQ_SOURCE_TIMER, false);
 }
 
-int TIMER_StateAction(StateMem *sm, int load, int data_only)
+void TIMER_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -183,14 +183,12 @@ int TIMER_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "TIMER");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "TIMER");
 
  if(load)
  {
 
  }
-
- return(ret);
 }
 
 uint32 TIMER_GetRegister(const unsigned int id, char *special, const uint32 special_len)

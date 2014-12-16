@@ -69,7 +69,7 @@ void NGPGFX_CLASS::drawColourPattern(uint8 screenx, uint16 tile, uint8 tiley, ui
 		return;
 
 	//Get the data for the "tiley'th" line of "tile".
-	index = LoadU16_LE((uint16*)(CharacterRAM + (tile * 16) + (tiley * 2)));
+	index = MDFN_de16lsb<true>(CharacterRAM + (tile * 16) + (tiley * 2));
 
 	//Horizontal Flip
 	if (mirror)
@@ -92,7 +92,7 @@ void NGPGFX_CLASS::drawColourPattern(uint8 screenx, uint16 tile, uint8 tiley, ui
 		zbuffer[xx] = depth;
 
 		//Get the colour of the pixel
-		data16 = LoadU16_LE(&palette_ptr[index&3]);
+		data16 = MDFN_de16lsb<true>(&palette_ptr[index&3]);
 		
 		if (negative)
 			cfb_scanline[xx] = ~data16;
@@ -112,7 +112,7 @@ void NGPGFX_CLASS::draw_colour_scroll1(uint8 depth, int ngpc_scanline)
 	//Draw Foreground scroll plane (Scroll 1)
 	for (tx = 0; tx < 32; tx++)
 	{
-		data16 = LoadU16_LE((uint16*)(ScrollVRAM + ((tx + ((line >> 3) << 5)) << 1)));
+		data16 = MDFN_de16lsb<true>(ScrollVRAM + ((tx + ((line >> 3) << 5)) << 1));
 		
 		//Draw the line of the tile
 		drawColourPattern((tx << 3) - scroll1x, data16 & 0x01FF, 
@@ -132,7 +132,7 @@ void NGPGFX_CLASS::draw_colour_scroll2(uint8 depth, int ngpc_scanline)
 	//Draw Background scroll plane (Scroll 2)
 	for (tx = 0; tx < 32; tx++)
 	{
-		data16 = LoadU16_LE((uint16*)(ScrollVRAM + 0x0800 + ((tx + ((line >> 3) << 5)) << 1)));
+		data16 = MDFN_de16lsb<true>(ScrollVRAM + 0x0800 + ((tx + ((line >> 3) << 5)) << 1));
 		
 		//Draw the line of the tile
 		drawColourPattern((tx << 3) - scroll2x, data16 & 0x01FF, 
@@ -152,7 +152,7 @@ void NGPGFX_CLASS::draw_scanline_colour(int layer_enable, int ngpc_scanline)
 	memset(zbuffer, 0, SCREEN_WIDTH);
 
 	//Window colour
-	win_color = LoadU16_LE((uint16*)(ColorPaletteRAM + 0x01F0 + (oowc << 1)));
+	win_color = MDFN_de16lsb<true>(ColorPaletteRAM + 0x01F0 + (oowc << 1));
 	if (negative) win_color = ~win_color;
 
 	//Top
@@ -185,7 +185,7 @@ void NGPGFX_CLASS::draw_scanline_colour(int layer_enable, int ngpc_scanline)
 		//Background colour Enabled?	HACK: 01 AUG 2002 - Always on!
 	//	if ((bgc & 0xC0) == 0x80)
 		{
-			win_color = LoadU16_LE((uint16*)(uint8*)(ColorPaletteRAM + 0x01E0 + ((bgc & 7) << 1)));
+			win_color = MDFN_de16lsb<true>(ColorPaletteRAM + 0x01E0 + ((bgc & 7) << 1));
 		}
 	//	else win_color = 0;
 
@@ -226,7 +226,7 @@ void NGPGFX_CLASS::draw_scanline_colour(int layer_enable, int ngpc_scanline)
 			int16 y = sy;
 			uint16 data16;
 			
-			data16 = LoadU16_LE((uint16*)(SpriteVRAM + (spr * 4)));
+			data16 = MDFN_de16lsb<true>(SpriteVRAM + (spr * 4));
 			priority = (data16 & 0x1800) >> 11;
 
 			if (data16 & 0x0400) x = lastSpriteX + sx;	//Horizontal chain?

@@ -26,6 +26,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/time.h>
+#include <poll.h>
 
 #ifndef SOL_TCP
  #define SOL_TCP IPPROTO_TCP
@@ -167,52 +168,63 @@ bool NetClient_POSIX::IsConnected(void)
  return(true);
 }
 
+//
+// Use poll() instead of select() so the code doesn't malfunction when
+// exceeding the FD_SETSIZE ceiling(which can occur in some quasi-pathological Mednafen use cases, such as making and running with an M3U file
+// that ultimately references thousands of files through CUE sheets).
+//
 bool NetClient_POSIX::CanSend(int32 timeout)
 {
  int rv;
- fd_set wfds;
- struct timeval tv;
+ struct pollfd fds[1];
 
- FD_ZERO(&wfds);
- FD_SET(fd, &wfds);
-
- tv.tv_sec = timeout / (1000 * 1000);
- tv.tv_usec = timeout % (1000 * 1000);
-
- rv = select(fd + 1, NULL, &wfds, NULL, &tv);
+ TryAgain:
+ memset(fds, 0, sizeof(fds));
+ fds[0].fd = fd;
+ fds[0].events = POLLOUT | POLLHUP | POLLERR;
+ rv = poll(fds, 1, ((timeout >= 0) ? (timeout + 500) / 1000 : -1));
 
  if(rv == -1)
  {
+  if(errno == EINTR)
+  {
+   timeout = 0;
+   goto TryAgain;
+  }
+
   ErrnoHolder ene(errno);
 
-  throw MDFN_Error(ene.Errno(), _("select() failed: %s"), ene.StrError());
+  throw MDFN_Error(ene.Errno(), _("poll() failed: %s"), ene.StrError());
  }
 
- return (bool)rv;
+ return (bool)(fds[0].revents & (POLLOUT | POLLERR));
 }
 
 bool NetClient_POSIX::CanReceive(int32 timeout)
 {
  int rv;
- fd_set rfds;
- struct timeval tv;
+ struct pollfd fds[1];
 
- FD_ZERO(&rfds);
- FD_SET(fd, &rfds);
-
- tv.tv_sec = timeout / (1000 * 1000);
- tv.tv_usec = timeout % (1000 * 1000);
-
- rv = select(fd + 1, &rfds, NULL, NULL, (timeout == -1) ? NULL : &tv);
+ TryAgain:
+ memset(fds, 0, sizeof(fds));
+ fds[0].fd = fd;
+ fds[0].events = POLLIN | POLLHUP | POLLERR;
+ rv = poll(fds, 1, ((timeout >= 0) ? (timeout + 500) / 1000 : -1));
 
  if(rv == -1)
  {
+  if(errno == EINTR)
+  {
+   timeout = 0;
+   goto TryAgain;
+  }
+
   ErrnoHolder ene(errno);
 
-  throw MDFN_Error(ene.Errno(), _("select() failed: %s"), ene.StrError());
+  throw MDFN_Error(ene.Errno(), _("poll() failed: %s"), ene.StrError());
  }
 
- return (bool)rv;
+ return (bool)(fds[0].revents & (POLLIN | POLLHUP | POLLERR));
 }
 
 uint32 NetClient_POSIX::Send(const void *data, uint32 len)

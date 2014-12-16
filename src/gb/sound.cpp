@@ -98,10 +98,9 @@ bool MDFNGB_SetSoundRate(uint32 rate)
 	return(TRUE);
 }
 
-int SOUND_StateAction(StateMem *sm, int load, int data_only)
+void SOUND_StateAction(StateMem *sm, int load, int data_only)
 {
  gb_apu_state_t gb_state;
- int ret = 1;
 
  //if(!load) // always save state, in case there is none to load
  {
@@ -110,20 +109,19 @@ int SOUND_StateAction(StateMem *sm, int load, int data_only)
 
  SFORMAT StateRegs[] =
  {
-  SFVARN(gb_state, "apu_state"),
+  SFARRAYN((uint8*)&gb_state, sizeof(gb_state), "apu_state"),
   SFEND
  };
 
- if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, "APU"))
-  ret = 0;
- else if(load)
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "APU");
+
+ if(load)
  {
   // TODO: set hardware mode to mode_dmg, mode_cgb, or mode_agb
   // (latter if you're running classic GB game on Game Boy Advance)
   gb_apu.reset();
   gb_apu.load_state(gb_state);
  }
- return(ret);
 }
 
 void SOUND_Init(void)

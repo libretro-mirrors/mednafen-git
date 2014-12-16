@@ -23,7 +23,7 @@ void v30mz_init(uint8 (*readmem20)(uint32), void (*writemem20)(uint32,uint8), ui
 
 void v30mz_int(uint32 vector, bool IgnoreIF = FALSE);
 
-int v30mz_StateAction(StateMem *sm, int load, int data_only);
+void v30mz_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 
 #ifdef WANT_DEBUGGER

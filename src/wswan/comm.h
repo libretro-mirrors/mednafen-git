@@ -21,7 +21,7 @@ namespace MDFN_IEN_WSWAN
 void Comm_Init(const char *wfence_path);
 void Comm_Kill(void);
 void Comm_Reset(void);
-int Comm_StateAction(StateMem *sm, int load, int data_only);
+void Comm_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 void Comm_Process(void);
 uint8 Comm_Read(uint8 A);

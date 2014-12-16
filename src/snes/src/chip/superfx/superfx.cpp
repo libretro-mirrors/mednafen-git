@@ -25,10 +25,8 @@ void SuperFX::enter() {
       continue;
     }
 
-    //(this->*opcode_table[(regs.sfr & 0x0300) + peekpipe()])();
-    //do_op((regs.sfr & 0x0300) + peekpipe());
     do_op((regs.sfr.alt & 1023) | peekpipe());
-    if(r15_modified == false) regs.r[15]++;
+    regs.r[15].data += r15_NOT_modified;    
 
     if(++instruction_counter >= 128) {
       instruction_counter = 0;
@@ -38,8 +36,8 @@ void SuperFX::enter() {
 }
 
 void SuperFX::init() {
-  regs.r[14].on_modify = bind(&SuperFX::r14_modify, this);
-  regs.r[15].on_modify = bind(&SuperFX::r15_modify, this);
+  regs.r[14].on_modify = SuperFX_r14_modify;
+  regs.r[15].on_modify = SuperFX_r15_modify;
 }
 
 void SuperFX::enable() {
@@ -52,6 +50,8 @@ void SuperFX::power() {
 }
 
 void SuperFX::reset() {
+  //printf("%d, %d\n", (int)sizeof(reg16_t), (int)((uint8*)&regs.r[0] - (uint8*)this));
+
   superfxbus.init();
   instruction_counter = 0;
 

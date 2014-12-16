@@ -1,5 +1,7 @@
-#ifndef _X6502H
-
+#ifndef __MDFN_NES_X6502_H
+#define __MDFN_NES_X6502_H
+namespace MDFN_IEN_NES
+{
 #include "x6502struct.h"
 
 #ifdef WANT_DEBUGGER
@@ -52,7 +54,6 @@ void X6502_DMW(uint32 A, uint8 V);
 void X6502_IRQBegin(int w);
 void X6502_IRQEnd(int w);
 
-int X6502_StateAction(StateMem *sm, int load, int data_only);
-
-#define _X6502H
+void X6502_StateAction(StateMem *sm, const unsigned load, const bool data_only);
+}
 #endif

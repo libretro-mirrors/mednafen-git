@@ -23,175 +23,157 @@
 #include "nsf.h"
 #include "nsfe.h"
 
-void LoadNSFE(NSFINFO *nfe, const uint8 *buf, int32 size, int info_only)
+namespace MDFN_IEN_NES
 {
- const uint8 *nbuf = 0;
 
- size -= 4;
- buf += 4;
+static void GetString(Stream* fp, uint32* chunk_size, std::string* str)
+{
+ str->clear();
 
- while(size)
+ while(*chunk_size)
  {
+  uint8 c;
+
+  fp->read(&c, 1);
+
+  (*chunk_size)--;
+
+  if(!c)
+   break;
+
+  if(c < 0x20)
+   c = 0x20;
+
+  str->push_back(c);
+ }
+}
+
+void LoadNSFE(NSFINFO *nfe, Stream* fp, int info_only)
+{
+ uint8 magic[4];
+
+ fp->read(magic, 4);
+
+ for(;;)
+ {
+  uint8 subhead[8];
   uint32 chunk_size;
-  uint8 tb[4];
 
-  if(size < 4)
-   throw MDFN_Error(0, _("Unexpected EOF while reading NSFE."));
+  fp->read(subhead, 8);
+  chunk_size =  MDFN_de32lsb(&subhead[0]);
 
-  chunk_size = MDFN_de32lsb(buf);
+  if(chunk_size > 64 * 1024 * 1024)
+   throw MDFN_Error(0, _("NSFE chunk \"%.4s\" size(%u) is invalid."), (char*)&subhead[4], chunk_size);
 
-  size -= 4;
-  buf += 4;
-  if(size < 4)
-   throw MDFN_Error(0, _("Unexpected EOF while reading NSFE."));
-
-  memcpy(tb, buf, 4);
-
-  buf += 4;
-  size -= 4;
-
-  if((int32)chunk_size < 0 || (int32)chunk_size > size)
-   throw MDFN_Error(0, _("NSFE chunk \"%.4s\" size(%u) is invalid."), (char*)&tb[0], chunk_size);
-
-  //printf("\nChunk: %.4s %d\n", tb, chunk_size);
-  if(!memcmp(tb, "INFO", 4))
+  //printf("\nChunk: %.4s %d\n", &subhead[4], chunk_size);
+  if(!memcmp(&subhead[4], "INFO", 4))
   {
+   if(nfe->TotalSongs)
+    throw MDFN_Error(0, _("NSFE chunk \"%.4s\" is duplicate."), (char*)&subhead[4]);
+
    if(chunk_size < 8)
-    throw MDFN_Error(0, _("NSFE chunk \"%.4s\" size(%u) is invalid."), (char*)&tb[0], chunk_size);
+    throw MDFN_Error(0, _("NSFE chunk \"%.4s\" size(%u) is invalid."), (char*)&subhead[4], chunk_size);
 
-   nfe->LoadAddr = MDFN_de16lsb(buf);
-   buf+=2; size-=2;
+   nfe->LoadAddr = fp->get_LE<uint16>();
+   nfe->InitAddr = fp->get_LE<uint16>();
+   nfe->PlayAddr = fp->get_LE<uint16>();
+   nfe->VideoSystem = fp->get_u8();
+   nfe->SoundChip = fp->get_u8();
 
-   nfe->InitAddr = MDFN_de16lsb(buf);
-   buf+=2; size-=2;
+   chunk_size -= 8;
 
-   nfe->PlayAddr = MDFN_de16lsb(buf);
-   buf+=2; size-=2;
-
-   nfe->VideoSystem = *buf; buf++; size--;
-   nfe->SoundChip = *buf; buf++; size--;
-
-   chunk_size-=8;
-
-   if(chunk_size) { nfe->TotalSongs = *buf; buf++; size--; chunk_size--; }
-   else nfe->TotalSongs = 1;
-
-   if(chunk_size) { nfe->StartingSong = *buf; buf++; size--; chunk_size--; }
-   else nfe->StartingSong = 0;
-
-   nfe->SongNames = (char **)malloc(sizeof(char *) * nfe->TotalSongs);
-   memset(nfe->SongNames, 0, sizeof(char *) * nfe->TotalSongs);
-
-   nfe->SongLengths = (int32 *)malloc(sizeof(int32) * nfe->TotalSongs);
-   nfe->SongFades = (int32 *)malloc(sizeof(int32) * nfe->TotalSongs);
+   if(chunk_size)
    {
-    int x;
-    for(x=0; x<nfe->TotalSongs; x++) {nfe->SongLengths[x] = -1; nfe->SongFades[x] = -1; }
+    nfe->TotalSongs = fp->get_u8();
+    if(!nfe->TotalSongs)
+     nfe->TotalSongs = 256;
+    chunk_size--;
+   }
+   else
+    nfe->TotalSongs = 1;
+
+   if(chunk_size)
+   {
+    nfe->StartingSong = fp->get_u8();
+    chunk_size--;
+   }
+   else
+    nfe->StartingSong = 0;
+
+   nfe->SongNames.resize(nfe->TotalSongs);
+  }
+  else if(!memcmp(&subhead[4], "DATA", 4))
+  {
+   if(!nfe->TotalSongs)
+    throw MDFN_Error(0, _("NSFE chunk \"%.4s\" is out of order."), (char*)&subhead[4]);
+
+   if(nfe->NSFDATA)
+    throw MDFN_Error(0, _("NSFE chunk \"%.4s\" is duplicate."), (char*)&subhead[4]);
+
+   nfe->NSFSize = chunk_size;
+   nfe->NSFMaxBank = round_up_pow2((nfe->NSFSize + (nfe->LoadAddr & 0xfff) + 0xfff) / 0x1000) - 1;
+   if(!info_only)
+   {
+    nfe->NSFDATA = (uint8 *)MDFN_malloc_T((nfe->NSFMaxBank + 1) * 4096, _("NSF Data"));
+    memset(nfe->NSFDATA, 0, (nfe->NSFMaxBank + 1) * 4096);
+    fp->read(nfe->NSFDATA + (nfe->LoadAddr & 0xfff), nfe->NSFSize);
+    chunk_size -= nfe->NSFSize;
    }
   }
-  else if(!memcmp(tb, "DATA", 4))
+  else if(!memcmp(&subhead[4], "BANK", 4))
   {
-   nfe->NSFSize=chunk_size;
-   nbuf = buf;
+   uint64 tr = std::min<uint64>(chunk_size, 8);
+
+   fp->read(nfe->BankSwitch, tr);
+   chunk_size -= 8;
   }
-  else if(!memcmp(tb, "BANK", 4))
-  {
-   memcpy(nfe->BankSwitch, buf, (chunk_size > 8) ? 8 : chunk_size);
-  }
-  else if(!memcmp(tb, "NEND", 4))
+  else if(!memcmp(&subhead[4], "NEND", 4))
   {
    if(chunk_size != 0)
-    throw MDFN_Error(0, _("NSFE chunk \"%.4s\" size(%u) is invalid."), (char*)&tb[0], chunk_size);
-   else if(!nbuf)
+    throw MDFN_Error(0, _("NSFE chunk \"%.4s\" size(%u) is invalid."), (char*)&subhead[4], chunk_size);
+   else if(!nfe->NSFDATA)
     throw MDFN_Error(0, _("NEND reached without preceding DATA chunk."));
    else
-   {
-    nfe->NSFMaxBank = ((nfe->NSFSize+(nfe->LoadAddr&0xfff)+4095)/4096);
-    nfe->NSFMaxBank = round_up_pow2(nfe->NSFMaxBank);
-
-    if(!info_only)
-    {
-     if(!(nfe->NSFDATA=(uint8 *)malloc(nfe->NSFMaxBank*4096)))
-      throw MDFN_Error(errno, _("Error allocating memory."));
-
-     memset(nfe->NSFDATA,0x00,nfe->NSFMaxBank*4096);
-     memcpy(nfe->NSFDATA+(nfe->LoadAddr&0xfff),nbuf,nfe->NSFSize);
-
-     nfe->NSFRawData = nfe->NSFDATA + (nfe->LoadAddr & 0xFFF);
-     nfe->NSFRawDataSize = nfe->NSFSize;
-    }
-    nfe->NSFMaxBank--;
     return;
-   }
   }
-  else if(!memcmp(tb, "tlbl", 4))
+  else if(!memcmp(&subhead[4], "tlbl", 4))
   {
-   int songcount = 0;
-
    if(!nfe->TotalSongs)
-    throw MDFN_Error(0, _("NSFE chunk \"%.4s\" is out of order."), (char*)&tb[0]);	// Out of order chunk.
+    throw MDFN_Error(0, _("NSFE chunk \"%.4s\" is out of order."), (char*)&subhead[4]);
 
-   while(chunk_size > 0)
+   for(unsigned ws = 0; ws < nfe->TotalSongs && chunk_size > 0; ws++)
    {
-    int slen = strlen((char *)buf);
-
-    nfe->SongNames[songcount++] = (char*)MDFN_RemoveControlChars(strdup((char *)buf));
-
-    buf += slen + 1;
-    chunk_size -= slen + 1;
+    GetString(fp, &chunk_size, &nfe->SongNames[ws]);
    }
   }
-  else if(!memcmp(tb, "time", 4))
+  else if(!memcmp(&subhead[4], "auth", 4))
   {
-   int count = chunk_size / 4;
-   int ws = 0;
-   chunk_size -= count * 4;
-
-   while(count--)
+   for(unsigned which = 0; which < 4 && chunk_size > 0; which++)
    {
-    nfe->SongLengths[ws] = (int32)MDFN_de32lsb(buf);
-    //printf("%d\n",fe->SongLengths[ws]/1000);
-    buf += 4;
-    ws++;
+    switch(which)
+    {
+     case 0: GetString(fp, &chunk_size, &nfe->GameName);  break;
+     case 1: GetString(fp, &chunk_size, &nfe->Artist);	  break;
+     case 2: GetString(fp, &chunk_size, &nfe->Copyright); break;
+     case 3: GetString(fp, &chunk_size, &nfe->Ripper); 	  break;
+    }
    }
   }
-  else if(!memcmp(tb, "fade", 4))
+  else if(subhead[4] >= 'A' && subhead[4] <= 'Z') /* Unrecognized mandatory chunk */
   {
-   int count = chunk_size / 4;
-   int ws = 0;
-   chunk_size -= count * 4;
-
-   while(count--)
-   {
-    nfe->SongFades[ws] = (int32)MDFN_de32lsb(buf);
-    //printf("%d\n",fe->SongFades[ws]);
-    buf += 4;
-    ws++;
-   }
+   throw MDFN_Error(0, _("NSFE unrecognized mandatory chunk \"%.4s\"."), (char*)&subhead[4]);
   }
-  else if(!memcmp(tb, "auth", 4))
+  else
   {
-   int which = 0;
-   while(chunk_size > 0)
-   {
-    int slen = strlen((char *)buf);
-
-    if(!which) nfe->GameName = (char*)MDFN_RemoveControlChars(strdup((char *)buf));
-    else if(which == 1) nfe->Artist = (char*)MDFN_RemoveControlChars(strdup((char *)buf));
-    else if(which == 2) nfe->Copyright = (char*)MDFN_RemoveControlChars(strdup((char *)buf));
-    else if(which == 3) nfe->Ripper = (char*)MDFN_RemoveControlChars(strdup((char *)buf));
-
-    which++;
-    buf += slen +1;
-    chunk_size -= slen + 1;
-   }
-  }
-  else if(tb[0] >= 'A' && tb[0] <= 'Z') /* Unrecognized mandatory chunk */
-  {
-   throw MDFN_Error(0, _("NSFE unrecognized mandatory chunk \"%.4s\"."), (char*)&tb[0]);
+   //printf("Skip chunk: %.4s\n", (char*)&subhead[4]);
   }
 
-  buf += chunk_size;
-  size -= chunk_size;
+  if(chunk_size)
+  {
+   fp->seek(chunk_size, SEEK_CUR);
+   chunk_size = 0;
+  }
  }
+}
+
 }

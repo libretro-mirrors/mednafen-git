@@ -55,7 +55,7 @@ static void FT_Update(void *data)
  FTVal = MDFN_de16lsb((uint8*)data);
 }
 
-static int StateActionFC(StateMem *sm, int load, int data_only)
+static void StateActionFC(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -63,12 +63,13 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
    SFVAR(FTVal),
    SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF", true);
+
  if(load)
  {
 
  }
- return(ret);
 }
 
 static INPUTCFC FamilyTrainer={FT_Read,FT_Write,0,FT_Update,0,0, StateActionFC };

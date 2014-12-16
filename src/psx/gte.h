@@ -4,8 +4,9 @@
 namespace MDFN_IEN_PSX
 {
 
-void GTE_Power(void);
-int GTE_StateAction(StateMem *sm, int load, int data_only);
+void GTE_Init(void) MDFN_COLD;
+void GTE_Power(void) MDFN_COLD;
+void GTE_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 int32 GTE_Instruction(uint32 instr);
 

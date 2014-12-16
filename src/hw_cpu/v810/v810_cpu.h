@@ -185,7 +185,7 @@ class V810
 
  void Reset(void) MDFN_COLD;
 
- int StateAction(StateMem *sm, int load, int data_only);
+ void StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
  #ifdef WANT_DEBUGGER
  void CheckBreakpoints(void (*callback)(int type, uint32 address, uint32 value, unsigned int len), uint16 MDFN_FASTCALL (*peek16)(const v810_timestamp_t, uint32), uint32 MDFN_FASTCALL (*peek32)(const v810_timestamp_t, uint32));

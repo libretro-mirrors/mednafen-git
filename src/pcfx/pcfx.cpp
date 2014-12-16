@@ -28,21 +28,21 @@
 #include <mednafen/cdrom/scsicd.h>
 #include <mednafen/mempatcher.h>
 #include <mednafen/cdrom/cdromif.h>
-#include <mednafen/md5.h>
+#include <mednafen/hash/md5.h>
 #include <mednafen/FileStream.h>
+#include <mednafen/GZFileStream.h>
 
 #include <trio/trio.h>
 #include <errno.h>
 #include <string.h>
 #include <math.h>
 
+extern MDFNGI EmulatedPCFX;
+
 /* FIXME:  soundbox, vce, vdc, rainbow, and king store wait states should be 4, not 2, but V810 has write buffers which can mask wait state penalties.
   This is a hack to somewhat address the issue, but to really fix it, we need to handle write buffer emulation in the V810 emulation core itself.
 */
-
 static std::vector<CDIF*> *cdifs = NULL;
-static bool CD_TrayOpen;
-static int CD_SelectedDisc;	// -1 for no disc
 
 V810 PCFX_V810;
 
@@ -270,7 +270,8 @@ static void Emulate(EmulateSpecStruct *espec)
  // new_base_ts is guaranteed to be <= v810_timestamp
  //
  v810_timestamp_t new_base_ts;
- espec->SoundBufSize = SoundBox_Flush(v810_timestamp, &new_base_ts, espec->SoundBuf, espec->SoundBufMaxSize);
+ espec->SoundBufSize = SoundBox_Flush(v810_timestamp, &new_base_ts, espec->SoundBuf, espec->SoundBufMaxSize, espec->NeedSoundReverse);
+ espec->NeedSoundReverse = false;
 
  KING_ResetTS(new_base_ts);
  FXTIMER_ResetTS(new_base_ts);
@@ -593,14 +594,13 @@ static void LoadCommon(std::vector<CDIF *> *CDInterfaces)
  BIOSROM = PCFX_V810.SetFastMap(BIOSROM_Map_Addresses, 0x00100000, 1, _("BIOS ROM"));
 
  {
-  std::string biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("pcfx.bios").c_str());
+  std::string biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("pcfx.bios"));
   MDFNFILE BIOSFile(biospath.c_str(), NULL, "BIOS");
 
-  if(BIOSFile.Size() != 1024 * 1024)
+  if(BIOSFile.size() != 1024 * 1024)
    throw MDFN_Error(0, _("BIOS ROM file is incorrect size.\n"));
 
-  memcpy(BIOSROM, BIOSFile.Data(), 1024 * 1024);
-
+  BIOSFile.read(BIOSROM, 1024 * 1024);
   BIOSFile.Close();
  }
 
@@ -609,7 +609,7 @@ static void LoadCommon(std::vector<CDIF *> *CDInterfaces)
 
   if(fxscsi_path != "0" && fxscsi_path != "" && fxscsi_path != "none")
   {
-   FileStream FXSCSIFile(fxscsi_path.c_str(), FileStream::MODE_READ);
+   FileStream FXSCSIFile(fxscsi_path, FileStream::MODE_READ);
    uint32 FXSCSI_Map_Addresses[1] = { 0x80780000 };
 
    FXSCSIROM = PCFX_V810.SetFastMap(FXSCSI_Map_Addresses, 0x0080000, 1, _("FX-SCSI ROM"));
@@ -646,12 +646,7 @@ static void LoadCommon(std::vector<CDIF *> *CDInterfaces)
 
  KING_Init();
 
- CD_TrayOpen = false;
- CD_SelectedDisc = 0;
-
  SCSICD_SetDisc(true, NULL, true);
- SCSICD_SetDisc(false, (*CDInterfaces)[0], true);
-
 
  #ifdef WANT_DEBUGGER
  for(unsigned disc = 0; disc < CDInterfaces->size(); disc++)
@@ -725,12 +720,22 @@ static void LoadCommon(std::vector<CDIF *> *CDInterfaces)
   memcpy(ExBackupRAM + 0x00, ExBRInit00, sizeof(ExBRInit00));
   memcpy(ExBackupRAM + 0x80, ExBRInit80, sizeof(ExBRInit80));
 
-  gzFile savefp;
-  if((savefp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
+  try
   {
-   gzread(savefp, BackupRAM, 0x8000);
-   gzread(savefp, ExBackupRAM, 0x8000);
-   gzclose(savefp);
+   std::string save_path = MDFN_MakeFName(MDFNMKF_SAV, 0, "sav");
+   GZFileStream savefp(save_path, GZFileStream::MODE::READ);
+   const uint64 fp_size_tmp = savefp.size();
+
+   if(fp_size_tmp != 65536)
+    throw MDFN_Error(0, _("Save game memory file \"%s\" is an incorrect size(%llu bytes).  The correct size is %llu bytes."), save_path.c_str(), (unsigned long long)fp_size_tmp, (unsigned long long)65536);
+
+   savefp.read(BackupRAM, 0x8000);
+   savefp.read(ExBackupRAM, 0x8000);
+  }
+  catch(MDFN_Error &e)
+  {
+   if(e.GetErrno() != ENOENT)
+    throw;
   }
  }
 
@@ -884,7 +889,7 @@ static void DoMD5CDVoodoo(std::vector<CDIF *> *CDInterfaces)
     MDFNGameInfo->GameSetMD5Valid = TRUE;
    }
    //printf("%s\n", found_entry->name);
-   MDFNGameInfo->name = (UTF8*)strdup(found_entry->name);
+   MDFNGameInfo->name = strdup(found_entry->name);
    break;
   }
  } // end: for(unsigned if_disc = 0; if_disc < CDInterfaces->size(); if_disc++)
@@ -938,8 +943,6 @@ static void LoadCD(std::vector<CDIF *> *CDInterfaces)
 
   MDFN_printf(_("Emulated CD-ROM drive speed: %ux\n"), (unsigned int)MDFN_GetSettingUI("pcfx.cdspeed"));
 
-  MDFNGameInfo->GameType = GMT_CDROM;
-
   PCFX_Power();
  }
  catch(...)
@@ -949,58 +952,40 @@ static void LoadCD(std::vector<CDIF *> *CDInterfaces)
  }
 }
 
-static void PCFX_CDInsertEject(void)
+static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
 {
- CD_TrayOpen = !CD_TrayOpen;
+ const RMD_Layout* rmd = EmulatedPCFX.RMD;
+ const RMD_Drive* rd = &rmd->Drives[drive_idx];
+ const RMD_State* rs = &rd->PossibleStates[state_idx];
 
- for(unsigned disc = 0; disc < cdifs->size(); disc++)
+ if(rs->MediaPresent && rs->MediaUsable)
  {
-  if(!(*cdifs)[disc]->Eject(CD_TrayOpen))
-  {
-   MDFN_DispMessage(_("Eject error."));
-   CD_TrayOpen = !CD_TrayOpen;
-  }
- }
+  if(!(*cdifs)[media_idx]->Eject(false))
+   return(false);
 
- if(CD_TrayOpen)
-  MDFN_DispMessage(_("Virtual CD Drive Tray Open"));
+  SCSICD_SetDisc(false, (*cdifs)[media_idx]);
+ }
  else
-  MDFN_DispMessage(_("Virtual CD Drive Tray Closed"));
-
- SCSICD_SetDisc(CD_TrayOpen, (CD_SelectedDisc >= 0 && !CD_TrayOpen) ? (*cdifs)[CD_SelectedDisc] : NULL);
-}
-
-static void PCFX_CDEject(void)
-{
- if(!CD_TrayOpen)
-  PCFX_CDInsertEject();
-}
-
-static void PCFX_CDSelect(void)
-{
- if(cdifs && CD_TrayOpen)
  {
-  CD_SelectedDisc = (CD_SelectedDisc + 1) % (cdifs->size() + 1);
+  if(!((*cdifs)[media_idx]->Eject(rs->MediaCanChange)))
+   return(false);
 
-  if((unsigned)CD_SelectedDisc == cdifs->size())
-   CD_SelectedDisc = -1;
-
-  if(CD_SelectedDisc == -1)
-   MDFN_DispMessage(_("Disc absence selected."));
-  else
-   MDFN_DispMessage(_("Disc %d of %d selected."), CD_SelectedDisc + 1, (int)cdifs->size());
+  SCSICD_SetDisc(rs->MediaCanChange, NULL);
  }
+
+ return(true);
 }
 
 static void SaveBackupMemory(void)
 {
  if(!BRAMDisabled)
  {
-  FileStream fp(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), FileStream::MODE_WRITE);
+  FileStream fp(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), FileStream::MODE_WRITE_INPLACE);
 
   fp.write(BackupRAM, 0x8000);
   fp.write(ExBackupRAM, 0x8000);
 
+  fp.truncate(fp.tell());
   fp.close();
  }
 }
@@ -1023,24 +1008,12 @@ static void DoSimpleCommand(int cmd)
 {
  switch(cmd)
  {
-   case MDFN_MSC_INSERT_DISK:
-		PCFX_CDInsertEject();
-                break;
-
-   case MDFN_MSC_SELECT_DISK:
-		PCFX_CDSelect();
-                break;
-
-   case MDFN_MSC_EJECT_DISK:
-		PCFX_CDEject();
-                break;
-
   case MDFN_MSC_RESET: PCFX_Reset(); break;
   case MDFN_MSC_POWER: PCFX_Power(); break;
  }
 }
 
-static int StateAction(StateMem *sm, int load, int data_only)
+static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  const v810_timestamp_t timestamp = PCFX_V810.v810_timestamp;
 
@@ -1053,25 +1026,22 @@ static int StateAction(StateMem *sm, int load, int data_only)
   SFARRAY(BackupRAM, BRAMDisabled ? 0 : 0x8000),
   SFARRAY(ExBackupRAM, BRAMDisabled ? 0 : 0x8000),
 
-  SFVAR(CD_TrayOpen),
-  SFVAR(CD_SelectedDisc),
-
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
 
  for(int i = 0; i < 2; i++)
-  ret &= fx_vdc_chips[i]->StateAction(sm, load, data_only, i ? "VDC1" : "VDC0");
+  fx_vdc_chips[i]->StateAction(sm, load, data_only, i ? "VDC1" : "VDC0");
 
- ret &= FXINPUT_StateAction(sm, load, data_only);
- ret &= PCFXIRQ_StateAction(sm, load, data_only);
- ret &= KING_StateAction(sm, load, data_only);
- ret &= PCFX_V810.StateAction(sm, load, data_only);
- ret &= FXTIMER_StateAction(sm, load, data_only);
- ret &= SoundBox_StateAction(sm, load, data_only);
- ret &= SCSICD_StateAction(sm, load, data_only, "CDRM");
- ret &= RAINBOW_StateAction(sm, load, data_only);
+ FXINPUT_StateAction(sm, load, data_only);
+ PCFXIRQ_StateAction(sm, load, data_only);
+ KING_StateAction(sm, load, data_only);
+ PCFX_V810.StateAction(sm, load, data_only);
+ FXTIMER_StateAction(sm, load, data_only);
+ SoundBox_StateAction(sm, load, data_only);
+ SCSICD_StateAction(sm, load, data_only, "CDRM");
+ RAINBOW_StateAction(sm, load, data_only);
 
  if(load)
  {
@@ -1081,22 +1051,11 @@ static int StateAction(StateMem *sm, int load, int data_only)
   //
   ForceEventUpdates(timestamp);
 
-  if(cdifs)
-  {
-   // Sanity check.
-   if(CD_SelectedDisc >= (int)cdifs->size())
-    CD_SelectedDisc = (int)cdifs->size() - 1;
-
-   SCSICD_SetDisc(CD_TrayOpen, (CD_SelectedDisc >= 0 && !CD_TrayOpen) ? (*cdifs)[CD_SelectedDisc] : NULL, true);
-  }
-
   if(!BRAMDisabled)
    BackupSignalDirty = true;
  }
 
  //printf("0x%08x, %d %d %d %d\n", load, next_pad_ts, next_timer_ts, next_adpcm_ts, next_king_ts);
-
- return(ret);
 }
 
 static const MDFNSetting_EnumList V810Mode_List[] =
@@ -1447,16 +1406,22 @@ MDFNGI EmulatedPCFX =
  #else
  NULL,
  #endif
- &PCFXInputInfo,
+ PCFXPortInfo,
  NULL,
  NULL,
  LoadCD,
  TestMagicCD,
  CloseGame,
+
  KING_SetLayerEnableMask,
  "BG0\0BG1\0BG2\0BG3\0VDC-A BG\0VDC-A SPR\0VDC-B BG\0VDC-B SPR\0RAINBOW\0",
+
  NULL,
  NULL,
+
+ NULL,
+ 0,
+
  NULL,
  NULL,
  NULL,
@@ -1464,7 +1429,9 @@ MDFNGI EmulatedPCFX =
  false,
  StateAction,
  Emulate,
+ FXINPUT_TransformInput,
  FXINPUT_SetInput,
+ SetMedia,
  DoSimpleCommand,
  PCFXSettings,
  MDFN_MASTERCLOCK_FIXED(PCFX_MASTER_CLOCK),

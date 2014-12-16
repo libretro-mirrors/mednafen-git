@@ -121,7 +121,7 @@ static void StrobeShadow(void)
 
 }
 
-static int StateActionFC(StateMem *sm, int load, int data_only)
+static void StateActionFC(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -132,12 +132,13 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
   SFVAR(ZD.zaphit),
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF", true);
+
  if(load)
  {
 
  }
- return(ret);
 }
 
 static INPUTCFC SHADOWC = { ReadShadow, 0, StrobeShadow, UpdateShadow, ShadowLinehook, DrawShadow, StateActionFC };

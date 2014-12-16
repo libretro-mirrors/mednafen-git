@@ -26,13 +26,17 @@
 #include "nsf.h"
 #include "fds-sound.h"
 #include <mednafen/FileStream.h>
+#include <mednafen/GZFileStream.h>
+
+#include <trio/trio.h>
 
 /*	TODO:  Add code to put a delay in between the time a disk is inserted
 	and the when it can be successfully read/written to.  This should
 	prevent writes to wrong places OR add code to prevent disk ejects
 	when the virtual motor is on(mmm...virtual motor).
 */
-
+namespace MDFN_IEN_NES
+{
 static DECLFR(FDSRead4030);
 static DECLFR(FDSRead4031);
 static DECLFR(FDSRead4032);
@@ -58,7 +62,8 @@ static uint8 Control;
 
 static int32 IRQCounter, IRQReload, IRQControl;
 
-static void FDSClose(void);
+static void FDSSaveNV(void);
+static void FDSKill(void);
 
 static uint8 FDSBIOS[8192];
 
@@ -72,43 +77,21 @@ static bool DiskWritten;		/* Set to 1 if disk was written to. */
 static uint8 writeskip;
 static uint32 DiskPtr;
 static int32 DiskSeekIRQ;
-static uint8 SelectDisk,InDisk;
 
-static int FDS_StateAction(StateMem *sm, int load, int data_only);
+static int ActiveDisk = -1;
 
-#define DC_INC		1
-
-int FDS_DiskInsert(int oride)
+bool FDS_SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
 {
-	if(InDisk==255)
-        {
-         MDFN_DispMessage(_("Disk %1$d Side %2$s Inserted"),SelectDisk>>1,(SelectDisk&1)?"B":"A");  
-         InDisk=SelectDisk;
-        }
-        else   
-        {
-         MDFN_DispMessage(_("Disk %1$d Side %2$s Ejected"),SelectDisk>>1,(SelectDisk&1)?"B":"A");
-         InDisk=255;
-        }
-	return(TRUE);
-}
+ const RMD_Layout* rmd = MDFNGameInfo->RMD;
+ const RMD_Drive* rd = &rmd->Drives[drive_idx];
+ const RMD_State* rs = &rd->PossibleStates[state_idx];
 
-int FDS_DiskEject(void)
-{
-	InDisk=255;
-	return(TRUE);
-}
+ if(rs->MediaPresent && rs->MediaUsable)
+  ActiveDisk = (media_idx * 2) | (orientation_idx & 1);
+ else
+  ActiveDisk = -1;
 
-int FDS_DiskSelect(void)
-{
-	if(InDisk!=255)
-        {
-         MDFN_DispMessage(_("Eject disk before selecting."));
-	 return(FALSE);
-        }
-        SelectDisk=((SelectDisk+1)%TotalSides)&3;
-        MDFN_DispMessage(_("Disk %1$d Side %2$s Selected"),SelectDisk>>1,(SelectDisk&1)?"B":"A");
-	return(TRUE);
+ return true;
 }
 
 static void FDSFix(int a)
@@ -163,9 +146,9 @@ static DECLFR(FDSRead4030)
 static DECLFR(FDSRead4031)
 {
 	static uint8 z=0;
-	if(InDisk!=255)
+	if(ActiveDisk >= 0)
 	{
-         z=diskdata[InDisk][DiskPtr];
+         z=diskdata[ActiveDisk][DiskPtr];
 	 if(!fceuindbg)
 	 {
           if(DiskPtr<64999) DiskPtr++;
@@ -180,10 +163,10 @@ static DECLFR(FDSRead4032)
         uint8 ret;
 
         ret=X.DB&~7;
-        if(InDisk==255)
+        if(ActiveDisk < 0)
          ret|=5;
 
-        if(InDisk==255 || !(Control & 1) || (Control & 2))        
+        if(ActiveDisk < 0 || !(Control & 1) || (Control & 2))        
          ret|=2;
         return ret;
 }
@@ -251,7 +234,7 @@ static DECLFW(FDSWrite)
 	break;
 
   case 0x4024:
-        if(InDisk!=255 && !(Control & 0x4) && (V4023 & 0x1))
+        if(ActiveDisk >= 0 && !(Control & 0x4) && (V4023 & 0x1))
         {
          if(DiskPtr>=0 && DiskPtr<65500)
          {
@@ -259,7 +242,7 @@ static DECLFW(FDSWrite)
           else if(DiskPtr>=2)
           {
 	   DiskWritten = true;
-           diskdata[InDisk][DiskPtr-2]=V;
+           diskdata[ActiveDisk][DiskPtr-2]=V;
           }
          }
         }
@@ -267,7 +250,7 @@ static DECLFW(FDSWrite)
 
   case 0x4025:
 	X6502_IRQEnd(MDFN_IQEXT2);
-	if(InDisk!=255)
+	if(ActiveDisk >= 0)
 	{
          if(!(V&0x40))
          {
@@ -296,7 +279,7 @@ static DECLFW(FDSWrite)
 
 static void FreeFDSMemory(void)
 {
- for(unsigned int x = 0; x < TotalSides; x++)
+ for(unsigned int x = 0; x < 8; x++)
  {
   if(diskdata[x])
   {
@@ -322,44 +305,43 @@ static void FreeFDSMemory(void)
   MDFN_free(CHRRAM);
   CHRRAM = NULL;
  }
+
+ TotalSides = 0;
+ DiskWritten = false;
 }
 
-static void SubLoad(MDFNFILE *fp)
+static void SubLoad(Stream *fp)
 {
  uint8 header[16];
+ uint32 MaxSides = 8;
 
- fp->fread(header, 16, 1);
+ fp->read(header, 16);
 
- if(memcmp(header,"FDS\x1a",4))
+ if(!memcmp(header,"FDS\x1a",4))
  {
-  long t;
+  MaxSides = std::min<uint32>(MaxSides, header[4]);
 
-  t = fp->Size();
-
-  if(t < 65500)
-   t = 65500;
-
-  TotalSides=t/65500;
-
-  fp->rewind();
+  if(!MaxSides)
+   MaxSides = 1;
  }
  else
-  TotalSides=header[4];
+  fp->rewind();
 
- if(TotalSides > 8)
-  TotalSides = 8;
-
- if(TotalSides < 1)
-  TotalSides = 1;
-
- for(unsigned int x = 0; x < TotalSides; x++)
+ TotalSides = 0;
+ for(unsigned x = 0; x < MaxSides; x++)
  {
   diskdata[x] = (uint8 *)MDFN_malloc_T(65500, _("FDS Disk Data"));
-  fp->fread(diskdata[x], 1, 65500);
+  if(fp->read(diskdata[x], 65500, false) != 65500)
+  {
+   MDFN_free(diskdata[x]);
+   diskdata[x] = NULL;
+   break;
+  }
+  TotalSides++;
  }
 }
 
-static int FDS_StateAction(StateMem *sm, int load, int data_only)
+static void FDS_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  unsigned int x;
  SFORMAT StateRegs[] =
@@ -384,8 +366,6 @@ static int FDS_StateAction(StateMem *sm, int load, int data_only)
   SFVAR(writeskip),
   SFVAR(DiskPtr),
   SFVAR(DiskSeekIRQ),
-  SFVAR(SelectDisk),
-  SFVAR(InDisk),
   SFVAR(DiskWritten),
   SFEND
  };
@@ -399,7 +379,9 @@ static int FDS_StateAction(StateMem *sm, int load, int data_only)
     diskdata[x][b] ^= diskdatao[x][b];
   }
  }
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "FDS");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "FDS");
+
  if(load)
  {
   setmirror(((Control & 8)>>3)^1);
@@ -422,9 +404,7 @@ static int FDS_StateAction(StateMem *sm, int load, int data_only)
   }
  }
  
- ret &= FDSSound_StateAction(sm, load, data_only);
-
- return(ret);
+ FDSSound_StateAction(sm, load, data_only);
 }
 
 typedef struct
@@ -435,7 +415,7 @@ typedef struct
 
 static const char* GetManName(uint8 code)
 {
- CodeNameCore Names[] = 
+ static const CodeNameCore Names[] = 
  {
   { 0x01, "Nintendo" },
   { 0x08, "Capcom" },
@@ -582,36 +562,30 @@ static const char* GetManName(uint8 code)
   { 0xF0, "A Wave" },         
   { 0xF3, "Extreme Entertainment" },
   { 0xFF, "LJN" },
-  { 0, NULL },
  };
 
- for(int x = 0; Names[x].name; x++)
-  if(Names[x].code == code)
-   return(Names[x].name);
-
+ for(auto const& n : Names)
+  if(n.code == code)
+   return n.name;
 
  return(_("Unknown"));
 }
 
 bool FDS_TestMagic(MDFNFILE *fp)
 {
- if(fp->size < 16)
-  return(FALSE);
+ uint8 header[16];
 
- if(memcmp(fp->data, "FDS\x1a",4) && memcmp(fp->data+1,"*NINTENDO-HVC*", 14))
-  return(FALSE);
+ if(fp->read(header, 16, false) != 16 || (memcmp(header, "FDS\x1a", 4) && memcmp(header + 1, "*NINTENDO-HVC*", 14)))
+  return false;
 
- return(TRUE);
+ return true;
 }
 
 
-bool FDSLoad(MDFNFILE *fp, NESGameType *gt)
+void FDSLoad(Stream *fp, NESGameType *gt)
 {
  try
  {
-  MDFNFILE bios_fp(MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, "disksys.rom").c_str(), NULL, _("FDS BIOS"));
-  int32 romoff = 0;
-
   fp->rewind();
 
   SubLoad(fp);
@@ -628,23 +602,21 @@ bool FDSLoad(MDFNFILE *fp, NESGameType *gt)
   }
   md5.finish(MDFNGameInfo->MD5);
 
-  if(bios_fp.Size() < 8192)
-   throw MDFN_Error(0, _("FDS BIOS ROM image is too small."));
-
-  if(!memcmp(bios_fp.Data(), "NES\x1a", 4)) // Encapsulated in iNES format?
   {
-   romoff = 16 + 8192;
+   FileStream bios_fp(MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, "disksys.rom"), FileStream::MODE_READ);
 
-   if(bios_fp.Data()[4] == 2)
-    romoff += 16384;
+   bios_fp.read(FDSBIOS, 8192);
+   if(!memcmp(FDSBIOS, "NES\x1a", 4)) // Encapsulated in iNES format?
+   {
+    uint32 seekrel = 16;
 
-   if((bios_fp.Size() - romoff) < 8192)
-    throw MDFN_Error(0, _("FDS BIOS ROM image is too small."));
+    if(FDSBIOS[4] == 2)
+     seekrel += 16384;
+
+    bios_fp.seek(seekrel, SEEK_CUR);
+    bios_fp.read(FDSBIOS, 8192);
+   }
   }
-
-  memcpy(FDSBIOS, bios_fp.Data() + romoff, 8192);
-
-  bios_fp.Close();
 
   FDSRAM = (uint8*)MDFN_malloc_T(32768, _("FDS RAM"));
   CHRRAM = (uint8*)MDFN_malloc_T(8192, _("CHR RAM"));
@@ -656,7 +628,7 @@ bool FDSLoad(MDFNFILE *fp, NESGameType *gt)
   //
   try
   {
-   MDFNFILE tp(MDFN_MakeFName(MDFNMKF_SAV, 0, "fds").c_str(), NULL, _("auxillary FDS data"));
+   GZFileStream tp(MDFN_MakeFName(MDFNMKF_SAV, 0, "fds"), GZFileStream::MODE::READ);
  
    for(unsigned int x = 0; x < TotalSides; x++)
    {
@@ -678,11 +650,36 @@ bool FDSLoad(MDFNFILE *fp, NESGameType *gt)
   //
   //
   //
+  {
+   RMD_Drive dr;
 
-  MDFNGameInfo->GameType = GMT_DISK;
+   dr.Name = "FDS";
+   dr.PossibleStates.push_back(RMD_State({_("Disk Ejected"), false, false, true}));
+   dr.PossibleStates.push_back(RMD_State({_("Disk Inserted"), true, true, false}));
+   dr.CompatibleMedia.push_back(0);
+   dr.MediaMtoPDelay = 2000;
+   MDFNGameInfo->RMD->Drives.push_back(dr);
+   MDFNGameInfo->RMD->MediaTypes.push_back(RMD_MediaType({_("FDS Floppy Disk")}));
 
-  SelectDisk=0;
-  InDisk=255;
+   for(unsigned n = 0; n < TotalSides; n += 2)
+   {
+    std::vector<std::string> orientations;
+    char namebuf[128];
+    char obuf[128];
+
+    trio_snprintf(namebuf, sizeof(namebuf), _("Disk %u of %u"), 1 + n / 2, (TotalSides + 1) / 2);
+
+    for(unsigned o = 0; o < std::min<unsigned>(2, TotalSides - n); o++)
+    {
+     trio_snprintf(obuf, sizeof(obuf), _("Side %c"), o ? 'B' : 'A');
+     orientations.push_back(obuf);
+    }
+
+    MDFNGameInfo->RMD->Media.push_back({namebuf, 0, orientations});
+   }
+  }
+
+  ActiveDisk = -1;
 
   ResetCartMapping();
   SetupCartCHRMapping(0,CHRRAM,8192,1);
@@ -696,37 +693,41 @@ bool FDSLoad(MDFNFILE *fp, NESGameType *gt)
 
   FDSInit();
 
-  gt->Close = FDSClose;
+  gt->SaveNV = FDSSaveNV;
+  gt->Kill = FDSKill;
   gt->Power = FDSPower;
   gt->StateAction = FDS_StateAction;
  }
- catch(std::exception &e)
+ catch(...)
  {
-  MDFN_PrintError("%s", e.what());
-
   FreeFDSMemory();
-  return(false);
+  throw;
  }
- return(true);
 }
 
-void FDSClose(void)
+static void FDSSaveNV(void)
 {
  if(DiskWritten)
  {
   try
   {
-   FileStream fp(MDFN_MakeFName(MDFNMKF_SAV, 0, "fds").c_str(), FileStream::MODE_WRITE);
+   FileStream fp(MDFN_MakeFName(MDFNMKF_SAV, 0, "fds"), FileStream::MODE_WRITE_INPLACE);
 
    for(unsigned int x = 0; x < TotalSides; x++)
     fp.write(diskdata[x], 65500);
+
+   fp.truncate(fp.tell());
+   fp.close();
   }
   catch(std::exception &e)
   {
    MDFN_PrintError("Error saving FDS image: %s", e.what());
   }
  }
+}
 
+static void FDSKill(void)
+{
  FreeFDSMemory();
 }
 
@@ -766,10 +767,7 @@ static void FDSPower(void)
  IRQReload = 0;
  IRQControl = 0;
 
-
-
- InDisk = 0;
- SelectDisk = 0;
-
  FDSSound_Power();
+}
+
 }

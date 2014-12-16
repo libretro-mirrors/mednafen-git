@@ -25,7 +25,7 @@
 #include "input.h"
 #include <mednafen/general.h>
 #include <mednafen/string/trim.h>
-#include <mednafen/md5.h>
+#include <mednafen/hash/md5.h>
 #include <mednafen/mempatcher.h>
 #include <iconv.h>
 
@@ -232,15 +232,15 @@ uint16 MDFN_FASTCALL MemRead16(v810_timestamp_t &timestamp, uint32 A)
 
   case 4: break;
 
-  case 5: ret = LoadU16_LE((uint16 *)&WRAM[A & 0xFFFF]);
+  case 5: ret = MDFN_de16lsb<true>(&WRAM[A & 0xFFFF]);
 	  break;
 
   case 6: if(GPRAM)
-           ret = LoadU16_LE((uint16 *)&GPRAM[A & GPRAM_Mask]);
+           ret = MDFN_de16lsb<true>(&GPRAM[A & GPRAM_Mask]);
 	  else printf("GPRAM(Unmapped) Read: %08x\n", A);
 	  break;
 
-  case 7: ret = LoadU16_LE((uint16 *)&GPROM[A & GPROM_Mask]);
+  case 7: ret = MDFN_de16lsb<true>(&GPROM[A & GPROM_Mask]);
 	  break;
  }
  return(ret);
@@ -302,11 +302,11 @@ void MDFN_FASTCALL MemWrite16(v810_timestamp_t &timestamp, uint32 A, uint16 V)
 
   case 4: break;
 
-  case 5: StoreU16_LE((uint16 *)&WRAM[A & 0xFFFF], V);
+  case 5: MDFN_en16lsb<true>(&WRAM[A & 0xFFFF], V);
           break;
 
   case 6: if(GPRAM)
-           StoreU16_LE((uint16 *)&GPRAM[A & GPRAM_Mask], V);
+           MDFN_en16lsb<true>(&GPRAM[A & GPRAM_Mask], V);
           break;
 
   case 7: // ROM, no writing allowed!
@@ -470,7 +470,7 @@ struct VB_HeaderInfo
  uint8 version;
 };
 
-static void ReadHeader(MDFNFILE *fp, VB_HeaderInfo *hi)
+static void ReadHeader(const uint8* const rom_data, const uint64 rom_size, VB_HeaderInfo *hi)
 {
  iconv_t sjis_ict = iconv_open("UTF-8", "shift_jis");
 
@@ -482,7 +482,7 @@ static void ReadHeader(MDFNFILE *fp, VB_HeaderInfo *hi)
   ibl = 20;
   obl = sizeof(hi->game_title) - 1;
 
-  in_ptr = (char*)fp->data + (0xFFFFFDE0 & (fp->size - 1));
+  in_ptr = (char*)rom_data + (0xFFFFFDE0 & (rom_size - 1));
   out_ptr = hi->game_title;
 
   iconv(sjis_ict, (ICONV_CONST char **)&in_ptr, &ibl, &out_ptr, &obl);
@@ -496,9 +496,9 @@ static void ReadHeader(MDFNFILE *fp, VB_HeaderInfo *hi)
  else
   hi->game_title[0] = 0;
 
- hi->game_code = MDFN_de32lsb(fp->data + (0xFFFFFDFB & (fp->size - 1)));
- hi->manf_code = MDFN_de16lsb(fp->data + (0xFFFFFDF9 & (fp->size - 1)));
- hi->version = fp->data[0xFFFFFDFF & (fp->size - 1)];
+ hi->game_code = MDFN_de32lsb(rom_data + (0xFFFFFDFB & (rom_size - 1)));
+ hi->manf_code = MDFN_de16lsb(rom_data + (0xFFFFFDF9 & (rom_size - 1)));
+ hi->version = rom_data[0xFFFFFDFF & (rom_size - 1)];
 }
 
 static bool TestMagic(MDFNFILE *fp)
@@ -509,213 +509,240 @@ static bool TestMagic(MDFNFILE *fp)
  return(false);
 }
 
-static int Load(MDFNFILE *fp)
+static void Cleanup(void)
 {
- V810_Emu_Mode cpu_mode;
- md5_context md5;
-
-
- VB_InDebugPeek = 0;
-
- cpu_mode = (V810_Emu_Mode)MDFN_GetSettingI("vb.cpu_emulation");
-
- if(fp->size != round_up_pow2(fp->size))
- {
-  puts("VB ROM image size is not a power of 2???");
-  return(0);
- }
-
- if(fp->size < 256)
- {
-  puts("VB ROM image size is too small??");
-  return(0);
- }
-
- if(fp->size > (1 << 24))
- {
-  puts("VB ROM image size is too large??");
-  return(0);
- }
-
- md5.starts();
- md5.update(fp->data, fp->size);
- md5.finish(MDFNGameInfo->MD5);
-
- VB_HeaderInfo hinfo;
-
- ReadHeader(fp, &hinfo);
-
- MDFN_printf(_("Title:     %s\n"), hinfo.game_title);
- MDFN_printf(_("Game ID Code: %u\n"), hinfo.game_code);
- MDFN_printf(_("Manufacturer Code: %d\n"), hinfo.manf_code);
- MDFN_printf(_("Version:   %u\n"), hinfo.version);
-
- MDFN_printf(_("ROM:       %dKiB\n"), (int)(fp->size / 1024));
- MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
+ VIP_Kill();
  
- MDFN_printf("\n");
-
- MDFN_printf(_("V810 Emulation Mode: %s\n"), (cpu_mode == V810_EMU_MODE_ACCURATE) ? _("Accurate") : _("Fast"));
-
- VB_V810 = new V810();
- VB_V810->Init(cpu_mode, true);
-
- VB_V810->SetMemReadHandlers(MemRead8, MemRead16, NULL);
- VB_V810->SetMemWriteHandlers(MemWrite8, MemWrite16, NULL);
-
- VB_V810->SetIOReadHandlers(MemRead8, MemRead16, NULL);
- VB_V810->SetIOWriteHandlers(MemWrite8, MemWrite16, NULL);
-
- for(int i = 0; i < 256; i++)
+ if(VB_VSU)
  {
-  VB_V810->SetMemReadBus32(i, false);
-  VB_V810->SetMemWriteBus32(i, false);
+  delete VB_VSU;
+  VB_VSU = NULL;
  }
-
- std::vector<uint32> Map_Addresses;
-
- for(uint64 A = 0; A < 1ULL << 32; A += (1 << 27))
+ 
+ if(VB_V810)
  {
-  for(uint64 sub_A = 5 << 24; sub_A < (6 << 24); sub_A += 65536)
+  delete VB_V810;
+  VB_V810 = NULL;
+  WRAM = NULL;
+  GPRAM = NULL;
+  GPROM = NULL;
+ }
+}
+
+static void Load(MDFNFILE *fp)
+{
+ try
+ {
+  const uint64 rom_size = fp->size();
+  V810_Emu_Mode cpu_mode;
+  md5_context md5;
+
+  VB_InDebugPeek = 0;
+
+  cpu_mode = (V810_Emu_Mode)MDFN_GetSettingI("vb.cpu_emulation");
+
+  if(rom_size != round_up_pow2(rom_size))
   {
-   Map_Addresses.push_back(A + sub_A);
+   throw MDFN_Error(0, _("VB ROM image size is not a power of 2."));
   }
- }
 
- WRAM = VB_V810->SetFastMap(&Map_Addresses[0], 65536, Map_Addresses.size(), "WRAM");
- Map_Addresses.clear();
-
-
- // Round up the ROM size to 65536(we mirror it a little later)
- GPROM_Mask = (fp->size < 65536) ? (65536 - 1) : (fp->size - 1);
-
- for(uint64 A = 0; A < 1ULL << 32; A += (1 << 27))
- {
-  for(uint64 sub_A = 7 << 24; sub_A < (8 << 24); sub_A += GPROM_Mask + 1)
+  if(rom_size < 256)
   {
-   Map_Addresses.push_back(A + sub_A);
-   //printf("%08x\n", (uint32)(A + sub_A));
+   throw MDFN_Error(0, _("VB ROM image size is too small."));
   }
- }
 
-
- GPROM = VB_V810->SetFastMap(&Map_Addresses[0], GPROM_Mask + 1, Map_Addresses.size(), "Cart ROM");
- Map_Addresses.clear();
-
- // Mirror ROM images < 64KiB to 64KiB
- for(uint64 i = 0; i < 65536; i += fp->size)
- {
-  memcpy(GPROM + i, fp->data, fp->size);
- }
-
- GPRAM_Mask = 0xFFFF;
-
- for(uint64 A = 0; A < 1ULL << 32; A += (1 << 27))
- {
-  for(uint64 sub_A = 6 << 24; sub_A < (7 << 24); sub_A += GPRAM_Mask + 1)
+  if(rom_size > (1 << 24))
   {
-   //printf("GPRAM: %08x\n", A + sub_A);
-   Map_Addresses.push_back(A + sub_A);
+   throw MDFN_Error(0, _("VB ROM image size is too large."));
   }
- }
 
+  VB_V810 = new V810();
+  VB_V810->Init(cpu_mode, true);
 
- GPRAM = VB_V810->SetFastMap(&Map_Addresses[0], GPRAM_Mask + 1, Map_Addresses.size(), "Cart RAM");
- Map_Addresses.clear();
+  VB_V810->SetMemReadHandlers(MemRead8, MemRead16, NULL);
+  VB_V810->SetMemWriteHandlers(MemWrite8, MemWrite16, NULL);
 
- memset(GPRAM, 0, GPRAM_Mask + 1);
+  VB_V810->SetIOReadHandlers(MemRead8, MemRead16, NULL);
+  VB_V810->SetIOWriteHandlers(MemWrite8, MemWrite16, NULL);
 
- {
-  gzFile gp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb");
-
-  if(gp)
+  for(int i = 0; i < 256; i++)
   {
-   if(gzread(gp, GPRAM, 65536) != 65536)
-    puts("Error reading GPRAM");
-   gzclose(gp);
+   VB_V810->SetMemReadBus32(i, false);
+   VB_V810->SetMemWriteBus32(i, false);
   }
+
+  std::vector<uint32> Map_Addresses;
+
+  for(uint64 A = 0; A < 1ULL << 32; A += (1 << 27))
+  {
+   for(uint64 sub_A = 5 << 24; sub_A < (6 << 24); sub_A += 65536)
+   {
+    Map_Addresses.push_back(A + sub_A);
+   }
+  }
+
+  WRAM = VB_V810->SetFastMap(&Map_Addresses[0], 65536, Map_Addresses.size(), "WRAM");
+  Map_Addresses.clear();
+
+
+  // Round up the ROM size to 65536(we mirror it a little later)
+  GPROM_Mask = (rom_size < 65536) ? (65536 - 1) : (rom_size - 1);
+
+  for(uint64 A = 0; A < 1ULL << 32; A += (1 << 27))
+  {
+   for(uint64 sub_A = 7 << 24; sub_A < (8 << 24); sub_A += GPROM_Mask + 1)
+   {
+    Map_Addresses.push_back(A + sub_A);
+    //printf("%08x\n", (uint32)(A + sub_A));
+   }
+  }
+
+
+  GPROM = VB_V810->SetFastMap(&Map_Addresses[0], GPROM_Mask + 1, Map_Addresses.size(), "Cart ROM");
+  Map_Addresses.clear();
+
+  fp->read(GPROM, rom_size);
+
+  // Mirror ROM images < 64KiB to 64KiB
+  for(uint64 i = rom_size; i < 65536; i += rom_size)
+  {
+   memcpy(GPROM + i, GPROM, rom_size);
+  }
+
+  md5.starts();
+  md5.update(GPROM, rom_size);
+  md5.finish(MDFNGameInfo->MD5);
+
+  VB_HeaderInfo hinfo;
+
+  ReadHeader(GPROM, rom_size, &hinfo);
+
+  MDFN_printf(_("Title:     %s\n"), hinfo.game_title);
+  MDFN_printf(_("Game ID Code: %u\n"), hinfo.game_code);
+  MDFN_printf(_("Manufacturer Code: %d\n"), hinfo.manf_code);
+  MDFN_printf(_("Version:   %u\n"), hinfo.version);
+
+  MDFN_printf(_("ROM:       %uKiB\n"), (unsigned)(rom_size / 1024));
+  MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
+ 
+  MDFN_printf("\n");
+
+  MDFN_printf(_("V810 Emulation Mode: %s\n"), (cpu_mode == V810_EMU_MODE_ACCURATE) ? _("Accurate") : _("Fast"));
+
+  GPRAM_Mask = 0xFFFF;
+
+  for(uint64 A = 0; A < 1ULL << 32; A += (1 << 27))
+  {
+   for(uint64 sub_A = 6 << 24; sub_A < (7 << 24); sub_A += GPRAM_Mask + 1)
+   {
+    //printf("GPRAM: %08x\n", A + sub_A);
+    Map_Addresses.push_back(A + sub_A);
+   }
+  }
+
+
+  GPRAM = VB_V810->SetFastMap(&Map_Addresses[0], GPRAM_Mask + 1, Map_Addresses.size(), "Cart RAM");
+  Map_Addresses.clear();
+
+  memset(GPRAM, 0, GPRAM_Mask + 1);
+
+  try
+  {
+   std::unique_ptr<Stream> gp = MDFN_AmbigGZOpenHelper(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), std::vector<size_t>({ 65536 }));
+
+   gp->read(GPRAM, 65536);
+  }
+  catch(MDFN_Error &e)
+  {
+   if(e.GetErrno() != ENOENT)
+    throw;
+  }
+
+  VIP_Init();
+  VB_VSU = new VSU(&sbuf[0], &sbuf[1]);
+  VBINPUT_Init();
+
+  VB3DMode = MDFN_GetSettingUI("vb.3dmode");
+  uint32 prescale = MDFN_GetSettingUI("vb.liprescale");
+  uint32 sbs_separation = MDFN_GetSettingUI("vb.sidebyside.separation");
+
+  VIP_Set3DMode(VB3DMode, MDFN_GetSettingUI("vb.3dreverse"), prescale, sbs_separation);
+
+
+  //SettingChanged("vb.3dmode");
+  SettingChanged("vb.disable_parallax");
+  SettingChanged("vb.anaglyph.lcolor");
+  SettingChanged("vb.anaglyph.rcolor");
+  SettingChanged("vb.anaglyph.preset");
+  SettingChanged("vb.default_color");
+
+  SettingChanged("vb.instant_display_hack");
+  SettingChanged("vb.allow_draw_skip");
+
+  SettingChanged("vb.input.instant_read_hack");
+
+  MDFNGameInfo->fps = (int64)20000000 * 65536 * 256 / (259 * 384 * 4);
+
+
+  VB_Power();
+
+
+  #ifdef WANT_DEBUGGER
+  VBDBG_Init();
+  #endif
+
+
+  MDFNGameInfo->nominal_width = 384;
+  MDFNGameInfo->nominal_height = 224;
+  MDFNGameInfo->fb_width = 384;
+  MDFNGameInfo->fb_height = 224;
+
+  switch(VB3DMode)
+  {
+   default: break;
+
+   case VB3DMODE_VLI:
+         MDFNGameInfo->nominal_width = 768 * prescale;
+         MDFNGameInfo->nominal_height = 224;
+         MDFNGameInfo->fb_width = 768 * prescale;
+         MDFNGameInfo->fb_height = 224;
+         break;
+
+   case VB3DMODE_HLI:
+         MDFNGameInfo->nominal_width = 384;
+         MDFNGameInfo->nominal_height = 448 * prescale;
+         MDFNGameInfo->fb_width = 384;
+         MDFNGameInfo->fb_height = 448 * prescale;
+         break;
+
+   case VB3DMODE_CSCOPE:
+	 MDFNGameInfo->nominal_width = 512;
+	 MDFNGameInfo->nominal_height = 384;
+	 MDFNGameInfo->fb_width = 512;
+	 MDFNGameInfo->fb_height = 384;
+	 break;
+
+   case VB3DMODE_SIDEBYSIDE:
+	 MDFNGameInfo->nominal_width = 384 * 2 + sbs_separation;
+  	 MDFNGameInfo->nominal_height = 224;
+  	 MDFNGameInfo->fb_width = 384 * 2 + sbs_separation;
+ 	 MDFNGameInfo->fb_height = 224;
+	 break;
+  }
+  MDFNGameInfo->lcm_width = MDFNGameInfo->fb_width;
+  MDFNGameInfo->lcm_height = MDFNGameInfo->fb_height;
+
+
+  MDFNMP_Init(32768, ((uint64)1 << 27) / 32768);
+  MDFNMP_AddRAM(65536, 5 << 24, WRAM);
+  if((GPRAM_Mask + 1) >= 32768)
+   MDFNMP_AddRAM(GPRAM_Mask + 1, 6 << 24, GPRAM);
  }
-
- VIP_Init();
- VB_VSU = new VSU(&sbuf[0], &sbuf[1]);
- VBINPUT_Init();
-
- VB3DMode = MDFN_GetSettingUI("vb.3dmode");
- uint32 prescale = MDFN_GetSettingUI("vb.liprescale");
- uint32 sbs_separation = MDFN_GetSettingUI("vb.sidebyside.separation");
-
- VIP_Set3DMode(VB3DMode, MDFN_GetSettingUI("vb.3dreverse"), prescale, sbs_separation);
-
-
- //SettingChanged("vb.3dmode");
- SettingChanged("vb.disable_parallax");
- SettingChanged("vb.anaglyph.lcolor");
- SettingChanged("vb.anaglyph.rcolor");
- SettingChanged("vb.anaglyph.preset");
- SettingChanged("vb.default_color");
-
- SettingChanged("vb.instant_display_hack");
- SettingChanged("vb.allow_draw_skip");
-
- SettingChanged("vb.input.instant_read_hack");
-
- MDFNGameInfo->fps = (int64)20000000 * 65536 * 256 / (259 * 384 * 4);
-
-
- VB_Power();
-
-
- #ifdef WANT_DEBUGGER
- VBDBG_Init();
- #endif
-
-
- MDFNGameInfo->nominal_width = 384;
- MDFNGameInfo->nominal_height = 224;
- MDFNGameInfo->fb_width = 384;
- MDFNGameInfo->fb_height = 224;
-
- switch(VB3DMode)
+ catch(...)
  {
-  default: break;
-
-  case VB3DMODE_VLI:
-        MDFNGameInfo->nominal_width = 768 * prescale;
-        MDFNGameInfo->nominal_height = 224;
-        MDFNGameInfo->fb_width = 768 * prescale;
-        MDFNGameInfo->fb_height = 224;
-        break;
-
-  case VB3DMODE_HLI:
-        MDFNGameInfo->nominal_width = 384;
-        MDFNGameInfo->nominal_height = 448 * prescale;
-        MDFNGameInfo->fb_width = 384;
-        MDFNGameInfo->fb_height = 448 * prescale;
-        break;
-
-  case VB3DMODE_CSCOPE:
-	MDFNGameInfo->nominal_width = 512;
-	MDFNGameInfo->nominal_height = 384;
-	MDFNGameInfo->fb_width = 512;
-	MDFNGameInfo->fb_height = 384;
-	break;
-
-  case VB3DMODE_SIDEBYSIDE:
-	MDFNGameInfo->nominal_width = 384 * 2 + sbs_separation;
-  	MDFNGameInfo->nominal_height = 224;
-  	MDFNGameInfo->fb_width = 384 * 2 + sbs_separation;
- 	MDFNGameInfo->fb_height = 224;
-	break;
+  Cleanup();
+  throw;
  }
- MDFNGameInfo->lcm_width = MDFNGameInfo->fb_width;
- MDFNGameInfo->lcm_height = MDFNGameInfo->fb_height;
-
-
- MDFNMP_Init(32768, ((uint64)1 << 27) / 32768);
- MDFNMP_AddRAM(65536, 5 << 24, WRAM);
- if((GPRAM_Mask + 1) >= 32768)
-  MDFNMP_AddRAM(GPRAM_Mask + 1, 6 << 24, GPRAM);
- return(1);
 }
 
 static void CloseGame(void)
@@ -725,41 +752,15 @@ static void CloseGame(void)
  {
   if(GPRAM[i])
   {
-   if(!MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 6, GPRAM, 65536))
+   if(!MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), GPRAM, 65536))
    {
 
    }
    break;
   }
  }
- //VIP_Kill();
- 
- if(VB_VSU)
- {
-  delete VB_VSU;
-  VB_VSU = NULL;
- }
 
- /*
- if(GPRAM)
- {
-  MDFN_free(GPRAM);
-  GPRAM = NULL;
- }
-
- if(GPROM)
- {
-  MDFN_free(GPROM);
-  GPROM = NULL;
- }
- */
-
- if(VB_V810)
- {
-  VB_V810->Kill();
-  delete VB_V810;
-  VB_V810 = NULL;
- }
+ Cleanup();
 }
 
 void VB_ExitLoop(void)
@@ -858,10 +859,9 @@ static DebuggerInfoStruct DBGInfo =
 #endif
 
 
-static int StateAction(StateMem *sm, int load, int data_only)
+static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  const v810_timestamp_t timestamp = VB_V810->v810_timestamp;
- int ret = 1;
 
  SFORMAT StateRegs[] =
  {
@@ -873,21 +873,20 @@ static int StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- ret &= MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
 
- ret &= VB_V810->StateAction(sm, load, data_only);
+ VB_V810->StateAction(sm, load, data_only);
 
- ret &= VB_VSU->StateAction(sm, load, data_only);
- ret &= TIMER_StateAction(sm, load, data_only);
- ret &= VBINPUT_StateAction(sm, load, data_only);
- ret &= VIP_StateAction(sm, load, data_only);
+ VB_VSU->StateAction(sm, load, data_only);
+ TIMER_StateAction(sm, load, data_only);
+ VBINPUT_StateAction(sm, load, data_only);
+ VIP_StateAction(sm, load, data_only);
 
  if(load)
  {
   // Needed to recalculate next_*_ts since we don't bother storing their deltas in save states.
   ForceEventUpdates(timestamp);
  }
- return(ret);
 }
 
 static void SetLayerEnableMask(uint64 mask)
@@ -963,7 +962,7 @@ static MDFNSetting VBSettings[] =
 };
 
 
-static const InputDeviceInputInfoStruct IDII[] =
+static const IDIISG IDII =
 {
  { "a", "A", 7, IDIT_BUTTON_CAN_RAPID,  NULL },
  { "b", "B", 6, IDIT_BUTTON_CAN_RAPID, NULL },
@@ -985,29 +984,20 @@ static const InputDeviceInputInfoStruct IDII[] =
  { "down-r", "DOWN ↓ (Right D-Pad)", 9, IDIT_BUTTON, "up-r" },
 };
 
-static InputDeviceInfoStruct InputDeviceInfo[] =
+static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
 {
  {
   "gamepad",
   "Gamepad",
   NULL,
-  NULL,
-  sizeof(IDII) / sizeof(InputDeviceInputInfoStruct),
   IDII,
  }
 };
 
-static const InputPortInfoStruct PortInfo[] =
+static const std::vector<InputPortInfoStruct> PortInfo =
 {
- { "builtin", "Built-In", sizeof(InputDeviceInfo) / sizeof(InputDeviceInfoStruct), InputDeviceInfo, "gamepad" }
+ { "builtin", "Built-In", InputDeviceInfo, "gamepad" }
 };
-
-static InputInfoStruct InputInfo =
-{
- sizeof(PortInfo) / sizeof(InputPortInfoStruct),
- PortInfo
-};
-
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
@@ -1027,16 +1017,22 @@ MDFNGI EmulatedVB =
  #else
  NULL,		// Debug info
  #endif
- &InputInfo,	//
+ PortInfo,
  Load,
  TestMagic,
  NULL,
  NULL,
  CloseGame,
+
  SetLayerEnableMask,
  NULL,		// Layer names, null-delimited
+
  NULL,
  NULL,
+
+ NULL,
+ 0,
+
  NULL,
  NULL,
  NULL,
@@ -1044,7 +1040,9 @@ MDFNGI EmulatedVB =
  false,
  StateAction,
  Emulate,
+ NULL,
  VBINPUT_SetInput,
+ NULL,
  DoSimpleCommand,
  VBSettings,
  MDFN_MASTERCLOCK_FIXED(VB_MASTER_CLOCK),

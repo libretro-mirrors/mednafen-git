@@ -55,7 +55,7 @@ void PPU::build_sprite_list() {
   }
 }
 
-bool PPU::is_sprite_on_scanline() {
+alwaysinline bool PPU::is_sprite_on_scanline() {
   //if sprite is entirely offscreen and doesn't wrap around to the left side of the screen,
   //then it is not counted. this *should* be 256, and not 255, even though dot 256 is offscreen.
   sprite_item *spr = &sprite_list[active_sprite];
@@ -67,7 +67,7 @@ bool PPU::is_sprite_on_scanline() {
   return false;
 }
 
-void PPU::load_oam_tiles() {
+alwaysinline void PPU::load_oam_tiles() {
   sprite_item *spr = &sprite_list[active_sprite];
   uint16 tile_width = spr->width >> 3;
   int x = spr->x;
@@ -145,7 +145,7 @@ void PPU::render_oam_tile(int tile_num) {
   }
 }
 
-void PPU::render_line_oam_rto() {
+alwaysinline void PPU::render_line_oam_rto() {
   build_sprite_list();
 
   regs.oam_itemcount = 0;

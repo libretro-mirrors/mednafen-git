@@ -1,6 +1,6 @@
 #ifdef SMPCORE_CPP
 
-inline void SMP::do_op(uint8 opv)
+alwaysinline void SMP::do_op(uint8 opv)
 {
  switch(opv)
  {

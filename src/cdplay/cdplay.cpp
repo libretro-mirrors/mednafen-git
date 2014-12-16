@@ -27,6 +27,8 @@ using namespace CDUtility;
 
 #include <mednafen/resampler/resampler.h>
 
+extern MDFNGI EmulatedCDPlay;
+
 namespace MDFN_IEN_CDPLAY
 {
 
@@ -113,6 +115,12 @@ static void LoadCD(std::vector<CDIF *> *CDInterfaces)
  ResampBufferPos = 0;
 
  InitLUT();
+
+ //
+ //
+ EmulatedCDPlay.RMD->Drives.clear();
+ EmulatedCDPlay.RMD->MediaTypes.clear();
+ EmulatedCDPlay.RMD->Media.clear();
 }
 
 static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
@@ -362,15 +370,15 @@ static void Emulate(EmulateSpecStruct *espec)
     disctype_string = "(unknown type)";
 
    trio_snprintf(tmpbuf, 256, "Disc: %u/%u %s", AudioTrackList[CurrentATLI].disc + 1, (unsigned)cdifs->size(), disctype_string);
-   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
    pixels += 13 * espec->surface->pitch32;
 
    trio_snprintf(tmpbuf, 256, "Track: %d/%d", AudioTrackList[CurrentATLI].track, toc.last_track);
-   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
    pixels += 13 * espec->surface->pitch32;
 
    trio_snprintf(tmpbuf, 256, "Sector: %d/%d", cur_sector, toc.tracks[100].lba - 1);
-   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
    pixels += 13 * espec->surface->pitch32;
   }
 
@@ -378,28 +386,28 @@ static void Emulate(EmulateSpecStruct *espec)
 
 
   //trio_snprintf(tmpbuf, 256, "Q-Mode: %01x", SubQBuf[1][0] & 0xF);
-  //DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  //DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
   //pixels += 13 * espec->surface->pitch32;
 
   trio_snprintf(tmpbuf, 256, "Track: %d", BCD_to_U8(SubQBuf[1][1]));
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
   pixels += 13 * espec->surface->pitch32;
 
   trio_snprintf(tmpbuf, 256, "Index: %d", BCD_to_U8(SubQBuf[1][2]));
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
   pixels += 13 * espec->surface->pitch32;
 
 
   trio_snprintf(tmpbuf, 256, "Relative: %02d:%02d:%02d", BCD_to_U8(SubQBuf[1][3]), BCD_to_U8(SubQBuf[1][4]), BCD_to_U8(SubQBuf[1][5]));
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
   pixels += 13 * espec->surface->pitch32;
 
   trio_snprintf(tmpbuf, 256, "Absolute: %02d:%02d:%02d", BCD_to_U8(SubQBuf[1][7]), BCD_to_U8(SubQBuf[1][8]), BCD_to_U8(SubQBuf[1][9]));
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
   pixels += 13 * espec->surface->pitch32;
 
   trio_snprintf(tmpbuf, 256, "Control: 0x%02x", (SubQBuf_LastValid[0] >> 4) & 0xF);
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
   pixels += 13 * espec->surface->pitch32;
 
 
@@ -409,7 +417,7 @@ static void Emulate(EmulateSpecStruct *espec)
 					        (SubQBuf[2][3] >> 4) & 0xF, (SubQBuf[2][3] >> 0) & 0xF, (SubQBuf[2][4] >> 4) & 0xF, (SubQBuf[2][4] >> 0) & 0xF,
 					        (SubQBuf[2][5] >> 4) & 0xF, (SubQBuf[2][5] >> 0) & 0xF, (SubQBuf[2][6] >> 4) & 0xF, (SubQBuf[2][6] >> 0) & 0xF,
 						(SubQBuf[2][7] >> 4) & 0xF);
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, (UTF8 *)tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
   pixels += 13 * espec->surface->pitch32;
  }
 
@@ -473,9 +481,9 @@ static const FileExtensionSpecStruct KnownExtensions[] =
  { NULL, NULL }
 };
 
-static void SetInput(int port, const char *type, void *ptr)
+static void SetInput(unsigned port, const char *type, uint8* ptr)
 {
- controller_ptr = (uint8 *)ptr;
+ controller_ptr = ptr;
 }
 
 static void DoSimpleCommand(int cmd)
@@ -493,7 +501,7 @@ static MDFNSetting CDPlaySettings[] =
  { NULL }
 };
 
-static const InputDeviceInputInfoStruct IDII[] =
+static const IDIISG IDII =
 {
  { "play_pause", "Play/Pause", 0, IDIT_BUTTON, NULL },
  { "stop", "Stop", 1, IDIT_BUTTON, NULL },
@@ -512,27 +520,19 @@ static const InputDeviceInputInfoStruct IDII[] =
  //{ "fast_forward_seek", "Fast Forward Seek", 4, IDIT_BUTTON, NULL },
 };
 
-static InputDeviceInfoStruct InputDeviceInfo[] =
+static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
 {
  {
   "controller",
   "Controller",
   NULL,
-  NULL,
-  sizeof(IDII) / sizeof(InputDeviceInputInfoStruct),
   IDII,
  }
 };
 
-static const InputPortInfoStruct PortInfo[] =
+static const std::vector<InputPortInfoStruct> PortInfo =
 {
- { "builtin", "Built-In", sizeof(InputDeviceInfo) / sizeof(InputDeviceInfoStruct), InputDeviceInfo }
-};
-
-static InputInfoStruct InputInfo =
-{
- sizeof(PortInfo) / sizeof(InputPortInfoStruct),
- PortInfo
+ { "builtin", "Built-In", InputDeviceInfo }
 };
 }
 
@@ -545,16 +545,22 @@ MDFNGI EmulatedCDPlay =
  KnownExtensions,
  MODPRIO_INTERNAL_EXTRA_LOW,
  NULL,          // Debug info
- &InputInfo,    //
+ PortInfo,    //
  NULL,
  NULL,
  LoadCD,
  TestMagicCD,
  CloseGame,
+
  NULL,
  NULL,            // Layer names, null-delimited
+
  NULL,
  NULL,
+
+ NULL,
+ 0,
+
  NULL,
  NULL,
  NULL,
@@ -562,7 +568,9 @@ MDFNGI EmulatedCDPlay =
  false,
  NULL, //StateAction,
  Emulate,
+ NULL,
  SetInput,
+ NULL,
  DoSimpleCommand,
  CDPlaySettings,
  MDFN_MASTERCLOCK_FIXED(44100),

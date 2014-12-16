@@ -403,7 +403,7 @@ static void CheckIRQ(void)
 }
 
 
-bool VIP_Init(void)
+void VIP_Init(void)
 {
  InstantDisplayHack = false;
  AllowDrawSkip = false;
@@ -417,8 +417,12 @@ bool VIP_Init(void)
  VBSBS_Separation = 0;
 
  VidSettingsDirty = true;
+}
 
- return(true);
+void VIP_Kill(void)
+{
+
+
 }
 
 void VIP_Power(void)
@@ -738,7 +742,7 @@ uint16 VIP_Read16(int32 &timestamp, uint32 A)
            }
            else
            {
-            ret = LoadU16_LE((uint16 *)&FB[(A >> 15) & 1][(A >> 16) & 1][A & 0x7FFF]);
+            ret = MDFN_de16lsb<true>(&FB[(A >> 15) & 1][(A >> 16) & 1][A & 0x7FFF]);
            }
            break;
 
@@ -831,7 +835,7 @@ void VIP_Write16(int32 &timestamp, uint32 A, uint16 V)
            if((A & 0x7FFF) >= 0x6000)
             VIP_MA16W16(CHR_RAM, (A & 0x1FFF) | ((A >> 2) & 0x6000), V);
            else
-            StoreU16_LE((uint16 *)&FB[(A >> 15) & 1][(A >> 16) & 1][A & 0x7FFF], V);
+            MDFN_en16lsb<true>(&FB[(A >> 15) & 1][(A >> 16) & 1][A & 0x7FFF], V);
            break;
 
   case 0x2:
@@ -1282,7 +1286,7 @@ v810_timestamp_t MDFN_FASTCALL VIP_Update(const v810_timestamp_t timestamp)
    DrawingCounter -= chunk_clocks;
    if(DrawingCounter <= 0)
    {
-    MDFN_ALIGN(8) uint8 DrawingBuffers[2][512 * 8];	// Don't decrease this from 512 unless you adjust vip_draw.inc(including areas that draw off-visible >= 384 and >= -7 for speed reasons)
+    alignas(8) uint8 DrawingBuffers[2][512 * 8];	// Don't decrease this from 512 unless you adjust vip_draw.inc(including areas that draw off-visible >= 384 and >= -7 for speed reasons)
 
     if(skip && InstantDisplayHack && AllowDrawSkip)
     {
@@ -1453,7 +1457,7 @@ v810_timestamp_t MDFN_FASTCALL VIP_Update(const v810_timestamp_t timestamp)
 }
 
 
-int VIP_StateAction(StateMem *sm, int load, int data_only)
+void VIP_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -1503,7 +1507,7 @@ int VIP_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "VIP");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "VIP");
 
  if(load)
  {
@@ -1514,8 +1518,6 @@ int VIP_StateAction(StateMem *sm, int load, int data_only)
    Recalc_JPLT_Cache(i);
   }
  }
-
- return(ret);
 }
 
 uint32 VIP_GetRegister(const unsigned int id, char *special, const uint32 special_len)

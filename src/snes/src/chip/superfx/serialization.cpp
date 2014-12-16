@@ -97,7 +97,9 @@ void SuperFX::serialize(serializer &s) {
   //timing/timing.hpp
   s.integer(cache_access_speed);
   s.integer(memory_access_speed);
-  s.integer(r15_modified);
+  r15_NOT_modified = !r15_NOT_modified;
+  s.integer(r15_NOT_modified);
+  r15_NOT_modified = !r15_NOT_modified;
 }
 
 #endif

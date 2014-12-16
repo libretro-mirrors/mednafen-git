@@ -19,7 +19,7 @@
 #include <ctype.h>
 #include <trio/trio.h>
 #include "console.h"
-#include "../string/trim.h"
+#include <mednafen/string/trim.h>
 #include <vector>
 
 static MDFN_Thread *CheatThread = NULL;
@@ -39,9 +39,9 @@ class CheatConsoleT : public MDFNConsole
 	 SetFont(MDFN_FONT_9x18_18x18);
 	}
 
-        virtual bool TextHook(UTF8 *text)
+        virtual bool TextHook(const std::string &text) override
         {
-	 char* tmp_ptr = strdup((char *)text);
+	 char* tmp_ptr = strdup(text.c_str());
 
 	 MDFND_LockMutex(CheatMutex);
 	 if(!pending_text)
@@ -61,14 +61,14 @@ class CheatConsoleT : public MDFNConsole
 	 MDFND_UnlockMutex(CheatMutex);
 	}
 
-	void WriteLine(UTF8 *text)
+	void WriteLine(const std::string &text)
 	{
 	 MDFND_LockMutex(CheatMutex);
 	 MDFNConsole::WriteLine(text);
  	 MDFND_UnlockMutex(CheatMutex);
 	}
 
-        void AppendLastLine(UTF8 *text)
+        void AppendLastLine(const std::string &text)
         {
          MDFND_LockMutex(CheatMutex);
          MDFNConsole::AppendLastLine(text);
@@ -86,16 +86,14 @@ static void CHEAT_printf(const char *format, ...)
 
  va_start(ap, format);
  trio_vsnprintf(temp, 2048, format, ap);
-
- CheatConsole.WriteLine((UTF8*) temp);
- //MDFND_PrintError(temp);
-
  va_end(ap);
+
+ CheatConsole.WriteLine(temp);
 }
 
 static void CHEAT_puts(const char *string)
 {
- CheatConsole.WriteLine((UTF8 *)string);
+ CheatConsole.WriteLine(string);
 }
 
 static void CHEAT_gets(char *s, int size)
@@ -124,7 +122,7 @@ static void CHEAT_gets(char *s, int size)
   s[size - 1] = 0;
   free(lpt);
 
-  CheatConsole.AppendLastLine((UTF8*)s);
+  CheatConsole.AppendLastLine(s);
  }
 
  if(need_thread_exit)

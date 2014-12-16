@@ -555,7 +555,7 @@ int32 NES_Resampler::Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, i
 	 for(uint32 x = 0; x < count; x++)
 	 {
 	  int32 sample = boobuf[x];
-          debias += ((int64)((sample << 16) - debias) * debias_multiplier) >> 32;
+          debias += ((int64)((int32)((uint32)sample << 16) - debias) * debias_multiplier) >> 32;
 	  out[x] = ((sample - (debias >> 16)) * SoundVolume) >> 8;
 	 }
 	}

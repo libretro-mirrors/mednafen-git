@@ -26,64 +26,44 @@ static std::string AlbumName, Artist, Copyright;
 static std::vector<std::string> SongNames;
 static int TotalSongs;
 
-static INLINE void DrawLine(MDFN_Surface *surface, uint32 color, uint32 bmatch, uint32 breplace, int x1, int y1, int x2, int y2)
+static INLINE void FastDrawLine(MDFN_Surface *surface, uint32 color, uint32 bmatch, uint32 breplace, const int xs, const int ys, const int ydelta)
 {
- uint32 *buf = surface->pixels;
- float dy_dx = (float)(y2 - y1) / (x2 - x1);
- int x;
+ uint32* buf = surface->pixels;
+ int y = ys;
+ int y_inc = (ydelta < 0) ? -1 : 1;
+ unsigned i_bound = abs(ydelta);	// No +1, or we'll overflow our buffer(we compensate in our calculation of half_point).
+ unsigned half_point = (i_bound + 1) >> 1;
 
- float r_ys = 0; //x1 * dy_dx;
- float r_ye = (x2 - x1) * dy_dx;
-
- for(x = x1; x <= x2; x++)
+ for(unsigned i = 0; i <= half_point; i++, y += y_inc)
  {
-  float ys = dy_dx * (x - 1 - x1) + dy_dx / 2;
-  float ye = dy_dx * (x + 1 - x1) - dy_dx / 2;
-
-  if(dy_dx > 0)
+  if(bmatch != ~0U)
   {
-   ys = floor(0.5 + ys);
-   ye = floor(0.5 + ye);
+   uint32 tmpcolor = color;
 
-   if(ys < r_ys) ys = r_ys;
-   if(ye > r_ye) ye = r_ye;
-   if(bmatch != ~0U)
-    for(unsigned int y = (unsigned int) ys; y <= (unsigned int)ye; y++)
-    {
-     uint32 tmpcolor = color;
-     if(buf[x + (y + y1) * surface->pitch32] == bmatch) tmpcolor = breplace;
-     if(buf[x + (y + y1) * surface->pitch32] != breplace)
-      buf[x + (y + y1) * surface->pitch32] = tmpcolor;
-    }
-   else
-    for(unsigned int y = (unsigned int)ys; y <= (unsigned int)ye; y++)
-     buf[x + (y + y1) * surface->pitch32] = color;
+   if(buf[xs + y * surface->pitch32] == bmatch)
+    tmpcolor = breplace;
+
+   if(buf[xs + y * surface->pitch32] != breplace)
+    buf[xs + y * surface->pitch32] = tmpcolor;
   }
   else
+   buf[xs + y * surface->pitch32] = color;
+ }
+ y -= y_inc;
+ for(unsigned i = half_point; i < i_bound; i++, y += y_inc)
+ {
+  if(bmatch != ~0U)
   {
-   ys = floor(0.5 + ys);
-   ye = floor(0.5 + ye);
+   uint32 tmpcolor = color;
 
-   if(ys > r_ys) ys = r_ys;
-   if(ye < r_ye) ye = r_ye;
+   if(buf[xs + 1 + y * surface->pitch32] == bmatch)
+    tmpcolor = breplace;
 
-   if(bmatch != ~0U)
-    for(int y = (int)ys; y >= (int)ye; y--)
-    {
-     uint32 tmpcolor = color;
-
-     if(buf[x + (y + y1) * surface->pitch32] == bmatch)
-      tmpcolor = breplace;
-
-     if(buf[x + (y + y1) * surface->pitch32] != breplace)
-      buf[x + (y + y1) * surface->pitch32] = tmpcolor;
-    }
-   else
-    for(int y = (int)ys; y >= (int)ye; y--)
-    {
-     buf[x + (y + y1) * surface->pitch32] = color;
-    }
+   if(buf[xs + 1+ y * surface->pitch32] != breplace)
+    buf[xs + 1 + y * surface->pitch32] = tmpcolor;
   }
+  else
+   buf[xs + 1 + y * surface->pitch32] = color;
  }
 }
 
@@ -127,7 +107,6 @@ void Player_Draw(MDFN_Surface *surface, MDFN_Rect *dr, int CurrentSong, int16 *s
 {
  uint32 *XBuf = surface->pixels;
  //MDFN_Rect *dr = &MDFNGameInfo->DisplayRect;
- int x,y;
  const uint32 text_color = surface->MakeColor(0xE8, 0xE8, 0xE8);
  const uint32 text_shadow_color = surface->MakeColor(0x00, 0x18, 0x10);
  const uint32 bg_color = surface->MakeColor(0x20, 0x00, 0x08);
@@ -141,21 +120,17 @@ void Player_Draw(MDFN_Surface *surface, MDFN_Rect *dr, int CurrentSong, int16 *s
  dr->h = 240;
 
  // Draw the background color
- for(y = 0; y < dr->h; y++)
+ for(int y = 0; y < dr->h; y++)
   MDFN_FastU32MemsetM8(&XBuf[y * surface->pitch32], bg_color, dr->w);
 
  // Now we draw the waveform data.  It should be centered vertically, and extend the screen horizontally from left to right.
- int32 x_scale;
- float y_scale;
- int lastX, lastY;
-
-
- x_scale = (sampcount << 8) / dr->w;
-
- y_scale = (float)dr->h;
-
  if(sampcount)
  {
+  const int32 x_scale = (sampcount << 8) / dr->w;;
+  const int32 y_scale = -dr->h;
+  int lastX, lastY;
+
+
   for(int wc = 0; wc < MDFNGameInfo->soundchan; wc++)
   {
    uint32 color =  wc ? right_color : left_color; //MK_COLOR(0x80, 0xff, 0x80) : MK_COLOR(0x80, 0x80, 0xFF);
@@ -166,21 +141,22 @@ void Player_Draw(MDFN_Surface *surface, MDFN_Rect *dr, int CurrentSong, int16 *s
    lastX = -1;
    lastY = 0;
 
-   for(x = 0; x < dr->w; x++)
+   for(int x = 0; x < dr->w; x++)
    {
-    float samp = ((float)-samples[wc + (x * x_scale >> 8) * MDFNGameInfo->soundchan]) / 32768;
+    const int32 samp = samples[wc + (x * x_scale >> 8) * MDFNGameInfo->soundchan];
     int ypos;
 
-    ypos = (dr->h / 2) + (int)(y_scale * samp);
-
-    if(ypos >= dr->h)
-     ypos = dr->h - 1;
+    ypos = (dr->h / 2) + ((samp * y_scale + 0x4000) >> 15);
+    //ypos = (rand() & 0xFFF) - 0x800;
 
     if(ypos < 0)
      ypos = 0;
 
+    if(ypos >= dr->h)
+     ypos = dr->h - 1;
+
     if(lastX >= 0) 
-     DrawLine(surface, color, wc ? left_color : ~0, center_color, lastX, lastY, x, ypos);
+     FastDrawLine(surface, color, wc ? left_color : ~0, center_color, lastX, lastY, ypos - lastY);
     lastX = x;
     lastY = ypos;
    }
@@ -216,6 +192,6 @@ void Player_Draw(MDFN_Surface *surface, MDFN_Rect *dr, int CurrentSong, int16 *s
  {
   char snbuf[32];
   trio_snprintf(snbuf, 32, "<%d/%d>", CurrentSong + 1, TotalSongs);
-  DrawTextTransShadow(XBuf, surface->pitch32 * sizeof(uint32), dr->w, (uint8*)snbuf, text_color, text_shadow_color, 1);
+  DrawTextTransShadow(XBuf, surface->pitch32 * sizeof(uint32), dr->w, snbuf, text_color, text_shadow_color, 1);
  }
 }

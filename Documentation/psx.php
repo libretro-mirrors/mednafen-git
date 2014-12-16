@@ -3,7 +3,13 @@
 <?php BeginPage('psx', 'Sony PlayStation'); ?>
 
 <?php BeginSection('Introduction', "", FALSE, FALSE, "Section_intro"); ?>
-PlayStation 1 emulation is currently in a state of development.  Save states, rewinding, and netplay are not available <a href="#psx.clobbers_lament">by default</a>.
+<p>
+<font color="red" size="+2">WARNING:</font> Save states(and by extension, state rewinding and netplay) and saved games on emulated memory cards do not mix well unless you are
+extremely careful.  For any given game, either use save states or the game's own save system, but not both, lest you may destroy your saved games.
+</p>
+<p>
+PlayStation 1 emulation is currently in a state of development, so there may occasionally be horrifying SPINE-TINGLING regressions in new versions.
+</p>
 <p>
 A dual-core Phenom II or Athlon II at 3GHz or higher, or rough equivalent(in terms of single-core IPC), is recommended for
 running Mednafen's PlayStation 1 emulation on.  For better performance, the binary should be compiled for a 64-bit
@@ -24,8 +30,8 @@ avoid short emulator pauses and audio pops due to waiting for disk accesses to c
 
 <?php BeginSection("Firmware/BIOS", "", FALSE, FALSE, "Section_firmware_bios"); ?>
 <p>
-Place the correct BIOS image files in the <a href="mednafen.html#Section_firmware_bios">correct location</a>.  <b>DO NOT</b> rename other revisions/regions of the BIOS to match the expected filenames, or you'll likely
-cause emulation glitches.
+Place the correct BIOS image files in the <a href="mednafen.html#Section_firmware_bios">correct location</a>.  Do not rename other revisions/regions of the BIOS to match the expected filenames, or you'll likely
+cause emulation glitches(and cause confusion if you ever distribute or otherwise refer to these misnamed files).
 </p>
 
 <p>

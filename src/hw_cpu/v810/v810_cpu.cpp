@@ -41,8 +41,7 @@ found freely through public domain sources.
 //////////////////////////////////////////////////////////
 // CPU routines
 
-#include "mednafen/mednafen.h"
-#include <mednafen/masmem.h>
+#include <mednafen/mednafen.h>
 
 //#include "pcfx.h"
 //#include "debug.h"
@@ -662,7 +661,7 @@ void V810::Run_Accurate_Debug(int32 MDFN_FASTCALL (*event_handler)(const v810_ti
 //
 #define RB_GETPC()      	((uint32)(PC_ptr - PC_base))
 
-#define RB_RDOP(PC_offset, ...) LoadU16_LE((uint16 *)&PC_ptr[PC_offset])
+#define RB_RDOP(PC_offset, ...) MDFN_de16lsb<true>(&PC_ptr[PC_offset])
 
 void V810::Run_Fast(int32 MDFN_FASTCALL (*event_handler)(const v810_timestamp_t timestamp))
 {
@@ -1426,32 +1425,20 @@ void V810::Exception(uint32 handler, uint16 eCode)
     }
 }
 
-int V810::StateAction(StateMem *sm, int load, int data_only)
+void V810::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
- uint32 *cache_tag_temp = NULL;
- uint32 *cache_data_temp = NULL;
- bool *cache_data_valid_temp = NULL;
+ PODFastVector<uint32> cache_tag_temp;
+ PODFastVector<uint32> cache_data_temp;
+ PODFastVector<bool> cache_data_valid_temp;
+
  uint32 PC_tmp = GetPC();
 
  if(EmuMode == V810_EMU_MODE_ACCURATE)
  {
-  cache_tag_temp = (uint32 *)malloc(sizeof(uint32 *) * 128);
-  cache_data_temp = (uint32 *)malloc(sizeof(uint32 *) * 128 * 2);
-  cache_data_valid_temp = (bool *)malloc(sizeof(bool *) * 128 * 2);
+  cache_tag_temp.resize(128);
+  cache_data_temp.resize(128 * 2);
+  cache_data_valid_temp.resize(128 * 2);
 
-  if(!cache_tag_temp || !cache_data_temp || !cache_data_valid_temp)
-  {
-   if(cache_tag_temp)
-    free(cache_tag_temp);
-
-   if(cache_data_temp)
-    free(cache_data_temp);
-
-   if(cache_data_valid_temp)
-    free(cache_data_valid_temp);
-
-   return(0);
-  }
   if(!load)
   {
    for(int i = 0; i < 128; i++)
@@ -1469,9 +1456,9 @@ int V810::StateAction(StateMem *sm, int load, int data_only)
        // in case the save state was saved while in fast mode
        // and the cache data isn't present and thus won't be loaded.
   {
-   memset(cache_tag_temp, 0, sizeof(uint32) * 128);
-   memset(cache_data_temp, 0, sizeof(uint32) * 128 * 2);
-   memset(cache_data_valid_temp, 0, sizeof(bool) * 128 * 2);
+   cache_tag_temp.fill(0);
+   cache_data_temp.fill(0);
+   cache_data_valid_temp.fill(false);
   }
  }
 
@@ -1486,9 +1473,9 @@ int V810::StateAction(StateMem *sm, int load, int data_only)
 
   SFVAR(lastop),
 
-  SFARRAY32(cache_tag_temp, 128),
-  SFARRAY32(cache_data_temp, 128 * 2),
-  SFARRAYB(cache_data_valid_temp, 128 * 2),
+  SFARRAY32N(&cache_tag_temp[0], cache_tag_temp.size(), "cache_tag_temp"),
+  SFARRAY32N(&cache_data_temp[0], cache_data_temp.size(), "cache_data_temp"),
+  SFARRAYBN(&cache_data_valid_temp[0], cache_data_valid_temp.size(), "cache_data_valid_temp"),
 
   SFVAR(ilevel),		// Perhaps remove in future?
   SFVAR(next_event_ts_delta),
@@ -1504,7 +1491,7 @@ int V810::StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "V810");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "V810");
 
  if(load)
  {
@@ -1533,13 +1520,4 @@ int V810::StateAction(StateMem *sm, int load, int data_only)
    }
   }
  }
-
- if(EmuMode == V810_EMU_MODE_ACCURATE)
- {
-  free(cache_tag_temp);
-  free(cache_data_temp);
-  free(cache_data_valid_temp);
- }
-
- return(ret);
 }

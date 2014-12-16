@@ -113,7 +113,7 @@ static inline void Interp10(unsigned char * pc, int c1, int c2, int c3)
 #define PIXEL11_90    Interp9(pOut+BpL+4, w[5], w[6], w[8]);
 #define PIXEL11_100   Interp10(pOut+BpL+4, w[5], w[6], w[8]);
 
-static inline int Diff(unsigned int w1, unsigned int w2)
+static int MDFN_FASTCALL Diff(unsigned int w1, unsigned int w2)
 {
   int YUV1;
   int YUV2;

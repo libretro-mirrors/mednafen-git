@@ -16,14 +16,16 @@
  */
 
 #include <mednafen/mednafen.h>
-#include <mednafen/md5.h>
+#include <mednafen/hash/md5.h>
 #include <mednafen/general.h>
 #include <mednafen/mempatcher.h>
 #include <mednafen/PSFLoader.h>
 #include <mednafen/player.h>
 #include <mednafen/FileStream.h>
 #include <mednafen/resampler/resampler.h>
+
 #include <vector>
+#include <memory>
 
 #include "src/base.hpp"
 
@@ -41,11 +43,11 @@ class SNSFLoader : public PSFLoader
 {
  public:
 
- SNSFLoader(MDFNFILE *fp);
+ SNSFLoader(Stream *fp);
  virtual ~SNSFLoader();
 
- virtual void HandleEXE(const uint8 *data, uint32 len, bool ignore_pcsp = false);
- virtual void HandleReserved(const uint8 *data, uint32 len);
+ virtual void HandleEXE(Stream* fp, bool ignore_pcsp = false) override;
+ virtual void HandleReserved(Stream* fp, uint32 len) override;
 
  PSFTags tags;
  std::vector<uint8> ROM_Data;
@@ -82,48 +84,9 @@ static const uint8 ScopeOSCounter_StartVal = 10;
 static const uint8 ScopeOSCounter_TriggerStartThresh = 6;
 static const uint8 ScopeOSCounter_TriggerEndThresh = 2;
 
-static uint8 *CustomColorMap = NULL;
-//static uint32 ColorMap[32768];
-static std::vector<uint32> ColorMap;
+static std::vector<uint32> ColorMap;	// [32768]
 
-static void LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries) MDFN_COLD;
-static void LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries)
-{
- std::string colormap_fn = MDFN_MakeFName(MDFNMKF_PALETTE, 0, syspalname).c_str();
-
- MDFN_printf(_("Loading custom palette from \"%s\"...\n"),  colormap_fn.c_str());
- MDFN_indent(1);
-
- try
- {
-  FileStream fp(colormap_fn.c_str(), FileStream::MODE_READ);
-
-  *ptr = new uint8[num_entries * 3];
-
-  fp.read(*ptr, num_entries * 3);
- }
- catch(MDFN_Error &e)
- {
-  MDFN_printf(_("Error: %s\n"), e.what());
-  MDFN_indent(-1);
-
-  if(e.GetErrno() != ENOENT)
-   throw;
-
-  return;
- }
- catch(std::exception &e)
- {
-  MDFN_printf(_("Error: %s\n"), e.what());
-  MDFN_indent(-1);
-  throw;
- }
-
- MDFN_indent(-1);
-}
-
-
-static void BuildColorMap(MDFN_PixelFormat &format)
+static void BuildColorMap(MDFN_PixelFormat &format, uint8* CustomColorMap)
 {
  for(int x = 0; x < 32768; x++) 
  {
@@ -148,6 +111,12 @@ static void BuildColorMap(MDFN_PixelFormat &format)
  }
 }
 
+static CustomPalette_Spec CPInfo[] =
+{
+ { gettext_noop("SNES 15-bit RGB colormap"), NULL, { 32768, 0 } },
+
+ { NULL, NULL }
+};
 
 static void BlankMissingLines(int ystart, int ybound, const bool interlaced, const bool field)
 {
@@ -446,113 +415,93 @@ namespace memory {
 
 #endif
 
-// For loading: Return false on fatal error during loading, or true on success(or file not found)
-static bool SaveMemorySub(bool load, const char *extension, bSNES_v059::MappedRAM *memoryA, bSNES_v059::MappedRAM *memoryB = NULL)
+static void SaveMemorySub(bool load, const char *extension, bSNES_v059::MappedRAM *memoryA, bSNES_v059::MappedRAM *memoryB = NULL)
 {
  const std::string path = MDFN_MakeFName(MDFNMKF_SAV, 0, extension);
- std::vector<PtrLengthPair> MemToSave;
+ const size_t total_size = ((memoryA && memoryA->size() != 0 && memoryA->size() != -1U) ? memoryA->size() : 0) +
+		       	   ((memoryB && memoryB->size() != 0 && memoryB->size() != -1U) ? memoryB->size() : 0);
+
+
+ if(!total_size)
+  return;
 
  if(load)
  {
-  gzFile gp;
-
-  errno = 0;
-  gp = gzopen(path.c_str(), "rb");
-  if(!gp)
+  try
   {
-   ErrnoHolder ene(errno);
-   if(ene.Errno() == ENOENT)
-    return(true);
+   std::unique_ptr<Stream> gp = MDFN_AmbigGZOpenHelper(path, std::vector<size_t>({ total_size }));
 
-   MDFN_PrintError(_("Error opening save file \"%s\": %s"), path.c_str(), ene.StrError());
-   return(false);
-  }
-
-  if(memoryA && memoryA->size() != 0 && memoryA->size() != -1U)
-  {
-   errno = 0;
-   if(gzread(gp, memoryA->data(), memoryA->size()) != memoryA->size())
+   if(memoryA && memoryA->size() != 0 && memoryA->size() != -1U)
    {
-    ErrnoHolder ene(errno);
+    gp->read(memoryA->data(), memoryA->size());
+   }
 
-    MDFN_PrintError(_("Error reading save file \"%s\": %s"), path.c_str(), ene.StrError());
-    return(false);
+   if(memoryB && memoryB->size() != 0 && memoryB->size() != -1U)
+   {
+    gp->read(memoryB->data(), memoryB->size());
    }
   }
-
-  if(memoryB && memoryB->size() != 0 && memoryB->size() != -1U)
+  catch(MDFN_Error &e)
   {
-   errno = 0;
-   if(gzread(gp, memoryB->data(), memoryB->size()) != memoryB->size())
-   {
-    ErrnoHolder ene(errno);
-
-    MDFN_PrintError(_("Error reading save file \"%s\": %s"), path.c_str(), ene.StrError());
-    return(false);
-   }
+   if(e.GetErrno() != ENOENT)
+    throw;
   }
-
-  gzclose(gp);
-
-  return(true);
  }
  else
  {
+  std::vector<PtrLengthPair> MemToSave;
+
   if(memoryA && memoryA->size() != 0 && memoryA->size() != -1U)
    MemToSave.push_back(PtrLengthPair(memoryA->data(), memoryA->size()));
 
   if(memoryB && memoryB->size() != 0 && memoryB->size() != -1U)
    MemToSave.push_back(PtrLengthPair(memoryB->data(), memoryB->size()));
 
-  return(MDFN_DumpToFile(path.c_str(), 6, MemToSave));
+  MDFN_DumpToFile(path, MemToSave, true);
  }
 }
 
-static bool SaveLoadMemory(bool load)
+static void SaveLoadMemory(bool load)
 {
   if(bSNES_v059::cartridge.loaded() == false)
-   return(FALSE);
-
-  bool ret = true;
+   return;
 
   switch(bSNES_v059::cartridge.mode())
   {
     case bSNES_v059::Cartridge::ModeNormal:
     case bSNES_v059::Cartridge::ModeBsxSlotted: 
     {
-      ret &= SaveMemorySub(load, "srm", &bSNES_v059::memory::cartram);
-      ret &= SaveMemorySub(load, "rtc", &bSNES_v059::memory::cartrtc);
+      SaveMemorySub(load, "srm", &bSNES_v059::memory::cartram);
+      SaveMemorySub(load, "rtc", &bSNES_v059::memory::cartrtc);
     }
     break;
 
     case bSNES_v059::Cartridge::ModeBsx:
     {
-      ret &= SaveMemorySub(load, "srm", &bSNES_v059::memory::bsxram );
-      ret &= SaveMemorySub(load, "psr", &bSNES_v059::memory::bsxpram);
+      SaveMemorySub(load, "srm", &bSNES_v059::memory::bsxram );
+      SaveMemorySub(load, "psr", &bSNES_v059::memory::bsxpram);
     }
     break;
 
     case bSNES_v059::Cartridge::ModeSufamiTurbo:
     {
-     ret &= SaveMemorySub(load, "srm", &bSNES_v059::memory::stAram, &bSNES_v059::memory::stBram);
+     SaveMemorySub(load, "srm", &bSNES_v059::memory::stAram, &bSNES_v059::memory::stBram);
     }
     break;
 
     case bSNES_v059::Cartridge::ModeSuperGameBoy:
     {
-     ret &= SaveMemorySub(load, "sav", &bSNES_v059::memory::gbram);
-     ret &= SaveMemorySub(load, "rtc", &bSNES_v059::memory::gbrtc);
+     SaveMemorySub(load, "sav", &bSNES_v059::memory::gbram);
+     SaveMemorySub(load, "rtc", &bSNES_v059::memory::gbrtc);
     }
     break;
   }
-
- return(ret);
 }
 
 
 static bool TestMagic(MDFNFILE *fp)
 {
- if(PSFLoader::TestMagic(0x23, fp))
+ if(PSFLoader::TestMagic(0x23, fp->stream()))
   return(true);
 
  if(strcasecmp(fp->ext, "smc") && strcasecmp(fp->ext, "swc") && strcasecmp(fp->ext, "sfc") && strcasecmp(fp->ext, "fig") &&
@@ -593,7 +542,7 @@ static void SetupMisc(bool PAL)
  SoundLastRate = 0;
 }
 
-SNSFLoader::SNSFLoader(MDFNFILE *fp)
+SNSFLoader::SNSFLoader(Stream *fp)
 {
  uint32 size_tmp;
  uint8 *export_ptr;
@@ -618,35 +567,28 @@ SNSFLoader::~SNSFLoader()
 
 }
 
-void SNSFLoader::HandleReserved(const uint8 *data, uint32 len)
+void SNSFLoader::HandleReserved(Stream* fp, uint32 len)
 {
- uint32 o = 0;
+ uint64 bound_pos = fp->tell() + len;
 
  if(len < 9)
   return;
 
- while((o + 8) <= len)
+ while(fp->tell() < bound_pos)
  {
-  uint32 header_type = MDFN_de32lsb(&data[o + 0]);
-  uint32 header_size = MDFN_de32lsb(&data[o + 4]);
+  uint8 raw_header[8];
+  uint32 header_type;
+  uint32 header_size;
 
-  printf("%08x %08x\n", header_type, header_size);
+  fp->read(raw_header, sizeof(raw_header));
 
-  o += 8;
+  header_type = MDFN_de32lsb(&raw_header[0]);
+  header_size = MDFN_de32lsb(&raw_header[4]);
 
   switch(header_type)
   {
    case 0xFFFFFFFF:	// EOR
-	if(header_size)
-	{
-	 throw MDFN_Error(0, _("SNSF Reserved Section EOR has non-zero(=%u) size."), header_size);
-	}
-
-	if(o < len)
-	{
-	 throw MDFN_Error(0, _("SNSF Reserved Section EOR, but more data(%u bytes) available."), len - o);
-	}
-	break;
+	goto Breakout;
 
    default:
 	throw MDFN_Error(0, _("SNSF Reserved Section Unknown/Unsupported Data Type 0x%08x"), header_type);
@@ -654,15 +596,13 @@ void SNSFLoader::HandleReserved(const uint8 *data, uint32 len)
 
    case 0:	// SRAM
 	{
+	 uint8 raw_subheader[4];
 	 uint32 srd_offset, srd_size;
 
-	 if((len - o) < 4)
-	 {
-	  throw MDFN_Error(0, _("SNSF Reserved Section SRAM block, insufficient data for subheader."));
-	 }
-	 srd_offset = MDFN_de32lsb(&data[o]);
-	 o += 4;
-	 srd_size = len - o;
+	 fp->read(raw_subheader, sizeof(raw_subheader));
+
+	 srd_offset = MDFN_de32lsb(&raw_subheader[0]);
+	 srd_size = header_size - 4;
 
 	 if(srd_size > 0x20000)
 	 {
@@ -674,32 +614,31 @@ void SNSFLoader::HandleReserved(const uint8 *data, uint32 len)
 	  throw MDFN_Error(0, _("SNSF Reserved Section SRAM block combined offset+size(=%llu) is too large."), (unsigned long long)srd_offset + srd_size);
 	 }
 
-	 printf("SRAM(not implemented yet): %08x %08x\n", srd_offset, srd_size);
-	printf("%d\n", bSNES_v059::memory::cartram.size());
+	 MDFN_printf("SNSF SRAM Data(not implemented yet): Offset=0x%08x, Size=0x%08x\n", srd_offset, srd_size);
+	 //printf("%d\n", bSNES_v059::memory::cartram.size());
+	 fp->seek(srd_size, SEEK_CUR);
 	}
 	break;
   }
-
-
-  o += header_size;
  }
 
- printf("Reserved: %d\n", len);
+ Breakout:;
+
+ if(fp->tell() != bound_pos)
+  throw MDFN_Error(0, _("Malformed SNSF reserved section."));
 }
 
 
-void SNSFLoader::HandleEXE(const uint8 *data, uint32 size, bool ignore_pcsp)
+void SNSFLoader::HandleEXE(Stream* fp, bool ignore_pcsp)
 {
- if(size < 8)
- {
-  throw MDFN_Error(0, _("SNSF Missing full program section header."));
- }
+ uint8 raw_header[8];
 
- const uint32 header_offset = MDFN_de32lsb(&data[0]);
- const uint32 header_size = MDFN_de32lsb(&data[4]);
- const uint8 *rdata = &data[8];
+ fp->read(raw_header, sizeof(raw_header));
 
- printf("%08x %08x\n", header_offset, header_size);
+ const uint32 header_offset = MDFN_de32lsb(&raw_header[0]);
+ const uint32 header_size = MDFN_de32lsb(&raw_header[4]);
+
+ MDFN_printf("SNSF ROM Data: SNSF_Offset=0x%08x Size=0x%08x\n", header_offset, header_size);
 
  if(header_offset > (1024 * 8192))
  {
@@ -716,18 +655,13 @@ void SNSFLoader::HandleEXE(const uint8 *data, uint32 size, bool ignore_pcsp)
   throw MDFN_Error(0, _("SNSF Combined Header Fields Offset(=%u) + Size(=%u) is too large."), header_offset, header_size);
  }
 
- if((size - 8) < header_size)
- {
-  throw(MDFN_Error(0, _("SNSF Insufficient data(need %u bytes, have %u bytes)"), header_size, size - 8));
- }
-
  if((header_offset + header_size) > ROM_Data.size())
   ROM_Data.resize(header_offset + header_size, 0x00);
 
- memcpy(&ROM_Data[header_offset], rdata, header_size);
+ fp->read(&ROM_Data[header_offset], header_size);
 }
 
-static bool LoadSNSF(MDFNFILE *fp)
+static void LoadSNSF(MDFNFILE *fp)
 {
  bool PAL = false;
 
@@ -736,41 +670,23 @@ static bool LoadSNSF(MDFNFILE *fp)
  MultitapEnabled[0] = false;
  MultitapEnabled[1] = false;
 
+ std::vector<std::string> SongNames;
 
- try
- {
-  std::vector<std::string> SongNames;
+ snsf_loader = new SNSFLoader(fp->stream());
 
-  snsf_loader = new SNSFLoader(fp);
+ SongNames.push_back(snsf_loader->tags.GetTag("title"));
 
-  SongNames.push_back(snsf_loader->tags.GetTag("title"));
-
-  Player_Init(1, snsf_loader->tags.GetTag("game"), snsf_loader->tags.GetTag("artist"), snsf_loader->tags.GetTag("copyright"), SongNames);
- }
- catch(std::exception &e)
- {
-  MDFND_PrintError(e.what());
-  Cleanup();
-  return 0;
- }
+ Player_Init(1, snsf_loader->tags.GetTag("game"), snsf_loader->tags.GetTag("artist"), snsf_loader->tags.GetTag("copyright"), SongNames);
 
  bSNES_v059::system.power();
  PAL = (bSNES_v059::system.region() == bSNES_v059::System::PAL);
 
  SetupMisc(PAL);
-
- return(true);
 }
 
 static void Cleanup(void)
 {
  bSNES_v059::memory::cartrom.map(NULL, 0); // So it delete[]s the pointer it took ownership of.
-
- if(CustomColorMap)
- {
-  delete[] CustomColorMap;
-  CustomColorMap = NULL;
- }
 
  if(snsf_loader)
  {
@@ -832,7 +748,7 @@ static void CheatMap(bool uics, uint8 bank_lo, uint8 bank_hi, uint16 addr_lo, ui
  }
 }
 
-static int Load(MDFNFILE *fp)
+static void Load(MDFNFILE *fp)
 {
  bool PAL = FALSE;
 
@@ -840,52 +756,53 @@ static int Load(MDFNFILE *fp)
 
  try
  {
-  if(PSFLoader::TestMagic(0x23, fp))
+  if(PSFLoader::TestMagic(0x23, fp->stream()))
   {
-   return LoadSNSF(fp);
+   LoadSNSF(fp);
+   return;
   }
-  // Allocate 8MiB of space regardless of actual ROM image size, to prevent malformed or corrupted ROM images
-  // from crashing the bsnes cart loading code.
-
-  const uint32 header_adjust = (((fp->size & 0x7FFF) == 512) ? 512 : 0);
-  uint8 *export_ptr;
-  const uint32 csize = fp->size - header_adjust;
-
-  if(csize > (8192 * 1024))
-  {
-   throw MDFN_Error(0, _("SNES ROM image is too large."));
-  }
-
-  md5_context md5;
-
-  md5.starts();
-  md5.update(fp->data, fp->size);
-  md5.finish(MDFNGameInfo->MD5);
 
   bSNES_v059::system.init(&Interface);
 
-  //const bSNES_v059::Cartridge::Type rom_type = bSNES_v059::cartridge.detect_image_type((uint8 *)fp->data, fp->size);
-
-  export_ptr = new uint8[8192 * 1024];
-  memset(export_ptr, 0x00, 8192 * 1024);
-  memcpy(export_ptr, fp->data + header_adjust, csize);
-
-  //
-  // Mirror up to an 8MB boundary so we can implement HAPPY FUNTIME YAAAAAAAY optimizations(like with SuperFX).
-  //
-  //uint32 st = MDFND_GetTime();
-  for(uint32 a = (csize + 255) &~255; a < 8192 * 1024; a += 256)
+  // Allocate 8MiB of space regardless of actual ROM image size, to prevent malformed or corrupted ROM images
+  // from crashing the bsnes cart loading code.
   {
-   const uint32 oa = bSNES_v059::bus.mirror(a, csize);
-   //printf("%08x->%08x\n",a, oa);
-   memcpy(&export_ptr[a], &export_ptr[oa], 256);
+   static const uint64 max_rom_size = 8192 * 1024;
+   const uint64 raw_size = fp->size();
+   const unsigned header_adjust = (((raw_size & 0x7FFF) == 512) ? 512 : 0);
+   const uint64 size = raw_size - header_adjust;
+   md5_context md5;
+   md5.starts();
+
+   if(size > max_rom_size)
+    throw MDFN_Error(0, _("SNES ROM image is too large."));
+
+   if(header_adjust)
+   {
+    uint8 header_tmp[512];
+    fp->read(header_tmp, 512);
+    md5.update(header_tmp, 512);	// For Mednafen backwards compat
+   }
+
+   std::unique_ptr<uint8[]> export_ptr(new uint8[max_rom_size]);
+   memset(export_ptr.get(), 0x00, max_rom_size);
+   fp->read(export_ptr.get(), size);
+
+   md5.update(export_ptr.get(), size);
+   md5.finish(MDFNGameInfo->MD5);
+
+   //
+   // Mirror up to an 8MB boundary so we can implement HAPPY FUNTIME YAAAAAAAY optimizations(like with SuperFX).
+   //
+   for(uint32 a = (size + 255) &~255; a < max_rom_size; a += 256)
+   {
+    const uint32 oa = bSNES_v059::bus.mirror(a, size);
+    //printf("%08x->%08x\n",a, oa);
+    memcpy(&export_ptr[a], &export_ptr[oa], 256);
+   }
+   bSNES_v059::memory::cartrom.map(export_ptr.release(), size);
+   bSNES_v059::cartridge.load(bSNES_v059::Cartridge::ModeNormal);
   }
-
-  //printf("%d\n", MDFND_GetTime() - st);
-
-  bSNES_v059::memory::cartrom.map(export_ptr, csize);
-
-  bSNES_v059::cartridge.load(bSNES_v059::Cartridge::ModeNormal);
 
   bSNES_v059::system.power();
 
@@ -896,11 +813,7 @@ static int Load(MDFNFILE *fp)
   MultitapEnabled[0] = MDFN_GetSettingB("snes.input.port1.multitap");
   MultitapEnabled[1] = MDFN_GetSettingB("snes.input.port2.multitap");
 
-  if(!SaveLoadMemory(true))
-  {
-   Cleanup();
-   return(0);
-  }
+  SaveLoadMemory(true);
 
   //printf(" %d %d\n", FSettings.SndRate, resampler.max_write());
 
@@ -972,23 +885,26 @@ static int Load(MDFNFILE *fp)
   CheatMap(true,  0x7e, 0x7f, 0x0000, 0xffff, bSNES_v059::memory::wram);
 
   ColorMap.resize(32768);
-
-  LoadCPalette(NULL, &CustomColorMap, 32768);
  }
  catch(std::exception &e)
  {
   Cleanup();
   throw;
  }
-
- return(1);
 }
 
 static void CloseGame(void)
 {
  if(!snsf_loader)
  {
-  SaveLoadMemory(false);
+  try
+  {
+   SaveLoadMemory(false);
+  }
+  catch(std::exception &e)
+  {
+   MDFN_PrintError("%s", e.what());
+  }
  }
  Cleanup();
 }
@@ -1017,7 +933,7 @@ static void Emulate(EmulateSpecStruct *espec)
   }
 
   if(espec->VideoFormatChanged)
-   BuildColorMap(espec->surface->format);
+   BuildColorMap(espec->surface->format, espec->CustomPalette);
  }
 
  if(SoundLastRate != espec->SoundRate)
@@ -1089,6 +1005,29 @@ static void Emulate(EmulateSpecStruct *espec)
   spx_uint32_t in_len; // "Number of input samples in the input buffer. Returns the number of samples processed. This is all per-channel."
   spx_uint32_t out_len; // "Size of the output buffer. Returns the number of samples written. This is all per-channel."
 
+  // Hrm, still crackly with some games(like MMX) when rewinding...
+  if(espec->NeedSoundReverse)
+  {
+   for(unsigned lr = 0; lr < 2; lr++)
+   {
+    int16* p0 = &ResampInBuffer[0][lr];
+    int16* p1 = &ResampInBuffer[ResampInPos - 1][lr];
+    unsigned count = ResampInPos >> 1;
+
+    while(MDFN_LIKELY(count--))
+    {
+     int16 tmp;
+
+     tmp = *p0;
+     *p0 = *p1;
+     *p1 = tmp;
+     p0 += 2;
+     p1 -= 2;
+    }
+   }
+   espec->NeedSoundReverse = false;
+  }
+
   //printf("%d\n", ResampInPos);
   in_len = ResampInPos;
   out_len = 524288; //8192;     // FIXME, real size.
@@ -1139,7 +1078,7 @@ static void Emulate(EmulateSpecStruct *espec)
 #endif
 }
 
-static int StateAction(StateMem *sm, int load, int data_only)
+static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  const uint32 length = bSNES_v059::system.serialize_size();
  bSNES_v059::Input* inpp = &bSNES_v059::input;
@@ -1183,35 +1122,25 @@ static int StateAction(StateMem *sm, int load, int data_only)
 
  if(load)
  {
-  uint8 *ptr;
-
-  if(!(ptr = (uint8 *)MDFN_calloc(1, length, _("SNES save state buffer"))))
-   return(0);
+  std::unique_ptr<uint8[]> ptr(new uint8[length]);
 
   SFORMAT StateRegs[] =
   {
-   SFARRAYN(ptr, length, "OmniCat"),
+   SFARRAYN(ptr.get(), length, "OmniCat"),
    { ExtraStateRegs, ~0U, 0, NULL },
    SFEND
   };
 
-  if(!MDFNSS_StateAction(sm, 1, data_only, StateRegs, "DATA"))
-  {
-   free(ptr);
-   return(0);
-  }
+  MDFNSS_StateAction(sm, 1, data_only, StateRegs, "DATA");
 
   //srand(99);
   //for(int i = 16; i < length; i++)
   // ptr[i] = rand() & 0x3;
 
-  serializer state(ptr, length);
-  int result;
+  serializer state(ptr.get(), length);
 
-  result = bSNES_v059::system.unserialize(state);
-
-  free(ptr);
-  return(result);
+  if(!bSNES_v059::system.unserialize(state))
+   throw MDFN_Error(0, _("bSNES core unserializer error."));
  }
  else // save:
  {
@@ -1233,12 +1162,8 @@ static int StateAction(StateMem *sm, int load, int data_only)
    SFEND
   };
 
-  if(!MDFNSS_StateAction(sm, 0, data_only, StateRegs, "DATA"))
-   return(0);
-
-  return(1);
+  MDFNSS_StateAction(sm, 0, data_only, StateRegs, "DATA");
  }
-
 }
 
 struct StrToBSIT_t
@@ -1260,9 +1185,9 @@ static const StrToBSIT_t StrToBSIT[] =
 };
 
 
-static void SetInput(int port, const char *type, void *ptr)
+static void SetInput(unsigned port, const char *type, uint8 *ptr)
 {
- assert(port >= 0 && port < 8);
+ assert(port < 8);
 
  if(port < 2)
  {
@@ -1326,7 +1251,7 @@ static void DoSimpleCommand(int cmd)
  }
 }
 
-static const InputDeviceInputInfoStruct GamepadIDII[] =
+static const IDIISG GamepadIDII =
 {
  { "b", "B (center, lower)", 7, IDIT_BUTTON_CAN_RAPID, NULL },
  { "y", "Y (left)", 6, IDIT_BUTTON_CAN_RAPID, NULL },
@@ -1342,7 +1267,7 @@ static const InputDeviceInputInfoStruct GamepadIDII[] =
  { "r", "Right Shoulder", 11, IDIT_BUTTON, NULL },
 };
 
-static const InputDeviceInputInfoStruct MouseIDII[0x4] =
+static const IDIISG MouseIDII =
 {
  { "x_axis", "X Axis", -1, IDIT_X_AXIS_REL },
  { "y_axis", "Y Axis", -1, IDIT_Y_AXIS_REL },
@@ -1350,7 +1275,7 @@ static const InputDeviceInputInfoStruct MouseIDII[0x4] =
  { "right", "Right Button", 1, IDIT_BUTTON, NULL },
 };
 
-static const InputDeviceInputInfoStruct SuperScopeIDII[] =
+static const IDIISG SuperScopeIDII =
 {
  { "x_axis", "X Axis", -1, IDIT_X_AXIS },
  { "y_axis", "Y Axis", -1, IDIT_Y_AXIS },
@@ -1362,16 +1287,14 @@ static const InputDeviceInputInfoStruct SuperScopeIDII[] =
  { "cursor", "Cursor", 4, IDIT_BUTTON, NULL },
 };
 
-static InputDeviceInfoStruct InputDeviceInfoSNESPort1[] =
+static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSNESPort1 =
 {
  // None
  {
   "none",
   "none",
   NULL,
-  NULL,
-  0,
-  NULL
+  IDII_Empty
  },
 
  // Gamepad
@@ -1379,9 +1302,7 @@ static InputDeviceInfoStruct InputDeviceInfoSNESPort1[] =
   "gamepad",
   "Gamepad",
   NULL,
-  NULL,
-  sizeof(GamepadIDII) / sizeof(InputDeviceInputInfoStruct),
-  GamepadIDII,
+  GamepadIDII
  },
 
  // Mouse
@@ -1389,22 +1310,18 @@ static InputDeviceInfoStruct InputDeviceInfoSNESPort1[] =
   "mouse",
   "Mouse",
   NULL,
-  NULL,
-  sizeof(MouseIDII) / sizeof(InputDeviceInputInfoStruct),
-  MouseIDII,
+  MouseIDII
  },
 };
 
-static InputDeviceInfoStruct InputDeviceInfoSNESPort2[] =
+static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSNESPort2 =
 {
  // None
  {
   "none",
   "none",
   NULL,
-  NULL,
-  0,
-  NULL
+  IDII_Empty
  },
 
  // Gamepad
@@ -1412,9 +1329,7 @@ static InputDeviceInfoStruct InputDeviceInfoSNESPort2[] =
   "gamepad",
   "Gamepad",
   NULL,
-  NULL,
-  sizeof(GamepadIDII) / sizeof(InputDeviceInputInfoStruct),
-  GamepadIDII,
+  GamepadIDII
  },
 
  // Mouse
@@ -1422,9 +1337,7 @@ static InputDeviceInfoStruct InputDeviceInfoSNESPort2[] =
   "mouse",
   "Mouse",
   NULL,
-  NULL,
-  sizeof(MouseIDII) / sizeof(InputDeviceInputInfoStruct),
-  MouseIDII,
+  MouseIDII
  },
 
  // Super Scope
@@ -1432,43 +1345,33 @@ static InputDeviceInfoStruct InputDeviceInfoSNESPort2[] =
   "superscope",
   "Super Scope",
   gettext_noop("Monkey!"),
-  NULL,
-  sizeof(SuperScopeIDII) / sizeof(InputDeviceInputInfoStruct),
   SuperScopeIDII
  },
 };
 
 
-static InputDeviceInfoStruct InputDeviceInfoTapPort[] =
+static const std::vector<InputDeviceInfoStruct> InputDeviceInfoTapPort =
 {
  // Gamepad
  {
   "gamepad",
   "Gamepad",
   NULL,
-  NULL,
-  sizeof(GamepadIDII) / sizeof(InputDeviceInputInfoStruct),
   GamepadIDII,
  },
 };
 
 
-static const InputPortInfoStruct PortInfo[] =
+static const std::vector<InputPortInfoStruct> PortInfo =
 {
- { "port1", "Port 1/1A", sizeof(InputDeviceInfoSNESPort1) / sizeof(InputDeviceInfoStruct), InputDeviceInfoSNESPort1, "gamepad" },
- { "port2", "Port 2/2A", sizeof(InputDeviceInfoSNESPort2) / sizeof(InputDeviceInfoStruct), InputDeviceInfoSNESPort2, "gamepad" },
- { "port3", "Port 2B", sizeof(InputDeviceInfoTapPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoTapPort, "gamepad" },
- { "port4", "Port 2C", sizeof(InputDeviceInfoTapPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoTapPort, "gamepad" },
- { "port5", "Port 2D", sizeof(InputDeviceInfoTapPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoTapPort, "gamepad" },
- { "port6", "Port 1B", sizeof(InputDeviceInfoTapPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoTapPort, "gamepad" },
- { "port7", "Port 1C", sizeof(InputDeviceInfoTapPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoTapPort, "gamepad" },
- { "port8", "Port 1D", sizeof(InputDeviceInfoTapPort) / sizeof(InputDeviceInfoStruct), InputDeviceInfoTapPort, "gamepad" },
-};
-
-static InputInfoStruct SNESInputInfo =
-{
- sizeof(PortInfo) / sizeof(InputPortInfoStruct),
- PortInfo
+ { "port1", "Port 1/1A", InputDeviceInfoSNESPort1, "gamepad" },
+ { "port2", "Port 2/2A", InputDeviceInfoSNESPort2, "gamepad" },
+ { "port3", "Port 2B", InputDeviceInfoTapPort, "gamepad" },
+ { "port4", "Port 2C", InputDeviceInfoTapPort, "gamepad" },
+ { "port5", "Port 2D", InputDeviceInfoTapPort, "gamepad" },
+ { "port6", "Port 1B", InputDeviceInfoTapPort, "gamepad" },
+ { "port7", "Port 1C", InputDeviceInfoTapPort, "gamepad" },
+ { "port8", "Port 1D", InputDeviceInfoTapPort, "gamepad" },
 };
 
 static void InstallReadPatch(uint32 address, uint8 value, int compare)
@@ -1637,7 +1540,7 @@ MDFNGI EmulatedSNES =
  KnownExtensions,
  MODPRIO_INTERNAL_HIGH,
  NULL,						// Debugger
- &SNESInputInfo,
+ PortInfo,
  Load,
  TestMagic,
  NULL,
@@ -1647,6 +1550,10 @@ MDFNGI EmulatedSNES =
  NULL,	// Layer names, null-delimited
  NULL,
  NULL,
+
+ CPInfo,
+ 1 << 0,
+
  InstallReadPatch,
  RemoveReadPatches,
  NULL, //MemRead,
@@ -1654,7 +1561,9 @@ MDFNGI EmulatedSNES =
  true,
  StateAction,
  Emulate,
+ NULL,
  SetInput,
+ NULL,
  DoSimpleCommand,
  SNESSettings,
  0,

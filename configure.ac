@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.36.5'
-MEDNAFEN_VERSION_NUMERIC=0x000936
+MEDNAFEN_VERSION='0.9.37-UNSTABLE'
+MEDNAFEN_VERSION_NUMERIC=0x000937
 
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
@@ -22,6 +22,7 @@ AM_PROG_CC_C_O
 AC_PROG_CXX
 AC_PROG_CXXCPP
 AC_LANG_CPLUSPLUS
+AX_CXX_COMPILE_STDCXX_11([ext], [mandatory])
 AM_PROG_LIBTOOL
 AC_PROG_INSTALL
 
@@ -29,6 +30,8 @@ gl_VISIBILITY
 
 AC_SYS_LARGEFILE
 AC_FUNC_FSEEKO
+
+AM_CONDITIONAL(CROSS_COMPILING, [test x$cross_compiling != xno])
 
 # sizeof tests need to come after largefile support macros
 
@@ -46,7 +49,7 @@ AC_CHECK_SIZEOF(size_t)
 AC_CHECK_SIZEOF(ptrdiff_t)
 AC_CHECK_SIZEOF(off_t)
 AC_C_CONST
-AC_CHECK_FUNCS(memcmp memcpy memmove memset mmap munmap madvise signal sigaction fork pipe dup2 fcntl getenv putenv setenv gettimeofday getpwuid getuid nanosleep usleep strerror strerror_r ftello fopen64 fseeko64 ftello64 fstat64)
+AC_CHECK_FUNCS(memcmp memcpy memmove memset mmap munmap madvise signal sigaction fork pipe dup2 fcntl getenv putenv setenv gettimeofday getpwuid getuid nanosleep usleep strerror strerror_r ftello fopen64 fseeko64 ftello64 fstat64 ftruncate64 __mingw_get_crt_info)
 AC_CHECK_HEADERS(fcntl.h)
 AC_CHECK_HEADERS(stdint.h inttypes.h)
 AC_FUNC_MKDIR
@@ -75,8 +78,6 @@ dnl Check for zlib
 AC_CHECK_LIB([z], [zlibVersion],[], AC_MSG_ERROR([*** zlib not found!]))
 LIBS="$LIBS -lz"
 
-dnl -fno-unit-at-a-time
-
 OPTIMIZER_FLAGS=""
 
 dnl -ffast-math removed January 12, 2013.  Don't re-add it, nor any of its sub-options(ESPECIALLY not -funsafe-math-optimizations),
@@ -84,21 +85,20 @@ dnl it messes up certain code(NES resampler, for example) under certain conditio
 dnl
 dnl In fact, let's explicitly disable it here with -fno-fast-math.
 dnl
+dnl -fomit-frame-pointer is required for some x86 inline assembly to compile.
+dnl
+dnl November 28, 2014: Use -fwrapv unconditionally instead of -fno-strict-overflow, -fno-strict-overflow is buggy
+dnl and does not work as documented/implied.
+dnl
 AX_CFLAGS_GCC_OPTION([-fno-fast-math], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-unsafe-math-optimizations], OPTIMIZER_FLAGS)
-
 AX_CFLAGS_GCC_OPTION([-fno-aggressive-loop-optimizations], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fomit-frame-pointer], OPTIMIZER_FLAGS)
-AX_CFLAGS_GCC_OPTION([-finline-limit=6000], OPTIMIZER_FLAGS)
-AX_CFLAGS_GCC_OPTION([--param large-function-growth=800], OPTIMIZER_FLAGS)
-AX_CFLAGS_GCC_OPTION([--param inline-unit-growth=175], OPTIMIZER_FLAGS)
-AX_CFLAGS_GCC_OPTION([--param max-inline-insns-single=10000], OPTIMIZER_FLAGS)
-AX_NO_STRICT_OVERFLOW
+AX_CFLAGS_GCC_OPTION([-fwrapv], OPTIMIZER_FLAGS)
 
 
 WARNING_FLAGS=""
 AX_CFLAGS_GCC_OPTION([-Wall], WARNING_FLAGS)
-AX_CFLAGS_GCC_OPTION([-Winline], WARNING_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wshadow], WARNING_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wempty-body], WARNING_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wignored-qualifiers], WARNING_FLAGS)
@@ -113,9 +113,6 @@ AX_CFLAGS_GCC_OPTION([-Wno-unused], SNES_EXTRA_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wno-inline], SNES_EXTRA_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wno-shadow], SNES_EXTRA_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wno-sign-compare], SNES_EXTRA_FLAGS)
-AX_CFLAGS_GCC_OPTION([-Wno-inline], SNES_EXTRA_FLAGS)
-AX_CFLAGS_GCC_OPTION([-Wno-ignored-qualifiers], SNES_EXTRA_FLAGS)
-AX_CFLAGS_GCC_OPTION([-Wno-inline], SNES_EXTRA_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wno-uninitialized], SNES_EXTRA_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wno-parentheses], SNES_EXTRA_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wno-switch], SNES_EXTRA_FLAGS)
@@ -124,10 +121,6 @@ AC_SUBST(SNES_EXTRA_CXXFLAGS)
 #
 # End snes flags
 # -----------------------------------
-
-GBA_EXTRA_FLAGS=""
-AX_CFLAGS_GCC_OPTION([-fno-unit-at-a-time], GBA_EXTRA_FLAGS)
-AC_SUBST(GBA_EXTRA_FLAGS)
 
 MDFN_COMPAT_FLAGS=""
 AX_CFLAGS_GCC_OPTION([-fsigned-char], MDFN_COMPAT_FLAGS)
@@ -395,22 +388,21 @@ NEED_SDL=true
 
 if expr x"$target" : 'x.*-mingw*' > /dev/null; then
 	AC_CHECK_TOOL([WINDRES], [windres])
-        AC_CHECK_HEADER([dsound.h],HAVE_DIRECTSOUND=true, HAVE_DIRECTSOUND=false)
-        AC_CHECK_HEADER([audioclient.h],HAVE_WASAPI=true, HAVE_WASAPI=false)
 
-        if $HAVE_DIRECTSOUND
-        then
-                AM_CONDITIONAL(HAVE_DIRECTSOUND,true)
-                AC_DEFINE([HAVE_DIRECTSOUND], [1], [Define if we are compiling with DirectSound support.])
-                LIBS="-ldxguid -lwinmm -ldsound $LIBS"
-        fi
+	if test x$target_cpu != xx86_64; then
+		# Enable larger address space support(for the 32-bit build).
+		LDFLAGS="$LDFLAGS -Wl,--large-address-aware"
+	fi
 
-        if $HAVE_WASAPI
-        then
-                AM_CONDITIONAL(HAVE_WASAPI,true)
-                AC_DEFINE([HAVE_WASAPI], [1], [Define if we are compiling with WASAPI support.])
-		LIBS="-lole32 $LIBS"
-        fi
+	# Always build with DirectSound support.
+	AM_CONDITIONAL(HAVE_DIRECTSOUND,true)
+	AC_DEFINE([HAVE_DIRECTSOUND], [1], [Define if we are compiling with DirectSound support.])
+	LIBS="-ldxguid -lwinmm -ldsound $LIBS"
+
+	# Always build with WASAPI support.
+	AM_CONDITIONAL(HAVE_WASAPI,true)
+	AC_DEFINE([HAVE_WASAPI], [1], [Define if we are compiling with WASAPI support.])
+	LIBS="-lole32 $LIBS"
 
         AC_DEFINE([PSS_STYLE],[2], [Defines the filesystem path-separator type.])
 	AC_DEFINE([WIN32], [1], [Define if we are compiling for Win32.])
@@ -495,7 +487,7 @@ dnl
 AC_SEARCH_LIBS([gethostbyname], [nsl])
 AC_SEARCH_LIBS([socket], [socket])
 
-AC_CHECK_FUNCS(socket bind listen connect accept send recv close gethostbyname gethostbyaddr getaddrinfo freeaddrinfo gai_strerror select getsockopt setsockopt, [], 
+AC_CHECK_FUNCS(socket bind listen connect accept send recv close gethostbyname gethostbyaddr getaddrinfo freeaddrinfo gai_strerror select poll getsockopt setsockopt, [], 
 	[HAVE_POSIX_SOCKETS=no])
 
 if test x$HAVE_POSIX_SOCKETS = xyes; then
@@ -591,4 +583,4 @@ LIBS="$SNDFILE_LIBS $LIBCDIO_LIBS $LIBS"
 CPPFLAGS="$LIBCDIO_CFLAGS $SNDFILE_CFLAGS $CPPFLAGS"
 
 dnl Output Makefiles
-AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/cdplay/Makefile src/demo/Makefile src/desa68/Makefile po/Makefile.in  intl/Makefile])
+AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/cdplay/Makefile src/demo/Makefile src/desa68/Makefile src/quicklz/Makefile po/Makefile.in  intl/Makefile])

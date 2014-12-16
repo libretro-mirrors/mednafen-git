@@ -81,7 +81,7 @@ static void Update(void *data)
  }
 }
 
-static int StateActionFC(StateMem *sm, int load, int data_only)
+static void StateActionFC(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -93,7 +93,7 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
   SFARRAY(bdata, 20),
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF", true);
 
  if(load)
  {
@@ -103,8 +103,6 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
    seq = -1;
   }
  }
-
- return(ret);
 }
 
 

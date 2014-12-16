@@ -33,15 +33,6 @@ you're better off at looking at something like <a href="http://www.mess.org">M.E
  </table>
 <?php EndSection(); ?>
 
-
-<?php BeginSection('Game-specific Emulation Hacks'); ?>
- <table border width="100%">
-  <tr><th>Title:</th><th>Description:</th><th>Source code files affected:</th></tr>
-  <tr><td>Metal Slug - 2nd Mission</td><td>Patch to work around lack of one of the side effects of a real BIOS(to be fixed in a future version of Mednafen).</td><td>src/ngp/rom.cpp</td></tr>
-  <tr><td>Puyo Pop</td><td></td><td>src/ngp/rom.cpp</td></tr>
-  </table>
-<?php EndSection(); ?>
-
 <?php PrintSettings(); ?>
 
 <?php EndPage(); ?>

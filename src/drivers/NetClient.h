@@ -1,7 +1,7 @@
 #ifndef __MDFN_DRIVERS_NETCLIENT_H
 #define __MDFN_DRIVERS_NETCLIENT_H
 
-#include "../mednafen.h"
+#include <mednafen/mednafen.h>
 
 class NetClient
 {
@@ -16,8 +16,13 @@ class NetClient
 
  virtual bool IsConnected(void) = 0;
 
- virtual bool CanSend(int32 timeout = 0) = 0;		// Returns 'true' if at least 1 byte can be sent.
- virtual bool CanReceive(int32 timeout = 0) = 0;	// Returns 'true' if at least 1 byte is ready to be read.
+ //
+ // Returns 'true' if Send()/Receive() with len=1 would be non-blocking if Send()/Receive() actually were blocking; i.e. Can*() have select() style semantics.
+ //
+ // May timeout before timeout specified(if a signal interrupts an underlying system call).
+ //
+ virtual bool CanSend(int32 timeout = 0) = 0;
+ virtual bool CanReceive(int32 timeout = 0) = 0;
 
  virtual uint32 Send(const void *data, uint32 len) = 0;		// Non-blocking
  virtual uint32 Receive(void *data, uint32 len) = 0;		// Non-blocking

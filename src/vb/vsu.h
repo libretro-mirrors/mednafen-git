@@ -16,7 +16,7 @@ class VSU
 
  void EndFrame(int32 timestamp);
 
- int StateAction(StateMem *sm, int load, int data_only);
+ void StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
  uint8 PeekWave(const unsigned int which, uint32 Address);
  void PokeWave(const unsigned int which, uint32 Address, uint8 value);

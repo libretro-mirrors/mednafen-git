@@ -57,8 +57,15 @@ Netplay:
 
 	Consider handling a recv() return value of 0 differently.
 
+	Netplay merge type(uint8), merge count(uint8, bits in with some merge types, bytes with others).
+
+	void MDFNI_SetInput(uint32 port, uint32 type);
+	void MDFND_InputSetNotification(uint32 port, uint32 type, uint8* data, uint32 data_len);
+	(...more here...)
 
 Settings:
+	Fix the problem where a bad setting value in the configuration file can't be properly overridden by the command line.
+
 	Quote(and escape) string-type settings in the configuration file.
 
 	Protect settings structures and objects with mutexes(for thread safety when using MDFNI_SetSetting() while the emulator is running)
@@ -76,6 +83,8 @@ Video:
 	screen to jitter/bounce slightly in certain cases in some games(Seiken Densetsu 3 dialogue boxes are a good example).  ALSO, such screens highlight
 	the border color blending issue when OpenGL texture interpolation is enabled.
 	TODO is to fix it, obviously. ;)  
+
+	LineWidths alternative(or extra info) to store sub-pixel x offset and width components.
 
 	Refactor hq2x, scale2x, 2xsai, etc. filtering code into classes based off an abstract base class.
 
@@ -163,8 +172,6 @@ Genesis:
 	Event system in C68K, fix possible problems with excessively long 68K instructions and the Z80 IRQ
 	not being handled.
 
-	Mouse emulation is borked, fix it.
-
 	Implement "Virtua Racing" SVP emulation via code supplied by notaz.
 
 	Look into the problem of some broken sound effects in Mortal Kombat.
@@ -225,8 +232,6 @@ NES:
 
 Safety fopen() replacement for preventing overwriting of files.
 
-smem_seek() offset signedness fix
-
 Reexamine the code for choosing which emulation module to use.  Highest priority to file extension(as long as the extension is unique to a system,
 "bin" is not unique for example), and special magic test functions if that fails.
 
@@ -252,6 +257,8 @@ by use of malicious save states.
 Investigate excessively long pause time after buffer underrun with ALSA and Intel HDA.
 
 Rewrite the cheat interface, and add support for multiple patches per named cheat.
+
+Maybe save cheats immediately after edit(but file locking/atomic replace first).
 
 Movie recording non-overwriting.
 

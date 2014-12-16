@@ -18,7 +18,7 @@
 #include "main.h"
 #include <trio/trio.h>
 #include "prompt.h"
-#include "../string/ConvertUTF.h"
+#include <mednafen/string/ConvertUTF.h>
 
 HappyPrompt::HappyPrompt(void)
 {
@@ -128,12 +128,12 @@ void HappyPrompt::Draw(MDFN_Surface *surface, const MDFN_Rect *rect)
    row[x] = MK_COLOR_A(0x00, 0x00, 0x00, 0xFF);
  }
 
- DrawTextTrans(pixels, surface->pitchinpix << 2, 39 * 6, (UTF8 *)   		    "╭────────────────────────────────────╮", MK_COLOR_A(0xFF,0xFF,0xFF,0xFF), 0, MDFN_FONT_6x13_12x13);
- DrawTextTrans(pixels + 13 * 1 * pitch32, surface->pitchinpix << 2, 39 * 6, (UTF8 *)"│                                    │", MK_COLOR_A(0xFF,0xFF,0xFF,0xFF), 0, MDFN_FONT_6x13_12x13);
- DrawTextTrans(pixels + 13 * 2 * pitch32, surface->pitchinpix << 2, 39 * 6, (UTF8 *)"│                                    │", MK_COLOR_A(0xFF,0xFF,0xFF,0xFF), 0, MDFN_FONT_6x13_12x13);
- DrawTextTrans(pixels + 13 * 3 * pitch32, surface->pitchinpix << 2, 39 * 6, (UTF8 *)"╰────────────────────────────────────╯", MK_COLOR_A(0xFF,0xFF,0xFF,0xFF), 0, MDFN_FONT_6x13_12x13);
+ DrawTextTrans(pixels, surface->pitchinpix << 2, 39 * 6,    		    "╭────────────────────────────────────╮", MK_COLOR_A(0xFF,0xFF,0xFF,0xFF), 0, MDFN_FONT_6x13_12x13);
+ DrawTextTrans(pixels + 13 * 1 * pitch32, surface->pitchinpix << 2, 39 * 6, "│                                    │", MK_COLOR_A(0xFF,0xFF,0xFF,0xFF), 0, MDFN_FONT_6x13_12x13);
+ DrawTextTrans(pixels + 13 * 2 * pitch32, surface->pitchinpix << 2, 39 * 6, "│                                    │", MK_COLOR_A(0xFF,0xFF,0xFF,0xFF), 0, MDFN_FONT_6x13_12x13);
+ DrawTextTrans(pixels + 13 * 3 * pitch32, surface->pitchinpix << 2, 39 * 6, "╰────────────────────────────────────╯", MK_COLOR_A(0xFF,0xFF,0xFF,0xFF), 0, MDFN_FONT_6x13_12x13);
 
- DrawTextTrans(pixels + 13 * 1 * pitch32 + 2 * 6, surface->pitchinpix << 2, (39 - 4) * 6, (UTF8 *)PromptText.c_str(), MK_COLOR_A(0xFF, 0x00, 0xFF, 0xFF), 0, MDFN_FONT_6x13_12x13);
+ DrawTextTrans(pixels + 13 * 1 * pitch32 + 2 * 6, surface->pitchinpix << 2, (39 - 4) * 6, PromptText.c_str(), MK_COLOR_A(0xFF, 0x00, 0xFF, 0xFF), 0, MDFN_FONT_6x13_12x13);
  DrawTextTrans(pixels + (13 * 2 + 2) * pitch32 + 2 * 6, surface->pitchinpix << 2, (39 - 4) * 6, &PromptAnswer[0], MK_COLOR_A(0x00, 0xFF, 0x00, 0xFF), 0, MDFN_FONT_6x13_12x13);
 
  if(SDL_GetTicks() & 0x80)
@@ -143,9 +143,9 @@ void HappyPrompt::Draw(MDFN_Surface *surface, const MDFN_Rect *rect)
   xpos = PromptAnswerOffsets[kb_cursor_pos];
   if(xpos < ((39 - 4) * 6))
   {
-   UTF8 *blinky_thingy = (UTF8*)"▉";
+   const char *blinky_thingy = "▉";
    if(PromptAnswerWidths.size() > kb_cursor_pos && PromptAnswerWidths[kb_cursor_pos] == 12)
-    blinky_thingy = (UTF8*)"▉▉";
+    blinky_thingy = "▉▉";
    DrawTextTrans(pixels + (13 * 2 + 2) * pitch32 + 2 * 6 + xpos, surface->pitchinpix << 2, 9, blinky_thingy, MK_COLOR_A(0x00, 0xFF, 0x00, 0xFF), 0, MDFN_FONT_6x13_12x13);
   }
  }

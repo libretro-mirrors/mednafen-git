@@ -153,7 +153,7 @@ int PCE_Input_Mouse::StateAction(StateMem *sm, int load, int data_only, const ch
  return(ret);
 }
 
-const InputDeviceInputInfoStruct PCE_MouseIDII[0x6] =
+const IDIISG PCE_MouseIDII =
 {
  { "x_axis", "X Axis", -1, IDIT_X_AXIS_REL },
  { "y_axis", "Y Axis", -1, IDIT_Y_AXIS_REL },

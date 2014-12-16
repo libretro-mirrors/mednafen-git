@@ -25,9 +25,12 @@
 #include <mednafen/mempatcher.h>
 #include <mednafen/PSFLoader.h>
 #include <mednafen/player.h>
+#include <mednafen/hash/sha256.h>
 
 #include <stdarg.h>
 #include <ctype.h>
+
+#include <zlib.h>
 
 extern MDFNGI EmulatedPSX;
 
@@ -37,7 +40,25 @@ namespace MDFN_IEN_PSX
 #if PSX_DBGPRINT_ENABLE
 static unsigned psx_dbg_level = 0;
 
-void PSX_DBG(unsigned level, const char *format, ...) throw()
+void PSX_DBG_BIOS_PUTC(uint8 c) noexcept
+{
+ if(psx_dbg_level >= PSX_DBG_BIOS_PRINT)
+ {
+  if(c == 0x1B)
+   return;
+
+  fputc(c, stdout);
+
+  //if(c == '\n')
+  //{
+  // fputc('%', stdout);
+  // fputc(' ', stdout);
+  //}
+  fflush(stdout);
+ }
+}
+
+void PSX_DBG(unsigned level, const char *format, ...) noexcept
 {
  if(psx_dbg_level >= level)
  {
@@ -118,10 +139,10 @@ class PSF1Loader : public PSFLoader
 {
  public:
 
- PSF1Loader(MDFNFILE *fp);
- virtual ~PSF1Loader();
+ PSF1Loader(Stream *fp);
+ virtual ~PSF1Loader() override;
 
- virtual void HandleEXE(const uint8 *data, uint32 len, bool ignore_pcsp = false);
+ virtual void HandleEXE(Stream* fp, bool ignore_pcsp = false) override;
 
  PSFTags tags;
 };
@@ -133,11 +154,67 @@ enum
  REGION_EU = 2,
 };
 
+static const MDFNSetting_EnumList Region_List[] =
+{
+ { "jp", REGION_JP, gettext_noop("Japan") },
+ { "na", REGION_NA, gettext_noop("North America") },
+ { "eu", REGION_EU, gettext_noop("Europe") },
+ { NULL, 0 },
+};
+
+static const struct
+{
+ const char* version;
+ char hwrev;		// Ostensibly, not sure where this information originally came from or if it has any use(considering it doesn't reflect all hardware changes).
+ unsigned region;
+ bool bad;
+ sha256_digest sd;
+} BIOS_DB[] =
+{
+ // 1.0J, 2.2D, 4.1A(W):
+ //  Tolerant with regards to ISO-9660 system-area contents
+ //
+
+ { "1.0J", 'A', REGION_JP, false, "cfc1fc38eb442f6f80781452119e931bcae28100c1c97e7e6c5f2725bbb0f8bb"_sha256 },
+
+ { "1.1J", 'B', REGION_JP, false, "5eb3aee495937558312b83b54323d76a4a015190decd4051214f1b6df06ac34b"_sha256 },
+
+ { "2.0A", 'X', REGION_NA, false, "42e4124be7623e2e28b1db0d8d426539646faee49d74b71166d8ba5bd7c472ed"_sha256 },	// DTL
+ { "2.0E", 'B', REGION_EU, false, "0af2be3468d30b6018b3c3b0d98b8b64347e255e16d874d55f0363648973dbf0"_sha256 },
+
+ { "2.1J", 'B', REGION_JP, false, "6f71ca1e716da761dc53187bd39e00c213f566e55090708fd3e2b4b425c8c989"_sha256 },
+ { "2.1A", 'X', REGION_NA, false, "6ad5521d105a6b86741f1af8da2e6ea1c732d34459940618c70305a105e8ec10"_sha256 },	// DTL
+ { "2.1E", 'B', REGION_EU, false, "1efb0cfc5db8a8751a884c5312e9c6265ca1bc580dc0c2663eb2dea3bde9fcf7"_sha256 },
+
+ { "2.2J", 'B', REGION_JP, false, "0c8359870cbac0ea091f1c87f188cd332dcc709753b91cafd9fd44a4a6188197"_sha256 },
+ { "2.2J", 'B', REGION_JP, true,  "8e0383171e67b33e60d5df6394c58843f3b11c7a0b97f3bfcc4319ac2d1f9d18"_sha256 },	// BAD! ! ! !
+ { "2.2A", 'B', REGION_NA, false, "71af94d1e47a68c11e8fdb9f8368040601514a42a5a399cda48c7d3bff1e99d3"_sha256 },
+ { "2.2E", 'B', REGION_EU, false, "3d06d2c469313c2a2128d24fe2e0c71ff99bc2032be89a829a62337187f500b7"_sha256 },
+ { "2.2D", 'X', REGION_JP, false, "4018749b3698b8694387beebcbabfb48470513066840f9441459ee4c9f0f39bc"_sha256 },	// DTL
+
+ { "3.0J", 'C', REGION_JP, false, "9c0421858e217805f4abe18698afea8d5aa36ff0727eb8484944e00eb5e7eadb"_sha256 },
+ { "3.0A", 'C', REGION_NA, false, "11052b6499e466bbf0a709b1f9cb6834a9418e66680387912451e971cf8a1fef"_sha256 },
+ { "3.0E", 'C', REGION_EU, false, "1faaa18fa820a0225e488d9f086296b8e6c46df739666093987ff7d8fd352c09"_sha256 },
+ { "3.0E", 'C', REGION_EU, true,  "9e1f8fb4fa356a5ac29d7c7209626dcc1b3038c0e5a85b0e99d1db96926647ca"_sha256 },	// BAD! ! ! !
+
+ { "4.0J", 'C', REGION_JP, false, "e900504d1755f021f861b82c8258c5e6658c7b592f800cccd91f5d32ea380d28"_sha256 },
+
+ { "4.1A(W)",'C',REGION_JP,false, "b3aa63cf30c81e0a40641740f4a43e25fda0b21b792fa9aaef60ce1675761479"_sha256 },	// Weird
+ { "4.1A", 'C', REGION_NA, false, "39dcc1a0717036c9b6ac52fefd1ee7a57d3808e8cfbc755879fa685a0a738278"_sha256 },
+ { "4.1E", 'C', REGION_EU, false, "5e84a94818cf5282f4217591fefd88be36b9b174b3cc7cb0bcd75199beb450f1"_sha256 },
+
+ { "4.3J", 'C', REGION_JP, false, "b29b4b5fcddef369bd6640acacda0865e0366fcf7ea54e40b2f1a8178004f89a"_sha256},
+
+ { "4.4E", 'C', REGION_EU, false, "5c0166da24e27deaa82246de8ff0108267fe4bb59f6df0fdec50e05e62448ca4"_sha256 },
+ 
+ { "4.5A", 'C', REGION_NA, false, "aca9cbfa974b933646baad6556a867eca9b81ce65d8af343a7843f7775b9ffc8"_sha256 },
+ { "4.5E", 'C', REGION_EU, false, "42244b0c650821519751b7e77ad1d3222a0125e75586df2b4e84ba693b9809dc"_sha256 },
+};
+
+static sha256_digest BIOS_SHA256;	// SHA-256 hash of the currently-loaded BIOS; used for save state sanity checks.
 static PSF1Loader *psf_loader = NULL;
 static std::vector<CDIF*> *cdifs = NULL;
 static std::vector<const char *> cdifs_scex_ids;
-static bool CD_TrayOpen;
-static int CD_SelectedDisc;     // -1 for no disc
 
 static uint64 Memcard_PrevDC[8];
 static int64 Memcard_SaveDelay[8];
@@ -148,10 +225,10 @@ PS_GPU *GPU = NULL;
 PS_CDC *CDC = NULL;
 FrontIO *FIO = NULL;
 
-static MultiAccessSizeMem<512 * 1024, uint32, false> *BIOSROM = NULL;
-static MultiAccessSizeMem<65536, uint32, false> *PIOMem = NULL;
+static MultiAccessSizeMem<512 * 1024, false> *BIOSROM = NULL;
+static MultiAccessSizeMem<65536, false> *PIOMem = NULL;
 
-MultiAccessSizeMem<2048 * 1024, uint32, false> MainRAM;
+MultiAccessSizeMem<2048 * 1024, false> MainRAM;
 
 static uint32 TextMem_Start;
 static std::vector<uint8> TextMem;
@@ -946,33 +1023,11 @@ uint32 PSX_MemPeek32(uint32 A)
  return MemPeek<uint32, false>(0, A);
 }
 
-// FIXME: Add PSX_Reset() and FrontIO::Reset() so that emulated input devices don't get power-reset on reset-button reset.
-static void PSX_Power(void)
+static void PSX_Reset(bool powering_up)
 {
  PSX_PRNG.ResetState();	// Should occur first!
 
-#if 0
- const uint32 counterer = 262144;
- uint64 averageizer = 0;
- uint32 maximizer = 0;
- uint32 minimizer = ~0U;
- for(int i = 0; i < counterer; i++)
- {
-  uint32 tmp = PSX_GetRandU32(0, 20000);
-  if(tmp < minimizer)
-   minimizer = tmp;
-
-  if(tmp > maximizer)
-   maximizer = tmp;
-
-  averageizer += tmp;
-  printf("%8u\n", tmp);
- }
- printf("Average: %f\nMinimum: %u\nMaximum: %u\n", (double)averageizer / counterer, minimizer, maximizer);
- exit(1);
-#endif
-
- memset(MainRAM.data32, 0, 2048 * 1024);
+ memset(MainRAM.data8, 0, 2048 * 1024);
 
  for(unsigned i = 0; i < 9; i++)
   SysControl.Regs[i] = 0;
@@ -985,7 +1040,7 @@ static void PSX_Power(void)
 
  DMA_Power();
 
- FIO->Power();
+ FIO->Reset(powering_up);
  SIO_Power();
 
  MDEC_Power();
@@ -1031,7 +1086,7 @@ static void Emulate(EmulateSpecStruct *espec)
  SPU->StartFrame(espec->SoundRate, MDFN_GetSettingUI("psx.spu.resamp_quality"));
 
  Running = -1;
- timestamp = CPU->Run(timestamp, psf_loader != NULL);
+ timestamp = CPU->Run(timestamp, psf_loader == NULL && psx_dbg_level >= PSX_DBG_BIOS_PRINT, psf_loader != NULL);
 
  assert(timestamp);
 
@@ -1041,7 +1096,8 @@ static void Emulate(EmulateSpecStruct *espec)
 
  //printf("scanline=%u, st=%u\n", GPU->GetScanlineNum(), timestamp);
 
- espec->SoundBufSize = SPU->EndFrame(espec->SoundBuf);
+ espec->SoundBufSize = SPU->EndFrame(espec->SoundBuf, espec->NeedSoundReverse);
+ espec->NeedSoundReverse = false;
 
  CDC->ResetTS();
  TIMER_ResetTS();
@@ -1083,7 +1139,7 @@ static void Emulate(EmulateSpecStruct *espec)
     {
      char ext[64];
      trio_snprintf(ext, sizeof(ext), "%d.mcr", i);
-     FIO->SaveMemcard(i, MDFN_MakeFName(MDFNMKF_SAV, 0, ext).c_str());
+     FIO->SaveMemcard(i, MDFN_MakeFName(MDFNMKF_SAV, 0, ext));
      Memcard_SaveDelay[i] = -1;
      Memcard_PrevDC[i] = 0;
     }
@@ -1098,75 +1154,14 @@ static void Emulate(EmulateSpecStruct *espec)
  }
 }
 
-static bool TestMagic(MDFNFILE *fp)
+static bool CalcRegion_By_SYSTEMCNF(CDIF *c, unsigned *rr)
 {
- if(PSFLoader::TestMagic(0x01, fp))
-  return(true);
-
- if(fp->size < 0x800)
-  return(false);
-
- if(memcmp(fp->data, "PS-X EXE", 8))
-  return(false);
-
- return(true);
-}
-
-static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
-{
- uint8 buf[2048];
- CDUtility::TOC toc;
- int dt;
-
- (*CDInterfaces)[0]->ReadTOC(&toc);
-
- dt = toc.FindTrackByLBA(4);
- if(dt > 0 && !(toc.tracks[dt].control & 0x4))
-  return(false);
-
- if((*CDInterfaces)[0]->ReadSector(buf, 4, 1) != 0x2)
-  return(false);
-
- if(strncmp((char *)buf + 10, "Licensed  by", strlen("Licensed  by")))
-  return(false);
-
- //if(strncmp((char *)buf + 32, "Sony", 4))
- // return(false);
-
- //for(int i = 0; i < 2048; i++)
- // printf("%d, %02x %c\n", i, buf[i], buf[i]);
- //exit(1);
-
-#if 0
- {
-  uint8 buf[2048 * 7];
-
-  if((*cdifs)[0]->ReadSector(buf, 5, 7) == 0x2)
-  {
-   printf("CRC32: 0x%08x\n", (uint32)crc32(0, &buf[0], 0x3278));
-  }
- }
-#endif
-
- return(true);
-}
-
-static const char *CalcDiscSCEx_BySYSTEMCNF(CDIF *c, unsigned *rr)
-{
- const char *ret = NULL;
- Stream *fp = NULL;
- CDUtility::TOC toc;
-
- //(*CDInterfaces)[disc]->ReadTOC(&toc);
-
- //if(toc.first_track > 1 || toc.
-
  try
  {
   uint8 pvd[2048];
   unsigned pvd_search_count = 0;
+  std::unique_ptr<Stream> fp(c->MakeStream(0, ~0U));
 
-  fp = c->MakeStream(0, ~0U);
   fp->seek(0x8000, SEEK_SET);
 
   do
@@ -1191,7 +1186,7 @@ static const char *CalcDiscSCEx_BySYSTEMCNF(CDIF *c, unsigned *rr)
 
   fp->seek((int64)rdel * 2048, SEEK_SET);
   //printf("%08x, %08x\n", rdel * 2048, rdel_len);
-  while(fp->tell() < (((int64)rdel * 2048) + rdel_len))
+  while(fp->tell() < (((uint64)rdel * 2048) + rdel_len))
   {
    uint8 len_dr = fp->get_u8();
    uint8 dr[256 + 1];
@@ -1238,29 +1233,20 @@ static const char *CalcDiscSCEx_BySYSTEMCNF(CDIF *c, unsigned *rr)
       {
        switch(bootpos[2])
        {
-	case 'E': if(rr)
-		   *rr = REGION_EU;
-		  ret = "SCEE";
-		  goto Breakout;
+	case 'E': *rr = REGION_EU;
+	          return(true);
 
-	case 'U': if(rr)
-		   *rr = REGION_NA;
-		  ret = "SCEA";
-		  goto Breakout;
+	case 'U': *rr = REGION_NA;
+		  return(true);
 
 	case 'K':	// Korea?
 	case 'B':
-	case 'P': if(rr)
-		   *rr = REGION_JP;
-		  ret = "SCEI";
-		  goto Breakout;
+	case 'P': *rr = REGION_JP;
+		  return(true);
        }
       }
      }
     }
-  
-    //puts((char*)fb);
-    //puts("ASOFKOASDFKO");
    }
   }
  }
@@ -1273,105 +1259,230 @@ static const char *CalcDiscSCEx_BySYSTEMCNF(CDIF *c, unsigned *rr)
 
  }
 
- Breakout:
- if(fp != NULL)
- {
-  delete fp;
-  fp = NULL;
- }
-
- return(ret);
+ return(false);
 }
 
-static unsigned CalcDiscSCEx(void)
+static bool CalcRegion_By_SA(const uint8 buf[2048 * 8], unsigned* region)
 {
- const char *prev_valid_id = NULL;
- unsigned ret_region = MDFN_GetSettingI("psx.region_default");
+	uint8 fbuf[2048 + 1];
+	unsigned ipos, opos;
 
- cdifs_scex_ids.clear();
+	memset(fbuf, 0, sizeof(fbuf));
 
-if(cdifs)
- for(unsigned i = 0; i < cdifs->size(); i++)
- {
-  const char *id = NULL;
-  uint8 buf[2048];
-  uint8 fbuf[2048 + 1];
-  unsigned ipos, opos;
+	for(ipos = 0, opos = 0; ipos < 0x48; ipos++)
+	{
+	 if(buf[ipos] > 0x20 && buf[ipos] < 0x80)
+	 {
+	  fbuf[opos++] = tolower(buf[ipos]);
+	 }
+	}
+
+	fbuf[opos++] = 0;
+
+	PSX_DBG(PSX_DBG_SPARSE, "License string: %s", (char *)fbuf);
+
+	if(strstr((char *)fbuf, "licensedby") != NULL)
+	{
+	 if(strstr((char *)fbuf, "america") != NULL)
+	 {
+          *region = REGION_NA;
+          return(true);
+         }
+         else if(strstr((char *)fbuf, "europe") != NULL)
+         {
+          *region = REGION_EU;
+	  return(true);
+         }
+         else if(strstr((char *)fbuf, "japan") != NULL)
+         {
+          *region = REGION_JP;
+          return(true);
+         }
+         else if(strstr((char *)fbuf, "sonycomputerentertainmentinc.") != NULL)
+         {
+          *region = REGION_JP;
+          return(true);
+         }
+        }
+
+	return(false);
+}
 
 
-  id = CalcDiscSCEx_BySYSTEMCNF((*cdifs)[i], (i == 0) ? &ret_region : NULL);
-
-  memset(fbuf, 0, sizeof(fbuf));
-
-  if(id == NULL && (*cdifs)[i]->ReadSector(buf, 4, 1) == 0x2)
+//
+// Returns true if constraint applied(*region changed), false otherwise.
+//
+static bool ConstrainRegion_By_SA(const uint8 buf[2048 * 8], unsigned* region)
+{
+  //
+  // If we're going with Japanese region,
+  // make sure the licensed-by string is correct(Japanese BIOS is kinda strict).
+  //
+  if(*region == REGION_JP)
   {
-   for(ipos = 0, opos = 0; ipos < 0x48; ipos++)
-   {
-    if(buf[ipos] > 0x20 && buf[ipos] < 0x80)
+    const char tv[2][0x41] = {
+			      { 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 76, 105, 99, 101, 110, 115, 
+			        101, 100, 32, 32, 98, 121, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 
+			         83, 111, 110, 121, 32, 67, 111, 109, 112, 117, 116, 101, 114, 32, 69, 110, 
+			        116, 101, 114, 116, 97, 105, 110, 109, 101, 110, 116, 32, 73, 110, 99, 46, 
+			        0
+			      },
+			      { 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 76, 105, 99, 101, 110, 115, 
+			        101, 100, 32, 32, 98, 121, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 
+			         83, 111, 110, 121, 32, 67, 111, 109, 112, 117, 116, 101, 114, 32, 69, 110, 
+			        116, 101, 114, 116, 97, 105, 110, 109, 101, 110, 116, 32, 73, 110, 99, 46, 
+			        10
+			      },
+			    };  
+    bool jp_incompatible = false;
+
+    if(memcmp(&buf[0], &tv[0][0], 0x41) && memcmp(&buf[0], &tv[1][0], 0x41))
+     jp_incompatible = true;
+
+    if(crc32(0, &buf[0x800], 0x3278) != 0x0069c087)
+     jp_incompatible = true;
+
+    if(jp_incompatible)
     {
-     fbuf[opos++] = tolower(buf[ipos]);
+     //
+     // Doesn't match, so default to most similar region, NA.
+     //
+     *region = REGION_NA;
+     return(true);
     }
    }
 
-   fbuf[opos++] = 0;
+ return(false);
+}
 
-   PSX_DBG(PSX_DBG_SPARSE, "License string: %s", (char *)fbuf);
+static const char* Region_To_SCEx(const unsigned region)
+{
+ switch(region)
+ {
+       default:
+	  abort();
 
-   if(strstr((char *)fbuf, "licensedby") != NULL)
-   {
-    if(strstr((char *)fbuf, "america") != NULL)
-    {
-     id = "SCEA";
-     if(!i)
-      ret_region = REGION_NA;
-    }
-    else if(strstr((char *)fbuf, "europe") != NULL)
-    {
-     id = "SCEE";
-     if(!i)
-      ret_region = REGION_EU;
-    }
-    else if(strstr((char *)fbuf, "japan") != NULL)
-    {
-     id = "SCEI";	// ?
-     if(!i)
-      ret_region = REGION_JP;
-    }
-    else if(strstr((char *)fbuf, "sonycomputerentertainmentinc.") != NULL)
-    {
-     id = "SCEI";
-     if(!i)
-      ret_region = REGION_JP;
-    }
-    else	// Failure case
-    {
-     if(prev_valid_id != NULL)
-      id = prev_valid_id;
-     else
-     {
-      switch(ret_region)	// Less than correct, but meh, what can we do.
-      {
        case REGION_JP:
-	id = "SCEI";
-	break;
+	  return("SCEI");
 
        case REGION_NA:
-	id = "SCEA";
-	break;
+	  return("SCEA");
 
        case REGION_EU:
-	id = "SCEE";
-	break;
-      }
+	  return("SCEE");
+ }
+}
+
+static bool TestMagic(MDFNFILE *fp)
+{
+ if(PSFLoader::TestMagic(0x01, fp->stream()))
+  return(true);
+
+ fp->rewind();
+
+ uint8 exe_header[0x800];
+ if(fp->read(exe_header, 0x800, false) == 0x800 && !memcmp(exe_header, "PS-X EXE", 8))
+  return true;
+
+ return false;
+}
+
+static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
+{
+ uint8 buf[2048 * 8];
+ CDUtility::TOC toc;
+ int dt;
+
+ (*CDInterfaces)[0]->ReadTOC(&toc);
+
+ dt = toc.FindTrackByLBA(4);
+ if(dt > 0 && !(toc.tracks[dt].control & 0x4))
+  return(false);
+
+ if((*CDInterfaces)[0]->ReadSector(buf, 4, 8) != 0x2)
+  return(false);
+
+ if(strncmp((char *)buf + 10, "Licensed  by", strlen("Licensed  by")) && crc32(0, &buf[0x800], 0x3278) != 0x0069c087)
+  return(false);
+
+ return(true);
+}
+
+
+static unsigned CalcDiscSCEx(void)
+{
+ const unsigned region_default = MDFN_GetSettingI("psx.region_default");
+ bool found_ps1_disc = false;
+ bool did_constraint = false;
+ unsigned ret_region = region_default;
+ unsigned region = region_default;
+
+ cdifs_scex_ids.clear();
+
+ for(unsigned i = 0; i < (cdifs ? cdifs->size() : 0); i++)
+ {
+  uint8 buf[2048 * 8];
+  bool is_ps1_disc = true;
+
+  //
+  // Read the PS1 system area.
+  //
+  if((*cdifs)[i]->ReadSector(buf, 4, 8) == 0x2)
+  {
+   if(!CalcRegion_By_SYSTEMCNF((*cdifs)[i], &region))
+   {
+    if(!CalcRegion_By_SA(buf, &region))
+    {
+     if(strncmp((char *)buf + 10, "Licensed  by", strlen("Licensed  by")) && crc32(0, &buf[0x800], 0x3278) != 0x0069c087)
+     {
+      //
+      // Last-ditch effort before deciding the disc isn't a PS1 disc.
+      //
+      uint8 pvd[2048];
+
+      if((*cdifs)[i]->ReadSector(pvd, 16, 1) != 0x2 || memcmp(&pvd[0], "\x01" "CD001", 6) || memcmp(&pvd[8], "PLAYSTATION", 11))
+       is_ps1_disc = false;
      }
     }
    }
   }
+  else
+   is_ps1_disc = false;
 
-  if(id != NULL)
-   prev_valid_id = id;
+  //
+  // If PS1 disc, apply any constraints and change the region as necessary(e.g. Japanese PS1 BIOS is strict about the structure of the system area);
+  // especially necessary for homebrew that failed automatic region detection above.
+  //
+  if(is_ps1_disc)
+  {
+   if(!found_ps1_disc || did_constraint)
+   {
+    if(ConstrainRegion_By_SA(buf, &region))
+     did_constraint = true;
+   }
+  }
 
-  cdifs_scex_ids.push_back(id);
+  //
+  // Determine what sort of PS1 to emulate based on the first PS1 disc in the set.
+  // 
+  if(!found_ps1_disc)
+   ret_region = region;
+
+  found_ps1_disc |= is_ps1_disc;
+  cdifs_scex_ids.push_back(is_ps1_disc ? Region_To_SCEx(region) : NULL);
+ }
+
+ if(cdifs_scex_ids.size())
+ {
+  MDFN_printf(_("Emulated Disc SCEx IDs:\n"));
+  {
+   MDFN_AutoIndent aind(1);
+
+   for(size_t x = 0; x < cdifs_scex_ids.size(); x++)
+   {
+    MDFN_printf(_("Disc %zu: %s\n"), x + 1, (cdifs_scex_ids[x] ? cdifs_scex_ids[x] : _("(Not recognized as a PS1 disc)")));
+   }
+  }
  }
 
  return ret_region;
@@ -1380,34 +1491,28 @@ if(cdifs)
 static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemcards = true, const bool WantPIOMem = false)
 {
  unsigned region;
- bool emulate_memcard[8];
- bool emulate_multitap[2];
  int sls, sle;
 
 #if PSX_DBGPRINT_ENABLE
  psx_dbg_level = MDFN_GetSettingUI("psx.dbg_level");
 #endif
 
- for(unsigned i = 0; i < 8; i++)
- {
-  char buf[64];
-  trio_snprintf(buf, sizeof(buf), "psx.input.port%u.memcard", i + 1);
-  emulate_memcard[i] = EmulateMemcards && MDFN_GetSettingB(buf);
- }
-
- for(unsigned i = 0; i < 2; i++)
- {
-  char buf[64];
-  trio_snprintf(buf, sizeof(buf), "psx.input.pport%u.multitap", i + 1);
-  emulate_multitap[i] = MDFN_GetSettingB(buf);
- }
-
-
  cdifs = CDInterfaces;
  region = CalcDiscSCEx();
 
  if(!MDFN_GetSettingB("psx.region_autodetect"))
   region = MDFN_GetSettingI("psx.region_default");
+
+ MDFN_printf("\n");
+
+ for(auto const* rle = Region_List; rle->string; rle++)
+ {
+  if((unsigned)rle->number == region)
+  {
+   MDFN_printf(_("Region: %s\n"), rle->description);
+   break;
+  }
+ }
 
  sls = MDFN_GetSettingI((region == REGION_EU) ? "psx.slstartp" : "psx.slstart");
  sle = MDFN_GetSettingI((region == REGION_EU) ? "psx.slendp" : "psx.slend");
@@ -1421,60 +1526,71 @@ static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
 
  CPU = new PS_CPU();
  SPU = new PS_SPU();
- GPU = new PS_GPU(region == REGION_EU, sls, sle);
+ GPU = new PS_GPU(region == REGION_EU, sls, sle, MDFN_GetSettingB("psx.h_overscan"));
  CDC = new PS_CDC();
- FIO = new FrontIO(emulate_memcard, emulate_multitap);
+ FIO = new FrontIO();
+
+ MDFN_printf("\n");
+ for(unsigned pp = 0; pp < 2; pp++)
+ {
+  char buf[64];
+  bool sv;
+
+  trio_snprintf(buf, sizeof(buf), "psx.input.pport%u.multitap", pp + 1);
+  sv = MDFN_GetSettingB(buf);
+  FIO->SetMultitap(pp, sv);
+
+  MDFN_printf(_("Multitap on PSX Port %u: %s\n"), pp + 1, sv ? _("Enabled") : _("Disabled"));
+ }
+
  FIO->SetAMCT(MDFN_GetSettingB("psx.input.analog_mode_ct"));
  for(unsigned i = 0; i < 8; i++)
  {
   char buf[64];
+
   trio_snprintf(buf, sizeof(buf), "psx.input.port%u.gun_chairs", i + 1);
   FIO->SetCrosshairsColor(i, MDFN_GetSettingUI(buf));
+
+  {
+   bool mcsv;
+
+   trio_snprintf(buf, sizeof(buf), "psx.input.port%u.memcard", i + 1);
+   mcsv = EmulateMemcards && MDFN_GetSettingB(buf);
+   FIO->SetMemcard(i, mcsv);
+
+   //MDFN_printf(_("Memcard on Virtual Port %u: %s\n"), i + 1, mcsv ? _("Enabled") : _("Disabled"));
+  }
  }
 
  DMA_Init();
 
  GPU->FillVideoParams(&EmulatedPSX);
 
- if(cdifs)
- {
-  CD_TrayOpen = false;
-  CD_SelectedDisc = 0;
- }
- else
- {
-  CD_TrayOpen = true;
-  CD_SelectedDisc = -1;
- }
-
  CDC->SetDisc(true, NULL, NULL);
- CDC->SetDisc(CD_TrayOpen, (CD_SelectedDisc >= 0 && !CD_TrayOpen) ? (*cdifs)[CD_SelectedDisc] : NULL,
-	(CD_SelectedDisc >= 0 && !CD_TrayOpen) ? cdifs_scex_ids[CD_SelectedDisc] : NULL);
 
-
- BIOSROM = new MultiAccessSizeMem<512 * 1024, uint32, false>();
+ BIOSROM = new MultiAccessSizeMem<512 * 1024, false>();
 
  if(WantPIOMem)
-  PIOMem = new MultiAccessSizeMem<65536, uint32, false>();
+  PIOMem = new MultiAccessSizeMem<65536, false>();
  else
   PIOMem = NULL;
 
  for(uint32 ma = 0x00000000; ma < 0x00800000; ma += 2048 * 1024)
  {
-  CPU->SetFastMap(MainRAM.data32, 0x00000000 + ma, 2048 * 1024);
-  CPU->SetFastMap(MainRAM.data32, 0x80000000 + ma, 2048 * 1024);
-  CPU->SetFastMap(MainRAM.data32, 0xA0000000 + ma, 2048 * 1024);
+  CPU->SetFastMap(MainRAM.data8, 0x00000000 + ma, 2048 * 1024);
+  CPU->SetFastMap(MainRAM.data8, 0x80000000 + ma, 2048 * 1024);
+  CPU->SetFastMap(MainRAM.data8, 0xA0000000 + ma, 2048 * 1024);
  }
 
- CPU->SetFastMap(BIOSROM->data32, 0x1FC00000, 512 * 1024);
- CPU->SetFastMap(BIOSROM->data32, 0x9FC00000, 512 * 1024);
- CPU->SetFastMap(BIOSROM->data32, 0xBFC00000, 512 * 1024);
+ CPU->SetFastMap(BIOSROM->data8, 0x1FC00000, 512 * 1024);
+ CPU->SetFastMap(BIOSROM->data8, 0x9FC00000, 512 * 1024);
+ CPU->SetFastMap(BIOSROM->data8, 0xBFC00000, 512 * 1024);
 
  if(PIOMem)
  {
-  CPU->SetFastMap(PIOMem->data32, 0x1F000000, 65536);
-  CPU->SetFastMap(PIOMem->data32, 0x9F000000, 65536);
-  CPU->SetFastMap(PIOMem->data32, 0xBF000000, 65536);
+  CPU->SetFastMap(PIOMem->data8, 0x1F000000, 65536);
+  CPU->SetFastMap(PIOMem->data8, 0x9F000000, 65536);
+  CPU->SetFastMap(PIOMem->data8, 0xBF000000, 65536);
  }
 
 
@@ -1497,17 +1613,44 @@ static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
   abort();
 
  {
-  std::string biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(biospath_sname).c_str());
-  FileStream BIOSFile(biospath.c_str(), FileStream::MODE_READ);
+  std::string biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(biospath_sname));
+  FileStream BIOSFile(biospath, FileStream::MODE_READ);
+
+  if(BIOSFile.size() != 524288)
+   throw MDFN_Error(0, _("BIOS file \"%s\" is of an incorrect size."), biospath.c_str());
 
   BIOSFile.read(BIOSROM->data8, 512 * 1024);
+  BIOS_SHA256 = sha256(BIOSROM->data8, 512 * 1024);
+
+  if(MDFN_GetSettingB("psx.bios_sanity"))
+  {
+   bool bios_recognized = false;
+
+   for(auto const& dbe : BIOS_DB)
+   {
+    if(BIOS_SHA256 == dbe.sd)
+    {
+     if(dbe.bad)
+      throw MDFN_Error(0, _("BIOS file \"%s\" is a known bad dump."), biospath.c_str());
+
+     if(dbe.region != region)
+      throw MDFN_Error(0, _("BIOS file \"%s\" is not the proper BIOS for the region of PS1 being emulated."), biospath.c_str());
+
+     bios_recognized = true;
+     break;
+    }
+   }
+
+   if(!bios_recognized)
+    MDFN_printf(_("Warning: Unrecognized BIOS.\n"));
+  }
  }
 
  for(int i = 0; i < 8; i++)
  {
   char ext[64];
   trio_snprintf(ext, sizeof(ext), "%d.mcr", i);
-  FIO->LoadMemcard(i, MDFN_MakeFName(MDFNMKF_SAV, 0, ext).c_str());
+  FIO->LoadMemcard(i, MDFN_MakeFName(MDFNMKF_SAV, 0, ext));
  }
 
  for(int i = 0; i < 8; i++)
@@ -1521,23 +1664,23 @@ static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
  DBG_Init();
  #endif
 
- PSX_Power();
+ PSX_Reset(true);
 }
 
-static void LoadEXE(const uint8 *data, const uint32 size, bool ignore_pcsp = false)
+static void LoadEXE(Stream* fp, bool ignore_pcsp = false)
 {
+ uint8 raw_header[0x800];
  uint32 PC;
  uint32 SP;
  uint32 TextStart;
  uint32 TextSize;
 
- if(size < 0x800)
-  throw(MDFN_Error(0, "PS-EXE is too small."));
+ fp->read(raw_header, sizeof(raw_header));
 
- PC = MDFN_de32lsb(&data[0x10]);
- SP = MDFN_de32lsb(&data[0x30]);
- TextStart = MDFN_de32lsb(&data[0x18]);
- TextSize = MDFN_de32lsb(&data[0x1C]);
+ PC = MDFN_de32lsb(&raw_header[0x10]);
+ SP = MDFN_de32lsb(&raw_header[0x30]);
+ TextStart = MDFN_de32lsb(&raw_header[0x18]);
+ TextSize = MDFN_de32lsb(&raw_header[0x1C]);
 
  if(ignore_pcsp)
   MDFN_printf("TextStart=0x%08x\nTextSize=0x%08x\n", TextStart, TextSize);
@@ -1551,11 +1694,11 @@ static void LoadEXE(const uint8 *data, const uint32 size, bool ignore_pcsp = fal
   throw(MDFN_Error(0, "Text section too large"));
  }
 
- if(TextSize > (size - 0x800))
-  throw(MDFN_Error(0, "Text section recorded size is larger than data available in file.  Header=0x%08x, Available=0x%08x", TextSize, size - 0x800));
+ //if(TextSize > (size - 0x800))
+ // throw(MDFN_Error(0, "Text section recorded size is larger than data available in file.  Header=0x%08x, Available=0x%08x", TextSize, size - 0x800));
 
- if(TextSize < (size - 0x800))
-  throw(MDFN_Error(0, "Text section recorded size is smaller than data available in file.  Header=0x%08x, Available=0x%08x", TextSize, size - 0x800));
+ //if(TextSize < (size - 0x800))
+ // throw(MDFN_Error(0, "Text section recorded size is smaller than data available in file.  Header=0x%08x, Available=0x%08x", TextSize, size - 0x800));
 
  if(!TextMem.size())
  {
@@ -1578,8 +1721,14 @@ static void LoadEXE(const uint8 *data, const uint32 size, bool ignore_pcsp = fal
  if(TextMem.size() < (TextStart - TextMem_Start + TextSize))
   TextMem.resize(TextStart - TextMem_Start + TextSize);
 
- memcpy(&TextMem[TextStart - TextMem_Start], data + 0x800, TextSize);
+ fp->read(&TextMem[TextStart - TextMem_Start], TextSize);
 
+ {
+  uint64 extra_data = fp->read_discard();
+
+  if(extra_data > 0)
+   throw MDFN_Error(0, _("0x%08llx bytes of extra data after EXE text section."), (unsigned long long)extra_data);
+ }
 
  //
  //
@@ -1697,7 +1846,7 @@ static void LoadEXE(const uint8 *data, const uint32 size, bool ignore_pcsp = fal
  po += 4;
 }
 
-PSF1Loader::PSF1Loader(MDFNFILE *fp)
+PSF1Loader::PSF1Loader(Stream *fp)
 {
  tags = Load(0x01, 2033664, fp);
 }
@@ -1707,34 +1856,51 @@ PSF1Loader::~PSF1Loader()
 
 }
 
-void PSF1Loader::HandleEXE(const uint8 *data, uint32 size, bool ignore_pcsp)
+void PSF1Loader::HandleEXE(Stream* fp, bool ignore_pcsp)
 {
- LoadEXE(data, size, ignore_pcsp);
+ LoadEXE(fp, ignore_pcsp);
 }
 
 static void Cleanup(void);
-static int Load(MDFNFILE *fp)
+static void Load(MDFNFILE *fp)
 {
  try
  {
-  const bool IsPSF = PSFLoader::TestMagic(0x01, fp);
+  const bool IsPSF = PSFLoader::TestMagic(0x01, fp->stream());
 
   if(!TestMagic(fp))
    throw MDFN_Error(0, _("File format is unknown to module \"%s\"."), MDFNGameInfo->shortname);
 
+  fp->rewind();
+
 // For testing.
 #if 0
-  #warning "GREMLINS GREMLINS EVERYWHEREE IYEEEEEE"
-  #warning "Seriously, GREMLINS!  Or peanut butter.  Or maybe...DINOSAURS."
+  {
+   #warning "GREMLINS GREMLINS EVERYWHEREE IYEEEEEE"
+   #warning "Seriously, GREMLINS!  Or peanut butter.  Or maybe...DINOSAURS."
 
-  static std::vector<CDIF *> CDInterfaces;
+   RMD_Drive dr;
 
-  //CDInterfaces.push_back(CDIF_Open("/home/sarah-projects/psxdev/tests/cd/adpcm.cue", false, false));
-  //CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Tony Hawk's Pro Skater 2 (USA)/Tony Hawk's Pro Skater 2 (USA).cue", false, false));
-  //CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Jumping Flash! (USA)/Jumping Flash! (USA).cue", false, false));
-  //CDInterfaces.push_back(CDIF_Open("/extra/games/PC-FX/Blue Breaker.cue", false, false));
-  CDInterfaces.push_back(CDIF_Open("/dev/cdrom2", true, false));
-  InitCommon(&CDInterfaces, !IsPSF, true);
+   dr.Name = std::string("Virtual CD Drive");
+   dr.PossibleStates.push_back(RMD_State({"Tray Open", false, false, true}));
+   dr.PossibleStates.push_back(RMD_State({"Tray Closed (Empty)", false, false, false}));
+   dr.PossibleStates.push_back(RMD_State({"Tray Closed", true, true, false}));
+   dr.CompatibleMedia.push_back(0);
+   dr.MediaMtoPDelay = 2000;
+
+   MDFNGameInfo->RMD->Drives.push_back(dr);
+   MDFNGameInfo->RMD->MediaTypes.push_back(RMD_MediaType({"CD"}));
+   MDFNGameInfo->RMD->Media.push_back(RMD_Media({"Test CD", 0}));
+
+   static std::vector<CDIF *> CDInterfaces;
+
+   //CDInterfaces.push_back(CDIF_Open("/home/sarah-projects/psxdev/tests/cd/adpcm.cue", false, false));
+   CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Tony Hawk's Pro Skater 2 (USA)/Tony Hawk's Pro Skater 2 (USA).cue", false, false));
+   //CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Jumping Flash! (USA)/Jumping Flash! (USA).cue", false, false));
+   //CDInterfaces.push_back(CDIF_Open("/extra/games/PC-FX/Blue Breaker.cue", false, false));
+   //CDInterfaces.push_back(CDIF_Open("/dev/cdrom2", true, false));
+   InitCommon(&CDInterfaces, !IsPSF, true);
+  }
 #else
   InitCommon(NULL, !IsPSF, true);
 #endif
@@ -1743,7 +1909,7 @@ static int Load(MDFNFILE *fp)
 
   if(IsPSF)
   {
-   psf_loader = new PSF1Loader(fp);
+   psf_loader = new PSF1Loader(fp->stream());
 
    std::vector<std::string> SongNames;
 
@@ -1752,15 +1918,13 @@ static int Load(MDFNFILE *fp)
    Player_Init(1, psf_loader->tags.GetTag("game"), psf_loader->tags.GetTag("artist"), psf_loader->tags.GetTag("copyright"), SongNames);
   }
   else
-   LoadEXE(fp->data, fp->size);
+   LoadEXE(fp->stream());
  }
  catch(std::exception &e)
  {
   Cleanup();
   throw;
  }
-
- return(1);
 }
 
 static void LoadCD(std::vector<CDIF *> *CDInterfaces)
@@ -1768,8 +1932,6 @@ static void LoadCD(std::vector<CDIF *> *CDInterfaces)
  try
  {
   InitCommon(CDInterfaces);
-
-  MDFNGameInfo->GameType = GMT_CDROM;
  }
  catch(std::exception &e)
  {
@@ -1848,7 +2010,7 @@ static void CloseGame(void)
     char ext[64];
     trio_snprintf(ext, sizeof(ext), "%d.mcr", i);
 
-    FIO->SaveMemcard(i, MDFN_MakeFName(MDFNMKF_SAV, 0, ext).c_str());
+    FIO->SaveMemcard(i, MDFN_MakeFName(MDFNMKF_SAV, 0, ext));
    }
    catch(std::exception &e)
    {
@@ -1861,7 +2023,7 @@ static void CloseGame(void)
 }
 
 
-static void SetInput(int port, const char *type, void *ptr)
+static void SetInput(unsigned port, const char *type, uint8 *ptr)
 {
  if(psf_loader)
   FIO->SetInput(port, "none", NULL);
@@ -1869,17 +2031,27 @@ static void SetInput(int port, const char *type, void *ptr)
   FIO->SetInput(port, type, ptr);
 }
 
-static int StateAction(StateMem *sm, int load, int data_only)
+static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
- if(!MDFN_GetSettingB("psx.clobbers_lament"))
+ if(!data_only)
  {
-  return(0);
+  sha256_digest sr_dig = BIOS_SHA256;
+
+  SFORMAT SRDStateRegs[] = 
+  {
+   SFARRAY(sr_dig.data(), sr_dig.size()),
+   SFEND
+  };
+
+  MDFNSS_StateAction(sm, load, data_only, SRDStateRegs, "BIOS_HASH", true);
+
+  if(load && sr_dig != BIOS_SHA256)
+   throw MDFN_Error(0, _("BIOS hash mismatch(save state created under a different BIOS)!"));
  }
+
 
  SFORMAT StateRegs[] =
  {
-  SFVAR(CD_TrayOpen),
-  SFVAR(CD_SelectedDisc),
   SFARRAY(MainRAM.data8, 1024 * 2048),
   SFARRAY32(SysControl.Regs, 9),
 
@@ -1892,105 +2064,60 @@ static int StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
 
- // Call SetDisc() BEFORE we load CDC state, since SetDisc() has emulation side effects.  We might want to clean this up in the future.
- if(load)
- {
-  if(!cdifs || CD_SelectedDisc >= (int)cdifs->size())
-   CD_SelectedDisc = -1;
+ CPU->StateAction(sm, load, data_only);
+ DMA_StateAction(sm, load, data_only);
+ TIMER_StateAction(sm, load, data_only);
+ SIO_StateAction(sm, load, data_only);
 
-  CDC->SetDisc(CD_TrayOpen, (CD_SelectedDisc >= 0 && !CD_TrayOpen) ? (*cdifs)[CD_SelectedDisc] : NULL,
-	(CD_SelectedDisc >= 0 && !CD_TrayOpen) ? cdifs_scex_ids[CD_SelectedDisc] : NULL);
- }
+ CDC->StateAction(sm, load, data_only);
+ MDEC_StateAction(sm, load, data_only);
+ GPU->StateAction(sm, load, data_only);
+ SPU->StateAction(sm, load, data_only);
 
- // TODO: Remember to increment dirty count in memory card state loading routine.
+ FIO->StateAction(sm, load, data_only);
 
- ret &= CPU->StateAction(sm, load, data_only);
- ret &= DMA_StateAction(sm, load, data_only);
- ret &= TIMER_StateAction(sm, load, data_only);
- ret &= SIO_StateAction(sm, load, data_only);
-
- ret &= CDC->StateAction(sm, load, data_only);
- ret &= MDEC_StateAction(sm, load, data_only);
- ret &= GPU->StateAction(sm, load, data_only);
- ret &= SPU->StateAction(sm, load, data_only);
-
- ret &= FIO->StateAction(sm, load, data_only);
-
- ret &= IRQ_StateAction(sm, load, data_only);	// Do it last.
+ IRQ_StateAction(sm, load, data_only);	// Do it last.
 
  if(load)
  {
   ForceEventUpdates(0);	// FIXME to work with debugger step mode.
  }
-
- return(ret);
 }
 
-static void CDInsertEject(void)
+static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
 {
- CD_TrayOpen = !CD_TrayOpen;
+ const RMD_Layout* rmd = EmulatedPSX.RMD;
+ const RMD_Drive* rd = &rmd->Drives[drive_idx];
+ const RMD_State* rs = &rd->PossibleStates[state_idx];
 
- for(unsigned disc = 0; disc < cdifs->size(); disc++)
+ //printf("%d %d %d %d\n", drive_idx, state_idx, media_idx, orientation_idx);
+
+ if(rs->MediaPresent && rs->MediaUsable)
  {
-  if(!(*cdifs)[disc]->Eject(CD_TrayOpen))
-  {
-   MDFN_DispMessage(_("Eject error."));
-   CD_TrayOpen = !CD_TrayOpen;
-  }
- }
+  if(!(*cdifs)[media_idx]->Eject(false))
+   return(false);
 
- if(CD_TrayOpen)
-  MDFN_DispMessage(_("Virtual CD Drive Tray Open"));
+  CDC->SetDisc(false, (*cdifs)[media_idx], cdifs_scex_ids[media_idx]);
+ }
  else
-  MDFN_DispMessage(_("Virtual CD Drive Tray Closed"));
-
- CDC->SetDisc(CD_TrayOpen, (CD_SelectedDisc >= 0 && !CD_TrayOpen) ? (*cdifs)[CD_SelectedDisc] : NULL,
-	(CD_SelectedDisc >= 0 && !CD_TrayOpen) ? cdifs_scex_ids[CD_SelectedDisc] : NULL);
-}
-
-static void CDEject(void)
-{
- if(!CD_TrayOpen)
-  CDInsertEject();
-}
-
-static void CDSelect(void)
-{
- if(cdifs && CD_TrayOpen)
  {
-  CD_SelectedDisc = (CD_SelectedDisc + 1) % (cdifs->size() + 1);
+  if(!(*cdifs)[media_idx]->Eject(rs->MediaCanChange))
+   return(false);
 
-  if((unsigned)CD_SelectedDisc == cdifs->size())
-   CD_SelectedDisc = -1;
-
-  if(CD_SelectedDisc == -1)
-   MDFN_DispMessage(_("Disc absence selected."));
-  else
-   MDFN_DispMessage(_("Disc %d of %d selected."), CD_SelectedDisc + 1, (int)cdifs->size());
+  CDC->SetDisc(rs->MediaCanChange, NULL, NULL);
  }
-}
 
+ return(true);
+}
 
 static void DoSimpleCommand(int cmd)
 {
  switch(cmd)
  {
-  case MDFN_MSC_RESET: PSX_Power(); break;
-  case MDFN_MSC_POWER: PSX_Power(); break;
-
-  case MDFN_MSC_INSERT_DISK:
-                CDInsertEject();
-                break;
-
-  case MDFN_MSC_SELECT_DISK:
-                CDSelect();
-                break;
-
-  case MDFN_MSC_EJECT_DISK:
-                CDEject();
-                break;
+  case MDFN_MSC_RESET: PSX_Reset(false); break;
+  case MDFN_MSC_POWER: PSX_Reset(true); break;
  }
 }
 
@@ -2196,14 +2323,6 @@ static const FileExtensionSpecStruct KnownExtensions[] =
  { NULL, NULL }
 };
 
-static const MDFNSetting_EnumList Region_List[] =
-{
- { "jp", REGION_JP, gettext_noop("Japan") },
- { "na", REGION_NA, gettext_noop("North America") },
- { "eu", REGION_EU, gettext_noop("Europe") },
- { NULL, 0 },
-};
-
 #if 0
 static const MDFNSetting_EnumList MultiTap_List[] =
 {
@@ -2245,9 +2364,11 @@ static MDFNSetting PSXSettings[] =
  { "psx.region_autodetect", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Attempt to auto-detect region of game."), NULL, MDFNST_BOOL, "1" },
  { "psx.region_default", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Default region to use."), gettext_noop("Used if region autodetection fails or is disabled."), MDFNST_ENUM, "jp", NULL, NULL, NULL, NULL, Region_List },
 
- { "psx.bios_jp", MDFNSF_EMU_STATE, gettext_noop("Path to the Japan SCPH-5500 ROM BIOS"), NULL, MDFNST_STRING, "scph5500.bin" },
- { "psx.bios_na", MDFNSF_EMU_STATE, gettext_noop("Path to the North America SCPH-5501 ROM BIOS"), gettext_noop("SHA1 0555c6fae8906f3f09baf5988f00e55f88e9f30b"), MDFNST_STRING, "scph5501.bin" },
- { "psx.bios_eu", MDFNSF_EMU_STATE, gettext_noop("Path to the Europe SCPH-5502 ROM BIOS"), NULL, MDFNST_STRING, "scph5502.bin" },
+ { "psx.bios_jp", MDFNSF_EMU_STATE, gettext_noop("Path to the Japan SCPH-5500/v3.0J ROM BIOS"), gettext_noop("SHA-256 9c0421858e217805f4abe18698afea8d5aa36ff0727eb8484944e00eb5e7eadb"), MDFNST_STRING, "scph5500.bin" },
+ { "psx.bios_na", MDFNSF_EMU_STATE, gettext_noop("Path to the North America SCPH-5501/v3.0A ROM BIOS"), gettext_noop("SHA-256 11052b6499e466bbf0a709b1f9cb6834a9418e66680387912451e971cf8a1fef"), MDFNST_STRING, "scph5501.bin" },
+ { "psx.bios_eu", MDFNSF_EMU_STATE, gettext_noop("Path to the Europe SCPH-5502/v3.0E ROM BIOS"), gettext_noop("SHA-256 1faaa18fa820a0225e488d9f086296b8e6c46df739666093987ff7d8fd352c09"), MDFNST_STRING, "scph5502.bin" },
+
+ { "psx.bios_sanity", MDFNSF_EMU_STATE | MDFNSF_SUPPRESS_DOC, gettext_noop("Enable BIOS ROM image sanity checks."), NULL, MDFNST_BOOL, "1" },
 
  { "psx.spu.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("SPU output resampler quality."),
 	gettext_noop("0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors."), MDFNST_UINT, "5", "0", "10" },
@@ -2256,14 +2377,16 @@ static MDFNSetting PSXSettings[] =
  { "psx.slstart", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in NTSC mode."), NULL, MDFNST_INT, "0", "0", "239" },
  { "psx.slend", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in NTSC mode."), NULL, MDFNST_INT, "239", "0", "239" },
 
- { "psx.slstartp", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in PAL mode."), NULL, MDFNST_INT, "0", "0", "287" },
- { "psx.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in PAL mode."), NULL, MDFNST_INT, "287", "0", "287" },
+ { "psx.slstartp", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in PAL mode."), NULL, MDFNST_INT, "0", "0", "287" },	// 14
+ { "psx.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in PAL mode."), NULL, MDFNST_INT, "287", "0", "287" },	// 275
+
+ { "psx.h_overscan", MDFNSF_NOFLAGS, gettext_noop("Show horizontal overscan area."), NULL, MDFNST_BOOL, "1" },
 
 #if PSX_DBGPRINT_ENABLE
  { "psx.dbg_level", MDFNSF_NOFLAGS, gettext_noop("Debug printf verbosity level."), NULL, MDFNST_UINT, "0", "0", "4" },
 #endif
 
- { "psx.clobbers_lament", MDFNSF_NOFLAGS, gettext_noop("Enable experimental save state functionality."), gettext_noop("Save states will destroy your saved game/memory card data if you're careless, and that will make clobber sad.  Poor clobber."), MDFNST_BOOL, "0" },
+ { "psx.clobbers_lament", MDFNSF_NOFLAGS | MDFNSF_SUPPRESS_DOC, gettext_noop("UNUSED"), NULL, MDFNST_BOOL, "0" },
 
  { NULL },
 };
@@ -2282,16 +2405,22 @@ MDFNGI EmulatedPSX =
  #else
  NULL,
  #endif
- &FIO_InputInfo,
+ FIO_PortInfo,
  Load,
  TestMagic,
  LoadCD,
  TestMagicCD,
  CloseGame,
+
  NULL,	//ToggleLayer,
  "GPU\0",	//"Background Scroll\0Foreground Scroll\0Sprites\0",
+
  NULL,
  NULL,
+
+ NULL,
+ 0,
+
  NULL,
  NULL,
  NULL,
@@ -2299,7 +2428,9 @@ MDFNGI EmulatedPSX =
  false,
  StateAction,
  Emulate,
+ NULL,
  SetInput,
+ SetMedia,
  DoSimpleCommand,
  PSXSettings,
  MDFN_MASTERCLOCK_FIXED(33868800),

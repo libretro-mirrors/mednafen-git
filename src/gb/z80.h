@@ -7,7 +7,7 @@ namespace MDFN_IEN_GB
 int GBZ80_RunOp(void);
 void GBZ80_Reset(void);
 void GBZ80_Interrupt(int which);
-int GBZ80_StateAction(StateMem *sm, int load, int data_only);
+void GBZ80_StateAction(StateMem *sm, int load, int data_only);
 
 }
 #endif

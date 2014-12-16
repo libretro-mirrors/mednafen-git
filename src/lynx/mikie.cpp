@@ -1563,7 +1563,7 @@ uint8 CMikie::Peek(uint32 addr)
 }
 
 
-int CMikie::StateAction(StateMem *sm, int load, int data_only)
+void CMikie::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT MikieRegs[] =
  {
@@ -1773,7 +1773,7 @@ int CMikie::StateAction(StateMem *sm, int load, int data_only)
 	SFEND
 	};
 
-	int ret = MDFNSS_StateAction(sm, load, data_only, MikieRegs, "MIKY");
+	MDFNSS_StateAction(sm, load, data_only, MikieRegs, "MIKY");
 
 	if(load)
 	{
@@ -1781,7 +1781,6 @@ int CMikie::StateAction(StateMem *sm, int load, int data_only)
 
 
 	}
-        return ret;
 }
 
 void CMikie::CombobulateSound(uint32 teatime)

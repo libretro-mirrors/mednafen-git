@@ -453,7 +453,7 @@ int GBZ80_RunOp(void)
  return(clockTicks);
 }
 
-int GBZ80_StateAction(StateMem *sm, int load, int data_only)
+void GBZ80_StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -469,14 +469,12 @@ int GBZ80_StateAction(StateMem *sm, int load, int data_only)
   SFVAR(EI_Delayed),
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "CPU");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "CPU");
 
  if(load)
  {
 
  }
-
- return(ret);
 }
 
 }

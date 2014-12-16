@@ -20,9 +20,8 @@
 #include <mednafen/file.h>
 #include <mednafen/general.h>
 #include <mednafen/state.h>
-#include <mednafen/movie.h>
 #include <mednafen/mempatcher.h>
-#include <mednafen/md5.h>
+#include <mednafen/hash/md5.h>
 #include <mednafen/FileStream.h>
 
 #include <string.h>
@@ -45,7 +44,7 @@ static void Cleanup(void) MDFN_COLD;
 static uint32 *gbColorFilter = NULL;
 static uint32 gbMonoColorMap[12 + 1];	// Mono color map(+1 = LCD off color)!
 
-static void gbUpdateSizes(const uint8* in_rom_data, int64 in_rom_size);
+static void LoadROM(MDFNFILE *fp);
 static int32 SoundTS = 0;
 //extern uint16 gbLineMix[160];
 extern union __gblmt
@@ -238,15 +237,13 @@ static const int gbRamSizesMasks[6] = { 0x00000000,
                            0x0000ffff
 };
 
-static uint8 *Custom_GB_ColorMap = NULL;
-static uint8 *Custom_GBC_ColorMap = NULL;
 static MDFN_PaletteEntry PalTest[256];
 
-static bool MatchExists(MDFN_PaletteEntry *pt, unsigned n, uint8 r, uint8 g, uint8 b)
+static bool MatchExists(MDFN_PaletteEntry *pt, unsigned n, const MDFN_PaletteEntry& pe)
 {
  for(unsigned x = 0; x < n; x++)
  {
-  if(pt[x].r == r && pt[x].g == g && pt[x].b == b)
+  if(pt[x].r == pe.r && pt[x].g == pe.g && pt[x].b == pe.b)
    return(true);
  }
  return(false);
@@ -258,7 +255,7 @@ class MDFN_PaletteMapper8
 
  MDFN_PaletteMapper8(MDFN_PaletteEntry *pal);
 
- uint8 FindClose(uint8 r, uint8 g, uint8 b);
+ uint8 FindClose(const MDFN_PaletteEntry& pe);
 
  private:
 
@@ -283,15 +280,15 @@ MDFN_PaletteMapper8::MDFN_PaletteMapper8(MDFN_PaletteEntry *pal)
  }
 }
 
-uint8 MDFN_PaletteMapper8::FindClose(uint8 r, uint8 g, uint8 b)
+uint8 MDFN_PaletteMapper8::FindClose(const MDFN_PaletteEntry& pe)
 {
  int rl, gl, bl;
  int closest = -1;
  int closest_cs = 0x7FFFFFFF;
 
- rl = ccp_to_ccl[r];
- gl = ccp_to_ccl[g];
- bl = ccp_to_ccl[b];
+ rl = ccp_to_ccl[pe.r];
+ gl = ccp_to_ccl[pe.g];
+ bl = ccp_to_ccl[pe.b];
 
  for(unsigned x = 0; x < 256; x++)
  {
@@ -309,8 +306,8 @@ uint8 MDFN_PaletteMapper8::FindClose(uint8 r, uint8 g, uint8 b)
 }
 
 
-static void SetPixelFormat(const MDFN_PixelFormat &format, bool cgb_mode) MDFN_COLD;
-static void SetPixelFormat(const MDFN_PixelFormat &format, bool cgb_mode)
+static void SetPixelFormat(const MDFN_PixelFormat &format, bool cgb_mode, const uint8* CustomColorMap, const uint32 CustomColorMapNE) MDFN_COLD;
+static void SetPixelFormat(const MDFN_PixelFormat &format, bool cgb_mode, const uint8* CustomColorMap, const uint32 CustomColorMapNE)
 {
  if(cgb_mode)
  {
@@ -322,42 +319,16 @@ static void SetPixelFormat(const MDFN_PixelFormat &format, bool cgb_mode)
 
    for(int i = 0; i < 8; i++)
    {
-    PalTest[pti].r = i * 36;
-    PalTest[pti].g = i * 36;
-    PalTest[pti].b = i * 36;
-    pti++;
+    PalTest[pti++] = format.MakePColor(i * 36, i * 36, i * 36);
 
     if(i)
     {
-     PalTest[pti].r = i * 36;
-     PalTest[pti].g = 0;
-     PalTest[pti].b = 0;
-     pti++;
-
-     PalTest[pti].r = 0;
-     PalTest[pti].g = i * 36;
-     PalTest[pti].b = 0;
-     pti++;
-
-     PalTest[pti].r = 0;
-     PalTest[pti].g = 0;
-     PalTest[pti].b = i * 36;
-     pti++;
-
-     PalTest[pti].r = i * 36;
-     PalTest[pti].g = i * 36;
-     PalTest[pti].b = 0;
-     pti++;
-
-     PalTest[pti].r = i * 36;
-     PalTest[pti].g = 0;
-     PalTest[pti].b = i * 36;
-     pti++;
-
-     PalTest[pti].r = 0;
-     PalTest[pti].g = i * 36;
-     PalTest[pti].b = i * 36;
-     pti++;
+     PalTest[pti++] = format.MakePColor(i * 36, 0, 0);
+     PalTest[pti++] = format.MakePColor(0, i * 36, 0);
+     PalTest[pti++] = format.MakePColor(0, 0, i * 36);
+     PalTest[pti++] = format.MakePColor(i * 36, i * 36, 0);
+     PalTest[pti++] = format.MakePColor(i * 36, 0, i * 36);
+     PalTest[pti++] = format.MakePColor(0, i * 36, i * 36);
     }
    }
 
@@ -367,7 +338,7 @@ static void SetPixelFormat(const MDFN_PixelFormat &format, bool cgb_mode)
     {
      for(int b = 0; b < 8; b++)
      {
-      if(MatchExists(PalTest, 256, r * 36, g * 36, b * 36))
+      if(MatchExists(PalTest, 256, format.MakePColor(r * 36, g * 36, b * 36)))
        continue;
 
       if(g == 6 && b == 6 && r == 5)
@@ -393,10 +364,7 @@ static void SetPixelFormat(const MDFN_PixelFormat &format, bool cgb_mode)
 
       SkipStuff:;
 
-      PalTest[pti].r = r * 36;
-      PalTest[pti].g = g * 36;
-      PalTest[pti].b = b * 36;
-      pti++;
+      PalTest[pti++] = format.MakePColor(r * 36, g * 36, b * 36);
 
       if(pti == 256) goto EndThingy;
      }
@@ -423,15 +391,15 @@ static void SetPixelFormat(const MDFN_PixelFormat &format, bool cgb_mode)
      ng /= 31;
      nb /= 31;
 
-     if(Custom_GBC_ColorMap)
+     if(CustomColorMap)
      {
-      nr = Custom_GBC_ColorMap[((b << 10) | (g << 5) | r) * 3 + 0];
-      ng = Custom_GBC_ColorMap[((b << 10) | (g << 5) | r) * 3 + 1];
-      nb = Custom_GBC_ColorMap[((b << 10) | (g << 5) | r) * 3 + 2];
+      nr = CustomColorMap[((b << 10) | (g << 5) | r) * 3 + 0];
+      ng = CustomColorMap[((b << 10) | (g << 5) | r) * 3 + 1];
+      nb = CustomColorMap[((b << 10) | (g << 5) | r) * 3 + 2];
      }
 
      if(format.bpp == 8)
-      gbColorFilter[(b << 10) | (g << 5) | r] = pm8.FindClose(nr, ng, nb);
+      gbColorFilter[(b << 10) | (g << 5) | r] = pm8.FindClose(format.MakePColor(nr, ng, nb));
      else
       gbColorFilter[(b << 10) | (g << 5) | r] = format.MakeColor(nr, ng, nb);
     }
@@ -448,17 +416,22 @@ static void SetPixelFormat(const MDFN_PixelFormat &format, bool cgb_mode)
    g = (3 - (i & 3)) * 48 + 32;
    b = (3 - (i & 3)) * 48 + 32;
 
-   if(Custom_GB_ColorMap)
+   if(CustomColorMap)
    {
-    r = Custom_GB_ColorMap[i * 3 + 0];
-    g = Custom_GB_ColorMap[i * 3 + 1];
-    b = Custom_GB_ColorMap[i * 3 + 2];
+    unsigned ci = i;
+
+    if(CustomColorMapNE == 4)
+     ci %= 4;
+    else if(CustomColorMapNE == 8)
+     ci = (ci & 0x7) | ((ci & 0x8) >> 1);
+
+    r = CustomColorMap[ci * 3 + 0];
+    g = CustomColorMap[ci * 3 + 1];
+    b = CustomColorMap[ci * 3 + 2];
    }
 
    gbMonoColorMap[i] = format.MakeColor(r, g, b);
-   PalTest[i].r = r;
-   PalTest[i].g = g;
-   PalTest[i].b = b;
+   PalTest[i] = format.MakePColor(r, g, b);
   }
 
   gbMonoColorMap[12] = gbMonoColorMap[0];
@@ -466,33 +439,7 @@ static void SetPixelFormat(const MDFN_PixelFormat &format, bool cgb_mode)
  }
 }
 
-static void LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries, bool dmg) MDFN_COLD;
-static void LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries, bool dmg)
-{
- std::string colormap_fn = MDFN_MakeFName(MDFNMKF_PALETTE, 0, syspalname);
-
- if(dmg)
- {
-  assert(num_entries == 12);
- }
-
- MDFN_printf(_("Loading custom palette from \"%s\"...\n"),  colormap_fn.c_str());
- MDFN_indent(1);
-
- try
- {
-  FileStream fp(colormap_fn.c_str(), FileStream::MODE_READ);
-  unsigned num_read;
-
-  *ptr = new uint8[num_entries * 3];
-
-  num_read = fp.read(*ptr, num_entries * 3, false);
-
-  if((!dmg && num_read != (num_entries * 3)) || (dmg && num_read != 4 * 3 && num_read != 8 * 3 && num_read != 12 * 3))
-   throw MDFN_Error(0, _("Custom palette is an incorrect size."));
-
-  if(dmg)
-  {
+#if 0
    if(num_read == 4 * 3)
    {
     for(unsigned i = 4 * 3; i < 12 * 3; i++)
@@ -505,38 +452,7 @@ static void LoadCPalette(const char *syspalname, uint8 **ptr, uint32 num_entries
     for(unsigned i = 8 * 3; i < 12 * 3; i++)
      (*ptr)[i] = (*ptr)[(4 * 3) + (i % (4 * 3))];
    }
-  }
-
-  // Print a warning message about unused trailing data
-  {
-   int64 rs = fp.size();
-
-   if(rs > (num_entries * 3))
-   {
-    MDFN_printf(_("Warning: %lld byte(s) of trailing unused data.\n"), (long long)(rs - (num_entries * 3)));
-   }
-  }
- }
- catch(MDFN_Error &e)
- {
-  MDFN_printf(_("Error: %s\n"), e.what());
-  MDFN_indent(-1);
-
-  if(e.GetErrno() != ENOENT)
-   throw;
-
-  return;
- }
- catch(std::exception &e)
- {
-  MDFN_printf(_("Error: %s\n"), e.what());
-  MDFN_indent(-1);
-  throw;
- }
-
- MDFN_indent(-1);
-}
-
+#endif
 
 static void gbCopyMemory(uint16 d, uint16 s, int count)
 {
@@ -1498,17 +1414,17 @@ static void gbPower(void)
   gbReset();
 }
 
-void gbWriteSaveMBC1(const char * name)
+static void gbWriteSaveMBC1(const std::string& path)
 {
- MDFN_DumpToFile(name, 6, gbRam, gbRamSize);
+ MDFN_DumpToFile(path, gbRam, gbRamSize, true);
 }
 
-void gbWriteSaveMBC2(const char * name)
+static void gbWriteSaveMBC2(const std::string& path)
 {
- MDFN_DumpToFile(name, 6, gbRam, 256 * 2);
+ MDFN_DumpToFile(path, gbRam, 256 * 2, true);
 }
 
-void gbWriteSaveMBC3(const char * name, bool extendedSave)
+static void gbWriteSaveMBC3(const std::string& path, bool extendedSave)
 {
  std::vector<PtrLengthPair> EvilRams;
  uint8 time_buffer[10 * 4 + 8]; // 10 uint32, 1 uint64
@@ -1532,194 +1448,128 @@ void gbWriteSaveMBC3(const char * name, bool extendedSave)
   EvilRams.push_back(PtrLengthPair(time_buffer, sizeof(time_buffer)));
  }  
 
- MDFN_DumpToFile(name, 6, EvilRams);
+ MDFN_DumpToFile(path, EvilRams, true);
 }
 
-void gbWriteSaveMBC5(const char * name)
+static void gbWriteSaveMBC5(const std::string& path)
 {
- MDFN_DumpToFile(name, 6, gbRam, gbRamSize);
+ MDFN_DumpToFile(path, gbRam, gbRamSize, true);
 }
 
-void gbWriteSaveMBC7(const char * name)
+static void gbWriteSaveMBC7(const std::string& path)
 {
- MDFN_DumpToFile(name, 0, gbRam, 256);
+ MDFN_DumpToFile(path, gbRam, 256, true);
 }
 
-bool gbReadSaveMBC1(const char * name)
+static void gbReadSaveMBC1(const std::string& path)
 {
-  gzFile file = gzopen(name, "rb");
+ std::unique_ptr<Stream> file = MDFN_AmbigGZOpenHelper(path, std::vector<size_t>({ (unsigned)gbRamSize }));
 
-  if(file == NULL) {
-    return false;
-  }
-  
-  int read = gzread(file, gbRam, gbRamSize);
-  
-  if(read != gbRamSize) {
-    gzclose(file);
-    return false;
-  }
-  
-  gzclose(file);
-  return true;
+ file->read(gbRam, gbRamSize);
 }
 
-bool gbReadSaveMBC2(const char * name)
+static void gbReadSaveMBC2(const std::string& path)
 {
-  gzFile file = gzopen(name, "rb");
+ std::unique_ptr<Stream> file = MDFN_AmbigGZOpenHelper(path, std::vector<size_t>({ 256 * 2 }));
 
-  if(file == NULL) {
-    return false;
-  }
-
-  int read = gzread(file, gbRam, 256 * 2);
-  if(read != 256 * 2) {
-    gzclose(file);
-    return false;
-  }
-  gzclose(file);
-  return true;
+ file->read(gbRam, 256 * 2);
 }
 
-bool gbReadSaveMBC3(const char * name)
+static void gbReadSaveMBC3(const std::string& path)
 {
-  gzFile file = gzopen(name, "rb");
+ uint8 time_buffer[10 * 4 + 8]; // 10 uint32, 1 uint64
+ std::unique_ptr<Stream> file = MDFN_AmbigGZOpenHelper(path, std::vector<size_t>({ (unsigned)gbRamSize, (unsigned)gbRamSize + sizeof(time_buffer) }));
 
-  if(file == NULL) {
-    return false;
-  }
+ file->read(gbRam, gbRamSize);
 
-  int read = gzread(file, gbRam, gbRamSize);
+ if(file->read(&time_buffer[0], 1, false) == 1)
+ {
+  file->read(&time_buffer[1], sizeof(time_buffer) - 1);
 
-  bool res = true;
-  
-  if(read != gbRamSize) 
+  gbDataMBC3.mapperSeconds = MDFN_de32lsb(time_buffer + 0);
+  gbDataMBC3.mapperMinutes = MDFN_de32lsb(time_buffer + 4);
+  gbDataMBC3.mapperHours = MDFN_de32lsb(time_buffer + 8);
+  gbDataMBC3.mapperDays = MDFN_de32lsb(time_buffer + 12);
+  gbDataMBC3.mapperControl = MDFN_de32lsb(time_buffer + 16);
+  gbDataMBC3.mapperLSeconds = MDFN_de32lsb(time_buffer + 20);
+  gbDataMBC3.mapperLMinutes = MDFN_de32lsb(time_buffer + 24);
+  gbDataMBC3.mapperLHours = MDFN_de32lsb(time_buffer + 28);
+  gbDataMBC3.mapperLDays = MDFN_de32lsb(time_buffer + 32);
+  gbDataMBC3.mapperLControl = MDFN_de32lsb(time_buffer + 36);
+  gbDataMBC3.mapperLastTime = MDFN_de64lsb(time_buffer + 40);
+ }
+}
+
+static void gbReadSaveMBC5(const std::string& path)
+{
+ std::unique_ptr<Stream> file = MDFN_AmbigGZOpenHelper(path, std::vector<size_t>({ (unsigned)gbRamSize }));
+
+ file->read(gbRam, gbRamSize);
+}
+
+static void gbReadSaveMBC7(const std::string& path)
+{
+ std::unique_ptr<Stream> file = MDFN_AmbigGZOpenHelper(path, std::vector<size_t>({ 256 }));
+
+ file->read(gbRam, 256);
+}
+
+static void gbWriteBatteryFile(const std::string& path, bool extendedSave)
+{
+  if(gbBattery)
   {
+   int type = gbRom[0x147];
 
-  }
-  else 
-  {
-   uint8 time_buffer[10 * 4 + 8]; // 10 uint32, 1 uint64
-
-   read = gzread(file, time_buffer, sizeof(time_buffer));
-   if(read == sizeof(time_buffer))
+   switch(type)
    {
-    gbDataMBC3.mapperSeconds = MDFN_de32lsb(time_buffer + 0);
-    gbDataMBC3.mapperMinutes = MDFN_de32lsb(time_buffer + 4);
-    gbDataMBC3.mapperHours = MDFN_de32lsb(time_buffer + 8);
-    gbDataMBC3.mapperDays = MDFN_de32lsb(time_buffer + 12);
-    gbDataMBC3.mapperControl = MDFN_de32lsb(time_buffer + 16);
-    gbDataMBC3.mapperLSeconds = MDFN_de32lsb(time_buffer + 20);
-    gbDataMBC3.mapperLMinutes = MDFN_de32lsb(time_buffer + 24);
-    gbDataMBC3.mapperLHours = MDFN_de32lsb(time_buffer + 28);
-    gbDataMBC3.mapperLDays = MDFN_de32lsb(time_buffer + 32);
-    gbDataMBC3.mapperLControl = MDFN_de32lsb(time_buffer + 36);
-    gbDataMBC3.mapperLastTime = MDFN_de64lsb(time_buffer + 40);
-   }
-   else if(read != 0) 
-   {
-    res = false;
-   }
-  }
-  
-  gzclose(file);
-  return res;
-}
-
-bool gbReadSaveMBC5(const char * name)
-{
-  gzFile file = gzopen(name, "rb");
-
-  if(file == NULL) {
-    return false;
-  }
-
-  int read = gzread(file, gbRam, gbRamSize);
-  
-  if(read != gbRamSize) {
-    gzclose(file);
-    return false;
-  }
-  
-  gzclose(file);
-  return true;
-}
-
-bool gbReadSaveMBC7(const char * name)
-{
-  gzFile file = gzopen(name, "rb");
-
-  if(file == NULL) {
-    return false;
-  }
-
-  int read = gzread(file, gbRam, 256);
-  
-  if(read != 256) {
-    gzclose(file);
-    return false;
-  }
-  
-  gzclose(file);
-  return true;
-}
-
-bool gbWriteBatteryFile(const char *file, bool extendedSave)
-{
-  if(gbBattery) {
-    int type = gbRom[0x147];
-
-    switch(type) {
     case 0x03:
-      gbWriteSaveMBC1(file);
+      gbWriteSaveMBC1(path);
       break;
     case 0x06:
-      gbWriteSaveMBC2(file);
+      gbWriteSaveMBC2(path);
       break;
     case 0x0f:
     case 0x10:
     case 0x13:
-      gbWriteSaveMBC3(file, extendedSave);
+      gbWriteSaveMBC3(path, extendedSave);
       break;
     case 0x1b:
     case 0x1e:
-      gbWriteSaveMBC5(file);
+      gbWriteSaveMBC5(path);
       break;
     case 0x22:
-      gbWriteSaveMBC7(file);
+      gbWriteSaveMBC7(path);
       break;
     case 0xff:
-      gbWriteSaveMBC1(file);
+      gbWriteSaveMBC1(path);
       break;
-    }
+   }
   }
-  return true;
 }
 
-bool gbWriteBatteryFile(const char *file)
+static void gbReadBatteryFile(const std::string& path)
 {
-  gbWriteBatteryFile(file, true);
-  return true;
-}
-
-bool gbReadBatteryFile(const char *file)
-{
-  bool res = false;
-  if(gbBattery) {
-    int type = gbRom[0x147];
+  if(gbBattery)
+  {
+   int type = gbRom[0x147];
     
-    switch(type) {
+   switch(type)
+   {
     case 0x03:
-      res = gbReadSaveMBC1(file);
+      gbReadSaveMBC1(path);
       break;
+
     case 0x06:
-      res = gbReadSaveMBC2(file);
+      gbReadSaveMBC2(path);
       break;
+
     case 0x0f:
     case 0x10:
     case 0x13:
-      if(!gbReadSaveMBC3(file)) 
-	{
+      //
+      // Initialize time data before loading from save file, in case save file doesn't exist(or doesn't contain the time data) and throws an exception.
+      //
+      {
 	time_t tmp;
 
         time(&tmp);
@@ -1732,97 +1582,24 @@ bool gbReadBatteryFile(const char *file)
         gbDataMBC3.mapperDays = lt->tm_yday & 255;
         gbDataMBC3.mapperControl = (gbDataMBC3.mapperControl & 0xfe) |
           (lt->tm_yday > 255 ? 1: 0);
-        res = false;
-        break;
       }
-      res = true;
+      gbReadSaveMBC3(path);
       break;
+
     case 0x1b:
     case 0x1e:
-      res = gbReadSaveMBC5(file);
+      gbReadSaveMBC5(path);
       break;
+
     case 0x22:
-      res = gbReadSaveMBC7(file);
-    case 0xff:
-      res = gbReadSaveMBC1(file);
+      gbReadSaveMBC7(path);
       break;
-    }
+
+    case 0xff:
+      gbReadSaveMBC1(path);
+      break;
+   }
   }
-  return res;
-}
-
-bool gbReadGSASnapshot(const char *fileName)
-{
-  FILE *file = fopen(fileName, "rb");
-    
-  if(!file) {
-    return false;
-  }
-  
-  //  long size = ftell(file);
-  if(fseek(file, 0x4, SEEK_SET))
-  {
-   fclose(file);
-   return(false);
-  }
-
-  char buffer[16];
-  char buffer2[16];
-
-  if(fread(buffer, 1, 15, file) != 15)
-  {
-   fclose(file);
-   return(false);
-  }
-
-  buffer[15] = 0;
-  memcpy(buffer2, &gbRom[0x134], 15);
-  buffer2[15] = 0;
-  if(memcmp(buffer, buffer2, 15)) {
-    fclose(file);
-    return false;
-  }
-
-  if(fseek(file, 0x13, SEEK_SET))
-  {
-   fclose(file);
-   return(false);
-  }
-
-  int read = 0;
-  int toRead = 0;
-  switch(gbRom[0x147])
-  {
-   case 0x03:
-   case 0x0f:
-   case 0x10:
-   case 0x13:
-   case 0x1b:
-   case 0x1e:
-   case 0xff:
-     read = fread(gbRam, 1, gbRamSize, file);
-     toRead = gbRamSize;
-     break;
-
-   case 0x06:
-   case 0x22:
-     read = fread(gbRam,1,256,file);
-     toRead = 256;
-     break;
-
-   default:
-     fclose(file);
-     return false;
-  }    
-  fclose(file);
-
-  if(read != toRead)
-  {
-
-  }
-
-  gbReset();
-  return true;  
 }
 
 static SFORMAT Joy_StateRegs[] =
@@ -2007,7 +1784,14 @@ static SFORMAT gbSaveGameStruct[] =
 static void CloseGame(void) MDFN_COLD;
 static void CloseGame(void)
 {
- gbWriteBatteryFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str());
+ try
+ {
+  gbWriteBatteryFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), true);
+ }
+ catch(std::exception &e)
+ {
+  MDFN_PrintError("%s", e.what());
+ }
 
  Cleanup();
 }
@@ -2221,14 +2005,12 @@ static const char *GetGBTypeString(uint8 t)
 static bool TestMagic(MDFNFILE *fp)
 {
  static const uint8 GBMagic[8] = { 0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B };
+ uint8 data[0x200];
 
- if(fp->size < 0x10C || memcmp(fp->data + 0x104, GBMagic, 8))
-  return(FALSE);
+ if(fp->read(data, 0x200, false) != 0x200 || memcmp(data + 0x104, GBMagic, 8))
+  return false;
 
- if(fp->size < 0x200)
-  return(false);
-
- return(TRUE);
+ return true;
 }
 
 static void Cleanup(void)
@@ -2264,28 +2046,13 @@ static void Cleanup(void)
   delete[] gbColorFilter;
   gbColorFilter = NULL;
  }
-
- if(Custom_GB_ColorMap)
- {
-  delete[] Custom_GB_ColorMap;
-  Custom_GB_ColorMap = NULL;
- }
-
- if(Custom_GBC_ColorMap)
- {
-  delete[] Custom_GBC_ColorMap;
-  Custom_GBC_ColorMap = NULL;
- }
 }
 
-static int Load(MDFNFILE *fp) MDFN_COLD;
-static int Load(MDFNFILE *fp)
+static void Load(MDFNFILE *fp) MDFN_COLD;
+static void Load(MDFNFILE *fp)
 {
  try
  {
-  if(fp->size < 0x200)
-   throw MDFN_Error(0, _("GameBoy (Color) ROM image is too small: %llu bytes(at least 512 is required)"), (unsigned long long)fp->size);
-
   gbColorFilter = new uint32[32768];
 
   gbEmulatorType = MDFN_GetSettingI("gb.system_type");
@@ -2294,20 +2061,17 @@ static int Load(MDFNFILE *fp)
 
   SOUND_Init();
 
-  //
-  //
-  //
-  gbUpdateSizes(fp->data, fp->size);
+  LoadROM(fp);
 
   md5_context md5;
   md5.starts();
-  md5.update(fp->data, fp->size); 	// Use fp->data and fp->size for backwards compatibility with save/save states from earlier versions of Mednafen.	//gbRom, gbRomSize);
+  md5.update(gbRom, gbRomSize);
   md5.finish(MDFNGameInfo->MD5);
 
   MDFNGameInfo->GameSetMD5Valid = FALSE;
 
   MDFN_printf(_("ROM:       %dKiB\n"), (gbRomSize + 1023) / 1024);
-  MDFN_printf(_("ROM CRC32: 0x%08x\n"), (unsigned int)crc32(0, fp->data, fp->size));
+  MDFN_printf(_("ROM CRC32: 0x%08x\n"), (unsigned int)crc32(0, gbRom, gbRomSize));
   MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
   MDFN_printf(_("Type:      0x%02x(%s)\n"), gbRom[0x147], GetGBTypeString(gbRom[0x147]));
   MDFN_printf(_("RAM Size:  0x%02x(%s)\n"), gbRom[0x149], GetGBRAMSizeString(gbRom[0x149]));
@@ -2317,40 +2081,45 @@ static int Load(MDFNFILE *fp)
   //
   //
 
-  gbReadBatteryFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str());
+  try
+  {
+   gbReadBatteryFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"));
+  }
+  catch(MDFN_Error &e)
+  {
+   if(e.GetErrno() != ENOENT)
+    throw;
+  }
   gblayerSettings = 0xFF;
 
-  // Custom palettes
-  if(gbCgbMode)
-  {
-   LoadCPalette("gbc", &Custom_GBC_ColorMap, 32768, false);
-  }
-  else
-  {
-   LoadCPalette("gb", &Custom_GB_ColorMap, 12, true);
-  }
+
+  MDFNGameInfo->CPInfoActiveBF = 1 << (bool)gbCgbMode;
  }
  catch(std::exception &e)
  {
   Cleanup();
   throw;
  }
- return(1);
 }
 
-static void gbUpdateSizes(const uint8* in_rom_data, int64 in_rom_size)
+static void LoadROM(MDFNFILE* fp)
 {
- const uint8* header = &in_rom_data[0];
+  uint8 header[0x200];
+
+  fp->read(header, 0x200);
 
   if(header[0x148] > 8) 
    throw MDFN_Error(0, _("Unsupported ROM size specified in GB header."));
 
-  //MDFN_printf("ROM Size: %d\n", gbRomSizes[gbRom[0x148]]);
   gbRomSize = gbRomSizes[header[0x148]];
   gbRomSizeMask = gbRomSizesMasks[header[0x148]];
+
   gbRom = new uint8[gbRomSize];
   memset(gbRom, 0xFF, gbRomSize);
-  memcpy(gbRom, in_rom_data, std::min<int64>(in_rom_size, gbRomSize));
+  memcpy(gbRom, header, std::min<uint64>(0x200, gbRomSize));
+
+  if(gbRomSize > 0x200) // && in_rom_size > 0x200)
+   fp->read(gbRom + 0x200, gbRomSize - 0x200); // std::min<uint64>(in_rom_size, gbRomSize) - 0x200);
   
   if(header[0x149] > 5) 
    throw MDFN_Error(0, _("Unsupported RAM size specified in GB header."));
@@ -2557,7 +2326,7 @@ static void FillLineSurface(MDFN_Surface *surface, int y)
 
 static uint8 *paddie, *tilt_paddie;
 
-static void MDFNGB_SetInput(int port, const char *type, void *ptr)
+static void MDFNGB_SetInput(unsigned port, const char *type, uint8 *ptr)
 {
  if(port)
   tilt_paddie = (uint8*)ptr;
@@ -2581,9 +2350,9 @@ static void Emulate(EmulateSpecStruct *espec)
   nf.Bshift = 0;
   nf.Ashift = 8;
   
-  nf.Rprec = 0;
-  nf.Gprec = 0;
-  nf.Bprec = 0;
+  nf.Rprec = 6;
+  nf.Gprec = 6;
+  nf.Bprec = 6;
   nf.Aprec = 0;
 
   espec->surface->SetFormat(nf, false);
@@ -2593,7 +2362,7 @@ static void Emulate(EmulateSpecStruct *espec)
 #endif
 
  if(espec->VideoFormatChanged)
-  SetPixelFormat(espec->surface->format, gbCgbMode);
+  SetPixelFormat(espec->surface->format, gbCgbMode, espec->CustomPalette, espec->CustomPaletteNumEntries);
 
  if(espec->SoundFormatChanged)
   MDFNGB_SetSoundRate(espec->SoundRate);
@@ -2896,7 +2665,7 @@ static void Emulate(EmulateSpecStruct *espec)
  SoundTS = 0;
 }
 
-static int StateAction(StateMem *sm, int load, int data_only)
+static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT RAMDesc[] =
  {
@@ -2906,33 +2675,26 @@ static int StateAction(StateMem *sm, int load, int data_only)
   SFARRAYN(gbVram, gbCgbMode ? 0x4000 : 0x2000, "VRAM"),
   SFARRAYN(gbWram, gbCgbMode ? 0x8000 : 0x2000, "WRAM"),
   SFARRAY16(gbPalette, (gbCgbMode ? 128 : 0)),
-  SFEND,
+  SFEND
  };
 
- std::vector <SSDescriptor> love;
+ MDFNSS_StateAction(sm, load, data_only, gbSaveGameStruct, "MAIN");
+ MDFNSS_StateAction(sm, load, data_only, Joy_StateRegs, "JOY");
+ MDFNSS_StateAction(sm, load, data_only, MBC1_StateRegs, "MBC1");
+ MDFNSS_StateAction(sm, load, data_only, MBC2_StateRegs, "MBC2");
+ MDFNSS_StateAction(sm, load, data_only, MBC3_StateRegs, "MBC3");
+ MDFNSS_StateAction(sm, load, data_only, MBC5_StateRegs, "MBC5");
+ MDFNSS_StateAction(sm, load, data_only, MBC7_StateRegs, "MBC7");
+ MDFNSS_StateAction(sm, load, data_only, HuC1_StateRegs, "HuC1");
+ MDFNSS_StateAction(sm, load, data_only, HuC3_StateRegs, "HuC3");
+ MDFNSS_StateAction(sm, load, data_only, RAMDesc, "RAM");
 
- love.push_back(SSDescriptor(gbSaveGameStruct, "MAIN"));
- love.push_back(SSDescriptor(Joy_StateRegs, "JOY"));
- love.push_back(SSDescriptor(MBC1_StateRegs, "MBC1"));
- love.push_back(SSDescriptor(MBC2_StateRegs, "MBC2"));
- love.push_back(SSDescriptor(MBC3_StateRegs, "MBC3"));
- love.push_back(SSDescriptor(MBC5_StateRegs, "MBC5"));
- love.push_back(SSDescriptor(MBC7_StateRegs, "MBC7"));
- love.push_back(SSDescriptor(HuC1_StateRegs, "HuC1"));
- love.push_back(SSDescriptor(HuC3_StateRegs, "HuC3"));
- love.push_back(SSDescriptor(RAMDesc, "RAM"));
-
- int ret = MDFNSS_StateAction(sm, load, data_only, love);
-
- ret &= GBZ80_StateAction(sm, load, data_only);
+ GBZ80_StateAction(sm, load, data_only);
 
  if(load)
   StateRest(load);
 
- if(!SOUND_StateAction(sm, load, data_only))
-  return(0);
-
- return(ret);
+ SOUND_StateAction(sm, load, data_only);
 }
 
 static void SetLayerEnableMask(uint64 mask)
@@ -2963,7 +2725,7 @@ static MDFNSetting GBSettings[] =
  { NULL }
 };
 
-static const InputDeviceInputInfoStruct IDII[] =
+static const IDIISG IDII =
 {
  { "a", "A", 		/*VIRTB_1,*/ 7, IDIT_BUTTON_CAN_RAPID, NULL },
 
@@ -2982,19 +2744,17 @@ static const InputDeviceInputInfoStruct IDII[] =
  { "down", "DOWN ↓",	/*VIRTB_DP0_D,*/ 1, IDIT_BUTTON, "up" },
 };
 
-static InputDeviceInfoStruct InputDeviceInfo[] =
+static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
 {
  {
   "gamepad",
   "Gamepad",
   NULL,
-  NULL,
-  sizeof(IDII) / sizeof(InputDeviceInputInfoStruct),
   IDII,
  }
 };
 
-static const InputDeviceInputInfoStruct Tilt_IDII[] =
+static const IDIISG Tilt_IDII =
 {
  { "up", "UP ↑", 	0, IDIT_BUTTON_ANALOG },
  { "down", "DOWN ↓",	1, IDIT_BUTTON_ANALOG },
@@ -3003,30 +2763,21 @@ static const InputDeviceInputInfoStruct Tilt_IDII[] =
 };
 
 
-static InputDeviceInfoStruct Tilt_InputDeviceInfo[] =
+static const std::vector<InputDeviceInfoStruct> Tilt_InputDeviceInfo =
 {
  {
   "tilt",
   "Tilt",
   NULL,
-  NULL,
-  sizeof(Tilt_IDII) / sizeof(InputDeviceInputInfoStruct),
   Tilt_IDII,
  }
 };
 
-static const InputPortInfoStruct PortInfo[] =
+static const std::vector<InputPortInfoStruct> PortInfo =
 {
- { "builtin", "Built-In", sizeof(InputDeviceInfo) / sizeof(InputDeviceInfoStruct), InputDeviceInfo, "gamepad" },
- { "tilt", "Tilt", sizeof(Tilt_InputDeviceInfo) / sizeof(InputDeviceInfoStruct), Tilt_InputDeviceInfo, "tilt" }
+ { "builtin", "Built-In", InputDeviceInfo, "gamepad" },
+ { "tilt", "Tilt", Tilt_InputDeviceInfo, "tilt" }
 };
-
-static InputInfoStruct InputInfo =
-{
- sizeof(PortInfo) / sizeof(InputPortInfoStruct),
- PortInfo
-};
-
 
 static uint8 CharToNibble(char thechar)
 {
@@ -3197,6 +2948,13 @@ static const FileExtensionSpecStruct KnownExtensions[] =
  { NULL, NULL }
 };
 
+static const CustomPalette_Spec CPInfo[] =
+{
+ { gettext_noop("GameBoy(mono) palette"), NULL, { 4, 8, 12, 0 } },
+ { gettext_noop("GameBoy Color 15-bit RGB"), NULL, { 32768, 0 } },
+ { NULL, NULL }
+};
+
 }
 
 using namespace MDFN_IEN_GB;
@@ -3208,16 +2966,22 @@ MDFNGI EmulatedGB =
  KnownExtensions,
  MODPRIO_INTERNAL_HIGH,
  NULL,
- &InputInfo,
+ PortInfo,
  Load,
  TestMagic,
  NULL,
  NULL,
  CloseGame,
+
  SetLayerEnableMask,
  "Background\0Sprites\0Window\0",
+
  NULL,
  NULL,
+
+ CPInfo,
+ 0,
+
  InstallReadPatch,
  RemoveReadPatches,
  NULL,
@@ -3225,7 +2989,9 @@ MDFNGI EmulatedGB =
  false,
  StateAction,
  Emulate,
+ NULL,
  MDFNGB_SetInput,
+ NULL,
  DoSimpleCommand,
  GBSettings,
  MDFN_MASTERCLOCK_FIXED(4194304),

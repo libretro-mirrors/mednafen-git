@@ -39,7 +39,7 @@ int32 DTestMouseAxis(ButtConfig &bc, const char* KeyState, const uint32* MouseDa
   ret -= joy_manager->TestAnalogButton(tmp_bc);
   ret += 32768;
 
-  ret = PtoV_J(ret, axis_hint, (bool)(tmp_bc.ButtonNum & (1 << 18)));
+  ret = Video_PtoV_J(ret, axis_hint, (bool)(tmp_bc.ButtonNum & (1 << 18)));
 
   return(ret);
  }

@@ -2,7 +2,6 @@
 #define _SHARED_H_
 
 #include <mednafen/mednafen.h>
-#include <mednafen/masmem.h>
 
 #include <mednafen/hw_cpu/c68k/c68k.h>
 #include <mednafen/hw_cpu/z80-fuse/z80.h>

@@ -28,6 +28,9 @@
 #define TRINPCM_SHIFT   0
 #include <math.h>
 
+namespace MDFN_IEN_NES
+{
+
 static void DoSQ1(void);
 static void DoSQ2(void);
 static void DoTriangle(void);
@@ -42,8 +45,8 @@ static int SoundPAL;
 static uint32 wlookup1[32];
 static uint32 wlookup2[203];
 
-static MDFN_ALIGN(16) int16 WaveHi[40000];
-MDFN_ALIGN(16) int16 WaveHiEx[40000];
+alignas(16) static int16 WaveHi[40000];
+alignas(16) int16 WaveHiEx[40000];
 
 std::vector<EXPSOUND> GameExpSound;
 
@@ -506,7 +509,7 @@ static INLINE void DMCDMA(void)
  }
 }
 
-void MDFN_SoundCPUHook(int cycles)
+void MDFN_FASTCALL MDFN_SoundCPUHook(int cycles)
 {
  DMCDMA();
  DMCacc -= cycles;
@@ -984,7 +987,7 @@ int MDFNSND_Init(bool IsPAL)
  return(1);
 }
 
-int MDFNSND_StateAction(StateMem *sm, int load, int data_only)
+void MDFNSND_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT MDFNSND_STATEINFO[]=
  {
@@ -1064,10 +1067,7 @@ int MDFNSND_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- std::vector <SSDescriptor> love;
- love.push_back(SSDescriptor(MDFNSND_STATEINFO, "SND"));
-
- int ret = MDFNSS_StateAction(sm, load, data_only, love);
+ MDFNSS_StateAction(sm, load, data_only, MDFNSND_STATEINFO, "SND");
 
  if(load)
  {
@@ -1078,6 +1078,6 @@ int MDFNSND_StateAction(StateMem *sm, int load, int data_only)
   if(DMCacc <= 0)
    DMCacc = 1;
  }
- return(ret);
 }
 
+}

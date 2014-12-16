@@ -20,7 +20,9 @@
 #include "romdb.h"
 #include "cart.h"
 #include <mednafen/general.h>
-#include <mednafen/md5.h>
+#include <mednafen/hash/md5.h>
+
+#include <zlib.h>
 
 namespace MDFN_IEN_SMS
 {
@@ -67,7 +69,7 @@ static void writemem_mapper_codies(uint16 A, uint8 V)
  }
 }
 
-void SMS_CartReset(void)
+void Cart_Reset(void)
 {
     CodeMasters_Bank[0] = 0;
     CodeMasters_Bank[1] = 0;
@@ -89,24 +91,35 @@ static const char *sms_mapper_string_table[] =
  "32KiB ROM + 8KiB RAM",
 };
 
-bool SMS_CartInit(const uint8 *data, uint32 size)
+void Cart_Init(MDFNFILE* fp)
 {
- if(!(rom = (uint8*) MDFN_malloc(size, _("Cart ROM"))))
-  return(0);
+ uint64 size = fp->size();
+
+ if(size & 512)
+ {
+  size &= ~512;
+  fp->seek(512, SEEK_SET);
+ }
+
+ if(size > 1024 * 1024)
+  throw MDFN_Error(0, _("SMS/GG ROM image is too large."));
+
+ rom = (uint8*)MDFN_malloc_T(std::max<uint64>(size, 0x2000), _("Cart ROM"));
+ if(size < 0x2000)
+  memset(rom + size, 0xFF, 0x2000 - size);
+ fp->read(rom, size);
 
  pages = size / 0x2000;
  page_mask8 = round_up_pow2(pages) - 1;
  page_mask16 = page_mask8 >> 1;
  rom_mask = (round_up_pow2(pages) * 8192) - 1;
 
- crc = crc32(0, data, size);
+ crc = crc32(0, rom, size);
 
  md5_context md5;
  md5.starts();
- md5.update(data, size);
+ md5.update(rom, size);
  md5.finish(MDFNGameInfo->MD5);
-
- memcpy(rom, data, size);
 
  if(size <= 40960)
   mapper = MAPPER_NONE;
@@ -126,32 +139,38 @@ bool SMS_CartInit(const uint8 *data, uint32 size)
 
  if(mapper == MAPPER_CASTLE)
  {
-  CastleRAM = (uint8 *)calloc(1, 8192);
+  CastleRAM = (uint8 *)MDFN_calloc_T(1, 8192, _("Castle RAM"));
  }
- sram = (uint8 *)calloc(1, 0x8000);
 
- MDFN_printf(_("ROM:       %dKiB\n"), (size + 1023) / 1024);
+ sram = (uint8 *)MDFN_calloc_T(1, 0x8000, _("Cart SRAM"));
+
+ MDFN_printf(_("ROM:       %uKiB\n"), (unsigned)((size + 1023) / 1024));
  MDFN_printf(_("ROM CRC32: 0x%08x\n"), crc);
  MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
  MDFN_printf(_("Mapper:    %s\n"), sms_mapper_string_table[mapper]);
  MDFN_printf(_("Territory: %s\n"), (sms.territory == TERRITORY_DOMESTIC) ? _("Domestic") : _("Export"));
+}
 
+void Cart_LoadNV(void)
+{
  // Load battery-backed RAM, if any.
  if(sram)
  {
-  gzFile savegame_fp;
-
-  savegame_fp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb");
-  if(savegame_fp)
+  try
   {
-   gzread(savegame_fp, sram, 0x8000);
-   gzclose(savegame_fp);
+   std::unique_ptr<Stream> savegame_fp = MDFN_AmbigGZOpenHelper(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), std::vector<size_t>({ 0x8000 }));
+
+   savegame_fp->read(sram, 0x8000);
+  }
+  catch(MDFN_Error &e)
+  {
+   if(e.GetErrno() != ENOENT)
+    throw;
   }
  }
- return(TRUE);
 }
 
-void SMS_CartClose(void)
+void Cart_SaveNV(void)
 {
  if(sram)
  {
@@ -159,32 +178,35 @@ void SMS_CartClose(void)
   {
    if(sram[i] != 0x00)
    {
-    MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 6, sram, 0x8000);
+    MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), sram, 0x8000, true);
     break;
    }
   }
  }
+}
 
+void Cart_Close(void)
+{
  if(rom)
  {
-  free(rom);
+  MDFN_free(rom);
   rom = NULL;
  }
 
  if(CastleRAM)
  {
-  free(CastleRAM);
+  MDFN_free(CastleRAM);
   CastleRAM = NULL;
  }
 
  if(sram)
  {
-  free(sram);
+  MDFN_free(sram);
   sram = NULL;
  }
 }
 
-void SMS_CartWrite(uint16 A, uint8 V)
+void Cart_Write(uint16 A, uint8 V)
 {
  if(mapper == MAPPER_CODIES)
   writemem_mapper_codies(A, V);
@@ -207,7 +229,7 @@ void SMS_CartWrite(uint16 A, uint8 V)
   printf("Bah: %04x %02x\n", A, V);
 }
 
-uint8 SMS_CartRead(uint16 A)
+uint8 Cart_Read(uint16 A)
 {
  if(mapper == MAPPER_CODIES)
  {
@@ -262,7 +284,7 @@ uint8 SMS_CartRead(uint16 A)
  return((((A >> 8) | data_bus_pullup) & ~data_bus_pulldown));
 }
 
-int SMS_CartStateAction(StateMem *sm, int load, int data_only)
+int Cart_StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {

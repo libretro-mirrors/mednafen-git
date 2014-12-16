@@ -29,35 +29,6 @@ static INLINE void Recalc(void)
  CPU->AssertIRQ(0, (bool)(Status & Mask));
 }
 
-void IRQ_Power(void)
-{
- Asserted = 0;
- Status = 0;
- Mask = 0;
-
- Recalc();
-}
-
-int IRQ_StateAction(StateMem *sm, int load, int data_only)
-{
- SFORMAT StateRegs[] =
- {
-  SFVAR(Asserted),
-  SFVAR(Mask),
-  SFVAR(Status),
-  SFEND
- };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "IRQ");
-
- if(load)
- {
-  Recalc();
- }
-
- return(ret);
-}
-
-
 void IRQ_Assert(int which, bool status)
 {
  uint32 old_Asserted = Asserted;
@@ -117,6 +88,14 @@ uint32 IRQ_Read(uint32 A)
  return(ret);
 }
 
+void IRQ_Power(void)
+{
+ Asserted = 0;
+ Status = 0;
+ Mask = 0;
+
+ Recalc();
+}
 
 void IRQ_Reset(void)
 {
@@ -127,6 +106,23 @@ void IRQ_Reset(void)
  Recalc();
 }
 
+void IRQ_StateAction(StateMem *sm, const unsigned load, const bool data_only)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(Asserted),
+  SFVAR(Mask),
+  SFVAR(Status),
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "IRQ");
+
+ if(load)
+ {
+  Recalc();
+ }
+}
 
 uint32 IRQ_GetRegister(unsigned int which, char *special, const uint32 special_len)
 {

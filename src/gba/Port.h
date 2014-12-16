@@ -20,12 +20,10 @@
 #ifndef VBA_PORT_H
 #define VBA_PORT_H
 
-#include <mednafen/masmem.h>
+#define READ16LE(base) MDFN_de16lsb<true>(base)
+#define READ32LE(base) MDFN_de32lsb<true>(base)
 
-#define READ16LE(base) LoadU16_LE(base)
-#define READ32LE(base) LoadU32_LE(base)
-
-#define WRITE16LE(x,v) StoreU16_LE(x,v)
-#define WRITE32LE(x,v) StoreU32_LE(x,v)
+#define WRITE16LE(x,v) MDFN_en16lsb<true>(x,v)
+#define WRITE32LE(x,v) MDFN_en32lsb<true>(x,v)
 
 #endif

@@ -1,6 +1,6 @@
 #ifdef PPU_CPP
 
-inline uint16 PPU::get_palette(uint8 index) {
+alwaysinline uint16 PPU::get_palette(uint8 index) {
   const unsigned addr = index << 1;
   return memory::cgram[addr] + (memory::cgram[addr + 1] << 8);
 }
@@ -8,13 +8,13 @@ inline uint16 PPU::get_palette(uint8 index) {
 //p = 00000bgr <palette data>
 //t = BBGGGRRR <tilemap data>
 //r = 0BBb00GGGg0RRRr0 <return data>
-inline uint16 PPU::get_direct_color(uint8 p, uint8 t) {
+alwaysinline uint16 PPU::get_direct_color(uint8 p, uint8 t) {
   return ((t & 7) << 2) | ((p & 1) << 1) |
     (((t >> 3) & 7) << 7) | (((p >> 1) & 1) << 6) |
     ((t >> 6) << 13) | ((p >> 2) << 12);
 }
 
-inline uint16 PPU::get_pixel_normal(uint32 x) {
+alwaysinline uint16 PPU::get_pixel_normal(uint32 x) {
   pixel_t &p = pixel_cache[x];
   uint16 src_main, src_sub;
   uint8  bg_sub;
@@ -49,7 +49,7 @@ inline uint16 PPU::get_pixel_normal(uint32 x) {
   return src_main;
 }
 
-inline uint16 PPU::get_pixel_swap(uint32 x) {
+alwaysinline uint16 PPU::get_pixel_swap(uint32 x) {
   pixel_t &p = pixel_cache[x];
   uint16 src_main, src_sub;
   uint8  bg_sub;
@@ -84,7 +84,7 @@ inline uint16 PPU::get_pixel_swap(uint32 x) {
   return src_main;
 }
 
-inline void PPU::render_line_output() {
+alwaysinline void PPU::render_line_output() {
   //printf("RLO: %u\n", line);
   uint16 *ptr  = line_output;
   uint16 *luma_b  = light_table_b [regs.display_brightness];
@@ -122,7 +122,7 @@ inline void PPU::render_line_output() {
   }
 }
 
-inline void PPU::render_line_clear() {
+alwaysinline void PPU::render_line_clear() {
   uint16 width = (!regs.pseudo_hires && regs.bg_mode != 5 && regs.bg_mode != 6) ? 256 : 512;
   memset(line_output, 0, width * sizeof(uint16));
 }

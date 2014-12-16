@@ -40,6 +40,8 @@
 
 extern MDFNGI EmulatedNES;
 
+namespace MDFN_IEN_NES
+{
 uint64 timestampbase;
 
 // Accessed in debug.cpp
@@ -142,17 +144,20 @@ static DECLFW(BOverflow)
 	return(BWrite[A](A, V));
 }
 
-static void CloseGame(void)
+static void Cleanup(void)
 {
  for(std::vector<EXPSOUND>::iterator ep = GameExpSound.begin(); ep != GameExpSound.end(); ep++)
+ {
   if(ep->Kill)
    ep->Kill();
+ }
+
  GameExpSound.clear();
 
  if(GameInterface)
  {
-  if(GameInterface->Close)
-   GameInterface->Close();
+  if(GameInterface->Kill)
+   GameInterface->Kill();
   free(GameInterface);
   GameInterface = NULL;
  }
@@ -160,6 +165,14 @@ static void CloseGame(void)
  Genie_Kill();
  MDFNSND_Close();
  MDFNPPU_Close();
+}
+
+static void CloseGame(void)
+{
+ if(GameInterface && GameInterface->SaveNV)
+  GameInterface->SaveNV();
+
+ Cleanup();
 }
 
 static void InitCommon(const char *fbase)
@@ -172,7 +185,6 @@ static void InitCommon(const char *fbase)
         MMC5Hack = 0;
         PAL &= 1;
 
-        MDFNGameInfo->GameType = GMT_CART;
         MDFNGameInfo->VideoSystem = VIDSYS_NONE;
 
         MDFNGameInfo->cspecial = NULL;
@@ -214,17 +226,15 @@ static void InitCommon(const char *fbase)
         #endif
 }
 
-bool UNIFLoad(MDFNFILE *fp, NESGameType *);
-bool iNESLoad(MDFNFILE *fp, NESGameType *);
-bool FDSLoad(MDFNFILE *fp, NESGameType *);
-bool NSFLoad(MDFNFILE *fp, NESGameType *);
+void UNIFLoad(Stream *fp, NESGameType *);
+void iNESLoad(Stream *fp, NESGameType *);
+void FDSLoad(Stream *fp, NESGameType *);
 
 bool iNES_TestMagic(MDFNFILE *fp);
 bool UNIF_TestMagic(MDFNFILE *fp);
 bool FDS_TestMagic(MDFNFILE *fp);
-bool NSF_TestMagic(MDFNFILE *fp);
 
-typedef bool (*LoadFunction_t)(MDFNFILE *fp, NESGameType *);
+typedef void (*LoadFunction_t)(Stream *fp, NESGameType *);
 
 static LoadFunction_t GetLoadFunctionByMagic(MDFNFILE *fp)
 {
@@ -250,24 +260,21 @@ static bool TestMagic(MDFNFILE *fp)
  return(GetLoadFunctionByMagic(fp) != NULL);
 }
 
-static int Load(MDFNFILE *fp)
+static void Load(MDFNFILE *fp)
 {
+ try
+ {
 	LoadFunction_t LoadFunction = NULL;
 
 	LoadFunction = GetLoadFunctionByMagic(fp);
 
 	// If the file type isn't recognized, return -1!
 	if(!LoadFunction)
-	 return(-1);
+	 throw MDFN_Error(0, _("File format is unknown to module \"%s\"."), MDFNGameInfo->shortname);
 
 	InitCommon(fp->fbase);
 
-	if(!LoadFunction(fp, GameInterface))
-	{
-	 free(GameInterface);
-	 GameInterface = NULL;
-	 return(0);
-	}
+	LoadFunction(fp->stream(), GameInterface);
 
 	{
 	 int w;
@@ -294,17 +301,25 @@ static int Load(MDFNFILE *fp)
 	if(NESIsVSUni)
 	 MDFN_VSUniInstallRWHooks();
 
-
 	if(MDFNGameInfo->GameType != GMT_PLAYER)
          if(MDFN_GetSettingB("nes.gg"))
 	  Genie_Init();
 
         PowerNES();
 
-        MDFN_InitPalette(NESIsVSUni ? MDFN_VSUniGetPaletteNum() : 0);
-	NESINPUT_PaletteChanged();
+        MDFN_InitPalette(NESIsVSUni ? MDFN_VSUniGetPaletteNum() : (bool)PAL, NULL, 0);
 
-        return(1);
+	if(MDFNGameInfo->GameType != GMT_PLAYER)
+	 MDFNGameInfo->CPInfoActiveBF = 1 << (NESIsVSUni ? MDFN_VSUniGetPaletteNum() : (bool)PAL);
+	else
+	 MDFNGameInfo->CPInfoActiveBF = 0;
+
+ }
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
 }
 
 static void Emulate(EmulateSpecStruct *espec)
@@ -321,9 +336,9 @@ static void Emulate(EmulateSpecStruct *espec)
  tmp_pf.Bshift = 0;
  tmp_pf.Ashift = 8;
 
- tmp_pf.Rprec = 0;
- tmp_pf.Gprec = 0;
- tmp_pf.Bprec = 0;
+ tmp_pf.Rprec = 6;
+ tmp_pf.Gprec = 6;
+ tmp_pf.Bprec = 6;
  tmp_pf.Aprec = 0;
 
  tmp_pf.bpp = 8;
@@ -336,7 +351,10 @@ static void Emulate(EmulateSpecStruct *espec)
 
 
  if(espec->VideoFormatChanged)
-  MDFNNES_SetPixelFormat(espec->surface->format); //.Rshift, espec->surface->format.Gshift, espec->surface->format.Bshift);
+ {
+  MDFN_InitPalette(NESIsVSUni ? MDFN_VSUniGetPaletteNum() : (bool)PAL, espec->CustomPalette, espec->CustomPaletteNumEntries);
+  MDFNNES_SetPixelFormat(espec->surface->format);
+ }
 
  if(espec->SoundFormatChanged)
   MDFNNES_SetSoundRate(espec->SoundRate);
@@ -373,7 +391,6 @@ static void Emulate(EmulateSpecStruct *espec)
 
 void ResetNES(void)
 {
-        MDFNMOV_AddCommand(MDFN_MSC_RESET);
 	if(GameInterface->Reset)
          GameInterface->Reset();
         MDFNSND_Reset();
@@ -383,8 +400,6 @@ void ResetNES(void)
 
 void PowerNES(void) 
 {
-        MDFNMOV_AddCommand(MDFN_MSC_POWER);
-
         if(!MDFNGameInfo)
 	 return;
 
@@ -423,27 +438,19 @@ void PowerNES(void)
          MDFNMP_InstallReadPatches();
 }
 
-static int StateAction(StateMem *sm, int load, int data_only)
+static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
- if(Genie_BIOSInstalled())
- {
-  if(!data_only)
-   MDFN_DispMessage(_("Cannot use states in GG Screen."));
-  return(0);
- }
- int ret = 1;
+ Genie_StateAction(sm, load, data_only);
 
- ret &= X6502_StateAction(sm, load, data_only);
- ret &= MDFNPPU_StateAction(sm, load, data_only);
- ret &= MDFNSND_StateAction(sm, load, data_only);
- ret &= NESINPUT_StateAction(sm, load, data_only);
+ X6502_StateAction(sm, load, data_only);
+ MDFNPPU_StateAction(sm, load, data_only);
+ MDFNSND_StateAction(sm, load, data_only);
+ NESINPUT_StateAction(sm, load, data_only);
 
  if(GameInterface->StateAction)
  {
-  ret &= GameInterface->StateAction(sm, load, data_only);
+  GameInterface->StateAction(sm, load, data_only);
  }
-
- return(ret);
 }
 
 // TODO: Actual enum vals
@@ -753,6 +760,7 @@ static const FileExtensionSpecStruct KnownExtensions[] =
  { ".unif", "UNIF Format ROM Image" },
  { NULL, NULL }
 };
+}
 
 MDFNGI EmulatedNES =
 {
@@ -765,7 +773,7 @@ MDFNGI EmulatedNES =
  #else
  NULL,
  #endif
- &NESInputInfo,
+ NESPortInfo,
  Load,
  TestMagic,
  NULL,
@@ -775,6 +783,10 @@ MDFNGI EmulatedNES =
  "Background\0Sprites\0",
  NULL,
  NULL,
+
+ NES_CPInfo,
+ 0,
+
  InstallReadPatch,
  RemoveReadPatches,
  MemRead,
@@ -782,7 +794,9 @@ MDFNGI EmulatedNES =
  false,
  StateAction,
  Emulate,
+ NULL,
  MDFNNES_SetInput,
+ FDS_SetMedia,
  MDFNNES_DoSimpleCommand,
  NESSettings,
  0,

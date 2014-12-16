@@ -39,13 +39,13 @@ uint32 AlphaClampLUT[64] =
 };  
 
 
-MDFN_ALIGN(16) uint32 line0[512];
-MDFN_ALIGN(16) uint32 line1[512];
-MDFN_ALIGN(16) uint32 line2[512];
-MDFN_ALIGN(16) uint32 line3[512];
-MDFN_ALIGN(16) uint32 lineOBJ[512];
-MDFN_ALIGN(16) uint32 lineOBJWin[512];
-MDFN_ALIGN(16) uint32 lineMix[512];
+alignas(16) uint32 line0[512];
+alignas(16) uint32 line1[512];
+alignas(16) uint32 line2[512];
+alignas(16) uint32 line3[512];
+alignas(16) uint32 lineOBJ[512];
+alignas(16) uint32 lineOBJWin[512];
+alignas(16) uint32 lineMix[512];
 
 bool gfxInWin0[512];
 bool gfxInWin1[512];

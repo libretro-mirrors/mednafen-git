@@ -40,6 +40,10 @@
 #include <cdio/version.h>
 #endif
 
+#ifdef HAVE_ICONV
+#include <iconv.h>
+#endif
+
 #include <algorithm>
 
 #include "input.h"
@@ -56,7 +60,8 @@
 #include "video-state.h"
 #include "remote.h"
 #include "ers.h"
-#include "../qtrecord.h"
+#include "rmdui.h"
+#include <mednafen/qtrecord.h>
 #include <math.h>
 
 JoystickManager *joy_manager = NULL;
@@ -65,45 +70,6 @@ static bool RemoteOn = FALSE;
 bool pending_save_state, pending_snapshot, pending_ssnapshot, pending_save_movie;
 static uint32 volatile MainThreadID = 0;
 static bool ffnosound;
-
-static const char *CSD_xres = gettext_noop("Full-screen horizontal resolution.");
-static const char *CSD_yres = gettext_noop("Full-screen vertical resolution.");
-static const char *CSDE_xres = gettext_noop("A value of \"0\" will cause the desktop horizontal resolution to be used.");
-static const char *CSDE_yres = gettext_noop("A value of \"0\" will cause the desktop vertical resolution to be used.");
-
-static const char *CSD_xscale = gettext_noop("Scaling factor for the X axis in windowed mode.");
-static const char *CSD_yscale = gettext_noop("Scaling factor for the Y axis in windowed mode.");
-
-static const char *CSD_xscalefs = gettext_noop("Scaling factor for the X axis in fullscreen mode.");
-static const char *CSD_yscalefs = gettext_noop("Scaling factor for the Y axis in fullscreen mode.");
-static const char *CSDE_xyscalefs = gettext_noop("For this settings to have any effect, the \"<system>.stretch\" setting must be set to \"0\".");
-
-static const char *CSD_scanlines = gettext_noop("Enable scanlines with specified opacity.");
-static const char *CSDE_scanlines = gettext_noop("Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field's lines(only if the video.deinterlacer setting is set to \"weave\", the default).");
-
-static const char *CSD_stretch = gettext_noop("Stretch to fill screen.");
-static const char *CSD_videoip = gettext_noop("Enable (bi)linear interpolation.");
-
-
-static const char *CSD_special = gettext_noop("Enable specified special video scaler.");
-static const char *CSDE_special = gettext_noop("The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).");
-
-static const char *CSD_pixshader = gettext_noop("Enable specified OpenGL pixel shader.");
-static const char *CSDE_pixshader = gettext_noop("Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.");
-
-static MDFNSetting_EnumList VDriver_List[] =
-{
- // Legacy:
- { "0", VDRIVER_OPENGL },
- { "1", VDRIVER_SOFTSDL },
-
-
- { "opengl", VDRIVER_OPENGL, "OpenGL + SDL", gettext_noop("This output method is preferred, as all features are available with it.") },
- { "sdl", VDRIVER_SOFTSDL, "SDL Surface", gettext_noop("Slower with lower-quality scaling than OpenGL, but if you don't have hardware-accelerated OpenGL rendering, it will be faster than software OpenGL rendering. Bilinear interpolation not available. Pixel shaders do not work with this output method, of course.") },
- { "overlay", VDRIVER_OVERLAY, "SDL Overlay", gettext_noop("As fast as OpenGL, perhaps faster in some situations, *if* it's hardware-accelerated. Scanline effects are not available. hq2x, hq3x, hq4x are not available. The OSD may be missing or glitchy. PSX emulation will not display properly. Bilinear interpolation can't be turned off. Harsh chroma subsampling blurring in some picture types.  If you use this output method, it is strongly recommended to use a special scaler with it, such as nn2x.") },
-
- { NULL, 0 },
-};
 
 static MDFNSetting_EnumList SDriver_List[] =
 {
@@ -125,50 +91,6 @@ static MDFNSetting_EnumList SDriver_List[] =
  { NULL, 0 },
 };
 
-static MDFNSetting_EnumList Special_List[] =
-{
-    { "0", 	-1 },
-    { "none", 	-1, "None/Disabled" },
-
-#ifdef WANT_FANCY_SCALERS
-    { "hq2x", 	-1, "hq2x" },
-    { "hq3x", 	-1, "hq3x" },
-    { "hq4x", 	-1, "hq4x" },
-    { "scale2x",-1, "scale2x" },
-    { "scale3x",-1, "scale3x" },
-    { "scale4x",-1, "scale4x" },
-
-    { "2xsai", 	-1, "2xSaI" },
-    { "super2xsai", -1, "Super 2xSaI" },
-    { "supereagle", -1, "Super Eagle" },
-#endif
-
-    { "nn2x",	-1, "Nearest-neighbor 2x" },
-    { "nn3x",	-1, "Nearest-neighbor 3x" },
-    { "nn4x",	-1, "Nearest-neighbor 4x" },
-    { "nny2x",	-1, "Nearest-neighbor 2x, y axis only" },
-    { "nny3x",	-1, "Nearest-neighbor 3x, y axis only" }, 
-    { "nny4x",	-1, "Nearest-neighbor 4x, y axis only" },
-//    { "scanlines", -1, "Scanlines" },
-
-    { NULL, 0 },
-};
-
-static MDFNSetting_EnumList Pixshader_List[] =
-{
-    { "none",		SHADER_NONE,		"None/Disabled" },
-    { "autoip", 	SHADER_AUTOIP,	"Auto Interpolation", gettext_noop("Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.") },
-    { "autoipsharper",	SHADER_AUTOIPSHARPER,	"Sharper Auto Interpolation", gettext_noop("Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.") },
-    { "scale2x", 	SHADER_SCALE2X,    "Scale2x" },
-    { "sabr",		SHADER_SABR,	"SABR v3.0", gettext_noop("GPU-intensive.") },
-    { "ipsharper", 	SHADER_IPSHARPER,  "Sharper bilinear interpolation." },
-    { "ipxnoty", 	SHADER_IPXNOTY,    "Linear interpolation on X axis only." },
-    { "ipynotx", 	SHADER_IPYNOTX,    "Linear interpolation on Y axis only." },
-    { "ipxnotysharper", SHADER_IPXNOTYSHARPER, "Sharper version of \"ipxnoty\"." },
-    { "ipynotxsharper", SHADER_IPYNOTXSHARPER, "Sharper version of \"ipynotx\"." },
-
-    { NULL, 0 },
-};
 
 static std::vector <MDFNSetting> NeoDriverSettings;
 static MDFNSetting DriverSettings[] =
@@ -182,20 +104,12 @@ static MDFNSetting DriverSettings[] =
   { "netplay.port", MDFNSF_NOFLAGS, gettext_noop("Server port."), NULL, MDFNST_UINT, "4046", "1", "65535" },
   { "netplay.smallfont", MDFNSF_NOFLAGS, gettext_noop("Use small(tiny!) font for netplay chat console."), NULL, MDFNST_BOOL, "0" },
 
-  { "video.fs", MDFNSF_NOFLAGS, gettext_noop("Enable fullscreen mode."), NULL, MDFNST_BOOL, "0", },
-  { "video.driver", MDFNSF_NOFLAGS, gettext_noop("Video output method/driver."), NULL, MDFNST_ENUM, "opengl", NULL, NULL, NULL,NULL, VDriver_List },
-  { "video.glvsync", MDFNSF_NOFLAGS, gettext_noop("Attempt to synchronize OpenGL page flips to vertical retrace period."), 
-			       gettext_noop("Note: Additionally, if the environment variable \"__GL_SYNC_TO_VBLANK\" does not exist, then it will be created and set to the value specified for this setting.  This has the effect of forcibly enabling or disabling vblank synchronization when running under Linux with NVidia's drivers."),
-				MDFNST_BOOL, "1" },
-
   { "video.frameskip", MDFNSF_NOFLAGS, gettext_noop("Enable frameskip during emulation rendering."), 
 					gettext_noop("Disable for rendering code performance testing."), MDFNST_BOOL, "1" },
 
   { "video.blit_timesync", MDFNSF_NOFLAGS, gettext_noop("Enable time synchronization(waiting) for frame blitting."),
 					gettext_noop("Disable to reduce latency, at the cost of potentially increased video \"juddering\", with the maximum reduction in latency being about 1 video frame's time.\nWill work best with emulated systems that are not very computationally expensive to emulate, combined with running on a relatively fast CPU."),
 					MDFNST_BOOL, "1" },
-
-  { "video.disable_composition", MDFNSF_NOFLAGS, gettext_noop("Attempt to disable desktop composition."), gettext_noop("Currently, this setting only has an effect on Windows Vista and Windows 7(and probably the equivalent server versions as well)."), MDFNST_BOOL, "1" },
 
   { "ffspeed", MDFNSF_NOFLAGS, gettext_noop("Fast-forwarding speed multiplier."), NULL, MDFNST_FLOAT, "4", "1", "15" },
   { "fftoggle", MDFNSF_NOFLAGS, gettext_noop("Treat the fast-forward button as a toggle."), NULL, MDFNST_BOOL, "0" },
@@ -222,10 +136,10 @@ static MDFNSetting DriverSettings[] =
   { "osd.alpha_blend", MDFNSF_NOFLAGS, gettext_noop("Enable alpha blending for OSD elements."), NULL, MDFNST_BOOL, "1" },
 };
 
-static void BuildSystemSetting(MDFNSetting *setting, const char *system_name, const char *name, const char *description, const char *description_extra, MDFNSettingType type, 
-	const char *default_value, const char *minimum = NULL, const char *maximum = NULL,
-	bool (*validate_func)(const char *name, const char *value) = NULL, void (*ChangeNotification)(const char *name) = NULL, 
-        const MDFNSetting_EnumList *enum_list = NULL)
+void BuildSystemSetting(MDFNSetting *setting, const char *system_name, const char *name, const char *description, const char *description_extra, MDFNSettingType type, 
+	const char *default_value, const char *minimum, const char *maximum,
+	bool (*validate_func)(const char *name, const char *value), void (*ChangeNotification)(const char *name), 
+        const MDFNSetting_EnumList *enum_list)
 {
  char setting_name[256];
 
@@ -256,35 +170,6 @@ static const MDFNSetting_EnumList DisFontSize_List[] =
  { NULL, 0 },
 };
 
-static const MDFNSetting_EnumList StretchMode_List[] =
-{
- { "0", 0, gettext_noop("Disabled") },
- { "off", 0 },
-
- { "1", 1 },
- { "full", 1, gettext_noop("Full"), gettext_noop("Full-screen stretch, disregarding aspect ratio.") },
-
- { "2", 2 },
- { "aspect", 2, gettext_noop("Aspect Preserve"), gettext_noop("Full-screen stretch as far as the aspect ratio(in this sense, the equivalent xscalefs == yscalefs) can be maintained.") },
-
- { "aspect_int", 3, gettext_noop("Aspect Preserve + Integer Scale"), gettext_noop("Full-screen stretch, same as \"aspect\" except that the equivalent xscalefs and yscalefs are rounded down to the nearest integer.") },
- { "aspect_mult2", 4, gettext_noop("Aspect Preserve + Integer Multiple-of-2 Scale"), gettext_noop("Full-screen stretch, same as \"aspect_int\", but rounds down to the nearest multiple of 2.") },
-
- { NULL, 0 },
-};
-
-static const MDFNSetting_EnumList VideoIP_List[] =
-{
- { "0", VIDEOIP_OFF, gettext_noop("Disabled") },
-
- { "1", VIDEOIP_BILINEAR, gettext_noop("Bilinear") },
-
- // Disabled until a fix can be made for rotation.
- { "x", VIDEOIP_LINEAR_X, gettext_noop("Linear (X)"), gettext_noop("Interpolation only on the X axis.") },
- { "y", VIDEOIP_LINEAR_Y, gettext_noop("Linear (Y)"), gettext_noop("Interpolation only on the Y axis.") },
-
- { NULL, 0 },
-};
 
 void MakeDebugSettings(std::vector <MDFNSetting> &settings)
 {
@@ -305,84 +190,6 @@ void MakeDebugSettings(std::vector <MDFNSetting> &settings)
   settings.push_back(setting);
  }
  #endif
-}
-
-void MakeVideoSettings(std::vector <MDFNSetting> &settings)
-{
- for(unsigned int i = 0; i < MDFNSystems.size() + 1; i++)
- {
-  int nominal_width;
-  int nominal_height;
-  bool multires;
-  const char *sysname;
-  char default_value[256];
-  MDFNSetting setting;
-  const int default_xres = 0, default_yres = 0;
-  const double default_scalefs = 1.0;
-  double default_scale;
-
-  if(i == MDFNSystems.size())
-  {
-   nominal_width = 384;
-   nominal_height = 240;
-   multires = FALSE;
-   sysname = "player";
-  }
-  else
-  {
-   nominal_width = MDFNSystems[i]->nominal_width;
-   nominal_height = MDFNSystems[i]->nominal_height;
-   multires = MDFNSystems[i]->multires;
-   sysname = (const char *)MDFNSystems[i]->shortname;
-  }
-
-  if(multires)
-   default_scale = ceil(1024 / nominal_width);
-  else
-   default_scale = ceil(768 / nominal_width);
-
-  if(default_scale * nominal_width > 1024)
-   default_scale--;
-
-  if(!default_scale)
-   default_scale = 1;
-
-  trio_snprintf(default_value, 256, "%d", default_xres);
-  BuildSystemSetting(&setting, sysname, "xres", CSD_xres, CSDE_xres, MDFNST_UINT, strdup(default_value), "0", "65536");
-  settings.push_back(setting);
-
-  trio_snprintf(default_value, 256, "%d", default_yres);
-  BuildSystemSetting(&setting, sysname, "yres", CSD_yres, CSDE_yres, MDFNST_UINT, strdup(default_value), "0", "65536");
-  settings.push_back(setting);
-
-  trio_snprintf(default_value, 256, "%f", default_scale);
-  BuildSystemSetting(&setting, sysname, "xscale", CSD_xscale, NULL, MDFNST_FLOAT, strdup(default_value), "0.01", "256");
-  settings.push_back(setting);
-  BuildSystemSetting(&setting, sysname, "yscale", CSD_yscale, NULL, MDFNST_FLOAT, strdup(default_value), "0.01", "256");
-  settings.push_back(setting);
-
-  trio_snprintf(default_value, 256, "%f", default_scalefs);
-  BuildSystemSetting(&setting, sysname, "xscalefs", CSD_xscalefs, CSDE_xyscalefs, MDFNST_FLOAT, strdup(default_value), "0.01", "256");
-  settings.push_back(setting);
-  BuildSystemSetting(&setting, sysname, "yscalefs", CSD_yscalefs, CSDE_xyscalefs, MDFNST_FLOAT, strdup(default_value), "0.01", "256");
-  settings.push_back(setting);
-
-  BuildSystemSetting(&setting, sysname, "scanlines", CSD_scanlines, CSDE_scanlines, MDFNST_INT, "0", "-100", "100");
-  settings.push_back(setting);
-
-  BuildSystemSetting(&setting, sysname, "stretch", CSD_stretch, NULL, MDFNST_ENUM, "aspect_mult2", NULL, NULL, NULL, NULL, StretchMode_List);
-  settings.push_back(setting);
-
-  BuildSystemSetting(&setting, sysname, "videoip", CSD_videoip, NULL, MDFNST_ENUM, multires ? "1" : "0", NULL, NULL, NULL, NULL, VideoIP_List);
-  settings.push_back(setting);
-
-  BuildSystemSetting(&setting, sysname, "special", CSD_special, CSDE_special, MDFNST_ENUM, "none", NULL, NULL, NULL, NULL, Special_List);
-  settings.push_back(setting);
-
-  BuildSystemSetting(&setting, sysname, "pixshader", CSD_pixshader, CSDE_pixshader, MDFNST_ENUM, "none", NULL, NULL, NULL, NULL, Pixshader_List);
-  settings.push_back(setting);
- }
-
 }
 
 static MDFN_Thread* GameThread;
@@ -450,29 +257,34 @@ void MDFND_Message(const char *s)
  }
 }
 
-// CreateDirs should make sure errno is intact after calling mkdir() if it fails.
-static bool CreateDirs(void)
+static void CreateDirs(void)
 {
- const char *subs[7] = { "mcs", "mcm", "snaps", "palettes", "sav", "cheats", "firmware" };
- char *tdir;
+ static const char *subs[] = { "mcs", "mcm", "snaps", "palettes", "sav", "cheats", "firmware" };
 
- if(MDFN_mkdir(DrBaseDirectory, S_IRWXU) == -1 && errno != EEXIST)
+ try
  {
-  return(FALSE);
+  MDFN_mkdir_T(DrBaseDirectory);
+ }
+ catch(MDFN_Error &e)
+ {
+  if(e.GetErrno() != EEXIST)
+   throw;
  }
 
- for(unsigned int x = 0; x < sizeof(subs) / sizeof(const char *); x++)
+ for(auto const& s : subs)
  {
-  tdir = trio_aprintf("%s" PSS "%s",DrBaseDirectory,subs[x]);
-  if(MDFN_mkdir(tdir, S_IRWXU) == -1 && errno != EEXIST)
+  std::string tdir = std::string(DrBaseDirectory) + std::string(PSS) + std::string(s);
+
+  try
   {
-   free(tdir);
-   return(FALSE);
+   MDFN_mkdir_T(tdir.c_str());
   }
-  free(tdir);
+  catch(MDFN_Error &e)
+  {
+   if(e.GetErrno() != EEXIST)
+    throw;
+  }
  }
-
- return(TRUE);
 }
 
 #if defined(HAVE_SIGNAL) || defined(HAVE_SIGACTION)
@@ -802,6 +614,7 @@ static int LoadGame(const char *force_module, const char *path)
 	CurGame = tmp;
 	InitGameInput(tmp);
 	InitCommandInput(tmp);
+	RMDUI_Init(tmp);
 
         RefreshThrottleFPS(1);
 
@@ -892,6 +705,7 @@ int CloseGame(void)
 
 	MDFNI_CloseGame();
 
+	RMDUI_Kill();
 	KillCommandInput();
         KillGameInput();
 	Sound_Kill();
@@ -902,12 +716,17 @@ int CloseGame(void)
 }
 
 static void GameThread_HandleEvents(void);
-static int volatile NeedExitNow = 0;
+static int volatile NeedExitNow = 0;	// Set 'true' in various places, including signal handler.
 double CurGameSpeed = 1;
 
 void MainRequestExit(void)
 {
  NeedExitNow = 1;
+}
+
+bool MainExitPending(void)	// Called from netplay code, so we can break out of blocking loops after receiving a signal.
+{
+ return (bool)NeedExitNow;
 }
 
 static bool InFrameAdvance = 0;
@@ -1376,7 +1195,7 @@ void PumpWrap(void)
 		 //case CEVT_TOGGLEFS: NeedVideoChange = 1; break;
 		 //case CEVT_VIDEOSYNC: NeedVideoChange = -1; break;
 		 case CEVT_SHOWCURSOR: SDL_ShowCursor(*(int *)event.user.data1); free(event.user.data1); break;
-	  	 case CEVT_DISP_MESSAGE: VideoShowMessage((UTF8*)event.user.data1); break;
+	  	 case CEVT_DISP_MESSAGE: VideoShowMessage((char*)event.user.data1); break;
 		 default: 
 			if(numevents < gtevents_size)
 			{
@@ -1421,7 +1240,31 @@ void PrintCompilerVersion(void)
  #if defined(__GNUC__)
   MDFN_printf(_("Compiled with gcc %s\n"), __VERSION__);
  #endif
+
+ #ifdef HAVE___MINGW_GET_CRT_INFO
+  MDFN_printf(_("Running with %s\n"), __mingw_get_crt_info());
+ #endif
 }
+
+#if 0
+#include <vector>	// To make sure we pick up c++config.h if it's there
+void PrintGLIBCXXInfo(void)
+{
+ #if defined(__GLIBCXX__)
+  MDFN_printf(_("Compiled with GNU libstdc++ %lu\n"), (unsigned long)__GLIBCXX__);
+  {
+   MDFN_AutoIndent aind(1);
+   const char* sjljresp;
+   #if defined(_GLIBCXX_SJLJ_EXCEPTIONS)
+    sjljresp = _("Yes");
+   #else
+    sjljresp = _("No");
+   #endif
+   MDFN_printf(_("Using SJLJ Exceptions: %s\n"), sjljresp);
+  }
+ #endif
+}
+#endif
 
 void PrintSDLVersion(void)
 {
@@ -1441,10 +1284,19 @@ void PrintLIBSNDFILEVersion(void)
  #endif
 }
 
+#include <zlib.h>
 void PrintZLIBVersion(void)
 {
  #ifdef ZLIB_VERSION
-  MDFN_printf(_("Compiled against zlib %s, running with zlib %s\n"), ZLIB_VERSION, zlibVersion());
+  MDFN_printf(_("Compiled against zlib %s, running with zlib %s(flags=0x%08lx)\n"), ZLIB_VERSION, zlibVersion(), (unsigned long)zlibCompileFlags());
+ #endif
+}
+
+void PrintLIBICONVVersion(void)
+{
+ #ifdef _LIBICONV_VERSION
+  MDFN_printf(_("Compiled against libiconv %u.%u, running with libiconv %u.%u\n"), _LIBICONV_VERSION & 0xFF, _LIBICONV_VERSION >> 8,
+										   _libiconv_version & 0xFF, _libiconv_version >> 8);
  #endif
 }
 
@@ -1458,8 +1310,6 @@ void PrintLIBCDIOVersion(void)
   MDFN_printf(_("Compiled against libcdio %s, running with libcdio %s\n"), CDIO_VERSION, cdio_version_string);
  #endif
 }
-
-int sdlhaveogl = 0;
 
 //#include <sched.h>
 
@@ -1609,6 +1459,49 @@ static void ThreadTest(void)
 
 #endif
 
+static bool HandleVideoChange(void)
+{
+ if(NeedVideoChange == -1)
+ {
+  try
+  {
+   Video_Init(CurGame);
+  }
+  catch(std::exception &e)
+  {
+   MDFND_PrintError(e.what());
+   return(false);
+  }
+ }
+ else
+ {
+  bool original_fs_setting = MDFN_GetSettingB("video.fs");
+
+  try
+  {
+   MDFNI_SetSettingB("video.fs", !original_fs_setting);
+   Video_Init(CurGame);
+  }
+  catch(std::exception &e)
+  {
+   MDFND_PrintError(e.what());
+
+   try
+   {
+    MDFNI_SetSettingB("video.fs", original_fs_setting);
+    Video_Init(CurGame);	    
+   }
+   catch(std::exception &ne)
+   {
+    MDFND_PrintError(ne.what());
+    return(false);
+   }
+  }
+ }
+
+ return(true);
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -1687,7 +1580,9 @@ int main(int argc, char *argv[])
         MDFN_printf(_("Build information:\n"));
         MDFN_indent(2);
         PrintCompilerVersion();
+	//PrintGLIBCXXInfo();
         PrintZLIBVersion();
+	PrintLIBICONVVersion();
         PrintSDLVersion();
         PrintLIBSNDFILEVersion();
 	PrintLIBCDIOVersion();
@@ -1721,7 +1616,7 @@ int main(int argc, char *argv[])
 	 NeoDriverSettings.push_back(DriverSettings[x]);
 
 	MakeDebugSettings(NeoDriverSettings);
-	MakeVideoSettings(NeoDriverSettings);
+	Video_MakeSettings(NeoDriverSettings);
 	MakeInputSettings(NeoDriverSettings);
 
         if(!MDFNI_Initialize(DrBaseDirectory, NeoDriverSettings))
@@ -1733,11 +1628,13 @@ int main(int argc, char *argv[])
         SetSignals(CloseStuff);
         #endif
 
-	if(!CreateDirs())
+	try
 	{
-	 ErrnoHolder ene(errno);	// TODO: Maybe we should have CreateDirs() return this instead?
-
-	 MDFN_PrintError(_("Error creating directories: %s\n"), ene.StrError());
+	 CreateDirs();
+	}
+	catch(std::exception &e)
+	{
+	 MDFN_PrintError(_("Error creating directories: %s\n"), e.what());
 	 MDFNI_Kill();
 	 return(-1);
 	}
@@ -1762,7 +1659,7 @@ int main(int argc, char *argv[])
 	*/
 	int ret = 0;
 
-	//InitVideo(NULL);
+	//Video_Init(NULL);
 
 	VTMutex = MDFND_CreateMutex();
         EVMutex = MDFND_CreateMutex();
@@ -1829,36 +1726,24 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 	 NeedExitNow = 1;
 	}
 
-	while(!NeedExitNow)
+	while(MDFN_LIKELY(!NeedExitNow))
 	{
 	 bool DidVideoChange = false;
 
 	 MDFND_LockMutex(VTMutex);	/* Lock mutex */
 
-         if(NeedVideoChange)
+         if(MDFN_UNLIKELY(NeedVideoChange))
          {
-          KillVideo();
+          Video_Kill();
 
-          if(NeedVideoChange == -1)
-          {
-           if(!InitVideo(CurGame))
-           {
-	    ret = -1;
-            NeedExitNow = 1;
-	    MDFND_UnlockMutex(VTMutex);   /* Unlock mutex */
-            break;
-           }
-          }
-          else
-          {
-           MDFNI_SetSettingB("video.fs", !MDFN_GetSettingB("video.fs"));
-
-           if(!InitVideo(CurGame))
-           {
-            MDFNI_SetSettingB("video.fs", !MDFN_GetSettingB("video.fs"));
-            InitVideo(CurGame);
-           }
-          }
+	  if(!HandleVideoChange())
+	  {
+	   ret = -1;
+           NeedExitNow = 1;
+           NeedVideoChange = 0;
+	   MDFND_UnlockMutex(VTMutex);   /* Unlock mutex */
+	   break;
+	  }
 
 	  DidVideoChange = true;
           NeedVideoChange = 0;
@@ -1921,7 +1806,7 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 	delete joy_manager;
 	joy_manager = NULL;
 
-	KillVideo();
+	Video_Kill();
 
 	SDL_Quit();
 
@@ -2090,17 +1975,17 @@ bool MDFND_Update(MDFN_Surface *surface, MDFN_Rect *rect, int32 *lw, int Interla
  return(ret);
 }
 
-void MDFND_DispMessage(UTF8 *text)
+void MDFND_DispMessage(char* text)
 {
  SendCEvent(CEVT_DISP_MESSAGE, text, NULL);
 }
 
-void MDFND_SetStateStatus(StateStatusStruct *status)
+void MDFND_SetStateStatus(StateStatusStruct *status) noexcept
 {
  SendCEvent(CEVT_SET_STATE_STATUS, status, NULL);
 }
 
-void MDFND_SetMovieStatus(StateStatusStruct *status)
+void MDFND_SetMovieStatus(StateStatusStruct *status) noexcept
 {
  SendCEvent(CEVT_SET_MOVIE_STATUS, status, NULL);
 }

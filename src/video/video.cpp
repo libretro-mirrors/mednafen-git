@@ -29,87 +29,46 @@
 
 #include "png.h"
 
-#if 0
-void MDFNI_CollapseMultiWidthSurface(MDFN_Surface* surface, MDFN_Rect* rect, int32* LineWidths, int32 lcm)
-{
- if(LineWidths[0] == ~0)
-  return;
-
- std:vector<uint32> LineBuffer;
-
- LineBuffer.resize(surface->fb_width);
-
-
- for(int32 y = rect->y; y < (rect->y + rect->y; y++)
- {
-  uint32* pixels = surface->pixels + y * surface->pitchinpix + rect->x;
-  int32 sf = lcm / LineWidths[y];
-
-  memcpy(&LineBuffer[0], pixels, LineWidths[y] * sizeof(*pixels));
-
-  for(int x = 0; x < LineWidths[y]; x++)
-
- }
-
- LineWidths[0] = ~0;
-}
-#endif
-
 void MDFNI_SaveSnapshot(const MDFN_Surface *src, const MDFN_Rect *rect, const int32 *LineWidths)
 {
- FileWrapper *pp = NULL;
-
  try
  {
-  std::string fn;
-  int u = 0;
+  unsigned u = 0;
 
   try
   {
-   pp = new FileWrapper(MDFN_MakeFName(MDFNMKF_SNAP_DAT, 0, NULL).c_str(), FileWrapper::MODE_READ);
+   FileStream pp(MDFN_MakeFName(MDFNMKF_SNAP_DAT, 0, NULL), FileStream::MODE_READ);
+   std::string linebuf;
+
+   if(pp.get_line(linebuf) >= 0)
+    if(trio_sscanf(linebuf.c_str(), "%u", &u) != 1)
+     u = 0;
   }
   catch(std::exception &e)
   {
 
   }
 
-  if(pp)
   {
-   if(pp->scanf("%d", &u) != 1)
-    u = 0;
+   FileStream pp(MDFN_MakeFName(MDFNMKF_SNAP_DAT, 0, NULL), FileStream::MODE_WRITE);
 
-   delete pp;
-   pp = NULL;
+   pp.print_format("%u\n", u + 1);
   }
 
-  pp = new FileWrapper(MDFN_MakeFName(MDFNMKF_SNAP_DAT, 0, NULL).c_str(), FileWrapper::MODE_WRITE);
+  std::string fn = MDFN_MakeFName(MDFNMKF_SNAP, u, "png");
 
-  pp->seek(0, SEEK_SET);
-  pp->printf("%d\n", u + 1);
+  PNGWrite(fn, src, *rect, LineWidths);
 
-  delete pp;
-  pp = NULL;
-
-  fn = MDFN_MakeFName(MDFNMKF_SNAP, u, "png");
-
-  PNGWrite(fn.c_str(), src, *rect, LineWidths);
-
-  MDFN_DispMessage(_("Screen snapshot %d saved."), u);
+  MDFN_DispMessage(_("Screen snapshot %u saved."), u);
  }
  catch(std::exception &e)
  {
-  if(pp)
-  {
-   delete pp;
-   pp = NULL;
-  }
-
   MDFN_PrintError(_("Error saving screen snapshot: %s"), e.what());
   MDFN_DispMessage(_("Error saving screen snapshot: %s"), e.what());
  }
 }
 
-void MDFN_DispMessage(const char *format, ...) throw()
+void MDFN_DispMessage(const char *format, ...) noexcept
 {
  va_list ap;
  va_start(ap,format);
@@ -118,7 +77,7 @@ void MDFN_DispMessage(const char *format, ...) throw()
  trio_vasprintf(&msg, format,ap);
  va_end(ap);
 
- MDFND_DispMessage((UTF8*)msg);
+ MDFND_DispMessage(msg);
 }
 
 void MDFN_ResetMessages(void)

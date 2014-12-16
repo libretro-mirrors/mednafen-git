@@ -214,7 +214,7 @@ bool bios_install(void)
 	//System Call Table, install iBIOSHLE instructions
 	for (i = 0; i <= 0x1A; i++)
 	{
-		*(uint32*)(ngpc_bios + 0xFE00 + (i * 4)) = htole32(vectable[i]);
+		MDFN_en32lsb(&ngpc_bios[0xFE00 + (i * 4)], vectable[i]);
 		ngpc_bios[vectable[i] & 0xFFFF] = 0x1F;	//iBIOSHLE
 	}
 

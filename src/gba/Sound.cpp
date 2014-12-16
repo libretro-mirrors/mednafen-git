@@ -98,7 +98,7 @@ int MDFNGBASOUND_StateAction(StateMem *sm, int load, int data_only)
   SFARRAYN(soundDSFifoB, sizeof(soundDSFifoB), "soundDSFifoB"),
   SFVAR(soundDSBValue),
 
-  SFVARN(apu_state, "apu_state"),
+  SFARRAYN((uint8*)&apu_state, sizeof(apu_state), "apu_state"),
   SFEND
  };
 

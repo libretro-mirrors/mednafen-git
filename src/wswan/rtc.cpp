@@ -283,7 +283,7 @@ void RTC_Reset(void)
  Command = 0x00;
 }
 
-int RTC_StateAction(StateMem *sm, int load, int data_only)
+void RTC_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -303,14 +303,13 @@ int RTC_StateAction(StateMem *sm, int load, int data_only)
   SFVAR(CommandIndex),
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "RTC");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "RTC");
 
  if(load)
  {
 
  }
-
- return(ret);
 }
 
 

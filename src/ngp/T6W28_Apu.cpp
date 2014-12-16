@@ -78,20 +78,22 @@ void T6W28_Square::run( sms_time_t time, sms_time_t end_time )
 		int amp_left = phase ? volume_left : -volume_left;
 		int amp_right = phase ? volume_right : -volume_right;
 
-		int delta_left  = amp_left - last_amp_left;
-		int delta_right = amp_right - last_amp_right;
-
-		if ( delta_left )
 		{
+		 int delta_left  = amp_left - last_amp_left;
+		 int delta_right = amp_right - last_amp_right;
+
+		 if ( delta_left )
+		 {
 			last_amp_left = amp_left;
 			synth->offset( time, delta_left, outputs[2] );
-		}
+		 }
 		
-                if ( delta_right )
-                {
+                 if ( delta_right )
+                 {
                         last_amp_right = amp_right;
                         synth->offset( time, delta_right, outputs[1] );
-                }
+                 }
+		}
 
 		time += delay;
 		if ( time < end_time )
@@ -143,20 +145,22 @@ void T6W28_Noise::run( sms_time_t time, sms_time_t end_time )
 		amp_right = -amp_right;
 	}
 
-	int delta_left = amp_left - last_amp_left;
-	int delta_right = amp_right - last_amp_right;
-
-	if ( delta_left )
 	{
+	 int delta_left = amp_left - last_amp_left;
+	 int delta_right = amp_right - last_amp_right;
+
+	 if ( delta_left )
+	 {
 		last_amp_left = amp_left;
 		synth.offset( time, delta_left, outputs[2] );
-	}
+	 }
 	
-        if ( delta_right )
-        {
+         if ( delta_right )
+         {
                 last_amp_right = amp_right;
                 synth.offset( time, delta_right, outputs[1] );
-        }
+         }
+	}
 
 	time += delay;
 
@@ -168,18 +172,18 @@ void T6W28_Noise::run( sms_time_t time, sms_time_t end_time )
 		Blip_Buffer* const output_left = this->outputs[2];
 		Blip_Buffer* const output_right = this->outputs[1];
 
-		unsigned shifter = this->shifter;
+		unsigned l_shifter = this->shifter;
 		int delta_left = amp_left * 2;
 		int delta_right = amp_right * 2;
 
-		int period = *this->period * 2;
-		if ( !period )
-			period = 16;
+		int l_period = *this->period * 2;
+		if ( !l_period )
+			l_period = 16;
 		
 		do
 		{
-			int changed = (shifter + 1) & 2; // set if prev and next bits differ
-			shifter = (((shifter << 14) ^ (shifter << tap)) & 0x4000) | (shifter >> 1);
+			int changed = (l_shifter + 1) & 2; // set if prev and next bits differ
+			l_shifter = (((l_shifter << 14) ^ (l_shifter << tap)) & 0x4000) | (l_shifter >> 1);
 			if ( changed )
 			{
 				delta_left = -delta_left;
@@ -188,11 +192,11 @@ void T6W28_Noise::run( sms_time_t time, sms_time_t end_time )
 				delta_right = -delta_right;
 				synth.offset_inline( time, delta_right, output_right );
 			}
-			time += period;
+			time += l_period;
 		}
 		while ( time < end_time );
 		
-		this->shifter = shifter;
+		this->shifter = l_shifter;
 		this->last_amp_left = delta_left >> 1;
 		this->last_amp_right = delta_right >> 1;
 	}
@@ -361,10 +365,8 @@ void T6W28_Apu::write_data_right( sms_time_t time, int data )
 }
 
 
-T6W28_ApuState *T6W28_Apu::save_state(void)
+void T6W28_Apu::save_state(T6W28_ApuState *ret)
 {
- T6W28_ApuState *ret = (T6W28_ApuState *)malloc(sizeof(T6W28_ApuState));
-
  for(int x = 0; x < 4; x++)
  {
   ret->volume_left[x] = oscs[x]->volume_left;
@@ -386,10 +388,11 @@ T6W28_ApuState *T6W28_Apu::save_state(void)
   ret->noise_period = 2;
  else ret->noise_period = 3;
 
- return(ret);
+ ret->latch_left = latch_left;
+ ret->latch_right = latch_right;
 }
 
-void T6W28_Apu::load_state(T6W28_ApuState *state)
+void T6W28_Apu::load_state(const T6W28_ApuState *state)
 {
  for(int x = 0; x < 4; x++)
  {
@@ -402,7 +405,7 @@ void T6W28_Apu::load_state(T6W28_ApuState *state)
   squares[x].phase = state->sq_phase[x];
  }
  noise.shifter = state->noise_shifter;
- noise.tap = state->noise_tap = noise.tap;
+ noise.tap = state->noise_tap;
 
  int select = state->noise_period;
 
@@ -410,5 +413,8 @@ void T6W28_Apu::load_state(T6W28_ApuState *state)
   noise.period = &noise_periods [select];
  else
   noise.period = &noise.period_extra;
+
+ latch_left = state->latch_left;
+ latch_right = state->latch_right;
 }
 

@@ -158,7 +158,7 @@ void MDSound_Power(void)
  apu.reset();
 }
 
-int MDSound_StateAction(StateMem *sm, int load, int data_only)
+void MDSound_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  Sms_ApuState sn_state;
  MDFN::LEPacker fm_slizer;
@@ -185,15 +185,13 @@ int MDSound_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "SND");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "SND");
 
  if(load)
  {
   FMUnit.serialize(fm_slizer, true);
   apu.load_state(&sn_state);
  }
-
- return(ret);
 }
 
 };

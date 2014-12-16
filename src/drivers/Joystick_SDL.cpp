@@ -19,7 +19,6 @@
 #include "input.h"
 #include "Joystick.h"
 #include "Joystick_SDL.h"
-#include "../md5.h"
 
 #include <SDL.h>
 

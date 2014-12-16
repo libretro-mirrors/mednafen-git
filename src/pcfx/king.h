@@ -28,7 +28,7 @@ uint8 KING_RB_Fetch();
 
 void KING_SetLayerEnableMask(uint64 mask);
 
-int KING_StateAction(StateMem *sm, int load, int data_only);
+void KING_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 #ifdef WANT_DEBUGGER
 uint32 KING_GetRegister(const std::string &name, std::string *special);

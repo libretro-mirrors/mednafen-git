@@ -177,10 +177,9 @@ class C65C02
 			gSystemCPUSleep=FALSE;
 		}
 
-                inline 	int StateAction(StateMem *sm, int load, int data_only)
+                inline void StateAction(StateMem *sm, const unsigned load, const bool data_only)
                 {
 			uint8 mPS;
-			std::vector <SSDescriptor> love;
 
 			SFORMAT CPURegs[] =
 			{
@@ -192,13 +191,13 @@ class C65C02
 			{
 	                        mPS=PS();
 			}
-			love.push_back(SSDescriptor(CPURegs, "CPU"));
-			MDFNSS_StateAction(sm, load, data_only, love);
+
+			MDFNSS_StateAction(sm, load, data_only, CPURegs, "CPU");
+
 			if(load)
 			{
 				PS(mPS);
 			}
-                        return 1;
                 }
 
 	void Update(void);

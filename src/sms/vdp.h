@@ -76,7 +76,7 @@ void vdp_hclatch(void);
 
 
 void SMS_VDPRunFrame(int skip_render);
-void SMS_VDPSetPixelFormat(const MDFN_PixelFormat &format);
+void SMS_VDPSetPixelFormat(const MDFN_PixelFormat &format, const uint8* CustomPalette);
 int SMS_VDPStateAction(StateMem *sm, int load, int data_only);
 
 }

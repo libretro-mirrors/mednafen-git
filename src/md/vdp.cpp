@@ -351,7 +351,7 @@ INLINE void MDVDP::MemoryWrite16(uint16 data)
             if((addr & sat_base_mask) == satb)
             {
                 //MDFN_en16lsb(&sat[addr & sat_addr_mask], data);
-		MDFN_en16lsb(&sat[addr & sat_addr_mask & ~1], data);
+		MDFN_en16lsb<true>(&sat[addr & sat_addr_mask & ~1], data);
             }
 
             /* Only write unique data to VRAM */
@@ -692,7 +692,7 @@ void MDVDP::ResetTS(void)
  vdp_last_ts = 0;
 }
 
-int MDVDP::StateAction(StateMem *sm, int load, int data_only)
+void MDVDP::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -745,7 +745,7 @@ int MDVDP::StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "VDP");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "VDP");
 
  if(load)
  {
@@ -769,9 +769,6 @@ int MDVDP::StateAction(StateMem *sm, int load, int data_only)
 
   update_bg_pattern_cache();
  }
-
-
- return(ret);
 }
 
 /*
@@ -904,11 +901,11 @@ void MDVDP::make_name_lut(void)
 void MDVDP::render_line(int line)
 {
     /* Line buffers */
-    uint8 tmp_buf[0x400];                   /* Temporary buffer */
-    uint8 bg_buf[0x400];                    /* Merged background buffer */
-    uint8 nta_buf[0x400];                   /* Plane A / Window line buffer */
-    uint8 ntb_buf[0x400];                   /* Plane B line buffer */
-    uint8 obj_buf[0x400];                   /* Object layer line buffer */
+    alignas(8) uint8 tmp_buf[0x400];                   /* Temporary buffer */
+    alignas(8) uint8 bg_buf[0x400];                    /* Merged background buffer */
+    alignas(8) uint8 nta_buf[0x400];                   /* Plane A / Window line buffer */
+    alignas(8) uint8 ntb_buf[0x400];                   /* Plane B line buffer */
+    alignas(8) uint8 obj_buf[0x400];                   /* Object layer line buffer */
     uint8 *lb = tmp_buf;
 
     const int32 vp_x = 0x20;
@@ -1038,7 +1035,7 @@ void MDVDP::render_ntw(int line, uint8 *buf)
 
     for(column = clip[1].left; column < clip[1].right; column += 1)
     {
-        atbuf = le32toh(nt[column]);
+        atbuf = MDFN_de32lsb<true>(&nt[column]);
         DRAW_COLUMN(atbuf, v_line)
     }
 }
@@ -1056,7 +1053,7 @@ void MDVDP::render_ntw_im2(int line, uint8 *buf)
 
     for(column = clip[1].left; column < clip[1].right; column += 1)
     {
-        atbuf = le32toh(nt[column]);
+        atbuf = MDFN_de32lsb<true>(&nt[column]);
         DRAW_COLUMN_IM2(atbuf, v_line)
     }
 }
@@ -1116,7 +1113,7 @@ void MDVDP::render_ntx(int which, int line, uint8 *buf)
     if(shift)
     {
         dst = (uint32 *)&buf[0x20-(0x10-shift)];
-        atbuf = MDFN_de32lsb(&nt[((index-1) & nametable_row_mask) << 2]);
+        atbuf = MDFN_de32lsb<true>(&nt[((index-1) & nametable_row_mask) << 2]);
         DRAW_COLUMN(atbuf, v_line)
     }
     buf = (buf + 0x20 + shift);
@@ -1124,7 +1121,7 @@ void MDVDP::render_ntx(int which, int line, uint8 *buf)
 
     for(column = start; column < end; column += 1, index += 1)
     {
-        atbuf = MDFN_de32lsb(&nt[(index & nametable_row_mask) << 2]);
+        atbuf = MDFN_de32lsb<true>(&nt[(index & nametable_row_mask) << 2]);
         DRAW_COLUMN(atbuf, v_line)
     }
 }
@@ -1177,7 +1174,7 @@ void MDVDP::render_ntx_im2(int which, int line, uint8 *buf)
     if(shift)
     {
         dst = (uint32 *)&buf[0x20-(0x10-shift)];
-        atbuf = MDFN_de32lsb(&nt[((index-1) & nametable_row_mask) << 2]);
+        atbuf = MDFN_de32lsb<true>(&nt[((index-1) & nametable_row_mask) << 2]);
         DRAW_COLUMN_IM2(atbuf, v_line)
     }
     buf = (buf + 0x20 + shift);
@@ -1185,7 +1182,7 @@ void MDVDP::render_ntx_im2(int which, int line, uint8 *buf)
 
     for(column = start; column < end; column += 1, index += 1)
     {
-        atbuf = MDFN_de32lsb(&nt[(index & nametable_row_mask) << 2]);
+        atbuf = MDFN_de32lsb<true>(&nt[(index & nametable_row_mask) << 2]);
         DRAW_COLUMN_IM2(atbuf, v_line)
     }
 }
@@ -1235,7 +1232,7 @@ void MDVDP::render_ntx_vs(int which, int line, uint8 *buf)
         y_scroll = (line & playfield_row_mask);
         v_line = (y_scroll & 7) << 1;
         nt = &vram[table + (((y_scroll >> 3) << playfield_shift) & y_mask)];
-        atbuf = MDFN_de32lsb(&nt[((index-1) & nametable_row_mask) << 2]);
+        atbuf = MDFN_de32lsb<true>(&nt[((index-1) & nametable_row_mask) << 2]);
         DRAW_COLUMN(atbuf, v_line)
     }
 
@@ -1248,7 +1245,7 @@ void MDVDP::render_ntx_vs(int which, int line, uint8 *buf)
         y_scroll = (line + (y_scroll & 0x3FF)) & playfield_row_mask;
         v_line = (y_scroll & 7) << 1;
         nt = &vram[table + (((y_scroll >> 3) << playfield_shift) & y_mask)];
-        atbuf = MDFN_de32lsb(&nt[(index & nametable_row_mask) << 2]);
+        atbuf = MDFN_de32lsb<true>(&nt[(index & nametable_row_mask) << 2]);
         DRAW_COLUMN(atbuf, v_line)
     }
 }
@@ -1274,7 +1271,7 @@ void MDVDP::update_bg_pattern_cache(void)
             if(bg_name_dirty[name] & (1 << y))
             {
                 uint8 *dst = (uint8 *)&bg_pattern_cache[name << 4];
-                uint32 bp = READ_32_LSB(vram, (name << 5) | (y << 2));
+                uint32 bp = MDFN_de32lsb<true>(vram + ((name << 5) | (y << 2)));
 
                 for(x = 0; x < 8; x += 1)
                 {
@@ -1723,7 +1720,7 @@ void MDVDP::parse_satb(int line)
         q = &sat[link << 3];
         p = &vram[satb + (link << 3)];
 
-        ypos = MDFN_de16lsb(&q[0]);
+        ypos = MDFN_de16lsb<true>(&q[0]);
 
         if(im2_flag)
             ypos = (ypos >> 1) & 0x1FF;
@@ -1742,14 +1739,14 @@ void MDVDP::parse_satb(int line)
              return;
             }
 
-            object_info[object_index_count].ypos = MDFN_de16lsb(&q[0]);
-            object_info[object_index_count].xpos = MDFN_de16lsb(&p[6]);
+            object_info[object_index_count].ypos = MDFN_de16lsb<true>(&q[0]);
+            object_info[object_index_count].xpos = MDFN_de16lsb<true>(&p[6]);
 
             // using xpos from internal satb stops sprite x
             // scrolling in bloodlin.bin,
             // but this seems to go against the test prog
            //object_info[object_index_count].xpos = MDFN_de16lsb(&q[6]);
-            object_info[object_index_count].attr = MDFN_de16lsb(&p[4]);
+            object_info[object_index_count].attr = MDFN_de16lsb<true>(&p[4]);
             object_info[object_index_count].size = q[3];
             object_info[object_index_count].index = count;
 

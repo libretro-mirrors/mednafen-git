@@ -14,10 +14,7 @@ namespace bSNES_v059 {
 #include "memory/memory.cpp"
 #include "timing/timing.cpp"
 
-#ifndef DEBUGGER
-inline
-#endif
-void SMP::op_step() {
+alwaysinline void SMP::op_step() {
   do_op(op_readpc());
 }
 

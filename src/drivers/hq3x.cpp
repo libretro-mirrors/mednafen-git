@@ -23,17 +23,17 @@
 #define HQXX_INTERNAL
 #include "hqxx-common.h"
 
-inline void Interp1(unsigned char * pc, int c1, int c2)
+static inline void Interp1(unsigned char * pc, int c1, int c2)
 {
   *((int*)pc) = (c1*3+c2) >> 2;
 }
 
-inline void Interp2(unsigned char * pc, int c1, int c2, int c3)
+static inline void Interp2(unsigned char * pc, int c1, int c2, int c3)
 {
   *((int*)pc) = (c1*2+c2+c3) >> 2;
 }
 
-inline void Interp3(unsigned char * pc, int c1, int c2)
+static inline void Interp3(unsigned char * pc, int c1, int c2)
 {
   //*((int*)pc) = (c1*7+c2)/8;
 
@@ -41,7 +41,7 @@ inline void Interp3(unsigned char * pc, int c1, int c2)
                  (((c1 & 0xFF00FF)*7 + (c2 & 0xFF00FF) ) & 0x07F807F8)) >> 3;
 }
 
-inline void Interp4(unsigned char * pc, int c1, int c2, int c3)
+static inline void Interp4(unsigned char * pc, int c1, int c2, int c3)
 {
   //*((int*)pc) = (c1*2+(c2+c3)*7)/16;
 
@@ -49,7 +49,7 @@ inline void Interp4(unsigned char * pc, int c1, int c2, int c3)
                  (((c1 & 0xFF00FF)*2 + ((c2 & 0xFF00FF) + (c3 & 0xFF00FF))*7 ) & 0x0FF00FF0)) >> 4;
 }
 
-inline void Interp5(unsigned char * pc, int c1, int c2)
+static inline void Interp5(unsigned char * pc, int c1, int c2)
 {
   *((int*)pc) = (c1+c2) >> 1;
 }
@@ -108,7 +108,7 @@ inline void Interp5(unsigned char * pc, int c1, int c2)
 #define PIXEL22_5   Interp5(pOut+BpL+BpL+8, w[6], w[8]);
 #define PIXEL22_C   *((int*)(pOut+BpL+BpL+8)) = w[5];
 
-static inline int Diff(unsigned int w1, unsigned int w2)
+static int MDFN_FASTCALL Diff(unsigned int w1, unsigned int w2)
 {
   int YUV1;
   int YUV2;

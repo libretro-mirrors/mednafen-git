@@ -30,7 +30,7 @@
 	The 21MHz master clock penalty when executing(not explicitly branching) across a 8KiB page boundary is not emulated.
 */
 
-#include "mednafen/mednafen.h"
+#include <mednafen/mednafen.h>
 #include "huc6280.h"
 
 #include <string.h>
@@ -662,7 +662,7 @@ void HuC6280::IRQStatusWrite(unsigned int address, uint8 V)
  }
 }
 
-int HuC6280::StateAction(StateMem *sm, int load, int data_only)
+void HuC6280::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  uint16 tmp_PC = PC;
 
@@ -705,7 +705,7 @@ int HuC6280::StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "CPU");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "CPU");
 
  if(load)
  {
@@ -716,17 +716,6 @@ int HuC6280::StateAction(StateMem *sm, int load, int data_only)
   REDOSPEEDCACHE();
   REDOPIMCACHE();
  }
- return(ret);
-}
-
-void HuC6280::DumpMem(char *filename, uint32 start, uint32 end)
-{
- FILE *fp=fopen(filename, "wb");
-
- for(uint32 x = start; x <= end; x++)
-  fputc(RdMem(x), fp);
-
- fclose(fp);
 }
 
 void HuC6280::SetRegister(const unsigned int id, uint32 value)

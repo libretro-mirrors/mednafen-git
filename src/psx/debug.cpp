@@ -462,14 +462,14 @@ static RegType Regs_SPU[] =
  { PS_SPU::GSREG_CDVOL_L, "CDVolL", "CD Volume Left", 2 },
  { PS_SPU::GSREG_CDVOL_R, "CDVolR", "CD Volume Right", 2 },
 
- { PS_SPU::GSREG_DRYVOL_CTRL_L, "DryVolCL", "Dry Volume Control Left", 2 },
- { PS_SPU::GSREG_DRYVOL_CTRL_R, "DryVolCR", "Dry Volume Control Right", 2 },
+ { PS_SPU::GSREG_RVBVOL_L, "RvbVolL", "Reverb Volume Left", 2 },
+ { PS_SPU::GSREG_RVBVOL_R, "RvbVolR", "Reverb Volume Right", 2 },
 
- { PS_SPU::GSREG_DRYVOL_L, "DryVolL", "Dry Volume Left", 2 },
- { PS_SPU::GSREG_DRYVOL_R, "DryVolR", "Dry Volume Right", 2 },
+ { PS_SPU::GSREG_MAINVOL_CTRL_L, "MainVolCL", "Main Volume Control Left", 2 },
+ { PS_SPU::GSREG_MAINVOL_CTRL_R, "MainVolCR", "Main Volume Control Right", 2 },
 
- { PS_SPU::GSREG_WETVOL_L, "WetVolL", "Wet Volume Left", 2 },
- { PS_SPU::GSREG_WETVOL_R, "WetVolR", "Wet Volume Right", 2 },
+ { PS_SPU::GSREG_MAINVOL_L, "MainVolL", "Dry Volume Left", 2 },
+ { PS_SPU::GSREG_MAINVOL_R, "MainVolR", "Dry Volume Right", 2 },
 
  { PS_SPU::GSREG_RWADDR, "RWAddr", "SPURAM Read/Write Address", 3 },
 

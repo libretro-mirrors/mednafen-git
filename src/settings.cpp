@@ -26,10 +26,11 @@
 #include <map>
 #include <list>
 #include "settings.h"
-#include "md5.h"
 #include "string/escape.h"
 #include "FileStream.h"
 #include "MemoryStream.h"
+
+#include <zlib.h>
 
 typedef struct
 {
@@ -338,10 +339,10 @@ static void LoadSettings(Stream *fp, bool override)
   ParseSettingLine(linebuf, override);
 }
 
-void MDFN_LoadSettings(const char *path, bool override)
+void MDFN_LoadSettings(const std::string& path, bool override)
 {
  if(!override)
-  MDFN_printf(_("Loading settings from \"%s\"..."), path);
+  MDFN_printf(_("Loading settings from \"%s\"..."), path.c_str());
 
  try
  {
@@ -365,7 +366,7 @@ void MDFN_LoadSettings(const char *path, bool override)
    if(!override)
     MDFN_printf("\n");
 
-   throw MDFN_Error(0, _("Failed to load settings from \"%s\": %s"), path, e.what());
+   throw MDFN_Error(0, _("Failed to load settings from \"%s\": %s"), path.c_str(), e.what());
   }
  }
  catch(std::exception &e)
@@ -373,7 +374,7 @@ void MDFN_LoadSettings(const char *path, bool override)
   if(!override)
    MDFN_printf("\n");
 
-  throw MDFN_Error(0, _("Failed to load settings from \"%s\": %s"), path, e.what());
+  throw MDFN_Error(0, _("Failed to load settings from \"%s\": %s"), path.c_str(), e.what());
  }
 
  if(!override)
@@ -421,7 +422,7 @@ static void SaveSettings(Stream *fp)
  fp->close();
 }
 
-bool MDFN_SaveSettings(const char *path)
+bool MDFN_SaveSettings(const std::string& path)
 {
  try
  {

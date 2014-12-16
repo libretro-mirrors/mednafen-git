@@ -17,9 +17,9 @@
 
 /* VDC emulation */
 
-#include "mednafen/mednafen.h"
-#include "mednafen/video.h"
-#include "mednafen/lepacker.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/video.h>
+#include <mednafen/lepacker.h>
 
 #include <trio/trio.h>
 #include <math.h>
@@ -926,44 +926,6 @@ void VDC::DrawBG(uint16 *target, int enabled)
    if((bat & 0xFFF) > VRAM_BGTileNoMask)
     VDC_UNDEFINED("Unmapped BG tile read");
 
-   #ifdef LSB_FIRST
-    #ifdef HAVE_NATIVE64BIT
-    uint64 doh = *(uint64 *)pix_lut;
-
-    (target + 0)[x] = (doh & 0xFF) | pal_or;
-    doh >>= 8;
-    (target + 1)[x] = (doh & 0xFF) | pal_or;
-    doh >>= 8;
-    (target + 2)[x] = (doh & 0xFF) | pal_or;
-    doh >>= 8;
-    (target + 3)[x] = (doh & 0xFF) | pal_or;
-    doh >>= 8;
-    (target + 4)[x] = (doh & 0xFF) | pal_or;
-    doh >>= 8;
-    (target + 5)[x] = (doh & 0xFF) | pal_or;
-    doh >>= 8;
-    (target + 6)[x] = (doh & 0xFF) | pal_or;
-    doh >>= 8;
-    (target + 7)[x] = (doh) | pal_or;
-    #else
-    uint32 doh = *(uint32 *)pix_lut;
-    (target + 0)[x] = (doh & 0xFF) | pal_or;
-    doh >>= 8;
-    (target + 1)[x] = (doh & 0xFF) | pal_or;
-    doh >>= 8;
-    (target + 2)[x] = (doh & 0xFF) | pal_or;
-    doh >>= 8;
-    (target + 3)[x] = doh | pal_or;
-    doh = *(uint32 *)(pix_lut + 4);
-    (target + 4)[x] = (doh & 0xFF) | pal_or;
-    doh >>= 8;
-    (target + 5)[x] = (doh & 0xFF) | pal_or;
-    doh >>= 8;
-    (target + 6)[x] = (doh & 0xFF) | pal_or;
-    doh >>= 8;
-    (target + 7)[x] = doh | pal_or;
-    #endif
-   #else
    (target + 0)[x] = pix_lut[0] | pal_or;
    (target + 1)[x] = pix_lut[1] | pal_or;
    (target + 2)[x] = pix_lut[2] | pal_or;
@@ -972,7 +934,6 @@ void VDC::DrawBG(uint16 *target, int enabled)
    (target + 5)[x] = pix_lut[5] | pal_or;
    (target + 6)[x] = pix_lut[6] | pal_or;
    (target + 7)[x] = pix_lut[7] | pal_or;
-   #endif
 
    bat_boom = (bat_boom + 1) & bat_width_mask;
    BG_XOffset++;
@@ -1093,7 +1054,7 @@ void VDC::FetchSpriteData(void)
 
 void VDC::DrawSprites(uint16 *target, int enabled)
 {
- MDFN_ALIGN(16) uint16 sprite_line_buf[1024];
+ alignas(16) uint16 sprite_line_buf[1024];
 
  uint32 display_width, start, end;
 
@@ -1753,9 +1714,8 @@ void VDC::StateExtra(MDFN::LEPacker &sl_packer, bool load)
  }
 }
 
-int VDC::StateAction(StateMem *sm, int load, int data_only, const char *sname)
+void VDC::StateAction(StateMem *sm, const unsigned load, const bool data_only, const char *sname)
 {
- int ret = 1;
  MDFN::LEPacker sl_packer;
 
  StateExtra(sl_packer, false);
@@ -1857,7 +1817,7 @@ int VDC::StateAction(StateMem *sm, int load, int data_only, const char *sname)
 	SFEND
   };
 
-  ret &= MDFNSS_StateAction(sm, load, data_only, StateRegs, sname);
+  MDFNSS_StateAction(sm, load, data_only, StateRegs, sname);
 
   if(load)
   {
@@ -1866,8 +1826,6 @@ int VDC::StateAction(StateMem *sm, int load, int data_only, const char *sname)
    for(int x = 0; x < VRAM_Size; x++)
     FixTileCache(x);
   }
-
- return(ret);
 }
 
 #ifdef WANT_DEBUGGER

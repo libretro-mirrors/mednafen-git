@@ -3,7 +3,6 @@
 
 #include <mednafen/mednafen.h>
 #include <mednafen/hw_cpu/v810/v810_cpu.h>
-#include <mednafen/masmem.h>
 #include <trio/trio.h>
 
 namespace MDFN_IEN_VB

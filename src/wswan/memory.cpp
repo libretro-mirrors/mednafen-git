@@ -27,15 +27,13 @@
 #include "v30mz.h"
 #include "comm.h"
 #include <mednafen/mempatcher.h>
+#include <mednafen/FileStream.h>
 #include <time.h>
 #include <math.h>
 #include <trio/trio.h>
 
 namespace MDFN_IEN_WSWAN
 {
-
-
-static bool SkipSL; // Skip save and load
 
 uint32 wsRAMSize;
 uint8 wsRAM[65536];
@@ -59,14 +57,37 @@ static uint8 BankSelector[4];
 
 static bool language;
 
+//
+static bool IsWW;
+static uint8 WW_FlashLock;
+
+enum
+{
+ WW_FWSM_READ = 0,
+
+ WW_FWSM_FPS0,
+ WW_FWSM_FPS1,
+
+ WW_FWSM_FP0,
+ WW_FWSM_FP1,
+
+ WW_FWSM_FPR0
+};
+
+static uint8 WW_FWSM;
+//
+
 extern uint16 WSButtonStatus;
 
-void WSwan_writemem20(uint32 A, uint8 V)
+template<bool WW>
+static INLINE void WriteMem(uint32 A, uint8 V)
 {
  uint32 offset, bank;
 
  offset = A & 0xffff;
  bank = (A>>16) & 0xF;
+
+ //printf("WriteA: %08x %02x --- %02x %02x %02x %02x\n", A, V, BankSelector[0], BankSelector[1], BankSelector[2], BankSelector[3]);
 
  if(!bank) /*RAM*/
  {
@@ -79,19 +100,80 @@ void WSwan_writemem20(uint32 A, uint8 V)
    WSwan_GfxWSCPaletteRAMWrite(offset, V);
  }
  else if(bank == 1) /* SRAM */
- {	 
-  if(sram_size)
+ { 
+  //if((offset | (BankSelector[1] << 16)) >= 0x38000)
+  // printf("%08x\n", offset | (BankSelector[1] << 16));
+  if(WW && (BankSelector[1] & 0x08))
   {
-   //if((offset | (BankSelector[1] << 16)) >= 0x38000)
-   // printf("%08x\n", offset | (BankSelector[1] << 16));
-   wsSRAM[(offset | (BankSelector[1] << 16)) & (sram_size - 1)] = V;
+   if(WW_FlashLock != 0x00)
+   {
+    uint32 rom_addr = offset | (BankSelector[1] << 16);
+
+    //printf("Write: %08x %02x\n", rom_addr, V);
+
+    switch(WW_FWSM)
+    {
+     case WW_FWSM_READ:
+
+	if((rom_addr & 0xFFF) == 0xAAA && V == 0xAA)
+	 WW_FWSM = WW_FWSM_FPS0;
+
+	break;
+
+     case WW_FWSM_FPS0:
+
+	if((rom_addr & 0xFFF) == 0x555 && V == 0x55)
+	 WW_FWSM = WW_FWSM_FPS1;
+	else
+	 WW_FWSM = WW_FWSM_READ;
+
+	break;
+
+     case WW_FWSM_FPS1:
+	if((rom_addr & 0xFFF) == 0xAAA && V == 0x20)
+	 WW_FWSM = WW_FWSM_FP0;
+	else
+	 WW_FWSM = WW_FWSM_READ;
+	break;
+
+     case WW_FWSM_FP0:
+	if((rom_addr & 0xFFF) == 0xBA && V == 0x90)
+	 WW_FWSM = WW_FWSM_FPR0;
+	else if(V == 0xA0)
+	 WW_FWSM = WW_FWSM_FP1;
+	break;
+
+     case WW_FWSM_FP1:
+	//printf("Program: %08x %02x\n", rom_addr, V);
+	wsCartROM[rom_addr & 524287] = V;
+	WW_FWSM = WW_FWSM_FP0;
+	break;
+
+     case WW_FWSM_FPR0:
+	if(V == 0xF0)
+	 WW_FWSM = WW_FWSM_READ;	
+	break;
+    }
+   }
   }
+  else if(sram_size)
+   wsSRAM[(offset | (BankSelector[1] << 16)) & (sram_size - 1)] = V;
  }
-}
+}	
 
+#if 0
+ WW_FWSM_READ = 0,
 
+ WW_FWSM_FPS0,
+ WW_FWSM_FPS1,
 
-uint8 WSwan_readmem20(uint32 A)
+ WW_FWSM_FP0,
+ WW_FWSM_FP1,
+
+ WW_FWSM_FPR0
+#endif
+template<bool WW>
+static INLINE uint8 ReadMem(uint32 A)
 {
  uint32	offset, bank;
 
@@ -101,21 +183,39 @@ uint8 WSwan_readmem20(uint32 A)
  switch(bank)
  {
 	case 0:  return wsRAM[offset];
-	case 1:  if(sram_size)
+
+	case 1:  if(WW && (BankSelector[1] & 0x08))
+		 {
+		  uint32 rom_addr = (offset | (BankSelector[1] << 16));
+		  uint8 ret = wsCartROM[rom_addr & 524287];
+
+		  if(WW_FWSM != WW_FWSM_READ)
+                   ret &= 0x80;
+
+		  //printf("%08x %02x %02x\n", rom_addr, wsCartROM[rom_addr & 524287], ret);
+
+		  return ret;
+	 	 }
+		 else if(sram_size)
 		 {
 		  return wsSRAM[(offset | (BankSelector[1] << 16)) & (sram_size - 1)];
 		 }
 		 else
 		  return(0);
 
-	case 2:
-	case 3:  return wsCartROM[offset+((BankSelector[bank]&((rom_size>>16)-1))<<16)];
-
-	default: 
+	default:
 		{
-		 uint8 bank_num = ((BankSelector[0] & 0xF) << 4) | (bank & 0xf);
-		 bank_num &= (rom_size >> 16) - 1;
-		 return(wsCartROM[(bank_num << 16) | offset]);
+		 uint32 rom_addr;
+
+		 if(bank == 2 || bank == 3)
+		  rom_addr = offset + ((BankSelector[bank] & ((rom_size >> 16) - 1)) << 16);
+		 else
+		 {
+		  uint8 bank_num = (((BankSelector[0] & 0xF) << 4) | (bank & 0xf)) & ((rom_size >> 16) - 1);
+		  rom_addr = (bank_num << 16) | offset; 
+	         }
+
+		 return wsCartROM[rom_addr];
 		}
  }
 }
@@ -162,7 +262,8 @@ void WSwan_CheckSoundDMA(void)
  }
 }
 
-uint8 WSwan_readport(uint32 number)
+template<bool WW>
+static INLINE uint8 ReadPort(uint32 number)
 {
   number &= 0xFF;
 
@@ -216,13 +317,17 @@ uint8 WSwan_readport(uint32 number)
 	     }
  }
 
+ if(WW && number == 0xCE)
+  return WW_FlashLock;
+
  if(number >= 0xC8)
   return(0xD0 | language);
 
  return(0);
 }
 
-void WSwan_writeport(uint32 IOPort, uint8 V)
+template<bool WW>
+static INLINE void WritePort(uint32 IOPort, uint8 V)
 {
  IOPort &= 0xFF;
 
@@ -296,6 +401,49 @@ void WSwan_writeport(uint32 IOPort, uint8 V)
    case 0xC2: BankSelector[2] = V; break;
    case 0xC3: BankSelector[3] = V; break;
  }
+
+ if(WW && IOPort == 0xCE)
+  WW_FlashLock = V;
+}
+
+void WSwan_writemem20(uint32 A, uint8 V)
+{
+ WriteMem<false>(A, V);
+}
+
+uint8 WSwan_readmem20(uint32 A)
+{
+ return ReadMem<false>(A);
+}
+
+uint8 WSwan_readport(uint32 number)
+{
+ return ReadPort<false>(number);
+}
+
+void WSwan_writeport(uint32 IOPort, uint8 V)
+{
+ WritePort<false>(IOPort, V);
+}
+
+void WSwan_writemem20_WW(uint32 A, uint8 V)
+{
+ WriteMem<true>(A, V);
+}
+
+uint8 WSwan_readmem20_WW(uint32 A)
+{
+ return ReadMem<true>(A);
+}
+
+uint8 WSwan_readport_WW(uint32 number)
+{
+ return ReadPort<true>(number);
+}
+
+void WSwan_writeport_WW(uint32 IOPort, uint8 V)
+{
+ WritePort<true>(IOPort, V);
 }
 
 #ifdef WANT_DEBUGGER
@@ -375,7 +523,13 @@ static void PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
 	     if(Address >= 0xfe00)
 	      WSwan_GfxWSCPaletteRAMWrite(offset & (wsRAMSize - 1), *Buffer);
 	     break;
-    case 1:  if(sram_size)
+    case 1:  
+	     if(IsWW && (BankSelector[1] & 0x08))
+	     {
+	      uint32 rom_addr = (offset | (BankSelector[1] << 16));
+	      wsCartROM[rom_addr & 524287] = *Buffer;
+	     }
+	     else if(sram_size)
 	       wsSRAM[(offset | (BankSelector[1] << 16)) & (sram_size - 1)] = *Buffer;
 	     break;
     case 2:
@@ -470,9 +624,70 @@ void WSwan_MemorySetRegister(const unsigned int id, uint32 value)
 
 #endif
 
+static void Cleanup(void)
+{
+ if(wsSRAM)
+ {
+  MDFN_free(wsSRAM);
+  wsSRAM = NULL;
+ }
+}
+
 void WSwan_MemoryKill(void)
 {
- if((sram_size || eeprom_size) && !SkipSL)
+ Cleanup();
+}
+
+void WSwan_MemoryLoadNV(void)
+{
+ if(sram_size || eeprom_size)
+ {
+  try
+  {
+   const std::string path = MDFN_MakeFName(MDFNMKF_SAV, 0, "sav");
+   std::unique_ptr<Stream> savegame_fp = MDFN_AmbigGZOpenHelper(path, std::vector<size_t>({ eeprom_size + sram_size }));
+   const uint64 fp_size_tmp = savegame_fp->size();
+
+   if(fp_size_tmp != ((uint64)eeprom_size + sram_size))
+    throw MDFN_Error(0, _("Save game memory file \"%s\" is an incorrect size(%llu bytes).  The correct size is %llu bytes."), path.c_str(), (unsigned long long)fp_size_tmp, ((unsigned long long)eeprom_size + sram_size));
+
+   if(eeprom_size)
+    savegame_fp->read(wsEEPROM, eeprom_size);
+
+   if(sram_size)
+    savegame_fp->read(wsSRAM, sram_size);
+  }
+  catch(MDFN_Error &e)
+  {
+   if(e.GetErrno() != ENOENT)
+    throw;
+  }
+ }
+
+ if(IsWW)
+ {
+  try
+  {
+   const std::string path = MDFN_MakeFName(MDFNMKF_SAV, 0, "flash");
+   FileStream savegame_fp(path, FileStream::MODE_READ);
+   const uint64 fp_size_tmp = savegame_fp.size();
+
+   if(fp_size_tmp != 524288)
+    throw MDFN_Error(0, _("Save game memory file \"%s\" is an incorrect size(%llu bytes).  The correct size is %llu bytes."), path.c_str(), (unsigned long long)fp_size_tmp, (unsigned long long)524288);
+
+   savegame_fp.read(wsCartROM, 524288);
+  }
+  catch(MDFN_Error &e)
+  {
+   if(e.GetErrno() != ENOENT)
+    throw;
+  }
+ }
+}
+
+void WSwan_MemorySaveNV(void)
+{
+ if(sram_size || eeprom_size)
  {
   std::vector<PtrLengthPair> EvilRams;
 
@@ -482,70 +697,68 @@ void WSwan_MemoryKill(void)
   if(sram_size)
    EvilRams.push_back(PtrLengthPair(wsSRAM, sram_size));
 
-  MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 6, EvilRams);
+  MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), EvilRams);
  }
 
- if(wsSRAM)
+ if(IsWW)
  {
-  free(wsSRAM);
-  wsSRAM = NULL;
+  MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "flash"), wsCartROM, 524288);
  }
 }
 
-void WSwan_MemoryInit(bool lang, bool IsWSC, uint32 ssize, bool SkipSaveLoad)
+void WSwan_MemoryInit(bool lang, bool IsWSC, uint32 ssize, bool IsWW_arg)
 {
- const uint16 byear = MDFN_GetSettingUI("wswan.byear");
- const uint8 bmonth = MDFN_GetSettingUI("wswan.bmonth");
- const uint8 bday = MDFN_GetSettingUI("wswan.bday");
- const uint8 sex = MDFN_GetSettingI("wswan.sex");
- const uint8 blood = MDFN_GetSettingI("wswan.blood");
+ IsWW = IsWW_arg;
 
- language = lang;
- SkipSL = SkipSaveLoad;
-
- wsRAMSize = 65536;
- sram_size = ssize;
-
- #ifdef WANT_DEBUGGER
+ try
  {
-  ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "physical", "CPU Physical", 20);
-  ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "ram", "RAM", (int)(log(wsRAMSize) / log(2)));
+  const uint16 byear = MDFN_GetSettingUI("wswan.byear");
+  const uint8 bmonth = MDFN_GetSettingUI("wswan.bmonth");
+  const uint8 bday = MDFN_GetSettingUI("wswan.bday");
+  const uint8 sex = MDFN_GetSettingI("wswan.sex");
+  const uint8 blood = MDFN_GetSettingI("wswan.blood");
 
-  ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "cs", "Code Segment", 16);
-  ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "ss", "Stack Segment", 16);
-  ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "ds", "Data Segment", 16);
-  ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "es", "Extra Segment", 16);
- }
- #endif
+  language = lang;
 
- // WSwan_EEPROMInit() will also clear wsEEPROM
- WSwan_EEPROMInit(MDFN_GetSettingS("wswan.name").c_str(), byear, bmonth, bday, sex, blood);
+  wsRAMSize = 65536;
+  sram_size = ssize;
 
- if(sram_size)
- {
-  wsSRAM = (uint8*)malloc(sram_size);
-  memset(wsSRAM, 0, sram_size);
- }
-
- if((sram_size || eeprom_size) && !SkipSL)
- {
-  gzFile savegame_fp;
-
-  savegame_fp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb");
-  if(savegame_fp)
+  #ifdef WANT_DEBUGGER
   {
-   if(eeprom_size)
-    gzread(savegame_fp, wsEEPROM, eeprom_size);
-   if(sram_size)
-    gzread(savegame_fp, wsSRAM, sram_size);
-   gzclose(savegame_fp);
+   ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "physical", "CPU Physical", 20);
+   ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "ram", "RAM", (int)(log(wsRAMSize) / log(2)));
+
+   ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "cs", "Code Segment", 16);
+   ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "ss", "Stack Segment", 16);
+   ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "ds", "Data Segment", 16);
+   ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "es", "Extra Segment", 16);
   }
+  #endif
+
+  // WSwan_EEPROMInit() will also clear wsEEPROM
+  WSwan_EEPROMInit(MDFN_GetSettingS("wswan.name").c_str(), byear, bmonth, bday, sex, blood);
+
+  if(sram_size)
+  {
+   wsSRAM = (uint8*)MDFN_malloc_T(sram_size, "SRAM");
+   memset(wsSRAM, 0, sram_size);
+  }
+
+  MDFNMP_AddRAM(wsRAMSize, 0x00000, wsRAM);
+
+  if(sram_size)
+   MDFNMP_AddRAM(sram_size, 0x10000, wsSRAM);
+
+  if(IsWW)
+   v30mz_init(WSwan_readmem20_WW, WSwan_writemem20_WW, WSwan_readport_WW, WSwan_writeport_WW);
+  else
+   v30mz_init(WSwan_readmem20, WSwan_writemem20, WSwan_readport, WSwan_writeport);
  }
-
- MDFNMP_AddRAM(wsRAMSize, 0x00000, wsRAM);
-
- if(sram_size)
-  MDFNMP_AddRAM(sram_size, 0x10000, wsSRAM);
+ catch(...)
+ {
+  Cleanup();
+  throw;
+ }
 }
 
 void WSwan_MemoryReset(void)
@@ -572,9 +785,13 @@ void WSwan_MemoryReset(void)
  SoundDMASource = 0;
  SoundDMALength = 0;
  SoundDMAControl = 0;
+
+ //
+ WW_FlashLock = 0;
+ WW_FWSM = 0;
 }
 
-int WSwan_MemoryStateAction(StateMem *sm, int load, int data_only)
+void WSwan_MemoryStateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -594,11 +811,14 @@ int WSwan_MemoryStateAction(StateMem *sm, int load, int data_only)
 
   SFARRAY(BankSelector, 4),
 
+  SFARRAYN(IsWW ? wsCartROM : NULL, 524288, "WW flash"),
+  SFVAR(WW_FlashLock),
+  SFVAR(WW_FWSM),
+
   SFEND
  };
 
- if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, "MEMR"))
-  return(0);
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "MEMR");
 
  if(load)
  {
@@ -607,7 +827,6 @@ int WSwan_MemoryStateAction(StateMem *sm, int load, int data_only)
    WSwan_GfxWSCPaletteRAMWrite(A, wsRAM[A]);
   }
  }
- return(1);
 }
 
 }

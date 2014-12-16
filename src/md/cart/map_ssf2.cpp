@@ -24,19 +24,19 @@ class MD_Cart_Type_SSF2 : public MD_Cart_Type
 	public:
 
         MD_Cart_Type_SSF2(const md_game_info *ginfo, const uint8 *ROM, const uint32 ROM_size);
-        virtual ~MD_Cart_Type_SSF2();
-        virtual void Reset(void);
+        virtual ~MD_Cart_Type_SSF2() override;
+        virtual void Reset(void) override;
 
-        virtual void Write8(uint32 A, uint8 V);
-        virtual void Write16(uint32 A, uint16 V);
-        virtual uint8 Read8(uint32 A);
-        virtual uint16 Read16(uint32 A);
-        virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name);
+        virtual void Write8(uint32 A, uint8 V) override;
+        virtual void Write16(uint32 A, uint16 V) override;
+        virtual uint8 Read8(uint32 A) override;
+        virtual uint16 Read16(uint32 A) override;
+        virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name) override;
 
         // In bytes
-        virtual uint32 GetNVMemorySize(void);
-        virtual void ReadNVMemory(uint8 *buffer);
-        virtual void WriteNVMemory(const uint8 *buffer);
+        virtual uint32 GetNVMemorySize(void) override;
+        virtual void ReadNVMemory(uint8 *buffer) override;
+        virtual void WriteNVMemory(const uint8 *buffer) override;
 
 	private:
 

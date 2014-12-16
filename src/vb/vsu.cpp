@@ -437,7 +437,7 @@ void VSU::EndFrame(int32 timestamp)
  last_ts = 0;
 }
 
-int VSU::StateAction(StateMem *sm, int load, int data_only)
+void VSU::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -479,15 +479,12 @@ int VSU::StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "VSU");
-
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "VSU");
 
  if(load)
  {
 
  }
-
- return(ret);
 }
 
 

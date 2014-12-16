@@ -15,7 +15,7 @@ void sms_writebyte(uint16 A, uint8 V)
  if(A >= 0xC000)
   sms.wram[A & 0x1FFF] = V;
 
- SMS_CartWrite(A, V);
+ Cart_Write(A, V);
 }
 
 uint8 sms_readbyte(uint16 A)
@@ -25,7 +25,7 @@ uint8 sms_readbyte(uint16 A)
  if(A >= 0xC000)
   ret = sms.wram[A & 0x1FFF];
  else
-  ret = SMS_CartRead(A);
+  ret = Cart_Read(A);
 
  return(ret);
 }

@@ -17,14 +17,6 @@
 
 /* VDC and VCE emulation */
 
-/*
-"Tonight I hooked up my Turbo Duo(with no games or CDs in it)'s video output to my PC sound card, recorded it, 
-and did a FFT and looked at the spectrum(around the line rate, 15-16KHz), and I also counted the number 
-of samples between the ~60Hz peaks(just to verify that the math shown below is remotely accurate).
-
-The spectrum peaked at 15734 Hz.  21477272.727272... / 3 / 15734 = 455.00(CPU cycles per scanline)"
-*/
-
 #include "pce.h"
 #include <mednafen/video.h>
 #include "vdc.h"
@@ -38,12 +30,10 @@ The spectrum peaked at 15734 Hz.  21477272.727272... / 3 / 15734 = 455.00(CPU cy
 namespace PCE_Fast
 {
 
-static uint8 *CustomColorMap = NULL; // 1024 * 3
-static uint32 CustomColorMapLen;      // 512 or 1024
-static uint32 systemColorMap32[512], bw_systemColorMap32[512];
+static uint32 systemColorMap32[2][512];	// 0 = normal, 1 = strip colorburst
 static uint32 amask;    // Alpha channel maskaroo
-static uint32 amask_shift;
 static uint32 userle; // User layer enable.
+static uint32 cputest_flags;
 static uint32 disabled_layer_color;
 
 static bool unlimited_sprites;
@@ -53,9 +43,6 @@ static bool correct_aspect;
 #define ULE_SPR0	2
 #define ULE_BG1		4
 #define ULE_SPR1	8
-
-static const uint8 bat_width_shift_tab[4] = { 5, 6, 7, 7 };
-static const uint8 bat_height_mask_tab[2] = { 32 - 1, 64 - 1 };
 
 static unsigned int VDS;
 static unsigned int VSW;
@@ -71,7 +58,7 @@ vdc_t *vdc_chips[2] = { NULL, NULL };
 
 static INLINE void FixPCache(int entry)
 {
- uint32 *cm32 = vce.bw ? bw_systemColorMap32 : systemColorMap32;
+ const uint32* __restrict__ cm32 = systemColorMap32[vce.CR >> 7];
 
  if(!(entry & 0xFF))
  {
@@ -180,18 +167,18 @@ static INLINE void CheckFixSpriteTileCache(vdc_t *which_vdc, uint16 no, uint32 s
 
 static INLINE void SetVCECR(uint8 V)
 {
- if(((V & 0x80) >> 7) != vce.bw)
- {
-  vce.bw = V & 0x80;
-  for(int x = 0; x < 512; x++)
-   FixPCache(x);
- }
+ const bool bw_changed = (V ^ vce.CR) & 0x80;
 
- vce.lc263 = (V & 0x04);
  vce.dot_clock = V & 1;
  if(V & 2)
   vce.dot_clock = 2;
  vce.CR = V;
+
+ if(bw_changed)
+ {
+  for(int x = 0; x < 512; x++)
+   FixPCache(x);
+ }
 }
 
 static unsigned int frame_counter;
@@ -222,16 +209,16 @@ vpc_t vpc;
 
 static MDFN_PaletteEntry PalTest[256];
 
-static uint8 FindClose(uint8 r, uint8 g, uint8 b) MDFN_COLD;
-static uint8 FindClose(uint8 r, uint8 g, uint8 b)
+static uint8 FindClose(const MDFN_PaletteEntry& pe) MDFN_COLD;
+static uint8 FindClose(const MDFN_PaletteEntry& pe)
 {
  double rl, gl, bl;
  int closest = -1;
  double closest_cs = 1000;
 
- rl = pow((double)r / 255, 2.2 / 1.0);
- gl = pow((double)g / 255, 2.2 / 1.0);
- bl = pow((double)b / 255, 2.2 / 1.0);
+ rl = pow((double)pe.r / 255, 2.2 / 1.0);
+ gl = pow((double)pe.g / 255, 2.2 / 1.0);
+ bl = pow((double)pe.b / 255, 2.2 / 1.0);
 
  for(unsigned x = 0; x < 256; x++)
  {
@@ -253,21 +240,19 @@ static uint8 FindClose(uint8 r, uint8 g, uint8 b)
  return(closest);
 }
 
-bool FindMatch(uint8 r, uint8 g, uint8 b)
+bool FindMatch(const MDFN_PaletteEntry& pe)
 {
  for(unsigned x = 0; x < 256; x++)
  {
-  if(PalTest[x].r == r && PalTest[x].g == g && PalTest[x].b == b)
+  if(PalTest[x].r == pe.r && PalTest[x].g == pe.g && PalTest[x].b == pe.b)
    return(true);
  }
  return(false);
 }
 
-void VDC_SetPixelFormat(const MDFN_PixelFormat &format)
+void VDC_SetPixelFormat(const MDFN_PixelFormat &format, const uint8* CustomColorMap, const uint32 CustomColorMapLen)
 {
  amask = 1 << format.Ashift;
- amask_shift = format.Ashift;
-
 
  if(format.bpp == 8)
  {
@@ -275,44 +260,19 @@ void VDC_SetPixelFormat(const MDFN_PixelFormat &format)
 
   memset(PalTest, 0, sizeof(PalTest));
 
+#if 1
   for(int i = 0; i < 8; i++)
   {
-   PalTest[pti].r = i * 36;
-   PalTest[pti].g = i * 36;
-   PalTest[pti].b = i * 36;
-   pti++;
+   PalTest[pti++] = format.MakePColor(i * 36, i * 36, i * 36);
 
    if(i)
    {
-    PalTest[pti].r = i * 36;
-    PalTest[pti].g = 0;
-    PalTest[pti].b = 0;
-    pti++;
-
-    PalTest[pti].r = 0;
-    PalTest[pti].g = i * 36;
-    PalTest[pti].b = 0;
-    pti++;
-
-    PalTest[pti].r = 0;
-    PalTest[pti].g = 0;
-    PalTest[pti].b = i * 36;
-    pti++;
-
-    PalTest[pti].r = i * 36;
-    PalTest[pti].g = i * 36;
-    PalTest[pti].b = 0;
-    pti++;
-
-    PalTest[pti].r = i * 36;
-    PalTest[pti].g = 0;
-    PalTest[pti].b = i * 36;
-    pti++;
-
-    PalTest[pti].r = 0;
-    PalTest[pti].g = i * 36;
-    PalTest[pti].b = i * 36;
-    pti++;
+    PalTest[pti++] = format.MakePColor(i * 36, 0, 0);
+    PalTest[pti++] = format.MakePColor(0, i * 36, 0);
+    PalTest[pti++] = format.MakePColor(0, 0, i * 36);
+    PalTest[pti++] = format.MakePColor(i * 36, i * 36, 0);
+    PalTest[pti++] = format.MakePColor(i * 36, 0, i * 36);
+    PalTest[pti++] = format.MakePColor(0, i * 36, i * 36);
    }
   }
 
@@ -322,7 +282,9 @@ void VDC_SetPixelFormat(const MDFN_PixelFormat &format)
    {
     for(int b = 0; b < 8; b++)
     {
-     if(FindMatch(r * 36, g * 36, b * 36))
+     MDFN_PaletteEntry pe = format.MakePColor(r * 36, g * 36, b * 36);
+
+     if(FindMatch(pe))
       continue;
 
      if(g == 6 && b == 6 && r == 5)
@@ -348,10 +310,7 @@ void VDC_SetPixelFormat(const MDFN_PixelFormat &format)
 
      SkipStuff:;
 
-     PalTest[pti].r = r * 36;
-     PalTest[pti].g = g * 36;
-     PalTest[pti].b = b * 36;
-     pti++;
+     PalTest[pti++] = pe;
 
      if(pti == 256) goto EndThingy;
     }
@@ -360,6 +319,30 @@ void VDC_SetPixelFormat(const MDFN_PixelFormat &format)
   EndThingy:;
   //printf("ZOOMBA: %u\n", pti);
   //exit(1);
+#else
+  for(int i = 0; i < 8; i++)
+   PalTest[pti++] = format.MakePColor(0, 0, i * 36);
+
+  for(int r = 0; r < 8; r++)
+  {
+   for(int g = 0; g < 8; g++)
+   {
+    for(int b = 0; b < 4; b++)
+    {
+     MDFN_PaletteEntry pe = format.MakePColor(r * 36, g * 36, b * 72);
+
+     if(FindMatch(pe))
+      continue;
+
+     PalTest[pti++] = pe;
+     if(pti == 256)
+      goto EndThingy;
+     printf("%d\n", pti);
+    }
+   }
+  }
+  EndThingy: ;
+#endif
  }
 
  for(int x = 0; x < 512; x++)
@@ -403,13 +386,13 @@ void VDC_SetPixelFormat(const MDFN_PixelFormat &format)
 
   if(format.bpp == 8)
   {
-   systemColorMap32[x] = FindClose(r, g, b);
-   bw_systemColorMap32[x] = FindClose(sc_r, sc_g, sc_b);
+   systemColorMap32[0][x] = FindClose(format.MakePColor(r, g, b));
+   systemColorMap32[1][x] = FindClose(format.MakePColor(sc_r, sc_g, sc_b));
   }
   else
   {
-   systemColorMap32[x] = format.MakeColor(r, g, b);
-   bw_systemColorMap32[x] = format.MakeColor(sc_r, sc_g, sc_b);
+   systemColorMap32[0][x] = format.MakeColor(r, g, b);
+   systemColorMap32[1][x] = format.MakeColor(sc_r, sc_g, sc_b);
   }
  }
 #if 0
@@ -442,12 +425,11 @@ DECLFR(VCE_Read)
 {
  switch(A & 0x7)
  {
-  case 4: return(vce.color_table[vce.ctaddress & 0x1FF]);
+  case 4: return(vce.color_table[vce.ctaddress]);
   case 5: {
-	   uint8 ret = vce.color_table[vce.ctaddress & 0x1FF] >> 8;
-	   ret &= 1;
+	   uint8 ret = vce.color_table[vce.ctaddress] >> 8;
 	   ret |= 0xFE;
-	   vce.ctaddress++;
+	   vce.ctaddress = (vce.ctaddress + 1) & 0x1FF;
 	   return(ret);
 	 }
  }
@@ -462,14 +444,14 @@ DECLFW(VCE_Write)
   case 0: SetVCECR(V); break;
   case 2: vce.ctaddress &= 0x100; vce.ctaddress |= V; break;
   case 3: vce.ctaddress &= 0x0FF; vce.ctaddress |= (V & 1) << 8; break;
-  case 4: vce.color_table[vce.ctaddress & 0x1FF] &= 0x100;
-	  vce.color_table[vce.ctaddress & 0x1FF] |= V;
-	  FixPCache(vce.ctaddress & 0x1FF);
+  case 4: vce.color_table[vce.ctaddress] &= 0x100;
+	  vce.color_table[vce.ctaddress] |= V;
+	  FixPCache(vce.ctaddress);
           break;
-  case 5: vce.color_table[vce.ctaddress & 0x1FF] &= 0xFF;
-	  vce.color_table[vce.ctaddress & 0x1FF] |= (V & 1) << 8;
-	  FixPCache(vce.ctaddress & 0x1FF);
-	  vce.ctaddress++;
+  case 5: vce.color_table[vce.ctaddress] &= 0xFF;
+	  vce.color_table[vce.ctaddress] |= (V & 1) << 8;
+	  FixPCache(vce.ctaddress);
+	  vce.ctaddress = (vce.ctaddress + 1) & 0x1FF;
 	  break;
  }
 }
@@ -712,18 +694,18 @@ static INLINE void CalcStartEnd(const vdc_t *vdc, uint32 &start, uint32 &end)
 }
 
 #define CB_EXL(n) (((n) << 4) | ((n) << 12) | ((n) << 20) | ((n) << 28) | ((n) << 36) | ((n) << 44) | ((n) << 52) | ((n) << 60))
+static const uint8 bat_width_shift_tab[4] = { 5, 6, 7, 7 };
 static const uint64 cblock_exlut[16] =  {
                                         CB_EXL(0ULL), CB_EXL(1ULL), CB_EXL(2ULL), CB_EXL(3ULL), CB_EXL(4ULL), CB_EXL(5ULL), CB_EXL(6ULL), CB_EXL(7ULL),
                                         CB_EXL(8ULL), CB_EXL(9ULL), CB_EXL(10ULL), CB_EXL(11ULL), CB_EXL(12ULL), CB_EXL(13ULL), CB_EXL(14ULL), CB_EXL(15ULL)
                                    };
 
-static void DrawBG(const vdc_t *vdc, const uint32 count, uint8 *target) NO_INLINE;
-static void DrawBG(const vdc_t *vdc, const uint32 count, uint8 *target)
+static void DrawBG(const vdc_t *vdc, const uint32 count, uint8* __restrict__ target) NO_INLINE;
+static void DrawBG(const vdc_t *vdc, const uint32 count, uint8* __restrict__ target)
 {
  int bat_width_shift = bat_width_shift_tab[(vdc->MWR >> 4) & 3];
  int bat_width_mask = (1U << bat_width_shift) - 1;
- int bat_height_mask = bat_height_mask_tab[(vdc->MWR >> 6) & 1];
- uint64 *target64 = (uint64 *)target;
+ int bat_height_mask = 31 + ((vdc->MWR & 0x40) >> 1);
 
  {
   int bat_y = ((vdc->BG_YOffset >> 3) & bat_height_mask) << bat_width_shift;
@@ -734,7 +716,7 @@ static void DrawBG(const vdc_t *vdc, const uint32 count, uint8 *target)
   const uint16 *BAT_Base = &vdc->VRAM[bat_y];
   const uint64 *CG_Base = &vdc->bg_tile_cache[0][line_sub];
 
-  if((vdc->MWR & 0x3) == 0x3)
+  if(MDFN_UNLIKELY((vdc->MWR & 0x3) == 0x3))
   {
    const uint64 cg_mask = (vdc->MWR & 0x80) ? 0xCCCCCCCCCCCCCCCCULL : 0x3333333333333333ULL;
 
@@ -743,10 +725,10 @@ static void DrawBG(const vdc_t *vdc, const uint32 count, uint8 *target)
     const uint16 bat = BAT_Base[bat_boom];
     const uint64 color_or = cblock_exlut[bat >> 12];
 
-    *target64 = (CG_Base[(bat & 0xFFF) * 8] & cg_mask) | color_or;
+    MDFN_ennsb<uint64, true>(target, (CG_Base[(bat & 0xFFF) * 8] & cg_mask) | color_or);
 
     bat_boom = (bat_boom + 1) & bat_width_mask;
-    target64++;
+    target += 8;
    }
   } // End 2-bit CG rendering
   else
@@ -756,10 +738,10 @@ static void DrawBG(const vdc_t *vdc, const uint32 count, uint8 *target)
     const uint16 bat = BAT_Base[bat_boom];
     const uint64 color_or = cblock_exlut[bat >> 12];
 
-    *target64 = CG_Base[(bat & 0xFFF) * 8] | color_or;
+    MDFN_ennsb<uint64, true>(target, CG_Base[(bat & 0xFFF) * 8] | color_or);
 
     bat_boom = (bat_boom + 1) & bat_width_mask;
-    target64++;
+    target += 8;
    }
   } // End normal CG rendering
  }
@@ -855,7 +837,7 @@ typedef struct
 	uint16 sub_y;
 } SPRLE;
 
-static const unsigned int spr_hpmask = 0x8000;	// High priority bit mask
+static const unsigned int spr_hpmask = 0x8000;	// High priority bit mask(don't change).
 
 // DrawSprites will write up to 0x20 units before the start of the pointer it's passed.
 static void DrawSprites(vdc_t *vdc, const int32 end, uint16 *spr_linebuf) NO_INLINE;
@@ -925,7 +907,7 @@ static void DrawSprites(vdc_t *vdc, const int32 end, uint16 *spr_linebuf)
  if(!active_sprites)
   return;
 
- for(int i = (active_sprites - 1) ; i >= 0; i--)
+ for(int i = (active_sprites - 1) ; MDFN_LIKELY(i >= 0); i--)
  {
   int32 pos = SpriteList[i].x - 0x20;
   uint32 prio_or;
@@ -941,7 +923,7 @@ static void DrawSprites(vdc_t *vdc, const int32 end, uint16 *spr_linebuf)
   if(SpriteList[i].flags & SPRF_PRIORITY)
    prio_or |= spr_hpmask;
 
-  if((SpriteList[i].flags & SPRF_SPRITE0) && (vdc->CR & 0x01))
+  if(MDFN_UNLIKELY((SpriteList[i].flags & SPRF_SPRITE0) && (vdc->CR & 0x01)))
   {
    const uint8 *pix_source = vdc->spr_tile_cache[SpriteList[i].no][SpriteList[i].sub_y];
 
@@ -1002,9 +984,10 @@ static void DrawSprites(vdc_t *vdc, const int32 end, uint16 *spr_linebuf)
    }
    else
    {
+    pix_source += 15;
     for(int32 x = 0; x < 16; x++)
     {
-     const uint32 raw_pixel = pix_source[15 - x];
+     const uint32 raw_pixel = pix_source[-x];
      if(raw_pixel)
       dest_pix[x] = raw_pixel | prio_or;
     }
@@ -1014,180 +997,100 @@ static void DrawSprites(vdc_t *vdc, const int32 end, uint16 *spr_linebuf)
  }
 }
 
-void (*MixBGSPR)(const uint32 count, const uint8 *bg_linebuf, const uint16 *spr_linebuf, uint32 *target) = NULL;
-
 template<typename T>
-void MixBGSPR_Generic(const uint32 count_in, const uint8 *bg_linebuf_in, const uint16 *spr_linebuf_in, T *target_in)
+static void MixBGSPR(const uint32 count, const uint8*  __restrict__ bg_linebuf, const uint16*  __restrict__ spr_linebuf, T* __restrict__ target)
 {
- for(unsigned int x = 0; x < count_in; x++)
- {
-  const uint32 bg_pixel = bg_linebuf_in[x];
-  const uint32 spr_pixel = spr_linebuf_in[x];
-  uint32 pixel = bg_pixel;
-
-  if(((int16)(spr_pixel | ((bg_pixel & 0x0F) - 1))) < 0)
-   pixel = spr_pixel;
-
-  target_in[x] = vce.color_table_cache[pixel & 0x1FF];
- }
-}
-
 #ifdef ARCH_X86
+ bg_linebuf += count;
+ spr_linebuf += count;
+ target += count;
+ #if SIZEOF_VOID_P == 8
+ uint64 x = -(uint64)count;
+ #else
+ uint32 x = -count;
+ #endif
 
-#ifdef __x86_64__
+ #ifdef __x86_64__
+ if(1)
+ #else
+ if(cputest_flags & CPUTEST_FLAG_CMOV)
+ #endif
+ {
+  do
+  {
+#if SIZEOF_VOID_P == 8
+   uint64 pixel = bg_linebuf[x];
+#else
+   uint32 pixel = bg_linebuf[x];
+#endif
+   uint32 spr_pixel = spr_linebuf[x];
 
-void MixBGSPR_x86(const uint32 count, const uint8 *bg_linebuf, const uint16 *spr_linebuf, uint32 *target)
-{
- // rdx: bg_linebuf
- // rsi: spr_linebuf
- // rbp: vce.color_table_cache
- // rdi: target
- // rcx: count
-
- // eax: bg pixel
- // ebx: spr pixel
- int dummy;
-
- asm volatile(
-	"push %%rbx\n\t"
-
-	"movq %%rax, %%rbp\n\t"
-	"negq %%rcx\n\t"
-	"xorq %%rax, %%rax\n\t"
-	"xorq %%rbx, %%rbx\n\t"
-
-	"BoomBuggy:\n\t"
-        "movzbl (%%rdx, %%rcx, 1), %%eax\n\t"
-        "movswl (%%rsi, %%rcx, 2), %%ebx\n\t"
-
+   asm volatile(
 	"testl $15, %%eax\n\t"
 	"bt $15, %%ebx\n\t"
 
 	"cmovbe %%ebx, %%eax\n\t"
         "andl $511, %%eax\n\t"
+	: "=a"(pixel)
+	: "a"(pixel), "b"(spr_pixel)
+	: "cc" );
 
-	"movl (%%rbp, %%rax, 4), %%ebx\n\t"
-	"movl %%ebx, (%%rdi, %%rcx, 4)\n\t"
+   target[x] = vce.color_table_cache[pixel];
+  } while(MDFN_LIKELY(++x));
+ }
+ else
+ {
+  do
+  {
+   uint32 pixel = bg_linebuf[x];
+   uint32 spr_pixel = spr_linebuf[x];
 
-        "addq $1, %%rcx\n\t"	
-	"jnz BoomBuggy\n\t"
+   asm volatile(
+	"testl $15, %%eax\n\t"
+	"bt $15, %%ebx\n\t"
 
-	"pop %%rbx\n\t"
- : "=c" (dummy), "=a" (dummy)
- : "d" (bg_linebuf + count), "S" (spr_linebuf + count), "D" (target + count), "c" (count), "a" (vce.color_table_cache)
- : "memory", "cc", "rbp"
- );
-}
-
-#else // else to __x86_64__
-void MixBGSPR_x86(const uint32 count, const uint8 *bg_linebuf, const uint16 *spr_linebuf, uint32 *target)
-{
- // edx: bg_linebuf
- // esi: spr_linebuf
- // ebp: vce.color_table_cache
- // edi: target
- // ecx: count
-
- // eax: bg pixel
- // ebx: spr pixel
- int dummy;
-
- asm volatile(
-        "push %%ebx\n\t"
-
-        "movl %%eax, %%ebp\n\t"
-        "negl %%ecx\n\t"
-        "xorl %%eax, %%eax\n\t"
-        "xorl %%ebx, %%ebx\n\t"
-
-        "BoomBuggy:\n\t"
-        "movzbl (%%edx, %%ecx, 1), %%eax\n\t"
-        "movswl (%%esi, %%ecx, 2), %%ebx\n\t"
-
-        "testl $15, %%eax\n\t"
-        "bt $15, %%ebx\n\t"
-
-        "jnbe SkipMove\n\t"
+        "jnbe 1f\n\t"
         "movl %%ebx, %%eax\n\t"
         "andl $511, %%eax\n\t"
-        "SkipMove:\n\t"
+        "1:\n\t"
+	: "=a"(pixel)
+	: "a"(pixel), "b"(spr_pixel)
+	: "cc" );
 
-        "movl (%%ebp, %%eax, 4), %%ebx\n\t"
-        "movl %%ebx, (%%edi, %%ecx, 4)\n\t"
+   target[x] = vce.color_table_cache[pixel];
+  } while(MDFN_LIKELY(++x));
+ }
+#else
+ uint32 x = 0;
 
-        "addl $1, %%ecx\n\t"
-        "jnz BoomBuggy\n\t"
+ do
+ {
+  uint32 pixel = bg_linebuf[x] | (spr_linebuf[x] << 16);
 
-	"pop %%ebx\n\t"
- : "=c" (dummy), "=a" (dummy)
- : "d" (bg_linebuf + count), "S" (spr_linebuf + count), "D" (target + count), "c" (count), "a" (vce.color_table_cache)
- : "memory", "cc", "ebp"
- );
-}
+  if((int32)(pixel & 0x8000000F) <= 0)
+   pixel >>= 16;
 
-void MixBGSPR_x86_CMOV(const uint32 count, const uint8 *bg_linebuf, const uint16 *spr_linebuf, uint32 *target)
-{
- // edx: bg_linebuf
- // esi: spr_linebuf
- // ebp: vce.color_table_cache
- // edi: target
- // ecx: count
-
- // eax: bg pixel
- // ebx: spr pixel
- int dummy;
-
- asm volatile(
-        "push %%ebx\n\t"
-
-        "movl %%eax, %%ebp\n\t"
-        "negl %%ecx\n\t"
-        "xorl %%eax, %%eax\n\t"
-        "xorl %%ebx, %%ebx\n\t"
-
-        "BoomBuggyCMOV:\n\t"
-        "movzbl (%%edx, %%ecx, 1), %%eax\n\t"
-        "movswl (%%esi, %%ecx, 2), %%ebx\n\t"
-
-        "testl $15, %%eax\n\t"
-        "bt $15, %%ebx\n\t"
-
-        "cmovbe %%ebx, %%eax\n\t"
-        "andl $511, %%eax\n\t"
-
-        "movl (%%ebp, %%eax, 4), %%ebx\n\t"
-        "movl %%ebx, (%%edi, %%ecx, 4)\n\t"
-
-        "addl $1, %%ecx\n\t"
-        "jnz BoomBuggyCMOV\n\t"
-
-	"pop %%ebx\n\t"
- : "=c" (dummy), "=a" (dummy)
- : "d" (bg_linebuf + count), "S" (spr_linebuf + count), "D" (target + count), "c" (count), "a" (vce.color_table_cache)
- : "memory", "cc", "ebp"
- );
-}
-
+  target[x] = vce.color_table_cache[pixel & 0x1FF];
+ } while(MDFN_LIKELY(++x != count));
 #endif
-
-#endif // ARCH_X86
+}
 
 template<typename T>
-void MixBGOnly(const uint32 count, const uint8 *bg_linebuf, T *target)
+static void MixBGOnly(const uint32 count, const uint8* __restrict__ bg_linebuf, T* __restrict__ target)
 {
  for(unsigned int x = 0; x < count; x++)
   target[x] = vce.color_table_cache[bg_linebuf[x]];
 }
 
 template<typename T>
-void MixSPROnly(const uint32 count, const uint16 *spr_linebuf, T *target)
+static void MixSPROnly(const uint32 count, const uint16* __restrict__ spr_linebuf, T* __restrict__ target)
 {
  for(unsigned int x = 0; x < count; x++)
   target[x] = vce.color_table_cache[(spr_linebuf[x] | 0x100) & 0x1FF];
 }
 
 template<typename T>
-void MixNone(const uint32 count, T *target)
+static void MixNone(const uint32 count, T* __restrict__ target)
 {
  uint32 bg_color = vce.color_table_cache[0x000];
 
@@ -1198,7 +1101,7 @@ void MixNone(const uint32 count, T *target)
 //static void MixVPC(const uint32 count, const uint32 *lb0, const uint32 *lb1, uint32 *target) NO_INLINE;
 
 template<typename T>
-static void MixVPC(const uint32 count, const uint32 *lb0, const uint32 *lb1, T *target)
+static void MixVPC(const uint32 count, const uint32* __restrict__ lb0, const uint32* __restrict__ lb1, T*  __restrict__ target)
 {
 	static const int prio_select[4] = { 1, 1, 0, 0 };
 	static const int prio_shift[4] = { 4, 0, 4, 0 };
@@ -1273,7 +1176,7 @@ static void MixVPC(const uint32 count, const uint32 *lb0, const uint32 *lb1, T *
 }
 
 template<typename T>
-void DrawOverscan(const vdc_t *vdc, T *target, const MDFN_Rect *lw, const bool full = true, const int32 vpl = 0, const int32 vpr = 0)
+static void DrawOverscan(const vdc_t *vdc, T *target, const MDFN_Rect *lw, const bool full = true, const int32 vpl = 0, const int32 vpr = 0)
 {
  uint32 os_color = vce.color_table_cache[0x100];
 
@@ -1297,7 +1200,11 @@ void DrawOverscan(const vdc_t *vdc, T *target, const MDFN_Rect *lw, const bool f
  }
 }
 
-void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
+template<unsigned TCT, typename T, typename U>
+static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES) NO_INLINE;
+
+template<unsigned TCT, typename T, typename U>
+static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES)
 {
  vdc_t *vdc = vdc_chips[0];
  int max_dc = 0;
@@ -1326,8 +1233,6 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
 
  do
  {
-  const bool SHOULD_DRAW = (!skip && (int)frame_counter >= (DisplayRect->y + 14) && (int)frame_counter < (DisplayRect->y + DisplayRect->h + 14));
-
   vdc = vdc_chips[0];
 
   if(frame_counter == 0)
@@ -1341,8 +1246,6 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
    if(VBlankFL > 261)
     VBlankFL = 261;
   }
-
-  uint32 line_buffer[2][1024];	// For super grafx emulation
 
   need_vbi[0] = need_vbi[1] = 0;
 
@@ -1404,7 +1307,7 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
    DisplayRect->w = ws[correct_aspect][vce.dot_clock];
   }
 
-  for(int chip = 0; chip < VDC_TotalChips; chip++)
+  for(unsigned chip = 0; chip < TCT; chip++)
   {
    vdc = vdc_chips[chip];
    if(frame_counter == 0)
@@ -1450,30 +1353,26 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
 
   HuC6280_Run(line_leadin1);
 
+  //
+  //
+  //
+  alignas(8) uint32 line_buffer[2][(TCT == 2) ? 1024 : 0];	// For super grafx emulation
+  alignas(8) uint8 bg_linebuf[8 + 1024];
+  alignas(8) uint16 spr_linebuf[16 + 1024];
+
+  const bool SHOULD_DRAW = (!skip && (int)frame_counter >= (DisplayRect->y + 14) && (int)frame_counter < (DisplayRect->y + DisplayRect->h + 14));
   const bool fc_vrm = (frame_counter >= 14 && frame_counter < (14 + 242));
 
-  for(int chip = 0; chip < VDC_TotalChips; chip++)
+  for(unsigned chip = 0; chip < TCT; chip++)
   {
-   MDFN_ALIGN(8) uint8 bg_linebuf[8 + 1024];
-   MDFN_ALIGN(8) uint16 spr_linebuf[16 + 1024];
-   
-   uint32 *target_ptr = NULL;
-   uint16 *target_ptr16 = NULL;
-   uint8 *target_ptr8 = NULL;
+   U* target_ptr;
 
    vdc = vdc_chips[chip];
 
-   if(VDC_TotalChips == 2)
-    target_ptr = line_buffer[chip];
+   if(TCT == 2)
+    target_ptr = (U*)line_buffer[chip];
    else
-   {
-    if(surface->format.bpp == 8)
-     target_ptr8 = surface->pixels8 + (frame_counter - 14) * surface->pitchinpix;
-    else if(surface->format.bpp == 16)
-     target_ptr16 = surface->pixels16 + (frame_counter - 14) * surface->pitchinpix;
-    else
-     target_ptr = surface->pixels + (frame_counter - 14) * surface->pitchinpix;
-   }
+    target_ptr = (U*)surface->pix<T>() + (frame_counter - 14) * surface->pitchinpix;
 
    if(fc_vrm && !skip)
     LineWidths[frame_counter - 14] = DisplayRect->w;
@@ -1482,12 +1381,7 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
    {
     if(fc_vrm && SHOULD_DRAW)
     {
-     if(target_ptr8)
-      DrawOverscan(vdc, target_ptr8, DisplayRect);
-     else if(target_ptr16)
-      DrawOverscan(vdc, target_ptr16, DisplayRect);
-     else
-      DrawOverscan(vdc, target_ptr, DisplayRect);
+     DrawOverscan(vdc, target_ptr, DisplayRect);
     }
    }
    else if(vdc->display_counter >= (VDS + VSW) && vdc->display_counter < (VDS + VSW + VDW + 1))
@@ -1547,41 +1441,6 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
 
       if(width > 0)
       {
-       if(target_ptr8)
-       {
-        switch(vdc->CR & 0xC0)
-        {
-         case 0xC0: MixBGSPR_Generic(width, bg_linebuf + (vdc->BG_XOffset & 7) + source_offset, spr_linebuf + 0x20 + source_offset, target_ptr8 + target_offset);
- 		    break;
-
-         case 0x80: MixBGOnly(width, bg_linebuf + (vdc->BG_XOffset & 7) + source_offset, target_ptr8 + target_offset);
-		    break;
-
-         case 0x40: MixSPROnly(width, spr_linebuf + 0x20 + source_offset, target_ptr8 + target_offset);
-		    break;
-
-         case 0x00: MixNone(width, target_ptr8 + target_offset);
-		    break;
-        }
-       }
-       else if(target_ptr16)
-       {
-        switch(vdc->CR & 0xC0)
-        {
-         case 0xC0: MixBGSPR_Generic(width, bg_linebuf + (vdc->BG_XOffset & 7) + source_offset, spr_linebuf + 0x20 + source_offset, target_ptr16 + target_offset);
- 		    break;
-
-         case 0x80: MixBGOnly(width, bg_linebuf + (vdc->BG_XOffset & 7) + source_offset, target_ptr16 + target_offset);
-		    break;
-
-         case 0x40: MixSPROnly(width, spr_linebuf + 0x20 + source_offset, target_ptr16 + target_offset);
-		    break;
-
-         case 0x00: MixNone(width, target_ptr16 + target_offset);
-		    break;
-        }
-       }
-       else
        switch(vdc->CR & 0xC0)
        {
         case 0xC0: MixBGSPR(width, bg_linebuf + (vdc->BG_XOffset & 7) + source_offset, spr_linebuf + 0x20 + source_offset, target_ptr + target_offset);
@@ -1598,48 +1457,36 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
        }
       }
 
-      if(target_ptr8)
-       DrawOverscan(vdc, target_ptr8, DisplayRect, false, target_offset, target_offset + width);
-      else if(target_ptr16)
-       DrawOverscan(vdc, target_ptr16, DisplayRect, false, target_offset, target_offset + width);
-      else
-       DrawOverscan(vdc, target_ptr, DisplayRect, false, target_offset, target_offset + width);
+      DrawOverscan(vdc, target_ptr, DisplayRect, false, target_offset, target_offset + width);
      } // end if(SHOULD_DRAW)
     }
    }
    else if(SHOULD_DRAW && fc_vrm) // Hmm, overscan...
    {
-    if(target_ptr8)
-     DrawOverscan(vdc, target_ptr8, DisplayRect);
-    else if(target_ptr16)
-     DrawOverscan(vdc, target_ptr16, DisplayRect);
-    else
-     DrawOverscan(vdc, target_ptr, DisplayRect);
+    DrawOverscan(vdc, target_ptr, DisplayRect);
    }
   }
 
-  if(VDC_TotalChips == 2 && SHOULD_DRAW && fc_vrm)
+  if(TCT == 2 && SHOULD_DRAW && fc_vrm)
   {
-   if(surface->format.bpp == 8)
-    MixVPC(DisplayRect->w, line_buffer[0] + DisplayRect->x, line_buffer[1] + DisplayRect->x, surface->pixels8 + (frame_counter - 14) * surface->pitchinpix + DisplayRect->x);
-   else if(surface->format.bpp == 16)
-    MixVPC(DisplayRect->w, line_buffer[0] + DisplayRect->x, line_buffer[1] + DisplayRect->x, surface->pixels16 + (frame_counter - 14) * surface->pitchinpix + DisplayRect->x);
-   else
-    MixVPC(DisplayRect->w, line_buffer[0] + DisplayRect->x, line_buffer[1] + DisplayRect->x, surface->pixels + (frame_counter - 14) * surface->pitchinpix + DisplayRect->x);
+   MixVPC(DisplayRect->w, line_buffer[0], line_buffer[1], surface->pix<T>() + (frame_counter - 14) * surface->pitchinpix);
   } 
 
   if(SHOULD_DRAW && fc_vrm)
   {
    MDFN_MidLineUpdate(espec, frame_counter - 14);
   }
+  //
+  //
+  //
 
-  for(int chip = 0; chip < VDC_TotalChips; chip++)
+  for(unsigned chip = 0; chip < TCT; chip++)
    if((vdc_chips[chip]->CR & 0x08) && need_vbi[chip])
     vdc_chips[chip]->status |= VDCS_VD;
 
   HuC6280_Run(2);
 
-  for(int chip = 0; chip < VDC_TotalChips; chip++)
+  for(unsigned chip = 0; chip < TCT; chip++)
    if(vdc_chips[chip]->status & VDCS_VD)
    {
     VDC_DEBUG("VBlank IRQ");
@@ -1653,7 +1500,7 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
    PCECD_Run(HuCPU.timestamp * 3);
   }
 
-  for(int chip = 0; chip < VDC_TotalChips; chip++)
+  for(unsigned chip = 0; chip < TCT; chip++)
   {
    vdc = vdc_chips[chip];
    vdc->RCRCount++;
@@ -1681,8 +1528,7 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
    }
   }
 
-  frame_counter = (frame_counter + 1) % (vce.lc263 ? 263 : 262);
-  //printf("%d\n", vce.lc263);
+  frame_counter = (frame_counter + 1) % ((vce.CR & 0x04) ? 263 : 262);
  } while(frame_counter != VBlankFL); // big frame loop!
 
  // Hack for the input latency-reduction hack, part 2. 
@@ -1692,28 +1538,34 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
   {
    if(!LineWidths[y])
    {
-    uint32 *target_ptr = NULL;
-    uint16 *target_ptr16 = NULL;
-    uint8  *target_ptr8 = NULL;
-
-    if(surface->format.bpp == 8)
-     target_ptr8 = surface->pixels8 + y * surface->pitchinpix;
-    if(surface->format.bpp == 16)
-     target_ptr16 = surface->pixels16 + y * surface->pitchinpix;
-    else
-     target_ptr = surface->pixels + y * surface->pitchinpix;
-
     LineWidths[y] = DisplayRect->w;
 
-    if(target_ptr8)
-     DrawOverscan(vdc_chips[0], target_ptr8, DisplayRect);
-    else if(target_ptr16)
-     DrawOverscan(vdc_chips[0], target_ptr16, DisplayRect);
-    else
-     DrawOverscan(vdc_chips[0], target_ptr, DisplayRect);
+    DrawOverscan(vdc_chips[0], surface->pix<T>() + y * surface->pitchinpix, DisplayRect);
 
     MDFN_MidLineUpdate(espec, y);
    }
+  }
+ }
+}
+
+void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
+{
+ if(VDC_TotalChips == 2)
+ {
+  switch(espec->surface ? espec->surface->format.bpp : 32)
+  {
+   case  8: BigDrawThingy<2,  uint8, uint32>(espec, IsHES); break;
+   case 16: BigDrawThingy<2, uint16, uint32>(espec, IsHES); break;
+   case 32: BigDrawThingy<2, uint32, uint32>(espec, IsHES); break;
+  }
+ }
+ else
+ {
+  switch(espec->surface ? espec->surface->format.bpp : 32)
+  {
+   case  8: BigDrawThingy<1,  uint8,  uint8>(espec, IsHES); break;
+   case 16: BigDrawThingy<1, uint16, uint16>(espec, IsHES); break;
+   case 32: BigDrawThingy<1, uint32, uint32>(espec, IsHES); break;
   }
  }
 }
@@ -1741,50 +1593,6 @@ void VDC_Power(void)
  VDC_Reset();
 }
 
-// Warning:  As of 0.8.x, this custom colormap function will only work if it's called from VDC_Init(), in the Load()
-// game load path.
-static bool LoadCustomPalette(const char *path) MDFN_COLD;
-static bool LoadCustomPalette(const char *path)
-{
- MDFN_printf(_("Loading custom palette from \"%s\"...\n"),  path);
- MDFN_indent(1);
-
- CustomColorMap = NULL;
-
- try
- {
-  FileStream fp(path, FileStream::MODE_READ);
-
-  CustomColorMap = new uint8[1024 * 3];
-
-  fp.read(CustomColorMap, 512 * 3, true);
-  if(fp.read(CustomColorMap, 512 * 3, false) == 512 * 3)
-   CustomColorMapLen = 1024;
-  else
-  {
-   MDFN_printf(_("Palette is missing the full set of 512 greyscale entries.  Strip-colorburst entries will be calculated.\n"));
-   CustomColorMapLen = 512;
-  }
- }
- catch(std::exception &e)
- {
-  if(CustomColorMap)
-  {
-   MDFN_free(CustomColorMap);
-   CustomColorMap = NULL;
-  }
-
-  MDFN_printf("%s\n", e.what());
-  MDFN_indent(-1);
-  return(false);
- }
-
- MDFN_indent(-1);
-
- return(true);
-}
-
-
 void VDC_Init(int sgx)
 {
  unlimited_sprites = MDFN_GetSettingB("pce_fast.nospritelimit");
@@ -1795,25 +1603,13 @@ void VDC_Init(int sgx)
 
  for(int chip = 0; chip < VDC_TotalChips; chip++)
  {
-  vdc_chips[chip] = (vdc_t *)MDFN_malloc(sizeof(vdc_t), "VDC");
+  vdc_chips[chip] = (vdc_t *)MDFN_malloc_T(sizeof(vdc_t), "VDC");
  }
 
- LoadCustomPalette(MDFN_MakeFName(MDFNMKF_PALETTE, 0, NULL).c_str());
-
- MixBGSPR = MixBGSPR_Generic<uint32>;
-
+ cputest_flags = 0;
 #ifdef ARCH_X86
- #ifndef __x86_64__
- if(cputest_get_flags() & CPUTEST_FLAG_CMOV)
- {
-  puts("CMOV");
-  MixBGSPR = MixBGSPR_x86_CMOV;
- }
- else
- #endif
-  MixBGSPR = MixBGSPR_x86;
+ cputest_flags = cputest_get_flags();
 #endif
-
 }
 
 void VDC_Close(void)
@@ -1827,13 +1623,11 @@ void VDC_Close(void)
  VDC_TotalChips = 0;
 }
 
-int VDC_StateAction(StateMem *sm, int load, int data_only)
+void VDC_StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT VCE_StateRegs[] =
  {
   SFVARN(vce.CR, "VCECR"),
-  SFVARN(vce.lc263, "lc263"),
-  SFVARN(vce.bw, "bw"),
   SFVARN(vce.dot_clock, "dot clock"),
   SFVARN(vce.ctaddress, "ctaddress"),
   SFARRAY16N(vce.color_table, 0x200, "color_table"),
@@ -1841,7 +1635,7 @@ int VDC_StateAction(StateMem *sm, int load, int data_only)
  };
 
 
- int ret = MDFNSS_StateAction(sm, load, data_only, VCE_StateRegs, "VCE");
+ MDFNSS_StateAction(sm, load, data_only, VCE_StateRegs, "VCE");
 
  int max_chips = VDC_TotalChips;
 
@@ -1854,7 +1648,7 @@ int VDC_StateAction(StateMem *sm, int load, int data_only)
    SFARRAY16N(vpc.winwidths, 2, "winwidths"),
    SFEND
   };
-  ret &= MDFNSS_StateAction(sm, load, data_only, VPC_StateRegs, "VPC");
+  MDFNSS_StateAction(sm, load, data_only, VPC_StateRegs, "VPC");
  }
 
  for(int chip = 0; chip < max_chips; chip++)
@@ -1918,10 +1712,12 @@ int VDC_StateAction(StateMem *sm, int load, int data_only)
 	SFEND
   };
 
-  ret &= MDFNSS_StateAction(sm, load, data_only, VDC_StateRegs, chip ? "VDC1" : "VDC0");
+  MDFNSS_StateAction(sm, load, data_only, VDC_StateRegs, chip ? "VDC1" : "VDC0");
 
   if(load)
   {
+   vce.ctaddress &= 0x1FF;
+
    for(int x = 0; x < VRAM_Size; x++)
    {
     FixTileCache(vdc, x);
@@ -1931,10 +1727,7 @@ int VDC_StateAction(StateMem *sm, int load, int data_only)
     FixPCache(x);
    RebuildSATCache(vdc);
   }
-
  }
-
- return(ret);
 }
 
 };

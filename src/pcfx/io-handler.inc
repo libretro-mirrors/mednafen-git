@@ -126,7 +126,7 @@ static uint16 MDFN_FASTCALL port_rhword(v810_timestamp_t &timestamp, uint32 A)
  }
  else if(FXSCSIROM && A >= 0x780000 && A <= 0x7FFFFF)
  {
-  return(le16toh(*(uint16*)&FXSCSIROM[A & 0x7FFFF]));
+  return MDFN_de16lsb<true>(&FXSCSIROM[A & 0x7FFFF]);
  }
  else if(FXSCSIROM && A >= 0x600000 && A <= 0x6FFFFF)
  {

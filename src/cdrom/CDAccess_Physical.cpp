@@ -336,7 +336,7 @@ void CDAccess_Physical::Read_Raw_Sector(uint8 *buf, int32 lba)
  StopLogging();
 }
 
-CDAccess_Physical::CDAccess_Physical(const char *path)
+CDAccess_Physical::CDAccess_Physical(const std::string& path)
 {
  char **devices = NULL;
  char **parseit = NULL;
@@ -377,7 +377,7 @@ CDAccess_Physical::CDAccess_Physical(const char *path)
   }
 
   StartLogging();
-  p_cdio = cdio_open_cd(path);
+  p_cdio = cdio_open_cd(path.c_str());
   if(!p_cdio) 
   {
    throw(MDFN_Error(0, _("Error opening physical CD: %s"), StopLogging().c_str()));

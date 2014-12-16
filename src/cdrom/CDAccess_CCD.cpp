@@ -88,7 +88,7 @@ static T CCD_ReadInt(CCD_Section &s, const std::string &propname, const bool hav
 }
 
 
-CDAccess_CCD::CDAccess_CCD(const char *path, bool image_memcache) : img_stream(NULL), sub_stream(NULL), img_numsectors(0)
+CDAccess_CCD::CDAccess_CCD(const std::string& path, bool image_memcache) : img_stream(NULL), sub_stream(NULL), img_numsectors(0)
 {
  try
  {
@@ -101,7 +101,7 @@ CDAccess_CCD::CDAccess_CCD(const char *path, bool image_memcache) : img_stream(N
  }
 }
 
-void CDAccess_CCD::Load(const char *path, bool image_memcache)
+void CDAccess_CCD::Load(const std::string& path, bool image_memcache)
 {
  FileStream cf(path, FileStream::MODE_READ);
  std::map<std::string, CCD_Section> Sections;
@@ -215,7 +215,7 @@ void CDAccess_CCD::Load(const char *path, bool image_memcache)
    uint8 control = CCD_ReadInt<uint8>(ts, "CONTROL");
    uint8 pmin = CCD_ReadInt<uint8>(ts, "PMIN");
    uint8 psec = CCD_ReadInt<uint8>(ts, "PSEC");
-   uint8 pframe = CCD_ReadInt<uint8>(ts, "PFRAME");
+   //uint8 pframe = CCD_ReadInt<uint8>(ts, "PFRAME");
    signed plba = CCD_ReadInt<signed>(ts, "PLBA");
 
    if(session != 1)
@@ -263,11 +263,11 @@ void CDAccess_CCD::Load(const char *path, bool image_memcache)
 
   if(image_memcache)
   {
-   img_stream = new MemoryStream(new FileStream(image_path.c_str(), FileStream::MODE_READ));
+   img_stream = new MemoryStream(new FileStream(image_path, FileStream::MODE_READ));
   }
   else
   {
-   img_stream = new FileStream(image_path.c_str(), FileStream::MODE_READ);
+   img_stream = new FileStream(image_path, FileStream::MODE_READ);
   }
 
   int64 ss = img_stream->size();
@@ -284,11 +284,11 @@ void CDAccess_CCD::Load(const char *path, bool image_memcache)
   std::string sub_path = MDFN_EvalFIP(dir_path, file_base + std::string(".") + std::string(sub_extsd), true);
 
   if(image_memcache)
-   sub_stream = new MemoryStream(new FileStream(sub_path.c_str(), FileStream::MODE_READ));
+   sub_stream = new MemoryStream(new FileStream(sub_path, FileStream::MODE_READ));
   else
-   sub_stream = new FileStream(sub_path.c_str(), FileStream::MODE_READ);
+   sub_stream = new FileStream(sub_path, FileStream::MODE_READ);
 
-  if(sub_stream->size() != (int64)img_numsectors * 96)
+  if(sub_stream->size() != (uint64)img_numsectors * 96)
    throw MDFN_Error(0, _("CCD SUB file size mismatch."));
  }
 

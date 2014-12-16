@@ -126,7 +126,7 @@ int Z80_RunOP(void)
  return(z80_do_opcode());
 }
 
-int MDFNNGPCZ80_StateAction(StateMem *sm, int load, int data_only)
+void MDFNNGPCZ80_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -135,13 +135,7 @@ int MDFNNGPCZ80_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, "Z80X"))
- {
-  return(0);
- }
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "Z80X");
 
- if(!z80_state_action(sm, load, data_only, "Z80"))
-  return(0);
-
- return(1);
+ z80_state_action(sm, load, data_only, "Z80");
 }

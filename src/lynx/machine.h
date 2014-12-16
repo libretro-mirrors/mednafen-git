@@ -48,6 +48,24 @@
 
 #include <mednafen/mednafen.h>
 
+typedef struct
+{
+ union
+ {
+  struct
+  {
+   #ifdef MSB_FIRST
+   uint8   High;
+   uint8   Low;
+   #else
+   uint8   Low;
+   uint8   High;
+   #endif
+  } Union8;
+  uint16 Val16;
+ };
+} Uuint16;
+
 // Read/Write Cycle definitions
 #define CPU_RDWR_CYC	5
 #define DMA_RDWR_CYC	4

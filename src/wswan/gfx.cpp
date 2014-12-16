@@ -590,7 +590,7 @@ void wsScanline(uint32 *target)
  	  }
 	  else
 	  {
-	   puts("Who knows!");
+	   //puts("Who knows!");
 	  }
          }
          else
@@ -824,7 +824,7 @@ void WSwan_GfxReset(void)
 
 }
 
-int WSwan_GfxStateAction(StateMem *sm, int load, int data_only)
+void WSwan_GfxStateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -873,8 +873,7 @@ int WSwan_GfxStateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, "GFX"))
-  return(0);
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "GFX");
 
  if(load)
  {
@@ -882,15 +881,13 @@ int WSwan_GfxStateAction(StateMem *sm, int load, int data_only)
 
   wsSetVideo(VideoMode >> 5, TRUE);
  }
-
- return(1);
 }
 
 #ifdef WANT_DEBUGGER
 static void DoGfxDecode(void)
 {
  // FIXME
- uint32 *palette_ptr;
+ //uint32 *palette_ptr;
  uint32 *target = GfxDecode_Buf->pixels;
  int w = GfxDecode_Buf->w;
  int h = GfxDecode_Buf->h;
@@ -937,7 +934,7 @@ static void DoGfxDecode(void)
     neo_palette[x] = GfxDecode_Buf->MakeColor(raw * 17 , raw * 17, raw * 17, 0xFF);
    }
  }
- palette_ptr = neo_palette;
+ //palette_ptr = neo_palette;
 
  for(int y = 0; y < h; y++)
  {

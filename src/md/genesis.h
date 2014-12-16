@@ -13,8 +13,8 @@ extern void (*MD_ExtWrite16)(uint32 address, uint16 value);
 class MDVDP;
 
 /* Global variables */
-extern uint8 work_ram[0x10000];
-extern uint8 zram[0x2000];
+alignas(8) extern uint8 work_ram[0x10000];
+alignas(8) extern uint8 zram[0x2000];
 extern uint8 zbusreq;
 extern uint8 zbusack;
 extern uint8 zreset;

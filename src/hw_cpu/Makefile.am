@@ -4,21 +4,17 @@ DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_src
 
 noinst_LIBRARIES        =       libmdfnhwcpu.a
 
-#SUBDIRS			=	c68k
-#libmdfnhwcpu_a_DEPENDENCIES	=	c68k/
-
-#SUBDIRS                        =       c68k
-#libmdfnhwcpu_a_DEPENDENCIES    =       c68k/
-
-noinst_PROGRAMS = gen68k
-gen68k_SOURCES = c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c
+if !CROSS_COMPILING
+noinst_PROGRAMS = gen68k$(EXEEXT)
+gen68k_SOURCES = c68k/gen68k.cpp
 gen68k_CFLAGS = -DC68K_GEN
 gen68k_LDFLAGS = -DC68K_GEN
 nodist_pkgdata_DATA = c68k/c68k_op0.inc
-c68k/c68k_op0.inc: $(srcdir)/c68k/*.h $(srcdir)/c68k/*.c $(srcdir)/c68k/c68k_ini.inc $(srcdir)/c68k/c68kmac.inc $(srcdir)/c68k/gen68k.inc
-	make gen68k && cd c68k && ../gen68k$(EXEEXT)
+c68k/c68k_op0.inc: gen68k$(EXEEXT)
+	cd c68k && ../gen68k$(EXEEXT)
+endif
 
-libmdfnhwcpu_a_SOURCES 	=       c68k/c68kexec.c c68k/c68k.c
+libmdfnhwcpu_a_SOURCES 	=	c68k/c68kexec.cpp c68k/c68k.cpp
 
 libmdfnhwcpu_a_SOURCES	+=      z80-fuse/z80.cpp z80-fuse/z80_ops.cpp
 

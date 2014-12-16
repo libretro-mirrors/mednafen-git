@@ -30,13 +30,11 @@ static const int VRAM_BGTileNoMask = VRAM_SizeMask / 16; //0x7FF;
 typedef struct
 {
         uint8 CR;
-
-        bool lc263;    // 263 line count if set, 262 if not
-        bool bw;       // Black and White
         uint8 dot_clock; // Dot Clock(5, 7, or 10 MHz = 0, 1, 2)
+        uint16 ctaddress;	// 9 bits
+
         uint16 color_table[0x200];
         uint32 color_table_cache[0x200];
-        uint16 ctaddress;
 } vce_t;
 
 extern vce_t vce;
@@ -58,6 +56,8 @@ typedef struct
         int32 sat_dma_slcounter;
 
         uint8 select;
+        uint8 status;
+
         uint16 MAWR;    // Memory Address Write Register
         uint16 MARR;    // Memory Address Read Register
 
@@ -83,7 +83,6 @@ typedef struct
 
         uint16 read_buffer;
         uint8 write_latch;
-        uint8 status;
 
         uint16 DMAReadBuffer;
         bool DMAReadWrite;
@@ -93,8 +92,6 @@ typedef struct
 
         uint32 BG_YOffset;
         uint32 BG_XOffset;
-
-
 
         int SAT_Cache_Valid;          // 64 through 128, depending on the number of 32-pixel-wide sprites.
         SAT_Cache_t SAT_Cache[128];     //64];
@@ -111,7 +108,7 @@ extern vdc_t *vdc_chips[2];
 extern int VDC_TotalChips;
 
 
-void VDC_SetPixelFormat(const MDFN_PixelFormat &format) MDFN_COLD;
+void VDC_SetPixelFormat(const MDFN_PixelFormat &format, const uint8* CustomColorMap, const uint32 CustomColorMapLen) MDFN_COLD;
 void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES);
 void VDC_SetLayerEnableMask(uint64 mask);
 
@@ -204,7 +201,7 @@ void VDC_Close(void) MDFN_COLD;
 void VDC_Reset(void) MDFN_COLD;
 void VDC_Power(void) MDFN_COLD;
 
-int VDC_StateAction(StateMem *sm, int load, int data_only);
+void VDC_StateAction(StateMem *sm, int load, int data_only);
 
 };
 

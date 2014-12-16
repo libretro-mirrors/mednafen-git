@@ -11,7 +11,7 @@ void RTC_Init(void);
 void RTC_Reset(void);
 
 void RTC_Clock(uint32 cycles);
-int RTC_StateAction(StateMem *sm, int load, int data_only);
+void RTC_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 }
 

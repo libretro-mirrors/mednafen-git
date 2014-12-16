@@ -24,31 +24,31 @@
 namespace MDFN_IEN_PSX
 {
 
-class InputDevice_Memcard : public InputDevice
+class InputDevice_Memcard final : public InputDevice
 {
  public:
 
  InputDevice_Memcard();
- virtual ~InputDevice_Memcard();
+ virtual ~InputDevice_Memcard() override;
 
- virtual void Power(void);
- virtual int StateAction(StateMem* sm, int load, int data_only, const char* section_name);
-
- //
- //
- //
- virtual void SetDTR(bool new_dtr);
- virtual bool GetDSR(void);
- virtual bool Clock(bool TxD, int32 &dsr_pulse_delay);
+ virtual void Power(void) override;
+ virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
 
  //
  //
- virtual uint32 GetNVSize(void);
- virtual void ReadNV(uint8 *buffer, uint32 offset, uint32 size);
- virtual void WriteNV(const uint8 *buffer, uint32 offset, uint32 size);
+ //
+ virtual void SetDTR(bool new_dtr) override;
+ virtual bool GetDSR(void) override;
+ virtual bool Clock(bool TxD, int32 &dsr_pulse_delay) override;
 
- virtual uint64 GetNVDirtyCount(void);
- virtual void ResetNVDirtyCount(void);
+ //
+ //
+ virtual uint32 GetNVSize(void) const override;
+ virtual const uint8* ReadNV(void) const override;
+ virtual void WriteNV(const uint8 *buffer, uint32 offset, uint32 size) override;
+
+ virtual uint64 GetNVDirtyCount(void) const override;
+ virtual void ResetNVDirtyCount(void) override;
 
  private:
 
@@ -154,7 +154,7 @@ void InputDevice_Memcard::Power(void)
  presence_new = true;
 }
 
-int InputDevice_Memcard::StateAction(StateMem* sm, int load, int data_only, const char* section_name)
+void InputDevice_Memcard::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix)
 {
  // Don't save dirty_count.
  SFORMAT StateRegs[] =
@@ -186,16 +186,19 @@ int InputDevice_Memcard::StateAction(StateMem* sm, int load, int data_only, cons
   SFARRAY(card_data, sizeof(card_data)),
   SFEND
  };
- int ret = 1;
 
- if(MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name) != 0)
+ //
+ // Use sname_prefix directly here for backwards compatibility with < 0.9.36.*
+ if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, sname_prefix, true) && load)
+  Power();	// We should technically also Format() here too for state consistency reasons, but I don't want to be murdered by an angry mob so we won't.
+ else
  {
-  //printf("%s data_used=%d\n", section_name, data_used);
   if(data_used)
   {
-   std::string tmp_name = std::string(section_name) + "_DT";
+   char aux_section_name[32];
 
-   ret &= MDFNSS_StateAction(sm, load, data_only, CD_StateRegs, tmp_name.c_str());
+   trio_snprintf(aux_section_name, sizeof(aux_section_name), "%s_DT", sname_prefix);
+   MDFNSS_StateAction(sm, load, data_only, CD_StateRegs, aux_section_name);
   }
 
   if(load)
@@ -209,10 +212,6 @@ int InputDevice_Memcard::StateAction(StateMem* sm, int load, int data_only, cons
    }
   }
  }
- else
-  ret = 0;
-
- return(ret);
 }
 
 
@@ -484,19 +483,14 @@ bool InputDevice_Memcard::Clock(bool TxD, int32 &dsr_pulse_delay)
  return(ret);
 }
 
-uint32 InputDevice_Memcard::GetNVSize(void)
+uint32 InputDevice_Memcard::GetNVSize(void) const
 {
  return(sizeof(card_data));
 }
 
-void InputDevice_Memcard::ReadNV(uint8 *buffer, uint32 offset, uint32 size)
+const uint8* InputDevice_Memcard::ReadNV(void) const
 {
- while(size--)
- {
-  *buffer = card_data[offset & (sizeof(card_data) - 1)];
-  buffer++;
-  offset++;
- }
+ return card_data;
 }
 
 void InputDevice_Memcard::WriteNV(const uint8 *buffer, uint32 offset, uint32 size)
@@ -517,7 +511,7 @@ void InputDevice_Memcard::WriteNV(const uint8 *buffer, uint32 offset, uint32 siz
  }
 }
 
-uint64 InputDevice_Memcard::GetNVDirtyCount(void)
+uint64 InputDevice_Memcard::GetNVDirtyCount(void) const
 {
  return(dirty_count);
 }

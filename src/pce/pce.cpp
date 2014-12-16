@@ -29,12 +29,16 @@
 #include <mednafen/hw_misc/arcade_card/arcade_card.h>
 #include <mednafen/mempatcher.h>
 #include <mednafen/cdrom/cdromif.h>
-#include <mednafen/md5.h>
+#include <mednafen/hash/md5.h>
 #include <mednafen/FileStream.h>
 #include <mednafen/sound/OwlResampler.h>
 #include <math.h>
 
+#include <zlib.h>
+
 #define PCE_DEBUG(x, ...) {  /* printf(x, ## __VA_ARGS__); */ }
+
+extern MDFNGI EmulatedPCE;
 
 namespace MDFN_IEN_PCE
 {
@@ -48,8 +52,6 @@ static const MDFNSetting_EnumList PSGRevisionList[] =
 };
 
 static std::vector<CDIF*> *cdifs = NULL;
-static bool CD_TrayOpen;
-static int CD_SelectedDisc;	// -1 for no disc
 
 HuC6280 *HuCPU;
 
@@ -72,7 +74,6 @@ bool PCE_ACEnabled;
 uint32 PCE_InDebug = 0;
 uint64 PCE_TimestampBase;	// Only used with the debugger for the time being.
 
-extern MDFNGI EmulatedPCE;
 static bool IsSGX;
 static bool IsHES;
 
@@ -283,49 +284,15 @@ static void PCECDIRQCB(bool asserted)
   HuCPU->IRQEnd(HuC6280::IQIRQ2);
 }
 
-static bool LoadCustomPalette(const char *path)
-{
- MDFN_printf(_("Loading custom palette from \"%s\"...\n"),  path);
- MDFN_indent(1);
-
- try
- {
-  FileStream fp(path, FileStream::MODE_READ);
-  uint8 CustomColorMap[1024 * 3];
-  uint32 CustomColorMapLen = 0;
-
-  fp.read(CustomColorMap, 512 * 3, true);
-  if(fp.read(CustomColorMap, 512 * 3, false) == 512 * 3)
-   CustomColorMapLen = 1024;
-  else
-  {
-   MDFN_printf(_("Palette is missing the full set of 512 greyscale entries.  Strip-colorburst entries will be calculated.\n"));
-   CustomColorMapLen = 512;
-  }
-
-  vce->SetCustomColorMap(CustomColorMap, CustomColorMapLen);
- }
- catch(std::exception &e)
- {
-  MDFN_printf("%s\n", e.what());
-  MDFN_indent(-1);
-  return(false);
- }
-
- MDFN_indent(-1);
-
- return(true);
-}
-
 static int LoadCommon(void);
 static void LoadCommonPre(void);
 
 static bool TestMagic(MDFNFILE *fp)
 {
- if(memcmp(fp->data, "HESM", 4) && strcasecmp(fp->ext, "pce") && strcasecmp(fp->ext, "sgx"))
-  return(FALSE);
+ if(strcasecmp(fp->ext, "hes") && strcasecmp(fp->ext, "pce") && strcasecmp(fp->ext, "sgx"))
+  return(false);
 
- return(TRUE);
+ return(true);
 }
 
 static void SetCDSettings(bool silent_status = false)
@@ -372,35 +339,41 @@ static void CDSettingChanged(const char *name)
  SetCDSettings(true);
 }
 
-static int Load(MDFNFILE *fp)
+
+static const struct
+{
+ uint32 crc;
+ const char* name;
+} sgx_table[] = 
+{
+	{ 0xbebfe042, "Darius Plus", },
+	{ 0x4c2126b0, "Aldynes" },
+	{ 0x8c4588e2, "1941 - Counter Attack" },
+	{ 0x1f041166, "Madouou Granzort" },
+	{ 0xb486a8ed, "Daimakaimura" },
+	{ 0x3b13af61, "Battle Ace" },
+};
+
+static void Load(MDFNFILE *fp)
 {
  try
  {
-  uint32 headerlen = 0;
-  uint32 r_size;
+  uint8 hes_header[4];
 
-  IsHES = 0;
-  IsSGX = 0;
+  IsHES = false;
+  IsSGX = false;
 
-  if(!memcmp(fp->data, "HESM", 4))
-   IsHES = 1;
+  fp->read(hes_header, 4);
+  fp->seek(0, SEEK_SET);
+
+  if(!memcmp(hes_header, "HESM", 4))
+   IsHES = true;
 
   LoadCommonPre();
 
-  if(!IsHES)
-  {
-   if(fp->size & 0x200) // 512 byte header!
-    headerlen = 512;
-  }
-
-  r_size = fp->size - headerlen;
-  if(r_size > 4096 * 1024) r_size = 4096 * 1024;
-
-  uint32 crc = crc32(0, fp->data + headerlen, fp->size - headerlen);
-
   if(IsHES)
   {
-   HES_Load(fp->data, fp->size);
+   HES_Load(fp);
 
    ADPCMBuf = new RavenBuffer();
    PCE_IsCD = 1;
@@ -408,50 +381,24 @@ static int Load(MDFNFILE *fp)
   }
   else
   {
-   HuC_Load(fp->data + headerlen, fp->size - headerlen, crc, MDFN_GetSettingB("pce.disable_bram_hucard"));
-   #if 0	// For testing
-   PCE_IsCD = 1;
-   PCECD_Init(NULL, PCECDIRQCB, PCE_MASTER_CLOCK, &sbuf[0], &sbuf[1]);
-   #endif
-  }
+   uint32 crc;
 
-  if(!strcasecmp(fp->ext, "sgx"))
-   IsSGX = TRUE;
+   crc = HuC_Load(fp, MDFN_GetSettingB("pce.disable_bram_hucard"));
 
-  if(fp->size >= 8192 && !memcmp(fp->data + headerlen, "DARIUS Version 1.11b", strlen("DARIUS VERSION 1.11b")))
-  {
-   MDFN_printf("SuperGfx:  Darius Plus\n");
-   IsSGX = 1;
-  }
-
-  if(crc == 0x4c2126b0)
-  {
-   MDFN_printf("SuperGfx:  Aldynes\n");
-   IsSGX = 1;
-  }
-
-  if(crc == 0x8c4588e2)
-  {
-   MDFN_printf("SuperGfx:  1941 - Counter Attack\n");
-   IsSGX = 1;
-  }
-
-  if(crc == 0x1f041166)
-  {
-   MDFN_printf("SuperGfx:  Madouou Granzort\n");
-   IsSGX = 1;
-  }
-
-  if(crc == 0xb486a8ed)
-  {
-   MDFN_printf("SuperGfx:  Daimakaimura\n");
-   IsSGX = 1;
-  }
-
-  if(crc == 0x3b13af61)
-  {
-   MDFN_printf("SuperGfx:  Battle Ace\n");
-   IsSGX = 1;
+   if(!strcasecmp(fp->ext, "sgx"))
+    IsSGX = true;
+   else
+   {
+    for(auto const& e : sgx_table)
+    {
+     if(e.crc == crc)
+     {
+      IsSGX = true;
+      MDFN_printf(_("SuperGrafx: %s\n"), e.name);
+      break;
+     }
+    }
+   }
   }
 
   LoadCommon();
@@ -461,8 +408,6 @@ static int Load(MDFNFILE *fp)
   Cleanup();
   throw;
  }
-
- return(true);
 }
 
 static void LoadCommonPre(void)
@@ -509,8 +454,6 @@ static int LoadCommon(void)
   else
    HuCPU->SetFastRead(i, BaseRAM);
  }
-
- LoadCustomPalette(MDFN_MakeFName(MDFNMKF_PALETTE, 0, NULL).c_str());
 
  MDFNMP_AddRAM(IsSGX ? 32768 : 8192, 0xf8 * 8192, BaseRAM);
 
@@ -574,7 +517,7 @@ static int LoadCommon(void)
 
  MDFNGameInfo->LayerNames = IsSGX ? "BG0\0SPR0\0BG1\0SPR1\0" : "Background\0Sprites\0";
  MDFNGameInfo->fps = (uint32)((double)7159090.90909090 / 455 / 263 * 65536 * 256);
-
+ MDFNGameInfo->CPInfoActiveBF = IsHES ? 0 : 1 << 0;
 
  for(unsigned int i = 0; i < 0x100; i++)
   NonCheatPCERead[i] = HuCPU->GetReadHandler(i);
@@ -699,32 +642,21 @@ static void LoadCD(std::vector<CDIF *> *CDInterfaces)
    { ".bios", gettext_noop("BIOS Image") },
    { NULL, NULL }
   };
-  md5_context md5;
-  uint32 headerlen = 0;
-
   IsHES = 0;
   IsSGX = 0;
 
   LoadCommonPre();
 
   const char *bios_sname = DetectGECD((*CDInterfaces)[0]) ? "pce.gecdbios" : "pce.cdbios";
-  std::string bios_path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(bios_sname).c_str() );
+  std::string bios_path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(bios_sname));
   MDFNFILE fp(bios_path.c_str(), KnownBIOSExtensions, _("CD BIOS"));
-
-  if(fp.Size() & 0x200)
-   headerlen = 512;
-
-  //md5.starts();
-  //md5.update(fp.Data(), fp.Size());
-  //md5.update(MDFNGameInfo->MD5, 16);
-  //md5.finish(MDFNGameInfo->MD5);
 
   bool disable_bram_cd = MDFN_GetSettingB("pce.disable_bram_cd");
 
   if(disable_bram_cd)
    MDFN_printf(_("Warning: BRAM is disabled per pcfx.disable_bram_cd setting.  This is simulating a malfunction.\n"));
 
-  HuC_Load(fp.Data() + headerlen, fp.Size() - headerlen, 0, disable_bram_cd, PCE_ACEnabled ? SYSCARD_ARCADE : SYSCARD_3);
+  HuC_Load(&fp, disable_bram_cd, PCE_ACEnabled ? SYSCARD_ARCADE : SYSCARD_3);
 
   ADPCMBuf = new RavenBuffer();
   for(unsigned lr = 0; lr < 2; lr++)
@@ -733,14 +665,9 @@ static void LoadCD(std::vector<CDIF *> *CDInterfaces)
   PCE_IsCD = 1;
   PCECD_Init(NULL, PCECDIRQCB, PCE_MASTER_CLOCK, ADPCMBuf->Buf(), CDDABufs[0]->Buf(), CDDABufs[1]->Buf());
 
-  MDFNGameInfo->GameType = GMT_CDROM;
-  CD_TrayOpen = false;
-  CD_SelectedDisc = 0;
   cdifs = CDInterfaces;
 
   SCSICD_SetDisc(true, NULL, true);
-  SCSICD_SetDisc(false, (*CDInterfaces)[0], true);
-
 
   MDFN_printf(_("CD Layout:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
   MDFN_printf(_("Arcade Card Emulation:  %s\n"), PCE_ACEnabled ? _("Enabled") : _("Disabled"));
@@ -923,7 +850,7 @@ static void Emulate(EmulateSpecStruct *espec)
  MDFNMP_ApplyPeriodicCheats();
 
  if(espec->VideoFormatChanged)
-  vce->SetPixelFormat(espec->surface->format);
+  vce->SetPixelFormat(espec->surface->format, espec->CustomPalette, espec->CustomPaletteNumEntries);
 
  if(espec->SoundFormatChanged)
   SetSoundRate(espec->SoundRate);
@@ -943,7 +870,10 @@ static void Emulate(EmulateSpecStruct *espec)
   INPUT_Frame();
 
   //vce->RunFrame(espec->surface, &espec->DisplayRect, espec->LineWidths, IsHES ? 1 : espec->skip);
-  rp_rv = vce->RunPartial();
+  do
+  {
+   rp_rv = vce->RunPartial();
+  } while(espec->NeedSoundReverse && !rp_rv);
 
   const uint32 end_timestamp = HuCPU->Timestamp();
   const uint32 end_timestamp_div12 = end_timestamp / 12;
@@ -1020,15 +950,19 @@ static void Emulate(EmulateSpecStruct *espec)
 
 #endif
 
-
     if(espec->SoundBuf && HRRes)
-     new_sc = HRRes->Resample(HRBufs[ch], rsc, espec->SoundBuf + (espec->SoundBufSize * 2) + ch, espec->SoundBufMaxSize - espec->SoundBufSize);
+    {
+     //printf("%04x\n", rsc);
+     new_sc = HRRes->Resample(HRBufs[ch], rsc, espec->SoundBuf + (espec->SoundBufSize * 2) + ch, espec->SoundBufMaxSize - espec->SoundBufSize, espec->NeedSoundReverse);
+    }
     else
     {
      HRBufs[ch]->ResampleSkipped(rsc);
      new_sc = 0;
     }
    }
+
+   espec->NeedSoundReverse = false;
 
    if(ADPCMBuf)
     ADPCMBuf->Finish(rsc);
@@ -1057,7 +991,7 @@ static void Emulate(EmulateSpecStruct *espec)
 
   if(!rp_rv)
   {
-   //MDFN_MidSync(espec);
+   MDFN_MidSync(espec);
   }
  } while(!rp_rv);
 
@@ -1070,24 +1004,12 @@ static void Emulate(EmulateSpecStruct *espec)
   HES_Update(espec, INPUT_HESHack());	//Draw(espec->skip ? NULL : espec->surface, espec->skip ? NULL : &espec->DisplayRect, espec->SoundBuf, espec->SoundBufSize, INPUT_HESHack());
 }
 
-void PCE_MidSync(void)
-{
- INPUT_Frame();
-
- es->MasterCycles = HuCPU->Timestamp();
-
- //MDFN_MidSync(es);
-}
-
-static int StateAction(StateMem *sm, int load, int data_only)
+static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
   SFARRAY(BaseRAM, IsSGX? 32768 : 8192),
   SFVAR(PCE_TimestampBase),
-
-  SFVAR(CD_TrayOpen),
-  SFVAR(CD_SelectedDisc),
 
   SFEND
  };
@@ -1096,29 +1018,19 @@ static int StateAction(StateMem *sm, int load, int data_only)
  PCEDBG_MachineStateChanged();
 #endif
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
 
- ret &= HuCPU->StateAction(sm, load, data_only);
- ret &= vce->StateAction(sm, load, data_only);
- ret &= psg->StateAction(sm, load, data_only);
- ret &= INPUT_StateAction(sm, load, data_only);
- ret &= HuC_StateAction(sm, load, data_only);
- ret &= SubHW_StateAction(sm, load, data_only);
-
+ HuCPU->StateAction(sm, load, data_only);
+ vce->StateAction(sm, load, data_only);
+ psg->StateAction(sm, load, data_only);
+ INPUT_StateAction(sm, load, data_only);
+ HuC_StateAction(sm, load, data_only);
+ SubHW_StateAction(sm, load, data_only);
 
  if(load)
  {
-  if(cdifs)
-  {
-   // Sanity check.
-   if(CD_SelectedDisc >= (int)cdifs->size())
-    CD_SelectedDisc = (int)cdifs->size() - 1;
 
-   SCSICD_SetDisc(CD_TrayOpen, (CD_SelectedDisc >= 0 && !CD_TrayOpen) ? (*cdifs)[CD_SelectedDisc] : NULL, true);
-  }
  }
-
- return(ret);
 }
 
 void PCE_Power(void)
@@ -1152,47 +1064,28 @@ void PCE_Power(void)
  //printf("%d\n", HuCPU->Timestamp());
 }
 
-static void CDInsertEject(void)
+static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
 {
- CD_TrayOpen = !CD_TrayOpen;
+ const RMD_Layout* rmd = EmulatedPCE.RMD;
+ const RMD_Drive* rd = &rmd->Drives[drive_idx];
+ const RMD_State* rs = &rd->PossibleStates[state_idx];
 
- for(unsigned disc = 0; disc < cdifs->size(); disc++)
+ if(rs->MediaPresent && rs->MediaUsable)
  {
-  if(!(*cdifs)[disc]->Eject(CD_TrayOpen))
-  {
-   MDFN_DispMessage(_("Eject error."));
-   CD_TrayOpen = !CD_TrayOpen;
-  }
- }
+  if(!(*cdifs)[media_idx]->Eject(false))
+   return(false);
 
- if(CD_TrayOpen)
-  MDFN_DispMessage(_("Virtual CD Drive Tray Open"));
+  SCSICD_SetDisc(false, (*cdifs)[media_idx]);
+ }
  else
-  MDFN_DispMessage(_("Virtual CD Drive Tray Closed"));
-
- SCSICD_SetDisc(CD_TrayOpen, (CD_SelectedDisc >= 0 && !CD_TrayOpen) ? (*cdifs)[CD_SelectedDisc] : NULL);
-}
-
-static void CDEject(void)
-{
- if(!CD_TrayOpen)
-  CDInsertEject();
-}
-
-static void CDSelect(void)
-{
- if(cdifs && CD_TrayOpen)
  {
-  CD_SelectedDisc = (CD_SelectedDisc + 1) % (cdifs->size() + 1);
+  if(!((*cdifs)[media_idx]->Eject(rs->MediaCanChange)))
+   return(false);
 
-  if((unsigned)CD_SelectedDisc == cdifs->size())
-   CD_SelectedDisc = -1;
-
-  if(CD_SelectedDisc == -1)
-   MDFN_DispMessage(_("Disc absence selected."));
-  else
-   MDFN_DispMessage(_("Disc %d of %d selected."), CD_SelectedDisc + 1, (int)cdifs->size());
+  SCSICD_SetDisc(rs->MediaCanChange, NULL);
  }
+
+ return(true);
 }
 
 static void DoSimpleCommand(int cmd)
@@ -1201,18 +1094,6 @@ static void DoSimpleCommand(int cmd)
  {
   case MDFN_MSC_RESET: PCE_Power(); break;
   case MDFN_MSC_POWER: PCE_Power(); break;
-
-  case MDFN_MSC_INSERT_DISK:
-	CDInsertEject();
-        break;
-
-  case MDFN_MSC_SELECT_DISK:
-	CDSelect();
-        break;
-
-  case MDFN_MSC_EJECT_DISK:
-	CDEject();
-        break;
  }
 }
 
@@ -1324,6 +1205,15 @@ static bool SetSoundRate(double rate)
  return(TRUE);
 }
 
+//MDFN_printf(_("Palette is missing the full set of 512 greyscale entries.  Strip-colorburst entries will be calculated.\n"));
+static const CustomPalette_Spec CPInfo[] =
+{
+ { gettext_noop("PCE/TG16 9-bit RGB"), NULL, { 512, 1024, 0 } },
+
+ { NULL, NULL }
+};
+
+
 };
 
 using namespace MDFN_IEN_PCE;
@@ -1339,16 +1229,22 @@ MDFNGI EmulatedPCE =
  #else
  NULL,
  #endif
- &PCEInputInfo,
+ PCEPortInfo,
  Load,
  TestMagic,
  LoadCD,
  TestMagicCD,
  CloseGame,
+
  SetLayerEnableMask,
  NULL,
+
  NULL,
  NULL,
+
+ CPInfo,
+ 0,
+
  InstallReadPatch,
  RemoveReadPatches,
  MemRead,
@@ -1356,7 +1252,9 @@ MDFNGI EmulatedPCE =
  false,
  StateAction,
  Emulate,
+ PCEINPUT_TransformInput,
  PCEINPUT_SetInput,
+ SetMedia,
  DoSimpleCommand,
  PCESettings,
  MDFN_MASTERCLOCK_FIXED(PCE_MASTER_CLOCK),

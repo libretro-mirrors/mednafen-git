@@ -15,5 +15,5 @@ void SubHW_EndFrame(const int32 timestamp, const int32 ts_base);
 void SubHW_CVSync(void);
 bool SubHW_DisplayLine(uint16 *out_buffer);
 
-int SubHW_StateAction(StateMem *sm, int load, int data_only);
+void SubHW_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 }

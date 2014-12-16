@@ -56,7 +56,7 @@ void VBINPUT_SetInstantReadHack(bool enabled)
 }
 
 
-void VBINPUT_SetInput(int port, const char *type, void *ptr)
+void VBINPUT_SetInput(unsigned port, const char *type, uint8 *ptr)
 {
  data_ptr = (uint8 *)ptr;
 }
@@ -200,7 +200,7 @@ void VBINPUT_Power(void)
 
 
 
-int VBINPUT_StateAction(StateMem *sm, int load, int data_only)
+void VBINPUT_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -214,14 +214,12 @@ int VBINPUT_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPUT");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPUT");
 
  if(load)
  {
 
  }
-
- return(ret);
 }
 
 

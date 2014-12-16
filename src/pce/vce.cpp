@@ -120,9 +120,6 @@ VCE::VCE(bool want_sgfx, bool nospritelimit)
 
  fb = NULL;
  pitch32 = 0;
- RunHook = NULL;
- HBlankHook = NULL;
- VBlankHook = NULL;
 
  vdc[0] = vdc[1] = NULL;
  for(int chip = 0; chip < chip_count; chip++)
@@ -132,11 +129,7 @@ VCE::VCE(bool want_sgfx, bool nospritelimit)
   vdc[chip]->SetWSHook(MDFN_IEN_PCE::WS_Hook);
  }
 
- CustomColorMap = NULL;
- CustomColorMapLen = 0;
-
  memset(systemColorMap32, 0, sizeof(systemColorMap32));
- memset(bw_systemColorMap32, 0, sizeof(bw_systemColorMap32));
 
  #ifdef WANT_DEBUGGER
  GfxDecode_Buf = NULL;
@@ -330,7 +323,7 @@ int32 VCE::Sync(const int32 timestamp)
 
 void VCE::FixPCache(int entry)
 {
- uint32 *cm32 = bw ? bw_systemColorMap32 : systemColorMap32;
+ const uint32 *cm32 = systemColorMap32[bw];
 
  if(!(entry & 0xFF))
  {
@@ -371,7 +364,7 @@ void VCE::SetVCECR(uint8 V)
  CR = V;
 }
 
-void VCE::SetPixelFormat(const MDFN_PixelFormat &format)
+void VCE::SetPixelFormat(const MDFN_PixelFormat &format, const uint8* CustomColorMap, const uint32 CustomColorMapLen)
 {
  for(int x = 0; x < 512; x++)
  {
@@ -412,8 +405,8 @@ void VCE::SetPixelFormat(const MDFN_PixelFormat &format)
    sc_r = sc_g = sc_b = y;
   }
 
-  systemColorMap32[x] = format.MakeColor(r, g, b);
-  bw_systemColorMap32[x] = format.MakeColor(sc_r, sc_g, sc_b);
+  systemColorMap32[0][x] = format.MakeColor(r, g, b);
+  systemColorMap32[1][x] = format.MakeColor(sc_r, sc_g, sc_b);
  }
 
  // I know the temptation is there, but don't combine these two loops just
@@ -453,21 +446,6 @@ void VCE::SetPixelFormat(const MDFN_PixelFormat &format)
 #endif
   SubTLUT[n] = format.MakeColor(r, g, b);
  }
-}
-
-bool VCE::SetCustomColorMap(const uint8 *triplets, const uint32 count)
-{
- assert(count == 512 || count == 1024);
- assert(triplets);
-
- if(!(CustomColorMap = (uint8*)MDFN_malloc(count * 3, _("custom color map"))))
-  return(FALSE);
-
- CustomColorMapLen = count;
-
- memcpy(CustomColorMap, triplets, 3 * count);
-
- return(TRUE);
 }
 
 uint8 VCE::Read(uint32 A)
@@ -647,7 +625,7 @@ void VCE::SetLayerEnableMask(uint64 mask)
  }
 }
 
-int VCE::StateAction(StateMem *sm, int load, int data_only)
+void VCE::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT VCE_StateRegs[] =
  {
@@ -670,7 +648,7 @@ int VCE::StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = MDFNSS_StateAction(sm, load, data_only, VCE_StateRegs, "VCE");
+ MDFNSS_StateAction(sm, load, data_only, VCE_StateRegs, "VCE");
 
  if(sgfx)
  {
@@ -683,7 +661,7 @@ int VCE::StateAction(StateMem *sm, int load, int data_only)
    SFEND
   };
 
-  ret &= MDFNSS_StateAction(sm, load, data_only, VPC_StateRegs, "VPC");
+  MDFNSS_StateAction(sm, load, data_only, VPC_StateRegs, "VPC");
  }
 
  if(load)
@@ -695,9 +673,7 @@ int VCE::StateAction(StateMem *sm, int load, int data_only)
  }
 
  for(int chip = 0; chip < chip_count; chip++)
-  ret &= vdc[chip]->StateAction(sm, load, data_only, chip ? "VDCB" : "VDC");
-
- return(ret);
+  vdc[chip]->StateAction(sm, load, data_only, chip ? "VDCB" : "VDC");
 }
 
 

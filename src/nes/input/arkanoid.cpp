@@ -78,7 +78,7 @@ static void UpdateARKFC(void *data)
  FCArk.mzb = (bool)ptr[2];
 }
 
-static int StateAction(int w, StateMem *sm, int load, int data_only)
+static void StateAction(int w, StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -87,15 +87,16 @@ static int StateAction(int w, StateMem *sm, int load, int data_only)
    SFVAR(NESArk[w].readbit),
    SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, w ? "INP1" : "INP0");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, w ? "INP1" : "INP0", true);
+
  if(load)
  {
 
  }
- return(ret);
 }
 
-static int StateActionFC(StateMem *sm, int load, int data_only)
+static void StateActionFC(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -104,12 +105,13 @@ static int StateActionFC(StateMem *sm, int load, int data_only)
    SFVAR(FCArk.readbit),
    SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF");
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "INPF", true);
+
  if(load)
  {
 
  }
- return(ret);
 }
 
 

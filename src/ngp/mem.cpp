@@ -192,10 +192,6 @@ static void* translate_address_write(uint32 address)
 
 /* WARNING:  32-bit loads and stores apparently DON'T have to be 4-byte-aligned(so we must +2 instead of |2). */
 /* Treat all 32-bit operations as two 16-bit operations */
-extern uint32 pc;
-
-uint8 lastpoof = 0;
-
 uint8 loadB(uint32 address)
 {
         address &= 0xFFFFFF;
@@ -257,18 +253,18 @@ uint16 loadW(uint32 address)
 	}
 
 	if(FastReadMap[address >> 16])
-	 return(LoadU16_LE((uint16*)&FastReadMap[address >> 16][address]));
+	 return(MDFN_de16lsb<true>(&FastReadMap[address >> 16][address]));
 
         uint16* ptr = (uint16*)translate_address_read(address);
 	if(ptr)
-                return LoadU16_LE(ptr);
+                return MDFN_de16lsb<true>(ptr);
 
         if(address >= 0x8000 && address <= 0xbfff)
          return(NGPGfx->read16(address));
 
         if(address >= 0x4000 && address <= 0x7fff)
 	{
-         return(LoadU16_LE((uint16 *)(CPUExRAM + address - 0x4000)));
+         return(MDFN_de16lsb<true>(CPUExRAM + address - 0x4000));
 	}
 	if(address == 0x50)
 	 return(SC0BUF);
@@ -326,12 +322,6 @@ uint32 loadL(uint32 address)
 void storeB(uint32 address, uint8 data)
 {
         address &= 0xFFFFFF;
-
-
-	if(address < 0x80)
-	{
-	 lastpoof = data;
-	}
 
         if(address >= 0x8000 && address <= 0xbfff)
 	{
@@ -444,11 +434,6 @@ void storeW(uint32 address, uint16 data)
 	 return;
 	}
 
-        if(address < 0x80)
-        {
-         lastpoof = data >> 8;
-        }
-
         if(address >= 0x8000 && address <= 0xbfff)
         {
          NGPGfx->write16(address, data);
@@ -456,7 +441,7 @@ void storeW(uint32 address, uint16 data)
         }
         if(address >= 0x4000 && address <= 0x7fff)
         {
-         StoreU16_LE((uint16 *)(CPUExRAM + address - 0x4000), data);
+         MDFN_en16lsb<true>(CPUExRAM + address - 0x4000, data);
          return;
         }
         if(address >= 0x70 && address <= 0x7F)
@@ -527,7 +512,7 @@ void storeW(uint32 address, uint16 data)
 	//Write
 	if (ptr)
 	{
-		StoreU16_LE(ptr, data);
+		MDFN_en16lsb<true>(ptr, data);
 	}
         //else
         //        printf("ACK16: %08x %04x\n", address, data);
@@ -600,10 +585,10 @@ void reset_memory(void)
 //006C00 -> 006FFF	BIOS Workspace
 //==================================
 
-	storeL(0x6C00, rom_header->startPC);		//Start
+	storeL(0x6C00, MDFN_de32lsb(rom_header->startPC));		//Start
 
-	storeW(0x6C04, rom_header->catalog);
-	storeW(0x6E82, rom_header->catalog);
+	storeW(0x6C04, MDFN_de16lsb(rom_header->catalog));
+	storeW(0x6E82, MDFN_de16lsb(rom_header->catalog));
 
 	storeB(0x6C06, rom_header->subCatalog);
 	storeB(0x6E84, rom_header->subCatalog);
@@ -668,6 +653,23 @@ void reset_memory(void)
 	storeB(0x8402, 0x80);	// Flash cycle = 1.3s
 
 	storeB(0x87E2, loadB(0x6F95) ? 0x00 : 0x80);
+
+
+	//
+	// Metal Slug - 2nd Mission oddly relies on a specific character RAM pattern.
+	//
+	{
+	 static const uint8 char_data[64] = {
+	 	255, 63, 255, 255, 0, 252, 255, 255, 255, 63, 3, 0, 255, 255, 255, 255, 
+	 	240, 243, 252, 243, 255, 3, 255, 195, 255, 243, 243, 243, 240, 243, 240, 195, 
+		207, 15, 207, 15, 207, 15, 207, 207, 207, 255, 207, 255, 207, 255, 207, 63, 
+		255, 192, 252, 195, 240, 207, 192, 255, 192, 255, 240, 207, 252, 195, 255, 192 };
+
+         for(i = 0; i < 64; i++)
+	 {
+	  storeB(0xA1C0 + i, char_data[i]);
+	 }
+	}
 }
 
 //=============================================================================

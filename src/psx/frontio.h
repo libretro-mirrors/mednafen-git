@@ -1,6 +1,8 @@
 #ifndef __MDFN_PSX_FRONTIO_H
 #define __MDFN_PSX_FRONTIO_H
 
+#include <memory>
+
 namespace MDFN_IEN_PSX
 {
 
@@ -15,7 +17,7 @@ class InputDevice
 
  virtual void Power(void);
  virtual void UpdateInput(const void *data);
- virtual int StateAction(StateMem* sm, int load, int data_only, const char* section_name);
+ virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix);
 
  virtual bool RequireNoFrameskip(void);
 
@@ -25,7 +27,7 @@ class InputDevice
  virtual void Update(const pscpu_timestamp_t timestamp);	// Partially-implemented, don't rely on for timing any more fine-grained than a video frame for now.
  virtual void ResetTS(void);
 
- void DrawCrosshairs(uint32 *pixels, const MDFN_PixelFormat* const format, const unsigned width, const unsigned pix_clock);
+ virtual void DrawCrosshairs(uint32 *pixels, const MDFN_PixelFormat* const format, const unsigned width, const unsigned pix_clock); // Virtual for multitap chaining.
  //
  //
  //
@@ -42,15 +44,15 @@ class InputDevice
 
  //
  //
- virtual uint32 GetNVSize(void);
- virtual void ReadNV(uint8 *buffer, uint32 offset, uint32 count);
+ virtual uint32 GetNVSize(void) const;
+ virtual const uint8* ReadNV(void) const;	// Pointer returned should be considered temporary and assumed invalidated upon further calls to non-const functions on the object.
  virtual void WriteNV(const uint8 *buffer, uint32 offset, uint32 count);
 
  //
  // Dirty count should be incremented on each call to a method this class that causes at least 1 write to occur to the
  // nonvolatile memory(IE Clock() in the correct command phase, and WriteNV()).
  //
- virtual uint64 GetNVDirtyCount(void);
+ virtual uint64 GetNVDirtyCount(void) const;
  virtual void ResetNVDirtyCount(void);
 
  private:
@@ -64,10 +66,10 @@ class FrontIO
 {
  public:
 
- FrontIO(bool emulate_memcards_[8], bool emulate_multitap_[2]);
+ FrontIO();
  ~FrontIO();
 
- void Power(void);
+ void Reset(bool powering_up);
  void Write(pscpu_timestamp_t timestamp, uint32 A, uint32 V);
  uint32 Read(pscpu_timestamp_t timestamp, uint32 A);
  pscpu_timestamp_t CalcNextEventTS(pscpu_timestamp_t timestamp, int32 next_event);
@@ -78,15 +80,17 @@ class FrontIO
  void GPULineHook(const pscpu_timestamp_t timestamp, const pscpu_timestamp_t line_timestamp, bool vsync, uint32 *pixels, const MDFN_PixelFormat* const format, const unsigned width, const unsigned pix_clock_offset, const unsigned pix_clock, const unsigned pix_clock_divider);
 
  void UpdateInput(void);
- void SetInput(unsigned int port, const char *type, void *ptr);
+ void SetInput(unsigned int port, const char *type, uint8 *ptr);
+ void SetMultitap(unsigned int pport, bool enabled);
+ void SetMemcard(unsigned int port, bool enabled);
  void SetAMCT(bool enabled);
  void SetCrosshairsColor(unsigned port, uint32 color);
 
  uint64 GetMemcardDirtyCount(unsigned int which);
- void LoadMemcard(unsigned int which, const char *path);
- void SaveMemcard(unsigned int which, const char *path); //, bool force_save = false);
+ void LoadMemcard(unsigned int which, const std::string& path);
+ void SaveMemcard(unsigned int which, const std::string& path); //, bool force_save = false);
 
- int StateAction(StateMem* sm, int load, int data_only);
+ void StateAction(StateMem* sm, const unsigned load, const bool data_only);
 
  private:
 
@@ -95,19 +99,39 @@ class FrontIO
 
  void MapDevicesToPorts(void);
 
- bool emulate_memcards[8];
- bool emulate_multitap[2];
+ bool emulate_multitap[2] = { false, false };
 
+ //
+ // Configurable pointers to the various pre-allocated devices, and associated configuration data.
+ //
+
+ // Physical ports
  InputDevice *Ports[2];
  InputDevice *MCPorts[2];
 
- InputDevice *DummyDevice;
- InputDevice_Multitap *DevicesTap[2];
-
+ // Mednafen virtual ports
  InputDevice *Devices[8];
  void *DeviceData[8];
+ InputDevice *MCDevices[8];
 
- InputDevice *DevicesMC[8];
+ //
+ // Actual pre-allocated devices below:
+ //
+ std::unique_ptr<InputDevice> PossibleNone;
+ std::unique_ptr<InputDevice_Multitap> PossibleMultitaps[2];
+
+ struct
+ {
+  std::unique_ptr<InputDevice> Memcard;
+  std::unique_ptr<InputDevice> Gamepad;
+  std::unique_ptr<InputDevice> DualAnalog;
+  std::unique_ptr<InputDevice> AnalogJoy;
+  std::unique_ptr<InputDevice> DualShock;
+  std::unique_ptr<InputDevice> Mouse;
+  std::unique_ptr<InputDevice> neGcon;
+  std::unique_ptr<InputDevice> GunCon;
+  std::unique_ptr<InputDevice> Justifier;
+ } PossibleDevices[8];
 
  //
  //
@@ -148,7 +172,7 @@ class FrontIO
  uint32 chair_colors[8];
 };
 
-extern InputInfoStruct FIO_InputInfo;
+extern const std::vector<InputPortInfoStruct> FIO_PortInfo;
 
 }
 #endif

@@ -36,11 +36,11 @@ CDAccess::~CDAccess()
 
 }
 
-CDAccess *cdaccess_open_image(const char *path, bool image_memcache)
+CDAccess *cdaccess_open_image(const std::string& path, bool image_memcache)
 {
  CDAccess *ret = NULL;
 
- if(strlen(path) >= 4 && !strcasecmp(path + strlen(path) - 4, ".ccd"))
+ if(path.size() >= 4 && !strcasecmp(path.c_str() + path.size() - 4, ".ccd"))
   ret = new CDAccess_CCD(path, image_memcache);
  else
   ret = new CDAccess_Image(path, image_memcache);
@@ -48,7 +48,7 @@ CDAccess *cdaccess_open_image(const char *path, bool image_memcache)
  return ret;
 }
 
-CDAccess *cdaccess_open_phys(const char *devicename)
+CDAccess *cdaccess_open_phys(const std::string& devicename)
 {
  #ifdef HAVE_LIBCDIO
  return new CDAccess_Physical(devicename);

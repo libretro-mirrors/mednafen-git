@@ -22,8 +22,8 @@
 */
 #include "main.h"
 #include "input.h"
-#include "../md5.h"
-#include "../math_ops.h"
+#include <mednafen/hash/md5.h>
+#include <mednafen/math_ops.h>
 
 #include "Joystick.h"
 

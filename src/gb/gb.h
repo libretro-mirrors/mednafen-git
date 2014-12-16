@@ -42,21 +42,9 @@ typedef union {
 extern uint8 gbOAM[0xA0];
 extern uint8 register_IF, register_IE, register_KEY1;
 
-extern void gbEmulate(int);
-extern void gbSoundReset();
 extern void gbReset();
 extern void gbCleanUp();
-extern bool gbWriteBatteryFile(const char *);
-extern bool gbWriteBatteryFile(const char *, bool);
-extern bool gbReadBatteryFile(const char *);
-extern bool gbWriteSaveState(const char *);
-extern bool gbWriteMemSaveState(char *, int);
-extern bool gbReadSaveState(const char *);
-extern bool gbReadMemSaveState(char *, int);
 extern void gbSgbRenderBorder();
-extern bool gbWritePNGFile(const char *);
-extern bool gbWriteBMPFile(const char *);
-extern bool gbReadGSASnapshot(const char *);
 
 extern struct EmulatedSystem GBSystem;
 

@@ -17,10 +17,10 @@ MDFNConsole::~MDFNConsole()
  kb_cursor_pos = 0;
 }
 
-bool MDFNConsole::TextHook(UTF8 *text)
+bool MDFNConsole::TextHook(const std::string &text)
 {
  WriteLine(text);
- free((char *)text);
+
  return(1);
 }
 
@@ -49,7 +49,7 @@ void MDFNConsole::Scroll(int32 amount, bool SetPos)
  }
 }
 
-#include "../string/ConvertUTF.h"
+#include <mednafen/string/ConvertUTF.h>
 int MDFNConsole::Event(const SDL_Event *event)
 {
   switch(event->type)
@@ -109,7 +109,7 @@ int MDFNConsole::Event(const SDL_Event *event)
                       for(unsigned int i = 0; i < kb_buffer.size(); i++)
                        concat_str += kb_buffer[i];
 
-		      TextHook((UTF8*)strdup(concat_str.c_str()));
+		      TextHook(strdup(concat_str.c_str()));
                       kb_buffer.clear();
 		      kb_cursor_pos = 0;
                      }
@@ -189,7 +189,7 @@ void MDFNConsole::Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect)
 
  while(destline >= 0 && vec_index >= 0)
  {
-  int32 pw = GetTextPixLength((UTF8 *)TextLog[vec_index].c_str(), EffFont) + 1;
+  int32 pw = GetTextPixLength(TextLog[vec_index].c_str(), EffFont) + 1;
 
   if(pw > tmp_surface->w)
   {
@@ -198,7 +198,7 @@ void MDFNConsole::Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect)
   }
 
   tmp_surface->Fill(0, 0, 0, opacity);
-  DrawTextTransShadow(tmp_surface->pixels, tmp_surface->pitchinpix << 2, tmp_surface->w, (UTF8 *)TextLog[vec_index].c_str(), MK_COLOR_A(0xff, 0xff, 0xff, 0xFF), MK_COLOR_A(0x00, 0x00, 0x01, 0xFF), 0, EffFont);
+  DrawTextTransShadow(tmp_surface->pixels, tmp_surface->pitchinpix << 2, tmp_surface->w, TextLog[vec_index].c_str(), MK_COLOR_A(0xff, 0xff, 0xff, 0xFF), MK_COLOR_A(0x00, 0x00, 0x01, 0xFF), 0, EffFont);
   int32 numlines = (uint32)ceil((double)pw / w);
 
   while(numlines > 0 && destline >= 0)
@@ -254,14 +254,14 @@ void MDFNConsole::Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect)
   }
 
   {
-   uint32 nw = GetTextPixLength((UTF8*)concat_str.c_str()) + 1;
+   uint32 nw = GetTextPixLength(concat_str.c_str()) + 1;
    tmp_surface = new MDFN_Surface(NULL, nw, font_height + 1, nw, surface->format);
    tmp_surface->Fill(0, 0, 0, opacity);
   }
 
   MDFN_Rect tmp_rect, dest_rect;
 
-  tmp_rect.w = DrawTextTransShadow(tmp_surface->pixels, tmp_surface->pitchinpix << 2, tmp_surface->w, (UTF8*)concat_str.c_str(),MK_COLOR_A(0xff, 0xff, 0xff, 0xff), MK_COLOR_A(0x00, 0x00, 0x01, 0xFF), 0, EffFont);
+  tmp_rect.w = DrawTextTransShadow(tmp_surface->pixels, tmp_surface->pitchinpix << 2, tmp_surface->w, concat_str.c_str(),MK_COLOR_A(0xff, 0xff, 0xff, 0xff), MK_COLOR_A(0x00, 0x00, 0x01, 0xFF), 0, EffFont);
   tmp_rect.h = dest_rect.h = font_height;
   tmp_rect.x = 0;
   tmp_rect.y = 0;
@@ -280,15 +280,15 @@ void MDFNConsole::Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect)
  }
 }
 
-void MDFNConsole::WriteLine(UTF8 *text)
+void MDFNConsole::WriteLine(const std::string &text)
 {
- TextLog.push_back(std::string((char *)text));
+ TextLog.push_back(text);
 }
 
-void MDFNConsole::AppendLastLine(UTF8 *text)
+void MDFNConsole::AppendLastLine(const std::string &text)
 {
  if(TextLog.size()) // Should we throw an exception if this isn't true?
-  TextLog[TextLog.size() - 1] += std::string((char*)text);
+  TextLog[TextLog.size() - 1] += text;
 }
 
 void MDFNConsole::ShowPrompt(bool shown)

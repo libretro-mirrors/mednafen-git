@@ -1,10 +1,10 @@
-#ifndef _DEBUG_H
-#define _DEBUG_H
+#ifndef __MDFN_NES_DEBUG_H
+#define __MDFN_NES_DEBUG_H
 
 #ifdef WANT_DEBUGGER
 
-#include "debug-driver.h"
-
+namespace MDFN_IEN_NES
+{
 #include "x6502struct.h"
 
 uint32 NESDBG_MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical);
@@ -23,6 +23,7 @@ void NESDBG_PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
 bool NESDBG_Init(void);
 
 extern DebuggerInfoStruct NESDBGInfo;
+}
 
 #endif
 

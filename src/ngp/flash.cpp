@@ -1,3 +1,10 @@
+/*
+ FIXME:
+  File format is not endian-safe.
+
+  Still possible for corrupt/malicious save game data to cause a crash, from blindly reading past the end of the buffer.
+*/
+
 //---------------------------------------------------------------------------
 // NEOPOP : Emulator as in Dreamland
 //
@@ -15,6 +22,8 @@
 #include "neopop.h"
 #include "flash.h"
 #include "mem.h"
+
+#include <vector>
 
 //-----------------------------------------------------------------------------
 // Local Definitions
@@ -51,7 +60,7 @@ typedef struct
 //-----------------------------------------------------------------------------
 // Local Data
 //-----------------------------------------------------------------------------
-static FlashFileBlockHeader	blocks[256];
+static FlashFileBlockHeader	blocks[FLASH_MAX_BLOCKS];
 static uint16 block_count;
 
 //=============================================================================
@@ -114,21 +123,20 @@ static void optimise_blocks(void)
 	}
 }
 
-void do_flash_read(uint8 *flashdata)
+static void do_flash_read(const uint8 *flashdata)
 {
 	FlashFileHeader header;
-	uint8 *fileptr;
+	const uint8 *fileptr;
         uint16 i;
         uint32 j;
 	bool PREV_memory_unlock_flash_write = memory_unlock_flash_write; // kludge, hack, FIXME
 
 	memcpy(&header, flashdata, sizeof(header));
 
-        if(header.block_count > FLASH_MAX_BLOCKS)
-        {
-         MDFN_PrintError("FLASH header block_count(%u) > FLASH_MAX_BLOCKS!", header.block_count);
-	 return;
-        }
+	if(header.block_count > FLASH_MAX_BLOCKS)
+	{
+	 throw MDFN_Error(0, _("FLASH header block_count(%u) > FLASH_MAX_BLOCKS!"), header.block_count);
+	}
 
 	//Read header
 	block_count = header.block_count;
@@ -155,21 +163,19 @@ void do_flash_read(uint8 *flashdata)
 
 	optimise_blocks();		//Optimise
 
-
+#if 0
 	//Output block list...
-/*	for (i = 0; i < block_count; i++)
-		system_debug_message("flash block: %06X, %d bytes", 
-			blocks[i].start_address, blocks[i].data_length);*/
+	for (i = 0; i < block_count; i++)
+		printf("flash block: %06X, %d bytes\n", 
+			blocks[i].start_address, blocks[i].data_length);
+#endif
 }
 
 
-//-----------------------------------------------------------------------------
-// flash_read()
-//-----------------------------------------------------------------------------
-void flash_read(void)
+void FLASH_LoadNV(void)
 {
         FlashFileHeader header;
-        uint8* flashdata;
+        PODFastVector<uint8> flashdata;
 
         //Initialise the internal flash configuration
         block_count = 0;
@@ -181,23 +187,19 @@ void flash_read(void)
         //Verify correct flash id
         if (header.valid_flash_id != FLASH_VALID_ID)
         {
-                MDFN_PrintError("IDS_BADFLASH");
-                return;
+                throw MDFN_Error(0, _("FLASH header ID is bad!"));
         }
 
-        if(header.total_file_length < sizeof(FlashFileHeader) || header.total_file_length > 16384 * 1024)
-        {
-                MDFN_PrintError("FLASH header total_file_length is bad!");
-		return;
-        }
+	if(header.total_file_length < sizeof(FlashFileHeader) || header.total_file_length > 16384 * 1024)
+	{
+		throw MDFN_Error(0, _("FLASH header total_file_length is bad!"));
+	}
 
         //Read the flash data
-        flashdata = (uint8*)malloc(header.total_file_length * sizeof(uint8));
-        system_io_flash_read(flashdata, header.total_file_length);
+	flashdata.resize(header.total_file_length);
+        system_io_flash_read(&flashdata[0], flashdata.size());
 
-	do_flash_read(flashdata);
-
-        free(flashdata);
+	do_flash_read(&flashdata[0]);
 }
 
 
@@ -233,7 +235,7 @@ void flash_write(uint32 start_address, uint16 length)
 
 	if(block_count >= FLASH_MAX_BLOCKS)
 	{
-	 MDFN_PrintError("[FLASH] Block list overflow!");
+	 MDFN_PrintError(_("[FLASH] Block list overflow!"));
 	 return;
 	}
 	else
@@ -245,15 +247,16 @@ void flash_write(uint32 start_address, uint16 length)
 	}
 }
 
-static uint8 *make_flash_commit(int32 *length)
+static void make_flash_commit(PODFastVector<uint8> &flashdata)
 {
-	int i;
 	FlashFileHeader header;
-	uint8 *flashdata, *fileptr;
+	uint8 *fileptr;
+
+	flashdata.clear();
 
 	//No flash data?
 	if (block_count == 0)
-		return(NULL);
+		return;
 
 	//Optimise before writing
 	optimise_blocks();
@@ -262,60 +265,56 @@ static uint8 *make_flash_commit(int32 *length)
 	header.valid_flash_id = FLASH_VALID_ID;
 	header.block_count = block_count;
 	header.total_file_length = sizeof(FlashFileHeader);
-	for (i = 0; i < block_count; i++)
+	for(int i = 0; i < block_count; i++)
 	{
 		header.total_file_length += sizeof(FlashFileBlockHeader);
 		header.total_file_length += blocks[i].data_length;
 	}
 
 	//Write the flash data
-	flashdata = (uint8*)malloc(header.total_file_length * sizeof(uint8));
+	flashdata.resize(header.total_file_length);
 
 	//Copy header
-	memcpy(flashdata, &header, sizeof(FlashFileHeader));
-	fileptr = flashdata + sizeof(FlashFileHeader);
+	memcpy(&flashdata[0], &header, sizeof(FlashFileHeader));
+	fileptr = &flashdata[0] + sizeof(FlashFileHeader);
 
 	//Copy blocks
-	for (i = 0; i < block_count; i++)
+	for(int i = 0; i < block_count; i++)
 	{
-		uint32 j;
-
 		memcpy(fileptr, &blocks[i], sizeof(FlashFileBlockHeader));
 		fileptr += sizeof(FlashFileBlockHeader);
 
 		//Copy data
-		for (j = 0; j < blocks[i].data_length; j++)
+		for(uint32 j = 0; j < blocks[i].data_length; j++)
 		{
 			*fileptr = loadB(blocks[i].start_address + j);
 			fileptr++;
 		}
 	}
-
-	*length = header.total_file_length;
-	return(flashdata);
 }
 
-void flash_commit(void)
+void FLASH_SaveNV(void)
 {
- int32 length = 0;
- uint8 *flashdata = make_flash_commit(&length);
+ PODFastVector<uint8> flashdata;
 
- if(flashdata)
+ make_flash_commit(flashdata);
+
+ if(flashdata.size() > 0)
  {
-  system_io_flash_write(flashdata, length);
-  free(flashdata);
+  system_io_flash_write(&flashdata[0], flashdata.size());
  }
 }
 
 
-int FLASH_StateAction(StateMem *sm, int load, int data_only)
+void FLASH_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
- int32 FlashLength = 0;
- uint8 *flashdata = NULL;
+ uint32 FlashLength = 0;
+ PODFastVector<uint8> flashdata;
 
  if(!load)
  {
-  flashdata = make_flash_commit(&FlashLength);
+  make_flash_commit(flashdata);
+  FlashLength = flashdata.size();
  }
 
  SFORMAT FINF_StateRegs[] =
@@ -324,13 +323,11 @@ int FLASH_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- if(!MDFNSS_StateAction(sm, load, data_only, FINF_StateRegs, "FINF"))
-  return(0);
+ MDFNSS_StateAction(sm, load, data_only, FINF_StateRegs, "FINF");
 
  if(!FlashLength) // No flash data to save, OR no flash data to load.
  {
-  if(flashdata) free(flashdata);
-  return(1);
+  return;
  }
 
  if(load)
@@ -338,27 +335,20 @@ int FLASH_StateAction(StateMem *sm, int load, int data_only)
   if(FlashLength > 16384 * 1024)
    FlashLength = 16384 * 1024;
 
-  flashdata = (uint8 *)malloc(FlashLength);
+  flashdata.resize(FlashLength);
  }
 
  SFORMAT FLSH_StateRegs[] =
  {
-  SFARRAY(flashdata, FlashLength),
+  SFARRAYN(&flashdata[0], FlashLength, "flashdata"),
   SFEND
  };
 
- if(!MDFNSS_StateAction(sm, load, data_only, FLSH_StateRegs, "FLSH"))
- {
-  free(flashdata);
-  return(0);
- }
+ MDFNSS_StateAction(sm, load, data_only, FLSH_StateRegs, "FLSH");
 
  if(load)
  {
-  memcpy(ngpc_rom.data, ngpc_rom.orig_data, ngpc_rom.length);
-  do_flash_read(flashdata);
+  memcpy(ngpc_rom.data, ngpc_rom.orig_data, ngpc_rom.length);	// Restore FLASH/ROM data to its state before any writes to FLASH the game made(or were loaded from file).
+  do_flash_read(&flashdata[0]);
  }
-
- free(flashdata);
- return(1);
 }

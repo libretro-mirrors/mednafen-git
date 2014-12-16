@@ -1,5 +1,10 @@
-#ifndef _NES_INPUT_H
-#define _NES_INPUT_H
+#ifndef __MDFN_NES_INPUT_H
+#define __MDFN_NES_INPUT_H
+
+#include <mednafen/state.h>
+
+namespace MDFN_IEN_NES
+{
 
 #define JOY_A   1
 #define JOY_B   2
@@ -37,8 +42,6 @@
 #define SIS_VSUNISYSTEM 3
 #define SIS_NSF         4
 
-#include <mednafen/state.h>
-
 typedef struct {
         uint8 (*Read)(int w);
 	void (*Write)(uint8 v);
@@ -46,7 +49,7 @@ typedef struct {
 	void (*Update)(int w, void *data);
 	void (*SLHook)(int w, uint8 *pix, uint32 linets, int final);
 	void (*Draw)(int w, uint8* pix, int pix_y);
-	int (*StateAction)(int w, StateMem *sm, int load, int data_only);
+	void (*StateAction)(int w, StateMem *sm, const unsigned load, const bool data_only);
 } INPUTC;
 
 typedef struct {
@@ -56,7 +59,7 @@ typedef struct {
         void (*Update)(void *data);
         void (*SLHook)(uint8 *pix, uint32 linets, int final);
         void (*Draw)(uint8* pix, int pix_y);
-        int (*StateAction)(StateMem *sm, int load, int data_only);
+        void (*StateAction)(StateMem *sm, const unsigned load, const bool data_only);
 } INPUTCFC;
 
 void MDFN_DrawInput(uint8* pix, int pix_y);
@@ -64,14 +67,16 @@ void MDFN_UpdateInput(void);
 void NESINPUT_Power(void) MDFN_COLD;
 void NESINPUT_Init(void) MDFN_COLD;
 void NESINPUT_PaletteChanged(void) MDFN_COLD;
-int NESINPUT_StateAction(StateMem *sm, int load, int data_only);
+void NESINPUT_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 extern void (*PStrobe[2])(void);
 extern void (*InputScanlineHook)(uint8 *pix, uint32 linets, int final);
 
 void MDFNNES_DoSimpleCommand(int cmd);
-void MDFNNES_SetInput(int port, const char *type, void *ptr) MDFN_COLD;
+void MDFNNES_SetInput(unsigned port, const char *type, uint8 *ptr) MDFN_COLD;
 
-extern InputInfoStruct NESInputInfo;
+extern const std::vector<InputPortInfoStruct> NESPortInfo;
+
+}
 
 #endif

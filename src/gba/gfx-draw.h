@@ -71,13 +71,13 @@ void gfxDrawOBJWin(void);
 //void gfxAlphaBlend(uint32 *ta, uint32 *tb, int ca, int cb);
 
 extern uint32 AlphaClampLUT[64];
-extern MDFN_ALIGN(16) uint32 line0[512];
-extern MDFN_ALIGN(16) uint32 line1[512];
-extern MDFN_ALIGN(16) uint32 line2[512];
-extern MDFN_ALIGN(16) uint32 line3[512];
-extern MDFN_ALIGN(16) uint32 lineOBJ[512];
-extern MDFN_ALIGN(16) uint32 lineOBJWin[512];
-extern MDFN_ALIGN(16) uint32 lineMix[512];
+alignas(16) extern uint32 line0[512];
+alignas(16) extern uint32 line1[512];
+alignas(16) extern uint32 line2[512];
+alignas(16) extern uint32 line3[512];
+alignas(16) extern uint32 lineOBJ[512];
+alignas(16) extern uint32 lineOBJWin[512];
+alignas(16) extern uint32 lineMix[512];
 extern bool gfxInWin0[512];
 extern bool gfxInWin1[512];
 

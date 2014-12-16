@@ -33,9 +33,9 @@ static uint8 Control;
 static uint8 SendBuf, RecvBuf;
 static bool SendLatched, RecvLatched;
 
-static int child_pid;
-static int stdin_pipes[2];
-static int stdout_pipes[2];
+static int child_pid = -1;
+static int stdin_pipes[2] = { -1, -1 };
+static int stdout_pipes[2] = { -1, -1 };
 
 void Comm_Init(const char *wfence_path)
 {
@@ -198,7 +198,7 @@ void Comm_Write(uint8 A, uint8 V)
  }
 }
 
-int Comm_StateAction(StateMem *sm, int load, int data_only)
+void Comm_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -212,7 +212,6 @@ int Comm_StateAction(StateMem *sm, int load, int data_only)
 
   SFEND
  };
- int ret = 1;
 
  if(load && load < 0x0936)
  {
@@ -226,15 +225,13 @@ int Comm_StateAction(StateMem *sm, int load, int data_only)
  } 
  else
  {
-  ret &= MDFNSS_StateAction(sm, load, data_only, StateRegs, "COMM");
+  MDFNSS_StateAction(sm, load, data_only, StateRegs, "COMM");
 
   if(load)
   {
    WSwan_InterruptAssert(WSINT_SERIAL_RECV, RecvLatched);
   }
  }
-
- return(ret);
 }
 
 }

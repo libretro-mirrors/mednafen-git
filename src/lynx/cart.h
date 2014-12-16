@@ -71,7 +71,7 @@ class CCart : public CLynxBase
 	// Function members
 
 	public:
-		CCart(const uint8 *gamedata, uint32 gamesize) MDFN_COLD;
+		CCart(Stream* fp) MDFN_COLD;
 		~CCart() MDFN_COLD;
 
 	public:
@@ -93,9 +93,8 @@ class CCart : public CLynxBase
 		const char*	CartGetName(void) { return mName;};
 		const char*	CartGetManufacturer(void) { return mManufacturer; };
 		uint32	CartGetRotate(void) { return mRotation;};
-		uint32	CRC32(void) { return mCRC32; };
 
-		int StateAction(StateMem *sm, int load, int data_only);
+		void StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 // Access for the lynx itself, it has no idea of address etc as this is done by the
 // cartridge emulation hardware 
@@ -119,8 +118,8 @@ class CCart : public CLynxBase
 		EMMODE	mBank;
 		uint32	mMaskBank0;
 		uint32	mMaskBank1;
-		uint8	*mCartBank0;
-		uint8	*mCartBank1;
+		std::unique_ptr<uint8[]> mCartBank0;
+		std::unique_ptr<uint8[]> mCartBank1;
 		char	mName[33];
 		char	mManufacturer[17];
 		uint32	mRotation;
@@ -135,7 +134,6 @@ class CCart : public CLynxBase
 		uint32	mShiftCount1;
 		uint32	mCountMask1;
 
-		uint32	mCRC32;
 		int8 last_strobe;
 };
 

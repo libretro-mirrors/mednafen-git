@@ -56,32 +56,24 @@
 
 #include "system.h"
 
-#include <mednafen/movie.h>
 #include <mednafen/general.h>
 #include <mednafen/mempatcher.h>
-#include <mednafen/md5.h>
+#include <mednafen/hash/md5.h>
 
-CSystem::CSystem(const uint8 *filememory, int32 filesize)
-	:mCart(NULL),
-	mRom(NULL),
-	mMemMap(NULL),
-	mRam(NULL),
-	mCpu(NULL),
-	mMikie(NULL),
-	mSusie(NULL)
+CSystem::CSystem(MDFNFILE* fp)
 {
-	mFileType=HANDY_FILETYPE_LNX;
-
-	if(filesize < 11)
-	 throw MDFN_Error(0, _("Lynx ROM image is too short: %u bytes"), filesize);
+	mFileType = HANDY_FILETYPE_LNX;
 
 	char clip[11];
-	memcpy(clip,filememory,11);
+	fp->read(clip, 11);
+	fp->seek(0, SEEK_SET);
 	clip[4]=0;
 	clip[10]=0;
 
-	if(!strcmp(&clip[6],"BS93")) mFileType=HANDY_FILETYPE_HOMEBREW;
-	else if(!strcmp(&clip[0],"LYNX")) mFileType=HANDY_FILETYPE_LNX;
+	if(!strcmp(&clip[6],"BS93"))
+	 mFileType = HANDY_FILETYPE_HOMEBREW;
+	else if(!strcmp(&clip[0],"LYNX"))
+	 mFileType = HANDY_FILETYPE_LNX;
 	else
 	{
 		throw MDFN_Error(0, _("File format is unknown to module \"%s\"."), MDFNGameInfo->shortname);
@@ -93,51 +85,40 @@ CSystem::CSystem(const uint8 *filememory, int32 filesize)
 
 	// Attempt to load the cartridge errors caught above here...
 
-	mRom = new CRom(MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, "lynxboot.img").c_str());
+	mRom.reset(new CRom(MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, "lynxboot.img").c_str()));
 
 	// An exception from this will be caught by the level above
 
 	switch(mFileType)
 	{
-		case HANDY_FILETYPE_LNX:
-			mCart = new CCart(filememory,filesize);
-			mRam = new CRam(0,0);
+		default: abort();
 			break;
+
+		case HANDY_FILETYPE_LNX:
+			mCart.reset(new CCart(fp->stream()));
+			mRam.reset(new CRam(NULL));
+			break;
+
 		case HANDY_FILETYPE_HOMEBREW:
 			{
-			 #if 0
-			 static uint8 dummy_cart[CCart::HEADER_RAW_SIZE + 65536] = 
-			 {
-				'L', 'Y', 'N', 'X', 0x00, 0x01, 0x00, 0x00,
-				0x01, 0x00,
-			 };
-			 mCart = new CCart(dummy_cart, sizeof(dummy_cart));
-			 #else
-			 mCart = new CCart(NULL, 0);
-			 #endif
-			 mRam = new CRam(filememory,filesize);
+			 mCart.reset(new CCart(NULL));
+			 mRam.reset(new CRam(fp->stream()));
 			}
-			break;
-		case HANDY_FILETYPE_SNAPSHOT:
-		case HANDY_FILETYPE_ILLEGAL:
-		default:
-			mCart = new CCart(0,0);
-			mRam = new CRam(0,0);
 			break;
 	}
 
 	// These can generate exceptions
 
-	mMikie = new CMikie(*this);
-	mSusie = new CSusie(*this);
+	mMikie.reset(new CMikie(*this));
+	mSusie.reset(new CSusie(*this));
 
 // Instantiate the memory map handler
 
-	mMemMap = new CMemMap(*this);
+	mMemMap.reset(new CMemMap(*this));
 
 // Now the handlers are set we can instantiate the CPU as is will use handlers on reset
 
-	mCpu = new C65C02(*this);
+	mCpu.reset(new C65C02(*this));
 
 // Now init is complete do a reset, this will cause many things to be reset twice
 // but what the hell, who cares, I don't.....
@@ -147,15 +128,7 @@ CSystem::CSystem(const uint8 *filememory, int32 filesize)
 
 CSystem::~CSystem()
 {
-	// Cleanup all our objects
 
-	if(mCart!=NULL) delete mCart;
-	if(mRom!=NULL) delete mRom;
-	if(mRam!=NULL) delete mRam;
-	if(mCpu!=NULL) delete mCpu;
-	if(mMikie!=NULL) delete mMikie;
-	if(mSusie!=NULL) delete mSusie;
-	if(mMemMap!=NULL) delete mMemMap;
 }
 
 void CSystem::Reset(void)
@@ -199,7 +172,18 @@ extern MDFNGI EmulatedLynx;
 
 static bool TestMagic(MDFNFILE *fp)
 {
- return(CCart::TestMagic(fp->data, fp->size));
+ uint8 data[std::max<unsigned>(CCart::HEADER_RAW_SIZE, CRam::HEADER_RAW_SIZE)];
+ uint64 rc;
+
+ rc = fp->read(data, sizeof(data), false);
+
+ if(rc >= CCart::HEADER_RAW_SIZE && CCart::TestMagic(data, sizeof(data)))
+  return true;
+
+ if(rc >= CRam::HEADER_RAW_SIZE && CRam::TestMagic(data, sizeof(data)))
+  return true;
+
+ return false;
 }
 
 static void Cleanup(void)
@@ -211,11 +195,11 @@ static void Cleanup(void)
  }
 }
 
-static int Load(MDFNFILE *fp)
+static void Load(MDFNFILE *fp)
 {
  try
  {
-  lynxie = new CSystem(fp->data, fp->size);
+  lynxie = new CSystem(fp);
 
   switch(lynxie->CartGetRotate())
   {
@@ -228,12 +212,19 @@ static int Load(MDFNFILE *fp)
 	break;
   }
 
-  memcpy(MDFNGameInfo->MD5, lynxie->mCart->MD5, 16);
-  MDFNGameInfo->GameSetMD5Valid = FALSE;
-
-  MDFN_printf(_("ROM:       %dKiB\n"), (lynxie->mCart->InfoROMSize + 1023) / 1024);
-  MDFN_printf(_("ROM CRC32: 0x%08x\n"), lynxie->mCart->CRC32());
-  MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
+  MDFNGameInfo->GameSetMD5Valid = false;
+  if(lynxie->mRam->InfoRAMSize)
+  {
+   memcpy(MDFNGameInfo->MD5, lynxie->mRam->MD5, 16);
+   MDFN_printf(_("RAM:       %u bytes\n"), lynxie->mRam->InfoRAMSize);
+   MDFN_printf(_("RAM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
+  }
+  else
+  {
+   memcpy(MDFNGameInfo->MD5, lynxie->mCart->MD5, 16);
+   MDFN_printf(_("ROM:       %dKiB\n"), (lynxie->mCart->InfoROMSize + 1023) / 1024);
+   MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
+  }
 
   MDFNGameInfo->fps = (uint32)(59.8 * 65536 * 256);
 
@@ -252,8 +243,6 @@ static int Load(MDFNFILE *fp)
 
   throw;
  }
-
- return(1);
 }
 
 static void CloseGame(void)
@@ -339,12 +328,12 @@ static void Emulate(EmulateSpecStruct *espec)
   espec->SoundBufSize = 0;
 }
 
-static void SetInput(int port, const char *type, void *ptr)
+static void SetInput(unsigned port, const char *type, uint8 *ptr)
 {
  chee = (uint8 *)ptr;
 }
 
-static int StateAction(StateMem *sm, int load, int data_only)
+static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT SystemRegs[] =
  {
@@ -359,26 +348,13 @@ static int StateAction(StateMem *sm, int load, int data_only)
 	SFARRAYN(lynxie->GetRamPointer(), RAM_SIZE, "RAM"),
 	SFEND
  };
- std::vector <SSDescriptor> love;
 
- love.push_back(SSDescriptor(SystemRegs, "SYST"));
- MDFNSS_StateAction(sm, load, data_only, love);
-
- if(!lynxie->mSusie->StateAction(sm, load, data_only))
-  return(0);
- if(!lynxie->mMemMap->StateAction(sm, load, data_only))
-  return(0);
-
- if(!lynxie->mCart->StateAction(sm, load, data_only))
-  return(0);
-
- if(!lynxie->mMikie->StateAction(sm, load, data_only))
-  return(0);
-
- if(!lynxie->mCpu->StateAction(sm, load, data_only))
-  return(0);
-
- return(1);
+ MDFNSS_StateAction(sm, load, data_only, SystemRegs, "SYST");
+ lynxie->mSusie->StateAction(sm, load, data_only);
+ lynxie->mMemMap->StateAction(sm, load, data_only);
+ lynxie->mCart->StateAction(sm, load, data_only);
+ lynxie->mMikie->StateAction(sm, load, data_only);
+ lynxie->mCpu->StateAction(sm, load, data_only);
 }
 
 static void SetLayerEnableMask(uint64 mask)
@@ -403,7 +379,7 @@ static MDFNSetting LynxSettings[] =
  { NULL }
 };
 
-static const InputDeviceInputInfoStruct IDII[] =
+static const IDIISG IDII =
 {
  { "a", "A (outer)", 8, IDIT_BUTTON_CAN_RAPID, NULL },
 
@@ -425,27 +401,19 @@ static const InputDeviceInputInfoStruct IDII[] =
  { "pause", "PAUSE", 6, IDIT_BUTTON, NULL },
 };
 
-static InputDeviceInfoStruct InputDeviceInfo[] =
+static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
 {
  {
   "gamepad",
   "Gamepad",
   NULL,
-  NULL,
-  sizeof(IDII) / sizeof(InputDeviceInputInfoStruct),
   IDII,
  }
 };
 
-static const InputPortInfoStruct PortInfo[] =
+static const std::vector<InputPortInfoStruct> PortInfo =
 {
- { "builtin", "Built-In", sizeof(InputDeviceInfo) / sizeof(InputDeviceInfoStruct), InputDeviceInfo, 0 }
-};
-
-static InputInfoStruct InputInfo =
-{
- sizeof(PortInfo) / sizeof(InputPortInfoStruct),
- PortInfo
+ { "builtin", "Built-In", InputDeviceInfo }
 };
 
 static const FileExtensionSpecStruct KnownExtensions[] =
@@ -461,16 +429,22 @@ MDFNGI EmulatedLynx =
  KnownExtensions,
  MODPRIO_INTERNAL_HIGH,
  NULL,
- &InputInfo,
+ PortInfo,
  Load,
  TestMagic,
  NULL,
  NULL,
  CloseGame,
+
  SetLayerEnableMask,
  NULL,
+
  NULL,
  NULL,
+
+ NULL,
+ 0,
+
  NULL,
  NULL,
  NULL,
@@ -478,7 +452,9 @@ MDFNGI EmulatedLynx =
  false,
  StateAction,
  Emulate,
+ NULL,
  SetInput,
+ NULL,
  DoSimpleCommand,
  LynxSettings,
  MDFN_MASTERCLOCK_FIXED(16000000),

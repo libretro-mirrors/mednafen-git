@@ -208,7 +208,7 @@ class CMikie : public CLynxBase
 		uint32	DisplayRenderLine(void);
 		uint32	DisplayEndOfFrame(void);
 
-		int StateAction(StateMem *sm, int load, int data_only);
+		void StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 		inline void SetCPUSleep(void) {gSystemCPUSleep=TRUE;};
 		inline void ClearCPUSleep(void) {gSystemCPUSleep=FALSE;};

@@ -234,7 +234,7 @@ void MemDebugger::PromptFinish(const std::string &pstring)
 	  if(ICV_Init(pstring.c_str()))
 	  {
 	   
-	   MDFNI_SetSetting(std::string(std::string(CurGame->shortname) + "." + std::string("debugger.memcharenc")).c_str(), pstring.c_str());
+	   MDFNI_SetSetting(std::string(CurGame->shortname) + "." + std::string("debugger.memcharenc"), pstring);
 	   
 	  }
 	 }
@@ -461,7 +461,7 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
 
  
 
- DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, (UTF8*)ASpace->long_name.c_str(), MK_COLOR_A(0x20, 0xFF, 0x20, 0xFF), 1, 1);
+ DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, ASpace->long_name.c_str(), MK_COLOR_A(0x20, 0xFF, 0x20, 0xFF), 1, 1);
  pixels += 10 * pitch32;
 
  uint32 A;
@@ -503,7 +503,7 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
   if(Ameow == (ASpacePos[CurASpace] & ~0xF))
    addr_color = MK_COLOR_A(0x80, 0xB0, 0xFF, 0xFF);
 
-  alen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, (UTF8*)abuf, addr_color, 0, 1);
+  alen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, abuf, addr_color, 0, 1);
   alen += 3;
 
   for(int x = 0; x < 16; x++)
@@ -513,12 +513,12 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
 
    char quickbuf[16];
    uint32 test_match_pos;
-   uint8 ascii_str[2];
+   char ascii_str[2];
 
    ascii_str[1] = 0;
    ascii_str[0] = byte_buffer[x];
 
-   if(ascii_str[0] < 0x20 || ascii_str[0] >= 128)
+   if((uint8)ascii_str[0] < 0x20 || (uint8)ascii_str[0] >= 128)
     ascii_str[0] = '.';
 
    trio_snprintf(quickbuf, 16, "%02X", byte_buffer[x]);
@@ -537,7 +537,7 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
       else
        pix_offset += (LowNib ? 5 : 0) + x * 12;
 
-      DrawTextTrans(pixels + pix_offset, surface->pitchinpix << 2, rect->w, (UTF8*)"▉", MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
+      DrawTextTrans(pixels + pix_offset, surface->pitchinpix << 2, rect->w, "▉", MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
      }
     if(InTextArea)
     {
@@ -552,10 +552,10 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
    }
 
    // hex display
-   DrawTextTrans(pixels + alen + x * 12, surface->pitchinpix << 2, rect->w, (UTF8*)quickbuf, bcolor, 0, 1);
+   DrawTextTrans(pixels + alen + x * 12, surface->pitchinpix << 2, rect->w, quickbuf, bcolor, 0, 1);
 
    // ASCII display
-   DrawTextTrans(pixels + alen + 16 * 12 + x * 5, surface->pitchinpix << 2, rect->w, (UTF8 *)ascii_str, acolor, 0, 1);
+   DrawTextTrans(pixels + alen + 16 * 12 + x * 5, surface->pitchinpix << 2, rect->w, ascii_str, acolor, 0, 1);
    Ameow++;
   }
   pixels += 9 * pitch32;
@@ -583,8 +583,8 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
   uint32 cpplen;
   uint32 cplen;
 
-  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, (UTF8*)"Cursor position: ", MK_COLOR_A(0xa0, 0xa0, 0xFF, 0xFF), 0, 1);
-  cplen = DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, (UTF8*)cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
+  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, "Cursor position: ", MK_COLOR_A(0xa0, 0xa0, 0xFF, 0xFF), 0, 1);
+  cplen = DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
   if(GoGoPowerDD[CurASpace])
   {
    char ggddstr[32];
@@ -596,14 +596,14 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
    else
     trio_snprintf(ggddstr, 32, "%08llX", (unsigned long long)(curpos - GoGoPowerDD[CurASpace]));
 
-   DrawTextTrans(pixels + cpplen + cplen + 8, surface->pitchinpix << 2, rect->w, (UTF8*)ggddstr, MK_COLOR_A(0xFF, 0x80, 0x80, 0xFF), 0, 1);
+   DrawTextTrans(pixels + cpplen + cplen + 8, surface->pitchinpix << 2, rect->w, ggddstr, MK_COLOR_A(0xFF, 0x80, 0x80, 0xFF), 0, 1);
   }
   pixels += 5 + 10 * pitch32;
 
   tmpval = zebytes[0];
   trio_snprintf(cpstr, 32, "%02x(%u, %d)", tmpval, (uint8)tmpval, (int8)tmpval);
-  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, (UTF8*)"1-byte value: ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
-  DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, (UTF8*)cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
+  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, "1-byte value: ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
+  DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
 
   pixels += 10 * pitch32;
 
@@ -614,7 +614,7 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
    uint8 waveform[wf_size];
    const int32 pcm_max = (1 << ASpace->WaveBits) - 1;
 
-   DrawTextTrans(pixels - 5, surface->pitchinpix << 2, rect->w, (UTF8 *)"Full waveform:", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
+   DrawTextTrans(pixels - 5, surface->pitchinpix << 2, rect->w, "Full waveform:", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
    pixels += 9 * pitch32;
 
    // BLECK, FIXME to not be so crazy.
@@ -651,29 +651,29 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
   {
   tmpval = zebytes[0] | (zebytes[1] << 8);
   trio_snprintf(cpstr, 32, "%04x(%u, %d)", tmpval, (uint16)tmpval, (int16)tmpval);
-  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, (UTF8*)"2-byte value(LSB): ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
-  DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, (UTF8*)cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
+  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, "2-byte value(LSB): ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
+  DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
 
   pixels += 10 * pitch32;
   tmpval = zebytes[0] | (zebytes[1] << 8) | (zebytes[2] << 16) | (zebytes[3] << 24);
   trio_snprintf(cpstr, 32, "%08x(%u, %d)", tmpval, (uint32)tmpval, (int32)tmpval);
-  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, (UTF8*)"4-byte value(LSB): ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
-  DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, (UTF8*)cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
+  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, "4-byte value(LSB): ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
+  DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
 
   pixels += 10 * pitch32;
   tmpval = zebytes[1] | (zebytes[0] << 8);
   trio_snprintf(cpstr, 32, "%04x(%u, %d)", tmpval, (uint16)tmpval, (int16)tmpval);
-  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, (UTF8*)"2-byte value(MSB): ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
-  DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, (UTF8*)cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
+  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, "2-byte value(MSB): ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
+  DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
 
   pixels += 10 * pitch32;
   tmpval = zebytes[3] | (zebytes[2] << 8) | (zebytes[1] << 16) | (zebytes[0] << 24);
   trio_snprintf(cpstr, 32, "%08x(%u, %d)", tmpval, (uint32)tmpval, (int32)tmpval);
-  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, (UTF8*)"4-byte value(MSB): ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
-  DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, (UTF8*)cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
+  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, "4-byte value(MSB): ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
+  DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
 
   trio_snprintf(cpstr, 32, "%s text: ", GameCode.c_str());
-  cpplen = DrawTextTrans(pixels + 10 * pitch32, surface->pitchinpix << 2, rect->w, (UTF8*)cpstr, MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, MDFN_FONT_5x7);
+  cpplen = DrawTextTrans(pixels + 10 * pitch32, surface->pitchinpix << 2, rect->w, cpstr, MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, MDFN_FONT_5x7);
 
   {
    char rawbuf[64];
@@ -691,7 +691,7 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
    iconv(ict_to_utf8, (ICONV_CONST char **)&inbuf, &ibl, &outbuf, &obl);
    textbuf[obl_start - obl] = 0;
 
-   DrawTextTrans(pixels + 8 * pitch32 + cpplen, surface->pitchinpix << 2, rect->w - cpplen - 13, (UTF8*)textbuf, MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, MDFN_FONT_9x18_18x18);
+   DrawTextTrans(pixels + 8 * pitch32 + cpplen, surface->pitchinpix << 2, rect->w - cpplen - 13, textbuf, MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, MDFN_FONT_9x18_18x18);
   }
 
  }
@@ -716,7 +716,7 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
   }
   else
   {
-   DrawTextTrans((uint32*)surface->pixels + (rect->h - 7) * pitch32, surface->pitchinpix << 2, rect->w, (UTF8*)error_string, MK_COLOR_A(0xFF, 0x00, 0x00, 0xFF), 1, 1);
+   DrawTextTrans((uint32*)surface->pixels + (rect->h - 7) * pitch32, surface->pitchinpix << 2, rect->w, error_string, MK_COLOR_A(0xFF, 0x00, 0x00, 0xFF), 1, 1);
   }
  }
 }
@@ -1029,7 +1029,7 @@ MemDebugger::MemDebugger() : AddressSpaces(NULL), ASpace(NULL), IsActive(false),
    SizeCache[i] = tmpsize;
   }
 
-  ICV_Init( MDFN_GetSettingS(std::string(std::string(CurGame->shortname) + "." + std::string("debugger.memcharenc")).c_str()).c_str() );
+  ICV_Init( MDFN_GetSettingS(std::string(CurGame->shortname) + "." + std::string("debugger.memcharenc")).c_str() );
  }
 }
 

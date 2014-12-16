@@ -144,16 +144,18 @@ static void FastRefreshLine(int firsttile, uint8 *target)
 
 static void FastLineEffects(int firsttile, uint8 *target)
 {
- int x;
-
  if(scanline == -1) return;
 
  if(ScreenON || SpriteON)
  {
   if(PPU[1]&0x01)
   {
-   for(x=63;x>=0;x--)
-   *(uint32 *)&target[x<<2]=(*(uint32*)&target[x<<2])&0x30303030;
+   for(int x = 63; x >= 0; x--)
+   {
+    uint8* p = &target[x << 2];
+
+    MDFN_ennsb<uint32, true>(p, MDFN_densb<uint32, true>(p) & 0x30303030);
+   }
   }
  }
 }
@@ -216,23 +218,23 @@ static void FastCopySprites(int firsttile, uint8 *target, int skip)
       do
       {
        #ifdef HAVE_NATIVE64BIT
-       uint64 t=*(uint64 *)(sprlinebuf+n);
-       uint64 poo = *(uint64 *)(P + n);
+       uint64 t = MDFN_densb<uint64, true>(sprlinebuf + n);
+       uint64 poo = MDFN_densb<uint64, true>(P + n);
        uint64 choo = (((~(poo | t)) | (t >> 1)) & 0x4040404040404040) >> 6;
        uint64 bgmask = ((choo - 0x01) & 0xFF) | ((choo - 0x0100) & 0xFF00) | ((choo - 0x010000) & 0xFF0000) | ((choo - 0x01000000) & 0xFF000000) | 
 			((choo - 0x0100000000) & 0xFF00000000) | ((choo - 0x010000000000) & 0xFF0000000000) | ((choo - 0x01000000000000) & 0xFF000000000000) | ((choo - 0x0100000000000000) & 0xFF00000000000000);
        uint64 sprmask = ~bgmask;
 
-       *(uint64 *)(P + n) = (t & bgmask) | (poo & sprmask);
+       MDFN_ennsb<uint64, true>(P + n, (t & bgmask) | (poo & sprmask));
        n += 8;
        #else
-       uint32 t=*(uint32 *)(sprlinebuf+n);
-       uint32 poo = *(uint32 *)(P + n);
+       uint32 t = MDFN_densb<uint32, true>(sprlinebuf + n);
+       uint32 poo = MDFN_densb<uint32, true>(P + n);
        uint32 choo = (((~(poo | t)) | (t >> 1)) & 0x40404040) >> 6;
        uint32 bgmask = ((choo - 0x01) & 0xFF) | ((choo - 0x0100) & 0xFF00) | ((choo - 0x010000) & 0xFF0000) | ((choo - 0x01000000) & 0xFF000000);
        uint32 sprmask = ~bgmask;
        
-       *(uint32 *)(P + n) = (t & bgmask) | (poo & sprmask);
+       MDFN_ennsb<uint32, true>(P + n, (t & bgmask) | (poo & sprmask));
        n += 4;
        #endif
       } while(n);

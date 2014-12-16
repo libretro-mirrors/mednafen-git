@@ -115,19 +115,19 @@ class MD_Cart_Type_EEPROM : public MD_Cart_Type
 	public:
 
         MD_Cart_Type_EEPROM(const md_game_info *ginfo, const uint8 *ROM, const uint32 ROM_size, const int BoardType);
-        virtual ~MD_Cart_Type_EEPROM();
-	virtual void Reset(void);
+        virtual ~MD_Cart_Type_EEPROM() override;
+	virtual void Reset(void) override;
 
-        virtual void Write8(uint32 A, uint8 V);
-        virtual void Write16(uint32 A, uint16 V);
-        virtual uint8 Read8(uint32 A);
-        virtual uint16 Read16(uint32 A);
-        virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name);
+        virtual void Write8(uint32 A, uint8 V) override;
+        virtual void Write16(uint32 A, uint16 V) override;
+        virtual uint8 Read8(uint32 A) override;
+        virtual uint16 Read16(uint32 A) override;
+        virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name) override;
 
         // In bytes
-        virtual uint32 GetNVMemorySize(void);
-        virtual void ReadNVMemory(uint8 *buffer);
-        virtual void WriteNVMemory(const uint8 *buffer);
+        virtual uint32 GetNVMemorySize(void) override;
+        virtual void ReadNVMemory(uint8 *buffer) override;
+        virtual void WriteNVMemory(const uint8 *buffer) override;
 
 	private:
 
@@ -350,7 +350,7 @@ void MD_Cart_Type_EEPROM::WriteEEPROM(unsigned int address, unsigned int data, b
           {
             /* two ADDRESS bytes */
             state = rw ? READ_DATA : GET_WORD_ADR_HIGH;
-            slave_mask <<= 16;
+            slave_mask = 0;
           }
           else
           {
@@ -565,7 +565,7 @@ uint8 MD_Cart_Type_EEPROM::Read8(uint32 A)
 
  if(A < 0x400000)
  {
-  if(A > rom_size)
+  if(A >= rom_size)
   {
    MD_DBG(MD_DBG_WARNING, "[MAP_EEPROM] Unknown read8 from 0x%08x\n", A);
    return(0);
@@ -584,7 +584,7 @@ uint16 MD_Cart_Type_EEPROM::Read16(uint32 A)
 
  if(A < 0x400000)
  {
-  if(A > rom_size)
+  if(A >= rom_size)
   {
    MD_DBG(MD_DBG_WARNING, "[MAP_EEPROM] Unknown read16 from 0x%08x\n", A);
    return(0);

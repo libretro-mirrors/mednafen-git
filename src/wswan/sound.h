@@ -10,7 +10,7 @@ void WSwan_SoundInit(void);
 void WSwan_SoundKill(void);
 void WSwan_SetSoundMultiplier(double multiplier);
 bool WSwan_SetSoundRate(uint32 rate);
-int WSwan_SoundStateAction(StateMem *sm, int load, int data_only);
+void WSwan_SoundStateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 void WSwan_SoundWrite(uint32, uint8);
 uint8 WSwan_SoundRead(uint32);

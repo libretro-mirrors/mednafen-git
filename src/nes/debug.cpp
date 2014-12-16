@@ -23,6 +23,8 @@
 #include "cart.h"
 #include <mednafen/dis6502.h>
 
+namespace MDFN_IEN_NES
+{
 static void RedoHooks(void);
 
 #define NUMBT 64
@@ -530,4 +532,5 @@ bool NESDBG_Init(void)
  MDFNDBG_AddRegGroup(&NESPPURegsGroup);
 
  return(TRUE);
+}
 }

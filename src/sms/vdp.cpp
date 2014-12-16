@@ -84,7 +84,7 @@ void vdp_hclatch(void)
  vdp.hc_latch = pixel_pos >> 1;
 }
 
-void viewport_check(void)
+static void viewport_check(void)
 {
     int i;
 
@@ -147,7 +147,7 @@ void viewport_check(void)
 }
 
 
-void vdp_reg_w(uint8 r, uint8 d)
+static void vdp_reg_w(uint8 r, uint8 d)
 {
     /* Store register data */
     vdp.reg[r] = d;

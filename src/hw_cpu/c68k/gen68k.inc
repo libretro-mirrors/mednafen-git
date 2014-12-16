@@ -402,10 +402,7 @@ static c68k_op_info_struc op_info_table[OP_INFO_TABLE_LEN] =
     {   "ROL",      0xE7C0, 0xFFC0, 0,  0,  3,  0,  -1, -1, "--ooooooo---", "------------", GenROL      }
 };
 
-static u16 op_jump_table[0x10000];
-
 // files where code is generated
-static FILE* ini_file = NULL;
 static FILE* opcode_file = NULL;
 
 // current generated instruction infos
@@ -512,7 +509,7 @@ static u32 prepare_generate()
 	return 0;
 }
 
-static void wf_op(char* fmt, ...)
+static void wf_op(const char* fmt, ...)
 {
 	va_list args;
 
@@ -525,10 +522,6 @@ static void wf_op(char* fmt, ...)
 
 static void gen_jumptable(u32 base, u32 start1, u32 end1, u32 step1, u32 start2, u32 end2, u32 step2, u32 start3, u32 end3, u32 step3, u32 op)
 {
-#ifdef C68K_CONST_JUMP_TABLE
-    u32 i, j, k;
-#endif
-
     base &= 0xFFFF;
     start1 &= 0xFFFF;
     end1 &= 0xFFFF;
@@ -540,38 +533,6 @@ static void gen_jumptable(u32 base, u32 start1, u32 end1, u32 step1, u32 start2,
     if (end2 < start2) end2 = start2;
     op &= 0xFFFF;
 
-#ifndef C68K_NO_JUMP_TABLE
-#ifdef C68K_CONST_JUMP_TABLE
-    if (step1 == 0) step1 = 1;
-    if (step2 == 0) step2 = 1;
-    if (step3 == 0) step3 = 1;
-
-    for(i = start1; i <= end1; i += step1)
-        for(j = start2; j <= end2; j += step2)
-            for(k = start3; k <= end3; k += step3)
-                op_jump_table[base + i + j + k] = op;
-                
-#else
-    if (ini_file == NULL) return;
-
-    if (start1 != end1)
-    {
-        fprintf(ini_file, "\t\tfor(i = 0x%.4X; i <= 0x%.4X; i += 0x%.4X)\n", (int)start1, (int)end1, (int)step1);
-    	if (start2 != end2)
-        {
-            fprintf(ini_file, "\t\t\tfor(j = 0x%.4X; j <= 0x%.4X; j += 0x%.4X)\n\t", (int)start2, (int)end2, (int)step2);
-        	if (start3 != end3)
-            {
-                fprintf(ini_file, "\t\t\t\tfor(k = 0x%.4X; k <= 0x%.4X; k += 0x%.4X)\n\t", (int)start3, (int)end3, (int)step3);
-                fprintf(ini_file, "\t\t\t\t\tJumpTable[0x%.4X + i + j + k] = &&OP_0x%.4X;\n", (int)base, (int)op);
-            }
-            else fprintf(ini_file, "\t\t\t\tJumpTable[0x%.4X + i + j] = &&OP_0x%.4X;\n", (int)base, (int)op);
-        }
-        else fprintf(ini_file, "\t\t\tJumpTable[0x%.4X + i] = &&OP_0x%.4X;\n", (int)base, (int)op);
-    }
-    else fprintf(ini_file, "\t\tJumpTable[0x%.4X] = &&OP_0x%.4X;\n", (int)base, (int)op);
-#endif
-#else
     u32 i, j, k;
 
     if (step1 == 0) step1 = 1;
@@ -590,7 +551,6 @@ static void gen_jumptable(u32 base, u32 start1, u32 end1, u32 step1, u32 start2,
                 if (temp != op && temp != 0x4E57 && temp != 0x4E5F)
                    wf_op("case 0x%.4X:\n", base + i + j + k);
             }    
-#endif
 }
 
 static void gen_opjumptable_ext(u32 base, u32 start3, u32 end3, u32 step3, u32 op)
@@ -638,11 +598,7 @@ static void start_op(u32 op, int v)
     current_cycle = 0;
 
     wf_op("\n// %s\n", current_op->op_name);
-#ifndef C68K_NO_JUMP_TABLE
-    wf_op("OP_0x%.4X:\n", op & 0xFFFF);
-#else
     wf_op("case 0x%.4X:\n", op & 0xFFFF);
-#endif
     wf_op("{\n");
     if (v & GEN_ADR) wf_op("\tu32 adr;\n");
     if (v & GEN_RES) wf_op("\tu32 res;\n");
@@ -655,15 +611,9 @@ static void add_CCnt(u32 cycle)
     wf_op("\ttimestamp += %d;\n", cycle);
 }
 
-static void adds_CCnt(char *str)
+static void adds_CCnt(const char *str)
 {
     wf_op("\ttimestamp += %s;\n", str);
-}
-
-static void quick_fterminate_op(u32 cycle)
-{
-    wf_op("\ttimestamp += %d;\n", current_cycle + cycle);
-    wf_op("\tgoto C68k_Exec_End;\n");
 }
 
 static void fterminate_op(u32 cycle)
@@ -735,7 +685,7 @@ static void IO_CTHULHU(char *test_string) //int evil_babies)
  }
 }
 
-static void mem_op(char* fmt, ...)
+static void mem_op(const char* fmt, ...)
 {
 	static char lovelykoala[262144];
 	va_list args;
@@ -1287,7 +1237,7 @@ static void _ea_calc(u32 ea, u32 rsft)
 	}
 }
 
-static void _ea_read_(u32 ea, u32 rsft, char dest[4])
+static void _ea_read_(u32 ea, u32 rsft, const char* dest)
 {
 	char sz[8];
 
@@ -1322,12 +1272,7 @@ static void _ea_read_(u32 ea, u32 rsft, char dest[4])
             }
             else wf_op("\t%s = (%s)CPU->A[(Opcode >> %d) & 7];\n", dest, szc, rsft);
 			break;
-/*
-		case EA_DREG:
-		case EA_AREG:
-            wf_op("\t%s = %s(adr);\n", dest, szcf);
-            break;
-*/
+
 		case EA_A32:
 		case EA_D8AX:
 		case EA_D8PX:
@@ -1379,7 +1324,7 @@ static void _ea_read_dst(u32 ea, u32 rsft)
     _ea_read_(ea, rsft, "dst");
 }
 
-static void _ea_read_sx_(u32 ea, u32 rsft, char dest[4])
+static void _ea_read_sx_(u32 ea, u32 rsft, const char *dest)
 {
 	char sz[8];
 
@@ -1414,12 +1359,7 @@ static void _ea_read_sx_(u32 ea, u32 rsft, char dest[4])
             }
             else wf_op("\t%s = (s32)(%s)CPU->A[(Opcode >> %d) & 7];\n", dest, szcs, rsft);
 			break;
-/*
-		case EA_DREG:
-		case EA_AREG:
-            wf_op("\t%s = (s32)(%s(adr));\n", dest, szcsf);
-			break;
-*/
+
 		case EA_A32:
 		case EA_D8AX:
 		case EA_D8PX:
@@ -1492,20 +1432,14 @@ static void _ea_write_sarsie(u32 ea, u32 rsft, int move_pd)
 	else switch (ea)
 	{
 		case EA_DREG:
-//            wf_op("\t%s(&CPU->D%s[(Opcode >> %d) & 7])) = res;\n", szcf, (current_sft_mask == 15) ? "16" : "", rsft);
-            wf_op("\t%s((u32*)&CPU->D%s + ((Opcode >> %d) & 7))) = res;\n", szcf, (current_sft_mask == 15) ? "16" : "", rsft);
+			wf_op("\tMDFN_ennsb<%s, true>(%s&CPU->D[(Opcode >> %d) & 7], res);\n", szc, szcf, rsft);
 			break;
 
 		case EA_AREG:
-            // writes in Ax registers are always 32 bits sized
-            wf_op("\tCPU->A[(Opcode >> %d) & 7] = res;\n", rsft);
+			// writes in Ax registers are always 32 bits sized
+			wf_op("\tCPU->A[(Opcode >> %d) & 7] = res;\n", rsft);
 			break;
-/*
-		case EA_DREG:
-		case EA_AREG:
-            wf_op("\t%s(adr) = res;\n", szcf);
-			break;
-*/
+
 		case EA_A32:
 		case EA_D8AX:
 		case EA_D8PX:
@@ -1567,7 +1501,7 @@ static void set_current_size(u32 sz)
             current_bits_mask = 0xFF;
             current_sft_mask = 7;
             strcpy(szc, "u8");
-            strcpy(szcf, "*(BYTE_OFF + (u8*)");
+            strcpy(szcf, "BYTE_OFF + (u8*)");
             strcpy(szcs, "s8");
             strcpy(szcsf, "*(BYTE_OFF + (s8*)");
             break;
@@ -1576,7 +1510,7 @@ static void set_current_size(u32 sz)
             current_bits_mask = 0xFFFF;
             current_sft_mask = 15;
             strcpy(szc, "u16");
-            strcpy(szcf, "*(WORD_OFF + (u16*)");
+            strcpy(szcf, "WORD_OFF + (u16*)");
             strcpy(szcs, "s16");
             strcpy(szcsf, "*(WORD_OFF + (s16*)");
             break;
@@ -1585,7 +1519,7 @@ static void set_current_size(u32 sz)
             current_bits_mask = 0xFFFFFFFF;
             current_sft_mask = 31;
             strcpy(szc, "u32");
-            strcpy(szcf, "*((u32*)");
+            strcpy(szcf, "(u32*)");
             strcpy(szcs, "s32");
             strcpy(szcsf, "*((s32*)");
             break;
@@ -1593,7 +1527,7 @@ static void set_current_size(u32 sz)
 }
 
 // gen privilege exception (happen when S flag is not set)
-static void gen_privilege_exception(char *pre)
+static void gen_privilege_exception(const char *pre)
 {
     // swap A7 and USP (because S not set)
     wf_op("%sres = CPU->USP;\n", pre);
@@ -1619,7 +1553,7 @@ static void gen_privilege_exception(char *pre)
     wf_op("%sSET_PC(PC)\n", pre);
 }
 
-static void gen_exception(char *pre, char* exception)
+static void gen_exception(const char *pre, const char* exception)
 {
     // swap A7 and USP if needed
     wf_op("%sif (!CPU->flag_S)\n", pre);

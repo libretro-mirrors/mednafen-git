@@ -21,10 +21,11 @@
 #include <errno.h>
 #include "pcecd.h"
 #include <mednafen/hw_misc/arcade_card/arcade_card.h>
-#include <mednafen/md5.h>
+#include <mednafen/hash/md5.h>
 #include <mednafen/file.h>
 #include <mednafen/cdrom/cdromif.h>
 #include <mednafen/mempatcher.h>
+#include <mednafen/GZFileStream.h>
 
 namespace PCE_Fast
 {
@@ -116,13 +117,35 @@ static void Cleanup(void)
  }
 }
 
-void HuC_Load(const uint8 *data, uint32 len, uint32 crc32)
+static void LoadSaveMemory(const std::string& path, uint8* const data, const uint64 len)
 {
+ try
+ {
+  GZFileStream fp(path, GZFileStream::MODE::READ);
+  const uint64 fp_size_tmp = fp.size();
+
+  if(fp_size_tmp != len)
+   throw MDFN_Error(0, _("Save game memory file \"%s\" is an incorrect size(%llu bytes).  The correct size is %llu bytes."), path.c_str(), (unsigned long long)fp_size_tmp, (unsigned long long)len);
+
+  fp.read(data, len);
+ }
+ catch(MDFN_Error &e)
+ {
+  if(e.GetErrno() != ENOENT)
+   throw;
+ }
+}
+
+uint32 HuC_Load(MDFNFILE* fp)
+{
+ uint32 crc = 0;
+
  try
  {
   uint32 sf2_threshold = 2048 * 1024;
   uint32 sf2_required_size = 2048 * 1024 + 512 * 1024;
-  uint32 m_len = (len + 8191)&~8191;
+  uint64 len = fp->size();
+  uint64 m_len = (len + 8191)&~8191;
   bool sf2_mapper = FALSE;
 
   if(m_len >= sf2_threshold)
@@ -136,19 +159,21 @@ void HuC_Load(const uint8 *data, uint32 len, uint32 crc32)
   IsPopulous = 0;
   PCE_IsCD = 0;
 
-  md5_context md5;
-  md5.starts();
-  md5.update(data, len);
-  md5.finish(MDFNGameInfo->MD5);
-
-  MDFN_printf(_("ROM:       %dKiB\n"), (len + 1023) / 1024);
-  MDFN_printf(_("ROM CRC32: 0x%04x\n"), crc32);
-  MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
 
   HuCROM = (uint8 *)MDFN_malloc_T(m_len, _("HuCard ROM"));
-
   memset(HuCROM, 0xFF, m_len);
-  memcpy(HuCROM, data, (m_len < len) ? m_len : len);
+  fp->read(HuCROM, std::min<uint64>(m_len, len));
+
+  md5_context md5;
+  md5.starts();
+  md5.update(HuCROM, std::min<uint64>(m_len, len));
+  md5.finish(MDFNGameInfo->MD5);
+
+  crc = crc32(0, HuCROM, std::min<uint64>(m_len, len));
+
+  MDFN_printf(_("ROM:       %lluKiB\n"), (unsigned long long)(std::min<uint64>(m_len, len) / 1024));
+  MDFN_printf(_("ROM CRC32: 0x%04x\n"), crc);
+  MDFN_printf(_("ROM MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
 
   memset(ROMSpace, 0xFF, 0x88 * 8192 + 8192);
 
@@ -181,14 +206,9 @@ void HuC_Load(const uint8 *data, uint32 len, uint32 crc32)
   if(!memcmp(HuCROM + 0x1F26, "POPULOUS", strlen("POPULOUS")))
   {
    uint8 *PopRAM = ROMSpace + 0x40 * 8192;
-   gzFile fp;
-  
    memset(PopRAM, 0xFF, 32768);
-   if((fp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
-   {
-    gzread(fp, PopRAM, 32768);
-    gzclose(fp);
-   }
+
+   LoadSaveMemory(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), PopRAM, 32768);
 
    IsPopulous = 1;
 
@@ -204,16 +224,12 @@ void HuC_Load(const uint8 *data, uint32 len, uint32 crc32)
   }
   else
   {
-   gzFile fp;
-
    memset(SaveRAM, 0x00, 2048);
    memcpy(SaveRAM, BRAM_Init_String, 8);    // So users don't have to manually intialize the file cabinet
-                                                // in the CD BIOS screen.
-   if((fp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
-   {
-    gzread(fp, SaveRAM, 2048);
-    gzclose(fp);
-   }
+                                            // in the CD BIOS screen.
+   
+   LoadSaveMemory(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), SaveRAM, 2048);
+
    PCEWrite[0xF7] = SaveRAMWrite;
    PCERead[0xF7] = SaveRAMRead;
    MDFNMP_AddRAM(2048, 0xF7 * 8192, SaveRAM);
@@ -239,6 +255,8 @@ void HuC_Load(const uint8 *data, uint32 len, uint32 crc32)
   Cleanup();
   throw;
  }
+
+ return crc;
 }
  
 bool IsBRAMUsed(void)
@@ -252,7 +270,7 @@ bool IsBRAMUsed(void)
  return(0);
 }
 
-void HuC_LoadCD(const char *bios_path)
+void HuC_LoadCD(const std::string& bios_path)
 {
  static const FileExtensionSpecStruct KnownBIOSExtensions[] =
  {
@@ -264,51 +282,19 @@ void HuC_LoadCD(const char *bios_path)
 
  try
  {
-  MDFNFILE fp(bios_path, KnownBIOSExtensions, _("CD BIOS"));
+  MDFNFILE fp(bios_path.c_str(), KnownBIOSExtensions, _("CD BIOS"));
 
   memset(ROMSpace, 0xFF, 262144);
 
-  memcpy(ROMSpace, fp.Data() + (fp.Size() & 512), ((fp.Size() & ~512) > 262144) ? 262144 : (fp.Size() &~ 512) );
+  if(fp.size() & 512)
+   fp.seek(512, SEEK_SET);
+
+  fp.read(ROMSpace, 262144);
 
   fp.Close();
 
   PCE_IsCD = 1;
   PCE_InitCD();
-
-  md5_context md5;
-  md5.starts();
-  // md5_update(&md5, HuCROM, 262144);
-
- #if 0
-  int32 track = CDIF_GetFirstTrack();
-  int32 last_track = CDIF_GetLastTrack();
-  bool DTFound = 0;
-  for(; track <= last_track; track++)
-  {
-   CDIF_Track_Format format;
-
-   if(CDIF_GetTrackFormat(track, format) && format == CDIF_FORMAT_MODE1)
-   {
-    DTFound = 1;
-    break;
-   }
-  }
- 
-  if(DTFound) // Only add the MD5 hash if we were able to find a data track.
-  {
-   uint32 start_sector = CDIF_GetTrackStartPositionLBA(track);
-   uint8 sector_buffer[2048];
-
-   for(int x = 0; x < 128; x++)
-   {
-    memset(sector_buffer, 0, 2048);
-    CDIF_ReadSector(sector_buffer, NULL, start_sector + x, 1);
-    md5.update(sector_buffer, 2048);
-   }
-  }
-  md5.finish(MDFNGameInfo->MD5);
-  MDFN_printf(_("CD MD5(first 256KiB):   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
-  #endif
 
   MDFN_printf(_("Arcade Card Emulation:  %s\n"), PCE_ACEnabled ? _("Enabled") : _("Disabled")); 
   for(int x = 0; x < 0x40; x++)
@@ -338,17 +324,12 @@ void HuC_LoadCD(const char *bios_path)
    }
   }
 
-  gzFile srp;
-
   memset(SaveRAM, 0x00, 2048);
   memcpy(SaveRAM, BRAM_Init_String, 8);	// So users don't have to manually intialize the file cabinet
 						// in the CD BIOS screen.
 
-  if((srp = gzopen(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), "rb")))
-  {
-   gzread(srp, SaveRAM, 2048);
-   gzclose(srp);
-  }
+  LoadSaveMemory(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), SaveRAM, 2048);
+
   PCEWrite[0xF7] = SaveRAMWrite;
   PCERead[0xF7] = SaveRAMRead;
   MDFNMP_AddRAM(2048, 0xF7 * 8192, SaveRAM);
@@ -380,11 +361,14 @@ int HuC_StateAction(StateMem *sm, int load, int data_only)
   ret &= PCECD_StateAction(sm, load, data_only);
 
   if(arcade_card)
-   ret &= arcade_card->StateAction(sm, load, data_only);
+   arcade_card->StateAction(sm, load, data_only);
  }
  return(ret);
 }
 
+//
+// HuC_Kill() may be called before HuC_Load*() is called or even after it errors out, so we have a separate HuC_SaveNV()
+// to prevent save game file corruption in case of error.
 void HuC_Kill(void)
 {
  Cleanup();
@@ -394,11 +378,11 @@ void HuC_SaveNV(void)
 {
  if(IsPopulous)
  {
-  MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 6, ROMSpace + 0x40 * 8192, 32768);
+  MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), ROMSpace + 0x40 * 8192, 32768);
  }
  else if(IsBRAMUsed())
  {
-  MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav").c_str(), 0, SaveRAM, 2048);
+  MDFN_DumpToFile(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), SaveRAM, 2048);
  }
 }
 

@@ -48,10 +48,9 @@
 
 #include <algorithm>
 #include <string.h>
-#include <zlib.h>
 #include "cart.h"
 #include <mednafen/state.h>
-#include <mednafen/md5.h>
+#include <mednafen/hash/md5.h>
 
 LYNX_HEADER CCart::DecodeHeader(const uint8 *data)
 {
@@ -86,7 +85,7 @@ LYNX_HEADER CCart::DecodeHeader(const uint8 *data)
 
 bool CCart::TestMagic(const uint8 *data, uint32 size)
 {
- if(size <= HEADER_RAW_SIZE)
+ if(size < HEADER_RAW_SIZE)
   return(FALSE);
 
  if(memcmp(data, "LYNX", 4) || data[8] != 0x01)
@@ -95,26 +94,37 @@ bool CCart::TestMagic(const uint8 *data, uint32 size)
  return(TRUE);
 }
 
-CCart::CCart(const uint8 *gamedata, uint32 gamesize)
+CCart::CCart(Stream* fp)
 {
+	uint64 gamesize;
+	uint8 raw_header[HEADER_RAW_SIZE];
 	LYNX_HEADER	header;
 	uint32 loop;
 
-	mWriteEnableBank0=FALSE;
-	mWriteEnableBank1=FALSE;
-	mCartRAM=FALSE;
+	mWriteEnableBank0 = FALSE;
+	mWriteEnableBank1 = FALSE;
+	mCartRAM = FALSE;
 
-	mCRC32 = 0;
-	mCRC32 = crc32(mCRC32,gamedata,gamesize);
-	
-	// Checkout the header bytes
-	if(gamesize <= HEADER_RAW_SIZE)
+	if(fp)
 	{
-	 throw MDFN_Error(0, _("Lynx ROM image is too small: %u bytes"), gamesize);
+	 gamesize = fp->size();
+	 // Checkout the header bytes
+	 if(gamesize < HEADER_RAW_SIZE)
+	 {
+	  throw MDFN_Error(0, _("Lynx ROM image is too small: %llu bytes"), (unsigned long long)gamesize);
+	 }
+
+	 fp->read(raw_header, HEADER_RAW_SIZE);
+	}
+	else
+	{
+	 gamesize = HEADER_RAW_SIZE;
+	 memset(raw_header, 0, sizeof(raw_header));
+	 memcpy(raw_header, "LYNX", 4);
+	 raw_header[8] = 0x01;
 	}
 
-	header = DecodeHeader(gamedata);
-	gamedata += HEADER_RAW_SIZE;
+	header = DecodeHeader(raw_header);
 	gamesize -= HEADER_RAW_SIZE;
 
 	InfoROMSize = gamesize;
@@ -213,8 +223,8 @@ CCart::CCart(const uint8 *gamedata, uint32 gamesize)
 
 	// Make some space for the new carts
 
-	mCartBank0 = (uint8*) new uint8[mMaskBank0+1];
-	mCartBank1 = (uint8*) new uint8[mMaskBank1+1];
+	mCartBank0.reset(new uint8[mMaskBank0+1]);
+	mCartBank1.reset(new uint8[mMaskBank1+1]);
 
 	// Set default bank
 
@@ -235,20 +245,18 @@ CCart::CCart(const uint8 *gamedata, uint32 gamesize)
 
         if(mMaskBank0)
         {
-         int size = std::min(gamesize, mMaskBank0+1);
-         memcpy(mCartBank0, gamedata, size);
-         md5.update(mCartBank0, size);
-         gamedata += size;
+         uint64 size = std::min<uint64>(gamesize, mMaskBank0+1);
+         fp->read(mCartBank0.get(), size);
+         md5.update(mCartBank0.get(), size);
          gamesize -= size;
         }
 
         // Read in the BANK0 bytes
         if(mMaskBank1)
         {
-         int size = std::min(gamesize, mMaskBank1+1);
-         memcpy(mCartBank1, gamedata, size);
-         md5.update(mCartBank1, size);
-         gamedata += size;
+         uint64 size = std::min<uint64>(gamesize, mMaskBank1+1);
+	 fp->read(mCartBank1.get(), size);
+         md5.update(mCartBank1.get(), size);
         }
 
         md5.finish(MD5);
@@ -260,14 +268,12 @@ CCart::CCart(const uint8 *gamedata, uint32 gamesize)
 	// Dont allow an empty Bank1 - Use it for shadow SRAM/EEPROM
 	if(banktype1==UNUSED)
 	{
-		// Delete the single byte allocated  earlier
-		delete[] mCartBank1;
 		// Allocate some new memory for us
 		banktype1=C64K;
 		mMaskBank1=0x00ffff;
 		mShiftCount1=8;
 		mCountMask1=0x0ff;
-		mCartBank1 = (uint8*) new uint8[mMaskBank1+1];
+		mCartBank1.reset(new uint8[mMaskBank1+1]);
 		for(loop=0;loop<mMaskBank1+1;loop++) mCartBank1[loop]=DEFAULT_RAM_CONTENTS;
 		mWriteEnableBank1=TRUE;
 		mCartRAM=TRUE;
@@ -276,8 +282,7 @@ CCart::CCart(const uint8 *gamedata, uint32 gamesize)
 
 CCart::~CCart()
 {
-	delete[] mCartBank0;
-	delete[] mCartBank1;
+
 }
 
 
@@ -401,7 +406,7 @@ uint8 CCart::Peek1(void)
 }
 
 
-int CCart::StateAction(StateMem *sm, int load, int data_only)
+void CCart::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT CartRegs[] =
  {
@@ -417,12 +422,15 @@ int CCart::StateAction(StateMem *sm, int load, int data_only)
         SFVAR(mWriteEnableBank0),
         SFVAR(mWriteEnableBank1),
 	SFVAR(last_strobe),
-	SFARRAYN(mCartBank1, mCartRAM ? mMaskBank1 + 1 : 0, "mCartBank1"),
+	SFARRAYN(mCartBank1.get(), mCartRAM ? mMaskBank1 + 1 : 0, "mCartBank1"),
 	SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, CartRegs, "CART");
 
+ MDFNSS_StateAction(sm, load, data_only, CartRegs, "CART");
 
- return(ret);
+ if(load)
+ {
+
+ }
 }
 

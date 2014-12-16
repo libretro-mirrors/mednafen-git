@@ -26,7 +26,7 @@
 //#include <string.h>
 //#include <ctype.h>
 
-#include "mednafen/mednafen.h"
+#include <mednafen/mednafen.h>
 #include "v810_opt.h"
 #include "v810_cpu.h"
 #include "v810_cpuD.h"

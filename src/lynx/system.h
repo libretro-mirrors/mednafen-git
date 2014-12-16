@@ -49,6 +49,7 @@
 #include "machine.h"
 
 #include <string>
+#include <memory>
 
 #define HANDY_SYSTEM_FREQ						16000000
 #define HANDY_TIMER_FREQ						20
@@ -113,7 +114,7 @@ class CSystem;
 class CSystem : public CSystemBase
 {
 	public:
-		CSystem(const uint8 *, int32) MDFN_COLD;
+		CSystem(MDFNFILE* fp) MDFN_COLD;
 		~CSystem() MDFN_COLD;
 
 	public:
@@ -214,13 +215,13 @@ class CSystem : public CSystemBase
 	public:
 		uint32			mCycleCountBreakpoint;
 		CLynxBase		*mMemoryHandlers[SYSTEM_SIZE];
-		CCart			*mCart;
-		CRom			*mRom;
-		CMemMap			*mMemMap;
-		CRam			*mRam;
-		C65C02			*mCpu;
-		CMikie			*mMikie;
-		CSusie			*mSusie;
+		std::unique_ptr<CCart>	mCart;
+		std::unique_ptr<CRom>	mRom;
+		std::unique_ptr<CMemMap> mMemMap;
+		std::unique_ptr<CRam>	mRam;
+		std::unique_ptr<C65C02>	mCpu;
+		std::unique_ptr<CMikie>	mMikie;
+		std::unique_ptr<CSusie>	mSusie;
 
 		uint32			mFileType;
 };

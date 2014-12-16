@@ -2130,7 +2130,7 @@ uint8 CSusie::Peek(uint32 addr)
 	return 0xff;
 }
 
-int CSusie::StateAction(StateMem *sm, int load, int data_only)
+void CSusie::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT SuzieRegs[] =
  {
@@ -2218,9 +2218,10 @@ int CSusie::StateAction(StateMem *sm, int load, int data_only)
 	SFVAR(vquadoff),
 	SFEND
  };
- std::vector <SSDescriptor> love;
- love.push_back(SSDescriptor(SuzieRegs, "SUZY"));
- int ret = MDFNSS_StateAction(sm, load, data_only, love);
+ MDFNSS_StateAction(sm, load, data_only, SuzieRegs, "SUZY");
 
- return(ret);
+ if(load)
+ {
+
+ }
 }

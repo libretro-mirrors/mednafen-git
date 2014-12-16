@@ -87,6 +87,9 @@
 /* Define to 1 if you have the `connect' function. */
 #undef HAVE_CONNECT
 
+/* define if the compiler supports basic C++11 syntax */
+#undef HAVE_CXX11
+
 /* Define if the GNU dcgettext() function is already present or preinstalled.
    */
 #undef HAVE_DCGETTEXT
@@ -152,6 +155,9 @@
 
 /* Define to 1 if you have the `ftello64' function. */
 #undef HAVE_FTELLO64
+
+/* Define to 1 if you have the `ftruncate64' function. */
+#undef HAVE_FTRUNCATE64
 
 /* Define to 1 if you have the `fwprintf' function. */
 #undef HAVE_FWPRINTF
@@ -297,6 +303,9 @@
 
 /* Define to 1 if you have the `pipe' function. */
 #undef HAVE_PIPE
+
+/* Define to 1 if you have the `poll' function. */
+#undef HAVE_POLL
 
 /* Define if your printf() function supports format strings with positions. */
 #undef HAVE_POSIX_PRINTF
@@ -455,6 +464,9 @@
 
 /* Define to 1 if you have the `__fsetlocking' function. */
 #undef HAVE___FSETLOCKING
+
+/* Define to 1 if you have the `__mingw_get_crt_info' function. */
+#undef HAVE___MINGW_GET_CRT_INFO
 
 /* Define as const if the declaration of iconv() needs const. */
 #undef ICONV_CONST

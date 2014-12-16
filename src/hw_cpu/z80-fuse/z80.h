@@ -117,6 +117,6 @@ static INLINE uint8 Z80_RP_MACRO(uint16 A)
 
 
 void z80_set_interrupt(int set);
-int z80_state_action(StateMem *sm, int load, int data_only, const char *section_name);
+void z80_state_action(StateMem *sm, const unsigned load, const bool data_only, const char *section_name);
 
 #endif			/* #ifndef FUSE_Z80_H */

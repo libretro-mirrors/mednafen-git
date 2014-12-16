@@ -185,7 +185,7 @@ void reset_registers(void)
 	memset(gpr, 0, sizeof(gpr));
 
 	if (ngpc_rom.data)
-		pc = le32toh(rom_header->startPC) & 0xFFFFFF;
+		pc = MDFN_de32lsb(rom_header->startPC) & 0xFFFFFF;
 	else
 		pc = 0xFFFFFE;
 
@@ -196,6 +196,9 @@ void reset_registers(void)
 
 	rErr = RERR_VALUE;
 
+	gpr[0] = 0xff23c3;
+	gpr[1] = 0xff23df;
+	gpr[2] = 0x006480;
 	REGXSP = 0x00006C00; //Confirmed from BIOS, 
 						//immediately changes value from default of 0x100
 }
