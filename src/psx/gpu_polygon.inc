@@ -1,42 +1,57 @@
+/* Mednafen - Multi-system Emulator
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#pragma GCC optimize ("no-unroll-loops,no-peel-loops")
+
+#include "psx.h"
+#include "gpu.h"
+
+namespace MDFN_IEN_PSX
+{
+#include "gpu_common.inc"
+
 #define COORD_FBS 12
 #define COORD_MF_INT(n) ((n) << COORD_FBS)
-
-/*
- Store and do most math with interpolant coordinates and deltas as unsigned to avoid violating strict overflow(due to biasing),
- but when actually grabbing the coordinates, treat them as signed(with signed right shift) so we can do saturation properly.
-*/
-static INLINE int32 COORD_GET_INT(int32 n)
-{
- return(n >> COORD_FBS);
-}
+#define COORD_POST_PADDING	12
 
 struct i_group
 {
  uint32 u, v;
  uint32 r, g, b;
- uint32 dummy0[3];
 };
 
 struct i_deltas
 {
  uint32 du_dx, dv_dx;
  uint32 dr_dx, dg_dx, db_dx;
- uint32 dummy0[3];
 
  uint32 du_dy, dv_dy;
  uint32 dr_dy, dg_dy, db_dy;
- uint32 dummy1[3];
 };
 
-static INLINE int64 MakePolyXFP(int32 x)
+static INLINE int64 MakePolyXFP(uint32 x)
 {
- return ((int64)x << 32) + ((1LL << 32) - (1 << 11));
+ return ((uint64)x << 32) + ((1ULL << 32) - (1 << 11));
 }
 
 static INLINE int64 MakePolyXFPStep(int32 dx, int32 dy)
 {
  int64 ret;
- int64 dx_ex = (int64)dx << 32;
+ int64 dx_ex = (uint64)dx << 32;
 
  if(dx_ex < 0)
   dx_ex -= dy - 1;
@@ -54,43 +69,35 @@ static INLINE int32 GetPolyXFP_Int(int64 xfp)
  return(xfp >> 32);
 }
 
-//#define CALCIS(x,y) ( A.x * (B.y - C.y) + B.x * (C.y - A.y) + C.x * (A.y - B.y) )
 #define CALCIS(x,y) (((B.x - A.x) * (C.y - B.y)) - ((C.x - B.x) * (B.y - A.y)))
+template<bool goraud, bool textured>
 static INLINE bool CalcIDeltas(i_deltas &idl, const tri_vertex &A, const tri_vertex &B, const tri_vertex &C)
 {
- const unsigned sa = 32;
- int64 num = ((int64)COORD_MF_INT(1)) << sa;
- int64 denom = CALCIS(x, y);
- int64 one_div;
+ int32 denom = CALCIS(x, y);
 
  if(!denom)
   return(false);
 
- one_div = num / denom;
+ if(goraud)
+ {
+  idl.dr_dx = (uint32)(CALCIS(r, y) * (1 << COORD_FBS) / denom) << COORD_POST_PADDING;
+  idl.dr_dy = (uint32)(CALCIS(x, r) * (1 << COORD_FBS) / denom) << COORD_POST_PADDING;
 
- idl.dr_dx = ((one_div * CALCIS(r, y)) + 0x00000000) >> sa;
- idl.dr_dy = ((one_div * CALCIS(x, r)) + 0x00000000) >> sa;
+  idl.dg_dx = (uint32)(CALCIS(g, y) * (1 << COORD_FBS) / denom) << COORD_POST_PADDING;
+  idl.dg_dy = (uint32)(CALCIS(x, g) * (1 << COORD_FBS) / denom) << COORD_POST_PADDING;
 
- idl.dg_dx = ((one_div * CALCIS(g, y)) + 0x00000000) >> sa;
- idl.dg_dy = ((one_div * CALCIS(x, g)) + 0x00000000) >> sa;
+  idl.db_dx = (uint32)(CALCIS(b, y) * (1 << COORD_FBS) / denom) << COORD_POST_PADDING;
+  idl.db_dy = (uint32)(CALCIS(x, b) * (1 << COORD_FBS) / denom) << COORD_POST_PADDING;
+ }
 
- idl.db_dx = ((one_div * CALCIS(b, y)) + 0x00000000) >> sa;
- idl.db_dy = ((one_div * CALCIS(x, b)) + 0x00000000) >> sa;
+ if(textured)
+ {
+  idl.du_dx = (uint32)(CALCIS(u, y) * (1 << COORD_FBS) / denom) << COORD_POST_PADDING;
+  idl.du_dy = (uint32)(CALCIS(x, u) * (1 << COORD_FBS) / denom) << COORD_POST_PADDING;
 
- idl.du_dx = ((one_div * CALCIS(u, y)) + 0x00000000) >> sa;
- idl.du_dy = ((one_div * CALCIS(x, u)) + 0x00000000) >> sa;
-
- idl.dv_dx = ((one_div * CALCIS(v, y)) + 0x00000000) >> sa;
- idl.dv_dy = ((one_div * CALCIS(x, v)) + 0x00000000) >> sa;
-
- // idl.du_dx = ((int64)CALCIS(u, y) << COORD_FBS) / denom;
- // idl.du_dy = ((int64)CALCIS(x, u) << COORD_FBS) / denom;
-
- // idl.dv_dx = ((int64)CALCIS(v, y) << COORD_FBS) / denom;
- // idl.dv_dy = ((int64)CALCIS(x, v) << COORD_FBS) / denom;
-
- //printf("Denom=%lld - CIS_UY=%d, CIS_XU=%d, CIS_VY=%d, CIS_XV=%d\n", denom, CALCIS(u, y), CALCIS(x, u), CALCIS(v, y), CALCIS(x, v));
- //printf("  du_dx=0x%08x, du_dy=0x%08x --- dv_dx=0x%08x, dv_dy=0x%08x\n", idl.du_dx, idl.du_dy, idl.dv_dx, idl.dv_dy);
+  idl.dv_dx = (uint32)(CALCIS(v, y) * (1 << COORD_FBS) / denom) << COORD_POST_PADDING;
+  idl.dv_dy = (uint32)(CALCIS(x, v) * (1 << COORD_FBS) / denom) << COORD_POST_PADDING;
+ }
 
  return(true);
 }
@@ -131,136 +138,139 @@ static INLINE void AddIDeltas_DY(i_group &ig, const i_deltas &idl, uint32 count 
 }
 
 template<bool goraud, bool textured, int BlendMode, bool TexMult, uint32 TexMode_TA, bool MaskEval_TA>
-INLINE void PS_GPU::DrawSpan(int y, uint32 clut_offset, const int32 x_start, const int32 x_bound, i_group ig, const i_deltas &idl)
+INLINE void PS_GPU::DrawSpan(int y, const int32 x_start, const int32 x_bound, i_group ig, const i_deltas &idl)
 {
-  int32 xs = x_start, xb = x_bound;
-
   if(LineSkipTest(y))
    return;
 
-  if(xs < xb)	// (xs != xb)
+  if(textured)
   {
-   if(xs < ClipX0)
-    xs = ClipX0;
+   ig.u += (x_start * idl.du_dx) + (y * idl.du_dy);
+   ig.v += (x_start * idl.dv_dx) + (y * idl.dv_dy);
+  }
 
-   if(xb > (ClipX1 + 1))
-    xb = ClipX1 + 1;
+  if(goraud)
+  {
+   ig.r += (x_start * idl.dr_dx) + (y * idl.dr_dy);
+   ig.g += (x_start * idl.dg_dx) + (y * idl.dg_dy);
+   ig.b += (x_start * idl.db_dx) + (y * idl.db_dy);
+  }
 
-   if(xs < xb)
+  for(int32 xi = x_start; MDFN_LIKELY(xi < x_bound); xi++, AddIDeltas_DX<goraud, textured>(ig, idl))
+  {
+   uint32 r, g, b;
+   int32 x = sign_x_to_s32(11, xi);
+
+   if(goraud || textured)
+    DrawTimeAvail -= 2;
+   else
+    DrawTimeAvail--;
+
+   if(x > ClipX1)
+    break;
+
+   if(x < ClipX0)
+    continue;
+
+   if(!(goraud || textured) && ((BlendMode >= 0) || MaskEval_TA))
    {
-    DrawTimeAvail -= (xb - xs);
-
-    if(goraud || textured)
-    {
-     DrawTimeAvail -= (xb - xs);
-    }
-    else if((BlendMode >= 0) || MaskEval_TA)
-    {
-     DrawTimeAvail -= (((xb + 1) & ~1) - (xs & ~1)) >> 1;
-    }
+    DrawTimeAvail -= (x & 1);
    }
+
+   r = ig.r >> (COORD_FBS + COORD_POST_PADDING);
+   g = ig.g >> (COORD_FBS + COORD_POST_PADDING);
+   b = ig.b >> (COORD_FBS + COORD_POST_PADDING);
 
    if(textured)
    {
-    ig.u += (xs * idl.du_dx) + (y * idl.du_dy);
-    ig.v += (xs * idl.dv_dx) + (y * idl.dv_dy);
-   }
+    uint16 fbw = GetTexel<TexMode_TA>(ig.u >> (COORD_FBS + COORD_POST_PADDING), ig.v >> (COORD_FBS + COORD_POST_PADDING));
 
-   if(goraud)
-   {
-    ig.r += (xs * idl.dr_dx) + (y * idl.dr_dy);
-    ig.g += (xs * idl.dg_dx) + (y * idl.dg_dy);
-    ig.b += (xs * idl.db_dx) + (y * idl.db_dy);
-   }
-
-   for(int32 x = xs; MDFN_LIKELY(x < xb); x++)
-   {
-    uint32 r, g, b;
-
-    if(goraud)
+    if(fbw)
     {
-     r = RGB8SAT[COORD_GET_INT(ig.r)];
-     g = RGB8SAT[COORD_GET_INT(ig.g)];
-     b = RGB8SAT[COORD_GET_INT(ig.b)];
-    }
-    else
-    {
-     r = COORD_GET_INT(ig.r);
-     g = COORD_GET_INT(ig.g);
-     b = COORD_GET_INT(ig.b);
-    }
-
-    if(textured)
-    {
-     uint16 fbw = GetTexel<TexMode_TA>(clut_offset, COORD_GET_INT(ig.u), COORD_GET_INT(ig.v));
-
-     if(fbw)
+     if(TexMult)
      {
-      if(TexMult)
+      uint32 dither_x = x & 3;
+      uint32 dither_y = y & 3;
+
+      if(!dtd)
       {
-       if(dtd)
-        fbw = ModTexel(fbw, r, g, b, x & 3, y & 3);
-       else
-        fbw = ModTexel(fbw, r, g, b, 3, 2); //x & 3, y & 3);
+       dither_x = 3;
+       dither_y = 2;
       }
-      PlotPixel<BlendMode, MaskEval_TA, true>(x, y, fbw);
+
+      fbw = ModTexel(fbw, r, g, b, dither_x, dither_y);
      }
+     PlotPixel<BlendMode, MaskEval_TA, true>(x, y, fbw);
+    }
+   }
+   else
+   {
+    uint16 pix = 0x8000;
+
+    if(goraud && dtd)
+    {
+     pix |= DitherLUT[y & 3][x & 3][r] << 0;
+     pix |= DitherLUT[y & 3][x & 3][g] << 5;
+     pix |= DitherLUT[y & 3][x & 3][b] << 10;
     }
     else
     {
-     uint16 pix = 0x8000;
-
-     if(goraud && dtd)
-     {
-      pix |= DitherLUT[y & 3][x & 3][r] << 0;
-      pix |= DitherLUT[y & 3][x & 3][g] << 5;
-      pix |= DitherLUT[y & 3][x & 3][b] << 10;
-     }
-     else
-     {
-      pix |= (r >> 3) << 0;
-      pix |= (g >> 3) << 5;
-      pix |= (b >> 3) << 10;
-     }
-    
-     PlotPixel<BlendMode, MaskEval_TA, false>(x, y, pix);
+     pix |= (r >> 3) << 0;
+     pix |= (g >> 3) << 5;
+     pix |= (b >> 3) << 10;
     }
-
-    AddIDeltas_DX<goraud, textured>(ig, idl);
-    //AddStep<goraud, textured>(perp_coord, perp_step);
+    
+    PlotPixel<BlendMode, MaskEval_TA, false>(x, y, pix);
    }
   }
 }
 
 template<bool goraud, bool textured, int BlendMode, bool TexMult, uint32 TexMode_TA, bool MaskEval_TA>
-void PS_GPU::DrawTriangle(tri_vertex *vertices, uint32 clut)
+INLINE void PS_GPU::DrawTriangle(tri_vertex *vertices)
 {
  i_deltas idl;
+ unsigned core_vertex;
 
  //
- // Sort vertices by y.
+ // Calculate the "core" vertex based on the unsorted input vertices, and sort vertices by Y.
  //
- if(vertices[2].y < vertices[1].y)
  {
-  tri_vertex tmp = vertices[1];
-  vertices[1] = vertices[2];
-  vertices[2] = tmp;
+  unsigned cvtemp = 0;
+
+  if(vertices[1].x <= vertices[0].x)
+  {
+   if(vertices[2].x <= vertices[1].x)
+    cvtemp = (1 << 2);
+   else
+    cvtemp = (1 << 1);
+  }
+  else
+   cvtemp = (1 << 0);
+
+  if(vertices[2].y < vertices[1].y)
+  {
+   std::swap(vertices[2], vertices[1]);
+   cvtemp = ((cvtemp >> 1) & 0x2) | ((cvtemp << 1) & 0x4) | (cvtemp & 0x1);
+  }
+
+  if(vertices[1].y < vertices[0].y)
+  {
+   std::swap(vertices[1], vertices[0]);
+   cvtemp = ((cvtemp >> 1) & 0x1) | ((cvtemp << 1) & 0x2) | (cvtemp & 0x4);
+  }
+
+  if(vertices[2].y < vertices[1].y)
+  {
+   std::swap(vertices[2], vertices[1]);
+   cvtemp = ((cvtemp >> 1) & 0x2) | ((cvtemp << 1) & 0x4) | (cvtemp & 0x1);
+  }
+
+  core_vertex = cvtemp >> 1;
  }
 
- if(vertices[1].y < vertices[0].y)
- {
-  tri_vertex tmp = vertices[0];
-  vertices[0] = vertices[1];
-  vertices[1] = tmp;
- }
-
- if(vertices[2].y < vertices[1].y)
- {
-  tri_vertex tmp = vertices[1];
-  vertices[1] = vertices[2];
-  vertices[2] = tmp;
- }
-
+ //
+ // 0-height, abort out.
+ //
  if(vertices[0].y == vertices[2].y)
   return;
 
@@ -278,64 +288,40 @@ void PS_GPU::DrawTriangle(tri_vertex *vertices, uint32 clut)
   return;
  }
 
- if(!CalcIDeltas(idl, vertices[0], vertices[1], vertices[2]))
+ if(!CalcIDeltas<goraud, textured>(idl, vertices[0], vertices[1], vertices[2]))
   return;
 
  // [0] should be top vertex, [2] should be bottom vertex, [1] should be off to the side vertex.
  //
  //
- int32 y_start = vertices[0].y;
- int32 y_middle = vertices[1].y;
- int32 y_bound = vertices[2].y;
-
  int64 base_coord;
  int64 base_step;
 
- int64 bound_coord_ul;
  int64 bound_coord_us;
-
- int64 bound_coord_ll;
  int64 bound_coord_ls;
 
  bool right_facing;
- //bool bottom_up;
  i_group ig;
 
- //
- // Find vertex with lowest X coordinate, and use as the base for calculating interpolants from.
- //
+ if(textured)
  {
-  unsigned iggvi = 0;
-
-  //
-  // <=, not <
-  //
-  if(vertices[1].x <= vertices[iggvi].x)
-   iggvi = 1;
-
-  if(vertices[2].x <= vertices[iggvi].x)
-   iggvi = 2;
-
-  ig.u = COORD_MF_INT(vertices[iggvi].u) + (1 << (COORD_FBS - 1));
-  ig.v = COORD_MF_INT(vertices[iggvi].v) + (1 << (COORD_FBS - 1));
-  ig.r = COORD_MF_INT(vertices[iggvi].r);
-  ig.g = COORD_MF_INT(vertices[iggvi].g);
-  ig.b = COORD_MF_INT(vertices[iggvi].b);
-
-  AddIDeltas_DX<goraud, textured>(ig, idl, -vertices[iggvi].x);
-  AddIDeltas_DY<goraud, textured>(ig, idl, -vertices[iggvi].y);
+  ig.u = (COORD_MF_INT(vertices[core_vertex].u) + (1 << (COORD_FBS - 1))) << COORD_POST_PADDING;
+  ig.v = (COORD_MF_INT(vertices[core_vertex].v) + (1 << (COORD_FBS - 1))) << COORD_POST_PADDING;
  }
+
+ ig.r = (COORD_MF_INT(vertices[core_vertex].r) + (1 << (COORD_FBS - 1))) << COORD_POST_PADDING;
+ ig.g = (COORD_MF_INT(vertices[core_vertex].g) + (1 << (COORD_FBS - 1))) << COORD_POST_PADDING;
+ ig.b = (COORD_MF_INT(vertices[core_vertex].b) + (1 << (COORD_FBS - 1))) << COORD_POST_PADDING;
+
+ AddIDeltas_DX<goraud, textured>(ig, idl, -vertices[core_vertex].x);
+ AddIDeltas_DY<goraud, textured>(ig, idl, -vertices[core_vertex].y);
 
  base_coord = MakePolyXFP(vertices[0].x);
  base_step = MakePolyXFPStep((vertices[2].x - vertices[0].x), (vertices[2].y - vertices[0].y));
 
- bound_coord_ul = MakePolyXFP(vertices[0].x);
- bound_coord_ll = MakePolyXFP(vertices[1].x);
-
  //
  //
  //
-
 
  if(vertices[1].y == vertices[0].y)
  {
@@ -353,61 +339,147 @@ void PS_GPU::DrawTriangle(tri_vertex *vertices, uint32 clut)
  else
   bound_coord_ls = MakePolyXFPStep((vertices[2].x - vertices[1].x), (vertices[2].y - vertices[1].y));
 
- if(y_start < ClipY0)
+ //
+ // Left side draw order
+ //
+ // core_vertex == 0
+ //	Left(base): vertices[0] -> (?vertices[1]?) -> vertices[2]
+ //
+ // core_vertex == 1:
+ // 	Left(base): vertices[1] -> vertices[2], vertices[1] -> vertices[0]
+ //
+ // core_vertex == 2:
+ //	Left(base): vertices[2] -> (?vertices[1]?) -> vertices[0]
+ //printf("%d %d\n", core_vertex, right_facing);
+ struct
  {
-  int32 count = ClipY0 - y_start;
+  uint64 x_coord[2];
+  uint64 x_step[2];
 
-  y_start = ClipY0;
-  base_coord += base_step * count;
-  bound_coord_ul += bound_coord_us * count;
+  int32 y_coord;
+  int32 y_bound;
 
-  if(y_middle < ClipY0)
-  {
-   int32 count_ls = ClipY0 - y_middle;
+  bool dec_mode;
+ } tripart[2];
 
-   y_middle = ClipY0;
-   bound_coord_ll += bound_coord_ls * count_ls;
-  }
+#if 0
+ switch(core_vertex)
+ {
+  case 0:
+	tripart[0].dec_mode = tripart[1].dec_mode = false;
+
+	tripart[0].y_coord = vertices[0].y;
+	tripart[0].y_bound = vertices[1].y;
+	if(vertices[0].y != vertices[1].y)
+	{
+	 tripart[0].x_coord[0] = MakePolyXFP(vertices[0].x);
+	 tripart[0].x_step[0] = 
+
+	 tripart[0].x_coord[1] = MakePolyXFP(vertices[0].x);
+	 tripart[0].x_step[1] = 
+	}
+	break;
+
+  case 1:
+	break;
+
+  case 2:
+	break;
+ }
+#endif
+
+ unsigned vo = 0;
+ unsigned vp = 0;
+
+ if(core_vertex)
+  vo = 1;
+
+ if(core_vertex == 2)
+  vp = 3;
+
+ {
+  auto* tp = &tripart[vo];
+
+  tp->y_coord = vertices[0 ^ vo].y;
+  tp->y_bound = vertices[1 ^ vo].y;
+  tp->x_coord[right_facing] = MakePolyXFP(vertices[0 ^ vo].x);
+  tp->x_step[right_facing] = bound_coord_us;
+  tp->x_coord[!right_facing] = base_coord + ((vertices[vo].y - vertices[0].y) * base_step);
+  tp->x_step[!right_facing] = base_step;
+  tp->dec_mode = vo;
  }
 
- if(y_bound > (ClipY1 + 1))
  {
-  y_bound = ClipY1 + 1;
+  auto* tp = &tripart[vo ^ 1];
 
-  if(y_middle > y_bound)
-   y_middle = y_bound;
+  tp->y_coord = vertices[1 ^ vp].y;
+  tp->y_bound = vertices[2 ^ vp].y;
+  tp->x_coord[right_facing] = MakePolyXFP(vertices[1 ^ vp].x);
+  tp->x_step[right_facing] = bound_coord_ls;
+  tp->x_coord[!right_facing] = base_coord + ((vertices[1 ^ vp].y - vertices[0].y) * base_step); //base_coord + ((vertices[1].y - vertices[0].y) * base_step);
+  tp->x_step[!right_facing] = base_step;
+  tp->dec_mode = vp;
  }
 
- if(right_facing)
+ for(unsigned i = 0; i < 2; i++) //2; i++)
  {
-  for(int32 y = y_start; y < y_middle; y++)
-  {
-   DrawSpan<goraud, textured, BlendMode, TexMult, TexMode_TA, MaskEval_TA>(y, clut, GetPolyXFP_Int(base_coord), GetPolyXFP_Int(bound_coord_ul), ig, idl);
-   base_coord += base_step;
-   bound_coord_ul += bound_coord_us;
-  }
+  int32 yi = tripart[i].y_coord;
+  int32 yb = tripart[i].y_bound;
 
-  for(int32 y = y_middle; y < y_bound; y++)
-  {
-   DrawSpan<goraud, textured, BlendMode, TexMult, TexMode_TA, MaskEval_TA>(y, clut, GetPolyXFP_Int(base_coord), GetPolyXFP_Int(bound_coord_ll), ig, idl);
-   base_coord += base_step;
-   bound_coord_ll += bound_coord_ls;
-  }
- }
- else
- {
-  for(int32 y = y_start; y < y_middle; y++)
-  {
-   DrawSpan<goraud, textured, BlendMode, TexMult, TexMode_TA, MaskEval_TA>(y, clut, GetPolyXFP_Int(bound_coord_ul), GetPolyXFP_Int(base_coord), ig, idl);
-   base_coord += base_step;
-   bound_coord_ul += bound_coord_us;
-  }
+  uint64 lc = tripart[i].x_coord[0];
+  uint64 ls = tripart[i].x_step[0];
 
-  for(int32 y = y_middle; y < y_bound; y++)
+  uint64 rc = tripart[i].x_coord[1];
+  uint64 rs = tripart[i].x_step[1];
+
+  if(tripart[i].dec_mode)
   {
-   DrawSpan<goraud, textured, BlendMode, TexMult, TexMode_TA, MaskEval_TA>(y, clut, GetPolyXFP_Int(bound_coord_ll), GetPolyXFP_Int(base_coord), ig, idl);
-   base_coord += base_step;
-   bound_coord_ll += bound_coord_ls;
+   while(MDFN_LIKELY(yi > yb))
+   {
+    yi--;
+    lc -= ls;
+    rc -= rs;
+    //
+    //
+    //
+    int32 y = sign_x_to_s32(11, yi);
+
+    if(y < ClipY0)
+     break;
+
+    if(y > ClipY1)
+    {
+     DrawTimeAvail -= 2;
+     continue;
+    }
+
+    DrawSpan<goraud, textured, BlendMode, TexMult, TexMode_TA, MaskEval_TA>(y, GetPolyXFP_Int(lc), GetPolyXFP_Int(rc), ig, idl);
+   }
+  }
+  else
+  {
+   while(MDFN_LIKELY(yi < yb))
+   {
+    int32 y = sign_x_to_s32(11, yi);
+
+    if(y > ClipY1)
+     break;
+
+    if(y < ClipY0)
+    {
+     DrawTimeAvail -= 2;
+     goto skipit;
+    }
+
+    DrawSpan<goraud, textured, BlendMode, TexMult, TexMode_TA, MaskEval_TA>(y, GetPolyXFP_Int(lc), GetPolyXFP_Int(rc), ig, idl);
+    //
+    //
+    //
+    skipit: ;
+    yi++;
+    lc += ls;
+    rc += rs;
+   }
   }
  }
 
@@ -426,7 +498,6 @@ INLINE void PS_GPU::Command_DrawPolygon(const uint32 *cb)
 {
  const unsigned cb0 = cb[0];
  tri_vertex vertices[3];
- uint32 clut = 0;
  unsigned sv = 0;
  //uint32 tpage = 0;
 
@@ -448,7 +519,6 @@ INLINE void PS_GPU::Command_DrawPolygon(const uint32 *cb)
   if(InCmd == INCMD_QUAD)
   {
    memcpy(&vertices[0], &InQuad_F3Vertices[1], 2 * sizeof(tri_vertex));
-   clut = InQuad_clut;
    sv = 2;
   }
  }
@@ -485,7 +555,7 @@ INLINE void PS_GPU::Command_DrawPolygon(const uint32 *cb)
 
    if(v == 0)
    {
-    clut = ((*cb >> 16) & 0xFFFF) << 4;
+    Update_CLUT_Cache<TexMode_TA>((*cb >> 16) & 0xFFFF);
    }
 
    cb++;
@@ -503,12 +573,60 @@ INLINE void PS_GPU::Command_DrawPolygon(const uint32 *cb)
    InCmd = INCMD_QUAD;
    InCmd_CC = cb0 >> 24;
    memcpy(&InQuad_F3Vertices[0], &vertices[0], sizeof(tri_vertex) * 3);
-   InQuad_clut = clut;
   }
  }
 
- DrawTriangle<goraud, textured, BlendMode, TexMult, TexMode_TA, MaskEval_TA>(vertices, clut);
+ DrawTriangle<goraud, textured, BlendMode, TexMult, TexMode_TA, MaskEval_TA>(vertices);
 }
 
+#undef COORD_POST_PADDING
 #undef COORD_FBS
 #undef COORD_MF_INT
+
+//
+// C-style function wrappers so our command table isn't so ginormous(in memory usage).
+//
+template<int numvertices, bool shaded, bool textured, int BlendMode, bool TexMult, uint32 TexMode_TA, bool MaskEval_TA>
+static void G_Command_DrawPolygon(PS_GPU* g, const uint32 *cb)
+{
+ g->Command_DrawPolygon<numvertices, shaded, textured, BlendMode, TexMult, TexMode_TA, MaskEval_TA>(cb);
+}
+
+const CTEntry PS_GPU::Commands_20_3F[0x20] =
+{
+ /* 0x20 */
+ POLY_HELPER(0x20),
+ POLY_HELPER(0x21),
+ POLY_HELPER(0x22),
+ POLY_HELPER(0x23),
+ POLY_HELPER(0x24),
+ POLY_HELPER(0x25),
+ POLY_HELPER(0x26),
+ POLY_HELPER(0x27),
+ POLY_HELPER(0x28),
+ POLY_HELPER(0x29),
+ POLY_HELPER(0x2a),
+ POLY_HELPER(0x2b),
+ POLY_HELPER(0x2c),
+ POLY_HELPER(0x2d),
+ POLY_HELPER(0x2e),
+ POLY_HELPER(0x2f),
+ POLY_HELPER(0x30),
+ POLY_HELPER(0x31),
+ POLY_HELPER(0x32),
+ POLY_HELPER(0x33),
+ POLY_HELPER(0x34),
+ POLY_HELPER(0x35),
+ POLY_HELPER(0x36),
+ POLY_HELPER(0x37),
+ POLY_HELPER(0x38),
+ POLY_HELPER(0x39),
+ POLY_HELPER(0x3a),
+ POLY_HELPER(0x3b),
+ POLY_HELPER(0x3c),
+ POLY_HELPER(0x3d),
+ POLY_HELPER(0x3e),
+ POLY_HELPER(0x3f)
+};
+
+}
