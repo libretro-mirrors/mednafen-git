@@ -52,6 +52,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
+@NEED_HUC6270_EMU_TRUE@am__append_1 = huc6270/vdc.cpp
 subdir = src/hw_video
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -92,8 +93,10 @@ am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
 libmdfnhwvideo_a_AR = $(AR) $(ARFLAGS)
 libmdfnhwvideo_a_LIBADD =
+am__libmdfnhwvideo_a_SOURCES_DIST = huc6270/vdc.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
-am_libmdfnhwvideo_a_OBJECTS = huc6270/vdc.$(OBJEXT)
+@NEED_HUC6270_EMU_TRUE@am__objects_1 = huc6270/vdc.$(OBJEXT)
+am_libmdfnhwvideo_a_OBJECTS = $(am__objects_1)
 libmdfnhwvideo_a_OBJECTS = $(am_libmdfnhwvideo_a_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -121,7 +124,7 @@ AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN   " $@;
 SOURCES = $(libmdfnhwvideo_a_SOURCES)
-DIST_SOURCES = $(libmdfnhwvideo_a_SOURCES)
+DIST_SOURCES = $(am__libmdfnhwvideo_a_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -333,7 +336,7 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libmdfnhwvideo.a
-libmdfnhwvideo_a_SOURCES = huc6270/vdc.cpp
+libmdfnhwvideo_a_SOURCES = $(am__append_1)
 all: all-am
 
 .SUFFIXES:

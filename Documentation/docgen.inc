@@ -1,6 +1,6 @@
 <?php
 
-$mednafen_version = "0.9.37-UNSTABLE";
+$mednafen_version = "0.9.37.1";
 $mod_list = array();
 
 $sections = array();

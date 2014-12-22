@@ -66,7 +66,7 @@ class Stream
   seek(0, SEEK_SET);
  }
  virtual uint64 tell(void) = 0;
- virtual uint64 size(void) = 0;
+ virtual uint64 size(void) = 0;	// May implicitly call flush() if the stream is writeable.
  virtual void flush(void) = 0;
  virtual void close(void) = 0;	// Flushes(in the case of writeable streams) and closes the stream.
 				// Necessary since this operation can fail(running out of disk space, for instance),

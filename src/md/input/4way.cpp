@@ -60,7 +60,7 @@ void MD_4Way_Shim::UpdateBus(const int32 master_timestamp, uint8 &bus, const uin
  parent->UpdateBus(n, master_timestamp, bus, genesis_asserted);
 }
 
-MD_4Way::MD_4Way() : Shams({{0, this}, {1, this}})
+MD_4Way::MD_4Way()
 {
  Power();
 }

@@ -751,7 +751,7 @@ bool MDFNI_LoadState(const char *fname, const char *suffix) noexcept
 
    st.read(header, 32);
 
-   st_len = MDFN_de32lsb(header + 16 + 4);
+   st_len = MDFN_de32lsb(header + 16 + 4) & 0x7FFFFFFF;
 
    if(st_len < 32)
     throw MDFN_Error(0, _("Save state header length field is bad."));

@@ -706,7 +706,10 @@
 /* Number of bits in a file offset, on hosts where this is settable. */
 #undef _FILE_OFFSET_BITS
 
-/* Define to 1 to make fseeko visible on some hosts (e.g. glibc 2.2). */
+/* Define for largefile support through extra functions. */
+#undef _LARGEFILE64_SOURCE
+
+/* Define for fseeko and ftello on some hosts. */
 #undef _LARGEFILE_SOURCE
 
 /* Define for large files, on AIX-style hosts. */

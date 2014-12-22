@@ -2,6 +2,7 @@
 #define __MDFN_CDACCESS_IMAGE_H
 
 #include <map>
+#include <array>
 
 class Stream;
 class AudioReader;

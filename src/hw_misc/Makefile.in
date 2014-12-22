@@ -52,6 +52,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
+@NEED_ARCADE_CARD_EMU_TRUE@am__append_1 = arcade_card/arcade_card.cpp
 subdir = src/hw_misc
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -92,8 +93,11 @@ am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
 libmdfnhwmisc_a_AR = $(AR) $(ARFLAGS)
 libmdfnhwmisc_a_LIBADD =
+am__libmdfnhwmisc_a_SOURCES_DIST = arcade_card/arcade_card.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
-am_libmdfnhwmisc_a_OBJECTS = arcade_card/arcade_card.$(OBJEXT)
+@NEED_ARCADE_CARD_EMU_TRUE@am__objects_1 =  \
+@NEED_ARCADE_CARD_EMU_TRUE@	arcade_card/arcade_card.$(OBJEXT)
+am_libmdfnhwmisc_a_OBJECTS = $(am__objects_1)
 libmdfnhwmisc_a_OBJECTS = $(am_libmdfnhwmisc_a_OBJECTS)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -121,7 +125,7 @@ AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN   " $@;
 SOURCES = $(libmdfnhwmisc_a_SOURCES)
-DIST_SOURCES = $(libmdfnhwmisc_a_SOURCES)
+DIST_SOURCES = $(am__libmdfnhwmisc_a_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -333,7 +337,7 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libmdfnhwmisc.a
-libmdfnhwmisc_a_SOURCES = arcade_card/arcade_card.cpp
+libmdfnhwmisc_a_SOURCES = $(am__append_1)
 all: all-am
 
 .SUFFIXES:

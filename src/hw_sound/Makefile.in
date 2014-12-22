@@ -52,6 +52,11 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
+@NEED_YM2413_EMU_TRUE@am__append_1 = ym2413/emu2413.cpp
+@NEED_YM2612_EMU_TRUE@am__append_2 = ym2612/Ym2612_Emu.cpp
+@NEED_GB_APU_EMU_TRUE@am__append_3 = gb_apu/Gb_Apu.cpp gb_apu/Gb_Apu_State.cpp gb_apu/Gb_Oscs.cpp
+@NEED_SMS_APU_EMU_TRUE@am__append_4 = sms_apu/Sms_Apu.cpp
+@NEED_PCE_PSG_EMU_TRUE@am__append_5 = pce_psg/pce_psg.cpp
 subdir = src/hw_sound
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -92,13 +97,18 @@ am__v_at_ = $(am__v_at_@AM_DEFAULT_V@)
 am__v_at_0 = @
 libmdfnhwsound_a_AR = $(AR) $(ARFLAGS)
 libmdfnhwsound_a_LIBADD =
+am__libmdfnhwsound_a_SOURCES_DIST = ym2413/emu2413.cpp \
+	ym2612/Ym2612_Emu.cpp gb_apu/Gb_Apu.cpp \
+	gb_apu/Gb_Apu_State.cpp gb_apu/Gb_Oscs.cpp sms_apu/Sms_Apu.cpp \
+	pce_psg/pce_psg.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
-am__objects_1 = ym2413/emu2413.$(OBJEXT)
-am__objects_2 = ym2612/Ym2612_Emu.$(OBJEXT)
-am__objects_3 = gb_apu/Gb_Apu.$(OBJEXT) gb_apu/Gb_Apu_State.$(OBJEXT) \
-	gb_apu/Gb_Oscs.$(OBJEXT)
-am__objects_4 = sms_apu/Sms_Apu.$(OBJEXT)
-am__objects_5 = pce_psg/pce_psg.$(OBJEXT)
+@NEED_YM2413_EMU_TRUE@am__objects_1 = ym2413/emu2413.$(OBJEXT)
+@NEED_YM2612_EMU_TRUE@am__objects_2 = ym2612/Ym2612_Emu.$(OBJEXT)
+@NEED_GB_APU_EMU_TRUE@am__objects_3 = gb_apu/Gb_Apu.$(OBJEXT) \
+@NEED_GB_APU_EMU_TRUE@	gb_apu/Gb_Apu_State.$(OBJEXT) \
+@NEED_GB_APU_EMU_TRUE@	gb_apu/Gb_Oscs.$(OBJEXT)
+@NEED_SMS_APU_EMU_TRUE@am__objects_4 = sms_apu/Sms_Apu.$(OBJEXT)
+@NEED_PCE_PSG_EMU_TRUE@am__objects_5 = pce_psg/pce_psg.$(OBJEXT)
 am_libmdfnhwsound_a_OBJECTS = $(am__objects_1) $(am__objects_2) \
 	$(am__objects_3) $(am__objects_4) $(am__objects_5)
 libmdfnhwsound_a_OBJECTS = $(am_libmdfnhwsound_a_OBJECTS)
@@ -128,7 +138,7 @@ AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN   " $@;
 SOURCES = $(libmdfnhwsound_a_SOURCES)
-DIST_SOURCES = $(libmdfnhwsound_a_SOURCES)
+DIST_SOURCES = $(am__libmdfnhwsound_a_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -340,12 +350,8 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 noinst_LIBRARIES = libmdfnhwsound.a
-ym2413_SOURCES = ym2413/emu2413.cpp
-ym2612_SOURCES = ym2612/Ym2612_Emu.cpp
-gb_apu_SOURCES = gb_apu/Gb_Apu.cpp gb_apu/Gb_Apu_State.cpp gb_apu/Gb_Oscs.cpp
-sms_apu_SOURCES = sms_apu/Sms_Apu.cpp
-pce_psg_SOURCES = pce_psg/pce_psg.cpp
-libmdfnhwsound_a_SOURCES = $(ym2413_SOURCES) $(ym2612_SOURCES) $(gb_apu_SOURCES) $(sms_apu_SOURCES) $(pce_psg_SOURCES)
+libmdfnhwsound_a_SOURCES = $(am__append_1) $(am__append_2) \
+	$(am__append_3) $(am__append_4) $(am__append_5)
 all: all-am
 
 .SUFFIXES:

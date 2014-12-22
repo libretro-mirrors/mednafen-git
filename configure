@@ -686,6 +686,28 @@ HAVE_ALSA_FALSE
 HAVE_ALSA_TRUE
 HAVE_OSSDSP_FALSE
 HAVE_OSSDSP_TRUE
+NEED_ARCADE_CARD_EMU_FALSE
+NEED_ARCADE_CARD_EMU_TRUE
+NEED_HUC6270_EMU_FALSE
+NEED_HUC6270_EMU_TRUE
+NEED_V810_EMU_FALSE
+NEED_V810_EMU_TRUE
+NEED_Z80_EMU_FALSE
+NEED_Z80_EMU_TRUE
+NEED_HUC6280_EMU_FALSE
+NEED_HUC6280_EMU_TRUE
+NEED_68K_EMU_FALSE
+NEED_68K_EMU_TRUE
+NEED_SMS_APU_EMU_FALSE
+NEED_SMS_APU_EMU_TRUE
+NEED_PCE_PSG_EMU_FALSE
+NEED_PCE_PSG_EMU_TRUE
+NEED_YM2612_EMU_FALSE
+NEED_YM2612_EMU_TRUE
+NEED_YM2413_EMU_FALSE
+NEED_YM2413_EMU_TRUE
+NEED_GB_APU_EMU_FALSE
+NEED_GB_APU_EMU_TRUE
 WANT_WSWAN_EMU_FALSE
 WANT_WSWAN_EMU_TRUE
 WANT_VB_EMU_FALSE
@@ -4316,7 +4338,7 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.37-UNSTABLE'
+MEDNAFEN_VERSION='0.9.37.1'
 MEDNAFEN_VERSION_NUMERIC=0x000937
 
 ac_aux_dir=
@@ -17437,6 +17459,12 @@ $as_echo "#define HAVE_FSEEKO 1" >>confdefs.h
 fi
 
 
+$as_echo "#define _LARGEFILE64_SOURCE 1" >>confdefs.h
+
+
+$as_echo "#define _LARGEFILE_SOURCE 1" >>confdefs.h
+
+
  if test x$cross_compiling != xno; then
   CROSS_COMPILING_TRUE=
   CROSS_COMPILING_FALSE='#'
@@ -24793,6 +24821,97 @@ else
 fi
 
 
+ if false; then
+  NEED_GB_APU_EMU_TRUE=
+  NEED_GB_APU_EMU_FALSE='#'
+else
+  NEED_GB_APU_EMU_TRUE='#'
+  NEED_GB_APU_EMU_FALSE=
+fi
+
+ if false; then
+  NEED_YM2413_EMU_TRUE=
+  NEED_YM2413_EMU_FALSE='#'
+else
+  NEED_YM2413_EMU_TRUE='#'
+  NEED_YM2413_EMU_FALSE=
+fi
+
+ if false; then
+  NEED_YM2612_EMU_TRUE=
+  NEED_YM2612_EMU_FALSE='#'
+else
+  NEED_YM2612_EMU_TRUE='#'
+  NEED_YM2612_EMU_FALSE=
+fi
+
+ if false; then
+  NEED_PCE_PSG_EMU_TRUE=
+  NEED_PCE_PSG_EMU_FALSE='#'
+else
+  NEED_PCE_PSG_EMU_TRUE='#'
+  NEED_PCE_PSG_EMU_FALSE=
+fi
+
+ if false; then
+  NEED_SMS_APU_EMU_TRUE=
+  NEED_SMS_APU_EMU_FALSE='#'
+else
+  NEED_SMS_APU_EMU_TRUE='#'
+  NEED_SMS_APU_EMU_FALSE=
+fi
+
+
+ if false; then
+  NEED_68K_EMU_TRUE=
+  NEED_68K_EMU_FALSE='#'
+else
+  NEED_68K_EMU_TRUE='#'
+  NEED_68K_EMU_FALSE=
+fi
+
+ if false; then
+  NEED_HUC6280_EMU_TRUE=
+  NEED_HUC6280_EMU_FALSE='#'
+else
+  NEED_HUC6280_EMU_TRUE='#'
+  NEED_HUC6280_EMU_FALSE=
+fi
+
+ if false; then
+  NEED_Z80_EMU_TRUE=
+  NEED_Z80_EMU_FALSE='#'
+else
+  NEED_Z80_EMU_TRUE='#'
+  NEED_Z80_EMU_FALSE=
+fi
+
+ if false; then
+  NEED_V810_EMU_TRUE=
+  NEED_V810_EMU_FALSE='#'
+else
+  NEED_V810_EMU_TRUE='#'
+  NEED_V810_EMU_FALSE=
+fi
+
+
+ if false; then
+  NEED_HUC6270_EMU_TRUE=
+  NEED_HUC6270_EMU_FALSE='#'
+else
+  NEED_HUC6270_EMU_TRUE='#'
+  NEED_HUC6270_EMU_FALSE=
+fi
+
+ if false; then
+  NEED_ARCADE_CARD_EMU_TRUE=
+  NEED_ARCADE_CARD_EMU_FALSE='#'
+else
+  NEED_ARCADE_CARD_EMU_TRUE='#'
+  NEED_ARCADE_CARD_EMU_FALSE=
+fi
+
+
 # Check whether --enable-gb was given.
 if test "${enable_gb+set}" = set; then :
   enableval=$enable_gb;
@@ -24811,6 +24930,14 @@ $as_echo "#define WANT_GB_EMU 1" >>confdefs.h
 else
   WANT_GB_EMU_TRUE='#'
   WANT_GB_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_GB_APU_EMU_TRUE=
+  NEED_GB_APU_EMU_FALSE='#'
+else
+  NEED_GB_APU_EMU_TRUE='#'
+  NEED_GB_APU_EMU_FALSE=
 fi
 
 fi
@@ -24833,6 +24960,14 @@ $as_echo "#define WANT_GBA_EMU 1" >>confdefs.h
 else
   WANT_GBA_EMU_TRUE='#'
   WANT_GBA_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_GB_APU_EMU_TRUE=
+  NEED_GB_APU_EMU_FALSE='#'
+else
+  NEED_GB_APU_EMU_TRUE='#'
+  NEED_GB_APU_EMU_FALSE=
 fi
 
 fi
@@ -24879,6 +25014,38 @@ else
   WANT_MD_EMU_FALSE=
 fi
 
+		 if true; then
+  NEED_68K_EMU_TRUE=
+  NEED_68K_EMU_FALSE='#'
+else
+  NEED_68K_EMU_TRUE='#'
+  NEED_68K_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_Z80_EMU_TRUE=
+  NEED_Z80_EMU_FALSE='#'
+else
+  NEED_Z80_EMU_TRUE='#'
+  NEED_Z80_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_YM2612_EMU_TRUE=
+  NEED_YM2612_EMU_FALSE='#'
+else
+  NEED_YM2612_EMU_TRUE='#'
+  NEED_YM2612_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_SMS_APU_EMU_TRUE=
+  NEED_SMS_APU_EMU_FALSE='#'
+else
+  NEED_SMS_APU_EMU_TRUE='#'
+  NEED_SMS_APU_EMU_FALSE=
+fi
+
 fi
 
 # Check whether --enable-nes was given.
@@ -24923,6 +25090,14 @@ else
   WANT_NGP_EMU_FALSE=
 fi
 
+		 if true; then
+  NEED_Z80_EMU_TRUE=
+  NEED_Z80_EMU_FALSE='#'
+else
+  NEED_Z80_EMU_TRUE='#'
+  NEED_Z80_EMU_FALSE=
+fi
+
 fi
 
 # Check whether --enable-pce was given.
@@ -24943,6 +25118,46 @@ $as_echo "#define WANT_PCE_EMU 1" >>confdefs.h
 else
   WANT_PCE_EMU_TRUE='#'
   WANT_PCE_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_68K_EMU_TRUE=
+  NEED_68K_EMU_FALSE='#'
+else
+  NEED_68K_EMU_TRUE='#'
+  NEED_68K_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_PCE_PSG_EMU_TRUE=
+  NEED_PCE_PSG_EMU_FALSE='#'
+else
+  NEED_PCE_PSG_EMU_TRUE='#'
+  NEED_PCE_PSG_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_HUC6270_EMU_TRUE=
+  NEED_HUC6270_EMU_FALSE='#'
+else
+  NEED_HUC6270_EMU_TRUE='#'
+  NEED_HUC6270_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_HUC6280_EMU_TRUE=
+  NEED_HUC6280_EMU_FALSE='#'
+else
+  NEED_HUC6280_EMU_TRUE='#'
+  NEED_HUC6280_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_ARCADE_CARD_EMU_TRUE=
+  NEED_ARCADE_CARD_EMU_FALSE='#'
+else
+  NEED_ARCADE_CARD_EMU_TRUE='#'
+  NEED_ARCADE_CARD_EMU_FALSE=
 fi
 
 fi
@@ -24967,6 +25182,14 @@ else
   WANT_PCE_FAST_EMU_FALSE=
 fi
 
+		 if true; then
+  NEED_ARCADE_CARD_EMU_TRUE=
+  NEED_ARCADE_CARD_EMU_FALSE='#'
+else
+  NEED_ARCADE_CARD_EMU_TRUE='#'
+  NEED_ARCADE_CARD_EMU_FALSE=
+fi
+
 fi
 
 # Check whether --enable-pcfx was given.
@@ -24987,6 +25210,22 @@ $as_echo "#define WANT_PCFX_EMU 1" >>confdefs.h
 else
   WANT_PCFX_EMU_TRUE='#'
   WANT_PCFX_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_V810_EMU_TRUE=
+  NEED_V810_EMU_FALSE='#'
+else
+  NEED_V810_EMU_TRUE='#'
+  NEED_V810_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_PCE_PSG_EMU_TRUE=
+  NEED_PCE_PSG_EMU_FALSE='#'
+else
+  NEED_PCE_PSG_EMU_TRUE='#'
+  NEED_PCE_PSG_EMU_FALSE=
 fi
 
 fi
@@ -25033,6 +25272,30 @@ else
   WANT_SMS_EMU_FALSE=
 fi
 
+		 if true; then
+  NEED_Z80_EMU_TRUE=
+  NEED_Z80_EMU_FALSE='#'
+else
+  NEED_Z80_EMU_TRUE='#'
+  NEED_Z80_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_SMS_APU_EMU_TRUE=
+  NEED_SMS_APU_EMU_FALSE='#'
+else
+  NEED_SMS_APU_EMU_TRUE='#'
+  NEED_SMS_APU_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_YM2413_EMU_TRUE=
+  NEED_YM2413_EMU_FALSE='#'
+else
+  NEED_YM2413_EMU_TRUE='#'
+  NEED_YM2413_EMU_FALSE=
+fi
+
 fi
 
 # Check whether --enable-snes was given.
@@ -25075,6 +25338,14 @@ $as_echo "#define WANT_VB_EMU 1" >>confdefs.h
 else
   WANT_VB_EMU_TRUE='#'
   WANT_VB_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_V810_EMU_TRUE=
+  NEED_V810_EMU_FALSE='#'
+else
+  NEED_V810_EMU_TRUE='#'
+  NEED_V810_EMU_FALSE=
 fi
 
 fi
@@ -27059,12 +27330,64 @@ if test -z "${WANT_WSWAN_EMU_TRUE}" && test -z "${WANT_WSWAN_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_WSWAN_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${NEED_GB_APU_EMU_TRUE}" && test -z "${NEED_GB_APU_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_GB_APU_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_YM2413_EMU_TRUE}" && test -z "${NEED_YM2413_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_YM2413_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_YM2612_EMU_TRUE}" && test -z "${NEED_YM2612_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_YM2612_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_PCE_PSG_EMU_TRUE}" && test -z "${NEED_PCE_PSG_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_PCE_PSG_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_SMS_APU_EMU_TRUE}" && test -z "${NEED_SMS_APU_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_SMS_APU_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_68K_EMU_TRUE}" && test -z "${NEED_68K_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_68K_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_HUC6280_EMU_TRUE}" && test -z "${NEED_HUC6280_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_HUC6280_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_Z80_EMU_TRUE}" && test -z "${NEED_Z80_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_Z80_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_V810_EMU_TRUE}" && test -z "${NEED_V810_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_V810_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_HUC6270_EMU_TRUE}" && test -z "${NEED_HUC6270_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_HUC6270_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_ARCADE_CARD_EMU_TRUE}" && test -z "${NEED_ARCADE_CARD_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_ARCADE_CARD_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${WANT_GB_EMU_TRUE}" && test -z "${WANT_GB_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_GB_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${NEED_GB_APU_EMU_TRUE}" && test -z "${NEED_GB_APU_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_GB_APU_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${WANT_GBA_EMU_TRUE}" && test -z "${WANT_GBA_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_GBA_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_GB_APU_EMU_TRUE}" && test -z "${NEED_GB_APU_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_GB_APU_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_LYNX_EMU_TRUE}" && test -z "${WANT_LYNX_EMU_FALSE}"; then
@@ -27075,6 +27398,22 @@ if test -z "${WANT_MD_EMU_TRUE}" && test -z "${WANT_MD_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_MD_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${NEED_68K_EMU_TRUE}" && test -z "${NEED_68K_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_68K_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_Z80_EMU_TRUE}" && test -z "${NEED_Z80_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_Z80_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_YM2612_EMU_TRUE}" && test -z "${NEED_YM2612_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_YM2612_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_SMS_APU_EMU_TRUE}" && test -z "${NEED_SMS_APU_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_SMS_APU_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${WANT_NES_EMU_TRUE}" && test -z "${WANT_NES_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_NES_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
@@ -27083,16 +27422,52 @@ if test -z "${WANT_NGP_EMU_TRUE}" && test -z "${WANT_NGP_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_NGP_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${NEED_Z80_EMU_TRUE}" && test -z "${NEED_Z80_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_Z80_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${WANT_PCE_EMU_TRUE}" && test -z "${WANT_PCE_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_PCE_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_68K_EMU_TRUE}" && test -z "${NEED_68K_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_68K_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_PCE_PSG_EMU_TRUE}" && test -z "${NEED_PCE_PSG_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_PCE_PSG_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_HUC6270_EMU_TRUE}" && test -z "${NEED_HUC6270_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_HUC6270_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_HUC6280_EMU_TRUE}" && test -z "${NEED_HUC6280_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_HUC6280_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_ARCADE_CARD_EMU_TRUE}" && test -z "${NEED_ARCADE_CARD_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_ARCADE_CARD_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_PCE_FAST_EMU_TRUE}" && test -z "${WANT_PCE_FAST_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_PCE_FAST_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${NEED_ARCADE_CARD_EMU_TRUE}" && test -z "${NEED_ARCADE_CARD_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_ARCADE_CARD_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${WANT_PCFX_EMU_TRUE}" && test -z "${WANT_PCFX_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_PCFX_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_V810_EMU_TRUE}" && test -z "${NEED_V810_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_V810_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_PCE_PSG_EMU_TRUE}" && test -z "${NEED_PCE_PSG_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_PCE_PSG_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_PSX_EMU_TRUE}" && test -z "${WANT_PSX_EMU_FALSE}"; then
@@ -27103,12 +27478,28 @@ if test -z "${WANT_SMS_EMU_TRUE}" && test -z "${WANT_SMS_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_SMS_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${NEED_Z80_EMU_TRUE}" && test -z "${NEED_Z80_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_Z80_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_SMS_APU_EMU_TRUE}" && test -z "${NEED_SMS_APU_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_SMS_APU_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_YM2413_EMU_TRUE}" && test -z "${NEED_YM2413_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_YM2413_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${WANT_SNES_EMU_TRUE}" && test -z "${WANT_SNES_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_SNES_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_VB_EMU_TRUE}" && test -z "${WANT_VB_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_VB_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_V810_EMU_TRUE}" && test -z "${NEED_V810_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_V810_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_WSWAN_EMU_TRUE}" && test -z "${WANT_WSWAN_EMU_FALSE}"; then

@@ -24,6 +24,8 @@
 #include "cart.h"
 #include "x6502.h"
 
+#include <array>
+
 #include <mednafen/mempatcher.h>
 #include <mednafen/FileStream.h>
 

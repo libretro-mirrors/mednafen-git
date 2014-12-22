@@ -6,7 +6,7 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.37-UNSTABLE'
+MEDNAFEN_VERSION='0.9.37.1'
 MEDNAFEN_VERSION_NUMERIC=0x000937
 
 AC_CANONICAL_HOST
@@ -30,6 +30,8 @@ gl_VISIBILITY
 
 AC_SYS_LARGEFILE
 AC_FUNC_FSEEKO
+AC_DEFINE(_LARGEFILE64_SOURCE, [1], [Define for largefile support through extra functions.])
+AC_DEFINE(_LARGEFILE_SOURCE, [1], [Define for fseeko and ftello on some hosts.])
 
 AM_CONDITIONAL(CROSS_COMPILING, [test x$cross_compiling != xno])
 
@@ -181,6 +183,20 @@ AM_CONDITIONAL(WANT_SNES_EMU, false)
 AM_CONDITIONAL(WANT_VB_EMU, false)
 AM_CONDITIONAL(WANT_WSWAN_EMU, false)
 
+AM_CONDITIONAL(NEED_GB_APU_EMU, false)
+AM_CONDITIONAL(NEED_YM2413_EMU, false)
+AM_CONDITIONAL(NEED_YM2612_EMU, false)
+AM_CONDITIONAL(NEED_PCE_PSG_EMU, false)
+AM_CONDITIONAL(NEED_SMS_APU_EMU, false)
+
+AM_CONDITIONAL(NEED_68K_EMU, false)
+AM_CONDITIONAL(NEED_HUC6280_EMU, false)
+AM_CONDITIONAL(NEED_Z80_EMU, false)
+AM_CONDITIONAL(NEED_V810_EMU, false)
+
+AM_CONDITIONAL(NEED_HUC6270_EMU, false)
+AM_CONDITIONAL(NEED_ARCADE_CARD_EMU, false)
+
 AC_ARG_ENABLE(gb,
  AC_HELP_STRING([--enable-gb], [build with GameBoy emulation [[default=yes]]]),
                   , enable_gb=yes)
@@ -188,6 +204,7 @@ AC_ARG_ENABLE(gb,
 if test x$enable_gb = xyes; then
                 AC_DEFINE([WANT_GB_EMU], [1], [Define if we are compiling with GB emulation.])
 		AM_CONDITIONAL(WANT_GB_EMU, true)
+		AM_CONDITIONAL(NEED_GB_APU_EMU, true)
 fi
 
 AC_ARG_ENABLE(gba,
@@ -197,6 +214,7 @@ AC_ARG_ENABLE(gba,
 if test x$enable_gba = xyes; then
                 AC_DEFINE([WANT_GBA_EMU], [1], [Define if we are compiling with GBA emulation.])
 		AM_CONDITIONAL(WANT_GBA_EMU, true)
+		AM_CONDITIONAL(NEED_GB_APU_EMU, true)
 fi
 
 AC_ARG_ENABLE(lynx,
@@ -215,6 +233,10 @@ AC_ARG_ENABLE(md,
 if test x$enable_md = xyes; then
                 AC_DEFINE([WANT_MD_EMU], [1], [Define if we are compiling with Sega Genesis/MegaDrive emulation.])
                 AM_CONDITIONAL(WANT_MD_EMU, true)
+		AM_CONDITIONAL(NEED_68K_EMU, true)
+		AM_CONDITIONAL(NEED_Z80_EMU, true)
+		AM_CONDITIONAL(NEED_YM2612_EMU, true)
+		AM_CONDITIONAL(NEED_SMS_APU_EMU, true)
 fi
 
 AC_ARG_ENABLE(nes,
@@ -233,6 +255,7 @@ AC_ARG_ENABLE(ngp,
 if test x$enable_ngp = xyes; then
                 AC_DEFINE([WANT_NGP_EMU], [1], [Define if we are compiling with NGP emulation.])
 		AM_CONDITIONAL(WANT_NGP_EMU, true)
+		AM_CONDITIONAL(NEED_Z80_EMU, true)
 fi
 
 AC_ARG_ENABLE(pce,
@@ -242,6 +265,11 @@ AC_ARG_ENABLE(pce,
 if test x$enable_pce = xyes; then
                 AC_DEFINE([WANT_PCE_EMU], [1], [Define if we are compiling with PCE emulation.])
 		AM_CONDITIONAL(WANT_PCE_EMU, true)
+		AM_CONDITIONAL(NEED_68K_EMU, true)
+		AM_CONDITIONAL(NEED_PCE_PSG_EMU, true)
+		AM_CONDITIONAL(NEED_HUC6270_EMU, true)
+		AM_CONDITIONAL(NEED_HUC6280_EMU, true)
+		AM_CONDITIONAL(NEED_ARCADE_CARD_EMU, true)
 fi
 
 AC_ARG_ENABLE(pce-fast,
@@ -251,6 +279,7 @@ AC_ARG_ENABLE(pce-fast,
 if test x$enable_pce_fast = xyes; then
                 AC_DEFINE([WANT_PCE_FAST_EMU], [1], [Define if we are compiling with separate fast PCE emulation.])
                 AM_CONDITIONAL(WANT_PCE_FAST_EMU, true)
+		AM_CONDITIONAL(NEED_ARCADE_CARD_EMU, true)
 fi
 
 AC_ARG_ENABLE(pcfx,
@@ -260,6 +289,8 @@ AC_ARG_ENABLE(pcfx,
 if test x$enable_pcfx = xyes; then
                 AC_DEFINE([WANT_PCFX_EMU], [1], [Define if we are compiling with PC-FX emulation.])
 		AM_CONDITIONAL(WANT_PCFX_EMU, true)
+		AM_CONDITIONAL(NEED_V810_EMU, true)
+		AM_CONDITIONAL(NEED_PCE_PSG_EMU, true)
 fi
 
 AC_ARG_ENABLE(psx,
@@ -278,6 +309,9 @@ AC_ARG_ENABLE(sms,
 if test x$enable_sms = xyes; then
                 AC_DEFINE([WANT_SMS_EMU], [1], [Define if we are compiling with SMS+GG emulation.])
                 AM_CONDITIONAL(WANT_SMS_EMU, true)
+		AM_CONDITIONAL(NEED_Z80_EMU, true)
+		AM_CONDITIONAL(NEED_SMS_APU_EMU, true)
+		AM_CONDITIONAL(NEED_YM2413_EMU, true)
 fi
 
 AC_ARG_ENABLE(snes,
@@ -296,6 +330,7 @@ AC_ARG_ENABLE(vb,
 if test x$enable_vb = xyes; then
                 AC_DEFINE([WANT_VB_EMU], [1], [Define if we are compiling with Virtual Boy emulation.])
                 AM_CONDITIONAL(WANT_VB_EMU, true)
+		AM_CONDITIONAL(NEED_V810_EMU, true)
 fi
 
 

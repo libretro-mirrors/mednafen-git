@@ -264,7 +264,7 @@ typedef void * trio_pointer_t;
 # define TRIO_VA_END(x) va_end(x)
 #endif
 
-#if defined(TRIO_COMPILER_GCC)
+#if defined(TRIO_COMPILER_GCC) && (!defined(__clang__) || ((__clang_major__ * 1000) + __clang_minor__) >= 3005)
   #define TRIO_FORMATSTR(a,b,c) __attribute__ ((format (a, b, c)))
 #else
   #define TRIO_FORMATSTR(a,b,c)

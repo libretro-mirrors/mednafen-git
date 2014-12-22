@@ -1,16 +1,21 @@
-Compilation notes:
-	gcc is generally required(Intel's compiler might work, and newish versions of LLVM clang do work), and the compilers optionally
-	specified via CC and CXX must be the same version.
+------------------
+Compilation Notes:
+------------------
+	gcc or LLVM clang is required for compiling Mednafen.  Intel's C compiler may work, but is untested.  Probably doesn't
+	need to be said, but the compilers optionally specified via CC and CXX *must* be the same version.
 
-	With gcc, 4.9.2 or newer is required.
+	clang: 3.4.0 or newer is required.
+
+	gcc: 4.7(4.7.4+), 4.8(4.8.4+), or 4.9(4.9.2+) or newer is required.
 
 	Reportedly, passing:	--build=x86_64-apple-darwin`uname -r`
 	to the configure script is necessary for building on Mac OS X to work properly.
 
 
 
+---------------------------------------------
 Some notes(and reminders) on the source code:
-
+---------------------------------------------
 	The following system headers are included by including "mednafen.h", and always will be, so don't include them manually.
 		assert.h	(included in "types.h")
 		inttypes.h	(included in "types.h")

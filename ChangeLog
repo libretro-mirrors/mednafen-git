@@ -1,3 +1,32 @@
+-- 0.9.37.1: --
+
+December 19, 2014:
+	Fixed some issues causing compilation errors on gcc 4.7.x.
+
+	Conditionalize the compilation of shared hardware emulation components(such as 68K, Z80, YM2612, etc. emulators) based on what emulation modules
+	are being compiled in, since support for loading external emulation modules never went anywhere, and if we do eventually add support for it, the exported
+	symbols won't include the common specific hardware emulation components.
+
+	Fixed some code causing compiler errors with clang 3.4.0.
+
+	Fixed broken loading of save states made with 0.9.37+ on big-endian platforms(0.9.37 regression).
+
+	fflush() before fstat() on the underlying file descriptor in FileStream::size() if the stream is open for writing.
+
+December 18, 2014:
+	Added zlib type-size sanity tests to tests.cpp
+
+	_LARGEFILE64_SOURCE and _LARGEFILE_SOURCE are now defined to "1" in config.h, for zlib purposes.
+
+December 17, 2014:
+	PSX: Avoid undefined behavior(that wasn't currently causing any problems) in the CPU core.
+
+December 16, 2014:
+	PSX: Clamp final SPU output samples(before volume adjustment and resampling) properly; lack of it wasn't causing any problems per-se, but it could have
+	been an issue in the future.
+
+	GB: Load GBC custom palette from "gbc.pal", not "gb.pal"(0.9.37 regression).
+
 -- 0.9.37-UNSTABLE: --
 
 December 15, 2014:

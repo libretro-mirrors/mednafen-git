@@ -176,7 +176,7 @@ void PS_CPU::StateAction(StateMem *sm, const unsigned load, const bool data_only
   SFARRAY32(CP0.Regs, 32),
 
   SFARRAY(ReadAbsorb, 0x20),
-  SFVAR(ReadAbsorbDummy),
+  SFVARN(ReadAbsorb[0x20], "ReadAbsorbDummy"),
   SFVAR(ReadAbsorbWhich),
   SFVAR(ReadFudge),
 

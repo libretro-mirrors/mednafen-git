@@ -49,6 +49,10 @@ typedef uint64_t uint64;
    #define NO_CLONE
   #endif
 
+  #if MDFN_GCC_VERSION < MDFN_MAKE_GCCV(4,8,0)
+   #define alignas(n) __attribute__ ((aligned (n)))	// Kludge for 4.7.x, remove eventually when 4.8+ are not so new.
+  #endif
+
   //
   // Just avoid using fastcall with gcc before 4.1.0, as it(and similar regparm)
   // tend to generate bad code on the older versions(between about 3.1.x and 4.0.x, at least)
@@ -67,7 +71,12 @@ typedef uint64_t uint64;
    #define MDFN_FASTCALL
   #endif
 
-  #define MDFN_FORMATSTR(a,b,c) __attribute__ ((format (a, b, c)))
+  #if !defined(__clang__) || ((__clang_major__ * 1000) + __clang_minor__) >= 3005
+   #define MDFN_FORMATSTR(a,b,c) __attribute__ ((format (a, b, c)))
+  #else
+   #define MDFN_FORMATSTR(a,b,c)
+  #endif
+
   #define MDFN_WARN_UNUSED_RESULT __attribute__ ((warn_unused_result))
   #define MDFN_NOWARN_UNUSED __attribute__((unused))
 

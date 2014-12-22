@@ -34,7 +34,7 @@ class MD_4Way
 
 	private:
 	MD_Input_Device* SubPort[4] = { nullptr, nullptr, nullptr, nullptr };
-	MD_4Way_Shim Shams[2];
+	MD_4Way_Shim Shams[2] = { { 0, this}, {1, this } };
 	uint8 index;
 };
 

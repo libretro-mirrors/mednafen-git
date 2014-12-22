@@ -30,6 +30,8 @@
 #include <mednafen/hash/sha1.h>
 #include <mednafen/hash/sha256.h>
 
+#include <zlib.h>
+
 #undef NDEBUG
 #include <assert.h>
 #include <math.h>
@@ -112,6 +114,8 @@ static bool DoSizeofTests(void)
  assert(sizeof(int) == SIZEOF_INT);
  assert(sizeof(long) == SIZEOF_LONG);
  assert(sizeof(long long) == SIZEOF_LONG_LONG);
+
+ assert(sizeof(off_t) == SIZEOF_OFF_T);
 
  return(1);
 }
@@ -546,6 +550,19 @@ static void TestBoolConv(void)
  BoolTestThing(BoolConv0());
 }
 
+static void TestNarrowConstFold(void) NO_INLINE MDFN_COLD;
+static void TestNarrowConstFold(void)
+{
+ unsigned sa = 8;
+ uint8 za[1] = { 0 };
+ int a;
+
+ a = za[0] < (uint8)(1 << sa);
+
+ assert(a == 0);
+}
+
+
 unsigned MDFNTests_ModTern_a = 2;
 unsigned MDFNTests_ModTern_b = 0;
 static void ModTernTestEval(unsigned v) NO_INLINE MDFN_COLD;
@@ -889,6 +906,25 @@ static void RunThreadTests(void)
 }
 #endif
 
+static void zlib_test(void)
+{
+ auto cfl = zlibCompileFlags();
+
+ assert((2 << ((cfl >> 0) & 0x3)) == sizeof(uInt));
+ assert((2 << ((cfl >> 2) & 0x3)) == sizeof(uLong));
+ assert((2 << ((cfl >> 4) & 0x3)) == sizeof(voidpf));
+
+ #ifdef Z_LARGE64
+ if((2 << ((cfl >> 6) & 0x3)) != sizeof(z_off_t))
+ {
+  assert(sizeof(z_off64_t) == 8);
+  assert(&gztell == &gztell64);
+ }
+ #else
+ assert((2 << ((cfl >> 6) & 0x3)) == sizeof(z_off_t));
+ #endif
+}
+
 const char* MDFN_tests_stringA = "AB\0C";
 const char* MDFN_tests_stringB = "AB\0CD";
 const char* MDFN_tests_stringC = "AB\0X";
@@ -1033,6 +1069,7 @@ bool MDFN_RunMathTests(void)
  TestSignedOverflow();
  TestOverShift();
  TestBoolConv();
+ TestNarrowConstFold();
  TestModTern();
  TestBWNotMask31GTZ();
  TestTernary();
@@ -1153,6 +1190,8 @@ bool MDFN_RunMathTests(void)
 
  sha1_test();
  sha256_test();
+
+ zlib_test();
 
 #if 0
 // Not really a math test.

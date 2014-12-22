@@ -418,6 +418,76 @@ static void CloseStuff(int signum)
 }
 #endif
 
+//
+//
+//
+#include <mednafen/FileStream.h>
+#include <mednafen/GZFileStream.h>
+static void Stream64Test(const char* path)
+{
+ try
+ {
+ {
+  FileStream fp(path, FileStream::MODE_WRITE_SAFE);
+
+  assert(fp.tell() == 0);
+  assert(fp.size() == 0);
+  fp.put_BE<uint32>(0xDEADBEEF);
+  assert(fp.tell() == 4);
+  assert(fp.size() == 4);
+
+  fp.seek((uint64)8192 * 1024 * 1024, SEEK_SET);
+  fp.put_BE<uint32>(0xCAFEBABE);
+  assert(fp.tell() == (uint64)8192 * 1024 * 1024 + 4);
+  assert(fp.size() == (uint64)8192 * 1024 * 1024 + 4);
+
+  fp.put_BE<uint32>(0xAAAAAAAA);
+  assert(fp.tell() == (uint64)8192 * 1024 * 1024 + 8);
+  assert(fp.size() == (uint64)8192 * 1024 * 1024 + 8);
+
+  fp.truncate((uint64)8192 * 1024 * 1024 + 4);
+  assert(fp.size() == (uint64)8192 * 1024 * 1024 + 4);
+
+  fp.seek(-((uint64)8192 * 1024 * 1024 + 8), SEEK_CUR);
+  assert(fp.tell() == 0);
+  fp.seek((uint64)-4, SEEK_END);
+  assert(fp.tell() == (uint64)8192 * 1024 * 1024);
+ }
+
+ {
+  FileStream fp(path, FileStream::MODE_READ);
+  uint32 tmp;
+
+  assert(fp.size() == (uint64)8192 * 1024 * 1024 + 4);
+  tmp = fp.get_LE<uint32>();
+  assert(tmp == 0xEFBEADDE);
+  fp.seek((uint64)8192 * 1024 * 1024 - 4, SEEK_CUR);
+  tmp = fp.get_LE<uint32>(); 
+  assert(tmp == 0xBEBAFECA);
+ }
+
+ {
+  GZFileStream fp(path, GZFileStream::MODE::READ);
+  uint32 tmp;
+
+  tmp = fp.get_LE<uint32>();
+  assert(tmp == 0xEFBEADDE);
+  fp.seek((uint64)8192 * 1024 * 1024 - 4, SEEK_CUR);
+  tmp = fp.get_LE<uint32>(); 
+  assert(tmp == 0xBEBAFECA);  
+  assert(fp.tell() == (uint64)8192 * 1024 * 1024 + 4);
+ }
+ }
+ catch(std::exception& e)
+ {
+  printf("%s\n", e.what());
+  abort();
+ }
+}
+//
+//
+//
+
 static ARGPSTRUCT *MDFN_Internal_Args = NULL;
 
 static int HokeyPokeyFallDown(const char *name, const char *value)
@@ -478,6 +548,7 @@ static int DoArgs(int argc, char *argv[], char **filename)
 	char *dsfn = NULL;
 	char *dmfn = NULL;
 	char *dummy_remote = NULL;
+	char *stream64testpath = NULL;
 
         ARGPSTRUCT MDFNArgs[] = 
 	{
@@ -500,6 +571,9 @@ static int DoArgs(int argc, char *argv[], char **filename)
          { 0, NULL, (int *)MDFN_Internal_Args, 0, 0},
 
 	 { "connect", _("Connect to the remote server and start network play."), &netconnect, 0, 0 },
+
+	 // Testing functionality for FileStream and GZFileStream largefile support(mostly intended for testing the Windows builds)
+	 { "stream64test", NULL, 0, &stream64testpath, SUBSTYPE_STRING_ALLOC },
 
 	 { 0, 0, 0, 0 }
         };
@@ -533,6 +607,13 @@ static int DoArgs(int argc, char *argv[], char **filename)
 	  printf(_("Settings specified in this manner are automatically saved to the configuration file, hence they\ndo not need to be passed to future invocations of the Mednafen executable.\n"));
 	  printf("\n");
 	  return(0);
+	 }
+
+	 if(stream64testpath)
+	 {
+	  Stream64Test(stream64testpath);
+	  free(stream64testpath);
+	  stream64testpath = NULL;
 	 }
 
 	 if(dsfn)

@@ -46,6 +46,8 @@
  #define ftello ftell
 #endif
 
+#define STRUCT_STAT struct stat
+
 #if SIZEOF_OFF_T == 4
 
  #ifdef HAVE_FOPEN64
@@ -65,6 +67,8 @@
  #ifdef HAVE_FSTAT64
   #define fstat fstat64
   #define stat stat64
+  #undef STRUCT_STAT
+  #define STRUCT_STAT struct stat64
  #endif
 
  #ifdef HAVE_FTRUNCATE64
@@ -286,9 +290,9 @@ uint64 FileStream::tell(void)
 
 uint64 FileStream::size(void)
 {
- struct stat buf;
+ STRUCT_STAT buf;
 
- if(fstat(fileno(fp), &buf) == -1)
+ if((OpenedMode != MODE_READ && fflush(fp) == EOF) || fstat(fileno(fp), &buf) == -1)
  {
   ErrnoHolder ene(errno);
 

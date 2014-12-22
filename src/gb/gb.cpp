@@ -2951,7 +2951,7 @@ static const FileExtensionSpecStruct KnownExtensions[] =
 static const CustomPalette_Spec CPInfo[] =
 {
  { gettext_noop("GameBoy(mono) palette"), NULL, { 4, 8, 12, 0 } },
- { gettext_noop("GameBoy Color 15-bit RGB"), NULL, { 32768, 0 } },
+ { gettext_noop("GameBoy Color 15-bit RGB"), "gbc", { 32768, 0 } },
  { NULL, NULL }
 };
 
