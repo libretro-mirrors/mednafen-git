@@ -254,6 +254,7 @@
   currently cannot be overridden properly:
   <ul>
    <li>cd.image_memcache</li>
+   <li>filesys.untrusted_fip_check</li>
    <li>&lt;system&gt;.enable</li>
   </ul>
  </p>
@@ -451,7 +452,7 @@ has the minimum amount of processing done to it before being passed to the DAC o
 
  <?php DoModDocLinks(); ?>
 
- <?php BeginSection("Cheat Guide", "", "cheat.html"); ?> <?php EndSection(); ?>
+ <?php /*BeginSection("Cheat Guide", "", "cheat.html"); */?> <?php /*EndSection();*/ ?>
  <?php BeginSection("Debugger", "", "debugger.html"); ?> <?php EndSection(); ?>
  <?php BeginSection("Network Play", "", "netplay.html"); ?> <?php EndSection(); ?>
 
@@ -1171,22 +1172,6 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
   2. Altered source versions must be plainly marked as such, and must not
      be misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
-</pre>
-</blockquote>
-<?php EndSection(); ?>
-
-<?php BeginSection("blz"); ?>
-<blockquote>
-<pre>
-/* Copyright (C) 2007 Shay Green. This module is free software; you can
-redistribute it and/or modify it under the terms of the GNU General Public
-License, version 2 or later, as published by the Free Software Foundation.
-This program is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-details. You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software Foundation, Inc.,
-51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 </pre>
 </blockquote>
 <?php EndSection(); ?>

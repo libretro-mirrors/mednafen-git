@@ -361,6 +361,8 @@ void MDFNI_CloseGame(void)
   CustomPalette = NULL;
  }
  CustomPaletteNumEntries = 0;
+
+ MDFN_ClearAllOverrideSettings();
 }
 
 int MDFNI_NetplayStart(void)
@@ -921,6 +923,8 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *path)
 	}
 	CustomPaletteNumEntries = 0;
 
+	MDFN_ClearAllOverrideSettings();
+
 	return(NULL);
  }
 
@@ -1104,6 +1108,8 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char *name)
   }
   CustomPaletteNumEntries = 0;
 
+  MDFN_ClearAllOverrideSettings();
+
   return(NULL);
  }
 
@@ -1197,7 +1203,7 @@ bool MDFNI_InitializeModules(const std::vector<MDFNGI *> &ExternalSystems)
  };
  std::string i_modules_string, e_modules_string;
 
- assert(MEDNAFEN_VERSION_NUMERIC >= 0x0927);
+ assert(MEDNAFEN_VERSION_NUMERIC >= 0x0938);
 
  for(unsigned int i = 0; i < sizeof(InternalSystems) / sizeof(MDFNGI *); i++)
  {

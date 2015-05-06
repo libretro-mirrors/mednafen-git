@@ -459,6 +459,7 @@ static void X6502_RunDebug(int32 cycles)
          { 
           if(_IRQlow&MDFN_IQRESET)
           {
+	   _S -= 3;
            _PC=RdMem(0xFFFC);
            _PC|=RdMem(0xFFFD)<<8;
 	   NESDBG_AddBranchTrace(old_PC, _PC, 0xFFFC); //	   ADDBT(_PC);
@@ -601,6 +602,7 @@ void X6502_Run(int32 cycles)
 	 {
 	  if(_IRQlow&MDFN_IQRESET)
 	  {
+	   _S -= 3;
 	   _PC=RdMem(0xFFFC);
 	   _PC|=RdMem(0xFFFD)<<8;
 	   _jammed=0;

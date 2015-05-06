@@ -1430,6 +1430,9 @@ static unsigned CalcDiscSCEx(void)
 
 static void DiscSanityChecks(void)
 {
+ if(!cdifs)
+  return;
+
  assert(cdifs->size() == cdifs_scex_ids.size());
 
  for(size_t i = 0; i < cdifs_scex_ids.size(); i++)

@@ -15,6 +15,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/*
+ TODO: Setting changed callback on override setting loading/clearing.
+*/
+
 #include "mednafen.h"
 #include <errno.h>
 #include <string.h>
@@ -505,18 +509,42 @@ bool MDFN_MergeSettings(const std::vector<MDFNSetting> &setting)
  return(1);
 }
 
+void MDFN_ClearAllOverrideSettings(void)
+{
+ for(auto& sit : CurrentSettings)
+ {
+  if(sit.second.desc->type == MDFNST_ALIAS)
+   continue;
+
+  if(sit.second.game_override)
+  {
+   free(sit.second.game_override);
+   sit.second.game_override = NULL;
+  }
+
+  if(sit.second.netplay_override)
+  {
+   free(sit.second.netplay_override);
+   sit.second.netplay_override = NULL;
+  }
+ }
+}
 
 void MDFN_KillSettings(void)
 {
- std::multimap <uint32, MDFNCS>::iterator sit;
-
- for(sit = CurrentSettings.begin(); sit != CurrentSettings.end(); sit++)
+ for(auto& sit : CurrentSettings)
  {
-  if(sit->second.desc->type == MDFNST_ALIAS)
+  if(sit.second.desc->type == MDFNST_ALIAS)
    continue;
 
-  free(sit->second.name);
-  free(sit->second.value);
+  free(sit.second.name);
+  free(sit.second.value);
+
+  if(sit.second.game_override)
+   free(sit.second.game_override);
+
+  if(sit.second.netplay_override)
+   free(sit.second.netplay_override);
  }
 
  if(UnknownSettings.size())

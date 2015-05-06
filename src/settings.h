@@ -10,6 +10,7 @@ bool MDFN_MergeSettings(const MDFNSetting *);
 bool MDFN_MergeSettings(const std::vector<MDFNSetting> &);
 bool MDFN_SaveSettings(const std::string& path);
 
+void MDFN_ClearAllOverrideSettings(void);
 void MDFN_KillSettings(void);	// Free any resources acquired.
 
 // This should assert() or something if the setting isn't found, since it would

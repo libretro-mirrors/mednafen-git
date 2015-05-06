@@ -1,3 +1,18 @@
+-- 0.9.38.1: --
+
+February 11, 2015:
+	NES: Subtract 3 from emulated 6502 stack pointer on reset, to match what reportedly occurs on a NES and to fix a certain poorly-programmed
+	"Legend of Zelda" game hack.
+
+February 9, 2015:
+	Allow interrupting the virtual device input configuration process(it was broken in 0.9.38-UNSTABLE); though of course interrupting it will still
+	leave the configuration in a broken state(but that's not a regression ;)).
+
+	PSX: Fixed a bug that was causing a segfault on loading a PSF/EXE file(a regression introduced in 0.9.38-UNSTABLE).
+
+February 8, 2015:
+	Clear override settings on game close(for the benefit of forks/ports).
+
 -- 0.9.38-UNSTABLE: --
 
 February 5, 2015:

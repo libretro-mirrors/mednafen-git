@@ -6,7 +6,7 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.38-UNSTABLE'
+MEDNAFEN_VERSION='0.9.38.1'
 MEDNAFEN_VERSION_NUMERIC=0x000938
 
 AC_CANONICAL_HOST

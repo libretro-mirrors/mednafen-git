@@ -963,8 +963,11 @@ static void CheckCommandKeys(void)
    {
     if(CK_Check((CommandKey)(CK_INPUT_CONFIG1 + i)))
     {
+     CK_PostRemapUpdate((CommandKey)(CK_INPUT_CONFIG1 + i));	// Kind of abusing that function if going by its name, but meh.
+
      ResyncGameInputSettings(i);
      IConfig = none;
+
      MDFNI_DispMessage(_("Configuration interrupted."));
     }
     else if(ConfigDevice(i))
