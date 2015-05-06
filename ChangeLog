@@ -1,3 +1,10 @@
+-- 0.9.38.2: --
+
+February 15, 2015:
+	PSX: Fixed some miscellaneous minor issues in the triangle rasterization code.
+
+	PSX: Fixed a GPU timing regression introduced around version 0.9.37; fixes a disappearing graphics glitch in "Tobal No.1".
+
 -- 0.9.38.1: --
 
 February 11, 2015:

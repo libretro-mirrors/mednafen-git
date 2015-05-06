@@ -64,7 +64,7 @@ static INLINE unsigned MDFN_lzcount64(uint64 v)
 {
  #if defined(__GNUC__) || defined(__clang__) || defined(__ICC) || defined(__INTEL_COMPILER)
  return v ? __builtin_clzll(v) : 64;
- #elif defined(_MSC_VER)
+ #elif defined(_MSC_VER) && defined(_WIN64)
  unsigned long idx;
 
  if(!v)
