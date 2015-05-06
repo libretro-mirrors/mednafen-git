@@ -42,6 +42,7 @@ found freely through public domain sources.
 // CPU routines
 
 #include <mednafen/mednafen.h>
+#include <trio/trio.h>
 
 //#include "pcfx.h"
 //#include "debug.h"
@@ -735,6 +736,59 @@ void V810::SetCPUHook(void (*newhook)(const v810_timestamp_t timestamp, uint32 P
 }
 #endif
 
+uint32 V810::GetRegister(unsigned int which, char *special, const uint32 special_len)
+{
+ if(which >= GSREG_PR && which <= GSREG_PR + 31)
+ {
+  return GetPR(which - GSREG_PR);
+ }
+ else if(which >= GSREG_SR && which <= GSREG_SR + 31)
+ {
+  uint32 val = GetSREG(which - GSREG_SR);
+
+  if(special && which == GSREG_SR + PSW)
+  {
+   trio_snprintf(special, special_len, "Z: %d, S: %d, OV: %d, CY: %d, ID: %d, AE: %d, EP: %d, NP: %d, IA: %2d",
+	(int)(bool)(val & PSW_Z), (int)(bool)(val & PSW_S), (int)(bool)(val & PSW_OV), (int)(bool)(val & PSW_CY),
+	(int)(bool)(val & PSW_ID), (int)(bool)(val & PSW_AE), (int)(bool)(val & PSW_EP), (int)(bool)(val & PSW_NP),
+	(val & PSW_IA) >> 16);
+  }
+
+  return val;
+ }
+ else if(which == GSREG_PC)
+ {
+  return GetPC();
+ }
+ else if(which == GSREG_TIMESTAMP)
+ {
+  return v810_timestamp;
+ }
+
+ return 0xDEADBEEF;
+}
+
+void V810::SetRegister(unsigned int which, uint32 value)
+{
+ if(which >= GSREG_PR && which <= GSREG_PR + 31)
+ {
+  if(which)
+   P_REG[which - GSREG_PR] = value;
+ }
+ else if(which >= GSREG_SR && which <= GSREG_SR + 31)
+ {
+  // SetSREG(timestamp, which - GSREG_SR, value);
+ }
+ else if(which == GSREG_PC)
+ {
+  SetPC(value & ~1);
+ }
+ else if(which == GSREG_TIMESTAMP)
+ {
+  //v810_timestamp = value;
+ }
+}
+
 uint32 V810::GetPC(void)
 {
  if(EmuMode == V810_EMU_MODE_ACCURATE)
@@ -755,37 +809,6 @@ void V810::SetPC(uint32 new_pc)
   PC_base = PC_ptr - new_pc;
  }
 }
-
-uint32 V810::GetPR(const unsigned int which)
-{
- assert(which <= 0x1F);
-
-
- return(which ? P_REG[which] : 0);
-}
-
-void V810::SetPR(const unsigned int which, uint32 value)
-{
- assert(which <= 0x1F);
-
- if(which)
-  P_REG[which] = value;
-}
-
-uint32 V810::GetSR(const unsigned int which)
-{
- assert(which <= 0x1F);
-
- return(GetSREG(which));
-}
-
-void V810::SetSR(const unsigned int which, uint32 value)
-{
- assert(which <= 0x1F);
-
-// SetSREG(timestamp, which, value);
-}
-
 
 #define BSTR_OP_MOV dst_cache &= ~(1 << dstoff); dst_cache |= ((src_cache >> srcoff) & 1) << dstoff;
 #define BSTR_OP_NOT dst_cache &= ~(1 << dstoff); dst_cache |= (((src_cache >> srcoff) & 1) ^ 1) << dstoff;

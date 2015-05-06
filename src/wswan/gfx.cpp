@@ -65,167 +65,280 @@ static uint8 VideoMode;
 
 #ifdef WANT_DEBUGGER
 
+enum
+{
+ GFX_GSREG_DISPCONTROL = 0,
+ GFX_GSREG_VIDEOMODE,
+ GFX_GSREG_LCDCONTROL,
+ GFX_GSREG_LCDICONS,
+ GFX_GSREG_BTIMERCONTROL,
+ GFX_GSREG_HBTIMERPERIOD,
+ GFX_GSREG_VBTIMERPERIOD,
+ GFX_GSREG_HBCOUNTER,
+ GFX_GSREG_VBCOUNTER,
+ GFX_GSREG_BGCOLOR,
+ GFX_GSREG_LINECOMPARE,
+ GFX_GSREG_SPRBASE,
+ GFX_GSREG_SPRITESTART,
+ GFX_GSREG_SPRITECOUNT,
+
+ GFX_GSREG_FGBGLOC,
+ GFX_GSREG_FGX0,
+ GFX_GSREG_FGY0,
+ GFX_GSREG_FGX1,
+ GFX_GSREG_FGY1,
+ GFX_GSREG_SPRX0,
+ GFX_GSREG_SPRY0,
+ GFX_GSREG_SPRX1,
+ GFX_GSREG_SPRY1,
+
+ GFX_GSREG_BGXSCROLL,
+ GFX_GSREG_BGYSCROLL,
+ GFX_GSREG_FGXSCROLL,
+ GFX_GSREG_FGYSCROLL
+};
+
 RegType WSwanGfxRegs[] =
 {
- { 0, "DispControl", "Display Control", 1 },
- { 0, "VideoMode", "Video Mode", 1 },
- { 0, "LCDControl", "LCD Control", 1 },
- { 0, "LCDIcons", "LCD Icons", 1 },
- { 0, "BTimerControl", "VB/HB Timer Control", 1 },
- { 0, "HBTimerPeriod", "Horizontal blank timer counter period", 2 },
- { 0, "VBTimerPeriod", "Vertical blank timer counter period", 2 },
- { 0, "HBCounter", "Horizontal blank counter", 1 },
- { 0, "VBCounter", "Vertical blank counter", 1 },
- { 0, "BGColor", "Background Color", 1 },
- { 0, "LineCompare", "Line Compare", 1 },
- { 0, "SPRBase", "Sprite Table Base", 1 },
- { 0, "SpriteStart", "SpriteStart", 1 },
- { 0, "SpriteCount", "SpriteCount", 1 },
+ { GFX_GSREG_DISPCONTROL, "DispControl", "Display Control", 1 },
+ { GFX_GSREG_VIDEOMODE, "VideoMode", "Video Mode", 1 },
+ { GFX_GSREG_LCDCONTROL, "LCDControl", "LCD Control", 1 },
+ { GFX_GSREG_LCDICONS, "LCDIcons", "LCD Icons", 1 },
+ { GFX_GSREG_BTIMERCONTROL, "BTimerControl", "VB/HB Timer Control", 1 },
+ { GFX_GSREG_HBTIMERPERIOD, "HBTimerPeriod", "Horizontal blank timer counter period", 2 },
+ { GFX_GSREG_VBTIMERPERIOD, "VBTimerPeriod", "Vertical blank timer counter period", 2 },
+ { GFX_GSREG_HBCOUNTER, "HBCounter", "Horizontal blank counter", 1 },
+ { GFX_GSREG_VBCOUNTER, "VBCounter", "Vertical blank counter", 1 },
+ { GFX_GSREG_BGCOLOR, "BGColor", "Background Color", 1 },
+ { GFX_GSREG_LINECOMPARE, "LineCompare", "Line Compare", 1 },
+ { GFX_GSREG_SPRBASE, "SPRBase", "Sprite Table Base", 1 },
+ { GFX_GSREG_SPRITESTART, "SpriteStart", "SpriteStart", 1 },
+ { GFX_GSREG_SPRITECOUNT, "SpriteCount", "SpriteCount", 1 },
 
- { 0, "FGBGLoc", "FG/BG Map Location", 1 },
+ { GFX_GSREG_FGBGLOC, "FGBGLoc", "FG/BG Map Location", 1 },
 
- { 0, "FGx0", "Foreground Window X0", 1 }, 
- { 0, "FGy0", "Foreground Window Y0", 1 },
- { 0, "FGx1", "Foreground Window X1", 1 },
- { 0, "FGy1", "Foreground Window Y1", 1 },
- { 0, "SPRx0", "Sprite Window X0", 1 },
- { 0, "SPRy0", "Sprite Window Y0", 1 },
- { 0, "SPRx1", "Sprite Window X1", 1 },
- { 0, "SPRy1", "Sprite Window Y1", 1 },
+ { GFX_GSREG_FGX0, "FGx0", "Foreground Window X0", 1 }, 
+ { GFX_GSREG_FGY0, "FGy0", "Foreground Window Y0", 1 },
+ { GFX_GSREG_FGX1, "FGx1", "Foreground Window X1", 1 },
+ { GFX_GSREG_FGY1, "FGy1", "Foreground Window Y1", 1 },
+ { GFX_GSREG_SPRX0, "SPRx0", "Sprite Window X0", 1 },
+ { GFX_GSREG_SPRY0, "SPRy0", "Sprite Window Y0", 1 },
+ { GFX_GSREG_SPRX1, "SPRx1", "Sprite Window X1", 1 },
+ { GFX_GSREG_SPRY1, "SPRy1", "Sprite Window Y1", 1 },
 
- { 0, "BGXScroll", "Background X Scroll", 1 },
- { 0, "BGYScroll", "Background Y Scroll", 1 },
- { 0, "FGXScroll", "Foreground X Scroll", 1 },
- { 0, "FGYScroll", "Foreground Y Scroll", 1 },
+ { GFX_GSREG_BGXSCROLL, "BGXScroll", "Background X Scroll", 1 },
+ { GFX_GSREG_BGYSCROLL, "BGYScroll", "Background Y Scroll", 1 },
+ { GFX_GSREG_FGXSCROLL, "FGXScroll", "Foreground X Scroll", 1 },
+ { GFX_GSREG_FGYSCROLL, "FGYScroll", "Foreground Y Scroll", 1 },
+
  { 0, "", "", 0 },
 };
 
-uint32 WSwan_GfxGetRegister(const std::string &oname, std::string *special)
+uint32 WSwan_GfxGetRegister(const unsigned id, char* special, const uint32 special_len)
 {
- if(oname == "DispControl")
-  return(DispControl);
- if(oname == "BGColor")
-  return(BGColor);
- if(oname == "LineCompare")
-  return(LineCompare);
- if(oname == "SPRBase")
+ switch(id)
  {
-  if(special)
-  {
-   char tmpstr[256];
-   trio_snprintf(tmpstr, 256, "0x%02x * 0x200 = 0x%04x", SPRBase, SPRBase * 0x200);
-   *special = std::string(tmpstr);
-  }
-  return(SPRBase);
- }
- if(oname == "SpriteStart")
-  return(SpriteStart);
- if(oname == "SpriteCount")
-  return(SpriteCount);
- if(oname == "FGBGLoc")
-  return(FGBGLoc);
- if(oname == "FGx0")
-  return(FGx0);
- if(oname == "FGy0")
-  return(FGy0);
- if(oname == "FGx1")
-  return(FGx1);
- if(oname == "FGy1")
-  return(FGy1);
- if(oname == "SPRx0")
-  return(SPRx0);
- if(oname == "SPRy0")
-  return(SPRy0);
- if(oname == "SPRx1")
-  return(SPRx1);
- if(oname == "SPRy1")
-  return(SPRy1);
- if(oname == "BGXScroll")
-  return(BGXScroll);
- if(oname == "BGYScroll")
-  return(BGYScroll);
- if(oname == "FGXScroll")
-  return(FGXScroll);
- if(oname == "FGYScroll")
-  return(FGYScroll);
- if(oname == "LCDIcons")
-  return(LCDIcons);
- if(oname == "LCDControl")
-  return(LCDControl);
- if(oname == "BTimerControl")
-  return(BTimerControl);
- if(oname == "HBTimerPeriod")
-  return(HBTimerPeriod);
- if(oname == "VBTimerPeriod")
-  return(VBTimerPeriod);
- if(oname == "HBCounter")
-  return(HBCounter);
- if(oname == "VBCounter")
-  return(VBCounter);
- if(oname == "VideoMode")
-  return(VideoMode);
+  case GFX_GSREG_DISPCONTROL:
+	return DispControl;
 
- return(0);
+  case GFX_GSREG_VIDEOMODE:
+	return(VideoMode);
+
+  case GFX_GSREG_LCDCONTROL:
+	return(LCDControl);
+
+  case GFX_GSREG_LCDICONS:
+	return(LCDIcons);
+
+  case GFX_GSREG_BTIMERCONTROL:
+	return(BTimerControl);
+
+  case GFX_GSREG_HBTIMERPERIOD:
+	return(HBTimerPeriod);
+
+  case GFX_GSREG_VBTIMERPERIOD:
+	return(VBTimerPeriod);
+
+  case GFX_GSREG_HBCOUNTER:
+	return(HBCounter);
+
+  case GFX_GSREG_VBCOUNTER:
+	return(VBCounter);
+
+  case GFX_GSREG_BGCOLOR:
+	return(BGColor);
+
+  case GFX_GSREG_LINECOMPARE:
+	return(LineCompare);
+
+  case GFX_GSREG_SPRBASE:
+	if(special)
+	{
+	 trio_snprintf(special, special_len, "0x%02x * 0x200 = 0x%04x", SPRBase, SPRBase * 0x200);
+	}
+	return(SPRBase);
+
+  case GFX_GSREG_SPRITESTART:
+	return(SpriteStart);
+
+  case GFX_GSREG_SPRITECOUNT:
+	return(SpriteCount);
+
+  case GFX_GSREG_FGBGLOC:
+	return(FGBGLoc);
+
+  case GFX_GSREG_FGX0:
+	return(FGx0);
+
+  case GFX_GSREG_FGY0:
+	return(FGy0);
+
+  case GFX_GSREG_FGX1:
+	return(FGx1);
+
+  case GFX_GSREG_FGY1:
+	return(FGy1);
+
+  case GFX_GSREG_SPRX0:
+	return(SPRx0);
+
+  case GFX_GSREG_SPRY0:
+	return(SPRy0);
+
+  case GFX_GSREG_SPRX1:
+	return(SPRx1);
+
+  case GFX_GSREG_SPRY1:
+	return(SPRy1);
+
+  case GFX_GSREG_BGXSCROLL:
+	return(BGXScroll);
+
+  case GFX_GSREG_BGYSCROLL:
+	return(BGYScroll);
+
+  case GFX_GSREG_FGXSCROLL:
+	return(FGXScroll);
+
+  case GFX_GSREG_FGYSCROLL:
+	return(FGYScroll);
+ }
+
+ return 0xDEADBEEF;
 }
 
-void WSwan_GfxSetRegister(const std::string &oname, uint32 value)
+void WSwan_GfxSetRegister(const unsigned id, uint32 value)
 {
- if(oname == "DispControl")
-  DispControl = value;
- if(oname == "BGColor")
-  BGColor = value;
- if(oname == "LineCompare")
-  LineCompare = value;
- if(oname == "SPRBase")
-  SPRBase = value;
- if(oname == "SpriteStart")
-  SpriteStart = value;
- if(oname == "SpriteCount")
-  SpriteCount = value;
- if(oname == "FGBGLoc")
-  FGBGLoc = value;
- if(oname == "FGx0")
-  FGx0 = value;
- if(oname == "FGy0")
-  FGy0 = value;
- if(oname == "FGx1")
-  FGx1 = value;
- if(oname == "FGy1")
-  FGy1 = value;
- if(oname == "SPRx0")
-  SPRx0 = value;
- if(oname == "SPRy0")
-  SPRy0 = value;
- if(oname == "SPRx1")
-  SPRx1 = value;
- if(oname == "SPRy1")
-  SPRy1 = value;
- if(oname == "BGXScroll")
-  BGXScroll = value;
- if(oname == "BGYScroll")
-  BGYScroll = value;
- if(oname == "FGXScroll")
-  FGXScroll = value;
- if(oname == "FGYScroll")
-  FGYScroll = value;
- if(oname == "LCDIcons")
-  LCDIcons = value;
- if(oname == "LCDControl")
-  LCDControl = value;
- if(oname == "BTimerControl")
-  BTimerControl = value;
- if(oname == "HBTimerPeriod")
-  HBTimerPeriod = value;
- if(oname == "VBTimerPeriod")
-  VBTimerPeriod = value;
- if(oname == "HBCounter")
-  HBCounter = value;
- if(oname == "VBCounter")
-  VBCounter = value;
- if(oname == "VideoMode")
+ switch(id)
  {
-  VideoMode = value;
-  wsSetVideo(VideoMode >> 5, false);
+  case GFX_GSREG_DISPCONTROL:
+	DispControl = value;
+	break;
+
+  case GFX_GSREG_VIDEOMODE:
+	VideoMode = value;
+	wsSetVideo(VideoMode >> 5, false);
+	break;
+
+  case GFX_GSREG_LCDCONTROL:
+	LCDControl = value;
+	break;
+
+  case GFX_GSREG_LCDICONS:
+	LCDIcons = value;
+	break;
+
+  case GFX_GSREG_BTIMERCONTROL:
+	BTimerControl = value;
+	break;
+
+  case GFX_GSREG_HBTIMERPERIOD:
+	HBTimerPeriod = value;
+	break;
+
+  case GFX_GSREG_VBTIMERPERIOD:
+	VBTimerPeriod = value;
+	break;
+
+  case GFX_GSREG_HBCOUNTER:
+	HBCounter = value;
+	break;
+
+  case GFX_GSREG_VBCOUNTER:
+	VBCounter = value;
+	break;
+
+  case GFX_GSREG_BGCOLOR:
+	BGColor = value;
+	break;
+
+  case GFX_GSREG_LINECOMPARE:
+	LineCompare = value;
+	break;
+
+  case GFX_GSREG_SPRBASE:
+	SPRBase = value;
+	break;
+
+  case GFX_GSREG_SPRITESTART:
+	SpriteStart = value;
+	break;
+
+  case GFX_GSREG_SPRITECOUNT:
+	SpriteCount = value;
+	break;
+
+  case GFX_GSREG_FGBGLOC:
+	FGBGLoc = value;
+	break;
+
+  case GFX_GSREG_FGX0:
+	FGx0 = value;
+	break;
+
+  case GFX_GSREG_FGY0:
+	FGy0 = value;
+	break;
+
+  case GFX_GSREG_FGX1:
+	FGx1 = value;
+	break;
+
+  case GFX_GSREG_FGY1:
+	FGy1 = value;
+	break;
+
+  case GFX_GSREG_SPRX0:
+	SPRx0 = value;
+	break;
+
+  case GFX_GSREG_SPRY0:
+	SPRy0 = value;
+	break;
+
+  case GFX_GSREG_SPRX1:
+	SPRx1 = value;
+	break;
+
+  case GFX_GSREG_SPRY1:
+	SPRy1 = value;
+	break;
+
+  case GFX_GSREG_BGXSCROLL:
+	BGXScroll = value;
+	break;
+
+  case GFX_GSREG_BGYSCROLL:
+	BGYScroll = value;
+	break;
+
+  case GFX_GSREG_FGXSCROLL:
+	FGXScroll = value;
+	break;
+
+  case GFX_GSREG_FGYSCROLL:
+	FGYScroll = value;
+	break;
  }
 }
 
@@ -233,8 +346,6 @@ static RegGroupType WSwanGfxRegsGroup =
 {
  "Gfx",
  WSwanGfxRegs,
- NULL,
- NULL,
  WSwan_GfxGetRegister,
  WSwan_GfxSetRegister,
 };

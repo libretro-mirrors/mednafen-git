@@ -698,6 +698,13 @@ static void LoadCommonPost(const char* name)
 {
 	DMStatus.resize(MDFNGameInfo->RMD->Drives.size());
 
+	if(!MDFNGameInfo->name && name)
+	 MakeGIName(MDFNGameInfo, name);
+
+        //
+        //
+        //
+
 	LoadCustomPalette();
 	if(MDFNGameInfo->GameType != GMT_PLAYER)
 	{
@@ -715,9 +722,6 @@ static void LoadCommonPost(const char* name)
 	MDFNMOV_CheckMovies();
 
 	MDFN_ResetMessages();   // Save state, status messages, etc.
-
-	if(!MDFNGameInfo->name && name)
-	 MakeGIName(MDFNGameInfo, name); 
 
 	PrevInterlaced = false;
 	deint.ClearState();

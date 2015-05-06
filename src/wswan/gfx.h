@@ -41,7 +41,6 @@ void WSwan_GfxStateAction(StateMem *sm, const unsigned load, const bool data_onl
 
 #ifdef WANT_DEBUGGER
 void WSwan_GfxSetGraphicsDecode(MDFN_Surface *surface, int line, int which, int xscroll, int yscroll, int pbn);
-uint32 WSwan_GfxGetRegister(const std::string &oname, std::string *special);
 #endif
 
 }

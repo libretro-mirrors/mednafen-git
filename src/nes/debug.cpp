@@ -494,8 +494,6 @@ static RegGroupType NESPPURegsGroup =
 {
  "PPU",
  NESPPURegs,
- NULL,
- NULL,
  NESPPU_GetRegister,
  NESPPU_SetRegister
 };

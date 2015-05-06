@@ -15,6 +15,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/*
+ The ugly kludges with the strcasecmp(MDFNGameInfo->shortname, "psx") are to work around the mess created by our
+ flawed game ID generation code(the PS1 game library is enormous, and many games only have one track, leading to many collisions);
+ TODO: a more permanent, system-agnostic solution to the problem.
+*/
+
 #include "mednafen.h"
 
 #include <string.h>
@@ -203,7 +209,8 @@ static bool SeekToOurSection(Stream* fp) // Tentacle monster section aisle five,
  {
   if(linebuf.size() >= 1 && linebuf[0] == '[')
   {
-   if(!strncmp(linebuf.c_str() + 1, md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str(), 16))
+   if(!strncmp(linebuf.c_str() + 1, md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str(), 32) &&
+	(strcasecmp(MDFNGameInfo->shortname, "psx") || linebuf.size() < 36 || !MDFNGameInfo->name || linebuf[34] != ' ' || !strcmp(linebuf.c_str() + 35, MDFNGameInfo->name)))
     return(true);
   }
  }
@@ -448,7 +455,8 @@ static void WriteCheats(void)
     {
      if(linebuf.size() >= 1 && linebuf[0] == '[' && !insection)
      {
-      if(!strncmp((char *)linebuf.c_str() + 1, md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str(), 16))
+      if(!strncmp((char *)linebuf.c_str() + 1, md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str(), 32) &&
+	(strcasecmp(MDFNGameInfo->shortname, "psx") || linebuf.size() < 36 || !MDFNGameInfo->name || linebuf[34] != ' ' || !strcmp(linebuf.c_str() + 35, MDFNGameInfo->name)))
       {
        insection = 1;
 

@@ -10,12 +10,13 @@ class NES_Resampler
 	// Resamples from input_rate to output_rate, allowing for rate_error(output_rate +/- output_rate*rate_error)
 	// error in the resample ratio.
 	//
-	// debias_corner is the cheap high-pass DC bias removal filter coefficient.  Higher values will result in more bias removal(and
-	// case a high-pass filter effect), while lower values will lower this effect.  It must not be higher than output_rate.
+	// hp_tc is the time constant(in seconds) for the DC bias removal highpass filter.
+	// Higher values will result in more bias removal(and cause a high-pass filter effect), while lower values will lower this effect.
+	// Values lower than 200e-6, other than 0, may cause assert()'s to be triggered at some output rates due to overflow issues.
 	// A value of 0 will disable it entirely.
 	//
 	// quality is an arbitrary control of quality(-3 for lowest quality, 3 for highest quality)
-	NES_Resampler(double input_rate, double output_rate, double rate_error, double debias_corner, int quality) MDFN_COLD;
+	NES_Resampler(double input_rate, double output_rate, double rate_error, double hp_tc, int quality) MDFN_COLD;
 	NES_Resampler(const NES_Resampler &resamp) MDFN_COLD;
 	~NES_Resampler() MDFN_COLD;
 
@@ -38,7 +39,7 @@ class NES_Resampler
 	private:
 
 	// Copy of the parameters passed to the constructor
-	double InputRate, OutputRate, RateError, DebiasCorner;
+	double InputRate, OutputRate, RateError;
 	int Quality;
 
         // Number of phases.

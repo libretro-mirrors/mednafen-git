@@ -219,9 +219,9 @@ void MemDebugger::PromptFinish(const std::string &pstring)
 	 }
          if(InPrompt == Goto || InPrompt == GotoDD)
          {
-	  unsigned long NewAddie;
+	  unsigned long long NewAddie;
 
-	  if(trio_sscanf(pstring.c_str(), "%08lx", &NewAddie) == 1)
+	  if(trio_sscanf(pstring.c_str(), "%llx", &NewAddie) == 1)
 	  {
 	   ASpacePos[CurASpace] = NewAddie;
 	   LowNib = FALSE;
@@ -939,6 +939,7 @@ int MemDebugger::Event(const SDL_Event *event)
                 }
                 break;
 
+	 case SDLK_RETURN:
 	 case SDLK_g:
 	        if(event->key.keysym.mod & KMOD_SHIFT)
 		{

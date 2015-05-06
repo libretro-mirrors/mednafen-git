@@ -42,6 +42,10 @@ typedef struct
 	uint32 ReadCount;
 	uint32 WriteStart;
 	uint32 WriteCount;
+
+	uint32 RegRWIndex;
+	bool RegWriteDone;
+	bool RegReadDone;
 } VDC_SimulateResult;
 
 class VDC
@@ -91,8 +95,14 @@ class VDC
         {
 	 result->ReadCount = 0;
 	 result->WriteCount = 0;
-         result->ReadStart = 0;
-         result->WriteStart = 0;
+	 result->RegReadDone = false;
+	 result->RegWriteDone = false;
+
+	 if(A & 0x2)
+	 {
+		  result->RegReadDone = true;
+		  result->RegRWIndex = Simulate_select;
+	 }
 
 	 if((A & 0x3) == 0x3 && Simulate_select == 0x02)
 	 {
@@ -107,8 +117,8 @@ class VDC
 	{
          result->ReadCount = 0;
          result->WriteCount = 0;
-	 result->ReadStart = 0;
-	 result->WriteStart = 0;
+	 result->RegReadDone = false;
+	 result->RegWriteDone = false;
 
 	 const unsigned int msb = A & 1;
 
@@ -119,6 +129,8 @@ class VDC
 
 	  case 0x02:
 	  case 0x03:
+		  result->RegWriteDone = true;
+		  result->RegRWIndex = Simulate_select;
 
 		  switch(Simulate_select)
 		  {
@@ -167,8 +179,14 @@ class VDC
         {
          result->ReadCount = 0;
          result->WriteCount = 0;
-         result->ReadStart = 0;
-         result->WriteStart = 0;
+	 result->RegReadDone = false;
+	 result->RegWriteDone = false;
+
+	 if(A & 0x2)
+	 {
+		  result->RegReadDone = true;
+		  result->RegRWIndex = Simulate_select;
+	 }
 
          if(A && Simulate_select == 0x02)
          {
@@ -184,13 +202,16 @@ class VDC
 	{
          result->ReadCount = 0;
          result->WriteCount = 0;
-	 result->ReadStart = 0;
-	 result->WriteStart = 0;
+	 result->RegReadDone = false;
+	 result->RegWriteDone = false;
 
 	 if(!A)
 	  Simulate_select = V & 0x1F;
 	 else
 	 {
+		  result->RegWriteDone = true;
+		  result->RegRWIndex = Simulate_select;
+
 		  switch(Simulate_select)
 		  {
 	          	case 0x00: Simulate_MAWR = V;

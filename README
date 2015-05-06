@@ -1,8 +1,8 @@
 ------------------
 Compilation Notes:
 ------------------
-	gcc or LLVM clang is required for compiling Mednafen.  Intel's C compiler may work, but is untested.  Probably doesn't
-	need to be said, but the compilers optionally specified via CC and CXX *must* be the same version.
+	gcc or LLVM clang is required for compiling Mednafen.  Intel's C compiler may work, but is untested.
+	Probably doesn't need to be said, but the compilers optionally specified via CC and CXX *must* be the same version.
 
 	clang: 3.4.0 or newer is required.
 

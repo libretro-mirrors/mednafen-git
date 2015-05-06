@@ -381,6 +381,9 @@ static DECLFR(ReadHandler)
 
   if(result.WriteCount)
    PCEDBG_CheckBP(BPOINT_AUX_WRITE, (which_vdc << 16) | result.WriteStart, result.WriteCount);
+
+  if(result.RegReadDone)
+   PCEDBG_CheckBP(BPOINT_AUX_READ, 0x20000 | (which_vdc << 16) | result.RegRWIndex, 1);
  }
 
  for(bpit = BreakPointsRead.begin(); bpit != BreakPointsRead.end(); bpit++)
@@ -412,6 +415,9 @@ static DECLFW(WriteHandler)
 
   if(result.WriteCount)
    PCEDBG_CheckBP(BPOINT_AUX_WRITE, (which_vdc << 16) | result.WriteStart, result.WriteCount);
+
+  if(result.RegWriteDone)
+   PCEDBG_CheckBP(BPOINT_AUX_WRITE, 0x20000 | (which_vdc << 16) | result.RegRWIndex, 1);
  }
 
 

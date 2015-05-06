@@ -6,7 +6,7 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.38.3'
+MEDNAFEN_VERSION='0.9.38.4'
 MEDNAFEN_VERSION_NUMERIC=0x000938
 
 AC_CANONICAL_HOST
@@ -549,7 +549,7 @@ case "$target_cpu" in
 		dnl Make sure we're not compiling with PIC, otherwise some inline assembly might break.
 		dnl Additionally, PICcyness will slow things down especially on a register-starved architecture like 32-bit x86.
 		dnl
-                CPPFLAGS="-fno-pic -fno-pie $CPPFLAGS"
+                CPPFLAGS="-fno-pic -fno-pie -fno-PIC -fno-PIE $CPPFLAGS"
 
 		MMX_CFLAGS="-mmmx"
 		SSE_CFLAGS="-msse"

@@ -382,79 +382,14 @@ static void PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
  }
 }
 
-uint32 VBDBG_GetRegister(const std::string &name, std::string *special)
+static uint32 VBDBG_GetRegister(const unsigned int id, char* special, const uint32 special_len)
 {
- if(name == "PC")
- {
-  return(VB_V810->GetPC());
- }
- const char *thestring = name.c_str();
-
- if(!strncmp(thestring, "PR", 2))
- {
-  return(VB_V810->GetPR(atoi(thestring + 2)));
- }
- else if(!strcmp(thestring, "HSP"))
-  return(VB_V810->GetPR(2));
- else if(!strcmp(thestring, "SP"))
-  return(VB_V810->GetPR(3));
- else if(!strcmp(thestring, "GP"))
-  return(VB_V810->GetPR(4));
- else if(!strcmp(thestring, "TP"))
-  return(VB_V810->GetPR(5));
- else if(!strcmp(thestring, "LP"))
-  return(VB_V810->GetPR(31));
- else if(!strcmp(thestring, "TStamp"))
-  return(VB_V810->v810_timestamp);
- else if(!strncmp(thestring, "SR", 2))
- {
-  int which_one = atoi(thestring + 2);
-  uint32 val =  VB_V810->GetSR(which_one);
-
-  if(special && which_one == PSW)
-  {
-   char buf[256];
-   trio_snprintf(buf, 256, "Z: %d, S: %d, OV: %d, CY: %d, ID: %d, AE: %d, EP: %d, NP: %d, IA: %2d",
-	(int)(bool)(val & PSW_Z), (int)(bool)(val & PSW_S), (int)(bool)(val & PSW_OV), (int)(bool)(val & PSW_CY),
-	(int)(bool)(val & PSW_ID), (int)(bool)(val & PSW_AE), (int)(bool)(val & PSW_EP), (int)(bool)(val & PSW_NP),
-	(val & PSW_IA) >> 16);
-   *special = std::string(buf);
-  }
-  return(val);
- }
- uint32 val = 0; 
-
- return(val);
+ return VB_V810->GetRegister(id, special, special_len);
 }
 
-void VBDBG_SetRegister(const std::string &name, uint32 value)
+static void VBDBG_SetRegister(const unsigned int id, uint32 value)
 {
- if(name == "PC")
- {
-  VB_V810->SetPC(value & ~1);
-  return;
- }
-
- const char *thestring = name.c_str();
-
- if(!strncmp(thestring, "PR", 2))
- {
-  VB_V810->SetPR(atoi(thestring + 2), value);
- }
- else if(!strcmp(thestring, "HSP"))
-  VB_V810->SetPR(2, value);
- else if(!strcmp(thestring, "SP"))
-  VB_V810->SetPR(3, value);
- else if(!strcmp(thestring, "GP"))
-  VB_V810->SetPR(4, value);
- else if(!strcmp(thestring, "TP"))
-  VB_V810->SetPR(5, value);
- else if(!strcmp(thestring, "LP"))
-  VB_V810->SetPR(31, value);
- else if(!strncmp(thestring, "SR", 2))
- {
-  VB_V810->SetSR(atoi(thestring + 2), value);
- }
+ VB_V810->SetRegister(id, value);
 }
 
 void VBDBG_SetCPUCallback(void (*callb)(uint32 PC, bool bpoint), bool continuous)
@@ -500,56 +435,52 @@ void VBDBG_SetLogFunc(void (*func)(const char *, const char *))
 
 static RegType V810Regs[] =
 {
-        { 0, "PC", "Program Counter", 4 },
-        { 0, "PR1", "Program Register 1", 4 },
-        { 0, "HSP", "Program Register 2(Handler Stack Pointer)", 4 },
-        { 0, "SP", "Program Register 3(Stack Pointer)", 4 },
-        { 0, "GP", "Program Register 4(Global Pointer)", 4 },
-        { 0, "TP", "Program Register 5(Text Pointer)", 4 },
-        { 0, "PR6", "Program Register 6", 4 },
-        { 0, "PR7", "Program Register 7", 4 },
-        { 0, "PR8", "Program Register 8", 4 },
-        { 0, "PR9", "Program Register 9", 4 },
-        { 0, "PR10", "Program Register 10", 4 },
-        { 0, "PR11", "Program Register 11", 4 },
-        { 0, "PR12", "Program Register 12", 4 },
-        { 0, "PR13", "Program Register 13", 4 },
-        { 0, "PR14", "Program Register 14", 4 },
-        { 0, "PR15", "Program Register 15", 4 },
-        { 0, "PR16", "Program Register 16", 4 },
-        { 0, "PR17", "Program Register 17", 4 },
-        { 0, "PR18", "Program Register 18", 4 },
-        { 0, "PR19", "Program Register 19", 4 },
-        { 0, "PR20", "Program Register 20", 4 },
-        { 0, "PR21", "Program Register 21", 4 },
-        { 0, "PR22", "Program Register 22", 4 },
-        { 0, "PR23", "Program Register 23", 4 },
-        { 0, "PR24", "Program Register 24", 4 },
-        { 0, "PR25", "Program Register 25", 4 },
-        { 0, "PR26", "Program Register 26(String Dest Bit Offset)", 4 },
-        { 0, "PR27", "Program Register 27(String Source Bit Offset)", 4 },
-        { 0, "PR28", "Program Register 28(String Length)", 4 },
-        { 0, "PR29", "Program Register 29(String Dest)", 4 },
-        { 0, "PR30", "Program Register 30(String Source)", 4 },
-        { 0, "LP", "Program Register 31(Link Pointer)", 4 },
-        { 0, "SR0", "Exception/Interrupt PC", 4 },
-        { 0, "SR1", "Exception/Interrupt PSW", 4 },
-        { 0, "SR2", "Fatal Error PC", 4 },
-        { 0, "SR3", "Fatal Error PSW", 4 },
-        { 0, "SR4", "Exception Cause Register", 4 },
-        { 0, "SR5", "Program Status Word", 4 },
-        { 0, "SR6", "Processor ID Register", 4 },
-        { 0, "SR7", "Task Control Word", 4 },
-        { 0, "SR24", "Cache Control Word", 4 },
-        { 0, "SR25", "Address Trap Register", 4 },
+        { V810::GSREG_PC, "PC", "Program Counter", 4 },
+	{ V810::GSREG_PR + 1, "PR1", "Program Register 1", 4 },
+	{ V810::GSREG_PR + 2, "HSP", "Program Register 2(Handler Stack Pointer)", 4 },
+	{ V810::GSREG_PR + 3, "SP", "Program Register 3(Stack Pointer)", 4 },
+	{ V810::GSREG_PR + 4, "GP", "Program Register 4(Global Pointer)", 4 },
+	{ V810::GSREG_PR + 5, "TP", "Program Register 5(Text Pointer)", 4 },
+	{ V810::GSREG_PR + 6, "PR6", "Program Register 6", 4 },
+	{ V810::GSREG_PR + 7, "PR7", "Program Register 7", 4 },
+	{ V810::GSREG_PR + 8, "PR8", "Program Register 8", 4 },
+	{ V810::GSREG_PR + 9, "PR9", "Program Register 9", 4 },
+	{ V810::GSREG_PR + 10, "PR10", "Program Register 10", 4 },
+	{ V810::GSREG_PR + 11, "PR11", "Program Register 11", 4 },
+	{ V810::GSREG_PR + 12, "PR12", "Program Register 12", 4 },
+	{ V810::GSREG_PR + 13, "PR13", "Program Register 13", 4 },
+	{ V810::GSREG_PR + 14, "PR14", "Program Register 14", 4 },
+	{ V810::GSREG_PR + 15, "PR15", "Program Register 15", 4 },
+        { V810::GSREG_PR + 16, "PR16", "Program Register 16", 4 },
+        { V810::GSREG_PR + 17, "PR17", "Program Register 17", 4 },
+        { V810::GSREG_PR + 18, "PR18", "Program Register 18", 4 },
+        { V810::GSREG_PR + 19, "PR19", "Program Register 19", 4 },
+        { V810::GSREG_PR + 20, "PR20", "Program Register 20", 4 },
+        { V810::GSREG_PR + 21, "PR21", "Program Register 21", 4 },
+        { V810::GSREG_PR + 22, "PR22", "Program Register 22", 4 },
+        { V810::GSREG_PR + 23, "PR23", "Program Register 23", 4 },
+        { V810::GSREG_PR + 24, "PR24", "Program Register 24", 4 },
+        { V810::GSREG_PR + 25, "PR25", "Program Register 25", 4 },
+        { V810::GSREG_PR + 26, "PR26", "Program Register 26(String Dest Bit Offset)", 4 },
+        { V810::GSREG_PR + 27, "PR27", "Program Register 27(String Source Bit Offset)", 4 },
+        { V810::GSREG_PR + 28, "PR28", "Program Register 28(String Length)", 4 },
+        { V810::GSREG_PR + 29, "PR29", "Program Register 29(String Dest)", 4 },
+        { V810::GSREG_PR + 30, "PR30", "Program Register 30(String Source)", 4 },
+        { V810::GSREG_PR + 31, "LP", "Program Register 31(Link Pointer)", 4 },
 
-        //{ 0, "IPEND", "Interrupts Pending", 2 },
-        //{ 0, "IMASK", "Interrupt Mask", 2 },
-        //{ 0, "TCTRL", "Timer Control", 2 },
-        //{ 0, "TPRD", "Timer Period", 2 },
-        //{ 0, "TCNTR", "Timer Counter", 3 },
+        { V810::GSREG_SR + 0, "SR0", "Exception/Interrupt PC", 4 },
+        { V810::GSREG_SR + 1, "SR1", "Exception/Interrupt PSW", 4 },
+        { V810::GSREG_SR + 2, "SR2", "Fatal Error PC", 4 },
+        { V810::GSREG_SR + 3, "SR3", "Fatal Error PSW", 4 },
+        { V810::GSREG_SR + 4, "SR4", "Exception Cause Register", 4 },
+        { V810::GSREG_SR + 5, "SR5", "Program Status Word", 4 },
+        { V810::GSREG_SR + 6, "SR6", "Processor ID Register", 4 },
+        { V810::GSREG_SR + 7, "SR7", "Task Control Word", 4 },
+        { V810::GSREG_SR + 24, "SR24", "Cache Control Word", 4 },
+        { V810::GSREG_SR + 25, "SR25", "Address Trap Register", 4 },
 
-        { 0, "TStamp", "Timestamp", 3 },
+	{ V810::GSREG_TIMESTAMP, "TStamp", "Timestamp", 3 },
+
         { 0, "", "", 0 },
 };
 
@@ -558,8 +489,6 @@ static RegGroupType V810RegsGroup =
 {
  NULL,
  V810Regs,
- NULL,
- NULL,
  VBDBG_GetRegister,
  VBDBG_SetRegister,
 };

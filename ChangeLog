@@ -1,3 +1,91 @@
+-- 0.9.38.4: --
+
+April 12, 2015:
+	PC-FX: Reorganized the debugger's register view to be slightly more space-efficient horizontally.
+
+	NES: Migrated the rest of the *GetRegister() and *SetRegister() debugger functions over to the newer-style interface.
+
+	PC-FX: Migrated the rest of the *GetRegister() and *SetRegister() debugger functions over to the newer-style interface.
+
+April 11, 2015:
+	PC-FX: Migrated debugger functions PCFXDBG_GetRegister() and PCFXDBG_SetRegister() over to the newer-style interface that takes integer IDs instead
+	of std::string.
+
+	VB: Migrated debugger functions VBDBG_GetRegister() and VBDBG_SetRegister() over to the newer-style interface that takes integer IDs instead
+	of std::string.
+
+	WonderSwan: Migrated debugger functions WSwan_GfxGetRegister() and WSwan_GfxSetRegister() over to the newer-style interface that takes integer IDs instead
+	of std::string.
+
+	PC-FX: Added support for setting breakpoints on writes to specific VDC registers, by setting an Aux Write Breakpoint on an
+	address ranging from A0000-A001F(VDC-A) or B0000-B001F(VDC-B).
+
+April 10, 2015:
+	Debugger: Relaxed most maximum string length restrictions on user-inputted addresses(to allow for lazily leaving an excessive number of 0s at the
+	beginning of an address, for example).
+
+	Debugger: "Goto Address" prompt in the memory editor can now be activated by pressing "ENTER"(in addition to "G"), and "Disassembly Address" prompt in the main debugger
+	view can now be activated by pressing the "G" key(in addition to "ENTER").
+
+April 9, 2015:
+	NES: Added sprite RAM to the debugger's memory editor.
+
+	NES: Fixed some issues with the debugger's graphics/tileset viewer.
+
+April 8, 2015:
+	PSX: Improved GPU texture cache emulation accuracy per tests on a PS1; fixes graphical glitches in the menus of "Tigershark".
+
+April 5, 2015:
+	PCE: Added support for setting breakpoints on writes to specific VDC registers(like MAWR, BXR, BYR, etc.), by setting an Aux Write Breakpoint on an address
+	ranging from 20000-2001f(hexadecimal).
+
+April 4, 2015:
+	Avoid left-shifting negative values in hw_sound/pce_psg/pce_psg.cpp
+
+	Added a couple more tests regarding left shift of signed integers to tests.cpp.
+
+April 2, 2015:
+	Debugger: Fixed half-broken re-activation of the debug screen when a breakpoint triggers and the user was last on a debug screen other than the
+	main one.
+
+	Debugger: Fixed a rounding issue that could cause insufficient disassembly lines with some *.debugger.disfontsize setting values.
+
+	PSX: Hooked up writing(editing) in the debugger's memory editor for "CPU Main RAM".
+
+March 29, 2015:
+	PCE: Removed old leftover debug puts() in HuC6280 emulation code.
+
+	Debugger: Fixed a bug that could cause breakpoints to be skipped if the 'R' key was pressed(or auto-repeated) while outside of step mode.
+
+	NES: Fixed highpass filter coefficient calculation.
+
+	SNES: Fixed a bug that was breaking input after triggering a virtual Reset/Power Toggle event when a non-gamepad controller(e.g. mouse) is currently
+	selected for a port.
+
+March 23, 2015:
+	NES: Fixed a minor sound emulation bug.
+
+March 15, 2015:
+	GBA: Fixed several instances of left-shifting negative values in thumb.cpp.
+
+	PC-FX, VB: Fixed an instance of left-shifting uint64 by 64 in the FPU emulation code.
+
+March 14, 2015:
+	GBA: Fixed a few instances of technically undefined behavior(shifting 32-bit int by >= 32, and left-shifting negative values) in arm.cpp.
+
+March 11, 2015:
+	Reworked a test in tests.cpp to better reflect the requirements of certain undefined behavior some code still (unfortunately) relies on, to avoid
+	triggering an assert() during startup when compiled with llvm/clang 3.6.
+
+March 6, 2015:
+	PCE: Fixed a major VRAM DMA emulation regression introduced around version 0.9.16-WIP, that breaks some homebrew software.
+
+	NES: Altered mapper 185 emulation to fix "Bird Week", "B-Wings", "Sansuu 1 Nen", "Sansuu 2 Nen", "Sansuu 3 Nen", and "Seicross (version 2)".
+
+	PSX: Added a kludge to the core cheat file reading and writing code to work around the mess created by our flawed game ID generation code
+	(the PS1 game library is enormous, and many games only have one track, leading to many collisions); effectively, the game's filename(which was previously
+	regarded as a comment), is now used in addition to the game ID.
+
 -- 0.9.38.3: --
 
 March 4, 2015:

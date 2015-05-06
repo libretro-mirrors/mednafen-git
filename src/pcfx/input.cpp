@@ -125,23 +125,31 @@ void FXINPUT_SettingChanged(const char *name)
 
 
 #ifdef WANT_DEBUGGER
-bool FXINPUT_GetRegister(const std::string &name, uint32 &value, std::string *special)
+uint32 FXINPUT_GetRegister(const unsigned int id, char *special, const uint32 special_len)
 {
- if(name == "KPCTRL0" || name == "KPCTRL1")
+ uint32 value = 0xDEADBEEF;
+
+ switch(id)
  {
-  value = control[name[6] - '0'];
-  if(special)
-  {
-   char buf[256];
-
-   trio_snprintf(buf, 256, "Trigger: %d, MOD: %d, IOS: %s", value & 0x1, value & 0x2, (value & 0x4) ? "Input" : "Output");
-
-   *special = std::string(buf);
-  }
-  return(TRUE);
+  case FXINPUT_GSREG_KPCTRL0:
+  case FXINPUT_GSREG_KPCTRL1:
+	value = control[id == FXINPUT_GSREG_KPCTRL1];
+	if(special)
+	{
+	 trio_snprintf(special, special_len, "Trigger: %d, MOD: %d, IOS: %s", value & 0x1, value & 0x2, (value & 0x4) ? "Input" : "Output");
+	}
+	break;
  }
- return(FALSE);
+
+ return value;
 }
+
+void FXINPUT_SetRegister(const unsigned int id, uint32 value)
+{
+
+
+}
+
 #endif
 
 static INLINE int32 min(int32 a, int32 b, int32 c)

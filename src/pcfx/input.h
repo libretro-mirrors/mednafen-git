@@ -51,7 +51,15 @@ void FXINPUT_ResetTS(int32 ts_base);
 extern const std::vector<InputPortInfoStruct> PCFXPortInfo;
 
 #ifdef WANT_DEBUGGER
-bool FXINPUT_GetRegister(const std::string &name, uint32 &value, std::string *special);
+
+enum
+{
+ FXINPUT_GSREG_KPCTRL0 = 0,
+ FXINPUT_GSREG_KPCTRL1
+};
+
+uint32 FXINPUT_GetRegister(const unsigned int id, char *special, const uint32 special_len);
+void FXINPUT_SetRegister(const unsigned int id, uint32 value);
 #endif
 
 #endif

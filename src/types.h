@@ -76,7 +76,7 @@ typedef uint64_t uint64;
    #define MDFN_FASTCALL
   #endif
 
-  #if !defined(__clang__) || ((__clang_major__ * 1000) + __clang_minor__) >= 3005
+  #if !defined(__clang__) //|| ((__clang_major__ * 1000) + __clang_minor__) >= 3005
    #define MDFN_FORMATSTR(a,b,c) __attribute__ ((format (a, b, c)))
   #else
    #define MDFN_FORMATSTR(a,b,c)

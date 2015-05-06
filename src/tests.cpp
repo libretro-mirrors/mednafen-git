@@ -393,6 +393,8 @@ MathTestTSOEntry MathTestTSOTests[] =
 volatile int32 MDFNTestsCPP_SLS_Var = (int32)0xDEADBEEF;
 volatile int8 MDFNTestsCPP_SLS_Var8 = (int8)0xEF;
 volatile int16 MDFNTestsCPP_SLS_Var16 = (int16)0xBEEF;
+int32 MDFNTestsCPP_SLS_Var_NT = (int32)0xDEADBEEF;
+int32 MDFNTestsCPP_SLS_Var_NT2 = (int32)0x7EADBEEF;
 
 static uint64 NO_INLINE NO_CLONE Mul_U16U16U32U64_Proper(uint16 a, uint16 b)	// For reference
 {
@@ -471,65 +473,58 @@ static void TestSignedOverflow(void)
  for(signed i = 1; i != 0; i =~-i);	// Not really signed overflow, but meh!
  for(signed i = -1; i != 0; i <<= 1);
  for(signed i = 1; i >= 0; i *= 3);
+
+ if(MDFNTestsCPP_SLS_Var_NT < 0)
+  assert((MDFNTestsCPP_SLS_Var_NT << 2) > 0);
+
+ if(MDFNTestsCPP_SLS_Var_NT2 > 0)
+  assert((MDFNTestsCPP_SLS_Var_NT2 << 2) < 0);
 }
 
-volatile unsigned MDFNTests_OverShiftAmounts[4] = { 8, 16, 32, 64 };
-
-//
-// Test to make sure that shifting == the bitwidth of the variable's type
-// produces an expected value(either the original unshifted value, or 0/-1), since this occurs in the codebase
-// in a few spots(such as the GBA ARM CPU emulator, and the V810 FPU emulation code).
-//
-static void TestOverShift(void)
+unsigned MDFNTests_OverShiftAmounts[3] = { 8, 16, 32};
+uint32 MDFNTests_OverShiftTV = 0xBEEFD00D;
+static void TestDefinedOverShift(void)
 {
  //for(unsigned sa = 0; sa < 4; sa++)
  {
   for(unsigned i = 0; i < 2; i++)
   {
-   uint8 v8 = (uint8)0xDEADCAFEBEEFD00DULL;
-   uint16 v16 = (uint16)0xDEADCAFEBEEFD00DULL;
-   uint32 v32 = (uint32)0xDEADCAFEBEEFD00DULL;
-   uint64 v64 = (uint64)0xDEADCAFEBEEFD00DULL;
+   uint8 v8 = MDFNTests_OverShiftTV;
+   uint16 v16 = MDFNTests_OverShiftTV;
+   uint32 v32 = MDFNTests_OverShiftTV;
 
-   int8 iv8 = (uint8)0xDEADCAFEBEEFD00DULL;
-   int16 iv16 = (uint16)0xDEADCAFEBEEFD00DULL;
-   int32 iv32 = (uint32)0xDEADCAFEBEEFD00DULL;
-   int64 iv64 = (uint64)0xDEADCAFEBEEFD00DULL;
+   int8 iv8 = MDFNTests_OverShiftTV;
+   int16 iv16 = MDFNTests_OverShiftTV;
+   int32 iv32 = MDFNTests_OverShiftTV;
 
    if(i == 1)
    {
     v8 >>= MDFNTests_OverShiftAmounts[0];
     v16 >>= MDFNTests_OverShiftAmounts[1];
-    v32 >>= MDFNTests_OverShiftAmounts[2];
-    v64 >>= MDFNTests_OverShiftAmounts[3];
+    v32 = (uint64)v32 >> MDFNTests_OverShiftAmounts[2];
 
     iv8 >>= MDFNTests_OverShiftAmounts[0];
     iv16 >>= MDFNTests_OverShiftAmounts[1];
-    iv32 >>= MDFNTests_OverShiftAmounts[2];
-    iv64 >>= MDFNTests_OverShiftAmounts[3];
+    iv32 = (int64)iv32 >> MDFNTests_OverShiftAmounts[2];
    }
    else
    {
     v8 <<= MDFNTests_OverShiftAmounts[0];
     v16 <<= MDFNTests_OverShiftAmounts[1];
-    v32 <<= MDFNTests_OverShiftAmounts[2];
-    v64 <<= MDFNTests_OverShiftAmounts[3];
+    v32 = (uint64)v32 << MDFNTests_OverShiftAmounts[2];
 
     iv8 <<= MDFNTests_OverShiftAmounts[0];
     iv16 <<= MDFNTests_OverShiftAmounts[1];
-    iv32 <<= MDFNTests_OverShiftAmounts[2];
-    iv64 <<= MDFNTests_OverShiftAmounts[3];
+    iv32 = (int64)iv32 << MDFNTests_OverShiftAmounts[2];
    }
 
    assert(v8 == 0);
    assert(v16 == 0);
-   assert(v32 == 0 || v32 == (uint32)0xDEADCAFEBEEFD00DULL);
-   assert(v64 == 0 || v64 == (uint64)0xDEADCAFEBEEFD00DULL);
+   assert(v32 == 0);
 
    assert(iv8 == 0);
    assert(iv16 == -(int)i);
-   assert(iv32 == -(int)i || iv32 == (int32)0xDEADCAFEBEEFD00DULL);
-   assert(iv64 == -(int)i || iv64 == (int64)0xDEADCAFEBEEFD00DULL);
+   assert(iv32 == -(int)i);
   }
  }
 }
@@ -1188,7 +1183,7 @@ bool MDFN_RunMathTests(void)
 
  DoAlignmentChecks();
  TestSignedOverflow();
- TestOverShift();
+ TestDefinedOverShift();
  TestBoolConv();
  TestNarrowConstFold();
 

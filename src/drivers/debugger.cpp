@@ -78,10 +78,7 @@ static uint32 GetPC(void)
 {
  RegGroupType *rg = (*CurGame->Debugger->RegGroups)[0];
 
- if(rg->GetRegister)
-  return rg->GetRegister(rg->Regs[0].id, NULL, 0); // FIXME
- else
-  return rg->OLDGetRegister(rg->Regs[0].name, NULL); // FIXME
+ return rg->GetRegister(rg->Regs[0].id, NULL, 0); // FIXME
 }
 
 static void MemPoke(uint32 A, uint32 V, uint32 Size, bool hl, bool logical)
@@ -132,9 +129,9 @@ static void MemPoke(uint32 A, uint32 V, uint32 Size, bool hl, bool logical)
   puts("Error");
 }
 
-static uint32 ParsePhysAddr(const char *za)
+static unsigned long long ParsePhysAddr(const char *za)
 {
- uint32 ret = 0;
+ unsigned long long ret = 0;
 
  if(strchr(za, ':'))
  {
@@ -152,7 +149,7 @@ static uint32 ParsePhysAddr(const char *za)
   }
  }
  else
-  trio_sscanf(za, "%08x", &ret);
+  trio_sscanf(za, "%llx", &ret);
 
  return(ret);
 }
@@ -242,7 +239,7 @@ static void UpdateBreakpoints(const std::string &Breakpoints, int type)
      A2 = ParsePhysAddr(sa2);
     }
     else
-     if(trio_sscanf(zestring + last_x, "%08x%*[-]%08x", &A1, &A2) < 2) continue;
+     if(trio_sscanf(zestring + last_x, "%x%*[-]%x", &A1, &A2) < 2) continue;
 
     two_parter = 0;
    }
@@ -257,7 +254,7 @@ static void UpdateBreakpoints(const std::string &Breakpoints, int type)
      A1 = ParsePhysAddr(sa1);
     }
     else
-     if(trio_sscanf(zestring + last_x, "%08x", &A1) != 1) continue;
+     if(trio_sscanf(zestring + last_x, "%x", &A1) != 1) continue;
 
     A2 = A1;
    }
@@ -282,8 +279,9 @@ static void UpdateBreakpoints(void)
  UpdateBreakpoints(AuxReadBreakpoints, BPOINT_AUX_READ);
 }
 
-static unsigned int RegsPos;
-static uint32 InRegs;
+static unsigned RegsPosX;
+static unsigned RegsPosY;
+static bool InRegs;
 static uint32 RegsCols;
 static uint32 RegsColsCounts[16];	// FIXME[5];
 static uint32 RegsColsPixOffset[16];	//[5];
@@ -297,8 +295,8 @@ static std::string CurRegDetails;
 
 static void Regs_Init(const int max_height_hint)
 {
- RegsPos = 0;
- InRegs = 0;
+ RegsPosX = RegsPosY = 0;
+ InRegs = false;
  RegsCols = 0;
 
  memset(RegsColsCounts, 0, sizeof(RegsColsCounts));
@@ -401,10 +399,7 @@ static void Regs_DrawGroup(RegGroupType *rg, MDFN_Surface *surface, uint32 *pixe
    {
     uint32 regval;
 
-    if(rg->GetRegister || rg->SetRegister)
-     regval = rg->GetRegister(rec->id, details_ptr ? details_string : NULL, details_string_len);
-    else
-     regval = rg->OLDGetRegister(rec->name, details_ptr);
+    regval = rg->GetRegister(rec->id, details_ptr ? details_string : NULL, details_string_len);
 
     if(rec->bsize & 0x100)
     {
@@ -553,10 +548,15 @@ class DebuggerPrompt : public HappyPrompt
 
                   if(InPrompt == DisGoto)
                   {
-                   trio_sscanf(tmp_c_str, "%08X", &DisAddr);
-                   DisAddr &= ((1ULL << CurGame->Debugger->LogAddrBits) - 1);
-	           DisAddr &= ~(CurGame->Debugger->InstructionAlignment - 1);
-		   DisCOffs = 0xFFFFFFFF;
+		   unsigned long long tmpaddr;
+
+                   if(trio_sscanf(tmp_c_str, "%llx", &tmpaddr) == 1)
+		   {
+		    DisAddr = tmpaddr;
+                    DisAddr &= ((1ULL << CurGame->Debugger->LogAddrBits) - 1);
+	            DisAddr &= ~(CurGame->Debugger->InstructionAlignment - 1);
+		    DisCOffs = 0xFFFFFFFF;
+		   }
                   }
                   else if(InPrompt == ReadBPS)
                   {
@@ -608,7 +608,7 @@ class DebuggerPrompt : public HappyPrompt
 
 		    unsigned int endpc;
 		    char tmpfn[256];
-		    int num = trio_sscanf(tmp_c_str, "%.255s %08x", tmpfn, &endpc);
+		    int num = trio_sscanf(tmp_c_str, "%.255s %x", tmpfn, &endpc);
 		    if(num >= 1)
 		    {
 		     if((TraceLog = fopen(tmpfn, "ab")))
@@ -635,28 +635,27 @@ class DebuggerPrompt : public HappyPrompt
                   {
                    CurGame->Debugger->IRQ(atoi(tmp_c_str));
                   }
-                  else if(InPrompt == PokeMe)
+                  else if(InPrompt == PokeMe || InPrompt == PokeMeHL)
                   {
-                   uint32 A = 0,V = 0,S = 1;
-                   bool logical = 1;
-
+		   const bool hl = (InPrompt == PokeMeHL);
+                   uint32 A = 0, V = 0, S = 1;
+                   bool logical = true;
                    char *meow_str = tmp_c_str;
+		   int ssf_ret;
 
                    if(meow_str[0] == '*')
                    {
                     meow_str++;
-                    logical = 0;
+                    logical = false;
                    }
 
-                   int ssf_ret;
-
                    if(logical)
-                    ssf_ret = trio_sscanf(tmp_c_str, "%08X %08X %d", &A, &V, &S);
+                    ssf_ret = trio_sscanf(tmp_c_str, "%x %x %d", &A, &V, &S);
                    else
                    {
                     char sa[64];
 
-                    ssf_ret = trio_sscanf(tmp_c_str, "%63s %08X %d", sa, &V, &S);
+                    ssf_ret = trio_sscanf(tmp_c_str, "%63s %x %d", sa, &V, &S);
 
                     A = ParsePhysAddr(sa);
                    }
@@ -664,68 +663,34 @@ class DebuggerPrompt : public HappyPrompt
                    if(ssf_ret >= 2) // Allow size to be omitted, implicit as '1'
                    {
                     A &= ((1ULL << CurGame->Debugger->LogAddrBits) - 1);
-                    if(S < 1) S = 1;
-                    if(S > 4) S = 4;
-
-		    MemPoke(A, V, S, 0, logical);
-                    //CurGame->Debugger->MemPoke(A, V, S, 0, logical);
-                   }
-                  }
-                  else if(InPrompt == PokeMeHL)
-                  {
-                   uint32 A = 0,V = 0,S = 1;
-                   bool logical = 1;
-
-                   char *meow_str = tmp_c_str;
-
-                   if(meow_str[0] == '*')
-                   {
-                    meow_str++;
-                    logical = 0;
-                   }
-
-                   if(trio_sscanf(meow_str, "%08X %08X %d", &A, &V, &S) >= 2) // Allow size to be omitted, implicit as '1'
-                   {
-                    A &= ((1ULL << CurGame->Debugger->LogAddrBits) - 1);
 
                     if(S < 1) S = 1;
                     if(S > 4) S = 4;
 
-		    MemPoke(A, V, S, 1, logical);
-//                    CurGame->Debugger->MemPoke(A, V, S, 1, logical);
+		    MemPoke(A, V, S, hl, logical);
                    }
                   }
                   else if(InPrompt == EditRegs)
                   {
-                   uint32 RegValue = 0;
+                   unsigned long long RegValue = 0;
 
-                   trio_sscanf(tmp_c_str, "%08X", &RegValue);
+                   trio_sscanf(tmp_c_str, "%llx", &RegValue);
 
-		   if(CurRegGroupIP->SetRegister || CurRegGroupIP->GetRegister)
-		   {
-		    if(CurRegGroupIP->SetRegister)
-                     CurRegGroupIP->SetRegister(CurRegIP->id, RegValue);
-		    else
-		     puts("Null SetRegister!");
-	           }
+		   if(CurRegGroupIP->SetRegister)
+                    CurRegGroupIP->SetRegister(CurRegIP->id, RegValue);
 		   else
-                   {
-                    if(CurRegGroupIP->OLDSetRegister)
-                     CurRegGroupIP->OLDSetRegister(CurRegIP->name, RegValue);
-                    else
-                     puts("Null (OLD)SetRegister!");
-                   }     
+		    puts("Null SetRegister!");
                   }
                   else if(InPrompt == WatchGoto)
                   {
                    if(WatchLogical)
                    {
-                    trio_sscanf(tmp_c_str, "%08X", &WatchAddr);
+                    trio_sscanf(tmp_c_str, "%x", &WatchAddr);
                     WatchAddr &= 0xFFF0;
                    }
                    else
                    {
-                    trio_sscanf(tmp_c_str, "%08X", &WatchAddrPhys);
+                    trio_sscanf(tmp_c_str, "%x", &WatchAddrPhys);
                     WatchAddrPhys &= (((uint64)1 << CurGame->Debugger->PhysAddrBits) - 1);
                     WatchAddrPhys &= ~0xF;
                    }
@@ -865,8 +830,8 @@ void Debugger_GT_Draw(void)
  // worshipping cactus mules.
 
 
- int PreBytes = CurGame->Debugger->MaxInstructionSize * (DIS_ENTRIES / 2) * 2;
- int DisBytes = CurGame->Debugger->MaxInstructionSize * (DIS_ENTRIES / 2) * 3;
+ int PreBytes = CurGame->Debugger->MaxInstructionSize * ((DIS_ENTRIES + 1) / 2) * 2;
+ int DisBytes = CurGame->Debugger->MaxInstructionSize * ((DIS_ENTRIES + 1) / 2) * 3;
 
  uint32 A = (DisAddr - PreBytes) & ((1ULL << CurGame->Debugger->LogAddrBits) - 1);
 
@@ -1055,7 +1020,7 @@ void Debugger_GT_Draw(void)
  CurRegDetails = "";
 
  for(unsigned int rp = 0; rp < CurGame->Debugger->RegGroups->size(); rp++)
-  Regs_DrawGroup((*CurGame->Debugger->RegGroups)[rp], surface, pixels + rect->w - RegsTotalWidth + RegsColsPixOffset[rp], (InRegs == rp + 1) ? (int)RegsPos : -1, RegsWhichFont[rp]); // 175
+  Regs_DrawGroup((*CurGame->Debugger->RegGroups)[rp], surface, pixels + rect->w - RegsTotalWidth + RegsColsPixOffset[rp], (InRegs && RegsPosX == rp) ? (int)RegsPosY : -1, RegsWhichFont[rp]); // 175
 
  if(CurGame->Debugger->ZPAddr != (uint32)~0UL)
   DrawZP(surface, pixels + 324 + 224 * pitch32);
@@ -1232,6 +1197,86 @@ void Debugger_GT_Draw(void)
  }
 }
 
+static void MDFN_COLD SetActive(bool active, unsigned which_ms)
+{
+  IsActive = active;
+  WhichMode = which_ms;
+
+  if(IsActive)
+  {
+   if(!DebuggerSurface[0])
+   {
+    DebuggerSurface[0] = new MDFN_Surface(NULL, 640, 480, 640, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, 0, 8, 16, 24));
+    DebuggerSurface[1] = new MDFN_Surface(NULL, 640, 480, 640, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, 0, 8, 16, 24));
+   }
+
+   if(NeedInit)
+   {
+    std::string des_disfont = MDFN_GetSettingS(std::string(std::string(CurGame->shortname) + "." + std::string("debugger.disfontsize")));
+    DebuggerOpacity = 0xC0;
+
+    // Debug remove me
+#if 0
+    {
+     DisComment comment;
+
+     comment.push_back("// Hi!");
+     comment.push_back("// We welcome you to the wonderful world");
+     comment.push_back("// of tomorrow...TODAY!");
+     comment.push_back("//");
+     comment.push_back("// Warning: Beware of deathbots.");
+
+     Comments[0x8001] = comment;
+    }
+#endif
+    // End debug remove me
+ 
+    if(des_disfont == "xsmall")
+    {
+     DisFont = MDFN_FONT_4x5;
+     DisFontHeight = 6;
+    }
+    else if(des_disfont == "medium")
+    {
+     DisFont = MDFN_FONT_6x13_12x13;
+     DisFontHeight = 12;
+    }
+    else if(des_disfont == "large")
+    {
+     DisFont = MDFN_FONT_9x18_18x18;
+     DisFontHeight = 17;
+    }
+    else // small
+    {
+     DisFont = MDFN_FONT_5x7;
+     DisFontHeight = 7;
+    }
+
+    DIS_ENTRIES = 406 / DisFontHeight;
+
+    //DIS_ENTRIES = CompactMode ? 46 : 58;
+
+    NeedInit = FALSE;
+    WatchAddr = CurGame->Debugger->DefaultWatchAddr;
+
+    DisAddr = GetPC();
+    DisCOffs = 0xFFFFFFFF;
+    //DisAddr = (*CurGame->Debugger->RegGroups)[0]->GetRegister(/*PC*/0, NULL, 0); // FIXME
+
+    Regs_Init(DIS_ENTRIES * DisFontHeight);
+   }
+  }
+
+  UpdateCoreHooks();	// Note: Relies on value of IsActive.
+  UpdateBreakpoints();
+
+  GfxDebugger_SetActive((WhichMode == 1) && IsActive);
+  memdbg->SetActive((WhichMode == 2) && IsActive);
+  LogDebugger_SetActive((WhichMode == 3) && IsActive);
+
+  SDL_MDFN_ShowCursor(IsActive);
+}
+
 static const char HexLUT[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 static void DoTraceLog(const uint32 PC)
@@ -1276,10 +1321,7 @@ static void DoTraceLog(const uint32 PC)
     if(rg->Regs[i].bsize == 0xFFFF)
      continue;
 
-    if(rg->GetRegister)
-     val = rg->GetRegister(rt->id, NULL, 0);
-    else
-     val = rg->OLDGetRegister(rt->name, NULL);
+    val = rg->GetRegister(rt->id, NULL, 0);
 
     if(i)
     {
@@ -1317,7 +1359,9 @@ static void CPUCallback(uint32 PC, bool bpoint)
 {
  if((NeedStep == 2 && !InSteppingMode) || bpoint)
  {
-  IsActive |= bpoint;
+  if(bpoint)
+   SetActive(true, 0);
+
   DisAddr = PC;
   DisCOffs = 0xFFFFFFFF;
   NeedStep = 0;
@@ -1388,91 +1432,12 @@ bool Debugger_IsActive(void)
  return(IsActive);
 }
 
-
 // Call this function from the game thread:
 bool Debugger_GT_Toggle(void)
 {
  if(CurGame->Debugger)
- {
-  IsActive = !IsActive;
+  SetActive(!IsActive, WhichMode);
 
-  if(IsActive)
-  {
-   if(!DebuggerSurface[0])
-   {
-    DebuggerSurface[0] = new MDFN_Surface(NULL, 640, 480, 640, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, 0, 8, 16, 24));
-    DebuggerSurface[1] = new MDFN_Surface(NULL, 640, 480, 640, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, 0, 8, 16, 24));
-   }
-
-   if(NeedInit)
-   {
-    std::string des_disfont = MDFN_GetSettingS(std::string(std::string(CurGame->shortname) + "." + std::string("debugger.disfontsize")));
-    DebuggerOpacity = 0xC0;
-
-    // Debug remove me
-#if 0
-    {
-     DisComment comment;
-
-     comment.push_back("// Hi!");
-     comment.push_back("// We welcome you to the wonderful world");
-     comment.push_back("// of tomorrow...TODAY!");
-     comment.push_back("//");
-     comment.push_back("// Warning: Beware of deathbots.");
-
-     Comments[0x8001] = comment;
-    }
-#endif
-    // End debug remove me
- 
-    if(des_disfont == "xsmall")
-    {
-     DisFont = MDFN_FONT_4x5;
-     DisFontHeight = 6;
-    }
-    else if(des_disfont == "medium")
-    {
-     DisFont = MDFN_FONT_6x13_12x13;
-     DisFontHeight = 12;
-    }
-    else if(des_disfont == "large")
-    {
-     DisFont = MDFN_FONT_9x18_18x18;
-     DisFontHeight = 17;
-    }
-    else // small
-    {
-     DisFont = MDFN_FONT_5x7;
-     DisFontHeight = 7;
-    }
-
-    DIS_ENTRIES = 406 / DisFontHeight;
-
-    //DIS_ENTRIES = CompactMode ? 46 : 58;
-
-    NeedInit = FALSE;
-    WatchAddr = CurGame->Debugger->DefaultWatchAddr;
-
-    DisAddr = GetPC();
-    DisCOffs = 0xFFFFFFFF;
-    //if((*CurGame->Debugger->RegGroups)[0]->GetRegister)
-    // DisAddr = (*CurGame->Debugger->RegGroups)[0]->GetRegister(/*PC*/0, NULL, 0); // FIXME
-    // else
-    //  DisAddr = (*CurGame->Debugger->RegGroups)[0]->OLDGetRegister("PC", NULL); // FIXME
-
-    Regs_Init(DIS_ENTRIES * DisFontHeight);
-   }
-  }
-
-  UpdateCoreHooks();	// Note: Relies on value of IsActive.
-  UpdateBreakpoints();
-
-  GfxDebugger_SetActive((WhichMode == 1) && IsActive);
-  memdbg->SetActive((WhichMode == 2) && IsActive);
-  LogDebugger_SetActive((WhichMode == 3) && IsActive);
-
-  SDL_MDFN_ShowCursor(IsActive);
- }
  return(IsActive);
 }
 
@@ -1626,26 +1591,58 @@ void Debugger_GT_Event(const SDL_Event *event)
 	   WatchLogical = !WatchLogical;
 	   break;
 
+	case SDLK_TAB:
+		if(RegsCols)
+		 InRegs = !InRegs;
+		break;
+
 	case SDLK_LEFT:
 		if(!InRegs)
-		 InRegs = RegsCols;		
+		{
+		 if(RegsCols)
+		 {
+		  InRegs = true;
+		  RegsPosX = RegsCols - 1;
+		 }
+		}
 		else
-		 InRegs = InRegs - 1;
+		{
+		 if(!RegsPosX)
+		  InRegs = false;
+		 else
+		  RegsPosX--;
+		}
 
-		if(InRegs && RegsPos >= RegsColsCounts[InRegs - 1])
- 		 RegsPos = RegsColsCounts[InRegs - 1] - 1;
-
+		if(InRegs && RegsPosY >= RegsColsCounts[RegsPosX])
+ 		 RegsPosY = RegsColsCounts[RegsPosX] - 1;
 		break;
+
 	case SDLK_RIGHT:
-		InRegs = (InRegs + 1) % (RegsCols + 1);
-                if(InRegs && RegsPos >= RegsColsCounts[InRegs - 1])
-                  RegsPos = RegsColsCounts[InRegs - 1] - 1;
+		if(!InRegs)
+		{
+		 if(RegsCols)
+		 {
+		  InRegs = true;
+		  RegsPosX = 0;
+		 }
+		}
+		else
+		{
+		 if(RegsPosX == RegsCols - 1)
+		  InRegs = false;
+		 else
+		  RegsPosX++;
+		}
+
+		if(InRegs && RegsPosY >= RegsColsCounts[RegsPosX])
+ 		 RegsPosY = RegsColsCounts[RegsPosX] - 1;
 		break;
+
         case SDLK_UP:
 	  if(InRegs)
 	  {
-		if(RegsPos)
-		 RegsPos--;
+		if(RegsPosY)
+		 RegsPosY--;
 	  }
 	  else
 	  {
@@ -1662,11 +1659,12 @@ void Debugger_GT_Event(const SDL_Event *event)
 	   }
 	  }
           break;
+
          case SDLK_DOWN:
 	  if(InRegs)
 	  {
-                if(RegsPos < (RegsColsCounts[InRegs - 1] - 1))
-		 RegsPos++;
+                if(RegsPosY < (RegsColsCounts[RegsPosX] - 1))
+		 RegsPosY++;
 	  }
 	  else
 	  {
@@ -1747,8 +1745,8 @@ void Debugger_GT_Event(const SDL_Event *event)
                  InPrompt = AuxReadBPS;
                  myprompt = new DebuggerPrompt("Aux Read Breakpoints", AuxReadBreakpoints);
                 }
-		else
-		 NeedRun = 1;
+		else if(InSteppingMode)
+		 NeedRun = true;
 		break;
 
 	 case SDLK_l:
@@ -1780,6 +1778,7 @@ void Debugger_GT_Event(const SDL_Event *event)
 		}
 		break;
 
+	  case SDLK_g:
 	  case SDLK_RETURN:
 		 {
 		  char buf[64];
@@ -1793,24 +1792,21 @@ void Debugger_GT_Event(const SDL_Event *event)
 	 	  }
 		  else
 		  {
-		   if(InRegs)
+		   if(InRegs && event->key.keysym.sym != SDLK_g)
 		   {
-		    if((*CurGame->Debugger->RegGroups)[InRegs - 1]->Regs[RegsPos].bsize == 0xFFFF)
+		    if((*CurGame->Debugger->RegGroups)[RegsPosX]->Regs[RegsPosY].bsize == 0xFFFF)
 		     break;
 
 		    InPrompt = (PromptType)(EditRegs);
-		    CurRegIP = &(*CurGame->Debugger->RegGroups)[InRegs - 1]->Regs[RegsPos];
-		    CurRegGroupIP = (*CurGame->Debugger->RegGroups)[InRegs - 1];
+		    CurRegIP = &(*CurGame->Debugger->RegGroups)[RegsPosX]->Regs[RegsPosY];
+		    CurRegGroupIP = (*CurGame->Debugger->RegGroups)[RegsPosX];
 
 		    ptext = CurRegIP->name;
 		    int len = CurRegIP->bsize;
 
 		    uint32 RegValue;
 
-		    if(CurRegGroupIP->GetRegister)
-		     RegValue = CurRegGroupIP->GetRegister(CurRegIP->id, NULL, 0);
-		    else
-		     RegValue = CurRegGroupIP->OLDGetRegister(CurRegIP->name, NULL);
+		    RegValue = CurRegGroupIP->GetRegister(CurRegIP->id, NULL, 0);
 
 		    if(len == 1)
 		     trio_snprintf(buf, 64, "%02X", RegValue);

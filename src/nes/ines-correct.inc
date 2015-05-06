@@ -1,3 +1,5 @@
+{ 0, 185, -1, 0xc11e39a017a5f62aULL },  /* Othello (Japan) */
+
 { 0, 135, 8, 0x6ae12e21239c2688ULL },	/* Super Pang */
 
 

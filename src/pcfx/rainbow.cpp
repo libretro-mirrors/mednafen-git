@@ -520,117 +520,39 @@ static void decode(int32 *dct, const uint32 *QuantTable, const int32 dc, const H
 }
 
 #ifdef WANT_DEBUGGER
-static RegType RainbowRegs[] =
-{
- { 0, "RSCRLL", "Rainbow Horizontal Scroll", 2 },
- { 0, "RCTRL", "Rainbow Control", 2 },
- { 0, "RHSYNC", "Rainbow HSync?", 1 },
- { 0, "RNRY", "Rainbow Null Run Y", 2 },
- { 0, "RNRU", "Rainbow Null Run U", 2 },
- { 0, "RNRV", "Rainbow Null Run V", 2 },
- { 0, "------", "", 0xFFFF },
-        { 0, "BGMODE", "Background Mode", 2 },
-        { 0, "BGPRIO", "Background Priority", 2 },
-        { 0, "BGSCRM", "Background Scroll Mode", 2 },
-        { 0, "BGSIZ0", "Background 0 Size", 2 },
-        { 0, "BGSIZ1", "Background 1 Size", 1 },
-        { 0, "BGSIZ2", "Background 2 Size", 1 },
-        { 0, "BGSIZ3", "Background 3 Size", 1 },
-        { 0, "BGXSC0", "Background 0 X Scroll", 0x100 | 11 },
-        { 0, "BGXSC1", "Background 1 X Scroll", 0x100 | 10 },
-        { 0, "BGXSC2", "Background 2 X Scroll", 0x100 | 10 },
-        { 0, "BGXSC3", "Background 3 X Scroll", 0x100 | 10 },
-        { 0, "BGYSC0", "Background 0 Y Scroll", 0x100 | 11 },
-        { 0, "BGYSC1", "Background 1 Y Scroll", 0x100 | 10 },
-        { 0, "BGYSC2", "Background 2 Y Scroll", 0x100 | 10 },
-        { 0, "BGYSC3", "Background 3 Y Scroll", 0x100 | 10 },
-
-        { 0, "BGBAT0", "Background 0 BAT Address", 1 },
-        { 0, "BGBATS", "Background SUB BAT Address", 1 },
-        { 0, "BGBAT1", "Background 1 BAT Address", 1 },
-        { 0, "BGBAT2", "Background 2 BAT Address", 1 },
-        { 0, "BGBAT3", "Background 3 BAT Address", 1 },
-        { 0, "BGCG0", "Background 0 CG Address", 1 },
-        { 0, "BGCGS", "Background SUB CG Address", 1 },
-        { 0, "BGCG1", "Background 1 CG Address", 1 },
-        { 0, "BGCG2", "Background 2 CG Address", 1 },
-        { 0, "BGCG3", "Background 3 CG Address", 1 },
-
- { 0, "AFFINA", "Background Affin Coefficient A", 2 },
- { 0, "AFFINB", "Background Affin Coefficient B", 2 },
- { 0, "AFFINC", "Background Affin Coefficient C", 2 },
- { 0, "AFFIND", "Background Affin Coefficient D", 2 },
- { 0, "AFFINX", "Background Affin Center X", 2 },
- { 0, "AFFINY", "Background Affin Center Y", 2 },
- { 0, "MPROG0", "Micro-program", 2},
- { 0, "MPROG1", "Micro-program", 2},
- { 0, "MPROG2", "Micro-program", 2},
- { 0, "MPROG3", "Micro-program", 2},
- { 0, "MPROG4", "Micro-program", 2},
- { 0, "MPROG5", "Micro-program", 2},
- { 0, "MPROG6", "Micro-program", 2},
- { 0, "MPROG7", "Micro-program", 2},
- { 0, "MPROG8", "Micro-program", 2},
- { 0, "MPROG9", "Micro-program", 2},
- { 0, "MPROGA", "Micro-program", 2},
- { 0, "MPROGB", "Micro-program", 2},
- { 0, "MPROGC", "Micro-program", 2},
- { 0, "MPROGD", "Micro-program", 2},
- { 0, "MPROGE", "Micro-program", 2},
- { 0, "MPROGF", "Micro-program", 2},
-
- // EVIL EVIL:
-
- { 0, "", "", 0 },
-};
-
-static uint32 RainbowDBG_GetRegister(const std::string &name, std::string *special)
+uint32 RAINBOW_GetRegister(const unsigned int id, char* special, const uint32 special_len)
 {
  uint32 value = 0xDEADBEEF;
 
- if(name ==  "RSCRLL")
+ if(id == RAINBOW_GSREG_RSCRLL)
   value = HScroll;
- else if(name == "RCTRL")
+ else if(id == RAINBOW_GSREG_RCTRL)
   value = Control;
- else if(name == "RNRY")
+ else if(id == RAINBOW_GSREG_RNRY)
   value = NullRunY;
- else if(name == "RNRU")
+ else if(id == RAINBOW_GSREG_RNRU)
   value = NullRunU;
- else if(name == "RNRV")
+ else if(id == RAINBOW_GSREG_RNRV)
   value = NullRunV;
- else if(name == "RHSYNC")
+ else if(id == RAINBOW_GSREG_RHSYNC)
   value = HSync;
- else
-  value = KING_GetRegister(name, special); // EVIL EVIL
+
  return(value);
 }
 
-static void RainbowDBG_SetRegister(const std::string &name, uint32 value)
+void RAINBOW_SetRegister(const unsigned int id, uint32 value)
 {
- if(name == "RSCRLL")
+ if(id == RAINBOW_GSREG_RSCRLL)
   HScroll = value & 0x1FF;
- else if(name == "RCTRL")
+ else if(id == RAINBOW_GSREG_RCTRL)
   Control = value;
- else if(name == "RNRY")
+ else if(id == RAINBOW_GSREG_RNRY)
   NullRunY = value;
- else if(name == "RNRU")
+ else if(id == RAINBOW_GSREG_RNRU)
   NullRunU = value;
- else if(name == "RNRV")
+ else if(id == RAINBOW_GSREG_RNRV)
   NullRunV = value;
- else
-  KING_SetRegister(name, value);
 }
-
-static RegGroupType RainbowRegsGroup =
-{
- NULL,
- RainbowRegs,
- NULL,
- NULL,
- RainbowDBG_GetRegister,
- RainbowDBG_SetRegister
-};
-
 #endif
 
 static uint32 LastLine[256];
@@ -656,10 +578,6 @@ void RAINBOW_Init(bool arg_ChromaIP)
 {
  try
  {
-  #ifdef WANT_DEBUGGER
-  MDFNDBG_AddRegGroup(&RainbowRegsGroup);
-  #endif
-
   ChromaIP = arg_ChromaIP;
 
   for(int i = 0; i < 2; i++)

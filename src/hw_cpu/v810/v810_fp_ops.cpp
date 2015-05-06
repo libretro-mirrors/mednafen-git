@@ -48,9 +48,9 @@ bool V810_FP_Ops::fp_is_inf_nan_sub(uint32 v)
  return(false);
 }
 
-uint8 V810_FP_Ops::clz64(uint64 v)
+unsigned V810_FP_Ops::clz64(uint64 v)
 {
- uint8 ret = 0;
+ unsigned ret = 0;
 
  if(!(v & 0xFFFFFFFFFFFFFFFFULL))
   return(64);
@@ -159,7 +159,7 @@ uint32 V810_FP_Ops::fpim_encode(fpim* df)
 {
  const int lzc = clz64(df->f);
  int tmp_exp = df->exp - lzc;
- uint64 tmp_walrus = df->f << lzc;
+ uint64 tmp_walrus = df->f << (lzc & 0x3F);
  int tmp_sign = df->sign;
 
  tmp_exp += 40;

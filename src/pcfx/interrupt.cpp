@@ -130,89 +130,82 @@ void PCFXIRQ_StateAction(StateMem *sm, const unsigned load, const bool data_only
   BuildInterruptCache();
 }
 
-bool PCFXIRQ_SetRegister(const std::string &name, uint32 value)
+void PCFXIRQ_SetRegister(const unsigned int id, uint32 value)
 {
- if(name == "IMASK")
+ switch(id)
  {
-  InterruptMask = value & 0x7F;
-  BuildInterruptCache();
+  case PCFXIRQ_GSREG_IMASK:
+	InterruptMask = value & 0x7F;
+	BuildInterruptCache();
+	break;
+
+  case PCFXIRQ_GSREG_IPRIO0:
+	InterruptPriority[0] = value & 0xFFF;
+	BuildInterruptCache();
+	break;
+
+  case PCFXIRQ_GSREG_IPRIO1:
+	InterruptPriority[1] = value & 0x1FF;
+	BuildInterruptCache();
+	break;
+
+  case PCFXIRQ_GSREG_IPEND:
+	InterruptAsserted = value;
+	BuildInterruptCache();
+	break;
  }
- else if(name == "IPRIO0")
- {
-  InterruptPriority[0] = value & 0xFFF;
-  BuildInterruptCache();
- }
- else if(name == "IPRIO1")
- {
-  InterruptPriority[1] = value & 0x1FF;
-  BuildInterruptCache();
- }
- else if(name == "IPEND")
- {
-  InterruptAsserted = value;
-  BuildInterruptCache();
- }
- return(FALSE);
 }
 
-bool PCFXIRQ_GetRegister(const std::string &name, uint32 &value, std::string *special)
+uint32 PCFXIRQ_GetRegister(const unsigned int id, char *special, const uint32 special_len)
 {
- if(name == "IMASK")
+ uint32 value = 0xDEADBEEF;
+
+ switch(id)
  {
-  value = InterruptMask;
-  if(special)
-  {
-   char buf[256];
-   trio_snprintf(buf, 256, "IRQ Allowed; HuC6273: %s, HuC6270-B: %s, HuC6272: %s, HuC6270-A: %s, Pad: %s, Timer: %s, Reset: %s",
-	(InterruptMask & (1 << 0)) ? "No" : "Yes", (InterruptMask & (1 << 1)) ? "No" : "Yes",
-	(InterruptMask & (1 << 2)) ? "No" : "Yes", (InterruptMask & (1 << 3)) ? "No" : "Yes",
-	(InterruptMask & (1 << 4)) ? "No" : "Yes", (InterruptMask & (1 << 6)) ? "No" : "Yes",
-	(InterruptMask & (1 << 7)) ? "No" : "Yes");
-   *special = std::string(buf);
-  }
-  return(TRUE);
+  case PCFXIRQ_GSREG_IMASK:
+	value = InterruptMask;
+	if(special)
+	{
+	 trio_snprintf(special, special_len, "IRQ Allowed; HuC6273: %s, HuC6270-B: %s, HuC6272: %s, HuC6270-A: %s, Pad: %s, Timer: %s, Reset: %s",
+		(InterruptMask & (1 << 0)) ? "No" : "Yes", (InterruptMask & (1 << 1)) ? "No" : "Yes",
+		(InterruptMask & (1 << 2)) ? "No" : "Yes", (InterruptMask & (1 << 3)) ? "No" : "Yes",
+		(InterruptMask & (1 << 4)) ? "No" : "Yes", (InterruptMask & (1 << 6)) ? "No" : "Yes",
+		(InterruptMask & (1 << 7)) ? "No" : "Yes");
+	}
+	break;
+
+  case PCFXIRQ_GSREG_IPRIO0:
+	value = InterruptPriority[0];
+	if(special)
+	{
+	 trio_snprintf(special, special_len, "HuC6273: %d, HuC6270-B: %d, HuC6272: %d, HuC6270-A: %d",
+ 	 	(InterruptPriority[0] >> 0) & 0x7, (InterruptPriority[0] >> 3) & 0x7,
+		(InterruptPriority[0] >> 6) & 0x7, (InterruptPriority[0] >> 9) & 0x7);
+	}
+	break;
+
+  case PCFXIRQ_GSREG_IPRIO1:
+	value = InterruptPriority[1];
+	if(special)
+	{
+	 trio_snprintf(special, special_len, "Pad: %d, ??: %d, Timer: %d, Reset: %d",
+         	(InterruptPriority[1] >> 0) & 0x7, (InterruptPriority[1] >> 3) & 0x7,
+         	(InterruptPriority[1] >> 6) & 0x7, (InterruptPriority[1] >> 9) & 0x7);
+	}
+	break;
+
+  case PCFXIRQ_GSREG_IPEND:
+	value = InterruptAsserted;
+	if(special)
+	{
+	 trio_snprintf(special, special_len, "HuC6273: %d, HuC6270-B: %d, HuC6272: %d, HuC6270-A: %d, Pad: %d, ??: %d, Timer: %d, Reset: %d", (int)(bool)(value & 0x01), (int)(bool)(value & 0x02),
+		(int)(bool)(value & 0x04), (int)(bool)(value & 0x08), (int)(bool)(value & 0x10), (int)(bool)(value & 0x20),
+		(int)(bool)(value & 0x40), (int)(bool)(value & 0x80));
+	}
+  	break;
  }
- else if(name == "IPRIO0")
- {
-  value =  InterruptPriority[0];
-  if(special)
-  {
-   char buf[256];
-   trio_snprintf(buf, 256, "HuC6273: %d, HuC6270-B: %d, HuC6272: %d, HuC6270-A: %d",
- 	 (InterruptPriority[0] >> 0) & 0x7, (InterruptPriority[0] >> 3) & 0x7,
-	 (InterruptPriority[0] >> 6) & 0x7, (InterruptPriority[0] >> 9) & 0x7);
-   *special = std::string(buf);
-  }
-  return(TRUE);
- }
- else if(name == "IPRIO1")
- {
-  value = InterruptPriority[1];
-  if(special)
-  {
-   char buf[256];
-   trio_snprintf(buf, 256, "Pad: %d, ??: %d, Timer: %d, Reset: %d",
-         (InterruptPriority[1] >> 0) & 0x7, (InterruptPriority[1] >> 3) & 0x7,
-         (InterruptPriority[1] >> 6) & 0x7, (InterruptPriority[1] >> 9) & 0x7);
-   *special = std::string(buf);
-  }
-  return(TRUE);
- }
- else if(name == "IPEND")
- {
-  value = InterruptAsserted;
-  if(special)
-  {
-   char buf[256];
-   trio_snprintf(buf, 256, "HuC6273: %d, HuC6270-B: %d, HuC6272: %d, HuC6270-A: %d, Pad: %d, ??: %d, Timer: %d, Reset: %d", (int)(bool)(value & 0x01), (int)(bool)(value & 0x02),
-	(int)(bool)(value & 0x04), (int)(bool)(value & 0x08), (int)(bool)(value & 0x10), (int)(bool)(value & 0x20),
-	(int)(bool)(value & 0x40), (int)(bool)(value & 0x80));
-   *special = std::string(buf);
-  }
-  return(TRUE);
- }
- else
-  return(FALSE);
+
+ return value;
 }
 
 void PCFXIRQ_Reset(void)

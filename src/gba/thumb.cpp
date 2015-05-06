@@ -1855,7 +1855,7 @@ switch(opcode >> 8) {
  case 0xd0:
    // BEQ offset
    if(Z_FLAG) {
-     reg[15].I += ((int8)(opcode & 0xFF)) << 1;
+     reg[15].I += (uint32)((int8)(opcode & 0xFF)) << 1;
      armNextPC = reg[15].I;
      reg[15].I += 2;
      THUMB_PREFETCH;
@@ -1866,7 +1866,7 @@ switch(opcode >> 8) {
  case 0xd1:
    // BNE offset
    if(!Z_FLAG) {
-     reg[15].I += ((int8)(opcode & 0xFF)) << 1;       
+     reg[15].I += (uint32)((int8)(opcode & 0xFF)) << 1;
      armNextPC = reg[15].I;
      reg[15].I += 2;
      THUMB_PREFETCH;
@@ -1877,7 +1877,7 @@ switch(opcode >> 8) {
  case 0xd2:
    // BCS offset
    if(C_FLAG) {
-     reg[15].I += ((int8)(opcode & 0xFF)) << 1;       
+     reg[15].I += (uint32)((int8)(opcode & 0xFF)) << 1;
      armNextPC = reg[15].I;
      reg[15].I += 2;
      THUMB_PREFETCH;
@@ -1888,7 +1888,7 @@ switch(opcode >> 8) {
  case 0xd3:
    // BCC offset
    if(!C_FLAG) {
-     reg[15].I += ((int8)(opcode & 0xFF)) << 1;       
+     reg[15].I += (uint32)((int8)(opcode & 0xFF)) << 1;
      armNextPC = reg[15].I;
      reg[15].I += 2;
      THUMB_PREFETCH;
@@ -1899,7 +1899,7 @@ switch(opcode >> 8) {
  case 0xd4:
    // BMI offset
    if(N_FLAG) {
-     reg[15].I += ((int8)(opcode & 0xFF)) << 1;       
+     reg[15].I += (uint32)((int8)(opcode & 0xFF)) << 1;
      armNextPC = reg[15].I;
      reg[15].I += 2;
      THUMB_PREFETCH;
@@ -1910,7 +1910,7 @@ switch(opcode >> 8) {
  case 0xd5:
    // BPL offset
    if(!N_FLAG) {
-     reg[15].I += ((int8)(opcode & 0xFF)) << 1;       
+     reg[15].I += (uint32)((int8)(opcode & 0xFF)) << 1;
      armNextPC = reg[15].I;
      reg[15].I += 2;
      THUMB_PREFETCH;
@@ -1921,7 +1921,7 @@ switch(opcode >> 8) {
  case 0xd6:
    // BVS offset
    if(V_FLAG) {
-     reg[15].I += ((int8)(opcode & 0xFF)) << 1;       
+     reg[15].I += (uint32)((int8)(opcode & 0xFF)) << 1;
      armNextPC = reg[15].I;
      reg[15].I += 2;
      THUMB_PREFETCH;
@@ -1932,7 +1932,7 @@ switch(opcode >> 8) {
  case 0xd7:
    // BVC offset
    if(!V_FLAG) {
-     reg[15].I += ((int8)(opcode & 0xFF)) << 1;       
+     reg[15].I += (uint32)((int8)(opcode & 0xFF)) << 1;
      armNextPC = reg[15].I;
      reg[15].I += 2;
      THUMB_PREFETCH;
@@ -1943,7 +1943,7 @@ switch(opcode >> 8) {
  case 0xd8:
    // BHI offset
    if(C_FLAG && !Z_FLAG) {
-     reg[15].I += ((int8)(opcode & 0xFF)) << 1;       
+     reg[15].I += (uint32)((int8)(opcode & 0xFF)) << 1;
      armNextPC = reg[15].I;
      reg[15].I += 2;
      THUMB_PREFETCH;
@@ -1954,7 +1954,7 @@ switch(opcode >> 8) {
  case 0xd9:
    // BLS offset
    if(!C_FLAG || Z_FLAG) {
-     reg[15].I += ((int8)(opcode & 0xFF)) << 1;       
+     reg[15].I += (uint32)((int8)(opcode & 0xFF)) << 1;
      armNextPC = reg[15].I;
      reg[15].I += 2;
      THUMB_PREFETCH;
@@ -1965,7 +1965,7 @@ switch(opcode >> 8) {
  case 0xda:
    // BGE offset
    if(N_FLAG == V_FLAG) {
-     reg[15].I += ((int8)(opcode & 0xFF)) << 1;       
+     reg[15].I += (uint32)((int8)(opcode & 0xFF)) << 1;
      armNextPC = reg[15].I;
      reg[15].I += 2;
      THUMB_PREFETCH;
@@ -1976,7 +1976,7 @@ switch(opcode >> 8) {
  case 0xdb:
    // BLT offset
    if(N_FLAG != V_FLAG) {
-     reg[15].I += ((int8)(opcode & 0xFF)) << 1;       
+     reg[15].I += (uint32)((int8)(opcode & 0xFF)) << 1;
      armNextPC = reg[15].I;
      reg[15].I += 2;
      THUMB_PREFETCH;
@@ -1987,7 +1987,7 @@ switch(opcode >> 8) {
  case 0xdc:
    // BGT offset
    if(!Z_FLAG && (N_FLAG == V_FLAG)) {
-     reg[15].I += ((int8)(opcode & 0xFF)) << 1;       
+     reg[15].I += (uint32)((int8)(opcode & 0xFF)) << 1;
      armNextPC = reg[15].I;
      reg[15].I += 2;
      THUMB_PREFETCH;
@@ -1998,7 +1998,7 @@ switch(opcode >> 8) {
  case 0xdd:
    // BLE offset
    if(Z_FLAG || (N_FLAG != V_FLAG)) {
-     reg[15].I += ((int8)(opcode & 0xFF)) << 1;       
+     reg[15].I += (uint32)((int8)(opcode & 0xFF)) << 1;
      armNextPC = reg[15].I;
      reg[15].I += 2;
      THUMB_PREFETCH;

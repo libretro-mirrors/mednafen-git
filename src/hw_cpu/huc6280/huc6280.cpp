@@ -190,7 +190,7 @@ INLINE void HuC6280::BBSi(const uint8 val, const unsigned int bitto)
 	      }	\
 	     } TPOSTFIX;
 
-#define SBC  if(P & T_FLAG) {puts("SET misuse"); } if(P & D_FLAG)	\
+#define SBC  if(P & D_FLAG)	\
 	     {		\
 	      uint32 c = (P & 1) ^ 1;	\
 	      uint32 l = A - x - c;	\

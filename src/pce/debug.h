@@ -17,8 +17,6 @@ uint32 PCEDBG_MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical);
 void PCEDBG_IRQ(int level);
 uint32 PCEDBG_GetVector(int level);
 void PCEDBG_Disassemble(uint32 &a, uint32 SpecialA, char *);
-uint32 PCEDBG_GetRegister(const std::string &name, std::string *special);
-void PCEDBG_SetRegister(const std::string &name, uint32 value);
 
 void PCEDBG_CheckBP(int type, uint32 address, unsigned int len);
 

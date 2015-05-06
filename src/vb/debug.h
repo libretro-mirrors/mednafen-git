@@ -9,8 +9,6 @@ void VBDBG_AddBreakPoint(int type, unsigned int A1, unsigned int A2, bool logica
 void VBDBG_Disassemble(uint32 &a, uint32 SpecialA, char *);
 
 uint32 VBDBG_MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical);
-uint32 VBDBG_GetRegister(const std::string &name, std::string *special);
-void VBDBG_SetRegister(const std::string &name, uint32 value);
 
 void VBDBG_SetCPUCallback(void (*callb)(uint32 PC, bool bpoint), bool continuous);
 

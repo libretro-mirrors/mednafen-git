@@ -3324,220 +3324,196 @@ void KING_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 }
 
 #ifdef WANT_DEBUGGER
-void KING_SetRegister(const std::string &name, uint32 value)
+void KING_SetRegister(const unsigned int id, uint32 value)
 {
-
- if(name == "AR")
+ if(id == KING_GSREG_AR)
   king->AR = value & 0x7F;
- else if(name == "MPROGADDR")
+ else if(id == KING_GSREG_MPROGADDR)
   king->MPROGAddress = value & 0xF;
- else if(name == "MPROGCTRL")
+ else if(id == KING_GSREG_MPROGCTRL)
   king->MPROGControl = value & 0x1;
- else if(name == "MPROG0" || name == "MPROG1" || name == "MPROG2" || name == "MPROG3" || name == "MPROG4" || name == "MPROG5" || name == "MPROG6" || name == "MPROG7" ||
-         name == "MPROG8" || name == "MPROG9" || name == "MPROGA" || name == "MPROGB" || name == "MPROGC" || name == "MPROGD" || name == "MPROGE" || name == "MPROGF")
+ else if(id == KING_GSREG_MPROG0 || id == KING_GSREG_MPROG1 || id == KING_GSREG_MPROG2 || id == KING_GSREG_MPROG3 || id == KING_GSREG_MPROG4 || id == KING_GSREG_MPROG5 || id == KING_GSREG_MPROG6 || id == KING_GSREG_MPROG7 ||
+         id == KING_GSREG_MPROG8 || id == KING_GSREG_MPROG9 || id == KING_GSREG_MPROGA || id == KING_GSREG_MPROGB || id == KING_GSREG_MPROGC || id == KING_GSREG_MPROGD || id == KING_GSREG_MPROGE || id == KING_GSREG_MPROGF)
  {
-  int which;
-  if(name[5] >= 'A' && name[5] <= 'F')
-   which = name[5] + 0xA - 'A';
-  else
-   which = name[5] - '0';
-  king->MPROGData[which] = value;
+  king->MPROGData[id - KING_GSREG_MPROG0] = value;
  }
- else if(name == "PAGESET")
+ else if(id == KING_GSREG_PAGESET)
  {
   king->PageSetting = value;
   RecalcKRAMPagePtrs();
  }
- else if(name == "BGMODE")
+ else if(id == KING_GSREG_BGMODE)
  {
   king->bgmode = value;
  }
- else if(name == "BGPRIO")
+ else if(id == KING_GSREG_BGPRIO)
  {
   king->priority = value;
  }
- else if(name == "BGSCRM")
+ else if(id == KING_GSREG_BGSCRM)
  {
   king->BGScrollMode = value;
  }
- else if(name == "BGSIZ0")
+ else if(id == KING_GSREG_BGSIZ0)
   king->BGSize[0] = value;
- else if(name == "BGSIZ1")
+ else if(id == KING_GSREG_BGSIZ1)
   king->BGSize[1] = value & 0x00FF;
- else if(name == "BGSIZ2")
+ else if(id == KING_GSREG_BGSIZ2)
   king->BGSize[2] = value & 0x00FF;
- else if(name == "BGSIZ3")
+ else if(id == KING_GSREG_BGSIZ3)
   king->BGSize[3] = value & 0x00FF;
- else if(name == "BGXSC0")
+ else if(id == KING_GSREG_BGXSC0)
   king->BGXScroll[0] = value & 0x7FF;
- else if(name == "BGXSC1")
+ else if(id == KING_GSREG_BGXSC1)
   king->BGXScroll[1] = value & 0x3FF;
- else if(name == "BGXSC2")
+ else if(id == KING_GSREG_BGXSC2)
   king->BGXScroll[2] = value & 0x3FF;
- else if(name == "BGXSC3")
+ else if(id == KING_GSREG_BGXSC3)
   king->BGXScroll[3] = value & 0x3FF;
- else if(name == "BGYSC0")
+ else if(id == KING_GSREG_BGYSC0)
   king->BGYScroll[0] = value & 0x7FF;
- else if(name == "BGYSC1")
+ else if(id == KING_GSREG_BGYSC1)
   king->BGYScroll[1] = value & 0x3FF;
- else if(name == "BGYSC2")
+ else if(id == KING_GSREG_BGYSC2)
   king->BGYScroll[2] = value & 0x3FF;
- else if(name == "BGYSC3")
+ else if(id == KING_GSREG_BGYSC3)
   king->BGYScroll[3] = value & 0x3FF;
- else if(name == "AFFINA")
+ else if(id == KING_GSREG_AFFINA)
   king->BGAffinA = value;
- else if(name == "AFFINB")
+ else if(id == KING_GSREG_AFFINB)
   king->BGAffinB = value;
- else if(name == "AFFINC")
+ else if(id == KING_GSREG_AFFINC)
   king->BGAffinC = value;
- else if(name == "AFFIND")
+ else if(id == KING_GSREG_AFFIND)
   king->BGAffinD = value;
- else if(name == "AFFINX")
+ else if(id == KING_GSREG_AFFINX)
   king->BGAffinCenterX = value;
- else if(name == "AFFINY")
+ else if(id == KING_GSREG_AFFINY)
   king->BGAffinCenterY = value;
- else if(name ==  "BGBAT0")
-  king->BGBATAddr[0] = value;
- else if(name ==  "BGBATS")
-  king->BG0SubBATAddr = value;
- else if(name ==  "BGBAT1")
-  king->BGBATAddr[1] = value;
- else if(name ==  "BGBAT2")
-  king->BGBATAddr[2] = value;
- else if(name ==  "BGBAT3")
-  king->BGBATAddr[3] = value;
- else if(name == "BGCG0" || name == "BGCGS" || name == "BGCG1" || name == "BGCG2" || name == "BGCG3")
+ else if(id == KING_GSREG_BGBATS || id == KING_GSREG_BGBAT0 || id == KING_GSREG_BGBAT1 || id == KING_GSREG_BGBAT2 || id == KING_GSREG_BGBAT3)
  {
-  char which = name[4];
-  if(which == 'S')
+  if(id == KING_GSREG_BGBATS)
+   king->BG0SubBATAddr = value;
+  else
+   king->BGBATAddr[id - KING_GSREG_BGBAT0] = value;
+ }
+ else if(id == KING_GSREG_BGCGS || id == KING_GSREG_BGCG0 || id == KING_GSREG_BGCG1 || id == KING_GSREG_BGCG2 || id == KING_GSREG_BGCG3)
+ {
+  if(id == KING_GSREG_BGCGS)
    king->BG0SubCGAddr = value;
   else
-   king->BGCGAddr[which - '0'] = value;
+   king->BGCGAddr[id - KING_GSREG_BGCG0] = value;
  }
- else if(name == "RTCTRL")
+ else if(id == KING_GSREG_RTCTRL)
   king->RAINBOWTransferControl = value & 0x3;
- else if(name == "RKRAMA")
+ else if(id == KING_GSREG_RKRAMA)
   king->RAINBOWKRAMA = value & 0x3FFFF;
- else if(name == "RSTART")
+ else if(id == KING_GSREG_RSTART)
   king->RAINBOWTransferStartPosition = value & 0x1FF;
- else if(name == "RCOUNT")
+ else if(id == KING_GSREG_RCOUNT)
   king->RAINBOWTransferBlockCount = value & 0x1F;
- else if(name == "RIRQLINE")
+ else if(id == KING_GSREG_RIRQLINE)
   king->RasterIRQLine = value;
- else if(name == "KRAMRA")
+ else if(id == KING_GSREG_KRAMRA)
  {
   king->KRAMRA = value;
  }
- else if(name == "KRAMWA")
+ else if(id == KING_GSREG_KRAMWA)
  {
   king->KRAMWA = value;
  }
- else if(name == "DMATA")
+ else if(id == KING_GSREG_DMATA)
   king->DMATransferAddr = value;
- else if(name == "DMATS")
+ else if(id == KING_GSREG_DMATS)
   king->DMATransferSize = value;
- else if(name == "DMASTT")
+ else if(id == KING_GSREG_DMASTT)
   king->DMAStatus = value;
- else if(name == "ADPCMCTRL")
+ else if(id == KING_GSREG_ADPCMCTRL)
  {
   king->ADPCMControl = value;
   SoundBox_SetKINGADPCMControl(king->ADPCMControl);
  }
- else if(name == "ADPCMBM0" || name == "ADPCMBM1")
+ else if(id == KING_GSREG_ADPCMBM0 || id == KING_GSREG_ADPCMBM1)
  {
-  unsigned int which = name[7] - '0';
-  king->ADPCMBufferMode[which] = value;
+  king->ADPCMBufferMode[id - KING_GSREG_ADPCMBM0] = value;
  }
- else if(name == "ADPCMPA0" || name == "ADPCMPA1")
+ else if(id == KING_GSREG_ADPCMPA0 || id == KING_GSREG_ADPCMPA1)
  {
-  unsigned int which = name[7] - '0';
-  king->ADPCMPlayAddress[which] = value;
+  king->ADPCMPlayAddress[id - KING_GSREG_ADPCMPA0] = value;
  }
- else if(name == "ADPCMSA0" || name == "ADPCMSA1")
+ else if(id == KING_GSREG_ADPCMSA0 || id == KING_GSREG_ADPCMSA1)
  {
-  unsigned int which = name[7] - '0';
-  king->ADPCMSAL[which] = value;
+  king->ADPCMSAL[id - KING_GSREG_ADPCMSA0] = value;
  }
- else if(name == "ADPCMIA0" || name == "ADPCMIA1")
+ else if(id == KING_GSREG_ADPCMIA0 || id == KING_GSREG_ADPCMIA1)
  {
-  unsigned int which = name[7] - '0';
-  king->ADPCMIntermediateAddress[which] = value;
+  king->ADPCMIntermediateAddress[id - KING_GSREG_ADPCMIA0] = value;
  }
- else if(name == "ADPCMEA0" || name == "ADPCMEA1")
+ else if(id == KING_GSREG_ADPCMEA0 || id == KING_GSREG_ADPCMEA1)
  {
-  unsigned int which = name[7] - '0';
-  king->ADPCMEndAddress[which] = value;
+  king->ADPCMEndAddress[id - KING_GSREG_ADPCMEA0] = value;
  }
- else if(name == "ADPCMStat")
+ else if(id == KING_GSREG_ADPCMStat)
  {
 
  }
- else if(name == "Reg01")
+ else if(id == KING_GSREG_Reg01)
  {
   king->Reg01 = value;
  }
- else if(name == "Reg02")
+ else if(id == KING_GSREG_Reg02)
  {
   king->Reg02 = value;
  }
- else if(name == "Reg03")
+ else if(id == KING_GSREG_Reg03)
  {
   king->Reg03 = value;
  }
- else if(name == "SUBCC")
+ else if(id == KING_GSREG_SUBCC)
  {
   king->SubChannelControl = value & 0x3;
  }
 }
 
-uint32 KING_GetRegister(const std::string &name, std::string *special)
+uint32 KING_GetRegister(const unsigned int id, char *special, const uint32 special_len)
 {
  uint32 value = 0xDEADBEEF;
 
- if(name == "AR")
+ if(id == KING_GSREG_AR)
  {
   value = king->AR;  
  }
- else if(name == "MPROGADDR")
+ else if(id == KING_GSREG_MPROGADDR)
   value = king->MPROGAddress;
- else if(name == "MPROGCTRL")
+ else if(id == KING_GSREG_MPROGCTRL)
  {
   value = king->MPROGControl;
  }
- else if(name == "MPROG0" || name == "MPROG1" || name == "MPROG2" || name == "MPROG3" || name == "MPROG4" || name == "MPROG5" || name == "MPROG6" || name == "MPROG7" ||
- 	 name == "MPROG8" || name == "MPROG9" || name == "MPROGA" || name == "MPROGB" || name == "MPROGC" || name == "MPROGD" || name == "MPROGE" || name == "MPROGF")
+ else if(id == KING_GSREG_MPROG0 || id == KING_GSREG_MPROG1 || id == KING_GSREG_MPROG2 || id == KING_GSREG_MPROG3 || id == KING_GSREG_MPROG4 || id == KING_GSREG_MPROG5 || id == KING_GSREG_MPROG6 || id == KING_GSREG_MPROG7 ||
+ 	 id == KING_GSREG_MPROG8 || id == KING_GSREG_MPROG9 || id == KING_GSREG_MPROGA || id == KING_GSREG_MPROGB || id == KING_GSREG_MPROGC || id == KING_GSREG_MPROGD || id == KING_GSREG_MPROGE || id == KING_GSREG_MPROGF)
  {
-  int which;
-  if(name[5] >= 'A' && name[5] <= 'F') 
-   which = name[5] + 0xA - 'A';
-  else
-   which = name[5] - '0';
-  value = king->MPROGData[which];
+  value = king->MPROGData[id - KING_GSREG_MPROG0];
+
   if(special)
   {
-   char buf[256];
    static const char *atypes[4] = { "CG", "CG of BAT", "BAT", "???" };
 
-   trio_snprintf(buf, 256, "Offset: %d, Access Type: %s, Rotation: %d, BG Number: %d, NOP: %d",
+   trio_snprintf(special, special_len, "Offset: %d, Access Type: %s, Rotation: %d, BG Number: %d, NOP: %d",
         value & 0x7, atypes[(value >> 3) & 0x3], (int)(bool)(value & 0x20),
         (value >> 6) & 0x3, (int)(bool)(value & 0x100));
-
-   *special = std::string(buf);
   }
 
  }
- else if(name == "PAGESET")
+ else if(id == KING_GSREG_PAGESET)
  {
   value = king->PageSetting;
 
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "SCSI: %d, BG: %d, ADPCM: %d, RAINBOW: %d", (int)(bool)(value & 0x1), (int)(bool)(value & 0x10), (int)(bool)(value & 0x100), (int)(bool)(value & 0x1000));
-   *special = std::string(buf);
+   trio_snprintf(special, special_len, "SCSI: %d, BG: %d, ADPCM: %d, RAINBOW: %d", (int)(bool)(value & 0x1), (int)(bool)(value & 0x10), (int)(bool)(value & 0x100), (int)(bool)(value & 0x1000));
   }
  }
- else if(name == "BGMODE")
+ else if(id == KING_GSREG_BGMODE)
  {
   value = king->bgmode;
   if(special)
@@ -3545,381 +3521,331 @@ uint32 KING_GetRegister(const std::string &name, std::string *special)
    static const char *bgmodes[16] = { "Disabled", "4-color", "16-color", "256-color", "64K-color", "16M-color", "Undefined", "Undefined",
 				      "Disabled", "4-color w/BAT", "16-color w/BAT", "256-color w/BAT", "64K-color w/BAT", "16M-color w/BAT", "Undefined", "Undefined"
 				    };
-   char buf[256];
-   trio_snprintf(buf, 256, "BG0: %2d(%s), BG1: %2d(%s), BG2: %2d(%s), BG3: %2d(%s)", value & 0xF, bgmodes[value & 0xF], (value >> 4) & 0xF, bgmodes[(value >> 4) & 0xF], (value >> 8) & 0xF, bgmodes[(value >> 8) & 0xf], (value >> 12) & 0xF, bgmodes[(value >> 12) & 0xf]);
-   *special = std::string(buf);
+   trio_snprintf(special, special_len, "BG0: %2d(%s), BG1: %2d(%s), BG2: %2d(%s), BG3: %2d(%s)", value & 0xF, bgmodes[value & 0xF], (value >> 4) & 0xF, bgmodes[(value >> 4) & 0xF], (value >> 8) & 0xF, bgmodes[(value >> 8) & 0xf], (value >> 12) & 0xF, bgmodes[(value >> 12) & 0xf]);
   }
  }
- else if(name == "BGPRIO")
+ else if(id == KING_GSREG_BGPRIO)
  {
   value = king->priority;
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "Affine enable: %s - BG0: %2d, BG1: %2d, BG2: %2d, BG3: %2d", (value & (1 << 12)) ? "Yes" : "No", value & 0x7, (value >> 3) & 0x7, (value >> 6) & 0x7, (value >> 9) & 0x7);
-   *special = std::string(buf);
+   trio_snprintf(special, special_len, "Affine enable: %s - BG0: %2d, BG1: %2d, BG2: %2d, BG3: %2d", (value & (1 << 12)) ? "Yes" : "No", value & 0x7, (value >> 3) & 0x7, (value >> 6) & 0x7, (value >> 9) & 0x7);
   }
  }
- else if(name == "BGSCRM")
+ else if(id == KING_GSREG_BGSCRM)
  {
   value = king->BGScrollMode;
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "BG0: %s, BG1: %s, BG2: %s, BG3: %s", (value & 1) ? "Endless" : "Non-endless",(value & 2) ? "Endless" : "Non-endless",
+   trio_snprintf(special, special_len, "BG0: %s, BG1: %s, BG2: %s, BG3: %s", (value & 1) ? "Endless" : "Non-endless",(value & 2) ? "Endless" : "Non-endless",
 	(value & 4) ? "Endless" : "Non-endless", (value & 8) ? "Endless" : "Non-endless");
-   *special = std::string(buf);
   }
  }
- else if(name == "BGSIZ0")
-  value = king->BGSize[0];
-
- else if(name == "BGSIZ1")
-  value = king->BGSize[1];
-
- else if(name == "BGSIZ2")
-  value = king->BGSize[2];
-
- else if(name == "BGSIZ3")
-  value = king->BGSize[3];
-
- else if(name == "BGXSC0")
+ else if(id == KING_GSREG_BGSIZ0 || id == KING_GSREG_BGSIZ1 || id == KING_GSREG_BGSIZ2 || id == KING_GSREG_BGSIZ3)
+ {
+  value = king->BGSize[id - KING_GSREG_BGSIZ0];
+ }
+ else if(id == KING_GSREG_BGXSC0)
   value = king->BGXScroll[0];
- else if(name == "BGXSC1")
+ else if(id == KING_GSREG_BGXSC1)
   value = king->BGXScroll[1];
- else if(name == "BGXSC2")
+ else if(id == KING_GSREG_BGXSC2)
   value = king->BGXScroll[2];
- else if(name == "BGXSC3")
+ else if(id == KING_GSREG_BGXSC3)
   value = king->BGXScroll[3];
 
- else if(name == "BGYSC0")
+ else if(id == KING_GSREG_BGYSC0)
   value = king->BGYScroll[0];
- else if(name == "BGYSC1")
+ else if(id == KING_GSREG_BGYSC1)
   value = king->BGYScroll[1];
- else if(name == "BGYSC2")
+ else if(id == KING_GSREG_BGYSC2)
   value = king->BGYScroll[2];
- else if(name == "BGYSC3")
+ else if(id == KING_GSREG_BGYSC3)
   value = king->BGYScroll[3];
- else if(name == "AFFINA" || name == "AFFINB" || name == "AFFINC" || name == "AFFIND")
+ else if(id == KING_GSREG_AFFINA || id == KING_GSREG_AFFINB || id == KING_GSREG_AFFINC || id == KING_GSREG_AFFIND)
  {
   const uint16 *coeffs[4] = { &king->BGAffinA, &king->BGAffinB, &king->BGAffinC, &king->BGAffinD };
-  value = *coeffs[name[5] - 'A'];
+  value = *coeffs[id - KING_GSREG_AFFINA];
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "%f", (double)(int16)value / 256);
-   *special = std::string(buf);
+   trio_snprintf(special, special_len, "%f", (double)(int16)value / 256);
   }
  }
- else if(name == "AFFINX")
+ else if(id == KING_GSREG_AFFINX)
   value = king->BGAffinCenterX;
- else if(name == "AFFINY")
+ else if(id == KING_GSREG_AFFINY)
   value = king->BGAffinCenterY;
- else if(name == "BGBAT0" || name == "BGBATS" || name == "BGBAT1" || name == "BGBAT2" || name == "BGBAT3")
+ else if(id == KING_GSREG_BGBATS || id == KING_GSREG_BGBAT0 || id == KING_GSREG_BGBAT1 || id == KING_GSREG_BGBAT2 || id == KING_GSREG_BGBAT3)
  {
-  char which = name[5];
-  if(which == 'S')
+  if(id == KING_GSREG_BGBATS)
    value = king->BG0SubBATAddr;
   else
-   value = king->BGBATAddr[which - '0'];
+   value = king->BGBATAddr[id - KING_GSREG_BGBAT0];
+
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "0x%04x * 1024 = 0x%05x", value, (value * 1024) & 0x3FFFF);
-   *special = std::string(buf);
+   trio_snprintf(special, special_len, "0x%04x * 1024 = 0x%05x", value, (value * 1024) & 0x3FFFF);
   }
  }
-
- else if(name == "BGCG0" || name == "BGCGS" || name == "BGCG1" || name == "BGCG2" || name == "BGCG3")
+ else if(id == KING_GSREG_BGCGS || id == KING_GSREG_BGCG0 || id == KING_GSREG_BGCG1 || id == KING_GSREG_BGCG2 || id == KING_GSREG_BGCG3)
  {
-  char which = name[4];
-  if(which == 'S')
+  if(id == KING_GSREG_BGCGS)
    value = king->BG0SubCGAddr;
   else
-   value = king->BGCGAddr[which - '0'];
+   value = king->BGCGAddr[id - KING_GSREG_BGCG0];
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "0x%04x * 1024 = 0x%05x", value, (value * 1024) & 0x3FFFF);
-   *special = std::string(buf);
+   trio_snprintf(special, special_len, "0x%04x * 1024 = 0x%05x", value, (value * 1024) & 0x3FFFF);
   }
  }
-
- else if(name == "RTCTRL")
+ else if(id == KING_GSREG_RTCTRL)
  {
   value = king->RAINBOWTransferControl;
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "Raster Interrupt: %s, Rainbow Transfer: %s", (value & 2) ? "On" : "Off", (value & 1) ? "On" : "Off");
-   *special = std::string(buf);
+   trio_snprintf(special, special_len, "Raster Interrupt: %s, Rainbow Transfer: %s", (value & 2) ? "On" : "Off", (value & 1) ? "On" : "Off");
   }
  }
- else if(name == "RKRAMA")
+ else if(id == KING_GSREG_RKRAMA)
   value = king->RAINBOWKRAMA;
- else if(name == "RSTART")
+ else if(id == KING_GSREG_RSTART)
   value = king->RAINBOWTransferStartPosition;
- else if(name == "RCOUNT")
+ else if(id == KING_GSREG_RCOUNT)
   value = king->RAINBOWTransferBlockCount;
- else if(name == "RIRQLINE")
+ else if(id == KING_GSREG_RIRQLINE)
   value = king->RasterIRQLine;
- else if(name == "KRAMRA")
+ else if(id == KING_GSREG_KRAMRA)
  {
   value = king->KRAMRA;
  }
- else if(name == "KRAMWA")
+ else if(id == KING_GSREG_KRAMWA)
  {
   value = king->KRAMWA;
  }
- else if(name == "DMATA")
+ else if(id == KING_GSREG_DMATA)
   value = king->DMATransferAddr;
- else if(name == "DMATS")
+ else if(id == KING_GSREG_DMATS)
   value = king->DMATransferSize;
- else if(name == "DMASTT")
+ else if(id == KING_GSREG_DMASTT)
   value = king->DMAStatus;
- else if(name == "ADPCMCTRL")
+ else if(id == KING_GSREG_ADPCMCTRL)
  {
   value = king->ADPCMControl;
 
  }
- else if(name == "ADPCMBM0" || name == "ADPCMBM1")
+ else if(id == KING_GSREG_ADPCMBM0 || id == KING_GSREG_ADPCMBM1)
  {
-  unsigned int which = name[7] - '0';
-  value = king->ADPCMBufferMode[which];
-
+  value = king->ADPCMBufferMode[id - KING_GSREG_ADPCMBM0];
  }
- else if(name == "ADPCMPA0" || name == "ADPCMPA1")
+ else if(id == KING_GSREG_ADPCMPA0 || id == KING_GSREG_ADPCMPA1)
  {
-  unsigned int which = name[7] - '0';
-  value = king->ADPCMPlayAddress[which];
-
+  value = king->ADPCMPlayAddress[id - KING_GSREG_ADPCMPA0];
  }
- else if(name == "ADPCMSA0" || name == "ADPCMSA1")
+ else if(id == KING_GSREG_ADPCMSA0 || id == KING_GSREG_ADPCMSA1)
  {
-  unsigned int which = name[7] - '0';
-  value = king->ADPCMSAL[which];
-
+  value = king->ADPCMSAL[id - KING_GSREG_ADPCMSA0];
  }
- else if(name == "ADPCMIA0" || name == "ADPCMIA1")
+ else if(id == KING_GSREG_ADPCMIA0 || id == KING_GSREG_ADPCMIA1)
  {
-  unsigned int which = name[7] - '0';
-  value = king->ADPCMIntermediateAddress[which];
+  value = king->ADPCMIntermediateAddress[id - KING_GSREG_ADPCMIA0];
+
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "0x%03x * 64 = 0x%08x", king->ADPCMIntermediateAddress[which], king->ADPCMIntermediateAddress[which] << 6);
-   *special = std::string(buf);
+   trio_snprintf(special, special_len, "0x%03x * 64 = 0x%08x", value, value << 6);
   }
  }
- else if(name == "ADPCMEA0" || name == "ADPCMEA1")
+ else if(id == KING_GSREG_ADPCMEA0 || id == KING_GSREG_ADPCMEA1)
  {
-  unsigned int which = name[7] - '0';
-  value = king->ADPCMEndAddress[which];
+  value = king->ADPCMEndAddress[id - KING_GSREG_ADPCMEA0];
  }
- else if(name == "ADPCMStat")
+ else if(id == KING_GSREG_ADPCMStat)
  {
   value = king->ADPCMStatus[0] | (king->ADPCMStatus[1] << 2);
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "Ch0 End: %d, Ch0 Intermediate: %d, Ch1 End: %d, Ch1 Intermediate: %d", (int)(bool)(value & 0x1),
+   trio_snprintf(special, special_len, "Ch0 End: %d, Ch0 Intermediate: %d, Ch1 End: %d, Ch1 Intermediate: %d", (int)(bool)(value & 0x1),
 												   (int)(bool)(value & 0x2),
 												   (int)(bool)(value & 0x4),
 												   (int)(bool)(value & 0x8));
-   *special = std::string(buf);
   }
  }
- else if(name == "Reg01")
+ else if(id == KING_GSREG_Reg01)
  {
   value = king->Reg01;
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "BSY: %d, ATN: %d, SEL: %d, ACK: %d, RST: %d", (int)(bool)(value & 1), (int)(bool)(value & 2), (int)(bool)(value & 4),
+   trio_snprintf(special, special_len, "BSY: %d, ATN: %d, SEL: %d, ACK: %d, RST: %d", (int)(bool)(value & 1), (int)(bool)(value & 2), (int)(bool)(value & 4),
 	(int)(bool)(value & 0x10), (int)(bool)(value & 0x80));
-   *special = std::string(buf);
   }
  }
- else if(name == "Reg02")
+ else if(id == KING_GSREG_Reg02)
  {
   value = king->Reg02;
  }
- else if(name == "Reg03")
+ else if(id == KING_GSREG_Reg03)
  {
   value = king->Reg03;
   if(special)
   {
-   char buf[256];
 
-   trio_snprintf(buf, 256, "I/O: %d, C/D: %d, MSG: %d", (int)(bool)(value & 1), (int)(bool)(value & 2), (int)(bool)(value & 4));
-   *special = std::string(buf);
+   trio_snprintf(special, special_len, "I/O: %d, C/D: %d, MSG: %d", (int)(bool)(value & 1), (int)(bool)(value & 2), (int)(bool)(value & 4));
   }
  }
- else if(name == "SUBCC")
+ else if(id == KING_GSREG_SUBCC)
  {
   value = king->SubChannelControl;
   if(special)
   {
-   char buf[256];
 
-   trio_snprintf(buf, 256, "Subchannel reading: %s, Subchannel read IRQ: %s", (value & 0x1) ? "Enabled" : "Disabled", (value & 0x2) ? "On" : "Off");
-   *special = std::string(buf);
+   trio_snprintf(special, special_len, "Subchannel reading: %s, Subchannel read IRQ: %s", (value & 0x1) ? "Enabled" : "Disabled", (value & 0x2) ? "On" : "Off");
   }
  }
- else if(name == "DB")
+ else if(id == KING_GSREG_DB)
   value = SCSICD_GetDB();
- else if(name == "BSY")
+ else if(id == KING_GSREG_BSY)
   value = SCSICD_GetBSY();
- else if(name == "REQ")
+ else if(id == KING_GSREG_REQ)
   value = SCSICD_GetREQ();
- else if(name == "ACK")
+ else if(id == KING_GSREG_ACK)
   value = SCSICD_GetACK();
- else if(name == "MSG")
+ else if(id == KING_GSREG_MSG)
   value = SCSICD_GetMSG();
- else if(name == "CD")
+ else if(id == KING_GSREG_CD)
   value = SCSICD_GetCD();
- else if(name == "IO")
+ else if(id == KING_GSREG_IO)
   value = SCSICD_GetIO();
- else if(name == "SEL")
+ else if(id == KING_GSREG_SEL)
   value = SCSICD_GetSEL();
 
  return(value);
 }
 
-void FXVDCVCE_SetRegister(const std::string &name, uint32 value)
+void FXVCE_SetRegister(const unsigned int id, uint32 value)
 {
- if(name == "VCEPRIO0")
+ if(id == FXVCE_GSREG_PRIO0)
  {
   fx_vce.priority[0] = value & 0x0777;
  }
- else if(name == "PRIO1")
+ else if(id == FXVCE_GSREG_PRIO1)
  {
   fx_vce.priority[1] = value & 0x7777;
  }
- else if(name == "PICMODE")
+ else if(id == FXVCE_GSREG_PICMODE)
  {
   fx_vce.picture_mode = value;
  }
- else if(name == "VCEPALRWOF")
+ else if(id == FXVCE_GSREG_PALRWOF)
  {
   fx_vce.palette_rw_offset = value;
   fx_vce.palette_rw_offset &= 0x1FF;
  }
- else if(name == "VCEPALRWLA")
+ else if(id == FXVCE_GSREG_PALRWLA)
   fx_vce.palette_rw_latch = value;
- else if(name == "VCEPALOFS0")
+ else if(id == FXVCE_GSREG_PALOFS0)
   fx_vce.palette_offset[0] = value;
- else if(name == "VCEPALOFS1")
+ else if(id == FXVCE_GSREG_PALOFS1)
   fx_vce.palette_offset[1] = value;
- else if(name == "VCEPALOFS2")
+ else if(id == FXVCE_GSREG_PALOFS2)
   fx_vce.palette_offset[2] = value;
- else if(name == "VCEPALOFS3")
+ else if(id == FXVCE_GSREG_PALOFS3)
  {
   fx_vce.palette_offset[3] = value;
   fx_vce.palette_offset[3] &= 0x00FF;
  }
- else if(name == "VCECCR")
+ else if(id == FXVCE_GSREG_CKeyY)
+  fx_vce.ChromaKeyY = value;
+ else if(id == FXVCE_GSREG_CKeyU)
+  fx_vce.ChromaKeyU = value;
+ else if(id == FXVCE_GSREG_CKeyV)
+  fx_vce.ChromaKeyV = value;
+ else if(id == FXVCE_GSREG_CCR)
   fx_vce.CCR = value;
- else if(name == "VCEBLE")
+ else if(id == FXVCE_GSREG_BLE)
   fx_vce.BLE = value;
- else if(name == "VCESPBL")
+ else if(id == FXVCE_GSREG_SPBL)
   fx_vce.SPBL = value;
- else if(!strncasecmp(name.c_str(), "VCECOEFF", strlen("VCECOEFF")))
- {
-  int which = name.c_str()[strlen("VCECOEFF")] - '0';
-  fx_vce.coefficients[which] = value;
- }
+ else if(id == FXVCE_GSREG_COEFF0 || id == FXVCE_GSREG_COEFF1 || id == FXVCE_GSREG_COEFF2 || id == FXVCE_GSREG_COEFF3 || id == FXVCE_GSREG_COEFF4 || id == FXVCE_GSREG_COEFF5)
+  fx_vce.coefficients[id - FXVCE_GSREG_COEFF0] = value & 0xFFF;
 }
 
-
-uint32 FXVDCVCE_GetRegister(const std::string &name, std::string *special)
+uint32 FXVCE_GetRegister(const unsigned int id, char* special, const uint32 special_len)
 {
  uint32 value = 0xDEADBEEF;
 
- if(name == "PRIO0")
+ if(id == FXVCE_GSREG_PRIO0)
  {
   value = fx_vce.priority[0];
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "VDC BG: %2d, VDC SPR: %2d, RAINBOW: %2d", value & 0xF, (value >> 4) & 0xF, (value >> 8) & 0xF);
-   *special = std::string(buf);
+   trio_snprintf(special, special_len, "VDC BG: %2d, VDC SPR: %2d, RAINBOW: %2d", value & 0xF, (value >> 4) & 0xF, (value >> 8) & 0xF);
   }
  }
- else if(name == "PRIO1")
+ else if(id == FXVCE_GSREG_PRIO1)
  {
   value = fx_vce.priority[1];
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "BG0: %2d, BG1: %2d, BG2: %2d, BG3: %2d", value & 0xF, (value >> 4) & 0xF, (value >> 8) & 0xF, (value >> 12) & 0xF);
-   *special = std::string(buf);
+   trio_snprintf(special, special_len, "BG0: %2d, BG1: %2d, BG2: %2d, BG3: %2d", value & 0xF, (value >> 4) & 0xF, (value >> 8) & 0xF, (value >> 12) & 0xF);
   }
  }
- else if(name == "PICMODE")
+ else if(id == FXVCE_GSREG_PICMODE)
  {
   value = fx_vce.picture_mode;
   if(special)
   {
-   char buf[256];
    static const char *DCCModes[4] =
    { 
     "263 lines/frame", "262 lines/frame", "Interlaced", "Interlaced+1/2 dot shift" 
    };
 
-   trio_snprintf(buf, 256, "BG0: %s, BG1: %s, BG2: %s, BG3: %s, VDC BG: %s%s, VDC SPR: %s%s, RAINBOW: %s, VDC Clk: %sMHz, %s",
+   trio_snprintf(special, special_len, "BG0: %s, BG1: %s, BG2: %s, BG3: %s, VDC BG: %s%s, VDC SPR: %s%s, RAINBOW: %s, VDC Clk: %sMHz, %s",
 	(value & (1 << 10)) ? "On" : "Off", (value & (1 << 11)) ? "On": "Off",
         (value & (1 << 12)) ? "On" : "Off", (value & (1 << 13)) ? "On": "Off",
 	(value & 0x0100) ? "On" : "Off", (value & 0x0040) ? "+merge mode" : "", (value & 0x0200) ? "On" : "Off", (value & 0x0080) ? "+merge mode" : "",
 	(value & 0x4000) ? "On" : "Off", (value & 0x0008) ? "7.16":"5.37", DCCModes[value & 0x3]);
-   *special = std::string(buf);
   }
  }
- else if(name == "Line")
+ else if(id == FXVCE_GSREG_Line)
   value = fx_vce.raster_counter;
- else if(name == "PALRWOF")
+ else if(id == FXVCE_GSREG_PALRWOF)
   value = fx_vce.palette_rw_offset;
- else if(name == "PALRWLA")
+ else if(id == FXVCE_GSREG_PALRWLA)
   value = fx_vce.palette_rw_latch;
- else if(name == "PALOFS0")
+ else if(id == FXVCE_GSREG_PALOFS0)
   value = fx_vce.palette_offset[0];
- else if(name == "PALOFS1")
+ else if(id == FXVCE_GSREG_PALOFS1)
   value = fx_vce.palette_offset[1];
- else if(name == "PALOFS2")
+ else if(id == FXVCE_GSREG_PALOFS2)
   value = fx_vce.palette_offset[2];
- else if(name == "PALOFS3")
+ else if(id == FXVCE_GSREG_PALOFS3)
   value = fx_vce.palette_offset[3];
- else if(name == "CKeyY")
+ else if(id == FXVCE_GSREG_CKeyY)
   value = fx_vce.ChromaKeyY;
- else if(name == "CKeyU")
+ else if(id == FXVCE_GSREG_CKeyU)
   value = fx_vce.ChromaKeyU;
- else if(name == "CKeyV")
+ else if(id == FXVCE_GSREG_CKeyV)
   value = fx_vce.ChromaKeyV;
 
- else if(name == "CCR")
+ else if(id == FXVCE_GSREG_CCR)
   value = fx_vce.CCR;
- else if(name == "BLE")
+ else if(id == FXVCE_GSREG_BLE)
  {
   value = fx_vce.BLE;
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "%s(%s), Rainbow: %d, BG3: %d, BG2: %d, BG1: %d, BG0: %d, VDC SP: %d, VDC BG: %d", (value & 0x8000) ? "Front" : "Back", (value & 0x4000) ? "On" : "Off", (value >> 12) & 0x3,
+   trio_snprintf(special, special_len, "%s(%s), Rainbow: %d, BG3: %d, BG2: %d, BG1: %d, BG0: %d, VDC SP: %d, VDC BG: %d", (value & 0x8000) ? "Front" : "Back", (value & 0x4000) ? "On" : "Off", (value >> 12) & 0x3,
 		(value >> 10) & 3, (value >> 8) & 3, (value >> 6) & 3, (value >> 4) & 3, (value >> 2) & 3, value & 3);
-   *special = std::string(buf);
   }
  }
- else if(name == "SPBL")
+ else if(id == FXVCE_GSREG_SPBL)
   value = fx_vce.SPBL;
- else if(!strncasecmp(name.c_str(), "COEFF", strlen("COEFF")))
+ else if(id == FXVCE_GSREG_COEFF0 || id == FXVCE_GSREG_COEFF1 || id == FXVCE_GSREG_COEFF2 || id == FXVCE_GSREG_COEFF3 || id == FXVCE_GSREG_COEFF4 || id == FXVCE_GSREG_COEFF5)
  {
-  int which = name.c_str()[strlen("COEFF")] - '0';
-  value = fx_vce.coefficients[which];
+  value = fx_vce.coefficients[id - FXVCE_GSREG_COEFF0];
+
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "Y: %1d, U: %1d, V: %1d", (value >> 8) & 0xF, (value >> 4) & 0xf, value & 0xf);
-   *special = std::string(buf);
+   trio_snprintf(special, special_len, "Y: %1d, U: %1d, V: %1d", (value >> 8) & 0xF, (value >> 4) & 0xf, value & 0xf);
   }
  } 
 

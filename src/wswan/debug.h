@@ -15,8 +15,6 @@ void WSwanDBG_AddBreakPoint(int type, unsigned int A1, unsigned int A2, bool log
 
 uint32 WSwanDBG_MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical);
 void WSwanDBG_Disassemble(uint32 &a, uint32 SpecialA, char *);
-uint32 WSwanDBG_GetRegister(const std::string &name, std::string *special);
-void WSwanDBG_SetRegister(const std::string &name, uint32 value);
 
 void WSwanDBG_AddBranchTrace(uint16 old_CS, uint16 old_IP, uint16 CS, uint16 IP, bool interrupt);
 void WSwanDBG_EnableBranchTrace(bool enable);

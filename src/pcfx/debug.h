@@ -3,19 +3,6 @@
 
 #ifdef WANT_DEBUGGER
 
-void PCFXDBG_FlushBreakPoints(int type);
-void PCFXDBG_AddBreakPoint(int type, unsigned int A1, unsigned int A2, bool logical);
-void PCFXDBG_Disassemble(uint32 &a, uint32 SpecialA, char *);
-
-uint32 PCFXDBG_MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical);
-uint32 PCFXDBG_GetRegister(const std::string &name, std::string *special);
-void PCFXDBG_SetRegister(const std::string &name, uint32 value);
-
-void PCFXDBG_SetCPUCallback(void (*callb)(uint32 PC, bool bpoint), bool continuous);
-
-void PCFXDBG_EnableBranchTrace(bool enable);
-std::vector<BranchTraceResult> PCFXDBG_GetBranchTrace(void);
-
 void PCFXDBG_CheckBP(int type, uint32 address, uint32 value, unsigned int len);
 
 void PCFXDBG_SetLogFunc(void (*func)(const char *, const char *));
@@ -25,6 +12,9 @@ char *PCFXDBG_ShiftJIS_to_UTF8(const uint16 sjc);
 
 
 extern bool PCFX_LoggingOn;
+
+void PCFXDBG_Init(void);
+extern DebuggerInfoStruct PCFXDBGInfo;
 
 #endif
 

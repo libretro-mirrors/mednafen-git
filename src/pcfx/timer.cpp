@@ -131,43 +131,45 @@ void FXTIMER_StateAction(StateMem *sm, const unsigned load, const bool data_only
 
 
 
-bool FXTIMER_GetRegister(const std::string &name, uint32 &value, std::string *special)
+uint32 FXTIMER_GetRegister(const unsigned int id, char *special, const uint32 special_len)
 {
- if(name == "TCTRL")
+ uint32 value = 0xDEADBEEF;
+
+ switch(id)
  {
-  value = control;
-  if(special)
-  {
-   char buf[256];
-   trio_snprintf(buf, 256, "Counting Enabled: %d, IRQ Enabled: %d, IRQ Asserted: %d", (int)(bool)(control & 2), (int)(bool)(control & 1), (int)(bool)(control & 4));
-   *special = std::string(buf);
-  }
-  return(TRUE);
+  case FXTIMER_GSREG_TCTRL:
+	value = control;
+	if(special)
+	{
+	 trio_snprintf(special, special_len, "Counting Enabled: %d, IRQ Enabled: %d, IRQ Asserted: %d", (int)(bool)(control & 2), (int)(bool)(control & 1), (int)(bool)(control & 4));
+	}
+	break;
+
+  case FXTIMER_GSREG_TPRD:
+	value = period;
+	if(special)
+	{
+	 trio_snprintf(special, special_len, "Effective Period: %d; 21477272 / %d = %fHz", EFF_PERIOD, EFF_PERIOD, (double)21477272 / (EFF_PERIOD));
+	}
+	break;
+
+  case FXTIMER_GSREG_TCNTR:
+	value = counter;
+	if(special)
+	{
+	 //trio_snprintf(buf, 256, "Pad: %d, ??: %d, Timer: %d, Reset: %d",
+	 //*special = std::string(buf);
+	}
+	break;
  }
- else if(name == "TPRD")
- {
-  value = period;
-  if(special)
-  {
-   char buf[256];
-   trio_snprintf(buf, 256, "Effective Period: %d; 21477272 / %d = %fHz", EFF_PERIOD, EFF_PERIOD, (double)21477272 / (EFF_PERIOD));
-   *special = std::string(buf);
-  }
-  return(TRUE);
- }
- else if(name == "TCNTR")
- {
-  value = counter;
-  if(special)
-  {
-   //char buf[256];
-   //trio_snprintf(buf, 256, "Pad: %d, ??: %d, Timer: %d, Reset: %d",
-   //*special = std::string(buf);
-  }
-  return(TRUE);
- }
- else
-  return(FALSE);
+
+ return value;
+}
+
+void FXTIMER_SetRegister(const unsigned int id, uint32 value)
+{
+
+
 }
 
 void FXTIMER_Reset(void)

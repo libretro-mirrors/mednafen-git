@@ -15,4 +15,18 @@ void RAINBOW_Init(bool arg_ChromaIP);
 void RAINBOW_Close(void);
 void RAINBOW_Reset(void);
 
+#ifdef WANT_DEBUGGER
+enum
+{
+ RAINBOW_GSREG_RSCRLL,
+ RAINBOW_GSREG_RCTRL,
+ RAINBOW_GSREG_RNRY,
+ RAINBOW_GSREG_RNRU,
+ RAINBOW_GSREG_RNRV,
+ RAINBOW_GSREG_RHSYNC,
+};
+uint32 RAINBOW_GetRegister(const unsigned int id, char* special, const uint32 special_len);
+void RAINBOW_SetRegister(const unsigned int id, uint32 value);
+#endif
+
 #endif

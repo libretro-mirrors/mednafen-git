@@ -201,6 +201,7 @@ static DECLFW(Write_PSG)
            break;
 
   case 0x1:
+	   DoSQ1();
 	   SweepReload[0] = 1;
 	   SweepPeriod[0] = ((V >> 4) & 0x7) + 1;
 	   SweepShift[0] = (V & 0x7);
@@ -224,6 +225,7 @@ static DECLFW(Write_PSG)
 	   break;
 
   case 0x5:        
+	  DoSQ2();
 	  SweepReload[1] = 1;
 	  SweepPeriod[1] = ((V >> 4) & 0x7) + 1;
 	  SweepShift[1] = (V & 0x7);
@@ -931,7 +933,7 @@ static bool InitResampler(double rate)
 {
  KillResampler();
 
- ff = new NES_Resampler(PAL ? PAL_CPU : NTSC_CPU, rate, MDFN_GetSettingF("nes.sound_rate_error"), 94, MDFN_GetSettingI("nes.soundq"));
+ ff = new NES_Resampler(PAL ? PAL_CPU : NTSC_CPU, rate, MDFN_GetSettingF("nes.sound_rate_error"), 5216.592e-6, MDFN_GetSettingI("nes.soundq"));
  ff->SetVolume((double)3 / 2);
  return(TRUE);
 }

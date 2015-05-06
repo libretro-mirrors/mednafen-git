@@ -12,8 +12,6 @@ void NESDBG_MemPoke(uint32 A, uint32 V, unsigned int bsize, bool, bool logical);
 void NESDBG_IRQ(int level);
 uint32 NESDBG_GetVector(int level);
 void NESDBG_Disassemble(uint32 &a, uint32 SpecialA, char *);
-uint32 NESDBG_GetRegister(const std::string &name, std::string *special);
-void NESDBG_SetRegister(const std::string &name, uint32 value);
 
 void NESDBG_AddBranchTrace(uint32 from, uint32 to, uint32 vector);
 

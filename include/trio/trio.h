@@ -116,15 +116,15 @@ int trio_asprintfv TRIO_PROTO((char **result, TRIO_CONST char *format, trio_poin
 /*************************************************************************
  * Scan Functions
  */
-int trio_scanf TRIO_PROTO((TRIO_CONST char *format, ...));
+int trio_scanf TRIO_PROTO((TRIO_CONST char *format, ...)) /*TRIO_FORMATSTR(gnu_scanf, 1, 2)*/;
 int trio_vscanf TRIO_PROTO((TRIO_CONST char *format, va_list args));
 int trio_scanfv TRIO_PROTO((TRIO_CONST char *format, void **args));
 
-int trio_fscanf TRIO_PROTO((FILE *file, TRIO_CONST char *format, ...));
+int trio_fscanf TRIO_PROTO((FILE *file, TRIO_CONST char *format, ...)) /*TRIO_FORMATSTR(gnu_scanf, 2, 3)*/;
 int trio_vfscanf TRIO_PROTO((FILE *file, TRIO_CONST char *format, va_list args));
 int trio_fscanfv TRIO_PROTO((FILE *file, TRIO_CONST char *format, void **args));
 
-int trio_dscanf TRIO_PROTO((int fd, TRIO_CONST char *format, ...));
+int trio_dscanf TRIO_PROTO((int fd, TRIO_CONST char *format, ...)) /*TRIO_FORMATSTR(gnu_scanf, 2, 3)*/;
 int trio_vdscanf TRIO_PROTO((int fd, TRIO_CONST char *format, va_list args));
 int trio_dscanfv TRIO_PROTO((int fd, TRIO_CONST char *format, void **args));
 
@@ -135,7 +135,7 @@ int trio_vcscanf TRIO_PROTO((trio_instream_t stream, trio_pointer_t closure,
 int trio_cscanfv TRIO_PROTO((trio_instream_t stream, trio_pointer_t closure,
 			     TRIO_CONST char *format, void **args));
 
-int trio_sscanf TRIO_PROTO((TRIO_CONST char *buffer, TRIO_CONST char *format, ...));
+int trio_sscanf TRIO_PROTO((TRIO_CONST char *buffer, TRIO_CONST char *format, ...)) /*TRIO_FORMATSTR(gnu_scanf, 2, 3)*/;
 int trio_vsscanf TRIO_PROTO((TRIO_CONST char *buffer, TRIO_CONST char *format, va_list args));
 int trio_sscanfv TRIO_PROTO((TRIO_CONST char *buffer, TRIO_CONST char *format, void **args));
 

@@ -17,7 +17,15 @@ void PCFXIRQ_StateAction(StateMem *sm, const unsigned load, const bool data_only
 
 void PCFXIRQ_Reset(void);
 
-bool PCFXIRQ_GetRegister(const std::string &name, uint32 &value, std::string *special);
-bool PCFXIRQ_SetRegister(const std::string &name, uint32 value);
+enum
+{
+ PCFXIRQ_GSREG_IMASK = 0,
+ PCFXIRQ_GSREG_IPRIO0,
+ PCFXIRQ_GSREG_IPRIO1,
+ PCFXIRQ_GSREG_IPEND
+};
+
+uint32 PCFXIRQ_GetRegister(const unsigned int id, char *special, const uint32 special_len);
+void PCFXIRQ_SetRegister(const unsigned int id, uint32 value);
 
 #endif

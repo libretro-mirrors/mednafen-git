@@ -42,11 +42,8 @@ enum
  PPU_GSREG_SCANLINE
 };
 
-// FIXME, todo
-//uint32 NESPPU_GetRegister(const unsigned int id, char *special, const uint32 special_len);
-//void NESPPU_SetRegister(const unsigned int id, uint32 value);
-uint32 NESPPU_GetRegister(const std::string &name, std::string *special) MDFN_COLD;
-void NESPPU_SetRegister(const std::string &name, uint32 value) MDFN_COLD;
+uint32 NESPPU_GetRegister(const unsigned int id, char *special, const uint32 special_len) MDFN_COLD;
+void NESPPU_SetRegister(const unsigned int id, uint32 value) MDFN_COLD;
 
 
 void NESPPU_SetGraphicsDecode(MDFN_Surface *surface, int line, int which, int xscroll, int yscroll, int pbn) MDFN_COLD;

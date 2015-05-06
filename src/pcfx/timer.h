@@ -11,6 +11,16 @@ void FXTIMER_Reset(void);
 void FXTIMER_Init(void);
 
 void FXTIMER_StateAction(StateMem *sm, const unsigned load, const bool data_only);
-bool FXTIMER_GetRegister(const std::string &name, uint32 &value, std::string *special);
+
+
+enum
+{
+ FXTIMER_GSREG_TCTRL = 0,
+ FXTIMER_GSREG_TPRD,
+ FXTIMER_GSREG_TCNTR
+};
+
+uint32 FXTIMER_GetRegister(const unsigned int id, char *special, const uint32 special_len);
+void FXTIMER_SetRegister(const unsigned int id, uint32 value);
 
 #endif

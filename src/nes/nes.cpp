@@ -221,8 +221,9 @@ static void InitCommon(const char *fbase)
 	#ifdef WANT_DEBUGGER
 	NESDBG_Init();
 
-        ASpace_Add(NESDBG_GetAddressSpaceBytes, NESDBG_PutAddressSpaceBytes, "cpu", "CPU", 16);
-        ASpace_Add(NESPPU_GetAddressSpaceBytes, NESPPU_PutAddressSpaceBytes, "ppu", "PPU", 14);
+	ASpace_Add(NESDBG_GetAddressSpaceBytes, NESDBG_PutAddressSpaceBytes, "cpu", "CPU", 16);
+	ASpace_Add(NESPPU_GetAddressSpaceBytes, NESPPU_PutAddressSpaceBytes, "ppu", "PPU", 14);
+	ASpace_Add(NESPPU_GetAddressSpaceBytes, NESPPU_PutAddressSpaceBytes, "spram", "Sprite RAM", 8);
         #endif
 }
 

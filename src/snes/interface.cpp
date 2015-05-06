@@ -1207,6 +1207,11 @@ static void SetInput(unsigned port, const char *type, uint8 *ptr)
 
   InputType[port] = id;
 
+  if(port)
+   bSNES_v059::config.controller_port2 = id;
+  else
+   bSNES_v059::config.controller_port1 = id;
+
   bSNES_v059::input.port_set_device(port, id);
 
 #if 0

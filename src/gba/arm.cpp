@@ -248,7 +248,7 @@ unsigned int RunARM(void)
 #define ARITHMETIC_ROR_IMM \
    {\
      uint32 v = opcode & 0xff;\
-     value = ((v << (32 - shift)) |\
+     value = ((v << ((32 - shift) & 0x1F)) |\
               (v >> shift));\
    }
 #define ROR_IMM_MSR \
@@ -7871,11 +7871,8 @@ if(cond_res) {
   CASE_256(0xa00)
     {
       // B <offset>
-      int offset = opcode & 0x00FFFFFF;
-      if(offset & 0x00800000) {
-        offset |= 0xFF000000;
-      }
-      offset <<= 2;
+      const uint32 offset = ((int32)((opcode & 0x00FFFFFF) << 8)) >> 6;
+
       reg[15].I += offset;
       armNextPC = reg[15].I;
       reg[15].I += 4;
@@ -7889,11 +7886,8 @@ if(cond_res) {
   CASE_256(0xb00)
     {
       // BL <offset>
-      int offset = opcode & 0x00FFFFFF;
-      if(offset & 0x00800000) {
-        offset |= 0xFF000000;
-      }
-      offset <<= 2;
+      const uint32 offset = ((int32)((opcode & 0x00FFFFFF) << 8)) >> 6;
+
       reg[14].I = reg[15].I - 4;
       reg[15].I += offset;
       armNextPC = reg[15].I;

@@ -52,6 +52,8 @@ T'ai Fu - Wrath of the Tiger
 
 -----------------------------------------------------------------------------------------------
 
+Handle D28 of DMA CHCR properly.
+
 Fix implementation of psx.slstart* and psx.slend* settings functionality so as to not potentially cause netplay desync
 when emulated lightguns are being used.
 

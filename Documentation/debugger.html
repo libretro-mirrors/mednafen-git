@@ -6,7 +6,7 @@
  <body>
   <center><h1><img alt="Mednafen" src="mednafen.png" width="696" height="204" /></h1></center>
   <center><h1>Debugger Documentation</h1></center>
-  <center><i>Last updated June 18, 2014<br />Valid as of Mednafen 0.9.36</i></center>
+  <center><i>Last updated April 11, 2015<br />Valid as of Mednafen 0.9.38.4</i></center>
   <hr>
    <h2>Notes and Cautions:</h2>
    <p>
@@ -65,6 +65,7 @@
     <tr><td>CTRL+R</td><td>Edit Aux read breakpoints.</td></tr>
     <tr><td>CTRL+W</td><td>Edit Aux write breakpoints.</td></tr>
     <tr><td>SHIFT+O</td><td>Edit opcode breakpoints(PC Engine only for now).</td></tr>
+    <tr><td>Tab</td><td>Switch cursor focus between disassembly and registers.</td></tr>
     <tr><td>Up, Left, Right, Down, PageUp, PageDown</td><td>Select disassembly address or select register.</td></tr>
     <tr><td>SHIFT + (Up, Left, Right, Down, PageUp, PageDown)</td><td>Select watch address.</td></tr>
     <tr><td>M</td><td>Toggle watch window between logical and physical(if available) addressing.</td></tr>
@@ -145,19 +146,25 @@ and
   and because segments overlap, you can get breakpoints to occur on writes with other segments than the one you specified.
   </p>
   <h3>Aux Read and Write Breakpoints</h3>
+  <p>
   Aux r/w breakpoints operate on secondary storage reads and writes.
+  </p>
   <table cellspacing="4" border="1">
-  <tr><th colspan="2">PC-FX</th></tr>
-  <tr><td>00000-3FFFF</td><td>KING Page 0</td></tr>
-  <tr><td>40000-7FFFF</td><td>KING Page 1</td></tr>
-  <tr><td>80000-8FFFF</td><td>VDC-A</td></tr>
-  <tr><td>90000-9FFFF</td><td>VDC-B</td></tr>
+   <tr><th colspan="2">PC Engine</th></tr>
+   <tr><td>0000-7FFF</td><td>VDC VRAM</td></tr>
+   <tr><td>10000-17FFF</td><td>VDC-B VRAM(SuperGrafx only)</td></tr>
+   <tr><td>20000-2001F</td><td>VDC Indexed Register</td></tr>
+   <tr><td>30000-3001F</td><td>VDC-B Indexed Register(SuperGrafx only)</td></tr>
   </table>
   <br>
   <table cellspacing="4" border="1">
-  <tr><th colspan="2">PC Engine</th></tr>
-   <tr><td>0000-7FFF</td><td>VDC</td></tr>
-   <tr><td>10000-17FFF</td><td>VDC-B(SuperGrafx only!)
+   <tr><th colspan="2">PC-FX</th></tr>
+   <tr><td>00000-3FFFF</td><td>KING KRAM Page 0</td></tr>
+   <tr><td>40000-7FFFF</td><td>KING KRAM Page 1</td></tr>
+   <tr><td>80000-8FFFF</td><td>VDC-A VRAM</td></tr>
+   <tr><td>90000-9FFFF</td><td>VDC-B VRAM</td></tr>
+   <tr><td>A0000-A001F</td><td>VDC-A Indexed Register</td></tr>
+   <tr><td>B0000-B001F</td><td>VDC-B Indexed Register</td></tr>
   </table>
  </body>
 </html>

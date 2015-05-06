@@ -1282,88 +1282,84 @@ int MDFNPPU_Loop(EmulateSpecStruct *espec)
    return(1);
 }
 
-uint32 NESPPU_GetRegister(const std::string &name, std::string *special)
+uint32 NESPPU_GetRegister(const unsigned int id, char* special, const uint32 special_len)
 {
- if(name == "PPU0")
+ if(id == PPU_GSREG_PPU0)
  {
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "VBlank NMI: %s, Sprite size: 8x%d, BG CHR: 0x%04x, SPR CHR: 0x%04x, VRAM Addr Increment: %d", (PPU[0] & 0x80) ? "On" : "Off",
+   trio_snprintf(special, special_len, "VBlank NMI: %s, Sprite size: 8x%d, BG CHR: 0x%04x, SPR CHR: 0x%04x, VRAM Addr Increment: %d", (PPU[0] & 0x80) ? "On" : "Off",
 	(PPU[0] & 0x20) ? 16 : 8, (PPU[0] & 0x10) ? 0x1000 : 0x0000, (PPU[0] & 0x08) ? 0x1000 : 0x0000,
 	(PPU[0] & 0x04) ? 32 : 1);
-   *special = std::string(buf);
   }
   return(PPU[0]);
  }
- else if(name == "PPU1")
+ else if(id == PPU_GSREG_PPU1)
  {
   if(special)
   {
-   char buf[256];
-   trio_snprintf(buf, 256, "Sprites: %s, Background: %s, Leftmost 8 SPR Pixels: %s, Leftmost 8 BG Pixels: %s",
+   trio_snprintf(special, special_len, "Sprites: %s, Background: %s, Leftmost 8 SPR Pixels: %s, Leftmost 8 BG Pixels: %s",
 	(PPU[1] & 0x10) ? "On" : "Off", (PPU[1] & 0x08) ? "On" : "Off",
 	(PPU[1] & 0x04) ? "On" : "Off", (PPU[1] & 0x02) ? "On" : "Off");
-   *special = std::string(buf);
   }
   return(PPU[1]);
  }
- else if(name == "PPU2")
+ else if(id == PPU_GSREG_PPU2)
   return(PPU[2]);
- else if(name == "PPU3")
+ else if(id == PPU_GSREG_PPU3)
   return(PPU[3]);
- else if(name == "XOffset")
+ else if(id == PPU_GSREG_XOFFSET)
   return(XOffset);
- else if(name == "RAddr")
+ else if(id == PPU_GSREG_RADDR)
   return(RefreshAddr);
- else if(name == "TAddr")
+ else if(id == PPU_GSREG_TADDR)
   return(TempAddr);
- else if(name == "VRAM Buf")
+ else if(id == PPU_GSREG_VRAMBUF)
   return(VRAMBuffer);
- else if(name == "V-Toggle")
+ else if(id == PPU_GSREG_VTOGGLE)
   return(vtoggle);
- else if(name == "Scanline")
+ else if(id == PPU_GSREG_SCANLINE)
  {
   if(scanline == -1) return(261);
   else return(scanline);
  }
- else return(0);
+ else return(0xDEADBEEF);
 }
 
-void NESPPU_SetRegister(const std::string &name, uint32 value)
+void NESPPU_SetRegister(const unsigned int id, uint32 value)
 {
- if(name == "PPU0")
+ if(id == PPU_GSREG_PPU0)
  {
   PPU[0] = value & 0xFF;
  }
- else if(name == "PPU1")
+ else if(id == PPU_GSREG_PPU1)
  {
   PPU[1] = value & 0xFF;
   RedoRenderCache();
  }
- else if(name == "PPU2")
+ else if(id == PPU_GSREG_PPU2)
  {
   PPU[2] = value & 0xE0;
  }
- else if(name == "PPU3")
+ else if(id == PPU_GSREG_PPU3)
  {
   PPU[3] = value & 0xFF;
  }
- else if(name == "XOffset")
+ else if(id == PPU_GSREG_XOFFSET)
  {
   XOffset = value & 0x07;
  }
- else if(name == "RAddr")
+ else if(id == PPU_GSREG_RADDR)
  {
   RefreshAddr = value & 0x3FFF;
  }
- else if(name == "TAddr")
+ else if(id == PPU_GSREG_TADDR)
  {
   TempAddr = value & 0x3FFF;
  }
- else if(name == "VRAM Buf")
+ else if(id == PPU_GSREG_VRAMBUF)
   VRAMBuffer = value & 0xFF;
- else if(name == "V-Toggle")
+ else if(id == PPU_GSREG_VTOGGLE)
   vtoggle = value ? 1 : 0;
 }
 
@@ -1650,6 +1646,18 @@ void NESPPU_GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
    Buffer++;
   }
  }
+ else if(!strcmp(name, "spram"))
+ {
+  while(Length--)
+  {
+   Address &= 0xFF;
+
+   *Buffer = SPRAM[Address];
+
+   Address++;
+   Buffer++;
+  }
+ }
 }
 
 void NESPPU_PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint32 Granularity, bool hl, const uint8 *Buffer)
@@ -1674,6 +1682,18 @@ void NESPPU_PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
    Buffer++;
   }
  }
+ else if(!strcmp(name, "spram"))
+ {
+  while(Length--)
+  {
+   Address &= 0xFF;
+
+   SPRAM[Address] = *Buffer;
+
+   Address++;
+   Buffer++;
+  }
+ }
 }
 
 
@@ -1692,7 +1712,7 @@ void NESPPU_SetGraphicsDecode(MDFN_Surface *surface, int line, int which, int xs
 static void DoGfxDecode(void)
 {
  uint32 *target = GfxDecode_Buf->pixels;
- int pbn = GfxDecode_Pbn & 0x3;
+ const unsigned pbn = (GfxDecode_Pbn & 0x3) | (GfxDecode_Layer ? 0x4 : 0x0);
  uint32 neo_palette[4];
 
  if(GfxDecode_Pbn == -1)
@@ -1708,11 +1728,11 @@ static void DoGfxDecode(void)
   {
    for(int x = 0; x < GfxDecode_Buf->w; x+=8)
    {
-    int which_tile = (x / 8) + (GfxDecode_Scroll + (y / 8)) * (GfxDecode_Buf->w / 8);
+    unsigned which_tile = (x / 8) + (GfxDecode_Scroll + (y / 8)) * (GfxDecode_Buf->w / 8);
+    unsigned tile_c = 0;
 
     uint8 *cg_ptr;
     uint8 cg[2];
-    int tile_c = 0;
 
     if(MMC5Hack)
     {
@@ -1720,13 +1740,16 @@ static void DoGfxDecode(void)
      {
       //which_tile &= 0x1FF;
       cg_ptr = MMC5SPRVRAMADR(which_tile * 16);
+      tile_c = 0x200;
      }
      else
      {
       switch(MMC5HackCHRMode)
       {
+       case 1: break;
        default: //which_tile &= 0x1FF;
                 cg_ptr = MMC5BGVRAMADR(which_tile * 16);
+		tile_c = 0x200;
 		break;
       }
      }
@@ -1735,30 +1758,33 @@ static void DoGfxDecode(void)
     {
      if(GfxDecode_Layer) // Sprites
      {
-      pbn |= 0x4;
       if(Sprite16)
       {
        tile_c = 0x200;
-       cg_ptr = VRAMADR(which_tile * 16);
       }
       else
       {
-       tile_c = 0x100;
-
        if(SpAdrHI)
-        cg_ptr = VRAMADR(0x1000 + which_tile * 16);
+       {
+	which_tile += 0x100;
+	tile_c = 0x200;
+       }
        else
-        cg_ptr = VRAMADR(0x0000 + which_tile * 16);
+	tile_c = 0x100;
       }
      }
      else // Background
      {
-      tile_c = 0x100;
       if(BGAdrHI)
-       cg_ptr = VRAMADR(0x1000 + which_tile * 16);
+      {
+       which_tile += 0x100;
+       tile_c = 0x200;
+      }
       else
-       cg_ptr = VRAMADR(0x0000 + which_tile * 16);
+       tile_c = 0x100;
      }
+
+     cg_ptr = VRAMADR(which_tile * 16);
     }
 
     if(which_tile >= tile_c)

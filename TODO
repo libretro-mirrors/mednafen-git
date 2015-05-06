@@ -265,6 +265,14 @@ Clean up intialization/deinitialization code so that more than one game can be l
  (This is a lot harder than it sounds! :b)
 
 Debugger(general):
+	New aux breakpoint syntax, like:
+		vram[0-7fff]
+		vdc[0-5]
+		mawr
+		mwr
+		bxr
+		bxr-byr
+
 	Disassembly address forcible resynchronization has inconsistent results across different emulated systems; make
 	them consistent.
 

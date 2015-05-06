@@ -24,20 +24,16 @@ struct RegType
         unsigned int bsize; // Byte size, 1, 2, 4
 };
 
-typedef struct
+struct RegGroupType
 {
  const char *name;
  RegType *Regs;
 
- // GetRegister() should modify the string at special if special is non-NULL to provide
+ // GetRegister() should modify the string at special if special is non-NULL, to provide
  // more details about the register.
  uint32 (*GetRegister)(const unsigned int id, char *special, const uint32 special_len);
  void (*SetRegister)(const unsigned int id, uint32 value);
-
- // Used if SetRegister and GetRegister are both NULL.  Deprecated.
- uint32 (*OLDGetRegister)(const std::string &name, std::string *special);
- void (*OLDSetRegister)(const std::string &name, uint32 value);
-} RegGroupType;
+};
 
 typedef enum
 {

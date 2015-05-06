@@ -191,15 +191,25 @@ class V810
  void CheckBreakpoints(void (*callback)(int type, uint32 address, uint32 value, unsigned int len), uint16 MDFN_FASTCALL (*peek16)(const v810_timestamp_t, uint32), uint32 MDFN_FASTCALL (*peek32)(const v810_timestamp_t, uint32));
  void SetCPUHook(void (*newhook)(const v810_timestamp_t timestamp, uint32 PC), void (*new_ADDBT)(uint32, uint32, uint32));
  #endif
+
+ enum
+ {
+  GSREG_PR = 0,
+  GSREG_SR = 32,
+  GSREG_PC = 64,
+  GSREG_TIMESTAMP
+ };
+
+ uint32 GetRegister(unsigned int which, char *special, const uint32 special_len);
+ void SetRegister(unsigned int which, uint32 value);
+
  uint32 GetPC(void);
  void SetPC(uint32);
 
- uint32 GetPR(const unsigned int which);
- void SetPR(const unsigned int which, uint32 value);
-
- uint32 GetSR(const unsigned int which);
- void SetSR(const unsigned int which, uint32 value);
-
+ INLINE uint32 GetPR(unsigned int which)
+ {
+  return which ? P_REG[which] : 0;
+ }
 
  private:
 

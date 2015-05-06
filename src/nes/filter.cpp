@@ -591,7 +591,7 @@ void NES_Resampler::SetVolume(double newvolume)
  SoundVolume = (int32)(newvolume * 256);
 }
 
-NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_error, double debias_corner, int quality)
+NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_error, double hp_tc, int quality)
 {
  double *FilterBuf = NULL;
  double ratio = (double)output_rate / input_rate;
@@ -603,7 +603,6 @@ NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_
  InputRate = input_rate;
  OutputRate = output_rate;
  RateError = rate_error;
- DebiasCorner = debias_corner;
  Quality = quality;
 
  IntermediateBuffer.resize(OutputRate * 4 / 50);	// *4 for safety padding, / min(50,60), an approximate calculation
@@ -892,7 +891,20 @@ NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_
  InputPhase = 0;
 
  debias = 0;
- debias_multiplier = (int32)(((int64)1 << 32) * debias_corner / output_rate);
+
+ if(hp_tc > 0)
+ {
+  double tdm = (pow(2.0 - pow(M_E, -1.0), 1.0 / (hp_tc * output_rate)) - 1.0);
+
+  //printf("%f\n", tdm);
+  assert(tdm >= 0.0 && tdm <= 0.4);
+
+  debias_multiplier = ((int64)1 << 32) * tdm;
+  assert(debias_multiplier >= 0);
+  //printf("%d\n", debias_multiplier);
+ }
+ else
+  debias_multiplier = 0;
 
  MDFN_indent(-1);
 }

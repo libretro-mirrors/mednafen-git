@@ -4328,7 +4328,7 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.38.3'
+MEDNAFEN_VERSION='0.9.38.4'
 MEDNAFEN_VERSION_NUMERIC=0x000938
 
 ac_aux_dir=
@@ -26700,7 +26700,7 @@ else
 fi
 
 
-								                CPPFLAGS="-fno-pic -fno-pie $CPPFLAGS"
+								                CPPFLAGS="-fno-pic -fno-pie -fno-PIC -fno-PIE $CPPFLAGS"
 
 		MMX_CFLAGS="-mmmx"
 		SSE_CFLAGS="-msse"

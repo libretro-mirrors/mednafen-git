@@ -179,7 +179,7 @@ void PCE_PSG::RecalcFreqCache(int chnum)
  {
   const uint32 shift = (((lfoctrl & 0x3) - 1) << 1);
   uint8 la = channel[1].dda;
-  int32 tmp_freq = ((int32)ch->frequency + ((la - 0x10) << shift)) & 0xFFF;
+  uint32 tmp_freq = (ch->frequency + ((uint32)(la - 0x10) << shift)) & 0xFFF;
 
   ch->freq_cache = (tmp_freq ? tmp_freq : 4096) << 1;
  }

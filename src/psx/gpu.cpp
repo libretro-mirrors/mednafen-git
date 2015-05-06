@@ -386,6 +386,7 @@ INLINE void PS_GPU::Command_FBCopy(const uint32 *cb)
  if(!height)
   height = 0x200;
 
+ InvalidateTexCache();
  //printf("FB Copy: %d %d %d %d %d %d\n", sourceX, sourceY, destX, destY, width, height);
 
  DrawTimeAvail -= (width * height) * 2;
@@ -415,7 +416,6 @@ INLINE void PS_GPU::Command_FBCopy(const uint32 *cb)
    }
   }
  }
-
 }
 
 INLINE void PS_GPU::Command_FBWrite(const uint32 *cb)
@@ -436,6 +436,8 @@ INLINE void PS_GPU::Command_FBWrite(const uint32 *cb)
 
  FBRW_CurX = FBRW_X;
  FBRW_CurY = FBRW_Y;
+
+ InvalidateTexCache();
 
  if(FBRW_W != 0 && FBRW_H != 0)
   InCmd = INCMD_FBWRITE;
@@ -464,6 +466,8 @@ INLINE void PS_GPU::Command_FBRead(const uint32 *cb)
  FBRW_CurX = FBRW_X;
  FBRW_CurY = FBRW_Y;
 
+ InvalidateTexCache();
+
  if(FBRW_W != 0 && FBRW_H != 0)
   InCmd = INCMD_FBREAD;
 }
@@ -475,28 +479,50 @@ INLINE void PS_GPU::RecalcTexPageStuff(uint32 tpage)
 
 }
 */
+
+INLINE void PS_GPU::SetTPage(const uint32 cmdw)
+{
+ const unsigned NewTexPageX = (cmdw & 0xF) * 64;
+ const unsigned NewTexPageY = (cmdw & 0x10) * 16;
+ const unsigned NewTexMode = (cmdw >> 7) & 0x3;
+
+ abr = (cmdw >> 5) & 0x3;
+
+ if(!NewTexMode != !TexMode || NewTexPageX != TexPageX || NewTexPageY != TexPageY)
+ {
+  InvalidateTexCache();
+ }
+
+ if(TexDisableAllowChange)
+ {
+  bool NewTexDisable = (cmdw >> 11) & 1;
+
+  if(NewTexDisable != TexDisable)
+   InvalidateTexCache();
+
+  TexDisable = NewTexDisable;
+  //printf("TexDisable: %02x\n", TexDisable);
+ }
+
+ TexPageX = NewTexPageX;
+ TexPageY = NewTexPageY;
+ TexMode = NewTexMode;
+
+ //
+ //
+ RecalcTexWindowStuff();
+}
+
 INLINE void PS_GPU::Command_DrawMode(const uint32 *cb)
 {
  const uint32 cmdw = *cb;
 
- TexPageX = (cmdw & 0xF) * 64;
- TexPageY = (cmdw & 0x10) * 16;
+ SetTPage(cmdw);
 
  SpriteFlip = cmdw & 0x3000;
-
- abr = (cmdw >> 5) & 0x3;
- TexMode = (cmdw >> 7) & 0x3;
-
  dtd = (cmdw >> 9) & 1;
  dfe = (cmdw >> 10) & 1;
 
- if(TexDisableAllowChange)
- {
-  TexDisable = (cmdw >> 11) & 1;
-  //printf("TexDisable: %02x\n", TexDisable);
- }
-
- RecalcTexWindowStuff();
  //printf("*******************DFE: %d -- scanline=%d\n", dfe, scanline);
 }
 
@@ -541,12 +567,17 @@ INLINE void PS_GPU::Command_MaskSetting(const uint32 *cb)
  MaskEvalAND = (*cb & 2) ? 0x8000 : 0x0000;
 }
 
+INLINE void PS_GPU::InvalidateTexCache(void)
+{
+ for(auto& c : TexCache)
+  c.Tag = ~0U;
+}
+
 void PS_GPU::InvalidateCache(void)
 {
  CLUT_Cache_VB = ~0U;
 
- for(auto& c : TexCache)
-  c.Tag = ~0U;
+ InvalidateTexCache();
 }
 
 INLINE void PS_GPU::Command_ClearCache(const uint32 *cb)
@@ -802,14 +833,7 @@ void PS_GPU::ProcessFIFO(void)
    //
    // Don't alter SpriteFlip here.
    //
-   const uint32 tpage = CB[4 + ((cc >> 4) & 0x1)] >> 16;
-
-   TexPageX = (tpage & 0xF) * 64;
-   TexPageY = (tpage & 0x10) * 16;
-
-   abr = (tpage >> 5) & 0x3;
-   TexMode = (tpage >> 7) & 0x3;
-   RecalcTexWindowStuff();
+   SetTPage(CB[4 + ((cc >> 4) & 0x1)] >> 16);
   }
 
   if(!command->func[abr][TexMode])

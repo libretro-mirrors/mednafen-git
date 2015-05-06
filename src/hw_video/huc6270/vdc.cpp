@@ -647,6 +647,8 @@ int32 VDC::Run(int32 clocks, uint16 *pixels, bool skip)
          memcpy(SAT, &VRAM[DVSSR], len * sizeof(uint16));
         }
     }
+    else
+     burst_mode = true;
    }
   }
 
