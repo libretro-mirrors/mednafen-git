@@ -831,6 +831,23 @@ static void RunExceptionTests(void)
  assert(z == 32);
 }
 
+std::vector<int> stltests_vec[2];
+
+static void NO_INLINE NO_CLONE RunSTLTests_Sub0(int v)
+{
+ stltests_vec[0].assign(v, v);
+}
+
+static void RunSTLTests(void)
+{
+ assert(stltests_vec[0] == stltests_vec[1]);
+ RunSTLTests_Sub0(0);
+ assert(stltests_vec[0] == stltests_vec[1]);
+ RunSTLTests_Sub0(1);
+ RunSTLTests_Sub0(0);
+ assert(stltests_vec[0] == stltests_vec[1]);
+}
+
 static void LZCount_Test(void)
 {
  for(uint32 i = 0, x = 0; i < 33; i++, x = (x << 1) + 1)
@@ -1295,6 +1312,8 @@ bool MDFN_RunMathTests(void)
  RunExceptionTests();
 
  //RunThreadTests();
+
+ RunSTLTests();
 
  LZCount_Test();
 

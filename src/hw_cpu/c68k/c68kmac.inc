@@ -193,8 +193,8 @@ static INLINE u32 C68k_Read_Long(c68k_struc *cpu, u32 adr)
     PC += 2;                \
                             \
     adr += (s32)((s8)(ext));                            \
-    if (ext & 0x0800) adr += (s32) CPU->D[ext >> 12];   \
-    else adr += (s32)((s16)(CPU->D[ext >> 12]));        \
+    if (ext & 0x0800) adr += (s32) CPU->DA[ext >> 12];  \
+    else adr += (s32)((s16)(CPU->DA[ext >> 12]));       \
 }
 
 #define GET_CCR                                     \

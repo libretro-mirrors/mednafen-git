@@ -14,8 +14,6 @@ int32 Video_PtoV_J(const int32 inv, const bool axis, const bool scr_scale);
 
 void BlitScreen(MDFN_Surface *, const MDFN_Rect *DisplayRect, const int32 *LineWidths, const int InterlaceField, const bool take_ssnapshot);
 
-void VideoAppActive(bool gain);
-
 int VideoResize(int nw, int nh);
 
 void VideoShowMessage(char *text);

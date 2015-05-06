@@ -575,8 +575,13 @@ static void PrintDiscsLayout(std::vector<CDIF *> *ifaces)
 
     eff_lt = track;
 
-    MDFN_printf(_("Track %2d, LBA: %6d  %s%s\n"),
+    uint8 m, s, f;
+
+    CDUtility::LBA_to_AMSF(toc.tracks[track].lba, &m, &s, &f);
+
+    MDFN_printf(_("Track %2d, MSF: %02d:%02d:%02d, LBA: %6d  %s%s\n"),
 		track,
+		m, s, f,
 		toc.tracks[track].lba,
 		(toc.tracks[track].control & 0x4) ? "DATA" : "AUDIO",
 		(track < toc.first_track || track > toc.last_track) ? _(" (Hidden)") : "");

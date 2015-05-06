@@ -785,13 +785,13 @@ void MDVDP::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 #define DRAW_COLUMN(ATTR, LINE) \
     atex = atex_table[(ATTR >> 13) & 7]; \
     src = &bg_pattern_cache[(ATTR & 0x1FFF) << 4 | (LINE)]; \
-    *dst++ = (*src++ | atex); \
-    *dst++ = (*src++ | atex); \
+    MDFN_ennsb<uint32, false>(dst++, (*src++ | atex)); \
+    MDFN_ennsb<uint32, false>(dst++, (*src++ | atex)); \
     ATTR >>= 16; \
     atex = atex_table[(ATTR >> 13) & 7]; \
     src = &bg_pattern_cache[(ATTR & 0x1FFF) << 4 | (LINE)]; \
-    *dst++ = (*src++ | atex); \
-    *dst++ = (*src++ | atex);
+    MDFN_ennsb<uint32, false>(dst++, (*src++ | atex)); \
+    MDFN_ennsb<uint32, false>(dst++, (*src++ | atex));
 
 /* Draw a single 16-pixel column */
 #define DRAW_COLUMN_IM2(ATTR, LINE) \
@@ -799,15 +799,15 @@ void MDVDP::StateAction(StateMem *sm, const unsigned load, const bool data_only)
     offs = (ATTR & 0x03FF) << 5 | (ATTR & 0x1800) << 4 | (LINE); \
     if(ATTR & 0x1000) offs ^= 0x10; \
     src = &bg_pattern_cache[offs]; \
-    *dst++ = (*src++ | atex); \
-    *dst++ = (*src++ | atex); \
+    MDFN_ennsb<uint32, false>(dst++, (*src++ | atex)); \
+    MDFN_ennsb<uint32, false>(dst++, (*src++ | atex)); \
     ATTR >>= 16; \
     atex = atex_table[(ATTR >> 13) & 7]; \
     offs = (ATTR & 0x03FF) << 5 | (ATTR & 0x1800) << 4 | (LINE); \
     if(ATTR & 0x1000) offs ^= 0x10; \
     src = &bg_pattern_cache[offs]; \
-    *dst++ = (*src++ | atex); \
-    *dst++ = (*src++ | atex);
+    MDFN_ennsb<uint32, false>(dst++, (*src++ | atex)); \
+    MDFN_ennsb<uint32, false>(dst++, (*src++ | atex));
 
 /*
     gcc complains about this:

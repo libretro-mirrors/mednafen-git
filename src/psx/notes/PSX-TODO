@@ -1,13 +1,5 @@
 ***Major issues***
 
-Tomb Raider(PAL)
-	(reported, and confirmed) "was fighting Tomb Raider PAL this night, when you get out of pool in Lara's home the game
-	bugs out: issues GetlocP, waits for it to complete and expects seek to be NOT complete (i.e. older location)"
-	Thoughts on emulating:
-		CalcSpinupTime()
-		DS_SPINUP
-		StatusAfterSpinup	ORRR we could scrap that StatusAfter* idea and have some kind of fancy function callback system...
-
 Monkey Hero
 	Locks up shortly after title screen.  It's straddling a framebuffer write command's parameters across two linked-list
 	blocks(2 words at the end of the first block, and 1 word at the beginning of the next block).  AFAIK, this construct will only

@@ -97,6 +97,9 @@ Backup memory:
 	Create a backup of the non-volatile memory(save-RAM) file the first time it is overwritten/replaced since emulator
 	startup(incidentally, in cases other than for PSX, this first time will generally occur on emulator exit).
 
+SNES:
+	src/ppu/render/oam.cpp:161:40: runtime error: index 32 out of bounds for type 'unsigned char [32]'
+
 PCE_FAST:
 	MWR latching!
 

@@ -134,7 +134,7 @@ static DECLFW(Mapper69_write)
                 case 0xb: PRGRegs[2] = V & 0x3F; SyncPRG(); break;
                 case 0xc: Mirroring = V & 0x3; SyncMirroring(); break;
 
-             case 0xd:IRQa=V; if(!(V&0x80)) X6502_IRQEnd(MDFN_IQEXT); break;
+             case 0xd:IRQa=V; X6502_IRQEnd(MDFN_IQEXT); break;
              case 0xe:IRQCount&=0xFF00;IRQCount|=V;break;
              case 0xf:IRQCount&=0x00FF;IRQCount|=V<<8;break;
              }

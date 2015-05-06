@@ -1129,11 +1129,6 @@ void BlitRaw(MDFN_Surface *src, const MDFN_Rect *src_rect, const MDFN_Rect *dest
   MarkNeedBBClear();
 }
 
-void VideoAppActive(bool gain)
-{
- //printf("AppActive: %u\n", gain);
-}
-
 static bool IsInternalMessageActive(void)
 {
  return(MDFND_GetTime() < howlong);
@@ -1374,6 +1369,13 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
  const MDFN_PixelFormat *pf_needed = &pf_normal;
 
  if(!screen) return;
+
+ //
+ // Reduce CPU usage when minimized, and prevent OpenGL memory quasi-leaks on Windows(though I have the feeling there's a
+ // cleaner less-racey way to prevent that memory leak problem).
+ //
+ if(!(SDL_GetAppState() & SDL_APPACTIVE))
+  return;
 
  if(NeedClear)
  {

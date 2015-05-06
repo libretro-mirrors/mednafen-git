@@ -1496,7 +1496,7 @@ static void DiscSanityChecks(void)
 
    if(!did_check)
    {
-    throw MDFN_Error(0, _("Disc %zu of %zu: No valid Q subchannel ADR_CURPOS data preset at lba 0-15?!"), i + 1, cdifs->size());
+    throw MDFN_Error(0, _("Disc %zu of %zu: No valid Q subchannel ADR_CURPOS data present at lba 0-15?!"), i + 1, cdifs->size());
    }
   }
  }

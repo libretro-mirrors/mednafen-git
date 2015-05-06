@@ -589,7 +589,7 @@ static void MakeMednafenArgsStruct(void)
  for(sit = settings->begin(); sit != settings->end(); sit++)
  {
   MDFN_Internal_Args[x].name = strdup(sit->second.name);
-  MDFN_Internal_Args[x].description = _(sit->second.desc->description);
+  MDFN_Internal_Args[x].description = sit->second.desc->description ? _(sit->second.desc->description) : NULL;
   MDFN_Internal_Args[x].var = NULL;
   MDFN_Internal_Args[x].subs = (void *)HokeyPokeyFallDown;
   MDFN_Internal_Args[x].substype = SUBSTYPE_FUNCTION;
@@ -1292,11 +1292,6 @@ void PumpWrap(void)
    			if(event.active.state & SDL_APPINPUTFOCUS)
 			{
 			 SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (char*)0 + (bool)event.active.gain, NULL);
-			}
-
-			if(event.active.state & SDL_APPACTIVE)
-			{
-			 VideoAppActive((bool)(event.active.gain));
 			}
 			break;
 

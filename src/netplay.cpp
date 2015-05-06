@@ -1027,6 +1027,9 @@ void Netplay_Update(const uint32 PortDevIdx[], uint8* const PortData[], const ui
 
    for(unsigned x = 0, wpos = 1; x < NumPorts; x++)
    {
+    if(!PortLen[x])
+     continue;
+
     memcpy(PreNPPortDataPortData[x].data(), PortData[x], PortLen[x]);
 
     auto n = PortVtoLVMap[x];
@@ -1079,6 +1082,9 @@ void Netplay_PostProcess(const uint32 PortDevIdx[], uint8* const PortData[], con
  //
  for(unsigned x = 0; x < NumPorts; x++)
  {
+  if(!PortLen[x])
+   continue;
+
   assert(PostEmulatePortData[x].size() == PortLen[x]);
   assert(PreNPPortDataPortData[x].size() == PortLen[x]);
 

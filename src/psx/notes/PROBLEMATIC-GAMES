@@ -119,3 +119,6 @@ MLB 99
 
 Wu-Tang - Shaolin Style
 	Requires proper handling of the case of CD-DA playing into the leadout area.
+
+Tomb Raider
+	Relies on low-level CD drive behavior in regards to Q subchannel data(read via GetlocP) after a SeekP.
