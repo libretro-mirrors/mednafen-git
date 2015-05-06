@@ -36,10 +36,6 @@
 #include <pwd.h>
 #endif
 
-#ifdef HAVE_LIBCDIO
-#include <cdio/version.h>
-#endif
-
 #ifdef HAVE_ICONV
 #include <iconv.h>
 #endif
@@ -132,8 +128,11 @@ static MDFNSetting DriverSettings[] =
   { "debugger.autostepmode", MDFNSF_NOFLAGS, gettext_noop("Automatically go into the debugger's step mode after a game is loaded."), NULL, MDFNST_BOOL, "0" },
   #endif
 
-  { "osd.state_display_time", MDFNSF_NOFLAGS, gettext_noop("The length of time, in milliseconds, to display the save state or the movie selector after selecting a state or movie."),  NULL, MDFNST_UINT, "2000", "0", "15000" },
+  { "osd.message_display_time", MDFNSF_NOFLAGS, gettext_noop("Length of time, in milliseconds, to display internal status and error messages"), gettext_noop("Time lengths less than 100ms are recommended against unless you understand you may miss important non-fatal error messages, and that the input configuration process may become unusable."), MDFNST_UINT, "2500", "0", "15000" },
+  { "osd.state_display_time", MDFNSF_NOFLAGS, gettext_noop("Length of time, in milliseconds, to display the save state or the movie selector after selecting a state or movie."),  NULL, MDFNST_UINT, "2000", "0", "15000" },
   { "osd.alpha_blend", MDFNSF_NOFLAGS, gettext_noop("Enable alpha blending for OSD elements."), NULL, MDFNST_BOOL, "1" },
+
+  { "srwautoenable", MDFNSF_SUPPRESS_DOC, gettext_noop("DO NOT USE UNLESS YOU'RE A SPACE GOAT"/*"Automatically enable state rewinding functionality on game load."*/), gettext_noop("Use this setting with caution, as save state rewinding can have widely variable memory and CPU usage requirements among different games and different emulated systems."), MDFNST_BOOL, "0" },
 };
 
 void BuildSystemSetting(MDFNSetting *setting, const char *system_name, const char *name, const char *description, const char *description_extra, MDFNSettingType type, 
@@ -259,7 +258,7 @@ void MDFND_Message(const char *s)
 
 static void CreateDirs(void)
 {
- static const char *subs[] = { "mcs", "mcm", "snaps", "palettes", "sav", "cheats", "firmware" };
+ static const char *subs[] = { "mcs", "mcm", "snaps", "palettes", "sav", "cheats", "firmware", "pgconfig" };
 
  try
  {
@@ -422,7 +421,7 @@ static void CloseStuff(int signum)
 //
 //
 #include <mednafen/FileStream.h>
-#include <mednafen/GZFileStream.h>
+#include <mednafen/compress/GZFileStream.h>
 static void Stream64Test(const char* path)
 {
  try
@@ -487,7 +486,72 @@ static void Stream64Test(const char* path)
 //
 //
 //
+#include <mednafen/cdrom/cdromif.h>
+static void CDTest(const char* path)
+{
+ try
+ {
+  CDIF* cds[2];
+  CDUtility::TOC toc[2];
 
+  cds[0] = CDIF_Open(path, false);
+  cds[1] = CDIF_Open(path, true);
+
+  for(unsigned i = 0; i < 2; i++)
+   cds[0]->ReadTOC(&toc[i]);
+
+  assert(!memcmp(&toc[0], &toc[1], sizeof(CDUtility::TOC)));
+
+  srand(0xDEADBEEF);
+
+  for(int32 lba = -150; lba < (int32)toc[0].tracks[100].lba + 5*60*75; lba++)
+  {
+   uint8 secbuf[2][2352 + 96];
+   uint8 pwobuf[2][96];
+
+   for(unsigned i = 0; i < 2; i++)
+   {
+    for(unsigned sbj = 0; sbj < 2352 + 96; sbj++)
+     secbuf[i][sbj] = rand() >> 8;
+
+    for(unsigned sbj = 0; sbj < 96; sbj++)
+     pwobuf[i][sbj] = rand() >> 8;
+
+    cds[i]->ReadRawSector(secbuf[i], lba);
+    cds[i]->ReadRawSectorPWOnly(pwobuf[i], lba, true);
+
+    for(unsigned p = 0; p < 96; p++)
+     assert(secbuf[i][2352 + p] == pwobuf[i][p]);
+   }
+   assert(!memcmp(secbuf[0], secbuf[1], 2352 + 96));
+   assert(!memcmp(pwobuf[0], pwobuf[1], 96));
+
+   uint8 subq[12];
+   CDUtility::subq_deinterleave(pwobuf[0], subq);
+   if(CDUtility::subq_check_checksum(subq))
+   {
+    /*if(lba == 0 || lba == 1)
+    {
+     for(unsigned i = 0; i < 12; i++)
+      printf("0x%02x ", subq[i]);
+     printf("\n");
+    }*/
+   }
+   else
+    printf("SubQ checksum error at lba=%d\n", lba);
+  }
+ }
+ catch(std::exception& e)
+ {
+  printf("%s\n", e.what());
+  abort();
+ }
+
+ printf("CDTest Done.\n");
+}
+//
+//
+//
 static ARGPSTRUCT *MDFN_Internal_Args = NULL;
 
 static int HokeyPokeyFallDown(const char *name, const char *value)
@@ -538,7 +602,6 @@ static void MakeMednafenArgsStruct(void)
 
 static int netconnect = 0;
 static char* loadcd = NULL;	// Deprecated
-static int physcd = 0;
 
 static char * force_module_arg = NULL;
 static int DoArgs(int argc, char *argv[], char **filename)
@@ -549,6 +612,7 @@ static int DoArgs(int argc, char *argv[], char **filename)
 	char *dmfn = NULL;
 	char *dummy_remote = NULL;
 	char *stream64testpath = NULL;
+	char *cdtestpath = NULL;
 
         ARGPSTRUCT MDFNArgs[] = 
 	{
@@ -557,8 +621,6 @@ static int DoArgs(int argc, char *argv[], char **filename)
 
 	 // -loadcd is deprecated and only still supported because it's been around for yeaaaars.
 	 { "loadcd", NULL/*_("Load and boot a CD for the specified system.")*/, 0, &loadcd, SUBSTYPE_STRING_ALLOC },
-
-	 { "physcd", _("Load and boot from a physical CD, treating [FILE] as the optional device name."), &physcd, 0, 0 },
 
 	 { "force_module", _("Force usage of specified emulation module."), 0, &force_module_arg, SUBSTYPE_STRING_ALLOC },
 
@@ -574,6 +636,8 @@ static int DoArgs(int argc, char *argv[], char **filename)
 
 	 // Testing functionality for FileStream and GZFileStream largefile support(mostly intended for testing the Windows builds)
 	 { "stream64test", NULL, 0, &stream64testpath, SUBSTYPE_STRING_ALLOC },
+
+	 { "cdtest", NULL, 0, &cdtestpath, SUBSTYPE_STRING_ALLOC },
 
 	 { 0, 0, 0, 0 }
         };
@@ -616,6 +680,13 @@ static int DoArgs(int argc, char *argv[], char **filename)
 	  stream64testpath = NULL;
 	 }
 
+	 if(cdtestpath)
+	 {
+	  CDTest(cdtestpath);
+	  free(cdtestpath);
+	  cdtestpath = NULL;
+	 }
+
 	 if(dsfn)
 	  MDFNI_DumpSettingsDef(dsfn);
 
@@ -625,7 +696,7 @@ static int DoArgs(int argc, char *argv[], char **filename)
 	 if(dsfn || dmfn)
 	  return(0);
 
-	 if(*filename == NULL && loadcd == NULL && physcd == 0)
+	 if(*filename == NULL)
 	 {
 	  MDFN_PrintError(_("No game filename specified!"));
 	  return(0);
@@ -655,43 +726,17 @@ static int LoadGame(const char *force_module, const char *path)
 	pending_snapshot = 0;
 	pending_ssnapshot = 0;
 
-	if(physcd)
+	if(loadcd)	// Deprecated
 	{
-	 if(!(tmp = MDFNI_LoadCD(force_module, path, true)))
-		return(0);
-	}
-	else if(loadcd)	// Deprecated
-	{
-	 const char *system = loadcd;
-         bool is_physical = false;
-
-	 if(!system)
-	  system = force_module;
-
-	 if(path == NULL)
-	  is_physical = true;
-	 else
-	 {
-	  int sr;
-	  //int se;
-	  struct stat sb;
-
-	  sr = stat(path, &sb);
-	  //se = errno;	  
-
-	  if(!sr && !S_ISREG(sb.st_mode))
-	  //if(sr || !S_ISREG(sb.st_mode))
-	   is_physical = true;
-	 }
-
-	 if(!(tmp = MDFNI_LoadCD(system, path, is_physical)))
-		return(0);
+	 if(!(tmp = MDFNI_LoadCD(loadcd ? loadcd : force_module, path)))
+	  return(0);
 	}
 	else
 	{
          if(!(tmp=MDFNI_LoadGame(force_module, path)))
 	  return 0;
 	}
+
 	CurGame = tmp;
 	InitGameInput(tmp);
 	InitCommandInput(tmp);
@@ -752,6 +797,12 @@ static int LoadGame(const char *force_module, const char *path)
         }
 
 	ffnosound = MDFN_GetSettingB("ffnosound");
+	RewindState = MDFN_GetSettingB("srwautoenable");
+	if(RewindState)
+	{
+	 MDFN_DispMessage(_("State rewinding functionality enabled."));
+	 MDFNI_EnableStateRewind(RewindState);
+	}
 
 	//
 	// Game thread creation should come lastish.
@@ -1270,7 +1321,7 @@ void PumpWrap(void)
 		     }
 		     break;
 	         case CEVT_SET_GRAB_INPUT:
-                         SDL_WM_GrabInput(*(int *)event.user.data1 ? SDL_GRAB_ON : SDL_GRAB_OFF);
+                         SDL_WM_GrabInput(*(uint8 *)event.user.data1 ? SDL_GRAB_ON : SDL_GRAB_OFF);
                          free(event.user.data1);
                          break;
 		 //case CEVT_TOGGLEFS: NeedVideoChange = 1; break;
@@ -1378,17 +1429,6 @@ void PrintLIBICONVVersion(void)
  #ifdef _LIBICONV_VERSION
   MDFN_printf(_("Compiled against libiconv %u.%u, running with libiconv %u.%u\n"), _LIBICONV_VERSION & 0xFF, _LIBICONV_VERSION >> 8,
 										   _libiconv_version & 0xFF, _libiconv_version >> 8);
- #endif
-}
-
-void PrintLIBCDIOVersion(void)
-{
- #ifdef HAVE_LIBCDIO
-  #if LIBCDIO_VERSION_NUM < 83
-  const char *cdio_version_string = "(unknown)";
-  #endif
-
-  MDFN_printf(_("Compiled against libcdio %s, running with libcdio %s\n"), CDIO_VERSION, cdio_version_string);
  #endif
 }
 
@@ -1666,7 +1706,6 @@ int main(int argc, char *argv[])
 	PrintLIBICONVVersion();
         PrintSDLVersion();
         PrintLIBSNDFILEVersion();
-	PrintLIBCDIOVersion();
         MDFN_indent(-2);
 
         MDFN_printf(_("Base directory: %s\n"), DrBaseDirectory);

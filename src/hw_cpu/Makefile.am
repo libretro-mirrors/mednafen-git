@@ -12,6 +12,7 @@ noinst_PROGRAMS = gen68k$(EXEEXT)
 gen68k_SOURCES = c68k/gen68k.cpp
 gen68k_CFLAGS = -DC68K_GEN
 gen68k_LDFLAGS = -DC68K_GEN
+gen68k_LDADD = @LIBINTL@ @LIBICONV@
 nodist_pkgdata_DATA = c68k/c68k_op0.inc
 c68k/c68k_op0.inc: gen68k$(EXEEXT)
 	cd c68k && ../gen68k$(EXEEXT)

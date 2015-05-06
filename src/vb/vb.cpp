@@ -59,8 +59,6 @@ int32 VB_InDebugPeek;
 
 static uint32 VB3DMode;
 
-static Blip_Buffer sbuf[2];
-
 static uint8 *WRAM = NULL;
 
 static uint8 *GPRAM = NULL;
@@ -659,7 +657,7 @@ static void Load(MDFNFILE *fp)
   }
 
   VIP_Init();
-  VB_VSU = new VSU(&sbuf[0], &sbuf[1]);
+  VB_VSU = new VSU();
   VBINPUT_Init();
 
   VB3DMode = MDFN_GetSettingUI("vb.3dmode");
@@ -777,14 +775,7 @@ static void Emulate(EmulateSpecStruct *espec)
  VBINPUT_Frame();
 
  if(espec->SoundFormatChanged)
- {
-  for(int y = 0; y < 2; y++)
-  {
-   sbuf[y].set_sample_rate(espec->SoundRate ? espec->SoundRate : 44100, 50);
-   sbuf[y].clock_rate((long)(VB_MASTER_CLOCK / 4));
-   sbuf[y].bass_freq(20);
-  }
- }
+  VB_VSU->SetSoundRate(espec->SoundRate);
 
  VIP_StartFrame(espec);
 
@@ -793,16 +784,7 @@ static void Emulate(EmulateSpecStruct *espec)
  FixNonEvents();
  ForceEventUpdates(v810_timestamp);
 
- VB_VSU->EndFrame((v810_timestamp + VSU_CycleFix) >> 2);
-
- if(espec->SoundBuf)
- {
-  for(int y = 0; y < 2; y++)
-  {
-   sbuf[y].end_frame((v810_timestamp + VSU_CycleFix) >> 2);
-   espec->SoundBufSize = sbuf[y].read_samples(espec->SoundBuf + y, espec->SoundBufMaxSize, 1);
-  }
- }
+ espec->SoundBufSize = VB_VSU->EndFrame((v810_timestamp + VSU_CycleFix) >> 2, espec->SoundBuf, espec->SoundBufMaxSize);
 
  VSU_CycleFix = (v810_timestamp + VSU_CycleFix) & 3;
 
@@ -815,17 +797,6 @@ static void Emulate(EmulateSpecStruct *espec)
  RebaseTS(v810_timestamp);
 
  VB_V810->ResetTS(0);
-
-
-#if 0
- if(espec->SoundRate)
- {
-  unsigned long long crf = (unsigned long long)sbuf[0].clock_rate_factor(sbuf[0].clock_rate());
-  double real_rate = (double)crf * sbuf[0].clock_rate() / (1ULL << BLIP_BUFFER_ACCURACY);
-
-  printf("%f\n", real_rate);
- }
-#endif
 }
 
 }

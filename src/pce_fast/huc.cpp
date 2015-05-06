@@ -25,7 +25,7 @@
 #include <mednafen/file.h>
 #include <mednafen/cdrom/cdromif.h>
 #include <mednafen/mempatcher.h>
-#include <mednafen/GZFileStream.h>
+#include <mednafen/compress/GZFileStream.h>
 
 namespace PCE_Fast
 {

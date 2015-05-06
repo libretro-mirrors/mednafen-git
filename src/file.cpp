@@ -17,7 +17,7 @@
 
 #include "mednafen.h"
 #include <mednafen/FileStream.h>
-#include <mednafen/GZFileStream.h>
+#include <mednafen/compress/GZFileStream.h>
 #include <mednafen/MemoryStream.h>
 #include <mednafen/IPSPatcher.h>
 

@@ -20,10 +20,6 @@
 #include "cdc.h"
 #include "spu.h"
 
-//#include <map>
-
-// Notes: DMA tested to abort when 
-
 /* Notes:
 
  Channel 4(SPU):
@@ -127,8 +123,6 @@ void DMA_Power(void)
  RecalcIRQOut();
 }
 
-void PSX_SetDMASuckSuck(unsigned);
-
 static INLINE bool ChCan(const unsigned ch, const uint32 CRModeCache)
 {
  switch(ch)
@@ -226,19 +220,16 @@ static void RecalcHalt(void)
   if(tmp > 0)
    tmp--;
 
-  if(tmp > 200)	// Due to 8-bit limitations in the CPU core.
-   tmp = 200;
-
-  PSX_SetDMASuckSuck(tmp);
+  PSX_SetDMACycleSteal(tmp);
  }
  else
-  PSX_SetDMASuckSuck(0);
+  PSX_SetDMACycleSteal(0);
 
  CPU->SetHalt(Halt);
 }
 
 
-static INLINE void ChRW(const unsigned ch, const uint32 CRModeCache, uint32 *V, int32 *offset)
+static INLINE void ChRW(const unsigned ch, const uint32 CRModeCache, uint32 *V, uint32 *offset)
 {
  unsigned extra_cyc_overhead = 0;
 
@@ -424,7 +415,7 @@ static INLINE void RunChannelI(const unsigned ch, const uint32 CRModeCache, int3
   //
   {
    uint32 vtmp;
-   int32 voffs = 0;
+   uint32 voffs = 0;
 
    if(MDFN_UNLIKELY(DMACH[ch].CurAddr & 0x800000))
    {

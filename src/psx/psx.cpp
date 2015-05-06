@@ -71,6 +71,8 @@ void PSX_DBG(unsigned level, const char *format, ...) noexcept
   va_end(ap);
  }
 }
+#else
+static unsigned const psx_dbg_level = 0;
 #endif
 
 
@@ -262,6 +264,16 @@ static struct
  };
 } SysControl;
 
+static unsigned DMACycleSteal = 0;	// Doesn't need to be saved in save states, since it's recalculated in the ForceEventUpdates() call chain.
+
+void PSX_SetDMACycleSteal(unsigned stealage)
+{
+ if(stealage > 200)	// Due to 8-bit limitations in the CPU core.
+  stealage = 200;
+
+ DMACycleSteal = stealage;
+}
+
 
 //
 // Event stuff
@@ -387,42 +399,11 @@ void ForceEventUpdates(const pscpu_timestamp_t timestamp)
 bool MDFN_FASTCALL PSX_EventHandler(const pscpu_timestamp_t timestamp)
 {
  event_list_entry *e = events[PSX_EVENT__SYNFIRST].next;
-#if PSX_EVENT_SYSTEM_CHECKS
- pscpu_timestamp_t prev_event_time = 0;
-#endif
-#if 0
- {
-   printf("EventHandler - timestamp=%8d\n", timestamp);
-   event_list_entry *moo = &events[PSX_EVENT__SYNFIRST];
-   while(moo)
-   {
-    printf("%u: %8d\n", moo->which, moo->event_time);
-    moo = moo->next;
-   }
- }
-#endif
-
-#if PSX_EVENT_SYSTEM_CHECKS
- assert(Running == 0 || timestamp >= e->event_time);	// If Running == 0, our EventHandler 
-#endif
 
  while(timestamp >= e->event_time)	// If Running = 0, PSX_EventHandler() may be called even if there isn't an event per-se, so while() instead of do { ... } while
  {
   event_list_entry *prev = e->prev;
   pscpu_timestamp_t nt;
-
-#if PSX_EVENT_SYSTEM_CHECKS
- // Sanity test to make sure events are being evaluated in temporal order.
-  if(e->event_time < prev_event_time)
-   abort();
-  prev_event_time = e->event_time;
-#endif
-
-  //printf("Event: %u %8d\n", e->which, e->event_time);
-#if PSX_EVENT_SYSTEM_CHECKS
-  if((timestamp - e->event_time) > 50)
-   printf("Late: %u %d --- %8d\n", e->which, timestamp - e->event_time, timestamp);
-#endif
 
   switch(e->which)
   {
@@ -458,26 +439,6 @@ bool MDFN_FASTCALL PSX_EventHandler(const pscpu_timestamp_t timestamp)
   e = prev->next;
  }
 
-#if PSX_EVENT_SYSTEM_CHECKS
- for(int i = PSX_EVENT__SYNFIRST + 1; i < PSX_EVENT__SYNLAST; i++)
- {
-  if(timestamp >= events[i].event_time)
-  {
-   printf("BUG: %u\n", i);
-
-   event_list_entry *moo = &events[PSX_EVENT__SYNFIRST];
-
-   while(moo)
-   {
-    printf("%u: %8d\n", moo->which, moo->event_time);
-    moo = moo->next;
-   }
-
-   abort();
-  }
- }
-#endif
-
  return(Running);
 }
 
@@ -493,15 +454,6 @@ void PSX_RequestMLExit(void)
 // End event stuff
 //
 
-void DMA_CheckReadDebug(uint32 A);
-
-static unsigned sucksuck = 0;
-void PSX_SetDMASuckSuck(unsigned suckage)
-{
- sucksuck = suckage;
-}
-
-
 // Remember to update MemPeek<>() when we change address decoding in MemRW()
 template<typename T, bool IsWrite, bool Access24> static INLINE void MemRW(pscpu_timestamp_t &timestamp, uint32 A, uint32 &V)
 {
@@ -513,13 +465,9 @@ template<typename T, bool IsWrite, bool Access24> static INLINE void MemRW(pscpu
  #endif
 
  if(!IsWrite)
-  timestamp += sucksuck;
-
- //if(A == 0xa0 && IsWrite)
- // DBG_Break();
+  timestamp += DMACycleSteal;
 
  if(A < 0x00800000)
- //if(A <= 0x1FFFFF)
  {
   if(IsWrite)
   {
@@ -530,8 +478,6 @@ template<typename T, bool IsWrite, bool Access24> static INLINE void MemRW(pscpu
    timestamp += 3;
   }
 
-  //DMA_CheckReadDebug(A);
-  //assert(A <= 0x1FFFFF);
   if(Access24)
   {
    if(IsWrite)
@@ -846,7 +792,6 @@ void MDFN_FASTCALL PSX_MemWrite16(pscpu_timestamp_t timestamp, uint32 A, uint32 
 
 void MDFN_FASTCALL PSX_MemWrite24(pscpu_timestamp_t timestamp, uint32 A, uint32 V)
 {
- //assert(0);
  MemRW<uint32, true, true>(timestamp, A, V);
 }
 
@@ -1148,7 +1093,6 @@ static void Emulate(EmulateSpecStruct *espec)
      MDFN_PrintError("Memcard %d save error: %s", i, e.what());
      MDFN_DispMessage("Memcard %d save error: %s", i, e.what());
     }
-    //MDFN_DispMessage("Memcard %d saved.", i);
    }
   }
  }
@@ -1219,9 +1163,13 @@ static bool CalcRegion_By_SYSTEMCNF(CDIF *c, unsigned *rr)
     {
      bootpos++;
      while(*bootpos == ' ' || *bootpos == '\t') bootpos++;
-     if(!strncasecmp(bootpos, "cdrom:\\", 7))
+     if(!strncasecmp(bootpos, "cdrom:", 6))
      { 
-      bootpos += 7;
+      bootpos += 6;
+
+      while(*bootpos == '\\')
+       bootpos++;
+
       char *tmp;
 
       if((tmp = strchr(bootpos, '_'))) *tmp = 0;
@@ -1229,9 +1177,9 @@ static bool CalcRegion_By_SYSTEMCNF(CDIF *c, unsigned *rr)
       if((tmp = strchr(bootpos, ';'))) *tmp = 0;
       //puts(bootpos);
 
-      if(strlen(bootpos) == 4 && bootpos[0] == 'S' && (bootpos[1] == 'C' || bootpos[1] == 'L' || bootpos[1] == 'I'))
+      if(strlen(bootpos) == 4 && toupper(bootpos[0]) == 'S' && (toupper(bootpos[1]) == 'C' || toupper(bootpos[1]) == 'L' || toupper(bootpos[1]) == 'I'))
       {
-       switch(bootpos[2])
+       switch(toupper(bootpos[2]))
        {
 	case 'E': *rr = REGION_EU;
 	          return(true);
@@ -1279,7 +1227,7 @@ static bool CalcRegion_By_SA(const uint8 buf[2048 * 8], unsigned* region)
 
 	fbuf[opos++] = 0;
 
-	PSX_DBG(PSX_DBG_SPARSE, "License string: %s", (char *)fbuf);
+	PSX_DBG(PSX_DBG_SPARSE, "License string: %s\n", (char *)fbuf);
 
 	if(strstr((char *)fbuf, "licensedby") != NULL)
 	{
@@ -1320,7 +1268,7 @@ static bool ConstrainRegion_By_SA(const uint8 buf[2048 * 8], unsigned* region)
   //
   if(*region == REGION_JP)
   {
-    const char tv[2][0x41] = {
+    static const char tv[2][0x41] = {
 			      { 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 76, 105, 99, 101, 110, 115, 
 			        101, 100, 32, 32, 98, 121, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 
 			         83, 111, 110, 121, 32, 67, 111, 109, 112, 117, 116, 101, 114, 32, 69, 110, 
@@ -1389,20 +1337,12 @@ static bool TestMagic(MDFNFILE *fp)
 
 static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
 {
- uint8 buf[2048 * 8];
- CDUtility::TOC toc;
- int dt;
+ std::unique_ptr<uint8[]> buf(new uint8[2048 * 8]);
 
- (*CDInterfaces)[0]->ReadTOC(&toc);
-
- dt = toc.FindTrackByLBA(4);
- if(dt > 0 && !(toc.tracks[dt].control & 0x4))
+ if((*CDInterfaces)[0]->ReadSector(&buf[0], 4, 8, true) != 0x2)
   return(false);
 
- if((*CDInterfaces)[0]->ReadSector(buf, 4, 8) != 0x2)
-  return(false);
-
- if(strncmp((char *)buf + 10, "Licensed  by", strlen("Licensed  by")) && crc32(0, &buf[0x800], 0x3278) != 0x0069c087)
+ if(strncmp((char *)&buf[10], "Licensed  by", strlen("Licensed  by")) && crc32(0, &buf[0x800], 0x3278) != 0x0069c087)
   return(false);
 
  return(true);
@@ -1421,19 +1361,19 @@ static unsigned CalcDiscSCEx(void)
 
  for(unsigned i = 0; i < (cdifs ? cdifs->size() : 0); i++)
  {
-  uint8 buf[2048 * 8];
+  std::unique_ptr<uint8[]> buf(new uint8[2048 * 8]);
   bool is_ps1_disc = true;
 
   //
   // Read the PS1 system area.
   //
-  if((*cdifs)[i]->ReadSector(buf, 4, 8) == 0x2)
+  if((*cdifs)[i]->ReadSector(buf.get(), 4, 8) == 0x2)
   {
    if(!CalcRegion_By_SYSTEMCNF((*cdifs)[i], &region))
    {
-    if(!CalcRegion_By_SA(buf, &region))
+    if(!CalcRegion_By_SA(buf.get(), &region))
     {
-     if(strncmp((char *)buf + 10, "Licensed  by", strlen("Licensed  by")) && crc32(0, &buf[0x800], 0x3278) != 0x0069c087)
+     if(strncmp((char *)buf.get() + 10, "Licensed  by", strlen("Licensed  by")) && crc32(0, &buf[0x800], 0x3278) != 0x0069c087)
      {
       //
       // Last-ditch effort before deciding the disc isn't a PS1 disc.
@@ -1457,7 +1397,7 @@ static unsigned CalcDiscSCEx(void)
   {
    if(!found_ps1_disc || did_constraint)
    {
-    if(ConstrainRegion_By_SA(buf, &region))
+    if(ConstrainRegion_By_SA(buf.get(), &region))
      did_constraint = true;
    }
   }
@@ -1488,6 +1428,77 @@ static unsigned CalcDiscSCEx(void)
  return ret_region;
 }
 
+static void DiscSanityChecks(void)
+{
+ assert(cdifs->size() == cdifs_scex_ids.size());
+
+ for(size_t i = 0; i < cdifs_scex_ids.size(); i++)
+ {
+  //
+  // Sanity check to ensure Q subchannel timing data relative to mode1/mode2 header timing data is as we expect it to be for a PS1 disc.
+  //
+  if(cdifs_scex_ids[i])
+  {
+   bool did_check = false;
+
+   for(int32 lba = -8; lba < 16; lba++)
+   {
+    uint8 rawbuf[2352 + 96];
+
+    if((*cdifs)[i]->ReadRawSector(rawbuf, lba))
+    {
+     uint8 qbuf[12];
+
+     CDUtility::subq_deinterleave(rawbuf + 2352, qbuf);
+     if(CDUtility::subq_check_checksum(qbuf) && (qbuf[0] & 0xF) == CDUtility::ADR_CURPOS)
+     {
+      uint8 qm = qbuf[7];
+      uint8 qs = qbuf[8];
+      uint8 qf = qbuf[9];
+
+      uint8 hm = rawbuf[12];
+      uint8 hs = rawbuf[13];
+      uint8 hf = rawbuf[14];
+
+      uint8 lm, ls, lf;
+
+      CDUtility::LBA_to_AMSF(lba, &lm, &ls, &lf);
+      lm = CDUtility::U8_to_BCD(lm);
+      ls = CDUtility::U8_to_BCD(ls);
+      lf = CDUtility::U8_to_BCD(lf);
+
+      if(qm != hm || qs != hs || qf != hf)
+      {
+       throw MDFN_Error(0, _("Disc %zu of %zu: Q-subchannel versus sector header absolute time mismatch at lba=%d; Q subchannel: %02x:%02x:%02x, Sector header: %02x:%02x:%02x"),
+		i + 1, cdifs->size(),
+		lba,
+		qm, qs, qf,
+		hm, hs, hf);
+      }
+
+      if(lm != hm || ls != hs || lf != hf)
+      {
+       throw MDFN_Error(0, _("Disc %zu of %zu: Sector header absolute time broken at lba=%d(%02x:%02x:%02x); Sector header: %02x:%02x:%02x"),
+		i + 1, cdifs->size(),
+		lba,
+		lm, ls, lf,
+		hm, hs, hf);
+      }
+
+      if(lba >= 0)
+       did_check = true;
+     }
+    }
+   }
+
+   if(!did_check)
+   {
+    throw MDFN_Error(0, _("Disc %zu of %zu: No valid Q subchannel ADR_CURPOS data preset at lba 0-15?!"), i + 1, cdifs->size());
+   }
+  }
+ }
+}
+
 static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemcards = true, const bool WantPIOMem = false)
 {
  unsigned region;
@@ -1499,6 +1510,10 @@ static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
 
  cdifs = CDInterfaces;
  region = CalcDiscSCEx();
+ if(MDFN_GetSettingB("psx.cd_sanity"))
+  DiscSanityChecks();
+ else
+  MDFN_printf(_("WARNING: CD (image) sanity checks disabled."));
 
  if(!MDFN_GetSettingB("psx.region_autodetect"))
   region = MDFN_GetSettingI("psx.region_default");
@@ -1644,6 +1659,8 @@ static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
    if(!bios_recognized)
     MDFN_printf(_("Warning: Unrecognized BIOS.\n"));
   }
+  else
+   MDFN_printf(_("WARNING: BIOS ROM sanity checks disabled.\n"));
  }
 
  for(int i = 0; i < 8; i++)
@@ -1873,12 +1890,8 @@ static void Load(MDFNFILE *fp)
 
   fp->rewind();
 
-// For testing.
-#if 0
+  if(MDFN_GetSettingS("psx.dbg_exe_cdpath") != "")	// For testing/debug purposes.
   {
-   #warning "GREMLINS GREMLINS EVERYWHEREE IYEEEEEE"
-   #warning "Seriously, GREMLINS!  Or peanut butter.  Or maybe...DINOSAURS."
-
    RMD_Drive dr;
 
    dr.Name = std::string("Virtual CD Drive");
@@ -1893,17 +1906,11 @@ static void Load(MDFNFILE *fp)
    MDFNGameInfo->RMD->Media.push_back(RMD_Media({"Test CD", 0}));
 
    static std::vector<CDIF *> CDInterfaces;
-
-   //CDInterfaces.push_back(CDIF_Open("/home/sarah-projects/psxdev/tests/cd/adpcm.cue", false, false));
-   CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Tony Hawk's Pro Skater 2 (USA)/Tony Hawk's Pro Skater 2 (USA).cue", false, false));
-   //CDInterfaces.push_back(CDIF_Open("/extra/games/PSX/Jumping Flash! (USA)/Jumping Flash! (USA).cue", false, false));
-   //CDInterfaces.push_back(CDIF_Open("/extra/games/PC-FX/Blue Breaker.cue", false, false));
-   //CDInterfaces.push_back(CDIF_Open("/dev/cdrom2", true, false));
+   CDInterfaces.push_back(CDIF_Open(MDFN_GetSettingS("psx.dbg_exe_cdpath").c_str(), false));
    InitCommon(&CDInterfaces, !IsPSF, true);
   }
-#else
-  InitCommon(NULL, !IsPSF, true);
-#endif
+  else
+   InitCommon(NULL, !IsPSF, true);
 
   TextMem.resize(0);
 
@@ -2096,16 +2103,10 @@ static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint3
 
  if(rs->MediaPresent && rs->MediaUsable)
  {
-  if(!(*cdifs)[media_idx]->Eject(false))
-   return(false);
-
   CDC->SetDisc(false, (*cdifs)[media_idx], cdifs_scex_ids[media_idx]);
  }
  else
  {
-  if(!(*cdifs)[media_idx]->Eject(rs->MediaCanChange))
-   return(false);
-
   CDC->SetDisc(rs->MediaCanChange, NULL, NULL);
  }
 
@@ -2323,16 +2324,6 @@ static const FileExtensionSpecStruct KnownExtensions[] =
  { NULL, NULL }
 };
 
-#if 0
-static const MDFNSetting_EnumList MultiTap_List[] =
-{
- { "0", 0, gettext_noop("Disabled") },
- { "1", 1, gettext_noop("Enabled") },
- { "auto", 0, gettext_noop("Automatically-enable multitap."), gettext_noop("NOT IMPLEMENTED YET(currently equivalent to 0)") },
- { NULL, 0 },
-};
-#endif
-
 static MDFNSetting PSXSettings[] =
 {
  { "psx.input.mouse_sensitivity", MDFNSF_NOFLAGS, gettext_noop("Emulated mouse sensitivity."), NULL, MDFNST_FLOAT, "1.00", NULL, NULL },
@@ -2342,14 +2333,14 @@ static MDFNSetting PSXSettings[] =
  { "psx.input.pport1.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on PSX port 1."), gettext_noop("Makes 3 more virtual ports available.\n\nNOTE: Enabling multitap in games that don't fully support it may cause deleterious effects."), MDFNST_BOOL, "0", NULL, NULL }, //MDFNST_ENUM, "auto", NULL, NULL, NULL, NULL, MultiTap_List },
  { "psx.input.pport2.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on PSX port 2."), gettext_noop("Makes 3 more virtual ports available.\n\nNOTE: Enabling multitap in games that don't fully support it may cause deleterious effects."), MDFNST_BOOL, "0", NULL, NULL },
 
- { "psx.input.port1.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 1."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
- { "psx.input.port2.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 2."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
- { "psx.input.port3.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 3."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
- { "psx.input.port4.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 4."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
- { "psx.input.port5.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 5."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
- { "psx.input.port6.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 6."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
- { "psx.input.port7.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 7."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
- { "psx.input.port8.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memcard on virtual port 8."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port1.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memory card on virtual port 1."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port2.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memory card on virtual port 2."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port3.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memory card on virtual port 3."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port4.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memory card on virtual port 4."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port5.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memory card on virtual port 5."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port6.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memory card on virtual port 6."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port7.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memory card on virtual port 7."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
+ { "psx.input.port8.memcard", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate memory card on virtual port 8."), NULL, MDFNST_BOOL, "1", NULL, NULL, },
 
 
  { "psx.input.port1.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 1."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0xFF0000", "0x000000", "0x1000000" },
@@ -2368,7 +2359,8 @@ static MDFNSetting PSXSettings[] =
  { "psx.bios_na", MDFNSF_EMU_STATE, gettext_noop("Path to the North America SCPH-5501/v3.0A ROM BIOS"), gettext_noop("SHA-256 11052b6499e466bbf0a709b1f9cb6834a9418e66680387912451e971cf8a1fef"), MDFNST_STRING, "scph5501.bin" },
  { "psx.bios_eu", MDFNSF_EMU_STATE, gettext_noop("Path to the Europe SCPH-5502/v3.0E ROM BIOS"), gettext_noop("SHA-256 1faaa18fa820a0225e488d9f086296b8e6c46df739666093987ff7d8fd352c09"), MDFNST_STRING, "scph5502.bin" },
 
- { "psx.bios_sanity", MDFNSF_EMU_STATE | MDFNSF_SUPPRESS_DOC, gettext_noop("Enable BIOS ROM image sanity checks."), NULL, MDFNST_BOOL, "1" },
+ { "psx.bios_sanity", MDFNSF_NOFLAGS, gettext_noop("Enable BIOS ROM image sanity checks."), NULL, MDFNST_BOOL, "1" },
+ { "psx.cd_sanity", MDFNSF_NOFLAGS, gettext_noop("Enable CD (image) sanity checks."), gettext_noop("Sanity checks are only performed on discs detected(via heuristics) to be PS1 discs.  The checks primarily consist of ensuring that Q subchannel data is as expected for a typical commercially-released PS1 disc."), MDFNST_BOOL, "1" },
 
  { "psx.spu.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("SPU output resampler quality."),
 	gettext_noop("0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors."), MDFNST_UINT, "5", "0", "10" },
@@ -2386,14 +2378,14 @@ static MDFNSetting PSXSettings[] =
  { "psx.dbg_level", MDFNSF_NOFLAGS, gettext_noop("Debug printf verbosity level."), NULL, MDFNST_UINT, "0", "0", "4" },
 #endif
 
- { "psx.clobbers_lament", MDFNSF_NOFLAGS | MDFNSF_SUPPRESS_DOC, gettext_noop("UNUSED"), NULL, MDFNST_BOOL, "0" },
+ { "psx.dbg_exe_cdpath", MDFNSF_SUPPRESS_DOC, gettext_noop("CD image to use with .PSX/.EXE loading."), NULL, MDFNST_STRING, "" },
 
  { NULL },
 };
 
 // Note for the future: If we ever support PSX emulation with non-8-bit RGB color components, or add a new linear RGB colorspace to MDFN_PixelFormat, we'll need
 // to buffer the intermediate 24-bit non-linear RGB calculation into an array and pass that into the GPULineHook stuff, otherwise netplay could break when
-// an emulated GunCon is used.  This IS assuming, of course, that we ever implement save state support so that netplay actually works at all...
+// an emulated GunCon is used.
 MDFNGI EmulatedPSX =
 {
  "psx",

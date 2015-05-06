@@ -115,7 +115,7 @@ DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/resampler/Makefile.am.inc \
 	$(srcdir)/string/Makefile.am.inc \
 	$(srcdir)/video/Makefile.am.inc
-@HAVE_LIBCDIO_TRUE@am__append_55 = cdrom/CDAccess_Physical.cpp
+@HAVE_LIBSNDFILE_TRUE@am__append_55 = cdrom/CDAFReader_SF.cpp
 @ARCH_X86_TRUE@am__append_56 = cputest/x86_cpu.c
 @ARCH_POWERPC_TRUE@am__append_57 = cputest/ppc_cpu.c
 subdir = src
@@ -153,14 +153,15 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	settings.cpp endian.cpp mednafen.cpp git.cpp file.cpp \
 	general.cpp memory.cpp netplay.cpp state.cpp state_rewind.cpp \
 	movie.cpp player.cpp PSFLoader.cpp tests.cpp qtrecord.cpp \
-	Stream.cpp MemoryStream.cpp FileStream.cpp GZFileStream.cpp \
-	IPSPatcher.cpp drivers/win-resource.rc dis6502.cpp \
-	cdrom/audioreader.cpp cdrom/cdromif.cpp cdrom/scsicd.cpp \
-	cdrom/CDUtility.cpp cdrom/crc32.cpp cdrom/galois.cpp \
-	cdrom/l-ec.cpp cdrom/recover-raw.cpp cdrom/lec.cpp \
-	cdrom/CDAccess.cpp cdrom/CDAccess_Image.cpp \
-	cdrom/CDAccess_CCD.cpp cdrom/CDAccess_Physical.cpp \
-	compress/minilzo.c compress/ioapi.c compress/unzip.c \
+	Stream.cpp MemoryStream.cpp FileStream.cpp IPSPatcher.cpp \
+	drivers/win-resource.rc dis6502.cpp cdrom/cdromif.cpp \
+	cdrom/scsicd.cpp cdrom/CDUtility.cpp cdrom/crc32.cpp \
+	cdrom/galois.cpp cdrom/l-ec.cpp cdrom/recover-raw.cpp \
+	cdrom/lec.cpp cdrom/CDAccess.cpp cdrom/CDAccess_Image.cpp \
+	cdrom/CDAccess_CCD.cpp cdrom/CDAFReader.cpp \
+	cdrom/CDAFReader_Vorbis.cpp cdrom/CDAFReader_MPC.cpp \
+	cdrom/CDAFReader_SF.cpp compress/minilzo.c compress/ioapi.c \
+	compress/unzip.c compress/GZFileStream.cpp \
 	compress/ZLInflateFilter.cpp hash/md5.cpp hash/sha1.cpp \
 	hash/sha256.cpp string/escape.cpp string/trim.cpp \
 	string/ConvertUTF.cpp video/surface.cpp video/font-data.cpp \
@@ -173,7 +174,7 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_SDL_TRUE@@WIN32_TRUE@am__objects_1 =  \
 @HAVE_SDL_TRUE@@WIN32_TRUE@	drivers/win-resource.$(OBJEXT)
 @WANT_DEBUGGER_TRUE@am__objects_2 = dis6502.$(OBJEXT)
-@HAVE_LIBCDIO_TRUE@am__objects_3 = cdrom/CDAccess_Physical.$(OBJEXT)
+@HAVE_LIBSNDFILE_TRUE@am__objects_3 = cdrom/CDAFReader_SF.$(OBJEXT)
 @ARCH_X86_TRUE@am__objects_4 = cputest/x86_cpu.$(OBJEXT)
 @ARCH_POWERPC_TRUE@am__objects_5 = cputest/ppc_cpu.$(OBJEXT)
 am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
@@ -183,16 +184,17 @@ am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	state.$(OBJEXT) state_rewind.$(OBJEXT) movie.$(OBJEXT) \
 	player.$(OBJEXT) PSFLoader.$(OBJEXT) tests.$(OBJEXT) \
 	qtrecord.$(OBJEXT) Stream.$(OBJEXT) MemoryStream.$(OBJEXT) \
-	FileStream.$(OBJEXT) GZFileStream.$(OBJEXT) \
-	IPSPatcher.$(OBJEXT) $(am__objects_1) $(am__objects_2) \
-	cdrom/audioreader.$(OBJEXT) cdrom/cdromif.$(OBJEXT) \
+	FileStream.$(OBJEXT) IPSPatcher.$(OBJEXT) $(am__objects_1) \
+	$(am__objects_2) cdrom/cdromif.$(OBJEXT) \
 	cdrom/scsicd.$(OBJEXT) cdrom/CDUtility.$(OBJEXT) \
 	cdrom/crc32.$(OBJEXT) cdrom/galois.$(OBJEXT) \
 	cdrom/l-ec.$(OBJEXT) cdrom/recover-raw.$(OBJEXT) \
 	cdrom/lec.$(OBJEXT) cdrom/CDAccess.$(OBJEXT) \
 	cdrom/CDAccess_Image.$(OBJEXT) cdrom/CDAccess_CCD.$(OBJEXT) \
-	$(am__objects_3) compress/minilzo.$(OBJEXT) \
-	compress/ioapi.$(OBJEXT) compress/unzip.$(OBJEXT) \
+	cdrom/CDAFReader.$(OBJEXT) cdrom/CDAFReader_Vorbis.$(OBJEXT) \
+	cdrom/CDAFReader_MPC.$(OBJEXT) $(am__objects_3) \
+	compress/minilzo.$(OBJEXT) compress/ioapi.$(OBJEXT) \
+	compress/unzip.$(OBJEXT) compress/GZFileStream.$(OBJEXT) \
 	compress/ZLInflateFilter.$(OBJEXT) hash/md5.$(OBJEXT) \
 	hash/sha1.$(OBJEXT) hash/sha256.$(OBJEXT) \
 	string/escape.$(OBJEXT) string/trim.$(OBJEXT) \
@@ -371,8 +373,6 @@ JACK_CFLAGS = @JACK_CFLAGS@
 JACK_LIBS = @JACK_LIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
-LIBCDIO_CFLAGS = @LIBCDIO_CFLAGS@
-LIBCDIO_LIBS = @LIBCDIO_LIBS@
 LIBICONV = @LIBICONV@
 LIBINTL = @LIBINTL@
 LIBMULTITHREAD = @LIBMULTITHREAD@
@@ -513,21 +513,23 @@ mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	endian.cpp mednafen.cpp git.cpp file.cpp general.cpp \
 	memory.cpp netplay.cpp state.cpp state_rewind.cpp movie.cpp \
 	player.cpp PSFLoader.cpp tests.cpp qtrecord.cpp Stream.cpp \
-	MemoryStream.cpp FileStream.cpp GZFileStream.cpp \
-	IPSPatcher.cpp $(am__append_4) $(am__append_9) \
-	cdrom/audioreader.cpp cdrom/cdromif.cpp cdrom/scsicd.cpp \
+	MemoryStream.cpp FileStream.cpp IPSPatcher.cpp $(am__append_4) \
+	$(am__append_9) cdrom/cdromif.cpp cdrom/scsicd.cpp \
 	cdrom/CDUtility.cpp cdrom/crc32.cpp cdrom/galois.cpp \
 	cdrom/l-ec.cpp cdrom/recover-raw.cpp cdrom/lec.cpp \
 	cdrom/CDAccess.cpp cdrom/CDAccess_Image.cpp \
-	cdrom/CDAccess_CCD.cpp $(am__append_55) compress/minilzo.c \
-	compress/ioapi.c compress/unzip.c compress/ZLInflateFilter.cpp \
-	hash/md5.cpp hash/sha1.cpp hash/sha256.cpp string/escape.cpp \
-	string/trim.cpp string/ConvertUTF.cpp video/surface.cpp \
-	video/font-data.cpp video/font-data-18x18.c \
-	video/font-data-12x13.c video/png.cpp video/primitives.cpp \
-	video/text.cpp video/video.cpp video/tblur.cpp \
-	video/resize.cpp video/Deinterlacer.cpp resampler/resample.c \
-	cputest/cputest.c $(am__append_56) $(am__append_57)
+	cdrom/CDAccess_CCD.cpp cdrom/CDAFReader.cpp \
+	cdrom/CDAFReader_Vorbis.cpp cdrom/CDAFReader_MPC.cpp \
+	$(am__append_55) compress/minilzo.c compress/ioapi.c \
+	compress/unzip.c compress/GZFileStream.cpp \
+	compress/ZLInflateFilter.cpp hash/md5.cpp hash/sha1.cpp \
+	hash/sha256.cpp string/escape.cpp string/trim.cpp \
+	string/ConvertUTF.cpp video/surface.cpp video/font-data.cpp \
+	video/font-data-18x18.c video/font-data-12x13.c video/png.cpp \
+	video/primitives.cpp video/text.cpp video/video.cpp \
+	video/tblur.cpp video/resize.cpp video/Deinterlacer.cpp \
+	resampler/resample.c cputest/cputest.c $(am__append_56) \
+	$(am__append_57)
 mednafen_LDADD = trio/libtrio.a $(am__append_2) $(am__append_6) \
 	sexyal/libsexyal.a $(am__append_8) cdplay/libcdplay.a \
 	demo/libdemo.a $(am__append_11) $(am__append_14) \
@@ -645,8 +647,6 @@ cdrom/$(am__dirstamp):
 cdrom/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) cdrom/$(DEPDIR)
 	@: > cdrom/$(DEPDIR)/$(am__dirstamp)
-cdrom/audioreader.$(OBJEXT): cdrom/$(am__dirstamp) \
-	cdrom/$(DEPDIR)/$(am__dirstamp)
 cdrom/cdromif.$(OBJEXT): cdrom/$(am__dirstamp) \
 	cdrom/$(DEPDIR)/$(am__dirstamp)
 cdrom/scsicd.$(OBJEXT): cdrom/$(am__dirstamp) \
@@ -669,7 +669,13 @@ cdrom/CDAccess_Image.$(OBJEXT): cdrom/$(am__dirstamp) \
 	cdrom/$(DEPDIR)/$(am__dirstamp)
 cdrom/CDAccess_CCD.$(OBJEXT): cdrom/$(am__dirstamp) \
 	cdrom/$(DEPDIR)/$(am__dirstamp)
-cdrom/CDAccess_Physical.$(OBJEXT): cdrom/$(am__dirstamp) \
+cdrom/CDAFReader.$(OBJEXT): cdrom/$(am__dirstamp) \
+	cdrom/$(DEPDIR)/$(am__dirstamp)
+cdrom/CDAFReader_Vorbis.$(OBJEXT): cdrom/$(am__dirstamp) \
+	cdrom/$(DEPDIR)/$(am__dirstamp)
+cdrom/CDAFReader_MPC.$(OBJEXT): cdrom/$(am__dirstamp) \
+	cdrom/$(DEPDIR)/$(am__dirstamp)
+cdrom/CDAFReader_SF.$(OBJEXT): cdrom/$(am__dirstamp) \
 	cdrom/$(DEPDIR)/$(am__dirstamp)
 compress/$(am__dirstamp):
 	@$(MKDIR_P) compress
@@ -682,6 +688,8 @@ compress/minilzo.$(OBJEXT): compress/$(am__dirstamp) \
 compress/ioapi.$(OBJEXT): compress/$(am__dirstamp) \
 	compress/$(DEPDIR)/$(am__dirstamp)
 compress/unzip.$(OBJEXT): compress/$(am__dirstamp) \
+	compress/$(DEPDIR)/$(am__dirstamp)
+compress/GZFileStream.$(OBJEXT): compress/$(am__dirstamp) \
 	compress/$(DEPDIR)/$(am__dirstamp)
 compress/ZLInflateFilter.$(OBJEXT): compress/$(am__dirstamp) \
 	compress/$(DEPDIR)/$(am__dirstamp)
@@ -763,12 +771,14 @@ mednafen$(EXEEXT): $(mednafen_OBJECTS) $(mednafen_DEPENDENCIES) $(EXTRA_mednafen
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f cdrom/CDAFReader.$(OBJEXT)
+	-rm -f cdrom/CDAFReader_MPC.$(OBJEXT)
+	-rm -f cdrom/CDAFReader_SF.$(OBJEXT)
+	-rm -f cdrom/CDAFReader_Vorbis.$(OBJEXT)
 	-rm -f cdrom/CDAccess.$(OBJEXT)
 	-rm -f cdrom/CDAccess_CCD.$(OBJEXT)
 	-rm -f cdrom/CDAccess_Image.$(OBJEXT)
-	-rm -f cdrom/CDAccess_Physical.$(OBJEXT)
 	-rm -f cdrom/CDUtility.$(OBJEXT)
-	-rm -f cdrom/audioreader.$(OBJEXT)
 	-rm -f cdrom/cdromif.$(OBJEXT)
 	-rm -f cdrom/crc32.$(OBJEXT)
 	-rm -f cdrom/galois.$(OBJEXT)
@@ -776,6 +786,7 @@ mostlyclean-compile:
 	-rm -f cdrom/lec.$(OBJEXT)
 	-rm -f cdrom/recover-raw.$(OBJEXT)
 	-rm -f cdrom/scsicd.$(OBJEXT)
+	-rm -f compress/GZFileStream.$(OBJEXT)
 	-rm -f compress/ZLInflateFilter.$(OBJEXT)
 	-rm -f compress/ioapi.$(OBJEXT)
 	-rm -f compress/minilzo.$(OBJEXT)
@@ -807,7 +818,6 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/FileStream.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/GZFileStream.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/IPSPatcher.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MemoryStream.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/PSFLoader.Po@am__quote@
@@ -830,12 +840,14 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/state.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/state_rewind.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tests.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/CDAFReader.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/CDAFReader_MPC.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/CDAFReader_SF.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/CDAFReader_Vorbis.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/CDAccess.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/CDAccess_CCD.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/CDAccess_Image.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/CDAccess_Physical.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/CDUtility.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/audioreader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/cdromif.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/crc32.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/galois.Po@am__quote@
@@ -843,6 +855,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/lec.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/recover-raw.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cdrom/$(DEPDIR)/scsicd.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@compress/$(DEPDIR)/GZFileStream.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@compress/$(DEPDIR)/ZLInflateFilter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@compress/$(DEPDIR)/ioapi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@compress/$(DEPDIR)/minilzo.Po@am__quote@

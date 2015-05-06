@@ -82,13 +82,55 @@
        	 opcode = (tmpop >> 9) | IPendingCache;
 
 	 //printf("%02x\n", opcode >> 1);
+#if HAVE_COMPUTED_GOTO
+	 #define CGBEGIN static const void *const op_goto_table[256] = {
+	 #define CGE(l) &&l,
+	 #define CGEND }; goto *op_goto_table[opcode];
+#else
+	 /* (uint8) cast for cheaper alternative to generated branch+compare bounds check instructions, but still more
+ 	    expensive than computed goto which needs no masking nor bounds checking.
+         */
+	 #define CGBEGIN { enum { CGESB = 1 + __COUNTER__ }; switch((uint8)opcode) {
+	 #define CGE(l) case __COUNTER__ - CGESB: goto l;
+	 #define CGEND } }
+#endif
 
-	 static const void *const op_goto_table[256] =
-	 {
-	  #include "v810_op_table.inc"
-	 };
+	 CGBEGIN
+		CGE(op_MOV)   CGE(op_MOV)   CGE(op_ADD)   CGE(op_ADD)   CGE(op_SUB)     CGE(op_SUB)     CGE(op_CMP)     CGE(op_CMP) 
+		CGE(op_SHL)   CGE(op_SHL)   CGE(op_SHR)   CGE(op_SHR)   CGE(op_JMP)     CGE(op_JMP)     CGE(op_SAR)     CGE(op_SAR) 
+		CGE(op_MUL)   CGE(op_MUL)   CGE(op_DIV)   CGE(op_DIV)   CGE(op_MULU)    CGE(op_MULU)    CGE(op_DIVU)    CGE(op_DIVU)
+		CGE(op_OR)    CGE(op_OR)    CGE(op_AND)   CGE(op_AND)   CGE(op_XOR)     CGE(op_XOR)     CGE(op_NOT)     CGE(op_NOT)
+		CGE(op_MOV_I) CGE(op_MOV_I) CGE(op_ADD_I) CGE(op_ADD_I) CGE(op_SETF)    CGE(op_SETF)    CGE(op_CMP_I)   CGE(op_CMP_I)
+		CGE(op_SHL_I) CGE(op_SHL_I) CGE(op_SHR_I) CGE(op_SHR_I) CGE(op_EI)      CGE(op_EI)      CGE(op_SAR_I)   CGE(op_SAR_I)
+		CGE(op_TRAP)  CGE(op_TRAP)  CGE(op_RETI)  CGE(op_RETI)  CGE(op_HALT)    CGE(op_HALT)    CGE(op_INVALID) CGE(op_INVALID)
+		CGE(op_LDSR)  CGE(op_LDSR)  CGE(op_STSR)  CGE(op_STSR)  CGE(op_DI)      CGE(op_DI)      CGE(op_BSTR)    CGE(op_BSTR)
+		CGE(op_BV)    CGE(op_BL)    CGE(op_BE)    CGE(op_BNH)   CGE(op_BN)      CGE(op_BR)      CGE(op_BLT)     CGE(op_BLE)
+		CGE(op_BNV)   CGE(op_BNL)   CGE(op_BNE)   CGE(op_BH)    CGE(op_BP)      CGE(op_NOP)     CGE(op_BGE)     CGE(op_BGT)
+		CGE(op_MOVEA) CGE(op_MOVEA) CGE(op_ADDI)  CGE(op_ADDI)  CGE(op_JR)      CGE(op_JR)      CGE(op_JAL)     CGE(op_JAL)
+		CGE(op_ORI)   CGE(op_ORI)   CGE(op_ANDI)  CGE(op_ANDI)  CGE(op_XORI)    CGE(op_XORI)    CGE(op_MOVHI)   CGE(op_MOVHI)
+		CGE(op_LD_B)  CGE(op_LD_B)  CGE(op_LD_H)  CGE(op_LD_H)  CGE(op_INVALID) CGE(op_INVALID) CGE(op_LD_W)    CGE(op_LD_W)
+		CGE(op_ST_B)  CGE(op_ST_B)  CGE(op_ST_H)  CGE(op_ST_H)  CGE(op_INVALID) CGE(op_INVALID) CGE(op_ST_W)    CGE(op_ST_W) 
+		CGE(op_IN_B)  CGE(op_IN_B)  CGE(op_IN_H)  CGE(op_IN_H)  CGE(op_CAXI)    CGE(op_CAXI)    CGE(op_IN_W)    CGE(op_IN_W)
+		CGE(op_OUT_B) CGE(op_OUT_B) CGE(op_OUT_H) CGE(op_OUT_H) CGE(op_FPP)     CGE(op_FPP)     CGE(op_OUT_W)   CGE(op_OUT_W)
 
-	 goto *op_goto_table[opcode];
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID)
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) 
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID)
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID)
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID)
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID)
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID)
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID)
+
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID)
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID)
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID)
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID)
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID)
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID)
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID)
+		CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INVALID) CGE(op_INT_HANDLER)
+	 CGEND
 
 	// Bit string subopcodes
         #define DO_AM_BSTR()							\

@@ -2,7 +2,6 @@
 #define __MDFN_GIT_H
 
 #include <string>
-#include <memory>
 
 #include "video.h"
 

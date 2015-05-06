@@ -540,6 +540,8 @@ static void CPUCleanUp(void)
   systemColorMap = NULL;
  }
 
+ MDFNGBASOUND_Kill();
+
  Flash_Kill();
 
  if(GBA_RTC)

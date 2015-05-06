@@ -195,7 +195,7 @@ class CSystem : public CSystemBase
 
 // Mikey system interfacing
 
-		void	DisplaySetAttributes(const MDFN_PixelFormat &format) { mMikie->DisplaySetAttributes(format); };
+		void	DisplaySetAttributes(const MDFN_PixelFormat &format, const uint8* CustomPalette) { mMikie->DisplaySetAttributes(format, CustomPalette); };
 
 		void	ComLynxCable(int status) { mMikie->ComLynxCable(status); };
 		void	ComLynxRxData(int data)  { mMikie->ComLynxRxData(data); };

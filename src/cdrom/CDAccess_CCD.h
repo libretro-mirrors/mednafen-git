@@ -19,8 +19,6 @@
 #include "../MemoryStream.h"
 #include "CDAccess.h"
 
-#include <vector>
-
 class CDAccess_CCD : public CDAccess
 {
  public:
@@ -30,11 +28,9 @@ class CDAccess_CCD : public CDAccess
 
  virtual void Read_Raw_Sector(uint8 *buf, int32 lba);
 
+ virtual bool Fast_Read_Raw_PW_TSRE(uint8* pwbuf, int32 lba) const noexcept;
+
  virtual void Read_TOC(CDUtility::TOC *toc);
-
- virtual bool Is_Physical(void) throw();
-
- virtual void Eject(bool eject_status);
 
  private:
 
@@ -43,8 +39,9 @@ class CDAccess_CCD : public CDAccess
 
  void CheckSubQSanity(void);
 
- Stream* img_stream;
- Stream* sub_stream;
+ std::unique_ptr<Stream> img_stream;
+ std::unique_ptr<uint8[]> sub_data;
+
  size_t img_numsectors;
  CDUtility::TOC tocd;
 };

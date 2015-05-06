@@ -19,7 +19,7 @@ typedef struct
 void PCECD_Run(uint32 in_timestamp);
 void PCECD_ResetTS(void);
 
-void PCECD_Init(const PCECD_Settings *settings, void (*irqcb)(bool), double master_clock, unsigned int ocm, Blip_Buffer *soundbuf_l, Blip_Buffer *soundbuf_r) MDFN_COLD;
+void PCECD_Init(const PCECD_Settings *settings, void (*irqcb)(bool), double master_clock, unsigned int ocm, Blip_Buffer* soundbufs) MDFN_COLD;
 bool PCECD_SetSettings(const PCECD_Settings *settings) MDFN_COLD;
 void PCECD_Close(void) MDFN_COLD;
 void PCECD_Power(uint32 timestamp) MDFN_COLD;

@@ -247,7 +247,7 @@ static uint16 M68K_ReadMemory16(uint32 A)
  {
   default: return(0xFFFF);
 
-  case 0x0 ... 0x3:
+  case 0x0: case 0x1: case 0x2: case 0x3:
         return READ16_MSB(BigRAM, A & 0x7FFFF);
 
   case 0x4:
@@ -348,18 +348,19 @@ void SubHW_WriteIOPage(uint32 A, uint8 V)
   }
   return;
  }
+ const uint32 sa = A & 0x1FFF;
 
- switch(A & 0x1FFF)
+ if(sa >= 0x1C00 && sa <= 0x1FEF)
  {
-  case 0x1C00 ... 0x1FEF:
 	ExHuRAM[A & 0x1FFF] = V;
-	break;
-
-  case 0x1FF0 ... 0x1FF3:
+ }
+ else if(sa >= 0x1FF0 && sa <= 0x1FF3)
+ {
 	UpdateM68K(HuCPU->Timestamp());
 	CommPort[A & 0x3] = V;
-	break;
-
+ }
+ else switch(sa)
+ {
   case 0x1FF4:
 	BigRAMWOTemp &= 0xFF00;
 	BigRAMWOTemp |= V;
@@ -396,16 +397,16 @@ uint8 SubHW_ReadIOPage(uint32 A)
  if(!HuVisible)
   return(0xFF);
 
- switch(A & 0x1FFF)
- {
-  case 0x1C00 ... 0x1FEF:
-        return ExHuRAM[A & 0x1FFF];
-        break;
+ const uint32 sa = A & 0x1FFF;
 
-  case 0x1FF0 ... 0x1FF3:
+ if(sa >= 0x1C00 && sa <= 0x1FEF)
+ {
+        return ExHuRAM[A & 0x1FFF];
+ }
+ else if(sa >= 0x1FF0 && sa <= 0x1FF3)
+ {
 	UpdateM68K(HuCPU->Timestamp());
         return CommPort[A & 0x3];
-        break;
  }
 
  return(0xFF);
@@ -514,7 +515,7 @@ void SubHW_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
  if(HuVisible)
  {
-  unsigned int c68k_state_len = C68k_Get_State_Max_Len();
+  const unsigned int c68k_state_len = C68k_State_Max_Len;
   uint8 c68k_state[c68k_state_len];
 
   C68k_Save_State(&M68K, c68k_state);

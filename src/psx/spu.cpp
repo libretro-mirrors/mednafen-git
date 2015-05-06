@@ -1439,6 +1439,10 @@ uint32 PS_SPU::GetRegister(unsigned int which, char *special, const uint32 speci
 	break;
   }
  }
+ else if(which >= GSREG_FB_SRC_A && which <= GSREG_IN_COEF_R)
+ {
+	ret = ReverbRegs[which - GSREG_FB_SRC_A];
+ }
  else switch(which)
  {
   case GSREG_SPUCONTROL:
@@ -1512,11 +1516,6 @@ uint32 PS_SPU::GetRegister(unsigned int which, char *special, const uint32 speci
   case GSREG_BLOCKEND:
 	ret = BlockEnd;
 	break;
-
-
-  case GSREG_FB_SRC_A ... GSREG_IN_COEF_R:
-	ret = ReverbRegs[which - GSREG_FB_SRC_A];
-	break;
  }
 
  return(ret);
@@ -1524,8 +1523,11 @@ uint32 PS_SPU::GetRegister(unsigned int which, char *special, const uint32 speci
 
 void PS_SPU::SetRegister(unsigned int which, uint32 value)
 {
-
- switch(which)
+ if(which >= GSREG_FB_SRC_A && which <= GSREG_IN_COEF_R)
+ {
+	ReverbRegs[which - GSREG_FB_SRC_A] = value;
+ }
+ else switch(which)
  {
   case GSREG_SPUCONTROL:
 	SPUControl = value;
@@ -1602,11 +1604,6 @@ void PS_SPU::SetRegister(unsigned int which, uint32 value)
   case GSREG_BLOCKEND:
         BlockEnd = value & 0xFFFFFF;
         break;
-
-
-  case GSREG_FB_SRC_A ... GSREG_IN_COEF_R:
-	ReverbRegs[which - GSREG_FB_SRC_A] = value;
-	break;
  }
 }
 

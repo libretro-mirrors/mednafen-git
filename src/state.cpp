@@ -33,7 +33,7 @@
 #include "video/resize.h"
 
 #include "MemoryStream.h"
-#include "GZFileStream.h"
+#include "compress/GZFileStream.h"
 #include <list>
 
 static void SubWrite(Stream *st, SFORMAT *sf)

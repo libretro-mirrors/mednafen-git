@@ -34,117 +34,44 @@ Nicktoons Racing
 	Totally fubared sound effects.  Likely CPU instruction timing-related(decreasing the IPC fixes this problem), or perhaps timing
 	related to SPU RAM writes?
 
-Resident Evil - Director's Cut(non-Dual Shock-version)
-	Controller configuration screen pops up on some screen transitions; CPU instruction timing issue.
-
 -----------------------------------------------------------------------------------------------
 
 ***Lesser issues***
 
-Castrol Honda Superbike Racing
-	Graphical glitches on startup, menus(fixed now probably), and loading screens.  (What is with all
-	these racing games having weird timing-related problems, it's like some sort of curse)
-
 Vigilante 8
-	Has weird red and green(and a few blue) garbage pixels in patches sometimes during gameplay; "garbage" pixel placement
-	is somewhat sparse, so it might not even be noticeable if it were to occur on a PS1 with composite or S-video output, due to limited
-	chroma bandwidth.
+	Has weird red and green(and a few blue) garbage pixels in patches sometimes during gameplay.
+
+Sangokushi Eiketsuden
+	Many animations go far too fast(It *looks* like the GPU's drawing speed dictates the animation speed!  That means the animation speed is going
+	to be different on early PS1s compared to later PS1s...).
 
 Final Fantasy 7
 	"Sony Computer blah blah" game startup image is a bit glitchy; interlacing-related glitch.  That part is really sensitive to CPU, GPU, DMA,
 	and RAM timing...
 
-Adventures of Lomax, The
-	"QSOUND" loading screen during startup is a flickery mess; interlacing-related glitch from the looks of it.
-	Maybe it's like that on an actual PS1 too?
-
 Nightmare Creatures
 	BIOS reverb sound excessively contaminates beginning of game.
-
-Shadow Master
-	Might have broken startup images.
 
 WipeOut 3
 	Music stops playing after a long while; maybe it's supposed to do that?
 
------------------------------------------------------------------------------------------------
-
-***Chaotic timing issues(listed here for reference and testing after any future timing tweaks or improvements)***
-
-Battle Arena Toshinden
-NBA Jam Extreme
-Zero Divide
-	Run too fast if CPU and(/or?) GPU operations execute too fast.  Probably not an issue anymore, but still
-	listed here for reference.
-
-iS: Internal Section
-Arcade Party Pak (Toobin)
-Next Tetris, The
-	Extremely sensitive about interlacing semantics, especially in regards to the high bit of the GPU status register when entering
-	interlaced 480-height mode.
-
-X-Men Mutant Academy
-	Sensitive to interlacing semantics and timing.
-
-Ballblazer Champions
-	Excessively sensitive to timing issues; might lock up during startup sometimes.
-
-FIFA - Road to Worldcup 98 (USA)
-	Used to lock up during startup; probably CPU instruction timing-related, or MDEC timing related,
-	or CDC timing related, or DMA timing related, or maybe the moon phase is to blame!
-
-	[CDC] WARNING: Interrupting command 0x02, phase=0, timeleft=1195 with command=0x02
-	[CDC] Bad number(5) of args(first check) for command 0x02
-	 0x39 0x23 0x22 0x41 0x67
-
-Freestyle Motocross: McGrath vs. Pastrana
-	Used to suffer from random fairly long(but finite) freezes during gameplay.  Possibly CPU instruction-timing
-	related.  Possibly CDC-timing related.
-
-	[CDC] Command: ReadN --- 
-	[CDC] Command: Standby --- 
-	[CDC] Command: Nop --- 
-	[CDC] Command: Setmode ---  0xa0
-	[CDC] Command: Setloc ---  0x08 0x13 0x53
-	[CDC] Command: ReadN --- 
-	20076
-	[CDC] Command: Standby --- 
-	[CDC] Command: Nop --- 
-	[CDC] Command: Setmode ---  0xa0
-	[CDC] Command: Setloc ---  0x08 0x13 0x61
-		0x800668B8
-
-Resident Evil 2
-	Lockup on second disc in a certain place; probably related to seek timing.  Seems to be fixed now, but still listed
-	here for reference.
-
-
-Nightmare Creatures
-	Shoddy CD reading code that's unreasonably sensitive to CD access timings.  It's a wonder it even ever works on an actual
-	PS1(my copy of it certainly doesn't).
-
-Wing Commander 4
-	Used to lock up sometimes during FMV sequences(might be sensitive to seek delays or SPU IRQ timings).
-
-Capcom games(MMX4, MMX5, etc)
-	Sensitive about CD access and XA ADPCM timing(XA ADPCM early cutoff problems in early versions of Mednafen's PS1 emulation).
-
-Viewpoint
-	Extra-sensitive about GPU LL DMA timing.  (It was generating exceptions for some timings...)
-
-Valkyrie Profile
-	Battle scenes will go all kaka with no graphics updates if GPU LL DMA completes too soon.
-
-Pro Pinball (series)
-	Sensitive to correct interlace and draw line skipping emulation.
-
-Dukes of Hazzard: Racing For Home
-	Sensitive about the GPU busy status flag being set long enough; double-check if we ever make CPU emulation 
-	more timing-accurate(the fix will likely just involve reducing the timing granularity for DMA and GPU updates).
+T'ai Fu - Wrath of the Tiger
+	Sometimes locks up when starting a new game.
 
 -----------------------------------------------------------------------------------------------
 
-Audit GTE instruction cycle counts.
+Fix implementation of psx.slstart* and psx.slend* settings functionality so as to not potentially cause netplay desync
+when emulated lightguns are being used.
+
+Rewrite CPU emulation to properly emulate the pipeline and all its quirks(might be too computationally-expensive, though).  Related TODOs
+dependent on this:
+	Audit GTE instruction cycle counts.
+	Test IRQ and COP0 latencies; PSX IRQ controller latency, software IRQ bit latency, latency of both relevant COP0 IRQ enable bits.
+	Test IRQ with LWC2.
+	Test IRQ with COP0 instructions(interrupted execution or not?).
+
+CDC status bit 4(seek error/disc change/something something) semantics aren't entirely correct; run tests to see under what conditions
+the bit is cleared(e.g. what commands will clear it).
 
 Add a means of grabbing and passing CIRC data, when using a physical CD, from Mednafen core to the PSX module so that the correct
 subheader fields can be chosen when there is a mismatch between the two instances of each field during XA ADPCM playback.
@@ -159,15 +86,7 @@ Respect device(GPU, SPU, etc.) DMA mode/memory access mode bits(more for homebre
 Test if Dual Analog vibration compatibility mode can be restored with DualShock after using DualShock extended features if the "Analog"
 mode button on the gamepad is pressed after the extended features are used.
 
-Test time delta between GPU LL DMA end and GPU non-busy status for various primitive types in sequence on a PS1.
-
-Test IRQ and COP0 latencies; PSX IRQ controller latency, software IRQ bit latency, latency of both relevant COP0 IRQ enable bits.
-
-Test IRQ with LWC2.
-
-Test IRQ with COP0 instructions(interrupted execution or not?).
-
 The SPU in the PS1 might sometimes drop voice-on events when playing an ADPCM block that loops to itself(and was also the first and only
 ADPCM block, at least in the test program I noticed the issue in); investigate further.
 
-Make sure debugger COPn disassembly is correct(no typos or whatnot).
+Ensure debugger COPn disassembly is correct(no typos or whatnot).

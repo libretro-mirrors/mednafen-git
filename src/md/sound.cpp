@@ -136,20 +136,20 @@ int32 MDSound_Flush(int16 *SoundBuf, const int32 MaxSoundFrames)
  return(FrameCount);
 }
 
-int MDSound_Init(void)
+void MDSound_Init(void)
 {
  MDSound_SetSoundRate(0);
  zebuf.clock_rate((long)(CLOCK_NTSC / 15));
 
  RedoVolume();
- zebuf.bass_freq(20); 
-
- return(1);
+ zebuf.bass_freq(20);
 }
 
 void MDSound_Kill(void)
 {
-
+ zebuf.clear();
+ fm_last_values[0] = 0;
+ fm_last_values[1] = 0;
 }
 
 void MDSound_Power(void)

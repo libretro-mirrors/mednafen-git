@@ -30,7 +30,8 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly = false, bool UpdateRapidFire = t
 void MakeInputSettings(std::vector <MDFNSetting> &settings);
 void KillInputSettings(void); // Called after MDFNI_Kill() is called
 
-extern bool DNeedRewind; // Only read/write in game thread.
+extern bool DNeedRewind; // Only read/write in game thread(or before creating game thread).
+extern bool RewindState; // " " " "
 
 bool InitCommandInput(MDFNGI* gi);
 void KillCommandInput(void);

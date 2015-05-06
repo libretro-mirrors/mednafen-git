@@ -98,12 +98,7 @@ void MDFNI_Power(void);
 /* path = path of game/file to load.  returns NULL on failure. */
 MDFNGI *MDFNI_LoadGame(const char *force_module, const char *path);
 
-/* If is_device is false, "devicename" should be treated as a path in the filesystem.  If is_device is true, then it should
-   be treated as a device name(which on some OSes may be the same as a path in the filesystem).
-
-   Additionally, if is_device is true, then devicename may be NULL to specify that the default CD drive device should be used.
-*/
-MDFNGI *MDFNI_LoadCD(const char *sysname, const char *devicename, const bool is_device);
+MDFNGI *MDFNI_LoadCD(const char *force_module, const char *path);	// Deprecated interface.
 
 // Call this function as early as possible, even before MDFNI_Initialize()
 bool MDFNI_InitializeModules(const std::vector<MDFNGI *> &ExternalSystems);

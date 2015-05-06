@@ -40,7 +40,8 @@ typedef enum
  MDFNMKF_AUX,
  MDFNMKF_SNAP_DAT,
  MDFNMKF_CHEAT_TMP,
- MDFNMKF_FIRMWARE
+ MDFNMKF_FIRMWARE,
+ MDFNMKF_PGCONFIG
 } MakeFName_Type;
 
 std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1);

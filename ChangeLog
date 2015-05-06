@@ -1,3 +1,151 @@
+-- 0.9.38-UNSTABLE: --
+
+February 5, 2015:
+	Lynx: Added support for custom palettes.
+
+January 31, 2015:
+	Split cdrom/audioreader.cpp into multiple files.
+
+January 29, 2015:
+	Dropped physical CD support.
+
+	Throw an error, rather than crashing, in the CUE sheet reader if a track is missing.
+
+	Throw an error in the CUE sheet reader if an M:S:F time contains a component out of range.
+
+	Implemented rudimentary support for CD-i discs (images), but no actual CD-i emulation, of course(yet :p).
+
+January 27, 2015:
+	PSX: Added support for reading (synthesized) CD sector data located at MSF 00:00:00 through 00:01:74.
+
+	Fixed completely broken synthesis of pregap data(mode 1/mode 2) sectors with CUE+whatever.
+
+	PSX: Refactored leadout track sector data synthesis handling into the core CD reading code.
+
+January 26, 2015:
+	PSX: Host system file/disk access time is now partially masked by emulated seek time when using CD images(except TOC+BIN with
+	embedded subchannel data), which should reduce the probability of sound buffer underruns when
+	running with "cd.image_memcache" set to "0"(the default).
+
+	The CloneCD format reader now always caches the subchannel file data in memory on load, regardless of the "cd.image_memcache" setting's value.
+
+	Added setting "osd.message_display_time".
+
+	Added undocumented setting "srwautoenable".
+
+January 25, 2015:
+	PSX: Fixed a problem that broke building after passing --disable-debugger to the configure script.
+
+January 24, 2015:
+	PCE_FAST, VB: Now dynamically-allocate the Blip_Buffer objects, and made very minor tangentially-related optimizations to the sound emulation code.
+
+	Refactored command key processing to be a bit cleaner, and to fix a couple of issues in the process(avoid triggering a command if keys/buttons are pressed
+	while Mednafen is starting up, and to skip the input.ckdelay delay when selecting a command key to remap after starting the process via F2); some of the
+	changes could conceivably cause regressions, as the modified code was very old and convoluted.
+
+January 18, 2015:
+	PSX: Improved some Read*/SeekL versus status bits versus GetLocL semantics, to fix a lockup in "Harukanaru Toki no Naka de - Banjou Yuugi".
+
+	PSX: SetLoc CDC command now generates an error on invalid arguments, per tests on a PS1.
+
+January 17, 2015:
+	PSX: Fixed the value that the "Mode" CDC parameter is reset to in the CDC Reset command; fixes lockups in "This Is Football 2" and 
+	"Disney's Pooh's Party Game: In Search of the Treasure".
+
+	PSX: Fixed some issues with emulation of CDC command GetTD, per tests on a PS1.
+
+	PSX: Improved CDC result FIFO emulation accuracy; fixes a startup lockup in the Japanese version of "CyberSled".
+
+	PSX: Fixed a line-drawing regression from a Dec 28 change.
+
+	PSX: Fixed a few minor bugs in the GPU RAM write and read commands, per tests on a PS1.
+
+January 15, 2015:
+	PSX: Tweaked CDC SeekL timing to fix a random lockup problem in Wing Commander 3.
+
+January 14, 2015:
+	Fixed a small memory corruption issue in the input grabbing/command key disable toggle code, and reworked the code to be more verbose in the
+	status message it displays and to prevent activating certain combinations of input grabbing/command key disabling that can be confusing to deactivate.
+
+January 13, 2015:
+	PSX: Fixed some problems with multitap emulation that were preventing DualShock functionality(such as rumble) from working properly when the
+	emulated DualShock was behind an emulated multitap.
+
+January 11, 2015:
+	PSX: Allow dithering on non-gradient lines(instead of only on gradient-colored lines), per tests on a PS1.
+
+January 10, 2015:
+	PSX: Fixed an off-by-1 saturation/clamping related bug in the RTPS/RTPT emulation code.
+
+January 9, 2015:
+	PSX: Improved emulation of the GPU info/VRAM read latches, per tests on a PS1.
+
+	PSX: Added support for GPU texturing disable bits, per no$ notes and tests on a PS1(still need to implement the actual functionality of texturing
+	disabling, though).
+
+	PSX: Return GPU display mode bit 7 in GPU status port reads properly(though we still don't emulate the effects of setting that bit to 1).
+
+January 1, 2015:
+	PSX: Removed most of the event system pedantic sanity checks(and associated computational/cache overhead), as they've long outlived
+	their usefulness.
+
+December 29, 2014:
+	No longer ignore settings in configuration files when the value is empty.
+
+December 28, 2014:
+	CDPLAY: Increased output volume by 3.5dB.
+
+	Added support for per-game configuration override files.
+
+	PSX: Fixed a minor line drawing bug, per tests on a PS1.
+
+December 27, 2014:
+	PSX: Fixed a few instances of left-shifting a negative value, and signed integer overflow.
+
+December 26, 2014:
+	PSX: Replaced SimpleFIFO usage in GPU and MDEC emulation with a new FastFIFO class.
+
+December 25, 2014:
+	PSX: Altered an emulation loop exit condition to not be based on psx.slstart* and psx.slend* settings(to fix a potential
+	desynchronization issue with netplay and input-recording movies).
+
+	Removed VLA usage in qtrecord.cpp.
+
+December 24, 2014:
+	PSX: Tweaked the region detection heuristics to support a hacky Russian translation of Tomb Raider 1.
+
+	Added MDFN_lzcount32() inline function to math_ops.h to replace direct usage of __builtin_clz() in psx/cpu.cpp.
+
+	PSX, PC-FX, VB: Added alternative to computed-goto in the CPU emulation cores, for crazy people who want to compile (parts of) Mednafen
+	with MSVC.
+
+December 23, 2014:
+	PSX: Fixed a bug that could cause a significant mischeduling of timer/root-counter 1's IRQ event under certain conditions.
+
+	PSX: Brought MDEC decode timing closer to what it is on a PS1; fixes stuttering issue in the early FMV-background sequence
+	in in Parasite Eve II.
+
+December 21, 2014:
+	Replaced usage of case-range and VLAs with non-GNUish alternatives in:
+		cdrom/CDAccess_CCD.cpp
+		cdrom/CDAccess_Physical.cpp
+		gb/gb.cpp
+		general.cpp
+		lynx/system.cpp
+		md/input/megamouse.cpp
+		md/system.cpp
+		nes/input.cpp
+		netplay.cpp
+		pce/subhw.cpp
+		pce/vce_sync.inc
+		pcfx/debug.cpp
+		psx/cpu.cpp
+		psx/spu.cpp
+		psx/input/memcard.cpp
+		settings.cpp
+		vb/debug.cpp
+		wswan/v30mz.cpp
+
 -- 0.9.37.1: --
 
 December 19, 2014:

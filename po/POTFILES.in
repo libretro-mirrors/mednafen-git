@@ -161,7 +161,7 @@ src/snes/src/system/serialization.cpp
 src/snes/src/system/config/config.cpp
 src/snes/src/system/video/video.cpp
 src/snes/src/system/debugger/debugger.cpp
-src/GZFileStream.cpp
+src/compress/GZFileStream.cpp
 src/hw_misc/arcade_card/arcade_card.cpp
 src/git.cpp
 src/psx/gpu_polygon.cpp
@@ -378,7 +378,6 @@ src/cdrom/CDAccess_Image.cpp
 src/cdrom/galois.cpp
 src/cdrom/CDUtility.cpp
 src/cdrom/lec.cpp
-src/cdrom/CDAccess_Physical.cpp
 src/cdrom/CDAccess_CCD.cpp
 src/cdrom/l-ec.cpp
 src/cdrom/audioreader.cpp
@@ -658,7 +657,6 @@ src/pce_fast/ioread.inc
 src/hw_cpu/huc6280/huc6280_step.inc
 src/hw_cpu/huc6280/ops.inc
 src/hw_cpu/v810/v810_oploop.inc
-src/hw_cpu/v810/v810_op_table.inc
 src/hw_cpu/c68k/c68k_op1.inc
 src/hw_cpu/c68k/c68k_op4.inc
 src/hw_cpu/c68k/c68k_opA.inc

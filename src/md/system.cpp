@@ -236,6 +236,8 @@ static void Cleanup(void)
 {
  MDCart_Kill();
  MDIO_Kill();
+
+ MDSound_Kill();
 }
 
 static void CloseGame(void)
@@ -666,7 +668,7 @@ static void DoSimpleCommand(int cmd)
 
 static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
- unsigned int c68k_state_len = C68k_Get_State_Max_Len();
+ const unsigned int c68k_state_len = C68k_State_Max_Len;
  uint8 c68k_state[c68k_state_len];
 
  C68k_Save_State(&Main68K, c68k_state);

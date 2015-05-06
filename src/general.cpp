@@ -484,6 +484,20 @@ std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
 		       }
 		      }
                       break;
+
+  case MDFNMKF_PGCONFIG:
+		      {
+		       std::string overpath = MDFN_GetSettingS("filesys.path_pgconfig");
+
+		       if(IsAbsolutePath(overpath))
+		        eff_dir = overpath;
+		       else
+			eff_dir = std::string(BaseDirectory) + std::string(PSS) + overpath;
+
+                       trio_snprintf(tmp_path, 4096, "%s" PSS "%s.%s.cfg", eff_dir.c_str(), FileBase.c_str(), MDFNGameInfo->shortname);
+		      }
+                      break;
+
  }
  return(tmp_path);
 }
@@ -535,22 +549,15 @@ void GetFileBase(const char *f)
      }
      else
      {
-      char tmpfn[tp1 - f + 1];
-
-      memcpy(tmpfn,f,tp1-f);
-      tmpfn[tp1-f]=0;
-      FileBaseDirectory = string(tmpfn);
-
+      FileBaseDirectory.resize(tp1 - f);
+      memcpy(&FileBaseDirectory[0], f, tp1 - f);
       tp1++;
      }
 
      if(((tp3=strrchr(f,'.'))!=NULL) && (tp3>tp1))
      {
-      char tmpbase[tp3 - tp1 + 1];
-
-      memcpy(tmpbase,tp1,tp3-tp1);
-      tmpbase[tp3-tp1]=0;
-      FileBase = string(tmpbase);
+      FileBase.resize(tp3 - tp1);
+      memcpy(&FileBase[0], tp1, tp3 - tp1);
       FileExt = string(tp3);
      }
      else

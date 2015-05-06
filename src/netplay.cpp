@@ -57,6 +57,9 @@ static std::vector<uint8> PostEmulatePortData[16];
 static bool StateLoaded;	// Set to true/false in Netplay_Update() call paths, used in Netplay_PostProcess()
 				// to determine where to pull switch data from.
 
+static std::unique_ptr<uint8[]> incoming_buffer;	// TotalInputStateSize + 1
+static std::unique_ptr<uint8[]> outgoing_buffer;	// 1 + LocalInputStateSize + 4
+
 static void RebuildPortVtoVMap(const uint32 PortDevIdx[])
 {
  const unsigned NumPorts = MDFNGameInfo->PortInfo.size();
@@ -94,6 +97,9 @@ static void SetLPM(const uint32 v, const uint32 PortDevIdx[], const uint32 PortL
   if(LocalPlayersMask & (1U << x))
    LocalInputStateSize += PortLen[x];
  }
+
+ outgoing_buffer.reset(nullptr);
+ outgoing_buffer.reset(new uint8[1 + LocalInputStateSize + 4]);
 
  RebuildPortVtoVMap(PortDevIdx);
 }
@@ -141,6 +147,8 @@ void MDFNI_NetplayStop(void)
 	  OurNick = NULL;
 	 }
 	 PlayersList.clear();
+	 incoming_buffer.reset(nullptr);
+	 outgoing_buffer.reset(nullptr);
 	}
 	else puts("Check your code!");
 }
@@ -273,6 +281,9 @@ int NetplayStart(const uint32 PortDeviceCache[16], const uint32 PortDataLenCache
   if(TotalInputStateSize < 4)
    TotalInputStateSize = 4;
 
+  incoming_buffer.reset(nullptr);
+  incoming_buffer.reset(new uint8[TotalInputStateSize + 1]);
+
   SetLPM(0, PortDeviceCache, PortDataLenCache);
   Joined = false;
 
@@ -303,21 +314,15 @@ int NetplayStart(const uint32 PortDeviceCache[16], const uint32 PortDataLenCache
 
 static void SendCommand(uint8 cmd, uint32 len, const void* data = NULL)
 {
- uint8 buf[1 + LocalInputStateSize + 4]; // Command, unused, command length
-
- memset(buf, 0, sizeof(buf));
-
- buf[0] = cmd;
- MDFN_en32lsb(&buf[1 + LocalInputStateSize], len);
- MDFND_SendData(buf,LocalInputStateSize + 1 + 4);
+ outgoing_buffer[0] = cmd;
+ memset(&outgoing_buffer[1], 0, LocalInputStateSize);
+ MDFN_en32lsb(&outgoing_buffer[1 + LocalInputStateSize], len);
+ MDFND_SendData(&outgoing_buffer[0], LocalInputStateSize + 1 + 4);
 
  if(data != NULL)
  {
   MDFND_SendData(data, len);
  }
-
- //DelayBuffer.push_back(std::vector<uint8>());
- //DelayBuffer.
 }
 
 bool NetplaySendCommand(uint8 cmd, uint32 len, const void* data)
@@ -676,7 +681,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
    case MDFNNPCMD_TEXT:
 			{
 			 static const uint32 MaxLength = 2000;
-			 uint8 neobuf[MaxLength + 1];
+			 char neobuf[MaxLength + 1];
 			 const uint32 totallen = raw_len;
                          uint32 nicklen;
                          bool NetEcho = false;
@@ -704,18 +709,16 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
 
 			 if(nicklen)
 			 {
-			  char nickbuf[nicklen + 1];
+			  memmove(neobuf, neobuf + 4, nicklen);
+			  neobuf[nicklen] = 0;
 
-			  memcpy(nickbuf, neobuf + 4, nicklen);
-			  nickbuf[nicklen] = 0;
-
-			  if(OurNick && !strcasecmp(OurNick, nickbuf))
+			  if(OurNick && !strcasecmp(OurNick, neobuf))
 			  {
                            trio_asprintf(&textbuf, "> %s", &neobuf[4 + nicklen]);
 			   NetEcho = true;
 			  }
 			  else
-			   trio_asprintf(&textbuf, "<%s> %s", nickbuf, &neobuf[4 + nicklen]);
+			   trio_asprintf(&textbuf, "<%s> %s", neobuf, &neobuf[4 + nicklen]);
 			 }
 		         else
 			 {
@@ -1010,7 +1013,6 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
 void Netplay_Update(const uint32 PortDevIdx[], uint8* const PortData[], const uint32 PortLen[])
 {
  const unsigned NumPorts = MDFNGameInfo->PortInfo.size();
- uint8 buf[TotalInputStateSize + 1];
 
  StateLoaded = false;
 
@@ -1021,7 +1023,6 @@ void Netplay_Update(const uint32 PortDevIdx[], uint8* const PortData[], const ui
   //
   if(Joined)
   {
-   uint8 outgoing_buffer[1 + LocalInputStateSize];
    outgoing_buffer[0] = 0; 	// Not a command
 
    for(unsigned x = 0, wpos = 1; x < NumPorts; x++)
@@ -1031,11 +1032,11 @@ void Netplay_Update(const uint32 PortDevIdx[], uint8* const PortData[], const ui
     auto n = PortVtoLVMap[x];
     if(n != 0xFF)
     {
-     memcpy(outgoing_buffer + wpos, PortData[n], PortLen[n]);
+     memcpy(&outgoing_buffer[wpos], PortData[n], PortLen[n]);
      wpos += PortLen[n];
     }
    }
-   MDFND_SendData(outgoing_buffer, 1 + LocalInputStateSize);
+   MDFND_SendData(&outgoing_buffer[0], 1 + LocalInputStateSize);
   }
   //
   //
@@ -1045,10 +1046,10 @@ void Netplay_Update(const uint32 PortDevIdx[], uint8* const PortData[], const ui
 
   do
   {
-   MDFND_RecvData(buf, TotalInputStateSize + 1);
+   MDFND_RecvData(&incoming_buffer[0], TotalInputStateSize + 1);
 
-   cmd = buf[TotalInputStateSize];
-   cmd_raw_len = MDFN_de32lsb(&buf[0]);
+   cmd = incoming_buffer[TotalInputStateSize];
+   cmd_raw_len = MDFN_de32lsb(&incoming_buffer[0]);
 
    if(cmd != 0)
     ProcessCommand(cmd, cmd_raw_len, PortDevIdx, PortData, PortLen, NumPorts);
@@ -1059,7 +1060,7 @@ void Netplay_Update(const uint32 PortDevIdx[], uint8* const PortData[], const ui
   //
   for(unsigned x = 0, rpos = 0; x < NumPorts; x++)
   {
-   memcpy(PortData[x], buf + rpos, PortLen[x]);
+   memcpy(PortData[x], &incoming_buffer[rpos], PortLen[x]);
    rpos += PortLen[x];
   }
  }

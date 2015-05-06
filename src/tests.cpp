@@ -36,7 +36,17 @@
 #include <assert.h>
 #include <math.h>
 
+#include "psx/masmem.h"
+#include "general.h"
+
+#if defined(HAVE_FENV_H)
+#include <fenv.h>
+#endif
+
 #define FATALME	 { printf("Math test failed: %s:%d\n", __FILE__, __LINE__); fprintf(stderr, "Math test failed: %s:%d\n", __FILE__, __LINE__); return(0); }
+
+namespace MDFN_TESTS_CPP
+{
 
 // Don't define this static, and don't define it const.  We want these tests to be done at run time, not compile time(although maybe we should do both...).
 typedef struct
@@ -609,6 +619,64 @@ static void TestTernary(void)
  assert(a == 2);
 }
 
+size_t TestLLVM15470_Counter;
+void NO_INLINE NO_CLONE TestLLVM15470_Sub2(size_t x)
+{
+ assert(x == TestLLVM15470_Counter);
+ TestLLVM15470_Counter++;
+}
+
+void NO_INLINE NO_CLONE TestLLVM15470_Sub(size_t m)
+{
+ size_t m2 = ~(size_t)0;
+
+ for(size_t i = 1; i <= 4; i *= m)
+  m2++;
+
+ for(size_t a = 0; a < 2; a++)
+ {
+  for(size_t b = 1; b <= 2; b++)
+  {
+   TestLLVM15470_Sub2(a * m2 + b);
+  }
+ }
+}
+
+void NO_INLINE NO_CLONE TestLLVM15470(void)
+{
+ TestLLVM15470_Counter = 1;
+ TestLLVM15470_Sub(2);
+}
+
+template<typename A, typename B>
+void NO_INLINE NO_CLONE TestSUCompare_Sub(A a, B b)
+{
+ assert(a < b);
+}
+
+int16 TestSUCompare_x0 = 256;
+
+void NO_INLINE NO_CLONE TestSUCompare(void)
+{
+ int8 a = 1;
+ uint8 b = 255;
+ int16 c = 1;
+ uint16 d = 65535;
+ int32 e = 1;
+ uint32 f = ~0U;
+ int64 g = ~(uint32)0;
+ uint64 h = ~(uint64)0;
+
+ assert(a < b);
+ assert(c < d);
+ assert((uint32)e < f);
+ assert((uint64)g < h);
+
+ TestSUCompare_Sub<int8, uint8>(1, 255);
+ TestSUCompare_Sub<int16, uint16>(1, 65535);
+
+ TestSUCompare_Sub<int8, uint8>(TestSUCompare_x0, 255);
+}
 
 static void DoAlignmentChecks(void)
 {
@@ -648,8 +716,6 @@ static void DoAlignmentChecks(void)
  assert(((uint8 *)&g_aligned1[1] - (uint8 *)&g_aligned1[0]) == 1);
  assert(((uint8 *)&g_aligned2[1] - (uint8 *)&g_aligned2[0]) == 4);
 }
-
-#include "psx/masmem.h"
 
 static uint32 NO_INLINE NO_CLONE RunMASMemTests_DoomAndGloom(uint32 offset)
 {
@@ -765,14 +831,50 @@ static void RunExceptionTests(void)
  assert(z == 32);
 }
 
+static void LZCount_Test(void)
+{
+ for(uint32 i = 0, x = 0; i < 33; i++, x = (x << 1) + 1)
+ {
+  assert(MDFN_lzcount32(x) == 32 - i);
+ }
+
+ for(uint32 i = 0, x = 0; i < 33; i++, x = (x ? (x << 1) : 1))
+ {
+  assert(MDFN_lzcount32(x) == 32 - i);
+ }
+
+ for(uint64 i = 0, x = 0; i < 65; i++, x = (x << 1) + 1)
+ {
+  assert(MDFN_lzcount64(x) == 64 - i);
+ }
+
+ for(uint64 i = 0, x = 0; i < 65; i++, x = (x ? (x << 1) : 1))
+ {
+  assert(MDFN_lzcount64(x) == 64 - i);
+ }
+
+ uint32 tv = 0;
+ for(uint32 i = 0, x = 1; i < 200; i++, x = (x * 9) + MDFN_lzcount32(x) + MDFN_lzcount32(x >> (x & 31)))
+ {
+  tv += x;
+ }
+ assert(tv == 0x397d920f);
+
+ uint64 tv64 = 0;
+ for(uint64 i = 0, x = 1; i < 200; i++, x = (x * 9) + MDFN_lzcount64(x) + MDFN_lzcount64(x >> (x & 63)))
+ {
+  tv64 += x;
+ }
+ assert(tv64 == 0x7b8263de01922c29);
+}
+
+
 // don't make this static, and don't make it local scope.  Whole-program optimization might defeat the purpose of this, though...
 unsigned int mdfn_shifty_test[4] =
 {
  0, 8, 16, 32
 };
 
-
-#include "general.h"
 
 // Don't make static.
 double mdfn_fptest0_sub(double x, double n) MDFN_COLD NO_INLINE;
@@ -800,8 +902,6 @@ static void fptest1(void)
 }
 
 #if defined(HAVE_FENV_H) && defined(HAVE_NEARBYINTF)
-#include <fenv.h>
-
 // For advisory/debug purposes, don't error out on failure.
 static void libc_rounding_test(void)
 {
@@ -928,6 +1028,10 @@ static void zlib_test(void)
 const char* MDFN_tests_stringA = "AB\0C";
 const char* MDFN_tests_stringB = "AB\0CD";
 const char* MDFN_tests_stringC = "AB\0X";
+
+}
+
+using namespace MDFN_TESTS_CPP;
 
 bool MDFN_RunMathTests(void)
 {
@@ -1070,9 +1174,13 @@ bool MDFN_RunMathTests(void)
  TestOverShift();
  TestBoolConv();
  TestNarrowConstFold();
+
  TestModTern();
  TestBWNotMask31GTZ();
  TestTernary();
+ TestLLVM15470();
+
+ TestSUCompare();
 
  if(sign_9_to_s16(itoo->negative_one) != -1 || sign_9_to_s16(itoo->mostneg) != itoo->mostnegresult)
   FATALME;
@@ -1187,6 +1295,8 @@ bool MDFN_RunMathTests(void)
  RunExceptionTests();
 
  //RunThreadTests();
+
+ LZCount_Test();
 
  sha1_test();
  sha256_test();

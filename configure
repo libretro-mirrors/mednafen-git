@@ -658,12 +658,10 @@ SDL_CFLAGS
 SDL_CONFIG
 SNDFILE_LIBS
 SNDFILE_CFLAGS
-LIBCDIO_LIBS
-LIBCDIO_CFLAGS
+HAVE_LIBSNDFILE_FALSE
+HAVE_LIBSNDFILE_TRUE
 HAVE_LINUX_JOYSTICK_FALSE
 HAVE_LINUX_JOYSTICK_TRUE
-HAVE_LIBCDIO_FALSE
-HAVE_LIBCDIO_TRUE
 UNIX_FALSE
 UNIX_TRUE
 WIN32_FALSE
@@ -971,7 +969,6 @@ with_alsa_prefix
 with_alsa_inc_prefix
 enable_alsatest
 enable_jack
-with_libcdio
 with_libsndfile
 with_sdl_prefix
 with_sdl_exec_prefix
@@ -996,8 +993,6 @@ PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
 JACK_CFLAGS
 JACK_LIBS
-LIBCDIO_CFLAGS
-LIBCDIO_LIBS
 SNDFILE_CFLAGS
 SNDFILE_LIBS'
 
@@ -1679,7 +1674,6 @@ Optional Packages:
   --without-libintl-prefix     don't search for libintl in includedir and libdir
   --with-alsa-prefix=PFX  Prefix where Alsa library is installed(optional)
   --with-alsa-inc-prefix=PFX  Prefix where include libraries are (optional)
-  --with-libcdio          support physical CD reading [default=yes]
   --with-libsndfile       support various sound file formats in ripped CD
                           images [default=yes]
   --with-sdl-prefix=PFX   Prefix where SDL is installed (optional)
@@ -1706,10 +1700,6 @@ Some influential environment variables:
               path overriding pkg-config's built-in search path
   JACK_CFLAGS C compiler flags for JACK, overriding pkg-config
   JACK_LIBS   linker flags for JACK, overriding pkg-config
-  LIBCDIO_CFLAGS
-              C compiler flags for LIBCDIO, overriding pkg-config
-  LIBCDIO_LIBS
-              linker flags for LIBCDIO, overriding pkg-config
   SNDFILE_CFLAGS
               C compiler flags for SNDFILE, overriding pkg-config
   SNDFILE_LIBS
@@ -4338,8 +4328,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.37.1'
-MEDNAFEN_VERSION_NUMERIC=0x000937
+MEDNAFEN_VERSION='0.9.38-UNSTABLE'
+MEDNAFEN_VERSION_NUMERIC=0x000938
 
 ac_aux_dir=
 for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do
@@ -24084,6 +24074,198 @@ case ".$var" in
  ;;
 esac
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking WARNING_FLAGS for gcc -Wvla" >&5
+$as_echo_n "checking WARNING_FLAGS for gcc -Wvla... " >&6; }
+if ${ax_cv_cflags_gcc_option__Wvla+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_cflags_gcc_option__Wvla="no, unknown"
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ ac_save_CFLAGS="$CFLAGS"
+for ac_arg in "-pedantic -Werror % -Wvla"     "-pedantic % -Wvla %% no, obsolete"     #
+do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_cflags_gcc_option__Wvla=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+ CFLAGS="$ac_save_CFLAGS"
+ ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__Wvla" >&5
+$as_echo "$ax_cv_cflags_gcc_option__Wvla" >&6; }
+var=$ax_cv_cflags_gcc_option__Wvla
+case ".$var" in
+     .ok|.ok,*)  ;;
+   .|.no|.no,*)  ;;
+   *)
+   if echo " $WARNING_FLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : WARNING_FLAGS does contain \$var"; } >&5
+  (: WARNING_FLAGS does contain $var) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : WARNING_FLAGS=\"\$WARNING_FLAGS \$var\""; } >&5
+  (: WARNING_FLAGS="$WARNING_FLAGS $var") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+                      WARNING_FLAGS="$WARNING_FLAGS $var"
+   fi
+ ;;
+esac
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking WARNING_FLAGS for gcc -Wvariadic-macros" >&5
+$as_echo_n "checking WARNING_FLAGS for gcc -Wvariadic-macros... " >&6; }
+if ${ax_cv_cflags_gcc_option__Wvariadic_macros+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_cflags_gcc_option__Wvariadic_macros="no, unknown"
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ ac_save_CFLAGS="$CFLAGS"
+for ac_arg in "-pedantic -Werror % -Wvariadic-macros"     "-pedantic % -Wvariadic-macros %% no, obsolete"     #
+do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_cflags_gcc_option__Wvariadic_macros=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+ CFLAGS="$ac_save_CFLAGS"
+ ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__Wvariadic_macros" >&5
+$as_echo "$ax_cv_cflags_gcc_option__Wvariadic_macros" >&6; }
+var=$ax_cv_cflags_gcc_option__Wvariadic_macros
+case ".$var" in
+     .ok|.ok,*)  ;;
+   .|.no|.no,*)  ;;
+   *)
+   if echo " $WARNING_FLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : WARNING_FLAGS does contain \$var"; } >&5
+  (: WARNING_FLAGS does contain $var) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : WARNING_FLAGS=\"\$WARNING_FLAGS \$var\""; } >&5
+  (: WARNING_FLAGS="$WARNING_FLAGS $var") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+                      WARNING_FLAGS="$WARNING_FLAGS $var"
+   fi
+ ;;
+esac
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking WARNING_FLAGS for gcc -Wdisabled-optimization" >&5
+$as_echo_n "checking WARNING_FLAGS for gcc -Wdisabled-optimization... " >&6; }
+if ${ax_cv_cflags_gcc_option__Wdisabled_optimization+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_cflags_gcc_option__Wdisabled_optimization="no, unknown"
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ ac_save_CFLAGS="$CFLAGS"
+for ac_arg in "-pedantic -Werror % -Wdisabled-optimization"     "-pedantic % -Wdisabled-optimization %% no, obsolete"     #
+do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_cflags_gcc_option__Wdisabled_optimization=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+ CFLAGS="$ac_save_CFLAGS"
+ ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__Wdisabled_optimization" >&5
+$as_echo "$ax_cv_cflags_gcc_option__Wdisabled_optimization" >&6; }
+var=$ax_cv_cflags_gcc_option__Wdisabled_optimization
+case ".$var" in
+     .ok|.ok,*)  ;;
+   .|.no|.no,*)  ;;
+   *)
+   if echo " $WARNING_FLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : WARNING_FLAGS does contain \$var"; } >&5
+  (: WARNING_FLAGS does contain $var) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : WARNING_FLAGS=\"\$WARNING_FLAGS \$var\""; } >&5
+  (: WARNING_FLAGS="$WARNING_FLAGS $var") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+                      WARNING_FLAGS="$WARNING_FLAGS $var"
+   fi
+ ;;
+esac
+
 
 
 # -----------------------------------
@@ -25761,15 +25943,6 @@ CheckALSA
 CheckJACK
 
 
-# Check whether --with-libcdio was given.
-if test "${with_libcdio+set}" = set; then :
-  withval=$with_libcdio;
-else
-  with_libcdio=yes
-fi
-
-
-
 # Check whether --with-libsndfile was given.
 if test "${with_libsndfile+set}" = set; then :
   withval=$with_libsndfile;
@@ -25810,19 +25983,19 @@ else
 fi
 
  if false; then
-  HAVE_LIBCDIO_TRUE=
-  HAVE_LIBCDIO_FALSE='#'
-else
-  HAVE_LIBCDIO_TRUE='#'
-  HAVE_LIBCDIO_FALSE=
-fi
-
- if false; then
   HAVE_LINUX_JOYSTICK_TRUE=
   HAVE_LINUX_JOYSTICK_FALSE='#'
 else
   HAVE_LINUX_JOYSTICK_TRUE='#'
   HAVE_LINUX_JOYSTICK_FALSE=
+fi
+
+ if false; then
+  HAVE_LIBSNDFILE_TRUE=
+  HAVE_LIBSNDFILE_FALSE='#'
+else
+  HAVE_LIBSNDFILE_TRUE='#'
+  HAVE_LIBSNDFILE_FALSE=
 fi
 
 NEED_SDL=true
@@ -25971,26 +26144,19 @@ fi
 
 	LIBS="-mwindows -lws2_32 -ldxguid -lwinmm -ldinput $LIBS -lwinmm"
 
-        if test x$with_libcdio = xyes; then
-		LIBS="$LIBS -lcdio"
-
-$as_echo "#define HAVE_LIBCDIO 1" >>confdefs.h
-
-		 if true; then
-  HAVE_LIBCDIO_TRUE=
-  HAVE_LIBCDIO_FALSE='#'
-else
-  HAVE_LIBCDIO_TRUE='#'
-  HAVE_LIBCDIO_FALSE=
-fi
-
-	fi
-
         if test x$with_libsndfile = xyes; then
                 SNDFILE_LIBS="-lsndfile"
                 SNDFILE_CFLAGS=""
 
 $as_echo "#define HAVE_LIBSNDFILE 1" >>confdefs.h
+
+		 if true; then
+  HAVE_LIBSNDFILE_TRUE=
+  HAVE_LIBSNDFILE_FALSE='#'
+else
+  HAVE_LIBSNDFILE_TRUE='#'
+  HAVE_LIBSNDFILE_FALSE=
+fi
 
         fi
 
@@ -26011,117 +26177,25 @@ fi
 
 	NEED_SDL=false
 
-        if test x$with_libcdio = xyes; then
-		LIBS="$LIBS -lcdio"
-
-$as_echo "#define HAVE_LIBCDIO 1" >>confdefs.h
-
-		 if true; then
-  HAVE_LIBCDIO_TRUE=
-  HAVE_LIBCDIO_FALSE='#'
-else
-  HAVE_LIBCDIO_TRUE='#'
-  HAVE_LIBCDIO_FALSE=
-fi
-
-	fi
-
         if test x$with_libsndfile = xyes; then
                 SNDFILE_LIBS="-lsndfile"
                 SNDFILE_CFLAGS=""
 
 $as_echo "#define HAVE_LIBSNDFILE 1" >>confdefs.h
 
+		 if true; then
+  HAVE_LIBSNDFILE_TRUE=
+  HAVE_LIBSNDFILE_FALSE='#'
+else
+  HAVE_LIBSNDFILE_TRUE='#'
+  HAVE_LIBSNDFILE_FALSE=
+fi
+
         fi
 else
 
 $as_echo "#define PSS_STYLE 1" >>confdefs.h
 
-
-	if test x$with_libcdio = xyes; then
-
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBCDIO" >&5
-$as_echo_n "checking for LIBCDIO... " >&6; }
-
-if test -n "$LIBCDIO_CFLAGS"; then
-    pkg_cv_LIBCDIO_CFLAGS="$LIBCDIO_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libcdio\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libcdio") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_LIBCDIO_CFLAGS=`$PKG_CONFIG --cflags "libcdio" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$LIBCDIO_LIBS"; then
-    pkg_cv_LIBCDIO_LIBS="$LIBCDIO_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libcdio\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libcdio") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_LIBCDIO_LIBS=`$PKG_CONFIG --libs "libcdio" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        LIBCDIO_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libcdio" 2>&1`
-        else
-	        LIBCDIO_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libcdio" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$LIBCDIO_PKG_ERRORS" >&5
-
-	as_fn_error $? "*** libcdio not found!" "$LINENO" 5
-elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-	as_fn_error $? "*** libcdio not found!" "$LINENO" 5
-else
-	LIBCDIO_CFLAGS=$pkg_cv_LIBCDIO_CFLAGS
-	LIBCDIO_LIBS=$pkg_cv_LIBCDIO_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-fi
-
-$as_echo "#define HAVE_LIBCDIO 1" >>confdefs.h
-
-		 if true; then
-  HAVE_LIBCDIO_TRUE=
-  HAVE_LIBCDIO_FALSE='#'
-else
-  HAVE_LIBCDIO_TRUE='#'
-  HAVE_LIBCDIO_FALSE=
-fi
-
-	fi
 
 	if test x$with_libsndfile = xyes; then
 
@@ -26197,6 +26271,14 @@ $as_echo "yes" >&6; }
 fi
 
 $as_echo "#define HAVE_LIBSNDFILE 1" >>confdefs.h
+
+		 if true; then
+  HAVE_LIBSNDFILE_TRUE=
+  HAVE_LIBSNDFILE_FALSE='#'
+else
+  HAVE_LIBSNDFILE_TRUE='#'
+  HAVE_LIBSNDFILE_FALSE=
+fi
 
 	fi
 
@@ -27112,8 +27194,8 @@ _ACEOF
 $as_echo "#define MPC_FIXED_POINT 1" >>confdefs.h
 
 
-LIBS="$SNDFILE_LIBS $LIBCDIO_LIBS $LIBS"
-CPPFLAGS="$LIBCDIO_CFLAGS $SNDFILE_CFLAGS $CPPFLAGS"
+LIBS="$SNDFILE_LIBS $LIBS"
+CPPFLAGS="$SNDFILE_CFLAGS $CPPFLAGS"
 
 ac_config_files="$ac_config_files Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/cdplay/Makefile src/demo/Makefile src/desa68/Makefile src/quicklz/Makefile po/Makefile.in intl/Makefile"
 
@@ -27550,12 +27632,12 @@ if test -z "${UNIX_TRUE}" && test -z "${UNIX_FALSE}"; then
   as_fn_error $? "conditional \"UNIX\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${HAVE_LIBCDIO_TRUE}" && test -z "${HAVE_LIBCDIO_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_LIBCDIO\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
 if test -z "${HAVE_LINUX_JOYSTICK_TRUE}" && test -z "${HAVE_LINUX_JOYSTICK_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_LINUX_JOYSTICK\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_LIBSNDFILE_TRUE}" && test -z "${HAVE_LIBSNDFILE_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_LIBSNDFILE\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_DIRECTSOUND_TRUE}" && test -z "${HAVE_DIRECTSOUND_FALSE}"; then
@@ -27570,20 +27652,20 @@ if test -z "${WIN32_TRUE}" && test -z "${WIN32_FALSE}"; then
   as_fn_error $? "conditional \"WIN32\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${HAVE_LIBCDIO_TRUE}" && test -z "${HAVE_LIBCDIO_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_LIBCDIO\" was never defined.
+if test -z "${HAVE_LIBSNDFILE_TRUE}" && test -z "${HAVE_LIBSNDFILE_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_LIBSNDFILE\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${DOS_TRUE}" && test -z "${DOS_FALSE}"; then
   as_fn_error $? "conditional \"DOS\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${HAVE_LIBCDIO_TRUE}" && test -z "${HAVE_LIBCDIO_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_LIBCDIO\" was never defined.
+if test -z "${HAVE_LIBSNDFILE_TRUE}" && test -z "${HAVE_LIBSNDFILE_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_LIBSNDFILE\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${HAVE_LIBCDIO_TRUE}" && test -z "${HAVE_LIBCDIO_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_LIBCDIO\" was never defined.
+if test -z "${HAVE_LIBSNDFILE_TRUE}" && test -z "${HAVE_LIBSNDFILE_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_LIBSNDFILE\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_OSSDSP_TRUE}" && test -z "${HAVE_OSSDSP_FALSE}"; then

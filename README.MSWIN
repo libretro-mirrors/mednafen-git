@@ -1,0 +1,24 @@
+Additional notes for compiling for MS Windows
+----------------------------------
+
+Compile with MinGW-W64
+
+Compile Mednafen and libraries(especially zlib) with additional CPPFLAG(might not be needed in the future?): -D_LFS64_LARGEFILE=1
+
+Compile libraries with callbacks(but not Mednafen itself for performance reasons) with extra flag(CPPFLAG): -mstackrealign
+
+To match official builds(As of Dec 18, 2014), compile Mednafen with:
+	32-bit: -O2 -fomit-frame-pointer -march=i586 -mtune=pentium3
+	64-bit: -O2 -fomit-frame-pointer -mtune=amdfam10
+
+Patch zlib zconf.h after running configure, but before make'ing, as follows:
+@@ -481,7 +481,7 @@ typedef uLong FAR uLongf;
+ #  define z_off_t long
+ #endif
+ 
+-#if !defined(_WIN32) && defined(Z_LARGE64)
++#if defined(Z_LARGE64)
+ #  define z_off64_t off64_t
+ #else
+ #  if defined(_WIN32) && !defined(__GNUC__) && !defined(Z_SOLO)
+

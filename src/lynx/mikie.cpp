@@ -379,7 +379,7 @@ void CMikie::ComLynxTxCallback(void (*function)(int data,uint32 objref),uint32 o
 }
 
 
-void CMikie::DisplaySetAttributes(const MDFN_PixelFormat &format)
+void CMikie::DisplaySetAttributes(const MDFN_PixelFormat &format, const uint8* CustomPalette)
 {
 	mpDisplayCurrent=NULL;
 
@@ -390,8 +390,20 @@ void CMikie::DisplaySetAttributes(const MDFN_PixelFormat &format)
 
 	for(Spot.Index=0;Spot.Index<4096;Spot.Index++)
 	{
-		mColourMap[Spot.Index]= format.MakeColor(((Spot.Colours.Red * 15) + 30), ((Spot.Colours.Green * 15) + 30),
-							 ((Spot.Colours.Blue * 15) + 30));
+	 uint8 r = ((Spot.Colours.Red * 15) + 30);
+         uint8 g = ((Spot.Colours.Green * 15) + 30);
+	 uint8 b = ((Spot.Colours.Blue * 15) + 30);
+
+	 if(CustomPalette)
+	 {
+	  const uint8* cp = &CustomPalette[Spot.Index * 3];
+
+	  r = cp[0];
+	  g = cp[1];
+	  b = cp[2];
+	 }
+
+	 mColourMap[Spot.Index]= format.MakeColor(r, g, b);
 	}
 }
 

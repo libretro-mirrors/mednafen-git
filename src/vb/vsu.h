@@ -7,14 +7,16 @@ class VSU
 {
  public:
 
- VSU(Blip_Buffer *bb_l, Blip_Buffer *bb_r) MDFN_COLD;
+ VSU() MDFN_COLD;
  ~VSU() MDFN_COLD;
+
+ void SetSoundRate(double rate) MDFN_COLD;
 
  void Power(void) MDFN_COLD;
 
  void Write(int32 timestamp, uint32 A, uint8 V);
 
- void EndFrame(int32 timestamp);
+ int32 EndFrame(int32 timestamp, int16* SoundBuf, int32 SoundBufMaxSize);
 
  void StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
@@ -73,7 +75,7 @@ class VSU
  int32 last_output[6][2];
  int32 last_ts;
 
- Blip_Buffer *sbuf[2];
+ Blip_Buffer sbuf[2];
  Blip_Synth<blip_good_quality, 1024> Synth;
  Blip_Synth<blip_med_quality, 1024> NoiseSynth;
 };

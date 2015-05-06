@@ -638,48 +638,58 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
    #define JTYPE uint32 target = instr & ((1 << 26) - 1); /*printf(" target=(%08x) ", target);*/
    #define RTYPE uint32 rs MDFN_NOWARN_UNUSED = (instr >> 21) & 0x1F; uint32 rt MDFN_NOWARN_UNUSED = (instr >> 16) & 0x1F; uint32 rd MDFN_NOWARN_UNUSED = (instr >> 11) & 0x1F; uint32 shamt MDFN_NOWARN_UNUSED = (instr >> 6) & 0x1F; /*printf(" rs=%02x(%08x), rt=%02x(%08x), rd=%02x(%08x) ", rs, GPR[rs], rt, GPR[rt], rd, GPR[rd]);*/
 
-   static const void *const op_goto_table[256] =
-   {
-    &&op_SLL, &&op_ILL, &&op_SRL, &&op_SRA, &&op_SLLV, &&op_ILL, &&op_SRLV, &&op_SRAV,
-    &&op_JR, &&op_JALR, &&op_ILL, &&op_ILL, &&op_SYSCALL, &&op_BREAK, &&op_ILL, &&op_ILL,
-    &&op_MFHI, &&op_MTHI, &&op_MFLO, &&op_MTLO, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL,
-    &&op_MULT, &&op_MULTU, &&op_DIV, &&op_DIVU, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL,
-    &&op_ADD, &&op_ADDU, &&op_SUB, &&op_SUBU, &&op_AND, &&op_OR, &&op_XOR, &&op_NOR,
-    &&op_ILL, &&op_ILL, &&op_SLT, &&op_SLTU, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL,
-    &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL,
-    &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL,
+#if HAVE_COMPUTED_GOTO
+   #define CGBEGIN static const void *const op_goto_table[256] = {
+   #define CGE(l) &&l,
+   #define CGEND }; goto *op_goto_table[opf];
+#else
+   /* (uint8) cast for cheaper alternative to generated branch+compare bounds check instructions, but still more
+      expensive than computed goto which needs no masking nor bounds checking.
+   */
+   #define CGBEGIN { enum { CGESB = 1 + __COUNTER__ }; switch((uint8)opf) {
+   #define CGE(l) case __COUNTER__ - CGESB: goto l;
+   #define CGEND } }
+#endif
 
-    NULL, &&op_BCOND, &&op_J, &&op_JAL, &&op_BEQ, &&op_BNE, &&op_BLEZ, &&op_BGTZ,
-    &&op_ADDI, &&op_ADDIU, &&op_SLTI, &&op_SLTIU, &&op_ANDI, &&op_ORI, &&op_XORI, &&op_LUI,
-    &&op_COP0, &&op_COP1, &&op_COP2, &&op_COP3, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL,
-    &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL,
-    &&op_LB, &&op_LH, &&op_LWL, &&op_LW, &&op_LBU, &&op_LHU, &&op_LWR, &&op_ILL,
-    &&op_SB, &&op_SH, &&op_SWL, &&op_SW, &&op_ILL, &&op_ILL, &&op_SWR, &&op_ILL,
-    &&op_LWC0, &&op_LWC1, &&op_LWC2, &&op_LWC3, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL,
-    &&op_SWC0, &&op_SWC1, &&op_SWC2, &&op_SWC3, &&op_ILL, &&op_ILL, &&op_ILL, &&op_ILL,
+   CGBEGIN
+    CGE(op_SLL)  CGE(op_ILL)   CGE(op_SRL)  CGE(op_SRA)   CGE(op_SLLV)    CGE(op_ILL)   CGE(op_SRLV) CGE(op_SRAV)
+    CGE(op_JR)   CGE(op_JALR)  CGE(op_ILL)  CGE(op_ILL)   CGE(op_SYSCALL) CGE(op_BREAK) CGE(op_ILL)  CGE(op_ILL)
+    CGE(op_MFHI) CGE(op_MTHI)  CGE(op_MFLO) CGE(op_MTLO)  CGE(op_ILL)     CGE(op_ILL)   CGE(op_ILL)  CGE(op_ILL)
+    CGE(op_MULT) CGE(op_MULTU) CGE(op_DIV)  CGE(op_DIVU)  CGE(op_ILL)     CGE(op_ILL)   CGE(op_ILL)  CGE(op_ILL)
+    CGE(op_ADD)  CGE(op_ADDU)  CGE(op_SUB)  CGE(op_SUBU)  CGE(op_AND)     CGE(op_OR)    CGE(op_XOR)  CGE(op_NOR)
+    CGE(op_ILL)  CGE(op_ILL)   CGE(op_SLT)  CGE(op_SLTU)  CGE(op_ILL)     CGE(op_ILL)   CGE(op_ILL)  CGE(op_ILL)
+    CGE(op_ILL)  CGE(op_ILL)   CGE(op_ILL)  CGE(op_ILL)   CGE(op_ILL)     CGE(op_ILL)   CGE(op_ILL)  CGE(op_ILL)
+    CGE(op_ILL)  CGE(op_ILL)   CGE(op_ILL)  CGE(op_ILL)   CGE(op_ILL)     CGE(op_ILL)   CGE(op_ILL)  CGE(op_ILL)
+
+    CGE(op_ILL)  CGE(op_BCOND) CGE(op_J)    CGE(op_JAL)   CGE(op_BEQ)  CGE(op_BNE) CGE(op_BLEZ) CGE(op_BGTZ)
+    CGE(op_ADDI) CGE(op_ADDIU) CGE(op_SLTI) CGE(op_SLTIU) CGE(op_ANDI) CGE(op_ORI) CGE(op_XORI) CGE(op_LUI)
+    CGE(op_COP0) CGE(op_COP1)  CGE(op_COP2) CGE(op_COP3)  CGE(op_ILL)  CGE(op_ILL) CGE(op_ILL)  CGE(op_ILL)
+    CGE(op_ILL)  CGE(op_ILL)   CGE(op_ILL)  CGE(op_ILL)   CGE(op_ILL)  CGE(op_ILL) CGE(op_ILL)  CGE(op_ILL)
+    CGE(op_LB)   CGE(op_LH)    CGE(op_LWL)  CGE(op_LW)    CGE(op_LBU)  CGE(op_LHU) CGE(op_LWR)  CGE(op_ILL)
+    CGE(op_SB)   CGE(op_SH)    CGE(op_SWL)  CGE(op_SW)    CGE(op_ILL)  CGE(op_ILL) CGE(op_SWR)  CGE(op_ILL)
+    CGE(op_LWC0) CGE(op_LWC1)  CGE(op_LWC2) CGE(op_LWC3)  CGE(op_ILL)  CGE(op_ILL) CGE(op_ILL)  CGE(op_ILL)
+    CGE(op_SWC0) CGE(op_SWC1)  CGE(op_SWC2) CGE(op_SWC3)  CGE(op_ILL)  CGE(op_ILL) CGE(op_ILL)  CGE(op_ILL)
 
     // Interrupt portion of this table is constructed so that an interrupt won't be taken when the PC is pointing to a GTE instruction,
     // to avoid problems caused by pipeline vs coprocessor nuances that aren't emulated.
-    &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
-    &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
-    &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
-    &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
-    &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
-    &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
-    &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
-    &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
+    CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
+    CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
+    CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
+    CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
+    CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
+    CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
+    CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
+    CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
 
-    NULL, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
-    &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
-    &&op_INTERRUPT, &&op_INTERRUPT, &&op_COP2, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
-    &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
-    &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
-    &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
-    &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
-    &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT, &&op_INTERRUPT,
-   };
-
-   goto *op_goto_table[opf];
+    CGE(op_ILL)       CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
+    CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
+    CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_COP2)      CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
+    CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
+    CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
+    CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
+    CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
+    CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT) CGE(op_INTERRUPT)
+   CGEND
 
    {
     BEGIN_OPF(ILL, 0, 0);
@@ -1133,7 +1143,8 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
 		}
 		break;
 
-	 case 0x10 ... 0x1F:
+	 case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x16: case 0x17:
+	 case 0x18: case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1E: case 0x1F:
 		//printf("%08x\n", PC);
 	        if(timestamp < gte_ts_done)
 	         timestamp = gte_ts_done;
@@ -1512,7 +1523,7 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
 	uint64 result;
 
 	result = (int64)(int32)GPR[rs] * (int32)GPR[rt];
-	muldiv_ts_done = timestamp + MULT_Tab24[__builtin_clz((GPR[rs] ^ ((int32)GPR[rs] >> 31)) | 0x400)];
+	muldiv_ts_done = timestamp + MULT_Tab24[MDFN_lzcount32((GPR[rs] ^ ((int32)GPR[rs] >> 31)) | 0x400)];
 	DO_LDS();
 
 	LO = result;
@@ -1534,7 +1545,7 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
 	uint64 result;
 
 	result = (uint64)GPR[rs] * GPR[rt];
-	muldiv_ts_done = timestamp + MULT_Tab24[__builtin_clz(GPR[rs] | 0x400)];
+	muldiv_ts_done = timestamp + MULT_Tab24[MDFN_lzcount32(GPR[rs] | 0x400)];
 	DO_LDS();
 
 	LO = result;

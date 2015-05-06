@@ -289,6 +289,7 @@ class VCE final : public HuC6280_Support
         uint8 st_mode;
 	int32 window_counter[2];
 
+	uint16 pixel_buffer[2][2048];	// Internal temporary pixel buffers, used in vce_sync.inc.
 
 	#ifdef WANT_DEBUGGER
 	MDFN_Surface *GfxDecode_Buf;// = NULL;

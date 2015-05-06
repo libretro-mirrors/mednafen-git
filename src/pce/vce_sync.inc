@@ -35,22 +35,16 @@
 
   if(div_clocks > 0)
   {
+   child_event[0] = vdc[0]->Run(div_clocks, pixel_buffer[0], skipframe);
    #ifdef VCE_SGFX_MODE
-   uint16 pixels[2][div_clocks];
-   #else
-   uint16 pixels[1][div_clocks];
-   #endif
-
-   child_event[0] = vdc[0]->Run(div_clocks, pixels[0], skipframe);
-   #ifdef VCE_SGFX_MODE
-   child_event[1] = vdc[1]->Run(div_clocks, pixels[1], skipframe);
+   child_event[1] = vdc[1]->Run(div_clocks, pixel_buffer[1], skipframe);
    #endif
 
    if(!skipframe)
    {
     #ifdef VCE_SGFX_MODE
     {
-     for(int32 i = 0; i < div_clocks; i++) // * vce_ratios[dot_clock]; i++)
+     for(int32 i = 0; MDFN_LIKELY(i < div_clocks); i++) // * vce_ratios[dot_clock]; i++)
      {
       static const int prio_select[4] = { 1, 1, 0, 0 };
       static const int prio_shift[4] = { 4, 0, 4, 0 };
@@ -75,9 +69,9 @@
       vdc2_pixel = vdc1_pixel = 0;
 
       if(pb & 1)
-       vdc1_pixel = pixels[0][i];
+       vdc1_pixel = pixel_buffer[0][i];
       if(pb & 2)
-       vdc2_pixel = pixels[1][i];
+       vdc2_pixel = pixel_buffer[1][i];
 
       /* Dai MakaiMura uses setting 1, and expects VDC #2 sprites in front of VDC #1 background, but
         behind VDC #1's sprites.
@@ -107,20 +101,20 @@
     #else
     {
      #if SUPERDUPERMODE
-     for(int32 i = 0; i < div_clocks; i++)
+     for(int32 i = 0; MDFN_LIKELY(i < div_clocks); i++)
      {
       for(int32 si = 0; si < dot_clock_ratio; si++)
       {
-       uint32 pix = color_table_cache[pixels[0][i] & 0x3FF];
+       uint32 pix = color_table_cache[pixel_buffer[0][i] & 0x3FF];
 
        scanline_out_ptr[pixel_offset & 2047] = pix;
        pixel_offset++;
       }
      }
      #else
-     for(int32 i = 0; i < div_clocks; i++) // * vce_ratios[dot_clock]; i++)
+     for(int32 i = 0; MDFN_LIKELY(i < div_clocks); i++) // * vce_ratios[dot_clock]; i++)
      {
-      uint32 pix = color_table_cache[pixels[0][i] & 0x3FF];
+      uint32 pix = color_table_cache[pixel_buffer[0][i] & 0x3FF];
       scanline_out_ptr[pixel_offset & 2047] = pix;
       pixel_offset++;
      }

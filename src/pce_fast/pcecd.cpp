@@ -48,7 +48,7 @@ static uint8 	ACKStatus;
 
 static SimpleFIFO<uint8> SubChannelFIFO(16);
 
-static Blip_Buffer *sbuf[2];
+static Blip_Buffer* sbuf;
 static int16 RawPCMVolumeCache[2];
 
 static int32 ClearACKDelay;
@@ -129,19 +129,19 @@ static INLINE void Fader_SyncWhich(void)
 
 static void RedoLPF(int f)
 {
-	if(sbuf[0] && sbuf[1])
+	if(sbuf)
 	{
          if(ADPCMLP)
          {
           if(f >= 14)
           {
            int rolloff = (int)((((double)32087.5 / (16 - f)) / 2) * 0.70);
-           ADPCMSynth.treble_eq( blip_eq_t(-1000, rolloff, sbuf[0]->sample_rate()));
+           ADPCMSynth.treble_eq( blip_eq_t(-1000, rolloff, sbuf[0].sample_rate()));
           }
           else
           {
            int rolloff = (int)((((double)32087.5 / (16 - f)) / 2) * 0.80);
-           ADPCMSynth.treble_eq( blip_eq_t(-1000, rolloff, sbuf[0]->sample_rate()));
+           ADPCMSynth.treble_eq( blip_eq_t(-1000, rolloff, sbuf[0].sample_rate()));
           }
          }
 	 else
@@ -277,7 +277,7 @@ bool PCECD_SetSettings(const PCECD_Settings *settings)
 	return true;
 }
 
-void PCECD_Init(const PCECD_Settings *settings, void (*irqcb)(bool), double master_clock, unsigned int ocm, Blip_Buffer *soundbuf_l, Blip_Buffer *soundbuf_r)
+void PCECD_Init(const PCECD_Settings *settings, void (*irqcb)(bool), double master_clock, unsigned int ocm, Blip_Buffer* soundbufs)
 {
 	lastts = 0;
 
@@ -285,11 +285,10 @@ void PCECD_Init(const PCECD_Settings *settings, void (*irqcb)(bool), double mast
 
 	IRQCB = irqcb;
 
-	sbuf[0] = soundbuf_l;
-	sbuf[1] = soundbuf_r;
+	sbuf = soundbufs;
 
 	// Warning: magic number 126000 in PCECD_SetSettings() too
-	PCECD_Drive_Init(3 * OC_Multiplier, sbuf[0], sbuf[1], 126000 * (settings ? settings->CD_Speed : 1), master_clock * OC_Multiplier, CDIRQ, StuffSubchannel);
+	PCECD_Drive_Init(3 * OC_Multiplier, sbuf, 126000 * (settings ? settings->CD_Speed : 1), master_clock * OC_Multiplier, CDIRQ, StuffSubchannel);
 
         ADPCM.RAM = (uint8 *)MDFN_malloc_T(0x10000, _("PCE ADPCM RAM"));
 
@@ -763,10 +762,10 @@ static INLINE void ADPCM_PB_Run(int32 basetime, int32 run_time)
    pcm = (pcm * ADPCMFadeVolume) >> 8;
    uint32 synthtime = ((basetime + (ADPCM.bigdiv >> 16))) / (3 * OC_Multiplier);
 
-   if(sbuf[0] && sbuf[1])
+   if(sbuf)
    {
-    ADPCMSynth.offset(synthtime, pcm - ADPCM.last_pcm, sbuf[0]);
-    ADPCMSynth.offset(synthtime, pcm - ADPCM.last_pcm, sbuf[1]);
+    ADPCMSynth.offset(synthtime, pcm - ADPCM.last_pcm, &sbuf[0]);
+    ADPCMSynth.offset(synthtime, pcm - ADPCM.last_pcm, &sbuf[1]);
    }
    ADPCM.last_pcm = pcm;
   }

@@ -172,7 +172,7 @@ extern MDFNGI EmulatedLynx;
 
 static bool TestMagic(MDFNFILE *fp)
 {
- uint8 data[std::max<unsigned>(CCart::HEADER_RAW_SIZE, CRam::HEADER_RAW_SIZE)];
+ uint8 data[((size_t)CCart::HEADER_RAW_SIZE > (size_t)CRam::HEADER_RAW_SIZE) ? (size_t)CCart::HEADER_RAW_SIZE : (size_t)CRam::HEADER_RAW_SIZE];
  uint64 rc;
 
  rc = fp->read(data, sizeof(data), false);
@@ -259,7 +259,7 @@ static void Emulate(EmulateSpecStruct *espec)
  espec->DisplayRect.h = 102;
 
  if(espec->VideoFormatChanged)
-  lynxie->DisplaySetAttributes(espec->surface->format); // FIXME, pitch
+  lynxie->DisplaySetAttributes(espec->surface->format, espec->CustomPalette);
 
  if(espec->SoundFormatChanged)
  {
@@ -290,7 +290,7 @@ static void Emulate(EmulateSpecStruct *espec)
 
  {
   // FIXME, we should integrate this into mikie.*
-  uint32 color_black = espec->surface->MakeColor(30, 30, 30);
+  uint32 color_black = espec->CustomPalette ? espec->surface->MakeColor(espec->CustomPalette[0], espec->CustomPalette[1], espec->CustomPalette[2]) : espec->surface->MakeColor(30, 30, 30);
 
   for(int y = 0; y < 102; y++)
   {
@@ -422,6 +422,13 @@ static const FileExtensionSpecStruct KnownExtensions[] =
  { NULL, NULL }
 };
 
+static const CustomPalette_Spec CPInfo[] =
+{
+ { gettext_noop("Atari Lynx 12-bit RGB"), NULL, { 4096, 0 } },
+
+ { NULL, NULL },
+};
+
 MDFNGI EmulatedLynx =
 {
  "lynx",
@@ -442,8 +449,8 @@ MDFNGI EmulatedLynx =
  NULL,
  NULL,
 
- NULL,
- 0,
+ CPInfo,
+ 1 << 0,
 
  NULL,
  NULL,

@@ -1072,16 +1072,10 @@ static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint3
 
  if(rs->MediaPresent && rs->MediaUsable)
  {
-  if(!(*cdifs)[media_idx]->Eject(false))
-   return(false);
-
   SCSICD_SetDisc(false, (*cdifs)[media_idx]);
  }
  else
  {
-  if(!((*cdifs)[media_idx]->Eject(rs->MediaCanChange)))
-   return(false);
-
   SCSICD_SetDisc(rs->MediaCanChange, NULL);
  }
 

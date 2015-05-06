@@ -49,7 +49,7 @@ class QTRecord
  void w32s(const char *str);
  void w64s(const char *str);
  void w64(uint64 val);
- uint32 wps(const char *str, uint32 max_len);
+ void wps(const char *str, uint8 fixed_len = 0);
  void atom_begin(uint32 type, bool small_atom = true);
  void atom_begin(const char *type, bool small_atom = true);
  void atom_end(void);

@@ -74,7 +74,7 @@ enum
 
 void PCECD_Drive_GetCDDAValues(int16 &left, int16 &right);
 
-void PCECD_Drive_Init(int CDDATimeDiv, Blip_Buffer *leftbuf, Blip_Buffer *rightbuf, uint32 TransferRate, uint32 SystemClock, void (*IRQFunc)(int), void (*SSCFunc)(uint8, int)) MDFN_COLD;
+void PCECD_Drive_Init(int CDDATimeDiv, Blip_Buffer* lrbufs, uint32 TransferRate, uint32 SystemClock, void (*IRQFunc)(int), void (*SSCFunc)(uint8, int)) MDFN_COLD;
 void PCECD_Drive_Close(void) MDFN_COLD;
 
 void PCECD_Drive_SetTransferRate(uint32 TransferRate);

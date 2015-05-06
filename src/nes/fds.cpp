@@ -26,7 +26,7 @@
 #include "nsf.h"
 #include "fds-sound.h"
 #include <mednafen/FileStream.h>
-#include <mednafen/GZFileStream.h>
+#include <mednafen/compress/GZFileStream.h>
 
 #include <trio/trio.h>
 

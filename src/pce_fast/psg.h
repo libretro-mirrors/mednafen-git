@@ -39,7 +39,7 @@ class PCEFast_PSG
 {
         public:
 
-        PCEFast_PSG(Blip_Buffer *bb_l, Blip_Buffer *bb_r) MDFN_COLD;
+        PCEFast_PSG(Blip_Buffer* bbs) MDFN_COLD;
         ~PCEFast_PSG() MDFN_COLD;
 
 	int StateAction(StateMem *sm, int load, int data_only) MDFN_COLD;
@@ -86,7 +86,7 @@ class PCEFast_PSG
 
         int32 lastts;
 
-	Blip_Buffer *sbuf[2];
+	Blip_Buffer* const sbuf;
 	Blip_Synth<blip_good_quality, 8192> Synth;
 
         int32 dbtable_volonly[32];

@@ -114,7 +114,16 @@ std::vector<BranchTraceResult> VBDBG_GetBranchTrace(void)
 
   tmp.code[0] = 0;
 
-  switch(bt->ecode)
+
+  if(bt->ecode >= 0xFFA0 && bt->ecode <= 0xFFBF)      // TRAP
+  {
+	trio_snprintf(tmp.code, sizeof(tmp.code), "TRAP");
+  }
+  else if(bt->ecode >= 0xFE00 && bt->ecode <= 0xFEFF)
+  {
+	trio_snprintf(tmp.code, sizeof(tmp.code), "INT%d", (bt->ecode >> 4) & 0xF);
+  }
+  else switch(bt->ecode)
   {
    case 0: break;
    default: trio_snprintf(tmp.code, sizeof(tmp.code), "e");
@@ -130,10 +139,6 @@ std::vector<BranchTraceResult> VBDBG_GetBranchTrace(void)
 
    case 0xFFC0: // Address trap
         trio_snprintf(tmp.code, sizeof(tmp.code), "ADTR");
-        break;
-
-   case 0xFFA0 ... 0xFFBF:      // TRAP
-        trio_snprintf(tmp.code, sizeof(tmp.code), "TRAP");
         break;
 
    case 0xFF90: // Illegal/invalid instruction code
@@ -166,10 +171,6 @@ std::vector<BranchTraceResult> VBDBG_GetBranchTrace(void)
 
    case 0xFF60:
         trio_snprintf(tmp.code, sizeof(tmp.code), "FRO");       // FRO
-        break;
-
-   case 0xFE00 ... 0xFEFF:
-        trio_snprintf(tmp.code, sizeof(tmp.code), "INT%d", (bt->ecode >> 4) & 0xF);
         break;
   }
 

@@ -1,13 +1,14 @@
 !!! Make sure all legal notices and licenses for DLLs are included in the Win32 binary distribution !!!
 
-!!! Phase out compression of save game files(but not save states, those should be compressed), and make save game file loading
-    more strict in regards to error checking.
-
 !!! Initialize statically-allocated Blip_Buffer objects(via clear() method) and reset any corresponding last-value variables
 on game load for each emulated system.
 
 !!! Systems with RTC emulation: Fix code to NOT use localtime(), which has consistency issues due to relying on external state(IE time zones), at
 			    any time other than virtual power toggle/init.
+
+Update minilzo.
+
+CTRL+SHIFT+1 intermediate disconnected state.
 
 Audit code to ensure proper handling of pointer variables when a constructor or new throws an exception(IE make sure cleanup code doesn't
 delete an uninitialized pointer).
@@ -20,10 +21,6 @@ logical AND mode.
 
 
 CD emulation/handling:
-	Add fixes for drives that don't support raw subchannel reading and/or raw reading.  Add fixes
-	for drives that return borked(from the wrong sectors) subchannel data.  Add fixes for drives that refuse to read garbage mode 1 sectors(or fix readahead to not read
-	the pregap between audio and data tracks).
-
 	Stricter CUE and TOC sheet parsing.
 
 	Support for indexes other than 0 and 1 in CUE and TOC sheets(maybe using std::map?).
@@ -69,8 +66,6 @@ Settings:
 	Quote(and escape) string-type settings in the configuration file.
 
 	Protect settings structures and objects with mutexes(for thread safety when using MDFNI_SetSetting() while the emulator is running)
-
-	Optional manually-created per-game setting override files(or one big database file per system?).
 
 	Save some emulation-related settings in save states, and temporarily(until another save state load, or a virtual power toggle via F11) make
 	them active.  Consider implications for netplay, state rewinding, and PSX memory card emulation(slots can be disabled via settings).
@@ -165,6 +160,8 @@ VB:
 	Look into getting VIP SCANRDY status bit emulated correctly.
 
 Genesis:
+	Correctly handle 6-button controller "Mode" button being pressed during Mednafen startup.
+
 	Fix VDP H-counter read value(write test program if necessary).
 
 	Add Z80 IRQ ack hack which can be controlled by a setting.
@@ -229,8 +226,6 @@ NES:
 	Fix weird graphical glitches in Quattro Sports: BMX Simulator
 
 	nes/boards/vrc7.cpp (slot save state saving)
-
-Safety fopen() replacement for preventing overwriting of files.
 
 Reexamine the code for choosing which emulation module to use.  Highest priority to file extension(as long as the extension is unique to a system,
 "bin" is not unique for example), and special magic test functions if that fails.

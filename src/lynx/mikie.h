@@ -201,7 +201,7 @@ class CMikie : public CLynxBase
 		void	ComLynxTxLoopback(int data);
 		void	ComLynxTxCallback(void (*function)(int data,uint32 objref),uint32 objref);
 		
-		void	DisplaySetAttributes(const MDFN_PixelFormat &format);
+		void	DisplaySetAttributes(const MDFN_PixelFormat &format, const uint8* CustomPalette);
 		
 		void	BlowOut(void);
 

@@ -38,7 +38,9 @@
 
 extern JoystickManager *joy_manager;
 
-static bool RewindState = false;
+bool RewindState = true;
+bool DNeedRewind = false;
+
 static uint32 MouseData[3];
 static double MouseDataRel[2];
 
@@ -57,8 +59,7 @@ static int subcon(const char *text, std::vector<ButtConfig> &bc, int commandkey)
 static void ResyncGameInputSettings(unsigned port);
 
 static char keys[MKK_COUNT];
-
-bool DNeedRewind = FALSE;
+static char keys_untouched[MKK_COUNT];
 
 static std::string BCToString(const ButtConfig &bc)
 {
@@ -514,7 +515,8 @@ static void IncSelectedDevice(unsigned int port)
 
 #define MKZ()   {0, 0, 0}
 
-typedef enum {
+enum CommandKey
+{
 	_CK_FIRST = 0,
         CK_SAVE_STATE = 0,
 	CK_LOAD_STATE,
@@ -575,108 +577,108 @@ typedef enum {
         CK_DEVICE_SELECT8,
 
 	_CK_COUNT
-} CommandKey;
+};
 
-typedef struct __COKE
+struct COKE
 {
  ButtConfig bc[2];
  const char *text;
- unsigned int system;
+ bool BypassKeyZeroing;
  bool SkipCKDelay;
  const char *description;
-} COKE;
+};
 
 static const COKE CKeys[_CK_COUNT]	=
 {
-	{ MK_CK(F5), "save_state", ~0U, 1, gettext_noop("Save state") },
-	{ MK_CK(F7), "load_state", ~0U, 0, gettext_noop("Load state") },
-	{ MK_CK_SHIFT(F5), "save_movie", ~0U, 1, gettext_noop("Save movie") },
-	{ MK_CK_SHIFT(F7), "load_movie", ~0U, 0, gettext_noop("Load movie") },
-	{ MK_CK_ALT(s), "toggle_state_rewind", ~0U, 1, gettext_noop("Toggle state rewind functionality") },
+	{ MK_CK(F5), 	   "save_state", false, 1, gettext_noop("Save state") },
+	{ MK_CK(F7),	   "load_state", false, 0, gettext_noop("Load state") },
+	{ MK_CK_SHIFT(F5), "save_movie", false, 1, gettext_noop("Save movie") },
+	{ MK_CK_SHIFT(F7), "load_movie", false, 0, gettext_noop("Load movie") },
+	{ MK_CK_ALT(s),     "toggle_state_rewind", false, 1, gettext_noop("Toggle state rewind functionality") },
 
-	{ MK_CK(0), "0", ~0U, 1, gettext_noop("Save state 0 select")},
-        { MK_CK(1), "1", ~0U, 1, gettext_noop("Save state 1 select")},
-        { MK_CK(2), "2", ~0U, 1, gettext_noop("Save state 2 select")},
-        { MK_CK(3), "3", ~0U, 1, gettext_noop("Save state 3 select")},
-        { MK_CK(4), "4", ~0U, 1, gettext_noop("Save state 4 select")},
-        { MK_CK(5), "5", ~0U, 1, gettext_noop("Save state 5 select")},
-        { MK_CK(6), "6", ~0U, 1, gettext_noop("Save state 6 select")},
-        { MK_CK(7), "7", ~0U, 1, gettext_noop("Save state 7 select")},
-        { MK_CK(8), "8", ~0U, 1, gettext_noop("Save state 8 select")},
-        { MK_CK(9), "9", ~0U, 1, gettext_noop("Save state 9 select")},
+	{ MK_CK(0), "0", false, 1, gettext_noop("Save state 0 select")},
+        { MK_CK(1), "1", false, 1, gettext_noop("Save state 1 select")},
+        { MK_CK(2), "2", false, 1, gettext_noop("Save state 2 select")},
+        { MK_CK(3), "3", false, 1, gettext_noop("Save state 3 select")},
+        { MK_CK(4), "4", false, 1, gettext_noop("Save state 4 select")},
+        { MK_CK(5), "5", false, 1, gettext_noop("Save state 5 select")},
+        { MK_CK(6), "6", false, 1, gettext_noop("Save state 6 select")},
+        { MK_CK(7), "7", false, 1, gettext_noop("Save state 7 select")},
+        { MK_CK(8), "8", false, 1, gettext_noop("Save state 8 select")},
+        { MK_CK(9), "9", false, 1, gettext_noop("Save state 9 select")},
 
-	{ MK_CK_SHIFT(0), "m0", ~0U, 1, gettext_noop("Movie 0 select") },
-        { MK_CK_SHIFT(1), "m1", ~0U, 1, gettext_noop("Movie 1 select")  },
-        { MK_CK_SHIFT(2), "m2", ~0U, 1, gettext_noop("Movie 2 select")  },
-        { MK_CK_SHIFT(3), "m3", ~0U, 1, gettext_noop("Movie 3 select")  },
-        { MK_CK_SHIFT(4), "m4", ~0U, 1, gettext_noop("Movie 4 select")  },
-        { MK_CK_SHIFT(5), "m5", ~0U, 1, gettext_noop("Movie 5 select")  },
-        { MK_CK_SHIFT(6), "m6", ~0U, 1, gettext_noop("Movie 6 select")  },
-        { MK_CK_SHIFT(7), "m7", ~0U, 1, gettext_noop("Movie 7 select")  },
-        { MK_CK_SHIFT(8), "m8", ~0U, 1, gettext_noop("Movie 8 select")  },
-        { MK_CK_SHIFT(9), "m9", ~0U, 1, gettext_noop("Movie 9 select")  },
+	{ MK_CK_SHIFT(0), "m0", false, 1, gettext_noop("Movie 0 select") },
+        { MK_CK_SHIFT(1), "m1", false, 1, gettext_noop("Movie 1 select")  },
+        { MK_CK_SHIFT(2), "m2", false, 1, gettext_noop("Movie 2 select")  },
+        { MK_CK_SHIFT(3), "m3", false, 1, gettext_noop("Movie 3 select")  },
+        { MK_CK_SHIFT(4), "m4", false, 1, gettext_noop("Movie 4 select")  },
+        { MK_CK_SHIFT(5), "m5", false, 1, gettext_noop("Movie 5 select")  },
+        { MK_CK_SHIFT(6), "m6", false, 1, gettext_noop("Movie 6 select")  },
+        { MK_CK_SHIFT(7), "m7", false, 1, gettext_noop("Movie 7 select")  },
+        { MK_CK_SHIFT(8), "m8", false, 1, gettext_noop("Movie 8 select")  },
+        { MK_CK_SHIFT(9), "m9", false, 1, gettext_noop("Movie 9 select")  },
 
-        { MK_CK_CTRL(1), "tl1", ~0U, 1, gettext_noop("Toggle graphics layer 1")  },
-        { MK_CK_CTRL(2), "tl2", ~0U, 1, gettext_noop("Toggle graphics layer 2") },
-        { MK_CK_CTRL(3), "tl3", ~0U, 1, gettext_noop("Toggle graphics layer 3") },
-        { MK_CK_CTRL(4), "tl4", ~0U, 1, gettext_noop("Toggle graphics layer 4") },
-        { MK_CK_CTRL(5), "tl5", ~0U, 1, gettext_noop("Toggle graphics layer 5") },
-        { MK_CK_CTRL(6), "tl6", ~0U, 1, gettext_noop("Toggle graphics layer 6") },
-        { MK_CK_CTRL(7), "tl7", ~0U, 1, gettext_noop("Toggle graphics layer 7") },
-        { MK_CK_CTRL(8), "tl8", ~0U, 1, gettext_noop("Toggle graphics layer 8") },
-        { MK_CK_CTRL(9), "tl9", ~0U, 1, gettext_noop("Toggle graphics layer 9") },
+        { MK_CK_CTRL(1), "tl1", false, 1, gettext_noop("Toggle graphics layer 1")  },
+        { MK_CK_CTRL(2), "tl2", false, 1, gettext_noop("Toggle graphics layer 2") },
+        { MK_CK_CTRL(3), "tl3", false, 1, gettext_noop("Toggle graphics layer 3") },
+        { MK_CK_CTRL(4), "tl4", false, 1, gettext_noop("Toggle graphics layer 4") },
+        { MK_CK_CTRL(5), "tl5", false, 1, gettext_noop("Toggle graphics layer 5") },
+        { MK_CK_CTRL(6), "tl6", false, 1, gettext_noop("Toggle graphics layer 6") },
+        { MK_CK_CTRL(7), "tl7", false, 1, gettext_noop("Toggle graphics layer 7") },
+        { MK_CK_CTRL(8), "tl8", false, 1, gettext_noop("Toggle graphics layer 8") },
+        { MK_CK_CTRL(9), "tl9", false, 1, gettext_noop("Toggle graphics layer 9") },
 
-	{ MK_CK(F9), "take_snapshot", ~0U, 1, gettext_noop("Take screen snapshot") },
-	{ MK_CK_SHIFT(F9), "take_scaled_snapshot", ~0U, 1, gettext_noop("Take scaled(and filtered) screen snapshot") },
+	{ MK_CK(F9), "take_snapshot", false, 1, gettext_noop("Take screen snapshot") },
+	{ MK_CK_SHIFT(F9), "take_scaled_snapshot", false, 1, gettext_noop("Take scaled(and filtered) screen snapshot") },
 
-	{ MK_CK_ALT(RETURN), "toggle_fs", ~0U, 1, gettext_noop("Toggle fullscreen mode") },
-	{ MK_CK(BACKQUOTE), "fast_forward", ~0U, 1, gettext_noop("Fast-forward") },
-        { MK_CK(BACKSLASH), "slow_forward", ~0U, 1, gettext_noop("Slow-forward") },
+	{ MK_CK_ALT(RETURN), "toggle_fs", false, 1, gettext_noop("Toggle fullscreen mode") },
+	{ MK_CK(BACKQUOTE), "fast_forward", false, 1, gettext_noop("Fast-forward") },
+        { MK_CK(BACKSLASH), "slow_forward", false, 1, gettext_noop("Slow-forward") },
 
-	{ MK_CK(F8), "insert_coin", ~0U, 1, gettext_noop("Insert coin") },
-	{ MK_CK(F6), "toggle_dipview", ~0U, 1, gettext_noop("Toggle DIP switch view") },
-	{ MK_CK(F6), "select_disk", ~0U, 1, gettext_noop("Select disk/disc") },
-	{ MK_CK(F8), "insert_eject_disk", ~0U, 0, gettext_noop("Insert/Eject disk/disc") },
-	{ MK_CK(F8), "activate_barcode", ~0U, 1, gettext_noop("Activate barcode(for Famicom)") },
-	{ MK_CK(SCROLLOCK), "toggle_grab_input", ~0U, 1, gettext_noop("Grab input") },
-	{ MK_CK_SHIFT(SCROLLOCK), "toggle_cidisable", ~0U, 1, gettext_noop("Grab input and disable commands") },
-	{ MK_CK_ALT_SHIFT(1), "input_config1", ~0U, 0, gettext_noop("Configure buttons on virtual port 1") },
-	{ MK_CK_ALT_SHIFT(2), "input_config2", ~0U, 0, gettext_noop("Configure buttons on virtual port 2")  },
-        { MK_CK_ALT_SHIFT(3), "input_config3", ~0U, 0, gettext_noop("Configure buttons on virtual port 3")  },
-        { MK_CK_ALT_SHIFT(4), "input_config4", ~0U, 0, gettext_noop("Configure buttons on virtual port 4")  },
-	{ MK_CK_ALT_SHIFT(5), "input_config5", ~0U, 0, gettext_noop("Configure buttons on virtual port 5")  },
-        { MK_CK_ALT_SHIFT(6), "input_config6", ~0U, 0, gettext_noop("Configure buttons on virtual port 6")  },
-        { MK_CK_ALT_SHIFT(7), "input_config7", ~0U, 0, gettext_noop("Configure buttons on virtual port 7")  },
-        { MK_CK_ALT_SHIFT(8), "input_config8", ~0U, 0, gettext_noop("Configure buttons on virtual port 8")  },
-        { MK_CK(F2), "input_configc", ~0U, 0, gettext_noop("Configure command key") },
-        { MK_CK_SHIFT(F2), "input_configc_am", ~0U, 0, gettext_noop("Configure command key, for all-pressed-to-trigger mode") },
+	{ MK_CK(F8), "insert_coin", false, 1, gettext_noop("Insert coin") },
+	{ MK_CK(F6), "toggle_dipview", false, 1, gettext_noop("Toggle DIP switch view") },
+	{ MK_CK(F6), "select_disk", false, 1, gettext_noop("Select disk/disc") },
+	{ MK_CK(F8), "insert_eject_disk", false, 0, gettext_noop("Insert/Eject disk/disc") },
+	{ MK_CK(F8), "activate_barcode", false, 1, gettext_noop("Activate barcode(for Famicom)") },
+	{ MK_CK(SCROLLOCK), "toggle_grab_input", false, 1, gettext_noop("Grab input") },
+	{ MK_CK_SHIFT(SCROLLOCK), "toggle_cidisable", false, 1, gettext_noop("Grab input and disable commands") },
+	{ MK_CK_ALT_SHIFT(1), "input_config1", false, 0, gettext_noop("Configure buttons on virtual port 1") },
+	{ MK_CK_ALT_SHIFT(2), "input_config2", false, 0, gettext_noop("Configure buttons on virtual port 2")  },
+        { MK_CK_ALT_SHIFT(3), "input_config3", false, 0, gettext_noop("Configure buttons on virtual port 3")  },
+        { MK_CK_ALT_SHIFT(4), "input_config4", false, 0, gettext_noop("Configure buttons on virtual port 4")  },
+	{ MK_CK_ALT_SHIFT(5), "input_config5", false, 0, gettext_noop("Configure buttons on virtual port 5")  },
+        { MK_CK_ALT_SHIFT(6), "input_config6", false, 0, gettext_noop("Configure buttons on virtual port 6")  },
+        { MK_CK_ALT_SHIFT(7), "input_config7", false, 0, gettext_noop("Configure buttons on virtual port 7")  },
+        { MK_CK_ALT_SHIFT(8), "input_config8", false, 0, gettext_noop("Configure buttons on virtual port 8")  },
+        { MK_CK(F2), "input_configc", false, 0, gettext_noop("Configure command key") },
+        { MK_CK_SHIFT(F2), "input_configc_am", false, 0, gettext_noop("Configure command key, for all-pressed-to-trigger mode") },
 
-	{ MK_CK(F3), "input_config_abd", ~0U, 0, gettext_noop("Detect analog buttons on physical joysticks/gamepads(for use with the input configuration process).") },
+	{ MK_CK(F3), "input_config_abd", false, 0, gettext_noop("Detect analog buttons on physical joysticks/gamepads(for use with the input configuration process).") },
 
-	{ MK_CK(F10), "reset", ~0U, 0, gettext_noop("Reset") },
-	{ MK_CK(F11), "power", ~0U, 0, gettext_noop("Power toggle") },
-	{ MK_CK2(F12, ESCAPE), "exit", ~0U, 0, gettext_noop("Exit") },
-	{ MK_CK(BACKSPACE), "state_rewind", ~0U, 1, gettext_noop("Rewind") },
-	{ MK_CK_ALT(o), "rotate_screen", ~0U, 1, gettext_noop("Rotate screen") },
+	{ MK_CK(F10), "reset", false, 0, gettext_noop("Reset") },
+	{ MK_CK(F11), "power", false, 0, gettext_noop("Power toggle") },
+	{ MK_CK2(F12, ESCAPE), "exit", true, 0, gettext_noop("Exit") },
+	{ MK_CK(BACKSPACE), "state_rewind", false, 1, gettext_noop("Rewind") },
+	{ MK_CK_ALT(o), "rotate_screen", false, 1, gettext_noop("Rotate screen") },
 
-	{ MK_CK(t), "togglenetview", ~0U, 1, gettext_noop("Toggle netplay console")},
-	{ MK_CK_ALT(a), "advance_frame", ~0U, 1, gettext_noop("Advance frame") },
-	{ MK_CK_ALT(r), "run_normal", ~0U, 1, gettext_noop("Return to normal mode after advancing frames") },
-	{ MK_CK_ALT(c), "togglecheatview", ~0U, 1, gettext_noop("Toggle cheat console") },
-	{ MK_CK_ALT(t), "togglecheatactive", ~0U, 1, gettext_noop("Enable/Disable cheats") },
-        { MK_CK_SHIFT(F1), "toggle_fps_view", ~0U, 1, gettext_noop("Toggle frames-per-second display") },
-	{ MK_CK_ALT(d), "toggle_debugger", ~0U, 1, gettext_noop("Toggle debugger") },
-	{ MK_CK(MINUS), "state_slot_dec", ~0U, 1, gettext_noop("Decrease selected save state slot by 1") },
-	{ MK_CK(EQUALS), "state_slot_inc", ~0U, 1, gettext_noop("Increase selected save state slot by 1") },
-	{ MK_CK(F1), "toggle_help", ~0U, 1, gettext_noop("Toggle help screen") },
-	{ MK_CK_CTRL_SHIFT(1), "device_select1", ~0U, 1, gettext_noop("Select virtual device on virtual input port 1") },
-        { MK_CK_CTRL_SHIFT(2), "device_select2", ~0U, 1, gettext_noop("Select virtual device on virtual input port 2") },
-        { MK_CK_CTRL_SHIFT(3), "device_select3", ~0U, 1, gettext_noop("Select virtual device on virtual input port 3") },
-        { MK_CK_CTRL_SHIFT(4), "device_select4", ~0U, 1, gettext_noop("Select virtual device on virtual input port 4") },
-        { MK_CK_CTRL_SHIFT(5), "device_select5", ~0U, 1, gettext_noop("Select virtual device on virtual input port 5") },
-        { MK_CK_CTRL_SHIFT(6), "device_select6", ~0U, 1, gettext_noop("Select virtual device on virtual input port 6") },
-        { MK_CK_CTRL_SHIFT(7), "device_select7", ~0U, 1, gettext_noop("Select virtual device on virtual input port 7") },
-        { MK_CK_CTRL_SHIFT(8), "device_select8", ~0U, 1, gettext_noop("Select virtual device on virtual input port 8") },
+	{ MK_CK(t), "togglenetview", false, 1, gettext_noop("Toggle netplay console")},
+	{ MK_CK_ALT(a), "advance_frame", false, 1, gettext_noop("Advance frame") },
+	{ MK_CK_ALT(r), "run_normal", false, 1, gettext_noop("Return to normal mode after advancing frames") },
+	{ MK_CK_ALT(c), "togglecheatview", true, 1, gettext_noop("Toggle cheat console") },
+	{ MK_CK_ALT(t), "togglecheatactive", false, 1, gettext_noop("Enable/Disable cheats") },
+        { MK_CK_SHIFT(F1), "toggle_fps_view", false, 1, gettext_noop("Toggle frames-per-second display") },
+	{ MK_CK_ALT(d), "toggle_debugger", true, 1, gettext_noop("Toggle debugger") },
+	{ MK_CK(MINUS), "state_slot_dec", false, 1, gettext_noop("Decrease selected save state slot by 1") },
+	{ MK_CK(EQUALS), "state_slot_inc", false, 1, gettext_noop("Increase selected save state slot by 1") },
+	{ MK_CK(F1), "toggle_help", true, 1, gettext_noop("Toggle help screen") },
+	{ MK_CK_CTRL_SHIFT(1), "device_select1", false, 1, gettext_noop("Select virtual device on virtual input port 1") },
+        { MK_CK_CTRL_SHIFT(2), "device_select2", false, 1, gettext_noop("Select virtual device on virtual input port 2") },
+        { MK_CK_CTRL_SHIFT(3), "device_select3", false, 1, gettext_noop("Select virtual device on virtual input port 3") },
+        { MK_CK_CTRL_SHIFT(4), "device_select4", false, 1, gettext_noop("Select virtual device on virtual input port 4") },
+        { MK_CK_CTRL_SHIFT(5), "device_select5", false, 1, gettext_noop("Select virtual device on virtual input port 5") },
+        { MK_CK_CTRL_SHIFT(6), "device_select6", false, 1, gettext_noop("Select virtual device on virtual input port 6") },
+        { MK_CK_CTRL_SHIFT(7), "device_select7", false, 1, gettext_noop("Select virtual device on virtual input port 7") },
+        { MK_CK_CTRL_SHIFT(8), "device_select8", false, 1, gettext_noop("Select virtual device on virtual input port 8") },
 };
 
 static const char *CKeysSettingName[_CK_COUNT];
@@ -688,37 +690,69 @@ struct CKeyConfig
 };
 
 static CKeyConfig CKeysConfig[_CK_COUNT];
-static int CKeysLastState[_CK_COUNT];
 static uint32 CKeysPressTime[_CK_COUNT];
+static bool CKeysActive[_CK_COUNT];
+static bool CKeysTrigger[_CK_COUNT];
 static uint32 CurTicks = 0;	// Optimization, SDL_GetTicks() might be slow on some platforms?
 
-static int CK_Check(CommandKey which)
+static void CK_Init(void)
 {
- int last = CKeysLastState[which];
- int tmp_ckdelay = ckdelay;
+ ckdelay = MDFN_GetSettingUI("ckdelay");
 
- if(CKeys[which].SkipCKDelay)
-  tmp_ckdelay = 0;
-
- if((CKeysLastState[which] = DTestButtonCombo(CKeysConfig[which].bc, keys, MouseData, CKeysConfig[which].AND_Mode)))
+ for(CommandKey i = _CK_FIRST; i < _CK_COUNT; i = (CommandKey)((unsigned)i + 1))
  {
-  if(!last)
-   CKeysPressTime[which] = CurTicks;
+  CKeysPressTime[i] = 0xFFFFFFFF;
+  CKeysActive[i] = true;	// To prevent triggering when a button/key is held from before startup.
+  CKeysTrigger[i] = false;
  }
- else
-  CKeysPressTime[which] = 0xFFFFFFFF;
-
- if(CurTicks >= ((int64)CKeysPressTime[which] + tmp_ckdelay))
- {
-  CKeysPressTime[which] = 0xFFFFFFFF;
-  return(1);
- }
- return(0);
 }
 
-static int CK_CheckActive(CommandKey which)
+static void CK_PostRemapUpdate(CommandKey which)
 {
- return(DTestButtonCombo(CKeysConfig[which].bc, keys, MouseData, CKeysConfig[which].AND_Mode));
+ CKeysActive[which] = DTestButtonCombo(CKeysConfig[which].bc, (CKeys[which].BypassKeyZeroing ? keys_untouched : keys), MouseData, CKeysConfig[which].AND_Mode);
+ CKeysTrigger[which] = false;
+ CKeysPressTime[which] = 0xFFFFFFFF;
+}
+
+static void CK_UpdateState(bool skipckd_tc)
+{
+ for(CommandKey i = _CK_FIRST; i < _CK_COUNT; i = (CommandKey)((unsigned)i + 1))
+ {
+  const bool prev_state = CKeysActive[i];
+  const bool cur_state = DTestButtonCombo(CKeysConfig[i].bc, (CKeys[i].BypassKeyZeroing ? keys_untouched : keys), MouseData, CKeysConfig[i].AND_Mode);
+  unsigned tmp_ckdelay = ckdelay;
+
+  if(CKeys[i].SkipCKDelay || skipckd_tc)
+   tmp_ckdelay = 0;
+
+  if(cur_state)
+  {
+   if(!prev_state)
+    CKeysPressTime[i] = CurTicks;
+  }
+  else
+   CKeysPressTime[i] = 0xFFFFFFFF;
+
+  CKeysTrigger[i] = false;
+
+  if(CurTicks >= ((uint64)CKeysPressTime[i] + tmp_ckdelay))
+  {
+   CKeysTrigger[i] = true;
+   CKeysPressTime[i] = 0xFFFFFFFF;
+  }
+
+  CKeysActive[i] = cur_state;
+ }
+}
+
+static INLINE bool CK_Check(CommandKey which)
+{
+ return CKeysTrigger[which];
+}
+
+static INLINE bool CK_CheckActive(CommandKey which)
+{
+ return CKeysActive[which];
 }
 
 int NoWaiting = 0;
@@ -834,7 +868,8 @@ static void UpdatePhysicalDeviceState(void)
  //
 
 
- memcpy(keys, SDL_GetKeyState(0), MKK_COUNT);
+ memcpy(keys_untouched, SDL_GetKeyState(0), MKK_COUNT);
+ memcpy(keys, keys_untouched, MKK_COUNT);
 
  if(MDFNDHaveFocus || MDFN_GetSettingB("input.joystick.global_focus"))
   joy_manager->UpdateJoysticks();
@@ -887,8 +922,7 @@ static uint8 BarcodeWorldData[1 + 13];
 
 static void DoKeyStateZeroing(void)
 {
-  if(IConfig == none && !(cidisabled & 0x1))	// Match the statement in CheckCommandKeys for when DoKeyStateZeroing()
-						// is called instead of CheckCommandKeys
+  if(IConfig == none && !(cidisabled & 0x1))
   {
    if(Netplay_IsTextInput() || CheatIF_Active())
    {
@@ -898,159 +932,150 @@ static void DoKeyStateZeroing(void)
 
    if(Debugger_IsActive())
    {
-    static char keys_backup[MKK_COUNT];
-    memcpy(keys_backup, keys, MKK_COUNT);
     memset(keys, 0, sizeof(keys));
 
-    keys[SDLK_F1] = keys_backup[SDLK_F1];
-    keys[SDLK_F2] = keys_backup[SDLK_F2];
-    keys[SDLK_F3] = keys_backup[SDLK_F3];
-    keys[SDLK_F4] = keys_backup[SDLK_F4];
-    keys[SDLK_F5] = keys_backup[SDLK_F5];
-    keys[SDLK_F6] = keys_backup[SDLK_F6];
-    keys[SDLK_F7] = keys_backup[SDLK_F7];
-    keys[SDLK_F8] = keys_backup[SDLK_F8];
-    keys[SDLK_F9] = keys_backup[SDLK_F9];
-    keys[SDLK_F10] = keys_backup[SDLK_F10];
-    keys[SDLK_F11] = keys_backup[SDLK_F11];
-    keys[SDLK_F12] = keys_backup[SDLK_F12];
-    keys[SDLK_F13] = keys_backup[SDLK_F13];
-    keys[SDLK_F14] = keys_backup[SDLK_F14];
-    keys[SDLK_F15] = keys_backup[SDLK_F15];
+    keys[SDLK_F1] = keys_untouched[SDLK_F1];
+    keys[SDLK_F2] = keys_untouched[SDLK_F2];
+    keys[SDLK_F3] = keys_untouched[SDLK_F3];
+    keys[SDLK_F4] = keys_untouched[SDLK_F4];
+    keys[SDLK_F5] = keys_untouched[SDLK_F5];
+    keys[SDLK_F6] = keys_untouched[SDLK_F6];
+    keys[SDLK_F7] = keys_untouched[SDLK_F7];
+    keys[SDLK_F8] = keys_untouched[SDLK_F8];
+    keys[SDLK_F9] = keys_untouched[SDLK_F9];
+    keys[SDLK_F10] = keys_untouched[SDLK_F10];
+    keys[SDLK_F11] = keys_untouched[SDLK_F11];
+    keys[SDLK_F12] = keys_untouched[SDLK_F12];
+    keys[SDLK_F13] = keys_untouched[SDLK_F13];
+    keys[SDLK_F14] = keys_untouched[SDLK_F14];
+    keys[SDLK_F15] = keys_untouched[SDLK_F15];
    }
  }
 }
 
 static void CheckCommandKeys(void)
 {
-  if(IConfig == none && !(cidisabled & 0x1))
+  CK_UpdateState((IConfig == Command || IConfig == CommandAM) && ICLatch == -1);
+
+  for(unsigned i = 0; i < 8; i++)
   {
-   if(CK_Check(CK_TOGGLE_HELP))
-    Help_Toggle();
-
-   if(!CheatIF_Active() && !MDFNDnetplay)
+   if(IConfig == Port1 + i)
    {
-    if(CK_Check(CK_TOGGLE_DEBUGGER))
+    if(CK_Check((CommandKey)(CK_INPUT_CONFIG1 + i)))
     {
-     Debugger_GT_Toggle();
+     ResyncGameInputSettings(i);
+     IConfig = none;
+     MDFNI_DispMessage(_("Configuration interrupted."));
     }
+    else if(ConfigDevice(i))
+    {
+     ResyncGameInputSettings(i);
+     ICDeadDelay = CurTicks + 300;
+     IConfig = none;
+    }
+    break;
    }
-   if(!Debugger_IsActive() && !MDFNDnetplay)
-    if(CK_Check(CK_TOGGLECHEATVIEW))
-    {
-     CheatIF_GT_Show(!CheatIF_Active());
-    }
-
-   if(!(cidisabled & 1))
-   {
-    if(CK_Check(CK_EXIT))
-    {
-     SendCEvent(CEVT_WANT_EXIT, NULL, NULL);
-    }
-   }
-
-   DoKeyStateZeroing();
-
-   if(!CheatIF_Active() && !Debugger_IsActive())
-    if(CK_Check(CK_TOGGLENETVIEW))
-    {
-     Netplay_ToggleTextView();
-    }
   }
 
-   for(int i = 0; i < 8; i++)
-   {
-    if(IConfig == Port1 + i)
-    {
-     if(CK_Check((CommandKey)(CK_INPUT_CONFIG1 + i)))
-     {
-      ResyncGameInputSettings(i);
-      IConfig = none;
-      //SetJoyReadMode(1);
-      MDFNI_DispMessage(_("Configuration interrupted."));
-     }
-     else if(ConfigDevice(i))
-     {
-      ResyncGameInputSettings(i);
-      ICDeadDelay = CurTicks + 300;
-      IConfig = none;
-      //SetJoyReadMode(1);
-     }
-     break;
-    }
-   }
-
-   if(IConfig == Command || IConfig == CommandAM)
-   {
-    if(ICLatch != -1)
-    {
-     if(subcon(CKeys[ICLatch].text, CKeysConfig[ICLatch].bc, 1))
-     {
-      MDFNI_DispMessage(_("Configuration finished."));
-
-      MDFNI_SetSetting(CKeysSettingName[ICLatch], BCsToString(CKeysConfig[ICLatch].bc, CKeysConfig[ICLatch].AND_Mode));
-      ICDeadDelay = CurTicks + 300;
-      IConfig = none;
-      //SetJoyReadMode(1);
-      CKeysLastState[ICLatch] = 1;	// We don't want to accidentally trigger the command. :b
-      return;
-     }
-    }
-    else
-    {
-     int x;
-     MDFNI_DispMessage(_("Press command key to remap now%s..."), (IConfig == CommandAM) ? _("(AND Mode)") : "");
-     for(x = (int)_CK_FIRST; x < (int)_CK_COUNT; x++)
-      if(CK_Check((CommandKey)x))
-      {
-       ICLatch = x;
-       CKeysConfig[ICLatch].AND_Mode = (IConfig == CommandAM);
-       subcon_begin(CKeysConfig[ICLatch].bc);
-       break;
-      }
-    }
-   }
-
-  if(CK_Check(CK_TOGGLE_GRAB_INPUT))
+  if(IConfig == Command || IConfig == CommandAM)
   {
-   cidisabled ^= 2;
+   if(ICLatch != -1)
+   {
+    if(subcon(CKeys[ICLatch].text, CKeysConfig[ICLatch].bc, 1))
+    {
+     MDFNI_DispMessage(_("Configuration finished."));
 
-   if(cidisabled & 0x2)
-    MDFNI_DispMessage(_("Input grabbing enabled."));
+     MDFNI_SetSetting(CKeysSettingName[ICLatch], BCsToString(CKeysConfig[ICLatch].bc, CKeysConfig[ICLatch].AND_Mode));
+     ICDeadDelay = CurTicks + 300;
+     IConfig = none;
+
+     // Prevent accidentally triggering the command
+     CK_PostRemapUpdate((CommandKey)ICLatch);
+    }
+   }
    else
-    MDFNI_DispMessage(_("Input grabbing disabled."));
+   {
+    MDFNI_DispMessage(_("Press command key to remap now%s..."), (IConfig == CommandAM) ? _("(AND Mode)") : "");
 
-   SDL_Event evt;
-   evt.user.type = SDL_USEREVENT;
-   evt.user.code = CEVT_SET_GRAB_INPUT;
-   evt.user.data1 = malloc(1);
-
-   *(int *)evt.user.data1 = cidisabled & 0x2;
-   SDL_PushEvent(&evt);
+    for(CommandKey x = _CK_FIRST; x < _CK_COUNT; x = (CommandKey)((unsigned)x + 1))
+    {
+     if(CK_Check((CommandKey)x))
+     {
+      ICLatch = x;
+      CKeysConfig[ICLatch].AND_Mode = (IConfig == CommandAM);
+      subcon_begin(CKeysConfig[ICLatch].bc);
+      break;
+     }
+    }
+   }
   }
 
-  if(CK_Check(CK_TOGGLE_CDISABLE))
   {
-   cidisabled = cidisabled ? 0 : 0x3;
+   bool cid_changed = false;
 
-   if(cidisabled)
-    MDFNI_DispMessage(_("Command processing disabled."));
-   else
-    MDFNI_DispMessage(_("Command processing enabled."));
+   if(CK_Check(CK_TOGGLE_GRAB_INPUT))
+   {
+    cidisabled = (cidisabled == 0x2) ? 0 : 0x2;
+    cid_changed = true;
+   }
 
-   SDL_Event evt;
-   evt.user.type = SDL_USEREVENT;
-   evt.user.code = CEVT_SET_GRAB_INPUT;
-   evt.user.data1 = malloc(1);
+   if(CK_Check(CK_TOGGLE_CDISABLE))
+   {
+    cidisabled = (cidisabled == 0x3) ? 0 : 0x3;
+    cid_changed = true;
+   }
 
-   *(int *)evt.user.data1 = cidisabled;
-   SDL_PushEvent(&evt);
+   if(cid_changed)
+   {
+    SDL_Event evt;
+    evt.user.type = SDL_USEREVENT;
+    evt.user.code = CEVT_SET_GRAB_INPUT;
+    evt.user.data1 = malloc(1);
+
+    *(uint8 *)evt.user.data1 = cidisabled & 0x2;
+    SDL_PushEvent(&evt);
+
+    MDFNI_DispMessage(_("Input grabbing: %s, Command key processing: %s"), (cidisabled & 0x02) ? _("On") : _("Off"), !(cidisabled & 0x01) ? _("On") : _("Off"));
+   }
   }
 
-  if(cidisabled & 0x1) return;
+  if(cidisabled & 0x1)
+   return;
 
   if(IConfig != none)
    return;
+
+  if(!CheatIF_Active() && !MDFNDnetplay)
+  {
+   if(CK_Check(CK_TOGGLE_DEBUGGER))
+   {
+    Debugger_GT_Toggle();
+   }
+  }
+
+  if(!Debugger_IsActive() && !MDFNDnetplay)
+  {
+   if(CK_Check(CK_TOGGLECHEATVIEW))
+   {
+    CheatIF_GT_Show(!CheatIF_Active());
+   }
+  }
+
+  if(CK_Check(CK_EXIT))
+  {
+   SendCEvent(CEVT_WANT_EXIT, NULL, NULL);
+  }
+
+  if(CK_Check(CK_TOGGLE_HELP))
+   Help_Toggle();
+
+  if(!CheatIF_Active() && !Debugger_IsActive())
+  {
+   if(CK_Check(CK_TOGGLENETVIEW))
+   {
+    Netplay_ToggleTextView();
+   }
+  }
 
   if(CK_Check(CK_TOGGLE_CHEAT_ACTIVE))
   {
@@ -1151,9 +1176,9 @@ static void CheckCommandKeys(void)
   }
 
   if(CK_CheckActive(CK_STATE_REWIND))
-	DNeedRewind = TRUE;
+	DNeedRewind = true;
   else
-	DNeedRewind = FALSE;
+	DNeedRewind = false;
 
   if(CK_Check(CK_STATE_REWIND_TOGGLE))
   {
@@ -1355,18 +1380,13 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
 
  UpdatePhysicalDeviceState();
 
+ DoKeyStateZeroing();	// Call before CheckCommandKeys()
+
  //
  // CheckCommandKeys(), specifically MDFNI_LoadState(), should be called *before* we update the emulated device input data, as that data is 
  // stored/restored from save states(related: ALT+A frame advance, switch state).
  //
-
- //
- // Check command keys/buttons.  CheckCommandKeys() may modify(such as memset to 0) the state of the "keys" array
- // under certain circumstances.
- //
- if(VirtualDevicesOnly)
-  DoKeyStateZeroing();	// Normally called from CheckCommandKeys(), but since we're not calling CheckCommandKeys() here...
- else
+ if(!VirtualDevicesOnly)
   CheckCommandKeys();
 
  if(UpdateRapidFire)
@@ -1560,10 +1580,7 @@ void InitGameInput(MDFNGI *gi)
  fftoggle_setting = MDFN_GetSettingB("fftoggle");
  sftoggle_setting = MDFN_GetSettingB("sftoggle");
 
- ckdelay = MDFN_GetSettingUI("ckdelay");
-
- memset(CKeysPressTime, 0xff, sizeof(CKeysPressTime));
- memset(CKeysLastState, 0, sizeof(CKeysLastState));
+ CK_Init();
 
  //SetJoyReadMode(1); // Disable joystick event handling, and allow manual state updates.
 

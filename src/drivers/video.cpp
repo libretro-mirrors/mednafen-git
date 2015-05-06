@@ -1097,7 +1097,7 @@ static char *CurrentMessage = NULL;
 void VideoShowMessage(char *text)
 {
  if(text)
-  howlong = MDFND_GetTime() + 2500;
+  howlong = MDFND_GetTime() + MDFN_GetSettingUI("osd.message_display_time");
  else
   howlong = 0;
 
@@ -1136,12 +1136,12 @@ void VideoAppActive(bool gain)
 
 static bool IsInternalMessageActive(void)
 {
- return(howlong >= MDFND_GetTime());
+ return(MDFND_GetTime() < howlong);
 }
 
 static bool BlitInternalMessage(void)
 {
- if(howlong < MDFND_GetTime())
+ if(MDFND_GetTime() >= howlong)
  {
   if(CurrentMessage)
   {
@@ -1597,21 +1597,24 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
   if(!HelpSurface)
   {
    HelpRect.w = std::min<int>(512, screen->w);
-   HelpRect.h = std::min<int>(384, screen->h);
+   HelpRect.h = std::min<int>(408, screen->h);
 
-   HelpSurface = new MDFN_Surface(NULL, 512, 384, 512, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
-/*
-   HelpSurface = SDL_CreateRGBSurface(SDL_SWSURFACE | SDL_SRCALPHA, 512, 384, 32, 0xFF << real_rs, 0xFF << real_gs, 0xFF << real_bs, 0xFF << real_as);
-   SDL_SetColorKey(HelpSurface, SDL_SRCCOLORKEY, 0);
-   SDL_SetAlpha(HelpSurface, SDL_SRCALPHA, 0);
-*/
+   HelpSurface = new MDFN_Surface(NULL, 512, 408, 512, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
    Help_Draw(HelpSurface, &HelpRect);
   }
 
   MDFN_Rect zederect;
+  int32 sfx = screen->w / HelpRect.w;
+  int32 sfy = screen->h / HelpRect.h;
 
-  zederect.w = HelpRect.w * (screen->w / HelpRect.w);
-  zederect.h = HelpRect.h * (screen->h / HelpRect.h);
+  if(sfy > sfx)
+   sfy = sfx + 1;
+
+  if(sfx > sfy)
+   sfx = sfy + 1;
+
+  zederect.w = HelpRect.w * sfx;
+  zederect.h = HelpRect.h * sfy;
 
   zederect.x = (screen->w - zederect.w) / 2;
   zederect.y = (screen->h - zederect.h) / 2;

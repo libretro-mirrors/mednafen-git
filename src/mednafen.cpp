@@ -107,6 +107,7 @@ static MDFNSetting MednafenSettings[] =
   { "filesys.path_movie", MDFNSF_NOFLAGS, gettext_noop("Path to directory for movies."), NULL, MDFNST_STRING, "mcm" },
   { "filesys.path_cheat", MDFNSF_NOFLAGS, gettext_noop("Path to directory for cheats."), NULL, MDFNST_STRING, "cheats" },
   { "filesys.path_palette", MDFNSF_NOFLAGS, gettext_noop("Path to directory for custom palettes."), NULL, MDFNST_STRING, "palettes" },
+  { "filesys.path_pgconfig", MDFNSF_NOFLAGS, gettext_noop("Path to directory for per-game configuration override files."), NULL, MDFNST_STRING, "pgconfig" },
   { "filesys.path_firmware", MDFNSF_NOFLAGS, gettext_noop("Path to directory for firmware."), NULL, MDFNST_STRING, "firmware" },
 
   { "filesys.fname_movie", MDFNSF_NOFLAGS, gettext_noop("Format string for movie filename."), fname_extra, MDFNST_STRING, "%f.%M%p.%x" },
@@ -447,6 +448,8 @@ void MDFNI_DumpModulesDef(const char *fn)
 {
  FileStream fp(fn, FileStream::MODE_WRITE);
 
+ fp.print_format("%s\n", MEDNAFEN_VERSION);
+
  for(unsigned int i = 0; i < MDFNSystems.size(); i++)
  {
   fp.print_format("%s\n", MDFNSystems[i]->shortname);
@@ -534,20 +537,52 @@ static void PrintDiscsLayout(std::vector<CDIF *> *ifaces)
 
   (*ifaces)[i]->ReadTOC(&toc);
 
-  MDFN_printf(_("CD %u Layout:\n"), i + 1);
+  MDFN_printf(_("CD %u TOC:\n"), i + 1);
   {
    MDFN_AutoIndent aindd(1);
+   int32 eff_lt = 0;
+   const char* disc_type_string;
 
-   MDFN_printf(_("Disc Type: 0x%02x\n"), toc.disc_type);
-
-   for(int32 track = toc.first_track; track <= toc.last_track; track++)
+   switch(toc.disc_type)
    {
-    MDFN_printf(_("Track %2d, LBA: %6d  %s\n"), track, toc.tracks[track].lba, (toc.tracks[track].control & 0x4) ? "DATA" : "AUDIO");
+    default:
+	disc_type_string = "";
+	break;
+
+    case CDUtility::DISC_TYPE_CDDA_OR_M1:
+	disc_type_string = _(" (CD-DA or Mode 1)");
+	break;
+
+    case CDUtility::DISC_TYPE_CD_I:
+	disc_type_string = _(" (CD-i)");
+	break;
+
+    case CDUtility::DISC_TYPE_CD_XA:
+	disc_type_string = _(" (CD-XA)");
+	break;
+   }
+
+   MDFN_printf(_("Disc Type: 0x%02x%s\n"), toc.disc_type, disc_type_string);
+   MDFN_printf(_("First Track: %2d\n"), toc.first_track);
+   MDFN_printf(_("Last Track:  %2d\n"), toc.last_track);
+
+   for(int32 track = 1; track <= 99; track++)
+   {
+    if(!toc.tracks[track].valid)
+     continue;
+
+    eff_lt = track;
+
+    MDFN_printf(_("Track %2d, LBA: %6d  %s%s\n"),
+		track,
+		toc.tracks[track].lba,
+		(toc.tracks[track].control & 0x4) ? "DATA" : "AUDIO",
+		(track < toc.first_track || track > toc.last_track) ? _(" (Hidden)") : "");
    }
 
    MDFN_printf(_("Leadout: %6d  %s\n"), toc.tracks[100].lba, (toc.tracks[100].control & 0x4) ? "DATA" : "AUDIO");
 
-   if((toc.tracks[toc.last_track].control & 0x4) != (toc.tracks[100].control & 0x4))
+   if((toc.tracks[eff_lt].control & 0x4) != (toc.tracks[100].control & 0x4))
     MDFN_printf(_("WARNING:  DATA/AUDIO TYPE MISMATCH BETWEEN LAST TRACK AND LEADOUT AREA."));
 
    MDFN_printf("\n");
@@ -571,8 +606,11 @@ static void CalcDiscsLayoutMD5(std::vector<CDIF *> *ifaces, uint8 out_md5[16])
    layout_md5.update_u32_as_lsb(toc.last_track);
    layout_md5.update_u32_as_lsb(toc.tracks[100].lba);
 
-   for(uint32 track = toc.first_track; track <= toc.last_track; track++)
+   for(uint32 track = 1; track <= 99; track++)
    {
+    if(!toc.tracks[track].valid)
+     continue;
+
     layout_md5.update_u32_as_lsb(toc.tracks[track].lba);
     layout_md5.update_u32_as_lsb(toc.tracks[track].control & 0x4);
    }
@@ -591,7 +629,7 @@ static void LoadCustomPalette(void)
   if(!(MDFNGameInfo->CPInfoActiveBF & (1U << (cpi - MDFNGameInfo->CPInfo))))
    continue;
 
-  std::string colormap_fn = MDFN_MakeFName(MDFNMKF_PALETTE, 0, cpi->name_override).c_str();
+  std::string colormap_fn = MDFN_MakeFName(MDFNMKF_PALETTE, 0, cpi->name_override);
 
   MDFN_printf("\n");
   MDFN_printf(_("Loading custom palette from \"%s\"...\n"),  colormap_fn.c_str());
@@ -687,58 +725,38 @@ static void LoadCommonPost(const char* name)
 	memset(&last_pixel_format, 0, sizeof(MDFN_PixelFormat));
 }
 
-MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename, const bool is_device)
+MDFNGI *MDFNI_LoadCD(const char *force_module, const char *path)
 {
  uint8 LayoutMD5[16];
 
  MDFNI_CloseGame();
 
- if(is_device)
- {
-  if(devicename)
-   MDFN_printf(_("Loading from CD drive device %s...\n"), devicename);
-  else
-   MDFN_printf(_("Load from default CD drive device...\n"));
- }
- else
- {
-  assert(devicename != NULL);
-  MDFN_printf(_("Loading %s...\n"), devicename);
- }
+ assert(path != NULL);
+ MDFN_printf(_("Loading %s...\n"), path);
 
  try
  {
   MDFN_AutoIndent aind(1);
   const bool image_memcache = MDFN_GetSettingB("cd.image_memcache");
 
-  if(is_device)
+  if(strlen(path) > 4 && !strcasecmp(path + strlen(path) - 4, ".m3u"))
   {
-   CDInterfaces.resize(1);
-   CDInterfaces[0] = CDIF_Open(devicename, true, image_memcache);
+   std::vector<std::string> file_list;
 
-   GetFileBase("cdrom");
+   ReadM3U(file_list, path);
+
+   CDInterfaces.resize(file_list.size());
+   for(unsigned i = 0; i < file_list.size(); i++)
+   {
+    CDInterfaces[i] = CDIF_Open(file_list[i], image_memcache);
+   }
   }
   else
   {
-   if(devicename && strlen(devicename) > 4 && !strcasecmp(devicename + strlen(devicename) - 4, ".m3u"))
-   {
-    std::vector<std::string> file_list;
-
-    ReadM3U(file_list, devicename);
-
-    CDInterfaces.resize(file_list.size());
-    for(unsigned i = 0; i < file_list.size(); i++)
-    {
-     CDInterfaces[i] = CDIF_Open(file_list[i], false, image_memcache);
-    }
-   }
-   else
-   {
-    CDInterfaces.resize(1);
-    CDInterfaces[0] = CDIF_Open(devicename, false, image_memcache);
-   }
-   GetFileBase(devicename);
+   CDInterfaces.resize(1);
+   CDInterfaces[0] = CDIF_Open(path, image_memcache);
   }
+  GetFileBase(path);
  }
  catch(std::exception &e)
  {
@@ -845,18 +863,33 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *devicename, const boo
         if(!MDFNGameInfo->LoadCD)
          throw MDFN_Error(0, _("Specified system \"%s\" doesn't support CDs!"), force_module);
 
-        MDFN_printf(_("Using module: %s(%s)\n\n"), MDFNGameInfo->shortname, MDFNGameInfo->fullname);
+        MDFN_printf(_("Using module: %s(%s)\n"), MDFNGameInfo->shortname, MDFNGameInfo->fullname);
+	{
+	 MDFN_AutoIndent aindentgm(1);
 
-	memcpy(MDFNGameInfo->MD5, LayoutMD5, 16);
-	MDFNGameInfo->RMD = rmd.get();
+	 assert(MDFNGameInfo->soundchan != 0);
 
-	std::string modoverride_settings_file_path = MDFN_GetBaseDirectory() + std::string(PSS) + std::string(MDFNGameInfo->shortname) + std::string(".cfg");
+         MDFNGameInfo->name = NULL;
+         MDFNGameInfo->rotated = 0;
+	 MDFNGameInfo->RMD = rmd.get();
 
-	MDFN_LoadSettings(modoverride_settings_file_path.c_str(), true);
+	 memcpy(MDFNGameInfo->MD5, LayoutMD5, 16);
 
-	MDFNGameInfo->LoadCD(&CDInterfaces);
+	 {
+	  std::string modoverride_settings_file_path = MDFN_GetBaseDirectory() + std::string(PSS) + std::string(MDFNGameInfo->shortname) + std::string(".cfg");
+	  MDFN_LoadSettings(modoverride_settings_file_path.c_str(), true);
+	 }
+	 {
+	  std::string pgcoverride_settings_file_path = MDFN_MakeFName(MDFNMKF_PGCONFIG, 0, NULL);
+	  MDFN_LoadSettings(pgcoverride_settings_file_path.c_str(), true);
+ 	 }
 
-	LoadCommonPost(is_device ? NULL : devicename);
+	 MDFN_printf("\n");
+
+	 MDFNGameInfo->LoadCD(&CDInterfaces);
+	}
+
+	LoadCommonPost(path);
 
 	rmd.release();
  }
@@ -973,7 +1006,7 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char *name)
 {
  if(strlen(name) > 4 && (!strcasecmp(name + strlen(name) - 4, ".cue") || !strcasecmp(name + strlen(name) - 4, ".toc") || !strcasecmp(name + strlen(name) - 4, ".ccd") || !strcasecmp(name + strlen(name) - 4, ".m3u")))
  {
-  return(MDFNI_LoadCD(force_module, name, false));
+  return(MDFNI_LoadCD(force_module, name));
  }
 
  MDFNI_CloseGame();
@@ -1026,7 +1059,7 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char *name)
           throw MDFN_Error(0, _("Unrecognized file format."));
         }
 
-	MDFN_printf(_("Using module: %s(%s)\n\n"), MDFNGameInfo->shortname, MDFNGameInfo->fullname);
+	MDFN_printf(_("Using module: %s(%s)\n"), MDFNGameInfo->shortname, MDFNGameInfo->fullname);
 	{
 	 MDFN_AutoIndent aindentgm(1);
 
@@ -1036,9 +1069,16 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char *name)
          MDFNGameInfo->rotated = 0;
 	 MDFNGameInfo->RMD = rmd.get();
 
-	 std::string modoverride_settings_file_path = MDFN_GetBaseDirectory() + std::string(PSS) + std::string(MDFNGameInfo->shortname) + std::string(".cfg");
+         {
+	  std::string modoverride_settings_file_path = MDFN_GetBaseDirectory() + std::string(PSS) + std::string(MDFNGameInfo->shortname) + std::string(".cfg");
+	  MDFN_LoadSettings(modoverride_settings_file_path.c_str(), true);
+         }
+	 {
+	  std::string pgcoverride_settings_file_path = MDFN_MakeFName(MDFNMKF_PGCONFIG, 0, NULL);
+	  MDFN_LoadSettings(pgcoverride_settings_file_path.c_str(), true);
+ 	 }
 
-	 MDFN_LoadSettings(modoverride_settings_file_path.c_str(), true);
+	 MDFN_printf("\n");
 
 	 GameFile.rewind();
          MDFNGameInfo->Load(&GameFile);
@@ -1090,81 +1130,6 @@ static void BuildDynamicSetting(MDFNSetting *setting, const char *system_name, c
  setting->validate_func = validate_func;
  setting->ChangeNotification = ChangeNotification;
 }
-
-std::vector<std::string> string_to_vecstrlist(const std::string &str_str)
-{
- std::vector<std::string> ret;
- const char *str = str_str.c_str();
-
- bool in_quote = FALSE;
- const char *quote_begin = NULL;
- char last_char = 0;
-
- while(*str || in_quote)
- {
-  char c;
-
-  if(*str)
-   c = *str;
-  else		// If the string has ended and we're still in a quote, get out of it!
-  {
-   c = '"';
-   last_char = 0;
-  }
-
-  if(last_char != '\\')
-  {
-   if(c == '"')
-   {
-    if(in_quote)
-    {
-     int64 str_length = str - quote_begin;
-     char tmp_str[str_length];
-
-     memcpy(tmp_str, quote_begin, str_length);
-  
-     ret.push_back(std::string(tmp_str));
-
-     quote_begin = NULL;
-     in_quote = FALSE;
-    }
-    else
-    {
-     in_quote = TRUE;
-     quote_begin = str + 1;
-    }
-   }
-  }
-
-  last_char = c;
-
-  if(*str)
-   str++;
- }
-
-
- return(ret);
-}
-
-std::string vecstrlist_to_string(const std::vector<std::string> &vslist)
-{
- std::string ret;
-
- for(uint32 i = 0; i < vslist.size(); i++)
- {
-  char *tmp_str = escape_string(vslist[i].c_str());
-
-  ret += "\"";
- 
-  ret += std::string(tmp_str);
- 
-  ret += "\" ";
-
-  free(tmp_str);
- }
- return(ret);
-}
-
 
 bool MDFNI_InitializeModules(const std::vector<MDFNGI *> &ExternalSystems)
 {

@@ -27,6 +27,7 @@
 #include <list>
 #include "settings.h"
 #include "string/escape.h"
+#include "string/trim.h"
 #include "FileStream.h"
 #include "MemoryStream.h"
 
@@ -86,8 +87,16 @@ static bool MR_StringToDouble(const char* string_value, double* dvalue)
 {
  static char MR_Radix = 0;
  const unsigned slen = strlen(string_value);
- char cpi[slen + 1];
+ char cpi_array[256 + 1];
+ std::unique_ptr<char[]> cpi_heap;
+ char* cpi = cpi_array;
  char* endptr = NULL;
+
+ if(slen > 256)
+ {
+  cpi_heap.reset(new char[slen + 1]);
+  cpi = cpi_heap.get();
+ }
 
  if(!MR_Radix)
  {
@@ -273,28 +282,34 @@ static uint32 MakeNameHash(const char *name)
  return(name_hash);
 }
 
-static void ParseSettingLine(std::string &linebuf, bool IsOverrideSetting = false)
+static void ParseSettingLine(std::string &linebuf, size_t* valid_count, size_t* unknown_count, bool IsOverrideSetting = false)
 {
  MDFNCS *zesetting;
- size_t spacepos = linebuf.find(' ');
+ size_t spacepos;
 
- // EOF or bad line
- if(spacepos == std::string::npos)
-  return;	
+ //
+ // Comment
+ //
+ if(linebuf[0] == ';' || linebuf[0] == '#')
+  return;
+
+ spacepos = linebuf.find(' ');
 
  // No name(key)
  if(spacepos == 0)
   return;
 
- // No value
- if((spacepos + 1) == linebuf.size())
-  return;
+ // No space present?!
+ if(spacepos == std::string::npos)
+ {
+  //if(linebuf.size() != 0)
+  // spacepos = linebuf.size() - 1;
+  //else
+   return;
+ }
+ else
+  linebuf[spacepos] = 0;
 
- // Comment
- if(linebuf[0] == ';')
-  return;
-
- linebuf[spacepos] = 0;
  zesetting = FindSetting(linebuf.c_str(), true, true);
 
  if(zesetting)
@@ -317,68 +332,73 @@ static void ParseSettingLine(std::string &linebuf, bool IsOverrideSetting = fals
   }
 
   ValidateSetting(nv, zesetting->desc);	// TODO: Validate later(so command line options can override invalid setting file data correctly)
+  (*valid_count)++;
  }
- else if(!IsOverrideSetting)
+ else
  {
-  UnknownSetting_t unks;
+  if(!IsOverrideSetting)
+  {
+   UnknownSetting_t unks;
 
-  unks.name = strdup(linebuf.c_str());
-  unks.value = strdup(linebuf.c_str() + spacepos + 1);
+   unks.name = strdup(linebuf.c_str());
+   unks.value = strdup(linebuf.c_str() + spacepos + 1);
 
-  UnknownSettings.push_back(unks);
+   UnknownSettings.push_back(unks);
+  }
+  (*unknown_count)++;
  }
 }
 
-static void LoadSettings(Stream *fp, bool override)
+static void LoadSettings(Stream *fp, size_t* valid_count, size_t* unknown_count, bool override)
 {
  std::string linebuf;
 
  linebuf.reserve(1024);
 
  while(fp->get_line(linebuf) >= 0)
-  ParseSettingLine(linebuf, override);
+  ParseSettingLine(linebuf, valid_count, unknown_count, override);
 }
 
 void MDFN_LoadSettings(const std::string& path, bool override)
 {
  if(!override)
-  MDFN_printf(_("Loading settings from \"%s\"..."), path.c_str());
+  MDFN_printf(_("Loading settings from \"%s\"...\n"), path.c_str());
+ else
+  MDFN_printf(_("Loading override settings from \"%s\"...\n"), path.c_str());
+
+ MDFN_AutoIndent aind(1);
 
  try
  {
   MemoryStream mp(new FileStream(path, FileStream::MODE_READ));
-  LoadSettings(&mp, override);
+  size_t valid_count = 0;
+  size_t unknown_count = 0;
+
+  //uint32 st = MDFND_GetTime();
+  LoadSettings(&mp, &valid_count, &unknown_count, override);
+  //printf("%u\n", MDFND_GetTime() - st);
+
+  if(override)
+   MDFN_printf(_("Loaded %zu valid settings and ignored %zu unknown settings.\n"), valid_count, unknown_count);
+  else
+   MDFN_printf(_("Loaded %zu valid settings and %zu unknown settings.\n"), valid_count, unknown_count);
  }
  catch(MDFN_Error &e)
  {
   if(e.GetErrno() == ENOENT)
   {
-   if(!override)
-   {
-    MDFN_indent(1);
-    MDFN_printf(_("Failed: %s\n"), e.what());
-    MDFN_indent(-1);
-   }
+   MDFN_printf(_("Failed: %s\n"), e.what());
    return;
   }
   else
   {
-   if(!override)
-    MDFN_printf("\n");
-
    throw MDFN_Error(0, _("Failed to load settings from \"%s\": %s"), path.c_str(), e.what());
   }
  }
  catch(std::exception &e)
  {
-  if(!override)
-   MDFN_printf("\n");
-
   throw MDFN_Error(0, _("Failed to load settings from \"%s\": %s"), path.c_str(), e.what());
  }
-
- if(!override)
-  MDFN_printf("\n");
 }
 
 static bool compare_sname(MDFNCS *first, MDFNCS *second)

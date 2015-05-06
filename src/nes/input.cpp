@@ -834,14 +834,14 @@ void NESINPUT_Init(void)
 
 void MDFNNES_DoSimpleCommand(int cmd)
 {
- switch(cmd)
+ if(cmd >= MDFN_MSC_TOGGLE_DIP0 && cmd <= MDFN_MSC_TOGGLE_DIP7)
+ {
+	MDFN_VSUniToggleDIP(cmd - MDFN_MSC_TOGGLE_DIP0);
+ }
+ else switch(cmd)
  {
    case MDFN_MSC_INSERT_COIN: 
 		MDFN_VSUniCoin();
-		break;
-
-   case MDFN_MSC_TOGGLE_DIP0 ... MDFN_MSC_TOGGLE_DIP7: 
-		MDFN_VSUniToggleDIP(cmd - MDFN_MSC_TOGGLE_DIP0);
 		break;
 
    case MDFN_MSC_POWER:

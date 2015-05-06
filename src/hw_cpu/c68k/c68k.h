@@ -201,7 +201,7 @@ static inline void C68k_Copy_State(const c68k_struc *source, c68k_struc *dest)
  memcpy(&dest->D[0], &source->D[0], (&(source->dirty1)) - (&(source->D[0])));
 }
 
-unsigned int C68k_Get_State_Max_Len(void);
+static const unsigned C68k_State_Max_Len = 512;
 void C68k_Save_State(c68k_struc *cpu, u8 *buffer);
 void C68k_Load_State(c68k_struc *cpu, const u8 *buffer);
 

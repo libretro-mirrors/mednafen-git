@@ -1564,6 +1564,15 @@ palettes
 
 
 0
+filesys.path_pgconfig
+
+Path to directory for per-game configuration override files.
+
+MDFNST_STRING
+pgconfig
+
+
+0
 filesys.path_sav
 
 Path to directory for save games and nonvolatile memory.
@@ -10090,9 +10099,18 @@ MDFNST_BOOL
 
 
 0
+osd.message_display_time
+
+Length of time, in milliseconds, to display internal status and error messages
+Time lengths less than 100ms are recommended against unless you understand you may miss important non-fatal error messages, and that the input configuration process may become unusable.
+MDFNST_UINT
+2500
+0
+15000
+0
 osd.state_display_time
 
-The length of time, in milliseconds, to display the save state or the movie selector after selecting a state or movie.
+Length of time, in milliseconds, to display the save state or the movie selector after selecting a state or movie.
 
 MDFNST_UINT
 2000
@@ -15725,7 +15743,7 @@ scph5501.bin
 
 0
 psx.bios_sanity
-MDFNSF_EMU_STATE MDFNSF_SUPPRESS_DOC 
+
 Enable BIOS ROM image sanity checks.
 
 MDFNST_BOOL
@@ -15733,12 +15751,21 @@ MDFNST_BOOL
 
 
 0
-psx.clobbers_lament
-MDFNSF_SUPPRESS_DOC 
-UNUSED
+psx.cd_sanity
 
+Enable CD (image) sanity checks.
+Sanity checks are only performed on discs detected(via heuristics) to be PS1 discs.  The checks primarily consist of ensuring that Q subchannel data is as expected for a typical commercially-released PS1 disc.
 MDFNST_BOOL
+1
+
+
 0
+psx.dbg_exe_cdpath
+MDFNSF_SUPPRESS_DOC 
+CD image to use with .PSX/.EXE loading.
+
+MDFNST_STRING
+
 
 
 0
@@ -16974,7 +17001,7 @@ mouse 0000000000000000 00008001
 0
 psx.input.port1.memcard
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
-Emulate memcard on virtual port 1.
+Emulate memory card on virtual port 1.
 
 MDFNST_BOOL
 1
@@ -18264,7 +18291,7 @@ mouse 0000000000000000 00008001
 0
 psx.input.port2.memcard
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
-Emulate memcard on virtual port 2.
+Emulate memory card on virtual port 2.
 
 MDFNST_BOOL
 1
@@ -19554,7 +19581,7 @@ MDFNST_STRING
 0
 psx.input.port3.memcard
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
-Emulate memcard on virtual port 3.
+Emulate memory card on virtual port 3.
 
 MDFNST_BOOL
 1
@@ -20844,7 +20871,7 @@ MDFNST_STRING
 0
 psx.input.port4.memcard
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
-Emulate memcard on virtual port 4.
+Emulate memory card on virtual port 4.
 
 MDFNST_BOOL
 1
@@ -22134,7 +22161,7 @@ MDFNST_STRING
 0
 psx.input.port5.memcard
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
-Emulate memcard on virtual port 5.
+Emulate memory card on virtual port 5.
 
 MDFNST_BOOL
 1
@@ -23424,7 +23451,7 @@ MDFNST_STRING
 0
 psx.input.port6.memcard
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
-Emulate memcard on virtual port 6.
+Emulate memory card on virtual port 6.
 
 MDFNST_BOOL
 1
@@ -24714,7 +24741,7 @@ MDFNST_STRING
 0
 psx.input.port7.memcard
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
-Emulate memcard on virtual port 7.
+Emulate memory card on virtual port 7.
 
 MDFNST_BOOL
 1
@@ -26004,7 +26031,7 @@ MDFNST_STRING
 0
 psx.input.port8.memcard
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
-Emulate memcard on virtual port 8.
+Emulate memory card on virtual port 8.
 
 MDFNST_BOOL
 1
@@ -28662,6 +28689,15 @@ MDFNST_UINT
 100
 0
 150
+0
+srwautoenable
+MDFNSF_SUPPRESS_DOC 
+DO NOT USE UNLESS YOU\'RE A SPACE GOAT
+Use this setting with caution, as save state rewinding can have widely variable memory and CPU usage requirements among different games and different emulated systems.
+MDFNST_BOOL
+0
+
+
 0
 srwframes
 

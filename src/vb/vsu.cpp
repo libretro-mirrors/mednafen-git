@@ -20,11 +20,8 @@
 
 static const unsigned int Tap_LUT[8] = { 15 - 1, 11 - 1, 14 - 1, 5 - 1, 9 - 1, 7 - 1, 10 - 1, 12 - 1 };
 
-VSU::VSU(Blip_Buffer *bb_l, Blip_Buffer *bb_r)
+VSU::VSU()
 {
- sbuf[0] = bb_l;
- sbuf[1] = bb_r;
-
  Synth.volume(1.0 / 6 / 2);
 
  for(int ch = 0; ch < 6; ch++)
@@ -37,6 +34,16 @@ VSU::VSU(Blip_Buffer *bb_l, Blip_Buffer *bb_r)
 VSU::~VSU()
 {
 
+}
+
+void VSU::SetSoundRate(double rate)
+{
+ for(int y = 0; y < 2; y++)
+ {
+  sbuf[y].set_sample_rate(rate ? rate : 44100, 50);
+  sbuf[y].clock_rate((long)(VB_MASTER_CLOCK / 4));
+  sbuf[y].bass_freq(20);
+ }
 }
 
 void VSU::Power(void)
@@ -242,8 +249,8 @@ void VSU::Update(int32 timestamp)
 
   // Output sound here
   CalcCurrentOutput(ch, left, right);
-  Synth.offset_inline(running_timestamp, left - last_output[ch][0], sbuf[0]);
-  Synth.offset_inline(running_timestamp, right - last_output[ch][1], sbuf[1]);
+  Synth.offset_inline(running_timestamp, left - last_output[ch][0], &sbuf[0]);
+  Synth.offset_inline(running_timestamp, right - last_output[ch][1], &sbuf[1]);
   last_output[ch][0] = left;
   last_output[ch][1] = right;
 
@@ -421,8 +428,8 @@ void VSU::Update(int32 timestamp)
 
    // Output sound here too.
    CalcCurrentOutput(ch, left, right);
-   Synth.offset_inline(running_timestamp, left - last_output[ch][0], sbuf[0]);
-   Synth.offset_inline(running_timestamp, right - last_output[ch][1], sbuf[1]);
+   Synth.offset_inline(running_timestamp, left - last_output[ch][0], &sbuf[0]);
+   Synth.offset_inline(running_timestamp, right - last_output[ch][1], &sbuf[1]);
    last_output[ch][0] = left;
    last_output[ch][1] = right;
   }
@@ -431,10 +438,23 @@ void VSU::Update(int32 timestamp)
  //puts("VSU End");
 }
 
-void VSU::EndFrame(int32 timestamp)
+int32 VSU::EndFrame(int32 timestamp, int16* SoundBuf, int32 SoundBufMaxSize)
 {
+ int32 ret = 0;
+
  Update(timestamp);
  last_ts = 0;
+
+ if(SoundBuf)
+ {
+  for(int y = 0; y < 2; y++)
+  {
+   sbuf[y].end_frame(timestamp);
+   ret = sbuf[y].read_samples(SoundBuf + y, SoundBufMaxSize, 1);
+  }
+ }
+
+ return ret;
 }
 
 void VSU::StateAction(StateMem *sm, const unsigned load, const bool data_only)

@@ -37,7 +37,7 @@ static std::vector<CDIF*> *cdifs = NULL;
 static PCEFast_PSG *psg = NULL;
 extern ArcadeCard *arcade_card; // Bah, lousy globals.
 
-static Blip_Buffer sbuf[2];
+static Blip_Buffer* sbuf = NULL; //[2];
 
 bool PCE_ACEnabled;
 
@@ -177,7 +177,7 @@ void PCE_InitCD(void)
  if(cd_settings.ADPCM_Volume != 1.0)
   MDFN_printf(_("ADPCM Volume: %d%%\n"), (int)(100 * cd_settings.ADPCM_Volume));
 
- PCECD_Init(&cd_settings, PCECDIRQCB, PCE_MASTER_CLOCK, pce_overclocked, &sbuf[0], &sbuf[1]);
+ PCECD_Init(&cd_settings, PCECDIRQCB, PCE_MASTER_CLOCK, pce_overclocked, sbuf);
 }
 
 
@@ -208,6 +208,12 @@ static void Cleanup(void)
  {
   delete psg;
   psg = NULL;
+ }
+
+ if(sbuf)
+ {
+  delete[] sbuf;
+  sbuf = NULL;
  }
 
  cdifs = NULL;
@@ -303,6 +309,8 @@ static void LoadCommonPre(void)
  }
 
  MDFNMP_Init(1024, (1 << 21) / 1024);
+
+ sbuf = new Blip_Buffer[2];
 }
 
 static void LoadCommon(void)
@@ -346,7 +354,7 @@ static void LoadCommon(void)
 
  HuC6280_Init();
 
- psg = new PCEFast_PSG(&sbuf[0], &sbuf[1]);
+ psg = new PCEFast_PSG(sbuf);
 
  psg->SetVolume(1.0);
 
@@ -630,16 +638,10 @@ static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint3
 
  if(rs->MediaPresent && rs->MediaUsable)
  {
-  if(!(*cdifs)[media_idx]->Eject(false))
-   return(false);
-
   PCECD_Drive_SetDisc(false, (*cdifs)[media_idx]);
  }
  else
  {
-  if(!((*cdifs)[media_idx]->Eject(rs->MediaCanChange)))
-   return(false);
-
   PCECD_Drive_SetDisc(rs->MediaCanChange, NULL);
  }
 

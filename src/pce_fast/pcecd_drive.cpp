@@ -24,7 +24,7 @@
 
 namespace PCE_Fast
 {
-#define SCSIDBG(format, ...) { printf("SCSI: " format "\n",  ## __VA_ARGS__); }
+//#define SCSIDBG(format, ...) { printf("SCSI: " format "\n",  ## __VA_ARGS__); }
 //#define SCSIDBG(format, ...) { }
 
 using namespace CDUtility;
@@ -33,7 +33,7 @@ static uint32 CD_DATA_TRANSFER_RATE;
 static uint32 System_Clock;
 static void (*CDIRQCallback)(int);
 static void (*CDStuffSubchannels)(uint8, int);
-static Blip_Buffer *sbuf[2];
+static Blip_Buffer* sbuf;
 
 static CDIF *Cur_CDIF;
 static bool TrayOpen;
@@ -256,7 +256,7 @@ static void GenSubQFromSubPW(void)
 
  if(!subq_check_checksum(SubQBuf))
  {
-  SCSIDBG("SubQ checksum error!");
+  //SCSIDBG("SubQ checksum error!");
  }
  else
  {
@@ -531,7 +531,7 @@ static void DoREAD6(const uint8 *cdb)
  // TODO: confirm real PCE does this(PC-FX does at least).
  if(!sc)
  {
-  SCSIDBG("READ(6) with count == 0.\n");
+  //SCSIDBG("READ(6) with count == 0.\n");
   sc = 256;
  }
 
@@ -550,7 +550,7 @@ static void DoNEC_PCE_SAPSP(const uint8 *cdb)
  //printf("Set audio start: %02x %02x %02x %02x %02x %02x %02x\n", cdb[9], cdb[1], cdb[2], cdb[3], cdb[4], cdb[5], cdb[6]);
  switch (cdb[9] & 0xc0)
  {
-  default:  SCSIDBG("Unknown SAPSP 9: %02x\n", cdb[9]);
+  default:  //SCSIDBG("Unknown SAPSP 9: %02x\n", cdb[9]);
   case 0x00:
    new_read_sec_start = (cdb[3] << 16) | (cdb[4] << 8) | cdb[5];
    break;
@@ -621,7 +621,7 @@ static void DoNEC_PCE_SAPEP(const uint8 *cdb)
 
  switch (cdb[9] & 0xc0)
  {
-  default: SCSIDBG("Unknown SAPEP 9: %02x\n", cdb[9]);
+  default: //SCSIDBG("Unknown SAPEP 9: %02x\n", cdb[9]);
 
   case 0x00:
    new_read_sec_end = (cdb[3] << 16) | (cdb[4] << 8) | cdb[5];
@@ -743,8 +743,8 @@ static void DoNEC_PCE_GETDIRINFO(const uint8 *cdb)
 
  switch(cdb[1])
  {
-  default: MDFN_DispMessage("Unknown GETDIRINFO Mode: %02x", cdb[1]);
-	   printf("Unknown GETDIRINFO Mode: %02x", cdb[1]);
+  default: //MDFN_DispMessage("Unknown GETDIRINFO Mode: %02x", cdb[1]);
+	   //printf("Unknown GETDIRINFO Mode: %02x", cdb[1]);
   case 0x0:
    data_in[0] = U8_to_BCD(toc.first_track);
    data_in[1] = U8_to_BCD(toc.last_track);
@@ -961,10 +961,10 @@ static INLINE void RunCDDA(uint32 system_timestamp, int32 run_time)
      CDStuffSubchannels(0x00, subindex);
    }
 
-   if(sbuf[0] && sbuf[1])
+   if(sbuf)
    {
-    cdda.CDDASynth.offset_inline(synthtime, sample[0] - cdda.last_sample[0], sbuf[0]);
-    cdda.CDDASynth.offset_inline(synthtime, sample[1] - cdda.last_sample[1], sbuf[1]);
+    cdda.CDDASynth.offset_inline(synthtime, sample[0] - cdda.last_sample[0], &sbuf[0]);
+    cdda.CDDASynth.offset_inline(synthtime, sample[1] - cdda.last_sample[1], &sbuf[1]);
    }
 
    cdda.last_sample[0] = sample[0];
@@ -1112,7 +1112,7 @@ uint32 PCECD_Drive_Run(pcecd_drive_timestamp_t system_timestamp)
       {
        CommandCCError(SENSEKEY_ILLEGAL_REQUEST, NSE_INVALID_COMMAND);
 
-       SCSIDBG("Bad Command: %02x\n", cd.command_buffer[0]);
+       //SCSIDBG("Bad Command: %02x\n", cd.command_buffer[0]);
 
        cd.command_buffer_pos = 0;
       }
@@ -1231,7 +1231,7 @@ void PCECD_Drive_Close(void)
 
 }
 
-void PCECD_Drive_Init(int cdda_time_div, Blip_Buffer *leftbuf, Blip_Buffer *rightbuf, uint32 TransferRate, uint32 SystemClock, void (*IRQFunc)(int), void (*SSCFunc)(uint8, int))
+void PCECD_Drive_Init(int cdda_time_div, Blip_Buffer* lrbufs, uint32 TransferRate, uint32 SystemClock, void (*IRQFunc)(int), void (*SSCFunc)(uint8, int))
 {
  Cur_CDIF = NULL;
  TrayOpen = true;
@@ -1246,8 +1246,7 @@ void PCECD_Drive_Init(int cdda_time_div, Blip_Buffer *leftbuf, Blip_Buffer *righ
  cdda.CDDAVolume = 65536;
  cdda.CDDASynth.volume(1.0f / 65536);
  cdda.CDDASynth.treble_eq(0);
- sbuf[0] = leftbuf;
- sbuf[1] = rightbuf;
+ sbuf = lrbufs;
 
  CD_DATA_TRANSFER_RATE = TransferRate;
  System_Clock = SystemClock;

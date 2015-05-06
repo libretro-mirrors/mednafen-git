@@ -19,6 +19,7 @@
 
 #include <type_traits>
 #include <initializer_list>
+#include <memory>
 
 typedef int8_t int8;
 typedef int16_t int16;
@@ -33,6 +34,10 @@ typedef uint64_t uint64;
 
 #if !defined(HAVE_NATIVE64BIT) && (SIZEOF_VOID_P >= 8 || defined(__x86_64__))
 #define HAVE_NATIVE64BIT 1
+#endif
+
+#if defined(__GNUC__) || defined(__clang__) || defined(__ICC) || defined(__INTEL_COMPILER)
+ #define HAVE_COMPUTED_GOTO 1
 #endif
 
 #ifdef __GNUC__

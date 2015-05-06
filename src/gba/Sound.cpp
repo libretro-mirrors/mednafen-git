@@ -417,6 +417,13 @@ void MDFNGBASOUND_Init(void)
  gba_buf.bass_freq(20);
 }
 
+void MDFNGBASOUND_Kill(void)
+{
+ //gba_apu.set_output(NULL, NULL, NULL);
+ gba_buf.clear();
+}
+
+
 void soundReset()
 {
   for(int ch = 0; ch < 2; ch++)

@@ -1,6 +1,6 @@
 <?php
 
-$mednafen_version = "0.9.37.1";
+$mednafen_version = "";
 $mod_list = array();
 
 $sections = array();
@@ -33,9 +33,11 @@ function GetMTime()
 
 function ReadModules()
 {
- global $mod_list;
+ global $mod_list, $mednafen_version;
 
  $fp = fopen("modules.def", "rb");
+
+ $mednafen_version = trim(fgets($fp));
 
  while(!feof($fp))
  {

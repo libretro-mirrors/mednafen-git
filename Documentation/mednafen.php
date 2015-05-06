@@ -51,32 +51,23 @@
 
  <?php BeginSection("CD Emulation", "", FALSE, FALSE, "Section_cdrom_emulation"); ?>
  <p>
-  Mednafen can load CD-ROM games from a physical CD, or a ripped/dumped copy of the disc, such as CUE+BIN.
-  Using a ripped copy of the disc is <b>strongly</b> recommended for performance and data consistency.
+  Mednafen can load CD-ROM games from a dumped copy of the disc, such as CUE+BIN.  Physical CD support was removed in version 0.9.38.
  </p>
 
-<?php BeginSection("Physical CDs"); ?>
- Physical CD access is done via <a href="http://www.gnu.org/s/libcdio/">libcdio</a>, using SCSI Multimedia Commands.
- Only drives that support reading and returning raw P-W subchannel data, CD-DA data, and 2352-byte raw data sector data
- are supported.  Note that some drives have buggy firmware and may return subchannel data
- for a following or preceding sector/frame, sometimes out of order, and this can compromise or break the program
- being emulated.
-<?php EndSection(); ?>
-
-<?php BeginSection("Ripped Disc Images"); ?>
+<?php BeginSection("Compact Disc Images"); ?>
  <p>
-  For ripped disc images, Mednafen supports "CUE" sheets, CloneCD "CCD/IMG/SUB" rips, and cdrdao "TOC" files; though only a very limited
+  Mednafen supports "CUE" sheets, CloneCD "CCD/IMG/SUB", and cdrdao "TOC" files; though only a very limited
   subset of the latter's full capabilities is supported.  Mednafen supports raw, simple storage formats supported by
   <a href="http://www.mega-nerd.com/libsndfile/">libsndfile</a>(MS WAV, AIFF/AIFC, AU/SND, etc.), and <a href="http://xiph.org/vorbis/">Ogg Vorbis</a> and <a href="http://www.musepack.net/">Musepack</a> audio files referenced by CUE sheets.
   MP3 is not supported, and will not be supported.
  </p>
  <p>
   The cdrdao "TOC" support in Mednafen includes support for "RW_RAW" subchannel data, needed for CD+G.  Note that Mednafen assumes that the Q subchannel
-  is also included in the RW_RAW data area in the ripped image(even though the name "RW_RAW" would suggest it isn't present, cdrdao seems to included it).  If
-  the Q subchannel data is missing from the RW_RAW data area in the ripped image, Mednafen's CD emulation will not work properly.
+  is also included in the RW_RAW data area in the disc image(even though the name "RW_RAW" would suggest it isn't present, cdrdao seems to included it).  If
+  the Q subchannel data is missing from the RW_RAW data area in the disc image, Mednafen's CD emulation will not work properly.
  </p>
  <p>
-  Since 0.8.4, Mednafen will perform simple data correction on ripped CDROM images that contain EDC and L-EC data(2352-byte-per-sector "raw" rips").
+  Since 0.8.4, Mednafen will perform simple data correction on disc images that contain EDC and L-EC data(2352-byte-per-sector "raw").
   It calculates the real EDC, and if it doesn't match the EDC recorded for that sector, it will evaluate the L-EC data to repair the data.  If the
   data is unrepairable, an error message will be displayed.
   <br>
@@ -92,21 +83,12 @@
 
 <?php BeginSection("Multiple-CD Games", "", FALSE, FALSE, "Section_multicd_games"); ?>
  <p>
-  To play a game that consists of more than one CD, and you are using ripped disc images, you will need to create an
+  To play a game that consists of more than one CD, you will need to create an
   M3U file(plain-text, ".m3u" extension), and enter the filenames of the CUE/TOC/CCD files, one per line.  Load the M3U file
   with Mednafen instead of the CUE/TOC/CCD files, and use the F6 and F8 keys to switch among the various discs available.
   <br>
   <b>Note:</b> Preferably, your M3U file(s) should reference CUE/TOC/CCD files that are in the same directory as the M3U file,
   otherwise you will likely need to alter the <a href="#filesys.untrusted_fip_check">filesys.untrusted_fip_check</a> setting.
- </p>
-
- <p>
-  Support for multi-disc games when using physical CDs is somewhat clunky.  To begin with, you'll need to start Mednafen with
-  the first disc of the set in the drive.  To switch to a different disc, press the F8 key, which should eject the disc.  If
-  the disc fails to eject, use the drive's eject button, and press F8 again so that Mednafen displays a message like
-  "Virtual CD Drive Tray Open".  Place the disc you're switching to in the drive, close the lid/tray/whatever(if applicable), and press
-  the F8 key again.  If you're using a standard PC-type drive with extending tray, you may just press F8 to close the tray instead
-  of manually closing it and then pressing F8.
  </p>
  <?php EndSection(); ?>
 
@@ -114,8 +96,8 @@
   Both the <a href="pce.html">PC Engine (CD)</a> and <a href="pcfx.html">PC-FX</a> emulation modules support CD+G playback; however,
   the PC-FX BIOS doesn't appear to be as resilient when dealing with scratched discs/damaged data as the PC Engine CD BIOS is.
   <br><br>
-  <b>Note:</b> CD+G graphics data is stored in the R-W subchannel data of discs.  You must either use a physical CD with this data,
-  or a rip that includes this data(such as in the cdrdao TOC or CloneCD formats; CUE format definitely isn't going to work).
+  <b>Note:</b> CD+G graphics data is stored in the R-W subchannel data of discs.  You must use a disc image format that includes this
+  data(such as in the cdrdao TOC or CloneCD formats; CUE format definitely isn't going to work).
  <?php EndSection(); ?>
 
  <?php BeginSection("PhotoCD Portfolio", "", FALSE, FALSE, "Section_photocdportfolio"); ?>
@@ -137,12 +119,12 @@
  you have reason to distrust, or not trust, is advised against.</b>
  <?php EndSection(); ?>
 
- <?php BeginSection("CD rips and PSF(PSF1, GSF, etc.) Files"); ?>
+ <?php BeginSection("CD images and PSF(PSF1, GSF, etc.) Files"); ?>
  <p>
  CUE and TOC, and PSF(PSF1, GSF, etc.) files can reference arbitrary files for inclusion and parsing.  Inclusion of
  device files may cause odd system behavior, particularly if you are running Mednafen as root(which you shouldn't be!) on a
  UN*X system, or cause Mednafen to lockup or abort.  <b>In combination with save states, this file inclusion presents
- the possibility of leaking of private local information;</b> for example, if an attacker supplies a CD rip or PSF rip that
+ the possibility of leaking of private local information;</b> for example, if an attacker supplies a CD image or PSF rip that
  you subsequently run, and can convince you to save a state and send it back, or to connect to a network play server(in
  which save states are automatically utilized), the attacker may then have access to local private data from your
  system.  The setting <a href="#filesys.untrusted_fip_check">filesys.untrusted_fip_check</a>, when set to 1(the default), will enable
@@ -239,8 +221,6 @@
 </p>
   <table border>
    <tr><th>Option:</th><th>Value Type:</th><th>Description:</th></tr>
-   <tr><td>-physcd</td><td><i>(n/a)</i></td><td><a name="physcd">Load and boot from a physical CD.</a><br><br>This argument modifies the usage of the filename component of the command-line, making it optional and treating it as the optical disc drive device name.<br>Examples:
-<ul><li>mednafen -physcd</li><li>mednafen -physcd /dev/sr0</li><li>mednafen -physcd \\.\E:</li></ul></td></tr>
    <tr><td nowrap>-force_module x</td><td>string</td><td>Force usage of specified emulation module.</td></tr>
 
    <tr><td>-connect</td><td><i>(n/a)</i></td><td>Trigger to connect to remote host after the game is loaded.</td></tr>
@@ -255,11 +235,21 @@
   <a href="#Section_base_directory">base directory</a>.  This file is created and written to when Mednafen shuts down.
  </p>
  <p>
-  Mednafen also loads override settings from optional per-module override configuration files, also located directly under the
+  Mednafen loads override settings from optional per-module override configuration files, also located directly under the
   Mednafen <a href="#Section_base_directory">base directory</a>.  The general pattern for the naming of these user-created
   files is "&lt;<b>system</b>&gt;<b>.cfg</b>"; e.g. "<b>nes.cfg</b>", "<b>pce.cfg</b>", "<b>gba.cfg</b>", "<b>psx.cfg</b>", etc.  This allows for overriding global settings
-  on a per-module basis.  The configuration override files will <b>NOT</b> be written to by Mednafen, and they will generally not
-  alter the settings in the primary configuration file, unless a user action occurs that causes new setting values to be generated
+  on a per-module basis.
+ </p>
+
+ <p>
+  Per-game override configuration files are also supported.  They should be placed in the <a href="#filesys.path_pgconfig"><b>pgconfig</b></a> directory
+  under the Mednafen <a href="#Section_base_directory">base directory</a>.  Name these files like &lt;<b>FileBase</b>&gt;.&lt;<b>system</b>&gt;.<b>cfg</b>; e.g.
+  "<b>Lieutenant Spoon's Sing-a-Tune (USA).psx.cfg</b>".
+ </p>
+
+ <p>
+  The aforementioned per-module and per-game configuration override files will <b>NOT</b> be written to by Mednafen, and they will generally not
+  alter the contents of the primary configuration file, unless a user action occurs that causes new setting values to be generated
   based on the current active setting value(such as toggling full-screen mode inside the emulator, for instance).  Some settings
   currently cannot be overridden properly:
   <ul>
@@ -295,6 +285,7 @@ Not all emulated systems support custom palettes.  Currently, the following emul
  <li>gb - <b>Note:</b> Use "gbc.pal" instead of "gb.pal" for GameBoy Color games per-system custom palette.</li>
  <li>gba</li>
  <li>gg</li>
+ <li>lynx</li>
  <li>nes</li>
  <li>pce</li>
  <li>pce_fast</li>
@@ -474,7 +465,6 @@ has the minimum amount of processing done to it before being passed to the DAC o
  In addition to the listing of licenses and copyright notices for code included in Mednafen, the following 
  "non-system" external libraries are linked to:
  <ul>
-  <li><a href="http://www.gnu.org/software/libcdio/">libcdio</a></li>
   <li><a href="http://www.mega-nerd.com/libsndfile/">libsndfile</a></li>
   <li><a href="http://www.libsdl.org/">SDL</a></li>
   <li><a href="http://www.zlib.org">zlib</a></li>

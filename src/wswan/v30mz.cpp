@@ -339,7 +339,7 @@ static void DoOP(uint8 opcode)
 {
  //#define OP(num,func_name) static void func_name(void)
  #define OP(num, func_name) case num: 
- #define OP_RANGE(num1, num2, func_name) case num1 ... num2:
+ #define OP8(base, func_name) case (base): case (base)+1: case (base)+2: case (base)+3: case (base)+4: case (base)+5: case (base)+6: case (base)+7:
  #define OP_EPILOGUE break
 
 switch(opcode)
@@ -809,7 +809,7 @@ OP( 0xd5, i_aad    ) { (void)FETCH; I.regs.b[AL] = I.regs.b[AH] * 10 + I.regs.b[
 OP( 0xd6, i_setalc ) { I.regs.b[AL] = (CF)?0xff:0x00; CLK(3);  } OP_EPILOGUE;
 OP( 0xd7, i_trans  ) { uint32 dest = (I.regs.w[BW]+I.regs.b[AL])&0xffff; I.regs.b[AL] = GetMemB(DS0, dest); CLK(5); } OP_EPILOGUE;
 
-OP_RANGE(0xd8, 0xdf, i_fpo) { /*printf("FPO1, Op:%02x\n", opcode);*/ GetModRM; (void)ModRM; CLK(1); } OP_EPILOGUE;
+OP8(0xd8, i_fpo) { /*printf("FPO1, Op:%02x\n", opcode);*/ GetModRM; (void)ModRM; CLK(1); } OP_EPILOGUE;
 
 OP( 0xe0, i_loopne ) { int8 disp = (int8)FETCH; I.regs.w[CW]--; if (!ZF && I.regs.w[CW]) { I.pc = (uint16)(I.pc+disp);  CLK(6); ADDBRANCHTRACE(I.sregs[PS], I.pc); } else CLK(3); } OP_EPILOGUE;
 OP( 0xe1, i_loope  ) { int8 disp = (int8)FETCH; I.regs.w[CW]--; if ( ZF && I.regs.w[CW]) { I.pc = (uint16)(I.pc+disp);  CLK(6); ADDBRANCHTRACE(I.sregs[PS], I.pc); } else CLK(3); } OP_EPILOGUE;

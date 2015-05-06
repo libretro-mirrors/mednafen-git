@@ -238,20 +238,13 @@ void C68k_Set_MSP(c68k_struc *cpu, u32 val)
     else cpu->USP = val;
 }
 
-
-unsigned int C68k_Get_State_Max_Len(void)
-{
- //printf("loopie: %d\n", (int)sizeof(c68k_struc));
- return(512);
-}
-
 #define PACK_U32(val) { u32 temp = (val); buffer[index++] = temp; buffer[index++] = temp >> 8; buffer[index++] = temp >> 16; buffer[index++] = temp >> 24; }
 #define UNPACK_U32(target) { if(index >= length) goto BadBad; target = buffer[index] | (buffer[index + 1] << 8) | (buffer[index + 2] << 16) | (buffer[index + 3] << 24); index += 4; }
 
 void C68k_Save_State(c68k_struc *cpu, u8 *buffer)
 {
  int index = 0;
- int length = C68k_Get_State_Max_Len();
+ int length = C68k_State_Max_Len;
  int i;
 
  PACK_U32(0); //0xDEADBEEF);
@@ -281,7 +274,7 @@ void C68k_Save_State(c68k_struc *cpu, u8 *buffer)
 void C68k_Load_State(c68k_struc *cpu, const u8 *buffer)
 {
  int index = 0;
- int length = C68k_Get_State_Max_Len();
+ int length = C68k_State_Max_Len;
  int version;
  int i;
  u32 footer_check;

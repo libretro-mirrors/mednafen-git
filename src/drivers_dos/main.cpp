@@ -674,17 +674,6 @@ void PrintZLIBVersion(void)
  #endif
 }
 
-void PrintLIBCDIOVersion(void)
-{
- #ifdef HAVE_LIBCDIO
-  #if LIBCDIO_VERSION_NUM < 83
-  const char *cdio_version_string = "(unknown)";
-  #endif
-
-  MDFN_printf(_("Compiled against libcdio %s, running with libcdio %s\n"), CDIO_VERSION, cdio_version_string);
- #endif
-}
-
 int main(int argc, char *argv[])
 {
 	std::vector<MDFNGI *> ExternalSystems;
@@ -709,7 +698,6 @@ int main(int argc, char *argv[])
         PrintCompilerVersion();
         PrintZLIBVersion();
         PrintLIBSNDFILEVersion();
-	PrintLIBCDIOVersion();
         MDFN_indent(-2);
 
         MDFN_printf(_("Base directory: %s\n"), DrBaseDirectory);

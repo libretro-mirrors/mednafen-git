@@ -93,9 +93,9 @@ static void LoadCD(std::vector<CDIF *> *CDInterfaces)
 
   for(int32 track = toc.first_track; track <= toc.last_track; track++)
   {
-   if(!(toc.tracks[track].control & 0x4))
+   if(toc.tracks[track].valid && !(toc.tracks[track].control & 0x4))
    {
-    AudioTrackList.push_back(AudioTrackInfo(disc, track, toc.tracks[track].lba, toc.tracks[track + 1].lba - 1));
+    AudioTrackList.push_back(AudioTrackInfo(disc, track, toc.tracks[track].lba, toc.tracks[(track == toc.last_track) ? 100 : track + 1].lba - 1));
    }
   }
  }
@@ -133,7 +133,7 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
 
   // If any audio track is found, return true.
   for(int32 track = magic_toc.first_track; track <= magic_toc.last_track; track++)
-   if(!(magic_toc.tracks[track].control & 0x4))
+   if(magic_toc.tracks[track].valid && !(magic_toc.tracks[track].control & 0x4))
     return(true);
  }
 
@@ -239,7 +239,7 @@ static void Emulate(EmulateSpecStruct *espec)
   {
    CDDABuffer[i] = MDFN_de16lsb(&sector_buffer[i * sizeof(int16)]);
 
-   ResampBuffer[ResampBufferPos + (i >> 1)][i & 1] = CDDABuffer[i] / 2;
+   ResampBuffer[ResampBufferPos + (i >> 1)][i & 1] = (CDDABuffer[i] * 3 + 2) >> 2;
   }
   ResampBufferPos += 588;
  }
@@ -380,6 +380,8 @@ static void Emulate(EmulateSpecStruct *espec)
    trio_snprintf(tmpbuf, 256, "Sector: %d/%d", cur_sector, toc.tracks[100].lba - 1);
    DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
    pixels += 13 * espec->surface->pitch32;
+
+   //assert(AudioTrackList[CurrentATLI].track == toc.FindTrackByLBA(cur_sector));
   }
 
   pixels += 13 * espec->surface->pitch32;

@@ -30,7 +30,7 @@
 #include <mednafen/cdrom/cdromif.h>
 #include <mednafen/hash/md5.h>
 #include <mednafen/FileStream.h>
-#include <mednafen/GZFileStream.h>
+#include <mednafen/compress/GZFileStream.h>
 
 #include <trio/trio.h>
 #include <errno.h>
@@ -665,7 +665,7 @@ static void LoadCommon(std::vector<CDIF *> *CDInterfaces)
     trio_snprintf(tmpn, 256, "track%d-%d-%d", disc, track, toc.tracks[track].lba);
     trio_snprintf(tmpln, 256, "CD - Disc %d/%d - Track %d/%d", disc + 1, (int)CDInterfaces->size(), track, toc.last_track - toc.first_track + 1);
 
-    sectors = toc.tracks[track + 1].lba - toc.tracks[track].lba;
+    sectors = toc.tracks[(track == toc.last_track) ? 100 : track + 1].lba - toc.tracks[track].lba;
     ASpace_Add(PCFXDBG_GetAddressSpaceBytes, PCFXDBG_PutAddressSpaceBytes, tmpn, tmpln, 0, sectors * 2048);
    }
   }
@@ -960,16 +960,10 @@ static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint3
 
  if(rs->MediaPresent && rs->MediaUsable)
  {
-  if(!(*cdifs)[media_idx]->Eject(false))
-   return(false);
-
   SCSICD_SetDisc(false, (*cdifs)[media_idx]);
  }
  else
  {
-  if(!((*cdifs)[media_idx]->Eject(rs->MediaCanChange)))
-   return(false);
-
   SCSICD_SetDisc(rs->MediaCanChange, NULL);
  }
 

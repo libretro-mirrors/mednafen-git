@@ -68,7 +68,13 @@ enum
  PHASE_INITIAL,
  PHASE_BEGIN,
  PHASE_DATA0,
- PHASE_DATA7 = PHASE_DATA0 + 7,
+ PHASE_DATA1,
+ PHASE_DATA2,
+ PHASE_DATA3,
+ PHASE_DATA4,
+ PHASE_DATA5,
+ PHASE_DATA6,
+ PHASE_DATA7,
  PHASE_END
 };
 
@@ -209,7 +215,8 @@ void MegaMouse::UpdateBus(const int32 master_timestamp, uint8 &bus, const uint8 
 	}
 	break;
 
-   case PHASE_DATA0 ... PHASE_DATA7:
+   case PHASE_DATA0: case PHASE_DATA1: case PHASE_DATA2: case PHASE_DATA3:
+   case PHASE_DATA4: case PHASE_DATA5: case PHASE_DATA6: case PHASE_DATA7:
 	bus_av = data_buffer[phase - PHASE_DATA0] | (((phase - PHASE_DATA0) & 1) << 4);
 	if(tr != ((phase - PHASE_DATA0) & 1))
 	 busy_until = master_timestamp + 400;

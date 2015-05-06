@@ -86,32 +86,18 @@ void QTRecord::w64(uint64 val)
  qtfile.write(buf, sizeof(buf));
 }
 
-// max_len doesn't include the leading 1-byte count
-// returns number of bytes written.
-uint32 QTRecord::wps(const char *str, uint32 max_len)
+// fixed_len doesn't include the leading 1-byte count
+void QTRecord::wps(const char *str, uint8 fixed_len)
 {
- if(!max_len)	// Variable-size pascal string
- {
-  max_len = strlen(str);
-  if(max_len > 255)
-   max_len = 255;
- }
-
- uint32 count = strlen(str);
- char buf[1 + max_len];
+ uint8 slen = std::min<size_t>(255, strlen(str));
+ uint8 count = (fixed_len ? fixed_len : slen);
+ char buf[1 + 255];
 
  memset(buf, 0, sizeof(buf));
-
- if(count > max_len)
-  count = max_len;
-
- strncpy(buf + 1, str, count);
-
  buf[0] = count;
+ memcpy(&buf[1], str, std::min<uint8>(slen, count));
 
- qtfile.write(buf, sizeof(buf));
-
- return(sizeof(buf));
+ qtfile.write(buf, 1 + count);
 }
 
 void QTRecord::vardata_begin(void)
@@ -306,7 +292,7 @@ void QTRecord::WriteFrame(const MDFN_Surface *surface, const MDFN_Rect &DisplayR
    int x_start;
    int width;
    int xscale_factor;
-   int32 dest_x;
+   uint32 dest_x;
    uint32 *src_ptr;
    uint8 *dest_line;
 
