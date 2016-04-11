@@ -2402,7 +2402,7 @@ static void CPUInit(const std::string &bios_fn)
   while(memfp.get_line(linebuffer) >= 0)
   {
    char args[2][256];
-   int acount = trio_sscanf(linebuffer.c_str(), "%.255s %.255s", args[0], args[1]);
+   int acount = trio_sscanf(linebuffer.c_str(), "%255s %255s", args[0], args[1]);
 
    if(acount < 1)
     continue;

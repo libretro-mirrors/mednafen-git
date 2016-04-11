@@ -37,10 +37,13 @@ uint8 ReadIBP(unsigned int A)
  if(!(A & 0x100))
   return(IBP[A & 0xFF]);
 
- if(bootstrap && !PCE_InDebug)
+ if(bootstrap)
  {
-  memcpy(rom + 0x1FF0, rom_backup + 0x1FF0, 16);
-  bootstrap = false;
+  if(!PCE_InDebug)
+  {
+   memcpy(rom + 0x1FF0, rom_backup + 0x1FF0, 16);
+   bootstrap = false;
+  }
   return(CurrentSong);
  }
 

@@ -51,6 +51,7 @@ static int is210;	/* Lesser mapper. */
 static uint8 PRG[3];
 static uint8 CHR[8];
 
+static uint64 PlayIndexBS[8];
 static uint32 PlayIndex[8];
 static int32 vcount[8];
 static int32 CVBC;
@@ -159,7 +160,8 @@ static void FixCache(int a,int V)
                       case 0x00:FreqCache[w]&=~0x000000FF;FreqCache[w]|=V;break;
                       case 0x02:FreqCache[w]&=~0x0000FF00;FreqCache[w]|=V<<8;break;
                       case 0x04:FreqCache[w]&=~0x00030000;FreqCache[w]|=(V&3)<<16;
-                                LengthCache[w]=(8-((V>>2)&7))<<2;
+				LengthCache[w] = 0x100 - (V & 0xFC);
+				//printf("%u, RL: 0x%02x, LC: %u\n", w, V & 0xFC, LengthCache[w]);
                                 break;
                       case 0x07:EnvCache[w]=(uint32)(V&0xF)*576716;break;
                      }
@@ -244,8 +246,8 @@ static INLINE uint32 FetchDuff(uint32 P, uint32 envelope)
 static INLINE uint32 FetchDuffBS(uint32 P, uint32 envelope)
 {
     uint32 duff;
-    duff=IRAM[((IRAM[0x46+(P<<3)]+(PlayIndex[P]>>TOINDEXBS))&0xFF)>>1];
-    if((IRAM[0x46+(P<<3)]+(PlayIndex[P]>>TOINDEXBS))&1)
+    duff=IRAM[((IRAM[0x46+(P<<3)]+(PlayIndexBS[P]>>TOINDEXBS))&0xFF)>>1];
+    if((IRAM[0x46+(P<<3)]+(PlayIndexBS[P]>>TOINDEXBS))&1)
      duff>>=4;
     duff&=0xF;
     duff=(duff*envelope)>>16;
@@ -316,9 +318,9 @@ static void DoNamcoSoundBS(void)
    for(V=CVBC;V<SOUNDTS;V++)
    {
     WaveHiEx[V] -= duff2;
-    PlayIndex[P]+=freq;
-    while((PlayIndex[P]>>TOINDEXBS) >=lengo)
-     PlayIndex[P]-=lengo<<TOINDEXBS;
+    PlayIndexBS[P]+=freq;
+    while((PlayIndexBS[P]>>TOINDEXBS) >=lengo)
+     PlayIndexBS[P]-=(uint64)lengo<<TOINDEXBS;
     duff2 = FetchDuffBS(P,envelope) << 1;
    }
   }
@@ -344,16 +346,9 @@ static int StateAction(StateMem *sm, int load, int data_only)
 
 	SFARRAY32(PlayIndex, 8),
 	SFARRAY32(vcount, 8),
+	SFARRAY64(PlayIndexBS, 8),
         SFEND
  };
-
- if(!load)
- {
-  // Pre-normalize
-  if(DoNamcoSound == DoNamcoSoundBS)
-   for(int x = 0; x < 8; x++)
-     PlayIndex[x] <<= TOINDEXBS - TOINDEX;
- }
 
  int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAPR");
 
@@ -363,13 +358,15 @@ static int StateAction(StateMem *sm, int load, int data_only)
   FixNTAR();
   FixCRR();
 
-  // Post-normalize
-  if(DoNamcoSound == DoNamcoSoundBS)
-   for(int x = 0; x < 8; x++)
-     PlayIndex[x] <<= TOINDEXBS - TOINDEX;
-
   for(int x=0x40;x<0x80;x++)
    FixCache(x,IRAM[x]);
+
+  // Do AFTER FixCache() calls:
+  for(unsigned x = 0; x < 8; x++)
+  {
+   PlayIndexBS[x] %= ((uint64)LengthCache[x] << TOINDEXBS);
+   PlayIndex[x] %= (LengthCache[x] << TOINDEX);
+  }
  }
  return(ret);
 }
@@ -383,6 +380,7 @@ void Mapper19_ESI(EXPSOUND *ep)
 
  memset(vcount,0,sizeof(vcount));
  memset(PlayIndex,0,sizeof(PlayIndex));
+ memset(PlayIndexBS, 0, sizeof(PlayIndexBS));
  CVBC=0;
 }
 
@@ -438,6 +436,10 @@ static void N106_Power(CartInfo *info)
 	}
 	for(x=0x40;x<0x80;x++)
 	 FixCache(x,IRAM[x]);
+
+	memset(vcount,0,sizeof(vcount));
+	memset(PlayIndex,0,sizeof(PlayIndex));
+	memset(PlayIndexBS, 0, sizeof(PlayIndexBS));
 }
 
 #ifdef WANT_DEBUGGER

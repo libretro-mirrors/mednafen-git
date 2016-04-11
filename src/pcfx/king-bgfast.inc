@@ -25,7 +25,6 @@ static bool CanDrawBG_Fast(int n)
  const uint32 cg_offset = king->BGCGAddr[n] * 1024;
  const uint32 bg_width = (king->BGSize[n] & 0xF0) >> 4;
  const uint32 bg_height = king->BGSize[n] & 0x0F;
- const uint32 bg_maxsize = n ? 0x9 : 0xA;
 
  // If the bgmode is 0, or 6/7(EXT DOT modes), abort.
  if(!(bgmode & 0x7) || ((bgmode & 0x7) >= 6))
@@ -35,14 +34,14 @@ static bool CanDrawBG_Fast(int n)
  }
 
  // BG width out of range?
- if(bg_width < 0x3 || bg_width > bg_maxsize)
+ if(bg_width < 0x3 || bg_width > 0xA)
  {
   CDBG_REASON("Width %02x out of range", bg_width);
   return(FALSE);
  }
 
  // BG height out of range?
- if(bg_height < 0x3 || bg_height > bg_maxsize)
+ if(bg_height < 0x3 || bg_height > 0xA)
  {
   CDBG_REASON("Height %02x out of range", bg_height);
   return(FALSE);
@@ -183,13 +182,11 @@ static void DrawBG_Fast(uint32 *target, int n)
 {
  const uint16 bgmode = (king->bgmode >> (n * 4)) & 0xF;
  const bool endless = (king->BGScrollMode >> n) & 0x1;
- const uint32 XScroll = king->BGXScroll[n];
- const uint32 YScroll = king->BGYScroll[n];
+ const uint32 XScroll = sign_x_to_s32((n ? 10 : 11), king->BGXScroll[n]);
+ const uint32 YScroll = sign_x_to_s32((n ? 10 : 11), king->BGYScroll[n]);
  const uint32 bat_offset = king->BGBATAddr[n] * 1024;
  const uint32 cg_offset = king->BGCGAddr[n] * 1024;
  const uint32 bat_and_cg_page = (king->PageSetting & 0x0010) ? 1 : 0;
-
- const int max_size_setting = n ? 0x9 : 0xA;
 
  const uint32 YOffset = (YScroll + (fx_vce.raster_counter - 22)) & 0xFFFF;
  const uint32 layer_or = (LAYER_BG0 + n) << 28;
@@ -197,11 +194,11 @@ static void DrawBG_Fast(uint32 *target, int n)
 
  const unsigned int bat_width_shift = (king->BGSize[n] & 0xF0) >> 4;
  const unsigned int bat_width = (1 << bat_width_shift) >> 3;
- const unsigned int bat_width_mask = endless ? (bat_width - 1) : ((((1 << max_size_setting) * 2) / 8) - 1);
+ const unsigned int bat_width_mask = endless ? (bat_width - 1) : ((((1 << 0xA) * 2) / 8) - 1);
 
  const int bat_height_shift = king->BGSize[n] & 0x0F;
  const int bat_height = (1 << bat_height_shift) >> 3;
- const int bat_height_mask = endless ? (bat_height - 1) : ((((1 << max_size_setting) * 2) / 8) - 1);
+ const int bat_height_mask = endless ? (bat_height - 1) : ((((1 << 0xA) * 2) / 8) - 1);
 
  // We don't need to &= cg_offset and bat_offset with 0x1ffff after here, as the effective addresses
  // calculated with them are anded with 0x1ffff in the rendering code already.

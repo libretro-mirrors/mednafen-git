@@ -162,12 +162,22 @@ void sha256_test(void)
  abort();
 #endif
 
- assert(sha256(tv, 55) == "16f868c5d6f278b54eacc307c56c0cd6ece81bb3784a531f0d6d75d4200c6fe6"_sha256);
- assert(sha256(tv, 56) == "4ccac470d07efd7f989c1f9a5045bc2cfe446622dbb50d4ad7f53996e574cd29"_sha256);
- assert(sha256(tv, 57) == "a9d56e4e0d999c82ac86ce58b6b711e95e40eaddceb3bbc2ee0dc213236d7056"_sha256);
- assert(sha256(tv, 63) == "ab14676d2f0ce3b7cec24dfcab775b124f2c95dd42bea4fe6a7c7158f4c1788e"_sha256);
- assert(sha256(tv, 64) == "1a0e0ecf84382961a85aa8629e98aefcfeffdcf0fd74a6dd49d55d9706477ab2"_sha256);
- assert(sha256(tv, 65) == "fd833d1be324b92272bc7c17a0ee9cad152cae24c622082f912e4552afe6bdbd"_sha256);
+ static const sha256_digest expected[6] =
+ {
+  "16f868c5d6f278b54eacc307c56c0cd6ece81bb3784a531f0d6d75d4200c6fe6"_sha256,
+  "4ccac470d07efd7f989c1f9a5045bc2cfe446622dbb50d4ad7f53996e574cd29"_sha256,
+  "a9d56e4e0d999c82ac86ce58b6b711e95e40eaddceb3bbc2ee0dc213236d7056"_sha256,
+  "ab14676d2f0ce3b7cec24dfcab775b124f2c95dd42bea4fe6a7c7158f4c1788e"_sha256,
+  "1a0e0ecf84382961a85aa8629e98aefcfeffdcf0fd74a6dd49d55d9706477ab2"_sha256,
+  "fd833d1be324b92272bc7c17a0ee9cad152cae24c622082f912e4552afe6bdbd"_sha256
+ };
+
+ assert(sha256(tv, 55) == expected[0]);
+ assert(sha256(tv, 56) == expected[1]);
+ assert(sha256(tv, 57) == expected[2]);
+ assert(sha256(tv, 63) == expected[3]);
+ assert(sha256(tv, 64) == expected[4]);
+ assert(sha256(tv, 65) == expected[5]);
 
 }
 

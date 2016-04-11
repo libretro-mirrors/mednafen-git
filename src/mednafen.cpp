@@ -47,6 +47,7 @@
 #include	"video/tblur.h"
 #include	"qtrecord.h"
 #include	<mednafen/hash/md5.h>
+#include	<mednafen/MemoryStream.h>
 #include	"sound/Fir_Resampler.h"
 
 #include	"string/escape.h"
@@ -164,6 +165,8 @@ static MDFNSetting RenamedSettings[] =
 
  { "psx.input.port1.multitap", MDFNSF_NOFLAGS, NULL, NULL, MDFNST_ALIAS         , "psx.input.pport1.multitap" },
  { "psx.input.port2.multitap", MDFNSF_NOFLAGS, NULL, NULL, MDFNST_ALIAS         , "psx.input.pport2.multitap" },
+
+ { "snes_faust.spexf",	       MDFNSF_NOFLAGS, NULL, NULL, MDFNST_ALIAS         , "snes_faust.spex" },
 
  { NULL }
 };
@@ -377,6 +380,10 @@ extern MDFNGI EmulatedNES;
 
 #ifdef WANT_SNES_EMU
 extern MDFNGI EmulatedSNES;
+#endif
+
+#ifdef WANT_SNES_FAUST_EMU
+extern MDFNGI EmulatedSNES_Faust;
 #endif
 
 #ifdef WANT_GBA_EMU
@@ -1158,6 +1165,10 @@ bool MDFNI_InitializeModules(const std::vector<MDFNGI *> &ExternalSystems)
   &EmulatedSNES,
   #endif
 
+  #ifdef WANT_SNES_FAUST_EMU
+  &EmulatedSNES_Faust,
+  #endif
+
   #ifdef WANT_GB_EMU
   &EmulatedGB,
   #endif
@@ -1656,51 +1667,6 @@ void MDFNI_Emulate(EmulateSpecStruct *espec)
 
  if(MDFNnetplay)
   Netplay_PostProcess(PortDevice, PortData, PortDataLen);
-
-#if 0
- static const unsigned SpeculativeRender = 6;
-
- if(SpeculativeRender == 0)
-  MDFNGameInfo->Emulate(espec);
- else
- {
-  StateMem shoe;
-
-  for(unsigned ra = 0; ra <= SpeculativeRender; ra++)
-  {
-   EmulateSpecStruct tmp_espec = *espec;
-
-   if(ra != SpeculativeRender)
-   {
-    if(ra == 1)
-    {
-     memset(&shoe, 0, sizeof(shoe));
-     MDFNSS_SaveSM(&shoe, false, false);
-    }
-    tmp_espec.skip = true;
-    tmp_espec.NeedSoundReverse = false;
-//    tmp_espec.SoundBuf = NULL;
-//    tmp_espec.SoundBufMaxSize = 0;
-    MDFNGameInfo->Emulate(&tmp_espec);
-    espec->VideoFormatChanged = false;
-    espec->SoundFormatChanged = false;
-   }
-   else
-   {
-    MDFNGameInfo->Emulate(espec);
-
-    shoe.loc = 0;
-    MDFNSS_LoadSM(&shoe, false, false);
-
-    if(shoe.data)
-    {
-     free(shoe.data);
-     shoe.data = NULL;
-    }
-   }
-  }
- }
-#endif
 
  //
  // Sanity checks

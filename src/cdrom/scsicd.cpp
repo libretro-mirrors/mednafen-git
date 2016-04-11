@@ -1928,7 +1928,7 @@ static void DoREADBase(uint32 sa, uint32 sc)
  {
   Cur_CDIF->HintReadSector(sa);	//, sa + sc);
 
-  CDReadTimer = (uint64)1 * 2048 * System_Clock / CD_DATA_TRANSFER_RATE;
+  CDReadTimer = (uint64)((WhichSystem == SCSICD_PCE) ? 3 : 1) * 2048 * System_Clock / CD_DATA_TRANSFER_RATE;
  }
  else
  {

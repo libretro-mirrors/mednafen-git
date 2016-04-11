@@ -10,5 +10,6 @@ void MDFN_rtrim(std::string &string);
 void MDFN_trim(std::string &string);
 
 char *MDFN_RemoveControlChars(char *str);
+void MDFN_RemoveControlChars(std::string& string);
 
 #endif

@@ -1,3 +1,89 @@
+-- 0.9.38.7: --
+
+September 30, 2015:
+	Fixed several malformed trio_sscanf() format strings in regards to field width, that could cause stack buffer overflows in certain cases.
+
+September 29, 2015:
+	PSX: Added skeleton BCzF/BCzT instruction emulation, and fixed handling of illegal CP0 instructions.
+
+September 25, 2015:
+	PSX: Added emulation of CPU exception-handling bad address register.
+
+	PSX: Implemented emulation of the Coprocessor Error field in the CAUSE register.
+
+	PSX: Added emulation of CPU exception-handling branch target register.
+
+	PSX: Fixed handling of CAUSE bits 30 and 31 when an exception occurs immediately after a branch instruction is executed.
+
+	PSX: Fixed link address calculation for JAL, JALR, and B*AL instructions when they're executed in a branch delay slot.
+
+	PSX: Corrected emulation of the quasi-illegal mirrors of the BGEZ*/BLTZ* type instructions.
+
+	PSX: Added emulation of a pipeline quirk that occurs with back-to-back load instructions to the same register(previously only emulated with LWL and LWR).
+
+September 22, 2015:
+	Fixed a bug in the debugger's disassembler that could break disassembly when a disassembled instruction wraps around the end of the CPU's program address
+	space to the beginning.
+
+September 18, 2015:
+	PCE: Removed experimental and unfinished hypothetical subtitle hardware emulation which had a few security-related problems.
+
+September 16, 2015:
+	MD: Fixed registration of main RAM in the cheat engine to be mirrored properly.
+
+	PCE: Fixed a bug that caused the debugger's disassembly and memory view to show a wrong value for the HES bootstrap register
+	at $1D00.
+
+	PCE: Fixed a bug that sometimes caused the "TIMV" register in the debugger to display "FFFFFFFF" instead of "FF".
+
+	The date and time of the compilation of qtrecord.cpp are no longer written to recorded QuickTime movie files, to solve
+	a minor privacy issue and a build reproducibility issue.
+
+	PSX: Rewrote parts of the timer emulation code to fix several issues; fixes wrong music playback speed problem
+	in "RPG Tsukuru 4".
+
+-- 0.9.38.6: --
+
+August 9, 2015:
+	PSX: Fixed a bug in the calculation of time taken by some GPU commands while in interlaced mode; fixes graphical glitches in
+	"Mr. Driller G".
+
+	PCE, PCE_FAST: Added more delay to CD Read command's returning of sector data, to fix a lockup in "Mirai Shonen Conan",
+	and a stuck note problem in "4 in 1 Super CD".
+
+-- 0.9.38.5: --
+
+June 26, 2015:
+	PSX: Generate a seek error when trying to read audio sectors(when the appropriate Mode bit isn't set), and generate a bad command error
+	when executing ReadN/ReadS with a non-PS1 disc.  Fixes a lockup in "Vib Ribbon" when trying to play with audio CDs.
+
+June 20, 2015:
+	Altered SHA-1 and SHA-256 test code to work around a preprocessor-related bug in gcc.
+
+	NES: Fixed a mapper 19 sound emulation bug; fixes music issues in the Japanese release of "Rolling Thunder".
+
+	PSX: Replaced a GPU debug puts() with code that respects the psx.dbg_level setting.
+
+June 18, 2015:
+	PC-FX: Corrected handling of width/height of 0xA for KING BG1-3, per tests on a PC-FX.  Fixes a graphical glitch in "Sakuraigar Mode" in
+	"Tyoushin Heiki Zeroigar".
+
+May 5, 2015:
+	PSX: Added some debug messages to the memory card emulation code, outputted when setting psx.dbg_level is set to certain values.
+
+April 29, 2015:
+	PCE, PCE_FAST: Corrected decimal-mode ADC and SBC behavior(especially for "illegal" input values), per tests on a HuC6280.
+
+April 22, 2015:
+	Added a test to tests.cpp for gcc bug #60196(triggered with non-default optimization flags).
+
+April 19, 2015:
+	Added a missing dependency statement to configure.ac, whose absence broke compilation with --disable-pce --enable-pcfx
+
+April 16, 2015:
+	WonderSwan: Removed erroneous constraints that were preventing opposing X* and Y* buttons from being pressed simultaneously, and changed the
+	names of the the X* and Y* buttons used during input configuration, per tip from trap15.
+
 -- 0.9.38.4: --
 
 April 12, 2015:

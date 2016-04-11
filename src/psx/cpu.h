@@ -123,13 +123,13 @@ class PS_CPU
   CP0REG_BDA = 5,		// Data load/store breakpoint address.
   CP0REG_TAR = 6,		// Target address(???)
   CP0REG_DCIC = 7,		// Cache control
+  CP0REG_BADVA = 8,
   CP0REG_BDAM = 9,		// Data load/store address mask.
   CP0REG_BPCM = 11,		// PC breakpoint address mask.
   CP0REG_SR = 12,
   CP0REG_CAUSE = 13,
   CP0REG_EPC = 14,
-  CP0REG_PRID = 15,		// Product ID
-  CP0REG_ERREG = 16
+  CP0REG_PRID = 15		// Product ID
  };
 
  struct
@@ -145,9 +145,9 @@ class PS_CPU
     uint32 BPC;		// RW
     uint32 Unused04;
     uint32 BDA;		// RW
-    uint32 TAR;
+    uint32 TAR;		// R
     uint32 DCIC;	// RW
-    uint32 Unused08;	
+    uint32 BADVA;	// R
     uint32 BDAM;	// R/W
     uint32 Unused0A;
     uint32 BPCM;	// R/W
@@ -155,7 +155,6 @@ class PS_CPU
     uint32 CAUSE;	// R/W(partial)
     uint32 EPC;		// R
     uint32 PRID;	// R
-    uint32 ERREG;	// ?(may not exist, test)
    };
   };
  } CP0;
@@ -209,7 +208,7 @@ class PS_CPU
   EXCEPTION_OV = 12	// Arithmetic overflow
  };
 
- uint32 Exception(uint32 code, uint32 PC, const uint32 NPM) MDFN_WARN_UNUSED_RESULT;
+ uint32 Exception(uint32 code, uint32 PC, const uint32 NP, const uint32 NPM, const uint32 instr) MDFN_WARN_UNUSED_RESULT;
 
  template<bool DebugMode, bool BIOSPrintMode, bool ILHMode> pscpu_timestamp_t RunReal(pscpu_timestamp_t timestamp_in) NO_INLINE;
 

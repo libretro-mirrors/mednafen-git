@@ -199,6 +199,9 @@ namespace CDUtility
  //  Returns "true" if errors weren't detected, or they were corrected succesfully.
  //  Returns "false" if errors couldn't be corrected.
  //  sector_data should contain 2352 bytes of raw sector data.
+ //
+ //  Note: mode 2 form 1 L-EC data can't correct errors in the 4-byte sector header(address + mode),
+ //  but the error(s) will still be detected by EDC.
  bool edc_lec_check_and_correct(uint8 *sector_data, bool xa);
 
  //

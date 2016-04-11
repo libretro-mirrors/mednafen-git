@@ -1,5 +1,8 @@
 ***Major issues***
 
+Cyberwar (Japan)
+	Locks up during startup(SPU status bits issue).
+
 Monkey Hero
 	Locks up shortly after title screen.  It's straddling a framebuffer write command's parameters across two linked-list
 	blocks(2 words at the end of the first block, and 1 word at the beginning of the next block).  AFAIK, this construct will only
@@ -21,6 +24,9 @@ Transformers - Beast Wars Transmetals
 Championship Motocross 2001
 	Invisible driver.  GHOSTRIDER~  The palette data in RAM is apparently being selectively zero'd out between
 	the DMA from CDC and the DMA to GPU for some reason.  Timing issue related maybe?  (Probably CPU instruction timing issue)
+
+International Moto X (Japan)
+	Flickering/Missing graphics on racer selection screen.
 
 Nicktoons Racing
 	Totally fubared sound effects.  Likely CPU instruction timing-related(decreasing the IPC fixes this problem), or perhaps timing
@@ -47,15 +53,17 @@ Nightmare Creatures
 WipeOut 3
 	Music stops playing after a long while; maybe it's supposed to do that?
 
+Rascal
+	Flickering/missing graphics in menus.
+
 T'ai Fu - Wrath of the Tiger
 	Sometimes locks up when starting a new game.
 
 -----------------------------------------------------------------------------------------------
 
-Handle D28 of DMA CHCR properly.
+Differentiate between power-on and reset-button events more accurately(e.g. in CPU and GTE code).
 
-Fix implementation of psx.slstart* and psx.slend* settings functionality so as to not potentially cause netplay desync
-when emulated lightguns are being used.
+Handle D28 of DMA CHCR properly.
 
 Rewrite CPU emulation to properly emulate the pipeline and all its quirks(might be too computationally-expensive, though).  Related TODOs
 dependent on this:
