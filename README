@@ -41,4 +41,5 @@ Some notes(and reminders) on the source code:
 
 	Vanishing temporaries: https://gcc.gnu.org/onlinedocs/gcc/Temporaries.html#Temporaries
 
-	
+	Do not place a period before the field width for "s" and "[" conversion specifiers in *scanf() format strings; perhaps a bad
+	habit picked up long ago from working with a buggy libc or trio?

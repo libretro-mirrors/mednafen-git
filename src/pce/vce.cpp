@@ -30,7 +30,6 @@
 #include "vce.h"
 #include <mednafen/hw_video/huc6270/vdc.h>
 #include "debug.h"
-#include "subhw.h"
 #include "pcecd.h"
 #include <trio/trio.h>
 
@@ -192,11 +191,6 @@ void VCE::Reset(const int32 timestamp)
 
  if(fb)
   scanline_out_ptr = &fb[scanline * pitch32];
-
- ///
- //
- //
- SubTValid = false;
 }
 
 static int32 *LW;
@@ -413,39 +407,6 @@ void VCE::SetPixelFormat(const MDFN_PixelFormat &format, const uint8* CustomColo
  // because they loop 512 times ;)
  for(int x = 0; x < 512; x++)
   FixPCache(x);
-
- //
- // Make the subtitle overlay LUT
- //
- for(int n = 0; n < 4096; n++)
- {
-#if 0
-  float y = (float)((n >> 8) & 0xF) / 15;
-  float i = (float)((n >> 4) & 0xF) / 16;
-  float q = (float)((n >> 0) & 0xF) / 16;
-  int r, g, b;
-
-  i *= 1.1914;
-  q *= 1.0452;
-
-  i -= 0.5957;
-  q -= 0.5226;
-
-  r = 255 * (y + (0.9563 * i) + (0.6210 * q));
-  g = 255 * (y + (-0.2721 * i) + (-0.6474 * q));
-  b = 255 * (y + (-1.1070 * i) + (1.7046 * q));
-  if(r < 0) r = 0; if(r > 255) r = 255;
-  if(g < 0) g = 0; if(g > 255) g = 255;
-  if(b < 0) b = 0; if(b > 255) b = 255;
-#else
-  int r, g, b;
-
-  r = ((n >> 8) & 0xF) * 17;
-  g = ((n >> 4) & 0xF) * 17;
-  b = ((n >> 0) & 0xF) * 17;
-#endif
-  SubTLUT[n] = format.MakeColor(r, g, b);
- }
 }
 
 uint8 VCE::Read(uint32 A)

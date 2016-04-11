@@ -374,6 +374,9 @@ int32 APU_EndFrame(int16* SoundBuf)
  APU_Update(CPUM.timestamp);
 #endif
 
+#if 0
+ printf("%02x %02x %02x %02x %s\n", APURAM[0x8000], APURAM[0x8001], APURAM[0x8002], APURAM[0x8003], &APURAM[0x8004]);
+#endif
  apu_last_master_timestamp = 0;
 
  return DSP_EndFrame(SoundBuf);

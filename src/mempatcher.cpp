@@ -615,7 +615,7 @@ static bool TestConditions(const char *string)
  unsigned int bytelen;
  bool passed = 1;
 
- while(trio_sscanf(string, "%u %c %.63s %.63s %.63s", &bytelen, &endian, address, operation, value) == 5 && passed)
+ while(trio_sscanf(string, "%u %c %63s %63s %63s", &bytelen, &endian, address, operation, value) == 5 && passed)
  {
   uint32 v_address;
   uint64 v_value;

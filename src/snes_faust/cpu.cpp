@@ -489,7 +489,7 @@ INLINE void Core65816::Op_ADC(T arg)
   a = (AA & 0x000F) + (arg & 0x000F) + (P & 1);
   b = (AA & 0x00F0) + (arg & 0x00F0);
 
-  P &= ~C_FLAG;
+  P &= ~(C_FLAG | V_FLAG);
 
   if(sizeof(T) == 2)
   {
@@ -499,6 +499,7 @@ INLINE void Core65816::Op_ADC(T arg)
    if(a > 0x0009) { b +=  0x0010; a += 0x0006; }
    if(b > 0x0090) { c +=  0x0100; b += 0x0060; }
    if(c > 0x0900) { d +=  0x1000; c += 0x0600; }
+   P |= ((~(AA ^ arg) & (AA ^ d)) >> (sizeof(T) * 8 - 7)) & 0x40;		// V flag
    if(d > 0x9000) { P |= C_FLAG;  d += 0x6000; }
 
    tmp = (a & 0x000F) | (b & 0x00F0) | (c & 0x0F00) | (d & 0xF000);
@@ -506,6 +507,7 @@ INLINE void Core65816::Op_ADC(T arg)
   else
   {
    if(a > 0x0009) { b +=  0x0010; a += 0x0006; }
+   P |= ((~(AA ^ arg) & (AA ^ b)) >> (sizeof(T) * 8 - 7)) & 0x40;		// V flag
    if(b > 0x0090) { P |= C_FLAG;  b += 0x0060; }
 
    tmp = (a & 0x000F) | (b & 0x00F0);
@@ -515,12 +517,10 @@ INLINE void Core65816::Op_ADC(T arg)
  {
   tmp = AA + arg + (P & 1);
 
-  P &= ~C_FLAG;
+  P &= ~(C_FLAG | V_FLAG);
   P |= (tmp >> (sizeof(T) * 8)) & 1;	// C flag
+  P |= ((~(AA ^ arg) & (AA ^ tmp)) >> (sizeof(T) * 8 - 7)) & 0x40;		// V flag
  }
-
- P &= ~V_FLAG;
- P |= ((~(AA ^ arg) & (AA ^ tmp)) >> (sizeof(T) * 8 - 7)) & 0x40;		// V flag
 
  AA = tmp;
  SetZN<T>(AA);
@@ -628,68 +628,57 @@ INLINE void Core65816::Op_ORA(T arg)
  SetZN<T>(AA);
 }
 
-//
-// FIXME, probably wrong in decimal mode.
-//
 template<typename T>
 INLINE void Core65816::Op_SBC(T arg)
 {
  T& AA = AC<T>();
  uint32 tmp;
 
+ arg = ~arg;
+
  if(P & D_FLAG)
  {
+  uint32 a, b, c, d;
+
+  a = (AA & 0x000F) + (arg & 0x000F) + (P & 1);
+  b = (AA & 0x00F0) + (arg & 0x00F0) + (a & 0x0010);
+
+  P &= ~(C_FLAG | V_FLAG);
+
   if(sizeof(T) == 2)
   {
-   const uint32 m = (AA & 0x000F) - (arg & 0x000F) - ((P & 1) ^ 1);
-   const uint32 n = (AA & 0x00F0) - (arg & 0x00F0) - (m & 0x0010);
-   const uint32 o = (AA & 0x0F00) - (arg & 0x0F00) - (n & 0x0100);
-   const uint32 p = (AA & 0xF000) - (arg & 0xF000) - (o & 0x1000);
+   c = (AA & 0x0F00) + (arg & 0x0F00) + (b & 0x0100);
+   d = (AA & 0xF000) + (arg & 0xF000) + (c & 0x1000);
 
-   tmp = (m & 0x000F) | (n & 0x00F0) | (o & 0x0F00) | (p & 0xF000);
+   P |= ((d >> (sizeof(T) * 8)) & 1);	// C flag   
 
-   if(m & 0x00010)
-    tmp -= 0x0006;
+   if(a < 0x00010) { a -= 0x0006; }
+   if(b < 0x00100) { b -= 0x0060; }
+   if(c < 0x01000) { c -= 0x0600; }
+   P |= ((~(AA ^ arg) & (AA ^ d)) >> (sizeof(T) * 8 - 7)) & 0x40;		// V flag
+   if(d < 0x10000) { d -= 0x6000; }
 
-   if(n & 0x00100)
-    tmp -= 0x0060;
-
-   if(o & 0x01000)
-    tmp -= 0x0600;
-
-   if(p & 0x10000)
-    tmp -= 0x6000;
-
-   P &= ~C_FLAG;
-   P |= ((p >> 16) & 0x1) ^ 1;	// C flag
+   tmp = (a & 0x000F) | (b & 0x00F0) | (c & 0x0F00) | (d & 0xF000);
   }
   else
   {
-   const uint32 m = (AA & 0x000F) - (arg & 0x000F) - ((P & 1) ^ 1);
-   const uint32 n = (AA & 0x00F0) - (arg & 0x00F0) - (m & 0x0010);
+   P |= ((b >> (sizeof(T) * 8)) & 1);	// C flag   
 
-   tmp = (m & 0x0F) | (n & 0xF0);
+   if(a < 0x0010) { a -= 0x0006; }
+   P |= ((~(AA ^ arg) & (AA ^ b)) >> (sizeof(T) * 8 - 7)) & 0x40;		// V flag
+   if(b < 0x0100) { b -= 0x0060; }
 
-   if(m & 0x0010)
-    tmp -= 0x06;
-
-   if(n & 0x0100)
-    tmp -= 0x60;
-
-   P &= ~C_FLAG;
-   P |= ((n >> 8) & 0x1) ^ 1;	// C flag
+   tmp = (a & 0x000F) | (b & 0x00F0);
   }
  }
  else
  {
-  tmp = AA - arg - ((P & 1) ^ 1);
+  tmp = AA + arg + (P & 1);
 
-  P &= ~C_FLAG;
-  P |= ((tmp >> (sizeof(T) * 8)) & 1) ^ 1;	// C flag
+  P &= ~(C_FLAG | V_FLAG);
+  P |= ((tmp >> (sizeof(T) * 8)) & 1);	// C flag
+  P |= ((~(AA ^ arg) & (AA ^ tmp)) >> (sizeof(T) * 8 - 7)) & 0x40;		// V flag
  }
-
- P &= ~V_FLAG;
- P |= (((AA ^ arg) & (AA ^ tmp)) >> (sizeof(T) * 8 - 7)) & 0x40;		// V flag
 
  AA = tmp;
  SetZN<T>(AA);

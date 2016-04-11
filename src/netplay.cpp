@@ -1184,7 +1184,7 @@ static bool CC_server(const char *arg)
 
  server[0] = 0;
 
- switch(trio_sscanf(arg, "%.299s %u", server, &port))
+ switch(trio_sscanf(arg, "%299s %u", server, &port))
  {
   default:
   case 0:

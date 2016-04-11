@@ -1,3 +1,47 @@
+-- 0.9.38.7: --
+
+September 30, 2015:
+	Fixed several malformed trio_sscanf() format strings in regards to field width, that could cause stack buffer overflows in certain cases.
+
+September 29, 2015:
+	PSX: Added skeleton BCzF/BCzT instruction emulation, and fixed handling of illegal CP0 instructions.
+
+September 25, 2015:
+	PSX: Added emulation of CPU exception-handling bad address register.
+
+	PSX: Implemented emulation of the Coprocessor Error field in the CAUSE register.
+
+	PSX: Added emulation of CPU exception-handling branch target register.
+
+	PSX: Fixed handling of CAUSE bits 30 and 31 when an exception occurs immediately after a branch instruction is executed.
+
+	PSX: Fixed link address calculation for JAL, JALR, and B*AL instructions when they're executed in a branch delay slot.
+
+	PSX: Corrected emulation of the quasi-illegal mirrors of the BGEZ*/BLTZ* type instructions.
+
+	PSX: Added emulation of a pipeline quirk that occurs with back-to-back load instructions to the same register(previously only emulated with LWL and LWR).
+
+September 22, 2015:
+	Fixed a bug in the debugger's disassembler that could break disassembly when a disassembled instruction wraps around the end of the CPU's program address
+	space to the beginning.
+
+September 18, 2015:
+	PCE: Removed experimental and unfinished hypothetical subtitle hardware emulation which had a few security-related problems.
+
+September 16, 2015:
+	MD: Fixed registration of main RAM in the cheat engine to be mirrored properly.
+
+	PCE: Fixed a bug that caused the debugger's disassembly and memory view to show a wrong value for the HES bootstrap register
+	at $1D00.
+
+	PCE: Fixed a bug that sometimes caused the "TIMV" register in the debugger to display "FFFFFFFF" instead of "FF".
+
+	The date and time of the compilation of qtrecord.cpp are no longer written to recorded QuickTime movie files, to solve
+	a minor privacy issue and a build reproducibility issue.
+
+	PSX: Rewrote parts of the timer emulation code to fix several issues; fixes wrong music playback speed problem
+	in "RPG Tsukuru 4".
+
 -- 0.9.38.6: --
 
 August 9, 2015:

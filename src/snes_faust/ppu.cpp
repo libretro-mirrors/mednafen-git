@@ -178,7 +178,8 @@ static DEFWRITE(Write_OAMDATA)
   (OAM - 1)[OAM_Addr] = OAM_Buffer;
   (OAM + 0)[OAM_Addr] = V;
  }
- else //if(!(OAM_Addr & 1)) // Is it set even when writing to high table?
+
+ if(!(OAM_Addr & 1))
   OAM_Buffer = V;
 
  OAM_Addr = (OAM_Addr + 1) & 0x3FF;

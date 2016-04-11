@@ -8,6 +8,13 @@ on game load for each emulated system.
 !!! Systems with RTC emulation: Fix code to NOT use localtime(), which has consistency issues due to relying on external state(IE time zones), at
 			    any time other than virtual power toggle/init.
 
+Save state preview images should reflect the screen-rotation(ALT+O) state somehow, probably at time of creation.
+
+Display current input setup(port mappings) in upper right corner of screen in smallest or second-smallest font, with black border, on
+game load; setting to control the time length of this display.
+
+Mednafen branding #define in config.h.
+
 Rework state rewinding code to run the XOR filter and compressor on small chunks instead of the whole save state, to improve performance due to better
 L1 cache utilization.
 

@@ -108,6 +108,8 @@ enum
  ROM_LAYOUT_HIROM,
  ROM_LAYOUT_EXLOROM,
  ROM_LAYOUT_EXHIROM,
+
+ ROM_LAYOUT_INVALID = 0xFFFFFFFF
 };
 
 void CART_Init(Stream* fp, uint8 id[16])
@@ -143,7 +145,7 @@ void CART_Init(Stream* fp, uint8 id[16])
  //
  //
 
- unsigned rom_layout = ROM_LAYOUT_LOROM;
+ unsigned rom_layout = ROM_LAYOUT_INVALID;
  unsigned ram_size = 0;
  uint8* header = NULL;
 
@@ -158,6 +160,9 @@ void CART_Init(Stream* fp, uint8 id[16])
    const uint8 header_rom_size = tmp[0x7FD7];
    const uint8 country_code = tmp[0x7FD9];
    const uint8 header_rom_type = tmp[0x7FD5];
+
+   if(rom_layout == ROM_LAYOUT_INVALID)
+    rom_layout = (s ? ROM_LAYOUT_HIROM : ROM_LAYOUT_LOROM);
 
    if(header_rom_size >= 0x01 && header_rom_size <= 0x0D && header_ram_size >= 0x00 && header_ram_size <= 0x09)
    {
@@ -198,8 +203,10 @@ void CART_Init(Stream* fp, uint8 id[16])
   }
  }
 
- SNES_DBG("[CART] rom_layout=%d\n", rom_layout);
+ if(rom_layout == ROM_LAYOUT_INVALID)	// FIXME: Error out?
+  rom_layout = ROM_LAYOUT_LOROM;
 
+ SNES_DBG("[CART] rom_layout=%d\n", rom_layout);
  //if((rom_type &~ 0x10) == 0x20)
  //{
  // assert(raw_ram_size <= 0x09);

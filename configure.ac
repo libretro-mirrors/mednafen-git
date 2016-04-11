@@ -6,7 +6,7 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.38.6'
+MEDNAFEN_VERSION='0.9.38.7'
 MEDNAFEN_VERSION_NUMERIC=0x000938
 
 AC_CANONICAL_HOST
@@ -269,7 +269,6 @@ AC_ARG_ENABLE(pce,
 if test x$enable_pce = xyes; then
                 AC_DEFINE([WANT_PCE_EMU], [1], [Define if we are compiling with PCE emulation.])
 		AM_CONDITIONAL(WANT_PCE_EMU, true)
-		AM_CONDITIONAL(NEED_68K_EMU, true)
 		AM_CONDITIONAL(NEED_PCE_PSG_EMU, true)
 		AM_CONDITIONAL(NEED_HUC6270_EMU, true)
 		AM_CONDITIONAL(NEED_HUC6280_EMU, true)

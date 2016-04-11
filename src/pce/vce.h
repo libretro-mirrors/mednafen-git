@@ -300,10 +300,6 @@ class VCE final : public HuC6280_Support
 	#endif
 
 	bool ShowHorizOS;
-
-	bool SubTValid;
-	uint16 SubTBuffer[0x100];
-	uint32 SubTLUT[4096];
 };
 
 

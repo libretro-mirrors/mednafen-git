@@ -358,6 +358,16 @@ void WSwanDBG_Disassemble(uint32 &a, uint32 SpecialA, char *text_buffer)
 
  consumed = zedis.disasm(0x0000, a, instr_buffer, text_buffer);
 
+ for(int i = 1; i < consumed; i++)
+ {
+  if(((a + i) & 0xFFFF) == SpecialA)
+  {
+   strcpy(text_buffer, "--------");
+   consumed = i;
+   break;
+  }
+ }
+
  int x;
  for(x = strlen(text_buffer); x < 40; x++)
   text_buffer[x] = ' ';
@@ -369,14 +379,6 @@ void WSwanDBG_Disassemble(uint32 &a, uint32 SpecialA, char *text_buffer)
   trio_snprintf(tmp, 16, " %02x", instr_buffer[i]);
   strcat(text_buffer, tmp);
  }
-
- for(int i = 1; i < consumed; i++)
-  if(((a + i) & 0xFFFF) == SpecialA)
-  {
-   a = SpecialA;
-   strcpy(text_buffer, "BORKBORK");
-   return;
-  }
 
  a = (a + consumed) & 0xFFFF;
 }

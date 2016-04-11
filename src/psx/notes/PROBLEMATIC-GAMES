@@ -9,12 +9,18 @@ Captain Commando
 Tekken 2
 	Requires emulation of coprocessor(GTE)->CPU transfer delay slots, or else severe graphical glitching.
 
+Skullmonkeys
+	Requires correct load delay slot handling.
+
 Next Tetris
 	Requires proper GPU CLUT wrapping.
 
 Threads of Fate
 	Requires correctish CPU branch delay slot emulation(it has branch instructions in previous branch instructions' delay slots), otherwise lockups
 	and graphical glitches.
+
+Shadow Master
+	Branches in branch delay slots.
 
 Legacy of Kain - Soul Reaver
 	Uses clever DMA tricks, including linked-list DMA with blocks larger than the GPU FIFO size.

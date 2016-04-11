@@ -20,7 +20,6 @@
 #include <mednafen/hw_sound/pce_psg/pce_psg.h>
 #include "input.h"
 #include "huc.h"
-#include "subhw.h"
 #include "pcecd.h"
 #include <mednafen/cdrom/scsicd.h>
 #include "hes.h"
@@ -201,7 +200,7 @@ static DECLFR(IORead)
 
   case 0x1C00: if(IsHES)
 		return(ReadIBP(A)); 
-	       return(SubHW_ReadIOPage(A));
+
 	       break; // Expansion
  }
 
@@ -271,7 +270,6 @@ static DECLFW(IOWrite)
 		//{
 		// PCE_DEBUG("I/O Unmapped Write: %04x %02x\n", A, V);
 		//}
-		SubHW_WriteIOPage(A, V);
 		break;
  }
 }
@@ -486,34 +484,7 @@ static int LoadCommon(void)
 
  PCEINPUT_Init();
 
- //
- //
- //
- SubHW_Init();
- HuCPU->SetReadHandler(0xFE, SubHW_ReadFEPage);
- HuCPU->SetWriteHandler(0xFE, SubHW_WriteFEPage);
- //
- //
- //
-
  PCE_Power();
-
- //
- // REMOVE ME, debugging stuff
- //
- #if 0
- {
-  uint8 er[8] = { 0x47, 0x6E, 0x31, 0x14, 0xB3, 0xEB, 0xEC, 0x2B };
-
-  for(int i = 0; i < 8; i++)
-   SubHW_WriteIOPage(0x1C00, er[i]);
-
-  SubHW_WriteIOPage(0x1FF7, 0x80);
- }
- #endif
- //
- //
- //
 
  MDFNGameInfo->LayerNames = IsSGX ? "BG0\0SPR0\0BG1\0SPR1\0" : "Background\0Sprites\0";
  MDFNGameInfo->fps = (uint32)((double)7159090.90909090 / 455 / 263 * 65536 * 256);
@@ -881,8 +852,6 @@ static void Emulate(EmulateSpecStruct *espec)
 
   INPUT_AdjustTS((int32)end_timestamp_mod12 - (int32)end_timestamp);	// Careful with this!
 
-  SubHW_EndFrame(end_timestamp, end_timestamp_mod12);
-
   psg->Update(end_timestamp / 3);
   psg->ResetTS(end_timestamp_mod12 / 3);
 
@@ -1025,7 +994,6 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
  psg->StateAction(sm, load, data_only);
  INPUT_StateAction(sm, load, data_only);
  HuC_StateAction(sm, load, data_only);
- SubHW_StateAction(sm, load, data_only);
 
  if(load)
  {
@@ -1054,8 +1022,6 @@ void PCE_Power(void)
   HuC_Power();
 
  PCEINPUT_Power(timestamp);
-
- SubHW_Power();
 
  if(PCE_IsCD)
  {

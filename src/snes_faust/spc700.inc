@@ -1154,8 +1154,8 @@ INLINE void SPC700::Instr_BRK(void)
  Push(PSW);
 
  PC = ReadMem(0xFFDE);
- PC |= ReadMem(0xFFDF);
- PSW |= B_FLAG;
+ PC |= ReadMem(0xFFDF) << 8;
+ PSW = (PSW | B_FLAG) & ~I_FLAG;
 
  IO();
  IO();
@@ -1412,14 +1412,14 @@ INLINE void SPC700::Instr_NOTC(void)
 INLINE void SPC700::Instr_EI(void)
 {
  IO();
- PSW &= ~I_FLAG;
+ PSW |= I_FLAG;
  IO();
 }
 
 INLINE void SPC700::Instr_DI(void)
 {
  IO();
- PSW |= I_FLAG;
+ PSW &= ~I_FLAG;
  IO();
 }
 

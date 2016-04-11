@@ -290,7 +290,7 @@ class HuC6280
 		break;
 
 	  case GSREG_TIMV:
-		value = timer_value;
+		value = (uint8)timer_value;
 		break;
 
 	  case GSREG_TIML:

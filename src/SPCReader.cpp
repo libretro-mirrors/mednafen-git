@@ -23,6 +23,9 @@
 
 bool SPCReader::TestMagic(Stream* fp)
 {
+#if 0
+ return true;
+#endif
  static const char* spc_magic = "SNES-SPC700 Sound File Data";
  uint8 header[0x100];
  uint64 rc;
@@ -62,6 +65,22 @@ static std::string GrabString(Stream* fp, size_t len)
 
 SPCReader::SPCReader(Stream* fp)
 {
+#if 0
+ reg_pc = 0x430;
+ reg_a = 0;
+ reg_x = 0;
+ reg_y = 0;
+ reg_psw = 0;
+ reg_sp = 0xFF;
+
+ memset(apuram, 0x00, sizeof(apuram));
+ memset(dspregs, 0x00, sizeof(dspregs));
+ dspregs[0x6C] = 0xE0;
+
+ fp->read(&apuram[0x400], 0x1000);
+ return;
+#endif
+
  if(!TestMagic(fp))
   throw MDFN_Error(0, _("Not a valid SPC file!"));
 

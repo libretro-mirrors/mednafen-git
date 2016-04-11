@@ -146,7 +146,7 @@ static bool StringToBC(const char *string, std::vector<ButtConfig> &bc)
 
  do
  {
-  if(trio_sscanf(string, "%.63s %.255[^~]", device_name, extra) == 2)
+  if(trio_sscanf(string, "%63s %255[^~]", device_name, extra) == 2)
   {
    if(!strcasecmp(device_name, "keyboard"))
    {

@@ -449,7 +449,9 @@ static void LoadCommonPost(const md_game_info &ginfo)
  MDFN_indent(-1);
 
  MDFNMP_Init(8192, (1 << 24) / 8192);
- MDFNMP_AddRAM(65536, 0x7 << 21, work_ram);
+
+ for(uint32 A = (0x7 << 21); A < (0x8 << 21); A += 65536)
+  MDFNMP_AddRAM(65536, A, work_ram, (A == 0xFF0000));
 
  MDFNGameInfo->GameSetMD5Valid = FALSE;
 
