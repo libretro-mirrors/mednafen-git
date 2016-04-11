@@ -144,3 +144,11 @@ char *MDFN_RemoveControlChars(char *str)
  return(orig);
 }
 
+void MDFN_RemoveControlChars(std::string& string)
+{
+ for(size_t i = 0; i < string.size(); i++)
+ {
+  if((unsigned char)string[i] < 0x20)
+   string[i] = 0x20;
+ }
+}

@@ -29529,7 +29529,7 @@ keyboard 258
 0
 wswan.input.builtin.gamepad.down-x
 (nil) MDFNSF_SUPPRESS_DOC 
-wswan, Built-In, Gamepad: DOWN ↓, X Cursors
+wswan, Built-In, Gamepad: X3(X DOWN ↓)
 
 MDFNST_STRING
 keyboard 115
@@ -29538,7 +29538,7 @@ keyboard 115
 0
 wswan.input.builtin.gamepad.down-y
 (nil) MDFNSF_SUPPRESS_DOC 
-wswan, Built-In, Gamepad: DOWN ↓, Y Cur: MUST NOT = X CURSORS
+wswan, Built-In, Gamepad: Y3(Y DOWN ↓)
 
 MDFNST_STRING
 keyboard 274
@@ -29547,7 +29547,7 @@ keyboard 274
 0
 wswan.input.builtin.gamepad.left-x
 (nil) MDFNSF_SUPPRESS_DOC 
-wswan, Built-In, Gamepad: LEFT ←, X Cursors
+wswan, Built-In, Gamepad: X4(X LEFT ←)
 
 MDFNST_STRING
 keyboard 97
@@ -29556,7 +29556,7 @@ keyboard 97
 0
 wswan.input.builtin.gamepad.left-y
 (nil) MDFNSF_SUPPRESS_DOC 
-wswan, Built-In, Gamepad: LEFT ←, Y Cur: MUST NOT = X CURSORS
+wswan, Built-In, Gamepad: Y4(Y LEFT ←)
 
 MDFNST_STRING
 keyboard 276
@@ -29583,7 +29583,7 @@ MDFNST_STRING
 0
 wswan.input.builtin.gamepad.right-x
 (nil) MDFNSF_SUPPRESS_DOC 
-wswan, Built-In, Gamepad: RIGHT →, X Cursors
+wswan, Built-In, Gamepad: X2(X RIGHT →)
 
 MDFNST_STRING
 keyboard 100
@@ -29592,7 +29592,7 @@ keyboard 100
 0
 wswan.input.builtin.gamepad.right-y
 (nil) MDFNSF_SUPPRESS_DOC 
-wswan, Built-In, Gamepad: RIGHT →, Y Cur: MUST NOT = X CURSORS
+wswan, Built-In, Gamepad: Y2(Y RIGHT →)
 
 MDFNST_STRING
 keyboard 275
@@ -29610,7 +29610,7 @@ keyboard 13
 0
 wswan.input.builtin.gamepad.up-x
 (nil) MDFNSF_SUPPRESS_DOC 
-wswan, Built-In, Gamepad: UP ↑, X Cursors
+wswan, Built-In, Gamepad: X1(X UP ↑)
 
 MDFNST_STRING
 keyboard 119
@@ -29619,7 +29619,7 @@ keyboard 119
 0
 wswan.input.builtin.gamepad.up-y
 (nil) MDFNSF_SUPPRESS_DOC 
-wswan, Built-In, Gamepad: UP ↑, Y Cur: MUST NOT = X CURSORS
+wswan, Built-In, Gamepad: Y1(Y UP ↑)
 
 MDFNST_STRING
 keyboard 273

@@ -153,11 +153,21 @@ void sha1_test(void)
  for(unsigned i = 0; i < 256; i++)
   tv[i] = i * 3;
 
- assert(sha1(tv, 55) == "e119a863bce69ad1b6ca1a51e94994531d122088"_sha1);
- assert(sha1(tv, 56) == "fd62c272e1f0f24b92a0ec8360519cd64d6ab986"_sha1);
- assert(sha1(tv, 57) == "010b0113d06cffb80f2beb657ef39682e5e7de79"_sha1);
- assert(sha1(tv, 63) == "adf8998c4791fc378fa6d8b23666934522546778"_sha1);
- assert(sha1(tv, 64) == "787680a25bf74f34c22b2c37d7d5bae2feceb20c"_sha1);
- assert(sha1(tv, 65) == "079b9ef0684bd9a600b9a23caa4297d064ce076e"_sha1);
+ static const sha1_digest expected[6] =
+ {
+  "e119a863bce69ad1b6ca1a51e94994531d122088"_sha1,
+  "fd62c272e1f0f24b92a0ec8360519cd64d6ab986"_sha1,
+  "010b0113d06cffb80f2beb657ef39682e5e7de79"_sha1,
+  "adf8998c4791fc378fa6d8b23666934522546778"_sha1,
+  "787680a25bf74f34c22b2c37d7d5bae2feceb20c"_sha1,
+  "079b9ef0684bd9a600b9a23caa4297d064ce076e"_sha1
+ };
+
+ assert(sha1(tv, 55) == expected[0]);
+ assert(sha1(tv, 56) == expected[1]);
+ assert(sha1(tv, 57) == expected[2]);
+ assert(sha1(tv, 63) == expected[3]);
+ assert(sha1(tv, 64) == expected[4]);
+ assert(sha1(tv, 65) == expected[5]);
 }
 

@@ -166,18 +166,22 @@ INLINE void HuC6280::BBSi(const uint8 val, const unsigned int bitto)
 
 // ADC and SBC in decimal mode take 1 extra CPU cycle...we'll add it by using "LASTCYCLE".  So now that makes
 // LASTCYCLE being called at most 3 times.  Not very LASTy, is it!!
-#define ADC  TPREFIX; {	\
-	      if(P & D_FLAG)	\
-	      {		\
-		uint32 low = (A & 0x0F) + (x & 0x0F) + (P & 1);	\
-		uint32 high = (A & 0xF0) + (x & 0xF0);	\
-		P &= ~(Z_FLAG | C_FLAG | N_FLAG);	\
-		if(low > 0x09) { high += 0x10; low += 0x06; }	\
-		if(high > 0x90) { high += 0x60; }	\
-		P |= (high >> 8) & C_FLAG;	\
-		A = (low & 0x0F) | (high & 0xF0);	\
-		X_ZNT(A);	\
-		LASTCYCLE;	\
+#define ADC  TPREFIX; {					\
+	      if(P & D_FLAG)				\
+	      {						\
+		uint32 tmp;				\
+		tmp = (A & 0x0F) + (x & 0x0F) + (P & 1);	\
+		if(tmp >= 0x0A)				\
+		 tmp += 0x06;				\
+		tmp += (A & 0xF0) + (x & 0xF0);		\
+		if(tmp >= 0xA0)				\
+		 tmp += 0x60;				\
+		P &= ~(Z_FLAG | N_FLAG | C_FLAG);	\
+		if(tmp & 0xFF00)			\
+		 P |= C_FLAG;				\
+		A = tmp;				\
+		X_ZNT(A);				\
+		LASTCYCLE;				\
 	      }	\
 	      else	\
 	      {	\
@@ -190,20 +194,20 @@ INLINE void HuC6280::BBSi(const uint8 val, const unsigned int bitto)
 	      }	\
 	     } TPOSTFIX;
 
-#define SBC  if(P & D_FLAG)	\
-	     {		\
-	      uint32 c = (P & 1) ^ 1;	\
-	      uint32 l = A - x - c;	\
-	      uint32 low = (A & 0x0f) - (x & 0x0f) - c;	\
-	      uint32 high = (A & 0xf0) - (x & 0xf0);	\
-	      P &= ~(Z_FLAG | C_FLAG | N_FLAG);	\
-	      if(low & 0xf0) low -= 0x06;	\
-	      if(low & 0x80) high -= 0x10;	\
-	      if(high & 0x0f00) high -= 0x60;	\
-	      P |= ((l >> 8) & C_FLAG) ^ C_FLAG;	\
-	      A = (low & 0x0F) | (high & 0xf0);	\
-	      X_ZNT(A);	\
-              LASTCYCLE;      \
+#define SBC  if(P & D_FLAG)						\
+	     {								\
+	      const uint8 m = (A & 0xF) - (x & 0xF) - ((P & 1) ^ 1);	\
+    	      const uint8 n = (A >> 4) - (x >> 4) - ((m >> 4) & 1);	\
+	      uint8 res = (n << 4) | (m & 0xF);				\
+	      P &= ~(Z_FLAG | N_FLAG | C_FLAG);				\
+	      if(m & 0x10)						\
+	       res -= 0x06;						\
+	      if(n & 0x10)						\
+	       res -= 0x60;						\
+	      A = res;							\
+	      P |= ((n >> 4) & 0x1) ^ 1;				\
+	      X_ZNT(A);							\
+              LASTCYCLE;      						\
 	     }	else {	\
 	      uint32 l=A-x-((P&1)^1);	\
 	      P&=~(Z_FLAG|C_FLAG|N_FLAG|V_FLAG);	\

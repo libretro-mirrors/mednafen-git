@@ -453,23 +453,9 @@ static bool ValidateRawDataSector(uint8 *data, const uint32 lba)
 
 static void DoREADBase(uint32 sa, uint32 sc)
 {
- int track;
-
  if(sa > toc.tracks[100].lba) // Another one of those off-by-one PC-FX CD bugs.
  {
   CommandCCError(SENSEKEY_ILLEGAL_REQUEST, NSE_END_OF_VOLUME);
-  return;
- }
-
- if((track = toc.FindTrackByLBA(sa)) == 0)
- {
-  CommandCCError(SENSEKEY_ILLEGAL_REQUEST, NSE_END_OF_VOLUME);
-  return;
- }
-
- if(!(toc.tracks[track].control) & 0x4)
- {
-  CommandCCError(SENSEKEY_MEDIUM_ERROR, NSE_NOT_DATA_TRACK);
   return;
  }
 

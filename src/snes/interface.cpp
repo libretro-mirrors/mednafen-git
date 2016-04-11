@@ -19,7 +19,7 @@
 #include <mednafen/hash/md5.h>
 #include <mednafen/general.h>
 #include <mednafen/mempatcher.h>
-#include <mednafen/PSFLoader.h>
+#include <mednafen/SNSFLoader.h>
 #include <mednafen/player.h>
 #include <mednafen/FileStream.h>
 #include <mednafen/resampler/resampler.h>
@@ -38,20 +38,6 @@ static int32 ResampInPos;
 static int16 ResampInBuffer[2048][2];
 static bool PrevFrameInterlaced;
 static int PrevLine;
-
-class SNSFLoader : public PSFLoader
-{
- public:
-
- SNSFLoader(Stream *fp);
- virtual ~SNSFLoader();
-
- virtual void HandleEXE(Stream* fp, bool ignore_pcsp = false) override;
- virtual void HandleReserved(Stream* fp, uint32 len) override;
-
- PSFTags tags;
- std::vector<uint8> ROM_Data;
-};
 
 static bSNES_v059::Interface Interface;
 static SNSFLoader *snsf_loader = NULL;
@@ -542,125 +528,6 @@ static void SetupMisc(bool PAL)
  SoundLastRate = 0;
 }
 
-SNSFLoader::SNSFLoader(Stream *fp)
-{
- uint32 size_tmp;
- uint8 *export_ptr;
-
- tags = Load(0x23, 8 + 1024 * 8192, fp);
-
- size_tmp = ROM_Data.size();
-
- assert(size_tmp <= (8192 * 1024));
-
- export_ptr = new uint8[8192 * 1024];
- memset(export_ptr, 0x00, 8192 * 1024);
- memcpy(export_ptr, &ROM_Data[0], size_tmp);
- bSNES_v059::memory::cartrom.map(export_ptr, size_tmp);
- ROM_Data.resize(0);
-
- bSNES_v059::cartridge.load(bSNES_v059::Cartridge::ModeNormal);
-}
-
-SNSFLoader::~SNSFLoader()
-{
-
-}
-
-void SNSFLoader::HandleReserved(Stream* fp, uint32 len)
-{
- uint64 bound_pos = fp->tell() + len;
-
- if(len < 9)
-  return;
-
- while(fp->tell() < bound_pos)
- {
-  uint8 raw_header[8];
-  uint32 header_type;
-  uint32 header_size;
-
-  fp->read(raw_header, sizeof(raw_header));
-
-  header_type = MDFN_de32lsb(&raw_header[0]);
-  header_size = MDFN_de32lsb(&raw_header[4]);
-
-  switch(header_type)
-  {
-   case 0xFFFFFFFF:	// EOR
-	goto Breakout;
-
-   default:
-	throw MDFN_Error(0, _("SNSF Reserved Section Unknown/Unsupported Data Type 0x%08x"), header_type);
-	break;
-
-   case 0:	// SRAM
-	{
-	 uint8 raw_subheader[4];
-	 uint32 srd_offset, srd_size;
-
-	 fp->read(raw_subheader, sizeof(raw_subheader));
-
-	 srd_offset = MDFN_de32lsb(&raw_subheader[0]);
-	 srd_size = header_size - 4;
-
-	 if(srd_size > 0x20000)
-	 {
-	  throw MDFN_Error(0, _("SNSF Reserved Section SRAM block size(=%u) is too large."), srd_size);
-	 }
-
-	 if(((uint64)srd_offset + srd_size) > 0x20000)
-	 {
-	  throw MDFN_Error(0, _("SNSF Reserved Section SRAM block combined offset+size(=%llu) is too large."), (unsigned long long)srd_offset + srd_size);
-	 }
-
-	 MDFN_printf("SNSF SRAM Data(not implemented yet): Offset=0x%08x, Size=0x%08x\n", srd_offset, srd_size);
-	 //printf("%d\n", bSNES_v059::memory::cartram.size());
-	 fp->seek(srd_size, SEEK_CUR);
-	}
-	break;
-  }
- }
-
- Breakout:;
-
- if(fp->tell() != bound_pos)
-  throw MDFN_Error(0, _("Malformed SNSF reserved section."));
-}
-
-
-void SNSFLoader::HandleEXE(Stream* fp, bool ignore_pcsp)
-{
- uint8 raw_header[8];
-
- fp->read(raw_header, sizeof(raw_header));
-
- const uint32 header_offset = MDFN_de32lsb(&raw_header[0]);
- const uint32 header_size = MDFN_de32lsb(&raw_header[4]);
-
- MDFN_printf("SNSF ROM Data: SNSF_Offset=0x%08x Size=0x%08x\n", header_offset, header_size);
-
- if(header_offset > (1024 * 8192))
- {
-  throw MDFN_Error(0, _("SNSF Header Field Offset(=%u) is too large."), header_offset);
- }
-
- if(header_size > (1024 * 8192))
- {
-  throw MDFN_Error(0, _("SNSF Header Field Size(=%u) is too large."), header_size);
- }
-
- if(((uint64)header_offset + header_size) > (1024 * 8192))
- {
-  throw MDFN_Error(0, _("SNSF Combined Header Fields Offset(=%u) + Size(=%u) is too large."), header_offset, header_size);
- }
-
- if((header_offset + header_size) > ROM_Data.size())
-  ROM_Data.resize(header_offset + header_size, 0x00);
-
- fp->read(&ROM_Data[header_offset], header_size);
-}
-
 static void LoadSNSF(MDFNFILE *fp)
 {
  bool PAL = false;
@@ -673,7 +540,18 @@ static void LoadSNSF(MDFNFILE *fp)
  std::vector<std::string> SongNames;
 
  snsf_loader = new SNSFLoader(fp->stream());
+ {
+  uint8 *export_ptr;
 
+  export_ptr = new uint8[8192 * 1024];
+  memset(export_ptr, 0x00, 8192 * 1024);
+  assert(snsf_loader->ROM_Data.size() <= 8192 * 1024);
+  snsf_loader->ROM_Data.read(export_ptr, snsf_loader->ROM_Data.size());
+  bSNES_v059::memory::cartrom.map(export_ptr, snsf_loader->ROM_Data.size());
+  snsf_loader->ROM_Data.close();
+
+  bSNES_v059::cartridge.load(bSNES_v059::Cartridge::ModeNormal);
+ }
  SongNames.push_back(snsf_loader->tags.GetTag("title"));
 
  Player_Init(1, snsf_loader->tags.GetTag("game"), snsf_loader->tags.GetTag("artist"), snsf_loader->tags.GetTag("copyright"), SongNames);

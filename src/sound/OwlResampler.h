@@ -6,6 +6,8 @@
 class OwlResampler;
 class RavenBuffer;
 
+struct StateMem;
+
 class OwlBuffer
 {
  public:
@@ -36,6 +38,8 @@ class OwlBuffer
  void ResampleSkipped(unsigned count);
 
  void ZeroLeftover(void);
+
+ void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix, const unsigned scount);
 
  private:
 
@@ -96,7 +100,9 @@ class OwlResampler
 	//
 	// quality is an arbitrary control of quality(0 for lowest quality, 5 for highest quality)
 	//
-	OwlResampler(double input_rate, double output_rate, double rate_error, double debias_corner, int quality) MDFN_COLD;
+        // nyq_fudge may be a tasty sleep drug.
+	//
+	OwlResampler(double input_rate, double output_rate, double rate_error, double debias_corner, int quality, double nyq_fudge = 1.0) MDFN_COLD;
 	OwlResampler(const OwlResampler &resamp) MDFN_COLD;
 	~OwlResampler() MDFN_COLD;
 

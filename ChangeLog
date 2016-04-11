@@ -1,3 +1,36 @@
+-- 0.9.38.5: --
+
+June 26, 2015:
+	PSX: Generate a seek error when trying to read audio sectors(when the appropriate Mode bit isn't set), and generate a bad command error
+	when executing ReadN/ReadS with a non-PS1 disc.  Fixes a lockup in "Vib Ribbon" when trying to play with audio CDs.
+
+June 20, 2015:
+	Altered SHA-1 and SHA-256 test code to work around a preprocessor-related bug in gcc.
+
+	NES: Fixed a mapper 19 sound emulation bug; fixes music issues in the Japanese release of "Rolling Thunder".
+
+	PSX: Replaced a GPU debug puts() with code that respects the psx.dbg_level setting.
+
+June 18, 2015:
+	PC-FX: Corrected handling of width/height of 0xA for KING BG1-3, per tests on a PC-FX.  Fixes a graphical glitch in "Sakuraigar Mode" in
+	"Tyoushin Heiki Zeroigar".
+
+May 5, 2015:
+	PSX: Added some debug messages to the memory card emulation code, outputted when setting psx.dbg_level is set to certain values.
+
+April 29, 2015:
+	PCE, PCE_FAST: Corrected decimal-mode ADC and SBC behavior(especially for "illegal" input values), per tests on a HuC6280.
+
+April 22, 2015:
+	Added a test to tests.cpp for gcc bug #60196(triggered with non-default optimization flags).
+
+April 19, 2015:
+	Added a missing dependency statement to configure.ac, whose absence broke compilation with --disable-pce --enable-pcfx
+
+April 16, 2015:
+	WonderSwan: Removed erroneous constraints that were preventing opposing X* and Y* buttons from being pressed simultaneously, and changed the
+	names of the the X* and Y* buttons used during input configuration, per tip from trap15.
+
 -- 0.9.38.4: --
 
 April 12, 2015:

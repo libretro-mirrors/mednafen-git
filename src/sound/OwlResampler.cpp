@@ -19,7 +19,8 @@
 //   22050-192000 in mind, though preferably output rates between 48000 to 96000(inclusive) will be used.
 //*/
 
-#include "../mednafen.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/state.h>
 #include <math.h>
 #include <assert.h>
 #include <limits.h>
@@ -59,6 +60,54 @@ OwlBuffer::~OwlBuffer()
 
 
 
+}
+
+void OwlBuffer::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix, const unsigned scount)
+{
+ unsigned InBuf = scount;
+
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(accum),
+  SFVAR(leftover),
+
+  SFARRAY64(filter_state, 2),
+
+  SFVAR(InputIndex),
+
+  SFVAR(InputPhase),
+
+  SFVAR(debias),
+
+  SFVAR(InBuf),
+
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, sname_prefix);
+
+ if(load)
+ {
+  if(leftover < 0)
+   leftover = 0;
+
+  if(leftover > HRBUF_LEFTOVER_PADDING)
+   leftover = HRBUF_LEFTOVER_PADDING;
+
+  if(InBuf > 65536)
+   InBuf = 65536;
+ }
+
+ char lod_sname[256];
+ snprintf(lod_sname, sizeof(lod_sname), "%s_LOD", sname_prefix);
+
+ SFORMAT StateRegs_LOD[] =
+ {
+  SFARRAY32(Buf() - leftover, leftover + InBuf + HRBUF_OVERFLOW_PADDING),
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs_LOD, lod_sname);
 }
 
 template<unsigned DoExMix, bool Integrate, unsigned IntegrateShift, bool Lowpass, bool Highpass, bool FloatOutput>
@@ -532,6 +581,13 @@ int32 OwlResampler::Resample(OwlBuffer* in, const uint32 in_count, int16* out, c
 	OwlBuffer::I32_F_Pudding* InSamps = in->BufPudding() - in->leftover;
 	int32 leftover;
 
+	if(MDFN_UNLIKELY(InputPhase >= NumPhases))
+	{
+	 fprintf(stderr, "[BUG] InputPhase >= NumPhases\n");	// Save states can also trigger this.
+	 InputPhase = 0;
+	}
+
+
 	if(0)
 	{
 
@@ -715,7 +771,7 @@ static float FilterDenormal(float v)
  return(v);
 }
 
-OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_error, double debias_corner, int quality)
+OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_error, double debias_corner, int quality, double nyq_fudge)
 {
  double *FilterBuf = NULL;
  double ratio = (double)output_rate / input_rate;
@@ -883,6 +939,11 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
  // Adjust cutoff now that NumCoeffs may have been increased.
  //
  cutoff = std::min<double>(QualityTable[quality].obw * something / input_rate, (std::min<double>(input_rate, output_rate) / input_rate - ((double)k_d / NumCoeffs)));
+
+ cutoff *= nyq_fudge;
+ if(ceil(cutoff) > 1.0)
+  cutoff = 1.0;  
+
 
  MDFN_printf("Adjusted number of coefficients per phase: %u\n", NumCoeffs);
  MDFN_printf("Adjusted nominal cutoff frequency: %f\n", InputRate * cutoff / 2);

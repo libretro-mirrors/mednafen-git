@@ -121,11 +121,7 @@ MemoryStream & MemoryStream::operator=(const MemoryStream &zs)
 
 MemoryStream::~MemoryStream()
 {
- if(data_buffer)
- {
-  free(data_buffer);
-  data_buffer = NULL;
- }
+ close();
 }
 
 uint64 MemoryStream::attributes(void)
@@ -303,7 +299,15 @@ void MemoryStream::flush(void)
 
 void MemoryStream::close(void)
 {
+ if(data_buffer)
+ {
+  free(data_buffer);
+  data_buffer = NULL;
+ }
 
+ data_buffer_size = 0;
+ data_buffer_alloced = 0;
+ position = 0;
 }
 
 

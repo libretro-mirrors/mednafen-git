@@ -5,7 +5,7 @@ DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_src
 
 bin_PROGRAMS	=	mednafen
 
-mednafen_SOURCES 	= 	debug.cpp error.cpp mempatcher.cpp settings.cpp endian.cpp mednafen.cpp git.cpp file.cpp general.cpp memory.cpp netplay.cpp state.cpp state_rewind.cpp movie.cpp player.cpp PSFLoader.cpp tests.cpp qtrecord.cpp Stream.cpp MemoryStream.cpp FileStream.cpp IPSPatcher.cpp
+mednafen_SOURCES 	= 	debug.cpp error.cpp mempatcher.cpp settings.cpp endian.cpp mednafen.cpp git.cpp file.cpp general.cpp memory.cpp netplay.cpp state.cpp state_rewind.cpp movie.cpp player.cpp PSFLoader.cpp SNSFLoader.cpp SPCReader.cpp tests.cpp qtrecord.cpp Stream.cpp MemoryStream.cpp FileStream.cpp IPSPatcher.cpp
 mednafen_LDADD 		= 	trio/libtrio.a
 mednafen_DEPENDENCIES	=	trio/libtrio.a
 
@@ -124,6 +124,12 @@ if WANT_SNES_EMU
 SUBDIRS += snes
 mednafen_LDADD          +=      snes/libsnes.a
 mednafen_DEPENDENCIES   +=      snes/libsnes.a
+endif
+
+if WANT_SNES_FAUST_EMU
+SUBDIRS += snes_faust
+mednafen_LDADD          +=      snes_faust/libsnes_faust.a
+mednafen_DEPENDENCIES   +=      snes_faust/libsnes_faust.a
 endif
 
 if WANT_VB_EMU

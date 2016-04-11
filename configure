@@ -710,6 +710,8 @@ WANT_WSWAN_EMU_FALSE
 WANT_WSWAN_EMU_TRUE
 WANT_VB_EMU_FALSE
 WANT_VB_EMU_TRUE
+WANT_SNES_FAUST_EMU_FALSE
+WANT_SNES_FAUST_EMU_TRUE
 WANT_SNES_EMU_FALSE
 WANT_SNES_EMU_TRUE
 WANT_PSX_EMU_FALSE
@@ -962,6 +964,7 @@ enable_pcfx
 enable_psx
 enable_sms
 enable_snes
+enable_snes_faust
 enable_vb
 enable_wswan
 enable_alsa
@@ -1650,6 +1653,7 @@ Optional Features:
   --enable-psx            build with PlayStation emulation [[default=yes]]
   --enable-sms            build with SMS+GG emulation [[default=yes]]
   --enable-snes           build with SNES emulation [[default=yes]]
+  --enable-snes-faust     build with shrieking zombies [[default=no]]
   --enable-vb             build with Virtual Boy emulation [[default=yes]]
   --enable-wswan          build with WonderSwan emulation [[default=yes]]
   --enable-alsa           support the ALSA audio API [[default=yes]]
@@ -4328,7 +4332,7 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.38.4'
+MEDNAFEN_VERSION='0.9.38.5'
 MEDNAFEN_VERSION_NUMERIC=0x000938
 
 ac_aux_dir=
@@ -24987,6 +24991,14 @@ else
 fi
 
  if false; then
+  WANT_SNES_FAUST_EMU_TRUE=
+  WANT_SNES_FAUST_EMU_FALSE='#'
+else
+  WANT_SNES_FAUST_EMU_TRUE='#'
+  WANT_SNES_FAUST_EMU_FALSE=
+fi
+
+ if false; then
   WANT_VB_EMU_TRUE=
   WANT_VB_EMU_FALSE='#'
 else
@@ -25410,6 +25422,14 @@ else
   NEED_PCE_PSG_EMU_FALSE=
 fi
 
+		 if true; then
+  NEED_HUC6270_EMU_TRUE=
+  NEED_HUC6270_EMU_FALSE='#'
+else
+  NEED_HUC6270_EMU_TRUE='#'
+  NEED_HUC6270_EMU_FALSE=
+fi
+
 fi
 
 # Check whether --enable-psx was given.
@@ -25498,6 +25518,28 @@ $as_echo "#define WANT_SNES_EMU 1" >>confdefs.h
 else
   WANT_SNES_EMU_TRUE='#'
   WANT_SNES_EMU_FALSE=
+fi
+
+fi
+
+# Check whether --enable-snes-faust was given.
+if test "${enable_snes_faust+set}" = set; then :
+  enableval=$enable_snes_faust;
+else
+  enable_snes_faust=no
+fi
+
+
+if test x$enable_snes_faust = xyes; then
+
+$as_echo "#define WANT_SNES_FAUST_EMU 1" >>confdefs.h
+
+                 if true; then
+  WANT_SNES_FAUST_EMU_TRUE=
+  WANT_SNES_FAUST_EMU_FALSE='#'
+else
+  WANT_SNES_FAUST_EMU_TRUE='#'
+  WANT_SNES_FAUST_EMU_FALSE=
 fi
 
 fi
@@ -27197,7 +27239,7 @@ $as_echo "#define MPC_FIXED_POINT 1" >>confdefs.h
 LIBS="$SNDFILE_LIBS $LIBS"
 CPPFLAGS="$SNDFILE_CFLAGS $CPPFLAGS"
 
-ac_config_files="$ac_config_files Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/cdplay/Makefile src/demo/Makefile src/desa68/Makefile src/quicklz/Makefile po/Makefile.in intl/Makefile"
+ac_config_files="$ac_config_files Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/snes_faust/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/cdplay/Makefile src/demo/Makefile src/desa68/Makefile src/quicklz/Makefile po/Makefile.in intl/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -27404,6 +27446,10 @@ if test -z "${WANT_SNES_EMU_TRUE}" && test -z "${WANT_SNES_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_SNES_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${WANT_SNES_FAUST_EMU_TRUE}" && test -z "${WANT_SNES_FAUST_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"WANT_SNES_FAUST_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${WANT_VB_EMU_TRUE}" && test -z "${WANT_VB_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_VB_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
@@ -27552,6 +27598,10 @@ if test -z "${NEED_PCE_PSG_EMU_TRUE}" && test -z "${NEED_PCE_PSG_EMU_FALSE}"; th
   as_fn_error $? "conditional \"NEED_PCE_PSG_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${NEED_HUC6270_EMU_TRUE}" && test -z "${NEED_HUC6270_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_HUC6270_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${WANT_PSX_EMU_TRUE}" && test -z "${WANT_PSX_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_PSX_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
@@ -27574,6 +27624,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_SNES_EMU_TRUE}" && test -z "${WANT_SNES_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_SNES_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${WANT_SNES_FAUST_EMU_TRUE}" && test -z "${WANT_SNES_FAUST_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"WANT_SNES_FAUST_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_VB_EMU_TRUE}" && test -z "${WANT_VB_EMU_FALSE}"; then
@@ -28731,6 +28785,7 @@ do
     "src/wswan/Makefile") CONFIG_FILES="$CONFIG_FILES src/wswan/Makefile" ;;
     "src/nes/Makefile") CONFIG_FILES="$CONFIG_FILES src/nes/Makefile" ;;
     "src/snes/Makefile") CONFIG_FILES="$CONFIG_FILES src/snes/Makefile" ;;
+    "src/snes_faust/Makefile") CONFIG_FILES="$CONFIG_FILES src/snes_faust/Makefile" ;;
     "src/ngp/Makefile") CONFIG_FILES="$CONFIG_FILES src/ngp/Makefile" ;;
     "src/sound/Makefile") CONFIG_FILES="$CONFIG_FILES src/sound/Makefile" ;;
     "src/hw_cpu/Makefile") CONFIG_FILES="$CONFIG_FILES src/hw_cpu/Makefile" ;;

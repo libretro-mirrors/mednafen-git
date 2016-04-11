@@ -519,17 +519,20 @@ static const MDFNSetting WSwanSettings[] =
  { NULL }
 };
 
+//
+// X* and Y* buttons are discrete buttons and not D-pads nor sticks(so for example, it's possible to press "up" and "down" simultaneously).
+//
 static const IDIISG IDII =
 {
- { "up-x", "UP ↑, X Cursors", 0, IDIT_BUTTON, "down-x",				{ "right-x", "down-x", "left-x" } },
- { "right-x", "RIGHT →, X Cursors", 3, IDIT_BUTTON, "left-x",			{ "down-x", "left-x", "up-x" } },
- { "down-x", "DOWN ↓, X Cursors", 1, IDIT_BUTTON, "up-x", 			{ "left-x", "up-x", "right-x" } },
- { "left-x", "LEFT ←, X Cursors", 2, IDIT_BUTTON, "right-x",			{ "up-x", "right-x", "down-x" } },
+ { "up-x",   	"X1(X UP ↑)", 0, IDIT_BUTTON, NULL,	{ "right-x", "down-x", "left-x" } },
+ { "right-x",	"X2(X RIGHT →)", 3, IDIT_BUTTON, NULL,	{ "down-x", "left-x", "up-x" } },
+ { "down-x",	"X3(X DOWN ↓)", 1, IDIT_BUTTON, NULL, 	{ "left-x", "up-x", "right-x" } },
+ { "left-x",	"X4(X LEFT ←)", 2, IDIT_BUTTON, NULL,	{ "up-x", "right-x", "down-x" } },
 
- { "up-y", "UP ↑, Y Cur: MUST NOT = X CURSORS", 4, IDIT_BUTTON, "down-y",	{ "right-y", "down-y", "left-y" } },
- { "right-y", "RIGHT →, Y Cur: MUST NOT = X CURSORS", 7, IDIT_BUTTON, "left-y",	{ "down-y", "left-y", "up-y" } },
- { "down-y", "DOWN ↓, Y Cur: MUST NOT = X CURSORS", 5, IDIT_BUTTON, "up-y",	{ "left-y", "up-y", "right-y" } },
- { "left-y", "LEFT ←, Y Cur: MUST NOT = X CURSORS", 6, IDIT_BUTTON, "right-y",	{ "up-y", "right-y", "down-y" } },
+ { "up-y", 	"Y1(Y UP ↑)", 4, IDIT_BUTTON, NULL,	{ "right-y", "down-y", "left-y" } },
+ { "right-y", 	"Y2(Y RIGHT →)", 7, IDIT_BUTTON, NULL,	{ "down-y", "left-y", "up-y" } },
+ { "down-y", 	"Y3(Y DOWN ↓)", 5, IDIT_BUTTON, NULL,	{ "left-y", "up-y", "right-y" } },
+ { "left-y", 	"Y4(Y LEFT ←)", 6, IDIT_BUTTON, NULL,	{ "up-y", "right-y", "down-y" } },
 
  { "start", "Start", 8, IDIT_BUTTON, NULL },
  { "a", "A", 10, IDIT_BUTTON_CAN_RAPID,  NULL },

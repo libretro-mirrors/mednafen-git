@@ -6,14 +6,14 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.38.4'
+MEDNAFEN_VERSION='0.9.38.5'
 MEDNAFEN_VERSION_NUMERIC=0x000938
 
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([mednafen], $MEDNAFEN_VERSION)
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
-AM_CONFIG_HEADER([include/config.h:include/config.h.in])
+AC_CONFIG_HEADERS([include/config.h:include/config.h.in])
 
 AC_PROG_CC
 AC_PROG_CPP
@@ -183,6 +183,7 @@ AM_CONDITIONAL(WANT_PCFX_EMU, false)
 AM_CONDITIONAL(WANT_PSX_EMU, false)
 AM_CONDITIONAL(WANT_SMS_EMU, false)
 AM_CONDITIONAL(WANT_SNES_EMU, false)
+AM_CONDITIONAL(WANT_SNES_FAUST_EMU, false)
 AM_CONDITIONAL(WANT_VB_EMU, false)
 AM_CONDITIONAL(WANT_WSWAN_EMU, false)
 
@@ -294,6 +295,7 @@ if test x$enable_pcfx = xyes; then
 		AM_CONDITIONAL(WANT_PCFX_EMU, true)
 		AM_CONDITIONAL(NEED_V810_EMU, true)
 		AM_CONDITIONAL(NEED_PCE_PSG_EMU, true)
+		AM_CONDITIONAL(NEED_HUC6270_EMU, true)
 fi
 
 AC_ARG_ENABLE(psx,
@@ -324,6 +326,15 @@ AC_ARG_ENABLE(snes,
 if test x$enable_snes = xyes; then
                 AC_DEFINE([WANT_SNES_EMU], [1], [Define if we are compiling with SNES emulation.])
                 AM_CONDITIONAL(WANT_SNES_EMU, true)
+fi
+
+AC_ARG_ENABLE(snes-faust,
+ AC_HELP_STRING([--enable-snes-faust], [build with shrieking zombies [[default=no]]]),
+                  , enable_snes_faust=no)
+
+if test x$enable_snes_faust = xyes; then
+                AC_DEFINE([WANT_SNES_FAUST_EMU], [1], [Define if we are compiling with shrieking zombies.])
+                AM_CONDITIONAL(WANT_SNES_FAUST_EMU, true)
 fi
 
 AC_ARG_ENABLE(vb,
@@ -600,4 +611,4 @@ LIBS="$SNDFILE_LIBS $LIBS"
 CPPFLAGS="$SNDFILE_CFLAGS $CPPFLAGS"
 
 dnl Output Makefiles
-AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/cdplay/Makefile src/demo/Makefile src/desa68/Makefile src/quicklz/Makefile po/Makefile.in  intl/Makefile])
+AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/gb/Makefile src/gba/Makefile src/lynx/Makefile src/pce/Makefile src/pce_fast/Makefile src/pcfx/Makefile src/psx/Makefile src/sms/Makefile src/vb/Makefile src/wswan/Makefile src/nes/Makefile src/snes/Makefile src/snes_faust/Makefile src/ngp/Makefile src/sound/Makefile src/hw_cpu/Makefile src/hw_misc/Makefile src/hw_sound/Makefile src/hw_video/Makefile src/md/Makefile src/cdplay/Makefile src/demo/Makefile src/desa68/Makefile src/quicklz/Makefile po/Makefile.in  intl/Makefile])

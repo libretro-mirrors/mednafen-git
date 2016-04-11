@@ -643,6 +643,26 @@ void NO_INLINE NO_CLONE TestLLVM15470(void)
  TestLLVM15470_Sub(2);
 }
 
+int NO_INLINE NO_CLONE TestGCC60196_Sub(const int16* data, int count)
+{
+ int ret = 0;
+
+ for(int i = 0; i < count; i++)
+  ret += i * data[i];
+
+ return ret;
+}
+
+void NO_INLINE NO_CLONE TestGCC60196(void)
+{
+ int16 ta[16];
+
+ for(unsigned i = 0; i < 16; i++)
+  ta[i] = 1;
+
+ assert(TestGCC60196_Sub(ta, sizeof(ta) / sizeof(ta[0])) == 120);
+}
+
 template<typename A, typename B>
 void NO_INLINE NO_CLONE TestSUCompare_Sub(A a, B b)
 {
@@ -1186,6 +1206,8 @@ bool MDFN_RunMathTests(void)
  TestDefinedOverShift();
  TestBoolConv();
  TestNarrowConstFold();
+
+ TestGCC60196();
 
  TestModTern();
  TestBWNotMask31GTZ();

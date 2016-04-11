@@ -674,6 +674,9 @@
 /* Define if we are compiling with SNES emulation. */
 #undef WANT_SNES_EMU
 
+/* Define if we are compiling with shrieking zombies. */
+#undef WANT_SNES_FAUST_EMU
+
 /* Define if we are compiling with Virtual Boy emulation. */
 #undef WANT_VB_EMU
 
