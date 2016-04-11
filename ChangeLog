@@ -1,3 +1,12 @@
+-- 0.9.38.6: --
+
+August 9, 2015:
+	PSX: Fixed a bug in the calculation of time taken by some GPU commands while in interlaced mode; fixes graphical glitches in
+	"Mr. Driller G".
+
+	PCE, PCE_FAST: Added more delay to CD Read command's returning of sector data, to fix a lockup in "Mirai Shonen Conan",
+	and a stuck note problem in "4 in 1 Super CD".
+
 -- 0.9.38.5: --
 
 June 26, 2015:
