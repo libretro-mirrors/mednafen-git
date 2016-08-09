@@ -909,7 +909,7 @@ void CMikie::Poke(uint32 addr,uint8 data)
 			{
 				C6502_REGS regs;
 				mSystem.GetRegs(regs);
-				MDFN_printf("Runtime Alert - System Halted\nCMikie::Poke(SYSCTL1) - Lynx power down occured at PC=$%04x.\nResetting system.\n",regs.PC);
+				MDFN_printf("Runtime Alert - System Halted\nCMikie::Poke(SYSCTL1) - Lynx power down occurred at PC=$%04x.\nResetting system.\n",regs.PC);
 				mSystem.Reset();
 				gSystemHalt=TRUE;
 			}

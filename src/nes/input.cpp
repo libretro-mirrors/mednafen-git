@@ -27,6 +27,9 @@
 #include "fds.h"
 #include "input/cursor.h"
 
+namespace MDFN_IEN_NES
+{
+
 extern INPUTC *MDFN_InitZapper(int w);
 extern INPUTC *MDFN_InitPowerpadA(int w);
 extern INPUTC *MDFN_InitPowerpadB(int w);
@@ -43,9 +46,6 @@ extern INPUTCFC *MDFN_InitFamilyTrainerB(void);
 extern INPUTCFC *MDFN_InitOekaKids(void);
 extern INPUTCFC *MDFN_InitTopRider(void);
 extern INPUTCFC *MDFN_InitBarcodeWorld(void);
-
-namespace MDFN_IEN_NES
-{
 
 static const IDIISG GamepadIDII =
 {

@@ -20,6 +20,9 @@
 
 #include "share.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint32 FTVal,FTValR;
 static char side;
 
@@ -88,3 +91,4 @@ INPUTCFC *MDFN_InitFamilyTrainerB(void)
  return(&FamilyTrainer);
 }
 
+}

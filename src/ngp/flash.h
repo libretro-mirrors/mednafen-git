@@ -16,12 +16,17 @@
 #define __NEOPOP_FLASH__
 //=============================================================================
 
+namespace MDFN_IEN_NGP
+{
+
 //Marks flash blocks for saving.
 void flash_write(uint32 start_address, uint16 length);
 
 void FLASH_LoadNV(void);
 void FLASH_SaveNV(void);
 void FLASH_StateAction(StateMem *sm, const unsigned load, const bool data_only);
+
+}
 
 //=============================================================================
 #endif

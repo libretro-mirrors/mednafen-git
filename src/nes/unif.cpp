@@ -105,19 +105,19 @@ static void FreeUNIF(void)
 {
  if(UNIFchrrama)
  {
-  MDFN_free(UNIFchrrama);
+  delete[] UNIFchrrama;
   UNIFchrrama = NULL;
  }
 
  if(exntar)
  {
-  MDFN_free(exntar);
+  delete[] exntar;
   exntar = NULL;
  }
 
  if(boardname)
  {
-  MDFN_free(boardname);
+  delete[] boardname;
   boardname = NULL;
  }
 
@@ -125,7 +125,7 @@ static void FreeUNIF(void)
  {
   if(malloced[x])
   {
-   MDFN_free(malloced[x]);
+   delete[] malloced[x];
    malloced[x] = NULL;
   }
  }
@@ -149,7 +149,7 @@ static void InitBoardMirroring(void)
   SetupCartMirroring(mirrortodo,1,0);
  else if(mirrortodo==0x4)
  {
-  exntar = (uint8 *)MDFN_malloc_T(2048, _("Nametable RAM"));
+  exntar = new uint8[2048];
   SetupCartMirroring(4,1,exntar);
  }
  else
@@ -173,25 +173,13 @@ static void DoMirroring(Stream *fp)
 
 static void NAME(Stream *fp)
 {
- char* namebuf = NULL;
-
  assert(uchead.info <= (SIZE_MAX - 1));
- namebuf = (char*)MDFN_malloc_T((size_t)uchead.info + 1, "Name");
 
- fp->read(namebuf, uchead.info);
+ MDFNGameInfo->name.resize((size_t)uchead.info);
+ fp->read(&MDFNGameInfo->name[0], (size_t)uchead.info);
+ MDFN_zapctrlchars(MDFNGameInfo->name);
 
- namebuf[uchead.info] = 0;
- MDFN_RemoveControlChars(namebuf);
-
- MDFN_printf(_("Name: %s\n"), namebuf);
-
- if(!MDFNGameInfo->name)
-  MDFNGameInfo->name = namebuf;
- else
- {
-  free(namebuf);
-  namebuf = NULL;
- }
+ MDFN_printf(_("Name: %s\n"), MDFNGameInfo->name.c_str());
 }
 
 static void DINF(Stream *fp)
@@ -217,8 +205,8 @@ static void DINF(Stream *fp)
 
  dinf.name[99] = dinf.method[99] = 0;
 
- MDFN_RemoveControlChars(dinf.name);
- MDFN_RemoveControlChars(dinf.method);
+ MDFN_zapctrlchars(dinf.name);
+ MDFN_zapctrlchars(dinf.method);
 
  MDFN_printf(_("Dumped by: %s\n"), dinf.name);
  MDFN_printf(_("Dumped with: %s\n"), dinf.method);
@@ -299,11 +287,11 @@ static void LoadPRG(Stream *fp)
  MDFN_printf(_("PRG ROM %u size: %u\n"), z, uchead.info);
 
  if(malloced[z])
-  free(malloced[z]);
+  delete[] malloced[z];
 
  t = FixRomSize(uchead.info, 2048);
 
- malloced[z] = (uint8 *)MDFN_malloc_T(t, _("PRG ROM"));
+ malloced[z] = new uint8[t];
  mallocedsizes[z] = t;
  memset(malloced[z] + uchead.info, 0xFF, t - uchead.info);
 
@@ -315,11 +303,11 @@ static void LoadPRG(Stream *fp)
 static void SetBoardName(Stream *fp)
 {
  assert(uchead.info <= (SIZE_MAX - 1));
- boardname = (uint8*)MDFN_malloc_T((size_t)uchead.info + 1, _("Board Name"));
+ boardname = new uint8[(size_t)uchead.info + 1];
 
- fp->read(boardname, uchead.info);
+ fp->read(boardname, (size_t)uchead.info);
  boardname[uchead.info] = 0;
- MDFN_RemoveControlChars((char*)boardname);
+ MDFN_zapctrlchars((char*)boardname);
 
  MDFN_printf(_("Board name: %s\n"), boardname);
  sboardname=boardname;
@@ -340,10 +328,10 @@ static void LoadCHR(Stream *fp)
  MDFN_printf(_("CHR ROM %u size: %u\n"), z, uchead.info);
 
  if(malloced[16 + z])
-  free(malloced[16 + z]);
+  delete[] malloced[16 + z];
 
  t = FixRomSize(uchead.info, 8192);
- malloced[16 + z] = (uint8 *)MDFN_malloc_T(t, _("CHR ROM"));
+ malloced[16 + z] = new uint8[t];
  mallocedsizes[16 + z]=t;
  memset(malloced[16 + z] + uchead.info, 0xFF, t - uchead.info);
 
@@ -507,7 +495,7 @@ static void InitializeBoard(void)
       else
 	CHRRAMSize = 8192;
 
-      UNIFchrrama = (uint8 *)MDFN_malloc_T(CHRRAMSize, _("CHR RAM"));
+      UNIFchrrama = new uint8[CHRRAMSize];
       SetupCartCHRMapping(0,UNIFchrrama,CHRRAMSize,1);
      }
 

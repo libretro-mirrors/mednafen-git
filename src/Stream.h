@@ -1,3 +1,24 @@
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* Stream.h:
+**  Copyright (C) 2012-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
 #ifndef __MDFN_STREAM_H
 #define __MDFN_STREAM_H
 
@@ -15,6 +36,11 @@
 
 #include <string>
 
+/*
+ The data read into the pointer passed to read*() functions should be considered undefined if the function throws
+ or propagates an exception.
+*/
+
 class Stream
 {
  public:
@@ -26,11 +52,18 @@ class Stream
  {
   ATTRIBUTE_READABLE = 	1U <<  0,
   ATTRIBUTE_WRITEABLE =	1U <<  1,
-  ATTRIBUTE_SEEKABLE =	1U <<  2,
-  ATTRIBUTE_SLOW_SEEK =	1U <<  3,
-  ATTRIBUTE_SLOW_SIZE =	1U <<  4
+  ATTRIBUTE_SEEKABLE =	1U <<  2,	// Indicates that Stream is capable of being seeked, regardless of how performant seeking is.
+
+  ATTRIBUTE_SLOW_SEEK =	1U <<  3,	// Indicates that seeking(particularly backwards) is slow, and should be avoided if at all possible.
+  ATTRIBUTE_SLOW_SIZE =	1U <<  4	// Indicates that size() is slow, and should be avoided if at all possible.
  };
  virtual uint64 attributes(void) = 0;
+
+ //
+ // Throw an exception if stream is not fast-seekable; exists to allow for class-specific generic but helpful
+ // error messages(such as perhaps "MeowZip file is missing a seek index.").
+ //
+ virtual void require_fast_seekable(void);
 
  virtual uint8 *map(void) noexcept;
 				// Map the entirety of the stream data into the address space of the process, if possible, and return a pointer.
@@ -218,7 +251,9 @@ class Stream
  //
  // If size_limit is/will be exceeded, an exception will be thrown, and *data_out will not be written to.
  //
- // Will return the amount of data read(and the size of the alloced memory).
+ // Will return the amount of data read.
+ //
+ // If the returned value is 0, *data_out will still be a valid non-NULL pointer.
  //
  uint64 alloc_and_read(void** data_out, uint64 size_limit = ~(uint64)0);
 };

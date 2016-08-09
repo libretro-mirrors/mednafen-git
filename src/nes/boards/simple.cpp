@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 latche;
 
 static DECLFW(CPROMWrite)
@@ -363,4 +366,6 @@ int AOROM_Init(CartInfo *info)
  SetWriteHandler(0x8000, 0xFFFF, AOROM_Write);
  SetReadHandler(0x8000, 0xFFFF, CartBR);
  return(1);
+}
+
 }

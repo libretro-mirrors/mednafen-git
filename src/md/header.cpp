@@ -84,20 +84,20 @@ void MD_ReadSegaHeader(const uint8 *header, md_game_info *ginfo)
 
  memcpy(ginfo->copyright, header + 0x10, 16);
  ginfo->copyright[16] = 0;
- MDFN_RemoveControlChars(ginfo->copyright);
+ MDFN_zapctrlchars(ginfo->copyright);
 
  // FIXME: SJIS to UTF8 conversion.
  memcpy(ginfo->domestic_name, header + 0x20, 0x30);
  ginfo->domestic_name[0x30] = 0;
- MDFN_RemoveControlChars(ginfo->domestic_name);
+ MDFN_zapctrlchars(ginfo->domestic_name);
 
  memcpy(ginfo->overseas_name, header + 0x50, 0x30);
  ginfo->overseas_name[0x30] = 0;
- MDFN_RemoveControlChars(ginfo->overseas_name);
+ MDFN_zapctrlchars(ginfo->overseas_name);
 
  memcpy(ginfo->product_code, header + 0x82, 0x0C);
  ginfo->product_code[0xC] = 0;
- MDFN_RemoveControlChars(ginfo->product_code);
+ MDFN_zapctrlchars(ginfo->product_code);
  MDFN_trim(ginfo->product_code);
 
  ginfo->checksum = (header[0x8E] << 8) | (header[0x8F] << 0);

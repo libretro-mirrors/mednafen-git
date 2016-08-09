@@ -21,6 +21,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 typedef struct 
 {
  uint8 PRGSelect;
@@ -88,16 +91,20 @@ static void Close(void)
 {
  if(WRAM)
  {
-  free(WRAM);
+  delete[] WRAM;
   WRAM = NULL;
  }
 }
 
 int Mapper125_Init(CartInfo *info)
 {
- if(!(WRAM = (uint8*) MDFN_malloc(32768, _("expansion RAM"))))
+ try
  {
-  return(0);
+  WRAM = new uint8[32768];
+ }
+ catch(...)
+ {
+  return 0;
  }
 
  SetupCartPRGMapping(0x10, WRAM, 32768, 1);
@@ -117,4 +124,6 @@ int Mapper125_Init(CartInfo *info)
  SetWriteHandler(0x6000,0x7FFF,CartBW);
 
  return(1);
+}
+
 }

@@ -2,6 +2,9 @@
 
 #include <math.h>
 
+namespace MDFN_IEN_NES
+{
+
 static const uint8 GunSight[]=
 {
         0,0,0,0,0,0,1,0,0,0,0,0,0,
@@ -138,4 +141,6 @@ void NESCURSOR_DrawCursor(uint8* pix, int pix_y, int xc, int yc)
    }
   }
  }
+}
+
 }

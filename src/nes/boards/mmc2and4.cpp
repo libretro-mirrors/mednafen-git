@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 latches[2];
 static uint8 CHRBanks[4];
 static uint8 Mirroring;
@@ -226,4 +229,6 @@ int MMC4_Init(CartInfo *info)
 
  PPU_hook = latchcheck;
  return(1);
+}
+
 }

@@ -1,5 +1,4 @@
 int MDFND_NetworkConnect(void);
-void DrawNetplayTextBuffer(MDFN_Surface *surface, const MDFN_Rect *src_rect);
 void NetplayText_InMainThread(uint8 *text, bool NetEcho);
 
 int NetplayEventHook(const SDL_Event *event);
@@ -11,3 +10,10 @@ bool Netplay_IsTextInput(void);
 bool Netplay_TryTextExit(void);
 
 extern int MDFNDnetplay;
+
+
+//
+//
+//
+
+void Netplay_MT_Draw(const MDFN_PixelFormat& pformat, const int32 screen_w, const int32 screen_h);

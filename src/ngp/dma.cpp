@@ -59,6 +59,9 @@
 #include "mem.h"
 #include "interrupt.h"
 
+namespace MDFN_IEN_NGP
+{
+
 //=============================================================================
 
 static uint32 dmaS[4], dmaD[4];
@@ -310,4 +313,6 @@ int MDFNNGPCDMA_StateAction(StateMem *sm, int load, int data_only)
   return(0);
 
  return(1); 
+}
+
 }

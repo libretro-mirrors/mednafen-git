@@ -1,19 +1,23 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* alsa.cpp - ALSA Sound Driver
+**  Copyright (C) 2006-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #include "../sexyal.h"
 
@@ -450,6 +454,9 @@ SexyAL_device *SexyALI_ALSA_Open(const char *id, SexyAL_format *format, SexyAL_b
 
  ALSA_TRY(snd_pcm_sw_params_current(alsa_pcm, sw_params));
 
+ //ALSA_TRY(snd_pcm_sw_params_set_tstamp_mode(alsa_pcm, sw_params, SND_PCM_TSTAMP_ENABLE));
+ //ALSA_TRY(snd_pcm_sw_params_set_start_threshold(alsa_pcm, sw_params, tmp_uft));
+ //ALSA_TRY(snd_pcm_sw_params_set_stop_threshold(alsa_pcm, sw_params, tmp_uft * 4));
  #if 0
  ALSA_TRY(snd_pcm_sw_params_set_xrun_mode(alsa_pcm, sw_params, SND_PCM_XRUN_NONE));
  #endif

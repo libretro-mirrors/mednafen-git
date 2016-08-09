@@ -1,19 +1,23 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* gfxdebugger.cpp:
+**  Copyright (C) 2006-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #include "main.h"
 #include "gfxdebugger.h"
@@ -135,7 +139,7 @@ void GfxDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
    trio_snprintf(buf, 256, "%s, PBN: %d, Scroll: %d, Instant", LayerNames[CurLayer], LayerPBN[CurLayer], LayerScroll[CurLayer]);
   else
    trio_snprintf(buf, 256, "%s, PBN: %d, Scroll: %d, Line: %d", LayerNames[CurLayer], LayerPBN[CurLayer], LayerScroll[CurLayer], LayerScanline[CurLayer]);
-  DrawTextTransShadow(pixels + 256 * pitch32, surface->pitchinpix << 2, rect->w, buf, MK_COLOR_A(0xF0, 0xF0, 0xF0, 0xFF), MK_COLOR_A(0, 0, 0, 0xFF), 1, FALSE);
+  DrawTextShadow(surface, 0, 256, buf, MK_COLOR_A(0xF0, 0xF0, 0xF0, 0xFF), MK_COLOR_A(0, 0, 0, 0xFF), MDFN_FONT_9x18_18x18, rect->w);
  }
 
  int mousex, mousey;
@@ -161,7 +165,7 @@ void GfxDebugger_Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_R
 
    trio_snprintf(buf, 256, "Tile: %08x, Address: %08x", src_pixels[128 + vx + vy * 128 * 3], src_pixels[256 + vx + vy * 128 * 3]);
 
-   DrawTextTransShadow(pixels + 278 * pitch32, surface->pitchinpix << 2, rect->w, buf, MK_COLOR_A(0xF0, 0xF0, 0xF0, 0xFF), MK_COLOR_A(0, 0, 0, 0xFF), 1, FALSE);  
+   DrawTextShadow(surface, 0, 278, buf, MK_COLOR_A(0xF0, 0xF0, 0xF0, 0xFF), MK_COLOR_A(0, 0, 0, 0xFF), MDFN_FONT_9x18_18x18, rect->w);
   }
  }
 
@@ -178,77 +182,65 @@ int GfxDebugger_Event(const SDL_Event *event)
 	{
 	 default: break;
 
-	 case SDLK_MINUS:
-		       
+	 case SDLK_MINUS:		      
 		       if(LayerScanline[CurLayer])
 		       {
 			LayerScanline[CurLayer]--;
 			RedoSGD();
 		       }
-		       
 		       break;
+
 	 case SDLK_EQUALS:
-		       
 		       LayerScanline[CurLayer]++;
 		       RedoSGD();
-		       
 		       break;
+
          case SDLK_UP: 
 		       if(LayerScroll[CurLayer])
 		       {
                         LayerScroll[CurLayer]--;
                         RedoSGD();
 		       }
-                       
                        break;
 
          case SDLK_PAGEUP:
-                         
                          LayerScroll[CurLayer] -= 8;
 			 if(LayerScroll[CurLayer] < 0)
 			  LayerScroll[CurLayer] = 0;
                          RedoSGD();
-                         
                          break;
 
 	 case SDLK_PAGEDOWN:
-			 
 			 LayerScroll[CurLayer] += 8;
 			 RedoSGD();
-			 
 			 break;
 	 case SDLK_DOWN: 
 			 LayerScroll[CurLayer]++;
 			 RedoSGD();
-			 
 			 break;
+
 	 case SDLK_LEFT: 
 			 CurLayer = (CurLayer - 1);
 
 			 if(CurLayer < 0) CurLayer = LayerCount - 1;
 
 			 RedoSGD();
-			 
 			 break;
+
 	 case SDLK_RIGHT: 
 			  CurLayer = (CurLayer + 1) % LayerCount;
 			  RedoSGD();
-			  
 			  break;
-
 
 	 case SDLK_COMMA: 
 			  if(LayerPBN[CurLayer] >= 0)
 			   LayerPBN[CurLayer]--;
 			  RedoSGD();
-			  
 			  break;
 
 	 case SDLK_PERIOD:
-			  
 			  LayerPBN[CurLayer]++;
 			  RedoSGD();
-			  
 			  break;
 	}
 	break;

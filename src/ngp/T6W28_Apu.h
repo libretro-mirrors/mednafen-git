@@ -3,9 +3,17 @@
 #ifndef SMS_APU_H
 #define SMS_APU_H
 
+namespace MDFN_IEN_NGP
+{
+
 typedef long sms_time_t; // clock cycle count
 
+}
+
 #include "T6W28_Oscs.h"
+
+namespace MDFN_IEN_NGP
+{
 
 typedef struct
 {
@@ -79,6 +87,8 @@ private:
 inline void T6W28_Apu::output( Blip_Buffer* b ) { output( b, b, b ); }
 
 inline void T6W28_Apu::osc_output( int i, Blip_Buffer* b ) { osc_output( i, b, b, b ); }
+
+}
 
 #endif
 

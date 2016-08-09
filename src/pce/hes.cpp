@@ -79,13 +79,13 @@ static void Cleanup(void)
 {
  if(rom)
  {
-  MDFN_free(rom);
+  delete[] rom;
   rom = NULL;
  }
 
  if(rom_backup)
  {
-  MDFN_free(rom_backup);
+  delete[] rom_backup;
   rom_backup = NULL;
  }
 }
@@ -156,8 +156,8 @@ void HES_Load(MDFNFILE* fp)
 
   InitAddr = MDFN_de16lsb(&header[0x6]);
 
-  rom = (uint8 *)MDFN_malloc_T(0x88 * 8192, _("HES ROM"));
-  rom_backup = (uint8 *)MDFN_malloc_T(0x88 * 8192, _("HES ROM"));
+  rom = new uint8[0x88 * 8192];
+  rom_backup = new uint8[0x88 * 8192];
 
   MDFN_printf(_("HES Information:\n"));
   MDFN_AutoIndent aind(1);
@@ -254,9 +254,9 @@ void HES_Load(MDFNFILE* fp)
   for(int x = 0; x < 0x88; x++)
   {
    if(x)
-    HuCPU->SetFastRead(x, rom + x * 8192);
-   HuCPU->SetReadHandler(x, HESROMRead);
-   HuCPU->SetWriteHandler(x, HESROMWrite);
+    HuCPU.SetFastRead(x, rom + x * 8192);
+   HuCPU.SetReadHandler(x, HESROMRead);
+   HuCPU.SetWriteHandler(x, HESROMWrite);
   }
 
   ROMWriteWarningGiven = FALSE;

@@ -2,7 +2,6 @@ class CPUcore {
 public:
   #include "registers.hpp"
   #include "memory.hpp"
-  #include "disassembler/disassembler.hpp"
 
   regs_t regs;
   reg24_t aa, rd;

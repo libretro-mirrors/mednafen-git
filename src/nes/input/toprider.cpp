@@ -20,6 +20,9 @@
 
 #include "share.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint32 bs,bss;
 static uint32 boop;
 
@@ -77,3 +80,4 @@ INPUTCFC *MDFN_InitTopRider(void)
  return(&TopRider);
 }
 
+}

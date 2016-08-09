@@ -1,19 +1,23 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen Virtual Boy Emulation Module                                      */
+/******************************************************************************/
+/* vip.cpp:
+**  Copyright (C) 2010-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #include "vb.h"
 #include "vip.h"
@@ -28,37 +32,6 @@ namespace MDFN_IEN_VB
 static uint8 FB[2][2][0x6000];
 static uint16 CHR_RAM[0x8000 / sizeof(uint16)];
 static uint16 DRAM[0x20000 / sizeof(uint16)];
-
-// Helper functions for the V810 VIP RAM read/write handlers.
-//  "Memory Array 16 (Write/Read) (16/8)"
-#define VIP__GETP16(array, address) ( (uint16 *)&((uint8 *)(array))[(address)] )
-
-#ifdef MSB_FIRST
-#define VIP__GETP8(array, address) ( &((uint8 *)(array))[(address) ^ 1] )
-#else
-#define VIP__GETP8(array, address) ( &((uint8 *)(array))[(address)] )
-#endif
-
-static INLINE void VIP_MA16W16(uint16 *array, const uint32 v810_address, const uint16 value)
-{
- *(VIP__GETP16(array, v810_address)) = value;
-}
-
-static INLINE uint16 VIP_MA16R16(uint16 *array, const uint32 v810_address)
-{
- return *(VIP__GETP16(array, v810_address));
-}
-
-static INLINE void VIP_MA16W8(uint16 *array, const uint32 v810_address, const uint8 value)
-{
- *(VIP__GETP8(array, v810_address)) = value;
-}
-
-static INLINE uint8 VIP_MA16R8(uint16 *array, const uint32 v810_address)
-{
- return *(VIP__GETP8(array, v810_address));
-}
-
 
 #define INT_SCAN_ERR	0x0001
 #define INT_LFB_END	0x0002
@@ -687,7 +660,7 @@ uint8 VIP_Read8(int32 &timestamp, uint32 A)
   case 0x1:
            if((A & 0x7FFF) >= 0x6000)
            {
-            ret = VIP_MA16R8(CHR_RAM, (A & 0x1FFF) | ((A >> 2) & 0x6000));
+            ret = ne16_rbo_le<uint8>(CHR_RAM, (A & 0x1FFF) | ((A >> 2) & 0x6000));
            }
            else
            {
@@ -696,7 +669,7 @@ uint8 VIP_Read8(int32 &timestamp, uint32 A)
            break;
 
   case 0x2:
-  case 0x3: ret = VIP_MA16R8(DRAM, A & 0x1FFFF);
+  case 0x3: ret = ne16_rbo_le<uint8>(DRAM, A & 0x1FFFF);
             break;
 
   case 0x4:
@@ -710,7 +683,7 @@ uint8 VIP_Read8(int32 &timestamp, uint32 A)
 
   case 0x7: if(A >= 0x8000)
             {
-             ret = VIP_MA16R8(CHR_RAM, A & 0x7FFF);
+             ret = ne16_rbo_le<uint8>(CHR_RAM, A & 0x7FFF);
             }
 	    else
 	     VIP_DBGMSG("Unknown VIP Read: %08x", A);
@@ -738,7 +711,7 @@ uint16 VIP_Read16(int32 &timestamp, uint32 A)
   case 0x1:
            if((A & 0x7FFF) >= 0x6000)
            {
-            ret = VIP_MA16R16(CHR_RAM, (A & 0x1FFF) | ((A >> 2) & 0x6000));
+            ret = ne16_rbo_le<uint16>(CHR_RAM, (A & 0x1FFF) | ((A >> 2) & 0x6000));
            }
            else
            {
@@ -747,7 +720,7 @@ uint16 VIP_Read16(int32 &timestamp, uint32 A)
            break;
 
   case 0x2:
-  case 0x3: ret = VIP_MA16R16(DRAM, A & 0x1FFFF);
+  case 0x3: ret = ne16_rbo_le<uint16>(DRAM, A & 0x1FFFF);
             break;
 
   case 0x4:
@@ -762,7 +735,7 @@ uint16 VIP_Read16(int32 &timestamp, uint32 A)
 
   case 0x7: if(A >= 0x8000)
             {
-             ret = VIP_MA16R16(CHR_RAM, A & 0x7FFF);
+             ret = ne16_rbo_le<uint16>(CHR_RAM, A & 0x7FFF);
             }
 	    else
 	     VIP_DBGMSG("Unknown VIP Read: %08x", A);
@@ -789,13 +762,13 @@ void VIP_Write8(int32 &timestamp, uint32 A, uint8 V)
   case 0x0:
   case 0x1:
 	   if((A & 0x7FFF) >= 0x6000)
-	    VIP_MA16W8(CHR_RAM, (A & 0x1FFF) | ((A >> 2) & 0x6000), V);
+	    ne16_wbo_le<uint8>(CHR_RAM, (A & 0x1FFF) | ((A >> 2) & 0x6000), V);
 	   else
 	    FB[(A >> 15) & 1][(A >> 16) & 1][A & 0x7FFF] = V;
 	   break;
 
   case 0x2:
-  case 0x3: VIP_MA16W8(DRAM, A & 0x1FFFF, V);
+  case 0x3: ne16_wbo_le<uint8>(DRAM, A & 0x1FFFF, V);
 	    break;
 
   case 0x4:
@@ -809,7 +782,7 @@ void VIP_Write8(int32 &timestamp, uint32 A, uint8 V)
 	    break;
 
   case 0x7: if(A >= 0x8000)
-	     VIP_MA16W8(CHR_RAM, A & 0x7FFF, V);
+	     ne16_wbo_le<uint8>(CHR_RAM, A & 0x7FFF, V);
 	    else
 	     VIP_DBGMSG("Unknown VIP Write: %08x %02x", A, V);
 	    break;
@@ -833,13 +806,13 @@ void VIP_Write16(int32 &timestamp, uint32 A, uint16 V)
   case 0x0:
   case 0x1:
            if((A & 0x7FFF) >= 0x6000)
-            VIP_MA16W16(CHR_RAM, (A & 0x1FFF) | ((A >> 2) & 0x6000), V);
+            ne16_wbo_le<uint16>(CHR_RAM, (A & 0x1FFF) | ((A >> 2) & 0x6000), V);
            else
             MDFN_en16lsb<true>(&FB[(A >> 15) & 1][(A >> 16) & 1][A & 0x7FFF], V);
            break;
 
   case 0x2:
-  case 0x3: VIP_MA16W16(DRAM, A & 0x1FFFF, V);
+  case 0x3: ne16_wbo_le<uint16>(DRAM, A & 0x1FFFF, V);
             break;
 
   case 0x4:
@@ -853,7 +826,7 @@ void VIP_Write16(int32 &timestamp, uint32 A, uint16 V)
 	    break;
 
   case 0x7: if(A >= 0x8000)
-             VIP_MA16W16(CHR_RAM, A & 0x7FFF, V);
+             ne16_wbo_le<uint16>(CHR_RAM, A & 0x7FFF, V);
 	    else
 	     VIP_DBGMSG("Unknown VIP Write: %08x %04x", A, V);
             break;
@@ -1350,7 +1323,7 @@ v810_timestamp_t MDFN_FASTCALL VIP_Update(const v810_timestamp_t timestamp)
     if(!(Column & 3))
     {
      const int lr = (DisplayRegion & 2) >> 1;
-     uint16 ctdata = VIP_MA16R16(DRAM, 0x1DFFE - ((Column >> 2) * 2) - (lr ? 0 : 0x200));
+     uint16 ctdata = ne16_rbo_le<uint16>(DRAM, 0x1DFFE - ((Column >> 2) * 2) - (lr ? 0 : 0x200));
 
      if((ctdata >> 8) != Repeat)
      {
@@ -1425,7 +1398,7 @@ v810_timestamp_t MDFN_FASTCALL VIP_Update(const v810_timestamp_t timestamp)
 	 {
 	  if(!(Column & 3))
 	  {
-	   uint16 ctdata = VIP_MA16R16(DRAM, 0x1DFFE - ((Column >> 2) * 2) - (lr ? 0 : 0x200));
+	   uint16 ctdata = ne16_rbo_le<uint16>(DRAM, 0x1DFFE - ((Column >> 2) * 2) - (lr ? 0 : 0x200));
 
 	   if((ctdata >> 8) != Repeat)
 	   {

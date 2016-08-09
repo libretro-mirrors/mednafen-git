@@ -27,9 +27,14 @@ unsigned int m68k_read_bus_8(unsigned int address)
     return ((address & 1) ? (temp & 0xFF) : (temp >> 8));
 }
 
+static const unsigned obsim_values[3] = { 0, 0x7FFF, 0xFFFF };
+static uint32 obsim = 0;
+
 unsigned int m68k_read_bus_16(unsigned int address)
 {
-    uint16 temp = 0x4e71;
+    uint16 temp = obsim_values[obsim]; //0x4e71;
+
+    obsim = (obsim + 1) % 3;
 
     if(address >= 0xC00000)
     {
@@ -59,23 +64,23 @@ void m68k_unused_16_w(unsigned int address, unsigned int value)
 
 void m68k_lockup_w_8(unsigned int address, unsigned int value)
 {
- MD_DBG(MD_DBG_WARNING, "[MEM68K] Lockup %08X = %02X (%08X)\n", address, value, C68k_Get_PC(&Main68K));
+ MD_DBG(MD_DBG_WARNING, "[MEM68K] Lockup %08X = %02X (%08X)\n", address, value, Main68K.GetRegister(M68K::GSREG_PC));
 }
 
 void m68k_lockup_w_16(unsigned int address, unsigned int value)
 {
- MD_DBG(MD_DBG_WARNING, "[MEM68K] Lockup %08X = %04X (%08X)\n", address, value, C68k_Get_PC(&Main68K));
+ MD_DBG(MD_DBG_WARNING, "[MEM68K] Lockup %08X = %04X (%08X)\n", address, value, Main68K.GetRegister(M68K::GSREG_PC));
 }
 
 unsigned int m68k_lockup_r_8(unsigned int address)
 {
- MD_DBG(MD_DBG_WARNING, "[MEM68K] Lockup %08X.b (%08X)\n", address, C68k_Get_PC(&Main68K));
+ MD_DBG(MD_DBG_WARNING, "[MEM68K] Lockup %08X.b (%08X)\n", address, Main68K.GetRegister(M68K::GSREG_PC));
  return -1;
 }
 
 unsigned int m68k_lockup_r_16(unsigned int address)
 {
- MD_DBG(MD_DBG_WARNING, "[MEM68K] Lockup %08X.w (%08X)\n", address, C68k_Get_PC(&Main68K));
+ MD_DBG(MD_DBG_WARNING, "[MEM68K] Lockup %08X.w (%08X)\n", address, Main68K.GetRegister(M68K::GSREG_PC));
  return -1;
 }
 
@@ -83,7 +88,7 @@ unsigned int m68k_lockup_r_16(unsigned int address)
 /* 68000 memory handlers                                                    */
 /*--------------------------------------------------------------------------*/
 
-uint8 MD_ReadMemory8(uint32 address)
+static INLINE uint8 MD_ReadMemory8(uint32 address)
 {
  MD_UpdateSubStuff();
 
@@ -242,7 +247,7 @@ uint8 MD_ReadMemory8(uint32 address)
 }
 
 
-uint16 MD_ReadMemory16(uint32 address)
+static INLINE uint16 MD_ReadMemory16(uint32 address)
 {
  MD_UpdateSubStuff();
 
@@ -379,7 +384,7 @@ uint16 MD_ReadMemory16(uint32 address)
 }
 
 
-void MD_WriteMemory8(uint32 address, uint8 value)
+static INLINE void MD_WriteMemory8(uint32 address, uint8 value)
 {
  MD_UpdateSubStuff();
 
@@ -559,7 +564,7 @@ void MD_WriteMemory8(uint32 address, uint8 value)
 }
 
 
-void MD_WriteMemory16(uint32 address, uint16 value) 
+static INLINE void MD_WriteMemory16(uint32 address, uint16 value) 
 {
  MD_UpdateSubStuff();
 
@@ -705,6 +710,98 @@ void MD_WriteMemory16(uint32 address, uint16 value)
             WRITE_WORD_MSB(work_ram, address & 0xFFFF, value);
             return;
     }
+}
+
+void Main68K_BusRESET(bool state)
+{
+
+}
+
+void Main68K_BusRMW(uint32 A, uint8 (*cb)(M68K*, uint8))
+{
+ Main68K.timestamp += 2;
+ cb(&Main68K, MD_ReadMemory8(A));
+ Main68K.timestamp += 8;
+}
+
+unsigned Main68K_BusIntAck(uint8 level)
+{
+ return MainVDP.IntAckCallback(level);
+}
+
+uint8 Main68K_BusRead8(uint32 A)
+{
+ uint8 ret;
+
+ Main68K.timestamp += 2;
+ ret = MD_ReadMemory8(A);
+ Main68K.timestamp += 2;
+
+ return ret;
+}
+
+uint16 Main68K_BusRead16(uint32 A)
+{
+ uint16 ret;
+
+ Main68K.timestamp += 2;
+ ret = MD_ReadMemory16(A);
+ Main68K.timestamp += 2;
+
+ return ret;
+}
+
+uint16 Main68K_BusReadInstr(uint32 A)
+{
+ uint16 ret;
+
+ Main68K.timestamp += 2;
+ ret = MD_ReadMemory16(A);
+ Main68K.timestamp += 2;
+
+ return ret;
+}
+
+void Main68K_BusWrite8(uint32 A, uint8 V)
+{
+ Main68K.timestamp += 2;
+ MD_WriteMemory8(A, V);
+ Main68K.timestamp += 2;
+}
+
+void Main68K_BusWrite16(uint32 A, uint16 V)
+{
+ Main68K.timestamp += 2;
+ MD_WriteMemory16(A, V);
+ Main68K.timestamp += 2;
+}
+
+
+uint8 Main68K_BusPeek8(uint32 A)
+{
+ uint8 ret;
+
+ MD_HackyHackyMode++;
+ ret = MD_ReadMemory8(A);
+ MD_HackyHackyMode--;
+
+ return ret;
+}
+
+uint16 Main68K_BusPeek16(uint32 A)
+{
+ uint16 ret;
+
+ MD_HackyHackyMode++;
+ ret = MD_ReadMemory16(A);
+ MD_HackyHackyMode--;
+
+ return ret;
+}
+
+void Main68K_BusPoke8(uint32 A, uint8 V)
+{
+ MD_WriteMemory8(A, V);
 }
 
 }

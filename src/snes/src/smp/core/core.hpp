@@ -1,6 +1,5 @@
   #include "registers.hpp"
   #include "memory.hpp"
-  #include "disassembler/disassembler.hpp"
 
   regs_t regs;
   uint16 dp, sp, rd, wr, bit, ya;

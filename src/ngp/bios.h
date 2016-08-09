@@ -39,6 +39,9 @@
 #define __NEOPOP_BIOS__
 //=============================================================================
 
+namespace MDFN_IEN_NGP
+{
+
 extern uint8 ngpc_bios[0x10000];
 
 void iBIOSHLE(void);
@@ -46,6 +49,8 @@ void iBIOSHLE(void);
 void biosDecode(int function);
 void BIOSHLE_Reset(void);
 int BIOSHLE_StateAction(StateMem *sm, int load, int data_only);
+
+}
 
 //=============================================================================
 #endif

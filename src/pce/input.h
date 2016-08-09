@@ -1,5 +1,5 @@
-#ifndef __PCE_INPUT_H
-#define __PCE_INPUT_H
+#ifndef __MDFN_PCE_INPUT_H
+#define __MDFN_PCE_INPUT_H
 
 namespace MDFN_IEN_PCE
 {

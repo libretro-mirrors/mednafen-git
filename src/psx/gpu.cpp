@@ -1,22 +1,30 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen Sony PS1 Emulation Module                                         */
+/******************************************************************************/
+/* gpu.cpp:
+**  Copyright (C) 2011-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
+#pragma GCC optimize ("unroll-loops")
 
 #include "psx.h"
 #include "timer.h"
+
+/* FIXME: Respect horizontal timing register values in relation to hsync/hblank/hretrace/whatever signal sent to the timers */
 
 /*
  GPU display timing master clock is nominally 53.693182 MHz for NTSC PlayStations, and 53.203425 MHz for PAL PlayStations.
@@ -66,10 +74,11 @@ static const int8 dither_table[4][4] =
  {  3, -1,  2, -2 },
 };
 
-PS_GPU::PS_GPU(bool pal_clock_and_tv, int sls, int sle, bool show_h_overscan)
+PS_GPU::PS_GPU(bool pal_clock_and_tv, int sls, int sle, bool show_h_overscan) : HardwarePALType(pal_clock_and_tv)
 {
- HardwarePALType = pal_clock_and_tv;
-
+ //printf("%zu\n", (size_t)((uintptr_t)DitherLUT - (uintptr_t)this));
+ //printf("%zu\n", (size_t)((uintptr_t)GPURAM - (uintptr_t)this));
+ //
  hide_hoverscan = !show_h_overscan;
 
  for(int y = 0; y < 4; y++)
@@ -1292,8 +1301,8 @@ pscpu_timestamp_t PS_GPU::Update(const pscpu_timestamp_t sys_timestamp)
        {
         char buffer[256];
         trio_snprintf(buffer, sizeof(buffer), _("VIDEO STANDARD MISMATCH"));
-        DrawTextTrans(surface->pixels + ((DisplayRect->h / 2) - (13 / 2)) * surface->pitch32, surface->pitch32 << 2, DisplayRect->w, buffer,
-		surface->MakeColor(0x00, 0xFF, 0x00), true, MDFN_FONT_6x13_12x13);
+        DrawText(surface, 0, (DisplayRect->h / 2) - (13 / 2), buffer,
+		surface->MakeColor(0x00, 0xFF, 0x00), MDFN_FONT_6x13_12x13, DisplayRect->w);
        }
       }
       else

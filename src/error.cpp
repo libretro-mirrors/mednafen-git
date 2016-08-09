@@ -1,19 +1,23 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* error.cpp:
+**  Copyright (C) 2007-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #include "mednafen.h"
 #include "error.h"
@@ -92,7 +96,7 @@ int MDFN_Error::GetErrno(void) const noexcept
  return(errno_code);
 }
 
-static const char *srr_wrap(int ret, const char *local_strerror)
+static MDFN_NOWARN_UNUSED const char *srr_wrap(int ret, const char *local_strerror)
 {
  if(ret == -1)
   return("ERROR IN strerror_r()!!!");
@@ -100,7 +104,7 @@ static const char *srr_wrap(int ret, const char *local_strerror)
  return(local_strerror);
 }
 
-static const char *srr_wrap(const char *ret, const char *local_strerror)
+static MDFN_NOWARN_UNUSED const char *srr_wrap(const char *ret, const char *local_strerror)
 {
  if(ret == NULL)
   return("ERROR IN strerror_r()!!!");

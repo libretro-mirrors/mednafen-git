@@ -23,10 +23,22 @@ namespace MDFN_IEN_MD
 {
 bool MD_DebugMode = FALSE;
 
+#if 0
+enum { NUMBT = 16 };
+static struct
+{
+ uint32 from;
+ uint32 to;
+ uint32 branch_count;
+ uint32 
+
+} BTEntries[NUMBT];
+#endif
+
 static void (*DriverCPUHook)(uint32, bool) = NULL;
 static bool DriverCPUHookContinuous = false;
 
-static c68k_struc Main68K_BP;
+static M68K Main68K_BP;
 static bool BPActive = FALSE; // Any breakpoints on?
 static bool BPNonPCActive = FALSE;	// Any breakpoints other than PC on?
 static bool FoundBPoint;
@@ -40,81 +52,45 @@ typedef struct
 static std::vector<MD_BPOINT> BreakPointsPC, BreakPointsRead, BreakPointsWrite;
 static std::vector<MD_BPOINT> BreakPointsAux0Read, BreakPointsAux0Write;
 
-enum
-{
- C68K_GSREG_PC = 0,
- C68K_GSREG_SR,
-
- C68K_GSREG_D0,
- C68K_GSREG_D7 = C68K_GSREG_D0 + 7,
-
- C68K_GSREG_A0,
- C68K_GSREG_A7 = C68K_GSREG_A0 + 7,
-
-
-};
-
-
 static uint32 M68K_GetRegister(const unsigned int id, char *special, const uint32 special_len)
 {
- uint32 ret = 0xDEADBEEF;
-
- if(id == C68K_GSREG_PC)
- {
-  ret = C68k_Get_PC(&Main68K);
- } 
- else if(id == C68K_GSREG_SR)
- {
-  ret = C68k_Get_SR(&Main68K);
- }
- else if(id >= C68K_GSREG_D0 && id <= C68K_GSREG_D7)
- {
-  ret = C68k_Get_DReg(&Main68K, id - C68K_GSREG_D0);
- }
- else if(id >= C68K_GSREG_A0 && id <= C68K_GSREG_A7)
- {
-  ret = C68k_Get_AReg(&Main68K, id - C68K_GSREG_A0);
- }
- return(ret);
+ return Main68K.GetRegister(id, special, special_len);
 }
 
 void M68K_SetRegister(const unsigned int id, uint32 value)
 {
- if(id == C68K_GSREG_PC)
- {
-  C68k_Set_PC(&Main68K, value);
- } 
+ Main68K.SetRegister(id, value);
 }
 
 
 static RegType M68K_Regs[] =
 {
-        { C68K_GSREG_PC, "PC", "Program Counter", 4 },
+        { M68K::GSREG_PC, "PC", "Program Counter", 4 },
 
         { 0, "------", "", 0xFFFF },
 
-	{ C68K_GSREG_D0 + 0, "D0", "D0(Data Register 0)", 4 },
-        { C68K_GSREG_D0 + 1, "D1", "D1(Data Register 1)", 4 },
-        { C68K_GSREG_D0 + 2, "D2", "D2(Data Register 2)", 4 },
-        { C68K_GSREG_D0 + 3, "D3", "D3(Data Register 3)", 4 },
-        { C68K_GSREG_D0 + 4, "D4", "D4(Data Register 4)", 4 },
-        { C68K_GSREG_D0 + 5, "D5", "D5(Data Register 5)", 4 },
-        { C68K_GSREG_D0 + 6, "D6", "D6(Data Register 6)", 4 },
-        { C68K_GSREG_D0 + 7, "D7", "D7(Data Register 7)", 4 },
+	{ M68K::GSREG_D0 + 0, "D0", "D0(Data Register 0)", 4 },
+        { M68K::GSREG_D0 + 1, "D1", "D1(Data Register 1)", 4 },
+        { M68K::GSREG_D0 + 2, "D2", "D2(Data Register 2)", 4 },
+        { M68K::GSREG_D0 + 3, "D3", "D3(Data Register 3)", 4 },
+        { M68K::GSREG_D0 + 4, "D4", "D4(Data Register 4)", 4 },
+        { M68K::GSREG_D0 + 5, "D5", "D5(Data Register 5)", 4 },
+        { M68K::GSREG_D0 + 6, "D6", "D6(Data Register 6)", 4 },
+        { M68K::GSREG_D0 + 7, "D7", "D7(Data Register 7)", 4 },
 
         { 0, "------", "", 0xFFFF },
 
-        { C68K_GSREG_A0 + 0, "A0", "A0(Address Register 0)", 4 },
-        { C68K_GSREG_A0 + 1, "A1", "A1(Address Register 1)", 4 },
-        { C68K_GSREG_A0 + 2, "A2", "A2(Address Register 2)", 4 },
-        { C68K_GSREG_A0 + 3, "A3", "A3(Address Register 3)", 4 },
-        { C68K_GSREG_A0 + 4, "A4", "A4(Address Register 4)", 4 },
-        { C68K_GSREG_A0 + 5, "A5", "A5(Address Register 5)", 4 },
-        { C68K_GSREG_A0 + 6, "A6", "A6(Address Register 6)", 4 },
-        { C68K_GSREG_A0 + 7, "A7", "A7/USP(Address Register 7 / User Stack Pointer)", 4 },
+        { M68K::GSREG_A0 + 0, "A0", "A0(Address Register 0)", 4 },
+        { M68K::GSREG_A0 + 1, "A1", "A1(Address Register 1)", 4 },
+        { M68K::GSREG_A0 + 2, "A2", "A2(Address Register 2)", 4 },
+        { M68K::GSREG_A0 + 3, "A3", "A3(Address Register 3)", 4 },
+        { M68K::GSREG_A0 + 4, "A4", "A4(Address Register 4)", 4 },
+        { M68K::GSREG_A0 + 5, "A5", "A5(Address Register 5)", 4 },
+        { M68K::GSREG_A0 + 6, "A6", "A6(Address Register 6)", 4 },
+        { M68K::GSREG_A0 + 7, "A7", "A7/USP(Address Register 7 / User Stack Pointer)", 4 },
 
         { 0, "------", "", 0xFFFF },
-	{ C68K_GSREG_SR, "SR", "Status Register", 2 },
+	{ M68K::GSREG_SR, "SR", "Status Register", 2 },
 
         { 0, "", "", 0 },
 };
@@ -132,23 +108,20 @@ uint32 MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical)
 {
  uint32 ret = 0;
 
- MD_HackyHackyMode++;
-
  for(unsigned int i = 0; i < bsize; i++)
  {
   A &= 0xFFFFFF;
-  ret |= MD_ReadMemory8(A) << ((bsize - 1 - i) * 8);
+  ret |= Main68K_BusPeek8(A) << ((bsize - 1 - i) * 8);
 
   A++;
  }
 
- MD_HackyHackyMode--;
  return(ret);
 }
 
 static uint16_t dis_callb(uint32_t A, void *private_data)
 {
- return(MD_ReadMemory16(A & 0xFFFFFF));
+ return Main68K_BusPeek16(A & 0xFFFFFF);
 }
 
 void Disassemble(uint32 &a, uint32 SpecialA, char *TextBuf)
@@ -183,14 +156,9 @@ void Disassemble(uint32 &a, uint32 SpecialA, char *TextBuf)
 // puts(TextBuf);
 }
 
-static inline void C68k_Copy_State2(const c68k_struc *source, c68k_struc *dest)
-{
- memcpy(&dest->D[0], &source->D[0], ((uint8 *)&(source->dirty1)) - ((uint8 *)&(source->D[0])));
-}
-
 void MDDBG_CPUHook(void)	//uint32 PC, uint16 op)
 {
- uint32 PC = C68k_Get_PC(&Main68K);
+ uint32 PC = Main68K.GetRegister(M68K::GSREG_PC);
  std::vector<MD_BPOINT>::iterator bpit;
 
  FoundBPoint = 0;
@@ -206,15 +174,8 @@ void MDDBG_CPUHook(void)	//uint32 PC, uint16 op)
 
  if(BPNonPCActive)
  {
-  MD_HackyHackyMode++;
-
-  C68k_Copy_State2(&Main68K, &Main68K_BP);
-
-  //printf("Moo: %08x\n", C68k_Get_PC(&Main68K_BP)); //, (int)(((uint8 *)&(Main68K.dirty1)) - ((uint8 *)&(Main68K.D[0]))));
-
-  C68k_Exec(&Main68K_BP);
-
-  MD_HackyHackyMode--;
+  Main68K_BP.DupeState(&Main68K);
+  Main68K_BP.Step();
  }
 
  DriverCPUHookContinuous |= FoundBPoint;
@@ -225,8 +186,6 @@ void MDDBG_CPUHook(void)	//uint32 PC, uint16 op)
 
 static void RedoCPUHook(void)
 {
- //C68k_Set_Debug(&Main68K, DriverCPUHook ? CPUHookHandler : NULL);
-
  BPNonPCActive = BreakPointsRead.size() || BreakPointsWrite.size() || BreakPointsAux0Read.size() || BreakPointsAux0Write.size();
  BPActive = BPNonPCActive || BreakPointsPC.size();
 
@@ -236,6 +195,12 @@ static void RedoCPUHook(void)
 static void AddBreakPoint(int type, unsigned int A1, unsigned int A2, bool logical)
 {
  MD_BPOINT tmp;
+
+ if(type == BPOINT_READ || type == BPOINT_WRITE)
+ {
+  A1 &= 0xFFFFFF;
+  A2 &= 0xFFFFFF;
+ }
 
  tmp.A[0] = A1;
  tmp.A[1] = A2;
@@ -295,14 +260,12 @@ std::vector<BranchTraceResult> GetBranchTrace(void)
 
 static void GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint8 *Buffer)
 {
- MD_HackyHackyMode++;
-
  if(!strcmp(name, "cpu"))
  {
   while(Length--)
   {
    Address &= 0xFFFFFF;
-   *Buffer = MD_ReadMemory8(Address);
+   *Buffer = Main68K_BusPeek8(Address);
    Address++;
    Buffer++;
   }
@@ -311,13 +274,11 @@ static void GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
  {
   while(Length--)
   {
-   *Buffer = MD_ReadMemory8((Address & 0xFFFF) | 0xFF0000);
+   *Buffer = Main68K_BusPeek8((Address & 0xFFFF) | 0xFF0000);
    Address++;
    Buffer++;
   }
  }
-
- MD_HackyHackyMode--;
 }
 
 static void PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint32 Granularity, bool hl, const uint8 *Buffer)
@@ -333,19 +294,19 @@ static void PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
  {
   while(Length--)
   {
-   MD_WriteMemory8((Address & 0xFFFF) | 0xFF0000, *Buffer);
+   Main68K_BusPoke8((Address & 0xFFFF) | 0xFF0000, *Buffer);
    Address++;
    Buffer++;
   }
  }
 }
 
-static int dbg_int_ack_callback(int int_level)
+static unsigned DBG_BusIntAck(uint8 level)
 {
-    return C68K_INT_ACK_AUTOVECTOR;
+ return M68K::BUS_INT_ACK_AUTO;
 }
 
-static uint8 MDDBG_ReadMemory8(uint32 address)
+static uint8 DBG_BusRead8(uint32 address)
 {
  std::vector<MD_BPOINT>::iterator bpit;
  address &= 0xFFFFFF;
@@ -359,11 +320,17 @@ static uint8 MDDBG_ReadMemory8(uint32 address)
   }
  }
 
-
- return(MD_ReadMemory8(address));
+ return Main68K_BusPeek8(address);
 }
 
-static uint16 MDDBG_ReadMemory16(uint32 address)
+static void DBG_BusRMW(uint32 address, uint8 (*cb)(M68K*, uint8))
+{
+ uint8 tmp = DBG_BusRead8(address);
+
+ cb(&Main68K_BP, tmp);
+}
+
+static uint16 DBG_BusRead16(uint32 address)
 {
  std::vector<MD_BPOINT>::iterator bpit;
 
@@ -380,10 +347,10 @@ static uint16 MDDBG_ReadMemory16(uint32 address)
 
  //printf("Read: %08x\n", address);
 
- return(MD_ReadMemory16(address));
+ return Main68K_BusPeek16(address);
 }
 
-static void MDDBG_WriteMemory8(uint32 address, uint8 value)
+static void DBG_BusWrite8(uint32 address, uint8 value)
 {
  std::vector<MD_BPOINT>::iterator bpit;
 
@@ -397,17 +364,13 @@ static void MDDBG_WriteMemory8(uint32 address, uint8 value)
    break;
   }
  }
-
-
-
 }
 
-static void MDDBG_WriteMemory16(uint32 address, uint16 value)
+static void DBG_BusWrite16(uint32 address, uint16 value)
 {
  std::vector<MD_BPOINT>::iterator bpit;
 
  address &= 0xFFFFFF;
-
 
  for(bpit = BreakPointsWrite.begin(); bpit != BreakPointsWrite.end(); bpit++)
  {
@@ -417,33 +380,31 @@ static void MDDBG_WriteMemory16(uint32 address, uint16 value)
    break;
   }
  }
-
-
 }
 
 
 
-bool MDDBG_Init(void)
+void MDDBG_Init(void)
 {
  MDFNDBG_AddRegGroup(&M68K_RegsGroup);
 
  ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "cpu", "CPU Physical", 24);
  ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "ram", "Work RAM", 16);
 
- 
- C68k_Init(&Main68K_BP, dbg_int_ack_callback);
+ //
+ Main68K_BP.BusIntAck = DBG_BusIntAck;
+ Main68K_BP.BusReadInstr = DBG_BusRead16;
 
- C68k_Set_TAS_Hack(&Main68K_BP, 1);
+ Main68K_BP.BusRead8 = DBG_BusRead8;
+ Main68K_BP.BusRead16 = DBG_BusRead16;
 
- C68k_Set_ReadB(&Main68K_BP, MDDBG_ReadMemory8);
- C68k_Set_ReadW(&Main68K_BP, MDDBG_ReadMemory16);
+ Main68K_BP.BusWrite8 = DBG_BusWrite8;
+ Main68K_BP.BusWrite16 = DBG_BusWrite16;
 
- C68k_Set_WriteB(&Main68K_BP, MDDBG_WriteMemory8);
- C68k_Set_WriteW(&Main68K_BP, MDDBG_WriteMemory16);
+ Main68K_BP.BusRMW = DBG_BusRMW;
+ //
 
- MD_DebugMode = FALSE;
-
- return(TRUE);
+ MD_DebugMode = false;
 }
 
 DebuggerInfoStruct DBGInfo =

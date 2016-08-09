@@ -14,10 +14,20 @@ unsigned int m68k_lockup_r_8(unsigned int address);
 unsigned int m68k_lockup_r_16(unsigned int address);
 
 
-uint8 MD_ReadMemory8(uint32 address);
-uint16 MD_ReadMemory16(uint32 address);
-void MD_WriteMemory8(uint32 address, uint8 value);
-void MD_WriteMemory16(uint32 address, uint16 value);
+
+void Main68K_BusRESET(bool state);
+void Main68K_BusRMW(uint32 A, uint8 (*cb)(M68K*, uint8));
+unsigned Main68K_BusIntAck(uint8 level);
+uint8 Main68K_BusRead8(uint32 A);
+uint16 Main68K_BusRead16(uint32 A);
+uint16 Main68K_BusReadInstr(uint32 A);
+void Main68K_BusWrite8(uint32 A, uint8 V);
+void Main68K_BusWrite16(uint32 A, uint16 V);
+
+// Debug(ger) functions:
+uint8 Main68K_BusPeek8(uint32 A);
+uint16 Main68K_BusPeek16(uint32 A);
+void Main68K_BusPoke8(uint32 A, uint8 V);
 
 }
 

@@ -86,11 +86,8 @@ void MDFNFILE::ApplyIPS(Stream *ips)
  }
 }
 
-MDFNFILE::MDFNFILE(const char *path, const FileExtensionSpecStruct *known_ext, const char *purpose) : ext((const char * const &)f_ext), fbase((const char * const &)f_fbase)
+MDFNFILE::MDFNFILE(const char *path, const FileExtensionSpecStruct *known_ext, const char *purpose) : ext((const std::string&)f_ext), fbase((const std::string&)f_fbase)
 {
- f_ext = NULL;
- f_fbase = NULL;
-
  Open(path, known_ext, purpose);
 }
 
@@ -182,20 +179,21 @@ void MDFNFILE::Open(const char *path, const FileExtensionSpecStruct *known_ext, 
     unzReadCurrentFile((unzFile)tz, str->map(), str->size());
    }
 
+   // Don't use MDFN_GetFilePathComponents() here.
    {
-    char *ld = strrchr(tempu, '.');
+    char* ld = strrchr(tempu, '.');
 
-    f_ext = strdup(ld ? ld + 1 : "");
-    f_fbase = strdup(tempu);
-    if(ld)
-     f_fbase[ld - tempu] = 0;
+    f_ext = std::string(ld ? ld : "");
+    f_fbase = std::string(tempu, ld ? (ld - tempu) : strlen(tempu));
    }
   }
   else // If it's not a zip file, handle it as...another type of file!
   {
    std::unique_ptr<Stream> tfp(new FileStream(path, FileStream::MODE_READ));
 
-   const char *path_fnp = GetFNComponent(path);
+   // We'll clean up f_ext to remove the leading period, and convert to lowercase, after
+   // the plain vs gzip file handling code below(since gzip handling path will want to strip off an extra extension).
+   MDFN_GetFilePathComponents(path, NULL, &f_fbase, &f_ext);
 
    uint8 gzmagic[3] = { 0 };
 
@@ -207,14 +205,6 @@ void MDFNFILE::Open(const char *path, const FileExtensionSpecStruct *known_ext, 
      throw MDFN_Error(0, _("ROM image is too large; maximum size allowed is %llu bytes."), (unsigned long long)MaxROMImageSize);
 
     str = std::move(tfp);
-
-    {
-     const char *ld = strrchr(path_fnp, '.');
-     f_ext = strdup(ld ? ld + 1 : "");
-     f_fbase = strdup(path_fnp);
-     if(ld)
-      f_fbase[ld - path_fnp] = 0;
-    }
    }
    else                  /* Probably gzip */
    {
@@ -222,21 +212,20 @@ void MDFNFILE::Open(const char *path, const FileExtensionSpecStruct *known_ext, 
 
     str.reset(new MemoryStream(new GZFileStream(path, GZFileStream::MODE::READ), MaxROMImageSize));
 
-    char *tmp_path = strdup(path_fnp);
-    char *ld = strrchr(tmp_path, '.');
-
-    if(ld && ld > tmp_path)
-    {
-     char *last_ld = ld;
-     *ld = 0;
-     ld = strrchr(tmp_path, '.');
-     if(!ld) { ld = last_ld; }
-     else *ld = 0;
-    }
-    f_ext = strdup(ld ? ld + 1 : "");
-    f_fbase = tmp_path;
+    MDFN_GetFilePathComponents(f_fbase, NULL, &f_fbase, &f_ext);
    } // End gzip handling
   } // End normal and gzip file handling else to zip
+
+  // Remove leading period in file extension.
+  if(f_ext.size() > 0 && f_ext[0] == '.')
+   f_ext = f_ext.substr(1);
+
+  // Convert file extension A-Z chars to lowercase, a-z
+  for(auto& c : f_ext)
+   if(c >= 'A' && c <= 'Z')
+    c = 'a' + (c - 'A');
+
+  //printf("|%s| --- |%s|\n", f_fbase.c_str(), f_ext.c_str());
  }
  catch(...)
  {
@@ -259,17 +248,8 @@ void MDFNFILE::Open(const char *path, const FileExtensionSpecStruct *known_ext, 
 
 void MDFNFILE::Close(void) throw()
 {
- if(f_ext)
- {
-  free(f_ext);
-  f_ext = NULL;
- }
-
- if(f_fbase)
- {
-  free(f_fbase);
-  f_fbase = NULL;
- }
+ f_ext.clear();
+ f_fbase.clear();
 
  if(str.get())
  {
@@ -354,8 +334,71 @@ std::unique_ptr<Stream> MDFN_AmbigGZOpenHelper(const std::string& path, std::vec
  return fp;
 }
 
+void MDFN_BackupSavFile(const uint8 max_backup_count, const char* sav_ext)
+{
+ FileStream cts(MDFN_MakeFName(MDFNMKF_SAVBACK, -1, sav_ext), FileStream::MODE_READ_WRITE, true);
+ std::unique_ptr<MemoryStream> tmp;
+ uint8 counter = max_backup_count - 1;
+
+ cts.read(&counter, 1, false);
+ //
+ //
+ try
+ {
+  tmp.reset(new MemoryStream(new FileStream(MDFN_MakeFName(MDFNMKF_SAV, 0, sav_ext), FileStream::MODE_READ)));
+ }
+ catch(MDFN_Error& e)
+ {
+  if(e.GetErrno() == ENOENT)
+   return;
+
+  throw;
+ }
+ //
+ //
+ //
+ {
+  try
+  {
+   MemoryStream oldbks(new GZFileStream(MDFN_MakeFName(MDFNMKF_SAVBACK, counter, sav_ext), GZFileStream::MODE::READ));
+
+   if(oldbks.size() == tmp->size() && !memcmp(oldbks.map(), tmp->map(), oldbks.size()))
+   {
+    //puts("Skipped backup.");
+    return;
+   }
+  }
+  catch(MDFN_Error& e)
+  {
+   if(e.GetErrno() != ENOENT)
+    throw;
+  }
+  //
+  counter = (counter + 1) % max_backup_count;
+  //
+  GZFileStream bks(MDFN_MakeFName(MDFNMKF_SAVBACK, counter, sav_ext), GZFileStream::MODE::WRITE, 9);
+
+  bks.write(tmp->map(), tmp->size());
+
+  bks.close();
+ }
+
+ //
+ //
+ cts.rewind();
+ cts.write(&counter, 1);
+ cts.close();
+}
+
+
+//
+//
+//
 void MDFN_mkdir_T(const char* path)
 {
+ //#ifdef WIN32
+ //#else
+
  #ifdef HAVE_MKDIR
   #if MKDIR_TAKES_ONE_ARG
    ::mkdir(path);
@@ -369,3 +412,21 @@ void MDFN_mkdir_T(const char* path)
  #endif
 }
 
+int MDFN_stat(const char* path, struct stat* buf)
+{
+ //#ifdef WIN32
+ //#else
+ return stat(path, buf);
+}
+
+int MDFN_unlink(const char* path)
+{
+ //#ifdef WIN32
+ //#else
+ return unlink(path);
+}
+
+int MDFN_rename(const char* oldpath, const char* newpath)
+{
+ return rename(oldpath, newpath);
+}

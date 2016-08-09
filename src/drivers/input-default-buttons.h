@@ -394,6 +394,34 @@ static ButtConfig MDMegaMouseConfig[4] =
  MK(RETURN),
 };
 
+static const ButtConfig SSPadConfig[13] =
+{
+ MK(KP6),
+ MK(KP5),
+ MK(KP4),
+ MK(KP9),
+
+ MK(w),
+ MK(s),
+ MK(a),
+ MK(d),
+
+ MK(KP2),
+ MK(KP3),
+ MK(KP1),
+ MK(RETURN),
+
+ MK(KP7),
+
+};
+
+static ButtConfig SSMouseConfig[4] =
+{
+ { BUTTC_MOUSE, 0, 0, 0 },
+ { BUTTC_MOUSE, 0, 2, 0 },
+ { BUTTC_MOUSE, 0, 1, 0 },
+ MK(RETURN),
+};
 
 static const ButtConfig SNESPadConfig[12] =
 {
@@ -618,6 +646,8 @@ static DefaultSettingsMeow defset[] =
  { "snes.input.port2.mouse", SNESMouseConfig, sizeof(SNESMouseConfig) / sizeof(ButtConfig) },
  { "snes.input.port2.superscope", SNESSuperScopeConfig, sizeof(SNESSuperScopeConfig) / sizeof(ButtConfig) },
 
+ { "snes_faust.input.port1.gamepad", SNESPadConfig, sizeof(SNESPadConfig) / sizeof(ButtConfig) },
+
  { "psx.input.port1.gamepad", PSXPadConfig, sizeof(PSXPadConfig) / sizeof(ButtConfig) },
 
  { "psx.input.port1.dancepad", PSXDancePadConfig, sizeof(PSXDancePadConfig) / sizeof(ButtConfig) },
@@ -644,6 +674,21 @@ static DefaultSettingsMeow defset[] =
  { "psx.input.port2.justifier", PSXJustifierConfig, sizeof(PSXJustifierConfig) / sizeof(ButtConfig) },
 
  //{ "vb.input.builtin.gamepad", VBPadConfig, sizeof(VBPadConfig) / sizeof(VBPadConfig) },
+
+ { "ss.input.port1.gamepad", SSPadConfig, sizeof(SSPadConfig) / sizeof(ButtConfig) },
+
+ { "ss.input.port1.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
+ { "ss.input.port2.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
+ { "ss.input.port3.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
+ { "ss.input.port4.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
+ { "ss.input.port5.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
+ { "ss.input.port6.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
+ { "ss.input.port7.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
+ { "ss.input.port8.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
+ { "ss.input.port9.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
+ { "ss.input.port10.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
+ { "ss.input.port11.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
+ { "ss.input.port12.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
 
  { "mmplay.input.builtin.controller", MMPlayInputConfig, sizeof(MMPlayInputConfig) / sizeof(ButtConfig) },
  { "cdplay.input.builtin.controller", CDPlayInputConfig, sizeof(CDPlayInputConfig) / sizeof(ButtConfig) },

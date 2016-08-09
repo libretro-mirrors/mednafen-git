@@ -19,6 +19,9 @@
 #include "interrupt.h"
 #include "dma.h"
 
+namespace MDFN_IEN_NGP
+{
+
 static uint8 CommByte;
 static bool Z80Enabled;
 
@@ -138,4 +141,6 @@ void MDFNNGPCZ80_StateAction(StateMem *sm, const unsigned load, const bool data_
  MDFNSS_StateAction(sm, load, data_only, StateRegs, "Z80X");
 
  z80_state_action(sm, load, data_only, "Z80");
+}
+
 }

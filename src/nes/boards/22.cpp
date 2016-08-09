@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 PRGBanks[2], CHRBanks[8], Mirroring;
 
 static void DoPRG(void)
@@ -92,4 +95,6 @@ int Mapper22_Init(CartInfo *info)
 	SetReadHandler(0x8000, 0xFFFF, CartBR);
 	SetWriteHandler(0x8000,0xffff,Mapper22_write);
 	return(1);
+}
+
 }

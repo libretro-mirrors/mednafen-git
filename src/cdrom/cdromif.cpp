@@ -90,7 +90,7 @@ class CDIF_MT : public CDIF
 {
  public:
 
- CDIF_MT(CDAccess *cda);
+ CDIF_MT(std::unique_ptr<CDAccess> cda);
  virtual ~CDIF_MT();
 
  virtual void HintReadSector(int32 lba);
@@ -102,7 +102,7 @@ class CDIF_MT : public CDIF
 
  private:
 
- CDAccess *disc_cdaccess;
+ std::unique_ptr<CDAccess> disc_cdaccess;
 
  MDFN_Thread *CDReadThread;
 
@@ -136,7 +136,7 @@ class CDIF_ST : public CDIF
 {
  public:
 
- CDIF_ST(CDAccess *cda);
+ CDIF_ST(std::unique_ptr<CDAccess> cda);
  virtual ~CDIF_ST();
 
  virtual void HintReadSector(int32 lba);
@@ -144,7 +144,7 @@ class CDIF_ST : public CDIF
  virtual bool ReadRawSectorPWOnly(uint8* pwbuf, int32 lba, bool hint_fullread);
 
  private:
- CDAccess *disc_cdaccess;
+ std::unique_ptr<CDAccess> disc_cdaccess;
 };
 
 CDIF::CDIF() : UnrecoverableError(false)
@@ -390,7 +390,7 @@ int CDIF_MT::ReadThreadStart()
  return(1);
 }
 
-CDIF_MT::CDIF_MT(CDAccess *cda) : disc_cdaccess(cda), CDReadThread(NULL), SBMutex(NULL), SBCond(NULL)
+CDIF_MT::CDIF_MT(std::unique_ptr<CDAccess> cda) : disc_cdaccess(std::move(cda)), CDReadThread(NULL), SBMutex(NULL), SBCond(NULL)
 {
  try
  {
@@ -432,12 +432,6 @@ CDIF_MT::CDIF_MT(CDAccess *cda) : disc_cdaccess(cda), CDReadThread(NULL), SBMute
    SBCond = NULL;
   }
 
-  if(disc_cdaccess)
-  {
-   delete disc_cdaccess;
-   disc_cdaccess = NULL;
-  }
-
   throw;
  }
 }
@@ -471,12 +465,6 @@ CDIF_MT::~CDIF_MT()
   MDFND_DestroyCond(SBCond);
   SBCond = NULL;
  }
-
- if(disc_cdaccess)
- {
-  delete disc_cdaccess;
-  disc_cdaccess = NULL;
- }
 }
 
 bool CDIF::ValidateRawSector(uint8 *buf)
@@ -509,6 +497,7 @@ bool CDIF_MT::ReadRawSector(uint8 *buf, int32 lba)
   memset(buf, 0, 2352 + 96);
   return(false);
  }
+ //fprintf(stderr, "%d\n", ra_lba - lba);
 
  ReadThreadQueue.Write(CDIF_Message(CDIF_MSG_READ_SECTOR, lba));
 
@@ -648,7 +637,7 @@ int CDIF::ReadSector(uint8* buf, int32 lba, uint32 sector_count, bool suppress_u
 //
 //
 
-CDIF_ST::CDIF_ST(CDAccess *cda) : disc_cdaccess(cda)
+CDIF_ST::CDIF_ST(std::unique_ptr<CDAccess> cda) : disc_cdaccess(std::move(cda))
 {
  //puts("***WARNING USING SINGLE-THREADED CD READER***");
 
@@ -664,11 +653,7 @@ CDIF_ST::CDIF_ST(CDAccess *cda) : disc_cdaccess(cda)
 
 CDIF_ST::~CDIF_ST()
 {
- if(disc_cdaccess)
- {
-  delete disc_cdaccess;
-  disc_cdaccess = NULL;
- }
+
 }
 
 void CDIF_ST::HintReadSector(int32 lba)
@@ -876,10 +861,10 @@ Stream *CDIF::MakeStream(int32 lba, uint32 sector_count)
 
 CDIF *CDIF_Open(const std::string& path, bool image_memcache)
 {
- CDAccess *cda = CDAccess_Open(path, image_memcache);
+ std::unique_ptr<CDAccess> cda(CDAccess_Open(path, image_memcache));
 
  if(!image_memcache)
-  return new CDIF_MT(cda);
+  return new CDIF_MT(std::move(cda));
  else
-  return new CDIF_ST(cda); 
+  return new CDIF_ST(std::move(cda));
 }

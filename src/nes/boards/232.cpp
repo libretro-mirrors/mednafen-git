@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 latches[2];
 
 static void Sync(void)
@@ -72,3 +75,4 @@ int BIC48_Init(CartInfo *info)
  return(1);
 }
 
+}

@@ -53,7 +53,7 @@ extern pcecd_drive_bus_t cd_bus; // Don't access this structure directly by name
 #define PCECD_Drive_GetRST() RST_signal
 #define PCECD_Drive_GetSEL() SEL_signal
 
-void PCECD_Drive_Power(pcecd_drive_timestamp_t system_timestamp);
+void PCECD_Drive_Power(pcecd_drive_timestamp_t system_timestamp) MDFN_COLD;
 void PCECD_Drive_SetDB(uint8 data);
 
 // These PCECD_Drive_Set* functions are kind of misnomers, at least in comparison to the PCECD_Drive_Get* functions...

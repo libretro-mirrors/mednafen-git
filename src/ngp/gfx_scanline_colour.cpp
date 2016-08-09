@@ -18,6 +18,9 @@
 
 //=============================================================================
 
+namespace MDFN_IEN_NGP
+{
+
 static const unsigned char mirrored[] = {
     0x00, 0x40, 0x80, 0xc0, 0x10, 0x50, 0x90, 0xd0,
     0x20, 0x60, 0xa0, 0xe0, 0x30, 0x70, 0xb0, 0xf0,
@@ -259,6 +262,8 @@ void NGPGFX_CLASS::draw_scanline_colour(int layer_enable, int ngpc_scanline)
 
 		//==========
 	}
+
+}
 
 }
 

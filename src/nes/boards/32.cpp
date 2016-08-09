@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 PRGBanks[2], IREMCon, CHRBanks[8], WRAM[8192];
 
 static void DoCHR(void)
@@ -124,4 +127,6 @@ int Mapper32_Init(CartInfo *info)
   info->SaveGameLen[0] = 8192;
  }
  return(1);
+}
+
 }

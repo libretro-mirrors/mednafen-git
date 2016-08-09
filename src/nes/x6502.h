@@ -41,9 +41,9 @@ extern void (*MapIRQHook)(int a);
 #define MDFN_IQFCOUNT   0x200
 #define MDFN_IQTEMP     0x800
 
-void X6502_Init(void);
-void X6502_Reset(void);
-void X6502_Power(void);
+void X6502_Init(void) MDFN_COLD;
+void X6502_Reset(void) MDFN_COLD;
+void X6502_Power(void) MDFN_COLD;
 
 void TriggerNMI(void);
 void TriggerNMI2(void);

@@ -7,7 +7,7 @@
 
 #include <exception>
 
-void MDFNSS_GetStateInfo(const char *filename, StateStatusStruct *status);
+void MDFNSS_GetStateInfo(const std::string& path, StateStatusStruct* status);
 
 struct StateMem
 {
@@ -40,33 +40,23 @@ void MDFNSS_LoadSM(Stream *st, bool data_only = false);
 
 void MDFNSS_CheckStates(void);
 
-// Flag for a single, >= 1 byte native-endian variable
-#define MDFNSTATE_RLSB            0x80000000
-
-// 32-bit native-endian elements
-#define MDFNSTATE_RLSB32          0x40000000
-
-// 16-bit native-endian elements
-#define MDFNSTATE_RLSB16          0x20000000
-
-// 64-bit native-endian elements
-#define MDFNSTATE_RLSB64          0x10000000
-
-#define MDFNSTATE_BOOL		  0x08000000
-
-
-//// Array of structures
-//#define MDFNSTATE_ARRAYOFS	  0x04000000
-
-typedef struct {
-           void *v;		// Pointer to the variable/array
-           uint32 size;		// Length, in bytes, of the data to be saved EXCEPT:
-				//  In the case of MDFNSTATE_BOOL, it is the number of bool elements to save(bool is not always 1-byte).
+struct SFORMAT
+{
+	enum
+	{
+	 FLAG_RLSB	= 0x80000000, // Flag for a single, >= 1 byte native-endian variable
+	 FLAG_RLSB32	= 0x40000000, // 32-bit native-endian elements	 
+	 FLAG_RLSB16	= 0x20000000, // 16-bit native-endian elements
+	 FLAG_RLSB64	= 0x10000000, // 64-bit native-endian elements
+	 FLAG_BOOL	= 0x08000000
+	};
+	void *v;		// Pointer to the variable/array
+	uint32 size;		// Length, in bytes, of the data to be saved EXCEPT:
+				//  In the case of SFORMAT::FLAG_BOOL, it is the number of bool elements to save(bool is not always 1-byte).
 				// If 0, the subchunk isn't saved.
-	   uint32 flags;	// Flags
-	   const char *name;	// Name
-	   //uint32 struct_size;	// Only used for MDFNSTATE_ARRAYOFS, sizeof(struct) that members of the linked SFORMAT struct are in.
-} SFORMAT;
+	uint32 flags;		// Flags
+	const char *name;	// Name
+};
 
 static INLINE bool SF_IS_BOOL(bool *) { return(1); }
 static INLINE bool SF_IS_BOOL(void *) { return(0); }
@@ -94,29 +84,29 @@ static INLINE int SF_VAR_OK(const T*)
  return 0;
 }
 
-#define SFVARN(x, n) { &(x), SF_IS_BOOL(&(x)) ? 1U : (uint32)sizeof(x), MDFNSTATE_RLSB | (SF_IS_BOOL(&(x)) ? MDFNSTATE_BOOL : 0) | SF_VAR_OK(&(x)), n }
+#define SFVARN(x, n) { &(x), SF_IS_BOOL(&(x)) ? 1U : (uint32)sizeof(x), SFORMAT::FLAG_RLSB | (SF_IS_BOOL(&(x)) ? SFORMAT::FLAG_BOOL : 0) | SF_VAR_OK(&(x)), n }
 #define SFVAR(x) SFVARN((x), #x)
 
 #define SFARRAYN(x, l, n) { (x), (uint32)(l), 0 | SF_FORCE_A8(x), n }
 #define SFARRAY(x, l) SFARRAYN((x), (l), #x)
 
-#define SFARRAYBN(x, l, n) { (x), (uint32)(l), MDFNSTATE_BOOL | SF_FORCE_AB(x), n }
+#define SFARRAYBN(x, l, n) { (x), (uint32)(l), SFORMAT::FLAG_BOOL | SF_FORCE_AB(x), n }
 #define SFARRAYB(x, l) SFARRAYBN((x), (l), #x)
 
-#define SFARRAY16N(x, l, n) { (x), (uint32)((l) * sizeof(uint16)), MDFNSTATE_RLSB16 | SF_FORCE_A16(x), n }
+#define SFARRAY16N(x, l, n) { (x), (uint32)((l) * sizeof(uint16)), SFORMAT::FLAG_RLSB16 | SF_FORCE_A16(x), n }
 #define SFARRAY16(x, l) SFARRAY16N((x), (l), #x)
 
-#define SFARRAY32N(x, l, n) { (x), (uint32)((l) * sizeof(uint32)), MDFNSTATE_RLSB32 | SF_FORCE_A32(x), n }
+#define SFARRAY32N(x, l, n) { (x), (uint32)((l) * sizeof(uint32)), SFORMAT::FLAG_RLSB32 | SF_FORCE_A32(x), n }
 #define SFARRAY32(x, l) SFARRAY32N((x), (l), #x)
 
-#define SFARRAY64N(x, l, n) { (x), (uint32)((l) * sizeof(uint64)), MDFNSTATE_RLSB64 | SF_FORCE_A64(x), n }
+#define SFARRAY64N(x, l, n) { (x), (uint32)((l) * sizeof(uint64)), SFORMAT::FLAG_RLSB64 | SF_FORCE_A64(x), n }
 #define SFARRAY64(x, l) SFARRAY64N((x), (l), #x)
 
 #if SIZEOF_DOUBLE != 8
 #error "sizeof(double) != 8"
 #endif
 
-#define SFARRAYDN(x, l, n) { (x), (uint32)((l) * 8), MDFNSTATE_RLSB64 | SF_FORCE_D(x), n }
+#define SFARRAYDN(x, l, n) { (x), (uint32)((l) * 8), SFORMAT::FLAG_RLSB64 | SF_FORCE_D(x), n }
 #define SFARRAYD(x, l) SFARRAYDN((x), (l), #x)
 
 #define SFEND { 0, 0, 0, 0 }

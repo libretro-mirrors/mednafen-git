@@ -59,9 +59,8 @@ MDVDP::MDVDP()
 
     UserLE = ~0;
 
-    /* Allocate and align pixel look-up tables */
-    lut_base = (uint8 *)malloc((LUT_MAX * LUT_SIZE) + LUT_SIZE);
-    lut[0] = (uint8 *)(((uint64)lut_base + LUT_SIZE) & ~(LUT_SIZE - 1));
+    /* Align pixel look-up tables */
+    lut[0] = (uint8 *)(((uintptr_t)lut_base + LUT_SIZE) & ~(LUT_SIZE - 1));
     for(i = 1; i < LUT_MAX; i += 1)
     {
         lut[i] = lut[0] + (i * LUT_SIZE);
@@ -92,7 +91,7 @@ void MDVDP::SetSettings(bool PAL, bool PAL_reported, bool auto_aspect)
 
 MDVDP::~MDVDP()
 {
-   if(lut_base) free(lut_base);
+
 }
 
 void MDVDP::RedoViewport(void)
@@ -168,7 +167,7 @@ void MDVDP::Reset(void)
 
     MD_Suspend68K(FALSE);
     z80_set_interrupt(FALSE);
-    C68k_Set_IRQ(&Main68K, 0);
+    Main68K.SetIPL(0);
 
     RedoViewport();
 

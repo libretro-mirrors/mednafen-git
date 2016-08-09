@@ -33,15 +33,15 @@ typedef struct __CartInfo {
                                 */
 } CartInfo;
 
-void MDFN_SaveGameSave(CartInfo *LocalHWInfo);
-void MDFN_LoadGameSave(CartInfo *LocalHWInfo);
+void MDFN_SaveGameSave(CartInfo *LocalHWInfo) MDFN_COLD;
+void MDFN_LoadGameSave(CartInfo *LocalHWInfo) MDFN_COLD;
 
 extern uint8 *Page[32],*VPage[8],*MMC5SPRVPage[8],*MMC5BGVPage[8];
 
-void ResetCartMapping(void);
-void SetupCartPRGMapping(int chip, uint8 *p, uint32 size, int ram);
-void SetupCartCHRMapping(int chip, uint8 *p, uint32 size, int ram);
-void SetupCartMirroring(int m, int hard, uint8 *extra);
+void ResetCartMapping(void) MDFN_COLD;
+void SetupCartPRGMapping(int chip, uint8 *p, uint32 size, int ram) MDFN_COLD;
+void SetupCartCHRMapping(int chip, uint8 *p, uint32 size, int ram) MDFN_COLD;
+void SetupCartMirroring(int m, int hard, uint8 *extra) MDFN_COLD;
 bool CartHasHardMirroring(void);
 uint8 *GetCartPagePtr(uint16 A);
 

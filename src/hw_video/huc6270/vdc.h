@@ -52,22 +52,15 @@ class VDC
 {
 	public:
 
-	// The VRAM size is specified in 16-bit words.
-	VDC(bool nospritelimit, uint32 par_VRAM_Size);
+	VDC();
 	~VDC();
 
-#if 0
-	void *operator new(size_t bcount)
-	{
-	 void *ret = calloc(1, bcount);
- 	 return(ret);
-	}
+	// Default false.
+	void SetUnlimitedSprites(const bool nospritelimit);
 
-	void operator delete(void *ptr)
-	{
-	 free(ptr);
-	}
-#endif
+	// The VRAM size is specified in 16-bit words.  Default 65536.
+	// Reset() should be called after changing this setting, otherwise things may be broken.
+	void SetVRAMSize(const uint32 par_VRAM_size);
 
 	int32 Reset(void) MDFN_WARN_UNUSED_RESULT;
 

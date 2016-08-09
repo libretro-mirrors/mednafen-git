@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 calreg, calchr;
 
 static void Sync(void)
@@ -76,4 +79,6 @@ int Mapper41_Init(CartInfo *info)
  SetReadHandler(0x8000, 0xFFFF, CartBR);
 
  return(1);
+}
+
 }

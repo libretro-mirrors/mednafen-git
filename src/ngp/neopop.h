@@ -40,6 +40,8 @@ using namespace TLCS900H;
 
 //=============================================================================
 
+namespace MDFN_IEN_NGP
+{
 
 //===========================
 // GCC specific 
@@ -180,8 +182,16 @@ typedef struct
 
 void int_redo_icache(void);
 
+}
+
 #include "gfx.h"
 
+namespace MDFN_IEN_NGP
+{
 extern NGPGFX_CLASS *NGPGfx;
 extern uint8 NGPJoyLatch;
+}
+
+using namespace MDFN_IEN_NGP;
+
 #endif

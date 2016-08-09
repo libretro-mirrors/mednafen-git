@@ -114,7 +114,7 @@ void LoadNSFE(NSFINFO *nfe, Stream* fp, int info_only)
    nfe->NSFMaxBank = round_up_pow2((nfe->NSFSize + (nfe->LoadAddr & 0xfff) + 0xfff) / 0x1000) - 1;
    if(!info_only)
    {
-    nfe->NSFDATA = (uint8 *)MDFN_malloc_T((nfe->NSFMaxBank + 1) * 4096, _("NSF Data"));
+    nfe->NSFDATA = new uint8[(nfe->NSFMaxBank + 1) * 4096];
     memset(nfe->NSFDATA, 0, (nfe->NSFMaxBank + 1) * 4096);
     fp->read(nfe->NSFDATA + (nfe->LoadAddr & 0xfff), nfe->NSFSize);
     chunk_size -= nfe->NSFSize;

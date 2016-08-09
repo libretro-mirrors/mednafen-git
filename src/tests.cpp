@@ -663,6 +663,37 @@ void NO_INLINE NO_CLONE TestGCC60196(void)
  assert(TestGCC60196_Sub(ta, sizeof(ta) / sizeof(ta[0])) == 120);
 }
 
+
+uint16 gcc69606_var = 0;
+int32 NO_INLINE NO_CLONE TestGCC69606_Sub(int8 a, uint8 e)
+{
+ int32 f = 1;
+ int32 mod = ~(int32)a;
+ int32 d = 0;
+
+ if(gcc69606_var > f)
+ {
+  e = gcc69606_var;
+  d = gcc69606_var | e;
+  mod = 8;
+ }
+
+ return (7 + d) % mod;
+}
+
+void NO_INLINE NO_CLONE TestGCC69606(void)
+{
+ assert(TestGCC69606_Sub(0, 0) == 0);
+}
+
+int8 gcc70941_array[2] = { 0, 0 };
+void NO_INLINE NO_CLONE TestGCC70941(void)
+{
+ int8 tmp = (0x7F - gcc70941_array[0] - ((gcc70941_array[0] && gcc70941_array[1]) ^ 0x8080));
+
+ assert(tmp == -1);
+}
+
 template<typename A, typename B>
 void NO_INLINE NO_CLONE TestSUCompare_Sub(A a, B b)
 {
@@ -788,6 +819,90 @@ static void RunMASMemTests(void)
  assert(RunMASMemTests_DoomAndGloom(0) == 1);
 }
 
+static void NO_INLINE NO_CLONE RunMiscEndianTests(uint32 arg0, uint32 arg1)
+{
+ uint8 mem[8];
+
+ memset(mem, 0xFF, sizeof(mem));
+
+ MDFN_en24msb(&mem[0], arg0);
+ MDFN_en24lsb(&mem[4], arg1);
+
+ assert(MDFN_de32lsb(&mem[0]) == 0xFF030201);
+ assert(MDFN_de32lsb(&mem[4]) == 0xFF030201);
+
+ assert(MDFN_de32msb(&mem[0]) == 0x010203FF);
+ assert(MDFN_de32msb(&mem[4]) == 0x010203FF);
+
+ assert(MDFN_de32lsb(&mem[0]) == 0xFF030201);
+ assert(MDFN_de32msb(&mem[4]) == 0x010203FF);
+
+ assert(MDFN_de24lsb(&mem[0]) == 0x030201);
+ assert(MDFN_de24lsb(&mem[4]) == 0x030201);
+
+ assert(MDFN_de24msb(&mem[0]) == 0x010203);
+ assert(MDFN_de24msb(&mem[4]) == 0x010203);
+
+ assert(MDFN_de24lsb(&mem[1]) == 0xFF0302);
+ assert(MDFN_de24lsb(&mem[5]) == 0xFF0302);
+
+ assert(MDFN_de24msb(&mem[1]) == 0x0203FF);
+ assert(MDFN_de24msb(&mem[5]) == 0x0203FF);
+
+ assert(MDFN_de64lsb(&mem[0]) == 0xFF030201FF030201ULL);
+ assert(MDFN_de64msb(&mem[0]) == 0x010203FF010203FFULL);
+ //
+ //
+ //
+ uint16 mem16[8] = { 0x1122, 0x3344, 0x5566, 0x7788, 0x99AA, 0xBBCC, 0xDDEE, 0xFF00 };
+
+ for(unsigned i = 0; i < 8; i++)
+ {
+  assert(ne16_rbo_le<uint16>(mem16, i << 1) == mem16[i]);
+  assert(ne16_rbo_be<uint16>(mem16, i << 1) == mem16[i]);
+ }
+
+ for(unsigned i = 0; i < 4; i++)
+ {
+  assert(ne16_rbo_le<uint32>(mem16, i * 4) == (uint32)(mem16[i * 2] | (mem16[i * 2 + 1] << 16)));
+  assert(ne16_rbo_be<uint32>(mem16, i * 4) == (uint32)(mem16[i * 2 + 1] | (mem16[i * 2] << 16)));
+ }
+
+ for(unsigned i = 0; i < 16; i++)
+ {
+  assert(ne16_rbo_le<uint8>(mem16, i) == (uint8)(mem16[i >> 1] >> ((i & 1) * 8)));
+  assert(ne16_rbo_be<uint8>(mem16, i) == (uint8)(mem16[i >> 1] >> (8 - ((i & 1) * 8))));
+ }
+
+ ne16_rwbo_le<uint16, false>(mem16, 0, &mem16[7]);
+ ne16_rwbo_le<uint16, true>(mem16, 0, &mem16[6]);
+ ne16_rwbo_be<uint16, false>(mem16, 4, &mem16[3]);
+ ne16_rwbo_be<uint16, true>(mem16, 4, &mem16[1]);
+
+ assert(mem16[7] == 0x1122);
+ assert(mem16[0] == 0xDDEE);
+ assert(mem16[3] == 0x5566);
+ assert(mem16[2] == 0x3344);
+
+ //
+ //
+ //
+ for(unsigned i = 0; i < 8; i++)
+ {
+  for(unsigned z = 0; z < 8; z++)
+   mem[z] = z;
+
+  #ifdef LSB_FIRST
+  Endian_V_NE_BE(mem, i);
+  #else
+  Endian_V_NE_LE(mem, i);
+  #endif
+
+  for(unsigned z = 0; z < 8; z++)
+   assert(mem[z] == ((z >= i) ? z : (i - 1 - z)));
+ }
+}
+
 static void NO_INLINE NO_CLONE ExceptionTestSub(int v, int n, int* y)
 {
  if(n)
@@ -863,15 +978,17 @@ static void RunSTLTests(void)
  assert(stltests_vec[0] == stltests_vec[1]);
 }
 
-static void LZCount_Test(void)
+static void LZTZCount_Test(void)
 {
  for(uint32 i = 0, x = 0; i < 33; i++, x = (x << 1) + 1)
  {
+  assert(MDFN_tzcount16(~x) == std::min<uint32>(16, i));
   assert(MDFN_lzcount32(x) == 32 - i);
  }
 
  for(uint32 i = 0, x = 0; i < 33; i++, x = (x ? (x << 1) : 1))
  {
+  assert(MDFN_tzcount16(x) == (std::min<uint32>(17, i) + 16) % 17);
   assert(MDFN_lzcount32(x) == 32 - i);
  }
 
@@ -899,7 +1016,6 @@ static void LZCount_Test(void)
  }
  assert(tv64 == 0x7b8263de01922c29);
 }
-
 
 // don't make this static, and don't make it local scope.  Whole-program optimization might defeat the purpose of this, though...
 unsigned int mdfn_shifty_test[4] =
@@ -994,6 +1110,40 @@ static void RunFPTests(void)
  pow_test();
 }
 
+static void NO_CLONE NO_INLINE NE1664_Test_Sub(uint16* buf)
+{
+ ne16_wbo_be<uint8>(buf, 3, 0xAA);
+ ne16_wbo_be<uint16>(buf, 2, 0xDEAD);
+ ne16_wbo_be<uint32>(buf, 0, 0xCAFEBEEF);
+ ne16_wbo_be<uint32>(buf, 0, ne16_rbo_be<uint16>(buf, 2) ^ ne16_rbo_be<uint16>(buf, 0));
+ ne16_wbo_be<uint16>(buf, 0, ne16_rbo_be<uint16>(buf, 0) ^ ne16_rbo_be<uint16>(buf, 2));
+}
+
+static void NO_CLONE NO_INLINE NE1664_Test_Sub64(uint64* buf)
+{
+ ne64_wbo_be<uint16>(buf, 0, 0x1111);
+ ne64_wbo_be<uint16>(buf, 2, 0x2222);
+ ne64_wbo_be<uint16>(buf, 4, 0x4444);
+ ne64_wbo_be<uint16>(buf, 6, 0x6666);
+
+ ne64_wbo_be<uint32>(buf, 0, 0x33333333);
+ ne64_wbo_be<uint32>(buf, 4, 0x77777777);
+
+ *buf += ne64_rbo_be<uint16>(buf, 0) + ne64_rbo_be<uint16>(buf, 2) + ne64_rbo_be<uint16>(buf, 4) + ne64_rbo_be<uint16>(buf, 6);
+}
+
+static void NE1664_Test(void)
+{
+ uint16 buf[2] = { 0, 0 };
+ uint64 var64 = 0xDEADBEEFCAFEF00DULL;
+
+ NE1664_Test_Sub(buf);
+ NE1664_Test_Sub64(&var64);
+
+ assert((buf[0] == buf[1]) && buf[0] == 0x7411);
+ assert(var64 == 0x333333337778CCCBULL);
+}
+
 #if 0
 static void NO_CLONE NO_INLINE ThreadSub(int tv)
 {
@@ -1056,6 +1206,36 @@ static void zlib_test(void)
  assert((2 << ((cfl >> 6) & 0x3)) == sizeof(z_off_t));
  #endif
 }
+
+static NO_INLINE NO_CLONE void memops_test_sub(uint8* mem8)
+{
+ for(unsigned offs = 0; offs < 8; offs++)
+ {
+  for(unsigned len = 1; len < 32; len++)
+  {
+   memset(mem8, 0x88, 64);
+
+   MDFN_FastArraySet(&mem8[offs], 0x55, len); 
+
+   for(unsigned i = 0; i < 64; i++)
+   {
+    if(i < offs || i >= (offs + len))
+     assert(mem8[i] == 0x88);
+    else
+     assert(mem8[i] == 0x55);
+   }
+  }
+ }
+}
+
+static void memops_test(void)
+{
+ uint8 mem8[64];
+
+ memops_test_sub(mem8);
+}
+
+
 
 const char* MDFN_tests_stringA = "AB\0C";
 const char* MDFN_tests_stringB = "AB\0CD";
@@ -1208,6 +1388,8 @@ bool MDFN_RunMathTests(void)
  TestNarrowConstFold();
 
  TestGCC60196();
+ TestGCC69606();
+ TestGCC70941();
 
  TestModTern();
  TestBWNotMask31GTZ();
@@ -1326,19 +1508,24 @@ bool MDFN_RunMathTests(void)
 
  RunMASMemTests();
 
+ RunMiscEndianTests(0xAA010203, 0xBB030201);
+
  RunExceptionTests();
 
  //RunThreadTests();
 
  RunSTLTests();
 
- LZCount_Test();
+ LZTZCount_Test();
+
+ NE1664_Test();
 
  sha1_test();
  sha256_test();
 
  zlib_test();
 
+ memops_test();
 #if 0
 // Not really a math test.
  const char *test_paths[] = { "/meow", "/meow/cow", "\\meow", "\\meow\\cow", "\\\\meow", "\\\\meow\\cow",

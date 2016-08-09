@@ -1,3 +1,130 @@
+-- 0.9.39-UNSTABLE: --
+
+August 4, 2016:
+	Put "official" -mtune and -march build flags for Windows targets into configure.ac.
+
+July 27, 2016:
+	The version is now displayed in the upper right-hand corner of the F1 help screen.
+
+June 28, 2016:
+	PSX: Modified GTE emulation to inline instruction-handling functions, to not unroll large loops, and to use MDFN_lzcount32() for LZCS/LZCR register
+	calculation.
+
+June 27, 2016:
+	SNES: Modified libco to use __attribute__((section(".text"))) on the libco swap function data arrays, instead of calling 
+	mprotect()/VirtualProtect().
+
+June 24, 2016:
+	PSX: Rearranged CPU structure layout to improve performance a little on ARM CPUs.
+
+June 20, 2016:
+	PSX: Don't specially compile the code with -mmx -msse -msse2 on 32-bit x86, to avoid potential ODR violations.
+
+June 19, 2016:
+	NES: Added ARM NEON support to the resampler.
+
+June 18, 2016:
+	NES: Enabled SSE2 support in the resampler, though only enabled(through rough heuristics) when likely to have a performance benefit over MMX.
+
+June 17, 2016:
+	NES: Made resampler's coefficient memory layout more optimal.
+
+	PCE, PC-FX: Added ARM NEON support to the resampler(though it's only compiled in when the compiler is setup to use NEON, such as by passing -mfpu=neon).
+
+June 16, 2016:
+	PCE, PC-FX: Added AVX support to the resampler.
+
+	PCE, PC-FX: Made resampler's coefficient memory layout more optimal.
+
+June 14, 2016:
+	PCE: Allocate HuC6280 objects statically instead of dynamically, and removed a layer of indirection for the event handler
+	pointer.
+
+	PCE: Moved HuC6280 CPU emulator back into the "pce" directory, since no other emulated systems use it and there are no plans
+	for emulating any such systems(and if there were, new, cleaner HuC6280 emulation code should probably be written).
+
+June 13, 2016:
+	PSX: Enabled CDC periodic-report maximum level calculation code that was written a while back, to fix a
+	lockup in "Fantastic Pinball Kyutenkai".
+
+	Added setting "netplay.console.lines".
+
+	When a console is scrolled, a green indicator arrow will now be drawn in the lower right corner.
+
+	Scrolling in the console(netplay, cheat) is now done in visible line units, rather than in internal line units.
+
+June 12, 2016:
+	Removed setting "netplay.smallfont", and added settings "netplay.console.scale" and "netplay.console.font".
+
+	Somewhat revamped the layout of the debugger's memory editor.
+
+	Removed 4x5 font(it's too small to be of much real use), and added 6x9 and 6x12 fonts(mostly for debugger use).
+
+	Code points outside the BMP are no longer drawn as being truncated to 16-bits.
+
+	In the text drawing routines, a character missing from the chosen font is now drawn as the Unicode replacement character instead
+	of a question mark.
+
+June 11, 2016:
+	Made some minor visual and positioning tweaks to the debugger's memory editor.
+
+	Revamped the text drawing routines to not take naked pointers, instead taking an MDFN_Surface*, optionally an MDFN_Rect for specifying
+	a clipping rectangle, and x and y positions within the surface.
+
+June 10, 2016:
+	Replaced MDFN_FastU32MemsetM8() with a set of MDFN_FastArraySet() functions, which don't require minimum alignments beyond natural alignment, but
+	will perform faster with them.
+
+June 9, 2016:
+	PSX: Brought MDEC emulation decode timing closer to the timing of a PS1.
+
+	VB: Replaced endian-handling functions local to vip.cpp with new code in endian.h derived from code written for Saturn emulation.
+
+June 8, 2016:
+	Fixed long-broken MDFN_en24msb() function.
+
+June 7, 2016:
+	Fixed a bug that could cause a crash if a gzip-compressed file whose uncompressed size is 0 bytes is loaded.
+
+June 6, 2016:
+	SNES: Updated libco to the copy included with higan v098, for x86_64 Windows fixes and ARM support.
+
+June 4, 2016:
+	Added support for CUE sheet "INDEX" directives for indexes 2-99.
+
+May 31, 2016:
+	NES: Extended the mapper 184 emulation to support "Fantasy Zone"'s board.
+
+May 30, 2016:
+	Replaced various redundant C-string-utilizing file path decomposition functions/code with usage of the newer MDFN_GetFilePathComponents().
+
+May 29, 2016:
+	Replaced usage of MDFN_calloc*()/MDFN_malloc*()/MDFN_free() with new/delete.
+
+	Replaced MDFN_IsFIROPSafe() with MDFN_CheckFIROPSafe(), which throws an exception instead of relying on the caller to do it.
+
+May 5, 2016:
+	SNES: Removed unused disassembler code.
+
+	Fixed code causing a compilation error on gcc 6.
+
+April 10, 2016:
+	Cleaned up cheat code a little, and added support for RAM cheats to be applied via function call instead of through direct data pointer access.
+
+March 29, 2016:
+	MD, NGP, PC-FX: Encapsulated code in namespaces.
+
+March 28, 2016:
+	NES: Implemented kludge to fix a minor Zelda 2 title screen glitch, a status bar glitch in Burai Fighter, and scrolling in the second stage of The Young Indiana
+	Jones Chronicles.
+
+October 23, 2015:
+	PSX: Reworked how branch delay slots are handled to be simpler and slightly more efficient.
+
+October 12, 2015:
+	PSX: Improved emulation of the instruction cache management features of the PS1's CPU core; probably won't affect any games, but could be of
+	use in homebrew.
+
 -- 0.9.38.7: --
 
 September 30, 2015:

@@ -8,9 +8,6 @@
 extremely careful.  For any given game, either use save states or the game's own save system, but not both, lest you may destroy your saved games.
 </p>
 <p>
-PlayStation 1 emulation is currently in a state of development, so there may occasionally be horrifying SPINE-TINGLING regressions in new versions.
-</p>
-<p>
 A dual-core Phenom II or Athlon II at 3GHz or higher, or rough equivalent(in terms of single-core IPC), is recommended for
 running Mednafen's PlayStation 1 emulation on.  For better performance, the binary should be compiled for a 64-bit
 target(for example, x86_64) rather than 32-bit, if available.<br>
@@ -22,7 +19,12 @@ avoid short emulator pauses and audio pops due to waiting for disk accesses to c
 </p>
 
 <p>
-<a href="http://www.neillcorlett.com/psf/">PSF1</a> playback is supported.
+<a href="http://www.neillcorlett.com/psf/">PSF1</a> playback is supported.  However, many PSF1 rips won't work as they are broken in various ways:
+<ul>
+ <li>Contain malformed PS-EXE headers.
+ <li>Perform unaligned halfword and word memory accesses.
+ <li>Erroneously use load instruction target register as a source register in load delay slots.
+</ul>
 </p>
 
 <?php EndSection(); ?>
@@ -117,6 +119,35 @@ is enabled when running them.
 </p>
 <?php EndSection(); ?>
 
+<?php BeginSection('Default Input Mappings'); ?>
+
+ <?php BeginSection('Digital Gamepad on Virtual Port 1'); ?>
+  <p>
+  <table border>
+   <tr><th>Key:</th><th nowrap>Emulated Button:</th></tr>
+
+   <tr><td>W</td><td>Up</td></tr>
+   <tr><td>S</td><td>Down</td></tr>
+   <tr><td>A</td><td>Left</td></tr>
+   <tr><td>D</td><td>Right</td></tr>
+
+   <tr><td>Tab</td><td>SELECT</td></tr>
+   <tr><td>Enter</td><td>START</td></tr>
+
+   <tr><td>Keypad 8</td><td>△</td></tr>
+   <tr><td>Keypad 2</td><td>x</td></tr>
+   <tr><td>Keypad 4</td><td>□</td></tr>
+   <tr><td>Keypad 6</td><td>○</td></tr>
+
+   <tr><td>Keypad 1</td><td>L1</td></tr>
+   <tr><td>Keypad 7</td><td>L2</td></tr>
+   <tr><td>Keypad 3</td><td>R1</td></tr>
+   <tr><td>Keypad 9</td><td>R2</td></tr>
+  </table>
+  </p>
+ <?php EndSection(); ?>
+
+<?php EndSection(); ?>
 
 <?php PrintSettings(); ?>
 

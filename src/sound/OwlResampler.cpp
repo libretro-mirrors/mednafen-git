@@ -15,9 +15,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-///* This resampler has only been designed for frequencies 1.5MHz - 2MHz as the input rate, and output rates of
-//   22050-192000 in mind, though preferably output rates between 48000 to 96000(inclusive) will be used.
-//*/
+// Don't pass more than about 40ms worth of audio data to Resample()
+// at a time.
 
 #include <mednafen/mednafen.h>
 #include <mednafen/state.h>
@@ -29,6 +28,10 @@
 
 #if defined(ARCH_POWERPC_ALTIVEC) && defined(HAVE_ALTIVEC_H)
  #include <altivec.h>
+#endif
+
+#ifdef __ARM_NEON__
+ #include <arm_neon.h>
 #endif
 
 #ifdef __FAST_MATH__
@@ -333,7 +336,7 @@ static INLINE void DoMAC(float *wave, float *coeffs, int32 count, int32 *accum_o
 {
  float acc[4] = { 0, 0, 0, 0 };
 
- for(int c = 0; c < count; c += 4)
+ for(int c = 0; MDFN_LIKELY(c < count); c += 4)
  {
   acc[0] += wave[c + 0] * coeffs[c + 0];
   acc[1] += wave[c + 1] * coeffs[c + 1];
@@ -347,198 +350,17 @@ static INLINE void DoMAC(float *wave, float *coeffs, int32 count, int32 *accum_o
 
 
 #ifdef ARCH_X86
-
-#if defined(__x86_64__) && !defined(__ILP32__)
-#define X86_REGC "r"
-#define X86_REGAT ""
-#else
-#define X86_REGC "e"
-#define X86_REGAT "l"
-#endif
-
-static INLINE void DoMAC_SSE(float *wave, float *coeffs, int32 count, int32 *accum_output)
-{
- // Multiplies 16 coefficients at a time.
- int dummy;
-
- //printf("%f\n", adj);
-/*
-	?di = wave pointer
-	?si = coeffs pointer
-	ecx = count / 16
-	edx = 32-bit int output pointer
-
-	
-*/
- // Will read 16 bytes of input waveform past end.
- asm volatile(
-"xorps %%xmm3, %%xmm3\n\t"	// For a loop optimization
-
-"xorps %%xmm4, %%xmm4\n\t"
-"xorps %%xmm5, %%xmm5\n\t"
-"xorps %%xmm6, %%xmm6\n\t"
-"xorps %%xmm7, %%xmm7\n\t"
-
-"movups  0(%%" X86_REGC "di), %%xmm0\n\t"
-"SSE_Loop:\n\t"
-
-"movups 16(%%" X86_REGC "di), %%xmm1\n\t"
-"mulps   0(%%" X86_REGC "si), %%xmm0\n\t"
-"addps  %%xmm3, %%xmm7\n\t"
-
-"movups 32(%%" X86_REGC "di), %%xmm2\n\t"
-"mulps  16(%%" X86_REGC "si), %%xmm1\n\t"
-"addps  %%xmm0, %%xmm4\n\t"
-
-"movups 48(%%" X86_REGC "di), %%xmm3\n\t"
-"mulps  32(%%" X86_REGC "si), %%xmm2\n\t"
-"addps  %%xmm1, %%xmm5\n\t"
-
-"movups 64(%%" X86_REGC "di), %%xmm0\n\t"
-"mulps  48(%%" X86_REGC "si), %%xmm3\n\t"
-"addps  %%xmm2, %%xmm6\n\t"
-
-"add" X86_REGAT " $64, %%" X86_REGC "si\n\t"
-"add" X86_REGAT " $64, %%" X86_REGC "di\n\t"
-"subl $1, %%ecx\n\t"
-"jnz SSE_Loop\n\t"
-
-"addps  %%xmm3, %%xmm7\n\t"	// For a loop optimization
-
-//
-// Add the four summation xmm regs together into one xmm register, xmm7
-//
-"addps  %%xmm4, %%xmm5\n\t"
-"addps  %%xmm6, %%xmm7\n\t"
-"addps  %%xmm5, %%xmm7\n\t"
-
-//
-// Now for the "fun" horizontal addition...
-//
-// 
-"movaps %%xmm7, %%xmm4\n\t"
-// (3 * 2^0) + (2 * 2^2) + (1 * 2^4) + (0 * 2^6) = 27
-"shufps $27, %%xmm7, %%xmm4\n\t"
-"addps  %%xmm4, %%xmm7\n\t"
-
-// At this point, xmm7:
-// (3 + 0), (2 + 1), (1 + 2), (0 + 3)
-//
-// (1 * 2^0) + (0 * 2^2) = 1
-"movaps %%xmm7, %%xmm4\n\t"
-"shufps $1, %%xmm7, %%xmm4\n\t"
-"addss %%xmm4, %%xmm7\n\t"	// No sense in doing packed addition here.
-
-"cvtss2si %%xmm7, %%ecx\n\t"
-"movl %%ecx, (%%" X86_REGC "dx)\n\t"
- : "=D" (dummy), "=S" (dummy), "=c" (dummy)
- : "D" (wave), "S" (coeffs), "c" (count >> 4), "d" (accum_output)
-#ifdef __SSE__
- : "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "cc", "memory"
-#else
- : "cc", "memory"
-#endif
-);
-}
+ #include "OwlResampler_x86.inc"
 #endif
 
 #ifdef ARCH_POWERPC_ALTIVEC
-static INLINE void DoMAC_AltiVec(float* wave, float* coeffs, int32 count, int32* accum_output)
-{
- register vector float acc0, acc1, acc2, acc3;
-
- acc0 = (vector float)vec_splat_u8(0);
- acc1 = acc0;
- acc2 = acc0;
- acc3 = acc0;
-
-
- count >>= 4;
-
- if(!((uint64)wave & 0xF))
- {
-  register vector float w, c;
-  do
-  {
-   w = vec_ld(0, wave);
-   c = vec_ld(0, coeffs);
-   acc0 = vec_madd(w, c, acc0);
-
-   w = vec_ld(16, wave);
-   c = vec_ld(16, coeffs);
-   acc1 = vec_madd(w, c, acc1);
-
-   w = vec_ld(32, wave);
-   c = vec_ld(32, coeffs);
-   acc2 = vec_madd(w, c, acc2);
-
-   w = vec_ld(48, wave);
-   c = vec_ld(48, coeffs);
-   acc3 = vec_madd(w, c, acc3);
-
-   coeffs += 16;
-   wave += 16;
-  } while(--count);
- }
- else
- {
-  register vector unsigned char lperm;
-  register vector float loado;
-
-  lperm = vec_lvsl(0, wave);
-  loado = vec_ld(0, wave);
-
-  do
-  {
-   register vector float tl;
-   register vector float w;
-   register vector float c;
-
-   tl = vec_ld(15 + 0, wave);
-   w = vec_perm(loado, tl, lperm);
-   c = vec_ld(0, coeffs);
-   loado = tl;
-   acc0 = vec_madd(w, c, acc0);
-
-   tl = vec_ld(15 + 16, wave);
-   w = vec_perm(loado, tl, lperm);
-   c = vec_ld(16, coeffs);
-   loado = tl;
-   acc1 = vec_madd(w, c, acc1);
-
-   tl = vec_ld(15 + 32, wave);
-   w = vec_perm(loado, tl, lperm);
-   c = vec_ld(32, coeffs);
-   loado = tl;
-   acc2 = vec_madd(w, c, acc2);
-
-   tl = vec_ld(15 + 48, wave);
-   w = vec_perm(loado, tl, lperm);
-   c = vec_ld(48, coeffs);
-   loado = tl;
-   acc3 = vec_madd(w, c, acc3);
-
-   coeffs += 16;
-   wave += 16;
-  } while(--count);
- }
-
- {
-  vector float sum;
-  vector float sums0;
-  vector signed int sum_i;
-
-  sum = vec_add(vec_add(acc0, acc1), vec_add(acc2, acc3));
-  sums0 = vec_sld(sum, sum, 8);
-  sum = vec_add(sum, sums0);
-  sums0 = vec_sld(sum, sum, 4);
-  sum = vec_add(sum, sums0);
-
-  sum_i = vec_cts(sum, 0);
-  vec_ste(sum_i, 0, accum_output);
- }
-}
+ #include "OwlResampler_altivec.inc"
 #endif
+
+#ifdef __ARM_NEON__
+ #include "OwlResampler_neon.inc"
+#endif
+
 
 template<typename T, unsigned sa>
 static T SDP2(T v)
@@ -550,7 +372,28 @@ static T SDP2(T v)
  return ((v + tmp) >> sa);
 }
 
-int32 OwlResampler::Resample(OwlBuffer* in, const uint32 in_count, int16* out, const uint32 max_out_count, const bool reverse)
+enum
+{
+ SIMD_NONE = 0,
+
+#ifdef ARCH_X86
+ SIMD_SSE_16X,
+
+#ifdef HAVE_INLINEASM_AVX
+ SIMD_AVX_32X,
+ SIMD_AVX_32X_P16,
+#else
+ #warning "Compiling without AVX inline assembly."
+#endif
+#elif defined(ARCH_POWERPC_ALTIVEC)
+ SIMD_ALTIVEC,
+#elif defined __ARM_NEON__
+ SIMD_NEON
+#endif
+};
+
+template<unsigned TA_SIMD_Type>
+NO_INLINE int32 OwlResampler::T_Resample(OwlBuffer* in, const uint32 in_count, int16* out, const uint32 max_out_count, const bool reverse)
 {
 	if(reverse)
 	{
@@ -559,10 +402,7 @@ int32 OwlResampler::Resample(OwlBuffer* in, const uint32 in_count, int16* out, c
 
 	 while(MDFN_LIKELY(a < b))
 	 {
-	  int32 tmp = *a;
-
-       	  *a = *b;
-	  *b = tmp;
+	  std::swap<int32>(*a, *b);
 	  a++;
 	  b--;
 	 }
@@ -572,8 +412,7 @@ int32 OwlResampler::Resample(OwlBuffer* in, const uint32 in_count, int16* out, c
 	//
 	//
 	uint32 count = 0;
-	int32 *boobuf = &IntermediateBuffer[0];
-	int32 *I32Out = boobuf;
+	int32* I32Out = &IntermediateBuffer[0];
 	const uint32 in_count_WLO = in->leftover + in_count;
 	const uint32 max = std::max<int64>(0, (int64)in_count_WLO - NumCoeffs);
         uint32 InputPhase = in->InputPhase;
@@ -587,72 +426,64 @@ int32 OwlResampler::Resample(OwlBuffer* in, const uint32 in_count, int16* out, c
 	 InputPhase = 0;
 	}
 
+        while(InputIndex < max)
+        {
+         float* wave = &InSamps[InputIndex].f;
+         float* coeffs = &PInfos[InputPhase].Coeffs[0];
+         int32 coeff_count = NumCoeffs;
 
-	if(0)
-	{
+	 switch(TA_SIMD_Type)
+  	 {
+	  default:
+	  case SIMD_NONE:
+		DoMAC(wave, coeffs, coeff_count, I32Out);
+		break;
 
-	}
 #ifdef ARCH_X86
-	else if(cpuext & CPUTEST_FLAG_SSE)
-	{
-	 //int32* tp = in->Buf();
-	 //for(unsigned c = 0; c < in_count; c++)
-	 // *(float*)(tp + c) = *(int32*)(tp + c);
+	  case SIMD_SSE_16X:
+		DoMAC_SSE_16X(wave, coeffs, coeff_count, I32Out);
+		break;
+#ifdef HAVE_INLINEASM_AVX
+	  case SIMD_AVX_32X:
+		DoMAC_AVX_32X(wave, coeffs, coeff_count, I32Out);
+		break;
 
-         while(InputIndex < max)
-         {
-          float* wave = &InSamps[InputIndex].f;
-          float* coeffs = &FIR_Coeffs[InputPhase][0].f;
-          int32 coeff_count = NumCoeffs;
-
-	  DoMAC_SSE(wave, coeffs, coeff_count, I32Out);
-          //DoMAC(wave, coeffs, coeff_count, I32Out);
-
-          I32Out++;
-          count++;
-
-          InputPhase = PhaseNext[InputPhase];
-          InputIndex += PhaseStep[InputPhase];
-         }
-	}
+	  case SIMD_AVX_32X_P16:
+		DoMAC_AVX_32X_P16(wave, coeffs, coeff_count, I32Out);
+		break;
 #endif
 
-#ifdef ARCH_POWERPC_ALTIVEC
-	else if(1)
+#elif defined(ARCH_POWERPC_ALTIVEC)
+	  case SIMD_ALTIVEC:
+		DoMAC_AltiVec(wave, coeffs, coeff_count, I32Out);
+		break;
+#elif defined __ARM_NEON__
+	  case SIMD_NEON:
+		DoMAC_NEON(wave, coeffs, coeff_count, I32Out);
+		break;
+#endif
+	 }
+
+         I32Out++;
+         count++;
+
+         InputPhase = PInfos[InputPhase].Next;
+         InputIndex += PInfos[InputPhase].Step;
+        }
+
+#if defined(ARCH_X86) && defined(HAVE_INLINEASM_AVX)
+	if(TA_SIMD_Type == SIMD_AVX_32X || TA_SIMD_Type == SIMD_AVX_32X_P16)
 	{
-         while(InputIndex < max)
-         {
-          float* wave = &InSamps[InputIndex].f;
-          float* coeffs = &FIR_Coeffs[InputPhase][0].f;
-          int32 coeff_count = NumCoeffs;
-
-	  DoMAC_AltiVec(wave, coeffs, coeff_count, I32Out);
-
-          I32Out++;
-          count++;
-
-          InputPhase = PhaseNext[InputPhase];
-          InputIndex += PhaseStep[InputPhase];
-         }
+	 asm volatile("vzeroupper\n\t" : : :
+	 #if defined(__AVX__)
+	 "ymm0", "ymm1", "ymm2", "ymm3", "ymm4", "ymm5", "ymm6", "ymm7"
+	  #if defined(__x86_64__)
+	  , "ymm8", "ymm9", "ymm10", "ymm11", "ymm12", "ymm13", "ymm14", "ymm15"
+	  #endif
+	 #endif
+	 );
 	}
 #endif
-	else
-	{
-         while(InputIndex < max)
-         {
-          float* wave = &InSamps[InputIndex].f;
-          float* coeffs = &FIR_Coeffs[InputPhase][0].f;
-          int32 coeff_count = NumCoeffs;
-
-	  DoMAC(wave, coeffs, coeff_count, I32Out);
-
-          I32Out++;
-          count++;
-
-          InputPhase = PhaseNext[InputPhase];
-          InputIndex += PhaseStep[InputPhase];
-         }
-	}
 
         if(InputIndex > in_count_WLO)
 	{
@@ -668,7 +499,7 @@ int32 OwlResampler::Resample(OwlBuffer* in, const uint32 in_count, int16* out, c
 #if 0
 	for(uint32 x = 0; x < count; x++)
 	{
- 	 int s = boobuf[x] >> 8;
+ 	 int s = IntermediateBuffer[x] >> 8;
 
 	 if(s < -32768 || s > 32767)
 	 {
@@ -686,7 +517,7 @@ int32 OwlResampler::Resample(OwlBuffer* in, const uint32 in_count, int16* out, c
 
  	 for(uint32 x = 0; x < count; x++)
 	 {
- 	  int32 sample = boobuf[x];
+ 	  int32 sample = IntermediateBuffer[x];
 	  int32 s;
 
           debias += (((int64)((uint64)(int64)sample << 16) - debias) * debias_multiplier) >> 16;
@@ -715,7 +546,7 @@ int32 OwlResampler::Resample(OwlBuffer* in, const uint32 in_count, int16* out, c
 	in->InputPhase = InputPhase;
 	in->InputIndex = InputIndex;
 
-	return(count);
+	return count;
 }
 
 void OwlResampler::ResetBufResampState(OwlBuffer* buf)
@@ -727,26 +558,7 @@ void OwlResampler::ResetBufResampState(OwlBuffer* buf)
 
 OwlResampler::~OwlResampler()
 {
- if(PhaseNext)
-  free(PhaseNext);
 
- if(PhaseStep)
-  free(PhaseStep);
-
- if(PhaseStepSave)
-  free(PhaseStepSave);
-
- if(FIR_Coeffs_Real)
- {
-  for(unsigned int i = 0; i < NumPhases; i++)
-   if(FIR_Coeffs_Real[i])
-    free(FIR_Coeffs_Real[i]);
-
-  free(FIR_Coeffs_Real);
- }
-
- if(FIR_Coeffs)
-  free(FIR_Coeffs);
 }
 
 //
@@ -773,7 +585,7 @@ static float FilterDenormal(float v)
 
 OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_error, double debias_corner, int quality, double nyq_fudge)
 {
- double *FilterBuf = NULL;
+ std::unique_ptr<double[]> FilterBuf;
  double ratio = (double)output_rate / input_rate;
  double cutoff;
  double required_bandwidth;
@@ -799,8 +611,8 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
 
  IntermediateBuffer.resize(OutputRate * 4 / 50);	// *4 for safety padding, / min(50,60), an approximate calculation
 
- cpuext = cputest_get_flags();
-//cpuext = 0;
+ const uint32 cpuext = cputest_get_flags();
+
  MDFN_printf("OwlResampler.cpp debug info:\n");
  MDFN_indent(1);
 
@@ -822,20 +634,18 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
   ratio = 1 / s_ratio;
   NumPhases = count;
 
-  PhaseNext = (uint32 *)malloc(sizeof(uint32) * NumPhases);
-  PhaseStep = (uint32 *)malloc(sizeof(uint32) * NumPhases);
-  PhaseStepSave = (uint32 *)malloc(sizeof(uint32) * NumPhases);
+  PInfos.resize(NumPhases);
 
   uint32 last_indoo = 0;
   for(unsigned int i = 0; i < NumPhases; i++)
   {
    uint32 index_pos = i * findo_i / NumPhases;
 
-   PhaseNext[i] = (i + 1) % (NumPhases);
-   PhaseStepSave[i] = PhaseStep[i] = index_pos - last_indoo;
+   PInfos[i].Next = (i + 1) % (NumPhases);
+   PInfos[i].Step = index_pos - last_indoo;
    last_indoo = index_pos;
   }
-  PhaseStepSave[0] = PhaseStep[0] = findo_i - last_indoo;
+  PInfos[0].Step = findo_i - last_indoo;
 
   Ratio_Dividend = findo_i;
   Ratio_Divisor = NumPhases;
@@ -890,7 +700,7 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
  MDFN_printf("Initial nominal cutoff frequency: %f\n", InputRate * cutoff / 2);
 
  //
- // Put this lower limit BEFORE the SIMD stuff, otherwise the NumCoeffs_Padded calculation will be off.
+ // Put this lower limit BEFORE the SIMD stuff, otherwise the NumCoeffs calculation will be off.
  //
  if(NumCoeffs < 16)
   NumCoeffs = 16;
@@ -900,18 +710,30 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
   abort();	// The sky is falling AAAAAAAAAAAAA
  }
  #ifdef ARCH_X86
+ #ifdef HAVE_INLINEASM_AVX
+ else if((cpuext & CPUTEST_FLAG_AVX) && (NumCoeffs + 0xF) >= 32)
+ {
+  MDFN_printf("SIMD: AVX\n");
+
+  // AVX loop can't handle less than 32 MACs properly.
+  NumCoeffs = std::max<uint32>(32, NumCoeffs);
+
+  // Past 32 MACs, AVX loop granularity is 16 MACs(with some ugly maaaagic~)
+  NumCoeffs = (NumCoeffs + 0xF) &~ 0xF;
+
+  if(NumCoeffs & 0x10)
+   Resample_ = &OwlResampler::T_Resample<SIMD_AVX_32X_P16>;
+  else
+   Resample_ = &OwlResampler::T_Resample<SIMD_AVX_32X>;
+ }
+ #endif
  else if(cpuext & CPUTEST_FLAG_SSE)
  {
   MDFN_printf("SIMD: SSE\n");
 
-#if 0 //defined(__x86_64__)
-  // SSE loop does 32 MACs per iteration.
-  NumCoeffs = (NumCoeffs + 31) &~ 31;
-#else
   // SSE loop does 16 MACs per iteration.
-  NumCoeffs = (NumCoeffs + 15) &~ 15;
-#endif
-  NumCoeffs_Padded = NumCoeffs;
+  NumCoeffs = (NumCoeffs + 0xF) &~ 0xF;
+  Resample_ = &OwlResampler::T_Resample<SIMD_SSE_16X>;
  }
  #endif
  #ifdef ARCH_POWERPC_ALTIVEC
@@ -920,18 +742,31 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
   MDFN_printf("SIMD: AltiVec\n");
 
   // AltiVec loop does 16 MACs per iteration.
-  NumCoeffs = (NumCoeffs + 15) &~ 15;
-  NumCoeffs_Padded = NumCoeffs;
+  NumCoeffs = (NumCoeffs + 0xF) &~ 0xF;
+  Resample_ = &OwlResampler::T_Resample<SIMD_ALTIVEC>;
+ }
+ #endif
+ #ifdef __ARM_NEON__
+ else if(1)
+ {
+  MDFN_printf("SIMD: NEON\n");
+
+  // NEON loop does 16 MACs per iteration.
+  NumCoeffs = (NumCoeffs + 0xF) &~ 0xF;
+  Resample_ = &OwlResampler::T_Resample<SIMD_NEON>;
  }
  #endif
  else
  {
   // Default loop does 4 MACs per iteration.
   NumCoeffs = (NumCoeffs + 3) &~ 3;
-  NumCoeffs_Padded = NumCoeffs;
+  Resample_ = &OwlResampler::T_Resample<SIMD_NONE>;
  }
+ //
+ // Don't alter NumCoeffs anymore from here on.
+ //
 
- #if !defined(ARCH_X86) && !defined(ARCH_POWERPC_ALTIVEC)
+ #if !defined(ARCH_X86) && !defined(ARCH_POWERPC_ALTIVEC) && !defined(__ARM_NEON__)
   #warning "OwlResampler is being compiled without SIMD support."
  #endif
 
@@ -950,36 +785,26 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
 
  assert(NumCoeffs <= OwlBuffer::HRBUF_LEFTOVER_PADDING);
 
- FIR_Coeffs = (OwlBuffer::I32_F_Pudding **)malloc(sizeof(int32 **) * NumPhases);
- FIR_Coeffs_Real = (OwlBuffer::I32_F_Pudding **)malloc(sizeof(int32 **) * NumPhases);
+ CoeffsBuffer.resize((256 / sizeof(float)) + NumCoeffs * NumPhases);
 
  for(unsigned int i = 0; i < NumPhases; i++)
- {
-  uint8 *tmp_ptr = (uint8 *)calloc(sizeof(int32) * NumCoeffs_Padded + 16, 1);
+  PInfos[i].Coeffs = (float *)(((uintptr_t)&CoeffsBuffer[0] + 0xFF) &~ 0xFF) + (i * NumCoeffs);
 
-  FIR_Coeffs_Real[i] = (OwlBuffer::I32_F_Pudding *)tmp_ptr;
-  tmp_ptr += 0xF;
-  tmp_ptr -= ((unsigned long long)tmp_ptr & 0xF);
-  FIR_Coeffs[i] = (OwlBuffer::I32_F_Pudding *)tmp_ptr;
- }
+ MDFN_printf("Impulse response table memory usage: %zu bytes\n", CoeffsBuffer.size() * sizeof(float));
 
- MDFN_printf("Impulse response table memory usage: %d bytes\n", (int)((sizeof(int32) * NumCoeffs_Padded + 16) * NumPhases));
-
-
- FilterBuf = (double *)malloc(sizeof(double) * NumCoeffs * NumPhases);
- gen_sinc(FilterBuf, NumCoeffs * NumPhases, cutoff / NumPhases, k_beta);
- normalize(FilterBuf, NumCoeffs * NumPhases); 
+ FilterBuf.reset(new double[NumCoeffs * NumPhases]);
+ gen_sinc(&FilterBuf[0], NumCoeffs * NumPhases, cutoff / NumPhases, k_beta);
+ normalize(&FilterBuf[0], NumCoeffs * NumPhases); 
 
  #if 0
  for(int i = 0; i < NumCoeffs * NumPhases; i++)
   fprintf(stderr, "%.20f\n", FilterBuf[i]);
-
  #endif
 
  for(unsigned int phase = 0; phase < NumPhases; phase++)
  {
-  double sum_d = 0;
-  float sum_f4[4] = { 0, 0, 0, 0 };
+  //double sum_d = 0;
+  //float sum_f4[4] = { 0, 0, 0, 0 };
 
   const unsigned sp = (NumPhases - 1 - (((uint64)phase * Ratio_Dividend) % NumPhases));
   const unsigned tp = phase;
@@ -988,9 +813,9 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
   {
    double tmpcod = FilterBuf[i * NumPhases + sp] * NumPhases;	// Tasty cod.
 
-   FIR_Coeffs[tp][i].f = FilterDenormal(tmpcod);
-   sum_d += FIR_Coeffs[tp][i].f;
-   sum_f4[i % 4] += FIR_Coeffs[tp][i].f;
+   PInfos[tp].Coeffs[i] = FilterDenormal(tmpcod);
+   //sum_d += PInfos[tp].Coeffs[i];
+   //sum_f4[i % 4] += PInfos[tp].Coeffs[i];
   }
 
 #if 0
@@ -1003,13 +828,28 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
 #endif
  }
 
- free(FilterBuf);
- FilterBuf = NULL;
-
  assert(debias_corner < (output_rate / 16));
  debias_multiplier = (uint32)(((uint64)1 << 16) * debias_corner / output_rate);
 
  MDFN_indent(-1);
 
  //abort();
+
+ #if 0
+ {
+  static float dummy_wave[1024];
+  static float dummy_coeffs[1024];
+  int32 dummy_out;
+  uint32 begin_time = MDFND_GetTime();
+
+  for(int i = 0; i < 1024 * 1024; i++)
+  {
+   DoMAC_AVX_32X(dummy_wave, dummy_coeffs, 1024, &dummy_out);
+   //DoMAC_SSE_16X(dummy_wave, dummy_coeffs, 1024, &dummy_out);
+  }
+
+  printf("%u\n", MDFND_GetTime() - begin_time);
+  abort();
+ }
+ #endif
 }

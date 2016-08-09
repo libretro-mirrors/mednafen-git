@@ -1,5 +1,8 @@
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 IRQa, MirRegs[2], latch, CHRBanks[8], PRGBanks[4], MirSelect, ModeSelect;
 static uint16 IRQCount;
 static uint8 WRAM[8192];
@@ -184,4 +187,6 @@ int Mapper17_Init(CartInfo *info)
  Mapper6_Init(info);
  ModeSelect = 0;
  return(1);
+}
+
 }

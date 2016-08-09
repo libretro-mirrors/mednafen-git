@@ -19,6 +19,9 @@
 #include "../nsf.h"
 #include <math.h>
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 WRAM[8192];
 static void AYSoundHQ(void);
 static void DoAYSQHQ(int x);
@@ -325,3 +328,4 @@ int BTR_Init(CartInfo *info)
  return(1);
 }
 
+}

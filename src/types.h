@@ -20,6 +20,7 @@
 #include <type_traits>
 #include <initializer_list>
 #include <memory>
+#include <algorithm>
 
 typedef int8_t int8;
 typedef int16_t int16;
@@ -40,8 +41,17 @@ typedef uint64_t uint64;
  #define HAVE_COMPUTED_GOTO 1
 #endif
 
-#ifdef __GNUC__
+#ifndef WIN32
+ #if defined(__PIC__) || defined(__pic__) || defined(__PIE__) || defined(__pie__)
+  #if defined(__386__) || defined(__i386__) || defined(__i386) || defined(_M_IX86) || defined(_M_I386) //|| (SIZEOF_VOID_P <= 4)
+   #error "Compiling with position-independent code generation enabled is not recommended, for performance reasons."
+  #else
+   #warning "Compiling with position-independent code generation enabled is not recommended, for performance reasons."
+  #endif
+ #endif
+#endif
 
+#ifdef __GNUC__
   #define MDFN_MAKE_GCCV(maj,min,pl) (((maj)*100*100) + ((min) * 100) + (pl))
   #define MDFN_GCC_VERSION	MDFN_MAKE_GCCV(__GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
 
@@ -90,12 +100,14 @@ typedef uint64_t uint64;
 
  #if MDFN_GCC_VERSION >= MDFN_MAKE_GCCV(4,3,0)
   #define MDFN_COLD __attribute__((cold))
+  #define MDFN_HOT __attribute__((hot))
  #else
   #define MDFN_COLD
+  #define MDFN_HOT
  #endif
 
  #if MDFN_GCC_VERSION >= MDFN_MAKE_GCCV(4,7,0)
-  #define MDFN_ASSUME_ALIGNED(p, align) __builtin_assume_aligned((p), (align))
+  #define MDFN_ASSUME_ALIGNED(p, align) ((decltype(p))__builtin_assume_aligned((p), (align)))
  #else
   #define MDFN_ASSUME_ALIGNED(p, align) (p)
  #endif
@@ -119,6 +131,7 @@ typedef uint64_t uint64;
   #define MDFN_LIKELY(n) ((n) != 0)
 
   #define MDFN_COLD
+  #define MDFN_HOT
 
   #define MDFN_ASSUME_ALIGNED(p, align) (p)
 #else
@@ -138,6 +151,7 @@ typedef uint64_t uint64;
   #define MDFN_LIKELY(n) ((n) != 0)
 
   #define MDFN_COLD
+  #define MDFN_HOT
 
   #define MDFN_ASSUME_ALIGNED(p, align) (p)
 #endif

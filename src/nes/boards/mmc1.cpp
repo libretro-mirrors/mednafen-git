@@ -21,6 +21,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static void GenMMC1Power(CartInfo *info);
 static int GenMMC1Init(CartInfo *info, int prg, int chr, int wram, int battery);
 
@@ -424,9 +427,11 @@ static void GenMMC1Power(CartInfo *info)
 static void GenMMC1Close(void)
 {
  if(CHRRAM)
-  MDFN_free(CHRRAM);
+  free(CHRRAM);
+
  if(WRAM)
-  MDFN_free(WRAM);
+  free(WRAM);
+
  CHRRAM=WRAM=NULL;
 } 
 
@@ -634,4 +639,4 @@ int SOROM_Init(CartInfo *info)
  return(GenMMC1Init(info, 256, 0, 16, info->battery));
 }
 
-
+}

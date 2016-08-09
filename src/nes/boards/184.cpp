@@ -1,24 +1,33 @@
 #include "mapinc.h"
 
 static uint8 latch;
+static bool fzalt;
 
 static void Sync(void)
 {
- setchr4(0x0000, latch & 0xf);
- setchr4(0x1000, latch >> 4);
+ if(fzalt)
+ {
+  setprg16(0x8000, latch & 0x7);
+ }
+ else
+ {
+  setchr4(0x0000, latch & 0x7);
+  setchr4(0x1000, (latch >> 4) & 0x7);
+ }
 }
 
 static DECLFW(Mapper184_write)
 {
- latch = V;
+ latch = V & 0x77;
  Sync();
 }
 
 static void Power(CartInfo *info)
 {
  latch = 0;
+ setchr8(0);
+ setprg32(0x8000, ~0U);
  Sync();
- setprg32(0x8000, 0);
 }
 
 static int StateAction(StateMem *sm, int load, int data_only)
@@ -37,8 +46,11 @@ static int StateAction(StateMem *sm, int load, int data_only)
 
 int Mapper184_Init(CartInfo *info)
 {
- SetWriteHandler(0x6000,0xffff,Mapper184_write);
+ fzalt = (CHRsize[0] <= 8192 && PRGsize[0] > 32768);
+
+ SetWriteHandler(0x6000, 0x7FFF, Mapper184_write);
  SetReadHandler(0x8000, 0xFFFF, CartBR);
+
  info->Power = Power;
  info->StateAction = StateAction;
 

@@ -84,6 +84,32 @@ static MDFNSetting_EnumList SDriver_List[] =
 
  { "jack", -1, "JACK", gettext_noop("The latency reported during startup is for the local sound buffer only and does not include server-side latency.  Please note that video card drivers(in the kernel or X), and hardware-accelerated OpenGL, may interfere with jackd's ability to effectively run with realtime response.") },
 
+ { "dummy", -1 },
+
+ { NULL, 0 },
+};
+
+static const MDFNSetting_EnumList FontSize_List[] =
+{
+ { "5x7",	MDFN_FONT_5x7, gettext_noop("5x7") },
+ { "6x9",	MDFN_FONT_6x9, gettext_noop("6x9") },
+ { "6x12",	MDFN_FONT_6x12, gettext_noop("6x12") },
+#ifdef WANT_INTERNAL_CJK
+ { "6x13",	MDFN_FONT_6x13_12x13, gettext_noop("6x13.  CJK support.") },
+ { "9x18",	MDFN_FONT_9x18_18x18, gettext_noop("9x18;  CJK support.") },
+#else
+ { "6x13",	MDFN_FONT_6x13_12x13, gettext_noop("6x13.") },
+ { "9x18",	MDFN_FONT_9x18_18x18, gettext_noop("9x18.") },
+#endif
+ // Backwards compat:
+ { "xsmall", 	MDFN_FONT_5x7 }, // 4x5 font was removed.
+ { "small",	MDFN_FONT_5x7 },
+ { "medium",	MDFN_FONT_6x13_12x13 },
+ { "large",	MDFN_FONT_9x18_18x18 },
+
+ { "0",		MDFN_FONT_9x18_18x18 },
+ { "1",		MDFN_FONT_5x7 },
+
  { NULL, 0 },
 };
 
@@ -98,7 +124,9 @@ static MDFNSetting DriverSettings[] =
 
   { "netplay.host", MDFNSF_NOFLAGS, gettext_noop("Server hostname."), NULL, MDFNST_STRING, "netplay.fobby.net" },
   { "netplay.port", MDFNSF_NOFLAGS, gettext_noop("Server port."), NULL, MDFNST_UINT, "4046", "1", "65535" },
-  { "netplay.smallfont", MDFNSF_NOFLAGS, gettext_noop("Use small(tiny!) font for netplay chat console."), NULL, MDFNST_BOOL, "0" },
+  { "netplay.console.font", MDFNSF_NOFLAGS, gettext_noop("Font for netplay chat console."), NULL, MDFNST_ENUM, "9x18", NULL, NULL, NULL, NULL, FontSize_List },
+  { "netplay.console.scale", MDFNSF_NOFLAGS, gettext_noop("Netplay chat console text scale factor."), gettext_noop("A value of 0 enables auto-scaling."), MDFNST_UINT, "1", "0", "16" },
+  { "netplay.console.lines", MDFNSF_NOFLAGS, gettext_noop("Height of chat console, in lines."), NULL, MDFNST_UINT, "5", "5", "64" },
 
   { "video.frameskip", MDFNSF_NOFLAGS, gettext_noop("Enable frameskip during emulation rendering."), 
 					gettext_noop("Disable for rendering code performance testing."), MDFNST_BOOL, "1" },
@@ -159,17 +187,6 @@ void BuildSystemSetting(MDFNSetting *setting, const char *system_name, const cha
  setting->enum_list = enum_list;
 }
 
-// TODO: Actual enum values
-static const MDFNSetting_EnumList DisFontSize_List[] =
-{
- { "xsmall", 	-1, gettext_noop("4x5") },
- { "small",	-1, gettext_noop("5x7") },
- { "medium",	-1, gettext_noop("6x13") },
- { "large",	-1, gettext_noop("9x18") },
- { NULL, 0 },
-};
-
-
 void MakeDebugSettings(std::vector <MDFNSetting> &settings)
 {
  #ifdef WANT_DEBUGGER
@@ -182,7 +199,7 @@ void MakeDebugSettings(std::vector <MDFNSetting> &settings)
   if(!dbg)
    continue;
 
-  BuildSystemSetting(&setting, sysname, "debugger.disfontsize", gettext_noop("Disassembly font size."), gettext_noop("Note: Setting the font size to larger than the default may cause text overlap in the debugger."), MDFNST_ENUM, "small", NULL, NULL, NULL, NULL, DisFontSize_List);
+  BuildSystemSetting(&setting, sysname, "debugger.disfontsize", gettext_noop("Disassembly font size."), gettext_noop("Note: Setting the font size to larger than the default may cause text overlap in the debugger."), MDFNST_ENUM, "5x7", NULL, NULL, NULL, NULL, FontSize_List);
   settings.push_back(setting);
 
   BuildSystemSetting(&setting, sysname, "debugger.memcharenc", gettext_noop("Character encoding for the debugger's memory editor."), NULL, MDFNST_STRING, dbg->DefaultCharEnc);
@@ -370,6 +387,11 @@ static void SetSignals(void (*t)(int))
   sigaction(SignalDefs[x].number, &act, NULL);
   #else
   signal(SignalDefs[x].number, t);
+
+  //#ifdef HAVE_SIGINTERRUPT
+  //siginterrupt(SignalDefs[x].number, 0);
+  //#endif
+
   #endif
  }
 }
@@ -1427,8 +1449,6 @@ void PrintLIBICONVVersion(void)
  #endif
 }
 
-//#include <sched.h>
-
 #if 0//#ifdef WIN32
 char *GetFileDialog(void)
 {
@@ -2114,3 +2134,4 @@ void MDFND_Sleep(uint32 ms)
 {
  SDL_Delay(ms);
 }
+

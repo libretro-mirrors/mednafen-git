@@ -17,6 +17,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 cmd, lpa, prgl[2], Mirroring, IRQLatch, IRQCount, IRQa, CHRBanks[6];
 
 static void PRGSynco(void)
@@ -142,3 +145,4 @@ int Mapper248_Init(CartInfo *info)
  return(1);
 }
 
+}

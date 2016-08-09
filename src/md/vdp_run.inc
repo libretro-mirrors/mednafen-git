@@ -267,17 +267,17 @@
     if(vint_pending && (reg[1] & 0x20))
     {
      //printf("V-int: %d, %d\n", scanline, md_timestamp);
-     C68k_Set_IRQ(&Main68K, 6);
+     Main68K.SetIPL(6);
     }
     else if(hint_pending && (reg[0] & 0x10))
     {
      //printf("H-int: %d %d\n", scanline, md_timestamp);
-     C68k_Set_IRQ(&Main68K, 4);
+     Main68K.SetIPL(4);
     }
     else
     {
      //printf("Int end: %d %d\n", scanline, md_timestamp);
-     C68k_Set_IRQ(&Main68K, 0);
+     Main68K.SetIPL(0);
     }
  }
 

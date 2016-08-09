@@ -16,6 +16,9 @@
 #define __NEOPOP_GFX__
 //=============================================================================
 
+namespace MDFN_IEN_NGP
+{
+
 #define ZDEPTH_BACK_SPRITE			2
 #define ZDEPTH_BACKGROUND_SCROLL	3
 #define ZDEPTH_MIDDLE_SPRITE		4
@@ -102,6 +105,8 @@ class NGPGFX_CLASS
 
  int layer_enable_setting;
 };
+
+}
 
 #endif
 

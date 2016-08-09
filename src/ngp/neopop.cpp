@@ -28,6 +28,9 @@
 
 #include <algorithm>
 
+namespace MDFN_IEN_NGP
+{
+
 extern uint8 CPUExRAM[16384];
 
 NGPGFX_CLASS *NGPGfx = NULL;
@@ -159,10 +162,10 @@ static void Emulate(EmulateSpecStruct *espec)
 
 static bool TestMagic(MDFNFILE *fp)
 {
- if(strcasecmp(fp->ext, "ngp") && strcasecmp(fp->ext, "ngpc") && strcasecmp(fp->ext, "ngc") && strcasecmp(fp->ext, "npc"))
-  return(false);
+ if(fp->ext != "ngp" && fp->ext != "ngpc" && fp->ext != "ngc" && fp->ext != "npc")
+  return false;
 
- return(true);
+ return true;
 }
 
 static void Cleanup(void)
@@ -186,7 +189,7 @@ static void Load(MDFNFILE *fp)
    throw MDFN_Error(0, _("NGP/NGPC ROM image is too large."));
 
   ngpc_rom.length = fp_size;
-  ngpc_rom.data = (uint8*)MDFN_malloc_T(ngpc_rom.length, _("ROM"));
+  ngpc_rom.data = new uint8[ngpc_rom.length];
   fp->read(ngpc_rom.data, ngpc_rom.length);
 
   md5_context md5;
@@ -242,7 +245,8 @@ static void CloseGame(void)
 
 static void SetInput(unsigned port, const char *type, uint8 *ptr)
 {
- if(!port) chee = (uint8 *)ptr;
+ if(!port)
+  chee = ptr;
 }
 
 static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
@@ -378,6 +382,10 @@ static const FileExtensionSpecStruct KnownExtensions[] =
  { NULL, NULL }
 };
 
+}
+
+using namespace MDFN_IEN_NGP;
+
 MDFNGI EmulatedNGP =
 {
  "ngp",
@@ -401,10 +409,8 @@ MDFNGI EmulatedNGP =
  NULL,
  0,
 
- NULL,
- NULL,
- NULL,
- NULL,
+ CheatInfo_Empty,
+
  false,
  StateAction,
  Emulate,
@@ -412,6 +418,7 @@ MDFNGI EmulatedNGP =
  SetInput,
  NULL,
  DoSimpleCommand,
+ NULL,
  NGPSettings,
  MDFN_MASTERCLOCK_FIXED(6144000),
  0,

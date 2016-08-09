@@ -1,8 +1,10 @@
-libnes_a_SOURCES	+=      boards/8237.cpp boards/h2288.cpp boards/simple.cpp boards/super24.cpp boards/mmc2and4.cpp boards/vrc6.cpp boards/emu2413.cpp boards/vrc7.cpp boards/96.cpp boards/208.cpp boards/187.cpp boards/95.cpp boards/fme7.cpp boards/mmc5.cpp boards/mmc3.cpp boards/mmc1.cpp boards/tengen.cpp boards/90.cpp boards/deirom.cpp boards/n106.cpp boards/maxicart.cpp
-libnes_a_SOURCES	+=	boards/112.cpp boards/113.cpp boards/114.cpp boards/117.cpp boards/22.cpp boards/23.cpp boards/25.cpp boards/67.cpp boards/68.cpp boards/16.cpp boards/97.cpp boards/99.cpp boards/151.cpp boards/180.cpp boards/182.cpp boards/184.cpp
-libnes_a_SOURCES	+=	boards/88.cpp boards/89.cpp boards/92.cpp boards/86.cpp boards/82.cpp boards/80.cpp boards/18.cpp boards/21.cpp boards/228.cpp boards/234.cpp boards/232.cpp
-libnes_a_SOURCES	+=	boards/42.cpp boards/ffe.cpp boards/65.cpp boards/nina06.cpp boards/73.cpp boards/32.cpp boards/33.cpp boards/41.cpp boards/46.cpp boards/72.cpp boards/75.cpp boards/76.cpp boards/77.cpp boards/colordreams.cpp
-libnes_a_SOURCES	+=	boards/140.cpp boards/93.cpp boards/94.cpp boards/malee.cpp boards/156.cpp boards/supervision.cpp boards/novel.cpp boards/242.cpp boards/246.cpp boards/248.cpp boards/15.cpp boards/8.cpp boards/193.cpp boards/189.cpp
-libnes_a_SOURCES	+=	boards/244.cpp boards/sachen.cpp boards/107.cpp boards/51.cpp boards/152.cpp boards/70.cpp boards/185.cpp boards/78.cpp boards/87.cpp boards/34.cpp boards/222.cpp boards/codemasters.cpp boards/38.cpp
+mednafen_SOURCES	+=      nes/boards/8237.cpp nes/boards/h2288.cpp nes/boards/simple.cpp nes/boards/super24.cpp nes/boards/mmc2and4.cpp nes/boards/vrc6.cpp nes/boards/emu2413.cpp nes/boards/vrc7.cpp nes/boards/96.cpp nes/boards/208.cpp nes/boards/187.cpp nes/boards/95.cpp nes/boards/fme7.cpp nes/boards/mmc5.cpp nes/boards/mmc3.cpp nes/boards/mmc1.cpp nes/boards/tengen.cpp nes/boards/90.cpp nes/boards/deirom.cpp nes/boards/n106.cpp nes/boards/maxicart.cpp
+mednafen_SOURCES	+=	nes/boards/112.cpp nes/boards/113.cpp nes/boards/114.cpp nes/boards/117.cpp nes/boards/22.cpp nes/boards/23.cpp nes/boards/25.cpp nes/boards/67.cpp nes/boards/68.cpp nes/boards/16.cpp nes/boards/97.cpp nes/boards/99.cpp nes/boards/151.cpp nes/boards/180.cpp nes/boards/182.cpp nes/boards/184.cpp
+mednafen_SOURCES	+=	nes/boards/88.cpp nes/boards/89.cpp nes/boards/92.cpp nes/boards/86.cpp nes/boards/82.cpp nes/boards/80.cpp nes/boards/18.cpp nes/boards/21.cpp nes/boards/228.cpp nes/boards/234.cpp nes/boards/232.cpp
+mednafen_SOURCES	+=	nes/boards/42.cpp nes/boards/ffe.cpp nes/boards/65.cpp nes/boards/nina06.cpp nes/boards/73.cpp nes/boards/32.cpp nes/boards/33.cpp nes/boards/41.cpp nes/boards/46.cpp nes/boards/72.cpp nes/boards/75.cpp nes/boards/76.cpp nes/boards/77.cpp nes/boards/colordreams.cpp
+mednafen_SOURCES	+=	nes/boards/140.cpp nes/boards/93.cpp nes/boards/94.cpp nes/boards/malee.cpp nes/boards/156.cpp nes/boards/supervision.cpp nes/boards/novel.cpp nes/boards/242.cpp nes/boards/246.cpp nes/boards/248.cpp nes/boards/15.cpp nes/boards/8.cpp nes/boards/193.cpp nes/boards/189.cpp
+mednafen_SOURCES	+=	nes/boards/244.cpp nes/boards/sachen.cpp nes/boards/107.cpp nes/boards/51.cpp nes/boards/152.cpp nes/boards/70.cpp nes/boards/185.cpp nes/boards/78.cpp nes/boards/87.cpp nes/boards/34.cpp nes/boards/222.cpp nes/boards/codemasters.cpp nes/boards/38.cpp
 
-libnes_a_SOURCES	+=	boards/240.cpp boards/241.cpp boards/163.cpp
+mednafen_SOURCES	+=	nes/boards/240.cpp nes/boards/241.cpp nes/boards/163.cpp
+
+mednafen_SOURCES	+=	nes/boards/30.cpp

@@ -15,26 +15,25 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __PCE_VCE_H
-#define __PCE_VCE_H
+#ifndef __MDFN_PCE_VCE_H
+#define __MDFN_PCE_VCE_H
 
-#include <mednafen/hw_cpu/huc6280/huc6280.h>
+#include "huc6280.h"
 #include <mednafen/hw_video/huc6270/vdc.h>
 
 namespace MDFN_IEN_PCE
 {
 
-//class VDC;
-//#include "vdc.h"
-
-class VCE final : public HuC6280_Support
+class VCE final
 {
 	public:
 
-	VCE(bool want_sgfx, bool nospritelimit);
+	VCE(const bool want_sgfx, const uint32 vram_size = 32768);
 	~VCE();
 
+	void SetVDCUnlimitedSprites(const bool nospritelimit);
 	void SetShowHorizOS(bool show);
+	void SetLayerEnableMask(uint64 mask);
 
 	void StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
@@ -64,41 +63,46 @@ class VCE final : public HuC6280_Support
         void WriteVDC(uint32 A, uint8 V);
         void WriteVDC_ST(uint32 A, uint8 V);
 
-	void SetLayerEnableMask(uint64 mask);
-
 	#ifdef WANT_DEBUGGER
 
-	uint16 PeekPRAM(const uint16 Address);
-	void PokePRAM(const uint16 Address, const uint16 Data);
+	INLINE uint16 PeekPRAM(const uint16 Address)
+	{
+	 return color_table[Address & 0x1FF];
+	}
 
+	INLINE void PokePRAM(const uint16 Address, const uint16 Data)
+	{
+	 color_table[Address & 0x1FF] = Data & 0x1FF;
+	 FixPCache(Address);
+	}
 
         // Peek(VRAM/SAT) and Poke(VRAM/SAT) work in 16-bit VRAM word units(Address and Length, both).
         INLINE uint16 PeekVDCVRAM(unsigned int which, uint16 Address)
         {
 	 assert(which < (unsigned int)chip_count);
 
-	 return(vdc[which]->PeekVRAM(Address));
+	 return(vdc[which].PeekVRAM(Address));
         }
 
         INLINE uint16 PeekVDCSAT(unsigned int which, uint8 Address)
         {
 	 assert(which < (unsigned int)chip_count);
 
-	 return(vdc[which]->PeekSAT(Address));
+	 return(vdc[which].PeekSAT(Address));
         }
 
         INLINE void PokeVDCVRAM(const unsigned int which, const uint16 Address, const uint16 Data)
 	{
 	 assert(which < (unsigned int)chip_count);
 
-	 vdc[which]->PokeVRAM(Address, Data);
+	 vdc[which].PokeVRAM(Address, Data);
 	}
 
         INLINE void PokeVDCSAT(const unsigned int which, const uint8 Address, const uint16 Data)
 	{
 	 assert(which < (unsigned int)chip_count);
 
-	 vdc[which]->PokeSAT(Address, Data);
+	 vdc[which].PokeSAT(Address, Data);
 	}
 
 	void SetGraphicsDecode(MDFN_Surface *surface, int line, int which, int xscroll, int yscroll, int pbn);
@@ -120,21 +124,29 @@ class VCE final : public HuC6280_Support
         uint32 GetRegister(const unsigned int id, char *special, const uint32 special_len);
         void SetRegister(const unsigned int id, const uint32 value);
 
+	INLINE uint32 GetRegisterVDC(const unsigned int which_vdc, const unsigned int id, char *special, const uint32 special_len)
+	{
+	 assert(which_vdc < chip_count);
+	 return vdc[which_vdc].GetRegister(id, special, special_len);
+	}
 
-        uint32 GetRegisterVDC(const unsigned int which_vdc, const unsigned int id, char *special, const uint32 special_len);
-        void SetRegisterVDC(const unsigned int which_vdc, const unsigned int id, const uint32 value);
+	INLINE void SetRegisterVDC(const unsigned int which_vdc, const unsigned int id, const uint32 value)
+	{
+	 assert(which_vdc < chip_count);
+	 vdc[which_vdc].SetRegister(id, value);
+	}
 	
 	INLINE void ResetSimulateVDC(void)
 	{
-	 for(int chip = 0; chip < chip_count; chip++)
-	  vdc[chip]->ResetSimulate();
+	 for(unsigned chip = 0; chip < chip_count; chip++)
+	  vdc[chip].ResetSimulate();
 	}
 
 	INLINE int SimulateReadVDC(uint32 A, VDC_SimulateResult *result)
 	{
 	 if(!sgfx)
 	 {
-	  vdc[0]->SimulateRead(A, result);
+	  vdc[0].SimulateRead(A, result);
 	  return(0);
 	 }
 	 else
@@ -146,7 +158,7 @@ class VCE final : public HuC6280_Support
 	  if(!(A & 0x8))
 	  {
 	   chip = (A & 0x10) >> 4;
-	   vdc[chip]->SimulateRead(A & 0x3, result);
+	   vdc[chip].SimulateRead(A & 0x3, result);
 	   return(chip);
 	  }
 	 }
@@ -160,7 +172,7 @@ class VCE final : public HuC6280_Support
 	{
 	 if(!sgfx)
 	 {
-	  vdc[0]->SimulateWrite(A, V, result);
+	  vdc[0].SimulateWrite(A, V, result);
 	  return(0);
 	 }
 	 else
@@ -173,7 +185,7 @@ class VCE final : public HuC6280_Support
 	  if(!(A & 0x8))
 	  {
 	   int chip = (A & 0x10) >> 4;
-	   vdc[chip]->SimulateWrite(A & 0x3, V, result);
+	   vdc[chip].SimulateWrite(A & 0x3, V, result);
 	   return(chip);
 	  }
 	 }
@@ -188,24 +200,20 @@ class VCE final : public HuC6280_Support
 
         bool WS_Hook(int32 vdc_cycles);
 
+	void SetCDEvent(const int32 cycles);
 
-	// So wrong, but feels so...MUSHROOMY.
-	// THIS IS BROKEN!
-	// We need to put Sync() call before that, or bias
-	// cd_event and the value to HuCPU->SetEvent by (HuCPU->timestamp - last_ts)
-	INLINE void SetCDEvent(const int32 cycles)
-	{
-	 const int32 time_behind = HuCPU->Timestamp() - last_ts;
-
-	 assert(time_behind >= 0);
-
-	 cd_event = cycles + time_behind;
-	 HuCPU->SetEvent(CalcNextEvent() - time_behind);
-	}
-
+	//
+	//
+	//
+	//
+	//
+	//
+        int32 SyncReal(const int32 timestamp);
 	private:
 
-        int32 Sync(const int32 timestamp);
+	template<bool TA_SuperGrafx, bool TA_AwesomeMode>
+	void SyncSub(int32 clocks);
+
         void FixPCache(int entry);
         void SetVCECR(uint8 V);
 
@@ -213,33 +221,7 @@ class VCE final : public HuC6280_Support
 	void DoGfxDecode(void);
 	#endif
 
-	INLINE int32 CalcNextEvent(void)
-	{
-	 int32 next_event = hblank_counter;
-
-         if(next_event > vblank_counter)
-	  next_event = vblank_counter;
-
-	 if(next_event > cd_event)
-	  next_event = cd_event;
-
-	 for(int chip = 0; chip < chip_count; chip++)
-	 {
-	  int fwoom = (child_event[chip] * dot_clock_ratio - clock_divider);
-
-	  if(fwoom < 1)
-	   fwoom = 1;
-
-	  if(next_event > fwoom)
-	   next_event = fwoom;
-	 }
-
-	 if(next_event < 1)
-	  next_event = 1;
-
-	 return(next_event);
-	}
-
+	int32 CalcNextEvent(void);
 	int32 child_event[2];
 
         int32 cd_event;
@@ -247,6 +229,12 @@ class VCE final : public HuC6280_Support
 	uint32 *fb;	// Pointer to the framebuffer.
 	uint32 pitch32;	// Pitch(in 32-bit pixels)
 	bool FrameDone;
+	bool ShowHorizOS;
+	bool sgfx;
+
+	bool skipframe;
+	int32 *LW;
+	unsigned chip_count;	// = 1 when sgfx is FALSE, = 2 when sgfx is TRUE
 
 	int32 clock_divider;
 
@@ -262,7 +250,6 @@ class VCE final : public HuC6280_Support
 
 	bool NeedSLReset;
 
-
         uint8 CR;		// Control Register
         bool lc263;     	// CR->263 line count if set, 262 if not
         bool bw;        	// CR->Black and White
@@ -271,25 +258,25 @@ class VCE final : public HuC6280_Support
 
 	int32 ws_counter;
 
-        uint16 color_table[0x200];
-        uint32 color_table_cache[0x200 * 2];	// * 2 for user layer disabling stuff.
-        uint16 ctaddress;
-
-	uint32 systemColorMap32[2][512];
-
 	int32 last_ts;
 
-	VDC *vdc[2];
-
-	// SuperGrafx stuff:
-	bool sgfx;
-	int chip_count;	// = 1 when sgfx is FALSE, = 2 when sgfx is TRUE
-        uint8 priority[2];
-        uint16 winwidths[2];
-        uint8 st_mode;
+	//
+	// SuperGrafx HuC6202 VPC state
+	//
 	int32 window_counter[2];
+        uint16 winwidths[2];
+        uint8 priority[2];
+        uint8 st_mode;
+	//
+	//
+	//
+        uint16 ctaddress;
+        uint32 color_table_cache[0x200 * 2];	// * 2 for user layer disabling stuff.
+	uint16 pixel_buffer[2][2048];	// Internal temporary pixel buffers.
+        uint16 color_table[0x200];
+	uint32 surf_clut[2][512];
 
-	uint16 pixel_buffer[2][2048];	// Internal temporary pixel buffers, used in vce_sync.inc.
+	VDC vdc[2];
 
 	#ifdef WANT_DEBUGGER
 	MDFN_Surface *GfxDecode_Buf;// = NULL;
@@ -298,8 +285,6 @@ class VCE final : public HuC6280_Support
 	int GfxDecode_Scroll;// = 0;
 	int GfxDecode_Pbn;// = 0;
 	#endif
-
-	bool ShowHorizOS;
 };
 
 

@@ -106,7 +106,10 @@ class OwlResampler
 	OwlResampler(const OwlResampler &resamp) MDFN_COLD;
 	~OwlResampler() MDFN_COLD;
 
-	int32 Resample(OwlBuffer* in, const uint32 in_count, int16* out, const uint32 max_out_count, const bool reverse = false);
+	INLINE int32 Resample(OwlBuffer* in, const uint32 in_count, int16* out, const uint32 max_out_count, const bool reverse = false)
+	{
+	 return (this->*OwlResampler::Resample_)(in, in_count, out, max_out_count, reverse);
+	}
 	void ResetBufResampState(OwlBuffer* buf);
 
 	// Get the InputRate / OutputRate ratio, expressed as a / b
@@ -128,24 +131,26 @@ class OwlResampler
 
 	// Coefficients(in each phase, not total)
 	uint32 NumCoeffs;
-	uint32 NumCoeffs_Padded;
 
-	uint32 *PhaseWhich;
+	struct PhaseInfo
+	{
+	 // One pointer for each phase
+	 float* Coeffs;
 
-	// In the FIR loop:  InputPhase = PhaseNext[InputPhase]
-	uint32 *PhaseNext;
+	 // In the FIR loop:  InputPhase = PInfos[InputPhase].Next
+	 uint32 Next;
 
-	// Incrementor for InputIndex.  In the FIR loop, after updating InputPhase:  InputIndex += PhaseStep[InputPhase]
-	uint32 *PhaseStep;
-	uint32 *PhaseStepSave;
+	 // Incrementor for InputIndex.  In the FIR loop, after updating InputPhase:  InputIndex += PInfos[InputPhase].Step
+	 uint32 Step;
+	};
 
-	// One pointer for each phase
-	OwlBuffer::I32_F_Pudding **FIR_Coeffs;
-	OwlBuffer::I32_F_Pudding **FIR_Coeffs_Real;
-
+	std::vector<PhaseInfo> PInfos;
+	std::vector<float> CoeffsBuffer;
 	std::vector<int32> IntermediateBuffer; //int32 boobuf[8192];
 
-	uint32 cpuext;
+	template<unsigned TA_SIMD_Type>
+	int32 T_Resample(OwlBuffer* in, const uint32 in_count, int16* out, const uint32 max_out_count, const bool reverse);
+	int32 (OwlResampler::*Resample_)(OwlBuffer* in, const uint32 in_count, int16* out, const uint32 max_out_count, const bool reverse);
 
 	uint16 debias_multiplier;
 

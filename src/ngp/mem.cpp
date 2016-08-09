@@ -24,6 +24,9 @@
 
 //=============================================================================
 
+namespace MDFN_IEN_NGP
+{
+
 //Hack way of returning good Flash status.
 bool FlashStatusEnable = FALSE;
 static uint32 FlashStatus;	
@@ -672,6 +675,6 @@ void reset_memory(void)
 	}
 }
 
+}
+
 //=============================================================================
-
-

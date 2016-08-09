@@ -18,6 +18,9 @@
 
 //=============================================================================
 
+namespace MDFN_IEN_NGP
+{
+
 void NGPGFX_CLASS::MonoPlot(uint8 x, uint8* palette_ptr, uint16 pal_hi, uint8 index, uint8 depth)
 {
 	uint8 data8;
@@ -243,6 +246,8 @@ void NGPGFX_CLASS::draw_scanline_mono(int layer_enable, int ngpc_scanline)
 	}
 
 	//==========
+}
+
 }
 
 //=============================================================================

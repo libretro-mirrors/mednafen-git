@@ -3,6 +3,8 @@
 
 #include "emutypes.h"
 
+namespace MDFN_IEN_NES
+{
 /* Size of Sintable ( 8 -- 18 can be used. 9 recommended.)*/
 #define PG_BITS 9              
 #define PG_WIDTH (1<<PG_BITS)
@@ -50,10 +52,6 @@
   #define EMU2413_API __declspec(dllimport)
 #else
   #define EMU2413_API
-#endif
-
-#ifdef __cplusplus
-extern "C" {
 #endif
 
 #define PI 3.14159265358979323846
@@ -200,8 +198,5 @@ EMU2413_API void OPLL_forceRefresh(OPLL *) ;
 EMU2413_API e_uint32 OPLL_setMask(OPLL *, e_uint32 mask) ;
 EMU2413_API e_uint32 OPLL_toggleMask(OPLL *, e_uint32 mask) ;
 
-#ifdef __cplusplus
 }
-#endif
-
 #endif

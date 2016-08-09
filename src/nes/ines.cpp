@@ -93,19 +93,19 @@ static void iNESFree(void)
 {
 	if(ROM)
 	{
-	 MDFN_free(ROM);
+	 delete[] ROM;
 	 ROM = NULL;
 	}
 
 	if(VROM)
 	{
-	 MDFN_free(VROM);
+	 delete[] VROM;
 	 VROM = NULL;
 	}
 
 	if(WRAM)
 	{
-	 MDFN_free(WRAM);
+	 delete[] WRAM;
 	 WRAM = NULL;
 	}
 }
@@ -473,8 +473,8 @@ static void CheckHInfo(void)
     if((moo[x].mapper & 0x800) && VROM_size)
     {
      VROM_size=0;
-     MDFN_free(VROM);
-     VROM = 0;
+     delete[] VROM;
+     VROM = NULL;
      tofix|=8;
     }
     if(MapperNo != (moo[x].mapper & 0xFF))
@@ -631,7 +631,7 @@ void iNESLoad(Stream *fp, NESGameType *gt)
 
 	if(head.ROM_type&8) Mirroring=2;
 
-        ROM = (uint8 *)MDFN_malloc_T(ROM_size<<14, _("PRG ROM"));
+        ROM = new uint8[ROM_size << 14];
 
 	#ifdef WANT_DEBUGGER
 	ASpace_Add(iNES_GetAddressSpaceBytes, iNES_PutAddressSpaceBytes, "prgrom", "PRG ROM", (unsigned int)(log(ROM_size << 14) / log(2)));
@@ -639,7 +639,7 @@ void iNESLoad(Stream *fp, NESGameType *gt)
 
         if(VROM_size) 
 	{
-         VROM = (uint8 *)MDFN_malloc_T(VROM_size<<13, _("CHR ROM"));
+         VROM = new uint8[VROM_size << 13];
 	 #ifdef WANT_DEBUGGER
 	 ASpace_Add(iNES_GetAddressSpaceBytes, iNES_PutAddressSpaceBytes, "chrrom", "CHR ROM", (unsigned int)(log(VROM_size << 13) / log(2)));
 	 #endif
@@ -706,7 +706,7 @@ void iNESLoad(Stream *fp, NESGameType *gt)
 	 MDFN_VSUniCheck(partialmd5, &MapperNo, &Mirroring);
 	}
 	/* Must remain here because above functions might change value of
-	   VROM_size and free(VROM).
+	   VROM_size and delete[] VROM.
 	*/
 	if(VROM_size)
          SetupCartCHRMapping(0,VROM,VROM_size*0x2000,0);
@@ -783,6 +783,7 @@ static const BMAPPING bmap[] = {
 	{ 24, Mapper24_Init, 0},
 	{ 25, Mapper25_Init, 0},
 	{ 26, Mapper26_Init, 0},
+	{ 30, Mapper30_Init, BMAPF_32KCHRR },
 	{ 32, Mapper32_Init, 0},
 	{ 33, Mapper33_Init, 0},
 	{ 34, Mapper34_Init, 0},
@@ -903,7 +904,7 @@ static void NewiNES_Init(int num)
     else
      CHRRAMSize = 8192;
 
-    VROM = (uint8 *)MDFN_malloc_T(CHRRAMSize, _("CHR RAM"));
+    VROM = new uint8[CHRRAMSize];
 
     SetupCartCHRMapping(0x0,VROM,CHRRAMSize,1);
 
@@ -914,7 +915,7 @@ static void NewiNES_Init(int num)
 
    if(iNESCart.battery && (tmp->flags & BMAPF_INESWRAMOK))
    {
-    WRAM = (uint8 *)MDFN_malloc_T(8192, _("WRAM"));
+    WRAM = new uint8[8192];
 
     memset(WRAM, 0x00, 8192);
 

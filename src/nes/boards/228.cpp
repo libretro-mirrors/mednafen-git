@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint16 latch;
 static uint8 v_latch;
 
@@ -77,3 +80,4 @@ int Mapper228_Init(CartInfo *info)
  return(1);
 }
 
+}

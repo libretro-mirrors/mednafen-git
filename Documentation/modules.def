@@ -1,4 +1,4 @@
-0.9.38.7
+0.9.39-UNSTABLE
 nes
 Nintendo Entertainment System/Famicom
 256
@@ -7,6 +7,10 @@ snes
 Super Nintendo Entertainment System/Super Famicom
 256
 240
+snes_faust
+Super Nintendo Entertainment System/Super Famicom
+292
+224
 gb
 GameBoy (Color)
 160
@@ -43,6 +47,14 @@ psx
 Sony PlayStation
 320
 240
+ss
+Sega Saturn
+302
+240
+ssfplay
+Sega Saturn Sound Format Player
+480
+300
 vb
 Virtual Boy
 384
@@ -60,7 +72,7 @@ Sega Game Gear
 160
 144
 cdplay
-Mednafen Test CD-DA Player
+CD-DA Player
 192
 144
 demo

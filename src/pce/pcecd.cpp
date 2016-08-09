@@ -88,6 +88,9 @@
 
 #include "pcecd.h"
 
+namespace MDFN_IEN_PCE
+{
+
 //#define PCECD_DEBUG
 
 static void (*IRQCB)(bool asserted);
@@ -418,7 +421,7 @@ static void Cleanup(void)
 {
         if(ADPCM.RAM)
         {
-         MDFN_free(ADPCM.RAM);
+         delete[] ADPCM.RAM;
          ADPCM.RAM = NULL;
 	}
  	SCSICD_Close();
@@ -441,7 +444,7 @@ void PCECD_Init(const PCECD_Settings *settings, void (*irqcb)(bool), double mast
 
 	SCSICD_Init(SCSICD_PCE, 3, hrbuf_l, hrbuf_r, 126000, master_clock, CDIRQ, StuffSubchannel);
 
-        ADPCM.RAM = (uint8 *)MDFN_malloc_T(0x10000, _("PCE ADPCM RAM"));
+        ADPCM.RAM = new uint8[0x10000];
 
 	PCECD_SetSettings(settings);
 
@@ -1335,4 +1338,6 @@ void PCECD_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 	 SubChannelFIFO.read_pos %= SubChannelFIFO.size;
          SubChannelFIFO.write_pos %= SubChannelFIFO.size;
 	}
+}
+
 }

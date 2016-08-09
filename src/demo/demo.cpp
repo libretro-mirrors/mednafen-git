@@ -106,6 +106,9 @@ static void Draw(EmulateSpecStruct* espec)
  espec->DisplayRect.w = 400;
  espec->DisplayRect.h = 300 << Interlace;
  
+ if(Interlace)
+  espec->skip = false;
+
  if(!espec->skip)
  {
   espec->surface->Fill(DemoRandU32() & 0xFF, DemoRandU32() & 0xFF, DemoRandU32() & 0xFF, 0);
@@ -122,7 +125,7 @@ static void Draw(EmulateSpecStruct* espec)
    for(int z = 0; z < std::min<int32>(espec->DisplayRect.w, espec->DisplayRect.h) / 2; z += 7)
     MDFN_DrawFillRect(espec->surface, espec->DisplayRect.x + z, espec->DisplayRect.y + z, espec->DisplayRect.w - z * 2, espec->DisplayRect.h - z * 2, espec->surface->MakeColor(0, (z * 8) & 0xFF, 0), espec->surface->MakeColor(0, 0, (z * 17) & 0xFF));
 
-   DrawTextTransShadow(espec->surface->pixels + espec->DisplayRect.x + (espec->DisplayRect.y + espec->DisplayRect.h / 2 - 9) * espec->surface->pitchinpix, espec->surface->pitchinpix << 2, espec->DisplayRect.w, width_text, espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), true, MDFN_FONT_9x18_18x18);
+   DrawTextShadow(espec->surface, espec->DisplayRect.x, espec->DisplayRect.y + espec->DisplayRect.h / 2 - 9, width_text, espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_9x18_18x18, espec->DisplayRect.w);
   }
   else
   {
@@ -135,15 +138,14 @@ static void Draw(EmulateSpecStruct* espec)
    int w0 = 400;
    int w1 = 800;
    int w2 = w2_tab[((w2_select >> 8) & 0xF)];
-   int w2_font = MDFN_FONT_9x18_18x18;
+   int w2_font;
    char w2_text[16];
 
-   if(w2 < 8)
-    w2_font = MDFN_FONT_4x5;
-   else if(w2 < 16)
-    w2_font = MDFN_FONT_5x7;
-   else if(w2 < 20)
+   w2_font = MDFN_FONT_9x18_18x18;
+   if(w2 < 18)
     w2_font = MDFN_FONT_6x13_12x13;
+   if(w2 < 12)
+    w2_font = MDFN_FONT_5x7;
 
 
    trio_snprintf(w2_text, sizeof(w2_text), "%d", w2);
@@ -164,14 +166,18 @@ static void Draw(EmulateSpecStruct* espec)
 
    assert( (y0 + (y1 - y0) / 2 - 9) >= 0);
 
-   MDFN_DrawFillRect(espec->surface, espec->DisplayRect.x, y0, w0, y1 - y0, espec->surface->MakeColor(0xFF, 0xFF, 0xFF), espec->surface->MakeColor(0x7F, 0x00, 0xFF));
-   DrawTextTransShadow(espec->surface->pixels + espec->DisplayRect.x + (y0 + (y1 - y0) / 2 - 9) * espec->surface->pitchinpix, espec->surface->pitchinpix << 2, w0, "400", espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), true, MDFN_FONT_9x18_18x18);
+   MDFN_Rect w0r = { espec->DisplayRect.x, y0, w0, y1 - y0 };
+   MDFN_Rect w1r = { espec->DisplayRect.x, y1, w1, y2 - y1 };
+   MDFN_Rect w2r = { espec->DisplayRect.x, y2, w2, y3 - y2 };
 
-   MDFN_DrawFillRect(espec->surface, espec->DisplayRect.x, y1, w1, y2 - y1, espec->surface->MakeColor(0xFF, 0xFF, 0xFF), espec->surface->MakeColor(0x00, 0x7F, 0xFF));
-   DrawTextTransShadow(espec->surface->pixels + espec->DisplayRect.x + (y1 + (y2 - y1) / 2 - 9) * espec->surface->pitchinpix, espec->surface->pitchinpix << 2, w1, "800", espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), true, MDFN_FONT_9x18_18x18);
+   MDFN_DrawFillRect(espec->surface, w0r.x, w0r.y, w0r.w, w0r.h, espec->surface->MakeColor(0xFF, 0xFF, 0xFF), espec->surface->MakeColor(0x7F, 0x00, 0xFF));
+   DrawTextShadow(espec->surface, w0r, espec->DisplayRect.x, (y0 + (y1 - y0) / 2 - 9), "400", espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_6x13_12x13, w0);
 
-   MDFN_DrawFillRect(espec->surface, espec->DisplayRect.x, y2, w2, y3 - y2, espec->surface->MakeColor(0xFF, 0xFF, 0xFF), espec->surface->MakeColor(0x00, 0x00, 0xFF));
-   DrawTextTransShadow(espec->surface->pixels + espec->DisplayRect.x + (y2 + (y3 - y2) / 2 - 9) * espec->surface->pitchinpix, espec->surface->pitchinpix << 2, w2, w2_text, espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), true, w2_font);
+   MDFN_DrawFillRect(espec->surface, w1r.x, w1r.y, w1r.w, w1r.h, espec->surface->MakeColor(0xFF, 0xFF, 0xFF), espec->surface->MakeColor(0x00, 0x7F, 0xFF));
+   DrawTextShadow(espec->surface, w1r, espec->DisplayRect.x, (y1 + (y2 - y1) / 2 - 9), "800", espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_9x18_18x18, w1);
+
+   MDFN_DrawFillRect(espec->surface, w2r.x, w2r.y, w2r.w, w2r.h, espec->surface->MakeColor(0xFF, 0xFF, 0xFF), espec->surface->MakeColor(0x00, 0x00, 0xFF));
+   DrawTextShadow(espec->surface, w2r, espec->DisplayRect.x, (y2 + (y3 - y2) / 2 - 9), w2_text, espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), w2_font, w2);
   }
  }
  middle_size += middle_size_inc;
@@ -431,10 +437,8 @@ MDFNGI EmulatedDEMO =
  NULL,
  0,
 
- NULL, //InstallReadPatch,
- NULL, //RemoveReadPatches,
- NULL,
- NULL, //&CheatFormatInfo,
+ CheatInfo_Empty,
+
  false,
  StateAction,
  Emulate,
@@ -442,6 +446,7 @@ MDFNGI EmulatedDEMO =
  SetInput,
  NULL,
  DoSimpleCommand,
+ NULL,
  DEMOSettings,
  MDFN_MASTERCLOCK_FIXED(DEMO_MASTER_CLOCK),
  (uint32)((double)DEMO_MASTER_CLOCK / (450 * 250) * 65536 * 256),

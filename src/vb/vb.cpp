@@ -1,19 +1,23 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen Virtual Boy Emulation Module                                      */
+/******************************************************************************/
+/* vb.cpp:
+**  Copyright (C) 2010-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #include "vb.h"
 #include "timer.h"
@@ -488,7 +492,7 @@ static void ReadHeader(const uint8* const rom_data, const uint64 rom_size, VB_He
 
   *out_ptr = 0;
 
-  MDFN_RemoveControlChars(hi->game_title);
+  MDFN_zapctrlchars(hi->game_title);
   MDFN_trim(hi->game_title);
  }
  else
@@ -501,10 +505,10 @@ static void ReadHeader(const uint8* const rom_data, const uint64 rom_size, VB_He
 
 static bool TestMagic(MDFNFILE *fp)
 {
- if(!strcasecmp(fp->ext, "vb") || !strcasecmp(fp->ext, "vboy"))
-  return(true);
+ if(fp->ext == "vb" || fp->ext == "vboy")
+  return true;
 
- return(false);
+ return false;
 }
 
 static void Cleanup(void)
@@ -799,10 +803,6 @@ static void Emulate(EmulateSpecStruct *espec)
  VB_V810->ResetTS(0);
 }
 
-}
-
-using namespace MDFN_IEN_VB;
-
 #ifdef WANT_DEBUGGER
 static DebuggerInfoStruct DBGInfo =
 {
@@ -977,6 +977,10 @@ static const FileExtensionSpecStruct KnownExtensions[] =
  { NULL, NULL }
 };
 
+}
+
+using namespace MDFN_IEN_VB;
+
 MDFNGI EmulatedVB =
 {
  "vb",
@@ -1004,10 +1008,8 @@ MDFNGI EmulatedVB =
  NULL,
  0,
 
- NULL,
- NULL,
- NULL,
- NULL,
+ CheatInfo_Empty,
+
  false,
  StateAction,
  Emulate,
@@ -1015,6 +1017,7 @@ MDFNGI EmulatedVB =
  VBINPUT_SetInput,
  NULL,
  DoSimpleCommand,
+ NULL,
  VBSettings,
  MDFN_MASTERCLOCK_FIXED(VB_MASTER_CLOCK),
  0,

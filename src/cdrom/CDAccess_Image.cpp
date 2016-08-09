@@ -481,6 +481,9 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
       memset(&TmpTrack, 0, sizeof(TmpTrack));
       active_track = -1;
      }
+
+     for(int32 i = 2; i < 100; i++)
+      TmpTrack.index[i] = -1;
  
      if(AutoTrackInc > 99)
      {
@@ -569,7 +572,8 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
     }
     else if(cmdbuf == "INDEX")
     {
-
+     // FIXME
+     throw MDFN_Error(0, _("Unsupported directive: %s"), cmdbuf.c_str());
     }
     else if(cmdbuf == "PREGAP")
     {
@@ -695,6 +699,10 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
       TmpTrack.index[0] = -1;
       TmpTrack.index[1] = 0;
      }
+
+     for(int32 i = 2; i < 100; i++)
+      TmpTrack.index[i] = -1;
+
      active_track = atoi(args[0].c_str());
 
      if(active_track < 1 || active_track > 99)
@@ -726,14 +734,15 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
     {
      if(active_track >= 0)
      {
+      unsigned wi;
       unsigned int m,s,f;
 
       StringToMSF(args[1].c_str(), &m, &s, &f);
 
-      if(!strcasecmp(args[0].c_str(), "01") || !strcasecmp(args[0].c_str(), "1"))
-       TmpTrack.index[1] = (m * 60 + s) * 75 + f;
-      else if(!strcasecmp(args[0].c_str(), "00") || !strcasecmp(args[0].c_str(), "0"))
-       TmpTrack.index[0] = (m * 60 + s) * 75 + f;
+      if(trio_sscanf(args[0].c_str(), "%u", &wi) == 1 && wi < 100)
+       TmpTrack.index[wi] = (m * 60 + s) * 75 + f;
+      else
+       throw MDFN_Error(0, _("Malformed \"INDEX\" directive: %s\n"), cmdbuf.c_str());
      }
     }
     else if(cmdbuf == "PREGAP")
@@ -908,6 +917,24 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
  } // end to track loop
 
  total_sectors = RunningLBA;
+
+ //
+ // Adjust indexes for MakeSubPQ()
+ //
+ for(int x = FirstTrack; x < (FirstTrack + NumTracks); x++)
+ {
+  const int32 base = Tracks[x].index[1];
+
+  for(int32 i = 0; i < 100; i++)
+  {
+   if(i == 0 || Tracks[x].index[i] == -1)
+    Tracks[x].index[i] = INT32_MAX;
+   else
+    Tracks[x].index[i] = Tracks[x].LBA + (Tracks[x].index[i] - base);
+
+   assert(Tracks[x].index[i] >= 0);
+  }
+ }
 
  //
  // Load SBI file, if present
@@ -1237,10 +1264,21 @@ int32 CDAccess_Image::MakeSubPQ(int32 lba, uint8 *SubPWBuf) const
  buf[0] = (adr << 0) | (control << 4);
  buf[1] = U8_to_BCD(track);
 
- if(lba < Tracks[track].LBA) // Index is 00 in pregap
-  buf[2] = U8_to_BCD(0x00);
- else
-  buf[2] = U8_to_BCD(0x01);
+ // Index
+ //if(lba < Tracks[track].LBA) // Index is 00 in pregap
+ // buf[2] = U8_to_BCD(0x00);
+ //else
+ // buf[2] = U8_to_BCD(0x01);
+ {
+  int index = 0;
+
+  for(int32 i = 0; i < 100; i++)
+  {
+   if(lba >= Tracks[track].index[i])
+    index = i;
+  }
+  buf[2] = U8_to_BCD(index);
+ }
 
  // Track relative MSF address
  buf[3] = U8_to_BCD(m);
@@ -1303,7 +1341,7 @@ void CDAccess_Image::GenerateTOC(void)
 
  toc.tracks[100].lba = total_sectors;
  toc.tracks[100].adr = ADR_CURPOS;
- toc.tracks[100].control = Tracks[FirstTrack + NumTracks - 1].subq_control & 0x4;
+ toc.tracks[100].control = Tracks[FirstTrack + NumTracks - 1].subq_control;
  toc.tracks[100].valid = true;
 }
 

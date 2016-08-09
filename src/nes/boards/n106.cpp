@@ -21,6 +21,9 @@
 #include "mapinc.h"
 #include "../nsf.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint16 IRQCount;
 static uint8 IRQa;
 
@@ -549,4 +552,6 @@ int Mapper210_Init(CartInfo *info)
  InstallRW(info);
 
  return(1);
+}
+
 }

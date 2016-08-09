@@ -26,9 +26,12 @@
 #include "interrupt.h"
 #include "timer.h"
 
+namespace MDFN_IEN_MD
+{
+
 #define READ8of16(value, a) ((value >> ((((a) & 1) ^ 1) << 3)) & 0xFF)
 
-c68k_struc Sub68K;
+M68K Sub68K;
 static int64 Sub68KCycleCounter;
 
 static uint8 *BIOS = NULL; // BIOS ROM, 128KiB
@@ -138,7 +141,7 @@ static void MDCD_MainWrite8(uint32 A, uint8 V)
    case 0x01: 
 	      if(SRES != (V & 0x1))
 	      {
-	       C68k_Reset(&Sub68K);
+	       Sub68K.Reset(false);
 	      }
 
 	      SRES = V & 0x1;
@@ -235,7 +238,7 @@ static void MDCD_MainWrite16(uint32 A, uint16 V)
 
               if(SRES != (V & 0x1))
               {
-               C68k_Reset(&Sub68K);
+               Sub68K.Reset(false);
 	      }
 	      SRES = V & 0x1;
 	      SBRQ = V & 0x2;
@@ -840,7 +843,7 @@ void MDCD_Run(int32 md_master_cycles)
   {
    //printf("Yay: %08x\n", C68k_Get_PC(&Sub68K));
    Sub68K.timestamp = 0;
-   C68k_Exec(&Sub68K);
+   Sub68K.Run(Sub68K.timestamp + 4);
    temp_cycles = Sub68K.timestamp;
   }
   MDCD_Timer_Run(temp_cycles);
@@ -861,25 +864,25 @@ static void Cleanup(void)
 {
  if(BIOS)
  {
-  MDFN_free(BIOS);
+  delete[] BIOS;
   BIOS = NULL;
  }
 
  if(BRAM)
  {
-  MDFN_free(BRAM);
+  delete[] BRAM;
   BRAM = NULL;
  }
 
  if(PRAM)
  {
-  MDFN_free(PRAM);
+  delete[] PRAM;
   PRAM = NULL;
  }
 
  if(WordRAM)
  {
-  MDFN_free(WordRAM);
+  delete[] WordRAM;
   WordRAM = NULL;
  }
 }
@@ -891,13 +894,13 @@ void MDCD_Close(void)
 
 static void MDCD_Init(void)
 {
-  BIOS = (uint8 *)MDFN_calloc_T(1, 0x20000, _("BIOS ROM"));
-  BRAM = (uint8 *)MDFN_calloc_T(1, 0x2000, _("Battery-backed RAM"));
+  BIOS = new uint8[0x20000];
+  BRAM = new uint8[0x2000];
   memset(BRAM, 0xFF, 8192);
 
-  PRAM = (uint8 *)MDFN_calloc_T(1, 0x80000, _("Program RAM"));
+  PRAM = new uint8[0x80000];
 
-  WordRAM = (uint8 *)MDFN_calloc_T(1, 0x40000, _("Word RAM"));
+  WordRAM = new uint8[0x40000];
 
  // Load the BIOS
   {
@@ -917,11 +920,17 @@ static void MDCD_Init(void)
   MD_ExtWrite8 = MDCD_MainWrite8;
   MD_ExtWrite16 = MDCD_MainWrite16;
 
+//
+// FIXME
+//
+  //Sub68K.BusIntAck = MDCD_InterruptAck;
+/*
   C68k_Init(&Sub68K, MDCD_InterruptAck);
   C68k_Set_ReadB(&Sub68K, MDCD_SubRead8);
   C68k_Set_ReadW(&Sub68K, MDCD_SubRead16);
   C68k_Set_WriteB(&Sub68K, MDCD_SubWrite8);
   C68k_Set_WriteW(&Sub68K, MDCD_SubWrite16);
+*/
 }
 
 static int32 CheckValidTrack(CDIF *cdiface, uint8 *sector_buffer)
@@ -989,7 +998,7 @@ void MDCD_Reset(bool poweron)
   memset(WordRAM, 0, 0x40000);
  }
 
- C68k_Reset(&Sub68K);
+ Sub68K.Reset(poweron);
  MDCD_InterruptReset();
  MDCD_PCM_Reset();
 
@@ -1001,4 +1010,6 @@ void MDCD_Reset(bool poweron)
  MM_BK = 0;
 
  MM_RET = 1;
+}
+
 }

@@ -20,6 +20,9 @@
 
 #include        "share.h"
 
+namespace MDFN_IEN_NES
+{
+
 struct SPACE_SHADOW
 {
         uint32 mzx,mzy,mzb;
@@ -149,4 +152,4 @@ INPUTCFC *MDFN_InitSpaceShadow(void)
   return(&SHADOWC);
 }
 
-
+}

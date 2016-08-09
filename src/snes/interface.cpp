@@ -23,6 +23,7 @@
 #include <mednafen/player.h>
 #include <mednafen/FileStream.h>
 #include <mednafen/resampler/resampler.h>
+#include <mednafen/cheat_formats/snes.h>
 
 #include <vector>
 #include <memory>
@@ -490,8 +491,8 @@ static bool TestMagic(MDFNFILE *fp)
  if(PSFLoader::TestMagic(0x23, fp->stream()))
   return(true);
 
- if(strcasecmp(fp->ext, "smc") && strcasecmp(fp->ext, "swc") && strcasecmp(fp->ext, "sfc") && strcasecmp(fp->ext, "fig") &&
-        strcasecmp(fp->ext, "bs") && strcasecmp(fp->ext, "st"))
+ if(fp->ext != "smc" && fp->ext != "swc" && fp->ext != "sfc" && fp->ext != "fig" &&
+        fp->ext != "bs" && fp->ext != "st")
  {
   return(false);
  }
@@ -1292,116 +1293,16 @@ static const MDFNSetting SNESSettings[] =
  { NULL }
 };
 
-
-static bool DecodeGG(const std::string& cheat_string, MemoryPatch* patch)
+static const CheatInfoStruct CheatInfo =
 {
- if(cheat_string.size() != 8 && cheat_string.size() != 9)
-  throw MDFN_Error(0, _("Game Genie code is of an incorrect length."));
+ InstallReadPatch,
+ RemoveReadPatches,
 
- if(cheat_string.size() == 9 && (cheat_string[4] != '-' && cheat_string[4] != '_' && cheat_string[4] != ' '))
-  throw MDFN_Error(0, _("Game Genie code is malformed."));
+ NULL, //MemRead,
+ NULL,
 
- uint32 ev = 0;
-
- for(unsigned i = 0; i < 8; i++)
- {
-  int c = cheat_string[(i >= 4 && cheat_string.size() == 9) ? (i + 1) : i];
-  static const uint8 subst_table[16] = { 0x4, 0x6, 0xD, 0xE, 0x2, 0x7, 0x8, 0x3,
-				  	 0xB, 0x5, 0xC, 0x9, 0xA, 0x0, 0xF, 0x1 };
-  ev <<= 4;
-
-  if(c >= '0' && c <= '9')
-   ev |= subst_table[c - '0'];
-  else if(c >= 'a' && c <= 'f')
-   ev |= subst_table[c - 'a' + 0xA];
-  else if(c >= 'A' && c <= 'F')
-   ev |= subst_table[c - 'A' + 0xA];
-  else
-  {
-   if(c & 0x80)
-    throw MDFN_Error(0, _("Invalid character in Game Genie code."));
-   else
-    throw MDFN_Error(0, _("Invalid character in Game Genie code: %c"), c);
-  }
- }
-
- uint32 addr = 0;
- uint8 val = 0;;
- static const uint8 bm[24] = 
- {
-  0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12, 0x13, 0x0e, 0x0f, 0x00, 0x01, 0x14, 0x15, 0x16, 0x17, 0x02, 0x03, 0x04, 0x05, 0x0a, 0x0b, 0x0c, 0x0d
- };
-
-
- val = ev >> 24;
- for(unsigned i = 0; i < 24; i++)
-  addr |= ((ev >> bm[i]) & 1) << i;
-
- patch->addr = addr;
- patch->val = val;
- patch->length = 1;
- patch->type = 'S';
-
- //printf("%08x %02x\n", addr, val);
-
- return(false);
-}
-
-static bool DecodePAR(const std::string& cheat_string, MemoryPatch* patch)
-{
- uint32 addr;
- uint8 val;
-
- if(cheat_string.size() != 8 && cheat_string.size() != 9)
-  throw MDFN_Error(0, _("Pro Action Replay code is of an incorrect length."));
-
- if(cheat_string.size() == 9 && (cheat_string[6] != ':' && cheat_string[6] != ';' && cheat_string[6] != ' '))
-  throw MDFN_Error(0, _("Pro Action Replay code is malformed."));
-
-
- uint32 ev = 0;
-
- for(unsigned i = 0; i < 8; i++)
- {
-  int c = cheat_string[(i >= 6 && cheat_string.size() == 9) ? (i + 1) : i];
-
-  ev <<= 4;
-
-  if(c >= '0' && c <= '9')
-   ev |= c - '0';
-  else if(c >= 'a' && c <= 'f')
-   ev |= c - 'a' + 0xA;
-  else if(c >= 'A' && c <= 'F')
-   ev |= c - 'A' + 0xA;
-  else
-  {
-   if(c & 0x80)
-    throw MDFN_Error(0, _("Invalid character in Pro Action Replay code."));
-   else
-    throw MDFN_Error(0, _("Invalid character in Pro Action Replay code: %c"), c);
-  }
- }
-
- patch->addr = ev >> 8;
- patch->val = ev & 0xFF;
- patch->length = 1;
- patch->type = 'R';
-
- return(false);
-}
-
-static CheatFormatStruct CheatFormats[] =
-{
- { "Game Genie", "", DecodeGG },
- { "Pro Action Replay", "", DecodePAR },
+ CheatFormats_SNES
 };
-
-static CheatFormatInfoStruct CheatFormatInfo =
-{
- 2,
- CheatFormats
-};
-
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
@@ -1437,10 +1338,8 @@ MDFNGI EmulatedSNES =
  CPInfo,
  1 << 0,
 
- InstallReadPatch,
- RemoveReadPatches,
- NULL, //MemRead,
- &CheatFormatInfo,
+ CheatInfo,
+
  true,
  StateAction,
  Emulate,
@@ -1448,6 +1347,7 @@ MDFNGI EmulatedSNES =
  SetInput,
  NULL,
  DoSimpleCommand,
+ NULL,
  SNESSettings,
  0,
  0,

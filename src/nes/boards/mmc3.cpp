@@ -25,6 +25,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 resetmode,MMC3_cmd,A000B,A001B;
 static uint8 DRegBuf[8];
 
@@ -1245,9 +1248,11 @@ static void GenMMC3Power(CartInfo *info)
 static void GenMMC3Close(void)
 {
  if(CHRRAM)
-  MDFN_free(CHRRAM);
+  free(CHRRAM);
+
  if(WRAM)
-  MDFN_free(WRAM);
+  free(WRAM);
+
  CHRRAM=WRAM=NULL;
 }
 
@@ -1701,4 +1706,6 @@ int Mapper37_Init(CartInfo *info)
 int HKROM_Init(CartInfo *info)
 {
  return(GenMMC3_Init(info, 512, 512, 1, info->battery));
+}
+
 }

@@ -5,7 +5,6 @@ namespace bSNES_v059 {
 
 #include "serialization.cpp"
 #include "algorithms.cpp"
-#include "disassembler/disassembler.cpp"
 
 #define A  0
 #define X  1

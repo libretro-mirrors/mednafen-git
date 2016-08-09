@@ -48,7 +48,7 @@ static void Rebuild(void)
   }
  }
 
- C68k_Set_IRQ(&Sub68K, pending_level);
+ Sub68K.SetIPL(pending_level);
 }
 
 uint8 MDCD_InterruptRead(void)
@@ -79,7 +79,7 @@ int MDCD_InterruptAck(int level)
  asserted &= ~(1 << level);
  Rebuild();
 
- return(C68K_INT_ACK_AUTOVECTOR);
+ return M68K::BUS_INT_ACK_AUTO;
 }
 
 void MDCD_InterruptAssert(int level, bool status)

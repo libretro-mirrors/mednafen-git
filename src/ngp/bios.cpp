@@ -21,6 +21,9 @@
 #include "dma.h"
 #include "bios.h"
 
+namespace MDFN_IEN_NGP
+{
+
 //=============================================================================
 
 uint8 ngpc_bios[0x10000];		//Holds bios program data
@@ -231,6 +234,8 @@ bool bios_install(void)
 	ngpc_bios[0xFFFF] = 0xFE;
 
 	return TRUE;	//Success
+}
+
 }
 
 //=============================================================================

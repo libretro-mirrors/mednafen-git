@@ -1,4 +1,5 @@
-#ifndef _PCE_H
+#ifndef __MDFN_PCE_PCE_H
+#define __MDFN_PCE_PCE_H
 
 #include <mednafen/mednafen.h>
 #include <mednafen/state.h>
@@ -14,11 +15,11 @@ namespace MDFN_IEN_PCE
 
 };
 
-#include <mednafen/hw_cpu/huc6280/huc6280.h>
+#include "huc6280.h"
 
 namespace MDFN_IEN_PCE
 {
-extern HuC6280 *HuCPU;
+extern HuC6280 HuCPU;
 
 extern uint32 PCE_InDebug;
 extern bool PCE_ACEnabled; // Arcade Card emulation enabled?
@@ -29,5 +30,4 @@ void PCE_PokeMainRAM(uint32 A, uint8 V);
 
 };
 
-#define _PCE_H
 #endif

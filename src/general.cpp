@@ -50,43 +50,48 @@ std::string MDFN_GetBaseDirectory(void)
  return BaseDirectory;
 }
 
-// Really dumb, maybe we should use boost?
-static bool IsAbsolutePath(const char *path)
+static bool IsPSep(const char c)
 {
- #if PSS_STYLE==4
-  if(path[0] == ':')
- #elif PSS_STYLE==1
-  if(path[0] == '/')
- #else
-  if(path[0] == '\\'
-  #if PSS_STYLE!=3
-   || path[0] == '/'
-  #endif
- )
+#if PSS_STYLE==4
+ bool ret = (c == ':');
+#elif PSS_STYLE==1
+ bool ret = (c == '/');
+#else
+ bool ret = (c == '\\');
+
+ #if PSS_STYLE!=3
+  ret |= (c == '/');
  #endif
- {
-  return(TRUE);
- }
+#endif
+
+ return ret;
+}
+
+// Really dumb, maybe we should use boost?
+static bool IsAbsolutePath(const char* path)
+{
+ if(IsPSep(path[0]))
+  return true;
 
  #if defined(WIN32) || defined(DOS)
  if((path[0] >= 'a' && path[0] <= 'z') || (path[0] >= 'A' && path[0] <= 'Z'))
  {
   if(path[1] == ':')
   {
-   return(TRUE);
+   return true;
   }
  }
  #endif
 
- return(FALSE);
+ return false;
 }
 
 static bool IsAbsolutePath(const std::string &path)
 {
- return(IsAbsolutePath(path.c_str()));
+ return IsAbsolutePath(path.c_str());
 }
 
-bool MDFN_IsFIROPSafe(const std::string &path)
+void MDFN_CheckFIROPSafe(const std::string &path)
 {
  //
  // First, check for any 8-bit characters, and print a warning about portability.
@@ -100,43 +105,63 @@ bool MDFN_IsFIROPSafe(const std::string &path)
   }
  }
 
+ if(!MDFN_GetSettingB("filesys.untrusted_fip_check"))
+  return;
+
  // We could make this more OS-specific, but it shouldn't hurt to try to weed out usage of characters that are path
  // separators in one OS but not in another, and we'd also run more of a risk of missing a special path separator case
  // in some OS.
- if(!MDFN_GetSettingB("filesys.untrusted_fip_check"))
-  return(true);
+ std::string unsafe_reason;
 
  if(path.find('\0') != string::npos)
-  return(false);
+  unsafe_reason += _("Contains null(0). ");
 
  if(path.find(':') != string::npos)
-  return(false);
+  unsafe_reason += _("Contains colon. ");
 
  if(path.find('\\') != string::npos)
-  return(false);
+  unsafe_reason += _("Contains backslash. ");
 
  if(path.find('/') != string::npos)
-  return(false);
+  unsafe_reason += _("Contains forward slash. ");
+
+ if(path == "..")
+  unsafe_reason += _("Is parent directory. ");
 
 #if defined(DOS) || defined(WIN32)
  //
  // http://support.microsoft.com/kb/74496
+ // http://googleprojectzero.blogspot.com/2016/02/the-definitive-guide-on-win32-to-nt.html
  //
  {
+  // TODO(after implementing Win32 unicode support): COM/LPT ¹,²,³
   static const char* dev_names[] = 
   {
-   "CON", "PRN", "AUX", "CLOCK$", "NUL", "COM1", "COM2", "COM3", "COM4", "LPT1", "LPT2", "LPT3", NULL
+   "CON", "PRN", "AUX", "CLOCK$", "NUL", "CONIN$", "CONOUT$",
+   "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+   "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+   NULL
   };
-
+  //
+  const char* pcs = path.c_str();
   for(const char** ls = dev_names; *ls != NULL; ls++)
   {
-   if(!strcasecmp(*ls, path.c_str()))
-    return(false);
+   size_t lssl = strlen(*ls);
+
+   if(!strncasecmp(*ls, pcs, lssl))
+   {
+    if(pcs[lssl] == 0 || pcs[lssl] == ':' || pcs[lssl] == '.' || pcs[lssl] == ' ')
+    {
+     unsafe_reason += _("Is (likely) a reserved device name. ");
+     break;
+    }
+   }
   }
  }
 #endif
 
- return(true);
+ if(unsafe_reason.size() > 0)
+  throw MDFN_Error(0, _("Referenced path \"%s\" is potentially unsafe.  %s Refer to the documentation about the \"filesys.untrusted_fip_check\" setting.\n"), path.c_str(), unsafe_reason.c_str());
 }
 
 void MDFN_GetFilePathComponents(const std::string &file_path, std::string *dir_path_out, std::string *file_base_out, std::string *file_ext_out)
@@ -188,6 +213,8 @@ void MDFN_GetFilePathComponents(const std::string &file_path, std::string *dir_p
   file_ext = string("");
  }
 
+ // Write outputs at end, in case file_path references the same std::string as pointed to
+ // by one of the outputs.
  if(dir_path_out)
   *dir_path_out = dir_path;
 
@@ -200,8 +227,8 @@ void MDFN_GetFilePathComponents(const std::string &file_path, std::string *dir_p
 
 std::string MDFN_EvalFIP(const std::string &dir_path, const std::string &rel_path, bool skip_safety_check)
 {
- if(!skip_safety_check && !MDFN_IsFIROPSafe(rel_path))
-  throw MDFN_Error(0, _("Referenced path \"%s\" is potentially unsafe.  See \"filesys.untrusted_fip_check\" setting.\n"), rel_path.c_str());
+ if(!skip_safety_check)
+  MDFN_CheckFIROPSafe(rel_path);
 
  if(IsAbsolutePath(rel_path.c_str()))
   return(rel_path);
@@ -248,39 +275,64 @@ static std::string EvalPathFS(const std::string &fstring, /*const (won't work be
  return(ret);
 }
 
-#if 0
-static void CreateMissingDirs(const char *path)
+static void CreateMissingDirs(const std::string& path)
 {
- const char *s = path;
- bool first_psep = true;
- char last_char = 0;
- const char char_test1 = '/', char_test2 = '/';
+ size_t make_spos;
 
-
- while(*s)
+ //
+ //
+ //
  {
-  if(*s == char_test1 || *s == char_test2)
+  bool prev_was_psep = false;
+  size_t last_notpsep_pos = path.size();
+
+  for(size_t i = path.size(); i != SIZE_MAX; i--)
   {
-   if(last_char != *s)	//char_test1 && last_char != char_test2)
+   if(IsPSep(path[i]))
+    prev_was_psep = true;
+   else
    {
-    if(!first_psep)
+    if(prev_was_psep)
     {
-     char tmpbuf[(s - path) + 1];
-     tmpbuf[s - path] = 0;
-     strncpy(tmpbuf, path, s - path);
+     std::string tmp = path.substr(0, i + 1);
+     struct stat tmpstat;
 
-     puts(tmpbuf);
-     //MDFN_mkdir(tmpbuf, S_IRWXU);
+     if(!MDFN_stat(tmp.c_str(), &tmpstat) || (errno != ENOENT && errno != ENOTDIR))
+      break;
     }
-   }
 
-   first_psep = false;
+    prev_was_psep = false;
+    last_notpsep_pos = i;
+   }
   }
-  last_char = *s;
-  s++;
+
+  make_spos = last_notpsep_pos;
+ }
+
+ //
+ //
+ //
+ {
+  bool prev_was_psep = false;
+
+  for(size_t i = make_spos; i < path.size(); i++)
+  {
+   if(IsPSep(path[i]))
+   {
+    if(!prev_was_psep)
+    {
+     std::string tmp = path.substr(0, i);
+
+     MDFN_mkdir_T(tmp.c_str());
+     //puts(tmp.c_str());
+    }
+    prev_was_psep = true;
+   }
+   else
+    prev_was_psep = false;
+  }
  }
 }
-#endif
 
 std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
 {
@@ -334,6 +386,7 @@ std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
   case MDFNMKF_MOVIE:
   case MDFNMKF_STATE:
   case MDFNMKF_SAV:
+  case MDFNMKF_SAVBACK:
 		     {
 		      std::string dir, fstring, fpath;
 
@@ -355,10 +408,26 @@ std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
                        fstring = MDFN_GetSettingS("filesys.fname_sav");
 		       fmap['x'] = std::string(cd1);
                       }
+                      else if(type == MDFNMKF_SAVBACK)
+                      {
+		       dir = MDFN_GetSettingS("filesys.path_savbackup");
+                       fstring = MDFN_GetSettingS("filesys.fname_savbackup");
+		       fmap['x'] = std::string(cd1);
+                      }
 
 		      fmap['X'] = fmap['x'];
 
-		      if(type != MDFNMKF_SAV && !cd1)
+		      if(type == MDFNMKF_SAVBACK)
+		      {
+		       if(id1 < 0)
+			fmap['p'] = "C";
+		       else
+		       {
+                        trio_snprintf(numtmp, sizeof(numtmp), "%u", id1);
+                        fmap['p'] = std::string(numtmp);
+		       }
+	              }
+		      else if(type != MDFNMKF_SAV && !cd1)
 		      {
                        trio_snprintf(numtmp, sizeof(numtmp), "%d", id1);
                        fmap['p'] = std::string(numtmp);
@@ -379,11 +448,14 @@ std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
  			fpath = dir + std::string(PSS) + fpath;
 		       }
 
-                       if(stat(fpath.c_str(), &tmpstat) == -1)
+                       if(MDFN_stat(fpath.c_str(), &tmpstat) == -1)
                         fmap['M'] = md5_context::asciistr(MDFNGameInfo->MD5, 0) + std::string(".");
 		       else
 		        break;
                       }
+
+		      if(type == MDFNMKF_SAVBACK)
+		       CreateMissingDirs(fpath);
 
                       return(fpath);
 	             }
@@ -457,7 +529,7 @@ std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
                        trio_snprintf(tmp_path, 4096, "%s" PSS "%s" PSS "%s", BaseDirectory.c_str(), overpath.c_str(), cd1);
 
 		       // For backwards-compatibility with < 0.9.0
-		       if(stat(tmp_path,&tmpstat) == -1)
+		       if(MDFN_stat(tmp_path,&tmpstat) == -1)
                         trio_snprintf(tmp_path, 4096, "%s" PSS "%s", BaseDirectory.c_str(), cd1);
 		      }
 		     }
@@ -475,11 +547,11 @@ std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
 
                        trio_snprintf(tmp_path, 4096, "%s" PSS "%s.pal", eff_dir.c_str(), FileBase.c_str());
 
-                       if(stat(tmp_path,&tmpstat) == -1 && errno == ENOENT)
+                       if(MDFN_stat(tmp_path,&tmpstat) == -1 && errno == ENOENT)
 		       {
                         trio_snprintf(tmp_path, 4096, "%s" PSS "%s.%s.pal", eff_dir.c_str(), FileBase.c_str(), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
 
-		        if(stat(tmp_path, &tmpstat) == -1 && errno == ENOENT)
+		        if(MDFN_stat(tmp_path, &tmpstat) == -1 && errno == ENOENT)
 			 trio_snprintf(tmp_path, 4096, "%s" PSS "%s.pal", eff_dir.c_str(), cd1 ? cd1 : MDFNGameInfo->shortname);
 		       }
 		      }
@@ -502,68 +574,8 @@ std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
  return(tmp_path);
 }
 
-const char * GetFNComponent(const char *str)
-{
- const char *tp1;
-
- #if PSS_STYLE==4
-     tp1=((char *)strrchr(str,':'));
- #elif PSS_STYLE==1
-     tp1=((char *)strrchr(str,'/'));
- #else
-     tp1=((char *)strrchr(str,'\\'));
-  #if PSS_STYLE!=3
-  {
-     const char *tp3;
-     tp3=((char *)strrchr(str,'/'));
-     if(tp1<tp3) tp1=tp3;
-  }
-  #endif
- #endif
-
- if(tp1)
-  return(tp1+1);
- else
-  return(str);
-}
-
 void GetFileBase(const char *f)
 {
-        const char *tp1,*tp3;
-
- #if PSS_STYLE==4
-     tp1=((char *)strrchr(f,':'));
- #elif PSS_STYLE==1
-     tp1=((char *)strrchr(f,'/'));
- #else
-     tp1=((char *)strrchr(f,'\\'));
-  #if PSS_STYLE!=3
-     tp3=((char *)strrchr(f,'/'));
-     if(tp1<tp3) tp1=tp3;
-  #endif
- #endif
-     if(!tp1)
-     {
-      tp1=f;
-      FileBaseDirectory = ".";
-     }
-     else
-     {
-      FileBaseDirectory.resize(tp1 - f);
-      memcpy(&FileBaseDirectory[0], f, tp1 - f);
-      tp1++;
-     }
-
-     if(((tp3=strrchr(f,'.'))!=NULL) && (tp3>tp1))
-     {
-      FileBase.resize(tp3 - tp1);
-      memcpy(&FileBase[0], tp1, tp3 - tp1);
-      FileExt = string(tp3);
-     }
-     else
-     {
-      FileBase = string(tp1);
-      FileExt = "";
-     }
+ MDFN_GetFilePathComponents(f, &FileBaseDirectory, &FileBase, &FileExt);
 }
 

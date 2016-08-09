@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 cmd,mir,rmode,IRQmode;
 static uint8 DRegs[11];
 static uint8 IRQCount,IRQa,IRQLatch;
@@ -235,4 +238,6 @@ static DECLFW(MIMIC1_Write)
 void Mapper159_init(void)
 {
 	SetWriteHandler(0x8000,0xFFFF,MIMIC1_Write);
+}
+
 }

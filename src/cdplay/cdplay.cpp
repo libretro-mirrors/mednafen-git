@@ -1,19 +1,23 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* cdplay.cpp:
+**  Copyright (C) 2010-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 // TODO: Clear Q subchannel data on disc change and manual track change, add Q subchannel mode have variable(s).
 
@@ -356,6 +360,8 @@ static void Emulate(EmulateSpecStruct *espec)
    }
   }
 
+  int32 text_y = 0;
+
   {
    TOC toc;
    const char *disctype_string = "";
@@ -370,47 +376,47 @@ static void Emulate(EmulateSpecStruct *espec)
     disctype_string = "(unknown type)";
 
    trio_snprintf(tmpbuf, 256, "Disc: %u/%u %s", AudioTrackList[CurrentATLI].disc + 1, (unsigned)cdifs->size(), disctype_string);
-   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
-   pixels += 13 * espec->surface->pitch32;
+   DrawTextShadow(espec->surface, 0, text_y, tmpbuf, text_color, text_shadow_color, MDFN_FONT_6x13_12x13);
+   text_y += 13;
 
    trio_snprintf(tmpbuf, 256, "Track: %d/%d", AudioTrackList[CurrentATLI].track, toc.last_track);
-   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
-   pixels += 13 * espec->surface->pitch32;
+   DrawTextShadow(espec->surface, 0, text_y, tmpbuf, text_color, text_shadow_color, MDFN_FONT_6x13_12x13);
+   text_y += 13;
 
    trio_snprintf(tmpbuf, 256, "Sector: %d/%d", cur_sector, toc.tracks[100].lba - 1);
-   DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
-   pixels += 13 * espec->surface->pitch32;
+   DrawTextShadow(espec->surface, 0, text_y, tmpbuf, text_color, text_shadow_color, MDFN_FONT_6x13_12x13);
+   text_y += 13;
 
    //assert(AudioTrackList[CurrentATLI].track == toc.FindTrackByLBA(cur_sector));
   }
 
-  pixels += 13 * espec->surface->pitch32;
+  text_y += 13;
 
 
   //trio_snprintf(tmpbuf, 256, "Q-Mode: %01x", SubQBuf[1][0] & 0xF);
-  //DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
-  //pixels += 13 * espec->surface->pitch32;
+  //DrawTextShadow(espec->surface, 0, text_y, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
+  //text_y += 13;
 
   trio_snprintf(tmpbuf, 256, "Track: %d", BCD_to_U8(SubQBuf[1][1]));
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
-  pixels += 13 * espec->surface->pitch32;
+  DrawTextShadow(espec->surface, 0, text_y, tmpbuf, text_color, text_shadow_color, MDFN_FONT_6x13_12x13);
+  text_y += 13;
 
   trio_snprintf(tmpbuf, 256, "Index: %d", BCD_to_U8(SubQBuf[1][2]));
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
-  pixels += 13 * espec->surface->pitch32;
+  DrawTextShadow(espec->surface, 0, text_y, tmpbuf, text_color, text_shadow_color, MDFN_FONT_6x13_12x13);
+  text_y += 13;
 
 
   trio_snprintf(tmpbuf, 256, "Relative: %02d:%02d:%02d", BCD_to_U8(SubQBuf[1][3]), BCD_to_U8(SubQBuf[1][4]), BCD_to_U8(SubQBuf[1][5]));
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
-  pixels += 13 * espec->surface->pitch32;
+  DrawTextShadow(espec->surface, 0, text_y, tmpbuf, text_color, text_shadow_color, MDFN_FONT_6x13_12x13);
+  text_y += 13;
 
   trio_snprintf(tmpbuf, 256, "Absolute: %02d:%02d:%02d", BCD_to_U8(SubQBuf[1][7]), BCD_to_U8(SubQBuf[1][8]), BCD_to_U8(SubQBuf[1][9]));
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
-  pixels += 13 * espec->surface->pitch32;
+  DrawTextShadow(espec->surface, 0, text_y, tmpbuf, text_color, text_shadow_color, MDFN_FONT_6x13_12x13);
+  text_y += 13;
 
   trio_snprintf(tmpbuf, 256, "Control: 0x%02x", (SubQBuf_LastValid[0] >> 4) & 0xF);
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
-  pixels += 13 * espec->surface->pitch32;
+  DrawTextShadow(espec->surface, 0, text_y, tmpbuf, text_color, text_shadow_color, MDFN_FONT_6x13_12x13);
+  text_y += 13;
 
 
   // Catalog
@@ -419,8 +425,8 @@ static void Emulate(EmulateSpecStruct *espec)
 					        (SubQBuf[2][3] >> 4) & 0xF, (SubQBuf[2][3] >> 0) & 0xF, (SubQBuf[2][4] >> 4) & 0xF, (SubQBuf[2][4] >> 0) & 0xF,
 					        (SubQBuf[2][5] >> 4) & 0xF, (SubQBuf[2][5] >> 0) & 0xF, (SubQBuf[2][6] >> 4) & 0xF, (SubQBuf[2][6] >> 0) & 0xF,
 						(SubQBuf[2][7] >> 4) & 0xF);
-  DrawTextTransShadow(pixels, espec->surface->pitch32 * 4, 192, tmpbuf, text_color, text_shadow_color, 0, MDFN_FONT_6x13_12x13);
-  pixels += 13 * espec->surface->pitch32;
+  DrawTextShadow(espec->surface, 0, text_y, tmpbuf, text_color, text_shadow_color, MDFN_FONT_6x13_12x13);
+  text_y += 13;
  }
 
  if(PlayMode != PLAYMODE_STOP && PlayMode != PLAYMODE_PAUSE)
@@ -543,7 +549,7 @@ using namespace MDFN_IEN_CDPLAY;
 MDFNGI EmulatedCDPlay =
 {
  "cdplay",
- "Mednafen Test CD-DA Player",
+ "CD-DA Player",
  KnownExtensions,
  MODPRIO_INTERNAL_EXTRA_LOW,
  NULL,          // Debug info
@@ -563,10 +569,8 @@ MDFNGI EmulatedCDPlay =
  NULL,
  0,
 
- NULL,
- NULL,
- NULL,
- NULL,
+ CheatInfo_Empty,
+
  false,
  NULL, //StateAction,
  Emulate,
@@ -574,6 +578,7 @@ MDFNGI EmulatedCDPlay =
  SetInput,
  NULL,
  DoSimpleCommand,
+ NULL,
  CDPlaySettings,
  MDFN_MASTERCLOCK_FIXED(44100),
  75 * 65536 * 256,

@@ -184,14 +184,16 @@ MD_Cart_Type_EEPROM::MD_Cart_Type_EEPROM(const md_game_info *ginfo, const uint8 
   throw(0);
 
  /* set SRAM start & end address */
- sram = (uint8 *)MDFN_malloc_T(type.size_mask + 1, _("Cart EEPROM"));
+ sram = new uint8[type.size_mask + 1];
  memset(sram, 0xFF, type.size_mask + 1);
 }
 
 MD_Cart_Type_EEPROM::~MD_Cart_Type_EEPROM()
 {
  if(sram)
-  MDFN_free(sram);
+ {
+  delete[] sram;
+ }
 }
 
 INLINE void MD_Cart_Type_EEPROM::Detect_START()

@@ -87,9 +87,6 @@
 /* Define to 1 if you have the `connect' function. */
 #undef HAVE_CONNECT
 
-/* define if the compiler supports basic C++11 syntax */
-#undef HAVE_CXX11
-
 /* Define if the GNU dcgettext() function is already present or preinstalled.
    */
 #undef HAVE_DCGETTEXT
@@ -209,6 +206,9 @@
 
 /* Define if you have the iconv() function and it works. */
 #undef HAVE_ICONV
+
+/* Define if GNU-style AVX inline assembly is supported. */
+#undef HAVE_INLINEASM_AVX
 
 /* Define if you have the 'intmax_t' type in <stdint.h> or <inttypes.h>. */
 #undef HAVE_INTMAX_T
@@ -671,8 +671,14 @@
 /* Define if we are compiling with SNES emulation. */
 #undef WANT_SNES_EMU
 
-/* Define if we are compiling with shrieking zombies. */
+/* Define if we are compiling with experimental fast SNES emulation. */
 #undef WANT_SNES_FAUST_EMU
+
+/* Define if we are compiling with SSF playback support. */
+#undef WANT_SSFPLAY_EMU
+
+/* Define if we are compiling with Sega Saturn emulation. */
+#undef WANT_SS_EMU
 
 /* Define if we are compiling with Virtual Boy emulation. */
 #undef WANT_VB_EMU

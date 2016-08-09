@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint16 IRQCount, IRQLatch, Mirroring;
 static uint8 IRQa, PRGBanks[4], CHRBanks[8];
 static uint8 WRAM[8192];
@@ -161,4 +164,5 @@ int Mapper18_Init(CartInfo *info)
 
 
  return(1);
+}
 }

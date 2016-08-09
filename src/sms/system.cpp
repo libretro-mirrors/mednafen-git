@@ -264,18 +264,18 @@ static void LoadCommon(MDFNFILE *fp)
 
 static bool TestMagicSMS(MDFNFILE *fp)
 {
- if(strcasecmp(fp->ext, "sms") && strcasecmp(fp->ext, "sg") && strcasecmp(fp->ext, "sc"))
-  return(FALSE);
+ if(fp->ext != "sms" && fp->ext != "sg" && fp->ext != "sc")
+  return false;
 
- return(TRUE);
+ return true;
 }
 
 static bool TestMagicGG(MDFNFILE *fp)
 {
- if(strcasecmp(fp->ext, "gg"))
-  return(FALSE);
+ if(fp->ext != "gg")
+  return false;
 
- return(TRUE);
+ return true;
 }
 
 
@@ -434,10 +434,8 @@ MDFNGI EmulatedSMS =
  SMSCPInfo,
  1 << 0,
 
- NULL,
- NULL,
- NULL,
- NULL,
+ CheatInfo_Empty,
+
  false,
  StateAction,
  Emulate,
@@ -445,6 +443,7 @@ MDFNGI EmulatedSMS =
  SetInput,
  NULL,
  DoSimpleCommand,
+ NULL,
  SMSSettings,
  0,
  0,
@@ -486,10 +485,8 @@ MDFNGI EmulatedGG =
  GGCPInfo,
  1 << 0,
 
- NULL,
- NULL,
- NULL,
- NULL,
+ CheatInfo_Empty,
+
  false,
  StateAction,
  Emulate,
@@ -497,6 +494,7 @@ MDFNGI EmulatedGG =
  SetInput,
  NULL,
  DoSimpleCommand,
+ NULL,
  GGSettings,
  0,
  0,

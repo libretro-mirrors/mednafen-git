@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 CHRBanks[8], PRGBanks[2], K4IRQ, K4sel, IRQCount, IRQLatch, Mirroring, IRQa, WRAM[8192];
 static int32 acount;
 
@@ -175,4 +178,6 @@ int Mapper21_Init(CartInfo *info)
          info->SaveGameLen[0] = 8192;
         }
 	return(1);
+}
+
 }

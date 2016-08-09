@@ -1,34 +1,40 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* tblur.cpp:
+**  Copyright (C) 2007-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
-#include        "../mednafen.h"
-#include	"tblur.h"
+#include <mednafen/mednafen.h>
+#include "tblur.h"
 
-typedef struct
+struct HQPixelEntry
 {
  uint16 a, b, c, d;
-} HQPixelEntry;
+};
 
-static uint32 *BlurBuf = NULL;
+static std::unique_ptr<uint32[]> BlurBuf;
 static uint32 AccumBlurAmount; // max of 16384, infinite blur!
-static HQPixelEntry *AccumBlurBuf = NULL;
+static std::unique_ptr<HQPixelEntry[]> AccumBlurBuf;
 
 void TBlur_Init(void)
 {
+ try
+ {
         std::string sn = MDFNGameInfo->shortname;
 
         if(MDFN_GetSettingB(std::string(sn + "." + std::string("tblur"))))
@@ -36,15 +42,22 @@ void TBlur_Init(void)
          AccumBlurAmount = (uint32)(16384 * MDFN_GetSettingF(std::string(sn + "." + std::string("tblur.accum.amount"))) / 100);
          if(MDFN_GetSettingB(std::string(sn + "." + std::string("tblur.accum"))))
          {
-          AccumBlurBuf = (HQPixelEntry *)calloc(sizeof(HQPixelEntry), MDFNGameInfo->fb_width * MDFNGameInfo->fb_height);
+          AccumBlurBuf.reset(new HQPixelEntry[MDFNGameInfo->fb_width * MDFNGameInfo->fb_height]);
           MDFN_printf(_("Video temporal frame blur enabled with accumulation: %f.\n"), (double)AccumBlurAmount * 100 / 16384);
          }
          else
          {
-          BlurBuf = (uint32 *)calloc(4, MDFNGameInfo->fb_width * MDFNGameInfo->fb_height);
+          BlurBuf.reset(new uint32[MDFNGameInfo->fb_width * MDFNGameInfo->fb_height]);
           MDFN_printf(_("Video temporal frame blur enabled.\n"));
          }
         }
+ }
+ catch(...)
+ {
+  BlurBuf.reset(nullptr);
+  AccumBlurBuf.reset(nullptr);
+  throw;
+ }
 }
 
 void TBlur_Run(EmulateSpecStruct *espec)
@@ -153,16 +166,8 @@ void TBlur_Run(EmulateSpecStruct *espec)
 
 void TBlur_Kill(void)
 {
- if(BlurBuf)
- {
-  free(BlurBuf);
-  BlurBuf = NULL;
- }
- if(AccumBlurBuf)
- {
-  free(AccumBlurBuf);
-  AccumBlurBuf = NULL;
- }
+ BlurBuf.reset(nullptr);
+ AccumBlurBuf.reset(nullptr);
 }
 
 bool TBlur_IsOn(void)

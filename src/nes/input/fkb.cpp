@@ -21,6 +21,9 @@
 #include "share.h"
 #include "fkb.h"
 
+namespace MDFN_IEN_NES
+{
+
 #define AK(x) 		((FKB_##x) - 1)
 
 static uint8 bufit[0x9];
@@ -118,4 +121,6 @@ INPUTCFC *MDFN_InitFKB(void)
  memset(bufit, 0, sizeof(bufit));
  ksmode=ksindex=0;
  return(&FKB);
+}
+
 }

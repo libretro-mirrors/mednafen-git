@@ -175,7 +175,7 @@ static void CloseGame(void)
  Cleanup();
 }
 
-static void InitCommon(const char *fbase)
+static void InitCommon(const std::string& fbase)
 {
         NESIsVSUni = FALSE;
         PPU_hook = 0;
@@ -193,11 +193,12 @@ static void InitCommon(const char *fbase)
 
         if(MDFN_GetSettingB("nes.fnscan"))
         {
-         if(strstr(fbase, "(U)") || strstr(fbase, "(USA)"))
+         if(fbase.find("(U)") != std::string::npos || fbase.find("(USA)") != std::string::npos)
           MDFNGameInfo->VideoSystem = VIDSYS_NTSC;
-         else if(strstr(fbase, "(J)") || strstr(fbase, "(Japan)"))
+         else if(fbase.find("(J)") != std::string::npos || fbase.find("(Japan)") != std::string::npos)
           MDFNGameInfo->VideoSystem = VIDSYS_NTSC;
-         else if(strstr(fbase, "(E)") || strstr(fbase, "(G)") || strstr(fbase, "(Europe)") || strstr(fbase, "(Germany)") )
+         else if(fbase.find("(E)") != std::string::npos || fbase.find("(G)") != std::string::npos ||
+	         fbase.find("(Europe)") != std::string::npos || fbase.find("(Germany)") != std::string::npos)
           MDFNGameInfo->VideoSystem = VIDSYS_PAL;
         }
 
@@ -407,7 +408,8 @@ void PowerNES(void)
 	if(!Genie_BIOSInstalled())
  	 MDFNMP_RemoveReadPatches();
 
-	MDFNMP_AddRAM(0x0800, 0x0000, RAM);
+	for(uint32 A = 0x0000; A < 0x2000; A += 0x800)
+	 MDFNMP_AddRAM(0x0800, A, RAM, A == 0);
 
 	// Genie_Power() will remove any cheat read patches, and then install the BIOS(and its read hooks)
         Genie_Power();
@@ -737,17 +739,11 @@ static bool DecodeRocky(const std::string& cheat_string, MemoryPatch* patch)
 }
 
 
-static CheatFormatStruct CheatFormats[] =
+static std::vector<CheatFormatStruct> CheatFormats =
 {
  { "Game Genie", gettext_noop("Genies will eat your cheeses."), DecodeGG },
  { "Pro Action Replay (Incomplete)", gettext_noop("Prooooooooooooooooocom."), DecodePAR },
  { "Pro Action Rocky", gettext_noop("No pie."), DecodeRocky },
-};
-
-static CheatFormatInfoStruct CheatFormatInfo =
-{
- 3,
- CheatFormats
 };
 
 static const FileExtensionSpecStruct KnownExtensions[] =
@@ -761,6 +757,16 @@ static const FileExtensionSpecStruct KnownExtensions[] =
  { ".unif", "UNIF Format ROM Image" },
  { NULL, NULL }
 };
+
+static const CheatInfoStruct CheatInfo =
+{
+ InstallReadPatch,
+ RemoveReadPatches,
+ MemRead,
+ NULL,
+ CheatFormats,
+};
+
 }
 
 MDFNGI EmulatedNES =
@@ -788,10 +794,8 @@ MDFNGI EmulatedNES =
  NES_CPInfo,
  0,
 
- InstallReadPatch,
- RemoveReadPatches,
- MemRead,
- &CheatFormatInfo,
+ CheatInfo,
+
  false,
  StateAction,
  Emulate,
@@ -799,6 +803,7 @@ MDFNGI EmulatedNES =
  MDFNNES_SetInput,
  FDS_SetMedia,
  MDFNNES_DoSimpleCommand,
+ NULL,
  NESSettings,
  0,
  0,

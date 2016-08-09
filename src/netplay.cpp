@@ -44,7 +44,7 @@
 int MDFNnetplay=0;
 
 static std::map<std::string, uint32> PlayersList;
-static char *OurNick = NULL;
+static std::string OurNick;
 
 static bool Joined = false;
 static uint32 LocalPlayersMask = 0;
@@ -141,11 +141,7 @@ void MDFNI_NetplayStop(void)
 	 MDFNnetplay = 0;
  	 MDFN_FlushGameCheats(1);	/* Don't save netplay cheats. */
  	 MDFN_LoadGameCheats(0);		/* Reload our original cheats. */
-	 if(OurNick)
-	 {
-	  free(OurNick);
-	  OurNick = NULL;
-	 }
+	 OurNick.clear();
 	 PlayersList.clear();
 	 incoming_buffer.reset(nullptr);
 	 outgoing_buffer.reset(nullptr);
@@ -712,7 +708,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
 			  memmove(neobuf, neobuf + 4, nicklen);
 			  neobuf[nicklen] = 0;
 
-			  if(OurNick && !strcasecmp(OurNick, neobuf))
+			  if(OurNick == neobuf)
 			  {
                            trio_asprintf(&textbuf, "> %s", &neobuf[4 + nicklen]);
 			   NetEcho = true;
@@ -732,9 +728,9 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
    case MDFNNPCMD_NICKCHANGED:
 			{
 			 static const uint32 MaxLength = 2000;
-                         uint8 neobuf[MaxLength + 1];
-                         uint8 *newnick;
-                         char *textbuf = NULL;
+                         char neobuf[MaxLength + 1];
+                         char* newnick;
+                         char* textbuf = NULL;
 			 const uint32 len = raw_len;
 
                          if(len > MaxLength) // Sanity check
@@ -746,32 +742,32 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
 
 			 neobuf[len] = 0;
 
-			 newnick = (uint8*)strchr((char*)neobuf, '\n');
+			 newnick = strchr(neobuf, '\n');
 
 			 if(newnick)
 			 {
 			  bool IsMeow = FALSE;
+
 			  *newnick = 0;
 			  newnick++;
-			  if(OurNick)
+
+			  if(OurNick == neobuf)
 			  {
-			   if(!strcasecmp((char*)neobuf, (char*)OurNick))
-			   {
-			    free(OurNick);
-			    OurNick = strdup((char*)newnick);
-			    textbuf = trio_aprintf(_("* You are now known as <%s>."), newnick);
-			    IsMeow = TRUE;
-			   }
+			   OurNick = newnick;
+			   textbuf = trio_aprintf(_("* You are now known as <%s>."), newnick);
+			   IsMeow = TRUE;
 			  }
+
 			  if(!textbuf)
 			   textbuf = trio_aprintf(_("* <%s> is now known as <%s>"), neobuf, newnick);
+
                           MDFND_NetplayText(textbuf, IsMeow);
 			  free(textbuf);
 
 			  // Update players list.
 			  {
-			   const std::string ons = std::string((const char*)neobuf);
-			   const std::string nns = std::string((const char*)newnick);
+			   const std::string ons(neobuf);
+			   const std::string nns(newnick);
 
 			   if(ons != nns)
 			   {
@@ -928,12 +924,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
 			 }
 			 else if(cmd == MDFNNPCMD_YOUJOINED)
 			 {
-			  if(OurNick) // This shouldn't happen, really...
-			  {
-			   free(OurNick);
-			   OurNick = NULL;
-			  }
-			  OurNick = strdup((char*)neobuf + 8);
+			  OurNick = (char*)neobuf + 8;
 
                           trio_asprintf(&textbuf, _("* You, %s, have connected as: %s"), neobuf + 8, mps_string.c_str());
 
@@ -1221,7 +1212,6 @@ static bool CC_gamekey(const char *arg)
   NetPrintText(_("** Caution: Changing the game key will not affect the current netplay session."));
  }
 
-// SendCEvent(CEVT_NP_SETGAMEKEY, strdup(arg), NULL);
  return(true);
 }
 
@@ -1459,13 +1449,12 @@ void MDFNI_NetplayLine(const char *text, bool &inputable, bool &viewable)
 	 {
           if(!strncasecmp(ConsoleCommands[x].name, (char*)text, strlen(ConsoleCommands[x].name)) && text[strlen(ConsoleCommands[x].name)] <= 0x20)
           {
-	   char *trim_text = strdup((char*)&text[strlen(ConsoleCommands[x].name)]);
+	   std::string trim_text(&text[strlen(ConsoleCommands[x].name)]);
 
 	   MDFN_trim(trim_text);
 
-           inputable = viewable = ConsoleCommands[x].func(trim_text);
+           inputable = viewable = ConsoleCommands[x].func(trim_text.c_str());
 
-           free(trim_text);
            return;
           }
 	 }

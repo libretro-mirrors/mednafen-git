@@ -283,26 +283,26 @@ static void FreeFDSMemory(void)
  {
   if(diskdata[x])
   {
-   MDFN_free(diskdata[x]);
+   delete[] diskdata[x];
    diskdata[x] = NULL;
   }
 
   if(diskdatao[x])
   {
-   MDFN_free(diskdatao[x]);
+   delete[] diskdatao[x];
    diskdatao[x] = NULL;
   }
  }
 
  if(FDSRAM)
  {
-  MDFN_free(FDSRAM);
+  delete[] FDSRAM;
   FDSRAM = NULL;
  }
 
  if(CHRRAM)
  {
-  MDFN_free(CHRRAM);
+  delete[] CHRRAM;
   CHRRAM = NULL;
  }
 
@@ -330,10 +330,10 @@ static void SubLoad(Stream *fp)
  TotalSides = 0;
  for(unsigned x = 0; x < MaxSides; x++)
  {
-  diskdata[x] = (uint8 *)MDFN_malloc_T(65500, _("FDS Disk Data"));
+  diskdata[x] = new uint8[65500];
   if(fp->read(diskdata[x], 65500, false) != 65500)
   {
-   MDFN_free(diskdata[x]);
+   delete[] diskdata[x];
    diskdata[x] = NULL;
    break;
   }
@@ -597,7 +597,7 @@ void FDSLoad(Stream *fp, NESGameType *gt)
   {
    md5.update(diskdata[x],65500);
 
-   diskdatao[x] = (uint8 *)MDFN_malloc_T(65500, _("FDS Disk Data"));
+   diskdatao[x] = new uint8[65500];
    memcpy(diskdatao[x],diskdata[x],65500);
   }
   md5.finish(MDFNGameInfo->MD5);
@@ -618,8 +618,8 @@ void FDSLoad(Stream *fp, NESGameType *gt)
    }
   }
 
-  FDSRAM = (uint8*)MDFN_malloc_T(32768, _("FDS RAM"));
-  CHRRAM = (uint8*)MDFN_malloc_T(8192, _("CHR RAM"));
+  FDSRAM = new uint8[32768];
+  CHRRAM = new uint8[8192];
 
   DiskWritten = false;
 
@@ -634,7 +634,7 @@ void FDSLoad(Stream *fp, NESGameType *gt)
    {
     if(diskdata[x])
     {
-     MDFN_free(diskdata[x]);
+     delete[] diskdata[x];
      diskdata[x] = NULL;
     }
    }

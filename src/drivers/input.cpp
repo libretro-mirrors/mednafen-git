@@ -548,6 +548,10 @@ enum CommandKey
         CK_INPUT_CONFIG6,
         CK_INPUT_CONFIG7,
         CK_INPUT_CONFIG8,
+        CK_INPUT_CONFIG9,
+        CK_INPUT_CONFIG10,
+        CK_INPUT_CONFIG11,
+        CK_INPUT_CONFIG12,
         CK_INPUT_CONFIGC,
 	CK_INPUT_CONFIGC_AM,
 	CK_INPUT_CONFIG_ABD,
@@ -575,6 +579,10 @@ enum CommandKey
         CK_DEVICE_SELECT6,
         CK_DEVICE_SELECT7,
         CK_DEVICE_SELECT8,
+        CK_DEVICE_SELECT9,
+        CK_DEVICE_SELECT10,
+        CK_DEVICE_SELECT11,
+        CK_DEVICE_SELECT12,
 
 	_CK_COUNT
 };
@@ -650,6 +658,11 @@ static const COKE CKeys[_CK_COUNT]	=
         { MK_CK_ALT_SHIFT(6), "input_config6", false, 0, gettext_noop("Configure buttons on virtual port 6")  },
         { MK_CK_ALT_SHIFT(7), "input_config7", false, 0, gettext_noop("Configure buttons on virtual port 7")  },
         { MK_CK_ALT_SHIFT(8), "input_config8", false, 0, gettext_noop("Configure buttons on virtual port 8")  },
+        { MK_CK_ALT_SHIFT(9), "input_config9", false, 0, gettext_noop("Configure buttons on virtual port 9")  },
+        { MK_CK_ALT_SHIFT(0), "input_config10", false, 0, gettext_noop("Configure buttons on virtual port 10")  },
+        { MK_CK_ALT_SHIFT(KP1), "input_config11", false, 0, gettext_noop("Configure buttons on virtual port 11")  },
+        { MK_CK_ALT_SHIFT(KP2), "input_config12", false, 0, gettext_noop("Configure buttons on virtual port 12")  },
+
         { MK_CK(F2), "input_configc", false, 0, gettext_noop("Configure command key") },
         { MK_CK_SHIFT(F2), "input_configc_am", false, 0, gettext_noop("Configure command key, for all-pressed-to-trigger mode") },
 
@@ -679,6 +692,10 @@ static const COKE CKeys[_CK_COUNT]	=
         { MK_CK_CTRL_SHIFT(6), "device_select6", false, 1, gettext_noop("Select virtual device on virtual input port 6") },
         { MK_CK_CTRL_SHIFT(7), "device_select7", false, 1, gettext_noop("Select virtual device on virtual input port 7") },
         { MK_CK_CTRL_SHIFT(8), "device_select8", false, 1, gettext_noop("Select virtual device on virtual input port 8") },
+        { MK_CK_CTRL_SHIFT(9), "device_select9", false, 1, gettext_noop("Select virtual device on virtual input port 9") },
+        { MK_CK_CTRL_SHIFT(0), "device_select10", false, 1, gettext_noop("Select virtual device on virtual input port 10") },
+        { MK_CK_CTRL_SHIFT(KP1), "device_select11", false, 1, gettext_noop("Select virtual device on virtual input port 11") },
+        { MK_CK_CTRL_SHIFT(KP2), "device_select12", false, 1, gettext_noop("Select virtual device on virtual input port 12") },
 };
 
 static const char *CKeysSettingName[_CK_COUNT];
@@ -774,6 +791,10 @@ typedef enum
 	Port6,
 	Port7,
 	Port8,
+	Port9,
+	Port10,
+	Port11,
+	Port12,
 	Command,
 	CommandAM
 } ICType;
@@ -957,7 +978,7 @@ static void CheckCommandKeys(void)
 {
   CK_UpdateState((IConfig == Command || IConfig == CommandAM) && ICLatch == -1);
 
-  for(unsigned i = 0; i < 8; i++)
+  for(unsigned i = 0; i < 12; i++)
   {
    if(IConfig == Port1 + i)
    {
@@ -1127,7 +1148,7 @@ static void CheckCommandKeys(void)
 
   if(!Debugger_IsActive()) // We don't want to start button configuration when the debugger is active!
   {
-   for(int i = 0; i < 8; i++)
+   for(int i = 0; i < 12; i++)
    {
     if(CK_Check((CommandKey)(CK_INPUT_CONFIG1 + i)))
     {
@@ -1141,6 +1162,7 @@ static void CheckCommandKeys(void)
       ConfigDeviceBegin();
       IConfig = (ICType)(Port1 + i);
      }
+     break;
     }
    }
 
@@ -1223,7 +1245,7 @@ static void CheckCommandKeys(void)
 
   if(CurGame->GameType != GMT_PLAYER)
   {
-   for(int i = 0; i < 8; i++)
+   for(int i = 0; i < 12; i++)
    {
     if(CK_Check((CommandKey)(CK_DEVICE_SELECT1 + i)))
      IncSelectedDevice(i);
@@ -1561,15 +1583,25 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
    {
     default: break;
 
+    case IDIT_RESET_BUTTON:
+	{
+	 const uint32 bo = PIDC[x].Device->IDII[tmi].BitOffset;
+	 uint8* const btptr = PIDC[x].Data + (bo >> 3);
+	 const unsigned sob = bo & 0x7;
+
+	 *btptr = (*btptr &~ (1U << sob)) | (CK_CheckActive(CK_RESET) << sob);
+	}
+	break;
+
     case IDIT_BYTE_SPECIAL:
-			assert(tmi < 13 + 1);
-			PIDC[x].Data[tmi] = BarcodeWorldData[tmi];
-			break;
+	assert(tmi < 13 + 1);
+	PIDC[x].Data[tmi] = BarcodeWorldData[tmi];
+	break;
 
     case IDIT_X_AXIS_REL:
     case IDIT_Y_AXIS_REL:
-                      MDFN_en32lsb((PIDC[x].Data + PIDC[x].Device->IDII[tmi].BitOffset / 8), (uint32)((PIDC[x].Device->IDII[tmi].Type == IDIT_Y_AXIS_REL) ? MouseDataRel[1] : MouseDataRel[0]));
-		      break;
+        MDFN_en32lsb((PIDC[x].Data + PIDC[x].Device->IDII[tmi].BitOffset / 8), (uint32)((PIDC[x].Device->IDII[tmi].Type == IDIT_Y_AXIS_REL) ? MouseDataRel[1] : MouseDataRel[0]));
+	break;
    }
   }
  }

@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static bool is48;
 static uint8 IRQCount, IRQa, IRQLatch, PRGBanks[2], Mirroring, CHRBanks[6];
 
@@ -163,4 +166,6 @@ int Mapper48_Init(CartInfo *info)
 	is48=1;
 
 	return(1);
+}
+
 }

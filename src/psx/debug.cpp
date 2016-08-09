@@ -1,19 +1,23 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen Sony PS1 Emulation Module                                         */
+/******************************************************************************/
+/* debug.cpp:
+**  Copyright (C) 2011-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #include "psx.h"
 #include "timer.h"
@@ -30,6 +34,8 @@ static void RedoCPUHook(void);
 
 static void (*CPUHook)(uint32, bool) = NULL;
 static bool CPUHookContinuous = false;
+
+static void (*LogFunc)(const char*, const char*);
 
 struct PSX_BPOINT
 {
@@ -139,9 +145,28 @@ void CheckCPUBPCallB(bool write, uint32 address, unsigned int len)
 
 static void CPUHandler(const pscpu_timestamp_t timestamp, uint32 PC)
 {
- std::vector<PSX_BPOINT>::iterator bpit;
+ if(LogFunc)
+ {
+  static const uint32 addr_mask[8] = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x7FFFFFFF, 0x1FFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF };
+  uint32 tpc = PC & addr_mask[PC >> 29];;
 
- for(bpit = BreakPointsPC.begin(); bpit != BreakPointsPC.end(); bpit++)
+  if(MDFN_UNLIKELY(tpc <= 0xC0))
+  {
+   if(tpc == 0xA0 || tpc == 0xB0 || tpc == 0xC0)
+   {
+    const uint32 function = CPU->GetRegister(PS_CPU::GSREG_GPR + 9, NULL, 0);
+
+    if(tpc != 0xB0 || function != 0x17)
+    {
+     char tmp[64];
+     trio_snprintf(tmp, sizeof(tmp), "0x%02x:0x%02x", PC & 0xFF, function);
+     LogFunc("BIOS", tmp);
+    }
+   }
+  }
+ }
+
+ for(std::vector<PSX_BPOINT>::iterator bpit = BreakPointsPC.begin(); bpit != BreakPointsPC.end(); bpit++)
  {
   if(PC >= bpit->A[0] && PC <= bpit->A[1])
   {
@@ -166,9 +191,15 @@ static void CPUHandler(const pscpu_timestamp_t timestamp, uint32 PC)
 
 static void RedoCPUHook(void)
 {
- const bool HappyTest = CPUHook || BreakPointsPC.size() || BreakPointsRead.size() || BreakPointsWrite.size();
+ const bool HappyTest = CPUHook || BreakPointsPC.size() || BreakPointsRead.size() || BreakPointsWrite.size() || LogFunc;
 
  CPU->SetCPUHook(HappyTest ? CPUHandler : NULL, BTEnabled ? AddBranchTrace : NULL);
+}
+
+static void SetLogFunc(void (*func)(const char*, const char*))
+{
+ LogFunc = func;
+ RedoCPUHook();
 }
 
 static void FlushBreakPoints(int type)
@@ -316,15 +347,20 @@ static uint32 MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical)
 
 static void Disassemble(uint32 &A, uint32 SpecialA, char *TextBuf)
 {
- assert(!(A & 0x3));
+ if(A & 0x3)
+ {
+  strncpy(TextBuf, "UNALIGNED", 256);
+  A &= ~0x3;
+ }
+ else
+ {
+  uint32 instr = CPU->PeekMem32(A);
 
- uint32 instr = CPU->PeekMem32(A);
+  CPU->PeekCheckICache(A, &instr);
 
- CPU->PeekCheckICache(A, &instr);
-
- strncpy(TextBuf, DisassembleMIPS(A, instr).c_str(), 256);
- TextBuf[255] = 0;
-
+  strncpy(TextBuf, DisassembleMIPS(A, instr).c_str(), 256);
+  TextBuf[255] = 0;
+ }
 // trio_snprintf(TextBuf, 256, "0x%08x", instr);
 
  A += 4;
@@ -400,7 +436,7 @@ DebuggerInfoStruct PSX_DBGInfo =
  EnableBranchTrace,
  GetBranchTrace,
  SetGraphicsDecode,
- NULL, //PCFXDBG_SetLogFunc,
+ SetLogFunc,
 };
 
 static RegType Regs_Misc[] =
@@ -627,10 +663,18 @@ static RegType Regs_CPU[] =
         { PS_CPU::GSREG_GPR + 30,   "s8", "Subroutine Reg Var 8/Frame Pointer", 4 },
         { PS_CPU::GSREG_GPR + 31,   "ra", "Return Address", 4 },
         { 0, "------", "", 0xFFFF },
-
 	{ PS_CPU::GSREG_SR,	"SR",	"Status Register", 4 },
-	{ PS_CPU::GSREG_CAUSE,	"CAU","Cause Register", 4 },
+	{ PS_CPU::GSREG_CAUSE,	"CAU",	"Cause Register", 4 },
 	{ PS_CPU::GSREG_EPC,	"EPC",	"EPC Register", 4 },
+        { 0, "------", "", 0xFFFF },
+	{ PS_CPU::GSREG_TAR,	"TAR",	"Target Address Register", 4 },
+	{ PS_CPU::GSREG_BADA,	"BADA",	"Bad Address Register", 4 },
+        { 0, "------", "", 0xFFFF },
+	{ PS_CPU::GSREG_BPC,	"BPC ",	"Breakpoint Program Counter Register", 4 },
+	{ PS_CPU::GSREG_BPCM,	"BPCM",	"Breakpoint Program Counter Mask", 4 },
+	{ PS_CPU::GSREG_BDA,	"BDA ",	"Breakpoint Data Address Register", 4 },
+	{ PS_CPU::GSREG_BDAM,	"BDAM",	"Breakpoint Data Address Mask", 4 },
+	{ PS_CPU::GSREG_DCIC,	"DCIC",	"Debug and Cache Invalidate Control", 4 },
 	{ 0, "", "", 0 }
 };
 

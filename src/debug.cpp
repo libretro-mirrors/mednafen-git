@@ -85,6 +85,7 @@ int ASpace_Add(const AddressSpaceType &newt)
  return(AddressSpaces.size() - 1);
 }
 
+#if 0
 // Returns number of new bytes allocated.
 static INLINE uint64 IncUsageMap(uint64 *****UsageMap, const uint32 address)
 {
@@ -214,6 +215,7 @@ void ASpace_ClearWriteMap(const int id)
 
  as->UsageWriteMemUsed = 0;
 }
+#endif
 
 void MDFNDBG_ResetRegGroupsInfo(void)
 {

@@ -21,6 +21,9 @@
 #include "mapinc.h"
 #include "../nsf.h"
 
+namespace MDFN_IEN_NES
+{
+
 static void (*sfun[3])(void);
 
 static uint8 PRGBank8, PRGBank16, CHRBanks[8], Mirroring;
@@ -359,4 +362,6 @@ int NSFVRC6_Init(EXPSOUND *ep, bool MultiChip)
 	 NSFECSetWriteHandler(0x9000,0xbfff,VRC6SW);
 	}
 	return(1);
+}
+
 }

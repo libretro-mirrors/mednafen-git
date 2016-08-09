@@ -1,3 +1,24 @@
+/******************************************************************************/
+/* Mednafen Sony PS1 Emulation Module                                         */
+/******************************************************************************/
+/* cpu.h:
+**  Copyright (C) 2011-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
 #ifndef __MDFN_PSX_CPU_H
 #define __MDFN_PSX_CPU_H
 
@@ -89,9 +110,14 @@ class PS_CPU
 
  uint32 BACKED_PC;
  uint32 BACKED_new_PC;
- uint32 BACKED_new_PC_mask;
 
  uint32 IPCache;
+ uint8 BDBT;
+
+ uint8 ReadAbsorb[0x20 + 1];
+ uint8 ReadAbsorbWhich;
+ uint8 ReadFudge;
+
  void RecalcIPCache(void);
  bool Halted;
 
@@ -105,17 +131,7 @@ class PS_CPU
 
  uint32 BIU;
 
- struct __ICache
- {
-  uint32 TV;
-  uint32 Data;
- };
-
- union
- {
-  __ICache ICache[1024];
-  uint32 ICache_Bulk[2048];
- };
+ const uint32 addr_mask[8] = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x7FFFFFFF, 0x1FFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF };
 
  enum
  {
@@ -123,7 +139,7 @@ class PS_CPU
   CP0REG_BDA = 5,		// Data load/store breakpoint address.
   CP0REG_TAR = 6,		// Target address(???)
   CP0REG_DCIC = 7,		// Cache control
-  CP0REG_BADVA = 8,
+  CP0REG_BADA = 8,
   CP0REG_BDAM = 9,		// Data load/store address mask.
   CP0REG_BPCM = 11,		// PC breakpoint address mask.
   CP0REG_SR = 12,
@@ -147,7 +163,7 @@ class PS_CPU
     uint32 BDA;		// RW
     uint32 TAR;		// R
     uint32 DCIC;	// RW
-    uint32 BADVA;	// R
+    uint32 BADA;	// R
     uint32 BDAM;	// R/W
     uint32 Unused0A;
     uint32 BPCM;	// R/W
@@ -159,30 +175,26 @@ class PS_CPU
   };
  } CP0;
 
-#if 1
- //uint32 WrAbsorb;
- //uint8 WrAbsorbShift;
-
- // On read:
- //WrAbsorb = 0;
- //WrAbsorbShift = 0;
-
- // On write:
- //WrAbsorb >>= (WrAbsorbShift >> 2) & 8;
- //WrAbsorbShift -= (WrAbsorbShift >> 2) & 8;
-
- //WrAbsorb |= (timestamp - pre_write_timestamp) << WrAbsorbShift;
- //WrAbsorbShift += 8;
-#endif
-
- uint8 ReadAbsorb[0x20 + 1];
- uint8 ReadAbsorbWhich;
- uint8 ReadFudge;
-
- //uint32 WriteAbsorb;
- //uint8 WriteAbsorbCount;
- //uint8 WriteAbsorbMonkey;
  uint8 MULT_Tab24[24];
+
+ struct __ICache
+ {
+  /*
+   TV:
+	Mask 0x00000001: 0x0 = icache enabled((BIU & 0x800) == 0x800), 0x1 = icache disabled(changed in bulk on BIU value changes; preserve everywhere else!)
+	Mask 0x00000002: 0x0 = valid, 0x2 = invalid
+	Mask 0x00000FFC: Always 0
+	Mask 0xFFFFF000: Tag.
+  */
+  uint32 TV;
+  uint32 Data;
+ };
+
+ union
+ {
+  __ICache ICache[1024];
+  uint32 ICache_Bulk[2048];
+ };
 
  MultiAccessSizeMem<1024, false> ScratchRAM;
 
@@ -208,7 +220,7 @@ class PS_CPU
   EXCEPTION_OV = 12	// Arithmetic overflow
  };
 
- uint32 Exception(uint32 code, uint32 PC, const uint32 NP, const uint32 NPM, const uint32 instr) MDFN_WARN_UNUSED_RESULT;
+ uint32 Exception(uint32 code, uint32 PC, const uint32 NP, const uint32 instr) MDFN_WARN_UNUSED_RESULT;
 
  template<bool DebugMode, bool BIOSPrintMode, bool ILHMode> pscpu_timestamp_t RunReal(pscpu_timestamp_t timestamp_in) NO_INLINE;
 
@@ -217,6 +229,7 @@ class PS_CPU
  template<typename T> T ReadMemory(pscpu_timestamp_t &timestamp, uint32 address, bool DS24 = false, bool LWC_timing = false);
  template<typename T> void WriteMemory(pscpu_timestamp_t &timestamp, uint32 address, uint32 value, bool DS24 = false);
 
+ uint32 ReadInstruction(pscpu_timestamp_t &timestamp, uint32 address);
 
  //
  // Mednafen debugger stuff follows:
@@ -233,9 +246,18 @@ class PS_CPU
   GSREG_IN_BD_SLOT,
   GSREG_LO,
   GSREG_HI,
+  //
+  //
+  GSREG_BPC,
+  GSREG_BDA,
+  GSREG_TAR,
+  GSREG_DCIC,
+  GSREG_BADA,
+  GSREG_BDAM,
+  GSREG_BPCM,
   GSREG_SR,
   GSREG_CAUSE,
-  GSREG_EPC,
+  GSREG_EPC
  };
 
  uint32 GetRegister(unsigned int which, char *special, const uint32 special_len);

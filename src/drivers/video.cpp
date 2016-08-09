@@ -285,10 +285,7 @@ void Video_MakeSettings(std::vector <MDFNSetting> &settings)
    sysname = (const char *)MDFNSystems[i]->shortname;
   }
 
-  if(multires)
-   default_scale = ceil(1024 / nominal_width);
-  else
-   default_scale = ceil(768 / nominal_width);
+  default_scale = ceil(1024 / nominal_width);
 
   if(default_scale * nominal_width > 1024)
    default_scale--;
@@ -406,11 +403,6 @@ static SDL_Surface *IconSurface=NULL;
 
 static MDFN_Rect screen_dest_rect;
 
-static MDFN_Surface *NetSurface = NULL;
-static MDFN_Rect NetRect;
-
-static MDFN_Surface *CheatSurface = NULL;
-
 static MDFN_Surface *HelpSurface = NULL;
 static MDFN_Rect HelpRect;
 
@@ -479,22 +471,10 @@ void Video_Kill(void)
   SMSurface = NULL;
  }
 
- if(CheatSurface)
- {
-  delete CheatSurface;
-  CheatSurface = NULL;
- }
-
  if(HelpSurface)
  {
   delete HelpSurface;
   HelpSurface = NULL;
- }
-
- if(NetSurface)
- {
-  delete NetSurface;
-  NetSurface = NULL;
  }
 
  if(ogl_blitter)
@@ -962,8 +942,13 @@ void Video_Init(MDFNGI *gi)
   MDFN_AutoIndent ainddr;
   MDFN_printf(_("Warning:  Destination rectangle exceeds screen dimensions.  This is ok if you really do want the clipping...\n"));
  }
- if(gi && gi->name)
-  SDL_WM_SetCaption(gi->name, gi->name);
+
+ if(gi && gi->name.size() > 0)
+ {
+  const char* gics = gi->name.c_str();
+
+  SDL_WM_SetCaption(gics, gics);
+ }
  else
   SDL_WM_SetCaption("Mednafen", "Mednafen");
 
@@ -1020,14 +1005,6 @@ void Video_Init(MDFNGI *gi)
   }
 #endif
  }
-
- NetSurface = new MDFN_Surface(NULL, screen->w, 18 * 5, screen->w, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
-
- NetRect.w = screen->w;
- NetRect.h = 18 * 5;
- NetRect.x = 0;
- NetRect.y = 0;
-
 
  {
   int xmu = std::max<int>(1, screen->w / 402);
@@ -1119,7 +1096,7 @@ void BlitRaw(MDFN_Surface *src, const MDFN_Rect *src_rect, const MDFN_Rect *dest
   SDL_to_MDFN_Surface_Wrapper m_surface(screen);
 
   //MDFN_SrcAlphaBlitSurface(src, src_rect, &m_surface, dest_rect);
-  MDFN_StretchBlitSurface(src, src_rect, &m_surface, dest_rect, (source_alpha > 0) && osd_alpha_blend);
+  MDFN_StretchBlitSurface(src, *src_rect, &m_surface, *dest_rect, (source_alpha > 0) && osd_alpha_blend);
  }
 
  bool cond1 = (dest_rect->x < screen_dest_rect.x || (dest_rect->x + dest_rect->w) > (screen_dest_rect.x + screen_dest_rect.w));
@@ -1150,8 +1127,8 @@ static bool BlitInternalMessage(void)
  {
   SMSurface->Fill(0x00, 0x00, 0x00, 0xC0);
 
-  DrawTextTransShadow(SMSurface->pixels + (1 * SMSurface->pitch32), SMSurface->pitch32 << 2, SMRect.w, CurrentMessage,
-	SMSurface->MakeColor(0xFF, 0xFF, 0xFF, 0xFF), SMSurface->MakeColor(0x00, 0x00, 0x00, 0xFF), TRUE);
+  DrawTextShadow(SMSurface, 0, 1, CurrentMessage,
+	SMSurface->MakeColor(0xFF, 0xFF, 0xFF, 0xFF), SMSurface->MakeColor(0x00, 0x00, 0x00, 0xFF), MDFN_FONT_9x18_18x18, SMRect.w);
   free(CurrentMessage);
   CurrentMessage = NULL;
  }
@@ -1166,9 +1143,9 @@ static bool OverlayOK;	// Set to TRUE when vdriver == "overlay", and it's safe t
 			// Otherwise, set to FALSE.
 			// (Set in the BlitScreen function before any calls to SubBlit())
 
-static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, const MDFN_Rect &dest_rect, const int InterlaceField)
+static void SubBlit(const MDFN_Surface *source_surface, const MDFN_Rect &src_rect, const MDFN_Rect &dest_rect, const int InterlaceField)
 {
- MDFN_Surface *eff_source_surface = source_surface;
+ const MDFN_Surface *eff_source_surface = source_surface;
  MDFN_Rect eff_src_rect = src_rect;
  int overlay_softscale = 0;
 
@@ -1209,7 +1186,7 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
      //
      if(eff_src_rect.w < 2 || eff_src_rect.h < 2 || (CurrentScaler->id == NTVB_SCALE4X && eff_src_rect.h < 4))
      {
-      nnx(CurrentScaler->id - NTVB_SCALE2X + 2, eff_source_surface, &eff_src_rect, &bah_surface, &boohoo_rect);
+      nnx(CurrentScaler->id - NTVB_SCALE2X + 2, eff_source_surface, eff_src_rect, &bah_surface, boohoo_rect);
      }
      else
      {
@@ -1220,11 +1197,11 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
     }
     else if(CurrentScaler->id == NTVB_NN2X || CurrentScaler->id == NTVB_NN3X || CurrentScaler->id == NTVB_NN4X)
     {
-     nnx(CurrentScaler->id - NTVB_NN2X + 2, eff_source_surface, &eff_src_rect, &bah_surface, &boohoo_rect);
+     nnx(CurrentScaler->id - NTVB_NN2X + 2, eff_source_surface, eff_src_rect, &bah_surface, boohoo_rect);
     }
     else if(CurrentScaler->id == NTVB_NNY2X || CurrentScaler->id == NTVB_NNY3X || CurrentScaler->id == NTVB_NNY4X)
     {
-     nnyx(CurrentScaler->id - NTVB_NNY2X + 2, eff_source_surface, &eff_src_rect, &bah_surface, &boohoo_rect);
+     nnyx(CurrentScaler->id - NTVB_NNY2X + 2, eff_source_surface, eff_src_rect, &bah_surface, boohoo_rect);
     }
 #if 0
     else if(CurrentScaler->id == NTVB_SCANLINES)
@@ -1332,7 +1309,7 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
      {
       SDL_to_MDFN_Surface_Wrapper m_surface(screen);
 
-      MDFN_StretchBlitSurface(&bah_surface, &boohoo_rect, &m_surface, &dest_rect, false, _video.scanlines, &eff_src_rect, CurGame->rotated, InterlaceField);
+      MDFN_StretchBlitSurface(&bah_surface, boohoo_rect, &m_surface, dest_rect, false, _video.scanlines, &eff_src_rect, CurGame->rotated, InterlaceField);
      }
     }
    }
@@ -1357,7 +1334,7 @@ static void SubBlit(MDFN_Surface *source_surface, const MDFN_Rect &src_rect, con
      {
       SDL_to_MDFN_Surface_Wrapper m_surface(screen);
 
-      MDFN_StretchBlitSurface(eff_source_surface, &eff_src_rect, &m_surface, &dest_rect, false, _video.scanlines, &eff_src_rect, CurGame->rotated, InterlaceField);
+      MDFN_StretchBlitSurface(eff_source_surface, eff_src_rect, &m_surface, dest_rect, false, _video.scanlines, &eff_src_rect, CurGame->rotated, InterlaceField);
      }
     }
    }
@@ -1598,11 +1575,13 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
  {
   if(!HelpSurface)
   {
+   HelpRect.x = 0;
+   HelpRect.y = 0;
    HelpRect.w = std::min<int>(512, screen->w);
    HelpRect.h = std::min<int>(408, screen->h);
 
    HelpSurface = new MDFN_Surface(NULL, 512, 408, 512, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
-   Help_Draw(HelpSurface, &HelpRect);
+   Help_Draw(HelpSurface, HelpRect);
   }
 
   MDFN_Rect zederect;
@@ -1631,65 +1610,14 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
 
  DrawSaveStates(screen, exs, eys, real_rs, real_gs, real_bs, real_as);
 
- if(CheatIF_Active())
+ try
  {
-  MDFN_Rect CheatRect;
-  unsigned crs = 0;
-
-  memset(&CheatRect, 0, sizeof(CheatRect));
-
-  CheatRect.x = 0;
-  CheatRect.y = 0;
-  CheatRect.w = screen->w;
-  CheatRect.h = screen->h;
-
-  while((CheatRect.h >> crs) >= 1024 && (CheatRect.w >> crs) >= 1024)
-   crs++;
-
-  CheatRect.w >>= crs;
-  CheatRect.h >>= crs;
-
-  if(!CheatSurface || CheatSurface->w < CheatRect.w || CheatSurface->h < CheatRect.h)
-  {
-   if(CheatSurface)
-   {
-    delete CheatSurface;
-    CheatSurface = NULL;
-   }
-
-   CheatSurface = new MDFN_Surface(NULL, CheatRect.w, CheatRect.h, CheatRect.w, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
-  }
-
-  MDFN_Rect zederect;
-
-  zederect.x = 0;
-  zederect.y = 0;
-  zederect.w = CheatRect.w << crs;
-  zederect.h = CheatRect.h << crs;
-
-  CheatIF_MT_Draw(CheatSurface, &CheatRect);
-  BlitRaw(CheatSurface, &CheatRect, &zederect);
+  CheatIF_MT_Draw(MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as), screen->w, screen->h);
+  Netplay_MT_Draw(MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as), screen->w, screen->h);
  }
- else if(CheatSurface)
+ catch(std::exception& e)
  {
-  delete CheatSurface;
-  CheatSurface = NULL;
- }
-
- if(Netplay_GetTextView())
- {
-  DrawNetplayTextBuffer(NetSurface, &NetRect);
-
-  {
-   MDFN_Rect zederect;
-
-   zederect.x = 0;
-   zederect.y = screen->h - NetRect.h;
-   zederect.w = NetRect.w;
-   zederect.h = NetRect.h;
-
-   BlitRaw(NetSurface, &NetRect, &zederect);
-  }
+  MDFN_DispMessage("%s", e.what());
  }
 
  BlitInternalMessage();

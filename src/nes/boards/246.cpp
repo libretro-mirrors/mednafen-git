@@ -19,6 +19,10 @@
  */
 
 #include "mapinc.h"
+
+namespace MDFN_IEN_NES
+{
+
 static uint8 PRGBanks[4], CHRBanks[4];
 static uint8 WRAM[0x800];
 
@@ -100,3 +104,4 @@ int Mapper246_Init(CartInfo *info)
  return(1);
 }
 
+}

@@ -15,6 +15,9 @@
 #ifndef __NEOPOP_SOUND__
 #define __NEOPOP_SOUND__
 
+namespace MDFN_IEN_NGP
+{
+
 void Write_SoundChipLeft(uint8 data);
 void Write_SoundChipRight(uint8 data);
 
@@ -22,9 +25,11 @@ void dac_write_left(uint8);
 void dac_write_right(uint8);
 
 int32 MDFNNGPCSOUND_Flush(int16 *SoundBuf, const int32 MaxSoundFrames);
-void MDFNNGPCSOUND_Init(void);
+void MDFNNGPCSOUND_Init(void) MDFN_COLD;
 bool MDFNNGPC_SetSoundRate(uint32 rate);
 int MDFNNGPCSOUND_StateAction(StateMem *sm, int load, int data_only);
 void MDFNNGPCSOUND_SetEnable(bool set);
+
+}
 
 #endif

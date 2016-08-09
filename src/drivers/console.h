@@ -1,14 +1,38 @@
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* console.h:
+**  Copyright (C) 2006-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
 #include <vector>
 #include <string>
 
 class MDFNConsole
 {
 	public:
-	MDFNConsole(bool shellstyle = 0, unsigned setfont = MDFN_FONT_9x18_18x18);
+	MDFNConsole(bool shellstyle = 0);
 	~MDFNConsole();
 
 	void ShowPrompt(bool shown);
-	void Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect);
+
+	// Returns pointer to internal surface, will remain valid until at least the next
+	// call to Draw()(or the MDFNConsole object is destroyed).
+	MDFN_Surface* Draw(const MDFN_PixelFormat& pformat, const int32 dim_w, const int32 dim_h, const unsigned fontid = MDFN_FONT_9x18_18x18, const uint32 hex_color = 0xFFFFFF);
 
 	int Event(const SDL_Event *event);
 
@@ -16,17 +40,24 @@ class MDFNConsole
 	void AppendLastLine(const std::string &text);
         virtual bool TextHook(const std::string &text);
 
-	void SetFont(unsigned newfont) { Font = newfont; }
 	void SetShellStyle(bool newsetting) { shellstyle = newsetting; }
 	void Scroll(int32 amount, bool SetPos = FALSE);
 
 	private:
 	std::vector<std::string> TextLog;
 	std::vector<std::string> kb_buffer;
+
 	unsigned int kb_cursor_pos;
 	bool shellstyle;
 	bool prompt_visible;
-	uint32 Scrolled;
-	unsigned Font;
+	int32 Scrolled;
 	uint8 opacity;
+
+	int32 ScrolledVecTarg;
+	int32 LastPageSize;
+
+	// Outside of the constructor and destructor, only mess with surface and tmp_surface
+	// inside Draw(), for the Draw() return value guarantee.
+	std::unique_ptr<MDFN_Surface> surface;
+	std::unique_ptr<MDFN_Surface> tmp_surface;
 };

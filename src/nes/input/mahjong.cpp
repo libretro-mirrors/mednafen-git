@@ -20,6 +20,9 @@
 
 #include "share.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint32 MReal,MRet;
 
 static uint8 MJ_Read(int w, uint8 ret)
@@ -92,4 +95,6 @@ INPUTCFC *MDFN_InitMahjong(void)
 {
  MReal=MRet=0;
  return(&Mahjong);
+}
+
 }

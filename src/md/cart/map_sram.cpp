@@ -75,7 +75,7 @@ MD_Cart_Type_SRAM::MD_Cart_Type_SRAM(const md_game_info *ginfo, const uint8 *ROM
 
  //printf("%08x %08x %08x\n", sram_start, sram_end, sram_size);
 
- sram = (uint8 *)MDFN_malloc_T(sram_size, _("Cart SRAM"));
+ sram = new uint8[sram_size];
  memset(sram, 0xFF, sram_size);
 }
 
@@ -83,7 +83,7 @@ MD_Cart_Type_SRAM::~MD_Cart_Type_SRAM()
 {
  if(sram)
  {
-  MDFN_free(sram);
+  delete[] sram;
   sram = NULL;
  }
 }

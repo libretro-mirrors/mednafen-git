@@ -204,13 +204,13 @@ static const DLEntry Developers[] =
 
 static bool TestMagic(MDFNFILE *fp)
 {
- if(strcasecmp(fp->ext, "ws") && strcasecmp(fp->ext, "wsc") && strcasecmp(fp->ext, "wsr"))
-  return(FALSE);
+ if(fp->ext != "ws" && fp->ext != "wsc" && fp->ext != "wsr")
+  return false;
 
  if(fp->size() < 65536)
-  return(FALSE);
+  return false;
 
- return(TRUE);
+ return true;
 }
 
 static void Cleanup(void)
@@ -222,7 +222,7 @@ static void Cleanup(void)
 
  if(wsCartROM)
  {
-  free(wsCartROM);
+  delete[] wsCartROM;
   wsCartROM = NULL;
  }
 }
@@ -234,7 +234,7 @@ static void CloseGame(void)
  {
   try
   {
-   WSwan_MemorySaveNV();	// Must be called before we free(wsCartRom).
+   WSwan_MemorySaveNV();	// Must be called before we delete[] wsCartRom.
   }
   catch(std::exception &e)
   {
@@ -266,7 +266,8 @@ static void Load(MDFNFILE *fp)
   real_rom_size = (fp_in_size + 0xFFFF) & ~0xFFFF;
   rom_size = round_up_pow2(real_rom_size);
 
-  wsCartROM = (uint8 *)MDFN_calloc_T(1, rom_size, "ROM");
+  wsCartROM = new uint8[rom_size];
+  memset(wsCartROM, 0, rom_size);
 
   // This real_rom_size vs rom_size funny business is intended primarily for handling
   // WSR files.
@@ -618,10 +619,8 @@ MDFNGI EmulatedWSwan =
  NULL,
  0,
 
- NULL,
- NULL,
- NULL,
- NULL,
+ CheatInfo_Empty,
+
  false,
  StateAction,
  Emulate,
@@ -629,6 +628,7 @@ MDFNGI EmulatedWSwan =
  SetInput,
  NULL,
  DoSimpleCommand,
+ NULL,
  WSwanSettings,
  MDFN_MASTERCLOCK_FIXED(3072000),
  0,

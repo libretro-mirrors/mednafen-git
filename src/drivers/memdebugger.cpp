@@ -1,19 +1,23 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* memdebugger.cpp:
+**  Copyright (C) 2007-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #include "main.h"
 #include "memdebugger.h"
@@ -198,7 +202,7 @@ uint8 *MemDebugger::TextToBS(const char *text, size_t *TheCount)
 
           if(nib_count & 1)
           {
-           error_string = trio_aprintf("Invalid number of characters in bytestring.");
+           error_string = trio_aprintf(_("Invalid number of characters in bytestring."));
            error_time = SDL_GetTicks();
            InPrompt = None;
 	   free(thebytes);
@@ -285,7 +289,7 @@ void MemDebugger::PromptFinish(const std::string &pstring)
           }
 	  else
 	  {
-	   error_string = trio_aprintf("Invalid memory dump specification.");
+	   error_string = trio_aprintf(_("Invalid memory dump specification."));
 	   error_time = SDL_GetTicks();
 	  }
          }
@@ -305,8 +309,6 @@ void MemDebugger::PromptFinish(const std::string &pstring)
 
           if(acceptable)
           {
-	   
-
 	   try
 	   {
             FileStream fp(fname, FileStream::MODE_READ);
@@ -330,7 +332,7 @@ void MemDebugger::PromptFinish(const std::string &pstring)
 
 	     if(read_len != to_read)
 	     {
-	      error_string = trio_aprintf("Warning: unexpected EOF(short by %08llx byte(s))", (unsigned long long)(A2 - a + 1));
+	      error_string = trio_aprintf(_("Warning: unexpected EOF(short by %08llx byte(s))"), (unsigned long long)(A2 - a + 1));
 	      error_time = SDL_GetTicks();
 	      break;
 	     }
@@ -341,11 +343,10 @@ void MemDebugger::PromptFinish(const std::string &pstring)
             error_string = trio_aprintf("%s", e.what());
             error_time = SDL_GetTicks();
 	   }
-	   
           }
           else
           {
-           error_string = trio_aprintf("Invalid memory load specification.");
+           error_string = trio_aprintf(_("Invalid memory load specification."));
            error_time = SDL_GetTicks();
           }
          }
@@ -374,7 +375,7 @@ void MemDebugger::PromptFinish(const std::string &pstring)
 
           if(result == (size_t)-1)
           {
-           error_string = trio_aprintf("iconv() error: %m");
+           error_string = trio_aprintf(_("iconv() error: %m"));
            error_time = SDL_GetTicks();
            InPrompt = None;
 	   free(utf8_string);
@@ -386,7 +387,7 @@ void MemDebugger::PromptFinish(const std::string &pstring)
 
 	  if(!DoBSSearch(bcount, thebytes))
 	  {
-	   error_string = trio_aprintf("String not found.");
+	   error_string = trio_aprintf(_("String not found."));
 	   error_time = SDL_GetTicks();
 	   InPrompt = None;
 	  }
@@ -404,7 +405,7 @@ void MemDebugger::PromptFinish(const std::string &pstring)
 	  if(!DoBSSearch(byte_count, the_bytes))
           {
 	   free(the_bytes);
-           error_string = trio_aprintf("Bytestring \"%s\" not found.", pstring.c_str());
+           error_string = trio_aprintf(_("Bytestring \"%s\" not found."), pstring.c_str());
            error_time = SDL_GetTicks();
            InPrompt = None;
            return;
@@ -423,7 +424,7 @@ void MemDebugger::PromptFinish(const std::string &pstring)
 	  if(!DoRSearch(byte_count, the_bytes))
 	  {
 	   free(the_bytes);
-           error_string = trio_aprintf("Bytestring \"%s\" not found.", pstring.c_str());
+           error_string = trio_aprintf(_("Bytestring \"%s\" not found."), pstring.c_str());
            error_time = SDL_GetTicks();
            InPrompt = None;
            return;
@@ -447,69 +448,228 @@ void MemDebugger::SetActive(bool newia)
  }
 }
 
-#define MK_COLOR_A(r,g,b,a) (pf_cache.MakeColor(r, g, b, a))
+//
+//
+//
+INLINE int32 MemDebugger::DrawWaveform(MDFN_Surface* surface, const int32 base_y, const uint32 hcenterw)
+{
+ const uint32 sample_color = surface->MakeColor(0x00,0xA0,0x00,0xFF);
+ const int32 wf_size = SizeCache[CurASpace];
+ uint8 waveform[wf_size];
+ const int32 pcm_max = (1 << ASpace->WaveBits) - 1;
+ int32 xo, yo;
+ int32 area_w, area_h;
+
+ xo = 0;
+ yo = base_y;
+
+ area_w = 2 + wf_size * 2 + 2;
+ area_h = 2 + (pcm_max + 1) + 2;
+
+ xo += (hcenterw - area_w) / 2;
+
+ MDFN_DrawRect(surface, xo, yo, area_w, area_h, surface->MakeColor(0xA0,0xA0,0xA0,0xFF));
+ MDFN_DrawFillRect(surface, xo + 1, yo + 1, area_w - 2, area_h - 2, surface->MakeColor(0x30,0x30,0x30,0xFF), surface->MakeColor(0,0,0,0xFF));
+ xo += 2;
+ yo += 2;
+
+ //
+ //
+ //
+ uint32* pixels = surface->pixels + xo + (yo * surface->pitchinpix);
+ ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), 0, wf_size, waveform);
+
+ for(int i = 0; MDFN_LIKELY(i < wf_size); i++)
+ {
+  int32 delta;
+  int32 current;
+  int32 previous;
+
+  current = waveform[i];
+  previous = waveform[(i + wf_size - 1) % wf_size];
+
+  delta = current - previous;
+
+  for(int y = previous; y != current; y += delta / abs(delta))
+   pixels[i * 2 + 0 + ((pcm_max - y)) * surface->pitchinpix] = sample_color;
+
+  pixels[i * 2 + 0 + ((pcm_max - current)) * surface->pitchinpix] = sample_color;
+  pixels[i * 2 + 1 + ((pcm_max - current)) * surface->pitchinpix] = sample_color;
+ }
+
+ return base_y + area_h;
+}
+
+INLINE void MemDebugger::DrawAtCursorInfo(MDFN_Surface* surface, const int32 base_y, const uint32 hcenterw)
+{
+ static const int32 line_spacing = 12;
+ static const unsigned fontid = MDFN_FONT_6x12;
+ char cpstr[64];
+ uint8 zebytes[4];
+ uint32 tmpval;
+ uint32 cpplen;
+ uint32 cplen;
+ int32 x = 0;
+ int32 y = base_y;
+ const uint64 asz = SizeCache[CurASpace];
+ const int curpos_fw = (std::max<int>(12, 63 - MDFN_lzcount64(round_up_pow2(asz))) + 3) / 4;
+ const uint32 curpos = ASpacePos[CurASpace] % asz;
+
+ ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), curpos, 4, zebytes);
+
+ x += 8;
+ y += 5;
+ trio_snprintf(cpstr, sizeof(cpstr), "<0x%0*X / 0x%llX>", curpos_fw, curpos, (unsigned long long)asz);
+ cpplen = DrawText(surface, x, y, "Position: ", surface->MakeColor(0xa0, 0xa0, 0xFF, 0xFF), fontid);
+ cplen = DrawText(surface, x + cpplen, y, cpstr, surface->MakeColor(0xFF, 0xFF, 0xFF, 0xFF), fontid);
+
+ //
+ //
+ //
+ if(GoGoPowerDD[CurASpace])
+ {
+  char ggddstr[64];
+
+  trio_snprintf(ggddstr, sizeof(ggddstr), "(0x%0*X+0x%0*X)", curpos_fw, (unsigned)GoGoPowerDD[CurASpace], curpos_fw, (unsigned)(curpos - GoGoPowerDD[CurASpace]));
+  DrawText(surface, x + cpplen + cplen + 8, y, ggddstr, surface->MakeColor(0xFF, 0x80, 0x80, 0xFF), fontid);
+ }
+ x += 8;
+ y += line_spacing;
+
+ tmpval = zebytes[0];
+ trio_snprintf(cpstr, sizeof(cpstr), "      0x%02x(%10u, %11d)", tmpval, (uint8)tmpval, (int8)tmpval);
+ cpplen = DrawText(surface, x, y, "   1-byte: ", surface->MakeColor(0xA0, 0xA0, 0xFF, 0xFF), fontid);
+ DrawText(surface, x + cpplen, y, cpstr, surface->MakeColor(0xEF, 0xEF, 0xEF, 0xFF), fontid);
+ y += line_spacing;
+
+ tmpval = zebytes[0] | (zebytes[1] << 8);
+ trio_snprintf(cpstr, sizeof(cpstr), "    0x%04x(%10u, %11d)", tmpval, (uint16)tmpval, (int16)tmpval);
+ cpplen = DrawText(surface, x, y, "LE 2-byte: ", surface->MakeColor(0xA0, 0xA0, 0xFF, 0xFF), fontid);
+ DrawText(surface, x + cpplen, y, cpstr, surface->MakeColor(0xEF, 0xEF, 0xEF, 0xFF), fontid);
+ y += line_spacing;
+
+ tmpval = zebytes[0] | (zebytes[1] << 8) | (zebytes[2] << 16) | (zebytes[3] << 24);
+ trio_snprintf(cpstr, sizeof(cpstr), "0x%08x(%10u, %11d)", tmpval, (uint32)tmpval, (int32)tmpval);
+ cpplen = DrawText(surface, x, y, "LE 4-byte: ", surface->MakeColor(0xA0, 0xA0, 0xFF, 0xFF), fontid);
+ DrawText(surface, x + cpplen, y, cpstr, surface->MakeColor(0xEF, 0xEF, 0xEF, 0xFF), fontid);
+ y += line_spacing;
+
+ tmpval = zebytes[1] | (zebytes[0] << 8);
+ trio_snprintf(cpstr, sizeof(cpstr), "    0x%04x(%10u, %11d)", tmpval, (uint16)tmpval, (int16)tmpval);
+ cpplen = DrawText(surface, x, y, "BE 2-byte: ", surface->MakeColor(0xA0, 0xA0, 0xFF, 0xFF), fontid);
+ DrawText(surface, x + cpplen, y, cpstr, surface->MakeColor(0xEF, 0xEF, 0xEF, 0xFF), fontid);
+ y += line_spacing;
+
+ tmpval = zebytes[3] | (zebytes[2] << 8) | (zebytes[1] << 16) | (zebytes[0] << 24);
+ trio_snprintf(cpstr, sizeof(cpstr), "0x%08x(%10u, %11d)", tmpval, (uint32)tmpval, (int32)tmpval);
+ cpplen = DrawText(surface, x, y, "BE 4-byte: ", surface->MakeColor(0xA0, 0xA0, 0xFF, 0xFF), fontid);
+ DrawText(surface, x + cpplen, y, cpstr, surface->MakeColor(0xEF, 0xEF, 0xEF, 0xFF), fontid);
+ y += line_spacing;
+
+ trio_snprintf(cpstr, sizeof(cpstr), "%s text: ", GameCode.c_str());
+ cpplen = DrawText(surface, x, y, cpstr, surface->MakeColor(0xA0, 0xA0, 0xFF, 0xFF), fontid);
+ {
+  char rawbuf[64];
+  char textbuf[256];
+
+  ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), curpos, 64, (uint8*)rawbuf);
+
+  size_t ibl, obl, obl_start;
+  char *inbuf, *outbuf;
+  ibl = 64;
+  obl_start = obl = 255; // Hehe, ugly maximum estimation!
+  inbuf = rawbuf;
+  outbuf = textbuf;
+
+  iconv(ict_to_utf8, (ICONV_CONST char **)&inbuf, &ibl, &outbuf, &obl);
+  textbuf[obl_start - obl] = 0;
+
+  DrawText(surface, x + cpplen, y - 2, textbuf, surface->MakeColor(0xEF, 0xEF, 0xEF, 0xFF), MDFN_FONT_9x18_18x18);
+ }
+}
+
+static const unsigned addr_font = MDFN_FONT_6x12; //5x7;
+static const int32 addr_left_padding = 1;
+static const int32 addr_right_padding = 3;
+
+static const int32 byte_vspacing = 12;
+
+static const unsigned byte_hex_font = MDFN_FONT_6x12;
+static const int32 byte_hex_font_width = 6;
+static const int32 byte_hex_spacing = 3 + (byte_hex_font_width * 2);
+static const int32 byte_hex_group_pad = 4; //3;
+static const int32 byte_hex_right_padding = 1;
+
+static const unsigned byte_char_font = MDFN_FONT_5x7;
+static const int32 byte_char_y_adjust = (byte_vspacing - 4) / 2;
+static const int32 byte_char_font_width = 5;
+static const int32 byte_char_spacing = byte_char_font_width;
+
+static const int32 byte_bpr = 16;	// Bytes per row.
+static const int32 byte_minrows = 4;
+static const int32 byte_maxrows = 16;
+
 
 // Call this function from the game thread
 void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *screen_rect)
 {
- if(!IsActive) return;
+ if(!IsActive)
+  return;
 
  const MDFN_PixelFormat pf_cache = surface->format;
- uint32 *pixels = surface->pixels;
- uint32 pitch32 = surface->pitchinpix;
+ int32 text_y = 0;
  const uint64 zemod = SizeCache[CurASpace];
 
- 
+ DrawText(surface, 0, text_y, ASpace->long_name, pf_cache.MakeColor(0x20, 0xFF, 0x20, 0xFF), MDFN_FONT_6x12, rect->w);
+ text_y += 12;
 
- DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, ASpace->long_name.c_str(), MK_COLOR_A(0x20, 0xFF, 0x20, 0xFF), 1, 1);
- pixels += 10 * pitch32;
+ if(ASpace->IsWave && SizeCache[CurASpace] <= 128 && ASpace->WaveBits <= 6)
+ {
+  text_y += 4;
+  text_y += DrawWaveform(surface, text_y, rect->w);
+ }
 
  uint32 A;
  uint32 Ameow; // A meow for a cat
 
- if(ASpacePos[CurASpace] < 128)
-  A = (SizeCache[CurASpace] - 128 + ASpacePos[CurASpace]) % SizeCache[CurASpace];
+ if(ASpacePos[CurASpace] < (byte_bpr * byte_maxrows / 2))
+  A = (SizeCache[CurASpace] - (byte_bpr * byte_maxrows / 2) + ASpacePos[CurASpace]) % SizeCache[CurASpace];
  else
-  A = ASpacePos[CurASpace] - 128;
+  A = ASpacePos[CurASpace] - (byte_bpr * byte_maxrows / 2);
 
- Ameow = A &~ 0xF;
+ Ameow = A - (A % byte_bpr);
 
- int numrows = zemod / 16;
+ int numrows = zemod / byte_bpr;
 
- if(numrows > 16)
-  numrows = 16;
- else if(numrows < 4)
-  numrows = 4;
+ if(numrows > byte_maxrows)
+  numrows = byte_maxrows;
+ else if(numrows < byte_minrows)
+  numrows = byte_minrows;
 
  for(int y = 0; y < numrows; y++)
  {
-  uint8 byte_buffer[16];
+  uint8 byte_buffer[byte_bpr];
   char abuf[32];
 
   Ameow %= zemod;
 
-  ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), Ameow, 16, byte_buffer);
+  ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), Ameow, byte_bpr, byte_buffer);
 
-  if(zemod <= (1 << 16))
-   trio_snprintf(abuf, 32, "%04X:", Ameow);
-  else if(zemod <= (1 << 24))
-   trio_snprintf(abuf, 32, "%06X:", Ameow);
-  else
-   trio_snprintf(abuf, 32, "%08X:", Ameow);
+  trio_snprintf(abuf, 32, "%0*X:", (std::max<int>(12, 63 - MDFN_lzcount64(round_up_pow2(zemod))) + 3) / 4, Ameow);
 
-  uint32 alen;
-  uint32 addr_color = MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF);
+  uint32 alen = addr_left_padding;
+  uint32 addr_color = pf_cache.MakeColor(0xA0, 0xA0, 0xFF, 0xFF);
 
   if(Ameow == (ASpacePos[CurASpace] & ~0xF))
-   addr_color = MK_COLOR_A(0x80, 0xB0, 0xFF, 0xFF);
+   addr_color = pf_cache.MakeColor(0xB0, 0xC0, 0xFF, 0xFF);
 
-  alen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, abuf, addr_color, 0, 1);
-  alen += 3;
+  alen += DrawText(surface, alen, text_y, abuf, addr_color, addr_font);
+  alen += addr_right_padding;
 
-  for(int x = 0; x < 16; x++)
+  for(int x = 0; x < byte_bpr; x++)
   {
-   uint32 bcolor = MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF);
-   uint32 acolor = MK_COLOR_A(0xA0, 0xA0, 0xA0, 0xFF);
+   uint32 bcolor = pf_cache.MakeColor(0xEF, 0xEF, 0xEF, 0xEF);
+   uint32 acolor = pf_cache.MakeColor(0xA0, 0xB0, 0xA0, 0xFF);
 
    char quickbuf[16];
    uint32 test_match_pos;
@@ -528,177 +688,49 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
    if(Ameow == test_match_pos)
    {
     if(InEditMode)
+    {
      if(SDL_GetTicks() & 0x80)
      {
       int pix_offset = alen;
 
       if(InTextArea)
-       pix_offset += 16 * 12 + x * 5;
+      {
+       pix_offset += byte_bpr * byte_hex_spacing + byte_hex_right_padding + x * byte_char_spacing + ((byte_bpr - 1) / 4) * byte_hex_group_pad;
+       DrawText(surface, pix_offset, text_y + byte_char_y_adjust, "▉", pf_cache.MakeColor(0xFF, 0xFF, 0xFF, 0xFF), byte_char_font); 
+      }
       else
-       pix_offset += (LowNib ? 5 : 0) + x * 12;
+      {
+       pix_offset += (LowNib ? byte_hex_font_width : 0) + x * byte_hex_spacing + (x / 4) * byte_hex_group_pad;
+       DrawText(surface, pix_offset, text_y, "▉", pf_cache.MakeColor(0xFF, 0xFF, 0xFF, 0xFF), byte_hex_font);
+      }
 
-      DrawTextTrans(pixels + pix_offset, surface->pitchinpix << 2, rect->w, "▉", MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
      }
+    }
+
     if(InTextArea)
     {
-     acolor = MK_COLOR_A(0xFF, 0x00, 0x00, 0xFF);
-     bcolor = MK_COLOR_A(0xFF, 0x80, 0x80, 0xFF);
+     acolor = pf_cache.MakeColor(0xFF, 0x00, 0x00, 0xFF);
+     bcolor = pf_cache.MakeColor(0xFF, 0x80, 0x80, 0xFF);
     }
     else
     {
-     acolor = MK_COLOR_A(0xFF, 0x80, 0x80, 0xFF);
-     bcolor = MK_COLOR_A(0xFF, 0x00, 0x00, 0xFF);
+     acolor = pf_cache.MakeColor(0xFF, 0x80, 0x80, 0xFF);
+     bcolor = pf_cache.MakeColor(0xFF, 0x00, 0x00, 0xFF);
     }
    }
 
    // hex display
-   DrawTextTrans(pixels + alen + x * 12, surface->pitchinpix << 2, rect->w, quickbuf, bcolor, 0, 1);
+   DrawText(surface, alen + x * byte_hex_spacing + ((x / 4) * byte_hex_group_pad), text_y, quickbuf, bcolor, byte_hex_font);
 
    // ASCII display
-   DrawTextTrans(pixels + alen + 16 * 12 + x * 5, surface->pitchinpix << 2, rect->w, ascii_str, acolor, 0, 1);
+   DrawText(surface, alen + byte_bpr * byte_hex_spacing + byte_hex_right_padding + x * byte_char_spacing + ((byte_bpr - 1) / 4) * byte_hex_group_pad, text_y + byte_char_y_adjust, ascii_str, acolor, byte_char_font);
    Ameow++;
   }
-  pixels += 9 * pitch32;
+  text_y += byte_vspacing;
  }
 
- {
-  char cpstr[32];
-  uint32 curpos = ASpacePos[CurASpace];
-  uint8 zebytes[4];
-  uint32 tmpval;
-
-  curpos %= zemod;
-
-  ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), curpos, 4, zebytes);
-
-  pixels += 8 + 5 * pitch32;
-
-  if(zemod <= (1 << 16))
-   trio_snprintf(cpstr, 32, "%04X", curpos);
-  else if(zemod <= (1 << 24))
-   trio_snprintf(cpstr, 32, "%06X", curpos);
-  else
-   trio_snprintf(cpstr, 32, "%08X", curpos);
-
-  uint32 cpplen;
-  uint32 cplen;
-
-  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, "Cursor position: ", MK_COLOR_A(0xa0, 0xa0, 0xFF, 0xFF), 0, 1);
-  cplen = DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
-  if(GoGoPowerDD[CurASpace])
-  {
-   char ggddstr[32];
-
-   if(zemod <= (1 << 16))
-    trio_snprintf(ggddstr, 32, "%04llX", (unsigned long long)(curpos - GoGoPowerDD[CurASpace]));
-   else if(zemod <= (1 << 24))
-    trio_snprintf(ggddstr, 32, "%06llX", (unsigned long long)(curpos - GoGoPowerDD[CurASpace]));
-   else
-    trio_snprintf(ggddstr, 32, "%08llX", (unsigned long long)(curpos - GoGoPowerDD[CurASpace]));
-
-   DrawTextTrans(pixels + cpplen + cplen + 8, surface->pitchinpix << 2, rect->w, ggddstr, MK_COLOR_A(0xFF, 0x80, 0x80, 0xFF), 0, 1);
-  }
-  pixels += 5 + 10 * pitch32;
-
-  tmpval = zebytes[0];
-  trio_snprintf(cpstr, 32, "%02x(%u, %d)", tmpval, (uint8)tmpval, (int8)tmpval);
-  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, "1-byte value: ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
-  DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
-
-  pixels += 10 * pitch32;
-
-
-  if(ASpace->IsWave && SizeCache[CurASpace] <= 128 && ASpace->WaveBits <= 6)
-  {
-   const int32 wf_size = SizeCache[CurASpace];
-   uint8 waveform[wf_size];
-   const int32 pcm_max = (1 << ASpace->WaveBits) - 1;
-
-   DrawTextTrans(pixels - 5, surface->pitchinpix << 2, rect->w, "Full waveform:", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
-   pixels += 9 * pitch32;
-
-   // BLECK, FIXME to not be so crazy.
-   {
-    uint32 tx, ty;
-
-    tx = (pixels - surface->pixels) % surface->pitchinpix;
-    ty = (pixels - surface->pixels) / surface->pitchinpix;
-
-    MDFN_DrawFillRect(surface, tx, ty, 2 + wf_size * 2 + 2, 2 + (pcm_max + 1) + 2, MK_COLOR_A(0xA0,0xA0,0xA0,0xFF), MK_COLOR_A(0,0,0,0xFF));
-   }
-
-   ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), 0, wf_size, waveform);
-
-   for(int i = 0; i < wf_size; i++)
-   {
-    int32 delta;
-    int32 current;
-    int32 previous;
-
-    current = waveform[i];
-    previous = waveform[(i + wf_size - 1) % wf_size];
-
-    delta = current - previous;
-
-    for(int y = previous; y != current; y += delta / abs(delta))
-     pixels[2 + i * 2 + 0 + (2 + (pcm_max - y)) * surface->pitchinpix] = MK_COLOR_A(0x00,0xA0,0x00,0xFF);
-
-    pixels[2 + i * 2 + 0 + (2 + (pcm_max - current)) * surface->pitchinpix] = MK_COLOR_A(0x00,0xA0,0x00,0xFF);
-    pixels[2 + i * 2 + 1 + (2 + (pcm_max - current)) * surface->pitchinpix] = MK_COLOR_A(0x00,0xA0,0x00,0xFF);
-   }
-  }
-  else
-  {
-  tmpval = zebytes[0] | (zebytes[1] << 8);
-  trio_snprintf(cpstr, 32, "%04x(%u, %d)", tmpval, (uint16)tmpval, (int16)tmpval);
-  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, "2-byte value(LSB): ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
-  DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
-
-  pixels += 10 * pitch32;
-  tmpval = zebytes[0] | (zebytes[1] << 8) | (zebytes[2] << 16) | (zebytes[3] << 24);
-  trio_snprintf(cpstr, 32, "%08x(%u, %d)", tmpval, (uint32)tmpval, (int32)tmpval);
-  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, "4-byte value(LSB): ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
-  DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
-
-  pixels += 10 * pitch32;
-  tmpval = zebytes[1] | (zebytes[0] << 8);
-  trio_snprintf(cpstr, 32, "%04x(%u, %d)", tmpval, (uint16)tmpval, (int16)tmpval);
-  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, "2-byte value(MSB): ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
-  DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
-
-  pixels += 10 * pitch32;
-  tmpval = zebytes[3] | (zebytes[2] << 8) | (zebytes[1] << 16) | (zebytes[0] << 24);
-  trio_snprintf(cpstr, 32, "%08x(%u, %d)", tmpval, (uint32)tmpval, (int32)tmpval);
-  cpplen = DrawTextTrans(pixels, surface->pitchinpix << 2, rect->w, "4-byte value(MSB): ", MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, 1);
-  DrawTextTrans(pixels + cpplen, surface->pitchinpix << 2, rect->w, cpstr , MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, 1);
-
-  trio_snprintf(cpstr, 32, "%s text: ", GameCode.c_str());
-  cpplen = DrawTextTrans(pixels + 10 * pitch32, surface->pitchinpix << 2, rect->w, cpstr, MK_COLOR_A(0xA0, 0xA0, 0xFF, 0xFF), 0, MDFN_FONT_5x7);
-
-  {
-   char rawbuf[64];
-   char textbuf[256];
-
-   ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), curpos, 64, (uint8*)rawbuf);
-
-   size_t ibl, obl, obl_start;
-   char *inbuf, *outbuf;
-   ibl = 64;
-   obl_start = obl = 255; // Hehe, ugly maximum estimation!
-   inbuf = rawbuf;
-   outbuf = textbuf;
-
-   iconv(ict_to_utf8, (ICONV_CONST char **)&inbuf, &ibl, &outbuf, &obl);
-   textbuf[obl_start - obl] = 0;
-
-   DrawTextTrans(pixels + 8 * pitch32 + cpplen, surface->pitchinpix << 2, rect->w - cpplen - 13, textbuf, MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, MDFN_FONT_9x18_18x18);
-  }
-
- }
-
- }
+ DrawAtCursorInfo(surface, 10 + byte_maxrows * byte_vspacing, rect->w);
  
-
  if(InPrompt)
   myprompt->Draw(surface, rect);
  else if(myprompt)
@@ -716,7 +748,8 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
   }
   else
   {
-   DrawTextTrans((uint32*)surface->pixels + (rect->h - 7) * pitch32, surface->pitchinpix << 2, rect->w, error_string, MK_COLOR_A(0xFF, 0x00, 0x00, 0xFF), 1, 1);
+   MDFN_DrawFillRect(surface, 0, (rect->h - 13 - 2), rect->w, 13 + 2, pf_cache.MakeColor(0xFF, 0xFF, 0xFF, 0xFF), pf_cache.MakeColor(0, 0, 0, 0xFF));
+   DrawText(surface, 0, (rect->h - 13 - 1), error_string, pf_cache.MakeColor(0xFF, 0x00, 0x00, 0xFF), MDFN_FONT_6x13_12x13, rect->w);
   }
  }
 }
@@ -735,73 +768,6 @@ void MemDebugger::ChangePos(int64 delta)
  ASpacePos[CurASpace] = newpos;
 
  LowNib = FALSE;
-}
-
-void MemDebugger::DoCrazy(void)
-{
- uint32 start = ASpacePos[CurASpace];
- uint32 A = ASpacePos[CurASpace];
-
- for(;;)
- {
-  uint8 zebyte;
-
-  ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), A, 1, &zebyte);
-
-  // Simple control codes
-  if(zebyte < 0x20)
-  {
-   switch(zebyte)
-   {
-    default:    printf("UNKNOWN GAHGAHGAH:  %02x\n", zebyte); 
-		return;
-
-    case 0x00: goto GetOut; // Crazy escape
-    case 0x05: goto GetOut; // Pause+close text box
-
-    // Print numbers, 3 arguments
-    case 0x06: 
-    case 0x07:
-    case 0x08: A += 3; break;
-
-    // Transfer control, 4 arguments
-    case 0x12: A += 4; break;
-
-    case 0x0C: break; // Clear text box
-    case 0x0D: break; // New line
-    case 0x0F: goto GetOut; // Pause+close text box
-
-    case 0x10: break; // Prompt for button to continue
-    case 0x11: goto GetOut; // Binary selection magic
-    case 0x14: A += 1; break; // Set draw speed, 1 argument
-    case 0x17: A += 1; break; // Delay, 1 argument
-   }
-  }
-  else if(zebyte <= 0x7F) // ASCII
-  {
-
-  }
-  else if(zebyte < 0xEB) // 2-byte SJIS
-  {
-   A += 1;
-  }
-  else
-  {
-   printf("UNKNOWN GAHGAHGAH:  %02x\n", zebyte);
-   return;
-  }
-  A++;
- }
-
- GetOut:
-
- ASpacePos[CurASpace] = A;
- printf("%08x\n", A);
- FILE *fp = fopen("markers.txt", "ab");
- fprintf(fp, "%08x %08x\n", start, ASpacePos[CurASpace]);
- fclose(fp);
-
- 
 }
 
 // Call this from the game thread
@@ -883,6 +849,27 @@ int MemDebugger::Event(const SDL_Event *event)
          case SDLK_EQUALS: Debugger_GT_ModOpacity(8);
                            break;
 
+	 case SDLK_BACKSPACE:
+		if(InEditMode && !InTextArea)
+		{
+	         LowNib = !LowNib;
+        	 if(LowNib)
+		 {
+		  ChangePos(-1);
+		  LowNib = true;
+		 }
+		}
+		break;
+
+	 case SDLK_SPACE:
+		if(InEditMode && !InTextArea)
+		{
+	         LowNib = !LowNib;
+        	 if(!LowNib)
+		  ChangePos(1);
+		}
+		break;
+
 	 case SDLK_TAB:
 		InTextArea = !InTextArea;
 		LowNib = FALSE;
@@ -899,7 +886,7 @@ int MemDebugger::Event(const SDL_Event *event)
 	 case SDLK_s:
 	        if(SizeCache[CurASpace] > (1 << 24))
                 {
-                 error_string = trio_aprintf("Address space is too large to search!");
+                 error_string = trio_aprintf(_("Address space is too large to search!"));
                  error_time = SDL_GetTicks();
                 }
 		else
@@ -911,7 +898,7 @@ int MemDebugger::Event(const SDL_Event *event)
 	 case SDLK_r:
 		if(SizeCache[CurASpace] > (1 << 24))
                 {
-                 error_string = trio_aprintf("Address space is too large to search!");
+                 error_string = trio_aprintf(_("Address space is too large to search!"));
                  error_time = SDL_GetTicks();
                 }
                 else
@@ -929,7 +916,7 @@ int MemDebugger::Event(const SDL_Event *event)
          case SDLK_t:
                 if(ASpace->TotalBits > 24)
                 {
-                 error_string = trio_aprintf("Address space is too large to search!");
+                 error_string = trio_aprintf(_("Address space is too large to search!"));
                  error_time = SDL_GetTicks();
                 }
                 else
@@ -958,7 +945,7 @@ int MemDebugger::Event(const SDL_Event *event)
 		LowNib = FALSE;
 		break;
 
-	 case SDLK_END: ASpacePos[CurASpace] = (SizeCache[CurASpace] - 128) % SizeCache[CurASpace]; 
+	 case SDLK_END: ASpacePos[CurASpace] = (SizeCache[CurASpace] - (byte_bpr * byte_maxrows / 2)) % SizeCache[CurASpace]; 
 			LowNib = FALSE;
 			break;
 
@@ -967,10 +954,10 @@ int MemDebugger::Event(const SDL_Event *event)
 			 break;
 
 
-         case SDLK_PAGEUP: ChangePos(-16 * 16); break;
-	 case SDLK_PAGEDOWN: ChangePos(16 * 16); break;
-	 case SDLK_UP: ChangePos(-16); break;
-	 case SDLK_DOWN: ChangePos(16); break;
+         case SDLK_PAGEUP: ChangePos(-byte_bpr * byte_maxrows); break;
+	 case SDLK_PAGEDOWN: ChangePos(byte_bpr * byte_maxrows); break;
+	 case SDLK_UP: ChangePos(-byte_bpr); break;
+	 case SDLK_DOWN: ChangePos(byte_bpr); break;
 	 case SDLK_LEFT: ChangePos(-1); break;
 	 case SDLK_RIGHT: ChangePos(1); break;
 
@@ -990,9 +977,6 @@ int MemDebugger::Event(const SDL_Event *event)
 
 			LowNib = FALSE;
 			break;
-
-	 case SDLK_b: DoCrazy();
-		      break;
 	}
 	break;
  }

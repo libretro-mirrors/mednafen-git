@@ -20,8 +20,8 @@
 #include <trio/trio.h>
 #include <iconv.h>
 
-#include <mednafen/hw_cpu/huc6280/huc6280.h>
-#include <mednafen/hw_cpu/huc6280/dis6280.h>
+#include "huc6280.h"
+#include "dis6280.h"
 #include "debug.h"
 #include "vce.h"
 #include "huc.h"
@@ -34,11 +34,11 @@
 namespace MDFN_IEN_PCE
 {
 
-static HuC6280 *ShadowCPU = NULL;
-
+static HuC6280 ShadowCPU;
 
 extern VCE *vce;
 extern ArcadeCard *arcade_card;
+static uint32 vram_addr_mask;
 
 static PCE_PSG *psg = NULL;
 
@@ -237,13 +237,13 @@ uint32 PCEDBG_MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical)
   {
    A &= 0xFFFF;
 
-   ret |= HuCPU->PeekLogical(A) << (i * 8);
+   ret |= HuCPU.PeekLogical(A) << (i * 8);
   }
   else
   {
    A &= (1 << 21) - 1;
 
-   ret |= HuCPU->PeekPhysical(A) << (i * 8);
+   ret |= HuCPU.PeekPhysical(A) << (i * 8);
   }
 
   A++;
@@ -261,11 +261,11 @@ void PCEDBG_IRQ(int level)
 
  }
  else if(level == 1)
-  HuCPU->IRQBegin(HuC6280::IQIRQ1);
+  HuCPU.IRQBegin(HuC6280::IQIRQ1);
  else if(level == 2)
-  HuCPU->IRQBegin(HuC6280::IQIRQ2);
+  HuCPU.IRQBegin(HuC6280::IQIRQ2);
  else if(level == 3)
-  HuCPU->IRQBegin(HuC6280::IQTIMER);
+  HuCPU.IRQBegin(HuC6280::IQTIMER);
 }
 
 class DisPCE : public Dis6280
@@ -278,12 +278,12 @@ class DisPCE : public Dis6280
 
 	uint8 GetX(void)
 	{
-	 return(HuCPU->GetRegister(HuC6280::GSREG_X));
+	 return(HuCPU.GetRegister(HuC6280::GSREG_X));
 	}
 
 	uint8 GetY(void)
 	{
-	 return(HuCPU->GetRegister(HuC6280::GSREG_Y));
+	 return(HuCPU.GetRegister(HuC6280::GSREG_Y));
 	}
 
 	uint8 Read(uint16 A)
@@ -292,7 +292,7 @@ class DisPCE : public Dis6280
 
 	 PCE_InDebug++;
 
-	 ret = HuCPU->PeekLogical(A);
+	 ret = HuCPU.PeekLogical(A);
 
 	 PCE_InDebug--;
 
@@ -315,14 +315,14 @@ void PCEDBG_Disassemble(uint32 &a, uint32 SpecialA, char *TextBuf)
 static void TestRWBP(void) NO_INLINE;
 static void TestRWBP(void)
 {
- ShadowCPU->LoadShadow(*HuCPU);
+ ShadowCPU.LoadShadow(HuCPU);
 
  vce->ResetSimulateVDC();
 
- ShadowCPU->Run(TRUE);
+ ShadowCPU.Run(TRUE);
 
- //printf("%d, %02x\n",ShadowCPU->IRQlow);
- //assert(!ShadowCPU->IRQlow);
+ //printf("%d, %02x\n",ShadowCPU.IRQlow);
+ //assert(!ShadowCPU.IRQlow);
 }
 
 static bool MachineStateChanged = false;
@@ -338,7 +338,7 @@ static bool CPUHandler(uint32 PC)
 
  PCE_InDebug++;
 
- FoundBPoint = TestPCBP(PC) | TestOpBP(HuCPU->PeekLogical(PC));
+ FoundBPoint = TestPCBP(PC) | TestOpBP(HuCPU.PeekLogical(PC));
 
  if(NeedExecSimu)
   TestRWBP();
@@ -346,7 +346,7 @@ static bool CPUHandler(uint32 PC)
  CPUCBContinuous |= FoundBPoint;
  if(CPUCBContinuous && CPUCB)
  {
-  vce->Update(HuCPU->Timestamp());
+  vce->Update(HuCPU.Timestamp());
   CPUCB(PC, FoundBPoint);
  }
 
@@ -354,7 +354,7 @@ static bool CPUHandler(uint32 PC)
  {
   uint16 sjis_glyph;
 
-  sjis_glyph = HuCPU->PeekLogical(0x20F8) | (HuCPU->PeekLogical(0x20F9) << 8);
+  sjis_glyph = HuCPU.PeekLogical(0x20F8) | (HuCPU.PeekLogical(0x20F9) << 8);
   PCEDBG_DoLog("BIOS", "Call EX_GETFNT from $%04X, ax=0x%04x = %s", LastPC, sjis_glyph, PCEDBG_ShiftJIS_to_UTF8(sjis_glyph));
  }
  LastPC = PC;
@@ -388,7 +388,7 @@ static DECLFR(ReadHandler)
 
  for(bpit = BreakPointsRead.begin(); bpit != BreakPointsRead.end(); bpit++)
  {
-  unsigned int testA = bpit->logical ? ShadowCPU->GetLastLogicalReadAddr() : A;
+  unsigned int testA = bpit->logical ? ShadowCPU.GetLastLogicalReadAddr() : A;
 
   if(testA >= bpit->A[0] && testA <= bpit->A[1])
   {
@@ -397,7 +397,7 @@ static DECLFR(ReadHandler)
   }
  }
 
- return(HuCPU->PeekPhysical(A));
+ return(HuCPU.PeekPhysical(A));
 }
 
 static DECLFW(WriteHandler)
@@ -431,7 +431,7 @@ static DECLFW(WriteHandler)
   {
    if(A & 0x80000000) continue;		// Ignore ST0/ST1/ST2 writes, which always use hardcoded physical addresses.
 
-   testA = ShadowCPU->GetLastLogicalWriteAddr();
+   testA = ShadowCPU.GetLastLogicalWriteAddr();
   }
 
   if(testA >= bpit->A[0] && testA <= bpit->A[1])
@@ -452,9 +452,9 @@ static void RedoDH(void)
 		BreakPointsAux0Read.size() || BreakPointsAux0Write.size();
 
  if(BPointsUsed || CPUCB || PCE_LoggingOn)
-  HuCPU->SetCPUHook(CPUHandler, BTEnabled ? AddBranchTrace : NULL);
+  HuCPU.SetCPUHook(CPUHandler, BTEnabled ? AddBranchTrace : NULL);
  else
-  HuCPU->SetCPUHook(NULL, BTEnabled ? AddBranchTrace : NULL);
+  HuCPU.SetCPUHook(NULL, BTEnabled ? AddBranchTrace : NULL);
 }
 
 void PCEDBG_AddBreakPoint(int type, unsigned int A1, unsigned int A2, bool logical)
@@ -612,14 +612,14 @@ static uint32 GetRegister_HuC6280(const unsigned int id, char *special, const ui
 {
  if(id == HuC6280::GSREG_STAMP)
  {
-  return(PCE_TimestampBase + HuCPU->GetRegister(id, special, special_len));
+  return(PCE_TimestampBase + HuCPU.GetRegister(id, special, special_len));
  }
- return(HuCPU->GetRegister(id, special, special_len));
+ return(HuCPU.GetRegister(id, special, special_len));
 }
 
 static void SetRegister_HuC6280(const unsigned int id, uint32 value)
 {
- HuCPU->SetRegister(id, value);
+ HuCPU.SetRegister(id, value);
 }
 
 static uint32 GetRegister_PSG(const unsigned int id, char *special, const uint32 special_len)
@@ -895,7 +895,7 @@ static void Do16BitGet(const char *name, uint32 Address, uint32 Length, uint8 *B
   else if(wc & 2) 
    data = vce->PeekVDCSAT(wc & 1, (Address >> 1) & 0xFF);
   else
-   data = vce->PeekVDCVRAM(wc & 1, (Address >> 1) & 0x7FFF);
+   data = vce->PeekVDCVRAM(wc & 1, (Address >> 1) & vram_addr_mask);
 
   if((Address & 1) || Length == 1)
   {
@@ -943,7 +943,7 @@ static void Do16BitPut(const char *name, uint32 Address, uint32 Length, uint32 G
    else if(wc & 2)
     data = vce->PeekVDCSAT(wc & 1, (Address >> 1) & 0xFF);
    else
-    data = vce->PeekVDCVRAM(wc & 1, (Address >> 1) & 0x7FFF);
+    data = vce->PeekVDCVRAM(wc & 1, (Address >> 1) & vram_addr_mask);
 
    data &= ~(0xFF << ((Address & 1) << 3));
    data |= *Buffer << ((Address & 1) << 3);
@@ -961,7 +961,7 @@ static void Do16BitPut(const char *name, uint32 Address, uint32 Length, uint32 G
   else if(wc & 2)
    vce->PokeVDCSAT(wc & 1, (Address >> 1) & 0xFF, data);
   else
-   vce->PokeVDCVRAM(wc & 1, (Address >> 1) & 0x7FFF, data);
+   vce->PokeVDCVRAM(wc & 1, (Address >> 1) & vram_addr_mask, data);
 
   Buffer += inc_amount;
   Address += inc_amount;
@@ -980,7 +980,7 @@ static void GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
   {
    Address &= 0xFFFF;
 
-   *Buffer = HuCPU->PeekLogical(Address);
+   *Buffer = HuCPU.PeekLogical(Address);
 
    Address++;
    Buffer++;
@@ -992,7 +992,7 @@ static void GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
   {
    Address &= 0x1FFFFF;
 
-   *Buffer = HuCPU->PeekPhysical(Address);
+   *Buffer = HuCPU.PeekPhysical(Address);
 
    Address++;
    Buffer++;
@@ -1039,7 +1039,7 @@ static void PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
   {
    Address &= 0xFFFF;
 
-   HuCPU->PokeLogical(Address, *Buffer, hl);
+   HuCPU.PokeLogical(Address, *Buffer, hl);
 
    Address++;
    Buffer++;
@@ -1051,7 +1051,7 @@ static void PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
   {
    Address &= 0x1FFFFF;
 
-   HuCPU->PokePhysical(Address, *Buffer, hl);
+   HuCPU.PokePhysical(Address, *Buffer, hl);
 
    Address++;
    Buffer++;
@@ -1120,11 +1120,7 @@ DebuggerInfoStruct PCEDBGInfo =
 
 static void Cleanup(void)
 {
- if(ShadowCPU != NULL)
- {
-  delete ShadowCPU;
-  ShadowCPU = NULL;
- }
+
 }
 
 void PCEDBG_Kill(void)
@@ -1132,7 +1128,7 @@ void PCEDBG_Kill(void)
  Cleanup();
 }
 
-void PCEDBG_Init(bool sgx, PCE_PSG *new_psg)
+void PCEDBG_Init(bool sgx, PCE_PSG *new_psg, const uint32 vram_size)
 {
  try
  {
@@ -1146,17 +1142,17 @@ void PCEDBG_Init(bool sgx, PCE_PSG *new_psg)
   memset(BreakPointsOp, 0, sizeof(BreakPointsOp));
   memset(BreakPointsPC, 0, sizeof(BreakPointsPC));
 
-  ShadowCPU = new HuC6280();
+  ShadowCPU.Init(false);
 
   for(int x = 0; x < 0x100; x++)
   {
-   ShadowCPU->SetFastRead(x, NULL);
+   ShadowCPU.SetFastRead(x, NULL);
 
-   ShadowCPU->SetReadHandler(x, ReadHandler);
-   ShadowCPU->SetWriteHandler(x, WriteHandler);
+   ShadowCPU.SetReadHandler(x, ReadHandler);
+   ShadowCPU.SetWriteHandler(x, WriteHandler);
   }
 
-  ShadowCPU->Power();
+  ShadowCPU.Power();
 
   psg = new_psg;
 
@@ -1174,16 +1170,17 @@ void PCEDBG_Init(bool sgx, PCE_PSG *new_psg)
 
   ASpace_Add(Do16BitGet, Do16BitPut, "pram", "VCE Palette RAM", 10);
 
+  vram_addr_mask = (vram_size - 1);
   if(IsSGX)
   {
-   ASpace_Add(Do16BitGet, Do16BitPut, "vram0", "VDC-A VRAM", 15 + 1);
+   ASpace_Add(Do16BitGet, Do16BitPut, "vram0", "VDC-A VRAM", uilog2(vram_size) + 1);
    ASpace_Add(Do16BitGet, Do16BitPut, "sat0", "VDC-A SAT", 8 + 1);
-   ASpace_Add(Do16BitGet, Do16BitPut, "vram1", "VDC-B VRAM", 15 + 1);
+   ASpace_Add(Do16BitGet, Do16BitPut, "vram1", "VDC-B VRAM", uilog2(vram_size) + 1);
    ASpace_Add(Do16BitGet, Do16BitPut, "sat1", "VDC-B SAT", 8 + 1);
   }
   else
   {
-   ASpace_Add(Do16BitGet, Do16BitPut, "vram0", "VDC VRAM", 15 + 1);
+   ASpace_Add(Do16BitGet, Do16BitPut, "vram0", "VDC VRAM", uilog2(vram_size) + 1);
    ASpace_Add(Do16BitGet, Do16BitPut, "sat0", "VDC SAT", 8 + 1);
   }
 

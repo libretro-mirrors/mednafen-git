@@ -15,9 +15,9 @@ namespace MDFN_IEN_NES
 typedef void (MDFN_FASTCALL *writefunc)(uint32 A, uint8 V);
 typedef uint8 (MDFN_FASTCALL *readfunc)(uint32 A);
 
-void ResetMapping(void);
-void ResetNES(void);
-void PowerNES(void);
+void ResetMapping(void) MDFN_COLD;
+void ResetNES(void) MDFN_COLD;
+void PowerNES(void) MDFN_COLD;
 
 extern uint64 timestampbase;
 extern uint32 MMC5HackVROMMask;

@@ -3,10 +3,11 @@
     Video Display Processor (VDP) emulation.
 */
 #include "shared.h"
-#include "hvc.inc"
 
 namespace MDFN_IEN_SMS
 {
+
+#include "hvc.inc"
 
 /* Mark a pattern as dirty */
 #define MARK_BG_DIRTY(addr)                                \

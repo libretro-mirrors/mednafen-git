@@ -45,7 +45,7 @@ static int SoundPAL;
 static uint32 wlookup1[32];
 static uint32 wlookup2[203];
 
-alignas(16) static int16 WaveHi[40000];
+alignas(16) static int16 WaveHi[40000 + NES_Resampler::MaxLeftover + NES_Resampler::MaxWaveOverRead];
 alignas(16) int16 WaveHiEx[40000];
 
 std::vector<EXPSOUND> GameExpSound;
@@ -783,8 +783,9 @@ int FlushEmulateSound(int reverse, int16 *SoundBuf, int32 MaxSoundFrames)
 static double phase = 0;
 static double phase_inc = 0.000;
 static double phase_inc_inc = 0.000000001;
+ff->SetVolume(1.0);
 
- *tmpo = 20000 * sin(phase);
+ *tmpo = 30000 * sin(phase);
  phase += phase_inc;
  phase_inc += phase_inc_inc;
 

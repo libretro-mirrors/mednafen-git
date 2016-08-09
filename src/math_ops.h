@@ -119,6 +119,25 @@ static INLINE unsigned MDFN_lzcount64(uint64 v)
  #endif
 }
 
+static INLINE unsigned MDFN_tzcount16(uint16 a)
+{
+ #if defined(__GNUC__) || defined(__clang__) || defined(__ICC) || defined(__INTEL_COMPILER)
+ if(!a)
+  return 16;
+
+ return __builtin_ctz(a);
+ #else
+ for(unsigned i = 0; i < 16; i++)
+ {
+  if(a & 1)
+   return i;
+
+  a >>= 1;
+ }
+ return 16;
+ #endif
+}
+
 
 // Source: http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
 // Rounds up to the nearest power of 2.

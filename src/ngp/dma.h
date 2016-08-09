@@ -39,6 +39,9 @@
 #define __NEOPOP_DMA__
 //=============================================================================
 
+namespace MDFN_IEN_NGP
+{
+
 void reset_dma(void);
 
 void DMA_update(int channel);
@@ -52,6 +55,8 @@ void dmaStoreW(uint8 cr, uint16 data);
 void dmaStoreL(uint8 cr, uint32 data);
 
 int MDFNNGPCDMA_StateAction(StateMem *sm, int load, int data_only);
+
+}
 
 //=============================================================================
 #endif

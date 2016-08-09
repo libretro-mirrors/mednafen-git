@@ -1,6 +1,7 @@
 /*
   libco
-  version: 0.15 (2009-10-12)
+  version: 0.17 (2015-06-18)
+  author: byuu
   license: public domain
 */
 
@@ -12,6 +13,13 @@
     #define thread_local __thread
   #else
     #define thread_local
+  #endif
+
+  #if defined(_MSC_VER)
+   /* Untested */
+   #define force_text_section __declspec(allocate(".text"))
+  #else
+   #define force_text_section __attribute__((section(".text")))
   #endif
 #endif
 

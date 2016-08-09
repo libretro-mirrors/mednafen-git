@@ -628,7 +628,7 @@ static void Cleanup(void)
 {
  if(wsSRAM)
  {
-  MDFN_free(wsSRAM);
+  delete[] wsSRAM;
   wsSRAM = NULL;
  }
 }
@@ -740,7 +740,7 @@ void WSwan_MemoryInit(bool lang, bool IsWSC, uint32 ssize, bool IsWW_arg)
 
   if(sram_size)
   {
-   wsSRAM = (uint8*)MDFN_malloc_T(sram_size, "SRAM");
+   wsSRAM = new uint8[sram_size];
    memset(wsSRAM, 0, sram_size);
   }
 

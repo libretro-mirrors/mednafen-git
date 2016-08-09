@@ -8,6 +8,9 @@
 
 #include <mednafen/sound/Blip_Buffer.h>
 
+namespace MDFN_IEN_NGP
+{
+
 struct T6W28_Osc
 {
 	Blip_Buffer* outputs [4]; // NULL, right, left, center
@@ -50,6 +53,8 @@ struct T6W28_Noise : T6W28_Osc
 	void reset();
 	void run( sms_time_t, sms_time_t );
 };
+
+}
 
 #endif
 

@@ -15,11 +15,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+// TODO: Before using this resampler for other systems, rework post-resampling code to handle overflow
+// properly(may happen with with input waveforms that use the full 16-bit range).
+
 /* This resampler has only been designed with NES CPU frequencies(NTSC and PAL) as the input rate, and output rates of
    22050-192000 in mind, up to 1024 coefficient multiply-accumulates per output sample.
-
-   An SSE2-utilizing MAC-loop is written, but is commented out as it is likely to perform significantly worse than the MMX
-   version on a large number of common x86 CPU architectures.
 */
 
 //
@@ -35,6 +35,10 @@
 
 #if defined(ARCH_POWERPC_ALTIVEC) && defined(HAVE_ALTIVEC_H)
  #include <altivec.h>
+#endif
+
+#ifdef __ARM_NEON__
+ #include <arm_neon.h>
 #endif
 
 #ifdef __FAST_MATH__
@@ -170,7 +174,6 @@ static INLINE void DoMAC(int16 *wave, int16 *coeffs, int32 count, int32 *accum_o
 #define X86_REGAT "l"
 #endif
 
-#if 0
 static INLINE void DoMAC_SSE2(int16 *wave, int16 *coeffs, int32 count, int32 *accum_output)
 {
  // Multiplies 32 coefficients at a time.
@@ -194,7 +197,7 @@ static INLINE void DoMAC_SSE2(int16 *wave, int16 *coeffs, int32 count, int32 *ac
 "pxor %%xmm7, %%xmm7\n\t"
 
 "movups  0(%%" X86_REGC "di), %%xmm0\n\t"
-"SSE_Loop:\n\t"
+"1:\n\t"
 
 "movups  16(%%" X86_REGC "di), %%xmm1\n\t"
 "pmaddwd  0(%%" X86_REGC "si), %%xmm0\n\t"
@@ -215,7 +218,7 @@ static INLINE void DoMAC_SSE2(int16 *wave, int16 *coeffs, int32 count, int32 *ac
 "add" X86_REGAT " $64, %%" X86_REGC "si\n\t"
 "add" X86_REGAT " $64, %%" X86_REGC "di\n\t"
 "subl $1, %%ecx\n\t"
-"jnz SSE_Loop\n\t"
+"jnz 1b\n\t"
 
 "paddd  %%xmm3, %%xmm7\n\t"	// For a loop optimization
 
@@ -256,7 +259,7 @@ static INLINE void DoMAC_SSE2(int16 *wave, int16 *coeffs, int32 count, int32 *ac
 "psrad $15, %%xmm7\n\t"
 "movss %%xmm7, (%%" X86_REGC "dx)\n\t"
  : "=D" (dummy), "=S" (dummy), "=c" (dummy)
- : "D" (wave), "S" (coeffs), "c" (count >> 5), "d" (accum_output)
+ : "D" (wave), "S" (coeffs), "c" ((count + 0x1F) >> 5), "d" (accum_output)
 #ifdef __SSE__
  : "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "cc", "memory"
 #else
@@ -264,7 +267,6 @@ static INLINE void DoMAC_SSE2(int16 *wave, int16 *coeffs, int32 count, int32 *ac
 #endif
 );
 }
-#endif
 
 static INLINE void DoMAC_MMX(int16 *wave, int16 *coeffs, int32 count, int32 *accum_output)
 {
@@ -291,7 +293,7 @@ static INLINE void DoMAC_MMX(int16 *wave, int16 *coeffs, int32 count, int32 *acc
 "pxor %%mm3, %%mm3\n\t"
 "pxor %%mm4, %%mm4\n\t"
 "pxor %%mm5, %%mm5\n\t"
-"MMX_Loop:\n\t"
+"1:\n\t"
 
 "movq (%%" X86_REGC "di), %%mm0\n\t"
 "pmaddwd (%%" X86_REGC "si), %%mm0\n\t"
@@ -317,7 +319,7 @@ static INLINE void DoMAC_MMX(int16 *wave, int16 *coeffs, int32 count, int32 *acc
 "add" X86_REGAT " $32, %%" X86_REGC "si\n\t"
 "add" X86_REGAT " $32, %%" X86_REGC "di\n\t"
 "subl $1, %%ecx\n\t"
-"jnz MMX_Loop\n\t"
+"jnz 1b\n\t"
 
 //
 #if FIR_TABLE_EXTRA_BITS != 0
@@ -417,11 +419,62 @@ static INLINE void DoMAC_AltiVec(int16 *wave, int16 *coeffs, int32 count, int32 
 }
 #endif
 
+#ifdef __ARM_NEON__
+static INLINE void DoMAC_NEON(int16* wave, const int16* coeffs, int32 count, int32* accum_output)
+{
+ register int32x4_t accum0, accum1, accum2, accum3;
+ register int16x4_t ctmp0, ctmp1, ctmp2, ctmp3;
+ register int16x4_t wtmp0, wtmp1, wtmp2, wtmp3;
+
+ //coeffs = MDFN_ASSUME_ALIGNED(coeffs, sizeof(ctmp0));
+
+ count = (count + 0xF) >> 4;
+
+ accum0 = accum1 = accum2 = accum3 = vdupq_n_s32(0);
+
+ wtmp0 = vld1_s16(wave);
+ wave += 4;
+ do
+ {
+  ctmp0 = vld1_s16(MDFN_ASSUME_ALIGNED(coeffs, sizeof(ctmp0)));
+  coeffs += 4;
+  wtmp1 = vld1_s16(wave);
+  wave += 4;
+  accum0 = vmlal_s16(accum0, ctmp0, wtmp0);
+
+  ctmp1 = vld1_s16(MDFN_ASSUME_ALIGNED(coeffs, sizeof(ctmp0)));
+  coeffs += 4;
+  wtmp2 = vld1_s16(wave);
+  wave += 4;
+  accum1 = vmlal_s16(accum1, ctmp1, wtmp1);
+
+  ctmp2 = vld1_s16(MDFN_ASSUME_ALIGNED(coeffs, sizeof(ctmp0)));
+  coeffs += 4;
+  wtmp3 = vld1_s16(wave);
+  wave += 4;
+  accum2 = vmlal_s16(accum2, ctmp2, wtmp2);
+
+  ctmp3 = vld1_s16(MDFN_ASSUME_ALIGNED(coeffs, sizeof(ctmp0)));
+  coeffs += 4;
+  wtmp0 = vld1_s16(wave);
+  wave += 4;
+  accum3 = vmlal_s16(accum3, ctmp3, wtmp3);
+ } while(MDFN_LIKELY(--count));
+
+ register int32x4_t tmp = vhaddq_s32(vhaddq_s32(accum0, accum1), vhaddq_s32(accum2, accum3));	// >> 2
+ register int32x2_t sum = vhadd_s32(vget_high_s32(tmp), vget_low_s32(tmp));			// >> 1
+ register int64x1_t sum64 = vpaddl_s32(sum);
+ register int32x2_t sumout = vreinterpret_s32_s64(vshr_n_s64(sum64, 16 + FIR_TABLE_EXTRA_BITS - 3));
+
+ vst1_lane_s32(accum_output, sumout, 0);
+}
+#endif
+
+
 /* Returns number of samples written to out. */
 /* leftover is set to the number of samples that need to be copied
    from the end of in to the beginning of in.
 */
-
 int32 NES_Resampler::Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, int32 *leftover)
 {
 	uint32 max;
@@ -448,8 +501,7 @@ int32 NES_Resampler::Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, i
 
 	}
         #ifdef ARCH_X86
-#if 0
-	else if((cpuext & CPUTEST_FLAG_SSE2) && !(cpuext & CPUTEST_FLAG_SSE2SLOW))
+	else if(SIMD_Type == SIMD_SSE2)
 	{
          while(InputIndex < max)
          {
@@ -466,8 +518,7 @@ int32 NES_Resampler::Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, i
           InputIndex += PhaseStep[InputPhase];
          }
 	}
-#endif
-        else if(cpuext & CPUTEST_FLAG_MMX)
+        else if(SIMD_Type == SIMD_MMX)
         {
  	 while(InputIndex < max)
          {
@@ -488,7 +539,7 @@ int32 NES_Resampler::Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, i
 	}
 	#endif
 	#ifdef ARCH_POWERPC_ALTIVEC
-        else if(cpuext & CPUTEST_FLAG_ALTIVEC)
+        else if(SIMD_Type == SIMD_ALTIVEC)
 	{
          while(InputIndex < max)
          {
@@ -498,6 +549,25 @@ int32 NES_Resampler::Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, i
           int32 coeff_count = FIR_CoCounts[align_index];
 
           DoMAC_AltiVec(wave, coeffs, coeff_count, I32Out);
+
+          I32Out++;
+          count++;
+
+          InputPhase = PhaseNext[InputPhase];
+          InputIndex += PhaseStep[InputPhase];
+         }
+	}
+	#endif
+	#ifdef __ARM_NEON__
+	else if(SIMD_Type == SIMD_NEON)
+	{
+         while(InputIndex < max)
+         {
+          int16* wave = &in[InputIndex];
+          int16* coeffs = &FIR_ENTRY(0, InputPhase, 0);
+          int32 coeff_count = FIR_CoCounts[0];
+
+          DoMAC_NEON(wave, coeffs, coeff_count, I32Out);
 
           I32Out++;
           count++;
@@ -564,26 +634,7 @@ int32 NES_Resampler::Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, i
 
 NES_Resampler::~NES_Resampler()
 {
- if(PhaseNext)
-  free(PhaseNext);
 
- if(PhaseStep)
-  free(PhaseStep);
-
- if(FIR_Coeffs_Real)
- {
-  for(unsigned int i = 0; i < NumAlignments * NumPhases; i++)
-   if(FIR_Coeffs_Real[i])
-    free(FIR_Coeffs_Real[i]);
-
-  free(FIR_Coeffs_Real);
- }
-
- if(FIR_Coeffs)
-  free(FIR_Coeffs);
-
- if(FIR_CoCounts)
-  free(FIR_CoCounts);
 }
 
 void NES_Resampler::SetVolume(double newvolume)
@@ -593,12 +644,13 @@ void NES_Resampler::SetVolume(double newvolume)
 
 NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_error, double hp_tc, int quality)
 {
- double *FilterBuf = NULL;
  double ratio = (double)output_rate / input_rate;
  double cutoff;
  double required_bandwidth;
  double k_beta;
  double k_d;
+
+ SetVolume(1.0);
 
  InputRate = input_rate;
  OutputRate = output_rate;
@@ -607,41 +659,10 @@ NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_
 
  IntermediateBuffer.resize(OutputRate * 4 / 50);	// *4 for safety padding, / min(50,60), an approximate calculation
 
- cpuext = cputest_get_flags();
+ const uint32 cpuext = cputest_get_flags();
 
  MDFN_printf("filter.cpp debug info:\n");
  MDFN_indent(1);
-
- if(0)
- {
-  abort();
- }
- #ifdef ARCH_X86
-#if 0
- else if((cpuext & CPUTEST_FLAG_SSE2) && !(cpuext & CPUTEST_FLAG_SSE2SLOW))
- {
-  MDFN_printf("SSE2\n");
-  NumAlignments = 1;
- }
-#endif
- else if(cpuext & CPUTEST_FLAG_MMX)
- {
-  MDFN_printf("MMX\n");
-  NumAlignments = 4;
- }
- #elif ARCH_POWERPC_ALTIVEC
- else if(cpuext & CPUTEST_FLAG_ALTIVEC)
- {
-  puts("AltiVec");
-  NumAlignments = 8;
- }
- #endif
- else
- {
-  NumAlignments = 1;
-  puts("None");
- }
-
 
  if(quality == -2)
  {
@@ -685,10 +706,62 @@ NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_
   throw(-1);
  }
 
- assert((NumCoeffs % 32) == 0);
- assert(NumAlignments <= 8); 
+ unsigned macperiter; // Must be power of 2.
 
- NumCoeffs_Padded = NumCoeffs + 4 + 16;	// FIXME: set differently based on SIMD path in use.
+ if(0)
+ {
+  abort();
+ }
+ #ifdef ARCH_X86
+ else if((cpuext & (CPUTEST_FLAG_SSE2 | CPUTEST_FLAG_SSE2SLOW)) == CPUTEST_FLAG_SSE2 && (cpuext & (CPUTEST_FLAG_3DNOW | CPUTEST_FLAG_ATOM | CPUTEST_FLAG_AVX | CPUTEST_FLAG_SSE42)))
+ {
+  SIMD_Type = SIMD_SSE2;
+  MDFN_printf("SIMD: SSE2\n");
+  NumAlignments = 1;
+  macperiter = 32;
+  assert(16 <= MaxWaveOverRead);
+ }
+ else if(cpuext & CPUTEST_FLAG_MMX)
+ {
+  SIMD_Type = SIMD_MMX;
+  MDFN_printf("SIMD: MMX\n");
+  NumAlignments = 4;
+  macperiter = 16;
+ }
+ #elif ARCH_POWERPC_ALTIVEC
+ else if(cpuext & CPUTEST_FLAG_ALTIVEC)
+ {
+  SIMD_Type = SIMD_ALTIVEC;
+  MDFN_printf("SIMD: AltiVec\n");
+  NumAlignments = 8;
+  macperiter = 16;
+ }
+ #elif defined(__ARM_NEON__)
+ else if(1) //cpuext & CPUTEST_FLAG_NEON)
+ {
+  SIMD_Type = SIMD_NEON;
+  MDFN_printf("SIMD: NEON\n");
+  NumAlignments = 1;
+  //macperiter = 32;
+  //assert(16 <= MaxWaveOverRead);
+  macperiter = 16;
+  assert(8 <= MaxWaveOverRead);
+ } 
+ #endif
+ else
+ {
+  SIMD_Type = SIMD_NONE;
+  MDFN_printf("SIMD: None\n");
+  NumAlignments = 1;
+  macperiter = 8;
+ }
+
+ NumCoeffs = (NumCoeffs + (macperiter - 1)) &~ (macperiter - 1);
+ NumCoeffs_Padded = (NumCoeffs + (NumAlignments - 1) + (macperiter - 1)) &~ (macperiter - 1);
+
+ assert(NumCoeffs <= MaxLeftover);
+
+ //printf("%d, %d\n", NumCoeffs, NumCoeffs_Padded);
 
  required_bandwidth = k_d / NumCoeffs;
 
@@ -712,8 +785,8 @@ NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_
   ratio = 1 / s_ratio;
   NumPhases = count;
 
-  PhaseNext = (uint32 *)malloc(sizeof(uint32) * NumPhases);
-  PhaseStep = (uint32 *)malloc(sizeof(uint32) * NumPhases);
+  PhaseNext.reset(new uint32[NumPhases]);
+  PhaseStep.reset(new uint32[NumPhases]);
 
   uint32 last_indoo = 0;
   for(unsigned int i = 0; i < NumPhases; i++)
@@ -762,34 +835,27 @@ NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_
   MDFN_printf("Cutoff frequency is <= 0: %f\n", cutoff);
  }
 
- FIR_Coeffs = (int16 **)malloc(sizeof(int16 **) * NumAlignments * NumPhases);
- FIR_Coeffs_Real = (int16 **)malloc(sizeof(int16 **) * NumAlignments * NumPhases);
+ FIR_Coeffs.reset(new int16*[NumAlignments * NumPhases]);
+
+ CoeffsBuffer.resize((256 / sizeof(int16)) + NumCoeffs_Padded * (NumAlignments * NumPhases));
 
  for(unsigned int i = 0; i < NumAlignments * NumPhases; i++)
- {
-  uint8 *tmp_ptr = (uint8 *)calloc(sizeof(int16) * NumCoeffs_Padded + 16, 1);
+  FIR_Coeffs[i] = (int16*)(((uintptr_t)&CoeffsBuffer[0] + 0xFF) &~ 0xFF) + (i * NumCoeffs_Padded);
 
-  FIR_Coeffs_Real[i] = (int16 *)tmp_ptr;
-  tmp_ptr += 0xF;
-  tmp_ptr -= ((unsigned long long)tmp_ptr & 0xF);
-  FIR_Coeffs[i] = (int16 *)tmp_ptr;
- }
-
- MDFN_printf("FIR table memory usage: %d bytes\n", (int)((sizeof(int16) * NumCoeffs_Padded + 16) * NumAlignments * NumPhases));
-
-
- FilterBuf = (double *)malloc(sizeof(double) * NumCoeffs * NumPhases);
- gen_sinc(FilterBuf, NumCoeffs * NumPhases, cutoff, k_beta);
- normalize(FilterBuf, NumCoeffs * NumPhases); 
+ MDFN_printf("FIR table memory usage: %zu bytes\n", CoeffsBuffer.size() * sizeof(int16));
+ //
+ //
+ //
+ std::unique_ptr<double[]> FilterBuf(new double[NumCoeffs * NumPhases]);
+ gen_sinc(FilterBuf.get(), NumCoeffs * NumPhases, cutoff, k_beta);
+ normalize(FilterBuf.get(), NumCoeffs * NumPhases); 
 
  #if 0
  for(int i = 0; i < NumCoeffs * NumPhases; i++)
   fprintf(stderr, "%.20f\n", FilterBuf[i]);
-
  #endif
 
-
- FIR_CoCounts = (uint32 *)calloc(NumAlignments, sizeof(uint32));
+ FIR_CoCounts.reset(new uint32[NumAlignments]);
  FIR_CoCounts[0] = NumCoeffs;
 
  for(unsigned int phase = 0; phase < NumPhases; phase++)
@@ -883,9 +949,6 @@ NES_Resampler::NES_Resampler(double input_rate, double output_rate, double rate_
    }
   }
  }
-
- free(FilterBuf);
- FilterBuf = NULL;
 
  InputIndex = 0;
  InputPhase = 0;

@@ -21,7 +21,7 @@
 #include "debug.h"
 #include "ppu/ppu.h"
 #include "cart.h"
-#include <mednafen/dis6502.h>
+#include "dis6502.h"
 
 namespace MDFN_IEN_NES
 {
@@ -211,7 +211,7 @@ uint32 NESDBG_GetVector(int level)
 class Dis2A03 : public Dis6502
 {
 	public:
-	Dis2A03(void) : Dis6502(0)
+	Dis2A03(void)
 	{
 
 	}

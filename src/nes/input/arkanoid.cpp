@@ -20,6 +20,9 @@
 
 #include	"share.h"
 
+namespace MDFN_IEN_NES
+{
+
 typedef struct {
 	uint32 mzx,mzb;
 	uint32 readbit;
@@ -161,4 +164,6 @@ INPUTC *MDFN_InitArkanoid(int w)
  NESArk[w].mzx=98;
  NESArk[w].mzb=0;
  return(&ARKC);
+}
+
 }

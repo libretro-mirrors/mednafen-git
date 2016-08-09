@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 Mirroring, PRGBank32, WRAM[8192];
 
 static void Sync(void)
@@ -79,3 +82,4 @@ int Mapper242_Init(CartInfo *info)
  return(1);
 }
 
+}

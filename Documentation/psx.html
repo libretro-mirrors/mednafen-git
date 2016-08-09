@@ -9,16 +9,13 @@
  <body>
   <center><h1><img alt="Mednafen" src="mednafen.png" width="696" height="204"></h1></center>
   <center><h1>Sony PlayStation Documentation</h1></center>
-  <center><i>Last updated October  1, 2015<br>Valid as of 0.9.38.7</i></center>
+  <center><i>Last updated August  4, 2016<br>Valid as of 0.9.39-UNSTABLE</i></center>
  <p></p>
  <b>Table of Contents:</b>
- <ul><li><a href="#Section_intro">Introduction</a><ul></ul></li><li><a href="#Section_firmware_bios">Firmware/BIOS</a><ul></ul></li><li><a href="#Analog+Sticks+Range+Issues">Analog Sticks Range Issues</a><ul></ul></li><li><a href="#Section_multitap">Multitap Usage</a><ul></ul></li><li><a href="#Settings+Reference">Settings Reference</a><ul></ul></li></ul><hr width="100%">
+ <ul><li><a href="#Section_intro">Introduction</a><ul></ul></li><li><a href="#Section_firmware_bios">Firmware/BIOS</a><ul></ul></li><li><a href="#Analog+Sticks+Range+Issues">Analog Sticks Range Issues</a><ul></ul></li><li><a href="#Section_multitap">Multitap Usage</a><ul></ul></li><li><a href="#Default+Input+Mappings">Default Input Mappings</a><ul><li><a href="#Default+Input+Mappings%01Digital+Gamepad+on+Virtual+Port+1">Digital Gamepad on Virtual Port 1</a><ul></ul></li></ul></li><li><a href="#Settings+Reference">Settings Reference</a><ul></ul></li></ul><hr width="100%">
 <h2><a name="Section_intro">Introduction</a></h2><p></p><p>
 <font color="red" size="+2">WARNING:</font> Save states(and by extension, state rewinding and netplay) and saved games on emulated memory cards do not mix well unless you are
 extremely careful.  For any given game, either use save states or the game's own save system, but not both, lest you may destroy your saved games.
-</p>
-<p>
-PlayStation 1 emulation is currently in a state of development, so there may occasionally be horrifying SPINE-TINGLING regressions in new versions.
 </p>
 <p>
 A dual-core Phenom II or Athlon II at 3GHz or higher, or rough equivalent(in terms of single-core IPC), is recommended for
@@ -32,7 +29,12 @@ avoid short emulator pauses and audio pops due to waiting for disk accesses to c
 </p>
 
 <p>
-<a href="http://www.neillcorlett.com/psf/">PSF1</a> playback is supported.
+<a href="http://www.neillcorlett.com/psf/">PSF1</a> playback is supported.  However, many PSF1 rips won't work as they are broken in various ways:
+<ul>
+ <li>Contain malformed PS-EXE headers.
+ <li>Perform unaligned halfword and word memory accesses.
+ <li>Erroneously use load instruction target register as a source register in load delay slots.
+</ul>
 </p>
 
 <hr width="100%">
@@ -120,7 +122,32 @@ is enabled when running them.
 
 </p>
 <hr width="100%">
+<h2><a name="Default+Input+Mappings">Default Input Mappings</a></h2><p></p>
+ <h3><a name="Default+Input+Mappings%01Digital+Gamepad+on+Virtual+Port+1">Digital Gamepad on Virtual Port 1</a></h3><p></p>  <p>
+  <table border>
+   <tr><th>Key:</th><th nowrap>Emulated Button:</th></tr>
 
+   <tr><td>W</td><td>Up</td></tr>
+   <tr><td>S</td><td>Down</td></tr>
+   <tr><td>A</td><td>Left</td></tr>
+   <tr><td>D</td><td>Right</td></tr>
+
+   <tr><td>Tab</td><td>SELECT</td></tr>
+   <tr><td>Enter</td><td>START</td></tr>
+
+   <tr><td>Keypad 8</td><td>△</td></tr>
+   <tr><td>Keypad 2</td><td>x</td></tr>
+   <tr><td>Keypad 4</td><td>□</td></tr>
+   <tr><td>Keypad 6</td><td>○</td></tr>
+
+   <tr><td>Keypad 1</td><td>L1</td></tr>
+   <tr><td>Keypad 7</td><td>L2</td></tr>
+   <tr><td>Keypad 3</td><td>R1</td></tr>
+   <tr><td>Keypad 9</td><td>R2</td></tr>
+  </table>
+  </p>
+ <hr width="75%">
+<hr width="75%">
 <h2><a name="Settings+Reference">Settings Reference</a></h2><p></p><p>
 <b>Caution:</b> Any settings that change emulation behavior as seen from the emulated game are shown with the setting name bolded in the table. One should be conscious of these settings if one has changed them from the default values when using network play or movies, as they can cause desychronizations if not set the same among hosts(or between the recording emulator and the playing emulator). 
 </p>
@@ -194,7 +221,7 @@ NOTE: Enabling multitap in games that don't fully support it may cause deleterio
 <tr class="RowB"><td class="ColA">psx.slstart</td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 239</td><td class="ColD">0</td><td class="ColE"><a name="psx.slstart">First displayed scanline in NTSC mode.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA">psx.slstartp</td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 287</td><td class="ColD">0</td><td class="ColE"><a name="psx.slstartp">First displayed scanline in PAL mode.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA">psx.spu.resamp_quality</td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 10</td><td class="ColD">5</td><td class="ColE"><a name="psx.spu.resamp_quality">SPU output resampler quality.</a><p>0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the "sound.rate" setting, to "44100" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-</table><p></p><table border><tr class="TableHeader"><th>Setting:</th><th>Value Type:</th><th>Possible Values:</th><th>Default Value:</th><th>Description:</th></tr><tr class="RowA"><td class="ColA">psx.debugger.disfontsize</td><td class="ColB">enum</td><td class="ColC">xsmall<br>small<br>medium<br>large</td><td class="ColD">small</td><td class="ColE"><a name="psx.debugger.disfontsize">Disassembly font size.</a><p>Note: Setting the font size to larger than the default may cause text overlap in the debugger.</p><ul><li><b>xsmall</b> - 4x5<br></li><br><li><b>small</b> - 5x7<br></li><br><li><b>medium</b> - 6x13<br></li><br><li><b>large</b> - 9x18<br></li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+</table><p></p><table border><tr class="TableHeader"><th>Setting:</th><th>Value Type:</th><th>Possible Values:</th><th>Default Value:</th><th>Description:</th></tr><tr class="RowA"><td class="ColA">psx.debugger.disfontsize</td><td class="ColB">enum</td><td class="ColC">5x7<br>6x9<br>6x12<br>6x13<br>9x18</td><td class="ColD">5x7</td><td class="ColE"><a name="psx.debugger.disfontsize">Disassembly font size.</a><p>Note: Setting the font size to larger than the default may cause text overlap in the debugger.</p><ul><li><b>5x7</b> - 5x7<br></li><br><li><b>6x9</b> - 6x9<br></li><br><li><b>6x12</b> - 6x12<br></li><br><li><b>6x13</b> - 6x13.  CJK support.<br></li><br><li><b>9x18</b> - 9x18;  CJK support.<br></li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA">psx.debugger.memcharenc</td><td class="ColB">string</td><td class="ColC">&nbsp;</td><td class="ColD">shift_jis</td><td class="ColE"><a name="psx.debugger.memcharenc">Character encoding for the debugger's memory editor.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA">psx.enable</td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">1</td><td class="ColE"><a name="psx.enable">Enable (automatic) usage of this module.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA">psx.forcemono</td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE"><a name="psx.forcemono">Force monophonic sound output.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>

@@ -22,6 +22,10 @@
 
 #include "mapinc.h"
 #include "../nsf.h"
+#include "emu2413.h"
+
+namespace MDFN_IEN_NES
+{
 
 static uint8 CHRBanks[8], PRGBanks[3], WRAM[8192], Mirroring;
 static uint8 IRQLatch, IRQCount, IRQEnabled;
@@ -29,8 +33,6 @@ static uint8 vrctemp;
 static uint8 indox;
 static int32 acount;
 static int32 divc;
-
-#include "emu2413.h"
 
 static OPLL *VRC7Sound=NULL;
 static uint32 V7BC;
@@ -234,4 +236,6 @@ int Mapper85_Init(CartInfo *info)
   VRC7SI(&info->CartExpSound);
 
  return(1);
+}
+
 }

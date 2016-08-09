@@ -1,5 +1,5 @@
-#ifndef _PCE_DEBUG_H
-#define _PCE_DEBUG_H
+#ifndef __MDFN_PCE_DEBUG_H
+#define __MDFN_PCE_DEBUG_H
 
 #ifdef WANT_DEBUGGER
 
@@ -36,7 +36,7 @@ extern bool PCE_UsageMapOn;
 
 extern DebuggerInfoStruct PCEDBGInfo;
 
-void PCEDBG_Init(bool sgx, PCE_PSG *psg);
+void PCEDBG_Init(bool sgx, PCE_PSG *psg, const uint32 vram_size);
 void PCEDBG_Kill(void);
 
 };

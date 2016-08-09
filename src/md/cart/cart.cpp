@@ -330,7 +330,7 @@ static BoardHandler_t BoardHandlers[] =
 
 bool MDCart_TestMagic(MDFNFILE *fp)
 {
- if(!strcmp(fp->ext, "gen") || !strcmp(fp->ext, "md"))
+ if(fp->ext == "gen" || fp->ext == "md")
   return true;
 
  uint8 data[512];
@@ -341,7 +341,7 @@ bool MDCart_TestMagic(MDFNFILE *fp)
  if(!memcmp(data + 0x100, "SEGA MEGA DRIVE", 15) || !memcmp(data + 0x100, "SEGA GENESIS", 12) || !memcmp(data + 0x100, "SEGA 32X", 8))
   return true;
 
- if((!memcmp(data + 0x100, "SEGA", 4) || !memcmp(data + 0x100, " SEGA", 5)) && !strcmp(fp->ext, "bin"))
+ if((!memcmp(data + 0x100, "SEGA", 4) || !memcmp(data + 0x100, " SEGA", 5)) && fp->ext == "bin")
   return true;
 
  return false;
@@ -357,7 +357,7 @@ static void Cleanup(void)
 
  if(cart_rom)
  {
-  MDFN_free(cart_rom);
+  delete[] cart_rom;
   cart_rom = NULL;
  }
 }
@@ -376,7 +376,7 @@ void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp)
    throw MDFN_Error(0, _("ROM image is too large."));
 
   Cart_ROM_Size = fp_in_size;
-  cart_rom = (uint8 *)MDFN_calloc_T(1, Cart_ROM_Size, _("Cart ROM"));
+  cart_rom = new uint8[Cart_ROM_Size];
   fp->read(cart_rom, Cart_ROM_Size);
 
   MD_ReadSegaHeader(cart_rom + 0x100, ginfo);

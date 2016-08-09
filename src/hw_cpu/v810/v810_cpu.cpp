@@ -354,9 +354,6 @@ bool V810::Init(V810_Emu_Mode mode, bool vb_mode)
 
 void V810::Kill(void)
 {
- for(unsigned int i = 0; i < FastMapAllocList.size(); i++)
-  MDFN_free(FastMapAllocList[i]);
-
  FastMapAllocList.clear();
 }
 
@@ -370,15 +367,14 @@ void V810::SetInt(int level)
 
 uint8 *V810::SetFastMap(uint32 addresses[], uint32 length, unsigned int num_addresses, const char *name)
 {
- uint8 *ret = NULL;
-
  for(unsigned int i = 0; i < num_addresses; i++)
  {
   assert((addresses[i] & (V810_FAST_MAP_PSIZE - 1)) == 0);
  }
  assert((length & (V810_FAST_MAP_PSIZE - 1)) == 0);
 
- ret = (uint8 *)MDFN_malloc_T(length + V810_FAST_MAP_TRAMPOLINE_SIZE, name);
+ FastMapAllocList.emplace_back(std::unique_ptr<uint8[]>(new uint8[length + V810_FAST_MAP_TRAMPOLINE_SIZE]));
+ uint8* ret = FastMapAllocList.back().get();
 
  for(unsigned int i = length; i < length + V810_FAST_MAP_TRAMPOLINE_SIZE; i += 2)
  {
@@ -396,9 +392,7 @@ uint8 *V810::SetFastMap(uint32 addresses[], uint32 length, unsigned int num_addr
   }
  }
 
- FastMapAllocList.push_back(ret);
-
- return(ret);
+ return ret;
 }
 
 

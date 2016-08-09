@@ -1,19 +1,23 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* FileStream.h:
+**  Copyright (C) 2010-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #ifndef __MDFN_FILESTREAM_H
 #define __MDFN_FILESTREAM_H
@@ -30,12 +34,17 @@ class FileStream : public Stream
  enum
  {
   MODE_READ = 0,
+
+  MODE_READ_WRITE,	// Will create file if it doesn't already exist.  Will not truncate existing file.
+			// Any necessary synchronization when switching between read and write operations is handled internally in
+			// FileStream.
+
   MODE_WRITE,
   MODE_WRITE_SAFE,	// Will throw an exception instead of overwriting an existing file.
   MODE_WRITE_INPLACE,	// Like MODE_WRITE, but won't truncate the file if it already exists.
  };
 
- FileStream(const std::string& path, const int mode);
+ FileStream(const std::string& path, const int mode, const bool do_lock = false);
  virtual ~FileStream() override;
 
  virtual uint64 attributes(void) override;
@@ -59,6 +68,9 @@ class FileStream : public Stream
  {
   int ret;
 
+  if(MDFN_UNLIKELY(prev_was_write == 1))
+   seek(0, SEEK_CUR);
+
   errno = 0;
   ret = fgetc(fp);
 
@@ -81,6 +93,13 @@ class FileStream : public Stream
 
  void* mapping;
  uint64 mapping_size;
+
+ bool locked;
+ int prev_was_write;	// -1 for no state, 0 for last op was read, 1 for last op was write(used for MODE_READ_WRITE)
+
+ //
+ void lock(void);
+ void unlock(void);
 };
 
 

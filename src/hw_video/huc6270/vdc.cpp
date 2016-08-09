@@ -1677,10 +1677,27 @@ int32 VDC::Reset(void)
  return(CalcNextEvent());
 }
 
-VDC::VDC(bool nospritelimit, uint32 par_VRAM_Size)
+VDC::VDC()
 {
- unlimited_sprites = nospritelimit; //MDFN_GetSettingB("pce.nospritelimit");
+ SetUnlimitedSprites(false);
+ SetVRAMSize(65536);
  userle = ~0;
+
+ WSHook = NULL;
+ IRQHook = NULL;
+
+ in_exhsync = false;
+ in_exvsync = false;
+}
+
+void VDC::SetUnlimitedSprites(const bool nospritelimit)
+{
+ unlimited_sprites = nospritelimit;
+}
+
+void VDC::SetVRAMSize(const uint32 par_VRAM_Size)
+{
+ //const uint32 old_VRAM_Size;
 
  assert(par_VRAM_Size == round_up_pow2(par_VRAM_Size));
  assert(par_VRAM_Size >= 16 && par_VRAM_Size <= 65536);
@@ -1689,11 +1706,8 @@ VDC::VDC(bool nospritelimit, uint32 par_VRAM_Size)
  VRAM_SizeMask = VRAM_Size - 1;
  VRAM_BGTileNoMask = VRAM_SizeMask / 16;
 
- WSHook = NULL;
- IRQHook = NULL;
-
- in_exhsync = false;
- in_exvsync = false;
+ // for(uint32 A = std::min<uint32>(old_VRAM_Size, par_VRAM_Size); A < 65536; A += 16)
+ //  FixTileCache(A);
 }
 
 VDC::~VDC()

@@ -16,6 +16,9 @@
 #define __NEOPOP_MEM__
 //=============================================================================
 
+namespace MDFN_IEN_NGP
+{
+
 #define ROM_START	0x200000
 #define ROM_END		0x3FFFFF
 
@@ -51,6 +54,8 @@ void storeL(uint32 address, uint32 data);
 
 void SetFRM(void);
 void RecacheFRM(void);
+
+}
 
 //=============================================================================
 #endif

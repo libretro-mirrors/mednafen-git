@@ -1,5 +1,5 @@
-#ifndef __PCE_TSUSHIN_H
-#define __PCE_TSUSHIN_H
+#ifndef __MDFN_PCE_TSUSHIN_H
+#define __MDFN_PCE_TSUSHIN_H
 
 namespace MDFN_IEN_PCE
 {

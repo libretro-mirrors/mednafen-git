@@ -104,6 +104,7 @@ static MDFNSetting MednafenSettings[] =
 
   { "filesys.path_snap", MDFNSF_NOFLAGS, gettext_noop("Path to directory for screen snapshots."), NULL, MDFNST_STRING, "snaps" },
   { "filesys.path_sav", MDFNSF_NOFLAGS, gettext_noop("Path to directory for save games and nonvolatile memory."), gettext_noop("WARNING: Do not set this path to a directory that contains Famicom Disk System disk images, or you will corrupt them when you load an FDS game and exit Mednafen."), MDFNST_STRING, "sav" },
+  { "filesys.path_savbackup", MDFNSF_NOFLAGS, gettext_noop("Path to directory for backups of save games and nonvolatile memory."), NULL, MDFNST_STRING, "b" },
   { "filesys.path_state", MDFNSF_NOFLAGS, gettext_noop("Path to directory for save states."), NULL, MDFNST_STRING, "mcs" },
   { "filesys.path_movie", MDFNSF_NOFLAGS, gettext_noop("Path to directory for movies."), NULL, MDFNST_STRING, "mcm" },
   { "filesys.path_cheat", MDFNSF_NOFLAGS, gettext_noop("Path to directory for cheats."), NULL, MDFNST_STRING, "cheats" },
@@ -114,6 +115,7 @@ static MDFNSetting MednafenSettings[] =
   { "filesys.fname_movie", MDFNSF_NOFLAGS, gettext_noop("Format string for movie filename."), fname_extra, MDFNST_STRING, "%f.%M%p.%x" },
   { "filesys.fname_state", MDFNSF_NOFLAGS, gettext_noop("Format string for state filename."), fname_extra, MDFNST_STRING, "%f.%M%X" /*"%F.%M%p.%x"*/ },
   { "filesys.fname_sav", MDFNSF_NOFLAGS, gettext_noop("Format string for save games filename."), gettext_noop("WARNING: %x should always be included, otherwise you run the risk of overwriting save data for games that create multiple save data files.\n\nSee fname_format.txt for more information.  Edit at your own risk."), MDFNST_STRING, "%F.%M%x" },
+  { "filesys.fname_savbackup", MDFNSF_NOFLAGS, gettext_noop("Format string for save game backups filename."), gettext_noop("WARNING: %x and %p should always be included.\n\nSee fname_format.txt for more information.  Edit at your own risk."), MDFNST_STRING, "%F.%m%z%p.%x" },
   { "filesys.fname_snap", MDFNSF_NOFLAGS, gettext_noop("Format string for screen snapshot filenames."), gettext_noop("WARNING: %x or %p should always be included, otherwise there will be a conflict between the numeric counter text file and the image data file.\n\nSee fname_format.txt for more information.  Edit at your own risk."), MDFNST_STRING, "%f-%p.%x" },
 
   { "filesys.state_comp_level", MDFNSF_NOFLAGS, gettext_noop("Save state file compression level."), gettext_noop("gzip/deflate compression level for save states saved to files.  -1 will disable gzip compression and wrapping entirely."), MDFNST_INT, "6", "-1", "9" },
@@ -167,6 +169,8 @@ static MDFNSetting RenamedSettings[] =
  { "psx.input.port2.multitap", MDFNSF_NOFLAGS, NULL, NULL, MDFNST_ALIAS         , "psx.input.pport2.multitap" },
 
  { "snes_faust.spexf",	       MDFNSF_NOFLAGS, NULL, NULL, MDFNST_ALIAS         , "snes_faust.spex" },
+
+ { "netplay.smallfont",		MDFNSF_NOFLAGS, NULL, NULL, MDFNST_ALIAS	, "netplay.console.font" },
 
  { NULL }
 };
@@ -314,11 +318,7 @@ void MDFNI_CloseGame(void)
   //
   //
   //
-  if(MDFNGameInfo->name)
-  {
-   free(MDFNGameInfo->name);
-   MDFNGameInfo->name = NULL;
-  }
+  MDFNGameInfo->name.clear();
 
   if(MDFNGameInfo->RMD)
   {
@@ -422,6 +422,14 @@ extern MDFNGI EmulatedPCFX;
 extern MDFNGI EmulatedPSX;
 #endif
 
+#ifdef WANT_SS_EMU
+extern MDFNGI EmulatedSS;
+#endif
+
+#ifdef WANT_SSFPLAY_EMU
+extern MDFNGI EmulatedSSFPlay;
+#endif
+
 #ifdef WANT_VB_EMU
 extern MDFNGI EmulatedVB;
 #endif
@@ -507,32 +515,6 @@ static void ReadM3U(std::vector<std::string> &file_list, std::string path, unsig
   }
   else
    file_list.push_back(efp);
- }
-}
-
-static void MakeGIName(MDFNGI* gi, const char* path)
-{
- char* ns = NULL;
- char* tmp;
-
- if((ns = strdup(GetFNComponent(path))))
- {
-  unsigned nslen = strlen(ns);
-
-  for(unsigned x = 0; x < nslen; x++)
-  {
-   if(ns[x] == '_')
-    ns[x] = ' ';
-   else if(ns[x] < 0x20)
-    ns[x] = ' ';
-  }
-
-  if((tmp = strrchr(ns, '.')))
-   *tmp = 0;
-
-  MDFN_trim(ns);
-
-  gi->name = ns;
  }
 }
 
@@ -701,12 +683,20 @@ static void LoadCustomPalette(void)
  }
 }
 
-static void LoadCommonPost(const char* name)
+static void LoadCommonPost(const char* path)
 {
 	DMStatus.resize(MDFNGameInfo->RMD->Drives.size());
 
-	if(!MDFNGameInfo->name && name)
-	 MakeGIName(MDFNGameInfo, name);
+	if(MDFNGameInfo->name.size() == 0 && path)
+	{
+	 MDFN_GetFilePathComponents(path, NULL, &MDFNGameInfo->name);
+
+	 for(auto& c : MDFNGameInfo->name)
+	  if(c == '_' || (uint8)c < 0x20)
+	   c = ' ';
+
+	 MDFN_trim(MDFNGameInfo->name);
+	}
 
         //
         //
@@ -887,7 +877,7 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *path)
 
 	 assert(MDFNGameInfo->soundchan != 0);
 
-         MDFNGameInfo->name = NULL;
+         MDFNGameInfo->name.clear();
          MDFNGameInfo->rotated = 0;
 	 MDFNGameInfo->RMD = rmd.get();
 
@@ -1043,7 +1033,7 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char *name)
 
         GetFileBase(name);
 
-	// Construct a NULL-delimited list of known file extensions for MDFN_fopen()
+	// Construct a NULL-delimited list of known file extensions for MDFNFILE
 	for(unsigned int i = 0; i < MDFNSystems.size(); i++)
 	{
 	 const FileExtensionSpecStruct *curexts = MDFNSystems[i]->FileExtensions;
@@ -1085,7 +1075,7 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char *name)
 
 	 assert(MDFNGameInfo->soundchan != 0);
 
-         MDFNGameInfo->name = NULL;
+         MDFNGameInfo->name.clear();
          MDFNGameInfo->rotated = 0;
 	 MDFNGameInfo->RMD = rmd.get();
 
@@ -1203,6 +1193,14 @@ bool MDFNI_InitializeModules(const std::vector<MDFNGI *> &ExternalSystems)
 
   #ifdef WANT_PSX_EMU
   &EmulatedPSX,
+  #endif
+
+  #ifdef WANT_SS_EMU
+  &EmulatedSS,
+  #endif
+
+  #ifdef WANT_SSFPLAY_EMU
+  &EmulatedSSFPlay,
   #endif
 
   #ifdef WANT_VB_EMU

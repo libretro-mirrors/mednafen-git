@@ -20,6 +20,9 @@
 
 #include        "share.h"
 
+namespace MDFN_IEN_NES
+{
+
 typedef struct {
         uint32 mzx,mzy;
 	uint8 mzb;
@@ -164,4 +167,4 @@ INPUTC *MDFN_InitZapper(int w)
    return(&ZAPC);
 }
 
-
+}

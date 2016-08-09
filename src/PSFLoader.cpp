@@ -1,25 +1,28 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
-/*
- TODO:
-	Time string parsing convenience functions.
-
-	Character set autodetect heuristics and conversion for when the "utf8" tag is missing.
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* PSFLoader.cpp:
+**  Copyright (C) 2011-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
+
+/*
+ TODO: Time string parsing convenience functions.
+*/
+
 #include "mednafen.h"
 #include <mednafen/FileStream.h>
 #include <mednafen/compress/ZLInflateFilter.h>
@@ -31,7 +34,7 @@
 #include <limits.h>
 #include <trio/trio.h>
 #include <ctype.h>
-//#include <iconv.h>
+#include <iconv.h>
 
 #include <zlib.h>
 
@@ -74,37 +77,6 @@ void PSFTags::AddTag(char *tag_line)
  }
 }
 
-#if 0
-static const char *DetectCharset(const uint8 *data, const uint32 data_size)
-{
- static const char *TestCharsets[] = { "UTF-8", /*"SJIS",*/ "WINDOWS-1252" };
-
- for(unsigned int i = 0; i < sizeof(TestCharsets) / sizeof(TestCharsets[0]); i++)
- {
-  iconv_t cd;
-
-  cd = iconv_open("UTF-32", TestCharsets[i]);
-  if(cd != (iconv_t)-1)
-  {
-   size_t in_len = data_size;
-   size_t out_len = data_size * 4 + 4;
-   char *in_ptr = (char *)data;
-   char *const out_ptr_mem = new char[out_len];
-   char *out_ptr = out_ptr_mem;
-
-   if(iconv(cd, (ICONV_CONST char **)&in_ptr, &in_len, &out_ptr, &out_len) != (size_t)-1)
-   { 
-    delete[] out_ptr_mem;
-    return(TestCharsets[i]);
-   }
-   delete[] out_ptr_mem;
-  }
- }
-
- return(NULL);
-}
-#endif
-
 void PSFTags::LoadTags(Stream* fp)
 {
  uint64 size = fp->size() - fp->tell();
@@ -142,6 +114,78 @@ void PSFTags::LoadTags(Stream* fp)
   data++;
  }
 
+ //
+ // Check if utf8 tag exists and is set to a non-zero value, and if so, return.
+ //
+ if(TagExists("utf8"))
+ {
+  std::string tmp = GetTag("utf8");
+
+  if(atoi(tmp.c_str()) != 0)
+  {
+   //puts("utf8");
+   return;
+  }
+ }
+
+ bool probably_ascii = true;
+
+ for(auto& t : tags)
+  for(auto& c : t.second)
+   if(c & 0x80)
+    probably_ascii = false;
+
+ if(probably_ascii)
+  return;
+
+ //
+ // Detect possible SJIS encoding, and convert tags.
+ //
+ {
+  bool possibly_sjis = true;
+  iconv_t sjis_utf8_cd;
+
+  sjis_utf8_cd = iconv_open("UTF-8", "SJIS");
+  if(sjis_utf8_cd == (iconv_t)-1)
+   throw MDFN_Error(errno, "iconv_open() failed.");
+
+  try
+  {
+   for(unsigned commit = 0; commit < 2 && possibly_sjis; commit++)
+   {
+    for(auto& t : tags)
+    {
+     std::string tmp;
+
+     tmp.resize(t.second.size() * 7);
+     size_t in_len = t.second.size();
+     size_t out_len = tmp.size();
+     char* in_ptr = (char *)&t.second[0];
+     char* out_ptr = &tmp[0];
+
+     if(iconv(sjis_utf8_cd, (ICONV_CONST char **)&in_ptr, &in_len, &out_ptr, &out_len) == (size_t)-1)
+     {
+      possibly_sjis = false;
+      break;
+     }
+     else if(commit)
+     {
+      tmp.resize(out_ptr - &tmp[0]);
+      t.second = tmp;
+     }
+    }
+   }
+  }
+  catch(...)
+  {
+   iconv_close(sjis_utf8_cd);
+   throw;
+  }
+  iconv_close(sjis_utf8_cd);
+
+  if(possibly_sjis)
+   return;
+ }
 }
 
 int64 PSFTags::GetTagI(const char *name)
@@ -262,11 +306,10 @@ PSFTags PSFLoader::LoadInternal(uint8 version, uint32 max_exe_size, Stream *fp, 
   {
    std::string tp = tags.GetTag("_lib");
 
-   if(!MDFN_IsFIROPSafe(tp))
-   {
-    throw(MDFN_Error(0, _("Referenced path \"%s\" is potentially unsafe.  See \"filesys.untrusted_fip_check\" setting."), tp.c_str()));
-   }
-
+   MDFN_CheckFIROPSafe(tp);
+   //
+   //
+   //
    FileStream subfile(MDFN_MakeFName(MDFNMKF_AUX, 0, tp.c_str()).c_str(), FileStream::MODE_READ);
 
    LoadInternal(version, max_exe_size, &subfile, level + 1);
@@ -324,7 +367,7 @@ PSFTags PSFLoader::Load(uint8 version, uint32 max_exe_size, Stream* fp)
 
 void PSFLoader::HandleReserved(Stream* fp, uint32 len)
 {
- fp->seek(SEEK_CUR, len);
+ fp->seek(len, SEEK_CUR);
 }
 
 void PSFLoader::HandleEXE(Stream* fp, bool ignore_pcsp)

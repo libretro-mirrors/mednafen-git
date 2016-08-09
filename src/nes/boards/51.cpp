@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 mode, page;
 
 static uint32 Get8K(uint32 A)
@@ -84,4 +87,6 @@ int Mapper51_Init(CartInfo *info)
  info->Power = Power;
  info->StateAction = StateAction;
  return(1);
+}
+
 }

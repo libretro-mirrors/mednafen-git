@@ -35,8 +35,8 @@ The filename listed below is per default <a href="#pcfx.bios">pcfx.bios</a> sett
 
  <table border>
   <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
-  <tr><td>ALT + SHIFT + 1</td><td>Activate in-game input configuration process for device on virtual inport port 1.</td><td>input_config1</td></tr>
-  <tr><td>ALT + SHIFT + 2</td><td>Activate in-game input configuration process for device on virtual inport port 2.</td><td>input_config2</td></tr>
+  <tr><td>ALT + SHIFT + 1</td><td>Activate in-game input configuration process for device on virtual input port 1.</td><td>input_config1</td></tr>
+  <tr><td>ALT + SHIFT + 2</td><td>Activate in-game input configuration process for device on virtual input port 2.</td><td>input_config2</td></tr>
  </table>
  </p>
  <p>

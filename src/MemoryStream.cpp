@@ -1,19 +1,23 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* MemoryStream.cpp:
+**  Copyright (C) 2012-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #include "MemoryStream.h"
 #include <mednafen/math_ops.h>
@@ -48,6 +52,8 @@ MemoryStream::MemoryStream(uint64 alloc_hint, int alloc_hint_is_size) : data_buf
   data_buffer_size = 0;
   data_buffer_alloced = (alloc_hint > SIZE_MAX) ? SIZE_MAX : alloc_hint;
  }
+
+ data_buffer_alloced = std::max<uint64>(data_buffer_alloced, 1);
 
  if(!(data_buffer = (uint8*)realloc(data_buffer, data_buffer_alloced)))
   throw MDFN_Error(ErrnoHolder(errno));
@@ -189,13 +195,14 @@ void MemoryStream::shrink_to_fit(void) noexcept
  if(data_buffer_alloced > data_buffer_size)
  {
   uint8 *new_data_buffer;
-  
-  new_data_buffer = (uint8*)realloc(data_buffer, data_buffer_size);
+  const uint64 new_data_buffer_alloced = std::max<uint64>(data_buffer_size, 1);
+
+  new_data_buffer = (uint8*)realloc(data_buffer, new_data_buffer_alloced);
 
   if(new_data_buffer != NULL)
   {
    data_buffer = new_data_buffer;
-   data_buffer_alloced = data_buffer_size;
+   data_buffer_alloced = new_data_buffer_alloced;
   }
  }
 }

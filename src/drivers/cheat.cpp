@@ -19,6 +19,7 @@
 #include <ctype.h>
 #include <trio/trio.h>
 #include "console.h"
+#include "video.h"
 #include <mednafen/string/trim.h>
 #include <vector>
 
@@ -36,7 +37,6 @@ class CheatConsoleT : public MDFNConsole
 	CheatConsoleT(void)
 	{
 	 SetShellStyle(1);
-	 SetFont(MDFN_FONT_9x18_18x18);
 	}
 
         virtual bool TextHook(const std::string &text) override
@@ -54,11 +54,23 @@ class CheatConsoleT : public MDFNConsole
          return(1);
         }
 
-        void Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect)
+	MDFN_Surface* Draw(const MDFN_PixelFormat& pformat, const int32 dim_w, const int32 dim_h, const unsigned fontid)
 	{
+	 MDFN_Surface* ret;
+
 	 MDFND_LockMutex(CheatMutex);
-	 MDFNConsole::Draw(surface, src_rect);
+	 try
+	 {
+	  ret = MDFNConsole::Draw(pformat, dim_w, dim_h, fontid);
+	 }
+	 catch(...)
+	 {
+	  MDFND_UnlockMutex(CheatMutex);
+	  throw;
+	 }
 	 MDFND_UnlockMutex(CheatMutex);
+
+	 return ret;
 	}
 
 	void WriteLine(const std::string &text)
@@ -88,12 +100,12 @@ static void CHEAT_printf(const char *format, ...)
  trio_vsnprintf(temp, 2048, format, ap);
  va_end(ap);
 
- CheatConsole.WriteLine(temp);
+ CheatConsole.CheatConsoleT::WriteLine(temp);
 }
 
 static void CHEAT_puts(const char *string)
 {
- CheatConsole.WriteLine(string);
+ CheatConsole.CheatConsoleT::WriteLine(string);
 }
 
 static void CHEAT_gets(char *s, int size)
@@ -122,7 +134,7 @@ static void CHEAT_gets(char *s, int size)
   s[size - 1] = 0;
   free(lpt);
 
-  CheatConsole.AppendLastLine(s);
+  CheatConsole.CheatConsoleT::AppendLastLine(s);
  }
 
  if(need_thread_exit)
@@ -149,7 +161,7 @@ static void GetString(char *s, int max)
  MDFN_trim(s);
 }
 
-static uint64 GetUI(uint64 def)
+static uint64 GetUI(unsigned long long def)
 {
  char buf[64];
 
@@ -328,7 +340,7 @@ static MemoryPatch GetCheatFields(const MemoryPatch &pin)
 {
  MemoryPatch patch = pin;
  char buf[256];
- const bool support_read_subst = CurGame->InstallReadPatch && CurGame->RemoveReadPatches;
+ const bool support_read_subst = CurGame->CheatInfo.InstallReadPatch && CurGame->CheatInfo.RemoveReadPatches;
 
  CHEAT_printf("Name [%s]: ", patch.name.c_str());
  GetString(buf, 256);
@@ -638,8 +650,8 @@ static void ResetSearch(void* data)
  CHEAT_puts("Done.");
 }
 
-static unsigned int searchbytelen = 1;
-static bool searchbigendian = 0;
+static unsigned int searchbytelen;
+static bool searchbigendian;
 
 static int srescallb(uint32 a, uint64 last, uint64 current, void *data)
 {
@@ -744,8 +756,6 @@ static void DoSearch(void* data)
   CHEAT_printf("Big endian? [%c]: ", searchbigendian ? 'Y' : 'N');
   searchbigendian = GetYN(searchbigendian);
  }
- else
-  searchbigendian = 0;
 
  MDFNI_CheatSearchEnd(method, v1, v2, searchbytelen, searchbigendian);
  CHEAT_puts("Search completed.");
@@ -815,6 +825,10 @@ int CheatLoop(void *arg)
  std::vector<MENU> NewCheatsMenu;
  std::vector<MENU> MainMenu;
 
+ // TODO: Init on game load.
+ searchbytelen = 1;
+ searchbigendian = CurGame->CheatInfo.BigEndian;
+
  NewCheatsMenu.push_back( MENU(_("Add Cheat"), AddCheat, NULL) );
  NewCheatsMenu.push_back( MENU(_("Reset Search"), ResetSearch, NULL) );
  NewCheatsMenu.push_back( MENU(_("Do Search"), DoSearch, NULL) );
@@ -825,15 +839,12 @@ int CheatLoop(void *arg)
  MainMenu.push_back( MENU(_("List Cheats"), ListCheats, NULL) );
  MainMenu.push_back( MENU(_("Cheat Search..."), NULL, &NewCheatsMenu) );
 
- if(CurGame->CheatFormatInfo != NULL)
+ for(auto& cf : CurGame->CheatInfo.CheatFormatInfo)
  {
-  for(unsigned i = 0; i < CurGame->CheatFormatInfo->NumFormats; i++)
-  {
-   char buf[256];
-   trio_snprintf(buf, 256, _("Add %s Code"), CurGame->CheatFormatInfo->Formats[i].FullName);
+  char buf[256];
+  trio_snprintf(buf, 256, _("Add %s Code"), cf.FullName);
 
-   MainMenu.push_back( MENU(buf, AddCodeCheat, NULL, (void*)&CurGame->CheatFormatInfo->Formats[i]) );
-  }
+  MainMenu.push_back( MENU(buf, AddCodeCheat, NULL, (void*)&cf) );
  }
 
  try
@@ -873,27 +884,53 @@ bool CheatIF_Active(void)
  return(isactive);
 }
 
-void CheatIF_MT_Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect)
+void CheatIF_MT_Draw(const MDFN_PixelFormat& pformat, const int32 screen_w, const int32 screen_h)
 {
  if(!isactive)
   return;
 
- if(src_rect->w < 342 || src_rect->h < 342)
-  CheatConsole.SetFont(MDFN_FONT_5x7);
- else if(src_rect->w < 512 || src_rect->h < 480)
-  CheatConsole.SetFont(MDFN_FONT_6x13_12x13);
+ //
+ //
+ //
+ MDFN_Rect CheatRect;
+ unsigned crs = 0;
+
+ CheatRect.x = 0;
+ CheatRect.y = 0;
+ CheatRect.w = screen_w;
+ CheatRect.h = screen_h;
+
+ while((CheatRect.h >> crs) >= 1024 && (CheatRect.w >> crs) >= 1024)
+  crs++;
+
+ CheatRect.w >>= crs;
+ CheatRect.h >>= crs;
+
+ MDFN_Rect zederect;
+
+ zederect.x = 0;
+ zederect.y = 0;
+ zederect.w = CheatRect.w << crs;
+ zederect.h = CheatRect.h << crs;
+
+ //
+ unsigned fontid = MDFN_FONT_9x18_18x18;
+
+ if(CheatRect.w < 342 || CheatRect.h < 342)
+  fontid = MDFN_FONT_5x7;
+ else if(CheatRect.w < 512 || CheatRect.h < 480)
+  fontid = MDFN_FONT_6x13_12x13;
  else
-  CheatConsole.SetFont(MDFN_FONT_9x18_18x18);
+  fontid = MDFN_FONT_9x18_18x18;
 
-
- CheatConsole.Draw(surface, src_rect);
+ BlitRaw(CheatConsole.CheatConsoleT::Draw(pformat, CheatRect.w, CheatRect.h, fontid), &CheatRect, &zederect);
 }
 
 int CheatIF_MT_EventHook(const SDL_Event *event)
 {
  if(!isactive) return(1);
 
- return(CheatConsole.Event(event));
+ return(CheatConsole.CheatConsoleT::Event(event));
 }
 
 #if 0

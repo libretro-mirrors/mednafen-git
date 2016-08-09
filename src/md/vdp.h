@@ -91,7 +91,7 @@ class MDVDP
     }
  //    C68k_Set_IRQ(&Main68K, 0);
 
-    return C68K_INT_ACK_AUTOVECTOR;
+    return M68K::BUS_INT_ACK_AUTO;
  }
 
  private:
@@ -203,15 +203,17 @@ class MDVDP
 
  object_info_t object_info[20];
 
- /* Pixel look-up tables and table base address */
- uint8 *lut[5];
- uint8 *lut_base;
+ /* Pixel look-up tables */
+ uint8 *lut[LUT_MAX];
 
  /* 32-bit pixel remapping data */
  uint32 pixel_32[0x100];
  uint32 pixel_32_lut[3][0x200];
 
  uint32 UserLE; // User layer enable;
+
+ /* Pixel look-up table base address */
+ uint8 lut_base[(LUT_MAX * LUT_SIZE) + LUT_SIZE];
 
 /* Function prototypes */
  void render_line(int line);

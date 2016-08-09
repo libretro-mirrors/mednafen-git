@@ -318,7 +318,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
-4.000000
+5.000000
 0.01
 256
 0
@@ -345,7 +345,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
-4.000000
+5.000000
 0.01
 256
 0
@@ -484,6 +484,33 @@ keyboard 49+ctrl+shift
 
 
 0
+command.device_select10
+(nil) MDFNSF_SUPPRESS_DOC 
+Select virtual device on virtual input port 10
+
+MDFNST_STRING
+keyboard 48+ctrl+shift
+
+
+0
+command.device_select11
+(nil) MDFNSF_SUPPRESS_DOC 
+Select virtual device on virtual input port 11
+
+MDFNST_STRING
+keyboard 257+ctrl+shift
+
+
+0
+command.device_select12
+(nil) MDFNSF_SUPPRESS_DOC 
+Select virtual device on virtual input port 12
+
+MDFNST_STRING
+keyboard 258+ctrl+shift
+
+
+0
 command.device_select2
 (nil) MDFNSF_SUPPRESS_DOC 
 Select virtual device on virtual input port 2
@@ -547,6 +574,15 @@ keyboard 56+ctrl+shift
 
 
 0
+command.device_select9
+(nil) MDFNSF_SUPPRESS_DOC 
+Select virtual device on virtual input port 9
+
+MDFNST_STRING
+keyboard 57+ctrl+shift
+
+
+0
 command.exit
 (nil) MDFNSF_SUPPRESS_DOC 
 Exit
@@ -571,6 +607,33 @@ Configure buttons on virtual port 1
 
 MDFNST_STRING
 keyboard 49+alt+shift
+
+
+0
+command.input_config10
+(nil) MDFNSF_SUPPRESS_DOC 
+Configure buttons on virtual port 10
+
+MDFNST_STRING
+keyboard 48+alt+shift
+
+
+0
+command.input_config11
+(nil) MDFNSF_SUPPRESS_DOC 
+Configure buttons on virtual port 11
+
+MDFNST_STRING
+keyboard 257+alt+shift
+
+
+0
+command.input_config12
+(nil) MDFNSF_SUPPRESS_DOC 
+Configure buttons on virtual port 12
+
+MDFNST_STRING
+keyboard 258+alt+shift
 
 
 0
@@ -634,6 +697,15 @@ Configure buttons on virtual port 8
 
 MDFNST_STRING
 keyboard 56+alt+shift
+
+
+0
+command.input_config9
+(nil) MDFNSF_SUPPRESS_DOC 
+Configure buttons on virtual port 9
+
+MDFNST_STRING
+keyboard 57+alt+shift
 
 
 0
@@ -1510,6 +1582,15 @@ MDFNST_STRING
 
 
 0
+filesys.fname_savbackup
+
+Format string for save game backups filename.
+WARNING: %x and %p should always be included.\n\nSee fname_format.txt for more information.  Edit at your own risk.
+MDFNST_STRING
+%F.%m%z%p.%x
+
+
+0
 filesys.fname_snap
 
 Format string for screen snapshot filenames.
@@ -1579,6 +1660,15 @@ Path to directory for save games and nonvolatile memory.
 WARNING: Do not set this path to a directory that contains Famicom Disk System disk images, or you will corrupt them when you load an FDS game and exit Mednafen.
 MDFNST_STRING
 sav
+
+
+0
+filesys.path_savbackup
+
+Path to directory for backups of save games and nonvolatile memory.
+
+MDFNST_STRING
+b
 
 
 0
@@ -1986,7 +2076,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
-4.000000
+6.000000
 0.01
 256
 0
@@ -2013,7 +2103,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
-4.000000
+6.000000
 0.01
 256
 0
@@ -2364,7 +2454,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
-3.000000
+4.000000
 0.01
 256
 0
@@ -2391,7 +2481,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
-3.000000
+4.000000
 0.01
 256
 0
@@ -2706,7 +2796,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
-4.000000
+6.000000
 0.01
 256
 0
@@ -2733,7 +2823,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
-4.000000
+6.000000
 0.01
 256
 0
@@ -3138,7 +3228,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
-4.000000
+6.000000
 0.01
 256
 0
@@ -3165,7 +3255,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
-4.000000
+6.000000
 0.01
 256
 0
@@ -3201,21 +3291,42 @@ MDFNSF_COMMON_TEMPLATE
 Disassembly font size.
 Note: Setting the font size to larger than the default may cause text overlap in the debugger.
 MDFNST_ENUM
-small
-
-
-4
-xsmall
-4x5
-
-small
 5x7
 
-medium
+
+11
+5x7
+5x7
+
+6x9
+6x9
+
+6x12
+6x12
+
 6x13
+6x13.  CJK support.
+
+9x18
+9x18;  CJK support.
+
+xsmall
+
+
+small
+
+
+medium
+
 
 large
-9x18
+
+
+0
+
+
+1
+
 
 md.debugger.memcharenc
 MDFNSF_COMMON_TEMPLATE 
@@ -6819,21 +6930,42 @@ MDFNSF_COMMON_TEMPLATE
 Disassembly font size.
 Note: Setting the font size to larger than the default may cause text overlap in the debugger.
 MDFNST_ENUM
-small
-
-
-4
-xsmall
-4x5
-
-small
 5x7
 
-medium
+
+11
+5x7
+5x7
+
+6x9
+6x9
+
+6x12
+6x12
+
 6x13
+6x13.  CJK support.
+
+9x18
+9x18;  CJK support.
+
+xsmall
+
+
+small
+
+
+medium
+
 
 large
-9x18
+
+
+0
+
+
+1
+
 
 nes.debugger.memcharenc
 MDFNSF_COMMON_TEMPLATE 
@@ -9615,7 +9747,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
-3.000000
+4.000000
 0.01
 256
 0
@@ -9642,7 +9774,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
-3.000000
+4.000000
 0.01
 256
 0
@@ -9654,6 +9786,66 @@ MDFNST_FLOAT
 1.000000
 0.01
 256
+0
+netplay.console.font
+
+Font for netplay chat console.
+
+MDFNST_ENUM
+9x18
+
+
+11
+5x7
+5x7
+
+6x9
+6x9
+
+6x12
+6x12
+
+6x13
+6x13.  CJK support.
+
+9x18
+9x18;  CJK support.
+
+xsmall
+
+
+small
+
+
+medium
+
+
+large
+
+
+0
+
+
+1
+
+
+netplay.console.lines
+
+Height of chat console, in lines.
+
+MDFNST_UINT
+5
+5
+64
+0
+netplay.console.scale
+
+Netplay chat console text scale factor.
+A value of 0 enables auto-scaling.
+MDFNST_UINT
+1
+0
+16
 0
 netplay.gamekey
 
@@ -9708,15 +9900,6 @@ MDFNST_UINT
 4046
 1
 65535
-0
-netplay.smallfont
-
-Use small(tiny!) font for netplay chat console.
-
-MDFNST_BOOL
-0
-
-
 0
 ngp.enable
 MDFNSF_COMMON_TEMPLATE 
@@ -10041,7 +10224,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
-4.000000
+6.000000
 0.01
 256
 0
@@ -10068,7 +10251,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
-4.000000
+6.000000
 0.01
 256
 0
@@ -10176,21 +10359,42 @@ MDFNSF_COMMON_TEMPLATE
 Disassembly font size.
 Note: Setting the font size to larger than the default may cause text overlap in the debugger.
 MDFNST_ENUM
-small
-
-
-4
-xsmall
-4x5
-
-small
 5x7
 
-medium
+
+11
+5x7
+5x7
+
+6x9
+6x9
+
+6x12
+6x12
+
 6x13
+6x13.  CJK support.
+
+9x18
+9x18;  CJK support.
+
+xsmall
+
+
+small
+
+
+medium
+
 
 large
-9x18
+
+
+0
+
+
+1
+
 
 pce.debugger.memcharenc
 MDFNSF_COMMON_TEMPLATE 
@@ -13791,21 +13995,42 @@ MDFNSF_COMMON_TEMPLATE
 Disassembly font size.
 Note: Setting the font size to larger than the default may cause text overlap in the debugger.
 MDFNST_ENUM
-small
-
-
-4
-xsmall
-4x5
-
-small
 5x7
 
-medium
+
+11
+5x7
+5x7
+
+6x9
+6x9
+
+6x12
+6x12
+
 6x13
+6x13.  CJK support.
+
+9x18
+9x18;  CJK support.
+
+xsmall
+
+
+small
+
+
+medium
+
 
 large
-9x18
+
+
+0
+
+
+1
+
 
 pcfx.debugger.memcharenc
 MDFNSF_COMMON_TEMPLATE 
@@ -15783,21 +16008,42 @@ MDFNSF_COMMON_TEMPLATE
 Disassembly font size.
 Note: Setting the font size to larger than the default may cause text overlap in the debugger.
 MDFNST_ENUM
-small
-
-
-4
-xsmall
-4x5
-
-small
 5x7
 
-medium
+
+11
+5x7
+5x7
+
+6x9
+6x9
+
+6x12
+6x12
+
 6x13
+6x13.  CJK support.
+
+9x18
+9x18;  CJK support.
+
+xsmall
+
+
+small
+
+
+medium
+
 
 large
-9x18
+
+
+0
+
+
+1
+
 
 psx.debugger.memcharenc
 MDFNSF_COMMON_TEMPLATE 
@@ -26967,7 +27213,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
-3.000000
+4.000000
 0.01
 256
 0
@@ -26994,7 +27240,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
-3.000000
+4.000000
 0.01
 256
 0
@@ -28563,7 +28809,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
-3.000000
+4.000000
 0.01
 256
 0
@@ -28590,11 +28836,626 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
-3.000000
+4.000000
 0.01
 256
 0
 snes.yscalefs
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the Y axis in fullscreen mode.
+For this settings to have any effect, the \"<system>.stretch\" setting must be set to \"0\".
+MDFNST_FLOAT
+1.000000
+0.01
+256
+0
+snes_faust.enable
+MDFNSF_COMMON_TEMPLATE 
+Enable (automatic) usage of this module.
+
+MDFNST_BOOL
+1
+
+
+0
+snes_faust.forcemono
+MDFNSF_CAT_SOUND MDFNSF_COMMON_TEMPLATE 
+Force monophonic sound output.
+
+MDFNST_BOOL
+0
+
+
+0
+snes_faust.input.port1
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Port 1
+
+MDFNST_ENUM
+gamepad
+
+
+2
+none
+none
+
+gamepad
+Gamepad
+
+snes_faust.input.port1.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: A (right)
+
+MDFNST_STRING
+keyboard 262
+
+
+0
+snes_faust.input.port1.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: B (center, lower)
+
+MDFNST_STRING
+keyboard 258
+
+
+0
+snes_faust.input.port1.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: DOWN ↓
+
+MDFNST_STRING
+keyboard 115
+
+
+0
+snes_faust.input.port1.gamepad.l
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: Left Shoulder
+
+MDFNST_STRING
+keyboard 263
+
+
+0
+snes_faust.input.port1.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: LEFT ←
+
+MDFNST_STRING
+keyboard 97
+
+
+0
+snes_faust.input.port1.gamepad.r
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: Right Shoulder
+
+MDFNST_STRING
+keyboard 265
+
+
+0
+snes_faust.input.port1.gamepad.rapid_a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: Rapid A (right)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port1.gamepad.rapid_b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: Rapid B (center, lower)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port1.gamepad.rapid_x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: Rapid X (center, upper)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port1.gamepad.rapid_y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: Rapid Y (left)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port1.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: RIGHT →
+
+MDFNST_STRING
+keyboard 100
+
+
+0
+snes_faust.input.port1.gamepad.select
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: SELECT
+
+MDFNST_STRING
+keyboard 9
+
+
+0
+snes_faust.input.port1.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: START
+
+MDFNST_STRING
+keyboard 13
+
+
+0
+snes_faust.input.port1.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: UP ↑
+
+MDFNST_STRING
+keyboard 119
+
+
+0
+snes_faust.input.port1.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: X (center, upper)
+
+MDFNST_STRING
+keyboard 264
+
+
+0
+snes_faust.input.port1.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 1, Gamepad: Y (left)
+
+MDFNST_STRING
+keyboard 260
+
+
+0
+snes_faust.input.port2
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Port 2
+
+MDFNST_ENUM
+gamepad
+
+
+2
+none
+none
+
+gamepad
+Gamepad
+
+snes_faust.input.port2.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: A (right)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port2.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: B (center, lower)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port2.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port2.gamepad.l
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port2.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port2.gamepad.r
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port2.gamepad.rapid_a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: Rapid A (right)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port2.gamepad.rapid_b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: Rapid B (center, lower)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port2.gamepad.rapid_x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: Rapid X (center, upper)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port2.gamepad.rapid_y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: Rapid Y (left)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port2.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port2.gamepad.select
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: SELECT
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port2.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port2.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port2.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: X (center, upper)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port2.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Port 2, Gamepad: Y (left)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.pixshader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+MDFNST_ENUM
+none
+
+
+10
+none
+None/Disabled
+
+autoip
+Auto Interpolation
+Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
+autoipsharper
+Sharper Auto Interpolation
+Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
+scale2x
+Scale2x
+
+sabr
+SABR v3.0
+GPU-intensive.
+ipsharper
+Sharper bilinear interpolation.
+
+ipxnoty
+Linear interpolation on X axis only.
+
+ipynotx
+Linear interpolation on Y axis only.
+
+ipxnotysharper
+Sharper version of \"ipxnoty\".
+
+ipynotxsharper
+Sharper version of \"ipynotx\".
+
+snes_faust.resamp_quality
+
+Sound quality.
+Higher values correspond to better SNR and better preservation of higher frequencies(\"brightness\"), at the cost of increased computational complexity and a negligible increase in latency.\n\nHigher values will also slightly increase the probability of sample clipping(relevant if Mednafen\'s volume control settings are set too high), due to increased (time-domain) ringing.
+MDFNST_INT
+3
+0
+5
+0
+snes_faust.resamp_rate_error
+
+Sound output rate tolerance.
+Lower values correspond to better matching of the output rate of the resampler to the actual desired output rate, at the expense of increased RAM usage and poorer CPU cache utilization.
+MDFNST_FLOAT
+0.000035
+0.0000001
+0.0015
+0
+snes_faust.scanlines
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
+MDFNST_INT
+0
+-100
+100
+0
+snes_faust.special
+MDFNSF_COMMON_TEMPLATE 
+Enable specified special video scaler.
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+MDFNST_ENUM
+none
+
+
+17
+0
+
+
+none
+None/Disabled
+
+hq2x
+hq2x
+
+hq3x
+hq3x
+
+hq4x
+hq4x
+
+scale2x
+scale2x
+
+scale3x
+scale3x
+
+scale4x
+scale4x
+
+2xsai
+2xSaI
+
+super2xsai
+Super 2xSaI
+
+supereagle
+Super Eagle
+
+nn2x
+Nearest-neighbor 2x
+
+nn3x
+Nearest-neighbor 3x
+
+nn4x
+Nearest-neighbor 4x
+
+nny2x
+Nearest-neighbor 2x, y axis only
+
+nny3x
+Nearest-neighbor 3x, y axis only
+
+nny4x
+Nearest-neighbor 4x, y axis only
+
+snes_faust.spex
+
+Enable 1-frame speculative execution for video output.
+Hack to reduce input->output video latency by 1 frame.  Enabling will increase CPU usage, and may cause video glitches(such as \"jerkiness\") in some oddball games, but most commercially-released games should be fine.
+MDFNST_BOOL
+0
+
+
+0
+snes_faust.spex.sound
+
+Enable speculative execution for sound output too.
+Only has an effect when speculative-execution for video output is enabled.  Will cause minor sound glitches in some games.
+MDFNST_BOOL
+1
+
+
+0
+snes_faust.stretch
+MDFNSF_COMMON_TEMPLATE 
+Stretch to fill screen.
+
+MDFNST_ENUM
+aspect_mult2
+
+
+8
+0
+Disabled
+
+off
+
+
+1
+
+
+full
+Full
+Full-screen stretch, disregarding aspect ratio.
+2
+
+
+aspect
+Aspect Preserve
+Full-screen stretch as far as the aspect ratio(in this sense, the equivalent xscalefs == yscalefs) can be maintained.
+aspect_int
+Aspect Preserve + Integer Scale
+Full-screen stretch, same as \"aspect\" except that the equivalent xscalefs and yscalefs are rounded down to the nearest integer.
+aspect_mult2
+Aspect Preserve + Integer Multiple-of-2 Scale
+Full-screen stretch, same as \"aspect_int\", but rounds down to the nearest multiple of 2.
+snes_faust.tblur
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Enable video temporal blur(50/50 previous/current frame by default).
+
+MDFNST_BOOL
+0
+
+
+0
+snes_faust.tblur.accum
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Accumulate color data rather than discarding it.
+
+MDFNST_BOOL
+0
+
+
+0
+snes_faust.tblur.accum.amount
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Blur amount in accumulation mode, specified in percentage of accumulation buffer to mix with the current frame.
+
+MDFNST_FLOAT
+50
+0
+100
+0
+snes_faust.videoip
+MDFNSF_COMMON_TEMPLATE 
+Enable (bi)linear interpolation.
+
+MDFNST_ENUM
+1
+
+
+4
+0
+Disabled
+
+1
+Bilinear
+
+x
+Linear (X)
+Interpolation only on the X axis.
+y
+Linear (Y)
+Interpolation only on the Y axis.
+snes_faust.xres
+MDFNSF_COMMON_TEMPLATE 
+Full-screen horizontal resolution.
+A value of \"0\" will cause the desktop horizontal resolution to be used.
+MDFNST_UINT
+0
+0
+65536
+0
+snes_faust.xscale
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the X axis in windowed mode.
+
+MDFNST_FLOAT
+3.000000
+0.01
+256
+0
+snes_faust.xscalefs
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the X axis in fullscreen mode.
+For this settings to have any effect, the \"<system>.stretch\" setting must be set to \"0\".
+MDFNST_FLOAT
+1.000000
+0.01
+256
+0
+snes_faust.yres
+MDFNSF_COMMON_TEMPLATE 
+Full-screen vertical resolution.
+A value of \"0\" will cause the desktop vertical resolution to be used.
+MDFNST_UINT
+0
+0
+65536
+0
+snes_faust.yscale
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the Y axis in windowed mode.
+
+MDFNST_FLOAT
+3.000000
+0.01
+256
+0
+snes_faust.yscalefs
 MDFNSF_COMMON_TEMPLATE 
 Scaling factor for the Y axis in fullscreen mode.
 For this settings to have any effect, the \"<system>.stretch\" setting must be set to \"0\".
@@ -28638,7 +29499,7 @@ MDFNST_ENUM
 default
 
 
-8
+9
 default
 Default
 Selects the default sound driver.
@@ -28663,6 +29524,9 @@ This driver is not recommended, but it serves as a backup driver if the others a
 jack
 JACK
 The latency reported during startup is for the local sound buffer only and does not include server-side latency.  Please note that video card drivers(in the kernel or X), and hardware-accelerated OpenGL, may interfere with jackd\'s ability to effectively run with realtime response.
+dummy
+
+
 sound.period_time
 
 Desired period size in microseconds(μs).
@@ -28707,6 +29571,4881 @@ MDFNST_UINT
 600
 10
 99999
+0
+ss.bios_jp
+MDFNSF_EMU_STATE 
+Path to the Japan ROM BIOS
+
+MDFNST_STRING
+sega_101.bin
+
+
+0
+ss.bios_na_eu
+MDFNSF_EMU_STATE 
+Path to the North America and Europe ROM BIOS
+
+MDFNST_STRING
+mpr-17933.bin
+
+
+0
+ss.bios_sanity
+
+Enable BIOS ROM image sanity checks.
+
+MDFNST_BOOL
+1
+
+
+0
+ss.cart
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Expansion cart.
+
+MDFNST_ENUM
+auto
+
+
+5
+auto
+Automatic
+
+none
+None
+
+backup
+Backup Memory(512KiB)
+
+extram1
+1MiB Extended RAM
+
+extram4
+4MiB Extended RAM
+
+ss.cart.kof95_path
+MDFNSF_EMU_STATE 
+Path to KoF 95 ROM image.
+
+MDFNST_STRING
+mpr-18811-mx.ic1
+
+
+0
+ss.cart.ultraman_path
+MDFNSF_EMU_STATE 
+Path to Ultraman ROM image.
+
+MDFNST_STRING
+mpr-19367-mx.ic1
+
+
+0
+ss.cd_sanity
+
+Enable CD (image) sanity checks.
+
+MDFNST_BOOL
+1
+
+
+0
+ss.dbg_exe_cdpath
+MDFNSF_SUPPRESS_DOC 
+CD image to use with homebrew executable loading.
+
+MDFNST_STRING
+
+
+
+0
+ss.dbg_mask
+
+Debug printf mask.
+
+MDFNST_UINT
+0x00001
+0x00000
+0xFFFFF
+0
+ss.debugger.disfontsize
+MDFNSF_COMMON_TEMPLATE 
+Disassembly font size.
+Note: Setting the font size to larger than the default may cause text overlap in the debugger.
+MDFNST_ENUM
+5x7
+
+
+11
+5x7
+5x7
+
+6x9
+6x9
+
+6x12
+6x12
+
+6x13
+6x13.  CJK support.
+
+9x18
+9x18;  CJK support.
+
+xsmall
+
+
+small
+
+
+medium
+
+
+large
+
+
+0
+
+
+1
+
+
+ss.debugger.memcharenc
+MDFNSF_COMMON_TEMPLATE 
+Character encoding for the debugger\'s memory editor.
+
+MDFNST_STRING
+SJIS
+
+
+0
+ss.enable
+MDFNSF_COMMON_TEMPLATE 
+Enable (automatic) usage of this module.
+
+MDFNST_BOOL
+1
+
+
+0
+ss.forcemono
+MDFNSF_CAT_SOUND MDFNSF_COMMON_TEMPLATE 
+Force monophonic sound output.
+
+MDFNST_BOOL
+0
+
+
+0
+ss.input.builtin.builtin.smpc_reset
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Builtin, builtin: SMPC Reset
+
+MDFNST_STRING
+
+
+
+0
+ss.input.mouse_sensitivity
+
+Emulated mouse sensitivity.
+
+MDFNST_FLOAT
+0.50
+
+
+0
+ss.input.port1
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 1
+
+MDFNST_ENUM
+gamepad
+
+
+4
+none
+none
+
+gamepad
+Digital Gamepad
+Standard Saturn digital gamepad.
+3dpad
+3D Control Pad
+3D Control Pad
+mouse
+Mouse
+Mouse
+ss.input.port1.3dpad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.analog_down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: Analog DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.analog_left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: Analog LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.analog_right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: Analog RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.analog_up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: Analog UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: D-Pad DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: D-Pad LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: Left Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.mode
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: Mode
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: D-Pad RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: Right Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: D-Pad UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.3dpad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, 3D Control Pad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port1.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Digital Gamepad: A
+
+MDFNST_STRING
+keyboard 257
+
+
+0
+ss.input.port1.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Digital Gamepad: B
+
+MDFNST_STRING
+keyboard 258
+
+
+0
+ss.input.port1.gamepad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Digital Gamepad: C
+
+MDFNST_STRING
+keyboard 259
+
+
+0
+ss.input.port1.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Digital Gamepad: DOWN ↓
+
+MDFNST_STRING
+keyboard 115
+
+
+0
+ss.input.port1.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Digital Gamepad: LEFT ←
+
+MDFNST_STRING
+keyboard 97
+
+
+0
+ss.input.port1.gamepad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Digital Gamepad: Left Shoulder
+
+MDFNST_STRING
+keyboard 263
+
+
+0
+ss.input.port1.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Digital Gamepad: RIGHT →
+
+MDFNST_STRING
+keyboard 100
+
+
+0
+ss.input.port1.gamepad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Digital Gamepad: Right Shoulder
+
+MDFNST_STRING
+keyboard 265
+
+
+0
+ss.input.port1.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Digital Gamepad: START
+
+MDFNST_STRING
+keyboard 13
+
+
+0
+ss.input.port1.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Digital Gamepad: UP ↑
+
+MDFNST_STRING
+keyboard 119
+
+
+0
+ss.input.port1.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Digital Gamepad: X
+
+MDFNST_STRING
+keyboard 260
+
+
+0
+ss.input.port1.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Digital Gamepad: Y
+
+MDFNST_STRING
+keyboard 261
+
+
+0
+ss.input.port1.gamepad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Digital Gamepad: Z
+
+MDFNST_STRING
+keyboard 262
+
+
+0
+ss.input.port1.mouse.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port1.mouse.middle
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Mouse: Middle Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port1.mouse.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port1.mouse.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Mouse: Start
+
+MDFNST_STRING
+keyboard 13
+
+
+0
+ss.input.port10
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 10
+
+MDFNST_ENUM
+gamepad
+
+
+4
+none
+none
+
+gamepad
+Digital Gamepad
+Standard Saturn digital gamepad.
+3dpad
+3D Control Pad
+3D Control Pad
+mouse
+Mouse
+Mouse
+ss.input.port10.3dpad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.analog_down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: Analog DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.analog_left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: Analog LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.analog_right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: Analog RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.analog_up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: Analog UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: D-Pad DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: D-Pad LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: Left Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.mode
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: Mode
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: D-Pad RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: Right Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: D-Pad UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.3dpad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, 3D Control Pad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Digital Gamepad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Digital Gamepad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.gamepad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Digital Gamepad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Digital Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Digital Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.gamepad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Digital Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Digital Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.gamepad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Digital Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Digital Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Digital Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Digital Gamepad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Digital Gamepad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.gamepad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Digital Gamepad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port10.mouse.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port10.mouse.middle
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Mouse: Middle Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port10.mouse.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port10.mouse.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Mouse: Start
+
+MDFNST_STRING
+keyboard 13
+
+
+0
+ss.input.port11
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 11
+
+MDFNST_ENUM
+gamepad
+
+
+4
+none
+none
+
+gamepad
+Digital Gamepad
+Standard Saturn digital gamepad.
+3dpad
+3D Control Pad
+3D Control Pad
+mouse
+Mouse
+Mouse
+ss.input.port11.3dpad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.analog_down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: Analog DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.analog_left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: Analog LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.analog_right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: Analog RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.analog_up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: Analog UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: D-Pad DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: D-Pad LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: Left Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.mode
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: Mode
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: D-Pad RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: Right Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: D-Pad UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.3dpad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, 3D Control Pad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Digital Gamepad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Digital Gamepad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.gamepad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Digital Gamepad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Digital Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Digital Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.gamepad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Digital Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Digital Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.gamepad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Digital Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Digital Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Digital Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Digital Gamepad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Digital Gamepad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.gamepad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Digital Gamepad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port11.mouse.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port11.mouse.middle
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Mouse: Middle Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port11.mouse.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port11.mouse.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Mouse: Start
+
+MDFNST_STRING
+keyboard 13
+
+
+0
+ss.input.port12
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 12
+
+MDFNST_ENUM
+gamepad
+
+
+4
+none
+none
+
+gamepad
+Digital Gamepad
+Standard Saturn digital gamepad.
+3dpad
+3D Control Pad
+3D Control Pad
+mouse
+Mouse
+Mouse
+ss.input.port12.3dpad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.analog_down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: Analog DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.analog_left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: Analog LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.analog_right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: Analog RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.analog_up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: Analog UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: D-Pad DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: D-Pad LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: Left Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.mode
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: Mode
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: D-Pad RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: Right Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: D-Pad UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.3dpad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, 3D Control Pad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Digital Gamepad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Digital Gamepad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.gamepad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Digital Gamepad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Digital Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Digital Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.gamepad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Digital Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Digital Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.gamepad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Digital Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Digital Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Digital Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Digital Gamepad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Digital Gamepad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.gamepad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Digital Gamepad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port12.mouse.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port12.mouse.middle
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Mouse: Middle Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port12.mouse.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port12.mouse.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Mouse: Start
+
+MDFNST_STRING
+keyboard 13
+
+
+0
+ss.input.port2
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 2
+
+MDFNST_ENUM
+gamepad
+
+
+4
+none
+none
+
+gamepad
+Digital Gamepad
+Standard Saturn digital gamepad.
+3dpad
+3D Control Pad
+3D Control Pad
+mouse
+Mouse
+Mouse
+ss.input.port2.3dpad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.analog_down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: Analog DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.analog_left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: Analog LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.analog_right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: Analog RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.analog_up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: Analog UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: D-Pad DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: D-Pad LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: Left Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.mode
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: Mode
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: D-Pad RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: Right Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: D-Pad UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.3dpad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, 3D Control Pad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Digital Gamepad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Digital Gamepad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.gamepad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Digital Gamepad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Digital Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Digital Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.gamepad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Digital Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Digital Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.gamepad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Digital Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Digital Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Digital Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Digital Gamepad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Digital Gamepad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.gamepad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Digital Gamepad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port2.mouse.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port2.mouse.middle
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Mouse: Middle Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port2.mouse.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port2.mouse.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Mouse: Start
+
+MDFNST_STRING
+keyboard 13
+
+
+0
+ss.input.port3
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 3
+
+MDFNST_ENUM
+gamepad
+
+
+4
+none
+none
+
+gamepad
+Digital Gamepad
+Standard Saturn digital gamepad.
+3dpad
+3D Control Pad
+3D Control Pad
+mouse
+Mouse
+Mouse
+ss.input.port3.3dpad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.analog_down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: Analog DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.analog_left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: Analog LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.analog_right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: Analog RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.analog_up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: Analog UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: D-Pad DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: D-Pad LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: Left Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.mode
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: Mode
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: D-Pad RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: Right Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: D-Pad UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.3dpad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, 3D Control Pad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Digital Gamepad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Digital Gamepad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.gamepad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Digital Gamepad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Digital Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Digital Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.gamepad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Digital Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Digital Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.gamepad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Digital Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Digital Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Digital Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Digital Gamepad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Digital Gamepad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.gamepad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Digital Gamepad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port3.mouse.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port3.mouse.middle
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Mouse: Middle Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port3.mouse.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port3.mouse.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Mouse: Start
+
+MDFNST_STRING
+keyboard 13
+
+
+0
+ss.input.port4
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 4
+
+MDFNST_ENUM
+gamepad
+
+
+4
+none
+none
+
+gamepad
+Digital Gamepad
+Standard Saturn digital gamepad.
+3dpad
+3D Control Pad
+3D Control Pad
+mouse
+Mouse
+Mouse
+ss.input.port4.3dpad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.analog_down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: Analog DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.analog_left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: Analog LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.analog_right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: Analog RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.analog_up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: Analog UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: D-Pad DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: D-Pad LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: Left Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.mode
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: Mode
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: D-Pad RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: Right Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: D-Pad UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.3dpad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, 3D Control Pad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Digital Gamepad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Digital Gamepad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.gamepad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Digital Gamepad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Digital Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Digital Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.gamepad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Digital Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Digital Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.gamepad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Digital Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Digital Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Digital Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Digital Gamepad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Digital Gamepad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.gamepad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Digital Gamepad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port4.mouse.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port4.mouse.middle
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Mouse: Middle Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port4.mouse.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port4.mouse.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Mouse: Start
+
+MDFNST_STRING
+keyboard 13
+
+
+0
+ss.input.port5
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 5
+
+MDFNST_ENUM
+gamepad
+
+
+4
+none
+none
+
+gamepad
+Digital Gamepad
+Standard Saturn digital gamepad.
+3dpad
+3D Control Pad
+3D Control Pad
+mouse
+Mouse
+Mouse
+ss.input.port5.3dpad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.analog_down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: Analog DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.analog_left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: Analog LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.analog_right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: Analog RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.analog_up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: Analog UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: D-Pad DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: D-Pad LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: Left Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.mode
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: Mode
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: D-Pad RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: Right Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: D-Pad UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.3dpad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, 3D Control Pad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Digital Gamepad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Digital Gamepad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.gamepad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Digital Gamepad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Digital Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Digital Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.gamepad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Digital Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Digital Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.gamepad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Digital Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Digital Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Digital Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Digital Gamepad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Digital Gamepad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.gamepad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Digital Gamepad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port5.mouse.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port5.mouse.middle
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Mouse: Middle Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port5.mouse.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port5.mouse.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Mouse: Start
+
+MDFNST_STRING
+keyboard 13
+
+
+0
+ss.input.port6
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 6
+
+MDFNST_ENUM
+gamepad
+
+
+4
+none
+none
+
+gamepad
+Digital Gamepad
+Standard Saturn digital gamepad.
+3dpad
+3D Control Pad
+3D Control Pad
+mouse
+Mouse
+Mouse
+ss.input.port6.3dpad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.analog_down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: Analog DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.analog_left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: Analog LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.analog_right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: Analog RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.analog_up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: Analog UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: D-Pad DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: D-Pad LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: Left Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.mode
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: Mode
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: D-Pad RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: Right Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: D-Pad UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.3dpad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, 3D Control Pad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Digital Gamepad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Digital Gamepad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.gamepad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Digital Gamepad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Digital Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Digital Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.gamepad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Digital Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Digital Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.gamepad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Digital Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Digital Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Digital Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Digital Gamepad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Digital Gamepad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.gamepad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Digital Gamepad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port6.mouse.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port6.mouse.middle
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Mouse: Middle Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port6.mouse.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port6.mouse.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Mouse: Start
+
+MDFNST_STRING
+keyboard 13
+
+
+0
+ss.input.port7
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 7
+
+MDFNST_ENUM
+gamepad
+
+
+4
+none
+none
+
+gamepad
+Digital Gamepad
+Standard Saturn digital gamepad.
+3dpad
+3D Control Pad
+3D Control Pad
+mouse
+Mouse
+Mouse
+ss.input.port7.3dpad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.analog_down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: Analog DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.analog_left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: Analog LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.analog_right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: Analog RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.analog_up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: Analog UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: D-Pad DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: D-Pad LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: Left Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.mode
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: Mode
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: D-Pad RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: Right Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: D-Pad UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.3dpad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, 3D Control Pad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Digital Gamepad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Digital Gamepad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.gamepad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Digital Gamepad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Digital Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Digital Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.gamepad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Digital Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Digital Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.gamepad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Digital Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Digital Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Digital Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Digital Gamepad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Digital Gamepad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.gamepad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Digital Gamepad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port7.mouse.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port7.mouse.middle
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Mouse: Middle Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port7.mouse.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port7.mouse.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Mouse: Start
+
+MDFNST_STRING
+keyboard 13
+
+
+0
+ss.input.port8
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 8
+
+MDFNST_ENUM
+gamepad
+
+
+4
+none
+none
+
+gamepad
+Digital Gamepad
+Standard Saturn digital gamepad.
+3dpad
+3D Control Pad
+3D Control Pad
+mouse
+Mouse
+Mouse
+ss.input.port8.3dpad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.analog_down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: Analog DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.analog_left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: Analog LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.analog_right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: Analog RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.analog_up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: Analog UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: D-Pad DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: D-Pad LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: Left Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.mode
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: Mode
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: D-Pad RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: Right Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: D-Pad UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.3dpad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, 3D Control Pad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Digital Gamepad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Digital Gamepad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.gamepad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Digital Gamepad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Digital Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Digital Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.gamepad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Digital Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Digital Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.gamepad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Digital Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Digital Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Digital Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Digital Gamepad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Digital Gamepad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.gamepad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Digital Gamepad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port8.mouse.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port8.mouse.middle
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Mouse: Middle Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port8.mouse.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port8.mouse.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Mouse: Start
+
+MDFNST_STRING
+keyboard 13
+
+
+0
+ss.input.port9
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 9
+
+MDFNST_ENUM
+gamepad
+
+
+4
+none
+none
+
+gamepad
+Digital Gamepad
+Standard Saturn digital gamepad.
+3dpad
+3D Control Pad
+3D Control Pad
+mouse
+Mouse
+Mouse
+ss.input.port9.3dpad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.analog_down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: Analog DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.analog_left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: Analog LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.analog_right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: Analog RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.analog_up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: Analog UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: D-Pad DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: D-Pad LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: Left Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.mode
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: Mode
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: D-Pad RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: Right Shoulder (Analog)
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: D-Pad UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.3dpad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, 3D Control Pad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Digital Gamepad: A
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Digital Gamepad: B
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.gamepad.c
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Digital Gamepad: C
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Digital Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Digital Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.gamepad.ls
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Digital Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Digital Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.gamepad.rs
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Digital Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Digital Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Digital Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Digital Gamepad: X
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Digital Gamepad: Y
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.gamepad.z
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Digital Gamepad: Z
+
+MDFNST_STRING
+
+
+
+0
+ss.input.port9.mouse.left
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port9.mouse.middle
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Mouse: Middle Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port9.mouse.right
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port9.mouse.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Mouse: Start
+
+MDFNST_STRING
+keyboard 13
+
+
+0
+ss.midsync
+
+Enable mid-frame synchronization.
+Mid-frame synchronization can reduce input latency, but it will increase CPU requirements.
+MDFNST_BOOL
+0
+
+
+0
+ss.pixshader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+MDFNST_ENUM
+none
+
+
+10
+none
+None/Disabled
+
+autoip
+Auto Interpolation
+Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
+autoipsharper
+Sharper Auto Interpolation
+Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
+scale2x
+Scale2x
+
+sabr
+SABR v3.0
+GPU-intensive.
+ipsharper
+Sharper bilinear interpolation.
+
+ipxnoty
+Linear interpolation on X axis only.
+
+ipynotx
+Linear interpolation on Y axis only.
+
+ipxnotysharper
+Sharper version of \"ipxnoty\".
+
+ipynotxsharper
+Sharper version of \"ipynotx\".
+
+ss.region_autodetect
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Attempt to auto-detect region of game.
+
+MDFNST_BOOL
+1
+
+
+0
+ss.region_default
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Default region to use.
+Used if region autodetection fails or is disabled.
+MDFNST_ENUM
+jp
+
+
+8
+jp
+Japan
+
+na
+North America
+
+eu
+Europe
+
+kr
+South Korea
+
+tw
+Taiwan
+
+as
+China
+
+br
+Brazil
+
+la
+Latin America
+
+ss.scanlines
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
+MDFNST_INT
+0
+-100
+100
+0
+ss.scsp.resamp_quality
+
+SCSP output resampler quality.
+0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen\'s output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors.
+MDFNST_UINT
+4
+0
+10
+0
+ss.slend
+
+Last displayed scanline in NTSC mode.
+
+MDFNST_INT
+239
+0
+239
+0
+ss.slendp
+
+Last displayed scanline in PAL mode.
+
+MDFNST_INT
+255
+0
+255
+0
+ss.slstart
+
+First displayed scanline in NTSC mode.
+
+MDFNST_INT
+0
+0
+239
+0
+ss.slstartp
+
+First displayed scanline in PAL mode.
+
+MDFNST_INT
+0
+0
+255
+0
+ss.smpc.autortc
+
+Automatically set RTC on game load.
+Automatically set the SMPC\'s emulated Real-Time Clock to the host system\'s current time and date upon game load.
+MDFNST_BOOL
+1
+
+
+0
+ss.smpc.autortc.lang
+
+BIOS language.
+
+MDFNST_ENUM
+english
+
+
+11
+english
+English
+
+german
+Deutsch
+
+french
+Français
+
+spanish
+Español
+
+italian
+Italiano
+
+japanese
+日本語
+
+deutsch
+
+
+français
+
+
+español
+
+
+italiano
+
+
+日本語
+
+
+ss.special
+MDFNSF_COMMON_TEMPLATE 
+Enable specified special video scaler.
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+MDFNST_ENUM
+none
+
+
+17
+0
+
+
+none
+None/Disabled
+
+hq2x
+hq2x
+
+hq3x
+hq3x
+
+hq4x
+hq4x
+
+scale2x
+scale2x
+
+scale3x
+scale3x
+
+scale4x
+scale4x
+
+2xsai
+2xSaI
+
+super2xsai
+Super 2xSaI
+
+supereagle
+Super Eagle
+
+nn2x
+Nearest-neighbor 2x
+
+nn3x
+Nearest-neighbor 3x
+
+nn4x
+Nearest-neighbor 4x
+
+nny2x
+Nearest-neighbor 2x, y axis only
+
+nny3x
+Nearest-neighbor 3x, y axis only
+
+nny4x
+Nearest-neighbor 4x, y axis only
+
+ss.stretch
+MDFNSF_COMMON_TEMPLATE 
+Stretch to fill screen.
+
+MDFNST_ENUM
+aspect_mult2
+
+
+8
+0
+Disabled
+
+off
+
+
+1
+
+
+full
+Full
+Full-screen stretch, disregarding aspect ratio.
+2
+
+
+aspect
+Aspect Preserve
+Full-screen stretch as far as the aspect ratio(in this sense, the equivalent xscalefs == yscalefs) can be maintained.
+aspect_int
+Aspect Preserve + Integer Scale
+Full-screen stretch, same as \"aspect\" except that the equivalent xscalefs and yscalefs are rounded down to the nearest integer.
+aspect_mult2
+Aspect Preserve + Integer Multiple-of-2 Scale
+Full-screen stretch, same as \"aspect_int\", but rounds down to the nearest multiple of 2.
+ss.tblur
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Enable video temporal blur(50/50 previous/current frame by default).
+
+MDFNST_BOOL
+0
+
+
+0
+ss.tblur.accum
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Accumulate color data rather than discarding it.
+
+MDFNST_BOOL
+0
+
+
+0
+ss.tblur.accum.amount
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Blur amount in accumulation mode, specified in percentage of accumulation buffer to mix with the current frame.
+
+MDFNST_FLOAT
+50
+0
+100
+0
+ss.videoip
+MDFNSF_COMMON_TEMPLATE 
+Enable (bi)linear interpolation.
+
+MDFNST_ENUM
+1
+
+
+4
+0
+Disabled
+
+1
+Bilinear
+
+x
+Linear (X)
+Interpolation only on the X axis.
+y
+Linear (Y)
+Interpolation only on the Y axis.
+ss.xres
+MDFNSF_COMMON_TEMPLATE 
+Full-screen horizontal resolution.
+A value of \"0\" will cause the desktop horizontal resolution to be used.
+MDFNST_UINT
+0
+0
+65536
+0
+ss.xscale
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the X axis in windowed mode.
+
+MDFNST_FLOAT
+3.000000
+0.01
+256
+0
+ss.xscalefs
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the X axis in fullscreen mode.
+For this settings to have any effect, the \"<system>.stretch\" setting must be set to \"0\".
+MDFNST_FLOAT
+1.000000
+0.01
+256
+0
+ss.yres
+MDFNSF_COMMON_TEMPLATE 
+Full-screen vertical resolution.
+A value of \"0\" will cause the desktop vertical resolution to be used.
+MDFNST_UINT
+0
+0
+65536
+0
+ss.yscale
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the Y axis in windowed mode.
+
+MDFNST_FLOAT
+3.000000
+0.01
+256
+0
+ss.yscalefs
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the Y axis in fullscreen mode.
+For this settings to have any effect, the \"<system>.stretch\" setting must be set to \"0\".
+MDFNST_FLOAT
+1.000000
+0.01
+256
+0
+ssfplay.enable
+MDFNSF_COMMON_TEMPLATE 
+Enable (automatic) usage of this module.
+
+MDFNST_BOOL
+1
+
+
+0
+ssfplay.forcemono
+MDFNSF_CAT_SOUND MDFNSF_COMMON_TEMPLATE 
+Force monophonic sound output.
+
+MDFNST_BOOL
+0
+
+
+0
+ssfplay.pixshader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL pixel shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+MDFNST_ENUM
+none
+
+
+10
+none
+None/Disabled
+
+autoip
+Auto Interpolation
+Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
+autoipsharper
+Sharper Auto Interpolation
+Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
+scale2x
+Scale2x
+
+sabr
+SABR v3.0
+GPU-intensive.
+ipsharper
+Sharper bilinear interpolation.
+
+ipxnoty
+Linear interpolation on X axis only.
+
+ipynotx
+Linear interpolation on Y axis only.
+
+ipxnotysharper
+Sharper version of \"ipxnoty\".
+
+ipynotxsharper
+Sharper version of \"ipynotx\".
+
+ssfplay.resamp_quality
+
+SCSP output resampler quality.
+0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen\'s output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors.
+MDFNST_UINT
+4
+0
+10
+0
+ssfplay.scanlines
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
+MDFNST_INT
+0
+-100
+100
+0
+ssfplay.special
+MDFNSF_COMMON_TEMPLATE 
+Enable specified special video scaler.
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+MDFNST_ENUM
+none
+
+
+17
+0
+
+
+none
+None/Disabled
+
+hq2x
+hq2x
+
+hq3x
+hq3x
+
+hq4x
+hq4x
+
+scale2x
+scale2x
+
+scale3x
+scale3x
+
+scale4x
+scale4x
+
+2xsai
+2xSaI
+
+super2xsai
+Super 2xSaI
+
+supereagle
+Super Eagle
+
+nn2x
+Nearest-neighbor 2x
+
+nn3x
+Nearest-neighbor 3x
+
+nn4x
+Nearest-neighbor 4x
+
+nny2x
+Nearest-neighbor 2x, y axis only
+
+nny3x
+Nearest-neighbor 3x, y axis only
+
+nny4x
+Nearest-neighbor 4x, y axis only
+
+ssfplay.stretch
+MDFNSF_COMMON_TEMPLATE 
+Stretch to fill screen.
+
+MDFNST_ENUM
+aspect_mult2
+
+
+8
+0
+Disabled
+
+off
+
+
+1
+
+
+full
+Full
+Full-screen stretch, disregarding aspect ratio.
+2
+
+
+aspect
+Aspect Preserve
+Full-screen stretch as far as the aspect ratio(in this sense, the equivalent xscalefs == yscalefs) can be maintained.
+aspect_int
+Aspect Preserve + Integer Scale
+Full-screen stretch, same as \"aspect\" except that the equivalent xscalefs and yscalefs are rounded down to the nearest integer.
+aspect_mult2
+Aspect Preserve + Integer Multiple-of-2 Scale
+Full-screen stretch, same as \"aspect_int\", but rounds down to the nearest multiple of 2.
+ssfplay.tblur
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Enable video temporal blur(50/50 previous/current frame by default).
+
+MDFNST_BOOL
+0
+
+
+0
+ssfplay.tblur.accum
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Accumulate color data rather than discarding it.
+
+MDFNST_BOOL
+0
+
+
+0
+ssfplay.tblur.accum.amount
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Blur amount in accumulation mode, specified in percentage of accumulation buffer to mix with the current frame.
+
+MDFNST_FLOAT
+50
+0
+100
+0
+ssfplay.videoip
+MDFNSF_COMMON_TEMPLATE 
+Enable (bi)linear interpolation.
+
+MDFNST_ENUM
+0
+
+
+4
+0
+Disabled
+
+1
+Bilinear
+
+x
+Linear (X)
+Interpolation only on the X axis.
+y
+Linear (Y)
+Interpolation only on the Y axis.
+ssfplay.xres
+MDFNSF_COMMON_TEMPLATE 
+Full-screen horizontal resolution.
+A value of \"0\" will cause the desktop horizontal resolution to be used.
+MDFNST_UINT
+0
+0
+65536
+0
+ssfplay.xscale
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the X axis in windowed mode.
+
+MDFNST_FLOAT
+2.000000
+0.01
+256
+0
+ssfplay.xscalefs
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the X axis in fullscreen mode.
+For this settings to have any effect, the \"<system>.stretch\" setting must be set to \"0\".
+MDFNST_FLOAT
+1.000000
+0.01
+256
+0
+ssfplay.yres
+MDFNSF_COMMON_TEMPLATE 
+Full-screen vertical resolution.
+A value of \"0\" will cause the desktop vertical resolution to be used.
+MDFNST_UINT
+0
+0
+65536
+0
+ssfplay.yscale
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the Y axis in windowed mode.
+
+MDFNST_FLOAT
+2.000000
+0.01
+256
+0
+ssfplay.yscalefs
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the Y axis in fullscreen mode.
+For this settings to have any effect, the \"<system>.stretch\" setting must be set to \"0\".
+MDFNST_FLOAT
+1.000000
+0.01
+256
 0
 vb.3dmode
 
@@ -28821,21 +34560,42 @@ MDFNSF_COMMON_TEMPLATE
 Disassembly font size.
 Note: Setting the font size to larger than the default may cause text overlap in the debugger.
 MDFNST_ENUM
-small
-
-
-4
-xsmall
-4x5
-
-small
 5x7
 
-medium
+
+11
+5x7
+5x7
+
+6x9
+6x9
+
+6x12
+6x12
+
 6x13
+6x13.  CJK support.
+
+9x18
+9x18;  CJK support.
+
+xsmall
+
+
+small
+
+
+medium
+
 
 large
-9x18
+
+
+0
+
+
+1
+
 
 vb.debugger.memcharenc
 MDFNSF_COMMON_TEMPLATE 
@@ -29448,21 +35208,42 @@ MDFNSF_COMMON_TEMPLATE
 Disassembly font size.
 Note: Setting the font size to larger than the default may cause text overlap in the debugger.
 MDFNST_ENUM
-small
-
-
-4
-xsmall
-4x5
-
-small
 5x7
 
-medium
+
+11
+5x7
+5x7
+
+6x9
+6x9
+
+6x12
+6x12
+
 6x13
+6x13.  CJK support.
+
+9x18
+9x18;  CJK support.
+
+xsmall
+
+
+small
+
+
+medium
+
 
 large
-9x18
+
+
+0
+
+
+1
+
 
 wswan.debugger.memcharenc
 MDFNSF_COMMON_TEMPLATE 
@@ -29892,7 +35673,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the X axis in windowed mode.
 
 MDFNST_FLOAT
-3.000000
+4.000000
 0.01
 256
 0
@@ -29919,7 +35700,7 @@ MDFNSF_COMMON_TEMPLATE
 Scaling factor for the Y axis in windowed mode.
 
 MDFNST_FLOAT
-3.000000
+4.000000
 0.01
 256
 0

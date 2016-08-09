@@ -21,6 +21,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static unsigned EEPROM_Type;	// Bitfield, set by *_Init().
 
 static uint8 IRQa, CHRBanks[8], PRGBank16, Mirroring;
@@ -585,6 +588,8 @@ static uint8 BarcodeReadPos;
 static uint32 BarcodeCycleCount;
 static uint8 BarcodeOut;
 
+}
+
 int MDFNI_DatachSet(const uint8 *rcode)
 {
         static const uint8 prefix_parity_type[10][6] = {
@@ -713,6 +718,9 @@ int MDFNI_DatachSet(const uint8 *rcode)
 	return(1);
 }
 
+namespace MDFN_IEN_NES
+{
+
 static void BarcodeIRQHook(int a)
 {
  BandaiIRQHook(a);
@@ -800,3 +808,4 @@ int Mapper157_Init(CartInfo *info)
  return(1);
 }
 
+}

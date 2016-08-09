@@ -452,10 +452,8 @@ MDFNGI EmulatedLynx =
  CPInfo,
  1 << 0,
 
- NULL,
- NULL,
- NULL,
- NULL,
+ CheatInfo_Empty,
+
  false,
  StateAction,
  Emulate,
@@ -463,6 +461,7 @@ MDFNGI EmulatedLynx =
  SetInput,
  NULL,
  DoSimpleCommand,
+ NULL,
  LynxSettings,
  MDFN_MASTERCLOCK_FIXED(16000000),
  0,

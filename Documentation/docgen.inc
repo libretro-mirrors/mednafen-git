@@ -452,7 +452,7 @@ function DoModDocLinks()
  {
   $mod_def = $mod_list[$name];
 
-  if($name == "cdplay" || $name == "demo")
+  if($name == "demo")
    continue;
 
   BeginSection($mod_def['fullname'], " [" . $name . "]", $name . ".html");

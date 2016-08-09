@@ -1,24 +1,28 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* Deinterlacer.cpp:
+**  Copyright (C) 2011-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #include "video-common.h"
 #include "Deinterlacer.h"
 
-Deinterlacer::Deinterlacer() : FieldBuffer(NULL), StateValid(false), DeintType(DEINT_WEAVE)
+Deinterlacer::Deinterlacer() : StateValid(false), DeintType(DEINT_WEAVE)
 {
  PrevDRect.x = 0;
  PrevDRect.y = 0;
@@ -29,11 +33,7 @@ Deinterlacer::Deinterlacer() : FieldBuffer(NULL), StateValid(false), DeintType(D
 
 Deinterlacer::~Deinterlacer()
 {
- if(FieldBuffer)
- {
-  delete FieldBuffer;
-  FieldBuffer = NULL;
- }
+
 }
 
 void Deinterlacer::SetType(unsigned dt)
@@ -43,11 +43,7 @@ void Deinterlacer::SetType(unsigned dt)
   DeintType = dt;
 
   LWBuffer.resize(0);
-  if(FieldBuffer)
-  {
-   delete FieldBuffer;
-   FieldBuffer = NULL;
-  }
+  FieldBuffer.reset(nullptr);
   StateValid = false;
  }
 }
@@ -167,10 +163,8 @@ void Deinterlacer::Process(MDFN_Surface *surface, MDFN_Rect &DisplayRect, int32 
  {
   if(!FieldBuffer || FieldBuffer->w < surface->w || FieldBuffer->h < (surface->h / 2))
   {
-   if(FieldBuffer)
-    delete FieldBuffer;
-
-   FieldBuffer = new MDFN_Surface(NULL, surface->w, surface->h / 2, surface->w, surface->format);
+   FieldBuffer.reset(nullptr);
+   FieldBuffer.reset(new MDFN_Surface(NULL, surface->w, surface->h / 2, surface->w, surface->format));
    LWBuffer.resize(FieldBuffer->h);
   }
   else if(memcmp(&surface->format, &FieldBuffer->format, sizeof(MDFN_PixelFormat)))

@@ -23,6 +23,9 @@
 #include "mapinc.h"
 #include "../nsf.h"
 
+namespace MDFN_IEN_NES
+{
+
 static void (*sfun)(int P);
 static void (*psfun)(void);
 
@@ -64,8 +67,8 @@ static uint8 MMC5BigCHRSelect;
 static uint8 mul[2];
 
 static uint8 *WRAM=NULL;
-static uint8 *MMC5fill=NULL;
-static uint8 *ExRAM=NULL;
+static uint8 MMC5fill[1024];
+static uint8 ExRAM[1024];
 
 static uint8 MMC5WRAMsize;
 static uint8 MMC5WRAMIndex[8];
@@ -86,7 +89,7 @@ typedef struct __cartdata {
 // EWROM seems to have 32KB of WRAM
 
 #define MMC5_NOCARTS 14
-cartdata MMC5CartList[MMC5_NOCARTS]=
+static const cartdata MMC5CartList[MMC5_NOCARTS]=
 {
  {0x9c18762b,2},         /* L'Empereur */
  {0x26533405,2},
@@ -650,9 +653,7 @@ static void Mapper5_ESI(EXPSOUND *ep)
 
 void NSFMMC5_Close(void)
 {
- if(ExRAM)
-  MDFN_free(ExRAM);
- ExRAM=NULL;
+
 }
 
 int NSFMMC5_Init(EXPSOUND *ep, bool MultiChip)
@@ -661,8 +662,6 @@ int NSFMMC5_Init(EXPSOUND *ep, bool MultiChip)
  {
   memset(&MMC5Sound,0,sizeof(MMC5Sound));
   mul[0]=mul[1]=0;
-
-  ExRAM = (uint8*)MDFN_malloc_T(1024, _("MMC5 EXRAM"));
 
   Mapper5_ESI(ep);
   NSFECSetWriteHandler(0x5c00,0x5fef,MMC5_ExRAMWr);
@@ -765,20 +764,8 @@ static void GenMMC5_Close(void)
 {
  if(WRAM)
  {
-  MDFN_free(WRAM);
+  delete[] WRAM;
   WRAM = NULL;
- }
-
- if(MMC5fill)
- {
-  MDFN_free(MMC5fill);
-  MMC5fill = NULL;
- }
-
- if(ExRAM)
- {
-  MDFN_free(ExRAM);
-  ExRAM = NULL;
  }
 }
 
@@ -790,14 +777,10 @@ static int GenMMC5_Init(CartInfo *info, int wsize, int battery)
 
   if(wsize)
   {
-   WRAM = (uint8*)MDFN_malloc_T(wsize*1024, _("WRAM"));
+   WRAM = new uint8[wsize * 1024];
    memset(WRAM, 0x00, wsize * 1024);
    SetupCartPRGMapping(0x10,WRAM,wsize*1024,1);
   }
-
-  MMC5fill = (uint8*)MDFN_malloc_T(1024, _("MMC5 Fill"));
-
-  ExRAM = (uint8*)MDFN_malloc_T(1024, _("MMC5 EXRAM"));
 
   MMC5WRAMsize=wsize/8; 
   BuildWRAMSizeTable();
@@ -877,4 +860,6 @@ int EWROM_Init(CartInfo *info)
 int EKROM_Init(CartInfo *info)
 {
  return(GenMMC5_Init(info,8,info->battery));
+}
+
 }

@@ -1,1 +1,1 @@
-libnes_a_SOURCES	+=	ppu/ppu.cpp ppu/palette.cpp
+mednafen_SOURCES	+=	nes/ppu/ppu.cpp nes/ppu/palette.cpp

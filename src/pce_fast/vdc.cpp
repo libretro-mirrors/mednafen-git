@@ -23,7 +23,6 @@
 #include "huc.h"
 #include "pcecd.h"
 #include <mednafen/cputest/cputest.h>
-#include <mednafen/FileStream.h>
 #include <trio/trio.h>
 #include <math.h>
 
@@ -52,9 +51,8 @@ static unsigned int VBlankFL;
 
 vce_t vce;
 
-int VDC_TotalChips = 0;
-
-vdc_t *vdc_chips[2] = { NULL, NULL };
+int VDC_TotalChips;
+vdc_t vdc_chips[2];
 
 static INLINE void FixPCache(int entry)
 {
@@ -537,12 +535,12 @@ DECLFW(VDC_Write)
   if(A & 0x8) return;
 
   chip = (A & 0x10) >> 4;
-  vdc = vdc_chips[chip];
+  vdc = &vdc_chips[chip];
   A &= 0x3;
  }
  else
  {
-  vdc = vdc_chips[0];
+  vdc = &vdc_chips[0];
   A &= 0x3;
  }
  //if((A == 0x2 || A == 0x3) && ((vdc->select & 0x1f) >= 0x09) && ((vdc->select & 0x1f) <= 0x13))
@@ -843,6 +841,8 @@ static const unsigned int spr_hpmask = 0x8000;	// High priority bit mask(don't c
 static void DrawSprites(vdc_t *vdc, const int32 end, uint16 *spr_linebuf) NO_INLINE;
 static void DrawSprites(vdc_t *vdc, const int32 end, uint16 *spr_linebuf)
 {
+ spr_linebuf = MDFN_ASSUME_ALIGNED(spr_linebuf, 8);
+ //
  int active_sprites = 0;
  SPRLE SpriteList[64 * 2]; // (see unlimited_sprites option, *2 to accomodate 32-pixel-width sprites ) //16];
 
@@ -901,8 +901,7 @@ static void DrawSprites(vdc_t *vdc, const int32 end, uint16 *spr_linebuf)
  //if(!active_sprites)
  // return;
 
- //memset(spr_linebuf, 0, sizeof(uint16) * end);
- MDFN_FastU32MemsetM8((uint32 *)spr_linebuf, 0, ((end + 3) >> 1) & ~1);
+ MDFN_FastArraySet(spr_linebuf, 0, (end + 3) &~ 3);
 
  if(!active_sprites)
   return;
@@ -1206,7 +1205,7 @@ static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES) NO_INLINE;
 template<unsigned TCT, typename T, typename U>
 static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES)
 {
- vdc_t *vdc = vdc_chips[0];
+ vdc_t *vdc = &vdc_chips[0];
  int max_dc = 0;
  MDFN_Surface *surface = espec->surface;
  MDFN_Rect *DisplayRect = &espec->DisplayRect;
@@ -1233,7 +1232,7 @@ static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES)
 
  do
  {
-  vdc = vdc_chips[0];
+  vdc = &vdc_chips[0];
 
   if(frame_counter == 0)
   {
@@ -1309,7 +1308,7 @@ static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES)
 
   for(unsigned chip = 0; chip < TCT; chip++)
   {
-   vdc = vdc_chips[chip];
+   vdc = &vdc_chips[chip];
    if(frame_counter == 0)
    {
     vdc->display_counter = 0;
@@ -1367,7 +1366,7 @@ static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES)
   {
    U* target_ptr;
 
-   vdc = vdc_chips[chip];
+   vdc = &vdc_chips[chip];
 
    if(TCT == 2)
     target_ptr = (U*)line_buffer[chip];
@@ -1481,13 +1480,13 @@ static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES)
   //
 
   for(unsigned chip = 0; chip < TCT; chip++)
-   if((vdc_chips[chip]->CR & 0x08) && need_vbi[chip])
-    vdc_chips[chip]->status |= VDCS_VD;
+   if((vdc_chips[chip].CR & 0x08) && need_vbi[chip])
+    vdc_chips[chip].status |= VDCS_VD;
 
   HuC6280_Run(2);
 
   for(unsigned chip = 0; chip < TCT; chip++)
-   if(vdc_chips[chip]->status & VDCS_VD)
+   if(vdc_chips[chip].status & VDCS_VD)
    {
     VDC_DEBUG("VBlank IRQ");
     HuC6280_IRQBegin(MDFN_IQIRQ1);   
@@ -1502,7 +1501,7 @@ static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES)
 
   for(unsigned chip = 0; chip < TCT; chip++)
   {
-   vdc = vdc_chips[chip];
+   vdc = &vdc_chips[chip];
    vdc->RCRCount++;
 
    //vdc->BG_YOffset = (vdc->BG_YOffset + 1);
@@ -1540,7 +1539,7 @@ static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES)
    {
     LineWidths[y] = DisplayRect->w;
 
-    DrawOverscan(vdc_chips[0], surface->pix<T>() + y * surface->pitchinpix, DisplayRect);
+    DrawOverscan(&vdc_chips[0], surface->pix<T>() + y * surface->pitchinpix, DisplayRect);
 
     MDFN_MidLineUpdate(espec, y);
    }
@@ -1572,16 +1571,16 @@ void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES)
 
 void VDC_Reset(void)
 {
- vdc_chips[0]->read_buffer = 0xFFFF;
+ vdc_chips[0].read_buffer = 0xFFFF;
 
  vpc.priority[0] = vpc.priority[1] = 0x11;
 
- vdc_chips[0]->HSR = vdc_chips[0]->HDR = vdc_chips[0]->VSR = vdc_chips[0]->VDR = vdc_chips[0]->VCR = 0xFF; // Needed for Body Conquest 2
+ vdc_chips[0].HSR = vdc_chips[0].HDR = vdc_chips[0].VSR = vdc_chips[0].VDR = vdc_chips[0].VCR = 0xFF; // Needed for Body Conquest 2
 
- if(vdc_chips[1])
+ if(VDC_TotalChips == 2)
  {
-  vdc_chips[1]->read_buffer = 0xFFFF;
-  vdc_chips[1]->HSR = vdc_chips[1]->HDR = vdc_chips[1]->VSR = vdc_chips[1]->VDR = vdc_chips[1]->VCR = 0xFF; // and for HES playback to not go bonkers
+  vdc_chips[1].read_buffer = 0xFFFF;
+  vdc_chips[1].HSR = vdc_chips[1].HDR = vdc_chips[1].VSR = vdc_chips[1].VDR = vdc_chips[1].VCR = 0xFF; // and for HES playback to not go bonkers
  }
  frame_counter = 0;
 }
@@ -1589,22 +1588,18 @@ void VDC_Reset(void)
 void VDC_Power(void)
 {
  for(int chip = 0; chip < VDC_TotalChips; chip++)
-  memset(vdc_chips[chip], 0, sizeof(vdc_t));
+  memset(&vdc_chips[chip], 0, sizeof(vdc_t));
  VDC_Reset();
 }
 
-void VDC_Init(int sgx)
+void VDC_Init(const bool sgx)
 {
- unlimited_sprites = MDFN_GetSettingB("pce_fast.nospritelimit");
- correct_aspect = MDFN_GetSettingB("pce_fast.correct_aspect");
+ unlimited_sprites = false;
+ correct_aspect = true;
+
  userle = ~0;
 
  VDC_TotalChips = sgx ? 2 : 1;
-
- for(int chip = 0; chip < VDC_TotalChips; chip++)
- {
-  vdc_chips[chip] = (vdc_t *)MDFN_malloc_T(sizeof(vdc_t), "VDC");
- }
 
  cputest_flags = 0;
 #ifdef ARCH_X86
@@ -1612,15 +1607,15 @@ void VDC_Init(int sgx)
 #endif
 }
 
+void VDC_SetSettings(const bool nospritelimit, const bool arg_correct_aspect)
+{
+ unlimited_sprites = nospritelimit;
+ correct_aspect = arg_correct_aspect;
+}
+
 void VDC_Close(void)
 {
- for(int chip = 0; chip < VDC_TotalChips; chip++)
- {
-  if(vdc_chips[chip])
-   MDFN_free(vdc_chips[chip]);
-  vdc_chips[chip] = NULL;
- }
- VDC_TotalChips = 0;
+
 }
 
 void VDC_StateAction(StateMem *sm, int load, int data_only)
@@ -1653,7 +1648,7 @@ void VDC_StateAction(StateMem *sm, int load, int data_only)
 
  for(int chip = 0; chip < max_chips; chip++)
  {
-  vdc_t *vdc = vdc_chips[chip];
+  vdc_t *vdc = &vdc_chips[chip];
   SFORMAT VDC_StateRegs[] = 
   {
 	SFVARN(vdc->display_counter, "display_counter"),

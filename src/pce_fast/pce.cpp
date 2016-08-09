@@ -181,12 +181,13 @@ void PCE_InitCD(void)
 }
 
 
-static void LoadCommon(void);
-static void LoadCommonPre(void);
+static void LoadCommon(void) MDFN_COLD;
+static void LoadCommonPre(void) MDFN_COLD;
 
+static bool TestMagic(MDFNFILE *fp) MDFN_COLD;
 static bool TestMagic(MDFNFILE *fp)
 {
- if(strcasecmp(fp->ext, "hes") && strcasecmp(fp->ext, "pce") && strcasecmp(fp->ext, "sgx"))
+ if(fp->ext != "hes" && fp->ext != "pce" && fp->ext != "sgx")
   return false;
 
  return true;
@@ -264,7 +265,7 @@ static void Load(MDFNFILE *fp)
 
    crc = HuC_Load(fp);
 
-   if(!strcasecmp(fp->ext, "sgx"))
+   if(fp->ext == "sgx")
     IsSGX = true;
    else
    {
@@ -322,6 +323,7 @@ static void LoadCommon(void)
  // Don't modify IsSGX past this point.
  
  VDC_Init(IsSGX);
+ VDC_SetSettings(MDFN_GetSettingB("pce_fast.nospritelimit"), MDFN_GetSettingB("pce_fast.correct_aspect"));
 
  if(IsSGX)
  {
@@ -378,12 +380,12 @@ static void LoadCommon(void)
  MDFNGameInfo->LayerNames = IsSGX ? "BG0\0SPR0\0BG1\0SPR1\0" : "Background\0Sprites\0";
  MDFNGameInfo->fps = (uint32)((double)7159090.90909090 / 455 / 263 * 65536 * 256);
 
- // Clean this up:
- if(!MDFN_GetSettingB("pce_fast.correct_aspect"))
-  MDFNGameInfo->fb_width = 682;
-
  if(!IsHES)
  {
+  // Clean this up:
+  if(!MDFN_GetSettingB("pce_fast.correct_aspect"))
+   MDFNGameInfo->fb_width = 682;
+
   MDFNGameInfo->nominal_width = MDFN_GetSettingB("pce_fast.correct_aspect") ? 288 : 341;
   MDFNGameInfo->nominal_height = MDFN_GetSettingUI("pce_fast.slend") - MDFN_GetSettingUI("pce_fast.slstart") + 1;
 
@@ -478,6 +480,7 @@ static void LoadCD(std::vector<CDIF *> *CDInterfaces)
 }
 
 
+static void CloseGame(void) MDFN_COLD;
 static void CloseGame(void)
 {
  HuC_SaveNV();
@@ -630,6 +633,7 @@ void PCE_Power(void)
  }
 }
 
+static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx) MDFN_COLD;
 static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
 {
  const RMD_Layout* rmd = EmulatedPCE_Fast.RMD;
@@ -649,6 +653,7 @@ static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint3
 }
 
 
+static void DoSimpleCommand(int cmd) MDFN_COLD;
 static void DoSimpleCommand(int cmd)
 {
  switch(cmd)
@@ -658,7 +663,7 @@ static void DoSimpleCommand(int cmd)
  }
 }
 
-static MDFNSetting PCESettings[] = 
+static const MDFNSetting PCESettings[] = 
 {
   { "pce_fast.correct_aspect", MDFNSF_CAT_VIDEO, gettext_noop("Correct the aspect ratio."), NULL, MDFNST_BOOL, "1" },
   { "pce_fast.slstart", MDFNSF_NOFLAGS, gettext_noop("First rendered scanline."), NULL, MDFNST_UINT, "4", "0", "239" },
@@ -700,6 +705,16 @@ static const CustomPalette_Spec CPInfo[] =
  { NULL, NULL }
 };
 
+static const CheatInfoStruct CheatInfo =
+{
+ NULL,
+ NULL,
+ MemRead,
+ NULL,
+
+ CheatFormatInfo_Empty
+};
+
 };
 
 MDFNGI EmulatedPCE_Fast =
@@ -725,10 +740,8 @@ MDFNGI EmulatedPCE_Fast =
  CPInfo,
  1 << 0,
 
- NULL,
- NULL,
- MemRead,
- NULL,
+ CheatInfo,
+
  false,
  StateAction,
  Emulate,
@@ -736,6 +749,7 @@ MDFNGI EmulatedPCE_Fast =
  PCEINPUT_SetInput,
  SetMedia,
  DoSimpleCommand,
+ NULL,
  PCESettings,
  MDFN_MASTERCLOCK_FIXED(PCE_MASTER_CLOCK),
  0,

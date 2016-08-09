@@ -4,8 +4,8 @@
 namespace MDFN_IEN_NES
 {
 
-void MDFN_VSUniPower(void);
-void MDFN_VSUniCheck(uint64 md5partial, int *, int *);
+void MDFN_VSUniPower(void) MDFN_COLD;
+void MDFN_VSUniCheck(uint64 md5partial, int *, int *) MDFN_COLD;
 void MDFN_VSUniDraw(MDFN_Surface *surface);
 
 void MDFN_VSUniToggleDIPView(void);

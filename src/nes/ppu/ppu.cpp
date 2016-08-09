@@ -36,10 +36,9 @@
  #include "mmintrin.h"
 #endif
 
-void MMC5_hb(int);     /* Ugh ugh ugh. */
-
 namespace MDFN_IEN_NES
 {
+void MMC5_hb(int);     /* Ugh ugh ugh. */
 
 #define VBlankON        (PPU[0]&0x80)   /* Generate VBlank NMI */
 #define Sprite16        (PPU[0]&0x20)   /* Sprites 8x16/8x8        */
@@ -308,6 +307,24 @@ static DECLFR(A2004)
         }
 }
 
+static INLINE void AB2007Inc(void)
+{
+ if(scanline >= /*-1*/0 && scanline <= 239 && (ScreenON || SpriteON))
+ {
+  if((RefreshAddr&0x1f)==0x1f)
+   RefreshAddr^=0x41F;
+  else
+   RefreshAddr++;
+
+  Fixit1();
+ }
+ else
+ {
+  if (INC32) RefreshAddr += 32;
+  else RefreshAddr++;
+ }
+}
+
 static DECLFR(A2007)
 {
         uint8 ret;
@@ -336,8 +353,7 @@ static DECLFR(A2007)
 
         if(!fceuindbg)
         {
-         if (INC32) RefreshAddr+=32;
-         else RefreshAddr++;
+	 AB2007Inc();
          if(PPU_hook) PPU_hook(RefreshAddr&0x3fff);
         }
         return ret;
@@ -474,8 +490,7 @@ static DECLFW(B2007)
                          if(PPUNTARAM&(1<<((tmp&0xF00)>>10)))
                           vnapage[((tmp&0xF00)>>10)][tmp&0x3FF]=V;
                         }
-                        if (INC32) RefreshAddr+=32;
-                        else RefreshAddr++;
+			AB2007Inc();
                         if(PPU_hook) PPU_hook(RefreshAddr&0x3fff);
 }
  
@@ -872,7 +887,7 @@ static void DoLine(MDFN_Surface *surface, int skip)
   if(RCSPROn && spork)
    FastCopySprites(newfirst >> 3, target, skip);
   else if(rendis & 1)
-   MDFN_FastU32MemsetM8((uint32 *)(target + newfirst), 0x40404040 | 0x3C3C3C3C, (256 - newfirst) / sizeof(uint32));
+   MDFN_FastArraySet(MDFN_ASSUME_ALIGNED(target + newfirst, alignof(target)), 0x40 | 0x3C, 256 - newfirst);
 
   if(!skip)
    FastLineEffects(newfirst >> 3, target);
@@ -1108,7 +1123,7 @@ static void RefreshSprites(void)
 {
         spork = 0;
 
-        MDFN_FastU32MemsetM8((uint32 *)sprlinebuf, 0x80808080, 256 / sizeof(uint32));
+        MDFN_FastArraySet(sprlinebuf, 0x80, 256);
 
         if(!numsprites)
 	 return;
@@ -1188,7 +1203,7 @@ static void RefreshSprites(void)
      spork=1;
 
      if(rendis & 2) 
-      MDFN_FastU32MemsetM8((uint32 *)sprlinebuf, 0x80808080, 256 / sizeof(uint32));
+      MDFN_FastArraySet(sprlinebuf, 0x80, 256);
 }
 
 void MDFNPPU_Reset(void)

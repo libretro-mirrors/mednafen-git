@@ -3,7 +3,7 @@
 
 void CheatIF_GT_Show(bool show);
 bool CheatIF_Active(void);
-void CheatIF_MT_Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect);
+void CheatIF_MT_Draw(const MDFN_PixelFormat& pformat, const int32 screen_w, const int32 screen_h);
 int CheatIF_MT_EventHook(const SDL_Event *event);
 
 #endif

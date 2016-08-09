@@ -357,7 +357,8 @@ refresh rate of at least 120Hz.
    <p>
 
    </p>
-   <?php BeginSection("Settings to Minimize Video Lag"); ?>
+   <?php BeginSection("Settings to Minimize Video Lag", "", FALSE, FALSE, "Section_minimize_video_lag"); ?>
+   <a name="Core+Features%01Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag%01Settings+to+Minimize+Video+Lag"></a>
     <p>
     Disabling vsync can also help to reduce keyboard and mouse input lag to a degree, due to the design of common GUI environments and SDL.
     </p>
@@ -931,7 +932,7 @@ woven in by Terry Thorsen 1/2003.
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("NeoPop Neo Geo Pocket (Color) Code", "", FALSE, "http://neopop.emuxhaven.net/"); ?>
+<?php BeginSection("NeoPop Neo Geo Pocket (Color) Code", "", FALSE, "http://web.archive.org/web/20071221222634/http://neopop.emuxhaven.net/"); ?>
 <blockquote>
 <pre>
 //---------------------------------------------------------------------------
@@ -1202,31 +1203,6 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA,
  *  or direct your browser at http://www.gnu.org.
  */
-</pre>
-</blockquote>
-<?php EndSection(); ?>
-
-<?php BeginSection("C68K"); ?>
-<blockquote>
-<pre>
-/*  Copyright 2003-2004 Stephane Dallongeville
-
-    This file is part of Yabause.
-
-    Yabause is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    Yabause is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Yabause; if not, write to the Free Software
-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
 </pre>
 </blockquote>
 <?php EndSection(); ?>

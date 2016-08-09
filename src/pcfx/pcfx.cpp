@@ -1,19 +1,23 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen NEC PC-FX Emulation Module                                        */
+/******************************************************************************/
+/* pcfx.cpp:
+**  Copyright (C) 2006-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #include "pcfx.h"
 #include "soundbox.h"
@@ -38,6 +42,9 @@
 #include <math.h>
 
 extern MDFNGI EmulatedPCFX;
+
+namespace MDFN_IEN_PCFX
+{
 
 /* FIXME:  soundbox, vce, vdc, rainbow, and king store wait states should be 4, not 2, but V810 has write buffers which can mask wait state penalties.
   This is a hack to somewhat address the issue, but to really fix it, we need to handle write buffer emulation in the V810 emulation core itself.
@@ -626,7 +633,9 @@ static void LoadCommon(std::vector<CDIF *> *CDInterfaces)
 
  for(int i = 0; i < 2; i++)
  {
-  fx_vdc_chips[i] = new VDC(MDFN_GetSettingB("pcfx.nospritelimit"), 65536);
+  fx_vdc_chips[i] = new VDC();
+  fx_vdc_chips[i]->SetUnlimitedSprites(MDFN_GetSettingB("pcfx.nospritelimit"));
+  fx_vdc_chips[i]->SetVRAMSize(65536);
   fx_vdc_chips[i]->SetWSHook(NULL);
   fx_vdc_chips[i]->SetIRQHook(i ? VDCB_IRQHook : VDCA_IRQHook);
 
@@ -887,7 +896,7 @@ static void DoMD5CDVoodoo(std::vector<CDIF *> *CDInterfaces)
     MDFNGameInfo->GameSetMD5Valid = TRUE;
    }
    //printf("%s\n", found_entry->name);
-   MDFNGameInfo->name = strdup(found_entry->name);
+   MDFNGameInfo->name = std::string(found_entry->name);
    break;
   }
  } // end: for(unsigned if_disc = 0; if_disc < CDInterfaces->size(); if_disc++)
@@ -1109,6 +1118,10 @@ static const FileExtensionSpecStruct KnownExtensions[] =
  { NULL, NULL }
 };
 
+}
+
+using namespace MDFN_IEN_PCFX;
+
 MDFNGI EmulatedPCFX =
 {
  "pcfx",
@@ -1136,10 +1149,8 @@ MDFNGI EmulatedPCFX =
  NULL,
  0,
 
- NULL,
- NULL,
- NULL,
- NULL,
+ CheatInfo_Empty,
+
  false,
  StateAction,
  Emulate,
@@ -1147,6 +1158,7 @@ MDFNGI EmulatedPCFX =
  FXINPUT_SetInput,
  SetMedia,
  DoSimpleCommand,
+ NULL,
  PCFXSettings,
  MDFN_MASTERCLOCK_FIXED(PCFX_MASTER_CLOCK),
  0,

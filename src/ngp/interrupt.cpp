@@ -21,6 +21,9 @@
 
 //=============================================================================
 
+namespace MDFN_IEN_NGP
+{
+
 uint32 timer_hint;
 static uint32 timer_clock[4];
 static uint8 timer[4];	//Up-counters
@@ -549,4 +552,6 @@ int int_timer_StateAction(StateMem *sm, int load, int data_only)
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, "INTT"))
   return(0);
  return(1);
+}
+
 }

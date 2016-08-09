@@ -1,21 +1,28 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen NEC PC-FX Emulation Module                                        */
+/******************************************************************************/
+/* rainbow.cpp:
+**  Copyright (C) 2006-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
-/* MJPEG-ish decoder based on the algorithm and huffman data tables provided by David Michel of MagicEngine and MagicEngine-FX */
+/*
+** MJPEG-like decoder based on the algorithm and Huffman data tables provided by David Michel
+** of MagicEngine and MagicEngine-FX.
+*/
 
 #include "pcfx.h"
 #include "rainbow.h"
@@ -23,203 +30,19 @@
 #include "interrupt.h"
 #include "jrevdct.h"
 
+#include <mednafen/FileStream.h>
+
+namespace MDFN_IEN_PCFX
+{
+
 static bool ChromaIP;	// Bilinearly interpolate chroma channel
 
 /* Y = luminance/luma, UV = chrominance/chroma */
 
-typedef struct
+struct HuffmanQuickLUTPair
 {
-	const uint8 *base;
-        const uint8 *codes;
-	const uint32 *minimum;
-	const uint32 *maximum;
-} HuffmanTable;
-
-typedef struct
-{
-        uint8 *lut;             // LUT for getting the code.
-        uint8 *lut_bits;        // Bit count for the code
-} HuffmanQuickLUT;
-
-/* Luma DC Huffman tables */
-static const uint8 dc_y_base[17] =
-{
-        0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x08, 0x09,
-        0x00, 0x0B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00
-};
-
-static const uint8 dc_y_codes[27] =
-{
-        0x00, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x01,
-        0x08, 0x09, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14,
-        0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C,
-        0x1D, 0x1E, 0x1F
-};
-
-static const uint32 dc_y_minimum[17] =
-{
-        0x0000, 0x0000, 0x0000, 0x0000, 0x000E, 0x0000, 0x003C, 0x007A,
-        0x0000, 0x01F0, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-        0x0000
-};
-
-static const uint32 dc_y_maximum[17] = 
-{
-        0xFFFF, 0xFFFF, 0xFFFF, 0x0006, 0x000E, 0xFFFF, 0x003C, 0x007B,
-        0xFFFF, 0x01FF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
-        0xFFFF
-};
-
-static const HuffmanTable dc_y_table =
-{
-	dc_y_base,
-	dc_y_codes,
-	dc_y_minimum,
-	dc_y_maximum
-};
-
-/* Chroma DC Huffman tables */
-
-static const uint8 dc_uv_base[17] =
-{
-        0x00, 0x00, 0x00, 0x03, 0x04, 0x05, 0x06, 0x07,
-        0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00
-};
-
-static const uint8 dc_uv_codes[10] =
-{
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-        0x08, 0x09
-};
-
-static const uint32 dc_uv_minimum[17] =
-{
-        0x0000, 0x0000, 0x0000, 0x0006, 0x000E, 0x001E, 0x003E, 0x007E,
-        0x00FE, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-        0x0000
-};
-
-static const uint32 dc_uv_maximum[17] =
-{
-        0xFFFF, 0xFFFF, 0x0002, 0x0006, 0x000E, 0x001E, 0x003E, 0x007E,
-        0x00FF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
-        0xFFFF
-};
-
-static const HuffmanTable dc_uv_table =
-{
-	dc_uv_base,
-	dc_uv_codes,
-	dc_uv_minimum,
-	dc_uv_maximum
-};
-
-/* Luma AC Huffman tables */
-static const uint8 ac_y_base[17] =
-{
-        0x00, 0x00, 0x00, 0x02, 0x03, 0x05, 0x09, 0x0D,
-        0x00, 0x10, 0x00, 0x12, 0x22, 0x00, 0x00, 0x00,
-        0x00
-};
-
-static const uint8 ac_y_codes[146] =
-{
-        0x01, 0x02, 0x03, 0x04, 0x11, 0x05, 0x12, 0x21,
-        0x00, 0x06, 0x31, 0x41, 0x51, 0x13, 0x22, 0x61,
-        0x07, 0x71, 0x09, 0x19, 0x29, 0x39, 0x49, 0x59,
-        0x69, 0x79, 0x89, 0x99, 0xA9, 0xB9, 0xC9, 0xD9,
-        0xE9, 0xF9, 0x08, 0x14, 0x15, 0x16, 0x17, 0x18,
-        0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x32, 0x33,
-        0x34, 0x35, 0x36, 0x37, 0x38, 0x42, 0x43, 0x44,
-        0x45, 0x46, 0x47, 0x48, 0x52, 0x53, 0x54, 0x55,
-        0x56, 0x57, 0x58, 0x62, 0x63, 0x64, 0x65, 0x66,
-        0x67, 0x68, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77,
-        0x78, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
-        0x88, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
-        0x98, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7,
-        0xA8, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7,
-        0xB8, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7,
-        0xC8, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7,
-        0xD8, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7,
-        0xE8, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7,
-        0xF8, 0x10
-};
-
-static const uint32 ac_y_minimum[17] =
-{
-        0x0000, 0x0000, 0x0000, 0x0004, 0x000A, 0x0018, 0x0036, 0x0074,
-        0x0000, 0x01DC, 0x0000, 0x0778, 0x0F10, 0x0000, 0x0000, 0x0000,
-        0x0000
-};
-
-static const uint32 ac_y_maximum[17] =
-{
-        0xFFFF, 0xFFFF, 0x0001, 0x0004, 0x000B, 0x001A, 0x0039, 0x0076,
-        0xFFFF, 0x01DD, 0xFFFF, 0x0787, 0x0F7F, 0xFFFF, 0xFFFF, 0xFFFF,
-        0xFFFF
-};
-
-static const HuffmanTable ac_y_table =
-{
-	ac_y_base,
-	ac_y_codes,
-	ac_y_minimum,
-	ac_y_maximum
-};
-
-/* Chroma AC Huffman tables */
-static const uint8 ac_uv_base[17] =
-{
-        0x00, 0x00, 0x00, 0x02, 0x03, 0x05, 0x0A, 0x0B,
-        0x00, 0x10, 0x00, 0x12, 0x22, 0x00, 0x00, 0x00,
-        0x00
-};
-
-static const uint8 ac_uv_codes[146] =
-{
-        0x01, 0x02, 0x11, 0x03, 0x21, 0x04, 0x12, 0x31,
-        0x41, 0x00, 0x51, 0x05, 0x13, 0x22, 0x61, 0x71,
-        0x32, 0x81, 0x09, 0x19, 0x29, 0x39, 0x49, 0x59,
-        0x69, 0x79, 0x89, 0x99, 0xA9, 0xB9, 0xC9, 0xD9,
-        0xE9, 0xF9, 0x06, 0x07, 0x08, 0x14, 0x15, 0x16,
-        0x17, 0x18, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
-        0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x42, 0x43,
-        0x44, 0x45, 0x46, 0x47, 0x48, 0x52, 0x53, 0x54,
-        0x55, 0x56, 0x57, 0x58, 0x62, 0x63, 0x64, 0x65,
-        0x66, 0x67, 0x68, 0x72, 0x73, 0x74, 0x75, 0x76,
-        0x77, 0x78, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
-        0x88, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
-        0x98, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7,
-        0xA8, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7,
-        0xB8, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7,
-        0xC8, 0xD1, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD7,
-        0xD8, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7,
-        0xE8, 0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7,
-        0xF8, 0x10
-};
-
-static const uint32 ac_uv_minimum[17] =
-{
-        0x0000, 0x0000, 0x0000, 0x0004, 0x000A, 0x0018, 0x0038, 0x0072,
-        0x0000, 0x01DC, 0x0000, 0x0778, 0x0F10, 0x0000, 0x0000, 0x0000,
-        0x0000
-};
-
-static const uint32 ac_uv_maximum[17] =
-{
-        0xFFFF, 0xFFFF, 0x0001, 0x0004, 0x000B, 0x001B, 0x0038, 0x0076,
-        0xFFFF, 0x01DD, 0xFFFF, 0x0787, 0x0F7F, 0xFFFF, 0xFFFF, 0xFFFF,
-        0xFFFF
-};
-
-static const HuffmanTable ac_uv_table =
-{
-	ac_uv_base,
-	ac_uv_codes,
-	ac_uv_minimum,
-	ac_uv_maximum
+	uint8 val;
+	uint8 bitc;	// Bit count for the code.
 };
 
 static const uint8 zigzag[63] =
@@ -234,55 +57,25 @@ static const uint8 zigzag[63] =
  0x3C, 0x3D, 0x36, 0x2F, 0x37, 0x3E, 0x3F
 };
 
-static HuffmanQuickLUT dc_y_qlut = { NULL }, dc_uv_qlut = { NULL}, ac_y_qlut = { NULL }, ac_uv_qlut = { NULL };
-
-static void KillHuffmanLUT(HuffmanQuickLUT *qlut)
+static const HuffmanQuickLUTPair ac_y_qlut[1 << 12] =
 {
- if(qlut->lut)
-  MDFN_free(qlut->lut);
+ #include "rainbow_acy.inc"
+};
 
- if(qlut->lut_bits)
-  MDFN_free(qlut->lut_bits);
-
- qlut->lut = NULL;
- qlut->lut_bits = NULL;
-}
-
-static void BuildHuffmanLUT(const HuffmanTable *table, HuffmanQuickLUT *qlut, const int bitmax)
+static const HuffmanQuickLUTPair ac_uv_qlut[1 << 12] =
 {
- // TODO: Allocate only (1 << bitmax) entries.
- // TODO: What should we set invalid bitsequences/entries to? 0? ~0?  Something else?
+ #include "rainbow_acuv.inc"
+};
 
- qlut->lut = (uint8 *)MDFN_calloc_T(1 << 12, 1, _("Huffman LUT"));
- qlut->lut_bits = (uint8 *)MDFN_calloc_T(1 << 12, 1, _("Huffman LUT"));
+static const HuffmanQuickLUTPair dc_y_qlut[1 << 9] =
+{
+ #include "rainbow_dcy.inc"
+};
 
- for(int numbits = 2; numbits <= 12; numbits++)
- {
-  if(table->maximum[numbits] != 0xFFFF)
-  {
-   for(unsigned int i = table->minimum[numbits]; i <= table->maximum[numbits]; i++)
-   {
-    for(int b = 0; b < (1 << (bitmax - numbits)); b++)
-    {
-     int lut_index = (i << (bitmax - numbits)) + b;
-
-     assert(lut_index < (1 << bitmax));
-
-     qlut->lut[lut_index] = table->codes[table->base[numbits] + (i - table->minimum[numbits])];
-     qlut->lut_bits[lut_index] = numbits;
-    }
-   }
-  }
- }
-
- //printf("\n\n%d\n", bitmax);
- for(int i = 0; i < (1 << bitmax); i++)
- {
-  //if(!qlut->lut_bits[i])
-  // printf("%d %d\n", i, qlut->lut_bits[i]);
- }
-}
-
+static const HuffmanQuickLUTPair dc_uv_qlut[1 << 8] =
+{
+ #include "rainbow_dcuv.inc"
+};
 
 static uint8 *DecodeBuffer[2] = { NULL, NULL };
 static int32 DecodeFormat[2]; // The format each buffer is in(-1 = invalid, 0 = palettized 8-bit, 1 = YUV)
@@ -369,28 +162,15 @@ static void CalcHappyColor(void)
  HappyColor = (y_c << 16) | (u_c << 8) | (v_c << 0);
 }
 
-static uint32 get_ac_coeff(const HuffmanQuickLUT *table, int32 *zeroes)
+static uint32 get_ac_coeff(const HuffmanQuickLUTPair *table, int32 *zeroes)
 {
  unsigned int numbits;
  uint32 rawbits;
  uint32 code;
 
  rawbits = GetBits(12, MDFNBITS_PEEK);
- if((rawbits & 0xF80) == 0xF80)
- //if(rawbits >= 0xF80)
- {
-  SkipBits(5);
-  *zeroes = 0;
-  return(0);
- }
-
- if(!table->lut_bits[rawbits])
- {
-  FXDBG("Invalid AC bit sequence: %03x\n", rawbits);
- }
-
- code = table->lut[rawbits];
- SkipBits(table->lut_bits[rawbits]);
+ code = table[rawbits].val;
+ SkipBits(table[rawbits].bitc);
 
  numbits = code & 0xF;
  *zeroes = code >> 4;
@@ -398,21 +178,17 @@ static uint32 get_ac_coeff(const HuffmanQuickLUT *table, int32 *zeroes)
  return(GetBits(numbits, MDFNBITS_FUNNYSIGN));
 }
 
-static uint32 get_dc_coeff(const HuffmanQuickLUT *table, int32 *zeroes, int maxbits)
+static uint32 get_dc_coeff(const HuffmanQuickLUTPair *table, int32 *zeroes, int maxbits)
 {
  uint32 code;
 
  for(;;)
  {
-  uint32 rawbits = GetBits(maxbits, MDFNBITS_PEEK);
+  uint32 rawbits;
 
-  if(!table->lut_bits[rawbits])
-  {
-   FXDBG("Invalid DC bit sequence: %03x\n", rawbits);
-  }
-
-  code = table->lut[rawbits];
-  SkipBits(table->lut_bits[rawbits]);
+  rawbits = GetBits(maxbits, MDFNBITS_PEEK);
+  code = table[rawbits].val;
+  SkipBits(table[rawbits].bitc);
 
   if(code < 0xF)
   {
@@ -421,7 +197,7 @@ static uint32 get_dc_coeff(const HuffmanQuickLUT *table, int32 *zeroes, int maxb
   }
   else if(code == 0xF)
   {
-   get_ac_coeff(&ac_y_qlut, zeroes);
+   get_ac_coeff(ac_y_qlut, zeroes);
    (*zeroes)++;
    return(0);
   }
@@ -462,23 +238,23 @@ static uint32 get_dc_coeff(const HuffmanQuickLUT *table, int32 *zeroes, int maxb
 
 static INLINE uint32 get_dc_y_coeff(int32 *zeroes)
 {
- return(get_dc_coeff(&dc_y_qlut, zeroes, 9));
+ return(get_dc_coeff(dc_y_qlut, zeroes, 9));
 }
 
 static uint32 get_dc_uv_coeff(void)
 {
- const HuffmanQuickLUT *table = &dc_uv_qlut;
+ const HuffmanQuickLUTPair *table = dc_uv_qlut;
  uint32 code;
  uint32 rawbits = GetBits(8, MDFNBITS_PEEK);
 
- code = table->lut[rawbits];
- SkipBits(table->lut_bits[rawbits]);
+ code = table[rawbits].val;
+ SkipBits(table[rawbits].bitc);
 
  return(GetBits(code, MDFNBITS_FUNNYSIGN));
 }
 
 
-static void decode(int32 *dct, const uint32 *QuantTable, const int32 dc, const HuffmanQuickLUT *table)
+static void decode(int32 *dct, const uint32 *QuantTable, const int32 dc, const HuffmanQuickLUTPair *table)
 {
  int32 coeff;
  int zeroes;
@@ -562,16 +338,13 @@ static bool GarbageData;
 static void Cleanup(void)
 {
  for(int i = 0; i < 2; i++)
+ {
   if(DecodeBuffer[i])
   {
-   free(DecodeBuffer[i]);
+   delete[] DecodeBuffer[i];
    DecodeBuffer[i] = NULL;
   }
-
- KillHuffmanLUT(&dc_y_qlut);
- KillHuffmanLUT(&dc_uv_qlut);
- KillHuffmanLUT(&ac_y_qlut);
- KillHuffmanLUT(&ac_uv_qlut);
+ }
 }
 
 void RAINBOW_Init(bool arg_ChromaIP)
@@ -582,14 +355,9 @@ void RAINBOW_Init(bool arg_ChromaIP)
 
   for(int i = 0; i < 2; i++)
   {
-   DecodeBuffer[i] = (uint8*)MDFN_malloc_T(0x2000 * 4, _("RAINBOW buffer RAM"));
+   DecodeBuffer[i] = new uint8[0x2000 * 4];
    memset(DecodeBuffer[i], 0, 0x2000 * 4);
   }
-
-  BuildHuffmanLUT(&dc_y_table, &dc_y_qlut, 9);
-  BuildHuffmanLUT(&dc_uv_table, &dc_uv_qlut, 8);
-  BuildHuffmanLUT(&ac_y_table, &ac_y_qlut, 12);
-  BuildHuffmanLUT(&ac_uv_table, &ac_uv_qlut, 12);
 
   DecodeFormat[0] = DecodeFormat[1] = -1;
   DecodeBufferWhichRead = 0;
@@ -790,27 +558,27 @@ void RAINBOW_DecodeBlock(bool arg_FirstDecode, bool Skip)
       // | B | D |
       // ---------
       // A (0, 0)
-      decode(&dct_y[0x00], QuantTables[0], dc_y, &ac_y_qlut);
+      decode(&dct_y[0x00], QuantTables[0], dc_y, ac_y_qlut);
 
       // B (0, 1)
       dc_y += get_dc_y_coeff(&zeroes);
-      decode(&dct_y[0x40], QuantTables[0], dc_y, &ac_y_qlut);
+      decode(&dct_y[0x40], QuantTables[0], dc_y, ac_y_qlut);
 
       // C (1, 0)
       dc_y += get_dc_y_coeff(&zeroes);
-      decode(&dct_y[0x80], QuantTables[0], dc_y, &ac_y_qlut);
+      decode(&dct_y[0x80], QuantTables[0], dc_y, ac_y_qlut);
 
       // D (1, 1)
       dc_y += get_dc_y_coeff(&zeroes);
-      decode(&dct_y[0xC0], QuantTables[0], dc_y, &ac_y_qlut);
+      decode(&dct_y[0xC0], QuantTables[0], dc_y, ac_y_qlut);
 
       // U, 8x8 components
       dc_u += get_dc_uv_coeff();
-      decode(&dct_u[0x00], QuantTables[1], dc_u, &ac_uv_qlut);
+      decode(&dct_u[0x00], QuantTables[1], dc_u, ac_uv_qlut);
 
       // V, 8x8 components
       dc_v += get_dc_uv_coeff();
-      decode(&dct_v[0x00], QuantTables[1], dc_v, &ac_uv_qlut);
+      decode(&dct_v[0x00], QuantTables[1], dc_v, ac_uv_qlut);
 
       if(Skip)
        continue;
@@ -960,10 +728,11 @@ int RAINBOW_FetchRaster(uint32 *linebuffer, uint32 layer_or, uint32 *palette_ptr
 
  if(linebuffer)
  {
+  linebuffer = MDFN_ASSUME_ALIGNED(linebuffer, 8);
+  //
   if(DecodeFormat[DecodeBufferWhichRead] == -1) // None
   {
-   if(linebuffer)
-    MDFN_FastU32MemsetM8(linebuffer, 0, 256);
+   MDFN_FastArraySet(linebuffer, 0, 256);
   }
   else if(DecodeFormat[DecodeBufferWhichRead] == 1)	// YUV
   {
@@ -989,7 +758,7 @@ int RAINBOW_FetchRaster(uint32 *linebuffer, uint32 layer_or, uint32 *palette_ptr
      tmpss = (tmpss + 1) & 0x1FF;
     }
    }
-    MDFN_FastU32MemsetM8(in_ptr, 0, 256);
+   MDFN_FastArraySet(in_ptr, 0, 256);
   }
   else if(DecodeFormat[DecodeBufferWhichRead] == 0)	// Palette
   {
@@ -1057,7 +826,6 @@ void RAINBOW_StateAction(StateMem *sm, const unsigned load, const bool data_only
    SFVAR(NullRunV),
    SFVAR(HSync),
    SFARRAY32(DecodeFormat, 2),
-   //  if(!(DecodeBuffer[i] = (uint8*)MDFN_malloc(0x2000 * 4, _("RAINBOW buffer RAM"))))
    SFARRAY(DecodeBuffer[0], 0x2000 * 4),
    SFARRAY(DecodeBuffer[1], 0x2000 * 4),
    SFEND
@@ -1072,3 +840,4 @@ void RAINBOW_StateAction(StateMem *sm, const unsigned load, const bool data_only
  }
 }
 
+}

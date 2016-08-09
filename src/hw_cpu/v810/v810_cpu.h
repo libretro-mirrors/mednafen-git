@@ -313,7 +313,7 @@ class V810
  bool have_src_cache, have_dst_cache;
 
  uint8 *FastMap[(1ULL << 32) / V810_FAST_MAP_PSIZE];
- std::vector<void *> FastMapAllocList;
+ std::vector<std::unique_ptr<uint8[]>> FastMapAllocList;
 
 
  #ifdef WANT_DEBUGGER

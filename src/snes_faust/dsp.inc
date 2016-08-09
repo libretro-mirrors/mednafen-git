@@ -1,19 +1,23 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
- */
+/******************************************************************************/
+/* Mednafen Fast SNES Emulation Module                                        */
+/******************************************************************************/
+/* dsp.inc:
+**  Copyright (C) 2015-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 /*
  $x0: VxVOLL
@@ -1116,7 +1120,22 @@ static int32 DSP_EndFrame(int16* SoundBuf)
    SoundBuf[i] = (int32)(&ResampBuf[i & 1].BufPudding()->f)[i >> 1] >> 8;
 #else
   for(unsigned i = 0; i < 2; i++)
+  {
+#if 0
+   for(unsigned x = 0; x < OutputBufPos; x++)
+   {
+    static double phase[2] = { 0};
+    static double phase_inc[2] = { 0 };
+    static double phase_inc_inc = 0.000003;
+
+    ResampBuf[i].BufPudding()[x].f = 256 * 32767 * 0.75 * sin(phase[i]);
+
+    phase[i] += phase_inc[i];
+    phase_inc[i] += phase_inc_inc;
+   }
+#endif
    ret = Resampler->Resample(&ResampBuf[i], OutputBufPos, SoundBuf + i, 0xFFFF);	// FIXME 0xFFFF
+  }
 #endif
   //ret = OutputBufPos;
   //memcpy(SoundBuf, OutputBuf, OutputBufPos * sizeof(int16) * 2);

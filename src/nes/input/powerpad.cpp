@@ -20,6 +20,8 @@
 
 #include	"share.h"
 
+namespace MDFN_IEN_NES
+{
 
 static bool side;	// false = A, true = B
 static uint32 pprsb[2];
@@ -97,4 +99,6 @@ INPUTC *MDFN_InitPowerpadB(int w)
 {
  side = true;
  return(MDFN_InitPowerpad(w));
+}
+
 }

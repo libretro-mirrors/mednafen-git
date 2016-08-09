@@ -17,6 +17,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 latch;
 static void Sync(void)
 {
@@ -68,3 +71,4 @@ int NINA06_Init(CartInfo *info)
  return(1);
 }
 
+}

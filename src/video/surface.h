@@ -1,3 +1,24 @@
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* surface.h:
+**  Copyright (C) 2009-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
 #ifndef __MDFN_SURFACE_H
 #define __MDFN_SURFACE_H
 
@@ -184,21 +205,30 @@ class MDFN_Surface //typedef struct
 
  ~MDFN_Surface();
 
- uint8 *pixels8;
- uint16 *pixels16;
- uint32 *pixels;
+ uint8* pixels8;
+ uint16* pixels16;
+ uint32* pixels;
+
+ private:
+ INLINE void pix_(uint8*& z) const { z = pixels8; }
+ INLINE void pix_(uint16*& z) const { z = pixels16; }
+ INLINE void pix_(uint32*& z) const { z = pixels; }
+ public:
 
  template<typename T>
- T* pix(void)
+ INLINE const T* pix(void) const
  {
-  if(sizeof(T) == 1)
-   return (T*)pixels8;
-  else if(sizeof(T) == 2)
-   return (T*)pixels16;
-  else if(sizeof(T) == 4)
-   return (T*)pixels;
-  else
-   return NULL;
+  T* ret;
+  pix_(ret);
+  return (const T*)ret;
+ }
+
+ template<typename T>
+ INLINE T* pix(void)
+ {
+  T* ret;
+  pix_(ret);
+  return ret;
  }
 
  MDFN_PaletteEntry *palette;

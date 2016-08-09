@@ -18,6 +18,9 @@
 
 #include <mednafen/hw_cpu/z80-fuse/z80.h>
 
+namespace MDFN_IEN_NGP
+{
+
 uint8 Z80_ReadComm(void);
 void Z80_WriteComm(uint8 data);
 
@@ -30,5 +33,7 @@ bool Z80_IsEnabled(void);
 int Z80_RunOP(void);
 
 void MDFNNGPCZ80_StateAction(StateMem *sm, const unsigned load, const bool data_only);
+
+}
 
 #endif

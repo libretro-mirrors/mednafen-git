@@ -1,21 +1,24 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen NEC PC-FX Emulation Module                                        */
+/******************************************************************************/
+/* king.cpp - Emulation of HuC6261(VCE descendant) and the HuC6272(KING)
+**  Copyright (C) 2006-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
-/* Emulation for HuC6261(descendant of the VCE) and the HuC6272(KING) */
 /* Note: Some technical comments may be outdated */
 
 /*
@@ -50,6 +53,9 @@
 #ifdef __MMX__
 #include <mmintrin.h>
 #endif
+
+namespace MDFN_IEN_PCFX
+{
 
 #define KINGDBG(format, ...) (void)0
 //#define KINGDBG FXDBG
@@ -1737,7 +1743,7 @@ static void Cleanup(void)
 {
  if(king)
  {
-  free(king);
+  delete king;
   king = NULL;
  }
 
@@ -1748,7 +1754,8 @@ void KING_Init(void)
 {
  try
  {
-  king = (king_t*)MDFN_calloc_T(1, sizeof(king_t), _("KING Data"));
+  king = new king_t();
+  memset(king, 0, sizeof(king_t));
 
   king->lastts = 0;
 
@@ -2466,11 +2473,11 @@ static int skip;
 
 void KING_StartFrame(VDC **arg_vdc_chips, EmulateSpecStruct *espec)
 {
- ::vdc_chips = arg_vdc_chips;
- ::surface = espec->surface;
- ::DisplayRect = &espec->DisplayRect;
- ::LineWidths = espec->LineWidths;
- ::skip = espec->skip;
+ MDFN_IEN_PCFX::vdc_chips = arg_vdc_chips;
+ MDFN_IEN_PCFX::surface = espec->surface;
+ MDFN_IEN_PCFX::DisplayRect = &espec->DisplayRect;
+ MDFN_IEN_PCFX::LineWidths = espec->LineWidths;
+ MDFN_IEN_PCFX::skip = espec->skip;
 
  //MDFN_DispMessage("P0:%06x P1:%06x; I0: %06x I1: %06x", king->ADPCMPlayAddress[0], king->ADPCMPlayAddress[1], king->ADPCMIntermediateAddress[0] << 6, king->ADPCMIntermediateAddress[1] << 6);
  //MDFN_DispMessage("%d %d\n", SCSICD_GetACK(), SCSICD_GetREQ());
@@ -2639,7 +2646,7 @@ static void DrawActive(void)
         0 = Hidden
     */
 
-   MDFN_FastU32MemsetM8(bg_linebuffer + 8, 0, 256);
+   MDFN_FastArraySet(bg_linebuffer + 8, 0, 256);
 
     // Only bother to draw the BGs if the microprogram is enabled.
    if(king->MPROGControl & 0x1)
@@ -2708,7 +2715,7 @@ static void MixVDC(void)
     // Optimization for when both layers are disabled in the VCE.
     if(!vce_rendercache.LayerPriority[LAYER_VDC_BG] && !vce_rendercache.LayerPriority[LAYER_VDC_SPR])
     {
-     MDFN_FastU32MemsetM8(vdc_linebuffer_yuved, 0, 512);
+     MDFN_FastArraySet(vdc_linebuffer_yuved, 0, 512);
     }
     else switch(fx_vce.picture_mode & 0xC0)
     {
@@ -4063,3 +4070,5 @@ static void DoGfxDecode(void)
 }
 
 #endif
+
+}

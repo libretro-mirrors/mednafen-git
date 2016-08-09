@@ -104,7 +104,7 @@ static u16 dbcc_ascii[] =
     'GE','LT','GT','LE'
   };
 
-DESA68parm_t d;
+static DESA68parm_t d;
 
 /* instruction operand size */
 /*static char sz_str[4][4] = { ".B", ".W", ".L", ".?" };*/

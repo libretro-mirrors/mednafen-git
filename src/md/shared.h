@@ -3,18 +3,23 @@
 
 #include <mednafen/mednafen.h>
 
-#include <mednafen/hw_cpu/c68k/c68k.h>
+#include <mednafen/hw_cpu/m68k/m68k.h>
 #include <mednafen/hw_cpu/z80-fuse/z80.h>
 #include <mednafen/state.h>
 
 #include <stdio.h>
 #include <math.h>
 
+namespace MDFN_IEN_MD
+{
+
 enum
 {
  CLOCK_NTSC = 53693175,
  CLOCK_PAL = 53203424 // Is this correct?
 };
+
+}
 
 #include "macros.h"
 #include "header.h"

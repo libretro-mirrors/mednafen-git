@@ -21,7 +21,7 @@ extern uint8 zreset;
 extern uint8 zirq;
 extern uint32 zbank;
 extern uint8 gen_running;
-extern c68k_struc Main68K;
+extern M68K Main68K;
 extern MDVDP MainVDP;
 
 /* Function prototypes */

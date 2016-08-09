@@ -661,7 +661,7 @@ static void RedoColorMap(const MDFN_PixelFormat &format, const uint8* CustomColo
 static bool TestMagic(MDFNFILE *fp) MDFN_COLD;
 static bool TestMagic(MDFNFILE *fp)
 {
- if(!strcasecmp(fp->ext, "gba") || !strcasecmp(fp->ext, "agb"))
+ if(fp->ext == "gba" || fp->ext == "agb")
   return true;
 
  if(PSFLoader::TestMagic(0x22, fp->stream()))
@@ -671,7 +671,7 @@ static bool TestMagic(MDFNFILE *fp)
 
  uint8 data[192];
 
- if(!strcasecmp(fp->ext, "bin") && fp->read(data, 192, false) == 192)
+ if(fp->ext == "bin" && fp->read(data, 192, false) == 192)
  {
   if((data[0xb2] == 0x96 && data[0xb3] == 0x00) || (data[0] == 0x2E && data[3] == 0xEA))
    return true;
@@ -3360,10 +3360,8 @@ MDFNGI EmulatedGBA =
  CPInfo,
  1 << 0,
 
- NULL,
- NULL,
- NULL,
- NULL,
+ CheatInfo_Empty,
+
  false,
  StateAction,
  Emulate,
@@ -3371,6 +3369,7 @@ MDFNGI EmulatedGBA =
  SetInput,
  NULL,
  DoSimpleCommand,
+ NULL,
  GBASettings,
  MDFN_MASTERCLOCK_FIXED(16777216),
  (uint32)((double)4194304 / 70224 * 65536 * 256),

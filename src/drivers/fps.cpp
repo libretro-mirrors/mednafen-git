@@ -157,18 +157,19 @@ void FPS_Draw(MDFN_Surface *target, const int xpos, const int ypos)
 
  const uint32 bg_color = target->MakeColor(0, 0, 0);
  const uint32 text_color = target->MakeColor(0xFF, 0xFF, 0xFF);
+ const unsigned fontid = MDFN_FONT_5x7;
  char virtfps[32], drawnfps[32], blitfps[32];
+ const MDFN_Rect cr = { 0, 0, box_width, box_height };
 
  CalcFramerates(virtfps, drawnfps, blitfps, 32);
 
  MDFN_DrawFillRect(target, xpos, ypos, box_width, box_height, bg_color);
 
- DrawTextTrans(target->pixels + xpos + ypos * target->pitch32, target->pitch32 << 2, box_width, virtfps, text_color, FALSE, TRUE);
- DrawTextTrans(target->pixels + xpos + (ypos + 7) * target->pitch32, target->pitch32 << 2, box_width, drawnfps, text_color, FALSE, TRUE);
- DrawTextTrans(target->pixels + xpos + (ypos + 7 * 2) * target->pitch32, target->pitch32 << 2, box_width, blitfps, text_color, FALSE, TRUE);
+ DrawText(target, cr, xpos, ypos + 7 * 0, virtfps, text_color, fontid);
+ DrawText(target, cr, xpos, ypos + 7 * 1, drawnfps, text_color, fontid);
+ DrawText(target, cr, xpos, ypos + 7 * 2, blitfps, text_color, fontid);
 }
 
-#define MK_COLOR_A(surface, r,g,b,a) ( surface->MakeColor(r, g, b, a))
 void FPS_DrawToScreen(SDL_Surface *screen, int rs, int gs, int bs, int as, unsigned offsx, unsigned offsy)
 {
  if(!isactive) 
@@ -190,14 +191,15 @@ void FPS_DrawToScreen(SDL_Surface *screen, int rs, int gs, int bs, int as, unsig
  }
 
  char virtfps[32], drawnfps[32], blitfps[32];
+ const uint32 text_color = FPSSurface->MakeColor(0xFF, 0xFF, 0xFF, 0xFF);
 
  CalcFramerates(virtfps, drawnfps, blitfps, 32);
 
  FPSSurface->Fill(0, 0, 0, 0x80);
 
- DrawTextTrans(FPSSurface->pixels, FPSSurface->pitchinpix << 2, FPSSurface->w, virtfps, MK_COLOR_A(FPSSurface, 0xFF, 0xFF, 0xFF, 0xFF), FALSE, TRUE);
- DrawTextTrans(FPSSurface->pixels + 7 * FPSSurface->pitchinpix, FPSSurface->pitchinpix << 2, FPSSurface->w, drawnfps, MK_COLOR_A(FPSSurface, 0xFF, 0xFF, 0xFF, 0xFF), FALSE, TRUE);
- DrawTextTrans(FPSSurface->pixels + 7 * 2 * FPSSurface->pitchinpix, FPSSurface->pitchinpix << 2, FPSSurface->w, blitfps, MK_COLOR_A(FPSSurface, 0xFF, 0xFF, 0xFF, 0xFF), FALSE, TRUE);
+ DrawText(FPSSurface, 0, 7 * 0, virtfps, text_color, MDFN_FONT_5x7);
+ DrawText(FPSSurface, 0, 7 * 1, drawnfps, text_color, MDFN_FONT_5x7);
+ DrawText(FPSSurface, 0, 7 * 2, blitfps, text_color, MDFN_FONT_5x7);
 
  MDFN_Rect drect;
  drect.x = offsx;

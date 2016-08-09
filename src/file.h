@@ -7,6 +7,10 @@
 #include <vector>
 #include <string>
 
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 class MDFNFILE
 {
 	public:
@@ -17,8 +21,8 @@ class MDFNFILE
         void ApplyIPS(Stream *);
 	void Close(void) throw();
 
-        const char * const &ext;
-        const char * const &fbase;
+        const std::string &ext;		// For file-type determination.  Leading period has been removed, and A-Z chars have been converted to a-z.
+        const std::string &fbase;	// For region detection heuristics.
 
 	inline uint64 size(void)
 	{
@@ -52,8 +56,8 @@ class MDFNFILE
 
 	private:
 
-        char *f_ext;
-	char *f_fbase;
+	std::string f_ext;
+	std::string f_fbase;
 
 	std::unique_ptr<Stream> str;
 
@@ -94,6 +98,8 @@ class PtrLengthPair
 bool MDFN_DumpToFile(const std::string& path, const void *data, const uint64 length, bool throw_on_error = false);
 bool MDFN_DumpToFile(const std::string& path, const std::vector<PtrLengthPair> &pearpairs, bool throw_on_error = false);
 
+void MDFN_BackupSavFile(const uint8 max_backup_count, const char* sav_ext);
+
 //
 // Helper function to open a file in read mode, so we can stop gzip-compressing our save-game files and not have to worry so much about games
 // that might write the gzip magic to the beginning of the save game memory area causing a problem.
@@ -101,6 +107,7 @@ bool MDFN_DumpToFile(const std::string& path, const std::vector<PtrLengthPair> &
 std::unique_ptr<Stream> MDFN_AmbigGZOpenHelper(const std::string& path, std::vector<size_t> good_sizes);
 
 void MDFN_mkdir_T(const char* path);
-
-
+int MDFN_stat(const char*, struct stat*);
+int MDFN_unlink(const char* path);
+int MDFN_rename(const char* oldpath, const char* newpath);
 #endif

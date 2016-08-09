@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 r1, r2;
 
 static void DoBS(void)
@@ -113,3 +116,4 @@ int Mapper234_Init(CartInfo *info)
 	return(1);
 }
 
+}

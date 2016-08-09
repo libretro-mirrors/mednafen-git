@@ -17,6 +17,9 @@ Mednafen's SNES emulation is a fork of <a href="http://byuu.org/">bsnes</a> v0.0
 SNSF playback is supported to a degree; however, its implementation in Mednafen is incomplete.
 </p>
 <p>
+SPC playback is not supported, but it is supported (experimentally) by the <b><a href="snes_faust.html">snes_faust</a></b> module.
+</p>
+<p>
 <b><font color="red">WARNING:</font></b> Saving state(and by extension rewinding and netplay) with Mednafen's SNES emulation may break some games.
 "Tales of Phantasia" is a known problematic game in this regard.
 </p>

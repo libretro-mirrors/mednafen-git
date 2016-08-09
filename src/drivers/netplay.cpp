@@ -30,6 +30,8 @@
 
 #include <trio/trio.h>
 
+#include "video.h"
+
 #include "NetClient.h"
 
 #ifdef HAVE_POSIX_SOCKETS
@@ -261,12 +263,11 @@ bool Netplay_TryTextExit(void)
 }
 
 // Called from main thread
-void DrawNetplayTextBuffer(MDFN_Surface *surface, const MDFN_Rect *src_rect)
+void Netplay_MT_Draw(const MDFN_PixelFormat& pformat, const int32 screen_w, const int32 screen_h)
 {
  if(!viewable) 
- {
   return;
- }
+
  if(!inputable)
  {
   if((int64)SDL_GetTicks() >= (LastTextTime + PopupTime))
@@ -276,7 +277,28 @@ void DrawNetplayTextBuffer(MDFN_Surface *surface, const MDFN_Rect *src_rect)
   }
  }
  NetConsole.ShowPrompt(inputable);
- NetConsole.Draw(surface, src_rect);
+ //
+ {
+  const unsigned fontid = MDFN_GetSettingUI("netplay.console.font");
+  const int32 lines = MDFN_GetSettingUI("netplay.console.lines");
+  int32 scale = MDFN_GetSettingUI("netplay.console.scale");
+  MDFN_Rect srect;
+  MDFN_Rect drect;
+
+  if(!scale)
+   scale = std::min<int32>(std::max<int32>(1, screen_h / 500), std::max<int32>(1, screen_w / 500));
+
+  srect.x = srect.y = 0;
+  srect.w = screen_w / scale;
+  srect.h = GetFontHeight(fontid) * lines;
+
+  drect.x = 0;
+  drect.y = screen_h - (srect.h * scale);
+  drect.w = srect.w * scale;
+  drect.h = srect.h * scale;
+
+  BlitRaw(NetConsole.Draw(pformat, srect.w, srect.h, fontid), &srect, &drect);
+ }
 }
 
 // Called from main thread
@@ -297,7 +319,9 @@ int NetplayEventHook(const SDL_Event *event)
 	break;
 
    case CEVT_NP_TOGGLE_TT:
-	NetConsole.SetFont(MDFN_GetSettingB("netplay.smallfont") ? MDFN_FONT_5x7 : MDFN_FONT_9x18_18x18);	// FIXME: Setting manager mutex needed example!
+	//
+	// FIXME: Setting manager mutex needed example!
+	//
 	if(viewable && !inputable)
 	{
 	 inputable = TRUE;

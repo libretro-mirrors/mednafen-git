@@ -25,6 +25,9 @@
 
 #include <vector>
 
+namespace MDFN_IEN_NGP
+{
+
 //-----------------------------------------------------------------------------
 // Local Definitions
 //-----------------------------------------------------------------------------
@@ -351,4 +354,6 @@ void FLASH_StateAction(StateMem *sm, const unsigned load, const bool data_only)
   memcpy(ngpc_rom.data, ngpc_rom.orig_data, ngpc_rom.length);	// Restore FLASH/ROM data to its state before any writes to FLASH the game made(or were loaded from file).
   do_flash_read(&flashdata[0]);
  }
+}
+
 }

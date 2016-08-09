@@ -37,27 +37,26 @@ uint32 zbank;               /* Address of Z80 bank window */
 
 uint8 gen_running;
 
-c68k_struc Main68K;
+M68K Main68K;
 MDVDP MainVDP;
 
 /*--------------------------------------------------------------------------*/
 /* Init, reset, shutdown functions                                          */
 /*--------------------------------------------------------------------------*/
-int vdp_int_ack_callback(int int_level)
-{
- return(MainVDP.IntAckCallback(int_level));
-}
-
 void gen_init(void)
 {
- C68k_Init(&Main68K, vdp_int_ack_callback);
- C68k_Set_TAS_Hack(&Main68K, 1);
+ Main68K.BusIntAck = Main68K_BusIntAck;
+ Main68K.BusReadInstr = Main68K_BusReadInstr;
 
- C68k_Set_ReadB(&Main68K, MD_ReadMemory8);
- C68k_Set_ReadW(&Main68K, MD_ReadMemory16);
+ Main68K.BusRead8 = Main68K_BusRead8;
+ Main68K.BusRead16 = Main68K_BusRead16;
 
- C68k_Set_WriteB(&Main68K, MD_WriteMemory8);
- C68k_Set_WriteW(&Main68K, MD_WriteMemory16);
+ Main68K.BusWrite8 = Main68K_BusWrite8;
+ Main68K.BusWrite16 = Main68K_BusWrite16;
+
+ Main68K.BusRMW = Main68K_BusRMW;
+
+ Main68K.timestamp = 0;
 }
 
 void gen_reset(bool poweron)
@@ -81,7 +80,7 @@ void gen_reset(bool poweron)
      gen_io_reset();
     }
 
-    C68k_Reset(&Main68K);
+    Main68K.Reset(poweron);
     z80_reset();
 }
 

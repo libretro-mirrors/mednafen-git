@@ -16,6 +16,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 
 // T6W28_Osc
 
+namespace MDFN_IEN_NGP
+{
+
 T6W28_Osc::T6W28_Osc()
 {
 	outputs [0] = NULL; // always stays NULL
@@ -418,3 +421,4 @@ void T6W28_Apu::load_state(const T6W28_ApuState *state)
  latch_right = state->latch_right;
 }
 
+}

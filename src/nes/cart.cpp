@@ -576,7 +576,7 @@ void Genie_Init(void)
  {
   if(!GENIEROM)
   {
-   GENIEROM = (uint8 *)MDFN_malloc_T(4096+1024, _("Game Genie ROM image"));
+   GENIEROM = new uint8[4096 + 1024];
 
    std::string fn = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("nes.ggrom"));
    MDFNFILE fp(fn.c_str(), NULL, _("Game Genie ROM Image"));
@@ -600,8 +600,14 @@ void Genie_Init(void)
     memcpy(GENIEROM + 4096 + (x<<8), GENIEROM + 4096, 256);
   }
 
-  AReadGG = (readfunc *)MDFN_calloc_T(sizeof(readfunc), 32768, _("Game Genie Read Map Backup"));
-  BWriteGG = (writefunc *)MDFN_calloc_T(sizeof(writefunc), 32768, _("Game Genie Write Map Backup"));
+  AReadGG = new readfunc[32768]; // Game Genie Read Map Backup
+  BWriteGG = new writefunc[32768]; // Game Genie Write Map Backup
+
+  for(unsigned i = 0; i < 32768; i++)
+  {
+   AReadGG[i] = NULL;
+   BWriteGG[i] = NULL;
+  }
 
   GenieBIOSHooksInstalled = FALSE;
 
@@ -620,19 +626,19 @@ void Genie_Init(void)
  {
   if(GENIEROM)
   {
-   MDFN_free(GENIEROM);
+   delete[] GENIEROM;
    GENIEROM = NULL;
   }
 
   if(AReadGG)
   {
-   MDFN_free(AReadGG);
+   delete[] AReadGG;
    AReadGG = NULL;
   }
 
   if(BWriteGG)
   {
-   MDFN_free(BWriteGG);
+   delete[] BWriteGG;
    BWriteGG = NULL;
   }
 
@@ -648,19 +654,19 @@ void Genie_Kill(void)
 
  if(GENIEROM)
  {
-  MDFN_free(GENIEROM);
+  delete[] GENIEROM;
   GENIEROM = NULL;
  }
 
  if(AReadGG)
  {
-  MDFN_free(AReadGG);
+  delete[] AReadGG;
   AReadGG = NULL;
  }
 
  if(BWriteGG)
  {
-  MDFN_free(BWriteGG);
+  delete[] BWriteGG;
   BWriteGG = NULL;
  }
 

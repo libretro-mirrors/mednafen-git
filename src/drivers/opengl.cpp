@@ -42,7 +42,7 @@ void OpenGL_Blitter::ReadPixels(MDFN_Surface *surface, const MDFN_Rect *rect)
 }
 
 
-void OpenGL_Blitter::BlitRaw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *dest_rect, const bool source_alpha)
+void OpenGL_Blitter::BlitRaw(const MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *dest_rect, const bool source_alpha)
 {
  unsigned int tmpwidth;
  unsigned int tmpheight;
@@ -306,7 +306,7 @@ void OpenGL_Blitter::DrawLinearIP(const unsigned UsingIP, const unsigned rotated
  }
 }
 
-void OpenGL_Blitter::Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Rect *dest_rect, const MDFN_Rect *original_src_rect, int InterlaceField, int UsingIP, int rotated)
+void OpenGL_Blitter::Blit(const MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Rect *dest_rect, const MDFN_Rect *original_src_rect, int InterlaceField, int UsingIP, int rotated)
 {
  MDFN_Rect tex_src_rect = *src_rect;
  float src_coords[4][2];
@@ -385,12 +385,21 @@ void OpenGL_Blitter::Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, 
    {
     //printf("Realloc: %d\n", neo_dbs);
     if(DummyBlack)
-     MDFN_free(DummyBlack);
-
-    if((DummyBlack = (uint32 *)MDFN_calloc(neo_dbs, sizeof(uint32), _("OpenGL dummy black texture data"))))
-     DummyBlackSize = neo_dbs;
-    else
+    {
+     delete[] DummyBlack;
+     DummyBlack = NULL;
      DummyBlackSize = 0;
+    }
+
+    try
+    {
+     DummyBlack = new uint32[neo_dbs];
+     memset(DummyBlack, 0, sizeof(uint32) * neo_dbs);
+     DummyBlackSize = neo_dbs;
+    }
+    catch(...)
+    {
+    }
    }
 
    //printf("Cleanup: %d %d, %d %d\n", src_rect->w, src_rect->h, tmpwidth, tmpheight);
@@ -533,7 +542,7 @@ void OpenGL_Blitter::Cleanup(void)
 
  if(DummyBlack)
  {
-  MDFN_free(DummyBlack);
+  delete[] DummyBlack;
   DummyBlack = NULL;
  }
  DummyBlackSize = 0;

@@ -62,6 +62,9 @@ if the origin of this software is not misrepresented.
 #include <math.h>
 #include "emu2413.h"
 
+namespace MDFN_IEN_NES
+{
+
 static const unsigned char default_inst[15][8] = {
  #include "vrc7tone.h"
 };
@@ -1135,4 +1138,6 @@ void OPLL_writeIO (OPLL * opll, e_uint32 adr, e_uint32 val)
     OPLL_writeReg (opll, opll->adr, val);
   else
     opll->adr = val;
+}
+
 }

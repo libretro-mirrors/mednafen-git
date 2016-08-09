@@ -20,6 +20,9 @@
 
 #include "share.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 QZVal,QZValR;
 static uint8 FunkyMode;
 
@@ -90,4 +93,6 @@ INPUTCFC *MDFN_InitPartyTap(void)
  QZVal=QZValR=0;
 
  return(&PartyTap);
+}
+
 }

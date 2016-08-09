@@ -78,8 +78,6 @@ void HappyPrompt::SetKBB(const std::string &zestring)
  free(utf32_buffer);
 }
 
-#define MK_COLOR_A(r,g,b,a) (surface->MakeColor(r, g, b, a))
-
 void HappyPrompt::Draw(MDFN_Surface *surface, const MDFN_Rect *rect)
 {
  std::vector<uint32> PromptAnswer;
@@ -115,26 +113,18 @@ void HappyPrompt::Draw(MDFN_Surface *surface, const MDFN_Rect *rect)
 * F00F                       *
 ******************************
 */
- uint32 *pixels = surface->pixels;
- uint32 pitch32 = surface->pitchinpix;
+ const int32 box_x = ((rect->w / 2) - (6 * 39 / 2));
+ const int32 box_y = ((rect->h / 2) - (4 * 13 / 2));
 
- pixels += ((rect->h / 2) - (4 * 13 / 2)) * pitch32;
- pixels += ((rect->w / 2) - (6 * 39 / 2));
+ MDFN_DrawFillRect(surface, box_x, box_y, 39 * 6, 4 * 13, surface->MakeColor(0x00, 0x00, 0x00, 0xFF));
 
- for(unsigned int y = 0; y < 4 * 13; y++)
- {
-  uint32 *row = pixels + y * pitch32;
-  for(unsigned int x = 0; x < 39 * 6; x++)
-   row[x] = MK_COLOR_A(0x00, 0x00, 0x00, 0xFF);
- }
+ DrawText(surface, box_x, box_y + 13 * 0, "╭────────────────────────────────────╮", surface->MakeColor(0xFF,0xFF,0xFF,0xFF), MDFN_FONT_6x13_12x13);
+ DrawText(surface, box_x, box_y + 13 * 1, "│                                    │", surface->MakeColor(0xFF,0xFF,0xFF,0xFF), MDFN_FONT_6x13_12x13);
+ DrawText(surface, box_x, box_y + 13 * 2, "│                                    │", surface->MakeColor(0xFF,0xFF,0xFF,0xFF), MDFN_FONT_6x13_12x13);
+ DrawText(surface, box_x, box_y + 13 * 3, "╰────────────────────────────────────╯", surface->MakeColor(0xFF,0xFF,0xFF,0xFF), MDFN_FONT_6x13_12x13);
 
- DrawTextTrans(pixels, surface->pitchinpix << 2, 39 * 6,    		    "╭────────────────────────────────────╮", MK_COLOR_A(0xFF,0xFF,0xFF,0xFF), 0, MDFN_FONT_6x13_12x13);
- DrawTextTrans(pixels + 13 * 1 * pitch32, surface->pitchinpix << 2, 39 * 6, "│                                    │", MK_COLOR_A(0xFF,0xFF,0xFF,0xFF), 0, MDFN_FONT_6x13_12x13);
- DrawTextTrans(pixels + 13 * 2 * pitch32, surface->pitchinpix << 2, 39 * 6, "│                                    │", MK_COLOR_A(0xFF,0xFF,0xFF,0xFF), 0, MDFN_FONT_6x13_12x13);
- DrawTextTrans(pixels + 13 * 3 * pitch32, surface->pitchinpix << 2, 39 * 6, "╰────────────────────────────────────╯", MK_COLOR_A(0xFF,0xFF,0xFF,0xFF), 0, MDFN_FONT_6x13_12x13);
-
- DrawTextTrans(pixels + 13 * 1 * pitch32 + 2 * 6, surface->pitchinpix << 2, (39 - 4) * 6, PromptText.c_str(), MK_COLOR_A(0xFF, 0x00, 0xFF, 0xFF), 0, MDFN_FONT_6x13_12x13);
- DrawTextTrans(pixels + (13 * 2 + 2) * pitch32 + 2 * 6, surface->pitchinpix << 2, (39 - 4) * 6, &PromptAnswer[0], MK_COLOR_A(0x00, 0xFF, 0x00, 0xFF), 0, MDFN_FONT_6x13_12x13);
+ DrawText(surface, box_x + 2 * 6, box_y + 13 * 1 + 0, PromptText, surface->MakeColor(0xFF, 0x00, 0xFF, 0xFF), MDFN_FONT_6x13_12x13);
+ DrawText(surface, box_x + 2 * 6, box_y + 13 * 2 + 2, &PromptAnswer[0], surface->MakeColor(0x00, 0xFF, 0x00, 0xFF), MDFN_FONT_6x13_12x13);
 
  if(SDL_GetTicks() & 0x80)
  {
@@ -146,7 +136,7 @@ void HappyPrompt::Draw(MDFN_Surface *surface, const MDFN_Rect *rect)
    const char *blinky_thingy = "▉";
    if(PromptAnswerWidths.size() > kb_cursor_pos && PromptAnswerWidths[kb_cursor_pos] == 12)
     blinky_thingy = "▉▉";
-   DrawTextTrans(pixels + (13 * 2 + 2) * pitch32 + 2 * 6 + xpos, surface->pitchinpix << 2, 9, blinky_thingy, MK_COLOR_A(0x00, 0xFF, 0x00, 0xFF), 0, MDFN_FONT_6x13_12x13);
+   DrawText(surface, box_x + 2 * 6 + xpos, box_y + (13 * 2 + 2), blinky_thingy, surface->MakeColor(0x00, 0xFF, 0x00, 0xFF), MDFN_FONT_6x13_12x13);
   }
  }
 }

@@ -19,7 +19,7 @@ struct CDRFILE_TRACK_INFO
 
 	int32 postgap;
 
-	int32 index[2];
+	int32 index[100];
 
 	int32 sectors;	// Not including pregap sectors!
         Stream *fp;

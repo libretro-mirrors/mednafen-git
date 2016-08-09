@@ -18,6 +18,9 @@
 
 //=============================================================================
 
+namespace MDFN_IEN_NGP
+{
+
 RomInfo ngpc_rom;
 RomHeader* rom_header;
 
@@ -101,7 +104,7 @@ void rom_loaded(void)
 
 	rom_display_header();
 
-	ngpc_rom.orig_data = (uint8 *)MDFN_malloc_T(ngpc_rom.length, _("ROM FLASH backup"));
+	ngpc_rom.orig_data = new uint8[ngpc_rom.length];
 	memcpy(ngpc_rom.orig_data, ngpc_rom.data, ngpc_rom.length);
 }
 
@@ -112,7 +115,7 @@ void rom_unload(void)
 {
  if(ngpc_rom.data)
  {
-	MDFN_free(ngpc_rom.data);
+	delete[] ngpc_rom.data;
 	ngpc_rom.data = NULL;
 	ngpc_rom.length = 0;
 	rom_header = 0;
@@ -123,9 +126,11 @@ void rom_unload(void)
 
  if(ngpc_rom.orig_data)
  {
-  	MDFN_free(ngpc_rom.orig_data);
+  	delete[] ngpc_rom.orig_data;
   	ngpc_rom.orig_data = NULL;
  }
+}
+
 }
 
 //=============================================================================

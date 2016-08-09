@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 PRGBank32, CHRBank8;
 
 static void Sync(void)
@@ -67,4 +70,6 @@ int Mapper244_Init(CartInfo *info)
  info->Power = Power;
  info->StateAction = StateAction;
  return(1);
+}
+
 }

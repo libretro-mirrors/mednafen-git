@@ -18,6 +18,9 @@
 #include "interrupt.h"
 #include "dma.h"
 
+namespace MDFN_IEN_NGP
+{
+
 NGPGFX_CLASS::NGPGFX_CLASS(void)
 {
  layer_enable_setting = 1 | 2 | 4;
@@ -391,3 +394,4 @@ uint16 NGPGFX_CLASS::read16(uint32 address)
  return(ret);
 }
 
+}

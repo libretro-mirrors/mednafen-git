@@ -1,21 +1,27 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* debugger.cpp:
+**  Copyright (C) 2006-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #include "main.h"
+#include <mednafen/FileStream.h>
+
 #include <trio/trio.h>
 #include <time.h>
 #include <map>
@@ -27,7 +33,7 @@
 #include "video.h"
 
 static MemDebugger* memdbg = NULL;
-static FILE *TraceLog = NULL;
+static std::unique_ptr<FileStream> TraceLog;
 static std::string TraceLogSpec;
 static int64 TraceLogEnd;
 static unsigned TraceLogRTO;
@@ -35,7 +41,6 @@ static unsigned TraceLogRTO;
 static bool NeedInit;
 static bool WatchLogical; // Watch logical memory addresses, not physical
 static bool IsActive;
-static bool CompactMode = FALSE;
 
 static unsigned int WhichMode; // 0 = normal, 1 = gfx, 2 = memory
 
@@ -292,8 +297,6 @@ static uint32 RegsTotalWidth;
 static std::string CurRegLongName;
 static std::string CurRegDetails;
 
-#define MK_COLOR_A(r,g,b,a) (pf_cache.MakeColor(r, g, b, a))
-
 static void Regs_Init(const int max_height_hint)
 {
  RegsPosX = RegsPosY = 0;
@@ -344,16 +347,16 @@ static void Regs_Init(const int max_height_hint)
      if(r == (CurGame->Debugger->RegGroups->size() - 1))
       pw -= 2;
 
-     if(x * 7 > max_height_hint)
-     {
-      pw *= 4;
-      RegsWhichFont[r] = MDFN_FONT_4x5;
-     }
-     else
-     {
-      pw *= 5;
-      RegsWhichFont[r] = MDFN_FONT_5x7;
-     }
+     //if(x * 7 > max_height_hint)
+     //{
+     // pw *= 4;
+     // RegsWhichFont[r] = MDFN_FONT_4x5;
+     //}
+     //else
+     //{
+     pw *= 5;
+     RegsWhichFont[r] = MDFN_FONT_5x7;
+     //}
 
      RegsCols++;
      RegsColsPixOffset[r] = pw_offset;
@@ -365,81 +368,59 @@ static void Regs_Init(const int max_height_hint)
  RegsTotalWidth = pw_offset;
 }
 
-static void Regs_DrawGroup(RegGroupType *rg, MDFN_Surface *surface, uint32 *pixels, int highlight, uint32 which_font)
+static void Regs_DrawGroup(RegGroupType *rg, MDFN_Surface *surface, const int32 x, int highlight, uint32 which_font)
 {
-  const MDFN_PixelFormat pf_cache = surface->format;
-  uint32 pitch32 = surface->pitchinpix;
-  uint32 *row = pixels;
-  unsigned int meowcow = 0;
-  RegType *rec = rg->Regs;
+ const uint32 rname_color = surface->MakeColor(0xE0, 0xFF, 0xFF, 0xFF);
+ const uint32 rval_color = surface->MakeColor(0xFF, 0xFF, 0xFF, 0xFF);
+ const uint32 hlight_color = surface->MakeColor(0xFF, 0x00, 0x00, 0xFF);
+ const uint32 row_vspacing = GetFontHeight(which_font);
 
-  while(rec->bsize)
+ unsigned int meowcow = 0;
+ RegType *rec = rg->Regs;
+ uint32 y_offs = 0;
+
+ while(rec->bsize)
+ {
+  uint32 eff_rname_color = rname_color;
+  uint32 eff_rval_color = rval_color;
+  std::string* details_ptr = nullptr;
+  char details_string_buf[256];
+
+  details_string_buf[0] = 0;
+
+  if(highlight >= 0 && (unsigned int)highlight == meowcow)
+  {
+   CurRegLongName = rec->long_name;
+   eff_rname_color = eff_rval_color = hlight_color;
+   details_ptr = &CurRegDetails;
+  }
+  const int rname_width = DrawText(surface, x, y_offs, rec->name, eff_rname_color, which_font);
+
+  if(rec->bsize != 0xFFFF)
   {
    char nubuf[256];
-   uint32 color = MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF);
-   uint32 rname_color = MK_COLOR_A(0xE0, 0xFF, 0xFF, 0xFF);
+   uint32 regval;
+   int regfw;
 
-   std::string *details_ptr = NULL;
-   char details_string[256];
-   uint32 details_string_len = sizeof(details_string);
+   regval = rg->GetRegister(rec->id, details_ptr ? details_string_buf : nullptr, sizeof(details_string_buf));
 
-   details_string[0] = 0;
-
-   if(highlight != -1)
-   {
-    if((unsigned int)highlight == meowcow)
-    {
-     CurRegLongName = rec->long_name;
-     rname_color = color = MK_COLOR_A(0xFF, 0x00, 0x00, 0xFF);
-     details_ptr = &CurRegDetails;
-    }
-   }
-   int prew = DrawTextTrans(row, surface->pitchinpix << 2, 128, rec->name.c_str(), rname_color, 0, which_font);
-
-   if(rec->bsize != 0xFFFF)
-   {
-    uint32 regval;
-
-    regval = rg->GetRegister(rec->id, details_ptr ? details_string : NULL, details_string_len);
-
-    if(rec->bsize & 0x100)
-    {
-     char fstring[7] = ": %08X";
-     int nib_size = ((rec->bsize & 0xFF) + 3) / 4;
-
-     fstring[3] = '0' + (nib_size / 10);
-     fstring[4] = '0' + (nib_size % 10);
-
-     trio_snprintf(nubuf, 256, fstring, regval);
-    }
-    else
-    {
-     if(rec->bsize == 4)
-      trio_snprintf(nubuf, 256, ": %08X", regval);
-     else if(rec->bsize == 3)
-      trio_snprintf(nubuf, 256, ": %06X", regval);
-     else if(rec->bsize == 2)
-      trio_snprintf(nubuf, 256, ": %04X", regval);
-     else if(rec->bsize == 1)
-      trio_snprintf(nubuf, 256, ": %02X", regval);
-    }
-
-    if(details_ptr && details_string[0])
-     *details_ptr = std::string(details_string);
-
-    DrawTextTrans(row + prew, surface->pitchinpix << 2, 64, nubuf, color, 0, which_font);
-   }
-
-   if(which_font == MDFN_FONT_5x7)
-    row += 7 * pitch32;
-   else if(which_font == MDFN_FONT_4x5)
-    row += 6 * pitch32;
+   if(rec->bsize & 0x100)
+    regfw = ((rec->bsize & 0xFF) + 3) / 4;
    else
-    row += 18 * pitch32;
+    regfw = rec->bsize * 2;
 
-   rec++;
-   meowcow++;
+   trio_snprintf(nubuf, sizeof(nubuf), ": %0*X", regfw, regval);
+
+   if(details_ptr && details_string_buf[0])
+    *details_ptr = std::string(details_string_buf);
+
+   DrawText(surface, x + rname_width, y_offs, nubuf, eff_rval_color, which_font);
   }
+
+  y_offs += row_vspacing;
+  rec++;
+  meowcow++;
+ }
 }
 
 
@@ -454,7 +435,7 @@ static uint32 DisAddr = 0x0000;
 static uint32 DisCOffs = 0xFFFFFFFF;
 static int NeedDisAddrChange = 0;
 
-static void DrawZP(MDFN_Surface *surface, uint32 *pixels)
+static void DrawZP(MDFN_Surface *surface, const int32 base_x, const int32 base_y)
 {
  const MDFN_PixelFormat pf_cache = surface->format;
  uint32 addr = CurGame->Debugger->ZPAddr;
@@ -498,7 +479,7 @@ static void DrawZP(MDFN_Surface *surface, uint32 *pixels)
     NeedInc = TRUE;
    }
 
-   DrawTextTrans(pixels + (x + 1) * 13 + (y + 1) * 10 * surface->pitchinpix, surface->pitchinpix << 2, 1024, tbuf, MK_COLOR_A(r, g, b, 0xFF), FALSE, MDFN_FONT_5x7);
+   DrawText(surface, base_x + (x + 1) * 13, base_y + (y + 1) * 10, tbuf, pf_cache.MakeColor(r, g, b, 0xFF), MDFN_FONT_5x7);
    if(NeedInc)
     addr++;
   }
@@ -596,14 +577,13 @@ class DebuggerPrompt : public HappyPrompt
                   }
 		  else if(InPrompt == TraceLogPrompt)
 		  {
-		   if(pstring != TraceLogSpec)
+		   if(pstring != TraceLogSpec || !TraceLog)
 		   {
 		    TraceLogSpec = pstring;
 
 		    if(TraceLog)
 		    {
-		     fclose(TraceLog);
-		     TraceLog = NULL;
+		     TraceLog.reset(nullptr);
 		     UpdateCoreHooks();
 		    }
 
@@ -612,22 +592,34 @@ class DebuggerPrompt : public HappyPrompt
 		    int num = trio_sscanf(tmp_c_str, "%255s %x", tmpfn, &endpc);
 		    if(num >= 1)
 		    {
-		     if((TraceLog = fopen(tmpfn, "ab")))
+		     try
 		     {
 		      time_t lovelytime;
+
+		      TraceLog.reset(new FileStream(tmpfn, FileStream::MODE_WRITE_INPLACE));
+
 		      lovelytime = time(NULL);
 
-		      if(ftell(TraceLog) != 0)
-		       trio_fprintf(TraceLog, "\n\n\n");
+		      TraceLog->seek(0, SEEK_END);
+		      if(TraceLog->tell() != 0)
+		       TraceLog->print_format("\n\n\n");
 
-		      trio_fprintf(TraceLog, "Tracing began: %s", asctime(gmtime(&lovelytime)));
-		      trio_fprintf(TraceLog, "[ADDRESS]: [INSTRUCTION]   [REGISTERS(before instruction exec)]");
+		      TraceLog->print_format("Tracing began: %s", asctime(gmtime(&lovelytime)));
+		      TraceLog->print_format("[ADDRESS]: [INSTRUCTION]   [REGISTERS(before instruction exec)]");
+
 		      if(num == 1)
 		       TraceLogEnd = -1;
 		      else
 		       TraceLogEnd = endpc;
+
 		      TraceLogRTO = 0;
 		      UpdateCoreHooks();
+		     }
+		     catch(std::exception& e)
+		     {
+		      TraceLog.reset(nullptr);
+
+		      MDFN_DispMessage("%s", e.what());
 		     }
 		    }
 		   }
@@ -780,16 +772,16 @@ void Debugger_GT_Draw(void)
  switch(WhichMode)
  {
   default:
-  case 0: rect->w = CompactMode ? 512 : 640;
-	  rect->h = CompactMode ? 448 : 480;
+  case 0: rect->w = 640;
+	  rect->h = 480;
 	  break;
 
   case 1: rect->w = 384;
 	  rect->h = 320;
 	  break;
 
-  case 2: rect->w = 320;
-	  rect->h = 240;
+  case 2: rect->w = 396;
+	  rect->h = 298;
 	  break;
 
   case 3: rect->w = 512;
@@ -820,8 +812,6 @@ void Debugger_GT_Draw(void)
  }
 
  const MDFN_PixelFormat pf_cache = surface->format;
- uint32 *pixels = surface->pixels;
- uint32 pitch32 = surface->pitchinpix;
 
  surface->Fill(0, 0, 0, DebuggerOpacity);
 
@@ -937,10 +927,6 @@ void Debugger_GT_Draw(void)
   DisBuffer.push_back(NewEntry);
  }
 
- char addr_text_fs[64];	 // Format string.
-
- trio_snprintf(addr_text_fs, 64, " %%0%0dX%%s", (CurGame->Debugger->LogAddrBits + 3) / 4);
-
  for(int x = 0; x < DIS_ENTRIES; x++)
  {
   int32 dbi = indexcow - (DIS_ENTRIES / 2) + x;
@@ -953,16 +939,16 @@ void Debugger_GT_Draw(void)
 
   if(DisBuffer[dbi].COffs != 0xFFFFFFFF)	// Comment
   {
-   uint32 color = MK_COLOR_A(0xFF, 0xA5, 0x00, 0xFF);
-   uint32 cursor_color = MK_COLOR_A(0xFF, 0x80, 0xE0, 0xFF);
+   uint32 color = pf_cache.MakeColor(0xFF, 0xA5, 0x00, 0xFF);
+   uint32 cursor_color = pf_cache.MakeColor(0xFF, 0x80, 0xE0, 0xFF);
    //char textbuf[256];
 
    //trio_snprintf(textbuf, sizeof(textbuf), "// %s", DisBuffer[dbi].text.c_str());
 
    if(DisBuffer[dbi].A == DisAddr && DisBuffer[dbi].COffs == DisCOffs)
-    DrawTextTrans(pixels + x * DisFontHeight * pitch32, surface->pitchinpix << 2, rect->w, ">", cursor_color, 0, DisFont);
+    DrawText(surface, 0, x * DisFontHeight, ">", cursor_color, DisFont);
 
-   DrawTextTrans(pixels + 5 + x * DisFontHeight * pitch32, surface->pitchinpix << 2, rect->w, DisBuffer[dbi].text.c_str(), color, 0, DisFont);
+   DrawText(surface, 5, x * DisFontHeight, DisBuffer[dbi].text, color, DisFont);
   }
   else						// Disassembly
   {
@@ -970,10 +956,10 @@ void Debugger_GT_Draw(void)
    uint32 dis_A = DisBuffer[dbi].A;
 
    char addr_text[64];
-   uint32 color = MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF);
-   uint32 addr_color = MK_COLOR_A(0xa0, 0xa0, 0xFF, 0xFF);
+   uint32 color = pf_cache.MakeColor(0xFF, 0xFF, 0xFF, 0xFF);
+   uint32 addr_color = pf_cache.MakeColor(0xA0, 0xA0, 0xFF, 0xFF);
 
-   trio_snprintf(addr_text, 256, addr_text_fs, dis_A, (DisBuffer[dbi].ForcedResync ? "!!" : ": "));
+   trio_snprintf(addr_text, sizeof(addr_text), " %0*X%s", (CurGame->Debugger->LogAddrBits + 3) / 4, dis_A, (DisBuffer[dbi].ForcedResync ? "!!" : ": "));
 
    if(dis_A == DisAddr && DisBuffer[dbi].COffs == DisCOffs)
    {
@@ -981,9 +967,9 @@ void Debugger_GT_Draw(void)
     if(!InRegs)
     {
      if(dis_A == PC)
-      addr_color = color = MK_COLOR_A(0xFF, 0x00, 0x00, 0xFF);
+      addr_color = color = pf_cache.MakeColor(0xFF, 0x00, 0x00, 0xFF);
      else
-      addr_color = color = MK_COLOR_A(0xFF, 0x80, 0xE0, 0xFF);
+      addr_color = color = pf_cache.MakeColor(0xFF, 0x80, 0xE0, 0xFF);
     }
 
     if(NeedPCBPToggle)
@@ -995,15 +981,15 @@ void Debugger_GT_Draw(void)
    }
 
    if(dis_A == PC && (dis_A != DisAddr || InRegs))
-    addr_color = color = MK_COLOR_A(0x00, 0xFF, 0x00, 0xFF);
+    addr_color = color = pf_cache.MakeColor(0x00, 0xFF, 0x00, 0xFF);
 
    if(IsPCBreakPoint(dis_A))
     addr_text[0] = addr_text[0] == '>' ? '#' : '*';
 
    int addrpixlen;
 
-   addrpixlen = DrawTextTrans(pixels + x * DisFontHeight * pitch32, surface->pitchinpix << 2, rect->w, addr_text, addr_color, 0, DisFont);
-   DrawTextTrans(pixels + x * DisFontHeight * pitch32 + addrpixlen, surface->pitchinpix << 2, rect->w - strlen(addr_text) * 5, dis_str.c_str(), color, 0, DisFont);
+   addrpixlen = DrawText(surface, 0, x * DisFontHeight, addr_text, addr_color, DisFont);
+   DrawText(surface, addrpixlen, x * DisFontHeight, dis_str, color, DisFont);
   }
  }
 
@@ -1025,30 +1011,28 @@ void Debugger_GT_Draw(void)
  CurRegDetails = "";
 
  for(unsigned int rp = 0; rp < CurGame->Debugger->RegGroups->size(); rp++)
-  Regs_DrawGroup((*CurGame->Debugger->RegGroups)[rp], surface, pixels + rect->w - RegsTotalWidth + RegsColsPixOffset[rp], (InRegs && RegsPosX == rp) ? (int)RegsPosY : -1, RegsWhichFont[rp]); // 175
+  Regs_DrawGroup((*CurGame->Debugger->RegGroups)[rp], surface, rect->w - RegsTotalWidth + RegsColsPixOffset[rp], (InRegs && RegsPosX == rp) ? (int)RegsPosY : -1, RegsWhichFont[rp]); // 175
 
  if(CurGame->Debugger->ZPAddr != (uint32)~0UL)
-  DrawZP(surface, pixels + 324 + 224 * pitch32);
+  DrawZP(surface, 324, 224);
 
- int moo = 8;
-
- if(CompactMode)
-  moo = 16;
+ static const int moo = 8;
 
  if(InRegs)
  {
-  DrawTextTrans(pixels + (rect->h - (moo + 2) * 7) * pitch32, surface->pitchinpix << 2, surface->w, CurRegLongName.c_str(), MK_COLOR_A(0xa0, 0xa0, 0xFF, 0xFF), TRUE, 1);
-  DrawTextTrans(pixels + (rect->h - (moo + 1) * 7) * pitch32, surface->pitchinpix << 2, surface->w, CurRegDetails.c_str(), MK_COLOR_A(0x60, 0xb0, 0xFF, 0xFF), TRUE, 1);
+  DrawText(surface, 0, (rect->h - (moo + 2) * 7), CurRegLongName, pf_cache.MakeColor(0xa0, 0xa0, 0xFF, 0xFF), MDFN_FONT_5x7, surface->w);
+  DrawText(surface, 0, (rect->h - (moo + 1) * 7), CurRegDetails, pf_cache.MakeColor(0x60, 0xb0, 0xFF, 0xFF), MDFN_FONT_5x7, surface->w);
  }
  else if(CurGame->Debugger->GetBranchTrace)
  {
   const int btrace_rows = 4;
   const int btrace_cols = 96;
   std::vector<BranchTraceResult> btrace = CurGame->Debugger->GetBranchTrace();
-  uint32 *btpixels = pixels + (rect->h - (moo + 2) * 7) * pitch32 + 7; // + ((128 - btrace_cols) / 2) * 5;
+  const int32 bt_x = 7;
+  const int32 bt_y = (rect->h - (moo + 2) * 7);
   int draw_position = btrace_rows * btrace_cols;
   bool color_osc = false;
-  const uint32 hcolors[2] = { MK_COLOR_A(0x60, 0xb0, 0xfF, 0xFF), MK_COLOR_A(0xb0, 0x70, 0xfF, 0xFF) };
+  const uint32 hcolors[2] = { pf_cache.MakeColor(0x60, 0xb0, 0xfF, 0xFF), pf_cache.MakeColor(0xb0, 0x70, 0xfF, 0xFF) };
 
   for(int i = (int)btrace.size() - 1; i >= 0; i--)
   {
@@ -1056,7 +1040,7 @@ void Debugger_GT_Draw(void)
    int strbuf_len;
    int new_draw_position;
    int col, row;
-   uint32 *pix_tmp;
+   int32 x_tmp, y_tmp;
 
    trio_snprintf(strbuf[0], 256, "%s", btrace[i].from);
 
@@ -1066,7 +1050,7 @@ void Debugger_GT_Draw(void)
     trio_snprintf(strbuf[1], 256, "‣");
 
    if(btrace[i].count > 1)
-    trio_snprintf(strbuf[2], 256, "%s(*%d)", btrace[i].to, btrace[i].count);
+    trio_snprintf(strbuf[2], 256, "%s(*%u)", btrace[i].to, btrace[i].count);
    else
     trio_snprintf(strbuf[2], 256, "%s", btrace[i].to);
 
@@ -1091,59 +1075,45 @@ void Debugger_GT_Draw(void)
    col = new_draw_position % btrace_cols;
    row = new_draw_position / btrace_cols;
 
-   pix_tmp = btpixels + col * 5 + row * 10 * pitch32;
-   pix_tmp += DrawTextTrans(pix_tmp, surface->pitchinpix << 2, rect->w, strbuf[0], (btrace[i].count > 1) ? MK_COLOR_A(0xe0, 0xe0, 0x00, 0xFF) : hcolors[color_osc], false, MDFN_FONT_5x7);
-   pix_tmp += DrawTextTrans(pix_tmp, surface->pitchinpix << 2, rect->w, strbuf[1], btrace[i].code[0] ? MK_COLOR_A(0xb0, 0xFF, 0xff, 0xFF) : MK_COLOR_A(0xb0, 0xb0, 0xff, 0xFF), false, MDFN_FONT_5x7);
+   x_tmp = bt_x + col * 5;
+   y_tmp = bt_y + row * 10;
+   x_tmp += DrawText(surface, x_tmp, y_tmp, strbuf[0], (btrace[i].count > 1) ? pf_cache.MakeColor(0xe0, 0xe0, 0x00, 0xFF) : hcolors[color_osc], MDFN_FONT_5x7);
+   x_tmp += DrawText(surface, x_tmp, y_tmp, strbuf[1], btrace[i].code[0] ? pf_cache.MakeColor(0xb0, 0xFF, 0xff, 0xFF) : pf_cache.MakeColor(0xb0, 0xb0, 0xff, 0xFF), MDFN_FONT_5x7);
 
    color_osc = !color_osc;
 
-   pix_tmp += DrawTextTrans(pix_tmp, surface->pitchinpix << 2, rect->w, strbuf[2], (btrace[i].count > 1) ? MK_COLOR_A(0xe0, 0xe0, 0x00, 0xFF) : hcolors[color_osc], false, MDFN_FONT_5x7);
-   pix_tmp += 2;
-   pix_tmp += DrawTextTrans(pix_tmp, surface->pitchinpix << 2, rect->w, strbuf[3], MK_COLOR_A(0x60, 0x70, 0x80, 0xFF), false, MDFN_FONT_5x7);
-   pix_tmp += 3;
+   x_tmp += DrawText(surface, x_tmp, y_tmp, strbuf[2], (btrace[i].count > 1) ? pf_cache.MakeColor(0xe0, 0xe0, 0x00, 0xFF) : hcolors[color_osc], MDFN_FONT_5x7);
+   x_tmp += 2;
+   x_tmp += DrawText(surface, x_tmp, y_tmp, strbuf[3], pf_cache.MakeColor(0x60, 0x70, 0x80, 0xFF), MDFN_FONT_5x7);
+   x_tmp += 3;
    draw_position = new_draw_position;
   }
-
-#if 0
-  for(int bt_row = 0; bt_row < btrace_rows; bt_row++)
-  {
-   strbuf[0] = 0;
-   strbuf_len = 0;
-   for(unsigned int y = 0; y < (btrace.size() + btrace_rows - 1) / btrace_rows && btrace_index < btrace.size(); y++)
-   {
-    strbuf_len += trio_snprintf(strbuf + strbuf_len, 256 - strbuf_len, /*"%s→"*/ "%s ", btrace[btrace_index].c_str());
-    btrace_index++;
-   }
-
-   strbuf[strbuf_len - 1] = 0; // Get rid of the trailing space
-
-   DrawTextTrans(btpixels + bt_row * 8 * pitch32, surface->pitchinpix << 2, rect->w, strbuf, MK_COLOR_A(0x60, 0xb0, 0xfF, 0xFF), TRUE, MDFN_FONT_5x7);
-  }
-#endif
  }
 
+ //
  // Draw memory watch section
+ //
  {
-  uint32 *watchpixels = pixels + (rect->h - moo * 7 + (InRegs ? 0 : 4) * 7) * pitch32;
+  static const int bytes_per_row = 32;
+  static const unsigned fontid = MDFN_FONT_5x7;
+  static const uint32 group_hspacing = 5 + 2;
+  static const uint32 ascii_lhpadding = 5;
+  const uint32 ascii_color = pf_cache.MakeColor(0xFF, 0xFF, 0xFF, 0xFF);
+  const uint32 row_vspacing = GetFontHeight(fontid);
+  const uint32 watch_y = (rect->h - moo * row_vspacing + (InRegs ? 0 : 4) * row_vspacing);
   int mw_rows = InRegs ? 8 : 4;
-  int bytes_per_row = 32;
-
-  if(CompactMode) 
-   mw_rows = 16;
-
-  if(CompactMode)
-   bytes_per_row = 16;
 
   for(int y = 0; y < mw_rows; y++)
   {
-   uint32 *row = watchpixels + y * pitch32 * 7;
+   uint32 row_x = 0;
+   uint32 row_y = watch_y + y * row_vspacing;
    char tbuf[256];
-   char asciistr[32 + 1];
+   char asciistr[bytes_per_row + 1];
    uint32 ewa;
    uint32 ewa_bits;
    uint32 ewa_mask;
 
-   asciistr[32] = 0;
+   asciistr[bytes_per_row] = 0;
 
    if(WatchLogical)
    {
@@ -1161,35 +1131,29 @@ void Debugger_GT_Draw(void)
    if(InRegs)
     ewa = (ewa - 0x80) & ewa_mask;
 
-   if(ewa_bits <= 16)
-    trio_snprintf(tbuf, 256, "%04X: ", (ewa + y * bytes_per_row) & ewa_mask);
-   else if(ewa_bits <= 20)
-    trio_snprintf(tbuf, 256, "%05X: ", (ewa + y * bytes_per_row) & ewa_mask);
-   else if(ewa_bits <= 24)
-    trio_snprintf(tbuf, 256, "%06X: ", (ewa + y * bytes_per_row) & ewa_mask);
-   else
-    trio_snprintf(tbuf, 256, "%08X: ", (ewa + y * bytes_per_row) & ewa_mask);
+   trio_snprintf(tbuf, sizeof(tbuf), "%0*X: ", std::max<int>(4, (ewa_bits + 3) / 4), (ewa + y * bytes_per_row) & ewa_mask);
 
-   row += DrawTextTrans(row, surface->pitchinpix << 2, rect->w, tbuf, MK_COLOR_A(0xa0, 0xa0, 0xFF, 0xFF), FALSE, MDFN_FONT_5x7);
+   row_x += DrawText(surface, row_x, row_y, tbuf, pf_cache.MakeColor(0xa0, 0xa0, 0xFF, 0xFF), fontid);
    for(int x = 0; x < bytes_per_row; x++)
    {
     uint8 zebyte = CurGame->Debugger->MemPeek((ewa + y * bytes_per_row + x) & ewa_mask, 1, 1, WatchLogical);
-    uint32 bcolor = MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF);
+    uint32 bcolor = pf_cache.MakeColor(0xFF, 0xFF, 0xFF, 0xFF);
 
     if(x & 1)
-     bcolor = MK_COLOR_A(0xD0, 0xFF, 0xF0, 0xFF);
+     bcolor = pf_cache.MakeColor(0xD0, 0xFF, 0xF0, 0xFF);
     if(!(x & 0x7))
-     bcolor = MK_COLOR_A(0xFF, 0x80, 0xFF, 0xFF);
+     bcolor = pf_cache.MakeColor(0xFF, 0x80, 0xFF, 0xFF);
     asciistr[x] = zebyte;
     if(zebyte & 0x80 || !zebyte)
      asciistr[x] = '.';
 
-    if(x == 16) row += 7;
+    if(x == 16)
+     row_x += group_hspacing;
 
     trio_snprintf(tbuf, 256, "%02X", zebyte);
-    row += DrawTextTrans(row, surface->pitchinpix << 2, rect->w, tbuf, bcolor, 0, 1) + 2;
+    row_x += DrawText(surface, row_x, row_y, tbuf, bcolor, fontid) + 2;
    }
-   DrawTextTrans(row + 5, surface->pitchinpix << 2, rect->w, asciistr, MK_COLOR_A(0xFF, 0xFF, 0xFF, 0xFF), 0, MDFN_FONT_5x7);
+   DrawText(surface, row_x + ascii_lhpadding, row_y, asciistr, ascii_color, fontid);
   }
  }  
 
@@ -1217,8 +1181,8 @@ static void MDFN_COLD SetActive(bool active, unsigned which_ms)
 
    if(NeedInit)
    {
-    std::string des_disfont = MDFN_GetSettingS(std::string(std::string(CurGame->shortname) + "." + std::string("debugger.disfontsize")));
-    DebuggerOpacity = 0xC0;
+    DisFont = MDFN_GetSettingUI(std::string(std::string(CurGame->shortname) + "." + std::string("debugger.disfontsize")));
+    DebuggerOpacity = 0xC8;
 
     // Debug remove me
 #if 0
@@ -1235,31 +1199,31 @@ static void MDFN_COLD SetActive(bool active, unsigned which_ms)
     }
 #endif
     // End debug remove me
- 
-    if(des_disfont == "xsmall")
-    {
-     DisFont = MDFN_FONT_4x5;
-     DisFontHeight = 6;
-    }
-    else if(des_disfont == "medium")
-    {
-     DisFont = MDFN_FONT_6x13_12x13;
-     DisFontHeight = 12;
-    }
-    else if(des_disfont == "large")
-    {
-     DisFont = MDFN_FONT_9x18_18x18;
-     DisFontHeight = 17;
-    }
-    else // small
-    {
-     DisFont = MDFN_FONT_5x7;
-     DisFontHeight = 7;
+
+    switch(DisFont)
+    { 
+     case MDFN_FONT_5x7:
+     	DisFontHeight = 7;
+	break;
+
+     case MDFN_FONT_6x9:
+	DisFontHeight = 9;
+	break;
+
+     case MDFN_FONT_6x12:
+	DisFontHeight = 11;
+	break;
+
+     case MDFN_FONT_6x13_12x13:
+	DisFontHeight = 12;
+	break;
+
+     case MDFN_FONT_9x18_18x18:
+	DisFontHeight = 17;
+	break;
     }
 
     DIS_ENTRIES = 406 / DisFontHeight;
-
-    //DIS_ENTRIES = CompactMode ? 46 : 58;
 
     NeedInit = FALSE;
     WatchAddr = CurGame->Debugger->DefaultWatchAddr;
@@ -1300,7 +1264,7 @@ static void DoTraceLog(const uint32 PC)
   *distbp++ = ' ';
 
   CurGame->Debugger->Disassemble(trace_PC, trace_PC, distbp);
-  fputs(dis_text_buf, TraceLog);
+  TraceLog->write(dis_text_buf, strlen(dis_text_buf));
 
   if(1)
   {
@@ -1346,15 +1310,12 @@ static void DoTraceLog(const uint32 PC)
      regs_buf[tpos++] = HexLUT[(val >> (((rt->bsize * 2) - 1 - n) * 4)) & 0xF];
    }
 
-   regs_buf[tpos] = 0;
-
-   fputs(regs_buf, TraceLog);
+   TraceLog->write(regs_buf, tpos);
   }
 
   if(TraceLogEnd >= 0 && (uint32)TraceLogEnd == PC)
   {
-   fclose(TraceLog);
-   TraceLog = 0;
+   TraceLog.reset(nullptr);
    UpdateCoreHooks();
   }
 }
@@ -1807,18 +1768,10 @@ void Debugger_GT_Event(const SDL_Event *event)
 		    CurRegGroupIP = (*CurGame->Debugger->RegGroups)[RegsPosX];
 
 		    ptext = CurRegIP->name;
-		    int len = CurRegIP->bsize;
+		    const int rval_fw = (CurRegIP->bsize & 0x100) ? (((CurRegIP->bsize & 0xFF) + 3) / 4) : (CurRegIP->bsize * 2);
+		    const uint32 rval = CurRegGroupIP->GetRegister(CurRegIP->id, NULL, 0);
 
-		    uint32 RegValue;
-
-		    RegValue = CurRegGroupIP->GetRegister(CurRegIP->id, NULL, 0);
-
-		    if(len == 1)
-		     trio_snprintf(buf, 64, "%02X", RegValue);
-		    else if(len == 2)
-		     trio_snprintf(buf, 64, "%04X", RegValue);
-		    else
-		     trio_snprintf(buf, 64, "%08X", RegValue);
+		    trio_snprintf(buf, sizeof(buf), "%0*X", rval_fw, rval);
 		   }
 		   else
 		   {
@@ -1854,7 +1807,6 @@ void Debugger_Init(void)
 	NeedInit = true;
 	WatchLogical = true;
 	IsActive = false;
-	CompactMode = false;
 
 	WhichMode = 0;
 
@@ -1893,10 +1845,7 @@ void Debugger_Init(void)
 void Debugger_Kill(void)
 {
 	if(TraceLog)
-	{
-	 fclose(TraceLog);
-	 TraceLog = NULL;
-	}
+	 TraceLog.reset(nullptr);
 
 	if(memdbg != NULL)
 	{

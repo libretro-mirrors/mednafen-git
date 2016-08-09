@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = subdir-objects
-DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@  @SDL_CFLAGS@
+DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@ @SDL_CFLAGS@ @ALSA_CFLAGS@ @JACK_CFLAGS@
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 
 noinst_LIBRARIES        =       libsexyal.a

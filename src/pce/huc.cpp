@@ -57,31 +57,31 @@ static void Cleanup(void)
 {
  if(HuCROM)
  {
-  MDFN_free(HuCROM);
+  delete[] HuCROM;
   HuCROM = NULL;
  }
 
  if(PopRAM)
  {
-  MDFN_free(PopRAM);
+  delete[] PopRAM;
   PopRAM = NULL;
  }
 
  if(TsushinRAM)
  {
-  MDFN_free(TsushinRAM);
+  delete[] TsushinRAM;
   TsushinRAM = NULL;
  }
 
  if(CDRAM)
  {
-  MDFN_free(CDRAM);
+  delete[] CDRAM;
   CDRAM = NULL;
  }
 
  if(SysCardRAM)
  {
-  MDFN_free(SysCardRAM);
+  delete[] SysCardRAM;
   SysCardRAM = NULL;
  }
 
@@ -180,12 +180,12 @@ static DECLFW(HuCSF2Write)
 
 static DECLFR(MCG_ReadHandler)
 {
- return mcg->Read(HuCPU->Timestamp(), A);
+ return mcg->Read(HuCPU.Timestamp(), A);
 }
 
 static DECLFW(MCG_WriteHandler)
 {
- mcg->Write(HuCPU->Timestamp(), A, V);
+ mcg->Write(HuCPU.Timestamp(), A, V);
 }
 
 static void LoadSaveMemory(const std::string& path, uint8* const data, const uint64 len, bool possibly_gz = true)
@@ -262,15 +262,15 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
 
   if(syscard != SYSCARD_NONE)
   {
-   CDRAM = (uint8 *)MDFN_calloc_T(1, 8 * 8192, _("CD RAM"));
+   CDRAM = new uint8[8 * 8192];
 
    for(int x = 0x80; x < 0x88; x++)
    {
     ROMMap[x] = &CDRAM[(x - 0x80) * 8192] - x * 8192;
-    HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
+    HuCPU.SetFastRead(x, ROMMap[x] + x * 8192);
 
-    HuCPU->SetReadHandler(x, CDRAMRead);
-    HuCPU->SetWriteHandler(x, CDRAMWrite);
+    HuCPU.SetReadHandler(x, CDRAMRead);
+    HuCPU.SetWriteHandler(x, CDRAMWrite);
    }
    MDFNMP_AddRAM(8 * 8192, 0x80 * 8192, CDRAM);
 
@@ -283,9 +283,9 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
 
    for(unsigned i = 0; i < 128; i++)
    {
-    HuCPU->SetFastRead(i, NULL);
-    HuCPU->SetReadHandler(i, MCG_ReadHandler);
-    HuCPU->SetWriteHandler(i, MCG_WriteHandler);
+    HuCPU.SetFastRead(i, NULL);
+    HuCPU.SetReadHandler(i, MCG_ReadHandler);
+    HuCPU.SetWriteHandler(i, MCG_WriteHandler);
    }
 
    for(unsigned i = 0; i < mcg->GetNVPDC(); i++)
@@ -308,7 +308,7 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
    goto BRAM_Init; // SO EVIL YES EVVIIIIIL(FIXME)
   }
 
-  HuCROM = (uint8 *)MDFN_malloc_T(m_len, _("HuCard ROM"));
+  HuCROM = new uint8[m_len];
   memset(HuCROM, 0xFF, m_len);
   fp->read(HuCROM, std::min<uint64>(m_len, len));
   crc = crc32(0, HuCROM, std::min<uint64>(m_len, len));
@@ -331,16 +331,16 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
    {
     ROMMap[x] = &HuCROM[(x & 0x1F) * 8192] - x * 8192;
 
-    HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
-    HuCPU->SetReadHandler(x, HuCRead);
+    HuCPU.SetFastRead(x, ROMMap[x] + x * 8192);
+    HuCPU.SetReadHandler(x, HuCRead);
    }
 
    for(int x = 64; x < 128; x++)
    {
     ROMMap[x] = &HuCROM[((x & 0xF) + 32) * 8192] - x * 8192;
 
-    HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
-    HuCPU->SetReadHandler(x, HuCRead);
+    HuCPU.SetFastRead(x, ROMMap[x] + x * 8192);
+    HuCPU.SetReadHandler(x, HuCRead);
    }
   }
   else if(m_len == 0x80000)
@@ -349,15 +349,15 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
    {
     ROMMap[x] = &HuCROM[(x & 0x3F) * 8192] - x * 8192;
 
-    HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
-    HuCPU->SetReadHandler(x, HuCRead);
+    HuCPU.SetFastRead(x, ROMMap[x] + x * 8192);
+    HuCPU.SetReadHandler(x, HuCRead);
    }
    for(int x = 64; x < 128; x++)
    {
     ROMMap[x] = &HuCROM[((x & 0x1F) + 32) * 8192] - x * 8192;
 
-    HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
-    HuCPU->SetReadHandler(x, HuCRead);
+    HuCPU.SetFastRead(x, ROMMap[x] + x * 8192);
+    HuCPU.SetReadHandler(x, HuCRead);
    }
   }
   else
@@ -368,8 +368,8 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
    
     ROMMap[x] = &HuCROM[bank * 8192] - x * 8192;
 
-    HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
-    HuCPU->SetReadHandler(x, HuCRead);
+    HuCPU.SetFastRead(x, ROMMap[x] + x * 8192);
+    HuCPU.SetReadHandler(x, HuCRead);
    }
   }
 
@@ -377,15 +377,15 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
   {
    if(syscard == SYSCARD_3 || syscard == SYSCARD_ARCADE)
    {
-    SysCardRAM = (uint8 *)MDFN_calloc_T(1, 24 * 8192, _("System Card RAM"));
+    SysCardRAM = new uint8[24 * 8192];
 
     for(int x = 0x68; x < 0x80; x++)
     {
      ROMMap[x] = &SysCardRAM[(x - 0x68) * 8192] - x * 8192;
-     HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
+     HuCPU.SetFastRead(x, ROMMap[x] + x * 8192);
 
-     HuCPU->SetReadHandler(x, SysCardRAMRead);
-     HuCPU->SetWriteHandler(x, SysCardRAMWrite);
+     HuCPU.SetReadHandler(x, SysCardRAMRead);
+     HuCPU.SetWriteHandler(x, SysCardRAMWrite);
     } 
     MDFNMP_AddRAM(24 * 8192, 0x68 * 8192, SysCardRAM); 
    }
@@ -397,10 +397,10 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
     for(int x = 0x40; x < 0x44; x++)
     {
      ROMMap[x] = NULL;
-     HuCPU->SetFastRead(x, NULL);
+     HuCPU.SetFastRead(x, NULL);
 
-     HuCPU->SetReadHandler(x, AC_PhysRead);
-     HuCPU->SetWriteHandler(x, AC_PhysWrite);
+     HuCPU.SetReadHandler(x, AC_PhysRead);
+     HuCPU.SetWriteHandler(x, AC_PhysWrite);
     }
    }
   }
@@ -408,7 +408,7 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
   {
    if(!memcmp(HuCROM + 0x1F26, "POPULOUS", strlen("POPULOUS")))
    {  
-    PopRAM = (uint8 *)MDFN_malloc_T(32768, _("Populous RAM"));
+    PopRAM = new uint8[32768];
     memset(PopRAM, 0xFF, 32768);
 
     LoadSaveMemory(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), PopRAM, 32768);
@@ -418,16 +418,16 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
     for(int x = 0x40; x < 0x44; x++)
     {
      ROMMap[x] = &PopRAM[(x & 3) * 8192] - x * 8192;
-     HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
+     HuCPU.SetFastRead(x, ROMMap[x] + x * 8192);
 
-     HuCPU->SetReadHandler(x, HuCRead);
-     HuCPU->SetWriteHandler(x, HuCRAMWrite);
+     HuCPU.SetReadHandler(x, HuCRead);
+     HuCPU.SetWriteHandler(x, HuCRAMWrite);
     }
     MDFNMP_AddRAM(32768, 0x40 * 8192, PopRAM);
    }
    else if(crc == 0x34dc65c4) // Tsushin Booster
    {
-    TsushinRAM = (uint8*)MDFN_malloc_T(0x8000, _("Tsushin Booster RAM"));
+    TsushinRAM = new uint8[0x8000];
     memset(TsushinRAM, 0xFF, 0x8000);
 
     LoadSaveMemory(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), TsushinRAM, 32768);
@@ -437,10 +437,10 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
     for(int x = 0x88; x < 0x8C; x++)
     {
      ROMMap[x] = &TsushinRAM[(x & 3) * 8192] - x * 8192;
-     HuCPU->SetFastRead(x, ROMMap[x] + x * 8192);
+     HuCPU.SetFastRead(x, ROMMap[x] + x * 8192);
 
-     HuCPU->SetReadHandler(x, HuCRead);
-     HuCPU->SetWriteHandler(x, HuCRAMWrite);
+     HuCPU.SetReadHandler(x, HuCRead);
+     HuCPU.SetWriteHandler(x, HuCRAMWrite);
     }
     MDFNMP_AddRAM(32768, 0x88 * 8192, TsushinRAM);
    }
@@ -451,13 +451,13 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
    if(sf2_mapper)
    {
     for(int x = 0x20; x < 0x40; x++)
-     HuCPU->SetReadHandler(x, HuCSF2ReadLow);
+     HuCPU.SetReadHandler(x, HuCSF2ReadLow);
     for(int x = 0x40; x < 0x80; x++)
     {
-     HuCPU->SetFastRead(x, NULL);		// Make sure our reads go through our read function, and not a table lookup
-     HuCPU->SetReadHandler(x, HuCSF2Read);
+     HuCPU.SetFastRead(x, NULL);		// Make sure our reads go through our read function, and not a table lookup
+     HuCPU.SetReadHandler(x, HuCSF2Read);
     }
-    HuCPU->SetWriteHandler(0, HuCSF2Write);
+    HuCPU.SetWriteHandler(0, HuCSF2Write);
 
     MDFN_printf("Street Fighter 2 Mapper\n");
     HuCSF2Latch = 0;
@@ -479,8 +479,8 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
 
    LoadSaveMemory(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), SaveRAM, 2048);
 
-   HuCPU->SetWriteHandler(0xF7, SaveRAMWrite);
-   HuCPU->SetReadHandler(0xF7, SaveRAMRead);
+   HuCPU.SetWriteHandler(0xF7, SaveRAMWrite);
+   HuCPU.SetReadHandler(0xF7, SaveRAMRead);
    MDFNMP_AddRAM(2048, 0xF7 * 8192, SaveRAM);
   }
  }

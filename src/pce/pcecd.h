@@ -1,13 +1,15 @@
 #ifndef __MDFN_PCE_PCECD_H
 #define __MDFN_PCE_PCECD_H
 
+namespace MDFN_IEN_PCE
+{
+
 typedef struct
 {
 	double CDDA_Volume;
 	double ADPCM_Volume;
 	bool ADPCM_ExtraPrecision;
 } PCECD_Settings;
-
 
 enum
 {
@@ -57,5 +59,6 @@ void PCECD_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 void ADPCM_PeekRAM(uint32 Address, uint32 Length, uint8 *Buffer);
 void ADPCM_PokeRAM(uint32 Address, uint32 Length, const uint8 *Buffer);
 
+}
 #endif
 

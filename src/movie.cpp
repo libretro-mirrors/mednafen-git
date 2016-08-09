@@ -325,7 +325,7 @@ void MDFNMOV_CheckMovies(void)
          struct stat stat_buf;
 
          MovieStatus[ssel] = 0;
-         if(stat(MDFN_MakeFName(MDFNMKF_MOVIE, ssel, 0).c_str(), &stat_buf) == 0)
+         if(MDFN_stat(MDFN_MakeFName(MDFNMKF_MOVIE, ssel, 0).c_str(), &stat_buf) == 0)
          {
           MovieStatus[ssel] = 1;
           if(stat_buf.st_mtime > last_time)
@@ -351,7 +351,8 @@ void MDFNI_SelectMovie(int w)
  CurrentMovie = w;
  MDFN_ResetMessages();
 
- status = (StateStatusStruct*)MDFN_calloc(1, sizeof(StateStatusStruct), _("Movie status"));
+ status = new StateStatusStruct();
+ memset(status, 0, sizeof(StateStatusStruct));
 
  memcpy(status->status, MovieStatus, 10 * sizeof(int));
  status->current = CurrentMovie;
@@ -363,7 +364,7 @@ void MDFNI_SelectMovie(int w)
 
  status->recently_saved = RecentlySavedMovie;
 
- MDFNSS_GetStateInfo(MDFN_MakeFName(MDFNMKF_MOVIE,CurrentMovie,NULL).c_str(), status);
+ MDFNSS_GetStateInfo(MDFN_MakeFName(MDFNMKF_MOVIE, CurrentMovie, NULL), status);
  MDFND_SetMovieStatus(status);
 }
 

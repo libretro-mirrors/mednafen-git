@@ -69,6 +69,8 @@ enum InputDeviceInputType : uint8
 
  IDIT_BYTE_SPECIAL,
 
+ IDIT_RESET_BUTTON,	// 1-bit
+
  IDIT_BUTTON_ANALOG,	// 16-bits, 0 - 32767
 
  IDIT_RUMBLE,		// 16-bits, lower 8 bits are weak rumble(0-255), next 8 bits are strong rumble(0-255), 0=no rumble, 255=max rumble.  Somewhat subjective, too...
@@ -210,12 +212,27 @@ struct CheatFormatStruct
 										// Will return true if this is part of a multipart cheat.
 };
 
-struct CheatFormatInfoStruct
-{
- unsigned NumFormats;
+extern const std::vector<CheatFormatStruct> CheatFormatInfo_Empty;
 
- CheatFormatStruct *Formats;
+struct CheatInfoStruct
+{
+ //
+ // InstallReadPatch and RemoveReadPatches should be non-NULL(even if only pointing to dummy functions) if the emulator module supports
+ // read-substitution and read-substitution-with-compare style(IE Game Genie-style) cheats.
+ //
+ // See also "SubCheats" global stuff in mempatcher.h.
+ //
+ void (*InstallReadPatch)(uint32 address, uint8 value, int compare); // Compare is >= 0 when utilized.
+ void (*RemoveReadPatches)(void);
+ uint8 (*MemRead)(uint32 addr);
+ void (*MemWrite)(uint32 addr, uint8 val);
+
+ const std::vector<CheatFormatStruct>& CheatFormatInfo;
+
+ bool BigEndian;	// UI default for cheat search and new cheats.
 };
+
+extern const CheatInfoStruct CheatInfo_Empty;
 
 // Miscellaneous system/simple commands(power, reset, dip switch toggles, coin insert, etc.)
 // (for DoSimpleCommand() )
@@ -460,17 +477,8 @@ typedef struct
  uint64 CPInfoActiveBF;			// 1 = 0, 2 = 1, 4 = 2, 8 = 3, etc. (to allow for future expansion for systems that might need
 					// multiple custom palette files, without having to go back and restructure this data).
 
- //
- // InstallReadPatch and RemoveReadPatches should be non-NULL(even if only pointing to dummy functions) if the emulator module supports
- // read-substitution and read-substitution-with-compare style(IE Game Genie-style) cheats.
- //
- // See also "SubCheats" global stuff in mempatcher.h.
- //
- void (*InstallReadPatch)(uint32 address, uint8 value, int compare); // Compare is >= 0 when utilized.
- void (*RemoveReadPatches)(void);
- uint8 (*MemRead)(uint32 addr);
 
- CheatFormatInfoStruct *CheatFormatInfo;
+ const CheatInfoStruct& CheatInfo;
 
  bool SaveStateAltersState;	// true for bsnes and some libco-style emulators, false otherwise.
 
@@ -492,6 +500,11 @@ typedef struct
  bool (*SetMedia)(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx);
 
  void (*DoSimpleCommand)(int cmd);
+
+ // Called when netplay starts, or the controllers controlled by local players changes during
+ // an existing netplay session.  Called with ~(uint64)0 when netplay ends.
+ // (For future use in implementing portable console netplay)
+ void (*NPControlNotif)(uint64 c);
 
  const MDFNSetting *Settings;
 
@@ -536,7 +549,7 @@ typedef struct
 
  int rotated;
 
- char* name;    /* Game name, UTF-8 encoding */
+ std::string name;    /* Game name, UTF-8 encoding */
  uint8 MD5[16];
  uint8 GameSetMD5[16];	/* A unique ID for the game set this CD belongs to, only used in PC-FX emulation. */
  bool GameSetMD5Valid; /* True if GameSetMD5 is valid. */

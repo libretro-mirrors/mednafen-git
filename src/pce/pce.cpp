@@ -52,7 +52,7 @@ static const MDFNSetting_EnumList PSGRevisionList[] =
 
 static std::vector<CDIF*> *cdifs = NULL;
 
-HuC6280 *HuCPU;
+HuC6280 HuCPU;
 
 VCE *vce = NULL;
 
@@ -136,41 +136,41 @@ static DECLFR(IORead)
  switch(A & 0x1c00)
  {
   case 0x0000: if(!PCE_InDebug)
-		HuCPU->StealCycle(); 
+		HuCPU.StealCycle(); 
 	       return(vce->ReadVDC(A));
 
   case 0x0400: if(!PCE_InDebug)
-		HuCPU->StealCycle(); 
+		HuCPU.StealCycle(); 
 	       return(vce->Read(A));
 
-  case 0x0800: if(HuCPU->InBlockMove())
+  case 0x0800: if(HuCPU.InBlockMove())
 		return(0);
-	       return(HuCPU->GetIODataBuffer());
+	       return(HuCPU.GetIODataBuffer());
 
-  case 0x0c00: if(HuCPU->InBlockMove())
+  case 0x0c00: if(HuCPU.InBlockMove())
                 return(0);
 	       {
-		uint8 ret = HuCPU->TimerRead(A, PCE_InDebug);
+		uint8 ret = HuCPU.TimerRead(A, PCE_InDebug);
                 if(!PCE_InDebug)
-		 HuCPU->SetIODataBuffer(ret);
+		 HuCPU.SetIODataBuffer(ret);
                 return(ret);
                }
 
-  case 0x1000: if(HuCPU->InBlockMove())
+  case 0x1000: if(HuCPU.InBlockMove())
                 return(0);
 	       {
-	        uint8 ret = INPUT_Read(HuCPU->Timestamp(), A);
+	        uint8 ret = INPUT_Read(HuCPU.Timestamp(), A);
                 if(!PCE_InDebug)
-		 HuCPU->SetIODataBuffer(ret);
+		 HuCPU.SetIODataBuffer(ret);
                 return(ret);
                }
 
-  case 0x1400: if(HuCPU->InBlockMove())
+  case 0x1400: if(HuCPU.InBlockMove())
                 return(0);
 	       {
-	        uint8 ret = HuCPU->IRQStatusRead(A, PCE_InDebug);
+	        uint8 ret = HuCPU.IRQStatusRead(A, PCE_InDebug);
 		if(!PCE_InDebug)
-		 HuCPU->SetIODataBuffer(ret);
+		 HuCPU.SetIODataBuffer(ret);
 	        return(ret);
 	       }
 
@@ -191,7 +191,7 @@ static DECLFR(IORead)
 		int32 next_cd_event;
 		uint8 ret;
 
-		ret = PCECD_Read(HuCPU->Timestamp(), A, next_cd_event, PCE_InDebug);
+		ret = PCECD_Read(HuCPU.Timestamp(), A, next_cd_event, PCE_InDebug);
 
 		vce->SetCDEvent(next_cd_event);
 
@@ -216,28 +216,28 @@ static DECLFW(IOWrite)
 {
  switch(A & 0x1c00)
  {
-  case 0x0000: HuCPU->StealCycle();
+  case 0x0000: HuCPU.StealCycle();
 	       vce->WriteVDC(A & 0x80001FFF, V);
 	       break;
 
-  case 0x0400: HuCPU->StealCycle(); 
+  case 0x0400: HuCPU.StealCycle(); 
 	       vce->Write(A & 0x1FFF, V);
 	       break;
 
-  case 0x0800: HuCPU->SetIODataBuffer(V); 
-	       psg->Write(HuCPU->Timestamp() / 3, A & 0x1FFF, V);
+  case 0x0800: HuCPU.SetIODataBuffer(V); 
+	       psg->Write(HuCPU.Timestamp() / 3, A & 0x1FFF, V);
 	       break;
 
-  case 0x0c00: HuCPU->SetIODataBuffer(V);
-	       HuCPU->TimerWrite(A & 0x1FFF, V);
+  case 0x0c00: HuCPU.SetIODataBuffer(V);
+	       HuCPU.TimerWrite(A & 0x1FFF, V);
 	       break;
 
-  case 0x1000: HuCPU->SetIODataBuffer(V);
-	       INPUT_Write(HuCPU->Timestamp(), A & 0x1FFF, V);
+  case 0x1000: HuCPU.SetIODataBuffer(V);
+	       INPUT_Write(HuCPU.Timestamp(), A & 0x1FFF, V);
 	       break;
 
-  case 0x1400: HuCPU->SetIODataBuffer(V);
-	       HuCPU->IRQStatusWrite(A & 0x1FFF, V);
+  case 0x1400: HuCPU.SetIODataBuffer(V);
+	       HuCPU.IRQStatusWrite(A & 0x1FFF, V);
 	       break;
 
   case 0x1800: if(IsTsushin)
@@ -259,7 +259,7 @@ static DECLFW(IOWrite)
 	       }
 	       else
 	       {
-	        int32 next_cd_event = PCECD_Write(HuCPU->Timestamp(), A & 0x1FFF, V);
+	        int32 next_cd_event = PCECD_Write(HuCPU.Timestamp(), A & 0x1FFF, V);
 
 		vce->SetCDEvent(next_cd_event);
 	       }
@@ -277,9 +277,9 @@ static DECLFW(IOWrite)
 static void PCECDIRQCB(bool asserted)
 {
  if(asserted)
-  HuCPU->IRQBegin(HuC6280::IQIRQ2);
+  HuCPU.IRQBegin(HuC6280::IQIRQ2);
  else
-  HuCPU->IRQEnd(HuC6280::IQIRQ2);
+  HuCPU.IRQEnd(HuC6280::IQIRQ2);
 }
 
 static int LoadCommon(void);
@@ -287,10 +287,10 @@ static void LoadCommonPre(void);
 
 static bool TestMagic(MDFNFILE *fp)
 {
- if(strcasecmp(fp->ext, "hes") && strcasecmp(fp->ext, "pce") && strcasecmp(fp->ext, "sgx"))
-  return(false);
+ if(fp->ext != "hes" && fp->ext != "pce" && fp->ext != "sgx")
+  return false;
 
- return(true);
+ return true;
 }
 
 static void SetCDSettings(bool silent_status = false)
@@ -383,7 +383,7 @@ static void Load(MDFNFILE *fp)
 
    crc = HuC_Load(fp, MDFN_GetSettingB("pce.disable_bram_hucard"));
 
-   if(!strcasecmp(fp->ext, "sgx"))
+   if(fp->ext == "sgx")
     IsSGX = true;
    else
    {
@@ -417,13 +417,13 @@ static void LoadCommonPre(void)
  // FIXME:  Make these globals less global!
  PCE_ACEnabled = MDFN_GetSettingB("pce.arcadecard");
 
- HuCPU = new HuC6280(IsHES);
+ HuCPU.Init(IsHES);
 
  for(int x = 0; x < 0x100; x++)
  {
-  HuCPU->SetFastRead(x, NULL);
-  HuCPU->SetReadHandler(x, PCEBusRead);
-  HuCPU->SetWriteHandler(x, PCENullWrite);
+  HuCPU.SetFastRead(x, NULL);
+  HuCPU.SetReadHandler(x, PCEBusRead);
+  HuCPU.SetWriteHandler(x, PCENullWrite);
  }
 
  MDFNMP_Init(1024, (1 << 21) / 1024);
@@ -436,27 +436,29 @@ static int LoadCommon(void)
  if(IsHES)
   IsSGX = 1;
  // Don't modify IsSGX past this point.
- 
- vce = new VCE(IsSGX, MDFN_GetSettingB("pce.nospritelimit"));
+ const uint32 vram_size = MDFN_GetSettingUI("pce.vramsize");
+
+ vce = new VCE(IsSGX, vram_size);
+ vce->SetVDCUnlimitedSprites(MDFN_GetSettingB("pce.nospritelimit"));
 
  if(IsSGX)
   MDFN_printf("SuperGrafx Emulation Enabled.\n");
 
  for(int i = 0xF8; i < 0xFC; i++)
  {
-  HuCPU->SetReadHandler(i, IsSGX ? BaseRAMReadSGX : BaseRAMRead);
-  HuCPU->SetWriteHandler(i, IsSGX ? BaseRAMWriteSGX : BaseRAMWrite);
+  HuCPU.SetReadHandler(i, IsSGX ? BaseRAMReadSGX : BaseRAMRead);
+  HuCPU.SetWriteHandler(i, IsSGX ? BaseRAMWriteSGX : BaseRAMWrite);
 
   if(IsSGX)
-   HuCPU->SetFastRead(i, BaseRAM + (i & 0x3) * 8192);
+   HuCPU.SetFastRead(i, BaseRAM + (i & 0x3) * 8192);
   else
-   HuCPU->SetFastRead(i, BaseRAM);
+   HuCPU.SetFastRead(i, BaseRAM);
  }
 
  MDFNMP_AddRAM(IsSGX ? 32768 : 8192, 0xf8 * 8192, BaseRAM);
 
- HuCPU->SetReadHandler(0xFF, IORead);
- HuCPU->SetWriteHandler(0xFF, IOWrite);
+ HuCPU.SetReadHandler(0xFF, IORead);
+ HuCPU.SetWriteHandler(0xFF, IOWrite);
 
  {
   int psgrevision = MDFN_GetSettingI("pce.psgrevision");
@@ -491,7 +493,7 @@ static int LoadCommon(void)
  MDFNGameInfo->CPInfoActiveBF = IsHES ? 0 : 1 << 0;
 
  for(unsigned int i = 0; i < 0x100; i++)
-  NonCheatPCERead[i] = HuCPU->GetReadHandler(i);
+  NonCheatPCERead[i] = HuCPU.GetReadHandler(i);
 
  if(!IsHES)
  {
@@ -505,9 +507,8 @@ static int LoadCommon(void)
  vce->SetShowHorizOS(MDFN_GetSettingB("pce.h_overscan")); 
 
 #ifdef WANT_DEBUGGER
- PCEDBG_Init(IsSGX, psg);
+ PCEDBG_Init(IsSGX, psg, vram_size);
 #endif
-
 
  return(1);
 }
@@ -682,12 +683,6 @@ static void Cleanup(void)
   psg = NULL;
  }
 
- if(HuCPU)
- {
-  delete HuCPU;
-  HuCPU = NULL;
- }
-
  for(unsigned ch = 0; ch < 2; ch++)
  {
   if(HRBufs[ch])
@@ -835,8 +830,8 @@ static void Emulate(EmulateSpecStruct *espec)
  bool rp_rv;
  do
  {
-  assert(HuCPU->Timestamp() < 12);
-  //printf("ST: %d\n", HuCPU->Timestamp());
+  assert(HuCPU.Timestamp() < 12);
+  //printf("ST: %d\n", HuCPU.Timestamp());
 
   INPUT_Frame();
 
@@ -846,7 +841,7 @@ static void Emulate(EmulateSpecStruct *espec)
    rp_rv = vce->RunPartial();
   } while(espec->NeedSoundReverse && !rp_rv);
 
-  const uint32 end_timestamp = HuCPU->Timestamp();
+  const uint32 end_timestamp = HuCPU.Timestamp();
   const uint32 end_timestamp_div12 = end_timestamp / 12;
   const uint32 end_timestamp_mod12 = end_timestamp % 12;
 
@@ -891,9 +886,10 @@ static void Emulate(EmulateSpecStruct *espec)
       // zoom = -zoom;
       *(float*)&HRBufs[ch]->Buf()[x] = zoom;
      }
-     // *(float*)&HRBufs[ch]->Buf()[x] = 256 * 32767 * 0.75 * sin(phase[ch]);
      else
       *(float*)&HRBufs[ch]->Buf()[x] = 256 * 0.75 * ((int16)rand());
+
+     *(float*)&HRBufs[ch]->Buf()[x] = 256 * 32767 * 0.75 * sin(phase[ch]);
 
      phase[ch] += phase_inc[ch];
      phase_inc[ch] += phase_inc_inc;
@@ -950,7 +946,7 @@ static void Emulate(EmulateSpecStruct *espec)
 
   vce->ResetTS(end_timestamp_mod12);
 
-  HuCPU->SyncAndResetTimestamp(end_timestamp_mod12);
+  HuCPU.SyncAndResetTimestamp(end_timestamp_mod12);
 
   //
   //
@@ -989,7 +985,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
  MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
 
- HuCPU->StateAction(sm, load, data_only);
+ HuCPU.StateAction(sm, load, data_only);
  vce->StateAction(sm, load, data_only);
  psg->StateAction(sm, load, data_only);
  INPUT_StateAction(sm, load, data_only);
@@ -1009,9 +1005,9 @@ void PCE_Power(void)
 
  memset(BaseRAM, 0x00, sizeof(BaseRAM));
 
- HuCPU->Power();
+ HuCPU.Power();
  PCE_TimestampBase = 0;	// FIXME, move to init.
- const int32 timestamp = HuCPU->Timestamp();
+ const int32 timestamp = HuCPU.Timestamp();
 
  vce->Reset(timestamp);
  psg->Power(timestamp / 3);
@@ -1027,7 +1023,7 @@ void PCE_Power(void)
  {
   vce->SetCDEvent(PCECD_Power(timestamp));
  }
- //printf("%d\n", HuCPU->Timestamp());
+ //printf("%d\n", HuCPU.Timestamp());
 }
 
 static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
@@ -1095,6 +1091,7 @@ static MDFNSetting PCESettings[] =
   { "pce.resamp_rate_error", MDFNSF_NOFLAGS, gettext_noop("Sound output rate tolerance."), gettext_noop("Lower values correspond to better matching of the output rate of the resampler to the actual desired output rate, at the expense of increased RAM usage and poorer CPU cache utilization."), MDFNST_FLOAT, "0.0000009", "0.0000001", "0.0000350" },
 
   { "pce.vramsize", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE | MDFNSF_SUPPRESS_DOC, gettext_noop("Size of emulated VRAM per VDC in 16-bit words.  DO NOT CHANGE THIS UNLESS YOU KNOW WTF YOU ARE DOING."), NULL, MDFNST_UINT, "32768", "32768", "65536" },
+
   { NULL }
 };
 
@@ -1124,14 +1121,14 @@ static uint8 MemRead(uint32 addr)
 
 static void InstallReadPatch(uint32 address, uint8 value, int compare)
 {
- HuCPU->SetFastRead(address >> 13, NULL);
- HuCPU->SetReadHandler(address >> 13, CheatReadFunc);
+ HuCPU.SetFastRead(address >> 13, NULL);
+ HuCPU.SetReadHandler(address >> 13, CheatReadFunc);
 }
 
 static void RemoveReadPatches(void)
 {
  for(int x = 0; x < 0x100; x++)
-  HuCPU->SetReadHandler(x, NonCheatPCERead[x]);
+  HuCPU.SetReadHandler(x, NonCheatPCERead[x]);
 }
 
 static void SetLayerEnableMask(uint64 mask)
@@ -1173,6 +1170,15 @@ static const CustomPalette_Spec CPInfo[] =
  { NULL, NULL }
 };
 
+static const CheatInfoStruct CheatInfo =
+{
+ InstallReadPatch,
+ RemoveReadPatches,
+ MemRead,
+ NULL,
+
+ CheatFormatInfo_Empty
+};
 
 };
 
@@ -1205,10 +1211,8 @@ MDFNGI EmulatedPCE =
  CPInfo,
  0,
 
- InstallReadPatch,
- RemoveReadPatches,
- MemRead,
- NULL,
+ CheatInfo,
+
  false,
  StateAction,
  Emulate,
@@ -1216,6 +1220,7 @@ MDFNGI EmulatedPCE =
  PCEINPUT_SetInput,
  SetMedia,
  DoSimpleCommand,
+ NULL,
  PCESettings,
  MDFN_MASTERCLOCK_FIXED(PCE_MASTER_CLOCK),
  0,

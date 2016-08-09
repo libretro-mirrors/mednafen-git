@@ -7,6 +7,9 @@ class NES_Resampler
 {
 	public:
 
+	enum { MaxLeftover = 1536 };
+	enum { MaxWaveOverRead = 16 };	// SSE2
+
 	// Resamples from input_rate to output_rate, allowing for rate_error(output_rate +/- output_rate*rate_error)
 	// error in the resample ratio.
 	//
@@ -15,7 +18,7 @@ class NES_Resampler
 	// Values lower than 200e-6, other than 0, may cause assert()'s to be triggered at some output rates due to overflow issues.
 	// A value of 0 will disable it entirely.
 	//
-	// quality is an arbitrary control of quality(-3 for lowest quality, 3 for highest quality)
+	// quality is an arbitrary control of quality(-2 for lowest quality, 3 for highest quality)
 	NES_Resampler(double input_rate, double output_rate, double rate_error, double hp_tc, int quality) MDFN_COLD;
 	NES_Resampler(const NES_Resampler &resamp) MDFN_COLD;
 	~NES_Resampler() MDFN_COLD;
@@ -59,25 +62,32 @@ class NES_Resampler
 	uint32 InputPhase;
 
 	// In the FIR loop:  InputPhase = PhaseNext[InputPhase]
-	uint32 *PhaseNext;
+	std::unique_ptr<uint32[]> PhaseNext;
 
 	// Incrementor for InputIndex.  In the FIR loop, after updating InputPhase:  InputIndex += PhaseStep[InputPhase]
-	uint32 *PhaseStep;
-	uint32 *PhaseStepSave;
+	std::unique_ptr<uint32[]> PhaseStep;
 
 	// One pointer for each phase in each possible alignment
-	int16 **FIR_Coeffs;
-	int16 **FIR_Coeffs_Real;
+	std::unique_ptr<int16*[]> FIR_Coeffs;
 
 	#define FIR_ENTRY(align, phase, coco) FIR_Coeffs[(phase) * NumAlignments + align][coco]
 
 	// Coefficient counts for the 4 alignments
-	uint32 *FIR_CoCounts;
+	std::unique_ptr<uint32[]> FIR_CoCounts;
 
 	int32 SoundVolume;
-	std::vector<int32> IntermediateBuffer; //int32 boobuf[8192];
+	std::vector<int16> CoeffsBuffer;
+	std::vector<int32> IntermediateBuffer;
 
-	uint32 cpuext;
+	enum
+	{
+	 SIMD_NONE,
+	 SIMD_MMX,
+	 SIMD_SSE2,
+	 SIMD_ALTIVEC,
+	 SIMD_NEON
+	};
+	uint32 SIMD_Type;
 
 	int32 debias;
 	int32 debias_multiplier;

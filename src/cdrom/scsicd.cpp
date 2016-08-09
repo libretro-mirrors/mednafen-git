@@ -948,7 +948,7 @@ static void DoMODESENSE6(const uint8 *cdb)
  if(!DBD)
  {
   data_in[index++] = 0x00;	// Density code.
-  MDFN_en24msb(&data_in[index], 0x6E); // Number of blocks?
+  MDFN_en24msb(&data_in[index], 0x6E); // FIXME: Number of blocks?
   index += 3;
  
   data_in[index++] = 0x00;	// Reserved

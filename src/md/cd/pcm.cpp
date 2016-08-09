@@ -19,6 +19,9 @@
 #include "cd.h"
 #include "pcm.h"
 
+namespace MDFN_IEN_MD
+{
+
 static bool IC_On;	// Set by D7 of writes to 0x0007.
 static uint8 WB;	// Wave bank select.  Set by the lower 4 bits of writes to 0x0007 when D6 is clear.
 static uint8 CB;	// Channel select.  Set by the lower 3 bits of wries to 0x0007 when D6 is set.
@@ -178,4 +181,6 @@ void MDCD_PCM_Reset(void)
 
  memset(WaveData, 0, sizeof(WaveData));
  memset(Channels, 0, sizeof(Channels));
+}
+
 }

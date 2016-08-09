@@ -104,7 +104,7 @@ void Cart_Init(MDFNFILE* fp)
  if(size > 1024 * 1024)
   throw MDFN_Error(0, _("SMS/GG ROM image is too large."));
 
- rom = (uint8*)MDFN_malloc_T(std::max<uint64>(size, 0x2000), _("Cart ROM"));
+ rom = new uint8[std::max<uint64>(size, 0x2000)];
  if(size < 0x2000)
   memset(rom + size, 0xFF, 0x2000 - size);
  fp->read(rom, size);
@@ -139,10 +139,12 @@ void Cart_Init(MDFNFILE* fp)
 
  if(mapper == MAPPER_CASTLE)
  {
-  CastleRAM = (uint8 *)MDFN_calloc_T(1, 8192, _("Castle RAM"));
+  CastleRAM = new uint8[8192];
+  memset(CastleRAM, 0x00, 8192);
  }
 
- sram = (uint8 *)MDFN_calloc_T(1, 0x8000, _("Cart SRAM"));
+ sram = new uint8[0x8000];
+ memset(sram, 0x00, 0x8000);
 
  MDFN_printf(_("ROM:       %uKiB\n"), (unsigned)((size + 1023) / 1024));
  MDFN_printf(_("ROM CRC32: 0x%08x\n"), crc);
@@ -189,19 +191,19 @@ void Cart_Close(void)
 {
  if(rom)
  {
-  MDFN_free(rom);
+  delete[] rom;
   rom = NULL;
  }
 
  if(CastleRAM)
  {
-  MDFN_free(CastleRAM);
+  delete[] CastleRAM;
   CastleRAM = NULL;
  }
 
  if(sram)
  {
-  MDFN_free(sram);
+  delete[] sram;
   sram = NULL;
  }
 }

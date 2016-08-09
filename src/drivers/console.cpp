@@ -1,20 +1,44 @@
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* console.cpp:
+**  Copyright (C) 2006-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
 #include "main.h"
 #include "console.h"
 #include <math.h>
 #include "nongl.h"
 
-MDFNConsole::MDFNConsole(bool setshellstyle, unsigned setfont)
+MDFNConsole::MDFNConsole(bool setshellstyle)
 {
- prompt_visible = TRUE;
+ kb_cursor_pos = 0;
  shellstyle = setshellstyle;
+ prompt_visible = true;
  Scrolled = 0;
- Font = setfont;
  opacity = 0xC0;
+
+ ScrolledVecTarg = -1;
+ LastPageSize = 0;
 }
 
 MDFNConsole::~MDFNConsole()
 {
- kb_cursor_pos = 0;
+
 }
 
 bool MDFNConsole::TextHook(const std::string &text)
@@ -22,31 +46,6 @@ bool MDFNConsole::TextHook(const std::string &text)
  WriteLine(text);
 
  return(1);
-}
-
-void MDFNConsole::Scroll(int32 amount, bool SetPos)
-{
- if(SetPos)
- {
-  // Scroll to the beginning
-  if(amount == 0)
-  {
-   //Scrolled = 
-  }
-  else // Scroll to the end
-  {
-   Scrolled = 0;
-  }
- }
- else
- {
-  int64 ts = Scrolled;
-  ts += amount;
-
-  if(ts < 0)
-   ts = 0;
-  Scrolled = ts;
- }
 }
 
 #include <mednafen/string/ConvertUTF.h>
@@ -61,46 +60,41 @@ int MDFNConsole::Event(const SDL_Event *event)
                     {
 		     case SDLK_HOME:
 			if(event->key.keysym.mod & KMOD_SHIFT)
-			{
-			 Scroll(0, TRUE); // Scroll to the beginning
-			}
+			 Scrolled = -1;
 			else
 			 kb_cursor_pos = 0;
 			break;
 		     case SDLK_END:
 			if(event->key.keysym.mod & KMOD_SHIFT)
-			{
-			 Scroll(-1, TRUE); // Scroll to the end
-			}
+			 Scrolled = 0;
 			else
 			 kb_cursor_pos = kb_buffer.size();
 			break;
+
 	             case SDLK_LEFT:
 	                if(kb_cursor_pos)
 	                 kb_cursor_pos--;
 	                break;
+
 	             case SDLK_RIGHT:
 	                if(kb_cursor_pos < kb_buffer.size())
 	                 kb_cursor_pos++;
 	                break;
 
 		     case SDLK_UP: 
-			if(event->key.keysym.mod & KMOD_SHIFT)
-			 Scroll(1); 
-			else
-			{
-
-			}
+			Scrolled = Scrolled + 1;
 			break;
-		     case SDLK_DOWN: 
-			if(event->key.keysym.mod & KMOD_SHIFT)
-			{
-			 Scroll(-1); 
-			}
-			else
-			{
 
-			}
+		     case SDLK_DOWN: 
+			Scrolled = std::max<int32>(0, Scrolled - 1);
+			break;
+
+		     case SDLK_PAGEUP:
+			Scrolled = (Scrolled + LastPageSize);
+			break;
+
+		     case SDLK_PAGEDOWN:
+			Scrolled = std::max<int64>(0, (int64)Scrolled - LastPageSize);
 			break;
 
                      case SDLK_RETURN:
@@ -145,37 +139,54 @@ int MDFNConsole::Event(const SDL_Event *event)
  return(1);
 }
 
-#define MK_COLOR_A(r,g,b,a) (pf_cache.MakeColor(r,g,b,a))
-
-void MDFNConsole::Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect)
+MDFN_Surface* MDFNConsole::Draw(const MDFN_PixelFormat& pformat, const int32 dim_w, const int32 dim_h, const unsigned fontid, const uint32 hex_color)
 {
- const MDFN_PixelFormat pf_cache = surface->format;
- uint32 pitch32 = surface->pitchinpix;
- uint32 w = src_rect->w;
- uint32 h = src_rect->h;
- uint32 *pixels = surface->pixels + src_rect->x + src_rect->y * pitch32;
- const unsigned int EffFont = Font;
- const unsigned int font_height = GetFontHeight(EffFont);
+ const int32 font_height = GetFontHeight(fontid);
+ const uint32 color = pformat.MakeColor((hex_color >> 16) & 0xFF, (hex_color >> 8) & 0xFF, (hex_color >> 0) & 0xFF, 0xFF);
+ const uint32 shadcolor = pformat.MakeColor(0x00, 0x00, 0x01, 0xFF);
+ bool scroll_resync = false;
+ bool draw_scrolled_notice = false;
 
- MDFN_Surface *tmp_surface = new MDFN_Surface(NULL, 1024, font_height + 1, 1024, surface->format);
-
- for(unsigned int y = 0; y < h; y++)
+ if(Scrolled < 0)
  {
-  uint32 *row = pixels + y * pitch32;
-  for(unsigned int x = 0; x < w; x++)
-  {
-   //printf("%d %d %d\n", y, x, pixels);
-   row[x] = MK_COLOR_A(0, 0, 0, opacity);
-   //row[x] = MK_COLOR_A(0x00, 0x00, 0x00, 0x7F);
-  }
+  scroll_resync = true;
+  ScrolledVecTarg = 0;
  }
+
+ if(!surface || surface->w != dim_w)
+ {
+  Scrolled = 0;
+
+  if(ScrolledVecTarg >= 0)
+   scroll_resync = true;
+ }
+
+ if(!surface || surface->w != dim_w || surface->h != dim_h || memcmp(&surface->format, &pformat, sizeof(MDFN_PixelFormat)))
+ {
+  surface.reset(nullptr);
+  surface.reset(new MDFN_Surface(nullptr, dim_w, dim_h, dim_w, pformat));
+  tmp_surface.reset(nullptr);
+ }
+
+ if(!tmp_surface || tmp_surface->h < (font_height + 1))
+ {
+  tmp_surface.reset(nullptr);
+  tmp_surface.reset(new MDFN_Surface(nullptr, 1024, font_height + 1, 1024, pformat));
+ }
+ //
+ //
+ //
+ const int32 w = surface->w;
+ const int32 h = surface->h;
+
+ surface->Fill(0, 0, 0, opacity);
+
+ //
+ //
+ //
+ int32 scroll_counter = 0;
  int32 destline;
  int32 vec_index = TextLog.size() - 1;
-
- if(vec_index > 0)
- {
-  vec_index -= Scrolled;
- }
 
  destline = ((h - font_height) / font_height) - 1;
 
@@ -187,41 +198,58 @@ void MDFNConsole::Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect)
   //vec_index--;
  }
 
+ LastPageSize = (destline + 1);
+
  while(destline >= 0 && vec_index >= 0)
  {
-  int32 pw = GetTextPixLength(TextLog[vec_index].c_str(), EffFont) + 1;
+  int32 pw = GetTextPixLength(TextLog[vec_index].c_str(), fontid) + 1;
 
   if(pw > tmp_surface->w)
   {
-   delete tmp_surface;
-   tmp_surface = new MDFN_Surface(NULL, pw, font_height + 1, pw, surface->format);
+   tmp_surface.reset(nullptr);
+   tmp_surface.reset(new MDFN_Surface(nullptr, pw, font_height + 1, pw, pformat));
   }
 
   tmp_surface->Fill(0, 0, 0, opacity);
-  DrawTextTransShadow(tmp_surface->pixels, tmp_surface->pitchinpix << 2, tmp_surface->w, TextLog[vec_index].c_str(), MK_COLOR_A(0xff, 0xff, 0xff, 0xFF), MK_COLOR_A(0x00, 0x00, 0x01, 0xFF), 0, EffFont);
+  DrawTextShadow(tmp_surface.get(), 0, 0, TextLog[vec_index], color, shadcolor, fontid);
   int32 numlines = (uint32)ceil((double)pw / w);
 
   while(numlines > 0 && destline >= 0)
   {
-   int32 offs = (numlines - 1) * w;
-   MDFN_Rect tmp_rect, dest_rect;
-   tmp_rect.x = offs;
-   tmp_rect.y = 0;
-   tmp_rect.h = font_height;
-   tmp_rect.w = (pw - offs) > (int32)w ? w : pw - offs;
+   if(scroll_resync && vec_index == ScrolledVecTarg && numlines == 1)
+   {
+    Scrolled = scroll_counter;
+    scroll_resync = false;
+   }
 
-   dest_rect.x = src_rect->x;
-   dest_rect.y = src_rect->y + destline * font_height;
-   dest_rect.w = tmp_rect.w;
-   dest_rect.h = tmp_rect.h;
+   if(!scroll_resync && scroll_counter >= Scrolled)
+   {
+    if(scroll_counter == Scrolled)
+     ScrolledVecTarg = vec_index;
+    //
+    int32 offs = (numlines - 1) * w;
+    MDFN_Rect tmp_rect, dest_rect;
+    tmp_rect.x = offs;
+    tmp_rect.y = 0;
+    tmp_rect.h = font_height;
+    tmp_rect.w = (pw - offs) > (int32)w ? w : pw - offs;
 
-   MDFN_StretchBlitSurface(tmp_surface, &tmp_rect, surface, &dest_rect);
+    dest_rect.x = 0;
+    dest_rect.y = destline * font_height;
+    dest_rect.w = tmp_rect.w;
+    dest_rect.h = tmp_rect.h;
+
+    MDFN_StretchBlitSurface(tmp_surface.get(), tmp_rect, surface.get(), dest_rect);
+    destline--;
+   }
+   else
+    draw_scrolled_notice = true;
+
    numlines--;
-   destline--;
+   scroll_counter++;
   }
   vec_index--;
  }
- delete tmp_surface;
 
  if(prompt_visible)
  {
@@ -237,6 +265,7 @@ void MDFNConsole::Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect)
   }
   else
    concat_str = "#>";
+
   for(unsigned int i = 0; i < kb_buffer.size(); i++)
   {
    if(i == kb_cursor_pos && (SDL_GetTicks() & 0x100))
@@ -254,30 +283,41 @@ void MDFNConsole::Draw(MDFN_Surface *surface, const MDFN_Rect *src_rect)
   }
 
   {
-   uint32 nw = GetTextPixLength(concat_str.c_str()) + 1;
-   tmp_surface = new MDFN_Surface(NULL, nw, font_height + 1, nw, surface->format);
-   tmp_surface->Fill(0, 0, 0, opacity);
+   int32 nw = GetTextPixLength(concat_str.c_str()) + 1;
+
+   if(nw > tmp_surface->w)
+   {
+    tmp_surface.reset(nullptr);
+    tmp_surface.reset(new MDFN_Surface(nullptr, nw, font_height + 1, nw, surface->format));
+   }
   }
 
+  tmp_surface->Fill(0, 0, 0, opacity);
   MDFN_Rect tmp_rect, dest_rect;
+  const uint32 tpl = DrawTextShadow(tmp_surface.get(), 0, 0, concat_str, color, shadcolor, fontid);
 
-  tmp_rect.w = DrawTextTransShadow(tmp_surface->pixels, tmp_surface->pitchinpix << 2, tmp_surface->w, concat_str.c_str(),MK_COLOR_A(0xff, 0xff, 0xff, 0xff), MK_COLOR_A(0x00, 0x00, 0x01, 0xFF), 0, EffFont);
-  tmp_rect.h = dest_rect.h = font_height;
   tmp_rect.x = 0;
   tmp_rect.y = 0;
+  tmp_rect.w = std::min<uint32>(tpl, tmp_surface->w);
+  tmp_rect.h = font_height;
 
   if(tmp_rect.w >= w)
   {
    tmp_rect.x = tmp_rect.w - w;
    tmp_rect.w -= tmp_rect.x;
   }
+  dest_rect.x = 0;
+  dest_rect.y = h - (font_height + 1);
   dest_rect.w = tmp_rect.w;
-  dest_rect.x = src_rect->x;
-  dest_rect.y = src_rect->y + h - (font_height + 1);
+  dest_rect.h = tmp_rect.h;
 
-  MDFN_StretchBlitSurface(tmp_surface, &tmp_rect, surface, &dest_rect);
-  delete tmp_surface;
+  MDFN_StretchBlitSurface(tmp_surface.get(), tmp_rect, surface.get(), dest_rect);
  }
+
+ if(draw_scrolled_notice)
+  DrawText(surface.get(), surface->w - 8, surface->h - 14, "↕", pformat.MakeColor(0x00, 0xFF, 0x00, 0xFF), fontid);
+
+ return surface.get();
 }
 
 void MDFNConsole::WriteLine(const std::string &text)

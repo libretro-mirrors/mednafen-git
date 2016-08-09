@@ -16,6 +16,9 @@
 #define __NEOPOP_INTERRUPT__
 //=============================================================================
 
+namespace MDFN_IEN_NGP
+{
+
 void interrupt(uint8 index);
 
 #define TIMER_HINT_RATE		515		//CPU Ticks between horizontal interrupts
@@ -50,6 +53,8 @@ void int_check_pending(void);
 void TestIntHDMA(int bios_num, int vec_num);
 
 int int_timer_StateAction(StateMem *sm, int load, int data_only);
+
+}
 
 //=============================================================================
 #endif

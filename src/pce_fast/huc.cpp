@@ -112,7 +112,7 @@ static void Cleanup(void)
 
  if(HuCROM)
  {
-  MDFN_free(HuCROM);
+  delete[] HuCROM;
   HuCROM = NULL;
  }
 }
@@ -160,7 +160,7 @@ uint32 HuC_Load(MDFNFILE* fp)
   PCE_IsCD = 0;
 
 
-  HuCROM = (uint8 *)MDFN_malloc_T(m_len, _("HuCard ROM"));
+  HuCROM = new uint8[m_len];
   memset(HuCROM, 0xFF, m_len);
   fp->read(HuCROM, std::min<uint64>(m_len, len));
 

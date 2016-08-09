@@ -18,11 +18,13 @@
  * scaled fixed-point arithmetic, with a minimal number of shifts.
  */
 
-/* Modified 2007 for usage in Mednafen */
+/* Modified 2007-2016 for usage in Mednafen */
 
 #include <mednafen/types.h>
 #include "jrevdct.h"
 
+namespace MDFN_IEN_PCFX
+{
 /*
  * This routine is specialized to the case DCTSIZE = 8.
  */
@@ -277,4 +279,6 @@ void j_rev_dct(DCTBLOCK data)
     
     dataptr++;			/* advance pointer to next column */
   }
+}
+
 }

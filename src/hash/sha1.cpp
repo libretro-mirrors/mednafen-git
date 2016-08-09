@@ -1,19 +1,23 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* sha1.cpp:
+**  Copyright (C) 2014-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #include <mednafen/mednafen.h>
 #include <mednafen/endian.h>
@@ -28,23 +32,6 @@ static INLINE uint32 rotl(uint32 val)
 {
  return (val << n) | (val >> (32 - n));
 }
-
-#if 0
-static INLINE uint32 ch(const uint32 x, const uint32 y, const uint32 z)
-{
- return (x & y) ^ ((~x) & z);
-}
-
-static INLINE uint32 par(const uint32 x, const uint32 y, const uint32 z)
-{
- return x ^ y ^ z;
-}
-
-static INLINE uint32 maj(const uint32 x, const uint32 y, const uint32 z)
-{
- return (x & y) ^ (x & z) ^ (y & z);
-}
-#endif
 
 template<unsigned bt>
 static INLINE uint32 f(uint32 x, uint32 y, uint32 z)

@@ -22,8 +22,6 @@
 #include <string.h>
 #include <trio/trio.h>
 
-#define MK_COLOR_A(tmp_surface, r,g,b,a) (tmp_surface->MakeColor(r, g, b, a))
-
 static MDFN_Surface *PreviewSurface = NULL, *TextSurface = NULL;
 static MDFN_Rect PreviewRect, TextRect;
 
@@ -33,9 +31,6 @@ static bool IsMovie;
 
 void DrawStateMovieRow(MDFN_Surface *surface, int *nstatus, int cur, int recently_saved, const char *text)
 {
- uint32 *XBuf = surface->pixels;
- uint32 pitch32 = surface->pitchinpix;
-
  MDFN_DrawFillRect(surface, 0, 0, 230, 40, surface->MakeColor(0x00, 0x00, 0x00, 170));
 
  // nstatus
@@ -43,29 +38,29 @@ void DrawStateMovieRow(MDFN_Surface *surface, int *nstatus, int cur, int recentl
  {
   char stringie[2];
   uint32 bordercol;
-  uint32 rect_bg_color = MK_COLOR_A(surface, 0x00, 0x00, 0x00, 0xFF);
+  uint32 rect_bg_color = surface->MakeColor(0x00, 0x00, 0x00, 0xFF);
 
   if(cur == (i % 10))
-   bordercol = MK_COLOR_A(surface, 0x60, 0x20, 0xb0, 0xFF);
+   bordercol = surface->MakeColor(0x60, 0x20, 0xb0, 0xFF);
   else
-   bordercol = MK_COLOR_A(surface, 0, 0, 0, 0xFF);
+   bordercol = surface->MakeColor(0, 0, 0, 0xFF);
 
   stringie[0] = '0' + (i % 10);
   stringie[1] = 0;
 
   if(nstatus[i % 10])
   {
-   rect_bg_color = MK_COLOR_A(surface, 0x00, 0x38, 0x28, 0xFF);
+   rect_bg_color = surface->MakeColor(0x00, 0x38, 0x28, 0xFF);
 
    if(recently_saved == (i % 10))
-    rect_bg_color = MK_COLOR_A(surface, 0x48, 0x00, 0x34, 0xFF);
+    rect_bg_color = surface->MakeColor(0x48, 0x00, 0x34, 0xFF);
   }
 
   MDFN_DrawFillRect(surface, (i - 1) * 23, 0, 23, 18 + 1, bordercol, rect_bg_color);
 
-  DrawTextTransShadow(XBuf + (i - 1) * 23 + 7, pitch32 << 2, 230, stringie, MK_COLOR_A(surface, 0xE0, 0xFF, 0xE0, 0xFF), MK_COLOR_A(surface, 0x00, 0x00, 0x00, 0xFF), FALSE);
+  DrawTextShadow(surface, (i - 1) * 23 + 7, 0, stringie, surface->MakeColor(0xE0, 0xFF, 0xE0, 0xFF), surface->MakeColor(0x00, 0x00, 0x00, 0xFF), MDFN_FONT_9x18_18x18);
  }
- DrawTextTransShadow(XBuf + 20 * pitch32, pitch32 << 2, 230, text, MK_COLOR_A(surface, 0xE0, 0xFF, 0xE0, 0xFF), MK_COLOR_A(surface, 0x00, 0x00, 0x00, 0xFF), TRUE);
+ DrawTextShadow(surface, 0, 20, text, surface->MakeColor(0xE0, 0xFF, 0xE0, 0xFF), surface->MakeColor(0x00, 0x00, 0x00, 0xFF), MDFN_FONT_9x18_18x18, 230);
 }
 
 
@@ -91,12 +86,14 @@ static void SSCleanup(void)
   if(StateStatus)
   {
    if(StateStatus->gfx)
-    free(StateStatus->gfx);
-   free(StateStatus);
+    delete[] StateStatus->gfx;
+
+   delete StateStatus;
    StateStatus = NULL;
   }
 }
 
+// TODO: Handle memory allocation errors.
 void DrawSaveStates(SDL_Surface *screen, double exs, double eys, int rs, int gs, int bs, int as)
 {
  if(StateShow < MDFND_GetTime())
@@ -110,17 +107,11 @@ void DrawSaveStates(SDL_Surface *screen, double exs, double eys, int rs, int gs,
   {
    PreviewSurface = new MDFN_Surface(NULL, StateStatus->w + 2, StateStatus->h + 2, StateStatus->w + 2, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, rs, gs, bs, as));
 
-   if(!PreviewSurface)
-   {
-    printf("Iyee: %d %d\n", StateStatus->w, StateStatus->h);
-    return;
-   }
-
    PreviewRect.x = PreviewRect.y = 0;
    PreviewRect.w = StateStatus->w + 2;
    PreviewRect.h = StateStatus->h + 2;
 
-   MDFN_DrawFillRect(PreviewSurface, 0, 0, StateStatus->w + 2, StateStatus->h + 2, MK_COLOR_A(PreviewSurface, 0x00, 0x00, 0x9F, 0xFF), MK_COLOR_A(PreviewSurface, 0x00, 0x00, 0x00, 0x80));
+   MDFN_DrawFillRect(PreviewSurface, 0, 0, StateStatus->w + 2, StateStatus->h + 2, PreviewSurface->MakeColor(0x00, 0x00, 0x9F, 0xFF), PreviewSurface->MakeColor(0x00, 0x00, 0x00, 0x80));
 
    uint32 *psp = PreviewSurface->pixels;
 
@@ -135,7 +126,7 @@ void DrawSaveStates(SDL_Surface *screen, double exs, double eys, int rs, int gs,
 
      for(uint32 x = 0; x < StateStatus->w; x++)
      {
-      psp[x] = MK_COLOR_A(PreviewSurface, src_row[0], src_row[1], src_row[2], 0xFF);
+      psp[x] = PreviewSurface->MakeColor(src_row[0], src_row[1], src_row[2], 0xFF);
       src_row += 3;
      }
      psp += PreviewSurface->pitchinpix;

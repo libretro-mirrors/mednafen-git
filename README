@@ -25,6 +25,8 @@ Some notes(and reminders) on the source code:
 
 	Avoid %= in save state load variable sanitizing code unless the variable is unsigned.
 
+	malloc(), realloc(), calloc()'ing 0 bytes of memory may return a NULL pointer.
+
 	memcpy()/memmove()/etc. with NULL pointers is undefined and bad even when length is 0.
 
 	Careful to not do something like: void somefunc(int something[16]); [...] sizeof(something)
@@ -43,3 +45,7 @@ Some notes(and reminders) on the source code:
 
 	Do not place a period before the field width for "s" and "[" conversion specifiers in *scanf() format strings; perhaps a bad
 	habit picked up long ago from working with a buggy libc or trio?
+
+	Avoid compiling different C++ files with different compiler flags in regards to instruction set used(like -mmmx, -msse, -mfpmath, -march),
+	or else there may be (template-)function ODR violations that could cause compatibility problems.
+

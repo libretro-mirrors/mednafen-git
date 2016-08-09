@@ -1,19 +1,25 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen Sony PS1 Emulation Module                                         */
+/******************************************************************************/
+/* cdc.cpp:
+**  Copyright (C) 2011-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
+#pragma GCC optimize ("unroll-loops")
 
 /*
   Games to test after changing code affecting CD reading and buffering:
@@ -935,14 +941,12 @@ void PS_CDC::HandlePlayRead(void)
   if((Mode & MODE_REPORT) && (((SubQBuf_Safe[0x9] >> 4) != ReportLastF) || Forward || Backward) && SubQChecksumOK)
   {
    uint8 tr[8];
-#if 0
    uint16 abs_lev_max = 0;
    bool abs_lev_chselect = SubQBuf_Safe[0x8] & 0x01;
 
    for(int i = 0; i < 588; i++)
     abs_lev_max = std::max<uint16>(abs_lev_max, std::min<int>(abs((int16)MDFN_de16lsb(&read_buf[i * 4 + (abs_lev_chselect * 2)])), 32767));
    abs_lev_max |= abs_lev_chselect << 15;
-#endif
    
    ReportLastF = SubQBuf_Safe[0x9] >> 4;
 
@@ -963,8 +967,8 @@ void PS_CDC::HandlePlayRead(void)
     tr[5] = SubQBuf_Safe[0x9];	// A F
    }
 
-   tr[6] = 0; //abs_lev_max >> 0;
-   tr[7] = 0; //abs_lev_max >> 8;
+   tr[6] = abs_lev_max >> 0;
+   tr[7] = abs_lev_max >> 8;
 
    SetAIP(CDCIRQ_DATA_READY, 8, tr);
   }

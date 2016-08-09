@@ -1,5 +1,8 @@
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 latch;
 
 static void Sync(void)
@@ -57,4 +60,6 @@ int AGCI50282_Init(CartInfo *info)
  info->StateAction = StateAction;
  info->Power = Power;
  return(1);
+}
+
 }

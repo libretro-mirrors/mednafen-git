@@ -20,6 +20,9 @@
 
 #include "share.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 HSVal,HSValR;
 
 
@@ -62,4 +65,6 @@ INPUTCFC *MDFN_InitHS(void)
 {
  HSVal=HSValR=0;
  return(&HyperShot);
+}
+
 }

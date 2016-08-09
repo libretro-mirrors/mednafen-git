@@ -1,5 +1,8 @@
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 PRGBanks[2], CHRBanks[8], IRQCount, IRQLatch, IRQa;
 static int32 acount;
 
@@ -34,7 +37,7 @@ static DECLFW(Write)
   case 0xf000: IRQLatch = V; break;
   case 0xf001: X6502_IRQEnd(MDFN_IQEXT); IRQa = 0; IRQCount = IRQLatch; break;
   case 0xf002: IRQa = 1; break;
-  default: printf("%04x: %02x\n", A, V);break;
+  default: /*printf("%04x: %02x\n", A, V);*/break;
  }
 
  Sync();
@@ -93,4 +96,6 @@ int Mapper222_Init(CartInfo *info)
  SetWriteHandler(0x8000, 0xFFFF, Write);
  MapIRQHook = IRQHook;
  return(1);
+}
+
 }

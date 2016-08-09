@@ -20,6 +20,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 PRGBank16, Mirroring;
 static int isbf9097;
 
@@ -91,3 +94,4 @@ int BIC62_Init(CartInfo *info)
  return(1);
 }
 
+}

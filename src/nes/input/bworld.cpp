@@ -20,6 +20,9 @@
 
 #include "share.h"
 
+namespace MDFN_IEN_NES
+{
+
 static int seq;
 static uint8 ptr, bit, cnt;
 static bool have;
@@ -113,3 +116,4 @@ INPUTCFC *MDFN_InitBarcodeWorld(void)
  return(&BarcodeWorld);
 }
 
+}

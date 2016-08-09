@@ -27,7 +27,7 @@
 
 #include "z80_macros.h"
 
-int iline = 0;
+static int iline = 0;
 
 void z80_set_interrupt(int set)
 {

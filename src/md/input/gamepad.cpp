@@ -22,6 +22,8 @@
 #include "gamepad.h"
 #include <trio/trio.h>
 
+namespace MDFN_IEN_MD
+{
 /*--------------------------------------------------------------------------*/
 /* Master System 2-button gamepad                                           */
 /*--------------------------------------------------------------------------*/
@@ -407,3 +409,4 @@ MD_Input_Device *MDInput_MakeMD6B(void)
  return new Gamepad6;
 }
 
+}

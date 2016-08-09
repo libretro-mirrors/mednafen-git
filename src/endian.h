@@ -1,5 +1,45 @@
+/******************************************************************************/
+/* Mednafen - Multi-system Emulator                                           */
+/******************************************************************************/
+/* endian.h:
+**  Copyright (C) 2006-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
 #ifndef __MDFN_ENDIAN_H
 #define __MDFN_ENDIAN_H
+
+void Endian_A16_Swap(void *src, uint32 nelements);
+void Endian_A32_Swap(void *src, uint32 nelements);
+void Endian_A64_Swap(void *src, uint32 nelements);
+
+void Endian_A16_NE_LE(void *src, uint32 nelements);
+void Endian_A32_NE_LE(void *src, uint32 nelements);
+void Endian_A64_NE_LE(void *src, uint32 nelements);
+
+void Endian_A16_NE_BE(void *src, uint32 nelements);
+void Endian_A32_NE_BE(void *src, uint32 nelements);
+void Endian_A64_NE_BE(void *src, uint32 nelements);
+
+void Endian_V_NE_LE(void* p, size_t len);
+void Endian_V_NE_BE(void* p, size_t len);
+
+//
+//
+//
 
 static INLINE uint32 BitsExtract(const uint8* ptr, const size_t bit_offset, const size_t bit_count)
 {
@@ -39,21 +79,6 @@ static INLINE void BitsIntract(uint8* ptr, const size_t bit_offset, const size_t
  Statically-allocated arrays/memory should be unioned with a big POD type or C++11 "alignas"'d.  (May need to audit code to ensure
  this is being done).
 */
-
-void Endian_A16_Swap(void *src, uint32 nelements);
-void Endian_A32_Swap(void *src, uint32 nelements);
-void Endian_A64_Swap(void *src, uint32 nelements);
-
-void Endian_A16_NE_LE(void *src, uint32 nelements);
-void Endian_A32_NE_LE(void *src, uint32 nelements);
-void Endian_A64_NE_LE(void *src, uint32 nelements);
-
-void Endian_A16_NE_BE(void *src, uint32 nelements);
-void Endian_A32_NE_BE(void *src, uint32 nelements);
-void Endian_A64_NE_BE(void *src, uint32 nelements);
-
-void Endian_V_NE_LE(void *src, uint32 bytesize);
-void Endian_V_NE_BE(void *src, uint32 bytesize);
 
 static INLINE uint16 MDFN_bswap16(uint16 v)
 {
@@ -127,8 +152,9 @@ static INLINE uint16 MDFN_de16lsb(const void* ptr)
 
 static INLINE uint32 MDFN_de24lsb(const void* ptr)
 {
- const uint8* morp = (const uint8*)ptr;
- return(morp[0]|(morp[1]<<8)|(morp[2]<<16));
+ const uint8* ptr_u8 = (const uint8*)ptr;
+
+ return (ptr_u8[0] << 0) | (ptr_u8[1] << 8) | (ptr_u8[2] << 16);
 }
 
 template<bool aligned = false>
@@ -160,8 +186,9 @@ static INLINE uint16 MDFN_de16msb(const void* ptr)
 
 static INLINE uint32 MDFN_de24msb(const void* ptr)
 {
- const uint8* morp = (const uint8*)ptr;
- return((morp[2]<<0)|(morp[1]<<8)|(morp[0]<<16));
+ const uint8* ptr_u8 = (const uint8*)ptr;
+
+ return (ptr_u8[0] << 16) | (ptr_u8[1] << 8) | (ptr_u8[2] << 0);
 }
 
 template<bool aligned = false>
@@ -234,11 +261,11 @@ static INLINE void MDFN_en16lsb(void* ptr, uint16 value)
 
 static INLINE void MDFN_en24lsb(void* ptr, uint32 value)
 {
- uint8* morp = (uint8*)ptr;
+ uint8* ptr_u8 = (uint8*)ptr;
 
- morp[0] = value;
- morp[1] = value >> 8;
- morp[2] = value >> 16;
+ ptr_u8[0] = value >> 0;
+ ptr_u8[1] = value >> 8;
+ ptr_u8[2] = value >> 16;
 }
 
 template<bool aligned = false>
@@ -271,11 +298,11 @@ static INLINE void MDFN_en16msb(void* ptr, uint16 value)
 
 static INLINE void MDFN_en24msb(void* ptr, uint32 value)
 {
- uint8* morp = (uint8*)ptr;
+ uint8* ptr_u8 = (uint8*)ptr;
 
- morp[0] = value;
- morp[1] = value >> 8;
- morp[2] = value >> 16;
+ ptr_u8[0] = value >> 16;
+ ptr_u8[1] = value >> 8;
+ ptr_u8[2] = value >> 0;
 }
 
 template<bool aligned = false>
@@ -288,6 +315,180 @@ template<bool aligned = false>
 static INLINE void MDFN_en64msb(void* ptr, uint64 value)
 {
  MDFN_enmsb<uint64, aligned>(ptr, value);
+}
+
+
+//
+//
+//
+//
+//
+//
+
+template<typename T, typename BT>
+static INLINE uint8* ne16_ptr_be(BT* const base, const size_t byte_offset)
+{
+#ifdef MSB_FIRST
+  return (uint8*)base + (byte_offset &~ (sizeof(T) - 1));
+#else
+  return (uint8*)base + (((byte_offset &~ (sizeof(T) - 1)) ^ (2 - std::min<size_t>(2, sizeof(T)))));
+#endif
+}
+
+template<typename T>
+static INLINE void ne16_wbo_be(uint16* const base, const size_t byte_offset, const T value)
+{
+  uint8* const ptr = ne16_ptr_be<T>(base, byte_offset);
+
+  static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4, "Unsupported type size");
+
+  if(sizeof(T) == 4)
+  {
+   uint16* const ptr16 = (uint16*)ptr;
+
+   ptr16[0] = value >> 16;
+   ptr16[1] = value;
+  }
+  else
+   *(T*)ptr = value;
+}
+
+template<typename T>
+static INLINE T ne16_rbo_be(const uint16* const base, const size_t byte_offset)
+{
+  uint8* const ptr = ne16_ptr_be<T>(base, byte_offset);
+
+  static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4, "Unsupported type size");
+
+  if(sizeof(T) == 4)
+  {
+   uint16* const ptr16 = (uint16*)ptr;
+   T tmp;
+
+   tmp  = ptr16[0] << 16;
+   tmp |= ptr16[1];
+
+   return tmp;
+  }
+  else
+   return *(T*)ptr;
+}
+
+template<typename T, bool IsWrite>
+static INLINE void ne16_rwbo_be(uint16* const base, const size_t byte_offset, T* value)
+{
+  if(IsWrite)
+   ne16_wbo_be<T>(base, byte_offset, *value);
+  else
+   *value = ne16_rbo_be<T>(base, byte_offset);
+}
+
+//
+//
+//
+
+template<typename T, typename BT>
+static INLINE uint8* ne16_ptr_le(BT* const base, const size_t byte_offset)
+{
+#ifdef LSB_FIRST
+  return (uint8*)base + (byte_offset &~ (sizeof(T) - 1));
+#else
+  return (uint8*)base + (((byte_offset &~ (sizeof(T) - 1)) ^ (2 - std::min<size_t>(2, sizeof(T)))));
+#endif
+}
+
+template<typename T>
+static INLINE void ne16_wbo_le(uint16* const base, const size_t byte_offset, const T value)
+{
+  uint8* const ptr = ne16_ptr_le<T>(base, byte_offset);
+
+  static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4, "Unsupported type size");
+
+  if(sizeof(T) == 4)
+  {
+   uint16* const ptr16 = (uint16*)ptr;
+
+   ptr16[0] = value;
+   ptr16[1] = value >> 16;
+  }
+  else
+   *(T*)ptr = value;
+}
+
+template<typename T>
+static INLINE T ne16_rbo_le(const uint16* const base, const size_t byte_offset)
+{
+  uint8* const ptr = ne16_ptr_le<T>(base, byte_offset);
+
+  static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4, "Unsupported type size");
+
+  if(sizeof(T) == 4)
+  {
+   uint16* const ptr16 = (uint16*)ptr;
+   T tmp;
+
+   tmp  = ptr16[0];
+   tmp |= ptr16[1] << 16;
+
+   return tmp;
+  }
+  else
+   return *(T*)ptr;
+}
+
+
+template<typename T, bool IsWrite>
+static INLINE void ne16_rwbo_le(uint16* const base, const size_t byte_offset, T* value)
+{
+  if(IsWrite)
+   ne16_wbo_le<T>(base, byte_offset, *value);
+  else
+   *value = ne16_rbo_le<T>(base, byte_offset);
+}
+
+//
+//
+//
+template<typename T>
+static INLINE uint8* ne64_ptr_be(uint64* const base, const size_t byte_offset)
+{
+#ifdef MSB_FIRST
+  return (uint8*)base + (byte_offset &~ (sizeof(T) - 1));
+#else
+  return (uint8*)base + (((byte_offset &~ (sizeof(T) - 1)) ^ (8 - sizeof(T))));
+#endif
+}
+
+template<typename T>
+static INLINE void ne64_wbo_be(uint64* const base, const size_t byte_offset, const T value)
+{
+  uint8* const ptr = ne64_ptr_be<T>(base, byte_offset);
+
+  static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Unsupported type size");
+
+  memcpy(MDFN_ASSUME_ALIGNED(ptr, sizeof(T)), &value, sizeof(T));
+}
+
+template<typename T>
+static INLINE T ne64_rbo_be(uint64* const base, const size_t byte_offset)
+{
+  uint8* const ptr = ne64_ptr_be<T>(base, byte_offset);
+  T ret;
+
+  static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4, "Unsupported type size");
+
+  memcpy(&ret, MDFN_ASSUME_ALIGNED(ptr, sizeof(T)), sizeof(T));
+
+  return ret;
+}
+
+template<typename T, bool IsWrite>
+static INLINE void ne64_rwbo_be(uint64* const base, const size_t byte_offset, T* value)
+{
+  if(IsWrite)
+   ne64_wbo_be<T>(base, byte_offset, *value);
+  else
+   *value = ne64_rbo_be<T>(base, byte_offset);
 }
 
 #endif

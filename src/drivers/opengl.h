@@ -148,8 +148,8 @@ class OpenGL_Blitter
  OpenGL_Blitter(int scanlines, ShaderType pixshader, const int screen_w, const int screen_h, int *rs, int *gs, int *bs, int *as);
  ~OpenGL_Blitter();
 
- void BlitRaw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *dest_rect, const bool source_alpha);
- void Blit(MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Rect *dest_rect, const MDFN_Rect *original_src_rect, int InterlaceField, int UsingIP, int rotated);
+ void BlitRaw(const MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *dest_rect, const bool source_alpha);
+ void Blit(const MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Rect *dest_rect, const MDFN_Rect *original_src_rect, int InterlaceField, int UsingIP, int rotated);
  void ClearBackBuffer(void);
 
  //void HardSync(uint64 timeout);

@@ -1,19 +1,25 @@
-/* Mednafen - Multi-system Emulator
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen Sony PS1 Emulation Module                                         */
+/******************************************************************************/
+/* spu.cpp:
+**  Copyright (C) 2011-2016 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
+#pragma GCC optimize ("unroll-loops")
 
 /* TODO:
 	Note to self: Emulating the SPU at more timing accuracy than sample, and emulating the whole SPU RAM write port FIFO thing and hypothetical periodic FIFO commit to
@@ -38,7 +44,12 @@
 	Should shift occur on all stages of ADPCM sample decoding, or only at the end?
 
 	On the real thing, there's some kind of weirdness with ADSR when you voice on when attack_rate(raw) = 0x7F; the envelope level register is repeatedly
-	reset to 0, which you can see by manual writes to the envelope level register.  Normally in the attack phase when attack_rate = 0x7F, enveloping is 		effectively stuck/paused such that the value you write is sticky and won't be replaced or reset.  Note that after you voice on, you can write a new 		attack_rate < 0x7F, and enveloping will work "normally" again shortly afterwards.  You can even write an attack_rate of 0x7F at that point to pause 		enveloping 		clocking.  I doubt any games rely on this, but it's something to keep in mind if we ever need greater insight as to how the SPU 	functions at a low-level in 		order to emulate it at cycle granularity rather than sample granularity, and it may not be a bad idea to 		investigate this oddity further and emulate it in 		the future regardless.
+	reset to 0, which you can see by manual writes to the envelope level register.  Normally in the attack phase when attack_rate = 0x7F, enveloping is
+	effectively stuck/paused such that the value you write is sticky and won't be replaced or reset.  Note that after you voice on, you can write a new
+	attack_rate < 0x7F, and enveloping will work "normally" again shortly afterwards.  You can even write an attack_rate of 0x7F at that point to pause
+	enveloping clocking.  I doubt any games rely on this, but it's something to keep in mind if we ever need greater insight as to how the SPU functions
+	at a low-level in order to emulate it at cycle granularity rather than sample granularity, and it may not be a bad idea to investigate this oddity
+	further and emulate it in the future regardless.
 
 	Voice 1 and 3 waveform output writes to SPURAM might not be correct(noted due to problems reading this area of SPU RAM on the real thing
 	based on my expectations of how this should work).
@@ -470,7 +481,7 @@ void PS_SPU::CacheEnvelope(SPU_Voice *voice)
  ADSR->SustainLevel = (Sl + 1) << 11;
 }
 
-void PS_SPU::ResetEnvelope(SPU_Voice *voice)
+INLINE void PS_SPU::ResetEnvelope(SPU_Voice *voice)
 {
  SPU_ADSR *ADSR = &voice->ADSR;
 
@@ -479,7 +490,7 @@ void PS_SPU::ResetEnvelope(SPU_Voice *voice)
  ADSR->Phase = ADSR_ATTACK;
 }
 
-void PS_SPU::ReleaseEnvelope(SPU_Voice *voice)
+INLINE void PS_SPU::ReleaseEnvelope(SPU_Voice *voice)
 {
  SPU_ADSR *ADSR = &voice->ADSR;
 
@@ -488,7 +499,7 @@ void PS_SPU::ReleaseEnvelope(SPU_Voice *voice)
 }
 
 
-void PS_SPU::RunEnvelope(SPU_Voice *voice)
+INLINE void PS_SPU::RunEnvelope(SPU_Voice *voice)
 {
  SPU_ADSR *ADSR = &voice->ADSR;
  int increment;

@@ -20,6 +20,9 @@
 
 #include "share.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 OKValR,LastWR;
 static uint32 OKData;
 static uint32 OKX,OKY,OKB;
@@ -113,4 +116,6 @@ INPUTCFC *MDFN_InitOekaKids(void)
 {
  OKValR=0;
  return(&OekaKids);
+}
+
 }

@@ -9,16 +9,10 @@ floating-point and AltiVec save/restore */
 
 #define LIBCO_C
 #include "libco.h"
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-
-#define LIBCO_MPROTECT (__unix__ && !LIBCO_PPC_ASM)
-
-#if LIBCO_MPROTECT
-	#include <unistd.h>
-	#include <sys/mman.h>
-#endif
 
 /* State format (offsets in 32-bit words)
 
@@ -66,7 +60,7 @@ or are directly to function */
 /* Swap code is here in array. Please leave dieassembly comments,
 as they make it easy to see what it does, and reorder instructions
 if one wants to see whether that improves performance. */
-static const uint32_t libco_ppc_code [] = {
+force_text_section static const uint32_t libco_ppc_code [] = {
 #if LIBCO_PPC64
     0x7d000026, /* mfcr    r8 */
     0xf8240028, /* std     r1,40(r4) */
@@ -368,25 +362,6 @@ void co_delete( cothread_t t )
 
 static void co_init_( void )
 {
-	#if LIBCO_MPROTECT
-		/* TODO: pre- and post-pad PPC code so that this doesn't make other
-		data executable and writable */
-		long page_size = sysconf( _SC_PAGESIZE );
-		if ( page_size > 0 )
-		{
-			uintptr_t align = page_size;
-			uintptr_t begin = (uintptr_t) libco_ppc_code;
-			uintptr_t end   = begin + sizeof libco_ppc_code;
-			
-			/* Align beginning and end */
-			end   += align - 1;
-			end   -= end   % align;
-			begin -= begin % align;
-			
-			mprotect( (void*) begin, end - begin, PROT_READ | PROT_WRITE | PROT_EXEC );
-		}
-	#endif
-    
 	co_active_handle = co_create_( state_size, (uintptr_t) &co_switch );
 }
 

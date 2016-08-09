@@ -1,5 +1,9 @@
 #include "share.h"
 #include "suborkb.h"
+
+namespace MDFN_IEN_NES
+{
+
 #define AK2(x,y)	( (FKB_##x) | (FKB_##y <<8) )
 #define AK(x) 		FKB_##x
 
@@ -108,4 +112,6 @@ INPUTCFC *MDFN_InitSuborKB(void)
  memset(bufit,0,sizeof(bufit));
  ksmode=ksindex=0;
  return(&SuborKB);
+}
+
 }

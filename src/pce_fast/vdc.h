@@ -104,9 +104,8 @@ typedef struct
         uint8 spr_tile_clean[1024];     //VRAM_Size / 64];
 } vdc_t;
 
-extern vdc_t *vdc_chips[2];
+extern vdc_t vdc_chips[2];
 extern int VDC_TotalChips;
-
 
 void VDC_SetPixelFormat(const MDFN_PixelFormat &format, const uint8* CustomColorMap, const uint32 CustomColorMapLen) MDFN_COLD;
 void VDC_RunFrame(EmulateSpecStruct *espec, bool IsHES);
@@ -139,12 +138,12 @@ static INLINE uint8 VDC_Read(unsigned int A, bool SGX)
   }
   if(A & 0x8) return(0);
   chip = (A & 0x10) >> 4;
-  vdc = vdc_chips[chip];
+  vdc = &vdc_chips[chip];
   A &= 0x3;
  }
  else
  {
-  vdc = vdc_chips[0];
+  vdc = &vdc_chips[0];
   A &= 0x3;
  }
 
@@ -156,7 +155,7 @@ static INLINE uint8 VDC_Read(unsigned int A, bool SGX)
 
             if(SGX)
             {
-             if(!(vdc_chips[0]->status & 0x3F) && !(vdc_chips[1]->status & 0x3F))
+             if(!(vdc_chips[0].status & 0x3F) && !(vdc_chips[1].status & 0x3F))
               HuC6280_IRQEnd(MDFN_IQIRQ1);
             }
             else
@@ -196,7 +195,8 @@ static INLINE uint8 VDC_Read(unsigned int A, bool SGX)
 
 DECLFW(VCE_Write);
 
-void VDC_Init(int sgx) MDFN_COLD;
+void VDC_Init(const bool sgx) MDFN_COLD;
+void VDC_SetSettings(const bool nospritelimit, const bool correct_aspect) MDFN_COLD;
 void VDC_Close(void) MDFN_COLD;
 void VDC_Reset(void) MDFN_COLD;
 void VDC_Power(void) MDFN_COLD;

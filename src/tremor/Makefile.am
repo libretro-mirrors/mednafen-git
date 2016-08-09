@@ -1,5 +1,5 @@
 DEFS = @DEFS@ @CFLAG_VISIBILITY@
-INCLUDES = -I./
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I./
 
 noinst_LIBRARIES = libvorbisidec.a
 

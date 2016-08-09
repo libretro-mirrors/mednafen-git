@@ -31,15 +31,14 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+namespace MDFN_IEN_NES
+{
+
 int NSFVRC6_Init(EXPSOUND *, bool MultiChip);
 int NSFMMC5_Init(EXPSOUND *, bool MultiChip);
 int NSFAY_Init(EXPSOUND *, bool MultiChip);
 int NSFN106_Init(EXPSOUND *, bool MultiChip);
 int NSFVRC7_Init(EXPSOUND *, bool MultiChip);
-
-namespace MDFN_IEN_NES
-{
-
 int NSFFDS_Init(EXPSOUND *, bool MultiChip);
 
 static DECLFW(NSF_write);
@@ -98,7 +97,7 @@ static void FreeNSF(void)
 
  if(ExWRAM)
  {
-  free(ExWRAM);
+  delete[] ExWRAM;
   ExWRAM = NULL;
  }
 
@@ -167,13 +166,17 @@ static void LoadNSF(Stream *fp)
  // NULL-terminate strings just in case.
  NSFHeader.GameName[31] = NSFHeader.Artist[31] = NSFHeader.Copyright[31] = 0;
 
- NSFInfo->GameName = std::string(MDFN_RemoveControlChars((char *)NSFHeader.GameName));
- NSFInfo->Artist = std::string(MDFN_RemoveControlChars((char *)NSFHeader.Artist));
- NSFInfo->Copyright = std::string(MDFN_RemoveControlChars((char *)NSFHeader.Copyright));
+ MDFN_zapctrlchars((char*)NSFHeader.GameName);
+ MDFN_zapctrlchars((char*)NSFHeader.Artist);
+ MDFN_zapctrlchars((char*)NSFHeader.Copyright);
 
- MDFN_trim(NSFInfo->GameName);
- MDFN_trim(NSFInfo->Artist);
- MDFN_trim(NSFInfo->Copyright);
+ MDFN_trim((char*)NSFHeader.GameName);
+ MDFN_trim((char*)NSFHeader.Artist);
+ MDFN_trim((char*)NSFHeader.Copyright);
+
+ NSFInfo->GameName = std::string((const char *)NSFHeader.GameName);
+ NSFInfo->Artist = std::string((const char *)NSFHeader.Artist);
+ NSFInfo->Copyright = std::string((const char *)NSFHeader.Copyright);
 
  NSFInfo->LoadAddr = NSFHeader.LoadAddressLow | (NSFHeader.LoadAddressHigh << 8);
  NSFInfo->InitAddr = NSFHeader.InitAddressLow | (NSFHeader.InitAddressHigh << 8);
@@ -188,7 +191,7 @@ static void LoadNSF(Stream *fp)
  NSFInfo->NSFMaxBank = ((NSFInfo->NSFSize+(NSFInfo->LoadAddr&0xfff)+4095)/4096);
  NSFInfo->NSFMaxBank = round_up_pow2(NSFInfo->NSFMaxBank);
 
- NSFInfo->NSFDATA=(uint8 *)MDFN_malloc_T(NSFInfo->NSFMaxBank*4096, _("NSF data"));
+ NSFInfo->NSFDATA = new uint8[NSFInfo->NSFMaxBank * 4096];
 
  memset(NSFInfo->NSFDATA, 0x00, NSFInfo->NSFMaxBank*4096);
  fp->read(NSFInfo->NSFDATA+(NSFInfo->LoadAddr&0xfff), NSFInfo->NSFSize);
@@ -253,7 +256,7 @@ void NSFLoad(Stream *fp, NESGameType *gt)
   MDFNGameInfo->GameType = GMT_PLAYER;
 
   if(NSFInfo->GameName.size())
-   MDFNGameInfo->name = strdup(NSFInfo->GameName.c_str());
+   MDFNGameInfo->name = NSFInfo->GameName;
 
   for(x=0;;x++)
   {
@@ -303,9 +306,9 @@ void NSFLoad(Stream *fp, NESGameType *gt)
   MDFN_printf(_("Starting song:  %d / %d\n\n"),NSFInfo->StartingSong + 1,NSFInfo->TotalSongs);
 
   if(NSFInfo->SoundChip&4)
-   ExWRAM=(uint8 *)MDFN_malloc_T(32768+8192, _("NSF expansion RAM"));
+   ExWRAM = new uint8[32768+8192];
   else
-   ExWRAM=(uint8 *)MDFN_malloc_T(8192, _("NSF expansion RAM"));
+   ExWRAM = new uint8[8192];
 
   MDFN_indent(-1);
 

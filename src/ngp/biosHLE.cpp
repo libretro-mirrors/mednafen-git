@@ -19,6 +19,8 @@
 #include "dma.h"
 #include "interrupt.h"
 
+namespace MDFN_IEN_NGP
+{
 
 static uint8 CacheIntPrio[0xB]; // Iinterrupt prio registers at 0x0070-0x007a don't have priority readable.
 	 		       // This should probably be stored in BIOS work RAM somewhere instead of a separate array, but I don't know where!
@@ -622,6 +624,8 @@ int BIOSHLE_StateAction(StateMem *sm, int load, int data_only)
   return(0);
 
  return(1);
+}
+
 }
 
 //=============================================================================

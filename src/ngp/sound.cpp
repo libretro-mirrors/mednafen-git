@@ -22,6 +22,9 @@
 #include "T6W28_Apu.h"
 #include <mednafen/sound/Stereo_Buffer.h>
 
+namespace MDFN_IEN_NGP
+{
+
 static T6W28_Apu apu;
 
 static Stereo_Buffer st_buf;
@@ -151,4 +154,6 @@ int MDFNNGPCSOUND_StateAction(StateMem *sm, int load, int data_only)
  }
 
  return(1);
+}
+
 }

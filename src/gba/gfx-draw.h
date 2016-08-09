@@ -96,10 +96,7 @@ extern int gfxLastVCOUNT;
 
 static INLINE void gfxClearArray(uint32 *array)
 {
- MDFN_FastU32MemsetM8(array, 0x80000000, 240);
- // for(int i = 0; i < 240; i++) {
- //   *array++ = 0x80000000;
- // }
+ MDFN_FastArraySet(array, 0x80000000, 240);
 }
 
 // Max coefficient is 16, so...

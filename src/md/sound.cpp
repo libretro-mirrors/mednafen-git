@@ -9,6 +9,9 @@
 #include <mednafen/sound/Blip_Buffer.h>
 #include <mednafen/sound/Stereo_Buffer.h>
 
+namespace MDFN_IEN_MD
+{
+
 static Stereo_Buffer zebuf;
 static Sms_Apu apu;
 
@@ -20,9 +23,6 @@ static int32 fm_div;
 static uint32 fm_latch;          // Address latch(9-bits)
 static Ym2612_Emu FMUnit;
 static bool FMReset;
-
-namespace MDFN_IEN_MD
-{
 
 static void UpdateFM(void)
 {

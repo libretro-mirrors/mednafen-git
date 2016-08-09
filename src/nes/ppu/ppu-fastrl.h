@@ -188,7 +188,7 @@ static void FastCopySprites(int firsttile, uint8 *target, int skip)
       }
 
       if(rendis & 1)
-       MDFN_FastU32MemsetM8((uint32 *)(target + firsttile * 8), 0x40404040 | 0x3C3C3C3C, (256 - firsttile * 8) / sizeof(uint32));
+       MDFN_FastArraySet(target + firsttile * 8, 0x40 | 0x3C, (256 - firsttile * 8));
 
       if(!RCSPROn || skip) return;
 

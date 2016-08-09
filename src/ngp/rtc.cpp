@@ -15,6 +15,9 @@
 #include "neopop.h"
 #include <time.h>
 
+namespace MDFN_IEN_NGP
+{
+
 static uint8 rtc_latch[7];
 
 static void update_rtc_latch(void)
@@ -63,4 +66,6 @@ uint8 rtc_read8(uint32 address)
   return(rtc_latch[address - 0x0091]);
  }
  return(0);
+}
+
 }

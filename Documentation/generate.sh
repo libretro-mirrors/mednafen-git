@@ -4,6 +4,7 @@
 
 # TODO: Dump to settings.def.tmp, and move to settings.def if different for more useful "last modified" time.
 
+php cdplay.php > cdplay.html
 php gba.php > gba.html
 php gb.php > gb.html
 php gg.php > gg.html
@@ -17,6 +18,9 @@ php pcfx.php > pcfx.html
 php psx.php > psx.html
 php sms.php > sms.html
 php snes.php > snes.html
+php snes_faust.php > snes_faust.html
+php ss.php > ss.html
+php ssfplay.php > ssfplay.html
 php vb.php > vb.html
 php wswan.php > wswan.html
 

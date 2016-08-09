@@ -1,5 +1,8 @@
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 PRGBank32, CHRBanks[2], WRAM[8192];
 
 static void Sync(void)
@@ -65,4 +68,6 @@ int Mapper34_Init(CartInfo *info)
  SetWriteHandler(0x7ffd,0xffff,Mapper34_write);
  SetReadHandler(0x6000, 0xFFFF, CartBR);
  return(1);
+}
+
 }

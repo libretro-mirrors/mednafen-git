@@ -17,6 +17,9 @@
 
 #include "mapinc.h"
 
+namespace MDFN_IEN_NES
+{
+
 static uint8 *WRAM = NULL;
 static uint8 latch;
 
@@ -105,4 +108,6 @@ int Mapper240_Init(CartInfo *info)
  SetWriteHandler(0x6000, 0x7FFF, BWRAM);
 
  return(1);
+}
+
 }
