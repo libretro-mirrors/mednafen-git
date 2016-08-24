@@ -5,10 +5,12 @@
 <?php BeginSection('Introduction', "", FALSE, FALSE, "Section_intro"); ?>
 <p>
 <font color="orange" size="+1"><b>NOTE:</b></font> The Sega Saturn emulation is currently experimental, and under active development, and save states are not currently supported.  By default(and for the official releases for Windows), Saturn emulation is only compiled in for <b>x86_64</b> builds.  The separate <a href="ssfplay.html">SSF playback module</a> does not have this limitation.
+Multitap is not currently emulated, though there are some settings present in preparation for it.
 </p>
 <p>
 Mednafen's Sega Saturn emulation is extremely CPU intensive.  The minimum recommended CPU is a quad-core Intel Haswell-microarchitecture CPU with
-a base frequency of >= 3.3GHz and a turbo frequency of >= 3.7GHz(e.g. Xeon E3-1226 v3).
+a base frequency of >= 3.3GHz and a turbo frequency of >= 3.7GHz(e.g. Xeon E3-1226 v3), but note that this recommendation does not apply to any unofficial ports or forks,
+which may have higher CPU requirements.
 </p>
 
 <p>

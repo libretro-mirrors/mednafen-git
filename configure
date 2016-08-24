@@ -666,6 +666,12 @@ WIN32_FALSE
 WIN32_TRUE
 DOS_FALSE
 DOS_TRUE
+TREMOR_LIBS
+HAVE_EXTERNAL_TREMOR_FALSE
+HAVE_EXTERNAL_TREMOR_TRUE
+MPCDEC_LIBS
+HAVE_EXTERNAL_MPCDEC_FALSE
+HAVE_EXTERNAL_MPCDEC_TRUE
 JACK_LIBS
 JACK_CFLAGS
 ALSA_LIBS
@@ -975,6 +981,8 @@ with_alsa_inc_prefix
 enable_alsatest
 enable_jack
 with_libsndfile
+with_external_mpcdec
+with_external_tremor
 with_sdl_prefix
 with_sdl_exec_prefix
 '
@@ -1687,6 +1695,8 @@ Optional Packages:
   --with-alsa-inc-prefix=PFX  Prefix where include libraries are (optional)
   --with-libsndfile       support various sound file formats in ripped CD
                           images [default=yes]
+  --with-external-mpcdec  compile and link with external mpcdec [default=no]
+  --with-external-tremor  compile and link with external tremor [default=no]
   --with-sdl-prefix=PFX   Prefix where SDL is installed (optional)
   --with-sdl-exec-prefix=PFX Exec prefix where SDL is installed (optional)
 
@@ -4430,7 +4440,7 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.39-UNSTABLE'
+MEDNAFEN_VERSION='0.9.39.1'
 MEDNAFEN_VERSION_NUMERIC=0x000939
 
 # Make sure we can run config.sub.
@@ -26832,11 +26842,191 @@ else
 fi
 
 
-#AC_ARG_WITH([ogg-vorbis],
-#           [AS_HELP_STRING([--with-ogg-vorbis],
-#              [support Ogg Vorbis playback for ripped CD images [default=yes]])],
-#            [],
-#            [with_oggvorbis=yes])
+#
+# mpcdec
+#
+ if false; then
+  HAVE_EXTERNAL_MPCDEC_TRUE=
+  HAVE_EXTERNAL_MPCDEC_FALSE='#'
+else
+  HAVE_EXTERNAL_MPCDEC_TRUE='#'
+  HAVE_EXTERNAL_MPCDEC_FALSE=
+fi
+
+
+# Check whether --with-external-mpcdec was given.
+if test "${with_external_mpcdec+set}" = set; then :
+  withval=$with_external_mpcdec;
+else
+  with_external_mpcdec=no
+fi
+
+if test x$with_external_mpcdec = xyes; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for mpc_demux_init in -lmpcdec" >&5
+$as_echo_n "checking for mpc_demux_init in -lmpcdec... " >&6; }
+if ${ac_cv_lib_mpcdec_mpc_demux_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lmpcdec  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char mpc_demux_init ();
+int
+main ()
+{
+return mpc_demux_init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_mpcdec_mpc_demux_init=yes
+else
+  ac_cv_lib_mpcdec_mpc_demux_init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mpcdec_mpc_demux_init" >&5
+$as_echo "$ac_cv_lib_mpcdec_mpc_demux_init" >&6; }
+if test "x$ac_cv_lib_mpcdec_mpc_demux_init" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBMPCDEC 1
+_ACEOF
+
+  LIBS="-lmpcdec $LIBS"
+
+else
+  as_fn_error $? "*** mpcdec not found!" "$LINENO" 5
+fi
+
+	ac_fn_cxx_check_header_mongrel "$LINENO" "mpc/mpcdec.h" "ac_cv_header_mpc_mpcdec_h" "$ac_includes_default"
+if test "x$ac_cv_header_mpc_mpcdec_h" = xyes; then :
+
+else
+  as_fn_error $? "*** mpcdec not found!" "$LINENO" 5
+fi
+
+
+
+
+$as_echo "#define HAVE_EXTERNAL_MPCDEC 1" >>confdefs.h
+
+	 if true; then
+  HAVE_EXTERNAL_MPCDEC_TRUE=
+  HAVE_EXTERNAL_MPCDEC_FALSE='#'
+else
+  HAVE_EXTERNAL_MPCDEC_TRUE='#'
+  HAVE_EXTERNAL_MPCDEC_FALSE=
+fi
+
+	MPCDEC_LIBS="-lmpcdec"
+
+else
+
+$as_echo "#define MPC_FIXED_POINT 1" >>confdefs.h
+
+fi
+
+#
+# tremor
+#
+ if false; then
+  HAVE_EXTERNAL_TREMOR_TRUE=
+  HAVE_EXTERNAL_TREMOR_FALSE='#'
+else
+  HAVE_EXTERNAL_TREMOR_TRUE='#'
+  HAVE_EXTERNAL_TREMOR_FALSE=
+fi
+
+
+# Check whether --with-external-tremor was given.
+if test "${with_external_tremor+set}" = set; then :
+  withval=$with_external_tremor;
+else
+  with_external_tremor=no
+fi
+
+if test x$with_external_tremor = xyes; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ov_read in -lvorbisidec" >&5
+$as_echo_n "checking for ov_read in -lvorbisidec... " >&6; }
+if ${ac_cv_lib_vorbisidec_ov_read+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lvorbisidec  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char ov_read ();
+int
+main ()
+{
+return ov_read ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_vorbisidec_ov_read=yes
+else
+  ac_cv_lib_vorbisidec_ov_read=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_vorbisidec_ov_read" >&5
+$as_echo "$ac_cv_lib_vorbisidec_ov_read" >&6; }
+if test "x$ac_cv_lib_vorbisidec_ov_read" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBVORBISIDEC 1
+_ACEOF
+
+  LIBS="-lvorbisidec $LIBS"
+
+else
+  as_fn_error $? "*** libvorbisidec not found!" "$LINENO" 5
+fi
+
+	ac_fn_cxx_check_header_mongrel "$LINENO" "tremor/ivorbisfile.h" "ac_cv_header_tremor_ivorbisfile_h" "$ac_includes_default"
+if test "x$ac_cv_header_tremor_ivorbisfile_h" = xyes; then :
+
+else
+  as_fn_error $? "*** libvorbisidec not found!" "$LINENO" 5
+fi
+
+
+
+
+$as_echo "#define HAVE_EXTERNAL_TREMOR 1" >>confdefs.h
+
+	 if true; then
+  HAVE_EXTERNAL_TREMOR_TRUE=
+  HAVE_EXTERNAL_TREMOR_FALSE='#'
+else
+  HAVE_EXTERNAL_TREMOR_TRUE='#'
+  HAVE_EXTERNAL_TREMOR_FALSE=
+fi
+
+	TREMOR_LIBS="-lvorbisidec"
+
+fi
 
 
  if false; then
@@ -28329,10 +28519,6 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-
-$as_echo "#define MPC_FIXED_POINT 1" >>confdefs.h
-
-
 AM_CFLAGS="$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGEN_CFLAGS"
 
 AM_CXXFLAGS="$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGEN_CXXFLAGS"
@@ -28791,6 +28977,22 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_JACK_TRUE}" && test -z "${HAVE_JACK_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_JACK\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_EXTERNAL_MPCDEC_TRUE}" && test -z "${HAVE_EXTERNAL_MPCDEC_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_EXTERNAL_MPCDEC\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_EXTERNAL_MPCDEC_TRUE}" && test -z "${HAVE_EXTERNAL_MPCDEC_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_EXTERNAL_MPCDEC\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_EXTERNAL_TREMOR_TRUE}" && test -z "${HAVE_EXTERNAL_TREMOR_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_EXTERNAL_TREMOR\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_EXTERNAL_TREMOR_TRUE}" && test -z "${HAVE_EXTERNAL_TREMOR_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_EXTERNAL_TREMOR\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${DOS_TRUE}" && test -z "${DOS_FALSE}"; then

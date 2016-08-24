@@ -20,11 +20,13 @@
 */
 
 #include <mednafen/mednafen.h>
+#include <math.h>
 #include "CDAFReader.h"
 #include "CDAFReader_MPC.h"
 
-#if 0
+#ifdef HAVE_EXTERNAL_MPCDEC
  #include <mpc/mpcdec.h>
+ #define MPC_STATUS_FAIL -1
 #else
  #include <mednafen/mpcdec/mpcdec.h>
 #endif
@@ -198,8 +200,7 @@ uint64 CDAFReader_MPC::Read_(int16 *buffer, uint64 frames)
 #ifdef MPC_FIXED_POINT
     int32 samp = MPCBuffer[MPCBufferOffs + x] >> MPC_FIXED_POINT_FRACTPART;
 #else
-    #warning Floating-point MPC decoding path not tested.
-    int32 samp = (int32)(MPCBuffer[MPCBufferOffs + x] * 32767);
+    int32 samp = (int32)(MPCBuffer[MPCBufferOffs + x] * 32768);
 #endif
     if(samp < -32768)
      samp = -32768;

@@ -616,7 +616,6 @@ void WSwan_SetPixelFormat(const MDFN_PixelFormat &format)
 void wsScanline(uint32 *target)
 {
 	uint32		start_tile_n,map_a,startindex,adrbuf,b1,b2,j,t,l;
-	char		ys2;
 	uint8		b_bg[256];
 	uint8		b_bg_pal[256];
 
@@ -775,13 +774,12 @@ void wsScanline(uint32 *target)
 			ts = SpriteTable[h][0];
 			as = SpriteTable[h][1];
 			ysx = SpriteTable[h][2];
-			ys2 = (int8)SpriteTable[h][2];
 			xs = SpriteTable[h][3];
 
 			if(xs >= 249) xs -= 256;
 
 			if(ysx > 150) 
-			 ys = ys2;
+			 ys = (int8)ysx;
 			else 
 			 ys = ysx;
 

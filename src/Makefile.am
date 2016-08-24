@@ -133,11 +133,6 @@ include hw_cpu/Makefile.am.inc
 include hw_misc/Makefile.am.inc
 include hw_sound/Makefile.am.inc
 include hw_video/Makefile.am.inc
-
-SUBDIRS += tremor mpcdec
-mednafen_LDADD          +=      tremor/libvorbisidec.a mpcdec/libmpcdec.a
-mednafen_DEPENDENCIES   +=      tremor/libvorbisidec.a mpcdec/libmpcdec.a
-
 include cdrom/Makefile.am.inc
 include sound/Makefile.am.inc
 
@@ -152,6 +147,22 @@ include video/Makefile.am.inc
 include resampler/Makefile.am.inc
 include cputest/Makefile.am.inc
 include cheat_formats/Makefile.am.inc
+
+if HAVE_EXTERNAL_TREMOR
+mednafen_LDADD		+=	@TREMOR_LIBS@
+else
+SUBDIRS += tremor
+mednafen_LDADD          +=      tremor/libvorbisidec.a
+mednafen_DEPENDENCIES   +=      tremor/libvorbisidec.a
+endif
+
+if HAVE_EXTERNAL_MPCDEC
+mednafen_LDADD		+=	@MPCDEC_LIBS@
+else
+SUBDIRS += mpcdec
+mednafen_LDADD          +=      mpcdec/libmpcdec.a
+mednafen_DEPENDENCIES   +=      mpcdec/libmpcdec.a
+endif
 
 mednafen_LDADD		+= 	@SNDFILE_LIBS@ @ZLIB_LIBS@ @LIBINTL@ @LIBICONV@
 

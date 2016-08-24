@@ -36,10 +36,10 @@
 
 struct XInputFuncPointers
 {
- void WINAPI (*p_XInputEnable)(BOOL);
- DWORD WINAPI (*p_XInputSetState)(DWORD, XINPUT_VIBRATION*);
- DWORD WINAPI (*p_XInputGetState)(DWORD, XINPUT_STATE*);	// Pointer to XInputGetState or XInputGetStateEx(if available).
- DWORD WINAPI (*p_XInputGetCapabilities)(DWORD, DWORD, XINPUT_CAPABILITIES*);
+ void WINAPI (*p_XInputEnable)(BOOL) = nullptr;
+ DWORD WINAPI (*p_XInputSetState)(DWORD, XINPUT_VIBRATION*) = nullptr;
+ DWORD WINAPI (*p_XInputGetState)(DWORD, XINPUT_STATE*) = nullptr;	// Pointer to XInputGetState or XInputGetStateEx(if available).
+ DWORD WINAPI (*p_XInputGetCapabilities)(DWORD, DWORD, XINPUT_CAPABILITIES*) = nullptr;
 };
 
 class Joystick_XInput : public Joystick
@@ -156,10 +156,10 @@ class JoystickDriver_XInput : public JoystickDriver
 
  private:
  Joystick_XInput *joys[XUSER_MAX_COUNT];
- unsigned joy_count;
+ unsigned joy_count = 0;
 
 
- HMODULE dll_handle;
+ HMODULE dll_handle = nullptr;
  XInputFuncPointers xfps;
 };
 
@@ -170,7 +170,7 @@ bool GetXIPA(HMODULE dll_handle, T& pf, const char *name)
  return(pf != NULL);
 }
 
-JoystickDriver_XInput::JoystickDriver_XInput() : joy_count(0), dll_handle(NULL)
+JoystickDriver_XInput::JoystickDriver_XInput()
 {
  if((dll_handle = LoadLibrary("xinput1_3.dll")) == NULL)
  {

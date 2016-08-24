@@ -471,7 +471,7 @@ int Ym2612_Impl::YM_SET(int Adr, int data)
 			break;
 		}
 		case 0x2A:
-			YM2612.DACdata = ((int)data - 0x80) << 5;
+			YM2612.DACdata = (unsigned int)((int)data - 0x80) << 5;
 			break;
 
 		case 0x2B:

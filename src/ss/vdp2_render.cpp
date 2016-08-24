@@ -2320,9 +2320,13 @@ static void (*DrawSpriteData[2][2][0x40])(const uint16* vdp1sb, const bool vdp1_
 
 static INLINE unsigned bsr64(uint64 val)
 {
+ #ifdef _MSC_VER
+ unsigned long ret;
+ _BitScanReverse64(&ret, val);
+ #else
  uint64 ret;
-
  asm("bsrq %1, %0\n\t" : "=r"(ret) : "r"(val) : "cc");
+ #endif
 
  return ret;
 }
@@ -2751,6 +2755,10 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
     int32 xs = Window[d].XStart, xe = Window[d].XEnd;
 
     // FIXME: Kludge, until we can figure out what's going on.
+    if(xs >= 0x380)
+     xs = 0;
+
+    // FIXME: Kludge, until we can figure out what's going on.
     if(xe >= 0x380)
     {
      xs = 2;
@@ -3110,7 +3118,13 @@ static int RThreadEntry(void* data)
    else
    {
     for(int i = 1000; i; i--)
+    {
+     #ifdef _MSC_VER
+     __nop();
+     #else
      asm volatile("nop\n\t");
+     #endif
+    }
    }
   }
   //

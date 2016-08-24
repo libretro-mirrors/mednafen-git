@@ -120,6 +120,12 @@
 /* Define to 1 if you have the `dup2' function. */
 #undef HAVE_DUP2
 
+/* Define if we are compiling and linking with external mpcdec. */
+#undef HAVE_EXTERNAL_MPCDEC
+
+/* Define if we are compiling and linking with external tremor. */
+#undef HAVE_EXTERNAL_TREMOR
+
 /* Define to 1 if you have the `fcntl' function. */
 #undef HAVE_FCNTL
 
@@ -232,8 +238,14 @@
 /* Define to 1 if you have the `asound' library (-lasound). */
 #undef HAVE_LIBASOUND
 
+/* Define to 1 if you have the `mpcdec' library (-lmpcdec). */
+#undef HAVE_LIBMPCDEC
+
 /* Define if we are compiling with libsndfile support. */
 #undef HAVE_LIBSNDFILE
+
+/* Define to 1 if you have the `vorbisidec' library (-lvorbisidec). */
+#undef HAVE_LIBVORBISIDEC
 
 /* Define to 1 if you have the `z' library (-lz). */
 #undef HAVE_LIBZ

@@ -267,6 +267,14 @@ DIST_COMMON = $(srcdir)/cdplay/Makefile.am.inc \
 @HAVE_LIBSNDFILE_TRUE@am__append_53 = cdrom/CDAFReader_SF.cpp
 @ARCH_X86_TRUE@am__append_54 = cputest/x86_cpu.c
 @ARCH_POWERPC_TRUE@am__append_55 = cputest/ppc_cpu.c
+@HAVE_EXTERNAL_TREMOR_TRUE@am__append_56 = @TREMOR_LIBS@
+@HAVE_EXTERNAL_TREMOR_FALSE@am__append_57 = tremor
+@HAVE_EXTERNAL_TREMOR_FALSE@am__append_58 = tremor/libvorbisidec.a
+@HAVE_EXTERNAL_TREMOR_FALSE@am__append_59 = tremor/libvorbisidec.a
+@HAVE_EXTERNAL_MPCDEC_TRUE@am__append_60 = @MPCDEC_LIBS@
+@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_61 = mpcdec
+@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_62 = mpcdec/libmpcdec.a
+@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_63 = mpcdec/libmpcdec.a
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
@@ -845,7 +853,7 @@ am__define_uniq_tagged_files = \
 ETAGS = etags
 CTAGS = ctags
 DIST_SUBDIRS = trio drivers drivers_dos sexyal ngp snes ss desa68 \
-	tremor mpcdec quicklz
+	quicklz tremor mpcdec
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -963,6 +971,7 @@ LTLIBTHREAD = @LTLIBTHREAD@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
+MPCDEC_LIBS = @MPCDEC_LIBS@
 MSGFMT = @MSGFMT@
 MSGFMT_015 = @MSGFMT_015@
 MSGMERGE = @MSGMERGE@
@@ -999,6 +1008,7 @@ SNES_EXTRA_CXXFLAGS = @SNES_EXTRA_CXXFLAGS@
 SNES_EXTRA_FLAGS = @SNES_EXTRA_FLAGS@
 SS_EXTRA_FLAGS = @SS_EXTRA_FLAGS@
 STRIP = @STRIP@
+TREMOR_LIBS = @TREMOR_LIBS@
 TRIO_CFLAGS = @TRIO_CFLAGS@
 USE_INCLUDED_LIBINTL = @USE_INCLUDED_LIBINTL@
 USE_NLS = @USE_NLS@
@@ -1069,8 +1079,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = trio $(am__append_1) $(am__append_5) sexyal $(am__append_17) \
-	$(am__append_28) $(SS_SUBDIRS) $(am__append_40) tremor mpcdec \
-	quicklz
+	$(am__append_28) $(SS_SUBDIRS) $(am__append_40) quicklz \
+	$(am__append_57) $(am__append_61)
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
@@ -1112,14 +1122,14 @@ mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 mednafen_LDADD = trio/libtrio.a $(am__append_2) $(am__append_6) \
 	sexyal/libsexyal.a @ALSA_LIBS@ @JACK_LIBS@ $(am__append_8) \
 	$(am__append_18) $(am__append_29) $(am__append_32) \
-	$(am__append_34) $(am__append_41) tremor/libvorbisidec.a \
-	mpcdec/libmpcdec.a quicklz/libmdfnquicklz.a @SNDFILE_LIBS@ \
-	@ZLIB_LIBS@ @LIBINTL@ @LIBICONV@ $(am__empty)
+	$(am__append_34) $(am__append_41) quicklz/libmdfnquicklz.a \
+	$(am__append_56) $(am__append_58) $(am__append_60) \
+	$(am__append_62) @SNDFILE_LIBS@ @ZLIB_LIBS@ @LIBINTL@ \
+	@LIBICONV@ $(am__empty)
 mednafen_DEPENDENCIES = trio/libtrio.a $(am__append_3) $(am__append_7) \
 	sexyal/libsexyal.a $(am__append_19) $(am__append_30) \
 	$(am__append_33) $(am__append_35) $(am__append_42) \
-	tremor/libvorbisidec.a mpcdec/libmpcdec.a \
-	quicklz/libmdfnquicklz.a
+	quicklz/libmdfnquicklz.a $(am__append_59) $(am__append_63)
 SS_SUBDIRS = 
 @WANT_SSFPLAY_EMU_TRUE@SS_SUBDIRS = ss
 @WANT_SS_EMU_TRUE@SS_SUBDIRS = ss

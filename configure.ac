@@ -6,7 +6,7 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.39-UNSTABLE'
+MEDNAFEN_VERSION='0.9.39.1'
 MEDNAFEN_VERSION_NUMERIC=0x000939
 
 AC_CANONICAL_HOST
@@ -484,11 +484,39 @@ AC_ARG_WITH([libsndfile],
             [],
             [with_libsndfile=yes])
 
-#AC_ARG_WITH([ogg-vorbis],
-#           [AS_HELP_STRING([--with-ogg-vorbis],
-#              [support Ogg Vorbis playback for ripped CD images @<:@default=yes@:>@])],
-#            [],
-#            [with_oggvorbis=yes])
+#
+# mpcdec
+#
+AM_CONDITIONAL(HAVE_EXTERNAL_MPCDEC, false)
+AC_ARG_WITH([external-mpcdec], [AS_HELP_STRING([--with-external-mpcdec], [compile and link with external mpcdec @<:@default=no@:>@])],
+	[],
+	[with_external_mpcdec=no])
+if test x$with_external_mpcdec = xyes; then
+	AC_CHECK_LIB([mpcdec], [mpc_demux_init], [], AC_MSG_ERROR([*** mpcdec not found!]))
+	AC_CHECK_HEADER([mpc/mpcdec.h], [], AC_MSG_ERROR([*** mpcdec not found!]))
+
+	AC_DEFINE([HAVE_EXTERNAL_MPCDEC], [1], [Define if we are compiling and linking with external mpcdec.])
+	AM_CONDITIONAL(HAVE_EXTERNAL_MPCDEC, true)
+	AC_SUBST([MPCDEC_LIBS], ["-lmpcdec"])
+else
+	AC_DEFINE([MPC_FIXED_POINT], [1], [Define to use fixed-point MPC decoder.])
+fi
+
+#
+# tremor
+#
+AM_CONDITIONAL(HAVE_EXTERNAL_TREMOR, false)
+AC_ARG_WITH([external-tremor], [AS_HELP_STRING([--with-external-tremor], [compile and link with external tremor @<:@default=no@:>@])],
+	[],
+	[with_external_tremor=no])
+if test x$with_external_tremor = xyes; then
+	AC_CHECK_LIB([vorbisidec], [ov_read], [], AC_MSG_ERROR([*** libvorbisidec not found!]))
+	AC_CHECK_HEADER([tremor/ivorbisfile.h], [], AC_MSG_ERROR([*** libvorbisidec not found!]))
+
+	AC_DEFINE([HAVE_EXTERNAL_TREMOR], [1], [Define if we are compiling and linking with external tremor.])
+	AM_CONDITIONAL(HAVE_EXTERNAL_TREMOR, true)
+	AC_SUBST([TREMOR_LIBS], ["-lvorbisidec"])
+fi
 
 
 AM_CONDITIONAL(DOS, false)
@@ -659,8 +687,6 @@ AC_C_BIGENDIAN([AC_DEFINE([MSB_FIRST],[1],[Define on big-endian platforms.])],
 ])
 AC_DEFINE_UNQUOTED([MEDNAFEN_VERSION],"$MEDNAFEN_VERSION", [Mednafen version definition.])
 AC_DEFINE_UNQUOTED([MEDNAFEN_VERSION_NUMERIC],$MEDNAFEN_VERSION_NUMERIC, [Mednafen version numeric.])
-
-AC_DEFINE([MPC_FIXED_POINT], [1], [Define to use fixed-point MPC decoder.])
 
 AC_SUBST([AM_CFLAGS], "$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGEN_CFLAGS")
 AC_SUBST([AM_CXXFLAGS], "$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGEN_CXXFLAGS")

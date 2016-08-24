@@ -1568,27 +1568,27 @@ static void NO_INLINE MixMainSubSubSubMarine(uint32* __restrict__ target)
     {
      if(sub & 0x8)	// Is subscreen backdrop?  Then no half-math when (CGWSEL & 0x2)
      {
-      main_color = CMath<false, cmath_mode & 2>(main_color, FixedColor);
-      sub_color  = CMath<false, cmath_mode & 2>(sub_color,  FixedColor);
+      main_color = CMath<false, (bool)(cmath_mode & 2)>(main_color, FixedColor);
+      sub_color  = CMath<false, (bool)(cmath_mode & 2)>(sub_color,  FixedColor);
      }
      else
      {
       if((cmath_mode & 1) && (main & 2))	// If half math enabled, and main wasn't clipped to 0 by color window, then half math.
       {
-       main_color = CMath<true,  cmath_mode & 2>(main_color, sub_color);
-       sub_color  = CMath<true,  cmath_mode & 2>(sub_color,  main_color);
+       main_color = CMath<true,  (bool)(cmath_mode & 2)>(main_color, sub_color);
+       sub_color  = CMath<true,  (bool)(cmath_mode & 2)>(sub_color,  main_color);
       }
       else
       {
-       main_color = CMath<false, cmath_mode & 2>(main_color, sub_color);
-       sub_color  = CMath<false, cmath_mode & 2>(sub_color,  main_color);
+       main_color = CMath<false, (bool)(cmath_mode & 2)>(main_color, sub_color);
+       sub_color  = CMath<false, (bool)(cmath_mode & 2)>(sub_color,  main_color);
       }
      }
     }
     else
     {
-     main_color = CMath<cmath_mode & 1, cmath_mode & 2>(main_color, FixedColor);
-     sub_color  = CMath<cmath_mode & 1, cmath_mode & 2>(sub_color,  FixedColor);
+     main_color = CMath<(bool)(cmath_mode & 1), (bool)(cmath_mode & 2)>(main_color, FixedColor);
+     sub_color  = CMath<(bool)(cmath_mode & 1), (bool)(cmath_mode & 2)>(sub_color,  FixedColor);
     }
    }
 
@@ -1611,9 +1611,9 @@ static void NO_INLINE MixMainSubSubSubMarine(uint32* __restrict__ target)
     //assert(main != sub);
 
     if((cmath_mode & 1) && (main & sub & 2))	// Halving mathing
-     tmp = CMath<true, cmath_mode & 2>(tmp, other_color);
+     tmp = CMath<true, (bool)(cmath_mode & 2)>(tmp, other_color);
     else
-     tmp = CMath<false, cmath_mode & 2>(tmp, other_color);
+     tmp = CMath<false, (bool)(cmath_mode & 2)>(tmp, other_color);
    }
 
    target[i] = ConvertRGB555(tmp);

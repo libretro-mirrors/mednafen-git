@@ -253,6 +253,9 @@ static uint32 DrawTextBase(MDFN_Surface* surf, const MDFN_Rect* cr, int32 x, int
  else
   max_glyph_len = strlen((const char*)text);
 
+ if(!max_glyph_len)
+  return 0;
+
  uint32 pixwidth;
  const uint8* glyph_ptrs[max_glyph_len];
  uint8 glyph_width[max_glyph_len];

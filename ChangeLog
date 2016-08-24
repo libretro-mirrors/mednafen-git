@@ -1,3 +1,63 @@
+-- 0.9.39.1: --
+
+August 22, 2016:
+	SS: Settings "ss.dbg_mask" and "ss.dbg_exe_cdpath", and the functionality they control, are no longer available unless Mednafen has been compiled with
+	"MDFN_SS_DEV_BUILD" defined(such as with -DMDFN_SS_DEV_BUILD=1 in CPPFLAGS env var passed to configure).
+
+	SS: Replaced some instances of case ranges with more portable constructs.
+
+August 20, 2016:
+	SS: Run VDP1 vblank erase at end of vblank, so we know how much time we have and thus how many entries in the framebuffer we'll be able
+	to erase.  Currently, the available time calculations are generous, allowing for a bit more erase than what's possible on a Saturn, but we can tighten
+	it up in the future once it's fairly certain there aren't any more event scheduling accuracy issues.  Fixes FMV subtitle text in "Panzer Dragoon".
+
+	SS: Fixed a bug that caused VDP2 frames to be short by 1 to 3 CPU cycles.
+
+	SS: Reschedule the SH-2 DMA event handler as necessary to prevent it from running when the SH-2 bus is locked.
+
+	SS: Force the SH-2 DMA and SCU DMA event handlers to be rescheduled to SH7095_mem_timestamp time when necessary.
+
+	SS: Check for pending events right before calling VDP1, VDP2, SMPC, and SCU regs read/write handlers, which may then call their own event update
+	functions.
+
+August 17, 2016:
+	Fixed an old bug that could cause a startup crash on Windows systems without XInput DLLs installed(e.g. some Windows XP systems).
+
+	NES: Fixed a very old bug triggered when disabling(via CTRL+1) the background layer, that would cause sprite pixels to also be visually disabled too under certain
+	circumstances.
+
+August 16, 2016:
+	MD, PC-FX: Fixed several instances of left-shifting negative values.
+
+August 15, 2016:
+	SS: Fixed a compilation error when compiling with the debugger disabled("--disable-debugger" passed to configure).
+
+	Added configure options "--with-external-mpcdec" and "--with-external-tremor", for distribution packagers.
+
+	SS, SNES-Faust: Fixed a few issues causing compilation errors on clang.
+
+	SS: Tweaked how seek command pause works; fixes a lockup issue in "Astal".
+
+August 11, 2016:
+	WonderSwan: Fixed a bad usage of "char" without an unsigned/signed qualifier.
+
+	SS: Slow down SCU DMA to VDP2 VRAM under certain conditions.
+
+August 10, 2016:
+	SS: Adjusted VDP1 polygon and line draw commands to behave as if SPD=1, ECD=1 when color mode >= 6; fixes missing graphics problem in "Hi-Octane".
+
+August 8, 2016:
+	SS: Reworked SCU DMA's timekeeping and scheduling code to be more accurate; reduces the size of the flickering section of the FMV in "Lunar".
+
+	SS: Fixed handling of CPU<->SMPC open bus.
+
+August 7, 2016:
+	Relaxed the CloneCD Q subchannel sanity checks to allow a track number of 0xAA(leadout).
+
+August 6, 2016:
+	SS: Implemented kludgy(incomplete) support for quasi-illegal window X start position values; fixes ground layer issues in the forest stage of
+	Panzer Dragoon 2.
+
 -- 0.9.39-UNSTABLE: --
 
 August 4, 2016:

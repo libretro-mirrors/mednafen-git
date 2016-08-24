@@ -396,11 +396,11 @@ void SoundBox_Write(uint32 A, uint16 V, const v810_timestamp_t timestamp)
 
 		     if(ResetAntiClickEnabled)
 		     {
-		      sbox.ResetAntiClick[ch] += (int64)sbox.ADPCMPredictor[ch] << 32;
+		      sbox.ResetAntiClick[ch] += (int64)((uint64)sbox.ADPCMPredictor[ch] << 32);
 		      if(sbox.ResetAntiClick[ch] > ((int64)0x3FFF << 32))
 		       sbox.ResetAntiClick[ch] = (int64)0x3FFF << 32;
-		      if(sbox.ResetAntiClick[ch] < ((int64)-0x4000 << 32))
-		       sbox.ResetAntiClick[ch] = (int64)-0x4000 << 32;
+		      if(sbox.ResetAntiClick[ch] < -((int64)0x4000 << 32))
+		       sbox.ResetAntiClick[ch] = -((int64)0x4000 << 32);
 		     }
 
 		     sbox.ADPCMPredictor[ch] = 0;
@@ -745,7 +745,7 @@ void SoundBox_StateAction(StateMem *sm, const unsigned load, const bool data_onl
   for(int ch = 0; ch < 2; ch++)
   {
    clamp(&sbox.ADPCMPredictor[ch], -0x4000, 0x3FFF);
-   clamp(&sbox.ResetAntiClick[ch], (int64)-0x4000 << 32, (int64)0x3FFF << 32);
+   clamp(&sbox.ResetAntiClick[ch], -((int64)0x4000 << 32), (int64)0x3FFF << 32);
 
    if(!ResetAntiClickEnabled)
     sbox.ResetAntiClick[ch] = 0;

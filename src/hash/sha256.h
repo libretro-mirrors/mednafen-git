@@ -32,12 +32,12 @@ sha256_digest sha256(const void* data, const uint64 len);
 static INLINE constexpr uint8 sha256_cton(char c)
 {
  return ((c >= 'A' && c <= 'F') ? c - 'A' + 0xa : ((c >= 'a' && c <= 'f') ? c - 'a' + 0xa : c - '0'));
-};
+}
 
 static INLINE constexpr uint8 sha256_cton2(char c, char d)
 {
  return (sha256_cton(c) << 4) | (sha256_cton(d) << 0);
-};
+}
 
 static INLINE constexpr sha256_digest operator "" _sha256(const char *s, std::size_t sz)
 {

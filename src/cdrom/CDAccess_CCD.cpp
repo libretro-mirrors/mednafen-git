@@ -337,11 +337,11 @@ void CDAccess_CCD::CheckSubQSanity(void)
 
     //printf("%2x %2x %2x\n", am_bcd, as_bcd, af_bcd);
 
-    if(!BCD_is_valid(track_bcd) || !BCD_is_valid(index_bcd) || !BCD_is_valid(rm_bcd) || !BCD_is_valid(rs_bcd) || !BCD_is_valid(rf_bcd) ||
+    if((track_bcd != 0xAA && !BCD_is_valid(track_bcd)) || !BCD_is_valid(index_bcd) || !BCD_is_valid(rm_bcd) || !BCD_is_valid(rs_bcd) || !BCD_is_valid(rf_bcd) ||
 	!BCD_is_valid(am_bcd) || !BCD_is_valid(as_bcd) || !BCD_is_valid(af_bcd) ||
 	rs_bcd > 0x59 || rf_bcd > 0x74 || as_bcd > 0x59 || af_bcd > 0x74)
     {
-     throw MDFN_Error(0, _("Garbage subchannel Q data detected(bad BCD/out of range): %02x:%02x:%02x %02x:%02x:%02x"), rm_bcd, rs_bcd, rf_bcd, am_bcd, as_bcd, af_bcd);
+     throw MDFN_Error(0, _("Garbage subchannel Q data detected(bad BCD/out of range): TNO=%02x IDX=%02x RMSF=%02x:%02x:%02x AMSF=%02x:%02x:%02x"), track_bcd, index_bcd, rm_bcd, rs_bcd, rf_bcd, am_bcd, as_bcd, af_bcd);
     }
     else
     {

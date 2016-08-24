@@ -27,8 +27,8 @@ namespace MDFN_IEN_SS
 namespace VDP2
 {
 
-void Write8_DB(uint32 A, uint16 DB) MDFN_HOT;
-void Write16_DB(uint32 A, uint16 DB) MDFN_HOT;
+uint32 Write8_DB(uint32 A, uint16 DB) MDFN_HOT;
+uint32 Write16_DB(uint32 A, uint16 DB) MDFN_HOT;
 uint16 Read16_DB(uint32 A) MDFN_HOT;
 
 void Init(const bool IsPAL, const int sls, const int sle) MDFN_COLD;
@@ -39,9 +39,12 @@ void Reset(bool powering_up) MDFN_COLD;
 void SetLayerEnableMask(uint64 mask) MDFN_COLD;
 
 sscpu_timestamp_t Update(sscpu_timestamp_t timestamp);
-void ResetTS(void);
+void AdjustTS(const int32 delta);
 
 void StartFrame(EmulateSpecStruct* espec, const bool clock28m);
+
+INLINE bool GetVBOut(void) { extern bool VBOut; return VBOut; }
+INLINE bool GetHBOut(void) { extern bool HBOut; return HBOut; }
 
 //
 //

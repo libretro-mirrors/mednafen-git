@@ -1604,6 +1604,43 @@ void VDC_Init(const bool sgx)
  cputest_flags = 0;
 #ifdef ARCH_X86
  cputest_flags = cputest_get_flags();
+
+ // ZF undefined schmundefined.
+ for(unsigned i = 0; i < 65536; i = ((i + 1) & 0x800F) + (((i & 0xF) == 0xF) << 15))
+ {
+  uint32 pixel, spr_pixel;
+
+  pixel = i & 0xF;
+  spr_pixel = (i & 0x8000) | 7;
+
+  if(cputest_flags & CPUTEST_FLAG_CMOV)
+  {
+   asm volatile(
+	"testl $15, %%eax\n\t"
+	"bt $15, %%ebx\n\t"
+
+	"cmovbe %%ebx, %%eax\n\t"
+        "andl $511, %%eax\n\t"
+	: "=a"(pixel)
+	: "a"(pixel), "b"(spr_pixel)
+	: "cc" );
+  }
+  else
+  {
+   asm volatile(
+	"testl $15, %%eax\n\t"
+	"bt $15, %%ebx\n\t"
+
+        "jnbe 1f\n\t"
+        "movl %%ebx, %%eax\n\t"
+        "andl $511, %%eax\n\t"
+        "1:\n\t"
+	: "=a"(pixel)
+	: "a"(pixel), "b"(spr_pixel)
+	: "cc" );
+  }
+  assert(pixel == ((i & 0x8000) ? 7 : ((i & 0xF) ? (i & 0xF) : 7)));
+ }
 #endif
 }
 

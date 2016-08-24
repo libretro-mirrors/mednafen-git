@@ -1,6 +1,7 @@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@
 AM_CXXFLAGS = @AM_CXXFLAGS@ @SS_EXTRA_FLAGS@ @NO_STACK_PROTECTOR_FLAGS@
+# -Wpedantic
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 
 noinst_LIBRARIES	=

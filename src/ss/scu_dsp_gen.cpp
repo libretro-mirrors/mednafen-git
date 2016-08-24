@@ -38,23 +38,6 @@ static INLINE void SetC(bool value)
  DSP.FlagC = value;
 }
 
-//static INLINE 
-
-static INLINE bool GetC(void)
-{
- return DSP.FlagC;
-}
-
-static INLINE bool GetS(void)
-{
- return DSP.FlagS;
-}
-
-static INLINE bool GetZ(void)
-{
- return DSP.FlagZ;
-}
-
 static INLINE void CalcZS32(uint32 val)
 {
  DSP.FlagS = (int32)val < 0;
@@ -69,32 +52,6 @@ static INLINE void CalcZS48(uint64 val)
  DSP.FlagZ = !val;
 }
 
-  //
-  // 8 ... 13
-  // 17 ... 19
-  // 23 ... 29
-
-  //
-  // TA_instr valid bits: 8...13, 17...19, 23...29, 30...31 -- Get the rest from "instr"
-  //
-
- //
- //
- //
- //const uint32 instr = DSP.NextInstr >> 32;
-/*
- //
- //
- //
- const unsigned b30_31 = TA_instr >> 30;
- if(b30_31 == 0)
- {
-*/
-
-  // const unsigned alu_op = (TA_instr >> 26) & 0xF
-  // const unsigned d1_op = (TA_Instr >> 12) & 0x3;
-  //  const unsigned x_op = (TA_instr >> 23) & 0x7;
-  //  const unsigned y_op = (TA_instr >> 17) & 0x7;
 
 template<const bool looped, const unsigned alu_op, const unsigned x_op, const unsigned y_op, const unsigned d1_op>
 static NO_INLINE NO_CLONE void GeneralInstr(void)

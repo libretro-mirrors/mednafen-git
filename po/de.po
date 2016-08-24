@@ -4,12 +4,12 @@
 # This file is distributed under the same license as the mednafen package.
 #
 # Dryer Lint, 2007.
-#: src/ss/ss.cpp:1641 src/ss/ss.cpp:1642
+#: src/ss/ss.cpp:1623 src/ss/ss.cpp:1624
 msgid ""
 msgstr ""
 "Project-Id-Version: mednafen\n"
 "Report-Msgid-Bugs-To: http://forum.fobby.net/\n"
-"POT-Creation-Date: 2016-08-03 16:32-0700\n"
+"POT-Creation-Date: 2016-08-16 12:52-0700\n"
 "PO-Revision-Date: 2007-09-30 15:15+0200\n"
 "Last-Translator: Dryer Lint\n"
 "Language-Team:  <de@li.org>\n"
@@ -282,7 +282,7 @@ msgstr ""
 msgid "Enable multitap(s)."
 msgstr ""
 
-#: src/md/system.cpp:751 src/ss/ss.cpp:1650 src/snes/interface.cpp:1287
+#: src/md/system.cpp:751 src/ss/ss.cpp:1632 src/snes/interface.cpp:1287
 #: src/psx/psx.cpp:2216 src/pce/pce.cpp:1065
 msgid "Emulated mouse sensitivity."
 msgstr ""
@@ -372,7 +372,7 @@ msgstr ""
 msgid "Error unlocking opened file \"%s\": %s"
 msgstr ""
 
-#: src/FileStream.cpp:470
+#: src/FileStream.cpp:471
 #, c-format
 msgid "Error closing opened file \"%s\": %s"
 msgstr ""
@@ -1118,26 +1118,26 @@ msgstr ""
 msgid "Compiled against libiconv %u.%u, running with libiconv %u.%u\n"
 msgstr ""
 
-#: src/drivers/main.cpp:1713
+#: src/drivers/main.cpp:1712
 #, c-format
 msgid "Starting Mednafen %s\n"
 msgstr "Starte Mednafen %s\n"
 
-#: src/drivers/main.cpp:1716
+#: src/drivers/main.cpp:1715
 msgid "Build information:\n"
 msgstr ""
 
-#: src/drivers/main.cpp:1726
+#: src/drivers/main.cpp:1725
 #, c-format
 msgid "Base directory: %s\n"
 msgstr ""
 
-#: src/drivers/main.cpp:1738
+#: src/drivers/main.cpp:1737
 #, c-format
 msgid "Could not create mutex: %s\n"
 msgstr ""
 
-#: src/drivers/main.cpp:1772
+#: src/drivers/main.cpp:1769
 #, c-format
 msgid "Error creating directories: %s\n"
 msgstr ""
@@ -1440,7 +1440,7 @@ msgstr "Vollbild: %s\n"
 msgid "Special Scaler: %s\n"
 msgstr "Spezial-Filter: %s\n"
 
-#: src/drivers/video.cpp:932 src/ss/ss.cpp:1065 src/ss/ss.cpp:1631
+#: src/drivers/video.cpp:932 src/ss/ss.cpp:1045 src/ss/ss.cpp:1613
 #: src/gb/gb.cpp:1954
 msgid "None"
 msgstr "Keiner"
@@ -2333,7 +2333,7 @@ msgstr ""
 msgid "Japanese"
 msgstr ""
 
-#: src/ngp/neopop.cpp:307 src/ss/ss.cpp:1612 src/wswan/main.cpp:500
+#: src/ngp/neopop.cpp:307 src/ss/ss.cpp:1594 src/wswan/main.cpp:500
 msgid "English"
 msgstr ""
 
@@ -2731,7 +2731,7 @@ msgstr ""
 msgid "Loaded %zu valid settings and %zu unknown settings.\n"
 msgstr ""
 
-#: src/settings.cpp:398 src/mednafen.cpp:953 src/mednafen.cpp:961
+#: src/settings.cpp:398 src/mednafen.cpp:956 src/mednafen.cpp:964
 #, c-format
 msgid "Failed: %s\n"
 msgstr ""
@@ -2802,11 +2802,11 @@ msgstr ""
 msgid "MiniSSF Rip"
 msgstr ""
 
-#: src/ss/ssf.cpp:152 src/ss/ss.cpp:1644
+#: src/ss/ssf.cpp:152 src/ss/ss.cpp:1626
 msgid "SCSP output resampler quality."
 msgstr ""
 
-#: src/ss/ssf.cpp:153 src/ss/ss.cpp:1645 src/psx/psx.cpp:2253
+#: src/ss/ssf.cpp:153 src/ss/ss.cpp:1627 src/psx/psx.cpp:2253
 msgid ""
 "0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The "
 "resampler that this setting refers to is used for converting from 44.1KHz to "
@@ -2817,229 +2817,229 @@ msgid ""
 "and hardware factors."
 msgstr ""
 
-#: src/ss/ss.cpp:1058
+#: src/ss/ss.cpp:1038
 #, c-format
 msgid "Region: 0x%01x\n"
 msgstr ""
 
-#: src/ss/ss.cpp:1066
+#: src/ss/ss.cpp:1046
 msgid "Backup Memory"
 msgstr ""
 
-#: src/ss/ss.cpp:1067 src/ss/ss.cpp:1633
+#: src/ss/ss.cpp:1047 src/ss/ss.cpp:1615
 msgid "1MiB Extended RAM"
 msgstr ""
 
-#: src/ss/ss.cpp:1068 src/ss/ss.cpp:1634
+#: src/ss/ss.cpp:1048 src/ss/ss.cpp:1616
 msgid "4MiB Extended RAM"
 msgstr ""
 
-#: src/ss/ss.cpp:1069
+#: src/ss/ss.cpp:1049
 msgid "King of Fighters '95 ROM"
 msgstr ""
 
-#: src/ss/ss.cpp:1070
+#: src/ss/ss.cpp:1050
 msgid "Ultraman ROM"
 msgstr ""
 
-#: src/ss/ss.cpp:1071
+#: src/ss/ss.cpp:1051
 msgid "Mednafen Debug"
 msgstr ""
 
-#: src/ss/ss.cpp:1073 src/nes/fds.cpp:571 src/gb/gb.cpp:1949
+#: src/ss/ss.cpp:1053 src/nes/fds.cpp:571 src/gb/gb.cpp:1949
 #: src/gb/gb.cpp:1979
 msgid "Unknown"
 msgstr "Unbekannt"
 
-#: src/ss/ss.cpp:1083
+#: src/ss/ss.cpp:1063
 #, c-format
 msgid "Cart: %s\n"
 msgstr ""
 
-#: src/ss/ss.cpp:1132 src/psx/psx.cpp:1701
+#: src/ss/ss.cpp:1112 src/psx/psx.cpp:1701
 #, c-format
 msgid "BIOS file \"%s\" is of an incorrect size."
 msgstr ""
 
-#: src/ss/ss.cpp:1163
+#: src/ss/ss.cpp:1143
 msgid "Wrong BIOS for region being emulated."
 msgstr ""
 
-#: src/ss/ss.cpp:1166
+#: src/ss/ss.cpp:1146
 msgid "BIOS hash does not match that as expected by filename."
 msgstr ""
 
-#: src/ss/ss.cpp:1380
+#: src/ss/ss.cpp:1360
 #, c-format
 msgid "Disc %zu of %zu: Error reading sector at lba=%d in DiscSanityChecks()."
 msgstr ""
 
-#: src/ss/ss.cpp:1399
+#: src/ss/ss.cpp:1379
 #, c-format
 msgid ""
 "Disc %zu of %zu: Time mismatch at lba=%d(%02x:%02x:%02x); Q subchannel: %02x:"
 "%02x:%02x"
 msgstr ""
 
-#: src/ss/ss.cpp:1410
+#: src/ss/ss.cpp:1390
 #, c-format
 msgid ""
 "Disc %zu of %zu: No valid Q subchannel ADR_CURPOS data present at lba %d-%d?!"
 msgstr ""
 
-#: src/ss/ss.cpp:1444 src/psx/psx.cpp:1582
+#: src/ss/ss.cpp:1424 src/psx/psx.cpp:1582
 msgid "WARNING: CD (image) sanity checks disabled."
 msgstr ""
 
-#: src/ss/ss.cpp:1589
+#: src/ss/ss.cpp:1571
 msgid "SS Homebrew ELF Executable"
 msgstr ""
 
-#: src/ss/ss.cpp:1596 src/psx/psx.cpp:167
+#: src/ss/ss.cpp:1578 src/psx/psx.cpp:167
 msgid "Japan"
 msgstr ""
 
-#: src/ss/ss.cpp:1597 src/psx/psx.cpp:168
+#: src/ss/ss.cpp:1579 src/psx/psx.cpp:168
 msgid "North America"
 msgstr ""
 
-#: src/ss/ss.cpp:1598 src/psx/psx.cpp:169
+#: src/ss/ss.cpp:1580 src/psx/psx.cpp:169
 msgid "Europe"
 msgstr ""
 
-#: src/ss/ss.cpp:1599
+#: src/ss/ss.cpp:1581
 msgid "South Korea"
 msgstr ""
 
-#: src/ss/ss.cpp:1601
+#: src/ss/ss.cpp:1583
 msgid "Taiwan"
 msgstr ""
 
-#: src/ss/ss.cpp:1602
+#: src/ss/ss.cpp:1584
 msgid "China"
 msgstr ""
 
-#: src/ss/ss.cpp:1604
+#: src/ss/ss.cpp:1586
 msgid "Brazil"
 msgstr ""
 
-#: src/ss/ss.cpp:1605
+#: src/ss/ss.cpp:1587
 msgid "Latin America"
 msgstr ""
 
-#: src/ss/ss.cpp:1613
+#: src/ss/ss.cpp:1595
 msgid "Deutsch"
 msgstr ""
 
-#: src/ss/ss.cpp:1614
+#: src/ss/ss.cpp:1596
 msgid "Français"
 msgstr ""
 
-#: src/ss/ss.cpp:1615
+#: src/ss/ss.cpp:1597
 msgid "Español"
 msgstr ""
 
-#: src/ss/ss.cpp:1616
+#: src/ss/ss.cpp:1598
 msgid "Italiano"
 msgstr ""
 
-#: src/ss/ss.cpp:1617
+#: src/ss/ss.cpp:1599
 msgid "日本語"
 msgstr ""
 
-#: src/ss/ss.cpp:1630
+#: src/ss/ss.cpp:1612
 msgid "Automatic"
 msgstr ""
 
-#: src/ss/ss.cpp:1632
+#: src/ss/ss.cpp:1614
 msgid "Backup Memory(512KiB)"
 msgstr ""
 
-#: src/ss/ss.cpp:1641
+#: src/ss/ss.cpp:1623
 msgid "Path to the Japan ROM BIOS"
 msgstr ""
 
-#: src/ss/ss.cpp:1642
+#: src/ss/ss.cpp:1624
 msgid "Path to the North America and Europe ROM BIOS"
 msgstr ""
 
-#: src/ss/ss.cpp:1647 src/psx/psx.cpp:2242
+#: src/ss/ss.cpp:1629 src/psx/psx.cpp:2242
 msgid "Attempt to auto-detect region of game."
 msgstr ""
 
-#: src/ss/ss.cpp:1648 src/psx/psx.cpp:2243
+#: src/ss/ss.cpp:1630 src/psx/psx.cpp:2243
 msgid "Default region to use."
 msgstr ""
 
-#: src/ss/ss.cpp:1648 src/psx/psx.cpp:2243
+#: src/ss/ss.cpp:1630 src/psx/psx.cpp:2243
 msgid "Used if region autodetection fails or is disabled."
 msgstr ""
 
-#: src/ss/ss.cpp:1652
+#: src/ss/ss.cpp:1634
 msgid "Automatically set RTC on game load."
 msgstr ""
 
-#: src/ss/ss.cpp:1652
+#: src/ss/ss.cpp:1634
 msgid ""
 "Automatically set the SMPC's emulated Real-Time Clock to the host system's "
 "current time and date upon game load."
 msgstr ""
 
-#: src/ss/ss.cpp:1653
+#: src/ss/ss.cpp:1635
 msgid "BIOS language."
 msgstr ""
 
-#: src/ss/ss.cpp:1655
+#: src/ss/ss.cpp:1637
 msgid "Expansion cart."
 msgstr ""
 
-#: src/ss/ss.cpp:1656
+#: src/ss/ss.cpp:1638
 msgid "Path to KoF 95 ROM image."
 msgstr ""
 
-#: src/ss/ss.cpp:1657
+#: src/ss/ss.cpp:1639
 msgid "Path to Ultraman ROM image."
 msgstr ""
 
-#: src/ss/ss.cpp:1659 src/psx/psx.cpp:2249
+#: src/ss/ss.cpp:1641 src/psx/psx.cpp:2249
 msgid "Enable BIOS ROM image sanity checks."
 msgstr ""
 
-#: src/ss/ss.cpp:1661 src/psx/psx.cpp:2250
+#: src/ss/ss.cpp:1643 src/psx/psx.cpp:2250
 msgid "Enable CD (image) sanity checks."
 msgstr ""
 
-#: src/ss/ss.cpp:1663 src/nes/nes.cpp:490 src/psx/psx.cpp:2256
+#: src/ss/ss.cpp:1645 src/nes/nes.cpp:490 src/psx/psx.cpp:2256
 msgid "First displayed scanline in NTSC mode."
 msgstr ""
 
-#: src/ss/ss.cpp:1664 src/nes/nes.cpp:491 src/psx/psx.cpp:2257
+#: src/ss/ss.cpp:1646 src/nes/nes.cpp:491 src/psx/psx.cpp:2257
 msgid "Last displayed scanline in NTSC mode."
 msgstr ""
 
-#: src/ss/ss.cpp:1666 src/nes/nes.cpp:492 src/psx/psx.cpp:2259
+#: src/ss/ss.cpp:1648 src/nes/nes.cpp:492 src/psx/psx.cpp:2259
 msgid "First displayed scanline in PAL mode."
 msgstr ""
 
-#: src/ss/ss.cpp:1667 src/nes/nes.cpp:493 src/psx/psx.cpp:2260
+#: src/ss/ss.cpp:1649 src/nes/nes.cpp:493 src/psx/psx.cpp:2260
 msgid "Last displayed scanline in PAL mode."
 msgstr ""
 
-#: src/ss/ss.cpp:1669
+#: src/ss/ss.cpp:1651
 msgid "Enable mid-frame synchronization."
 msgstr ""
 
-#: src/ss/ss.cpp:1669
+#: src/ss/ss.cpp:1651
 msgid ""
 "Mid-frame synchronization can reduce input latency, but it will increase CPU "
 "requirements."
 msgstr ""
 
-#: src/ss/ss.cpp:1671
+#: src/ss/ss.cpp:1653
 msgid "Debug printf mask."
 msgstr ""
 
-#: src/ss/ss.cpp:1672
+#: src/ss/ss.cpp:1654
 msgid "CD image to use with homebrew executable loading."
 msgstr ""
 
@@ -3061,30 +3061,30 @@ msgstr ""
 msgid "Section missing: %.32s"
 msgstr ""
 
-#: src/state.cpp:532
-msgid "Missing/Wrong save state header ID."
-msgstr ""
-
-#: src/state.cpp:542
-msgid "Invalid/Unsupported version in save state header."
-msgstr ""
-
-#: src/state.cpp:691 src/state.cpp:749 src/movie.cpp:90 src/movie.cpp:166
+#: src/state.cpp:399 src/state.cpp:520 src/movie.cpp:90 src/movie.cpp:166
 #, c-format
 msgid "Module \"%s\" doesn't support save states."
 msgstr ""
 
-#: src/state.cpp:696
+#: src/state.cpp:542
+msgid "Missing/Wrong save state header ID."
+msgstr ""
+
+#: src/state.cpp:552
+msgid "Invalid/Unsupported version in save state header."
+msgstr ""
+
+#: src/state.cpp:701
 #, c-format
 msgid "Module %s is not compatible with manual state saving during netplay."
 msgstr ""
 
-#: src/state.cpp:722
+#: src/state.cpp:727
 #, c-format
 msgid "State %d saved."
 msgstr "Stand %d gespeichert."
 
-#: src/state.cpp:728
+#: src/state.cpp:733
 #, c-format
 msgid "State %d save error: %s"
 msgstr ""
@@ -4633,7 +4633,7 @@ msgstr ""
 msgid "Atari Lynx 12-bit RGB"
 msgstr ""
 
-#: src/hw_cpu/m68k/m68k.cpp:135
+#: src/hw_cpu/m68k/m68k.cpp:137
 msgid "Malformed old 68K save state."
 msgstr ""
 
@@ -5132,158 +5132,153 @@ msgstr ""
 msgid "Sound: Disabled\n"
 msgstr ""
 
-#: src/mednafen.cpp:509
+#: src/mednafen.cpp:512
 #, c-format
 msgid "M3U at \"%s\" references self."
 msgstr ""
 
-#: src/mednafen.cpp:512
+#: src/mednafen.cpp:515
 msgid "M3U load recursion too deep!"
 msgstr ""
 
-#: src/mednafen.cpp:531
+#: src/mednafen.cpp:534
 #, c-format
 msgid "CD %u TOC:\n"
 msgstr ""
 
-#: src/mednafen.cpp:544
+#: src/mednafen.cpp:547
 msgid " (CD-DA or Mode 1)"
 msgstr ""
 
-#: src/mednafen.cpp:548
+#: src/mednafen.cpp:551
 msgid " (CD-i)"
 msgstr ""
 
-#: src/mednafen.cpp:552
+#: src/mednafen.cpp:555
 msgid " (CD-XA)"
 msgstr ""
 
-#: src/mednafen.cpp:556
+#: src/mednafen.cpp:559
 #, c-format
 msgid "Disc Type: 0x%02x%s\n"
 msgstr ""
 
-#: src/mednafen.cpp:557
+#: src/mednafen.cpp:560
 #, c-format
 msgid "First Track: %2d\n"
 msgstr ""
 
-#: src/mednafen.cpp:558
+#: src/mednafen.cpp:561
 #, c-format
 msgid "Last Track:  %2d\n"
 msgstr ""
 
-#: src/mednafen.cpp:571
+#: src/mednafen.cpp:574
 #, c-format
 msgid "Track %2d, MSF: %02d:%02d:%02d, LBA: %6d  %s%s\n"
 msgstr ""
 
-#: src/mednafen.cpp:576
+#: src/mednafen.cpp:579
 msgid " (Hidden)"
 msgstr ""
 
-#: src/mednafen.cpp:579
+#: src/mednafen.cpp:582
 #, c-format
 msgid "Leadout: %6d  %s\n"
 msgstr ""
 
-#: src/mednafen.cpp:582
+#: src/mednafen.cpp:585
 msgid "WARNING:  DATA/AUDIO TYPE MISMATCH BETWEEN LAST TRACK AND LEADOUT AREA."
 msgstr ""
 
-#: src/mednafen.cpp:631
+#: src/mednafen.cpp:634
 #, c-format
 msgid "Loading custom palette from \"%s\"...\n"
 msgstr ""
 
-#: src/mednafen.cpp:660
+#: src/mednafen.cpp:663
 msgid ", "
 msgstr ""
 
-#: src/mednafen.cpp:665
+#: src/mednafen.cpp:668
 #, c-format
 msgid ""
 "Custom palette file's size(%llu bytes) is incorrect.  Valid sizes are: %s"
 msgstr ""
 
-#: src/mednafen.cpp:669 src/mednafen.cpp:678 src/cdrom/CDAccess_Image.cpp:376
+#: src/mednafen.cpp:672 src/mednafen.cpp:681 src/cdrom/CDAccess_Image.cpp:376
 #, c-format
 msgid "Error: %s\n"
 msgstr ""
 
-#: src/mednafen.cpp:743 src/mednafen.cpp:1024
+#: src/mednafen.cpp:746 src/mednafen.cpp:1027
 #, c-format
 msgid "Loading %s...\n"
 msgstr ""
 
-#: src/mednafen.cpp:771
+#: src/mednafen.cpp:774
 #, c-format
 msgid "Error opening CD: %s"
 msgstr ""
 
-#: src/mednafen.cpp:825
+#: src/mednafen.cpp:828
 #, c-format
 msgid "Disc %zu of %zu"
 msgstr ""
 
-#: src/mednafen.cpp:847 src/mednafen.cpp:995
+#: src/mednafen.cpp:850 src/mednafen.cpp:998
 #, c-format
 msgid "Skipping module \"%s\" per \"%s\" setting.\n"
 msgstr ""
 
-#: src/mednafen.cpp:865 src/mednafen.cpp:1067
+#: src/mednafen.cpp:868 src/mednafen.cpp:1070
 #, c-format
 msgid "Unrecognized system \"%s\"!"
 msgstr "Unbekanntes System \"%s\"!"
 
-#: src/mednafen.cpp:867
+#: src/mednafen.cpp:870
 msgid "Could not find a system that supports this CD."
 msgstr ""
 
-#: src/mednafen.cpp:872
+#: src/mednafen.cpp:875
 #, c-format
 msgid "Specified system \"%s\" doesn't support CDs!"
 msgstr "Das angegebene System \"%s\" unterstützt keine CDs!"
 
-#: src/mednafen.cpp:874 src/mednafen.cpp:1072
+#: src/mednafen.cpp:877 src/mednafen.cpp:1075
 #, c-format
 msgid "Using module: %s(%s)\n"
 msgstr ""
 
-#: src/mednafen.cpp:942
+#: src/mednafen.cpp:945
 #, c-format
 msgid "Applying IPS file \"%s\"...\n"
 msgstr "Wende IPS Datei \"%s\" an...\n"
 
-#: src/mednafen.cpp:980
+#: src/mednafen.cpp:983
 msgid ""
 "Specified system only supports CD(physical, or image files, such as *.cue "
 "and *.toc) loading."
 msgstr ""
 
-#: src/mednafen.cpp:982
+#: src/mednafen.cpp:985
 msgid "Specified system does not support normal file loading."
 msgstr ""
 
-#: src/mednafen.cpp:1057
+#: src/mednafen.cpp:1060
 msgid "game"
 msgstr ""
 
-#: src/mednafen.cpp:1069
+#: src/mednafen.cpp:1072
 msgid "Unrecognized file format."
 msgstr ""
 
-#: src/mednafen.cpp:1242
+#: src/mednafen.cpp:1244
 #, c-format
-msgid "Internal emulation modules: %s\n"
+msgid "Emulation modules: %s\n"
 msgstr ""
 
-#: src/mednafen.cpp:1243
-#, c-format
-msgid "External emulation modules: %s\n"
-msgstr ""
-
-#: src/mednafen.cpp:1652
+#: src/mednafen.cpp:1647
 msgid "Can't rewind during netplay."
 msgstr ""
 
@@ -5331,8 +5326,8 @@ msgstr ""
 #: src/cdrom/CDAccess_CCD.cpp:344
 #, c-format
 msgid ""
-"Garbage subchannel Q data detected(bad BCD/out of range): %02x:%02x:%02x "
-"%02x:%02x:%02x"
+"Garbage subchannel Q data detected(bad BCD/out of range): TNO=%02x IDX=%02x "
+"RMSF=%02x:%02x:%02x AMSF=%02x:%02x:%02x"
 msgstr ""
 
 #: src/cdrom/CDAccess_CCD.cpp:352
@@ -5506,13 +5501,13 @@ msgstr ""
 msgid "Error creating CD read thread."
 msgstr ""
 
-#: src/cdrom/CDAFReader_MPC.cpp:148
+#: src/cdrom/CDAFReader_MPC.cpp:150
 #, c-format
 msgid ""
 "MusePack stream has wrong number of channels(%u); the correct number is 2."
 msgstr ""
 
-#: src/cdrom/CDAFReader_MPC.cpp:155
+#: src/cdrom/CDAFReader_MPC.cpp:157
 #, c-format
 msgid ""
 "MusePack stream has wrong samplerate(%u Hz); the correct samplerate is 44100 "

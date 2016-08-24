@@ -394,7 +394,11 @@ struct M68K::HAM
 	break;
 
    case DATA_REG_DIR:
+	#ifdef MSB_FIRST
+	memcpy((uint8*)&zptr->D[reg] + (4 - sizeof(T)), &val, sizeof(T));
+	#else
 	memcpy((uint8*)&zptr->D[reg] + 0, &val, sizeof(T));
+	#endif
 	break;
 
    case ADDR_REG_INDIR:
@@ -446,7 +450,11 @@ struct M68K::HAM
    case DATA_REG_DIR:
 	{
 	 T tmp = cb(zptr, zptr->D[reg]);
+	 #ifdef MSB_FIRST
+	 memcpy((uint8*)&zptr->D[reg] + (4 - sizeof(T)), &tmp, sizeof(T));
+	 #else
 	 memcpy((uint8*)&zptr->D[reg] + 0, &tmp, sizeof(T));
+	 #endif
 	}
 	break;
 
@@ -2287,10 +2295,12 @@ uint32 M68K::GetRegister(unsigned which, char* special, const uint32 special_len
   default:
 	return 0xDEADBEEF;
 
-  case GSREG_D0 ... GSREG_D7:
+  case GSREG_D0: case GSREG_D1: case GSREG_D2: case GSREG_D3:
+  case GSREG_D4: case GSREG_D5: case GSREG_D6: case GSREG_D7:
 	return D[which - GSREG_D0];
 
-  case GSREG_A0 ... GSREG_A7:
+  case GSREG_A0: case GSREG_A1: case GSREG_A2: case GSREG_A3:
+  case GSREG_A4: case GSREG_A5: case GSREG_A6: case GSREG_A7:
 	return A[which - GSREG_A0];
 
   case GSREG_PC:
@@ -2317,11 +2327,13 @@ void M68K::SetRegister(unsigned which, uint32 value)
 {
  switch(which)
  {
-  case GSREG_D0 ... GSREG_D7:
+  case GSREG_D0: case GSREG_D1: case GSREG_D2: case GSREG_D3:
+  case GSREG_D4: case GSREG_D5: case GSREG_D6: case GSREG_D7:
 	D[which - GSREG_D0] = value;
 	break;
 
-  case GSREG_A0 ... GSREG_A7:
+  case GSREG_A0: case GSREG_A1: case GSREG_A2: case GSREG_A3:
+  case GSREG_A4: case GSREG_A5: case GSREG_A6: case GSREG_A7:
 	A[which - GSREG_A0] = value;
 	break;
 

@@ -59,7 +59,7 @@ namespace MDFN_IEN_PCFX
  * they are represented to better-than-integral precision.  These outputs
  * require BITS_IN_JSAMPLE + PASS1_BITS + 3 bits; this fits in a 16-bit word
  * with the recommended scaling.  (To scale up 12-bit sample data further, an
- * intermediate INT32 array would be needed.)
+ * intermediate int32 array would be needed.)
  *
  * To avoid overflow of the 32-bit intermediate results in pass 2, we must
  * have BITS_IN_JSAMPLE + CONST_BITS + PASS1_BITS <= 26.  Error analysis
@@ -73,13 +73,13 @@ namespace MDFN_IEN_PCFX
  #error "Too many bits1!"
 #endif
 
-#define ONE	((INT32) 1)
+#define ONE	((int32) 1)
 
 #define CONST_SCALE (ONE << CONST_BITS)
 
 /* Convert a positive real constant to an integer scaled by CONST_SCALE. */
 
-#define FIX(x)	((INT32) ((x) * CONST_SCALE + 0.5))
+#define FIX(x)	((int32) ((x) * CONST_SCALE + 0.5))
 
 /* Some C compilers fail to reduce "FIX(constant)" at compile time, thus
  * causing a lot of useless floating-point operations at run time.
@@ -89,18 +89,18 @@ namespace MDFN_IEN_PCFX
  */
 
 #if CONST_BITS == 13
-#define FIX_0_298631336  ((INT32)  2446)	/* FIX(0.298631336) */
-#define FIX_0_390180644  ((INT32)  3196)	/* FIX(0.390180644) */
-#define FIX_0_541196100  ((INT32)  4433)	/* FIX(0.541196100) */
-#define FIX_0_765366865  ((INT32)  6270)	/* FIX(0.765366865) */
-#define FIX_0_899976223  ((INT32)  7373)	/* FIX(0.899976223) */
-#define FIX_1_175875602  ((INT32)  9633)	/* FIX(1.175875602) */
-#define FIX_1_501321110  ((INT32)  12299)	/* FIX(1.501321110) */
-#define FIX_1_847759065  ((INT32)  15137)	/* FIX(1.847759065) */
-#define FIX_1_961570560  ((INT32)  16069)	/* FIX(1.961570560) */
-#define FIX_2_053119869  ((INT32)  16819)	/* FIX(2.053119869) */
-#define FIX_2_562915447  ((INT32)  20995)	/* FIX(2.562915447) */
-#define FIX_3_072711026  ((INT32)  25172)	/* FIX(3.072711026) */
+#define FIX_0_298631336  ((int32)  2446)	/* FIX(0.298631336) */
+#define FIX_0_390180644  ((int32)  3196)	/* FIX(0.390180644) */
+#define FIX_0_541196100  ((int32)  4433)	/* FIX(0.541196100) */
+#define FIX_0_765366865  ((int32)  6270)	/* FIX(0.765366865) */
+#define FIX_0_899976223  ((int32)  7373)	/* FIX(0.899976223) */
+#define FIX_1_175875602  ((int32)  9633)	/* FIX(1.175875602) */
+#define FIX_1_501321110  ((int32)  12299)	/* FIX(1.501321110) */
+#define FIX_1_847759065  ((int32)  15137)	/* FIX(1.847759065) */
+#define FIX_1_961570560  ((int32)  16069)	/* FIX(1.961570560) */
+#define FIX_2_053119869  ((int32)  16819)	/* FIX(2.053119869) */
+#define FIX_2_562915447  ((int32)  20995)	/* FIX(2.562915447) */
+#define FIX_3_072711026  ((int32)  25172)	/* FIX(3.072711026) */
 #else
 #define FIX_0_298631336  FIX(0.298631336)
 #define FIX_0_390180644  FIX(0.390180644)
@@ -117,7 +117,7 @@ namespace MDFN_IEN_PCFX
 #endif
 
 
-/* Descale and correctly round an INT32 value that's scaled by N bits.
+/* Descale and correctly round an int32 value that's scaled by N bits.
  * We assume RIGHT_SHIFT rounds towards minus infinity, so adding
  * the fudge factor is correct for either sign of X.
  */
@@ -133,9 +133,9 @@ namespace MDFN_IEN_PCFX
 
 void j_rev_dct(DCTBLOCK data)
 {
-  INT32 tmp0, tmp1, tmp2, tmp3;
-  INT32 tmp10, tmp11, tmp12, tmp13;
-  INT32 z1, z2, z3, z4, z5;
+  int32 tmp0, tmp1, tmp2, tmp3;
+  int32 tmp10, tmp11, tmp12, tmp13;
+  int32 z1, z2, z3, z4, z5;
   register DCTELEM *dataptr;
   int rowctr;
 
@@ -149,15 +149,15 @@ void j_rev_dct(DCTBLOCK data)
     /* Even part: reverse the even part of the forward DCT. */
     /* The rotator is sqrt(2)*c(-6). */
 
-    z2 = (INT32) dataptr[2];
-    z3 = (INT32) dataptr[6];
+    z2 = (int32) dataptr[2];
+    z3 = (int32) dataptr[6];
 
     z1 = MULTIPLY(z2 + z3, FIX_0_541196100);
     tmp2 = z1 + MULTIPLY(z3, - FIX_1_847759065);
     tmp3 = z1 + MULTIPLY(z2, FIX_0_765366865);
 
-    tmp0 = ((INT32) dataptr[0] + (INT32) dataptr[4]) << CONST_BITS;
-    tmp1 = ((INT32) dataptr[0] - (INT32) dataptr[4]) << CONST_BITS;
+    tmp0 = ((uint32) dataptr[0] + (uint32) dataptr[4]) << CONST_BITS;
+    tmp1 = ((uint32) dataptr[0] - (uint32) dataptr[4]) << CONST_BITS;
 
     tmp10 = tmp0 + tmp3;
     tmp13 = tmp0 - tmp3;
@@ -168,10 +168,10 @@ void j_rev_dct(DCTBLOCK data)
      * transpose is its inverse.  i0..i3 are y7,y5,y3,y1 respectively.
      */
 
-    tmp0 = (INT32) dataptr[7];
-    tmp1 = (INT32) dataptr[5];
-    tmp2 = (INT32) dataptr[3];
-    tmp3 = (INT32) dataptr[1];
+    tmp0 = (int32) dataptr[7];
+    tmp1 = (int32) dataptr[5];
+    tmp2 = (int32) dataptr[3];
+    tmp3 = (int32) dataptr[1];
 
     z1 = tmp0 + tmp3;
     z2 = tmp1 + tmp2;
@@ -219,15 +219,15 @@ void j_rev_dct(DCTBLOCK data)
     /* Even part: reverse the even part of the forward DCT. */
     /* The rotator is sqrt(2)*c(-6). */
 
-    z2 = (INT32) dataptr[DCTSIZE*2];
-    z3 = (INT32) dataptr[DCTSIZE*6];
+    z2 = (int32) dataptr[DCTSIZE*2];
+    z3 = (int32) dataptr[DCTSIZE*6];
 
     z1 = MULTIPLY(z2 + z3, FIX_0_541196100);
     tmp2 = z1 + MULTIPLY(z3, - FIX_1_847759065);
     tmp3 = z1 + MULTIPLY(z2, FIX_0_765366865);
 
-    tmp0 = ((INT32) dataptr[DCTSIZE*0] + (INT32) dataptr[DCTSIZE*4]) << CONST_BITS;
-    tmp1 = ((INT32) dataptr[DCTSIZE*0] - (INT32) dataptr[DCTSIZE*4]) << CONST_BITS;
+    tmp0 = ((uint32) dataptr[DCTSIZE*0] + (uint32) dataptr[DCTSIZE*4]) << CONST_BITS;
+    tmp1 = ((uint32) dataptr[DCTSIZE*0] - (uint32) dataptr[DCTSIZE*4]) << CONST_BITS;
 
     tmp10 = tmp0 + tmp3;
     tmp13 = tmp0 - tmp3;
@@ -238,10 +238,10 @@ void j_rev_dct(DCTBLOCK data)
      * transpose is its inverse.  i0..i3 are y7,y5,y3,y1 respectively.
      */
 
-    tmp0 = (INT32) dataptr[DCTSIZE*7];
-    tmp1 = (INT32) dataptr[DCTSIZE*5];
-    tmp2 = (INT32) dataptr[DCTSIZE*3];
-    tmp3 = (INT32) dataptr[DCTSIZE*1];
+    tmp0 = (int32) dataptr[DCTSIZE*7];
+    tmp1 = (int32) dataptr[DCTSIZE*5];
+    tmp2 = (int32) dataptr[DCTSIZE*3];
+    tmp3 = (int32) dataptr[DCTSIZE*1];
 
     z1 = tmp0 + tmp3;
     z2 = tmp1 + tmp2;

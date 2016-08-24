@@ -49,17 +49,19 @@
         sphitx = 0x100;
        }
      }
+
+     if(MDFN_UNLIKELY(rendis & 1))
+      Pline[x] = 0x3C | 0x40;
+
      if(!(sprlinebuf[x] & 0x80))
      {
       if((sprlinebuf[x]&0x40) || (Pline[x] & 0x40))
        Pline[x] = sprlinebuf[x];
      }
     }
-    if(rendis & 1)
-    {
-     emphlinebuf[x] = 0;
+    else if(MDFN_UNLIKELY(rendis & 1))
      Pline[x] = 0x3C | 0x40;
-    }
+
     Pline[x] = (Pline[x] & pix_mask);
     switch(x & 7)
     {

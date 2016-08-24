@@ -742,16 +742,8 @@ static void RefreshLine(int lastpixel)
 
   if(count > 0)
   {
-   if(rendis & 1)
-   {
-    memset(emphlinebuf + firstpixel, 0, count);
-    memset(Pline + firstpixel, 0x40 | 0x3C, count);
-   }
-   else
-   {
-    memset(emphlinebuf + firstpixel, PPU[1] >> 5, count);
-    memset(Pline + firstpixel, PALRAM[poopoo()], count);
-   }
+   memset(emphlinebuf + firstpixel, PPU[1] >> 5, count);
+   memset(Pline + firstpixel, ((rendis & 1) ? (0x40 | 0x3C) : PALRAM[poopoo()]), count);
   }
   //pshift[0] = pshift[1] = atlatch = 0;
  }
@@ -887,7 +879,7 @@ static void DoLine(MDFN_Surface *surface, int skip)
   if(RCSPROn && spork)
    FastCopySprites(newfirst >> 3, target, skip);
   else if(rendis & 1)
-   MDFN_FastArraySet(MDFN_ASSUME_ALIGNED(target + newfirst, alignof(target)), 0x40 | 0x3C, 256 - newfirst);
+   MDFN_FastArraySet(MDFN_ASSUME_ALIGNED(target + newfirst, 8), 0x40 | 0x3C, 256 - newfirst);
 
   if(!skip)
    FastLineEffects(newfirst >> 3, target);

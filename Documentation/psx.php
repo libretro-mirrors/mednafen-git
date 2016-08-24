@@ -9,8 +9,8 @@ extremely careful.  For any given game, either use save states or the game's own
 </p>
 <p>
 A dual-core Phenom II or Athlon II at 3GHz or higher, or rough equivalent(in terms of single-core IPC), is recommended for
-running Mednafen's PlayStation 1 emulation on.  For better performance, the binary should be compiled for a 64-bit
-target(for example, x86_64) rather than 32-bit, if available.<br>
+running Mednafen's PlayStation 1 emulation on(note that this recommendation does not apply to any unofficial ports or forks, which may have higher
+CPU requirements).  For better performance, the binary should be compiled for a 64-bit target(for example, x86_64) rather than 32-bit, if available.<br>
 </p>
 
 <p>

@@ -29650,24 +29650,6 @@ MDFNST_BOOL
 
 
 0
-ss.dbg_exe_cdpath
-MDFNSF_SUPPRESS_DOC 
-CD image to use with homebrew executable loading.
-
-MDFNST_STRING
-
-
-
-0
-ss.dbg_mask
-
-Debug printf mask.
-
-MDFNST_UINT
-0x00001
-0x00000
-0xFFFFF
-0
 ss.debugger.disfontsize
 MDFNSF_COMMON_TEMPLATE 
 Disassembly font size.

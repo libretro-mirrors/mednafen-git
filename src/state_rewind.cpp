@@ -177,7 +177,7 @@ static bool DoRewind(void)
     //
     //
     //
-    *smp = std::move(StateMemPacket());
+    *smp = StateMemPacket();
     bcs_pos = (bcs_pos + bcs.size() - 1) % bcs.size();
    }
   }

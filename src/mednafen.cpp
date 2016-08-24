@@ -448,12 +448,12 @@ extern MDFNGI EmulatedDEMO;
 std::vector<MDFNGI *> MDFNSystems;
 static std::list<MDFNGI *> MDFNSystemsPrio;
 
-bool MDFNSystemsPrio_CompareFunc(MDFNGI *first, MDFNGI *second)
+bool MDFNSystemsPrio_CompareFunc(const MDFNGI* first, const MDFNGI* second)
 {
  if(first->ModulePriority > second->ModulePriority)
-  return(true);
+  return true;
 
- return(false);
+ return false;
 }
 
 static void AddSystem(MDFNGI *system)
@@ -1143,7 +1143,7 @@ static void BuildDynamicSetting(MDFNSetting *setting, const char *system_name, c
  setting->ChangeNotification = ChangeNotification;
 }
 
-bool MDFNI_InitializeModules(const std::vector<MDFNGI *> &ExternalSystems)
+bool MDFNI_InitializeModules(void)
 {
  static MDFNGI *InternalSystems[] =
  {
@@ -1219,34 +1219,26 @@ bool MDFNI_InitializeModules(const std::vector<MDFNGI *> &ExternalSystems)
   &EmulatedCDPlay,
   &EmulatedDEMO
  };
- std::string i_modules_string, e_modules_string;
-
- assert(MEDNAFEN_VERSION_NUMERIC >= 0x0938);
+ assert(MEDNAFEN_VERSION_NUMERIC >= 0x0939);
 
  for(unsigned int i = 0; i < sizeof(InternalSystems) / sizeof(MDFNGI *); i++)
- {
   AddSystem(InternalSystems[i]);
-  if(i)
-   i_modules_string += " ";
-  i_modules_string += std::string(InternalSystems[i]->shortname);
- }
-
- for(unsigned int i = 0; i < ExternalSystems.size(); i++)
- {
-  AddSystem(ExternalSystems[i]);
-  if(i)
-   i_modules_string += " ";
-  e_modules_string += std::string(ExternalSystems[i]->shortname);
- }
-
- MDFNI_printf(_("Internal emulation modules: %s\n"), i_modules_string.c_str());
- MDFNI_printf(_("External emulation modules: %s\n"), e_modules_string.c_str());
-
 
  for(unsigned int i = 0; i < MDFNSystems.size(); i++)
   MDFNSystemsPrio.push_back(MDFNSystems[i]);
 
  MDFNSystemsPrio.sort(MDFNSystemsPrio_CompareFunc);
+ //
+ //
+ //
+ std::string modules_string;
+ for(auto& m : MDFNSystemsPrio)
+ {
+  if(modules_string.size())
+   modules_string += " ";
+  modules_string += std::string(m->shortname);
+ }
+ MDFNI_printf(_("Emulation modules: %s\n"), modules_string.c_str());
 
  CDUtility::CDUtility_Init();
 

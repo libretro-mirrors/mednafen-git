@@ -1684,7 +1684,6 @@ int main(int argc, char *argv[])
 	 return(0);
 	}
 #endif
-	std::vector<MDFNGI *> ExternalSystems;
 	char *needie = NULL;
 
 	MDFNDHaveFocus = false;
@@ -1742,9 +1741,7 @@ int main(int argc, char *argv[])
 
         MainThreadID = MDFND_ThreadID();
 
-        // Look for external emulation modules here.
-
-	if(!MDFNI_InitializeModules(ExternalSystems))
+	if(!MDFNI_InitializeModules())
 	 return(-1);
 
 	for(unsigned int x = 0; x < sizeof(DriverSettings) / sizeof(MDFNSetting); x++)

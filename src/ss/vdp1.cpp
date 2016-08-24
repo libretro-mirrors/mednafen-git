@@ -55,6 +55,8 @@ bool FBDrawWhich;
 static bool FBManualPending;
 
 static bool FBVBErasePending;
+static bool FBVBEraseActive;
+static sscpu_timestamp_t FBVBEraseLastTS;
 
 int32 SysClipX, SysClipY;
 int32 UserClipX0, UserClipY0, UserClipX1, UserClipY1;
@@ -116,6 +118,7 @@ void Init(void)
  vb_status = false;
  hb_status = false;
  lastts = 0;
+ FBVBEraseLastTS = 0;
 }
 
 void Kill(void)
@@ -174,6 +177,7 @@ void Reset(bool powering_up)
 
  FBManualPending = false;
  FBVBErasePending = false;
+ FBVBEraseActive = false;
 
  LOPR = 0;
  CurCommandAddr = 0;
@@ -467,6 +471,8 @@ static void StartDrawing(void)
   SS_DBGTI(SS_DBG_WARNING | SS_DBG_VDP1, "[VDP1] Drawing interrupted by new drawing start request.");
  }
 
+ SS_DBGTI(SS_DBG_VDP1, "[VDP1] Started drawing to framebuffer %d.", FBDrawWhich);
+
  // On draw start, clear CEF.
  EDSR &= ~0x2;
 
@@ -497,7 +503,21 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
    //
    if((TVMR & TVMR_VBE) || FBVBErasePending)
    {
+    SS_DBGTI(SS_DBG_VDP1, "[VDP1] VB erase start of framebuffer %d.", !FBDrawWhich);
+
     FBVBErasePending = false;
+    FBVBEraseActive = true;
+    FBVBEraseLastTS = event_timestamp;
+   }
+  }
+  else // Leaving v-blank
+  {
+   // Run vblank erase at end of vblank all at once(not strictly accurate, but should only have visible side effects wrt the debugger and reset).
+   if(FBVBEraseActive)
+   {
+    int32 count = event_timestamp - FBVBEraseLastTS;
+    //printf("%d %d, %d\n", event_timestamp, FBVBEraseLastTS, count);
+    //
     //
     //
     uint32 y = EraseParams.y_start;
@@ -511,6 +531,7 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
      if(EraseParams.rot8)
       fbyptr += (y & 0x100);
 
+     count -= 8;
      do
      {
       for(unsigned sub = 0; sub < 8; sub++)
@@ -520,12 +541,23 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
        fbyptr[x & EraseParams.fb_x_mask] = EraseParams.fill_data;
        x++;
       }
+      count -= 8;
+      if(MDFN_UNLIKELY(count <= 0))
+      {
+       SS_DBGTI(SS_DBG_WARNING | SS_DBG_VDP1, "[VDP1] VB erase of framebuffer %d ran out of time.", !FBDrawWhich);
+       goto AbortVBErase;
+      }
      } while(x < EraseParams.x_bound);
     } while(++y <= EraseParams.y_end);
+
+    AbortVBErase:;
+    //
+    FBVBEraseActive = false;
    }
-  }
-  else // Leaving v-blank
-  {
+   //
+   //
+   //
+   //
    if(!(FBCR & FBCR_FCM) || (FBManualPending && (FBCR & FBCR_FCT)))	// Swap framebuffers
    {
     if(DrawingActive)
@@ -535,6 +567,8 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
     }
 
     FBDrawWhich = !FBDrawWhich;
+
+    SS_DBGTI(SS_DBG_VDP1, "[VDP1] Displayed framebuffer changed to %d.", !FBDrawWhich);
 
     // On fb swap, copy CEF to BEF, clear CEF, and copy COPR to LOPR.
     EDSR = EDSR >> 1;
@@ -556,7 +590,7 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
     if(PTMR & 0x2)	// Start drawing(but only if we swapped the frame)
     {
      StartDrawing();
-     SS_SetEventNT(SS_EVENT_VDP1, Update(event_timestamp));
+     SS_SetEventNT(&events[SS_EVENT_VDP1], Update(event_timestamp));
     }
    }
 
@@ -667,15 +701,16 @@ bool GetLine(const int line, uint16* buf, unsigned w, uint32 rot_x, uint32 rot_y
  return ret;
 }
 
-
-void ResetTS(void)
+void AdjustTS(const int32 delta)
 {
- lastts = 0;
+ lastts += delta;
+ if(FBVBEraseActive)
+  FBVBEraseLastTS += delta;
 }
 
 static INLINE void WriteReg(const unsigned which, const uint16 value)
 {
- SS_SetEventNT(SS_EVENT_VDP2, VDP2::Update(SH7095_mem_timestamp));
+ SS_SetEventNT(&events[SS_EVENT_VDP2], VDP2::Update(SH7095_mem_timestamp));
  sscpu_timestamp_t nt = Update(SH7095_mem_timestamp);
 
  SS_DBGTI(SS_DBG_VDP1_REGW, "[VDP1] Register write: 0x%02x: 0x%04x", which << 1, value);
@@ -729,7 +764,7 @@ static INLINE void WriteReg(const unsigned which, const uint16 value)
 
  }
 
- SS_SetEventNT(SS_EVENT_VDP1, nt);
+ SS_SetEventNT(&events[SS_EVENT_VDP1], nt);
 }
 
 static INLINE uint16 ReadReg(const unsigned which)
