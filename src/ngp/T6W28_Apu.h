@@ -19,7 +19,8 @@ typedef struct
 {
 	int32 sq_period[3];
 	int32 sq_phase[3];
-	int32 noise_period;
+	uint32 noise_period;
+	uint32 noise_period_extra;
 	uint32 noise_shifter;
 	uint32 noise_tap;
 

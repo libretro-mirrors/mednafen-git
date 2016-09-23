@@ -73,12 +73,12 @@ void Sms_Square::run( blip_time_t time, blip_time_t end_time )
             }
             else
             {
-                Blip_Buffer* const output = this->output;
+                Blip_Buffer* const output_ = this->output;
                 int delta = amp * 2 - volume * 2;
                 do
                 {
                     delta = -delta;
-                    synth->offset_inline( time, delta, output );
+                    synth->offset_inline( time, delta, output_ );
                     time += period;
                 }
                 while ( time < end_time );
@@ -122,30 +122,30 @@ void Sms_Noise::run( blip_time_t time, blip_time_t end_time )
 
 	if ( time < end_time )
 	{
-		Blip_Buffer* const output = this->output;
-		unsigned shifter = this->shifter;
-		int delta = (shifter & 1) ? (-volume * 2) : (volume * 2);
-		int period = *this->period * 2;
-		if ( !period )
-			period = 16;
+		Blip_Buffer* const output_ = this->output;
+		unsigned shifter_ = this->shifter;
+		int delta = (shifter_ & 1) ? (-volume * 2) : (volume * 2);
+		int period_ = *this->period * 2;
+		if ( !period_ )
+			period_ = 16;
 
 		do
 		{
-			int changed = shifter + 1;
-			shifter = (feedback & -(shifter & 1)) ^ (shifter >> 1);
+			int changed = shifter_ + 1;
+			shifter_ = (feedback & -(shifter_ & 1)) ^ (shifter_ >> 1);
 			if ( changed & 2 ) // true if bits 0 and 1 differ
 			{
-				amp = (shifter & 1) ? 0 : volume * 2;
+				amp = (shifter_ & 1) ? 0 : volume * 2;
 				delta = -delta;
-				synth.offset_inline( time, delta, output );
+				synth.offset_inline( time, delta, output_ );
 				last_amp = amp;
 			}
-			time += period;
+			time += period_;
 		}
 		while ( time < end_time );
 		
-		this->shifter = shifter;
-		this->last_amp = (shifter & 1) ? 0 : volume * 2; //delta >> 1;
+		this->shifter = shifter_;
+		this->last_amp = (shifter_ & 1) ? 0 : volume * 2; //delta >> 1;
 	}
 	delay = time - end_time;
 }
@@ -366,13 +366,13 @@ void Sms_Apu::load_state(const Sms_ApuState *state)
 
  for(int x = 0; x < 3; x++)
  {
-  squares[x].period = state->sq_period[x];
+  squares[x].period = state->sq_period[x] & 0x3FFF;
   squares[x].phase = state->sq_phase[x];
  }
  noise.shifter = state->noise_shifter;
  noise.feedback = state->noise_feedback;
 
- int select = state->noise_period;
+ unsigned select = state->noise_period;
 
  if ( select < 3 )
   noise.period = &noise_periods [select];

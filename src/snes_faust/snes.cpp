@@ -521,7 +521,7 @@ static void EventReset(void)
   if(i == SNES_EVENT__SYNFIRST)
    events[i].event_time = 0;
   else if(i == SNES_EVENT__SYNLAST)
-   events[i].event_time = 0x7FFFFFFF;
+   events[i].event_time = 0xFFFFFFFF;
   else
    events[i].event_time = SNES_EVENT_MAXTS;
 

@@ -122,12 +122,13 @@ SNES:
 	src/ppu/render/oam.cpp:161:40: runtime error: index 32 out of bounds for type 'unsigned char [32]'
 
 PCE_FAST:
+	Add padding to start of data mapped into HuC6280 for instruction reads to prevent a crash if a game does a negative relative branch to
+	before the start of the memory region.
+
 	MWR latching!
 
 
 PCE:
-	CPU fast read offsetting may result in NULL pointer, which could slow down emulation and break high-level pokes.  Fix.
-
 	Test writes to $0806 when channel is enabled and DDA mode disabled, to track down the cause of some bus-conflicty-sounding
 	glitches in an old sound playback demo program I wrote.
 

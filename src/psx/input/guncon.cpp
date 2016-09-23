@@ -157,7 +157,7 @@ void InputDevice_GunCon::StateAction(StateMem* sm, const unsigned load, const bo
   Power();
  else if(load)
  {
-  if((transmit_pos + transmit_count) > sizeof(transmit_buffer))
+  if(((uint64)transmit_pos + transmit_count) > sizeof(transmit_buffer))
   {
    transmit_pos = 0;
    transmit_count = 0;

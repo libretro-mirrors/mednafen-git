@@ -742,6 +742,9 @@ void SoundBox_StateAction(StateMem *sm, const unsigned load, const bool data_onl
 
  if(load)
  {
+  clamp(&sbox.bigdiv, 1, 1365);
+  clamp(&sbox.smalldiv, 1, 8);
+
   for(int ch = 0; ch < 2; ch++)
   {
    clamp(&sbox.ADPCMPredictor[ch], -0x4000, 0x3FFF);
@@ -752,12 +755,9 @@ void SoundBox_StateAction(StateMem *sm, const unsigned load, const bool data_onl
 
    clamp(&sbox.StepSizeIndex[ch], 0, 48);
 
-   clamp(&sbox.bigdiv, 1, 1365);
-   clamp(&sbox.smalldiv, 1, 8);
-
    for(int lr = 0; lr < 2; lr++)
    {
-
+    sbox.ADPCMVolume[ch][lr] &= 0x3F;
    }
   }
   SCSICD_SetCDDAVolume(0.50f * sbox.CDDAVolume[0] / 63, 0.50f * sbox.CDDAVolume[1] / 63);

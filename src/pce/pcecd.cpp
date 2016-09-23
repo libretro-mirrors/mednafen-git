@@ -114,7 +114,7 @@ static int16 RawPCMVolumeCache[2];
 static int32 ClearACKDelay;
 
 static int32 lastts;
-static int32 scsicd_ne = 0;
+static int32 scsicd_ne;
 
 // ADPCM variables and whatnot
 #define ADPCM_DEBUG(x, ...) {  /*printf("[Half=%d, End=%d, Playing=%d] "x, ADPCM.HalfReached, ADPCM.EndReached, ADPCM.Playing, ## __VA_ARGS__);*/  }
@@ -193,10 +193,10 @@ static INLINE int32 ADPCM_ClocksToNextEvent(void)
 {
  int32 ret = (ADPCM.bigdiv + 65535) >> 16;
 
- if(ADPCM.WritePending && ret > ADPCM.WritePending)
+ if(ADPCM.WritePending > 0 && ret > ADPCM.WritePending)
   ret = ADPCM.WritePending;
 
- if(ADPCM.ReadPending && ret > ADPCM.ReadPending)
+ if(ADPCM.ReadPending > 0 && ret > ADPCM.ReadPending)
   ret = ADPCM.ReadPending;
 
  return(ret);
@@ -965,7 +965,7 @@ static const uint8 ADPCM_Filter[64][ADPCM_Filter_NumConvolutions] =
 
 static INLINE void ADPCM_PB_Run(int32 basetime, int32 run_time)
 {
- ADPCM.bigdiv -= run_time * 65536;
+ ADPCM.bigdiv -= ((int64)run_time << 16);
 
  while(ADPCM.bigdiv <= 0)
  {
@@ -1141,7 +1141,7 @@ static INLINE void ADPCM_Run(const int32 clocks, const int32 timestamp)
  //printf("ADPCM Run: %d\n", clocks);
  ADPCM_PB_Run(timestamp, clocks);
 
- if(ADPCM.WritePending)
+ if(ADPCM.WritePending > 0)
  {
   ADPCM.WritePending -= clocks;
   if(ADPCM.WritePending <= 0)
@@ -1155,7 +1155,7 @@ static INLINE void ADPCM_Run(const int32 clocks, const int32 timestamp)
   }
  }
 
- if(!ADPCM.WritePending)
+ if(ADPCM.WritePending <= 0)
  {
   if(_Port[0xb] & 0x3)
   {
@@ -1170,7 +1170,7 @@ static INLINE void ADPCM_Run(const int32 clocks, const int32 timestamp)
   }
  }
 
- if(ADPCM.ReadPending)
+ if(ADPCM.ReadPending > 0)
  {
   ADPCM.ReadPending -= clocks;
   if(ADPCM.ReadPending <= 0)
@@ -1207,7 +1207,7 @@ int32 PCECD_Run(uint32 in_timestamp)
  int32 clocks = in_timestamp - lastts;
  int32 running_ts = lastts;
 
- //printf("Run Begin: Clocks=%d(%d - %d), cl=%d\n", clocks, in_timestamp, lastts, CalcNextEvent);
+ //printf("Run Begin: Clocks=%d(%d - %d), cl=%d ---- (%016llx %d %d) %d %d %d\n", clocks, in_timestamp, lastts, CalcNextEvent(clocks), (long long)ADPCM.bigdiv, ADPCM.ReadPending, ADPCM.WritePending, ClearACKDelay, scsicd_ne, Fader.CycleCounter);
  //fflush(stdout);
 
  while(clocks > 0)
@@ -1259,7 +1259,7 @@ void PCECD_ResetTS(uint32 ts_base)
 static void ADPCM_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  uint32 ad_sample = MSM5205.GetSample();
- int32  ad_ref_index = MSM5205.GetSSI();
+ uint32 ad_ref_index = MSM5205.GetSSI();
 
  SFORMAT StateRegs[] =
  {
@@ -1295,6 +1295,18 @@ static void ADPCM_StateAction(StateMem *sm, const unsigned load, const bool data
 
  if(load)
  {
+  ad_ref_index %= 49;
+  ad_sample &= 0xFFF;
+  ADPCM.SampleFreq &= 0xF;
+
+  if(ADPCM.bigdiv < 1)
+   ADPCM.bigdiv = 1;
+  else if(ADPCM.bigdiv > ((int64)0x7FFFFFFF << 16))
+   ADPCM.bigdiv = ((int64)0x7FFFFFFF << 16);
+
+  //
+  //
+
   MSM5205.SetSample(ad_sample);
   MSM5205.SetSSI(ad_ref_index);
  }
@@ -1321,10 +1333,22 @@ void PCECD_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 	 SFVAR(SubChannelFIFO.write_pos),
 	 SFVAR(SubChannelFIFO.in_count),
 
+	 SFVAR(scsicd_ne),
+
 	 SFEND
 	};
 
         MDFNSS_StateAction(sm, load, data_only, StateRegs, "PECD");
+	if(load)
+	{
+	 if(Fader.Clocked && Fader.CycleCounter < 1)
+	  Fader.CycleCounter = 1;
+
+	 if(scsicd_ne < 1)
+	  scsicd_ne = 1;
+
+	 SubChannelFIFO.SaveStatePostLoad();
+	}
 	SCSICD_StateAction(sm, load, data_only, "CDRM");
 	ADPCM_StateAction(sm, load, data_only);
 
@@ -1334,9 +1358,6 @@ void PCECD_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 	 //SCSICD_SetDB(_Port[1]);
 	 SCSICD_SetACK(ACKStatus);
          SCSICD_SetRST(_Port[4] & 0x2);
-
-	 SubChannelFIFO.read_pos %= SubChannelFIFO.size;
-         SubChannelFIFO.write_pos %= SubChannelFIFO.size;
 	}
 }
 

@@ -178,7 +178,7 @@ void InputDevice_Justifier::StateAction(StateMem* sm, const unsigned load, const
   Power();
  else if(load)
  {
-  if((transmit_pos + transmit_count) > sizeof(transmit_buffer))
+  if(((uint64)transmit_pos + transmit_count) > sizeof(transmit_buffer))
   {
    transmit_pos = 0;
    transmit_count = 0;

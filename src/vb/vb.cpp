@@ -845,6 +845,10 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
  };
 
  MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
+ if(load)
+ {
+  VSU_CycleFix &= 3;
+ }
 
  VB_V810->StateAction(sm, load, data_only);
 

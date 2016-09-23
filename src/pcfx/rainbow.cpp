@@ -836,6 +836,8 @@ void RAINBOW_StateAction(StateMem *sm, const unsigned load, const bool data_only
  if(load)
  {
   RasterReadPos &= 0xF;
+  DecodeBufferWhichRead &= 0x1;
+
   CalcHappyColor();
  }
 }

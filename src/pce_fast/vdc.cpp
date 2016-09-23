@@ -180,9 +180,6 @@ static INLINE void SetVCECR(uint8 V)
 }
 
 static unsigned int frame_counter;
-static int32 need_vbi[2] = { 0, 0 };
-static int32 line_leadin1 = 0;
-static int32 magical, cyc_tot;
 
 vpc_t vpc;
 
@@ -1099,12 +1096,12 @@ static void MixNone(const uint32 count, T* __restrict__ target)
 
 //static void MixVPC(const uint32 count, const uint32 *lb0, const uint32 *lb1, uint32 *target) NO_INLINE;
 
+static const int prio_select[4] = { 1, 1, 0, 0 };
+static const int prio_shift[4] = { 4, 0, 4, 0 };
+
 template<typename T>
 static void MixVPC(const uint32 count, const uint32* __restrict__ lb0, const uint32* __restrict__ lb1, T*  __restrict__ target)
 {
-	static const int prio_select[4] = { 1, 1, 0, 0 };
-	static const int prio_shift[4] = { 4, 0, 4, 0 };
-
 	// Windowing disabled.
 	if(MDFN_LIKELY(vpc.winwidths[0] <= 0x40 && vpc.winwidths[1] <= 0x40))
 	{
@@ -1199,11 +1196,18 @@ static void DrawOverscan(const vdc_t *vdc, T *target, const MDFN_Rect *lw, const
  }
 }
 
-template<unsigned TCT, typename T, typename U>
-static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES) NO_INLINE;
+static const int ws[2][3] = {
+				{ 341, 341, 682 },
+				{ 256, 341, 512 }
+			       };
+
+static const int xs[2][3] = {
+                                { 24 - 43, 38, 96 - 43 * 2 },
+                                { 24,      38, 96 }
+                               };
 
 template<unsigned TCT, typename T, typename U>
-static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES)
+static NO_INLINE void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES)
 {
  vdc_t *vdc = &vdc_chips[0];
  int max_dc = 0;
@@ -1246,15 +1250,14 @@ static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES)
     VBlankFL = 261;
   }
 
-  need_vbi[0] = need_vbi[1] = 0;
+  bool need_vbi[2] = { false, false };
 
   #if 1
-  line_leadin1 = 0;
-
-  magical = M_vdc_HDS + (M_vdc_HDW + 1) + M_vdc_HDE;
+  int32 line_leadin1 = 0;
+  int32 magical = M_vdc_HDS + (M_vdc_HDW + 1) + M_vdc_HDE;
   magical = (magical + 2) & ~1;
   magical -= M_vdc_HDW + 1;
-  cyc_tot = magical * 8; //ClockPixelWidths[vce.dot_clock] - magical * 8;
+  int32 cyc_tot = magical * 8; //ClockPixelWidths[vce.dot_clock] - magical * 8;
   cyc_tot-=2;
   switch(vce.dot_clock)
   {
@@ -1297,11 +1300,6 @@ static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES)
 
   if(!skip)
   {
-   static const int ws[2][3] = {
-				{ 341, 341, 682 },
-				{ 256, 341, 512 }
-			       };
-
    DisplayRect->x = 0;
    DisplayRect->w = ws[correct_aspect][vce.dot_clock];
   }
@@ -1333,7 +1331,7 @@ static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES)
 
    if(vdc->display_counter == VBlankFL)
    {
-    need_vbi[chip] = 1;
+    need_vbi[chip] = true;
     if(vdc->SATBPending || (vdc->DCR & 0x10))
     {
      vdc->SATBPending = 0;
@@ -1416,11 +1414,6 @@ static void BigDrawThingy(EmulateSpecStruct *espec, bool IsHES)
 
      if(SHOULD_DRAW)
      {
-      static const int xs[2][3] = {
-                                { 24 - 43, 38, 96 - 43 * 2 },
-                                { 24,      38, 96 }
-                               };
-
       int32 width = end - start;
       int32 source_offset = 0;
       int32 target_offset = start - (128 + 8 + xs[correct_aspect][vce.dot_clock]);
@@ -1668,6 +1661,12 @@ void VDC_StateAction(StateMem *sm, int load, int data_only)
 
 
  MDFNSS_StateAction(sm, load, data_only, VCE_StateRegs, "VCE");
+ if(load)
+ {
+  vce.ctaddress &= 0x1FF;
+  vce.dot_clock %= 2 + 1;
+ }
+
 
  int max_chips = VDC_TotalChips;
 
@@ -1737,10 +1736,6 @@ void VDC_StateAction(StateMem *sm, int load, int data_only)
         SFVARN(VCR, "VCR_cache"),
         SFVARN(VBlankFL, "VBlankFL_cache"),
 
-	SFARRAY32(need_vbi, 2),
-	SFVAR(line_leadin1),
-	SFVAR(magical),
-	SFVAR(cyc_tot),
 	SFEND
   };
 
@@ -1748,7 +1743,9 @@ void VDC_StateAction(StateMem *sm, int load, int data_only)
 
   if(load)
   {
-   vce.ctaddress &= 0x1FF;
+   frame_counter %= ((vce.CR & 0x04) ? 263 : 262);
+   if(VBlankFL > 261)
+    VBlankFL = 261;
 
    for(int x = 0; x < VRAM_Size; x++)
    {

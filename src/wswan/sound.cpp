@@ -418,7 +418,18 @@ void WSwan_SoundStateAction(StateMem *sm, const unsigned load, const bool data_o
 
  if(load)
  {
+  if(sweep_8192_divider < 1)
+   sweep_8192_divider = 1;
 
+  for(unsigned ch = 0; ch < 4; ch++)
+  {
+   period[ch] &= 0x7FF;
+
+   if(period_counter[ch] < 1)
+    period_counter[ch] = 1;
+
+   sample_pos[ch] &= 0x1F;
+  }
  }
 }
 

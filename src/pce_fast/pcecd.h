@@ -30,7 +30,7 @@ void PCECD_Write(uint32 timestamp, uint32, uint8 data);
 
 bool PCECD_IsBRAMEnabled(void);
 
-int PCECD_StateAction(StateMem *sm, int load, int data_only);
+void PCECD_StateAction(StateMem *sm, int load, int data_only);
 
 }
 #endif

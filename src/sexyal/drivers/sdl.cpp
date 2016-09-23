@@ -272,16 +272,20 @@ static int RawClose(SexyAL_device *device)
   if(device->private_data)
   {
    SDLWrap *sw = (SDLWrap *)device->private_data;
-   if(sw->Buffer)
-    free(sw->Buffer);
    SDL_CloseAudio();
-   free(device->private_data);
 
    if(sw->StandAlone)
    {
     SDL_Quit();
     //puts("SDL quit");
    }
+   //
+   //
+   //
+   if(sw->Buffer)
+    free(sw->Buffer);
+
+   free(device->private_data);
   }
   free(device);
   return(1);

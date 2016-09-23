@@ -54,7 +54,7 @@ typedef struct {
 
   /* Interrupts were enabled at this time; do not accept any interrupts
      until z80_tstates > this value */
-  int32 interrupts_enabled_at;
+  uint64 interrupts_enabled_at;
 
 } processor;
 

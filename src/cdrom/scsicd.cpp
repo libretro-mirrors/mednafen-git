@@ -240,7 +240,7 @@ static void VirtualReset(void)
  cdda.PlayMode = PLAYMODE_SILENT;
  cdda.CDDAReadPos = 0;
  cdda.CDDAStatus = CDDASTATUS_STOPPED;
- cdda.CDDADiv = 0;
+ cdda.CDDADiv = 1;
 
  cdda.ScanMode = 0;
  cdda.scan_sec_end = 0;
@@ -3227,7 +3227,7 @@ void SCSICD_StateAction(StateMem* sm, const unsigned load, const bool data_only,
 
  if(load)
  {
-  din->in_count &= din->size - 1;
+  din->in_count %= din->size + 1;
   din->read_pos &= din->size - 1;
   din->write_pos = (din->read_pos + din->in_count) & (din->size - 1);
   //printf("%d %d %d\n", din->in_count, din->read_pos, din->write_pos);
@@ -3235,8 +3235,10 @@ void SCSICD_StateAction(StateMem* sm, const unsigned load, const bool data_only,
   if(load < 0x0935)
    cdda.CDDADiv /= 2;
 
-  if(cdda.CDDADiv <= 0)
+  if(cdda.CDDADiv < 1)
    cdda.CDDADiv = 1;
+
+  cdda.CDDAReadPos %= 588 + 1;
 
   cdda.OversamplePos &= 0x1F;
 

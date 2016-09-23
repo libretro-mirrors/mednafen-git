@@ -17,7 +17,7 @@ extern std::vector<EXPSOUND> GameExpSound;
 
 int FlushEmulateSound(int reverse, int16 *SoundBuf, int32 MaxSoundFrames);
 
-alignas(16) extern int16 WaveHiEx[40000];
+alignas(16) extern int16 WaveHiEx[2 * 40000];
 
 extern uint32 soundtsoffs;
 #define SOUNDTS (timestamp + soundtsoffs)

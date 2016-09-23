@@ -94,7 +94,7 @@ void z80_reset( void )
   IFF1=IFF2=IM=0;
   z80.halted=0;
 
-  z80.interrupts_enabled_at = -1;
+  z80.interrupts_enabled_at = 0;
   z80_tstates = last_z80_tstates = 0;
 }
 
@@ -254,6 +254,13 @@ void z80_state_action(StateMem *sm, const unsigned load, const bool data_only, c
 
  if(load)
  {
+  if(load < 0x00093902)
+   z80.interrupts_enabled_at = z80_tstates;
+
+  // TODO: Maybe adjust this check if we ever add emulation of a Z80-utilizing system with long wait-stating.
+  if((z80_tstates - last_z80_tstates) > 1000)
+   last_z80_tstates = z80_tstates - 1000;
+
   z80.r7 = r_register & 0x80;
   z80.r = r_register & 0x7F;
  }

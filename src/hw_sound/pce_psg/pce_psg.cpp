@@ -811,9 +811,9 @@ void PCE_PSG::Power(const int32 timestamp)
   if(ch >= 4)
   {
    RecalcNoiseFreqCache(ch);
-   channel[ch].noisecount = 1;
-   channel[ch].lfsr = 1;
   }
+  channel[ch].noisecount = 1;
+  channel[ch].lfsr = 1;
  }
 
  vol_pending = false;
@@ -874,6 +874,10 @@ void PCE_PSG::StateAction(StateMem *sm, const unsigned load, const bool data_onl
 
   for(int ch = 0; ch < 6; ch++)
   {
+   channel[ch].waveform_index &= 0x1F;
+   channel[ch].frequency &= 0xFFF;
+   channel[ch].dda &= 0x1F;
+
    channel[ch].samp_accum = 0;
    for(int wi = 0; wi < 32; wi++)
    {
@@ -884,9 +888,9 @@ void PCE_PSG::StateAction(StateMem *sm, const unsigned load, const bool data_onl
    for(int lr = 0; lr < 2; lr++)
     channel[ch].vl[lr] &= 0x1F;
 
-   if(!channel[ch].noisecount && ch >= 4)
+   if(channel[ch].noisecount <= 0 && ch >= 4)
    {
-    printf("ch=%d, noisecount == 0\n", ch);
+    printf("ch=%d, noisecount <= 0\n", ch);
     channel[ch].noisecount = 1;
    }
 

@@ -198,7 +198,7 @@ void VCE::Reset(const int32 timestamp)
  window_counter[1] = 0x40;
 
  if(fb)
-  scanline_out_ptr = &fb[scanline * pitch32];
+  scanline_out_ptr = &fb[(scanline % 263) * pitch32];
 }
 
 /*
@@ -231,7 +231,7 @@ void VCE::StartFrame(MDFN_Surface *surface, MDFN_Rect *DisplayRect, int32 *LineW
   pitch32 = surface->pitch32;
   fb = surface->pixels;
   LW = LineWidths;
-  scanline_out_ptr = &fb[scanline * pitch32];
+  scanline_out_ptr = &fb[(scanline % 263) * pitch32];
  }
  else
  {
@@ -330,7 +330,7 @@ INLINE void VCE::SyncSub(int32 clocks)
 
   if(MDFN_UNLIKELY(chunk_clocks <= 0))
   {
-   fprintf(stderr, "[BUG] chunk_clocks <= 0 -- %d\n", chunk_clocks);
+   fprintf(stderr, "[BUG] chunk_clocks <= 0 -- %d --- %d %d %d %d, %d %d\n", chunk_clocks, clocks, hblank_counter, vblank_counter, clock_divider, child_event[0], child_event[1]);
    chunk_clocks = 1;
   }
  
@@ -483,7 +483,7 @@ INLINE void VCE::SyncSub(int32 clocks)
 
     //printf("VCE New scanline: %d\n", scanline);
 
-    scanline_out_ptr = &fb[scanline * pitch32];
+    scanline_out_ptr = &fb[(scanline % 263) * pitch32];
 
 #ifdef WANT_DEBUGGER
     if(GfxDecode_Buf && GfxDecode_Line == scanline)
@@ -529,7 +529,7 @@ INLINE void VCE::SyncSub(int32 clocks)
      }
 
      pixel_offset = (0 - rect_x) & 2047;
-     LW[scanline] = rect_w;
+     LW[scanline % 263] = rect_w;
     }
    }
    hblank_counter = hblank ? 237 : 1128;
@@ -714,7 +714,7 @@ uint8 VCE::Read(uint32 A)
 	  ret |= 0xFE;
 	  if(!PCE_InDebug)
 	  {
-	   ctaddress++;
+	   ctaddress = (ctaddress + 1) & 0x1FF;
 	  }
 	  break;
  }
@@ -757,7 +757,7 @@ void VCE::Write(uint32 A, uint8 V)
   case 5: color_table[ctaddress & 0x1FF] &= 0xFF;
 	  color_table[ctaddress & 0x1FF] |= (V & 1) << 8;
 	  FixPCache(ctaddress & 0x1FF);
-	  ctaddress++;
+	  ctaddress = (ctaddress + 1) & 0x1FF;
 	  break;
  }
 
@@ -915,8 +915,40 @@ void VCE::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
  if(load)
  {
-  // TODO/FIXME:  Integrity checks to prevent buffer overflows.
   SetVCECR(CR);
+  //
+  //
+  //
+  ctaddress &= 0x1FF;
+
+  clock_divider = (uint32)clock_divider % dot_clock_ratio;
+
+  if(scanline < 0)
+   scanline = 0;
+
+  if(hblank_counter < 1)
+   hblank_counter = 1;
+  else if(hblank_counter > 1365)
+   hblank_counter = 1365;
+
+  if(vblank_counter < 1)
+   vblank_counter = 1;
+  else if(vblank_counter > 400000)
+   vblank_counter = 400000;
+
+  if(cd_event < 1)
+   cd_event = 1;
+
+  for(unsigned chip = 0; chip < chip_count; chip++)
+  {
+   if(child_event[chip] < 1)
+    child_event[chip] = 1;
+   else if(child_event[chip] > 1024)
+    child_event[chip] = 1024;
+  }
+  //
+  //
+  //
   for(int x = 0; x < 512; x++)
    FixPCache(x);
  }

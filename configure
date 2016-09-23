@@ -4440,8 +4440,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.39.1'
-MEDNAFEN_VERSION_NUMERIC=0x000939
+MEDNAFEN_VERSION='0.9.39.2'
+MEDNAFEN_VERSION_NUMERIC=0x00093902
 
 # Make sure we can run config.sub.
 $SHELL "$ac_aux_dir/config.sub" sun4 >/dev/null 2>&1 ||

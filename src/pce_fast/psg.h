@@ -42,7 +42,7 @@ class PCEFast_PSG
         PCEFast_PSG(Blip_Buffer* bbs) MDFN_COLD;
         ~PCEFast_PSG() MDFN_COLD;
 
-	int StateAction(StateMem *sm, int load, int data_only) MDFN_COLD;
+	void StateAction(StateMem *sm, int load, int data_only) MDFN_COLD;
 
         void Power(const int32 timestamp) MDFN_COLD;
         void Write(int32 timestamp, uint8 A, uint8 V);

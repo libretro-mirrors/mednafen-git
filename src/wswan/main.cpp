@@ -440,6 +440,12 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
  }
 
  v30mz_StateAction(sm, load, data_only);
+ if(load)
+ {
+  //printf("%d\n", v30mz_ICount);
+  if(v30mz_ICount > 256)
+   v30mz_ICount = 256;
+ }
 
  // Call MemoryStateAction before others StateActions...
  WSwan_MemoryStateAction(sm, load, data_only);

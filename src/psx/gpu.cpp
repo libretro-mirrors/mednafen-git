@@ -1660,6 +1660,22 @@ void PS_GPU::StateAction(StateMem *sm, const unsigned load, const bool data_only
   HorizStart &= 0xFFF;
   HorizEnd &= 0xFFF;
 
+  DisplayFB_CurYOffset &= 0x1FF;
+  DisplayFB_CurLineYReadout &= 0x1FF;
+
+  TexPageX &= 0xF * 64;
+  TexPageY &= 0x10 * 16;
+  TexMode &= 0x3;
+  abr &= 0x3;
+
+  ClipX0 &= 1023;
+  ClipY0 &= 1023;
+  ClipX1 &= 1023;
+  ClipY1 &= 1023;
+
+  OffsX = sign_x_to_s32(11, OffsX);
+  OffsY = sign_x_to_s32(11, OffsY);
+
   IRQ_Assert(IRQ_GPU, IRQPending);
  }
 }

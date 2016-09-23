@@ -382,6 +382,7 @@ void T6W28_Apu::save_state(T6W28_ApuState *ret)
  }
  ret->noise_shifter = noise.shifter;
  ret->noise_tap = noise.tap;
+ ret->noise_period_extra = noise.period_extra;
 
  if(noise.period == &noise_periods[0])
   ret->noise_period = 0;
@@ -404,13 +405,14 @@ void T6W28_Apu::load_state(const T6W28_ApuState *state)
  }
  for(int x = 0; x < 3; x++)
  {
-  squares[x].period = state->sq_period[x];
+  squares[x].period = state->sq_period[x] & 0x3FFF;
   squares[x].phase = state->sq_phase[x];
  }
  noise.shifter = state->noise_shifter;
  noise.tap = state->noise_tap;
+ noise.period_extra = state->noise_period_extra & 0x3FFF;
 
- int select = state->noise_period;
+ unsigned select = state->noise_period;
 
  if ( select < 3 )
   noise.period = &noise_periods [select];

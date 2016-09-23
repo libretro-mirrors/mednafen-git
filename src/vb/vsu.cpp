@@ -507,7 +507,49 @@ void VSU::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
  if(load)
  {
+  for(int ch = 0; ch < 6; ch++)
+  {
+   WavePos[ch] &= 0x1F;
 
+   LeftLevel[ch] &= 0xF;
+   RightLevel[ch] &= 0xF;
+
+   Frequency[ch] &= 0x07FF;
+   EffFreq[ch] &= 0x07FF;
+   Envelope[ch] &= 0xF;
+   EnvControl[ch] &= ((ch >= 4) ? 0x73FF : 0x03FF);
+
+   RAMAddress[ch] &= 0xF;
+   //
+   //
+   if(FreqCounter[ch] < 1)
+    FreqCounter[ch] = 1;
+
+   FreqCounter[ch] = 0;
+   IntervalCounter[ch] = 0;
+   EnvelopeCounter[ch] = 0;
+
+   if(EffectsClockDivider[ch] < 1)
+    EffectsClockDivider[ch] = 1;
+
+   if(IntervalClockDivider[ch] < 1)
+    IntervalClockDivider[ch] = 1;
+
+   if(EnvelopeClockDivider[ch] < 1)
+    EnvelopeClockDivider[ch] = 1;
+
+   if(LatcherClockDivider[ch] < 1)
+    LatcherClockDivider[ch] = 1;
+  }
+
+  if(NoiseLatcherClockDivider < 1)
+   NoiseLatcherClockDivider = 1;
+
+  SweepControl &= 0xFF;
+  SweepModCounter &= 0x7;
+
+  if(SweepModClockDivider < 1)
+   SweepModClockDivider = 1;
  }
 }
 

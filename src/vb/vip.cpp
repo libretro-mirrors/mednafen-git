@@ -345,7 +345,7 @@ static int32 CalcNextEvent(void);
 
 static int32 last_ts;
 
-static int32 Column;
+static uint32 Column;
 static int32 ColumnCounter;
 
 static int32 DisplayRegion;
@@ -1388,7 +1388,7 @@ v810_timestamp_t MDFN_FASTCALL VIP_Update(const v810_timestamp_t timestamp)
      {
 	// Ugly kludge, fix in the future.
 	int32 save_DisplayRegion = DisplayRegion;
-	int32 save_Column = Column;
+	uint32 save_Column = Column;
 	uint8 save_Repeat = Repeat;
 
 	for(int lr = 0; lr < 2; lr++)
@@ -1484,6 +1484,16 @@ void VIP_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
  if(load)
  {
+  Column %= 384;
+
+  if(ColumnCounter < 1)
+   ColumnCounter = 1;
+  else if(ColumnCounter > 1000)
+   ColumnCounter = 1000;
+
+  //
+  //
+  //
   RecalcBrightnessCache();
   for(int i = 0; i < 4; i++)
   {

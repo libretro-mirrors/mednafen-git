@@ -5,23 +5,9 @@
 #include "state-common.h"
 #include "Stream.h"
 
-#include <exception>
-
 void MDFNSS_GetStateInfo(const std::string& path, StateStatusStruct* status);
 
-struct StateMem
-{
- StateMem(Stream*s, int64 bnd = 0, bool svbe_ = false) : st(s), sss_bound(bnd), svbe(svbe_) { };
- ~StateMem();
-
- Stream* st = NULL;
- uint64 sss_bound = 0;	// State section search boundary, for state loading only.
- bool svbe = false;	// State variable data is stored big-endian(for normal-path state loading only).
-
- std::exception_ptr deferred_error;
- void ThrowDeferred(void);
-};
-
+struct StateMem;
 //
 // "st" should be MemoryStream, or FileStream if running in a memory-constrained system.  GZFileStream won't work properly due to 
 // the save state saving code relying on reverse-seeking.

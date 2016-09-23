@@ -184,6 +184,8 @@ static int system_frame(int do_skip)
 
 static void Emulate(EmulateSpecStruct *espec)
 {
+ //printf("%016llx %016llx %016llx\n", z80_tstates, last_z80_tstates, z80.interrupts_enabled_at);
+
  MDFNMP_ApplyPeriodicCheats();
 
  MDIO_BeginTimePeriod(md_timestamp);
@@ -675,7 +677,6 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVAR(zirq),
   SFVAR(zbank),
 
-  SFVAR(md_timestamp),
   SFVAR(suspend68k),
   SFVAR(z80_cycle_counter),
 
@@ -685,6 +686,17 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
 
  MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
+ if(load)
+ {
+  zbusreq &= 1;
+  zreset &= 1;
+  zbusack &= 1;
+
+  if(z80_cycle_counter > 0)
+   z80_cycle_counter = 0;
+ }
+
+
  z80_state_action(sm, load, data_only, "Z80");
  MDINPUT_StateAction(sm, load, data_only);
  MainVDP.StateAction(sm, load, data_only);

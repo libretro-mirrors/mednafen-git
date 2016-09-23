@@ -154,6 +154,8 @@ void MDSound_Kill(void)
 
 void MDSound_Power(void)
 {
+ fm_div = 1;
+
  FMUnit.reset();
  apu.reset();
 }
@@ -168,7 +170,6 @@ void MDSound_StateAction(StateMem *sm, const unsigned load, const bool data_only
 
  SFORMAT StateRegs[] =
  {
-  SFVAR(fm_last_timestamp),
   SFVAR(FMReset),
   SFVAR(fm_div),
   SFVAR(fm_latch),
@@ -189,6 +190,10 @@ void MDSound_StateAction(StateMem *sm, const unsigned load, const bool data_only
 
  if(load)
  {
+  if(fm_div < 1)
+   fm_div = 1;
+
+  //
   FMUnit.serialize(fm_slizer, true);
   apu.load_state(&sn_state);
  }

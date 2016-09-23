@@ -1056,8 +1056,8 @@ void Ym2612_Emu::serialize(MDFN::LEPacker &slizer, bool load)
 
    if(load)
    {
-    tun &= 0x07;
-    sl->DT = &g->DT_TAB[tun][0];
+    tun &= 0x07 * 32;
+    sl->DT = &g->DT_TAB[0][0] + tun;
    }
 
    slizer ^ sl->MUL;

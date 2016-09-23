@@ -159,7 +159,7 @@ void InputDevice_Mouse::StateAction(StateMem* sm, const unsigned load, const boo
   Power();
  else if(load)
  {
-  if((transmit_pos + transmit_count) > sizeof(transmit_buffer))
+  if(((uint64)transmit_pos + transmit_count) > sizeof(transmit_buffer))
   {
    transmit_pos = 0;
    transmit_count = 0;

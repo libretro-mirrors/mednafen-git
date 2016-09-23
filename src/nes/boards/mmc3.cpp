@@ -1459,6 +1459,7 @@ static int GenMMC3_Init(CartInfo *info, int prg, int chr, int wram, int battery)
    GenMMC3Close();
    return(0);
   }
+  memset(WRAM, 0, wram*1024);
  }
 
  if(battery)

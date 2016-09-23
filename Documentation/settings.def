@@ -33892,8 +33892,8 @@ Last displayed scanline in PAL mode.
 
 MDFNST_INT
 255
-0
-255
+-16
+271
 0
 ss.slstart
 
@@ -33910,8 +33910,8 @@ First displayed scanline in PAL mode.
 
 MDFNST_INT
 0
-0
-255
+-16
+271
 0
 ss.smpc.autortc
 
@@ -33925,7 +33925,7 @@ MDFNST_BOOL
 ss.smpc.autortc.lang
 
 BIOS language.
-
+Also affects language used in some games(e.g. the European release of \"Panzer Dragoon\").
 MDFNST_ENUM
 english
 

@@ -134,6 +134,7 @@ int MDFNNGPCSOUND_StateAction(StateMem *sm, int load, int data_only)
   SFVARN(sn_state.noise_period, "NPeriod"),
   SFVARN(sn_state.noise_shifter, "NShifter"),
   SFVARN(sn_state.noise_tap, "NTap"),
+  SFVARN(sn_state.noise_period_extra, "NPeriodExtra"),
   SFVARN(sn_state.latch_left, "LatchLeft"),
   SFVARN(sn_state.latch_right, "LatchRight"),
   SFEND

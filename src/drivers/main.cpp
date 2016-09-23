@@ -969,15 +969,7 @@ int GameLoop(void *arg)
 	 {
 	  if(!GameThreadRun) return(1);	// Might happen if video initialization failed
 	  SDL_Delay(2);
-	  }
-         do
-         {
-	  if(InFrameAdvance && !NeedFrameAdvance)
-	  {
-	   SDL_Delay(10);
-	  }
-	 } while(InFrameAdvance && !NeedFrameAdvance);
-
+	 }
 
 	 if(Sound_NeedReInit())
 	  GT_ReinitSound();

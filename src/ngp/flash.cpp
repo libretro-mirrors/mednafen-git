@@ -339,6 +339,7 @@ void FLASH_StateAction(StateMem *sm, const unsigned load, const bool data_only)
    FlashLength = 16384 * 1024;
 
   flashdata.resize(FlashLength);
+  memset(&flashdata[0], 0, FlashLength);
  }
 
  SFORMAT FLSH_StateRegs[] =

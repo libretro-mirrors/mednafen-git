@@ -450,8 +450,9 @@ static sscpu_timestamp_t SH_DMA_EventHandler(sscpu_timestamp_t et)
   return SH7095_mem_timestamp;
  }
 
+ // Must come after the (et < SH7095_mem_timestamp) check.
  if(MDFN_UNLIKELY(SH7095_BusLock))
-  return et + 8;
+  return et + 1;
 
  return CPU[c].DMA_Update(et);
 }
@@ -846,7 +847,7 @@ static MDFN_COLD void Cleanup(void)
  cdifs = NULL;
 }
 
-static bool IsSaturnDisc(const uint8* sa32k)
+static MDFN_COLD bool IsSaturnDisc(const uint8* sa32k)
 {
  if(sha256(&sa32k[0x100], 0xD00) != "96b8ea48819cfa589f24c40aa149c224c420dccf38b730f00156efe25c9bbc8f"_sha256)
   return false;
@@ -857,7 +858,7 @@ static bool IsSaturnDisc(const uint8* sa32k)
  return true;
 }
 
-static void CalcGameID(uint8* id_out16, uint8* fd_id_out16, char* sgid)
+static INLINE void CalcGameID(uint8* id_out16, uint8* fd_id_out16, char* sgid)
 {
  std::unique_ptr<uint8[]> buf(new uint8[2048]);
  md5_context mctx;
@@ -944,8 +945,7 @@ static const struct
  { 'L', nullptr, SMPC_AREA_CSA_PAL },
 };
 
-
-static bool DetectRegion(unsigned* const region)
+static INLINE bool DetectRegion(unsigned* const region)
 {
  std::unique_ptr<uint8[]> buf(new uint8[2048 * 16]);
  uint64 possible_regions = 0;
@@ -984,7 +984,7 @@ static bool DetectRegion(unsigned* const region)
  return false;
 }
 
-static bool DetectRegionByFN(const std::string& fn, unsigned* const region)
+static MDFN_COLD bool DetectRegionByFN(const std::string& fn, unsigned* const region)
 {
  std::string ss = fn;
  size_t cp_pos;
@@ -1119,6 +1119,12 @@ static void MDFN_COLD InitCommon(const unsigned cart_type, const unsigned smpc_a
  int sls = MDFN_GetSettingI(PAL ? "ss.slstartp" : "ss.slstart");
  int sle = MDFN_GetSettingI(PAL ? "ss.slendp" : "ss.slend");
 
+ if(PAL)
+ {
+  sls += 16;
+  sle += 16;
+ }
+
  if(sls > sle)
   std::swap(sls, sle);
 
@@ -1222,12 +1228,12 @@ static void MDFN_COLD InitCommon(const unsigned cart_type, const unsigned smpc_a
 }
 
 #ifdef MDFN_SS_DEV_BUILD
-static bool TestMagic(MDFNFILE* fp)
+static MDFN_COLD bool TestMagic(MDFNFILE* fp)
 {
  return false;
 }
 
-static void Load(MDFNFILE* fp)
+static MDFN_COLD void Load(MDFNFILE* fp)
 {
 #if 0
  // cat regiondb.inc | sort | uniq --all-repeated=separate -w 102 
@@ -1657,7 +1663,7 @@ static MDFNSetting SSSettings[] =
  { "ss.input.mouse_sensitivity", MDFNSF_NOFLAGS, gettext_noop("Emulated mouse sensitivity."), NULL, MDFNST_FLOAT, "0.50", NULL, NULL },
 
  { "ss.smpc.autortc", MDFNSF_NOFLAGS, gettext_noop("Automatically set RTC on game load."), gettext_noop("Automatically set the SMPC's emulated Real-Time Clock to the host system's current time and date upon game load."), MDFNST_BOOL, "1" },
- { "ss.smpc.autortc.lang", MDFNSF_NOFLAGS, gettext_noop("BIOS language."), NULL, MDFNST_ENUM, "english", NULL, NULL, NULL, NULL, RTCLang_List },
+ { "ss.smpc.autortc.lang", MDFNSF_NOFLAGS, gettext_noop("BIOS language."), gettext_noop("Also affects language used in some games(e.g. the European release of \"Panzer Dragoon\")."), MDFNST_ENUM, "english", NULL, NULL, NULL, NULL, RTCLang_List },
 
  { "ss.cart", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Expansion cart."), NULL, MDFNST_ENUM, "auto", NULL, NULL, NULL, NULL, Cart_List },
  { "ss.cart.kof95_path", MDFNSF_EMU_STATE, gettext_noop("Path to KoF 95 ROM image."), NULL, MDFNST_STRING, "mpr-18811-mx.ic1" },
@@ -1670,8 +1676,11 @@ static MDFNSetting SSSettings[] =
  { "ss.slstart", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in NTSC mode."), NULL, MDFNST_INT, "0", "0", "239" },
  { "ss.slend", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in NTSC mode."), NULL, MDFNST_INT, "239", "0", "239" },
 
- { "ss.slstartp", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in PAL mode."), NULL, MDFNST_INT, "0", "0", "255" },
- { "ss.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in PAL mode."), NULL, MDFNST_INT, "255", "0", "255" },
+ //{ "ss.slstartp", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in PAL mode."), NULL, MDFNST_INT, "16", "0", "287" },
+ //{ "ss.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in PAL mode."), NULL, MDFNST_INT, "271", "0", "287" },
+
+ { "ss.slstartp", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in PAL mode."), NULL, MDFNST_INT, "0", "-16", "271" },
+ { "ss.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in PAL mode."), NULL, MDFNST_INT, "255", "-16", "271" },
 
  { "ss.midsync", MDFNSF_NOFLAGS, gettext_noop("Enable mid-frame synchronization."), gettext_noop("Mid-frame synchronization can reduce input latency, but it will increase CPU requirements."), MDFNST_BOOL, "0" },
 

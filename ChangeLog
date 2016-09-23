@@ -1,3 +1,55 @@
+-- 0.9.39.2: --
+
+September 19, 2016:
+	SMS: Sanitize some previously-missed variables in the save state loading code.
+
+September 18, 2016:
+	MD: Fixed a bug that caused some YM2612 state to not be restored properly on save state load.
+
+	MD, SMS, NGP: Fixed an old Z80 emulation bug with interrupt handling.
+
+	Make an index of save state sections on save state load, to detect sections in a save state that are unused by the state loading code(for debugging).
+
+	MD, PCE, PCE_FAST: Sanitize some previously-missed variables in the save state loading code.
+
+September 16, 2016:
+	SS: Added PAL support.
+
+	SS: Fixed vertical positioning brokenness with custom "ss.slstart" setting values with interlaced video.
+
+September 15, 2016:
+	PC-FX, WonderSwan, NES, VB, PSX: Sanitize some previously-missed variables in the save state loading code.
+
+	Fixed a use-after-free bug in the SDL sound output driver.
+
+	NGP: Fixed several off-by-1 bugs in the address to ROM data translation function.
+
+September 11, 2016:
+	Removed nonsensical unused frame advance loop in drivers/main.cpp leftover from 0.5.x.
+
+	PCE_FAST: Fixed a bug that could cause a crash with large "pce_fast.ocmultiplier" setting values when running CD games.
+
+September 10, 2016:
+	PCE_FAST: Skip 512-byte copier header if detected when loading a ROM image.
+
+	PCE_FAST: Made some minor optimizations.
+
+	PCE, PSX, PCE_FAST: Avoid UB by biasing uintptr_t values instead of pointers directly in the CPU core.
+
+September 1, 2016:
+	GB: Corrected the layer names used with the layer toggling feature.
+
+August 26, 2016:
+	SS: Fixed a potential problem with SH-2 DMA event rescheduling when bus lock is held, that probably wouldn't ever happen in practice.
+
+	NES: Fixed several instances of missing initialization of on-cart WRAM.
+
+August 24, 2016:
+	SS: Marked more functions with MDFN_COLD hint, and marked a few functions to be forcibly-inlined where it makes sense.
+
+August 23, 2016:
+	SNES: Fixed an issue causing a compilation error on Mac OS X.
+
 -- 0.9.39.1: --
 
 August 22, 2016:

@@ -108,6 +108,8 @@ int Mapper112_Init(CartInfo *info)
  if(!(WRAM = (uint8 *)malloc(8192)))
   return(0);
 
+ memset(WRAM, 0, 8192);
+
  SetupCartPRGMapping(0x10, WRAM, 8192, 1);
 
  if(info->battery)

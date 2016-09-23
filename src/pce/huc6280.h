@@ -311,7 +311,7 @@ class alignas(128) HuC6280
 	 {
 	  // FIXME: This is a very evil hack.
 	  if(FastMap[address >> 13])
-	   FastMap[address >> 13][address] = data;
+	   FastMap[address >> 13][address & 0x1FFF] = data;
 	 }
 	 else
           WriteMap[address >> 13](address, data);
@@ -344,8 +344,7 @@ class alignas(128) HuC6280
 	INLINE void SetFastRead(unsigned int i, uint8 *ptr)
 	{
 	 assert(i < 0x100);
-
-	 FastMap[i] = ptr ? (ptr - i * 8192) : NULL;
+	 FastMap[i] = ptr;
 	}
 
         INLINE readfunc GetReadHandler(unsigned int i)
@@ -386,7 +385,7 @@ class alignas(128) HuC6280
         INLINE void SetMPR(int i, int v)
         {
          MPR[i] = v;
-         FastPageR[i] = FastMap[v] ? (FastMap[v] + v * 8192) - i * 8192 : NULL;
+         FastPageR[i] = FastMap[v] ? ((uintptr_t)FastMap[v] - i * 8192) : 0;
         }
 
 
@@ -394,7 +393,7 @@ class alignas(128) HuC6280
 	INLINE uint8 RdMem(unsigned int address)
 	{
 	 if(FastPageR[address >> 13])
-	  return FastPageR[address >> 13][address];
+	  return *(uint8*)(FastPageR[address >> 13] + address);
 
 	 LastLogicalReadAddr = address;
 
@@ -534,10 +533,10 @@ class alignas(128) HuC6280
 	uint32 LastLogicalReadAddr;		// Some helper variables for debugging code(external)
 	uint32 LastLogicalWriteAddr;		// to know where the read/write occurred in the 16-bit logical space.
 
-	uint8 *FastPageR[9];	// Fast page read cache for each 8KiB in the 16-bit logical address space
+	uintptr_t FastPageR[9];	// Biased fast page read cache for each 8KiB in the 16-bit logical address space
 				// (Reloaded on corresponding MPR change)
 
-	uint8 *FastMap[0x100];		// Direct pointers to memory for mapped RAM and ROM for faster reads(biased to remove the need for an & operation).
+	uint8 *FastMap[0x100];		// Direct pointers to memory for mapped RAM and ROM for faster reads.
 	readfunc ReadMap[0x100];	// Read handler pointers for each 8KiB in the 21-bit physical address space.
 	writefunc WriteMap[0x100];	// Write handler pointers for each 8KiB in the 21-bit physical address space.
 

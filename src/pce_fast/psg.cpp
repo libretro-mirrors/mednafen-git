@@ -574,9 +574,9 @@ void PCEFast_PSG::Power(const int32 timestamp)
   if(ch >= 4)
   {
    RecalcNoiseFreqCache(ch);
-   channel[ch].noisecount = 1;
-   channel[ch].lfsr = 1;
   }
+  channel[ch].noisecount = 1;
+  channel[ch].lfsr = 1;
  }
 
  vol_pending = false;
@@ -584,10 +584,8 @@ void PCEFast_PSG::Power(const int32 timestamp)
  vol_update_which = 0;
 }
 
-int PCEFast_PSG::StateAction(StateMem *sm, int load, int data_only)
+void PCEFast_PSG::StateAction(StateMem *sm, int load, int data_only)
 {
- int ret = 1;
-
  for(int ch = 0; ch < 6; ch++)
  {
   char tmpstr[5] = "SCHx";
@@ -609,7 +607,7 @@ int PCEFast_PSG::StateAction(StateMem *sm, int load, int data_only)
    SFEND
   };
   tmpstr[3] = '0' + ch;
-  ret &= MDFNSS_StateAction(sm, load, data_only, CH_StateRegs, tmpstr);
+  MDFNSS_StateAction(sm, load, data_only, CH_StateRegs, tmpstr);
  }
 
  SFORMAT PSG_StateRegs[] =
@@ -625,7 +623,7 @@ int PCEFast_PSG::StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
  
- ret &= MDFNSS_StateAction(sm, load, data_only, PSG_StateRegs, "PSG");
+ MDFNSS_StateAction(sm, load, data_only, PSG_StateRegs, "PSG");
 
  if(load)
  {
@@ -639,6 +637,10 @@ int PCEFast_PSG::StateAction(StateMem *sm, int load, int data_only)
 
   for(int ch = 0; ch < 6; ch++)
   {
+   channel[ch].waveform_index &= 0x1F;
+   channel[ch].frequency &= 0xFFF;
+   channel[ch].dda &= 0x1F;
+
    channel[ch].samp_accum = 0;
    for(int wi = 0; wi < 32; wi++)
    {
@@ -649,9 +651,9 @@ int PCEFast_PSG::StateAction(StateMem *sm, int load, int data_only)
    for(int lr = 0; lr < 2; lr++)
     channel[ch].vl[lr] &= 0x1F;
 
-   if(!channel[ch].noisecount && ch >= 4)
+   if(channel[ch].noisecount <= 0 && ch >= 4)
    {
-    printf("ch=%d, noisecount == 0\n", ch);
+    printf("ch=%d, noisecount <= 0\n", ch);
     channel[ch].noisecount = 1;
    }
 
@@ -667,7 +669,6 @@ int PCEFast_PSG::StateAction(StateMem *sm, int load, int data_only)
    RecalcUOFunc(ch);
   }
  }
- return(ret); 
 }
 
 }

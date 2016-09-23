@@ -150,7 +150,7 @@
  <p>
  
  </p>
- <?php BeginSection("Key Assignments"); ?>
+ <?php BeginSection("Key Assignments", "", FALSE, FALSE, "Section_key_assignments"); ?>
  <p>
   A single-press (un)pause function can be achieved by mapping the <a href="#command.advance_frame">frame advance</a> and
   <a href="#command.run_normal">exit frame advance mode/run normal</a> functions to the same key via the
@@ -208,6 +208,28 @@
  <tr><td>Escape/F12</td><td>Exit(the emulator, or netplay chat mode).</td><td>exit</td></tr>
  </table>
 
+ <?php EndSection(); ?>
+
+ <?php BeginSection("Remapping Buttons and Keys", "", FALSE, FALSE, "Section_remapping_input"); ?>
+  <p>
+   You may configure a virtual(emulated) input device by using special command keys in Mednafen while a game is running.
+  </p>
+  <p>
+   <font color="yellow">Caution:</font>  Users of XBox 360-type gamepads on operating systems other than Microsoft Windows(e.g. Linux), or users of other controllers with analog buttons, should complete the following process before attempting any configuration that will map a physical analog button to a virtual button.<br>
+   <blockquote>Twirl all sticks and D-pads and press all analog buttons on any physical gamepads/joysticks with analog buttons you want to use in the input configuration process, then press F3. Then, configure input as normal. The detected analog buttons will be recognized during input configuration until Mednafen exits; if you exit Mednafen and restart, and want to configure input devices again, you'll need to repeat the twirling-pressing-F3 process again).</blockquote>
+  </p>
+
+  <p>
+   To configure the virtual device on input port 1, press ALT+SHIFT+1.  For the virtual device on input port 2, press ALT+SHIFT+2.  Etc.
+  </p>
+
+  <p>
+   After pressing the appropriate command key or command key combination, a message will be displayed at the bottom of the screen similar to "GamePad #1: A (1)".  At this time, you would press the physical joystick or keyboard button you want to map to button "A" on the first virtual gamepad.  After you push the button, you should see something like "GamePad #1: A (2)".  If you want to map any other physical buttons to virtual button "A", press them now.  Otherwise, press the physical joystick or keyboard button you pressed before, and you will move on to the configuration of the next virtual button("B").
+  </p>
+
+  <p>
+   To configure a command key, press "F2", and then the command key whose mapping you wish to change.  The process is similar to that for a virtual input device.
+  </p>
  <?php EndSection(); ?>
 
  <?php BeginSection("Command-line"); ?>
@@ -478,7 +500,7 @@ has the minimum amount of processing done to it before being passed to the DAC o
   <?php BeginSection("libmpcdec", "", FALSE, "http://www.musepack.net/"); ?>
   <blockquote>
   <pre>
-  Copyright (c) 2005, The Musepack Development Team
+  Copyright (c) 2005-2009, The Musepack Development Team
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without

@@ -2876,7 +2876,7 @@ MDFNGI EmulatedGB =
  CloseGame,
 
  SetLayerEnableMask,
- "Background\0Sprites\0Window\0",
+ "Background\0Window\0Sprites\0",
 
  NULL,
  NULL,

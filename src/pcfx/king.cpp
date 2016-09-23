@@ -198,7 +198,7 @@ enum
 
 static int32 HPhase;
 static int32 HPhaseCounter;
-static int32 vdc_lb_pos;
+static uint32 vdc_lb_pos;
 
 alignas(8) static uint16 vdc_linebuffers[2][512];
 alignas(8) static uint32 vdc_linebuffer[512];
@@ -2983,7 +2983,11 @@ static INLINE void RunVDCs(const int master_cycles, uint16 *pixels0, uint16 *pix
  if(pixels1)
   pixels1 += vdc_lb_pos;
 
- assert((vdc_lb_pos + div_clocks) <= 512);
+ if(MDFN_UNLIKELY(((uint64)vdc_lb_pos + div_clocks) > 512))
+ {
+  //puts("Bug");
+  pixels0 = pixels1 = NULL;
+ }
 
  fx_vce.vdc_event[0] = vdc_chips[0]->Run(div_clocks, pixels0, pixels0 ? false : true);
  fx_vce.vdc_event[1] = vdc_chips[1]->Run(div_clocks, pixels1, pixels1 ? false : true);
@@ -3306,6 +3310,12 @@ void KING_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
   fx_vce.dot_clock_ratio = fx_vce.dot_clock ? 3 : 4;
 
+  if(fx_vce.clock_divider < 0)
+   fx_vce.clock_divider = 0;
+  else if(fx_vce.clock_divider > 3)
+   fx_vce.clock_divider = 3;
+
+
   fx_vce.palette_rw_offset &= 0x1FF;
   fx_vce.palette_offset[3] &= 0x00FF;
   fx_vce.priority[0] &= 0x0777;
@@ -3318,7 +3328,16 @@ void KING_StateAction(StateMem *sm, const unsigned load, const bool data_only)
    RedoPaletteCache(x);
 
   vdc_lb_pos &= 0x1FF; // FIXME: Better checks(in case we remove the assert() elsewhere)?
+  //
+  if(king->dma_cycle_counter < 1)
+   king->dma_cycle_counter = 1;
 
+  if(scsicd_ne < 1)
+   scsicd_ne = 1;
+
+  if(HPhaseCounter < 1)
+   HPhaseCounter = 1;
+  //
   RedoKINGIRQCheck();
   SoundBox_SetKINGADPCMControl(king->ADPCMControl);
  }

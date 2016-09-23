@@ -356,6 +356,19 @@ void PS_CDC::StateAction(StateMem *sm, const unsigned load, const bool data_only
   DMABuffer.SaveStatePostLoad();
   SectorPipe_Pos %= SectorPipe_Count;
 
+  if(AudioBuffer.Size > sizeof(AudioBuffer.Samples[0]) / sizeof(AudioBuffer.Samples[0][0]))
+   AudioBuffer.Size = sizeof(AudioBuffer.Samples[0]) / sizeof(AudioBuffer.Samples[0][0]);
+
+  if(AudioBuffer.ReadPos > AudioBuffer.Size)
+   AudioBuffer.ReadPos = AudioBuffer.Size;
+
+  ResultsRP &= 0xF;
+  ResultsWP &= 0xF;
+  ResultsIn &= 0x1F;
+
+  ADPCM_ResampCurPos &= 0x1F;
+  ADPCM_ResampCurPhase %= 7;
+
   //
   // Handle pre-0.9.37 state loading, and maliciously-constructed/corrupted save states.
   if(!Cur_CDIF)

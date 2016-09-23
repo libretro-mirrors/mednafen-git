@@ -193,6 +193,9 @@ static DECLFW(Super24Write)
 
 static void Super24Reset(CartInfo *info)
 {
+ if(CHRRAM)
+  memset(CHRRAM, 0x00, 8192);
+
  GameHBIRQHook=Sup24_hb;
  IRQCount=IRQLatch=IRQa=resetmode=0;
  sizer=0x24;

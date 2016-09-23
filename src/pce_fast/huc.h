@@ -23,7 +23,7 @@ void HuC_LoadCD(const std::string& bios_path) MDFN_COLD;
 void HuC_SaveNV(void) MDFN_COLD;
 void HuC_Kill(void) MDFN_COLD;
 
-int HuC_StateAction(StateMem *sm, int load, int data_only);
+void HuC_StateAction(StateMem *sm, int load, int data_only);
 
 void HuC_Power(void) MDFN_COLD;
 

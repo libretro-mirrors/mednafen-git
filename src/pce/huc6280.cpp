@@ -517,7 +517,7 @@ void HuC6280::Power(void)
  for(int i = 0; i < 9; i++)
  {
   MPR[i] = 0;
-  FastPageR[i] = NULL;
+  FastPageR[i] = 0;
  }  
  Reset();
 }
@@ -827,6 +827,10 @@ void HuC6280::StateAction(StateMem *sm, const unsigned load, const bool data_onl
 
  if(load)
  {
+  speed &= 0x01;
+  if(timer_div < 1)
+   timer_div = 1;
+  //
   PC = tmp_PC;
 
   // Update MPR cache

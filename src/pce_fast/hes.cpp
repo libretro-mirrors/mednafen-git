@@ -183,12 +183,12 @@ void HES_Load(MDFNFILE* fp)
 
   for(int x = 0; x < 0x80; x++)
   {
-   HuCPUFastMap[x] = rom;
-   PCERead[x] = HESROMRead;
-   PCEWrite[x] = HESROMWrite;
+   HuCPU.FastMap[x] = &rom[x * 8192];
+   HuCPU.PCERead[x] = HESROMRead;
+   HuCPU.PCEWrite[x] = HESROMWrite;
   }
 
-  HuCPUFastMap[0xFF] = IBP_Bank - (0xFF * 8192);
+  HuCPU.FastMap[0xFF] = IBP_Bank;
 
   // FIXME:  If a HES rip tries to execute a SCSI command, the CD emulation code will probably crash.  Obviously, a HES rip shouldn't do this,
   // but Mednafen shouldn't crash either. ;)

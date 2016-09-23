@@ -988,6 +988,13 @@ void WSwan_GfxStateAction(StateMem *sm, const unsigned load, const bool data_onl
  {
   weppy %= 3;
 
+  if(SpriteCountCache > 0x80)
+   SpriteCountCache = 0x80;
+
+  for(unsigned i = 0; i < 16; i++)
+   for(unsigned j = 0; j < 4; j++)
+    wsMonoPal[i][j] &= 0x7;
+
   wsSetVideo(VideoMode >> 5, TRUE);
  }
 }

@@ -88,7 +88,7 @@ void PS_CPU::SetFastMap(void *region_mem, uint32 region_address, uint32 region_s
 
  for(uint64 A = region_address; A < (uint64)region_address + region_size; A += FAST_MAP_PSIZE)
  {
-  FastMap[A >> FAST_MAP_SHIFT] = ((uint8 *)region_mem - region_address);
+  FastMap[A >> FAST_MAP_SHIFT] = ((uintptr_t)region_mem - region_address);
  }
 }
 
@@ -213,6 +213,9 @@ void PS_CPU::StateAction(StateMem *sm, const unsigned load, const bool data_only
   }
   else
    BDBT = OPM;
+
+  ReadAbsorbWhich &= 0x1F;
+  BACKED_LDWhich %= 0x21;
 
   //printf("PC=0x%08x, new_PC=0x%08x, BDBT=0x%02x\n", BACKED_PC, BACKED_new_PC, BDBT);
  }
@@ -478,13 +481,13 @@ INLINE uint32 PS_CPU::ReadInstruction(pscpu_timestamp_t &timestamp, uint32 addre
 
   if(address >= 0xA0000000 || !(BIU & 0x800))
   {
-   instr = MDFN_de32lsb<true>(&FastMap[address >> FAST_MAP_SHIFT][address]);
+   instr = MDFN_de32lsb<true>((uint8*)(FastMap[address >> FAST_MAP_SHIFT] + address));
    timestamp += 4;	// Approximate best-case cache-disabled time, per PS1 tests(executing out of 0xA0000000+); it can be 5 in *some* sequences of code(like a lot of sequential "nop"s, probably other simple instructions too).
   }
   else
   {
    __ICache *ICI = &ICache[((address & 0xFF0) >> 2)];
-   const uint8 *FMP = &FastMap[(address & 0xFFFFFFF0) >> FAST_MAP_SHIFT][address & 0xFFFFFFF0];
+   const uint8 *FMP = (uint8*)(FastMap[(address & 0xFFFFFFF0) >> FAST_MAP_SHIFT] + (address & 0xFFFFFFF0));
 
    // | 0x2 to simulate (in)validity bits.
    ICI[0x00].TV = (address & 0xFFFFFFF0) | 0x0 | 0x2;
@@ -703,7 +706,7 @@ pscpu_timestamp_t PS_CPU::RunReal(pscpu_timestamp_t timestamp_in)
 	  {							\
 	   if(old_PC == (((new_PC - 4) & mask) + offset))	\
 	   {							\
-	    if(MDFN_densb<uint32, true>(&FastMap[PC >> FAST_MAP_SHIFT][PC]) == 0)	\
+	    if(MDFN_densb<uint32, true>((uint8*)(FastMap[PC >> FAST_MAP_SHIFT] + PC)) == 0)	\
 	    {							\
 	     if(next_event_ts > timestamp) /* Necessary since next_event_ts might be set to something like "0" to force a call to the event handler. */		\
 	     {							\

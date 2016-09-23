@@ -612,23 +612,13 @@ int SMS_VDPStateAction(StateMem *sm, int load, int data_only)
   SFVARN(vdp.code, "code"),
   SFVARN(vdp.addr, "addr"),
 
-  SFVARN(vdp.pn, "pn"),
-  SFVARN(vdp.ct, "ct"),
-  SFVARN(vdp.pg, "pg"),
-  SFVARN(vdp.sa, "sa"),
-  SFVARN(vdp.sg, "sg"),
-  SFVARN(vdp.ntab, "ntab"),
-  SFVARN(vdp.satb, "satb"),
-  SFVARN(vdp.line, "line"),
+  //SFVARN(vdp.line, "line"),
   SFVARN(vdp.left, "left"),
-  SFVARN(vdp.height, "height"),
-  SFVARN(vdp.extended, "extended"),
-  SFVARN(vdp.mode, "mode"),
+
   SFVARN(vdp.vint_pending, "vint_pending"),
   SFVARN(vdp.hint_pending, "hint_pending"),
   SFVARN(vdp.hc_latch, "hc_latch"),
   SFVARN(vdp.cram_latch, "cram_latch"),
-  SFVARN(vdp.bd, "bd"),
 
   SFEND
  };
@@ -637,17 +627,28 @@ int SMS_VDPStateAction(StateMem *sm, int load, int data_only)
 
  if(load)
  {
-   /* Force full pattern cache update */
-   bg_list_index = 0x200;
-   for(int i = 0; i < 0x200; i++)
-   {
-       bg_name_list[i] = i;
-       bg_name_dirty[i] = -1;
-   }
+  //if(vdp.line < 0)
+  // vdp.line = 0;
 
-   /* Restore palette */
-   for(int i = 0; i < PALETTE_SIZE; i++)
-       palette_sync(i, 1);
+  vdp.code &= 3;
+  vdp.addr &= 0x3FFF;
+
+  vdp.satb = (vdp.reg[5] << 7) & 0x3F00;
+  vdp.bd = (vdp.reg[7] & 0x0F);
+
+  viewport_check();
+
+  /* Force full pattern cache update */
+  bg_list_index = 0x200;
+  for(int i = 0; i < 0x200; i++)
+  {
+   bg_name_list[i] = i;
+   bg_name_dirty[i] = -1;
+  }
+
+  /* Restore palette */
+  for(int i = 0; i < PALETTE_SIZE; i++)
+   palette_sync(i, 1);
  }
 
  return(ret);

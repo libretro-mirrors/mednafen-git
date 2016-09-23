@@ -708,6 +708,21 @@ void X6502_StateAction(StateMem *sm, const unsigned load, const bool data_only)
  if(load)
  {
   X.PC &= 0xFFFF;
+
+  // (312 - 242) * 341 * 15
+  // 27384...
+  if(X.count > 524288)
+   X.count = 524288;
+  else if(X.count < -5000 * 16)
+   X.count = -5000 * 16;
+
+  // RMW, $4014 512 * 2...8...DMC too...
+  if(X.tcount > 5000)
+   X.tcount = 5000;
+  else if(X.tcount < 0)
+   X.tcount = 0;
+
+  //printf("%d %d\n", X.count, X.tcount);
  }
 }
 

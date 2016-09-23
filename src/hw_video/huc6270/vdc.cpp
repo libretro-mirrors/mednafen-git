@@ -1837,6 +1837,23 @@ void VDC::StateAction(StateMem *sm, const unsigned load, const bool data_only, c
 
   if(load)
   {
+   HSW_cache &= 0x1F;
+   HDS_cache &= 0x7F;
+   HDW_cache &= 0x7F;
+   HDE_cache &= 0x7F;
+
+   VSW_cache &= 0x1F;
+   VDS_cache &= 0xFF;
+   VDW_cache &= 0x1FF;
+   VCR_cache &= 0xFF;
+
+   if(HPhaseCounter < 1)
+    HPhaseCounter = 1;
+   else if(HPhaseCounter > (0x7F + 1) * 8)
+    HPhaseCounter = (0x7F + 1) * 8;
+
+   VDMA_CycleCounter &= 0x1;
+   //
    StateExtra(sl_packer, true);
 
    for(int x = 0; x < VRAM_Size; x++)

@@ -35,6 +35,55 @@
 #include "MemoryStream.h"
 #include "compress/GZFileStream.h"
 #include <list>
+#include <exception>
+
+struct StateSectionMapEntry
+{
+ uint64 pos;
+ uint32 size;
+ bool used;
+};
+
+struct StateMem
+{
+ StateMem(Stream*s, bool svbe_ = false) : st(s), svbe(svbe_) { };
+ ~StateMem();
+
+ Stream* st = nullptr;
+ bool svbe = false;	// State variable data is stored big-endian(for normal-path state loading only).
+
+ std::map<std::string, StateSectionMapEntry> secmap; // For loads
+
+ std::exception_ptr deferred_error;
+ void ThrowDeferred(void);
+};
+
+static void MakeSectionMap(StateMem* sm, const uint64 sss_bound)
+{
+ Stream* const st = sm->st;
+ char sname_tmp[32 + 1];
+
+ while(st->tell() < sss_bound)
+ {
+  StateSectionMapEntry sme;
+
+  st->read(sname_tmp, 32);
+  sname_tmp[32] = 0;
+
+  sme.size = st->get_LE<uint32>();
+  sme.pos = st->tell();
+  sme.used = false;
+  st->seek(sme.size, SEEK_CUR);
+  //
+  std::string name_ss = sname_tmp;
+
+  if(sm->secmap.count(name_ss))
+   throw MDFN_Error(0, _("Duplicate section \"%s\" in save state!"), name_ss.c_str());
+  else
+   sm->secmap[name_ss] = sme;
+ }
+}
+
 
 static void SubWrite(Stream *st, SFORMAT *sf)
 {
@@ -122,7 +171,7 @@ static void MakeSFMap(SFORMAT *sf, SFMap_t &sfmap)
  }
 }
 
-static void ReadStateChunk(Stream *st, SFORMAT *sf, uint32 size, const bool svbe)
+static void ReadStateChunk(Stream *st, SFORMAT *sf, uint32 size, const bool svbe, const bool fuzz)
 {
  SFMap_t sfmap;
  SFMap_t sfmap_found;	// Used for identifying variables that are missing in the save state.
@@ -162,7 +211,19 @@ static void ReadStateChunk(Stream *st, SFORMAT *sf, uint32 size, const bool svbe
     sfmap_found[tmp->name] = tmp;
 
     st->read((uint8 *)tmp->v, expected_size);
+#if 0
+    if(MDFN_UNLIKELY(fuzz))
+    {
+     static uint64 lcg[2] = { 0xDEADBEEFCAFEBABEULL, 0x0123456789ABCDEFULL };
 
+     for(unsigned i = 0; i < expected_size; i++)
+     {
+      ((uint8*)tmp->v)[i] = (lcg[0] ^ lcg[1]) >> 28;
+      lcg[0] = (19073486328125ULL * lcg[0]) + 1;
+      lcg[1] = (6364136223846793005ULL * lcg[1]) + 1442695040888963407ULL;
+     }
+    }
+#endif
     if(tmp->flags & SFORMAT::FLAG_BOOL)
     {
      // Converting downwards is necessary for the case of sizeof(bool) > 1
@@ -305,42 +366,24 @@ bool MDFNSS_StateAction(StateMem *sm, const unsigned load, const bool data_only,
   {
    if(load)
    {
-    char sname_tmp[32];
-    bool found = false;
-    uint32 tmp_size;
-    uint32 total = 0;
+    auto msme = sm->secmap.find(sname);
 
-    while(st->tell() < sm->sss_bound)
-    {
-     st->read(sname_tmp, 32);
-     tmp_size = st->get_LE<uint32>();
-
-     total += tmp_size + 32 + 4;
-
-     // Yay, we found the section
-     if(!strncmp(sname_tmp, sname, 32))
-     {
-      ReadStateChunk(st, sf, tmp_size, sm->svbe);
-      found = true;
-      break;
-     } 
-     else
-     {
-      st->seek(tmp_size, SEEK_CUR);
-     }
-    }
-
-    st->seek(-(int64)total, SEEK_CUR);
-
-    if(!found)
+    if(msme == sm->secmap.end())
     {
      if(optional)
      {
       printf("Missing optional section: %.32s\n", sname);
-      return(false);
+
+      return false;
      }
      else
       throw MDFN_Error(0, _("Section missing: %.32s"), sname);
+    }
+    else
+    {
+     msme->second.used = true;
+     st->seek(msme->second.pos, SEEK_SET);
+     ReadStateChunk(st, sf, msme->second.size, sm->svbe, (bool)(load & 0x80000000));
     }
    }
    else
@@ -553,10 +596,21 @@ void MDFNSS_LoadSM(Stream *st, bool data_only)
 
 	 st->seek(preview_len, SEEK_CUR);				// Skip preview
 
-	 StateMem sm(st, start_pos + total_len, svbe);
-	 MDFN_StateAction(&sm, stateversion, false);			// Load state data.
-	 sm.ThrowDeferred();
+	 {
+	  StateMem sm(st, svbe);
 
+	  MakeSectionMap(&sm, start_pos + total_len);
+
+	  MDFN_StateAction(&sm, stateversion, false);			// Load state data.
+
+	  for(auto msme : sm.secmap)
+	  {
+	   if(!msme.second.used)
+	    printf("Warning: Unused section \"%s\".\n", msme.first.c_str());
+	  }
+
+	  sm.ThrowDeferred();
+	 }
 	 st->seek(start_pos + total_len, SEEK_SET);			// Seek to just beyond end of save state before returning.
 	}
 }

@@ -2505,7 +2505,7 @@ void PPU_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFEND
  };
 
- // TODO: Might want to save sprite fetch state when we add a debuger(for save states in step mode, which may occur outside of vblank).
+ // TODO: Might want to save sprite fetch state when we add a debugger(for save states in step mode, which may occur outside of vblank).
 
  MDFNSS_StateAction(sm, load, data_only, StateRegs, "PPU");
 

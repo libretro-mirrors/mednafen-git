@@ -51,8 +51,6 @@ uint8 ROMSpace[0x88 * 8192 + 8192];	// + 8192 for PC-as-pointer safety padding
 uint8 BaseRAM[32768 + 8192]; // 8KB for PCE, 32KB for Super Grafx // + 8192 for PC-as-pointer safety padding
 
 uint8 PCEIODataBuffer;
-readfunc PCERead[0x100];
-writefunc PCEWrite[0x100];
 
 static DECLFR(PCEBusRead)
 {
@@ -184,8 +182,7 @@ void PCE_InitCD(void)
 static void LoadCommon(void) MDFN_COLD;
 static void LoadCommonPre(void) MDFN_COLD;
 
-static bool TestMagic(MDFNFILE *fp) MDFN_COLD;
-static bool TestMagic(MDFNFILE *fp)
+static MDFN_COLD bool TestMagic(MDFNFILE *fp)
 {
  if(fp->ext != "hes" && fp->ext != "pce" && fp->ext != "sgx")
   return false;
@@ -193,8 +190,7 @@ static bool TestMagic(MDFNFILE *fp)
  return true;
 }
 
-static void Cleanup(void) MDFN_COLD;
-static void Cleanup(void)
+static MDFN_COLD void Cleanup(void)
 {
  if(IsHES)
   HES_Close();
@@ -234,7 +230,7 @@ static const struct
 	{ 0x3b13af61, "Battle Ace" },
 };
 
-static void Load(MDFNFILE *fp)
+static MDFN_COLD void Load(MDFNFILE *fp)
 {
  try
  {
@@ -253,8 +249,8 @@ static void Load(MDFNFILE *fp)
 
   for(int x = 0; x < 0x100; x++)
   {
-   PCERead[x] = PCEBusRead;
-   PCEWrite[x] = PCENullWrite;
+   HuCPU.PCERead[x] = PCEBusRead;
+   HuCPU.PCEWrite[x] = PCENullWrite;
   }
 
   if(IsHES)
@@ -292,6 +288,8 @@ static void Load(MDFNFILE *fp)
 
 static void LoadCommonPre(void)
 {
+ HuC6280_Init();
+
  // FIXME:  Make these globals less global!
  pce_overclocked = MDFN_GetSettingUI("pce_fast.ocmultiplier");
  PCE_ACEnabled = MDFN_GetSettingB("pce_fast.arcadecard");
@@ -302,11 +300,10 @@ static void LoadCommonPre(void)
  if(MDFN_GetSettingUI("pce_fast.cdspeed") > 1)
   MDFN_printf(_("CD-ROM speed:  %ux\n"), (unsigned int)MDFN_GetSettingUI("pce_fast.cdspeed"));
 
- memset(HuCPUFastMap, 0, sizeof(HuCPUFastMap));
  for(int x = 0; x < 0x100; x++)
  {
-  PCERead[x] = PCEBusRead;
-  PCEWrite[x] = PCENullWrite;
+  HuCPU.PCERead[x] = PCEBusRead;
+  HuCPU.PCEWrite[x] = PCENullWrite;
  }
 
  MDFNMP_Init(1024, (1 << 21) / 1024);
@@ -328,33 +325,31 @@ static void LoadCommon(void)
  if(IsSGX)
  {
   MDFN_printf("SuperGrafx Emulation Enabled.\n");
-  PCERead[0xF8] = PCERead[0xF9] = PCERead[0xFA] = PCERead[0xFB] = BaseRAMReadSGX;
-  PCEWrite[0xF8] = PCEWrite[0xF9] = PCEWrite[0xFA] = PCEWrite[0xFB] = BaseRAMWriteSGX;
+  HuCPU.PCERead[0xF8] = HuCPU.PCERead[0xF9] = HuCPU.PCERead[0xFA] = HuCPU.PCERead[0xFB] = BaseRAMReadSGX;
+  HuCPU.PCEWrite[0xF8] = HuCPU.PCEWrite[0xF9] = HuCPU.PCEWrite[0xFA] = HuCPU.PCEWrite[0xFB] = BaseRAMWriteSGX;
 
   for(int x = 0xf8; x < 0xfb; x++)
-   HuCPUFastMap[x] = BaseRAM - 0xf8 * 8192;
+   HuCPU.FastMap[x] = &BaseRAM[(x & 0x3) * 8192];
 
-  PCERead[0xFF] = IOReadSGX;
+  HuCPU.PCERead[0xFF] = IOReadSGX;
  }
  else
  {
-  PCERead[0xF8] = BaseRAMRead;
-  PCERead[0xF9] = PCERead[0xFA] = PCERead[0xFB] = BaseRAMRead_Mirrored;
+  HuCPU.PCERead[0xF8] = BaseRAMRead;
+  HuCPU.PCERead[0xF9] = HuCPU.PCERead[0xFA] = HuCPU.PCERead[0xFB] = BaseRAMRead_Mirrored;
 
-  PCEWrite[0xF8] = BaseRAMWrite;
-  PCEWrite[0xF9] = PCEWrite[0xFA] = PCEWrite[0xFB] = BaseRAMWrite_Mirrored;
+  HuCPU.PCEWrite[0xF8] = BaseRAMWrite;
+  HuCPU.PCEWrite[0xF9] = HuCPU.PCEWrite[0xFA] = HuCPU.PCEWrite[0xFB] = BaseRAMWrite_Mirrored;
 
   for(int x = 0xf8; x < 0xfb; x++)
-   HuCPUFastMap[x] = BaseRAM - x * 8192;
+   HuCPU.FastMap[x] = &BaseRAM[0];
 
-  PCERead[0xFF] = IORead;
+  HuCPU.PCERead[0xFF] = IORead;
  }
 
  MDFNMP_AddRAM(IsSGX ? 32768 : 8192, 0xf8 * 8192, BaseRAM);
 
- PCEWrite[0xFF] = IOWrite;
-
- HuC6280_Init();
+ HuCPU.PCEWrite[0xFF] = IOWrite;
 
  psg = new PCEFast_PSG(sbuf);
 
@@ -394,7 +389,7 @@ static void LoadCommon(void)
  }
 }
 
-static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
+static MDFN_COLD bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
 {
  static const uint8 magic_test[0x20] = { 0x82, 0xB1, 0x82, 0xCC, 0x83, 0x76, 0x83, 0x8D, 0x83, 0x4F, 0x83, 0x89, 0x83, 0x80, 0x82, 0xCC,
                                          0x92, 0x98, 0x8D, 0xEC, 0x8C, 0xA0, 0x82, 0xCD, 0x8A, 0x94, 0x8E, 0xAE, 0x89, 0xEF, 0x8E, 0xD0
@@ -454,7 +449,7 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  return(ret);
 }
 
-static void LoadCD(std::vector<CDIF *> *CDInterfaces)
+static MDFN_COLD void LoadCD(std::vector<CDIF *> *CDInterfaces)
 {
  try
  {
@@ -480,8 +475,7 @@ static void LoadCD(std::vector<CDIF *> *CDInterfaces)
 }
 
 
-static void CloseGame(void) MDFN_COLD;
-static void CloseGame(void)
+static MDFN_COLD void CloseGame(void)
 {
  HuC_SaveNV();
  Cleanup();
@@ -687,7 +681,7 @@ static const MDFNSetting PCESettings[] =
 
 static uint8 MemRead(uint32 addr)
 {
- return(PCERead[(addr / 8192) & 0xFF](addr));
+ return HuCPU.PCERead[(addr / 8192) & 0xFF](addr);
 }
 
 static const FileExtensionSpecStruct KnownExtensions[] =

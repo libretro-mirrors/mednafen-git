@@ -1219,7 +1219,7 @@ bool MDFNI_InitializeModules(void)
   &EmulatedCDPlay,
   &EmulatedDEMO
  };
- assert(MEDNAFEN_VERSION_NUMERIC >= 0x0939);
+ assert(MEDNAFEN_VERSION_NUMERIC >= 0x00093902);
 
  for(unsigned int i = 0; i < sizeof(InternalSystems) / sizeof(MDFNGI *); i++)
   AddSystem(InternalSystems[i]);
@@ -1654,6 +1654,31 @@ void MDFNI_Emulate(EmulateSpecStruct *espec)
   espec->NeedSoundReverse = MDFNSRW_Frame(espec->NeedRewind);
 
  MDFNGameInfo->Emulate(espec);
+
+#if 0
+ {
+  MemoryStream orig_state(65536);
+  MemoryStream new_state(65536);
+
+  MDFNSS_SaveSM(&orig_state);
+  orig_state.rewind();
+  MDFNSS_LoadSM(&orig_state);
+  MDFNSS_SaveSM(&new_state);
+
+  if(!(orig_state.map_size() == new_state.map_size() && !memcmp(orig_state.map() + 32, new_state.map() + 32, orig_state.map_size() - 32)))
+  {
+   FileStream sd0("/tmp/sdump0", FileStream::MODE_WRITE);
+   FileStream sd1("/tmp/sdump1", FileStream::MODE_WRITE);
+
+   sd0.write(orig_state.map(), orig_state.map_size());
+   sd1.write(new_state.map(), new_state.map_size());
+   sd0.close();
+   sd1.close();
+   //assert(orig_state.map_size() == new_state.map_size() && !memcmp(orig_state.map() + 32, new_state.map() + 32, orig_state.map_size() - 32));
+   abort();
+  }
+ }
+#endif
 
  if(MDFNnetplay)
   Netplay_PostProcess(PortDevice, PortData, PortDataLen);

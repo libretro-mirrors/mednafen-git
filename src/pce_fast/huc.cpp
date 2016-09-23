@@ -17,6 +17,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/*
+ TODO: Allow HuC6280 code to execute properly in the Street Fighter 2 mapper's bankswitched region.
+*/
+
 #include "pce.h"
 #include <errno.h>
 #include "pcecd.h"
@@ -26,6 +30,8 @@
 #include <mednafen/cdrom/cdromif.h>
 #include <mednafen/mempatcher.h>
 #include <mednafen/compress/GZFileStream.h>
+
+#include "huc.h"
 
 namespace PCE_Fast
 {
@@ -145,6 +151,13 @@ uint32 HuC_Load(MDFNFILE* fp)
   uint32 sf2_threshold = 2048 * 1024;
   uint32 sf2_required_size = 2048 * 1024 + 512 * 1024;
   uint64 len = fp->size();
+
+  if(len & 512) // Skip copier header.
+  {
+   len &= ~512;
+   fp->seek(512, SEEK_SET);
+  }
+
   uint64 m_len = (len + 8191)&~8191;
   bool sf2_mapper = FALSE;
 
@@ -199,8 +212,8 @@ uint32 HuC_Load(MDFNFILE* fp)
 
   for(int x = 0x00; x < 0x80; x++)
   {
-   HuCPUFastMap[x] = ROMSpace;
-   PCERead[x] = HuCRead;
+   HuCPU.FastMap[x] = &ROMSpace[x * 8192];
+   HuCPU.PCERead[x] = HuCRead;
   }
 
   if(!memcmp(HuCROM + 0x1F26, "POPULOUS", strlen("POPULOUS")))
@@ -216,9 +229,9 @@ uint32 HuC_Load(MDFNFILE* fp)
 
    for(int x = 0x40; x < 0x44; x++)
    {
-    HuCPUFastMap[x] = &PopRAM[(x & 3) * 8192] - x * 8192;
-    PCERead[x] = HuCRead;
-    PCEWrite[x] = HuCRAMWrite;
+    HuCPU.FastMap[x] = &PopRAM[(x & 3) * 8192];
+    HuCPU.PCERead[x] = HuCRead;
+    HuCPU.PCEWrite[x] = HuCRAMWrite;
    }
    MDFNMP_AddRAM(32768, 0x40 * 8192, PopRAM);
   }
@@ -230,8 +243,8 @@ uint32 HuC_Load(MDFNFILE* fp)
    
    LoadSaveMemory(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), SaveRAM, 2048);
 
-   PCEWrite[0xF7] = SaveRAMWrite;
-   PCERead[0xF7] = SaveRAMRead;
+   HuCPU.PCEWrite[0xF7] = SaveRAMWrite;
+   HuCPU.PCERead[0xF7] = SaveRAMRead;
    MDFNMP_AddRAM(2048, 0xF7 * 8192, SaveRAM);
   }
 
@@ -241,11 +254,9 @@ uint32 HuC_Load(MDFNFILE* fp)
   {
    for(int x = 0x40; x < 0x80; x++)
    {
-    // FIXME: PCE_FAST
-    HuCPUFastMap[x] = NULL; // Make sure our reads go through our read function, and not a table lookup
-    PCERead[x] = HuCSF2Read;
+    HuCPU.PCERead[x] = HuCSF2Read;
    }
-   PCEWrite[0] = HuCSF2Write;
+   HuCPU.PCEWrite[0] = HuCSF2Write;
    MDFN_printf("Street Fighter 2 Mapper\n");
    HuCSF2Latch = 0;
   }
@@ -299,17 +310,17 @@ void HuC_LoadCD(const std::string& bios_path)
   MDFN_printf(_("Arcade Card Emulation:  %s\n"), PCE_ACEnabled ? _("Enabled") : _("Disabled")); 
   for(int x = 0; x < 0x40; x++)
   {
-   HuCPUFastMap[x] = ROMSpace;
-   PCERead[x] = HuCRead;
+   HuCPU.FastMap[x] = &ROMSpace[x * 8192];
+   HuCPU.PCERead[x] = HuCRead;
   }
 
   for(int x = 0x68; x < 0x88; x++)
   {
-   HuCPUFastMap[x] = ROMSpace;
-   PCERead[x] = HuCRead;
-   PCEWrite[x] = HuCRAMWrite;
+   HuCPU.FastMap[x] = &ROMSpace[x * 8192];
+   HuCPU.PCERead[x] = HuCRead;
+   HuCPU.PCEWrite[x] = HuCRAMWrite;
   }
-  PCEWrite[0x80] = HuCRAMWriteCDSpecial; 	// Hyper Dyne Special hack
+  HuCPU.PCEWrite[0x80] = HuCRAMWriteCDSpecial; 	// Hyper Dyne Special hack
   MDFNMP_AddRAM(262144, 0x68 * 8192, ROMSpace + 0x68 * 8192);
 
   if(PCE_ACEnabled)
@@ -318,9 +329,8 @@ void HuC_LoadCD(const std::string& bios_path)
 
    for(int x = 0x40; x < 0x44; x++)
    {
-    HuCPUFastMap[x] = NULL;
-    PCERead[x] = ACPhysRead;
-    PCEWrite[x] = ACPhysWrite;
+    HuCPU.PCERead[x] = ACPhysRead;
+    HuCPU.PCEWrite[x] = ACPhysWrite;
    }
   }
 
@@ -330,8 +340,8 @@ void HuC_LoadCD(const std::string& bios_path)
 
   LoadSaveMemory(MDFN_MakeFName(MDFNMKF_SAV, 0, "sav"), SaveRAM, 2048);
 
-  PCEWrite[0xF7] = SaveRAMWrite;
-  PCERead[0xF7] = SaveRAMRead;
+  HuCPU.PCEWrite[0xF7] = SaveRAMWrite;
+  HuCPU.PCERead[0xF7] = SaveRAMRead;
   MDFNMP_AddRAM(2048, 0xF7 * 8192, SaveRAM);
  }
  catch(...)
@@ -341,7 +351,7 @@ void HuC_LoadCD(const std::string& bios_path)
  }
 }
 
-int HuC_StateAction(StateMem *sm, int load, int data_only)
+void HuC_StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] = 
  {
@@ -351,19 +361,18 @@ int HuC_StateAction(StateMem *sm, int load, int data_only)
   SFVAR(HuCSF2Latch),
   SFEND
  };
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "HuC");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "HuC");
 
  if(load)
   HuCSF2Latch &= 0x3;
 
  if(PCE_IsCD)
  {
-  ret &= PCECD_StateAction(sm, load, data_only);
+  PCECD_StateAction(sm, load, data_only);
 
   if(arcade_card)
    arcade_card->StateAction(sm, load, data_only);
  }
- return(ret);
 }
 
 //

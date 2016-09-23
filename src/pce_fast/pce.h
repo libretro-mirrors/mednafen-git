@@ -30,8 +30,6 @@ namespace PCE_Fast
 extern bool PCE_ACEnabled; // Arcade Card emulation enabled?
 void PCE_Power(void) MDFN_COLD;
 
-extern readfunc PCERead[0x100];
-extern writefunc PCEWrite[0x100];
 extern int pce_overclocked;
 
 extern uint8 BaseRAM[32768 + 8192];
