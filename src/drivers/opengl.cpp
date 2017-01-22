@@ -125,23 +125,23 @@ void OpenGL_Blitter::BlitRaw(const MDFN_Surface *surface, const MDFN_Rect *rect,
  }
 }
 
-static INLINE void MakeSourceCoords(const MDFN_Rect *src_rect, float sc[4][2], const int32 tmpwidth, const int32 tmpheight)
+static INLINE void MakeSourceCoords(const MDFN_Rect *src_rect, float sc[4][2], const int32 tmpwidth, const int32 tmpheight, const float y_fudge)
 {
  // Upper left
- sc[0][0] = (float)src_rect->x / tmpwidth;		// X
- sc[0][1] = (float)src_rect->y / tmpheight;		// Y
+ sc[0][0] = (float)src_rect->x / tmpwidth;			// X
+ sc[0][1] = (float)(src_rect->y + y_fudge) / tmpheight;		// Y
 
  // Upper right
  sc[1][0] = (float)(src_rect->x + src_rect->w) / tmpwidth;	// X
- sc[1][1] = (float)(src_rect->y) / tmpheight;			// Y
+ sc[1][1] = (float)(src_rect->y + y_fudge) / tmpheight;		// Y
 
  // Lower right
  sc[2][0] = (float)(src_rect->x + src_rect->w) / tmpwidth;	// X
- sc[2][1] = (float)(src_rect->y + src_rect->h) / tmpheight;	// Y
+ sc[2][1] = (float)(src_rect->y + y_fudge + src_rect->h) / tmpheight;	// Y
 
  // Lower left
  sc[3][0] = (float)src_rect->x / tmpwidth;			// X
- sc[3][1] = (float)(src_rect->y + src_rect->h) / tmpheight;	// Y
+ sc[3][1] = (float)(src_rect->y + y_fudge + src_rect->h) / tmpheight;	// Y
 }
 
 static INLINE void MakeDestCoords(const MDFN_Rect *dest_rect, int dest_coords[4][2], const unsigned rotated)
@@ -299,7 +299,7 @@ void OpenGL_Blitter::DrawLinearIP(const unsigned UsingIP, const unsigned rotated
    tmp_sr.w = 1;
   }
 
-  MakeSourceCoords(&tmp_sr, tmp_sc, tmpwidth, tmpheight);
+  MakeSourceCoords(&tmp_sr, tmp_sc, tmpwidth, tmpheight, 0);
   MakeDestCoords(&tmp_dr, tmp_dc, rotated);
 
   DrawQuad(tmp_sc, tmp_dc);
@@ -314,6 +314,7 @@ void OpenGL_Blitter::Blit(const MDFN_Surface *src_surface, const MDFN_Rect *src_
  unsigned int tmpwidth;
  unsigned int tmpheight;
  uint32 *src_pixies;
+ const bool ShaderIlace = (InterlaceField >= 0) && shader && shader->ShaderNeedsProperIlace();
 
  if(shader)
  {
@@ -323,16 +324,17 @@ void OpenGL_Blitter::Blit(const MDFN_Surface *src_surface, const MDFN_Rect *src_
    UsingIP = VIDEOIP_OFF;
  }
 
- if(src_rect->w == 0 || src_rect->h == 0 || dest_rect->w == 0 || dest_rect->h == 0 || original_src_rect->w == 0 || original_src_rect->h == 0)
+ if(tex_src_rect.w == 0 || tex_src_rect.h == 0 || dest_rect->w == 0 || dest_rect->h == 0 || original_src_rect->w == 0 || original_src_rect->h == 0)
  {
-  printf("[BUG] OpenGL blitting nothing? --- %d:%d %d:%d %d:%d\n", src_rect->w, src_rect->h, dest_rect->w, dest_rect->h, original_src_rect->w, original_src_rect->h);
+  printf("[BUG] OpenGL blitting nothing? --- %d:%d %d:%d %d:%d\n", tex_src_rect.w, tex_src_rect.h, dest_rect->w, dest_rect->h, original_src_rect->w, original_src_rect->h);
   return;
  }
 
 
- src_pixies = src_surface->pixels + tex_src_rect.x + tex_src_rect.y * src_surface->pitchinpix;
+ src_pixies = src_surface->pixels + tex_src_rect.x + (tex_src_rect.y + (InterlaceField & ShaderIlace)) * src_surface->pitchinpix;
  tex_src_rect.x = 0;
  tex_src_rect.y = 0;
+ tex_src_rect.h >>= ShaderIlace;
 
  MakeDestCoords(dest_rect, dest_coords, rotated);
 
@@ -342,8 +344,8 @@ void OpenGL_Blitter::Blit(const MDFN_Surface *src_surface, const MDFN_Rect *src_
 
  if(SupportNPOT)
  {
-  tmpwidth = src_rect->w;
-  tmpheight = src_rect->h;
+  tmpwidth = tex_src_rect.w;
+  tmpheight = tex_src_rect.h;
 
   if(tmpwidth != last_w || tmpheight != last_h)
   {
@@ -356,8 +358,8 @@ void OpenGL_Blitter::Blit(const MDFN_Surface *src_surface, const MDFN_Rect *src_
  {
   bool ImageSizeChange = FALSE;
 
-  tmpwidth = round_up_pow2(src_rect->w);
-  tmpheight = round_up_pow2(src_rect->h);
+  tmpwidth = round_up_pow2(tex_src_rect.w);
+  tmpheight = round_up_pow2(tex_src_rect.h);
 
   // If the required GL texture size has changed, resize the texture! :b
   if(tmpwidth != round_up_pow2(last_w) || tmpheight != round_up_pow2(last_h))
@@ -367,7 +369,7 @@ void OpenGL_Blitter::Blit(const MDFN_Surface *src_surface, const MDFN_Rect *src_
   }
  
   // If the dimensions of our image stored in the texture have changed...
-  if(src_rect->w != last_w || src_rect->h != last_h)
+  if(tex_src_rect.w != last_w || tex_src_rect.h != last_h)
    ImageSizeChange = TRUE;
 
   // Only clean up if we're using pixel shaders and/or bilinear interpolation
@@ -375,11 +377,11 @@ void OpenGL_Blitter::Blit(const MDFN_Surface *src_surface, const MDFN_Rect *src_
   {
    uint32 neo_dbs = DummyBlackSize;
 
-   if(src_rect->w != tmpwidth && neo_dbs < src_rect->h)
-    neo_dbs = src_rect->h;
+   if(tex_src_rect.w != tmpwidth && neo_dbs < tex_src_rect.h)
+    neo_dbs = tex_src_rect.h;
 
-   if(src_rect->h != tmpheight && neo_dbs < src_rect->w)
-    neo_dbs = src_rect->w;
+   if(tex_src_rect.h != tmpheight && neo_dbs < tex_src_rect.w)
+    neo_dbs = tex_src_rect.w;
 
    if(neo_dbs != DummyBlackSize)
    {
@@ -402,36 +404,36 @@ void OpenGL_Blitter::Blit(const MDFN_Surface *src_surface, const MDFN_Rect *src_
     }
    }
 
-   //printf("Cleanup: %d %d, %d %d\n", src_rect->w, src_rect->h, tmpwidth, tmpheight);
+   //printf("Cleanup: %d %d, %d %d\n", tex_src_rect.w, tex_src_rect.h, tmpwidth, tmpheight);
 
    if(DummyBlack) // If memory allocation failed for some reason, don't clean the texture. :(
    {
-    if(src_rect->w < tmpwidth)
+    if(tex_src_rect.w < tmpwidth)
     {
      //puts("X");
      p_glPixelStorei(GL_UNPACK_ROW_LENGTH, 1);
-     p_glTexSubImage2D(GL_TEXTURE_2D, 0, src_rect->w, 0, 1, src_rect->h, GL_RGBA, GL_UNSIGNED_BYTE, DummyBlack);
+     p_glTexSubImage2D(GL_TEXTURE_2D, 0, tex_src_rect.w, 0, 1, tex_src_rect.h, GL_RGBA, GL_UNSIGNED_BYTE, DummyBlack);
     }
-    if(src_rect->h < tmpheight)
+    if(tex_src_rect.h < tmpheight)
     {
      //puts("Y");
-     p_glPixelStorei(GL_UNPACK_ROW_LENGTH, src_rect->w);
-     p_glTexSubImage2D(GL_TEXTURE_2D, 0, 0, src_rect->h, src_rect->w, 1, GL_RGBA, GL_UNSIGNED_BYTE, DummyBlack);
+     p_glPixelStorei(GL_UNPACK_ROW_LENGTH, tex_src_rect.w);
+     p_glTexSubImage2D(GL_TEXTURE_2D, 0, 0, tex_src_rect.h, tex_src_rect.w, 1, GL_RGBA, GL_UNSIGNED_BYTE, DummyBlack);
     }
    } // end if(DummyBlack)
 
   }
 
-  last_w = src_rect->w;
-  last_h = src_rect->h;
+  last_w = tex_src_rect.w;
+  last_h = tex_src_rect.h;
  }
 
- MakeSourceCoords(&tex_src_rect, src_coords, tmpwidth, tmpheight);
+ MakeSourceCoords(&tex_src_rect, src_coords, tmpwidth, tmpheight, (ShaderIlace & InterlaceField) * -0.5);
 
  if(shader)
-  shader->ShaderBegin(gl_screen_w, gl_screen_h, src_rect, dest_rect, tmpwidth, tmpheight, round((double)tmpwidth * original_src_rect->w / src_rect->w), round((double)tmpheight * original_src_rect->h / src_rect->h), rotated);
+  shader->ShaderBegin(gl_screen_w, gl_screen_h, src_rect, dest_rect, tmpwidth, tmpheight, round((double)tmpwidth * original_src_rect->w / tex_src_rect.w), round((double)tmpheight * (original_src_rect->h >> ShaderIlace) / tex_src_rect.h), rotated);
 
- p_glPixelStorei(GL_UNPACK_ROW_LENGTH, src_surface->pitchinpix);
+ p_glPixelStorei(GL_UNPACK_ROW_LENGTH, src_surface->pitchinpix << ShaderIlace);
 
  p_glTexSubImage2D(GL_TEXTURE_2D, 0, tex_src_rect.x, tex_src_rect.y, tex_src_rect.w, tex_src_rect.h, PixelFormat, PixelType, src_pixies);
 
@@ -458,12 +460,12 @@ void OpenGL_Blitter::Blit(const MDFN_Surface *src_surface, const MDFN_Rect *src_
  if(shader)
   shader->ShaderEnd();
 
- if(using_scanlines)
+ if(using_scanlines && (dest_rect->h + (InterlaceField >= 0)) > original_src_rect->h)
  {
   float yif_offset = 0;
   int yh_shift = 0;
 
-  if(using_scanlines < 0 && InterlaceField >= 0)
+  if((using_scanlines < 0 || (dest_rect->h == original_src_rect->h)) && InterlaceField >= 0)
   {
    yif_offset = (float)InterlaceField / 512;
    yh_shift = 1;
@@ -492,13 +494,6 @@ void OpenGL_Blitter::Blit(const MDFN_Surface *src_surface, const MDFN_Rect *src_
   p_glEnd();
   p_glDisable(GL_BLEND);
  }
-
- //if(1)
- //{
- // p_glAccum(GL_MULT, 0.99);
- // p_glAccum(GL_ACCUM, 1 - 0.99);
- // p_glAccum(GL_RETURN, 1.0);
- //}
 }
 
 
@@ -515,11 +510,11 @@ void OpenGL_Blitter::HardSync(uint64 timeout)
    p_glVertex2f(0.0, 0.0);
    p_glEnd();
 
-   uint32 before = MDFND_GetTime();
+   uint64 before = Time::MonoUS();
 
    p_glClientWaitSync(s, 0, timeout); //50ULL * 1000 * 1000);	// 50 milliseconds.
 
-   printf("Waited: %u\n", MDFND_GetTime() - before);
+   printf("Waited: %llu\n", (unsigned long long)(Time::MonoUS() - before));
 
    p_glDeleteSync(s);
   }
@@ -533,12 +528,6 @@ void OpenGL_Blitter::Cleanup(void)
   p_glDeleteTextures(4, &textures[0]);
 
  textures[0] = textures[1] = textures[2] = textures[3] = 0;
-
- if(rgb_mask)
- {
-  p_glDeleteTextures(1, &rgb_mask);
-  rgb_mask = 0;
- }
 
  if(DummyBlack)
  {
@@ -590,7 +579,7 @@ static bool CheckAlternateFormat(const uint32 version_h)
 }
 
 /* Rectangle, left, right(not inclusive), top, bottom(not inclusive). */
-OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int screen_w, const int screen_h, int *rs, int *gs, int *bs, int *as) : gl_screen_w(screen_w), gl_screen_h(screen_h)
+OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const ShaderParams& shader_params, const int screen_w, const int screen_h, int *rs, int *gs, int *bs, int *as) : gl_screen_w(screen_w), gl_screen_h(screen_h)
 {
  try
  {
@@ -608,8 +597,6 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
 
  for(unsigned i = 0; i < 4; i++)
   textures[i] = 0;
-
- rgb_mask = 0;
 
  using_scanlines = 0;
  last_w = 0;
@@ -717,7 +704,6 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
  p_glViewport(0, 0, gl_screen_w, gl_screen_h);
 
  p_glGenTextures(4, &textures[0]);
- p_glGenTextures(1, &rgb_mask);
  using_scanlines = 0;
 
  shader = NULL;
@@ -738,6 +724,10 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
   LFG(glUniform2iARB);
   LFG(glUniform3iARB);
   LFG(glUniformMatrix2fvARB);
+  LFG(glUniform1fvARB);
+  LFG(glUniform2fvARB);
+  LFG(glUniform3fvARB);
+  LFG(glUniform4fvARB);
   LFG(glActiveTextureARB);
   LFG(glGetInfoLogARB);
   LFG(glGetUniformLocationARB);
@@ -746,9 +736,12 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
 
   LFG(glGetObjectParameterivARB);
 
-  shader = new OpenGL_Blitter_Shader(this, pixshader);
+  shader = new OpenGL_Blitter_Shader(this, pixshader, shader_params);
   SupportNPOT = 0; 	 // Our pixel shaders don't work right with NPOT textures(for them to do so would probably necessitate rewriting them to use texelFetch)
   p_glActiveTextureARB(GL_TEXTURE0_ARB);
+
+  if(pixshader == SHADER_GOAT && shader_params.goat_slen)
+   scanlines = 0;
  }
 
  // printf here because pixel shader code will set SupportNPOT to 0
@@ -768,7 +761,7 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
   p_glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
   p_glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
 
-  uint8 *buf=(uint8*)malloc(64 * (256 * 2) * 4);
+  std::unique_ptr<uint8[]> buf(new uint8[64 * (256 * 2) * 4]);
 
   slcount = 0;
   for(int y=0;y<(256 * 2);y++)
@@ -791,8 +784,7 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
    slcount ^= 1;
   }
   p_glPixelStorei(GL_UNPACK_ROW_LENGTH, 64);
-  p_glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 64, 256 * 2, 0, GL_RGBA,GL_UNSIGNED_BYTE,buf);
-  free(buf);
+  p_glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 64, 256 * 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, buf.get());
  }
  p_glBindTexture(GL_TEXTURE_2D, textures[3]);
  p_glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
@@ -803,10 +795,8 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const int sc
 
  p_glBindTexture(GL_TEXTURE_2D, textures[0]);
      
- p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
- p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
- //p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, 0x812F);
- //p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, 0x812F);
+ p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+ p_glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 
  p_glBindTexture(GL_TEXTURE_2D, textures[2]);
 

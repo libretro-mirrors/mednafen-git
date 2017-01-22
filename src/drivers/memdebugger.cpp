@@ -53,7 +53,7 @@ bool MemDebugger::ICV_Init(const char *newcode)
  if((size_t)ict == (size_t)-1)
  {
   error_string = trio_aprintf("iconv_open() error: %m");
-  error_time = SDL_GetTicks();
+  error_time = Time::MonoMS();
   return(0);
  }
 
@@ -61,7 +61,7 @@ bool MemDebugger::ICV_Init(const char *newcode)
  if((size_t)ict_to_utf8 == (size_t)-1)
  {
   error_string = trio_aprintf("iconv_open() error: %m");
-  error_time = SDL_GetTicks();
+  error_time = Time::MonoMS();
   return(0);
  }
 
@@ -69,7 +69,7 @@ bool MemDebugger::ICV_Init(const char *newcode)
  if((size_t)ict_utf16_to_game == (size_t)-1)
  {
   error_string = trio_aprintf("iconv_open() error: %m");
-  error_time = SDL_GetTicks();
+  error_time = Time::MonoMS();
   return(0);
  }
 
@@ -103,335 +103,277 @@ void MemDebuggerPrompt::TheEnd(const std::string &pstring)
 }
 
 
-bool MemDebugger::DoBSSearch(uint32 byte_count, uint8 *thebytes)
+bool MemDebugger::DoBSSearch(const std::vector<uint8>& thebytes)
 {
-	 const uint64 zemod = SizeCache[CurASpace];
-         const uint32 start_a = ASpacePos[CurASpace] % zemod;
-         uint32 a = start_a;
-	 bool found = FALSE;
-	 uint8 *bbuffer = (uint8 *)calloc(1, byte_count);
-
+	const size_t byte_count = thebytes.size();
+	const uint64 zemod = SizeCache[CurASpace];
+        const uint32 start_a = ASpacePos[CurASpace] % zemod;
+        uint32 a = start_a;
+	bool found = false;
+	std::vector<uint8> bbuffer(byte_count, 0);
 	 
-         do
+        do
+        {
+         ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), a, byte_count, bbuffer.data());
+         if(!memcmp(bbuffer.data(), thebytes.data(), byte_count))
          {
-          ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), a, byte_count, bbuffer);
-          if(!memcmp(bbuffer, thebytes, byte_count))
-          {
-           ASpacePos[CurASpace] = a;
-           found = TRUE;
-           break;
-          }
-          a = (a + 1) % zemod;
-         } while(a != start_a);
+          ASpacePos[CurASpace] = a;
+          found = true;
+          break;
+         }
+         a = (a + 1) % zemod;
+        } while(a != start_a);
 	 
-
-	 free(bbuffer);
-	 return(found);
+	return found;
 }
 
-bool MemDebugger::DoRSearch(uint32 byte_count, uint8 *the_bytes)
+bool MemDebugger::DoRSearch(const std::vector<uint8>& thebytes)
 {
-	 const uint64 zemod = SizeCache[CurASpace];
-         const uint32 start_a = (ASpacePos[CurASpace] - 1) % zemod;
-         uint32 a = start_a;
-	 bool found = FALSE;
-	 uint8 *bbuffer = (uint8 *)calloc(1, byte_count);
+	const size_t byte_count = thebytes.size();
+	const uint64 zemod = SizeCache[CurASpace];
+        const uint32 start_a = (ASpacePos[CurASpace] - 1) % zemod;
+        uint32 a = start_a;
+	bool found = false;
+	std::vector<uint8> bbuffer(byte_count + 1, 0);
 
-	 
-         do
+        do
+        {
+         ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), a, byte_count + 1, bbuffer.data());
+         bool match = true;
+
+         for(uint32 i = 1; i <= byte_count; i++)
          {
-          ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), a, byte_count + 1, bbuffer);
-          bool match = TRUE;
-
-          for(uint32 i = 1; i <= byte_count; i++)
+          if(((bbuffer[i] - bbuffer[i - 1]) & 0xFF) != thebytes[i - 1])
           {
-           if(((bbuffer[i] - bbuffer[i - 1]) & 0xFF) != the_bytes[i - 1])
-           {
-            match = FALSE;
-            break;
-           }
-          }
-          if(match)
-          {
-           found = TRUE;
-           ASpacePos[CurASpace] = (a + 1) % zemod;
+           match = false;
            break;
           }
-          a = (a + 1) % zemod;
-         } while(a != start_a);
+         }
+         if(match)
+         {
+          found = true;
+          ASpacePos[CurASpace] = (a + 1) % zemod;
+          break;
+         }
+         a = (a + 1) % zemod;
+        } while(a != start_a);
 	 
-	 free(bbuffer);
-
-	 return(found);
+	return found;
 }
 
-uint8 *MemDebugger::TextToBS(const char *text, size_t *TheCount)
+std::vector<uint8> MemDebugger::TextToBS(const std::string& text)
 {
-          size_t byte_count;
-          uint8 *thebytes = NULL;
-	  size_t text_len = strlen(text);
-          size_t nib_count;
+	const size_t text_len = text.size();
+	std::vector<uint8> ret((text_len + 1) / 2, 0);
+	size_t nib_count = 0;
 
-          thebytes = (uint8 *)calloc(1, text_len / 2);
+        for(size_t x = 0; x < text_len; x++)
+        {
+         int c = tolower(text[x]);
 
-          nib_count = 0;
-          for(size_t x = 0; x < text_len; x++)
-          {
-           int c = tolower(text[x]);
-           if(c >= '0' && c <= '9')
-            c -= '0';
-           else if(c >= 'a' && c <= 'f')
-           {
-            c = c - 'a' + 0xa;
-           }
-           else if(c == ' ')
-           {
-            continue;
-           }
-           else
-           {
-            error_string = trio_aprintf("Invalid character '%c' in bytestring.", c);
-            error_time = SDL_GetTicks();
-            InPrompt = None;
-	    free(thebytes);
-            return(NULL);
-           }
-           thebytes[nib_count >> 1] |= c << ((nib_count & 1) ? 0 : 4);
-           nib_count++;
-          }
+         if(c >= '0' && c <= '9')
+          c -= '0';
+         else if(c >= 'a' && c <= 'f')
+         {
+          c = c - 'a' + 0xa;
+         }
+         else if(c == ' ')
+         {
+          continue;
+         }
+         else
+	  throw MDFN_Error(0, _("Invalid character '%c' in bytestring."), c);
 
-          if(nib_count & 1)
-          {
-           error_string = trio_aprintf(_("Invalid number of characters in bytestring."));
-           error_time = SDL_GetTicks();
-           InPrompt = None;
-	   free(thebytes);
-           return(NULL);;
-          }
+         ret[nib_count >> 1] |= c << ((nib_count & 1) ? 0 : 4);
+         nib_count++;
+        }
 
-          byte_count = nib_count >> 1;
-	  *TheCount = byte_count;
-	  return(thebytes);
+        if(nib_count & 1)
+	 throw MDFN_Error(0, _("Invalid number of characters in bytestring."));
+
+	ret.resize(nib_count >> 1);
+
+	return ret;
 }
 
 void MemDebugger::PromptFinish(const std::string &pstring)
 {
-	 if(error_string)
-	 {
-	  free(error_string);
-	  error_string = NULL;
-	 }
-         if(InPrompt == Goto || InPrompt == GotoDD)
+ if(error_string)
+ {
+  free(error_string);
+  error_string = nullptr;
+ }
+
+ const PromptType which = InPrompt;
+ InPrompt = None;
+
+ try
+ {
+         if(which == Goto || which == GotoDD)
          {
 	  unsigned long long NewAddie;
 
 	  if(trio_sscanf(pstring.c_str(), "%llx", &NewAddie) == 1)
 	  {
 	   ASpacePos[CurASpace] = NewAddie;
-	   LowNib = FALSE;
-	   if(InPrompt == GotoDD)
+	   LowNib = false;
+	   if(which == GotoDD)
 	    GoGoPowerDD[CurASpace] = NewAddie;
 	  }
          }
-	 else if(InPrompt == SetCharset)
+	 else if(which == SetCharset)
 	 {
 	  if(ICV_Init(pstring.c_str()))
 	  {
-	   
 	   MDFNI_SetSetting(std::string(CurGame->shortname) + "." + std::string("debugger.memcharenc"), pstring);
-	   
 	  }
 	 }
-         else if(InPrompt == DumpMem)
+         else if(which == DumpMem)
          {
           uint32 A1, A2, tmpsize;
           char fname[256];
-	  bool acceptable = FALSE;
-
+	  bool acceptable = false;
 
           if(trio_sscanf(pstring.c_str(), "%08x %08x %255[^\r\n]", &A1, &A2, fname) == 3)
-	   acceptable = TRUE;
+	   acceptable = true;
           else if(trio_sscanf(pstring.c_str(), "%08x +%08x %255[^\r\n]", &A1, &tmpsize, fname) == 3)
 	  {
-	   acceptable = TRUE;
+	   acceptable = true;
 	   A2 = A1 + tmpsize - 1;
 	  }
 
-	  if(acceptable)
-          {
-           
-	   try
-	   {
-	    FileStream fp(fname, FileStream::MODE_WRITE);
-            uint8 write_buffer[256];
-            uint64 a = A1;
-
-	    //printf("%08x %08x\n", A1, A2);
-
-	    while(a <= A2)
-	    {
-             size_t to_write;
-             to_write = A2 - a + 1;
-             if(to_write > 256) to_write = 256;
-
-	     ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), a, to_write, write_buffer);
-
-	     fp.write(write_buffer, to_write);
-	     a += to_write;
-	    }
-           }
-	   catch(std::exception &e)
-	   {
-            error_string = trio_aprintf("%s", e.what());
-            error_time = SDL_GetTicks();
-	   }
-           
-          }
+	  if(!acceptable)
+	   throw MDFN_Error(0, _("Invalid memory dump specification."));
 	  else
-	  {
-	   error_string = trio_aprintf(_("Invalid memory dump specification."));
-	   error_time = SDL_GetTicks();
-	  }
+          {           
+	   FileStream fp(fname, FileStream::MODE_WRITE);
+           uint8 write_buffer[256];
+           uint64 a = A1;
+
+	   //printf("%08x %08x\n", A1, A2);
+
+	   while(a <= A2)
+	   {
+            size_t to_write;
+            to_write = A2 - a + 1;
+            if(to_write > 256) to_write = 256;
+
+	    ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), a, to_write, write_buffer);
+
+	    fp.write(write_buffer, to_write);
+	    a += to_write;
+	   }
+          }
          }
-         else if(InPrompt == LoadMem)
+         else if(which == LoadMem)
          {
           uint32 A1, A2, tmpsize;
           char fname[256];
-          bool acceptable = FALSE;
+          bool acceptable = false;
 
           if(trio_sscanf(pstring.c_str(), "%08x %08x %255[^\r\n]", &A1, &A2, fname) == 3)
-           acceptable = TRUE;
+           acceptable = true;
           else if(trio_sscanf(pstring.c_str(), "%08x +%08x %255[^\r\n]", &A1, &tmpsize, fname) == 3)
           {
-           acceptable = TRUE;
+           acceptable = true;
            A2 = A1 + tmpsize - 1;
           }
 
-          if(acceptable)
-          {
-	   try
-	   {
-            FileStream fp(fname, FileStream::MODE_READ);
-	    uint8 read_buffer[256];
-	    uint64 a = A1;
-
-	    while(a <= A2)
-	    {
-	     size_t to_read; 
-	     size_t read_len;
-
-	     to_read = A2 - a + 1;
-	     if(to_read > 256) to_read = 256;
-
-	     read_len = fp.read(read_buffer, to_read, false);
-
-	     if(read_len > 0)
-              ASpace->PutAddressSpaceBytes(ASpace->name.c_str(), a, read_len, 1, TRUE, read_buffer);
-
-             a += read_len;
-
-	     if(read_len != to_read)
-	     {
-	      error_string = trio_aprintf(_("Warning: unexpected EOF(short by %08llx byte(s))"), (unsigned long long)(A2 - a + 1));
-	      error_time = SDL_GetTicks();
-	      break;
-	     }
-	    }
-           }
-	   catch(std::exception &e)
-	   {
-            error_string = trio_aprintf("%s", e.what());
-            error_time = SDL_GetTicks();
-	   }
-          }
+	  if(!acceptable)
+	   throw MDFN_Error(0, _("Invalid memory load specification."));
           else
           {
-           error_string = trio_aprintf(_("Invalid memory load specification."));
-           error_time = SDL_GetTicks();
+           FileStream fp(fname, FileStream::MODE_READ);
+	   uint8 read_buffer[256];
+	   uint64 a = A1;
+
+	   while(a <= A2)
+	   {
+	    size_t to_read; 
+	    size_t read_len;
+
+	    to_read = A2 - a + 1;
+	    if(to_read > 256) to_read = 256;
+
+	    read_len = fp.read(read_buffer, to_read, false);
+
+	    if(read_len > 0)
+             ASpace->PutAddressSpaceBytes(ASpace->name.c_str(), a, read_len, 1, true, read_buffer);
+
+            a += read_len;
+
+	    if(read_len != to_read)
+	    {
+	     error_string = trio_aprintf(_("Warning: unexpected EOF(short by %08llx byte(s))"), (unsigned long long)(A2 - a + 1));
+	     error_time = Time::MonoMS();
+	     break;
+	    }
+	   }
           }
          }
-	 else if(InPrompt == TextSearch)
+	 else if(which == TextSearch)
 	 {
-          uint8 *thebytes;
-	  uint32 bcount;
-
           TS_String = pstring;
-
+	  //
+	  std::vector<uint8> thebytes;
           char *inbuf, *outbuf;
-          char *utf8_string;
           size_t ibl, obl, obl_start;
-          size_t result;
 
-          utf8_string = strdup(pstring.c_str());
+          ibl = pstring.size();
+          obl_start = obl = (ibl + 1) * 8; // Ugly maximum estimation!
+          thebytes.resize(obl_start);
 
-          ibl = strlen(utf8_string);
-          obl_start = obl = (ibl + 1) * 8; // Hehe, ugly maximum estimation!
-          thebytes = (uint8 *)calloc(1, obl_start);
+          inbuf = (char*)pstring.c_str();
+          outbuf = (char*)thebytes.data();
 
-          inbuf = utf8_string;
-          outbuf = (char*)thebytes;
+	  if(iconv(ict, (ICONV_CONST char **)&inbuf, &ibl, &outbuf, &obl) == (size_t)-1)
+	  {
+	   ErrnoHolder ene(errno);
 
-	  result = iconv(ict, (ICONV_CONST char **)&inbuf, &ibl, &outbuf, &obl);
+	   throw MDFN_Error(0, _("iconv() error: %s"), ene.StrError());
+	  }
 
-          if(result == (size_t)-1)
-          {
-           error_string = trio_aprintf(_("iconv() error: %m"));
-           error_time = SDL_GetTicks();
-           InPrompt = None;
-	   free(utf8_string);
-	   free(thebytes);
-           return;
-          }
-	  bcount = obl_start - obl;
-          free(utf8_string);
+	  thebytes.resize(obl_start - obl);
 
-	  if(!DoBSSearch(bcount, thebytes))
+	  if(!DoBSSearch(thebytes))
 	  {
 	   error_string = trio_aprintf(_("String not found."));
-	   error_time = SDL_GetTicks();
-	   InPrompt = None;
-	  }
-	  free(thebytes);
-	 }
-	 else if(InPrompt == ByteStringSearch)
-	 {
-	  size_t byte_count;
-	  uint8 *the_bytes;
-	  BSS_String = pstring;
-
-	  if(!(the_bytes = TextToBS(pstring.c_str(), &byte_count)))
+	   error_time = Time::MonoMS();
 	   return;
+	  }
+	 }
+	 else if(which == ByteStringSearch)
+	 {
+	  BSS_String = pstring;
+	  //
+	  std::vector<uint8> the_bytes = TextToBS(pstring);
 
-	  if(!DoBSSearch(byte_count, the_bytes))
+	  if(!DoBSSearch(the_bytes))
           {
-	   free(the_bytes);
            error_string = trio_aprintf(_("Bytestring \"%s\" not found."), pstring.c_str());
-           error_time = SDL_GetTicks();
-           InPrompt = None;
+           error_time = Time::MonoMS();
            return;
           }
-	  free(the_bytes);
 	 }
-	 else if(InPrompt == RelSearch)
+	 else if(which == RelSearch)
 	 {
-          size_t byte_count;
-          uint8 *the_bytes;
 	  RS_String = pstring;
+	  //
+	  std::vector<uint8> the_bytes = TextToBS(pstring);
 
-          if(!(the_bytes = TextToBS(pstring.c_str(), &byte_count)))
-           return;
-
-	  if(!DoRSearch(byte_count, the_bytes))
+	  if(!DoRSearch(the_bytes))
 	  {
-	   free(the_bytes);
            error_string = trio_aprintf(_("Bytestring \"%s\" not found."), pstring.c_str());
-           error_time = SDL_GetTicks();
-           InPrompt = None;
+           error_time = Time::MonoMS();
            return;
 	  }
-	  free(the_bytes);
 	 }
-         InPrompt = None;
+ }
+ catch(std::exception& e)
+ {
+  error_string = trio_aprintf("%s", e.what());
+  error_time = Time::MonoMS();
+ }
 }
 
 // Call this function from the game thread.
@@ -442,8 +384,8 @@ void MemDebugger::SetActive(bool newia)
   IsActive = newia;
   if(!newia)
   {
-   InEditMode = FALSE;
-   LowNib = FALSE;
+   InEditMode = false;
+   LowNib = false;
   }
  }
 }
@@ -689,7 +631,7 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
    {
     if(InEditMode)
     {
-     if(SDL_GetTicks() & 0x80)
+     if(Time::MonoMS() & 0x80)
      {
       int pix_offset = alen;
 
@@ -741,7 +683,7 @@ void MemDebugger::Draw(MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_
 
  if(error_string)
  {
-  if(SDL_GetTicks() >= (error_time + 4000))
+  if(Time::MonoMS() >= (error_time + 4000))
   {
    free(error_string);
    error_string = NULL;
@@ -767,7 +709,7 @@ void MemDebugger::ChangePos(int64 delta)
  newpos %= SizeCache[CurASpace];
  ASpacePos[CurASpace] = newpos;
 
- LowNib = FALSE;
+ LowNib = false;
 }
 
 // Call this from the game thread
@@ -811,7 +753,7 @@ int MemDebugger::Event(const SDL_Event *event)
           to_write_len = obl_start - obl;
 
 	  
-	  ASpace->PutAddressSpaceBytes(ASpace->name.c_str(), ASpacePos[CurASpace], to_write_len, 1, TRUE, to_write);
+	  ASpace->PutAddressSpaceBytes(ASpace->name.c_str(), ASpacePos[CurASpace], to_write_len, 1, true, to_write);
 	  
 
 	  LowNib = 0;
@@ -833,7 +775,7 @@ int MemDebugger::Event(const SDL_Event *event)
          ASpace->GetAddressSpaceBytes(ASpace->name.c_str(), ASpacePos[CurASpace], 1, &meowbyte);
          meowbyte &= 0xF << ((LowNib) * 4);
          meowbyte |= tc << ((!LowNib) * 4);
-         ASpace->PutAddressSpaceBytes(ASpace->name.c_str(), ASpacePos[CurASpace], 1, 1, TRUE, &meowbyte);
+         ASpace->PutAddressSpaceBytes(ASpace->name.c_str(), ASpacePos[CurASpace], 1, 1, true, &meowbyte);
 	 
 
          LowNib = !LowNib;
@@ -872,7 +814,7 @@ int MemDebugger::Event(const SDL_Event *event)
 
 	 case SDLK_TAB:
 		InTextArea = !InTextArea;
-		LowNib = FALSE;
+		LowNib = false;
 		break;
 
 	 case SDLK_d:
@@ -887,7 +829,7 @@ int MemDebugger::Event(const SDL_Event *event)
 	        if(SizeCache[CurASpace] > (1 << 24))
                 {
                  error_string = trio_aprintf(_("Address space is too large to search!"));
-                 error_time = SDL_GetTicks();
+                 error_time = Time::MonoMS();
                 }
 		else
 		{
@@ -899,7 +841,7 @@ int MemDebugger::Event(const SDL_Event *event)
 		if(SizeCache[CurASpace] > (1 << 24))
                 {
                  error_string = trio_aprintf(_("Address space is too large to search!"));
-                 error_time = SDL_GetTicks();
+                 error_time = Time::MonoMS();
                 }
                 else
                 {
@@ -917,7 +859,7 @@ int MemDebugger::Event(const SDL_Event *event)
                 if(ASpace->TotalBits > 24)
                 {
                  error_string = trio_aprintf(_("Address space is too large to search!"));
-                 error_time = SDL_GetTicks();
+                 error_time = Time::MonoMS();
                 }
                 else
                 {
@@ -942,15 +884,15 @@ int MemDebugger::Event(const SDL_Event *event)
 
 	 case SDLK_INSERT:
 		InEditMode = !InEditMode;
-		LowNib = FALSE;
+		LowNib = false;
 		break;
 
 	 case SDLK_END: ASpacePos[CurASpace] = (SizeCache[CurASpace] - (byte_bpr * byte_maxrows / 2)) % SizeCache[CurASpace]; 
-			LowNib = FALSE;
+			LowNib = false;
 			break;
 
 	 case SDLK_HOME: ASpacePos[CurASpace] = 0;
-			 LowNib = FALSE;
+			 LowNib = false;
 			 break;
 
 
@@ -968,14 +910,13 @@ int MemDebugger::Event(const SDL_Event *event)
 			 CurASpace = AddressSpaces->size() - 1;
 
 			ASpace = &(*AddressSpaces)[CurASpace];
-
-			LowNib = FALSE;
+			LowNib = false;
 			break;
+
 	 case SDLK_PERIOD:
 			CurASpace = (CurASpace + 1) % AddressSpaces->size();
 			ASpace = &(*AddressSpaces)[CurASpace];
-
-			LowNib = FALSE;
+			LowNib = false;
 			break;
 	}
 	break;

@@ -2,21 +2,21 @@
 
 <?php BeginPage('gba', 'Game Boy Advance'); ?>
 
-<?php BeginSection('Introduction'); ?>
+<?php BeginSection('Introduction', "Section_intro"); ?>
 
-Mednafen's GameBoy Advance emulation is based off of <a href="http://vba.sf.net/">VisualBoy Advance</a>.
+Mednafen's GameBoy Advance emulation is based off of <b>VisualBoy Advance</b>.
 
-<?php BeginSection('BIOS'); ?>
+<?php BeginSection('BIOS', "Section_bios"); ?>
 Built-in high-level BIOS emulation is used by default; however, a real BIOS can be used by setting the <a href="#gba.bios">gba.bios</a> setting.
 <?php EndSection(); ?>
 
-<?php BeginSection('Custom Palettes'); ?>
+<?php BeginSection('Custom Palettes', "Section_custom_palettes"); ?>
 <p>
 Custom palettes should contain 32768 8-bit-per-color-component RGB triplets.
 </p>
 <?php EndSection(); ?>
 
-<?php BeginSection('Backup Memory Type'); ?>
+<?php BeginSection('Backup Memory Type', "Section_backupmem_type"); ?>
    <p>
    To specify the backup memory type on a per-game basis, create a file with the same name as the ROM image but with the extension replaced with "type",
    in the "sav" directory under the Mednafen base directory.
@@ -41,7 +41,7 @@ Custom palettes should contain 32768 8-bit-per-color-component RGB triplets.
 
 <?php EndSection(); ?>
 
-<?php BeginSection('Default Key Assignments'); ?>
+<?php BeginSection('Default Key Assignments', "Section_default_keys"); ?>
  <table border>
   <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
   <tr><td>ALT + SHIFT + 1</td><td>Activate in-game input configuration process for GameBoy Advance pad.</td><td>input_config1</td></tr>

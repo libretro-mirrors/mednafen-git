@@ -44,8 +44,7 @@ namespace MDFN_IEN_NES
 {
 uint64 timestampbase;
 
-// Accessed in debug.cpp
-NESGameType *GameInterface = NULL;
+static NESGameType GameInterface;
 
 static readfunc NonCheatARead[0x10000 + 0x100];
 readfunc ARead[0x10000 + 0x100];
@@ -154,13 +153,10 @@ static void Cleanup(void)
 
  GameExpSound.clear();
 
- if(GameInterface)
- {
-  if(GameInterface->Kill)
-   GameInterface->Kill();
-  free(GameInterface);
-  GameInterface = NULL;
- }
+ if(GameInterface.Kill)
+  GameInterface.Kill();
+
+ memset(&GameInterface, 0, sizeof(GameInterface));
 
  Genie_Kill();
  MDFNSND_Close();
@@ -169,8 +165,8 @@ static void Cleanup(void)
 
 static void CloseGame(void)
 {
- if(GameInterface && GameInterface->SaveNV)
-  GameInterface->SaveNV();
+ if(GameInterface.SaveNV)
+  GameInterface.SaveNV();
 
  Cleanup();
 }
@@ -202,7 +198,7 @@ static void InitCommon(const std::string& fbase)
           MDFNGameInfo->VideoSystem = VIDSYS_PAL;
         }
 
-        GameInterface = (NESGameType *)calloc(1, sizeof(NESGameType));
+	memset(&GameInterface, 0, sizeof(GameInterface));
 
         SetReadHandler(0x0000, 0xFFFF, ANull);
         SetWriteHandler(0x0000, 0xFFFF, BNull);
@@ -276,7 +272,7 @@ static void Load(MDFNFILE *fp)
 
 	InitCommon(fp->fbase);
 
-	LoadFunction(fp->stream(), GameInterface);
+	LoadFunction(fp->stream(), &GameInterface);
 
 	{
 	 int w;
@@ -393,8 +389,8 @@ static void Emulate(EmulateSpecStruct *espec)
 
 void ResetNES(void)
 {
-	if(GameInterface->Reset)
-         GameInterface->Reset();
+	if(GameInterface.Reset)
+         GameInterface.Reset();
         MDFNSND_Reset();
         MDFNPPU_Reset();
         X6502_Reset();
@@ -428,8 +424,8 @@ void PowerNES(void)
 	/* Have the external game hardware "powered" after the internal NES stuff.  
 	   Needed for the NSF code and VS System code.
 	*/
-	if(GameInterface->Power)
-	 GameInterface->Power();
+	if(GameInterface.Power)
+	 GameInterface.Power();
 
 	if(NESIsVSUni)
          MDFN_VSUniPower();
@@ -450,9 +446,9 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
  MDFNSND_StateAction(sm, load, data_only);
  NESINPUT_StateAction(sm, load, data_only);
 
- if(GameInterface->StateAction)
+ if(GameInterface.StateAction)
  {
-  GameInterface->StateAction(sm, load, data_only);
+  GameInterface.StateAction(sm, load, data_only);
  }
 }
 

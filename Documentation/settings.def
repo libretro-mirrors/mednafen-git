@@ -106,15 +106,24 @@ keyboard 13
 
 
 0
-cdplay.pixshader
+cdplay.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+cdplay.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -145,14 +154,80 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-cdplay.scanlines
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+cdplay.shader.goat.fprog
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
 0
--100
-100
+
+
+0
+cdplay.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+cdplay.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+cdplay.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+cdplay.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+cdplay.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 cdplay.special
 MDFNSF_COMMON_TEMPLATE 
@@ -222,11 +297,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -1276,15 +1354,42 @@ MDFNST_STRING
 
 
 0
-demo.pixshader
+demo.resamp_quality
+
+Sound quality.
+Higher values correspond to better SNR and better preservation of higher frequencies(\"brightness\"), at the cost of increased computational complexity and a negligible increase in latency.\n\nHigher values will also slightly increase the probability of sample clipping(relevant if Mednafen\'s volume control settings are set too high), due to increased (time-domain) ringing.
+MDFNST_INT
+3
+0
+5
+0
+demo.resamp_rate_error
+
+Sound output rate tolerance.
+Lower values correspond to better matching of the output rate of the resampler to the actual desired output rate, at the expense of increased RAM usage and poorer CPU cache utilization.
+MDFNST_FLOAT
+0.0000009
+0.0000001
+0.0000350
+0
+demo.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+demo.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -1315,32 +1420,80 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-demo.resamp_quality
-
-Sound quality.
-Higher values correspond to better SNR and better preservation of higher frequencies(\"brightness\"), at the cost of increased computational complexity and a negligible increase in latency.\n\nHigher values will also slightly increase the probability of sample clipping(relevant if Mednafen\'s volume control settings are set too high), due to increased (time-domain) ringing.
-MDFNST_INT
-3
-0
-5
-0
-demo.resamp_rate_error
-
-Sound output rate tolerance.
-Lower values correspond to better matching of the output rate of the resampler to the actual desired output rate, at the expense of increased RAM usage and poorer CPU cache utilization.
-MDFNST_FLOAT
-0.0000009
-0.0000001
-0.0000350
-0
-demo.scanlines
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+demo.shader.goat.fprog
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
 0
--100
-100
+
+
+0
+demo.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+demo.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+demo.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+demo.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+demo.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 demo.special
 MDFNSF_COMMON_TEMPLATE 
@@ -1410,11 +1563,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -1852,15 +2008,24 @@ MDFNST_STRING
 
 
 0
-gb.pixshader
+gb.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+gb.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -1891,14 +2056,80 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-gb.scanlines
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+gb.shader.goat.fprog
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
 0
--100
-100
+
+
+0
+gb.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+gb.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+gb.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+gb.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+gb.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 gb.special
 MDFNSF_COMMON_TEMPLATE 
@@ -1968,11 +2199,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -2251,15 +2485,24 @@ keyboard 119
 
 
 0
-gba.pixshader
+gba.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+gba.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -2290,14 +2533,80 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-gba.scanlines
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+gba.shader.goat.fprog
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
 0
--100
-100
+
+
+0
+gba.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+gba.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+gba.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+gba.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+gba.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 gba.special
 MDFNSF_COMMON_TEMPLATE 
@@ -2367,11 +2676,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -2593,15 +2905,24 @@ keyboard 119
 
 
 0
-gg.pixshader
+gg.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+gg.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -2632,14 +2953,80 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-gg.scanlines
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+gg.shader.goat.fprog
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
 0
--100
-100
+
+
+0
+gg.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+gg.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+gg.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+gg.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+gg.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 gg.special
 MDFNSF_COMMON_TEMPLATE 
@@ -2709,11 +3096,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -3016,15 +3406,33 @@ MDFNST_BOOL
 
 
 0
-lynx.pixshader
+lynx.rotateinput
+
+Virtually rotate the D-pad when the screen is rotated.
+
+MDFNST_BOOL
+1
+
+
+0
+lynx.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+lynx.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -3055,23 +3463,80 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-lynx.rotateinput
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+lynx.shader.goat.fprog
+MDFNSF_COMMON_TEMPLATE 
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
+0
 
-Virtually rotate D-pad along with screen.
+
+0
+lynx.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+lynx.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+lynx.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
 
 MDFNST_BOOL
 1
 
 
 0
-lynx.scanlines
+lynx.shader.goat.tp
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
 0
--100
-100
+lynx.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 lynx.special
 MDFNSF_COMMON_TEMPLATE 
@@ -3141,11 +3606,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -6613,45 +7081,6 @@ keyboard 13
 
 
 0
-md.pixshader
-MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
-MDFNST_ENUM
-none
-
-
-10
-none
-None/Disabled
-
-autoip
-Auto Interpolation
-Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
-autoipsharper
-Sharper Auto Interpolation
-Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
-scale2x
-Scale2x
-
-sabr
-SABR v3.0
-GPU-intensive.
-ipsharper
-Sharper bilinear interpolation.
-
-ipxnoty
-Linear interpolation on X axis only.
-
-ipynotx
-Linear interpolation on Y axis only.
-
-ipxnotysharper
-Sharper version of \"ipxnoty\".
-
-ipynotxsharper
-Sharper version of \"ipynotx\".
-
 md.region
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 Emulate the specified region\'s Genesis/MegaDrive
@@ -6706,11 +7135,125 @@ Probably an invalid region, but available for testing purposes anyway.
 md.scanlines
 MDFNSF_COMMON_TEMPLATE 
 Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
 MDFNST_INT
 0
 -100
 100
+0
+md.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
+MDFNST_ENUM
+none
+
+
+11
+none
+None/Disabled
+
+autoip
+Auto Interpolation
+Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
+autoipsharper
+Sharper Auto Interpolation
+Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
+scale2x
+Scale2x
+
+sabr
+SABR v3.0
+GPU-intensive.
+ipsharper
+Sharper bilinear interpolation.
+
+ipxnoty
+Linear interpolation on X axis only.
+
+ipynotx
+Linear interpolation on Y axis only.
+
+ipxnotysharper
+Sharper version of \"ipxnoty\".
+
+ipynotxsharper
+Sharper version of \"ipynotx\".
+
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+md.shader.goat.fprog
+MDFNSF_COMMON_TEMPLATE 
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
+0
+
+
+0
+md.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+md.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+md.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+md.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+md.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 md.special
 MDFNSF_COMMON_TEMPLATE 
@@ -6780,11 +7323,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -9490,15 +10036,24 @@ MDFNST_BOOL
 
 
 0
-nes.pixshader
+nes.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+nes.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -9529,14 +10084,80 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-nes.scanlines
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+nes.shader.goat.fprog
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
 0
--100
-100
+
+
+0
+nes.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+nes.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+nes.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+nes.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+nes.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 nes.slend
 
@@ -9660,11 +10281,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -10021,15 +10645,24 @@ English
 1
 
 
-ngp.pixshader
+ngp.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+ngp.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -10060,14 +10693,80 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-ngp.scanlines
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+ngp.shader.goat.fprog
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
 0
--100
-100
+
+
+0
+ngp.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+ngp.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+ngp.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+ngp.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+ngp.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 ngp.special
 MDFNSF_COMMON_TEMPLATE 
@@ -10137,11 +10836,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -12379,45 +13081,6 @@ MDFNST_BOOL
 
 
 0
-pce.pixshader
-MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
-MDFNST_ENUM
-none
-
-
-10
-none
-None/Disabled
-
-autoip
-Auto Interpolation
-Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
-autoipsharper
-Sharper Auto Interpolation
-Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
-scale2x
-Scale2x
-
-sabr
-SABR v3.0
-GPU-intensive.
-ipsharper
-Sharper bilinear interpolation.
-
-ipxnoty
-Linear interpolation on X axis only.
-
-ipynotx
-Linear interpolation on Y axis only.
-
-ipxnotysharper
-Sharper version of \"ipxnoty\".
-
-ipynotxsharper
-Sharper version of \"ipynotx\".
-
 pce.psgrevision
 
 Select PSG revision.
@@ -12457,11 +13120,125 @@ MDFNST_FLOAT
 pce.scanlines
 MDFNSF_COMMON_TEMPLATE 
 Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
 MDFNST_INT
 0
 -100
 100
+0
+pce.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
+MDFNST_ENUM
+none
+
+
+11
+none
+None/Disabled
+
+autoip
+Auto Interpolation
+Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
+autoipsharper
+Sharper Auto Interpolation
+Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
+scale2x
+Scale2x
+
+sabr
+SABR v3.0
+GPU-intensive.
+ipsharper
+Sharper bilinear interpolation.
+
+ipxnoty
+Linear interpolation on X axis only.
+
+ipynotx
+Linear interpolation on Y axis only.
+
+ipxnotysharper
+Sharper version of \"ipxnoty\".
+
+ipynotxsharper
+Sharper version of \"ipynotx\".
+
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+pce.shader.goat.fprog
+MDFNSF_COMMON_TEMPLATE 
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
+0
+
+
+0
+pce.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+pce.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+pce.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+pce.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+pce.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 pce.slend
 
@@ -12549,11 +13326,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -13675,15 +14455,24 @@ MDFNST_UINT
 1
 100
 0
-pce_fast.pixshader
+pce_fast.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+pce_fast.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -13714,14 +14503,80 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-pce_fast.scanlines
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+pce_fast.shader.goat.fprog
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
 0
--100
-100
+
+
+0
+pce_fast.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+pce_fast.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+pce_fast.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+pce_fast.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+pce_fast.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 pce_fast.slend
 
@@ -13809,11 +14664,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -15436,45 +16294,6 @@ MDFNST_BOOL
 
 
 0
-pcfx.pixshader
-MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
-MDFNST_ENUM
-none
-
-
-10
-none
-None/Disabled
-
-autoip
-Auto Interpolation
-Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
-autoipsharper
-Sharper Auto Interpolation
-Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
-scale2x
-Scale2x
-
-sabr
-SABR v3.0
-GPU-intensive.
-ipsharper
-Sharper bilinear interpolation.
-
-ipxnoty
-Linear interpolation on X axis only.
-
-ipynotx
-Linear interpolation on Y axis only.
-
-ipxnotysharper
-Sharper version of \"ipxnoty\".
-
-ipynotxsharper
-Sharper version of \"ipynotx\".
-
 pcfx.rainbow.chromaip
 
 Enable bilinear interpolation on the chroma channel of RAINBOW YUV output.
@@ -15505,11 +16324,125 @@ MDFNST_FLOAT
 pcfx.scanlines
 MDFNSF_COMMON_TEMPLATE 
 Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
 MDFNST_INT
 0
 -100
 100
+0
+pcfx.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
+MDFNST_ENUM
+none
+
+
+11
+none
+None/Disabled
+
+autoip
+Auto Interpolation
+Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
+autoipsharper
+Sharper Auto Interpolation
+Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
+scale2x
+Scale2x
+
+sabr
+SABR v3.0
+GPU-intensive.
+ipsharper
+Sharper bilinear interpolation.
+
+ipxnoty
+Linear interpolation on X axis only.
+
+ipynotx
+Linear interpolation on Y axis only.
+
+ipxnotysharper
+Sharper version of \"ipxnoty\".
+
+ipynotxsharper
+Sharper version of \"ipynotx\".
+
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+pcfx.shader.goat.fprog
+MDFNSF_COMMON_TEMPLATE 
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
+0
+
+
+0
+pcfx.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+pcfx.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+pcfx.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+pcfx.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+pcfx.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 pcfx.slend
 
@@ -15597,11 +16530,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -15724,15 +16660,24 @@ MDFNST_FLOAT
 0.01
 256
 0
-player.pixshader
+player.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+player.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -15763,14 +16708,80 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-player.scanlines
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+player.shader.goat.fprog
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
 0
--100
-100
+
+
+0
+player.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+player.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+player.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+player.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+player.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 player.special
 MDFNSF_COMMON_TEMPLATE 
@@ -15840,11 +16851,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -15970,7 +16984,7 @@ scph5501.bin
 psx.bios_sanity
 
 Enable BIOS ROM image sanity checks.
-
+Enables blacklisting of known bad BIOS dumps and known BIOS versions that don\'t match the region of the hardware being emulated.
 MDFNST_BOOL
 1
 
@@ -16082,13 +17096,22 @@ MDFNST_BOOL
 
 0
 psx.input.analog_mode_ct
-MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+
 Enable analog mode combo-button alternate toggle.
-When enabled, instead of the configured Analog mode toggle button for the emulated DualShock, use a combination of buttons to toggle it instead.  When Select, Start, and all four shoulder buttons are held down for about 1 second, the mode will toggle.
+When enabled, instead of the configured Analog mode toggle button for the emulated DualShock, use a combination of buttons held down for one emulated second to toggle it instead.  The specific combination is controlled via the \"psx.input.analog_mode_ct.compare\" setting, which by default is Select, Start, and all four shoulder buttons.
 MDFNST_BOOL
 0
 
 
+0
+psx.input.analog_mode_ct.compare
+
+Compare value for analog mode combo-button alternate toggle.
+0x0001=SELECT\n0x0002=L3\n0x0004=R3\n0x0008=START\n0x0010=D-Pad UP\n0x0020=D-Pad Right\n0x0040=D-Pad Down\n0x0080=D-Pad Left\n0x0100=L2\n0x0200=R2\n0x0400=L1\n0x0800=R1\n0x1000=△\n0x2000=○\n0x4000=x\n0x8000=□
+MDFNST_UINT
+0x0F09
+0x0000
+0xFFFF
 0
 psx.input.mouse_sensitivity
 
@@ -26437,45 +27460,6 @@ MDFNST_BOOL
 
 
 0
-psx.pixshader
-MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
-MDFNST_ENUM
-none
-
-
-10
-none
-None/Disabled
-
-autoip
-Auto Interpolation
-Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
-autoipsharper
-Sharper Auto Interpolation
-Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
-scale2x
-Scale2x
-
-sabr
-SABR v3.0
-GPU-intensive.
-ipsharper
-Sharper bilinear interpolation.
-
-ipxnoty
-Linear interpolation on X axis only.
-
-ipynotx
-Linear interpolation on Y axis only.
-
-ipxnotysharper
-Sharper version of \"ipxnoty\".
-
-ipynotxsharper
-Sharper version of \"ipynotx\".
-
 psx.region_autodetect
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 Attempt to auto-detect region of game.
@@ -26506,11 +27490,125 @@ Europe
 psx.scanlines
 MDFNSF_COMMON_TEMPLATE 
 Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
 MDFNST_INT
 0
 -100
 100
+0
+psx.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
+MDFNST_ENUM
+none
+
+
+11
+none
+None/Disabled
+
+autoip
+Auto Interpolation
+Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
+autoipsharper
+Sharper Auto Interpolation
+Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
+scale2x
+Scale2x
+
+sabr
+SABR v3.0
+GPU-intensive.
+ipsharper
+Sharper bilinear interpolation.
+
+ipxnoty
+Linear interpolation on X axis only.
+
+ipynotx
+Linear interpolation on Y axis only.
+
+ipxnotysharper
+Sharper version of \"ipxnoty\".
+
+ipynotxsharper
+Sharper version of \"ipynotx\".
+
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+psx.shader.goat.fprog
+MDFNSF_COMMON_TEMPLATE 
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
+0
+
+
+0
+psx.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+psx.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+psx.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+psx.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+psx.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 psx.slend
 
@@ -26625,11 +27723,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -26995,15 +28096,24 @@ MDFNST_STRING
 
 
 0
-sms.pixshader
+sms.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+sms.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -27034,14 +28144,116 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-sms.scanlines
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+sms.shader.goat.fprog
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
 0
--100
-100
+
+
+0
+sms.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+sms.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+sms.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+sms.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+sms.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+sms.slend
+
+Last displayed scanline in NTSC mode.
+
+MDFNST_UINT
+239
+0
+239
+0
+sms.slendp
+
+Last displayed scanline in PAL mode.
+
+MDFNST_UINT
+239
+0
+239
+0
+sms.slstart
+
+First displayed scanline in NTSC mode.
+
+MDFNST_UINT
+0
+0
+239
+0
+sms.slstartp
+
+First displayed scanline in PAL mode.
+
+MDFNST_UINT
+0
+0
+239
 0
 sms.special
 MDFNSF_COMMON_TEMPLATE 
@@ -27111,11 +28323,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -27284,6 +28499,15 @@ snes.forcemono
 MDFNSF_CAT_SOUND MDFNSF_COMMON_TEMPLATE 
 Force monophonic sound output.
 
+MDFNST_BOOL
+0
+
+
+0
+snes.h_blend
+
+Enable horizontal blend(blur) filter.
+Intended for use in combination with the \"goat\" OpenGL shader, or with bilinear interpolation or linear interpolation on the X axis enabled.
 MDFNST_BOOL
 0
 
@@ -28606,15 +29830,24 @@ MDFNST_FLOAT
 
 
 0
-snes.pixshader
+snes.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+snes.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -28645,14 +29878,80 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-snes.scanlines
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+snes.shader.goat.fprog
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
 0
--100
-100
+
+
+0
+snes.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+snes.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+snes.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+snes.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+snes.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 snes.special
 MDFNSF_COMMON_TEMPLATE 
@@ -28722,11 +30021,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -29185,15 +30487,42 @@ MDFNST_STRING
 
 
 0
-snes_faust.pixshader
+snes_faust.resamp_quality
+
+Sound quality.
+Higher values correspond to better SNR and better preservation of higher frequencies(\"brightness\"), at the cost of increased computational complexity and a negligible increase in latency.\n\nHigher values will also slightly increase the probability of sample clipping(relevant if Mednafen\'s volume control settings are set too high), due to increased (time-domain) ringing.
+MDFNST_INT
+3
+0
+5
+0
+snes_faust.resamp_rate_error
+
+Sound output rate tolerance.
+Lower values correspond to better matching of the output rate of the resampler to the actual desired output rate, at the expense of increased RAM usage and poorer CPU cache utilization.
+MDFNST_FLOAT
+0.000035
+0.0000001
+0.0015
+0
+snes_faust.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+snes_faust.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -29224,32 +30553,80 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-snes_faust.resamp_quality
-
-Sound quality.
-Higher values correspond to better SNR and better preservation of higher frequencies(\"brightness\"), at the cost of increased computational complexity and a negligible increase in latency.\n\nHigher values will also slightly increase the probability of sample clipping(relevant if Mednafen\'s volume control settings are set too high), due to increased (time-domain) ringing.
-MDFNST_INT
-3
-0
-5
-0
-snes_faust.resamp_rate_error
-
-Sound output rate tolerance.
-Lower values correspond to better matching of the output rate of the resampler to the actual desired output rate, at the expense of increased RAM usage and poorer CPU cache utilization.
-MDFNST_FLOAT
-0.000035
-0.0000001
-0.0015
-0
-snes_faust.scanlines
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+snes_faust.shader.goat.fprog
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
 0
--100
-100
+
+
+0
+snes_faust.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+snes_faust.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+snes_faust.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+snes_faust.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+snes_faust.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 snes_faust.special
 MDFNSF_COMMON_TEMPLATE 
@@ -29337,11 +30714,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -29650,6 +31030,33 @@ MDFNST_BOOL
 
 
 0
+ss.correct_aspect
+
+Correct aspect ratio.
+Disabling aspect ratio correction with this setting should be considered a hack.\n\nIf disabling it to allow for sharper pixels by also separately disabling interpolation(though using Mednafen\'s \"autoipsharper\" OpenGL shader is usually a better option), remember to use scale factors that are multiples of 2, or else games that use high-resolution and interlaced modes will have distorted pixels.\n\nDisabling aspect ratio correction with this setting will allow for the QuickTime movie recording feature to produce much smaller files using much less CPU time.
+MDFNST_BOOL
+1
+
+
+0
+ss.dbg_exe_cdpath
+MDFNSF_SUPPRESS_DOC 
+CD image to use with homebrew executable loading.
+
+MDFNST_STRING
+
+
+
+0
+ss.dbg_mask
+MDFNSF_SUPPRESS_DOC 
+Debug printf mask.
+
+MDFNST_UINT
+0x00001
+0x00000
+0xFFFFF
+0
 ss.debugger.disfontsize
 MDFNSF_COMMON_TEMPLATE 
 Disassembly font size.
@@ -29716,6 +31123,24 @@ Force monophonic sound output.
 
 MDFNST_BOOL
 0
+
+
+0
+ss.h_blend
+
+Enable horizontal blend(blur) filter.
+Intended for use in combination with the \"goat\" OpenGL shader, or with bilinear interpolation or linear interpolation on the X axis enabled.  Has a more noticeable effect with the Saturn\'s higher horizontal resolution modes(640/704).
+MDFNST_BOOL
+0
+
+
+0
+ss.h_overscan
+
+Show horizontal overscan area.
+
+MDFNST_BOOL
+1
 
 
 0
@@ -33778,45 +35203,6 @@ MDFNST_BOOL
 
 
 0
-ss.pixshader
-MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
-MDFNST_ENUM
-none
-
-
-10
-none
-None/Disabled
-
-autoip
-Auto Interpolation
-Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
-autoipsharper
-Sharper Auto Interpolation
-Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
-scale2x
-Scale2x
-
-sabr
-SABR v3.0
-GPU-intensive.
-ipsharper
-Sharper bilinear interpolation.
-
-ipxnoty
-Linear interpolation on X axis only.
-
-ipynotx
-Linear interpolation on Y axis only.
-
-ipxnotysharper
-Sharper version of \"ipxnoty\".
-
-ipynotxsharper
-Sharper version of \"ipynotx\".
-
 ss.region_autodetect
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 Attempt to auto-detect region of game.
@@ -33862,7 +35248,7 @@ Latin America
 ss.scanlines
 MDFNSF_COMMON_TEMPLATE 
 Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
 MDFNST_INT
 0
 -100
@@ -33876,6 +35262,120 @@ MDFNST_UINT
 4
 0
 10
+0
+ss.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
+MDFNST_ENUM
+none
+
+
+11
+none
+None/Disabled
+
+autoip
+Auto Interpolation
+Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
+autoipsharper
+Sharper Auto Interpolation
+Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
+scale2x
+Scale2x
+
+sabr
+SABR v3.0
+GPU-intensive.
+ipsharper
+Sharper bilinear interpolation.
+
+ipxnoty
+Linear interpolation on X axis only.
+
+ipynotx
+Linear interpolation on Y axis only.
+
+ipxnotysharper
+Sharper version of \"ipxnoty\".
+
+ipynotxsharper
+Sharper version of \"ipynotx\".
+
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+ss.shader.goat.fprog
+MDFNSF_COMMON_TEMPLATE 
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
+0
+
+
+0
+ss.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+ss.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+ss.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+ss.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+ss.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 ss.slend
 
@@ -34032,11 +35532,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -34177,15 +35680,33 @@ MDFNST_BOOL
 
 
 0
-ssfplay.pixshader
+ssfplay.resamp_quality
+
+SCSP output resampler quality.
+0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen\'s output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors.
+MDFNST_UINT
+4
+0
+10
+0
+ssfplay.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+ssfplay.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -34216,23 +35737,80 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-ssfplay.resamp_quality
-
-SCSP output resampler quality.
-0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen\'s output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors.
-MDFNST_UINT
-4
-0
-10
-0
-ssfplay.scanlines
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+ssfplay.shader.goat.fprog
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
 0
--100
-100
+
+
+0
+ssfplay.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+ssfplay.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+ssfplay.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+ssfplay.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+ssfplay.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 ssfplay.special
 MDFNSF_COMMON_TEMPLATE 
@@ -34302,11 +35880,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -34795,15 +36376,24 @@ MDFNST_UINT
 1
 10
 0
-vb.pixshader
+vb.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+vb.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -34834,14 +36424,80 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-vb.scanlines
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+vb.shader.goat.fprog
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
 0
--100
-100
+
+
+0
+vb.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+vb.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+vb.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+vb.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+vb.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
 vb.sidebyside.separation
 
@@ -34920,11 +36576,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1
@@ -35103,7 +36762,7 @@ OpenGL + SDL
 This output method is preferred, as all features are available with it.
 sdl
 SDL Surface
-Slower with lower-quality scaling than OpenGL, but if you don\'t have hardware-accelerated OpenGL rendering, it will be faster than software OpenGL rendering. Bilinear interpolation not available. Pixel shaders do not work with this output method, of course.
+Slower with lower-quality scaling than OpenGL, but if you don\'t have hardware-accelerated OpenGL rendering, it will be faster than software OpenGL rendering. Bilinear interpolation not available. OpenGL shaders do not work with this output method, of course.
 overlay
 SDL Overlay
 As fast as OpenGL, perhaps faster in some situations, *if* it\'s hardware-accelerated. Scanline effects are not available. hq2x, hq3x, hq4x are not available. The OSD may be missing or glitchy. PSX emulation will not display properly. Bilinear interpolation can\'t be turned off. Harsh chroma subsampling blurring in some picture types.  If you use this output method, it is strongly recommended to use a special scaler with it, such as nn2x.
@@ -35419,15 +37078,57 @@ Mednafen
 
 
 0
-wswan.pixshader
+wswan.rotateinput
+
+Virtually rotate the D-pads when the screen is rotated.
+
+MDFNST_BOOL
+0
+
+
+0
+wswan.scanlines
 MDFNSF_COMMON_TEMPLATE 
-Enable specified OpenGL pixel shader.
-Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support pixel shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. Bilinear interpolation is disabled with pixel shaders, and any interpolation, if present, will be noted in the description of each pixel shader.
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+wswan.sex
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Sex
+
+MDFNST_ENUM
+F
+
+
+5
+m
+
+
+male
+Male
+
+f
+
+
+female
+Female
+
+3
+
+
+wswan.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
 MDFNST_ENUM
 none
 
 
-10
+11
 none
 None/Disabled
 
@@ -35458,48 +37159,81 @@ Sharper version of \"ipxnoty\".
 ipynotxsharper
 Sharper version of \"ipynotx\".
 
-wswan.rotateinput
-
-Virtually rotate D-pads along with screen.
-
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+wswan.shader.goat.fprog
+MDFNSF_COMMON_TEMPLATE 
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
 MDFNST_BOOL
 0
 
 
 0
-wswan.scanlines
+wswan.shader.goat.hdiv
 MDFNSF_COMMON_TEMPLATE 
-Enable scanlines with specified opacity.
-Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous field\'s lines(only if the video.deinterlacer setting is set to \"weave\", the default).
-MDFNST_INT
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
 0
--100
-100
-0
-wswan.sex
-MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
-Sex
+wswan.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
 
 MDFNST_ENUM
-F
+goatron
 
 
-5
-m
+6
+goatron
+Goatron
+Brightest.
+goattron
 
 
-male
-Male
-
-f
+goatronprime
 
 
-female
-Female
-
-3
+goattronprime
 
 
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+wswan.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+wswan.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+wswan.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
 wswan.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
@@ -35568,11 +37302,14 @@ MDFNST_ENUM
 aspect_mult2
 
 
-8
+9
 0
 Disabled
 
 off
+
+
+none
 
 
 1

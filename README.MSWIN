@@ -1,11 +1,17 @@
 Additional notes for compiling for MS Windows
 ----------------------------------
 
-Compile with MinGW-W64
+Compile with MinGW-W64.
 
-Compile Mednafen and libraries(especially zlib) with additional CPPFLAG(might not be needed in the future?): -D_LFS64_LARGEFILE=1
+Official 32-bit builds of Mednafen use gcc 4.9.2.
 
-Compile libraries with callbacks(but not Mednafen itself for performance reasons) with extra flag(CPPFLAG): -mstackrealign
+Official 64-bit builds use a modified version of gcc 4.9.4, with the following patch(available in the "patches" subdirectory):
+	gcc-4.9.4-mingw-w64-noforcepic-smalljmptab.patch
+ (if you want to use the functionality of the patch on non-Mednafen code, add -mcmodel=small to the other project's CFLAGS/CXXFLAGS)
+
+Compile Mednafen and libraries(especially zlib) with additional CPPFLAGS(might not be needed in the future?): -D_LFS64_LARGEFILE=1
+
+Compile libraries with callbacks(but not Mednafen itself for performance reasons) with extra flag(CPPFLAGS): -mstackrealign
 
 Patch zlib zconf.h after running configure, but before make'ing, as follows:
 @@ -481,7 +481,7 @@ typedef uLong FAR uLongf;

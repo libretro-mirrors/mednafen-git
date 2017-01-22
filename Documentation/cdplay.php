@@ -2,7 +2,7 @@
 
 <?php BeginPage('cdplay', 'Sega Saturn Sound Format Player'); ?>
 
-<?php BeginSection('Introduction', "", FALSE, FALSE, "Section_intro"); ?>
+<?php BeginSection('Introduction', "Section_intro"); ?>
 CD-DA player, for dev testing purposes mostly.
 <?php EndSection(); ?>
 

@@ -242,23 +242,16 @@ static void iNES_PutAddressSpaceBytes(const char *name, uint32 Address, uint32 L
 
 uint32 iNESGameCRC32;
 
-struct CRCMATCH	{
-	uint32 crc;
-	const char *name;
-};
-
-struct INPSEL {
-	const uint32 crc32;
-	const char* input1;
-	const char *input2;
-	const char *inputfc;
-};
-
-/* This is mostly for my personal use.  So HA. */
 static void SetInput(void)
 {
- static struct INPSEL moo[]=
-	{
+ static const struct
+ {
+  uint32 crc32;
+  const char* input1;
+  const char* input2;
+  const char* inputfc;
+ } InputDB[]=
+ {
 	 {0x62c67984, "gamepad", "gamepad", "4player" },	// Nekketsu Koukou Dodgeball-bu
 
          {0x3a1694f9,"gamepad","gamepad","4player"},       /* Nekketsu Kakutou Densetsu */
@@ -323,59 +316,48 @@ static void SetInput(void)
 	 {0xf7606810,NULL,NULL,"fkb"},	/* Family BASIC 2.0A */
 	 {0x895037bc,NULL,NULL,"fkb"},	/* Family BASIC 2.1a */
 	 {0xb2530afc,NULL,NULL,"fkb"},	/* Family BASIC 3.0 */
-	 {0, NULL, NULL, NULL },
-	};
- int x=0;
+ };
 
- while(moo[x].input1 > 0 || moo[x].input2 > 0 || moo[x].inputfc > 0)
+ for(auto const& moo : InputDB)
  {
-  if(moo[x].crc32==iNESGameCRC32)
+  if(moo.crc32 == iNESGameCRC32)
   {
    MDFNGameInfo->DesiredInput.clear();
-   MDFNGameInfo->DesiredInput.push_back(moo[x].input1);
-   MDFNGameInfo->DesiredInput.push_back(moo[x].input2);
+   MDFNGameInfo->DesiredInput.push_back(moo.input1);
+   MDFNGameInfo->DesiredInput.push_back(moo.input2);
    MDFNGameInfo->DesiredInput.push_back("gamepad");
    MDFNGameInfo->DesiredInput.push_back("gamepad");
-   MDFNGameInfo->DesiredInput.push_back(moo[x].inputfc);
+   MDFNGameInfo->DesiredInput.push_back(moo.inputfc);
    break;
   }
-  x++;
  }
 }
-
-#define INESB_INCOMPLETE        1
-#define INESB_CORRUPT           2
-#define INESB_HACKED            4
-
-struct BADINF {
-        uint64 md5partial;
-        const char *name;
-        uint32 type;
-};
-
-
-static struct BADINF BadROMImages[]=
-{
- #include "ines-bad.inc"
-};
 
 void CheckBad(uint64 md5partial)
 {
- int x;
+ #define INESB_INCOMPLETE        1
+ #define INESB_CORRUPT           2
+ #define INESB_HACKED            4
+ static const struct
+ {
+  uint64 md5partial;
+  const char* name;
+  uint32 type;
+ } BadROMImages[]=
+ {
+  #include "ines-bad.inc"
+ };
 
- x=0;
- //printf("0x%llx\n",md5partial);
- while(BadROMImages[x].name)
- {  
-  if(BadROMImages[x].md5partial == md5partial)
+ for(auto const& bade : BadROMImages)
+ {
+  if(bade.md5partial == md5partial)
   {
-   MDFN_PrintError(_("The copy of the game you have loaded, \"%s\", is bad, and will not work properly on Mednafen."), BadROMImages[x].name);
+   MDFN_PrintError(_("The copy of the game you have loaded, \"%s\", is bad, and will not work properly on Mednafen."), bade.name);
    return;
   }
-  x++;
  }
-
 }
+
 struct CHINF {
         uint32 crc32;
         int32 mapper;
@@ -392,8 +374,8 @@ static void CheckHInfo(void)
     Lower 64 bits of the MD5 hash.
  */
 
- static uint64 savie[]=
-        {
+ static const uint64 savie[]=
+ {
 	 0x58abd7c8990c4e25ULL, /* Taito Grand Prix - Eikou e no License */
 	 0x82000965f04a71bbULL, /* Mirai Shinwa Jarvas */
 	 0x38ed9483242b252dULL, /* Honoo no Toukyuuji - Dodge Danpei 2 */
@@ -446,7 +428,7 @@ static void CheckHInfo(void)
          0x836c0ff4f3e06e45ULL,    /* Zelda 2 */
 
          0                      /* Abandon all hope if the game has 0 in the lower 64-bits of its MD5 hash */
-        };
+ };
 
  static struct CHINF moo[]=
  {

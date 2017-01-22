@@ -6,11 +6,10 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.39.2'
-MEDNAFEN_VERSION_NUMERIC=0x00093902
+MEDNAFEN_VERSION='0.9.41'
+MEDNAFEN_VERSION_NUMERIC=0x00094100
 
 AC_CANONICAL_HOST
-AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([mednafen], $MEDNAFEN_VERSION)
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
 AC_CONFIG_HEADERS([include/config.h:include/config.h.in])
@@ -31,7 +30,6 @@ CPP="$CPP -std=gnu99"
 AX_CFLAGS_GCC_OPTION([-fsigned-char], CC)
 AX_CXXFLAGS_GCC_OPTION([-fsigned-char], CXX)
 
-AM_PROG_LIBTOOL
 AC_PROG_INSTALL
 
 gl_VISIBILITY
@@ -59,7 +57,16 @@ AC_CHECK_SIZEOF(size_t)
 AC_CHECK_SIZEOF(ptrdiff_t)
 AC_CHECK_SIZEOF(off_t)
 AC_C_CONST
-AC_CHECK_FUNCS(memcmp memcpy memmove memset mmap munmap madvise signal sigaction fork pipe dup2 fcntl getenv putenv setenv gettimeofday getpwuid getuid nanosleep usleep strerror strerror_r ftello fopen64 fseeko64 ftello64 fstat64 ftruncate64 __mingw_get_crt_info)
+AC_CHECK_FUNCS(memcmp memcpy memmove memset mmap munmap madvise signal sigaction fork pipe dup2 fcntl getenv putenv setenv gettimeofday getpwuid getuid strerror strerror_r ftello fopen64 fseeko64 ftello64 fstat64 ftruncate64 __mingw_get_crt_info)
+
+#
+# Check for any libraries that need to be linked against for clock_gettime().
+#
+# (posix4 is apparently used by much older versions of Solaris according to tar, pre-7, so maybe it's not necessary
+#  for Mednafen?)
+AC_SEARCH_LIBS(clock_gettime, [rt posix4])
+AC_CHECK_FUNCS(clock_gettime nanosleep usleep localtime_r gmtime_r)
+
 AC_CHECK_HEADERS(fcntl.h)
 AC_CHECK_HEADERS(stdint.h inttypes.h)
 AC_FUNC_MKDIR
@@ -68,13 +75,6 @@ PKG_PROG_PKG_CONFIG
 AC_CHECK_FUNCS(round nearbyint nearbyintf rint rintf)
 AC_CHECK_HEADERS(fenv.h)
 
-#
-# Check for any libraries that need to be linked against for clock_gettime().
-#
-# (posix4 is apparently used by much older versions of Solaris according to tar, pre-7, so maybe it's not necessary
-#  for Mednafen?)
-AC_SEARCH_LIBS(clock_gettime, [rt posix4])
-AC_CHECK_FUNCS(clock_gettime)
 
 AC_DEFINE(MINILZO_HAVE_CONFIG_H, [1], [Define if config.h is present])
 
@@ -85,8 +85,8 @@ AC_SUBST(LIBICONV)
 AC_SUBST(LIBINTL)
 
 dnl Check for zlib
-AC_CHECK_LIB([z], [zlibVersion],[], AC_MSG_ERROR([*** zlib not found!]))
-AC_SUBST([ZLIB_LIBS], [-lz])
+AC_CHECK_LIB([z], [zlibVersion], ZLIB_LIBS="-lz", AC_MSG_ERROR([*** zlib not found!]))
+AC_SUBST([ZLIB_LIBS])
 
 dnl -fno-fast-math and -fno-unsafe-math-optimizations to make sure it's disabled, as the fast-math feature on certain older
 dnl versions of gcc produces horribly broken code(and even when it's working correctly, it can have somewhat unpredictable effects).
@@ -115,6 +115,7 @@ AX_CFLAGS_GCC_OPTION([-fno-pie], CODEGEN_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-PIC], CODEGEN_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-PIE], CODEGEN_FLAGS)
 AX_CFLAGS_GCC_OPTION([-nopie], CODEGEN_FLAGS)
+AX_CFLAGS_GCC_OPTION([-no-pie], CODEGEN_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fwrapv],  CODEGEN_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fjump-tables], CODEGEN_FLAGS)
 
@@ -377,18 +378,11 @@ if test x$enable_snes_faust = xyes; then
 fi
 
 AC_ARG_ENABLE(ss,
- AC_HELP_STRING([--enable-ss], [build with Sega Saturn emulation [[default=x86_64]]]),
-                  , enable_ss=x86_64)
+ AC_HELP_STRING([--enable-ss], [build with Sega Saturn emulation [[default=x86_64 amd64 aarch64* arm64* ppc64* powerpc64*]]]),
+                  , [enable_ss="x86_64 amd64 aarch64* arm64* ppc64* powerpc64*"])
+for i in $enable_ss; do case $host_cpu in $i) enable_ss=yes ;; esac; done
 
-case "$target_cpu" in
-	x86_64|amd64)
-		if test x$enable_ss = xx86_64; then
-			enable_ss=yes
-		fi
-		;;
-esac
-
-if test x$enable_ss = xyes; then
+if test "x$enable_ss" = "xyes"; then
                 AC_DEFINE([WANT_SS_EMU], [1], [Define if we are compiling with Sega Saturn emulation.])
                 AM_CONDITIONAL(WANT_SS_EMU, true)
 		AM_CONDITIONAL(NEED_68K_EMU, true)
@@ -526,10 +520,10 @@ AM_CONDITIONAL(HAVE_LINUX_JOYSTICK, false)
 AM_CONDITIONAL(HAVE_LIBSNDFILE, false)
 NEED_SDL=true
 
-if expr x"$target" : 'x.*-mingw*' > /dev/null; then
+if expr x"$host" : 'x.*-mingw*' > /dev/null; then
 	AC_CHECK_TOOL([WINDRES], [windres])
 
-	if test x$target_cpu != xx86_64; then
+	if test x$host_cpu != xx86_64; then
 		# Enable larger address space support(for the 32-bit build).
 		LDFLAGS="$LDFLAGS -Wl,--large-address-aware"
 		AX_CFLAGS_GCC_OPTION([-march=i586], OPTIMIZER_FLAGS)
@@ -561,7 +555,7 @@ if expr x"$target" : 'x.*-mingw*' > /dev/null; then
 		AM_CONDITIONAL(HAVE_LIBSNDFILE, true)
         fi
 
-elif expr x"$target" : 'x.*djgpp' > /dev/null; then
+elif expr x"$host" : 'x.*djgpp' > /dev/null; then
        	AC_DEFINE([PSS_STYLE],[2], [Defines the filesystem path-separator type.])
        	AC_DEFINE([DOS], [1], [Define if we are compiling for DOS.])
        	AM_CONDITIONAL(DOS, true)
@@ -617,7 +611,7 @@ dnl
 dnl Solaris may require "nsl" and "socket" libraries.
 dnl
 AC_SEARCH_LIBS([gethostbyname], [nsl])
-AC_SEARCH_LIBS([socket], [socket])
+AC_SEARCH_LIBS([socket], [socket network])
 
 AC_CHECK_FUNCS(socket bind listen connect accept send recv close gethostbyname gethostbyaddr getaddrinfo freeaddrinfo gai_strerror select poll getsockopt setsockopt, [], 
 	[HAVE_POSIX_SOCKETS=no])
@@ -640,7 +634,7 @@ AC_TRY_COMPILE([], [asm volatile("vcvtss2si %xmm6,%ecx\n\tvhaddps %ymm7,%ymm7,%y
 	AC_DEFINE([HAVE_INLINEASM_AVX], [1], [Define if GNU-style AVX inline assembly is supported.]),
 	[])
 
-case "$target_cpu" in
+case "$host_cpu" in
 	x86_64|amd64)
 	        AC_DEFINE([ARCH_X86], [1], [Define if we are compiling for 32-bit or 64-bit x86 architectures.])
 	        AM_CONDITIONAL(ARCH_X86, true)
@@ -668,9 +662,12 @@ case "$target_cpu" in
         	                AC_DEFINE([ARCH_POWERPC_ALTIVEC], [1], [Define if we are compiling with AltiVec usage.])
                 	        AM_CONDITIONAL(ARCH_POWERPC_ALTIVEC, true)
 
+				altivec_save_CPPFLAGS="$CPPFLAGS"
+				CPPFLAGS="$CPPFLAGS $ALTIVEC_FLAGS"
 				AC_CHECK_HEADER([altivec.h],
 					AC_DEFINE([HAVE_ALTIVEC_H], [1], [Define if altivec.h is present and usable.]),
 					[] )
+				CPPFLAGS="$altivec_save_CPPFLAGS"
 	                fi
 	        fi
 		;;

@@ -114,9 +114,6 @@
 /* Define if we are compiling with DirectSound support. */
 #undef HAVE_DIRECTSOUND
 
-/* Define to 1 if you have the <dlfcn.h> header file. */
-#undef HAVE_DLFCN_H
-
 /* Define to 1 if you have the `dup2' function. */
 #undef HAVE_DUP2
 
@@ -210,6 +207,9 @@
 /* Define to 1 if you have the `getuid' function. */
 #undef HAVE_GETUID
 
+/* Define to 1 if you have the `gmtime_r' function. */
+#undef HAVE_GMTIME_R
+
 /* Define if you have the iconv() function and it works. */
 #undef HAVE_ICONV
 
@@ -247,9 +247,6 @@
 /* Define to 1 if you have the `vorbisidec' library (-lvorbisidec). */
 #undef HAVE_LIBVORBISIDEC
 
-/* Define to 1 if you have the `z' library (-lz). */
-#undef HAVE_LIBZ
-
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
 
@@ -258,6 +255,9 @@
 
 /* Define to 1 if you have the `listen' function. */
 #undef HAVE_LISTEN
+
+/* Define to 1 if you have the `localtime_r' function. */
+#undef HAVE_LOCALTIME_R
 
 /* Define to 1 if the system has the type `long long int'. */
 #undef HAVE_LONG_LONG_INT
@@ -485,10 +485,6 @@
 
 /* Define on little-endian platforms. */
 #undef LSB_FIRST
-
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
-#undef LT_OBJDIR
 
 /* Mednafen version definition. */
 #undef MEDNAFEN_VERSION

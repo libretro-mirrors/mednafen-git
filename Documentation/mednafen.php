@@ -2,7 +2,7 @@
 
 <?php BeginPage('', 'General'); ?>
 
- <?php BeginSection("Introduction"); ?>
+ <?php BeginSection("Introduction", "Section_introduction"); ?>
  <p>
  This main document covers general Mednafen usage, generally regardless of which system is being emulated.  Documentation covering key assignments, settings, and related information for each system emulation module is linked to in the table of contents under "Emulation Module Documentation".
  </p>
@@ -12,7 +12,7 @@
   The terms "audio/video movie", "QuickTime movie", and variations thereof refer to audio and video data recorded and stored in a file, and
   usable with external programs.
  </p>
-  <?php BeginSection("Base Directory", "", FALSE, FALSE, "Section_base_directory"); ?>
+  <?php BeginSection("Base Directory", "Section_base_directory"); ?>
    <p>
     Mednafen's "base directory" is the directory under which Mednafen stores its data and
     looks for various auxillary data by default.  If the "<b>HOME</b>" environment variable is set, it will be suffixed with "/.mednafen"
@@ -35,7 +35,7 @@
 
  <?php EndSection(); ?>
 
- <?php BeginSection("Core Features"); ?>
+ <?php BeginSection("Core Features", "Section_core_features"); ?>
  <ul>
   <li>Physical joystick/gamepad support.</li>
   <li>Versatile input configuration system; assign multiple physical buttons to a virtual button or action.</li>
@@ -49,12 +49,12 @@
   <li>Network play(utilizing an external dedicated server program).</li>
 </ul>
 
- <?php BeginSection("CD Emulation", "", FALSE, FALSE, "Section_cdrom_emulation"); ?>
+ <?php BeginSection("CD Emulation", "Section_cdrom_emulation"); ?>
  <p>
   Mednafen can load CD-ROM games from a dumped copy of the disc, such as CUE+BIN.  Physical CD support was removed in version 0.9.38.
  </p>
 
-<?php BeginSection("Compact Disc Images"); ?>
+<?php BeginSection("Compact Disc Images", "Section_cd_images"); ?>
  <p>
   Mednafen supports "CUE" sheets, CloneCD "CCD/IMG/SUB", and cdrdao "TOC" files; though only a very limited
   subset of the latter's full capabilities is supported.  Mednafen supports raw, simple storage formats supported by
@@ -81,7 +81,7 @@
  </p>
 <?php EndSection(); ?>
 
-<?php BeginSection("Multiple-CD Games", "", FALSE, FALSE, "Section_multicd_games"); ?>
+<?php BeginSection("Multiple-CD Games", "Section_multicd_games"); ?>
  <p>
   To play a game that consists of more than one CD, you will need to create an
   M3U file(plain-text, ".m3u" extension), and enter the filenames of the CUE/TOC/CCD files, one per line.  Load the M3U file
@@ -92,7 +92,7 @@
  </p>
  <?php EndSection(); ?>
 
- <?php BeginSection("CD+G", "", FALSE, FALSE, "Section_cdg"); ?>
+ <?php BeginSection("CD+G", "Section_cdg"); ?>
   Both the <a href="pce.html">PC Engine (CD)</a> and <a href="pcfx.html">PC-FX</a> emulation modules support CD+G playback; however,
   the PC-FX BIOS doesn't appear to be as resilient when dealing with scratched discs/damaged data as the PC Engine CD BIOS is.
   <br><br>
@@ -100,18 +100,20 @@
   data(such as in the cdrdao TOC or CloneCD formats; CUE format definitely isn't going to work).
  <?php EndSection(); ?>
 
- <?php BeginSection("PhotoCD Portfolio", "", FALSE, FALSE, "Section_photocdportfolio"); ?>
+ <?php BeginSection("PhotoCD Portfolio", "Section_photocdportfolio"); ?>
   The <a href="pcfx.html">PC-FX</a> emulation module supports low-resolution single-session Kodak "PhotoCD Portfolio" disc playback.
   Hardware features to support multi-session CDs are not fully emulated; they may or may not work.
  <?php EndSection(); ?>
 
  <?php EndSection(); ?>
 
- <?php BeginSection("Security Issues", "", FALSE, FALSE, "Section_security"); ?>
+ <?php EndSection(); ?>
+
+ <?php BeginSection("Security Issues", "Section_security"); ?>
 
  This section discusses various known design flaws/choices, bugs, and limitations in Mednafen that have security implications.
 
- <?php BeginSection("Save States", "", FALSE, FALSE, "Section_security_savestates"); ?>
+ <?php BeginSection("Save States", "Section_security_savestates"); ?>
  Causing Mednafen to lock-up, abort, or consume large amounts of CPU time via loading a specially-constructed save state is
  a trivial exercise.  It is hypothetically possible to overflow some buffers on some emulated systems by clever
  manipulation of saved timekeeping variables.  In combination with custom emulated machine code and state, it may therefore
@@ -119,7 +121,7 @@
  you have reason to distrust, or not trust, is advised against.</b>
  <?php EndSection(); ?>
 
- <?php BeginSection("CD images and PSF(PSF1, GSF, etc.) Files"); ?>
+ <?php BeginSection("CD images and PSF(PSF1, GSF, etc.) Files", "Section_security_includes"); ?>
  <p>
  CUE and TOC, and PSF(PSF1, GSF, etc.) files can reference arbitrary files for inclusion and parsing.  Inclusion of
  device files may cause odd system behavior, particularly if you are running Mednafen as root(which you shouldn't be!) on a
@@ -132,7 +134,7 @@
  </p>
  <?php EndSection(); ?>
 
- <?php BeginSection("Network Play", "", FALSE, FALSE, "Section_security_netplay"); ?>
+ <?php BeginSection("Network Play", "Section_security_netplay"); ?>
  <p>
  Mednafen's network play automatically utilizes save states to synchronize state among newly connected players, and
  thereafter at connected players' command.  Hence, any security issues relating to save states apply to network play as well.
@@ -146,11 +148,11 @@
 
  <?php EndSection(); ?>
 
- <?php BeginSection("Using Mednafen"); ?>
+ <?php BeginSection("Using Mednafen", "Section_using"); ?>
  <p>
  
  </p>
- <?php BeginSection("Key Assignments", "", FALSE, FALSE, "Section_key_assignments"); ?>
+ <?php BeginSection("Key Assignments", "Section_key_assignments"); ?>
  <p>
   A single-press (un)pause function can be achieved by mapping the <a href="#command.advance_frame">frame advance</a> and
   <a href="#command.run_normal">exit frame advance mode/run normal</a> functions to the same key via the
@@ -210,13 +212,13 @@
 
  <?php EndSection(); ?>
 
- <?php BeginSection("Remapping Buttons and Keys", "", FALSE, FALSE, "Section_remapping_input"); ?>
+ <?php BeginSection("Remapping Buttons and Keys", "Section_remapping_input"); ?>
   <p>
    You may configure a virtual(emulated) input device by using special command keys in Mednafen while a game is running.
   </p>
   <p>
    <font color="yellow">Caution:</font>  Users of XBox 360-type gamepads on operating systems other than Microsoft Windows(e.g. Linux), or users of other controllers with analog buttons, should complete the following process before attempting any configuration that will map a physical analog button to a virtual button.<br>
-   <blockquote>Twirl all sticks and D-pads and press all analog buttons on any physical gamepads/joysticks with analog buttons you want to use in the input configuration process, then press F3. Then, configure input as normal. The detected analog buttons will be recognized during input configuration until Mednafen exits; if you exit Mednafen and restart, and want to configure input devices again, you'll need to repeat the twirling-pressing-F3 process again).</blockquote>
+   <blockquote>Twirl all sticks and D-pads and press all analog buttons on any physical gamepads/joysticks with analog buttons you want to use in the input configuration process, then press <a href="#command.input_config_abd">F3</a>. Then, configure input as normal. The detected analog buttons will be recognized during input configuration until Mednafen exits; if you exit Mednafen and restart, and want to configure input devices again, you'll need to repeat the twirling-pressing-<a href="#command.input_config_abd">F3</a> process again).</blockquote>
   </p>
 
   <p>
@@ -228,11 +230,11 @@
   </p>
 
   <p>
-   To configure a command key, press "F2", and then the command key whose mapping you wish to change.  The process is similar to that for a virtual input device.
+   To configure a command key, press <a href="#command.input_configc">F2</a>, and then the command key whose mapping you wish to change.  The process is similar to that for a virtual input device.
   </p>
  <?php EndSection(); ?>
 
- <?php BeginSection("Command-line"); ?>
+ <?php BeginSection("Command-line", "Section_command_line"); ?>
  <p>
   Mednafen supports options passed on the command line.   Options
   are taken in the form of "-option value".  Some options are valueless.
@@ -251,7 +253,7 @@
   </table>
  <?php EndSection(); ?>
 
-<?php BeginSection("Configuration Files"); ?>
+<?php BeginSection("Configuration Files", "Section_config_files"); ?>
  <p>
   Mednafen loads/saves its settings from/to a primary configuration file, named "<b>mednafen-09x.cfg</b>", under the Mednafen
   <a href="#Section_base_directory">base directory</a>.  This file is created and written to when Mednafen shuts down.
@@ -285,7 +287,7 @@
 
 <?php PrintSettings("Global Settings Reference"); ?>
 
- <?php BeginSection("Firmware/BIOS", "", FALSE, FALSE, "Section_firmware_bios"); ?>
+ <?php BeginSection("Firmware/BIOS", "Section_firmware_bios"); ?>
 <p>
 Some emulation modules require firmware/BIOS images to function.  If a firmware path is non-absolute(doesn't begin with
 C:\ or / or similar), Mednafen will try to load the file relative to the "firmware" directory under the Mednafen <a href="#Section_base_directory">base directory</a>.  If it doesn't find it there, it will be loaded relative to the Mednafen <a href="#Section_base_directory">base directory</a> itself.  Of course,
@@ -293,7 +295,7 @@ if the "path_firmware" setting is set to a custom value, the firmware files will
 </p>
  <?php EndSection(); ?>
 
- <?php BeginSection("Custom Palettes", "", FALSE, FALSE, "Section_custom_palettes"); ?>
+ <?php BeginSection("Custom Palettes", "Section_custom_palettes"); ?>
 <p>
 Custom palettes for a system should be named <sysname>.pal, IE "nes.pal", "pce.pal", etc., and placed in the
 "palettes" directory beneath the Mednafen <a href="#Section_base_directory">base directory</a>.
@@ -318,7 +320,7 @@ Not all emulated systems support custom palettes.  Currently, the following emul
 </p>
  <?php EndSection(); ?>
 
- <?php BeginSection("Automatic IPS Patching"); ?>
+ <?php BeginSection("Automatic IPS Patching", "Section_ips_patching"); ?>
  <p>
         Place the IPS file in the same directory as the file to load,
         and name it &lt;FullFileName&gt;.ips.
@@ -340,8 +342,8 @@ Not all emulated systems support custom palettes.  Currently, the following emul
  
  <?php EndSection(); ?>
 
- <?php BeginSection("Advanced Usage"); ?>
-  <?php BeginSection("Minimizing video/audio/input Lag"); ?>
+ <?php BeginSection("Advanced Usage", "Section_advanced"); ?>
+  <?php BeginSection("Minimizing video/audio/input Lag", "Section_lag"); ?>
 This section is a work-in-progress, tips given may not cover all cases, latency reduction is a black art on modern
 PCs, etc etc.
 <p>
@@ -356,7 +358,7 @@ Miscellaneous relevant external links:
  <li><a href="http://www.tomshardware.com/reviews/ultrasharp-u2711-ds-277w-multisync-pa271w,2968-14.html">http://www.tomshardware.com/reviews/ultrasharp-u2711-ds-277w-multisync-pa271w,2968-14.html</a></li>
 </ul>
 </p>
-   <?php BeginSection("Hardware Selection"); ?>
+   <?php BeginSection("Hardware Selection", "Section_lag_hardware"); ?>
     <ul>
     <li><u><b>Video Card:</b></u><blockquote>Higher-performing discrete video cards are preferable, but anything with similar
 or better OpenGL performance to an NVidia GeForce 9500GT should be fine.</blockquote></li>
@@ -379,7 +381,7 @@ refresh rate of at least 120Hz.
    <p>
 
    </p>
-   <?php BeginSection("Settings to Minimize Video Lag", "", FALSE, FALSE, "Section_minimize_video_lag"); ?>
+   <?php BeginSection("Settings to Minimize Video Lag", "Section_minimize_video_lag"); ?>
    <a name="Core+Features%01Advanced+Usage%01Minimizing+video%2Faudio%2Finput+Lag%01Settings+to+Minimize+Video+Lag"></a>
     <p>
     Disabling vsync can also help to reduce keyboard and mouse input lag to a degree, due to the design of common GUI environments and SDL.
@@ -411,7 +413,7 @@ a native resolution).
     </p>
    <?php EndSection(); ?>
 
-   <?php BeginSection("Settings to Minimize Audio Lag"); ?>
+   <?php BeginSection("Settings to Minimize Audio Lag", "Section_minimize_audio_lag"); ?>
 <p>
 <u>Mednafen:</u> Select a <a href="#sound.driver">sound driver</a> that is closer to the actual hardware, such as "alsa" on Linux, "oss" on other UN*X platforms, and "wasapi" on Windows Vista and newer.  If you choose to use "OSS", heed the advice regarding osscore.conf and max_intrate.
 </p>
@@ -444,12 +446,12 @@ has the minimum amount of processing done to it before being passed to the DAC o
   <?php EndSection(); ?>
  <?php EndSection(); ?>
 
- <?php BeginSection("Troubleshooting and Common Solutions"); ?>
+ <?php BeginSection("Troubleshooting and Common Solutions", "Section_troubleshooting"); ?>
   <p>
    When Mednafen encounters a fatal error, it will print details of the error to stdout and/or stderr before exiting.  On the Microsoft Windows builds of Mednafen,
    stdout and stderr are redirected to files "<b>stdout.txt</b>" and "<b>stderr.txt</b>", respectively.
   </p>
-  <?php BeginSection("No sound output on Linux."); ?>
+  <?php BeginSection("No sound output on Linux.", "Section_troubleshooting_nosoundlinux"); ?>
    <p>
     Due to historical Linux distribution design decisions and problems with various software audio mixing solutions on Linux, Mednafen's ALSA output code
     attempts to output to device "<b>hw:0</b>" by default.  This may cause problems if your sound card does not support hardware mixing of streams and your system is
@@ -465,7 +467,7 @@ has the minimum amount of processing done to it before being passed to the DAC o
    </p>
   <?php EndSection(); ?>
 
-  <?php BeginSection("Configuration file is a mess in Notepad in Windows."); ?>
+  <?php BeginSection("Configuration file is a mess in Notepad in Windows.", "Section_troubleshooting_configcrlf"); ?>
    <p>
     Mednafen's settings file currently uses UN*X-style line breaks, which Notepad does not handle very well.  Use
     <a href="http://notepad-plus-plus.org/">Notepad++</a> instead.
@@ -475,11 +477,11 @@ has the minimum amount of processing done to it before being passed to the DAC o
 
  <?php DoModDocLinks(); ?>
 
- <?php /*BeginSection("Cheat Guide", "", "cheat.html"); */?> <?php /*EndSection();*/ ?>
- <?php BeginSection("Debugger", "", "debugger.html"); ?> <?php EndSection(); ?>
- <?php BeginSection("Network Play", "", "netplay.html"); ?> <?php EndSection(); ?>
+ <?php /*ExternalSection("Cheat Guide", "cheat.html"); */?>
+ <?php ExternalSection("Debugger", "debugger.html"); ?>
+ <?php ExternalSection("Network Play", "netplay.html"); ?>
 
- <?php BeginSection("Licenses, Copyright Notices, and Code Credits"); ?>
+ <?php BeginSection("Licenses, Copyright Notices, and Code Credits", "Section_legal"); ?>
  <p>
   Mednafen makes use of much open-source code from other people, and could not be what it is without their work.  Feel
   free to give them your thanks, but keep in mind most have nothing to do with the Mednafen project, so don't ask
@@ -497,7 +499,7 @@ has the minimum amount of processing done to it before being passed to the DAC o
  <hr>
 
  <p>
-  <?php BeginSection("libmpcdec", "", FALSE, "http://www.musepack.net/"); ?>
+  <?php BeginSection("libmpcdec", "Section_legal_libmpcdec", "http://www.musepack.net/"); ?>
   <blockquote>
   <pre>
   Copyright (c) 2005-2009, The Musepack Development Team
@@ -535,7 +537,7 @@ has the minimum amount of processing done to it before being passed to the DAC o
   </blockquote>
   <?php EndSection(); ?>
 
-  <?php BeginSection("Tremor", "", FALSE, "http://xiph.org/"); ?>
+  <?php BeginSection("Tremor", "Section_legal_tremor", "http://xiph.org/"); ?>
   <blockquote>
 <pre>
 Copyright (c) 2002, Xiph.org Foundation
@@ -570,7 +572,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   </blockquote>
   <?php EndSection(); ?>
 
- <?php BeginSection("Gb_Snd_Emu", "", FALSE, "http://slack.net/~ant/libs/audio.html"); ?>
+ <?php BeginSection("Gb_Snd_Emu", "Section_legal_gb_snd_emu", "http://slack.net/~ant/libs/audio.html"); ?>
 <blockquote>
 <pre>
 /* Library Copyright (C) 2003-2004 Shay Green. Gb_Snd_Emu is free
@@ -587,7 +589,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 </blockquote>
  <?php EndSection(); ?>
 
-<?php BeginSection("Blip_Buffer", "", FALSE, "http://www.slack.net/~ant/libs/"); ?>
+<?php BeginSection("Blip_Buffer", "Section_legal_blip_buffer", "http://www.slack.net/~ant/libs/"); ?>
 <blockquote>
 <pre>
 Copyright (C) 2003-2006 Shay Green. This module is free software; you
@@ -604,7 +606,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 </blockquote>
  <?php EndSection(); ?>
 
- <?php BeginSection("Sms_Snd_Emu(base for T6W28_Apu NGP code)", "", FALSE, "http://slack.net/~ant/libs/audio.html"); ?>
+ <?php BeginSection("Sms_Snd_Emu(base for T6W28_Apu NGP code)", "Section_legal_sms_snd_emu", "http://slack.net/~ant/libs/audio.html"); ?>
 <blockquote>
 <pre>
 Copyright (C) 2003-2006 Shay Green. This module is free software; you
@@ -621,7 +623,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 </blockquote>
  <?php EndSection(); ?>
 
-<?php BeginSection("Handy", "", FALSE, "http://homepage.ntlworld.com/dystopia/"); ?>
+<?php BeginSection("Handy", "Section_legal_handy", "http://handy.sourceforge.net/"); ?>
 <blockquote>
 <pre>
 Copyright (c) 2004 K. Wilkins
@@ -647,7 +649,7 @@ freely, subject to the following restrictions:
 </blockquote>
  <?php EndSection(); ?>
 
- <?php BeginSection("PC2e (Used in portions of PC Engine CD emulation)"); ?>
+ <?php BeginSection("PC2e (Used in portions of PC Engine CD emulation)", "Section_legal_pc2e"); ?>
 <blockquote>
 <pre>
         Copyright (C) 2004 Ki
@@ -665,7 +667,7 @@ freely, subject to the following restrictions:
 </blockquote>
  <?php EndSection(); ?>
 
- <?php BeginSection("Scale2x", "", FALSE, "http://scale2x.sf.net/"); ?>
+ <?php BeginSection("Scale2x", "Section_legal_scale2x", "http://scale2x.sf.net/"); ?>
 <blockquote>
 <pre>
  * Copyright (C) 2001, 2002, 2003, 2004 Andrea Mazzoleni
@@ -687,7 +689,7 @@ freely, subject to the following restrictions:
 </blockquote>
  <?php EndSection(); ?>
 
-<?php BeginSection("hq2x, hq3x, hq4x", "", FALSE, "http://www.hiend3d.com/hq2x.html"); ?>
+<?php BeginSection("hq2x, hq3x, hq4x", "Section_legal_hqnx", "http://www.hiend3d.com/hq2x.html"); ?>
 <blockquote>
 <pre>
 //Copyright (C) 2003 MaxSt ( maxst@hiend3d.com )
@@ -709,7 +711,7 @@ freely, subject to the following restrictions:
 </blockquote>
  <?php EndSection(); ?>
 
-<?php BeginSection("nes_ntsc", "", FALSE, "http://www.slack.net/~ant/libs/ntsc.html#nes_ntsc"); ?>
+<?php BeginSection("nes_ntsc", "Section_legal_nes_ntsc", "http://www.slack.net/~ant/libs/ntsc.html#nes_ntsc"); ?>
 <blockquote>
 <pre>
 /* Copyright (C) 2006 Shay Green. This module is free software; you
@@ -726,7 +728,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 </blockquote>
  <?php EndSection(); ?>
 
-<?php BeginSection("2xSaI"); ?>
+<?php BeginSection("2xSaI", "Section_legal_2xsai"); ?>
 <blockquote>
 <pre>
 /* 2xSaI
@@ -751,7 +753,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("VisualBoyAdvance GameBoy and GBA code", "", FALSE, "http://vba.sf.net/"); ?>
+<?php BeginSection("VisualBoyAdvance GameBoy and GBA code", "Section_legal_vba"); ?>
 <blockquote>
 <pre>
 // VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
@@ -775,7 +777,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 </blockquote>
  <?php EndSection(); ?>
 
-<?php BeginSection("trio", "", FALSE, "http://daniel.haxx.se/projects/trio/"); ?>
+<?php BeginSection("trio", "Section_legal_trio", "http://daniel.haxx.se/projects/trio/"); ?>
 <blockquote>
 <pre>
  * Copyright (C) 1998, 2009 Bjorn Reese and Daniel Stenberg.
@@ -796,7 +798,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 
 <?php EndSection(); ?>
 
-<?php BeginSection("ConvertUTF"); ?>
+<?php BeginSection("ConvertUTF", "Section_legal_convertutf"); ?>
 <blockquote>
 <pre>
  * Copyright 2001-2004 Unicode, Inc.
@@ -822,7 +824,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("MD5 Hashing"); ?>
+<?php BeginSection("MD5 Hashing", "Section_legal_md5"); ?>
 <blockquote>
 <pre>
 /*
@@ -834,7 +836,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 </blockquote>
  <?php EndSection(); ?>
 
-<?php BeginSection("V810 Emulator"); ?>
+<?php BeginSection("V810 Emulator", "Section_legal_v810"); ?>
 <blockquote>
 <pre>
  * Copyright (C) 2006 David Tucker
@@ -856,7 +858,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("Unzipping Code"); ?>
+<?php BeginSection("Unzipping Code", "Section_legal_minizip"); ?>
 <blockquote>
 <pre>
 /* unzip.c -- IO for uncompress .zip files using zlib
@@ -884,25 +886,10 @@ woven in by Terry Thorsen 1/2003.
 
 <?php EndSection(); ?>
 
-<?php BeginSection("MiniLZO", "", FALSE, "http://www.oberhumer.com/opensource/lzo/"); ?>
+<?php BeginSection("MiniLZO", "Section_legal_minilzo", "http://www.oberhumer.com/opensource/lzo/"); ?>
 <blockquote>
 <pre>
-   Copyright (C) 2011 Markus Franz Xaver Johannes Oberhumer
-   Copyright (C) 2010 Markus Franz Xaver Johannes Oberhumer
-   Copyright (C) 2009 Markus Franz Xaver Johannes Oberhumer
-   Copyright (C) 2008 Markus Franz Xaver Johannes Oberhumer
-   Copyright (C) 2007 Markus Franz Xaver Johannes Oberhumer
-   Copyright (C) 2006 Markus Franz Xaver Johannes Oberhumer
-   Copyright (C) 2005 Markus Franz Xaver Johannes Oberhumer
-   Copyright (C) 2004 Markus Franz Xaver Johannes Oberhumer
-   Copyright (C) 2003 Markus Franz Xaver Johannes Oberhumer
-   Copyright (C) 2002 Markus Franz Xaver Johannes Oberhumer
-   Copyright (C) 2001 Markus Franz Xaver Johannes Oberhumer
-   Copyright (C) 2000 Markus Franz Xaver Johannes Oberhumer
-   Copyright (C) 1999 Markus Franz Xaver Johannes Oberhumer
-   Copyright (C) 1998 Markus Franz Xaver Johannes Oberhumer
-   Copyright (C) 1997 Markus Franz Xaver Johannes Oberhumer
-   Copyright (C) 1996 Markus Franz Xaver Johannes Oberhumer
+   Copyright (C) 1996-2015 Markus Franz Xaver Johannes Oberhumer
    All Rights Reserved.
 
    The LZO library is free software; you can redistribute it and/or
@@ -921,13 +908,13 @@ woven in by Terry Thorsen 1/2003.
    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
    Markus F.X.J. Oberhumer
-   <markus@oberhumer.com>
+   &lt;markus@oberhumer.com&gt;
    http://www.oberhumer.com/opensource/lzo/
 </pre>
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("Fuse Z80 emulation code", "", FALSE, "http://fuse-emulator.sourceforge.net/"); ?>
+<?php BeginSection("Fuse Z80 emulation code", "Section_legal_fuse", "http://fuse-emulator.sourceforge.net/"); ?>
 <blockquote>
 <pre>
    Copyright (c) 1999-2005 Philip Kendall, Witold Filipczyk
@@ -954,7 +941,7 @@ woven in by Terry Thorsen 1/2003.
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("NeoPop Neo Geo Pocket (Color) Code", "", FALSE, "http://web.archive.org/web/20071221222634/http://neopop.emuxhaven.net/"); ?>
+<?php BeginSection("NeoPop Neo Geo Pocket (Color) Code", "Section_legal_neopop"); ?>
 <blockquote>
 <pre>
 //---------------------------------------------------------------------------
@@ -971,7 +958,7 @@ woven in by Terry Thorsen 1/2003.
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("PC-FX MJPEG Decoding"); ?>
+<?php BeginSection("PC-FX MJPEG Decoding", "Section_legal_jrevdct"); ?>
 <blockquote>
 <pre>
 /*
@@ -987,7 +974,7 @@ woven in by Terry Thorsen 1/2003.
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("VRC7 Sound Emulation"); ?>
+<?php BeginSection("VRC7 Sound Emulation", "Section_legal_emu2413"); ?>
 <blockquote>
 <pre>
 /*
@@ -1001,7 +988,7 @@ if the origin of this software is not misrepresented.
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("NEC V30MZ Emulator"); ?>
+<?php BeginSection("NEC V30MZ Emulator", "Section_legal_v30mz"); ?>
 <blockquote>
 <pre>
 /* This NEC V30MZ emulator may be used for purposes both commercial and noncommercial if you give the author, Bryan McPhail,
@@ -1011,7 +998,7 @@ if the origin of this software is not misrepresented.
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("NEC V30MZ disassembler(modified BOCHS x86 disassembler)"); ?>
+<?php BeginSection("NEC V30MZ disassembler(modified BOCHS x86 disassembler)", "Section_legal_v30mzdis"); ?>
 <blockquote>
 <i>Caution:  Bochs' code is under the LGPL, but it is unclear if "or (at your option) any later version." applies to the x86 disassembler code.</i>
 <pre>
@@ -1032,13 +1019,13 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("Cygne", "", FALSE, "http://cygne.emuunlim.com/"); ?>
+<?php BeginSection("Cygne", "Section_legal_cygne", "http://cygne.emuunlim.com/"); ?>
 <p>
 Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyright 2002 Dox, dox@space.pl.
 </p>
 <?php EndSection(); ?>
 
-<?php BeginSection("FCE Ultra", "", FALSE, "http://fceultra.sourceforge.net/"); ?>
+<?php BeginSection("FCE Ultra", "Section_legal_fceu"); ?>
 <blockquote>
 <pre>
 /* FCE Ultra - NES/Famicom Emulator
@@ -1065,7 +1052,7 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("QuickLZ", "", FALSE, "http://www.quicklz.com/"); ?>
+<?php BeginSection("QuickLZ", "Section_legal_quicklz", "http://www.quicklz.com/"); ?>
 <blockquote>
 <pre>
 // QuickLZ data compression library
@@ -1080,7 +1067,7 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("Q-Subchannel CRC16 Code", "", FALSE, "http://cdrdao.sourceforge.net/"); ?>
+<?php BeginSection("Q-Subchannel CRC16 Code", "Section_legal_cdrdao", "http://cdrdao.sourceforge.net/"); ?>
 <blockquote>
 <pre>
 /*  cdrdao - write audio CD-Rs in disc-at-once mode
@@ -1106,7 +1093,7 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
 
 <?php EndSection(); ?>
 
-<?php BeginSection("SMS Plus", "", FALSE, "http://cgfm2.emuviews.com/"); ?>
+<?php BeginSection("SMS Plus", "Section_legal_sms_plus", "http://www.techno-junk.org/"); ?>
 <blockquote>
 <pre>
     Copyright (C) 1998-2004  Charles MacDonald
@@ -1128,7 +1115,7 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("Genesis Plus", "", FALSE, "http://cgfm2.emuviews.com/"); ?>
+<?php BeginSection("Genesis Plus", "Section_legal_genesis_plus", "http://www.techno-junk.org/"); ?>
 <blockquote>
 <pre>
 /*
@@ -1152,7 +1139,7 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("Genesis Plus GX", "", FALSE, "http://code.google.com/p/genplus-gx/"); ?>
+<?php BeginSection("Genesis Plus GX", "Section_legal_genesis_plus_gx"); ?>
 <blockquote>
 <prE>
  *
@@ -1175,7 +1162,7 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("EMU2413(used in SMS emulation)"); ?>
+<?php BeginSection("EMU2413(used in SMS emulation)", "Section_legal_emu2413_sms"); ?>
 <blockquote>
 <pre>
   Copyright (C) Mitsutaka Okazaki 2004
@@ -1199,7 +1186,7 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("CD-ROM data correction code"); ?>
+<?php BeginSection("CD-ROM data correction code", "Section_legal_dvdisaster"); ?>
 <blockquote>
 <pre>
 /*  dvdisaster: Additional error correction for optical media.
@@ -1229,7 +1216,7 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("YM2612 Emulator"); ?>
+<?php BeginSection("YM2612 Emulator", "Section_legal_ym2612"); ?>
 <blockquote>
 <pre>
 /* Copyright (C) 2002 St�phane Dallongeville (gens AT consolemul.com) */
@@ -1247,7 +1234,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("Sega Genesis SVP/SSP16 Emulator"); ?>
+<?php BeginSection("Sega Genesis SVP/SSP16 Emulator", "Section_legal_svp_ssp16"); ?>
 <blockquote>
 <pre>
 /*
@@ -1282,7 +1269,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 </blockquote>
 <?php EndSection(); ?>
 
-<?php BeginSection("Speex Resampler", "", FALSE, "http://speex.org/"); ?>
+<?php BeginSection("Speex Resampler", "Section_legal_speex", "http://speex.org/"); ?>
 <blockquote>
 <pre>
 /* Copyright (C) 2007-2008 Jean-Marc Valin
@@ -1321,7 +1308,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 </blockquote>
  <?php EndSection(); ?>
 
-<?php BeginSection("SABR v3.0 Shader"); ?>
+<?php BeginSection("SABR v3.0 Shader", "Section_legal_sabr"); ?>
 <blockquote>
 <pre>
         SABR v3.0 Shader

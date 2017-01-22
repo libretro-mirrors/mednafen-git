@@ -1,6 +1,5 @@
 #!/bin/sh
 
-libtoolize --force --copy
 #gettextize --force --copy --intl
 autoheader
 aclocal -I m4

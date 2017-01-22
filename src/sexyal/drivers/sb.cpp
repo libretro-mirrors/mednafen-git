@@ -79,24 +79,24 @@ static const struct
  { 0xD0, 0xD2, 0xD4, 0xD6, 0xD8, 0xDA, 0xDC, 0xDE },
 };
 
-static void dma_wr_base_addr(uint8_t ch, uint16_t value)
+static void dma_wr_base_addr(uint8 ch, uint16 value)
 {
  outportb(dma_con_ports[ch >> 2].clear_ff, 0);
  outportb(dma_ch_ports[ch].addr, value >> 0);
  outportb(dma_ch_ports[ch].addr, value >> 8);
 }
 
-static void dma_wr_count(uint8_t ch, uint16_t value)
+static void dma_wr_count(uint8 ch, uint16 value)
 {
  outportb(dma_con_ports[ch >> 2].clear_ff, 0);
  outportb(dma_ch_ports[ch].count, value >> 0);
  outportb(dma_ch_ports[ch].count, value >> 8);
 }
 
-static uint16_t dma_rd_cur_addr(uint8_t ch)
+static uint16 dma_rd_cur_addr(uint8 ch)
 {
- uint16_t a;
- uint16_t b;
+ uint16 a;
+ uint16 b;
 
  outportb(dma_con_ports[ch >> 2].clear_ff, 0);
 
@@ -106,12 +106,12 @@ static uint16_t dma_rd_cur_addr(uint8_t ch)
   a |= inportb(dma_ch_ports[ch].addr) << 8;
   b = inportb(dma_ch_ports[ch].addr);
   b |= inportb(dma_ch_ports[ch].addr) << 8;
- } while((uint16_t)(b - a) > 8);  //a != b);
+ } while((uint16)(b - a) > 8);  //a != b);
 
  return(b);
 }
 
-static void dma_wr_page(uint8_t ch, uint8_t value)
+static void dma_wr_page(uint8 ch, uint8 value)
 {
  outportb(dma_ch_ports[ch].page, value);
 }
@@ -133,9 +133,9 @@ static void dma_wr_page(uint8_t ch, uint8_t value)
 #define DMA_MODE_TT_READ	(2 << 2)
 #define DMA_MODE_TT_KABOOM	(3 << 2)	
 
-static void dma_ch_set_buffer(uint8_t ch, uint32_t addr, uint32_t size)
+static void dma_ch_set_buffer(uint8 ch, uint32 addr, uint32 size)
 {
- const uint8_t page = (addr >> 16) & ((ch >= 4) ? 0xFE : 0xFF);	// Mask out the lower bit with 16-bit DMA in case any motherboards use it for A24.
+ const uint8 page = (addr >> 16) & ((ch >= 4) ? 0xFE : 0xFF);	// Mask out the lower bit with 16-bit DMA in case any motherboards use it for A24.
 
  assert(addr < (1U << 24));
 
@@ -157,28 +157,28 @@ static void dma_ch_set_buffer(uint8_t ch, uint32_t addr, uint32_t size)
  dma_wr_count(ch, size - 1);
 }
 
-static void dma_ch_set_mode(uint8_t ch, uint8_t value)
+static void dma_ch_set_mode(uint8 ch, uint8 value)
 {
  //printf("DMA Set Mode: %d 0x%02x\n", ch, value);
 
  outportb(dma_con_ports[ch >> 2].mode, (ch & 0x3) | (value &~ 0x3));
 }
 
-static void dma_ch_on(uint8_t ch)
+static void dma_ch_on(uint8 ch)
 {
  outportb(dma_con_ports[ch >> 2].mask_bit, (ch & 0x3) | (0 << 2));
 }
 
-static void dma_ch_off(uint8_t ch)
+static void dma_ch_off(uint8 ch)
 {
  outportb(dma_con_ports[ch >> 2].mask_bit, (ch & 0x3) | (1 << 2));
 }
 
-static bool irq_fonof(uint8_t irq, bool on)
+static bool irq_fonof(uint8 irq, bool on)
 {
- const uint8_t pnum = ((irq >= 8) ? 0xA1 : 0x21);
- const uint8_t old_status = inportb(pnum);
- uint8_t tmp = old_status;
+ const uint8 pnum = ((irq >= 8) ? 0xA1 : 0x21);
+ const uint8 old_status = inportb(pnum);
+ uint8 tmp = old_status;
 
  tmp &= ~(1 << (irq & 0x7));
  tmp |= (!on) << (irq & 0x7);
@@ -188,7 +188,7 @@ static bool irq_fonof(uint8_t irq, bool on)
  return !((old_status >> (irq & 0x7)) & 1);
 }
 
-static void irq_eoi(uint8_t irq)	// Specific EOI; don't change it to non-specific!
+static void irq_eoi(uint8 irq)	// Specific EOI; don't change it to non-specific!
 {
  if(irq >= 8)
  {
@@ -203,7 +203,7 @@ static void irq_eoi(uint8_t irq)	// Specific EOI; don't change it to non-specifi
 
 struct SB_Driver_t
 {
- uint16_t dsp_version;	// 0x100, 0x200, 0x201, etc.
+ uint16 dsp_version;	// 0x100, 0x200, 0x201, etc.
 
  unsigned base;		// I/O base, typically 0x220 or 0x240
  unsigned dma;
@@ -213,17 +213,17 @@ struct SB_Driver_t
 
  int save_istate;
  int save_pic_ion;
- uint8_t save_mixer[0x40];
+ uint8 save_mixer[0x40];
  bool save_mixer_valid;
 
  _go32_dpmi_seginfo dmabuf;
  uint32 dmabuf_eff_paddr;
  uint32 dmabuf_eff_size;
 
- uint64_t read_counter;		// In frames, not bytes.
- uint64_t write_counter;	// In frames, not bytes.
+ uint64 read_counter;		// In frames, not bytes.
+ uint64 write_counter;	// In frames, not bytes.
 
- uint16_t prev_dmacounter;
+ uint16 prev_dmacounter;
  bool paused;
 };
 
@@ -245,7 +245,7 @@ static bool dsp_reset(SB_Driver_t* ds)
  return(true);
 }
 
-static void dsp_write(SB_Driver_t* ds, uint8_t value)
+static void dsp_write(SB_Driver_t* ds, uint8 value)
 {
  while(inportb(ds->base + 0xC) & 0x80);
 
@@ -254,32 +254,32 @@ static void dsp_write(SB_Driver_t* ds, uint8_t value)
  //printf("DSP Write: 0x%02x\n", value);
 }
 
-static uint8_t dsp_read(SB_Driver_t* ds)
+static uint8 dsp_read(SB_Driver_t* ds)
 {
  while(!(inportb(ds->base + 0xE) & 0x80));
 
  return inportb(ds->base + 0xA);
 }
 
-static void dsp_command(SB_Driver_t* ds, uint8_t cmd)
+static void dsp_command(SB_Driver_t* ds, uint8 cmd)
 {
  dsp_write(ds, cmd);
 }
 
-static void dsp_command(SB_Driver_t* ds, uint8_t cmd, uint8_t arg0)
+static void dsp_command(SB_Driver_t* ds, uint8 cmd, uint8 arg0)
 {
  dsp_write(ds, cmd);
  dsp_write(ds, arg0);
 }
 
-static void dsp_command(SB_Driver_t* ds, uint8_t cmd, uint8_t arg0, uint8_t arg1)
+static void dsp_command(SB_Driver_t* ds, uint8 cmd, uint8 arg0, uint8 arg1)
 {
  dsp_write(ds, cmd);
  dsp_write(ds, arg0);
  dsp_write(ds, arg1);
 }
 
-static void dsp_command(SB_Driver_t* ds, uint8_t cmd, uint8_t arg0, uint8_t arg1, uint8_t arg2)
+static void dsp_command(SB_Driver_t* ds, uint8 cmd, uint8 arg0, uint8 arg1, uint8 arg2)
 {
  dsp_write(ds, cmd);
  dsp_write(ds, arg0);
@@ -287,7 +287,7 @@ static void dsp_command(SB_Driver_t* ds, uint8_t cmd, uint8_t arg0, uint8_t arg1
  dsp_write(ds, arg2);
 }
 
-static void dsp_command(SB_Driver_t* ds, uint8_t cmd, uint8_t arg0, uint8_t arg1, uint8_t arg2, uint8_t arg3)
+static void dsp_command(SB_Driver_t* ds, uint8 cmd, uint8 arg0, uint8 arg1, uint8 arg2, uint8 arg3)
 {
  dsp_write(ds, cmd);
  dsp_write(ds, arg0);
@@ -296,24 +296,24 @@ static void dsp_command(SB_Driver_t* ds, uint8_t cmd, uint8_t arg0, uint8_t arg1
  dsp_write(ds, arg3);
 }
 
-static void mixer_write(SB_Driver_t* ds, uint8_t addr, uint8_t value)
+static void mixer_write(SB_Driver_t* ds, uint8 addr, uint8 value)
 {
  outportb(ds->base + 0x4, addr);
  outportb(ds->base + 0x5, value);
 }
 
-static uint8_t mixer_read(SB_Driver_t* ds, uint8_t addr)
+static uint8 mixer_read(SB_Driver_t* ds, uint8 addr)
 {
  outportb(ds->base + 0x4, addr);
  return inportb(ds->base + 0x5);
 }
 
-static uint16_t GetDMACounter(SexyAL_device* device)
+static uint16 GetDMACounter(SexyAL_device* device)
 {
  SB_Driver_t *ds = (SB_Driver_t *)device->private_data;
- const uint32_t lb = (ds->dmabuf_eff_paddr >> ((ds->dma >= 4) ? 1 : 0)) & 0xFFFF;
- const uint32_t ls = (ds->dmabuf_eff_size >> ((ds->dma >= 4) ? 1 : 0));
- uint32_t tmp;
+ const uint32 lb = (ds->dmabuf_eff_paddr >> ((ds->dma >= 4) ? 1 : 0)) & 0xFFFF;
+ const uint32 ls = (ds->dmabuf_eff_size >> ((ds->dma >= 4) ? 1 : 0));
+ uint32 tmp;
  int pis;
 
  // For EMU10K DOS SB emulator, so it doesn't stop playback and cause the sound code to freeze up.
@@ -343,11 +343,11 @@ static void UpdateReadCounter(SexyAL_device* device)
 {
  SB_Driver_t *ds = (SB_Driver_t *)device->private_data;
  const unsigned ftob = (device->format.sampformat >> 4) * device->format.channels;
- uint16_t cur_dmacounter = GetDMACounter(device);
+ uint16 cur_dmacounter = GetDMACounter(device);
 
 #if 0
  {
-  static uint16_t prev = 0;
+  static uint16 prev = 0;
 
   if(prev != cur_dmacounter)
   {
@@ -378,7 +378,7 @@ static int Pause(SexyAL_device *device, int state)
  return(state);
 }
 
-static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
+static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 {
  SB_Driver_t *ds = (SB_Driver_t *)device->private_data;
  const unsigned ftob = (device->format.sampformat >> 4) * device->format.channels;
@@ -394,18 +394,18 @@ static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
  return(1);
 }
 
-static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
+static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 {
  SB_Driver_t *ds = (SB_Driver_t *)device->private_data;
- uint32_t pl_0, pl_1;
- const uint8_t* data_d8 = (uint8_t*)data;
+ uint32 pl_0, pl_1;
+ const uint8* data_d8 = (uint8*)data;
  const unsigned ftob = (device->format.sampformat >> 4) * device->format.channels;
 
  do
  {
-  uint32_t cw;
-  uint32_t i_len;
-  uint32_t writepos;
+  uint32 cw;
+  uint32 i_len;
+  uint32 writepos;
 
   if(!RawCanWrite(device, &cw))	// Caution: RawCanWrite() will modify ds->write_counter on underflow.
    return(0);
@@ -437,8 +437,8 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
 static int Clear(SexyAL_device *device)
 {
  SB_Driver_t *ds = (SB_Driver_t *)device->private_data;
- const uint32_t base = ds->dmabuf_eff_paddr;
- const uint32_t siz = ds->dmabuf_eff_size;
+ const uint32 base = ds->dmabuf_eff_paddr;
+ const uint32 siz = ds->dmabuf_eff_size;
 
  Pause(device, true);
 
@@ -531,7 +531,7 @@ static int RawClose(SexyAL_device *device)
 
 
 // AKA the "I have no idea what it's doing but at least it's doing something and it's small" hash.
-static uint64_t DunnoHash(uint64_t ht, uint8_t v)
+static uint64 DunnoHash(uint64 ht, uint8 v)
 {
  ht ^= 104707;
  for(unsigned i = 0; i < 8; i++)
@@ -548,17 +548,17 @@ static uint64_t DunnoHash(uint64_t ht, uint8_t v)
 
  Fingerprinting is currently only used for DSP version >= 4.13.
 */
-static uint64_t SaveFPAndResetMixer(SB_Driver_t* ds)
+static uint64 SaveFPAndResetMixer(SB_Driver_t* ds)
 {
- uint64_t fip = 0;
- uint8_t all_savemixer[0x100];
+ uint64 fip = 0;
+ uint8 all_savemixer[0x100];
 
  //
  // Save mixer params.
  //
  for(unsigned i = 0; i < 0x100; i++)
  {
-  uint8_t tmp = mixer_read(ds, i);
+  uint8 tmp = mixer_read(ds, i);
 
   if(i < 0x40)
    ds->save_mixer[i] = mixer_read(ds, i);
@@ -857,7 +857,7 @@ SexyAL_device *SexyALI_DOS_SB_Open(const char *id, SexyAL_format *format, SexyAL
  // Save and fingerprint and reset mixer state
  //
  printf("\n");
- uint64_t mixer_fp = SaveFPAndResetMixer(ds);
+ uint64 mixer_fp = SaveFPAndResetMixer(ds);
  dsp_reset(ds);	// Work around fingerprinting-triggered bug in Sound Blaster PCI SB emulation code.
 
 
@@ -890,8 +890,8 @@ SexyAL_device *SexyALI_DOS_SB_Open(const char *id, SexyAL_format *format, SexyAL
 #if 0
   static struct
   {
-   uint16_t dsp_version;
-   uint64_t mixer_fp;
+   uint16 dsp_version;
+   uint64 mixer_fp;
    const char *name;
   } card_table[] =
   {
@@ -1057,9 +1057,9 @@ SexyAL_device *SexyALI_DOS_SB_Open(const char *id, SexyAL_format *format, SexyAL
  // Clear DMA buffer memory.
  //
  {
-  const uint32_t base = ds->dmabuf_eff_paddr;
-  const uint32_t siz = ds->dmabuf_eff_size;
-  uint32_t wv = 0;
+  const uint32 base = ds->dmabuf_eff_paddr;
+  const uint32 siz = ds->dmabuf_eff_size;
+  uint32 wv = 0;
 
   if(format->sampformat == SEXYAL_FMT_PCMU8)
    wv = 0x80808080U;
@@ -1153,7 +1153,7 @@ SexyAL_device *SexyALI_DOS_SB_Open(const char *id, SexyAL_format *format, SexyAL
     (NOTE: Pseudocode below requires fractional/floating point precision)
     actual_rate = 1000000 / (256 - raw_time_constant + 11 / (raw_block_size + 1))
   */
-  uint16_t wbs = 0xFFFF; //0;
+  uint16 wbs = 0xFFFF; //0;
 
   dsp_command(ds, 0x48, wbs >> 0, wbs >> 8);
 
@@ -1164,9 +1164,9 @@ SexyAL_device *SexyALI_DOS_SB_Open(const char *id, SexyAL_format *format, SexyAL
  }
  else
  {
-  uint8_t digi_cmd;
-  uint8_t digi_mode;
-  uint16_t wlen = 0xFFFF;
+  uint8 digi_cmd;
+  uint8 digi_mode;
+  uint16 wlen = 0xFFFF;
 
   digi_cmd = 0xB0 | (0 << 3) | (1 << 2) | (1 << 1);
 
@@ -1181,8 +1181,8 @@ SexyAL_device *SexyALI_DOS_SB_Open(const char *id, SexyAL_format *format, SexyAL
 #if 0
  printf("Timing transfer rate....\n");
  {
-  uint64_t tick_counter = 0;
-  uint8_t ct;
+  uint64 tick_counter = 0;
+  uint8 ct;
   int prev_ct = -1;
 
   ds->save_istate = __dpmi_get_and_disable_virtual_interrupt_state();

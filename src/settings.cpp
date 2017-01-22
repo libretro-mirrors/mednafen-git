@@ -773,7 +773,7 @@ bool MDFNI_SetSettingB(const char *name, bool value)
  tmpstr[0] = value ? '1' : '0';
  tmpstr[1] = 0;
 
- return(MDFNI_SetSetting(name, tmpstr, FALSE));
+ return(MDFNI_SetSetting(name, tmpstr, false));
 }
 
 bool MDFNI_SetSettingUI(const char *name, uint64 value)
@@ -781,7 +781,7 @@ bool MDFNI_SetSettingUI(const char *name, uint64 value)
  char tmpstr[32];
 
  trio_snprintf(tmpstr, 32, "%llu", (unsigned long long)value);
- return(MDFNI_SetSetting(name, tmpstr, FALSE));
+ return(MDFNI_SetSetting(name, tmpstr, false));
 }
 
 void MDFNI_DumpSettingsDef(const char *path)

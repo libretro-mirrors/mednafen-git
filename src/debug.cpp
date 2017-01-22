@@ -129,12 +129,12 @@ bool ASpace_Read(const int id, const uint32 address, const unsigned int size, co
  as = &AddressSpaces[id];
 
  if(pre_bpoint)
-  return(FALSE);
+  return(false);
  else
  {
   as->UsageReadMemUsed += IncUsageMap(&as->UsageMapRead, address);
  }
- return(FALSE);
+ return(false);
 }
 
 bool ASpace_Write(const int id, const uint32 address, const uint32 value, const unsigned int size, const bool pre_bpoint)
@@ -146,11 +146,11 @@ bool ASpace_Write(const int id, const uint32 address, const uint32 value, const 
  as = &AddressSpaces[id];
 
  if(pre_bpoint)
-  return(FALSE);
+  return(false);
  else
  {
   as->UsageWriteMemUsed += IncUsageMap(&as->UsageMapWrite, address);
-  return(FALSE);
+  return(false);
  }
 }
 

@@ -16,6 +16,7 @@
  */
 
 #include "sexyal.h"
+#include <mednafen/endian.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -23,13 +24,13 @@
 #include "convert.h"
 #include <stdlib.h>
 
-static inline uint32_t ConvertRandU32(void)
+static inline uint32 ConvertRandU32(void)
 {
- static uint32_t x = 123456789;
- static uint32_t y = 987654321;
- static uint32_t z = 43219876;
- static uint32_t c = 6543217;
- uint64_t t;
+ static uint32 x = 123456789;
+ static uint32 y = 987654321;
+ static uint32 z = 43219876;
+ static uint32 c = 6543217;
+ uint64 t;
 
  x = 314527869 * x + 1234567;
  y ^= y << 5; y ^= y >> 7; y ^= y << 22;
@@ -38,23 +39,12 @@ static inline uint32_t ConvertRandU32(void)
  return(x + y + z);
 }
 
-static inline uint16_t FLIP16(uint16_t b)
-{
- return((b<<8)|((b>>8)&0xFF));
-}
-
-static inline uint32_t FLIP32(uint32_t b)
-{
- return( (b<<24) | ((b>>8)&0xFF00) | ((b<<8)&0xFF0000) | ((b>>24)&0xFF) );
-}
-
-
-template<typename dsf_t, uint32_t dsf>
-static inline dsf_t SAMP_CONVERT(int16_t in_sample)
+template<typename dsf_t, uint32 dsf>
+static inline dsf_t SAMP_CONVERT(int16 in_sample)
 {
  if(dsf == SEXYAL_FMT_PCMU8)
  {
-  int tmp = (in_sample + 32768 + (uint8_t)(ConvertRandU32() & 0xFF)) >> 8;
+  int tmp = (in_sample + 32768 + (uint8)(ConvertRandU32() & 0xFF)) >> 8;
 
   if(tmp < 0)
    tmp = 0;
@@ -67,7 +57,7 @@ static inline dsf_t SAMP_CONVERT(int16_t in_sample)
 
  if(dsf == SEXYAL_FMT_PCMS8)
  {
-  int tmp = (in_sample + (uint8_t)(ConvertRandU32() & 0xFF)) >> 8;
+  int tmp = (in_sample + (uint8)(ConvertRandU32() & 0xFF)) >> 8;
 
   if(tmp < -128)
    tmp = -128;
@@ -91,7 +81,7 @@ static inline dsf_t SAMP_CONVERT(int16_t in_sample)
   return(in_sample << 8);
 
  if(dsf == SEXYAL_FMT_PCMU32)
-  return((uint32_t)(in_sample + 32768) << 16);
+  return((uint32)(in_sample + 32768) << 16);
 
  if(dsf == SEXYAL_FMT_PCMS32)
   return(in_sample << 16);
@@ -101,8 +91,8 @@ static inline dsf_t SAMP_CONVERT(int16_t in_sample)
 }
 
 
-template<typename dsf_t, uint32_t dsf>
-static void ConvertLoop(const int16_t *src, dsf_t *dest, const int src_chan, const int dest_chan, const bool dest_noninterleaved, int32_t frames)
+template<typename dsf_t, uint32 dsf>
+static void ConvertLoop(const int16 *src, dsf_t *dest, const int src_chan, const int dest_chan, const bool dest_noninterleaved, int32 frames)
 {
  if(src_chan == 1 && dest_chan == 1)
  {
@@ -117,7 +107,7 @@ static void ConvertLoop(const int16_t *src, dsf_t *dest, const int src_chan, con
  {
   for(int i = 0; i < frames; i++)
   {
-   int32_t mt = (src[0] + src[1]) >> 1;
+   int32 mt = (src[0] + src[1]) >> 1;
 
    dest[0] = SAMP_CONVERT<dsf_t, dsf>(mt);
    src += 2;
@@ -190,9 +180,9 @@ static void ConvertLoop(const int16_t *src, dsf_t *dest, const int src_chan, con
 
 
 /* Only supports one input sample format right now:  SEXYAL_FMT_PCMS16 */
-void SexiALI_Convert(const SexyAL_format *srcformat, const SexyAL_format *destformat, const void *vsrc, void *vdest, uint32_t frames)
+void SexiALI_Convert(const SexyAL_format *srcformat, const SexyAL_format *destformat, const void *vsrc, void *vdest, uint32 frames)
 {
- const int16_t *src = (int16_t *)vsrc;
+ const int16 *src = (int16 *)vsrc;
 
  assert(srcformat->noninterleaved == false);
 
@@ -208,35 +198,35 @@ void SexiALI_Convert(const SexyAL_format *srcformat, const SexyAL_format *destfo
  switch(destformat->sampformat)
  {
   case SEXYAL_FMT_PCMU8:
-	ConvertLoop<uint8_t, SEXYAL_FMT_PCMU8>(src, (uint8_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
+	ConvertLoop<uint8, SEXYAL_FMT_PCMU8>(src, (uint8*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMS8:
-	ConvertLoop<int8_t, SEXYAL_FMT_PCMS8>(src, (int8_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
+	ConvertLoop<int8, SEXYAL_FMT_PCMS8>(src, (int8*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMU16:
-	ConvertLoop<uint16_t, SEXYAL_FMT_PCMU16>(src, (uint16_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
+	ConvertLoop<uint16, SEXYAL_FMT_PCMU16>(src, (uint16*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMS16:
-	ConvertLoop<int16_t, SEXYAL_FMT_PCMS16>(src, (int16_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
+	ConvertLoop<int16, SEXYAL_FMT_PCMS16>(src, (int16*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMU24:
-	ConvertLoop<uint32_t, SEXYAL_FMT_PCMU24>(src, (uint32_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
+	ConvertLoop<uint32, SEXYAL_FMT_PCMU24>(src, (uint32*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMS24:
-	ConvertLoop<int32_t, SEXYAL_FMT_PCMS24>(src, (int32_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
+	ConvertLoop<int32, SEXYAL_FMT_PCMS24>(src, (int32*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMU32:
-	ConvertLoop<uint32_t, SEXYAL_FMT_PCMU32>(src, (uint32_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
+	ConvertLoop<uint32, SEXYAL_FMT_PCMU32>(src, (uint32*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMS32:
-	ConvertLoop<int32_t, SEXYAL_FMT_PCMS32>(src, (int32_t*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
+	ConvertLoop<int32, SEXYAL_FMT_PCMS32>(src, (int32*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
 	break;
 
   case SEXYAL_FMT_PCMFLOAT:
@@ -248,19 +238,19 @@ void SexiALI_Convert(const SexyAL_format *srcformat, const SexyAL_format *destfo
  {
   if((destformat->sampformat >> 4) == 2)
   {
-   uint16_t *dest = (uint16_t *)vdest;
-   for(uint32_t x = 0; x < frames * destformat->channels; x++)
+   uint16 *dest = (uint16 *)vdest;
+   for(uint32 x = 0; x < frames * destformat->channels; x++)
    {
-    *dest = FLIP16(*dest);
+    *dest = MDFN_bswap16(*dest);
     dest++;
    }
   }
   else if((destformat->sampformat >> 4) == 4)
   {
-   uint32_t *dest = (uint32_t *)vdest;
-   for(uint32_t x = 0; x < frames * destformat->channels; x++)
+   uint32 *dest = (uint32 *)vdest;
+   for(uint32 x = 0; x < frames * destformat->channels; x++)
    {
-    *dest = FLIP32(*dest);
+    *dest = MDFN_bswap32(*dest);
     dest++;
    }
   }

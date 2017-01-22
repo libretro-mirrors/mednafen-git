@@ -1,21 +1,25 @@
-// -*- C++ -*-
-// VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
-// Copyright (C) 1999-2003 Forgotten
-// Copyright (C) 2004 Forgotten and the VBA development team
-
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2, or(at your option)
-// any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software Foundation,
-// Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+/******************************************************************************/
+/* Mednafen GBA Emulation Module(based on VisualBoyAdvance)                   */
+/******************************************************************************/
+/* RTC.h:
+**  Copyright (C) 1999-2003 Forgotten
+**  Copyright (C) 2004 Forgotten and the VBA development team
+**  Copyright (C) 2009-2017 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License
+** as published by the Free Software Foundation; either version 2
+** of the License, or (at your option) any later version.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #ifndef VBA_RTC_H
 #define VBA_RTC_H
@@ -30,7 +34,7 @@ class RTC
  RTC();
  ~RTC();
 
- void InitTime(void);
+ void InitTime(const struct tm& toom);
 
  uint16 Read(uint32 address);
  void Write(uint32 address, uint16 value);
@@ -53,8 +57,21 @@ class RTC
  RTCSTATE state;
  uint8 data[12];
 
- int64 curtime;        // GBA CPU cycles since the Epoch, in local time.
+ uint32 ClockCounter;
 
+ //
+ //
+ //
+ void ClockSeconds(void);
+ bool BCDInc(uint8 &V, uint8 thresh, uint8 reset_val = 0x00);
+
+ uint8 sec;
+ uint8 min;
+ uint8 hour;
+ uint8 wday;
+ uint8 mday;
+ uint8 mon;
+ uint8 year;
 };
 
 }

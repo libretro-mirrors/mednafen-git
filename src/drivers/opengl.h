@@ -130,6 +130,11 @@ typedef void GLAPIENTRY (*glUniform1iARB_Func)(GLint, GLint);
 typedef void GLAPIENTRY (*glUniform2iARB_Func)(GLint, GLint, GLint);
 typedef void GLAPIENTRY (*glUniform3iARB_Func)(GLint, GLint, GLint, GLint);
 typedef void GLAPIENTRY (*glUniformMatrix2fvARB_Func)(GLint, GLsizei, GLboolean, const GLfloat*);
+typedef void GLAPIENTRY (*glUniform1fvARB_Func)(GLint, GLsizei, const GLfloat*);
+typedef void GLAPIENTRY (*glUniform2fvARB_Func)(GLint, GLsizei, const GLfloat*);
+typedef void GLAPIENTRY (*glUniform3fvARB_Func)(GLint, GLsizei, const GLfloat*);
+typedef void GLAPIENTRY (*glUniform4fvARB_Func)(GLint, GLsizei, const GLfloat*);
+
 typedef void GLAPIENTRY (*glActiveTextureARB_Func)(GLenum);
 typedef void GLAPIENTRY (*glGetInfoLogARB_Func)(GLhandleARB, GLsizei, GLsizei *, GLcharARB *);
 typedef GLint GLAPIENTRY (*glGetUniformLocationARB_Func)(GLhandleARB, const GLcharARB *);
@@ -138,14 +143,13 @@ typedef void GLAPIENTRY (*glDetachObjectARB_Func)(GLhandleARB, GLhandleARB);
 
 typedef void GLAPIENTRY (*glGetObjectParameterivARB_Func)(GLhandleARB, GLenum, GLint *);
 
-
 #include "shader.h"
 
 class OpenGL_Blitter
 {
  public:
 
- OpenGL_Blitter(int scanlines, ShaderType pixshader, const int screen_w, const int screen_h, int *rs, int *gs, int *bs, int *as);
+ OpenGL_Blitter(int scanlines, ShaderType pixshader, const ShaderParams& shader_params, const int screen_w, const int screen_h, int *rs, int *gs, int *bs, int *as);
  ~OpenGL_Blitter();
 
  void BlitRaw(const MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *dest_rect, const bool source_alpha);
@@ -225,6 +229,11 @@ class OpenGL_Blitter
  glUniform2iARB_Func p_glUniform2iARB;
  glUniform3iARB_Func p_glUniform3iARB;
  glUniformMatrix2fvARB_Func p_glUniformMatrix2fvARB;
+ glUniform1fvARB_Func p_glUniform1fvARB;
+ glUniform2fvARB_Func p_glUniform2fvARB;
+ glUniform3fvARB_Func p_glUniform3fvARB;
+ glUniform4fvARB_Func p_glUniform4fvARB;
+
  glActiveTextureARB_Func p_glActiveTextureARB;
  glGetInfoLogARB_Func p_glGetInfoLogARB;
  glGetUniformLocationARB_Func p_glGetUniformLocationARB;
@@ -240,7 +249,6 @@ class OpenGL_Blitter
 
  const int gl_screen_w, gl_screen_h;
  GLuint textures[4];		// emulated fb, scanlines, osd, raw(netplay)
- GLuint rgb_mask; 		// TODO:  RGB mask texture for LCD RGB triad simulation
 
  int using_scanlines;	// Don't change to bool.
  unsigned int last_w, last_h;

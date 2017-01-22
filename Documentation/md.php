@@ -2,9 +2,9 @@
 
 <?php BeginPage('md', 'Sega Genesis/MegaDrive'); ?>
 
-<?php BeginSection('Introduction'); ?>
-Mednafen's Sega Genesis/Megadrive emulation is based off of <a href="http://cgfm2.emuviews.com/">Genesis Plus</a> and
-information and code from <a href="http://code.google.com/p/genplus-gx/">Genesis Plus GX</a>.  The GPL-incompatible
+<?php BeginSection('Introduction', "Section_intro"); ?>
+Mednafen's Sega Genesis/Megadrive emulation is based off of <a href="http://www.techno-junk.org/">Genesis Plus</a> and
+information and code from <b>Genesis Plus GX</b>(old GPL-licensed version).  The GPL-incompatible
 CPU and sound emulation cores in the aforementioned projects have been replaced with GPLed or GPL-compatible alternatives;
 heavily-modified and improved YM2612 emulation from Gens, and Z80 emulation core from FUSE.
 <p>

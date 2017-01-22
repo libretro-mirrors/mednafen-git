@@ -47,8 +47,8 @@ typedef struct
 
 
 static int Close(SexyAL_device *device);
-static int RawCanWrite(SexyAL_device *device, uint32_t *can_write);
-static int RawWrite(SexyAL_device *device, const void *data, uint32_t len);
+static int RawCanWrite(SexyAL_device *device, uint32 *can_write);
+static int RawWrite(SexyAL_device *device, const void *data, uint32 len);
 
 static int CheckStatus(DSFobby *tmp)
 {
@@ -160,7 +160,7 @@ SexyAL_device *SexyALI_DSound_Open(const char *id, SexyAL_format *format, SexyAL
   buffering->ms += 20;
  }
 
- buffering->buffer_size = (int64_t)format->rate * buffering->ms / 1000;
+ buffering->buffer_size = (int64)format->rate * buffering->ms / 1000;
 
  fobby->BufHowMuch = buffering->buffer_size * format->channels * (format->sampformat >> 4);
  fobby->BufHowMuchOBM = fobby->BufHowMuch + ((30 * format->rate + 999) / 1000) * format->channels * (format->sampformat >> 4);
@@ -170,12 +170,12 @@ SexyAL_device *SexyALI_DSound_Open(const char *id, SexyAL_format *format, SexyAL
 
  /* Create secondary sound buffer */
  {
-  int64_t padding_extra = (((int64_t)format->rate * 200 + 999) / 1000) * format->channels * (format->sampformat >> 4);
+  int64 padding_extra = (((int64)format->rate * 200 + 999) / 1000) * format->channels * (format->sampformat >> 4);
 
   if(padding_extra < (fobby->BufHowMuchOBM * 2))
    padding_extra = fobby->BufHowMuchOBM * 2;
 
-  fobby->DSBufferSize = SexyAL_rupow2(fobby->BufHowMuchOBM + padding_extra);
+  fobby->DSBufferSize = round_up_pow2(fobby->BufHowMuchOBM + padding_extra);
 
   //printf("Bufferbytesizenomnom: %u --- BufHowMuch: %u, BufHowMuchOBM: %u\n", fobby->DSBufferSize, fobby->BufHowMuch, fobby->BufHowMuchOBM);
 
@@ -217,7 +217,7 @@ SexyAL_device *SexyALI_DSound_Open(const char *id, SexyAL_format *format, SexyAL
  return(dev);
 }
 
-static int RawCanWriteInternal(SexyAL_device *device, uint32_t *can_write, const bool OBM, const bool signal_nega = false)
+static int RawCanWriteInternal(SexyAL_device *device, uint32 *can_write, const bool OBM, const bool signal_nega = false)
 {
  DSFobby *tmp = (DSFobby *)device->private_data;
  DWORD CurWritePos, CurPlayPos = 0;
@@ -237,7 +237,7 @@ static int RawCanWriteInternal(SexyAL_device *device, uint32_t *can_write, const
  /*  If the current write pos is >= half the buffer size less than the to write pos,
      assume DirectSound has wrapped around.
  */
- if(((int32_t)tmp->ToWritePos-(int32_t)CurWritePos) >= (tmp->DSBufferSize/2))
+ if(((int32)tmp->ToWritePos-(int32)CurWritePos) >= (tmp->DSBufferSize/2))
  {
   CurWritePos += tmp->DSBufferSize;
   //printf("Fixit: %d,%d,%d\n",tmp->ToWritePos,CurWritePos,CurWritePos-tmp->DSBufferSize);
@@ -245,7 +245,7 @@ static int RawCanWriteInternal(SexyAL_device *device, uint32_t *can_write, const
 
  if(tmp->ToWritePos < CurWritePos)
  {
-  int32_t howmuch = (int32_t)CurWritePos - (int32_t)tmp->ToWritePos;
+  int32 howmuch = (int32)CurWritePos - (int32)tmp->ToWritePos;
 
   //printf(" HM: %u\n", howmuch);
 
@@ -277,12 +277,12 @@ static int RawCanWriteInternal(SexyAL_device *device, uint32_t *can_write, const
  return(1);
 }
 
-static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
+static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 {
  return RawCanWriteInternal(device, can_write, false);
 }
 
-static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
+static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 {
  DSFobby *tmp = (DSFobby *)device->private_data;
 
@@ -299,7 +299,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
  {
   VOID *LockPtr[2]={0,0};
   DWORD LockLen[2]={0,0};
-  uint32_t curlen;
+  uint32 curlen;
   int rcw_rv;
 
   while((rcw_rv = RawCanWriteInternal(device, &curlen, true)) && !curlen)
@@ -323,7 +323,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
   if(LockPtr[1] != 0 && LockPtr[1] != LockPtr[0])
   {
    memcpy(LockPtr[0], data, LockLen[0]);
-   memcpy(LockPtr[1], (uint8_t *)data + LockLen[0], len - LockLen[0]);
+   memcpy(LockPtr[1], (uint8 *)data + LockLen[0], len - LockLen[0]);
   }
   else if(LockPtr[0])
   {
@@ -335,7 +335,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
   tmp->ToWritePos = (tmp->ToWritePos + curlen) % tmp->DSBufferSize;
 
   len -= curlen;
-  data = (uint8_t *)data + curlen;
+  data = (uint8 *)data + curlen;
 
   if(len)
    Sleep(1);
@@ -344,7 +344,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
 
  // Synchronize to effective buffer size.
  {
-  uint32_t curlen;
+  uint32 curlen;
   int rcw_rv;
 
   while((rcw_rv = RawCanWriteInternal(device, &curlen, false, true)) && (curlen == ~0U))

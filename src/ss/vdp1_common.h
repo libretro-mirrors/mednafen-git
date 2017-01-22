@@ -46,7 +46,7 @@ extern int32 SysClipX, SysClipY;
 extern int32 UserClipX0, UserClipY0, UserClipX1, UserClipY1;
 extern int32 LocalX, LocalY;
 
-extern uint32 (*const TexFetchTab[0x20])(uint32 x);
+extern uint32 (MDFN_FASTCALL *const TexFetchTab[0x20])(uint32 x);
 
 enum { TVMR_8BPP   = 0x1 };
 enum { TVMR_ROTATE = 0x2 };
@@ -337,7 +337,7 @@ struct line_data
  bool HSS;
  uint16 color;
  int32 ec_count;
- uint32 (*tffn)(uint32);
+ uint32 (MDFN_FASTCALL *tffn)(uint32);
  uint16 CLUT[0x10];
  uint32 cb_or;
  uint32 tex_base;

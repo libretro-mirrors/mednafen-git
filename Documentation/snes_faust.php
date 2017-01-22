@@ -2,7 +2,7 @@
 
 <?php BeginPage('snes_faust', 'Super Nintendo Entertainment System/Super Famicom'); ?>
 
-<?php BeginSection('Introduction'); ?>
+<?php BeginSection('Introduction', 'Section_intro'); ?>
 <p>
 The "<b>snes_faust</b>" emulation module is experimental, and not used automatically by default except for SPC playback.  To use this module rather than the "<b><a href="snes.html">snes</a></b>" module, you must either set the "snes.enable" setting to "0", or pass "-force_module snes_faust" to Mednafen each time it is invoked. 
 </p>

@@ -23,7 +23,6 @@
 #include <mednafen/FileStream.h>
 
 #include <trio/trio.h>
-#include <time.h>
 #include <map>
 #include "debugger.h"
 #include "gfxdebugger.h"
@@ -594,17 +593,13 @@ class DebuggerPrompt : public HappyPrompt
 		    {
 		     try
 		     {
-		      time_t lovelytime;
-
 		      TraceLog.reset(new FileStream(tmpfn, FileStream::MODE_WRITE_INPLACE));
-
-		      lovelytime = time(NULL);
 
 		      TraceLog->seek(0, SEEK_END);
 		      if(TraceLog->tell() != 0)
 		       TraceLog->print_format("\n\n\n");
 
-		      TraceLog->print_format("Tracing began: %s", asctime(gmtime(&lovelytime)));
+		      TraceLog->print_format("Tracing began: %s", Time::StrTime().c_str());
 		      TraceLog->print_format("[ADDRESS]: [INSTRUCTION]   [REGISTERS(before instruction exec)]");
 
 		      if(num == 1)

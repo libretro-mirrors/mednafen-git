@@ -449,6 +449,33 @@ static MDFN_COLD bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  return(ret);
 }
 
+static MDFN_COLD bool DetectSGXCD(std::vector<CDIF*>* CDInterfaces)
+{
+ CDIF *cdiface = (*CDInterfaces)[0];
+ CDUtility::TOC toc;
+ uint8 sector_buffer[2048];
+ bool ret = false;
+
+ memset(sector_buffer, 0, sizeof(sector_buffer));
+
+ cdiface->ReadTOC(&toc);
+
+ // Check all data tracks for the 16-byte magic(4D 65 64 6E 61 66 65 6E 74 AB 90 19 42 62 7D E6) at offset 0x86A(assuming mode 1 sectors).
+ for(int32 track = toc.first_track; track <= toc.last_track; track++)
+ {
+  if(toc.tracks[track].control & 0x4)
+  {
+   if(cdiface->ReadSector(sector_buffer, toc.tracks[track].lba + 1, 1) != 0x1)
+    continue;
+
+   if(MDFN_de64msb(&sector_buffer[0x6A]) == 0x4D65646E6166656EULL && MDFN_de64msb(&sector_buffer[0x6A + 8]) == 0x74AB901942627DE6ULL)
+    ret = true;
+  }
+ }
+
+ return ret;
+}
+
 static MDFN_COLD void LoadCD(std::vector<CDIF *> *CDInterfaces)
 {
  try
@@ -456,7 +483,7 @@ static MDFN_COLD void LoadCD(std::vector<CDIF *> *CDInterfaces)
   std::string bios_path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("pce_fast.cdbios"));
 
   IsHES = 0;
-  IsSGX = 0;
+  IsSGX = DetectSGXCD(CDInterfaces);
 
   LoadCommonPre();
 

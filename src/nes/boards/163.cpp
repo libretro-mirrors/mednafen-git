@@ -19,7 +19,7 @@
 
 #include "mapinc.h"
 
-static uint8 *WRAM = NULL;
+static uint8 WRAM[8192];
 static uint8 security, trigger, strobe;
 static uint8 regs[2];
 static uint8 chrbank[2];
@@ -159,11 +159,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
 
 static void Close(void)
 {
- if(WRAM)
- {
-  free(WRAM);
-  WRAM = NULL;
- }
+
 }
 
 int Mapper163_Init(CartInfo *info)
@@ -173,12 +169,6 @@ int Mapper163_Init(CartInfo *info)
  info->Close = Close;
 
  GameHBIRQHook2 = Mapper163_HB;
-
-
- if(!(WRAM = (uint8 *)malloc(8192)))
- {
-  return(0);
- }
 
  memset(WRAM, 0x00, 8192);	// 0x00 needed over 0xFF for NJ079.  Probably programmed that way in the factory?
  MDFNMP_AddRAM(8192, 0x6000, WRAM);

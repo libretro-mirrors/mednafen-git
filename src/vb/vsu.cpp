@@ -68,9 +68,9 @@ void VSU::Power(void)
   EffFreq[ch] = 0;
   Envelope[ch] = 0;
   WavePos[ch] = 0;
-  FreqCounter[ch] = 0;
+  FreqCounter[ch] = 1;
   IntervalCounter[ch] = 0;
-  EnvelopeCounter[ch] = 0;
+  EnvelopeCounter[ch] = 1;
 
   EffectsClockDivider[ch] = 4800;
   IntervalClockDivider[ch] = 4;
@@ -525,9 +525,12 @@ void VSU::StateAction(StateMem *sm, const unsigned load, const bool data_only)
    if(FreqCounter[ch] < 1)
     FreqCounter[ch] = 1;
 
-   FreqCounter[ch] = 0;
-   IntervalCounter[ch] = 0;
-   EnvelopeCounter[ch] = 0;
+   if(IntervalCounter[ch] <= 0)
+    IntlControl[ch] &= ~0x80;
+   else
+    IntervalCounter[ch] = std::min<int32>(0x20, IntervalCounter[ch]);
+      
+   EnvelopeCounter[ch] = std::max<int32>(0x1, std::min<int32>(0x8, EnvelopeCounter[ch]));
 
    if(EffectsClockDivider[ch] < 1)
     EffectsClockDivider[ch] = 1;

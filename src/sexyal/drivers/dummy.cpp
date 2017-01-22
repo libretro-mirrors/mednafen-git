@@ -20,35 +20,26 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/time.h>
-#include <time.h>
 #include <assert.h>
 
-
-// FIXME?
-#ifdef WIN32
-#include <windows.h>
-#include <windowsx.h>
-#endif
-
+#include <mednafen/Time.h>
 
 typedef struct
 {
  int paused;
- int64_t paused_time;
+ int64 paused_time;
 
- int64_t buffering_us;
+ int64 buffering_us;
 
- int64_t data_written_to;
+ int64 data_written_to;
 
 } Dummy_Driver_t;
 
-static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
+static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 {
  Dummy_Driver_t *dstate = (Dummy_Driver_t *)device->private_data;
- uint32_t ret;
- int64_t curtime = SexyAL_Time64();
+ uint32 ret;
+ int64 curtime = Time::MonoUS();
 
  if(dstate->paused)
   curtime = dstate->paused_time;
@@ -72,13 +63,13 @@ static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
  return(1);
 }
 
-static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
+static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 {
  Dummy_Driver_t *dstate = (Dummy_Driver_t *)device->private_data;
 
  while(len)
  {
-  uint32_t can_write = 0;
+  uint32 can_write = 0;
 
   RawCanWrite(device, &can_write);
 
@@ -91,11 +82,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
 
   if(len)
   {
-   #ifdef HAVE_USLEEP
-   usleep(1000);
-   #elif defined(WIN32)
-   Sleep(1);
-   #endif
+   Time::SleepMS(1);
   }
  }
 
@@ -112,11 +99,11 @@ static int Pause(SexyAL_device *device, int state)
 
   if(state)
   {
-   dstate->paused_time = SexyAL_Time64();
+   dstate->paused_time = Time::MonoUS();
   }
   else
   {
-   dstate->data_written_to = SexyAL_Time64() - (dstate->paused_time - dstate->data_written_to);
+   dstate->data_written_to = Time::MonoUS() - (dstate->paused_time - dstate->data_written_to);
   }
  }
 
@@ -126,7 +113,7 @@ static int Pause(SexyAL_device *device, int state)
 static int Clear(SexyAL_device *device)
 {
  Dummy_Driver_t *dstate = (Dummy_Driver_t *)device->private_data;
- int64_t curtime = SexyAL_Time64();
+ int64 curtime = Time::MonoUS();
 
  if(dstate->paused)
   curtime = dstate->paused_time;
@@ -180,7 +167,7 @@ SexyAL_device *SexyALI_Dummy_Open(const char *id, SexyAL_format *format, SexyAL_
  buffering->ms = buffering->buffer_size * 1000 / format->rate;
  buffering->latency = buffering->buffer_size;
 
- dstate->buffering_us = (int64_t)buffering->buffer_size * 1000 * 1000 / format->rate;
+ dstate->buffering_us = (int64)buffering->buffer_size * 1000 * 1000 / format->rate;
 
  memcpy(&device->format, format, sizeof(SexyAL_format));
  memcpy(&device->buffering, buffering, sizeof(SexyAL_buffering));

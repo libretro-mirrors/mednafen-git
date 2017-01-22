@@ -280,9 +280,11 @@ void JoystickManager::Reset_BC_ChangeCheck(void)
 
 bool JoystickManager::Do_BC_ChangeCheck(ButtConfig *bc) //, bool hint_analog)
 {
+ const uint32 curtime = Time::MonoMS();
+
  if(BCPending.ButtType != BUTTC_NONE)
  {
-  if((BCPending_Time + 150) <= MDFND_GetTime() && BCPending_CCCC >= 5) //(int32)(MDFND_GetTime() - BCPending_Time) >= 150)
+  if((BCPending_Time + 150) <= curtime && BCPending_CCCC >= 5)
   {
    *bc = BCPending;
    BCPending.ButtType = BUTTC_NONE;
@@ -329,7 +331,7 @@ bool JoystickManager::Do_BC_ChangeCheck(ButtConfig *bc) //, bool hint_analog)
      {
       BCPending = bctmp;
       BCPending_Prio = jsc->config_prio;
-      BCPending_Time = MDFND_GetTime();
+      BCPending_Time = curtime;
       BCPending_CCCC = 0;
      }
     }
@@ -381,7 +383,7 @@ bool JoystickManager::Do_BC_ChangeCheck(ButtConfig *bc) //, bool hint_analog)
       {
        BCPending = bctmp;
        BCPending_Prio = jsc->config_prio;
-       BCPending_Time = MDFND_GetTime();
+       BCPending_Time = curtime;
        BCPending_CCCC = 0;
       }
      }
@@ -423,20 +425,6 @@ void JoystickManager::SetRumble(const std::vector<ButtConfig> &bc, uint8 weak_in
  }
 }
 
-void JoystickManager::TestRumble(void)
-{
- uint8 weak, strong;
- //uint32 cur_time = MDFND_GetTime();
-
- strong = 255;
- weak = 0;
- for(unsigned i = 0; i < JoystickCache.size(); i++)
- {
-  Joystick *joy = JoystickCache[i].joystick; 
-  joy->SetRumble(weak, strong);
- }
-}
-
 void JoystickManager::UpdateJoysticks(void)
 {
  //TestRumble();
@@ -470,7 +458,7 @@ bool JoystickManager::TestButton(const ButtConfig &bc)
 
     if(button != ~0U)
     {
-     button += uilog2(bc.ButtonNum & 0xF);
+     button += MDFN_log2(bc.ButtonNum & 0xF);
 
      if(button >= joy->NumButtons())
       return(0);

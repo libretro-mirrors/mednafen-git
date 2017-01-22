@@ -105,7 +105,7 @@ bool pci_bios_present(void)
  return(false);
 }
 
-bool pci_find_device(uint16_t vend_id, uint16_t dev_id, uint16_t index, uint16_t* bdf)
+bool pci_find_device(uint16 vend_id, uint16 dev_id, uint16 index, uint16* bdf)
 {
  _go32_dpmi_registers r;
  memset(&r, 0, sizeof(r));
@@ -129,15 +129,15 @@ bool pci_find_device(uint16_t vend_id, uint16_t dev_id, uint16_t index, uint16_t
  return(true);
 }
 
-pci_vd_pair* pci_find_device(pci_vd_pair* pci_ids, uint32_t index, uint16_t* bdf)
+pci_vd_pair* pci_find_device(pci_vd_pair* pci_ids, uint32 index, uint16* bdf)
 {
- uint32_t i = 0;
+ uint32 i = 0;
 
  while(pci_ids->vendor || pci_ids->device)
  {
-  uint16_t bdf_try;
+  uint16 bdf_try;
 
-  for(uint16_t idx_try = 0; pci_find_device(pci_ids->vendor, pci_ids->device, idx_try, &bdf_try); idx_try++)
+  for(uint16 idx_try = 0; pci_find_device(pci_ids->vendor, pci_ids->device, idx_try, &bdf_try); idx_try++)
   {
    if(i == index)
    {
@@ -153,7 +153,7 @@ pci_vd_pair* pci_find_device(pci_vd_pair* pci_ids, uint32_t index, uint16_t* bdf
  return(NULL);
 }
 
-uint8_t pci_read_config_u8(uint16_t bdf, unsigned index)
+uint8 pci_read_config_u8(uint16 bdf, unsigned index)
 {
  _go32_dpmi_registers r;
  memset(&r, 0, sizeof(r));
@@ -171,7 +171,7 @@ uint8_t pci_read_config_u8(uint16_t bdf, unsigned index)
  return(r.h.cl);
 }
 
-uint16_t pci_read_config_u16(uint16_t bdf, unsigned index)
+uint16 pci_read_config_u16(uint16 bdf, unsigned index)
 {
  _go32_dpmi_registers r;
  memset(&r, 0, sizeof(r));
@@ -189,7 +189,7 @@ uint16_t pci_read_config_u16(uint16_t bdf, unsigned index)
  return(r.x.cx);
 }
 
-uint32_t pci_read_config_u32(uint16_t bdf, unsigned index)
+uint32 pci_read_config_u32(uint16 bdf, unsigned index)
 {
  _go32_dpmi_registers r;
  memset(&r, 0, sizeof(r));
@@ -207,17 +207,17 @@ uint32_t pci_read_config_u32(uint16_t bdf, unsigned index)
  return(r.d.ecx);
 }
 
-void pci_write_config_u8(uint16_t bdf, unsigned index, uint8_t value)
+void pci_write_config_u8(uint16 bdf, unsigned index, uint8 value)
 {
  abort();
 }
 
-void pci_write_config_u16(uint16_t bdf, unsigned index, uint16_t value)
+void pci_write_config_u16(uint16 bdf, unsigned index, uint16 value)
 {
  abort();
 }
 
-void pci_write_config_u32(uint16_t bdf, unsigned index, uint32_t value)
+void pci_write_config_u32(uint16 bdf, unsigned index, uint32 value)
 {
  abort();
 }

@@ -2,7 +2,7 @@
 
 <?php BeginPage('pcfx', 'PC-FX'); ?>
 
-<?php BeginSection('Introduction'); ?>
+<?php BeginSection('Introduction', 'Section_intro'); ?>
   <ul>
    <li>Internal backup memory and external backup memory are emulated.</li>
    <li>Motion decoder RLE and JPEG-like modes are emulated.</li>
@@ -12,7 +12,7 @@
   </ul>
 <?php EndSection(); ?>
 
-<?php BeginSection("Firmware/BIOS", "", FALSE, FALSE, "Section_firmware_bios"); ?>
+<?php BeginSection("Firmware/BIOS", "Section_firmware_bios"); ?>
 <p>
 Place a correct BIOS image file in the <a href="mednafen.html#Section_firmware_bios">correct location</a>.
 </p>
@@ -31,7 +31,7 @@ The filename listed below is per default <a href="#pcfx.bios">pcfx.bios</a> sett
 <?php EndSection(); ?>
 
 
-<?php BeginSection('Default Key Assignments'); ?>
+<?php BeginSection('Default Key Assignments', 'Section_default_keys'); ?>
 
  <table border>
   <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>

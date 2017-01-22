@@ -4,6 +4,7 @@
 #include <mednafen/driver.h>
 #include <mednafen/mednafen.h>
 #include <mednafen/settings.h>
+#include <mednafen/Time.h>
 #include "config.h"
 #include "args.h"
 

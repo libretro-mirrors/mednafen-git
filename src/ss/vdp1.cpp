@@ -225,7 +225,7 @@ int32 CMD_SetLocalCoord(const uint16* cmd_data)
 }
 
 template<unsigned ECDSPDMode>
-static uint32 TexFetch(uint32 x)
+static uint32 MDFN_FASTCALL TexFetch(uint32 x)
 {
  const uint32 base = LineSetup.tex_base;
  const bool ECD = ECDSPDMode & 0x10;
@@ -330,7 +330,7 @@ static uint32 TexFetch(uint32 x)
 }
 
 
-extern uint32 (*const TexFetchTab[0x20])(uint32 x) =
+extern uint32 (MDFN_FASTCALL *const TexFetchTab[0x20])(uint32 x) =
 {
  #define TF(a) (TexFetch<a>)
 

@@ -33,27 +33,27 @@
 #include <stdlib.h>
 #include <assert.h>
 
-typedef uint8_t uint8;
-typedef uint16_t uint16;
-typedef uint32_t uint32;
-typedef uint64_t uint64;
+typedef uint8 uint8;
+typedef uint16 uint16;
+typedef uint32 uint32;
+typedef uint64 uint64;
 
 struct pci_vd_pair
 {
- uint16_t vendor;
- uint16_t device;
+ uint16 vendor;
+ uint16 device;
 };
 
 bool pci_bios_present(void);
-bool pci_find_device(uint16_t vend_id, uint16_t dev_id, uint16_t index, uint16_t* bdf);
-pci_vd_pair* pci_find_device(pci_vd_pair* pci_ids, uint32_t index, uint16_t* bdf);	// Terminate list with { 0 } 
+bool pci_find_device(uint16 vend_id, uint16 dev_id, uint16 index, uint16* bdf);
+pci_vd_pair* pci_find_device(pci_vd_pair* pci_ids, uint32 index, uint16* bdf);	// Terminate list with { 0 } 
 
-uint8_t pci_read_config_u8(uint16_t bdf, unsigned index);
-uint16_t pci_read_config_u16(uint16_t bdf, unsigned index);
-uint32_t pci_read_config_u32(uint16_t bdf, unsigned index);
+uint8 pci_read_config_u8(uint16 bdf, unsigned index);
+uint16 pci_read_config_u16(uint16 bdf, unsigned index);
+uint32 pci_read_config_u32(uint16 bdf, unsigned index);
 
-void pci_write_config_u8(uint16_t bdf, unsigned index, uint8_t value);
-void pci_write_config_u16(uint16_t bdf, unsigned index, uint16_t value);
-void pci_write_config_u32(uint16_t bdf, unsigned index, uint32_t value);
+void pci_write_config_u8(uint16 bdf, unsigned index, uint8 value);
+void pci_write_config_u16(uint16 bdf, unsigned index, uint16 value);
+void pci_write_config_u32(uint16 bdf, unsigned index, uint32 value);
 
 #endif

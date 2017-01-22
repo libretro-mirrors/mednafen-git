@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = subdir-objects
-DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@  @SDL_CFLAGS@
+DEFS = -DLOCALEDIR=\"$(localedir)\" @DEFS@  @SDL_CFLAGS@
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 
 noinst_LIBRARIES	=	libmdfnsdl.a
@@ -30,14 +30,9 @@ if HAVE_LINUX_JOYSTICK
 libmdfnsdl_a_SOURCES += Joystick_Linux.cpp
 endif
 
-if HAVE_POSIX_SOCKETS
-libmdfnsdl_a_SOURCES += NetClient_POSIX.cpp
-endif
-
 if WIN32
 libmdfnsdl_a_SOURCES += Joystick_XInput.cpp
 libmdfnsdl_a_SOURCES += Joystick_DX5.cpp
-libmdfnsdl_a_SOURCES += NetClient_WS2.cpp
 endif
 
 if WANT_DEBUGGER

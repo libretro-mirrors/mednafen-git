@@ -2,7 +2,7 @@
 
 <?php BeginPage('psx', 'Sony PlayStation'); ?>
 
-<?php BeginSection('Introduction', "", FALSE, FALSE, "Section_intro"); ?>
+<?php BeginSection('Introduction', "Section_intro"); ?>
 <p>
 <font color="red" size="+2">WARNING:</font> Save states(and by extension, state rewinding and netplay) and saved games on emulated memory cards do not mix well unless you are
 extremely careful.  For any given game, either use save states or the game's own save system, but not both, lest you may destroy your saved games.
@@ -19,18 +19,19 @@ avoid short emulator pauses and audio pops due to waiting for disk accesses to c
 </p>
 
 <p>
-<a href="http://www.neillcorlett.com/psf/">PSF1</a> playback is supported.  However, many PSF1 rips won't work as they are broken in various ways:
+<a href="http://www.neillcorlett.com/psf/">PSF1</a> playback is supported.  However, many PSF1 rips won't work properly as they are broken in various ways:
 <ul>
  <li>Contain malformed PS-EXE headers.
  <li>Perform unaligned halfword and word memory accesses.
  <li>Erroneously use load instruction target register as a source register in load delay slots.
+ <li>Set volume too high, leading to obnoxious clipping in the emulated SPU.
 </ul>
 </p>
 
 <?php EndSection(); ?>
 
 
-<?php BeginSection("Firmware/BIOS", "", FALSE, FALSE, "Section_firmware_bios"); ?>
+<?php BeginSection("Firmware/BIOS", "Section_firmware_bios"); ?>
 <p>
 Place the correct BIOS image files in the <a href="mednafen.html#Section_firmware_bios">correct location</a>.  Do not rename other revisions/regions of the BIOS to match the expected filenames, or you'll likely
 cause emulation glitches(and cause confusion if you ever distribute or otherwise refer to these misnamed files).
@@ -47,7 +48,7 @@ The filenames listed below are per default psx.bios_* settings.
 </table>
 <?php EndSection(); ?>
 
-<?php BeginSection("Analog Sticks Range Issues"); ?>
+<?php BeginSection("Analog Sticks Range Issues", "Section_analog_range"); ?>
 The DualShock and Dual Analog controllers' analog sticks have a circular physical range of movement, but a much more squareish(corners are a bit rounded for
 DualShock) logical range, likely due to conservative calibration in the gamepads' hardware and firmware design.  Modern PC(compatible) gamepads with a circular
 physical range of motion for their analog sticks(e.g. XBox 360 type controllers) tend to be more tightly-calibrated in hardware, and thus their logical range
@@ -62,7 +63,7 @@ recommended as a starting point.  Smaller values(such as "1.20") may be sufficie
 
 <?php EndSection(); ?>
 
-<?php BeginSection("Multitap Usage", "", FALSE, FALSE, "Section_multitap"); ?>
+<?php BeginSection("Multitap Usage", "Section_multitap"); ?>
 <p>
 By default, no multitap is enabled.  Be aware that if you enable multitap on PSX port 1, game view mapping will be
 inconsistent between games that support multitap and those that do not.
@@ -119,9 +120,9 @@ is enabled when running them.
 </p>
 <?php EndSection(); ?>
 
-<?php BeginSection('Default Input Mappings'); ?>
+<?php BeginSection('Default Input Mappings', 'Section_default_keys'); ?>
 
- <?php BeginSection('Digital Gamepad on Virtual Port 1'); ?>
+ <?php BeginSection('Digital Gamepad on Virtual Port 1', 'Section_default_keys_gamepad'); ?>
   <p>
   <table border>
    <tr><th>Key:</th><th nowrap>Emulated Button:</th></tr>

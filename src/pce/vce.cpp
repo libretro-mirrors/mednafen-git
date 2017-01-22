@@ -455,11 +455,7 @@ INLINE void VCE::SyncSub(int32 clocks)
    {
     if(sgfx)
     {
-     int add = 0;
-     if(dot_clock & 2)
-      add = 8 + 96;
-     else
-      add = 8 + (dot_clock ? 38 : 24);
+     int add = 8 + ((dot_clock == 1) ? 38 : 24);
      window_counter[0] = winwidths[0] + add;
      window_counter[1] = winwidths[1] + add;
     }
@@ -629,18 +625,7 @@ void VCE::SetVCECR(uint8 V)
 
  lc263 = (V & 0x04);
 
- #if 0
- int new_dot_clock = V & 1;
- if(V & 2)
-  new_dot_clock = 2;
-
- dot_clock = new_dot_clock;
- #endif
-
  dot_clock = V & 0x3;
- if(dot_clock == 3)	// Remove this once we determine any relevant differences between 2 and 3.
-  dot_clock = 2;
-
  dot_clock_ratio = vce_ratios[dot_clock];
 
  CR = V;

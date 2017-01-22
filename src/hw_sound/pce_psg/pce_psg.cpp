@@ -856,6 +856,7 @@ void PCE_PSG::StateAction(StateMem *sm, const unsigned load, const bool data_onl
 
   SFVAR(vol_update_counter),
   SFVAR(vol_update_which),
+  SFVAR(vol_update_vllatch),
   SFVAR(vol_pending),
   SFEND
  };

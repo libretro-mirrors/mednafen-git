@@ -42,7 +42,7 @@ typedef struct
 {
 	snd_pcm_t *alsa_pcm;
 
-	uint32_t period_size;
+	uint32 period_size;
 	//bool heavy_sync;
 } ADStruct;
 
@@ -71,10 +71,10 @@ static int Clear(SexyAL_device *device)
  return(1);
 }
 
-static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
+static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 {
  ADStruct *ads = (ADStruct *)device->private_data;
- uint32_t ret;
+ uint32 ret;
  snd_pcm_sframes_t avail;
 
 
@@ -118,7 +118,7 @@ static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
  return(1);
 }
 
-static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
+static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 {
  ADStruct *ads = (ADStruct *)device->private_data;
 
@@ -131,7 +131,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
  
  //if(ads->heavy_sync)
  //{
- // uint32_t cw;
+ // uint32 cw;
  // while(RawCanWrite(device, &cw) > 0 && ((int)cw) < len) usleep(750);
  //}
 
@@ -148,7 +148,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
     void *foodata[device->format.channels];
 
     for(unsigned ch = 0; ch < device->format.channels; ch++)
-     foodata[ch] = (uint8_t*)data + ch * (len / device->format.channels);
+     foodata[ch] = (uint8*)data + ch * (len / device->format.channels);
 
     snore = snd_pcm_writen(ads->alsa_pcm, foodata, len / (device->format.sampformat>>4) / device->format.channels);
    }
@@ -180,9 +180,9 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
   } while(snore <= 0);
 
   if(device->format.noninterleaved == false)
-   data = (const uint8_t*)data + snore * (device->format.sampformat>>4) * device->format.channels;
+   data = (const uint8*)data + snore * (device->format.sampformat>>4) * device->format.channels;
   else
-   data = (const uint8_t*)data + snore * (device->format.sampformat>>4);
+   data = (const uint8*)data + snore * (device->format.sampformat>>4);
 
   len -= snore * (device->format.sampformat>>4) * device->format.channels;
 
@@ -422,7 +422,7 @@ SexyAL_device *SexyALI_ALSA_Open(const char *id, SexyAL_format *format, SexyAL_b
   unsigned int max_periods;
 
   ALSA_TRY(snd_pcm_hw_params_get_periods_max(hw_params, &max_periods, &dir));
-  if(((int64_t)desired_pt * max_periods) < ((int64_t)1000 * desired_buffertime))
+  if(((int64)desired_pt * max_periods) < ((int64)1000 * desired_buffertime))
   {
    //puts("\nHRMMM. max_periods is not large enough to meet desired buffering size at desired period time.\n");
    desired_pt = 1000 * desired_buffertime / max_periods;
@@ -434,7 +434,7 @@ SexyAL_device *SexyALI_ALSA_Open(const char *id, SexyAL_format *format, SexyAL_b
  }
 
  {
-  snd_pcm_uframes_t tmpps = (int64_t)desired_pt * format->rate / (1000 * 1000);
+  snd_pcm_uframes_t tmpps = (int64)desired_pt * format->rate / (1000 * 1000);
   int dir = 0;
 
   snd_pcm_hw_params_set_period_size_near(alsa_pcm, hw_params, &tmpps, &dir);

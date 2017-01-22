@@ -27,7 +27,7 @@
 */
 
 #include "wswan.h"
-#include <time.h>
+#include <mednafen/Time.h>
 #include <limits.h>
 
 #include <mednafen/cdrom/CDUtility.h>	// We really should move the BCD functions somewhere else...
@@ -47,7 +47,7 @@ static uint8 CommandCount;
 struct GenericRTC
 {
  GenericRTC();
- void Init(time_t zetime);
+ void Init(const struct tm& toom);
  void Clock(void);
 
  bool BCDInc(uint8 &V, uint8 thresh, uint8 reset_val = 0x00);
@@ -96,20 +96,15 @@ bool GenericRTC::BCDInc(uint8 &V, uint8 thresh, uint8 reset_val)
  return(false);
 }
 
-void GenericRTC::Init(time_t tmp_time)
+void GenericRTC::Init(const struct tm& toom)
 {
- struct tm *toom;
-
- //toom = gmtime(&tmp_time); 
- toom = localtime(&tmp_time);
-
- sec = U8_to_BCD(toom->tm_sec);
- min = U8_to_BCD(toom->tm_min);
- hour = U8_to_BCD(toom->tm_hour);
- wday = U8_to_BCD(toom->tm_wday);
- mday = U8_to_BCD(toom->tm_mday);
- mon = U8_to_BCD(toom->tm_mon);
- year = U8_to_BCD(toom->tm_year % 100);
+ sec = U8_to_BCD(toom.tm_sec);
+ min = U8_to_BCD(toom.tm_min);
+ hour = U8_to_BCD(toom.tm_hour);
+ wday = U8_to_BCD(toom.tm_wday);
+ mday = U8_to_BCD(toom.tm_mday);
+ mon = U8_to_BCD(toom.tm_mon);
+ year = U8_to_BCD(toom.tm_year % 100);
 
  if(sec >= 0x60)	// Murder the leap second.
   sec = 0x59;
@@ -254,7 +249,7 @@ void RTC_Clock(uint32 cycles)
 
 void RTC_Init(void)
 {
- RTC.Init(time(NULL));
+ RTC.Init(Time::LocalTime());
  ClockCycleCounter = 0;
 
 #if 0

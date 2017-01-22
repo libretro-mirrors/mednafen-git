@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* thread_win32.cpp:
-**  Copyright (C) 2014-2016 Mednafen Team
+**  Copyright (C) 2014-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -116,8 +116,8 @@ static void TestStackAlign(void)
  //assert(test_array[1] == '0');
 }
 
-static DWORD WINAPI ThreadPivot(LPVOID data) __attribute__((force_align_arg_pointer));
-static DWORD WINAPI ThreadPivot(LPVOID data)
+static unsigned __stdcall ThreadPivot(void* data) __attribute__((force_align_arg_pointer));
+static unsigned __stdcall ThreadPivot(void* data)
 {
  TestStackAlign();
 
@@ -143,8 +143,9 @@ MDFN_Thread *MDFND_CreateThread(int (*fn)(void *), void *data)
  ret->fn = fn;
  ret->data = data;
 
- if(!(ret->thr = CreateThread(NULL, 0, ThreadPivot, ret, 0, NULL)))
+ if(!(ret->thr = (HANDLE)_beginthreadex(NULL, 0, ThreadPivot, ret, 0, NULL)))
  {
+  // TODO: Check errno.
   free(ret);
   return(NULL);
  }

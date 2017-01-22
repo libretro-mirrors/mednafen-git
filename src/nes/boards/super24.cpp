@@ -20,7 +20,7 @@
 
 #include "mapinc.h"
 
-static uint8 *CHRRAM = NULL;
+static uint8 CHRRAM[8192];
 static int32 IRQCount,IRQLatch;
 static uint8 IRQa,resetmode,mbia;
 static uint8 sizer,bigbank,bigbank2;
@@ -193,8 +193,7 @@ static DECLFW(Super24Write)
 
 static void Super24Reset(CartInfo *info)
 {
- if(CHRRAM)
-  memset(CHRRAM, 0x00, 8192);
+ memset(CHRRAM, 0x00, 8192);
 
  GameHBIRQHook=Sup24_hb;
  IRQCount=IRQLatch=IRQa=resetmode=0;
@@ -212,9 +211,7 @@ static void Super24Reset(CartInfo *info)
 
 static void Super24Close(void)
 {
- if(CHRRAM)
-  free(CHRRAM);
- CHRRAM = NULL;
+
 }
 
 static int StateAction(StateMem *sm, int load, int data_only)
@@ -246,10 +243,6 @@ int Super24_Init(CartInfo *info)
 {
  info->Power=Super24Reset;
  info->StateAction = StateAction;
-
- if(!(CHRRAM = (uint8 *)malloc(8192)))
-  return(0);
-
  info->Close = Super24Close;
 
  SetupCartCHRMapping(0x10, CHRRAM, 8192, 1);

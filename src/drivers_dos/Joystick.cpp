@@ -470,7 +470,7 @@ bool JoystickManager::TestButton(const ButtConfig &bc)
 
     if(button != ~0U)
     {
-     button += uilog2(bc.ButtonNum & 0xF);
+     button += MDFN_log2(bc.ButtonNum & 0xF);
 
      if(button >= joy->NumButtons())
       return(0);

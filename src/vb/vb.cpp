@@ -119,13 +119,13 @@ static uint8 HWCTRL_Read(v810_timestamp_t &timestamp, uint32 A)
 
  if(A & 0x3)
  { 
-  puts("HWCtrl Bogus Read?");
+  //puts("HWCtrl Bogus Read?");
   return(ret);
  }
 
  switch(A & 0xFF)
  {
-  default: printf("Unknown HWCTRL Read: %08x\n", A);
+  default: //printf("Unknown HWCTRL Read: %08x\n", A);
 	   break;
 
   case 0x18:
@@ -156,7 +156,7 @@ static void HWCTRL_Write(v810_timestamp_t &timestamp, uint32 A, uint8 V)
 
  switch(A & 0xFF)
  {
-  default: printf("Unknown HWCTRL Write: %08x %02x\n", A, V);
+  default: //printf("Unknown HWCTRL Write: %08x %02x\n", A, V);
            break;
 
   case 0x18:
@@ -201,7 +201,9 @@ uint8 MDFN_FASTCALL MemRead8(v810_timestamp_t &timestamp, uint32 A)
   case 6: if(GPRAM)
 	   ret = GPRAM[A & GPRAM_Mask];
 	  else
-	   printf("GPRAM(Unmapped) Read: %08x\n", A);
+	  {
+	   //printf("GPRAM(Unmapped) Read: %08x\n", A);
+	  }
 	  break;
 
   case 7: ret = GPROM[A & GPROM_Mask];
@@ -239,7 +241,10 @@ uint16 MDFN_FASTCALL MemRead16(v810_timestamp_t &timestamp, uint32 A)
 
   case 6: if(GPRAM)
            ret = MDFN_de16lsb<true>(&GPRAM[A & GPRAM_Mask]);
-	  else printf("GPRAM(Unmapped) Read: %08x\n", A);
+	  else
+	  {
+	   //printf("GPRAM(Unmapped) Read: %08x\n", A);
+	  }
 	  break;
 
   case 7: ret = MDFN_de16lsb<true>(&GPROM[A & GPROM_Mask]);

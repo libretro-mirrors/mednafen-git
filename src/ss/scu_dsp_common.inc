@@ -42,7 +42,7 @@ union DSPR48
   uint16 dummy;
   uint16 H;
   uint32 L;
- }
+ };
 #else
  struct
  {

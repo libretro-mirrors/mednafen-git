@@ -21,7 +21,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <time.h>
+#include <mednafen/Time.h>
 
 #include <trio/trio.h>
 #include "driver.h"
@@ -460,7 +460,7 @@ void MDFNSS_SaveSM(Stream *st, bool data_only, const MDFN_Surface *surface, cons
 
 	 if(surface && DisplayRect && LineWidths)
 	 {
-	  bool is_multires = FALSE;
+	  bool is_multires = false;
 
 	  // We'll want to use the nominal width if the source rectangle is > 25% off on either axis, or the source image has
 	  // multiple horizontal resolutions.
@@ -476,7 +476,7 @@ void MDFNSS_SaveSM(Stream *st, bool data_only, const MDFN_Surface *surface, cons
 	    if(LineWidths[DisplayRect->y + y] != first_w)
 	    {
 	     //puts("Multires!");
-	     is_multires = TRUE;
+	     is_multires = true;
 	    }
 	   }
 	  }
@@ -493,7 +493,7 @@ void MDFNSS_SaveSM(Stream *st, bool data_only, const MDFN_Surface *surface, cons
 
 	 memcpy(header, header_magic, 8);
 
-	 MDFN_en64lsb(header + 8, time(NULL));
+	 MDFN_en64lsb(header + 8, Time::EpochTime());
 
 	 MDFN_en32lsb(header + 16, MEDNAFEN_VERSION_NUMERIC);
 	 MDFN_en32lsb(header + 24, neowidth);

@@ -268,7 +268,7 @@ MDFN_Surface* MDFNConsole::Draw(const MDFN_PixelFormat& pformat, const int32 dim
 
   for(unsigned int i = 0; i < kb_buffer.size(); i++)
   {
-   if(i == kb_cursor_pos && (SDL_GetTicks() & 0x100))
+   if(i == kb_cursor_pos && (Time::MonoMS() & 0x100))
     concat_str += "▉";
    else
     concat_str += kb_buffer[i];
@@ -276,7 +276,7 @@ MDFN_Surface* MDFNConsole::Draw(const MDFN_PixelFormat& pformat, const int32 dim
 
   if(kb_cursor_pos == kb_buffer.size())
   {
-   if(SDL_GetTicks() & 0x100)
+   if(Time::MonoMS() & 0x100)
     concat_str += "▉";
    else
     concat_str += " ";

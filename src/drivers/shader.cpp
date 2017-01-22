@@ -1,8 +1,5 @@
 /* Mednafen - Multi-system Emulator
  *
- * Copyright notice for this file:
- *  Scale2x GLslang shader - ported by Pete Bernert
- * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -22,13 +19,27 @@
 #include "opengl.h"
 #include "shader.h"
 
+#include <mednafen/FileStream.h>
+#include <mednafen/MemoryStream.h>
+
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <math.h>
 
-#define MDFN_GL_TRY(x, ...) { x; GLenum errcode = oblt->p_glGetError(); if(errcode != GL_NO_ERROR) { __VA_ARGS__; throw(MDFN_Error(0, _("OpenGL Error: %d\n"), (int)(long long)errcode)); /* FIXME: Throw an error string and not an arcane number. */ } }
+#define MDFN_GL_TRY(x, ...)								\
+	{										\
+	 x;										\
+	 GLenum errcode = oblt->p_glGetError();						\
+	 if(errcode != GL_NO_ERROR)							\
+	 {										\
+	  __VA_ARGS__;									\
+											\
+	  /* FIXME: Throw an error string and not an arcane number. */			\
+	  throw MDFN_Error(0, _("OpenGL Error: %d\n"), (int)(long long)errcode);	\
+	 }										\
+	}
 
 static const char *vertexProg = "void main(void)\n{\ngl_Position = ftransform();\ngl_TexCoord[0] = gl_MultiTexCoord0;\n}";
 
@@ -57,6 +68,9 @@ static std::string MakeProgIpolate(unsigned ipolate_axis)	// X & 1, Y & 2, sharp
    case 1:
 	if(ipolate_axis & 4)
     	 ret += std::string("texelFract.s = clamp(texelFract.s * XSharp, -0.5, 0.5) + float(0.5);\n");
+	else
+	 ret += std::string("texelFract.s = texelFract.s + float(0.5);\n");
+
 	ret += std::string("texelFract.t = floor(texelFract.t + float(1.0));\n");
 	break;
 
@@ -65,6 +79,8 @@ static std::string MakeProgIpolate(unsigned ipolate_axis)	// X & 1, Y & 2, sharp
 
 	if(ipolate_axis & 4)
     	 ret += std::string("texelFract.t = clamp(texelFract.t * YSharp, -0.5, 0.5) + float(0.5);\n");
+	else
+    	 ret += std::string("texelFract.t = texelFract.t + float(0.5);\n");
 	break;
 
    case 3:
@@ -72,6 +88,10 @@ static std::string MakeProgIpolate(unsigned ipolate_axis)	// X & 1, Y & 2, sharp
 	{
     	 ret += std::string("texelFract.s = clamp(texelFract.s * XSharp, -0.5, 0.5) + float(0.5);\n");
     	 ret += std::string("texelFract.t = clamp(texelFract.t * YSharp, -0.5, 0.5) + float(0.5);\n");
+	}
+	else
+	{
+	 ret += std::string("texelFract = texelFract + float(0.5);\n");
 	}
 	break;
   }
@@ -89,31 +109,71 @@ static std::string MakeProgIpolate(unsigned ipolate_axis)	// X & 1, Y & 2, sharp
  return ret;
 }
 
-static const char *fragScale2X =
-"uniform vec2 TexSize;\n\
-uniform vec2 TexSizeInverse;\n\
-uniform sampler2D Tex0;\n\
-void main()\n\
-{\n\
- vec4 colD,colF,colB,colH,col,tmp;\n\
- vec2 sel;\n\
- vec4 chewx = vec4(TexSizeInverse.x, 0, 0, 0);\n\
- vec4 chewy = vec4(0, TexSizeInverse.y, 0, 0);\n\
- vec4 MeowCoord = gl_TexCoord[0];\n\
- col  = texture2DProj(Tex0, MeowCoord);	\n\
- colD = texture2DProj(Tex0, MeowCoord - chewx);	\n\
- colF = texture2DProj(Tex0, MeowCoord + chewx);	\n\
- colB = texture2DProj(Tex0, MeowCoord - chewy);	\n\
- colH = texture2DProj(Tex0, MeowCoord + chewy);	\n\
- sel=fract(gl_TexCoord[0].xy * TexSize.xy);		\n\
- if(sel.y>=0.5)  {tmp=colB;colB=colH;colH=tmp;}		\n\
- if(sel.x>=0.5)  {tmp=colF;colF=colD;colD=tmp;}		\n\
- if(colB == colD && colB != colF && colD!=colH) 	\n\
-  col=colD;\n\
- gl_FragColor = col;\n\
-}";
-
+#include "shader_scale2x.inc"
 #include "shader_sabr.inc"
+
+static std::string BuildGoat(const bool slen)
+{
+ std::string ret;
+
+ret += "\n\
+uniform ivec2 MaskDim;\n\
+uniform vec3 TexRGBAdj[400];\n\
+uniform float TexXCoordAdj;\n\
+uniform vec3 TexYCoordAdj;\n\
+\n\
+uniform sampler2D Tex0;\n\
+uniform vec2 TexSize;\n\
+uniform vec2 TexSizeInverse;\n\
+uniform float XSharp;\n\
+uniform float YSharp;\n\
+\n\
+void main(void)\n\
+{\n\
+ ivec2 fc = ivec2(gl_FragCoord);\n\
+ ivec2 di = fc - MaskDim * (fc / MaskDim);\n\
+\n\
+ vec2 texelIndex = vec2(gl_TexCoord[0]) * TexSize - float(0.5);\n\
+ vec3 texelIndexX = vec3(texelIndex.x - TexXCoordAdj, texelIndex.x, texelIndex.x + TexXCoordAdj);\n\
+ vec3 texelIntX = floor(texelIndexX);\n\
+ vec3 texelFractX = texelIndexX - texelIntX - float(0.5);\n\
+\n\
+ texelFractX = clamp(texelFractX * XSharp, -0.5, 0.5) + float(0.5);\n\
+ texelIndexX = texelFractX + texelIntX;\n\
+ texelIndexX += float(0.5);\n\
+ texelIndexX *= TexSizeInverse.x;\n\
+\n\
+ vec3 texelIndexY = TexYCoordAdj + texelIndex.y;\n\
+ vec3 texelIntY = floor(texelIndexY);\n\
+ vec3 texelFractY = texelIndexY - texelIntY - float(0.5);\n\
+\n";
+
+ if(slen)
+  ret += "vec3 slmul = min(abs(texelFractY) * float(2.0), float(1)) * float(0.40) + float(0.60);\n";
+
+ret += "\n\
+ texelFractY = clamp(texelFractY * YSharp, -0.5, 0.5) + float(0.5);\n\
+ texelIndexY = texelFractY + texelIntY;\n\
+ texelIndexY += float(0.5);\n\
+ texelIndexY *= TexSizeInverse.y;\n\
+\n\
+ vec3 smoodged = vec3(texture2D(Tex0, vec2(texelIndexX.s, texelIndexY.s)).r,\n\
+		      texture2D(Tex0, vec2(texelIndexX.t, texelIndexY.t)).g,\n\
+		      texture2D(Tex0, vec2(texelIndexX.p, texelIndexY.p)).b);\n\
+\n";
+
+ ret += "smoodged = pow(smoodged, vec3(float(2.2) / float(1.0)));\n";
+ ret += "smoodged *= TexRGBAdj[di.y * int(20) + di.x];\n";
+ if(slen)
+  ret += "smoodged *= slmul;\n";
+ ret += "smoodged = pow(smoodged, vec3(float(1.0) / float(2.2)));\n";
+
+
+ ret += "gl_FragColor = vec4(smoodged, float(0));\n";
+ ret += "}\n";
+
+ return ret;
+}
 
 void OpenGL_Blitter_Shader::SLP(GLhandleARB moe)
 {
@@ -195,7 +255,7 @@ void OpenGL_Blitter_Shader::Cleanup(void)
         oblt->p_glDisable(GL_FRAGMENT_PROGRAM_ARB);
 }
 
-OpenGL_Blitter_Shader::OpenGL_Blitter_Shader(OpenGL_Blitter *in_oblt, ShaderType shader_type) : oblt(in_oblt)
+OpenGL_Blitter_Shader::OpenGL_Blitter_Shader(OpenGL_Blitter *in_oblt, ShaderType shader_type, const ShaderParams& in_params) : oblt(in_oblt), params(in_params)
 {
 	OurType = shader_type;
 
@@ -211,6 +271,23 @@ OpenGL_Blitter_Shader::OpenGL_Blitter_Shader(OpenGL_Blitter *in_oblt, ShaderType
 
 	  case SHADER_SABR:
 		CompileShader(CSP[0], vertSABR, fragSABR);
+		break;
+
+	  case SHADER_GOAT:
+		{
+#if 0
+		 MemoryStream foof(new FileStream("goat.txt", FileStream::MODE_READ));
+
+		 foof.seek(0, SEEK_END);
+		 foof.put_u8(0);
+
+		 CompileShader(CSP[0], vertexProg, (const char*)foof.map());
+#endif
+		 std::string fragGoat = BuildGoat(params.goat_slen);
+
+		 CompileShader(CSP[0], vertexProg, fragGoat.c_str());
+		 GoatMaskLastRot = ~0U;
+		}
 		break;
 
 	  default:
@@ -236,6 +313,123 @@ bool OpenGL_Blitter_Shader::ShaderNeedsBTIP(void)
  return(false);
 }
 
+bool OpenGL_Blitter_Shader::ShaderNeedsProperIlace(void)
+{
+ return (OurType == SHADER_GOAT) && !params.goat_fprog;
+}
+
+void OpenGL_Blitter_Shader::UpdateGoatMask(const unsigned rotated)
+{
+ bool hblack;
+ bool vblack;
+ unsigned mask_w, mask_h;
+
+ if(params.goat_pat == ShaderParams::GOAT_MASKPAT_GOATRON)
+ {
+  mask_w = 3;
+  mask_h = 1;
+  hblack = false;
+  vblack = false;
+ }
+ else if(params.goat_pat == ShaderParams::GOAT_MASKPAT_GOATRONPRIME)
+ {
+  mask_w = 4;
+  mask_h = 1;
+  hblack = true;
+  vblack = false;
+ }
+ else if(params.goat_pat == ShaderParams::GOAT_MASKPAT_SLENDERMAN)
+ {
+  mask_w = 20;
+  mask_h = 10;
+  hblack = true;
+  vblack = true;
+ }
+ else
+ {
+  mask_w = 8;
+  mask_h = 4;
+  hblack = true;
+  vblack = true;
+ }
+
+ float rgbadj[20][20][3];
+
+ for(unsigned y = 0; y < mask_h; y++)
+ {
+  for(unsigned x = 0; x < mask_w; x++)	
+  {
+   const unsigned jx = x;
+   const unsigned jy = y;
+
+   for(unsigned i = 0; i < 3; i++)
+   {
+    float tmp;
+    bool in_black = false;
+
+    if(((jx & 0x3) == 0x3) && hblack)
+     in_black = true;
+
+    if(vblack)
+    {
+     if(params.goat_pat == ShaderParams::GOAT_MASKPAT_SLENDERMAN)
+     {
+      if(((jy + ((jx / 4) * 2)) % 5) == 4)
+       in_black = true;
+     }
+     else
+     {
+      if(jy == ((mask_h >> (jx >= (mask_w / 2))) - 1))
+       in_black = true;
+     }
+    }
+
+    if(in_black)
+     tmp = params.goat_tp;
+    else if(jx % (hblack ? 4 : 3) == i)
+     tmp = 1.0;
+    else
+     tmp = params.goat_tp;
+
+    //
+    unsigned adx = x;
+    unsigned ady = y;
+
+    if(rotated == MDFN_ROTATE90)
+     rgbadj[adx][ady][i] = tmp;
+    else if(rotated == MDFN_ROTATE270)
+     rgbadj[mask_w - 1 - adx][mask_h - 1 - ady][i] = tmp;
+    else
+     rgbadj[mask_h - 1 - ady][adx][i] = tmp;
+   }
+  }
+ }
+
+#if 0
+	 printf("Pattern %dx%d:\n", mask_w, mask_h);
+	 for(unsigned y = 0; y < mask_h; y++)
+	 {
+          for(unsigned x = 0; x < mask_w; x++)
+	  {
+	   printf("[%.1f %.1f %.1f] ", rgbadj[y][x][0], rgbadj[y][x][1], rgbadj[y][x][2]);
+	  }
+	  printf("\n");
+	 }
+	 printf("\n\n");
+#endif
+ oblt->p_glUniform3fvARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "TexRGBAdj"), 400, (const float*)rgbadj);
+
+ {
+  unsigned smw = mask_w, smh = mask_h;
+
+  if(rotated == MDFN_ROTATE90 || rotated == MDFN_ROTATE270)
+   std::swap(smw, smh);
+
+  oblt->p_glUniform2iARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "MaskDim"), smw, smh);
+ }
+ GoatMaskLastRot = rotated;
+}
+
 void OpenGL_Blitter_Shader::ShaderBegin(const int gl_screen_w, const int gl_screen_h, const MDFN_Rect *rect, const MDFN_Rect *dest_rect, int tw, int th, int orig_tw, int orig_th, unsigned rotated)
 {
         oblt->p_glEnable(GL_FRAGMENT_PROGRAM_ARB);
@@ -257,6 +451,37 @@ void OpenGL_Blitter_Shader::ShaderBegin(const int gl_screen_w, const int gl_scre
 
          oblt->p_glUniform1iARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "rubyTexture"), 0);
          oblt->p_glUniform2fARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "rubyTextureSize"), tw, th);
+	}
+	else if(OurType == SHADER_GOAT)
+	{
+ 	 oblt->p_glUseProgramObjectARB(CSP[0].p);
+
+         oblt->p_glUniform1iARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "Tex0"), 0);
+         oblt->p_glUniform2fARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "TexSize"), tw, th);
+         oblt->p_glUniform2fARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "TexSizeInverse"), (float)1 / tw, (float) 1 / th);
+
+
+	 float ipc_drw = dest_rect->w;
+	 float ipc_drh = dest_rect->h;
+
+	 if(rotated == MDFN_ROTATE90 || rotated == MDFN_ROTATE270)
+ 	  std::swap(ipc_drw, ipc_drh);
+
+         oblt->p_glUniform1fARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "XSharp"), std::max<float>(1.0, ipc_drw / rect->w * 0.25));
+         oblt->p_glUniform1fARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "YSharp"), std::max<float>(1.0, ipc_drh / rect->h * 0.25));
+
+	 float xpp = (float)1.0 / dest_rect->w;
+	 float ypp = (float)1.0 / dest_rect->h;
+
+	 oblt->p_glUniform1fARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "TexXCoordAdj"), tw * xpp * params.goat_hdiv);
+	 {
+	  float ycab = th * ypp * params.goat_vdiv;
+
+	  oblt->p_glUniform3fARB(oblt->p_glGetUniformLocationARB(CSP[0].p, "TexYCoordAdj"), -ycab, -ycab / 2, ycab);
+	 }
+
+	 if(rotated != GoatMaskLastRot)
+	  UpdateGoatMask(rotated);
 	}
 	else
 	{

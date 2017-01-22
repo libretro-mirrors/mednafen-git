@@ -43,12 +43,11 @@ class MemDebugger
 
  bool ICV_Init(const char *newcode);
  void ChangePos(int64 delta);
- void DoCrazy(void);
 
- uint8* TextToBS(const char *text, size_t *TheCount);
- void PromptFinish(const std::string &pstring);
- bool DoBSSearch(uint32 byte_count, uint8 *thebytes);
- bool DoRSearch(uint32 byte_count, uint8 *the_bytes);
+ std::vector<uint8> TextToBS(const std::string& text);
+ void PromptFinish(const std::string& pstring);
+ bool DoBSSearch(const std::vector<uint8>& thebytes);
+ bool DoRSearch(const std::vector<uint8>& thebytes);
 
 
  int32 DrawWaveform(MDFN_Surface* surface, const int32 base_y, const uint32 hcenterw);

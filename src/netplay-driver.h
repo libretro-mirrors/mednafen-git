@@ -22,7 +22,7 @@ void MDFND_SendData(const void *data, uint32 len);	// thrown std::exception will
 void MDFND_RecvData(void *data, uint32 len);		// thrown std::exception will be handled
 
 /* Display netplay-related text. */
-/* NetEcho will be set to TRUE if the displayed text is a network
+/* NetEcho will be set to true if the displayed text is a network
    echo of what we typed.
 */
 void MDFND_NetplayText(const char* text, bool NetEcho);

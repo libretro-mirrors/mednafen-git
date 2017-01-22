@@ -927,7 +927,7 @@ void Ym2612_Impl::run( Ym2612_Emu::sample_t* out )
 			{
 			 int amp = LFO_PhaseMod_Table[ch.FMS][lfo_pm_tabposition];
 
-			 lfo_fnm_delta = (amp << uilog2(ch.FNUM[i2])) >> 9;
+			 lfo_fnm_delta = (amp << MDFN_log2(ch.FNUM[i2])) >> 9;
 
 			 if(lfo_pm_position & 0x10)
 			  lfo_fnm_delta = -lfo_fnm_delta;

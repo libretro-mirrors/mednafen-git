@@ -110,7 +110,7 @@ static std::string BCsToString(const ButtConfig *bc, unsigned int n)
  return(ret);
 }
 
-static std::string BCsToString(const std::vector<ButtConfig> &bc, const bool AND_Mode = false)
+static std::string BCsToString(const std::vector<ButtConfig> &bc, const bool AND_Mode)
 {
  std::string ret = "";
 
@@ -220,6 +220,7 @@ struct ButtonInfoCache
  const InputDeviceInputInfoStruct* IDII = NULL;
 
  std::vector<ButtConfig> BC;
+ bool BCANDMode = false;
  int BCPrettyPrio = 0;
 
  unsigned Flags = 0;
@@ -353,7 +354,7 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
      bic.IDII = &idii;
      bic.SettingName = trio_aprintf("%s.input.%s.%s.%s%s", gi->shortname, gi->PortInfo[port].ShortName, zedevice->ShortName, (r ? "rapid_" : ""), idii.SettingName);
      CleanSettingName(bic.SettingName);
-     StringToBC(MDFN_GetSettingS(bic.SettingName).c_str(), bic.BC);
+     bic.BCANDMode = StringToBC(MDFN_GetSettingS(bic.SettingName).c_str(), bic.BC);
 
      for(unsigned o = 0; o < 4; o++)
      {
@@ -710,7 +711,7 @@ static CKeyConfig CKeysConfig[_CK_COUNT];
 static uint32 CKeysPressTime[_CK_COUNT];
 static bool CKeysActive[_CK_COUNT];
 static bool CKeysTrigger[_CK_COUNT];
-static uint32 CurTicks = 0;	// Optimization, SDL_GetTicks() might be slow on some platforms?
+static uint32 CurTicks = 0;	// Optimization, Time::MonoMS() might be slow on some platforms?
 
 static void CK_Init(void)
 {
@@ -895,7 +896,7 @@ static void UpdatePhysicalDeviceState(void)
  if(MDFNDHaveFocus || MDFN_GetSettingB("input.joystick.global_focus"))
   joy_manager->UpdateJoysticks();
 
- CurTicks = SDL_GetTicks();
+ CurTicks = Time::MonoMS();
 }
 
 static void RedoFFSF(void)
@@ -1492,7 +1493,7 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
    {
     uint32 intv;
 
-    intv = DTestButton(bic.BC, keys, MouseData, true);
+    intv = DTestAnalogButton(bic.BC, keys, MouseData);
  
     if(bic.Flags & IDIT_BUTTON_ANALOG_FLAG_SQLR)
      intv = std::min<unsigned>((unsigned)floor(0.5 + intv * PIDC[x].AxisScale), 32767);
@@ -1501,7 +1502,7 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
    }
    else if(bic.Type == IDIT_SWITCH)
    {
-    const bool nps = DTestButton(bic.BC, keys, MouseData);
+    const bool nps = DTestButton(bic.BC, keys, MouseData, bic.BCANDMode);
     uint8 cv = BitsExtract(tptr, bo, bic.SwitchBitSize);
 
     if(MDFN_UNLIKELY(!bic.SwitchLastPress && nps))
@@ -1525,7 +1526,7 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
     if(!bic.Rapid)
      *btptr &= ~(1 << (bo & 7));
 
-    if(DTestButton(bic.BC, keys, MouseData)) // boolean button
+    if(DTestButton(bic.BC, keys, MouseData, bic.BCANDMode)) // boolean button
     {
      if(!bic.Rapid || rapid >= (autofirefreq + 1) / 2)
       *btptr |= 1 << (bo & 7);
@@ -1627,7 +1628,7 @@ void InitGameInput(MDFNGI *gi)
 static void ResyncGameInputSettings(unsigned port)
 {
  for(unsigned int x = 0; x < PIDC[port].BIC.size(); x++)
-  MDFNI_SetSetting(PIDC[port].BIC[x].SettingName, BCsToString(PIDC[port].BIC[x].BC));
+  MDFNI_SetSetting(PIDC[port].BIC[x].SettingName, BCsToString(PIDC[port].BIC[x].BC, PIDC[port].BIC[x].BCANDMode));
 }
 
 

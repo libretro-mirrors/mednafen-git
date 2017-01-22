@@ -59,18 +59,18 @@ struct WASWrap
  HANDLE AThread;
  UINT32 bfc;
 
- volatile uint8_t* Buffer;
- uint32_t BufferBPF;
- uint32_t BufferReadBytePos;
- uint32_t BufferWriteBytePos;
- uint32_t BufferFrameSize;
- uint32_t BufferFrameSizeSuper;
- uint32_t BufferByteSize;
- uint32_t BufferByteSizeSuper;
+ volatile uint8* Buffer;
+ uint32 BufferBPF;
+ uint32 BufferReadBytePos;
+ uint32 BufferWriteBytePos;
+ uint32 BufferFrameSize;
+ uint32 BufferFrameSizeSuper;
+ uint32 BufferByteSize;
+ uint32 BufferByteSizeSuper;
 
  // Ostensibly atomic:
- volatile uint32_t BufferRBC;	// In audio thread: uint32 tc = BufferWriteCounter - BufferReadCounter;
- volatile uint32_t BufferWBC;	// In main thread: uint32 tc = SOMETHING - (BufferWriteCounter - BufferReadCounter);
+ volatile uint32 BufferRBC;	// In audio thread: uint32 tc = BufferWriteCounter - BufferReadCounter;
+ volatile uint32 BufferWBC;	// In main thread: uint32 tc = SOMETHING - (BufferWriteCounter - BufferReadCounter);
 
  volatile char AThreadRunning;
  HANDLE BufferReadEvent;
@@ -78,8 +78,8 @@ struct WASWrap
 
 
 static int Close(SexyAL_device *device);
-static int RawCanWrite(SexyAL_device *device, uint32_t *can_write);
-static int RawWrite(SexyAL_device *device, const void *data, uint32_t len);
+static int RawCanWrite(SexyAL_device *device, uint32 *can_write);
+static int RawWrite(SexyAL_device *device, const void *data, uint32 len);
 
 static int Pause(SexyAL_device *device, int state)
 {
@@ -156,8 +156,8 @@ static DWORD WINAPI AThreadMain(LPVOID param)
    // FIXME: Proper integer typecasting for std::min stuff.
    if((tmp = w->arc->GetBuffer(w->bfc, &bd)) == S_OK)
    {
-    int32_t to_copy = std::min<int32_t>(w->bfc * w->BufferBPF, w->BufferWBC - w->BufferRBC);
-    int32_t max_bs_copy = w->BufferByteSizeSuper - w->BufferReadBytePos;
+    int32 to_copy = std::min<int32>(w->bfc * w->BufferBPF, w->BufferWBC - w->BufferRBC);
+    int32 max_bs_copy = w->BufferByteSizeSuper - w->BufferReadBytePos;
 
     assert(to_copy >= 0);
 
@@ -165,13 +165,13 @@ static DWORD WINAPI AThreadMain(LPVOID param)
     static int sawie = 0;
     for(int i = 0; i < w->bfc; i++)
     {
-     ((uint16_t*)bd)[i * 2 + 0] = sawie;
-     ((uint16_t*)bd)[i * 2 + 1] = sawie;
+     ((uint16*)bd)[i * 2 + 0] = sawie;
+     ((uint16*)bd)[i * 2 + 1] = sawie;
      sawie += 128;
     }
     #else
-    memcpy(bd, (void*)(w->Buffer + w->BufferReadBytePos), std::min<int32_t>(to_copy, max_bs_copy));
-    memcpy(bd + max_bs_copy, (void*)(w->Buffer), std::max<int32_t>(0, to_copy - max_bs_copy));
+    memcpy(bd, (void*)(w->Buffer + w->BufferReadBytePos), std::min<int32>(to_copy, max_bs_copy));
+    memcpy(bd + max_bs_copy, (void*)(w->Buffer), std::max<int32>(0, to_copy - max_bs_copy));
     memset(bd + to_copy, 0, (w->bfc * w->BufferBPF) - to_copy);
     #endif
     w->arc->ReleaseBuffer(w->bfc, 0);
@@ -341,8 +341,8 @@ SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL
  }
  else
  {
-  const uint32_t rates[7] = { format->rate, 48000, 96000, 192000, 44100, 88200, 22050 };
-  const uint32_t chans[4] = { format->channels, 2, 1, 8 };
+  const uint32 rates[7] = { format->rate, 48000, 96000, 192000, 44100, 88200, 22050 };
+  const uint32 chans[4] = { format->channels, 2, 1, 8 };
   const int bits[3] = { 16, 32, 8 };
 
   for(int chantry = 0; chantry < 4; chantry++)
@@ -358,7 +358,7 @@ SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL
       wfe.Format.wFormatTag = WAVE_FORMAT_PCM;
       wfe.Format.nChannels = chans[chantry];
       wfe.Format.nSamplesPerSec = rates[ratetry];
-      wfe.Format.wBitsPerSample = SexyAL_rupow2(bits[bittry]);
+      wfe.Format.wBitsPerSample = round_up_pow2(bits[bittry]);
 
       wfe.Format.nBlockAlign = (wfe.Format.nChannels * wfe.Format.wBitsPerSample) / 8;
       wfe.Format.nAvgBytesPerSec = wfe.Format.nSamplesPerSec * wfe.Format.nBlockAlign;
@@ -420,7 +420,7 @@ SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL
 
   TRYHR(w->ac->GetDevicePeriod(NULL, &periodicity));
 
-  if(buffering->period_us > 0 && ((int64_t)buffering->period_us * 10) >= periodicity)	// >= rather than > so the else-if doesn't run for < 2ms minimum case
+  if(buffering->period_us > 0 && ((int64)buffering->period_us * 10) >= periodicity)	// >= rather than > so the else-if doesn't run for < 2ms minimum case
    periodicity = buffering->period_us * 10;
   else if(periodicity < 20000)	// Don't use a periodicity smaller than 2ms unless the user specifically asks for it(handled above).
    periodicity = 20000;
@@ -433,7 +433,7 @@ SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL
    UINT32 tmp_bs;
 
    TRYHR(w->ac->GetBufferSize(&tmp_bs));
-   periodicity = ((int64_t)tmp_bs * 10000 * 1000 + (wfe.Format.nSamplesPerSec >> 1)) / wfe.Format.nSamplesPerSec;
+   periodicity = ((int64)tmp_bs * 10000 * 1000 + (wfe.Format.nSamplesPerSec >> 1)) / wfe.Format.nSamplesPerSec;
    //printf("PERIODICITYYYY(AGAIAIAAAIN): %d\n", (int)periodicity);
 
    w->ac->Release();
@@ -459,16 +459,16 @@ SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL
 
   //printf("MOOMOOOOO: %u\n", (unsigned)raw_ac_latency);
 
-  int32_t dtbfs = (int64_t)(buffering->ms ? buffering->ms : 32) * wfe.Format.nSamplesPerSec / 1000;
-  int32_t des_local_bufsize = std::max<int32_t>(dtbfs, w->bfc);
-  int32_t des_local_bufsize_super = des_local_bufsize + ((30 * wfe.Format.nSamplesPerSec + 999) / 1000);
+  int32 dtbfs = (int64)(buffering->ms ? buffering->ms : 32) * wfe.Format.nSamplesPerSec / 1000;
+  int32 des_local_bufsize = std::max<int32>(dtbfs, w->bfc);
+  int32 des_local_bufsize_super = des_local_bufsize + ((30 * wfe.Format.nSamplesPerSec + 999) / 1000);
 
   w->BufferRBC = 0;
   w->BufferWBC = 0;
   w->BufferReadBytePos = 0;
   w->BufferWriteBytePos = 0;
 
-  w->Buffer = (uint8_t*)calloc(wfe.Format.wBitsPerSample / 8 * wfe.Format.nChannels, des_local_bufsize_super);
+  w->Buffer = (uint8*)calloc(wfe.Format.wBitsPerSample / 8 * wfe.Format.nChannels, des_local_bufsize_super);
   w->BufferBPF = wfe.Format.wBitsPerSample / 8 * wfe.Format.nChannels;
   w->BufferFrameSize = des_local_bufsize;
   w->BufferFrameSizeSuper = des_local_bufsize_super;
@@ -516,36 +516,36 @@ SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL
  return(dev);
 }
 
-static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
+static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 {
  WASWrap *w = (WASWrap *)device->private_data;
- int32_t bytes_in = w->BufferWBC - w->BufferRBC;
+ int32 bytes_in = w->BufferWBC - w->BufferRBC;
 
  assert(bytes_in >= 0);
 
- *can_write = std::max<int32_t>(0, (int32_t)w->BufferByteSize - bytes_in);
+ *can_write = std::max<int32>(0, (int32)w->BufferByteSize - bytes_in);
 
  return(1);
 }
 
-static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
+static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 {
  WASWrap *w = (WASWrap *)device->private_data;
- const uint8_t* data8 = (uint8_t*)data;
+ const uint8* data8 = (uint8*)data;
 
  while(len > 0)
  {
-  int32_t bytes_in = w->BufferWBC - w->BufferRBC;
-  int32_t cwt = w->BufferByteSizeSuper - bytes_in;
-  int32_t to_copy = std::min<int32_t>(cwt, len);
-  int32_t max_bs_copy = w->BufferByteSizeSuper - w->BufferWriteBytePos;
+  int32 bytes_in = w->BufferWBC - w->BufferRBC;
+  int32 cwt = w->BufferByteSizeSuper - bytes_in;
+  int32 to_copy = std::min<int32>(cwt, len);
+  int32 max_bs_copy = w->BufferByteSizeSuper - w->BufferWriteBytePos;
 
   //printf("%u - %d %d %d %d --- %08x %08x, %08x\n", len, bytes_in, cwt, to_copy, max_bs_copy, w->BufferWBC, w->BufferRBC, w->BufferByteSizeSuper);
   assert(bytes_in >= 0);
   assert(to_copy >= 0);
 
-  memcpy((void*)(w->Buffer + w->BufferWriteBytePos), data8, std::min<int32_t>(to_copy, max_bs_copy));
-  memcpy((void*)(w->Buffer), data8 + max_bs_copy, std::max<int32_t>(0, to_copy - max_bs_copy));
+  memcpy((void*)(w->Buffer + w->BufferWriteBytePos), data8, std::min<int32>(to_copy, max_bs_copy));
+  memcpy((void*)(w->Buffer), data8 + max_bs_copy, std::max<int32>(0, to_copy - max_bs_copy));
 
   w->BufferWriteBytePos = (w->BufferWriteBytePos + to_copy) % w->BufferByteSizeSuper;
   w->BufferWBC += to_copy;
@@ -563,8 +563,8 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
 
  for(;;)
  {
-  int32_t bytes_in = w->BufferWBC - w->BufferRBC;
-  int32_t tcw = (int32_t)w->BufferByteSize - bytes_in;
+  int32 bytes_in = w->BufferWBC - w->BufferRBC;
+  int32 tcw = (int32)w->BufferByteSize - bytes_in;
 
   assert(bytes_in >= 0);
 

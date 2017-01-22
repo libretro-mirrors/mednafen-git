@@ -2,7 +2,7 @@
 
 <?php BeginPage('pce', 'PC Engine/TurboGrafx 16 (CD)/SuperGrafx'); ?>
 
-<?php BeginSection('Introduction'); ?> 
+<?php BeginSection('Introduction', 'Section_intro'); ?> 
  <ul>
   <li>Sub-instruction timing granularity(but greater than cycle granularity)
   <li>All sprite sizes supported.</li>
@@ -17,7 +17,7 @@
  </ul>
 <?php EndSection(); ?>
 
-<?php BeginSection('Custom Palettes'); ?>
+<?php BeginSection('Custom Palettes', 'Section_custom_palettes'); ?>
 <p>
 Custom palettes should contain 512 or 1024 8-bit-per-color-component RGB triplets.  If only 512 triplets are present, the remaining 512
 greyscale colors will be calculated automatically.
@@ -26,7 +26,7 @@ greyscale colors will be calculated automatically.
 
 
 
-<?php BeginSection('Default Key Assignments'); ?>
+<?php BeginSection('Default Key Assignments', 'Section_default_keys'); ?>
  <p>
  <table border>
   <tr><th colspan="3">Hotkeys</th></tr>
@@ -55,15 +55,15 @@ greyscale colors will be calculated automatically.
  </p>
 <?php EndSection(); ?>
 
-<?php BeginSection('Advanced Usage'); ?>
- <?php BeginSection('Accidental Soft Resets'); ?>
+<?php BeginSection('Advanced Usage', 'Section_advanced'); ?>
+ <?php BeginSection('Accidental Soft Resets', 'Section_advanced_softreset'); ?>
  <p>
   To prevent soft resets due to accidentally hitting RUN and SEL at the same time, set <a href="#pce.disable_softreset">pce.disable_softreset</a> to <b>1</b>.  This will prevent the emulated PCE from seeing both of those buttons pressed at the
   same time.  However, it is not guaranteed to work on all games, particularly ones with sloppily-coded gamepad polling routines.
  </p>
  <?php EndSection(); ?>
 
- <?php BeginSection('Sprite Flickering'); ?>
+ <?php BeginSection('Sprite Flickering', 'Section_advanced_spritelimit'); ?>
  <p>
   Sprite flickering in shmups got you down?  Tired of scenery having a critical existence failure in games that have complex multi-layer effects?  Then the <a href="#pce.nospritelimit">pce.nospritelimit</a> setting is for you!<br>
   Changing this setting to a value of <b>1</b> will eliminate 99% of your flickering and existence failure woes.  Side effects may include the superpower of seeing submarines through water(as in the first boss
@@ -78,7 +78,7 @@ greyscale colors will be calculated automatically.
 
  <?php EndSection(); ?>
 
- <?php BeginSection('Obnoxious Sound Effects in CD Games'); ?>
+ <?php BeginSection('Obnoxious Sound Effects in CD Games', 'Section_cdvolbalance'); ?>
  <p>
   Many CD games have awesome music, but it is drowned out by excessively loud obnoxious sound effects.  This can be partially remedied by altering the <a href="#pce.cdpsgvolume">pce.cdpsgvolume</a> and <a href="#pce.adpcmvolume">pce.adpcmvolume</a> settings, try say a value of <b>50</b>,
   but doing so may cause issues with cutscenes and PSG music-only sections.

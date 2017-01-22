@@ -32,18 +32,9 @@
 
 #include "video.h"
 
-#include "NetClient.h"
+#include <mednafen/net/Net.h>
 
-#ifdef HAVE_POSIX_SOCKETS
-#include "NetClient_POSIX.h"
-#endif
-
-#ifdef WIN32
-#include "NetClient_WS2.h"
-#endif
-
-static NetClient *Connection = NULL;
-
+static std::unique_ptr<Net::Connection> Connection;
 
 class NetplayConsole : public MDFNConsole
 {
@@ -71,17 +62,11 @@ NetplayConsole::NetplayConsole(void)
 // Called from main thread
 bool NetplayConsole::TextHook(const std::string &text)
 {
-	LastTextTime = SDL_GetTicks();
+	LastTextTime = Time::MonoMS();
 
 	SendCEvent(CEVT_NP_LINE, strdup(text.c_str()), NULL);
 
 	return(1);
-}
-
-// Call from game thread
-static void PrintNetStatus(const char *s)
-{
- MDFND_NetplayText(s, FALSE);
 }
 
 // Call from game thread
@@ -103,9 +88,6 @@ static void PrintNetError(const char *format, ...)
 // Called from game thread
 int MDFND_NetworkConnect(void)
 {
- std::string remote_host = MDFN_GetSettingS("netplay.host");
- unsigned int remote_port = MDFN_GetSettingUI("netplay.port");
-
  if(Connection)
  {
   MDFND_NetworkClose();
@@ -113,14 +95,16 @@ int MDFND_NetworkConnect(void)
 
  try
  {
-  #ifdef HAVE_POSIX_SOCKETS
-  Connection = new NetClient_POSIX();
-  #elif defined(WIN32)
-  Connection = new NetClient_WS2();
-  #else
-  throw MDFN_Error(0, _("Networking system API support not compiled in."));
-  #endif
-  Connection->Connect(remote_host.c_str(), remote_port);
+  std::string remote_host = MDFN_GetSettingS("netplay.host");
+  unsigned int remote_port = MDFN_GetSettingUI("netplay.port");
+
+  Connection = Net::Connect(remote_host.c_str(), remote_port);
+
+  do
+  {
+   if(MainExitPending())
+    throw MDFN_Error(0, _("Mednafen exit pending."));
+  } while(!Connection->Established(50000));
  }
  catch(std::exception &e)
  {
@@ -128,15 +112,12 @@ int MDFND_NetworkConnect(void)
   return(0);
  }
 
- PrintNetStatus(_("*** Sending initialization data to server."));
-
  MDFNDnetplay = 1;
  if(!MDFNI_NetplayStart())
  {
   MDFNDnetplay = 0;
   return(0);
  }
- PrintNetStatus(_("*** Connection established."));
 
  return(1);
 }
@@ -192,17 +173,12 @@ void MDFND_NetworkClose(void)
 {
  NoWaiting &= ~2;
 
- if(Connection)
- {
-  delete Connection;
-  Connection = NULL;
- }
+ Connection.reset(nullptr);
 
  if(MDFNDnetplay)
  {
   MDFNI_NetplayStop();
   MDFNDnetplay = 0;
-  PrintNetStatus(_("*** Disconnected"));
  }
 }
 
@@ -252,7 +228,7 @@ bool Netplay_TryTextExit(void)
   LastTextTime = -1;
   return(TRUE);
  }
- else if(LastTextTime > 0 && (int64)SDL_GetTicks() < (LastTextTime + PopupTime + 500)) // Allow some extra time if a user tries to escape away an auto popup box but misses
+ else if(LastTextTime > 0 && (int64)Time::MonoMS() < (LastTextTime + PopupTime + 500)) // Allow some extra time if a user tries to escape away an auto popup box but misses
  {
   return(TRUE);
  }
@@ -270,7 +246,7 @@ void Netplay_MT_Draw(const MDFN_PixelFormat& pformat, const int32 screen_w, cons
 
  if(!inputable)
  {
-  if((int64)SDL_GetTicks() >= (LastTextTime + PopupTime))
+  if((int64)Time::MonoMS() >= (LastTextTime + PopupTime))
   {
    viewable = 0;
    return;
@@ -313,7 +289,7 @@ int NetplayEventHook(const SDL_Event *event)
          if(event->user.data2 != NULL)
 	 {
 	  viewable = true;
-          LastTextTime = SDL_GetTicks();
+          LastTextTime = Time::MonoMS();
 	 }
 	}
 	break;
@@ -340,7 +316,7 @@ int NetplayEventHook(const SDL_Event *event)
 	if(!(bool)event->user.data2)
 	{
 	 viewable = 1;
-	 LastTextTime = SDL_GetTicks();
+	 LastTextTime = Time::MonoMS();
 	}
 	break;
   }

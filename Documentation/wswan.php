@@ -2,7 +2,7 @@
 
 <?php BeginPage('wswan', 'WonderSwan'); ?>
 
-<?php BeginSection('Introduction'); ?>
+<?php BeginSection('Introduction', 'Section_intro'); ?>
 
 Mednafen's WonderSwan (Color) emulation is based off of <a href="http://cygne.emuunlim.com/">Cygne</a>, modified with bug fixes
 and to add sound emulation.
@@ -13,7 +13,7 @@ WSR(WonderSwan sound rip format) playback is supported.
 
 <?php EndSection(); ?>
 
-<?php BeginSection('Default Key Assignments'); ?>
+<?php BeginSection('Default Key Assignments', 'Section_default_keys'); ?>
 
  The "X Cursor" buttons are usually used for directional control with horizontal-layout games, 
  while the "Y Cursor" buttons are usually used for directional control with vertical-layout games.
@@ -46,7 +46,7 @@ WSR(WonderSwan sound rip format) playback is supported.
 <?php EndSection(); ?>
 
 
-<?php BeginSection("Game-specific Emulation Hacks"); ?>
+<?php BeginSection("Game-specific Emulation Hacks", "Section_hax"); ?>
  <table border width="100%">
   <tr><th>Title:</th><th>Description:</th><th>Source code files affected:</th></tr>
   <tr><td>Detective Conan</td><td>Patch to work around lack of pipeline/prefetch emulation.</td><td>src/wswan/main.cpp</td></tr>

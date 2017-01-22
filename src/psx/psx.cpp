@@ -1607,7 +1607,7 @@ static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
 
  CPU = new PS_CPU();
  SPU = new PS_SPU();
- GPU = new PS_GPU(region == REGION_EU, sls, sle, MDFN_GetSettingB("psx.h_overscan"));
+ GPU = new PS_GPU(region == REGION_EU);
  CDC = new PS_CDC();
  FIO = new FrontIO();
 
@@ -1624,7 +1624,7 @@ static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
   MDFN_printf(_("Multitap on PSX Port %u: %s\n"), pp + 1, sv ? _("Enabled") : _("Disabled"));
  }
 
- FIO->SetAMCT(MDFN_GetSettingB("psx.input.analog_mode_ct"));
+ FIO->SetAMCT(MDFN_GetSettingB("psx.input.analog_mode_ct"), MDFN_GetSettingUI("psx.input.analog_mode_ct.compare"));
  for(unsigned i = 0; i < 8; i++)
  {
   char buf[64];
@@ -1645,7 +1645,7 @@ static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
 
  DMA_Init();
 
- GPU->FillVideoParams(&EmulatedPSX);
+ GPU->SetGetVideoParams(&EmulatedPSX, sls, sle, MDFN_GetSettingB("psx.h_overscan"));
 
  CDC->SetDisc(true, NULL, NULL);
 
@@ -2106,6 +2106,11 @@ static void SetInput(unsigned port, const char *type, uint8 *ptr)
   FIO->SetInput(port, type, ptr);
 }
 
+static void TransformInput(void)
+{
+ FIO->TransformInput();
+}
+
 static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  if(!data_only)
@@ -2215,7 +2220,8 @@ static MDFNSetting PSXSettings[] =
 {
  { "psx.input.mouse_sensitivity", MDFNSF_NOFLAGS, gettext_noop("Emulated mouse sensitivity."), NULL, MDFNST_FLOAT, "1.00", NULL, NULL },
 
- { "psx.input.analog_mode_ct", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable analog mode combo-button alternate toggle."), gettext_noop("When enabled, instead of the configured Analog mode toggle button for the emulated DualShock, use a combination of buttons to toggle it instead.  When Select, Start, and all four shoulder buttons are held down for about 1 second, the mode will toggle."), MDFNST_BOOL, "0", NULL, NULL },
+ { "psx.input.analog_mode_ct", MDFNSF_NOFLAGS, gettext_noop("Enable analog mode combo-button alternate toggle."), gettext_noop("When enabled, instead of the configured Analog mode toggle button for the emulated DualShock, use a combination of buttons held down for one emulated second to toggle it instead.  The specific combination is controlled via the \"psx.input.analog_mode_ct.compare\" setting, which by default is Select, Start, and all four shoulder buttons."), MDFNST_BOOL, "0", NULL, NULL },
+ { "psx.input.analog_mode_ct.compare", MDFNSF_NOFLAGS, gettext_noop("Compare value for analog mode combo-button alternate toggle."), gettext_noop("0x0001=SELECT\n0x0002=L3\n0x0004=R3\n0x0008=START\n0x0010=D-Pad UP\n0x0020=D-Pad Right\n0x0040=D-Pad Down\n0x0080=D-Pad Left\n0x0100=L2\n0x0200=R2\n0x0400=L1\n0x0800=R1\n0x1000=△\n0x2000=○\n0x4000=x\n0x8000=□"), MDFNST_UINT, "0x0F09", "0x0000", "0xFFFF" },
 
  { "psx.input.pport1.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on PSX port 1."), gettext_noop("Makes 3 more virtual ports available.\n\nNOTE: Enabling multitap in games that don't fully support it may cause deleterious effects."), MDFNST_BOOL, "0", NULL, NULL }, //MDFNST_ENUM, "auto", NULL, NULL, NULL, NULL, MultiTap_List },
  { "psx.input.pport2.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on PSX port 2."), gettext_noop("Makes 3 more virtual ports available.\n\nNOTE: Enabling multitap in games that don't fully support it may cause deleterious effects."), MDFNST_BOOL, "0", NULL, NULL },
@@ -2246,7 +2252,7 @@ static MDFNSetting PSXSettings[] =
  { "psx.bios_na", MDFNSF_EMU_STATE, gettext_noop("Path to the North America SCPH-5501/v3.0A ROM BIOS"), gettext_noop("SHA-256 11052b6499e466bbf0a709b1f9cb6834a9418e66680387912451e971cf8a1fef"), MDFNST_STRING, "scph5501.bin" },
  { "psx.bios_eu", MDFNSF_EMU_STATE, gettext_noop("Path to the Europe SCPH-5502/v3.0E ROM BIOS"), gettext_noop("SHA-256 1faaa18fa820a0225e488d9f086296b8e6c46df739666093987ff7d8fd352c09"), MDFNST_STRING, "scph5502.bin" },
 
- { "psx.bios_sanity", MDFNSF_NOFLAGS, gettext_noop("Enable BIOS ROM image sanity checks."), NULL, MDFNST_BOOL, "1" },
+ { "psx.bios_sanity", MDFNSF_NOFLAGS, gettext_noop("Enable BIOS ROM image sanity checks."), gettext_noop("Enables blacklisting of known bad BIOS dumps and known BIOS versions that don't match the region of the hardware being emulated.") , MDFNST_BOOL, "1" },
  { "psx.cd_sanity", MDFNSF_NOFLAGS, gettext_noop("Enable CD (image) sanity checks."), gettext_noop("Sanity checks are only performed on discs detected(via heuristics) to be PS1 discs.  The checks primarily consist of ensuring that Q subchannel data is as expected for a typical commercially-released PS1 disc."), MDFNST_BOOL, "1" },
 
  { "psx.spu.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("SPU output resampler quality."),
@@ -2305,7 +2311,7 @@ MDFNGI EmulatedPSX =
  false,
  StateAction,
  Emulate,
- NULL,
+ TransformInput,
  SetInput,
  SetMedia,
  DoSimpleCommand,

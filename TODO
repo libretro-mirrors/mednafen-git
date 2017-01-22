@@ -8,6 +8,9 @@ on game load for each emulated system.
 !!! Systems with RTC emulation: Fix code to NOT use localtime(), which has consistency issues due to relying on external state(IE time zones), at
 			    any time other than virtual power toggle/init.
 
+!!! Look into using jemalloc or similar on Windows builds due to poor handling of realloc() by the CRT/underlying Win32 API, which results in state rewinding with
+PS1 emulation causing address space exhaustion on 32-bit builds.
+
 SF*() state variable macro overhaul; add macro/function for handling std::array and std::vector.
 
 Save state preview images should reflect the screen-rotation(ALT+O) state somehow, probably at time of creation.
@@ -94,6 +97,10 @@ Settings:
 	
 
 Video:
+	Have temporal blur feature occur after special scalers, driver-side.
+
+	Move deinterlacing driver-side.
+
 	Mixed-horizontal-resolution screens have Y coordinate precision issues in regards to rendering(in drivers/video.cpp), which
 	can cause vertical subscreen positioning to be off in the case of non-integer vertical scaling, which will cause parts of the
 	screen to jitter/bounce slightly in certain cases in some games(Seiken Densetsu 3 dialogue boxes are a good example).  ALSO, such screens highlight
@@ -256,6 +263,8 @@ PC-FX:
 	Fix ADPCM crackling during save state rewinding.
 
 NES:
+	Fix/Check left/right screen edges wrt overscan color and artefacting.
+
 	Save/Load expansion sound chip state when utilizing save states in the NSF player.
 
 	Add some kind of protection against FDS corruption when exiting the emulator in the middle of a disk write.
@@ -269,12 +278,12 @@ NES:
 WonderSwan:
 	Fix V30MZ rep prefix emulation timing accuracy problems.
 
-	http://daifukkat.su/docs/wsman/#snd_specifics (REG_SND_VOICE_VOL fix in particular, and DMA loop mode for that one game with the rain)  and Tonpuusou, writing to frequency reg implicitly turns on timer?
+	Tonpuusou, writing to frequency reg implicitly turns on timer?
 
 Reexamine the code for choosing which emulation module to use.  Highest priority to file extension(as long as the extension is unique to a system,
 "bin" is not unique for example), and special magic test functions if that fails.
 
-Investigate reports of undefined symbols(in V810 FPU emulation code, and the WonderSwan x86 disassembler, and possibly other places).  There ARE references to
+Investigate reports of undefined symbols(in the WonderSwan x86 disassembler, and possibly other places).  There ARE references to
 undefined symbols, but the symbols that reference them are never referenced themselves.  We should probably fix this.
 
 Add dummy copy constructors to lots of our new classes.

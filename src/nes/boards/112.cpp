@@ -24,7 +24,7 @@ static char Mirroring;
 static uint8 RegSelect;
 static uint8 Regs[8];
 
-static uint8 *WRAM = NULL;
+static uint8 WRAM[8192];
 
 static void SyncPRGCHR(void)
 {
@@ -67,11 +67,7 @@ static void Power(CartInfo *info)
 
 static void Close(void)
 {
- if(WRAM)
- {
-  free(WRAM);
-  WRAM = NULL;
- }
+
 }
 
 static int StateAction(StateMem *sm, int load, int data_only)
@@ -104,9 +100,6 @@ int Mapper112_Init(CartInfo *info)
  info->Power = Power;
  info->Close = Close;
  info->StateAction = StateAction;
-
- if(!(WRAM = (uint8 *)malloc(8192)))
-  return(0);
 
  memset(WRAM, 0, 8192);
 

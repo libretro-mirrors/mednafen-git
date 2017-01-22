@@ -31,7 +31,7 @@
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>
 
-static int64_t Time64(void)
+static int64 Time64(void)
 {
  return(jack_get_time());
 }
@@ -50,13 +50,13 @@ typedef struct
 	jack_ringbuffer_t *timebuf;
 
 	// Read/written to in the main program thread.
-	int64_t last_time;
-	int32_t write_space;
+	int64 last_time;
+	int32 write_space;
 
 	int closed;
 
-	uint64_t underrun_frames;
-	uint64_t underrun_chunks;
+	uint64 underrun_frames;
+	uint64 underrun_chunks;
 
 	bool NeedActivate;
 } JACKWrap;
@@ -142,10 +142,10 @@ static int process(jack_nframes_t nframes, void *arg)
   jw->underrun_chunks++;
 
  {
-  int64_t buf[2];
+  int64 buf[2];
   
   buf[0] = Time64();
-  buf[1] = jw->RealBufferSize * sizeof(float) - (int64_t)jack_ringbuffer_read_space(jw->tmpbuf[0]);
+  buf[1] = jw->RealBufferSize * sizeof(float) - (int64)jack_ringbuffer_read_space(jw->tmpbuf[0]);
 
   if(jack_ringbuffer_write(jw->timebuf, (const char *)buf, sizeof(buf)) != sizeof(buf))
   {
@@ -157,13 +157,13 @@ static int process(jack_nframes_t nframes, void *arg)
  return(0);
 }
 
-static int Get_RCW(SexyAL_device *device, uint32_t *can_write, bool want_nega = false)
+static int Get_RCW(SexyAL_device *device, uint32 *can_write, bool want_nega = false)
 {
  JACKWrap *jw = (JACKWrap *)device->private_data;
- int32_t cw;
+ int32 cw;
  size_t can_read;
- int64_t buf[2];
- int32_t extra_precision;
+ int64 buf[2];
+ int32 extra_precision;
 
  DoActivate(device);
 
@@ -215,7 +215,7 @@ static int Get_RCW(SexyAL_device *device, uint32_t *can_write, bool want_nega = 
 
   return(1);
  }
- else if((uint32_t)cw > jw->RealBufferSize * sizeof(float))
+ else if((uint32)cw > jw->RealBufferSize * sizeof(float))
   cw = jw->RealBufferSize * sizeof(float);
 
  *can_write = cw * device->format.channels;
@@ -223,15 +223,15 @@ static int Get_RCW(SexyAL_device *device, uint32_t *can_write, bool want_nega = 
  return(1);
 }
 
-static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
+static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 {
  return(Get_RCW(device, can_write, false));
 }
 
-static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
+static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 {
  JACKWrap *jw = (JACKWrap *)device->private_data;
- uint8_t *data8 = (uint8_t*)data;
+ uint8 *data8 = (uint8*)data;
  DoActivate(device);
 
  if(jw->closed)
@@ -241,7 +241,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
 
  while(len)
  {
-  uint32_t sublen = len / device->format.channels;
+  uint32 sublen = len / device->format.channels;
 
   for(unsigned int ch = 0; ch < device->format.channels; ch++)
   {
@@ -272,7 +272,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
    usleep(1000);
  } // end while(len)
 
- uint32_t cw_tmp;
+ uint32 cw_tmp;
 
  while(Get_RCW(device, &cw_tmp, true) && cw_tmp == ~0U)
  {
@@ -400,7 +400,7 @@ SexyAL_device *SexyALI_JACK_Open(const char *id, SexyAL_format *format, SexyAL_b
 
  jw->BufferSize = format->rate * buffering->ms / 1000;
 
- jw->RealBufferSize = SexyAL_rupow2(jw->BufferSize + jw->EPMaxVal + ((30 * format->rate + 999) / 1000));
+ jw->RealBufferSize = round_up_pow2(jw->BufferSize + jw->EPMaxVal + ((30 * format->rate + 999) / 1000));
 
  buffering->buffer_size = jw->BufferSize;
 
@@ -423,7 +423,7 @@ SexyAL_device *SexyALI_JACK_Open(const char *id, SexyAL_format *format, SexyAL_b
   //format->split_stereo = 0;
 
  // Overkill size, to be on the safe side. :3
- if(!(jw->timebuf = jack_ringbuffer_create(sizeof(int64_t) * 8192)))
+ if(!(jw->timebuf = jack_ringbuffer_create(sizeof(int64) * 8192)))
  {
   RawClose(device);
   return(0);

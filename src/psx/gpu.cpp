@@ -74,12 +74,11 @@ static const int8 dither_table[4][4] =
  {  3, -1,  2, -2 },
 };
 
-PS_GPU::PS_GPU(bool pal_clock_and_tv, int sls, int sle, bool show_h_overscan) : HardwarePALType(pal_clock_and_tv)
+PS_GPU::PS_GPU(bool pal_clock_and_tv) : HardwarePALType(pal_clock_and_tv)
 {
  //printf("%zu\n", (size_t)((uintptr_t)DitherLUT - (uintptr_t)this));
  //printf("%zu\n", (size_t)((uintptr_t)GPURAM - (uintptr_t)this));
  //
- hide_hoverscan = !show_h_overscan;
 
  for(int y = 0; y < 4; y++)
   for(int x = 0; x < 4; x++)
@@ -109,10 +108,6 @@ PS_GPU::PS_GPU(bool pal_clock_and_tv, int sls, int sle, bool show_h_overscan) : 
   hmc_to_visible = 560; 
  }
 
- LineVisFirst = sls;
- LineVisLast = sle;
-
-
  memcpy(&Commands[0x00], Commands_00_1F, sizeof(Commands_00_1F));
  memcpy(&Commands[0x20], Commands_20_3F, sizeof(Commands_20_3F));
  memcpy(&Commands[0x40], Commands_40_5F, sizeof(Commands_40_5F));
@@ -125,8 +120,15 @@ PS_GPU::~PS_GPU()
 
 }
 
-void PS_GPU::FillVideoParams(MDFNGI* gi)
+void PS_GPU::SetGetVideoParams(MDFNGI* gi, const int sls, const int sle, const bool show_h_overscan)
 {
+ hide_hoverscan = !show_h_overscan;
+
+ LineVisFirst = sls;
+ LineVisLast = sle;
+ //
+ //
+ //
  if(HardwarePALType)
  {
   gi->lcm_width = hide_hoverscan ? 2640 : 2800;

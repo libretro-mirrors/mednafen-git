@@ -68,7 +68,7 @@ void InputDevice::ResetTS(void)
 
 }
 
-void InputDevice::SetAMCT(bool)
+void InputDevice::SetAMCT(bool, uint16)
 {
 
 }
@@ -141,6 +141,10 @@ pscpu_timestamp_t InputDevice::GPULineHook(const pscpu_timestamp_t timestamp, bo
 
 
 void InputDevice::UpdateInput(const void *data)
+{
+}
+
+void InputDevice::TransformInput(void* data)
 {
 }
 
@@ -310,13 +314,14 @@ void FrontIO::SetMultitap(unsigned int pport, bool enabled)
  }
 }
 
-void FrontIO::SetAMCT(bool enabled)
+void FrontIO::SetAMCT(bool enabled, uint16 compare)
 {
  for(unsigned i = 0; i < 8; i++)
  {
-  Devices[i]->SetAMCT(enabled);
+  Devices[i]->SetAMCT(enabled, compare);
  }
  amct_enabled = enabled;
+ amct_compare = compare;
 }
 
 void FrontIO::SetCrosshairsColor(unsigned port, uint32 color)
@@ -749,6 +754,12 @@ void FrontIO::Reset(bool powering_up)
  istatus = false;
 }
 
+void FrontIO::TransformInput(void)
+{
+ for(unsigned i = 0; i < 8; i++)
+  Devices[i]->TransformInput(DeviceData[i]);
+}
+
 void FrontIO::UpdateInput(void)
 {
  for(unsigned i = 0; i < 8; i++)
@@ -787,7 +798,7 @@ void FrontIO::SetInput(unsigned int port, const char *type, uint8 *ptr)
   Devices[port] = nd;
 // ResetTS?
   Devices[port]->Power();
-  Devices[port]->SetAMCT(amct_enabled);
+  Devices[port]->SetAMCT(amct_enabled, amct_compare);
   Devices[port]->SetCrosshairsColor(chair_colors[port]);
   DeviceData[port] = ptr;
 

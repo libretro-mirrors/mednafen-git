@@ -29,9 +29,6 @@ void MDFN_printf(const char *format, ...) noexcept MDFN_FORMATSTR(gnu_printf, 1,
 void MDFND_PrintError(const char *s);
 void MDFND_Message(const char *s);
 
-uint32 MDFND_GetTime(void);
-void MDFND_Sleep(uint32 ms);
-
 // Synchronize virtual time to actual time using members of espec:
 //
 //  MasterCycles and MasterCyclesALMS (coupled with MasterClock of MDFNGI)

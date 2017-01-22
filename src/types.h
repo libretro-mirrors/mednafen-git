@@ -9,11 +9,16 @@
  #error "Wrong include order for types.h"
 #endif
 
+#ifdef __USING_SJLJ_EXCEPTIONS__
+ #error "SJLJ-style exception handling will incur a significant performance penalty even when exceptions are not thrown, and thus an alternative(e.g. DWARF) should be used if at all possible."
+#endif
+
 // Yes, yes, I know:  There's a better place for including config.h than here, but I'm tired, and this should work fine. :b
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
+#include <stddef.h>
 #include <assert.h>
 #include <inttypes.h>
 

@@ -20,7 +20,7 @@
 namespace MDFN_IEN_NES
 {
 
-static uint8 *WRAM = NULL;
+static uint8 WRAM[8192];
 static uint8 latch;
 
 static void Sync(void)
@@ -74,11 +74,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
 
 static void Close(void)
 {
- if(WRAM)
- {
-  free(WRAM);
-  WRAM = NULL;
- }
+
 }
 
 int Mapper240_Init(CartInfo *info)
@@ -86,11 +82,6 @@ int Mapper240_Init(CartInfo *info)
  info->Power = Power;
  info->StateAction = StateAction;
  info->Close = Close;
-
- if(!(WRAM = (uint8 *)malloc(8192)))
- {
-  return(0);
- }
 
  memset(WRAM, 0xFF, 8192);
 

@@ -35,6 +35,7 @@
 #include "state.h"
 #include "movie.h"
 #include <mednafen/hash/md5.h>
+#include <mednafen/Time.h>
 #include "mempatcher.h"
 
 #include "MemoryStream.h"
@@ -114,7 +115,7 @@ static void NetError(const char *format, ...)
  temp = trio_vaprintf(format, ap);
  va_end(ap);
 
- MDFND_NetplayText(temp, FALSE);
+ MDFND_NetplayText(temp, false);
  MDFND_NetworkClose();
  free(temp);
 }
@@ -128,7 +129,7 @@ static void NetPrintText(const char *format, ...)
  temp = trio_vaprintf(format, ap);
  va_end(ap);
 
- MDFND_NetplayText(temp, FALSE);
+ MDFND_NetplayText(temp, false);
  free(temp);
 }
 
@@ -145,6 +146,8 @@ void MDFNI_NetplayStop(void)
 	 PlayersList.clear();
 	 incoming_buffer.reset(nullptr);
 	 outgoing_buffer.reset(nullptr);
+
+	 NetPrintText(_("*** Disconnected"));
 	}
 	else puts("Check your code!");
 }
@@ -210,6 +213,8 @@ int NetplayStart(const uint32 PortDeviceCache[16], const uint32 PortDataLenCache
   login_data_t *ld = NULL;
   std::vector<uint8> sendbuf;
 
+  NetPrintText(_("*** Sending initialization data to server."));
+
   PlayersList.clear();
   MDFNnetplay = true;
 
@@ -218,7 +223,7 @@ int NetplayStart(const uint32 PortDeviceCache[16], const uint32 PortDataLenCache
   MDFN_en32lsb(&sendbuf[0], sendbuf.size() - 4);
   ld = (login_data_t*)&sendbuf[4];
 
-  if(game_key != "")
+  if(game_key.size())
   {
    md5_context md5;
    uint8 md5out[16];
@@ -296,6 +301,11 @@ int NetplayStart(const uint32 PortDeviceCache[16], const uint32 PortDataLenCache
 
   if(MDFNMOV_IsPlaying())		/* Recording's ok during netplay, playback is not. */
    MDFNMOV_Stop();
+
+  NetPrintText(_("*** Connection established."));
+
+  if(game_key.size())
+   NetPrintText(_("** Using game key: %s"), game_key.c_str());
  }
  catch(std::exception &e)
  {
@@ -337,36 +347,29 @@ bool NetplaySendCommand(uint8 cmd, uint32 len, const void* data)
 
 static std::string GenerateMPSString(uint32 mps, bool ctlr_string = false)
 {
- char tmpbuf[256];
-
- tmpbuf[0] = 0;
+ std::string ret;
 
  if(!mps)
  {
   if(!ctlr_string)
-   trio_snprintf(tmpbuf, sizeof(tmpbuf), _("a lurker"));
+   ret = _("a lurker");
  }
  else
-  trio_snprintf(tmpbuf, sizeof(tmpbuf), ("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"), ctlr_string ? ((mps == round_up_pow2(mps)) ? _("controller") : _("controllers")) : ((mps == round_up_pow2(mps)) ? _("player") : _("players")),
-				       (mps & 0x0001) ? " 1" : "",
-				       (mps & 0x0002) ? " 2" : "",
-				       (mps & 0x0004) ? " 3" : "",
-				       (mps & 0x0008) ? " 4" : "",
-                                       (mps & 0x0010) ? " 5" : "",
-                                       (mps & 0x0020) ? " 6" : "",
-                                       (mps & 0x0040) ? " 7" : "",
-                                       (mps & 0x0080) ? " 8" : "",
-                                       (mps & 0x0100) ? " 9" : "",
-                                       (mps & 0x0200) ? " 10" : "",
-                                       (mps & 0x0400) ? " 11" : "",
-                                       (mps & 0x0800) ? " 12" : "",
-                                       (mps & 0x1000) ? " 13" : "",
-                                       (mps & 0x2000) ? " 14" : "",
-                                       (mps & 0x4000) ? " 15" : "",
-                                       (mps & 0x8000) ? " 16" : "");
+ {
+  ret = ctlr_string ? ((mps == round_up_pow2(mps)) ? _("controller") : _("controllers")) : ((mps == round_up_pow2(mps)) ? _("player") : _("players"));
 
+  for(unsigned i = 0; i < 16; i++)
+  {
+   if(mps & (1U << i))
+   {
+    char tmp[16];
+    trio_snprintf(tmp, sizeof(tmp), " %u", i + 1);
+    ret += tmp;
+   }
+  }
+ }
 
- return(std::string(tmpbuf));
+ return ret;
 }
 
 static void MDFNI_NetplaySwap(uint8 a, uint8 b)
@@ -439,7 +442,7 @@ static void MDFNI_NetplayPing(void)
  {
   uint64 now_time;
 
-  now_time = MDFND_GetTime();
+  now_time = Time::MonoMS();
 
   // Endianness doesn't matter, since it will be echoed back only to us.
   SendCommand(MDFNNPCMD_ECHO, sizeof(now_time), &now_time);
@@ -647,7 +650,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
 
 			 neobuf[totallen] = 0;
 			 trio_asprintf(&textbuf, "** %s", neobuf);
-                         MDFND_NetplayText(textbuf, FALSE);
+                         MDFND_NetplayText(textbuf, false);
                          free(textbuf);
 			}
 			break;
@@ -665,11 +668,11 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
 
                          MDFND_RecvData(&then_time, sizeof(then_time));
 
-			 now_time = MDFND_GetTime();
+			 now_time = Time::MonoMS();
 
                          char *textbuf = NULL;
 			 trio_asprintf(&textbuf, _("*** Round-trip time: %llu ms"), (unsigned long long)(now_time - then_time));
-                         MDFND_NetplayText(textbuf, FALSE);
+                         MDFND_NetplayText(textbuf, false);
                          free(textbuf);
 			}
 			break;
@@ -746,7 +749,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
 
 			 if(newnick)
 			 {
-			  bool IsMeow = FALSE;
+			  bool IsMeow = false;
 
 			  *newnick = 0;
 			  newnick++;
@@ -755,7 +758,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
 			  {
 			   OurNick = newnick;
 			   textbuf = trio_aprintf(_("* You are now known as <%s>."), newnick);
-			   IsMeow = TRUE;
+			   IsMeow = true;
 			  }
 
 			  if(!textbuf)
@@ -920,7 +923,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
 			 {
 			  // Uhm, not supported yet!
 			  SetLPM(0, PortDevIdx, PortLen);
-			  Joined = FALSE;
+			  Joined = false;
 			 }
 			 else if(cmd == MDFNNPCMD_YOUJOINED)
 			 {
@@ -929,7 +932,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
                           trio_asprintf(&textbuf, _("* You, %s, have connected as: %s"), neobuf + 8, mps_string.c_str());
 
 			  SetLPM(mps, PortDevIdx, PortLen);
-			  Joined = TRUE;
+			  Joined = true;
 
 			  SendCommand(MDFNNPCMD_SETFPS, MDFNGameInfo->fps);
 			 }
@@ -942,7 +945,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
                                   trio_asprintf(&textbuf, _("* %s has connected as: %s"), neobuf + 8, mps_string.c_str());
 			 }
 
-	                 MDFND_NetplayText(textbuf, FALSE);
+	                 MDFND_NetplayText(textbuf, false);
 			 free(textbuf);
 
 			 // Update players list.
@@ -993,7 +996,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
       if(!Taken[n] && IDII_N == IDII_X)
       {
        memcpy(outgoing_buffer + wpos, PortData[n], PortLen[n]);
-       Taken[n] = TRUE;
+       Taken[n] = true;
        wpos += PortLen[n];
        break;
       }
@@ -1413,7 +1416,7 @@ static bool CC_integrity(const char *arg)
   return(true);
  }
 
- return(FALSE);
+ return(false);
 }
 #endif
 

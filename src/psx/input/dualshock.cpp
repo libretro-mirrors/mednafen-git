@@ -69,8 +69,9 @@ class InputDevice_DualShock final : public InputDevice
  virtual void Update(const pscpu_timestamp_t timestamp) override;
  virtual void ResetTS(void) override;
  virtual void UpdateInput(const void *data) override;
+ virtual void TransformInput(void* data) override;
 
- virtual void SetAMCT(bool enabled) override;
+ virtual void SetAMCT(bool enabled, uint16 compare) override;
  //
  //
  //
@@ -122,6 +123,7 @@ class InputDevice_DualShock final : public InputDevice
  //
  //
  bool amct_enabled;
+ uint16 amct_compare;
 };
 
 InputDevice_DualShock::InputDevice_DualShock()
@@ -148,9 +150,36 @@ void InputDevice_DualShock::ResetTS(void)
  lastts = 0;
 }
 
-void InputDevice_DualShock::SetAMCT(bool enabled)
+void InputDevice_DualShock::SetAMCT(bool enabled, uint16 compare)
 {
  amct_enabled = enabled;
+ amct_compare = compare;
+}
+
+void InputDevice_DualShock::TransformInput(void* data)
+{
+ if(amct_enabled)
+ {
+  uint8* const d8 = (uint8*)data;
+  const uint16 btmp = MDFN_de16lsb(d8);
+
+  d8[2] &= ~0x01;
+
+  if(btmp == amct_compare)
+  {
+   if(combo_anatoggle_counter == -1)
+    combo_anatoggle_counter = 0;
+   else if(combo_anatoggle_counter >= (44100 * 768))
+   {
+    combo_anatoggle_counter = 44100 * 768;
+    d8[2] |= 0x01;
+   }
+  }
+  else
+   combo_anatoggle_counter = -1;
+ }
+ else
+  combo_anatoggle_counter = -1;
 }
 
 //
@@ -160,33 +189,7 @@ void InputDevice_DualShock::CheckManualAnaModeChange(void)
 {
  if(!dtr)
  {
-  bool need_mode_toggle = false;
-
-  if(amct_enabled)
-  {
-   if(buttons[0] == 0x09 && buttons[1] == 0x0f)
-   {
-    if(combo_anatoggle_counter == -1)
-     combo_anatoggle_counter = 0;
-    else if(combo_anatoggle_counter >= (44100 * 768))
-    {
-     need_mode_toggle = true;
-     combo_anatoggle_counter = -2;
-    }
-   }
-   else
-    combo_anatoggle_counter = -1;
-  }  
-  else
-  {
-   combo_anatoggle_counter = -1;
-   if(cur_ana_button_state && (cur_ana_button_state != prev_ana_button_state))
-   {
-    need_mode_toggle = true;
-   }
-  }
-
-  if(need_mode_toggle)
+  if(cur_ana_button_state && (cur_ana_button_state != prev_ana_button_state))
   {
    if(!analog_mode_locked)
     analog_mode = !analog_mode;
@@ -198,7 +201,7 @@ void InputDevice_DualShock::CheckManualAnaModeChange(void)
 
 void InputDevice_DualShock::Power(void)
 {
- combo_anatoggle_counter = -2;
+ combo_anatoggle_counter = -1;
  lastts = 0;
  //
  //
@@ -238,7 +241,6 @@ void InputDevice_DualShock::StateAction(StateMem* sm, const unsigned load, const
  {
   SFVAR(cur_ana_button_state),
   SFVAR(prev_ana_button_state),
-  SFVAR(combo_anatoggle_counter),
 
   SFVAR(da_rumble_compat),
 

@@ -25,6 +25,7 @@ namespace MDFN_IEN_SMS
 bitmap_t bitmap;
 input_t input;
 static int32 SoftResetCount;
+static unsigned sls, sle;
 
 /* Run the virtual console emulation for one frame */
 void system_frame(int skip_render)
@@ -164,15 +165,15 @@ static void Emulate(EmulateSpecStruct *espec)
  else
  {
   espec->DisplayRect.x = 0;
-  espec->DisplayRect.y = 0;
+  espec->DisplayRect.y = sls;
   espec->DisplayRect.w = 256;
-  espec->DisplayRect.h = 240;
+  espec->DisplayRect.h = sle + 1 - sls;
  }
 
  bitmap.data = (uint8*)espec->surface->pixels;
  bitmap.width = 256;
  bitmap.height = 240;
- bitmap.pitch = 256 * sizeof(uint32);
+ bitmap.pitch = espec->surface->pitchinpix * sizeof(uint32);
 
  system_frame(espec->skip);
 
@@ -245,6 +246,18 @@ static void LoadCommon(MDFNFILE *fp)
   {
    sndclk = 3579545;
    MDFNGameInfo->fps = (uint32)((uint64)65536 * 256 * sndclk / 262 / 228); //6144000 * 65536 * 256 / 515 / 198); // 3072000 * 2 * 10000 / 515 / 198
+  }
+
+  if(sms.console != CONSOLE_GG)
+  {
+   sls = MDFN_GetSettingUI((sms.display == DISPLAY_PAL) ? "sms.slstartp" : "sms.slstart");
+   sle = MDFN_GetSettingUI((sms.display == DISPLAY_PAL) ? "sms.slendp" : "sms.slend");
+
+   if(sle < sls)
+    std::swap(sls, sle);
+
+   MDFNGameInfo->lcm_height = sle + 1 - sls;
+   MDFNGameInfo->nominal_height = sle + 1 - sls;
   }
 
   MDFNGameInfo->MasterClock = MDFN_MASTERCLOCK_FIXED(sndclk);
@@ -375,6 +388,13 @@ static MDFNSetting SMSSettings[] =
 {
  { "sms.territory", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("System territory/region."), NULL, MDFNST_ENUM, "export", NULL, NULL, NULL, NULL, Territory_List },
  { "sms.fm", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable FM sound emulation when playing domestic/Japan-region games."), NULL, MDFNST_BOOL, "1" },
+
+ { "sms.slstart", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in NTSC mode."), NULL, MDFNST_UINT, "0", "0", "239" },
+ { "sms.slend", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in NTSC mode."), NULL, MDFNST_UINT, "239", "0", "239" },
+
+ { "sms.slstartp", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in PAL mode."), NULL, MDFNST_UINT, "0", "0", "239" },
+ { "sms.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in PAL mode."), NULL, MDFNST_UINT, "239", "0", "239" },
+
  { NULL }
 };
 

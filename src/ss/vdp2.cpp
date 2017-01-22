@@ -785,7 +785,7 @@ void AdjustTS(const int32 delta)
 }
 
 
-void Init(const bool IsPAL, const int sls, const int sle)
+void Init(const bool IsPAL)
 {
  SurfInterlaceField = -1;
  PAL = IsPAL;
@@ -793,17 +793,17 @@ void Init(const bool IsPAL, const int sls, const int sle)
 
  SS_SetPhysMemMap(0x05E00000, 0x05EFFFFF, VRAM, 0x80000, true);
 
- VDP2REND_Init(IsPAL, sls, sle);
+ VDP2REND_Init(IsPAL);
 }
 
-void FillVideoParams(MDFNGI* gi)
+void SetGetVideoParams(MDFNGI* gi, const bool caspect, const int sls, const int sle, const bool show_h_overscan, const bool dohblend)
 {
  if(PAL)
   gi->fps = 65536 * 256 * (1734687500.0 / 61 / 4 / 455 / ((313 + 312.5) / 2.0));
  else
   gi->fps = 65536 * 256 * (1746818181.8 / 61 / 4 / 455 / ((263 + 262.5) / 2.0));
 
- VDP2REND_FillVideoParams(gi);
+ VDP2REND_SetGetVideoParams(gi, caspect, sls, sle, show_h_overscan, dohblend);
 }
 
 void Kill(void)

@@ -22,6 +22,8 @@
 #include "ss.h"
 #include "scu.h"
 
+#include <mednafen/endian.h>
+
 #pragma GCC optimize("Os")
   // Is first DSP instruction cached on PC load, or when execution starts?
 
@@ -323,8 +325,12 @@ static NO_INLINE NO_CLONE void GeneralInstr(void)
  }
 
  //
- // FIXME: Will only work when running on little endian platforms!
  //
+ //
+ #ifdef MSB_FIRST
+ ct_inc = MDFN_bswap32(ct_inc);
+ #endif
+
  if(x_op >= 0x3 || y_op >= 0x3 || (d1_op & 0x1))
   DSP.CT32 = (DSP.CT32 + ct_inc) & 0x3F3F3F3F;
 }

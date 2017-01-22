@@ -35,4 +35,3 @@
 { 0x1895afc6eef26c7dLL, "Super Mario Bros.", INESB_HACKED },
 { 0x103fc85d978b861bLL, "Sweet Home", INESB_CORRUPT },
 { 0xfffda4407d80885aLL, "Sweet Home", INESB_CORRUPT },
-{ 0, 0, 0 }

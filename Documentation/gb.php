@@ -2,15 +2,15 @@
 
 <?php BeginPage('gb', 'Game Boy (Color)'); ?>
 
-<?php BeginSection('Introduction'); ?>
-Mednafen's GameBoy (Color) emulation is based off of <a href="http://vba.sf.net/">VisualBoy Advance</a>.
+<?php BeginSection('Introduction', "Section_intro"); ?>
+Mednafen's GameBoy (Color) emulation is based off of <b>VisualBoy Advance</b>.
 <p>
 Super Game Boy is presently not supported.  If it ever is supported in the future, it will likely be via the
 <a href="snes.html">SNES</a> module instead of the GB module.
 </p>
 <?php EndSection(); ?>
 
-<?php BeginSection('Default Key Assignments'); ?>
+<?php BeginSection('Default Key Assignments', "Section_default_keys"); ?>
  <table border>
   <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
   <tr><td>ALT + SHIFT + 1</td><td>Activate in-game input configuration process for GameBoy pad.</td><td>input_config1</td></tr>

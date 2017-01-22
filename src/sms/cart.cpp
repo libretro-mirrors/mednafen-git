@@ -133,8 +133,6 @@ void Cart_Init(MDFNFILE* fp)
   mapper     = romi->mapper;
   sms.display     = romi->display;
   sms.territory   = romi->territory;
-  if(romi->system != -1)
-   sms.console = romi->system;
  }
 
  if(mapper == MAPPER_CASTLE)

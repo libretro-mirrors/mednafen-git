@@ -96,7 +96,7 @@ static void SSCleanup(void)
 // TODO: Handle memory allocation errors.
 void DrawSaveStates(SDL_Surface *screen, double exs, double eys, int rs, int gs, int bs, int as)
 {
- if(StateShow < MDFND_GetTime())
+ if(StateShow < Time::MonoMS())
  {
   SSCleanup();
  }
@@ -193,7 +193,7 @@ void MT_SetStateStatus(StateStatusStruct *status)
  StateStatus = status;
 
  if(status)
-  StateShow = MDFND_GetTime() + MDFN_GetSettingUI("osd.state_display_time");
+  StateShow = Time::MonoMS() + MDFN_GetSettingUI("osd.state_display_time");
  else
   StateShow = 0;
 }
@@ -206,7 +206,7 @@ void MT_SetMovieStatus(StateStatusStruct *status)
  StateStatus = status;
 
  if(status)
-  StateShow = MDFND_GetTime() + MDFN_GetSettingUI("osd.state_display_time");
+  StateShow = Time::MonoMS() + MDFN_GetSettingUI("osd.state_display_time");
  else
   StateShow = 0;
 }

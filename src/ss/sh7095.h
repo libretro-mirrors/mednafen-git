@@ -175,15 +175,15 @@ class SH7095 final
  //
  uint32 IBuffer;
 
- uint32 (*MRFPI[8])(uint32 A);
+ uint32 (MDFN_FASTCALL *MRFPI[8])(uint32 A);
 
- uint8 (*MRFP8[8])(uint32 A);
- uint16 (*MRFP16[8])(uint32 A);
- uint32 (*MRFP32[8])(uint32 A);
+ uint8 (MDFN_FASTCALL *MRFP8[8])(uint32 A);
+ uint16 (MDFN_FASTCALL *MRFP16[8])(uint32 A);
+ uint32 (MDFN_FASTCALL *MRFP32[8])(uint32 A);
 
- void (*MWFP8[8])(uint32 A, uint8);
- void (*MWFP16[8])(uint32 A, uint16);
- void (*MWFP32[8])(uint32 A, uint32);
+ void (MDFN_FASTCALL *MWFP8[8])(uint32 A, uint8);
+ void (MDFN_FASTCALL *MWFP16[8])(uint32 A, uint16);
+ void (MDFN_FASTCALL *MWFP32[8])(uint32 A, uint32);
 
  //
  //
@@ -196,7 +196,7 @@ class SH7095 final
   // in the upper bit of the Tag variables.
   uint32 Tag[4];
   uint8 LRU;
-  uint8 Data[4][16];
+  alignas(uint32) uint8 Data[4][16];
  } Cache[64];
 
  uint8 CCR;

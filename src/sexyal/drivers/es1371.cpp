@@ -31,47 +31,47 @@ static const int ES_DMAFIFO_FETCHBYTESIZE = 32;
 
 typedef struct
 {
- uint16_t bdf;
- uint32_t base_addr;
+ uint16 bdf;
+ uint32 base_addr;
 
  _go32_dpmi_seginfo dmabuf;
 
- uint64_t read_counter;		// In frames, not bytes.
- uint64_t write_counter;	// In frames, not bytes.
+ uint64 read_counter;		// In frames, not bytes.
+ uint64 write_counter;	// In frames, not bytes.
 
- uint16_t prev_dmacounter;
+ uint16 prev_dmacounter;
  bool paused;
 } ES1371_Driver_t;
 
-static void wrdm32(ES1371_Driver_t* ds, uint32_t offset, uint32_t value)
+static void wrdm32(ES1371_Driver_t* ds, uint32 offset, uint32 value)
 {
  outportl(ds->base_addr + offset, value);
  //printf("wrdm32() %02x:%08x ;;; %08x\n", offset, value, inportl(ds->base_addr + offset));
 }
 
-static uint32_t rddm32(ES1371_Driver_t* ds, uint32_t offset)
+static uint32 rddm32(ES1371_Driver_t* ds, uint32 offset)
 {
  return inportl(ds->base_addr + offset);
 }
 
-static void wrdm16(ES1371_Driver_t* ds, uint32_t offset, uint16_t value)
+static void wrdm16(ES1371_Driver_t* ds, uint32 offset, uint16 value)
 {
  outportw(ds->base_addr + offset, value);
  //printf("wrdm16() %02x:%04x ;;; %04x\n", offset, value, inportw(ds->base_addr + offset));
 }
 
-static uint16_t rddm16(ES1371_Driver_t* ds, uint32_t offset)
+static uint16 rddm16(ES1371_Driver_t* ds, uint32 offset)
 {
  return inportw(ds->base_addr + offset);
 }
 
-static void wresmem32(ES1371_Driver_t* ds, uint32_t offset, uint32_t value)
+static void wresmem32(ES1371_Driver_t* ds, uint32 offset, uint32 value)
 {
  wrdm32(ds, 0x0C, offset >> 4);
  wrdm32(ds, 0x30 + (offset & 0xF), value);
 }
 
-static uint32_t rdesmem32(ES1371_Driver_t* ds, uint32_t offset)
+static uint32 rdesmem32(ES1371_Driver_t* ds, uint32 offset)
 {
  wrdm32(ds, 0x0C, offset >> 4);
  return rddm32(ds, 0x30 + (offset & 0xF));
@@ -102,9 +102,9 @@ static uint16 rdcodec(ES1371_Driver_t* ds, uint8 addr) // BUG: Appears to hang w
  return(tmp & 0xFFFF);
 }
 
-static void wrsrc(ES1371_Driver_t* ds, uint8_t addr, uint16_t value)
+static void wrsrc(ES1371_Driver_t* ds, uint8 addr, uint16 value)
 {
- uint32_t tow;
+ uint32 tow;
 
  //printf("WRSRC: %02x %04x\n", addr, value);
 
@@ -115,10 +115,10 @@ static void wrsrc(ES1371_Driver_t* ds, uint8_t addr, uint16_t value)
  for(unsigned i = 0; i < 8 || (rddm32(ds, 0x10) & (1U << 23)); i++);
 }
 
-static uint16_t rdsrc(ES1371_Driver_t* ds, uint8_t addr)
+static uint16 rdsrc(ES1371_Driver_t* ds, uint8 addr)
 {
- uint32_t tow;
- uint32_t tmp;
+ uint32 tow;
+ uint32 tmp;
 
  while(rddm32(ds, 0x10) & (1U << 23));
  tow = (addr << 25) | (0U << 24) | (rddm32(ds, 0x10) & (0xFFU << 16));
@@ -129,9 +129,9 @@ static uint16_t rdsrc(ES1371_Driver_t* ds, uint8_t addr)
  return(tmp & 0xFFFF);
 }
 
-static uint16_t GetDMACounter(ES1371_Driver_t* ds)
+static uint16 GetDMACounter(ES1371_Driver_t* ds)
 {
- uint32_t a, b;
+ uint32 a, b;
  unsigned counter = 0;
 
  do
@@ -148,7 +148,7 @@ static uint16_t GetDMACounter(ES1371_Driver_t* ds)
 
 static void UpdateReadCounter(ES1371_Driver_t* ds)
 {
- uint16_t cur_dmacounter = GetDMACounter(ds);
+ uint16 cur_dmacounter = GetDMACounter(ds);
 
  ds->read_counter -= ds->prev_dmacounter;
  ds->read_counter += cur_dmacounter;
@@ -171,7 +171,7 @@ static int Pause(SexyAL_device *device, int state)
  return(state);
 }
 
-static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
+static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 {
  ES1371_Driver_t *ds = (ES1371_Driver_t *)device->private_data;
 
@@ -186,17 +186,17 @@ static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
  return(1);
 }
 
-static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
+static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 {
  ES1371_Driver_t *ds = (ES1371_Driver_t *)device->private_data;
- uint32_t pl_0, pl_1;
- const uint8_t* data_d8 = (uint8_t*)data;
+ uint32 pl_0, pl_1;
+ const uint8* data_d8 = (uint8*)data;
 
  do
  {
-  uint32_t cw;
-  uint32_t i_len;
-  uint32_t writepos;
+  uint32 cw;
+  uint32 i_len;
+  uint32 writepos;
 
   if(!RawCanWrite(device, &cw))	// Caution: RawCanWrite() will modify ds->write_counter on underflow.
    return(0);
@@ -230,8 +230,8 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
 static int Clear(SexyAL_device *device)
 {
  ES1371_Driver_t *ds = (ES1371_Driver_t *)device->private_data;
- const uint32_t base = ds->dmabuf.rm_segment << 4;
- const uint32_t siz = ds->dmabuf.size << 4;
+ const uint32 base = ds->dmabuf.rm_segment << 4;
+ const uint32 siz = ds->dmabuf.size << 4;
 
  Pause(device, true);
 
@@ -286,7 +286,7 @@ pci_vd_pair SexyAL_DOS_ES1371_PCI_IDs[] =
 
 bool SexyALI_DOS_ES1371_Avail(void)
 {
- uint16_t bdf;
+ uint16 bdf;
 
  if(!pci_bios_present())
   return(false);
@@ -391,7 +391,7 @@ SexyAL_device *SexyALI_DOS_ES1371_Open(const char *id, SexyAL_format *format, Se
  //
 
  {
-  uint32_t tmp_freq;
+  uint32 tmp_freq;
 
   //printf("Program SRC\n");
 
@@ -470,8 +470,8 @@ SexyAL_device *SexyALI_DOS_ES1371_Open(const char *id, SexyAL_format *format, Se
  // Clear DMA buffer memory.
  //
  {
-  const uint32_t base = ds->dmabuf.rm_segment << 4;
-  const uint32_t siz = ds->dmabuf.size << 4;
+  const uint32 base = ds->dmabuf.rm_segment << 4;
+  const uint32 siz = ds->dmabuf.size << 4;
 
   _farsetsel(_dos_ds);
   for(unsigned i = 0; i < siz; i += 4)
@@ -502,7 +502,7 @@ SexyAL_device *SexyALI_DOS_ES1371_Open(const char *id, SexyAL_format *format, Se
  //
  printf("Program AC97\n");
  {
-  //uint32_t codec_vendor = (rdcodec(ds, 0x7C) << 16) | rdcodec(ds, 0x7E);
+  //uint32 codec_vendor = (rdcodec(ds, 0x7C) << 16) | rdcodec(ds, 0x7E);
   //printf("AC97 Codec Vendor ID: 0x%08x %c%c%c%c\n", codec_vendor, (codec_vendor >> 24) & 0xFF, (codec_vendor >> 16) & 0xFF, (codec_vendor >> 8) & 0xFF, (codec_vendor >> 0) & 0xFF);
 
   wrcodec(ds, 0x00, 0x0001);	// Reset(non-zero value required by AK4540).

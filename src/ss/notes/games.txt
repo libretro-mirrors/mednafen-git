@@ -1,6 +1,13 @@
-Independence Day
+Pocket Fighter - Interrupt handler interrupting other interrupt handler in the middle of a read,modify,write sequence of instructions.  Same sort of issue as
+	Street Fighter Alpha 2.
+	16-bits var at 0x60443E2
+	INT42->
+		0x600D7C4
+		0x600D7D0
+	INT41->
+		0x600D738 (writes 0)
 
-Astal - Loses track of CD or audio buffers or something, music playback goes crackly, sometimes gets stuck then game freezes up entirely afterward.
+Independence Day
 
 Batman Forever - Corrupt batmobile graphic during intro(timing issue maybe?).
 

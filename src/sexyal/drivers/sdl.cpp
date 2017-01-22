@@ -34,13 +34,13 @@
 
 #include <SDL.h>
 
-static int64_t Time64(void)
+static int64 Time64(void)
 {
  // Don't use gettimeofday(), it's not monotonic.
  // (SDL will use gettimeofday() on UNIXy systems if clock_gettime() is not available, however...)
- int64_t ret;
+ int64 ret;
 
- ret = (int64_t)SDL_GetTicks() * 1000;
+ ret = (int64)SDL_GetTicks() * 1000;
 
  return(ret);
 }
@@ -48,31 +48,31 @@ static int64_t Time64(void)
 typedef struct
 {
 	void *Buffer;
-	int32_t BufferSize;
-	int32_t RealBufferSize;
+	int32 BufferSize;
+	int32 RealBufferSize;
 
 	int EPMaxVal;   // Extra precision max value, in frames.
 
 
-	int32_t BufferSize_Raw;
-	int32_t RealBufferSize_Raw;
-	int32_t BufferRead;
-	int32_t BufferWrite;
-	int32_t BufferIn;
-	int32_t BufferGranularity;
+	int32 BufferSize_Raw;
+	int32 RealBufferSize_Raw;
+	int32 BufferRead;
+	int32 BufferWrite;
+	int32 BufferIn;
+	int32 BufferGranularity;
 
 	int StartPaused;
 	int ProgPaused;
 
 	int StandAlone;
 
-	int64_t last_time;
+	int64 last_time;
 } SDLWrap;
 
 #ifdef WIN32
-static void fillaudio(void *udata, uint8_t *stream, int len) __attribute__((force_align_arg_pointer));
+static void fillaudio(void *udata, uint8 *stream, int len) __attribute__((force_align_arg_pointer));
 #endif
-static void fillaudio(void *udata, uint8_t *stream, int len)
+static void fillaudio(void *udata, uint8 *stream, int len)
 {
  SexyAL_device *device = (SexyAL_device *)udata;
  SDLWrap *sw = (SDLWrap *)device->private_data;
@@ -117,13 +117,13 @@ static void fillaudio(void *udata, uint8_t *stream, int len)
    }
    else if(SEXYAL_FMT_PCMU16 == device->format.sampformat)
    {
-    uint16_t fill_value = 0x8000;
+    uint16 fill_value = 0x8000;
 
     if(device->format.revbyteorder)	// Is byte-order reversed from native?
      fill_value = 0x0080;
 
     for(int i = 0; i < len; i += 2)
-     *(uint16_t *)(stream + i) = fill_value;
+     *(uint16 *)(stream + i) = fill_value;
    }
    else
     memset(stream, 0, len);
@@ -134,12 +134,12 @@ static void fillaudio(void *udata, uint8_t *stream, int len)
  }
 }
 
-static int Get_RCW(SexyAL_device *device, uint32_t *can_write, bool want_nega = false)
+static int Get_RCW(SexyAL_device *device, uint32 *can_write, bool want_nega = false)
 {
  SDLWrap *sw = (SDLWrap *)device->private_data;
- int64_t curtime;
- int32_t cw;
- int32_t extra_precision;
+ int64 curtime;
+ int32 cw;
+ int32 extra_precision;
 
  SDL_LockAudio();
 
@@ -165,7 +165,7 @@ static int Get_RCW(SexyAL_device *device, uint32_t *can_write, bool want_nega = 
  if(cw < 0)
  {
   if(want_nega)
-   *can_write = (uint32_t)(int32_t)cw;
+   *can_write = (uint32)(int32)cw;
   else
    *can_write = 0;
  }
@@ -181,15 +181,15 @@ static int Get_RCW(SexyAL_device *device, uint32_t *can_write, bool want_nega = 
  return(1);
 }
 
-static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
+static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 {
  return(Get_RCW(device, can_write, false));
 }
 
-static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
+static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 {
  SDLWrap *sw = (SDLWrap *)device->private_data;
- const uint8_t *data_u8 = (const uint8_t *)data;
+ const uint8 *data_u8 = (const uint8 *)data;
 
  //printf("Write: %u, %u %u\n", len, sw->BufferIn, sw->RealBufferSize_Raw);
 
@@ -229,11 +229,11 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
   SDL_PauseAudio(sw->ProgPaused);
  }
 
- uint32_t cw_tmp;
+ uint32 cw_tmp;
 
- while(Get_RCW(device, &cw_tmp, true) && (int32_t)cw_tmp < 0)
+ while(Get_RCW(device, &cw_tmp, true) && (int32)cw_tmp < 0)
  {
-  //int64_t tt = (int64_t)(int32_t)cw_tmp * -1 * 1000 * 1000 * 1000 / (device->format.channels * (device->format.sampformat >> 4) * device->format.rate);
+  //int64 tt = (int64)(int32)cw_tmp * -1 * 1000 * 1000 * 1000 / (device->format.channels * (device->format.sampformat >> 4) * device->format.rate);
   //usleep(tt / 1000);
   //printf("%f\n", (double)tt / 1000 / 1000 / 1000);
   SDL_Delay(1);
@@ -344,7 +344,7 @@ SexyAL_device *SexyALI_SDL_Open(const char *id, SexyAL_format *format, SexyAL_bu
  memset(&obtained, 0, sizeof(SDL_AudioSpec));
 
  int desired_pt = buffering->period_us ? buffering->period_us : 5333;
- int psize = SexyAL_rnearestpow2((int64_t)desired_pt * format->rate / (1000 * 1000), false);
+ int psize = round_nearest_pow2((int64)desired_pt * format->rate / (1000 * 1000), false);
 
  desired.freq = format->rate;
  desired.format = AUDIO_S16;
@@ -397,7 +397,7 @@ SexyAL_device *SexyALI_SDL_Open(const char *id, SexyAL_format *format, SexyAL_bu
  //printf("%d\n", sw->BufferSize);
 
  // *2 for safety room, and 30ms extra.
- sw->RealBufferSize = SexyAL_rupow2(sw->BufferSize + sw->EPMaxVal * 2 + ((30 * format->rate + 999) / 1000) );
+ sw->RealBufferSize = round_up_pow2(sw->BufferSize + sw->EPMaxVal * 2 + ((30 * format->rate + 999) / 1000) );
 
  sw->BufferIn = sw->BufferRead = sw->BufferWrite = 0;
 

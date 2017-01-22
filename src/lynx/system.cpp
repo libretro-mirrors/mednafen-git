@@ -374,7 +374,7 @@ static void DoSimpleCommand(int cmd)
 
 static MDFNSetting LynxSettings[] =
 {
- { "lynx.rotateinput", MDFNSF_NOFLAGS,	gettext_noop("Virtually rotate D-pad along with screen."), NULL, MDFNST_BOOL, "1" },
+ { "lynx.rotateinput", MDFNSF_NOFLAGS,	gettext_noop("Virtually rotate the D-pad when the screen is rotated."), NULL, MDFNST_BOOL, "1" },
  { "lynx.lowpass", MDFNSF_CAT_SOUND,	gettext_noop("Enable sound output lowpass filter."), NULL, MDFNST_BOOL, "1" },
  { NULL }
 };

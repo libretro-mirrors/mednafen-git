@@ -2,9 +2,9 @@
 
 <?php BeginPage('ss', 'Sega Saturn'); ?>
 
-<?php BeginSection('Introduction', "", FALSE, FALSE, "Section_intro"); ?>
+<?php BeginSection('Introduction', "Section_intro"); ?>
 <p>
-<font color="orange" size="+1"><b>NOTE:</b></font> The Sega Saturn emulation is currently experimental, and under active development, and save states are not currently supported.  By default(and for the official releases for Windows), Saturn emulation is only compiled in for <b>x86_64</b> builds.  The separate <a href="ssfplay.html">SSF playback module</a> does not have this limitation.
+<font color="orange" size="+1"><b>NOTE:</b></font> The Sega Saturn emulation is currently experimental, and under active development, and save states are not currently supported.  By default(and for the official releases for Windows), Saturn emulation is only compiled in for builds for some 64-bit architectures(x86_64, AArch64, PPC64).  The separate <a href="ssfplay.html">SSF playback module</a> does not have this limitation.
 Multitap is not currently emulated, though there are some settings present in preparation for it.
 </p>
 <p>
@@ -19,7 +19,7 @@ avoid short emulator pauses and audio pops due to waiting for disk accesses to c
 </p>
 <?php EndSection(); ?>
 
-<?php BeginSection("Firmware/BIOS", "", FALSE, FALSE, "Section_firmware_bios"); ?>
+<?php BeginSection("Firmware/BIOS", "Section_firmware_bios"); ?>
 <p>
 Place the correct BIOS image files in the <a href="mednafen.html#Section_firmware_bios">correct location</a>.
 </p>
@@ -34,9 +34,9 @@ The filenames listed below are per default ss.bios_* settings.
 </table>
 <?php EndSection(); ?>
 
-<?php BeginSection('Default Input Mappings'); ?>
+<?php BeginSection('Default Input Mappings', 'Section_default_keys'); ?>
 
- <?php BeginSection('Digital Gamepad on Virtual Port 1'); ?>
+ <?php BeginSection('Digital Gamepad on Virtual Port 1', 'Section_default_keys_gamepad'); ?>
   <p>
   <table border>
    <tr><th>Key:</th><th nowrap>Emulated Button:</th></tr>

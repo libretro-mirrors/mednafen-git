@@ -2,9 +2,9 @@
 
 <?php BeginPage('lynx', 'Atari Lynx'); ?>
 
-<?php BeginSection('Introduction'); ?>
+<?php BeginSection('Introduction', "Section_intro"); ?>
 <p>
-Mednafen's Atari Lynx emulation is based off of <a href="http://homepage.ntlworld.com/dystopia/">Handy</a>.
+Mednafen's Atari Lynx emulation is based off of <a href="http://handy.sourceforge.net/">Handy</a>.
 </p>
 <p>
 Atari Lynx emulation requires the 512-byte Lynx boot ROM image, named as "lynxboot.img", and placed in the Mednafen base
@@ -13,7 +13,7 @@ directory.
 <?php EndSection(); ?>
 
 
-<?php BeginSection('Default Key Assignments'); ?>
+<?php BeginSection('Default Key Assignments', "Section_default_keys"); ?>
  <table border>
   <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
   <tr><td>ALT + SHIFT + 1</td><td>Activate in-game input configuration process for Lynx pad.</td><td>input_config1</td></tr>

@@ -27,7 +27,7 @@ static MDFN_Thread *CheatThread = NULL;
 static MDFN_Mutex *CheatMutex = NULL;
 static MDFN_Cond *CheatCond = NULL;
 static bool isactive = 0;
-static char * volatile pending_text = NULL;
+static char* pending_text = NULL;
 static bool volatile need_thread_exit;
 
 class CheatConsoleT : public MDFNConsole

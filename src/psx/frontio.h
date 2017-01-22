@@ -38,6 +38,7 @@ class InputDevice
 
  virtual void Power(void);
  virtual void UpdateInput(const void *data);
+ virtual void TransformInput(void* data);
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix);
 
  virtual bool RequireNoFrameskip(void);
@@ -52,7 +53,7 @@ class InputDevice
  //
  //
  //
- virtual void SetAMCT(bool enabled);
+ virtual void SetAMCT(bool enabled, uint16 compare);
  virtual void SetCrosshairsColor(uint32 color);
 
  //
@@ -101,10 +102,11 @@ class FrontIO
  void GPULineHook(const pscpu_timestamp_t timestamp, const pscpu_timestamp_t line_timestamp, bool vsync, uint32 *pixels, const MDFN_PixelFormat* const format, const unsigned width, const unsigned pix_clock_offset, const unsigned pix_clock, const unsigned pix_clock_divider);
 
  void UpdateInput(void);
+ void TransformInput(void);
  void SetInput(unsigned int port, const char *type, uint8 *ptr);
  void SetMultitap(unsigned int pport, bool enabled);
  void SetMemcard(unsigned int port, bool enabled);
- void SetAMCT(bool enabled);
+ void SetAMCT(bool enabled, uint16 compare);
  void SetCrosshairsColor(unsigned port, uint32 color);
 
  uint64 GetMemcardDirtyCount(unsigned int which);
@@ -190,6 +192,7 @@ class FrontIO
  //
  //
  bool amct_enabled;
+ uint16 amct_compare;
  uint32 chair_colors[8];
 };
 

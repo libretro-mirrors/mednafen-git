@@ -29,9 +29,9 @@
 #include <mednafen/mempatcher.h>
 #include <mednafen/hash/sha256.h>
 #include <mednafen/hash/md5.h>
+#include <mednafen/Time.h>
 
 #include <ctype.h>
-#include <time.h>
 
 #include <bitset>
 
@@ -43,6 +43,7 @@ extern MDFNGI EmulatedSS;
 
 #include "ss.h"
 #include "sound.h"
+#include "scsp.h"	// For debug.inc
 #include "smpc.h"
 #include "cdb.h"
 #include "vdp1.h"
@@ -1186,8 +1187,8 @@ static void MDFN_COLD InitCommon(const unsigned cart_type, const unsigned smpc_a
  SCU_Init();
  SMPC_Init(smpc_area, MasterClock);
  VDP1::Init();
- VDP2::Init(PAL, sls, sle);
- VDP2::FillVideoParams(&EmulatedSS);
+ VDP2::Init(PAL);
+ VDP2::SetGetVideoParams(&EmulatedSS, MDFN_GetSettingB("ss.correct_aspect"), sls, sle, MDFN_GetSettingB("ss.h_overscan"), MDFN_GetSettingB("ss.h_blend"));
  CDB_Init();
  SOUND_Init();
 
@@ -1212,16 +1213,9 @@ static void MDFN_COLD InitCommon(const unsigned cart_type, const unsigned smpc_a
  //
  if(MDFN_GetSettingB("ss.smpc.autortc"))
  {
-  time_t ut;
-  struct tm* ht;
+  struct tm ht = Time::LocalTime();
 
-  if((ut = time(NULL)) == (time_t)-1)
-   throw MDFN_Error(ErrnoHolder(errno));
-
-  if((ht = localtime(&ut)) == NULL)
-   throw MDFN_Error(ErrnoHolder(errno));
-
-  SMPC_SetRTC(ht, MDFN_GetSettingUI("ss.smpc.autortc.lang"));
+  SMPC_SetRTC(&ht, MDFN_GetSettingUI("ss.smpc.autortc.lang"));
  }
  //
  SS_Reset(true);
@@ -1676,8 +1670,11 @@ static MDFNSetting SSSettings[] =
  { "ss.slstart", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in NTSC mode."), NULL, MDFNST_INT, "0", "0", "239" },
  { "ss.slend", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in NTSC mode."), NULL, MDFNST_INT, "239", "0", "239" },
 
- //{ "ss.slstartp", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in PAL mode."), NULL, MDFNST_INT, "16", "0", "287" },
- //{ "ss.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in PAL mode."), NULL, MDFNST_INT, "271", "0", "287" },
+ { "ss.h_overscan", MDFNSF_NOFLAGS, gettext_noop("Show horizontal overscan area."), NULL, MDFNST_BOOL, "1" },
+
+ { "ss.h_blend", MDFNSF_NOFLAGS, gettext_noop("Enable horizontal blend(blur) filter."), gettext_noop("Intended for use in combination with the \"goat\" OpenGL shader, or with bilinear interpolation or linear interpolation on the X axis enabled.  Has a more noticeable effect with the Saturn's higher horizontal resolution modes(640/704)."), MDFNST_BOOL, "0" },
+
+ { "ss.correct_aspect", MDFNSF_NOFLAGS, gettext_noop("Correct aspect ratio."), gettext_noop("Disabling aspect ratio correction with this setting should be considered a hack.\n\nIf disabling it to allow for sharper pixels by also separately disabling interpolation(though using Mednafen's \"autoipsharper\" OpenGL shader is usually a better option), remember to use scale factors that are multiples of 2, or else games that use high-resolution and interlaced modes will have distorted pixels.\n\nDisabling aspect ratio correction with this setting will allow for the QuickTime movie recording feature to produce much smaller files using much less CPU time."), MDFNST_BOOL, "1" },
 
  { "ss.slstartp", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in PAL mode."), NULL, MDFNST_INT, "0", "-16", "271" },
  { "ss.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in PAL mode."), NULL, MDFNST_INT, "255", "-16", "271" },

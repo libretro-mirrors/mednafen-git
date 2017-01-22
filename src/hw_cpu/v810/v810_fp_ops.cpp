@@ -52,52 +52,6 @@ bool V810_FP_Ops::fp_is_inf_nan_sub(uint32 v)
  return(false);
 }
 
-unsigned V810_FP_Ops::clz64(uint64 v)
-{
- unsigned ret = 0;
-
- if(!(v & 0xFFFFFFFFFFFFFFFFULL))
-  return(64);
-
- if(!(v & 0xFFFFFFFF00000000ULL))
- {
-  v <<= 32;
-  ret += 32;
- }
-
- if(!(v & 0xFFFF000000000000ULL))
- {
-  v <<= 16;
-  ret += 16;
- }
-
- if(!(v & 0xFF00000000000000ULL))
- {
-  v <<= 8;
-  ret += 8;
- }
-
- if(!(v & 0xF000000000000000ULL))
- {
-  v <<= 4;
-  ret += 4;
- }
-
- if(!(v & 0xC000000000000000ULL))
- {
-  v <<= 2;
-  ret += 2;
- }
-
- if(!(v & 0x8000000000000000ULL))
- {
-  v <<= 1;
-  ret += 1;
- }
-
- return(ret);
-}
-
 void V810_FP_Ops::fpim_decode(fpim* df, uint32 v)
 {
  df->exp = ((v >> 23) & 0xFF) - 127;
@@ -107,7 +61,7 @@ void V810_FP_Ops::fpim_decode(fpim* df, uint32 v)
 
 void V810_FP_Ops::fpim_round(fpim* df)
 {
- int vbc = 64 - clz64(df->f);
+ int vbc = 64 - MDFN_lzcount64(df->f);
 
  if(vbc > 24)
  {
@@ -161,7 +115,7 @@ void V810_FP_Ops::fpim_round_int(fpim* df, bool truncate)
 
 uint32 V810_FP_Ops::fpim_encode(fpim* df)
 {
- const int lzc = clz64(df->f);
+ const int lzc = MDFN_lzcount64(df->f);
  int tmp_exp = df->exp - lzc;
  uint64 tmp_walrus = df->f << (lzc & 0x3F);
  int tmp_sign = df->sign;

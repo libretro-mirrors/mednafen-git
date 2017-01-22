@@ -60,10 +60,10 @@ class PS_GPU
 {
  public:
 
- PS_GPU(bool pal_clock_and_tv, int sls, int sle, bool show_h_overscan) MDFN_COLD;
+ PS_GPU(bool pal_clock_and_tv) MDFN_COLD;
  ~PS_GPU() MDFN_COLD;
 
- void FillVideoParams(MDFNGI* gi) MDFN_COLD;
+ void SetGetVideoParams(MDFNGI* gi, const int sls, const int sle, const bool show_h_overscan) MDFN_COLD;
 
  void Power(void) MDFN_COLD;
 

@@ -98,46 +98,58 @@ static bool DTestButtonMouse(const ButtConfig &bc, const uint32 *MouseData)
  return(false);
 }
 
-int DTestButton(std::vector<ButtConfig> &bc, const char *KeyState, const uint32 *MouseData, bool analog)
+bool DTestButton(const std::vector<ButtConfig>& bc, const char* KeyState, const uint32* MouseData, bool AND_Mode)
 {
- const int maxv = analog ? 32767 : 1;
- int32 ret = 0;	// Will obviously break if 10s of thousands of physical buttons are assigned to one emulated analog button. ;)
+ unsigned match_count = 0;
 
- for(unsigned int x = 0; x < bc.size(); x++)
+ for(auto const& bce : bc)
  {
-  if(bc[x].ButtType == BUTTC_KEYBOARD)
+  switch(bce.ButtType)
   {
-   if(KeyState[bc[x].ButtonNum])
-    ret += maxv;
-  }
-  else if(bc[x].ButtType == BUTTC_JOYSTICK)
-  {
-   if(analog)
-    ret += joy_manager->TestAnalogButton(bc[x]);
-   else if(joy_manager->TestButton(bc[x]))
-    ret += maxv;
-  }
-  else if(bc[x].ButtType == BUTTC_MOUSE)
-  {
-   if(DTestButtonMouse(bc[x], MouseData))
-    ret += maxv;
+   case BUTTC_KEYBOARD:
+	match_count += (bool)KeyState[bce.ButtonNum];
+	break;
+
+   case BUTTC_JOYSTICK:
+	match_count += (bool)joy_manager->TestButton(bce);
+	break;
+
+   case BUTTC_MOUSE:
+	match_count += (bool)DTestButtonMouse(bce, MouseData);
+	break;
   }
  }
 
- if(ret > maxv)
-  ret = maxv;
-
- return(ret);
+ return match_count && (!AND_Mode || match_count == bc.size());
 }
 
-int DTestButton(ButtConfig &bc, const char *KeyState, const uint32 *MouseData, bool analog)
+int32 DTestAnalogButton(const std::vector<ButtConfig>& bc, const char* KeyState, const uint32* MouseData)
 {
- std::vector<ButtConfig> neobc;
- neobc.push_back(bc);
+ const int maxv = 32767;
+ int32 ret = 0;	// Will obviously break if 10s of thousands of physical buttons are assigned to one emulated analog button. ;)
 
- return(DTestButton(neobc, KeyState, MouseData, analog));
+ for(auto const& bce : bc)
+ {
+  switch(bce.ButtType)
+  {
+   case BUTTC_KEYBOARD:
+	if(KeyState[bce.ButtonNum])
+	 ret += maxv;
+	break;
+
+   case BUTTC_JOYSTICK:
+	ret += joy_manager->TestAnalogButton(bce);
+	break;
+
+   case BUTTC_MOUSE:
+	if(DTestButtonMouse(bce, MouseData))
+	 ret += maxv;
+	break;
+  }
+ }
+
+ return std::min<int32>(ret, maxv);
 }
-
 
 #define ICSS_ALT	1
 #define ICSS_SHIFT	2

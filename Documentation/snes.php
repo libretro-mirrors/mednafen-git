@@ -2,7 +2,7 @@
 
 <?php BeginPage('snes', 'Super Nintendo Entertainment System/Super Famicom'); ?>
 
-<?php BeginSection('Introduction'); ?>
+<?php BeginSection('Introduction', 'Section_intro'); ?>
 Mednafen's SNES emulation is a fork of <a href="http://byuu.org/">bsnes</a> v0.059, with(but not limited to) the following modifications:
 <ul>
  <li>Cx4 Op10 fix patch</li>
@@ -25,7 +25,7 @@ SPC playback is not supported, but it is supported (experimentally) by the <b><a
 </p>
 <?php EndSection(); ?>
 
-<?php BeginSection('Default Key Assignments'); ?>
+<?php BeginSection('Default Key Assignments', 'Section_default_keys'); ?>
 
  <p>
  <table border>

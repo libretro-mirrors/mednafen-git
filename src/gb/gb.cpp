@@ -23,6 +23,7 @@
 #include <mednafen/mempatcher.h>
 #include <mednafen/hash/md5.h>
 #include <mednafen/FileStream.h>
+#include <mednafen/Time.h>
 #include <mednafen/cheat_formats/gb.h>
 
 #include <string.h>
@@ -1613,18 +1614,17 @@ static void gbReadBatteryFile(const std::string& path)
       // Initialize time data before loading from save file, in case save file doesn't exist(or doesn't contain the time data) and throws an exception.
       //
       {
-	time_t tmp;
+	int64 tmp = Time::EpochTime();
 
-        time(&tmp);
         gbDataMBC3.mapperLastTime = tmp;
-        struct tm *lt;
-        lt = localtime(&tmp);
-        gbDataMBC3.mapperSeconds = lt->tm_sec;
-        gbDataMBC3.mapperMinutes = lt->tm_min;
-        gbDataMBC3.mapperHours = lt->tm_hour;
-        gbDataMBC3.mapperDays = lt->tm_yday & 255;
+        struct tm lt;
+        lt = Time::LocalTime(tmp);
+        gbDataMBC3.mapperSeconds = lt.tm_sec;
+        gbDataMBC3.mapperMinutes = lt.tm_min;
+        gbDataMBC3.mapperHours = lt.tm_hour;
+        gbDataMBC3.mapperDays = lt.tm_yday & 255;
         gbDataMBC3.mapperControl = (gbDataMBC3.mapperControl & 0xfe) |
-          (lt->tm_yday > 255 ? 1: 0);
+          (lt.tm_yday > 255 ? 1: 0);
       }
       gbReadSaveMBC3(path);
       break;
@@ -1675,15 +1675,18 @@ static SFORMAT MBC3_StateRegs[] =
  SFVARN(gbDataMBC3.mapperClockLatch, "CLKL"),
  SFVARN(gbDataMBC3.mapperClockRegister, "CLKR"),
  SFVARN(gbDataMBC3.mapperSeconds, "SEC"),
+ SFVARN(gbDataMBC3.mapperMinutes, "MIN"),
  SFVARN(gbDataMBC3.mapperHours, "HOUR"),
  SFVARN(gbDataMBC3.mapperDays, "DAY"),
  SFVARN(gbDataMBC3.mapperControl, "CTRL"),
 
  SFVARN(gbDataMBC3.mapperLSeconds, "LSEC"),
+ SFVARN(gbDataMBC3.mapperLMinutes, "LMIN"),
  SFVARN(gbDataMBC3.mapperLHours, "LHUR"),
  SFVARN(gbDataMBC3.mapperLDays, "LDAY"),
  SFVARN(gbDataMBC3.mapperLControl, "LCTR"),
  SFVARN(gbDataMBC3.mapperLastTime, "LTIM"),
+
  SFEND
 };
 

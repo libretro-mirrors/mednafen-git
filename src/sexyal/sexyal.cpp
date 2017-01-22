@@ -22,11 +22,6 @@
 #include <stdio.h>	// For debugging
 #include <assert.h>
 
-#ifdef HAVE_GETTIMEOFDAY
-#include <sys/time.h>
-#endif
-
-#include <time.h>
 #include <errno.h>
 
 #include "convert.h"
@@ -69,19 +64,19 @@ bool SexyALI_DOS_CMI8738_Avail(void);
 SexyAL_device *SexyALI_Dummy_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 
 
-static uint32_t FtoB(const SexyAL_format *format, uint32_t frames)
+static uint32 FtoB(const SexyAL_format *format, uint32 frames)
 {
  return(frames*format->channels*(format->sampformat>>4));
 }
 
-static uint32_t BtoF(const SexyAL_format *format, uint32_t bytes)
+static uint32 BtoF(const SexyAL_format *format, uint32 bytes)
 {
  return(bytes / (format->channels * (format->sampformat>>4)));
 }
 
-static uint32_t CanWrite(SexyAL_device *device)
+static uint32 CanWrite(SexyAL_device *device)
 {
- uint32_t bytes;
+ uint32 bytes;
 
  if(!device->RawCanWrite(device, &bytes))
   return(0);
@@ -89,7 +84,7 @@ static uint32_t CanWrite(SexyAL_device *device)
  return(BtoF(&device->format, bytes));
 }
 
-static int Write(SexyAL_device *device, void *data, uint32_t frames)
+static int Write(SexyAL_device *device, void *data, uint32 frames)
 {
  assert(device->srcformat.noninterleaved == false);
 
@@ -104,11 +99,11 @@ static int Write(SexyAL_device *device, void *data, uint32_t frames)
  }
  else
  {
-  const uint8_t *data_in = (const uint8_t *)data;
+  const uint8 *data_in = (const uint8 *)data;
 
   while(frames)
   {
-   uint32_t convert_this_iteration;
+   uint32 convert_this_iteration;
 
    convert_this_iteration = frames;
 
@@ -258,8 +253,8 @@ SexyAL_device *SexyAL::Open(const char *id, SexyAL_format *format, SexyAL_buffer
  //assert(0 != buffering->period_size);
  assert(0 != buffering->latency);
 
- buffering->ms = (uint64_t)buffering->buffer_size * 1000 / format->rate;
- buffering->period_us = (uint64_t)buffering->period_size * (1000 * 1000) / format->rate;
+ buffering->ms = (uint64)buffering->buffer_size * 1000 / format->rate;
+ buffering->period_us = (uint64)buffering->period_size * (1000 * 1000) / format->rate;
 
  ret->convert_buffer_fsize = (25 * format->rate + 999) / 1000;
  if(!(ret->convert_buffer = calloc(format->channels * (format->sampformat >> 4), ret->convert_buffer_fsize)))
@@ -341,96 +336,4 @@ SexyAL::SexyAL()
 SexyAL::~SexyAL()
 {
 
-}
-
-// Source: http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
-// Rounds up to the nearest power of 2.
-uint32_t SexyAL_rupow2(uint32_t v)
-{
- v--;
- v |= v >> 1;
- v |= v >> 2;
- v |= v >> 4;
- v |= v >> 8;
- v |= v >> 16;
- v++;
-
- v += (v == 0);
-
- return(v);
-}
-
-int32_t SexyAL_rnearestpow2(int32_t v, bool round_halfway_up)
-{
- int32_t upper, lower;
- int32_t diff_upper, diff_lower;
-
- upper = SexyAL_rupow2(v);
- lower = upper >> 1;
-
- if(!lower)
-  lower = 1;
-
- diff_upper = abs(v - upper);
- diff_lower = abs(v - lower);
-
- if(diff_upper == diff_lower)
- {
-  return(round_halfway_up ? upper : lower);
- }
- else if(diff_upper < diff_lower)
-  return(upper);
-
- return(lower);
-}
-
-// Returns (preferably-monotonic) time in microseconds.
-int64_t SexyAL_Time64(void)
-{
- static bool cgt_fail_warning = 0;
-
- #if HAVE_CLOCK_GETTIME && ( _POSIX_MONOTONIC_CLOCK > 0 || defined(CLOCK_MONOTONIC))
- struct timespec tp;
-
- if(clock_gettime(CLOCK_MONOTONIC, &tp) == -1)
- {
-  if(!cgt_fail_warning)
-   printf("clock_gettime() failed: %s\n", strerror(errno));
-  cgt_fail_warning = 1;
- }
- else
- {
-  static bool res_test = 0;
-  struct timespec res;
-
-  if(!res_test && clock_getres(CLOCK_MONOTONIC, &res) != -1)
-  {
-   printf("%lld %ld\n", (long long)res.tv_sec, (long)res.tv_nsec);
-   res_test = 1;
-  }
-
-  return((int64_t)tp.tv_sec * (1000 * 1000) + tp.tv_nsec / 1000);
- }
- #else
-   #warning "SexyAL: clock_gettime() with CLOCK_MONOTONIC not available"
- #endif
-
-
- #if HAVE_GETTIMEOFDAY
- // Warning: gettimeofday() is not guaranteed to be monotonic!!
- struct timeval tv;
-
- if(gettimeofday(&tv, NULL) == -1)
- {
-  puts("gettimeofday() error");
-  return(0);
- }
-
- return((int64_t)tv.tv_sec * 1000000 + tv.tv_usec);
- #else
-  #warning "SexyAL: gettimeofday() not available!!!"
- #endif
-
- // Yeaaah, this isn't going to work so well.
- return((int64_t)time(NULL) * 1000000);
 }

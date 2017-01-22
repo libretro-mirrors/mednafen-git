@@ -5,6 +5,8 @@ $mod_list = array();
 
 $sections = array();
 
+$section_aname_usage = array();
+
 $curmod = "";
 $cursection = "";
 
@@ -147,9 +149,15 @@ function EndPage()
  $end_string = ' </body>
 </html>';
 
-
+ $section_depth--;
  $section_string = ob_get_contents();
  ob_end_clean();
+
+ if($section_depth != 0)
+ {
+  fprintf(STDERR, "Mismatched BeginSection()/EndSection(): %d\n", $section_depth);
+  exit(1);
+ }
 
 
  echo($ps_string);
@@ -161,41 +169,37 @@ function EndPage()
  $section_depth--;
 }
 
-
-function BeginSection($name, $nonlink_text = "", $link = FALSE, $header_link = FALSE, $anchor_override = FALSE)
+function ExternalSection($name, $link, $nonlink_text = "")
 {
  global $mednafen_version, $curmod, $cursection, $ps_string, $toc_string, $section_depth, $sections, $section_endhtml;
+
+ $toc_string .= '<li><a href="' . urlencode($link) . '">' . htmlspecialchars($name) . '</a>' . htmlspecialchars($nonlink_text);
+}
+
+function BeginSection($name, $aname, $header_link = FALSE)
+{
+ global $mednafen_version, $curmod, $cursection, $ps_string, $toc_string, $section_depth, $sections, $section_endhtml;
+ global $section_aname_usage;
+
+
+ if(isset($section_aname_usage[$aname]))
+ {
+  fprintf(STDERR, "Section aname \"" . $aname . "\" already used!");
+  exit(1);
+ }
+ $section_aname_usage[$aname] = true;
 
  array_push($sections, $name);
  $section_depth++;
 
- if($link !== FALSE)
- {
-  if($link == "")
-   $toc_string .= '<li>' . htmlspecialchars($name . $nonlink_text) . '<ul>';
-  else
-   $toc_string .= '<li><a href="' . urlencode($link) . '">' . htmlspecialchars($name) . '</a>' . htmlspecialchars($nonlink_text) . '<ul>';
-
-  $section_endhtml = '';
- }
+ if($aname === FALSE)
+  $toc_string .= '<li>' . htmlspecialchars($name) . '<ul>';
  else
  {
-  $aname = "";
+  $toc_string .= '<li><a href="#' . urlencode($aname) . '">' . htmlspecialchars($name) . '</a>' . '<ul>';
 
-  for($i = 0; $i < count($sections); $i++)
-  {
-   if($aname != "")
-    $aname .= "\1";
-
-   $aname .= $sections[$i];
-  }
-
-  if($anchor_override !== FALSE)
-   $aname = $anchor_override;
-
-  $toc_string .= '<li><a href="#' . urlencode($aname) . '">' . htmlspecialchars($name) . '</a>' . htmlspecialchars($nonlink_text) . '<ul>';
-
-  echo('<h' . $section_depth . '>' . '<a name="' . urlencode($aname) . '">');
+  echo('<h' . $section_depth . '>');
+  echo('<a name="' . urlencode($aname) . '">');
 
   if($header_link !== FALSE)
    echo('<a href="' . $header_link . '">');
@@ -205,7 +209,9 @@ function BeginSection($name, $nonlink_text = "", $link = FALSE, $header_link = F
   if($header_link !== FALSE)
    echo('</a>');
 
-  echo('</a></h' . $section_depth . '><p></p>');
+   echo('</a>');
+
+  echo('</h' . $section_depth . '><p></p>');
 
   $section_endhtml = '<hr width="' . (100 - ($section_depth - 2) * 25) . '%">';
  }
@@ -244,7 +250,7 @@ function PrintSettings($section_name = "Settings Reference")
  $magic_settings_temp = array();
  $magic_moo = array();
 
- BeginSection($section_name);	//'Settings Reference');
+ BeginSection($section_name, $section_name);
 ?>
 <p>
 <b>Caution:</b> Any settings that change emulation behavior as seen from the emulated game are shown with the setting name bolded in the table. One should be conscious of these settings if one has changed them from the default values when using network play or movies, as they can cause desychronizations if not set the same among hosts(or between the recording emulator and the playing emulator). 
@@ -439,7 +445,7 @@ function DoModDocLinks()
 {
  global $mod_list;
  
- BeginSection("Emulation Module Documentation", "", "");
+ BeginSection("Emulation Module Documentation", FALSE);
 
  $doctor_sort = array();
 
@@ -455,8 +461,7 @@ function DoModDocLinks()
   if($name == "demo")
    continue;
 
-  BeginSection($mod_def['fullname'], " [" . $name . "]", $name . ".html");
-  EndSection();
+  ExternalSection($mod_def['fullname'], $name . ".html", " [" . $name . "]");
  }
 
  EndSection();

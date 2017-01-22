@@ -54,28 +54,22 @@ void HappyPrompt::SetText(const std::string &ptext)
 
 void HappyPrompt::SetKBB(const std::string &zestring)
 {
- UTF8 *utf8_buffer = (UTF8*)strdup(zestring.c_str());
- UTF32 *utf32_buffer;
- const UTF8 *sourceStart = utf8_buffer, *sourceEnd = utf8_buffer + zestring.size();
- UTF32 *targetStart, *targetEnd;
-
- utf32_buffer = (UTF32 *)calloc(1, zestring.size() * 4);
- targetStart = utf32_buffer;
- targetEnd = utf32_buffer + zestring.size() * 4;
-
+ std::vector<UTF32> utf32_buffer(zestring.size() * 4, 0);
+ const UTF8* sourceStart = (const UTF8*)zestring.c_str();
+ const UTF8* sourceEnd = sourceStart + zestring.size();
+ UTF32* targetStart = utf32_buffer.data();
+ UTF32* targetEnd = targetStart + utf32_buffer.size();
 
  if(ConvertUTF8toUTF32(&sourceStart, sourceEnd, &targetStart, targetEnd,lenientConversion) == conversionOK)
  {
-  size_t meow_count = targetStart - utf32_buffer;
+  size_t meow_count = targetStart - utf32_buffer.data();
 
-  for(unsigned int x = 0; x < meow_count; x++)
+  for(size_t x = 0; x < meow_count; x++)
   {
    kb_buffer.push_back(utf32_buffer[x]);
    kb_cursor_pos++;
   }
  }
-
- free(utf32_buffer);
 }
 
 void HappyPrompt::Draw(MDFN_Surface *surface, const MDFN_Rect *rect)
@@ -126,7 +120,7 @@ void HappyPrompt::Draw(MDFN_Surface *surface, const MDFN_Rect *rect)
  DrawText(surface, box_x + 2 * 6, box_y + 13 * 1 + 0, PromptText, surface->MakeColor(0xFF, 0x00, 0xFF, 0xFF), MDFN_FONT_6x13_12x13);
  DrawText(surface, box_x + 2 * 6, box_y + 13 * 2 + 2, &PromptAnswer[0], surface->MakeColor(0x00, 0xFF, 0x00, 0xFF), MDFN_FONT_6x13_12x13);
 
- if(SDL_GetTicks() & 0x80)
+ if(Time::MonoMS() & 0x80)
  {
   uint32 xpos;
 

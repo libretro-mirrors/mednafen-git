@@ -9,7 +9,6 @@ typedef struct {
     int mapper;
     int display;
     int territory;
-    int system;
     const char *name;
 } rominfo_t;
 

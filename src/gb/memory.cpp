@@ -18,6 +18,7 @@
 
 #include <mednafen/mednafen.h>
 #include <mednafen/mempatcher.h>
+#include <mednafen/Time.h>
 #include "gbGlobals.h"
 #include "memory.h"
 
@@ -174,8 +175,8 @@ mapperMBC3 gbDataMBC3 = {
 
 void memoryUpdateMBC3Clock()
 {
-  time_t now = time(NULL);
-  time_t diff = now - gbDataMBC3.mapperLastTime;
+  int64 now = Time::EpochTime();
+  int64 diff = now - gbDataMBC3.mapperLastTime;
   if(diff > 0) {
     // update the clock according to the last update time
     gbDataMBC3.mapperSeconds += diff % 60;
@@ -272,10 +273,7 @@ void mapperMBC3RAM(uint16 address, uint8 value)
         gbMemoryMap[address>>12][address & 0x0fff & gbRamSizeMask] = value;
       }
     } else {
-      time_t tmp;
-      time(&tmp);
-  
-      gbDataMBC3.mapperLastTime = tmp;
+      gbDataMBC3.mapperLastTime = Time::EpochTime();
       switch(gbDataMBC3.mapperClockRegister) {
       case 0x08:
         gbDataMBC3.mapperSeconds = value;

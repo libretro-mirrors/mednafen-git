@@ -2,17 +2,17 @@
 
 <?php BeginPage('nes', 'Nintendo Entertainment System/Famicom'); ?>
 
-<?php BeginSection('Introduction'); ?>
+<?php BeginSection('Introduction', "Section_intro"); ?>
 <p>
-Mednafen's NES/Famicom emulation is based off of <a href="http://fceultra.sourceforge.net/">FCE Ultra</a>.
+Mednafen's NES/Famicom emulation is based off of FCE Ultra.
 </p>
-<?php BeginSection('Custom Palettes'); ?>
+<?php BeginSection('Custom Palettes', "Section_custom_palettes"); ?>
 <p>
 Custom palettes should contain 64 8-bit-per-color-component RGB triplets.
 </p>
 <?php EndSection(); ?>
 
-<?php BeginSection("Input"); ?>
+<?php BeginSection("Input", "Section_input"); ?>
  <p>
   Mednafen emulates the standard NES gamepad, the Four-Score multiplayer
   adapter, the Zapper, the Power Pad,  and the Arkanoid controller.  The 
@@ -22,7 +22,7 @@ Custom palettes should contain 64 8-bit-per-color-component RGB triplets.
   reader are also emulated.
  </p>
 
-<?php BeginSection("Zapper"); ?>
+<?php BeginSection("Zapper", "Section_input_zapper"); ?>
  <p>
         Most Zapper NES games expect the Zapper to be plugged into port 2.
         and most VS Unisystem games expect the Zapper to be plugged
@@ -40,14 +40,14 @@ Custom palettes should contain 64 8-bit-per-color-component RGB triplets.
 
 <?php EndSection(); ?>
 
-<?php BeginSection("File Formats"); ?>
+<?php BeginSection("File Formats", "Section_formats"); ?>
  <p>
  Mednafen supports the iNES, FDS(raw and with a header), UNIF, and NSF file
  formats.  FDS ROM images in the iNES format are not supported; it would
  be silly to do so and storing them in that format is nonsensical.
  </p>
 
-<?php BeginSection('iNES Format'); ?>
+<?php BeginSection('iNES Format', "Section_formats_ines"); ?>
  <p>
  The battery-backed RAM, vertical/horizontal mirroring, four-screen
  name table layout, and 8-bit mapper number capabilities of the iNES
@@ -195,7 +195,7 @@ Custom palettes should contain 64 8-bit-per-color-component RGB triplets.
 <?php EndSection(); ?>
 
 
-<?php BeginSection('UNIF'); ?>
+<?php BeginSection('UNIF', "Section_formats_unif"); ?>
  <p>
  Mednafen supports the following UNIF boards.  The prefixes HVC-, NES-, BTL-, and BMC- are omitted, since they are currently ignored in Mednafen's UNIF loader.
  </p>
@@ -271,7 +271,7 @@ Custom palettes should contain 64 8-bit-per-color-component RGB triplets.
 
 <?php EndSection(); ?>
 
-<?php BeginSection('Famicom Disk System'); ?>
+<?php BeginSection('Famicom Disk System', "Section_fds"); ?>
  <p>
         You will need the FDS BIOS ROM image in the base Mednafen directory.
         It must be named "disksys.rom".  Mednafen will not load FDS games
@@ -288,7 +288,7 @@ Custom palettes should contain 64 8-bit-per-color-component RGB triplets.
  </p>
 <?php EndSection(); ?>
 
-<?php BeginSection('Game Genie'); ?>
+<?php BeginSection('Game Genie', "Section_game_genie"); ?>
 
  <p>
         The Game Genie ROM image is loaded from the path specified by the setting "nes.ggrom", or, if that string is not set, the file "gg.rom" in the
@@ -300,7 +300,7 @@ Custom palettes should contain 64 8-bit-per-color-component RGB triplets.
 <?php EndSection(); ?>
 
 
-<?php BeginSection('VS Unisystem'); ?>
+<?php BeginSection('VS Unisystem', "Section_vs_unisystem"); ?>
  <p>
 Mednafen currently only supports VS Unisystem ROM images in the
 iNES format.  DIP switches and coin insertion are both emulated.  
@@ -348,7 +348,7 @@ necessarily 100% accurate or complete):
 <?php EndSection(); ?>
 
 
-<?php BeginSection('Default Key Assignments'); ?>
+<?php BeginSection('Default Key Assignments', "Section_default_keys"); ?>
 
  <table border>
  <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
@@ -359,7 +359,7 @@ necessarily 100% accurate or complete):
  <tr><td>ALT + SHIFT + 5</td><td>Activate in-game input configuration process for the Famicom expansion port.</td><td>input_config5</td></tr>
  </table>
 
-<?php BeginSection('VS Unisystem'); ?>
+<?php BeginSection('VS Unisystem', "Section_default_keys_vsuni"); ?>
  <table border>
  <tr><th>Key:</th><th>Action:</th><th>Configuration String:</th></tr>
  <tr><td>F8</td><td>Insert coin.</td><td>insert_coin</td></tr>
@@ -369,7 +369,7 @@ necessarily 100% accurate or complete):
 <?php EndSection(); ?>
 
 
-<?php BeginSection('Famicom Disk System'); ?>
+<?php BeginSection('Famicom Disk System', "Section_default_keys_fds"); ?>
  <table border>
  <tr><th>Key:</th><th>Action:</th><th>Configuration String:</th></tr>
  <tr><td>F6</td><td>Select disk and disk side.</td><td>select_disk</td></tr>
@@ -378,7 +378,7 @@ necessarily 100% accurate or complete):
 <?php EndSection(); ?>
 
 
-<?php BeginSection('Barcode Readers'); ?>
+<?php BeginSection('Barcode Readers', "Section_default_keys_barcode"); ?>
  <table border>
  <tr><th>Key:</th><th>Action:</th><th>Configuration String:</th></tr>
  <tr><td>0-9</td><td>Barcode digits(after activating barcode input).</td><td>"0" through "9"</tr>
@@ -387,7 +387,7 @@ necessarily 100% accurate or complete):
 <?php EndSection(); ?>
 
 
-<?php BeginSection('Game Pad'); ?>
+<?php BeginSection('Game Pad', "Section_default_keys_gamepad"); ?>
 <table border>
  <tr><th>Key:</th><th nowrap>Button on Emulated Gamepad:</th></tr>
  <tr><td>Keypad 2</td><td>B</td></tr>
@@ -402,7 +402,7 @@ necessarily 100% accurate or complete):
 <?php EndSection(); ?>
 
 
-<?php BeginSection('Power Pad'); ?>
+<?php BeginSection('Power Pad', "Section_default_keys_powerpad"); ?>
  <table border>
   <tr><th colspan="4">Side B</th></tr>
   <tr><td width="25%">O</td><td width="25%">P</td>
@@ -420,7 +420,7 @@ necessarily 100% accurate or complete):
  </table>
 <?php EndSection(); ?>
 
-<?php BeginSection('Family Keyboard'); ?>
+<?php BeginSection('Family Keyboard', "Section_default_keys_fkb"); ?>
  <p>
          All emulated keys are mapped to the closest open key on the PC
           keyboard, with a few exceptions.  The emulated "@" key is
@@ -434,7 +434,7 @@ necessarily 100% accurate or complete):
  </p>
 <?php EndSection(); ?>
 
-<?php BeginSection('HyperShot Controller'); ?>
+<?php BeginSection('HyperShot Controller', "Section_default_keys_hypershot"); ?>
  <table border>
   <tr><td></td><th>Run</th><th>Jump</th></tr>
   <tr><th>Controller I</th><td>Q</td><td>W</td></tr>
@@ -442,7 +442,7 @@ necessarily 100% accurate or complete):
  </table>
 <?php EndSection(); ?>
 
-<?php BeginSection('Mahjong Controller'); ?>
+<?php BeginSection('Mahjong Controller', "Section_default_keys_mahjong"); ?>
  <p>
   <table border>
    <tr><th>Emulated Mahjong Controller:</th><td>A</td><td>B</td><td>C</td><td>D</td><td>E</td><td>F</td><td>G</td><td>H</td><td>I</td><td>J</td><td>K</td><td>L</td><td>M</td><td>N</td></tr>
@@ -456,7 +456,7 @@ necessarily 100% accurate or complete):
  </p>
 <?php EndSection(); ?>
 
-<?php BeginSection('Party Tap Controller'); ?>
+<?php BeginSection('Party Tap Controller', "Section_default_keys_partytap"); ?>
  <p>
   <table border>
    <tr><th>Emulated Buzzer:</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td></tr>
@@ -468,7 +468,7 @@ necessarily 100% accurate or complete):
 <?php EndSection(); ?>
 
 
-<?php BeginSection('Game-specific Emulation Hacks'); ?>
+<?php BeginSection('Game-specific Emulation Hacks', "Section_hax"); ?>
  <table border width="100%">
   <tr><th>Title:</th><th>Description:</th><th>Source code files affected:</th></tr>
   <tr><td>KickMaster</td>
@@ -492,7 +492,7 @@ necessarily 100% accurate or complete):
 
 <?php PrintSettings(); ?>
 
- <?php BeginSection("Credits"); ?>
+ <?php BeginSection("Credits", "Section_credits"); ?>
  <p>
   (This section is woefully outdated, being mostly copied from FCE Ultra)
  <table border width="100%">

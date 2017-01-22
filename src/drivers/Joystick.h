@@ -102,8 +102,6 @@ class JoystickManager
  unsigned GetIndexByUniqueID(uint64 unique_id);	// Returns ~0U if joystick was not found.
  unsigned GetUniqueIDByIndex(unsigned index);
 
- void TestRumble(void);
-
  private:
  int AnalogThreshold;
 

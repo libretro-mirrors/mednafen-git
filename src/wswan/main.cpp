@@ -1,22 +1,22 @@
-/* Cygne
- *
- * Copyright notice for this file:
- *  Copyright (C) 2002 Dox dox@space.pl
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen WonderSwan Emulation Module(based on Cygne)                       */
+/******************************************************************************/
+/* main.cpp:
+**  Copyright (C) 2002 Dox dox@space.pl
+**  Copyright (C) 2007-2017 Mednafen Team
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License version 2.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #include "wswan.h"
 #include <mednafen/hash/md5.h>
@@ -511,7 +511,7 @@ static const MDFNSetting_EnumList LanguageList[] =
 
 static const MDFNSetting WSwanSettings[] =
 {
- { "wswan.rotateinput", MDFNSF_NOFLAGS, gettext_noop("Virtually rotate D-pads along with screen."), NULL, MDFNST_BOOL, "0" },
+ { "wswan.rotateinput", MDFNSF_NOFLAGS, gettext_noop("Virtually rotate the D-pads when the screen is rotated."), NULL, MDFNST_BOOL, "0" },
  { "wswan.language", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Language games should display text in."), gettext_noop("The only game this setting is known to affect is \"Digimon Tamers - Battle Spirit\"."), MDFNST_ENUM, "english", NULL, NULL, NULL, NULL, LanguageList },
  { "wswan.name", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Name"), NULL, MDFNST_STRING, "Mednafen" },
  { "wswan.byear", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Birth Year"), NULL, MDFNST_UINT, "1989", "0", "9999" },

@@ -15,11 +15,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#include <inttypes.h>
+#include <mednafen/types.h>
+#include <mednafen/math_ops.h>
 
 #include <vector>
 #include <string>
@@ -34,11 +31,11 @@ struct SexyAL_DriverInfo
 
 typedef struct
 {
-	uint32_t sampformat;
-	uint32_t channels;	/* 1 = mono, 2 = stereo (actual device output channels will be 1<=ch<=8, however, 
+	uint32 sampformat;
+	uint32 channels;	/* 1 = mono, 2 = stereo (actual device output channels will be 1<=ch<=8, however, 
 				   source format MUST be 1 or 2, since the converter can't handle other numbers of source
 				   channels) */
-	uint32_t rate;		/* Number of frames per second, 22050, 44100, etc. */
+	uint32 rate;		/* Number of frames per second, 22050, 44100, etc. */
 	bool revbyteorder;	/* 0 = Native(to CPU), 1 = Reversed.  PDP can go to hell. */
 	bool noninterleaved;	/* 0 = Interleaved multichannel audio(stereo), 1 = Non-Interleaved */
 } SexyAL_format;
@@ -46,26 +43,26 @@ typedef struct
 typedef struct
 {
 	/* Inputs(requested) and Outputs(obtained; dev-note: ms and period_us outputs calculated by core SexyAL code, not sound device interface/driver code) */
-	uint32_t ms;		/* Desired buffer size, in milliseconds. */
-	uint32_t period_us;	/* Desired period size, in MICROseconds */
+	uint32 ms;		/* Desired buffer size, in milliseconds. */
+	uint32 period_us;	/* Desired period size, in MICROseconds */
 	bool overhead_kludge;	/* If true, and ms is non-zero, and we're using driver "dsound", add 20 to ms when calculating the buffer size.
 
 				   Implemented this way to preserve "sound.buffer_time" setting semantics from older versions of Mednafen.
 				*/
 
 	/* Outputs Only(obtained) */
-	uint32_t buffer_size;	/* Buffer size(as in the maximum value returned by CanWrite()). In frames. */
-	uint32_t period_size;	/* Period/Fragment size.  In frames. */
-	uint32_t latency;	/* Estimated total latency(between first Write() and actual sound output; essentially equal to the maximum value of
+	uint32 buffer_size;	/* Buffer size(as in the maximum value returned by CanWrite()). In frames. */
+	uint32 period_size;	/* Period/Fragment size.  In frames. */
+	uint32 latency;	/* Estimated total latency(between first Write() and actual sound output; essentially equal to the maximum value of
 				   CanWrite() plus any additional internal or external buffering). In frames. */
 
-	uint32_t bt_gran;	/* Buffer timing granularity(RawWrite() blocking, RawCanWrite() granularity), best-case.  In frames.
+	uint32 bt_gran;	/* Buffer timing granularity(RawWrite() blocking, RawCanWrite() granularity), best-case.  In frames.
 				   If 0, period_size is the granularity. */
 
-        //uint32_t ms;            /* Milliseconds of buffering, approximate(application code should set this value to control buffer size). */
-	//uint32_t period_time;	/* If non-zero, specifies the desired period/fragment size, in frames. */
-	//uint32_t size;		/* Shouldn't be filled in by application code. */
-	//uint32_t latency;	/* Estimated latency between Write() and sound output, in frames. */
+        //uint32 ms;            /* Milliseconds of buffering, approximate(application code should set this value to control buffer size). */
+	//uint32 period_time;	/* If non-zero, specifies the desired period/fragment size, in frames. */
+	//uint32 size;		/* Shouldn't be filled in by application code. */
+	//uint32 latency;	/* Estimated latency between Write() and sound output, in frames. */
 } SexyAL_buffering;
 
 
@@ -87,39 +84,10 @@ enum
  SEXYAL_FMT_PCMFLOAT = 0x4F // 32-bit floating point
 };
 
-#if 0
-class SexyAL_Device
-{
-	public:
-
-	SexyAL_Device();
-
-	virtual ~SexyAL_Device()
-	{
-	 Close();
-	}
-
-	virtual int Open(const char *id, const SexyAL_format *format, const SexyAL_buffering *buffering,
-		SexyAL_format *got_format, SexyAL_buffering *got_buffering);
-
-	virtual int Close(void);
-
-	virtual int Pause(int state);
-	virtual int Clear(void);
-
-	virtual int RawWrite(uint32_t bytes);
-	virtual int RawCanWrite(uint32_t *can_write);
-
-	protected:
-	SexyAL_format format;
-	SexyAL_buffering buffering;
-};
-#endif
-
 typedef struct __SexyAL_device
 {
 	int (*SetConvert)(struct __SexyAL_device *, SexyAL_format *);
-	int (*Write)(struct __SexyAL_device *, void *data, uint32_t frames);
+	int (*Write)(struct __SexyAL_device *, void *data, uint32 frames);
 
 
 	// Returns the number of frames that can be written via Write() without blocking.
@@ -127,7 +95,7 @@ typedef struct __SexyAL_device
 	// amount of data that can be written without blocking.  Additionally, it will not be higher
 	// than the buffer size(unless there's a bug somewhere ;) ).
 	// So, try to use this function for advisory timing purposes only.
-	uint32_t (*CanWrite)(struct __SexyAL_device *);
+	uint32 (*CanWrite)(struct __SexyAL_device *);
 
         int (*Close)(struct __SexyAL_device *);
 
@@ -141,11 +109,11 @@ typedef struct __SexyAL_device
 
 	// Writes "bytes" bytes of data from "data" to the device, blocking if necessary.
 	// Returns 1 on success, 0 on failure(probably fatal).
-        int (*RawWrite)(struct __SexyAL_device *, const void *data, uint32_t bytes);
+        int (*RawWrite)(struct __SexyAL_device *, const void *data, uint32 bytes);
 
 	// Sets *count to the number of bytes that can be written to the device without blocking.
 	// Returns 1 on success, 0 on failure(probably fatal).
-        int (*RawCanWrite)(struct __SexyAL_device *, uint32_t *can_write);
+        int (*RawCanWrite)(struct __SexyAL_device *, uint32 *can_write);
 
 	// Closes the device.
 	// Returns 1 on success, 0 on failure(failure should indicate some resources may be left open/allocated due to
@@ -158,7 +126,7 @@ typedef struct __SexyAL_device
 	void *private_data;
 
 	void *convert_buffer;
-	uint32_t convert_buffer_fsize;
+	uint32 convert_buffer_fsize;
 } SexyAL_device;
 
 typedef struct __SexyAL_enumdevice
@@ -213,7 +181,3 @@ class SexyAL
 	bool FindDriver(SexyAL_DriverInfo* out_di, const char* name);
 };
 
-/* Utility functions: */
-uint32_t SexyAL_rupow2(uint32_t v);
-int32_t SexyAL_rnearestpow2(int32_t v, bool round_halfway_up = true);
-int64_t SexyAL_Time64(void);

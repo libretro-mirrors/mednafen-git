@@ -25,7 +25,7 @@ namespace MDFN_IEN_NES
 
 static uint8 CHRBanks[8], PRGBanks[2], IRQCount, IRQLatch, Mirroring, K4IRQ, IRQa, K4sel;
 static int32 acount;
-static uint8 *WRAM = NULL;
+static uint8 WRAM[8192];
 
 static void DoMirroring(void)
 {
@@ -157,11 +157,7 @@ static void Power(CartInfo *info)
 
 static void Close(void)
 {
- if(WRAM)
- {
-  free(WRAM);
-  WRAM = NULL;
- }
+
 }
 
 int Mapper23_Init(CartInfo *info)
@@ -175,9 +171,6 @@ int Mapper23_Init(CartInfo *info)
         MapIRQHook=KonamiIRQHook2;
 	info->Power = Power;
 	info->Close = Close;
-
-	if(!(WRAM = (uint8 *)malloc(8192)))
-	 return(0);
 
 	memset(WRAM, 0, 8192);
 

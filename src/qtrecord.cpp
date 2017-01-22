@@ -21,11 +21,11 @@
 
 #include <mednafen/mednafen.h>
 #include <mednafen/endian.h>
+#include <mednafen/Time.h>
 #include "qtrecord.h"
 #include "compress/minilzo.h"
 #include "video/png.h"
 
-#include <time.h>
 #include <zlib.h>
 
 void QTRecord::w16(uint16 val)
@@ -251,14 +251,7 @@ QTRecord::QTRecord(const std::string& path, const VideoSpec &spec) : qtfile(path
   CompressedVideoBuffer.resize(compressBound(RawVideoBuffer.size()));
 
  {
-  int64 unixy_time = time(NULL);
-  uint32 appley_time;
-
-  //if(unixy_time == (time_t)-1)	// TODO: handle error
-
-  //printf("%d\n", unixy_time);
-
-  appley_time = unixy_time + 2082844800;
+  uint32 appley_time = Time::EpochTime() + 2082844800;
 
   CreationTS = appley_time;
   ModificationTS = appley_time;

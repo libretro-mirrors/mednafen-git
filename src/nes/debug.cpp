@@ -154,8 +154,6 @@ void NESDBG_MemPoke(uint32 A, uint32 V, unsigned int bsize, bool hl, bool logica
  }
 }
 
-extern NESGameType *GameInterface;       
-
 void NESDBG_GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint8 *Buffer)
 {
  if(!strcmp(name, "cpu"))

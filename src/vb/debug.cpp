@@ -43,7 +43,7 @@ static void RedoCPUHook(void);
 static void (*CPUHook)(uint32, bool bpoint) = NULL;
 static bool CPUHookContinuous = false;
 static void (*LogFunc)(const char *, const char *);
-bool VB_LoggingOn = FALSE;
+bool VB_LoggingOn = false;
 
 typedef struct __VB_BPOINT {
         uint32 A[2];
@@ -210,7 +210,7 @@ void VBDBG_CheckBP(int type, uint32 address, uint32 value, unsigned int len)
   {
    if(tmp_address >= bpit->A[0] && tmp_address <= bpit->A[1])
    {
-    FoundBPoint = TRUE;
+    FoundBPoint = true;
     break;
    }
    tmp_address++;
@@ -250,7 +250,7 @@ static void CPUHandler(const v810_timestamp_t timestamp, uint32 PC)
  {
   if(PC >= bpit->A[0] && PC <= bpit->A[1])
   {
-   FoundBPoint = TRUE;
+   FoundBPoint = true;
    break;
   }
  }
@@ -332,57 +332,77 @@ uint32 VBDBG_MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical)
  return(ret);
 }
 
-static void GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint8 *Buffer)
+static void GetAddressSpaceBytes_CPU(const char *name, uint32 Address, uint32 Length, uint8 *Buffer)
 {
- if(!strcmp(name, "cpu"))
+ while(Length--)
  {
-  while(Length--)
-  {
-   *Buffer = MemPeek8(0, Address);
+  *Buffer = MemPeek8(0, Address);
 
-   Address++;
-   Buffer++;
-  }
- }
- else if(!strncmp(name, "vsuwd", 5))
- {
-  const unsigned int which = name[5] - '0';
-
-  while(Length--)
-  {
-   *Buffer = VB_VSU->PeekWave(which, Address);
-
-   Address++;
-   Buffer++;
-  }
+  Address++;
+  Buffer++;
  }
 }
 
-static void PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint32 Granularity, bool hl, const uint8 *Buffer)
+static void GetAddressSpaceBytes_RAM(const char *name, uint32 Address, uint32 Length, uint8 *Buffer)
 {
- if(!strcmp(name, "cpu"))
+ while(Length--)
  {
-  while(Length--)
-  {
-   int32 dummy_ts = 0;
+  *Buffer = MemPeek8(0, (0x5 << 24) | (uint16)Address);
 
-   MemWrite8(dummy_ts, Address, *Buffer);
-
-   Address++;
-   Buffer++;
-  }
+  Address++;
+  Buffer++;
  }
- else if(!strncmp(name, "vsuwd", 5))
+}
+
+static void GetAddressSpaceBytes_VSUWD(const char *name, uint32 Address, uint32 Length, uint8 *Buffer)
+{
+ const unsigned int which = name[5] - '0';
+
+ while(Length--)
  {
-  const unsigned int which = name[5] - '0';
+  *Buffer = VB_VSU->PeekWave(which, Address);
 
-  while(Length--)
-  {
-   VB_VSU->PokeWave(which, Address, *Buffer);
+  Address++;
+  Buffer++;
+ }
+}
 
-   Address++;
-   Buffer++;
-  }
+static void PutAddressSpaceBytes_CPU(const char *name, uint32 Address, uint32 Length, uint32 Granularity, bool hl, const uint8 *Buffer)
+{
+ while(Length--)
+ {
+  int32 dummy_ts = 0;
+
+  MemWrite8(dummy_ts, Address, *Buffer);
+
+  Address++;
+  Buffer++;
+ }
+}
+
+static void PutAddressSpaceBytes_RAM(const char *name, uint32 Address, uint32 Length, uint32 Granularity, bool hl, const uint8 *Buffer)
+{
+ while(Length--)
+ {
+  int32 dummy_ts = 0;
+
+  MemWrite8(dummy_ts, (0x5 << 24) | (uint16)Address, *Buffer);
+
+  Address++;
+  Buffer++;
+ }
+}
+
+static void PutAddressSpaceBytes_VSUWD(const char *name, uint32 Address, uint32 Length, uint32 Granularity, bool hl, const uint8 *Buffer)
+{
+ const unsigned int which = name[5] - '0';
+
+ while(Length--)
+ {
+  VB_VSU->PokeWave(which, Address, *Buffer);
+
+  Address++;
+  Buffer++;
  }
 }
 
@@ -424,7 +444,7 @@ void VBDBG_SetLogFunc(void (*func)(const char *, const char *))
 {
  LogFunc = func;
 
- VB_LoggingOn = func ? TRUE : FALSE;
+ VB_LoggingOn = func ? true : false;
 
  if(VB_LoggingOn)
  {
@@ -579,9 +599,8 @@ bool VBDBG_Init(void)
  MDFNDBG_AddRegGroup(&RegsGroup_Misc);
  MDFNDBG_AddRegGroup(&RegsGroup_VIP);
 
- ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "cpu", "CPU Physical", 32);
-// ASpace_Add(GetAddressSpaceBytes, PutAddressSpaceBytes, "ram", "RAM", 21);
-
+ ASpace_Add(GetAddressSpaceBytes_CPU, PutAddressSpaceBytes_CPU, "cpu", "CPU Physical", 27);
+ ASpace_Add(GetAddressSpaceBytes_RAM, PutAddressSpaceBytes_RAM, "ram", "RAM", 16);
 
  for(int x = 0; x < 5; x++)
  {
@@ -591,15 +610,15 @@ bool VBDBG_Init(void)
      trio_snprintf(tmpname, 128, "vsuwd%d", x);
      trio_snprintf(tmpinfo, 128, "VSU Wave Data %d", x);
 
-     newt.GetAddressSpaceBytes = GetAddressSpaceBytes;
-     newt.PutAddressSpaceBytes = PutAddressSpaceBytes;
+     newt.GetAddressSpaceBytes = GetAddressSpaceBytes_VSUWD;
+     newt.PutAddressSpaceBytes = PutAddressSpaceBytes_VSUWD;
 
      newt.name = std::string(tmpname);
      newt.long_name = std::string(tmpinfo);
      newt.TotalBits = 5;
      newt.NP2Size = 0;
 
-     newt.IsWave = TRUE;
+     newt.IsWave = true;
      newt.WaveFormat = ASPACE_WFMT_UNSIGNED;
      newt.WaveBits = 6;
      ASpace_Add(newt); //PSG_GetAddressSpaceBytes, PSG_PutAddressSpaceBytes, tmpname, tmpinfo, 5);

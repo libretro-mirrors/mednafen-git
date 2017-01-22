@@ -193,14 +193,14 @@ int ASpace_Add(const AddressSpaceType &);
 // Removes all registered address spaces.
 void ASpace_Reset(void);
 
-// pre_bpoint should be TRUE if these are "estimated" read/writes that will occur when the current instruction
+// pre_bpoint should be true if these are "estimated" read/writes that will occur when the current instruction
 // is actually executed/committed.
 // size is the size of the read/write(ex: 1 byte, 2 bytes, 4 bytes), defaulting to 1 byte.
 //
-// The return value is always FALSE if pre_bpoint is FALSE.  If pre_bpoint is TRUE, the return value will be
-// TRUE if the "estimated" read/write matches a registered breakpoint.
-bool ASpace_Read(const int id, const uint32 address, const unsigned int size = 1, const bool pre_bpoint = FALSE);
-bool ASpace_Write(const int id, const uint32 address, const uint32 value, const unsigned int size = 1, const bool pre_bpoint = FALSE);
+// The return value is always false if pre_bpoint is false.  If pre_bpoint is true, the return value will be
+// true if the "estimated" read/write matches a registered breakpoint.
+bool ASpace_Read(const int id, const uint32 address, const unsigned int size = 1, const bool pre_bpoint = false);
+bool ASpace_Write(const int id, const uint32 address, const uint32 value, const unsigned int size = 1, const bool pre_bpoint = false);
 
 // Clears read/write usage maps.
 void ASpace_ClearReadMap(const int id);

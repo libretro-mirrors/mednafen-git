@@ -19,6 +19,7 @@
 #include <mednafen/sound/OwlResampler.h>
 #include <mednafen/video/primitives.h>
 #include <mednafen/video/text.h>
+#include <mednafen/Time.h>
 #include <trio/trio.h>
 
 #include <math.h>
@@ -98,7 +99,7 @@ static inline uint32_t DemoRandU32(void)
  return(x + y + z);
 }
 
-static void Draw(EmulateSpecStruct* espec)
+static void Draw(EmulateSpecStruct* espec, const uint8* weak, const uint8* strong)
 {
  espec->DisplayRect.x = DemoRandU32() & 31;
  espec->DisplayRect.y = DemoRandU32() & 31;
@@ -111,9 +112,66 @@ static void Draw(EmulateSpecStruct* espec)
 
  if(!espec->skip)
  {
-  espec->surface->Fill(DemoRandU32() & 0xFF, DemoRandU32() & 0xFF, DemoRandU32() & 0xFF, 0);
+  if(cur_test_mode == 2 || cur_test_mode == 3 || cur_test_mode == 4)
+   espec->surface->Fill(0, 0, 0, 0);
+  else
+   espec->surface->Fill(DemoRandU32() & 0xFF, DemoRandU32() & 0xFF, DemoRandU32() & 0xFF, 0);
 
-  if(cur_test_mode == 1)
+  if(cur_test_mode == 4)
+  {
+   espec->DisplayRect.x = 0;
+   espec->DisplayRect.y = 0;
+   espec->DisplayRect.h = 240 << Interlace;
+   espec->DisplayRect.w = 1;
+
+   for(int y = 0; y < 240; y++)
+   {
+    uint32 color;
+
+    if(y >= 120)
+    {
+     uint8 r = 0, g = 0, b = 0;
+
+     if(y & 1) 
+      r = 0xFF;
+     else
+      b = 0xFF;
+
+     color = espec->surface->MakeColor(r, g, b);
+    }
+    else
+    {
+     color = espec->surface->MakeColor(0, 0, 0);
+     if(y & 1) 
+      color = espec->surface->MakeColor(0xFF, 0xFF, 0xFF);
+    }
+
+    MDFN_DrawLine(espec->surface, 0, (y << Interlace) + 0, 0, (y << Interlace) + Interlace, color);
+   }
+  }
+  else if(cur_test_mode == 2 || cur_test_mode == 3)
+  {
+   espec->DisplayRect.x = 0;
+   espec->DisplayRect.y = 0;
+   espec->DisplayRect.h = 240 << Interlace;
+   espec->DisplayRect.w = 640 >> (cur_test_mode == 3);
+
+   for(int i = 0; i < 34; i++)
+   {
+    const unsigned cs = i / 7;
+    uint32 bcol = espec->surface->MakeColor(0, 0, 0xFF * (cs == 4));
+    uint32 color = espec->surface->MakeColor(0xFF, 0xFF, 0xFF);
+
+    if(cs)
+     color = espec->surface->MakeColor(0xFF * (cs == 1 || cs == 4), 0xFF * (cs == 2), 0xFF * (cs == 3));
+
+    for(unsigned x = 0; x < (640 >> (cur_test_mode == 3)); x++)
+    {
+     MDFN_DrawLine(espec->surface, x, (i * 7) << Interlace, x, (i * 7 + 7) << Interlace, (x % ((i % 7) + (cs == 4) + 1)) ? bcol : color);
+    }
+   }
+  }
+  else if(cur_test_mode == 1)
   {
    char width_text[16];
 
@@ -172,9 +230,29 @@ static void Draw(EmulateSpecStruct* espec)
 
    MDFN_DrawFillRect(espec->surface, w0r.x, w0r.y, w0r.w, w0r.h, espec->surface->MakeColor(0xFF, 0xFF, 0xFF), espec->surface->MakeColor(0x7F, 0x00, 0xFF));
    DrawTextShadow(espec->surface, w0r, espec->DisplayRect.x, (y0 + (y1 - y0) / 2 - 9), "400", espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_6x13_12x13, w0);
+   for(int i = 0; i < 2; i++)
+   {
+    char weakstr[64];
+    char strongstr[64];
+    trio_snprintf(weakstr, sizeof(weakstr),     "  Weak: %3d", weak[i]);
+    trio_snprintf(strongstr, sizeof(strongstr), "Strong: %3d", strong[i]);
 
+    DrawTextShadow(espec->surface, w0r, espec->DisplayRect.x + (i ? 342 : 3), (y0 + (y1 - y0) / 2 - 8), weakstr, espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_5x7);
+    DrawTextShadow(espec->surface, w0r, espec->DisplayRect.x + (i ? 342 : 3), (y0 + (y1 - y0) / 2 + 1), strongstr, espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_5x7);
+   }
    MDFN_DrawFillRect(espec->surface, w1r.x, w1r.y, w1r.w, w1r.h, espec->surface->MakeColor(0xFF, 0xFF, 0xFF), espec->surface->MakeColor(0x00, 0x7F, 0xFF));
    DrawTextShadow(espec->surface, w1r, espec->DisplayRect.x, (y1 + (y2 - y1) / 2 - 9), "800", espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_9x18_18x18, w1);
+
+   DrawTextShadow(espec->surface, w1r, espec->DisplayRect.x + 4, (y1 + (y2 - y1) / 2 - 13), Time::StrTime(Time::LocalTime()).c_str(), espec->surface->MakeColor(0xFF, 0xFF, 0), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_6x13_12x13);
+   DrawTextShadow(espec->surface, w1r, espec->DisplayRect.x + 4, (y1 + (y2 - y1) / 2 -  0), Time::StrTime(Time::UTCTime()).c_str(), espec->surface->MakeColor(0xFF, 0xFF, 0), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_6x13_12x13);
+
+   {
+    char tstr[64];
+    trio_snprintf(tstr, sizeof(tstr), "%10u", Time::MonoMS());
+    DrawTextShadow(espec->surface, w1r, espec->DisplayRect.x + w1 - 13 * 6 - 4, (y1 + (y2 - y1) / 2 - 13), tstr, espec->surface->MakeColor(0xFF, 0x00, 0xFF), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_6x13_12x13);
+    trio_snprintf(tstr, sizeof(tstr), "%20llu", (unsigned long long)Time::MonoUS());
+    DrawTextShadow(espec->surface, w1r, espec->DisplayRect.x + w1 - 20 * 6 - 4, (y1 + (y2 - y1) / 2 -  0), tstr, espec->surface->MakeColor(0xFF, 0x00, 0xFF), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_6x13_12x13);
+   }
 
    MDFN_DrawFillRect(espec->surface, w2r.x, w2r.y, w2r.w, w2r.h, espec->surface->MakeColor(0xFF, 0xFF, 0xFF), espec->surface->MakeColor(0x00, 0x00, 0xFF));
    DrawTextShadow(espec->surface, w2r, espec->DisplayRect.x, (y2 + (y3 - y2) / 2 - 9), w2_text, espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), w2_font, w2);
@@ -197,6 +275,8 @@ static void Emulate(EmulateSpecStruct* espec)
  if(espec->SoundFormatChanged)
   SetSoundRate(espec->SoundRate);
 
+ uint8 weak[2], strong[2];
+
  for(unsigned i = 0; i < 2; i++)
  {
   {
@@ -206,20 +286,20 @@ static void Emulate(EmulateSpecStruct* espec)
     Interlace = !Interlace;
 
    if((cur_cstate ^ last_cstate[i]) & cur_cstate & 2)
-    cur_test_mode = (cur_test_mode + 1) % 2;
+    cur_test_mode = (cur_test_mode + 1) % 5;
 
    last_cstate[i] = cur_cstate;
   }
 
   {
-   uint8 weak = MDFN_de16lsb(&controller_ptr[i][3]) >> 7;
-   uint8 strong = MDFN_de16lsb(&controller_ptr[i][5]) >> 7;
+   weak[i] = MDFN_de16lsb(&controller_ptr[i][3]) >> 7;
+   strong[i] = MDFN_de16lsb(&controller_ptr[i][5]) >> 7;
 
-   MDFN_en16lsb(&controller_ptr[i][1], (weak << 0) | (strong << 8));
+   MDFN_en16lsb(&controller_ptr[i][1], (weak[i] << 0) | (strong[i] << 8));
   }
  }
 
- Draw(espec);
+ Draw(espec, weak, strong);
 
  {
   int sc = 0;

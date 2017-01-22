@@ -1,22 +1,23 @@
-/* Cygne
- *
- * Copyright notice for this file:
- *  Copyright (C) 2002 Dox dox@space.pl
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
+/******************************************************************************/
+/* Mednafen WonderSwan Emulation Module(based on Cygne)                       */
+/******************************************************************************/
+/* gfx.cpp:
+**  Copyright (C) 2002 Dox dox@space.pl
+**  Copyright (C) 2007-2017 Mednafen Team
+**  Copyright (C) 2016 Alex 'trap15' Marshall - http://daifukkat.su/
+**
+** This program is free software; you can redistribute it and/or
+** modify it under the terms of the GNU General Public License version 2.
+**
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+**
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, write to the Free Software Foundation, Inc.,
+** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
 
 #include "wswan.h"
 #include "gfx.h"
@@ -41,8 +42,9 @@ static uint32 LayerEnabled;
 static uint8 wsLine;                 /*current scanline*/
 static uint8 weppy;
 
-static uint8 SpriteTable[0x80][4];
-static uint32 SpriteCountCache;
+static uint8 SpriteTable[2][0x80][4];
+static uint32 SpriteCountCache[2];
+static bool FrameWhichActive;
 static uint8 DispControl;
 static uint8 BGColor;
 static uint8 LineCompare;
@@ -55,6 +57,7 @@ static uint8 SPRx0, SPRy0, SPRx1, SPRy1;
 static uint8 BGXScroll, BGYScroll;
 static uint8 FGXScroll, FGYScroll;
 static uint8 LCDControl, LCDIcons;
+static uint8 LCDVtotal;
 
 static uint8 BTimerControl;
 static uint16 HBTimerPeriod;
@@ -71,6 +74,7 @@ enum
  GFX_GSREG_VIDEOMODE,
  GFX_GSREG_LCDCONTROL,
  GFX_GSREG_LCDICONS,
+ GFX_GSREG_LCDVTOTAL,
  GFX_GSREG_BTIMERCONTROL,
  GFX_GSREG_HBTIMERPERIOD,
  GFX_GSREG_VBTIMERPERIOD,
@@ -104,6 +108,7 @@ RegType WSwanGfxRegs[] =
  { GFX_GSREG_VIDEOMODE, "VideoMode", "Video Mode", 1 },
  { GFX_GSREG_LCDCONTROL, "LCDControl", "LCD Control", 1 },
  { GFX_GSREG_LCDICONS, "LCDIcons", "LCD Icons", 1 },
+ { GFX_GSREG_LCDVTOTAL, "LCDVtotal", "LCD Vtotal", 1 },
  { GFX_GSREG_BTIMERCONTROL, "BTimerControl", "VB/HB Timer Control", 1 },
  { GFX_GSREG_HBTIMERPERIOD, "HBTimerPeriod", "Horizontal blank timer counter period", 2 },
  { GFX_GSREG_VBTIMERPERIOD, "VBTimerPeriod", "Vertical blank timer counter period", 2 },
@@ -149,6 +154,9 @@ uint32 WSwan_GfxGetRegister(const unsigned id, char* special, const uint32 speci
 
   case GFX_GSREG_LCDICONS:
 	return(LCDIcons);
+
+  case GFX_GSREG_LCDVTOTAL:
+	return(LCDVtotal);
 
   case GFX_GSREG_BTIMERCONTROL:
 	return(BTimerControl);
@@ -246,6 +254,10 @@ void WSwan_GfxSetRegister(const unsigned id, uint32 value)
 
   case GFX_GSREG_LCDICONS:
 	LCDIcons = value;
+	break;
+
+  case GFX_GSREG_LCDVTOTAL:
+	LCDVtotal = value;
 	break;
 
   case GFX_GSREG_BTIMERCONTROL:
@@ -409,17 +421,14 @@ void WSwan_GfxWrite(uint32 A, uint8 V)
 
   case 0x14: LCDControl = V; break; //    if((!(wsIO[0x14]&1))&&(data&1)) { wsLine=0; }break; /* LCD off ??*/
   case 0x15: LCDIcons = V; break;
+  case 0x16: LCDVtotal = V; break;
 
   case 0x60: VideoMode = V; 
 	     wsSetVideo(V>>5, false); 
 	     //printf("VideoMode: %02x, %02x\n", V, V >> 5);
 	     break;
 
-  case 0xa2: if((V & 0x01) && !(BTimerControl & 0x01))
-	      HBCounter = HBTimerPeriod;
-	     if((V & 0x04) && !(BTimerControl & 0x04))
-	      VBCounter = VBTimerPeriod;
-	     BTimerControl = V; 
+  case 0xa2: BTimerControl = V; 
 	     //printf("%04x:%02x\n", A, V);
 	     break;
   case 0xa4: HBTimerPeriod &= 0xFF00; HBTimerPeriod |= (V << 0); /*printf("%04x:%02x, %d\n", A, V, wsLine);*/ break;
@@ -471,6 +480,7 @@ uint8 WSwan_GfxRead(uint32 A)
   case 0x13: return(FGYScroll);
   case 0x14: return(LCDControl);
   case 0x15: return(LCDIcons);
+  case 0x16: return(LCDVtotal);
   case 0x60: return(VideoMode);
   case 0xa0: return(wsc ? 0x87 : 0x86);
   case 0xa2: return(BTimerControl);
@@ -489,7 +499,7 @@ uint8 WSwan_GfxRead(uint32 A)
 
 bool wsExecuteLine(MDFN_Surface *surface, bool skip)
 {
-	static const void* const WEP_Tab[3] = { &&WEP0, &&WEP1, &&WEP2 };	// The things we do for debugger step mode save states!  If we ever add more entries, remember to change the mask stuff in StateAction
+	static const void* const WEP_Tab[4] = { &&WEP0, &&WEP1, &&WEP2, &&WEP3 };	// The things we do for debugger step mode save states!  If we ever add more entries, remember to change the mask stuff in StateAction
         bool ret;
 
 	weppy = 0;
@@ -512,21 +522,29 @@ bool wsExecuteLine(MDFN_Surface *surface, bool skip)
 	WSwan_CheckSoundDMA();
 
         // Update sprite data table
+        // Note: it's at 142 actually but it doesn't "update" until next frame
         if(wsLine == 142)
         {
-         SpriteCountCache = SpriteCount;
-
-         if(SpriteCountCache > 0x80)
-          SpriteCountCache = 0x80;
-
-         memcpy(SpriteTable, &wsRAM[(SPRBase << 9) + (SpriteStart << 2)], SpriteCountCache << 2);
-        }
+	 SpriteCountCache[!FrameWhichActive] = std::min<uint8>(0x80, SpriteCount);
+         memcpy(SpriteTable[!FrameWhichActive], &wsRAM[(SPRBase << 9) + (SpriteStart << 2)], SpriteCountCache[!FrameWhichActive] << 2);
+	}
 
         if(wsLine == 144)
         {
+		FrameWhichActive = !FrameWhichActive;
                 ret = TRUE;
                 WSwan_Interrupt(WSINT_VBLANK);
                 //printf("VBlank: %d\n", wsLine);
+                if(VBCounter && (BTimerControl & 0x04))
+                {
+                 VBCounter--;
+                 if(!VBCounter)
+                 {
+                  if(BTimerControl & 0x08) // loop
+                   VBCounter = VBTimerPeriod;
+                  WSwan_Interrupt(WSINT_VBLANK_TIMER);
+                 }
+                }
         }
 
 
@@ -535,47 +553,39 @@ bool wsExecuteLine(MDFN_Surface *surface, bool skip)
          HBCounter--;
          if(!HBCounter)
          {
-          // Loop mode?
-          if(BTimerControl & 0x02)
+          if(BTimerControl & 0x02) // loop
            HBCounter = HBTimerPeriod;
           WSwan_Interrupt(WSINT_HBLANK_TIMER);
          }
         }
 
 	weppy = 1;
-        v30mz_execute(224);
+        v30mz_execute(128);
         goto *WEP_Tab[weppy];
 	WEP1: ;
+	//
 
-	wsLine = (wsLine + 1) % 159;
+	WSwan_CheckSoundDMA();
+
+	//
+	weppy = 2;
+        v30mz_execute(96);
+        goto *WEP_Tab[weppy];
+	WEP2: ;
+
+	wsLine = (wsLine + 1) % (std::max<uint8>(144, LCDVtotal) + 1);
         if(wsLine == LineCompare)
         {
          WSwan_Interrupt(WSINT_LINE_HIT);
          //printf("Line hit: %d\n", wsLine);
         }
 
-	weppy = 2;
+	weppy = 3;
 	v30mz_execute(32);
 	goto *WEP_Tab[weppy];
-	WEP2: ;
+	WEP3: ;
 
 	RTC_Clock(256);
-
-        if(!wsLine)
-        {
-                if(VBCounter && (BTimerControl & 0x04))
-                {
-                 VBCounter--;
-                 if(!VBCounter)
-                 {
-                  if(BTimerControl & 0x08) // Loop mode?
-                   VBCounter = VBTimerPeriod;
-
-                  WSwan_Interrupt(WSINT_VBLANK_TIMER);
-                 }
-                }
-		wsLine = 0;
-        }
 
 	weppy = 0;
         return(ret);
@@ -686,7 +696,7 @@ void wsScanline(uint32 *target)
 
 	  if(windowtype == 0x20) // Display FG only inside window
 	  {
-           if((wsLine >= FGy0) && (wsLine < FGy1))
+           if((wsLine >= FGy0) && (wsLine <= FGy1))
             for(j = FGx0; j <= FGx1 && j < 224; j++)
               in_window[7 + j] = 1;
 	  }
@@ -694,7 +704,7 @@ void wsScanline(uint32 *target)
 	  {
 	   for(j = 0; j < 224; j++)
 	   {
-	    if(!(j >= FGx0 && j < FGx1) || !((wsLine >= FGy0) && (wsLine < FGy1)))
+	    if(!(j >= FGx0 && j <= FGx1) || !((wsLine >= FGy0) && (wsLine <= FGy1)))
 	     in_window[7 + j] = 1;
 	   }
  	  }
@@ -754,27 +764,28 @@ void wsScanline(uint32 *target)
 
 	} // end FG drawing
 
-	if((DispControl & 0x04) && SpriteCountCache && (LayerEnabled & 0x04))/*Sprites*/
+	if((DispControl & 0x04) && SpriteCountCache[FrameWhichActive] && (LayerEnabled & 0x04))/*Sprites*/
 	{
-	  int xs,ts,as,ys,ysx,h;
 	  bool in_window[256 + 8*2];
 
           if(DispControl & 0x08)
 	  {
 	   memset(in_window, 0, sizeof(in_window));
-	   if((wsLine >= SPRy0) && (wsLine < SPRy1))
-            for(j = SPRx0; j < SPRx1 && j < 256; j++)
+	   if((wsLine >= SPRy0) && (wsLine <= SPRy1))
+            for(j = SPRx0; j <= SPRx1 && j < 256; j++)
 	      in_window[7 + j] = 1;
 	  }
 	  else
 	   memset(in_window, 1, sizeof(in_window));
 
-		for(h = SpriteCountCache - 1; h >= 0; h--)
+		for(int h = SpriteCountCache[FrameWhichActive] - 1; h >= 0; h--)
 		{
-			ts = SpriteTable[h][0];
-			as = SpriteTable[h][1];
-			ysx = SpriteTable[h][2];
-			xs = SpriteTable[h][3];
+			const uint8* stab = SpriteTable[FrameWhichActive][h];
+			int ts = stab[0];
+			int as = stab[1];
+			int ysx = stab[2];
+			int xs = stab[3];
+			int ys;
 
 			if(xs >= 249) xs -= 256;
 
@@ -895,7 +906,8 @@ void WSwan_GfxReset(void)
  wsSetVideo(0,TRUE);
 
  memset(SpriteTable, 0, sizeof(SpriteTable));
- SpriteCountCache = 0;
+ SpriteCountCache[0] = SpriteCountCache[1] = 0;
+ FrameWhichActive = false;
  DispControl = 0;
  BGColor = 0;
  LineCompare = 0xBB;
@@ -918,6 +930,7 @@ void WSwan_GfxReset(void)
  FGXScroll = FGYScroll = 0;
  LCDControl = 0;
  LCDIcons = 0;
+ LCDVtotal = 158;
 
  BTimerControl = 0;
  HBTimerPeriod = 0;
@@ -942,8 +955,11 @@ void WSwan_GfxStateAction(StateMem *sm, const unsigned load, const bool data_onl
 
   SFVAR(wsLine),
 
-  SFARRAYN(&SpriteTable[0][0], 0x80 * 4, "SpriteTable"),
-  SFVAR(SpriteCountCache),
+  SFARRAYN(&SpriteTable[0][0][0], 0x80 * 4, "SpriteTable"),
+  SFARRAYN(&SpriteTable[1][0][0], 0x80 * 4, "SpriteTable1"),
+  SFVARN(SpriteCountCache[0], "SpriteCountCache"),
+  SFVARN(SpriteCountCache[1], "SpriteCountCache1"),
+  SFVAR(FrameWhichActive),
   SFVAR(DispControl),
   SFVAR(BGColor),
   SFVAR(LineCompare),
@@ -968,6 +984,7 @@ void WSwan_GfxStateAction(StateMem *sm, const unsigned load, const bool data_onl
   SFVAR(FGYScroll),
   SFVAR(LCDControl),
   SFVAR(LCDIcons),
+  SFVAR(LCDVtotal),
 
   SFVAR(BTimerControl),
   SFVAR(HBTimerPeriod),
@@ -986,10 +1003,24 @@ void WSwan_GfxStateAction(StateMem *sm, const unsigned load, const bool data_onl
 
  if(load)
  {
-  weppy %= 3;
+  if(load < 0x94100)
+  {
+   FrameWhichActive = 0;
+   SpriteCountCache[1] = SpriteCountCache[0];
+   memcpy(&SpriteTable[1][0][0], &SpriteTable[0][0][0], 0x80 * 4);
 
-  if(SpriteCountCache > 0x80)
-   SpriteCountCache = 0x80;
+   if(weppy == 2)
+    weppy = 3;
+  }
+  //
+  //
+  weppy %= 4;
+
+  for(unsigned i = 0; i < 2; i++)
+  {
+   if(SpriteCountCache[i] > 0x80)
+    SpriteCountCache[i] = 0x80;
+  }
 
   for(unsigned i = 0; i < 16; i++)
    for(unsigned j = 0; j < 4; j++)

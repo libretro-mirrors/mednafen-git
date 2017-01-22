@@ -31,8 +31,10 @@ namespace MDFN_IEN_NES
 static uint8 resetmode,MMC3_cmd,A000B,A001B;
 static uint8 DRegBuf[8];
 
-static uint8 *WRAM;
-static uint8 *CHRRAM;
+static uint8 WRAM[8192];
+static uint8 CHRRAM[8192];
+
+static uint32 WRAMSize;
 static uint32 CHRRAMSize;
 
 static uint8 PPUCHRBus;
@@ -733,11 +735,6 @@ int Mapper165_Init(CartInfo *info)
   return(0);
 
  cwrap=M165PPU;
- if(!(CHRRAM = (uint8*)malloc(4096)))
- {
-  GenMMC3Close();
-  return(0);
- }
 
  EXPREGS[0]=0xFD;
  EXPREGS[1]=0xFE;
@@ -1080,11 +1077,6 @@ int Mapper74_Init(CartInfo *info)
 
  info->Power = M74_Power;
 
- if(!(CHRRAM=(uint8*)malloc(2048)))
- {
-  GenMMC3Close();
-  return(0);
- }
  CHRRAMSize=2048;
  SetupCartCHRMapping(0x10, CHRRAM, 2048, 1);
  return(1);
@@ -1104,11 +1096,7 @@ int Mapper148_Init(CartInfo *info)
   return(0);
  cwrap=m148kie;
  pwrap=m74p;
- if(!(CHRRAM=(uint8*)malloc(2048)))
- {
-  GenMMC3Close();
-  return(0);
- }
+
  CHRRAMSize=2048;
  SetupCartCHRMapping(0x10, CHRRAM, 2048, 1);
  return(1);
@@ -1179,8 +1167,6 @@ static void TQWRAP(uint32 A, uint8 V)
  setchr1r((V&0x40)>>2,A,V&0x3F);
 }
 
-static int wrams;
-
 static DECLFW(MBWRAM)
 {
   WRAM[A-0x6000]=V;
@@ -1205,7 +1191,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(WRAM, wrams),
+  SFARRAY(WRAM, WRAMSize),
   SFARRAY(CHRRAM, CHRRAMSize),
   SFARRAYN(DRegBuf, 8, "REGS"),
   SFVARN(resetmode, "RMOD"),
@@ -1238,22 +1224,16 @@ static void GenMMC3Power(CartInfo *info)
  if(mmc3opts&1)
  {
   if(!(mmc3opts&2))
-   memset(WRAM, 0x00, wrams);
+   memset(WRAM, 0x00, WRAMSize);
  }
  MMC3RegReset(info);
- if(CHRRAM)
-  memset(CHRRAM,0,CHRRAMSize);
+ memset(CHRRAM, 0, CHRRAMSize);
 }
 
 static void GenMMC3Close(void)
 {
- if(CHRRAM)
-  free(CHRRAM);
-
- if(WRAM)
-  free(WRAM);
-
- CHRRAM=WRAM=NULL;
+ CHRRAMSize = 0;
+ WRAMSize = 0;
 }
 
 #ifdef WANT_DEBUGGER
@@ -1445,7 +1425,8 @@ static int GenMMC3_Init(CartInfo *info, int prg, int chr, int wram, int battery)
  cwrap=GENCWRAP;
  mwrap=GENMWRAP;
 
- wrams=wram*1024;
+ WRAMSize=wram*1024;
+ assert(WRAMSize <= sizeof(WRAM));
 
  PRGmask8[0]&=(prg>>13)-1;
  CHRmask1[0]&=(chr>>10)-1;
@@ -1454,11 +1435,6 @@ static int GenMMC3_Init(CartInfo *info, int prg, int chr, int wram, int battery)
  if(wram)
  {
   mmc3opts|=1;
-  if(!(WRAM=(uint8*)malloc(wram*1024)))
-  {
-   GenMMC3Close();
-   return(0);
-  }
   memset(WRAM, 0, wram*1024);
  }
 
@@ -1472,11 +1448,6 @@ static int GenMMC3_Init(CartInfo *info, int prg, int chr, int wram, int battery)
 
  if(!chr)
  {
-  if(!(CHRRAM=(uint8*)malloc(8192)))
-  {
-   GenMMC3Close();
-   return(0);
-  }
   CHRRAMSize=8192;
   SetupCartCHRMapping(0, CHRRAM, 8192, 1);
  }
@@ -1507,7 +1478,7 @@ static int GenMMC3_Init(CartInfo *info, int prg, int chr, int wram, int battery)
 
  if(mmc3opts&1)
  {
-  if(wrams==1024)
+  if(WRAMSize==1024)
   {
    MDFNMP_AddRAM(1024,0x7000,WRAM);
    SetReadHandler(0x7000,0x7FFF,MAWRAMMMC6);
@@ -1515,9 +1486,9 @@ static int GenMMC3_Init(CartInfo *info, int prg, int chr, int wram, int battery)
   }
   else
   {
-   MDFNMP_AddRAM(wrams, 0x6000, WRAM);
-   SetReadHandler(0x6000,0x6000+wrams-1,MAWRAM);
-   SetWriteHandler(0x6000,0x6000+wrams-1,MBWRAM);
+   MDFNMP_AddRAM(WRAMSize, 0x6000, WRAM);
+   SetReadHandler(0x6000,0x6000+WRAMSize-1,MAWRAM);
+   SetWriteHandler(0x6000,0x6000+WRAMSize-1,MBWRAM);
   }
  }
 
@@ -1564,11 +1535,6 @@ int Mapper119_Init(CartInfo *info)
  if(!(GenMMC3_Init(info, 512, 64, 0, 0)))
   return(0);
  cwrap=TQWRAP;
- if(!(CHRRAM=(uint8*)malloc(8192)))
- {
-  GenMMC3Close();
-  return(0);
- }
  CHRRAMSize=8192;
  SetupCartCHRMapping(0x10, CHRRAM, 8192, 1);
  return(1);
@@ -1631,11 +1597,6 @@ int TQROM_Init(CartInfo *info)
  if(!(GenMMC3_Init(info, 512, 64, 0, 0)))
   return(0);
  cwrap=TQWRAP;
- if(!(CHRRAM=(uint8*)malloc(8192)))
- {
-  GenMMC3Close();
-  return(0);
- }
  CHRRAMSize=8192;
  SetupCartCHRMapping(0x10, CHRRAM, 8192, 1);
 

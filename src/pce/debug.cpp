@@ -1173,14 +1173,14 @@ void PCEDBG_Init(bool sgx, PCE_PSG *new_psg, const uint32 vram_size)
   vram_addr_mask = (vram_size - 1);
   if(IsSGX)
   {
-   ASpace_Add(Do16BitGet, Do16BitPut, "vram0", "VDC-A VRAM", uilog2(vram_size) + 1);
+   ASpace_Add(Do16BitGet, Do16BitPut, "vram0", "VDC-A VRAM", MDFN_log2(vram_size) + 1);
    ASpace_Add(Do16BitGet, Do16BitPut, "sat0", "VDC-A SAT", 8 + 1);
-   ASpace_Add(Do16BitGet, Do16BitPut, "vram1", "VDC-B VRAM", uilog2(vram_size) + 1);
+   ASpace_Add(Do16BitGet, Do16BitPut, "vram1", "VDC-B VRAM", MDFN_log2(vram_size) + 1);
    ASpace_Add(Do16BitGet, Do16BitPut, "sat1", "VDC-B SAT", 8 + 1);
   }
   else
   {
-   ASpace_Add(Do16BitGet, Do16BitPut, "vram0", "VDC VRAM", uilog2(vram_size) + 1);
+   ASpace_Add(Do16BitGet, Do16BitPut, "vram0", "VDC VRAM", MDFN_log2(vram_size) + 1);
    ASpace_Add(Do16BitGet, Do16BitPut, "sat0", "VDC SAT", 8 + 1);
   }
 

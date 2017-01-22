@@ -78,7 +78,6 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-target_triplet = @target@
 bin_PROGRAMS = mednafen$(EXEEXT)
 @HAVE_SDL_TRUE@am__append_1 = drivers
 @HAVE_SDL_TRUE@am__append_2 = drivers/libmdfnsdl.a
@@ -106,7 +105,7 @@ DIST_COMMON = $(srcdir)/cdplay/Makefile.am.inc \
 	$(srcdir)/hw_sound/Makefile.am.inc \
 	$(srcdir)/hw_video/Makefile.am.inc \
 	$(srcdir)/cdrom/Makefile.am.inc \
-	$(srcdir)/sound/Makefile.am.inc \
+	$(srcdir)/sound/Makefile.am.inc $(srcdir)/net/Makefile.am.inc \
 	$(srcdir)/compress/Makefile.am.inc \
 	$(srcdir)/hash/Makefile.am.inc \
 	$(srcdir)/string/Makefile.am.inc \
@@ -265,16 +264,18 @@ DIST_COMMON = $(srcdir)/cdplay/Makefile.am.inc \
 @NEED_PCE_PSG_EMU_TRUE@am__append_51 = hw_sound/pce_psg/pce_psg.cpp
 @NEED_HUC6270_EMU_TRUE@am__append_52 = hw_video/huc6270/vdc.cpp
 @HAVE_LIBSNDFILE_TRUE@am__append_53 = cdrom/CDAFReader_SF.cpp
-@ARCH_X86_TRUE@am__append_54 = cputest/x86_cpu.c
-@ARCH_POWERPC_TRUE@am__append_55 = cputest/ppc_cpu.c
-@HAVE_EXTERNAL_TREMOR_TRUE@am__append_56 = @TREMOR_LIBS@
-@HAVE_EXTERNAL_TREMOR_FALSE@am__append_57 = tremor
-@HAVE_EXTERNAL_TREMOR_FALSE@am__append_58 = tremor/libvorbisidec.a
-@HAVE_EXTERNAL_TREMOR_FALSE@am__append_59 = tremor/libvorbisidec.a
-@HAVE_EXTERNAL_MPCDEC_TRUE@am__append_60 = @MPCDEC_LIBS@
-@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_61 = mpcdec
-@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_62 = mpcdec/libmpcdec.a
-@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_63 = mpcdec/libmpcdec.a
+@HAVE_POSIX_SOCKETS_TRUE@am__append_54 = net/Net_POSIX.cpp
+@WIN32_TRUE@am__append_55 = net/Net_WS2.cpp
+@ARCH_X86_TRUE@am__append_56 = cputest/x86_cpu.c
+@ARCH_POWERPC_TRUE@am__append_57 = cputest/ppc_cpu.c
+@HAVE_EXTERNAL_TREMOR_TRUE@am__append_58 = @TREMOR_LIBS@
+@HAVE_EXTERNAL_TREMOR_FALSE@am__append_59 = tremor
+@HAVE_EXTERNAL_TREMOR_FALSE@am__append_60 = tremor/libvorbisidec.a
+@HAVE_EXTERNAL_TREMOR_FALSE@am__append_61 = tremor/libvorbisidec.a
+@HAVE_EXTERNAL_MPCDEC_TRUE@am__append_62 = @MPCDEC_LIBS@
+@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_63 = mpcdec
+@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_64 = mpcdec/libmpcdec.a
+@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_65 = mpcdec/libmpcdec.a
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
@@ -286,17 +287,15 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
 	$(top_srcdir)/m4/inttypes-pri.m4 \
 	$(top_srcdir)/m4/inttypes_h.m4 $(top_srcdir)/m4/lcmessage.m4 \
 	$(top_srcdir)/m4/lib-ld.m4 $(top_srcdir)/m4/lib-link.m4 \
-	$(top_srcdir)/m4/lib-prefix.m4 $(top_srcdir)/m4/libtool.m4 \
-	$(top_srcdir)/m4/lock.m4 $(top_srcdir)/m4/longlong.m4 \
-	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
-	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
-	$(top_srcdir)/m4/nls.m4 $(top_srcdir)/m4/po.m4 \
-	$(top_srcdir)/m4/printf-posix.m4 $(top_srcdir)/m4/progtest.m4 \
-	$(top_srcdir)/m4/size_max.m4 $(top_srcdir)/m4/stdint_h.m4 \
-	$(top_srcdir)/m4/threadlib.m4 $(top_srcdir)/m4/uintmax_t.m4 \
-	$(top_srcdir)/m4/visibility.m4 $(top_srcdir)/m4/wchar_t.m4 \
-	$(top_srcdir)/m4/wint_t.m4 $(top_srcdir)/m4/xsize.m4 \
-	$(top_srcdir)/acinclude.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/lib-prefix.m4 $(top_srcdir)/m4/lock.m4 \
+	$(top_srcdir)/m4/longlong.m4 $(top_srcdir)/m4/nls.m4 \
+	$(top_srcdir)/m4/po.m4 $(top_srcdir)/m4/printf-posix.m4 \
+	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/m4/size_max.m4 \
+	$(top_srcdir)/m4/stdint_h.m4 $(top_srcdir)/m4/threadlib.m4 \
+	$(top_srcdir)/m4/uintmax_t.m4 $(top_srcdir)/m4/visibility.m4 \
+	$(top_srcdir)/m4/wchar_t.m4 $(top_srcdir)/m4/wint_t.m4 \
+	$(top_srcdir)/m4/xsize.m4 $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -306,7 +305,7 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
-	settings.cpp endian.cpp mednafen.cpp git.cpp file.cpp \
+	settings.cpp endian.cpp Time.cpp mednafen.cpp git.cpp file.cpp \
 	general.cpp memory.cpp netplay.cpp state.cpp state_rewind.cpp \
 	movie.cpp player.cpp PSFLoader.cpp SSFLoader.cpp \
 	SNSFLoader.cpp SPCReader.cpp tests.cpp qtrecord.cpp Stream.cpp \
@@ -419,7 +418,8 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	cdrom/CDAFReader_MPC.cpp cdrom/CDAFReader_SF.cpp \
 	sound/Blip_Buffer.cpp sound/Stereo_Buffer.cpp \
 	sound/Fir_Resampler.cpp sound/WAVRecord.cpp \
-	sound/OwlResampler.cpp sound/okiadpcm.cpp compress/minilzo.c \
+	sound/OwlResampler.cpp sound/okiadpcm.cpp net/Net.cpp \
+	net/Net_POSIX.cpp net/Net_WS2.cpp compress/minilzo.c \
 	compress/ioapi.c compress/unzip.c compress/GZFileStream.cpp \
 	compress/ZLInflateFilter.cpp hash/md5.cpp hash/sha1.cpp \
 	hash/sha256.cpp string/escape.cpp string/trim.cpp \
@@ -706,11 +706,13 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @NEED_HUC6270_EMU_TRUE@am__objects_32 =  \
 @NEED_HUC6270_EMU_TRUE@	hw_video/huc6270/vdc.$(OBJEXT)
 @HAVE_LIBSNDFILE_TRUE@am__objects_33 = cdrom/CDAFReader_SF.$(OBJEXT)
-@ARCH_X86_TRUE@am__objects_34 = cputest/x86_cpu.$(OBJEXT)
-@ARCH_POWERPC_TRUE@am__objects_35 = cputest/ppc_cpu.$(OBJEXT)
+@HAVE_POSIX_SOCKETS_TRUE@am__objects_34 = net/Net_POSIX.$(OBJEXT)
+@WIN32_TRUE@am__objects_35 = net/Net_WS2.$(OBJEXT)
+@ARCH_X86_TRUE@am__objects_36 = cputest/x86_cpu.$(OBJEXT)
+@ARCH_POWERPC_TRUE@am__objects_37 = cputest/ppc_cpu.$(OBJEXT)
 am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	mempatcher.$(OBJEXT) settings.$(OBJEXT) endian.$(OBJEXT) \
-	mednafen.$(OBJEXT) git.$(OBJEXT) file.$(OBJEXT) \
+	Time.$(OBJEXT) mednafen.$(OBJEXT) git.$(OBJEXT) file.$(OBJEXT) \
 	general.$(OBJEXT) memory.$(OBJEXT) netplay.$(OBJEXT) \
 	state.$(OBJEXT) state_rewind.$(OBJEXT) movie.$(OBJEXT) \
 	player.$(OBJEXT) PSFLoader.$(OBJEXT) SSFLoader.$(OBJEXT) \
@@ -739,6 +741,7 @@ am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	sound/Blip_Buffer.$(OBJEXT) sound/Stereo_Buffer.$(OBJEXT) \
 	sound/Fir_Resampler.$(OBJEXT) sound/WAVRecord.$(OBJEXT) \
 	sound/OwlResampler.$(OBJEXT) sound/okiadpcm.$(OBJEXT) \
+	net/Net.$(OBJEXT) $(am__objects_34) $(am__objects_35) \
 	compress/minilzo.$(OBJEXT) compress/ioapi.$(OBJEXT) \
 	compress/unzip.$(OBJEXT) compress/GZFileStream.$(OBJEXT) \
 	compress/ZLInflateFilter.$(OBJEXT) hash/md5.$(OBJEXT) \
@@ -751,14 +754,10 @@ am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	video/video.$(OBJEXT) video/tblur.$(OBJEXT) \
 	video/resize.$(OBJEXT) video/Deinterlacer.$(OBJEXT) \
 	resampler/resample.$(OBJEXT) cputest/cputest.$(OBJEXT) \
-	$(am__objects_34) $(am__objects_35) cheat_formats/gb.$(OBJEXT) \
+	$(am__objects_36) $(am__objects_37) cheat_formats/gb.$(OBJEXT) \
 	cheat_formats/psx.$(OBJEXT) cheat_formats/snes.$(OBJEXT)
 mednafen_OBJECTS = $(am_mednafen_OBJECTS)
 am__DEPENDENCIES_1 =
-AM_V_lt = $(am__v_lt_@AM_V@)
-am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
-am__v_lt_0 = --silent
-am__v_lt_1 = 
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -776,36 +775,25 @@ am__depfiles_maybe = depfiles
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
-LTCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) \
-	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
-	$(AM_CFLAGS) $(CFLAGS)
 AM_V_CC = $(am__v_CC_@AM_V@)
 am__v_CC_ = $(am__v_CC_@AM_DEFAULT_V@)
 am__v_CC_0 = @echo "  CC      " $@;
 am__v_CC_1 = 
 CCLD = $(CC)
-LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
-LTCXXCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) \
-	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
-	$(AM_CXXFLAGS) $(CXXFLAGS)
 AM_V_CXX = $(am__v_CXX_@AM_V@)
 am__v_CXX_ = $(am__v_CXX_@AM_DEFAULT_V@)
 am__v_CXX_0 = @echo "  CXX     " $@;
 am__v_CXX_1 = 
 CXXLD = $(CXX)
-CXXLINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
-	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
+	-o $@
 AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
@@ -888,7 +876,6 @@ AMTAR = @AMTAR@
 AM_CFLAGS = @AM_CFLAGS@
 AM_CXXFLAGS = @AM_CXXFLAGS@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
-AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -910,17 +897,13 @@ CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
-DEFS = -DLOCALEDIR=\"$(datadir)/locale\" @DEFS@ @SNDFILE_CFLAGS@
+DEFS = @DEFS@ @SNDFILE_CFLAGS@
 DEPDIR = @DEPDIR@
-DLLTOOL = @DLLTOOL@
-DSYMUTIL = @DSYMUTIL@
-DUMPBIN = @DUMPBIN@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
-FGREP = @FGREP@
 GENCAT = @GENCAT@
 GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
 GLIBC2 = @GLIBC2@
@@ -948,7 +931,6 @@ INTL_LIBTOOL_SUFFIX_PREFIX = @INTL_LIBTOOL_SUFFIX_PREFIX@
 INTL_MACOSX_LIBS = @INTL_MACOSX_LIBS@
 JACK_CFLAGS = @JACK_CFLAGS@
 JACK_LIBS = @JACK_LIBS@
-LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBICONV = @LIBICONV@
 LIBINTL = @LIBINTL@
@@ -958,9 +940,6 @@ LIBPTH = @LIBPTH@
 LIBPTH_PREFIX = @LIBPTH_PREFIX@
 LIBS = @LIBS@
 LIBTHREAD = @LIBTHREAD@
-LIBTOOL = @LIBTOOL@
-LIPO = @LIPO@
-LN_S = @LN_S@
 LTLIBC = @LTLIBC@
 LTLIBICONV = @LTLIBICONV@
 LTLIBINTL = @LTLIBINTL@
@@ -969,19 +948,13 @@ LTLIBOBJS = @LTLIBOBJS@
 LTLIBPTH = @LTLIBPTH@
 LTLIBTHREAD = @LTLIBTHREAD@
 MAKEINFO = @MAKEINFO@
-MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 MPCDEC_LIBS = @MPCDEC_LIBS@
 MSGFMT = @MSGFMT@
 MSGFMT_015 = @MSGFMT_015@
 MSGMERGE = @MSGMERGE@
-NM = @NM@
-NMEDIT = @NMEDIT@
 NO_STACK_PROTECTOR_FLAGS = @NO_STACK_PROTECTOR_FLAGS@
-OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
-OTOOL = @OTOOL@
-OTOOL64 = @OTOOL64@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
@@ -999,7 +972,6 @@ RANLIB = @RANLIB@
 SDL_CFLAGS = @SDL_CFLAGS@
 SDL_CONFIG = @SDL_CONFIG@
 SDL_LIBS = @SDL_LIBS@
-SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 SNDFILE_CFLAGS = @SNDFILE_CFLAGS@
@@ -1025,10 +997,8 @@ abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
-ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_CXX = @ac_ct_CXX@
-ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
@@ -1070,21 +1040,17 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
 sysconfdir = @sysconfdir@
-target = @target@
 target_alias = @target_alias@
-target_cpu = @target_cpu@
-target_os = @target_os@
-target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 SUBDIRS = trio $(am__append_1) $(am__append_5) sexyal $(am__append_17) \
 	$(am__append_28) $(SS_SUBDIRS) $(am__append_40) quicklz \
-	$(am__append_57) $(am__append_61)
+	$(am__append_59) $(am__append_63)
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
 mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
-	endian.cpp mednafen.cpp git.cpp file.cpp general.cpp \
+	endian.cpp Time.cpp mednafen.cpp git.cpp file.cpp general.cpp \
 	memory.cpp netplay.cpp state.cpp state_rewind.cpp movie.cpp \
 	player.cpp PSFLoader.cpp SSFLoader.cpp SNSFLoader.cpp \
 	SPCReader.cpp tests.cpp qtrecord.cpp Stream.cpp \
@@ -1108,7 +1074,8 @@ mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	cdrom/CDAFReader_MPC.cpp $(am__append_53) \
 	sound/Blip_Buffer.cpp sound/Stereo_Buffer.cpp \
 	sound/Fir_Resampler.cpp sound/WAVRecord.cpp \
-	sound/OwlResampler.cpp sound/okiadpcm.cpp compress/minilzo.c \
+	sound/OwlResampler.cpp sound/okiadpcm.cpp net/Net.cpp \
+	$(am__append_54) $(am__append_55) compress/minilzo.c \
 	compress/ioapi.c compress/unzip.c compress/GZFileStream.cpp \
 	compress/ZLInflateFilter.cpp hash/md5.cpp hash/sha1.cpp \
 	hash/sha256.cpp string/escape.cpp string/trim.cpp \
@@ -1116,28 +1083,28 @@ mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	video/font-data-18x18.c video/font-data-12x13.c video/png.cpp \
 	video/primitives.cpp video/text.cpp video/video.cpp \
 	video/tblur.cpp video/resize.cpp video/Deinterlacer.cpp \
-	resampler/resample.c cputest/cputest.c $(am__append_54) \
-	$(am__append_55) cheat_formats/gb.cpp cheat_formats/psx.cpp \
+	resampler/resample.c cputest/cputest.c $(am__append_56) \
+	$(am__append_57) cheat_formats/gb.cpp cheat_formats/psx.cpp \
 	cheat_formats/snes.cpp
 mednafen_LDADD = trio/libtrio.a $(am__append_2) $(am__append_6) \
 	sexyal/libsexyal.a @ALSA_LIBS@ @JACK_LIBS@ $(am__append_8) \
 	$(am__append_18) $(am__append_29) $(am__append_32) \
 	$(am__append_34) $(am__append_41) quicklz/libmdfnquicklz.a \
-	$(am__append_56) $(am__append_58) $(am__append_60) \
-	$(am__append_62) @SNDFILE_LIBS@ @ZLIB_LIBS@ @LIBINTL@ \
+	$(am__append_58) $(am__append_60) $(am__append_62) \
+	$(am__append_64) @SNDFILE_LIBS@ @ZLIB_LIBS@ @LIBINTL@ \
 	@LIBICONV@ $(am__empty)
 mednafen_DEPENDENCIES = trio/libtrio.a $(am__append_3) $(am__append_7) \
 	sexyal/libsexyal.a $(am__append_19) $(am__append_30) \
 	$(am__append_33) $(am__append_35) $(am__append_42) \
-	quicklz/libmdfnquicklz.a $(am__append_59) $(am__append_63)
+	quicklz/libmdfnquicklz.a $(am__append_61) $(am__append_65)
 SS_SUBDIRS = 
 @WANT_SSFPLAY_EMU_TRUE@SS_SUBDIRS = ss
 @WANT_SS_EMU_TRUE@SS_SUBDIRS = ss
 all: all-recursive
 
 .SUFFIXES:
-.SUFFIXES: .c .cpp .lo .o .obj .rc
-$(srcdir)/Makefile.in:  $(srcdir)/Makefile.am $(srcdir)/cdplay/Makefile.am.inc $(srcdir)/demo/Makefile.am.inc $(srcdir)/gb/Makefile.am.inc $(srcdir)/gba/Makefile.am.inc $(srcdir)/lynx/Makefile.am.inc $(srcdir)/md/Makefile.am.inc $(srcdir)/nes/Makefile.am.inc $(srcdir)/nes/ppu/Makefile.am.inc $(srcdir)/nes/boards/Makefile.am.inc $(srcdir)/nes/input/Makefile.am.inc $(srcdir)/pce/Makefile.am.inc $(srcdir)/pce_fast/Makefile.am.inc $(srcdir)/pcfx/Makefile.am.inc $(srcdir)/psx/Makefile.am.inc $(srcdir)/sms/Makefile.am.inc $(srcdir)/snes_faust/Makefile.am.inc $(srcdir)/vb/Makefile.am.inc $(srcdir)/wswan/Makefile.am.inc $(srcdir)/hw_cpu/Makefile.am.inc $(srcdir)/hw_misc/Makefile.am.inc $(srcdir)/hw_sound/Makefile.am.inc $(srcdir)/hw_video/Makefile.am.inc $(srcdir)/cdrom/Makefile.am.inc $(srcdir)/sound/Makefile.am.inc $(srcdir)/compress/Makefile.am.inc $(srcdir)/hash/Makefile.am.inc $(srcdir)/string/Makefile.am.inc $(srcdir)/video/Makefile.am.inc $(srcdir)/resampler/Makefile.am.inc $(srcdir)/cputest/Makefile.am.inc $(srcdir)/cheat_formats/Makefile.am.inc $(am__configure_deps)
+.SUFFIXES: .c .cpp .o .obj .rc
+$(srcdir)/Makefile.in:  $(srcdir)/Makefile.am $(srcdir)/cdplay/Makefile.am.inc $(srcdir)/demo/Makefile.am.inc $(srcdir)/gb/Makefile.am.inc $(srcdir)/gba/Makefile.am.inc $(srcdir)/lynx/Makefile.am.inc $(srcdir)/md/Makefile.am.inc $(srcdir)/nes/Makefile.am.inc $(srcdir)/nes/ppu/Makefile.am.inc $(srcdir)/nes/boards/Makefile.am.inc $(srcdir)/nes/input/Makefile.am.inc $(srcdir)/pce/Makefile.am.inc $(srcdir)/pce_fast/Makefile.am.inc $(srcdir)/pcfx/Makefile.am.inc $(srcdir)/psx/Makefile.am.inc $(srcdir)/sms/Makefile.am.inc $(srcdir)/snes_faust/Makefile.am.inc $(srcdir)/vb/Makefile.am.inc $(srcdir)/wswan/Makefile.am.inc $(srcdir)/hw_cpu/Makefile.am.inc $(srcdir)/hw_misc/Makefile.am.inc $(srcdir)/hw_sound/Makefile.am.inc $(srcdir)/hw_video/Makefile.am.inc $(srcdir)/cdrom/Makefile.am.inc $(srcdir)/sound/Makefile.am.inc $(srcdir)/net/Makefile.am.inc $(srcdir)/compress/Makefile.am.inc $(srcdir)/hash/Makefile.am.inc $(srcdir)/string/Makefile.am.inc $(srcdir)/video/Makefile.am.inc $(srcdir)/resampler/Makefile.am.inc $(srcdir)/cputest/Makefile.am.inc $(srcdir)/cheat_formats/Makefile.am.inc $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
 	    *$$dep*) \
@@ -1158,7 +1125,7 @@ Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	    echo ' cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe)'; \
 	    cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe);; \
 	esac;
-$(srcdir)/cdplay/Makefile.am.inc $(srcdir)/demo/Makefile.am.inc $(srcdir)/gb/Makefile.am.inc $(srcdir)/gba/Makefile.am.inc $(srcdir)/lynx/Makefile.am.inc $(srcdir)/md/Makefile.am.inc $(srcdir)/nes/Makefile.am.inc $(srcdir)/nes/ppu/Makefile.am.inc $(srcdir)/nes/boards/Makefile.am.inc $(srcdir)/nes/input/Makefile.am.inc $(srcdir)/pce/Makefile.am.inc $(srcdir)/pce_fast/Makefile.am.inc $(srcdir)/pcfx/Makefile.am.inc $(srcdir)/psx/Makefile.am.inc $(srcdir)/sms/Makefile.am.inc $(srcdir)/snes_faust/Makefile.am.inc $(srcdir)/vb/Makefile.am.inc $(srcdir)/wswan/Makefile.am.inc $(srcdir)/hw_cpu/Makefile.am.inc $(srcdir)/hw_misc/Makefile.am.inc $(srcdir)/hw_sound/Makefile.am.inc $(srcdir)/hw_video/Makefile.am.inc $(srcdir)/cdrom/Makefile.am.inc $(srcdir)/sound/Makefile.am.inc $(srcdir)/compress/Makefile.am.inc $(srcdir)/hash/Makefile.am.inc $(srcdir)/string/Makefile.am.inc $(srcdir)/video/Makefile.am.inc $(srcdir)/resampler/Makefile.am.inc $(srcdir)/cputest/Makefile.am.inc $(srcdir)/cheat_formats/Makefile.am.inc:
+$(srcdir)/cdplay/Makefile.am.inc $(srcdir)/demo/Makefile.am.inc $(srcdir)/gb/Makefile.am.inc $(srcdir)/gba/Makefile.am.inc $(srcdir)/lynx/Makefile.am.inc $(srcdir)/md/Makefile.am.inc $(srcdir)/nes/Makefile.am.inc $(srcdir)/nes/ppu/Makefile.am.inc $(srcdir)/nes/boards/Makefile.am.inc $(srcdir)/nes/input/Makefile.am.inc $(srcdir)/pce/Makefile.am.inc $(srcdir)/pce_fast/Makefile.am.inc $(srcdir)/pcfx/Makefile.am.inc $(srcdir)/psx/Makefile.am.inc $(srcdir)/sms/Makefile.am.inc $(srcdir)/snes_faust/Makefile.am.inc $(srcdir)/vb/Makefile.am.inc $(srcdir)/wswan/Makefile.am.inc $(srcdir)/hw_cpu/Makefile.am.inc $(srcdir)/hw_misc/Makefile.am.inc $(srcdir)/hw_sound/Makefile.am.inc $(srcdir)/hw_video/Makefile.am.inc $(srcdir)/cdrom/Makefile.am.inc $(srcdir)/sound/Makefile.am.inc $(srcdir)/net/Makefile.am.inc $(srcdir)/compress/Makefile.am.inc $(srcdir)/hash/Makefile.am.inc $(srcdir)/string/Makefile.am.inc $(srcdir)/video/Makefile.am.inc $(srcdir)/resampler/Makefile.am.inc $(srcdir)/cputest/Makefile.am.inc $(srcdir)/cheat_formats/Makefile.am.inc:
 
 $(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
@@ -1178,7 +1145,6 @@ install-binPROGRAMS: $(bin_PROGRAMS)
 	for p in $$list; do echo "$$p $$p"; done | \
 	sed 's/$(EXEEXT)$$//' | \
 	while read p p1; do if test -f $$p \
-	 || test -f $$p1 \
 	  ; then echo "$$p"; echo "$$p"; else :; fi; \
 	done | \
 	sed -e 'p;s,.*/,,;n;h' \
@@ -1193,8 +1159,8 @@ install-binPROGRAMS: $(bin_PROGRAMS)
 	while read type dir files; do \
 	    if test "$$dir" = .; then dir=; else dir=/$$dir; fi; \
 	    test -z "$$files" || { \
-	    echo " $(INSTALL_PROGRAM_ENV) $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL_PROGRAM) $$files '$(DESTDIR)$(bindir)$$dir'"; \
-	    $(INSTALL_PROGRAM_ENV) $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL_PROGRAM) $$files "$(DESTDIR)$(bindir)$$dir" || exit $$?; \
+	      echo " $(INSTALL_PROGRAM_ENV) $(INSTALL_PROGRAM) $$files '$(DESTDIR)$(bindir)$$dir'"; \
+	      $(INSTALL_PROGRAM_ENV) $(INSTALL_PROGRAM) $$files "$(DESTDIR)$(bindir)$$dir" || exit $$?; \
 	    } \
 	; done
 
@@ -1210,13 +1176,7 @@ uninstall-binPROGRAMS:
 	cd "$(DESTDIR)$(bindir)" && rm -f $$files
 
 clean-binPROGRAMS:
-	@list='$(bin_PROGRAMS)'; test -n "$$list" || exit 0; \
-	echo " rm -f" $$list; \
-	rm -f $$list || exit $$?; \
-	test -n "$(EXEEXT)" || exit 0; \
-	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
-	echo " rm -f" $$list; \
-	rm -f $$list
+	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
 drivers/$(am__dirstamp):
 	@$(MKDIR_P) drivers
 	@: > drivers/$(am__dirstamp)
@@ -2029,6 +1989,17 @@ sound/OwlResampler.$(OBJEXT): sound/$(am__dirstamp) \
 	sound/$(DEPDIR)/$(am__dirstamp)
 sound/okiadpcm.$(OBJEXT): sound/$(am__dirstamp) \
 	sound/$(DEPDIR)/$(am__dirstamp)
+net/$(am__dirstamp):
+	@$(MKDIR_P) net
+	@: > net/$(am__dirstamp)
+net/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) net/$(DEPDIR)
+	@: > net/$(DEPDIR)/$(am__dirstamp)
+net/Net.$(OBJEXT): net/$(am__dirstamp) net/$(DEPDIR)/$(am__dirstamp)
+net/Net_POSIX.$(OBJEXT): net/$(am__dirstamp) \
+	net/$(DEPDIR)/$(am__dirstamp)
+net/Net_WS2.$(OBJEXT): net/$(am__dirstamp) \
+	net/$(DEPDIR)/$(am__dirstamp)
 compress/$(am__dirstamp):
 	@$(MKDIR_P) compress
 	@: > compress/$(am__dirstamp)
@@ -2166,6 +2137,7 @@ mostlyclean-compile:
 	-rm -f nes/input/*.$(OBJEXT)
 	-rm -f nes/ntsc/*.$(OBJEXT)
 	-rm -f nes/ppu/*.$(OBJEXT)
+	-rm -f net/*.$(OBJEXT)
 	-rm -f pce/*.$(OBJEXT)
 	-rm -f pce/input/*.$(OBJEXT)
 	-rm -f pce_fast/*.$(OBJEXT)
@@ -2194,6 +2166,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SPCReader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SSFLoader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Stream.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Time.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/debug.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/endian.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/error.Po@am__quote@
@@ -2445,6 +2418,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@nes/ntsc/$(DEPDIR)/nes_ntsc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@nes/ppu/$(DEPDIR)/palette.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@nes/ppu/$(DEPDIR)/ppu.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@net/$(DEPDIR)/Net.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@net/$(DEPDIR)/Net_POSIX.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@net/$(DEPDIR)/Net_WS2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@pce/$(DEPDIR)/debug.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@pce/$(DEPDIR)/dis6280.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@pce/$(DEPDIR)/hes.Po@am__quote@
@@ -2582,14 +2558,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
-.c.lo:
-@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.lo$$||'`;\
-@am__fastdepCC_TRUE@	$(LTCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
-@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
-
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
 @am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
@@ -2605,20 +2573,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
-
-.cpp.lo:
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.lo$$||'`;\
-@am__fastdepCXX_TRUE@	$(LTCXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
-@am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LTCXXCOMPILE) -c -o $@ $<
-
-mostlyclean-libtool:
-	-rm -f *.lo
-
-clean-libtool:
-	-rm -rf .libs _libs
 
 # This directory's subdirectories are mostly independent; you can cd
 # into them and run 'make' without going through this Makefile.
@@ -2868,6 +2822,8 @@ distclean-generic:
 	-rm -f nes/ntsc/$(am__dirstamp)
 	-rm -f nes/ppu/$(DEPDIR)/$(am__dirstamp)
 	-rm -f nes/ppu/$(am__dirstamp)
+	-rm -f net/$(DEPDIR)/$(am__dirstamp)
+	-rm -f net/$(am__dirstamp)
 	-rm -f pce/$(DEPDIR)/$(am__dirstamp)
 	-rm -f pce/$(am__dirstamp)
 	-rm -f pce/input/$(DEPDIR)/$(am__dirstamp)
@@ -2906,10 +2862,10 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-recursive
 
-clean-am: clean-binPROGRAMS clean-generic clean-libtool mostlyclean-am
+clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-recursive
-	-rm -rf ./$(DEPDIR) cdplay/$(DEPDIR) cdrom/$(DEPDIR) cheat_formats/$(DEPDIR) compress/$(DEPDIR) cputest/$(DEPDIR) demo/$(DEPDIR) gb/$(DEPDIR) gba/$(DEPDIR) hash/$(DEPDIR) hw_cpu/m68k/$(DEPDIR) hw_cpu/v810/$(DEPDIR) hw_cpu/z80-fuse/$(DEPDIR) hw_misc/arcade_card/$(DEPDIR) hw_sound/gb_apu/$(DEPDIR) hw_sound/pce_psg/$(DEPDIR) hw_sound/sms_apu/$(DEPDIR) hw_sound/ym2413/$(DEPDIR) hw_sound/ym2612/$(DEPDIR) hw_video/huc6270/$(DEPDIR) lynx/$(DEPDIR) md/$(DEPDIR) md/cart/$(DEPDIR) md/cd/$(DEPDIR) md/input/$(DEPDIR) nes/$(DEPDIR) nes/boards/$(DEPDIR) nes/input/$(DEPDIR) nes/ntsc/$(DEPDIR) nes/ppu/$(DEPDIR) pce/$(DEPDIR) pce/input/$(DEPDIR) pce_fast/$(DEPDIR) pcfx/$(DEPDIR) pcfx/input/$(DEPDIR) psx/$(DEPDIR) psx/input/$(DEPDIR) resampler/$(DEPDIR) sms/$(DEPDIR) snes_faust/$(DEPDIR) sound/$(DEPDIR) string/$(DEPDIR) vb/$(DEPDIR) video/$(DEPDIR) wswan/$(DEPDIR) wswan/dis/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) cdplay/$(DEPDIR) cdrom/$(DEPDIR) cheat_formats/$(DEPDIR) compress/$(DEPDIR) cputest/$(DEPDIR) demo/$(DEPDIR) gb/$(DEPDIR) gba/$(DEPDIR) hash/$(DEPDIR) hw_cpu/m68k/$(DEPDIR) hw_cpu/v810/$(DEPDIR) hw_cpu/z80-fuse/$(DEPDIR) hw_misc/arcade_card/$(DEPDIR) hw_sound/gb_apu/$(DEPDIR) hw_sound/pce_psg/$(DEPDIR) hw_sound/sms_apu/$(DEPDIR) hw_sound/ym2413/$(DEPDIR) hw_sound/ym2612/$(DEPDIR) hw_video/huc6270/$(DEPDIR) lynx/$(DEPDIR) md/$(DEPDIR) md/cart/$(DEPDIR) md/cd/$(DEPDIR) md/input/$(DEPDIR) nes/$(DEPDIR) nes/boards/$(DEPDIR) nes/input/$(DEPDIR) nes/ntsc/$(DEPDIR) nes/ppu/$(DEPDIR) net/$(DEPDIR) pce/$(DEPDIR) pce/input/$(DEPDIR) pce_fast/$(DEPDIR) pcfx/$(DEPDIR) pcfx/input/$(DEPDIR) psx/$(DEPDIR) psx/input/$(DEPDIR) resampler/$(DEPDIR) sms/$(DEPDIR) snes_faust/$(DEPDIR) sound/$(DEPDIR) string/$(DEPDIR) vb/$(DEPDIR) video/$(DEPDIR) wswan/$(DEPDIR) wswan/dis/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -2955,14 +2911,13 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-recursive
-	-rm -rf ./$(DEPDIR) cdplay/$(DEPDIR) cdrom/$(DEPDIR) cheat_formats/$(DEPDIR) compress/$(DEPDIR) cputest/$(DEPDIR) demo/$(DEPDIR) gb/$(DEPDIR) gba/$(DEPDIR) hash/$(DEPDIR) hw_cpu/m68k/$(DEPDIR) hw_cpu/v810/$(DEPDIR) hw_cpu/z80-fuse/$(DEPDIR) hw_misc/arcade_card/$(DEPDIR) hw_sound/gb_apu/$(DEPDIR) hw_sound/pce_psg/$(DEPDIR) hw_sound/sms_apu/$(DEPDIR) hw_sound/ym2413/$(DEPDIR) hw_sound/ym2612/$(DEPDIR) hw_video/huc6270/$(DEPDIR) lynx/$(DEPDIR) md/$(DEPDIR) md/cart/$(DEPDIR) md/cd/$(DEPDIR) md/input/$(DEPDIR) nes/$(DEPDIR) nes/boards/$(DEPDIR) nes/input/$(DEPDIR) nes/ntsc/$(DEPDIR) nes/ppu/$(DEPDIR) pce/$(DEPDIR) pce/input/$(DEPDIR) pce_fast/$(DEPDIR) pcfx/$(DEPDIR) pcfx/input/$(DEPDIR) psx/$(DEPDIR) psx/input/$(DEPDIR) resampler/$(DEPDIR) sms/$(DEPDIR) snes_faust/$(DEPDIR) sound/$(DEPDIR) string/$(DEPDIR) vb/$(DEPDIR) video/$(DEPDIR) wswan/$(DEPDIR) wswan/dis/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) cdplay/$(DEPDIR) cdrom/$(DEPDIR) cheat_formats/$(DEPDIR) compress/$(DEPDIR) cputest/$(DEPDIR) demo/$(DEPDIR) gb/$(DEPDIR) gba/$(DEPDIR) hash/$(DEPDIR) hw_cpu/m68k/$(DEPDIR) hw_cpu/v810/$(DEPDIR) hw_cpu/z80-fuse/$(DEPDIR) hw_misc/arcade_card/$(DEPDIR) hw_sound/gb_apu/$(DEPDIR) hw_sound/pce_psg/$(DEPDIR) hw_sound/sms_apu/$(DEPDIR) hw_sound/ym2413/$(DEPDIR) hw_sound/ym2612/$(DEPDIR) hw_video/huc6270/$(DEPDIR) lynx/$(DEPDIR) md/$(DEPDIR) md/cart/$(DEPDIR) md/cd/$(DEPDIR) md/input/$(DEPDIR) nes/$(DEPDIR) nes/boards/$(DEPDIR) nes/input/$(DEPDIR) nes/ntsc/$(DEPDIR) nes/ppu/$(DEPDIR) net/$(DEPDIR) pce/$(DEPDIR) pce/input/$(DEPDIR) pce_fast/$(DEPDIR) pcfx/$(DEPDIR) pcfx/input/$(DEPDIR) psx/$(DEPDIR) psx/input/$(DEPDIR) resampler/$(DEPDIR) sms/$(DEPDIR) snes_faust/$(DEPDIR) sound/$(DEPDIR) string/$(DEPDIR) vb/$(DEPDIR) video/$(DEPDIR) wswan/$(DEPDIR) wswan/dis/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
 mostlyclean: mostlyclean-recursive
 
-mostlyclean-am: mostlyclean-compile mostlyclean-generic \
-	mostlyclean-libtool
+mostlyclean-am: mostlyclean-compile mostlyclean-generic
 
 pdf: pdf-recursive
 
@@ -2977,18 +2932,17 @@ uninstall-am: uninstall-binPROGRAMS
 .MAKE: $(am__recursive_targets) install-am install-strip
 
 .PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am check \
-	check-am clean clean-binPROGRAMS clean-generic clean-libtool \
-	cscopelist-am ctags ctags-am distclean distclean-compile \
-	distclean-generic distclean-libtool distclean-tags distdir dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-binPROGRAMS install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am install-man \
-	install-pdf install-pdf-am install-ps install-ps-am \
-	install-strip installcheck installcheck-am installdirs \
-	installdirs-am maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-compile mostlyclean-generic \
-	mostlyclean-libtool pdf pdf-am ps ps-am tags tags-am uninstall \
+	check-am clean clean-binPROGRAMS clean-generic cscopelist-am \
+	ctags ctags-am distclean distclean-compile distclean-generic \
+	distclean-tags distdir dvi dvi-am html html-am info info-am \
+	install install-am install-binPROGRAMS install-data \
+	install-data-am install-dvi install-dvi-am install-exec \
+	install-exec-am install-html install-html-am install-info \
+	install-info-am install-man install-pdf install-pdf-am \
+	install-ps install-ps-am install-strip installcheck \
+	installcheck-am installdirs installdirs-am maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
 	uninstall-am uninstall-binPROGRAMS
 
 

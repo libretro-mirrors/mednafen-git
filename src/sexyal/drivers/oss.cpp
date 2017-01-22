@@ -46,8 +46,8 @@ typedef struct
 					// Applying the workaround on non-ALSA where it's not needed will not hurt too much, it'll
 					// just make the stuttering due to buffer underruns a little more severe.
 					// (The workaround is to fix a bug which affects, at least, ALSA 1.0.20 when used with a CS46xx card)
-	uint8_t *dummy_data;
-	uint32_t dummy_data_len;
+	uint8 *dummy_data;
+	uint32 dummy_data_len;
 } OSS_Wrap;
 
 
@@ -97,10 +97,10 @@ unsigned int Log2(unsigned int value)
  return(x?x:1);
 }
 
-static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
+static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 {
  OSS_Wrap *ossw = (OSS_Wrap *)device->private_data;
- const uint8_t *datau8 = (const uint8_t *)data;
+ const uint8 *datau8 = (const uint8 *)data;
 
  while(len)
  {
@@ -126,7 +126,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32_t len)
  return(1);
 }
 
-static int RawCanWrite(SexyAL_device *device, uint32_t *can_write)
+static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 {
  OSS_Wrap *ossw = (OSS_Wrap *)device->private_data;
  struct audio_buf_info ai;
@@ -337,7 +337,7 @@ SexyAL_device *SexyALI_OSS_Open(const char *id, SexyAL_format *format, SexyAL_bu
  memcpy(&device->buffering,buffering,sizeof(SexyAL_buffering));
 
  int fragcount = 16;
- int fragsize = SexyAL_rnearestpow2((int64_t)desired_pt * format->rate / (1000 * 1000), FALSE); //128; //256;
+ int fragsize = round_nearest_pow2((int64)desired_pt * format->rate / (1000 * 1000), false);
 
  // Going lower than this is unlikely to work, and since we use this value to calculate the number of fragments, we'll get
  // a buffer far larger than we wanted, unless the OSS implementation is nice and adjusts the fragment count when it can't get set fragment size
@@ -349,7 +349,7 @@ SexyAL_device *SexyALI_OSS_Open(const char *id, SexyAL_format *format, SexyAL_bu
   fragsize = 512;
 
  {
-  int64_t tc;
+  int64 tc;
 
   /* 2*, >>1, |1 for crude rounding(it will always round 0.5 up, so it is a bit biased). */
 
@@ -381,7 +381,7 @@ SexyAL_device *SexyALI_OSS_Open(const char *id, SexyAL_format *format, SexyAL_bu
  }
 
  ossw->dummy_data_len = (format->sampformat >> 4) * format->channels * (format->rate / 128);
- if(!(ossw->dummy_data = (uint8_t *)calloc(1, ossw->dummy_data_len)))
+ if(!(ossw->dummy_data = (uint8 *)calloc(1, ossw->dummy_data_len)))
  {
   OSS_INIT_ERROR_CLEANUP
   return(NULL);
