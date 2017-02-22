@@ -846,6 +846,7 @@ static const BMAPPING bmap[] = {
 	{ 185, Mapper185_Init, 0},
         { 187, Mapper187_Init, 0},
 	{ 189, Mapper189_Init, 0},
+	{ 190, Mapper190_Init, 0 },
 	{ 193, Mapper193_Init, 0},
 	{ 206, Mapper206_Init, 0},
 	{ 207, Mapper207_Init, 0},

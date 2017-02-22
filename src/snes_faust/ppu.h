@@ -25,9 +25,9 @@
 namespace MDFN_IEN_SNES_FAUST
 {
 
-void PPU_Init(void);
-void PPU_Kill(void);
-void PPU_Reset(bool powering_up);
+void PPU_Init(void) MDFN_COLD;
+void PPU_Kill(void) MDFN_COLD;
+void PPU_Reset(bool powering_up) MDFN_COLD;
 void PPU_ResetTS(void);
 
 void PPU_StateAction(StateMem* sm, const unsigned load, const bool data_only);

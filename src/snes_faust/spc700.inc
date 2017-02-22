@@ -23,10 +23,10 @@ class SPC700 final
 {
  public:
 
- SPC700();
- ~SPC700();
+ SPC700() MDFN_COLD;
+ ~SPC700() MDFN_COLD;
 
- void Reset(bool powering_up);
+ void Reset(bool powering_up) MDFN_COLD;
 
  // count should be > 0.
  void Run(int32 count);

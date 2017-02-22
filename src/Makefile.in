@@ -194,8 +194,9 @@ DIST_COMMON = $(srcdir)/cdplay/Makefile.am.inc \
 @WANT_NES_EMU_TRUE@	nes/boards/codemasters.cpp \
 @WANT_NES_EMU_TRUE@	nes/boards/38.cpp nes/boards/240.cpp \
 @WANT_NES_EMU_TRUE@	nes/boards/241.cpp nes/boards/163.cpp \
-@WANT_NES_EMU_TRUE@	nes/boards/30.cpp nes/input/cursor.cpp \
-@WANT_NES_EMU_TRUE@	nes/input/zapper.cpp nes/input/powerpad.cpp \
+@WANT_NES_EMU_TRUE@	nes/boards/30.cpp nes/boards/190.cpp \
+@WANT_NES_EMU_TRUE@	nes/input/cursor.cpp nes/input/zapper.cpp \
+@WANT_NES_EMU_TRUE@	nes/input/powerpad.cpp \
 @WANT_NES_EMU_TRUE@	nes/input/arkanoid.cpp nes/input/shadow.cpp \
 @WANT_NES_EMU_TRUE@	nes/input/fkb.cpp nes/input/fkb.h \
 @WANT_NES_EMU_TRUE@	nes/input/hypershot.cpp \
@@ -365,10 +366,10 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	nes/boards/87.cpp nes/boards/34.cpp nes/boards/222.cpp \
 	nes/boards/codemasters.cpp nes/boards/38.cpp \
 	nes/boards/240.cpp nes/boards/241.cpp nes/boards/163.cpp \
-	nes/boards/30.cpp nes/input/cursor.cpp nes/input/zapper.cpp \
-	nes/input/powerpad.cpp nes/input/arkanoid.cpp \
-	nes/input/shadow.cpp nes/input/fkb.cpp nes/input/fkb.h \
-	nes/input/hypershot.cpp nes/input/mahjong.cpp \
+	nes/boards/30.cpp nes/boards/190.cpp nes/input/cursor.cpp \
+	nes/input/zapper.cpp nes/input/powerpad.cpp \
+	nes/input/arkanoid.cpp nes/input/shadow.cpp nes/input/fkb.cpp \
+	nes/input/fkb.h nes/input/hypershot.cpp nes/input/mahjong.cpp \
 	nes/input/oekakids.cpp nes/input/ftrainer.cpp \
 	nes/input/partytap.cpp nes/input/toprider.cpp \
 	nes/input/bworld.cpp nes/input/suborkb.cpp \
@@ -422,7 +423,7 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	net/Net_POSIX.cpp net/Net_WS2.cpp compress/minilzo.c \
 	compress/ioapi.c compress/unzip.c compress/GZFileStream.cpp \
 	compress/ZLInflateFilter.cpp hash/md5.cpp hash/sha1.cpp \
-	hash/sha256.cpp string/escape.cpp string/trim.cpp \
+	hash/sha256.cpp string/escape.cpp string/string.cpp \
 	string/ConvertUTF.cpp video/surface.cpp video/font-data.cpp \
 	video/font-data-18x18.c video/font-data-12x13.c video/png.cpp \
 	video/primitives.cpp video/text.cpp video/video.cpp \
@@ -582,6 +583,7 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @WANT_NES_EMU_TRUE@	nes/boards/241.$(OBJEXT) \
 @WANT_NES_EMU_TRUE@	nes/boards/163.$(OBJEXT) \
 @WANT_NES_EMU_TRUE@	nes/boards/30.$(OBJEXT) \
+@WANT_NES_EMU_TRUE@	nes/boards/190.$(OBJEXT) \
 @WANT_NES_EMU_TRUE@	nes/input/cursor.$(OBJEXT) \
 @WANT_NES_EMU_TRUE@	nes/input/zapper.$(OBJEXT) \
 @WANT_NES_EMU_TRUE@	nes/input/powerpad.$(OBJEXT) \
@@ -746,7 +748,7 @@ am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	compress/unzip.$(OBJEXT) compress/GZFileStream.$(OBJEXT) \
 	compress/ZLInflateFilter.$(OBJEXT) hash/md5.$(OBJEXT) \
 	hash/sha1.$(OBJEXT) hash/sha256.$(OBJEXT) \
-	string/escape.$(OBJEXT) string/trim.$(OBJEXT) \
+	string/escape.$(OBJEXT) string/string.$(OBJEXT) \
 	string/ConvertUTF.$(OBJEXT) video/surface.$(OBJEXT) \
 	video/font-data.$(OBJEXT) video/font-data-18x18.$(OBJEXT) \
 	video/font-data-12x13.$(OBJEXT) video/png.$(OBJEXT) \
@@ -1078,7 +1080,7 @@ mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	$(am__append_54) $(am__append_55) compress/minilzo.c \
 	compress/ioapi.c compress/unzip.c compress/GZFileStream.cpp \
 	compress/ZLInflateFilter.cpp hash/md5.cpp hash/sha1.cpp \
-	hash/sha256.cpp string/escape.cpp string/trim.cpp \
+	hash/sha256.cpp string/escape.cpp string/string.cpp \
 	string/ConvertUTF.cpp video/surface.cpp video/font-data.cpp \
 	video/font-data-18x18.c video/font-data-12x13.c video/png.cpp \
 	video/primitives.cpp video/text.cpp video/video.cpp \
@@ -1564,6 +1566,8 @@ nes/boards/163.$(OBJEXT): nes/boards/$(am__dirstamp) \
 	nes/boards/$(DEPDIR)/$(am__dirstamp)
 nes/boards/30.$(OBJEXT): nes/boards/$(am__dirstamp) \
 	nes/boards/$(DEPDIR)/$(am__dirstamp)
+nes/boards/190.$(OBJEXT): nes/boards/$(am__dirstamp) \
+	nes/boards/$(DEPDIR)/$(am__dirstamp)
 nes/input/$(am__dirstamp):
 	@$(MKDIR_P) nes/input
 	@: > nes/input/$(am__dirstamp)
@@ -2036,7 +2040,7 @@ string/$(DEPDIR)/$(am__dirstamp):
 	@: > string/$(DEPDIR)/$(am__dirstamp)
 string/escape.$(OBJEXT): string/$(am__dirstamp) \
 	string/$(DEPDIR)/$(am__dirstamp)
-string/trim.$(OBJEXT): string/$(am__dirstamp) \
+string/string.$(OBJEXT): string/$(am__dirstamp) \
 	string/$(DEPDIR)/$(am__dirstamp)
 string/ConvertUTF.$(OBJEXT): string/$(am__dirstamp) \
 	string/$(DEPDIR)/$(am__dirstamp)
@@ -2327,6 +2331,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@nes/boards/$(DEPDIR)/185.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@nes/boards/$(DEPDIR)/187.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@nes/boards/$(DEPDIR)/189.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@nes/boards/$(DEPDIR)/190.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@nes/boards/$(DEPDIR)/193.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@nes/boards/$(DEPDIR)/208.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@nes/boards/$(DEPDIR)/21.Po@am__quote@
@@ -2508,7 +2513,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@sound/$(DEPDIR)/okiadpcm.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@string/$(DEPDIR)/ConvertUTF.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@string/$(DEPDIR)/escape.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@string/$(DEPDIR)/trim.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@string/$(DEPDIR)/string.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@vb/$(DEPDIR)/debug.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@vb/$(DEPDIR)/input.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@vb/$(DEPDIR)/timer.Po@am__quote@

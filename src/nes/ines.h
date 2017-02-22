@@ -127,6 +127,7 @@ int Mapper185_Init(CartInfo *) MDFN_COLD;
 int Mapper187_Init(CartInfo *) MDFN_COLD;
 int Mapper188_Init(CartInfo *) MDFN_COLD;
 int Mapper189_Init(CartInfo *) MDFN_COLD;
+int Mapper190_Init(CartInfo *) MDFN_COLD;
 int Mapper193_Init(CartInfo *) MDFN_COLD;
 int Mapper206_Init(CartInfo *) MDFN_COLD;
 int Mapper207_Init(CartInfo *) MDFN_COLD;

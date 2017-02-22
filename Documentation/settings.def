@@ -1354,6 +1354,27 @@ MDFNST_STRING
 
 
 0
+demo.multi_enum
+
+Multi-enum test.
+
+(nil)
+
+
+
+4
+cookie
+Monster.
+
+cake
+Lie.
+
+cobbler
+Shoe.
+
+strudel
+Steve.
+
 demo.resamp_quality
 
 Sound quality.
@@ -30171,7 +30192,7 @@ MDFNST_BOOL
 0
 snes_faust.input.port1
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
-Input device for Port 1
+Input device for Virtual Port 1
 
 MDFNST_ENUM
 gamepad
@@ -30186,7 +30207,7 @@ Gamepad
 
 snes_faust.input.port1.gamepad.a
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: A (right)
+snes_faust, Virtual Port 1, Gamepad: A (right)
 
 MDFNST_STRING
 keyboard 262
@@ -30195,7 +30216,7 @@ keyboard 262
 0
 snes_faust.input.port1.gamepad.b
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: B (center, lower)
+snes_faust, Virtual Port 1, Gamepad: B (center, lower)
 
 MDFNST_STRING
 keyboard 258
@@ -30204,7 +30225,7 @@ keyboard 258
 0
 snes_faust.input.port1.gamepad.down
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: DOWN ↓
+snes_faust, Virtual Port 1, Gamepad: DOWN ↓
 
 MDFNST_STRING
 keyboard 115
@@ -30213,7 +30234,7 @@ keyboard 115
 0
 snes_faust.input.port1.gamepad.l
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: Left Shoulder
+snes_faust, Virtual Port 1, Gamepad: Left Shoulder
 
 MDFNST_STRING
 keyboard 263
@@ -30222,7 +30243,7 @@ keyboard 263
 0
 snes_faust.input.port1.gamepad.left
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: LEFT ←
+snes_faust, Virtual Port 1, Gamepad: LEFT ←
 
 MDFNST_STRING
 keyboard 97
@@ -30231,7 +30252,7 @@ keyboard 97
 0
 snes_faust.input.port1.gamepad.r
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: Right Shoulder
+snes_faust, Virtual Port 1, Gamepad: Right Shoulder
 
 MDFNST_STRING
 keyboard 265
@@ -30240,7 +30261,7 @@ keyboard 265
 0
 snes_faust.input.port1.gamepad.rapid_a
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: Rapid A (right)
+snes_faust, Virtual Port 1, Gamepad: Rapid A (right)
 
 MDFNST_STRING
 
@@ -30249,7 +30270,7 @@ MDFNST_STRING
 0
 snes_faust.input.port1.gamepad.rapid_b
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: Rapid B (center, lower)
+snes_faust, Virtual Port 1, Gamepad: Rapid B (center, lower)
 
 MDFNST_STRING
 
@@ -30258,7 +30279,7 @@ MDFNST_STRING
 0
 snes_faust.input.port1.gamepad.rapid_x
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: Rapid X (center, upper)
+snes_faust, Virtual Port 1, Gamepad: Rapid X (center, upper)
 
 MDFNST_STRING
 
@@ -30267,7 +30288,7 @@ MDFNST_STRING
 0
 snes_faust.input.port1.gamepad.rapid_y
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: Rapid Y (left)
+snes_faust, Virtual Port 1, Gamepad: Rapid Y (left)
 
 MDFNST_STRING
 
@@ -30276,7 +30297,7 @@ MDFNST_STRING
 0
 snes_faust.input.port1.gamepad.right
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: RIGHT →
+snes_faust, Virtual Port 1, Gamepad: RIGHT →
 
 MDFNST_STRING
 keyboard 100
@@ -30285,7 +30306,7 @@ keyboard 100
 0
 snes_faust.input.port1.gamepad.select
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: SELECT
+snes_faust, Virtual Port 1, Gamepad: SELECT
 
 MDFNST_STRING
 keyboard 9
@@ -30294,7 +30315,7 @@ keyboard 9
 0
 snes_faust.input.port1.gamepad.start
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: START
+snes_faust, Virtual Port 1, Gamepad: START
 
 MDFNST_STRING
 keyboard 13
@@ -30303,7 +30324,7 @@ keyboard 13
 0
 snes_faust.input.port1.gamepad.up
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: UP ↑
+snes_faust, Virtual Port 1, Gamepad: UP ↑
 
 MDFNST_STRING
 keyboard 119
@@ -30312,7 +30333,7 @@ keyboard 119
 0
 snes_faust.input.port1.gamepad.x
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: X (center, upper)
+snes_faust, Virtual Port 1, Gamepad: X (center, upper)
 
 MDFNST_STRING
 keyboard 264
@@ -30321,7 +30342,7 @@ keyboard 264
 0
 snes_faust.input.port1.gamepad.y
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 1, Gamepad: Y (left)
+snes_faust, Virtual Port 1, Gamepad: Y (left)
 
 MDFNST_STRING
 keyboard 260
@@ -30330,7 +30351,7 @@ keyboard 260
 0
 snes_faust.input.port2
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
-Input device for Port 2
+Input device for Virtual Port 2
 
 MDFNST_ENUM
 gamepad
@@ -30345,7 +30366,7 @@ Gamepad
 
 snes_faust.input.port2.gamepad.a
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: A (right)
+snes_faust, Virtual Port 2, Gamepad: A (right)
 
 MDFNST_STRING
 
@@ -30354,7 +30375,7 @@ MDFNST_STRING
 0
 snes_faust.input.port2.gamepad.b
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: B (center, lower)
+snes_faust, Virtual Port 2, Gamepad: B (center, lower)
 
 MDFNST_STRING
 
@@ -30363,7 +30384,7 @@ MDFNST_STRING
 0
 snes_faust.input.port2.gamepad.down
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: DOWN ↓
+snes_faust, Virtual Port 2, Gamepad: DOWN ↓
 
 MDFNST_STRING
 
@@ -30372,7 +30393,7 @@ MDFNST_STRING
 0
 snes_faust.input.port2.gamepad.l
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: Left Shoulder
+snes_faust, Virtual Port 2, Gamepad: Left Shoulder
 
 MDFNST_STRING
 
@@ -30381,7 +30402,7 @@ MDFNST_STRING
 0
 snes_faust.input.port2.gamepad.left
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: LEFT ←
+snes_faust, Virtual Port 2, Gamepad: LEFT ←
 
 MDFNST_STRING
 
@@ -30390,7 +30411,7 @@ MDFNST_STRING
 0
 snes_faust.input.port2.gamepad.r
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: Right Shoulder
+snes_faust, Virtual Port 2, Gamepad: Right Shoulder
 
 MDFNST_STRING
 
@@ -30399,7 +30420,7 @@ MDFNST_STRING
 0
 snes_faust.input.port2.gamepad.rapid_a
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: Rapid A (right)
+snes_faust, Virtual Port 2, Gamepad: Rapid A (right)
 
 MDFNST_STRING
 
@@ -30408,7 +30429,7 @@ MDFNST_STRING
 0
 snes_faust.input.port2.gamepad.rapid_b
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: Rapid B (center, lower)
+snes_faust, Virtual Port 2, Gamepad: Rapid B (center, lower)
 
 MDFNST_STRING
 
@@ -30417,7 +30438,7 @@ MDFNST_STRING
 0
 snes_faust.input.port2.gamepad.rapid_x
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: Rapid X (center, upper)
+snes_faust, Virtual Port 2, Gamepad: Rapid X (center, upper)
 
 MDFNST_STRING
 
@@ -30426,7 +30447,7 @@ MDFNST_STRING
 0
 snes_faust.input.port2.gamepad.rapid_y
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: Rapid Y (left)
+snes_faust, Virtual Port 2, Gamepad: Rapid Y (left)
 
 MDFNST_STRING
 
@@ -30435,7 +30456,7 @@ MDFNST_STRING
 0
 snes_faust.input.port2.gamepad.right
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: RIGHT →
+snes_faust, Virtual Port 2, Gamepad: RIGHT →
 
 MDFNST_STRING
 
@@ -30444,7 +30465,7 @@ MDFNST_STRING
 0
 snes_faust.input.port2.gamepad.select
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: SELECT
+snes_faust, Virtual Port 2, Gamepad: SELECT
 
 MDFNST_STRING
 
@@ -30453,7 +30474,7 @@ MDFNST_STRING
 0
 snes_faust.input.port2.gamepad.start
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: START
+snes_faust, Virtual Port 2, Gamepad: START
 
 MDFNST_STRING
 
@@ -30462,7 +30483,7 @@ MDFNST_STRING
 0
 snes_faust.input.port2.gamepad.up
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: UP ↑
+snes_faust, Virtual Port 2, Gamepad: UP ↑
 
 MDFNST_STRING
 
@@ -30471,7 +30492,7 @@ MDFNST_STRING
 0
 snes_faust.input.port2.gamepad.x
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: X (center, upper)
+snes_faust, Virtual Port 2, Gamepad: X (center, upper)
 
 MDFNST_STRING
 
@@ -30480,10 +30501,982 @@ MDFNST_STRING
 0
 snes_faust.input.port2.gamepad.y
 (nil) MDFNSF_SUPPRESS_DOC 
-snes_faust, Port 2, Gamepad: Y (left)
+snes_faust, Virtual Port 2, Gamepad: Y (left)
 
 MDFNST_STRING
 
+
+
+0
+snes_faust.input.port3
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 3
+
+MDFNST_ENUM
+gamepad
+
+
+2
+none
+none
+
+gamepad
+Gamepad
+
+snes_faust.input.port3.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: A (right)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port3.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: B (center, lower)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port3.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port3.gamepad.l
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port3.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port3.gamepad.r
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port3.gamepad.rapid_a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: Rapid A (right)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port3.gamepad.rapid_b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: Rapid B (center, lower)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port3.gamepad.rapid_x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: Rapid X (center, upper)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port3.gamepad.rapid_y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: Rapid Y (left)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port3.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port3.gamepad.select
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: SELECT
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port3.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port3.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port3.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: X (center, upper)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port3.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Gamepad: Y (left)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 4
+
+MDFNST_ENUM
+gamepad
+
+
+2
+none
+none
+
+gamepad
+Gamepad
+
+snes_faust.input.port4.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: A (right)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: B (center, lower)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4.gamepad.l
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4.gamepad.r
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4.gamepad.rapid_a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: Rapid A (right)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4.gamepad.rapid_b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: Rapid B (center, lower)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4.gamepad.rapid_x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: Rapid X (center, upper)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4.gamepad.rapid_y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: Rapid Y (left)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4.gamepad.select
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: SELECT
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: X (center, upper)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port4.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Gamepad: Y (left)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 5
+
+MDFNST_ENUM
+gamepad
+
+
+2
+none
+none
+
+gamepad
+Gamepad
+
+snes_faust.input.port5.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: A (right)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: B (center, lower)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5.gamepad.l
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5.gamepad.r
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5.gamepad.rapid_a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: Rapid A (right)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5.gamepad.rapid_b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: Rapid B (center, lower)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5.gamepad.rapid_x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: Rapid X (center, upper)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5.gamepad.rapid_y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: Rapid Y (left)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5.gamepad.select
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: SELECT
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: X (center, upper)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port5.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Gamepad: Y (left)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 6
+
+MDFNST_ENUM
+gamepad
+
+
+2
+none
+none
+
+gamepad
+Gamepad
+
+snes_faust.input.port6.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: A (right)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: B (center, lower)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6.gamepad.l
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6.gamepad.r
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6.gamepad.rapid_a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: Rapid A (right)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6.gamepad.rapid_b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: Rapid B (center, lower)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6.gamepad.rapid_x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: Rapid X (center, upper)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6.gamepad.rapid_y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: Rapid Y (left)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6.gamepad.select
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: SELECT
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: X (center, upper)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port6.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Gamepad: Y (left)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 7
+
+MDFNST_ENUM
+gamepad
+
+
+2
+none
+none
+
+gamepad
+Gamepad
+
+snes_faust.input.port7.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: A (right)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: B (center, lower)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7.gamepad.l
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7.gamepad.r
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7.gamepad.rapid_a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: Rapid A (right)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7.gamepad.rapid_b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: Rapid B (center, lower)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7.gamepad.rapid_x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: Rapid X (center, upper)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7.gamepad.rapid_y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: Rapid Y (left)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7.gamepad.select
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: SELECT
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: X (center, upper)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port7.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Gamepad: Y (left)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Port 8
+
+MDFNST_ENUM
+gamepad
+
+
+2
+none
+none
+
+gamepad
+Gamepad
+
+snes_faust.input.port8.gamepad.a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: A (right)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8.gamepad.b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: B (center, lower)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8.gamepad.down
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8.gamepad.l
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: Left Shoulder
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8.gamepad.left
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8.gamepad.r
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: Right Shoulder
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8.gamepad.rapid_a
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: Rapid A (right)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8.gamepad.rapid_b
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: Rapid B (center, lower)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8.gamepad.rapid_x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: Rapid X (center, upper)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8.gamepad.rapid_y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: Rapid Y (left)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8.gamepad.right
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8.gamepad.select
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: SELECT
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8.gamepad.start
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: START
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8.gamepad.up
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8.gamepad.x
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: X (center, upper)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.port8.gamepad.y
+(nil) MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Gamepad: Y (left)
+
+MDFNST_STRING
+
+
+
+0
+snes_faust.input.sport1.multitap
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Enable multitap on SNES port 1.
+
+MDFNST_BOOL
+0
+
+
+0
+snes_faust.input.sport2.multitap
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Enable multitap on SNES port 2.
+
+MDFNST_BOOL
+0
 
 
 0
@@ -31038,24 +32031,6 @@ MDFNST_BOOL
 1
 
 
-0
-ss.dbg_exe_cdpath
-MDFNSF_SUPPRESS_DOC 
-CD image to use with homebrew executable loading.
-
-MDFNST_STRING
-
-
-
-0
-ss.dbg_mask
-MDFNSF_SUPPRESS_DOC 
-Debug printf mask.
-
-MDFNST_UINT
-0x00001
-0x00000
-0xFFFFF
 0
 ss.debugger.disfontsize
 MDFNSF_COMMON_TEMPLATE 

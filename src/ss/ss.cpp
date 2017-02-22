@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* ss.cpp - Saturn Core Emulation and Support Functions
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -131,7 +131,16 @@ static INLINE void BusRW(uint32 A, T& V, const bool BurstHax, int32* SH2DMAHax)
   if(!BurstHax)
   {
    if(!SH2DMAHax)
-    SH7095_mem_timestamp += IsWrite ? 4 : 7;
+   {
+    if(IsWrite)
+    {
+     SH7095_mem_timestamp = (SH7095_mem_timestamp + 4) &~ 3;
+    }
+    else
+    {
+     SH7095_mem_timestamp += 7;
+    }
+   }
    else
     *SH2DMAHax -= IsWrite ? 3 : 6;
   }
@@ -269,7 +278,7 @@ static INLINE void BusRW(uint32 A, T& V, const bool BurstHax, int32* SH2DMAHax)
    else
     *SH2DMAHax -= 8;
 
-   //printf("FT FRT %zu %08x %04x %d\n", sizeof(T), A, V, SMPC_IsSlaveOn());
+   //printf("FT FRT%08x %zu %08x %04x %d %d\n", A, sizeof(T), A, V, SMPC_IsSlaveOn(), SH7095_mem_timestamp);
 
    if(IsWrite)
    {

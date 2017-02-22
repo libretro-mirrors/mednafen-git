@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* sh7095.inc - Hitachi SH7095 Emulation
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -66,6 +66,10 @@
  TODO: Make sure RecalcPendingIntPEX() is called in all places it needs to be called(which is arguably too many...).
 */
 
+/*
+ TODO: Penalize slave CPU external bus access if we ever figure out a solution to the timestamp vs mem_timestamp problem that doesn't murder
+       performance.
+*/
 
 // Shouldn't enable instruction cache emulation until we resolve timestamp vs mem_timestamp issues
 // in regards to bus contention and time sharing, or else emulated dual-CPU programs will run slower
@@ -152,6 +156,14 @@ void SH7095::AdjustTS(int32 delta, bool force_set)
  {
   timestamp = delta;
 
+  MA_until = delta;
+  MM_until = delta;
+
+#if 0
+  for(unsigned i = 0; i < 16; i++)
+   WB_until[i] = delta;
+#endif
+
   write_finish_timestamp = delta;
   divide_finish_timestamp = delta;
 
@@ -162,6 +174,20 @@ void SH7095::AdjustTS(int32 delta, bool force_set)
  {
   if(!(timestamp & 0x40000000))
    timestamp += delta;
+
+  if(!(MA_until & 0x40000000))
+   MA_until += delta;
+
+  if(!(MM_until & 0x40000000))
+   MM_until += delta;
+
+#if 0
+  for(unsigned i = 0; i < 16; i++)
+  {
+   if(!(WB_until[i] & 0x40000000))
+    WB_until[i] += delta;
+  }
+#endif
 
   if(!(write_finish_timestamp & 0x40000000))
    write_finish_timestamp += delta;
@@ -185,6 +211,11 @@ void SH7095::TruePowerOn(void)
  for(unsigned i = 0; i < 16; i++)
   R[i] = 0;
 
+#if 0
+ for(unsigned i = 0; i < 16; i++)
+  WB_until[i] = 0;
+#endif
+
  PC = 0;
 
  SR = 0;
@@ -204,6 +235,8 @@ void SH7095::TruePowerOn(void)
  memset(Cache, 0, sizeof(Cache));
  CCR = 0;
 
+ MA_until = 0;
+ MM_until = 0;
  //
  //
  //
@@ -521,16 +554,22 @@ INLINE void SH7095::FRT_CheckOCR(void)
   if(FRT.FTCSR & 0x0001)
    FRT.FRC = 0;
 
-  FRT.FTCSR |= 0x08;
-  FRT.FTCSRM |= 0x08;
-  RecalcPendingIntPEX();
+  if(!(FRT.FTCSR & 0x08))
+  {
+   FRT.FTCSR |= 0x08;
+   FRT.FTCSRM |= 0x08;
+   RecalcPendingIntPEX();
+  }
  }
 
  if(FRT.FRC == FRT.OCR[1]) // OCRB
  {
-  FRT.FTCSR |= 0x04;
-  FRT.FTCSRM |= 0x04;
-  RecalcPendingIntPEX();
+  if(!(FRT.FTCSR & 0x04))
+  {
+   FRT.FTCSR |= 0x04;
+   FRT.FTCSRM |= 0x04;
+   RecalcPendingIntPEX();
+  }
  }
 }
 
@@ -539,9 +578,12 @@ INLINE void SH7095::FRT_ClockFRC(void)
  FRT.FRC++;
  if(!FRT.FRC)
  {
-  FRT.FTCSR |= 0x02;	// OVF
-  FRT.FTCSRM |= 0x02;
-  RecalcPendingIntPEX();
+  if(!(FRT.FTCSR & 0x02))
+  {
+   FRT.FTCSR |= 0x02;	// OVF
+   FRT.FTCSRM |= 0x02;
+   RecalcPendingIntPEX();
+  }
  }
  //
  //
@@ -641,7 +683,6 @@ void SH7095::FRT_WDT_Update(void)
    {
     SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] WDT overflow in WDT mode!\n", cpu_name);
     WDT.RSTCSR |= 0x80;
-    WDT.RSTCSRM |= 0x80;
 
     WDT.WTCNT = 0;
     WDT.WTCSR = 0;
@@ -651,9 +692,12 @@ void SH7095::FRT_WDT_Update(void)
    }
    else
    {
-    WDT.WTCSR |= 0x80;
-    WDT.WTCSRM |= 0x80;
-    RecalcPendingIntPEX();
+    if(!(WDT.WTCSR & 0x80))
+    {
+     WDT.WTCSR |= 0x80;
+     WDT.WTCSRM |= 0x80;
+     RecalcPendingIntPEX();
+    }
    }
   }
  }
@@ -676,8 +720,11 @@ void SH7095::SetFTI(bool state)
   }
 
   FRT.FICR = FRT.FRC;
-  FRT.FTCSR |= 0x80;
-  FRT.FTCSRM |= 0x80;
+  if(!(FRT.FTCSR & 0x80))
+  {
+   FRT.FTCSR |= 0x80;
+   FRT.FTCSRM |= 0x80;
+  }
   RecalcPendingIntPEX();
  }
 }
@@ -755,7 +802,7 @@ INLINE void SH7095::DIVU_S32_S32(void)
 {
  if(!DVSR)
  {
-  divide_finish_timestamp = timestamp + 6;
+  divide_finish_timestamp = MA_until + 2 + 6;
 
   DVCR |= 1;
   RecalcPendingIntPEX();
@@ -769,7 +816,7 @@ INLINE void SH7095::DIVU_S32_S32(void)
  }
  else
  {
-  divide_finish_timestamp = timestamp + 39;
+  divide_finish_timestamp = MA_until + 1 + 39;
 
   if(DVSR == 0xFFFFFFFF && DVDNTL == 0x80000000)
   {
@@ -1119,6 +1166,7 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	  }
 	 }
 	}
+	WDT.RSTCSRM = 0;
 	FRT_WDT_Recalc_NET();
 	RecalcPendingIntPEX();
 	break;
@@ -1131,7 +1179,7 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	 if(V == 0xA500)
 	 {
 	  // Clear OVF bit
-	  WDT.RSTCSR &= (0x7F | WDT.RSTCSRM);
+	  WDT.RSTCSR &= ~WDT.RSTCSRM;
 	 }
 	 else if((V & 0xFF00) == 0x5A00)
 	 {
@@ -1139,6 +1187,22 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	  WDT.RSTCSR = (WDT.RSTCSR & 0x80) | (V & 0x60);
 	 }
 	}
+	WDT.RSTCSRM = 0;
+	break;
+
+   case 0x81:
+   case 0x83:
+   case 0x84:
+   case 0x85:
+   case 0x86:
+   case 0x87:
+   case 0x89:
+   case 0x8B:
+   case 0x8C:
+   case 0x8D:
+   case 0x8E:
+   case 0x8F:
+	WDT.RSTCSRM = 0;
 	break;
 
    //
@@ -1224,7 +1288,7 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
  {
   uint32 ret = 0;
 
-  timestamp += 2;
+  MA_until++;
 
   if(sizeof(T) == 2)
    A &= 0xFE;
@@ -1247,7 +1311,7 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
    case 0x22:
    case 0x00:
    case 0x02:
-	timestamp = std::max<sscpu_timestamp_t>(timestamp, divide_finish_timestamp);
+	MA_until = std::max<sscpu_timestamp_t>(MA_until, divide_finish_timestamp);
 	ret = DVSR;
 	break;
 
@@ -1255,7 +1319,7 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
    case 0x26:
    case 0x04:
    case 0x06:
-	timestamp = std::max<sscpu_timestamp_t>(timestamp, divide_finish_timestamp);
+	MA_until = std::max<sscpu_timestamp_t>(MA_until, divide_finish_timestamp);
 	ret = DVDNT;
 	break;
 
@@ -1263,7 +1327,7 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
    case 0x2A:
    case 0x08:
    case 0x0A:
-	timestamp = std::max<sscpu_timestamp_t>(timestamp, divide_finish_timestamp);
+	MA_until = std::max<sscpu_timestamp_t>(MA_until, divide_finish_timestamp);
 	ret = DVCR;
 	break;
 
@@ -1271,7 +1335,7 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
    case 0x2E:
    case 0x0C:
    case 0x0E:
-	timestamp = std::max<sscpu_timestamp_t>(timestamp, divide_finish_timestamp);
+	MA_until = std::max<sscpu_timestamp_t>(MA_until, divide_finish_timestamp);
 	ret = VCRDIV;
 	break;
 
@@ -1279,7 +1343,7 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
    case 0x32:
    case 0x10:
    case 0x12:
-	timestamp = std::max<sscpu_timestamp_t>(timestamp, divide_finish_timestamp);
+	MA_until = std::max<sscpu_timestamp_t>(MA_until, divide_finish_timestamp);
 	ret = DVDNTH;
 	break;
 
@@ -1287,7 +1351,7 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
    case 0x36:
    case 0x14:
    case 0x16:
-	timestamp = std::max<sscpu_timestamp_t>(timestamp, divide_finish_timestamp);
+	MA_until = std::max<sscpu_timestamp_t>(MA_until, divide_finish_timestamp);
 	ret = DVDNTL;
 	break;
 
@@ -1296,7 +1360,7 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
    case 0x3A:
    case 0x18:
    case 0x1A:
-	timestamp = std::max<sscpu_timestamp_t>(timestamp, divide_finish_timestamp);
+	MA_until = std::max<sscpu_timestamp_t>(MA_until, divide_finish_timestamp);
 	ret = DVDNTH_Shadow;
 	break;
 
@@ -1304,7 +1368,7 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
    case 0x3E:
    case 0x1C:
    case 0x1E:
-	timestamp = std::max<sscpu_timestamp_t>(timestamp, divide_finish_timestamp);
+	MA_until = std::max<sscpu_timestamp_t>(MA_until, divide_finish_timestamp);
 	ret = DVDNTL_Shadow;
 	break;
    //
@@ -1365,15 +1429,21 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
  }
  else
  {
+  const unsigned Am = (uint8)A;
   const unsigned shift = ((sizeof(T) != 2) ? (((A & 1) ^ 1) << 3) : 0);
   uint16 ret = 0;
 
-  timestamp += 1 + ((((A & 0x70) < 0x20) | ((A & 0x70) == 0x60)) << 1);
+  if(Am < 0x20)
+   MA_until = (MA_until + 11) &~ 1; // FIXME: not quite right. //3;
+  else if((Am >= 0x60 && Am < 0xA0) || Am >= 0xE0)
+   MA_until += 3;
+  else
+   MA_until += 1;
 
   if(sizeof(T) == 4)
    SetPEX(PEX_CPUADDR);
 
-  else switch(A & 0xFF)
+  else switch(Am)
   {
    default:
 	SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unhandled %zu-byte read from on-chip low register area; address=0x%08x\n", cpu_name, sizeof(T), A);
@@ -1467,13 +1537,16 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
 	break;
 
    case 0x83:
-   case 0x84:
    case 0x8B:
-   case 0x8C:
 	FRT_WDT_Update();
 	ret = WDT.RSTCSR | 0x1F;
-	WDT.RSTCSRM = 0x00;
+	WDT.RSTCSRM = (WDT.RSTCSR & 0x80);
 	break;
+
+   // FIXME: WDT open bus of a sort.
+   // case 0x84:
+   // case 0x8C:
+
    //
    //
    //
@@ -1567,9 +1640,6 @@ INLINE void SH7095::ExtBusWrite(uint32 A, T V)
 {
  A &= (1U << 27) - 1;
 
- if(write_finish_timestamp > timestamp)
-  timestamp = write_finish_timestamp;
-
  if(timestamp > SH7095_mem_timestamp)
   SH7095_mem_timestamp = timestamp;
 
@@ -1648,6 +1718,11 @@ INLINE T SH7095::MemReadRT(uint32 A)
   }
  }
 
+ if(!IsInstr)
+  MA_until = std::max<sscpu_timestamp_t>(MA_until, timestamp + 1);
+ else
+  timestamp = std::max<sscpu_timestamp_t>(MA_until, timestamp);
+
  //
  // WARNING: Template arguments CacheEnabled and TwoWayMode are only valid for region==0.  In addition, TwoWayMode is only valid for CacheEnabled==true.
  //
@@ -1699,7 +1774,10 @@ INLINE T SH7095::MemReadRT(uint32 A)
 	  {
 	   unsigned di = (A + 4 + i) & 0xC; MDFN_ennsb<uint32, true>(&cent->Data[way_match][di], ExtBusRead<uint32,  true>((A &~ 0xF) + di));
 	  }
-	  timestamp = SH7095_mem_timestamp;
+	  if(!IsInstr)
+	   MA_until = std::max<sscpu_timestamp_t>(MA_until, SH7095_mem_timestamp + 1);
+	  else
+	   timestamp = SH7095_mem_timestamp;
 	 }
 	 cent->LRU = (cent->LRU & LRU_Update_Tab[way_match].AND) | LRU_Update_Tab[way_match].OR;
   	 return MDFN_densb<T, true>(&cent->Data[way_match][NE32ASU8_IDX_ADJ(T, A & 0x0F)]);
@@ -1710,7 +1788,10 @@ INLINE T SH7095::MemReadRT(uint32 A)
 	{
 	 T ret = ExtBusRead<T, false>(A);
 
-	 timestamp = SH7095_mem_timestamp;
+	 if(!IsInstr)
+	  MA_until = std::max<sscpu_timestamp_t>(MA_until, SH7095_mem_timestamp + 1);
+	 else
+	  timestamp = SH7095_mem_timestamp;
 
 	 return ret;
 	}
@@ -1799,6 +1880,8 @@ INLINE void SH7095::MemWriteRT(uint32 A, T V)
   SetPEX(PEX_CPUADDR);
  }
 
+ MA_until = std::max<sscpu_timestamp_t>(MA_until, timestamp + 1);
+
  //
  // WARNING: Template argument CacheEnabled is only valid for region==0.
  //
@@ -1809,6 +1892,8 @@ INLINE void SH7095::MemWriteRT(uint32 A, T V)
 	 Write_UpdateCache<T>(A, V);
 	// Fall-through, no break
   case 1:
+  	MA_until = std::max<sscpu_timestamp_t>(MA_until, write_finish_timestamp + 1);
+
 	ExtBusWrite<T>(A, V);
 	return;
 
@@ -1827,6 +1912,8 @@ INLINE void SH7095::MemWriteRT(uint32 A, T V)
 	//
 	// TODO: Check non-32 bit access
 	//SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] %zu-byte write to cache address array area; address=0x%08x value=0x%x\n", cpu_name, sizeof(T), A, V);
+	timestamp++;
+	MA_until = std::max<sscpu_timestamp_t>(MA_until, timestamp + 1);
 	{
 	 const unsigned way = (CCR >> 6) & 0x3;
 	 const unsigned ena = (A >> 4) & 0x3F;
@@ -2161,6 +2248,43 @@ static const uint8 InstrDecodeTab[65536] =
  #include "sh7095_idecodetab.inc"
 };
 
+template<bool DebugMode>
+INLINE void SH7095::FetchIF(bool ForceIBufferFill)
+{
+ if(DebugMode)
+  PC_IF = PC;
+
+#ifdef SH7095_EMULATE_ICACHE
+ if(ForceIBufferFill)
+ {
+  IBuffer = MRFPI[PC >> 29](PC &~ 2);
+  Pipe_IF = (uint16)(IBuffer >> (((PC & 2) ^ 2) << 3));
+ }
+ else
+ {
+  Pipe_IF = (uint16)IBuffer;
+  if(!(PC & 0x2))
+  {
+   IBuffer = MRFPI[PC >> 29](PC);
+   Pipe_IF = IBuffer >> 16;
+  }
+ }
+#else
+ if(timestamp < (MA_until - (ForceIBufferFill ? 0 : ((int32)(PC & 0x2) << 28))))
+  timestamp = MA_until;
+
+ if(MDFN_UNLIKELY((int32)PC < 0))	// Mr. Boooones
+ {
+  Pipe_IF = MRFP16[PC >> 29](PC);
+  timestamp++;
+  return;
+ }
+
+ Pipe_IF = *(uint16*)(SH7095_FastMap[PC >> SH7095_EXT_MAP_GRAN_BITS] + PC);
+#endif
+ timestamp++;
+}
+
 //
 // TODO: Stop reading from memory when an exception is pending?
 //
@@ -2198,29 +2322,7 @@ INLINE void SH7095::DoIDIF_Real(void)
  }
 
  if(!SkipFetchIF)
- {
-  if(DebugMode)
-   PC_IF = PC;
-
-#ifdef SH7095_EMULATE_ICACHE
-  Pipe_IF = (uint16)IBuffer;
-  if(!(PC & 0x2))
-  {
-   IBuffer = MRFPI[PC >> 29](PC);
-   Pipe_IF = IBuffer >> 16;
-  }
-#else
-  if(MDFN_UNLIKELY((int32)PC < 0))	// Mr. Boooones
-  {
-   Pipe_IF = MRFP16[PC >> 29](PC);
-   timestamp++;
-   return;
-  }
-
-  Pipe_IF = *(uint16*)(SH7095_FastMap[PC >> SH7095_EXT_MAP_GRAN_BITS] + PC);
-#endif
-  timestamp++;
- }
+  FetchIF<DebugMode>(false);
 }
 
 template<unsigned which, bool DebugMode, bool DelaySlot, bool IntPreventNext, bool SkipFetchIF>
@@ -2277,6 +2379,40 @@ INLINE void SH7095::Branch(uint32 target)
   }
  }
 }
+
+// Remember to use BEGIN_OP_DLYIDIF instead of BEGIN_OP
+template<unsigned which, int DebugMode>
+INLINE void SH7095::UCDelayBranch(uint32 target)
+{
+ if(DebugMode > 0)
+  DBG_AddBranchTrace(which, target, -1);
+
+ PC = target;
+
+ if(DebugMode)
+  PC_ID = PC_IF;
+
+ Pipe_ID = Pipe_IF | ((InstrDecodeTab[Pipe_IF] | 0x80) << 24);
+
+ timestamp++;
+
+ if(MDFN_UNLIKELY(PC & 1))
+ {
+  DoIDIF<which, (bool)DebugMode, true, true, true>();
+  SetPEX(PEX_CPUADDR);	// Pending for the instruction after the delay slot instruction.
+ }
+ else
+ {
+  FetchIF<DebugMode>(true);
+ }
+}
+
+template<unsigned which, int DebugMode>
+INLINE void SH7095::UCRelDelayBranch(uint32 disp)
+{
+ UCDelayBranch<which, DebugMode>(PC + disp);
+}
+
 
 template<unsigned which, int DebugMode, bool delayed>
 INLINE void SH7095::CondRelBranch(bool cond, uint32 disp)
@@ -2364,11 +2500,26 @@ INLINE void SH7095::Step(void)
  switch(Pipe_ID >> 24)
  {
  #include "sh7095_opdefs.inc"
- #define BEGIN_OP(x) 	     OP_##x { DoIDIF<which, DebugMode, false, false, false>();
+
+ #define PART_OP_NORMIDIF DoIDIF<which, DebugMode, false, false, false>();
+
+ #define BEGIN_OP(x) 	     OP_##x { PART_OP_NORMIDIF
  #define BEGIN_OP_DLYIDIF(x) OP_##x { 
- #define END_OP_INTDIS DoIDIF<which, DebugMode, false, true, false>(); } break;	// "Interrupt-disabled" instruction(blocks interrupt from being taken for next instruction).
+
+ // "Interrupt-disabled" instruction(blocks interrupt from being taken for next instruction).
+ // Use with BEGIN_OP_DLYIDIF()
+ #define PART_OP_INTDIS DoIDIF<which, DebugMode, false, true, false>();
+
  #define END_OP } break;
 
+#if 0
+ #define WB_EX_CHECK(r) { if(timestamp < WB_until[(r)]) timestamp = WB_until[(r)]; }
+
+ #define WB_WRITE(r, v) { R[(r)] = (v); WB_until[(r)] = MA_until + 1; }
+#else
+ #define WB_EX_CHECK(r) { }
+ #define WB_WRITE(r, v) { R[(r)] = (v); }
+#endif
  //
  //
  //
@@ -2378,6 +2529,8 @@ INLINE void SH7095::Step(void)
  BEGIN_OP(MOV_IMM_REG)
 	const unsigned n = instr_nyb2;
 	const uint32 imm = (int8)instr;
+
+	WB_EX_CHECK(n)
 
 	R[n] = imm;
  END_OP
@@ -2391,7 +2544,7 @@ INLINE void SH7095::Step(void)
 	const unsigned d = (instr >> 0) & 0xff;
 	const uint32 ea = PC + (d << 1);
 
-	R[n] = (int16)MemRead<uint16>(ea);
+	WB_WRITE(n, (int16)MemRead<uint16>(ea));
  END_OP
 
 
@@ -2403,7 +2556,7 @@ INLINE void SH7095::Step(void)
 	const unsigned d = (instr >> 0) & 0xff;
 	const uint32 ea = (PC &~ 0x3) + (d << 2);
 
-	R[n] = MemRead<uint32>(ea);
+	WB_WRITE(n, MemRead<uint32>(ea));
  END_OP
 
 
@@ -2413,6 +2566,9 @@ INLINE void SH7095::Step(void)
  BEGIN_OP(MOV_REG_REG)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
+
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
 
 	R[n] = R[m];
  END_OP
@@ -2465,7 +2621,7 @@ INLINE void SH7095::Step(void)
 	const unsigned m = instr_nyb1;
 	const uint32 ea = R[m];
 
-	R[n] = (int8)MemRead<uint8>(ea);
+	WB_WRITE(n, (int8)MemRead<uint8>(ea));
  END_OP
 
 
@@ -2477,7 +2633,7 @@ INLINE void SH7095::Step(void)
 	const unsigned m = instr_nyb1;
 	const uint32 ea = R[m];
 
-	R[n] = (int16)MemRead<uint16>(ea);
+	WB_WRITE(n, (int16)MemRead<uint16>(ea));
  END_OP
 
 
@@ -2489,7 +2645,7 @@ INLINE void SH7095::Step(void)
 	const unsigned m = instr_nyb1;
 	const uint32 ea = R[m];
 
-	R[n] = MemRead<uint32>(ea);
+	WB_WRITE(n, MemRead<uint32>(ea));
  END_OP
 
 
@@ -2552,7 +2708,7 @@ INLINE void SH7095::Step(void)
 	ea = R[m];
 	R[m] += 1;
 
-	R[n] = (int8)MemRead<uint8>(ea);
+	WB_WRITE(n, (int8)MemRead<uint8>(ea));
  END_OP
 
 
@@ -2567,7 +2723,7 @@ INLINE void SH7095::Step(void)
 	ea = R[m];
 	R[m] += 2;
 
-	R[n] = (int16)MemRead<uint16>(ea);
+	WB_WRITE(n, (int16)MemRead<uint16>(ea));
  END_OP
 
 
@@ -2582,7 +2738,7 @@ INLINE void SH7095::Step(void)
 	ea = R[m];
 	R[m] += 4;
 
-	R[n] = MemRead<uint32>(ea);
+	WB_WRITE(n, MemRead<uint32>(ea));
  END_OP
 
 
@@ -2631,7 +2787,7 @@ INLINE void SH7095::Step(void)
 	const unsigned d = (instr >> 0) & 0xf;
 	const uint32 ea = R[m] + (d << 0);
 
-	R[0] = (int8)MemRead<uint8>(ea);
+	WB_WRITE(0, (int8)MemRead<uint8>(ea));
  END_OP
 
 
@@ -2643,7 +2799,7 @@ INLINE void SH7095::Step(void)
 	const unsigned d = (instr >> 0) & 0xf;
 	const uint32 ea = R[m] + (d << 1);
 
-	R[0] = (int16)MemRead<uint16>(ea);
+	WB_WRITE(0, (int16)MemRead<uint16>(ea));
  END_OP
 
 
@@ -2656,7 +2812,7 @@ INLINE void SH7095::Step(void)
 	const unsigned d = (instr >> 0) & 0xf;
 	const uint32 ea = R[m] + (d << 2);
 
-	R[n] = MemRead<uint32>(ea);
+	WB_WRITE(n, MemRead<uint32>(ea));
  END_OP
 
 
@@ -2704,7 +2860,7 @@ INLINE void SH7095::Step(void)
 	const unsigned m = instr_nyb1;
 	const uint32 ea = R[0] + R[m];
 
-	R[n] = (int8)MemRead<uint8>(ea);
+	WB_WRITE(n, (int8)MemRead<uint8>(ea));
  END_OP
 
 
@@ -2716,7 +2872,7 @@ INLINE void SH7095::Step(void)
 	const unsigned m = instr_nyb1;
 	const uint32 ea = R[0] + R[m];
 
-	R[n] = (int16)MemRead<uint16>(ea);
+	WB_WRITE(n, (int16)MemRead<uint16>(ea));
  END_OP
 
 
@@ -2728,7 +2884,7 @@ INLINE void SH7095::Step(void)
 	const unsigned m = instr_nyb1;
 	const uint32 ea = R[0] + R[m];
 
-	R[n] = MemRead<uint32>(ea);
+	WB_WRITE(n, MemRead<uint32>(ea));
  END_OP
 
 
@@ -2772,7 +2928,7 @@ INLINE void SH7095::Step(void)
 	const unsigned d = (instr >> 0) & 0xff;
 	const uint32 ea = GBR + (d << 0);
 
-	R[0] = (int8)MemRead<uint8>(ea);
+	WB_WRITE(0, (int8)MemRead<uint8>(ea));
  END_OP
 
 
@@ -2783,7 +2939,7 @@ INLINE void SH7095::Step(void)
 	const unsigned d = (instr >> 0) & 0xff;
 	const uint32 ea = GBR + (d << 1);
 
-	R[0] = (int16)MemRead<uint16>(ea);
+	WB_WRITE(0, (int16)MemRead<uint16>(ea));
  END_OP
 
 
@@ -2794,7 +2950,7 @@ INLINE void SH7095::Step(void)
 	const unsigned d = (instr >> 0) & 0xff;
 	const uint32 ea = GBR + (d << 2);
 
-	R[0] = MemRead<uint32>(ea);
+	WB_WRITE(0, MemRead<uint32>(ea));
  END_OP
 
 
@@ -2805,6 +2961,8 @@ INLINE void SH7095::Step(void)
 	const unsigned d = (instr >> 0) & 0xff;
 	const uint32 ea = (PC &~ 0x3) + (d << 2);
 
+	WB_EX_CHECK(0)
+
 	R[0] = ea;
  END_OP
 
@@ -2814,6 +2972,8 @@ INLINE void SH7095::Step(void)
  //
  BEGIN_OP(MOVT_REG)
 	const unsigned n = instr_nyb2;
+
+	WB_EX_CHECK(n)
 
 	R[n] = GetT();
  END_OP
@@ -2826,6 +2986,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	R[n] = (R[m] & 0xFFFF0000) | ((R[m] << 8) & 0xFF00) | ((R[m] >> 8) & 0x00FF);
  END_OP
 
@@ -2836,6 +2999,9 @@ INLINE void SH7095::Step(void)
  BEGIN_OP(SWAP_W_REG_REG)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
+
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
 
 	R[n] = (R[m] << 16) | (R[m] >> 16);
  END_OP
@@ -2848,6 +3014,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	R[n] = (R[n] >> 16) | (R[m] << 16);
  END_OP
 
@@ -2858,6 +3027,9 @@ INLINE void SH7095::Step(void)
  BEGIN_OP(ADD_REG_REG)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
+
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
 
 	R[n] = R[n] + R[m];
  END_OP
@@ -2870,6 +3042,8 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const uint32 imm = (int8)instr;
 
+	WB_EX_CHECK(n)
+
 	R[n] = R[n] + imm;
  END_OP
 
@@ -2881,6 +3055,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 	const uint64 result = (uint64)R[n] + R[m] + GetT();
+
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
 
 	R[n] = result;
 	SetT((result >> 32) & 1);
@@ -2895,6 +3072,9 @@ INLINE void SH7095::Step(void)
 	const unsigned m = instr_nyb1;
 	const uint32 result = R[n] + R[m];
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	SetT(((~(R[n] ^ R[m])) & (R[n] ^ result)) >> 31);
 	R[n] = result;
  END_OP
@@ -2905,6 +3085,8 @@ INLINE void SH7095::Step(void)
  //
  BEGIN_OP(CMP_EQ_IMM_REG0)
 	const uint32 imm = (int8)instr;
+
+	WB_EX_CHECK(0)
 
 	SetT(imm == R[0]);
  END_OP
@@ -2917,6 +3099,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	SetT(R[n] == R[m]);
  END_OP
 
@@ -2927,6 +3112,9 @@ INLINE void SH7095::Step(void)
  BEGIN_OP(CMP_HS_REG_REG)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
+
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
 
 	SetT(R[n] >= R[m]);
  END_OP
@@ -2939,6 +3127,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	SetT((int32)R[n] >= (int32)R[m]);
  END_OP
 
@@ -2949,6 +3140,9 @@ INLINE void SH7095::Step(void)
  BEGIN_OP(CMP_HI_REG_REG)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
+
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
 
 	SetT(R[n] > R[m]);
  END_OP
@@ -2961,6 +3155,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	SetT((int32)R[n] > (int32)R[m]);
  END_OP
 
@@ -2971,6 +3168,8 @@ INLINE void SH7095::Step(void)
  BEGIN_OP(CMP_PZ_REG)
 	const unsigned n = instr_nyb2;
 
+	WB_EX_CHECK(n)
+
 	SetT((int32)R[n] >= 0);
  END_OP
 
@@ -2980,6 +3179,8 @@ INLINE void SH7095::Step(void)
  //
  BEGIN_OP(CMP_PL_REG)
 	const unsigned n = instr_nyb2;
+
+	WB_EX_CHECK(n)
 
 	SetT((int32)R[n] > 0);
  END_OP
@@ -2993,6 +3194,9 @@ INLINE void SH7095::Step(void)
 	const unsigned m = instr_nyb1;
 	const uint32 tmp = R[n] ^ R[m];
 	unsigned new_T = 0;
+
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
 
 	if(!(tmp & 0x000000FF)) new_T = 1;
 	if(!(tmp & 0x0000FF00)) new_T = 1;
@@ -3011,6 +3215,9 @@ INLINE void SH7095::Step(void)
 	const unsigned m = instr_nyb1;
 	uint32 tmp;
 	bool new_Q;
+
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
 
 	new_Q = R[n] >> 31;
 	R[n] <<= 1;
@@ -3044,6 +3251,9 @@ INLINE void SH7095::Step(void)
 	const unsigned new_Q = R[n] >> 31;
 	const unsigned new_M = R[m] >> 31;
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	SetQ(new_Q);
 	SetM(new_M);
 	SetT(new_Q != new_M);
@@ -3061,40 +3271,12 @@ INLINE void SH7095::Step(void)
 
 
  //
- // DMULS.L Rm,Rn
- //
- BEGIN_OP(DMULS_L_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
-	const uint64 result = (int64)(int32)R[n] * (int32)R[m];
-
-	timestamp++;
-
-	MACL = result >> 0;
-	MACH = result >> 32;
- END_OP
-
-
- //
- // DMULU.L Rm,Rn
- //
- BEGIN_OP(DMULU_L_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
-	const uint64 result = (uint64)R[n] * R[m];
-
-	timestamp++;
-
-	MACL = result >> 0;
-	MACH = result >> 32;
- END_OP
-
-
- //
  // DT 
  //
  BEGIN_OP(DT)
 	const unsigned n = instr_nyb2;
+
+	WB_EX_CHECK(n)
 
 	R[n]--;
 	SetT(!R[n]);
@@ -3108,6 +3290,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	R[n] = (int8)R[m];
  END_OP
 
@@ -3118,6 +3303,9 @@ INLINE void SH7095::Step(void)
  BEGIN_OP(EXTS_W_REG_REG)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
+
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
 
 	R[n] = (int16)R[m];
  END_OP
@@ -3130,6 +3318,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	R[n] = (uint8)R[m];
  END_OP
 
@@ -3141,6 +3332,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	R[n] = (uint16)R[m];
  END_OP
 
@@ -3148,6 +3342,7 @@ INLINE void SH7095::Step(void)
  //
  // MAC.L @Rm+,@Rn+
  //
+ //  Pipeline: page 188(not implemented right here)
  BEGIN_OP(MAC_L)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
@@ -3181,6 +3376,7 @@ INLINE void SH7095::Step(void)
  //
  // MAC.W @Rm+,@Rn+
  //
+ //  Pipeline: page 180(not implemented right here)
  BEGIN_OP(MAC_W)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
@@ -3217,13 +3413,58 @@ INLINE void SH7095::Step(void)
 
 
  //
+ // DMULS.L Rm,Rn
+ //
+ //  Pipeline: page 215 (not implemented here totally correctly)
+ BEGIN_OP_DLYIDIF(DMULS_L_REG_REG)
+	const unsigned n = instr_nyb2;
+	const unsigned m = instr_nyb1;
+	const uint64 result = (int64)(int32)R[n] * (int32)R[m];
+
+	timestamp++;
+
+	MA_until = std::max<sscpu_timestamp_t>(std::max<sscpu_timestamp_t>(MA_until, MM_until), timestamp + 1);
+	MM_until = MA_until + 4;
+	PART_OP_NORMIDIF
+
+	MACL = result >> 0;
+	MACH = result >> 32;
+ END_OP
+
+
+ //
+ // DMULU.L Rm,Rn
+ //
+ //  Pipeline: page 215 (not implemented here totally correctly)
+ BEGIN_OP_DLYIDIF(DMULU_L_REG_REG)
+	const unsigned n = instr_nyb2;
+	const unsigned m = instr_nyb1;
+	const uint64 result = (uint64)R[n] * R[m];
+
+	timestamp++;
+
+	MA_until = std::max<sscpu_timestamp_t>(std::max<sscpu_timestamp_t>(MA_until, MM_until), timestamp + 1);
+	MM_until = MA_until + 4;
+	PART_OP_NORMIDIF
+
+	MACL = result >> 0;
+	MACH = result >> 32;
+ END_OP
+
+
+ //
  // MUL.L Rm,Rn
  //
- BEGIN_OP(MUL_L_REG_REG)
+ //  Pipeline: page 215 (not implemented here totally correctly)
+ BEGIN_OP_DLYIDIF(MUL_L_REG_REG)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
 	timestamp++;
+
+	MA_until = std::max<sscpu_timestamp_t>(std::max<sscpu_timestamp_t>(MA_until, MM_until), timestamp + 1);
+	MM_until = MA_until + 4;
+	PART_OP_NORMIDIF
 
 	MACL = R[n] * R[m];
  END_OP
@@ -3232,9 +3473,13 @@ INLINE void SH7095::Step(void)
  //
  // MULS.W Rm,Rn
  //
+ //  Pipeline: page 207
  BEGIN_OP(MULS_W_REG_REG)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
+
+	MA_until = std::max<sscpu_timestamp_t>(std::max<sscpu_timestamp_t>(MA_until, MM_until), timestamp + 1);
+	MM_until = MA_until + 2;
 
 	MACL = (int16)R[n] * (int16)R[m];
  END_OP
@@ -3243,9 +3488,13 @@ INLINE void SH7095::Step(void)
  //
  // MULU.W Rm,Rn
  //
+ //  Pipeline: page 207
  BEGIN_OP(MULU_W_REG_REG)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
+
+	MA_until = std::max<sscpu_timestamp_t>(std::max<sscpu_timestamp_t>(MA_until, MM_until), timestamp + 1);
+	MM_until = MA_until + 2;
 
 	MACL = (uint32)(uint16)R[n] * (uint32)(uint16)R[m];
  END_OP
@@ -3257,6 +3506,9 @@ INLINE void SH7095::Step(void)
  BEGIN_OP(NEG_REG_REG)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
+
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
 
 	R[n] = -R[m];
  END_OP
@@ -3270,6 +3522,9 @@ INLINE void SH7095::Step(void)
 	const unsigned m = instr_nyb1;
 	const uint64 result = (uint64)0 - R[m] - GetT();
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	R[n] = result;
 	SetT((result >> 32) & 1);
  END_OP
@@ -3282,6 +3537,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	R[n] = R[n] - R[m];
  END_OP
 
@@ -3293,6 +3551,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 	const uint64 result = (uint64)R[n] - R[m] - GetT();
+
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
 
 	R[n] = result;
 	SetT((result >> 32) & 1);
@@ -3307,6 +3568,9 @@ INLINE void SH7095::Step(void)
 	const unsigned m = instr_nyb1;
 	const uint32 result = R[n] - R[m];
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	SetT((((R[n] ^ R[m])) & (R[n] ^ result)) >> 31);
 	R[n] = result;
  END_OP
@@ -3319,6 +3583,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	R[n] = R[n] & R[m];
  END_OP
 
@@ -3328,6 +3595,8 @@ INLINE void SH7095::Step(void)
  //
  BEGIN_OP(AND_IMM_REG0)
 	const unsigned imm = (uint8)instr;
+
+	WB_EX_CHECK(0)
 
 	R[0] = R[0] & imm;
  END_OP
@@ -3356,6 +3625,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	R[n] = ~R[m];
  END_OP
 
@@ -3367,6 +3639,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	R[n] |= R[m];
  END_OP
 
@@ -3376,6 +3651,8 @@ INLINE void SH7095::Step(void)
  //
  BEGIN_OP(OR_IMM_REG0)
 	const unsigned imm = (uint8)instr;
+
+	WB_EX_CHECK(0)
 
 	R[0] |= imm;
  END_OP
@@ -3427,6 +3704,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	SetT(!(R[n] & R[m]));
  END_OP
 
@@ -3436,6 +3716,8 @@ INLINE void SH7095::Step(void)
  //
  BEGIN_OP(TST_IMM_REG0)
 	const unsigned imm = (uint8)instr;
+
+	WB_EX_CHECK(0)
 
 	SetT(!(R[0] & imm));
  END_OP
@@ -3463,6 +3745,9 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned m = instr_nyb1;
 
+	WB_EX_CHECK(n)
+	WB_EX_CHECK(m)
+
 	R[n] = R[n] ^ R[m];
  END_OP
 
@@ -3472,6 +3757,8 @@ INLINE void SH7095::Step(void)
  //
  BEGIN_OP(XOR_IMM_REG0)
 	const unsigned imm = (uint8)instr;
+
+	WB_EX_CHECK(0)
 
 	R[0] = R[0] ^ imm;
  END_OP
@@ -3500,6 +3787,8 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned rotbit = R[n] >> 31;
 
+	WB_EX_CHECK(n)
+
 	R[n] = (R[n] << 1) | rotbit;
 	SetT(rotbit);
  END_OP
@@ -3511,6 +3800,8 @@ INLINE void SH7095::Step(void)
  BEGIN_OP(ROTR_REG)
 	const unsigned n = instr_nyb2;
 	const unsigned rotbit = R[n] & 1;
+
+	WB_EX_CHECK(n)
 
 	R[n] = (R[n] >> 1) | (rotbit << 31);
 	SetT(rotbit);
@@ -3524,6 +3815,8 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned rotbit = R[n] >> 31;
 
+	WB_EX_CHECK(n)
+
 	R[n] = (R[n] << 1) | GetT();
 	SetT(rotbit);
  END_OP
@@ -3535,6 +3828,8 @@ INLINE void SH7095::Step(void)
  BEGIN_OP(ROTCR_REG)
 	const unsigned n = instr_nyb2;
 	const unsigned rotbit = R[n] & 1;
+
+	WB_EX_CHECK(n)
 
 	R[n] = (R[n] >> 1) | (GetT() << 31);
 	SetT(rotbit);
@@ -3548,6 +3843,8 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned shbit = R[n] & 1;
 
+	WB_EX_CHECK(n)
+
 	R[n] = (int32)R[n] >> 1;
 	SetT(shbit);
  END_OP
@@ -3559,6 +3856,8 @@ INLINE void SH7095::Step(void)
  BEGIN_OP(SHLL_REG)
 	const unsigned n = instr_nyb2;
 	const unsigned shbit = R[n] >> 31;
+
+	WB_EX_CHECK(n)
 
 	R[n] <<= 1;
 	SetT(shbit);
@@ -3572,6 +3871,8 @@ INLINE void SH7095::Step(void)
 	const unsigned n = instr_nyb2;
 	const unsigned shbit = R[n] & 1;
 
+	WB_EX_CHECK(n)
+
 	R[n] >>= 1;
 	SetT(shbit);
  END_OP
@@ -3583,6 +3884,8 @@ INLINE void SH7095::Step(void)
  BEGIN_OP(SHLL2_REG)
 	const unsigned n = instr_nyb2;
 
+	WB_EX_CHECK(n)
+
 	R[n] <<= 2;
  END_OP
 
@@ -3592,6 +3895,8 @@ INLINE void SH7095::Step(void)
  //
  BEGIN_OP(SHLR2_REG)
 	const unsigned n = instr_nyb2;
+
+	WB_EX_CHECK(n)
 
 	R[n] >>= 2;
  END_OP
@@ -3603,6 +3908,8 @@ INLINE void SH7095::Step(void)
  BEGIN_OP(SHLL8_REG)
 	const unsigned n = instr_nyb2;
 
+	WB_EX_CHECK(n)
+
 	R[n] <<= 8;
  END_OP
 
@@ -3612,6 +3919,8 @@ INLINE void SH7095::Step(void)
  //
  BEGIN_OP(SHLR8_REG)
 	const unsigned n = instr_nyb2;
+
+	WB_EX_CHECK(n)
 
 	R[n] >>= 8;
  END_OP
@@ -3623,6 +3932,8 @@ INLINE void SH7095::Step(void)
  BEGIN_OP(SHLL16_REG)
 	const unsigned n = instr_nyb2;
 
+	WB_EX_CHECK(n)
+
 	R[n] <<= 16;
  END_OP
 
@@ -3632,6 +3943,8 @@ INLINE void SH7095::Step(void)
  //
  BEGIN_OP(SHLR16_REG)
 	const unsigned n = instr_nyb2;
+
+	WB_EX_CHECK(n)
 
 	R[n] >>= 16;
  END_OP
@@ -3672,70 +3985,70 @@ INLINE void SH7095::Step(void)
  //
  // BRA 
  //
- BEGIN_OP(BRA)
-	CondRelBranch<which, DebugMode, true>(true, (uint32)sign_x_to_s32(12, instr) << 1);
+ BEGIN_OP_DLYIDIF(BRA)
+	UCRelDelayBranch<which, DebugMode>((uint32)sign_x_to_s32(12, instr) << 1);
  END_OP
 
 
  //
  // BRAF Rm
  //
- BEGIN_OP(BRAF_REG)
+ BEGIN_OP_DLYIDIF(BRAF_REG)
 	const unsigned m = instr_nyb2;
 
-	CondRelBranch<which, DebugMode, true>(true, R[m]);
+	UCRelDelayBranch<which, DebugMode>(R[m]);
  END_OP
 
 
  //
  // BSR 
  //
- BEGIN_OP(BSR)
+ BEGIN_OP_DLYIDIF(BSR)
 	PR = PC;
 
-	CondRelBranch<which, DebugMode, true>(true, (uint32)sign_x_to_s32(12, instr) << 1);
+	UCRelDelayBranch<which, DebugMode>((uint32)sign_x_to_s32(12, instr) << 1);
  END_OP
 
 
  //
  // BSRF Rm
  //
- BEGIN_OP(BSRF_REG)
+ BEGIN_OP_DLYIDIF(BSRF_REG)
 	const unsigned m = instr_nyb2;
 
 	PR = PC;
 
-	CondRelBranch<which, DebugMode, true>(true, R[m]);
+	UCRelDelayBranch<which, DebugMode>(R[m]);
  END_OP
 
 
  //
  // JMP @Rm
  //
- BEGIN_OP(JMP_REGINDIR)
+ BEGIN_OP_DLYIDIF(JMP_REGINDIR)
 	const unsigned m = instr_nyb2;
 
-	Branch<which, DebugMode, true>(R[m]);
+	UCDelayBranch<which, DebugMode>(R[m]);
  END_OP
 
 
  //
  // JSR @Rm
  //
- BEGIN_OP(JSR_REGINDIR)
+ BEGIN_OP_DLYIDIF(JSR_REGINDIR)
 	const unsigned m = instr_nyb2;
 
 	PR = PC;
 
-	Branch<which, DebugMode, true>(R[m]);
+	UCDelayBranch<which, DebugMode>(R[m]);
  END_OP
 
 
  //
  // RTS 
  //
- BEGIN_OP(RTS)
-	Branch<which, DebugMode, true>(PR);
+ BEGIN_OP_DLYIDIF(RTS)
+	UCDelayBranch<which, DebugMode>(PR);
  END_OP
 
 
@@ -3769,7 +4082,8 @@ INLINE void SH7095::Step(void)
 	 SR &= 0x3F3;
 	 RecalcPendingIntPEX();
 	}
- END_OP_INTDIS
+	PART_OP_INTDIS
+ END_OP
 
  //
  // LDC.L 
@@ -3793,7 +4107,8 @@ INLINE void SH7095::Step(void)
 	}
 
 	timestamp++;
- END_OP_INTDIS
+	PART_OP_INTDIS
+ END_OP
 
 
  //
@@ -3804,7 +4119,8 @@ INLINE void SH7095::Step(void)
 	const unsigned sri = (instr >> 4) & 0x3;
 
 	SysRegs[sri] = R[m];
- END_OP_INTDIS
+	PART_OP_INTDIS
+ END_OP
 
 
  //
@@ -3818,10 +4134,11 @@ INLINE void SH7095::Step(void)
 	ea = R[m];
 	R[m] += 4;
 
-	SysRegs[sri] = MemRead<uint32>(ea);
+	PART_OP_INTDIS
 
+	SysRegs[sri] = MemRead<uint32>(ea);
 	//printf(" LDS.L: (0x%08x)->0x%08x\n", ea, SysRegs[sri]);
- END_OP_INTDIS
+ END_OP
 
 
  //
@@ -3930,7 +4247,8 @@ INLINE void SH7095::Step(void)
 	const unsigned cri = (instr >> 4) & 0x3;
 
 	R[n] = CtrlRegs[cri];
- END_OP_INTDIS
+	PART_OP_INTDIS
+ END_OP
 
 
  //
@@ -3947,7 +4265,8 @@ INLINE void SH7095::Step(void)
 
 	MemWrite<uint32>(ea, CtrlRegs[cri]);
 	timestamp++;
- END_OP_INTDIS
+	PART_OP_INTDIS
+ END_OP
 
 
  //
@@ -3958,7 +4277,8 @@ INLINE void SH7095::Step(void)
 	const unsigned sri = (instr >> 4) & 0x3;
 
 	R[n] = SysRegs[sri];
- END_OP_INTDIS
+	PART_OP_INTDIS
+ END_OP
 
 
  //
@@ -3975,7 +4295,9 @@ INLINE void SH7095::Step(void)
 	//printf(" STS.L: 0x%08x->(0x%08x)\n", SysRegs[sri], ea);
 
 	MemWrite<uint32>(ea, SysRegs[sri]);
- END_OP_INTDIS
+
+	PART_OP_INTDIS
+ END_OP
 
 
  //
@@ -4167,7 +4489,6 @@ INLINE void SH7095::Step(void)
  #undef BEGIN_OP
  #undef BEGIN_OP_DLYIDIF
  #undef END_OP
- #undef END_OP_INTDIS
  }
 
  PC += 2;

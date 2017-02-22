@@ -28,7 +28,7 @@
 #endif
 #include "input.h"
 #include <mednafen/general.h>
-#include <mednafen/string/trim.h>
+#include <mednafen/string/string.h>
 #include <mednafen/hash/md5.h>
 #include <mednafen/mempatcher.h>
 #include <iconv.h>

@@ -482,7 +482,11 @@ static void IncSelectedDevice(unsigned int port)
  {
   MDFN_DispMessage(_("Cannot change input device while state rewinding is active."));
  }
- else if(CurGame->PortInfo[port].DeviceInfo.size() > 1)
+ else if(port >= CurGame->PortInfo.size())
+  MDFN_DispMessage(_("Port %u does not exist."), port + 1);
+ else if(CurGame->PortInfo[port].DeviceInfo.size() <= 1)
+  MDFN_DispMessage(_("Port %u device not selectable."), port + 1);
+ else
  {
   char tmp_setting_name[512];
 
@@ -1149,11 +1153,13 @@ static void CheckCommandKeys(void)
 
   if(!Debugger_IsActive()) // We don't want to start button configuration when the debugger is active!
   {
-   for(int i = 0; i < 12; i++)
+   for(unsigned i = 0; i < 12; i++)
    {
     if(CK_Check((CommandKey)(CK_INPUT_CONFIG1 + i)))
     {
-     if(!PIDC[i].BIC.size())
+     if(i >= CurGame->PortInfo.size())
+      MDFN_DispMessage(_("Port %u does not exist."), i + 1);
+     else if(!PIDC[i].BIC.size())
      {
       MDFN_DispMessage(_("No buttons to configure for input port %u!"), i + 1);
      }

@@ -72,7 +72,12 @@ class SH7095 final
  };
 
  sscpu_timestamp_t timestamp;
+ sscpu_timestamp_t MA_until;
+ sscpu_timestamp_t MM_until;
  sscpu_timestamp_t write_finish_timestamp;
+#if 0
+ sscpu_timestamp_t WB_until[16];
+#endif
 
  INLINE void SetT(bool new_value) { SR &= ~1; SR |= new_value; }
  INLINE bool GetT(void) { return SR & 1; }
@@ -196,7 +201,7 @@ class SH7095 final
   // in the upper bit of the Tag variables.
   uint32 Tag[4];
   uint8 LRU;
-  alignas(uint32) uint8 Data[4][16];
+  alignas(4) uint8 Data[4][16];
  } Cache[64];
 
  uint8 CCR;
@@ -373,6 +378,9 @@ class SH7095 final
  uint8 GetPendingInt(uint8*);
  void RecalcPendingIntPEX(void);
 
+ template<bool DebugMode>
+ INLINE void FetchIF(bool ForceIBufferFill);
+
  template<bool DebugMode, bool DelaySlot, bool IntPreventNext, bool SkipFetchIF>
  void DoIDIF_Real(void);
 
@@ -400,11 +408,20 @@ class SH7095 final
  template<typename T>
  void MemWrite(uint32 A, T V);
 
+
  template<unsigned which, int DebugMode, bool delayed>
  INLINE void Branch(uint32 target);
 
  template<unsigned which, int DebugMode, bool delayed>
  INLINE void CondRelBranch(bool cond, uint32 disp);
+
+
+ template<unsigned which, int DebugMode>
+ INLINE void UCDelayBranch(uint32 target);
+
+ template<unsigned which, int DebugMode>
+ INLINE void UCRelDelayBranch(uint32 disp);
+
 
  //
  //

@@ -31,7 +31,7 @@
 #include "netplay.h"
 #include "netplay-driver.h"
 #include "general.h"
-#include "string/trim.h"
+#include <mednafen/string/string.h>
 #include "state.h"
 #include "movie.h"
 #include <mednafen/hash/md5.h>

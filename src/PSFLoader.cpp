@@ -29,7 +29,7 @@
 #include "PSFLoader.h"
 #include "endian.h"
 #include "general.h"
-#include "string/trim.h"
+#include <mednafen/string/string.h>
 
 #include <limits.h>
 #include <trio/trio.h>

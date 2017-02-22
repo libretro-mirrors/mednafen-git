@@ -24,12 +24,12 @@
 
 namespace MDFN_IEN_SNES_FAUST
 {
- void CART_Init(Stream* fp, uint8 id[16]);
- void CART_Kill(void);
- void CART_Reset(bool powering_up);
+ void CART_Init(Stream* fp, uint8 id[16]) MDFN_COLD;
+ void CART_Kill(void) MDFN_COLD;
+ void CART_Reset(bool powering_up) MDFN_COLD;
  void CART_StateAction(StateMem* sm, const unsigned load, const bool data_only);
 
- bool CART_LoadNV(void);
+ bool CART_LoadNV(void) MDFN_COLD;
  void CART_SaveNV(void);
 }
 

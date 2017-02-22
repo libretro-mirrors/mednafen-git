@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* vdp1.cpp - VDP1 Emulation
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -27,6 +27,9 @@
 //  (...but goes weird in 8bpp rotated mode...)
 
 // TODO: Test 1x1 line, polyline, sprite, and polygon.
+
+// TODO: Framebuffer swap/auto drawing start happens a bit too early, should happen near
+//       end of hblank instead of the beginning.
 
 #include "ss.h"
 #include <mednafen/mednafen.h>
@@ -384,7 +387,12 @@ sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
  if(CycleCounter > VDP1_UpdateTimingGran)
   CycleCounter = VDP1_UpdateTimingGran;
 
- if(DrawingActive)
+ if(CycleCounter > 0 && SCU_CheckVDP1HaltKludge())
+ {
+  //puts("Kludge");
+  CycleCounter = 0;
+ }
+ else if(DrawingActive)
  {
   while(CycleCounter > 0)
   {

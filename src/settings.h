@@ -42,10 +42,15 @@ double MDFN_GetSettingF(const char *name);
 bool MDFN_GetSettingB(const char *name);
 std::string MDFN_GetSettingS(const char *name);
 
+std::vector<uint64> MDFN_GetSettingMultiUI(const char *name);
+std::vector<int64> MDFN_GetSettingMultiI(const char *name);
+
 static INLINE uint64 MDFN_GetSettingUI(const std::string& name) { return MDFN_GetSettingUI(name.c_str()); }
 static INLINE int64 MDFN_GetSettingI(const std::string& name) { return MDFN_GetSettingI(name.c_str()); }
 static INLINE double MDFN_GetSettingF(const std::string& name) { return MDFN_GetSettingF(name.c_str()); }
 static INLINE bool MDFN_GetSettingB(const std::string& name) { return MDFN_GetSettingB(name.c_str()); }
 static INLINE std::string MDFN_GetSettingS(const std::string& name) { return MDFN_GetSettingS(name.c_str()); }
+static INLINE std::vector<uint64> MDFN_GetSettingMultiUI(const std::string& name) { return MDFN_GetSettingMultiUI(name.c_str()); }
+static INLINE std::vector<int64> MDFN_GetSettingMultiI(const std::string& name) { return MDFN_GetSettingMultiI(name.c_str()); }
 
 #endif

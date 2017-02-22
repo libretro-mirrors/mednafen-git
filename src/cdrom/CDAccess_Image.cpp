@@ -38,7 +38,7 @@
 #include <memory>
 
 #include <mednafen/general.h>
-#include <mednafen/string/trim.h>
+#include <mednafen/string/string.h>
 #include <mednafen/endian.h>
 #include <mednafen/FileStream.h>
 #include <mednafen/MemoryStream.h>

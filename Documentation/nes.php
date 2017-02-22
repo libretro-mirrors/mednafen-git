@@ -170,6 +170,7 @@ Custom palettes should contain 64 8-bit-per-color-component RGB triplets.
  <tr><td>184</td><td>??</td><td>Wing of Madoola, The</td></tr>
  <tr><td>185</td><td>CNROM w/ CHR ROM unmapping</td><td>Banana, Mighty Bomb Jack, Spy vs Spy(Japanese)</td></tr>
  <tr><td>189</td><td>??</td><td>Thunder Warrior, Street Fighter 2 (Yoko)</td></tr>
+ <tr><td>190</td><td>??</td><td>Magic Kid Googoo</td></tr>
  <tr><td>193</td><td>Mega Soft</td><td>Fighting Hero</td></tr>
  <tr><td>206</td><td>DEIROM</td><td>Karnov</td></tr>
  <tr><td>207</td><td>Taito ??</td><td>Fudou Myouou Den</td></tr>

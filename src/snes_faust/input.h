@@ -24,13 +24,13 @@
 
 namespace MDFN_IEN_SNES_FAUST
 {
- void INPUT_Init(void);
- void INPUT_Kill(void);
- void INPUT_Reset(bool powering_up);
+ void INPUT_Init(void) MDFN_COLD;
+ void INPUT_Kill(void) MDFN_COLD;
+ void INPUT_Reset(bool powering_up) MDFN_COLD;
  void INPUT_StateAction(StateMem* sm, const unsigned load, const bool data_only);
- void INPUT_Set(unsigned port, const char* type, uint8* ptr);
+ void INPUT_Set(unsigned port, const char* type, uint8* ptr) MDFN_COLD;
  void INPUT_UpdatePhysicalState(void);
-
+ void INPUT_SetMultitap(const bool (&enabled)[2]) MDFN_COLD;
 
  void INPUT_AutoRead(void);
 

@@ -35,7 +35,7 @@
 #include <list>
 #include "settings.h"
 #include "string/escape.h"
-#include "string/trim.h"
+#include <mednafen/string/string.h>
 #include "FileStream.h"
 #include "MemoryStream.h"
 
@@ -270,7 +270,45 @@ static void ValidateSetting(const char *value, const MDFNSetting *setting)
    throw MDFN_Error(0, _("Setting \"%s\", value \"%s\", is not a recognized string.  Recognized strings: %s"), setting->name, value, valid_string_list.c_str());
   }
  }
+ else if(base_type == MDFNST_MULTI_ENUM)
+ {
+  std::vector<std::string> mel = MDFN_strsplit(value);
 
+  assert(setting->enum_list);
+
+  for(auto& mee : mel)
+  {
+   bool found = false;
+   const MDFNSetting_EnumList* enum_list = setting->enum_list;
+
+   MDFN_trim(mee);
+
+   while(enum_list->string)
+   {
+    if(!strcasecmp(mee.c_str(), enum_list->string))
+    {
+     found = true;
+     break;
+    }
+    enum_list++;
+   }
+
+   if(!found)
+   {
+    std::string valid_string_list;
+
+    enum_list = setting->enum_list;
+    while(enum_list->string)
+    {
+     if(enum_list->description)	// Don't list out undocumented and deprecated values.
+      valid_string_list = valid_string_list + (enum_list == setting->enum_list ? "" : " ") + std::string(enum_list->string);
+
+     enum_list++;
+    }
+    throw MDFN_Error(0, _("Setting \"%s\", value \"%s\" component \"%s\", is not a recognized string.  Recognized strings: %s"), setting->name, value, mee.c_str(), valid_string_list.c_str());
+   }
+  }
+ }
 
  if(setting->validate_func && !setting->validate_func(setting->name, value))
  {
@@ -634,6 +672,38 @@ static int GetEnum(const MDFNCS *setting, const char *value)
  return(ret);
 }
 
+template<typename T>
+static std::vector<T> GetMultiEnum(const MDFNCS* setting, const char* value)
+{
+ std::vector<T> ret;
+ std::vector<std::string> mel = MDFN_strsplit(value);
+
+ assert(setting->desc->enum_list);
+
+ for(auto& mee : mel)
+ {
+  const MDFNSetting_EnumList *enum_list = setting->desc->enum_list;
+  bool found = false;
+
+  MDFN_trim(mee);
+
+  while(enum_list->string)
+  {
+   if(!strcasecmp(mee.c_str(), enum_list->string))
+   {
+    found = true;
+    ret.push_back(enum_list->number);
+    break;
+   }
+   enum_list++;
+  }
+  assert(found);
+ }
+
+ return ret;
+}
+
+
 uint64 MDFN_GetSettingUI(const char *name)
 {
  const MDFNCS *setting = FindSetting(name);
@@ -664,6 +734,29 @@ int64 MDFN_GetSettingI(const char *name)
   return(ret);
  }
 }
+
+std::vector<uint64> MDFN_GetSettingMultiUI(const char *name)
+{
+ const MDFNCS *setting = FindSetting(name);
+ const char *value = GetSetting(setting);
+
+ if(setting->desc->type == MDFNST_MULTI_ENUM)
+  return GetMultiEnum<uint64>(setting, value);
+ else
+  abort();
+}
+
+std::vector<int64> MDFN_GetSettingMultiI(const char *name)
+{
+ const MDFNCS *setting = FindSetting(name);
+ const char *value = GetSetting(setting);
+
+ if(setting->desc->type == MDFNST_MULTI_ENUM)
+  return GetMultiEnum<int64>(setting, value);
+ else
+  abort();
+}
+
 
 double MDFN_GetSettingF(const char *name)
 {

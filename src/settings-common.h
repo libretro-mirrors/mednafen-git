@@ -37,6 +37,7 @@ typedef enum
         MDFNST_FLOAT,   // float, double(saved as).
 	MDFNST_STRING,
 	MDFNST_ENUM,	// Handled like a string, but validated against the enumeration list, and MDFN_GetSettingUI() returns the number in the enumeration list.
+	MDFNST_MULTI_ENUM,
 
 	MDFNST_ALIAS
 } MDFNSettingType;

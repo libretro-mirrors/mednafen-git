@@ -4,7 +4,7 @@
 #include <mednafen/mednafen.h>
 #include <mednafen/state.h>
 #include <mednafen/general.h>
-#include <mednafen/string/trim.h>
+#include <mednafen/string/string.h>
 #include <mednafen/file.h>
 #include <mednafen/hash/md5.h>
 #include <mednafen/video.h>

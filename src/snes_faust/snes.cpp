@@ -160,8 +160,6 @@ static DEFWRITE(WRAMWrite)
  WRAMWritten[A & mask] = true;
 }
 
-static uint8 WRIO;
-
 static uint8 Multiplicand;
 static uint16 MultProduct;	// Also division remainder.
 
@@ -176,7 +174,6 @@ static void ICRegsReset(bool powering_up)
 {
  if(powering_up)
  {
-  WRIO = 0xFF;
   Multiplicand = 0xFF;
   MultProduct = 0xFFFF;
 
@@ -197,10 +194,6 @@ static DEFWRITE(ICRegsWrite)
 
  switch(A & 0xFFFF)
  {
-  case 0x4201:	WRIO = V;
-		SNES_DBG("[SNES] Write WRIO: %02x\n", V);
-		break;
-
   case 0x4202:	Multiplicand = V;
 		break;
 
@@ -448,7 +441,7 @@ static void Load(MDFNFILE *fp)
   {
    Set_A_Handlers((bank << 16) | 0x0000, (bank << 16) | 0x1FFF, WRAMRead<0x1FFF>, WRAMWrite<0x1FFF>);
 
-   Set_A_Handlers((bank << 16) | 0x4201, (bank << 16) | 0x4206, OBRead_FAST, ICRegsWrite);
+   Set_A_Handlers((bank << 16) | 0x4202, (bank << 16) | 0x4206, OBRead_FAST, ICRegsWrite);
    Set_A_Handlers((bank << 16) | 0x420D, OBRead_FAST, ICRegsWrite);
 
    Set_A_Handlers((bank << 16) | 0x4214, Read_4214, OBWrite_FAST);
@@ -477,6 +470,11 @@ static void Load(MDFNFILE *fp)
 
  DMA_Init();
  INPUT_Init();
+ {
+  const bool mte[2] = { MDFN_GetSettingB("snes_faust.input.sport1.multitap"), MDFN_GetSettingB("snes_faust.input.sport2.multitap") };
+  INPUT_SetMultitap(mte);
+ }
+
  PPU_Init();
  APU_Init();
 
@@ -776,7 +774,6 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
  {
   SFVAR(MemSelect),
   SFARRAY(WRAM, 0x20000),
-  SFVAR(WRIO),
 
   SFVAR(Multiplicand),
   SFVAR(MultProduct),
@@ -820,6 +817,10 @@ static const MDFNSetting Settings[] =
 
  { "snes_faust.spex", MDFNSF_NOFLAGS, gettext_noop("Enable 1-frame speculative execution for video output."), gettext_noop("Hack to reduce input->output video latency by 1 frame.  Enabling will increase CPU usage, and may cause video glitches(such as \"jerkiness\") in some oddball games, but most commercially-released games should be fine."), MDFNST_BOOL, "0" },
  { "snes_faust.spex.sound", MDFNSF_NOFLAGS, gettext_noop("Enable speculative execution for sound output too."), gettext_noop("Only has an effect when speculative-execution for video output is enabled.  Will cause minor sound glitches in some games."), MDFNST_BOOL, "1" },
+
+ { "snes_faust.input.sport1.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on SNES port 1."), NULL, MDFNST_BOOL, "0" },
+ { "snes_faust.input.sport2.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on SNES port 2."), NULL, MDFNST_BOOL, "0" },
+
  { NULL }
 };
 

@@ -644,7 +644,6 @@ static RegType DBG_Regs_SCU[] =
 {
  { SCU_GSREG_ILEVEL, "ILevel", "IRL Output to SH2-M", 1 },
  { SCU_GSREG_IVEC, "IVec", "Pending IRQ Vector Number", 1 },
- { SCU_GSREG_ICLEARMASK, "IClM", "Pending^2 IRQ Clear Mask", 1 },
 
  { 0, "------", "", 0xFFFF },
 

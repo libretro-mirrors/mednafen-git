@@ -31,7 +31,7 @@
 #include <vector>
 
 #include "general.h"
-#include "string/trim.h"
+#include <mednafen/string/string.h>
 #include <mednafen/hash/md5.h>
 #include "mempatcher.h"
 #include "FileStream.h"

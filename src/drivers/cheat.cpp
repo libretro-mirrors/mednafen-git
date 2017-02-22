@@ -20,7 +20,7 @@
 #include <trio/trio.h>
 #include "console.h"
 #include "video.h"
-#include <mednafen/string/trim.h>
+#include <mednafen/string/string.h>
 #include <vector>
 
 static MDFN_Thread *CheatThread = NULL;

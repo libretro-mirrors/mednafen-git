@@ -21,7 +21,7 @@
 
 #include <mednafen/mednafen.h>
 #include <mednafen/SPCReader.h>
-#include <mednafen/string/trim.h>
+#include <mednafen/string/string.h>
 
 #include <string.h>
 

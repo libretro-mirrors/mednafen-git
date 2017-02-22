@@ -189,15 +189,7 @@
  <tr><td>`</td><td>Fast-forward.</td><td>fast_forward</td></tr>
  <tr><td>\</td><td>Slow-forward.</td><td>slow_forward</td></tr>
  <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
- <tr><td>F3</td><td><a name="command.input_config_abd">Detect analog buttons on physical joysticks/gamepads(for use with the input configuration process).</a>
-<p>
-                  Twirl all sticks and D-pads and press all analog buttons on any physical gamepads/joysticks with analog buttons you want
-                  to use in the input configuration process, then press F3.  Then, configure input as normal.  The detected analog buttons
-                  will be recognized during input configuration until Mednafen exits;  if you exit Mednafen and restart, and want to configure
-                  input devices again, you'll need to repeat the twirling-pressing-F3 process again).
-</p>
-</td><td>input_config_abd</td></tr>
-
+ <tr><td>F3</td><td><a name="command.input_config_abd"><a href="#Section_analog_detection">Detect analog buttons</a> on physical joysticks/gamepads(for use with the input configuration process).</a></td><td>input_config_abd</td></tr>
  <tr><td nowrap>ALT + SHIFT + [<i>n</i>]</td><td>Configure buttons for emulated device on input port <i>n</i>(1-8).</td><td>input_config<i>n</i></td></tr>
  <tr><td nowrap>CTRL + SHIFT + [<i>n</i>]</td><td>Select input device on input port <i>n</i>(1-8).<br /><br /><b>Note:</b> Many games do not expect input devices to change while the game is running, and thus may require a hard reset.</td><td>device_select<i>n</i></td></tr>
  <tr><td>F2</td><td><a name="command.input_configc">Activate in-game input configuration process for a command key.</a></td><td>input_configc</td></tr>
@@ -217,8 +209,22 @@
    You may configure a virtual(emulated) input device by using special command keys in Mednafen while a game is running.
   </p>
   <p>
-   <font color="yellow">Caution:</font>  Users of XBox 360-type gamepads on operating systems other than Microsoft Windows(e.g. Linux), or users of other controllers with analog buttons, should complete the following process before attempting any configuration that will map a physical analog button to a virtual button.<br>
-   <blockquote>Twirl all sticks and D-pads and press all analog buttons on any physical gamepads/joysticks with analog buttons you want to use in the input configuration process, then press <a href="#command.input_config_abd">F3</a>. Then, configure input as normal. The detected analog buttons will be recognized during input configuration until Mednafen exits; if you exit Mednafen and restart, and want to configure input devices again, you'll need to repeat the twirling-pressing-<a href="#command.input_config_abd">F3</a> process again).</blockquote>
+   <a name="Section_analog_detection"></a>
+   <font color="yellow"><b><u>Caution:</u></b></font>  Users of XBox 360-type/compatible controllers on operating systems other than Microsoft Windows(e.g. Linux), or users of other
+   controllers with analog buttons or throttles, should complete the following process before attempting any configuration that will map a physical analog button or throttle to a virtual input.
+   Failure to complete this process under the aforementioned conditions which necessitate it will result in the input configuration functionality becoming confused, and the
+   resulting input mappings will be wonky.<br>
+   <blockquote>
+    Twirl all sticks and D-pads, move all throttles to maximum then minimum(and leave them there), and press all analog buttons on any physical gamepads/joysticks
+    with analog buttons you want to use in the input configuration process, then press <a href="#command.input_config_abd">F3</a>. Then, configure input as
+    normal. The detected analog buttons will be recognized during input configuration until Mednafen exits; if you exit Mednafen and restart, and want to
+    configure input devices again, you'll need to repeat the twirling-pressing-<a href="#command.input_config_abd">F3</a> process again).
+   </blockquote>
+  </p>
+
+  <p>
+   All joystick throttles should be set to their minimum position before configuring inputs.  To register a "press" with a throttle control during the input
+   configuration process, move it to maximum position, then back to the minimum position.
   </p>
 
   <p>

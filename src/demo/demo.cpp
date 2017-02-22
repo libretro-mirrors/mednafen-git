@@ -370,6 +370,15 @@ static void Load(MDFNFILE* fp)
 {
  try
  {
+  std::vector<uint64> dlist = MDFN_GetSettingMultiUI("demo.multi_enum");
+
+  MDFN_printf("Loaded desserts:");
+
+  for(uint64 dle : dlist)
+   MDFN_printf(" %llu", dle);
+
+  printf("\n");
+
   for(unsigned ch = 0; ch < 2; ch++)
    HRBufs[ch] = new OwlBuffer();
 
@@ -449,10 +458,23 @@ static void DoSimpleCommand(int cmd)
  }
 }
 
+static const MDFNSetting_EnumList MultiEnum_List[] =
+{
+ { "cookie", 0, gettext_noop("Monster.") },
+ { "cake", 1, gettext_noop("Lie.") },
+ { "cobbler", 2, gettext_noop("Shoe.") },
+ { "strudel", 3, gettext_noop("Steve.") },
+
+ { NULL, 0 },
+};
+
 static MDFNSetting DEMOSettings[] = 
 {
  { "demo.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("Sound quality."), gettext_noop("Higher values correspond to better SNR and better preservation of higher frequencies(\"brightness\"), at the cost of increased computational complexity and a negligible increase in latency.\n\nHigher values will also slightly increase the probability of sample clipping(relevant if Mednafen's volume control settings are set too high), due to increased (time-domain) ringing."), MDFNST_INT, "3", "0", "5" },
  { "demo.resamp_rate_error", MDFNSF_NOFLAGS, gettext_noop("Sound output rate tolerance."), gettext_noop("Lower values correspond to better matching of the output rate of the resampler to the actual desired output rate, at the expense of increased RAM usage and poorer CPU cache utilization."), MDFNST_FLOAT, "0.0000009", "0.0000001", "0.0000350" },
+
+ { "demo.multi_enum", MDFNSF_NOFLAGS, gettext_noop("Multi-enum test."), nullptr, MDFNST_MULTI_ENUM, "", nullptr, nullptr, nullptr, nullptr, MultiEnum_List },
+
  { NULL }
 };
 
