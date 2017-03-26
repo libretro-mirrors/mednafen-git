@@ -123,8 +123,10 @@ am_libss_a_OBJECTS = db.$(OBJEXT) cdb.$(OBJEXT) sound.$(OBJEXT) \
 	scu_dsp_mvi.$(OBJEXT) scu_dsp_jmp.$(OBJEXT) \
 	scu_dsp_misc.$(OBJEXT) vdp1.$(OBJEXT) vdp1_line.$(OBJEXT) \
 	vdp1_sprite.$(OBJEXT) vdp1_poly.$(OBJEXT) vdp2.$(OBJEXT) \
-	vdp2_render.$(OBJEXT) smpc.$(OBJEXT) input/gamepad.$(OBJEXT) \
-	input/3dpad.$(OBJEXT) input/mouse.$(OBJEXT)
+	vdp2_render.$(OBJEXT) smpc.$(OBJEXT) input/multitap.$(OBJEXT) \
+	input/gamepad.$(OBJEXT) input/3dpad.$(OBJEXT) \
+	input/mouse.$(OBJEXT) input/wheel.$(OBJEXT) \
+	input/mission.$(OBJEXT) input/keyboard.$(OBJEXT)
 libss_a_OBJECTS = $(am_libss_a_OBJECTS)
 libssfplay_a_AR = $(AR) $(ARFLAGS)
 libssfplay_a_LIBADD =
@@ -369,7 +371,9 @@ libss_a_SOURCES = db.cpp cdb.cpp sound.cpp cart.cpp ss.cpp \
 	scu_dsp_gen.cpp scu_dsp_mvi.cpp scu_dsp_jmp.cpp \
 	scu_dsp_misc.cpp vdp1.cpp vdp1_line.cpp vdp1_sprite.cpp \
 	vdp1_poly.cpp vdp2.cpp vdp2_render.cpp smpc.cpp \
-	input/gamepad.cpp input/3dpad.cpp input/mouse.cpp
+	input/multitap.cpp input/gamepad.cpp input/3dpad.cpp \
+	input/mouse.cpp input/wheel.cpp input/mission.cpp \
+	input/keyboard.cpp
 libssfplay_a_SOURCES = ssf.cpp
 all: all-am
 
@@ -414,11 +418,19 @@ input/$(am__dirstamp):
 input/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) input/$(DEPDIR)
 	@: > input/$(DEPDIR)/$(am__dirstamp)
+input/multitap.$(OBJEXT): input/$(am__dirstamp) \
+	input/$(DEPDIR)/$(am__dirstamp)
 input/gamepad.$(OBJEXT): input/$(am__dirstamp) \
 	input/$(DEPDIR)/$(am__dirstamp)
 input/3dpad.$(OBJEXT): input/$(am__dirstamp) \
 	input/$(DEPDIR)/$(am__dirstamp)
 input/mouse.$(OBJEXT): input/$(am__dirstamp) \
+	input/$(DEPDIR)/$(am__dirstamp)
+input/wheel.$(OBJEXT): input/$(am__dirstamp) \
+	input/$(DEPDIR)/$(am__dirstamp)
+input/mission.$(OBJEXT): input/$(am__dirstamp) \
+	input/$(DEPDIR)/$(am__dirstamp)
+input/keyboard.$(OBJEXT): input/$(am__dirstamp) \
 	input/$(DEPDIR)/$(am__dirstamp)
 
 libss.a: $(libss_a_OBJECTS) $(libss_a_DEPENDENCIES) $(EXTRA_libss_a_DEPENDENCIES) 
@@ -457,7 +469,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdp2_render.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/3dpad.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/gamepad.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/keyboard.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/mission.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/mouse.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/multitap.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/wheel.Po@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\

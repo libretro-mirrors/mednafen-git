@@ -1,3 +1,6 @@
+#ifndef __MDFN_DRIVERS_NETPLAY_H
+#define __MDFN_DRIVERS_NETPLAY_H
+
 int MDFND_NetworkConnect(void);
 void NetplayText_InMainThread(uint8 *text, bool NetEcho);
 
@@ -15,5 +18,12 @@ extern int MDFNDnetplay;
 //
 //
 //
+void Netplay_GT_CheckPendingLine(void);
+
+//
+//
+//
 
 void Netplay_MT_Draw(const MDFN_PixelFormat& pformat, const int32 screen_w, const int32 screen_h);
+
+#endif

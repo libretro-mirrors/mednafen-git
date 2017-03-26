@@ -26,7 +26,7 @@
 
 extern JoystickManager *joy_manager;
 
-int32 DTestMouseAxis(ButtConfig &bc, const char* KeyState, const uint32* MouseData, const bool axis_hint)	// UNDOCUMENTED INCOMPLETE FUN
+int32 DTestMouseAxis(ButtConfig &bc, const uint8* KeyState, const uint32* MouseData, const bool axis_hint)	// UNDOCUMENTED INCOMPLETE FUN
 {
  if(bc.ButtType == BUTTC_JOYSTICK)	// HAXY
  {
@@ -98,7 +98,7 @@ static bool DTestButtonMouse(const ButtConfig &bc, const uint32 *MouseData)
  return(false);
 }
 
-bool DTestButton(const std::vector<ButtConfig>& bc, const char* KeyState, const uint32* MouseData, bool AND_Mode)
+bool DTestButton(const std::vector<ButtConfig>& bc, const uint8* KeyState, const uint32* MouseData, bool AND_Mode)
 {
  unsigned match_count = 0;
 
@@ -123,7 +123,7 @@ bool DTestButton(const std::vector<ButtConfig>& bc, const char* KeyState, const 
  return match_count && (!AND_Mode || match_count == bc.size());
 }
 
-int32 DTestAnalogButton(const std::vector<ButtConfig>& bc, const char* KeyState, const uint32* MouseData)
+int32 DTestAnalogButton(const std::vector<ButtConfig>& bc, const uint8* KeyState, const uint32* MouseData)
 {
  const int maxv = 32767;
  int32 ret = 0;	// Will obviously break if 10s of thousands of physical buttons are assigned to one emulated analog button. ;)
@@ -156,7 +156,7 @@ int32 DTestAnalogButton(const std::vector<ButtConfig>& bc, const char* KeyState,
 #define ICSS_CTRL	4
 
 /* Used for command keys */
-int DTestButtonCombo(std::vector<ButtConfig> &bc, const char *KeyState, const uint32 *MouseData, bool AND_Mode)
+int DTestButtonCombo(std::vector<ButtConfig> &bc, const uint8 *KeyState, const uint32 *MouseData, bool AND_Mode)
 {
  unsigned int x;
  unsigned int ss = 0;
@@ -196,7 +196,7 @@ int DTestButtonCombo(std::vector<ButtConfig> &bc, const char *KeyState, const ui
  return(0);
 }
 
-int DTestButtonCombo(ButtConfig &bc, const char *KeyState, const uint32 *MouseData, bool AND_Mode)
+int DTestButtonCombo(ButtConfig &bc, const uint8* KeyState, const uint32 *MouseData, bool AND_Mode)
 {
  std::vector<ButtConfig> neobc;
  neobc.push_back(bc);

@@ -285,7 +285,7 @@ uint32 PCE_PSG::GetRegister(const unsigned int id, char *special, const uint32 s
 	break;
 
   case PSG_GSREG_CH0_LFSR:
-	value = channel[ch].lfsr & 0x7FFF;
+	value = channel[ch].lfsr & 0x3FFFF;
 	break;
  }
  return(value);
@@ -351,7 +351,7 @@ void PCE_PSG::SetRegister(const unsigned int id, const uint32 value)
 	break;
 
   case PSG_GSREG_CH0_LFSR:
-	channel[ch].lfsr = value & 0x7FFF;
+	channel[ch].lfsr = value & 0x3FFFF;
 	break;
  }
 }

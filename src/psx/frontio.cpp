@@ -2,7 +2,7 @@
 /* Mednafen Sony PS1 Emulation Module                                         */
 /******************************************************************************/
 /* frontio.cpp:
-**  Copyright (C) 2011-2016 Mednafen Team
+**  Copyright (C) 2011-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -141,6 +141,10 @@ pscpu_timestamp_t InputDevice::GPULineHook(const pscpu_timestamp_t timestamp, bo
 
 
 void InputDevice::UpdateInput(const void *data)
+{
+}
+
+void InputDevice::UpdateOutput(void* data)
 {
 }
 
@@ -764,6 +768,12 @@ void FrontIO::UpdateInput(void)
 {
  for(unsigned i = 0; i < 8; i++)
   Devices[i]->UpdateInput(DeviceData[i]);
+}
+
+void FrontIO::UpdateOutput(void)
+{
+ for(unsigned i = 0; i < 8; i++)
+  Devices[i]->UpdateOutput(DeviceData[i]);
 }
 
 // Take care to call ->Power() only if the device actually changed.

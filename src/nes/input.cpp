@@ -364,7 +364,8 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoFamicomPort =
   "fkb",
   "Family Keyboard",
   NULL,
-  FKBIDII
+  FKBIDII,
+  InputDeviceInfoStruct::FLAG_KEYBOARD
  },
 
  // Hypershot

@@ -2,7 +2,7 @@
 /* Mednafen Sony PS1 Emulation Module                                         */
 /******************************************************************************/
 /* dualshock.cpp:
-**  Copyright (C) 2012-2016 Mednafen Team
+**  Copyright (C) 2012-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -69,6 +69,7 @@ class InputDevice_DualShock final : public InputDevice
  virtual void Update(const pscpu_timestamp_t timestamp) override;
  virtual void ResetTS(void) override;
  virtual void UpdateInput(const void *data) override;
+ virtual void UpdateOutput(void* data) override;
  virtual void TransformInput(void* data) override;
 
  virtual void SetAMCT(bool enabled, uint16 compare) override;
@@ -288,7 +289,6 @@ void InputDevice_DualShock::StateAction(StateMem* sm, const unsigned load, const
 void InputDevice_DualShock::UpdateInput(const void *data)
 {
  uint8 *d8 = (uint8 *)data;
- uint8* const rumb_dp = &d8[3 + 16];
 
  buttons[0] = d8[0];
  buttons[1] = d8[1];
@@ -308,7 +308,17 @@ void InputDevice_DualShock::UpdateInput(const void *data)
   }
  }
 
- //printf("%3d:%3d, %3d:%3d\n", axes[0][0], axes[0][1], axes[1][0], axes[1][1]);
+ //printf("%d %d %d %d\n", axes[0][0], axes[0][1], axes[1][0], axes[1][1]);
+ //
+ //
+ //
+ CheckManualAnaModeChange();
+}
+
+void InputDevice_DualShock::UpdateOutput(void* data)
+{
+ uint8 *d8 = (uint8 *)data;
+ uint8* const rumb_dp = &d8[3 + 16];
 
  //printf("RUMBLE: 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n", rumble_magic[0], rumble_magic[1], rumble_magic[2], rumble_magic[3], rumble_magic[4], rumble_magic[5]);
  //printf("%d, 0x%02x 0x%02x\n", da_rumble_compat, rumble_param[0], rumble_param[1]);
@@ -332,15 +342,8 @@ void InputDevice_DualShock::UpdateInput(const void *data)
   MDFN_en16lsb(rumb_dp, sneaky_weaky << 0);
  }
 
- //printf("%d %d %d %d\n", axes[0][0], axes[0][1], axes[1][0], axes[1][1]);
-
  //
- //
- //
- CheckManualAnaModeChange();
-
- //
- // Encode analog mode state last.
+ // Encode analog mode state.
  //
  d8[2] &= ~0x6;
  d8[2] |= (analog_mode ? 0x02 : 0x00);

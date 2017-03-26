@@ -38,6 +38,16 @@
 
 extern JoystickManager *joy_manager;
 
+int NoWaiting = 0;
+
+static bool ViewDIPSwitches = false;
+static bool InputGrab = false;
+static bool EmuKeyboardKeysGrabbed = false;
+static bool NPCheatDebugKeysGrabbed = false;
+
+static bool inff = 0;
+static bool insf = 0;
+
 bool RewindState = true;
 bool DNeedRewind = false;
 
@@ -58,8 +68,8 @@ static int subcon(const char *text, std::vector<ButtConfig> &bc, int commandkey)
 
 static void ResyncGameInputSettings(unsigned port);
 
-static char keys[MKK_COUNT];
-static char keys_untouched[MKK_COUNT];
+static uint8 keys[MKK_COUNT];
+static uint8 keys_untouched[MKK_COUNT];	// == 0 if not pressed, != 0 if pressed
 
 static std::string BCToString(const ButtConfig &bc)
 {
@@ -543,8 +553,7 @@ enum CommandKey
 	CK_INSERTEJECT_DISK,
 	CK_ACTIVATE_BARCODE,
 
-        CK_TOGGLE_GRAB_INPUT,
-	CK_TOGGLE_CDISABLE,
+        CK_TOGGLE_GRAB,
 	CK_INPUT_CONFIG1,
 	CK_INPUT_CONFIG2,
         CK_INPUT_CONFIG3,
@@ -653,8 +662,7 @@ static const COKE CKeys[_CK_COUNT]	=
 	{ MK_CK(F6), "select_disk", false, 1, gettext_noop("Select disk/disc") },
 	{ MK_CK(F8), "insert_eject_disk", false, 0, gettext_noop("Insert/Eject disk/disc") },
 	{ MK_CK(F8), "activate_barcode", false, 1, gettext_noop("Activate barcode(for Famicom)") },
-	{ MK_CK(SCROLLOCK), "toggle_grab_input", false, 1, gettext_noop("Grab input") },
-	{ MK_CK_SHIFT(SCROLLOCK), "toggle_cidisable", false, 1, gettext_noop("Grab input and disable commands") },
+	{ MK_CK_CTRL_SHIFT(MENU), "toggle_grab", true, 1, gettext_noop("Grab input") },
 	{ MK_CK_ALT_SHIFT(1), "input_config1", false, 0, gettext_noop("Configure buttons on virtual port 1") },
 	{ MK_CK_ALT_SHIFT(2), "input_config2", false, 0, gettext_noop("Configure buttons on virtual port 2")  },
         { MK_CK_ALT_SHIFT(3), "input_config3", false, 0, gettext_noop("Configure buttons on virtual port 3")  },
@@ -731,9 +739,14 @@ static void CK_Init(void)
 
 static void CK_PostRemapUpdate(CommandKey which)
 {
- CKeysActive[which] = DTestButtonCombo(CKeysConfig[which].bc, (CKeys[which].BypassKeyZeroing ? keys_untouched : keys), MouseData, CKeysConfig[which].AND_Mode);
+ CKeysActive[which] = DTestButtonCombo(CKeysConfig[which].bc, ((CKeys[which].BypassKeyZeroing && (!EmuKeyboardKeysGrabbed || which == CK_TOGGLE_GRAB)) ? keys_untouched : keys), MouseData, CKeysConfig[which].AND_Mode);
  CKeysTrigger[which] = false;
  CKeysPressTime[which] = 0xFFFFFFFF;
+}
+
+static void CK_ClearTriggers(void)
+{
+ memset(CKeysTrigger, 0, sizeof(CKeysTrigger));
 }
 
 static void CK_UpdateState(bool skipckd_tc)
@@ -741,7 +754,7 @@ static void CK_UpdateState(bool skipckd_tc)
  for(CommandKey i = _CK_FIRST; i < _CK_COUNT; i = (CommandKey)((unsigned)i + 1))
  {
   const bool prev_state = CKeysActive[i];
-  const bool cur_state = DTestButtonCombo(CKeysConfig[i].bc, (CKeys[i].BypassKeyZeroing ? keys_untouched : keys), MouseData, CKeysConfig[i].AND_Mode);
+  const bool cur_state = DTestButtonCombo(CKeysConfig[i].bc, ((CKeys[i].BypassKeyZeroing && (!EmuKeyboardKeysGrabbed || i == CK_TOGGLE_GRAB)) ? keys_untouched : keys), MouseData, CKeysConfig[i].AND_Mode);
   unsigned tmp_ckdelay = ckdelay;
 
   if(CKeys[i].SkipCKDelay || skipckd_tc)
@@ -754,8 +767,6 @@ static void CK_UpdateState(bool skipckd_tc)
   }
   else
    CKeysPressTime[i] = 0xFFFFFFFF;
-
-  CKeysTrigger[i] = false;
 
   if(CurTicks >= ((uint64)CKeysPressTime[i] + tmp_ckdelay))
   {
@@ -776,14 +787,6 @@ static INLINE bool CK_CheckActive(CommandKey which)
 {
  return CKeysActive[which];
 }
-
-int NoWaiting = 0;
-
-static bool ViewDIPSwitches = false;
-static int cidisabled=0;
-
-static bool inff = 0;
-static bool insf = 0;
 
 typedef enum
 {
@@ -827,10 +830,34 @@ void MainSetEventHook(int (*eh)(const SDL_Event *event))
  EventHook = eh;
 }
 
+
+// Can be called from MDFND_MidSync(), so be careful.
 void Input_Event(const SDL_Event *event)
 {
  switch(event->type)
  {
+  case SDL_KEYDOWN:
+	{
+	 //printf("Down: %3u\n", event->key.keysym.sym);
+	 size_t s = event->key.keysym.sym;
+
+	 if(s < MKK_COUNT)
+	 {
+          keys_untouched[s] = (keys_untouched[s] & 0x7F) | 0x01;
+	 }
+	}
+	break;
+
+  case SDL_KEYUP:
+	{
+	 //printf("Up: %3u\n", event->key.keysym.sym);
+	 size_t s = event->key.keysym.sym;
+
+	 if(s < MKK_COUNT)
+	  keys_untouched[s] |= 0x80;
+	}
+	break;
+
   case SDL_MOUSEBUTTONDOWN:
 	if(event->button.state == SDL_PRESSED)
 	{
@@ -863,6 +890,11 @@ void Input_Event(const SDL_Event *event)
  still register as pressed for 1 emulated frame, and without otherwise increasing the lag of a mouse button release(which
  is what the button_prevsent is for).
 */
+/*
+ Note: Don't call this function frivolously or any more than needed, or else the logic to prevent lost key and mouse button
+ presses won't work properly in regards to emulated input devices(has particular significance with the "Pause" key and the emulated
+ Saturn keyboard).
+*/
 static void UpdatePhysicalDeviceState(void)
 {
  const bool clearify_mdr = true;
@@ -892,9 +924,20 @@ static void UpdatePhysicalDeviceState(void)
  //
  //
  //
+ for(unsigned i = 0; i < MKK_COUNT; i++)
+ {
+  uint8 tmp = keys_untouched[i];
 
+  if((tmp & 0x80) && ((tmp & 0x02) || !(tmp & 0x01)))
+   tmp = 0;
 
- memcpy(keys_untouched, SDL_GetKeyState(0), MKK_COUNT);
+  tmp = (tmp & 0x81) | ((tmp << 1) & 0x02);
+
+  keys_untouched[i] = tmp;
+
+  //if(tmp)
+  // printf("%3u, 0x%02x\n", i, tmp);
+ }
  memcpy(keys, keys_untouched, MKK_COUNT);
 
  if(MDFNDHaveFocus || MDFN_GetSettingB("input.joystick.global_focus"))
@@ -948,41 +991,80 @@ static uint8 BarcodeWorldData[1 + 13];
 
 static void DoKeyStateZeroing(void)
 {
-  if(IConfig == none && !(cidisabled & 0x1))
+ EmuKeyboardKeysGrabbed = false;
+ NPCheatDebugKeysGrabbed = false;
+
+ if(IConfig == none)
+ {
+  if(Debugger_IsActive())
   {
-   if(Netplay_IsTextInput() || CheatIF_Active())
-   {
-    memset(keys, 0, sizeof(keys)); // This effectively disables keyboard input, but still
+   memset(keys, 0, sizeof(keys));
+   NPCheatDebugKeysGrabbed = true;
+
+   keys[SDLK_F1] = keys_untouched[SDLK_F1];
+   keys[SDLK_F2] = keys_untouched[SDLK_F2];
+   keys[SDLK_F3] = keys_untouched[SDLK_F3];
+   keys[SDLK_F4] = keys_untouched[SDLK_F4];
+   keys[SDLK_F5] = keys_untouched[SDLK_F5];
+   keys[SDLK_F6] = keys_untouched[SDLK_F6];
+   keys[SDLK_F7] = keys_untouched[SDLK_F7];
+   keys[SDLK_F8] = keys_untouched[SDLK_F8];
+   keys[SDLK_F9] = keys_untouched[SDLK_F9];
+   keys[SDLK_F10] = keys_untouched[SDLK_F10];
+   keys[SDLK_F11] = keys_untouched[SDLK_F11];
+   keys[SDLK_F12] = keys_untouched[SDLK_F12];
+   keys[SDLK_F13] = keys_untouched[SDLK_F13];
+   keys[SDLK_F14] = keys_untouched[SDLK_F14];
+   keys[SDLK_F15] = keys_untouched[SDLK_F15];
+  }
+  else if(Netplay_IsTextInput() || CheatIF_Active())
+  {
+   memset(keys, 0, sizeof(keys)); // This effectively disables keyboard input, but still
                                    // allows physical joystick input when in the chat mode.
-   }
-
-   if(Debugger_IsActive())
+   NPCheatDebugKeysGrabbed = true;
+  }
+  else if(InputGrab)
+  {
+   for(unsigned int x = 0; x < CurGame->PortInfo.size(); x++)
    {
-    memset(keys, 0, sizeof(keys));
+    if(!(PIDC[x].Device->Flags & InputDeviceInfoStruct::FLAG_KEYBOARD))
+     continue;
 
-    keys[SDLK_F1] = keys_untouched[SDLK_F1];
-    keys[SDLK_F2] = keys_untouched[SDLK_F2];
-    keys[SDLK_F3] = keys_untouched[SDLK_F3];
-    keys[SDLK_F4] = keys_untouched[SDLK_F4];
-    keys[SDLK_F5] = keys_untouched[SDLK_F5];
-    keys[SDLK_F6] = keys_untouched[SDLK_F6];
-    keys[SDLK_F7] = keys_untouched[SDLK_F7];
-    keys[SDLK_F8] = keys_untouched[SDLK_F8];
-    keys[SDLK_F9] = keys_untouched[SDLK_F9];
-    keys[SDLK_F10] = keys_untouched[SDLK_F10];
-    keys[SDLK_F11] = keys_untouched[SDLK_F11];
-    keys[SDLK_F12] = keys_untouched[SDLK_F12];
-    keys[SDLK_F13] = keys_untouched[SDLK_F13];
-    keys[SDLK_F14] = keys_untouched[SDLK_F14];
-    keys[SDLK_F15] = keys_untouched[SDLK_F15];
+    for(auto& bic : PIDC[x].BIC)
+    {
+     for(auto& b : bic.BC)
+     {
+      if(b.ButtType != BUTTC_KEYBOARD)
+       continue;
+
+      EmuKeyboardKeysGrabbed = true;
+
+#if 1
+      memset(keys, 0, sizeof(keys));
+      goto IGrabEnd;
+#else
+      //
+      if(b.ButtonNum & (2 << 24)) // Shift
+       keys[MKK(LSHIFT)] = keys[MKK(RSHIFT)] = 0;
+      if(b.ButtonNum & (1 << 24)) // Alt
+       keys[MKK(LALT)] = keys[MKK(RALT)] = 0;
+      if(b.ButtonNum & (4 << 24)) // Ctrl
+       keys[MKK(LCTRL)] = keys[MKK(RCTRL)] = 0;
+      //
+      unsigned k = b.ButtonNum & 0xFFFFFF;
+      if(k < MKK_COUNT)
+       keys[k] = 0;
+#endif
+     }
+    }
    }
+   IGrabEnd:;
+  }
  }
 }
 
 static void CheckCommandKeys(void)
 {
-  CK_UpdateState((IConfig == Command || IConfig == CommandAM) && ICLatch == -1);
-
   for(unsigned i = 0; i < 12; i++)
   {
    if(IConfig == Port1 + i)
@@ -1039,40 +1121,23 @@ static void CheckCommandKeys(void)
    }
   }
 
-  {
-   bool cid_changed = false;
-
-   if(CK_Check(CK_TOGGLE_GRAB_INPUT))
-   {
-    cidisabled = (cidisabled == 0x2) ? 0 : 0x2;
-    cid_changed = true;
-   }
-
-   if(CK_Check(CK_TOGGLE_CDISABLE))
-   {
-    cidisabled = (cidisabled == 0x3) ? 0 : 0x3;
-    cid_changed = true;
-   }
-
-   if(cid_changed)
-   {
-    SDL_Event evt;
-    evt.user.type = SDL_USEREVENT;
-    evt.user.code = CEVT_SET_GRAB_INPUT;
-    evt.user.data1 = malloc(1);
-
-    *(uint8 *)evt.user.data1 = cidisabled & 0x2;
-    SDL_PushEvent(&evt);
-
-    MDFNI_DispMessage(_("Input grabbing: %s, Command key processing: %s"), (cidisabled & 0x02) ? _("On") : _("Off"), !(cidisabled & 0x01) ? _("On") : _("Off"));
-   }
-  }
-
-  if(cidisabled & 0x1)
-   return;
-
   if(IConfig != none)
    return;
+
+  if(CK_Check(CK_TOGGLE_GRAB))
+  {
+   InputGrab = !InputGrab;
+   //
+   SDL_Event evt;
+   evt.user.type = SDL_USEREVENT;
+   evt.user.code = CEVT_SET_GRAB_INPUT;
+   evt.user.data1 = malloc(1);
+
+   *(uint8 *)evt.user.data1 = InputGrab;
+   SDL_PushEvent(&evt);
+
+   MDFNI_DispMessage(_("Input grabbing: %s"), InputGrab ? _("On") : _("Off"));
+  }
 
   if(!CheatIF_Active() && !MDFNDnetplay)
   {
@@ -1418,8 +1483,12 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
  // CheckCommandKeys(), specifically MDFNI_LoadState(), should be called *before* we update the emulated device input data, as that data is 
  // stored/restored from save states(related: ALT+A frame advance, switch state).
  //
+ CK_UpdateState((IConfig == Command || IConfig == CommandAM) && ICLatch == -1);
  if(!VirtualDevicesOnly)
+ {
   CheckCommandKeys();
+  CK_ClearTriggers();
+ }
 
  if(UpdateRapidFire)
   rapid = (rapid + 1) % (autofirefreq + 1);
@@ -1430,8 +1499,18 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
  // Do stuff here
  for(unsigned int x = 0; x < CurGame->PortInfo.size(); x++)
  {
+  uint8* kk = keys;
+
   if(!PIDC[x].Data)
    continue;
+
+  if(PIDC[x].Device->Flags & InputDeviceInfoStruct::FLAG_KEYBOARD)
+  {
+   if(!InputGrab || NPCheatDebugKeysGrabbed)
+    continue;
+   else
+    kk = keys_untouched;
+  }
 
   //
   // Handle rumble(FIXME: Do we want rumble to work in frame advance mode too?)
@@ -1486,7 +1565,7 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
     float tv = 0;
 
     if(bic.BC.size() > 0)
-     tv = DTestMouseAxis(bic.BC[0], keys, MouseData, (bic.Type == IDIT_Y_AXIS));
+     tv = DTestMouseAxis(bic.BC[0], kk, MouseData, (bic.Type == IDIT_Y_AXIS));
 
     if(bic.Type == IDIT_Y_AXIS)
      tv = floor(0.5 + (tv * (1.0 / 65536) * CurGame->mouse_scale_y) + CurGame->mouse_offs_y);
@@ -1499,7 +1578,7 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
    {
     uint32 intv;
 
-    intv = DTestAnalogButton(bic.BC, keys, MouseData);
+    intv = DTestAnalogButton(bic.BC, kk, MouseData);
  
     if(bic.Flags & IDIT_BUTTON_ANALOG_FLAG_SQLR)
      intv = std::min<unsigned>((unsigned)floor(0.5 + intv * PIDC[x].AxisScale), 32767);
@@ -1508,7 +1587,7 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
    }
    else if(bic.Type == IDIT_SWITCH)
    {
-    const bool nps = DTestButton(bic.BC, keys, MouseData, bic.BCANDMode);
+    const bool nps = DTestButton(bic.BC, kk, MouseData, bic.BCANDMode);
     uint8 cv = BitsExtract(tptr, bo, bic.SwitchBitSize);
 
     if(MDFN_UNLIKELY(!bic.SwitchLastPress && nps))
@@ -1532,7 +1611,7 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
     if(!bic.Rapid)
      *btptr &= ~(1 << (bo & 7));
 
-    if(DTestButton(bic.BC, keys, MouseData, bic.BCANDMode)) // boolean button
+    if(DTestButton(bic.BC, kk, MouseData, bic.BCANDMode)) // boolean button
     {
      if(!bic.Rapid || rapid >= (autofirefreq + 1) / 2)
       *btptr |= 1 << (bo & 7);
@@ -1861,7 +1940,15 @@ static void MakeSettingsForPort(std::vector <MDFNSetting> &settings, const MDFNG
    EnumList[device].string = strdup(dinfo->ShortName);
    EnumList[device].number = device;
    EnumList[device].description = strdup(info->DeviceInfo[device].FullName);
-   EnumList[device].description_extra = info->DeviceInfo[device].Description ? strdup(info->DeviceInfo[device].Description) : NULL;
+
+   EnumList[device].description_extra = NULL;
+   if(info->DeviceInfo[device].Description || (info->DeviceInfo[device].Flags & InputDeviceInfoStruct::FLAG_KEYBOARD))
+   {
+    EnumList[device].description_extra = trio_aprintf("%s%s%s",
+	info->DeviceInfo[device].Description ? info->DeviceInfo[device].Description : "",
+	(info->DeviceInfo[device].Description && (info->DeviceInfo[device].Flags & InputDeviceInfoStruct::FLAG_KEYBOARD)) ? "\n" : "",
+	(info->DeviceInfo[device].Flags & InputDeviceInfoStruct::FLAG_KEYBOARD) ? _("Emulated keyboard key state is not updated unless input grabbing(by default, mapped to CTRL+SHIFT+Menu) is toggled on; refer to the main documentation for details.") : "");
+   }
 
    PendingGarbage.push_back((void *)EnumList[device].string);
    PendingGarbage.push_back((void *)EnumList[device].description);

@@ -21,8 +21,6 @@ game load; setting to control the time length of this display.
 Rework state rewinding code to run the XOR filter and compressor on small chunks instead of the whole save state, to improve performance due to better
 L1 cache utilization.
 
-Update minilzo.
-
 CTRL+SHIFT+1 intermediate disconnected state.
 
 Audit code to ensure proper handling of pointer variables when a constructor or new throws an exception(IE make sure cleanup code doesn't
@@ -30,10 +28,6 @@ delete an uninitialized pointer).
 
 Write StreamSpace(or StreamArchive?) class, write ZIPReader and GZReader, write MappedMemoryStream(derived from MemoryStream), and
 rewrite file.cpp and other code to use these instead of MDFNFILE.
-
-Switch hotkey/command key processing over to be event-based rather than instantaneous-state based?  Consider implications for ckdelay, hotkey
-logical AND mode.
-
 
 CD emulation/handling:
 	Stricter CUE and TOC sheet parsing.

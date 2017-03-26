@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* smpc.cpp - SMPC Emulation
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,12 +19,16 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-// TODO: CD On/Off
+/*
+  TODO:
+	CD On/Off
+*/
 
 #include "ss.h"
 #include <mednafen/mednafen.h>
 #include <mednafen/general.h>
 #include <mednafen/Stream.h>
+#include <mednafen/Time.h>
 #include <mednafen/cdrom/CDUtility.h>
 using namespace CDUtility;
 
@@ -38,8 +42,11 @@ using namespace CDUtility;
 #include "input/gamepad.h"
 #include "input/3dpad.h"
 #include "input/mouse.h"
+#include "input/wheel.h"
+#include "input/mission.h"
+#include "input/keyboard.h"
 
-#include <time.h>
+#include "input/multitap.h"
 
 namespace MDFN_IEN_SS
 {
@@ -131,6 +138,7 @@ static bool ResetButtonPhysStatus;
 static int32 ResetButtonCount;
 static bool ResetPending;
 static int32 PendingCommand;
+static int32 ExecutingCommand;
 static int32 PendingClockDivisor;
 static int32 CurrentClockDivisor;
 
@@ -158,12 +166,12 @@ static struct
 
  uint8 Mode[2];
  bool TimeOptEn;
- bool Remaining;
  bool NextContBit;
 
  uint8 CurPort;
  uint8 ID1;
  uint8 ID2;
+ uint8 IDTap;
 
  uint8 CommMode;
 
@@ -172,9 +180,13 @@ static struct
  uint8 work[8];
  //
  //
+ uint8 TapCounter;
+ uint8 TapCount;
  uint8 ReadCounter;
+ uint8 ReadCount;
  uint8 ReadBuffer[255]; //16];
  uint8 WriteCounter;
+ uint8 PDCounter;
 } JRS;
 //
 //
@@ -192,8 +204,15 @@ static struct
  IODevice_Gamepad gamepad;
  IODevice_3DPad threedpad;
  IODevice_Mouse mouse;
+ IODevice_Wheel wheel;
+ IODevice_Mission mission{false};
+ IODevice_Mission dualmission{true};
+ IODevice_Keyboard keyboard;
 } PossibleDevices[12];
 
+static IODevice_Multitap PossibleMultitaps[2];
+
+static IODevice_Multitap* SPorts[2];
 static IODevice* VirtualPorts[12];
 static uint8* VirtualPortsDPtr[12];
 static uint8* MiscInputPtr;
@@ -201,7 +220,8 @@ static uint8* MiscInputPtr;
 IODevice::IODevice() { }
 IODevice::~IODevice() { }
 void IODevice::Power(void) { }
-void IODevice::UpdateInput(const uint8* data) { }
+void IODevice::UpdateInput(const uint8* data, const int32 time_elapsed) { }
+void IODevice::UpdateOutput(uint8* data) { }
 void IODevice::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) { }
 uint8 IODevice::UpdateBus(const uint8 smpc_out, const uint8 smpc_out_asserted) { return smpc_out; }
 
@@ -219,35 +239,76 @@ static void UpdateIOBus(unsigned port)
 
 static void MapPorts(void)
 {
- for(unsigned port = 0; port < 2; port++)
-  IOPorts[port] = VirtualPorts[port];
+ for(unsigned sp = 0, vp = 0; sp < 2; sp++)
+ {
+  IODevice* nd;
+
+  if(SPorts[sp])
+  {
+   for(unsigned i = 0; i < 6; i++)
+   {
+    IODevice* const tsd = VirtualPorts[vp++];
+
+    if(SPorts[sp]->GetSubDevice(i) != tsd)
+     tsd->Power();
+
+    SPorts[sp]->SetSubDevice(i, tsd);
+   }
+
+   nd = SPorts[sp];
+  }
+  else
+   nd = VirtualPorts[vp++];
+
+  if(IOPorts[sp] != nd)
+   nd->Power();
+
+  IOPorts[sp] = nd;
+ }
+}
+
+void SMPC_SetMultitap(unsigned sport, bool enabled)
+{
+ assert(sport < 2);
+
+ SPorts[sport] = (enabled ? &PossibleMultitaps[sport] : nullptr);
+ MapPorts();
 }
 
 void SMPC_SetInput(unsigned port, const char* type, uint8* ptr)
 {
+ assert(port < 13);
+
  if(port == 12) 
  {
   MiscInputPtr = ptr;
   return;
  }
+ //
+ //
+ //
+ IODevice* nd = nullptr;
 
- assert(port < 12);
-
- IODevice* nd = &PossibleDevices[port].none;
-
- if(!strcmp(type, "gamepad"))
+ if(!strcmp(type, "none"))
+  nd = &PossibleDevices[port].none;
+ else if(!strcmp(type, "gamepad"))
   nd = &PossibleDevices[port].gamepad;
  else if(!strcmp(type, "3dpad"))
   nd = &PossibleDevices[port].threedpad;
  else if(!strcmp(type, "mouse"))
   nd = &PossibleDevices[port].mouse;
+ else if(!strcmp(type, "wheel"))
+  nd = &PossibleDevices[port].wheel;
+ else if(!strcmp(type, "mission") || !strcmp(type, "missionwoa"))
+  nd = &PossibleDevices[port].mission;
+ else if(!strcmp(type, "dmission") || !strcmp(type, "dmissionwoa"))
+  nd = &PossibleDevices[port].dualmission;
+ else if(!strcmp(type, "keyboard"))
+  nd = &PossibleDevices[port].keyboard;
+ else
+  abort();
 
- if(nd != VirtualPorts[port])
- {
-  VirtualPorts[port] = nd;
-  VirtualPorts[port]->Power();
- }
-
+ VirtualPorts[port] = nd;
  VirtualPortsDPtr[port] = ptr;
 
  MapPorts();
@@ -320,8 +381,14 @@ void SMPC_Init(const uint8 area_code_arg, const int32 master_clock_arg)
  vb = false;
  lastts = 0;
 
+ for(unsigned sp = 0; sp < 2; sp++)
+  SPorts[sp] = nullptr;
+
  for(unsigned i = 0; i < 12; i++)
+ {
+  VirtualPorts[i] = nullptr;
   SMPC_SetInput(i, "none", NULL);
+ }
 
  SMPC_SetRTC(NULL, 0);
 }
@@ -375,6 +442,7 @@ void SMPC_Reset(bool powering_up)
  memset(IREG, 0, sizeof(IREG));
  memset(OREG, 0, sizeof(OREG));
  PendingCommand = -1;
+ ExecutingCommand = -1;
  SF = 0;
 
  BusBuffer = 0x00;
@@ -424,12 +492,22 @@ int32 SMPC_StartFrame(EmulateSpecStruct* espec)
  return CurrentClockDivisor;
 }
 
-void SMPC_UpdateInput(void)
+void SMPC_UpdateOutput(void)
 {
+ for(unsigned vp = 0; vp < 12; vp++)
+ {
+  VirtualPorts[vp]->UpdateOutput(VirtualPortsDPtr[vp]);
+ }
+}
+
+void SMPC_UpdateInput(const int32 time_elapsed)
+{
+ //printf("%8d\n", time_elapsed);
+
  ResetButtonPhysStatus = (bool)(*MiscInputPtr & 0x1);
  for(unsigned vp = 0; vp < 12; vp++)
  {
-  VirtualPorts[vp]->UpdateInput(VirtualPortsDPtr[vp]);
+  VirtualPorts[vp]->UpdateInput(VirtualPortsDPtr[vp], time_elapsed);
  }
 }
 
@@ -455,18 +533,23 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
   case 0x04:
   case 0x05:
   case 0x06:
-	if(MDFN_UNLIKELY(PendingCommand >= 0))
+	if(MDFN_UNLIKELY(ExecutingCommand >= 0))
 	{
-	 SS_DBGTI(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Input register %u port written with 0x%02x while command 0x%02x is executing.", A, V, PendingCommand);
+	 SS_DBGTI(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Input register %u port written with 0x%02x while command 0x%02x is executing.", A, V, ExecutingCommand);
 	}
 
 	IREG[A] = V;
 	break;
 
   case 0x0F:
+	if(MDFN_UNLIKELY(ExecutingCommand >= 0))
+	{
+	 SS_DBGTI(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Command port written with 0x%02x while command 0x%02x is still executing.", V, ExecutingCommand);
+	}
+
 	if(MDFN_UNLIKELY(PendingCommand >= 0))
 	{
-	 SS_DBGTI(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Command port written with 0x%02x while command 0x%02x is still executing.", V, PendingCommand);
+	 SS_DBGTI(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Command port written with 0x%02x while command 0x%02x is still pending.", V, PendingCommand);
 	}
 
 	PendingCommand = V;
@@ -545,18 +628,18 @@ uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A)
   case 0x18: case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1E: case 0x1F:
   case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x26: case 0x27:
   case 0x28: case 0x29: case 0x2A: case 0x2B: case 0x2C: case 0x2D: case 0x2E: case 0x2F:
-	if(MDFN_UNLIKELY(PendingCommand >= 0))
+	if(MDFN_UNLIKELY(ExecutingCommand >= 0))
 	{
-	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Output register %u port read while command 0x%02x is executing.\n", A - 0x10, PendingCommand);
+	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Output register %u port read while command 0x%02x is executing.\n", A - 0x10, ExecutingCommand);
 	}
 
 	ret = (OREG - 0x10)[A];
 	break;
 
   case 0x30:
-	if(MDFN_UNLIKELY(PendingCommand >= 0))
+	if(MDFN_UNLIKELY(ExecutingCommand >= 0))
 	{
-	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] SR port read while command 0x%02x is executing.\n", PendingCommand);
+	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] SR port read while command 0x%02x is executing.\n", ExecutingCommand);
 	}
 
 	ret = SR;
@@ -778,54 +861,56 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
     continue;
    }
 
+   ExecutingCommand = PendingCommand;
+   PendingCommand = -1;
 
    SMPC_EAT_CLOCKS(92);
-   if(PendingCommand < 0x20)
+   if(ExecutingCommand < 0x20)
    {
-    OREG[0x1F] = PendingCommand;
+    OREG[0x1F] = ExecutingCommand;
 
-    SS_DBGTI(SS_DBG_SMPC, "[SMPC] Command 0x%02x --- 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x", PendingCommand, IREG[0], IREG[1], IREG[2], IREG[3], IREG[4], IREG[5], IREG[6]);
+    SS_DBGTI(SS_DBG_SMPC, "[SMPC] Command 0x%02x --- 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x", ExecutingCommand, IREG[0], IREG[1], IREG[2], IREG[3], IREG[4], IREG[5], IREG[6]);
 
-    if(PendingCommand == CMD_MSHON)
+    if(ExecutingCommand == CMD_MSHON)
     {
 
     }
-    else if(PendingCommand == CMD_SSHON)
+    else if(ExecutingCommand == CMD_SSHON)
     {
      if(!SlaveSH2On)
       SlaveOn();
     }
-    else if(PendingCommand == CMD_SSHOFF)
+    else if(ExecutingCommand == CMD_SSHOFF)
     {
      if(SlaveSH2On)
       SlaveOff();
     }
-    else if(PendingCommand == CMD_SNDON)
+    else if(ExecutingCommand == CMD_SNDON)
     {
      if(!SoundCPUOn)
       TurnSoundCPUOn();
     }
-    else if(PendingCommand == CMD_SNDOFF)
+    else if(ExecutingCommand == CMD_SNDOFF)
     {
      if(SoundCPUOn)
       TurnSoundCPUOff();
     }
-    else if(PendingCommand == CMD_CDON)
+    else if(ExecutingCommand == CMD_CDON)
     {
      CDOn = true;
     }
-    else if(PendingCommand == CMD_CDOFF)
+    else if(ExecutingCommand == CMD_CDOFF)
     {
      CDOn = false;
     }
-    else if(PendingCommand == CMD_SYSRES)
+    else if(ExecutingCommand == CMD_SYSRES)
     {
      ResetPending = true;
      SMPC_WAIT_UNTIL_COND(!ResetPending);
 
      // TODO/FIXME(unreachable currently?):
     }
-    else if(PendingCommand == CMD_CKCHG352 || PendingCommand == CMD_CKCHG320)
+    else if(ExecutingCommand == CMD_CKCHG352 || ExecutingCommand == CMD_CKCHG320)
     {
      // Devour some time
 
@@ -841,7 +926,7 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
      SCU_Reset(false);
 
      // Change clock
-     PendingClockDivisor = (PendingCommand == CMD_CKCHG352) ? CLOCK_DIVISOR_28M : CLOCK_DIVISOR_26M;
+     PendingClockDivisor = (ExecutingCommand == CMD_CKCHG352) ? CLOCK_DIVISOR_28M : CLOCK_DIVISOR_26M;
 
      // Wait for a few vblanks
      SMPC_WAIT_UNTIL_COND(!vb);
@@ -859,7 +944,7 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
      CPU[0].SetNMI(false);
      CPU[0].SetNMI(true);
     }
-    else if(PendingCommand == CMD_INTBACK)
+    else if(ExecutingCommand == CMD_INTBACK)
     {
      //SS_DBGTI(SS_DBG_SMPC, "[SMPC] INTBACK IREG0=0x%02x, IREG1=0x%02x, IREG2=0x%02x, %d", IREG[0], IREG[1], IREG[2], vb);
 
@@ -903,9 +988,30 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
      {
       #define JR_WAIT(cond)	{ SMPC_WAIT_UNTIL_COND((cond) || PendingVB); if(PendingVB) { SS_DBGTI(SS_DBG_SMPC, "[SMPC] abortjr wait"); goto AbortJR; } }
       #define JR_EAT(n)		{ SMPC_EAT_CLOCKS(n); if(PendingVB) { SS_DBGTI(SS_DBG_SMPC, "[SMPC] abortjr eat"); goto AbortJR; } }
-      #define JR_WRNYB(val)	\
-	{			\
-	 /*if(!JRS.OWP) { JR_WAIT((bool)(IREG[0] & 0x80) == JRS.NextContBit); JRS.NextContBit = !JRS.NextContBit; }*/	\
+      #define JR_WRNYB(val)															\
+	{																	\
+	 if(!JRS.OWP)																\
+	 {																	\
+	  if(JRS.PDCounter > 0)															\
+	  {																	\
+	   SR = (SR & ~SR_PDL) | ((JRS.PDCounter < 0x2) ? SR_PDL : 0);										\
+      	   SR = (SR & ~0xF) | (JRS.Mode[0] << 0) | (JRS.Mode[1] << 2);										\
+	   SR |= SR_NPE;															\
+	   SR |= 0x80;																\
+	   SCU_SetInt(SCU_INT_SMPC, true);													\
+	   SCU_SetInt(SCU_INT_SMPC, false);													\
+	   JR_WAIT((bool)(IREG[0] & 0x80) == JRS.NextContBit || (IREG[0] & 0x40));								\
+           if(IREG[0] & 0x40)															\
+           {																	\
+            SS_DBGTI(SS_DBG_SMPC, "[SMPC] Big Read Break");											\
+            goto AbortJR;															\
+	   }																	\
+	   JRS.NextContBit = !JRS.NextContBit;													\
+	  }																	\
+          if(JRS.PDCounter < 0xFF)														\
+           JRS.PDCounter++;															\
+	 }																	\
+																		\
 	 OREG[(JRS.OWP >> 1)] &= 0x0F << ((JRS.OWP & 1) << 2);								\
 	 OREG[(JRS.OWP >> 1)] |= ((val) & 0xF) << (((JRS.OWP & 1) ^ 1) << 2);						\
 	 JRS.OWP = (JRS.OWP + 1) & 0x3F;										\
@@ -933,6 +1039,7 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
        JRS.NextContBit = !JRS.NextContBit;
       }
 
+      JRS.PDCounter = 0;
       JRS.TimeOptEn = !(IREG[1] & 0x2);
       JRS.Mode[0] = (IREG[1] >> 4) & 0x3;
       JRS.Mode[1] = (IREG[1] >> 6) & 0x3;
@@ -959,7 +1066,10 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
       {
        JR_EAT(380);
 
-	// TODO: Check read size mode.
+       if(JRS.Mode[JRS.CurPort] & 0x2)
+	continue;
+
+       // TODO: 255-byte read size mode.
 
        JRS.ID1 = 0;
        JR_TH_TR(1, 1);
@@ -1029,49 +1139,87 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 	JR_WAIT(JR_BS & 0x10);
 	JRS.ID2 |= ((JR_BS & 0xF) << 0);
 
+	//printf("%d, %02x %02x\n", JRS.CurPort, JRS.ID1, JRS.ID2);
+
 	if(JRS.ID1 == 0x3)
 	 JRS.ID2 = 0xE3;
 
-	JRS.ReadCounter = 0;
-	while(JRS.ReadCounter < (JRS.ID2 & 0xF))
-	{
+        if((JRS.ID2 & 0xF0) == 0x40) // Multitap
+        {
 	 JR_TH_TR(0, 0)
 	 JR_EAT(50);
 	 JR_WAIT(!(JR_BS & 0x10));
-	 JRS.ReadBuffer[JRS.ReadCounter] = ((JR_BS & 0xF) << 4);
+	 JRS.IDTap = ((JRS.ID2 & 0xF) << 4) | (JR_BS & 0xF);
 
 	 JR_TH_TR(0, 1)
 	 JR_EAT(50);
 	 JR_WAIT(JR_BS & 0x10);
-	 JRS.ReadBuffer[JRS.ReadCounter] |= ((JR_BS & 0xF) << 0);
-	 JRS.ReadCounter++;
+        }
+	else
+	 JRS.IDTap = 0xF1;
+
+        JRS.TapCounter = 0;
+        JRS.TapCount = (JRS.IDTap & 0xF);
+        while(JRS.TapCounter < JRS.TapCount)
+        {
+         if(JRS.TapCount > 1)
+         {
+	  JR_TH_TR(0, 0)
+	  JR_EAT(50);
+	  JR_WAIT(!(JR_BS & 0x10));
+	  JRS.ID2 = ((JR_BS & 0xF) << 4);
+
+	  JR_TH_TR(0, 1)
+	  JR_EAT(50);
+	  JR_WAIT(JR_BS & 0x10);
+	  JRS.ID2 |= ((JR_BS & 0xF) << 0);
+         }
+	 JRS.ReadCounter = 0;
+         JRS.ReadCount = ((JRS.ID2 & 0xF0) == 0xF0) ? 0 : (JRS.ID2 & 0xF);
+	 while(JRS.ReadCounter < JRS.ReadCount)
+	 {
+	  JR_TH_TR(0, 0)
+	  JR_EAT(50);
+	  JR_WAIT(!(JR_BS & 0x10));
+	  JRS.ReadBuffer[JRS.ReadCounter] = ((JR_BS & 0xF) << 4);
+
+	  JR_TH_TR(0, 1)
+	  JR_EAT(50);
+	  JR_WAIT(JR_BS & 0x10);
+	  JRS.ReadBuffer[JRS.ReadCounter] |= ((JR_BS & 0xF) << 0);
+	  JRS.ReadCounter++;
+	 }
+
+         if(!JRS.TapCounter)
+         {
+	  JR_WRNYB(JRS.IDTap >> 4);
+	  JR_EAT(21);
+
+	  JR_WRNYB(JRS.IDTap >> 0);
+	  JR_EAT(21);
+         }
+
+         //printf("What: %d, %02x\n", JRS.TapCounter, JRS.ID2);
+
+	 JR_WRNYB(JRS.ID2 >> 4);
+	 JR_EAT(21);
+
+	 JR_WRNYB(JRS.ID2 >> 0);
+	 JR_EAT(21);
+
+	 JRS.WriteCounter = 0;
+	 while(JRS.WriteCounter < JRS.ReadCounter)
+	 {
+	  JR_WRNYB(JRS.ReadBuffer[JRS.WriteCounter] >> 4);
+ 	  JR_EAT(21);
+
+	  JR_WRNYB(JRS.ReadBuffer[JRS.WriteCounter] >> 0);
+ 	  JR_EAT(21);
+
+          JRS.WriteCounter++;
+	 }
+	 JRS.TapCounter++;
 	}
-
-	JR_WRNYB(0xF);
-	JR_EAT(21);
-
-	JR_WRNYB(0x1);
-	JR_EAT(21);
-
-	JR_WRNYB(JRS.ID2 >> 4);
-	JR_EAT(21);
-
-	JR_WRNYB(JRS.ID2 >> 0);
-	JR_EAT(21);
-
-	JRS.WriteCounter = 0;
-	while(JRS.WriteCounter < JRS.ReadCounter)
-	{
-	 JR_WRNYB(JRS.ReadBuffer[JRS.WriteCounter] >> 4);
- 	 JR_EAT(21);
-
-	 JR_WRNYB(JRS.ReadBuffer[JRS.WriteCounter] >> 0);
- 	 JR_EAT(21);
-
-         JRS.WriteCounter++;
-	}
-	
-
 	// Saturn analog joystick, keyboard, multitap
         // OREG[0x0] = 0xF1;	// Upper nybble, multitap ID.  Lower nybble, number of connected devices behind multitap.
         // OREG[0x1] = 0x02;	// Upper nybble, peripheral ID 2.  Lower nybble, data size.
@@ -1080,19 +1228,14 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
        {
 	JR_WRNYB(0xF);
 	JR_WRNYB(0x0);
-
-	JR_WRNYB(0x0);
-	JR_WRNYB(0x0);
        }
        JR_EAT(26);
        JR_TH_TR(-1, -1);
       }
 
-      SR &= ~SR_NPE;
-      SR &= ~0xF;
-      SR |= JRS.Mode[0] << 0;
-      SR |= JRS.Mode[1] << 2;
-      SR |= SR_PDL;
+      SR = (SR & ~SR_NPE);
+      SR = (SR & ~0xF) | (JRS.Mode[0] << 0) | (JRS.Mode[1] << 2);
+      SR = (SR & ~SR_PDL) | ((JRS.PDCounter < 0x2) ? SR_PDL : 0);
       SR |= 0x80;
       SCU_SetInt(SCU_INT_SMPC, true);
       SCU_SetInt(SCU_INT_SMPC, false);
@@ -1103,7 +1246,7 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
      AbortJR:;
      // TODO: Set TH TR to inputs on abort.
     }
-    else if(PendingCommand == CMD_SETTIME)	// Warning: Execute RTC setting atomically(all values or none) in regards to emulator exit/power toggle.
+    else if(ExecutingCommand == CMD_SETTIME)	// Warning: Execute RTC setting atomically(all values or none) in regards to emulator exit/power toggle.
     {
      SMPC_EAT_CLOCKS(380);
 
@@ -1113,29 +1256,29 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
      for(unsigned i = 0; i < 7; i++)
       RTC.raw[i] = IREG[i];
     }
-    else if(PendingCommand == CMD_SETSMEM)	// Warning: Execute save mem setting(all values or none) atomically in regards to emulator exit/power toggle.
+    else if(ExecutingCommand == CMD_SETSMEM)	// Warning: Execute save mem setting(all values or none) atomically in regards to emulator exit/power toggle.
     {
      SMPC_EAT_CLOCKS(234);
 
      for(unsigned i = 0; i < 4; i++)
       SaveMem[i] = IREG[i];
     }
-    else if(PendingCommand == CMD_NMIREQ)
+    else if(ExecutingCommand == CMD_NMIREQ)
     {
      CPU[0].SetNMI(false);
      CPU[0].SetNMI(true);
     }
-    else if(PendingCommand == CMD_RESENAB)
+    else if(ExecutingCommand == CMD_RESENAB)
     {
      ResetNMIEnable = true;
     }
-    else if(PendingCommand == CMD_RESDISA)
+    else if(ExecutingCommand == CMD_RESDISA)
     {
      ResetNMIEnable = false;
     }
    }
 
-   PendingCommand = -1;
+   ExecutingCommand = -1;
    SF = false;
    continue;
   }
@@ -1155,7 +1298,7 @@ void SMPC_SetVB(sscpu_timestamp_t event_timestamp, bool vb_status)
  vb = vb_status;
 }
 
-static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSPort =
+static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
 {
  // None
  {
@@ -1170,7 +1313,7 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSPort =
   "gamepad",
   "Digital Gamepad",
   "Standard Saturn digital gamepad.",
-  IODevice_Gamepad_IDII,
+  IODevice_Gamepad_IDII
  },
 
  // 3D Gamepad
@@ -1178,7 +1321,7 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSPort =
   "3dpad",
   "3D Control Pad",
   "3D Control Pad",
-  IODevice_3DPad_IDII,
+  IODevice_3DPad_IDII
  },
 
  // Mouse
@@ -1186,7 +1329,58 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSPort =
   "mouse",
   "Mouse",
   "Mouse",
-  IODevice_Mouse_IDII,
+  IODevice_Mouse_IDII
+ },
+
+ // Steering Wheel
+ {
+  "wheel",
+  "Steering Wheel",
+  "Arcade Racer/Racing Controller",
+  IODevice_Wheel_IDII
+ },
+
+ // Mission Stick
+ {
+  "mission",
+  "Mission Stick",
+  "Mission Stick",
+  IODevice_Mission_IDII
+ },
+#if 0
+ // Mission Stick (No Autofire)
+ {
+  "missionwoa",
+  "Mission (No AF)",
+  "Mission Stick, without autofire functionality(for less things to map).",
+  IODevice_MissionNoAF_IDII
+ },
+#endif
+ // Dual Mission Stick
+ {
+  "dmission",
+  "Dual Mission",
+  "Dual Mission Sticks, useful for \"Panzer Dragoon Zwei\".  With 30 inputs to map, don't get distracted by..LOOK A LOBSTER!",
+  IODevice_DualMission_IDII
+ },
+
+#if 0
+ // Dual Mission Stick (No Autofire)
+ {
+  "dmissionwoa",
+  "Dual Mission (No AF)",
+  "Dual Mission Sticks (No Autofire)",
+  IODevice_DualMissionNoAF_IDII
+ },
+#endif
+
+ // Keyboard (101-key US)
+ {
+  "keyboard",
+  "Keyboard (US)",
+  "101-key US keyboard.",
+  IODevice_Keyboard_US101_IDII,
+  InputDeviceInfoStruct::FLAG_KEYBOARD
  },
 };
 
@@ -1208,18 +1402,18 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoBuiltin =
 
 const std::vector<InputPortInfoStruct> SMPC_PortInfo =
 {
- { "port1", "Virtual Port 1", InputDeviceInfoSSPort, "gamepad" },
- { "port2", "Virtual Port 2", InputDeviceInfoSSPort, "gamepad" },
- { "port3", "Virtual Port 3", InputDeviceInfoSSPort, "gamepad" },
- { "port4", "Virtual Port 4", InputDeviceInfoSSPort, "gamepad" },
- { "port5", "Virtual Port 5", InputDeviceInfoSSPort, "gamepad" },
- { "port6", "Virtual Port 6", InputDeviceInfoSSPort, "gamepad" },
- { "port7", "Virtual Port 7", InputDeviceInfoSSPort, "gamepad" },
- { "port8", "Virtual Port 8", InputDeviceInfoSSPort, "gamepad" },
- { "port9", "Virtual Port 9", InputDeviceInfoSSPort, "gamepad" },
- { "port10", "Virtual Port 10", InputDeviceInfoSSPort, "gamepad" },
- { "port11", "Virtual Port 11", InputDeviceInfoSSPort, "gamepad" },
- { "port12", "Virtual Port 12", InputDeviceInfoSSPort, "gamepad" },
+ { "port1", "Virtual Port 1", InputDeviceInfoSSVPort, "gamepad" },
+ { "port2", "Virtual Port 2", InputDeviceInfoSSVPort, "gamepad" },
+ { "port3", "Virtual Port 3", InputDeviceInfoSSVPort, "gamepad" },
+ { "port4", "Virtual Port 4", InputDeviceInfoSSVPort, "gamepad" },
+ { "port5", "Virtual Port 5", InputDeviceInfoSSVPort, "gamepad" },
+ { "port6", "Virtual Port 6", InputDeviceInfoSSVPort, "gamepad" },
+ { "port7", "Virtual Port 7", InputDeviceInfoSSVPort, "gamepad" },
+ { "port8", "Virtual Port 8", InputDeviceInfoSSVPort, "gamepad" },
+ { "port9", "Virtual Port 9", InputDeviceInfoSSVPort, "gamepad" },
+ { "port10", "Virtual Port 10", InputDeviceInfoSSVPort, "gamepad" },
+ { "port11", "Virtual Port 11", InputDeviceInfoSSVPort, "gamepad" },
+ { "port12", "Virtual Port 12", InputDeviceInfoSSVPort, "gamepad" },
 
  { "builtin", "Builtin", InputDeviceInfoBuiltin, "builtin" },
 };

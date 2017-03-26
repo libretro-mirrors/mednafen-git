@@ -34,7 +34,11 @@
 
 #include <mednafen/net/Net.h>
 
+#include "AtomicFIFO.h"
+
 static std::unique_ptr<Net::Connection> Connection;
+
+static AtomicFIFO<char*, 128> LineFIFO;
 
 class NetplayConsole : public MDFNConsole
 {
@@ -64,7 +68,8 @@ bool NetplayConsole::TextHook(const std::string &text)
 {
 	LastTextTime = Time::MonoMS();
 
-	SendCEvent(CEVT_NP_LINE, strdup(text.c_str()), NULL);
+	if(LineFIFO.CanWrite())
+         LineFIFO.Write(strdup(text.c_str()));
 
 	return(1);
 }
@@ -327,26 +332,20 @@ int NetplayEventHook(const SDL_Event *event)
  return(NetConsole.Event(event));
 }
 
-// Called from game thread
-int NetplayEventHook_GT(const SDL_Event *event)
+void Netplay_GT_CheckPendingLine(void)
 {
- if(event->type == SDL_USEREVENT)
+ size_t c = LineFIFO.CanRead();
+
+ while(c--)
  {
-  switch(event->user.code)
-  {
-   case CEVT_NP_LINE:
-	{
-	 bool inputable_tmp = false, viewable_tmp = false;
+  char* str = LineFIFO.Read();
+  bool inputable_tmp = false, viewable_tmp = false;
 
-	 MDFNI_NetplayLine((const char*)event->user.data1, inputable_tmp, viewable_tmp);
-	 free(event->user.data1);
+  MDFNI_NetplayLine(str, inputable_tmp, viewable_tmp);
+  free(str);
 
-	 SendCEvent(CEVT_NP_LINE_RESPONSE, (void*)inputable_tmp, (void*)viewable_tmp);
-	}
-	break;
-  }
+  SendCEvent(CEVT_NP_LINE_RESPONSE, (void*)inputable_tmp, (void*)viewable_tmp);
  }
- return(1);
 }
 
 

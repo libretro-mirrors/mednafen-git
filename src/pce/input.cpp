@@ -374,7 +374,8 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoPort1 =
   "tsushinkb",
   "Tsushin Keyboard",
   NULL,
-  PCE_TsushinKBIDII
+  PCE_TsushinKBIDII,
+  InputDeviceInfoStruct::FLAG_KEYBOARD
  },
 };
 

@@ -168,10 +168,10 @@
  <tr><td>0-9</td><td>Select save state slot.</td><td>"0" through "9"</td></tr>
  <tr><td>-</td><td><a name="command.state_slot_dec">Decrement selected save state slot.</a></td><td>state_slot_dec</td></tr>
  <tr><td>=</td><td><a name="command.state_slot_inc">Increment selected save state slot.</a></td><td>state_slot_inc</td></tr>
- <tr><td>ALT + S</td><td>Toggle <a href="#srwframes">600-frame(~10 seconds on NES)</a> save-state rewinding functionality, disabled by default.</td><td>state_rewind_toggle</td></tr>
- <tr><td>Shift + F5</td><td>Record movie.</td><td>save_movie</td></tr>
- <tr><td>Shift + F7</td><td>Play movie.</td><td>load_movie</td></tr>
- <tr><td>Shift + 0-9</td><td>Select movie slot.</td><td>"m0" through "m9"</td></tr>
+ <tr><td>ALT + S</td><td>Toggle <a href="#srwframes">600-frame</a> save-state rewinding functionality, disabled by default.</td><td>state_rewind_toggle</td></tr>
+ <tr><td>SHIFT + F5</td><td>Record movie.</td><td>save_movie</td></tr>
+ <tr><td>SHIFT + F7</td><td>Play movie.</td><td>load_movie</td></tr>
+ <tr><td>SHIFT + 0-9</td><td>Select movie slot.</td><td>"m0" through "m9"</td></tr>
  <tr><td>ALT + C</td><td>Toggle cheat console.</td><td>togglecheatview</td></tr>
  <tr><td>ALT + T</td><td>Toggle cheats active.</td><td>togglecheatactive</td></tr>
  <tr><td>T</td><td>Enable network play console input.</td><td>togglenetview</td></tr>
@@ -184,8 +184,8 @@
  <tr><td>F9</td><td>Save (rawish) screen snapshot.</td><td>take_snapshot</td></tr>
  <tr><td>SHIFT + F9</td><td>Save screen snapshot, taken after all scaling and special filters/shaders are applied.</td><td>take_scaled_snapshot</td></tr>
  <tr><td>ALT + O</td><td>Rotate the screen</td><td>rotate_screen</td></tr>
- <tr><td>Alt + Enter</td><td>Toggle fullscreen mode.</td><td>toggle_fs</td></tr>
- <tr><td nowrap>Ctrl + 1<br>through<br>Ctrl + 9</td><td>Toggle layer.</td><td>"tl1" through "tl9"</td></tr>
+ <tr><td>ALT + Enter</td><td>Toggle fullscreen mode.</td><td>toggle_fs</td></tr>
+ <tr><td nowrap>CTRL + 1<br>through<br>Ctrl + 9</td><td>Toggle layer.</td><td>"tl1" through "tl9"</td></tr>
  <tr><td>`</td><td>Fast-forward.</td><td>fast_forward</td></tr>
  <tr><td>\</td><td>Slow-forward.</td><td>slow_forward</td></tr>
  <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
@@ -194,14 +194,24 @@
  <tr><td nowrap>CTRL + SHIFT + [<i>n</i>]</td><td>Select input device on input port <i>n</i>(1-8).<br /><br /><b>Note:</b> Many games do not expect input devices to change while the game is running, and thus may require a hard reset.</td><td>device_select<i>n</i></td></tr>
  <tr><td>F2</td><td><a name="command.input_configc">Activate in-game input configuration process for a command key.</a></td><td>input_configc</td></tr>
  <tr><td>SHIFT + F2</td><td>Like F2, but after configuration completes, to activate the configured command key will require all buttons configured to it to be in a pressed state simultaneously to trigger the action.  Note that keyboard modifier keys(CTRL, ALT, SHIFT) are still treated as modifiers and not discrete keys.<br><br>Especially useful in conjunction with the <a href="#ckdelay">ckdelay</a> setting.</td><td>input_configc_am</td></tr>
- <tr><td nowrap>Scroll Lock</td><td>Toggle input grabbing(use this to use the PC Engine mouse properly in windowed mode).</td><td>toggle_grab_input</td></tr>
- <tr><td>Shift + Scroll Lock</td><td>Toggle input grabbing AND command disabling(used for giving almost unhindered button access to an emulated device; most useful when emulating the Famicom's Family Keyboard).</td><td>toggle_cdisable</td></tr>
+ <tr><td nowrap>CTRL + SHIFT + Menu</td><td><a name="command.toggle_grab">Toggle <a href="#Section_input_grabbing">input grabbing</a>(for emulated mice and keyboards).</a></td><td>toggle_grab</td></tr>
  <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
  <tr><td>F10</td><td>Reset.</td><td>reset</td></tr>
  <tr><td>F11</td><td>Hard reset(toggle power switch).</td><td>power</td></tr>
  <tr><td>Escape/F12</td><td>Exit(the emulator, or netplay chat mode).</td><td>exit</td></tr>
  </table>
 
+ <?php EndSection(); ?>
+
+ <?php BeginSection("Input Grabbing", "Section_input_grabbing"); ?>
+ <p>
+ Keyboard and mouse input can be grabbed(from the OS/window manager) by pressing <a href="#command.toggle_grab">CTRL+SHIFT+Menu</a>(default mapping), and disabled by pressing the same again.
+ </p>
+ <p>
+  Emulated keyboards will only function when input grabbing is enabled.  When input grabbing is enabled, and at least one emulated keyboard that has an emulated key mapped
+  to a host keyboard key is enabled, all(except for the input grab toggling mapping) other host keyboard input mappings will see all keyboard keys as being unpressed.  In
+  other words, this disables hotkeys/command keys(unless the user has mapped them to a non-keyboard device), and the keyboard mappings of any non-keyboard emulated devices.
+ </p>
  <?php EndSection(); ?>
 
  <?php BeginSection("Remapping Buttons and Keys", "Section_remapping_input"); ?>
@@ -211,11 +221,11 @@
   <p>
    <a name="Section_analog_detection"></a>
    <font color="yellow"><b><u>Caution:</u></b></font>  Users of XBox 360-type/compatible controllers on operating systems other than Microsoft Windows(e.g. Linux), or users of other
-   controllers with analog buttons or throttles, should complete the following process before attempting any configuration that will map a physical analog button or throttle to a virtual input.
+   controllers with analog buttons, should complete the following process before attempting any configuration that will map a physical analog button to a virtual input.
    Failure to complete this process under the aforementioned conditions which necessitate it will result in the input configuration functionality becoming confused, and the
    resulting input mappings will be wonky.<br>
    <blockquote>
-    Twirl all sticks and D-pads, move all throttles to maximum then minimum(and leave them there), and press all analog buttons on any physical gamepads/joysticks
+    Twirl all sticks and D-pads, move all throttles to maximum then center(and leave them there), and press all analog buttons on any physical gamepads/joysticks
     with analog buttons you want to use in the input configuration process, then press <a href="#command.input_config_abd">F3</a>. Then, configure input as
     normal. The detected analog buttons will be recognized during input configuration until Mednafen exits; if you exit Mednafen and restart, and want to
     configure input devices again, you'll need to repeat the twirling-pressing-<a href="#command.input_config_abd">F3</a> process again).
@@ -223,8 +233,8 @@
   </p>
 
   <p>
-   All joystick throttles should be set to their minimum position before configuring inputs.  To register a "press" with a throttle control during the input
-   configuration process, move it to maximum position, then back to the minimum position.
+   All joystick throttles should be set to their center position before configuring inputs.  To register a "press" with a throttle control during the input
+   configuration process, move it to the maximum or minimum position as appropriate, then back to the center position.
   </p>
 
   <p>

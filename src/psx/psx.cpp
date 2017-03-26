@@ -2,7 +2,7 @@
 /* Mednafen Sony PS1 Emulation Module                                         */
 /******************************************************************************/
 /* psx.cpp:
-**  Copyright (C) 2011-2016 Mednafen Team
+**  Copyright (C) 2011-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -1122,6 +1122,8 @@ static void Emulate(EmulateSpecStruct *espec)
    Player_Draw(espec->surface, &espec->DisplayRect, 0, espec->SoundBuf, espec->SoundBufSize);
   }
  }
+
+ FIO->UpdateOutput();
 
  // Save memcards if dirty.
  for(int i = 0; i < 8; i++)

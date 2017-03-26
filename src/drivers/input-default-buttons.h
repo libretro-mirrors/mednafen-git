@@ -140,7 +140,7 @@ static const ButtConfig FTrainerButtons[12]=
                                MK(m),MK(COMMA),MK(PERIOD),MK(SLASH)
 };
 
-static ButtConfig OekaKidsConfig[3] =
+static const ButtConfig OekaKidsConfig[3] =
 {
  { BUTTC_MOUSE, 0, 0x8000, 0 },
  { BUTTC_MOUSE, 0, 0x8001, 0 },
@@ -148,24 +148,14 @@ static ButtConfig OekaKidsConfig[3] =
  { BUTTC_MOUSE, 0, 0, 0 },
 };
 
-static ButtConfig ArkanoidConfig[2] =
+static const ButtConfig ArkanoidConfig[2] =
 {
  { BUTTC_MOUSE, 0, 0x8000, 0 },
 
  { BUTTC_MOUSE, 0, 0, 0 },
 };
 
-static ButtConfig ShadowConfig[4] =
-{
- { BUTTC_MOUSE, 0, 0x8000, 0 },
- { BUTTC_MOUSE, 0, 0x8001, 0 },
-
- { BUTTC_MOUSE, 0, 0, 0 },
- { BUTTC_MOUSE, 0, 2, 0 },
-};
-
-
-static ButtConfig NESZapperConfig[4] =
+static const ButtConfig ShadowConfig[4] =
 {
  { BUTTC_MOUSE, 0, 0x8000, 0 },
  { BUTTC_MOUSE, 0, 0x8001, 0 },
@@ -174,7 +164,17 @@ static ButtConfig NESZapperConfig[4] =
  { BUTTC_MOUSE, 0, 2, 0 },
 };
 
-static ButtConfig PCEMouseConfig[4] =
+
+static const ButtConfig NESZapperConfig[4] =
+{
+ { BUTTC_MOUSE, 0, 0x8000, 0 },
+ { BUTTC_MOUSE, 0, 0x8001, 0 },
+
+ { BUTTC_MOUSE, 0, 0, 0 },
+ { BUTTC_MOUSE, 0, 2, 0 },
+};
+
+static const ButtConfig PCEMouseConfig[4] =
 {
  { BUTTC_MOUSE, 0, 2, 0 },
  { BUTTC_MOUSE, 0, 0, 0 },
@@ -182,7 +182,7 @@ static ButtConfig PCEMouseConfig[4] =
  MK(RETURN)
 };
 
-static ButtConfig PCFXMouseConfig[2] =
+static const ButtConfig PCFXMouseConfig[2] =
 {
  { BUTTC_MOUSE, 0, 0, 0 },
  { BUTTC_MOUSE, 0, 2, 0 },
@@ -386,7 +386,7 @@ static const ButtConfig MDPad6Config[2][12] =
  { MKZ(), MKZ(), MKZ(), MKZ(), MKZ(),   MKZ(),   MKZ(),   MKZ(),      MKZ(),   MKZ(),   MKZ(),   MKZ() },
 };
 
-static ButtConfig MDMegaMouseConfig[4] =
+static const ButtConfig MDMegaMouseConfig[4] =
 {
  { BUTTC_MOUSE, 0, 0, 0 },
  { BUTTC_MOUSE, 0, 2, 0 },
@@ -415,12 +415,125 @@ static const ButtConfig SSPadConfig[13] =
 
 };
 
-static ButtConfig SSMouseConfig[4] =
+static const ButtConfig SSMouseConfig[4] =
 {
  { BUTTC_MOUSE, 0, 0, 0 },
  { BUTTC_MOUSE, 0, 2, 0 },
  { BUTTC_MOUSE, 0, 1, 0 },
  MK(RETURN),
+};
+
+static const ButtConfig SSKeyboardConfig[] =
+{
+ MK(F9),
+ MK(F5),
+ MK(F3),
+ MK(F1),
+ MK(F2),
+ MK(F12),
+ MK(F10),
+ MK(F8),
+ MK(F6),
+ MK(F4),
+ MK(TAB),
+ MK(BACKQUOTE),
+
+ MK(LALT),
+ MK(LSHIFT),
+ MK(LCTRL),
+ MK(q),
+ MK(1),
+ MK(RALT),
+ MK(RCTRL),
+ MK(KP_ENTER),
+ MK(z),
+ MK(s),
+ MK(a),
+ MK(w),
+ MK(2),
+
+ MK(c),
+ MK(x),
+ MK(d),
+ MK(e),
+ MK(4),
+ MK(3),
+ MK(SPACE),
+ MK(v),
+ MK(f),
+ MK(t),
+ MK(r),
+ MK(5),
+
+ MK(n),
+ MK(b),
+ MK(h),
+ MK(g),
+ MK(y),
+ MK(6),
+ MK(m),
+ MK(j),
+ MK(u),
+ MK(7),
+ MK(8),
+
+ MK(COMMA),
+ MK(k),
+ MK(i),
+ MK(o),
+ MK(0),
+ MK(9),
+ MK(PERIOD),
+ MK(SLASH),
+ MK(l),
+ MK(SEMICOLON),
+ MK(p),
+ MK(MINUS),
+
+ MK(QUOTE),
+ MK(LEFTBRACKET),
+ MK(EQUALS),
+ MK(CAPSLOCK),
+ MK(RSHIFT),
+ MK(RETURN),
+ MK(RIGHTBRACKET),
+ MK(BACKSLASH),
+
+ MK(BACKSPACE),
+ MK(KP1),
+ MK(KP4),
+ MK(KP7),
+
+ MK(KP0),
+ MK(KP_PERIOD),
+ MK(KP2),
+ MK(KP5),
+ MK(KP6),
+ MK(KP8),
+ MK(ESCAPE),
+ MK(NUMLOCK),
+ MK(F11),
+ MK(KP_PLUS),
+ MK(KP3),
+ MK(KP_MINUS),
+ MK(KP_MULTIPLY),
+ MK(KP9),
+ MK(SCROLLOCK),
+
+ MK(KP_DIVIDE),
+ MK(INSERT),
+ MK(PAUSE),
+ MK(F7),
+ MK(PRINT),
+ MK(DELETE),
+ MK(LEFT),
+ MK(HOME),
+ MK(END),
+ MK(UP),
+ MK(DOWN),
+ MK(PAGEUP),
+ MK(PAGEDOWN),
+ MK(RIGHT),
 };
 
 static const ButtConfig SNESPadConfig[12] =
@@ -440,13 +553,13 @@ static const ButtConfig SNESPadConfig[12] =
 };
 
 
-static ButtConfig SNESMouseConfig[2] =
+static const ButtConfig SNESMouseConfig[2] =
 {
  { BUTTC_MOUSE, 0, 0, 0 },
  { BUTTC_MOUSE, 0, 2, 0 },
 };
 
-static ButtConfig SNESSuperScopeConfig[7] =
+static const ButtConfig SNESSuperScopeConfig[7] =
 {
  { BUTTC_MOUSE, 0, 0x8000, 0 },
  { BUTTC_MOUSE, 0, 0x8001, 0 },
@@ -493,13 +606,13 @@ static const ButtConfig PSXDancePadConfig[10] =
  MK(KP3),
 };
 
-static ButtConfig PSXMouseConfig[2] =
+static const ButtConfig PSXMouseConfig[2] =
 {
  { BUTTC_MOUSE, 0, 2, 0 },
  { BUTTC_MOUSE, 0, 0, 0 },
 };
 
-static ButtConfig PSXGunConConfig[6] =
+static const ButtConfig PSXGunConConfig[6] =
 {
  { BUTTC_MOUSE, 0, 0x8000, 0 },
  { BUTTC_MOUSE, 0, 0x8001, 0 },
@@ -510,7 +623,7 @@ static ButtConfig PSXGunConConfig[6] =
  MK(SPACE)
 };
 
-static ButtConfig PSXJustifierConfig[6] =
+static const ButtConfig PSXJustifierConfig[6] =
 {
  { BUTTC_MOUSE, 0, 0x8000, 0 },
  { BUTTC_MOUSE, 0, 0x8001, 0 },
@@ -543,7 +656,7 @@ typedef struct
  int num;
 } DefaultSettingsMeow;
 
-static DefaultSettingsMeow defset[] =
+static const DefaultSettingsMeow defset[] =
 {
  { "nes.input.port1.gamepad", NESGamePadConfig[0], sizeof(NESGamePadConfig[0]) / sizeof(ButtConfig) },
  { "nes.input.port2.gamepad", NESGamePadConfig[1], sizeof(NESGamePadConfig[1]) / sizeof(ButtConfig) },
@@ -689,6 +802,19 @@ static DefaultSettingsMeow defset[] =
  { "ss.input.port10.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
  { "ss.input.port11.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
  { "ss.input.port12.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
+
+ { "ss.input.port1.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
+ { "ss.input.port2.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
+ { "ss.input.port3.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
+ { "ss.input.port4.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
+ { "ss.input.port5.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
+ { "ss.input.port6.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
+ { "ss.input.port7.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
+ { "ss.input.port8.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
+ { "ss.input.port9.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
+ { "ss.input.port10.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
+ { "ss.input.port11.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
+ { "ss.input.port12.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
 
  { "mmplay.input.builtin.controller", MMPlayInputConfig, sizeof(MMPlayInputConfig) / sizeof(ButtConfig) },
  { "cdplay.input.builtin.controller", CDPlayInputConfig, sizeof(CDPlayInputConfig) / sizeof(ButtConfig) },

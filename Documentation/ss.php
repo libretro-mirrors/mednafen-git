@@ -5,7 +5,6 @@
 <?php BeginSection('Introduction', "Section_intro"); ?>
 <p>
 <font color="orange" size="+1"><b>NOTE:</b></font> The Sega Saturn emulation is currently experimental, and under active development, and save states are not currently supported.  By default(and for the official releases for Windows), Saturn emulation is only compiled in for builds for some 64-bit architectures(x86_64, AArch64, PPC64).  The separate <a href="ssfplay.html">SSF playback module</a> does not have this limitation.
-Multitap is not currently emulated, though there are some settings present in preparation for it.
 </p>
 <p>
 Mednafen's Sega Saturn emulation is extremely CPU intensive.  The minimum recommended CPU is a quad-core Intel Haswell-microarchitecture CPU with
@@ -58,6 +57,21 @@ The filenames listed below are per default ss.bios_* settings.
 
    <tr><td>Keypad 7</td><td>Left Shoulder</td></tr>
    <tr><td>Keypad 9</td><td>Right Shoulder</td></tr>
+  </table>
+  </p>
+ <?php EndSection(); ?>
+
+ <?php BeginSection('Mouse on Virtual Ports 1-12', 'Section_default_keys_mouse'); ?>
+  <p>
+  <font color="yellow">NOTE:</font> The default mapping for the emulated mouse "START" button conflicts with the default mapping for the "Enter" key on the emulated keyboards on all virtual ports,
+  and the default mapping for "START" on the emulated digital gamepad on virtual port 1.  If you want to use an emulated mouse with an emulated keyboard, you should probably
+  remap the "START" button to a non-keyboard host device.
+  <table border>
+   <tr><th>Button:</th><th nowrap>Emulated Button:</th></tr>
+   <tr><td nowrap>Mouse, Left Button</td><td>Left Button</td></tr>
+   <tr><td nowrap>Mouse, Right Button</td><td>Right Button</td></tr>
+   <tr><td nowrap>Mouse, Middle Button</td><td>Middle Button</td></tr>
+   <tr><td nowrap>Keyboard, Enter</td><td>START</td></tr>
   </table>
   </p>
  <?php EndSection(); ?>

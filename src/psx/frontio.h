@@ -2,7 +2,7 @@
 /* Mednafen Sony PS1 Emulation Module                                         */
 /******************************************************************************/
 /* frontio.h:
-**  Copyright (C) 2011-2016 Mednafen Team
+**  Copyright (C) 2011-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -38,6 +38,7 @@ class InputDevice
 
  virtual void Power(void);
  virtual void UpdateInput(const void *data);
+ virtual void UpdateOutput(void* data);
  virtual void TransformInput(void* data);
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix);
 
@@ -103,6 +104,7 @@ class FrontIO
 
  void UpdateInput(void);
  void TransformInput(void);
+ void UpdateOutput(void);
  void SetInput(unsigned int port, const char *type, uint8 *ptr);
  void SetMultitap(unsigned int pport, bool enabled);
  void SetMemcard(unsigned int port, bool enabled);

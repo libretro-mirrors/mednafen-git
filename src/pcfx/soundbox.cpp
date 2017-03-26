@@ -2,7 +2,7 @@
 /* Mednafen NEC PC-FX Emulation Module                                        */
 /******************************************************************************/
 /* soundbox.cpp:
-**  Copyright (C) 2006-2016 Mednafen Team
+**  Copyright (C) 2006-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -129,10 +129,10 @@ static RegType SBoxRegs[] =
  CHPDMOO(3),
  CHPDMOO(4),
  { PSG_GSREG_CH4_NCTRL, "NCtrl", "PSG Ch4 Noise Control", 1 },
- { PSG_GSREG_CH4_LFSR, "LFSR", "PSG Ch4 Noise LFSR", 2 },
+ { PSG_GSREG_CH4_LFSR, "LFSR", "PSG Ch4 Noise LFSR", 0x100 | 18 },
  CHPDMOO(5),
  { PSG_GSREG_CH5_NCTRL, "NCtrl", "PSG Ch5 Noise Control", 1 },
- { PSG_GSREG_CH5_LFSR, "LFSR", "PSG Ch5 Noise LFSR", 2 },
+ { PSG_GSREG_CH5_LFSR, "LFSR", "PSG Ch5 Noise LFSR", 0x100 | 18 },
 
  { 0, "--ADPCM:--", "", 0xFFFF },
 

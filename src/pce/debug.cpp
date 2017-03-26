@@ -738,10 +738,10 @@ static RegType Regs_PSG[] =
  CHPDMOO(3),
  CHPDMOO(4),
  { PSG_GSREG_CH4_NCTRL, "CH4NCtrl", "PSG Ch4 Noise Control", 1 },
- { PSG_GSREG_CH4_LFSR, "CH4LFSR", "PSG Ch4 Noise LFSR", 2 },
+ { PSG_GSREG_CH4_LFSR, "CH4LFSR", "PSG Ch4 Noise LFSR", 0x100 | 18 },
  CHPDMOO(5),
  { PSG_GSREG_CH5_NCTRL, "CH5NCtrl", "PSG Ch5 Noise Control", 1 },
- { PSG_GSREG_CH5_LFSR, "CH5LFSR", "PSG Ch5 Noise LFSR", 2 },
+ { PSG_GSREG_CH5_LFSR, "CH5LFSR", "PSG Ch5 Noise LFSR", 0x100 | 18 },
 
  { 0, "", "", 0 },
 };

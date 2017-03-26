@@ -1064,6 +1064,8 @@ int GameLoop(void *arg)
 
 	   FPS_UpdateCalc();
 
+	   Netplay_GT_CheckPendingLine();
+
            if((InFrameAdvance && !NeedFrameAdvance) || GameLoopPaused)
 	   {
             if(ssize)
@@ -1141,6 +1143,10 @@ static volatile int gte_read = 0;
 static volatile int gte_write = 0;
 
 /* This function may also be called by the main thread if a game is not loaded. */
+/*
+ This function may be called from MDFND_MidSync(), so make sure that it doesn't call directly nor indirectly
+ any MDFNI_* functions that shouldn't be called.
+*/
 static void GameThread_HandleEvents(void)
 {
  SDL_Event gtevents_temp[gtevents_size];
@@ -1177,8 +1183,6 @@ static void GameThread_HandleEvents(void)
 
   if(Debugger_IsActive())
    Debugger_GT_Event(event);
-
-  NetplayEventHook_GT(event);
  }
 }
 
@@ -1691,6 +1695,10 @@ int main(int argc, char *argv[])
 #endif
 	char *needie = NULL;
 
+        // Place before calls to SDL_Init()
+	putenv(strdup("SDL_DISABLE_LOCK_KEYS=1"));
+        //
+
 	MDFNDHaveFocus = false;
 
 	DrBaseDirectory=GetBaseDirectory();
@@ -2013,7 +2021,7 @@ void MDFND_MidSync(const EmulateSpecStruct *espec)
 
  UpdateSoundSync(espec->SoundBuf + (espec->SoundBufSizeALMS * CurGame->soundchan), espec->SoundBufSize - espec->SoundBufSizeALMS);
 
- // TODO(once we can ensure it's safe): GameThread_HandleEvents();
+ GameThread_HandleEvents(); // Should be safe, but be careful about future changes.
  MDFND_UpdateInput(true, false);
 }
 

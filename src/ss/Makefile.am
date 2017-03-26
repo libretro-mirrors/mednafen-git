@@ -18,6 +18,6 @@ libss_a_SOURCES 	= 	db.cpp cdb.cpp sound.cpp cart.cpp ss.cpp
 libss_a_SOURCES		+=	scu_dsp_gen.cpp scu_dsp_mvi.cpp scu_dsp_jmp.cpp scu_dsp_misc.cpp
 libss_a_SOURCES		+=	vdp1.cpp vdp1_line.cpp vdp1_sprite.cpp vdp1_poly.cpp
 libss_a_SOURCES		+=	vdp2.cpp vdp2_render.cpp
-libss_a_SOURCES		+=	smpc.cpp input/gamepad.cpp input/3dpad.cpp input/mouse.cpp
+libss_a_SOURCES		+=	smpc.cpp input/multitap.cpp input/gamepad.cpp input/3dpad.cpp input/mouse.cpp input/wheel.cpp input/mission.cpp input/keyboard.cpp
 
 libssfplay_a_SOURCES	=	ssf.cpp

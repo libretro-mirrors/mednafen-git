@@ -712,6 +712,17 @@ void SS_Reset(bool powering_up)
 static EmulateSpecStruct* espec;
 static bool AllowMidSync;
 static int32 cur_clock_div;
+
+static int64 UpdateInputLastBigTS;
+static INLINE void UpdateSMPCInput(const sscpu_timestamp_t timestamp)
+{
+ int32 elapsed_time = (((int64)timestamp * cur_clock_div * 1000 * 1000) - UpdateInputLastBigTS) / (EmulatedSS.MasterClock / MDFN_MASTERCLOCK_FIXED(1));
+
+ UpdateInputLastBigTS += (int64)elapsed_time * (EmulatedSS.MasterClock / MDFN_MASTERCLOCK_FIXED(1));
+
+ SMPC_UpdateInput(elapsed_time);
+}
+
 static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp)
 {
  if(AllowMidSync)
@@ -727,12 +738,15 @@ static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp)
    espec->MasterCycles = timestamp * cur_clock_div;
   }
   //printf("%d\n", espec->SoundBufSize);
+
+  SMPC_UpdateOutput();
   //
   //
   MDFN_MidSync(espec);
   //
   //
-  SMPC_UpdateInput();
+  UpdateSMPCInput(timestamp);
+
   AllowMidSync = false;
  }
 
@@ -748,7 +762,7 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  MDFNGameInfo->mouse_sensitivity = MDFN_GetSettingF("ss.input.mouse_sensitivity");
 
  cur_clock_div = SMPC_StartFrame(espec);
- SMPC_UpdateInput();
+ UpdateSMPCInput(0);
  VDP2::StartFrame(espec, cur_clock_div == 61);
  SOUND_StartFrame(espec->SoundRate / espec->soundmultiplier, MDFN_GetSettingUI("ss.scsp.resamp_quality"));
  espec->SoundBufSize = 0;
@@ -780,6 +794,8 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  SMPC_ResetTS();
  SCU_AdjustTS(-end_ts);
 
+ UpdateInputLastBigTS -= (int64)end_ts * cur_clock_div * 1000 * 1000;
+
  if(!(SH7095_mem_timestamp & 0x40000000))	// or maybe >= 0 instead?
   SH7095_mem_timestamp -= end_ts;
 
@@ -793,6 +809,10 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  espec->MasterCycles = end_ts * cur_clock_div;
  espec->SoundBufSize += SOUND_FlushOutput(espec->SoundBuf + (espec->SoundBufSize * 2), espec->SoundBufMaxSize - espec->SoundBufSize, espec->NeedSoundReverse);
  espec->NeedSoundReverse = false;
+ //
+ //
+ //
+ SMPC_UpdateOutput();
  //
  //
  //
@@ -1197,13 +1217,42 @@ static void MDFN_COLD InitCommon(const unsigned cart_type, const unsigned smpc_a
  SMPC_Init(smpc_area, MasterClock);
  VDP1::Init();
  VDP2::Init(PAL);
- VDP2::SetGetVideoParams(&EmulatedSS, MDFN_GetSettingB("ss.correct_aspect"), sls, sle, MDFN_GetSettingB("ss.h_overscan"), MDFN_GetSettingB("ss.h_blend"));
  CDB_Init();
  SOUND_Init();
 
  InitEvents();
+ UpdateInputLastBigTS = 0;
 
  DBG_Init();
+ //
+ //
+ //
+ MDFN_printf("\n");
+ {
+  const bool correct_aspect = MDFN_GetSettingB("ss.correct_aspect");
+  const bool h_overscan = MDFN_GetSettingB("ss.h_overscan");
+  const bool h_blend = MDFN_GetSettingB("ss.h_blend");
+
+  MDFN_printf(_("Displayed scanlines: [%u,%u]\n"), sls, sle);
+  MDFN_printf(_("Correct Aspect Ratio: %s\n"), correct_aspect ? _("Enabled") : _("Disabled"));
+  MDFN_printf(_("Show H Overscan: %s\n"), h_overscan ? _("Enabled") : _("Disabled"));
+  MDFN_printf(_("H Blend: %s\n"), h_blend ? _("Enabled") : _("Disabled"));
+
+  VDP2::SetGetVideoParams(&EmulatedSS, correct_aspect, sls, sle, h_overscan, h_blend);
+ }
+
+ MDFN_printf("\n");
+ for(unsigned sp = 0; sp < 2; sp++)
+ {
+  char buf[64];
+  bool sv;
+
+  trio_snprintf(buf, sizeof(buf), "ss.input.sport%u.multitap", sp + 1);
+  sv = MDFN_GetSettingB(buf);
+  SMPC_SetMultitap(sp, sv);
+
+  MDFN_printf(_("Multitap on Saturn Port %u: %s\n"), sp + 1, sv ? _("Enabled") : _("Disabled"));
+ }
  //
  //
  //
@@ -1654,8 +1703,8 @@ static const MDFNSetting_EnumList Cart_List[] =
 
 static MDFNSetting SSSettings[] =
 {
- { "ss.bios_jp", MDFNSF_EMU_STATE, gettext_noop("Path to the Japan ROM BIOS"), gettext_noop(""), MDFNST_STRING, "sega_101.bin" },
- { "ss.bios_na_eu", MDFNSF_EMU_STATE, gettext_noop("Path to the North America and Europe ROM BIOS"), gettext_noop(""), MDFNST_STRING, "mpr-17933.bin" },
+ { "ss.bios_jp", MDFNSF_EMU_STATE, gettext_noop("Path to the Japan ROM BIOS"), NULL, MDFNST_STRING, "sega_101.bin" },
+ { "ss.bios_na_eu", MDFNSF_EMU_STATE, gettext_noop("Path to the North America and Europe ROM BIOS"), NULL, MDFNST_STRING, "mpr-17933.bin" },
 
  { "ss.scsp.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("SCSP output resampler quality."),
 	gettext_noop("0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors."), MDFNST_UINT, "4", "0", "10" },
@@ -1664,6 +1713,8 @@ static MDFNSetting SSSettings[] =
  { "ss.region_default", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Default region to use."), gettext_noop("Used if region autodetection fails or is disabled."), MDFNST_ENUM, "jp", NULL, NULL, NULL, NULL, Region_List },
 
  { "ss.input.mouse_sensitivity", MDFNSF_NOFLAGS, gettext_noop("Emulated mouse sensitivity."), NULL, MDFNST_FLOAT, "0.50", NULL, NULL },
+ { "ss.input.sport1.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on Saturn port 1."), NULL, MDFNST_BOOL, "0", NULL, NULL },
+ { "ss.input.sport2.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on Saturn port 2."), NULL, MDFNST_BOOL, "0", NULL, NULL },
 
  { "ss.smpc.autortc", MDFNSF_NOFLAGS, gettext_noop("Automatically set RTC on game load."), gettext_noop("Automatically set the SMPC's emulated Real-Time Clock to the host system's current time and date upon game load."), MDFNST_BOOL, "1" },
  { "ss.smpc.autortc.lang", MDFNSF_NOFLAGS, gettext_noop("BIOS language."), gettext_noop("Also affects language used in some games(e.g. the European release of \"Panzer Dragoon\")."), MDFNST_ENUM, "english", NULL, NULL, NULL, NULL, RTCLang_List },
