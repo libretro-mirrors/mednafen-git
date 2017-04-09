@@ -271,7 +271,9 @@ bool MDFNI_StartAVRecord(const char *path, double SoundRate)
   if(spec.VideoHeight < MDFN_GetSettingUI("qtrecord.h_double_threshold"))
    spec.VideoHeight *= 2;
 
-
+  if (spec.VideoWidth > 1000)
+     spec.VideoWidth = spec.VideoWidth / 2;
+  
   spec.AspectXAdjust = ((double)MDFNGameInfo->nominal_width * 2) / spec.VideoWidth;
   spec.AspectYAdjust = ((double)MDFNGameInfo->nominal_height * 2) / spec.VideoHeight;
 
