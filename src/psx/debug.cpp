@@ -2,7 +2,7 @@
 /* Mednafen Sony PS1 Emulation Module                                         */
 /******************************************************************************/
 /* debug.cpp:
-**  Copyright (C) 2011-2016 Mednafen Team
+**  Copyright (C) 2011-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -27,7 +27,6 @@
 namespace MDFN_IEN_PSX
 {
 
-extern PS_GPU *GPU;
 extern PS_SPU *SPU;
 
 static void RedoCPUHook(void);
@@ -276,7 +275,7 @@ static void GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
   while(Length--)
   {
    Address &= 0xFFFFF;
-   *Buffer = GPU->PeekRAM(Address >> 1) >> ((Address & 1) * 8);
+   *Buffer = GPU_PeekRAM(Address >> 1) >> ((Address & 1) * 8);
    Address++;
    Buffer++;
   }
@@ -312,9 +311,9 @@ static void PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
   {
    Address &= 0xFFFFF;
 
-   uint16 peeko = GPU->PeekRAM(Address >> 1);
+   uint16 peeko = GPU_PeekRAM(Address >> 1);
 
-   GPU->PokeRAM(Address >> 1, (*Buffer << ((Address & 1) * 8)) | (peeko & (0xFF00 >> ((Address & 1) * 8))) );
+   GPU_PokeRAM(Address >> 1, (*Buffer << ((Address & 1) * 8)) | (peeko & (0xFF00 >> ((Address & 1) * 8))) );
    Address++;
    Buffer++;
   }
@@ -366,11 +365,11 @@ static void Disassemble(uint32 &A, uint32 SpecialA, char *TextBuf)
  A += 4;
 }
 
-static MDFN_Surface *GfxDecode_Buf = NULL;
-static int GfxDecode_Line = -1;
-static int GfxDecode_Layer = 0;
-static int GfxDecode_Scroll = 0;
-static int GfxDecode_PBN = 0;
+static MDFN_Surface* GfxDecode_Buf;
+static int GfxDecode_Line;
+static int GfxDecode_Layer;
+static int GfxDecode_Scroll;
+static int GfxDecode_PBN;
 
 static void DoGfxDecode(void)
 {
@@ -383,7 +382,7 @@ static void DoGfxDecode(void)
     unsigned fb_x = ((sx % GfxDecode_Buf->w) + ((sy + GfxDecode_Scroll) / GfxDecode_Buf->w * GfxDecode_Buf->w)) & 1023;
     unsigned fb_y = (((sy + GfxDecode_Scroll) % GfxDecode_Buf->w) + ((((sx % GfxDecode_Buf->w) + ((sy + GfxDecode_Scroll) / GfxDecode_Buf->w * GfxDecode_Buf->w)) / 1024) * GfxDecode_Buf->w)) & 511;
 
-    uint16 pixel = GPU->PeekRAM(fb_y * 1024 + fb_x);
+    uint16 pixel = GPU_PeekRAM(fb_y * 1024 + fb_x);
 
     GfxDecode_Buf->pixels[(sy * GfxDecode_Buf->w * 3) + sx] = GfxDecode_Buf->MakeColor(((pixel >> 0) & 0x1F) * 255 / 31,
 											((pixel >> 5) & 0x1F) * 255 / 31,
@@ -439,7 +438,7 @@ DebuggerInfoStruct PSX_DBGInfo =
  SetLogFunc,
 };
 
-static RegType Regs_Misc[] =
+static const RegType Regs_Misc[] =
 {
  { TIMER_GSREG_COUNTER0,	"COUNT0", "Counter 0", 2 	},
  { TIMER_GSREG_MODE0,		"MODE0", "Mode 0", 	2   	},
@@ -485,7 +484,7 @@ static void SetRegister_Misc(const unsigned int id, uint32 value)
   TIMER_SetRegister(id & 0xFFFF, value);
 }
 
-static RegGroupType MiscRegsGroup =
+static const RegGroupType MiscRegsGroup =
 {
  NULL,
  Regs_Misc,
@@ -493,7 +492,7 @@ static RegGroupType MiscRegsGroup =
  SetRegister_Misc
 };
 
-static RegType Regs_SPU[] =
+static const RegType Regs_SPU[] =
 {
  { PS_SPU::GSREG_SPUCONTROL, "SPUCTRL", "SPU Control", 2 },
 
@@ -576,7 +575,7 @@ static RegType Regs_SPU[] =
  { PS_SPU:: GSREG_V0_READ_ADDR + v * 256, "RAddr", "Read Address", 3 }
 
 
-static RegType Regs_SPU_Voices[] =
+static const RegType Regs_SPU_Voices[] =
 {
 #if 1
  VOICE_HELPER(0),
@@ -608,7 +607,7 @@ static void SetRegister_SPU(const unsigned int id, uint32 value)
  SPU->SetRegister(id, value);
 }
 
-static RegGroupType SPURegsGroup =
+static const RegGroupType SPURegsGroup =
 {
  NULL,
  Regs_SPU,
@@ -617,7 +616,7 @@ static RegGroupType SPURegsGroup =
 };
 
 
-static RegGroupType SPUVoicesRegsGroup =
+static const RegGroupType SPUVoicesRegsGroup =
 {
  NULL,
  Regs_SPU_Voices,
@@ -625,7 +624,7 @@ static RegGroupType SPUVoicesRegsGroup =
  SetRegister_SPU
 };
 
-static RegType Regs_CPU[] =
+static const RegType Regs_CPU[] =
 {
 	{ PS_CPU::GSREG_PC, 	   "PC", "PC", 4 },
 	{ PS_CPU::GSREG_PC_NEXT,   "NPC", "Next PC", 4 },
@@ -688,7 +687,7 @@ static void SetRegister_CPU(const unsigned int id, uint32 value)
  CPU->SetRegister(id, value);
 }
 
-static RegGroupType CPURegsGroup =
+static const RegGroupType CPURegsGroup =
 {
  NULL,
  Regs_CPU,
@@ -699,6 +698,12 @@ static RegGroupType CPURegsGroup =
 
 bool DBG_Init(void)
 {
+ GfxDecode_Buf = NULL;
+ GfxDecode_Line = -1;
+ GfxDecode_Layer = 0;
+ GfxDecode_Scroll = 0;
+ GfxDecode_PBN = 0;
+
  CPUHook = NULL;
  CPUHookContinuous = false;
  FoundBPoint = false;

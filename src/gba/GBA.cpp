@@ -1278,7 +1278,7 @@ void CPUSoftwareInterrupt(int comment)
   }
 }
 
-void CPUCompareVCOUNT()
+static void CPUCompareVCOUNT()
 {
   if(VCOUNT == (DISPSTAT >> 8)) {
     DISPSTAT |= 4;
@@ -2150,7 +2150,7 @@ static void FLASH_SRAM_Write(uint32 A, uint32 V)
  flashWrite(A, V);
 }
 
-void CPUWriteMemory(uint32 address, uint32 value)
+MDFN_FASTCALL void CPUWriteMemory(uint32 address, uint32 value)
 {
  switch(address >> 24) 
  {
@@ -2198,7 +2198,7 @@ void CPUWriteMemory(uint32 address, uint32 value)
  }
 }
 
-void CPUWriteHalfWord(uint32 address, uint16 value)
+MDFN_FASTCALL void CPUWriteHalfWord(uint32 address, uint16 value)
 {
  switch(address >> 24) 
  {
@@ -2252,7 +2252,7 @@ void CPUWriteHalfWord(uint32 address, uint16 value)
  }
 }
 
-void CPUWriteByte(uint32 address, uint8 b)
+MDFN_FASTCALL void CPUWriteByte(uint32 address, uint8 b)
 {
  switch(address >> 24) 
  {
@@ -3272,7 +3272,7 @@ static void DoSimpleCommand(int cmd)
  }
 }
 
-static MDFNSetting GBASettings[] =
+static const MDFNSetting GBASettings[] =
 {
  { "gba.bios", 	MDFNSF_EMU_STATE,	gettext_noop("Path to optional GBA BIOS ROM image."), NULL, MDFNST_STRING, "" },
  { NULL }
@@ -3328,7 +3328,7 @@ static const FileExtensionSpecStruct KnownExtensions[] =
 
 static const CustomPalette_Spec CPInfo[] =
 {
- { gettext_noop("GBA 15-bit RGB"), NULL, { 32768, 0 } },
+ { gettext_noop("GBA 15-bit BGR"), NULL, { 32768, 0 } },
 
  { NULL, NULL }
 };

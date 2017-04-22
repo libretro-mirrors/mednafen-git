@@ -394,7 +394,7 @@ void WSwanDBG_ToggleSyntax(void)
 //
 //
 
-static RegType V30MZ_Regs[] =
+static const RegType V30MZ_Regs[] =
 {
         { NEC_PC, "IP", "Instruction Pointer", 2 },
         { NEC_FLAGS, "PSW", "Program Status Word", 2 },
@@ -425,7 +425,7 @@ static void V30MZ_SetRegister(const unsigned int id, uint32 value)
 }
 
 
-static RegGroupType V30MZRegsGroup =
+static const RegGroupType V30MZRegsGroup =
 {
  "V30MZ",
  V30MZ_Regs,
@@ -436,7 +436,7 @@ static RegGroupType V30MZRegsGroup =
 //
 //
 
-static RegType MiscRegs[] =
+static const RegType MiscRegs[] =
 {
  { MEMORY_GSREG_ROMBBSLCT, "ROMBBSLCT", "ROM Bank Base Selector for 64KiB banks 0x4-0xF", 1 },
  { MEMORY_GSREG_BNK1SLCT, "BNK1SLCT", "???", 1 },
@@ -467,7 +467,7 @@ static void Misc_SetRegister(const unsigned int id, uint32 value)
 }
 
 
-static RegGroupType MiscRegsGroup =
+static const RegGroupType MiscRegsGroup =
 {
  "Misc",
  MiscRegs,

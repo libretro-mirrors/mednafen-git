@@ -1,4 +1,4 @@
-<?php require("docgen.inc"); ?>
+-<?php require("docgen.inc"); ?>
 
 <?php BeginPage('', 'General'); ?>
 
@@ -262,7 +262,7 @@
   <table border>
    <tr><th>Option:</th><th>Value Type:</th><th>Description:</th></tr>
    <tr><td nowrap>-force_module x</td><td>string</td><td>Force usage of specified emulation module.</td></tr>
-
+   <tr><td nowrap>-which_medium x</td><td>integer</td><td>Start with specified disk/CD(numbered from 0) inserted.  For ejected, pass -1.</td></tr>
    <tr><td>-connect</td><td><i>(n/a)</i></td><td>Trigger to connect to remote host after the game is loaded.</td></tr>
    <tr><td nowrap>-soundrecord x</td><td>string</td><td>Record sound output to the specified filename in the MS WAV format.</td></tr>
    <tr><td nowrap>-qtrecord x</td><td>string</td><td>Record video and audio output to the specified filename in the QuickTime format.</td></tr>
@@ -313,7 +313,7 @@ if the "path_firmware" setting is set to a custom value, the firmware files will
 
  <?php BeginSection("Custom Palettes", "Section_custom_palettes"); ?>
 <p>
-Custom palettes for a system should be named <sysname>.pal, IE "nes.pal", "pce.pal", etc., and placed in the
+Custom palettes for a system should generally(with caveats; refer to the table near the end of this section) be named &lt;system&gt;.pal, IE "snes.pal", "pce.pal", etc., and placed in the
 "palettes" directory beneath the Mednafen <a href="#Section_base_directory">base directory</a>.
 </p>
 <p>
@@ -321,18 +321,11 @@ Per-game custom palettes are also supported, and should be
 named as &lt;FileBase&gt;.pal or &lt;FileBase&gt;.&lt;MD5 Hash&gt;.pal, IE "Mega Man 4.pal" or "Mega Man 4.db45eb9413964295adb8d1da961807cc.pal".
 </p>
 <p>
-Not all emulated systems support custom palettes.  Currently, the following emulation modules support custom palettes:
-<ul>
- <li>gb - <b>Note:</b> Use "gbc.pal" instead of "gb.pal" for GameBoy Color games per-system custom palette.</li>
- <li>gba</li>
- <li>gg</li>
- <li>lynx</li>
- <li>nes</li>
- <li>pce</li>
- <li>pce_fast</li>
- <li>sms</li>
- <li>snes</li>
-</ul>
+Each entry in a custom palette file consists of 3 8-bit color components; Red, Green, Blue, in that order.
+</p>
+<p>
+Not all emulated systems support custom palettes.  Refer to the following list:
+<?php PrintCustomPalettes(); ?>
 </p>
  <?php EndSection(); ?>
 
@@ -812,32 +805,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 </pre>
 </blockquote>
 
-<?php EndSection(); ?>
-
-<?php BeginSection("ConvertUTF", "Section_legal_convertutf"); ?>
-<blockquote>
-<pre>
- * Copyright 2001-2004 Unicode, Inc.
- *
- * Disclaimer
- *
- * This source code is provided as is by Unicode, Inc. No claims are
- * made as to fitness for any particular purpose. No warranties of any
- * kind are expressed or implied. The recipient agrees to determine
- * applicability of information provided. If this file has been
- * purchased on magnetic or optical media from Unicode, Inc., the
- * sole remedy for any claim will be exchange of defective media
- * within 90 days of receipt.
- *
- * Limitations on Rights to Redistribute This Code
- *
- * Unicode, Inc. hereby grants the right to freely use the information
- * supplied in this file in the creation of products supporting the
- * Unicode Standard, and to make copies of this file in any form
- * for internal or external distribution as long as this notice
- * remains attached.
-</pre>
-</blockquote>
 <?php EndSection(); ?>
 
 <?php BeginSection("MD5 Hashing", "Section_legal_md5"); ?>

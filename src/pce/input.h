@@ -19,7 +19,7 @@ class PCE_Input_Device
 };
 
 void PCEINPUT_Power(int32 timestamp);
-void PCEINPUT_Init(void);
+void PCEINPUT_Init(void) MDFN_COLD;
 void PCEINPUT_SettingChanged(const char *name);
 void PCEINPUT_TransformInput(void);
 void PCEINPUT_SetInput(unsigned port, const char *type, uint8 *ptr);

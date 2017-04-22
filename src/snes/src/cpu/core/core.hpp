@@ -7,6 +7,8 @@ public:
   reg24_t aa, rd;
   uint8_t sp, dp;
 
+  Scheduler::sync_t wai_stp_sync;
+
   virtual void op_io() = 0;
   virtual uint8_t op_read(uint32_t addr) = 0;
   virtual void op_write(uint32_t addr, uint8_t data) = 0;
@@ -17,6 +19,7 @@ public:
   void op_io_cond2();
   void op_io_cond4(uint16 x, uint16 y);
   void op_io_cond6(uint16 addr);
+  void wai_stp_shenanigans();
 
   void op_adc_b();
   void op_adc_w();

@@ -107,11 +107,11 @@ void setntamem(uint8 *p, int ram, uint32 b);
 
 extern uint8 geniestage;
 
-void Genie_Init(void);
-void Genie_Kill(void);
+void Genie_Init(void) MDFN_COLD;
+void Genie_Kill(void) MDFN_COLD;
 bool Genie_BIOSInstalled(void);
 void Genie_StateAction(StateMem* sm, const unsigned load, const bool data_only);
-void Genie_Power(void);
+void Genie_Power(void) MDFN_COLD;
 
 }
 #endif

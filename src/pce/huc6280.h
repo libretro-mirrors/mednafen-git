@@ -9,9 +9,9 @@ class alignas(128) HuC6280
 {
 	public:
 
-	typedef void (*writefunc)(uint32 A, uint8 V);
-	typedef uint8 (*readfunc)(uint32 A);
-	typedef int32 (*ehfunc)(const int32 timestamp);
+	typedef void (MDFN_FASTCALL *writefunc)(uint32 A, uint8 V);
+	typedef uint8 (MDFN_FASTCALL *readfunc)(uint32 A);
+	typedef int32 (MDFN_FASTCALL *ehfunc)(const int32 timestamp);
 
 	enum { N_FLAG = 0x80 };
 	enum { V_FLAG = 0x40 };

@@ -54,15 +54,15 @@ extern pcecd_drive_bus_t cd_bus; // Don't access this structure directly by name
 #define PCECD_Drive_GetSEL() SEL_signal
 
 void PCECD_Drive_Power(pcecd_drive_timestamp_t system_timestamp) MDFN_COLD;
-void PCECD_Drive_SetDB(uint8 data);
+MDFN_FASTCALL void PCECD_Drive_SetDB(uint8 data);
 
 // These PCECD_Drive_Set* functions are kind of misnomers, at least in comparison to the PCECD_Drive_Get* functions...
 // They will set/clear the bits corresponding to the KING's side of the bus.
-void PCECD_Drive_SetACK(bool set);
-void PCECD_Drive_SetSEL(bool set);
-void PCECD_Drive_SetRST(bool set);
+MDFN_FASTCALL void PCECD_Drive_SetACK(bool set);
+MDFN_FASTCALL void PCECD_Drive_SetSEL(bool set);
+MDFN_FASTCALL void PCECD_Drive_SetRST(bool set);
 
-uint32 PCECD_Drive_Run(pcecd_drive_timestamp_t);
+MDFN_FASTCALL uint32 PCECD_Drive_Run(pcecd_drive_timestamp_t);
 void PCECD_Drive_ResetTS(void);
 
 enum

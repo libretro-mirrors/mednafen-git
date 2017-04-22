@@ -184,7 +184,7 @@ static void AYHiSync(int32 ts)
   CAYBC[x]=ts;
 }
 
-static void SunIRQHook(int a)
+static MDFN_FASTCALL void SunIRQHook(int a)
 {
   if(IRQa & 1)
   {

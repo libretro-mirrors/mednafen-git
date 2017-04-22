@@ -143,7 +143,7 @@ static DECLFW(BOverflow)
 	return(BWrite[A](A, V));
 }
 
-static void Cleanup(void)
+static MDFN_COLD void Cleanup(void)
 {
  for(std::vector<EXPSOUND>::iterator ep = GameExpSound.begin(); ep != GameExpSound.end(); ep++)
  {
@@ -163,7 +163,7 @@ static void Cleanup(void)
  MDFNPPU_Close();
 }
 
-static void CloseGame(void)
+static MDFN_COLD void CloseGame(void)
 {
  if(GameInterface.SaveNV)
   GameInterface.SaveNV();
@@ -171,7 +171,7 @@ static void CloseGame(void)
  Cleanup();
 }
 
-static void InitCommon(const std::string& fbase)
+static MDFN_COLD void InitCommon(const std::string& fbase)
 {
         NESIsVSUni = FALSE;
         PPU_hook = 0;
@@ -224,9 +224,9 @@ static void InitCommon(const std::string& fbase)
         #endif
 }
 
-void UNIFLoad(Stream *fp, NESGameType *);
-void iNESLoad(Stream *fp, NESGameType *);
-void FDSLoad(Stream *fp, NESGameType *);
+void UNIFLoad(Stream *fp, NESGameType *) MDFN_COLD;
+void iNESLoad(Stream *fp, NESGameType *) MDFN_COLD;
+void FDSLoad(Stream *fp, NESGameType *) MDFN_COLD;
 
 bool iNES_TestMagic(MDFNFILE *fp);
 bool UNIF_TestMagic(MDFNFILE *fp);
@@ -258,7 +258,7 @@ static bool TestMagic(MDFNFILE *fp)
  return(GetLoadFunctionByMagic(fp) != NULL);
 }
 
-static void Load(MDFNFILE *fp)
+static MDFN_COLD void Load(MDFNFILE *fp)
 {
  try
  {
@@ -466,7 +466,7 @@ static const MDFNSetting_EnumList NTSCPresetList[] =
  { NULL, 0 },
 };
 
-static MDFNSetting NESSettings[] =
+static const MDFNSetting NESSettings[] =
 {
   { "nes.nofs", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Disable four-score emulation."), NULL, MDFNST_BOOL, "0" },
 

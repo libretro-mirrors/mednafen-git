@@ -218,25 +218,25 @@ void PCECD_Drive_Power(pcecd_drive_timestamp_t system_timestamp)
 }
 
 
-void PCECD_Drive_SetDB(uint8 data)
+MDFN_FASTCALL void PCECD_Drive_SetDB(uint8 data)
 {
  cd_bus.DB = data;
  //printf("Set DB: %02x\n", data);
 }
 
-void PCECD_Drive_SetACK(bool set)
+MDFN_FASTCALL void PCECD_Drive_SetACK(bool set)
 {
  SetkingACK(set);
  //printf("Set ACK: %d\n", set);
 }
 
-void PCECD_Drive_SetSEL(bool set)
+MDFN_FASTCALL void PCECD_Drive_SetSEL(bool set)
 {
  SetkingSEL(set);
  //printf("Set SEL: %d\n", set);
 }
 
-void PCECD_Drive_SetRST(bool set)
+MDFN_FASTCALL void PCECD_Drive_SetRST(bool set)
 {
  SetkingRST(set);
  //printf("Set RST: %d\n", set);
@@ -814,7 +814,7 @@ static const uint8 RequiredCDBLen[16] =
  10, // 0xFn
 };
 
-static SCSICH PCECommandDefs[] = 
+static const SCSICH PCECommandDefs[] = 
 {
  { 0x00, SCF_REQUIRES_MEDIUM, DoTESTUNITREADY, "Test Unit Ready" },
  { 0x03, 0, DoREQUESTSENSE, "Request Sense" },
@@ -1039,7 +1039,7 @@ static INLINE void RunCDRead(uint32 system_timestamp, int32 run_time)
 }
 
 
-uint32 PCECD_Drive_Run(pcecd_drive_timestamp_t system_timestamp)
+MDFN_FASTCALL uint32 PCECD_Drive_Run(pcecd_drive_timestamp_t system_timestamp)
 {
  int32 run_time = system_timestamp - lastts;
 

@@ -37,7 +37,7 @@
 	  __VA_ARGS__;									\
 											\
 	  /* FIXME: Throw an error string and not an arcane number. */			\
-	  throw MDFN_Error(0, _("OpenGL Error: %d\n"), (int)(long long)errcode);	\
+	  throw MDFN_Error(0, _("OpenGL Error 0x%04x during \"%s\"."), (int)(long long)errcode, #x);	\
 	 }										\
 	}
 
@@ -185,7 +185,7 @@ void OpenGL_Blitter_Shader::SLP(GLhandleARB moe)
 
  if(buflen)
  {
-  throw MDFN_Error(0, "Shader compilation error:\n%s\n", buf);
+  throw MDFN_Error(0, "Shader compilation error:\n%s", buf);
  }
 }
 

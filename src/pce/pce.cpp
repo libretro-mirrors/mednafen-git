@@ -352,7 +352,7 @@ static const struct
 	{ 0x3b13af61, "Battle Ace" },
 };
 
-static void Load(MDFNFILE *fp)
+static MDFN_COLD void Load(MDFNFILE *fp)
 {
  try
  {
@@ -408,7 +408,7 @@ static void Load(MDFNFILE *fp)
  }
 }
 
-static void LoadCommonPre(void)
+static MDFN_COLD void LoadCommonPre(void)
 {
  // Initialize sound buffers
  for(unsigned ch = 0; ch < 2; ch++)
@@ -429,7 +429,7 @@ static void LoadCommonPre(void)
  MDFNMP_Init(1024, (1 << 21) / 1024);
 }
 
-static int LoadCommon(void)
+static MDFN_COLD int LoadCommon(void)
 { 
  IsSGX |= MDFN_GetSettingB("pce.forcesgx") ? 1 : 0;
 
@@ -630,7 +630,7 @@ static MDFN_COLD bool DetectSGXCD(std::vector<CDIF*>* CDInterfaces)
  return ret;
 }
 
-static void LoadCD(std::vector<CDIF *> *CDInterfaces)
+static MDFN_COLD void LoadCD(std::vector<CDIF *> *CDInterfaces)
 {
  try
  {
@@ -680,7 +680,7 @@ static void LoadCD(std::vector<CDIF *> *CDInterfaces)
  }
 }
 
-static void Cleanup(void)
+static MDFN_COLD void Cleanup(void)
 {
  #ifdef WANT_DEBUGGER
  PCEDBG_Kill();
@@ -738,7 +738,7 @@ static void Cleanup(void)
  }
 }
 
-static void CloseGame(void)
+static MDFN_COLD void CloseGame(void)
 {
  HuC_SaveNV();
  Cleanup();
@@ -1080,7 +1080,7 @@ static void DoSimpleCommand(int cmd)
  }
 }
 
-static MDFNSetting PCESettings[] = 
+static const MDFNSetting PCESettings[] = 
 {
   { "pce.input.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap(TurboTap) emulation."), NULL, MDFNST_BOOL, "1" },
 
@@ -1192,7 +1192,7 @@ static bool SetSoundRate(double rate)
 //MDFN_printf(_("Palette is missing the full set of 512 greyscale entries.  Strip-colorburst entries will be calculated.\n"));
 static const CustomPalette_Spec CPInfo[] =
 {
- { gettext_noop("PCE/TG16 9-bit RGB"), NULL, { 512, 1024, 0 } },
+ { gettext_noop("PCE/TG16 9-bit GRB.  If only 512 triplets are present, the remaining 512 greyscale colors will be calculated automatically."), NULL, { 512, 1024, 0 } },
 
  { NULL, NULL }
 };

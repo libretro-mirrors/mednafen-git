@@ -237,7 +237,7 @@ DIST_COMMON = $(srcdir)/cdplay/Makefile.am.inc \
 @WANT_PSX_EMU_TRUE@	psx/input/justifier.cpp psx/gpu.cpp \
 @WANT_PSX_EMU_TRUE@	psx/gpu_polygon.cpp psx/gpu_line.cpp \
 @WANT_PSX_EMU_TRUE@	psx/gpu_sprite.cpp
-@WANT_DEBUGGER_TRUE@@WANT_PSX_EMU_TRUE@am__append_26 = psx/dis.cpp psx/debug.cpp
+@WANT_DEBUGGER_TRUE@@WANT_PSX_EMU_TRUE@am__append_26 = psx/debug.cpp psx/dis.cpp
 @WANT_SMS_EMU_TRUE@am__append_27 = sms/cart.cpp sms/memz80.cpp sms/pio.cpp sms/render.cpp sms/romdb.cpp sms/sms.cpp sms/sound.cpp sms/system.cpp sms/tms.cpp sms/vdp.cpp 
 @WANT_SNES_EMU_TRUE@am__append_28 = snes
 @WANT_SNES_EMU_TRUE@am__append_29 = snes/libsnes.a
@@ -250,7 +250,7 @@ DIST_COMMON = $(srcdir)/cdplay/Makefile.am.inc \
 @WANT_VB_EMU_TRUE@am__append_36 = vb/vb.cpp vb/timer.cpp vb/input.cpp vb/vip.cpp vb/vsu.cpp
 @WANT_DEBUGGER_TRUE@@WANT_VB_EMU_TRUE@am__append_37 = vb/debug.cpp
 @WANT_WSWAN_EMU_TRUE@am__append_38 = wswan/gfx.cpp wswan/main.cpp wswan/memory.cpp wswan/comm.cpp wswan/v30mz.cpp wswan/sound.cpp wswan/tcache.cpp wswan/interrupt.cpp wswan/eeprom.cpp wswan/rtc.cpp
-@WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@am__append_39 = wswan/dis/dis_decode.cpp wswan/dis/dis_groups.cpp wswan/dis/resolve.cpp wswan/dis/syntax.cpp wswan/debug.cpp
+@WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@am__append_39 = wswan/debug.cpp wswan/dis/dis_decode.cpp wswan/dis/dis_groups.cpp wswan/dis/resolve.cpp wswan/dis/syntax.cpp
 @WANT_DEBUGGER_TRUE@am__append_40 = desa68
 @WANT_DEBUGGER_TRUE@am__append_41 = desa68/libdesa68.a
 @WANT_DEBUGGER_TRUE@am__append_42 = desa68/libdesa68.a
@@ -391,7 +391,7 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	psx/input/memcard.cpp psx/input/multitap.cpp \
 	psx/input/mouse.cpp psx/input/negcon.cpp psx/input/guncon.cpp \
 	psx/input/justifier.cpp psx/gpu.cpp psx/gpu_polygon.cpp \
-	psx/gpu_line.cpp psx/gpu_sprite.cpp psx/dis.cpp psx/debug.cpp \
+	psx/gpu_line.cpp psx/gpu_sprite.cpp psx/debug.cpp psx/dis.cpp \
 	sms/cart.cpp sms/memz80.cpp sms/pio.cpp sms/render.cpp \
 	sms/romdb.cpp sms/sms.cpp sms/sound.cpp sms/system.cpp \
 	sms/tms.cpp sms/vdp.cpp snes_faust/cpu.cpp snes_faust/snes.cpp \
@@ -400,12 +400,12 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	vb/vip.cpp vb/vsu.cpp vb/debug.cpp wswan/gfx.cpp \
 	wswan/main.cpp wswan/memory.cpp wswan/comm.cpp wswan/v30mz.cpp \
 	wswan/sound.cpp wswan/tcache.cpp wswan/interrupt.cpp \
-	wswan/eeprom.cpp wswan/rtc.cpp wswan/dis/dis_decode.cpp \
-	wswan/dis/dis_groups.cpp wswan/dis/resolve.cpp \
-	wswan/dis/syntax.cpp wswan/debug.cpp hw_cpu/m68k/m68k.cpp \
-	hw_cpu/z80-fuse/z80.cpp hw_cpu/z80-fuse/z80_ops.cpp \
-	hw_cpu/v810/v810_cpu.cpp hw_cpu/v810/v810_cpuD.cpp \
-	hw_cpu/v810/v810_fp_ops.cpp \
+	wswan/eeprom.cpp wswan/rtc.cpp wswan/debug.cpp \
+	wswan/dis/dis_decode.cpp wswan/dis/dis_groups.cpp \
+	wswan/dis/resolve.cpp wswan/dis/syntax.cpp \
+	hw_cpu/m68k/m68k.cpp hw_cpu/z80-fuse/z80.cpp \
+	hw_cpu/z80-fuse/z80_ops.cpp hw_cpu/v810/v810_cpu.cpp \
+	hw_cpu/v810/v810_cpuD.cpp hw_cpu/v810/v810_fp_ops.cpp \
 	hw_misc/arcade_card/arcade_card.cpp \
 	hw_sound/ym2413/emu2413.cpp hw_sound/ym2612/Ym2612_Emu.cpp \
 	hw_sound/gb_apu/Gb_Apu.cpp hw_sound/gb_apu/Gb_Apu_State.cpp \
@@ -424,12 +424,12 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	compress/ioapi.c compress/unzip.c compress/GZFileStream.cpp \
 	compress/ZLInflateFilter.cpp hash/md5.cpp hash/sha1.cpp \
 	hash/sha256.cpp string/escape.cpp string/string.cpp \
-	string/ConvertUTF.cpp video/surface.cpp video/font-data.cpp \
-	video/font-data-18x18.c video/font-data-12x13.c video/png.cpp \
-	video/primitives.cpp video/text.cpp video/video.cpp \
-	video/tblur.cpp video/resize.cpp video/Deinterlacer.cpp \
-	resampler/resample.c cputest/cputest.c cputest/x86_cpu.c \
-	cputest/ppc_cpu.c cheat_formats/gb.cpp cheat_formats/psx.cpp \
+	video/surface.cpp video/font-data.cpp video/font-data-18x18.c \
+	video/font-data-12x13.c video/png.cpp video/primitives.cpp \
+	video/text.cpp video/video.cpp video/tblur.cpp \
+	video/resize.cpp video/Deinterlacer.cpp resampler/resample.c \
+	cputest/cputest.c cputest/x86_cpu.c cputest/ppc_cpu.c \
+	cheat_formats/gb.cpp cheat_formats/psx.cpp \
 	cheat_formats/snes.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_SDL_TRUE@@WIN32_TRUE@am__objects_1 =  \
@@ -652,8 +652,8 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @WANT_PSX_EMU_TRUE@	psx/gpu_line.$(OBJEXT) \
 @WANT_PSX_EMU_TRUE@	psx/gpu_sprite.$(OBJEXT)
 @WANT_DEBUGGER_TRUE@@WANT_PSX_EMU_TRUE@am__objects_16 =  \
-@WANT_DEBUGGER_TRUE@@WANT_PSX_EMU_TRUE@	psx/dis.$(OBJEXT) \
-@WANT_DEBUGGER_TRUE@@WANT_PSX_EMU_TRUE@	psx/debug.$(OBJEXT)
+@WANT_DEBUGGER_TRUE@@WANT_PSX_EMU_TRUE@	psx/debug.$(OBJEXT) \
+@WANT_DEBUGGER_TRUE@@WANT_PSX_EMU_TRUE@	psx/dis.$(OBJEXT)
 @WANT_SMS_EMU_TRUE@am__objects_17 = sms/cart.$(OBJEXT) \
 @WANT_SMS_EMU_TRUE@	sms/memz80.$(OBJEXT) sms/pio.$(OBJEXT) \
 @WANT_SMS_EMU_TRUE@	sms/render.$(OBJEXT) sms/romdb.$(OBJEXT) \
@@ -681,11 +681,11 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @WANT_WSWAN_EMU_TRUE@	wswan/interrupt.$(OBJEXT) \
 @WANT_WSWAN_EMU_TRUE@	wswan/eeprom.$(OBJEXT) \
 @WANT_WSWAN_EMU_TRUE@	wswan/rtc.$(OBJEXT)
-@WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@am__objects_22 = wswan/dis/dis_decode.$(OBJEXT) \
+@WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@am__objects_22 = wswan/debug.$(OBJEXT) \
+@WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@	wswan/dis/dis_decode.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@	wswan/dis/dis_groups.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@	wswan/dis/resolve.$(OBJEXT) \
-@WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@	wswan/dis/syntax.$(OBJEXT) \
-@WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@	wswan/debug.$(OBJEXT)
+@WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@	wswan/dis/syntax.$(OBJEXT)
 @NEED_68K_EMU_TRUE@am__objects_23 = hw_cpu/m68k/m68k.$(OBJEXT)
 @NEED_Z80_EMU_TRUE@am__objects_24 = hw_cpu/z80-fuse/z80.$(OBJEXT) \
 @NEED_Z80_EMU_TRUE@	hw_cpu/z80-fuse/z80_ops.$(OBJEXT)
@@ -749,8 +749,8 @@ am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	compress/ZLInflateFilter.$(OBJEXT) hash/md5.$(OBJEXT) \
 	hash/sha1.$(OBJEXT) hash/sha256.$(OBJEXT) \
 	string/escape.$(OBJEXT) string/string.$(OBJEXT) \
-	string/ConvertUTF.$(OBJEXT) video/surface.$(OBJEXT) \
-	video/font-data.$(OBJEXT) video/font-data-18x18.$(OBJEXT) \
+	video/surface.$(OBJEXT) video/font-data.$(OBJEXT) \
+	video/font-data-18x18.$(OBJEXT) \
 	video/font-data-12x13.$(OBJEXT) video/png.$(OBJEXT) \
 	video/primitives.$(OBJEXT) video/text.$(OBJEXT) \
 	video/video.$(OBJEXT) video/tblur.$(OBJEXT) \
@@ -1050,7 +1050,7 @@ SUBDIRS = trio $(am__append_1) $(am__append_5) sexyal $(am__append_17) \
 	$(am__append_28) $(SS_SUBDIRS) $(am__append_40) quicklz \
 	$(am__append_59) $(am__append_63)
 AUTOMAKE_OPTIONS = subdir-objects
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_builddir)/intl
 mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	endian.cpp Time.cpp mednafen.cpp git.cpp file.cpp general.cpp \
 	memory.cpp netplay.cpp state.cpp state_rewind.cpp movie.cpp \
@@ -1081,12 +1081,12 @@ mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	compress/ioapi.c compress/unzip.c compress/GZFileStream.cpp \
 	compress/ZLInflateFilter.cpp hash/md5.cpp hash/sha1.cpp \
 	hash/sha256.cpp string/escape.cpp string/string.cpp \
-	string/ConvertUTF.cpp video/surface.cpp video/font-data.cpp \
-	video/font-data-18x18.c video/font-data-12x13.c video/png.cpp \
-	video/primitives.cpp video/text.cpp video/video.cpp \
-	video/tblur.cpp video/resize.cpp video/Deinterlacer.cpp \
-	resampler/resample.c cputest/cputest.c $(am__append_56) \
-	$(am__append_57) cheat_formats/gb.cpp cheat_formats/psx.cpp \
+	video/surface.cpp video/font-data.cpp video/font-data-18x18.c \
+	video/font-data-12x13.c video/png.cpp video/primitives.cpp \
+	video/text.cpp video/video.cpp video/tblur.cpp \
+	video/resize.cpp video/Deinterlacer.cpp resampler/resample.c \
+	cputest/cputest.c $(am__append_56) $(am__append_57) \
+	cheat_formats/gb.cpp cheat_formats/psx.cpp \
 	cheat_formats/snes.cpp
 mednafen_LDADD = trio/libtrio.a $(am__append_2) $(am__append_6) \
 	sexyal/libsexyal.a @ALSA_LIBS@ @JACK_LIBS@ $(am__append_8) \
@@ -1754,8 +1754,8 @@ psx/gpu_line.$(OBJEXT): psx/$(am__dirstamp) \
 	psx/$(DEPDIR)/$(am__dirstamp)
 psx/gpu_sprite.$(OBJEXT): psx/$(am__dirstamp) \
 	psx/$(DEPDIR)/$(am__dirstamp)
-psx/dis.$(OBJEXT): psx/$(am__dirstamp) psx/$(DEPDIR)/$(am__dirstamp)
 psx/debug.$(OBJEXT): psx/$(am__dirstamp) psx/$(DEPDIR)/$(am__dirstamp)
+psx/dis.$(OBJEXT): psx/$(am__dirstamp) psx/$(DEPDIR)/$(am__dirstamp)
 sms/$(am__dirstamp):
 	@$(MKDIR_P) sms
 	@: > sms/$(am__dirstamp)
@@ -1831,6 +1831,8 @@ wswan/eeprom.$(OBJEXT): wswan/$(am__dirstamp) \
 	wswan/$(DEPDIR)/$(am__dirstamp)
 wswan/rtc.$(OBJEXT): wswan/$(am__dirstamp) \
 	wswan/$(DEPDIR)/$(am__dirstamp)
+wswan/debug.$(OBJEXT): wswan/$(am__dirstamp) \
+	wswan/$(DEPDIR)/$(am__dirstamp)
 wswan/dis/$(am__dirstamp):
 	@$(MKDIR_P) wswan/dis
 	@: > wswan/dis/$(am__dirstamp)
@@ -1845,8 +1847,6 @@ wswan/dis/resolve.$(OBJEXT): wswan/dis/$(am__dirstamp) \
 	wswan/dis/$(DEPDIR)/$(am__dirstamp)
 wswan/dis/syntax.$(OBJEXT): wswan/dis/$(am__dirstamp) \
 	wswan/dis/$(DEPDIR)/$(am__dirstamp)
-wswan/debug.$(OBJEXT): wswan/$(am__dirstamp) \
-	wswan/$(DEPDIR)/$(am__dirstamp)
 hw_cpu/m68k/$(am__dirstamp):
 	@$(MKDIR_P) hw_cpu/m68k
 	@: > hw_cpu/m68k/$(am__dirstamp)
@@ -2041,8 +2041,6 @@ string/$(DEPDIR)/$(am__dirstamp):
 string/escape.$(OBJEXT): string/$(am__dirstamp) \
 	string/$(DEPDIR)/$(am__dirstamp)
 string/string.$(OBJEXT): string/$(am__dirstamp) \
-	string/$(DEPDIR)/$(am__dirstamp)
-string/ConvertUTF.$(OBJEXT): string/$(am__dirstamp) \
 	string/$(DEPDIR)/$(am__dirstamp)
 video/$(am__dirstamp):
 	@$(MKDIR_P) video
@@ -2511,7 +2509,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@sound/$(DEPDIR)/Stereo_Buffer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@sound/$(DEPDIR)/WAVRecord.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@sound/$(DEPDIR)/okiadpcm.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@string/$(DEPDIR)/ConvertUTF.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@string/$(DEPDIR)/escape.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@string/$(DEPDIR)/string.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@vb/$(DEPDIR)/debug.Po@am__quote@

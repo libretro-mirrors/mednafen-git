@@ -18,7 +18,7 @@ void NESDBG_AddBranchTrace(uint32 from, uint32 to, uint32 vector);
 void NESDBG_GetAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint8 *Buffer);
 void NESDBG_PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length, uint32 Granularity, bool hl, const uint8 *Buffer);
 
-bool NESDBG_Init(void);
+bool NESDBG_Init(void) MDFN_COLD;
 
 extern DebuggerInfoStruct NESDBGInfo;
 }

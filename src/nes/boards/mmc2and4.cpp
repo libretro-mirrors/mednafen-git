@@ -28,7 +28,7 @@ static uint8 CHRBanks[4];
 static uint8 Mirroring;
 static uint8 PRGBank;
 
-static void latchcheck(uint32 VAddr)
+static MDFN_FASTCALL void latchcheck(uint32 VAddr)
 {
      uint8 l,h;
 

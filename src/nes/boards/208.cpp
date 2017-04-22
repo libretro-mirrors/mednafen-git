@@ -126,7 +126,7 @@ static void sl(void)
  }
 }
 
-static void foo(uint32 A)
+static MDFN_FASTCALL void foo(uint32 A)
 {
  if((A&0x2000) && !(last&0x2000))
  {

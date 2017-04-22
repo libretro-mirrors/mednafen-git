@@ -712,24 +712,24 @@ static INLINE void MD_WriteMemory16(uint32 address, uint16 value)
     }
 }
 
-void Main68K_BusRESET(bool state)
+MDFN_FASTCALL void Main68K_BusRESET(bool state)
 {
 
 }
 
-void Main68K_BusRMW(uint32 A, uint8 (*cb)(M68K*, uint8))
+MDFN_FASTCALL void Main68K_BusRMW(uint32 A, uint8 (MDFN_FASTCALL *cb)(M68K*, uint8))
 {
  Main68K.timestamp += 2;
  cb(&Main68K, MD_ReadMemory8(A));
  Main68K.timestamp += 8;
 }
 
-unsigned Main68K_BusIntAck(uint8 level)
+MDFN_FASTCALL unsigned Main68K_BusIntAck(uint8 level)
 {
  return MainVDP.IntAckCallback(level);
 }
 
-uint8 Main68K_BusRead8(uint32 A)
+MDFN_FASTCALL uint8 Main68K_BusRead8(uint32 A)
 {
  uint8 ret;
 
@@ -740,7 +740,7 @@ uint8 Main68K_BusRead8(uint32 A)
  return ret;
 }
 
-uint16 Main68K_BusRead16(uint32 A)
+MDFN_FASTCALL uint16 Main68K_BusRead16(uint32 A)
 {
  uint16 ret;
 
@@ -751,7 +751,7 @@ uint16 Main68K_BusRead16(uint32 A)
  return ret;
 }
 
-uint16 Main68K_BusReadInstr(uint32 A)
+MDFN_FASTCALL uint16 Main68K_BusReadInstr(uint32 A)
 {
  uint16 ret;
 
@@ -762,14 +762,14 @@ uint16 Main68K_BusReadInstr(uint32 A)
  return ret;
 }
 
-void Main68K_BusWrite8(uint32 A, uint8 V)
+MDFN_FASTCALL void Main68K_BusWrite8(uint32 A, uint8 V)
 {
  Main68K.timestamp += 2;
  MD_WriteMemory8(A, V);
  Main68K.timestamp += 2;
 }
 
-void Main68K_BusWrite16(uint32 A, uint16 V)
+MDFN_FASTCALL void Main68K_BusWrite16(uint32 A, uint16 V)
 {
  Main68K.timestamp += 2;
  MD_WriteMemory16(A, V);
@@ -777,7 +777,7 @@ void Main68K_BusWrite16(uint32 A, uint16 V)
 }
 
 
-uint8 Main68K_BusPeek8(uint32 A)
+MDFN_FASTCALL uint8 Main68K_BusPeek8(uint32 A)
 {
  uint8 ret;
 
@@ -788,7 +788,7 @@ uint8 Main68K_BusPeek8(uint32 A)
  return ret;
 }
 
-uint16 Main68K_BusPeek16(uint32 A)
+MDFN_FASTCALL uint16 Main68K_BusPeek16(uint32 A)
 {
  uint16 ret;
 
@@ -799,7 +799,7 @@ uint16 Main68K_BusPeek16(uint32 A)
  return ret;
 }
 
-void Main68K_BusPoke8(uint32 A, uint8 V)
+MDFN_FASTCALL void Main68K_BusPoke8(uint32 A, uint8 V)
 {
  MD_WriteMemory8(A, V);
 }

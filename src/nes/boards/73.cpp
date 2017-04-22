@@ -41,7 +41,7 @@ static DECLFW(Mapper73_write)
  }
 }
 
-static void Mapper73IRQHook(int a)
+static MDFN_FASTCALL void Mapper73IRQHook(int a)
 {
  if(IRQa)
  {

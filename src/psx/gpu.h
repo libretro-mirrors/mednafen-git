@@ -2,7 +2,7 @@
 /* Mednafen Sony PS1 Emulation Module                                         */
 /******************************************************************************/
 /* gpu.h:
-**  Copyright (C) 2011-2016 Mednafen Team
+**  Copyright (C) 2011-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -30,11 +30,9 @@
 namespace MDFN_IEN_PSX
 {
 
-class PS_GPU;
-
 struct CTEntry
 {
- void (*func[4][8])(PS_GPU* g, const uint32 *cb);
+ void (*func[4][8])(const uint32 *cb);
  uint8 len;
  uint8 fifo_fb_len;
  bool ss_cmd;
@@ -47,87 +45,18 @@ struct tri_vertex
  int32 r, g, b;
 };
 
-struct i_group;
-struct i_deltas;
-
 struct line_point
 {
  int32 x, y;
  uint8 r, g, b;
 };
 
-class PS_GPU
+struct PS_GPU
 {
- public:
-
- PS_GPU(bool pal_clock_and_tv) MDFN_COLD;
- ~PS_GPU() MDFN_COLD;
-
- void SetGetVideoParams(MDFNGI* gi, const int sls, const int sle, const bool show_h_overscan) MDFN_COLD;
-
- void Power(void) MDFN_COLD;
-
- void StateAction(StateMem *sm, const unsigned load, const bool data_only);
-
- void ResetTS(void);
-
- void StartFrame(EmulateSpecStruct *espec);
-
- pscpu_timestamp_t Update(const pscpu_timestamp_t timestamp);
-
- void Write(const pscpu_timestamp_t timestamp, uint32 A, uint32 V);
-
- INLINE bool CalcFIFOReadyBit(void)
- {
-  if(InCmd & (INCMD_PLINE | INCMD_QUAD))
-   return(false);
-
-  if(BlitterFIFO.CanRead() == 0)
-   return(true);
-
-  if(InCmd & (INCMD_FBREAD | INCMD_FBWRITE))
-   return(false);
-
-  if(BlitterFIFO.CanRead() >= Commands[BlitterFIFO.Peek() >> 24].fifo_fb_len)
-   return(false);
-
-  return(true);
- }
-
- INLINE bool DMACanWrite(void)
- {
-  return CalcFIFOReadyBit();
- }
-
- void WriteDMA(uint32 V);
- uint32 ReadDMA(void);
-
- uint32 Read(const pscpu_timestamp_t timestamp, uint32 A);
-
- inline int32 GetScanlineNum(void)
- {
-  return(scanline);
- } 
-
- INLINE uint16 PeekRAM(uint32 A)
- {
-  return(GPURAM[(A >> 10) & 0x1FF][A & 0x3FF]);
- }
-
- INLINE void PokeRAM(uint32 A, uint16 V)
- {
-  GPURAM[(A >> 10) & 0x1FF][A & 0x3FF] = V;
- }
-
- private:
-
  uint16 CLUT_Cache[256];
  uint32 CLUT_Cache_VB;	// Don't try to be clever and reduce it to 16 bits... ~0U is value for invalidated state.
 
- template<uint32 TexMode_TA>
- void Update_CLUT_Cache(uint16 raw_clut);
-
- struct	// Speedup-cache varibles, derived from other variables; shouldn't be saved in save states.
+ struct	// Speedup-cache variables, derived from other variables; shouldn't be saved in save states.
  {
   // TW*_* variables derived from tww, twh, twx, twy, TexPageX, TexPageY
   uint32 TWX_AND;
@@ -136,23 +65,12 @@ class PS_GPU
   uint32 TWY_AND;
   uint32 TWY_ADD;
  } SUCV;
- void RecalcTexWindowStuff(void);
 
  struct
  {
   uint16 Data[4];
   uint32 Tag;
  } TexCache[256];
-
- void InvalidateTexCache(void);
- void InvalidateCache(void);
-
- void SetTPage(uint32);
-
- void ProcessFIFO(void);
- void WriteCB(uint32 data);
- uint32 ReadData(void);
- void SoftReset(void);
 
  uint32 DMAControl;
 
@@ -190,62 +108,6 @@ class PS_GPU
 
  uint32 abr;
  uint32 TexMode;
-
- bool LineSkipTest(unsigned y);
-
- template<int BlendMode, bool MaskEval_TA, bool textured>
- void PlotPixel(uint32 x, uint32 y, uint16 pix);
-
- template<uint32 TexMode_TA>
- uint16 GetTexel(uint32 u, uint32 v);
-
- uint16 ModTexel(uint16 texel, int32 r, int32 g, int32 b, const int32 dither_x, const int32 dither_y);
-
- template<bool goraud, bool textured, int BlendMode, bool TexMult, uint32 TexMode, bool MaskEval_TA>
- void DrawSpan(int y, const int32 x_start, const int32 x_bound, i_group ig, const i_deltas &idl);
-
- template<bool shaded, bool textured, int BlendMode, bool TexMult, uint32 TexMode_TA, bool MaskEval_TA>
- void DrawTriangle(tri_vertex *vertices);
-
- template<bool textured, int BlendMode, bool TexMult, uint32 TexMode_TA, bool MaskEval_TA, bool FlipX, bool FlipY>
- void DrawSprite(int32 x_arg, int32 y_arg, int32 w, int32 h, uint8 u_arg, uint8 v_arg, uint32 color);
-
- template<bool goraud, int BlendMode, bool MaskEval_TA>
- void DrawLine(line_point *vertices);
-
-
- public:
- template<int numvertices, bool shaded, bool textured, int BlendMode, bool TexMult, uint32 TexMode_TA, bool MaskEval_TA>
- void Command_DrawPolygon(const uint32 *cb);
-
- template<uint8 raw_size, bool textured, int BlendMode, bool TexMult, uint32 TexMode_TA, bool MaskEval_TA>
- void Command_DrawSprite(const uint32 *cb);
-
- template<bool polyline, bool goraud, int BlendMode, bool MaskEval_TA>
- void Command_DrawLine(const uint32 *cb);
-
- void Command_ClearCache(const uint32 *cb);
- void Command_IRQ(const uint32 *cb);
-
- void Command_FBFill(const uint32 *cb);
- void Command_FBCopy(const uint32 *cb);
- void Command_FBWrite(const uint32 *cb);
- void Command_FBRead(const uint32 *cb);
-
- void Command_DrawMode(const uint32 *cb);
- void Command_TexWindow(const uint32 *cb);
- void Command_Clip0(const uint32 *cb);
- void Command_Clip1(const uint32 *cb);
- void Command_DrawingOffset(const uint32 *cb);
- void Command_MaskSetting(const uint32 *cb);
-
- private:
- static CTEntry Commands[256];
- static const CTEntry Commands_00_1F[0x20];
- static const CTEntry Commands_20_3F[0x20];
- static const CTEntry Commands_40_5F[0x20];
- static const CTEntry Commands_60_7F[0x20];
- static const CTEntry Commands_80_FF[0x80];
 
  FastFIFO<uint32, 0x20> BlitterFIFO; // 0x10 on actual PS1 GPU, 0x20 here(see comment at top of gpu.h)
  uint32 DataReadBuffer;
@@ -322,6 +184,8 @@ class PS_GPU
  pscpu_timestamp_t lastts;
 
  uint8 DitherLUT[4][4][512];	// Y, X, 8-bit source value(256 extra for saturation)
+
+ CTEntry Commands[256];
  //
  //
  //
@@ -334,17 +198,73 @@ class PS_GPU
  int32 *LineWidths;
  int LineVisFirst, LineVisLast;
  int32 hmc_to_visible;
- const bool HardwarePALType;
+ /*const*/ bool HardwarePALType;
  uint32 OutputLUT[384];
  //
  //
  // Y, X
  uint16 GPURAM[512][1024];
- void ReorderRGB_Var(uint32 out_Rshift, uint32 out_Gshift, uint32 out_Bshift, bool bpp24, const uint16 *src, uint32 *dest, const int32 dx_start, const int32 dx_end, int32 fb_x);
-
- template<uint32 out_Rshift, uint32 out_Gshift, uint32 out_Bshift>
- void ReorderRGB(bool bpp24, const uint16 *src, uint32 *dest, const int32 dx_start, const int32 dx_end, int32 fb_x) NO_INLINE;
 };
 
+ extern PS_GPU GPU;
+
+ void GPU_Init(bool pal_clock_and_tv) MDFN_COLD;
+ void GPU_Kill(void) MDFN_COLD;
+
+ void GPU_SetGetVideoParams(MDFNGI* gi, const int sls, const int sle, const bool show_h_overscan) MDFN_COLD;
+
+ void GPU_Power(void) MDFN_COLD;
+
+ void GPU_StateAction(StateMem *sm, const unsigned load, const bool data_only);
+
+ void GPU_ResetTS(void);
+
+ void GPU_StartFrame(EmulateSpecStruct *espec);
+
+ MDFN_FASTCALL pscpu_timestamp_t GPU_Update(const pscpu_timestamp_t timestamp);
+
+ MDFN_FASTCALL void GPU_Write(const pscpu_timestamp_t timestamp, uint32 A, uint32 V);
+
+ static INLINE bool GPU_CalcFIFOReadyBit(void)
+ {
+  if(GPU.InCmd & (PS_GPU::INCMD_PLINE | PS_GPU::INCMD_QUAD))
+   return false;
+
+  if(GPU.BlitterFIFO.CanRead() == 0)
+   return true;
+
+  if(GPU.InCmd & (PS_GPU::INCMD_FBREAD | PS_GPU::INCMD_FBWRITE))
+   return false;
+
+  if(GPU.BlitterFIFO.CanRead() >= GPU.Commands[GPU.BlitterFIFO.Peek() >> 24].fifo_fb_len)
+   return false;
+
+  return true;
+ }
+
+ static INLINE bool GPU_DMACanWrite(void)
+ {
+  return GPU_CalcFIFOReadyBit();
+ }
+
+ MDFN_FASTCALL void GPU_WriteDMA(uint32 V);
+ uint32 GPU_ReadDMA(void);
+
+ MDFN_FASTCALL uint32 GPU_Read(const pscpu_timestamp_t timestamp, uint32 A);
+
+ static INLINE int32 GPU_GetScanlineNum(void)
+ {
+  return GPU.scanline;
+ } 
+
+ static INLINE uint16 GPU_PeekRAM(uint32 A)
+ {
+  return GPU.GPURAM[(A >> 10) & 0x1FF][A & 0x3FF];
+ }
+
+ static INLINE void GPU_PokeRAM(uint32 A, uint16 V)
+ {
+  GPU.GPURAM[(A >> 10) & 0x1FF][A & 0x3FF] = V;
+ }
 }
 #endif

@@ -135,7 +135,7 @@ enum
  NTVB_SUPEREAGLE,
 };
 
-static MDFNSetting_EnumList VDriver_List[] =
+static const MDFNSetting_EnumList VDriver_List[] =
 {
  // Legacy:
  { "0", VDRIVER_OPENGL },
@@ -149,7 +149,7 @@ static MDFNSetting_EnumList VDriver_List[] =
  { NULL, 0 },
 };
 
-static MDFNSetting GlobalVideoSettings[] =
+static const MDFNSetting GlobalVideoSettings[] =
 {
  { "video.driver", MDFNSF_NOFLAGS, gettext_noop("Video output method/driver."), NULL, MDFNST_ENUM, "opengl", NULL, NULL, NULL, NULL, VDriver_List },
 
@@ -192,7 +192,7 @@ static const MDFNSetting_EnumList VideoIP_List[] =
  { NULL, 0 },
 };
 
-static MDFNSetting_EnumList Special_List[] =
+static const MDFNSetting_EnumList Special_List[] =
 {
     { "0", 	NTVB_NONE },
     { "none", 	NTVB_NONE, "None/Disabled" },
@@ -220,7 +220,7 @@ static MDFNSetting_EnumList Special_List[] =
     { NULL, 0 },
 };
 
-static MDFNSetting_EnumList Shader_List[] =
+static const MDFNSetting_EnumList Shader_List[] =
 {
     { "none",		SHADER_NONE,		gettext_noop("None/Disabled") },
     { "autoip", 	SHADER_AUTOIP,		gettext_noop("Auto Interpolation"), gettext_noop("Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.") },
@@ -238,7 +238,7 @@ static MDFNSetting_EnumList Shader_List[] =
     { NULL, 0 },
 };
 
-static MDFNSetting_EnumList GoatPat_List[] =
+static const MDFNSetting_EnumList GoatPat_List[] =
 {
 	{ "goatron",	ShaderParams::GOAT_MASKPAT_GOATRON,	gettext_noop("Goatron"), gettext_noop("Brightest.") },
 	{ "goattron",	ShaderParams::GOAT_MASKPAT_GOATRON },

@@ -69,7 +69,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
  return(ret);
 }
 
-static void IRQHook(int a)
+static MDFN_FASTCALL void IRQHook(int a)
 {
  if(IRQa)
  {

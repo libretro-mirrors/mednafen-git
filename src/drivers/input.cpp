@@ -234,7 +234,7 @@ struct ButtonInfoCache
  int BCPrettyPrio = 0;
 
  unsigned Flags = 0;
- uint16 BitOffsets[4] = { 0, 0, 0, 0 };	// [rotated]
+ uint16 BitOffset = 0;
  uint16 ExclusionBitOffset = 0xFFFF;
  InputDeviceInputType Type = IDIT_BUTTON;
  bool Rapid = false;
@@ -365,11 +365,7 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
      bic.SettingName = trio_aprintf("%s.input.%s.%s.%s%s", gi->shortname, gi->PortInfo[port].ShortName, zedevice->ShortName, (r ? "rapid_" : ""), idii.SettingName);
      CleanSettingName(bic.SettingName);
      bic.BCANDMode = StringToBC(MDFN_GetSettingS(bic.SettingName).c_str(), bic.BC);
-
-     for(unsigned o = 0; o < 4; o++)
-     {
-      bic.BitOffsets[o] = idii.BitOffset;
-     }
+     bic.BitOffset = idii.BitOffset;
 
      if(idii.Type == IDIT_SWITCH)
      {
@@ -447,7 +443,7 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
   }
 
   //
-  // Now, search for exclusion buttons and rotated inputs.
+  // Now, search for exclusion buttons.
   //
   for(auto& bic : PIDC[port].BIC)
   {
@@ -457,23 +453,8 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
     {
      if(!strcasecmp(bic.IDII->ExcludeName, sub_bic.IDII->SettingName))
      {
-      bic.ExclusionBitOffset = sub_bic.BitOffsets[0];
+      bic.ExclusionBitOffset = sub_bic.BitOffset;
       break;
-     }
-    }
-   }
-
-   if(bic.IDII->RotateName[0])
-   {
-    for(auto const& sub_bic : PIDC[port].BIC)
-    {
-     for(int rodir = 0; rodir < 3; rodir++)
-     {
-      if(!strcasecmp(bic.IDII->RotateName[rodir], sub_bic.IDII->SettingName))
-      {
-       bic.BitOffsets[1 + rodir] = sub_bic.BitOffsets[0];
-       // No break for you!
-      }
      }
     }
    }
@@ -1493,9 +1474,6 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
  if(UpdateRapidFire)
   rapid = (rapid + 1) % (autofirefreq + 1);
 
- bool RotateInput = false;
- bool RotateInputSettingFetched = false;
-
  // Do stuff here
  for(unsigned int x = 0; x < CurGame->PortInfo.size(); x++)
  {
@@ -1538,22 +1516,8 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
   //
   for(auto& bic : PIDC[x].BIC)
   {
-   if(!RotateInputSettingFetched)
-   {
-    if(bic.BitOffsets[CurGame->rotated] != bic.BitOffsets[0])
-    {
-     char tmp_setting_name[512];
-
-     trio_snprintf(tmp_setting_name, 512, "%s.rotateinput", CurGame->shortname);
-     RotateInput = MDFN_GetSettingB(tmp_setting_name);
-     RotateInputSettingFetched = true;
-    }
-   }
-   //
-   //
-   //
    uint8* tptr = PIDC[x].Data;
-   const uint32 bo = bic.BitOffsets[RotateInput ? CurGame->rotated : 0];
+   const uint32 bo = bic.BitOffset;
    uint8* const btptr = &tptr[bo >> 3];
 
 
@@ -1626,7 +1590,7 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
   {
    if(bic.ExclusionBitOffset != 0xFFFF)
    {
-    const uint32 bo[2] = { bic.BitOffsets[0], bic.ExclusionBitOffset };
+    const uint32 bo[2] = { bic.BitOffset, bic.ExclusionBitOffset };
     const uint32 bob[2] = { bo[0] >> 3, bo[1] >> 3 };
     const uint32 bom[2] = { 1U << (bo[0] & 0x7), 1U << (bo[1] & 0x7) };
     uint8 *tptr = PIDC[x].Data;

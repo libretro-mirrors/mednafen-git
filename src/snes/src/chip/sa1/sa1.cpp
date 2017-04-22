@@ -12,9 +12,12 @@ SA1 sa1;
 #include "mmio/mmio.cpp"
 
 void SA1::enter() {
+  wai_stp_shenanigans();
   while(true) {
     while(scheduler.sync == Scheduler::SyncAll) {
       scheduler.exit(Scheduler::SynchronizeEvent);
+
+      wai_stp_shenanigans();
     }
 
     if(mmio.sa1_rdyb || mmio.sa1_resb) {
@@ -322,6 +325,7 @@ void SA1::reset() {
 }
 
 SA1::SA1() {
+  wai_stp_sync = Scheduler::SyncAll;
 }
 
 };

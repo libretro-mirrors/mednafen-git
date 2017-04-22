@@ -53,7 +53,7 @@ static int Mirroring;
 static uint32 ROM_size;
 static uint32 VROM_size;
 
-static void NewiNES_Init(int num);
+static void NewiNES_Init(int num) MDFN_COLD;
 
 static int MapperNo;
 
@@ -89,7 +89,7 @@ static void iNES_StateAction(StateMem *sm, const unsigned load, const bool data_
  if(iNESCart.StateAction)	// Call after loading/saving VS Uni and iNES sections.
   iNESCart.StateAction(sm, load, data_only);
 }
-static void iNESFree(void)
+static MDFN_COLD void iNESFree(void)
 {
 	if(ROM)
 	{
@@ -110,7 +110,7 @@ static void iNESFree(void)
 	}
 }
 
-static void iNES_Reset(void)
+static MDFN_COLD void iNES_Reset(void)
 {
         if(head.ROM_type & 4)
          memcpy(TrainerRAM, trainerpoo, 512);
@@ -119,7 +119,7 @@ static void iNES_Reset(void)
 	 iNESCart.Reset(&iNESCart);
 }
 
-static void iNES_Power(void)
+static MDFN_COLD void iNES_Power(void)
 {
 	if(!VROM_size)
 	 memset(VROM, 0xFF, CHRRAMSize);
@@ -142,7 +142,7 @@ static void iNES_SaveNV(void)
 	MDFN_SaveGameSave(&iNESCart);
 }
 
-static void iNES_Kill(void)
+static MDFN_COLD void iNES_Kill(void)
 {
 	if(iNESCart.Close) iNESCart.Close();
 
@@ -556,7 +556,7 @@ bool iNES_TestMagic(MDFNFILE *fp)
  return true;
 }
 
-void iNESLoad(Stream *fp, NESGameType *gt)
+MDFN_COLD void iNESLoad(Stream *fp, NESGameType *gt)
 {
   try
   {

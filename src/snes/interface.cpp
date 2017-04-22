@@ -99,9 +99,9 @@ static void BuildColorMap(MDFN_PixelFormat &format, uint8* CustomColorMap)
  }
 }
 
-static CustomPalette_Spec CPInfo[] =
+static const CustomPalette_Spec CPInfo[] =
 {
- { gettext_noop("SNES 15-bit RGB colormap"), NULL, { 32768, 0 } },
+ { gettext_noop("SNES 15-bit BGR"), NULL, { 32768, 0 } },
 
  { NULL, NULL }
 };

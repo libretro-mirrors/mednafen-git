@@ -2055,7 +2055,7 @@ CPU_Misc CPUM;
 
 void CPU_Run(void)
 {
- static const void* const LoopTable[4] =
+ const void* const LoopTable[4] =
  {
   &&Loop_0, &&Loop_1, &&Loop_2, &&Loop_3,
  };

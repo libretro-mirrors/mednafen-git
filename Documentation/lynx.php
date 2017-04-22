@@ -12,6 +12,7 @@ directory.
 </p>
 <?php EndSection(); ?>
 
+<?php PrintCustomPalettes(); ?>
 
 <?php BeginSection('Default Key Assignments', "Section_default_keys"); ?>
  <table border>

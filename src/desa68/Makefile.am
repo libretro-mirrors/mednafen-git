@@ -7,7 +7,7 @@
 AUTOMAKE_OPTIONS = subdir-objects
 AM_CFLAGS = @AM_CFLAGS@ -Wno-multichar
 DEFS = @DEFS@ 
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_builddir)/intl
 
 noinst_LIBRARIES	=	libdesa68.a
 libdesa68_a_SOURCES	=	desa68.c

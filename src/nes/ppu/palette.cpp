@@ -57,15 +57,15 @@ MDFNPalStruct ActiveNESPalette[0x200];
 
 const CustomPalette_Spec NES_CPInfo[7 + 1] =
 {
- { gettext_noop("NTSC NES/Famicom Palette"), NULL, { 64, 512, 0 } },
- { gettext_noop("PAL NES Palette"), "nes-pal", { 64, 512, 0 } },
+ { gettext_noop("NTSC NES/Famicom"), NULL, { 64, 512, 0 } },
+ { gettext_noop("PAL NES"), "nes-pal", { 64, 512, 0 } },
 
- { gettext_noop("Arcade RP2C04-0001 Palette"), "rp2c04-0001", { 64, 0 } },
- { gettext_noop("Arcade RP2C04-0002 Palette"), "rp2c04-0002", { 64, 0 } },
- { gettext_noop("Arcade RP2C04-0003 Palette"), "rp2c04-0003", { 64, 0 } },
- { gettext_noop("Arcade RP2C04-0004 Palette"), "rp2c04-0004", { 64, 0 } },
+ { gettext_noop("Arcade RP2C04-0001"), "rp2c04-0001", { 64, 0 } },
+ { gettext_noop("Arcade RP2C04-0002"), "rp2c04-0002", { 64, 0 } },
+ { gettext_noop("Arcade RP2C04-0003"), "rp2c04-0003", { 64, 0 } },
+ { gettext_noop("Arcade RP2C04-0004"), "rp2c04-0004", { 64, 0 } },
 
- { gettext_noop("Arcade RP2C03/RP2C05 Palette"), "rp2c0x", { 64, 0 } },
+ { gettext_noop("Arcade RP2C03/RP2C05"), "rp2c0x", { 64, 0 } },
 
  { NULL, NULL },
 };

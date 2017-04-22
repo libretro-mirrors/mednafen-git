@@ -34,7 +34,7 @@
 
 #include <mednafen/net/Net.h>
 
-#include "AtomicFIFO.h"
+#include <mednafen/AtomicFIFO.h>
 
 static std::unique_ptr<Net::Connection> Connection;
 

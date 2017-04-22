@@ -92,17 +92,18 @@ int MDFND_PostSem(MDFN_Sem* sem);
 void MDFNI_Reset(void);
 void MDFNI_Power(void);
 
-/* path = path of game/file to load.  returns NULL on failure. */
-MDFNGI *MDFNI_LoadGame(const char *force_module, const char *path);
 
-MDFNGI *MDFNI_LoadCD(const char *force_module, const char *path);	// Deprecated interface.
+// path = path of game/file to load.
+// Returns NULL on error.
+MDFNGI *MDFNI_LoadGame(const char *force_module, const char *path) MDFN_COLD;
+MDFNGI *MDFNI_LoadCD(const char *force_module, const char *path) MDFN_COLD;	// Deprecated interface.
 
 // Call this function as early as possible, even before MDFNI_Initialize()
-bool MDFNI_InitializeModules(void);
+bool MDFNI_InitializeModules(void) MDFN_COLD;
 
 /* allocates memory.  0 on failure, 1 on success. */
 /* Also pass it the base directory to load the configuration file. */
-int MDFNI_Initialize(const char *basedir, const std::vector<MDFNSetting> &DriverSettings);
+int MDFNI_Initialize(const char *basedir, const std::vector<MDFNSetting> &DriverSettings) MDFN_COLD;
 
 /* Call only when a game is loaded. */
 int MDFNI_NetplayStart(void);
@@ -122,10 +123,10 @@ void MDFNI_AutoScaleMRFrame(EmulateSpecStruct *espec);
 #endif
 
 /* Closes currently loaded game */
-void MDFNI_CloseGame(void);
+void MDFNI_CloseGame(void) MDFN_COLD;
 
 /* Deallocates all allocated memory.  Call after MDFNI_Emulate() returns. */
-void MDFNI_Kill(void);
+void MDFNI_Kill(void) MDFN_COLD;
 
 void MDFN_DispMessage(const char *format, ...) noexcept MDFN_FORMATSTR(gnu_printf, 1, 2);
 #define MDFNI_DispMessage MDFN_DispMessage
@@ -155,12 +156,12 @@ void MDFNI_ToggleDIPView(void);
 
 bool MDFNI_EnableStateRewind(bool enable);
 
-bool MDFNI_StartAVRecord(const char *path, double SoundRate);
-void MDFNI_StopAVRecord(void);
+bool MDFNI_StartAVRecord(const char *path, double SoundRate) MDFN_COLD;
+void MDFNI_StopAVRecord(void) MDFN_COLD;
 
-bool MDFNI_StartWAVRecord(const char *path, double SoundRate);
-void MDFNI_StopWAVRecord(void);
+bool MDFNI_StartWAVRecord(const char *path, double SoundRate) MDFN_COLD;
+void MDFNI_StopWAVRecord(void) MDFN_COLD;
 
-void MDFNI_DumpModulesDef(const char *fn);
+void MDFNI_DumpModulesDef(const char *fn) MDFN_COLD;
 
 #endif

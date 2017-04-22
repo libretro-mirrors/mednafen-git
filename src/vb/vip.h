@@ -25,6 +25,8 @@
 namespace MDFN_IEN_VB
 {
 
+extern const CustomPalette_Spec VIP_CPInfo[];
+
 void VIP_Init(void) MDFN_COLD;
 void VIP_Kill(void) MDFN_COLD;
 void VIP_Power(void) MDFN_COLD;
@@ -35,18 +37,19 @@ void VIP_Set3DMode(uint32 mode, bool reverse, uint32 prescale, uint32 sbs_separa
 void VIP_SetParallaxDisable(bool disabled) MDFN_COLD;
 void VIP_SetDefaultColor(uint32 default_color) MDFN_COLD;
 void VIP_SetAnaglyphColors(uint32 lcolor, uint32 rcolor) MDFN_COLD;	// R << 16, G << 8, B << 0
+void VIP_SetLEDOnScale(float coeff) MDFN_COLD;
 
 v810_timestamp_t MDFN_FASTCALL VIP_Update(const v810_timestamp_t timestamp);
 void VIP_ResetTS(void);
 
 void VIP_StartFrame(EmulateSpecStruct *espec);
 
-uint8 VIP_Read8(v810_timestamp_t &timestamp, uint32 A);
-uint16 VIP_Read16(v810_timestamp_t &timestamp, uint32 A);
+MDFN_FASTCALL uint8 VIP_Read8(v810_timestamp_t &timestamp, uint32 A);
+MDFN_FASTCALL uint16 VIP_Read16(v810_timestamp_t &timestamp, uint32 A);
 
 
-void VIP_Write8(v810_timestamp_t &timestamp, uint32 A, uint8 V);
-void VIP_Write16(v810_timestamp_t &timestamp, uint32 A, uint16 V);
+MDFN_FASTCALL void VIP_Write8(v810_timestamp_t &timestamp, uint32 A, uint8 V);
+MDFN_FASTCALL void VIP_Write16(v810_timestamp_t &timestamp, uint32 A, uint16 V);
 
 void VIP_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 

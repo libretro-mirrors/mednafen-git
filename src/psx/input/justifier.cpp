@@ -30,10 +30,10 @@ class InputDevice_Justifier final : public InputDevice
 {
  public:
 
- InputDevice_Justifier(void);
- virtual ~InputDevice_Justifier() override;
+ InputDevice_Justifier(void) MDFN_COLD;
+ virtual ~InputDevice_Justifier() override MDFN_COLD;
 
- virtual void Power(void) override;
+ virtual void Power(void) override MDFN_COLD;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
  virtual void UpdateInput(const void *data) override;
  virtual bool RequireNoFrameskip(void) override;

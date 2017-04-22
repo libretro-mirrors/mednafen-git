@@ -102,7 +102,7 @@ static DECLFW(Mapper21_write)
 	 case 0xf006:IRQa=K4IRQ;X6502_IRQEnd(MDFN_IQEXT);break;
  }
 }
-static void KonamiIRQHook(int a)
+static MDFN_FASTCALL void KonamiIRQHook(int a)
 {
   #define LCYCS ((227*2)+1)
   //#define LCYCS 341

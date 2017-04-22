@@ -20,6 +20,7 @@
 */
 
 #include <mednafen/mednafen.h>
+#include <mednafen/string/string.h>
 #include "Time.h"
 
 #include <algorithm>
@@ -164,6 +165,18 @@ struct tm UTCTime(const int64 ept)
 
 std::string StrTime(const char* format, const struct tm& tin)
 {
+ #ifdef WIN32
+ std::u16string ret((size_t)256, 0);
+ size_t rv;
+ std::u16string formatadj = UTF8_to_UTF16(format) + u"!";
+
+ while(!(rv = wcsftime((wchar_t*)&ret[0], ret.size(), (const wchar_t*)formatadj.c_str(), &tin)))
+  ret.resize(ret.size() * 2);
+
+ ret.resize(rv - 1);
+
+ return UTF16_to_UTF8(ret);
+ #else
  std::string ret((size_t)256, 0);
  size_t rv;
  std::string formatadj = std::string(format) + "!";
@@ -174,6 +187,7 @@ std::string StrTime(const char* format, const struct tm& tin)
  ret.resize(rv - 1);
 
  return ret;
+ #endif
 }
 
 int64 MonoUS(void)

@@ -25,6 +25,8 @@ SPC playback is not supported, but it is supported (experimentally) by the <b><a
 </p>
 <?php EndSection(); ?>
 
+<?php PrintCustomPalettes(); ?>
+
 <?php BeginSection('Default Key Assignments', 'Section_default_keys'); ?>
 
  <p>

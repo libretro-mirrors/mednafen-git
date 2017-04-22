@@ -18,7 +18,7 @@
 #include "main.h"
 #include <trio/trio.h>
 #include "prompt.h"
-#include <mednafen/string/ConvertUTF.h>
+#include <mednafen/string/string.h>
 
 HappyPrompt::HappyPrompt(void)
 {
@@ -33,7 +33,7 @@ HappyPrompt::HappyPrompt(const std::string &ptext, const std::string &zestring)
         kb_buffer.clear();
         kb_cursor_pos = 0;
 	SetText(ptext);
-	SetKBB(zestring);
+	InsertKBB(zestring);
 }
 
 HappyPrompt::~HappyPrompt()
@@ -52,29 +52,17 @@ void HappyPrompt::SetText(const std::string &ptext)
  PromptText = ptext;
 }
 
-void HappyPrompt::SetKBB(const std::string &zestring)
+void HappyPrompt::InsertKBB(const std::string &zestring)
 {
- std::vector<UTF32> utf32_buffer(zestring.size() * 4, 0);
- const UTF8* sourceStart = (const UTF8*)zestring.c_str();
- const UTF8* sourceEnd = sourceStart + zestring.size();
- UTF32* targetStart = utf32_buffer.data();
- UTF32* targetEnd = targetStart + utf32_buffer.size();
+ std::u32string zestring_u32 = UTF8_to_UTF32(zestring);
 
- if(ConvertUTF8toUTF32(&sourceStart, sourceEnd, &targetStart, targetEnd,lenientConversion) == conversionOK)
- {
-  size_t meow_count = targetStart - utf32_buffer.data();
-
-  for(size_t x = 0; x < meow_count; x++)
-  {
-   kb_buffer.push_back(utf32_buffer[x]);
-   kb_cursor_pos++;
-  }
- }
+ kb_buffer.insert(kb_cursor_pos, zestring_u32);
+ kb_cursor_pos += zestring_u32.size();
 }
 
 void HappyPrompt::Draw(MDFN_Surface *surface, const MDFN_Rect *rect)
 {
- std::vector<uint32> PromptAnswer;
+ std::u32string PromptAnswer;
  std::vector<uint32> PromptAnswerOffsets;
  std::vector<uint32> PromptAnswerWidths;
  uint32 offset_accum = 0;
@@ -85,7 +73,7 @@ void HappyPrompt::Draw(MDFN_Surface *surface, const MDFN_Rect *rect)
  for(unsigned int i = 0; i < kb_buffer.size(); i++)
  {
   uint32 gw;
-  UTF32 tmp_str[2];
+  char32_t tmp_str[2];
 
   PromptAnswer.push_back(kb_buffer[i]);
   PromptAnswerOffsets.push_back(offset_accum);
@@ -98,7 +86,6 @@ void HappyPrompt::Draw(MDFN_Surface *surface, const MDFN_Rect *rect)
   offset_accum += gw;
   PromptAnswerWidths.push_back(gw);
  }
- PromptAnswer.push_back(0);
  PromptAnswerOffsets.push_back(offset_accum);
 
 /*
@@ -118,7 +105,7 @@ void HappyPrompt::Draw(MDFN_Surface *surface, const MDFN_Rect *rect)
  DrawText(surface, box_x, box_y + 13 * 3, "╰────────────────────────────────────╯", surface->MakeColor(0xFF,0xFF,0xFF,0xFF), MDFN_FONT_6x13_12x13);
 
  DrawText(surface, box_x + 2 * 6, box_y + 13 * 1 + 0, PromptText, surface->MakeColor(0xFF, 0x00, 0xFF, 0xFF), MDFN_FONT_6x13_12x13);
- DrawText(surface, box_x + 2 * 6, box_y + 13 * 2 + 2, &PromptAnswer[0], surface->MakeColor(0x00, 0xFF, 0x00, 0xFF), MDFN_FONT_6x13_12x13);
+ DrawText(surface, box_x + 2 * 6, box_y + 13 * 2 + 2, PromptAnswer, surface->MakeColor(0x00, 0xFF, 0x00, 0xFF), MDFN_FONT_6x13_12x13);
 
  if(Time::MonoMS() & 0x80)
  {
@@ -141,6 +128,17 @@ void HappyPrompt::Event(const SDL_Event *event)
  {
   switch(event->key.keysym.sym)
   {
+   default:
+	if(event->key.keysym.unicode)
+	{
+	 const char16_t tmp = event->key.keysym.unicode; 
+	 std::u32string tmpstr = UTF16_to_UTF32(&tmp, 1);
+
+	 kb_buffer.insert(kb_cursor_pos, tmpstr);
+	 kb_cursor_pos += tmpstr.size();
+	}
+	break;
+
    case SDLK_HOME:
         kb_cursor_pos = 0;
         break;
@@ -157,37 +155,26 @@ void HappyPrompt::Event(const SDL_Event *event)
         break;
    case SDLK_RETURN:
         {
-         std::string concat_str;
-
-         for(unsigned int i = 0; i < kb_buffer.size(); i++)
-          concat_str += kb_buffer[i];
-
-	 TheEnd(concat_str);
+	 TheEnd(UTF32_to_UTF8(kb_buffer));
          kb_buffer.clear();
          kb_cursor_pos = 0;
 	}
 	break;
 
-         case SDLK_BACKSPACE:
-                if(kb_buffer.size() && kb_cursor_pos)
-                {
-                  kb_buffer.erase(kb_buffer.begin() + kb_cursor_pos - 1, kb_buffer.begin() + kb_cursor_pos);
-                  kb_cursor_pos--;
-                }
-                break;
-          case SDLK_DELETE:
-                if(kb_buffer.size() && kb_cursor_pos < kb_buffer.size())
-                {
-                 kb_buffer.erase(kb_buffer.begin() + kb_cursor_pos, kb_buffer.begin() + kb_cursor_pos + 1);
-                }
-                break;
-          default:
-	        if(event->key.keysym.unicode)
-        	{
-	         kb_buffer.insert(kb_buffer.begin() + kb_cursor_pos, event->key.keysym.unicode);
-        	 kb_cursor_pos++;
-	        }
-        	break;
+   case SDLK_BACKSPACE:
+        if(kb_buffer.size() && kb_cursor_pos)
+        {
+         kb_buffer.erase(kb_cursor_pos - 1, 1);
+         kb_cursor_pos--;
+        }
+        break;
+
+   case SDLK_DELETE:
+        if(kb_buffer.size() && kb_cursor_pos < kb_buffer.size())
+        {
+         kb_buffer.erase(kb_cursor_pos, 1);
+        }
+        break;
   }
  }
 }

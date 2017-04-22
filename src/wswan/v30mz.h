@@ -19,7 +19,7 @@ void v30mz_execute(int cycles);
 void v30mz_set_reg(int, unsigned);
 unsigned v30mz_get_reg(int regnum);
 void v30mz_reset(void);
-void v30mz_init(uint8 (*readmem20)(uint32), void (*writemem20)(uint32,uint8), uint8 (*readport)(uint32), void (*writeport)(uint32, uint8));
+void v30mz_init(uint8 (MDFN_FASTCALL *readmem20)(uint32), void (MDFN_FASTCALL *writemem20)(uint32,uint8), uint8 (MDFN_FASTCALL *readport)(uint32), void (MDFN_FASTCALL *writeport)(uint32, uint8)) MDFN_COLD;
 
 void v30mz_int(uint32 vector, bool IgnoreIF = FALSE);
 

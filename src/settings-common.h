@@ -59,6 +59,8 @@ typedef enum
 
 #define MDFNSF_SUPPRESS_DOC	(1 << 19) // Suppress documentation generation for this setting.
 #define MDFNSF_COMMON_TEMPLATE	(1 << 20) // Auto-generated common template setting(like nes.xscale, pce.xscale, vb.xscale, nes.enable, pce.enable, vb.enable)
+#define MDFNSF_NONPERSISTENT	(1 << 21) // Don't save setting in settings file.
+
 // TODO:
 // #define MDFNSF_WILL_BREAK_GAMES (1 << ) // If changing the value of the setting from the default value will break games/programs that would otherwise work.
 

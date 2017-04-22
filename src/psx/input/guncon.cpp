@@ -30,10 +30,10 @@ class InputDevice_GunCon final : public InputDevice
 {
  public:
 
- InputDevice_GunCon(void);
- virtual ~InputDevice_GunCon() override;
+ InputDevice_GunCon(void) MDFN_COLD;
+ virtual ~InputDevice_GunCon() override MDFN_COLD;
 
- virtual void Power(void) override;
+ virtual void Power(void) override MDFN_COLD;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
  virtual void UpdateInput(const void *data) override;
  virtual bool RequireNoFrameskip(void) override;

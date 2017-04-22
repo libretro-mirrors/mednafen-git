@@ -45,7 +45,7 @@ static DECLFW(Write)
  Sync();
 }
 
-static void IRQHook(int a)
+static MDFN_FASTCALL void IRQHook(int a)
 {
  if(regs[2] & 2)
  {

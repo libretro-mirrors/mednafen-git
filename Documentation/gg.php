@@ -9,6 +9,8 @@ Game Gear emulation in Mednafen is a low-priority system in terms of proactive m
 </p>
 <?php EndSection(); ?>
 
+<?php PrintCustomPalettes(); ?>
+
 <?php PrintSettings(); ?>
 
 <?php EndPage(); ?>

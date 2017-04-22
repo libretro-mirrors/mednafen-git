@@ -52,8 +52,8 @@ class VDC
 {
 	public:
 
-	VDC();
-	~VDC();
+	VDC() MDFN_COLD;
+	~VDC() MDFN_COLD;
 
 	// Default false.
 	void SetUnlimitedSprites(const bool nospritelimit);

@@ -100,7 +100,7 @@ class PCFX_Input_Gamepad : public PCFX_Input_Device
  uint16 buttons;
 };
 
-static const char* ModeSwitchPositions[] =
+static const char* const ModeSwitchPositions[] =
 {
  "A",
  "B",

@@ -438,42 +438,42 @@ static INLINE void WritePort(uint32 IOPort, uint8 V)
   WW_FlashLock = V;
 }
 
-void WSwan_writemem20(uint32 A, uint8 V)
+MDFN_FASTCALL void WSwan_writemem20(uint32 A, uint8 V)
 {
  WriteMem<false>(A, V);
 }
 
-uint8 WSwan_readmem20(uint32 A)
+MDFN_FASTCALL uint8 WSwan_readmem20(uint32 A)
 {
  return ReadMem<false>(A);
 }
 
-uint8 WSwan_readport(uint32 number)
+MDFN_FASTCALL uint8 WSwan_readport(uint32 number)
 {
  return ReadPort<false>(number);
 }
 
-void WSwan_writeport(uint32 IOPort, uint8 V)
+MDFN_FASTCALL void WSwan_writeport(uint32 IOPort, uint8 V)
 {
  WritePort<false>(IOPort, V);
 }
 
-void WSwan_writemem20_WW(uint32 A, uint8 V)
+MDFN_FASTCALL void WSwan_writemem20_WW(uint32 A, uint8 V)
 {
  WriteMem<true>(A, V);
 }
 
-uint8 WSwan_readmem20_WW(uint32 A)
+MDFN_FASTCALL uint8 WSwan_readmem20_WW(uint32 A)
 {
  return ReadMem<true>(A);
 }
 
-uint8 WSwan_readport_WW(uint32 number)
+MDFN_FASTCALL uint8 WSwan_readport_WW(uint32 number)
 {
  return ReadPort<true>(number);
 }
 
-void WSwan_writeport_WW(uint32 IOPort, uint8 V)
+MDFN_FASTCALL void WSwan_writeport_WW(uint32 IOPort, uint8 V)
 {
  WritePort<true>(IOPort, V);
 }

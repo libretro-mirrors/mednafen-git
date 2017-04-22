@@ -10,6 +10,8 @@ Super Game Boy is presently not supported.  If it ever is supported in the futur
 </p>
 <?php EndSection(); ?>
 
+<?php PrintCustomPalettes(); ?>
+
 <?php BeginSection('Default Key Assignments', "Section_default_keys"); ?>
  <table border>
   <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>

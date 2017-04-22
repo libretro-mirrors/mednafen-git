@@ -116,8 +116,9 @@ enum
  ROM_LAYOUT_INVALID = 0xFFFFFFFF
 };
 
-void CART_Init(Stream* fp, uint8 id[16])
+bool CART_Init(Stream* fp, uint8 id[16])
 {
+ bool IsPAL = false;
  static const uint64 max_rom_size = 8192 * 1024;
  const uint64 raw_size = fp->size();
  const unsigned copier_header_adjust = ((raw_size & 0x7FFF) == 512) ? 512 : 0;
@@ -172,6 +173,25 @@ void CART_Init(Stream* fp, uint8 id[16])
    {
     if(tmp[0x7FDC] == (tmp[0x7FDE] ^ 0xFF) && tmp[0x7FDD] == (tmp[0x7FDF] ^ 0xFF))
     {
+     //	printf("Country: %02x\n", country_code);
+     switch(country_code)
+     {
+      case 0x02:
+      case 0x03:
+      case 0x04:
+      case 0x05:
+      case 0x06:
+      case 0x07:
+      case 0x08:
+      case 0x09:
+      case 0x0A:
+      case 0x0B:
+      case 0x0C:
+      case 0x11:
+	IsPAL = true;
+	break;
+     }
+
      switch(header_rom_type)
      {
       case 0x30:
@@ -283,6 +303,8 @@ void CART_Init(Stream* fp, uint8 id[16])
    }
   }  
  }
+
+ return IsPAL;
 }
 
 bool CART_LoadNV(void)

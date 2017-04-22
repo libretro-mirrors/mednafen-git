@@ -281,7 +281,7 @@ static void UpdateEEPROMSignals(void)
   eep128.SetBus(EEPROM_Control & 0x20, ((EEPROM_Control & 0x80) ? 1 : (EEPROM_Control & 0x40)));
 }
 
-static void BandaiIRQHook(int a)
+static MDFN_FASTCALL void BandaiIRQHook(int a)
 {
   if(IRQa)
   {
@@ -721,7 +721,7 @@ int MDFNI_DatachSet(const uint8 *rcode)
 namespace MDFN_IEN_NES
 {
 
-static void BarcodeIRQHook(int a)
+static MDFN_FASTCALL void BarcodeIRQHook(int a)
 {
  BandaiIRQHook(a);
 

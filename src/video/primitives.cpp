@@ -24,7 +24,7 @@
 template<typename T, bool fill>
 static void SuperDrawRect(MDFN_Surface *surface, uint32 x, uint32 y, uint32 w, uint32 h, uint32 border_color, uint32 fill_color)
 {
- T *pixels = (T*)surface->pixels + (y * surface->pitchinpix) + x;
+ T* pixels = surface->pix<T>() + (y * surface->pitchinpix) + x;
 
  if(w < 1 || h < 1)
   return;
@@ -66,17 +66,56 @@ static void SuperDrawRect(MDFN_Surface *surface, uint32 x, uint32 y, uint32 w, u
 
 void MDFN_DrawRect(MDFN_Surface *surface, uint32 x, uint32 y, uint32 w, uint32 h, uint32 border_color)
 {
- SuperDrawRect<uint32, false>(surface, x, y, w, h, border_color, 0);
+ switch(surface->format.bpp)
+ {
+  case 8:
+	SuperDrawRect<uint8,  false>(surface, x, y, w, h, border_color, 0);
+	break;
+
+  case 16:
+	SuperDrawRect<uint16, false>(surface, x, y, w, h, border_color, 0);
+	break;
+
+  case 32:
+	SuperDrawRect<uint32, false>(surface, x, y, w, h, border_color, 0);
+	break;
+ }
 }
 
 void MDFN_DrawFillRect(MDFN_Surface *surface, uint32 x, uint32 y, uint32 w, uint32 h, uint32 border_color, uint32 fill_color)
 {
- SuperDrawRect<uint32, true>(surface, x, y, w, h, border_color, fill_color);
+ switch(surface->format.bpp)
+ {
+  case 8:
+	SuperDrawRect<uint8,  true>(surface, x, y, w, h, border_color, fill_color);
+	break;
+
+  case 16:
+	SuperDrawRect<uint16, true>(surface, x, y, w, h, border_color, fill_color);
+	break;
+
+  case 32:
+	SuperDrawRect<uint32, true>(surface, x, y, w, h, border_color, fill_color);
+	break;
+ }
 }
 
 void MDFN_DrawFillRect(MDFN_Surface *surface, uint32 x, uint32 y, uint32 w, uint32 h, uint32 fill_color)
 {
- SuperDrawRect<uint32, true>(surface, x, y, w, h, fill_color, fill_color);
+ switch(surface->format.bpp)
+ {
+  case 8:
+	SuperDrawRect<uint8,  true>(surface, x, y, w, h, fill_color, fill_color);
+	break;
+
+  case 16:
+	SuperDrawRect<uint16, true>(surface, x, y, w, h, fill_color, fill_color);
+	break;
+
+  case 32:
+	SuperDrawRect<uint32, true>(surface, x, y, w, h, fill_color, fill_color);
+	break;
+ }
 }
 #if 0
 void MDFN_DrawLine_P(MDFN_Surface *surface, int x0, int y0, int x1, int y1, uint32 color)
@@ -200,7 +239,8 @@ void MDFN_DrawLine_P(MDFN_Surface *surface, int x0, int y0, int x1, int y1, uint
 
 // Will fail GLORIOUSLY if trying to draw a line where the distance between x coordinates, or between y coordinates, is >= 2**31
 // but you'd have to be 2**32 types of crazy to want to draw a line that long anyway.
-void MDFN_DrawLine(MDFN_Surface *surface, int x0, int y0, int x1, int y1, uint32 color)
+template<typename T>
+static void SuperDrawLine(MDFN_Surface *surface, int x0, int y0, int x1, int y1, uint32 color)
 {
  const int dx = x1 - x0;
  const int dy = y1 - y0;
@@ -208,8 +248,8 @@ void MDFN_DrawLine(MDFN_Surface *surface, int x0, int y0, int x1, int y1, uint32
  const unsigned int abs_dy = abs(dy);
  const uint32 pitchinpix = surface->pitchinpix;
  uint32 *pixels = surface->pixels;
- const unsigned int s_w = surface->w;
- const unsigned int s_h = surface->h;
+// const unsigned int s_w = surface->w;
+// const unsigned int s_h = surface->h;
 
  int64 x = ((int64)x0 << 32) + ((int64)1 << 31);
  int64 y = ((int64)y0 << 32) + ((int64)1 << 31);
@@ -250,6 +290,24 @@ void MDFN_DrawLine(MDFN_Surface *surface, int x0, int y0, int x1, int y1, uint32
 
   x += x_inc;
   y += y_inc;
+ }
+}
+
+void MDFN_DrawLine(MDFN_Surface *surface, int x0, int y0, int x1, int y1, uint32 color)
+{
+ switch(surface->format.bpp)
+ {
+  case 8:
+	SuperDrawLine<uint8>(surface, x0, y0, x1, y1, color);
+	break;
+
+  case 16:
+	SuperDrawLine<uint16>(surface, x0, y0, x1, y1, color);
+	break;
+
+  case 32:
+	SuperDrawLine<uint32>(surface, x0, y0, x1, y1, color);
+	break;
  }
 }
 

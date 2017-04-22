@@ -13,9 +13,9 @@ typedef enum
  SYSCARD_ARCADE		// 3.0 + extras
 } SysCardType;
 
-uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM = false, SysCardType syscard = SYSCARD_NONE);
+uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM = false, SysCardType syscard = SYSCARD_NONE) MDFN_COLD;
 void HuC_SaveNV(void);
-void HuC_Kill(void);
+void HuC_Kill(void) MDFN_COLD;
 
 void HuC_Update(int32 timestamp);
 void HuC_ResetTS(int32 ts_base);

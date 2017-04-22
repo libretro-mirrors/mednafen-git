@@ -746,7 +746,7 @@ static const MDFNSetting_EnumList ReportedRegionList[] =
  { NULL, 0 },
 };
 
-static MDFNSetting MDSettings[] =
+static const MDFNSetting MDSettings[] =
 {
  { "md.region", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate the specified region's Genesis/MegaDrive"), NULL, MDFNST_ENUM, "game", NULL, NULL, NULL, NULL, RegionList },
  { "md.reported_region", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Region reported to the game."), NULL, MDFNST_ENUM, "same", NULL, NULL, NULL, NULL, ReportedRegionList },

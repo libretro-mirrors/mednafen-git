@@ -7,7 +7,7 @@
 The "<b>snes_faust</b>" emulation module is experimental, and not used automatically by default except for SPC playback.  To use this module rather than the "<b><a href="snes.html">snes</a></b>" module, you must either set the "snes.enable" setting to "0", or pass "-force_module snes_faust" to Mednafen each time it is invoked. 
 </p>
 <p>
-PAL games and special cart chips are not supported, and the only input devices currently emulated are the standard SNES gamepad and multitap.  Timing is approximate, so some games may exhibit timing-related issues.
+Special cart chips are not supported, and the only input devices currently emulated are the standard SNES gamepad and multitap.  Timing is approximate, so some games may exhibit timing-related issues.
 </p>
 <p>
 A unique feature to this module(at the current time) is optional 1-frame speculative execution, disabled by default, controlled by the <a href="#snes_faust.spex">snes_faust.spex</a>

@@ -28,10 +28,10 @@ namespace MDFN_IEN_SS
 class IODevice_Gamepad final : public IODevice
 {
  public:
- IODevice_Gamepad();
- virtual ~IODevice_Gamepad() override;
+ IODevice_Gamepad() MDFN_COLD;
+ virtual ~IODevice_Gamepad() override MDFN_COLD;
 
- virtual void Power(void) override;
+ virtual void Power(void) override MDFN_COLD;
  virtual void UpdateInput(const uint8* data, const int32 time_elapsed) override;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
 

@@ -333,6 +333,24 @@ static void SetInput(unsigned port, const char *type, uint8 *ptr)
  chee = (uint8 *)ptr;
 }
 
+static void TransformInput(void)
+{
+ if(MDFN_GetSettingB("lynx.rotateinput"))
+ {
+  static const unsigned bp[4] = { 4, 6, 5, 7 };
+  const unsigned offs = MDFNGameInfo->rotated;
+  uint16 butt_data = MDFN_de16lsb(chee);
+
+  butt_data = (butt_data & 0xFF0F) |
+	      (((butt_data >> bp[0]) & 1) << bp[(0 + offs) & 3]) |
+	      (((butt_data >> bp[1]) & 1) << bp[(1 + offs) & 3]) |
+	      (((butt_data >> bp[2]) & 1) << bp[(2 + offs) & 3]) |
+	      (((butt_data >> bp[3]) & 1) << bp[(3 + offs) & 3]);
+  //printf("%d, %04x\n", MDFNGameInfo->rotated, butt_data);
+  MDFN_en16lsb(chee, butt_data);
+ }
+}
+
 static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT SystemRegs[] =
@@ -372,7 +390,7 @@ static void DoSimpleCommand(int cmd)
  }
 }
 
-static MDFNSetting LynxSettings[] =
+static const MDFNSetting LynxSettings[] =
 {
  { "lynx.rotateinput", MDFNSF_NOFLAGS,	gettext_noop("Virtually rotate the D-pad when the screen is rotated."), NULL, MDFNST_BOOL, "1" },
  { "lynx.lowpass", MDFNSF_CAT_SOUND,	gettext_noop("Enable sound output lowpass filter."), NULL, MDFNST_BOOL, "1" },
@@ -381,24 +399,17 @@ static MDFNSetting LynxSettings[] =
 
 static const IDIISG IDII =
 {
- { "a", "A (outer)", 8, IDIT_BUTTON_CAN_RAPID, NULL },
+ { "a", "A (outer)", 8, IDIT_BUTTON_CAN_RAPID },
+ { "b", "B (inner)", 7, IDIT_BUTTON_CAN_RAPID },
+ { "option_2", "Option 2 (lower)", 5, IDIT_BUTTON_CAN_RAPID },
+ { "option_1", "Option 1 (upper)", 4, IDIT_BUTTON_CAN_RAPID },
 
- { "b", "B (inner)", 7, IDIT_BUTTON_CAN_RAPID, NULL },
+ { "left", "LEFT ←", 	2, IDIT_BUTTON, "right" },
+ { "right", "RIGHT →", 	3, IDIT_BUTTON, "left" },
+ { "up", "UP ↑", 	0, IDIT_BUTTON, "down" },
+ { "down", "DOWN ↓", 	1, IDIT_BUTTON, "up" },
 
- { "option_2", "Option 2 (lower)", 5, IDIT_BUTTON_CAN_RAPID, NULL },
-
- { "option_1", "Option 1 (upper)", 4, IDIT_BUTTON_CAN_RAPID, NULL },
-
-
- { "left", "LEFT ←", 	/*VIRTB_DPAD0_L,*/ 2, IDIT_BUTTON, "right",		{ "up", "right", "down" } },
-
- { "right", "RIGHT →", 	/*VIRTB_DPAD0_R,*/ 3, IDIT_BUTTON, "left", 		{ "down", "left", "up" } },
-
- { "up", "UP ↑", 	/*VIRTB_DPAD0_U,*/ 0, IDIT_BUTTON, "down",		{ "right", "down", "left" } },
-
- { "down", "DOWN ↓", 	/*VIRTB_DPAD0_D,*/ 1, IDIT_BUTTON, "up", 		{ "left", "up", "right" } },
-
- { "pause", "PAUSE", 6, IDIT_BUTTON, NULL },
+ { "pause", "PAUSE", 6, IDIT_BUTTON },
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
@@ -424,7 +435,7 @@ static const FileExtensionSpecStruct KnownExtensions[] =
 
 static const CustomPalette_Spec CPInfo[] =
 {
- { gettext_noop("Atari Lynx 12-bit RGB"), NULL, { 4096, 0 } },
+ { gettext_noop("Atari Lynx 12-bit BRG"), NULL, { 4096, 0 } },
 
  { NULL, NULL },
 };
@@ -457,7 +468,7 @@ MDFNGI EmulatedLynx =
  false,
  StateAction,
  Emulate,
- NULL,
+ TransformInput,
  SetInput,
  NULL,
  DoSimpleCommand,

@@ -377,14 +377,14 @@ static void DoSimpleCommand(int cmd)
  }
 }
 
-static MDFNSetting_EnumList Territory_List[] =
+static const MDFNSetting_EnumList Territory_List[] =
 {
  { "domestic", TERRITORY_DOMESTIC, gettext_noop("Domestic(Japanese)") },
  { "export", TERRITORY_EXPORT, gettext_noop("Export(World)") },
  { NULL, 0 },
 };
 
-static MDFNSetting SMSSettings[] =
+static const MDFNSetting SMSSettings[] =
 {
  { "sms.territory", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("System territory/region."), NULL, MDFNST_ENUM, "export", NULL, NULL, NULL, NULL, Territory_List },
  { "sms.fm", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable FM sound emulation when playing domestic/Japan-region games."), NULL, MDFNST_BOOL, "1" },
@@ -398,7 +398,7 @@ static MDFNSetting SMSSettings[] =
  { NULL }
 };
 
-static MDFNSetting GGSettings[] =
+static const MDFNSetting GGSettings[] =
 {
  { NULL }
 };
@@ -418,14 +418,14 @@ static const FileExtensionSpecStruct GGKnownExtensions[] =
 
 static const CustomPalette_Spec SMSCPInfo[] =
 {
- { gettext_noop("SMS 6-bit RGB"), NULL, { 64, 0 } },
+ { gettext_noop("SMS 6-bit BGR"), NULL, { 64, 0 } },
 
  { NULL, NULL }
 };
 
 static const CustomPalette_Spec GGCPInfo[] =
 {
- { gettext_noop("GG 12-bit RGB"), NULL, { 4096, 0 } },
+ { gettext_noop("GG 12-bit BGR"), NULL, { 4096, 0 } },
 
  { NULL, NULL }
 };

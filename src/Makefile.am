@@ -1,7 +1,7 @@
 SUBDIRS	= trio
 AUTOMAKE_OPTIONS = subdir-objects
 DEFS = @DEFS@ @SNDFILE_CFLAGS@
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_builddir)/intl
 
 bin_PROGRAMS	=	mednafen
 

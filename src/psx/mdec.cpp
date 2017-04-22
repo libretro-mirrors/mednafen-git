@@ -612,7 +612,7 @@ static INLINE void WriteImageData(uint16 V, int32* eat_cycles)
 #define MDEC_READ_FIFO(n)  { MDEC_WAIT_COND(InFIFO.CanRead()); n = InFIFO.Read(); }
 #define MDEC_EAT_CLOCKS(n) { ClockCounter -= (n); MDEC_WAIT_COND(ClockCounter > 0); }
 
-void MDEC_Run(int32 clocks)
+MDFN_FASTCALL void MDEC_Run(int32 clocks)
 {
  static const unsigned MDRPhaseBias = __COUNTER__ + 1;
 
@@ -750,7 +750,7 @@ void MDEC_Run(int32 clocks)
 }
 #endif
 
-void MDEC_DMAWrite(uint32 V)
+MDFN_FASTCALL void MDEC_DMAWrite(uint32 V)
 {
  if(InFIFO.CanWrite())
  {
@@ -763,7 +763,7 @@ void MDEC_DMAWrite(uint32 V)
  }
 }
 
-uint32 MDEC_DMARead(uint32* offs)
+MDFN_FASTCALL uint32 MDEC_DMARead(uint32* offs)
 {
  uint32 V = 0;
 
@@ -807,7 +807,7 @@ bool MDEC_DMACanRead(void)
  return((OutFIFO.CanRead() >= 0x20) && (Control & (1U << 29)));
 }
 
-void MDEC_Write(const pscpu_timestamp_t timestamp, uint32 A, uint32 V)
+MDFN_FASTCALL void MDEC_Write(const pscpu_timestamp_t timestamp, uint32 A, uint32 V)
 {
  //PSX_WARNING("[MDEC] Write: 0x%08x 0x%08x, %d  --- %u %u", A, V, timestamp, InFIFO.CanRead(), OutFIFO.CanRead());
  if(A & 4)
@@ -855,7 +855,7 @@ void MDEC_Write(const pscpu_timestamp_t timestamp, uint32 A, uint32 V)
  }
 }
 
-uint32 MDEC_Read(const pscpu_timestamp_t timestamp, uint32 A)
+MDFN_FASTCALL uint32 MDEC_Read(const pscpu_timestamp_t timestamp, uint32 A)
 {
  uint32 ret = 0;
 

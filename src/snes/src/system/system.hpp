@@ -1,7 +1,6 @@
 #include "config/config.hpp"
 #include "debugger/debugger.hpp"
 #include "interface/interface.hpp"
-#include "scheduler/scheduler.hpp"
 
 #include "video/video.hpp"
 #include "audio/audio.hpp"

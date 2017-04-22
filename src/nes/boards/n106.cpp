@@ -67,7 +67,7 @@ static void SyncPRG(void)
  setprg8(0xe000,0x3F);
 }
 
-static void NamcoIRQHook(int a)
+static MDFN_FASTCALL void NamcoIRQHook(int a)
 {
   if(IRQa)
   {

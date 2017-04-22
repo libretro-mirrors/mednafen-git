@@ -7,7 +7,7 @@ namespace MDFN_IEN_MD
 
 
 extern DebuggerInfoStruct DBGInfo;
-void MDDBG_Init(void);
+void MDDBG_Init(void) MDFN_COLD;
 void MDDBG_CPUHook(void);
 
 extern bool MD_DebugMode;

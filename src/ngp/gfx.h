@@ -29,8 +29,8 @@ class NGPGFX_CLASS
 {
  public:
 
- NGPGFX_CLASS();
- ~NGPGFX_CLASS();
+ NGPGFX_CLASS() MDFN_COLD;
+ ~NGPGFX_CLASS() MDFN_COLD;
 
  void write8(uint32 address, uint8 data);
  void write16(uint32 address, uint16 data);

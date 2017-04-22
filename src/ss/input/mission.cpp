@@ -194,7 +194,7 @@ uint8 IODevice_Mission::UpdateBus(const uint8 smpc_out, const uint8 smpc_out_ass
  return (smpc_out & (smpc_out_asserted | 0xE0)) | (tmp &~ smpc_out_asserted);
 }
 
-static const char* SpeedSwitchPositions[] =
+static const char* const SpeedSwitchPositions[] =
 {
  gettext_noop("1/7"),
  gettext_noop("2/7"),
@@ -205,7 +205,7 @@ static const char* SpeedSwitchPositions[] =
  gettext_noop("7/7")
 };
 
-static const char* AFSwitchPositions[] =
+static const char* const AFSwitchPositions[] =
 {
  gettext_noop("• (Off)"),
  gettext_noop("•• (On)")

@@ -27,8 +27,8 @@ namespace MDFN_IEN_WSWAN
 
 int32 WSwan_SoundFlush(int16 *SoundBuf, const int32 MaxSoundFrames);
 
-void WSwan_SoundInit(void);
-void WSwan_SoundKill(void);
+void WSwan_SoundInit(void) MDFN_COLD;
+void WSwan_SoundKill(void) MDFN_COLD;
 void WSwan_SetSoundMultiplier(double multiplier);
 bool WSwan_SetSoundRate(uint32 rate);
 void WSwan_SoundStateAction(StateMem *sm, const unsigned load, const bool data_only);

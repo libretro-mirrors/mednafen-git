@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* rmdui.cpp:
-**  Copyright (C) 2014-2016 Mednafen Team
+**  Copyright (C) 2014-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -41,13 +41,15 @@ static DiskSelectType DiskEjectOption;
 static std::vector<DiskSelectType> DiskSelectOptions;
 static bool SupressDiskChangeNotifDisplay;
 
-void RMDUI_Init(MDFNGI* gi)
+void RMDUI_Init(MDFNGI* gi, const int which_medium)
 {
  const RMD_Layout* rmd = gi->RMD;
  char textbuf[256];
  bool deo_set = false;
+ std::vector<DiskSelectType> PUOptions;
+ std::vector<DiskSelectType> EmptyOptions;
 
- DiskSelectOptions.clear();
+ assert(rmd->Drives.size() == rmd->DrivesDefaults.size());
 
  DiskEjected = true;
  DiskSelected = 0;
@@ -70,18 +72,12 @@ void RMDUI_Init(MDFNGI* gi)
      deo_set = true;
     }
     else
-     DiskSelectOptions.push_back(DiskSelectType({textbuf, d, s, 0, 0}));
+     EmptyOptions.push_back(DiskSelectType({textbuf, d, s, 0, 0}));
    }
    else //if(rs->MediaPresent && rs->MediaUsable)
    {
     for(unsigned m = 0; m < rmd->Media.size(); m++)
     {
-     if(m == 0)
-     {
-      DiskEjected = false;
-      DiskSelected = DiskSelectOptions.size();
-     }
-
      for(unsigned o = 0; o < rmd->Media[m].Orientations.size() || o == 0; o++)
      {
       if(rmd->Media[m].Orientations.size())
@@ -89,11 +85,37 @@ void RMDUI_Init(MDFNGI* gi)
       else
        trio_snprintf(textbuf, sizeof(textbuf), "%s: %s (%s)", rd->Name.c_str(), rs->Name.c_str(), rmd->Media[m].Name.c_str());
 
-      DiskSelectOptions.push_back(DiskSelectType({textbuf, d, s, m, o}));
+      PUOptions.push_back(DiskSelectType({textbuf, d, s, m, o}));
      }
     }
    }
   }
+ }
+
+ //
+ //
+ //
+ DiskSelectOptions = EmptyOptions;
+ DiskSelectOptions.insert(DiskSelectOptions.end(), PUOptions.begin(), PUOptions.end());
+
+ for(size_t i = 0; i < DiskSelectOptions.size(); i++)
+ {
+  const auto& dso = DiskSelectOptions[i];
+  const auto& dd = rmd->DrivesDefaults[0];
+
+  if(dso.state_idx == dd.State && dso.media_idx == dd.Media && dso.orientation_idx == dd.Orientation)
+  {
+   DiskEjected = false;
+   DiskSelected = i;
+  }
+ }
+
+ if(which_medium == -1)
+  DiskEjected = true;
+ else if(which_medium >= 0 && DiskSelectOptions.size())
+ {
+  DiskEjected = false;
+  DiskSelected = (std::min<size_t>(which_medium, DiskSelectOptions.size() - 1) + EmptyOptions.size()) % DiskSelectOptions.size();
  }
 
  SupressDiskChangeNotifDisplay = true;

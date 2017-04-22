@@ -127,7 +127,7 @@ uint8 PPUNTARAM;
 uint8 PPUCHRRAM;  
 
 void (*GameHBIRQHook)(void), (*GameHBIRQHook2)(void);
-void (*PPU_hook)(uint32 A);
+void (MDFN_FASTCALL *PPU_hook)(uint32 A);
 
 static uint8 vtoggle;
 static uint8 XOffset;

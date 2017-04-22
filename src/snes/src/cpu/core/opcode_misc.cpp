@@ -72,7 +72,11 @@ L rd.h = op_readlong(vectorN + 1);
 }
 
 void CPUcore::op_stp() {
-  while(regs.wai = true) {
+  while(regs.wai = -1) {
+    if(scheduler.sync == wai_stp_sync) {
+      //printf("Break STP: %d\n", (int)scheduler.sync);
+      return;
+    }
 L   op_io();
   }
 }
@@ -80,6 +84,11 @@ L   op_io();
 void CPUcore::op_wai() {
   regs.wai = true;
   while(regs.wai) {
+    if(scheduler.sync == wai_stp_sync) {
+      //printf("Break WAI: %d\n", (int)scheduler.sync);
+      return;
+    }
+
 L   op_io();
   }
   op_io();

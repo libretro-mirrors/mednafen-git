@@ -26,7 +26,7 @@ static uint8 cmd;
 static uint8 MirCache[8];
 static int32 lastmc;
 
-static void dragonbust_ppu(uint32 A)
+static MDFN_FASTCALL void dragonbust_ppu(uint32 A)
 { 
  static uint8 z;
 

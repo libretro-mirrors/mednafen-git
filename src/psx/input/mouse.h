@@ -25,7 +25,7 @@
 namespace MDFN_IEN_PSX
 {
 
-InputDevice *Device_Mouse_Create(void);
+InputDevice *Device_Mouse_Create(void) MDFN_COLD;
 extern IDIISG Device_Mouse_IDII;
 
 }

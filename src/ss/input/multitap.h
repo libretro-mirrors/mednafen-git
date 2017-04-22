@@ -28,10 +28,10 @@ namespace MDFN_IEN_SS
 class IODevice_Multitap final : public IODevice
 {
  public:
- IODevice_Multitap();
- virtual ~IODevice_Multitap() override;
+ IODevice_Multitap() MDFN_COLD;
+ virtual ~IODevice_Multitap() override MDFN_COLD;
 
- virtual void Power(void) override;
+ virtual void Power(void) override MDFN_COLD;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
 
  virtual uint8 UpdateBus(const uint8 smpc_out, const uint8 smpc_out_asserted) override;

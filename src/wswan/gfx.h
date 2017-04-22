@@ -28,7 +28,7 @@ extern uint32		dx_bits,dx_pitch,cmov,dx_linewidth_blit,dx_buffer_line;
 
 void WSwan_SetPixelFormat(const MDFN_PixelFormat &format);
 
-void WSwan_GfxInit(void);
+void WSwan_GfxInit(void) MDFN_COLD;
 void WSwan_GfxReset(void);
 void WSwan_GfxWrite(uint32 A, uint8 V);
 uint8 WSwan_GfxRead(uint32 A);

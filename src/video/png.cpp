@@ -146,7 +146,7 @@ void PNGWrite::WriteIt(FileStream &pngfile, const MDFN_Surface *src, const MDFN_
  compmem.resize(compmemsize);
 
  {
-  static uint8 header[8] = { 137, 80, 78, 71, 13, 10, 26, 10 };
+  static const uint8 header[8] = { 137, 80, 78, 71, 13, 10, 26, 10 };
   pngfile.write(header, 8);
  }
 

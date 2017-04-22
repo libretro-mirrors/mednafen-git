@@ -85,7 +85,7 @@ static void MakeSectionMap(StateMem* sm, const uint64 sss_bound)
 }
 
 
-static void SubWrite(Stream *st, SFORMAT *sf)
+static void SubWrite(Stream *st, const SFORMAT *sf)
 {
  while(sf->size || sf->name)	// Size can sometimes be zero, so also check for the text name.  These two should both be zero only at the end of a struct.
  {
@@ -97,7 +97,7 @@ static void SubWrite(Stream *st, SFORMAT *sf)
 
   if(sf->size == (uint32)~0)		/* Link to another struct.	*/
   {
-   SubWrite(st, (SFORMAT *)sf->v);
+   SubWrite(st, (const SFORMAT *)sf->v);
 
    sf++;
    continue;
@@ -143,9 +143,9 @@ struct compare_cstr
  }
 };
 
-typedef std::map<const char *, SFORMAT *, compare_cstr> SFMap_t;
+typedef std::map<const char *, const SFORMAT *, compare_cstr> SFMap_t;
 
-static void MakeSFMap(SFORMAT *sf, SFMap_t &sfmap)
+static void MakeSFMap(const SFORMAT *sf, SFMap_t &sfmap)
 {
  while(sf->size || sf->name) // Size can sometimes be zero, so also check for the text name.  These two should both be zero only at the end of a struct.
  {
@@ -156,7 +156,7 @@ static void MakeSFMap(SFORMAT *sf, SFMap_t &sfmap)
   }
 
   if(sf->size == (uint32)~0)            /* Link to another SFORMAT structure. */
-   MakeSFMap((SFORMAT *)sf->v, sfmap);
+   MakeSFMap((const SFORMAT *)sf->v, sfmap);
   else
   {
    assert(sf->name);
@@ -171,7 +171,7 @@ static void MakeSFMap(SFORMAT *sf, SFMap_t &sfmap)
  }
 }
 
-static void ReadStateChunk(Stream *st, SFORMAT *sf, uint32 size, const bool svbe, const bool fuzz)
+static void ReadStateChunk(Stream *st, const SFORMAT *sf, uint32 size, const bool svbe, const bool fuzz)
 {
  SFMap_t sfmap;
  SFMap_t sfmap_found;	// Used for identifying variables that are missing in the save state.
@@ -197,7 +197,7 @@ static void ReadStateChunk(Stream *st, SFORMAT *sf, uint32 size, const bool svbe
 
   if(sfmit != sfmap.end())
   {
-   SFORMAT *tmp = sfmit->second;
+   const SFORMAT *tmp = sfmit->second;
    uint32 expected_size = tmp->size;	// In bytes
 
    if(recorded_size != expected_size)
@@ -279,7 +279,7 @@ static void ReadStateChunk(Stream *st, SFORMAT *sf, uint32 size, const bool svbe
 // Fast raw chunk reader/writer.
 //
 template<bool load>
-static void FastRWChunk(Stream *st, SFORMAT *sf)
+static void FastRWChunk(Stream *st, const SFORMAT *sf)
 {
  while(sf->size || sf->name)	// Size can sometimes be zero, so also check for the text name.  These two should both be zero only at the end of a struct.
  {
@@ -291,7 +291,7 @@ static void FastRWChunk(Stream *st, SFORMAT *sf)
 
   if(sf->size == (uint32)~0)		/* Link to another struct.	*/
   {
-   FastRWChunk<load>(st, (SFORMAT *)sf->v);
+   FastRWChunk<load>(st, (const SFORMAT *)sf->v);
 
    sf++;
    continue;
@@ -322,7 +322,7 @@ static void FastRWChunk(Stream *st, SFORMAT *sf)
 //
 // When updating this function make sure to adhere to the guarantees in state.h.
 //
-bool MDFNSS_StateAction(StateMem *sm, const unsigned load, const bool data_only, SFORMAT *sf, const char *sname, const bool optional) noexcept
+bool MDFNSS_StateAction(StateMem *sm, const unsigned load, const bool data_only, const SFORMAT *sf, const char *sname, const bool optional) noexcept
 {
  //printf("Section: %s %zu\n", sname, strlen(sname));
 

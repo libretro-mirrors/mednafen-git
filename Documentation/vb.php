@@ -27,6 +27,8 @@ To use the "hli" mode with a "Line Interlaced 3D" monitor, you'll want to set "v
 
 <?php EndSection(); ?>
 
+<?php PrintCustomPalettes(); ?>
+
 <?php PrintSettings(); ?>
 
 <?php EndPage(); ?>

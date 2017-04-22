@@ -14,7 +14,7 @@ void MDFNPPU_LineUpdate();
 void NESPPU_GetDisplayRect(MDFN_Rect *DisplayRect);
 
 
-extern void (*PPU_hook)(uint32 A);
+extern void (MDFN_FASTCALL *PPU_hook)(uint32 A);
 extern void (*GameHBIRQHook)(void), (*GameHBIRQHook2)(void);
 
 /* For cart.c and banksw.h, mostly */

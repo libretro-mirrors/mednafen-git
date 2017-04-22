@@ -34,7 +34,8 @@ class Connection
  virtual ~Connection() = 0;
 
  //
- // Returns 'true' if Send()/Receive() with len=1 would be non-blocking if Send()/Receive() actually were blocking; i.e. Can*() have select() style semantics.
+ // CanSend()/CanReceive() returns 'true' if Send()/Receive() with len=1 would be non-blocking if Send()/Receive() actually were blocking;
+ // i.e. Can*() have select() style semantics.
  //
  // May timeout before timeout specified(if a signal interrupts an underlying system call).
  //

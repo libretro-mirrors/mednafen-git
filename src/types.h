@@ -9,14 +9,32 @@
  #error "Wrong include order for types.h"
 #endif
 
+#ifdef HAVE_CONFIG_H
+ #include <config.h>
+#endif
+
+//
+//
+//
+
 #ifdef __USING_SJLJ_EXCEPTIONS__
  #error "SJLJ-style exception handling will incur a significant performance penalty even when exceptions are not thrown, and thus an alternative(e.g. DWARF) should be used if at all possible."
 #endif
 
-// Yes, yes, I know:  There's a better place for including config.h than here, but I'm tired, and this should work fine. :b
-#ifdef HAVE_CONFIG_H
-#include <config.h>
+#if defined(__PIC__) || defined(__pic__) || defined(__PIE__) || defined(__pie__)
+ #if defined(__386__) || defined(__i386__) || defined(__i386) || defined(_M_IX86) || defined(_M_I386) //|| (SIZEOF_VOID_P <= 4)
+  #error "Compiling with position-independent code generation enabled is not recommended, for performance reasons."
+ #else
+  #warning "Compiling with position-independent code generation enabled is not recommended, for performance reasons."
+ #endif
 #endif
+
+#if defined(__x86_64__) && defined(__code_model_large__)
+ #error "Compiling with large memory model is not recommended, for performance reasons."
+#endif
+//
+//
+//
 
 #include <stddef.h>
 #include <assert.h>
@@ -46,17 +64,42 @@ typedef uint64_t uint64;
  #define HAVE_COMPUTED_GOTO 1
 #endif
 
-#ifndef WIN32
- #if defined(__PIC__) || defined(__pic__) || defined(__PIE__) || defined(__pie__)
-  #if defined(__386__) || defined(__i386__) || defined(__i386) || defined(_M_IX86) || defined(_M_I386) //|| (SIZEOF_VOID_P <= 4)
-   #error "Compiling with position-independent code generation enabled is not recommended, for performance reasons."
-  #else
-   #warning "Compiling with position-independent code generation enabled is not recommended, for performance reasons."
-  #endif
- #endif
-#endif
+#if defined(__clang__)
+  //
+  // Begin clang
+  //
+  #define MDFN_MAKE_CLANGV(maj,min,pl) (((maj)*100*100) + ((min) * 100) + (pl))
+  #define MDFN_CLANG_VERSION	MDFN_MAKE_CLANGV(__clang_major__, __clang_minor__, __clang_patchlevel__)
 
-#ifdef __GNUC__
+  #define INLINE inline __attribute__((always_inline))
+  #define NO_INLINE __attribute__((noinline))
+  #define NO_CLONE
+
+  #if defined(__386__) || defined(__i386__) || defined(__i386) || defined(_M_IX86) || defined(_M_I386)
+    #define MDFN_FASTCALL __attribute__((fastcall))
+  #else
+    #define MDFN_FASTCALL
+  #endif
+
+  #define MDFN_FORMATSTR(a,b,c)
+  #define MDFN_WARN_UNUSED_RESULT __attribute__ ((warn_unused_result))
+  #define MDFN_NOWARN_UNUSED __attribute__((unused))
+
+  #define MDFN_UNLIKELY(n) __builtin_expect((n) != 0, 0)
+  #define MDFN_LIKELY(n) __builtin_expect((n) != 0, 1)
+
+  #define MDFN_COLD __attribute__((cold))
+  #define MDFN_HOT __attribute__((hot))
+
+  #if MDFN_CLANG_VERSION >= MDFN_MAKE_CLANGV(3,6,0)
+   #define MDFN_ASSUME_ALIGNED(p, align) ((decltype(p))__builtin_assume_aligned((p), (align)))
+  #else
+   #define MDFN_ASSUME_ALIGNED(p, align) (p)
+  #endif
+#elif defined(__GNUC__)
+  //
+  // Begin gcc
+  //
   #define MDFN_MAKE_GCCV(maj,min,pl) (((maj)*100*100) + ((min) * 100) + (pl))
   #define MDFN_GCC_VERSION	MDFN_MAKE_GCCV(__GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__)
 
@@ -91,33 +134,30 @@ typedef uint64_t uint64;
    #define MDFN_FASTCALL
   #endif
 
-  #if !defined(__clang__) //|| ((__clang_major__ * 1000) + __clang_minor__) >= 3005
-   #define MDFN_FORMATSTR(a,b,c) __attribute__ ((format (a, b, c)))
-  #else
-   #define MDFN_FORMATSTR(a,b,c)
-  #endif
-
+  #define MDFN_FORMATSTR(a,b,c) __attribute__ ((format (a, b, c)))
   #define MDFN_WARN_UNUSED_RESULT __attribute__ ((warn_unused_result))
   #define MDFN_NOWARN_UNUSED __attribute__((unused))
 
- #define MDFN_UNLIKELY(n) __builtin_expect((n) != 0, 0)
- #define MDFN_LIKELY(n) __builtin_expect((n) != 0, 1)
+  #define MDFN_UNLIKELY(n) __builtin_expect((n) != 0, 0)
+  #define MDFN_LIKELY(n) __builtin_expect((n) != 0, 1)
 
- #if MDFN_GCC_VERSION >= MDFN_MAKE_GCCV(4,3,0)
-  #define MDFN_COLD __attribute__((cold))
-  #define MDFN_HOT __attribute__((hot))
- #else
-  #define MDFN_COLD
-  #define MDFN_HOT
- #endif
+  #if MDFN_GCC_VERSION >= MDFN_MAKE_GCCV(4,3,0)
+   #define MDFN_COLD __attribute__((cold))
+   #define MDFN_HOT __attribute__((hot))
+  #else
+   #define MDFN_COLD
+   #define MDFN_HOT
+  #endif
 
- #if MDFN_GCC_VERSION >= MDFN_MAKE_GCCV(4,7,0)
-  #define MDFN_ASSUME_ALIGNED(p, align) ((decltype(p))__builtin_assume_aligned((p), (align)))
- #else
-  #define MDFN_ASSUME_ALIGNED(p, align) (p)
- #endif
+  #if MDFN_GCC_VERSION >= MDFN_MAKE_GCCV(4,7,0)
+   #define MDFN_ASSUME_ALIGNED(p, align) ((decltype(p))__builtin_assume_aligned((p), (align)))
+  #else
+   #define MDFN_ASSUME_ALIGNED(p, align) (p)
+  #endif
 #elif defined(_MSC_VER)
-
+  //
+  // Begin MSVC
+  //
   #pragma message("Compiling with MSVC, untested")
 
   #define INLINE __forceinline
@@ -183,16 +223,12 @@ typedef uint64_t uint64;
 
 #endif
 
-typedef uint32   UTF32;  /* at least 32 bits */
-typedef uint16  UTF16;  /* at least 16 bits */
-typedef uint8   UTF8;   /* typically 8 bits */
-
 #ifndef FALSE
-#define FALSE 0
+ #define FALSE 0
 #endif
 
 #ifndef TRUE
-#define TRUE 1
+ #define TRUE 1
 #endif
 
 #undef require

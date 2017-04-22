@@ -40,7 +40,7 @@ static void DoMirroring(void)
  setmirror((Mirroring & 1) ^ 1);
 }
 
-static void IREMIRQHook(int a)
+static MDFN_FASTCALL void IREMIRQHook(int a)
 {
   if(IRQa)
   {

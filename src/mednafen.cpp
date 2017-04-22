@@ -86,7 +86,7 @@ static const MDFNSetting_EnumList Deinterlacer_List[] =
  { NULL, 0 },
 };
 
-static const char *fname_extra = gettext_noop("See fname_format.txt for more information.  Edit at your own risk.");
+static const char* const fname_extra = gettext_noop("See fname_format.txt for more information.  Edit at your own risk.");
 
 static const MDFNSetting MednafenSettings[] =
 {
@@ -271,9 +271,7 @@ bool MDFNI_StartAVRecord(const char *path, double SoundRate)
   if(spec.VideoHeight < MDFN_GetSettingUI("qtrecord.h_double_threshold"))
    spec.VideoHeight *= 2;
 
-  if (spec.VideoWidth > 1000)
-     spec.VideoWidth = spec.VideoWidth / 2;
-  
+
   spec.AspectXAdjust = ((double)MDFNGameInfo->nominal_width * 2) / spec.VideoWidth;
   spec.AspectYAdjust = ((double)MDFNGameInfo->nominal_height * 2) / spec.VideoHeight;
 
@@ -496,21 +494,54 @@ void MDFNI_DumpModulesDef(const char *fn)
   fp.print_format("%s\n", MDFNSystems[i]->fullname);
   fp.print_format("%d\n", MDFNSystems[i]->nominal_width);
   fp.print_format("%d\n", MDFNSystems[i]->nominal_height);
+
+  size_t cpcount = 0;
+
+  if(MDFNSystems[i]->CPInfo)
+   for(auto cpi = MDFNSystems[i]->CPInfo; cpi->description || cpi->name_override; cpi++)
+    cpcount++;
+
+  fp.print_format("%zu\n", cpcount);
+
+  if(MDFNSystems[i]->CPInfo)
+  {
+   for(auto cpi = MDFNSystems[i]->CPInfo; cpi->description || cpi->name_override; cpi++)
+   {
+    fp.print_format("%s.pal\n", cpi->name_override ? cpi->name_override : MDFNSystems[i]->shortname);
+    fp.print_format("%s\n", cpi->description);
+    for(unsigned vec : cpi->valid_entry_count)
+    {
+     if(!vec)
+      break;
+     fp.print_format("%u ", vec);
+    }
+    fp.print_format("\n");
+   }
+  }
  }
+
  fp.close();
 }
 
-static void ReadM3U(std::vector<std::string> &file_list, std::string path, unsigned depth = 0)
+struct M3U_ListEntry
+{
+ std::string path;
+ std::unique_ptr<std::string> name;
+};
+
+static MDFN_COLD void ReadM3U(std::vector<M3U_ListEntry> &file_list, size_t* default_cd, std::string path, unsigned depth = 0)
 {
  FileStream m3u_file(path, FileStream::MODE_READ);
  std::string dir_path;
  std::string linebuf;
+ std::unique_ptr<std::string> name;
+ int termc;
 
  MDFN_GetFilePathComponents(path, &dir_path);
 
  linebuf.reserve(2048);
 
- while(m3u_file.get_line(linebuf) >= 0)
+ while((termc = m3u_file.get_line(linebuf)) >= 0)
  {
   std::string efp;
 
@@ -522,7 +553,18 @@ static void ReadM3U(std::vector<std::string> &file_list, std::string path, unsig
 
   // Comment line, skip it.
   if(linebuf[0] == '#')
+  {
+   if(!strcmp(linebuf.c_str(), "#MEDNAFEN_DEFAULT"))
+    *default_cd = file_list.size();
+   else if(!strncmp(linebuf.c_str(), "#MEDNAFEN_LABEL", 15))
+   {
+    name.reset(new std::string(linebuf.substr(15)));
+    UTF8_sanitize(*name);
+    MDFN_zapctrlchars(*name);
+    MDFN_trim(*name);
+   }
    continue;
+  }
 
   efp = MDFN_EvalFIP(dir_path, linebuf);
 
@@ -534,14 +576,14 @@ static void ReadM3U(std::vector<std::string> &file_list, std::string path, unsig
    if(depth == 99)
     throw(MDFN_Error(0, _("M3U load recursion too deep!")));
 
-   ReadM3U(file_list, efp, depth++);
+   ReadM3U(file_list, default_cd, efp, depth++);
   }
   else
-   file_list.push_back(efp);
+   file_list.emplace_back(M3U_ListEntry({efp, std::move(name)}));
  }
 }
 
-static void PrintDiscsLayout(std::vector<CDIF *> *ifaces)
+static MDFN_COLD void PrintDiscsLayout(std::vector<CDIF *> *ifaces)
 {
  MDFN_AutoIndent aind(1);
 
@@ -609,7 +651,7 @@ static void PrintDiscsLayout(std::vector<CDIF *> *ifaces)
  }
 }
 
-static void CalcDiscsLayoutMD5(std::vector<CDIF *> *ifaces, uint8 out_md5[16])
+static MDFN_COLD void CalcDiscsLayoutMD5(std::vector<CDIF *> *ifaces, uint8 out_md5[16])
 {
   md5_context layout_md5;
 
@@ -638,7 +680,7 @@ static void CalcDiscsLayoutMD5(std::vector<CDIF *> *ifaces, uint8 out_md5[16])
   layout_md5.finish(out_md5);
 }
 
-static void LoadCustomPalette(void)
+static MDFN_COLD void LoadCustomPalette(void)
 {
  if(!MDFNGameInfo->CPInfo)
   return;
@@ -706,7 +748,7 @@ static void LoadCustomPalette(void)
  }
 }
 
-static void LoadCommonPost(const char* path)
+static MDFN_COLD void LoadCommonPost(const char* path)
 {
 	DMStatus.resize(MDFNGameInfo->RMD->Drives.size());
 
@@ -758,7 +800,9 @@ static void LoadCommonPost(const char* path)
 
 MDFNGI *MDFNI_LoadCD(const char *force_module, const char *path)
 {
+ std::vector<M3U_ListEntry> file_list;
  uint8 LayoutMD5[16];
+ size_t default_cd = 0;
 
  MDFNI_CloseGame();
 
@@ -771,22 +815,14 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *path)
   const bool image_memcache = MDFN_GetSettingB("cd.image_memcache");
 
   if(strlen(path) > 4 && !strcasecmp(path + strlen(path) - 4, ".m3u"))
-  {
-   std::vector<std::string> file_list;
-
-   ReadM3U(file_list, path);
-
-   CDInterfaces.resize(file_list.size());
-   for(unsigned i = 0; i < file_list.size(); i++)
-   {
-    CDInterfaces[i] = CDIF_Open(file_list[i], image_memcache);
-   }
-  }
+   ReadM3U(file_list, &default_cd, path);
   else
-  {
-   CDInterfaces.resize(1);
-   CDInterfaces[0] = CDIF_Open(path, image_memcache);
-  }
+   file_list.emplace_back(M3U_ListEntry({ path }));
+
+  CDInterfaces.resize(file_list.size());
+  for(size_t i = 0; i < file_list.size(); i++)
+   CDInterfaces[i] = CDIF_Open(file_list[i].path, image_memcache);
+
   GetFileBase(path);
  }
  catch(std::exception &e)
@@ -837,16 +873,27 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *path)
 	 dr.MediaMtoPDelay = 2000;
 
 	 rmd->Drives.push_back(dr);
+	 rmd->DrivesDefaults.push_back(RMD_DriveDefaults({0, 0, 0}));
 	 rmd->MediaTypes.push_back(RMD_MediaType({"CD"}));
 	}
 
-
 	for(size_t i = 0; i < CDInterfaces.size(); i++)
 	{
-	 char namebuf[128];
+         if(i == default_cd)
+         {
+	  rmd->DrivesDefaults[0].State = 2;	// Tray Closed
+	  rmd->DrivesDefaults[0].Media = i;
+          rmd->DrivesDefaults[0].Orientation = 0;
+         }
 
-	 trio_snprintf(namebuf, sizeof(namebuf), _("Disc %zu of %zu"), i + 1, CDInterfaces.size());
-	 rmd->Media.push_back(RMD_Media({namebuf, 0}));
+	 if(file_list[i].name)
+	  rmd->Media.push_back(RMD_Media({std::string(1, '"') + *file_list[i].name + '"', 0}));
+	 else
+	 {
+	  char namebuf[128];
+	  trio_snprintf(namebuf, sizeof(namebuf), _("Disc %zu of %zu"), i + 1, CDInterfaces.size());
+	  rmd->Media.push_back(RMD_Media({namebuf, 0}));
+	 }
 	}
 
         for(std::list<MDFNGI *>::iterator it = MDFNSystemsPrio.begin(); it != MDFNSystemsPrio.end(); it++)  //_unsigned int x = 0; x < MDFNSystems.size(); x++)
@@ -922,6 +969,8 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *path)
 
 	LoadCommonPost(path);
 
+	//
+	//
 	rmd.release();
  }
  catch(std::exception &e)
@@ -954,13 +1003,13 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *path)
 
 	MDFN_ClearAllOverrideSettings();
 
-	return(NULL);
+	return NULL;
  }
 
- return(MDFNGameInfo);
+ return MDFNGameInfo;
 }
 
-static void LoadIPS(MDFNFILE* GameFile, const std::string& path)
+static MDFN_COLD void LoadIPS(MDFNFILE* GameFile, const std::string& path)
 {
  MDFN_printf(_("Applying IPS file \"%s\"...\n"), path.c_str());
 
@@ -987,7 +1036,7 @@ static void LoadIPS(MDFNFILE* GameFile, const std::string& path)
  }
 }
 
-static MDFNGI* FindCompatibleModule(const char* force_module, MDFNFILE* gf)
+static MDFN_COLD MDFNGI* FindCompatibleModule(const char* force_module, MDFNFILE* gf)
 {
  //for(unsigned pass = 0; pass < 2; pass++)
  //{
@@ -1039,7 +1088,7 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char *name)
 {
  if(strlen(name) > 4 && (!strcasecmp(name + strlen(name) - 4, ".cue") || !strcasecmp(name + strlen(name) - 4, ".toc") || !strcasecmp(name + strlen(name) - 4, ".ccd") || !strcasecmp(name + strlen(name) - 4, ".m3u")))
  {
-  return(MDFNI_LoadCD(force_module, name));
+  return MDFNI_LoadCD(force_module, name);
  }
 
  MDFNI_CloseGame();

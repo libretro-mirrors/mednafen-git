@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* text.cpp:
-**  Copyright (C) 2005-2016 Mednafen Team
+**  Copyright (C) 2005-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -24,7 +24,7 @@
 */
 
 #include "video-common.h"
-#include <mednafen/string/ConvertUTF.h>
+#include <mednafen/string/string.h>
 #include "font-data.h"
 
 static const struct
@@ -84,7 +84,7 @@ void MDFN_InitFontData(void)
  #endif
 }
 
-size_t utf32_strlen(UTF32 *s)
+static size_t utf32_strlen(const char32_t *s)
 {
  size_t ret = 0;
 
@@ -93,52 +93,58 @@ size_t utf32_strlen(UTF32 *s)
  return(ret);
 }
 
-static uint32 DrawTextSub(const UTF32 *utf32_buf, uint32 slen, const uint8 **glyph_ptrs, uint8 *glyph_width, uint8 *glyph_ov_width, uint32 fontid)
+static void DecodeGlyph(char32_t thisglyph, const uint8 **glyph_ptr, uint8 *glyph_width, uint8 *glyph_ov_width, uint32 fontid)
+{
+ bool GlyphFound = false;
+ uint32 recurse_fontid = fontid;
+
+ while(!GlyphFound)
+ {
+  if(thisglyph < 0x10000 && FontDataIndexCache[recurse_fontid][thisglyph] != 0xFFFF)
+  {
+   *glyph_ptr = FontDescriptors[recurse_fontid].base_ptr + (FontDescriptors[recurse_fontid].entry_bsize * FontDataIndexCache[recurse_fontid][thisglyph]);
+   *glyph_width = FontDescriptors[recurse_fontid].glyph_width;
+   GlyphFound = true;
+  }
+  else if(FontDescriptors[recurse_fontid].extension != -1)
+   recurse_fontid = FontDescriptors[recurse_fontid].extension;
+  else
+   break;
+ }
+
+ if(!GlyphFound)
+ {
+  *glyph_ptr = FontDescriptors[fontid].base_ptr + (FontDescriptors[fontid].entry_bsize * FontDataIndexCache[fontid][0xFFFD]);
+  *glyph_width = FontDescriptors[fontid].glyph_width;
+ }
+
+ if((thisglyph >= 0x0300 && thisglyph <= 0x036F) || (thisglyph >= 0xFE20 && thisglyph <= 0xFE2F))
+  *glyph_ov_width = 0;
+ //else if(MDFN_UNLIKELY(thisglyph < 0x20))
+ //{
+ // if(thisglyph == '\b')	(If enabling this, need to change all glyph_ov_width types to int8)
+ // {
+ //  glyph_width[x] = 0;
+ //  glyph_ov_width[x] = std::max<int64>(-(int64)ret, -FontDescriptors[fontid].glyph_width);
+ //}
+ //}
+ else
+  *glyph_ov_width = *glyph_width;
+}
+
+static uint32 GetTextPixLength(const char32_t* text, const size_t text_len, const uint32 fontid)
 {
  uint32 ret = 0;
 
- for(uint32 x = 0; x < slen; x++)
+ for(size_t i = 0; i < text_len; i++)
  {
-  uint32 thisglyph = utf32_buf[x];
-  bool GlyphFound = false;
-  uint32 recurse_fontid = fontid;
+  const uint8 *glyph_ptr;
+  uint8 glyph_width;
+  uint8 glyph_ov_width;
 
-  while(!GlyphFound)
-  {
-   if(thisglyph < 0x10000 && FontDataIndexCache[recurse_fontid][thisglyph] != 0xFFFF)
-   {
-    glyph_ptrs[x] = FontDescriptors[recurse_fontid].base_ptr + (FontDescriptors[recurse_fontid].entry_bsize * FontDataIndexCache[recurse_fontid][thisglyph]);
-    glyph_width[x] = FontDescriptors[recurse_fontid].glyph_width;
-    GlyphFound = true;
-   }
-   else if(FontDescriptors[recurse_fontid].extension != -1)
-    recurse_fontid = FontDescriptors[recurse_fontid].extension;
-   else
-    break;
-  }
-
-  if(!GlyphFound)
-  {
-   glyph_ptrs[x] = FontDescriptors[fontid].base_ptr + (FontDescriptors[fontid].entry_bsize * FontDataIndexCache[fontid][0xFFFD]);
-   glyph_width[x] = FontDescriptors[fontid].glyph_width;
-  }
-
-  if((thisglyph >= 0x0300 && thisglyph <= 0x036F) || (thisglyph >= 0xFE20 && thisglyph <= 0xFE2F))
-   glyph_ov_width[x] = 0;
-  //else if(MDFN_UNLIKELY(thisglyph < 0x20))
-  //{
-  // if(thisglyph == '\b')	(If enabling this, need to change all glyph_ov_width types to int8)
-  // {
-  //  glyph_width[x] = 0;
-  //  glyph_ov_width[x] = std::max<int64>(-(int64)ret, -FontDescriptors[fontid].glyph_width);
-  // }
-  //}
-  else
-   glyph_ov_width[x] = glyph_width[x];
-
-  ret += (((x + 1) == slen) ? glyph_width[x] : glyph_ov_width[x]);
+  DecodeGlyph(text[i], &glyph_ptr, &glyph_width, &glyph_ov_width, fontid);
+  ret += (i == (text_len - 1)) ? glyph_width : glyph_ov_width;
  }
-
  return ret;
 }
 
@@ -148,55 +154,52 @@ uint32 GetTextPixLength(const char* text, uint32 fontid)
 
  if(MDFN_LIKELY(max_glyph_len > 0))
  {
-  uint32 slen;
-  const uint8 *glyph_ptrs[max_glyph_len];
-  uint8 glyph_width[max_glyph_len];
-  uint8 glyph_ov_width[max_glyph_len];
+  size_t dlen = max_glyph_len;
+  std::unique_ptr<char32_t[]> utf32_text_d;
+  char32_t utf32_text_l[256];
+  char32_t* utf32_text = (256 < dlen) ? (utf32_text_d.reset(new char32_t[dlen]), utf32_text_d.get()) : utf32_text_l;
 
-  const UTF8 *src_begin = (UTF8 *)text;
-  UTF32 utf32_buf[max_glyph_len];
-  UTF32 *tstart = utf32_buf;
+  UTF8_to_UTF32(text, max_glyph_len, utf32_text, &dlen);
 
-  ConvertUTF8toUTF32(&src_begin, (UTF8*)text + max_glyph_len, &tstart, &tstart[max_glyph_len], lenientConversion);
-  slen = (tstart - utf32_buf);
-  return DrawTextSub(utf32_buf, slen, glyph_ptrs, glyph_width, glyph_ov_width, fontid);
+  return GetTextPixLength(utf32_text, std::min<size_t>(max_glyph_len, dlen), fontid);
  }
 
  return 0;
 }
 
-uint32 GetTextPixLength(const UTF32* text, uint32 fontid)
+uint32 GetTextPixLength(const char32_t* text, uint32 fontid)
 {
- uint32 max_glyph_len = utf32_strlen((UTF32 *)text);
+ const uint32 text_len = utf32_strlen(text);
 
- if(MDFN_LIKELY(max_glyph_len > 0))
- {
-  uint32 slen;
-  const uint8 *glyph_ptrs[max_glyph_len];
-  uint8 glyph_width[max_glyph_len];
-  uint8 glyph_ov_width[max_glyph_len];
-
-  slen = utf32_strlen((UTF32 *)text);
-  return DrawTextSub((UTF32*)text, slen, glyph_ptrs, glyph_width, glyph_ov_width, fontid);
- }
+ if(MDFN_LIKELY(text_len > 0))
+  return GetTextPixLength(text, text_len, fontid);
 
  return 0;
 }
 
 template<typename T>
-static uint32 DoRealDraw(T* const surfp, uint32 pitch, const int32 x, const int32 y, const int32 bx0, const int32 bx1, const int32 by0, const int32 by1, uint32 fgcolor, uint32 slen, uint32 glyph_height, const uint8 *glyph_ptrs[], const uint8 glyph_width[], const uint8 glyph_ov_width[])
+static uint32 DoRealDraw(T* const surfp, uint32 pitch, const int32 x, const int32 y, const int32 bx0, const int32 bx1, const int32 by0, const int32 by1, uint32 fgcolor, const char32_t* const text, const size_t text_len, const uint32 fontid)
 {
+ const uint32 glyph_height = FontDescriptors[fontid].glyph_height;
  uint32 gy_start = std::min<int64>(glyph_height, std::max<int64>(0, (int64)by0 - y));
  uint32 gy_bound = std::min<int64>(glyph_height, std::max<int64>(0, (int64)by1 - y));
  T* dest = surfp + y * pitch + x;
  uint32 ret = 0;
 
- for(uint32 n = 0; n < slen; n++)
+ for(size_t i = 0; i < text_len; i++)
  {
-  uint32 gx_start = std::min<int64>(glyph_width[n], std::max<int64>(0, (int64)bx0 - x - ret));
-  uint32 gx_bound = std::min<int64>(glyph_width[n], std::max<int64>(0, (int64)bx1 - x - ret));
-  size_t sd_inc = (glyph_width[n] >> 3) + 1;
-  const uint8* sd = glyph_ptrs[n] + (sd_inc * gy_start);
+  const uint8* glyph_ptr;
+  uint8 glyph_width;
+  uint8 glyph_ov_width;
+
+  DecodeGlyph(text[i], &glyph_ptr, &glyph_width, &glyph_ov_width, fontid);
+  //
+  //
+  //
+  uint32 gx_start = std::min<int64>(glyph_width, std::max<int64>(0, (int64)bx0 - x - ret));
+  uint32 gx_bound = std::min<int64>(glyph_width, std::max<int64>(0, (int64)bx1 - x - ret));
+  size_t sd_inc = (glyph_width >> 3) + 1;
+  const uint8* sd = glyph_ptr + (sd_inc * gy_start);
   T* dd = dest + (gy_start * pitch);
 
   //printf("x=%d, y=%d --- %d %d\n", x, y, gx_start, gx_bound);
@@ -212,15 +215,14 @@ static uint32 DoRealDraw(T* const surfp, uint32 pitch, const int32 x, const int3
    sd += sd_inc;
   }
 
-  dest += glyph_ov_width[n];
-  ret += ((n + 1) == slen) ? glyph_width[n] : glyph_ov_width[n];
+  dest += glyph_ov_width;
+  ret += (i == (text_len - 1)) ? glyph_width : glyph_ov_width;
  }
 
  return ret;
 }
 
-template<typename T>
-static uint32 DrawTextBase(MDFN_Surface* surf, const MDFN_Rect* cr, int32 x, int32 y, T* text, uint32 color, uint32 shadcolor, uint32 fontid, uint32 hcenterw, const bool shadow)
+static uint32 DrawTextUTF32(MDFN_Surface* surf, const MDFN_Rect* cr, int32 x, int32 y, const char32_t* text, const size_t text_len, uint32 color, uint32 shadcolor, uint32 fontid, uint32 hcenterw, const bool shadow)
 {
  int32 bx0, bx1;
  int32 by0, by1;
@@ -245,99 +247,93 @@ static uint32 DrawTextBase(MDFN_Surface* surf, const MDFN_Rect* cr, int32 x, int
  //
  //
  //
- uint32 max_glyph_len;
- uint32 slen;
-
- if(sizeof(T) == 4)
-  max_glyph_len = slen = utf32_strlen((UTF32 *)text);
- else
-  max_glyph_len = strlen((const char*)text);
-
- if(!max_glyph_len)
+ if(!text_len)
   return 0;
 
- uint32 pixwidth;
- const uint8* glyph_ptrs[max_glyph_len];
- uint8 glyph_width[max_glyph_len];
- uint8 glyph_ov_width[max_glyph_len];
- UTF32 utf32_buf[(sizeof(T) == 4) ? 1 : max_glyph_len];
- UTF32* eptr;
-
- if(sizeof(T) == 4)
-  eptr = (UTF32*)text;
- else
+ if(hcenterw)
  {
-  const UTF8* src_begin = (UTF8*)text;
-  UTF32* tstart = utf32_buf;
+  uint32 pixwidth = GetTextPixLength(text, text_len, fontid);
 
-  ConvertUTF8toUTF32(&src_begin, (UTF8*)text + max_glyph_len, &tstart, &tstart[max_glyph_len], lenientConversion);
-  slen = (tstart - utf32_buf);
-  eptr = utf32_buf;
+  if(hcenterw > pixwidth)
+   x += (int32)(hcenterw - pixwidth) / 2;
  }
-
- pixwidth = DrawTextSub(eptr, slen, glyph_ptrs, glyph_width, glyph_ov_width, fontid);
-
- if(hcenterw && hcenterw > pixwidth)
-  x += (int32)(hcenterw - pixwidth) / 2;
 
  switch(surf->format.bpp)
  {
   default:
 	return 0;
 
+  case 8:
+	if(shadow)
+	 DoRealDraw(surf->pix<uint8>(), surf->pitchinpix, x + 1, y + 1, bx0, bx1, by0, by1, shadcolor, text, text_len, fontid);
+
+	return DoRealDraw(surf->pix<uint8>(), surf->pitchinpix, x, y, bx0, bx1, by0, by1, color, text, text_len, fontid);
+
   case 16:
 	if(shadow)
-	 DoRealDraw(surf->pix<uint16>(), surf->pitchinpix, x + 1, y + 1, bx0, bx1, by0, by1, shadcolor, slen, FontDescriptors[fontid].glyph_height, glyph_ptrs, glyph_width, glyph_ov_width);
+	 DoRealDraw(surf->pix<uint16>(), surf->pitchinpix, x + 1, y + 1, bx0, bx1, by0, by1, shadcolor, text, text_len, fontid);
 
-	return DoRealDraw(surf->pix<uint16>(), surf->pitchinpix, x, y, bx0, bx1, by0, by1, color, slen, FontDescriptors[fontid].glyph_height, glyph_ptrs, glyph_width, glyph_ov_width);
+	return DoRealDraw(surf->pix<uint16>(), surf->pitchinpix, x, y, bx0, bx1, by0, by1, color, text, text_len, fontid);
 
   case 32:
 	if(shadow)
-	 DoRealDraw(surf->pix<uint32>(), surf->pitchinpix, x + 1, y + 1, bx0, bx1, by0, by1, shadcolor, slen, FontDescriptors[fontid].glyph_height, glyph_ptrs, glyph_width, glyph_ov_width);
+	 DoRealDraw(surf->pix<uint32>(), surf->pitchinpix, x + 1, y + 1, bx0, bx1, by0, by1, shadcolor, text, text_len, fontid);
 
-	return DoRealDraw(surf->pix<uint32>(), surf->pitchinpix, x, y, bx0, bx1, by0, by1, color, slen, FontDescriptors[fontid].glyph_height, glyph_ptrs, glyph_width, glyph_ov_width);
+	return DoRealDraw(surf->pix<uint32>(), surf->pitchinpix, x, y, bx0, bx1, by0, by1, color, text, text_len, fontid);
  }
+}
+
+static uint32 DrawTextUTF8(MDFN_Surface* surf, const MDFN_Rect* cr, int32 x, int32 y, const char* text, const size_t text_len, uint32 color, uint32 shadcolor, uint32 fontid, uint32 hcenterw, const bool shadow)
+{
+ size_t dlen = text_len;
+ std::unique_ptr<char32_t[]> utf32_text_d;
+ char32_t utf32_text_l[256];
+ char32_t* utf32_text = (256 < dlen) ? (utf32_text_d.reset(new char32_t[dlen]), utf32_text_d.get()) : utf32_text_l;
+
+ UTF8_to_UTF32(text, text_len, utf32_text, &dlen);
+
+ return DrawTextUTF32(surf, cr, x, y, utf32_text, std::min<size_t>(text_len, dlen), color, shadcolor, fontid, hcenterw, shadow);
 }
 
 uint32 DrawText(MDFN_Surface* surf, int32 x, int32 y, const char* text, uint32 color, uint32 fontid, uint32 hcenterw)
 {
- return DrawTextBase(surf, nullptr, x, y, text, color, 0, fontid, hcenterw, false);
+ return DrawTextUTF8(surf, nullptr, x, y, text, strlen(text), color, 0, fontid, hcenterw, false);
 }
 
 uint32 DrawText(MDFN_Surface* surf, const MDFN_Rect& cr, int32 x, int32 y, const char* text, uint32 color, uint32 fontid, uint32 hcenterw)
 {
- return DrawTextBase(surf, &cr, x, y, text, color, 0, fontid, hcenterw, false);
+ return DrawTextUTF8(surf, &cr, x, y, text, strlen(text), color, 0, fontid, hcenterw, false);
 }
 
 uint32 DrawTextShadow(MDFN_Surface* surf, int32 x, int32 y, const char* text, uint32 color, uint32 shadcolor, uint32 fontid, uint32 hcenterw)
 {
- return DrawTextBase(surf, nullptr, x, y, text, color, shadcolor, fontid, hcenterw, true);
+ return DrawTextUTF8(surf, nullptr, x, y, text, strlen(text), color, shadcolor, fontid, hcenterw, true);
 }
 
 uint32 DrawTextShadow(MDFN_Surface* surf, const MDFN_Rect& cr, int32 x, int32 y, const char* text, uint32 color, uint32 shadcolor, uint32 fontid, uint32 hcenterw)
 {
- return DrawTextBase(surf, &cr, x, y, text, color, shadcolor, fontid, hcenterw, true);
+ return DrawTextUTF8(surf, &cr, x, y, text, strlen(text), color, shadcolor, fontid, hcenterw, true);
 }
 
 //
 //
 //
-uint32 DrawText(MDFN_Surface* surf, int32 x, int32 y, const uint32* text, uint32 color, uint32 fontid, uint32 hcenterw)
+uint32 DrawText(MDFN_Surface* surf, int32 x, int32 y, const char32_t* text, uint32 color, uint32 fontid, uint32 hcenterw)
 {
- return DrawTextBase(surf, nullptr, x, y, text, color, 0, fontid, hcenterw, false);
+ return DrawTextUTF32(surf, nullptr, x, y, text, utf32_strlen(text), color, 0, fontid, hcenterw, false);
 }
 
-uint32 DrawText(MDFN_Surface* surf, const MDFN_Rect& cr, int32 x, int32 y, const uint32* text, uint32 color, uint32 fontid, uint32 hcenterw)
+uint32 DrawText(MDFN_Surface* surf, const MDFN_Rect& cr, int32 x, int32 y, const char32_t* text, uint32 color, uint32 fontid, uint32 hcenterw)
 {
- return DrawTextBase(surf, &cr, x, y, text, color, 0, fontid, hcenterw, false);
+ return DrawTextUTF32(surf, &cr, x, y, text, utf32_strlen(text), color, 0, fontid, hcenterw, false);
 }
 
-uint32 DrawTextShadow(MDFN_Surface* surf, int32 x, int32 y, const uint32* text, uint32 color, uint32 shadcolor, uint32 fontid, uint32 hcenterw)
+uint32 DrawTextShadow(MDFN_Surface* surf, int32 x, int32 y, const char32_t* text, uint32 color, uint32 shadcolor, uint32 fontid, uint32 hcenterw)
 {
- return DrawTextBase(surf, nullptr, x, y, text, color, shadcolor, fontid, hcenterw, true);
+ return DrawTextUTF32(surf, nullptr, x, y, text, utf32_strlen(text), color, shadcolor, fontid, hcenterw, true);
 }
 
-uint32 DrawTextShadow(MDFN_Surface* surf, const MDFN_Rect& cr, int32 x, int32 y, const uint32* text, uint32 color, uint32 shadcolor, uint32 fontid, uint32 hcenterw)
+uint32 DrawTextShadow(MDFN_Surface* surf, const MDFN_Rect& cr, int32 x, int32 y, const char32_t* text, uint32 color, uint32 shadcolor, uint32 fontid, uint32 hcenterw)
 {
- return DrawTextBase(surf, &cr, x, y, text, color, shadcolor, fontid, hcenterw, true);
+ return DrawTextUTF32(surf, &cr, x, y, text, utf32_strlen(text), color, shadcolor, fontid, hcenterw, true);
 }

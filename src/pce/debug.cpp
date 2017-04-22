@@ -681,7 +681,7 @@ static void SetRegister_CD(const unsigned int id, uint32 value)
 }
 
 
-static RegType Regs_HuC6280[] =
+static const RegType Regs_HuC6280[] =
 {
         { HuC6280::GSREG_PC, "PC", "Program Counter", 2 },
         { HuC6280::GSREG_A, "A", "Accumulator", 1 },
@@ -708,7 +708,7 @@ static RegType Regs_HuC6280[] =
         { 0, "", "", 0 },
 };
 
-static RegGroupType RegsGroup_HuC6280 =
+static const RegGroupType RegsGroup_HuC6280 =
 {
 	"HuC6280",
         Regs_HuC6280,
@@ -725,7 +725,7 @@ static RegGroupType RegsGroup_HuC6280 =
  { PSG_GSREG_CH0_WINDEX | (n << 8), "CH"#n"WIndex", "PSG Ch"#n" Waveform Index", 1},     \
  { PSG_GSREG_CH0_SCACHE | (n << 8), "CH"#n"SCache", "PSG Ch"#n" Sample Cache", 1 }
 
-static RegType Regs_PSG[] =
+static const RegType Regs_PSG[] =
 {
  { PSG_GSREG_SELECT, "Select", "PSG Channel Select", 1 },
  { PSG_GSREG_GBALANCE, "GBalance", "PSG Global Balance", 1 },
@@ -746,7 +746,7 @@ static RegType Regs_PSG[] =
  { 0, "", "", 0 },
 };
 
-static RegGroupType RegsGroup_PSG =
+static const RegGroupType RegsGroup_PSG =
 {
  "PSG",
  Regs_PSG,
@@ -754,7 +754,7 @@ static RegGroupType RegsGroup_PSG =
  SetRegister_PSG
 };
 
-static RegType Regs_VDC[] =
+static const RegType Regs_VDC[] =
 {
 	{ VDC::GSREG_SELECT, "Select", "Register Select", 1 },
         { VDC::GSREG_STATUS, "Status", "Status", 1 },
@@ -787,7 +787,7 @@ static RegType Regs_VDC[] =
         { 0, "", "", 0 },
 };
 
-static RegGroupType RegsGroup_VDC =
+static const RegGroupType RegsGroup_VDC =
 {
 	"VDC",
         Regs_VDC,
@@ -796,7 +796,7 @@ static RegGroupType RegsGroup_VDC =
 };
 
 
-static RegType Regs_SGXVDC[] =
+static const RegType Regs_SGXVDC[] =
 {
         { VDC::GSREG_SELECT, "Select", "Register Select, VDC-B", 1 },
 	{ VDC::GSREG_STATUS, "Status", "Status, VDC-B", 1 },
@@ -831,7 +831,7 @@ static RegType Regs_SGXVDC[] =
         { 0, "", "", 0 },
 };
 
-static RegGroupType RegsGroup_SGXVDC =
+static const RegGroupType RegsGroup_SGXVDC =
 {
 	"VDC-B",
         Regs_SGXVDC,
@@ -839,7 +839,7 @@ static RegGroupType RegsGroup_SGXVDC =
         SetRegister_SGXVDC
 };
 
-static RegType Regs_CD[] =
+static const RegType Regs_CD[] =
 {
  { CD_GSREG_BSY, "BSY", "SCSI BSY", 1 },
  { CD_GSREG_REQ, "REQ", "SCSI REQ", 1 },
@@ -863,7 +863,7 @@ static RegType Regs_CD[] =
  { 0, "", "", 0 },
 };
 
-static RegGroupType RegsGroup_CD =
+static const RegGroupType RegsGroup_CD =
 {
  "CD",
  Regs_CD,

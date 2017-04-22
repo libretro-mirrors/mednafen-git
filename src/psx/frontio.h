@@ -33,10 +33,10 @@ class InputDevice
 {
  public:
 
- InputDevice();
- virtual ~InputDevice();
+ InputDevice() MDFN_COLD;
+ virtual ~InputDevice() MDFN_COLD;
 
- virtual void Power(void);
+ virtual void Power(void) MDFN_COLD;
  virtual void UpdateInput(const void *data);
  virtual void UpdateOutput(void* data);
  virtual void TransformInput(void* data);
@@ -89,10 +89,10 @@ class FrontIO
 {
  public:
 
- FrontIO();
- ~FrontIO();
+ FrontIO() MDFN_COLD;
+ ~FrontIO() MDFN_COLD;
 
- void Reset(bool powering_up);
+ void Reset(bool powering_up) MDFN_COLD;
  void Write(pscpu_timestamp_t timestamp, uint32 A, uint32 V);
  uint32 Read(pscpu_timestamp_t timestamp, uint32 A);
  pscpu_timestamp_t CalcNextEventTS(pscpu_timestamp_t timestamp, int32 next_event);

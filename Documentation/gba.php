@@ -10,11 +10,7 @@ Mednafen's GameBoy Advance emulation is based off of <b>VisualBoy Advance</b>.
 Built-in high-level BIOS emulation is used by default; however, a real BIOS can be used by setting the <a href="#gba.bios">gba.bios</a> setting.
 <?php EndSection(); ?>
 
-<?php BeginSection('Custom Palettes', "Section_custom_palettes"); ?>
-<p>
-Custom palettes should contain 32768 8-bit-per-color-component RGB triplets.
-</p>
-<?php EndSection(); ?>
+<?php PrintCustomPalettes(); ?>
 
 <?php BeginSection('Backup Memory Type', "Section_backupmem_type"); ?>
    <p>

@@ -375,9 +375,9 @@ static void Load(MDFNFILE* fp)
   MDFN_printf("Loaded desserts:");
 
   for(uint64 dle : dlist)
-   MDFN_printf(" %llu", dle);
+   MDFN_printf(" %llu", (unsigned long long)dle);
 
-  printf("\n");
+  MDFN_printf("\n");
 
   for(unsigned ch = 0; ch < 2; ch++)
    HRBufs[ch] = new OwlBuffer();
@@ -468,7 +468,7 @@ static const MDFNSetting_EnumList MultiEnum_List[] =
  { NULL, 0 },
 };
 
-static MDFNSetting DEMOSettings[] = 
+static const MDFNSetting DEMOSettings[] = 
 {
  { "demo.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("Sound quality."), gettext_noop("Higher values correspond to better SNR and better preservation of higher frequencies(\"brightness\"), at the cost of increased computational complexity and a negligible increase in latency.\n\nHigher values will also slightly increase the probability of sample clipping(relevant if Mednafen's volume control settings are set too high), due to increased (time-domain) ringing."), MDFNST_INT, "3", "0", "5" },
  { "demo.resamp_rate_error", MDFNSF_NOFLAGS, gettext_noop("Sound output rate tolerance."), gettext_noop("Lower values correspond to better matching of the output rate of the resampler to the actual desired output rate, at the expense of increased RAM usage and poorer CPU cache utilization."), MDFNST_FLOAT, "0.0000009", "0.0000001", "0.0000350" },
@@ -478,7 +478,7 @@ static MDFNSetting DEMOSettings[] =
  { NULL }
 };
 
-static const char* SwitchPositions[] =
+static const char* const SwitchPositions[] =
 {
  gettext_noop("Waffles 0"),
  gettext_noop("Oranges 1"),

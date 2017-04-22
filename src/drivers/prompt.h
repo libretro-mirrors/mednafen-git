@@ -13,7 +13,7 @@ class HappyPrompt
 	void Event(const SDL_Event *event);
 	void Init(const std::string &ptext, const std::string &zestring);
 	void SetText(const std::string &ptext);
-	void SetKBB(const std::string &zestring);
+	void InsertKBB(const std::string &zestring);
 
         virtual void TheEnd(const std::string &pstring);
 
@@ -23,7 +23,7 @@ class HappyPrompt
 
 	private:
 
-	std::vector<uint32> kb_buffer;
+	std::u32string kb_buffer;
 	unsigned int kb_cursor_pos;
 };
 

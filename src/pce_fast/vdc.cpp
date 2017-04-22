@@ -1000,11 +1000,7 @@ static void MixBGSPR(const uint32 count, const uint8*  __restrict__ bg_linebuf, 
  bg_linebuf += count;
  spr_linebuf += count;
  target += count;
- #if SIZEOF_VOID_P == 8
- uint64 x = -(uint64)count;
- #else
- uint32 x = -count;
- #endif
+ size_t x = -(size_t)count;
 
  #ifdef __x86_64__
  if(1)
@@ -1014,11 +1010,7 @@ static void MixBGSPR(const uint32 count, const uint8*  __restrict__ bg_linebuf, 
  {
   do
   {
-#if SIZEOF_VOID_P == 8
-   uint64 pixel = bg_linebuf[x];
-#else
-   uint32 pixel = bg_linebuf[x];
-#endif
+   size_t pixel = bg_linebuf[x];
    uint32 spr_pixel = spr_linebuf[x];
 
    asm volatile(

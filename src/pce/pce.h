@@ -10,8 +10,8 @@ namespace MDFN_IEN_PCE
 
 #define PCE_MASTER_CLOCK	21477272.727273
 
-#define DECLFR(x) uint8 x (uint32 A)
-#define DECLFW(x) void x (uint32 A, uint8 V)
+#define DECLFR(x) MDFN_FASTCALL uint8 x (uint32 A)
+#define DECLFW(x) MDFN_FASTCALL void x (uint32 A, uint8 V)
 
 };
 

@@ -119,14 +119,16 @@ libss_a_AR = $(AR) $(ARFLAGS)
 libss_a_LIBADD =
 am__dirstamp = $(am__leading_dot)dirstamp
 am_libss_a_OBJECTS = db.$(OBJEXT) cdb.$(OBJEXT) sound.$(OBJEXT) \
-	cart.$(OBJEXT) ss.$(OBJEXT) scu_dsp_gen.$(OBJEXT) \
-	scu_dsp_mvi.$(OBJEXT) scu_dsp_jmp.$(OBJEXT) \
-	scu_dsp_misc.$(OBJEXT) vdp1.$(OBJEXT) vdp1_line.$(OBJEXT) \
-	vdp1_sprite.$(OBJEXT) vdp1_poly.$(OBJEXT) vdp2.$(OBJEXT) \
-	vdp2_render.$(OBJEXT) smpc.$(OBJEXT) input/multitap.$(OBJEXT) \
-	input/gamepad.$(OBJEXT) input/3dpad.$(OBJEXT) \
-	input/mouse.$(OBJEXT) input/wheel.$(OBJEXT) \
-	input/mission.$(OBJEXT) input/keyboard.$(OBJEXT)
+	cart.$(OBJEXT) cart/backup.$(OBJEXT) cart/cs1ram.$(OBJEXT) \
+	cart/debug.$(OBJEXT) cart/extram.$(OBJEXT) cart/rom.$(OBJEXT) \
+	ss.$(OBJEXT) scu_dsp_gen.$(OBJEXT) scu_dsp_mvi.$(OBJEXT) \
+	scu_dsp_jmp.$(OBJEXT) scu_dsp_misc.$(OBJEXT) vdp1.$(OBJEXT) \
+	vdp1_line.$(OBJEXT) vdp1_sprite.$(OBJEXT) vdp1_poly.$(OBJEXT) \
+	vdp2.$(OBJEXT) vdp2_render.$(OBJEXT) smpc.$(OBJEXT) \
+	input/multitap.$(OBJEXT) input/gamepad.$(OBJEXT) \
+	input/3dpad.$(OBJEXT) input/mouse.$(OBJEXT) \
+	input/wheel.$(OBJEXT) input/mission.$(OBJEXT) \
+	input/keyboard.$(OBJEXT)
 libss_a_OBJECTS = $(am_libss_a_OBJECTS)
 libssfplay_a_AR = $(AR) $(ARFLAGS)
 libssfplay_a_LIBADD =
@@ -365,10 +367,11 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 # -Wpedantic
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_builddir)/intl
 noinst_LIBRARIES = $(am__append_1) $(am__append_2)
-libss_a_SOURCES = db.cpp cdb.cpp sound.cpp cart.cpp ss.cpp \
-	scu_dsp_gen.cpp scu_dsp_mvi.cpp scu_dsp_jmp.cpp \
+libss_a_SOURCES = db.cpp cdb.cpp sound.cpp cart.cpp cart/backup.cpp \
+	cart/cs1ram.cpp cart/debug.cpp cart/extram.cpp cart/rom.cpp \
+	ss.cpp scu_dsp_gen.cpp scu_dsp_mvi.cpp scu_dsp_jmp.cpp \
 	scu_dsp_misc.cpp vdp1.cpp vdp1_line.cpp vdp1_sprite.cpp \
 	vdp1_poly.cpp vdp2.cpp vdp2_render.cpp smpc.cpp \
 	input/multitap.cpp input/gamepad.cpp input/3dpad.cpp \
@@ -412,6 +415,22 @@ $(am__aclocal_m4_deps):
 
 clean-noinstLIBRARIES:
 	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
+cart/$(am__dirstamp):
+	@$(MKDIR_P) cart
+	@: > cart/$(am__dirstamp)
+cart/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) cart/$(DEPDIR)
+	@: > cart/$(DEPDIR)/$(am__dirstamp)
+cart/backup.$(OBJEXT): cart/$(am__dirstamp) \
+	cart/$(DEPDIR)/$(am__dirstamp)
+cart/cs1ram.$(OBJEXT): cart/$(am__dirstamp) \
+	cart/$(DEPDIR)/$(am__dirstamp)
+cart/debug.$(OBJEXT): cart/$(am__dirstamp) \
+	cart/$(DEPDIR)/$(am__dirstamp)
+cart/extram.$(OBJEXT): cart/$(am__dirstamp) \
+	cart/$(DEPDIR)/$(am__dirstamp)
+cart/rom.$(OBJEXT): cart/$(am__dirstamp) \
+	cart/$(DEPDIR)/$(am__dirstamp)
 input/$(am__dirstamp):
 	@$(MKDIR_P) input
 	@: > input/$(am__dirstamp)
@@ -445,6 +464,7 @@ libssfplay.a: $(libssfplay_a_OBJECTS) $(libssfplay_a_DEPENDENCIES) $(EXTRA_libss
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f cart/*.$(OBJEXT)
 	-rm -f input/*.$(OBJEXT)
 
 distclean-compile:
@@ -467,6 +487,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdp1_sprite.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdp2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdp2_render.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/backup.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/cs1ram.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/debug.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/extram.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/rom.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/3dpad.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/gamepad.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/keyboard.Po@am__quote@
@@ -603,6 +628,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f cart/$(DEPDIR)/$(am__dirstamp)
+	-rm -f cart/$(am__dirstamp)
 	-rm -f input/$(DEPDIR)/$(am__dirstamp)
 	-rm -f input/$(am__dirstamp)
 
@@ -614,7 +641,7 @@ clean: clean-am
 clean-am: clean-generic clean-noinstLIBRARIES mostlyclean-am
 
 distclean: distclean-am
-	-rm -rf ./$(DEPDIR) input/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) cart/$(DEPDIR) input/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -660,7 +687,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -rf ./$(DEPDIR) input/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) cart/$(DEPDIR) input/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

@@ -76,7 +76,7 @@ static DECLFW(Mapper67_write)
  }
 }
 
-static void SunIRQHook(int a)
+static MDFN_FASTCALL void SunIRQHook(int a)
 {
   if(IRQa)
   {

@@ -2,7 +2,7 @@
 /* Mednafen Fast SNES Emulation Module                                        */
 /******************************************************************************/
 /* apu.cpp:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -29,10 +29,7 @@ namespace MDFN_IEN_SNES_FAUST
 
 #include "spc700.inc"
 
-static const uint8 IPL[64] =
-{
- #include "apu_ipl.inc"
-};
+static uint8 IPL[64];
 
 static uint8 APURAM[65536];
 static uint8 IOFromSPC700[4];
@@ -49,7 +46,7 @@ static uint8 TTARGET[3];
 static uint8 TCOUNT[3];
 static uint8 TOUT[3];
 
-static void TickTimer(unsigned which)
+static MDFN_HOT MDFN_FASTCALL void TickTimer(unsigned which)
 {
  if(Control & (1U << which))
  {
@@ -85,7 +82,7 @@ static uint8 (MDFN_FASTCALL *SPC_PageXX_ReadTable[256])(uint16);
 static uint8 (MDFN_FASTCALL *SPC_PageFF_ReadTable[256])(uint16);
 
 template<unsigned special_base>
-static uint8 MDFN_FASTCALL SPC_Read(uint16 A)
+static uint8 MDFN_HOT MDFN_FASTCALL SPC_Read(uint16 A)
 {
  SPC700_IOHandler();
  //
@@ -134,7 +131,7 @@ static uint8 MDFN_FASTCALL SPC_Read(uint16 A)
 }
 
 template<unsigned special_base>
-static void MDFN_FASTCALL SPC_Write(uint16 A, uint8 V)
+static MDFN_HOT void MDFN_FASTCALL SPC_Write(uint16 A, uint8 V)
 {
  SPC700_IOHandler();
  //
@@ -198,8 +195,9 @@ static void MDFN_FASTCALL SPC_Write(uint16 A, uint8 V)
 
 static uint32 apu_last_master_timestamp;
 static unsigned run_count_mod;
+static unsigned clock_multiplier;
 
-static void MDFN_FASTCALL NO_INLINE APU_Update(uint32 master_timestamp)
+static void MDFN_HOT MDFN_FASTCALL NO_INLINE APU_Update(uint32 master_timestamp)
 {
  // (21477272.727 * 3129) / 65536 / 32 = 32044.594937
  // (21477272.727 / 60) * 3129 = 1120039772.71305
@@ -207,7 +205,7 @@ static void MDFN_FASTCALL NO_INLINE APU_Update(uint32 master_timestamp)
  int32 tmp;
  int32 run_count;
 
- tmp = ((master_timestamp - apu_last_master_timestamp) * 3129) + run_count_mod;
+ tmp = ((master_timestamp - apu_last_master_timestamp) * clock_multiplier) + run_count_mod;
  apu_last_master_timestamp = master_timestamp;
  run_count_mod 	= (uint16)tmp;
  run_count 	= tmp >> 16;
@@ -265,10 +263,18 @@ void APU_Reset(bool powering_up)
  SPC_CPU.Reset(powering_up);
 }
 
-void APU_Init(void)
+void APU_Init(const bool IsPAL)
 {
+ static const uint8 IPL_Init[64] =
+ {
+  #include "apu_ipl.inc"
+ };
+
+ memcpy(IPL, IPL_Init, sizeof(IPL));
+ //
  apu_last_master_timestamp = 0;
  run_count_mod = 0;
+ clock_multiplier = IsPAL ? 3158 : 3129;
 
  Set_B_Handlers(0x40, 0x7F, MainCPU_APUIORead, MainCPU_APUIOWrite);	// 4 registers mirrored throughout the range.
 
@@ -357,9 +363,9 @@ void APU_SetSPC(SPCReader* s)
  SPC_CPU.SetRegister(SPC700::GSREG_SP, s->SP());
 }
 
-void APU_StartFrame(double rate)
+void APU_StartFrame(double master_clock, double rate)
 {
- DSP_StartFrame(32044.594937, rate);
+ DSP_StartFrame((master_clock * clock_multiplier) / (65536.0 * 32.0), rate);
 }
 
 int32 APU_EndFrame(int16* SoundBuf)

@@ -95,7 +95,7 @@ static RegType M68K_Regs[] =
         { 0, "", "", 0 },
 };
 
-static RegGroupType M68K_RegsGroup =
+static const RegGroupType M68K_RegsGroup =
 {
 	"M68K",
         M68K_Regs,
@@ -301,12 +301,12 @@ static void PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
  }
 }
 
-static unsigned DBG_BusIntAck(uint8 level)
+static MDFN_FASTCALL unsigned DBG_BusIntAck(uint8 level)
 {
  return M68K::BUS_INT_ACK_AUTO;
 }
 
-static uint8 DBG_BusRead8(uint32 address)
+static MDFN_FASTCALL uint8 DBG_BusRead8(uint32 address)
 {
  std::vector<MD_BPOINT>::iterator bpit;
  address &= 0xFFFFFF;
@@ -323,14 +323,14 @@ static uint8 DBG_BusRead8(uint32 address)
  return Main68K_BusPeek8(address);
 }
 
-static void DBG_BusRMW(uint32 address, uint8 (*cb)(M68K*, uint8))
+static MDFN_FASTCALL void DBG_BusRMW(uint32 address, uint8 (MDFN_FASTCALL *cb)(M68K*, uint8))
 {
  uint8 tmp = DBG_BusRead8(address);
 
  cb(&Main68K_BP, tmp);
 }
 
-static uint16 DBG_BusRead16(uint32 address)
+static MDFN_FASTCALL uint16 DBG_BusRead16(uint32 address)
 {
  std::vector<MD_BPOINT>::iterator bpit;
 
@@ -350,7 +350,7 @@ static uint16 DBG_BusRead16(uint32 address)
  return Main68K_BusPeek16(address);
 }
 
-static void DBG_BusWrite8(uint32 address, uint8 value)
+static MDFN_FASTCALL void DBG_BusWrite8(uint32 address, uint8 value)
 {
  std::vector<MD_BPOINT>::iterator bpit;
 
@@ -366,7 +366,7 @@ static void DBG_BusWrite8(uint32 address, uint8 value)
  }
 }
 
-static void DBG_BusWrite16(uint32 address, uint16 value)
+static MDFN_FASTCALL void DBG_BusWrite16(uint32 address, uint16 value)
 {
  std::vector<MD_BPOINT>::iterator bpit;
 

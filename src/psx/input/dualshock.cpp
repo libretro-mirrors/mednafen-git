@@ -60,10 +60,10 @@ class InputDevice_DualShock final : public InputDevice
 {
  public:
 
- InputDevice_DualShock();
- virtual ~InputDevice_DualShock() override;
+ InputDevice_DualShock() MDFN_COLD;
+ virtual ~InputDevice_DualShock() override MDFN_COLD;
 
- virtual void Power(void) override;
+ virtual void Power(void) override MDFN_COLD;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
 
  virtual void Update(const pscpu_timestamp_t timestamp) override;
@@ -1103,15 +1103,15 @@ const IDIISG Device_DualShock_IDII =
 
  IDIIS_Status("amstatus", "Analog Mode", AM_SS, sizeof(AM_SS) / sizeof(AM_SS[0])),
 
- { "rstick_right", "Right Stick RIGHT →", 22, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_left", "Right Stick LEFT ←", 21, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_down", "Right Stick DOWN ↓", 20, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_up", "Right Stick UP ↑", 19, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "rstick_right", "Right Stick RIGHT →", 22, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "rstick_left", "Right Stick LEFT ←", 21, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "rstick_down", "Right Stick DOWN ↓", 20, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "rstick_up", "Right Stick UP ↑", 19, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
 
- { "lstick_right", "Left Stick RIGHT →", 17, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_left", "Left Stick LEFT ←", 16, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_down", "Left Stick DOWN ↓", 15, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_up", "Left Stick UP ↑", 14, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "lstick_right", "Left Stick RIGHT →", 17, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "lstick_left", "Left Stick LEFT ←", 16, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "lstick_down", "Left Stick DOWN ↓", 15, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "lstick_up", "Left Stick UP ↑", 14, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
 
  { "rumble", "RUMBLE MONSTER RUMBA", 100, IDIT_RUMBLE },
 };

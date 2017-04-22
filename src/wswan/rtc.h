@@ -28,7 +28,7 @@ namespace MDFN_IEN_WSWAN
 void RTC_Write(uint8 A, uint8 V);
 uint8 RTC_Read(uint8 A);
 
-void RTC_Init(void);
+void RTC_Init(void) MDFN_COLD;
 void RTC_Reset(void);
 
 void RTC_Clock(uint32 cycles);

@@ -28,10 +28,10 @@ namespace MDFN_IEN_SS
 class IODevice_Keyboard final : public IODevice
 {
  public:
- IODevice_Keyboard();
- virtual ~IODevice_Keyboard() override;
+ IODevice_Keyboard() MDFN_COLD;
+ virtual ~IODevice_Keyboard() override MDFN_COLD;
 
- virtual void Power(void) override;
+ virtual void Power(void) override MDFN_COLD;
  virtual void UpdateInput(const uint8* data, const int32 time_elapsed) override;
  virtual void UpdateOutput(uint8* data) override;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;

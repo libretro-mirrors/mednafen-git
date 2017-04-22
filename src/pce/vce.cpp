@@ -38,7 +38,7 @@ namespace MDFN_IEN_PCE
 
 static const int vce_ratios[4] = { 4, 3, 2, 2 };
 
-static NO_INLINE int32 Sync(const int32 timestamp);
+static MDFN_FASTCALL NO_INLINE int32 Sync(const int32 timestamp);
 
 static void IRQChange_Hook(bool newstatus)
 {
@@ -578,7 +578,7 @@ INLINE int32 VCE::SyncReal(const int32 timestamp)
  return(ret);
 }
 
-static NO_INLINE int32 Sync(const int32 timestamp)
+static MDFN_FASTCALL NO_INLINE int32 Sync(const int32 timestamp)
 {
  extern VCE *vce; //HORRIBLE
  return vce->SyncReal(timestamp);

@@ -1000,7 +1000,7 @@ static void SettingChanged(const char *name)
 }
 
 
-MDFNSetting MDFNMP_Settings[] =
+extern const MDFNSetting MDFNMP_Settings[] =
 {
  { "cheats", MDFNSF_NOFLAGS, "Enable cheats.", NULL, MDFNST_BOOL, "1", NULL, NULL, NULL, SettingChanged },
  { NULL}

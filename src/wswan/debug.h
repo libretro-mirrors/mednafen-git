@@ -29,7 +29,7 @@ void WSwanDBG_PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Leng
 void WSwanDBG_ToggleSyntax(void);
 void WSwanDBG_IRQ(int level);
 
-void WSwanDBG_Init(void);
+void WSwanDBG_Init(void) MDFN_COLD;
 
 #endif
 

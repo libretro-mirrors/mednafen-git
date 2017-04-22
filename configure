@@ -644,10 +644,6 @@ HAVE_POSIX_SOCKETS_TRUE
 SDL_LIBS
 SDL_CFLAGS
 SDL_CONFIG
-SNDFILE_LIBS
-SNDFILE_CFLAGS
-HAVE_LIBSNDFILE_FALSE
-HAVE_LIBSNDFILE_TRUE
 HAVE_LINUX_JOYSTICK_FALSE
 HAVE_LINUX_JOYSTICK_TRUE
 UNIX_FALSE
@@ -656,6 +652,18 @@ WIN32_FALSE
 WIN32_TRUE
 DOS_FALSE
 DOS_TRUE
+HAVE_SDL_FALSE
+HAVE_SDL_TRUE
+HAVE_WASAPI_FALSE
+HAVE_WASAPI_TRUE
+HAVE_DIRECTSOUND_FALSE
+HAVE_DIRECTSOUND_TRUE
+HAVE_OSSDSP_FALSE
+HAVE_OSSDSP_TRUE
+SNDFILE_LIBS
+SNDFILE_CFLAGS
+HAVE_LIBSNDFILE_FALSE
+HAVE_LIBSNDFILE_TRUE
 TREMOR_LIBS
 HAVE_EXTERNAL_TREMOR_FALSE
 HAVE_EXTERNAL_TREMOR_TRUE
@@ -664,20 +672,12 @@ HAVE_EXTERNAL_MPCDEC_FALSE
 HAVE_EXTERNAL_MPCDEC_TRUE
 JACK_LIBS
 JACK_CFLAGS
-ALSA_LIBS
-ALSA_CFLAGS
 HAVE_JACK_FALSE
 HAVE_JACK_TRUE
-HAVE_SDL_FALSE
-HAVE_SDL_TRUE
-HAVE_WASAPI_FALSE
-HAVE_WASAPI_TRUE
-HAVE_DIRECTSOUND_FALSE
-HAVE_DIRECTSOUND_TRUE
+ALSA_LIBS
+ALSA_CFLAGS
 HAVE_ALSA_FALSE
 HAVE_ALSA_TRUE
-HAVE_OSSDSP_FALSE
-HAVE_OSSDSP_TRUE
 NEED_ARCADE_CARD_EMU_FALSE
 NEED_ARCADE_CARD_EMU_TRUE
 NEED_HUC6270_EMU_FALSE
@@ -942,9 +942,9 @@ with_alsa_prefix
 with_alsa_inc_prefix
 enable_alsatest
 enable_jack
-with_libsndfile
 with_external_mpcdec
 with_external_tremor
+with_libsndfile
 with_sdl_prefix
 with_sdl_exec_prefix
 '
@@ -1645,10 +1645,10 @@ Optional Packages:
   --without-libintl-prefix     don't search for libintl in includedir and libdir
   --with-alsa-prefix=PFX  Prefix where Alsa library is installed(optional)
   --with-alsa-inc-prefix=PFX  Prefix where include libraries are (optional)
-  --with-libsndfile       support various sound file formats in ripped CD
-                          images [default=yes]
   --with-external-mpcdec  compile and link with external mpcdec [default=no]
   --with-external-tremor  compile and link with external tremor [default=no]
+  --with-libsndfile       support various sound file formats in ripped CD
+                          images [default=yes]
   --with-sdl-prefix=PFX   Prefix where SDL is installed (optional)
   --with-sdl-exec-prefix=PFX Exec prefix where SDL is installed (optional)
 
@@ -2979,8 +2979,37 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
-# expand $ac_aux_dir to an absolute path
-am_aux_dir=`cd $ac_aux_dir && pwd`
+ac_aux_dir=
+for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do
+  if test -f "$ac_dir/install-sh"; then
+    ac_aux_dir=$ac_dir
+    ac_install_sh="$ac_aux_dir/install-sh -c"
+    break
+  elif test -f "$ac_dir/install.sh"; then
+    ac_aux_dir=$ac_dir
+    ac_install_sh="$ac_aux_dir/install.sh -c"
+    break
+  elif test -f "$ac_dir/shtool"; then
+    ac_aux_dir=$ac_dir
+    ac_install_sh="$ac_aux_dir/shtool install -c"
+    break
+  fi
+done
+if test -z "$ac_aux_dir"; then
+  as_fn_error $? "cannot find install-sh, install.sh, or shtool in \"$srcdir\" \"$srcdir/..\" \"$srcdir/../..\"" "$LINENO" 5
+fi
+
+# These three variables are undocumented and unsupported,
+# and are intended to be withdrawn in a future Autoconf release.
+# They can cause serious problems if a builder's source tree is in a directory
+# whose full name contains unusual characters.
+ac_config_guess="$SHELL $ac_aux_dir/config.guess"  # Please don't use this var.
+ac_config_sub="$SHELL $ac_aux_dir/config.sub"  # Please don't use this var.
+ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
+
+
+# Expand $ac_aux_dir to an absolute path.
+am_aux_dir=`cd "$ac_aux_dir" && pwd`
 
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -4296,37 +4325,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.43'
-MEDNAFEN_VERSION_NUMERIC=0x00094300
-
-ac_aux_dir=
-for ac_dir in "$srcdir" "$srcdir/.." "$srcdir/../.."; do
-  if test -f "$ac_dir/install-sh"; then
-    ac_aux_dir=$ac_dir
-    ac_install_sh="$ac_aux_dir/install-sh -c"
-    break
-  elif test -f "$ac_dir/install.sh"; then
-    ac_aux_dir=$ac_dir
-    ac_install_sh="$ac_aux_dir/install.sh -c"
-    break
-  elif test -f "$ac_dir/shtool"; then
-    ac_aux_dir=$ac_dir
-    ac_install_sh="$ac_aux_dir/shtool install -c"
-    break
-  fi
-done
-if test -z "$ac_aux_dir"; then
-  as_fn_error $? "cannot find install-sh, install.sh, or shtool in \"$srcdir\" \"$srcdir/..\" \"$srcdir/../..\"" "$LINENO" 5
-fi
-
-# These three variables are undocumented and unsupported,
-# and are intended to be withdrawn in a future Autoconf release.
-# They can cause serious problems if a builder's source tree is in a directory
-# whose full name contains unusual characters.
-ac_config_guess="$SHELL $ac_aux_dir/config.guess"  # Please don't use this var.
-ac_config_sub="$SHELL $ac_aux_dir/config.sub"  # Please don't use this var.
-ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
-
+MEDNAFEN_VERSION='0.9.44.1'
+MEDNAFEN_VERSION_NUMERIC=0x00094401
 
 # Make sure we can run config.sub.
 $SHELL "$ac_aux_dir/config.sub" sun4 >/dev/null 2>&1 ||
@@ -5166,6 +5166,7 @@ END
     as_fn_error $? "Your 'rm' program is bad, sorry." "$LINENO" 5
   fi
 fi
+
 # Check whether --enable-silent-rules was given.
 if test "${enable_silent_rules+set}" = set; then :
   enableval=$enable_silent_rules;
@@ -6850,7 +6851,7 @@ else
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -6896,7 +6897,7 @@ else
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -6920,7 +6921,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -6965,7 +6966,7 @@ else
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -6989,7 +6990,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
     We can't simply define LARGE_OFF_T to be 9223372036854775807,
     since some C++ compilers masquerading as C compilers
     incorrectly reject 9223372036854775807.  */
-#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
 		       && LARGE_OFF_T % 2147483647 == 1)
 		      ? 1 : -1];
@@ -7588,6 +7589,63 @@ _ACEOF
 
 fi
 done
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing fmodl" >&5
+$as_echo_n "checking for library containing fmodl... " >&6; }
+if ${ac_cv_search_fmodl+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char fmodl ();
+int
+main ()
+{
+return fmodl ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' m; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_search_fmodl=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_fmodl+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_fmodl+:} false; then :
+
+else
+  ac_cv_search_fmodl=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_fmodl" >&5
+$as_echo "$ac_cv_search_fmodl" >&6; }
+ac_res=$ac_cv_search_fmodl
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
 
 
 #
@@ -13400,6 +13458,70 @@ case ".$var" in
  ;;
 esac
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking OPTIMIZER_FLAGS for gcc -fno-printf-return-value" >&5
+$as_echo_n "checking OPTIMIZER_FLAGS for gcc -fno-printf-return-value... " >&6; }
+if ${ax_cv_cflags_gcc_option__fno_printf_return_value+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_cflags_gcc_option__fno_printf_return_value="no, unknown"
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ ac_save_CFLAGS="$CFLAGS"
+for ac_arg in "-pedantic -Werror % -fno-printf-return-value"     "-pedantic % -fno-printf-return-value %% no, obsolete"     #
+do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_cflags_gcc_option__fno_printf_return_value=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+ CFLAGS="$ac_save_CFLAGS"
+ ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__fno_printf_return_value" >&5
+$as_echo "$ax_cv_cflags_gcc_option__fno_printf_return_value" >&6; }
+var=$ax_cv_cflags_gcc_option__fno_printf_return_value
+case ".$var" in
+     .ok|.ok,*)  ;;
+   .|.no|.no,*)  ;;
+   *)
+   if echo " $OPTIMIZER_FLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : OPTIMIZER_FLAGS does contain \$var"; } >&5
+  (: OPTIMIZER_FLAGS does contain $var) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : OPTIMIZER_FLAGS=\"\$OPTIMIZER_FLAGS \$var\""; } >&5
+  (: OPTIMIZER_FLAGS="$OPTIMIZER_FLAGS $var") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+                      OPTIMIZER_FLAGS="$OPTIMIZER_FLAGS $var"
+   fi
+ ;;
+esac
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking OPTIMIZER_FLAGS for gcc -fomit-frame-pointer" >&5
 $as_echo_n "checking OPTIMIZER_FLAGS for gcc -fomit-frame-pointer... " >&6; }
 if ${ax_cv_cflags_gcc_option__fomit_frame_pointer+:} false; then :
@@ -16016,14 +16138,12 @@ fi
 
 fi
 
- if false; then
-  HAVE_OSSDSP_TRUE=
-  HAVE_OSSDSP_FALSE='#'
-else
-  HAVE_OSSDSP_TRUE='#'
-  HAVE_OSSDSP_FALSE=
-fi
-
+##
+## ALSA and JACK checking code ripped from SDL's autoconf file, with heavy modifications
+##
+#
+# ALSA
+#
  if false; then
   HAVE_ALSA_TRUE=
   HAVE_ALSA_FALSE='#'
@@ -16032,51 +16152,15 @@ else
   HAVE_ALSA_FALSE=
 fi
 
- if false; then
-  HAVE_DIRECTSOUND_TRUE=
-  HAVE_DIRECTSOUND_FALSE='#'
-else
-  HAVE_DIRECTSOUND_TRUE='#'
-  HAVE_DIRECTSOUND_FALSE=
-fi
-
- if false; then
-  HAVE_WASAPI_TRUE=
-  HAVE_WASAPI_FALSE='#'
-else
-  HAVE_WASAPI_TRUE='#'
-  HAVE_WASAPI_FALSE=
-fi
-
- if false; then
-  HAVE_SDL_TRUE=
-  HAVE_SDL_FALSE='#'
-else
-  HAVE_SDL_TRUE='#'
-  HAVE_SDL_FALSE=
-fi
-
- if false; then
-  HAVE_JACK_TRUE=
-  HAVE_JACK_FALSE='#'
-else
-  HAVE_JACK_TRUE='#'
-  HAVE_JACK_FALSE=
-fi
-
-
-
-CheckALSA()
-{
-    # Check whether --enable-alsa was given.
+# Check whether --enable-alsa was given.
 if test "${enable_alsa+set}" = set; then :
   enableval=$enable_alsa;
 else
   enable_alsa=yes
 fi
 
-    if test x$enable_alsa = xyes; then
-        alsa_save_CFLAGS="$CFLAGS"
+if test x$enable_alsa = xyes; then
+	alsa_save_CFLAGS="$CFLAGS"
 alsa_save_LDFLAGS="$LDFLAGS"
 alsa_save_LIBS="$LIBS"
 alsa_found=yes
@@ -16277,12 +16361,12 @@ fi
 
 
 
-        # Restore all flags from before the ALSA detection runs
-        CFLAGS="$alsa_save_CFLAGS"
-        LDFLAGS="$alsa_save_LDFLAGS"
-        LIBS="$alsa_save_LIBS"
+	# Restore all flags from before the ALSA detection runs
+	CFLAGS="$alsa_save_CFLAGS"
+	LDFLAGS="$alsa_save_LDFLAGS"
+	LIBS="$alsa_save_LIBS"
 
-        if test x$have_alsa = xyes; then
+	if test x$have_alsa = xyes; then
 		 if true; then
   HAVE_ALSA_TRUE=
   HAVE_ALSA_FALSE='#'
@@ -16295,22 +16379,30 @@ fi
 $as_echo "#define HAVE_ALSA 1" >>confdefs.h
 
 	fi
-    fi
+fi
 
 
 
-}
 
-CheckJACK()
-{
-    # Check whether --enable-jack was given.
+#
+# JACK
+#
+ if false; then
+  HAVE_JACK_TRUE=
+  HAVE_JACK_FALSE='#'
+else
+  HAVE_JACK_TRUE='#'
+  HAVE_JACK_FALSE=
+fi
+
+# Check whether --enable-jack was given.
 if test "${enable_jack+set}" = set; then :
   enableval=$enable_jack;
 else
   enable_jack=yes
 fi
 
-    if test x$enable_jack = xyes; then
+if test x$enable_jack = xyes; then
 
 pkg_failed=no
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for JACK" >&5
@@ -16383,8 +16475,8 @@ $as_echo "yes" >&6; }
 	have_jack=yes
 fi
 
-        if test x$have_jack = xyes; then
-                 if true; then
+	if test x$have_jack = xyes; then
+		 if true; then
   HAVE_JACK_TRUE=
   HAVE_JACK_FALSE='#'
 else
@@ -16395,23 +16487,10 @@ fi
 
 $as_echo "#define HAVE_JACK 1" >>confdefs.h
 
-        fi
-    fi
-
-
-
-}
-
-CheckALSA
-CheckJACK
-
-
-# Check whether --with-libsndfile was given.
-if test "${with_libsndfile+set}" = set; then :
-  withval=$with_libsndfile;
-else
-  with_libsndfile=yes
+	fi
 fi
+
+
 
 
 #
@@ -16600,6 +16679,144 @@ fi
 
 fi
 
+#
+# libsndfile
+#
+ if false; then
+  HAVE_LIBSNDFILE_TRUE=
+  HAVE_LIBSNDFILE_FALSE='#'
+else
+  HAVE_LIBSNDFILE_TRUE='#'
+  HAVE_LIBSNDFILE_FALSE=
+fi
+
+
+# Check whether --with-libsndfile was given.
+if test "${with_libsndfile+set}" = set; then :
+  withval=$with_libsndfile;
+else
+  with_libsndfile=yes
+fi
+
+if test x$with_libsndfile = xyes; then
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for SNDFILE" >&5
+$as_echo_n "checking for SNDFILE... " >&6; }
+
+if test -n "$SNDFILE_CFLAGS"; then
+    pkg_cv_SNDFILE_CFLAGS="$SNDFILE_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"sndfile >= 1.0.2\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "sndfile >= 1.0.2") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_SNDFILE_CFLAGS=`$PKG_CONFIG --cflags "sndfile >= 1.0.2" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$SNDFILE_LIBS"; then
+    pkg_cv_SNDFILE_LIBS="$SNDFILE_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"sndfile >= 1.0.2\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "sndfile >= 1.0.2") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_SNDFILE_LIBS=`$PKG_CONFIG --libs "sndfile >= 1.0.2" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        SNDFILE_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "sndfile >= 1.0.2" 2>&1`
+        else
+	        SNDFILE_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "sndfile >= 1.0.2" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$SNDFILE_PKG_ERRORS" >&5
+
+	as_fn_error $? "*** libsndfile >= 1.0.2 not found!" "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	as_fn_error $? "*** libsndfile >= 1.0.2 not found!" "$LINENO" 5
+else
+	SNDFILE_CFLAGS=$pkg_cv_SNDFILE_CFLAGS
+	SNDFILE_LIBS=$pkg_cv_SNDFILE_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+fi
+
+$as_echo "#define HAVE_LIBSNDFILE 1" >>confdefs.h
+
+	 if true; then
+  HAVE_LIBSNDFILE_TRUE=
+  HAVE_LIBSNDFILE_FALSE='#'
+else
+  HAVE_LIBSNDFILE_TRUE='#'
+  HAVE_LIBSNDFILE_FALSE=
+fi
+
+fi
+
+
+
+
+ if false; then
+  HAVE_OSSDSP_TRUE=
+  HAVE_OSSDSP_FALSE='#'
+else
+  HAVE_OSSDSP_TRUE='#'
+  HAVE_OSSDSP_FALSE=
+fi
+
+ if false; then
+  HAVE_DIRECTSOUND_TRUE=
+  HAVE_DIRECTSOUND_FALSE='#'
+else
+  HAVE_DIRECTSOUND_TRUE='#'
+  HAVE_DIRECTSOUND_FALSE=
+fi
+
+ if false; then
+  HAVE_WASAPI_TRUE=
+  HAVE_WASAPI_FALSE='#'
+else
+  HAVE_WASAPI_TRUE='#'
+  HAVE_WASAPI_FALSE=
+fi
+
+ if false; then
+  HAVE_SDL_TRUE=
+  HAVE_SDL_FALSE='#'
+else
+  HAVE_SDL_TRUE='#'
+  HAVE_SDL_FALSE=
+fi
 
  if false; then
   DOS_TRUE=
@@ -16631,14 +16848,6 @@ fi
 else
   HAVE_LINUX_JOYSTICK_TRUE='#'
   HAVE_LINUX_JOYSTICK_FALSE=
-fi
-
- if false; then
-  HAVE_LIBSNDFILE_TRUE=
-  HAVE_LIBSNDFILE_FALSE='#'
-else
-  HAVE_LIBSNDFILE_TRUE='#'
-  HAVE_LIBSNDFILE_FALSE=
 fi
 
 NEED_SDL=true
@@ -16740,12 +16949,12 @@ fi
 	if test x$host_cpu != xx86_64; then
 		# Enable larger address space support(for the 32-bit build).
 		LDFLAGS="$LDFLAGS -Wl,--large-address-aware"
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking OPTIMIZER_FLAGS for gcc -march=i586" >&5
-$as_echo_n "checking OPTIMIZER_FLAGS for gcc -march=i586... " >&6; }
-if ${ax_cv_cflags_gcc_option__march_i586+:} false; then :
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking OPTIMIZER_FLAGS for gcc -march=i686" >&5
+$as_echo_n "checking OPTIMIZER_FLAGS for gcc -march=i686... " >&6; }
+if ${ax_cv_cflags_gcc_option__march_i686+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  ax_cv_cflags_gcc_option__march_i586="no, unknown"
+  ax_cv_cflags_gcc_option__march_i686="no, unknown"
 
  ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -16754,7 +16963,7 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
  ac_save_CFLAGS="$CFLAGS"
-for ac_arg in "-pedantic -Werror % -march=i586"     "-pedantic % -march=i586 %% no, obsolete"     #
+for ac_arg in "-pedantic -Werror % -march=i686"     "-pedantic % -march=i686 %% no, obsolete"     #
 do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -16768,7 +16977,7 @@ return 0;
 }
 _ACEOF
 if ac_fn_c_try_compile "$LINENO"; then :
-  ax_cv_cflags_gcc_option__march_i586=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+  ax_cv_cflags_gcc_option__march_i686=`echo $ac_arg | sed -e 's,.*% *,,'`; break
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 done
@@ -16781,9 +16990,9 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
 
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__march_i586" >&5
-$as_echo "$ax_cv_cflags_gcc_option__march_i586" >&6; }
-var=$ax_cv_cflags_gcc_option__march_i586
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__march_i686" >&5
+$as_echo "$ax_cv_cflags_gcc_option__march_i686" >&6; }
+var=$ax_cv_cflags_gcc_option__march_i686
 case ".$var" in
      .ok|.ok,*)  ;;
    .|.no|.no,*)  ;;
@@ -16979,23 +17188,7 @@ fi
 
 
 	LIBS="-mwindows -lws2_32 -ldxguid -lwinmm -ldinput $LIBS -lwinmm"
-
-        if test x$with_libsndfile = xyes; then
-                SNDFILE_LIBS="-lsndfile"
-                SNDFILE_CFLAGS=""
-
-$as_echo "#define HAVE_LIBSNDFILE 1" >>confdefs.h
-
-		 if true; then
-  HAVE_LIBSNDFILE_TRUE=
-  HAVE_LIBSNDFILE_FALSE='#'
-else
-  HAVE_LIBSNDFILE_TRUE='#'
-  HAVE_LIBSNDFILE_FALSE=
-fi
-
-        fi
-
+	CPPFLAGS="-D_LFS64_LARGEFILE=1 $CPPFLAGS"
 elif expr x"$host" : 'x.*djgpp' > /dev/null; then
 
 $as_echo "#define PSS_STYLE 2" >>confdefs.h
@@ -17012,111 +17205,10 @@ else
 fi
 
 	NEED_SDL=false
-
-        if test x$with_libsndfile = xyes; then
-                SNDFILE_LIBS="-lsndfile"
-                SNDFILE_CFLAGS=""
-
-$as_echo "#define HAVE_LIBSNDFILE 1" >>confdefs.h
-
-		 if true; then
-  HAVE_LIBSNDFILE_TRUE=
-  HAVE_LIBSNDFILE_FALSE='#'
-else
-  HAVE_LIBSNDFILE_TRUE='#'
-  HAVE_LIBSNDFILE_FALSE=
-fi
-
-        fi
 else
 
 $as_echo "#define PSS_STYLE 1" >>confdefs.h
 
-
-	if test x$with_libsndfile = xyes; then
-
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for SNDFILE" >&5
-$as_echo_n "checking for SNDFILE... " >&6; }
-
-if test -n "$SNDFILE_CFLAGS"; then
-    pkg_cv_SNDFILE_CFLAGS="$SNDFILE_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"sndfile >= 1.0.2\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "sndfile >= 1.0.2") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_SNDFILE_CFLAGS=`$PKG_CONFIG --cflags "sndfile >= 1.0.2" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$SNDFILE_LIBS"; then
-    pkg_cv_SNDFILE_LIBS="$SNDFILE_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"sndfile >= 1.0.2\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "sndfile >= 1.0.2") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_SNDFILE_LIBS=`$PKG_CONFIG --libs "sndfile >= 1.0.2" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        SNDFILE_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "sndfile >= 1.0.2" 2>&1`
-        else
-	        SNDFILE_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "sndfile >= 1.0.2" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$SNDFILE_PKG_ERRORS" >&5
-
-	as_fn_error $? "*** libsndfile >= 1.0.2 not found!" "$LINENO" 5
-elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-	as_fn_error $? "*** libsndfile >= 1.0.2 not found!" "$LINENO" 5
-else
-	SNDFILE_CFLAGS=$pkg_cv_SNDFILE_CFLAGS
-	SNDFILE_LIBS=$pkg_cv_SNDFILE_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-fi
-
-$as_echo "#define HAVE_LIBSNDFILE 1" >>confdefs.h
-
-		 if true; then
-  HAVE_LIBSNDFILE_TRUE=
-  HAVE_LIBSNDFILE_FALSE='#'
-else
-  HAVE_LIBSNDFILE_TRUE='#'
-  HAVE_LIBSNDFILE_FALSE=
-fi
-
-	fi
 
 	ac_fn_cxx_check_header_mongrel "$LINENO" "sys/soundcard.h" "ac_cv_header_sys_soundcard_h" "$ac_includes_default"
 if test "x$ac_cv_header_sys_soundcard_h" = xyes; then :
@@ -17149,9 +17241,6 @@ fi
 
 
 fi
-
-
-
 
 if $NEED_SDL
 then
@@ -18522,12 +18611,48 @@ if test -z "${WANT_WSWAN_EMU_TRUE}" && test -z "${WANT_WSWAN_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_WSWAN_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${HAVE_OSSDSP_TRUE}" && test -z "${HAVE_OSSDSP_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_OSSDSP\" was never defined.
+if test -z "${HAVE_ALSA_TRUE}" && test -z "${HAVE_ALSA_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_ALSA\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_ALSA_TRUE}" && test -z "${HAVE_ALSA_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_ALSA\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_JACK_TRUE}" && test -z "${HAVE_JACK_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_JACK\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_JACK_TRUE}" && test -z "${HAVE_JACK_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_JACK\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_EXTERNAL_MPCDEC_TRUE}" && test -z "${HAVE_EXTERNAL_MPCDEC_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_EXTERNAL_MPCDEC\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_EXTERNAL_MPCDEC_TRUE}" && test -z "${HAVE_EXTERNAL_MPCDEC_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_EXTERNAL_MPCDEC\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_EXTERNAL_TREMOR_TRUE}" && test -z "${HAVE_EXTERNAL_TREMOR_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_EXTERNAL_TREMOR\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_EXTERNAL_TREMOR_TRUE}" && test -z "${HAVE_EXTERNAL_TREMOR_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_EXTERNAL_TREMOR\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_LIBSNDFILE_TRUE}" && test -z "${HAVE_LIBSNDFILE_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_LIBSNDFILE\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_LIBSNDFILE_TRUE}" && test -z "${HAVE_LIBSNDFILE_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_LIBSNDFILE\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_OSSDSP_TRUE}" && test -z "${HAVE_OSSDSP_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_OSSDSP\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_DIRECTSOUND_TRUE}" && test -z "${HAVE_DIRECTSOUND_FALSE}"; then
@@ -18540,34 +18665,6 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_SDL_TRUE}" && test -z "${HAVE_SDL_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_SDL\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_JACK_TRUE}" && test -z "${HAVE_JACK_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_JACK\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_ALSA_TRUE}" && test -z "${HAVE_ALSA_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_ALSA\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_JACK_TRUE}" && test -z "${HAVE_JACK_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_JACK\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_EXTERNAL_MPCDEC_TRUE}" && test -z "${HAVE_EXTERNAL_MPCDEC_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_EXTERNAL_MPCDEC\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_EXTERNAL_MPCDEC_TRUE}" && test -z "${HAVE_EXTERNAL_MPCDEC_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_EXTERNAL_MPCDEC\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_EXTERNAL_TREMOR_TRUE}" && test -z "${HAVE_EXTERNAL_TREMOR_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_EXTERNAL_TREMOR\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_EXTERNAL_TREMOR_TRUE}" && test -z "${HAVE_EXTERNAL_TREMOR_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_EXTERNAL_TREMOR\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${DOS_TRUE}" && test -z "${DOS_FALSE}"; then
@@ -18586,10 +18683,6 @@ if test -z "${HAVE_LINUX_JOYSTICK_TRUE}" && test -z "${HAVE_LINUX_JOYSTICK_FALSE
   as_fn_error $? "conditional \"HAVE_LINUX_JOYSTICK\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${HAVE_LIBSNDFILE_TRUE}" && test -z "${HAVE_LIBSNDFILE_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_LIBSNDFILE\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
 if test -z "${HAVE_DIRECTSOUND_TRUE}" && test -z "${HAVE_DIRECTSOUND_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_DIRECTSOUND\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
@@ -18602,20 +18695,8 @@ if test -z "${WIN32_TRUE}" && test -z "${WIN32_FALSE}"; then
   as_fn_error $? "conditional \"WIN32\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${HAVE_LIBSNDFILE_TRUE}" && test -z "${HAVE_LIBSNDFILE_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_LIBSNDFILE\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
 if test -z "${DOS_TRUE}" && test -z "${DOS_FALSE}"; then
   as_fn_error $? "conditional \"DOS\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_LIBSNDFILE_TRUE}" && test -z "${HAVE_LIBSNDFILE_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_LIBSNDFILE\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${HAVE_LIBSNDFILE_TRUE}" && test -z "${HAVE_LIBSNDFILE_FALSE}"; then
-  as_fn_error $? "conditional \"HAVE_LIBSNDFILE\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_OSSDSP_TRUE}" && test -z "${HAVE_OSSDSP_FALSE}"; then
@@ -19105,9 +19186,9 @@ esac
 
 cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
 # Files that config.status was made for.
-config_files="`echo $ac_config_files`"
-config_headers="`echo $ac_config_headers`"
-config_commands="`echo $ac_config_commands`"
+config_files="$ac_config_files"
+config_headers="$ac_config_headers"
+config_commands="$ac_config_commands"
 
 _ACEOF
 

@@ -113,7 +113,7 @@ static DECLFW(Mapper25_write)
 	}
 }
 
-static void KonamiIRQHook(int a)
+static MDFN_FASTCALL void KonamiIRQHook(int a)
 {
 //  #define LCYCS ((227*2))
   #define LCYCS 341

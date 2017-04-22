@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFS = @DEFS@ @SDL_CFLAGS@ @ALSA_CFLAGS@ @JACK_CFLAGS@
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_builddir)/intl
 
 noinst_LIBRARIES        =       libsexyal.a
 

@@ -33,15 +33,15 @@ class MDFN_Error : public std::exception
 {
  public:
 
- MDFN_Error() noexcept;
+ MDFN_Error() noexcept MDFN_COLD;
 
- MDFN_Error(int errno_code_new, const char *format, ...) noexcept MDFN_FORMATSTR(gnu_printf, 3, 4);
- MDFN_Error(const ErrnoHolder &enh);
+ MDFN_Error(int errno_code_new, const char *format, ...) noexcept MDFN_FORMATSTR(gnu_printf, 3, 4) MDFN_COLD;
+ MDFN_Error(const ErrnoHolder &enh) MDFN_COLD;
 
- ~MDFN_Error() noexcept;
+ ~MDFN_Error() noexcept MDFN_COLD;
 
- MDFN_Error(const MDFN_Error &ze_error) noexcept;
- MDFN_Error & operator=(const MDFN_Error &ze_error) noexcept;
+ MDFN_Error(const MDFN_Error &ze_error) noexcept MDFN_COLD;
+ MDFN_Error & operator=(const MDFN_Error &ze_error) noexcept MDFN_COLD;
 
  virtual const char *what(void) const noexcept;
  int GetErrno(void) const noexcept;

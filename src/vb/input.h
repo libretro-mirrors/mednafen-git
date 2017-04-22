@@ -25,7 +25,7 @@
 namespace MDFN_IEN_VB
 {
 
-void VBINPUT_Init(void);
+void VBINPUT_Init(void) MDFN_COLD;
 void VBINPUT_SetInstantReadHack(bool);
 
 void VBINPUT_SetInput(unsigned port, const char *type, uint8 *ptr);

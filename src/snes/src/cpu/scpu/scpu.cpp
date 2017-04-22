@@ -17,10 +17,13 @@ namespace bSNES_v059 {
 #include "timing/timing.cpp"
 
 void sCPU::enter() {
+  wai_stp_shenanigans();
   while(true) {
     while(scheduler.sync == Scheduler::SyncCpu) {
       scheduler.sync = Scheduler::SyncAll;
       scheduler.exit(Scheduler::SynchronizeEvent);
+
+      wai_stp_shenanigans();
     }
 
     if(status.interrupt_pending) {
@@ -41,12 +44,8 @@ void sCPU::enter() {
       }
     }
 
-    op_step();
+    (this->*opcode_table[op_readpc()])();
   }
-}
-
-void sCPU::op_step() {
-  (this->*opcode_table[op_readpc()])();
 }
 
 void sCPU::op_irq() {
@@ -104,6 +103,7 @@ void sCPU::reset() {
 }
 
 sCPU::sCPU() : event(512, bind(&sCPU::queue_event, this)) {
+  wai_stp_sync = Scheduler::SyncCpu;
   PPUcounter::scanline = bind(&sCPU::scanline, this);
 }
 

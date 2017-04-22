@@ -95,8 +95,6 @@ struct InputDeviceInputInfoStruct
 	InputDeviceInputType Type;
 	const char *ExcludeName;	// SettingName of a button that can't be pressed at the same time as this button
 					// due to physical limitations.
-
-	const char *RotateName[3];	// 90, 180, 270
 	uint8 Flags;
 	uint8 BitSize;
 	uint16 BitOffset;
@@ -105,7 +103,7 @@ struct InputDeviceInputInfoStruct
 	{
          struct
          {
-	  const char** SwitchPosName;	//
+	  const char*const* SwitchPosName;	//
 	  uint32 SwitchNumPos;
          };
 
@@ -130,25 +128,21 @@ extern const IDIISG IDII_Empty;
 template<bool CanRapid = false>
 struct IDIIS_Button : public InputDeviceInputInfoStruct
 {
-	IDIIS_Button(const char* sname, const char* name, int co, const char* en = NULL,
-			const char* Rotate90Name = NULL, const char* Rotate180Name = NULL, const char* Rotate270Name = NULL)
+	IDIIS_Button(const char* sname, const char* name, int co, const char* exn = NULL)
 	{
 	 SettingName = sname;
 	 Name = name;
 	 ConfigOrder = co;
 	 Type = (CanRapid ? IDIT_BUTTON_CAN_RAPID : IDIT_BUTTON);
 
-	 ExcludeName = en;
-	 RotateName[0] = Rotate90Name;
-	 RotateName[1] = Rotate180Name;
-	 RotateName[2] = Rotate270Name;
+	 ExcludeName = exn;
 	}
 };
 #endif
 
 struct IDIIS_Switch : public InputDeviceInputInfoStruct
 {
-	IDIIS_Switch(const char* sname, const char* name, int co, const char** spn, const uint32 spn_num)
+	IDIIS_Switch(const char* sname, const char* name, int co, const char*const* spn, const uint32 spn_num)
 	{
 	 SettingName = sname;
 	 Name = name;
@@ -156,7 +150,6 @@ struct IDIIS_Switch : public InputDeviceInputInfoStruct
 	 Type = IDIT_SWITCH;
 
 	 ExcludeName = NULL;
-	 RotateName[0] = RotateName[1] = RotateName[2] = NULL;
 	 Flags = 0;
 	 SwitchPosName = spn;
 	 SwitchNumPos = spn_num;
@@ -173,7 +166,6 @@ struct IDIIS_Status : public InputDeviceInputInfoStruct
 	 Type = IDIT_STATUS;
 
 	 ExcludeName = NULL;
-	 RotateName[0] = RotateName[1] = RotateName[2] = NULL;
 	 Flags = 0;
 	 StatusStates = ss;
 	 StatusNumStates = ss_num;
@@ -303,9 +295,6 @@ typedef struct
 	uint8 *CustomPalette;
 	uint32 CustomPaletteNumEntries;
 
-	// TODO
-	bool *IsFMV;
-
 	// Set(optionally) by emulation code.  If InterlaceOn is true, then assume field height is 1/2 DisplayRect.h, and
 	// only every other line in surface (with the start line defined by InterlacedField) has valid data
 	// (it's up to internal Mednafen code to deinterlace it).
@@ -408,11 +397,19 @@ struct RMD_Drive
 					// by the media changing user interface.
 };
 
+struct RMD_DriveDefaults
+{
+ uint32 State;
+ uint32 Media;
+ uint32 Orientation;
+};
+
 struct RMD_Layout
 {
  std::vector<RMD_Drive> Drives;
  std::vector<RMD_MediaType> MediaTypes;
  std::vector<RMD_Media> Media;
+ std::vector<RMD_DriveDefaults> DrivesDefaults;
 };
 
 struct CustomPalette_Spec

@@ -22,6 +22,17 @@ namespace bSNES_v059 {
 #include "opcode_misc.cpp"
 #include "table.cpp"
 
+void CPUcore::wai_stp_shenanigans() {
+  if(regs.wai < 0) { // STP
+    //printf("STP resume\n");
+    op_stp();
+  }
+  else if(regs.wai > 0) { // WAI
+    //printf("WAI resume\n");
+    op_wai();
+  }
+}
+
 #undef L
 #undef A
 #undef X

@@ -29,7 +29,7 @@ void (*X6502_Run)(int32 cycles);
 #endif
 
 uint32 timestamp;
-void (*MapIRQHook)(int a);
+void (MDFN_FASTCALL *MapIRQHook)(int a);
 
 #define _PC              X.PC
 #define _A               X.A

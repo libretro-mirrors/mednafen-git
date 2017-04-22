@@ -17,14 +17,7 @@
  </ul>
 <?php EndSection(); ?>
 
-<?php BeginSection('Custom Palettes', 'Section_custom_palettes'); ?>
-<p>
-Custom palettes should contain 512 or 1024 8-bit-per-color-component RGB triplets.  If only 512 triplets are present, the remaining 512
-greyscale colors will be calculated automatically.
-</p>
-<?php EndSection(); ?>
-
-
+<?php PrintCustomPalettes(); ?>
 
 <?php BeginSection('Default Key Assignments', 'Section_default_keys'); ?>
  <p>

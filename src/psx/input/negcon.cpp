@@ -30,10 +30,10 @@ class InputDevice_neGcon final : public InputDevice
 {
  public:
 
- InputDevice_neGcon(void);
- virtual ~InputDevice_neGcon() override;
+ InputDevice_neGcon(void) MDFN_COLD;
+ virtual ~InputDevice_neGcon() override MDFN_COLD;
 
- virtual void Power(void) override;
+ virtual void Power(void) override MDFN_COLD;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
  virtual void UpdateInput(const void *data) override;
 

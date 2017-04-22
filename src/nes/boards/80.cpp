@@ -27,7 +27,7 @@ static uint8 CCache[8];
 static int32 lastmc;
 static uint8 IRAM_Control;
 
-static void Fudou_PPU(uint32 A)
+static MDFN_FASTCALL void Fudou_PPU(uint32 A)
 {
  static uint8 z;
   

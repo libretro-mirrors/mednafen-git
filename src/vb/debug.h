@@ -45,7 +45,7 @@ void VBDBG_DoLog(const char *type, const char *format, ...);
 
 extern bool VB_LoggingOn;
 
-bool VBDBG_Init(void);
+bool VBDBG_Init(void) MDFN_COLD;
 
 };
 

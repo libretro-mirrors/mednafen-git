@@ -380,7 +380,7 @@ bool PCECD_IsBRAMEnabled(void)
 	return bBRAMEnabled;
 }
 
-uint8 PCECD_Read(uint32 timestamp, uint32 A)
+MDFN_FASTCALL uint8 PCECD_Read(uint32 timestamp, uint32 A)
 {
  uint8 ret = 0;
 
@@ -507,7 +507,7 @@ static INLINE void Fader_Run(const int32 clocks)
 }
 
 
-void PCECD_Write(uint32 timestamp, uint32 physAddr, uint8 data)
+MDFN_FASTCALL void PCECD_Write(uint32 timestamp, uint32 physAddr, uint8 data)
 {
 	const uint8 V = data;
 
@@ -851,7 +851,7 @@ static INLINE void ADPCM_Run(const int32 clocks, const int32 timestamp)
  UpdateADPCMIRQState();
 }
 
-void PCECD_Run(uint32 in_timestamp)
+MDFN_FASTCALL void PCECD_Run(uint32 in_timestamp)
 {
  int32 clocks = in_timestamp - lastts;
  int32 running_ts = lastts;

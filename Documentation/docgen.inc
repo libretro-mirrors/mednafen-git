@@ -53,6 +53,19 @@ function ReadModules()
   $mod['nominal_width'] = (int)fgets($fp);
   $mod['nominal_height'] = (int)fgets($fp);  
 
+  $mod['cpinfo'] = array();
+  $cpicount = (int)trim(fgets($fp));
+  while($cpicount--)
+  {
+   $gfn = trim(fgets($fp));
+   $mod['cpinfo'][$gfn] = array();
+   $mod['cpinfo'][$gfn]['gfn'] = $gfn;
+   $mod['cpinfo'][$gfn]['description'] = trim(fgets($fp));
+   $mod['cpinfo'][$gfn]['valid_entry_count'] = explode(' ', trim(fgets($fp)));
+  }
+
+  asort($mod['cpinfo']);
+
   $mod_list[$mod['name']] = $mod;
  }
 
@@ -236,6 +249,63 @@ function spis($haystack, $needle)
  if(strpos($haystack, $needle) === FALSE)
   return(0);
  return(1);
+}
+
+function PrintCustomPalettes()
+{
+ global $mednafen_version, $curmod, $cursection, $ps_string, $toc_string, $section_string, $settings_g, $mod_list;
+
+ if($curmod != "")
+  BeginSection("Custom Palettes", "Section_custom_palettes");
+
+ echo('<p></p><table border><tr class="TableHeader">');
+
+ if($curmod == "")
+  echo('<th>System Module:</th>');
+
+ echo('<th>Global Filename:</th>');
+ echo('<th>Description:</th>');
+ echo('</tr>');
+
+ $mls = $mod_list;
+ asort($mls);
+
+ foreach($mls as $mod=>$mod_def)
+ {
+  if($mod != $curmod && $curmod != "")
+   continue;
+
+  $cpicounter = 0;
+  foreach($mod_def['cpinfo'] as $gfn=>$cpdef)
+  {
+   echo('<tr>');
+
+   if($curmod == "" && $cpicounter == 0)
+    echo('<td align="center" rowspan="' . sizeof($mod_def['cpinfo']) . '"><b>' . htmlspecialchars($mod) . '</b></td>');
+
+   echo('<td>' . htmlspecialchars($cpdef['gfn']) . '</td>');
+   echo('<td>');
+
+   echo(htmlspecialchars($cpdef['description']) . '<br><br>');
+
+   for($i = 0; $i < sizeof($cpdef['valid_entry_count']); $i++)
+   {
+    if($i)
+     echo(' <i>or</i> ');
+    echo($cpdef['valid_entry_count'][$i]);
+   }
+   echo(' RGB triplets');
+   echo('</td>');
+   // valid_entry_count
+   echo('</tr>');
+   $cpicounter++;
+  }
+ }
+
+ echo('</table>');
+
+ if($curmod != "")
+  EndSection();
 }
 
 function PrintSettings($section_name = "Settings Reference")

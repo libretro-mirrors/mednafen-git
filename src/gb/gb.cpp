@@ -1645,13 +1645,13 @@ static void gbReadBatteryFile(const std::string& path)
   }
 }
 
-static SFORMAT Joy_StateRegs[] =
+static const SFORMAT Joy_StateRegs[] =
 {
  SFVAR(gbJoymask),
  SFEND
 };
 
-static SFORMAT MBC1_StateRegs[] =
+static const SFORMAT MBC1_StateRegs[] =
 {
  SFVARN(gbDataMBC1.mapperRAMEnable, "RAME"),
  SFVARN(gbDataMBC1.mapperROMBank, "ROMB"),
@@ -1660,14 +1660,14 @@ static SFORMAT MBC1_StateRegs[] =
  SFEND
 };
 
-static SFORMAT MBC2_StateRegs[] =
+static const SFORMAT MBC2_StateRegs[] =
 {
  SFVARN(gbDataMBC2.mapperRAMEnable, "RAME"),
  SFVARN(gbDataMBC2.mapperROMBank, "ROMB"),
  SFEND
 };
 
-static SFORMAT MBC3_StateRegs[] =
+static const SFORMAT MBC3_StateRegs[] =
 {
  SFVARN(gbDataMBC3.mapperRAMEnable, "RAME"),
  SFVARN(gbDataMBC3.mapperROMBank, "ROMB"),
@@ -1690,7 +1690,7 @@ static SFORMAT MBC3_StateRegs[] =
  SFEND
 };
 
-static SFORMAT MBC5_StateRegs[] =
+static const SFORMAT MBC5_StateRegs[] =
 {
  SFVAR(gbDataMBC5.mapperRAMEnable),
  SFVAR(gbDataMBC5.mapperROMBank),
@@ -1700,7 +1700,7 @@ static SFORMAT MBC5_StateRegs[] =
  SFEND
 };
 
-static SFORMAT MBC7_StateRegs[] =
+static const SFORMAT MBC7_StateRegs[] =
 {
  SFVARN(gbDataMBC7.mapperROMBank, "ROMB"),
  SFVARN(gbDataMBC7.cs, "CS"),
@@ -1720,7 +1720,7 @@ static SFORMAT MBC7_StateRegs[] =
  SFEND
 };
 
-static SFORMAT HuC1_StateRegs[] =
+static const SFORMAT HuC1_StateRegs[] =
 {
  SFVARN(gbDataHuC1.mapperRAMEnable, "RAME"),
  SFVARN(gbDataHuC1.mapperROMBank, "ROMB"),
@@ -1730,7 +1730,7 @@ static SFORMAT HuC1_StateRegs[] =
  SFEND
 };
 
-static SFORMAT HuC3_StateRegs[] =
+static const SFORMAT HuC3_StateRegs[] =
 {
  SFVARN(gbDataHuC3.mapperRAMEnable, "RAME"),
  SFVARN(gbDataHuC3.mapperROMBank, "ROMB"),
@@ -1751,7 +1751,7 @@ static SFORMAT HuC3_StateRegs[] =
 };
 
 
-static SFORMAT gbSaveGameStruct[] = 
+static const SFORMAT gbSaveGameStruct[] = 
 {
   SFVAR(GBLCD_MODE_0_CLOCK_TICKS),
   SFVAR(GBLCD_MODE_1_CLOCK_TICKS),
@@ -2765,7 +2765,7 @@ static const MDFNSetting_EnumList SystemType_List[] =
  { NULL, 0 },
 };
 
-static MDFNSetting GBSettings[] =
+static const MDFNSetting GBSettings[] =
 {
  { "gb.system_type", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulated GB type."), NULL, MDFNST_ENUM, "auto", NULL, NULL, NULL, NULL, SystemType_List },
  { NULL }
@@ -2846,8 +2846,8 @@ static const FileExtensionSpecStruct KnownExtensions[] =
 
 static const CustomPalette_Spec CPInfo[] =
 {
- { gettext_noop("GameBoy(mono) palette"), NULL, { 4, 8, 12, 0 } },
- { gettext_noop("GameBoy Color 15-bit RGB"), "gbc", { 32768, 0 } },
+ { gettext_noop("GameBoy(mono)"), NULL, { 4, 8, 12, 0 } },
+ { gettext_noop("GameBoy Color 15-bit BGR"), "gbc", { 32768, 0 } },
  { NULL, NULL }
 };
 

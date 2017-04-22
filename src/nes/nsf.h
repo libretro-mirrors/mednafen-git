@@ -49,7 +49,7 @@ typedef struct {
                 uint8 reserve[8];
 } NSF_HEADER;
 
-void NSFLoad(Stream *fp, NESGameType *gt);
+void NSFLoad(Stream *fp, NESGameType *gt) MDFN_COLD;
 bool NSF_TestMagic(MDFNFILE *fp);
 
 void DoNSFFrame(void);

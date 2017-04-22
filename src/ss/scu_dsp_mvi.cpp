@@ -67,7 +67,7 @@ static NO_INLINE NO_CLONE void MVIInstr(void)
 }
 
 
-void (*DSP_MVIFuncTable[2][16][128])(void) =
+extern void (*const DSP_MVIFuncTable[2][16][128])(void) =
 {
  #include "scu_dsp_mvitab.inc"
 };

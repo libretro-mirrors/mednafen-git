@@ -32,10 +32,10 @@ class InputDevice_Memcard final : public InputDevice
 {
  public:
 
- InputDevice_Memcard();
- virtual ~InputDevice_Memcard() override;
+ InputDevice_Memcard() MDFN_COLD;
+ virtual ~InputDevice_Memcard() override MDFN_COLD;
 
- virtual void Power(void) override;
+ virtual void Power(void) override MDFN_COLD;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
 
  //

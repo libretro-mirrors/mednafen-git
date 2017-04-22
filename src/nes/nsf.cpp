@@ -43,7 +43,7 @@ int NSFFDS_Init(EXPSOUND *, bool MultiChip);
 
 static DECLFW(NSF_write);
 static DECLFR(NSF_read);
-static void NSF_init(void);
+static void NSF_init(void) MDFN_COLD;
 
 static NSFINFO *NSFInfo;
 typedef std::vector<writefunc> NSFWriteEntry;
@@ -87,7 +87,7 @@ static bool doreset = false;
 static int NSFNMIFlags;
 static uint8 *ExWRAM = NULL;
 
-static void FreeNSF(void)
+static MDFN_COLD void FreeNSF(void)
 {
  if(NSFInfo)
  {
@@ -108,17 +108,17 @@ static void FreeNSF(void)
  }
 }
 
-static void NSF_Kill(void)
+static MDFN_COLD void NSF_Kill(void)
 {
  FreeNSF();
 }
 
-static void NSF_Reset(void)
+static MDFN_COLD void NSF_Reset(void)
 {
  NSF_init();
 }
 
-static void NSF_Power(void)
+static MDFN_COLD void NSF_Power(void)
 {
  NSF_init();
 }

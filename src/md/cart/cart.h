@@ -3,10 +3,10 @@
 
 #include "../header.h"
 
-void MDCart_Write8(uint32 address, uint8 value);
-void MDCart_Write16(uint32 address, uint16 value);
-uint8 MDCart_Read8(uint32 address);
-uint16 MDCart_Read16(uint32 address);
+MDFN_FASTCALL void MDCart_Write8(uint32 address, uint8 value);
+MDFN_FASTCALL void MDCart_Write16(uint32 address, uint16 value);
+MDFN_FASTCALL uint8 MDCart_Read8(uint32 address);
+MDFN_FASTCALL uint16 MDCart_Read16(uint32 address);
 
 void MDCart_Reset(void);
 

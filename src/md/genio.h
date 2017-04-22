@@ -15,8 +15,8 @@ extern void gen_io_set_device(int which, int type);
 void MDIO_BeginTimePeriod(const int32 timestamp_base);
 void MDIO_EndTimePeriod(const int32 master_timestamp);
 
-void MDIO_Init(bool overseas, bool PAL, bool overseas_reported, bool PAL_reported);
-void MDIO_Kill(void);
+void MDIO_Init(bool overseas, bool PAL, bool overseas_reported, bool PAL_reported) MDFN_COLD;
+void MDIO_Kill(void) MDFN_COLD;
 
 void MDINPUT_Frame(void);
 void MDINPUT_SetInput(unsigned port, const char *type, uint8 *ptr);

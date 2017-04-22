@@ -21,7 +21,7 @@
 #ifdef WANT_DEBUGGER
 
 static std::vector<AddressSpaceType> AddressSpaces;
-static std::vector<RegGroupType*> RegGroups;
+static std::vector<const RegGroupType*> RegGroups;
 
 // Currently only called on emulator startup, not game load...
 void MDFNDBG_Init(void)
@@ -222,7 +222,7 @@ void MDFNDBG_ResetRegGroupsInfo(void)
  RegGroups.clear();
 }
 
-void MDFNDBG_AddRegGroup(RegGroupType *groupie)
+void MDFNDBG_AddRegGroup(const RegGroupType* groupie)
 {
  RegGroups.push_back(groupie);
 }
@@ -230,12 +230,6 @@ void MDFNDBG_AddRegGroup(RegGroupType *groupie)
 void ASpace_Reset(void)
 {
  AddressSpaces.clear();
-}
-
-
-RegType::~RegType()
-{
-
 }
 
 #endif

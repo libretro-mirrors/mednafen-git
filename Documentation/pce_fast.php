@@ -17,6 +17,8 @@ To use this module rather than the "pce" module, you must either set the "pce.en
 </p>
 <?php EndSection(); ?>
 
+<?php PrintCustomPalettes(); ?>
+
 <?php PrintSettings(); ?>
 
 <?php EndPage(); ?>

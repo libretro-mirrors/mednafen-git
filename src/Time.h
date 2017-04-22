@@ -30,7 +30,7 @@
 
 namespace Time
 {
- void Time_Init(void);
+ void Time_Init(void) MDFN_COLD;
 
  int64 EpochTime(void);
  struct tm LocalTime(const int64 ept);

@@ -49,7 +49,7 @@ static DECLFR(FDSRAMRead);
 static DECLFW(FDSRAMWrite);
 static void FDSPower(void);
 static void FDSInit(void);
-static void FDSFix(int a);
+static MDFN_FASTCALL void FDSFix(int a);
 
 
 static uint8 *FDSRAM = NULL;
@@ -94,7 +94,7 @@ bool FDS_SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 o
  return true;
 }
 
-static void FDSFix(int a)
+static MDFN_FASTCALL void FDSFix(int a)
 {
  if(IRQCounter)
  {
@@ -277,7 +277,7 @@ static DECLFW(FDSWrite)
  }
 }
 
-static void FreeFDSMemory(void)
+static MDFN_COLD void FreeFDSMemory(void)
 {
  for(unsigned int x = 0; x < 8; x++)
  {
@@ -310,7 +310,7 @@ static void FreeFDSMemory(void)
  DiskWritten = false;
 }
 
-static void SubLoad(Stream *fp)
+static MDFN_COLD void SubLoad(Stream *fp)
 {
  uint8 header[16];
  uint32 MaxSides = 8;
@@ -582,7 +582,7 @@ bool FDS_TestMagic(MDFNFILE *fp)
 }
 
 
-void FDSLoad(Stream *fp, NESGameType *gt)
+MDFN_COLD void FDSLoad(Stream *fp, NESGameType *gt)
 {
  try
  {
@@ -652,13 +652,20 @@ void FDSLoad(Stream *fp, NESGameType *gt)
   //
   {
    RMD_Drive dr;
+   RMD_DriveDefaults drdef;
 
    dr.Name = "FDS";
    dr.PossibleStates.push_back(RMD_State({_("Disk Ejected"), false, false, true}));
    dr.PossibleStates.push_back(RMD_State({_("Disk Inserted"), true, true, false}));
    dr.CompatibleMedia.push_back(0);
    dr.MediaMtoPDelay = 2000;
+
+   drdef.State = 1; // Disk Inserted
+   drdef.Media = 0;
+   drdef.Orientation = 0;
+
    MDFNGameInfo->RMD->Drives.push_back(dr);
+   MDFNGameInfo->RMD->DrivesDefaults.push_back(drdef);
    MDFNGameInfo->RMD->MediaTypes.push_back(RMD_MediaType({_("FDS Floppy Disk")}));
 
    for(unsigned n = 0; n < TotalSides; n += 2)
@@ -726,13 +733,13 @@ static void FDSSaveNV(void)
  }
 }
 
-static void FDSKill(void)
+static MDFN_COLD void FDSKill(void)
 {
  FreeFDSMemory();
 }
 
 
-static void FDSInit(void)
+static MDFN_COLD void FDSInit(void)
 {
  MapIRQHook = FDSFix;
 
@@ -750,7 +757,7 @@ static void FDSInit(void)
  FDSSound_Init();
 }
 
-static void FDSPower(void)
+static MDFN_COLD void FDSPower(void)
 {
  setprg8r(0, 0xe000, 0);          // BIOS
  setprg32r(1, 0x6000, 0);         // 32KB RAM

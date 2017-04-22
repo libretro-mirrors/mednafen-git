@@ -168,7 +168,7 @@ static bool TestMagic(MDFNFILE *fp)
  return true;
 }
 
-static void Cleanup(void)
+static MDFN_COLD void Cleanup(void)
 {
  rom_unload();
 
@@ -179,7 +179,7 @@ static void Cleanup(void)
  }
 }
 
-static void Load(MDFNFILE *fp)
+static MDFN_COLD void Load(MDFNFILE *fp)
 {
  try
  {
@@ -229,7 +229,7 @@ static void Load(MDFNFILE *fp)
  }
 }
 
-static void CloseGame(void)
+static MDFN_COLD void CloseGame(void)
 {
  try
  {
@@ -310,7 +310,7 @@ static const MDFNSetting_EnumList LanguageList[] =
  { NULL, 0 },
 };
 
-static MDFNSetting NGPSettings[] =
+static const MDFNSetting NGPSettings[] =
 {
  { "ngp.language", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Language games should display text in."), NULL, MDFNST_ENUM, "english", NULL, NULL, NULL, NULL, LanguageList },
  { NULL }

@@ -63,7 +63,8 @@ static INLINE int16 ClampS16(int32 v)
  return v;
 }
 
-static const int16 ResampHalfImp[512] =
+static int16 ResampHalfImp[512];
+static const int16 ResampHalfImp_Init[512] =
 {
     0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
     1,    1,    1,    1,    1,    1,    1,    1,    1,    1,    1,    2,    2,    2,    2,    2, 
@@ -235,6 +236,51 @@ struct DSP_Voice
 static DSP_HGS HGS;
 static DSP_Voice Voices[8];
 
+static int8 weights[4][2];
+static const int8 weights_init[4][2] =
+{
+ // i-2, i-1
+ {   0,   0 },
+ {   0,  60 },
+ { -60, 122 },
+ { -52, 115 },
+};
+
+static uint16 RateMasks[32];
+static const uint16 RateMasks_Init[32] =
+{
+ 0x0000, 0xFFE0, 0x3FF8,
+ 0x1FE7, 0x7FE0, 0x1FF8,
+ 0x0FE7, 0x3FE0, 0x0FF8,
+ 0x07E7, 0x1FE0, 0x07F8,
+ 0x03E7, 0x0FE0, 0x03F8,
+ 0x01E7, 0x07E0, 0x01F8,
+ 0x00E7, 0x03E0, 0x00F8,
+ 0x0067, 0x01E0, 0x0078,
+ 0x0027, 0x00E0, 0x0038,
+ 0x0007, 0x0060, 0x0018,
+         0x0020,
+         0x0000
+};
+
+static uint16 RateCompares[32];
+static const uint16 RateCompares_Init[32] =
+{
+ 0xffff, 0x0000, 0x3e08, 
+ 0x1d04, 0x0000, 0x1e08, 
+ 0x0d04, 0x0000, 0x0e08, 
+ 0x0504, 0x0000, 0x0608, 
+ 0x0104, 0x0000, 0x0208, 
+ 0x0104, 0x0000, 0x0008, 
+ 0x0004, 0x0000, 0x0008, 
+ 0x0004, 0x0000, 0x0008, 
+ 0x0004, 0x0000, 0x0008, 
+ 0x0004, 0x0000, 0x0008, 
+         0x0000,
+	 0x0000
+};
+
+
 static int16 OutputL; // To avoid distortion, since L and R aren't updated at the same time(and the emulation frame can end between them).
 static unsigned OutputBufPos;
 static OwlResampler* Resampler;
@@ -247,39 +293,7 @@ static OwlBuffer ResampBuf[2];
 
 static INLINE bool CheckRC(unsigned rate)
 {
- static const uint16 RateMasks[32] =
- {
-  0x0000, 0xFFE0, 0x3FF8,
-  0x1FE7, 0x7FE0, 0x1FF8,
-  0x0FE7, 0x3FE0, 0x0FF8,
-  0x07E7, 0x1FE0, 0x07F8,
-  0x03E7, 0x0FE0, 0x03F8,
-  0x01E7, 0x07E0, 0x01F8,
-  0x00E7, 0x03E0, 0x00F8,
-  0x0067, 0x01E0, 0x0078,
-  0x0027, 0x00E0, 0x0038,
-  0x0007, 0x0060, 0x0018,
-          0x0020,
-          0x0000
- };
-
- static const uint16 RateXOR[32] =
- {
-  0xffff, 0x0000, 0x3e08, 
-  0x1d04, 0x0000, 0x1e08, 
-  0x0d04, 0x0000, 0x0e08, 
-  0x0504, 0x0000, 0x0608, 
-  0x0104, 0x0000, 0x0208, 
-  0x0104, 0x0000, 0x0008, 
-  0x0004, 0x0000, 0x0008, 
-  0x0004, 0x0000, 0x0008, 
-  0x0004, 0x0000, 0x0008, 
-  0x0004, 0x0000, 0x0008, 
-          0x0000,
-	  0x0000
- };
-
- return !((HGS.RateCounter & RateMasks[rate]) ^ RateXOR[rate]);
+ return (HGS.RateCounter & RateMasks[rate]) == RateCompares[rate];
 }
 
 static INLINE void ResetRC(void)
@@ -526,14 +540,14 @@ static INLINE void V3c(unsigned voice_num)
  }
 }
 
-static void V3(unsigned voice_num)
+static MDFN_HOT MDFN_FASTCALL void V3(unsigned voice_num)
 {
  V3a(voice_num);
  V3b(voice_num);
  V3c(voice_num);
 }
 
-static void VoiceAccum(unsigned voice_num, unsigned lr)
+static MDFN_HOT MDFN_FASTCALL void VoiceAccum(unsigned voice_num, unsigned lr)
 {
  DSP_Voice* const v = &Voices[voice_num];
  int32 tmp = (v->CurSample * (int8)Regs[(voice_num << 4) | (VRO_VOLL + lr)]) >> 7;
@@ -544,7 +558,7 @@ static void VoiceAccum(unsigned voice_num, unsigned lr)
   HGS.EchoAccum[lr] = ClampS16(HGS.EchoAccum[lr] + tmp);
 }
 
-static void V4(unsigned voice_num)
+static MDFN_HOT MDFN_FASTCALL void V4(unsigned voice_num)
 {
  DSP_Voice* const v = &Voices[voice_num];
  bool snork = (v->RB_In == 12);
@@ -576,14 +590,6 @@ static void V4(unsigned voice_num)
   // printf("%d, BRR Decode->%u --- Header=0x%02x, data0=0x%02x, data1=0x%02x\n", KONCounter[voice_num], v->RB_Pos, v->BRR_Header, v->BRR_Data[0], v->BRR_Data[1]);
 
   {
-   static const int8 weights[4][2] =
-   {
-    // i-2, i-1
-    {   0,   0 },
-    {   0,  60 },
-    { -60, 122 },
-    { -52, 115 },
-   };
    unsigned filter = (v->BRR_Header >> 2) & 0x3;
    unsigned shift = (v->BRR_Header >> 4) & 0xF;
    uint16 brrd = (v->BRR_Data[0] << 8) | v->BRR_Data[1];
@@ -736,7 +742,7 @@ static INLINE int16 CalcOutput(unsigned lr)
 }
 
 template<unsigned which>
-static void DSP_Cycle(void)
+static MDFN_HOT void DSP_Cycle(void)
 {
  switch(which)
  {
@@ -1016,11 +1022,15 @@ static void DSP_Cycle(void)
  SPC700_IOHandler = &DSP_Cycle<(which + 1) & 0x1F>;
 }
 
-static void DSP_Reset(bool powering_up)
+static MDFN_COLD void DSP_Reset(bool powering_up)
 {
  SPC700_IOHandler = &DSP_Cycle<0>;
 
  memset(Regs, 0, sizeof(Regs));
+ for(unsigned voice_num = 0; voice_num < 8; voice_num++)
+ {
+  Regs[(voice_num << 4) | VRO_PITCHL] = 0x01; // Magical Drop
+ }
  memset(&HGS, 0, sizeof(HGS));
  memset(Voices, 0, sizeof(Voices));
 
@@ -1069,13 +1079,18 @@ static INLINE void DSP_Write(uint8 A, uint8 V)
  }
 }
 
-static void MDFN_COLD DSP_Init(void)
+static MDFN_COLD void DSP_Init(void)
 {
+ memcpy(ResampHalfImp, ResampHalfImp_Init, sizeof(ResampHalfImp));
+ memcpy(RateMasks, RateMasks_Init, sizeof(RateMasks));
+ memcpy(RateCompares, RateCompares_Init, sizeof(RateCompares));
+ memcpy(weights, weights_init, sizeof(weights));
+
  Resampler = NULL;
  ResampLastRate = 0;
 }
 
-static void MDFN_COLD DSP_Kill(void)
+static MDFN_COLD void DSP_Kill(void)
 {
  if(Resampler)
  {

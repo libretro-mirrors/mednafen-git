@@ -122,7 +122,7 @@ int PCE_Input_Gamepad::StateAction(StateMem *sm, int load, int data_only, const 
  return(ret);
 }
 
-static const char* ModeSwitchPositions[] =
+static const char* const ModeSwitchPositions[] =
 {
  gettext_noop("2-button"),
  gettext_noop("6-button"),

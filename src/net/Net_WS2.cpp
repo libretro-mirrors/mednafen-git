@@ -20,6 +20,7 @@
 */
 
 #include "Net_WS2.h"
+#include <mednafen/string/string.h>
 
 #include <sys/time.h>
 #include <winsock2.h>
@@ -68,34 +69,33 @@ class WS2_Client : public WS2_Connection
 static std::string ErrCodeToString(int errcode)
 {
  std::string ret;
- void *msg_buffer;
+ void* msg_buffer = NULL;
  unsigned int tchar_count;
 
- tchar_count = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+ tchar_count = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 	       		     NULL, errcode,
 		             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-               		     (LPTSTR)&msg_buffer, 0, NULL);
+               		     (LPWSTR)&msg_buffer, 0, NULL);
 
  if(tchar_count == 0)
- {
-  return std::string("Error Error");
- }
+  return "Error Error";
 
  //{
  // TCHAR trim_chars[] = TEXT("\r\n\t ");
  //
  // StrTrim((PTSTR)msg_buffer, trim_chars);
  //}
-
- #ifdef UNICODE
-  #warning "UNICODE TODO"
-  ret = "";
- #else
-  ret = std::string((char *)msg_buffer);
- #endif
+ try
+ {
+  ret = UTF16_to_UTF8((char16_t*)msg_buffer, tchar_count);
+ }
+ catch(...)
+ {
+  LocalFree(msg_buffer);
+  throw;
+ }
  LocalFree(msg_buffer);
-
- return(ret);
+ return ret;
 }
 
 WS2_Connection::WS2_Connection()

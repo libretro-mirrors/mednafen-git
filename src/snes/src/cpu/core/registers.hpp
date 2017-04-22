@@ -77,7 +77,7 @@ struct regs_t {
   bool e;
 
   bool irq;   //IRQ pin (0 = low, 1 = trigger)
-  bool wai;   //raised during wai, cleared after interrupt triggered
+  int8 wai;  //bool wai;   //raised during wai, cleared after interrupt triggered
   uint8 mdr;  //memory data register
 
   regs_t() : db(0), e(false), irq(false), wai(false), mdr(0) {

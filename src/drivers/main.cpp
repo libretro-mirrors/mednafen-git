@@ -61,6 +61,7 @@
 #include <mednafen/qtrecord.h>
 #include <mednafen/tests.h>
 #include <mednafen/MemoryStream.h>
+#include <mednafen/file.h>
 #include <math.h>
 
 static int StateSLSTest = false;
@@ -72,7 +73,7 @@ bool pending_save_state, pending_snapshot, pending_ssnapshot, pending_save_movie
 static uint32 volatile MainThreadID = 0;
 static bool ffnosound;
 
-static MDFNSetting_EnumList SDriver_List[] =
+static const MDFNSetting_EnumList SDriver_List[] =
 {
  { "default", -1, "Default", gettext_noop("Selects the default sound driver.") },
 
@@ -120,7 +121,7 @@ static const MDFNSetting_EnumList FontSize_List[] =
 
 
 static std::vector <MDFNSetting> NeoDriverSettings;
-static MDFNSetting DriverSettings[] =
+static const MDFNSetting DriverSettings[] =
 {
   { "input.joystick.global_focus", MDFNSF_NOFLAGS, gettext_noop("Update physical joystick(s) internal state in Mednafen even when Mednafen lacks OS focus."), NULL, MDFNST_BOOL, "1" },
   { "input.joystick.axis_threshold", MDFNSF_NOFLAGS, gettext_noop("Analog axis binary press detection threshold."), gettext_noop("Threshold for detecting a digital-like \"button\" press on analog axis, in percent."), MDFNST_FLOAT, "75", "0", "100" },
@@ -289,7 +290,7 @@ void MDFND_Message(const char *s)
 
 static void CreateDirs(void)
 {
- static const char *subs[] = { "mcs", "mcm", "snaps", "palettes", "sav", "cheats", "firmware", "pgconfig" };
+ static const char* const subs[] = { "mcs", "mcm", "snaps", "palettes", "sav", "cheats", "firmware", "pgconfig" };
 
  try
  {
@@ -462,56 +463,78 @@ static void Stream64Test(const char* path)
 {
  try
  {
- {
-  FileStream fp(path, FileStream::MODE_WRITE_SAFE);
+  {
+   FileStream fp(path, FileStream::MODE_WRITE_SAFE);
 
-  assert(fp.tell() == 0);
-  assert(fp.size() == 0);
-  fp.put_BE<uint32>(0xDEADBEEF);
-  assert(fp.tell() == 4);
-  assert(fp.size() == 4);
+   assert(fp.tell() == 0);
+   assert(fp.size() == 0);
+   fp.put_BE<uint32>(0xDEADBEEF);
+   assert(fp.tell() == 4);
+   assert(fp.size() == 4);
 
-  fp.seek((uint64)8192 * 1024 * 1024, SEEK_SET);
-  fp.put_BE<uint32>(0xCAFEBABE);
-  assert(fp.tell() == (uint64)8192 * 1024 * 1024 + 4);
-  assert(fp.size() == (uint64)8192 * 1024 * 1024 + 4);
+   fp.seek(0x7FFFFFFFU, SEEK_SET);
+   assert(fp.tell() == 0x7FFFFFFFU);
+   fp.truncate(0x7FFFFFFFU);
+   assert(fp.size() == 0x7FFFFFFFU);
+   fp.put_LE<uint8>(0xB0);
+   assert(fp.tell() == 0x80000000U);
+   assert(fp.size() == 0x80000000U);
+   fp.put_LE<uint8>(0x0F);
+   assert(fp.tell() == 0x80000001U);
+   assert(fp.size() == 0x80000001U);
 
-  fp.put_BE<uint32>(0xAAAAAAAA);
-  assert(fp.tell() == (uint64)8192 * 1024 * 1024 + 8);
-  assert(fp.size() == (uint64)8192 * 1024 * 1024 + 8);
+   fp.seek(0xFFFFFFFFU, SEEK_SET);
+   assert(fp.tell() == 0xFFFFFFFFU);
+   fp.truncate(0xFFFFFFFFU);
+   assert(fp.size() == 0xFFFFFFFFU);
+   fp.put_LE<uint8>(0xCA);
+   assert(fp.tell() == 0x100000000ULL);
+   assert(fp.size() == 0x100000000ULL);
+   fp.put_LE<uint8>(0xAD);
+   assert(fp.tell() == 0x100000001ULL);
+   assert(fp.size() == 0x100000001ULL);
 
-  fp.truncate((uint64)8192 * 1024 * 1024 + 4);
-  assert(fp.size() == (uint64)8192 * 1024 * 1024 + 4);
+   fp.seek((uint64)8192 * 1024 * 1024, SEEK_SET);
+   fp.put_BE<uint32>(0xCAFEBABE);
+   assert(fp.tell() == (uint64)8192 * 1024 * 1024 + 4);
+   assert(fp.size() == (uint64)8192 * 1024 * 1024 + 4);
 
-  fp.seek(-((uint64)8192 * 1024 * 1024 + 8), SEEK_CUR);
-  assert(fp.tell() == 0);
-  fp.seek((uint64)-4, SEEK_END);
-  assert(fp.tell() == (uint64)8192 * 1024 * 1024);
- }
+   fp.put_BE<uint32>(0xAAAAAAAA);
+   assert(fp.tell() == (uint64)8192 * 1024 * 1024 + 8);
+   assert(fp.size() == (uint64)8192 * 1024 * 1024 + 8);
 
- {
-  FileStream fp(path, FileStream::MODE_READ);
-  uint32 tmp;
+   fp.truncate((uint64)8192 * 1024 * 1024 + 4);
+   assert(fp.size() == (uint64)8192 * 1024 * 1024 + 4);
 
-  assert(fp.size() == (uint64)8192 * 1024 * 1024 + 4);
-  tmp = fp.get_LE<uint32>();
-  assert(tmp == 0xEFBEADDE);
-  fp.seek((uint64)8192 * 1024 * 1024 - 4, SEEK_CUR);
-  tmp = fp.get_LE<uint32>(); 
-  assert(tmp == 0xBEBAFECA);
- }
+   fp.seek(-((uint64)8192 * 1024 * 1024 + 8), SEEK_CUR);
+   assert(fp.tell() == 0);
+   fp.seek((uint64)-4, SEEK_END);
+   assert(fp.tell() == (uint64)8192 * 1024 * 1024);
+  }
 
- {
-  GZFileStream fp(path, GZFileStream::MODE::READ);
-  uint32 tmp;
+  {
+   FileStream fp(path, FileStream::MODE_READ);
+   uint32 tmp;
 
-  tmp = fp.get_LE<uint32>();
-  assert(tmp == 0xEFBEADDE);
-  fp.seek((uint64)8192 * 1024 * 1024 - 4, SEEK_CUR);
-  tmp = fp.get_LE<uint32>(); 
-  assert(tmp == 0xBEBAFECA);  
-  assert(fp.tell() == (uint64)8192 * 1024 * 1024 + 4);
- }
+   assert(fp.size() == (uint64)8192 * 1024 * 1024 + 4);
+   tmp = fp.get_LE<uint32>();
+   assert(tmp == 0xEFBEADDE);
+   fp.seek((uint64)8192 * 1024 * 1024 - 4, SEEK_CUR);
+   tmp = fp.get_LE<uint32>(); 
+   assert(tmp == 0xBEBAFECA);
+  }
+
+  {
+   GZFileStream fp(path, GZFileStream::MODE::READ);
+   uint32 tmp;
+
+   tmp = fp.get_LE<uint32>();
+   assert(tmp == 0xEFBEADDE);
+   fp.seek((uint64)8192 * 1024 * 1024 - 4, SEEK_CUR);
+   tmp = fp.get_LE<uint32>(); 
+   assert(tmp == 0xBEBAFECA);  
+   assert(fp.tell() == (uint64)8192 * 1024 * 1024 + 4);
+  }
  }
  catch(std::exception& e)
  {
@@ -638,6 +661,7 @@ static void MakeMednafenArgsStruct(void)
 
 static int netconnect = 0;
 static char* loadcd = NULL;	// Deprecated
+static int which_medium = -2;
 
 static char * force_module_arg = NULL;
 static int DoArgs(int argc, char *argv[], char **filename)
@@ -658,6 +682,8 @@ static int DoArgs(int argc, char *argv[], char **filename)
 
 	 // -loadcd is deprecated and only still supported because it's been around for yeaaaars.
 	 { "loadcd", NULL/*_("Load and boot a CD for the specified system.")*/, 0, &loadcd, SUBSTYPE_STRING_ALLOC },
+
+	 { "which_medium", _("Start with specified disk/CD(numbered from 0) inserted."), 0, &which_medium, SUBSTYPE_INTEGER },
 
 	 { "force_module", _("Force usage of specified emulation module."), 0, &force_module_arg, SUBSTYPE_STRING_ALLOC },
 
@@ -784,7 +810,7 @@ static int LoadGame(const char *force_module, const char *path)
 	CurGame = tmp;
 	InitGameInput(tmp);
 	InitCommandInput(tmp);
-	RMDUI_Init(tmp);
+	RMDUI_Init(tmp, which_medium);
 
         RefreshThrottleFPS(1);
 

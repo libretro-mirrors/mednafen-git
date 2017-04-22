@@ -2,7 +2,7 @@
 /* Mednafen Virtual Boy Emulation Module                                      */
 /******************************************************************************/
 /* vb.cpp:
-**  Copyright (C) 2010-2016 Mednafen Team
+**  Copyright (C) 2010-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -113,7 +113,7 @@ void VBIRQ_Assert(int source, bool assert)
 
 
 
-static uint8 HWCTRL_Read(v810_timestamp_t &timestamp, uint32 A)
+static MDFN_FASTCALL uint8 HWCTRL_Read(v810_timestamp_t &timestamp, uint32 A)
 {
  uint8 ret = 0;
 
@@ -146,7 +146,7 @@ static uint8 HWCTRL_Read(v810_timestamp_t &timestamp, uint32 A)
  return(ret);
 }
 
-static void HWCTRL_Write(v810_timestamp_t &timestamp, uint32 A, uint8 V)
+static MDFN_FASTCALL void HWCTRL_Write(v810_timestamp_t &timestamp, uint32 A, uint8 V)
 {
  if(A & 0x3)
  {
@@ -463,6 +463,8 @@ static void SettingChanged(const char *name)
   VIP_SetInstantDisplayHack(MDFN_GetSettingB("vb.instant_display_hack"));
  else if(!strcasecmp(name, "vb.allow_draw_skip"))
   VIP_SetAllowDrawSkip(MDFN_GetSettingB("vb.allow_draw_skip"));
+ else if(!strcasecmp(name, "vb.ledonscale"))
+  VIP_SetLEDOnScale(MDFN_GetSettingF("vb.ledonscale"));
  else
   abort();
 
@@ -516,7 +518,7 @@ static bool TestMagic(MDFNFILE *fp)
  return false;
 }
 
-static void Cleanup(void)
+static MDFN_COLD void Cleanup(void)
 {
  VIP_Kill();
  
@@ -536,7 +538,7 @@ static void Cleanup(void)
  }
 }
 
-static void Load(MDFNFILE *fp)
+static MDFN_COLD void Load(MDFNFILE *fp)
 {
  try
  {
@@ -682,6 +684,7 @@ static void Load(MDFNFILE *fp)
   SettingChanged("vb.anaglyph.rcolor");
   SettingChanged("vb.anaglyph.preset");
   SettingChanged("vb.default_color");
+  SettingChanged("vb.ledonscale");
 
   SettingChanged("vb.instant_display_hack");
   SettingChanged("vb.allow_draw_skip");
@@ -752,7 +755,7 @@ static void Load(MDFNFILE *fp)
  }
 }
 
-static void CloseGame(void)
+static MDFN_COLD void CloseGame(void)
 {
  // Only save cart RAM if it has been modified.
  for(unsigned int i = 0; i < GPRAM_Mask + 1; i++)
@@ -916,7 +919,7 @@ static const MDFNSetting_EnumList AnaglyphPreset_List[] =
  { NULL, 0 },
 };
 
-static MDFNSetting VBSettings[] =
+static const MDFNSetting VBSettings[] =
 {
  { "vb.cpu_emulation", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("CPU emulation mode."), NULL, MDFNST_ENUM, "fast", NULL, NULL, NULL, NULL, V810Mode_List },
  { "vb.input.instant_read_hack", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Input latency reduction hack."), gettext_noop("Reduces latency in some games by 20ms by returning the current pad state, rather than latched state, on serial port data reads.  This hack may cause some homebrew software to malfunction, but it should be relatively safe for commercial official games."), MDFNST_BOOL, "1", NULL, NULL, NULL, SettingChanged },
@@ -938,6 +941,9 @@ static MDFNSetting VBSettings[] =
  { "vb.sidebyside.separation", MDFNSF_NOFLAGS, gettext_noop("Number of pixels to separate L/R views by."), gettext_noop("This setting refers to pixels before vb.xscale(fs) scaling is taken into consideration.  For example, a value of \"100\" here will result in a separation of 300 screen pixels if vb.xscale(fs) is set to \"3\"."), MDFNST_UINT, /*"96"*/"0", "0", "1024", NULL, NULL },
 
  { "vb.3dreverse", MDFNSF_NOFLAGS, gettext_noop("Reverse left/right 3D views."), NULL, MDFNST_BOOL, "0", NULL, NULL, NULL, SettingChanged },
+
+ { "vb.ledonscale", MDFNSF_NOFLAGS, gettext_noop("LED on duration to linear RGB conversion coefficient."), gettext_noop("Setting this higher than the default will cause excessive white crush in at least one game.  A value of 1.0 is close to ideal, other than causing the image to be rather dark."), MDFNST_FLOAT, "1.75", "1.0", "2.0", NULL, SettingChanged },
+
  { NULL }
 };
 
@@ -1014,8 +1020,8 @@ MDFNGI EmulatedVB =
  NULL,
  NULL,
 
- NULL,
- 0,
+ VIP_CPInfo,
+ 1 << 0,
 
  CheatInfo_Empty,
 

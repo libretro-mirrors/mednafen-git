@@ -23,6 +23,7 @@
 #include "console.h"
 #include <math.h>
 #include "nongl.h"
+#include <mednafen/string/string.h>
 
 MDFNConsole::MDFNConsole(bool setshellstyle)
 {
@@ -48,7 +49,6 @@ bool MDFNConsole::TextHook(const std::string &text)
  return(1);
 }
 
-#include <mednafen/string/ConvertUTF.h>
 int MDFNConsole::Event(const SDL_Event *event)
 {
   switch(event->type)
@@ -124,12 +124,8 @@ int MDFNConsole::Event(const SDL_Event *event)
                      default:
 		     if(event->key.keysym.unicode >= 0x20)
                      {
-                      uint8 utf8_buffer[8];
-                      UTF8 *dest_ptr = utf8_buffer;
-                      memset(utf8_buffer, 0, sizeof(utf8_buffer));
-                      const UTF16 *start_utf16 = &event->key.keysym.unicode;
-                      ConvertUTF16toUTF8(&start_utf16, (UTF16 *)&event->key.keysym.unicode + 1, &dest_ptr, &utf8_buffer[8], lenientConversion);
-	              kb_buffer.insert(kb_buffer.begin() + kb_cursor_pos, std::string((char *)utf8_buffer));
+		      const char16_t tmp = event->key.keysym.unicode;
+	              kb_buffer.insert(kb_buffer.begin() + kb_cursor_pos, UTF16_to_UTF8(&tmp, 1));
 	              kb_cursor_pos++;
                      }
                      break;

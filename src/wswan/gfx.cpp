@@ -102,7 +102,7 @@ enum
  GFX_GSREG_FGYSCROLL
 };
 
-RegType WSwanGfxRegs[] =
+static const RegType WSwanGfxRegs[] =
 {
  { GFX_GSREG_DISPCONTROL, "DispControl", "Display Control", 1 },
  { GFX_GSREG_VIDEOMODE, "VideoMode", "Video Mode", 1 },
@@ -354,7 +354,7 @@ void WSwan_GfxSetRegister(const unsigned id, uint32 value)
  }
 }
 
-static RegGroupType WSwanGfxRegsGroup =
+static const RegGroupType WSwanGfxRegsGroup =
 {
  "Gfx",
  WSwanGfxRegs,

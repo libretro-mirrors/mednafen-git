@@ -87,16 +87,32 @@ static const ButtConfig NGPPadConfig[7 + 2] =
         MK(w), MK(s), MK(a), MK(d), MK(KP2), MK(KP3), MK(RETURN), MK(KP5), MK(KP6)
 };
 
-static const ButtConfig WSwanPadConfig[12] =
+static const ButtConfig WSwanPadConfig[11] =
 {
         // Up, right, down, left,
         // up-y, right-y, down-y, left-y,
-	//  start, a(outer), b(inner), option
+	//  start, a(outer), b(inner)
         MK(w), MK(d), MK(s), MK(a), 
 	MK(UP), MK(RIGHT), MK(DOWN), MK(LEFT),
-	MK(RETURN), MK(KP3), MK(KP2), MK(RETURN)
+	MK(RETURN), MK(KP3), MK(KP2)
 };
 
+static const ButtConfig WSwanPadRAAConfig[13] = 
+{
+        // Up, right, down, left,
+        // up-y, right-y, down-y, left-y,
+	// a', a, b, b'
+	// start
+        MK(w), MK(d), MK(s), MK(a), 
+	MK(UP), MK(RIGHT), MK(DOWN), MK(LEFT),
+
+	MK(KP6),
+	MK(KP3),
+	MK(KP2),
+	MK(KP5),
+
+	MK(RETURN)
+};
 
 static const ButtConfig PowerPadConfig[12] =
 {
@@ -693,6 +709,7 @@ static const DefaultSettingsMeow defset[] =
  { "gba.input.builtin.gamepad", GBAPadConfig, sizeof(GBAPadConfig) / sizeof(ButtConfig) },
  { "ngp.input.builtin.gamepad", NGPPadConfig, sizeof(NGPPadConfig) / sizeof(ButtConfig) },
  { "wswan.input.builtin.gamepad", WSwanPadConfig, sizeof(WSwanPadConfig) / sizeof(ButtConfig) },
+ { "wswan.input.builtin.gamepadraa", WSwanPadRAAConfig, sizeof(WSwanPadRAAConfig) / sizeof(ButtConfig) },
 
  { "pce.input.port1.gamepad", PCEPadConfig[0], sizeof(PCEPadConfig[0]) / sizeof(ButtConfig) },
  { "pce.input.port2.gamepad", PCEPadConfig[1], sizeof(PCEPadConfig[1]) / sizeof(ButtConfig)  },

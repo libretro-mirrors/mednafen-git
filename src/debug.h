@@ -17,17 +17,16 @@ enum
 
 struct RegType
 {
-	~RegType();
 	const unsigned int id;
-        std::string name;
-	std::string long_name;
-        unsigned int bsize; // Byte size, 1, 2, 4
+	const char* name;
+	const char* long_name;
+	unsigned int bsize; // Byte size, 1, 2, 4
 };
 
 struct RegGroupType
 {
  const char *name;
- RegType *Regs;
+ const RegType* Regs;
 
  // GetRegister() should modify the string at special if special is non-NULL, to provide
  // more details about the register.
@@ -177,7 +176,7 @@ typedef struct
 
  // Game emulation code shouldn't touch these directly.
  std::vector<AddressSpaceType> *AddressSpaces;
- std::vector<RegGroupType*> *RegGroups;
+ std::vector<const RegGroupType*> *RegGroups;
 } DebuggerInfoStruct;
 
 // ASpace_Add() functions return an ID that should be used with with MDFNDBG_ASpace_Read()
@@ -211,13 +210,13 @@ void ASpace_AddBreakPoint(const int id, const int type, const uint32 A1, const u
 void ASpace_FlushBreakPoints(const int id);
 
 
-void MDFNDBG_ResetRegGroupsInfo(void);
-void MDFNDBG_AddRegGroup(RegGroupType *groupie);
+void MDFNDBG_ResetRegGroupsInfo(void) MDFN_COLD;
+void MDFNDBG_AddRegGroup(const RegGroupType* groupie) MDFN_COLD;
 
 
-void MDFNDBG_Init(void);
-void MDFNDBG_PostGameLoad(void);
-void MDFNDBG_Kill(void);
+void MDFNDBG_Init(void) MDFN_COLD;
+void MDFNDBG_PostGameLoad(void) MDFN_COLD;
+void MDFNDBG_Kill(void) MDFN_COLD;
 
 #endif
 

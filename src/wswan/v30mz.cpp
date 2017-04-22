@@ -69,10 +69,10 @@ typedef struct
 	uint8 TF, IF, DF;
 } v30mz_regs_t;
 
-static void (*cpu_writemem20)(uint32,uint8) = NULL;
-static uint8 (*cpu_readport)(uint32) = NULL;
-static void (*cpu_writeport)(uint32, uint8) = NULL;
-static uint8 (*cpu_readmem20)(uint32) = NULL;
+static void (MDFN_FASTCALL *cpu_writemem20)(uint32,uint8) = NULL;
+static uint8 (MDFN_FASTCALL *cpu_readport)(uint32) = NULL;
+static void (MDFN_FASTCALL *cpu_writeport)(uint32, uint8) = NULL;
+static uint8 (MDFN_FASTCALL *cpu_readmem20)(uint32) = NULL;
 
 static INLINE uint8 PhysRead8(uint32 addr)
 {
@@ -133,7 +133,7 @@ static INLINE void i_real_popf(void)
 
 /***************************************************************************/
 
-void v30mz_init(uint8 (*readmem20)(uint32), void (*writemem20)(uint32,uint8), uint8 (*readport)(uint32), void (*writeport)(uint32, uint8))
+void v30mz_init(uint8 (MDFN_FASTCALL *readmem20)(uint32), void (MDFN_FASTCALL *writemem20)(uint32,uint8), uint8 (MDFN_FASTCALL *readport)(uint32), void (MDFN_FASTCALL *writeport)(uint32, uint8))
 {
  cpu_readmem20 = readmem20;
  cpu_writemem20 = writemem20;
@@ -1009,18 +1009,18 @@ void v30mz_set_reg(int regnum, unsigned val)
 }
 
 #ifdef WANT_DEBUGGER
-static void (*save_cpu_writemem20)(uint32,uint8);
-static uint8 (*save_cpu_readport)(uint32);
-static void (*save_cpu_writeport)(uint32, uint8);
-static uint8 (*save_cpu_readmem20)(uint32);
+static void (MDFN_FASTCALL *save_cpu_writemem20)(uint32,uint8);
+static uint8 (MDFN_FASTCALL *save_cpu_readport)(uint32);
+static void (MDFN_FASTCALL *save_cpu_writeport)(uint32, uint8);
+static uint8 (MDFN_FASTCALL *save_cpu_readmem20)(uint32);
 
-static void test_cpu_writemem20(uint32 A, uint8 V)
+static MDFN_FASTCALL void test_cpu_writemem20(uint32 A, uint8 V)
 {
  if(write_hook)
   write_hook(A, V);
 }
 
-static uint8 test_cpu_readmem20(uint32 A)
+static MDFN_FASTCALL uint8 test_cpu_readmem20(uint32 A)
 {
  if(read_hook)
   return(read_hook(A));
@@ -1028,13 +1028,13 @@ static uint8 test_cpu_readmem20(uint32 A)
   return(save_cpu_readmem20(A));
 }
 
-static void test_cpu_writeport(uint32 A, uint8 V)
+static MDFN_FASTCALL void test_cpu_writeport(uint32 A, uint8 V)
 {
  if(port_write_hook)
   port_write_hook(A, V);
 }
 
-static uint8 test_cpu_readport(uint32 A)
+static MDFN_FASTCALL uint8 test_cpu_readport(uint32 A)
 {
  if(port_read_hook)
   return(port_read_hook(A));

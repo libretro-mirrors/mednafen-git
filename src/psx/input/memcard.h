@@ -25,7 +25,7 @@
 namespace MDFN_IEN_PSX
 {
 
-InputDevice *Device_Memcard_Create(void);
+InputDevice *Device_Memcard_Create(void) MDFN_COLD;
 
 }
 

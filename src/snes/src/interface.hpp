@@ -5,6 +5,7 @@
 #endif
 
 namespace bSNES_v059 {
+  #include "system/scheduler/scheduler.hpp"
   #include "cheat/cheat.hpp"
   #include "memory/memory.hpp"
   #include "memory/smemory/smemory.hpp"

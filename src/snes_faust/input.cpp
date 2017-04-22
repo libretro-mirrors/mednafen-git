@@ -29,15 +29,15 @@ class InputDevice
 {
  public:
 
- InputDevice();
- virtual ~InputDevice();
+ InputDevice() MDFN_COLD;
+ virtual ~InputDevice() MDFN_COLD;
 
- virtual void Power(void);
+ virtual void Power(void) MDFN_COLD;
 
- virtual void UpdatePhysicalState(const uint8* data);
+ virtual void MDFN_FASTCALL UpdatePhysicalState(const uint8* data);
 
- virtual uint8 Read(bool IOB);
- virtual void SetLatch(bool state);
+ virtual uint8 MDFN_FASTCALL Read(bool IOB) MDFN_HOT;
+ virtual void MDFN_FASTCALL SetLatch(bool state) MDFN_HOT;
 
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix);
 };
@@ -84,13 +84,13 @@ void InputDevice::StateAction(StateMem* sm, const unsigned load, const bool data
 class InputDevice_MTap final : public InputDevice
 {
  public:
- InputDevice_MTap();
- virtual ~InputDevice_MTap() override;
+ InputDevice_MTap() MDFN_COLD;
+ virtual ~InputDevice_MTap() override MDFN_COLD;
 
- virtual void Power(void) override;
+ virtual void Power(void) override MDFN_COLD;
 
- virtual uint8 Read(bool IOB) override;
- virtual void SetLatch(bool state) override;
+ virtual uint8 MDFN_FASTCALL Read(bool IOB) override MDFN_HOT;
+ virtual void MDFN_FASTCALL SetLatch(bool state) override MDFN_HOT;
 
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
 
@@ -179,15 +179,15 @@ class InputDevice_Gamepad final : public InputDevice
 {
  public:
 
- InputDevice_Gamepad();
- virtual ~InputDevice_Gamepad() override;
+ InputDevice_Gamepad() MDFN_COLD;
+ virtual ~InputDevice_Gamepad() override MDFN_COLD;
 
- virtual void Power(void) override;
+ virtual void Power(void) override MDFN_COLD;
 
- virtual void UpdatePhysicalState(const uint8* data) override;
+ virtual void MDFN_FASTCALL UpdatePhysicalState(const uint8* data) override;
 
- virtual uint8 Read(bool IOB) override;
- virtual void SetLatch(bool state) override;
+ virtual uint8 MDFN_FASTCALL Read(bool IOB) override MDFN_HOT;
+ virtual void MDFN_FASTCALL SetLatch(bool state) override MDFN_HOT;
 
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
 

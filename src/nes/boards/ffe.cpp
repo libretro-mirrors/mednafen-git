@@ -7,7 +7,7 @@ static uint8 IRQa, MirRegs[2], latch, CHRBanks[8], PRGBanks[4], MirSelect, ModeS
 static uint16 IRQCount;
 static uint8 WRAM[8192];
 
-static void FFEIRQHook(int a)
+static MDFN_FASTCALL void FFEIRQHook(int a)
 {
   if(IRQa)
   {

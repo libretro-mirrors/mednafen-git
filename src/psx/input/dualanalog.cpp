@@ -30,10 +30,10 @@ class InputDevice_DualAnalog final : public InputDevice
 {
  public:
 
- InputDevice_DualAnalog(bool joystick_mode_);
- virtual ~InputDevice_DualAnalog() override;
+ InputDevice_DualAnalog(bool joystick_mode_) MDFN_COLD;
+ virtual ~InputDevice_DualAnalog() override MDFN_COLD;
 
- virtual void Power(void) override;
+ virtual void Power(void) override MDFN_COLD;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
  virtual void UpdateInput(const void *data) override;
 
@@ -294,16 +294,15 @@ IDIISG Device_DualAnalog_IDII =
  { "cross", "x (lower)", 7, IDIT_BUTTON_CAN_RAPID, NULL },
  { "square", "□ (left)", 8, IDIT_BUTTON_CAN_RAPID, NULL },
 
- { "rstick_right", "Right Stick RIGHT →", 22, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_left", "Right Stick LEFT ←", 21, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_down", "Right Stick DOWN ↓", 20, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_up", "Right Stick UP ↑", 19, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "rstick_right", "Right Stick RIGHT →", 22, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "rstick_left", "Right Stick LEFT ←", 21, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "rstick_down", "Right Stick DOWN ↓", 20, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "rstick_up", "Right Stick UP ↑", 19, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
 
- { "lstick_right", "Left Stick RIGHT →", 17, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_left", "Left Stick LEFT ←", 16, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_down", "Left Stick DOWN ↓", 15, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_up", "Left Stick UP ↑", 14, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
-
+ { "lstick_right", "Left Stick RIGHT →", 17, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "lstick_left", "Left Stick LEFT ←", 16, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "lstick_down", "Left Stick DOWN ↓", 15, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "lstick_up", "Left Stick UP ↑", 14, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
 };
 
 // Not sure if all these buttons are named correctly!
@@ -328,16 +327,15 @@ IDIISG Device_AnalogJoy_IDII =
  { "cross",  "Right stick, L-thumb", 10, IDIT_BUTTON, NULL },
  { "square", "Right stick, Trigger", 12, IDIT_BUTTON, NULL },
 
- { "rstick_right", "Right Stick, RIGHT →", 21, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_left", "Right Stick, LEFT ←", 20, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_down", "Right Stick, BACK ↓", 19, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_up", "Right Stick, FORE ↑", 18, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "rstick_right", "Right Stick, RIGHT →", 21, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "rstick_left", "Right Stick, LEFT ←", 20, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "rstick_down", "Right Stick, BACK ↓", 19, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "rstick_up", "Right Stick, FORE ↑", 18, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
 
- { "lstick_right", "Left Stick, RIGHT →", 7, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_left", "Left Stick, LEFT ←", 6, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_down", "Left Stick, BACK ↓", 5, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_up", "Left Stick, FORE ↑", 4, IDIT_BUTTON_ANALOG, NULL, { NULL, NULL, NULL }, IDIT_BUTTON_ANALOG_FLAG_SQLR },
-
+ { "lstick_right", "Left Stick, RIGHT →", 7, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "lstick_left", "Left Stick, LEFT ←", 6, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "lstick_down", "Left Stick, BACK ↓", 5, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ { "lstick_up", "Left Stick, FORE ↑", 4, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
 };
 
 

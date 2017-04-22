@@ -28,8 +28,8 @@ class VCE final
 {
 	public:
 
-	VCE(const bool want_sgfx, const uint32 vram_size = 32768);
-	~VCE();
+	VCE(const bool want_sgfx, const uint32 vram_size = 32768) MDFN_COLD;
+	~VCE() MDFN_COLD;
 
 	void SetVDCUnlimitedSprites(const bool nospritelimit);
 	void SetShowHorizOS(bool show);

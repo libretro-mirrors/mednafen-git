@@ -2,7 +2,7 @@
 /* Mednafen Fast SNES Emulation Module                                        */
 /******************************************************************************/
 /* ppu.cpp:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -20,15 +20,11 @@
 */
 
 //
-// FIXME: Blank lines properly in es->surface when switching from overscan to non-overscan mode mid-frame.
-//
 // FIXME: Hires/pseudo-hires color math and color window are all wonky.
 //
 // FIXME: Add mode 6 emulation
 //
 // FIXME: Correct handling of lower 3 bits of BGHOFS registers.
-//
-// FIXME: PAL support
 //
 // FIXME: Interlaced support.
 //
@@ -52,10 +48,10 @@ static unsigned HVLatchReadShift;
 
 //
 // Cheaty registers and state:
-static uint8 NMITIMEEN;
-
 static uint16 HTime;
 static uint16 VTime;
+
+static uint8 NMITIMEEN;
 
 static uint8 HVBJOY;
 static uint8 NMIFlag;	// 0x00 or 0x80
@@ -64,10 +60,13 @@ static uint8 JPReadCounter;
 //
 //
 
+static bool PAL;
 static bool VBlank;
-static uint32 LineCounter;
 static bool LinePhase;
+static uint32 LineCounter;
 /*static*/ uint32 scanline;
+static uint32 LinesPerFrame;
+static uint32 LineTarget;
 
 static uint8 BusLatch[2];
 static uint8 Status[2];	// $3E and $3F.
@@ -250,7 +249,7 @@ static const struct
  { { 16, 32 }, { 32, 32 } },
 };
 
-static void FetchSpriteData(signed line_y)
+static INLINE void FetchSpriteData(signed line_y)
 {
  unsigned SpriteIndex = 0;
  unsigned SpriteCount = 0;
@@ -396,7 +395,7 @@ static void FetchSpriteData(signed line_y)
  ExitTileLoop: ;
 }
 
-static void DrawSprites(void)
+static INLINE void DrawSprites(void)
 {
  unsigned prio_or_mask = 0xFFFF;
 
@@ -495,7 +494,7 @@ static DEFWRITE(Write_BGVOFS)
  }
 }
 
-static uint16 GetVAddr(void)
+static MDFN_HOT uint16 GetVAddr(void)
 {
  return (VRAM_Addr & VMAIN_AddrTransMaskA) | ((VRAM_Addr >> VMAIN_AddrTransShiftB) & 0x7) | ((VRAM_Addr << 3) & VMAIN_AddrTransMaskC);
 }
@@ -781,7 +780,7 @@ static DEFREAD(Read_HVLatchTrigger)
   // Maximum horribleness.
   //PPU_Update(CPUM.timestamp);
 
-  HLatch = (CPUM.timestamp - LineStartTS) >> 2;
+  HLatch = (uint32)(CPUM.timestamp - LineStartTS) >> 2;
   VLatch = scanline;
 
   if(HLatch >= 340)
@@ -791,7 +790,7 @@ static DEFREAD(Read_HVLatchTrigger)
    else
    {
     HLatch -= 341;
-    VLatch = (VLatch + 1) % 262;	// FIXME
+    VLatch = (VLatch + 1) % LinesPerFrame;	// FIXME
    }
   }
 
@@ -882,10 +881,11 @@ void PPU_StartFrame(EmulateSpecStruct* espec)
 {
  es = espec;
 
+ es->LineWidths[0] = 0;
  es->DisplayRect.x = 0;
- es->DisplayRect.y = 0;
+ es->DisplayRect.y = PAL ? 0 : 8;
  es->DisplayRect.w = 256;
- es->DisplayRect.h = 224;
+ es->DisplayRect.h = PAL ? 239 : 224;
 
  if(es->VideoFormatChanged)
  {
@@ -903,7 +903,7 @@ void PPU_StartFrame(EmulateSpecStruct* espec)
 }
 
 template<bool size16, bool mode4 = false>
-static void GetOPTStrip(const unsigned n)
+static MDFN_HOT MDFN_FASTCALL void GetOPTStrip(const unsigned n)
 {
  unsigned VOFS = BGVOFS[n];
  unsigned HOFS = BGHOFS[n];
@@ -986,7 +986,7 @@ static INLINE unsigned DirColCvt(unsigned inpix, unsigned palbase = 0)
 }
 
 template<bool size16, unsigned bpp, bool palbase_n = false, bool opt = false, bool hires = false, bool dircolor = false>
-static void DrawBG(const unsigned n, const unsigned y, uint32 prio_or)
+static MDFN_HOT MDFN_FASTCALL void DrawBG(const unsigned n, const unsigned y, uint32 prio_or)
 {
  unsigned VOFS = BGVOFS[n] + (y - ((Mosaic & (1U << n)) ? MosaicYOffset : 0));
  unsigned HOFS = BGHOFS[n];
@@ -1002,6 +1002,8 @@ static void DrawBG(const unsigned n, const unsigned y, uint32 prio_or)
 
  uint32* target;
 
+ // Make sure we go with [8] and not [7], or else we'll potentially have an invalid bounds pointer
+ // in the pixel blitting loop further down in this function.
  if(hires)
   target = &linebuf.bghr[n][8];
  else
@@ -1054,46 +1056,64 @@ static void DrawBG(const unsigned n, const unsigned y, uint32 prio_or)
 
   const uint16* const vchr = &VRAM[(chrbase + (tile_y_offs ^ v_flip_xor) + (tile_num * (bpp / 2) * 8) + 0) & 0x7FFF];
   const uint16* const cgr = CGRAM + (bpp == 8 ? 0 : ((pal_base << bpp) + (palbase_n ? (n << 5) : 0)));
-  uint64 bp;
+  //
+  const size_t subtarg_inc = h_flip ? 1 : -1;
+  const uint32* subtarg_bound = target + (h_flip ? 8 : -1);
+  uint32* subtarg = target + (h_flip ? 0 : 7);
 
-  bp = vchr[0];
-
-  if(bpp >= 4)
+  static_assert(bpp == 2 || bpp == 4 || bpp == 8, "wrong bpp");
+  if(bpp == 2)
   {
-   bp |= (uint32)vchr[8] << 16;
+   uint32 tmp[4] =
+	{ (uint32)cgr[0] << 16,
+	 ((uint32)cgr[1] << 16) | eff_prio_or,
+	 ((uint32)cgr[2] << 16) | eff_prio_or,
+	 ((uint32)cgr[3] << 16) | eff_prio_or };
+   uint32 bp = vchr[0];
 
-   if(bpp >= 8)
+   if(h_flip)
    {
-    bp |= (uint64)vchr[16] << 32;
-    bp |= (uint64)vchr[24] << 48;
+    target[0] = tmp[((bp     ) & 0x01) | ((bp >>  7) & 0x02)];
+    target[1] = tmp[((bp >> 1) & 0x01) | ((bp >>  8) & 0x02)];
+    target[2] = tmp[((bp >> 2) & 0x01) | ((bp >>  9) & 0x02)];
+    target[3] = tmp[((bp >> 3) & 0x01) | ((bp >> 10) & 0x02)];
+    target[4] = tmp[((bp >> 4) & 0x01) | ((bp >> 11) & 0x02)];
+    target[5] = tmp[((bp >> 5) & 0x01) | ((bp >> 12) & 0x02)];
+    target[6] = tmp[((bp >> 6) & 0x01) | ((bp >> 13) & 0x02)];
+    target[7] = tmp[((bp >> 7) & 0x01) | ((bp >> 14) & 0x02)];
+   }
+   else
+   {
+    target[0] = tmp[((bp >> 7) & 0x01) | ((bp >> 14) & 0x02)];
+    target[1] = tmp[((bp >> 6) & 0x01) | ((bp >> 13) & 0x02)];
+    target[2] = tmp[((bp >> 5) & 0x01) | ((bp >> 12) & 0x02)];
+    target[3] = tmp[((bp >> 4) & 0x01) | ((bp >> 11) & 0x02)];
+    target[4] = tmp[((bp >> 3) & 0x01) | ((bp >> 10) & 0x02)];
+    target[5] = tmp[((bp >> 2) & 0x01) | ((bp >>  9) & 0x02)];
+    target[6] = tmp[((bp >> 1) & 0x01) | ((bp >>  8) & 0x02)];
+    target[7] = tmp[((bp     ) & 0x01) | ((bp >>  7) & 0x02)];
    }
   }
-
-  for(unsigned sub = 0; sub < 8; sub++)
+  else if(bpp == 4)
   {
-   unsigned pix;
-
-   pix =  ((bp >>  7) & 0x01);
-   pix |= ((bp >> 14) & 0x02);
-
-   if(bpp >= 4)
+   uint32 bp = vchr[0] | ((uint32)vchr[8] << 16);
+   uint32 bp2;
+   size_t pix;
+   for(; MDFN_LIKELY(subtarg != subtarg_bound); subtarg += subtarg_inc << 1, bp >>= 2)
    {
-    pix |= ((bp >> 21) & 0x04);
-    pix |= ((bp >> 28) & 0x08);
-
-    if(bpp >= 8)
-    {
-     pix |= ((bp >> 35) & 0x10);
-     pix |= ((bp >> 42) & 0x20);
-     pix |= ((bp >> 49) & 0x40);
-     pix |= ((bp >> 56) & 0x80);
-    }
+    bp2 = bp & 0x01010101; pix = (uint8)((bp2     ) | (bp2 >> 7) | (bp2 >> 14) | (bp2 >> 21)); subtarg[0]           = (cgr[pix] << 16) | (pix ? eff_prio_or : 0);
+    bp2 = bp & 0x02020202; pix = (uint8)((bp2 >> 1) | (bp2 >> 8) | (bp2 >> 15) | (bp2 >> 22)); subtarg[subtarg_inc] = (cgr[pix] << 16) | (pix ? eff_prio_or : 0);
    }
-
-   //if(hires) pix ^= rand() & 0xFF;
-
-   target[sub ^ (h_flip ? 7 : 0)] = ((dircolor ? DirColCvt(pix, pal_base) : cgr[pix]) << 16) | (pix ? eff_prio_or : 0);
-   bp <<= 1;
+  }
+  else if(bpp == 8)
+  {
+   uint64 bp = vchr[0] | ((uint32)vchr[8] << 16) | ((uint64)vchr[16] << 32) | ((uint64)vchr[24] << 48);
+   for(; MDFN_LIKELY(subtarg != subtarg_bound); subtarg += subtarg_inc, bp >>= 1)
+   {
+    const uint64 bp2 = bp & 0x0101010101010101ULL;
+    const size_t pix = (uint8)(bp2 | (bp2 >> 7) | (bp2 >> 14) | (bp2 >> 21) | (bp2 >> 28) | (bp2 >> 35) | (bp2 >> 42) | (bp2 >> 49));
+    *subtarg = ((dircolor ? DirColCvt(pix, pal_base) : cgr[pix]) << 16) | (pix ? eff_prio_or : 0);
+   }
   }
 
   if(!(size16 || hires) || (tile_num_offs & 1))
@@ -1155,7 +1175,7 @@ static void DrawBG(const unsigned n, const unsigned y, uint32 prio_or)
  }
 }
 
-static int16 funny(int16 val)
+static INLINE int16 funny(int16 val)
 {
  int16 ret = val & 0x3FF;
 
@@ -1165,14 +1185,14 @@ static int16 funny(int16 val)
  return ret;
 }
 
-static int M7Mul(int16 matval, int16 ov)
+static INLINE int M7Mul(int16 matval, int16 ov)
 {
  return (matval * ov) &~ 0x3F;
 }
 
 // Mode 7, scary cake time!
 template<bool extbg, bool dircolor>
-static void DrawMODE7(unsigned line_y, uint16 prio_or, uint32 prio_or_bg1 = 0)
+static MDFN_HOT MDFN_FASTCALL void DrawMODE7(unsigned line_y, uint16 prio_or, uint32 prio_or_bg1 = 0)
 {
  const bool h_flip = M7SEL & 0x01;
  const bool v_flip = M7SEL & 0x02;
@@ -1238,7 +1258,7 @@ static void DrawMODE7(unsigned line_y, uint16 prio_or, uint32 prio_or_bg1 = 0)
 #pragma GCC push_options
 #pragma GCC optimize("no-unroll-loops,no-peel-loops,no-crossjumping")
 template<bool hires = false>
-static void NO_INLINE DoXMosaic(unsigned layernum, uint32* __restrict__ buf)
+static MDFN_HOT MDFN_FASTCALL NO_INLINE void DoXMosaic(unsigned layernum, uint32* __restrict__ buf)
 {
  if(!(Mosaic & (1U << layernum)))
   return;
@@ -1308,7 +1328,7 @@ static INLINE void CalcWindowPieces(void)
 }
 
 template<bool cwin = false, bool hires = false>
-static void DoWindow(unsigned layernum, uint32* __restrict__ buf)
+static MDFN_HOT MDFN_FASTCALL void DoWindow(unsigned layernum, uint32* __restrict__ buf)
 {
  const unsigned mask_settings = (WMSettings[layernum >> 1] >> ((layernum & 1) << 2)) & 0xF;
  const unsigned mask_logic = (WMLogic >> (layernum * 2)) & 0x3;
@@ -1504,7 +1524,7 @@ static INLINE void DoBGLayer(unsigned n, uint32 bgprio)
 }
 
 template<bool half, bool subtract>
-static uint32 CMath(uint32 tmp, uint32 other_color)
+static MDFN_HOT MDFN_FASTCALL uint32 CMath(uint32 tmp, uint32 other_color)
 {
  if(half)
  {
@@ -1547,7 +1567,7 @@ static INLINE uint32 ConvertRGB555(uint32 tmp)
 }
 
 template<bool any_hires, unsigned cmath_mode, bool hires_cmath_add_subscreen = false>
-static void NO_INLINE MixMainSubSubSubMarine(uint32* __restrict__ target)
+static MDFN_HOT MDFN_FASTCALL NO_INLINE void MixMainSubSubSubMarine(uint32* __restrict__ target)
 {
  //if(scanline == 100)
  // fprintf(stderr, "CGWSEL=0x%02x, CGADSUB=0x%02x, WOBJSEL=0x%02x, WMLogic=0x%02x\n", CGWSEL, CGADSUB, WMSettings[2], WMLogic);
@@ -1703,7 +1723,7 @@ static INLINE void PrioHelper(uint32& main, uint32& sub, uint32 np, uint32 nps =
 // hrop =  1 for modes 5 and 6 hires
 // hrop = -1 for pseudo-hires
 template<bool mix_bg0, bool mix_bg1, bool mix_bg2, bool mix_bg3, int hrop>
-static void MixLayersSub(void)
+static MDFN_HOT void MixLayersSub(void)
 {
  uint32 main_back, sub_back;
 
@@ -1903,13 +1923,21 @@ static INLINE void DrawBGAndMixToMS(void)
   SNES_DBG("[PPU] BGMODE: %02x\n", BGMode);
 }
 
-static void RenderLine(void)
+static MDFN_HOT void RenderLine(void)
 {
- uint32* const out_target = es->surface->pixels + ((scanline - 1) * es->surface->pitchinpix);
+ if(MDFN_UNLIKELY(LineTarget > 239))	// Sanity check(239 isn't shown, too...)
+  LineTarget = 239;
+
+ uint32* const out_target = es->surface->pixels + (LineTarget * es->surface->pitchinpix);
+ int32* const out_lw = &es->LineWidths[LineTarget];
+
+ //
+ LineTarget++;
+ //
 
  if(INIDisp & 0x80)
  {
-  es->LineWidths[scanline - 1] = 2;
+  *out_lw = 2;
 
   for(unsigned i = 0; i < 2; i++)
    out_target[i] = 0;
@@ -1942,12 +1970,12 @@ static void RenderLine(void)
   //DoWindow<true>(5, linebuf.sub); // For color window masking to black.  Probably should find a more efficient/logical way to do this...
 
   MixMainSub<true>(out_target);
-  es->LineWidths[scanline - 1] = 512;
+  *out_lw = 512;
  }
  else
  {
   MixMainSub<false>(out_target);
-  es->LineWidths[scanline - 1] = 256;
+  *out_lw = 256;
  }
 }
 
@@ -2076,6 +2104,19 @@ static DEFREAD(Read_4213)
 //
 //
 //
+static INLINE void RenderZero(uint32 bound)
+{
+ while(LineTarget < bound)
+ {
+  uint32* const out_target = es->surface->pixels + (LineTarget * es->surface->pitchinpix);
+
+  es->LineWidths[LineTarget] = 2;
+  out_target[0] = 0;
+  out_target[1] = 0;
+
+  LineTarget++;
+ }
+}
 
 uint32 PPU_Update(uint32 timestamp)
 {
@@ -2110,7 +2151,7 @@ uint32 PPU_Update(uint32 timestamp)
   }
   else	// HBlank end
   {
-   scanline = (scanline + 1) % 262;
+   scanline = (scanline + 1) % LinesPerFrame;
    //
    LineStartTS = timestamp;
    
@@ -2162,13 +2203,15 @@ uint32 PPU_Update(uint32 timestamp)
     //
     //
     //
-    es->DisplayRect.y = ((ScreenMode & 0x04) && 1) ? 8 : 0;
-    es->LineWidths[0] = 0;
+    LineTarget = 0;
+    RenderZero((ScreenMode & 0x04) ? 0 : 8);
+    //printf("%02x, %d\n", ScreenMode, es->DisplayRect.y);
    }
    else if(!VBlank && scanline >= ((ScreenMode & 0x04) ? 0xF0 : 0xE1))
    {
     VBlank = true;
 
+    RenderZero(239);
     //
     //
     //
@@ -2191,7 +2234,7 @@ uint32 PPU_Update(uint32 timestamp)
      OAM_Addr = (OAMADDL | ((OAMADDH & 0x1) << 8)) << 1;
    }
 
-   if(!VBlank)
+   if(MDFN_LIKELY(!VBlank))
    {
     if(scanline > 0 && !es->skip)
      RenderLine();
@@ -2213,8 +2256,11 @@ void PPU_ResetTS(void)
  lastts = 0;
 }
 
-void PPU_Init(void)
+void PPU_Init(const bool IsPAL)
 {
+ PAL = IsPAL;
+ LinesPerFrame = IsPAL ? 312 : 262;
+
  Set_B_Handlers(0x00, OBRead_FAST, Write_2100);
 
  Set_B_Handlers(0x01, OBRead_FAST, Write_OBSEL);
@@ -2292,7 +2338,7 @@ void PPU_Init(void)
  Set_B_Handlers(0x3F, Read_Status1, OBWrite_FAST);
 
  Status[0] = 1;
- Status[1] = (0 << 4) | 2;
+ Status[1] = (IsPAL << 4) | 2;
 
  //
  //
@@ -2311,6 +2357,30 @@ void PPU_Init(void)
    Set_A_Handlers((bank << 16) | 0x4213, Read_4213, OBWrite_FAST);
   }
  }
+}
+
+void PPU_SetGetVideoParams(MDFNGI* gi, const bool caspect)
+{
+ gi->fb_width = 512;
+ gi->fb_height = 480;	// Don't change to less than 480
+
+ if(PAL)
+ {
+  gi->nominal_width = caspect ? 354 : 256;
+  gi->nominal_height = 239;
+
+  gi->fps = 838977920;
+ }
+ else
+ {
+  gi->nominal_width = caspect ? 292 : 256;
+  gi->nominal_height = 224;  
+
+  gi->fps = 1008307711;
+ }
+
+ gi->lcm_width = 512;
+ gi->lcm_height = gi->nominal_height * 2;
 }
 
 void PPU_Kill(void)

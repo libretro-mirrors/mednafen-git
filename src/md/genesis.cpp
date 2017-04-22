@@ -22,10 +22,10 @@
 namespace MDFN_IEN_MD
 {
 
-uint8 (*MD_ExtRead8)(uint32 address) = NULL;
-uint16 (*MD_ExtRead16)(uint32 address) = NULL;
-void (*MD_ExtWrite8)(uint32 address, uint8 value) = NULL;
-void (*MD_ExtWrite16)(uint32 address, uint16 value) = NULL;
+uint8 (MDFN_FASTCALL *MD_ExtRead8)(uint32 address) = NULL;
+uint16 (MDFN_FASTCALL *MD_ExtRead16)(uint32 address) = NULL;
+void (MDFN_FASTCALL *MD_ExtWrite8)(uint32 address, uint8 value) = NULL;
+void (MDFN_FASTCALL *MD_ExtWrite16)(uint32 address, uint16 value) = NULL;
 
 alignas(8) uint8 work_ram[0x10000];    /* 68K work RAM */
 alignas(8) uint8 zram[0x2000];         /* Z80 work RAM */

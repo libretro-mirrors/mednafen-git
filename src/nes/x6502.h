@@ -26,7 +26,7 @@ extern X6502 X;
 #define Z_FLAG  0x02
 #define C_FLAG  0x01
 
-extern void (*MapIRQHook)(int a);
+extern void (MDFN_FASTCALL *MapIRQHook)(int a);
 
 #define NTSC_CPU 1789772.7272727272727272
 #define PAL_CPU  1662607.125

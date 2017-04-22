@@ -32,7 +32,7 @@ namespace MDFN_IEN_SNES_FAUST
  void INPUT_UpdatePhysicalState(void);
  void INPUT_SetMultitap(const bool (&enabled)[2]) MDFN_COLD;
 
- void INPUT_AutoRead(void);
+ void INPUT_AutoRead(void) MDFN_HOT;
 
  extern const std::vector<InputPortInfoStruct> INPUT_PortInfo;
 }

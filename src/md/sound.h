@@ -14,8 +14,8 @@ int MDSound_ReadFM(int address);
 void MDSound_SetSoundMultiplier(double multiplier);
 bool MDSound_SetSoundRate(uint32 rate);
 int32 MDSound_Flush(int16 *SoundBuf, const int32 MaxSoundFrames);
-void MDSound_Init(void);
-void MDSound_Kill(void);
+void MDSound_Init(void) MDFN_COLD;
+void MDSound_Kill(void) MDFN_COLD;
 void MDSound_Power(void);
 
 void MDSound_StateAction(StateMem *sm, const unsigned load, const bool data_only);

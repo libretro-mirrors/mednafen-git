@@ -656,7 +656,7 @@ char *PCFXDBG_ShiftJIS_to_UTF8(const uint16 sjc)
  return(ret);
 }
 
-static RegType PCFXRegs0[] =
+static const RegType PCFXRegs0[] =
 {
         { V810::GSREG_PC, "PC", "Program Counter", 4 },
 	{ V810::GSREG_PR + 1, "PR1", "Program Register 1", 4 },
@@ -718,7 +718,7 @@ static RegType PCFXRegs0[] =
         { 0, "", "", 0 },
 };
 
-static RegType KINGRegs0[] =
+static const RegType KINGRegs0[] =
 {
 	{ KING_GSREG_AR, "AR", "Active Register", 1 },
 	{ KING_GSREG_MPROGADDR, "MPROGADDR", "Micro-program Address", 2 },
@@ -764,7 +764,7 @@ static RegType KINGRegs0[] =
         { 0, "", "", 0 },
 };
 
-static RegType KINGRegs1[] =
+static const RegType KINGRegs1[] =
 {
 	{ 0, "-KING BG-", "", 0xFFFF },
 
@@ -848,7 +848,7 @@ static void SetRegister_VCERAINBOW(const unsigned int id, uint32 value)
   FXVCE_SetRegister(id & 0xFFFF, value);
 } 
 
-static RegType VCERAINBOWRegs[] =
+static const RegType VCERAINBOWRegs[] =
 {
 	{ 0, "--VCE--", "", 0xFFFF },
         { FXVCE_GSREG_Line, "Line", "VCE Frame Counter", 0x100 | 9 },
@@ -898,7 +898,7 @@ static void SetRegister_VDC(const unsigned int id, uint32 value)
 } 
 
 
-static RegType VDCRegs[] =
+static const RegType VDCRegs[] =
 {
         { 0, "--VDC-A--", "", 0xFFFF },
 	
@@ -954,7 +954,7 @@ static RegType VDCRegs[] =
         { 0, "", "", 0 },
 };
 
-static RegGroupType PCFXRegs0Group =
+static const RegGroupType PCFXRegs0Group =
 {
  NULL,
  PCFXRegs0,
@@ -962,7 +962,7 @@ static RegGroupType PCFXRegs0Group =
  PCFXDBG_SetRegister,
 };
 
-static RegGroupType KINGRegs0Group =
+static const RegGroupType KINGRegs0Group =
 {
  NULL,
  KINGRegs0,
@@ -970,7 +970,7 @@ static RegGroupType KINGRegs0Group =
  KING_SetRegister
 };
 
-static RegGroupType KINGRegs1Group =
+static const RegGroupType KINGRegs1Group =
 {
  NULL,
  KINGRegs1,
@@ -978,7 +978,7 @@ static RegGroupType KINGRegs1Group =
  KING_SetRegister
 };
 
-static RegGroupType VCERAINBOWRegsGroup =
+static const RegGroupType VCERAINBOWRegsGroup =
 {
  NULL,
  VCERAINBOWRegs,
@@ -986,7 +986,7 @@ static RegGroupType VCERAINBOWRegsGroup =
  SetRegister_VCERAINBOW
 };
 
-static RegGroupType VDCRegsGroup =
+static const RegGroupType VDCRegsGroup =
 {
  NULL,
  VDCRegs,

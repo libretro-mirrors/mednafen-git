@@ -36,8 +36,8 @@ extern bool PCE_UsageMapOn;
 
 extern DebuggerInfoStruct PCEDBGInfo;
 
-void PCEDBG_Init(bool sgx, PCE_PSG *psg, const uint32 vram_size);
-void PCEDBG_Kill(void);
+void PCEDBG_Init(bool sgx, PCE_PSG *psg, const uint32 vram_size) MDFN_COLD;
+void PCEDBG_Kill(void) MDFN_COLD;
 
 };
 

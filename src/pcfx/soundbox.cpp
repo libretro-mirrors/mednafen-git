@@ -116,7 +116,7 @@ enum
  { PSG_GSREG_CH0_WINDEX | (n << 8), "WIndex", "PSG Ch"#n" Waveform Index", 1},     \
  { PSG_GSREG_CH0_SCACHE | (n << 8), "SCache", "PSG Ch"#n" Sample Cache", 1 }
 
-static RegType SBoxRegs[] =
+static const RegType SBoxRegs[] =
 {
  { PSG_GSREG_SELECT, "Select", "PSG Channel Select", 1 },
  { PSG_GSREG_GBALANCE, "GBal", "PSG Global Balance", 1 },
@@ -252,7 +252,7 @@ static void SBoxDBG_SetRegister(const unsigned int id, uint32 value)
  }
 }
 
-static RegGroupType SBoxRegsGroup =
+static const RegGroupType SBoxRegsGroup =
 {
  "SndBox",
  SBoxRegs,

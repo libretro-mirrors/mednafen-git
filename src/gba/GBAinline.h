@@ -28,7 +28,7 @@ namespace MDFN_IEN_GBA
 {
 
 #ifdef INCED_FROM_ARM_CPP
-#define EXCLUDE_ARM_FROM_INLINE
+#define EXCLUDE_ARM_FROM_INLINE MDFN_FASTCALL
 #else
 #define EXCLUDE_ARM_FROM_INLINE INLINE
 #endif
@@ -82,9 +82,9 @@ extern int cpuTotalTicks;
 #define CPUReadMemoryQuick(addr) \
   READ32LE(((uint32*)&map[(addr)>>24].address[(addr) & map[(addr)>>24].mask]))
 
-uint32 CPUReadMemory(uint32 address);
+MDFN_FASTCALL uint32 CPUReadMemory(uint32 address);
 
-uint32 CPUReadHalfWord(uint32 address);
+MDFN_FASTCALL uint32 CPUReadHalfWord(uint32 address);
 
 static INLINE uint16 CPUReadHalfWordSigned(uint32 address)
 {
@@ -94,7 +94,7 @@ static INLINE uint16 CPUReadHalfWordSigned(uint32 address)
   return value;
 }
 
-uint8 CPUReadByte(uint32 address);
+MDFN_FASTCALL uint8 CPUReadByte(uint32 address);
 
 // Waitstates when accessing data
 static EXCLUDE_ARM_FROM_INLINE int dataTicksAccesint16(uint32 address) // DATA 8/16bits NON SEQ

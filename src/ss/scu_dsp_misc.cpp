@@ -61,7 +61,7 @@ static NO_INLINE NO_CLONE void MiscInstr(void)
  }
 }
 
-void (*DSP_MiscFuncTable[2][4])(void) =
+extern void (*const DSP_MiscFuncTable[2][4])(void) =
 {
  #include "scu_dsp_misctab.inc"
 };

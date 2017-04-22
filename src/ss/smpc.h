@@ -80,10 +80,10 @@ class IODevice
 {
  public:
 
- IODevice();
- virtual ~IODevice();
+ IODevice() MDFN_COLD;
+ virtual ~IODevice() MDFN_COLD;
 
- virtual void Power(void);
+ virtual void Power(void) MDFN_COLD;
 
  //
  // time_elapsed is emulated time elapsed since last call to UpdateInput(), in microseconds;

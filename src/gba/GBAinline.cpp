@@ -25,7 +25,7 @@
 namespace MDFN_IEN_GBA
 {
 
-uint32 CPUReadMemory(uint32 address)
+MDFN_FASTCALL uint32 CPUReadMemory(uint32 address)
 {  
   uint32 value;
 
@@ -113,7 +113,7 @@ uint32 CPUReadMemory(uint32 address)
   return value;
 }
 
-uint32 CPUReadHalfWord(uint32 address)
+MDFN_FASTCALL uint32 CPUReadHalfWord(uint32 address)
 {
   uint32 value;
   
@@ -211,7 +211,7 @@ uint32 CPUReadHalfWord(uint32 address)
   return value;
 }
 
-uint8 CPUReadByte(uint32 address)
+MDFN_FASTCALL uint8 CPUReadByte(uint32 address)
 {
   switch(address >> 24) {
   case 0:

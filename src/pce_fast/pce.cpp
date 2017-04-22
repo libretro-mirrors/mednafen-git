@@ -721,7 +721,7 @@ static const FileExtensionSpecStruct KnownExtensions[] =
 
 static const CustomPalette_Spec CPInfo[] =
 {
- { gettext_noop("PCE/TG16 9-bit RGB"), NULL, { 512, 1024, 0 } },
+ { gettext_noop("PCE/TG16 9-bit GRB.  If only 512 triplets are present, the remaining 512 greyscale colors will be calculated automatically."), NULL, { 512, 1024, 0 } },
 
  { NULL, NULL }
 };

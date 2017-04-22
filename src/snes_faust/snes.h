@@ -26,8 +26,8 @@
 
 #include <mednafen/mednafen.h>
 
-#define DEFREAD(x) uint8 MDFN_FASTCALL x (uint32 A)
-#define DEFWRITE(x) void MDFN_FASTCALL x (uint32 A, uint8 V)
+#define DEFREAD(x) uint8 MDFN_FASTCALL MDFN_HOT x (uint32 A)
+#define DEFWRITE(x) void MDFN_FASTCALL MDFN_HOT x (uint32 A, uint8 V)
 
 #define MEMCYC_FAST   6
 #define MEMCYC_SLOW   8
@@ -59,20 +59,20 @@ DEFWRITE(OBWrite_VAR);
 // Caution: B bus read/write handlers should ignore the upper 24 bits of the passed-in address
 // variable.
 //
-void Set_B_Handlers(uint8 A1, uint8 A2, readfunc read_handler, writefunc write_handler);
+void Set_B_Handlers(uint8 A1, uint8 A2, readfunc read_handler, writefunc write_handler) MDFN_COLD;
 static INLINE void Set_B_Handlers(uint8 A1, readfunc read_handler, writefunc write_handler)
 {
  Set_B_Handlers(A1, A1, read_handler, write_handler);
 }
 
-void Set_A_Handlers(uint32 A1, uint32 A2, readfunc read_handler, writefunc write_handler);
+void Set_A_Handlers(uint32 A1, uint32 A2, readfunc read_handler, writefunc write_handler) MDFN_COLD;
 static INLINE void Set_A_Handlers(uint32 A1, readfunc read_handler, writefunc write_handler)
 {
  Set_A_Handlers(A1, A1, read_handler, write_handler);
 }
 
-void DMA_InitHDMA(void);
-void DMA_RunHDMA(void);
+void DMA_InitHDMA(void) MDFN_HOT;
+void DMA_RunHDMA(void) MDFN_HOT;
 
 void ForceEventUpdates(const uint32 timestamp);
 
@@ -86,7 +86,7 @@ enum
 };
 
 #define SNES_EVENT_MAXTS       		0x20000000
-void SNES_SetEventNT(const int type, const uint32 next_timestamp);
+void SNES_SetEventNT(const int type, const uint32 next_timestamp) MDFN_HOT;
 
 
 }

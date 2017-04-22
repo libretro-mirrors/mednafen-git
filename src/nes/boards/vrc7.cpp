@@ -109,7 +109,7 @@ static DECLFW(Mapper85_write)
         }
 }
 
-static void KonamiIRQHook(int a)
+static MDFN_FASTCALL void KonamiIRQHook(int a)
 {
   #define ACBOO 341
 //  #define ACBOO ((227*2)+1)

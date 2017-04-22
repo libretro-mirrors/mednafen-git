@@ -206,10 +206,7 @@ static void TestTypesSign(void)
 {
  // Make sure the "char" type is signed(pass -fsigned-char to gcc).  New code in Mednafen shouldn't be written with the
  // assumption that "char" is signed, but there likely is at least some code that does.
- {
-  char tmp = 255;
-  assert(tmp < 0);
- }
+ assert((char)255 < 0);
 }
 
 static void AntiNSOBugTest_Sub1_a(int *array) NO_INLINE;
@@ -275,7 +272,7 @@ static void DoAntiNSOBugTest(void)
 static void DoAntiNSOBugTest2014_SubA(int a) NO_INLINE NO_CLONE;
 static void DoAntiNSOBugTest2014_SubA(int a)
 {
- char c = 0;
+ signed char c = 0;
 
  for(; a; a--)
  {
@@ -300,7 +297,7 @@ static void DoAntiNSOBugTest2014_SubMx_F(void)
 static void DoAntiNSOBugTest2014_SubM1(void) NO_INLINE NO_CLONE;
 static void DoAntiNSOBugTest2014_SubM1(void)
 {
- char a;
+ signed char a;
 
  for(a = 127 - 1; a >= 0; a++)
   DoAntiNSOBugTest2014_SubMx_F();
@@ -309,7 +306,7 @@ static void DoAntiNSOBugTest2014_SubM1(void)
 static void DoAntiNSOBugTest2014_SubM3(void) NO_INLINE NO_CLONE;
 static void DoAntiNSOBugTest2014_SubM3(void)
 {
- char a;
+ signed char a;
 
  for(a = 127 - 3; a >= 0; a++)
   DoAntiNSOBugTest2014_SubMx_F();
@@ -596,7 +593,7 @@ unsigned MDFNTests_ModTern_b = 0;
 static void ModTernTestEval(unsigned v) NO_INLINE MDFN_COLD;
 static void ModTernTestEval(unsigned v)
 {
-// assert(v == 0);
+ assert(v == 0);
 }
 
 static void TestModTern(void) NO_INLINE MDFN_COLD;
@@ -842,6 +839,12 @@ static void RunMASMemTests(void)
  assert(RunMASMemTests_DoomAndGloom(0) == 1);
 }
 
+
+void NO_INLINE NO_CLONE RunMiscEndianTests_Sub(uint32 v, volatile uint16* a)
+{
+ *a = (v << 24) | (v >> 24) | ((v << 8) & 0xFF0000) | ((v >> 8) & 0xFF00);
+}
+
 static void NO_INLINE NO_CLONE RunMiscEndianTests(uint32 arg0, uint32 arg1)
 {
  uint8 mem[8];
@@ -923,6 +926,17 @@ static void NO_INLINE NO_CLONE RunMiscEndianTests(uint32 arg0, uint32 arg1)
 
   for(unsigned z = 0; z < 8; z++)
    assert(mem[z] == ((z >= i) ? z : (i - 1 - z)));
+ }
+ //
+ //
+ //
+ {
+  volatile uint16 greatzorb[2] = { 0x0123, 0x4567 };
+
+  RunMiscEndianTests_Sub(0xA55ADEAD, greatzorb);
+
+  assert(greatzorb[0] == 0x5AA5);
+  assert(greatzorb[1] == 0x4567);
  }
 }
 
@@ -1434,6 +1448,198 @@ static void TestCastShift(void)
  assert((TestCasts_Sub<uint64,  int32, -20>(0xDEADBEEF) == 0x00000FFFFFFFFDEAULL));
 }
 
+union tup_floatyint
+{
+ float f;
+ uint32 i;
+ uint64 j;
+};
+
+void NO_INLINE NO_CLONE TestUnionPun_Sub0(tup_floatyint* t)
+{
+ t->f = 1.0;
+ t->i++;
+ t->j -= 0x100000001ULL;
+}
+
+float NO_INLINE NO_CLONE TestUnionPun_Sub1(tup_floatyint* t, int z)
+{
+ float a = 0;
+
+ while(z--)
+ {
+  t->f = 1.0;
+  t->i++;
+  t->j -= 0x100000001ULL;
+  a += t->f;
+ }
+
+ return a;
+}
+
+float NO_INLINE NO_CLONE TestUnionPun_Sub2(tup_floatyint* t, int z)
+{
+ float a = 0;
+
+ while(z--)
+ {
+  t->f *= 2;
+  t->i++;
+  t->j -= 0x100000001ULL;
+  t->f /= 2;
+  a += t->f * 2;
+ }
+
+ return a;
+}
+
+
+static void TestUnionPun(void)
+{
+ tup_floatyint v;
+
+ v.j = ~(uint64)0;
+ v.f = 1.0;
+ v.i++;
+ assert(v.f != 1.0);
+ v.j -= 0x100000001ULL;
+ assert(v.f == 1.0);
+
+ v.f++;
+ v.j = ~(uint64)0;
+ TestUnionPun_Sub0(&v);
+ assert(v.f == 1.0);
+
+ v.f--;
+ v.j = ~(uint64)0;
+ float t0 = TestUnionPun_Sub1(&v, 9);
+ assert(t0 == 9.0);
+ assert(v.f == 1.0);
+
+ v.j = ~(uint64)0;
+ v.f = 32;
+ float t1 = TestUnionPun_Sub2(&v, 15);
+ assert(t1 == 960.0);
+ assert(v.f == 32.0);
+}
+
+void NO_INLINE NO_CLONE TestI8Alias_Sub(int8* a, uint8* b, unsigned* c)
+{
+ (*a)++;
+ *c *= 2;
+ (*b)++;
+ *c *= 3;
+ (*a)++;
+ *c *= 4;
+ (*b)++;
+ *c *= 5;
+
+ (*a)++;
+ *c *= 6;
+ (*a)++;
+ *c *= 7;
+ (*a)++;
+ *c *= 8;
+ (*a)++;
+ *c *= 9;
+
+ (*b)++;
+ *c *= 10;
+ (*b)++;
+ *c *= 11;
+ (*b)++;
+ *c *= 12;
+ (*b)++;
+ *c *= 13;
+
+ (*b)++;
+ *c *= 14 + (*a < 0);
+ (*b)++;
+ *c *= 15 + (*a < 0);
+ (*b)++;
+ *c *= 16 + (*a < 0);
+ (*b)++;
+ *c *= 17 + (*a < 0);
+}
+
+static void TestI8Alias(void)
+{
+ unsigned v = 1;
+ for(char* z = (char*)&v; z != (char*)&v + sizeof(v); z++)
+ {
+  if(*z)
+  {
+   TestI8Alias_Sub((int8*)z, (uint8*)z, &v);
+   //printf("%08x\n", v);
+   break;
+  }
+ }
+ assert(v == 0x297adbae);
+}
+
+template<typename T, typename U>
+NO_INLINE NO_CLONE void TestSUSAlias_Sub(T* a, U* b)
+{
+ *a *= 2;
+ *b += 1;
+ *a *= 2;
+}
+
+static void TestSUSAlias(void)
+{
+ unsigned char d = 1;
+ unsigned short e = 1;
+ unsigned int f = 1;
+ unsigned long g = 1;
+ unsigned long long h = 1;
+
+ TestSUSAlias_Sub((unsigned char*)&d, (signed char*)&d);
+ TestSUSAlias_Sub((unsigned short*)&e, (signed short*)&e);
+ TestSUSAlias_Sub((unsigned int*)&f, (signed int*)&f);
+ TestSUSAlias_Sub((unsigned long*)&g, (signed long*)&g);
+ TestSUSAlias_Sub((unsigned long long*)&h, (signed long long*)&h);
+
+ assert(d == 6);
+ assert(e == 6);
+ assert(f == 6);
+ assert(g == 6);
+ assert(h == 6);
+}
+
+NO_INLINE NO_CLONE int8 TestDiv_Sub0(int8 a)
+{
+ return (uint16)a / -3;
+}
+
+NO_INLINE NO_CLONE int8 TestDiv_Sub1(int8 a)
+{
+ return (int8)(-a) / 2;
+}
+
+NO_INLINE NO_CLONE int16 TestDiv_Sub2(int16 a)
+{
+ return (int16)(-a) / 2;
+}
+
+NO_INLINE NO_CLONE int32 TestDiv_Sub3(int32 a)
+{
+ return (int32)(-(uint32)a) / 2;
+}
+
+NO_INLINE NO_CLONE int64 TestDiv_Sub4(int64 a)
+{
+ return (int64)(-(uint64)a) / 2;
+}
+
+static void TestDiv(void)
+{
+ //assert((uint8)TestDiv_Sub0(-1) == (uint8)(0xFFFF / -3));
+ assert(TestDiv_Sub1(-128) == -64);
+ assert(TestDiv_Sub2(-32768) == -16384);
+ assert(TestDiv_Sub3((uint32)1 << 31) == -1073741824);
+ assert(TestDiv_Sub4((uint64)1 << 63) == (int64)((uint64)1 << 63) >> 1);
+}
+
 static void Time_Test(void)
 {
  {
@@ -1722,6 +1928,13 @@ bool MDFN_RunMathTests(void)
 
  TestCastShift();
 
+ TestUnionPun();
+
+ TestI8Alias();
+
+ TestSUSAlias();
+
+ TestDiv();
 
 #if 0
 // Not really a math test.

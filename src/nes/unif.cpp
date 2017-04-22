@@ -101,7 +101,7 @@ static void UNIF_StateAction(StateMem *sm, const unsigned load, const bool data_
   UNIFCart.StateAction(sm, load, data_only);
 }
 
-static void FreeUNIF(void)
+static MDFN_COLD void FreeUNIF(void)
 {
  if(UNIFchrrama)
  {
@@ -131,7 +131,7 @@ static void FreeUNIF(void)
  }
 }
 
-static void ResetUNIF(void)
+static MDFN_COLD void ResetUNIF(void)
 {
  for(int x = 0; x < 32; x++)
   malloced[x] = NULL;
@@ -509,13 +509,13 @@ static void InitializeBoard(void)
    throw MDFN_Error(0, _("Board type not supported."));
 }
 
-static void UNIF_Reset(void)
+static MDFN_COLD void UNIF_Reset(void)
 {
  if(UNIFCart.Reset)
   UNIFCart.Reset(&UNIFCart);
 }
 
-static void UNIF_Power(void)
+static MDFN_COLD void UNIF_Power(void)
 {
  if(UNIFCart.Power)
   UNIFCart.Power(&UNIFCart);
@@ -527,7 +527,7 @@ static void UNIF_SaveNV(void)
  MDFN_SaveGameSave(&UNIFCart);
 }
 
-static void UNIF_Kill(void)
+static MDFN_COLD void UNIF_Kill(void)
 {
  if(UNIFCart.Close)
   UNIFCart.Close();
@@ -545,7 +545,7 @@ bool UNIF_TestMagic(MDFNFILE *fp)
 }
 
 
-void UNIFLoad(Stream *fp, NESGameType *gt)
+MDFN_COLD void UNIFLoad(Stream *fp, NESGameType *gt)
 {
   try
   {

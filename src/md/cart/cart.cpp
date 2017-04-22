@@ -42,22 +42,22 @@ static MD_Cart_Type *cart_hardware = NULL;
 static uint8 *cart_rom = NULL;
 static uint32 Cart_ROM_Size;
 
-void MDCart_Write8(uint32 A, uint8 V)
+MDFN_FASTCALL void MDCart_Write8(uint32 A, uint8 V)
 {
  cart_hardware->Write8(A, V);
 }
 
-void MDCart_Write16(uint32 A, uint16 V)
+MDFN_FASTCALL void MDCart_Write16(uint32 A, uint16 V)
 {
  cart_hardware->Write16(A, V);
 }
 
-uint8 MDCart_Read8(uint32 A)
+MDFN_FASTCALL uint8 MDCart_Read8(uint32 A)
 {
  return(cart_hardware->Read8(A));
 }
 
-uint16 MDCart_Read16(uint32 A)
+MDFN_FASTCALL uint16 MDCart_Read16(uint32 A)
 {
  return(cart_hardware->Read16(A));
 }
@@ -298,7 +298,7 @@ typedef struct
  const char *sparam;
 } BoardHandler_t;
 
-static BoardHandler_t BoardHandlers[] =
+static const BoardHandler_t BoardHandlers[] =
 {
  { "ROM", MD_Make_Cart_Type_ROM, 0, NULL },
  { "SRAM", MD_Make_Cart_Type_SRAM, 0, NULL },

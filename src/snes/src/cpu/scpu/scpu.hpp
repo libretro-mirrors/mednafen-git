@@ -1,7 +1,6 @@
 class sCPU : public CPU, public CPUcore {
 public:
   void enter();
-  debugvirtual void op_step();
   void op_irq();
   bool interrupt_pending() { return status.interrupt_pending; }
 

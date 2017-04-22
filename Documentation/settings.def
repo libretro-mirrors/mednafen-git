@@ -30163,6 +30163,15 @@ MDFNST_FLOAT
 0.01
 256
 0
+snes_faust.correct_aspect
+
+Correct aspect ratio.
+
+MDFNST_BOOL
+1
+
+
+0
 snes_faust.enable
 MDFNSF_COMMON_TEMPLATE 
 Enable (automatic) usage of this module.
@@ -31971,7 +31980,7 @@ MDFNST_ENUM
 auto
 
 
-5
+6
 auto
 Automatic
 
@@ -31986,6 +31995,9 @@ extram1
 
 extram4
 4MiB Extended RAM
+
+cs1ram16
+16MiB RAM mapped in A-bus CS1
 
 ss.cart.kof95_path
 MDFNSF_EMU_STATE 
@@ -55423,6 +55435,15 @@ MDFNST_BOOL
 
 
 0
+vb.ledonscale
+
+LED on duration to linear RGB conversion coefficient.
+Setting this higher than the default will cause excessive white crush in at least one game.  A value of 1.0 is close to ideal, other than causing the image to be rather dark.
+MDFNST_FLOAT
+1.75
+1.0
+2.0
+0
 vb.liprescale
 
 Line Interlaced prescale.
@@ -55987,6 +56008,21 @@ MDFNST_BOOL
 
 
 0
+wswan.input.builtin
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Built-In
+
+MDFNST_ENUM
+gamepad
+
+
+2
+gamepad
+Gamepad
+
+gamepadraa
+Gamepad(Rotation Auto-Adjust)
+
 wswan.input.builtin.gamepad.a
 (nil) MDFNSF_SUPPRESS_DOC 
 wswan, Built-In, Gamepad: A
@@ -56104,6 +56140,123 @@ keyboard 273
 
 
 0
+wswan.input.builtin.gamepadraa.a
+(nil) MDFNSF_SUPPRESS_DOC 
+wswan, Built-In, Gamepad(Rotation Auto-Adjust): A (right)
+
+MDFNST_STRING
+keyboard 259
+
+
+0
+wswan.input.builtin.gamepadraa.ap
+(nil) MDFNSF_SUPPRESS_DOC 
+wswan, Built-In, Gamepad(Rotation Auto-Adjust): A\'(center, upper)
+
+MDFNST_STRING
+keyboard 262
+
+
+0
+wswan.input.builtin.gamepadraa.b
+(nil) MDFNSF_SUPPRESS_DOC 
+wswan, Built-In, Gamepad(Rotation Auto-Adjust): B (center, lower)
+
+MDFNST_STRING
+keyboard 258
+
+
+0
+wswan.input.builtin.gamepadraa.bp
+(nil) MDFNSF_SUPPRESS_DOC 
+wswan, Built-In, Gamepad(Rotation Auto-Adjust): B\'(left)
+
+MDFNST_STRING
+keyboard 261
+
+
+0
+wswan.input.builtin.gamepadraa.down-x
+(nil) MDFNSF_SUPPRESS_DOC 
+wswan, Built-In, Gamepad(Rotation Auto-Adjust): X3(X DOWN ↓)
+
+MDFNST_STRING
+keyboard 115
+
+
+0
+wswan.input.builtin.gamepadraa.down-y
+(nil) MDFNSF_SUPPRESS_DOC 
+wswan, Built-In, Gamepad(Rotation Auto-Adjust): Y3(Y DOWN ↓)
+
+MDFNST_STRING
+keyboard 274
+
+
+0
+wswan.input.builtin.gamepadraa.left-x
+(nil) MDFNSF_SUPPRESS_DOC 
+wswan, Built-In, Gamepad(Rotation Auto-Adjust): X4(X LEFT ←)
+
+MDFNST_STRING
+keyboard 97
+
+
+0
+wswan.input.builtin.gamepadraa.left-y
+(nil) MDFNSF_SUPPRESS_DOC 
+wswan, Built-In, Gamepad(Rotation Auto-Adjust): Y4(Y LEFT ←)
+
+MDFNST_STRING
+keyboard 276
+
+
+0
+wswan.input.builtin.gamepadraa.right-x
+(nil) MDFNSF_SUPPRESS_DOC 
+wswan, Built-In, Gamepad(Rotation Auto-Adjust): X2(X RIGHT →)
+
+MDFNST_STRING
+keyboard 100
+
+
+0
+wswan.input.builtin.gamepadraa.right-y
+(nil) MDFNSF_SUPPRESS_DOC 
+wswan, Built-In, Gamepad(Rotation Auto-Adjust): Y2(Y RIGHT →)
+
+MDFNST_STRING
+keyboard 275
+
+
+0
+wswan.input.builtin.gamepadraa.start
+(nil) MDFNSF_SUPPRESS_DOC 
+wswan, Built-In, Gamepad(Rotation Auto-Adjust): Start
+
+MDFNST_STRING
+keyboard 13
+
+
+0
+wswan.input.builtin.gamepadraa.up-x
+(nil) MDFNSF_SUPPRESS_DOC 
+wswan, Built-In, Gamepad(Rotation Auto-Adjust): X1(X UP ↑)
+
+MDFNST_STRING
+keyboard 119
+
+
+0
+wswan.input.builtin.gamepadraa.up-y
+(nil) MDFNSF_SUPPRESS_DOC 
+wswan, Built-In, Gamepad(Rotation Auto-Adjust): Y1(Y UP ↑)
+
+MDFNST_STRING
+keyboard 273
+
+
+0
 wswan.language
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 Language games should display text in.
@@ -56131,15 +56284,6 @@ Name
 
 MDFNST_STRING
 Mednafen
-
-
-0
-wswan.rotateinput
-
-Virtually rotate the D-pads when the screen is rotated.
-
-MDFNST_BOOL
-0
 
 
 0

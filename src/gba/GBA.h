@@ -92,9 +92,9 @@ extern void doMirroring(bool);
 extern void CPUUpdateRegister(uint32, uint16);
 extern void applyTimer ();
 
-void CPUWriteMemory(uint32 address, uint32 value);
-void CPUWriteHalfWord(uint32, uint16);
-void CPUWriteByte(uint32, uint8);
+MDFN_FASTCALL void CPUWriteMemory(uint32 address, uint32 value);
+MDFN_FASTCALL void CPUWriteHalfWord(uint32, uint16);
+MDFN_FASTCALL void CPUWriteByte(uint32, uint8);
 
 extern void CPUCheckDMA(int,int);
 
@@ -103,7 +103,6 @@ extern void CPUSwitchMode(int mode, bool saveState);
 extern void CPUUndefinedException();
 extern void CPUSoftwareInterrupt();
 extern void CPUSoftwareInterrupt(int comment);
-extern void CPUCompareVCOUNT();
 extern void CPUUpdateCPSR();
 extern void CPUUpdateFlags(bool breakLoop);
 extern void CPUUpdateFlags();

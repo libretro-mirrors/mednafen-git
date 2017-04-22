@@ -244,7 +244,7 @@ void INPUT_StateAction(StateMem *sm, int load, int data_only)
  MDFNSS_StateAction(sm, load, data_only, StateRegs, "JOY");
 }
 
-static const char* ModeSwitchPositions[] =
+static const char* const ModeSwitchPositions[] =
 {
  gettext_noop("2-button"),
  gettext_noop("6-button"),

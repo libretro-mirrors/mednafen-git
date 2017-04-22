@@ -101,7 +101,7 @@ static DECLFW(Mapper23_write)
  }
 }
 
-static void KonamiIRQHook2(int a)
+static MDFN_FASTCALL void KonamiIRQHook2(int a)
 {
   #define LCYCS 341
   if(IRQa)

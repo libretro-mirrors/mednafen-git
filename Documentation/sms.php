@@ -9,6 +9,8 @@ Sega Master System emulation in Mednafen is a low-priority system in terms of pr
 </p>
 <?php EndSection(); ?>
 
+<?php PrintCustomPalettes(); ?>
+
 <?php PrintSettings(); ?>
 
 <?php EndPage(); ?>

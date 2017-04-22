@@ -6,11 +6,8 @@
 <p>
 Mednafen's NES/Famicom emulation is based off of FCE Ultra.
 </p>
-<?php BeginSection('Custom Palettes', "Section_custom_palettes"); ?>
-<p>
-Custom palettes should contain 64 8-bit-per-color-component RGB triplets.
-</p>
-<?php EndSection(); ?>
+
+<?php PrintCustomPalettes(); ?>
 
 <?php BeginSection("Input", "Section_input"); ?>
  <p>

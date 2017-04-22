@@ -29,9 +29,9 @@ class InputDevice_Multitap final : public InputDevice
 {
  public:
 
- InputDevice_Multitap();
- virtual ~InputDevice_Multitap() override;
- virtual void Power(void) override;
+ InputDevice_Multitap() MDFN_COLD;
+ virtual ~InputDevice_Multitap() override MDFN_COLD;
+ virtual void Power(void) override MDFN_COLD;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
 
  virtual void Update(const pscpu_timestamp_t timestamp) override;

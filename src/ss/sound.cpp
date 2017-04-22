@@ -75,16 +75,16 @@ static INLINE void SCSP_MainIntChanged(bool state)
 //
 //
 template<typename T>
-static T SoundCPU_BusRead(uint32 A);
+static MDFN_FASTCALL T SoundCPU_BusRead(uint32 A);
 
-static uint16 SoundCPU_BusReadInstr(uint32 A);
+static MDFN_FASTCALL uint16 SoundCPU_BusReadInstr(uint32 A);
 
 template<typename T>
-static INLINE void SoundCPU_BusWrite(uint32 A, T V);
+static MDFN_FASTCALL void SoundCPU_BusWrite(uint32 A, T V);
 
-static void SoundCPU_BusRMW(uint32 A, uint8 (*cb)(M68K*, uint8));
-static unsigned SoundCPU_BusIntAck(uint8 level);
-static void SoundCPU_BusRESET(bool state);
+static MDFN_FASTCALL void SoundCPU_BusRMW(uint32 A, uint8 (MDFN_FASTCALL *cb)(M68K*, uint8));
+static MDFN_FASTCALL unsigned SoundCPU_BusIntAck(uint8 level);
+static MDFN_FASTCALL void SoundCPU_BusRESET(bool state);
 //
 //
 
@@ -322,7 +322,7 @@ void SOUND_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 // TODO: test masks.
 //
 template<typename T>
-static T SoundCPU_BusRead(uint32 A)
+static MDFN_FASTCALL T SoundCPU_BusRead(uint32 A)
 {
  T ret;
 
@@ -338,7 +338,7 @@ static T SoundCPU_BusRead(uint32 A)
  return ret;
 }
 
-static uint16 SoundCPU_BusReadInstr(uint32 A)
+static MDFN_FASTCALL uint16 SoundCPU_BusReadInstr(uint32 A)
 {
  uint16 ret;
 
@@ -355,7 +355,7 @@ static uint16 SoundCPU_BusReadInstr(uint32 A)
 }
 
 template<typename T>
-static INLINE void SoundCPU_BusWrite(uint32 A, T V)
+static MDFN_FASTCALL void SoundCPU_BusWrite(uint32 A, T V)
 {
  if(MDFN_UNLIKELY(SoundCPU.timestamp >= next_scsp_time))
   RunSCSP();
@@ -366,7 +366,7 @@ static INLINE void SoundCPU_BusWrite(uint32 A, T V)
 }
 
 
-static void SoundCPU_BusRMW(uint32 A, uint8 (*cb)(M68K*, uint8))
+static MDFN_FASTCALL void SoundCPU_BusRMW(uint32 A, uint8 (MDFN_FASTCALL *cb)(M68K*, uint8))
 {
  uint8 tmp;
 
@@ -386,12 +386,12 @@ static void SoundCPU_BusRMW(uint32 A, uint8 (*cb)(M68K*, uint8))
  SoundCPU.timestamp += 2;
 }
 
-static unsigned SoundCPU_BusIntAck(uint8 level)
+static MDFN_FASTCALL unsigned SoundCPU_BusIntAck(uint8 level)
 {
  return M68K::BUS_INT_ACK_AUTO;
 }
 
-static void SoundCPU_BusRESET(bool state)
+static MDFN_FASTCALL void SoundCPU_BusRESET(bool state)
 {
  //SS_DBG(SS_DBG_WARNING, "[M68K] RESET: %d @ time %d\n", state, SoundCPU.timestamp);
  if(state)

@@ -84,7 +84,7 @@ static unsigned const psx_dbg_level = 0;
 
 struct MDFN_PseudoRNG	// Based off(but not the same as) public-domain "JKISS" PRNG.
 {
- MDFN_PseudoRNG()
+ MDFN_COLD MDFN_PseudoRNG()
  {
   ResetState();
  }
@@ -122,7 +122,7 @@ struct MDFN_PseudoRNG	// Based off(but not the same as) public-domain "JKISS" PR
   return(mina + tmp);
  }
 
- void ResetState(void)	// Must always reset to the same state.
+ MDFN_COLD void ResetState(void)	// Must always reset to the same state.
  {
   x = 123456789;
   y = 987654321;
@@ -147,10 +147,10 @@ class PSF1Loader : public PSFLoader
 {
  public:
 
- PSF1Loader(Stream *fp);
- virtual ~PSF1Loader() override;
+ PSF1Loader(Stream *fp) MDFN_COLD;
+ virtual ~PSF1Loader() override MDFN_COLD;
 
- virtual void HandleEXE(Stream* fp, bool ignore_pcsp = false) override;
+ virtual void HandleEXE(Stream* fp, bool ignore_pcsp = false) override MDFN_COLD;
 
  PSFTags tags;
 };
@@ -229,7 +229,6 @@ static int64 Memcard_SaveDelay[8];
 
 PS_CPU *CPU = NULL;
 PS_SPU *SPU = NULL;
-PS_GPU *GPU = NULL;
 PS_CDC *CDC = NULL;
 FrontIO *FIO = NULL;
 
@@ -389,7 +388,7 @@ void PSX_SetEventNT(const int type, const pscpu_timestamp_t next_timestamp)
 // Called from debug.cpp too.
 void ForceEventUpdates(const pscpu_timestamp_t timestamp)
 {
- PSX_SetEventNT(PSX_EVENT_GPU, GPU->Update(timestamp));
+ PSX_SetEventNT(PSX_EVENT_GPU, GPU_Update(timestamp));
  PSX_SetEventNT(PSX_EVENT_CDC, CDC->Update(timestamp));
 
  PSX_SetEventNT(PSX_EVENT_TIMER, TIMER_Update(timestamp));
@@ -415,7 +414,7 @@ bool MDFN_FASTCALL PSX_EventHandler(const pscpu_timestamp_t timestamp)
    default: abort();
 
    case PSX_EVENT_GPU:
-	nt = GPU->Update(e->event_time);
+	nt = GPU_Update(e->event_time);
 	break;
 
    case PSX_EVENT_CDC:
@@ -596,9 +595,9 @@ template<typename T, bool IsWrite, bool Access24> static INLINE void MemRW(pscpu
     timestamp++;
 
    if(IsWrite)
-    GPU->Write(timestamp, A, V);
+    GPU_Write(timestamp, A, V);
    else
-    V = GPU->Read(timestamp, A);
+    V = GPU_Read(timestamp, A);
 
    return;
   }
@@ -1050,7 +1049,7 @@ static void PSX_Reset(bool powering_up)
 
  MDEC_Power();
  CDC->Power();
- GPU->Power();
+ GPU_Power();
  //SPU->Power();	// Called from CDC->Power()
  IRQ_Power();
 
@@ -1087,7 +1086,7 @@ static void Emulate(EmulateSpecStruct *espec)
  espec->SoundBufSize = 0;
 
  FIO->UpdateInput();
- GPU->StartFrame(psf_loader ? NULL : espec);
+ GPU_StartFrame(psf_loader ? NULL : espec);
  SPU->StartFrame(espec->SoundRate, MDFN_GetSettingUI("psx.spu.resamp_quality"));
 
  Running = -1;
@@ -1096,10 +1095,10 @@ static void Emulate(EmulateSpecStruct *espec)
  assert(timestamp);
 
  ForceEventUpdates(timestamp);
- if(GPU->GetScanlineNum() < 100)
-  PSX_DBG(PSX_DBG_ERROR, "[BUUUUUUUG] Frame timing end glitch; scanline=%u, st=%u\n", GPU->GetScanlineNum(), timestamp);
+ if(GPU_GetScanlineNum() < 100)
+  PSX_DBG(PSX_DBG_ERROR, "[BUUUUUUUG] Frame timing end glitch; scanline=%u, st=%u\n", GPU_GetScanlineNum(), timestamp);
 
- //printf("scanline=%u, st=%u\n", GPU->GetScanlineNum(), timestamp);
+ //printf("scanline=%u, st=%u\n", GPU_GetScanlineNum(), timestamp);
 
  espec->SoundBufSize = SPU->EndFrame(espec->SoundBuf, espec->NeedSoundReverse);
  espec->NeedSoundReverse = false;
@@ -1107,7 +1106,7 @@ static void Emulate(EmulateSpecStruct *espec)
  CDC->ResetTS();
  TIMER_ResetTS();
  DMA_ResetTS();
- GPU->ResetTS();
+ GPU_ResetTS();
  FIO->ResetTS();
 
  RebaseTS(timestamp);
@@ -1567,7 +1566,7 @@ static void DiscSanityChecks(void)
  }
 }
 
-static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemcards = true, const bool WantPIOMem = false)
+static MDFN_COLD void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemcards = true, const bool WantPIOMem = false)
 {
  unsigned region;
  int sls, sle;
@@ -1609,7 +1608,7 @@ static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
 
  CPU = new PS_CPU();
  SPU = new PS_SPU();
- GPU = new PS_GPU(region == REGION_EU);
+ GPU_Init(region == REGION_EU);
  CDC = new PS_CDC();
  FIO = new FrontIO();
 
@@ -1647,7 +1646,7 @@ static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
 
  DMA_Init();
 
- GPU->SetGetVideoParams(&EmulatedPSX, sls, sle, MDFN_GetSettingB("psx.h_overscan"));
+ GPU_SetGetVideoParams(&EmulatedPSX, sls, sle, MDFN_GetSettingB("psx.h_overscan"));
 
  CDC->SetDisc(true, NULL, NULL);
 
@@ -1753,7 +1752,7 @@ static void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemc
  PSX_Reset(true);
 }
 
-static void LoadEXE(Stream* fp, bool ignore_pcsp = false)
+static MDFN_COLD void LoadEXE(Stream* fp, bool ignore_pcsp = false)
 {
  uint8 raw_header[0x800];
  uint32 PC;
@@ -1948,7 +1947,7 @@ void PSF1Loader::HandleEXE(Stream* fp, bool ignore_pcsp)
 }
 
 static void Cleanup(void);
-static void Load(MDFNFILE *fp)
+static MDFN_COLD void Load(MDFNFILE *fp)
 {
  try
  {
@@ -1962,6 +1961,7 @@ static void Load(MDFNFILE *fp)
   if(MDFN_GetSettingS("psx.dbg_exe_cdpath") != "")	// For testing/debug purposes.
   {
    RMD_Drive dr;
+   RMD_DriveDefaults drdef;
 
    dr.Name = std::string("Virtual CD Drive");
    dr.PossibleStates.push_back(RMD_State({"Tray Open", false, false, true}));
@@ -1970,7 +1970,12 @@ static void Load(MDFNFILE *fp)
    dr.CompatibleMedia.push_back(0);
    dr.MediaMtoPDelay = 2000;
 
+   drdef.State = 2; // Tray Closed
+   drdef.Media = 0;
+   drdef.Orientation = 0;
+
    MDFNGameInfo->RMD->Drives.push_back(dr);
+   MDFNGameInfo->RMD->DrivesDefaults.push_back(drdef);
    MDFNGameInfo->RMD->MediaTypes.push_back(RMD_MediaType({"CD"}));
    MDFNGameInfo->RMD->Media.push_back(RMD_Media({"Test CD", 0}));
 
@@ -2004,7 +2009,7 @@ static void Load(MDFNFILE *fp)
  }
 }
 
-static void LoadCD(std::vector<CDIF *> *CDInterfaces)
+static MDFN_COLD void LoadCD(std::vector<CDIF *> *CDInterfaces)
 {
  try
  {
@@ -2017,7 +2022,7 @@ static void LoadCD(std::vector<CDIF *> *CDInterfaces)
  }
 }
 
-static void Cleanup(void)
+static MDFN_COLD void Cleanup(void)
 {
  TextMem.resize(0);
 
@@ -2039,11 +2044,7 @@ static void Cleanup(void)
   SPU = NULL;
  }
 
- if(GPU)
- {
-  delete GPU;
-  GPU = NULL;
- }
+ GPU_Kill();
 
  if(CPU)
  {
@@ -2074,7 +2075,7 @@ static void Cleanup(void)
  cdifs = NULL;
 }
 
-static void CloseGame(void)
+static MDFN_COLD void CloseGame(void)
 {
  if(!psf_loader)
  {
@@ -2155,7 +2156,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
  CDC->StateAction(sm, load, data_only);
  MDEC_StateAction(sm, load, data_only);
- GPU->StateAction(sm, load, data_only);
+ GPU_StateAction(sm, load, data_only);
  SPU->StateAction(sm, load, data_only);
 
  FIO->StateAction(sm, load, data_only);
@@ -2218,7 +2219,7 @@ static const FileExtensionSpecStruct KnownExtensions[] =
  { NULL, NULL }
 };
 
-static MDFNSetting PSXSettings[] =
+static const MDFNSetting PSXSettings[] =
 {
  { "psx.input.mouse_sensitivity", MDFNSF_NOFLAGS, gettext_noop("Emulated mouse sensitivity."), NULL, MDFNST_FLOAT, "1.00", NULL, NULL },
 

@@ -519,7 +519,7 @@ bool PCECD_IsBRAMEnabled()
 	return bBRAMEnabled;
 }
 
-uint8 PCECD_Read(uint32 timestamp, uint32 A, int32 &next_event, const bool PeekMode)
+MDFN_FASTCALL uint8 PCECD_Read(uint32 timestamp, uint32 A, int32 &next_event, const bool PeekMode)
 {
  uint8 ret = 0;
 
@@ -658,7 +658,7 @@ static INLINE void Fader_Run(const int32 clocks)
 }
 
 
-int32 PCECD_Write(uint32 timestamp, uint32 physAddr, uint8 data)
+MDFN_FASTCALL int32 PCECD_Write(uint32 timestamp, uint32 physAddr, uint8 data)
 {
 	const uint8 V = data;
 
@@ -1202,7 +1202,7 @@ static INLINE void ADPCM_Run(const int32 clocks, const int32 timestamp)
 
 // The return value of this function is ignored in PCECD_Read() and PCECD_Write() for speed reasons, and the
 // fact that reading and writing can change the next potential event,
-int32 PCECD_Run(uint32 in_timestamp)
+MDFN_FASTCALL int32 PCECD_Run(uint32 in_timestamp)
 {
  int32 clocks = in_timestamp - lastts;
  int32 running_ts = lastts;

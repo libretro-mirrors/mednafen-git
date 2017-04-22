@@ -79,7 +79,9 @@ static void Reset(void)
 	}
 }
 
-static uint8 *chee;
+static uint8* PortDeviceData;
+static unsigned PortDeviceType;
+
 static void Emulate(EmulateSpecStruct *espec)
 {
  espec->DisplayRect.x = 0;
@@ -93,9 +95,7 @@ static void Emulate(EmulateSpecStruct *espec)
  if(espec->SoundFormatChanged)
   WSwan_SetSoundRate(espec->SoundRate);
 
- uint16 butt_data = chee[0] | (chee[1] << 8);
-
- WSButtonStatus = butt_data;
+ WSButtonStatus = MDFN_de16lsb(PortDeviceData);
  
  MDFNMP_ApplyPeriodicCheats();
 
@@ -423,7 +423,36 @@ static void Load(MDFNFILE *fp)
 
 static void SetInput(unsigned port, const char *type, uint8 *ptr)
 {
- if(!port) chee = (uint8 *)ptr;
+ if(!port)
+ {
+  PortDeviceData = (uint8 *)ptr;
+  PortDeviceType = strcmp(type, "gamepad");
+ }
+}
+
+static void TransformInput(void)
+{
+ if(PortDeviceType)
+ {
+  uint16 butt_data = MDFN_de16lsb(PortDeviceData);
+  unsigned x = (butt_data >> 0) & 0xF;
+  unsigned y = (butt_data >> 4) & 0xF;
+  unsigned b = (butt_data >> 8) & 0xF;
+  const unsigned offs = MDFNGameInfo->rotated;
+  x = ((x << offs) | (x >> (4 - offs))) & 0xF;
+  y = ((y << offs) | (y >> (4 - offs))) & 0xF;
+  b = ((b << offs) | (b >> (4 - offs))) & 0xF;
+
+  if(MDFNGameInfo->rotated == MDFN_ROTATE90)
+  {
+   std::swap(x, y);
+   std::swap(x, b);
+  }
+  b = ((b & 1) << 1) | ((b & 8) >> 1) | (b & 0x6) | ((butt_data >> 12) & 1);
+  butt_data = (x << 0) | (y << 4) | (b << 8);
+  //printf("%04x\n", butt_data);
+  MDFN_en16lsb(PortDeviceData, butt_data);
+ }
 }
 
 static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
@@ -468,8 +497,9 @@ static void DoSimpleCommand(int cmd)
  switch(cmd)
  {
   case MDFN_MSC_POWER:
-  case MDFN_MSC_RESET: Reset();
-                        break;
+  case MDFN_MSC_RESET:
+	Reset();
+	break;
  }
 }
 
@@ -511,7 +541,6 @@ static const MDFNSetting_EnumList LanguageList[] =
 
 static const MDFNSetting WSwanSettings[] =
 {
- { "wswan.rotateinput", MDFNSF_NOFLAGS, gettext_noop("Virtually rotate the D-pads when the screen is rotated."), NULL, MDFNST_BOOL, "0" },
  { "wswan.language", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Language games should display text in."), gettext_noop("The only game this setting is known to affect is \"Digimon Tamers - Battle Spirit\"."), MDFNST_ENUM, "english", NULL, NULL, NULL, NULL, LanguageList },
  { "wswan.name", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Name"), NULL, MDFNST_STRING, "Mednafen" },
  { "wswan.byear", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Birth Year"), NULL, MDFNST_UINT, "1989", "0", "9999" },
@@ -529,21 +558,41 @@ static const MDFNSetting WSwanSettings[] =
 //
 // X* and Y* buttons are discrete buttons and not D-pads nor sticks(so for example, it's possible to press "up" and "down" simultaneously).
 //
-static const IDIISG IDII =
+static const IDIISG IDII_GP =
 {
- { "up-x",   	"X1(X UP ↑)", 0, IDIT_BUTTON, NULL,	{ "right-x", "down-x", "left-x" } },
- { "right-x",	"X2(X RIGHT →)", 3, IDIT_BUTTON, NULL,	{ "down-x", "left-x", "up-x" } },
- { "down-x",	"X3(X DOWN ↓)", 1, IDIT_BUTTON, NULL, 	{ "left-x", "up-x", "right-x" } },
- { "left-x",	"X4(X LEFT ←)", 2, IDIT_BUTTON, NULL,	{ "up-x", "right-x", "down-x" } },
+ { "up-x",   	"X1(X UP ↑)", 0, IDIT_BUTTON },
+ { "right-x",	"X2(X RIGHT →)", 3, IDIT_BUTTON },
+ { "down-x",	"X3(X DOWN ↓)", 1, IDIT_BUTTON },
+ { "left-x",	"X4(X LEFT ←)", 2, IDIT_BUTTON },
 
- { "up-y", 	"Y1(Y UP ↑)", 4, IDIT_BUTTON, NULL,	{ "right-y", "down-y", "left-y" } },
- { "right-y", 	"Y2(Y RIGHT →)", 7, IDIT_BUTTON, NULL,	{ "down-y", "left-y", "up-y" } },
- { "down-y", 	"Y3(Y DOWN ↓)", 5, IDIT_BUTTON, NULL,	{ "left-y", "up-y", "right-y" } },
- { "left-y", 	"Y4(Y LEFT ←)", 6, IDIT_BUTTON, NULL,	{ "up-y", "right-y", "down-y" } },
+ { "up-y", 	"Y1(Y UP ↑)", 4, IDIT_BUTTON },
+ { "right-y", 	"Y2(Y RIGHT →)", 7, IDIT_BUTTON },
+ { "down-y", 	"Y3(Y DOWN ↓)", 5, IDIT_BUTTON },
+ { "left-y", 	"Y4(Y LEFT ←)", 6, IDIT_BUTTON },
 
- { "start", "Start", 8, IDIT_BUTTON, NULL },
- { "a", "A", 10, IDIT_BUTTON_CAN_RAPID,  NULL },
- { "b", "B", 9, IDIT_BUTTON_CAN_RAPID, NULL },
+ { "start", "Start", 8, IDIT_BUTTON },
+ { "a", "A", 10, IDIT_BUTTON_CAN_RAPID },
+ { "b", "B", 9, IDIT_BUTTON_CAN_RAPID },
+};
+
+static const IDIISG IDII_GPRAA =
+{
+ { "up-x",   	"X1(X UP ↑)", 0, IDIT_BUTTON },
+ { "right-x",	"X2(X RIGHT →)", 3, IDIT_BUTTON },
+ { "down-x",	"X3(X DOWN ↓)", 1, IDIT_BUTTON },
+ { "left-x",	"X4(X LEFT ←)", 2, IDIT_BUTTON },
+
+ { "up-y", 	"Y1(Y UP ↑)", 4, IDIT_BUTTON },
+ { "right-y", 	"Y2(Y RIGHT →)", 7, IDIT_BUTTON },
+ { "down-y", 	"Y3(Y DOWN ↓)", 5, IDIT_BUTTON },
+ { "left-y", 	"Y4(Y LEFT ←)", 6, IDIT_BUTTON },
+
+ { "ap","A'(center, upper)", 11, IDIT_BUTTON },
+ { "a", "A (right)", 12, IDIT_BUTTON },
+ { "b", "B (center, lower)", 10, IDIT_BUTTON },
+ { "bp","B'(left)", 9, IDIT_BUTTON },
+
+ { "start", "Start", 8, IDIT_BUTTON },
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
@@ -552,7 +601,14 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
   "gamepad",
   "Gamepad",
   NULL,
-  IDII,
+  IDII_GP,
+ },
+
+ {
+  "gamepadraa",
+  "Gamepad(Rotation Auto-Adjust)",
+  NULL,
+  IDII_GPRAA,
  }
 };
 
@@ -630,7 +686,7 @@ MDFNGI EmulatedWSwan =
  false,
  StateAction,
  Emulate,
- NULL,
+ TransformInput,
  SetInput,
  NULL,
  DoSimpleCommand,

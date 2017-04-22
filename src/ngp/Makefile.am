@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFS = @DEFS@ -fno-strict-aliasing
-DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_srcdir)/intl
+DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_builddir)/intl
 
 noinst_LIBRARIES	=	libngp.a
 ngp_SOURCES 	=	bios.cpp biosHLE.cpp dma.cpp flash.cpp gfx.cpp T6W28_Apu.cpp	\

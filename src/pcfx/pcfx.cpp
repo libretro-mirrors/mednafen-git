@@ -2,7 +2,7 @@
 /* Mednafen NEC PC-FX Emulation Module                                        */
 /******************************************************************************/
 /* pcfx.cpp:
-**  Copyright (C) 2006-2016 Mednafen Team
+**  Copyright (C) 2006-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -235,7 +235,7 @@ typedef struct
 
 static uint32 EmuFlags;
 
-static CDGameEntry GameList[] =
+static const CDGameEntry GameList[] =
 {
  #include "gamedb.inc"
 };
@@ -549,7 +549,7 @@ static void VDCB_IRQHook(bool asserted)
  PCFXIRQ_Assert(PCFXIRQ_SOURCE_VDCB, asserted);
 }
 
-static void Cleanup(void)
+static MDFN_COLD void Cleanup(void)
 {
  for(int i = 0; i < 2; i++)
  {
@@ -570,7 +570,7 @@ static void Cleanup(void)
  BIOSROM = NULL;
 }
 
-static void LoadCommon(std::vector<CDIF *> *CDInterfaces)
+static MDFN_COLD void LoadCommon(std::vector<CDIF *> *CDInterfaces)
 {
  V810_Emu_Mode cpu_mode;
 
@@ -936,7 +936,7 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  return(FALSE);
 }
 
-static void LoadCD(std::vector<CDIF *> *CDInterfaces)
+static MDFN_COLD void LoadCD(std::vector<CDIF *> *CDInterfaces)
 {
  try
  {
@@ -991,7 +991,7 @@ static void SaveBackupMemory(void)
  }
 }
 
-static void CloseGame(void)
+static MDFN_COLD void CloseGame(void)
 {
  try
  {
@@ -1076,7 +1076,7 @@ static const MDFNSetting_EnumList HDCWidthList[] =
  { NULL, 0 },
 };
 
-static MDFNSetting PCFXSettings[] =
+static const MDFNSetting PCFXSettings[] =
 {
   { "pcfx.input.port1.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on PC-FX port 1."), gettext_noop("EXPERIMENTAL emulation of the unreleased multitap.  Enables ports 3 4 5."), MDFNST_BOOL, "0", NULL, NULL },
   { "pcfx.input.port2.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on PC-FX port 2."), gettext_noop("EXPERIMENTAL emulation of the unreleased multitap.  Enables ports 6 7 8."), MDFNST_BOOL, "0", NULL, NULL },

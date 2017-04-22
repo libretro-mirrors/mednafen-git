@@ -87,7 +87,7 @@ static uint8 COMM_STATUS[8 * 2];
 //#define UNDEFSUB(format, ...)
 //#endif
 
-static void MDCD_MainWrite8(uint32 A, uint8 V)
+static MDFN_FASTCALL void MDCD_MainWrite8(uint32 A, uint8 V)
 {
  A &= 0xFFFFFF;
 
@@ -184,7 +184,7 @@ static void MDCD_MainWrite8(uint32 A, uint8 V)
  }
 }
 
-static void MDCD_MainWrite16(uint32 A, uint16 V)
+static MDFN_FASTCALL void MDCD_MainWrite16(uint32 A, uint16 V)
 {
  A &= 0xFFFFFF;
 
@@ -276,7 +276,7 @@ static void MDCD_MainWrite16(uint32 A, uint16 V)
  }
 }
 
-static uint8 MDCD_MainRead8(uint32 A)
+static MDFN_FASTCALL uint8 MDCD_MainRead8(uint32 A)
 {
  A &= 0xFFFFFF;
 
@@ -361,7 +361,7 @@ static uint8 MDCD_MainRead8(uint32 A)
  return(0x0);
 }
 
-static uint16 MDCD_MainRead16(uint32 A)
+static MDFN_FASTCALL uint16 MDCD_MainRead16(uint32 A)
 {
  A &= 0xFFFFFF;
 
@@ -446,7 +446,7 @@ static uint16 MDCD_MainRead16(uint32 A)
 // Sub 68K memory map handling:
 //
 //////////////////////////////////
-static void MDCD_SubWrite8(uint32 A, uint8 V)
+static MDFN_FASTCALL void MDCD_SubWrite8(uint32 A, uint8 V)
 {
  A &= 0xFFFFFF;
 
@@ -553,7 +553,7 @@ static void MDCD_SubWrite8(uint32 A, uint8 V)
  }
 }
 
-static void MDCD_SubWrite16(uint32 A, uint16 V)
+static MDFN_FASTCALL void MDCD_SubWrite16(uint32 A, uint16 V)
 {
  A &= 0xFFFFFF;
 

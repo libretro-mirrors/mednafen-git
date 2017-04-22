@@ -3,6 +3,6 @@ mednafen_SOURCES	+=	psx/input/gamepad.cpp psx/input/dualanalog.cpp psx/input/dua
 mednafen_SOURCES	+=	psx/gpu.cpp psx/gpu_polygon.cpp psx/gpu_line.cpp psx/gpu_sprite.cpp
 
 if WANT_DEBUGGER
-mednafen_SOURCES	+=	psx/dis.cpp psx/debug.cpp
+mednafen_SOURCES	+=	psx/debug.cpp psx/dis.cpp
 endif
 

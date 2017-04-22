@@ -18,8 +18,8 @@
 namespace MDFN_IEN_WSWAN
 {
 
-void Comm_Init(const char *wfence_path);
-void Comm_Kill(void);
+void Comm_Init(const char *wfence_path) MDFN_COLD;
+void Comm_Kill(void) MDFN_COLD;
 void Comm_Reset(void);
 void Comm_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 

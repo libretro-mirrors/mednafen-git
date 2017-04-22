@@ -5,10 +5,10 @@
 namespace MDFN_IEN_MD
 {
 
-extern uint8 (*MD_ExtRead8)(uint32 address);
-extern uint16 (*MD_ExtRead16)(uint32 address);
-extern void (*MD_ExtWrite8)(uint32 address, uint8 value);
-extern void (*MD_ExtWrite16)(uint32 address, uint16 value);
+extern uint8 (MDFN_FASTCALL *MD_ExtRead8)(uint32 address);
+extern uint16 (MDFN_FASTCALL *MD_ExtRead16)(uint32 address);
+extern void (MDFN_FASTCALL *MD_ExtWrite8)(uint32 address, uint8 value);
+extern void (MDFN_FASTCALL *MD_ExtWrite16)(uint32 address, uint16 value);
 
 class MDVDP;
 

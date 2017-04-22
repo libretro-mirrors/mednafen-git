@@ -689,7 +689,7 @@ static void M165PPU(uint32 A, uint8 V)
  M165PPUSync();
 }
 
-static void ppu165(uint32 VAddr)
+static MDFN_FASTCALL void ppu165(uint32 VAddr)
 {
      uint8 l,h;
 
@@ -1136,7 +1136,7 @@ int UNL6035052_Init(CartInfo *info)
 
 
 
-static void TKSPPU(uint32 A)
+static MDFN_FASTCALL void TKSPPU(uint32 A)
 {
  //static uint8 z;
  //if(A>=0x2000 || type<0) return;

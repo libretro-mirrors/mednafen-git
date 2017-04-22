@@ -4,8 +4,8 @@
 namespace MDFN_IEN_SMS
 {
 
-void Cart_Init(MDFNFILE *fp);
-void Cart_Close(void);
+void Cart_Init(MDFNFILE *fp) MDFN_COLD;
+void Cart_Close(void) MDFN_COLD;
 
 void Cart_Reset(void);
 

@@ -46,13 +46,10 @@ Internationalization issues:
 
 	Filesystem character coding vs UTF8 internal encoding vs locale.
 
-	Replace string/ConvertUTF.cpp with iconv() usage.
-
 	Wrap iconv() in C++ classes.
 
 	Win32 Unicode:
-		MDFN_mkdir_T(), MDFN_stat(), MDFN_unlink(), MDFN_rename(), FileStream, GZFileStream, unzip code. GetCommandLineW, CommandLineToArgvW,
-		basic_string<uint16>(u16string might not be safe).
+		MDFN_mkdir_T(), MDFN_stat(), MDFN_unlink(), MDFN_rename(), FileStream, GZFileStream, unzip code. GetCommandLineW, CommandLineToArgvW
 		Use UTF-16<->UTF-8 conversion that permits lone/mismatched surrogates.  UTF-8 to UTF-16 conversion MUST error out(exception) on
 		overlong encodings, though.  Don't use MultiByteToWideChar(), as it's documented to simply delete such characters on Windows XP,
 		which could allow subversion of the crude unsafe file-include-path checking code.
@@ -118,9 +115,6 @@ Sound:
 Backup memory:
 	Create a backup of the non-volatile memory(save-RAM) file the first time it is overwritten/replaced since emulator
 	startup(incidentally, in cases other than for PSX, this first time will generally occur on emulator exit).
-
-SNES:
-	src/ppu/render/oam.cpp:161:40: runtime error: index 32 out of bounds for type 'unsigned char [32]'
 
 PCE_FAST:
 	Add padding to start of data mapped into HuC6280 for instruction reads to prevent a crash if a game does a negative relative branch to
@@ -199,7 +193,7 @@ Genesis:
 
 	Add Z80 IRQ ack hack which can be controlled by a setting.
 
-	Event system in C68K, fix possible problems with excessively long 68K instructions and the Z80 IRQ
+	Event system, fix possible problems with excessively long 68K instructions and the Z80 IRQ
 	not being handled.
 
 	Implement "Virtua Racing" SVP emulation via code supplied by notaz.

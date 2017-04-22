@@ -167,7 +167,7 @@ uint8 IODevice_3DPad::UpdateBus(const uint8 smpc_out, const uint8 smpc_out_asser
  return (smpc_out & (smpc_out_asserted | 0xE0)) | (tmp &~ smpc_out_asserted);
 }
 
-static const char* ModeSwitchPositions[] =
+static const char* const ModeSwitchPositions[] =
 {
  gettext_noop("Digital(+)"),
  gettext_noop("Analog(○)"),

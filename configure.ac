@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.43'
-MEDNAFEN_VERSION_NUMERIC=0x00094300
+MEDNAFEN_VERSION='0.9.44.1'
+MEDNAFEN_VERSION_NUMERIC=0x00094401
 
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([mednafen], $MEDNAFEN_VERSION)
@@ -59,6 +59,8 @@ AC_CHECK_SIZEOF(off_t)
 AC_C_CONST
 AC_CHECK_FUNCS(memcmp memcpy memmove memset mmap munmap madvise signal sigaction fork pipe dup2 fcntl getenv putenv setenv gettimeofday getpwuid getuid strerror strerror_r ftello fopen64 fseeko64 ftello64 fstat64 ftruncate64 __mingw_get_crt_info)
 
+AC_SEARCH_LIBS(fmodl, [m])
+
 #
 # Check for any libraries that need to be linked against for clock_gettime().
 #
@@ -101,6 +103,7 @@ AX_CFLAGS_GCC_OPTION([-fno-fast-math], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-unsafe-math-optimizations], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-aggressive-loop-optimizations], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-ipa-icf], OPTIMIZER_FLAGS)
+AX_CFLAGS_GCC_OPTION([-fno-printf-return-value], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fomit-frame-pointer], OPTIMIZER_FLAGS)
 
 dnl
@@ -418,65 +421,51 @@ if test x$enable_wswan = xyes; then
                 AM_CONDITIONAL(WANT_WSWAN_EMU, true)
 fi
 
-AM_CONDITIONAL(HAVE_OSSDSP, false)
+##
+## ALSA and JACK checking code ripped from SDL's autoconf file, with heavy modifications
+##
+#
+# ALSA
+#
 AM_CONDITIONAL(HAVE_ALSA, false)
-AM_CONDITIONAL(HAVE_DIRECTSOUND, false)
-AM_CONDITIONAL(HAVE_WASAPI, false)
-AM_CONDITIONAL(HAVE_SDL, false)
-AM_CONDITIONAL(HAVE_JACK, false)
+AC_ARG_ENABLE(alsa, AC_HELP_STRING([--enable-alsa], [support the ALSA audio API [[default=yes]]]),
+	[],
+	[enable_alsa=yes])
+if test x$enable_alsa = xyes; then
+	AM_PATH_ALSA(1.0.0, have_alsa=yes, have_alsa=no)
 
-dnl Check* functions ripped from SDL's autoconf file, with heavy modifications
-dnl See if the ALSA audio interface is supported
+	# Restore all flags from before the ALSA detection runs
+	CFLAGS="$alsa_save_CFLAGS"
+	LDFLAGS="$alsa_save_LDFLAGS"
+	LIBS="$alsa_save_LIBS"
 
-CheckALSA()
-{
-    AC_ARG_ENABLE(alsa,
-AC_HELP_STRING([--enable-alsa], [support the ALSA audio API [[default=yes]]]),
-                  , enable_alsa=yes)
-    if test x$enable_alsa = xyes; then
-        AM_PATH_ALSA(1.0.0, have_alsa=yes, have_alsa=no)
-
-        # Restore all flags from before the ALSA detection runs
-        CFLAGS="$alsa_save_CFLAGS"
-        LDFLAGS="$alsa_save_LDFLAGS"
-        LIBS="$alsa_save_LIBS"
-
-        if test x$have_alsa = xyes; then
+	if test x$have_alsa = xyes; then
 		AM_CONDITIONAL(HAVE_ALSA, true)
 		AC_DEFINE([HAVE_ALSA], [1], [Define if we are compiling with ALSA support.])
 	fi
-    fi
+fi
+AC_SUBST([ALSA_LIBS])
+AC_SUBST([ALSA_CFLAGS])
 
- AC_SUBST([ALSA_LIBS])
- AC_SUBST([ALSA_CFLAGS])
-}
 
-CheckJACK()
-{
-    AC_ARG_ENABLE(jack,
-AC_HELP_STRING([--enable-jack], [support the JACK audio API [[default=yes]]]),
-                  , enable_jack=yes)
-    if test x$enable_jack = xyes; then
-        PKG_CHECK_MODULES(JACK, jack, [have_jack=yes], [have_jack=no])
+#
+# JACK
+#
+AM_CONDITIONAL(HAVE_JACK, false)
+AC_ARG_ENABLE(jack, AC_HELP_STRING([--enable-jack], [support the JACK audio API [[default=yes]]]),
+	[],
+	[enable_jack=yes])
+if test x$enable_jack = xyes; then
+	PKG_CHECK_MODULES(JACK, jack, [have_jack=yes], [have_jack=no])
 
-        if test x$have_jack = xyes; then
-                AM_CONDITIONAL(HAVE_JACK, true)
-                AC_DEFINE([HAVE_JACK], [1], [Define if we are compiling with JACK support.])
-        fi
-    fi
+	if test x$have_jack = xyes; then
+		AM_CONDITIONAL(HAVE_JACK, true)
+		AC_DEFINE([HAVE_JACK], [1], [Define if we are compiling with JACK support.])
+	fi
+fi
+AC_SUBST([JACK_LIBS])
+AC_SUBST([JACK_CFLAGS])
 
- AC_SUBST([JACK_LIBS])
- AC_SUBST([JACK_CFLAGS])
-}
-
-CheckALSA
-CheckJACK
-
-AC_ARG_WITH([libsndfile],
-            [AS_HELP_STRING([--with-libsndfile],
-              [support various sound file formats in ripped CD images @<:@default=yes@:>@])],
-            [],
-            [with_libsndfile=yes])
 
 #
 # mpcdec
@@ -512,12 +501,32 @@ if test x$with_external_tremor = xyes; then
 	AC_SUBST([TREMOR_LIBS], ["-lvorbisidec"])
 fi
 
+#
+# libsndfile
+#
+AM_CONDITIONAL(HAVE_LIBSNDFILE, false)
+AC_ARG_WITH([libsndfile],
+            [AS_HELP_STRING([--with-libsndfile],
+              [support various sound file formats in ripped CD images @<:@default=yes@:>@])],
+            [],
+            [with_libsndfile=yes])
+if test x$with_libsndfile = xyes; then
+	PKG_CHECK_MODULES(SNDFILE, sndfile >= 1.0.2, [], AC_MSG_ERROR([*** libsndfile >= 1.0.2 not found!]))
+	AC_DEFINE([HAVE_LIBSNDFILE], [1], [Define if we are compiling with libsndfile support.])
+	AM_CONDITIONAL(HAVE_LIBSNDFILE, true)
+fi
+AC_SUBST([SNDFILE_LIBS])
+AC_SUBST([SNDFILE_CFLAGS])
 
+
+AM_CONDITIONAL(HAVE_OSSDSP, false)
+AM_CONDITIONAL(HAVE_DIRECTSOUND, false)
+AM_CONDITIONAL(HAVE_WASAPI, false)
+AM_CONDITIONAL(HAVE_SDL, false)
 AM_CONDITIONAL(DOS, false)
 AM_CONDITIONAL(WIN32, false)
 AM_CONDITIONAL(UNIX, false)
 AM_CONDITIONAL(HAVE_LINUX_JOYSTICK, false)
-AM_CONDITIONAL(HAVE_LIBSNDFILE, false)
 NEED_SDL=true
 
 if expr x"$host" : 'x.*-mingw*' > /dev/null; then
@@ -526,7 +535,7 @@ if expr x"$host" : 'x.*-mingw*' > /dev/null; then
 	if test x$host_cpu != xx86_64; then
 		# Enable larger address space support(for the 32-bit build).
 		LDFLAGS="$LDFLAGS -Wl,--large-address-aware"
-		AX_CFLAGS_GCC_OPTION([-march=i586], OPTIMIZER_FLAGS)
+		AX_CFLAGS_GCC_OPTION([-march=i686], OPTIMIZER_FLAGS)
 		AX_CFLAGS_GCC_OPTION([-mtune=pentium3], OPTIMIZER_FLAGS)
 	else
 		AX_CFLAGS_GCC_OPTION([-mtune=amdfam10], OPTIMIZER_FLAGS)
@@ -547,41 +556,18 @@ if expr x"$host" : 'x.*-mingw*' > /dev/null; then
 	AM_CONDITIONAL(WIN32, true)
 
 	LIBS="-mwindows -lws2_32 -ldxguid -lwinmm -ldinput $LIBS -lwinmm"
-
-        if test x$with_libsndfile = xyes; then
-                SNDFILE_LIBS="-lsndfile"
-                SNDFILE_CFLAGS=""
-                AC_DEFINE([HAVE_LIBSNDFILE], [1], [Define if we are compiling with libsndfile support.])
-		AM_CONDITIONAL(HAVE_LIBSNDFILE, true)
-        fi
-
+	CPPFLAGS="-D_LFS64_LARGEFILE=1 $CPPFLAGS"
 elif expr x"$host" : 'x.*djgpp' > /dev/null; then
        	AC_DEFINE([PSS_STYLE],[2], [Defines the filesystem path-separator type.])
        	AC_DEFINE([DOS], [1], [Define if we are compiling for DOS.])
        	AM_CONDITIONAL(DOS, true)
 	NEED_SDL=false
-
-        if test x$with_libsndfile = xyes; then
-                SNDFILE_LIBS="-lsndfile"
-                SNDFILE_CFLAGS=""
-                AC_DEFINE([HAVE_LIBSNDFILE], [1], [Define if we are compiling with libsndfile support.])
-		AM_CONDITIONAL(HAVE_LIBSNDFILE, true)
-        fi
 else
 	AC_DEFINE([PSS_STYLE],[1], [Defines the filesystem path-separator type.])
-
-	if test x$with_libsndfile = xyes; then
-		PKG_CHECK_MODULES(SNDFILE, sndfile >= 1.0.2, [], AC_MSG_ERROR([*** libsndfile >= 1.0.2 not found!]))
-                AC_DEFINE([HAVE_LIBSNDFILE], [1], [Define if we are compiling with libsndfile support.])
-		AM_CONDITIONAL(HAVE_LIBSNDFILE, true)
-	fi
 
 	AC_CHECK_HEADER([sys/soundcard.h],[AM_CONDITIONAL(HAVE_OSSDSP,true) AC_DEFINE([HAVE_OSSDSP], [1], [Define if we are compiling with OSS support.])])
 	AC_CHECK_HEADER([linux/joystick.h],[AM_CONDITIONAL(HAVE_LINUX_JOYSTICK,true) AC_DEFINE([HAVE_LINUX_JOYSTICK], [1], [Define if we are compiling with Linux joystick support.])])
 fi
-
-AC_SUBST([SNDFILE_LIBS])
-AC_SUBST([SNDFILE_CFLAGS])
 
 if $NEED_SDL
 then

@@ -30,7 +30,7 @@ static uint8 IRQCount,IRQa,IRQLatch;
 static void (*setchr1wrap)(unsigned int A, unsigned int V);
 static int nomirror;
 
-static void RAMBO1_IRQHook(int a)
+static MDFN_FASTCALL void RAMBO1_IRQHook(int a)
 {
  static int smallcount;
  if(!IRQmode) return;
@@ -211,7 +211,7 @@ static void MirWrap(unsigned int A, unsigned int V)
  setchr1(A,V);
 }
 
-static void MirrorFear(uint32 A)
+static MDFN_FASTCALL void MirrorFear(uint32 A)
 {
  A&=0x1FFF;
  A>>=10;

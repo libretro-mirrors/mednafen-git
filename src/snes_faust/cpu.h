@@ -99,8 +99,8 @@ struct CPU_Misc
  //
  //
  //
- void RunDMA(void);
- void EventHandler(void);
+ void RunDMA(void) MDFN_HOT;
+ void EventHandler(void) MDFN_HOT;
 };
 
 extern CPU_Misc CPUM;
@@ -139,10 +139,10 @@ INLINE void CPU_SetNMI(bool active)
  CPUM.NMILineState = active;
 }
 
-void CPU_Init(void);
-void CPU_Reset(bool powering_up);
+void CPU_Init(void) MDFN_COLD;
+void CPU_Reset(bool powering_up) MDFN_COLD;
 void CPU_StateAction(StateMem* sm, const unsigned load, const bool data_only);
-void CPU_Run(void);
+void CPU_Run(void) MDFN_HOT;
 
 INLINE void CPU_Exit(void)
 {

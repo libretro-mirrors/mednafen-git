@@ -27,7 +27,7 @@ static uint16 IRQCount, IRQLatch, Mirroring;
 static uint8 IRQa, PRGBanks[4], CHRBanks[8];
 static uint8 WRAM[8192];
 
-static void JalecoIRQHook(int a)
+static MDFN_FASTCALL void JalecoIRQHook(int a)
 {
  if(IRQa && IRQCount)
  {

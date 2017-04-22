@@ -157,7 +157,7 @@ alwaysinline void PPU::render_line_oam_rto() {
   for(int s = 0; s < 128; s++) {
     active_sprite = (s + regs.oam_firstsprite) & 127;
     if(is_sprite_on_scanline() == false) continue;
-    if(regs.oam_itemcount++ > 32) break;
+    if(++regs.oam_itemcount > 32) break;
     oam_itemlist[regs.oam_itemcount - 1] = (s + regs.oam_firstsprite) & 127;
   }
 

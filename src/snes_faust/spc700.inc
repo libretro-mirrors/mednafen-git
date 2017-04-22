@@ -2,7 +2,7 @@
 /* Mednafen Fast SNES Emulation Module                                        */
 /******************************************************************************/
 /* spc700.inc:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -191,7 +191,7 @@ class SPC700 final
  void Instr_Reg(uint8* arg, gen_sarg_op op);
  void Instr_Dir(gen_sarg_op op);
  void Instr_DirIdx(gen_sarg_op op);
- void Instr_Abs(gen_sarg_op op);
+ template<bool dummy_read = false> void Instr_Abs(gen_sarg_op op);
 
  //
  //
@@ -205,7 +205,7 @@ class SPC700 final
 
  uint16 GetEA_MB(unsigned* wb);
 
- template<bool bwn> void Instr_C_MB(mb_op op);
+ template<bool bwn, bool dummy_io = false> void Instr_C_MB(mb_op op);
 
  void Instr_MB_C_MOV1(void);
  void Instr_MB_NOT1(void);
@@ -828,6 +828,7 @@ INLINE void SPC700::Instr_DirIdx(gen_sarg_op op)
  WriteDP(ead, tmp);
 }
 
+template<bool dummy_read>
 INLINE void SPC700::Instr_Abs(gen_sarg_op op)
 {
  uint16 ea = GetEA_Abs();
@@ -835,7 +836,7 @@ INLINE void SPC700::Instr_Abs(gen_sarg_op op)
 
  tmp = ReadMem(ea);
 
- if(op == &SPC700::Op_TCLR1 || op == &SPC700::Op_TSET1)
+ if(dummy_read)
   ReadMem(ea);	// Discarded dummy read?
 
  (this->*op)(&tmp);
@@ -882,7 +883,7 @@ INLINE uint16 SPC700::GetEA_MB(unsigned* wb)
  return ea;
 }
 
-template<bool bwn>
+template<bool bwn, bool dummy_io>
 INLINE void SPC700::Instr_C_MB(mb_op op)
 {
  unsigned wb;
@@ -894,7 +895,7 @@ INLINE void SPC700::Instr_C_MB(mb_op op)
 
  (this->*op)((data >> wb) & 1);
 
- if(op == &SPC700::Op_EOR1 || op == &SPC700::Op_OR1)
+ if(dummy_io)
   IO();
 }
 
@@ -1449,7 +1450,7 @@ static const uint8 CycleCheckTable[256] =
 };
 #endif
 
-static const uint8 CycleHackyTable[256] =
+static const uint8 CycleHackyTable_Init[256] =
 {
  0x01, 0x01, 0x03, 0x04, 0x02, 0x03, 0x02, 0x05,  0x01, 0x05, 0x04, 0x03, 0x04, 0x01, 0x05, 0x01, 
  0x01, 0x01, 0x03, 0x04, 0x03, 0x04, 0x04, 0x05,  0x04, 0x04, 0x05, 0x04, 0x01, 0x01, 0x03, 0x01, 
@@ -1469,6 +1470,7 @@ static const uint8 CycleHackyTable[256] =
  0x01, 0x01, 0x03, 0x04, 0x02, 0x03, 0x02, 0x05,  0x01, 0x03, 0x04, 0x02, 0x03, 0x01, 0x01, 0x01, 
  0x01, 0x01, 0x03, 0x04, 0x03, 0x04, 0x04, 0x05,  0x02, 0x03, 0x04, 0x03, 0x01, 0x01, 0x01, 0x01, 
 };
+static uint8 CycleHackyTable[256];
 
 INLINE void SPC700::RunReal(void)
 {
@@ -1703,12 +1705,11 @@ INLINE void SPC700::RunReal(void)
    //
    //
    //
-
-   case 0x0A: Instr_C_MB<false>(&SPC700::Op_OR1); break;
-   case 0x2A: Instr_C_MB<true> (&SPC700::Op_OR1); break;
+   case 0x0A: Instr_C_MB<false, true>(&SPC700::Op_OR1); break;
+   case 0x2A: Instr_C_MB<true,  true> (&SPC700::Op_OR1); break;
    case 0x4A: Instr_C_MB<false>(&SPC700::Op_AND1); break;
    case 0x6A: Instr_C_MB<true> (&SPC700::Op_AND1); break;
-   case 0x8A: Instr_C_MB<false>(&SPC700::Op_EOR1); break;
+   case 0x8A: Instr_C_MB<false, true>(&SPC700::Op_EOR1); break;
    case 0xAA: Instr_C_MB<false>(&SPC700::Op_MOV1); break;
 
    case 0xCA: Instr_MB_C_MOV1(); break;
@@ -1774,8 +1775,8 @@ INLINE void SPC700::RunReal(void)
    case 0xC2: Instr_Dir(&SPC700::Op_SET1<6>); break;
    case 0xE2: Instr_Dir(&SPC700::Op_SET1<7>); break;
 
-   case 0x4E: Instr_Abs(&SPC700::Op_TCLR1); break;
-   case 0x0E: Instr_Abs(&SPC700::Op_TSET1); break;
+   case 0x4E: Instr_Abs<true>(&SPC700::Op_TCLR1); break;
+   case 0x0E: Instr_Abs<true>(&SPC700::Op_TSET1); break;
 
    //
    //
@@ -1816,6 +1817,8 @@ INLINE void SPC700::Run(int32 cycles)
 
 void SPC700::Reset(bool powering_up)
 {
+ memcpy(CycleHackyTable, CycleHackyTable_Init, sizeof(CycleHackyTable)); // Don't put it in the constructor, or else the compiler might try to be too smort.
+ //
  PC = 0xFFC0;	// FIXME FIXME FIXME, read the vector properly!
  A = X = Y = 0;
  PSW = I_FLAG;
@@ -1855,7 +1858,7 @@ void SPC700::StateAction(StateMem* sm, const unsigned load, const bool data_only
 
 SPC700::SPC700()
 {
-
+ 
 }
 
 SPC700::~SPC700()

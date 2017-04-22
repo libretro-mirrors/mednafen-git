@@ -70,7 +70,7 @@ static void DoMirroring(void)
  }
 }
 
-static void KonamiIRQHook(int a)
+static MDFN_FASTCALL void KonamiIRQHook(int a)
 {
   #define LCYCS 341
 //  #define LCYCS ((227*2)+1)

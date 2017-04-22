@@ -497,7 +497,7 @@ static MDFN_COLD void DBG_ToggleSyntax(void)
 //
 //
 
-static RegType DBG_Regs_CPU[] =
+static const RegType DBG_Regs_CPU[] =
 {
  { SH7095::GSREG_PC_ID, "PC", "PC (Effective)", 4 },
  { SH7095::GSREG_RPC, "RPC", "PC (Real)", 4 },
@@ -574,7 +574,7 @@ static RegType DBG_Regs_CPU[] =
  { 0, "", "", 0 },
 };
 
-static RegType DBG_Regs_CPUE[] =
+static const RegType DBG_Regs_CPUE[] =
 {
  { SH7095::GSREG_DMAOR, "DMAOR", "DMAOR", 1 },
  { SH7095::GSREG_DMAORM, "DMAORM", "DMAORM", 1 },
@@ -623,7 +623,7 @@ static MDFN_COLD void DBG_SetRegister_CPU(const unsigned int id, uint32 value)
  CPU[DBG.ActiveCPU].SetRegister(id, value);
 }
 
-static RegGroupType DBG_RegGroup_CPU =
+static const RegGroupType DBG_RegGroup_CPU =
 {
  NULL,
  DBG_Regs_CPU,
@@ -631,7 +631,7 @@ static RegGroupType DBG_RegGroup_CPU =
  DBG_SetRegister_CPU
 };
 
-static RegGroupType DBG_RegGroup_CPUE =
+static const RegGroupType DBG_RegGroup_CPUE =
 {
  NULL,
  DBG_Regs_CPUE,
@@ -640,7 +640,7 @@ static RegGroupType DBG_RegGroup_CPUE =
 };
 
 
-static RegType DBG_Regs_SCU[] =
+static const RegType DBG_Regs_SCU[] =
 {
  { SCU_GSREG_ILEVEL, "ILevel", "IRL Output to SH2-M", 1 },
  { SCU_GSREG_IVEC, "IVec", "Pending IRQ Vector Number", 1 },
@@ -674,7 +674,7 @@ static RegType DBG_Regs_SCU[] =
  { 0, "", "", 0 },
 };
 
-static RegGroupType DBG_RegGroup_SCU =
+static const RegGroupType DBG_RegGroup_SCU =
 {
  NULL,
  DBG_Regs_SCU,
@@ -685,7 +685,7 @@ static RegGroupType DBG_RegGroup_SCU =
 //
 //
 
-static RegType DBG_Regs_VDP1_VDP2_SCSP[] =
+static const RegType DBG_Regs_VDP1_VDP2_SCSP[] =
 {
  { 0, "------", "", 0xFFFF },
 
@@ -730,7 +730,7 @@ static void VDP1_VDP2_SCSP_SetRegister(const unsigned id, const uint32 value)
  }
 }
 
-static RegGroupType DBG_RegGroup_VDP1_VDP2_SCSP =
+static const RegGroupType DBG_RegGroup_VDP1_VDP2_SCSP =
 {
  NULL,
  DBG_Regs_VDP1_VDP2_SCSP,

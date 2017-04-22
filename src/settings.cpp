@@ -217,23 +217,21 @@ static void ValidateSetting(const char *value, const MDFNSetting *setting)
   {
    double minimum;
 
-   assert(MR_StringToDouble(setting->minimum, &minimum) == true);
+   if(MDFN_UNLIKELY(!MR_StringToDouble(setting->minimum, &minimum)))
+    throw MDFN_Error(0, _("Minimum value, \"%f\", for setting \"%s\" is not set to a floating-point(real) number."), minimum, setting->name);
 
-   if(dvalue < minimum)
-   {
+   if(MDFN_UNLIKELY(dvalue < minimum))
     throw MDFN_Error(0, _("Setting \"%s\" is set too small(\"%s\"); the minimum acceptable value is \"%s\"."), setting->name, value, setting->minimum);
-   }
   }
   if(setting->maximum)
   {
    double maximum;
 
-   assert(MR_StringToDouble(setting->maximum, &maximum) == true);
+   if(MDFN_UNLIKELY(!MR_StringToDouble(setting->maximum, &maximum)))
+    throw MDFN_Error(0, _("Maximum value, \"%f\", for setting \"%s\" is not set to a floating-point(real) number."), maximum, setting->name);
 
-   if(dvalue > maximum)
-   {
+   if(MDFN_UNLIKELY(dvalue > maximum))
     throw MDFN_Error(0, _("Setting \"%s\" is set too large(\"%s\"); the maximum acceptable value is \"%s\"."), setting->name, value, setting->maximum);
-   }
   }
  }
  else if(base_type == MDFNST_BOOL)
@@ -471,6 +469,9 @@ static void SaveSettings(Stream *fp)
  for(lit = SortedList.begin(); lit != SortedList.end(); lit++)
  {
   if((*lit)->desc->type == MDFNST_ALIAS)
+   continue;
+
+  if((*lit)->desc->flags & MDFNSF_NONPERSISTENT)
    continue;
 
   fp->print_format(";%s\n%s %s\n\n", _((*lit)->desc->description), (*lit)->name, (*lit)->value);

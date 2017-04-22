@@ -2,7 +2,7 @@
 /* Mednafen Sony PS1 Emulation Module                                         */
 /******************************************************************************/
 /* gpu.cpp:
-**  Copyright (C) 2011-2016 Mednafen Team
+**  Copyright (C) 2011-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -66,16 +66,25 @@
 namespace MDFN_IEN_PSX
 {
 
-static const int8 dither_table[4][4] =
-{
- { -4,  0, -3,  1 },
- {  2, -2,  3, -1 },
- { -3,  1, -4,  0 },
- {  3, -1,  2, -2 },
-};
+PS_GPU GPU;
 
-PS_GPU::PS_GPU(bool pal_clock_and_tv) : HardwarePALType(pal_clock_and_tv)
+namespace PS_GPU_INTERNAL
 {
+ #include "gpu_common.inc"
+}
+using namespace PS_GPU_INTERNAL;
+
+void GPU_Init(bool pal_clock_and_tv)
+{
+ static const int8 dither_table[4][4] =
+ {
+  { -4,  0, -3,  1 },
+  {  2, -2,  3, -1 },
+  { -3,  1, -4,  0 },
+  {  3, -1,  2, -2 },
+ };
+
+ HardwarePALType = pal_clock_and_tv;
  //printf("%zu\n", (size_t)((uintptr_t)DitherLUT - (uintptr_t)this));
  //printf("%zu\n", (size_t)((uintptr_t)GPURAM - (uintptr_t)this));
  //
@@ -115,12 +124,12 @@ PS_GPU::PS_GPU(bool pal_clock_and_tv) : HardwarePALType(pal_clock_and_tv)
  memcpy(&Commands[0x80], Commands_80_FF, sizeof(Commands_80_FF));
 }
 
-PS_GPU::~PS_GPU()
+void GPU_Kill(void)
 {
 
 }
 
-void PS_GPU::SetGetVideoParams(MDFNGI* gi, const int sls, const int sle, const bool show_h_overscan)
+void GPU_SetGetVideoParams(MDFNGI* gi, const int sls, const int sle, const bool show_h_overscan)
 {
  hide_hoverscan = !show_h_overscan;
 
@@ -171,7 +180,20 @@ void PS_GPU::SetGetVideoParams(MDFNGI* gi, const int sls, const int sle, const b
  gi->mouse_offs_y = LineVisFirst;
 }
 
-void PS_GPU::SoftReset(void) // Control command 0x00
+static INLINE void InvalidateTexCache(void)
+{
+ for(auto& c : TexCache)
+  c.Tag = ~0U;
+}
+
+static void InvalidateCache(void)
+{
+ CLUT_Cache_VB = ~0U;
+
+ InvalidateTexCache();
+}
+
+static void SoftReset(void) // Control command 0x00
 {
  IRQPending = false;
  IRQ_Assert(IRQ_GPU, IRQPending);
@@ -185,7 +207,7 @@ void PS_GPU::SoftReset(void) // Control command 0x00
 
  BlitterFIFO.Flush();
  DataReadBufferEx = 0;
- InCmd = INCMD_NONE;
+ InCmd = PS_GPU::INCMD_NONE;
 
  DisplayOff = 1;
  DisplayFB_XStart = 0;
@@ -239,7 +261,7 @@ void PS_GPU::SoftReset(void) // Control command 0x00
  TexDisableAllowChange = false;
 }
 
-void PS_GPU::Power(void)
+void GPU_Power(void)
 {
  memset(GPURAM, 0, sizeof(GPURAM));
 
@@ -284,7 +306,7 @@ void PS_GPU::Power(void)
  BlitterFIFO.Flush();
  DataReadBuffer = 0;	// Don't reset in SoftReset()
  DataReadBufferEx = 0;
- InCmd = INCMD_NONE;
+ InCmd = PS_GPU::INCMD_NONE;
  FBRW_X = 0;
  FBRW_Y = 0;
  FBRW_W = 0;
@@ -339,15 +361,13 @@ void PS_GPU::Power(void)
  TIMER_SetVBlank(InVBlank);
 }
 
-void PS_GPU::ResetTS(void)
+void GPU_ResetTS(void)
 {
  lastts = 0;
 }
 
-#include "gpu_common.inc"
-
 // Special RAM write mode(16 pixels at a time), does *not* appear to use mask drawing environment settings.
-INLINE void PS_GPU::Command_FBFill(const uint32 *cb)
+static void Command_FBFill(const uint32 *cb)
 {
  int32 r = cb[0] & 0xFF;
  int32 g = (cb[0] >> 8) & 0xFF;
@@ -381,7 +401,7 @@ INLINE void PS_GPU::Command_FBFill(const uint32 *cb)
  }
 }
 
-INLINE void PS_GPU::Command_FBCopy(const uint32 *cb)
+static void Command_FBCopy(const uint32 *cb)
 {
  int32 sourceX = (cb[1] >> 0) & 0x3FF;
  int32 sourceY = (cb[1] >> 16) & 0x3FF;
@@ -429,9 +449,9 @@ INLINE void PS_GPU::Command_FBCopy(const uint32 *cb)
  }
 }
 
-INLINE void PS_GPU::Command_FBWrite(const uint32 *cb)
+static void Command_FBWrite(const uint32 *cb)
 {
- assert(InCmd == INCMD_NONE);
+ assert(InCmd == PS_GPU::INCMD_NONE);
 
  FBRW_X = (cb[1] >>  0) & 0x3FF;
  FBRW_Y = (cb[1] >> 16) & 0x3FF;
@@ -451,16 +471,16 @@ INLINE void PS_GPU::Command_FBWrite(const uint32 *cb)
  InvalidateTexCache();
 
  if(FBRW_W != 0 && FBRW_H != 0)
-  InCmd = INCMD_FBWRITE;
+  InCmd = PS_GPU::INCMD_FBWRITE;
 }
 
 //
 // FBRead: PS1 GPU in SCPH-5501 gives odd, inconsistent results when raw_height == 0, or
 // raw_height != 0x200 && (raw_height & 0x1FF) == 0
 //
-INLINE void PS_GPU::Command_FBRead(const uint32 *cb)
+static void Command_FBRead(const uint32 *cb)
 {
- assert(InCmd == INCMD_NONE);
+ assert(InCmd == PS_GPU::INCMD_NONE);
 
  FBRW_X = (cb[1] >>  0) & 0x3FF;
  FBRW_Y = (cb[1] >> 16) & 0x3FF;
@@ -480,7 +500,7 @@ INLINE void PS_GPU::Command_FBRead(const uint32 *cb)
  InvalidateTexCache();
 
  if(FBRW_W != 0 && FBRW_H != 0)
-  InCmd = INCMD_FBREAD;
+  InCmd = PS_GPU::INCMD_FBREAD;
 }
 
 /*
@@ -491,7 +511,7 @@ INLINE void PS_GPU::RecalcTexPageStuff(uint32 tpage)
 }
 */
 
-INLINE void PS_GPU::SetTPage(const uint32 cmdw)
+static void SetTPage(const uint32 cmdw)
 {
  const unsigned NewTexPageX = (cmdw & 0xF) * 64;
  const unsigned NewTexPageY = (cmdw & 0x10) * 16;
@@ -524,7 +544,7 @@ INLINE void PS_GPU::SetTPage(const uint32 cmdw)
  RecalcTexWindowStuff();
 }
 
-INLINE void PS_GPU::Command_DrawMode(const uint32 *cb)
+static void Command_DrawMode(const uint32 *cb)
 {
  const uint32 cmdw = *cb;
 
@@ -537,7 +557,7 @@ INLINE void PS_GPU::Command_DrawMode(const uint32 *cb)
  //printf("*******************DFE: %d -- scanline=%d\n", dfe, scanline);
 }
 
-INLINE void PS_GPU::Command_TexWindow(const uint32 *cb)
+static void Command_TexWindow(const uint32 *cb)
 {
  tww = (*cb & 0x1F);
  twh = ((*cb >> 5) & 0x1F);
@@ -547,7 +567,7 @@ INLINE void PS_GPU::Command_TexWindow(const uint32 *cb)
  RecalcTexWindowStuff();
 }
 
-INLINE void PS_GPU::Command_Clip0(const uint32 *cb)
+static void Command_Clip0(const uint32 *cb)
 {
  ClipX0 = *cb & 1023;
  ClipY0 = (*cb >> 10) & 1023;
@@ -555,7 +575,7 @@ INLINE void PS_GPU::Command_Clip0(const uint32 *cb)
  //fprintf(stderr, "[GPU] Clip0: x=%d y=%d, raw=0x%08x --- %d\n", ClipX0, ClipY0, *cb, scanline);
 }
 
-INLINE void PS_GPU::Command_Clip1(const uint32 *cb)
+static void Command_Clip1(const uint32 *cb)
 {
  ClipX1 = *cb & 1023;
  ClipY1 = (*cb >> 10) & 1023;
@@ -563,7 +583,7 @@ INLINE void PS_GPU::Command_Clip1(const uint32 *cb)
  //fprintf(stderr, "[GPU] Clip1: x=%d y=%d, raw=0x%08x --- %d\n", ClipX1, ClipY1, *cb, scanline);
 }
 
-INLINE void PS_GPU::Command_DrawingOffset(const uint32 *cb)
+static void Command_DrawingOffset(const uint32 *cb)
 {
  OffsX = sign_x_to_s32(11, (*cb & 2047));
  OffsY = sign_x_to_s32(11, ((*cb >> 11) & 2047));
@@ -571,108 +591,32 @@ INLINE void PS_GPU::Command_DrawingOffset(const uint32 *cb)
  //fprintf(stderr, "[GPU] Drawing offset: x=%d y=%d, raw=0x%08x --- %d\n", OffsX, OffsY, *cb, scanline);
 }
 
-INLINE void PS_GPU::Command_MaskSetting(const uint32 *cb)
+static void Command_MaskSetting(const uint32 *cb)
 {
  //printf("Mask setting: %08x\n", *cb);
  MaskSetOR = (*cb & 1) ? 0x8000 : 0x0000;
  MaskEvalAND = (*cb & 2) ? 0x8000 : 0x0000;
 }
 
-INLINE void PS_GPU::InvalidateTexCache(void)
-{
- for(auto& c : TexCache)
-  c.Tag = ~0U;
-}
-
-void PS_GPU::InvalidateCache(void)
-{
- CLUT_Cache_VB = ~0U;
-
- InvalidateTexCache();
-}
-
-INLINE void PS_GPU::Command_ClearCache(const uint32 *cb)
+static void Command_ClearCache(const uint32 *cb)
 {
  InvalidateCache();
 }
 
-INLINE void PS_GPU::Command_IRQ(const uint32 *cb)
+static void Command_IRQ(const uint32 *cb)
 {
  IRQPending = true;
  IRQ_Assert(IRQ_GPU, IRQPending);
 }
 
-//
-// C-style function wrappers so our command table isn't so ginormous(in memory usage).
-//
-static void G_Command_ClearCache(PS_GPU* g, const uint32 *cb)
+namespace PS_GPU_INTERNAL
 {
- g->Command_ClearCache(cb);
-}
-
-static void G_Command_IRQ(PS_GPU* g, const uint32 *cb)
-{
- g->Command_IRQ(cb);
-}
-
-static void G_Command_FBFill(PS_GPU* g, const uint32 *cb)
-{
- g->Command_FBFill(cb);
-}
-
-static void G_Command_FBCopy(PS_GPU* g, const uint32 *cb)
-{
- g->Command_FBCopy(cb);
-}
-
-static void G_Command_FBWrite(PS_GPU* g, const uint32 *cb)
-{
- g->Command_FBWrite(cb);
-}
-
-static void G_Command_FBRead(PS_GPU* g, const uint32 *cb)
-{
- g->Command_FBRead(cb);
-}
-
-static void G_Command_DrawMode(PS_GPU* g, const uint32 *cb)
-{
- g->Command_DrawMode(cb);
-}
-
-static void G_Command_TexWindow(PS_GPU* g, const uint32 *cb)
-{
- g->Command_TexWindow(cb);
-}
-
-static void G_Command_Clip0(PS_GPU* g, const uint32 *cb)
-{
- g->Command_Clip0(cb);
-}
-
-static void G_Command_Clip1(PS_GPU* g, const uint32 *cb)
-{
- g->Command_Clip1(cb);
-}
-
-static void G_Command_DrawingOffset(PS_GPU* g, const uint32 *cb)
-{
- g->Command_DrawingOffset(cb);
-}
-
-static void G_Command_MaskSetting(PS_GPU* g, const uint32 *cb)
-{
- g->Command_MaskSetting(cb);
-}
-
-CTEntry PS_GPU::Commands[0x100];
-
-const CTEntry PS_GPU::Commands_00_1F[0x20] =
+extern const CTEntry Commands_00_1F[0x20] =
 {
  /* 0x00 */
  NULLCMD(),
- OTHER_HELPER(1, 2, false, G_Command_ClearCache),
- OTHER_HELPER(3, 3, false, G_Command_FBFill),
+ OTHER_HELPER(1, 2, false, Command_ClearCache),
+ OTHER_HELPER(3, 3, false, Command_FBFill),
 
  NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(),
  NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(),
@@ -682,29 +626,29 @@ const CTEntry PS_GPU::Commands_00_1F[0x20] =
  NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(),
 
  /* 0x1F */
- OTHER_HELPER(1, 1, false,  G_Command_IRQ)
+ OTHER_HELPER(1, 1, false,  Command_IRQ)
 };
 
-const CTEntry PS_GPU::Commands_80_FF[0x80] =
+extern const CTEntry Commands_80_FF[0x80] =
 {
  /* 0x80 ... 0x9F */
- OTHER_HELPER_X32(4, 2, false, G_Command_FBCopy),
+ OTHER_HELPER_X32(4, 2, false, Command_FBCopy),
 
  /* 0xA0 ... 0xBF */
- OTHER_HELPER_X32(3, 2, false, G_Command_FBWrite),
+ OTHER_HELPER_X32(3, 2, false, Command_FBWrite),
 
  /* 0xC0 ... 0xDF */
- OTHER_HELPER_X32(3, 2, false, G_Command_FBRead),
+ OTHER_HELPER_X32(3, 2, false, Command_FBRead),
 
  /* 0xE0 */
 
  NULLCMD(),
- OTHER_HELPER(1, 2, false, G_Command_DrawMode),
- OTHER_HELPER(1, 2, false, G_Command_TexWindow),
- OTHER_HELPER(1, 1, true,  G_Command_Clip0),
- OTHER_HELPER(1, 1, true,  G_Command_Clip1),
- OTHER_HELPER(1, 1, true,  G_Command_DrawingOffset),
- OTHER_HELPER(1, 2, false, G_Command_MaskSetting),
+ OTHER_HELPER(1, 2, false, Command_DrawMode),
+ OTHER_HELPER(1, 2, false, Command_TexWindow),
+ OTHER_HELPER(1, 1, true,  Command_Clip0),
+ OTHER_HELPER(1, 1, true,  Command_Clip1),
+ OTHER_HELPER(1, 1, true,  Command_DrawingOffset),
+ OTHER_HELPER(1, 2, false, Command_MaskSetting),
 
  NULLCMD(),
  NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(),
@@ -713,8 +657,9 @@ const CTEntry PS_GPU::Commands_80_FF[0x80] =
  NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(),
  NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD(), NULLCMD()
 };
+}
 
-void PS_GPU::ProcessFIFO(void)
+static void ProcessFIFO(void)
 {
  if(!BlitterFIFO.CanRead())
   return;
@@ -725,14 +670,14 @@ void PS_GPU::ProcessFIFO(void)
 	abort();
 	break;
 
-  case INCMD_NONE:
+  case PS_GPU::INCMD_NONE:
 	break;
 
-  case INCMD_FBREAD:
+  case PS_GPU::INCMD_FBREAD:
 	PSX_WARNING("[GPU] Command FIFO not empty while in FB Read?!");
 	return;
 
-  case INCMD_FBWRITE:
+  case PS_GPU::INCMD_FBWRITE:
        {
   	uint32 InData = BlitterFIFO.Read();
 
@@ -748,7 +693,7 @@ void PS_GPU::ProcessFIFO(void)
 	  FBRW_CurY++;
 	  if(FBRW_CurY == (FBRW_Y + FBRW_H))
 	  {
-	   InCmd = INCMD_NONE;
+	   InCmd = PS_GPU::INCMD_NONE;
 	   break;	// Break out of the for() loop.
 	  }
 	 }
@@ -758,7 +703,7 @@ void PS_GPU::ProcessFIFO(void)
        }
        break;
 
-  case INCMD_QUAD:
+  case PS_GPU::INCMD_QUAD:
        {
 	if(DrawTimeAvail < 0)
 	 return;
@@ -775,13 +720,13 @@ void PS_GPU::ProcessFIFO(void)
 	  CB[i] = BlitterFIFO.Read();
 	 }
 
-	 command->func[abr][TexMode | (MaskEvalAND ? 0x4 : 0x0)](this, CB);
+	 command->func[abr][TexMode | (MaskEvalAND ? 0x4 : 0x0)](CB);
 	}
 	return;
        }
        break;
 
-  case INCMD_PLINE:
+  case PS_GPU::INCMD_PLINE:
        {
   	if(DrawTimeAvail < 0)
 	 return;
@@ -794,7 +739,7 @@ void PS_GPU::ProcessFIFO(void)
   	if((BlitterFIFO.Peek() & 0xF000F000) == 0x50005000)
 	{
 	 BlitterFIFO.Read();
-	 InCmd = INCMD_NONE;
+	 InCmd = PS_GPU::INCMD_NONE;
 	 return;
 	}
 
@@ -805,7 +750,7 @@ void PS_GPU::ProcessFIFO(void)
 	  CB[i] = BlitterFIFO.Read();
 	 }
 
-	 command->func[abr][TexMode | (MaskEvalAND ? 0x4 : 0x0)](this, CB);
+	 command->func[abr][TexMode | (MaskEvalAND ? 0x4 : 0x0)](CB);
 	}
 	return;
        }
@@ -854,14 +799,14 @@ void PS_GPU::ProcessFIFO(void)
   }
   else
   {
-   command->func[abr][TexMode | (MaskEvalAND ? 0x4 : 0x0)](this, CB);
+   command->func[abr][TexMode | (MaskEvalAND ? 0x4 : 0x0)](CB);
   }
  }
 }
 
-INLINE void PS_GPU::WriteCB(uint32 InData)
+static void WriteCB(uint32 InData)
 {
- if(BlitterFIFO.CanRead() >= 0x10 && (InCmd != INCMD_NONE || (BlitterFIFO.CanRead() - 0x10) >= Commands[BlitterFIFO.Peek() >> 24].fifo_fb_len))
+ if(BlitterFIFO.CanRead() >= 0x10 && (InCmd != PS_GPU::INCMD_NONE || (BlitterFIFO.CanRead() - 0x10) >= Commands[BlitterFIFO.Peek() >> 24].fifo_fb_len))
  {
   PSX_DBG(PSX_DBG_WARNING, "GPU FIFO overflow!!!\n");
   return;
@@ -871,7 +816,7 @@ INLINE void PS_GPU::WriteCB(uint32 InData)
  ProcessFIFO();
 }
 
-void PS_GPU::Write(const pscpu_timestamp_t timestamp, uint32 A, uint32 V)
+MDFN_FASTCALL void GPU_Write(const pscpu_timestamp_t timestamp, uint32 A, uint32 V)
 {
  V <<= (A & 3) * 8;
 
@@ -900,7 +845,7 @@ void PS_GPU::Write(const pscpu_timestamp_t timestamp, uint32 A, uint32 V)
 	if(DrawTimeAvail < 0)
 	 DrawTimeAvail = 0;
 	BlitterFIFO.Flush();
-	InCmd = INCMD_NONE;
+	InCmd = PS_GPU::INCMD_NONE;
 	break;
 
    case 0x02: 	// Acknowledge IRQ
@@ -989,14 +934,14 @@ void PS_GPU::Write(const pscpu_timestamp_t timestamp, uint32 A, uint32 V)
 }
 
 
-void PS_GPU::WriteDMA(uint32 V)
+MDFN_FASTCALL void GPU_WriteDMA(uint32 V)
 {
  WriteCB(V);
 }
 
-INLINE uint32 PS_GPU::ReadData(void)
+static INLINE uint32 ReadData(void)
 {
- if(InCmd == INCMD_FBREAD)
+ if(InCmd == PS_GPU::INCMD_FBREAD)
  {
   DataReadBufferEx = 0;
   for(int i = 0; i < 2; i++)
@@ -1008,7 +953,7 @@ INLINE uint32 PS_GPU::ReadData(void)
    {
     if((FBRW_CurY + 1) == (FBRW_Y + FBRW_H))
     {
-     InCmd = INCMD_NONE;
+     InCmd = PS_GPU::INCMD_NONE;
     }
     else
     {
@@ -1024,12 +969,12 @@ INLINE uint32 PS_GPU::ReadData(void)
  return DataReadBuffer;
 }
 
-uint32 PS_GPU::ReadDMA(void)
+uint32 GPU_ReadDMA(void)
 {
  return ReadData();
 }
 
-uint32 PS_GPU::Read(const pscpu_timestamp_t timestamp, uint32 A)
+MDFN_FASTCALL uint32 GPU_Read(const pscpu_timestamp_t timestamp, uint32 A)
 {
  uint32 ret = 0;
 
@@ -1052,13 +997,13 @@ uint32 PS_GPU::Read(const pscpu_timestamp_t timestamp, uint32 A)
 
   ret |= DisplayOff << 23;
 
-  if(InCmd == INCMD_NONE && DrawTimeAvail >= 0 && BlitterFIFO.CanRead() == 0x00)	// GPU idle bit.
+  if(InCmd == PS_GPU::INCMD_NONE && DrawTimeAvail >= 0 && BlitterFIFO.CanRead() == 0x00)	// GPU idle bit.
    ret |= 1 << 26;
 
-  if(InCmd == INCMD_FBREAD)	// Might want to more accurately emulate this in the future?
+  if(InCmd == PS_GPU::INCMD_FBREAD)	// Might want to more accurately emulate this in the future?
    ret |= (1 << 27);
 
-  ret |= CalcFIFOReadyBit() << 28;		// FIFO has room bit? (kinda).
+  ret |= GPU_CalcFIFOReadyBit() << 28;		// FIFO has room bit? (kinda).
 
   //
   //
@@ -1101,7 +1046,7 @@ static INLINE uint32 MDFN_NOWARN_UNUSED ShiftHelper(uint32 val, int shamt, uint3
 
 #pragma GCC push_options
 #pragma GCC optimize("no-unroll-loops,no-peel-loops,no-crossjumping")
-INLINE void PS_GPU::ReorderRGB_Var(uint32 out_Rshift, uint32 out_Gshift, uint32 out_Bshift, bool bpp24, const uint16 *src, uint32 *dest, const int32 dx_start, const int32 dx_end, int32 fb_x)
+static INLINE void ReorderRGB_Var(uint32 out_Rshift, uint32 out_Gshift, uint32 out_Bshift, bool bpp24, const uint16 *src, uint32 *dest, const int32 dx_start, const int32 dx_end, int32 fb_x)
 {
      if(bpp24)	// 24bpp
      {
@@ -1138,13 +1083,13 @@ INLINE void PS_GPU::ReorderRGB_Var(uint32 out_Rshift, uint32 out_Gshift, uint32 
 }
 
 template<uint32 out_Rshift, uint32 out_Gshift, uint32 out_Bshift>
-void NO_INLINE PS_GPU::ReorderRGB(bool bpp24, const uint16 *src, uint32 *dest, const int32 dx_start, const int32 dx_end, int32 fb_x)
+static NO_INLINE void ReorderRGB(bool bpp24, const uint16 *src, uint32 *dest, const int32 dx_start, const int32 dx_end, int32 fb_x)
 {
  ReorderRGB_Var(out_Rshift, out_Gshift, out_Bshift, bpp24, src, dest, dx_start, dx_end, fb_x);
 }
 #pragma GCC pop_options
 
-pscpu_timestamp_t PS_GPU::Update(const pscpu_timestamp_t sys_timestamp)
+MDFN_FASTCALL pscpu_timestamp_t GPU_Update(const pscpu_timestamp_t sys_timestamp)
 {
  static const uint32 DotClockRatios[5] = { 10, 8, 5, 4, 7 };
  const uint32 dmc = (DisplayMode & 0x40) ? 4 : (DisplayMode & 0x3);
@@ -1488,7 +1433,7 @@ pscpu_timestamp_t PS_GPU::Update(const pscpu_timestamp_t sys_timestamp)
  }
 }
 
-void PS_GPU::StartFrame(EmulateSpecStruct *espec_arg)
+void GPU_StartFrame(EmulateSpecStruct *espec_arg)
 {
  sl_zero_reached = false;
 
@@ -1524,7 +1469,7 @@ void PS_GPU::StartFrame(EmulateSpecStruct *espec_arg)
  }
 }
 
-void PS_GPU::StateAction(StateMem *sm, const unsigned load, const bool data_only)
+void GPU_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  uint32 TexCache_Tag[256];
  uint16 TexCache_Data[256][4];
