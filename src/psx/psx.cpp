@@ -33,7 +33,6 @@
 #include <mednafen/hash/sha256.h>
 #include <mednafen/cheat_formats/psx.h>
 
-#include <stdarg.h>
 #include <ctype.h>
 
 #include <zlib.h>

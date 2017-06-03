@@ -264,8 +264,8 @@ static INLINE uint8 read_1808(int32 timestamp)
  {
   if(PCECD_Drive_GetIO())
   {
-   PCECD_Drive_SetACK(TRUE);
-   ACKStatus = TRUE;
+   PCECD_Drive_SetACK(true);
+   ACKStatus = true;
    pcecd_drive_ne = PCECD_Drive_Run(timestamp);
    ClearACKDelay = 15 * 3;
   }
@@ -335,7 +335,7 @@ void PCECD_Power(uint32 timestamp)
 	PCECD_Drive_Power(timestamp);
         pcecd_drive_ne = 0x7fffffff;
 
-        bBRAMEnabled = FALSE;
+        bBRAMEnabled = false;
         memset(_Port, 0, sizeof(_Port));
 	ACKStatus = 0;
 	ClearACKDelay = 0;
@@ -372,7 +372,7 @@ void PCECD_Power(uint32 timestamp)
 	Fader.Volume = 0;
 	Fader.CycleCounter = 0;
 	Fader.CountValue = 0;
-	Fader.Clocked = FALSE;
+	Fader.Clocked = false;
 }
 
 bool PCECD_IsBRAMEnabled(void)
@@ -417,7 +417,7 @@ MDFN_FASTCALL uint8 PCECD_Read(uint32 timestamp, uint32 A)
    case 0x2: ret = _Port[2];
 	     break;
 
-   case 0x3: bBRAMEnabled = FALSE;
+   case 0x3: bBRAMEnabled = false;
 
 	     /* switch left/right of digitized cd playback */
 	     ret = _Port[0x3];
@@ -578,7 +578,7 @@ MDFN_FASTCALL void PCECD_Write(uint32 timestamp, uint32 physAddr, uint8 data)
 		case 0x7:	// $1807: D7=1 enables backup ram 
 			if (data & 0x80)
 			{
-				bBRAMEnabled = TRUE;
+				bBRAMEnabled = true;
 			}
 			break;
 	
@@ -720,7 +720,7 @@ MDFN_FASTCALL void PCECD_Write(uint32 timestamp, uint32 physAddr, uint8 data)
 			 Fader.Volume = 65536;
 			 Fader.CycleCounter = 0;
 			 Fader.CountValue = 0;
-			 Fader.Clocked = FALSE;
+			 Fader.Clocked = false;
 			}
 			else
 			{
@@ -729,7 +729,7 @@ MDFN_FASTCALL void PCECD_Write(uint32 timestamp, uint32 physAddr, uint8 data)
 			 if(!Fader.Clocked)
 			  Fader.CycleCounter = Fader.CountValue;
 
-			 Fader.Clocked = TRUE;
+			 Fader.Clocked = true;
 			}
 			Fader_SyncWhich();
 			break;
@@ -870,8 +870,8 @@ MDFN_FASTCALL void PCECD_Run(uint32 in_timestamp)
    ClearACKDelay -= chunk_clocks;
    if(ClearACKDelay <= 0)
    {
-    ACKStatus = FALSE;
-    PCECD_Drive_SetACK(FALSE);
+    ACKStatus = false;
+    PCECD_Drive_SetACK(false);
     PCECD_Drive_Run(running_ts);
     if(PCECD_Drive_GetCD())
     {

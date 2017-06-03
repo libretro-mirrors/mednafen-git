@@ -470,7 +470,7 @@ void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp)
 
   {
    const BoardHandler_t *bh = BoardHandlers;
-   bool BoardFound = FALSE;
+   bool BoardFound = false;
 
    MDFN_printf(_("Mapper: %s\n"), mapper);
    MDFN_printf(_("SRAM Type:  0x%08x\n"), sram_type);
@@ -481,7 +481,7 @@ void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp)
     if(!strcasecmp(bh->boardname, mapper))
     {
      cart_hardware = bh->MapperMake(ginfo, cart_rom, Cart_ROM_Size, bh->iparam, bh->sparam);
-     BoardFound = TRUE;
+     BoardFound = true;
      break;
     }
     bh++;

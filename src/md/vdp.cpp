@@ -165,8 +165,8 @@ void MDVDP::Reset(void)
     vdp_hcounter_start_ts = 0;
     scanline = visible_frame_end;
 
-    MD_Suspend68K(FALSE);
-    z80_set_interrupt(FALSE);
+    MD_Suspend68K(false);
+    z80_set_interrupt(false);
     Main68K.SetIPL(0);
 
     RedoViewport();

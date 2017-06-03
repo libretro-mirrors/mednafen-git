@@ -16,7 +16,6 @@
  */
 
 #include "nes.h"
-#include <math.h>
 #include "x6502.h"
 #include "sound.h"
 #include "cart.h"

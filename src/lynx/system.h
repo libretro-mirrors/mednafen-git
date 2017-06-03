@@ -48,9 +48,6 @@
 
 #include "machine.h"
 
-#include <string>
-#include <memory>
-
 #define HANDY_SYSTEM_FREQ						16000000
 #define HANDY_TIMER_FREQ						20
 
@@ -70,10 +67,10 @@
 	uint32	gSystemCycleCount=0;
 	uint32	gNextTimerEvent=0;
 	uint32	gCPUBootAddress=0;
-	uint32	gSystemIRQ=FALSE;
-	uint32	gSystemNMI=FALSE;
-	uint32	gSystemCPUSleep=FALSE;
-	uint32	gSystemHalt=FALSE;
+	uint32	gSystemIRQ=false;
+	uint32	gSystemNMI=false;
+	uint32	gSystemCPUSleep=false;
+	uint32	gSystemHalt=false;
 #else
 	extern uint32	gSystemCycleCount;
 	extern uint32	gSuzieDoneTime;

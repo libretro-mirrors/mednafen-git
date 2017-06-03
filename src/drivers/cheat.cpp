@@ -21,7 +21,6 @@
 #include "console.h"
 #include "video.h"
 #include <mednafen/string/string.h>
-#include <vector>
 
 static MDFN_Thread *CheatThread = NULL;
 static MDFN_Mutex *CheatMutex = NULL;

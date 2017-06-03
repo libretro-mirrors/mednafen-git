@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* wasapi.cpp - Exclusive-Mode WASAPI Sound Driver
-**  Copyright (C) 2013-2016 Mednafen Team
+**  Copyright (C) 2013-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -25,14 +25,10 @@
 
 #include <windows.h>
 #include <windowsx.h>
-#include <stdio.h>
-#include <string.h>
 #include <mmdeviceapi.h>
 #include <audioclient.h>
 #include <audiopolicy.h>
 #include <propidl.h>
-#include <algorithm>
-#include <assert.h>
 
 //#undef _WIN32_WINNT
 //#define _WIN32_WINNT 0x600
@@ -47,7 +43,7 @@ static const GUID LV_KSDATAFORMAT_SUBTYPE_PCM = { 0x00000001, 0x0000, 0x0010, { 
 static const PROPERTYKEY LV_PKEY_Device_FriendlyName = { { 0xa45c254e, 0xdf1c, 0x4efd, { 0x80, 0x20, 0x67, 0xd1, 0x46, 0xa8, 0x50, 0xe0 } }, 14 };
 static const PROPERTYKEY LV_PKEY_DeviceInterface_FriendlyName = { { 0x026e516e, 0xb814, 0x414b, { 0x83, 0xcd, 0x85, 0x6d, 0x6f, 0xef, 0x48, 0x22 } }, 2 };
 
-struct WASWrap
+struct SexyAL_WASAPI
 {
  IMMDevice *immdev;
  IAudioClient *ac;
@@ -91,7 +87,7 @@ static int Pause(SexyAL_device *device, int state)
 static DWORD WINAPI AThreadMain(LPVOID param)
 {
  SexyAL_device *dev = (SexyAL_device*)param;
- WASWrap *w = (WASWrap*)dev->private_data;
+ SexyAL_WASAPI *w = (SexyAL_WASAPI*)dev->private_data;
  BYTE *bd;
  DWORD task_index = 0;
  HANDLE avh;
@@ -219,16 +215,15 @@ bool SexyALI_WASAPI_Avail(void)
 SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering)
 {
  SexyAL_device *dev;
- WASWrap *w;
+ SexyAL_WASAPI *w;
  IMMDeviceEnumerator *immdeven = NULL;
  WAVEFORMATEXTENSIBLE wfe;
  HRESULT hr;
- const bool exclusive_mode = true;
 
  dev = (SexyAL_device *)calloc(1, sizeof(SexyAL_device));
  timeBeginPeriod(1);
 
- w = (WASWrap *)calloc(1, sizeof(WASWrap));
+ w = (SexyAL_WASAPI *)calloc(1, sizeof(SexyAL_WASAPI));
  dev->private_data = w;
  //
  //
@@ -310,55 +305,26 @@ SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL
 
  TRYHR(w->immdev->Activate(LV_IID_IAudioClient, CLSCTX_ALL, NULL, (void**)&w->ac));
 
- if(exclusive_mode == false)
  {
-  WAVEFORMATEX *mf = NULL;
+  const uint32 rates[] = { format->rate, 48000, 96000, 192000, 44100, 88200, 64000, 32000, 22050 };
+  const uint32 chans[] = { format->channels, 2, 8, 1 };
+  const uint32 bits[] = { 8 * SAMPFORMAT_BYTES(format->sampformat), 16, 32, 24, 8 };
 
-  TRYHR(w->ac->GetMixFormat(&mf));
-
-#if 0
-  printf("wFormatTag: 0x%08x\n", mf->wFormatTag);
-  printf("nChannels: 0x%08x\n", mf->nChannels);
-  printf("nSamplesPerSec: 0x%08x\n", mf->nSamplesPerSec);
-  printf("wBitsPerSample: 0x%08x\n", mf->wBitsPerSample);
-  printf("nBlockAlign: 0x%08x\n", mf->nBlockAlign);
-  printf("cbSize: 0x%08x\n", mf->cbSize);
-  fflush(stdout);
-#endif
-
-  memset(&wfe, 0, sizeof(wfe));
-  wfe.Format.wFormatTag = WAVE_FORMAT_PCM;
-  wfe.Format.nChannels = format->channels;
-  wfe.Format.nSamplesPerSec = mf->nSamplesPerSec;
-  wfe.Format.wBitsPerSample = 16;
-  wfe.Format.nBlockAlign = (wfe.Format.nChannels * wfe.Format.wBitsPerSample) / 8;
-  wfe.Format.nAvgBytesPerSec = wfe.Format.nSamplesPerSec * wfe.Format.nBlockAlign;
-  wfe.Format.cbSize = 0;
-
-  CoTaskMemFree(mf);
-
-  goto SuppFormatFound;
- }
- else
- {
-  const uint32 rates[7] = { format->rate, 48000, 96000, 192000, 44100, 88200, 22050 };
-  const uint32 chans[4] = { format->channels, 2, 1, 8 };
-  const int bits[3] = { 16, 32, 8 };
-
-  for(int chantry = 0; chantry < 4; chantry++)
+  for(unsigned chantry = 0; chantry < sizeof(chans) / sizeof(chans[0]); chantry++)
   {
-   for(int ratetry = 0; ratetry < 7; ratetry++)
+   for(unsigned ratetry = 0; ratetry < sizeof(rates) / sizeof(rates[0]); ratetry++)
    {
-    for(int bittry = 0; bittry < 3; bittry++)
+    for(unsigned bittry = 0; bittry < sizeof(bits) / sizeof(bits[0]); bittry++)
     {
-     for(int vbtry = (bits[bittry] == 32) ? 32 : 16; vbtry >= 16; vbtry--)
+     for(unsigned vbtry = std::max<unsigned>(16, bits[bittry]); vbtry >= 16; vbtry--)
      {
       memset(&wfe, 0, sizeof(wfe));
 
       wfe.Format.wFormatTag = WAVE_FORMAT_PCM;
       wfe.Format.nChannels = chans[chantry];
       wfe.Format.nSamplesPerSec = rates[ratetry];
-      wfe.Format.wBitsPerSample = round_up_pow2(bits[bittry]);
+      wfe.Format.wBitsPerSample = bits[bittry];
+      wfe.Samples.wValidBitsPerSample = bits[bittry];	// Simplifies SAMPFORMAT_MAKE()
 
       wfe.Format.nBlockAlign = (wfe.Format.nChannels * wfe.Format.wBitsPerSample) / 8;
       wfe.Format.nAvgBytesPerSec = wfe.Format.nSamplesPerSec * wfe.Format.nBlockAlign;
@@ -379,7 +345,7 @@ SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL
        wfe.SubFormat = LV_KSDATAFORMAT_SUBTYPE_PCM;
       }
 
-      if(w->ac->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, (WAVEFORMATEX*)&wfe, NULL) == S_OK)
+      if(w->ac->IsFormatSupported(AUDCLNT_SHAREMODE_EXCLUSIVE, (const WAVEFORMATEX*)&wfe, NULL) == S_OK)
       {
        goto SuppFormatFound;
       }
@@ -395,26 +361,11 @@ SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL
  SuppFormatFound: ;
 
  format->rate = wfe.Format.nSamplesPerSec;
- format->sampformat = ((wfe.Format.wBitsPerSample >> 3) << 4) | 1;
-
- if(wfe.Format.wBitsPerSample == 32)
-  format->sampformat |= 2;
+ format->sampformat = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_SINT, wfe.Format.wBitsPerSample >> 3, wfe.Samples.wValidBitsPerSample, wfe.Format.wBitsPerSample - wfe.Samples.wValidBitsPerSample, MDFN_IS_BIGENDIAN);
 
  format->channels = wfe.Format.nChannels;
- format->revbyteorder = false;
  format->noninterleaved = false;
 
- if(exclusive_mode == false)
- {
-  REFERENCE_TIME periodicity;
-
-  TRYHR(w->ac->GetDevicePeriod(&periodicity, NULL));	// Default periodicity for a shared-mode stream.
-
-  TRYHR(w->ac->Initialize(AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, periodicity, 0, (WAVEFORMATEX*)&wfe, NULL));
-
-  TRYHR(w->ac->GetBufferSize(&w->bfc));
- }
- else
  {
   REFERENCE_TIME periodicity;
 
@@ -518,7 +469,7 @@ SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL
 
 static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 {
- WASWrap *w = (WASWrap *)device->private_data;
+ SexyAL_WASAPI *w = (SexyAL_WASAPI *)device->private_data;
  int32 bytes_in = w->BufferWBC - w->BufferRBC;
 
  assert(bytes_in >= 0);
@@ -530,7 +481,7 @@ static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 
 static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 {
- WASWrap *w = (WASWrap *)device->private_data;
+ SexyAL_WASAPI *w = (SexyAL_WASAPI *)device->private_data;
  const uint8* data8 = (uint8*)data;
 
  while(len > 0)
@@ -588,7 +539,7 @@ static int Close(SexyAL_device *device)
  {
   if(device->private_data)
   {
-   WASWrap *w = (WASWrap *)device->private_data;
+   SexyAL_WASAPI *w = (SexyAL_WASAPI *)device->private_data;
 
    w->AThreadRunning = false;
    if(w->AThread)

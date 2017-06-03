@@ -439,6 +439,17 @@ static const ButtConfig SSMouseConfig[4] =
  MK(RETURN),
 };
 
+static const ButtConfig SSGunConfig[5] =
+{
+ { BUTTC_MOUSE, 0, 0x8000, 0 },
+ { BUTTC_MOUSE, 0, 0x8001, 0 },
+
+ { BUTTC_MOUSE, 0, 0, 0 },
+ { BUTTC_MOUSE, 0, 1, 0 },
+ { BUTTC_MOUSE, 0, 2, 0 },
+};
+
+
 static const ButtConfig SSKeyboardConfig[] =
 {
  MK(F9),
@@ -819,6 +830,19 @@ static const DefaultSettingsMeow defset[] =
  { "ss.input.port10.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
  { "ss.input.port11.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
  { "ss.input.port12.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
+
+ { "ss.input.port1.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
+ { "ss.input.port2.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
+ { "ss.input.port3.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
+ { "ss.input.port4.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
+ { "ss.input.port5.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
+ { "ss.input.port6.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
+ { "ss.input.port7.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
+ { "ss.input.port8.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
+ { "ss.input.port9.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
+ { "ss.input.port10.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
+ { "ss.input.port11.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
+ { "ss.input.port12.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
 
  { "ss.input.port1.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
  { "ss.input.port2.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },

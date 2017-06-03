@@ -17,10 +17,7 @@
 
 #include "main.h"
 
-#include <string.h>
 #include <trio/trio.h>
-#include <math.h>
-#include <stdlib.h>
 
 #include "video.h"
 #include "opengl.h"

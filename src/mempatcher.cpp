@@ -23,12 +23,9 @@
 
 #include "mednafen.h"
 
-#include <string.h>
 #include <ctype.h>
 #include <trio/trio.h>
-#include <errno.h>
 #include <unistd.h>
-#include <vector>
 
 #include "general.h"
 #include <mednafen/string/string.h>

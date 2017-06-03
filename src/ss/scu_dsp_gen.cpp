@@ -22,8 +22,6 @@
 #include "ss.h"
 #include "scu.h"
 
-#include <mednafen/endian.h>
-
 #pragma GCC optimize("Os")
   // Is first DSP instruction cached on PC load, or when execution starts?
 

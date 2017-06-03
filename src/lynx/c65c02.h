@@ -163,18 +163,18 @@ class C65C02
 			mOpcode=0;
 			mOperand=0;
 			mPC=CPU_PEEKW(BOOT_VECTOR);
-			mN=FALSE;
-			mV=FALSE;
-			mB=FALSE;
-			mD=FALSE;
-			mI=TRUE;
-			mZ=TRUE;
-			mC=FALSE;
-			mIRQActive=FALSE;
+			mN=false;
+			mV=false;
+			mB=false;
+			mD=false;
+			mI=true;
+			mZ=true;
+			mC=false;
+			mIRQActive=false;
 
-			gSystemNMI=FALSE;
-			gSystemIRQ=FALSE;
-			gSystemCPUSleep=FALSE;
+			gSystemNMI=false;
+			gSystemIRQ=false;
+			gSystemCPUSleep=false;
 		}
 
                 inline void StateAction(StateMem *sm, const unsigned load, const bool data_only)

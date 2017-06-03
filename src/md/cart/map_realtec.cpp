@@ -62,7 +62,7 @@ MD_Cart_Type_REALTEC::~MD_Cart_Type_REALTEC()
 
 void MD_Cart_Type_REALTEC::Reset(void)
 {
- boot_mode = TRUE;
+ boot_mode = true;
  bank_select = 0;
  bank_size = 0;
 }

@@ -17,7 +17,6 @@
 
 #include "main.h"
 
-#include <string.h>
 #include <ctype.h>
 #include <trio/trio.h>
 #include <map>
@@ -33,8 +32,6 @@
 #include "debugger.h"
 #include "help.h"
 #include "rmdui.h"
-
-#include <math.h>
 
 extern JoystickManager *joy_manager;
 

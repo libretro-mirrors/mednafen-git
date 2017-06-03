@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* es1371.cpp - Ensoniq ES1371/ES1373 Sound Driver
-**  Copyright (C) 2014-2016 Mednafen Team
+**  Copyright (C) 2014-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -24,7 +24,6 @@
 */
 
 #include "dos_common.h"
-#include <algorithm>
 
 static const int ES_DMAFIFO_BYTESIZE = 64;
 static const int ES_DMAFIFO_FETCHBYTESIZE = 32;
@@ -351,7 +350,6 @@ SexyAL_device *SexyALI_DOS_ES1371_Open(const char *id, SexyAL_format *format, Se
  format->rate = 48000;	// Hard-coded to 48KHz, at least until we can figure out how to make the resampler not be horrible at other rates.
  format->channels = 2;
  format->sampformat = SEXYAL_FMT_PCMS16;
- format->revbyteorder = false;
  format->noninterleaved = false;
 
  //

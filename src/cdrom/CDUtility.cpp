@@ -22,9 +22,7 @@
 #include "dvdisaster.h"
 #include "lec.h"
 
-#include <assert.h>
 //  Kill_LEC_Correct();
-
 
 namespace CDUtility
 {

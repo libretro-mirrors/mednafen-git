@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* sha256.cpp:
-**  Copyright (C) 2014-2016 Mednafen Team
+**  Copyright (C) 2014-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -20,12 +20,7 @@
 */
 
 #include <mednafen/mednafen.h>
-#include <mednafen/endian.h>
-
 #include "sha256.h"
-
-#include <stdio.h>
-#include <string.h>
 
 static const uint32 K[64] =
 {
@@ -145,7 +140,6 @@ sha256_digest sha256(const void* data, const uint64 len)
 }
 
 //sha256_digest goomba = "dccac470d07efd7f989c1f9a5045bc2cfe446622dbb50d4ad7f53996e574cd29"_sha256;
-#include <assert.h>
 void sha256_test(void)
 {
  char tv[256];

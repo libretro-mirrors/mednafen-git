@@ -30,7 +30,6 @@
 #include <mednafen/mempatcher.h>
 #include <mednafen/FileStream.h>
 #include <time.h>
-#include <math.h>
 #include <trio/trio.h>
 
 namespace MDFN_IEN_WSWAN

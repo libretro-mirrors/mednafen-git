@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* es1370.cpp - Ensoniq ES1370 Sound Driver
-**  Copyright (C) 2014-2016 Mednafen Team
+**  Copyright (C) 2014-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -31,7 +31,6 @@
 */
 
 #include "dos_common.h"
-#include <algorithm>
 
 static const int ES_DMAFIFO_BYTESIZE = 64;
 static const int ES_DMAFIFO_FETCHBYTESIZE = 32;
@@ -314,7 +313,6 @@ SexyAL_device *SexyALI_DOS_ES1370_Open(const char *id, SexyAL_format *format, Se
  //
  format->channels = 2;
  format->sampformat = SEXYAL_FMT_PCMS16;
- format->revbyteorder = false;
  format->noninterleaved = false;
 
  if(!buffering->ms) 

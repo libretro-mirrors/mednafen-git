@@ -23,7 +23,6 @@
 #include "video.h"
 #include "overlay.h"
 #include "nnx.h"
-#include <math.h>
 
 static SDL_Overlay *ov = NULL;
 

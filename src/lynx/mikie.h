@@ -210,8 +210,8 @@ class CMikie : public CLynxBase
 
 		void StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
-		inline void SetCPUSleep(void) {gSystemCPUSleep=TRUE;};
-		inline void ClearCPUSleep(void) {gSystemCPUSleep=FALSE;};
+		inline void SetCPUSleep(void) {gSystemCPUSleep=true;};
+		inline void ClearCPUSleep(void) {gSystemCPUSleep=false;};
 
 		void CombobulateSound(uint32 teatime);
 		void Update(void);

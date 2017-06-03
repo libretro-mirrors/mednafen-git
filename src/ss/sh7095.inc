@@ -879,6 +879,34 @@ INLINE void SH7095::DIVU_S64_S32(void)
 }
 
 //
+//
+// Begin SCI
+//
+//
+void SH7095::SCI_Reset(void)
+{
+ SCI.SMR = 0x00;
+ SCI.BRR = 0xFF;
+ SCI.SCR = 0x00;
+ SCI.TDR = 0xFF;
+ SCI.SSR = 0x84;
+ SCI.SSRM = 0x00;
+ SCI.RDR = 0x00;
+ //
+ SCI.RSR = 0x00;
+ SCI.TSR = 0x00;
+
+ RecalcPendingIntPEX();
+}
+
+
+//
+//
+// End SCI
+//
+//
+
+//
 // Misaligned/wrong-sized accesses aren't handled correctly, it's a mess, but probably doesn't matter.
 //
 template<typename T>
@@ -1036,6 +1064,33 @@ NO_INLINE void SH7095::OnChipRegWrite(uint32 A, uint32 V)
 	SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unhandled %zu-byte write to on-chip low register area; address=0x%08x value=0x%08x\n", cpu_name, sizeof(T), A, V);
 	break;
 
+#if 0
+   //
+   // SCI registers.
+   //
+   case 0x00:
+	SCI.SMR = V;
+	break;
+
+   case 0x01:
+	SCI.BRR = V;
+	break;
+
+   case 0x02:
+	SCI.SCR = V;
+	RecalcPendingIntPEX();
+	break;
+
+   case 0x03:
+	SCI.TDR = V;
+	break;
+
+   case 0x04:
+	SCI.SSR = (SCI.SSR & ~SCI.SSRM & 0xF8) | (SCI.SSR & 0x06) | (V & 0x01);
+	SCI.SSRM = 0;
+	RecalcPendingIntPEX();
+	break;
+#endif
    //
    // Free-running timer registers.
    //
@@ -1449,6 +1504,35 @@ INLINE T SH7095::OnChipRegRead(uint32 A)
 	SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Unhandled %zu-byte read from on-chip low register area; address=0x%08x\n", cpu_name, sizeof(T), A);
 	break;
 
+#if 0
+   //
+   // SCI registers.
+   //
+   case 0x00:
+	ret = SCI.SMR;
+	break;
+
+   case 0x01:
+	ret = SCI.BRR;
+	break;
+
+   case 0x02:
+	ret = SCI.SCR;
+	break;
+
+   case 0x03:
+	ret = SCI.TDR;
+	break;
+
+   case 0x04:
+	ret = SCI.SSR;
+	SCI.SSRM = SCI.SSR & 0xF8;
+	break;
+
+   case 0x05:
+	ret = SCI.RDR;
+	break;
+#endif
    //
    // FRT registers.  Some weirdness with 16-bit reads duplicating the lower 8 bits in the upper 8-bits, but the upper 8-bits are masked
    // with the last data written to the FRT area or something...not emulated here.
@@ -2059,6 +2143,8 @@ void NO_INLINE SH7095::Reset(bool power_on_reset, bool from_internal_wdt)
  FRT_Reset();
  WDT_Reset(from_internal_wdt);
  //
+ SCI_Reset();
+ //
  SBYCR = 0;
  Standby = false;
  //
@@ -2180,16 +2266,25 @@ uint8 INLINE SH7095::GetPendingInt(uint8* vecnum_out)
   vecnum = (VCRWDT >> 8) & 0x7F;
  }
 
+ //
+ //
+ //
 #if 0
- if(OPMIPending)
  {
-  static const uint32 sci_any_mask = (1U << OPMI_SCI_TEI) | (1U << OPMI_SCI_TXI) | (1U << OPMI_SCI_RXI) | (1U << OPMI_SCI_ERI);
-  static const uint32 dmac_any_mask = (1U << OPMI_DMAC1) | (1U << OPMI_DMAC0);
-  uint32 new_ipr;
+  const uint32 sci_ip_tmp = (SCI.SSR & SCI.SCR & 0xC4) | (SCI.SSR & 0x38);
 
-  if((OPMIPending & sci_any_mask) && (new_ipr = ((IPRB >> 12) & 0xF)) > ipr)
+  if(sci_ip_tmp && (tmp_ipr = ((IPRB >> 12) & 0xF)) > ipr)
   {
-  
+   ipr = tmp_ipr;
+
+   if(sci_ip_tmp & 0x38) // ERI(receive error; ORER, PER, FER)
+    vecnum = (VCRA >> 8) & 0x7F;
+   else if(sci_ip_tmp & 0x40)// RXI(receive data full; RDRF)
+    vecnum = (VCRA >> 0) & 0x7F;
+   else if(sci_ip_tmp & 0x80)// TXI(transmit data empty; TDRE)
+    vecnum = (VCRB >> 8) & 0x7F;
+   else if(sci_ip_tmp & 0x04)// TEI(transmit end; TEND)
+    vecnum = (VCRB >> 0) & 0x7F;
   }
  }
 #endif
@@ -4201,6 +4296,9 @@ INLINE void SH7095::Step(void)
 	 //
 	 //
 	 WDT_StandbyReset();
+	 //
+	 //
+	 SCI_Reset();
 	 //
 	 //
 

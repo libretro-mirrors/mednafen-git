@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* scsp.h:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -25,6 +25,8 @@ class SS_SCSP
 
  SS_SCSP() MDFN_COLD;
  ~SS_SCSP() MDFN_COLD;
+
+ void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname) MDFN_COLD;
 
  void Reset(bool powering_up) MDFN_COLD;
  void RunSample(int16* outlr);
@@ -156,7 +158,7 @@ class SS_SCSP
   bool EnvGCBTPrev;
 
   uint8 LFOCounter;
-  int16 LFOTimeCounter;
+  uint16 LFOTimeCounter;
  } Slots[32];
 
  uint16 EXTS[2];

@@ -258,8 +258,8 @@
 	PUSH(mPC&0xff);\
 	PUSH(PS()|0x10);\
 \
-	mD=FALSE;\
-	mI=TRUE;\
+	mD=false;\
+	mI=true;\
 \
 	mPC=CPU_PEEKW(IRQ_VECTOR);\
 }
@@ -299,22 +299,22 @@
 
 #define	xCLC()\
 {\
-	mC=FALSE;\
+	mC=false;\
 }
 
 #define	xCLD()\
 {\
-	mD=FALSE;\
+	mD=false;\
 }
 
 #define	xCLI()\
 {\
-	mI=FALSE;\
+	mI=false;\
 }
 
 #define	xCLV()\
 {\
-	mV=FALSE;\
+	mV=false;\
 }
 
 #define	xCMP()\
@@ -618,7 +618,7 @@
 
 #define	xSTP()\
 {\
-	gSystemCPUSleep=TRUE;\
+	gSystemCPUSleep=true;\
 }
 
 #define	xSTX()\
@@ -689,6 +689,6 @@
 
 #define	xWAI()\
 {\
-	gSystemCPUSleep=TRUE;\
+	gSystemCPUSleep=true;\
 }
 

@@ -43,7 +43,7 @@ void unescape_string(char *string)
  {
   if(*src == '\\')
   {
-   inescape = TRUE;
+   inescape = true;
    inhex = 0;
    inoctal = 0;
   }

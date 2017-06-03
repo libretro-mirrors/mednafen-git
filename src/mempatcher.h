@@ -3,7 +3,6 @@
 
 #include "mempatcher-driver.h"
 #include "Stream.h"
-#include <vector>
 
 // Substitution cheat/patch stuff
 struct SUBCHEAT

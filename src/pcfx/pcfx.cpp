@@ -37,9 +37,6 @@
 #include <mednafen/compress/GZFileStream.h>
 
 #include <trio/trio.h>
-#include <errno.h>
-#include <string.h>
-#include <math.h>
 
 extern MDFNGI EmulatedPCFX;
 
@@ -64,7 +61,7 @@ static const int RAM_PageNOTMask = ~(RAM_PageSize - 1);
 
 static uint16 Last_VDC_AR[2];
 
-static bool WantHuC6273 = FALSE;
+static bool WantHuC6273 = false;
 
 //static 
 VDC *fx_vdc_chips[2];
@@ -586,7 +583,7 @@ static MDFN_COLD void LoadCommon(std::vector<CDIF *> *CDInterfaces)
 
  if(EmuFlags & CDGE_FLAG_FXGA)
  {
-  //WantHuC6273 = TRUE;
+  //WantHuC6273 = true;
  }
 
  MDFN_printf(_("V810 Emulation Mode: %s\n"), (cpu_mode == V810_EMU_MODE_ACCURATE) ? _("Accurate") : _("Fast"));
@@ -749,33 +746,33 @@ static MDFN_COLD void LoadCommon(std::vector<CDIF *> *CDInterfaces)
  // Default to 16-bit bus.
  for(int i = 0; i < 256; i++)
  {
-  PCFX_V810.SetMemReadBus32(i, FALSE);
-  PCFX_V810.SetMemWriteBus32(i, FALSE);
+  PCFX_V810.SetMemReadBus32(i, false);
+  PCFX_V810.SetMemWriteBus32(i, false);
  }
 
  // 16MiB RAM area.
- PCFX_V810.SetMemReadBus32(0, TRUE);
- PCFX_V810.SetMemWriteBus32(0, TRUE);
+ PCFX_V810.SetMemReadBus32(0, true);
+ PCFX_V810.SetMemWriteBus32(0, true);
 
  // Bitstring read range
  for(int i = 0xA0; i <= 0xAF; i++)
  {
-  PCFX_V810.SetMemReadBus32(i, FALSE);       // Reads to the read range are 16-bit, and
-  PCFX_V810.SetMemWriteBus32(i, TRUE);       // writes are 32-bit.
+  PCFX_V810.SetMemReadBus32(i, false);       // Reads to the read range are 16-bit, and
+  PCFX_V810.SetMemWriteBus32(i, true);       // writes are 32-bit.
  }
 
  // Bitstring write range
  for(int i = 0xB0; i <= 0xBF; i++)
  {
-  PCFX_V810.SetMemReadBus32(i, TRUE);	// Reads to the write range are 32-bit,
-  PCFX_V810.SetMemWriteBus32(i, FALSE);	// but writes are 16-bit!
+  PCFX_V810.SetMemReadBus32(i, true);	// Reads to the write range are 32-bit,
+  PCFX_V810.SetMemWriteBus32(i, false);	// but writes are 16-bit!
  }
 
  // BIOS area
  for(int i = 0xF0; i <= 0xFF; i++)
  {
-  PCFX_V810.SetMemReadBus32(i, FALSE);
-  PCFX_V810.SetMemWriteBus32(i, FALSE);
+  PCFX_V810.SetMemReadBus32(i, false);
+  PCFX_V810.SetMemWriteBus32(i, false);
  }
 
  PCFX_V810.SetMemReadHandlers(mem_rbyte, mem_rhword, mem_rword);
@@ -829,17 +826,17 @@ static void DoMD5CDVoodoo(std::vector<CDIF *> *CDInterfaces)
     for(unsigned int disc = 0; disc < entry->discs; disc++)
     {
      const CDGameEntryTrack *et = entry->tracks[disc];
-     bool GameFound = TRUE;
+     bool GameFound = true;
 
      while(et->tracknum != -1 && GameFound)
      {
       assert(et->tracknum > 0 && et->tracknum < 100);
 
       if(toc.tracks[et->tracknum].lba != et->lba)
-       GameFound = FALSE;
+       GameFound = false;
 
       if( ((et->format == CDGE_FORMAT_DATA) ? 0x4 : 0x0) != (toc.tracks[et->tracknum].control & 0x4))
-       GameFound = FALSE;
+       GameFound = false;
 
       et++;
      }
@@ -847,10 +844,10 @@ static void DoMD5CDVoodoo(std::vector<CDIF *> *CDInterfaces)
      if(et->tracknum == -1)
      {
       if((et - 1)->tracknum != toc.last_track)
-       GameFound = FALSE;
+       GameFound = false;
  
       if(et->lba != toc.tracks[100].lba)
-       GameFound = FALSE;
+       GameFound = false;
      }
 
      if(GameFound)
@@ -893,7 +890,7 @@ static void DoMD5CDVoodoo(std::vector<CDIF *> *CDInterfaces)
      }
     }
     md5_gameset.finish(MDFNGameInfo->GameSetMD5);
-    MDFNGameInfo->GameSetMD5Valid = TRUE;
+    MDFNGameInfo->GameSetMD5Valid = true;
    }
    //printf("%s\n", found_entry->name);
    MDFNGameInfo->name = std::string(found_entry->name);
@@ -926,14 +923,14 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
    cdiface->ReadSector(sector_buffer, toc.tracks[track].lba, 1);
    if(!strncmp("PC-FX:Hu_CD-ROM", (char*)sector_buffer, strlen("PC-FX:Hu_CD-ROM")))
    {
-    return(TRUE);
+    return(true);
    }
 
    if(!strncmp((char *)sector_buffer + 64, "PPPPHHHHOOOOTTTTOOOO____CCCCDDDD", 32))
     return(true);
   }
  }
- return(FALSE);
+ return(false);
 }
 
 static MDFN_COLD void LoadCD(std::vector<CDIF *> *CDInterfaces)
@@ -1162,7 +1159,7 @@ MDFNGI EmulatedPCFX =
  PCFXSettings,
  MDFN_MASTERCLOCK_FIXED(PCFX_MASTER_CLOCK),
  0,
- TRUE,  // Multires possible?
+ true,  // Multires possible?
 
  0,   // lcm_width
  0,   // lcm_height

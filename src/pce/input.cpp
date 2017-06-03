@@ -86,7 +86,7 @@ int PCE_Input_Device::StateAction(StateMem *sm, int load, int data_only, const c
 }
 
 static PCE_Input_Device *devices[5] = { NULL };
-static bool MultiTapEnabled = TRUE;
+static bool MultiTapEnabled = true;
 static int InputTypes[5] = { 0 };
 static uint8 *data_ptr[5];
 static bool SEL, CLR;

@@ -169,13 +169,13 @@ void srcLDIR()
 	{
 		switch(size)
 		{
-		case 0:	if (debug_abort_memory == FALSE)
+		case 0:	if (debug_abort_memory == false)
 					storeB(regL(dst), loadB(regL(src)));
 			regL(dst) += 1;
 			regL(src) += 1;
 			break;
 
-		case 1:	if (debug_abort_memory == FALSE)
+		case 1:	if (debug_abort_memory == false)
 					storeW(regL(dst), loadW(regL(src)));
 			regL(dst) += 2;
 			regL(src) += 2;
@@ -235,14 +235,14 @@ void srcLDDR()
 		switch(size)
 		{
 		case 0:
-			if (debug_abort_memory == FALSE)
+			if (debug_abort_memory == false)
 				storeB(regL(dst), loadB(regL(src)));
 			regL(dst) -= 1;
 			regL(src) -= 1;
 			break;
 
 		case 1:
-			if (debug_abort_memory == FALSE)
+			if (debug_abort_memory == false)
 				storeW(regL(dst), loadW(regL(src)));
 			regL(dst) -= 2;
 			regL(src) -= 2;
@@ -291,11 +291,11 @@ void srcCPIR()
 	{
 		switch(size)
 		{
-		case 0:	if (debug_abort_memory == FALSE)
+		case 0:	if (debug_abort_memory == false)
 					generic_SUB_B(REGA, loadB(regL(R)));
 				regL(R) ++; break;
 
-		case 1:	if (debug_abort_memory == FALSE)
+		case 1:	if (debug_abort_memory == false)
 					generic_SUB_W(REGWA, loadW(regL(R)));
 				regL(R) += 2; break;
 		}
@@ -305,7 +305,7 @@ void srcCPIR()
 
 		cycles += 14;
 	}
-	while (FLAG_V && (FLAG_Z == FALSE));
+	while (FLAG_V && (FLAG_Z == false));
 }
 
 //===== CPD
@@ -339,11 +339,11 @@ void srcCPDR()
 	{
 		switch(size)
 		{
-		case 0:	if (debug_abort_memory == FALSE)
+		case 0:	if (debug_abort_memory == false)
 					generic_SUB_B(REGA, loadB(regL(R)));
 				regL(R) -= 1; break;
 
-		case 1: if (debug_abort_memory == FALSE)
+		case 1: if (debug_abort_memory == false)
 					generic_SUB_W(REGWA, loadW(regL(R)));
 				regL(R) -= 2; break;
 		}
@@ -353,7 +353,7 @@ void srcCPDR()
 
 		cycles += 14;
 	}
-	while (FLAG_V && (FLAG_Z == FALSE));
+	while (FLAG_V && (FLAG_Z == false));
 }
 
 //===== LD (nn),(mem)

@@ -23,8 +23,6 @@
 #include "flash.h"
 #include "mem.h"
 
-#include <vector>
-
 namespace MDFN_IEN_NGP
 {
 
@@ -146,7 +144,7 @@ static void do_flash_read(const uint8 *flashdata)
 	fileptr = flashdata + sizeof(FlashFileHeader);
 
 	//Copy blocks
-	memory_unlock_flash_write = TRUE;
+	memory_unlock_flash_write = true;
 	for (i = 0; i < block_count; i++)
 	{
 		FlashFileBlockHeader* current = (FlashFileBlockHeader*)fileptr;
@@ -184,7 +182,7 @@ void FLASH_LoadNV(void)
         block_count = 0;
 
         //Read flash buffer header
-        if (system_io_flash_read((uint8*)&header, sizeof(FlashFileHeader)) == FALSE)
+        if (system_io_flash_read((uint8*)&header, sizeof(FlashFileHeader)) == false)
                 return; //Silent failure - no flash data yet.
 
         //Verify correct flash id
@@ -214,7 +212,7 @@ void flash_write(uint32 start_address, uint16 length)
 	uint16 i;
 
 	//Now we need a new flash command before the next flash write will work!
-	memory_flash_command = FALSE;
+	memory_flash_command = false;
 
 //	system_debug_message("flash write: %06X, %d bytes", start_address, length);
 

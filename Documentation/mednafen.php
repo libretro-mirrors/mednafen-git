@@ -1,4 +1,4 @@
--<?php require("docgen.inc"); ?>
+<?php require("docgen.inc"); ?>
 
 <?php BeginPage('', 'General'); ?>
 

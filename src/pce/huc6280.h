@@ -60,10 +60,10 @@ class alignas(128) HuC6280
 	 IODataBuffer = v;
 	}
 
-	uint8 TimerRead(unsigned int address, bool peek = FALSE);
+	uint8 TimerRead(unsigned int address, bool peek = false);
 	void TimerWrite(unsigned int address, uint8 V);
 
-	uint8 IRQStatusRead(unsigned int address, bool peek = FALSE);
+	uint8 IRQStatusRead(unsigned int address, bool peek = false);
 	void IRQStatusWrite(unsigned int address, uint8 V);
 
 	void StateAction(StateMem *sm, const unsigned load, const bool data_only);
@@ -303,7 +303,7 @@ class alignas(128) HuC6280
 	//uint32 GetRegister(const unsigned int id, char *special = NULL, const uint32 special_len = 0);
 	void SetRegister(const unsigned int id, uint32 value);
 
-        INLINE void PokePhysical(uint32 address, uint8 data, bool hl = FALSE)
+        INLINE void PokePhysical(uint32 address, uint8 data, bool hl = false)
         {
 	 address &= 0x1FFFFF;
 
@@ -317,7 +317,7 @@ class alignas(128) HuC6280
           WriteMap[address >> 13](address, data);
         }
 
-        INLINE void PokeLogical(uint16 address, uint8 data, bool hl = FALSE)
+        INLINE void PokeLogical(uint16 address, uint8 data, bool hl = false)
         {
          uint8 wmpr = MPR[address >> 13];
 

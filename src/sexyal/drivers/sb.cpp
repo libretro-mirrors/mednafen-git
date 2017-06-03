@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* sb.cpp - Creative Labs Sound Blaster Sound Driver
-**  Copyright (C) 2014-2016 Mednafen Team
+**  Copyright (C) 2014-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -39,7 +39,6 @@
 */
 
 #include "dos_common.h"
-#include <algorithm>
 
 /*
  Interrupts *MUST* be disabled when calling the dma_*() and irq_*() functions.
@@ -334,7 +333,7 @@ static uint16 GetDMACounter(SexyAL_device* device)
 
  tmp -= lb;
  tmp %= ls;
- tmp /= device->format.channels * ((ds->dma >= 4) ? 1 : (device->format.sampformat >> 4));
+ tmp /= device->format.channels * ((ds->dma >= 4) ? 1 : SAMPFORMAT_BYTES(device->format.sampformat));
 
  return(tmp);
 }
@@ -342,7 +341,7 @@ static uint16 GetDMACounter(SexyAL_device* device)
 static void UpdateReadCounter(SexyAL_device* device)
 {
  SB_Driver_t *ds = (SB_Driver_t *)device->private_data;
- const unsigned ftob = (device->format.sampformat >> 4) * device->format.channels;
+ const unsigned ftob = SAMPFORMAT_BYTES(device->format.sampformat) * device->format.channels;
  uint16 cur_dmacounter = GetDMACounter(device);
 
 #if 0
@@ -381,7 +380,7 @@ static int Pause(SexyAL_device *device, int state)
 static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 {
  SB_Driver_t *ds = (SB_Driver_t *)device->private_data;
- const unsigned ftob = (device->format.sampformat >> 4) * device->format.channels;
+ const unsigned ftob = SAMPFORMAT_BYTES(device->format.sampformat) * device->format.channels;
 
  UpdateReadCounter(device);
 
@@ -399,7 +398,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
  SB_Driver_t *ds = (SB_Driver_t *)device->private_data;
  uint32 pl_0, pl_1;
  const uint8* data_d8 = (uint8*)data;
- const unsigned ftob = (device->format.sampformat >> 4) * device->format.channels;
+ const unsigned ftob = SAMPFORMAT_BYTES(device->format.sampformat) * device->format.channels;
 
  do
  {
@@ -875,7 +874,7 @@ SexyAL_device *SexyALI_DOS_SB_Open(const char *id, SexyAL_format *format, SexyAL
   else if(conf_dmabf & (1 << 3))
    ds->dma = 3;
 
-  if((format->sampformat >> 4) >= 2)
+  if(SAMPFORMAT_BYTES(format->sampformat) >= 2)
   {
    if(conf_dmabf & (1 << 5))
     ds->dma = 5;
@@ -926,7 +925,6 @@ SexyAL_device *SexyALI_DOS_SB_Open(const char *id, SexyAL_format *format, SexyAL
  //
  //
  //
- format->revbyteorder = false;
  format->noninterleaved = false;
 
  if(!buffering->ms) 
@@ -940,13 +938,13 @@ SexyAL_device *SexyALI_DOS_SB_Open(const char *id, SexyAL_format *format, SexyAL
  else if(format->channels > 2)
   format->channels = 2;
 
- if((format->sampformat >> 4) >= 2)
+ if(SAMPFORMAT_BYTES(format->sampformat) >= 2)
  {
   if(ds->dsp_version < 0x400)
   {
    format->sampformat = SEXYAL_FMT_PCMU8;
   }
-  else if((format->sampformat >> 4) > 2)
+  else if(SAMPFORMAT_BYTES(format->sampformat) > 2)
   {
    format->sampformat = SEXYAL_FMT_PCMS16;
   }
@@ -1024,13 +1022,13 @@ SexyAL_device *SexyALI_DOS_SB_Open(const char *id, SexyAL_format *format, SexyAL
  //
  // Don't bother having a higher limit for 16-bit DMA, since it'd use too much conventional memory to be useful when taking into consideration
  // allocation alignment overhead needed to prevent the buffer from straddling a 64K/128K boundary.
- if((buffering->buffer_size * (format->sampformat >> 4) * format->channels) > 32768)
-  buffering->buffer_size = 32768 / (format->channels * (format->sampformat >> 4));
+ if((buffering->buffer_size * SAMPFORMAT_BYTES(format->sampformat) * format->channels) > 32768)
+  buffering->buffer_size = 32768 / (format->channels * SAMPFORMAT_BYTES(format->sampformat));
 
  buffering->latency = buffering->buffer_size;	// TODO: SB FIFO length.
 
  memset(&ds->dmabuf, 0, sizeof(ds->dmabuf));
- ds->dmabuf.size = (((buffering->buffer_size * 2 * 2) * (format->sampformat >> 4) * format->channels) + 15) / 16;
+ ds->dmabuf.size = (((buffering->buffer_size * 2 * 2) * SAMPFORMAT_BYTES(format->sampformat) * format->channels) + 15) / 16;
  if(_go32_dpmi_allocate_dos_memory(&ds->dmabuf) != 0)
  {
   fprintf(stderr, "SB: error allocating DMA memory.");
@@ -1170,7 +1168,7 @@ SexyAL_device *SexyALI_DOS_SB_Open(const char *id, SexyAL_format *format, SexyAL
 
   digi_cmd = 0xB0 | (0 << 3) | (1 << 2) | (1 << 1);
 
-  if((format->sampformat >> 4) == 1)
+  if(SAMPFORMAT_BYTES(format->sampformat) == 1)
    digi_cmd += 0x10;
 
   digi_mode = ((format->sampformat == SEXYAL_FMT_PCMS8 || format->sampformat == SEXYAL_FMT_PCMS16) ? 0x10 : 0x00) | ((format->channels == 2) ? 0x20 : 0x00);

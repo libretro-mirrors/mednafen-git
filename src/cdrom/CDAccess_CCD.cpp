@@ -26,8 +26,6 @@
 #include "CDAccess_CCD.h"
 #include <trio/trio.h>
 
-#include <limits>
-#include <limits.h>
 #include <map>
 
 using namespace CDUtility;

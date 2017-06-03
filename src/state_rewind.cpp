@@ -31,10 +31,6 @@
  #error "State rewinding code untested with QLZ_COMPRESSION_LEVEL != 0"
 #endif
 
-#include <algorithm>
-#include <vector>
-#include <memory>
-
 struct StateMemPacket
 {
 	std::unique_ptr<MemoryStream> data;

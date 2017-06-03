@@ -298,7 +298,7 @@ void MDFN_VSUniCheck(uint64 md5partial, int *MapperNo, int *Mirroring)
    *MapperNo = vs->mapper;
    *Mirroring = vs->mirroring;
 
-   NESIsVSUni = TRUE;
+   NESIsVSUni = true;
    MDFNGameInfo->GameType = GMT_ARCADE;
 
    curppu = vs->ppu;

@@ -247,10 +247,10 @@ class VDC
 
 
 	void Write(uint32 A, uint8 V, int32 &next_event);
-	uint8 Read(uint32 A, int32 &next_event, bool peek = FALSE);
+	uint8 Read(uint32 A, int32 &next_event, bool peek = false);
 
         void Write16(bool A, uint16 V);
-        uint16 Read16(bool A, bool peek = FALSE);
+        uint16 Read16(bool A, bool peek = false);
 
 	int32 Run(int32 clocks, /*bool hs, bool vs,*/ uint16 *pixels, bool skip);
 
@@ -258,8 +258,8 @@ class VDC
 	void FixTileCache(uint16);
 	void SetLayerEnableMask(uint64 mask);
 
-	void RunDMA(int32, bool force_completion = FALSE);
-	void RunSATDMA(int32, bool force_completion = FALSE);
+	void RunDMA(int32, bool force_completion = false);
+	void RunSATDMA(int32, bool force_completion = false);
 
 	void IncRCR(void);
 	void DoVBIRQTest(void);

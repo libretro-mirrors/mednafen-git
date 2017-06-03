@@ -252,11 +252,11 @@ uint16 FXINPUT_Read16(uint32 A, const v810_timestamp_t timestamp)
 
   // Which way is correct?  Clear on low reads, or both?  Official docs only say low...
   if(!(A & 0x2))
-   latched[which] = FALSE;
+   latched[which] = false;
  }
 
  if(!latched[0] && !latched[1])
-   PCFXIRQ_Assert(PCFXIRQ_SOURCE_INPUT, FALSE);
+   PCFXIRQ_Assert(PCFXIRQ_SOURCE_INPUT, false);
 
  return(ret);
 }
@@ -267,7 +267,7 @@ void FXINPUT_Write16(uint32 A, uint16 V, const v810_timestamp_t timestamp)
 
  //printf("Write16: %04x:%02x, %d\n", A, V, timestamp / 1365);
 
- //PCFXIRQ_Assert(PCFXIRQ_SOURCE_INPUT, FALSE);
+ //PCFXIRQ_Assert(PCFXIRQ_SOURCE_INPUT, false);
  //if(V != 7 && V != 5)
  //printf("PAD Write16: %04x %04x %d\n", A, V, timestamp);
 
@@ -345,9 +345,9 @@ v810_timestamp_t FXINPUT_Update(const v810_timestamp_t timestamp)
      data_latch[i] = devices[i]->Read();
     }
     // printf("Moo: %d, %d, %08x\n", i, TapCounter[i], data_latch[i]);
-    latched[i] = TRUE;
+    latched[i] = true;
     control[i] &= ~1;
-    PCFXIRQ_Assert(PCFXIRQ_SOURCE_INPUT, TRUE);
+    PCFXIRQ_Assert(PCFXIRQ_SOURCE_INPUT, true);
 
     if(MultiTapEnabled & (1 << i))
     {

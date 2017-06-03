@@ -21,8 +21,6 @@
 #include "Sound.h"
 #include "Port.h"
 
-#include <math.h>
-
 #include <mednafen/sound/Blip_Buffer.h>
 #include <mednafen/hw_sound/gb_apu/Gb_Apu.h>
 
@@ -350,18 +348,18 @@ static void DSTimer(int which, int dmamask)
 
 void soundTimerOverflow(int timer)
 {
- bool NeedLick = FALSE;
+ bool NeedLick = false;
 
  if(soundDSAEnabled && (soundDSATimer == timer))
  {
   DSTimer(0, 2);
-  NeedLick = TRUE;
+  NeedLick = true;
  }
 
  if(soundDSBEnabled && (soundDSBTimer == timer))
  {
   DSTimer(1, 4);
-  NeedLick = TRUE;
+  NeedLick = true;
  }
 
  if(NeedLick)
@@ -449,7 +447,7 @@ void soundReset()
 bool MDFNGBA_SetSoundRate(uint32 rate)
 {
  gba_buf.set_sample_rate(rate?rate:44100, 60);
- return(TRUE);
+ return(true);
 }
 
 }

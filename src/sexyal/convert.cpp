@@ -16,13 +16,7 @@
  */
 
 #include "sexyal.h"
-#include <mednafen/endian.h>
-
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
 #include "convert.h"
-#include <stdlib.h>
 
 static inline uint32 ConvertRandU32(void)
 {
@@ -39,221 +33,318 @@ static inline uint32 ConvertRandU32(void)
  return(x + y + z);
 }
 
-template<typename dsf_t, uint32 dsf>
-static inline dsf_t SAMP_CONVERT(int16 in_sample)
+static INLINE uint32 Dither(uint32 tmp, const uint32 dither_mask)
 {
- if(dsf == SEXYAL_FMT_PCMU8)
+ if(dither_mask)
  {
-  int tmp = (in_sample + 32768 + (uint8)(ConvertRandU32() & 0xFF)) >> 8;
+  uint32 nv = tmp + (ConvertRandU32() & dither_mask);
 
-  if(tmp < 0)
-   tmp = 0;
+  if((int32)nv < (int32)tmp)
+   nv = 0x7FFFFFFF;
 
-  if(tmp > 255)
-   tmp = 255;
-
-  return(tmp);
+  tmp = nv & ~dither_mask;
  }
 
- if(dsf == SEXYAL_FMT_PCMS8)
+ return tmp;
+}
+
+static INLINE void EncodeSamp(const uint32 dest_sampformat, void* d, const unsigned dest_shift, const uint32 samp)
+{
+ if(SAMPFORMAT_ENC(dest_sampformat) == SEXYAL_ENC_PCM_FLOAT)
  {
-  int tmp = (in_sample + (uint8)(ConvertRandU32() & 0xFF)) >> 8;
-
-  if(tmp < -128)
-   tmp = -128;
-
-  if(tmp > 127)
-   tmp = 127;
-
-  return(tmp);
+  uint32 tmp;
+  float t = (int32)samp * (1.0 / 2147483648.0);
+  memcpy(&tmp, &t, 4);
+  if(SAMPFORMAT_BIGENDIAN(dest_sampformat))
+   MDFN_en32msb<true>(d, tmp);
+  else
+   MDFN_en32lsb<true>(d, tmp);
  }
+ else
+ {
+  uint32 tmp = samp;
 
- if(dsf == SEXYAL_FMT_PCMU16)
-  return(in_sample + 32768);
+  if(SAMPFORMAT_ENC(dest_sampformat) == SEXYAL_ENC_PCM_UINT)
+   tmp ^= 0x80000000U;
 
- if(dsf == SEXYAL_FMT_PCMS16)
-  return(in_sample);
+  tmp >>= dest_shift;
 
- if(dsf == SEXYAL_FMT_PCMU24)
-  return((in_sample + 32768) << 8);
+  switch(SAMPFORMAT_BYTES(dest_sampformat))
+  {
+   default: abort(); break;
+   case 1: *(uint8*)d = tmp; break;
+   case 2: if(SAMPFORMAT_BIGENDIAN(dest_sampformat)) MDFN_en16msb<true>(d, tmp); else MDFN_en16lsb<true>(d, tmp); break;
+   case 3: if(SAMPFORMAT_BIGENDIAN(dest_sampformat)) MDFN_en24msb      (d, tmp); else MDFN_en24lsb      (d, tmp); break;
+   case 4: if(SAMPFORMAT_BIGENDIAN(dest_sampformat)) MDFN_en32msb<true>(d, tmp); else MDFN_en32lsb<true>(d, tmp); break;
+  }
+ }
+}
 
- if(dsf == SEXYAL_FMT_PCMS24)
-  return(in_sample << 8);
+static INLINE uint32 DecodeSamp(const uint32 src_sampformat, const void* s, const unsigned src_shift)
+{
+ if(SAMPFORMAT_ENC(src_sampformat) == SEXYAL_ENC_PCM_FLOAT)
+ {
+  static_assert(sizeof(float) == 4, "sizeof(float) != 4");
+  float t;
+  int32 tmp;
 
- if(dsf == SEXYAL_FMT_PCMU32)
-  return((uint32)(in_sample + 32768) << 16);
+  tmp = SAMPFORMAT_BIGENDIAN(src_sampformat) ? MDFN_de32msb<true>(s) : MDFN_de32lsb<true>(s);
+  memcpy(&t, &tmp, 4);
 
- if(dsf == SEXYAL_FMT_PCMS32)
-  return(in_sample << 16);
+  tmp = t * 16777216.0;
 
- if(dsf == SEXYAL_FMT_PCMFLOAT)
-  return((float)in_sample / 32768);
+  if(tmp > 16777215)
+   tmp = 16777215;
+  else if(t < -16777216)
+   tmp = -16777216;
+
+  return (uint32)tmp << 8;
+ }
+ else
+ {
+  uint32 tmp;
+
+  switch(SAMPFORMAT_BYTES(src_sampformat))
+  {
+   default: abort(); break;
+   case 1: tmp = *(uint8*)s; break;
+   case 2: tmp = SAMPFORMAT_BIGENDIAN(src_sampformat) ? MDFN_de16msb<true>(s) : MDFN_de16lsb<true>(s); break;
+   case 3: tmp = SAMPFORMAT_BIGENDIAN(src_sampformat) ? MDFN_de24msb      (s) : MDFN_de24lsb      (s); break;
+   case 4: tmp = SAMPFORMAT_BIGENDIAN(src_sampformat) ? MDFN_de32msb<true>(s) : MDFN_de32lsb<true>(s); break;
+  }
+
+  tmp <<= src_shift;
+
+  if(SAMPFORMAT_ENC(src_sampformat) == SEXYAL_ENC_PCM_UINT)
+   tmp ^= 0x80000000U;
+
+  return tmp;
+ }
 }
 
 
-template<typename dsf_t, uint32 dsf>
-static void ConvertLoop(const int16 *src, dsf_t *dest, const int src_chan, const int dest_chan, const bool dest_noninterleaved, int32 frames)
+static INLINE void ConvertLoop(const uint32 src_sampformat, const uint32 src_chan, const bool src_noninterleaved,
+			const uint32 dest_sampformat, const uint32 dest_chan, const bool dest_noninterleaved,
+			const void* vsrc, void* vdest, size_t frames)
 {
+ unsigned src_shift;
+ unsigned dest_shift;
+ unsigned dither_mask;
+ const unsigned char* src = (const unsigned char*)vsrc;
+ const unsigned char* src_bound = src + SAMPFORMAT_BYTES(src_sampformat) * frames * src_chan;
+ unsigned char* dest = (unsigned char*)vdest;
+
+ src_shift = 32 - SAMPFORMAT_BITS(src_sampformat) - SAMPFORMAT_LSBPAD(src_sampformat);
+ dest_shift = 32 - SAMPFORMAT_BITS(dest_sampformat) - SAMPFORMAT_LSBPAD(dest_sampformat);
+
+ if(SAMPFORMAT_BITS(dest_sampformat) < SAMPFORMAT_BITS(src_sampformat)/* || dest_chan < src_chan*/)
+  dither_mask = (1U << (32 - SAMPFORMAT_BITS(dest_sampformat))) - 1;
+ else
+  dither_mask = 0;
+
+ //printf("%08x\n", dither_mask);
+
+ #define DECODE(offs)   DecodeSamp(src_sampformat, src + (offs) * SAMPFORMAT_BYTES(src_sampformat), src_shift)
+ #define ENCODE(offs,v) EncodeSamp(dest_sampformat, dest + (offs) * SAMPFORMAT_BYTES(dest_sampformat), dest_shift, v)
+ #define DITHER(v) Dither(v, dither_mask)
+
  if(src_chan == 1 && dest_chan == 1)
  {
-  for(int i = 0; i < frames; i++)
+  do
   {
-   dest[0] = SAMP_CONVERT<dsf_t, dsf>(src[0]);
-   src++;
-   dest++;
-  }
+   uint32 tmp = DECODE(0);
+
+   tmp = DITHER(tmp);
+
+   ENCODE(0, tmp);
+
+   src += SAMPFORMAT_BYTES(src_sampformat);
+   dest += SAMPFORMAT_BYTES(dest_sampformat);
+  } while(MDFN_LIKELY(src != src_bound));
  }
  else if(src_chan == 2 && dest_chan == 1)
  {
-  for(int i = 0; i < frames; i++)
+  do
   {
-   int32 mt = (src[0] + src[1]) >> 1;
+   uint32 tmp0 = (int32)DECODE(0) >> 1;
+   uint32 tmp1 = (int32)DECODE(1) >> 1;
+   uint32 tmp = tmp0 + tmp1;
 
-   dest[0] = SAMP_CONVERT<dsf_t, dsf>(mt);
-   src += 2;
-   dest += 1;
-  }
+   tmp = DITHER(tmp);
+
+   ENCODE(0, tmp);
+
+   src += SAMPFORMAT_BYTES(src_sampformat) * 2;
+   dest += SAMPFORMAT_BYTES(dest_sampformat);
+  } while(MDFN_LIKELY(src != src_bound));
  }
  else if(src_chan == 1 && dest_chan >= 2)
  {
   if(dest_noninterleaved)
   {
-   for(int i = 0; i < frames; i++)
+   do
    {
-    dsf_t temp = SAMP_CONVERT<dsf_t, dsf>(*src);
+    uint32 tmp = DECODE(0);
 
-    dest[0 * frames] = temp;
-    dest[1 * frames] = temp;
+    tmp = DITHER(tmp);
 
-    src += 1;
-    dest += 1;
+    ENCODE(0 * frames, tmp);
+    ENCODE(1 * frames, tmp);
 
-    for(int padc = 2; padc < dest_chan; padc++)
-     dest[padc * frames] = SAMP_CONVERT<dsf_t, dsf>(0);
-   }
+    for(unsigned padc = 2; padc < dest_chan; padc++)
+     ENCODE(padc * frames, 0);
+
+    src += SAMPFORMAT_BYTES(src_sampformat); 
+    dest += SAMPFORMAT_BYTES(dest_sampformat);
+   } while(MDFN_LIKELY(src != src_bound));
   }
   else
   {
-   for(int i = 0; i < frames; i++)
+   do
    {
-    dsf_t temp = SAMP_CONVERT<dsf_t, dsf>(*src);
-    dest[0] = temp;
-    dest[1] = temp;
-    src += 1;
-    dest += 2;
+    uint32 tmp = DECODE(0);
 
-    for(int padc = 2; padc < dest_chan; padc++)
-     *dest++ = SAMP_CONVERT<dsf_t, dsf>(0);
-   }
+    tmp = DITHER(tmp);
+
+    ENCODE(0, tmp);
+    ENCODE(1, tmp);
+
+    for(unsigned padc = 2; padc < dest_chan; padc++)
+     ENCODE(padc, 0);
+
+    src += SAMPFORMAT_BYTES(src_sampformat);
+    dest += SAMPFORMAT_BYTES(dest_sampformat) * dest_chan;
+   } while(MDFN_LIKELY(src != src_bound));
   }
  }
  else //if(src_chan == 2 && dest_chan >= 2)
  {
   if(dest_noninterleaved)
   {
-   for(int i = 0; i < frames; i++)
+   do
    {
-    dest[0 * frames] = SAMP_CONVERT<dsf_t, dsf>(src[0]);
-    dest[1 * frames] = SAMP_CONVERT<dsf_t, dsf>(src[1]);
-    src += 2;
-    dest += 1;
-   }
+    ENCODE(0 * frames, DITHER(DECODE(0)));
+    ENCODE(1 * frames, DITHER(DECODE(1)));
 
-   for(int padc = 2; padc < dest_chan; padc++)
-    dest[padc * frames] = SAMP_CONVERT<dsf_t, dsf>(0);
+    for(unsigned padc = 2; padc < dest_chan; padc++)
+     ENCODE(padc * frames, 0);
+
+    src += SAMPFORMAT_BYTES(src_sampformat) * 2;
+    dest += SAMPFORMAT_BYTES(dest_sampformat);
+   } while(MDFN_LIKELY(src != src_bound));
   }
   else
   {
-   for(int i = 0; i < frames; i++)
+   do
    {
-    dest[0] = SAMP_CONVERT<dsf_t, dsf>(src[0]);
-    dest[1] = SAMP_CONVERT<dsf_t, dsf>(src[1]);
-    src += 2;
-    dest += 2;
+    ENCODE(0, DITHER(DECODE(0)));
+    ENCODE(1, DITHER(DECODE(1)));
 
-    for(int padc = 2; padc < dest_chan; padc++)
-     *dest++ = SAMP_CONVERT<dsf_t, dsf>(0);
-   }
+    for(unsigned padc = 2; padc < dest_chan; padc++)
+     ENCODE(padc, 0);
+
+    src += SAMPFORMAT_BYTES(src_sampformat) * 2;
+    dest += SAMPFORMAT_BYTES(dest_sampformat) * dest_chan;
+   } while(MDFN_LIKELY(src != src_bound));
   }
  }
 }
 
+template<uint32 src_sampformat, uint32 dest_sampformat>
+static void ConvertLoopT(const uint32 src_chan, const bool src_noninterleaved,
+			const uint32 dest_chan, const bool dest_noninterleaved,
+			const void* vsrc, void* vdest, size_t frames)
+{
+ ConvertLoop(src_sampformat, src_chan, src_noninterleaved,
+	     dest_sampformat, dest_chan, dest_noninterleaved,
+	     vsrc, vdest, frames);
+}
+
+
+static const struct
+{
+ uint32 sampformat;
+ void (*convert)(const uint32 src_chan, const bool src_noninterleaved,
+			const uint32 dest_chan, const bool dest_noninterleaved,
+			const void* vsrc, void* vdest, size_t frames);
+} convert_tab[] =
+{
+ #define CTE(sf) { sf, ConvertLoopT<SEXYAL_FMT_PCMS16, sf> }
+ CTE(SEXYAL_FMT_PCMU8),
+ CTE(SEXYAL_FMT_PCMS8),
+ CTE(SEXYAL_FMT_PCMU16_LE),
+ CTE(SEXYAL_FMT_PCMS16_LE),
+ CTE(SEXYAL_FMT_PCMU16_BE),
+ CTE(SEXYAL_FMT_PCMS16_BE),
+ CTE(SEXYAL_FMT_PCMU24_LE),
+ CTE(SEXYAL_FMT_PCMS24_LE),
+ CTE(SEXYAL_FMT_PCMU24_BE),
+ CTE(SEXYAL_FMT_PCMS24_BE),
+ CTE(SEXYAL_FMT_PCMU32_LE),
+ CTE(SEXYAL_FMT_PCMS32_LE),
+ CTE(SEXYAL_FMT_PCMU32_BE),
+ CTE(SEXYAL_FMT_PCMS32_BE),
+ CTE(SEXYAL_FMT_PCMFLOAT_LE),
+ CTE(SEXYAL_FMT_PCMFLOAT_BE),
+ CTE(SEXYAL_FMT_PCMU18_3BYTE_LE),
+ CTE(SEXYAL_FMT_PCMS18_3BYTE_LE),
+ CTE(SEXYAL_FMT_PCMU18_3BYTE_BE),
+ CTE(SEXYAL_FMT_PCMS18_3BYTE_BE),
+ CTE(SEXYAL_FMT_PCMU20_3BYTE_LE),
+ CTE(SEXYAL_FMT_PCMS20_3BYTE_LE),
+ CTE(SEXYAL_FMT_PCMU20_3BYTE_BE),
+ CTE(SEXYAL_FMT_PCMS20_3BYTE_BE),
+ CTE(SEXYAL_FMT_PCMU24_3BYTE_LE),
+ CTE(SEXYAL_FMT_PCMS24_3BYTE_LE),
+ CTE(SEXYAL_FMT_PCMU24_3BYTE_BE),
+ CTE(SEXYAL_FMT_PCMS24_3BYTE_BE),
+ #undef CTE
+};
 
 /* Only supports one input sample format right now:  SEXYAL_FMT_PCMS16 */
 void SexiALI_Convert(const SexyAL_format *srcformat, const SexyAL_format *destformat, const void *vsrc, void *vdest, uint32 frames)
 {
- const int16 *src = (int16 *)vsrc;
+ if(!frames)
+  return;
 
  assert(srcformat->noninterleaved == false);
+ assert(srcformat->sampformat == SEXYAL_FMT_PCMS16);
 
- if(destformat->sampformat == srcformat->sampformat)
-  if(destformat->channels == srcformat->channels)
-   if(destformat->revbyteorder == srcformat->revbyteorder)
-    if(destformat->noninterleaved == srcformat->noninterleaved)
-    {
-     memcpy(vdest, vsrc, frames * (destformat->sampformat >> 4) * destformat->channels);
-     return;
-    }
-
- switch(destformat->sampformat)
+ void (*convert)(const uint32 src_chan, const bool src_noninterleaved,
+		 const uint32 dest_chan, const bool dest_noninterleaved,
+		 const void* vsrc, void* vdest, size_t frames) = nullptr;
+ //
  {
-  case SEXYAL_FMT_PCMU8:
-	ConvertLoop<uint8, SEXYAL_FMT_PCMU8>(src, (uint8*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
-	break;
+  const uint32 dsf = destformat->sampformat;
+  uint32 adj_dest_sampformat = dsf;
 
-  case SEXYAL_FMT_PCMS8:
-	ConvertLoop<int8, SEXYAL_FMT_PCMS8>(src, (int8*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
-	break;
+  if(destformat->channels >= srcformat->channels &&
+	SAMPFORMAT_BITS(dsf) >= SAMPFORMAT_BITS(srcformat->sampformat) &&
+	(SAMPFORMAT_LSBPAD(dsf) + SAMPFORMAT_BITS(dsf)) == (8 * SAMPFORMAT_BYTES(dsf)))
+  {
+   adj_dest_sampformat = SAMPFORMAT_MAKE(SAMPFORMAT_ENC(dsf), SAMPFORMAT_BYTES(dsf), SAMPFORMAT_BITS(dsf) + SAMPFORMAT_LSBPAD(dsf), 0, SAMPFORMAT_BIGENDIAN(dsf));
+   //printf("ADJ: %08x->%08x\n", dsf, adj_dest_sampformat);
+  }
 
-  case SEXYAL_FMT_PCMU16:
-	ConvertLoop<uint16, SEXYAL_FMT_PCMU16>(src, (uint16*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
-	break;
-
-  case SEXYAL_FMT_PCMS16:
-	ConvertLoop<int16, SEXYAL_FMT_PCMS16>(src, (int16*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
-	break;
-
-  case SEXYAL_FMT_PCMU24:
-	ConvertLoop<uint32, SEXYAL_FMT_PCMU24>(src, (uint32*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
-	break;
-
-  case SEXYAL_FMT_PCMS24:
-	ConvertLoop<int32, SEXYAL_FMT_PCMS24>(src, (int32*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
-	break;
-
-  case SEXYAL_FMT_PCMU32:
-	ConvertLoop<uint32, SEXYAL_FMT_PCMU32>(src, (uint32*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
-	break;
-
-  case SEXYAL_FMT_PCMS32:
-	ConvertLoop<int32, SEXYAL_FMT_PCMS32>(src, (int32*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
-	break;
-
-  case SEXYAL_FMT_PCMFLOAT:
-	ConvertLoop<float, SEXYAL_FMT_PCMFLOAT>(src, (float*)vdest, srcformat->channels, destformat->channels, destformat->noninterleaved, frames);
-	break;
+  for(auto& cte : convert_tab)
+  {
+   if(cte.sampformat == adj_dest_sampformat)
+   {
+    convert = cte.convert;
+    break;
+   }
+  }
  }
+ //
 
- if(destformat->revbyteorder != srcformat->revbyteorder)
+ if(convert)
  {
-  if((destformat->sampformat >> 4) == 2)
-  {
-   uint16 *dest = (uint16 *)vdest;
-   for(uint32 x = 0; x < frames * destformat->channels; x++)
-   {
-    *dest = MDFN_bswap16(*dest);
-    dest++;
-   }
-  }
-  else if((destformat->sampformat >> 4) == 4)
-  {
-   uint32 *dest = (uint32 *)vdest;
-   for(uint32 x = 0; x < frames * destformat->channels; x++)
-   {
-    *dest = MDFN_bswap32(*dest);
-    dest++;
-   }
-  }
-
+  //puts("Convert Template");
+  convert(srcformat->channels, srcformat->noninterleaved, destformat->channels, destformat->noninterleaved, vsrc, vdest, frames);
+ }
+ else
+ {
+  //puts("Convert Unspecialized");
+  ConvertLoop(SEXYAL_FMT_PCMS16/*srcformat->sampformat*/, srcformat->channels, srcformat->noninterleaved, destformat->sampformat, destformat->channels, destformat->noninterleaved, vsrc, vdest, frames);
  }
 }

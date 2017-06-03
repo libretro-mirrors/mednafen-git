@@ -18,7 +18,6 @@
 #include "main.h"
 #include "video.h"
 #include <trio/trio.h>
-#include <algorithm>
 
 static struct
 {

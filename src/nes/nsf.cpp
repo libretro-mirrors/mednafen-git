@@ -16,7 +16,6 @@
  */
 
 #include "nes.h"
-#include <math.h>
 #include "x6502.h"
 #include "sound.h"
 #include "nsf.h"
@@ -319,6 +318,12 @@ void NSFLoad(Stream *fp, NESGameType *gt)
   gt->StateAction = NSF_StateAction;
 
   Player_Init(NSFInfo->TotalSongs, NSFInfo->GameName, NSFInfo->Artist, NSFInfo->Copyright, NSFInfo->SongNames);
+
+  MDFNGameInfo->DesiredInput.push_back("gamepad");
+  MDFNGameInfo->DesiredInput.push_back("none");
+  MDFNGameInfo->DesiredInput.push_back("none");
+  MDFNGameInfo->DesiredInput.push_back("none");
+  MDFNGameInfo->DesiredInput.push_back("none");
  }
  catch(...)
  {

@@ -19,11 +19,6 @@
 #include <mednafen/mednafen.h>
 #include <mednafen/mempatcher.h>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
-
 #include "TLCS-900h/TLCS900h_disassemble.h"
 #include "TLCS-900h/TLCS900h_interpret_dst.h"
 #include "TLCS-900h/TLCS900h_interpret.h"

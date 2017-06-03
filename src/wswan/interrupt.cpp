@@ -38,7 +38,7 @@ static void RecalcInterrupt(void)
 {
  IStatus |= (IAsserted & LevelTriggeredMask) & IEnable;
 
- IOn_Cache = FALSE;
+ IOn_Cache = false;
  IOn_Which = 0;
  IVector_Cache = 0;
 
@@ -46,7 +46,7 @@ static void RecalcInterrupt(void)
  {
   if(IStatus & IEnable & (1U << i))
   {
-   IOn_Cache = TRUE;
+   IOn_Cache = true;
    IOn_Which = i;
    IVector_Cache = (IVectorBase + i) * 4;
    break;
@@ -56,7 +56,7 @@ static void RecalcInterrupt(void)
 
 void WSwan_InterruptDebugForce(unsigned int level)
 {
- v30mz_int((IVectorBase + level) * 4, TRUE);
+ v30mz_int((IVectorBase + level) * 4, true);
 }
 
 void WSwan_InterruptAssert(unsigned which, bool asserted)
@@ -114,7 +114,7 @@ void WSwan_InterruptCheck(void)
 {
  if(IOn_Cache)
  {
-  v30mz_int(IVector_Cache, FALSE);
+  v30mz_int(IVector_Cache, false);
  }
 }
 

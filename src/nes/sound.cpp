@@ -26,7 +26,6 @@
 
 #define SQ_SHIFT        8
 #define TRINPCM_SHIFT   0
-#include <math.h>
 
 namespace MDFN_IEN_NES
 {
@@ -936,7 +935,7 @@ static bool InitResampler(double rate)
 
  ff = new NES_Resampler(PAL ? PAL_CPU : NTSC_CPU, rate, MDFN_GetSettingF("nes.sound_rate_error"), 5216.592e-6, MDFN_GetSettingI("nes.soundq"));
  ff->SetVolume((double)3 / 2);
- return(TRUE);
+ return(true);
 }
 
 bool MDFNNES_SetSoundRate(double rate)
@@ -951,7 +950,7 @@ bool MDFNNES_SetSoundRate(double rate)
   if(!InitResampler(rate))
    return(false);
  }
- return(TRUE);
+ return(true);
 }
 
 /* Called when a game has been loaded. */

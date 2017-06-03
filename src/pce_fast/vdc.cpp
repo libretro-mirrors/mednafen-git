@@ -24,7 +24,6 @@
 #include "pcecd.h"
 #include <mednafen/cputest/cputest.h>
 #include <trio/trio.h>
-#include <math.h>
 
 namespace PCE_Fast
 {

@@ -25,9 +25,6 @@
 #include <mednafen/resampler/resampler.h>
 #include <mednafen/cheat_formats/snes.h>
 
-#include <vector>
-#include <memory>
-
 #include "src/base.hpp"
 
 extern MDFNGI EmulatedSNES;

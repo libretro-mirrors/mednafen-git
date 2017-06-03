@@ -18,8 +18,6 @@
 #include <mednafen/mednafen.h>
 #include "psg.h"
 
-#include <math.h>
-#include <string.h>
 #include <trio/trio.h>
 
 namespace PCE_Fast

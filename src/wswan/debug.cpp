@@ -21,7 +21,6 @@
 #include "dis/disasm.h"
 #include "memory.h"
 #include "gfx.h"
-#include <stdarg.h>
 #include <trio/trio.h>
 
 namespace MDFN_IEN_WSWAN

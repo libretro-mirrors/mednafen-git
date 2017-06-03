@@ -22,8 +22,6 @@
 #ifndef __MDFN_DEINTERLACER_H
 #define __MDFN_DEINTERLACER_H
 
-#include <vector>
-
 class Deinterlacer
 {
  public:

@@ -21,10 +21,7 @@
 
 #include "nes.h"
 
-#include <string.h>
-#include <string>
 #include <zlib.h>
-#include <math.h>
 
 #include "x6502.h"
 #include "cart.h"

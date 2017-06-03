@@ -16,22 +16,16 @@
  */
 
 #include "sexyal.h"
-
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>	// For debugging
-#include <assert.h>
-
-#include <errno.h>
-
 #include "convert.h"
 
 /* kludge.  yay. */
 SexyAL_enumdevice *SexyALI_OSS_EnumerateDevices(void);
+SexyAL_enumdevice *SexyALI_OpenBSD_EnumerateDevices(void);
 SexyAL_device *SexyALI_OSS_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 SexyAL_device *SexyALI_JACK_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 SexyAL_device *SexyALI_SDL_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
 SexyAL_device *SexyALI_DSound_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
+SexyAL_device* SexyALI_OpenBSD_Open(const char* id, SexyAL_format* format, SexyAL_buffering* buffering);
 
 #if HAVE_WASAPI
 SexyAL_device *SexyALI_WASAPI_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering);
@@ -66,12 +60,12 @@ SexyAL_device *SexyALI_Dummy_Open(const char *id, SexyAL_format *format, SexyAL_
 
 static uint32 FtoB(const SexyAL_format *format, uint32 frames)
 {
- return(frames*format->channels*(format->sampformat>>4));
+ return frames * format->channels * SAMPFORMAT_BYTES(format->sampformat);
 }
 
 static uint32 BtoF(const SexyAL_format *format, uint32 bytes)
 {
- return(bytes / (format->channels * (format->sampformat>>4)));
+ return bytes / (format->channels * SAMPFORMAT_BYTES(format->sampformat));
 }
 
 static uint32 CanWrite(SexyAL_device *device)
@@ -91,7 +85,6 @@ static int Write(SexyAL_device *device, void *data, uint32 frames)
  if(device->srcformat.sampformat == device->format.sampformat &&
 	device->srcformat.channels == device->format.channels &&
 	device->srcformat.rate == device->format.rate &&
-	device->srcformat.revbyteorder == device->format.revbyteorder &&
 	device->srcformat.noninterleaved == device->format.noninterleaved)
  {
   if(!device->RawWrite(device, data, FtoB(&device->format, frames)))
@@ -157,6 +150,10 @@ static SexyAL_driver drivers[] =
         { SEXYAL_TYPE_ALSA, "ALSA", "alsa", SexyALI_ALSA_Open, SexyALI_ALSA_EnumerateDevices },
         #endif
 
+	#if HAVE_OPENBSD_AUDIO
+	{ SEXYAL_TYPE_OPENBSD, "OpenBSD(/dev/audio*)", "openbsd", SexyALI_OpenBSD_Open, SexyALI_OpenBSD_EnumerateDevices },
+	#endif
+
 	#if HAVE_OSSDSP
 	{ SEXYAL_TYPE_OSSDSP, "OSS(/dev/dsp*)", "oss", SexyALI_OSS_Open, SexyALI_OSS_EnumerateDevices },
 	#endif
@@ -216,7 +213,7 @@ static SexyAL_driver *FindDriver(int type)
  return(0);
 }
 
-SexyAL_device *SexyAL::Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering, int type)
+SexyAL_device *SexyAL_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering, int type)
 {
  SexyAL_device *ret;
  SexyAL_driver *driver;
@@ -239,7 +236,6 @@ SexyAL_device *SexyAL::Open(const char *id, SexyAL_format *format, SexyAL_buffer
  assert(format->rate >= 8192 && format->rate <= (1024 * 1024));
  assert(format->channels == 1 || format->channels == 2);
  assert(0 == format->noninterleaved);
- assert(0 == format->revbyteorder);
 
  assert(0 == buffering->buffer_size);
  assert(0 == buffering->period_size);
@@ -257,7 +253,7 @@ SexyAL_device *SexyAL::Open(const char *id, SexyAL_format *format, SexyAL_buffer
  buffering->period_us = (uint64)buffering->period_size * (1000 * 1000) / format->rate;
 
  ret->convert_buffer_fsize = (25 * format->rate + 999) / 1000;
- if(!(ret->convert_buffer = calloc(format->channels * (format->sampformat >> 4), ret->convert_buffer_fsize)))
+ if(!(ret->convert_buffer = calloc(format->channels * SAMPFORMAT_BYTES(format->sampformat), ret->convert_buffer_fsize)))
  {
   ret->RawClose(ret);
   return(0);
@@ -271,7 +267,7 @@ SexyAL_device *SexyAL::Open(const char *id, SexyAL_format *format, SexyAL_buffer
  return(ret);
 }
 
-std::vector<SexyAL_DriverInfo> SexyAL::GetDriverList(void)
+std::vector<SexyAL_DriverInfo> SexyAL_GetDriverList(void)
 {
  std::vector<SexyAL_DriverInfo> ret;
 
@@ -289,7 +285,7 @@ std::vector<SexyAL_DriverInfo> SexyAL::GetDriverList(void)
  return(ret);
 }
 
-bool SexyAL::FindDriver(SexyAL_DriverInfo* out_di, const char* name)
+bool SexyAL_FindDriver(SexyAL_DriverInfo* out_di, const char* name)
 {
  bool need_default = ((name == NULL) || !strcasecmp(name, "default"));
 
@@ -313,7 +309,7 @@ bool SexyAL::FindDriver(SexyAL_DriverInfo* out_di, const char* name)
  return(false);
 }
 
-SexyAL_enumdevice* SexyAL::EnumerateDevices(int type)
+SexyAL_enumdevice* SexyAL_EnumerateDevices(int type)
 {
  SexyAL_driver *driver;
 
@@ -328,12 +324,3 @@ SexyAL_enumdevice* SexyAL::EnumerateDevices(int type)
  return(0);
 }
 
-SexyAL::SexyAL()
-{
-
-}
-
-SexyAL::~SexyAL()
-{
-
-}

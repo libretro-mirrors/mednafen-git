@@ -307,6 +307,9 @@
 /* Define to 1 if you have the `newlocale' function. */
 #undef HAVE_NEWLOCALE
 
+/* Define if we are compiling with OpenBSD audio support. */
+#undef HAVE_OPENBSD_AUDIO
+
 /* Define if we are compiling with OSS support. */
 #undef HAVE_OSSDSP
 

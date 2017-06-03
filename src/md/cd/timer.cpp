@@ -27,7 +27,7 @@ void MDCD_Timer_Reset(void)
 {
  TimerLatch = 0;
  TimerDiv = 0;
- MDCD_InterruptAssert(3, FALSE);
+ MDCD_InterruptAssert(3, false);
 }
 
 void MDCD_Timer_Run(int32 clocks)
@@ -41,7 +41,7 @@ void MDCD_Timer_Run(int32 clocks)
    TimerLatch--;
    if(!TimerLatch)
    {
-    MDCD_InterruptAssert(3, TRUE);
+    MDCD_InterruptAssert(3, true);
    }
   }
   TimerDiv += 384;

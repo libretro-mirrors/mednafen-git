@@ -22,8 +22,6 @@
 #ifndef __MDFN_PSX_FRONTIO_H
 #define __MDFN_PSX_FRONTIO_H
 
-#include <memory>
-
 namespace MDFN_IEN_PSX
 {
 

@@ -1,5 +1,5 @@
-#ifndef __MDFN_TYPES
-#define __MDFN_TYPES
+#ifndef __MDFN_TYPES_H
+#define __MDFN_TYPES_H
 
 #define __STDC_LIMIT_MACROS 1
 
@@ -39,11 +39,28 @@
 #include <stddef.h>
 #include <assert.h>
 #include <inttypes.h>
+#include <stdint.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include <strings.h>
+#include <errno.h>
+#include <math.h>
 
+#include <limits>
+#include <exception>
+#include <stdexcept>
 #include <type_traits>
 #include <initializer_list>
+#include <utility>
 #include <memory>
 #include <algorithm>
+#include <string>
+#include <vector>
+#include <array>
+#include <list>
 
 typedef int8_t int8;
 typedef int16_t int16;
@@ -201,28 +218,6 @@ typedef uint64_t uint64;
   #define MDFN_ASSUME_ALIGNED(p, align) (p)
 #endif
 
-#if PSS_STYLE==2
-
-#define PSS "\\"
-#define MDFN_PS '\\'
-
-#elif PSS_STYLE==1
-
-#define PSS "/"
-#define MDFN_PS '/'
-
-#elif PSS_STYLE==3
-
-#define PSS "\\"
-#define MDFN_PS '\\'
-
-#elif PSS_STYLE==4
-
-#define PSS ":" 
-#define MDFN_PS ':'
-
-#endif
-
 #ifndef FALSE
  #define FALSE 0
 #endif
@@ -231,15 +226,20 @@ typedef uint64_t uint64;
  #define TRUE 1
 #endif
 
-#undef require
-#define require( expr ) assert( expr )
-
 #if !defined(MSB_FIRST) && !defined(LSB_FIRST)
  #error "Define MSB_FIRST or LSB_FIRST!"
 #elif defined(MSB_FIRST) && defined(LSB_FIRST)
  #error "Define only one of MSB_FIRST or LSB_FIRST, not both!"
 #endif
 
+#ifdef LSB_FIRST
+ #define MDFN_IS_BIGENDIAN false
+#else
+ #define MDFN_IS_BIGENDIAN true
+#endif
+
 #include "error.h"
+#include "math_ops.h"
+#include "endian.h"
 
 #endif

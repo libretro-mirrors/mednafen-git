@@ -159,9 +159,9 @@ static void vdp_reg_w(uint8 r, uint8 d)
             if(vdp.hint_pending)
             {
                 if(d & 0x10)
-		 z80_set_interrupt(TRUE);
+		 z80_set_interrupt(true);
                 else
-		 z80_set_interrupt(FALSE);
+		 z80_set_interrupt(false);
             }
             viewport_check();
             break;
@@ -170,9 +170,9 @@ static void vdp_reg_w(uint8 r, uint8 d)
             if(vdp.vint_pending)
             {
                 if(d & 0x20)
-		 z80_set_interrupt(TRUE);
+		 z80_set_interrupt(true);
                 else
-		 z80_set_interrupt(FALSE);
+		 z80_set_interrupt(false);
             }
             viewport_check();
             break;
@@ -291,7 +291,7 @@ uint8 vdp_read(int offset)
             vdp.status = 0;
             vdp.vint_pending = 0;
             vdp.hint_pending = 0;
-	    z80_set_interrupt(FALSE);
+	    z80_set_interrupt(false);
             return temp;
     }
 
@@ -566,7 +566,7 @@ void SMS_VDPRunFrame(int skip_render)
 
                 if(vdp.reg[0x00] & 0x10)
                 {
-                 z80_set_interrupt(TRUE);
+                 z80_set_interrupt(true);
                 }
             }
         }
@@ -583,7 +583,7 @@ void SMS_VDPRunFrame(int skip_render)
             moohack -= 16;
             if(vdp.reg[0x01] & 0x20)
             {
-             z80_set_interrupt(TRUE);
+             z80_set_interrupt(true);
             }
         }
 

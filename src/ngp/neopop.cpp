@@ -26,8 +26,6 @@
 #include "bios.h"
 #include "flash.h"
 
-#include <algorithm>
-
 namespace MDFN_IEN_NGP
 {
 
@@ -207,7 +205,7 @@ static MDFN_COLD void Load(MDFNFILE *fp)
   NGPGfx = new NGPGFX_CLASS();
 
   MDFNGameInfo->fps = (uint32)((uint64)6144000 * 65536 * 256 / 515 / 198); // 3072000 * 2 * 10000 / 515 / 198
-  MDFNGameInfo->GameSetMD5Valid = FALSE;
+  MDFNGameInfo->GameSetMD5Valid = false;
 
   MDFNNGPCSOUND_Init();
 

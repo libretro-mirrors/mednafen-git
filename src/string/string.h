@@ -61,7 +61,7 @@ void UTF8_sanitize(std::string& s, bool permit_utf16_surrogates = false);
 // to handle insufficient space condition(insufficient space can be avoided with *dlen >= slen
 // for UTF8->UTF16 and UTF8->UTF32, and *dlen >= (slen * 4) for UTF8->UTF8).
 //
-bool UTF8_to_UTF8(const char* s, size_t slen, char16_t* d, size_t* dlen, bool permit_utf16_surrogates = false);
+bool UTF8_to_UTF8(const char* s, size_t slen, char* d, size_t* dlen, bool permit_utf16_surrogates = false);
 bool UTF8_to_UTF16(const char* s, size_t slen, char16_t* d, size_t* dlen, bool permit_utf16_surrogates = false);
 bool UTF8_to_UTF32(const char* s, size_t slen, char32_t* d, size_t* dlen, bool permit_utf16_surrogates = false);
 std::string UTF8_to_UTF8(const char* s, size_t slen, bool* invalid_utf8 = nullptr, bool permit_utf16_surrogates = false);

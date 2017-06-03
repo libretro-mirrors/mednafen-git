@@ -26,8 +26,6 @@
 #include <mednafen/FileStream.h>
 #include <mednafen/hash/sha1.h>
 
-#include <vector>
-
 namespace MDFN_IEN_SNES_FAUST
 {
 static uint8 CartROM[8192 * 1024];

@@ -1,7 +1,6 @@
 #ifndef __MDFN_DRIVERS_NETPLAY_H
 #define __MDFN_DRIVERS_NETPLAY_H
 
-int MDFND_NetworkConnect(void);
 void NetplayText_InMainThread(uint8 *text, bool NetEcho);
 
 int NetplayEventHook(const SDL_Event *event);

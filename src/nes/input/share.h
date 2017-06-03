@@ -6,7 +6,6 @@
 #include "../ppu/ppu.h"
 #include "../x6502.h"
 #include "../ppu/palette.h"
-#include <mednafen/endian.h>
 
 #include "cursor.h"
 

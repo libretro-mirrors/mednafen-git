@@ -141,21 +141,21 @@ static void ExRCB()
 {
 	uint8 data = get8_dis();
 	sprintf(extra, "%s", RCN_fetch(0, data >> 0));
-	brCode = TRUE;
+	brCode = true;
 }
 
 static void ExRCW()
 {
 	uint8 data = get8_dis();
 	sprintf(extra, "%s", RCN_fetch(1, data >> 1));
-	brCode = TRUE;
+	brCode = true;
 }
 
 static void ExRCL()
 {
 	uint8 data = get8_dis();
 	sprintf(extra, "%s", RCN_fetch(2, data >> 2));
-	brCode = TRUE;
+	brCode = true;
 }
 
 //=========================================================================

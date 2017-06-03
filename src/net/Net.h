@@ -34,13 +34,16 @@ class Connection
  virtual ~Connection() = 0;
 
  //
+ // returns 'true' once a connection has been established(regardless of whether or not the connection has been lost since)
+ //
+ virtual bool Established(int32 timeout = 0) = 0;
+
+ //
  // CanSend()/CanReceive() returns 'true' if Send()/Receive() with len=1 would be non-blocking if Send()/Receive() actually were blocking;
  // i.e. Can*() have select() style semantics.
  //
  // May timeout before timeout specified(if a signal interrupts an underlying system call).
  //
- virtual bool Established(int32 timeout = 0) = 0;
-
  virtual bool CanSend(int32 timeout = 0) = 0;
  virtual bool CanReceive(int32 timeout = 0) = 0;
 

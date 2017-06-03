@@ -26,7 +26,6 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <math.h>
 #include <zlib.h>
 
 #include "gfx.h"
@@ -111,7 +110,7 @@ static void Emulate(EmulateSpecStruct *espec)
 
  if(IsWSR)
  {
-  bool needreload = FALSE;
+  bool needreload = false;
 
   Player_Draw(espec->surface, &espec->DisplayRect, WSRCurrentSong, espec->SoundBuf, espec->SoundBufSize);
 
@@ -280,7 +279,7 @@ static void Load(MDFNFILE *fp)
   {
    const uint8 *wsr_footer = wsCartROM + (rom_size - real_rom_size) + fp_in_size - 0x20;
 
-   IsWSR = TRUE;
+   IsWSR = true;
    WSRCurrentSong = wsr_footer[0x5];
    WSRLastButtonStatus = 0xFF;
 
@@ -403,7 +402,7 @@ static void Load(MDFNFILE *fp)
 
   WSwan_GfxInit();
   MDFNGameInfo->fps = (uint32)((uint64)3072000 * 65536 * 256 / (159*256));
-  MDFNGameInfo->GameSetMD5Valid = FALSE;
+  MDFNGameInfo->GameSetMD5Valid = false;
 
   WSwan_SoundInit();
 
@@ -694,7 +693,7 @@ MDFNGI EmulatedWSwan =
  WSwanSettings,
  MDFN_MASTERCLOCK_FIXED(3072000),
  0,
- FALSE, // Multires possible?
+ false, // Multires possible?
 
  224,   // lcm_width
  144,   // lcm_height

@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* endian.h:
-**  Copyright (C) 2006-2016 Mednafen Team
+**  Copyright (C) 2006-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -95,12 +95,6 @@ static INLINE uint64 MDFN_bswap64(uint64 v)
  return (v << 56) | (v >> 56) | ((v & 0xFF00) << 40) | ((v >> 40) & 0xFF00) | ((uint64)MDFN_bswap32(v >> 16) << 16);
 }
 
-#ifdef LSB_FIRST
- #define MDFN_ENDIANH_IS_BIGENDIAN 0
-#else
- #define MDFN_ENDIANH_IS_BIGENDIAN 1
-#endif
-
 //
 // X endian.
 //
@@ -111,7 +105,7 @@ static INLINE T MDFN_deXsb(const void* ptr)
 
  memcpy(&tmp, MDFN_ASSUME_ALIGNED(ptr, (aligned ? sizeof(T) : 1)), sizeof(T));
 
- if(isbigendian != -1 && isbigendian != MDFN_ENDIANH_IS_BIGENDIAN)
+ if(isbigendian != -1 && isbigendian != MDFN_IS_BIGENDIAN)
  {
   static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Gummy penguins.");
 
@@ -220,7 +214,7 @@ static INLINE void MDFN_enXsb(void* ptr, T value)
 {
  T tmp = value;
 
- if(isbigendian != -1 && isbigendian != MDFN_ENDIANH_IS_BIGENDIAN)
+ if(isbigendian != -1 && isbigendian != MDFN_IS_BIGENDIAN)
  {
   static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Gummy penguins.");
 

@@ -4,8 +4,6 @@
 #ifndef V810_CPU_H_
 #define V810_CPU_H_
 
-#include <vector>
-
 #include "v810_fp_ops.h"
 
 typedef int32 v810_timestamp_t;

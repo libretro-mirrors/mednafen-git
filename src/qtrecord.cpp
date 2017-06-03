@@ -20,7 +20,6 @@
 */
 
 #include <mednafen/mednafen.h>
-#include <mednafen/endian.h>
 #include <mednafen/Time.h>
 #include "qtrecord.h"
 #include "compress/minilzo.h"

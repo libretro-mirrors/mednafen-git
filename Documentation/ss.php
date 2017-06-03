@@ -76,6 +76,17 @@ The filenames listed below are per default ss.bios_* settings.
   </p>
  <?php EndSection(); ?>
 
+ <?php BeginSection('Light Gun on Virtual Ports 1-12', 'Section_default_keys_gun'); ?>
+  <p>
+   <table border>
+   <tr><th>Button:</th><th nowrap>Emulated Button:</th></tr>
+   <tr><td nowrap>Mouse, Left Button</td><td>Trigger</td></tr>
+   <tr><td nowrap>Mouse, Middle Button</td><td>START</td></tr>
+   <tr><td nowrap>Mouse, Right Button</td><td>Offscreen Shot(simulated)</td></tr>
+   </table>
+  </p>
+ <?php EndSection(); ?>
+
 <?php EndSection(); ?>
 
 

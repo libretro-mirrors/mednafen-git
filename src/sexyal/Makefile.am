@@ -18,6 +18,10 @@ if HAVE_OSSDSP
 TMP_OSSDSP	=	drivers/oss.cpp
 endif
 
+if HAVE_OPENBSD_AUDIO
+TMP_OPENBSD	=	drivers/openbsd.cpp
+endif
+
 if HAVE_JACK
 TMP_JACK	=	drivers/jack.cpp
 endif
@@ -35,4 +39,4 @@ if DOS
 TMP_DOS		=	drivers/dos_common.cpp drivers/cmi8738.cpp drivers/es1370.cpp drivers/es1371.cpp drivers/sb.cpp
 endif
 
-libsexyal_a_SOURCES	+=	$(TMP_DIRECTSOUND) $(TMP_WASAPI) $(TMP_OSSDSP) $(TMP_JACK) $(TMP_SDL) $(TMP_ALSA) $(TMP_DOS)
+libsexyal_a_SOURCES	+=	$(TMP_DIRECTSOUND) $(TMP_WASAPI) $(TMP_OSSDSP) $(TMP_OPENBSD) $(TMP_JACK) $(TMP_SDL) $(TMP_ALSA) $(TMP_DOS)

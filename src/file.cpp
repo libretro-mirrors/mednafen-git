@@ -21,12 +21,9 @@
 #include <mednafen/MemoryStream.h>
 #include <mednafen/IPSPatcher.h>
 
-#include <stdarg.h>
-#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <errno.h>
 #include <trio/trio.h>
 
 #include "compress/unzip.h"

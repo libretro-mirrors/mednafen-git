@@ -19,12 +19,9 @@
  */
 
 #include "nes.h"
-#include <errno.h>
 #include "ppu/ppu.h"
 #include "cart.h"
 #include "x6502.h"
-
-#include <array>
 
 #include <mednafen/mempatcher.h>
 #include <mednafen/FileStream.h>
@@ -419,7 +416,7 @@ void setntamem(uint8 *p, int ram, uint32 b)
   PPUNTARAM|=1<<b;
 }
 
-static bool mirrorhard = FALSE;
+static bool mirrorhard = false;
 
 void setmirrorw(int a, int b, int c, int d)
 {
@@ -458,7 +455,7 @@ void SetupCartMirroring(int m, int hard, uint8 *extra)
 {
  if(m < 4)
  {
-  mirrorhard = FALSE;
+  mirrorhard = false;
   setmirror(m);
  }
  else
@@ -483,7 +480,7 @@ static void FixGenieMap(void);
 
 static DECLFW(GenieWrite);
 static DECLFR(GenieRead);
-static bool GenieBIOSHooksInstalled = FALSE;
+static bool GenieBIOSHooksInstalled = false;
 static readfunc *AReadGG = NULL;
 static writefunc *BWriteGG = NULL;
 
@@ -609,7 +606,7 @@ void Genie_Init(void)
    BWriteGG[i] = NULL;
   }
 
-  GenieBIOSHooksInstalled = FALSE;
+  GenieBIOSHooksInstalled = false;
 
   for(int x = 0; x < 3; x++)
   {
@@ -766,7 +763,7 @@ static void FixGenieMap(void)
 
  InstallGenieReadPatches();
 
- // Call this last, after GenieBIOSHooksInstalled = FALSE and our read cheat hooks are installed.  Yay spaghetti code.
+ // Call this last, after GenieBIOSHooksInstalled = false and our read cheat hooks are installed.  Yay spaghetti code.
  MDFNMP_InstallReadPatches();
 }
 

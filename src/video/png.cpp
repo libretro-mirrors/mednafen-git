@@ -19,7 +19,6 @@
 
 #include <zlib.h>
 #include "png.h"
-#include "../endian.h"
 
 void PNGWrite::WriteChunk(FileStream &pngfile, uint32 size, const char *type, const uint8 *data)
 {

@@ -505,7 +505,7 @@ bool wsExecuteLine(MDFN_Surface *surface, bool skip)
 	weppy = 0;
         WEP0: ;
 
-	ret = FALSE;
+	ret = false;
 
          #ifdef WANT_DEBUGGER
          if(GfxDecode_Buf && GfxDecode_Line >=0 && wsLine == GfxDecode_Line)
@@ -532,7 +532,7 @@ bool wsExecuteLine(MDFN_Surface *surface, bool skip)
         if(wsLine == 144)
         {
 		FrameWhichActive = !FrameWhichActive;
-                ret = TRUE;
+                ret = true;
                 WSwan_Interrupt(WSINT_VBLANK);
                 //printf("VBlank: %d\n", wsLine);
                 if(VBCounter && (BTimerControl & 0x04))
@@ -815,11 +815,11 @@ void wsScanline(uint32 *target)
 			      bool drawthis = 0;
 
 			      if(!(DispControl & 0x08)) 
-			       drawthis = TRUE;
+			       drawthis = true;
 			      else if((as & 0x10) && !in_window[7 + xs + x])
-			       drawthis = TRUE;
+			       drawthis = true;
 			      else if(!(as & 0x10) && in_window[7 + xs + x])
-			       drawthis = TRUE;
+			       drawthis = true;
 
 			      if(drawthis)
 		              {
@@ -839,11 +839,11 @@ void wsScanline(uint32 *target)
                               bool drawthis = 0;
 
                               if(!(DispControl & 0x08))
-                               drawthis = TRUE;
+                               drawthis = true;
                               else if((as & 0x10) && !in_window[7 + xs + x])
-                               drawthis = TRUE;
+                               drawthis = true;
                               else if(!(as & 0x10) && in_window[7 + xs + x])
-                               drawthis = TRUE;
+                               drawthis = true;
 
                               if(drawthis)
                               {
@@ -866,11 +866,11 @@ void wsScanline(uint32 *target)
                              bool drawthis = 0;
 
                              if(!(DispControl & 0x08))
-                              drawthis = TRUE;
+                              drawthis = true;
                              else if((as & 0x10) && !in_window[7 + xs + x])
-                              drawthis = TRUE;
+                              drawthis = true;
                              else if(!(as & 0x10) && in_window[7 + xs + x])
-                              drawthis = TRUE;
+                              drawthis = true;
 
                              if(drawthis)
                              //if((as & 0x10) || in_window[7 + xs + x])
@@ -903,7 +903,7 @@ void WSwan_GfxReset(void)
 {
  weppy = 0;
  wsLine=0;
- wsSetVideo(0,TRUE);
+ wsSetVideo(0,true);
 
  memset(SpriteTable, 0, sizeof(SpriteTable));
  SpriteCountCache[0] = SpriteCountCache[1] = 0;
@@ -1026,7 +1026,7 @@ void WSwan_GfxStateAction(StateMem *sm, const unsigned load, const bool data_onl
    for(unsigned j = 0; j < 4; j++)
     wsMonoPal[i][j] &= 0x7;
 
-  wsSetVideo(VideoMode >> 5, TRUE);
+  wsSetVideo(VideoMode >> 5, true);
  }
 }
 

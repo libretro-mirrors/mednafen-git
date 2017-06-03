@@ -40,10 +40,7 @@
 #include "arm.h"
 #include "thumb.h"
 
-#include <stdarg.h>
-#include <string.h>
 #include <trio/trio.h>
-#include <errno.h>
 
 namespace MDFN_IEN_GBA
 {
@@ -95,7 +92,7 @@ static bool stopState = false;
 static bool holdState = false;
 static int holdType = 0;
 
-static bool FlashSizeSet; // Set to TRUE if explicitly set by the user
+static bool FlashSizeSet; // Set to true if explicitly set by the user
 bool cpuSramEnabled;
 bool cpuFlashEnabled;
 bool cpuEEPROMEnabled;
@@ -441,9 +438,9 @@ static bool CPUWriteBatteryFile(const std::string& path)
    if(!MDFN_DumpToFile(path, flashSaveMemory, flashSize))
     return(0);
   }
-  return(TRUE);
+  return(true);
  }
- return(FALSE);
+ return(false);
 }
 
 static void CPUReadBatteryFile(const std::string& path) MDFN_COLD;
@@ -460,7 +457,7 @@ static void CPUReadBatteryFile(const std::string& path)
    if(!FlashSizeSet)
    {
     flashSetSize(0x20000);
-    FlashSizeSet = TRUE;
+    FlashSizeSet = true;
    }
   }
   else if(size == 0x10000)
@@ -469,7 +466,7 @@ static void CPUReadBatteryFile(const std::string& path)
    if(!FlashSizeSet)
    {
     flashSetSize(0x10000);
-    FlashSizeSet = TRUE;
+    FlashSizeSet = true;
    }
   }
   else
@@ -748,7 +745,7 @@ static void Load(MDFNFILE *fp)
 
   CPUUpdateRenderBuffers(true);
 
-  MDFNGameInfo->GameSetMD5Valid = FALSE;
+  MDFNGameInfo->GameSetMD5Valid = false;
 
   MDFNGBASOUND_Init();
 
@@ -2135,9 +2132,9 @@ static void FLASH_SRAM_Write(uint32 A, uint32 V)
  if(cpuFlashEnabled && cpuSramEnabled)
  {
   if((A & 0xFFFF) == 0x5555 && (V & 0xFF) == 0xAA)
-   cpuSramEnabled = FALSE;
+   cpuSramEnabled = false;
   else if((A & 0xFFFF) != 0x2AAA)
-   cpuFlashEnabled = FALSE;
+   cpuFlashEnabled = false;
 
   if(!cpuFlashEnabled || !cpuSramEnabled)
    printf("%s emulation disabled by write to:  %08x %08x\n", cpuSramEnabled ? "FLASH" : "SRAM", A, V);
@@ -2376,7 +2373,7 @@ uint8 cpuLowestBitSet[256];
 
 static void CPUInit(const std::string &bios_fn)
 {
- FlashSizeSet = FALSE;
+ FlashSizeSet = false;
 
  cpuSramEnabled = true;
  cpuFlashEnabled = true;
@@ -2392,10 +2389,10 @@ static void CPUInit(const std::string &bios_fn)
   //
   //
 
-  cpuSramEnabled = FALSE;
-  cpuFlashEnabled = FALSE;
-  cpuEEPROMEnabled = FALSE;
-  cpuEEPROMSensorEnabled = FALSE;
+  cpuSramEnabled = false;
+  cpuFlashEnabled = false;
+  cpuEEPROMEnabled = false;
+  cpuEEPROMSensorEnabled = false;
 
   linebuffer.reserve(256);
 
@@ -2411,11 +2408,11 @@ static void CPUInit(const std::string &bios_fn)
 
    if(!strcasecmp(args[0], "sram"))
    {
-    cpuSramEnabled = TRUE;
+    cpuSramEnabled = true;
    }
    else if(!strcasecmp(args[0], "flash"))
    {
-    cpuFlashEnabled = TRUE;
+    cpuFlashEnabled = true;
     if(acount == 2)
     {
      int size_temp = atoi(args[1]);
@@ -2423,21 +2420,21 @@ static void CPUInit(const std::string &bios_fn)
      if(size_temp == 0x10000 || size_temp == 0x20000)
      {
       flashSetSize(size_temp);
-      FlashSizeSet = TRUE;
+      FlashSizeSet = true;
      }
      else if(size_temp == 64 || size_temp == 128)
      {
       flashSetSize(size_temp * 1024);
-      FlashSizeSet = TRUE;
+      FlashSizeSet = true;
      }
      else
       puts("Flash size error");
     }
    }
    else if(!strcasecmp(args[0], "eeprom"))
-    cpuEEPROMEnabled = TRUE;
+    cpuEEPROMEnabled = true;
    else if(!strcasecmp(args[0], "sensor"))
-    cpuEEPROMSensorEnabled = TRUE;
+    cpuEEPROMSensorEnabled = true;
    else if(!strcasecmp(args[0], "rtc"))
     GBA_RTC = new RTC();
   }

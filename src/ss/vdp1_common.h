@@ -19,8 +19,6 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include <mednafen/endian.h>
-
 #ifndef __MDFN_SS_VDP1_COMMON_H
 #define __MDFN_SS_VDP1_COMMON_H
 

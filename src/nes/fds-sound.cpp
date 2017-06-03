@@ -34,7 +34,7 @@ static DECLFR(FDSWaveRead);
 static DECLFR(FDSSRead);
 static DECLFW(FDSSWrite);
 
-//static bool cwave_ip = TRUE;
+//static bool cwave_ip = true;
 
 static int32 env_divider;	// Main envelope clock divider.
 

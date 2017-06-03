@@ -91,9 +91,9 @@ MD_Cart_Type_SRAM::~MD_Cart_Type_SRAM()
 void MD_Cart_Type_SRAM::Reset(void)
 {
  if(rom_size > sram_start)
-  sram_enabled = FALSE;
+  sram_enabled = false;
  else
-  sram_enabled = TRUE;
+  sram_enabled = true;
 }
 
 void MD_Cart_Type_SRAM::Write8(uint32 A, uint8 V)

@@ -527,6 +527,6 @@ bool NESDBG_Init(void)
  MDFNDBG_AddRegGroup(&NESCPURegsGroup);
  MDFNDBG_AddRegGroup(&NESPPURegsGroup);
 
- return(TRUE);
+ return(true);
 }
 }

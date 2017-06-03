@@ -37,7 +37,7 @@ sscpu_timestamp_t SOUND_Update(sscpu_timestamp_t timestamp);
 void SOUND_ResetTS(void);
 void SOUND_StartFrame(double rate, uint32 quality);
 int32 SOUND_FlushOutput(int16* SoundBuf, const int32 SoundBufMaxSize, const bool reverse);
-void SOUND_StateAction(StateMem *sm, const unsigned load, const bool data_only);
+void SOUND_StateAction(StateMem* sm, const unsigned load, const bool data_only) MDFN_COLD;
 
 uint16 SOUND_Read16(uint32 A);
 void SOUND_Write8(uint32 A, uint8 V);

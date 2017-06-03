@@ -29,7 +29,6 @@
 #include <windowsx.h>
 #include <dinput.h>
 
-#include <math.h>
 #include <set>
 
 struct di_axis_info

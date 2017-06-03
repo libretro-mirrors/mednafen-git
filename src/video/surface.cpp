@@ -21,7 +21,6 @@
 
 #include <mednafen/mednafen.h>
 #include "surface.h"
-#include <math.h>
 
 MDFN_PixelFormat::MDFN_PixelFormat()
 {

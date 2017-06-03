@@ -24,15 +24,9 @@
 */
 
 #include "mednafen.h"
-#include <errno.h>
-#include <string.h>
-#include <vector>
-#include <string>
 #include <trio/trio.h>
-#include <math.h>
 #include <locale.h>
 #include <map>
-#include <list>
 #include "settings.h"
 #include "string/escape.h"
 #include <mednafen/string/string.h>

@@ -576,13 +576,13 @@ case 0x38:
    // HALT
    if(IFF) 
    {
-    InHALT = TRUE;
+    InHALT = true;
    } 
    else 
    {
-    InHALT = TRUE;
+    InHALT = true;
     if(!gbCgbMode)
-     RepeatNextByte = TRUE;
+     RepeatNextByte = true;
    }
    break;
  case 0x77:
@@ -1205,7 +1205,7 @@ case 0x38:
    // RETI
    PC.B.B0=gbReadMemory(SP.W++);
    PC.B.B1=gbReadMemory(SP.W++);
-   IFF = TRUE;
+   IFF = true;
    break;
  case 0xda:
    // JP C,NNNN
@@ -1326,8 +1326,8 @@ case 0x38:
    break;
 
  case 0xf3: // DI
-	   IFF = FALSE;
-	   EI_Delayed = FALSE;
+	   IFF = false;
+	   EI_Delayed = false;
 	   break;
 
    // F4 illegal
@@ -1368,7 +1368,7 @@ case 0x38:
    break;
 
  case 0xfb:
-	EI_Delayed = TRUE;
+	EI_Delayed = true;
 	break;
 
    // FC illegal

@@ -26,9 +26,6 @@
 #include <signal.h>
 #include <sys/time.h>
 #include <sys/stat.h>
-#include <string.h>
-#include <strings.h>
-#include <errno.h>
 #include <trio/trio.h>
 #include <locale.h>
 
@@ -40,7 +37,6 @@
 #include <iconv.h>
 #endif
 
-#include <algorithm>
 #include <atomic>
 
 #include "input.h"
@@ -62,7 +58,6 @@
 #include <mednafen/tests.h>
 #include <mednafen/MemoryStream.h>
 #include <mednafen/file.h>
-#include <math.h>
 
 static int StateSLSTest = false;
 
@@ -78,7 +73,8 @@ static const MDFNSetting_EnumList SDriver_List[] =
  { "default", -1, "Default", gettext_noop("Selects the default sound driver.") },
 
  { "alsa", -1, "ALSA", gettext_noop("The default for Linux(if available).") },
- { "oss", -1, "Open Sound System", gettext_noop("The default for non-Linux UN*X/POSIX/BSD systems, or anywhere ALSA is unavailable. If the ALSA driver gives you problems, you can try using this one instead.\n\nIf you are using OSSv4 or newer, you should edit \"/usr/lib/oss/conf/osscore.conf\", uncomment the max_intrate= line, and change the value from 100(default) to 1000(or higher if you know what you're doing), and restart OSS. Otherwise, performance will be poor, and the sound buffer size in Mednafen will be orders of magnitude larger than specified.\n\nIf the sound buffer size is still excessively larger than what is specified via the \"sound.buffer_time\" setting, you can try setting \"sound.period_time\" to 2666, and as a last resort, 5333, to work around a design flaw/limitation/choice in the OSS API and OSS implementation.") },
+ { "openbsd", -1, "OpenBSD Audio", gettext_noop("The default for OpenBSD.") },
+ { "oss", -1, "Open Sound System", gettext_noop("The default for non-Linux UN*X/POSIX/BSD(other than OpenBSD) systems, or anywhere ALSA is unavailable. If the ALSA driver gives you problems, you can try using this one instead.\n\nIf you are using OSSv4 or newer, you should edit \"/usr/lib/oss/conf/osscore.conf\", uncomment the max_intrate= line, and change the value from 100(default) to 1000(or higher if you know what you're doing), and restart OSS. Otherwise, performance will be poor, and the sound buffer size in Mednafen will be orders of magnitude larger than specified.\n\nIf the sound buffer size is still excessively larger than what is specified via the \"sound.buffer_time\" setting, you can try setting \"sound.period_time\" to 2666, and as a last resort, 5333, to work around a design flaw/limitation/choice in the OSS API and OSS implementation.") },
 
  { "wasapish", -1, "WASAPI(Shared Mode)", gettext_noop("The default when it's available(running on Microsoft Windows Vista and newer).") },
 
@@ -837,7 +833,7 @@ static int LoadGame(const char *force_module, const char *path)
 	 MDFNI_LoadState(NULL, "mca");
 
 	if(netconnect)
-	 MDFND_NetworkConnect();
+	 MDFNI_NetplayConnect();
 
 	ers.SetEmuClock(CurGame->MasterClock >> 32);
 
@@ -901,7 +897,7 @@ int CloseGame(void)
 	if(MDFN_GetSettingB("autosave"))
 	 MDFNI_SaveState(NULL, "mca", NULL, NULL, NULL);
 
-	MDFND_NetworkClose();
+	MDFNI_NetplayDisconnect();
 
 	Debugger_Kill();
 
@@ -926,7 +922,7 @@ void MainRequestExit(void)
  NeedExitNow = 1;
 }
 
-bool MainExitPending(void)	// Called from netplay code, so we can break out of blocking loops after receiving a signal.
+bool MDFND_CheckNeedExit(void)	// Called from netplay code, so we can break out of blocking loops after receiving a signal.
 {
  return (bool)NeedExitNow;
 }
@@ -1980,57 +1976,59 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 }
 
 
-
 static uint32 last_btime = 0;
-static void UpdateSoundSync(int16 *Buffer, int Count)
+static void UpdateSoundSync(int16 *Buffer, uint32 Count)
 {
  if(Count)
  {
   if(ffnosound && CurGameSpeed != 1)
   {
-   for(int x = 0; x < Count * CurGame->soundchan; x++)
+   for(uint32 x = 0; x < Count * CurGame->soundchan; x++)
     Buffer[x] = 0;
   }
-  int32 max = Sound_CanWrite();
-  if(Count > max)
+  //
+  //
+  //
+  const uint32 cw = Sound_CanWrite();
+  bool NeedETtoRT = (Count >= (cw * 0.95));
+
+  if(NoWaiting && Count > cw)
   {
-   if(NoWaiting) 
-   {
-    //printf("NW C to M; count=%d, max=%d\n", Count, max);
-    Count = max;
-   }
+   //printf("NW C to M; count=%d, max=%d\n", Count, max);
+   Count = cw;
   }
-  if(Count >= (max * 0.95))
+  else if(MDFNDnetplay)
   {
-   ers.SetETtoRT();
+   //
+   // Cheap code to fix sound buffer underruns due to accumulation of time error during netplay.
+   //
+   uint32 dw = 0;
+
+   if(cw >= (Count * 7 / 4)) // || cw >= Sound_BufferSize())
+    dw = cw - std::min<uint32>(cw, Count);
+
+   if(dw)
+   {
+    int16 zbuf[128 * 2];	// *2 for stereo case.
+
+    //printf("DW: %u\n", dw);
+
+    memset(zbuf, 0, sizeof(zbuf));
+
+    while(dw != 0)
+    {
+     uint32 wti = std::min<int>(128, dw);
+     Sound_Write(zbuf, wti);
+     dw -= wti;
+    }
+    NeedETtoRT = true;
+   }
   }
 
   Sound_Write(Buffer, Count);
 
-  //printf("%u\n", Sound_CanWrite());
-
-  //
-  // Cheap code to fix sound buffer underruns due to accumulation of time error during netplay.
-  //
-  if(MDFNDnetplay)
-  {
-   int cw = Sound_CanWrite();
-
-   if(cw >= Count * 1.00)
-   {
-    int16 zbuf[128 * 2];	// *2 for stereo case.
-
-    //printf("SNOO: %d %d\n", cw, Count);
-    memset(zbuf, 0, sizeof(zbuf));
-
-    while(cw > 0)
-    {
-     Sound_Write(zbuf, std::min<int>(128, cw));
-     cw -= 128;
-    }
-    ers.SetETtoRT();
-   }
-  }
+  if(NeedETtoRT)
+   ers.SetETtoRT();
  }
  else
  {

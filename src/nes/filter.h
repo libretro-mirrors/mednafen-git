@@ -1,8 +1,6 @@
 #ifndef __NES_FILTER_H
 #define __NES_FILTER_H
 
-#include <vector>
-
 class NES_Resampler
 {
 	public:

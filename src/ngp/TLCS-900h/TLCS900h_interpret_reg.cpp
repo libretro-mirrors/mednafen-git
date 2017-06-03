@@ -282,7 +282,7 @@ void regDAA()
 {
 	uint16 resultC;
 	uint8 src = rCodeB(rCode), result, added = 0, half;
-	bool setC = FALSE;
+	bool setC = false;
 
 	uint8 upper4 = (src & 0xF0);
 	uint8 lower4 = (src & 0x0F);
@@ -291,14 +291,14 @@ void regDAA()
 	{
 		if (FLAG_H)	// {H = 1}
 		{
-			setC = TRUE;
+			setC = true;
 			added = 0x66;
 		}
 		else		// {H = 0}
 		{
 			if      (lower4 < 0x0a)		{ added = 0x60; }
 			else						{ added = 0x66; }
-			setC = TRUE;
+			setC = true;
 		}
 	}
 	else	// {C = 0}

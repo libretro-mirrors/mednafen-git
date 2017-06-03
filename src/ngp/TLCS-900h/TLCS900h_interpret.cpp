@@ -125,7 +125,7 @@ void parityB(uint8 value)
 		value >>= 1;
 	}
 
-	// if (count & 1) == FALSE, means even, thus SET
+	// if (count & 1) == false, means even, thus SET
 	SETFLAG_V((count & 1) == 0);
 }
 
@@ -139,7 +139,7 @@ void parityW(uint16 value)
 		value >>= 1;
 	}
 
-	// if (count & 1) == FALSE, means even, thus SET
+	// if (count & 1) == false, means even, thus SET
 	SETFLAG_V((count & 1) == 0);
 }
 
@@ -488,7 +488,7 @@ bool conditionCode(int cc)
 #ifdef NEOPOP_DEBUG
 	system_debug_message("Unknown Condition Code %d", cc);
 #endif
-	return FALSE;
+	return false;
 }
 
 //=============================================================================
@@ -656,7 +656,7 @@ static void ExInc()
 
 static void ExRC()
 {
-	brCode = TRUE;
+	brCode = true;
 	rCode = FETCH8;
 	cycles_extra = 1;
 }
@@ -874,9 +874,9 @@ static void reg_B()
 	R = second & 7;
 	size = 0;					//Byte Size
 
-	if (brCode == FALSE)
+	if (brCode == false)
 	{
-		brCode = TRUE;
+		brCode = true;
 		rCode = rCodeConversionB[first & 7];
 	}
 
@@ -889,9 +889,9 @@ static void reg_W()
 	R = second & 7;
 	size = 1;					//Word Size
 
-	if (brCode == FALSE)
+	if (brCode == false)
 	{
-		brCode = TRUE;
+		brCode = true;
 		rCode = rCodeConversionW[first & 7];
 	}
 
@@ -904,9 +904,9 @@ static void reg_L()
 	R = second & 7;
 	size = 2;					//Long Size
 
-	if (brCode == FALSE)
+	if (brCode == false)
 	{
-		brCode = TRUE;
+		brCode = true;
 		rCode = rCodeConversionL[first & 7];
 	}
 
@@ -956,7 +956,7 @@ static void (*decode[256])() =
 
 int32 TLCS900h_interpret(void)
 {
-	brCode = FALSE;
+	brCode = false;
 
 	first = FETCH8;	//Get the first byte
 

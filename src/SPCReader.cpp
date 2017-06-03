@@ -23,8 +23,6 @@
 #include <mednafen/SPCReader.h>
 #include <mednafen/string/string.h>
 
-#include <string.h>
-
 bool SPCReader::TestMagic(Stream* fp)
 {
 #if 0

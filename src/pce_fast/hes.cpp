@@ -20,7 +20,6 @@
 #include "huc.h"
 #include "pcecd.h"
 #include <mednafen/player.h>
-#include <mednafen/endian.h>
 
 namespace PCE_Fast
 {
@@ -55,7 +54,7 @@ static DECLFW(HESROMWrite)
  if(!ROMWriteWarningGiven)
  {
   MDFN_printf(_("Warning:  HES is writing to physical address %08x.  Future warnings of this nature are temporarily disabled for this HES file.\n"), A);
-  ROMWriteWarningGiven = TRUE;
+  ROMWriteWarningGiven = true;
  }
 }
 
@@ -195,7 +194,7 @@ void HES_Load(MDFNFILE* fp)
   PCE_IsCD = 1;
   PCE_InitCD();
 
-  ROMWriteWarningGiven = FALSE;
+  ROMWriteWarningGiven = false;
  }
  catch(...)
  {

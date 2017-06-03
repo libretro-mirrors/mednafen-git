@@ -2,10 +2,6 @@
 #define __MDFN_FILE_H
 
 #include <mednafen/Stream.h>
-#include <mednafen/endian.h>
-
-#include <vector>
-#include <string>
 
 #include <sys/stat.h>
 #include <sys/types.h>

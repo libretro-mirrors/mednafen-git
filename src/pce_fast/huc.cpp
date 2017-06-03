@@ -22,7 +22,6 @@
 */
 
 #include "pce.h"
-#include <errno.h>
 #include "pcecd.h"
 #include <mednafen/hw_misc/arcade_card/arcade_card.h>
 #include <mednafen/hash/md5.h>
@@ -159,11 +158,11 @@ uint32 HuC_Load(MDFNFILE* fp)
   }
 
   uint64 m_len = (len + 8191)&~8191;
-  bool sf2_mapper = FALSE;
+  bool sf2_mapper = false;
 
   if(m_len >= sf2_threshold)
   {
-   sf2_mapper = TRUE;
+   sf2_mapper = true;
 
    if(m_len != sf2_required_size)
     m_len = sf2_required_size;

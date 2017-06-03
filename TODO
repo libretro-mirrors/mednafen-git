@@ -11,6 +11,8 @@ on game load for each emulated system.
 !!! Look into using jemalloc or similar on Windows builds due to poor handling of realloc() by the CRT/underlying Win32 API, which results in state rewinding with
 PS1 emulation causing address space exhaustion on 32-bit builds.
 
+Draw lightgun crosshairs driver-side.
+
 SF*() state variable macro overhaul; add macro/function for handling std::array and std::vector.
 
 Save state preview images should reflect the screen-rotation(ALT+O) state somehow, probably at time of creation.

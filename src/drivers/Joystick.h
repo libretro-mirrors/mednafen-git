@@ -1,10 +1,6 @@
 #ifndef __MDFN_DRIVERS_N_JOYSTICK_H
 #define __MDFN_DRIVERS_N_JOYSTICK_H
 
-#include <utility>
-#include <vector>
-#include <list>
-
 class Joystick
 {
  public:

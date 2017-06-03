@@ -58,7 +58,7 @@ bool MD_IsCD;
 static int32 z80_cycle_counter;
 static int32 z80_last_ts;
 int32 md_timestamp;
-static bool suspend68k = FALSE;
+static bool suspend68k = false;
 
 static bool run_cpu;
 
@@ -111,7 +111,7 @@ static void system_reset(bool poweron)
 
 void MD_ExitCPULoop(void)
 {
- run_cpu = FALSE;
+ run_cpu = false;
 }
 
 void MD_UpdateSubStuff(void)
@@ -167,7 +167,7 @@ void MD_DBG(unsigned level, const char *format, ...) throw()
 
 static int system_frame(int do_skip)
 {
- run_cpu = TRUE;
+ run_cpu = true;
 
  while(run_cpu > 0)
  {
@@ -398,24 +398,24 @@ static bool decode_region_setting(const int setting, bool &overseas, bool &pal)
 	   return(false);
 
   case REGION_OVERSEAS_NTSC:
-	overseas = TRUE;
-	pal = FALSE;
-	return(TRUE);
+	overseas = true;
+	pal = false;
+	return(true);
 
   case REGION_OVERSEAS_PAL:
-	overseas = TRUE;
-	pal = TRUE;
-	return(TRUE);
+	overseas = true;
+	pal = true;
+	return(true);
 
   case REGION_DOMESTIC_NTSC:
-	overseas = FALSE;
-	pal = FALSE;
-	return(TRUE);
+	overseas = false;
+	pal = false;
+	return(true);
 
   case REGION_DOMESTIC_PAL:
-	overseas = FALSE;
-	pal = TRUE;
-	return(TRUE);
+	overseas = false;
+	pal = true;
+	return(true);
  }
 }
 
@@ -448,7 +448,7 @@ static void LoadCommonPost(const md_game_info &ginfo)
  for(uint32 A = (0x7 << 21); A < (0x8 << 21); A += 65536)
   MDFNMP_AddRAM(65536, A, work_ram, (A == 0xFF0000));
 
- MDFNGameInfo->GameSetMD5Valid = FALSE;
+ MDFNGameInfo->GameSetMD5Valid = false;
 
  MDSound_Init();
 
@@ -469,8 +469,8 @@ static void LoadCommonPost(const md_game_info &ginfo)
   const int reported_region_setting = MDFN_GetSettingI("md.reported_region");
 
   // Default, in case the game doesn't support any regions!
-  bool game_overseas = TRUE;
-  bool game_pal = FALSE;
+  bool game_overseas = true;
+  bool game_pal = false;
   bool overseas;
   bool pal;
   bool overseas_reported;
@@ -479,23 +479,23 @@ static void LoadCommonPost(const md_game_info &ginfo)
   // Preference order, TODO:  Make it configurable
   if(ginfo.region_support & REGIONMASK_OVERSEAS_NTSC)
   {
-   game_overseas = TRUE;
-   game_pal = FALSE;
+   game_overseas = true;
+   game_pal = false;
   }
   else if(ginfo.region_support & REGIONMASK_JAPAN_NTSC)
   {
-   game_overseas = FALSE;
-   game_pal = FALSE;
+   game_overseas = false;
+   game_pal = false;
   }
   else if(ginfo.region_support & REGIONMASK_OVERSEAS_PAL)
   {
-   game_overseas = TRUE;
-   game_pal = TRUE;
+   game_overseas = true;
+   game_pal = true;
   }
   else if(ginfo.region_support & REGIONMASK_JAPAN_PAL) // WTF?
   {
-   game_overseas = FALSE;
-   game_pal = TRUE;
+   game_overseas = false;
+   game_pal = true;
   }
  
   if(region_setting == REGION_GAME)
@@ -610,7 +610,7 @@ static void Load(MDFNFILE *fp)
 
   memcpy(MDFNGameInfo->MD5, ginfo.md5, 16);
 
-  MD_IsCD = FALSE;
+  MD_IsCD = false;
 
   MD_ExtRead8 = MDCart_Read8;
   MD_ExtRead16 = MDCart_Read16;
@@ -636,7 +636,7 @@ static void LoadCD(std::vector<CDIF *> *CDInterfaces)
 
   memset(&ginfo, 0, sizeof(md_game_info));
 
-  MD_IsCD = TRUE;
+  MD_IsCD = true;
 
   MDCD_Load(CDInterfaces, &ginfo);
 
@@ -821,7 +821,7 @@ MDFNGI EmulatedMD =
  MDSettings,
  0,	// MasterClock(set in game loading code)
  0,
- TRUE, // Multires possible?
+ true, // Multires possible?
 
  0,   // lcm_width		// Calculated in game load
  0,   // lcm_height         	// Calculated in game load

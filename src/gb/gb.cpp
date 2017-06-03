@@ -26,11 +26,7 @@
 #include <mednafen/Time.h>
 #include <mednafen/cheat_formats/gb.h>
 
-#include <string.h>
 #include <zlib.h>
-#include <math.h>
-
-#include <algorithm>
 
 #include "gb.h"
 #include "gbGlobals.h"
@@ -2114,7 +2110,7 @@ static void Load(MDFNFILE *fp)
   md5.update(gbRom, gbRomSize);
   md5.finish(MDFNGameInfo->MD5);
 
-  MDFNGameInfo->GameSetMD5Valid = FALSE;
+  MDFNGameInfo->GameSetMD5Valid = false;
 
   MDFN_printf(_("ROM:       %dKiB\n"), (gbRomSize + 1023) / 1024);
   MDFN_printf(_("ROM CRC32: 0x%08x\n"), (unsigned int)crc32(0, gbRom, gbRomSize));
@@ -2900,7 +2896,7 @@ MDFNGI EmulatedGB =
  GBSettings,
  MDFN_MASTERCLOCK_FIXED(4194304),
  (uint32)((double)4194304 / 70224 * 65536 * 256),
- FALSE, // Multires possible?
+ false, // Multires possible?
 
  160,	// lcm_width
  144,	// lcm_height

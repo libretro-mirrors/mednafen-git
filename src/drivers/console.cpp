@@ -21,7 +21,6 @@
 
 #include "main.h"
 #include "console.h"
-#include <math.h>
 #include "nongl.h"
 #include <mednafen/string/string.h>
 

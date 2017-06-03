@@ -63,7 +63,7 @@ static DECLFW(HESROMWrite)
  if(!ROMWriteWarningGiven)
  {
   MDFN_printf(_("Warning:  HES is writing to physical address %08x.  Future warnings of this nature are temporarily disabled for this HES file.\n"), A);
-  ROMWriteWarningGiven = TRUE;
+  ROMWriteWarningGiven = true;
  }
 }
 
@@ -259,7 +259,7 @@ void HES_Load(MDFNFILE* fp)
    HuCPU.SetWriteHandler(x, HESROMWrite);
   }
 
-  ROMWriteWarningGiven = FALSE;
+  ROMWriteWarningGiven = false;
  }
  catch(...)
  {

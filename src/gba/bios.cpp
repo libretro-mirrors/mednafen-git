@@ -21,8 +21,6 @@
 #include "GBAinline.h"
 #include "Globals.h"
 
-#include <math.h>
-
 namespace MDFN_IEN_GBA
 {
 

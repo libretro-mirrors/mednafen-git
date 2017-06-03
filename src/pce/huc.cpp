@@ -26,8 +26,6 @@
 #include <mednafen/compress/GZFileStream.h>
 #include <mednafen/FileStream.h>
 
-#include <errno.h>
-#include <string.h>
 #include "mcgenjin.h"
 
 namespace MDFN_IEN_PCE
@@ -211,9 +209,9 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
 {
  uint32 crc = 0;
  const uint32 sf2_threshold = 2048 * 1024;
- bool sf2_mapper = FALSE;
- bool mcg_mapper = FALSE;
- bool UseBRAM = FALSE;
+ bool sf2_mapper = false;
+ bool mcg_mapper = false;
+ bool UseBRAM = false;
 
  try
  {
@@ -234,14 +232,14 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
    fp->read(buf, 8192);
 
    if(!memcmp(buf + 0x1FD0, "MCGENJIN", 8))
-    mcg_mapper = TRUE;
+    mcg_mapper = true;
 
    fp->seek(-8192, SEEK_CUR);	// Seek backwards so we don't undo skip copier header.
   }
 
   if(!syscard && m_len >= sf2_threshold && !mcg_mapper)
   {
-   sf2_mapper = TRUE;
+   sf2_mapper = true;
 
    // Only used the "extended" SF2 mapper if it's considerably larger than the normal SF2 mapper size.
    if(m_len < (512 * 1024 * 6))
@@ -274,7 +272,7 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
    }
    MDFNMP_AddRAM(8 * 8192, 0x80 * 8192, CDRAM);
 
-   UseBRAM = TRUE;
+   UseBRAM = true;
   }
 
   if(mcg_mapper)
@@ -445,7 +443,7 @@ uint32 HuC_Load(MDFNFILE* fp, bool DisableBRAM, SysCardType syscard)
     MDFNMP_AddRAM(32768, 0x88 * 8192, TsushinRAM);
    }
    else
-    UseBRAM = TRUE;
+    UseBRAM = true;
 
    // 0x1A558
    if(sf2_mapper)

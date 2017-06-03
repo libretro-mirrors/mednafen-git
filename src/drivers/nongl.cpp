@@ -24,10 +24,6 @@
 #include "nongl.h"
 #include "nnx.h"
 
-#include <algorithm>
-#include <math.h>
-#include <stdlib.h>
-
 //
 // Source rectangle sanity checking(more strict than dest rectangle sanity checking).	*/					
 //

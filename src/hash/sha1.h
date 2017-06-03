@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* sha1.h:
-**  Copyright (C) 2014-2016 Mednafen Team
+**  Copyright (C) 2014-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -22,9 +22,6 @@
 
 #ifndef __MDFN_SHA1_H
 #define __MDFN_SHA1_H
-
-#include <array>
-#include <string>
 
 typedef std::array<uint8, 20> sha1_digest;
 

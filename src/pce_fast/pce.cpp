@@ -397,7 +397,7 @@ static MDFN_COLD bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  uint8 sector_buffer[2048];
  CDIF *cdiface = (*CDInterfaces)[0];
  CDUtility::TOC toc;
- bool ret = FALSE;
+ bool ret = false;
 
  memset(sector_buffer, 0, sizeof(sector_buffer));
 
@@ -410,7 +410,7 @@ static MDFN_COLD bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
    cdiface->ReadSector(sector_buffer, toc.tracks[track].lba, 1);
 
    if(!memcmp((char*)sector_buffer, (char *)magic_test, 0x20))
-    ret = TRUE;
+    ret = true;
 
    // PCE CD BIOS apparently only looks at the first data track.
    break;
@@ -441,7 +441,7 @@ static MDFN_COLD bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
   {
    if(!memcmp((char *)sector_buffer + 0x8, "HACKER CD ROM SYSTEM", 0x14))
    {
-    ret = TRUE;
+    ret = true;
    }
   }
  }

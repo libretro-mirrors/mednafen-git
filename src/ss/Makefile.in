@@ -128,7 +128,7 @@ am_libss_a_OBJECTS = db.$(OBJEXT) cdb.$(OBJEXT) sound.$(OBJEXT) \
 	input/multitap.$(OBJEXT) input/gamepad.$(OBJEXT) \
 	input/3dpad.$(OBJEXT) input/mouse.$(OBJEXT) \
 	input/wheel.$(OBJEXT) input/mission.$(OBJEXT) \
-	input/keyboard.$(OBJEXT)
+	input/gun.$(OBJEXT) input/keyboard.$(OBJEXT)
 libss_a_OBJECTS = $(am_libss_a_OBJECTS)
 libssfplay_a_AR = $(AR) $(ARFLAGS)
 libssfplay_a_LIBADD =
@@ -376,7 +376,7 @@ libss_a_SOURCES = db.cpp cdb.cpp sound.cpp cart.cpp cart/backup.cpp \
 	vdp1_poly.cpp vdp2.cpp vdp2_render.cpp smpc.cpp \
 	input/multitap.cpp input/gamepad.cpp input/3dpad.cpp \
 	input/mouse.cpp input/wheel.cpp input/mission.cpp \
-	input/keyboard.cpp
+	input/gun.cpp input/keyboard.cpp
 libssfplay_a_SOURCES = ssf.cpp
 all: all-am
 
@@ -449,6 +449,8 @@ input/wheel.$(OBJEXT): input/$(am__dirstamp) \
 	input/$(DEPDIR)/$(am__dirstamp)
 input/mission.$(OBJEXT): input/$(am__dirstamp) \
 	input/$(DEPDIR)/$(am__dirstamp)
+input/gun.$(OBJEXT): input/$(am__dirstamp) \
+	input/$(DEPDIR)/$(am__dirstamp)
 input/keyboard.$(OBJEXT): input/$(am__dirstamp) \
 	input/$(DEPDIR)/$(am__dirstamp)
 
@@ -494,6 +496,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/rom.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/3dpad.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/gamepad.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/gun.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/keyboard.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/mission.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/mouse.Po@am__quote@

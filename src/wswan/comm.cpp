@@ -61,7 +61,7 @@ void Comm_Init(const char *wfence_path)
   {
    dup2(stdin_pipes[0], 0);
    dup2(stdout_pipes[1], 1);
-   execlp(wfence_path, wfence_path, "ASDF", NULL);
+   execlp(wfence_path, wfence_path, "ASDF", (char*)NULL);
    abort();
   }
 

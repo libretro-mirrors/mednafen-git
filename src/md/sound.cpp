@@ -114,7 +114,7 @@ static void RedoVolume(void)
 bool MDSound_SetSoundRate(uint32 rate)
 {
  zebuf.set_sample_rate(rate ?rate : 44100, 60);
- return(TRUE);
+ return(true);
 }
 
 int32 MDSound_Flush(int16 *SoundBuf, const int32 MaxSoundFrames)

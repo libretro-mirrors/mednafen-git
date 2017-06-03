@@ -46,8 +46,6 @@
 
 #include "system.h"
 
-#include <algorithm>
-#include <string.h>
 #include "cart.h"
 #include <mednafen/state.h>
 #include <mednafen/hash/md5.h>
@@ -86,12 +84,12 @@ LYNX_HEADER CCart::DecodeHeader(const uint8 *data)
 bool CCart::TestMagic(const uint8 *data, uint32 size)
 {
  if(size < HEADER_RAW_SIZE)
-  return(FALSE);
+  return(false);
 
  if(memcmp(data, "LYNX", 4) || data[8] != 0x01)
-  return(FALSE);
+  return(false);
 
- return(TRUE);
+ return(true);
 }
 
 CCart::CCart(Stream* fp)
@@ -101,9 +99,9 @@ CCart::CCart(Stream* fp)
 	LYNX_HEADER	header;
 	uint32 loop;
 
-	mWriteEnableBank0 = FALSE;
-	mWriteEnableBank1 = FALSE;
-	mCartRAM = FALSE;
+	mWriteEnableBank0 = false;
+	mWriteEnableBank1 = false;
+	mCartRAM = false;
 
 	if(fp)
 	{
@@ -275,8 +273,8 @@ CCart::CCart(Stream* fp)
 		mCountMask1=0x0ff;
 		mCartBank1.reset(new uint8[mMaskBank1+1]);
 		for(loop=0;loop<mMaskBank1+1;loop++) mCartBank1[loop]=DEFAULT_RAM_CONTENTS;
-		mWriteEnableBank1=TRUE;
-		mCartRAM=TRUE;
+		mWriteEnableBank1=true;
+		mCartRAM=true;
 	}
 }
 

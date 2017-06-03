@@ -172,7 +172,7 @@ bool SMS_SetSoundRate(uint32 rate)
 {
  zebuf.set_sample_rate(rate ? rate : 44100, 60);
 
- return(TRUE);
+ return(true);
 }
 
 

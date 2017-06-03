@@ -21,9 +21,7 @@
 
 #include "vb.h"
 #include <mednafen/hw_cpu/v810/v810_cpuD.h>
-#include <string.h>
 #include <trio/trio.h>
-#include <stdarg.h>
 #include <iconv.h>
 
 #include "debug.h"

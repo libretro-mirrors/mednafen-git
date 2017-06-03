@@ -21,7 +21,7 @@
 
 namespace MDFN_IEN_MD
 {
-bool MD_DebugMode = FALSE;
+bool MD_DebugMode = false;
 
 #if 0
 enum { NUMBT = 16 };
@@ -39,8 +39,8 @@ static void (*DriverCPUHook)(uint32, bool) = NULL;
 static bool DriverCPUHookContinuous = false;
 
 static M68K Main68K_BP;
-static bool BPActive = FALSE; // Any breakpoints on?
-static bool BPNonPCActive = FALSE;	// Any breakpoints other than PC on?
+static bool BPActive = false; // Any breakpoints on?
+static bool BPNonPCActive = false;	// Any breakpoints other than PC on?
 static bool FoundBPoint;
 
 typedef struct
@@ -167,7 +167,7 @@ void MDDBG_CPUHook(void)	//uint32 PC, uint16 op)
  {
   if(PC >= bpit->A[0] && PC <= bpit->A[1])
   {
-   FoundBPoint = TRUE;
+   FoundBPoint = true;
    break;
   }
  }
@@ -315,7 +315,7 @@ static MDFN_FASTCALL uint8 DBG_BusRead8(uint32 address)
  {
   if(address >= bpit->A[0] && address <= bpit->A[1])
   {
-   FoundBPoint = TRUE;
+   FoundBPoint = true;
    break;
   }
  }
@@ -340,7 +340,7 @@ static MDFN_FASTCALL uint16 DBG_BusRead16(uint32 address)
  {
   if((address | 1) >= bpit->A[0] && address <= bpit->A[1])
   {
-   FoundBPoint = TRUE;
+   FoundBPoint = true;
    break;
   }
  }
@@ -360,7 +360,7 @@ static MDFN_FASTCALL void DBG_BusWrite8(uint32 address, uint8 value)
  {
   if(address >= bpit->A[0] && address <= bpit->A[1])
   {
-   FoundBPoint = TRUE;
+   FoundBPoint = true;
    break;
   }
  }
@@ -376,7 +376,7 @@ static MDFN_FASTCALL void DBG_BusWrite16(uint32 address, uint16 value)
  {
   if((address | 1) >= bpit->A[0] && address <= bpit->A[1])
   {
-   FoundBPoint = TRUE;
+   FoundBPoint = true;
    break;
   }
  }

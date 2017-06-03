@@ -21,10 +21,7 @@
 #include <config.h>
 #endif
 #include "main.h"
-#include <stdarg.h>
 
-#include <string.h>
-#include <math.h>
 #include "netplay.h"
 #include "console.h"
 
@@ -32,11 +29,8 @@
 
 #include "video.h"
 
-#include <mednafen/net/Net.h>
-
 #include <mednafen/AtomicFIFO.h>
 
-static std::unique_ptr<Net::Connection> Connection;
 
 static AtomicFIFO<char*, 128> LineFIFO;
 
@@ -74,117 +68,15 @@ bool NetplayConsole::TextHook(const std::string &text)
 	return(1);
 }
 
-// Call from game thread
-static void PrintNetError(const char *format, ...)
-{
- char *temp;
-
- va_list ap;
-
- va_start(ap, format);
-
- temp = trio_vaprintf(format, ap);
- MDFND_NetplayText(temp, FALSE);
- free(temp);
-
- va_end(ap);
-}
-
 // Called from game thread
-int MDFND_NetworkConnect(void)
+void MDFND_NetplaySetHints(bool active, bool behind)
 {
- if(Connection)
- {
-  MDFND_NetworkClose();
- }
+ MDFNDnetplay = active;
 
- try
- {
-  std::string remote_host = MDFN_GetSettingS("netplay.host");
-  unsigned int remote_port = MDFN_GetSettingUI("netplay.port");
-
-  Connection = Net::Connect(remote_host.c_str(), remote_port);
-
-  do
-  {
-   if(MainExitPending())
-    throw MDFN_Error(0, _("Mednafen exit pending."));
-  } while(!Connection->Established(50000));
- }
- catch(std::exception &e)
- {
-  PrintNetError("%s", e.what());
-  return(0);
- }
-
- MDFNDnetplay = 1;
- if(!MDFNI_NetplayStart())
- {
-  MDFNDnetplay = 0;
-  return(0);
- }
-
- return(1);
-}
-
-// Called from game thread
-void MDFND_SendData(const void *data, uint32 len)
-{
- do
- {
-  int32 sent = Connection->Send(data, len);
-  assert(sent >= 0);
-
-  data = (uint8*)data + sent;
-  len -= sent;
-
-  if(len)
-  {
-   if(MainExitPending())
-    throw MDFN_Error(0, _("Mednafen exit pending."));
-
-   Connection->CanSend(50000);
-  }
- } while(len);
-}
-
-void MDFND_RecvData(void *data, uint32 len)
-{
  NoWaiting &= ~2;
-
- do
- {
-  int32 received = Connection->Receive(data, len);
-  assert(received >= 0);
-
-  data = (uint8*)data + received;
-  len -= received;
-
-  if(len)
-  {
-   if(MainExitPending())
-    throw MDFN_Error(0, _("Mednafen exit pending."));
-
-   Connection->CanReceive(50000);
-  }
- } while(len);
-
- if(Connection->CanReceive())
+ if(active && behind)
   NoWaiting |= 2;
-}
-
-// Called from the game thread
-void MDFND_NetworkClose(void)
-{
- NoWaiting &= ~2;
-
- Connection.reset(nullptr);
-
- if(MDFNDnetplay)
- {
-  MDFNI_NetplayStop();
-  MDFNDnetplay = 0;
- }
+ //printf("Hint: %d, %d\n", active, behind);
 }
 
 // Called from the game thread

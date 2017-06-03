@@ -24,8 +24,6 @@
 
 #include <mednafen/Stream.h>
 
-#include <string>
-
 class SPCReader
 {
  public:

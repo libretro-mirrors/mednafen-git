@@ -18,9 +18,6 @@
 #ifndef __MDFN_PCE_MCGENJIN_H
 #define __MDFN_PCE_MCGENJIN_H
 
-#include <vector>
-#include <memory>
-
 class MCGenjin_CS_Device
 {
  public:

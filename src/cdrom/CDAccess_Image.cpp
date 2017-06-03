@@ -32,14 +32,10 @@
 
 #include <sys/types.h>
 
-#include <string.h>
-#include <errno.h>
 #include <trio/trio.h>
-#include <memory>
 
 #include <mednafen/general.h>
 #include <mednafen/string/string.h>
-#include <mednafen/endian.h>
 #include <mednafen/FileStream.h>
 #include <mednafen/MemoryStream.h>
 
@@ -396,7 +392,7 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
  static const unsigned max_args = 4;
  std::string linebuf;
  std::string cmdbuf, args[max_args];
- bool IsTOC = FALSE;
+ bool IsTOC = false;
  int32 active_track = -1;
  int32 AutoTrackInc = 1; // For TOC
  CDRFILE_TRACK_INFO TmpTrack;
@@ -511,7 +507,7 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
      }
 
      if(TmpTrack.DIFormat == DI_FORMAT_AUDIO)
-      TmpTrack.RawAudioMSBFirst = TRUE; // Silly cdrdao...
+      TmpTrack.RawAudioMSBFirst = true; // Silly cdrdao...
 
      if(!strcasecmp(args[1].c_str(), "RW"))
      {

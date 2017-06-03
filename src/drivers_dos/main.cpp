@@ -22,9 +22,6 @@
 #include <signal.h>
 #include <sys/time.h>
 #include <sys/stat.h>
-#include <string.h>
-#include <strings.h>
-#include <errno.h>
 #include <trio/trio.h>
 #include <locale.h>
 

@@ -27,9 +27,7 @@
 #include "prompt.h"
 
 #include <trio/trio.h>
-#include <vector>
 #include <map>
-#include <string>
 
 typedef struct
 {

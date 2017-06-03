@@ -57,7 +57,7 @@ v810_timestamp_t FXTIMER_Update(const v810_timestamp_t timestamp)
    if(control & 0x1)
    {
     control |= 0x4;
-    PCFXIRQ_Assert(PCFXIRQ_SOURCE_TIMER, TRUE);
+    PCFXIRQ_Assert(PCFXIRQ_SOURCE_TIMER, true);
    }
   }
  }

@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* FileStream.cpp:
-**  Copyright (C) 2010-2016 Mednafen Team
+**  Copyright (C) 2010-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -28,13 +28,10 @@
 #include <mednafen/mednafen.h>
 
 #include <trio/trio.h>
-#include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
 
 #ifdef WIN32
 #include <windows.h>

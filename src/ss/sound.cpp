@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* sound.cpp - Sound Emulation
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -311,10 +311,28 @@ int32 SOUND_FlushOutput(int16* SoundBuf, const int32 SoundBufMaxSize, const bool
  }
 }
 
-void SOUND_StateAction(StateMem *sm, const unsigned load, const bool data_only)
+void SOUND_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 {
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(next_scsp_time),
+  SFVAR(run_until_time),
 
+  SFEND
+ };
 
+ //
+ next_scsp_time -= SoundCPU.timestamp;
+ run_until_time -= (int64)SoundCPU.timestamp << 32;
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "SOUND");
+
+ next_scsp_time += SoundCPU.timestamp;
+ run_until_time += (int64)SoundCPU.timestamp << 32;
+ //
+
+ SoundCPU.StateAction(sm, load, data_only, "M68K");
+ SCSP.StateAction(sm, load, data_only, "SCSP");
 }
 
 //
@@ -399,7 +417,6 @@ static MDFN_FASTCALL void SoundCPU_BusRESET(bool state)
   SoundCPU.Reset(false);
  }
 }
-
 
 uint32 SOUND_GetSCSPRegister(const unsigned id, char* const special, const uint32 special_len)
 {

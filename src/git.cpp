@@ -21,8 +21,6 @@
 
 #include <mednafen/mednafen.h>
 
-#include <math.h>
-
 const IDIISG IDII_Empty;
 
 IDIISG::IDIISG()

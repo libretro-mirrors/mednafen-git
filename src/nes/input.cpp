@@ -45,7 +45,7 @@ extern INPUTCFC *MDFN_InitFamilyTrainerA(void);
 extern INPUTCFC *MDFN_InitFamilyTrainerB(void);
 extern INPUTCFC *MDFN_InitOekaKids(void);
 extern INPUTCFC *MDFN_InitTopRider(void);
-extern INPUTCFC *MDFN_InitBarcodeWorld(void);
+extern INPUTCFC *MDFN_InitBBattler2(void);
 
 static const IDIISG GamepadIDII =
 {
@@ -234,7 +234,7 @@ static const IDIISG OekaIDII =
  { "button", "Button", 0, IDIT_BUTTON, NULL },
 };
 
-static const IDIISG BWorldIDII =
+static const IDIISG BBattler2IDII =
 {
  { "new", "New", -1, IDIT_BYTE_SPECIAL },
  { "bd1", "Barcode Digit 1", -1, IDIT_BYTE_SPECIAL },
@@ -416,12 +416,12 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoFamicomPort =
   OekaIDII
  },
 
- // Barcode World
+ // Barcode Battler II
  {
   "bworld",
-  "Barcode World Scanner",
+  "Barcode Battler II",
   NULL,
-  BWorldIDII
+  BBattler2IDII
  },
 
 };
@@ -725,7 +725,7 @@ static void SetInputStuff(int x)
          else if(!strcasecmp(ts, "ftrainerb"))
 	  FCExp=MDFN_InitFamilyTrainerB();
          else if(!strcasecmp(ts, "bworld"))
-	  FCExp=MDFN_InitBarcodeWorld();
+	  FCExp=MDFN_InitBBattler2();
 	}
 	else
 	{

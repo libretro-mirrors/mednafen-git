@@ -17,26 +17,21 @@
 
 #include "../sexyal.h"
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <assert.h>
-#include <algorithm>
 
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>
 
-static int64 Time64(void)
+static INLINE int64 Time64(void)
 {
- return(jack_get_time());
+ return jack_get_time();
 }
 
-typedef struct
+struct SexyAL_JACK
 {
 	jack_port_t *output_port[2];
 	jack_client_t *client;
@@ -59,14 +54,14 @@ typedef struct
 	uint64 underrun_chunks;
 
 	bool NeedActivate;
-} JACKWrap;
+};
 
 static int RawClose(SexyAL_device *device);
 
 
 static bool DoActivate(SexyAL_device *device)
 {
- JACKWrap *jw = (JACKWrap *)device->private_data;
+ SexyAL_JACK *jw = (SexyAL_JACK *)device->private_data;
  const char **ports;
 
  if(!jw->NeedActivate)
@@ -104,7 +99,7 @@ static bool DoActivate(SexyAL_device *device)
 
 static int process(jack_nframes_t nframes, void *arg)
 {
- JACKWrap *jw = (JACKWrap *)arg;
+ SexyAL_JACK *jw = (SexyAL_JACK *)arg;
  int tch = 1;
  int ch;
  int canread = jack_ringbuffer_read_space(jw->tmpbuf[0]) / sizeof(jack_default_audio_sample_t);
@@ -159,7 +154,7 @@ static int process(jack_nframes_t nframes, void *arg)
 
 static int Get_RCW(SexyAL_device *device, uint32 *can_write, bool want_nega = false)
 {
- JACKWrap *jw = (JACKWrap *)device->private_data;
+ SexyAL_JACK *jw = (SexyAL_JACK *)device->private_data;
  int32 cw;
  size_t can_read;
  int64 buf[2];
@@ -230,7 +225,7 @@ static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 
 static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 {
- JACKWrap *jw = (JACKWrap *)device->private_data;
+ SexyAL_JACK *jw = (SexyAL_JACK *)device->private_data;
  uint8 *data8 = (uint8*)data;
  DoActivate(device);
 
@@ -285,7 +280,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 // TODO: How should be implement this without causing race conditions?
 static int Clear(SexyAL_device *device)
 {
- //JACKWrap *jw = (JACKWrap *)device->private_data;
+ //SexyAL_JACK *jw = (SexyAL_JACK *)device->private_data;
 
  DoActivate(device);
 
@@ -298,7 +293,7 @@ static int RawClose(SexyAL_device *device)
  {
   if(device->private_data)
   {
-   JACKWrap *jw = (JACKWrap *)device->private_data;
+   SexyAL_JACK *jw = (SexyAL_JACK *)device->private_data;
 
    if(jw->client)
     jack_deactivate(jw->client);
@@ -330,7 +325,7 @@ static int RawClose(SexyAL_device *device)
 
 static void DeadSound(void *arg)
 {
- JACKWrap *jw = (JACKWrap *)arg;
+ SexyAL_JACK *jw = (SexyAL_JACK *)arg;
 
  jw->closed = 1;
  jw->NeedActivate = 0;
@@ -341,7 +336,7 @@ static void DeadSound(void *arg)
 // TODO
 static int Pause(SexyAL_device *device, int state)
 {
- //JACKWrap *jw = (JACKWrap *)device->private_data;
+ //SexyAL_JACK *jw = (SexyAL_JACK *)device->private_data;
 
  DoActivate(device);
 
@@ -351,9 +346,9 @@ static int Pause(SexyAL_device *device, int state)
 SexyAL_device *SexyALI_JACK_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering)
 {
  SexyAL_device *device;
- JACKWrap *jw;
+ SexyAL_JACK *jw;
 
- jw = (JACKWrap *)calloc(1, sizeof(JACKWrap));
+ jw = (SexyAL_JACK *)calloc(1, sizeof(SexyAL_JACK));
 
  device = (SexyAL_device *)calloc(1, sizeof(SexyAL_device));
 

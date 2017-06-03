@@ -88,14 +88,14 @@ static bool RedoBuffer(uint32 rate)
          gb_apu.set_output(gb_buf->center(), gb_buf->left(), gb_buf->right());
         }
 
-	return(TRUE);
+	return(true);
 }
 
 bool MDFNGB_SetSoundRate(uint32 rate)
 {
 	RedoBuffer(rate);
 
-	return(TRUE);
+	return(true);
 }
 
 void SOUND_StateAction(StateMem *sm, int load, int data_only)

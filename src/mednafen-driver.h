@@ -1,10 +1,6 @@
 #ifndef __MDFN_MEDNAFEN_DRIVER_H
 #define __MDFN_MEDNAFEN_DRIVER_H
 
-#include <stdio.h>
-#include <vector>
-#include <string>
-
 #include "settings-common.h"
 
 extern std::vector<MDFNGI *>MDFNSystems;
@@ -42,6 +38,9 @@ void MDFND_Message(const char *s);
 // If you do not understand how to implement this function, you can leave it empty at first, but know that doing so
 // will subtly break at least one PC Engine game(Takeda Shingen), and raise input latency on some other PC Engine games.
 void MDFND_MidSync(const EmulateSpecStruct *espec);
+
+// Called from inside blocking loops on unreliable resources(e.g. netplay).
+bool MDFND_CheckNeedExit(void);
 
 //
 // Begin threading support.
@@ -104,9 +103,6 @@ bool MDFNI_InitializeModules(void) MDFN_COLD;
 /* allocates memory.  0 on failure, 1 on success. */
 /* Also pass it the base directory to load the configuration file. */
 int MDFNI_Initialize(const char *basedir, const std::vector<MDFNSetting> &DriverSettings) MDFN_COLD;
-
-/* Call only when a game is loaded. */
-int MDFNI_NetplayStart(void);
 
 /* Emulates a frame. */
 void MDFNI_Emulate(EmulateSpecStruct *espec);

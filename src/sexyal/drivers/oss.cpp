@@ -17,12 +17,8 @@
 
 #include "../sexyal.h"
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <unistd.h>
-#include <string.h>
 #include <ctype.h>
-#include <errno.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
@@ -31,24 +27,16 @@
 #include <sched.h>
 #include <sys/soundcard.h>
 
-#ifndef FALSE
-#define FALSE 0
-#endif
-
-#ifndef TRUE
-#define TRUE 1
-#endif
-
-typedef struct
+struct SexyAL_OSS
 {
 	int fd;
-	bool alsa_workaround;		// TRUE if we're using any OSS older than version 4, which includes ALSA(which conforms to 3.x).
+	bool alsa_workaround;		// true if we're using any OSS older than version 4, which includes ALSA(which conforms to 3.x).
 					// Applying the workaround on non-ALSA where it's not needed will not hurt too much, it'll
 					// just make the stuttering due to buffer underruns a little more severe.
 					// (The workaround is to fix a bug which affects, at least, ALSA 1.0.20 when used with a CS46xx card)
 	uint8 *dummy_data;
 	uint32 dummy_data_len;
-} OSS_Wrap;
+};
 
 
 SexyAL_enumdevice *SexyALI_OSS_EnumerateDevices(void)
@@ -84,22 +72,9 @@ SexyAL_enumdevice *SexyALI_OSS_EnumerateDevices(void)
  return(ret);
 }
 
-unsigned int Log2(unsigned int value)
-{
- int x=0;
-
- value>>=1;
- while(value)
- {
-  value>>=1;
-  x++;
- }
- return(x?x:1);
-}
-
 static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 {
- OSS_Wrap *ossw = (OSS_Wrap *)device->private_data;
+ SexyAL_OSS *ossw = (SexyAL_OSS *)device->private_data;
  const uint8 *datau8 = (const uint8 *)data;
 
  while(len)
@@ -128,7 +103,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 
 static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 {
- OSS_Wrap *ossw = (OSS_Wrap *)device->private_data;
+ SexyAL_OSS *ossw = (SexyAL_OSS *)device->private_data;
  struct audio_buf_info ai;
 
  TryAgain:
@@ -138,7 +113,7 @@ static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
   if(ai.bytes < 0)
    ai.bytes = 0; // ALSA is weird
 
-  if(ossw->alsa_workaround && (unsigned int)ai.bytes >= (device->buffering.buffer_size * (device->format.sampformat >> 4) * device->format.channels))
+  if(ossw->alsa_workaround && (unsigned int)ai.bytes >= (device->buffering.buffer_size * SAMPFORMAT_BYTES(device->format.sampformat) * device->format.channels))
   {
    //puts("Underflow fix");
    //fprintf(stderr, "%d\n",ai.bytes);
@@ -166,7 +141,7 @@ static int Pause(SexyAL_device *device, int state)
 
 static int Clear(SexyAL_device *device)
 {
- OSS_Wrap *ossw = (OSS_Wrap *)device->private_data;
+ SexyAL_OSS *ossw = (SexyAL_OSS *)device->private_data;
 
  ioctl(ossw->fd, SNDCTL_DSP_RESET, 0);
  return(1);
@@ -178,13 +153,20 @@ static int RawClose(SexyAL_device *device)
  {
   if(device->private_data)
   {
-   OSS_Wrap *ossw = (OSS_Wrap *)device->private_data;
+   SexyAL_OSS *ossw = (SexyAL_OSS *)device->private_data;
 
    if(ossw->fd != -1)
    {
     close(ossw->fd);
     ossw->fd = -1;
    }
+
+   if(ossw->dummy_data)
+   {
+    free(ossw->dummy_data);
+    ossw->dummy_data = NULL;
+   }
+
    free(device->private_data);
   }
   free(device);
@@ -192,6 +174,20 @@ static int RawClose(SexyAL_device *device)
  }
  return(0);
 }
+
+static unsigned MapSampformatToOSS(const uint32 sampformat)
+{
+ if(SAMPFORMAT_BYTES(sampformat) >= 2)
+ {
+  if(SAMPFORMAT_ENC(sampformat) == SEXYAL_ENC_PCM_UINT)
+   return SAMPFORMAT_BIGENDIAN(sampformat) ? AFMT_U16_BE : AFMT_U16_LE;
+  else
+   return SAMPFORMAT_BIGENDIAN(sampformat) ? AFMT_S16_BE : AFMT_S16_LE;
+ }
+ else
+  return (SAMPFORMAT_ENC(sampformat) == SEXYAL_ENC_PCM_UINT) ? AFMT_U8 : AFMT_S8;
+}
+
 
 #define OSS_INIT_ERROR_CLEANUP			\
 		if(fd != -1)			\
@@ -201,7 +197,10 @@ static int RawClose(SexyAL_device *device)
 		}				\
 		if(ossw)			\
 		{				\
+		 if(ossw->dummy_data)		\
+		  free(ossw->dummy_data);	\
 		 free(ossw);			\
+		 ossw = NULL;			\
 		}				\
 		if(device)			\
 		{				\
@@ -213,10 +212,9 @@ SexyAL_device *SexyALI_OSS_Open(const char *id, SexyAL_format *format, SexyAL_bu
 {
  SexyAL_device *device = NULL;
  int fd = -1;
- unsigned int temp, try_format;
- OSS_Wrap *ossw = NULL;
+ SexyAL_OSS *ossw = NULL;
  int version = 0;
- bool alsa_workaround = FALSE;
+ bool alsa_workaround = false;
  int desired_pt;                // Desired period time, in MICROseconds.
  int desired_buffertime;        // Desired buffer time, in milliseconds
 
@@ -226,165 +224,141 @@ SexyAL_device *SexyALI_OSS_Open(const char *id, SexyAL_format *format, SexyAL_bu
  if((fd = open(id ? id : "/dev/dsp", O_WRONLY)) == -1)
  {
   puts(strerror(errno));
-  return(0);
+  return NULL;
  }
  
  if(ioctl(fd, OSS_GETVERSION, &version) == -1 || version < 0x040000)
  {
   puts("\nALSA SNDCTL_DSP_GETOSPACE internal-state-corruption bug workaround mode used.");
-  alsa_workaround = TRUE;
+  alsa_workaround = true;
  }
 
  // Try to force at least 16-bit output and 2 channels so we can get lower period sizes(assuming the low-level device driver
  // expresses minimum period size in bytes).
  if(format->channels < 2)
   format->channels = 2;
- if(format->sampformat == SEXYAL_FMT_PCMU8 || format->sampformat == SEXYAL_FMT_PCMS8)
+ if(SAMPFORMAT_BYTES(format->sampformat) < 2)
   format->sampformat = SEXYAL_FMT_PCMS16;
 
- /* Set sample format. */
- /* TODO:  Handle devices with byte order different from native byte order. */
- /* TODO:  Fix fragment size calculation to work well with lower/higher playback rates,
-    as reported by OSS.
- */
-
- if(format->sampformat == SEXYAL_FMT_PCMU8)
-  try_format = AFMT_U8;
- else if(format->sampformat == SEXYAL_FMT_PCMS8)
-  try_format = AFMT_S8;
- else if(format->sampformat == SEXYAL_FMT_PCMU16)
-  try_format = AFMT_U16_LE;
- else 
-  try_format = AFMT_S16_NE;
-
- format->revbyteorder = 0;
-
- temp = try_format;
- if(ioctl(fd, SNDCTL_DSP_SETFMT, &temp) == -1 && temp == try_format)
+ //
+ // Set sample format
+ //
  {
-  puts(strerror(errno));
-  close(fd);
-  return(0);
+  unsigned temp, try_format;
+
+  try_format = MapSampformatToOSS(format->sampformat);
+  temp = try_format;
+  if(ioctl(fd, SNDCTL_DSP_SETFMT, &temp) == -1 && temp == try_format)
+  {
+   puts(strerror(errno));
+   OSS_INIT_ERROR_CLEANUP
+   return NULL;
+  }
+
+  switch(temp)
+  {
+   case AFMT_U8: format->sampformat = SEXYAL_FMT_PCMU8; break;
+   case AFMT_S8: format->sampformat = SEXYAL_FMT_PCMS8; break;
+   case AFMT_U16_LE: format->sampformat = SEXYAL_FMT_PCMU16_LE; break;
+   case AFMT_U16_BE: format->sampformat = SEXYAL_FMT_PCMU16_BE; break;
+   case AFMT_S16_LE: format->sampformat = SEXYAL_FMT_PCMS16_LE; break;
+   case AFMT_S16_BE: format->sampformat = SEXYAL_FMT_PCMS16_BE; break;
+
+   default:
+	OSS_INIT_ERROR_CLEANUP
+	return NULL;
+  }
  }
 
- switch(temp)
+ //
+ // Set channel count
+ //
  {
-  case AFMT_U8: format->sampformat = SEXYAL_FMT_PCMU8;
-		break;
+  unsigned temp = format->channels;
+  if(ioctl(fd, SNDCTL_DSP_CHANNELS, &temp) == -1)
+  {
+   OSS_INIT_ERROR_CLEANUP
+   return NULL;
+  }
 
-  case AFMT_S8: format->sampformat = SEXYAL_FMT_PCMS8;
-		break;
+  if(temp < 1 || temp > 2)
+  {
+   OSS_INIT_ERROR_CLEANUP
+   return NULL;
+  }
 
-  case AFMT_U16_LE: 
-		    #ifndef LSB_FIRST
-                    format->revbyteorder=1;
-                    #endif
-		    format->sampformat = SEXYAL_FMT_PCMU16;
-		    break;
-
-  case AFMT_U16_BE: 
-		    #ifdef LSB_FIRST
-                    format->revbyteorder=1;
-                    #endif
-		    format->sampformat = SEXYAL_FMT_PCMU16;
-		    break;
-
-  case AFMT_S16_LE: 
-		    #ifndef LSB_FIRST
-		    format->revbyteorder=1;
-		    #endif
-		    format->sampformat = SEXYAL_FMT_PCMS16;
-		    break;
-
-  case AFMT_S16_BE: 
-		    #ifdef LSB_FIRST
-                    format->revbyteorder=1;
-                    #endif
-		    format->sampformat = SEXYAL_FMT_PCMS16;
-		    break;
-
-  default:	    close(fd);
-		    return(0);
+  format->channels = temp;
  }
 
- /* Set number of channels. */
- temp=format->channels;
- if(ioctl(fd,SNDCTL_DSP_CHANNELS,&temp)==-1)
+ //
+ // Set rate
+ //
  {
-  close(fd);
-  return(0);
+  unsigned temp = format->rate;
+  if(ioctl(fd, SNDCTL_DSP_SPEED, &temp) == -1)
+  {
+   OSS_INIT_ERROR_CLEANUP
+   return NULL;
+  }
+  format->rate = temp;
  }
 
- if(temp < 1 || temp > 2)
+ device = (SexyAL_device*)calloc(1, sizeof(SexyAL_device));
+ memcpy(&device->format, format, sizeof(SexyAL_format));
+ memcpy(&device->buffering, buffering, sizeof(SexyAL_buffering));
+
+ //
+ // Set frag size and number of fragments.
+ //
  {
-  close(fd);
-  return(0);
- }
-
- format->channels = temp;
-
- /* Set frame rate. */
- temp = format->rate;
- if(ioctl(fd,SNDCTL_DSP_SPEED,&temp)==-1)
- {
-  close(fd);
-  return(0);
- }
- format->rate = temp;
-
- device = (SexyAL_device *)calloc(1, sizeof(SexyAL_device));
- memcpy(&device->format,format,sizeof(SexyAL_format));
- memcpy(&device->buffering,buffering,sizeof(SexyAL_buffering));
-
- int fragcount = 16;
- int fragsize = round_nearest_pow2((int64)desired_pt * format->rate / (1000 * 1000), false);
-
- // Going lower than this is unlikely to work, and since we use this value to calculate the number of fragments, we'll get
- // a buffer far larger than we wanted, unless the OSS implementation is nice and adjusts the fragment count when it can't get set fragment size
- // specified.
- if(fragsize < 16)
-  fragsize = 16;
-
- if(fragsize > 512)
-  fragsize = 512;
-
- {
-  int64 tc;
-
-  /* 2*, >>1, |1 for crude rounding(it will always round 0.5 up, so it is a bit biased). */
-
-  tc=2 * desired_buffertime * format->rate / 1000 / fragsize;
-  fragcount=(tc>>1)+(tc&1); //1<<Log2(tc);
- }
-
- temp=Log2(fragsize*(format->sampformat>>4)*format->channels);
-
- temp|=fragcount<<16;
-
- ioctl(fd,SNDCTL_DSP_SETFRAGMENT,&temp);
-
- {
+  unsigned fragsize_frames;
+  unsigned fragsize_bytes;
+  unsigned fragcount;
   audio_buf_info info;
-  ioctl(fd,SNDCTL_DSP_GETOSPACE,&info);
 
-  fragsize=info.fragsize/(format->sampformat>>4)/format->channels;
-  fragcount=info.fragments;
+  fragsize_frames = round_nearest_pow2((int64)desired_pt * format->rate / (1000 * 1000), false);
+  fragsize_bytes = fragsize_frames * SAMPFORMAT_BYTES(format->sampformat) * format->channels;
+  // Partially work around poorly-designed/poorly-implemented OSS API by limiting range of the fragment size:
+  fragsize_bytes = std::min<unsigned>(2048, fragsize_bytes);
+  fragsize_bytes = std::max<unsigned>(64, fragsize_bytes);
+  fragsize_frames = fragsize_bytes / (SAMPFORMAT_BYTES(format->sampformat) * format->channels);
 
-  buffering->buffer_size=fragsize * fragcount;
-  buffering->period_size = fragsize;
+  fragcount = ((int64)desired_buffertime * format->rate * 2 + 1000 * fragsize_frames) / (1000 * fragsize_frames * 2);
+  fragcount = std::min<unsigned>(0x7FFF, fragcount);
+  fragcount = std::max<unsigned>(2, fragcount);
+
+  unsigned temp = MDFN_log2(fragsize_bytes) | (fragcount << 16);
+  if(ioctl(fd, SNDCTL_DSP_SETFRAGMENT, &temp) == -1)
+  {
+   OSS_INIT_ERROR_CLEANUP
+   return NULL;
+  }
+
+  if(ioctl(fd, SNDCTL_DSP_GETOSPACE, &info) == -1)
+  {
+   OSS_INIT_ERROR_CLEANUP
+   return NULL;
+  }
+
+  fragsize_frames = info.fragsize / (SAMPFORMAT_BYTES(format->sampformat) * format->channels);
+  fragcount = info.fragments;
+
+  buffering->buffer_size = fragsize_frames * fragcount;
+  buffering->period_size = fragsize_frames;
+  buffering->latency = buffering->buffer_size;
  }
 
- if(!(ossw = (OSS_Wrap *)calloc(1, sizeof(OSS_Wrap))))
+ if(!(ossw = (SexyAL_OSS *)calloc(1, sizeof(SexyAL_OSS))))
  {
   OSS_INIT_ERROR_CLEANUP
-  return(NULL);
+  return NULL;
  }
 
- ossw->dummy_data_len = (format->sampformat >> 4) * format->channels * (format->rate / 128);
+ ossw->dummy_data_len = SAMPFORMAT_BYTES(format->sampformat) * format->channels * (format->rate / 128);
  if(!(ossw->dummy_data = (uint8 *)calloc(1, ossw->dummy_data_len)))
  {
   OSS_INIT_ERROR_CLEANUP
-  return(NULL);
+  return NULL;
  }
 
  if(format->sampformat == SEXYAL_FMT_PCMU8 || format->sampformat == SEXYAL_FMT_PCMU16)
@@ -402,9 +376,6 @@ SexyAL_device *SexyALI_OSS_Open(const char *id, SexyAL_format *format, SexyAL_bu
  device->RawClose = RawClose;
  device->Clear = Clear;
  device->Pause = Pause;
-
- 
- buffering->latency = buffering->buffer_size;
 
  memcpy(&device->buffering,buffering,sizeof(SexyAL_buffering));
  memcpy(&device->format,format,sizeof(SexyAL_format));

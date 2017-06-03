@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* alsa.cpp - ALSA Sound Driver
-**  Copyright (C) 2006-2016 Mednafen Team
+**  Copyright (C) 2006-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -21,30 +21,19 @@
 
 #include "../sexyal.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <errno.h>
 #include <poll.h>
 #include <sys/time.h>
 #include <time.h>
 #include <alsa/asoundlib.h>
 #include <unistd.h>
 
-#ifndef FALSE
-#define FALSE 0
-#endif
-
-#ifndef TRUE
-#define TRUE 1
-#endif
-
-typedef struct
+struct SexyAL_ALSA
 {
 	snd_pcm_t *alsa_pcm;
 
 	uint32 period_size;
 	//bool heavy_sync;
-} ADStruct;
+};
 
 
 // TODO:
@@ -56,24 +45,24 @@ SexyAL_enumdevice *SexyALI_ALSA_EnumerateDevices(void)
 static int Pause(SexyAL_device *device, int state)
 {
  if(0)
-  snd_pcm_pause(((ADStruct *)device->private_data)->alsa_pcm, state);
+  snd_pcm_pause(((SexyAL_ALSA *)device->private_data)->alsa_pcm, state);
  else
  {
-  snd_pcm_drop(((ADStruct *)device->private_data)->alsa_pcm);
+  snd_pcm_drop(((SexyAL_ALSA *)device->private_data)->alsa_pcm);
  }
  return(0);
 }
 
 static int Clear(SexyAL_device *device)
 {
- snd_pcm_drop(((ADStruct *)device->private_data)->alsa_pcm);
+ snd_pcm_drop(((SexyAL_ALSA *)device->private_data)->alsa_pcm);
 
  return(1);
 }
 
 static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 {
- ADStruct *ads = (ADStruct *)device->private_data;
+ SexyAL_ALSA *ads = (SexyAL_ALSA *)device->private_data;
  uint32 ret;
  snd_pcm_sframes_t avail;
 
@@ -85,7 +74,7 @@ static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
   {
    // This shouldn't happen, but in case it does...
    default: //puts("What1?"); 
-	    *can_write = device->buffering.buffer_size * (device->format.sampformat >> 4) * device->format.channels;
+	    *can_write = device->buffering.buffer_size * SAMPFORMAT_BYTES(device->format.sampformat) * device->format.channels;
 	    return(1);
 
    //default: break;
@@ -95,7 +84,7 @@ static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
    case SND_PCM_STATE_PAUSED:
    case SND_PCM_STATE_DRAINING:
    case SND_PCM_STATE_OPEN:
-   case SND_PCM_STATE_DISCONNECTED: *can_write = device->buffering.buffer_size * (device->format.sampformat >> 4) * device->format.channels;
+   case SND_PCM_STATE_DISCONNECTED: *can_write = device->buffering.buffer_size * SAMPFORMAT_BYTES(device->format.sampformat) * device->format.channels;
 				    return(1);
 
    case SND_PCM_STATE_SETUP:
@@ -103,12 +92,12 @@ static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
    case SND_PCM_STATE_XRUN:
 			   //puts("XRun1");
 			   snd_pcm_prepare(ads->alsa_pcm);
-			   *can_write = device->buffering.buffer_size * (device->format.sampformat >> 4) * device->format.channels;
+			   *can_write = device->buffering.buffer_size * SAMPFORMAT_BYTES(device->format.sampformat) * device->format.channels;
 			   return(1);
   }
  }
 
- ret = avail * (device->format.sampformat >> 4) * device->format.channels;
+ ret = avail * SAMPFORMAT_BYTES(device->format.sampformat) * device->format.channels;
 
  if(ret < 0)
   ret = 0;
@@ -120,7 +109,7 @@ static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 
 static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 {
- ADStruct *ads = (ADStruct *)device->private_data;
+ SexyAL_ALSA *ads = (SexyAL_ALSA *)device->private_data;
 
  //printf("%u\n", len);
 
@@ -142,7 +131,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
   do
   {
    if(device->format.noninterleaved == false)
-    snore = snd_pcm_writei(ads->alsa_pcm, data, len / (device->format.sampformat>>4) / device->format.channels);
+    snore = snd_pcm_writei(ads->alsa_pcm, data, len / SAMPFORMAT_BYTES(device->format.sampformat) / device->format.channels);
    else
    {
     void *foodata[device->format.channels];
@@ -150,7 +139,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
     for(unsigned ch = 0; ch < device->format.channels; ch++)
      foodata[ch] = (uint8*)data + ch * (len / device->format.channels);
 
-    snore = snd_pcm_writen(ads->alsa_pcm, foodata, len / (device->format.sampformat>>4) / device->format.channels);
+    snore = snd_pcm_writen(ads->alsa_pcm, foodata, len / SAMPFORMAT_BYTES(device->format.sampformat) / device->format.channels);
    }
 
    if(snore <= 0)
@@ -160,12 +149,12 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
      // This shouldn't happen, but if it does, and there was an error, exit out of the loopie.
      default: //puts("What2");
 	      if(snore < 0)
-	       snore = len / (device->format.sampformat>>4) / device->format.channels;
+	       snore = len / SAMPFORMAT_BYTES(device->format.sampformat) / device->format.channels;
 	      break;
 
      // Don't unplug your sound card, silly human! ;)
      case SND_PCM_STATE_OPEN:
-     case SND_PCM_STATE_DISCONNECTED: snore = len / (device->format.sampformat>>4) / device->format.channels; 
+     case SND_PCM_STATE_DISCONNECTED: snore = len / SAMPFORMAT_BYTES(device->format.sampformat) / device->format.channels; 
 				      //usleep(1000);
 				      break;
 
@@ -180,11 +169,11 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
   } while(snore <= 0);
 
   if(device->format.noninterleaved == false)
-   data = (const uint8*)data + snore * (device->format.sampformat>>4) * device->format.channels;
+   data = (const uint8*)data + snore * SAMPFORMAT_BYTES(device->format.sampformat) * device->format.channels;
   else
-   data = (const uint8*)data + snore * (device->format.sampformat>>4);
+   data = (const uint8*)data + snore * SAMPFORMAT_BYTES(device->format.sampformat);
 
-  len -= snore * (device->format.sampformat>>4) * device->format.channels;
+  len -= snore * SAMPFORMAT_BYTES(device->format.sampformat) * device->format.channels;
 
   if(snd_pcm_state(ads->alsa_pcm) == SND_PCM_STATE_PREPARED)
    snd_pcm_start(ads->alsa_pcm);
@@ -199,7 +188,7 @@ static int RawClose(SexyAL_device *device)
  {
   if(device->private_data)
   {
-   ADStruct *ads = (ADStruct *)device->private_data;
+   SexyAL_ALSA *ads = (SexyAL_ALSA *)device->private_data;
    snd_pcm_close(ads->alsa_pcm);
    free(device->private_data);
   }
@@ -227,50 +216,55 @@ static int RawClose(SexyAL_device *device)
 
 typedef struct
 {
- int sexyal;
- bool sexyal_revbyteorder;
+ uint32 sexyal;
  snd_pcm_format_t alsa;
 } ALSA_SAL_FMAP;
 
 #ifdef LSB_FIRST
- #define FMAP_ENTRY_EPAIR(sal, bf)	{ sal, false, bf##_LE }, { sal, true, bf##_BE },
+ #define FMAP_ENTRY_EPAIR(sal, bf)	{ sal##_LE, bf##LE }, { sal##_BE, bf##BE },
 #else
- #define FMAP_ENTRY_EPAIR(sal, bf)	{ sal, false, bf##_BE }, { sal, true, bf##_LE },
+ #define FMAP_ENTRY_EPAIR(sal, bf)	{ sal##_BE, bf##BE }, { sal##_LE, bf##LE },
 #endif
 
 static ALSA_SAL_FMAP FormatMap[] =
 {
- { SEXYAL_FMT_PCMU8, false, SND_PCM_FORMAT_U8 },
- { SEXYAL_FMT_PCMS8, false, SND_PCM_FORMAT_S8 },
+ { SEXYAL_FMT_PCMU8, SND_PCM_FORMAT_U8 },
+ { SEXYAL_FMT_PCMS8, SND_PCM_FORMAT_S8 },
 
+ FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMU16, SND_PCM_FORMAT_U16_)
+ FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMS16, SND_PCM_FORMAT_S16_)
+ FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMFLOAT, SND_PCM_FORMAT_FLOAT_)
 
- FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMU16, SND_PCM_FORMAT_U16)
- FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMS16, SND_PCM_FORMAT_S16)
- FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMFLOAT, SND_PCM_FORMAT_FLOAT)
+ FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMU24, SND_PCM_FORMAT_U24_)
+ FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMS24, SND_PCM_FORMAT_S24_)
 
- FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMU24, SND_PCM_FORMAT_U24)
- FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMS24, SND_PCM_FORMAT_S24)
+ FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMU32, SND_PCM_FORMAT_U32_)
+ FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMS32, SND_PCM_FORMAT_S32_)
 
- FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMU32, SND_PCM_FORMAT_U32)
- FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMS32, SND_PCM_FORMAT_S32)
+ FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMU24_3BYTE, SND_PCM_FORMAT_U24_3)
+ FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMS24_3BYTE, SND_PCM_FORMAT_S24_3)
+
+ FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMU20_3BYTE, SND_PCM_FORMAT_U20_3)
+ FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMS20_3BYTE, SND_PCM_FORMAT_S20_3)
+
+ FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMU18_3BYTE, SND_PCM_FORMAT_U18_3)
+ FMAP_ENTRY_EPAIR(SEXYAL_FMT_PCMS18_3BYTE, SND_PCM_FORMAT_S18_3)
 };
 
-static int Format_ALSA_to_SexyAL(const snd_pcm_format_t alsa_format, bool *revbyteorder)
+static int Format_ALSA_to_SexyAL(const snd_pcm_format_t alsa_format)
 {
  for(unsigned int i = 0; i < sizeof(FormatMap) / sizeof(ALSA_SAL_FMAP); i++)
  {
   if(FormatMap[i].alsa == alsa_format)
   {
-   if(revbyteorder)
-    *revbyteorder = FormatMap[i].sexyal_revbyteorder;
-   return(FormatMap[i].sexyal);
+   return FormatMap[i].sexyal;
   }
  }
  printf("ALSA->SexyAL format not found: %d\n", alsa_format);
  return(-1);
 }
 
-static snd_pcm_format_t Format_SexyAL_to_ALSA(const int sexyal_format)
+static snd_pcm_format_t Format_SexyAL_to_ALSA(const uint32 sexyal_format)
 {
  for(unsigned int i = 0; i < sizeof(FormatMap) / sizeof(ALSA_SAL_FMAP); i++)
  {
@@ -284,14 +278,14 @@ static snd_pcm_format_t Format_SexyAL_to_ALSA(const int sexyal_format)
 
 SexyAL_device *SexyALI_ALSA_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering)
 {
- ADStruct *ads = NULL;
+ SexyAL_ALSA *ads = NULL;
  SexyAL_device *device = NULL;
  snd_pcm_t *alsa_pcm = NULL;
  snd_pcm_hw_params_t *hw_params = NULL;
  snd_pcm_sw_params_t *sw_params = NULL;
  int desired_pt;		// Desired period time, in MICROseconds.
  int desired_buffertime;	// Desired buffer time, in milliseconds
- //bool heavy_sync = FALSE;
+ //bool heavy_sync = false;
  snd_pcm_format_t sampformat;
 
 
@@ -304,7 +298,7 @@ SexyAL_device *SexyALI_ALSA_Open(const char *id, SexyAL_format *format, SexyAL_b
 
  //...and at least >= 16-bit samples.  Doing so will allow us to achieve lower period sizes(since minimum period sizes in the ALSA core
  // are expressed in bytes).
- if(format->sampformat == SEXYAL_FMT_PCMU8 || format->sampformat == SEXYAL_FMT_PCMS8)
+ if(SAMPFORMAT_BYTES(format->sampformat) < 2)
   format->sampformat = SEXYAL_FMT_PCMS16;
 
  sampformat = Format_SexyAL_to_ALSA(format->sampformat);
@@ -360,7 +354,7 @@ SexyAL_device *SexyALI_ALSA_Open(const char *id, SexyAL_format *format, SexyAL_b
    if(snd_pcm_hw_params_set_format(alsa_pcm, hw_params, TryFormats[try_format]) >= 0)
    {
     sampformat = TryFormats[try_format];
-    format->sampformat = Format_ALSA_to_SexyAL(TryFormats[try_format], &format->revbyteorder);
+    format->sampformat = Format_ALSA_to_SexyAL(TryFormats[try_format]);
     break;
    }
   }
@@ -471,7 +465,7 @@ SexyAL_device *SexyALI_ALSA_Open(const char *id, SexyAL_format *format, SexyAL_b
  buffering->latency = buffering->buffer_size;
 
  device = (SexyAL_device *)calloc(1, sizeof(SexyAL_device));
- ads = (ADStruct *)calloc(1, sizeof(ADStruct));
+ ads = (SexyAL_ALSA *)calloc(1, sizeof(SexyAL_ALSA));
 
  ads->alsa_pcm = alsa_pcm;
  ads->period_size = period_size;

@@ -17,16 +17,10 @@
 
 #include        "mednafen.h"
 
-#include	<math.h>
-#include        <string.h>
-#include	<stdarg.h>
-#include	<errno.h>
 #include	<sys/types.h>
 #include	<sys/stat.h>
 #include	<unistd.h>
 #include	<trio/trio.h>
-#include	<list>
-#include	<algorithm>
 
 #include	"netplay.h"
 #include	"netplay-driver.h"
@@ -325,8 +319,7 @@ void MDFNI_CloseGame(void)
 {
  if(MDFNGameInfo)
  {
-  if(MDFNnetplay)
-   MDFNI_NetplayStop();
+  MDFNI_NetplayDisconnect();
 
   MDFNSRW_End();
   MDFNMOV_Stop();
@@ -388,12 +381,6 @@ void MDFNI_CloseGame(void)
 
  MDFN_ClearAllOverrideSettings();
 }
-
-int MDFNI_NetplayStart(void)
-{
- return(NetplayStart(PortDevice, PortDataLen));
-}
-
 
 #ifdef WANT_NES_EMU
 extern MDFNGI EmulatedNES;
@@ -948,6 +935,7 @@ MDFNGI *MDFNI_LoadCD(const char *force_module, const char *path)
 	 assert(MDFNGameInfo->soundchan != 0);
 
          MDFNGameInfo->name.clear();
+	 MDFNGameInfo->DesiredInput.clear();
          MDFNGameInfo->rotated = 0;
 	 MDFNGameInfo->RMD = rmd.get();
 
@@ -1148,6 +1136,7 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char *name)
 	 assert(MDFNGameInfo->soundchan != 0);
 
          MDFNGameInfo->name.clear();
+	 MDFNGameInfo->DesiredInput.clear();
          MDFNGameInfo->rotated = 0;
 	 MDFNGameInfo->RMD = rmd.get();
 
@@ -1651,10 +1640,7 @@ void MDFNI_Emulate(EmulateSpecStruct *espec)
  if(MDFNGameInfo->TransformInput)
   MDFNGameInfo->TransformInput();
 
- if(MDFNnetplay)
- {
-  Netplay_Update(PortDevice, PortData, PortDataLen);
- }
+ Netplay_Update(PortDevice, PortData, PortDataLen);
 
  MDFNMOV_ProcessInput(PortData, PortDataLen, MDFNGameInfo->PortInfo.size());
 

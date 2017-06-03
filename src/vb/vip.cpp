@@ -21,7 +21,6 @@
 
 #include "vb.h"
 #include "vip.h"
-#include <math.h>
 
 #define VIP_DBGMSG(format, ...) { }
 //#define VIP_DBGMSG(format, ...) printf(format "\n", ## __VA_ARGS__)

@@ -117,25 +117,26 @@ libsexyal_a_AR = $(AR) $(ARFLAGS)
 libsexyal_a_LIBADD =
 am__libsexyal_a_SOURCES_DIST = sexyal.cpp convert.cpp \
 	drivers/dummy.cpp drivers/dsound.cpp drivers/wasapi.cpp \
-	drivers/wasapish.cpp drivers/oss.cpp drivers/jack.cpp \
-	drivers/sdl.cpp drivers/alsa.cpp drivers/dos_common.cpp \
-	drivers/cmi8738.cpp drivers/es1370.cpp drivers/es1371.cpp \
-	drivers/sb.cpp
+	drivers/wasapish.cpp drivers/oss.cpp drivers/openbsd.cpp \
+	drivers/jack.cpp drivers/sdl.cpp drivers/alsa.cpp \
+	drivers/dos_common.cpp drivers/cmi8738.cpp drivers/es1370.cpp \
+	drivers/es1371.cpp drivers/sb.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_DIRECTSOUND_TRUE@am__objects_1 = drivers/dsound.$(OBJEXT)
 @HAVE_WASAPI_TRUE@am__objects_2 = drivers/wasapi.$(OBJEXT) \
 @HAVE_WASAPI_TRUE@	drivers/wasapish.$(OBJEXT)
 @HAVE_OSSDSP_TRUE@am__objects_3 = drivers/oss.$(OBJEXT)
-@HAVE_JACK_TRUE@am__objects_4 = drivers/jack.$(OBJEXT)
-@HAVE_SDL_TRUE@am__objects_5 = drivers/sdl.$(OBJEXT)
-@HAVE_ALSA_TRUE@am__objects_6 = drivers/alsa.$(OBJEXT)
-@DOS_TRUE@am__objects_7 = drivers/dos_common.$(OBJEXT) \
+@HAVE_OPENBSD_AUDIO_TRUE@am__objects_4 = drivers/openbsd.$(OBJEXT)
+@HAVE_JACK_TRUE@am__objects_5 = drivers/jack.$(OBJEXT)
+@HAVE_SDL_TRUE@am__objects_6 = drivers/sdl.$(OBJEXT)
+@HAVE_ALSA_TRUE@am__objects_7 = drivers/alsa.$(OBJEXT)
+@DOS_TRUE@am__objects_8 = drivers/dos_common.$(OBJEXT) \
 @DOS_TRUE@	drivers/cmi8738.$(OBJEXT) drivers/es1370.$(OBJEXT) \
 @DOS_TRUE@	drivers/es1371.$(OBJEXT) drivers/sb.$(OBJEXT)
 am_libsexyal_a_OBJECTS = sexyal.$(OBJEXT) convert.$(OBJEXT) \
 	drivers/dummy.$(OBJEXT) $(am__objects_1) $(am__objects_2) \
 	$(am__objects_3) $(am__objects_4) $(am__objects_5) \
-	$(am__objects_6) $(am__objects_7)
+	$(am__objects_6) $(am__objects_7) $(am__objects_8)
 libsexyal_a_OBJECTS = $(am_libsexyal_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -372,11 +373,12 @@ AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_builddir)/intl
 noinst_LIBRARIES = libsexyal.a
 libsexyal_a_SOURCES = sexyal.cpp convert.cpp drivers/dummy.cpp \
-	$(TMP_DIRECTSOUND) $(TMP_WASAPI) $(TMP_OSSDSP) $(TMP_JACK) \
-	$(TMP_SDL) $(TMP_ALSA) $(TMP_DOS)
+	$(TMP_DIRECTSOUND) $(TMP_WASAPI) $(TMP_OSSDSP) $(TMP_OPENBSD) \
+	$(TMP_JACK) $(TMP_SDL) $(TMP_ALSA) $(TMP_DOS)
 @HAVE_DIRECTSOUND_TRUE@TMP_DIRECTSOUND = drivers/dsound.cpp
 @HAVE_WASAPI_TRUE@TMP_WASAPI = drivers/wasapi.cpp drivers/wasapish.cpp
 @HAVE_OSSDSP_TRUE@TMP_OSSDSP = drivers/oss.cpp
+@HAVE_OPENBSD_AUDIO_TRUE@TMP_OPENBSD = drivers/openbsd.cpp
 @HAVE_JACK_TRUE@TMP_JACK = drivers/jack.cpp
 @HAVE_SDL_TRUE@TMP_SDL = drivers/sdl.cpp
 @HAVE_SDL_TRUE@libsexyal_a_CFLAGS = @SDL_CFLAGS@
@@ -435,6 +437,8 @@ drivers/wasapish.$(OBJEXT): drivers/$(am__dirstamp) \
 	drivers/$(DEPDIR)/$(am__dirstamp)
 drivers/oss.$(OBJEXT): drivers/$(am__dirstamp) \
 	drivers/$(DEPDIR)/$(am__dirstamp)
+drivers/openbsd.$(OBJEXT): drivers/$(am__dirstamp) \
+	drivers/$(DEPDIR)/$(am__dirstamp)
 drivers/jack.$(OBJEXT): drivers/$(am__dirstamp) \
 	drivers/$(DEPDIR)/$(am__dirstamp)
 drivers/sdl.$(OBJEXT): drivers/$(am__dirstamp) \
@@ -474,6 +478,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/es1370.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/es1371.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/jack.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/openbsd.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/oss.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/sb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@drivers/$(DEPDIR)/sdl.Po@am__quote@

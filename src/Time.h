@@ -26,8 +26,6 @@
 
 #include <time.h>
 
-#include <string>
-
 namespace Time
 {
  void Time_Init(void) MDFN_COLD;

@@ -3,10 +3,6 @@
 
 #include "mednafen.h"
 
-#include <vector>
-#include <stdexcept>
-#include <stdlib.h>
-
 /* Little-endian byte packer(and unpacker). */
 
 namespace MDFN

@@ -27,7 +27,6 @@
 
 #include <ctype.h>
 #include <trio/trio.h>
-#include <errno.h>
 
 bool MemDebugger::ICV_Init(const char *newcode)
 {

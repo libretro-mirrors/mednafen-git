@@ -16,7 +16,6 @@
  */
 
 #include "pce.h"
-#include <string.h>
 #include <trio/trio.h>
 #include <iconv.h>
 
@@ -89,7 +88,7 @@ static void (*CPUCB)(uint32 PC, bool bpoint) = NULL;
 static bool CPUCBContinuous = false;
 static bool FoundBPoint = false;
 static void (*LogFunc)(const char *, const char *);
-bool PCE_LoggingOn = FALSE;
+bool PCE_LoggingOn = false;
 static uint16 LastPC = 0xBEEF;
 
 static void AddBranchTrace(uint32 from, uint32 to, uint32 vector)
@@ -216,7 +215,7 @@ void PCEDBG_CheckBP(int type, uint32 address, unsigned int len)
   {
    if(tmp_address >= bpit->A[0] && tmp_address <= bpit->A[1])
    {
-    FoundBPoint = TRUE;
+    FoundBPoint = true;
     break;
    }
    tmp_address++;
@@ -319,7 +318,7 @@ static void TestRWBP(void)
 
  vce->ResetSimulateVDC();
 
- ShadowCPU.Run(TRUE);
+ ShadowCPU.Run(true);
 
  //printf("%d, %02x\n",ShadowCPU.IRQlow);
  //assert(!ShadowCPU.IRQlow);
@@ -556,7 +555,7 @@ void PCEDBG_SetLogFunc(void (*func)(const char *, const char *))
 {
  LogFunc = func;
 
- PCE_LoggingOn = func ? TRUE : FALSE;
+ PCE_LoggingOn = func ? true : false;
  SCSICD_SetLog(func ? PCEDBG_DoLog : NULL);
 
  if(PCE_LoggingOn)
@@ -1216,7 +1215,7 @@ void PCEDBG_Init(bool sgx, PCE_PSG *new_psg, const uint32 vram_size)
      newt.TotalBits = 5;
      newt.NP2Size = 0;
 
-     newt.IsWave = TRUE;
+     newt.IsWave = true;
      newt.WaveFormat = ASPACE_WFMT_UNSIGNED;
      newt.WaveBits = 5;
      ASpace_Add(newt); //PSG_GetAddressSpaceBytes, PSG_PutAddressSpaceBytes, tmpname, tmpinfo, 5);

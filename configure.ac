@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.44.1'
-MEDNAFEN_VERSION_NUMERIC=0x00094401
+MEDNAFEN_VERSION='0.9.45'
+MEDNAFEN_VERSION_NUMERIC=0x00094500
 
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([mednafen], $MEDNAFEN_VERSION)
@@ -466,6 +466,28 @@ fi
 AC_SUBST([JACK_LIBS])
 AC_SUBST([JACK_CFLAGS])
 
+
+#
+# OpenBSD Audio
+#
+AM_CONDITIONAL(HAVE_OPENBSD_AUDIO, false)
+AC_MSG_CHECKING([for OpenBSD audio])
+AC_TRY_COMPILE([
+	#include <sys/types.h>
+	#include <sys/ioctl.h>
+	#include <sys/audioio.h>
+	#include <string.h>
+	],
+	[
+	struct audio_swpar par;
+	struct audio_pos pos;
+	struct audio_status status;
+	AUDIO_INITPAR(&par);
+	],
+	[AC_MSG_RESULT([yes])
+	 AM_CONDITIONAL(HAVE_OPENBSD_AUDIO, true)
+	 AC_DEFINE([HAVE_OPENBSD_AUDIO], [1], [Define if we are compiling with OpenBSD audio support.])],
+	[AC_MSG_RESULT([no])])
 
 #
 # mpcdec

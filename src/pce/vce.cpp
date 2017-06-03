@@ -25,7 +25,6 @@
 
 #include "pce.h"
 #include "huc.h"
-#include <math.h>
 #include <mednafen/video.h>
 #include "vce.h"
 #include <mednafen/hw_video/huc6270/vdc.h>
@@ -70,7 +69,7 @@ bool VCE::WS_Hook(int32 vdc_cycles)
   if(to_steal < 0)
    to_steal = 0;
 
-  ret = FALSE;
+  ret = false;
  }
 
  if(to_steal > 0)
@@ -487,7 +486,7 @@ INLINE void VCE::SyncSub(int32 clocks)
 #endif
 
     pixel_offset = 0;
-    NeedSLReset = FALSE;
+    NeedSLReset = false;
 
     if(!skipframe)
     {
@@ -543,7 +542,7 @@ INLINE void VCE::SyncSub(int32 clocks)
 
    if(!vblank)
    {
-    NeedSLReset = TRUE;
+    NeedSLReset = true;
    }
 
    child_event[0] = vdc[0].VSync(vblank);

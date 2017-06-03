@@ -27,8 +27,6 @@
 #include <mednafen/sound/OwlResampler.h>
 
 #include <trio/trio.h>
-#include <math.h>
-#include <string.h>
 
 namespace MDFN_IEN_PCFX
 {
@@ -289,7 +287,7 @@ bool SoundBox_SetSoundRate(uint32 rate)
 
  RedoVolume();
 
- return(TRUE);
+ return(true);
 }
 
 static void Cleanup(void)
@@ -490,7 +488,7 @@ v810_timestamp_t SoundBox_ADPCMUpdate(const v810_timestamp_t timestamp)
      if(!sbox.ADPCMWhichNibble[ch])
      {
       sbox.ADPCMHalfWord[ch] = KING_GetADPCMHalfWord(ch);
-      sbox.ADPCMHaveHalfWord[ch] = TRUE;
+      sbox.ADPCMHaveHalfWord[ch] = true;
      }
 
      // If the channel's reset bit is set, don't update its ADPCM state.
@@ -540,7 +538,7 @@ v810_timestamp_t SoundBox_ADPCMUpdate(const v810_timestamp_t timestamp)
      sbox.ADPCMWhichNibble[ch] = (sbox.ADPCMWhichNibble[ch] + 4) & 0xF;
 
      if(!sbox.ADPCMWhichNibble[ch])
-      sbox.ADPCMHaveHalfWord[ch] = FALSE;
+      sbox.ADPCMHaveHalfWord[ch] = false;
     }
    } // for(int ch...)
   } // while(sbox.smalldiv <= 0)

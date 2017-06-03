@@ -234,7 +234,7 @@ class VCE final
 
 	bool skipframe;
 	int32 *LW;
-	unsigned chip_count;	// = 1 when sgfx is FALSE, = 2 when sgfx is TRUE
+	unsigned chip_count;	// = 1 when sgfx is false, = 2 when sgfx is true
 
 	int32 clock_divider;
 
@@ -245,8 +245,8 @@ class VCE final
 	int32 hblank_counter;
 	int32 vblank_counter;
 
-	bool hblank;	// TRUE if in HBLANK, FALSE if not.
-	bool vblank;	// TRUE if in vblank, FALSE if not
+	bool hblank;	// true if in HBLANK, false if not.
+	bool vblank;	// true if in vblank, false if not
 
 	bool NeedSLReset;
 

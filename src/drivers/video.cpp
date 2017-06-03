@@ -22,11 +22,7 @@
 #include <windows.h>
 #endif
 
-#include <math.h>
-#include <string.h>
-#include <stdlib.h>
 #include <trio/trio.h>
-#include <algorithm>
 
 #include "video.h"
 #include "opengl.h"

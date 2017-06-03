@@ -27,11 +27,9 @@
 #include <mednafen/FileStream.h>
 #include <mednafen/compress/ZLInflateFilter.h>
 #include "PSFLoader.h"
-#include "endian.h"
 #include "general.h"
 #include <mednafen/string/string.h>
 
-#include <limits.h>
 #include <trio/trio.h>
 #include <ctype.h>
 #include <iconv.h>

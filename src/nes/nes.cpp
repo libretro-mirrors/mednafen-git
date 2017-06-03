@@ -19,7 +19,6 @@
  */
 
 #include	"nes.h"
-#include        <stdarg.h>
 
 #include	"x6502.h"
 #include	"ppu/ppu.h"
@@ -173,7 +172,7 @@ static MDFN_COLD void CloseGame(void)
 
 static MDFN_COLD void InitCommon(const std::string& fbase)
 {
-        NESIsVSUni = FALSE;
+        NESIsVSUni = false;
         PPU_hook = 0;
         GameHBIRQHook = 0;
 
@@ -184,7 +183,7 @@ static MDFN_COLD void InitCommon(const std::string& fbase)
         MDFNGameInfo->VideoSystem = VIDSYS_NONE;
 
         MDFNGameInfo->cspecial = NULL;
-        MDFNGameInfo->GameSetMD5Valid = FALSE;
+        MDFNGameInfo->GameSetMD5Valid = false;
 
 
         if(MDFN_GetSettingB("nes.fnscan"))
@@ -803,7 +802,7 @@ MDFNGI EmulatedNES =
  NESSettings,
  0,
  0,
- FALSE,	// Multires
+ false,	// Multires
 
  0,   // lcm_width		(replaced in game load)
  0,   // lcm_height           	(replaced in game load)

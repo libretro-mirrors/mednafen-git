@@ -23,8 +23,6 @@
 #include <mednafen/string/string.h>
 #include "Time.h"
 
-#include <algorithm>
-
 #if defined(WIN32)
  #include <windows.h>
 #endif

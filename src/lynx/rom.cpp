@@ -52,11 +52,9 @@
 
 #include <mednafen/FileStream.h>
 
-#include <errno.h>
-
 CRom::CRom(const char *romfile)
 {
-	mWriteEnable=FALSE;
+	mWriteEnable=false;
 	Reset();
 
 	// Initialise ROM

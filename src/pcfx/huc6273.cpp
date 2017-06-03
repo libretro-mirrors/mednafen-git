@@ -254,7 +254,7 @@ void HuC6273_Reset(void)
 bool HuC6273_Init(void)
 {
 
- return(TRUE);
+ return(true);
 }
 
 }

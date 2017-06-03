@@ -24,8 +24,6 @@
 #include <mednafen/mednafen.h>
 #include <mednafen/cdrom/cdromif.h>
 #include <trio/trio.h>
-#include <vector>
-#include <math.h>
 
 using namespace CDUtility;
 

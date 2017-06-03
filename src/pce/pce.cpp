@@ -31,7 +31,6 @@
 #include <mednafen/hash/md5.h>
 #include <mednafen/FileStream.h>
 #include <mednafen/sound/OwlResampler.h>
-#include <math.h>
 
 #include <zlib.h>
 
@@ -562,7 +561,7 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  CDIF *cdiface = (*CDInterfaces)[0];
  uint8 sector_buffer[2048];
  CDUtility::TOC toc;
- bool ret = FALSE;
+ bool ret = false;
 
  memset(sector_buffer, 0, sizeof(sector_buffer));
 
@@ -576,7 +575,7 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
     break;
 
    if(!memcmp((char*)sector_buffer, (char *)magic_test, 0x20))
-    ret = TRUE;
+    ret = true;
 
    // PCE CD BIOS apparently only looks at the first data track.
    break;
@@ -1186,7 +1185,7 @@ static bool SetSoundRate(double rate)
    HRRes->ResetBufResampState(HRBufs[i]);
  }
 
- return(TRUE);
+ return(true);
 }
 
 //MDFN_printf(_("Palette is missing the full set of 512 greyscale entries.  Strip-colorburst entries will be calculated.\n"));
@@ -1251,7 +1250,7 @@ MDFNGI EmulatedPCE =
  PCESettings,
  MDFN_MASTERCLOCK_FIXED(PCE_MASTER_CLOCK),
  0,
- TRUE,  // Multires possible?
+ true,  // Multires possible?
 
  0,   // lcm_width
  0,   // lcm_height

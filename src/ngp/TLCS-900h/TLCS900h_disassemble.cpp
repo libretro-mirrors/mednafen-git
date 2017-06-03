@@ -600,7 +600,7 @@ char* TLCS900h_disassemble(void)
 	
 	//Reset
 	bcnt = 0;
-	brCode = FALSE;
+	brCode = false;
 	sprintf(instr, "unknown");
 	sprintf(extra, "unknown");
 

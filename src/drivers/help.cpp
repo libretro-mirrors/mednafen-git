@@ -17,8 +17,6 @@
 
 #include "main.h"
 
-#include <string.h>
-
 static bool IsActive;
 
 void Help_Draw(MDFN_Surface* surface, const MDFN_Rect& rect)

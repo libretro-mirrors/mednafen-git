@@ -46,7 +46,6 @@
 #include "timer.h"
 #include "debug.h"
 #include <trio/trio.h>
-#include <math.h>
 #include <mednafen/video.h>
 #include <mednafen/sound/OwlResampler.h>
 
@@ -96,9 +95,9 @@ typedef struct
 				bit 15-12: KING BG3 priority
 			*/
 
- bool odd_field;	/* TRUE if interlaced mode is enabled and we're in the odd field, FALSE otherwise. */
+ bool odd_field;	/* true if interlaced mode is enabled and we're in the odd field, false otherwise. */
 
- bool in_hblank;	/* TRUE if we're in H-blank */
+ bool in_hblank;	/* true if we're in H-blank */
  bool in_vdc_hsync;
 
  bool frame_interlaced;
@@ -506,8 +505,8 @@ static INLINE void REGSETP(uint16 &reg, const uint8 data, const bool msb)
 }
 
 #ifdef WANT_DEBUGGER
-static bool KRAMReadBPE = FALSE;
-static bool KRAMWriteBPE = FALSE;
+static bool KRAMReadBPE = false;
+static bool KRAMWriteBPE = false;
 
 void KING_NotifyOfBPE(bool read, bool write)
 {
@@ -688,7 +687,7 @@ static void DoRealDMA(uint8 db)
   if(!king->DMATransferSize)
   {
    KINGDBG("DMA Done\n");
-   king->DMAInterrupt = TRUE;
+   king->DMAInterrupt = true;
    RedoKINGIRQCheck();
    king->DMAStatus &= ~1;
    return;
@@ -851,7 +850,7 @@ void KING_CDIRQ(int type)
       SCSICD_GetMSG() != ((king->Reg03 >> 2) & 1))
    {
      KINGDBG("Phase mismatch interrupt asserted.\n");
-     king->CDInterrupt = TRUE;
+     king->CDInterrupt = true;
      RedoKINGIRQCheck();
    }
   }
@@ -871,7 +870,7 @@ void KING_StuffSubchannels(uint8 subchannels, int subindex)
 
   if(king->SubChannelControl & 0x2)
   {
-   king->SubChannelInterrupt = TRUE;
+   king->SubChannelInterrupt = true;
    RedoKINGIRQCheck();
   }
  }
@@ -988,23 +987,23 @@ v810_timestamp_t MDFN_FASTCALL KING_Update(const v810_timestamp_t timestamp)
      {
       if(!king->DRQ)
       {
-       king->DRQ = TRUE;
+       king->DRQ = true;
        king->data_cache = SCSICD_GetDB();
-       //SCSICD_SetACK(TRUE);
+       //SCSICD_SetACK(true);
        //PCFX_SetEvent(PCFX_EVENT_SCSI, SCSICD_Run(timestamp));
 
        if(king->DMAStatus & 0x1)
        {
-        king->DRQ = FALSE;
+        king->DRQ = false;
         DoRealDMA(king->data_cache);
-        SCSICD_SetACK(TRUE);
+        SCSICD_SetACK(true);
         scsicd_ne = SCSICD_Run(running_timestamp);
        }
       }
      }
      else if(SCSICD_GetACK() && !SCSICD_GetREQ())
      {
-      SCSICD_SetACK(FALSE);
+      SCSICD_SetACK(false);
       scsicd_ne = SCSICD_Run(running_timestamp);
      }
     }
@@ -1019,14 +1018,14 @@ v810_timestamp_t MDFN_FASTCALL KING_Update(const v810_timestamp_t timestamp)
       {
        //KINGDBG("Did write: %02x\n", king->data_cache);
        SCSICD_SetDB(king->data_cache);
-       SCSICD_SetACK(TRUE);
+       SCSICD_SetACK(true);
        scsicd_ne = SCSICD_Run(running_timestamp);
-       king->DRQ = TRUE;
+       king->DRQ = true;
       }
      }
      else if(SCSICD_GetACK() && !SCSICD_GetREQ())
      {
-      SCSICD_SetACK(FALSE);
+      SCSICD_SetACK(false);
       scsicd_ne = SCSICD_Run(running_timestamp);
      }
     }
@@ -1075,8 +1074,8 @@ uint16 KING_Read16(const v810_timestamp_t timestamp, uint32 A)
 	       if(king->RasterIRQPending)
 		ret |= 0x800;
 
-	       king->SubChannelInterrupt = FALSE;
-               king->RasterIRQPending = FALSE;
+	       king->SubChannelInterrupt = false;
+               king->RasterIRQPending = false;
                RedoKINGIRQCheck();
 	      }
 	      else
@@ -1141,8 +1140,8 @@ uint16 KING_Read16(const v810_timestamp_t timestamp, uint32 A)
 			 //printf("Fooball: %02x\n", ret);
 			 if(king->dma_receive_active)
 			 {
-			  king->DRQ = FALSE;
-     			  SCSICD_SetACK(TRUE);
+			  king->DRQ = false;
+     			  SCSICD_SetACK(true);
      			  scsicd_ne = 1;
 			 }
 			}
@@ -1177,7 +1176,7 @@ uint16 KING_Read16(const v810_timestamp_t timestamp, uint32 A)
 		case 0x07: 
 			// SCSI IRQ acknowledge/reset
 			KINGDBG("SCSI IRQ acknowledge\n");
-			king->CDInterrupt = FALSE;
+			king->CDInterrupt = false;
                         RedoKINGIRQCheck();
 			ret = 0xFF;
 			break;
@@ -1305,7 +1304,7 @@ static INLINE void SCSI_Reg2_Write(const v810_timestamp_t timestamp, uint8 V, bo
  {
 
   { // HACK(probably)
-   king->CDInterrupt = FALSE;
+   king->CDInterrupt = false;
    RedoKINGIRQCheck();
   }
 
@@ -1315,10 +1314,10 @@ static INLINE void SCSI_Reg2_Write(const v810_timestamp_t timestamp, uint8 V, bo
   {
    scsicd_ne = 1; //SCSICD_Run(timestamp);
   }
-  king->DRQ = FALSE;
+  king->DRQ = false;
 
-  king->dma_receive_active = FALSE;
-  king->dma_send_active = FALSE;
+  king->dma_receive_active = false;
+  king->dma_send_active = false;
   king->dma_cycle_counter = 0x7FFFFFFF;
  }
 
@@ -1384,9 +1383,9 @@ void KING_Write16(const v810_timestamp_t timestamp, uint32 A, uint16 V)
 			    {
 			     if(!(king->Reg01 & 0x80))
 			     {
-			      SCSI_Reg0_Write(timestamp, 0, TRUE);
-			      SCSI_Reg2_Write(timestamp, 0, TRUE);
-			      SCSI_Reg3_Write(timestamp, 0, TRUE);
+			      SCSI_Reg0_Write(timestamp, 0, true);
+			      SCSI_Reg2_Write(timestamp, 0, true);
+			      SCSI_Reg3_Write(timestamp, 0, true);
 			      king->data_cache = 0x00;
 
 			      //king->CDInterrupt = true;
@@ -1433,9 +1432,9 @@ void KING_Write16(const v810_timestamp_t timestamp, uint32 A, uint16 V)
 			   if(!msh)	// Start DMA target receive
 			   {
                             KINGDBG("DMA target receive: %04x, %d\n", V, msh);
-                            king->dma_receive_active = FALSE;
-                            king->dma_send_active = TRUE;
-			    king->DRQ = TRUE;
+                            king->dma_receive_active = false;
+                            king->dma_send_active = true;
+			    king->DRQ = true;
 			    //StartKingMagic();
 			    king->dma_cycle_counter = KING_MAGIC_INTERVAL;
 			   }
@@ -1445,7 +1444,7 @@ void KING_Write16(const v810_timestamp_t timestamp, uint32 A, uint16 V)
 			    {
 			     //KINGDBG("%02x\n", V);
 			     king->data_cache = V;
-			     king->DRQ = FALSE;
+			     king->DRQ = false;
 			    }
 			   }
 			   break;
@@ -1459,8 +1458,8 @@ void KING_Write16(const v810_timestamp_t timestamp, uint32 A, uint16 V)
 
 			   if(king->Reg02 & 0x2)
 			   {
-			    king->dma_receive_active = TRUE;
-			    king->dma_send_active = FALSE;
+			    king->dma_receive_active = true;
+			    king->dma_send_active = false;
 			    //StartKingMagic();
 			    king->dma_cycle_counter = KING_MAGIC_INTERVAL;
 			   }
@@ -1470,7 +1469,7 @@ void KING_Write16(const v810_timestamp_t timestamp, uint32 A, uint16 V)
 			   KINGDBG("Sub-channel control: %02x\n", V);
 
 			   king->SubChannelControl = V & 0x3;
-			   king->SubChannelInterrupt = FALSE;
+			   king->SubChannelInterrupt = false;
 			   RedoKINGIRQCheck();
 			   break;
 
@@ -1609,7 +1608,7 @@ void KING_Write16(const v810_timestamp_t timestamp, uint32 A, uint16 V)
 			     king->RAINBOWBlockCount = 0;
 			    }
 			   }
-			   king->RasterIRQPending = FALSE;
+			   king->RasterIRQPending = false;
 			   RedoKINGIRQCheck();
                            //printf("Transfer Control: %d, %08x\n", fx_vce.raster_counter,  king->RAINBOWTransferControl);
 			   break;
@@ -1717,7 +1716,7 @@ uint16 KING_GetADPCMHalfWord(int ch)
 
   if(king->ADPCMBufferMode[ch] & (0x1 << 1))
   {
-   king->ADPCMIRQPending = TRUE;
+   king->ADPCMIRQPending = true;
    RedoKINGIRQCheck();
   }
  }
@@ -1728,7 +1727,7 @@ uint16 KING_GetADPCMHalfWord(int ch)
 
   if(king->ADPCMBufferMode[ch] & (0x2 << 1))
   {
-   king->ADPCMIRQPending = TRUE;
+   king->ADPCMIRQPending = true;
    RedoKINGIRQCheck();
   }
  }
@@ -1853,8 +1852,8 @@ void KING_Reset(const v810_timestamp_t timestamp)
  king->Reg01 = 0;
  king->Reg02 = 0;
  king->Reg03 = 0;
- king->dma_receive_active = FALSE;
- king->dma_send_active = FALSE;
+ king->dma_receive_active = false;
+ king->dma_send_active = false;
  king->dma_cycle_counter = 0x7FFFFFFF;
 
 
@@ -2040,8 +2039,8 @@ static void DrawBG(uint32 *target, int n, bool sub)
  uint16 cg_sub_remap[8];
  bool cg_sub_ofbat[8];
 
- bool BATFetchCycle = FALSE;
- bool BATSubFetchCycle = FALSE;
+ bool BATFetchCycle = false;
+ bool BATSubFetchCycle = false;
 
  const bool rotate_mode = (n == 0) && (king->priority & 0x1000);
 
@@ -2054,7 +2053,7 @@ static void DrawBG(uint32 *target, int n, bool sub)
   if(!bgmode_warning)
   {
    printf("Unsupported KING BG Mode for KING BG %d: %02x\n", n, bgmode);
-   bgmode_warning = TRUE;
+   bgmode_warning = true;
   }
   return;
  }
@@ -2116,11 +2115,11 @@ static void DrawBG(uint32 *target, int n, bool sub)
 
    mpd = king->MPROGData[((bat_offset & 0x20000) ? 0x8 : 0x0) + x];
    if(((mpd >> 6) & 0x3) == n && !(mpd & 0x100) && (mpd & 0x010) && (bool)(mpd & 0x020) == rotate_mode)
-    BATFetchCycle = TRUE;
+    BATFetchCycle = true;
 
    mpd = king->MPROGData[((bat_sub_offset & 0x20000) ? 0x8 : 0x0) + x];
    if(((mpd >> 6) & 0x3) == n && !(mpd & 0x100) && (mpd & 0x010) && (bool)(mpd & 0x020) == rotate_mode)
-    BATSubFetchCycle = TRUE;
+    BATSubFetchCycle = true;
   }
  }
 
@@ -2517,7 +2516,7 @@ static void DrawActive(void)
 
  if(fx_vce.raster_counter == king->RAINBOWTransferStartPosition && (king->RAINBOWTransferControl & 1))
  {
-  king->RAINBOWStartPending = TRUE;
+  king->RAINBOWStartPending = true;
 
   //printf("Rainbow start pending: line=%d, busycount=%d, blockcount=%d\n", fx_vce.raster_counter, king->RAINBOWBusyCount, king->RAINBOWBlockCount);
 
@@ -2536,8 +2535,8 @@ static void DrawActive(void)
 
   if(!king->RAINBOWBusyCount)
   {
-   bool WantDecode = FALSE;
-   bool FirstDecode = FALSE;
+   bool WantDecode = false;
+   bool FirstDecode = false;
 
    if(!king->RAINBOWBlockCount && king->RAINBOWStartPending)
    {
@@ -2546,14 +2545,14 @@ static void DrawActive(void)
     if(king->RAINBOWBlockCount)
     {
      king->RAINBOWKRAMReadPos = king->RAINBOWKRAMA << 1;
-     FirstDecode = TRUE;
+     FirstDecode = true;
     }
    }
 
    if(king->RAINBOWBlockCount)
    {
     king->RAINBOWBlockCount--;
-    WantDecode = TRUE;
+    WantDecode = true;
    }
 
    if(WantDecode)
@@ -2572,7 +2571,7 @@ static void DrawActive(void)
 
   rb_type = RAINBOW_FetchRaster(skip ? NULL : rainbow_linebuffer, LAYER_RAINBOW << 28, &vce_rendercache.palette_table_cache[((fx_vce.palette_offset[3] >> 0) & 0xFF) << 1]);
 
-  king->RAINBOWStartPending = FALSE;
+  king->RAINBOWStartPending = false;
  } // end   if(fx_vce.raster_counter < 262)
 
  if(fx_vce.raster_counter >= 22 && fx_vce.raster_counter < 262)
@@ -2736,7 +2735,7 @@ static void MixLayers(void)
     // Which layer is specified in bits 28-31(check the enum earlier on)
     uint32 priority_remap[8];
     uint32 ble_cache[8];
-    bool ble_cache_any = FALSE;
+    bool ble_cache_any = false;
 
     for(int n = 0; n < 8; n++)
     {
@@ -2759,7 +2758,7 @@ static void MixLayers(void)
     for(int x = 0; x < 8; x++)
      if(ble_cache[x])
      {
-      ble_cache_any = TRUE;
+      ble_cache_any = true;
       break;
      }
    
@@ -3093,7 +3092,7 @@ static void MDFN_FASTCALL KING_RunGfx(int32 clocks)
 			 //}
 			 //else
 			 {
-			  king->RasterIRQPending = TRUE;
+			  king->RasterIRQPending = true;
 			  RedoKINGIRQCheck();
 			 }
 			}

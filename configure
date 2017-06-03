@@ -670,6 +670,8 @@ HAVE_EXTERNAL_TREMOR_TRUE
 MPCDEC_LIBS
 HAVE_EXTERNAL_MPCDEC_FALSE
 HAVE_EXTERNAL_MPCDEC_TRUE
+HAVE_OPENBSD_AUDIO_FALSE
+HAVE_OPENBSD_AUDIO_TRUE
 JACK_LIBS
 JACK_CFLAGS
 HAVE_JACK_FALSE
@@ -4325,8 +4327,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.44.1'
-MEDNAFEN_VERSION_NUMERIC=0x00094401
+MEDNAFEN_VERSION='0.9.45'
+MEDNAFEN_VERSION_NUMERIC=0x00094500
 
 # Make sure we can run config.sub.
 $SHELL "$ac_aux_dir/config.sub" sun4 >/dev/null 2>&1 ||
@@ -16494,6 +16496,60 @@ fi
 
 
 #
+# OpenBSD Audio
+#
+ if false; then
+  HAVE_OPENBSD_AUDIO_TRUE=
+  HAVE_OPENBSD_AUDIO_FALSE='#'
+else
+  HAVE_OPENBSD_AUDIO_TRUE='#'
+  HAVE_OPENBSD_AUDIO_FALSE=
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for OpenBSD audio" >&5
+$as_echo_n "checking for OpenBSD audio... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+	#include <sys/types.h>
+	#include <sys/ioctl.h>
+	#include <sys/audioio.h>
+	#include <string.h>
+
+int
+main ()
+{
+
+	struct audio_swpar par;
+	struct audio_pos pos;
+	struct audio_status status;
+	AUDIO_INITPAR(&par);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	  if true; then
+  HAVE_OPENBSD_AUDIO_TRUE=
+  HAVE_OPENBSD_AUDIO_FALSE='#'
+else
+  HAVE_OPENBSD_AUDIO_TRUE='#'
+  HAVE_OPENBSD_AUDIO_FALSE=
+fi
+
+
+$as_echo "#define HAVE_OPENBSD_AUDIO 1" >>confdefs.h
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+#
 # mpcdec
 #
  if false; then
@@ -18625,6 +18681,14 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_JACK_TRUE}" && test -z "${HAVE_JACK_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_JACK\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_OPENBSD_AUDIO_TRUE}" && test -z "${HAVE_OPENBSD_AUDIO_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_OPENBSD_AUDIO\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_OPENBSD_AUDIO_TRUE}" && test -z "${HAVE_OPENBSD_AUDIO_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_OPENBSD_AUDIO\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_EXTERNAL_MPCDEC_TRUE}" && test -z "${HAVE_EXTERNAL_MPCDEC_FALSE}"; then

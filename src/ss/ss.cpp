@@ -786,6 +786,8 @@ static void Emulate(EmulateSpecStruct* espec_arg)
 
  ForceEventUpdates(end_ts);
  //
+ SMPC_EndFrame(espec, end_ts);
+ //
  //
  //
  RebaseTS(end_ts);
@@ -1258,6 +1260,17 @@ static void MDFN_COLD InitCommon(const unsigned cart_type, const unsigned smpc_a
 
   MDFN_printf(_("Multitap on Saturn Port %u: %s\n"), sp + 1, sv ? _("Enabled") : _("Disabled"));
  }
+
+ for(unsigned vp = 0; vp < 12; vp++)
+ {
+  char buf[64];
+  uint32 sv;
+
+  trio_snprintf(buf, sizeof(buf), "ss.input.port%u.gun_chairs", vp + 1);
+  sv = MDFN_GetSettingUI(buf);
+  SMPC_SetCrosshairsColor(vp, sv);  
+ }
+
  //
  //
  //
@@ -1630,9 +1643,37 @@ static MDFN_COLD void LoadRTC(void)
  SMPC_LoadNV(&sds);
 }
 
-static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
+static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool data_only)
 {
+ SFORMAT StateRegs[] = 
+ {
+  // TODO: Events, or recalc?
 
+  SFARRAY16(WorkRAML, sizeof(WorkRAML) / sizeof(WorkRAML[0])),
+  SFARRAY16(WorkRAMH, sizeof(WorkRAMH) / sizeof(WorkRAMH[0])),
+  SFARRAY(BackupRAM, sizeof(BackupRAM) / sizeof(BackupRAM[0])),
+
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAIN");
+
+ if(load)
+ {
+  BackupRAM_Dirty = true;
+ }
+
+/*
+ CPU[0].StateAction(sm, load, data_only, "SH2-M");
+ CPU[1].StateAction(sm, load, data_only, "SH2-S");
+ SCU_StateAction(sm, load, data_only);
+ SMPC_StateAction(sm, load, data_only);
+ CDB_StateAction(sm, load, data_only);
+ VDP1::StateAction(sm, load, data_only);
+ VDP2_StateAction(sm, load, data_only);
+*/
+
+ SOUND_StateAction(sm, load, data_only);
  CART_StateAction(sm, load, data_only);
 }
 
@@ -1730,12 +1771,27 @@ static const MDFNSetting SSSettings[] =
  { "ss.input.sport1.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on Saturn port 1."), NULL, MDFNST_BOOL, "0", NULL, NULL },
  { "ss.input.sport2.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on Saturn port 2."), NULL, MDFNST_BOOL, "0", NULL, NULL },
 
+ { "ss.input.port1.gun_chairs",  MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 1."),  gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0xFF0000", "0x000000", "0x1000000" },
+ { "ss.input.port2.gun_chairs",  MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 2."),  gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x00FF00", "0x000000", "0x1000000" },
+ { "ss.input.port3.gun_chairs",  MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 3."),  gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0xFF00FF", "0x000000", "0x1000000" },
+ { "ss.input.port4.gun_chairs",  MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 4."),  gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0xFF8000", "0x000000", "0x1000000" },
+ { "ss.input.port5.gun_chairs",  MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 5."),  gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0xFFFF00", "0x000000", "0x1000000" },
+ { "ss.input.port6.gun_chairs",  MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 6."),  gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x00FFFF", "0x000000", "0x1000000" },
+ { "ss.input.port7.gun_chairs",  MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 7."),  gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x0080FF", "0x000000", "0x1000000" },
+ { "ss.input.port8.gun_chairs",  MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 8."),  gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x8000FF", "0x000000", "0x1000000" },
+ { "ss.input.port9.gun_chairs",  MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 9."),  gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0xFF80FF", "0x000000", "0x1000000" },
+ { "ss.input.port10.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 10."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x00FF80", "0x000000", "0x1000000" },
+ { "ss.input.port11.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 11."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0x8080FF", "0x000000", "0x1000000" },
+ { "ss.input.port12.gun_chairs", MDFNSF_NOFLAGS, gettext_noop("Crosshairs color for lightgun on virtual port 12."), gettext_noop("A value of 0x1000000 disables crosshair drawing."), MDFNST_UINT, "0xFF8080", "0x000000", "0x1000000" },
+
  { "ss.smpc.autortc", MDFNSF_NOFLAGS, gettext_noop("Automatically set RTC on game load."), gettext_noop("Automatically set the SMPC's emulated Real-Time Clock to the host system's current time and date upon game load."), MDFNST_BOOL, "1" },
  { "ss.smpc.autortc.lang", MDFNSF_NOFLAGS, gettext_noop("BIOS language."), gettext_noop("Also affects language used in some games(e.g. the European release of \"Panzer Dragoon\")."), MDFNST_ENUM, "english", NULL, NULL, NULL, NULL, RTCLang_List },
 
  { "ss.cart", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Expansion cart."), NULL, MDFNST_ENUM, "auto", NULL, NULL, NULL, NULL, Cart_List },
  { "ss.cart.kof95_path", MDFNSF_EMU_STATE, gettext_noop("Path to KoF 95 ROM image."), NULL, MDFNST_STRING, "mpr-18811-mx.ic1" },
  { "ss.cart.ultraman_path", MDFNSF_EMU_STATE, gettext_noop("Path to Ultraman ROM image."), NULL, MDFNST_STRING, "mpr-19367-mx.ic1" },
+
+// { "ss.cart.modem_port", MDFNSF_NOFLAGS, gettext_noop("TCP/IP port to use for modem emulation."), gettext_noop("A value of \"0\" disables network access."), MDFNST_UINT, "4920", "0", "65535" },
  
  { "ss.bios_sanity", MDFNSF_NOFLAGS, gettext_noop("Enable BIOS ROM image sanity checks."), NULL, MDFNST_BOOL, "1" },
 
@@ -1817,7 +1873,7 @@ MDFNGI EmulatedSS =
  false,
  NULL, //StateAction,
  Emulate,
- NULL,
+ SMPC_TransformInput,
  SMPC_SetInput,
  SetMedia,
  DoSimpleCommand,

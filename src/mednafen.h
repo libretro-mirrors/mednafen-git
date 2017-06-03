@@ -2,14 +2,24 @@
 #define __MDFN_MEDNAFEN_H
 
 #include "types.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "gettext.h"
 
 #define _(String) gettext (String)
 
-#include "math_ops.h"
+#if PSS_STYLE==2
+ #define PSS "\\"
+ #define MDFN_PS '\\'
+#elif PSS_STYLE==1
+ #define PSS "/"
+ #define MDFN_PS '/'
+#elif PSS_STYLE==3
+ #define PSS "\\"
+ #define MDFN_PS '\\'
+#elif PSS_STYLE==4
+ #define PSS ":" 
+ #define MDFN_PS ':'
+#endif
+
 #include "git.h"
 
 extern MDFNGI *MDFNGameInfo;
@@ -38,8 +48,6 @@ void MDFN_MidLineUpdate(EmulateSpecStruct *espec, int y);
 void MDFN_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 #include "mednafen-driver.h"
-
-#include "endian.h"
 #include "memory.h"
 
 #endif

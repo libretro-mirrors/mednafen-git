@@ -24,9 +24,6 @@
 
 #include "Stream.h"
 
-#include <stdio.h>
-#include <string>
-
 class FileStream : public Stream
 {
  public:

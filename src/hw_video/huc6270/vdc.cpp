@@ -303,7 +303,7 @@ void VDC::RunSATDMA(int32 cycles, bool force_completion)
   {
    VDC_DEBUG("Sprite DMA IRQ");
    status |= VDCS_DS;
-   IRQHook(TRUE);
+   IRQHook(true);
   }
   CheckAndCommitPending();
   burst_mode = true;
@@ -358,7 +358,7 @@ void VDC::RunDMA(int32 cycles, bool force_completion)
     if(DCR & 0x02)
     {
      status |= VDCS_DV;
-     IRQHook(TRUE);
+     IRQHook(true);
      VDC_DEBUG("DMA IRQ");
     }
     break;
@@ -446,7 +446,7 @@ void VDC::IncRCR(void)
  {
   VDC_DEBUG("RCR IRQ");
   status |= VDCS_RR;
-  IRQHook(TRUE);
+  IRQHook(true);
  }
 }
 
@@ -456,7 +456,7 @@ void VDC::DoVBIRQTest(void)
  {
   VDC_DEBUG("VBlank IRQ");
   status |= VDCS_VD;
-  IRQHook(TRUE);
+  IRQHook(true);
  }
 }
 
@@ -982,7 +982,7 @@ void VDC::FetchSpriteData(void)
     if(CR & 0x2)
     {
      status |= VDCS_OR;
-     IRQHook(TRUE);
+     IRQHook(true);
      VDC_DEBUG("Overflow IRQ");
     }
     if(!unlimited_sprites)
@@ -1101,7 +1101,7 @@ void VDC::DrawSprites(uint16 *target, int enabled)
      {
       status |= VDCS_CR;
       VDC_DEBUG("Sprite hit IRQ");
-      IRQHook(TRUE);
+      IRQHook(true);
      }
      sprite_line_buf[tx] = pi | raw_pixel | prio_or;
     }
@@ -1167,13 +1167,13 @@ void VDC::DoWaitStates(void)
    if(DMARunning)
    {
     VDC_WARNING("VRAM DMA completion forced.");
-    RunDMA(0, TRUE);
+    RunDMA(0, true);
    }
 
    if(sat_dma_counter > 0)
    {
     VDC_WARNING("SAT DMA completion forced.");
-    RunSATDMA(0, TRUE);
+    RunSATDMA(0, true);
    }
 
    if(mystery_phase)
@@ -1209,7 +1209,7 @@ uint8 VDC::Read(uint32 A, int32 &next_event, bool peek)
             if(!peek)
             {
              status &= ~0x3F;
-             IRQHook(FALSE);
+             IRQHook(false);
             }
             break;
 
@@ -1229,7 +1229,7 @@ uint8 VDC::Read(uint32 A, int32 &next_event, bool peek)
             {
              if(!peek)
              {
-	      pending_read = TRUE;
+	      pending_read = true;
 	      pending_read_addr = MARR;
 	      MARR += vram_inc_tab[(CR >> 11) & 0x3];
 
@@ -1254,7 +1254,7 @@ uint16 VDC::Read16(bool A, bool peek)
   if(!peek)
   {
    status &= ~0x3F;
-   IRQHook(FALSE);
+   IRQHook(false);
   }
  }
  else
@@ -1268,7 +1268,7 @@ uint16 VDC::Read16(bool A, bool peek)
   {
    if(!peek)
    {
-    pending_read = TRUE;
+    pending_read = true;
     pending_read_addr = MARR;
     MARR += vram_inc_tab[(CR >> 11) & 0x3];
 
@@ -1295,7 +1295,7 @@ void VDC::CheckAndCommitPending(void)
    //else
    // VDC_UNDEFINED("Unmapped VRAM write");
 
-   pending_write = FALSE;
+   pending_write = false;
   }
 
   if(pending_read)
@@ -1304,7 +1304,7 @@ void VDC::CheckAndCommitPending(void)
     VDC_UNDEFINED("Unmapped VRAM VRR read");
 
    read_buffer = VRAM[pending_read_addr];
-   pending_read = FALSE;
+   pending_read = false;
   }
  }
 }
@@ -1340,7 +1340,7 @@ void VDC::Write(uint32 A, uint8 V, int32 &next_event)
                        {
 			DoWaitStates();
 
-			pending_read = TRUE;
+			pending_read = true;
 			pending_read_addr = MARR;
 	                MARR += vram_inc_tab[(CR >> 11) & 0x3];
 
@@ -1357,7 +1357,7 @@ void VDC::Write(uint32 A, uint8 V, int32 &next_event)
 			// We must call CommitPendingWrite at the end of SAT/VRAM DMA for this to work!
 			DoWaitStates();
 
-			pending_write = TRUE;
+			pending_write = true;
 			pending_write_addr = MAWR;
 			pending_write_latch = write_latch | (V << 8);
 	                MAWR += vram_inc_tab[(CR >> 11) & 0x3];
@@ -1473,7 +1473,7 @@ void VDC::Write16(bool A, uint16 V)
 
 		       DoWaitStates();
 
-		       pending_read = TRUE;
+		       pending_read = true;
 		       pending_read_addr = MARR;
 
 	               MARR += vram_inc_tab[(CR >> 11) & 0x3];
@@ -1485,7 +1485,7 @@ void VDC::Write16(bool A, uint16 V)
             case 0x02: // We must call CommitPendingWrite at the end of SAT/VRAM DMA for this to work!
 			DoWaitStates();
 
-			pending_write = TRUE;
+			pending_write = true;
 			pending_write_addr = MAWR;
 			pending_write_latch = V;
 	                MAWR += vram_inc_tab[(CR >> 11) & 0x3];

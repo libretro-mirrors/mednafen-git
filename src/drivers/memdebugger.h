@@ -23,8 +23,6 @@
 #define __MDFN_DRIVERS_MEMDEBUGGER_H
 
 #include <iconv.h>
-#include <vector>
-#include <string>
 
 class MemDebuggerPrompt;
 

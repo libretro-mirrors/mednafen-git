@@ -1,7 +1,5 @@
-#ifndef __MDFN_CDROMFILE_H
-#define __MDFN_CDROMFILE_H
-
-#include <stdio.h>
+#ifndef __MDFN_CDACCESS_H
+#define __MDFN_CDACCESS_H
 
 #include "CDUtility.h"
 

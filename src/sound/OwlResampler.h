@@ -1,7 +1,5 @@
-#ifndef __NES_FILTER_H
-#define __NES_FILTER_H
-
-#include <vector>
+#ifndef __MDFN_SOUND_OWLRESAMPLER_H
+#define __MDFN_SOUND_OWLRESAMPLER_H
 
 class OwlResampler;
 class RavenBuffer;

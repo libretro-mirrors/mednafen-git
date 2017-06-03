@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* vdp2_render.cpp - VDP2 Rendering
-**  Copyright (C) 2016 Mednafen Team
+**  Copyright (C) 2016-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -30,12 +30,11 @@
 #include "vdp2_common.h"
 #include "vdp2_render.h"
 
-#include <array>
 #include <atomic>
-#include <algorithm>
 
 namespace MDFN_IEN_SS
 {
+
 //uint8 vdp2rend_prepad_bss
 
 static EmulateSpecStruct* espec = NULL;
@@ -44,7 +43,7 @@ static bool CorrectAspect;
 static bool ShowHOverscan;
 static bool DoHBlend;
 static int LineVisFirst, LineVisLast;
-static uint32 OutLineCounter;
+static uint32 NextOutLine;
 static bool Clock28M;
 static unsigned VisibleLines;
 static VDP2Rend_LIB LIB[256];
@@ -3144,6 +3143,9 @@ enum
  COMMAND_DRAW_LINE,
 
  COMMAND_SET_LEM,
+
+ COMMAND_SET_BUSYWAIT,
+
  COMMAND_RESET,
  COMMAND_EXIT
 };
@@ -3159,7 +3161,9 @@ static std::array<WQ_Entry, 0x80000> WQ;
 static size_t WQ_ReadPos, WQ_WritePos;
 static std::atomic_int_least32_t WQ_InCount;
 static std::atomic_int_least32_t DrawCounter;
-static int32 LastDrawnLine;
+static bool DoBusyWait;
+static MDFN_Sem* WakeupSem;
+static bool DoWakeupIfNecessary;
 
 static INLINE void WWQ(uint16 command, uint32 arg32 = 0, uint16 arg16 = 0)
 {
@@ -3184,8 +3188,8 @@ static int RThreadEntry(void* data)
  {
   while(MDFN_UNLIKELY(WQ_InCount.load(std::memory_order_acquire) == 0))
   {
-   if(LastDrawnLine < 192) // || (LastDrawnLine == VisibleLines - 1))
-    Time::SleepMS(1);
+   if(!DoBusyWait)
+    MDFND_WaitSemTimeout(WakeupSem, 1);
    else
    {
     for(int i = 1000; i; i--)
@@ -3217,7 +3221,6 @@ static int RThreadEntry(void* data)
 	//for(unsigned i = 0; i < 2; i++)
 	DrawLine((uint16)wqe->Arg32, wqe->Arg32 >> 16, wqe->Arg16);
 	//
-	LastDrawnLine = (uint16)wqe->Arg32;
 	DrawCounter.fetch_sub(1, std::memory_order_release);
 	break;
 
@@ -3227,6 +3230,10 @@ static int RThreadEntry(void* data)
 
    case COMMAND_SET_LEM:
 	UserLayerEnableMask = wqe->Arg32;
+	break;
+
+   case COMMAND_SET_BUSYWAIT:
+	DoBusyWait = wqe->Arg32;
 	break;
 
    case COMMAND_EXIT:
@@ -3261,7 +3268,22 @@ void VDP2REND_Init(const bool IsPAL)
  WQ_WritePos = 0;
  WQ_InCount.store(0, std::memory_order_release); 
  DrawCounter.store(0, std::memory_order_release);
+
+ WakeupSem = MDFND_CreateSem();
  RThread = MDFND_CreateThread(RThreadEntry, NULL);
+}
+
+// Needed for ss.correct_aspect == 0
+void VDP2REND_GetGunXTranslation(const bool clock28m, float* scale, float* offs)
+{
+ *scale = 1.0;
+ *offs = 0.0;
+
+ if(!CorrectAspect && !clock28m)
+ {
+  *scale = 65.0 / 61.0;
+  *offs = -(21472 - (21472.0 / 65 * 61)) * 0.5;
+ }
 }
 
 void VDP2REND_SetGetVideoParams(MDFNGI* gi, const bool caspect, const int sls, const int sle, const bool show_h_overscan, const bool dohblend)
@@ -3288,9 +3310,13 @@ void VDP2REND_SetGetVideoParams(MDFNGI* gi, const bool caspect, const int sls, c
  }
  gi->nominal_height = LineVisLast + 1 - LineVisFirst;
 
-
  gi->lcm_width = (ShowHOverscan? 10560 : 10240);
  gi->lcm_height = (LineVisLast + 1 - LineVisFirst) * 2;
+
+ gi->mouse_scale_x = (float)(ShowHOverscan? 21472 : 20821) / gi->nominal_width;
+ gi->mouse_offs_x = (float)(ShowHOverscan? 0 : 651) / 2;
+ gi->mouse_scale_y = 1.0;
+ gi->mouse_offs_y = LineVisFirst;
  //
  //
  //
@@ -3298,6 +3324,9 @@ void VDP2REND_SetGetVideoParams(MDFNGI* gi, const bool caspect, const int sls, c
  {
   gi->nominal_width = (ShowHOverscan ? 352 : 341);
   gi->lcm_width = gi->nominal_width * 2;
+
+  gi->mouse_scale_x = (float)(ShowHOverscan? 21472 : 20821) / gi->nominal_width;
+  gi->mouse_offs_x = (float)(ShowHOverscan? 0 : 651) / 2;
  }
 }
 
@@ -3308,11 +3337,17 @@ void VDP2REND_Kill(void)
   WWQ(COMMAND_EXIT);
   MDFND_WaitThread(RThread, NULL);
  }
+
+ if(WakeupSem != NULL)
+ {
+  MDFND_DestroySem(WakeupSem);
+  WakeupSem = NULL;
+ }
 }
 
 void VDP2REND_StartFrame(EmulateSpecStruct* espec_arg, const bool clock28m, const int SurfInterlaceField)
 {
- OutLineCounter = 0;
+ NextOutLine = 0;
  Clock28M = clock28m;
 
  espec = espec_arg;
@@ -3340,12 +3375,14 @@ void VDP2REND_EndFrame(void)
   //Time::SleepMS(1);
  }
 
- if(OutLineCounter < VisibleLines)
+ WWQ(COMMAND_SET_BUSYWAIT, false);
+
+ if(NextOutLine < VisibleLines)
  {
   //printf("OutLineCounter(%d) < VisibleLines(%d)\n", OutLineCounter, VisibleLines);
   do
   {
-   uint16 out_line = OutLineCounter;
+   uint16 out_line = NextOutLine;
    uint32* target;
 
    if(espec->InterlaceOn)
@@ -3354,7 +3391,7 @@ void VDP2REND_EndFrame(void)
    target = espec->surface->pixels + out_line * espec->surface->pitchinpix;
    target[0] = target[1] = target[2] = target[3] = espec->surface->MakeColor(0, 0, 0);
    espec->LineWidths[out_line] = 4;
-  } while(++OutLineCounter < VisibleLines);
+  } while(++NextOutLine < VisibleLines);
  }
 
  espec = NULL;
@@ -3367,18 +3404,39 @@ VDP2Rend_LIB* VDP2REND_GetLIB(unsigned line)
  return &LIB[line];
 }
 
-void VDP2REND_DrawLine(int vdp2_line, const bool field)
+void VDP2REND_DrawLine(const int vdp2_line, const uint32 crt_line, const bool field)
 {
- if(MDFN_LIKELY(OutLineCounter < VisibleLines))
+ const unsigned bwthresh = VisibleLines - 48;
+
+ if(MDFN_LIKELY(crt_line < VisibleLines))
  {
-  uint16 out_line = OutLineCounter;
+  uint16 out_line = crt_line;
 
   if(espec->InterlaceOn)
    out_line = (out_line << 1) | espec->InterlaceField;
 
-  DrawCounter.fetch_add(1, std::memory_order_release);
+  auto wdcq = DrawCounter.fetch_add(1, std::memory_order_release);
   WWQ(COMMAND_DRAW_LINE, ((uint16)vdp2_line << 16) | out_line, field);
-  OutLineCounter++;
+  //
+  //
+  if(crt_line == bwthresh)
+  {
+   WWQ(COMMAND_SET_BUSYWAIT, true);
+   MDFND_PostSem(WakeupSem);
+  }
+  else if(crt_line < bwthresh)
+  {
+   if(wdcq == 0)
+    DoWakeupIfNecessary = true;
+   else if((wdcq + 1) >= 64 && DoWakeupIfNecessary)
+   {
+    //printf("Post Wakeup: %3d --- crt_line=%3d\n", wdcq + 1, crt_line);
+    MDFND_PostSem(WakeupSem);
+    DoWakeupIfNecessary = false;
+   }
+  }
+
+  NextOutLine = crt_line + 1;
  }
 }
 

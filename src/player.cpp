@@ -17,7 +17,6 @@
 
 #include "mednafen.h"
 #include <trio/trio.h>
-#include <math.h>
 
 #include "video.h"
 #include "player.h"

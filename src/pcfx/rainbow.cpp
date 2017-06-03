@@ -361,8 +361,8 @@ void RAINBOW_Init(bool arg_ChromaIP)
 
   DecodeFormat[0] = DecodeFormat[1] = -1;
   DecodeBufferWhichRead = 0;
-  GarbageData = FALSE;
-  FirstDecode = TRUE;
+  GarbageData = false;
+  FirstDecode = true;
   RasterReadPos = 0;
  }
  catch(...)
@@ -441,8 +441,8 @@ void RAINBOW_DecodeBlock(bool arg_FirstDecode, bool Skip)
 
    if(arg_FirstDecode)
    {
-    FirstDecode = TRUE;
-    GarbageData = FALSE;
+    FirstDecode = true;
+    GarbageData = false;
    }
 
    if(GarbageData)
@@ -489,7 +489,7 @@ void RAINBOW_DecodeBlock(bool arg_FirstDecode, bool Skip)
    if(icount <= 0)
    {
     FXDBG("Garbage data.");
-    GarbageData = TRUE;
+    GarbageData = true;
     //printf("Dooom: %d\n");
     DecodeFormat[which_buffer] = 0;
     memset(DecodeBuffer[which_buffer], 0, 0x2000);

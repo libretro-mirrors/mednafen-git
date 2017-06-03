@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* sha1.cpp:
-**  Copyright (C) 2014-2016 Mednafen Team
+**  Copyright (C) 2014-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -20,12 +20,7 @@
 */
 
 #include <mednafen/mednafen.h>
-#include <mednafen/endian.h>
-
 #include "sha1.h"
-
-#include <stdio.h>
-#include <string.h>
 
 template<unsigned n>
 static INLINE uint32 rotl(uint32 val)
@@ -132,7 +127,6 @@ sha1_digest sha1(const void* data, const uint64 len)
  return ret;
 }
 
-#include <assert.h>
 void sha1_test(void)
 {
  char tv[256];

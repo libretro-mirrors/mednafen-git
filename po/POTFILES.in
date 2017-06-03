@@ -351,7 +351,7 @@ src/nes/input/arkanoid.cpp
 src/nes/input/hypershot.cpp
 src/nes/input/powerpad.cpp
 src/nes/input/cursor.cpp
-src/nes/input/bworld.cpp
+src/nes/input/bbattler2.cpp
 src/nes/input/partytap.cpp
 src/nes/input/toprider.cpp
 src/nes/input/zapper.cpp
@@ -667,7 +667,6 @@ src/cdrom/recover-raw.cpp
 src/cdrom/cdromif.cpp
 src/cdrom/CDAFReader_MPC.cpp
 src/cdrom/CDAFReader_Vorbis.cpp
-src/string/ConvertUTF.cpp
 src/string/string.cpp
 src/string/escape.cpp
 src/hw_misc/arcade_card/arcade_card.cpp

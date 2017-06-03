@@ -1,7 +1,5 @@
-#ifndef _GENERAL_H
-#define _GENERAL_H
-
-#include <string>
+#ifndef __MDFN_GENERAL_H
+#define __MDFN_GENERAL_H
 
 #if 0
 class FilePathMaker

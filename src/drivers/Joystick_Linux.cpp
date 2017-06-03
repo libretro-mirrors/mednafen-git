@@ -34,8 +34,6 @@
 #include <sys/types.h>
 #include <dirent.h>
 
-#include <string>
-
 class Joystick_Linux : public Joystick
 {
  public:

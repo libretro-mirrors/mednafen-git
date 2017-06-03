@@ -159,7 +159,7 @@ class MD_Cart_Type_EEPROM : public MD_Cart_Type
 
 MD_Cart_Type_EEPROM::MD_Cart_Type_EEPROM(const md_game_info *ginfo, const uint8 *ROM, const uint32 ROM_size, const int BoardType)
 {
- bool found_board_type = FALSE;
+ bool found_board_type = false;
 
  this->rom = ROM;
  this->rom_size = ROM_size;
@@ -174,7 +174,7 @@ MD_Cart_Type_EEPROM::MD_Cart_Type_EEPROM(const md_game_info *ginfo, const uint8 
   if(database[i].board_type == BoardType)
   {
    memcpy(&type, &database[i].type, sizeof(T_EEPROM_TYPE));
-   found_board_type = TRUE;
+   found_board_type = true;
    break;
   }
  }

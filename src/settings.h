@@ -22,8 +22,6 @@
 #ifndef MDFN_SETTINGS_H
 #define MDFN_SETTINGS_H
 
-#include <string>
-
 #include "settings-common.h"
 
 void MDFN_LoadSettings(const std::string& path, bool override = false);

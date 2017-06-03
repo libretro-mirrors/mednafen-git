@@ -31,9 +31,6 @@
 #include <windowsx.h>
 #include <xinput.h>
 
-#include <math.h>
-#include <algorithm>
-
 struct XInputFuncPointers
 {
  void WINAPI (*p_XInputEnable)(BOOL) = nullptr;

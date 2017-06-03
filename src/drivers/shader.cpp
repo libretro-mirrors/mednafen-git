@@ -22,12 +22,6 @@
 #include <mednafen/FileStream.h>
 #include <mednafen/MemoryStream.h>
 
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <math.h>
-
 #define MDFN_GL_TRY(x, ...)								\
 	{										\
 	 x;										\

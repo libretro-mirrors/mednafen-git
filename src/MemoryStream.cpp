@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* MemoryStream.cpp:
-**  Copyright (C) 2012-2016 Mednafen Team
+**  Copyright (C) 2012-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -20,8 +20,6 @@
 */
 
 #include "MemoryStream.h"
-#include <mednafen/math_ops.h>
-#include <stdlib.h>
 
 /*
  TODO:	Copy and assignment constructor fixes.

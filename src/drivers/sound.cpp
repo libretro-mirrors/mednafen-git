@@ -16,20 +16,17 @@
  */
 
 #include "main.h"
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
+#include <trio/trio.h>
 
 #include "sound.h"
 
 #include <mednafen/sexyal/sexyal.h>
 
-static SexyAL *Interface = NULL;
-static SexyAL_device *Output = NULL;
+static SexyAL_device* Output = NULL;
 static SexyAL_format format;
 static SexyAL_buffering buffering;
 
-static int16 *EmuModBuffer = NULL;
+static int16* EmuModBuffer = NULL;
 static int32 EmuModBufferSize = 0;	// In frames.
 
 static double SoundRate = 0;
@@ -42,15 +39,15 @@ bool Sound_NeedReInit(void)
 
 double Sound_GetRate(void)
 {
- return(SoundRate);
+ return SoundRate;
 }
 
 uint32 Sound_CanWrite(void)
 {
  if(!Output)
-  return(0);
+  return 0;
 
- return(Output->CanWrite(Output));
+ return Output->CanWrite(Output);
 }
 
 void Sound_Write(int16 *Buffer, int Count)
@@ -77,35 +74,67 @@ void Sound_WriteSilence(int ms)
  Output->Write(Output, SBuffer, frames);
 }
 
-#if 0
-static bool RunSexyALTest(SexyAL *interface, SexyAL_buffering *buffering, const char *device, int driver_type)
+static std::string sampformat_to_string(const uint32 sampformat)
 {
- static const int to_format[9] = 
+ char buf[256];
+ const char* enc_str = _("unknown encoding");
+
+ switch(SAMPFORMAT_ENC(sampformat))
+ {
+  case SEXYAL_ENC_PCM_UINT: enc_str = _("unsigned"); break;
+  case SEXYAL_ENC_PCM_SINT: enc_str = _("signed"); break;
+  case SEXYAL_ENC_PCM_FLOAT: enc_str = _("floating-point"); break;
+ }
+
+ trio_snprintf(buf, sizeof(buf), _("%u bits(%s, %u bytes%s)"),
+	SAMPFORMAT_BITS(sampformat),
+	enc_str,
+	SAMPFORMAT_BYTES(sampformat),
+	(SAMPFORMAT_BYTES(sampformat) <= 1) ? "" : SAMPFORMAT_BIGENDIAN(sampformat) ? ", big-endian" : ", little-endian");
+
+ return buf;
+}
+
+#if 0
+static bool RunSexyALTest(SexyAL_buffering* buffering, const char* device, int driver_type)
+{
+ static const uint32 sampformats[] = 
  {
   SEXYAL_FMT_PCMU8,
   SEXYAL_FMT_PCMS8,
-  SEXYAL_FMT_PCMU16,
-  SEXYAL_FMT_PCMS16,
 
-  SEXYAL_FMT_PCMU24,
-  SEXYAL_FMT_PCMS24,
-  SEXYAL_FMT_PCMU32,
-  SEXYAL_FMT_PCMS32,
+  SEXYAL_FMT_PCMU16_LE,
+  SEXYAL_FMT_PCMS16_LE,
+  SEXYAL_FMT_PCMU16_BE,
+  SEXYAL_FMT_PCMS16_BE,
 
-  SEXYAL_FMT_PCMFLOAT
- };
+  SEXYAL_FMT_PCMU24_LE,
+  SEXYAL_FMT_PCMS24_LE,
+  SEXYAL_FMT_PCMU24_BE,
+  SEXYAL_FMT_PCMS24_BE,
 
- static const char *to_format_name[9] = 
- {
-  "8-bit unsigned",
-  "8-bit signed",
-  "16-bit unsigned",
-  "16-bit signed",
-  "24-bit unsigned",
-  "24-bit signed",
-  "32-bit unsigned",
-  "32-bit signed",
-  "float"
+  SEXYAL_FMT_PCMU32_LE,
+  SEXYAL_FMT_PCMS32_LE,
+  SEXYAL_FMT_PCMU32_BE,
+  SEXYAL_FMT_PCMS32_BE,
+
+  SEXYAL_FMT_PCMFLOAT_LE,
+  SEXYAL_FMT_PCMFLOAT_BE,
+
+  SEXYAL_FMT_PCMU18_3BYTE_LE,
+  SEXYAL_FMT_PCMS18_3BYTE_LE,
+  SEXYAL_FMT_PCMU18_3BYTE_BE,
+  SEXYAL_FMT_PCMS18_3BYTE_BE,
+
+  SEXYAL_FMT_PCMU20_3BYTE_LE,
+  SEXYAL_FMT_PCMS20_3BYTE_LE,
+  SEXYAL_FMT_PCMU20_3BYTE_BE,
+  SEXYAL_FMT_PCMS20_3BYTE_BE,
+
+  SEXYAL_FMT_PCMU24_3BYTE_LE,
+  SEXYAL_FMT_PCMS24_3BYTE_LE,
+  SEXYAL_FMT_PCMU24_3BYTE_BE,
+  SEXYAL_FMT_PCMS24_3BYTE_BE,
  };
 
  // TODO: byte order format conversion.
@@ -113,25 +142,22 @@ static bool RunSexyALTest(SexyAL *interface, SexyAL_buffering *buffering, const 
  const int rate = 48000;
  const int numframes = (rate / 2 + 1) &~ 1;
 
- for(int src_channels = 1; src_channels <= 2; src_channels++)
+ for(unsigned src_channels = 1; src_channels <= 2; src_channels++)
  {
-  for(int dest_channels = 1; dest_channels <= 2; dest_channels++)
+  for(unsigned dest_channels = 1; dest_channels <= 2; dest_channels++)
   {
-   //for(int src_format = 0; src_format < 9; src_format++)
-   int src_format = 3;
+   //for(const auto src_sampformat : sampformats)
+   const uint32 src_sampformat = SEXYAL_FMT_PCMS16;
    {
-    for(int dest_format = 0; dest_format < 9; dest_format++)
+    printf("Source Format: %s, Source Channels: %d\n", sampformat_to_string(src_sampformat).c_str(), src_channels);
+    for(const auto dest_sampformat : sampformats)
     {
-     printf("Source Format: %s, Source Channels: %d --- Dest Format: %s, Dest Channels: %d\n\n", to_format_name[src_format], src_channels, to_format_name[dest_format], dest_channels);
+     printf(" Dest Format: %s, Dest Channels: %d\n", sampformat_to_string(dest_sampformat).c_str(), dest_channels);
 
-     memset(&format,0,sizeof(format));
+     memset(&format, 0, sizeof(format));
 
-     Interface = (SexyAL *)SexyAL_Init(0);
-     DriverTypes = Interface->EnumerateTypes(Interface);
-
-     format.sampformat = to_format[dest_format];
+     format.sampformat = dest_sampformat;
      format.channels = dest_channels;
-     format.revbyteorder = 0;
      format.rate = rate;
 
      buffering->buffer_size = 0;
@@ -139,15 +165,13 @@ static bool RunSexyALTest(SexyAL *interface, SexyAL_buffering *buffering, const 
      buffering->latency = 0;
      buffering->bt_gran = 0;
 
-     if(!(Output=Interface->Open(Interface, device, &format, buffering, driver_type)))
+     if(!(Output = SexyAL_Open(device, &format, buffering, driver_type)))
      {
       MDFND_PrintError(_("Error opening a sound device."));
-      Interface->Destroy(Interface);
-      Interface=0;
-      return(0);
+      return false;
      }
 
-     if(format.sampformat != to_format[dest_format])
+     if(format.sampformat != dest_sampformat)
       printf("Warning: Could not set desired device format.\n");
 
      if(format.channels != dest_channels)
@@ -156,23 +180,23 @@ static bool RunSexyALTest(SexyAL *interface, SexyAL_buffering *buffering, const 
      if(format.rate != rate)
       printf("Warning: Could not set desired device rate.\n");
 
-     format.sampformat = to_format[src_format];
+     format.sampformat = src_sampformat;
      format.channels = src_channels;
-     format.revbyteorder = 0;
      format.rate = rate;
+     format.noninterleaved = false;
 
      Output->SetConvert(Output, &format);
 
-     if(to_format[src_format] == SEXYAL_FMT_PCMS16)
+     if(src_sampformat == SEXYAL_FMT_PCMS16)
      {
       int16 samples[numframes * src_channels];
 
       for(int i = 0; i < numframes; i++)
       {
-       int16 sval = 4095 * sin((double)i * 440 * M_PI * 2 / rate);
-       
-       for(int ch = 0; ch < src_channels; ch++)
-        samples[i * src_channels + ch] = sval;
+       for(unsigned ch = 0; ch < src_channels; ch++)
+       {
+        samples[i * src_channels + ch] = 4095 * sin((double)i * 440 * (ch + 1) * M_PI * 2 / rate);;
+       }
       }
       // Write half in one go, the rest in small chunks.
       if(!Output->Write(Output, samples, numframes / 2))
@@ -190,12 +214,13 @@ static bool RunSexyALTest(SexyAL *interface, SexyAL_buffering *buffering, const 
       }
      }
      Output->Close(Output);
-     Interface->Destroy(Interface);
-     sleep(1);
+     Time::SleepMS(100);
     }
    }
   }
  }
+
+ return true;
 }
 #endif
 
@@ -209,14 +234,8 @@ bool Sound_Init(MDFNGI *gi)
  memset(&format, 0, sizeof(format));
  memset(&buffering, 0, sizeof(buffering));
 
- Interface = new SexyAL();
-
  format.sampformat = SEXYAL_FMT_PCMS16;
-
- assert(gi->soundchan);
  format.channels = gi->soundchan;
-
- format.revbyteorder = 0;
  format.noninterleaved = false;
  format.rate = MDFN_GetSettingUI("sound.rate");
 
@@ -238,9 +257,9 @@ bool Sound_Init(MDFNGI *gi)
  MDFNI_printf(_("\nInitializing sound...\n"));
  MDFN_indent(1);
 
- if(!Interface->FindDriver(&CurDriver, zedriver.c_str()))
+ if(!SexyAL_FindDriver(&CurDriver, zedriver.c_str()))
  {
-  std::vector<SexyAL_DriverInfo> DriverTypes = Interface->GetDriverList();
+  std::vector<SexyAL_DriverInfo> DriverTypes = SexyAL_GetDriverList();
 
   MDFN_printf(_("\nUnknown sound driver \"%s\".  Compiled-in sound drivers:\n"), zedriver.c_str());
 
@@ -252,11 +271,8 @@ bool Sound_Init(MDFNGI *gi)
   MDFN_indent(-2);
   MDFN_printf("\n");
 
-  delete Interface;
-  Interface = NULL;
-
   MDFN_indent(-1);
-  return(FALSE);
+  return false;
  }
 
  if(!strcasecmp(zedevice.c_str(), "default"))
@@ -265,16 +281,17 @@ bool Sound_Init(MDFNGI *gi)
   MDFNI_printf(_("Using \"%s\" audio driver with device \"%s\":"), CurDriver.name, zedevice.c_str());
  MDFN_indent(1);
 
- //RunSexyALTest(Interface, &buffering, zedevice.c_str(), CurDriver.type);
- //exit(1);
- if(!(Output=Interface->Open(zedevice.c_str(), &format, &buffering, CurDriver.type)))
+#if 0
+ RunSexyALTest(&buffering, zedevice.c_str(), CurDriver.type);
+ exit(1);
+#endif
+
+ if(!(Output = SexyAL_Open(zedevice.c_str(), &format, &buffering, CurDriver.type)))
  {
   MDFND_PrintError(_("Error opening a sound device."));
 
-  delete Interface;
-  Interface = NULL;
   MDFN_indent(-2);
-  return(FALSE);
+  return false;
  }
 
  if(format.rate < 22050 || format.rate > 192000)
@@ -282,10 +299,30 @@ bool Sound_Init(MDFNGI *gi)
   MDFND_PrintError(_("Set rate is out of range [22050-192000]"));
   Sound_Kill();
   MDFN_indent(-2);
-  return(FALSE);
+  return false;
  }
- MDFNI_printf(_("\nBits: %u%s\nRate: %u\nChannels: %u%s\nByte order: CPU %s\nBuffer size: %u sample frames(%f ms)\n"), (format.sampformat>>4)*8, (format.sampformat == SEXYAL_FMT_PCMFLOAT) ? _(" (floating-point)") : "",format.rate,format.channels,format.noninterleaved ? _(" (non-interleaved) ") : "", format.revbyteorder?"Reversed":"Native", buffering.buffer_size, (double)buffering.buffer_size * 1000 / format.rate);
- MDFNI_printf(_("Latency: %u sample frames(%f ms)\n"), buffering.latency, (double)buffering.latency * 1000 / format.rate);
+ {
+  const char* enc_str = _("unknown encoding");
+
+  switch(SAMPFORMAT_ENC(format.sampformat))
+  {
+   case SEXYAL_ENC_PCM_UINT: enc_str = _("unsigned"); break;
+   case SEXYAL_ENC_PCM_SINT: enc_str = _("signed"); break;
+   case SEXYAL_ENC_PCM_FLOAT: enc_str = _("floating-point"); break;
+  }
+
+  MDFNI_printf("\n");
+
+  MDFNI_printf(_("Format: %u bits(%s, %u bytes%s)\n"),
+	SAMPFORMAT_BITS(format.sampformat),
+	enc_str,
+	SAMPFORMAT_BYTES(format.sampformat),
+	(SAMPFORMAT_BYTES(format.sampformat) <= 1) ? "" : SAMPFORMAT_BIGENDIAN(format.sampformat) ? ", big-endian" : ", little-endian");
+  MDFNI_printf(_("Rate: %u\n"), format.rate);
+  MDFNI_printf(_("Channels: %u%s\n"), format.channels, format.noninterleaved ? _(" (non-interleaved) ") : "");
+  MDFNI_printf(_("Buffer size: %u sample frames(%f ms)\n"), buffering.buffer_size, (double)buffering.buffer_size * 1000 / format.rate);
+  MDFNI_printf(_("Latency: %u sample frames(%f ms)\n"), buffering.latency, (double)buffering.latency * 1000 / format.rate);
+ }
 
  if(buffering.period_size)
  {
@@ -306,8 +343,7 @@ bool Sound_Init(MDFNGI *gi)
  }
 
  format.sampformat = SEXYAL_FMT_PCMS16;
- format.channels = gi->soundchan?gi->soundchan:1;
- format.revbyteorder = 0;
+ format.channels = gi->soundchan;
  format.noninterleaved = false;
  //format.rate=gi->soundrate?gi->soundrate:soundrate;
 
@@ -319,7 +355,7 @@ bool Sound_Init(MDFNGI *gi)
  SoundRate = format.rate;
  MDFN_indent(-2);
 
- return(1);
+ return true;
 }
 
 bool Sound_Kill(void)
@@ -337,18 +373,12 @@ bool Sound_Kill(void)
  if(Output)
   Output->Close(Output);
 
- if(Interface)
- {
-  delete Interface;
-  Interface = NULL;
- }
-
  if(!Output)
-  return(FALSE);
+  return false;
 
  Output = NULL;
 
- return(TRUE);
+ return true;
 }
 
 
@@ -356,5 +386,5 @@ int16 *Sound_GetEmuModBuffer(int32 *max_size_bytes)
 {
  *max_size_bytes = EmuModBufferSize;
 
- return(EmuModBuffer);
+ return EmuModBuffer;
 }

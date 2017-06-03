@@ -22,10 +22,6 @@
 #include <mednafen/Time.h>
 #include <trio/trio.h>
 
-#include <math.h>
-
-#include <vector>
-
 namespace MDFN_IEN_DEMO
 {
 

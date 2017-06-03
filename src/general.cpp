@@ -17,14 +17,10 @@
 
 #include "mednafen.h"
 
-#include <string.h>
-#include <stdarg.h>
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <string>
 #include <map>
 #include <trio/trio.h>
 

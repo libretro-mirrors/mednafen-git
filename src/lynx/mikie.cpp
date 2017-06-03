@@ -61,7 +61,7 @@ void CMikie::BlowOut(void)
 	mSystem.GetRegs(regs);
 	//sprintf(addr,"Runtime Error - System Halted\nCMikie::Poke() - Read/Write to counter clocks at PC=$%04x.",regs.PC);
 	//gError->Warning(addr);
-	gSystemHalt=TRUE;
+	gSystemHalt=true;
 }
 
 
@@ -73,7 +73,7 @@ CMikie::CMikie(CSystem& parent)
 	mpDisplayCurrent=NULL;
 	mpRamPointer=NULL;
 
-	mUART_CABLE_PRESENT=FALSE;
+	mUART_CABLE_PRESENT=false;
 	mpUART_TX_CALLBACK=NULL;
 
 	int loop;
@@ -93,7 +93,7 @@ void CMikie::Reset(void)
 {
 	TRACE_MIKIE0("Reset()");
 
-	mAudioInputComparator=FALSE;	// Initialises to unknown
+	mAudioInputComparator=false;	// Initialises to unknown
 	mDisplayAddress=0x00;			// Initialises to unknown
 	mLynxLine=0;
 	mLynxLineDMACounter=0;
@@ -242,8 +242,8 @@ void CMikie::Reset(void)
 	//
 	// Initialise display control register vars
 	//
-	mDISPCTL_DMAEnable=FALSE;
-	mDISPCTL_Flip=FALSE;
+	mDISPCTL_DMAEnable=false;
+	mDISPCTL_Flip=false;
 	mDISPCTL_FourColour=0;
 	mDISPCTL_Colour=0;
 
@@ -309,18 +309,18 @@ void CMikie::PresetForHomebrew(void)
 	// i.e LR.O doesn't bother to setup the timers
 
 	mTIM_0_BKUP=0x9e;
-	mTIM_0_ENABLE_RELOAD=TRUE;
-	mTIM_0_ENABLE_COUNT=TRUE;
+	mTIM_0_ENABLE_RELOAD=true;
+	mTIM_0_ENABLE_COUNT=true;
 
 	mTIM_2_BKUP=0x68;
-	mTIM_2_ENABLE_RELOAD=TRUE;
-	mTIM_2_ENABLE_COUNT=TRUE;
+	mTIM_2_ENABLE_RELOAD=true;
+	mTIM_2_ENABLE_COUNT=true;
 	mTIM_2_LINKING=7;
 
-	mDISPCTL_DMAEnable=TRUE;
-	mDISPCTL_Flip=FALSE;
+	mDISPCTL_DMAEnable=true;
+	mDISPCTL_Flip=false;
 	mDISPCTL_FourColour=0;
-	mDISPCTL_Colour=TRUE;
+	mDISPCTL_Colour=true;
 }
 
 void CMikie::ComLynxCable(int status)
@@ -460,7 +460,7 @@ uint32 CMikie::DisplayRenderLine(void)
 // the beginning of count==99 hence the code below !!
 
 	// Emulate REST signal
-	if(mLynxLine==mTIM_2_BKUP-2 || mLynxLine==mTIM_2_BKUP-3 || mLynxLine==mTIM_2_BKUP-4) mIODAT_REST_SIGNAL=TRUE; else mIODAT_REST_SIGNAL=FALSE;
+	if(mLynxLine==mTIM_2_BKUP-2 || mLynxLine==mTIM_2_BKUP-3 || mLynxLine==mTIM_2_BKUP-4) mIODAT_REST_SIGNAL=true; else mIODAT_REST_SIGNAL=false;
 
 	if(mLynxLine==(mTIM_2_BKUP-3))
 	{
@@ -507,7 +507,7 @@ uint32 CMikie::DisplayRenderLine(void)
 			}
 
 			if(mpDisplayCurrentLine < 102)
-			 LynxLineDrawn[mpDisplayCurrentLine] = TRUE;
+			 LynxLineDrawn[mpDisplayCurrentLine] = true;
 
 			mpDisplayCurrentLine++;
 		}
@@ -911,9 +911,9 @@ void CMikie::Poke(uint32 addr,uint8 data)
 				mSystem.GetRegs(regs);
 				MDFN_printf("Runtime Alert - System Halted\nCMikie::Poke(SYSCTL1) - Lynx power down occurred at PC=$%04x.\nResetting system.\n",regs.PC);
 				mSystem.Reset();
-				gSystemHalt=TRUE;
+				gSystemHalt=true;
 			}
-			mSystem.CartAddressStrobe((data&0x01)?TRUE:FALSE);
+			mSystem.CartAddressStrobe((data&0x01)?true:false);
 			break;
 
 		case (MIKEYSREV&0xff):
@@ -928,9 +928,9 @@ void CMikie::Poke(uint32 addr,uint8 data)
 		case (IODAT&0xff):
 			TRACE_MIKIE2("Poke(IODAT   ,%02x) at PC=%04x",data,mSystem.mCpu->GetPC());
 			mIODAT=data;
-			mSystem.CartAddressData((mIODAT&0x02)?TRUE:FALSE);
+			mSystem.CartAddressData((mIODAT&0x02)?true:false);
 			// Enable cart writes to BANK1 on AUDIN if AUDIN is set to output
-			if(mIODIR&0x10) mSystem.mCart->mWriteEnableBank1=(mIODAT&0x10)?TRUE:FALSE;
+			if(mIODIR&0x10) mSystem.mCart->mWriteEnableBank1=(mIODAT&0x10)?true:false;
 			break;
 
 		case (SERCTL&0xff): 
@@ -1942,7 +1942,7 @@ void CMikie::Update(void)
 						if(mTIM_0_CURRENT&0x80000000)
 						{
 							// Set carry out
-							mTIM_0_BORROW_OUT=TRUE;
+							mTIM_0_BORROW_OUT=true;
 	
 //							// Reload if neccessary
 //							if(mTIM_0_ENABLE_RELOAD)
@@ -1954,7 +1954,7 @@ void CMikie::Update(void)
 //								mTIM_0_CURRENT=0;
 //							}
 
-							mTIM_0_TIMER_DONE=TRUE;
+							mTIM_0_TIMER_DONE=true;
 
 							// Interupt flag setting code moved into DisplayRenderLine()
 
@@ -1966,17 +1966,17 @@ void CMikie::Update(void)
 						}
 						else
 						{
-							mTIM_0_BORROW_OUT=FALSE;
+							mTIM_0_BORROW_OUT=false;
 						}
 						// Set carry in as we did a count
-						mTIM_0_BORROW_IN=TRUE;
+						mTIM_0_BORROW_IN=true;
 					}
 					else
 					{
 						// Clear carry in as we didn't count
-						mTIM_0_BORROW_IN=FALSE;
+						mTIM_0_BORROW_IN=false;
 						// Clear carry out
-						mTIM_0_BORROW_OUT=FALSE;
+						mTIM_0_BORROW_OUT=false;
 					}
 				}
 
@@ -2037,7 +2037,7 @@ void CMikie::Update(void)
 					if(mTIM_2_CURRENT&0x80000000)
 					{
 						// Set carry out
-						mTIM_2_BORROW_OUT=TRUE;
+						mTIM_2_BORROW_OUT=true;
 				
 //						// Reload if neccessary
 //						if(mTIM_2_ENABLE_RELOAD)
@@ -2048,7 +2048,7 @@ void CMikie::Update(void)
 //						{
 //							mTIM_2_CURRENT=0;
 //						}
-						mTIM_2_TIMER_DONE=TRUE;
+						mTIM_2_TIMER_DONE=true;
 
 						// Interupt flag setting code moved into DisplayEndOfFrame(), also
 						// park any CPU cycles lost for later inclusion
@@ -2056,17 +2056,17 @@ void CMikie::Update(void)
 					}
 					else
 					{
-						mTIM_2_BORROW_OUT=FALSE;
+						mTIM_2_BORROW_OUT=false;
 					}
 					// Set carry in as we did a count
-					mTIM_2_BORROW_IN=TRUE;
+					mTIM_2_BORROW_IN=true;
 				}
 				else
 				{
 					// Clear carry in as we didn't count
-					mTIM_2_BORROW_IN=FALSE;
+					mTIM_2_BORROW_IN=false;
 					// Clear carry out
-					mTIM_2_BORROW_OUT=FALSE;
+					mTIM_2_BORROW_OUT=false;
 				}
 
 				// Prediction for next timer event cycle number
@@ -2120,7 +2120,7 @@ void CMikie::Update(void)
 					if(mTIM_4_CURRENT&0x80000000)
 					{
 						// Set carry out
-						mTIM_4_BORROW_OUT=TRUE;
+						mTIM_4_BORROW_OUT=true;
 		
 						//
 						// Update the UART counter models for Rx & Tx
@@ -2225,21 +2225,21 @@ void CMikie::Update(void)
 //						{
 //							mTIM_4_CURRENT=0;
 //						}
-//						mTIM_4_TIMER_DONE=TRUE;
+//						mTIM_4_TIMER_DONE=true;
 					}
 //					else
 //					{
-//						mTIM_4_BORROW_OUT=FALSE;
+//						mTIM_4_BORROW_OUT=false;
 //					}
 //					// Set carry in as we did a count
-//					mTIM_4_BORROW_IN=TRUE;
+//					mTIM_4_BORROW_IN=true;
 				}
 //				else
 //				{
 //					// Clear carry in as we didn't count
-//					mTIM_4_BORROW_IN=FALSE;
+//					mTIM_4_BORROW_IN=false;
 //					// Clear carry out
-//					mTIM_4_BORROW_OUT=FALSE;
+//					mTIM_4_BORROW_OUT=false;
 //				}
 //
 //				// Prediction for next timer event cycle number
@@ -2303,7 +2303,7 @@ void CMikie::Update(void)
 						if(mTIM_1_CURRENT&0x80000000)
 						{
 							// Set carry out
-							mTIM_1_BORROW_OUT=TRUE;
+							mTIM_1_BORROW_OUT=true;
 		
 							// Set the timer status flag
 							if(mTimerInterruptMask&0x02)
@@ -2321,21 +2321,21 @@ void CMikie::Update(void)
 							{
 								mTIM_1_CURRENT=0;
 							}
-							mTIM_1_TIMER_DONE=TRUE;
+							mTIM_1_TIMER_DONE=true;
 						}
 						else
 						{
-							mTIM_1_BORROW_OUT=FALSE;
+							mTIM_1_BORROW_OUT=false;
 						}
 						// Set carry in as we did a count
-						mTIM_1_BORROW_IN=TRUE;
+						mTIM_1_BORROW_IN=true;
 					}
 					else
 					{
 						// Clear carry in as we didn't count
-						mTIM_1_BORROW_IN=FALSE;
+						mTIM_1_BORROW_IN=false;
 						// Clear carry out
-						mTIM_1_BORROW_OUT=FALSE;
+						mTIM_1_BORROW_OUT=false;
 					}
 				}
 
@@ -2389,7 +2389,7 @@ void CMikie::Update(void)
 					if(mTIM_3_CURRENT&0x80000000)
 					{
 						// Set carry out
-						mTIM_3_BORROW_OUT=TRUE;
+						mTIM_3_BORROW_OUT=true;
 		
 						// Set the timer status flag
 						if(mTimerInterruptMask&0x08)
@@ -2407,21 +2407,21 @@ void CMikie::Update(void)
 						{
 							mTIM_3_CURRENT=0;
 						}
-						mTIM_3_TIMER_DONE=TRUE;
+						mTIM_3_TIMER_DONE=true;
 					}
 					else
 					{
-						mTIM_3_BORROW_OUT=FALSE;
+						mTIM_3_BORROW_OUT=false;
 					}
 					// Set carry in as we did a count
-					mTIM_3_BORROW_IN=TRUE;
+					mTIM_3_BORROW_IN=true;
 				}
 				else
 				{
 					// Clear carry in as we didn't count
-					mTIM_3_BORROW_IN=FALSE;
+					mTIM_3_BORROW_IN=false;
 					// Clear carry out
-					mTIM_3_BORROW_OUT=FALSE;
+					mTIM_3_BORROW_OUT=false;
 				}
 
 				// Prediction for next timer event cycle number
@@ -2474,7 +2474,7 @@ void CMikie::Update(void)
 					if(mTIM_5_CURRENT&0x80000000)
 					{
 						// Set carry out
-						mTIM_5_BORROW_OUT=TRUE;
+						mTIM_5_BORROW_OUT=true;
 		
 						// Set the timer status flag
 						if(mTimerInterruptMask&0x20)
@@ -2492,21 +2492,21 @@ void CMikie::Update(void)
 						{
 							mTIM_5_CURRENT=0;
 						}
-						mTIM_5_TIMER_DONE=TRUE;
+						mTIM_5_TIMER_DONE=true;
 					}
 					else
 					{
-						mTIM_5_BORROW_OUT=FALSE;
+						mTIM_5_BORROW_OUT=false;
 					}
 					// Set carry in as we did a count
-					mTIM_5_BORROW_IN=TRUE;
+					mTIM_5_BORROW_IN=true;
 				}
 				else
 				{
 					// Clear carry in as we didn't count
-					mTIM_5_BORROW_IN=FALSE;
+					mTIM_5_BORROW_IN=false;
 					// Clear carry out
-					mTIM_5_BORROW_OUT=FALSE;
+					mTIM_5_BORROW_OUT=false;
 				}
 
 				// Prediction for next timer event cycle number
@@ -2559,7 +2559,7 @@ void CMikie::Update(void)
 					if(mTIM_7_CURRENT&0x80000000)
 					{
 						// Set carry out
-						mTIM_7_BORROW_OUT=TRUE;
+						mTIM_7_BORROW_OUT=true;
 		
 						// Set the timer status flag
 						if(mTimerInterruptMask&0x80)
@@ -2577,22 +2577,22 @@ void CMikie::Update(void)
 						{
 							mTIM_7_CURRENT=0;
 						}
-						mTIM_7_TIMER_DONE=TRUE;
+						mTIM_7_TIMER_DONE=true;
 		
 					}
 					else
 					{
-						mTIM_7_BORROW_OUT=FALSE;
+						mTIM_7_BORROW_OUT=false;
 					}
 					// Set carry in as we did a count
-					mTIM_7_BORROW_IN=TRUE;
+					mTIM_7_BORROW_IN=true;
 				}
 				else
 				{
 					// Clear carry in as we didn't count
-					mTIM_7_BORROW_IN=FALSE;
+					mTIM_7_BORROW_IN=false;
 					// Clear carry out
-					mTIM_7_BORROW_OUT=FALSE;
+					mTIM_7_BORROW_OUT=false;
 				}
 
 				// Prediction for next timer event cycle number
@@ -2636,7 +2636,7 @@ void CMikie::Update(void)
 						if(mTIM_6_CURRENT&0x80000000)
 						{
 							// Set carry out
-							mTIM_6_BORROW_OUT=TRUE;
+							mTIM_6_BORROW_OUT=true;
 		
 							// Set the timer status flag
 							if(mTimerInterruptMask&0x40)
@@ -2654,21 +2654,21 @@ void CMikie::Update(void)
 							{
 								mTIM_6_CURRENT=0;
 							}
-							mTIM_6_TIMER_DONE=TRUE;
+							mTIM_6_TIMER_DONE=true;
 						}
 						else
 						{
-							mTIM_6_BORROW_OUT=FALSE;
+							mTIM_6_BORROW_OUT=false;
 						}
 						// Set carry in as we did a count
-						mTIM_6_BORROW_IN=TRUE;
+						mTIM_6_BORROW_IN=true;
 					}
 					else
 					{
 						// Clear carry in as we didn't count
-						mTIM_6_BORROW_IN=FALSE;
+						mTIM_6_BORROW_IN=false;
 						// Clear carry out
-						mTIM_6_BORROW_OUT=FALSE;
+						mTIM_6_BORROW_OUT=false;
 					}
 				}
 
@@ -2732,7 +2732,7 @@ void CMikie::Update(void)
 						if(mAUDIO_CURRENT[y]&0x80000000)
 						{
 							// Set carry out
-							mAUDIO_BORROW_OUT[y]=TRUE;
+							mAUDIO_BORROW_OUT[y]=true;
 		
 							// Reload if neccessary
 							if(mAUDIO_ENABLE_RELOAD[y])
@@ -2743,7 +2743,7 @@ void CMikie::Update(void)
 							else
 							{
 								// Set timer done
-								mAUDIO_TIMER_DONE[y]=TRUE;
+								mAUDIO_TIMER_DONE[y]=true;
 								mAUDIO_CURRENT[y]=0;
 							}
 
@@ -2769,17 +2769,17 @@ void CMikie::Update(void)
 						}
 						else
 						{
-							mAUDIO_BORROW_OUT[y]=FALSE;
+							mAUDIO_BORROW_OUT[y]=false;
 						}
 						// Set carry in as we did a count
-						mAUDIO_BORROW_IN[y]=TRUE;
+						mAUDIO_BORROW_IN[y]=true;
 					}
 					else
 					{
 						// Clear carry in as we didn't count
-						mAUDIO_BORROW_IN[y]=FALSE;
+						mAUDIO_BORROW_IN[y]=false;
 						// Clear carry out
-						mAUDIO_BORROW_OUT[y]=FALSE;
+						mAUDIO_BORROW_OUT[y]=false;
 					}
 
 					// Prediction for next timer event cycle number
@@ -2807,7 +2807,7 @@ void CMikie::Update(void)
 			// Update system IRQ status as a result of timer activity
 			// OR is required to ensure serial IRQ's are not masked accidentally
 		
-			gSystemIRQ=(mTimerStatusFlags)?TRUE:FALSE;
+			gSystemIRQ=(mTimerStatusFlags)?true:false;
 			if(gSystemIRQ && gSystemCPUSleep) { ClearCPUSleep(); /*puts("ARLARM"); */ }
 			//else if(gSuzieDoneTime) SetCPUSleep();
 

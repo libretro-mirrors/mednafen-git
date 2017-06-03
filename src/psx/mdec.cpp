@@ -63,8 +63,6 @@
 #include "mdec.h"
 #include "FastFIFO.h"
 
-#include <math.h>
-
 #if defined(__SSE2__) || (defined(ARCH_X86) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 9)))
 #include <xmmintrin.h>
 #include <emmintrin.h>

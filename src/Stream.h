@@ -29,13 +29,6 @@
 #include "gettext.h"
 #define _(String) gettext (String)
 
-#include <errno.h>
-
-#include <stdio.h>	// For SEEK_* defines, which we will use in Stream out of FORCE OF HABIT.
-#include <string.h>
-
-#include <string>
-
 /*
  The data read into the pointer passed to read*() functions should be considered undefined if the function throws
  or propagates an exception.

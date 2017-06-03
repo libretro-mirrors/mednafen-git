@@ -22,12 +22,8 @@
 #ifndef __MDFN_QTRECORD_H
 #define __MDFN_QTRECORD_H
 
-#include <mednafen/mednafen.h>
 #include <mednafen/FileStream.h>
 #include "resampler/resampler.h"
-
-#include <vector>
-#include <list>
 
 class QTRecord
 {

@@ -22,10 +22,6 @@
 #ifndef __MDFN_ERROR_H
 #define __MDFN_ERROR_H
 
-#include <errno.h>
-#include <string.h>
-#include <exception>
-
 #ifdef __cplusplus
 
 class ErrnoHolder;

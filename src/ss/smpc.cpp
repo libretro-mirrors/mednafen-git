@@ -33,6 +33,7 @@
 using namespace CDUtility;
 
 #include "smpc.h"
+#include "smpc_iodevice.h"
 #include "sound.h"
 #include "vdp1.h"
 #include "vdp2.h"
@@ -44,6 +45,7 @@ using namespace CDUtility;
 #include "input/mouse.h"
 #include "input/wheel.h"
 #include "input/mission.h"
+#include "input/gun.h"
 #include "input/keyboard.h"
 //#include "input/jpkeyboard.h"
 
@@ -208,6 +210,7 @@ static struct
  IODevice_Wheel wheel;
  IODevice_Mission mission{false};
  IODevice_Mission dualmission{true};
+ IODevice_Gun gun;
  IODevice_Keyboard keyboard;
 // IODevice_Keyboard jpkeyboard;
 } PossibleDevices[12];
@@ -222,21 +225,33 @@ static uint8* MiscInputPtr;
 IODevice::IODevice() { }
 IODevice::~IODevice() { }
 void IODevice::Power(void) { }
+void IODevice::TransformInput(uint8* const data, float gun_x_scale, float gun_x_offs) const { }
 void IODevice::UpdateInput(const uint8* data, const int32 time_elapsed) { }
 void IODevice::UpdateOutput(uint8* data) { }
 void IODevice::StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) { }
-uint8 IODevice::UpdateBus(const uint8 smpc_out, const uint8 smpc_out_asserted) { return smpc_out; }
+void IODevice::Draw(MDFN_Surface* surface, const MDFN_Rect& drect, const int32* lw, int ifield, float gun_x_scale, float gun_x_offs) const { }
+uint8 IODevice::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted) { return smpc_out; }
 
+void IODevice::ResetTS(void) { if(NextEventTS < SS_EVENT_DISABLED_TS) { NextEventTS -= LastTS; assert(NextEventTS >= 0); } LastTS = 0; }
+void IODevice::LineHook(const sscpu_timestamp_t timestamp, int32 out_line, int32 div, int32 coord_adj) { }
 //
 //
 
 static bool vb;
+static bool vsync;
 static sscpu_timestamp_t lastts;
 
-static void UpdateIOBus(unsigned port)
+static void UpdateIOBus(unsigned port, const sscpu_timestamp_t timestamp)
 {
- IOBusState[port] = IOPorts[port]->UpdateBus((DataOut[port][DirectModeEn[port]] | ~DataDir[port][DirectModeEn[port]]) & 0x7F, DataDir[port][DirectModeEn[port]]);
+ IOBusState[port] = IOPorts[port]->UpdateBus(timestamp, (DataOut[port][DirectModeEn[port]] | ~DataDir[port][DirectModeEn[port]]) & 0x7F, DataDir[port][DirectModeEn[port]]);
  assert(!(IOBusState[port] & 0x80));
+
+ {
+  bool tmp = (!(IOBusState[0] & 0x40) & ExLatchEn[0]) | (!(IOBusState[1] & 0x40) & ExLatchEn[1]);
+
+  SCU_SetInt(SCU_INT_PAD, tmp);
+  VDP2::SetExtLatch(timestamp, tmp);
+ }
 }
 
 static void MapPorts(void)
@@ -277,6 +292,13 @@ void SMPC_SetMultitap(unsigned sport, bool enabled)
  MapPorts();
 }
 
+void SMPC_SetCrosshairsColor(unsigned port, uint32 color)
+{
+ assert(port < 12);
+
+ PossibleDevices[port].gun.SetCrosshairsColor(color);
+}
+
 void SMPC_SetInput(unsigned port, const char* type, uint8* ptr)
 {
  assert(port < 13);
@@ -305,6 +327,8 @@ void SMPC_SetInput(unsigned port, const char* type, uint8* ptr)
   nd = &PossibleDevices[port].mission;
  else if(!strcmp(type, "dmission") || !strcmp(type, "dmissionwoa"))
   nd = &PossibleDevices[port].dualmission;
+ else if(!strcmp(type, "gun"))
+  nd = &PossibleDevices[port].gun;
  else if(!strcmp(type, "keyboard"))
   nd = &PossibleDevices[port].keyboard;
 // else if(!strcmp(type, "jpkeyboard"))
@@ -383,6 +407,7 @@ void SMPC_Init(const uint8 area_code_arg, const int32 master_clock_arg)
 
  ResetPending = false;
  vb = false;
+ vsync = false;
  lastts = 0;
 
  for(unsigned sp = 0; sp < 2; sp++)
@@ -460,7 +485,7 @@ void SMPC_Reset(bool powering_up)
   }
   DirectModeEn[port] = false;
   ExLatchEn[port] = false;
-  UpdateIOBus(port);
+  UpdateIOBus(port, SH7095_mem_timestamp);
  }
 
  ResetPending = false;
@@ -473,6 +498,16 @@ void SMPC_Reset(bool powering_up)
  ClockCounter = 0;
  //
  memset(&JRS, 0, sizeof(JRS));
+}
+
+void SMPC_TransformInput(void)
+{
+ float gun_x_scale, gun_x_offs;
+
+ VDP2::GetGunXTranslation(((PendingClockDivisor > 0) ? PendingClockDivisor : CurrentClockDivisor) == CLOCK_DIVISOR_28M, &gun_x_scale, &gun_x_offs);
+
+ for(unsigned vp = 0; vp < 12; vp++)
+  VirtualPorts[vp]->TransformInput(VirtualPortsDPtr[vp], gun_x_scale, gun_x_offs);
 }
 
 int32 SMPC_StartFrame(EmulateSpecStruct* espec)
@@ -494,6 +529,27 @@ int32 SMPC_StartFrame(EmulateSpecStruct* espec)
  CDB_SetClockRatio((1ULL << 32) * 11289600 * CurrentClockDivisor / MasterClock);
 
  return CurrentClockDivisor;
+}
+
+void SMPC_EndFrame(EmulateSpecStruct* espec, const sscpu_timestamp_t timestamp)
+{
+ for(unsigned i = 0; i < 2; i++)
+ {
+  if(SPorts[i])
+   SPorts[i]->ForceSubUpdate(timestamp);
+ }
+
+ if(!espec->skip)
+ {
+  float gun_x_scale, gun_x_offs;
+
+  VDP2::GetGunXTranslation(CurrentClockDivisor == CLOCK_DIVISOR_28M, &gun_x_scale, &gun_x_offs);
+
+  for(unsigned i = 0; i < 2; i++)
+  {
+   IOPorts[i]->Draw(espec->surface, espec->DisplayRect, espec->LineWidths, espec->InterlaceOn ? espec->InterlaceField : -1, gun_x_scale, gun_x_offs);
+  }
+ }
 }
 
 void SMPC_UpdateOutput(void)
@@ -573,35 +629,38 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
   //
   case 0x3A:
 	DataOut[0][1] = V & 0x7F;
-	UpdateIOBus(0);
+	UpdateIOBus(0, SH7095_mem_timestamp);
 	break;
 
   case 0x3B:
 	DataOut[1][1] = V & 0x7F;
-	UpdateIOBus(1);
+	UpdateIOBus(1, SH7095_mem_timestamp);
 	break;
 
   case 0x3C:
 	DataDir[0][1] = V & 0x7F;
-	UpdateIOBus(0);
+	UpdateIOBus(0, SH7095_mem_timestamp);
 	break;
 
   case 0x3D:
 	DataDir[1][1] = V & 0x7F;
-	UpdateIOBus(1);
+	UpdateIOBus(1, SH7095_mem_timestamp);
 	break;
 
   case 0x3E:
 	DirectModeEn[0] = (bool)(V & 0x1);
-	UpdateIOBus(0);
+	UpdateIOBus(0, SH7095_mem_timestamp);
 
 	DirectModeEn[1] = (bool)(V & 0x2);
-	UpdateIOBus(1);
+	UpdateIOBus(1, SH7095_mem_timestamp);
 	break;
 
   case 0x3F:
 	ExLatchEn[0] = (bool)(V & 0x1);
+	UpdateIOBus(0, SH7095_mem_timestamp);
+
 	ExLatchEn[1] = (bool)(V & 0x2);
+	UpdateIOBus(1, SH7095_mem_timestamp);
 	break;
 
   default:
@@ -612,6 +671,8 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
 
  if(PendingCommand >= 0)
   nt = timestamp + 1;
+
+ nt = std::min<sscpu_timestamp_t>(nt, std::min<sscpu_timestamp_t>(IOPorts[0]->NextEventTS, IOPorts[1]->NextEventTS));
 
  SS_SetEventNT(&events[SS_EVENT_SMPC], nt);
 }
@@ -669,6 +730,9 @@ uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A)
 
 void SMPC_ResetTS(void)
 {
+ for(unsigned p = 0; p < 2; p++)
+  IOPorts[p]->ResetTS();
+
  lastts = 0;
 }
 
@@ -678,7 +742,8 @@ void SMPC_ResetTS(void)
 			    if(!(cond))					\
 			    {						\
 			     SubPhase = __COUNTER__ - SubPhaseBias - 1;	\
-			     return timestamp + 1000;			\
+			     next_event_ts = timestamp + 1000;		\
+			     goto Breakout;				\
 			    }						\
 			   }
 
@@ -689,7 +754,8 @@ void SMPC_ResetTS(void)
 		 if(!(cond) && ClockCounter < 0)						\
 		 {										\
 		  SubPhase = __COUNTER__ - SubPhaseBias - 1;					\
-		  return timestamp + (-ClockCounter + SMPC_ClockRatio - 1) / SMPC_ClockRatio;	\
+		  next_event_ts = timestamp + (-ClockCounter + SMPC_ClockRatio - 1) / SMPC_ClockRatio;		\
+		  goto Breakout;								\
 		 }										\
 		 ClockCounter = 0;								\
 		}
@@ -701,7 +767,8 @@ void SMPC_ResetTS(void)
 		 if(ClockCounter < 0)								\
 		 {										\
 		  SubPhase = __COUNTER__ - SubPhaseBias - 1;					\
-		  return timestamp + (-ClockCounter + SMPC_ClockRatio - 1) / SMPC_ClockRatio;	\
+		  next_event_ts = timestamp + (-ClockCounter + SMPC_ClockRatio - 1) / SMPC_ClockRatio;		\
+		  goto Breakout;								\
 		 }										\
 		 /*printf("%f\n", (double)ClockCounter / (1LL << 32));*/			\
 		}										\
@@ -807,6 +874,12 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
  ClockCounter += clocks;
  RTC.ClockAccum += clocks;
  JRS.TimeCounter += clocks;
+
+ UpdateIOBus(0, timestamp);
+ UpdateIOBus(1, timestamp);
+
+ //
+ sscpu_timestamp_t next_event_ts;
 
  switch(SubPhase + SubPhaseBias)
  {
@@ -937,12 +1010,10 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
      SMPC_WAIT_UNTIL_COND(vb);
      SMPC_WAIT_UNTIL_COND(!vb);
      SMPC_WAIT_UNTIL_COND(vb);
+     SMPC_WAIT_UNTIL_COND(!PendingClockDivisor);
      SMPC_WAIT_UNTIL_COND(!vb);
      SMPC_WAIT_UNTIL_COND(vb);
-
-
-     //
-     SMPC_WAIT_UNTIL_COND(!PendingClockDivisor);
+     SMPC_WAIT_UNTIL_COND(vsync);
 
      // Send NMI to master SH-2
      CPU[0].SetNMI(false);
@@ -1027,7 +1098,7 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 	{													\
 	 DataDir[JRS.CurPort][0] = ((th >= 0) << 6) | ((tr >= 0) << 5);						\
 	 DataOut[JRS.CurPort][0] = (DataOut[JRS.CurPort][0] & 0x1F) | (((th) > 0) << 6) | (((tr) > 0) << 5);	\
-	 UpdateIOBus(JRS.CurPort);										\
+	 UpdateIOBus(JRS.CurPort, timestamp);									\
 	}
 
       JR_WAIT(!vb);
@@ -1086,7 +1157,7 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
        JRS.work[1] = JR_BS;
        JRS.ID1 |= ((((JRS.work[1] >> 3) | (JRS.work[1] >> 2)) & 1) << 1) | ((((JRS.work[1] >> 1) | (JRS.work[1] >> 0)) & 1) << 0);
 
-       //printf("%02x, %02x\n", JRS.work[0], JRS.work[1]);
+       //printf("%d ID1: %02x (%02x, %02x)\n", JRS.CurPort, JRS.ID1, JRS.work[0], JRS.work[1]);
 
        if(JRS.ID1 == 0xB)
        {
@@ -1230,7 +1301,7 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
        }
        else
        {
-	JR_WRNYB(0xF);
+	JR_WRNYB(JRS.ID1);
 	JR_WRNYB(0x0);
        }
        JR_EAT(26);
@@ -1287,9 +1358,12 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
    continue;
   }
  }
+ Breakout:;
+
+ return std::min<sscpu_timestamp_t>(next_event_ts, std::min<sscpu_timestamp_t>(IOPorts[0]->NextEventTS, IOPorts[1]->NextEventTS));
 }
 
-void SMPC_SetVB(sscpu_timestamp_t event_timestamp, bool vb_status)
+void SMPC_SetVBVS(sscpu_timestamp_t event_timestamp, bool vb_status, bool vsync_status)
 {
  if(vb ^ vb_status)
  {
@@ -1300,6 +1374,18 @@ void SMPC_SetVB(sscpu_timestamp_t event_timestamp, bool vb_status)
  }
 
  vb = vb_status;
+ vsync = vsync_status;
+}
+
+void SMPC_LineHook(sscpu_timestamp_t event_timestamp, int32 out_line, int32 div, int32 coord_adj)
+{
+ IOPorts[0]->LineHook(event_timestamp, out_line, div, coord_adj);
+ IOPorts[1]->LineHook(event_timestamp, out_line, div, coord_adj);
+ //
+ //
+ sscpu_timestamp_t nets = std::min<sscpu_timestamp_t>(events[SS_EVENT_SMPC].event_time, std::min<sscpu_timestamp_t>(IOPorts[0]->NextEventTS, IOPorts[1]->NextEventTS));
+
+ SS_SetEventNT(&events[SS_EVENT_SMPC], nets);
 }
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
@@ -1377,6 +1463,14 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
   IODevice_DualMissionNoAF_IDII
  },
 #endif
+
+ // Gun(Virtua Gun/Stunner)
+ {
+  "gun",
+  "Light Gun",
+  "Virtua Gun/Stunner.  Won't function properly if connected behind an emulated multitap.\nEmulation of the Saturn lightgun in Mednafen is not particularly accurate(in terms of low-level details), unless you happen to be in the habit of using your Saturn with a TV the size of a house and bright enough to start fires.",
+  IODevice_Gun_IDII
+ },
 
  // Keyboard (101-key US)
  {

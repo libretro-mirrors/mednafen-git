@@ -204,7 +204,8 @@ DIST_COMMON = $(srcdir)/cdplay/Makefile.am.inc \
 @WANT_NES_EMU_TRUE@	nes/input/oekakids.cpp \
 @WANT_NES_EMU_TRUE@	nes/input/ftrainer.cpp \
 @WANT_NES_EMU_TRUE@	nes/input/partytap.cpp \
-@WANT_NES_EMU_TRUE@	nes/input/toprider.cpp nes/input/bworld.cpp \
+@WANT_NES_EMU_TRUE@	nes/input/toprider.cpp \
+@WANT_NES_EMU_TRUE@	nes/input/bbattler2.cpp \
 @WANT_NES_EMU_TRUE@	nes/input/suborkb.cpp nes/ntsc/nes_ntsc.cpp
 @WANT_NGP_EMU_TRUE@am__append_17 = ngp
 @WANT_NGP_EMU_TRUE@am__append_18 = ngp/libngp.a
@@ -372,7 +373,7 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	nes/input/fkb.h nes/input/hypershot.cpp nes/input/mahjong.cpp \
 	nes/input/oekakids.cpp nes/input/ftrainer.cpp \
 	nes/input/partytap.cpp nes/input/toprider.cpp \
-	nes/input/bworld.cpp nes/input/suborkb.cpp \
+	nes/input/bbattler2.cpp nes/input/suborkb.cpp \
 	nes/ntsc/nes_ntsc.cpp pce/huc6280.cpp pce/pce.cpp pce/vce.cpp \
 	pce/input.cpp pce/huc.cpp pce/pcecd.cpp pce/hes.cpp \
 	pce/tsushin.cpp pce/mcgenjin.cpp pce/input/gamepad.cpp \
@@ -596,7 +597,7 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @WANT_NES_EMU_TRUE@	nes/input/ftrainer.$(OBJEXT) \
 @WANT_NES_EMU_TRUE@	nes/input/partytap.$(OBJEXT) \
 @WANT_NES_EMU_TRUE@	nes/input/toprider.$(OBJEXT) \
-@WANT_NES_EMU_TRUE@	nes/input/bworld.$(OBJEXT) \
+@WANT_NES_EMU_TRUE@	nes/input/bbattler2.$(OBJEXT) \
 @WANT_NES_EMU_TRUE@	nes/input/suborkb.$(OBJEXT) \
 @WANT_NES_EMU_TRUE@	nes/ntsc/nes_ntsc.$(OBJEXT)
 @WANT_PCE_EMU_TRUE@am__objects_10 = pce/huc6280.$(OBJEXT) \
@@ -1598,7 +1599,7 @@ nes/input/partytap.$(OBJEXT): nes/input/$(am__dirstamp) \
 	nes/input/$(DEPDIR)/$(am__dirstamp)
 nes/input/toprider.$(OBJEXT): nes/input/$(am__dirstamp) \
 	nes/input/$(DEPDIR)/$(am__dirstamp)
-nes/input/bworld.$(OBJEXT): nes/input/$(am__dirstamp) \
+nes/input/bbattler2.$(OBJEXT): nes/input/$(am__dirstamp) \
 	nes/input/$(DEPDIR)/$(am__dirstamp)
 nes/input/suborkb.$(OBJEXT): nes/input/$(am__dirstamp) \
 	nes/input/$(DEPDIR)/$(am__dirstamp)
@@ -2405,7 +2406,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@nes/boards/$(DEPDIR)/vrc6.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@nes/boards/$(DEPDIR)/vrc7.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@nes/input/$(DEPDIR)/arkanoid.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@nes/input/$(DEPDIR)/bworld.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@nes/input/$(DEPDIR)/bbattler2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@nes/input/$(DEPDIR)/cursor.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@nes/input/$(DEPDIR)/fkb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@nes/input/$(DEPDIR)/ftrainer.Po@am__quote@

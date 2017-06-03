@@ -20,9 +20,6 @@
 
 #include <mednafen/mednafen.h>
 #include <mednafen/state.h>
-#include <math.h>
-#include <assert.h>
-#include <limits.h>
 #include "OwlResampler.h"
 #include "../cputest/cputest.h"
 

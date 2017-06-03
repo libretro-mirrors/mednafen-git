@@ -17,11 +17,6 @@
 
 #include "../sexyal.h"
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <assert.h>
-
 #include <mednafen/Time.h>
 
 typedef struct
@@ -58,7 +53,7 @@ static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
   dstate->data_written_to = curtime - dstate->buffering_us;
  }
 
- *can_write = ret * device->format.channels * (device->format.sampformat >> 4);
+ *can_write = ret * device->format.channels * SAMPFORMAT_BYTES(device->format.sampformat);
 
  return(1);
 }
@@ -76,7 +71,7 @@ static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
   if(can_write > len) 
    can_write = len;
 
-  dstate->data_written_to += can_write / (device->format.channels * (device->format.sampformat >> 4)) * 1000000 / device->format.rate;
+  dstate->data_written_to += can_write / (device->format.channels * SAMPFORMAT_BYTES(device->format.sampformat)) * 1000000 / device->format.rate;
 
   len -= can_write;
 

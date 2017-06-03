@@ -213,7 +213,7 @@ static void LoadCommon(MDFNFILE *fp)
   sms.display     = DISPLAY_NTSC;
 
   sms.territory   = MDFN_GetSettingI("sms.territory");
-  sms.use_fm      = FALSE;
+  sms.use_fm      = false;
 
   Cart_Init(fp);
   Cart_LoadNV();
@@ -233,7 +233,7 @@ static void LoadCommon(MDFNFILE *fp)
   vdp_init(IS_SMS && sms.territory == TERRITORY_DOMESTIC);
   render_init();
 
-  MDFNGameInfo->GameSetMD5Valid = FALSE;
+  MDFNGameInfo->GameSetMD5Valid = false;
 
   uint32 sndclk;
 
@@ -467,7 +467,7 @@ MDFNGI EmulatedSMS =
  SMSSettings,
  0,
  0,
- FALSE, // Multires possible?
+ false, // Multires possible?
 
  256,   // lcm_width
  240,   // lcm_height
@@ -518,7 +518,7 @@ MDFNGI EmulatedGG =
  GGSettings,
  0,
  0,
- FALSE, // Multires possible?
+ false, // Multires possible?
 
  160,   // lcm_width
  144,   // lcm_height           

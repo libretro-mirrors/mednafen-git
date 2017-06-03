@@ -1,8 +1,6 @@
 #ifndef __MDFN_GIT_H
 #define __MDFN_GIT_H
 
-#include <string>
-
 #include "video.h"
 
 typedef struct

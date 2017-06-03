@@ -15,7 +15,7 @@ Mednafen's NES/Famicom emulation is based off of FCE Ultra.
   adapter, the Zapper, the Power Pad,  and the Arkanoid controller.  The 
   Famicom version of the Arkanoid controller, the "Space Shadow" gun, the 
   Famicom 4-player adapter, the Family Keyboard, the HyperShot controller, the Mahjong controller,
-  the Oeka Kids tablet, the Party Tap, the Family Trainer, and the Barcode World barcode
+  the Oeka Kids tablet, the Party Tap, the Family Trainer, and the Barcode Battler II barcode
   reader are also emulated.
  </p>
 

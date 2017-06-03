@@ -33,8 +33,6 @@
  #define AI_ADDRCONFIG	0x0400
 #endif
 
-#include <string>
-
 namespace Net
 {
 

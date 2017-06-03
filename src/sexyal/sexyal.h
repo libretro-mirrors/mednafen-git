@@ -16,10 +16,6 @@
  */
 
 #include <mednafen/types.h>
-#include <mednafen/math_ops.h>
-
-#include <vector>
-#include <string>
 
 struct SexyAL_DriverInfo
 {
@@ -27,20 +23,41 @@ struct SexyAL_DriverInfo
 	const char* short_name;
 	const char* name;
 	int type;
+	//bool lfn_lowlatency;	// Large frames(higher bit depth, more channels) needed for low latency(e.g. small period sizes)
 };
 
-typedef struct
+enum
+{
+ SEXYAL_ENC_PCM_UINT = 0x0,
+ SEXYAL_ENC_PCM_SINT = 0x1,
+ SEXYAL_ENC_PCM_FLOAT = 0xF
+};
+
+#define SAMPFORMAT_ENC(f) 	(((f) >>  0) &  0xF)
+#define SAMPFORMAT_BYTES(f) 	(((f) >>  4) &  0xF)
+#define SAMPFORMAT_BITS(f) 	(((f) >>  8) & 0xFF)
+#define SAMPFORMAT_LSBPAD(f)	(((f) >> 16) & 0xFF)
+#define SAMPFORMAT_BIGENDIAN(f) (bool)((f) & 0x80000000U)
+
+#define SAMPFORMAT_MAKE(encoding, bytes, bits, lsbpad, bigendian)	\
+	( (((encoding) & 0xF) << 0) |					\
+	  (((bytes) & 0xF) << 4) |					\
+	  (((bits) & 0xFF) << 8) |					\
+	  ((bool)((lsbpad) & 0xFF) << 16) | 				\
+	  ((uint32)(bool)(bigendian) << 31)				\
+	)
+
+struct SexyAL_format
 {
 	uint32 sampformat;
 	uint32 channels;	/* 1 = mono, 2 = stereo (actual device output channels will be 1<=ch<=8, however, 
 				   source format MUST be 1 or 2, since the converter can't handle other numbers of source
 				   channels) */
 	uint32 rate;		/* Number of frames per second, 22050, 44100, etc. */
-	bool revbyteorder;	/* 0 = Native(to CPU), 1 = Reversed.  PDP can go to hell. */
 	bool noninterleaved;	/* 0 = Interleaved multichannel audio(stereo), 1 = Non-Interleaved */
-} SexyAL_format;
+};
 
-typedef struct
+struct SexyAL_buffering
 {
 	/* Inputs(requested) and Outputs(obtained; dev-note: ms and period_us outputs calculated by core SexyAL code, not sound device interface/driver code) */
 	uint32 ms;		/* Desired buffer size, in milliseconds. */
@@ -63,25 +80,72 @@ typedef struct
 	//uint32 period_time;	/* If non-zero, specifies the desired period/fragment size, in frames. */
 	//uint32 size;		/* Shouldn't be filled in by application code. */
 	//uint32 latency;	/* Estimated latency between Write() and sound output, in frames. */
-} SexyAL_buffering;
+};
 
 
 // Bits 4 through 7 should reflect the byte count for each sample.
 // If the format is integer PCM, bit 0 should be 0 if unsigned, 1 if signed.
 enum
 {
- SEXYAL_FMT_PCMU8 = 0x10,
- SEXYAL_FMT_PCMS8 = 0x11,
- SEXYAL_FMT_PCMU16 = 0x20,
- SEXYAL_FMT_PCMS16 = 0x21,
+ SEXYAL_FMT_PCMU8  = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_UINT, 1,  8, 0, false),
+ SEXYAL_FMT_PCMS8  = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_SINT, 1,  8, 0, false),
 
- SEXYAL_FMT_PCMU24 = 0x40,
- SEXYAL_FMT_PCMS24 = 0x41,
+ SEXYAL_FMT_PCMU16_LE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_UINT, 2, 16, 0, false),
+ SEXYAL_FMT_PCMS16_LE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_SINT, 2, 16, 0, false),
+ SEXYAL_FMT_PCMU16_BE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_UINT, 2, 16, 0, true),
+ SEXYAL_FMT_PCMS16_BE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_SINT, 2, 16, 0, true),
 
- SEXYAL_FMT_PCMU32 = 0x42,
- SEXYAL_FMT_PCMS32 = 0x43,
+ SEXYAL_FMT_PCMU24_LE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_UINT, 4, 24, 0, false),
+ SEXYAL_FMT_PCMS24_LE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_SINT, 4, 24, 0, false),
+ SEXYAL_FMT_PCMU24_BE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_UINT, 4, 24, 0, true),
+ SEXYAL_FMT_PCMS24_BE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_SINT, 4, 24, 0, true),
 
- SEXYAL_FMT_PCMFLOAT = 0x4F // 32-bit floating point
+ SEXYAL_FMT_PCMU32_LE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_UINT, 4, 32, 0, false),
+ SEXYAL_FMT_PCMS32_LE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_SINT, 4, 32, 0, false),
+ SEXYAL_FMT_PCMU32_BE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_UINT, 4, 32, 0, true),
+ SEXYAL_FMT_PCMS32_BE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_SINT, 4, 32, 0, true),
+
+ SEXYAL_FMT_PCMFLOAT_LE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_FLOAT, 4, 32, 0, false),
+ SEXYAL_FMT_PCMFLOAT_BE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_FLOAT, 4, 32, 0, true),
+
+ SEXYAL_FMT_PCMU18_3BYTE_LE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_UINT, 3, 18, 0, false),
+ SEXYAL_FMT_PCMS18_3BYTE_LE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_SINT, 3, 18, 0, false),
+ SEXYAL_FMT_PCMU18_3BYTE_BE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_UINT, 3, 18, 0, true),
+ SEXYAL_FMT_PCMS18_3BYTE_BE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_SINT, 3, 18, 0, true),
+
+ SEXYAL_FMT_PCMU20_3BYTE_LE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_UINT, 3, 20, 0, false),
+ SEXYAL_FMT_PCMS20_3BYTE_LE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_SINT, 3, 20, 0, false),
+ SEXYAL_FMT_PCMU20_3BYTE_BE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_UINT, 3, 20, 0, true),
+ SEXYAL_FMT_PCMS20_3BYTE_BE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_SINT, 3, 20, 0, true),
+
+ SEXYAL_FMT_PCMU24_3BYTE_LE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_UINT, 3, 24, 0, false),
+ SEXYAL_FMT_PCMS24_3BYTE_LE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_SINT, 3, 24, 0, false),
+ SEXYAL_FMT_PCMU24_3BYTE_BE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_UINT, 3, 24, 0, true),
+ SEXYAL_FMT_PCMS24_3BYTE_BE = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_SINT, 3, 24, 0, true),
+
+#ifdef MSB_FIRST
+ SEXYAL_FMT_PCMU16 = SEXYAL_FMT_PCMU16_BE,
+ SEXYAL_FMT_PCMS16 = SEXYAL_FMT_PCMS16_BE,
+
+ SEXYAL_FMT_PCMU24 = SEXYAL_FMT_PCMU24_BE,
+ SEXYAL_FMT_PCMS24 = SEXYAL_FMT_PCMS24_BE,
+
+ SEXYAL_FMT_PCMU32 = SEXYAL_FMT_PCMU32_BE,
+ SEXYAL_FMT_PCMS32 = SEXYAL_FMT_PCMS32_BE,
+
+ SEXYAL_FMT_PCMFLOAT = SEXYAL_FMT_PCMFLOAT_BE
+#else
+ SEXYAL_FMT_PCMU16 = SEXYAL_FMT_PCMU16_LE,
+ SEXYAL_FMT_PCMS16 = SEXYAL_FMT_PCMS16_LE,
+
+ SEXYAL_FMT_PCMU24 = SEXYAL_FMT_PCMU24_LE,
+ SEXYAL_FMT_PCMS24 = SEXYAL_FMT_PCMS24_LE,
+
+ SEXYAL_FMT_PCMU32 = SEXYAL_FMT_PCMU32_LE,
+ SEXYAL_FMT_PCMS32 = SEXYAL_FMT_PCMS32_LE,
+
+ SEXYAL_FMT_PCMFLOAT = SEXYAL_FMT_PCMFLOAT_LE
+#endif
 };
 
 typedef struct __SexyAL_device
@@ -140,6 +204,7 @@ enum
 {
  SEXYAL_TYPE_OSSDSP = 0x001,
  SEXYAL_TYPE_ALSA = 0x002,
+ SEXYAL_TYPE_OPENBSD = 0x003,
 
  SEXYAL_TYPE_DIRECTSOUND = 0x010,
  SEXYAL_TYPE_WASAPI = 0x011,
@@ -159,25 +224,16 @@ enum
  SEXYAL_TYPE_DUMMY = 0x1FF
 };
 
-class SexyAL
-{
-	public:
+SexyAL_device* SexyAL_Open(const char *id, SexyAL_format *, SexyAL_buffering *buffering, int type);
+SexyAL_enumdevice* SexyAL_EnumerateDevices(int type);
 
-	SexyAL();
-	~SexyAL();
+//
+// Returns a list(vector :p) describing drivers that are compiled-in.
+//
+std::vector<SexyAL_DriverInfo> SexyAL_GetDriverList(void);
 
-	SexyAL_device* Open(const char *id, SexyAL_format *, SexyAL_buffering *buffering, int type);
-
-	SexyAL_enumdevice* EnumerateDevices(int type);
-
-	//
-	// Returns a list(vector :p) describing drivers that are compiled-in.
-	//
-	std::vector<SexyAL_DriverInfo> GetDriverList(void);
-
-	//
-	// To find the default driver, set name to NULL or "default"
-	//
-	bool FindDriver(SexyAL_DriverInfo* out_di, const char* name);
-};
+//
+// To find the default driver, set name to NULL or "default"
+//
+bool SexyAL_FindDriver(SexyAL_DriverInfo* out_di, const char* name);
 

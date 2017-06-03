@@ -19,6 +19,8 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+// TODO: How to handle di/dlen overflow in UTF conversion functions?
+
 // If using a codepoint other than 0xFFFD for bad bytes, remember to adjust the string buffer
 // allocation multipliers in the *_to_UTF8() and *_to_UTF16() functions.
 

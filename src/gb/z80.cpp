@@ -371,8 +371,8 @@ static bool EI_Delayed;
 
 void GBZ80_Interrupt(int which)
 {
- IFF = FALSE;
- EI_Delayed = FALSE;
+ IFF = false;
+ EI_Delayed = false;
 
  register_IF &= ~(1 << which);
 
@@ -389,11 +389,11 @@ void GBZ80_Reset(void)
   DE.W = 0x00d8;
   HL.W = 0x014d;
   PC.W = 0x0100;
-  IFF = FALSE;
+  IFF = false;
 
-  EI_Delayed = FALSE;
-  RepeatNextByte = FALSE;
-  InHALT = FALSE;
+  EI_Delayed = false;
+  RepeatNextByte = false;
+  InHALT = false;
 
   if(gbCgbMode) 
   {
@@ -418,7 +418,7 @@ int GBZ80_RunOp(void)
 
  // HALT will be exited even when interrupts are disabled by IFF
  if(register_IF & register_IE)
-  InHALT = FALSE;
+  InHALT = false;
 
  if(IFF)
  {
@@ -436,8 +436,8 @@ int GBZ80_RunOp(void)
 
  if(EI_Delayed)
  {
-  IFF = TRUE;
-  EI_Delayed = FALSE;
+  IFF = true;
+  EI_Delayed = false;
  }
 
  if(InHALT)
@@ -447,7 +447,7 @@ int GBZ80_RunOp(void)
 
  if(RepeatNextByte)
  {
-  RepeatNextByte = FALSE;
+  RepeatNextByte = false;
   PC.W--;
  }
 

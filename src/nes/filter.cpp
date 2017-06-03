@@ -29,7 +29,6 @@
 #define FIR_TABLE_EXTRA_BITS_S	"3"
 
 #include <mednafen/mednafen.h>
-#include <math.h>
 #include "filter.h"
 #include <mednafen/cputest/cputest.h>
 

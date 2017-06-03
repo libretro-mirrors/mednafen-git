@@ -426,7 +426,7 @@ INLINE void HuC6280::BBSi(const uint8 val, const unsigned int bitto)
 
 void HuC6280::Reset(void)
 {
- timer_inreload = FALSE;
+ timer_inreload = false;
  timer_div = 1024;
  timer_load = 0;
  timer_value = 0;
@@ -538,7 +538,7 @@ void HuC6280::TimerSync(void)
   {
    timer_value = timer_load;
    reload_div = reload_div - 1; //1023;
-   timer_inreload = FALSE;
+   timer_inreload = false;
   }
   else
   {
@@ -547,7 +547,7 @@ void HuC6280::TimerSync(void)
     timer_value --;
     if(timer_value < 0)
     {
-     timer_inreload = TRUE;
+     timer_inreload = true;
      reload_div = 1;
      IRQBegin(IQTIMER);
     }

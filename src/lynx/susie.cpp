@@ -157,12 +157,12 @@ void CSusie::Reset(void)
 	mSPRSYS_Mathbit=0;
 	mSPRSYS_MathInProgress=0;
 
-	mSUZYBUSEN=FALSE;
+	mSUZYBUSEN=false;
 
 	mSPRINIT.Byte=0;
 
-	mSPRGO=FALSE;
-	mEVERON=FALSE;
+	mSPRGO=false;
+	mEVERON=false;
 
 	for(int loop=0;loop<16;loop++) mPenIndex[loop]=loop;
 
@@ -175,7 +175,7 @@ void CSusie::Reset(void)
 
 void CSusie::DoMathMultiply(void)
 {
-	mSPRSYS_Mathbit=FALSE;
+	mSPRSYS_Mathbit=false;
 
 	// Multiplies with out sign or accumulate take 44 ticks to complete.
 	// Multiplies with sign and accumulate take 54 ticks to complete. 
@@ -221,11 +221,11 @@ void CSusie::DoMathMultiply(void)
 		if((tmp&0x80000000)!=(mMATHJKLM.Long&0x80000000))
 		{
 			TRACE_SUSIE0("DoMathMultiply() - OVERFLOW DETECTED");
-//			mSPRSYS_Mathbit=TRUE;
+//			mSPRSYS_Mathbit=true;
 		}
 		else
 		{
-//			mSPRSYS_Mathbit=FALSE;
+//			mSPRSYS_Mathbit=false;
 		}
 		// Save accumulated result
 		mMATHJKLM.Long=tmp;
@@ -238,7 +238,7 @@ void CSusie::DoMathMultiply(void)
 
 void CSusie::DoMathDivide(void)
 {
-	mSPRSYS_Mathbit=FALSE;
+	mSPRSYS_Mathbit=false;
 
 	//
 	// Divides take 176 + 14*N ticks
@@ -263,7 +263,7 @@ void CSusie::DoMathDivide(void)
 		TRACE_SUSIE0("DoMathDivide() - DIVIDE BY ZERO ERROR");
 		mMATHABCD.Long=0xffffffff;
 		mMATHJKLM.Long=0;
-		mSPRSYS_Mathbit=TRUE;
+		mSPRSYS_Mathbit=true;
 	}
 	TRACE_SUSIE2("DoMathDivide() EFGH=$%08x / NP=%04x",mMATHEFGH.Long,mMATHNP.Long);
 	TRACE_SUSIE1("DoMathDivide() Results (div) ABCD=$%08x",mMATHABCD.Long);
@@ -311,7 +311,7 @@ uint32 CSusie::PaintSprites(void)
 		{
 			TRACE_SUSIE0("PaintSprites() mSCBNEXT==0 - FINISHED");
 			mSPRSYS_Status=0;	// Engine has finished
-			mSPRGO=FALSE;
+			mSPRGO=false;
 			break;
 		}
 		else
@@ -383,9 +383,9 @@ uint32 CSusie::PaintSprites(void)
 
 			cycles_used+=6*SPR_RDWR_CYC;
 
-			bool enable_sizing=FALSE;
-			bool enable_stretch=FALSE;
-			bool enable_tilt=FALSE;
+			bool enable_sizing=false;
+			bool enable_stretch=false;
+			bool enable_tilt=false;
 		
 			// Optional section defined by reload type in Control 1
 
@@ -394,7 +394,7 @@ uint32 CSusie::PaintSprites(void)
 			{
 				case 1:
 					TRACE_SUSIE0("PaintSprites() Sizing Enabled");
-					enable_sizing=TRUE;
+					enable_sizing=true;
 
 					mSPRHSIZ.Val16=RAM_PEEKW(mTMPADR.Val16);	// Sprite Horizontal size
 					mTMPADR.Val16+=2;
@@ -408,8 +408,8 @@ uint32 CSusie::PaintSprites(void)
 				case 2:
 					TRACE_SUSIE0("PaintSprites() Sizing Enabled");
 					TRACE_SUSIE0("PaintSprites() Stretch Enabled");
-					enable_sizing=TRUE;
-					enable_stretch=TRUE;
+					enable_sizing=true;
+					enable_stretch=true;
 
 					mSPRHSIZ.Val16=RAM_PEEKW(mTMPADR.Val16);	// Sprite Horizontal size
 					mTMPADR.Val16+=2;
@@ -427,9 +427,9 @@ uint32 CSusie::PaintSprites(void)
 					TRACE_SUSIE0("PaintSprites() Sizing Enabled");
 					TRACE_SUSIE0("PaintSprites() Stretch Enabled");
 					TRACE_SUSIE0("PaintSprites() Tilt Enabled");
-					enable_sizing=TRUE;
-					enable_stretch=TRUE;
-					enable_tilt=TRUE;
+					enable_sizing=true;
+					enable_stretch=true;
+					enable_tilt=true;
 
 					mSPRHSIZ.Val16=RAM_PEEKW(mTMPADR.Val16);	// Sprite Horizontal size
 					mTMPADR.Val16+=2;
@@ -490,7 +490,7 @@ uint32 CSusie::PaintSprites(void)
 			TRACE_SUSIE2("PaintSprites() screen_v_start $%04x screen_v_end $%04x",screen_v_start,screen_v_end);
 			TRACE_SUSIE2("PaintSprites() world_h_mid    $%04x world_v_mid  $%04x",world_h_mid,world_v_mid);
 
-			bool superclip=FALSE;
+			bool superclip=false;
 			int quadrant=0;
 			int hsign,vsign;
 
@@ -507,7 +507,7 @@ uint32 CSusie::PaintSprites(void)
 			// Check ref is inside screen area
 
 			//if((int16)mHPOSSTRT.Val16<screen_h_start || (int16)mHPOSSTRT.Val16>=screen_h_end ||
-			//	(int16)mVPOSSTRT.Val16<screen_v_start || (int16)mVPOSSTRT.Val16>=screen_v_end) superclip=TRUE;
+			//	(int16)mVPOSSTRT.Val16<screen_v_start || (int16)mVPOSSTRT.Val16>=screen_v_end) superclip=true;
 
 			TRACE_SUSIE1("PaintSprites() Superclip=%d",superclip);
 
@@ -532,7 +532,7 @@ uint32 CSusie::PaintSprites(void)
 				int sprite_v=mVPOSSTRT.Val16;
 				int sprite_h=mHPOSSTRT.Val16;
 
-				bool render=FALSE;
+				bool render=false;
 
 				// Set quadrand multipliers
 				hsign=(quadrant==0 || quadrant==1)?1:-1;
@@ -589,22 +589,22 @@ uint32 CSusie::PaintSprites(void)
 					switch(modquad)
 					{
 						case 3:
-							if((sprite_h>=screen_h_start || sprite_h<world_h_mid) && (sprite_v<screen_v_end   || sprite_v>world_v_mid)) render=TRUE;
+							if((sprite_h>=screen_h_start || sprite_h<world_h_mid) && (sprite_v<screen_v_end   || sprite_v>world_v_mid)) render=true;
 							break;
 						case 2:
-							if((sprite_h>=screen_h_start || sprite_h<world_h_mid) && (sprite_v>=screen_v_start || sprite_v<world_v_mid)) render=TRUE;
+							if((sprite_h>=screen_h_start || sprite_h<world_h_mid) && (sprite_v>=screen_v_start || sprite_v<world_v_mid)) render=true;
 							break;
 						case 1:
-							if((sprite_h<screen_h_end   || sprite_h>world_h_mid) && (sprite_v>=screen_v_start || sprite_v<world_v_mid)) render=TRUE;
+							if((sprite_h<screen_h_end   || sprite_h>world_h_mid) && (sprite_v>=screen_v_start || sprite_v<world_v_mid)) render=true;
 							break;
 						default:
-							if((sprite_h<screen_h_end   || sprite_h>world_h_mid) && (sprite_v<screen_v_end   || sprite_v>world_v_mid)) render=TRUE;
+							if((sprite_h<screen_h_end   || sprite_h>world_h_mid) && (sprite_v<screen_v_end   || sprite_v>world_v_mid)) render=true;
 							break;
 					}
 				}
 				else
 				{
-					render=TRUE;
+					render=true;
 				}
 
 				// Is this quad to be rendered ??
@@ -688,7 +688,7 @@ uint32 CSusie::PaintSprites(void)
 
 								// Initialise our line
 								LineInit(voff);
-								onscreen=FALSE;
+								onscreen=false;
 
 								// Now render an individual destination line
 								while((pixel=LineGetPixel())!=LINE_END)
@@ -704,8 +704,8 @@ uint32 CSusie::PaintSprites(void)
 										if(hoff>=0 && hoff<SCREEN_WIDTH)
 										{
 											ProcessPixel(hoff,pixel);
-											onscreen = TRUE;
-											everonscreen = TRUE;
+											onscreen = true;
+											everonscreen = true;
 										}
 										else
 										{
@@ -812,7 +812,7 @@ uint32 CSusie::PaintSprites(void)
 //		if(mSPRSYS.Read.StopOnCurrent) 
 //		{
 //			mSPRSYS.Read.Status=0;	// Engine has finished
-//			mSPRGO=FALSE;
+//			mSPRGO=false;
 //			break;
 //		}
 
@@ -820,7 +820,7 @@ uint32 CSusie::PaintSprites(void)
 		if(sprcount>4096)
 		{
 			// Stop the system, otherwise we may just come straight back in.....
-			gSystemHalt=TRUE;
+			gSystemHalt=true;
 			// Display warning message
 			//gError->Warning("CSusie:PaintSprites(): Single draw sprite limit exceeded (>4096). The SCB is most likely looped back on itself. Reset/Exit is recommended");
 			// Signal error to the caller
@@ -1624,7 +1624,7 @@ void CSusie::Poke(uint32 addr,uint8 data)
 		case (MATHM&0xff):
 			mMATHJKLM.Bytes.M=data;
 			mMATHJKLM.Bytes.L=0;
-			mSPRSYS_Mathbit=FALSE;
+			mSPRSYS_Mathbit=false;
 			TRACE_SUSIE2("Poke(MATHM,%02x) at PC=$%04x",data,mSystem.mCpu->GetPC());
 			break;
 		case (MATHL&0xff):

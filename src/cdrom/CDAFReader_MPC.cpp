@@ -20,7 +20,6 @@
 */
 
 #include <mednafen/mednafen.h>
-#include <math.h>
 #include "CDAFReader.h"
 #include "CDAFReader_MPC.h"
 

@@ -1,8 +1,6 @@
 #ifndef __MDFN_NES_SOUND_H
 #define __MDFN_NES_SOUND_H
 
-#include <vector>
-
 namespace MDFN_IEN_NES
 {
 

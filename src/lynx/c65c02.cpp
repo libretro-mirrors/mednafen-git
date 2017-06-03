@@ -12,8 +12,8 @@ void C65C02::Update(void)
 			PUSH(mPC&0xff);
 			PUSH(PS()&0xef);		// Clear B flag on stack
 
-			mI=TRUE;				// Stop further interrupts
-			mD=FALSE;				// Clear decimal mode
+			mI=true;				// Stop further interrupts
+			mD=false;				// Clear decimal mode
 
 			// Pick up the new PC
 			mPC=CPU_PEEKW(IRQ_VECTOR);

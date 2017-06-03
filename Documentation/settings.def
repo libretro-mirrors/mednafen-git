@@ -7613,7 +7613,7 @@ oekakids
 Oeka Kids Tablet
 
 bworld
-Barcode World Scanner
+Barcode Battler II
 
 nes.input.fcexp.arkanoid.button
 (nil) MDFNSF_SUPPRESS_DOC 
@@ -31872,16 +31872,19 @@ MDFNST_ENUM
 default
 
 
-9
+10
 default
 Default
 Selects the default sound driver.
 alsa
 ALSA
 The default for Linux(if available).
+openbsd
+OpenBSD Audio
+The default for OpenBSD.
 oss
 Open Sound System
-The default for non-Linux UN*X/POSIX/BSD systems, or anywhere ALSA is unavailable. If the ALSA driver gives you problems, you can try using this one instead.\n\nIf you are using OSSv4 or newer, you should edit \"/usr/lib/oss/conf/osscore.conf\", uncomment the max_intrate= line, and change the value from 100(default) to 1000(or higher if you know what you\'re doing), and restart OSS. Otherwise, performance will be poor, and the sound buffer size in Mednafen will be orders of magnitude larger than specified.\n\nIf the sound buffer size is still excessively larger than what is specified via the \"sound.buffer_time\" setting, you can try setting \"sound.period_time\" to 2666, and as a last resort, 5333, to work around a design flaw/limitation/choice in the OSS API and OSS implementation.
+The default for non-Linux UN*X/POSIX/BSD(other than OpenBSD) systems, or anywhere ALSA is unavailable. If the ALSA driver gives you problems, you can try using this one instead.\n\nIf you are using OSSv4 or newer, you should edit \"/usr/lib/oss/conf/osscore.conf\", uncomment the max_intrate= line, and change the value from 100(default) to 1000(or higher if you know what you\'re doing), and restart OSS. Otherwise, performance will be poor, and the sound buffer size in Mednafen will be orders of magnitude larger than specified.\n\nIf the sound buffer size is still excessively larger than what is specified via the \"sound.buffer_time\" setting, you can try setting \"sound.period_time\" to 2666, and as a last resort, 5333, to work around a design flaw/limitation/choice in the OSS API and OSS implementation.
 wasapish
 WASAPI(Shared Mode)
 The default when it\'s available(running on Microsoft Windows Vista and newer).
@@ -32148,7 +32151,7 @@ MDFNST_ENUM
 gamepad
 
 
-8
+9
 none
 none
 
@@ -32170,6 +32173,9 @@ Mission Stick
 dmission
 Dual Mission
 Dual Mission Sticks, useful for \"Panzer Dragoon Zwei\".  With 30 inputs to map, don\'t get distracted by..LOOK A LOBSTER!
+gun
+Light Gun
+Virtua Gun/Stunner.  Won\'t function properly if connected behind an emulated multitap.\nEmulation of the Saturn lightgun in Mednafen is not particularly accurate(in terms of low-level details), unless you happen to be in the habit of using your Saturn with a TV the size of a house and bright enough to start fires.
 keyboard
 Keyboard (US)
 101-key US keyboard.\nEmulated keyboard key state is not updated unless input grabbing(by default, mapped to CTRL+SHIFT+Menu) is toggled on; refer to the main documentation for details.
@@ -32721,6 +32727,60 @@ MDFNST_STRING
 keyboard 262
 
 
+0
+ss.input.port1.gun.offscreen_shot
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Light Gun: Offscreen Shot(Simulated)
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port1.gun.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Light Gun: START
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port1.gun.trigger
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Light Gun: Trigger
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port1.gun.x_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Light Gun: X Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008000
+
+
+0
+ss.input.port1.gun.y_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 1, Light Gun: Y Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008001
+
+
+0
+ss.input.port1.gun_chairs
+
+Crosshairs color for lightgun on virtual port 1.
+A value of 0x1000000 disables crosshair drawing.
+MDFNST_UINT
+0xFF0000
+0x000000
+0x1000000
 0
 ss.input.port1.keyboard.0
 (nil) MDFNSF_SUPPRESS_DOC 
@@ -33990,7 +34050,7 @@ MDFNST_ENUM
 gamepad
 
 
-8
+9
 none
 none
 
@@ -34012,6 +34072,9 @@ Mission Stick
 dmission
 Dual Mission
 Dual Mission Sticks, useful for \"Panzer Dragoon Zwei\".  With 30 inputs to map, don\'t get distracted by..LOOK A LOBSTER!
+gun
+Light Gun
+Virtua Gun/Stunner.  Won\'t function properly if connected behind an emulated multitap.\nEmulation of the Saturn lightgun in Mednafen is not particularly accurate(in terms of low-level details), unless you happen to be in the habit of using your Saturn with a TV the size of a house and bright enough to start fires.
 keyboard
 Keyboard (US)
 101-key US keyboard.\nEmulated keyboard key state is not updated unless input grabbing(by default, mapped to CTRL+SHIFT+Menu) is toggled on; refer to the main documentation for details.
@@ -34563,6 +34626,60 @@ MDFNST_STRING
 
 
 
+0
+ss.input.port10.gun.offscreen_shot
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Light Gun: Offscreen Shot(Simulated)
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port10.gun.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Light Gun: START
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port10.gun.trigger
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Light Gun: Trigger
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port10.gun.x_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Light Gun: X Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008000
+
+
+0
+ss.input.port10.gun.y_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 10, Light Gun: Y Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008001
+
+
+0
+ss.input.port10.gun_chairs
+
+Crosshairs color for lightgun on virtual port 10.
+A value of 0x1000000 disables crosshair drawing.
+MDFNST_UINT
+0x00FF80
+0x000000
+0x1000000
 0
 ss.input.port10.keyboard.0
 (nil) MDFNSF_SUPPRESS_DOC 
@@ -35832,7 +35949,7 @@ MDFNST_ENUM
 gamepad
 
 
-8
+9
 none
 none
 
@@ -35854,6 +35971,9 @@ Mission Stick
 dmission
 Dual Mission
 Dual Mission Sticks, useful for \"Panzer Dragoon Zwei\".  With 30 inputs to map, don\'t get distracted by..LOOK A LOBSTER!
+gun
+Light Gun
+Virtua Gun/Stunner.  Won\'t function properly if connected behind an emulated multitap.\nEmulation of the Saturn lightgun in Mednafen is not particularly accurate(in terms of low-level details), unless you happen to be in the habit of using your Saturn with a TV the size of a house and bright enough to start fires.
 keyboard
 Keyboard (US)
 101-key US keyboard.\nEmulated keyboard key state is not updated unless input grabbing(by default, mapped to CTRL+SHIFT+Menu) is toggled on; refer to the main documentation for details.
@@ -36405,6 +36525,60 @@ MDFNST_STRING
 
 
 
+0
+ss.input.port11.gun.offscreen_shot
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Light Gun: Offscreen Shot(Simulated)
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port11.gun.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Light Gun: START
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port11.gun.trigger
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Light Gun: Trigger
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port11.gun.x_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Light Gun: X Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008000
+
+
+0
+ss.input.port11.gun.y_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 11, Light Gun: Y Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008001
+
+
+0
+ss.input.port11.gun_chairs
+
+Crosshairs color for lightgun on virtual port 11.
+A value of 0x1000000 disables crosshair drawing.
+MDFNST_UINT
+0x8080FF
+0x000000
+0x1000000
 0
 ss.input.port11.keyboard.0
 (nil) MDFNSF_SUPPRESS_DOC 
@@ -37674,7 +37848,7 @@ MDFNST_ENUM
 gamepad
 
 
-8
+9
 none
 none
 
@@ -37696,6 +37870,9 @@ Mission Stick
 dmission
 Dual Mission
 Dual Mission Sticks, useful for \"Panzer Dragoon Zwei\".  With 30 inputs to map, don\'t get distracted by..LOOK A LOBSTER!
+gun
+Light Gun
+Virtua Gun/Stunner.  Won\'t function properly if connected behind an emulated multitap.\nEmulation of the Saturn lightgun in Mednafen is not particularly accurate(in terms of low-level details), unless you happen to be in the habit of using your Saturn with a TV the size of a house and bright enough to start fires.
 keyboard
 Keyboard (US)
 101-key US keyboard.\nEmulated keyboard key state is not updated unless input grabbing(by default, mapped to CTRL+SHIFT+Menu) is toggled on; refer to the main documentation for details.
@@ -38247,6 +38424,60 @@ MDFNST_STRING
 
 
 
+0
+ss.input.port12.gun.offscreen_shot
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Light Gun: Offscreen Shot(Simulated)
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port12.gun.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Light Gun: START
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port12.gun.trigger
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Light Gun: Trigger
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port12.gun.x_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Light Gun: X Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008000
+
+
+0
+ss.input.port12.gun.y_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 12, Light Gun: Y Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008001
+
+
+0
+ss.input.port12.gun_chairs
+
+Crosshairs color for lightgun on virtual port 12.
+A value of 0x1000000 disables crosshair drawing.
+MDFNST_UINT
+0xFF8080
+0x000000
+0x1000000
 0
 ss.input.port12.keyboard.0
 (nil) MDFNSF_SUPPRESS_DOC 
@@ -39516,7 +39747,7 @@ MDFNST_ENUM
 gamepad
 
 
-8
+9
 none
 none
 
@@ -39538,6 +39769,9 @@ Mission Stick
 dmission
 Dual Mission
 Dual Mission Sticks, useful for \"Panzer Dragoon Zwei\".  With 30 inputs to map, don\'t get distracted by..LOOK A LOBSTER!
+gun
+Light Gun
+Virtua Gun/Stunner.  Won\'t function properly if connected behind an emulated multitap.\nEmulation of the Saturn lightgun in Mednafen is not particularly accurate(in terms of low-level details), unless you happen to be in the habit of using your Saturn with a TV the size of a house and bright enough to start fires.
 keyboard
 Keyboard (US)
 101-key US keyboard.\nEmulated keyboard key state is not updated unless input grabbing(by default, mapped to CTRL+SHIFT+Menu) is toggled on; refer to the main documentation for details.
@@ -40089,6 +40323,60 @@ MDFNST_STRING
 
 
 
+0
+ss.input.port2.gun.offscreen_shot
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Light Gun: Offscreen Shot(Simulated)
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port2.gun.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Light Gun: START
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port2.gun.trigger
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Light Gun: Trigger
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port2.gun.x_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Light Gun: X Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008000
+
+
+0
+ss.input.port2.gun.y_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 2, Light Gun: Y Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008001
+
+
+0
+ss.input.port2.gun_chairs
+
+Crosshairs color for lightgun on virtual port 2.
+A value of 0x1000000 disables crosshair drawing.
+MDFNST_UINT
+0x00FF00
+0x000000
+0x1000000
 0
 ss.input.port2.keyboard.0
 (nil) MDFNSF_SUPPRESS_DOC 
@@ -41358,7 +41646,7 @@ MDFNST_ENUM
 gamepad
 
 
-8
+9
 none
 none
 
@@ -41380,6 +41668,9 @@ Mission Stick
 dmission
 Dual Mission
 Dual Mission Sticks, useful for \"Panzer Dragoon Zwei\".  With 30 inputs to map, don\'t get distracted by..LOOK A LOBSTER!
+gun
+Light Gun
+Virtua Gun/Stunner.  Won\'t function properly if connected behind an emulated multitap.\nEmulation of the Saturn lightgun in Mednafen is not particularly accurate(in terms of low-level details), unless you happen to be in the habit of using your Saturn with a TV the size of a house and bright enough to start fires.
 keyboard
 Keyboard (US)
 101-key US keyboard.\nEmulated keyboard key state is not updated unless input grabbing(by default, mapped to CTRL+SHIFT+Menu) is toggled on; refer to the main documentation for details.
@@ -41931,6 +42222,60 @@ MDFNST_STRING
 
 
 
+0
+ss.input.port3.gun.offscreen_shot
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Light Gun: Offscreen Shot(Simulated)
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port3.gun.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Light Gun: START
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port3.gun.trigger
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Light Gun: Trigger
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port3.gun.x_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Light Gun: X Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008000
+
+
+0
+ss.input.port3.gun.y_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 3, Light Gun: Y Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008001
+
+
+0
+ss.input.port3.gun_chairs
+
+Crosshairs color for lightgun on virtual port 3.
+A value of 0x1000000 disables crosshair drawing.
+MDFNST_UINT
+0xFF00FF
+0x000000
+0x1000000
 0
 ss.input.port3.keyboard.0
 (nil) MDFNSF_SUPPRESS_DOC 
@@ -43200,7 +43545,7 @@ MDFNST_ENUM
 gamepad
 
 
-8
+9
 none
 none
 
@@ -43222,6 +43567,9 @@ Mission Stick
 dmission
 Dual Mission
 Dual Mission Sticks, useful for \"Panzer Dragoon Zwei\".  With 30 inputs to map, don\'t get distracted by..LOOK A LOBSTER!
+gun
+Light Gun
+Virtua Gun/Stunner.  Won\'t function properly if connected behind an emulated multitap.\nEmulation of the Saturn lightgun in Mednafen is not particularly accurate(in terms of low-level details), unless you happen to be in the habit of using your Saturn with a TV the size of a house and bright enough to start fires.
 keyboard
 Keyboard (US)
 101-key US keyboard.\nEmulated keyboard key state is not updated unless input grabbing(by default, mapped to CTRL+SHIFT+Menu) is toggled on; refer to the main documentation for details.
@@ -43773,6 +44121,60 @@ MDFNST_STRING
 
 
 
+0
+ss.input.port4.gun.offscreen_shot
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Light Gun: Offscreen Shot(Simulated)
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port4.gun.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Light Gun: START
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port4.gun.trigger
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Light Gun: Trigger
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port4.gun.x_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Light Gun: X Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008000
+
+
+0
+ss.input.port4.gun.y_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 4, Light Gun: Y Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008001
+
+
+0
+ss.input.port4.gun_chairs
+
+Crosshairs color for lightgun on virtual port 4.
+A value of 0x1000000 disables crosshair drawing.
+MDFNST_UINT
+0xFF8000
+0x000000
+0x1000000
 0
 ss.input.port4.keyboard.0
 (nil) MDFNSF_SUPPRESS_DOC 
@@ -45042,7 +45444,7 @@ MDFNST_ENUM
 gamepad
 
 
-8
+9
 none
 none
 
@@ -45064,6 +45466,9 @@ Mission Stick
 dmission
 Dual Mission
 Dual Mission Sticks, useful for \"Panzer Dragoon Zwei\".  With 30 inputs to map, don\'t get distracted by..LOOK A LOBSTER!
+gun
+Light Gun
+Virtua Gun/Stunner.  Won\'t function properly if connected behind an emulated multitap.\nEmulation of the Saturn lightgun in Mednafen is not particularly accurate(in terms of low-level details), unless you happen to be in the habit of using your Saturn with a TV the size of a house and bright enough to start fires.
 keyboard
 Keyboard (US)
 101-key US keyboard.\nEmulated keyboard key state is not updated unless input grabbing(by default, mapped to CTRL+SHIFT+Menu) is toggled on; refer to the main documentation for details.
@@ -45615,6 +46020,60 @@ MDFNST_STRING
 
 
 
+0
+ss.input.port5.gun.offscreen_shot
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Light Gun: Offscreen Shot(Simulated)
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port5.gun.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Light Gun: START
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port5.gun.trigger
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Light Gun: Trigger
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port5.gun.x_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Light Gun: X Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008000
+
+
+0
+ss.input.port5.gun.y_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 5, Light Gun: Y Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008001
+
+
+0
+ss.input.port5.gun_chairs
+
+Crosshairs color for lightgun on virtual port 5.
+A value of 0x1000000 disables crosshair drawing.
+MDFNST_UINT
+0xFFFF00
+0x000000
+0x1000000
 0
 ss.input.port5.keyboard.0
 (nil) MDFNSF_SUPPRESS_DOC 
@@ -46884,7 +47343,7 @@ MDFNST_ENUM
 gamepad
 
 
-8
+9
 none
 none
 
@@ -46906,6 +47365,9 @@ Mission Stick
 dmission
 Dual Mission
 Dual Mission Sticks, useful for \"Panzer Dragoon Zwei\".  With 30 inputs to map, don\'t get distracted by..LOOK A LOBSTER!
+gun
+Light Gun
+Virtua Gun/Stunner.  Won\'t function properly if connected behind an emulated multitap.\nEmulation of the Saturn lightgun in Mednafen is not particularly accurate(in terms of low-level details), unless you happen to be in the habit of using your Saturn with a TV the size of a house and bright enough to start fires.
 keyboard
 Keyboard (US)
 101-key US keyboard.\nEmulated keyboard key state is not updated unless input grabbing(by default, mapped to CTRL+SHIFT+Menu) is toggled on; refer to the main documentation for details.
@@ -47457,6 +47919,60 @@ MDFNST_STRING
 
 
 
+0
+ss.input.port6.gun.offscreen_shot
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Light Gun: Offscreen Shot(Simulated)
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port6.gun.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Light Gun: START
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port6.gun.trigger
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Light Gun: Trigger
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port6.gun.x_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Light Gun: X Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008000
+
+
+0
+ss.input.port6.gun.y_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 6, Light Gun: Y Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008001
+
+
+0
+ss.input.port6.gun_chairs
+
+Crosshairs color for lightgun on virtual port 6.
+A value of 0x1000000 disables crosshair drawing.
+MDFNST_UINT
+0x00FFFF
+0x000000
+0x1000000
 0
 ss.input.port6.keyboard.0
 (nil) MDFNSF_SUPPRESS_DOC 
@@ -48726,7 +49242,7 @@ MDFNST_ENUM
 gamepad
 
 
-8
+9
 none
 none
 
@@ -48748,6 +49264,9 @@ Mission Stick
 dmission
 Dual Mission
 Dual Mission Sticks, useful for \"Panzer Dragoon Zwei\".  With 30 inputs to map, don\'t get distracted by..LOOK A LOBSTER!
+gun
+Light Gun
+Virtua Gun/Stunner.  Won\'t function properly if connected behind an emulated multitap.\nEmulation of the Saturn lightgun in Mednafen is not particularly accurate(in terms of low-level details), unless you happen to be in the habit of using your Saturn with a TV the size of a house and bright enough to start fires.
 keyboard
 Keyboard (US)
 101-key US keyboard.\nEmulated keyboard key state is not updated unless input grabbing(by default, mapped to CTRL+SHIFT+Menu) is toggled on; refer to the main documentation for details.
@@ -49299,6 +49818,60 @@ MDFNST_STRING
 
 
 
+0
+ss.input.port7.gun.offscreen_shot
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Light Gun: Offscreen Shot(Simulated)
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port7.gun.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Light Gun: START
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port7.gun.trigger
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Light Gun: Trigger
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port7.gun.x_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Light Gun: X Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008000
+
+
+0
+ss.input.port7.gun.y_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 7, Light Gun: Y Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008001
+
+
+0
+ss.input.port7.gun_chairs
+
+Crosshairs color for lightgun on virtual port 7.
+A value of 0x1000000 disables crosshair drawing.
+MDFNST_UINT
+0x0080FF
+0x000000
+0x1000000
 0
 ss.input.port7.keyboard.0
 (nil) MDFNSF_SUPPRESS_DOC 
@@ -50568,7 +51141,7 @@ MDFNST_ENUM
 gamepad
 
 
-8
+9
 none
 none
 
@@ -50590,6 +51163,9 @@ Mission Stick
 dmission
 Dual Mission
 Dual Mission Sticks, useful for \"Panzer Dragoon Zwei\".  With 30 inputs to map, don\'t get distracted by..LOOK A LOBSTER!
+gun
+Light Gun
+Virtua Gun/Stunner.  Won\'t function properly if connected behind an emulated multitap.\nEmulation of the Saturn lightgun in Mednafen is not particularly accurate(in terms of low-level details), unless you happen to be in the habit of using your Saturn with a TV the size of a house and bright enough to start fires.
 keyboard
 Keyboard (US)
 101-key US keyboard.\nEmulated keyboard key state is not updated unless input grabbing(by default, mapped to CTRL+SHIFT+Menu) is toggled on; refer to the main documentation for details.
@@ -51141,6 +51717,60 @@ MDFNST_STRING
 
 
 
+0
+ss.input.port8.gun.offscreen_shot
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Light Gun: Offscreen Shot(Simulated)
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port8.gun.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Light Gun: START
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port8.gun.trigger
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Light Gun: Trigger
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port8.gun.x_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Light Gun: X Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008000
+
+
+0
+ss.input.port8.gun.y_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 8, Light Gun: Y Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008001
+
+
+0
+ss.input.port8.gun_chairs
+
+Crosshairs color for lightgun on virtual port 8.
+A value of 0x1000000 disables crosshair drawing.
+MDFNST_UINT
+0x8000FF
+0x000000
+0x1000000
 0
 ss.input.port8.keyboard.0
 (nil) MDFNSF_SUPPRESS_DOC 
@@ -52410,7 +53040,7 @@ MDFNST_ENUM
 gamepad
 
 
-8
+9
 none
 none
 
@@ -52432,6 +53062,9 @@ Mission Stick
 dmission
 Dual Mission
 Dual Mission Sticks, useful for \"Panzer Dragoon Zwei\".  With 30 inputs to map, don\'t get distracted by..LOOK A LOBSTER!
+gun
+Light Gun
+Virtua Gun/Stunner.  Won\'t function properly if connected behind an emulated multitap.\nEmulation of the Saturn lightgun in Mednafen is not particularly accurate(in terms of low-level details), unless you happen to be in the habit of using your Saturn with a TV the size of a house and bright enough to start fires.
 keyboard
 Keyboard (US)
 101-key US keyboard.\nEmulated keyboard key state is not updated unless input grabbing(by default, mapped to CTRL+SHIFT+Menu) is toggled on; refer to the main documentation for details.
@@ -52983,6 +53616,60 @@ MDFNST_STRING
 
 
 
+0
+ss.input.port9.gun.offscreen_shot
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Light Gun: Offscreen Shot(Simulated)
+
+MDFNST_STRING
+mouse 0000000000000000 00000002
+
+
+0
+ss.input.port9.gun.start
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Light Gun: START
+
+MDFNST_STRING
+mouse 0000000000000000 00000001
+
+
+0
+ss.input.port9.gun.trigger
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Light Gun: Trigger
+
+MDFNST_STRING
+mouse 0000000000000000 00000000
+
+
+0
+ss.input.port9.gun.x_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Light Gun: X Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008000
+
+
+0
+ss.input.port9.gun.y_axis
+(nil) MDFNSF_SUPPRESS_DOC 
+ss, Virtual Port 9, Light Gun: Y Axis
+
+MDFNST_STRING
+mouse 0000000000000000 00008001
+
+
+0
+ss.input.port9.gun_chairs
+
+Crosshairs color for lightgun on virtual port 9.
+A value of 0x1000000 disables crosshair drawing.
+MDFNST_UINT
+0xFF80FF
+0x000000
+0x1000000
 0
 ss.input.port9.keyboard.0
 (nil) MDFNSF_SUPPRESS_DOC 

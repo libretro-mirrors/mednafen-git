@@ -233,7 +233,7 @@ bool bios_install(void)
 	ngpc_bios[0xFFFE] = 0x68; // - JR 0xFFFFFE (Infinite loop!)
 	ngpc_bios[0xFFFF] = 0xFE;
 
-	return TRUE;	//Success
+	return true;	//Success
 }
 
 }

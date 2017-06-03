@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* wasapish.cpp - Shared-Mode WASAPI Sound Driver
-**  Copyright (C) 2014-2016 Mednafen Team
+**  Copyright (C) 2014-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -23,13 +23,10 @@
 
 #include <windows.h>
 #include <windowsx.h>
-#include <stdio.h>
-#include <string.h>
 #include <mmdeviceapi.h>
 #include <audioclient.h>
 #include <audiopolicy.h>
 #include <propidl.h>
-#include <algorithm>
 
 static const CLSID LV_CLSID_MMDeviceEnumerator = { 0xbcde0395, 0xe52f, 0x467c, { 0x8e,0x3d, 0xc4,0x57,0x92,0x91,0x69,0x2e} }; //__uuidof(MMDeviceEnumerator);
 static const IID LV_IID_IMMDeviceEnumerator = { 0xa95664d2, 0x9614, 0x4f35, {0xa7,0x46, 0xde,0x8d,0xb6,0x36,0x17,0xe6} }; //__uuidof(IMMDeviceEnumerator);
@@ -40,7 +37,7 @@ static const GUID LV_KSDATAFORMAT_SUBTYPE_PCM = { 0x00000001, 0x0000, 0x0010, { 
 static const PROPERTYKEY LV_PKEY_Device_FriendlyName = { { 0xa45c254e, 0xdf1c, 0x4efd, { 0x80, 0x20, 0x67, 0xd1, 0x46, 0xa8, 0x50, 0xe0 } }, 14 };
 static const PROPERTYKEY LV_PKEY_DeviceInterface_FriendlyName = { { 0x026e516e, 0xb814, 0x414b, { 0x83, 0xcd, 0x85, 0x6d, 0x6f, 0xef, 0x48, 0x22 } }, 2 };
 
-struct WASWrap
+struct SexyAL_WASAPISH
 {
  IMMDevice *immdev;
  IAudioClient *ac;
@@ -78,7 +75,7 @@ static int Pause(SexyAL_device *device, int state)
 static DWORD WINAPI AThreadMain(LPVOID param)
 {
  SexyAL_device *dev = (SexyAL_device*)param;
- WASWrap *w = (WASWrap*)dev->private_data;
+ SexyAL_WASAPISH *w = (SexyAL_WASAPISH*)dev->private_data;
  DWORD task_index = 0;
  HANDLE avh = NULL;
 
@@ -124,7 +121,7 @@ static void Cleanup(SexyAL_device* device)
  {
   if(device->private_data)
   {
-   WASWrap *w = (WASWrap *)device->private_data;
+   SexyAL_WASAPISH *w = (SexyAL_WASAPISH *)device->private_data;
 
    w->AThreadRunning = false;
    if(w->AThread)
@@ -195,7 +192,7 @@ bool SexyALI_WASAPISH_Avail(void)
 SexyAL_device *SexyALI_WASAPISH_Open(const char *id, SexyAL_format *format, SexyAL_buffering *buffering)
 {
  SexyAL_device *dev;
- WASWrap *w;
+ SexyAL_WASAPISH *w;
  IMMDeviceEnumerator *immdeven = NULL;
  WAVEFORMATEXTENSIBLE wfe;
  HRESULT hr;
@@ -207,7 +204,7 @@ SexyAL_device *SexyALI_WASAPISH_Open(const char *id, SexyAL_format *format, Sexy
  }
  timeBeginPeriod(1);
 
- w = (WASWrap *)calloc(1, sizeof(WASWrap));
+ w = (SexyAL_WASAPISH *)calloc(1, sizeof(SexyAL_WASAPISH));
  dev->private_data = w;
  if(!w)
  {
@@ -328,13 +325,9 @@ SexyAL_device *SexyALI_WASAPISH_Open(const char *id, SexyAL_format *format, Sexy
  }
 
  format->rate = wfe.Format.nSamplesPerSec;
- format->sampformat = ((wfe.Format.wBitsPerSample >> 3) << 4) | 1;
-
- if(wfe.Format.wBitsPerSample == 32)
-  format->sampformat |= 2;
+ format->sampformat = SAMPFORMAT_MAKE(SEXYAL_ENC_PCM_SINT, wfe.Format.wBitsPerSample >> 3, wfe.Format.wBitsPerSample, 0, MDFN_IS_BIGENDIAN);
 
  format->channels = wfe.Format.nChannels;
- format->revbyteorder = false;
  format->noninterleaved = false;
 
  //
@@ -454,7 +447,7 @@ SexyAL_device *SexyALI_WASAPISH_Open(const char *id, SexyAL_format *format, Sexy
 
 static inline int64 MooCowGoesMoo(SexyAL_device *device)
 {
- WASWrap *w = (WASWrap *)device->private_data;
+ SexyAL_WASAPISH *w = (SexyAL_WASAPISH *)device->private_data;
  UINT32 local_recent_pad;
  LARGE_INTEGER local_recent_time;
  LARGE_INTEGER current_time;
@@ -490,7 +483,7 @@ static inline int64 MooCowGoesMoo(SexyAL_device *device)
 
 static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 {
- WASWrap *w = (WASWrap *)device->private_data;
+ SexyAL_WASAPISH *w = (SexyAL_WASAPISH *)device->private_data;
 
  *can_write = std::max<int64>(0, w->BufferBPF * MooCowGoesMoo(device));
 
@@ -499,7 +492,7 @@ static int RawCanWrite(SexyAL_device *device, uint32 *can_write)
 
 static int RawWrite(SexyAL_device *device, const void *data, uint32 len)
 {
- WASWrap *w = (WASWrap *)device->private_data;
+ SexyAL_WASAPISH *w = (SexyAL_WASAPISH *)device->private_data;
  const uint8* data8 = (uint8*)data;
 
  while(len > 0)
