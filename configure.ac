@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.45'
-MEDNAFEN_VERSION_NUMERIC=0x00094500
+MEDNAFEN_VERSION='0.9.45.1'
+MEDNAFEN_VERSION_NUMERIC=0x00094501
 
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([mednafen], $MEDNAFEN_VERSION)

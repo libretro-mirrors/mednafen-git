@@ -105,7 +105,7 @@ static INLINE T MDFN_deXsb(const void* ptr)
 
  memcpy(&tmp, MDFN_ASSUME_ALIGNED(ptr, (aligned ? sizeof(T) : 1)), sizeof(T));
 
- if(isbigendian != -1 && isbigendian != MDFN_IS_BIGENDIAN)
+ if(isbigendian != -1 && isbigendian != (int)MDFN_IS_BIGENDIAN)
  {
   static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Gummy penguins.");
 
@@ -214,7 +214,7 @@ static INLINE void MDFN_enXsb(void* ptr, T value)
 {
  T tmp = value;
 
- if(isbigendian != -1 && isbigendian != MDFN_IS_BIGENDIAN)
+ if(isbigendian != -1 && isbigendian != (int)MDFN_IS_BIGENDIAN)
  {
   static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Gummy penguins.");
 

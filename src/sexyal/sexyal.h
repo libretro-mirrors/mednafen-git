@@ -43,7 +43,7 @@ enum
 	( (((encoding) & 0xF) << 0) |					\
 	  (((bytes) & 0xF) << 4) |					\
 	  (((bits) & 0xFF) << 8) |					\
-	  ((bool)((lsbpad) & 0xFF) << 16) | 				\
+	  (((lsbpad) & 0xFF) << 16) | 					\
 	  ((uint32)(bool)(bigendian) << 31)				\
 	)
 
