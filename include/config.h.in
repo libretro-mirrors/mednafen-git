@@ -123,6 +123,9 @@
 /* Define if we are compiling and linking with external tremor. */
 #undef HAVE_EXTERNAL_TREMOR
 
+/* Define if we are compiling and linking with external trio. */
+#undef HAVE_EXTERNAL_TRIO
+
 /* Define to 1 if you have the `fcntl' function. */
 #undef HAVE_FCNTL
 
@@ -243,6 +246,9 @@
 
 /* Define if we are compiling with libsndfile support. */
 #undef HAVE_LIBSNDFILE
+
+/* Define to 1 if you have the `trio' library (-ltrio). */
+#undef HAVE_LIBTRIO
 
 /* Define to 1 if you have the `vorbisidec' library (-lvorbisidec). */
 #undef HAVE_LIBVORBISIDEC

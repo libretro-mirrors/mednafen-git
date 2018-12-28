@@ -168,7 +168,7 @@
  <tr><td>0-9</td><td>Select save state slot.</td><td>"0" through "9"</td></tr>
  <tr><td>-</td><td><a name="command.state_slot_dec">Decrement selected save state slot.</a></td><td>state_slot_dec</td></tr>
  <tr><td>=</td><td><a name="command.state_slot_inc">Increment selected save state slot.</a></td><td>state_slot_inc</td></tr>
- <tr><td>ALT + S</td><td>Toggle <a href="#srwframes">600-frame</a> save-state rewinding functionality, disabled by default.</td><td>state_rewind_toggle</td></tr>
+ <tr><td>ALT + S</td><td>Toggle <a href="#srwframes">600-frame</a> save-state rewinding functionality, disabled by default.</td><td>toggle_state_rewind</td></tr>
  <tr><td>SHIFT + F5</td><td>Record movie.</td><td>save_movie</td></tr>
  <tr><td>SHIFT + F7</td><td>Play movie.</td><td>load_movie</td></tr>
  <tr><td>SHIFT + 0-9</td><td>Select movie slot.</td><td>"m0" through "m9"</td></tr>

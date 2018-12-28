@@ -15,7 +15,7 @@ void SMS_SoundClose(void);
 int32 SMS_SoundFlush(int16 *SoundBuf, int32 MaxSoundFrames);
 void SMS_SoundReset(void);
 bool SMS_SetSoundRate(uint32 rate);
-int SMS_SoundStateAction(StateMem *sm, int load, int data_only);
+void SMS_SoundStateAction(StateMem *sm, int load, int data_only);
 void SMS_SoundInit(uint32 clock, bool WantFM);
 
 }

@@ -564,7 +564,7 @@ static void AddCheatParam(uint32 A, uint64 V, unsigned int bytelen, bool bigendi
 
 static void AddCheat(void* data)
 {
- AddCheatParam(0, 0, 1, false);
+ AddCheatParam(0, 0, 1, CurGame->CheatInfo.BigEndian);
 }
 
 static int lid;

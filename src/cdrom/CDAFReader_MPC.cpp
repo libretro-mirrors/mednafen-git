@@ -52,8 +52,6 @@ class CDAFReader_MPC final : public CDAFReader
  Stream *fw;
 };
 
-
-/// Reads size bytes of data into buffer at ptr.
 static mpc_int32_t impc_read(mpc_reader *p_reader, void *ptr, mpc_int32_t size)
 {
  Stream *fw = (Stream*)(p_reader->data);
@@ -64,11 +62,10 @@ static mpc_int32_t impc_read(mpc_reader *p_reader, void *ptr, mpc_int32_t size)
  }
  catch(...)
  {
-  return(MPC_STATUS_FAIL);
+  return MPC_STATUS_FAIL;
  }
 }
 
-/// Seeks to byte position offset.
 static mpc_bool_t impc_seek(mpc_reader *p_reader, mpc_int32_t offset)
 {
  Stream *fw = (Stream*)(p_reader->data);
@@ -76,15 +73,14 @@ static mpc_bool_t impc_seek(mpc_reader *p_reader, mpc_int32_t offset)
  try
  {
   fw->seek(offset, SEEK_SET);
-  return(MPC_TRUE);
+  return MPC_TRUE;
  }
  catch(...)
  {
-  return(MPC_FALSE);
+  return MPC_FALSE;
  }
 }
 
-/// Returns the current byte offset in the stream.
 static mpc_int32_t impc_tell(mpc_reader *p_reader)
 {
  Stream *fw = (Stream*)(p_reader->data);
@@ -95,11 +91,10 @@ static mpc_int32_t impc_tell(mpc_reader *p_reader)
  }
  catch(...)
  {
-  return(MPC_STATUS_FAIL);
+  return MPC_STATUS_FAIL;
  }
 }
 
-/// Returns the total length of the source stream, in bytes.
 static mpc_int32_t impc_get_size(mpc_reader *p_reader)
 {
  Stream *fw = (Stream*)(p_reader->data);
@@ -110,14 +105,13 @@ static mpc_int32_t impc_get_size(mpc_reader *p_reader)
  }
  catch(...)
  {
-  return(MPC_STATUS_FAIL);
+  return MPC_STATUS_FAIL;
  }
 }
 
-/// True if the stream is a seekable stream.
 static mpc_bool_t impc_canseek(mpc_reader *p_reader)
 {
- return(MPC_TRUE);
+ return MPC_TRUE;
 }
 
 CDAFReader_MPC::CDAFReader_MPC(Stream *fp) : fw(fp)
@@ -225,14 +219,14 @@ bool CDAFReader_MPC::Seek_(uint64 frame_offset)
  MPCBufferIn = 0;
 
  if(mpc_demux_seek_sample(demux, frame_offset) < 0)
-  return(false);
+  return false;
 
- return(true);
+ return true;
 }
 
 uint64 CDAFReader_MPC::FrameCount(void)
 {
- return(mpc_streaminfo_get_length_samples(&si));
+ return mpc_streaminfo_get_length_samples(&si);
 }
 
 

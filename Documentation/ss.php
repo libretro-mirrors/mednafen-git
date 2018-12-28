@@ -4,7 +4,7 @@
 
 <?php BeginSection('Introduction', "Section_intro"); ?>
 <p>
-<font color="orange" size="+1"><b>NOTE:</b></font> The Sega Saturn emulation is currently experimental, and under active development, and save states are not currently supported.  By default(and for the official releases for Windows), Saturn emulation is only compiled in for builds for some 64-bit architectures(x86_64, AArch64, PPC64).  The separate <a href="ssfplay.html">SSF playback module</a> does not have this limitation.
+<font color="orange" size="+1"><b>NOTE:</b></font> The Sega Saturn emulation is currently experimental and under active development.  By default(and for the official releases for Windows), Saturn emulation is only compiled in for builds for some 64-bit architectures(x86_64, AArch64, PPC64).  The separate <a href="ssfplay.html">SSF playback module</a> does not have this limitation.
 </p>
 <p>
 Mednafen's Sega Saturn emulation is extremely CPU intensive.  The minimum recommended CPU is a quad-core Intel Haswell-microarchitecture CPU with
@@ -13,9 +13,18 @@ which may have higher CPU requirements.
 </p>
 
 <p>
+Save states are supported, but the data is not fully sanitized properly on save state load, so definitely <font color="red">avoid loading save states acquired from sources you don't trust</font>(this includes via netplay).
+</p>
+
+<p>
 Enabling CD image preloading into memory via the <a href="mednafen.html#cd.image_memcache">cd.image_memcache</a> setting is recommended, to
 avoid short emulator pauses and audio pops due to waiting for disk accesses to complete when the emulated CD is accessed.
 </p>
+
+<p>
+A list of known emulation bugs(with workarounds in some cases) in Saturn games with Mednafen is available at <a href="https://forum.fobby.net/index.php?t=msg&th=1357">https://forum.fobby.net/index.php?t=msg&th=1357</a>
+</p>
+
 <?php EndSection(); ?>
 
 <?php BeginSection("Firmware/BIOS", "Section_firmware_bios"); ?>

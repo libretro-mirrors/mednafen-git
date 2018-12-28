@@ -176,21 +176,17 @@ bool SMS_SetSoundRate(uint32 rate)
 }
 
 
-int SMS_SoundStateAction(StateMem *sm, int load, int data_only)
+void SMS_SoundStateAction(StateMem *sm, int load, int data_only)
 {
  Sms_ApuState sn_state;
- int ret = 1;
 
  memset(&sn_state, 0, sizeof(Sms_ApuState));
-
- if(!load)
- {
-  apu.save_state(&sn_state);
- }
+ apu.save_state(&sn_state);
 
  SFORMAT StateRegs[] =
  {
   SFARRAY32N(sn_state.volume, 4, "Volume"),
+  SFARRAY32N(sn_state.delay, 4, "Delay"),
   SFARRAY32N(sn_state.sq_period, 3, "SQPeriod"),
   SFARRAY32N(sn_state.sq_phase, 3, "SQPhase"),
   SFVARN(sn_state.noise_period, "NPeriod"),
@@ -201,13 +197,12 @@ int SMS_SoundStateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, "PSG"))
-  ret = 0;
- else if(load)
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "PSG");
+
+ if(load)
  {
   apu.load_state(&sn_state);
  }
- return(ret);
 }
 
 }

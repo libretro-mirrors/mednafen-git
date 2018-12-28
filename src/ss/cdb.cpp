@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* cdb.cpp - CD Block Emulation
-**  Copyright (C) 2016 Mednafen Team
+**  Copyright (C) 2016-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -160,7 +160,7 @@ static MDFN_COLD void GetCommandDetails(const uint16* CD, char* s, size_t sl)
 	break;
 
   case COMMAND_INIT:
-	trio_snprintf(s, sl, "Initialize; Flags=0x%02x", CD[0] & 0xFF);
+	trio_snprintf(s, sl, "Initialize; Flags=0x%02x, StandbyTime=0x%04x, ECC=0x%02x, Retry=0x%02x", CD[0] & 0xFF, CD[1], CD[3] >> 8, CD[3] & 0xFF);
 	break;
 
   case COMMAND_OPEN:
@@ -376,6 +376,8 @@ static uint16 HIRQ, HIRQ_Mask;
 static uint16 CData[4];
 static uint16 Results[4];
 static bool CommandPending;
+static uint16 SWResetHIRQDeferred;
+static bool SWResetPending;
 
 static uint8 CDDevConn;
 static uint8 LastBufDest;
@@ -542,6 +544,7 @@ static struct
  uint8 tno;
 
  bool is_cdrom;
+ uint8 repcount;
 } CurPosInfo;
 
 // Higher-level:
@@ -759,15 +762,30 @@ static void Filter_SetTrueConn(const uint8 fnum, const uint8 tconn)
  Filters[fnum].TrueConn = tconn;
 }
 
-static void Filter_SetFalseConn(const uint8 fnum, const uint8 fconn)
+static void Filter_DisconnectInput(const uint8 fnum)
 {
- if(CDDevConn == fconn)
+ if(fnum == 0xFF)
+  return;
+
+ if(CDDevConn == fnum)
+ {
+  SS_DBG(SS_DBG_WARNING | SS_DBG_CDB, "[CDB] Filter 0x%02x input disconnected from CD device as side effect!\n", fnum);
   CDDevConn = 0xFF;
+ }
 
  for(unsigned fs = 0; fs < 0x18; fs++)
-  if(Filters[fs].FalseConn == fconn)
+ {
+  if(Filters[fs].FalseConn == fnum)
+  {
+   SS_DBG(SS_DBG_WARNING | SS_DBG_CDB, "[CDB] Filter 0x%02x input disconnected from filter 0x%02x output as side effect!\n", fnum, fs);
    Filters[fs].FalseConn = 0xFF;
+  }
+ }
+}
 
+static void Filter_SetFalseConn(const uint8 fnum, const uint8 fconn)
+{
+ Filter_DisconnectInput(fconn);
  Filters[fnum].FalseConn = fconn;
 }
 
@@ -799,7 +817,8 @@ static struct FileInfoS
  uint8 gap_size;
  uint8 fnum;
  uint8 attr;
-} __attribute__((__packed__)) FileInfo[256];
+} FileInfo[256];
+static_assert(sizeof(FileInfoS) == 12 && sizeof(FileInfo) == 12 * 256, "FileInfo wrong size!");
 static bool FileInfoValid;
 
 enum
@@ -841,7 +860,6 @@ static struct
  uint8 record[256];
  uint32 record_counter;
 
- uint32 finfo_read_start_offs;
  uint32 finfo_offs;
 } FLS;
 
@@ -1235,6 +1253,8 @@ void CDB_SetDisc(bool tray_open, CDIF *cdif)
    DriveCounter = (int64)1000 << 32;
   }
  }
+ else
+  Cur_CDIF->ReadTOC(&toc);
 }
 
 static INLINE void RecalcIRQOut(void)
@@ -1462,23 +1482,24 @@ static void TranslateTOC(void)
 //
 //
 //
-static void MakeReport(const bool rejected = false, const uint8 hb = 0, const bool nobs = false)
+static void MakeReport(const bool rejected = false, const uint8 hb = 0)
 {
- Results[0] = ((nobs ? 0x00 : MakeBaseStatus(rejected, hb)) << 8) | (CurPosInfo.is_cdrom << 7) | PlayRepeatCounter;
+ Results[0] = (MakeBaseStatus(rejected, hb) << 8) | (CurPosInfo.is_cdrom << 7) | (CurPosInfo.repcount & 0x7F);
 
  Results[1] = (CurPosInfo.ctrl_adr << 8) | CurPosInfo.tno;
  Results[2] = (CurPosInfo.idx << 8) | (CurPosInfo.fad >> 16);
  Results[3] = CurPosInfo.fad;
 }
 
-static void CDStatusResults(const bool rejected = false, const uint8 hb = 0, const bool nobs = false)
+static void CDStatusResults(const bool rejected = false, const uint8 hb = 0)
 {
- MakeReport(rejected, hb, nobs);
+ MakeReport(rejected, hb);
 
  SS_DBG(SS_DBG_CDB, "[CDB]   Results: %04x %04x %04x %04x\n", Results[0], Results[1], Results[2], Results[3]);
  ResultsRead = false;
  CommandPending = false;
- TriggerIRQ(HIRQ_CMOK);
+ TriggerIRQ(HIRQ_CMOK | SWResetHIRQDeferred);
+ SWResetHIRQDeferred = 0;
 }
 
 static void BasicResults(uint32 res0, uint32 res1, uint32 res2, uint32 res3)
@@ -1492,7 +1513,8 @@ static void BasicResults(uint32 res0, uint32 res1, uint32 res2, uint32 res3)
  SS_DBG(SS_DBG_CDB, "[CDB]   Results: %04x %04x %04x %04x\n", Results[0], Results[1], Results[2], Results[3]);
 
  CommandPending = false;
- TriggerIRQ(HIRQ_CMOK);
+ TriggerIRQ(HIRQ_CMOK | SWResetHIRQDeferred);
+ SWResetHIRQDeferred = 0;
 }
 
 static void StartSeek(const uint32 cmd_target, const bool no_pickup_change = false)
@@ -1564,6 +1586,7 @@ static void StartSeek(const uint32 cmd_target, const bool no_pickup_change = fal
  //
  CurPosInfo.status = STATUS_BUSY;
  CurPosInfo.is_cdrom = false;
+ CurPosInfo.repcount = PlayRepeatCounter & 0xF;
  DrivePhase = DRIVEPHASE_SEEK_START;
 
  Cur_CDIF->HintReadSector(CurPosInfo.fad);
@@ -1591,12 +1614,13 @@ static void Drive_Run(int64 clocks)
 	RootDirInfoValid = false;
 
         CurPosInfo.status = STATUS_OPEN;
-	CurPosInfo.is_cdrom = false;
 	CurPosInfo.fad = 0xFFFFFF;
 	CurPosInfo.rel_fad = 0xFFFFFF;
 	CurPosInfo.ctrl_adr = 0xFF;
 	CurPosInfo.idx = 0xFF;
 	CurPosInfo.tno = 0xFF;
+	CurPosInfo.is_cdrom = true;
+	CurPosInfo.repcount = 0x7F;
 	TriggerIRQ(HIRQ_DCHG);
 
 	DrivePhase = DRIVEPHASE_EJECTED1;
@@ -1622,17 +1646,17 @@ static void Drive_Run(int64 clocks)
 	break;
 
     case DRIVEPHASE_STARTUP:
-	Cur_CDIF->ReadTOC(&toc);
 	TranslateTOC();
 	//
 	//
 	//
 	ClearPendingSec();
-        StartSeek(0x800096);
-
+	//
 	PlayEndIRQType = 0;
 	CurPlayEnd = 0x800000;
 	CurPlayRepeat = 0;
+	//
+        StartSeek(0x800096);
 	break;
 
     case DRIVEPHASE_STOPPED:
@@ -1640,25 +1664,24 @@ static void Drive_Run(int64 clocks)
 	DriveCounter += (int64)2000 << 32;
 	break;
 
-/*
- DoSeek
-*/
     case DRIVEPHASE_SEEK_START:
+	//
+	// TODO: Motor spinup from stopped state time penalty?
+	//
 	{
-	 int32 seek_base_time = 2 * (44100 * 256) / 150;
+	 int32 seek_time;
 	 int32 fad_delta;
 
 	 fad_delta = CurPosInfo.fad - CurSector;
 
-	 //if(abs(fad_delta) >= 4000) // FIXME ! ! !something)
-	 //{
-	 // seek_base_time += abs(fad_delta) somethingelse; // FIXME ! ! !
-	 //}
-	 seek_base_time += abs(fad_delta) * (44100 * 256) / 300000 / 2;	// FIXME ! ! !
+	 seek_time = 6 * (44100 * 256) / 150;
+	 seek_time += abs(fad_delta) * ((fad_delta < 0) ? 28 : 26);
+	 seek_time += (fad_delta < 0 || fad_delta >= 150) ? (44100 * 256) / 150 : 0;
+	 //seek_time += fabs(sqrt(CurSector) - sqrt(CurPosInfo.fad)) * 13000;
 
 	 CurPosInfo.status = STATUS_SEEK;
 	 DrivePhase = DRIVEPHASE_SEEK;
-	 DriveCounter += (int64)seek_base_time << 32;
+	 DriveCounter += (int64)seek_time << 32;
 	 CurSector = CurPosInfo.fad;
 	 SubQBuf_Safe_Valid = false;
 	}
@@ -1874,11 +1897,13 @@ static void Drive_Run(int64 clocks)
       {
        CurPosInfo.status = STATUS_BUSY;
 
-       PlayEndIRQType += 1 << 30;
+       PlayEndIRQType += 1 << 30;	// Crappy delay so we're in STATUS_BUSY state long enough.
 
        if((PlayEndIRQType >> 30) >= 3)
        {
-        TriggerIRQ(PlayEndIRQType & 0xFFFF);	// May not be right for EFLS with Read File, maybe EFLS is only triggered after the buffer is written?
+	// Don't generate IRQ if we've repeated and there hasn't been a non-end_met sector since.
+        if(!(PlayRepeatCounter & 0x80))
+         TriggerIRQ(PlayEndIRQType & 0xFFFF);	// May not be right for EFLS with Read File, maybe EFLS is only triggered after the buffer is written?
         PlayEndIRQType = 0;
        }
       }
@@ -1888,12 +1913,16 @@ static void Drive_Run(int64 clocks)
      }
      else
      {
-      StartSeek(PlayCmdStartPos);
-
       if(PlayRepeatCounter < 0xE)
        PlayRepeatCounter++;
+
+      PlayRepeatCounter |= 0x80;
+      //
+      StartSeek(PlayCmdStartPos);
      }
     }
+    else
+     PlayRepeatCounter &= ~0x80;
    }
    //
    //
@@ -2092,15 +2121,25 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
     //
     else if(CTR.Command == COMMAND_INIT) //		= 0x04,
     {
-     CDStatusResults(false, 0x00, true);
+     ClearPendingSec();
+     CurPlayEnd = 0x800000;
+     CurPlayRepeat = 0;
+     CurPosInfo.status = STATUS_BUSY;
+
+     CDStatusResults(false, 0x00);
 
      //
      if(CTR.CD[0] & 0x01)	// Software reset of CD block
      {
-      SWReset();
+      CMD_EAT_CLOCKS(180);
+      SWResetPending = true;
 
-      CMD_EAT_CLOCKS(8192);
-      TriggerIRQ(HIRQ_MPED | HIRQ_EFLS | HIRQ_ECPY | HIRQ_EHST | HIRQ_ESEL | HIRQ_CMOK);
+      //
+      // If a new command was issued in the time we spent in CMD_EAT_CLOCKS(), process it before we do the software reset
+      // down below.
+      //
+      if(CommandPending)
+       continue;
      }
 
      // TODO TODO TODO
@@ -2136,8 +2175,7 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
 
       if(DT.Writing)
       {
-       if(CDDevConn == DT.FNum)
-        CDDevConn = 0xFF;
+       Filter_DisconnectInput(DT.FNum);
 
        for(unsigned i = 0; i < DT.BufCount; i++)
        {
@@ -2200,17 +2238,18 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
       //
       if(!(pm & 0x80))
        ClearPendingSec();
-
-      StartSeek(PlayCmdStartPos, (bool)(pm & 0x80));
-
+      //
       PlayEndIRQType = HIRQ_PEND;
       CurPlayEnd = PlayCmdEndPos;
 
       if(!(pm & 0x70))
        PlayCmdRepCnt = pm & 0x0F;
 
-      PlayRepeatCounter = 0;
       CurPlayRepeat = PlayCmdRepCnt;
+
+      PlayRepeatCounter = 0;
+      //
+      StartSeek(PlayCmdStartPos, (bool)(pm & 0x80));
      }
     }
     //
@@ -2227,7 +2266,8 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
      if(!cmd_sp)	// Stop
      {
       ClearPendingSec();
-      CurPosInfo.is_cdrom = false;	// FIXME? Correct?
+      CurPosInfo.is_cdrom = true;
+      CurPosInfo.repcount = 0x7F;
       CurPosInfo.status = STATUS_BUSY;
       CurPosInfo.fad = 0xFFFFFF;
       CurPosInfo.rel_fad = 0xFFFFFF;
@@ -2254,8 +2294,10 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
      else
      {
       ClearPendingSec();
+      //
       CurPlayEnd = 0x800000;
       CurPlayRepeat = 0;
+      //
       StartSeek(cmd_sp);
      }
     }
@@ -2394,11 +2436,12 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
        FLS.Active = true;
 
        ClearPendingSec();
-       StartSeek(0x800000 | (data_track_fad + 16));
-
+       //
        CurPlayEnd = 0;
        CurPlayRepeat = 0;
        PlayRepeatCounter = 0;
+       //
+       StartSeek(0x800000 | (data_track_fad + 16));
       }
      }
     }
@@ -2659,7 +2702,10 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
 	Partition_Clear(pnum);
        }
 
-       if(rflags & 0x08)	// Initialize all partition output connectors? ? ?
+       // TODO: Initialize all partition output connectors.
+       //       Has to do with MPEG decoding, copy/move sector data
+       //       commands, and maybe some other commands too?
+       if(rflags & 0x08)
        {
 
        }
@@ -2669,7 +2715,7 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
 	Filter_ResetCond(pnum);
        }
 
-       if(rflags & 0x20)	// Initialize all filter input connectors? ? ?
+       if(rflags & 0x20)	// Initialize all filter input connectors
        {
 	if(pnum == CDDevConn)
 	 CDDevConn = 0xFF;
@@ -3026,8 +3072,7 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
      }
      else
      {
-      if(CDDevConn == fnum)
-       CDDevConn = 0xFF;
+      Filter_DisconnectInput(fnum);
 
       CDStatusResults(false, STATUS_DTREQ);
 
@@ -3086,8 +3131,7 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
        CDStatusResults(false, STATUS_WAIT);
       else
       {
-       if(CDDevConn == dst_fnum)
-        CDDevConn = 0xFF;
+       Filter_DisconnectInput(dst_fnum);
 
        for(int i = 0, bfi = Partition_GetBuffer(src_pnum, src_offs); i < numsec; i++)
        {
@@ -3208,11 +3252,12 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
       FLS.Active = true;
 
       ClearPendingSec();
-      StartSeek(0x800000 | fi->fad());
-
+      //
       CurPlayEnd = 0;
       CurPlayRepeat = 0;
       PlayRepeatCounter = 0;
+      //
+      StartSeek(0x800000 | fi->fad());
      }
     }
     //
@@ -3254,11 +3299,12 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
       FLS.Active = true;
 
       ClearPendingSec();
-      StartSeek(0x800000 | fi->fad());
-
+      //
       CurPlayEnd = 0;
       CurPlayRepeat = 0;
       PlayRepeatCounter = 0;
+      //
+      StartSeek(0x800000 | fi->fad());
      }
     }
     //
@@ -3367,13 +3413,7 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
       uint32 sec_count = ((FileInfo[fiaoffs].size() + 2047) >> 11) - offset;	// FIXME: Check offset versus ifile size.
 
       ClearPendingSec();
-      StartSeek(start_fad | 0x800000);
-
-      PlayEndIRQType = HIRQ_EFLS;
-      CurPlayEnd = 0x800000 | ((start_fad + sec_count) & 0x7FFFFF);
-      CurPlayRepeat = 0;
-      PlayRepeatCounter = 0;
-
+      //
       SetCDDeviceConn(fnum);
       Filter_SetTrueConn(fnum, fnum);
       Filter_SetFalseConn(fnum, 0xFF);
@@ -3387,6 +3427,13 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
       Filters[fnum].SubModeMask = 0;
       Filters[fnum].CInfo = 0;
       Filters[fnum].CInfoMask = 0;
+      //
+      PlayEndIRQType = HIRQ_EFLS;
+      CurPlayEnd = 0x800000 | ((start_fad + sec_count) & 0x7FFFFF);
+      CurPlayRepeat = 0;
+      PlayRepeatCounter = 0;
+      //
+      StartSeek(start_fad | 0x800000);
      }
     }
     //
@@ -3406,6 +3453,25 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
      ResultsRead = false;
      CommandPending = false;
     }
+
+    if(SWResetPending)
+    {
+     SWResetPending = false;
+     SWReset();
+
+     CMD_EAT_CLOCKS(8192 - 180);
+
+     SWResetHIRQDeferred = HIRQ_MPED | HIRQ_EFLS | HIRQ_ECPY | HIRQ_EHST | HIRQ_ESEL | HIRQ_CMOK;
+     // If a stupid game(Tenchi Muyou Ryououki Gokuraku) tries to run a new command after the Initialize command's software reset process
+     // begins but before it finishes, delay software reset HIRQ bit setting until the command generates its own HIRQ_CMOK(effectively collapsing two HIRQ_CMOKs
+     // into one HIRQ_CMOK in the process).
+     if(!CommandPending)
+     {
+      TriggerIRQ(SWResetHIRQDeferred);
+      SWResetHIRQDeferred = 0;
+     }
+    }
+
     continue;
     //
     //
@@ -3418,6 +3484,8 @@ sscpu_timestamp_t CDB_Update(sscpu_timestamp_t timestamp)
     ECCEnable = 0xFF;
     RetryCount = 1;
     CommandPending = false;
+    SWResetPending = false;
+    SWResetHIRQDeferred = 0;
     ResultsRead = true;
 
     memset(&DT, 0, sizeof(DT));
@@ -3631,6 +3699,243 @@ void CDB_Write_DBM(uint32 offset, uint16 DB, uint16 mask)
 }
 
 
+
+void CDB_StateAction(StateMem* sm, const unsigned load, const bool data_only)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(GetSecLen),
+  SFVAR(PutSecLen),
+
+  SFVAR(AuthDiscType),
+
+  SFVAR(HIRQ),
+  SFVAR(HIRQ_Mask),
+  SFARRAY16(CData, 4),
+  SFARRAY16(Results, 4),
+
+  SFVAR(CommandPending),
+  SFVAR(SWResetHIRQDeferred),
+  SFVAR(SWResetPending),
+
+  SFVAR(CDDevConn),
+  SFVAR(LastBufDest),
+
+  //
+  //
+  SFARRAY(Buffers->Data, 2352, NumBuffers, sizeof(BufferT)),
+  SFVAR(Buffers->Prev, NumBuffers, sizeof(BufferT)),
+  SFVAR(Buffers->Next, NumBuffers, sizeof(BufferT)),
+  //
+  //
+  SFVAR(Filters->Mode, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->TrueConn, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->FalseConn, 0x18, sizeof(FilterS)),
+
+  SFVAR(Filters->FAD, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->Range, 0x18, sizeof(FilterS)),
+
+  SFVAR(Filters->Channel, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->File, 0x18, sizeof(FilterS)),
+
+  SFVAR(Filters->SubMode, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->SubModeMask, 0x18, sizeof(FilterS)),
+
+  SFVAR(Filters->CInfo, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->CInfoMask, 0x18, sizeof(FilterS)),
+  //
+  //
+  SFVAR(Partitions->FirstBuf, 0x18, sizeof(*Partitions)),
+  SFVAR(Partitions->LastBuf, 0x18, sizeof(*Partitions)),
+  SFVAR(Partitions->Count, 0x18, sizeof(*Partitions)),
+
+  SFVAR(FirstFreeBuf),
+  SFVAR(FreeBufferCount),
+
+  SFVAR(FADSearch.fad),
+  SFVAR(FADSearch.spos),
+  SFVAR(FADSearch.pnum),
+
+  SFVAR(CalcedActualSize),
+
+  SFVAR(lastts),
+  SFVAR(CommandPhase),
+  //SFVAR(CommandYield),
+  SFVAR(CommandClockCounter),
+
+  SFVAR(CTR.Command),
+  SFARRAY16(CTR.CD, 4),
+
+  SFVAR(DT.Active),
+  SFVAR(DT.Writing),
+  SFVAR(DT.NeedBufFree),
+
+  SFVAR(DT.CurBufIndex),
+  SFVAR(DT.BufCount),
+
+  SFVAR(DT.InBufOffs),
+  SFVAR(DT.InBufCounter),
+
+  SFVAR(DT.TotalCounter),
+
+  SFVAR(DT.FNum),
+
+  SFARRAY16(DT.FIFO, 6),
+  SFVAR(DT.FIFO_RP),
+  SFVAR(DT.FIFO_WP),
+  SFVAR(DT.FIFO_In),
+
+  SFARRAY(DT.BufList, NumBuffers),
+
+  SFVAR(StandbyTime),
+  SFVAR(ECCEnable),
+  SFVAR(RetryCount),
+
+  SFVAR(ResultsRead),
+
+  SFVAR(SeekIndexPhase),
+  SFVAR(CurSector),
+  SFVAR(DrivePhase),
+
+  SFVAR(DriveCounter),
+  SFVAR(PeriodicIdleCounter),
+
+  SFVAR(PlayRepeatCounter),
+  SFVAR(CurPlayRepeat),
+
+  SFVAR(CurPlayStart),
+  SFVAR(CurPlayEnd),
+  SFVAR(PlayEndIRQType),
+  //static uint32 PlayEndIRQPending;
+
+  SFVAR(PlayCmdStartPos),
+  SFVAR(PlayCmdEndPos),
+  SFVAR(PlayCmdRepCnt),
+
+  SFARRAY16(&CDDABuf[0][0], CDDABuf_MaxCount * 2),
+  SFVAR(CDDABuf_RP),
+  SFVAR(CDDABuf_WP),
+  SFVAR(CDDABuf_Count),
+
+  SFARRAY(SecPreBuf, 2352 + 96),
+  SFVAR(SecPreBuf_In),
+
+  SFARRAY(TOC_Buffer, (99 + 3) * 4),
+
+  SFVAR(CurPosInfo.status),
+  SFVAR(CurPosInfo.fad),
+  SFVAR(CurPosInfo.rel_fad),
+  SFVAR(CurPosInfo.ctrl_adr),
+  SFVAR(CurPosInfo.idx),
+  SFVAR(CurPosInfo.tno),
+
+  SFVAR(CurPosInfo.is_cdrom),
+  SFVAR(CurPosInfo.repcount),
+
+  SFARRAY(SubCodeQBuf, 10),
+  SFARRAY(SubCodeRWBuf, 24),
+
+  SFARRAY(SubQBuf, 0xC),
+  SFARRAY(SubQBuf_Safe, 0xC),
+  SFVAR(SubQBuf_Safe_Valid),
+
+  #define SFFIS(vs, tc)						\
+	SFARRAY((vs).fad_be, 4, tc, sizeof(FileInfoS)),		\
+	SFARRAY((vs).size_be, 4, tc, sizeof(FileInfoS)),	\
+	SFVAR((vs).unit_size, tc, sizeof(FileInfoS)),		\
+	SFVAR((vs).gap_size, tc, sizeof(FileInfoS)),		\
+	SFVAR((vs).fnum, tc, sizeof(FileInfoS)),		\
+	SFVAR((vs).attr, tc, sizeof(FileInfoS))
+
+  SFFIS(*FileInfo, 256),
+  SFVAR(FileInfoValid),
+
+  SFFIS(RootDirInfo, 1),
+  SFVAR(RootDirInfoValid),
+  #undef SFFIS
+
+  SFVAR(FLS.Active),
+  SFVAR(FLS.DoAuth),
+  SFVAR(FLS.Abort),
+  SFVAR(FLS.pnum),
+
+  SFVAR(FLS.CurDirFAD),
+
+  SFVAR(FLS.FileInfoValidCount),
+  SFVAR(FLS.FileInfoOffs),
+  SFVAR(FLS.FileInfoOnDiscCount),
+
+  SFVAR(FLS.Phase),
+
+  SFARRAY(FLS.pbuf, 2048),
+  SFVAR(FLS.pbuf_offs),
+  SFVAR(FLS.pbuf_read_i),
+
+  SFVAR(FLS.total_counter),
+  SFVAR(FLS.total_max),
+
+  SFARRAY(FLS.record, 256),
+  SFVAR(FLS.record_counter),
+
+  SFVAR(FLS.finfo_offs),
+
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "CDB");
+
+ if(load)
+ {
+  // FIXME: Sanitizing!
+  //
+  //
+  //
+  bool need_reset_buffers = false;
+
+  for(unsigned i = 0; i < 0x18; i++)
+  {
+   auto& p = Partitions[i];
+
+   if(p.FirstBuf >= NumBuffers && p.FirstBuf != 0xFF)
+    need_reset_buffers = true;
+   else if(p.LastBuf >= NumBuffers && p.LastBuf != 0xFF)
+    need_reset_buffers = true;
+   //Partitions[i].Count = 0;
+  }
+
+  for(unsigned i = 0; i < NumBuffers; i++)
+  {
+   auto& b = Buffers[i];
+
+   if(b.Prev >= NumBuffers && b.Prev != 0xFF)
+    need_reset_buffers = true;
+   else if(b.Next >= NumBuffers && b.Next != 0xFF)
+    need_reset_buffers = true;
+  }
+
+  if(need_reset_buffers)
+  {
+   printf("need_reset_buffers!\n");
+   ResetBuffers();
+  }
+  //
+  //
+  //
+
+
+  DT.FNum %= 0x18;
+
+  DT.FIFO_WP %= sizeof(DT.FIFO) / sizeof(DT.FIFO[0]);
+  DT.FIFO_RP %= sizeof(DT.FIFO) / sizeof(DT.FIFO[0]);
+
+  CDDABuf_RP %= CDDABuf_MaxCount;
+  CDDABuf_WP %= CDDABuf_MaxCount;
+
+  FLS.pbuf_offs %= 2048;
+  //FLS.pbuf_read_i
+  FLS.finfo_offs %= 256 + 1;
+ }
+}
 
 
 }

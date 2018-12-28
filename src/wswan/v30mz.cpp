@@ -100,7 +100,7 @@ static v30mz_regs_t I;
 static bool InHLT;
 
 static uint32 prefix_base;	/* base address of the latest prefix segment */
-static char seg_prefix;		/* prefix segment indicator */
+static int8 seg_prefix;		/* prefix segment indicator */
 
 #ifdef WANT_DEBUGGER
 static void (*cpu_hook)(uint32) = NULL;

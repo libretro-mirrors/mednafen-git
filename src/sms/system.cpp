@@ -151,8 +151,6 @@ static void Emulate(EmulateSpecStruct *espec)
    input.system &= ~INPUT_START;
  }
 
- //NGPJoyLatch = *chee;
-
  MDFNMP_ApplyPeriodicCheats();
 
  if(sms.console == CONSOLE_GG)

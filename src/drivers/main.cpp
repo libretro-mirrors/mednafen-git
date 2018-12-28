@@ -60,6 +60,7 @@
 #include <mednafen/file.h>
 
 static int StateSLSTest = false;
+static int StateRCTest = false;	// Rewind consistency
 
 JoystickManager *joy_manager = NULL;
 bool MDFNDHaveFocus;
@@ -632,8 +633,8 @@ static void DeleteInternalArgs(void)
 
 static void MakeMednafenArgsStruct(void)
 {
- const std::multimap <uint32, MDFNCS> *settings;
- std::multimap <uint32, MDFNCS>::const_iterator sit;
+ const std::vector<MDFNCS>* settings;
+ std::vector<MDFNCS>::const_iterator sit;
 
  settings = MDFNI_GetSettings();
 
@@ -643,8 +644,8 @@ static void MakeMednafenArgsStruct(void)
 
  for(sit = settings->begin(); sit != settings->end(); sit++)
  {
-  MDFN_Internal_Args[x].name = strdup(sit->second.name);
-  MDFN_Internal_Args[x].description = sit->second.desc->description ? _(sit->second.desc->description) : NULL;
+  MDFN_Internal_Args[x].name = strdup(sit->name);
+  MDFN_Internal_Args[x].description = sit->desc->description ? _(sit->desc->description) : NULL;
   MDFN_Internal_Args[x].var = NULL;
   MDFN_Internal_Args[x].subs = (void *)HokeyPokeyFallDown;
   MDFN_Internal_Args[x].substype = SUBSTYPE_FUNCTION;
@@ -701,6 +702,7 @@ static int DoArgs(int argc, char *argv[], char **filename)
 	 { "mtetest", NULL, &mtetest, 0, 0 },
 
 	 { "stateslstest", NULL, &StateSLSTest, 0, 0 },
+	 { "staterctest", NULL, &StateRCTest, 0, 0 },
 
 	 { 0, 0, 0, 0 }
         };
@@ -973,7 +975,7 @@ int GameLoop(void *arg)
 	{
          int16 *sound;
          int32 ssize;
-         int fskip;
+         bool fskip;
         
 	 /* If we requested a new video mode, wait until it's set before calling the emulation code again.
 	 */
@@ -988,20 +990,18 @@ int GameLoop(void *arg)
 
 	 if(MDFNDnetplay && !(NoWaiting & 0x2))	// TODO: Hacky, clean up.
 	  ers.SetETtoRT();
-
+	 //
+	 //
 	 fskip = ers.NeedFrameSkip();
-	
-	 if(!MDFN_GetSettingB("video.frameskip"))
-	  fskip = 0;
+	 fskip &= MDFN_GetSettingB("video.frameskip");
+	 fskip &= !(pending_ssnapshot || pending_snapshot || pending_save_state || pending_save_movie || NeedFrameAdvance);
+	 fskip |= (bool)NoWaiting;
 
-	 if(pending_ssnapshot || pending_snapshot || pending_save_state || pending_save_movie || NeedFrameAdvance)
-	  fskip = 0;
+	 //printf("fskip %d; NeedFrameAdvance=%d\n", fskip, NeedFrameAdvance);
 
- 	 NeedFrameAdvance = 0;
-
-         if(NoWaiting)
-	  fskip = 1;
-
+	 NeedFrameAdvance = false;
+	 //
+	 //
 	 SoftFB[SoftFB_BackBuffer].lw[0] = ~0;
 
 	 //
@@ -1021,12 +1021,45 @@ int GameLoop(void *arg)
 	 espec.SoundBuf = Sound_GetEmuModBuffer(&espec.SoundBufMaxSize);
  	 espec.SoundVolume = (double)MDFN_GetSettingUI("sound.volume") / 100;
 
-         MDFNI_Emulate(&espec);
+	 if(MDFN_UNLIKELY(StateRCTest))
+	 {
+	  // Note: Won't work correctly with modules that do mid-sync.
+	  EmulateSpecStruct estmp = espec;
+
+	  MemoryStream state0(524288);
+	  MemoryStream state1(524288);
+	  MemoryStream state2(524288);
+
+	  MDFNSS_SaveSM(&state0);
+	  MDFNI_Emulate(&espec);
+	  espec = estmp;
+
+	  MDFNSS_SaveSM(&state1);
+	  state0.rewind();
+	  MDFNSS_LoadSM(&state0);
+	  MDFNI_Emulate(&espec);
+	  MDFNSS_SaveSM(&state2);
+
+	  if(!(state1.map_size() == state2.map_size() && !memcmp(state1.map() + 32, state2.map() + 32, state1.map_size() - 32)))
+	  {
+	   FileStream sd0("/tmp/sdump0", FileStream::MODE_WRITE);
+	   FileStream sd1("/tmp/sdump1", FileStream::MODE_WRITE);
+
+	   sd0.write(state1.map(), state1.map_size());
+	   sd1.write(state2.map(), state2.map_size());
+	   sd0.close();
+	   sd1.close();
+	   //assert(orig_state.map_size() == new_state.map_size() && !memcmp(orig_state.map() + 32, new_state.map() + 32, orig_state.map_size() - 32));
+	   abort();
+	  }
+	 }
+	 else
+          MDFNI_Emulate(&espec);
 
 	 if(MDFN_UNLIKELY(StateSLSTest))
 	 {
-	  MemoryStream orig_state(65536);
-	  MemoryStream new_state(65536);
+	  MemoryStream orig_state(524288);
+	  MemoryStream new_state(524288);
 
 	  MDFNSS_SaveSM(&orig_state);
 	  orig_state.rewind();
@@ -1068,12 +1101,12 @@ int GameLoop(void *arg)
 
 	  do
 	  {
- 	   if(fskip && GameLoopPaused)
+ 	   if(fskip && ((InFrameAdvance && !NeedFrameAdvance) || GameLoopPaused))
 	   {
-	    // If this frame was skipped, and the game loop is paused(IE cheat interface is active), just blit the previous "successful" frame so the cheat
-	    // interface actually gets drawn.
+	    // If this frame was skipped, and the game loop is paused(IE cheat interface is active) or we're in frame advance, just blit the last
+	    // drawn, non-skipped frame so the OSD elements actually get drawn.
 	    //
-	    // Needless to say, do not do "SoftFB_BackBuffer ^= 1;" here.
+	    // Needless to say, do not allow do_flip to be set to true here.
 	    //
 	    // Possible problems with this kludgery:
 	    //	Will fail spectacularly if there is no previous successful frame.  BOOOOOOM.  (But there always should be, especially since we initialize some
@@ -1872,7 +1905,7 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 	  SoftFB[i].surface->Fill(0, 0, 0, 0);
 
 	  //
-	  // Debugger step mode, and cheat interface, rely on the previous backbuffer being valid in certain situations.  Initialize some stuff here so that
+	  // Debugger step mode, cheat interface, and frame advance mode rely on the previous backbuffer being valid in certain situations.  Initialize some stuff here so that
 	  // reliance will still work even immediately after startup.
 	  SoftFB[i].rect.w = std::min<int32>(16, SoftFB[i].surface->w);
 	  SoftFB[i].rect.h = std::min<int32>(16, SoftFB[i].surface->h);

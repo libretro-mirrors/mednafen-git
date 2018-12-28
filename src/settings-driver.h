@@ -20,8 +20,6 @@ static INLINE bool MDFNI_SetSettingUI(const std::string& name, uint64 value) { r
 
 bool MDFNI_DumpSettingsDef(const char *path);
 
-#include <map>
-
-const std::multimap <uint32, MDFNCS> *MDFNI_GetSettings(void);
+const std::vector<MDFNCS>* MDFNI_GetSettings(void);
 
 #endif

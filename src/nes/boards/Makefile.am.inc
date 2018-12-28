@@ -8,3 +8,5 @@ mednafen_SOURCES	+=	nes/boards/244.cpp nes/boards/sachen.cpp nes/boards/107.cpp 
 mednafen_SOURCES	+=	nes/boards/240.cpp nes/boards/241.cpp nes/boards/163.cpp
 
 mednafen_SOURCES	+=	nes/boards/30.cpp nes/boards/190.cpp
+
+mednafen_SOURCES	+=	nes/boards/40.cpp

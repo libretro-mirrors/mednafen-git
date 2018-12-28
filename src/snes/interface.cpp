@@ -1043,7 +1043,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFORMAT StateRegs[] =
   {
    SFARRAYN(ptr.get(), length, "OmniCat"),
-   { ExtraStateRegs, ~0U, 0, NULL },
+   SFLINK(ExtraStateRegs),
    SFEND
   };
 
@@ -1074,7 +1074,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFORMAT StateRegs[] =
   {
    SFARRAYN(ptr, length, "OmniCat"),
-   { ExtraStateRegs, ~0U, 0, NULL },
+   SFLINK(ExtraStateRegs),
    SFEND
   };
 

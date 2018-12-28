@@ -192,8 +192,8 @@ static MDFN_COLD void InitCommon(const std::string& fbase)
           MDFNGameInfo->VideoSystem = VIDSYS_NTSC;
          else if(fbase.find("(J)") != std::string::npos || fbase.find("(Japan)") != std::string::npos)
           MDFNGameInfo->VideoSystem = VIDSYS_NTSC;
-         else if(fbase.find("(E)") != std::string::npos || fbase.find("(G)") != std::string::npos ||
-	         fbase.find("(Europe)") != std::string::npos || fbase.find("(Germany)") != std::string::npos)
+         else if(fbase.find("(E)") != std::string::npos || fbase.find("(G)") != std::string::npos || fbase.find("(F)") != std::string::npos ||
+	         fbase.find("(Europe)") != std::string::npos || fbase.find("(Germany)") != std::string::npos || fbase.find("(France)") != std::string::npos)
           MDFNGameInfo->VideoSystem = VIDSYS_PAL;
         }
 

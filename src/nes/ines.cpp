@@ -768,6 +768,7 @@ static const BMAPPING bmap[] = {
 	{ 34, Mapper34_Init, 0},
 	{ 37, Mapper37_Init, 0},
 	{ 38, Mapper38_Init, 0},
+	{ 40, Mapper40_Init, 0},
         { 41, Mapper41_Init, 0},
 	{ 42, BioMiracleA_Init, 0},
         { 44, Mapper44_Init, 0},

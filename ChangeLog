@@ -1,3 +1,98 @@
+-- 0.9.48: --
+
+September 16, 2017:
+	Set cheat's default endianness to that preferred by the system being emulated when manually adding a cheat that's not
+	a cheat device code nor the result of a cheat search.
+
+September 15, 2017:
+	SS: Fixed SCU DSP DMA from B-bus; fixes the periodic loud popping in Grandia's FMV.
+
+September 12, 2017:
+	SS: Added a hack/kludge to allow bypassing of data cache on reads(such that the timing benefits of partial cache emulation are preserved, without cache
+	coherency problems that partial cache emulation sometimes leads to with poorly programmed games), and added an internal database to enable it on select games;
+	fixes graphical glitches and/or hangs in "Area 51 (USA and Europe)", "Clockwork Knight 2 (USA)", "DeJig - Lassen Art Collection", "Father Christmas",
+	"Golden Axe The Duel", "Sega Saturn Choice Cuts", "Spot Goes to Hollywood (USA and Japan)", "Street Fighter Zero", "Street Fighter Zero 3",
+	"Super Puzzle Fighter II Turbo", and "Virtual Volleyball".
+
+	SS: Full cache emulation is now enabled for "Whizz"(by using an internal database), to resolve(or at least reduce) quasi-random hanging issues during startup. 
+
+September 11, 2017:
+	SS: Corrected an inaccuracy with CDB play repeat handling; fixes hang when trying to resume a suspended game in "Tactics Ogre".
+
+	SS: Initialize VDP1 clipping and local coordinate registers only on power-on, and not on reset.
+
+September 7, 2017:
+	SS: Fixed side-effect inaccuracies in the CDB Put Sector Data, Copy Sector Data, and Move Sector Data command emulation.
+
+September 6, 2017:
+	Added configure option "--with-external-trio", for distribution packagers.
+
+	SS: Added partial emulation of SH-2 external bus open bus behavior; fixes messed up colors in "Discworld 2".
+
+September 4, 2017:
+	SS: Improved CDB Initialize command emulation; fixes crash in "Tenchi Muyou! Ryououki Gokuraku" when it tries to play an opening movie during startup.
+
+August 28, 2017:
+	SS: Made CD seek overhead calculation less completely wrong; fixes graphics corruption in intro of "Batman Forever", and fixes hang in "Jung Rhythm" when
+	trying to retry a failed stage.
+
+-- 0.9.47: --
+
+August 25, 2017:
+	Lynx, MD, NGP, SMS: Added a few missing variables to save states.
+
+August 24, 2017:
+	SS: Added save state support.
+
+	Revamped save state helper macros and functions, to allow save-stating of variables in arrays of structs to be simpler.
+
+August 22, 2017:
+	SS: Fixed BCR1 write protect, and added stub emulation of the other BSC registers.
+
+	SS: Added incomplete stub Action Replay 4M Plus emulation(for experimentation); proper Action Replay support would require SH-2 UBC emulation, and that
+	may be too costly performance wise.
+
+August 21, 2017:
+	SS: Implemented very rough approximation of bus timing side effects when master SH-2 DMA is active(accurate handling of bus priorities and sharing would increase
+	CPU requirements noticeably, but it may ultimately be necessary as a database-driven option for some stubborn games in the future).  Fixes startup hangs in
+	"Device Reign", "Real Sound", "Resident Evil", "SD Gundam G Century S", "Super Tempo", "Tennis Arena", "Tilk", "Yuukyuu Gensoukyoku",
+	"Yuukyuu Gensoukyoku 2nd Album", "Yuukyuu Gensoukyoku ensemble", "Yuukyuu Gensoukyoku ensemble 2", "Yuukyuu no Kobako Official Collection", and "Zero4 Champ". 
+
+-- 0.9.46: --
+
+August 10, 2017:
+	Compile with explicit -fstrict-aliasing, for distributions/OSes that have configured gcc to not enable strict aliasing at -O2(and possibly other levels).
+
+	Fixed a bug that could, under certain conditions, cause emulator OSD elements to not be updated in the time after entering frame advance mode
+	and before a frame advance.
+
+August 7, 2017:
+	Use a sorted std::vector instead of std::multimap to store current settings, to reduce memory usage.
+
+August 6, 2017:
+	SS: Added ss.input.port*.3dpad.mode.defpos settings to control the default position of the digital/analog mode switch.
+
+August 5, 2017:
+	Allow addresses above FFFF to be entered as the logical watch address in the debugger.
+
+August 4, 2017:
+	SS: Added kludge to fix layer offset problem in "Daytona USA CCE".
+
+	NES: The functionality controlled by setting "nes.fnscan" now recognizes "(F)" and "(France)" as PAL.
+
+	NES: Added support for iNES mapper 40.
+
+July 11, 2017:
+	Utilize _byteswap_*() functions in endian.h when compiling with Microsoft's C++ compiler.
+
+June 22, 2017:
+	Fixed a couple of minor issues(log header formatting, and skipped logging of first instruction in step mode) with the debugger's undocumented trace log feature.
+
+	NES: Corrected the period of PAL noise channel frequency setting 0x1.
+
+June 21, 2017:
+	NES: Fixed a few square wave sound channel emulation bugs(wrong phase for duty setting 3, and failing to clock the period counter when the channel is silenced).
+
 -- 0.9.45.1: --
 
 June 5, 2017:

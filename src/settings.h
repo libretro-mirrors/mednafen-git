@@ -25,8 +25,9 @@
 #include "settings-common.h"
 
 void MDFN_LoadSettings(const std::string& path, bool override = false);
-bool MDFN_MergeSettings(const MDFNSetting *);
-bool MDFN_MergeSettings(const std::vector<MDFNSetting> &);
+void MDFN_MergeSettings(const MDFNSetting *);
+void MDFN_MergeSettings(const std::vector<MDFNSetting> &);
+void MDFN_FinalizeSettings(void);
 bool MDFN_SaveSettings(const std::string& path);
 
 void MDFN_ClearAllOverrideSettings(void);

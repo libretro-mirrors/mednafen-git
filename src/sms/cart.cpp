@@ -284,7 +284,7 @@ uint8 Cart_Read(uint16 A)
  return((((A >> 8) | data_bus_pullup) & ~data_bus_pulldown));
 }
 
-int Cart_StateAction(StateMem *sm, int load, int data_only)
+void Cart_StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -296,11 +296,12 @@ int Cart_StateAction(StateMem *sm, int load, int data_only)
   SFEND
  };
 
- int ret = 1;
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "CART");
 
- ret &= MDFNSS_StateAction(sm, load, data_only, StateRegs, "CART");
+ if(load)
+ {
 
- return(ret);
+ }
 }
 
 }

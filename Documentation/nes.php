@@ -95,6 +95,7 @@ Mednafen's NES/Famicom emulation is based off of FCE Ultra.
  <tr><td>34</td><td>NINA-001 and BNROM</td><td>Impossible Mission 2, Deadly Towers, Bug Honey</td></tr>
  <tr><td>37</td><td>??</td><td>Super Mario Bros/Tetris/Nintendo World Cup</td></tr>
  <tr><td>38</td><td>??</td><td>Crime Busters</td></tr>
+ <tr><td>40</td><td>??</td><td>Super Mario Bros. 2j bootleg</td></tr>
  <tr><td>41</td><td>Caltron 6-in-1</td><td>Caltron 6-in-1</td></tr>
  <tr><td>42</td><td>(bootleg)</td><td>Mario Baby</td></tr>
  <tr><td>44</td><td>Multi-cart(bootleg)</td><td>Super HiK 7 in 1</td></tr>

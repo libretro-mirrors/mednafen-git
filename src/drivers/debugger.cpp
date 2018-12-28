@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* debugger.cpp:
-**  Copyright (C) 2006-2016 Mednafen Team
+**  Copyright (C) 2006-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -599,7 +599,7 @@ class DebuggerPrompt : public HappyPrompt
 		      if(TraceLog->tell() != 0)
 		       TraceLog->print_format("\n\n\n");
 
-		      TraceLog->print_format("Tracing began: %s", Time::StrTime().c_str());
+		      TraceLog->print_format("Tracing began: %s\n", Time::StrTime().c_str());
 		      TraceLog->print_format("[ADDRESS]: [INSTRUCTION]   [REGISTERS(before instruction exec)]");
 
 		      if(num == 1)
@@ -674,7 +674,8 @@ class DebuggerPrompt : public HappyPrompt
                    if(WatchLogical)
                    {
                     trio_sscanf(tmp_c_str, "%x", &WatchAddr);
-                    WatchAddr &= 0xFFF0;
+                    WatchAddr &= (((uint64)1 << CurGame->Debugger->LogAddrBits) - 1);
+		    WatchAddr &= ~0xF;
                    }
                    else
                    {
@@ -1336,9 +1337,6 @@ static void CPUCallback(uint32 PC, bool bpoint)
   NeedStep = 0;
  }
 
- if(TraceLog)
-  DoTraceLog(PC);
-
  while(InSteppingMode && GameThreadRun)
  {
   DebuggerFudge();
@@ -1357,6 +1355,11 @@ static void CPUCallback(uint32 PC, bool bpoint)
    UpdateCoreHooks();
  }
  if(NeedRun) NeedRun = 0;
+
+ //
+ //
+ if(TraceLog)
+  DoTraceLog(PC);
 }
 
 

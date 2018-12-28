@@ -15,7 +15,7 @@ void Cart_SaveNV(void);
 void Cart_Write(uint16 A, uint8 V);
 uint8 Cart_Read(uint16 A);
 
-int Cart_StateAction(StateMem *sm, int load, int data_only);
+void Cart_StateAction(StateMem *sm, int load, int data_only);
 
 }
 #endif

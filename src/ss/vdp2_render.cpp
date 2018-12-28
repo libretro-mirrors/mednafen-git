@@ -1705,10 +1705,15 @@ static void T_DrawNBG23(const unsigned n, uint64* bgbuf, const unsigned w, const
  bgbuf -= xscr & 0x7;
  tx = xscr >> 3;
 
- //if(TA_bpp == 4 && n == 3)
- // printf("Goop: %d %d %02x, %016llx %016llx %016llx %016llx\n", n, TA_bpp, VRAM_Mode, MDFN_de64lsb(VCPRegs[0]), MDFN_de64lsb(VCPRegs[1]), MDFN_de64lsb(VCPRegs[2]), MDFN_de64lsb(VCPRegs[3]));
- // Kludge for Akumajou Dracula X
- if(MDFN_UNLIKELY(TA_bpp == 4 && n == 3 && VRAM_Mode == 0x2 && MDFN_de64lsb(VCPRegs[0]) == 0x0f0f070406060505ULL && MDFN_de64lsb(VCPRegs[2]) == 0x0f0f03000f0f0201ULL && MDFN_de64lsb(VCPRegs[3]) == 0x0f0f0f0f0f0f0f0fULL))
+ //
+ // Layer offset kludges
+ //
+ // Note: When/If adding new kludges, check that the NT and CG fetches for the layer each occur only in one bank, to safely handle other cases may require something more complex.
+ // printf("(TA_bpp == %d && n == %d && VRAM_Mode == 0x%01x && (HRes & 0x6) == 0x%01x && MDFN_de64lsb(VCPRegs[0]) == 0x%016llxULL && MDFN_de64lsb(VCPRegs[1]) == 0x%016llxULL && MDFN_de64lsb(VCPRegs[2]) == 0x%016llxULL && MDFN_de64lsb(VCPRegs[3]) == 0x%016llxULL) || \n", TA_bpp, n, VRAM_Mode, HRes & 0x6, (unsigned long long)MDFN_de64lsb(VCPRegs[0]), (unsigned long long)MDFN_de64lsb(VCPRegs[1]), (unsigned long long)MDFN_de64lsb(VCPRegs[2]), (unsigned long long)MDFN_de64lsb(VCPRegs[3]));
+ if(MDFN_UNLIKELY(
+  /* Akumajou Dracula X */ (TA_bpp == 4 && n == 3 && VRAM_Mode == 0x2 && (HRes & 0x6) == 0x0 && MDFN_de64lsb(VCPRegs[0]) == 0x0f0f070406060505ULL && MDFN_de64lsb(VCPRegs[1]) == 0x0f0f0f0f0f0f0f0fULL && MDFN_de64lsb(VCPRegs[2]) == 0x0f0f03000f0f0201ULL && MDFN_de64lsb(VCPRegs[3]) == 0x0f0f0f0f0f0f0f0fULL) ||
+  /* Daytona USA CCE    */ (TA_bpp == 4 && n == 2 && VRAM_Mode == 0x3 && (HRes & 0x6) == 0x0 && MDFN_de64lsb(VCPRegs[0]) == 0x0f0f0f0f00000404ULL && MDFN_de64lsb(VCPRegs[1]) == 0x0f0f0f060f0f0f0fULL && MDFN_de64lsb(VCPRegs[2]) == 0x0f0f0f0f0505070fULL && MDFN_de64lsb(VCPRegs[3]) == 0x0f0f03020f010f00ULL) ||
+  0))
  {
   for(unsigned i = 0; i < 8; i++)
    *bgbuf++ = 0;
@@ -3464,6 +3469,69 @@ void VDP2REND_Write16_DB(uint32 A, uint16 DB)
   WWQ(COMMAND_WRITE16, A, DB);
  //else
  // MemW<uint16>(A, DB);
+}
+
+void VDP2REND_StateAction(StateMem* sm, const unsigned load, const bool data_only, uint16 (&rr)[0x100], uint16 (&cr)[2048], uint16 (&vr)[262144])
+{
+ while(MDFN_UNLIKELY(WQ_InCount.load(std::memory_order_acquire) != 0))
+  Time::SleepMS(1);
+ //
+ //
+ //
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(Clock28M),	// DUBIOUS
+
+  SFVAR(MosaicVCount),
+
+  SFARRAY32(VCLast, 2),
+
+  SFARRAY32(YCoordAccum, 2),
+  SFARRAY32(MosEff_YCoordAccum, 2),
+
+  SFARRAY32(CurXScrollIF, 2),
+  SFARRAY32(CurYScrollIF, 2),
+  SFARRAY16(CurXCoordInc, 2),
+  SFARRAY32(CurLSA, 2),
+
+  SFARRAY16(NBG23_YCounter, 2),
+  SFARRAY16(MosEff_NBG23_YCounter, 2),
+
+  SFVAR(CurBackTabAddr),
+  SFVAR(CurBackColor),
+
+  SFVAR(CurLCTabAddr),
+  SFVAR(CurLCColor),
+
+  // XStart and XEnd can be modified by line window processing.
+  SFVAR(Window->XStart, 2, sizeof(*Window)),
+  SFVAR(Window->XEnd, 2, sizeof(*Window)),
+  SFVAR(Window->YMet, 2, sizeof(*Window)),
+  SFVAR(Window->CurXStart, 2, sizeof(*Window)),
+  SFVAR(Window->CurXEnd, 2, sizeof(*Window)),
+  SFVAR(Window->CurLineWinAddr, 2, sizeof(*Window)),
+
+  SFEND
+ };
+
+ // Calls to RegsWrite() should go before MDFNSS_StateAction(), and before memcpy() to VRAM and CRAM.
+ if(load)
+ {
+  for(unsigned i = 0; i < 0x100; i++)
+  {
+   RegsWrite(i << 1, rr[i]);
+  }
+ }
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "VDP2REND");
+
+ if(load)
+ {
+  memcpy(VRAM, vr, sizeof(VRAM));
+  memcpy(CRAM, cr, sizeof(CRAM));
+
+  RecalcColorCache();
+ }
 }
 
 }

@@ -20,7 +20,7 @@
 
 #include "mapinc.h"
 
-static char Mirroring;
+static int8 Mirroring;
 static uint8 RegSelect;
 static uint8 Regs[8];
 

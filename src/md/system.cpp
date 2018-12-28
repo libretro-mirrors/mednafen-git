@@ -95,6 +95,7 @@ static void system_init(bool overseas, bool PAL, bool overseas_reported, bool PA
 
 static void system_reset(bool poweron)
 {
+ obsim = 0;
  z80_cycle_counter = 0;
  z80_last_ts = 0;
 
@@ -679,6 +680,8 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
   SFVAR(suspend68k),
   SFVAR(z80_cycle_counter),
+
+  SFVAR(obsim),
 
   SFARRAYN((load && load < 0x939) ? c68k_state : NULL, sizeof(c68k_state), "c68k_state"),
   SFEND

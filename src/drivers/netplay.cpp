@@ -71,6 +71,9 @@ bool NetplayConsole::TextHook(const std::string &text)
 // Called from game thread
 void MDFND_NetplaySetHints(bool active, bool behind)
 {
+ if(!MDFNDnetplay && active)
+  DoRunNormal();
+
  MDFNDnetplay = active;
 
  NoWaiting &= ~2;

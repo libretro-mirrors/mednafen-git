@@ -243,10 +243,10 @@ void INPUT_StateAction(StateMem *sm, int load, int data_only)
  MDFNSS_StateAction(sm, load, data_only, StateRegs, "JOY");
 }
 
-static const char* const ModeSwitchPositions[] =
+static const IDIIS_SwitchPos ModeSwitchPositions[] =
 {
- gettext_noop("2-button"),
- gettext_noop("6-button"),
+ { "2", gettext_noop("2-button"), gettext_noop("Basic 2-button controller mode, compatible with practically all games.") },
+ { "6", gettext_noop("6-button"), gettext_noop("6-button controller mode, only for compatible games(incompatible games will behave in a quite loopy manner).") },
 };
 
 static const IDIISG GamepadIDII =

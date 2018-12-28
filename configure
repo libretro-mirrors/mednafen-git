@@ -664,6 +664,9 @@ SNDFILE_LIBS
 SNDFILE_CFLAGS
 HAVE_LIBSNDFILE_FALSE
 HAVE_LIBSNDFILE_TRUE
+TRIO_LIBS
+HAVE_EXTERNAL_TRIO_FALSE
+HAVE_EXTERNAL_TRIO_TRUE
 TREMOR_LIBS
 HAVE_EXTERNAL_TREMOR_FALSE
 HAVE_EXTERNAL_TREMOR_TRUE
@@ -741,6 +744,7 @@ WANT_DEBUGGER_TRUE
 SS_EXTRA_FLAGS
 SNES_EXTRA_CXXFLAGS
 SNES_EXTRA_FLAGS
+NO_STRICT_ALIASING_FLAGS
 NO_STACK_PROTECTOR_FLAGS
 WARNING_FLAGS
 ZLIB_LIBS
@@ -946,6 +950,7 @@ enable_alsatest
 enable_jack
 with_external_mpcdec
 with_external_tremor
+with_external_trio
 with_libsndfile
 with_sdl_prefix
 with_sdl_exec_prefix
@@ -1649,6 +1654,7 @@ Optional Packages:
   --with-alsa-inc-prefix=PFX  Prefix where include libraries are (optional)
   --with-external-mpcdec  compile and link with external mpcdec [default=no]
   --with-external-tremor  compile and link with external tremor [default=no]
+  --with-external-trio    compile and link with external trio [default=no]
   --with-libsndfile       support various sound file formats in ripped CD
                           images [default=yes]
   --with-sdl-prefix=PFX   Prefix where SDL is installed (optional)
@@ -4327,8 +4333,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.45.1'
-MEDNAFEN_VERSION_NUMERIC=0x00094501
+MEDNAFEN_VERSION='0.9.48'
+MEDNAFEN_VERSION_NUMERIC=0x00094800
 
 # Make sure we can run config.sub.
 $SHELL "$ac_aux_dir/config.sub" sun4 >/dev/null 2>&1 ||
@@ -13588,6 +13594,70 @@ case ".$var" in
  ;;
 esac
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking OPTIMIZER_FLAGS for gcc -fstrict-aliasing" >&5
+$as_echo_n "checking OPTIMIZER_FLAGS for gcc -fstrict-aliasing... " >&6; }
+if ${ax_cv_cflags_gcc_option__fstrict_aliasing+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_cflags_gcc_option__fstrict_aliasing="no, unknown"
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ ac_save_CFLAGS="$CFLAGS"
+for ac_arg in "-pedantic -Werror % -fstrict-aliasing"     "-pedantic % -fstrict-aliasing %% no, obsolete"     #
+do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_cflags_gcc_option__fstrict_aliasing=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+ CFLAGS="$ac_save_CFLAGS"
+ ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__fstrict_aliasing" >&5
+$as_echo "$ax_cv_cflags_gcc_option__fstrict_aliasing" >&6; }
+var=$ax_cv_cflags_gcc_option__fstrict_aliasing
+case ".$var" in
+     .ok|.ok,*)  ;;
+   .|.no|.no,*)  ;;
+   *)
+   if echo " $OPTIMIZER_FLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : OPTIMIZER_FLAGS does contain \$var"; } >&5
+  (: OPTIMIZER_FLAGS does contain $var) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : OPTIMIZER_FLAGS=\"\$OPTIMIZER_FLAGS \$var\""; } >&5
+  (: OPTIMIZER_FLAGS="$OPTIMIZER_FLAGS $var") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+                      OPTIMIZER_FLAGS="$OPTIMIZER_FLAGS $var"
+   fi
+ ;;
+esac
+
 
 CODEGEN_FLAGS=""
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking CODEGEN_FLAGS for gcc -fno-pic" >&5
@@ -14815,6 +14885,74 @@ case ".$var" in
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }
                       NO_STACK_PROTECTOR_FLAGS="$NO_STACK_PROTECTOR_FLAGS $var"
+   fi
+ ;;
+esac
+
+
+
+# Used for ngp and quicklz
+NO_STRICT_ALIASING_FLAGS=""
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking NO_STRICT_ALIASING_FLAGS for gcc -fno-strict-aliasing" >&5
+$as_echo_n "checking NO_STRICT_ALIASING_FLAGS for gcc -fno-strict-aliasing... " >&6; }
+if ${ax_cv_cflags_gcc_option__fno_strict_aliasing+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_cflags_gcc_option__fno_strict_aliasing="no, unknown"
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ ac_save_CFLAGS="$CFLAGS"
+for ac_arg in "-pedantic -Werror % -fno-strict-aliasing"     "-pedantic % -fno-strict-aliasing %% no, obsolete"     #
+do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_cflags_gcc_option__fno_strict_aliasing=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+ CFLAGS="$ac_save_CFLAGS"
+ ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__fno_strict_aliasing" >&5
+$as_echo "$ax_cv_cflags_gcc_option__fno_strict_aliasing" >&6; }
+var=$ax_cv_cflags_gcc_option__fno_strict_aliasing
+case ".$var" in
+     .ok|.ok,*)  ;;
+   .|.no|.no,*)  ;;
+   *)
+   if echo " $NO_STRICT_ALIASING_FLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : NO_STRICT_ALIASING_FLAGS does contain \$var"; } >&5
+  (: NO_STRICT_ALIASING_FLAGS does contain $var) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : NO_STRICT_ALIASING_FLAGS=\"\$NO_STRICT_ALIASING_FLAGS \$var\""; } >&5
+  (: NO_STRICT_ALIASING_FLAGS="$NO_STRICT_ALIASING_FLAGS $var") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+                      NO_STRICT_ALIASING_FLAGS="$NO_STRICT_ALIASING_FLAGS $var"
    fi
  ;;
 esac
@@ -16736,6 +16874,110 @@ fi
 fi
 
 #
+# trio
+#
+ if false; then
+  HAVE_EXTERNAL_TRIO_TRUE=
+  HAVE_EXTERNAL_TRIO_FALSE='#'
+else
+  HAVE_EXTERNAL_TRIO_TRUE='#'
+  HAVE_EXTERNAL_TRIO_FALSE=
+fi
+
+
+# Check whether --with-external-trio was given.
+if test "${with_external_trio+set}" = set; then :
+  withval=$with_external_trio;
+else
+  with_external_trio=no
+fi
+
+if test x$with_external_trio = xyes; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for trio_printf in -ltrio" >&5
+$as_echo_n "checking for trio_printf in -ltrio... " >&6; }
+if ${ac_cv_lib_trio_trio_printf+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ltrio  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char trio_printf ();
+int
+main ()
+{
+return trio_printf ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_trio_trio_printf=yes
+else
+  ac_cv_lib_trio_trio_printf=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_trio_trio_printf" >&5
+$as_echo "$ac_cv_lib_trio_trio_printf" >&6; }
+if test "x$ac_cv_lib_trio_trio_printf" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBTRIO 1
+_ACEOF
+
+  LIBS="-ltrio $LIBS"
+
+else
+  as_fn_error $? "*** libtrio not found!" "$LINENO" 5
+fi
+
+	ac_fn_cxx_check_header_mongrel "$LINENO" "trio.h" "ac_cv_header_trio_h" "$ac_includes_default"
+if test "x$ac_cv_header_trio_h" = xyes; then :
+
+else
+  as_fn_error $? "*** libtrio not found!" "$LINENO" 5
+fi
+
+
+
+
+$as_echo "#define HAVE_EXTERNAL_TRIO 1" >>confdefs.h
+
+	 if true; then
+  HAVE_EXTERNAL_TRIO_TRUE=
+  HAVE_EXTERNAL_TRIO_FALSE='#'
+else
+  HAVE_EXTERNAL_TRIO_TRUE='#'
+  HAVE_EXTERNAL_TRIO_FALSE=
+fi
+
+	TRIO_LIBS="-ltrio"
+
+	trio_include_symsrc="include/trio_external"
+else
+	trio_include_symsrc="src/trio"
+fi
+ac_config_links="$ac_config_links include/trio/triodef.h:$trio_include_symsrc/triodef.h"
+
+ac_config_links="$ac_config_links include/trio/trio.h:$trio_include_symsrc/trio.h"
+
+ac_config_links="$ac_config_links include/trio/trionan.h:$trio_include_symsrc/trionan.h"
+
+ac_config_links="$ac_config_links include/trio/triop.h:$trio_include_symsrc/triop.h"
+
+ac_config_links="$ac_config_links include/trio/triostr.h:$trio_include_symsrc/triostr.h"
+
+
+#
 # libsndfile
 #
  if false; then
@@ -18244,7 +18486,7 @@ AM_CFLAGS="$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGE
 AM_CXXFLAGS="$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGEN_CXXFLAGS"
 
 
-ac_config_files="$ac_config_files Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/ngp/Makefile src/snes/Makefile src/ss/Makefile src/desa68/Makefile src/quicklz/Makefile po/Makefile.in intl/Makefile"
+ac_config_files="$ac_config_files Makefile po/Makefile.in intl/Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/ss/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -18705,6 +18947,14 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_EXTERNAL_TREMOR_TRUE}" && test -z "${HAVE_EXTERNAL_TREMOR_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_EXTERNAL_TREMOR\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_EXTERNAL_TRIO_TRUE}" && test -z "${HAVE_EXTERNAL_TRIO_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_EXTERNAL_TRIO\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_EXTERNAL_TRIO_TRUE}" && test -z "${HAVE_EXTERNAL_TRIO_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_EXTERNAL_TRIO\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_LIBSNDFILE_TRUE}" && test -z "${HAVE_LIBSNDFILE_FALSE}"; then
@@ -19252,6 +19502,7 @@ cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
 # Files that config.status was made for.
 config_files="$ac_config_files"
 config_headers="$ac_config_headers"
+config_links="$ac_config_links"
 config_commands="$ac_config_commands"
 
 _ACEOF
@@ -19281,6 +19532,9 @@ $config_files
 
 Configuration headers:
 $config_headers
+
+Configuration links:
+$config_links
 
 Configuration commands:
 $config_commands
@@ -19430,21 +19684,19 @@ do
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "include/config.h") CONFIG_HEADERS="$CONFIG_HEADERS include/config.h:include/config.h.in" ;;
     "po-directories") CONFIG_COMMANDS="$CONFIG_COMMANDS po-directories" ;;
+    "include/trio/triodef.h") CONFIG_LINKS="$CONFIG_LINKS include/trio/triodef.h:$trio_include_symsrc/triodef.h" ;;
+    "include/trio/trio.h") CONFIG_LINKS="$CONFIG_LINKS include/trio/trio.h:$trio_include_symsrc/trio.h" ;;
+    "include/trio/trionan.h") CONFIG_LINKS="$CONFIG_LINKS include/trio/trionan.h:$trio_include_symsrc/trionan.h" ;;
+    "include/trio/triop.h") CONFIG_LINKS="$CONFIG_LINKS include/trio/triop.h:$trio_include_symsrc/triop.h" ;;
+    "include/trio/triostr.h") CONFIG_LINKS="$CONFIG_LINKS include/trio/triostr.h:$trio_include_symsrc/triostr.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+    "po/Makefile.in") CONFIG_FILES="$CONFIG_FILES po/Makefile.in" ;;
+    "intl/Makefile") CONFIG_FILES="$CONFIG_FILES intl/Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
     "src/drivers/Makefile") CONFIG_FILES="$CONFIG_FILES src/drivers/Makefile" ;;
     "src/drivers_dos/Makefile") CONFIG_FILES="$CONFIG_FILES src/drivers_dos/Makefile" ;;
     "src/sexyal/Makefile") CONFIG_FILES="$CONFIG_FILES src/sexyal/Makefile" ;;
-    "src/tremor/Makefile") CONFIG_FILES="$CONFIG_FILES src/tremor/Makefile" ;;
-    "src/mpcdec/Makefile") CONFIG_FILES="$CONFIG_FILES src/mpcdec/Makefile" ;;
-    "src/trio/Makefile") CONFIG_FILES="$CONFIG_FILES src/trio/Makefile" ;;
-    "src/ngp/Makefile") CONFIG_FILES="$CONFIG_FILES src/ngp/Makefile" ;;
-    "src/snes/Makefile") CONFIG_FILES="$CONFIG_FILES src/snes/Makefile" ;;
     "src/ss/Makefile") CONFIG_FILES="$CONFIG_FILES src/ss/Makefile" ;;
-    "src/desa68/Makefile") CONFIG_FILES="$CONFIG_FILES src/desa68/Makefile" ;;
-    "src/quicklz/Makefile") CONFIG_FILES="$CONFIG_FILES src/quicklz/Makefile" ;;
-    "po/Makefile.in") CONFIG_FILES="$CONFIG_FILES po/Makefile.in" ;;
-    "intl/Makefile") CONFIG_FILES="$CONFIG_FILES intl/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
@@ -19458,6 +19710,7 @@ done
 if $ac_need_defaults; then
   test "${CONFIG_FILES+set}" = set || CONFIG_FILES=$config_files
   test "${CONFIG_HEADERS+set}" = set || CONFIG_HEADERS=$config_headers
+  test "${CONFIG_LINKS+set}" = set || CONFIG_LINKS=$config_links
   test "${CONFIG_COMMANDS+set}" = set || CONFIG_COMMANDS=$config_commands
 fi
 
@@ -19755,7 +20008,7 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 fi # test -n "$CONFIG_HEADERS"
 
 
-eval set X "  :F $CONFIG_FILES  :H $CONFIG_HEADERS    :C $CONFIG_COMMANDS"
+eval set X "  :F $CONFIG_FILES  :H $CONFIG_HEADERS  :L $CONFIG_LINKS  :C $CONFIG_COMMANDS"
 shift
 for ac_tag
 do
@@ -20032,7 +20285,38 @@ $as_echo X"$_am_arg" |
 	  }
 	  s/.*/./; q'`/stamp-h$_am_stamp_count
  ;;
+  :L)
+  #
+  # CONFIG_LINK
+  #
 
+  if test "$ac_source" = "$ac_file" && test "$srcdir" = '.'; then
+    :
+  else
+    # Prefer the file from the source tree if names are identical.
+    if test "$ac_source" = "$ac_file" || test ! -r "$ac_source"; then
+      ac_source=$srcdir/$ac_source
+    fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: linking $ac_source to $ac_file" >&5
+$as_echo "$as_me: linking $ac_source to $ac_file" >&6;}
+
+    if test ! -r "$ac_source"; then
+      as_fn_error $? "$ac_source: file not found" "$LINENO" 5
+    fi
+    rm -f "$ac_file"
+
+    # Try a relative symlink, then a hard link, then a copy.
+    case $ac_source in
+    [\\/$]* | ?:[\\/]* ) ac_rel_source=$ac_source ;;
+	*) ac_rel_source=$ac_top_build_prefix$ac_source ;;
+    esac
+    ln -s "$ac_rel_source" "$ac_file" 2>/dev/null ||
+      ln "$ac_source" "$ac_file" 2>/dev/null ||
+      cp -p "$ac_source" "$ac_file" ||
+      as_fn_error $? "cannot link or copy $ac_source to $ac_file" "$LINENO" 5
+  fi
+ ;;
   :C)  { $as_echo "$as_me:${as_lineno-$LINENO}: executing $ac_file commands" >&5
 $as_echo "$as_me: executing $ac_file commands" >&6;}
  ;;

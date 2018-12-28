@@ -32,7 +32,7 @@ void MDFN_DispMessage(const char *format, ...) noexcept MDFN_FORMATSTR(gnu_print
 
 void MDFN_DebugPrintReal(const char *file, const int line, const char *format, ...) MDFN_FORMATSTR(gnu_printf, 3, 4);
 
-#define MDFN_DebugPrint(format, ...) MDFN_DebugPrintReal(__FILE__, __LINE__, format, ## __VA_ARGS__)
+#define MDFN_DebugPrint(...) MDFN_DebugPrintReal(__FILE__, __LINE__, __VA_ARGS__)
 
 void MDFN_FlushGameCheats(int nosave);
 void MDFN_DoSimpleCommand(int cmd);

@@ -24,7 +24,7 @@
 
 void MDFN_FastMemXOR(void* dest, const void* src, size_t count)
 {
- const unsigned alch = ((unsigned long long)dest | (unsigned long long)src);
+ const unsigned alch = ((uintptr_t)dest | (uintptr_t)src);
 
  uint8* pd = (uint8*)dest;
  const uint8* sd = (const uint8*)src;

@@ -28,7 +28,7 @@ unsigned int m68k_read_bus_8(unsigned int address)
 }
 
 static const unsigned obsim_values[3] = { 0, 0x7FFF, 0xFFFF };
-static uint32 obsim = 0;
+uint32 obsim = 0;
 
 unsigned int m68k_read_bus_16(unsigned int address)
 {

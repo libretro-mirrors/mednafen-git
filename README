@@ -12,6 +12,7 @@ Compilation Notes:
 	Reportedly, passing:	--build=x86_64-apple-darwin`uname -r`
 	to the configure script is necessary for building on Mac OS X to work properly.
 
+	Compiling at -O3 or higher, or with other custom optimization flags, is discouraged.
 
 
 ---------------------------------------------

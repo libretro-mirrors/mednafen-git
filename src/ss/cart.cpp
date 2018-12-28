@@ -31,6 +31,7 @@
 #include "cart/extram.h"
 //#include "cart/nlmodem.h"
 #include "cart/rom.h"
+#include "cart/ar4mp.h"
 
 namespace MDFN_IEN_SS
 {
@@ -80,10 +81,11 @@ static MDFN_COLD bool DummyGetClearNVDirty(void)
  return false;
 }
 
-static MDFN_COLD void DummyGetNVInfo(const char** ext, void** nv_ptr, uint64* nv_size)
+static MDFN_COLD void DummyGetNVInfo(const char** ext, void** nv_ptr, bool* nv16, uint64* nv_size)
 {
  *ext = nullptr;
  *nv_ptr = nullptr;
+ *nv16 = false;
  *nv_size = 0;
 }
 
@@ -163,6 +165,15 @@ void CART_Init(const int cart_type)
 	 FileStream fp(path, FileStream::MODE_READ);
 
 	 CART_ROM_Init(&Cart, &fp);
+	}
+	break;
+
+  case CART_AR4MP:
+	{
+	 const std::string path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("ss.cart.satar4mp_path"));
+	 FileStream fp(path, FileStream::MODE_READ);
+
+	 CART_AR4MP_Init(&Cart, &fp);
 	}
 	break;
 

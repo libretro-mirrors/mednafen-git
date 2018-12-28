@@ -58,7 +58,7 @@ uint32 IRQ_GetRegister(unsigned int which, char *special, const uint32 special_l
 void IRQ_SetRegister(unsigned int which, uint32 value);
 
 void IRQ_StateAction(StateMem *sm, const unsigned load, const bool data_only);
-};
+}
 
 
 #endif

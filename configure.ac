@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.45.1'
-MEDNAFEN_VERSION_NUMERIC=0x00094501
+MEDNAFEN_VERSION='0.9.48'
+MEDNAFEN_VERSION_NUMERIC=0x00094800
 
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([mednafen], $MEDNAFEN_VERSION)
@@ -98,6 +98,8 @@ dnl in Mednafen that would cause problems.
 dnl
 dnl -fomit-frame-pointer is required for some x86 inline assembly to compile.
 dnl
+dnl -fstrict-aliasing for OpenBSD
+dnl
 OPTIMIZER_FLAGS=""
 AX_CFLAGS_GCC_OPTION([-fno-fast-math], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-unsafe-math-optimizations], OPTIMIZER_FLAGS)
@@ -105,6 +107,7 @@ AX_CFLAGS_GCC_OPTION([-fno-aggressive-loop-optimizations], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-ipa-icf], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-printf-return-value], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fomit-frame-pointer], OPTIMIZER_FLAGS)
+AX_CFLAGS_GCC_OPTION([-fstrict-aliasing], OPTIMIZER_FLAGS)
 
 dnl
 dnl Aggressively try to disable PIC and PIE, as it has a significant performance overhead and will
@@ -146,6 +149,11 @@ AX_CFLAGS_GCC_OPTION([-fno-stack-protector], NO_STACK_PROTECTOR_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-stack-protector-all], NO_STACK_PROTECTOR_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-stack-protector-strong], NO_STACK_PROTECTOR_FLAGS)
 AC_SUBST(NO_STACK_PROTECTOR_FLAGS)
+
+# Used for ngp and quicklz
+NO_STRICT_ALIASING_FLAGS=""
+AX_CFLAGS_GCC_OPTION([-fno-strict-aliasing], NO_STRICT_ALIASING_FLAGS)
+AC_SUBST(NO_STRICT_ALIASING_FLAGS)
 
 # -----------------------------------
 # Begin snes flags
@@ -524,6 +532,30 @@ if test x$with_external_tremor = xyes; then
 fi
 
 #
+# trio
+#
+AM_CONDITIONAL(HAVE_EXTERNAL_TRIO, false)
+AC_ARG_WITH([external-trio], [AS_HELP_STRING([--with-external-trio], [compile and link with external trio @<:@default=no@:>@])],
+	[],
+	[with_external_trio=no])
+if test x$with_external_trio = xyes; then
+	AC_CHECK_LIB([trio], [trio_printf], [], AC_MSG_ERROR([*** libtrio not found!]))
+	AC_CHECK_HEADER([trio.h], [], AC_MSG_ERROR([*** libtrio not found!]))
+
+	AC_DEFINE([HAVE_EXTERNAL_TRIO], [1], [Define if we are compiling and linking with external trio.])
+	AM_CONDITIONAL(HAVE_EXTERNAL_TRIO, true)
+	AC_SUBST([TRIO_LIBS], ["-ltrio"])
+	trio_include_symsrc="include/trio_external"
+else
+	trio_include_symsrc="src/trio"
+fi
+AC_CONFIG_LINKS([include/trio/triodef.h:$trio_include_symsrc/triodef.h])
+AC_CONFIG_LINKS([include/trio/trio.h:$trio_include_symsrc/trio.h])
+AC_CONFIG_LINKS([include/trio/trionan.h:$trio_include_symsrc/trionan.h])
+AC_CONFIG_LINKS([include/trio/triop.h:$trio_include_symsrc/triop.h])
+AC_CONFIG_LINKS([include/trio/triostr.h:$trio_include_symsrc/triostr.h])
+
+#
 # libsndfile
 #
 AM_CONDITIONAL(HAVE_LIBSNDFILE, false)
@@ -697,4 +729,4 @@ AC_SUBST([AM_CFLAGS], "$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_F
 AC_SUBST([AM_CXXFLAGS], "$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGEN_CXXFLAGS")
 
 dnl Output Makefiles
-AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/ngp/Makefile src/snes/Makefile src/ss/Makefile src/desa68/Makefile src/quicklz/Makefile po/Makefile.in  intl/Makefile])
+AC_OUTPUT([Makefile po/Makefile.in intl/Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/ss/Makefile])

@@ -121,14 +121,15 @@ am__dirstamp = $(am__leading_dot)dirstamp
 am_libss_a_OBJECTS = db.$(OBJEXT) cdb.$(OBJEXT) sound.$(OBJEXT) \
 	cart.$(OBJEXT) cart/backup.$(OBJEXT) cart/cs1ram.$(OBJEXT) \
 	cart/debug.$(OBJEXT) cart/extram.$(OBJEXT) cart/rom.$(OBJEXT) \
-	ss.$(OBJEXT) scu_dsp_gen.$(OBJEXT) scu_dsp_mvi.$(OBJEXT) \
-	scu_dsp_jmp.$(OBJEXT) scu_dsp_misc.$(OBJEXT) vdp1.$(OBJEXT) \
-	vdp1_line.$(OBJEXT) vdp1_sprite.$(OBJEXT) vdp1_poly.$(OBJEXT) \
-	vdp2.$(OBJEXT) vdp2_render.$(OBJEXT) smpc.$(OBJEXT) \
-	input/multitap.$(OBJEXT) input/gamepad.$(OBJEXT) \
-	input/3dpad.$(OBJEXT) input/mouse.$(OBJEXT) \
-	input/wheel.$(OBJEXT) input/mission.$(OBJEXT) \
-	input/gun.$(OBJEXT) input/keyboard.$(OBJEXT)
+	cart/ar4mp.$(OBJEXT) ss.$(OBJEXT) scu_dsp_gen.$(OBJEXT) \
+	scu_dsp_mvi.$(OBJEXT) scu_dsp_jmp.$(OBJEXT) \
+	scu_dsp_misc.$(OBJEXT) vdp1.$(OBJEXT) vdp1_line.$(OBJEXT) \
+	vdp1_sprite.$(OBJEXT) vdp1_poly.$(OBJEXT) vdp2.$(OBJEXT) \
+	vdp2_render.$(OBJEXT) smpc.$(OBJEXT) input/multitap.$(OBJEXT) \
+	input/gamepad.$(OBJEXT) input/3dpad.$(OBJEXT) \
+	input/mouse.$(OBJEXT) input/wheel.$(OBJEXT) \
+	input/mission.$(OBJEXT) input/gun.$(OBJEXT) \
+	input/keyboard.$(OBJEXT)
 libss_a_OBJECTS = $(am_libss_a_OBJECTS)
 libssfplay_a_AR = $(AR) $(ARFLAGS)
 libssfplay_a_LIBADD =
@@ -275,6 +276,7 @@ MSGFMT = @MSGFMT@
 MSGFMT_015 = @MSGFMT_015@
 MSGMERGE = @MSGMERGE@
 NO_STACK_PROTECTOR_FLAGS = @NO_STACK_PROTECTOR_FLAGS@
+NO_STRICT_ALIASING_FLAGS = @NO_STRICT_ALIASING_FLAGS@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -303,6 +305,7 @@ SS_EXTRA_FLAGS = @SS_EXTRA_FLAGS@
 STRIP = @STRIP@
 TREMOR_LIBS = @TREMOR_LIBS@
 TRIO_CFLAGS = @TRIO_CFLAGS@
+TRIO_LIBS = @TRIO_LIBS@
 USE_INCLUDED_LIBINTL = @USE_INCLUDED_LIBINTL@
 USE_NLS = @USE_NLS@
 VERSION = @VERSION@
@@ -371,10 +374,10 @@ DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_bui
 noinst_LIBRARIES = $(am__append_1) $(am__append_2)
 libss_a_SOURCES = db.cpp cdb.cpp sound.cpp cart.cpp cart/backup.cpp \
 	cart/cs1ram.cpp cart/debug.cpp cart/extram.cpp cart/rom.cpp \
-	ss.cpp scu_dsp_gen.cpp scu_dsp_mvi.cpp scu_dsp_jmp.cpp \
-	scu_dsp_misc.cpp vdp1.cpp vdp1_line.cpp vdp1_sprite.cpp \
-	vdp1_poly.cpp vdp2.cpp vdp2_render.cpp smpc.cpp \
-	input/multitap.cpp input/gamepad.cpp input/3dpad.cpp \
+	cart/ar4mp.cpp ss.cpp scu_dsp_gen.cpp scu_dsp_mvi.cpp \
+	scu_dsp_jmp.cpp scu_dsp_misc.cpp vdp1.cpp vdp1_line.cpp \
+	vdp1_sprite.cpp vdp1_poly.cpp vdp2.cpp vdp2_render.cpp \
+	smpc.cpp input/multitap.cpp input/gamepad.cpp input/3dpad.cpp \
 	input/mouse.cpp input/wheel.cpp input/mission.cpp \
 	input/gun.cpp input/keyboard.cpp
 libssfplay_a_SOURCES = ssf.cpp
@@ -430,6 +433,8 @@ cart/debug.$(OBJEXT): cart/$(am__dirstamp) \
 cart/extram.$(OBJEXT): cart/$(am__dirstamp) \
 	cart/$(DEPDIR)/$(am__dirstamp)
 cart/rom.$(OBJEXT): cart/$(am__dirstamp) \
+	cart/$(DEPDIR)/$(am__dirstamp)
+cart/ar4mp.$(OBJEXT): cart/$(am__dirstamp) \
 	cart/$(DEPDIR)/$(am__dirstamp)
 input/$(am__dirstamp):
 	@$(MKDIR_P) input
@@ -489,6 +494,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdp1_sprite.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdp2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdp2_render.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/ar4mp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/backup.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/cs1ram.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/debug.Po@am__quote@

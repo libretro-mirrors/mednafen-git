@@ -1,12 +1,13 @@
 // Sega Master System SN76489 PSG sound chip emulator
 
 // Sms_Snd_Emu 0.1.4
+
 #ifndef SMS_APU_H
 #define SMS_APU_H
 
 #include "Sms_Oscs.h"
 
-typedef struct
+struct Sms_ApuState
 {
         int32 sq_period[3];
         int32 sq_phase[3];
@@ -15,9 +16,10 @@ typedef struct
         uint32 noise_feedback;
 
         int32 volume[4];
+	int32 delay[4];
 	uint8 ggstereo;
         uint8 latch;
-} Sms_ApuState;
+};
 
 class Sms_Apu {
 public:
@@ -77,12 +79,6 @@ private:
 	unsigned int ggstereo_save;
 	
 	void run_until( blip_time_t );
-};
-
-struct sms_apu_state_t
-{
-	unsigned char regs [8] [2];
-	unsigned char latch;
 };
 
 inline void Sms_Apu::output( Blip_Buffer* b ) { output( b, b, b ); }

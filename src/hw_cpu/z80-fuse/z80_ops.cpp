@@ -27,16 +27,14 @@
 
 #include "z80_macros.h"
 
-static int iline = 0;
-
 void z80_set_interrupt(int set)
 {
- iline = set;
+ z80_iline = set;
 }
 
 int z80_do_opcode( void )
 {
- if(iline)
+ if(z80_iline)
  {
   if(z80_interrupt())
   {

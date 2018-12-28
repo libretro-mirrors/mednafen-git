@@ -55,6 +55,7 @@ uint8 sz53p_table[0x100]; /* OR the above two tables together */
 processor z80;
 uint64 z80_tstates;
 uint64 last_z80_tstates;
+int z80_iline = 0;
 
 static void z80_init_tables(void);
 
@@ -216,7 +217,7 @@ z80_to_snapshot( libspectrum_snap *snap )
 
 void z80_state_action(StateMem *sm, const unsigned load, const bool data_only, const char *section_name)
 {
- uint8 r_register;
+ uint8 r_register = (z80.r7 & 0x80) | (z80.r & 0x7f);
 
  SFORMAT StateRegs[] =
  {
@@ -243,12 +244,10 @@ void z80_state_action(StateMem *sm, const unsigned load, const bool data_only, c
 
   SFVAR(z80_tstates),
   SFVAR(last_z80_tstates),
+  SFVAR(z80_iline),
 
   SFEND
  };
-
- if(!load)
-  r_register = (z80.r7 & 0x80) | (z80.r & 0x7f);
 
  MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name);
 

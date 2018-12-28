@@ -79,6 +79,7 @@ extern uint8 sz53p_table[];
 extern uint8 parity_table[];
 
 extern uint64 z80_tstates, last_z80_tstates;
+extern int z80_iline;
 
 extern void (*z80_writebyte)(uint16, uint8);
 extern uint8 (*z80_readbyte)(uint16);

@@ -100,10 +100,10 @@ class PCFX_Input_Gamepad : public PCFX_Input_Device
  uint16 buttons;
 };
 
-static const char* const ModeSwitchPositions[] =
+static const IDIIS_SwitchPos ModeSwitchPositions[] =
 {
- "A",
- "B",
+ { "a", "A" },
+ { "b", "B" },
 };
 
 const IDIISG PCFX_GamepadIDII =

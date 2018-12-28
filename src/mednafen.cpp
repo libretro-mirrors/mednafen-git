@@ -1382,6 +1382,8 @@ int MDFNI_Initialize(const char *basedir, const std::vector<MDFNSetting> &Driver
 
 	MDFN_MergeSettings(RenamedSettings);
 
+	MDFN_FinalizeSettings();
+
 	try
 	{
 	 settings_file_path = std::string(basedir) + std::string(PSS) + std::string("mednafen-09x.cfg");

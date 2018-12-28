@@ -335,11 +335,13 @@ void Sms_Apu::save_state(Sms_ApuState *ret)
 {
  memset(ret, 0, sizeof(Sms_ApuState));
 
+ ret->latch = latch;
  ret->ggstereo = ggstereo_save;
 
  for(int x = 0; x < 4; x++)
  {
   ret->volume[x] = oscs[x]->volume;
+  ret->delay[x] = oscs[x]->delay;
  }
 
  for(int x = 0; x < 3; x++)
@@ -362,9 +364,12 @@ void Sms_Apu::save_state(Sms_ApuState *ret)
 
 void Sms_Apu::load_state(const Sms_ApuState *state)
 {
+ latch = state->latch;
+
  for(int x = 0; x < 4; x++)
  {
   oscs[x]->volume = state->volume[x];
+  oscs[x]->delay = state->delay[x];
  }
 
  for(int x = 0; x < 3; x++)

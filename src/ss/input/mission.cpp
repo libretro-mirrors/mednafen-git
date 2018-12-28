@@ -194,21 +194,21 @@ uint8 IODevice_Mission::UpdateBus(const sscpu_timestamp_t timestamp, const uint8
  return (smpc_out & (smpc_out_asserted | 0xE0)) | (tmp &~ smpc_out_asserted);
 }
 
-static const char* const SpeedSwitchPositions[] =
+static const IDIIS_SwitchPos SpeedSwitchPositions[] =
 {
- gettext_noop("1/7"),
- gettext_noop("2/7"),
- gettext_noop("3/7"),
- gettext_noop("4/7"),
- gettext_noop("5/7"),
- gettext_noop("6/7"),
- gettext_noop("7/7")
+ { "1", gettext_noop("1/7"), gettext_noop("Slowest") },
+ { "2", gettext_noop("2/7") },
+ { "3", gettext_noop("3/7") },
+ { "4", gettext_noop("4/7") },
+ { "5", gettext_noop("5/7") },
+ { "6", gettext_noop("6/7") },
+ { "7", gettext_noop("7/7"), gettext_noop("Fastest") },
 };
 
-static const char* const AFSwitchPositions[] =
+static const IDIIS_SwitchPos AFSwitchPositions[] =
 {
- gettext_noop("• (Off)"),
- gettext_noop("•• (On)")
+ { "off", gettext_noop("• (Off)"), },
+ { "on", gettext_noop("•• (On)") },
 };
 
 IDIISG IODevice_Mission_IDII =

@@ -15,12 +15,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "../mednafen.h"
+#include <mednafen/mednafen.h>
+#include <mednafen/general.h>
 #include <sys/types.h>
 #include <trio/trio.h>
 #include "cdromif.h"
 #include "CDAccess.h"
-#include "../general.h"
 
 using namespace CDUtility;
 
