@@ -174,12 +174,12 @@ void MDSound_StateAction(StateMem *sm, const unsigned load, const bool data_only
   SFVAR(fm_div),
   SFVAR(fm_latch),
 
-  SFARRAYN(&fm_slizer[0], fm_slizer.size(), "FMState"),
+  SFPTR8N(&fm_slizer[0], fm_slizer.size(), "FMState"),
 
-  SFARRAY32N(sn_state.volume, 4, "Volume"),
-  SFARRAY32N(sn_state.delay, 4, "Delay"),
-  SFARRAY32N(sn_state.sq_period, 3, "SQPeriod"),
-  SFARRAY32N(sn_state.sq_phase, 3, "SQPhase"),
+  SFPTR32N(sn_state.volume, 4, "Volume"),
+  SFPTR32N(sn_state.delay, 4, "Delay"),
+  SFPTR32N(sn_state.sq_period, 3, "SQPeriod"),
+  SFPTR32N(sn_state.sq_phase, 3, "SQPhase"),
   SFVARN(sn_state.noise_period, "NPeriod"),
   SFVARN(sn_state.noise_shifter, "NShifter"),
   SFVARN(sn_state.noise_feedback, "NFeedback"),

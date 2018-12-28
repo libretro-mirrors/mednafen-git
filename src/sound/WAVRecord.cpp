@@ -97,6 +97,6 @@ WAVRecord::~WAVRecord()
  }
  catch(std::exception &e)
  {
-  MDFND_PrintError(e.what());
+  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
  }
 }

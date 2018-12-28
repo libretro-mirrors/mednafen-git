@@ -89,8 +89,31 @@ static void Power(CartInfo *info)
  setprg16(0xc000, 0x7F);
 }
 
+static int StateAction(StateMem *sm, int load, int data_only)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(PRGBanks),
+  SFVAR(CHRBanks),
+  SFVAR(Mirroring),
+  SFEND
+ };
+
+ int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAPR");
+
+ if(load)
+ {
+  DoPRG();
+  DoCHR();
+  DoMirroring();
+ }
+
+ return ret;
+}
+
 int Mapper22_Init(CartInfo *info)
 {
+	info->StateAction = StateAction;
 	info->Power = Power;
 	SetReadHandler(0x8000, 0xFFFF, CartBR);
 	SetWriteHandler(0x8000,0xffff,Mapper22_write);

@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* Joystick_Linux.cpp:
-**  Copyright (C) 2012-2016 Mednafen Team
+**  Copyright (C) 2012-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -23,6 +23,7 @@
 #include "input.h"
 #include "Joystick.h"
 #include "Joystick_Linux.h"
+#include <mednafen/FileStream.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -33,13 +34,14 @@
 #include <linux/input.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <limits.h>
 
 class Joystick_Linux : public Joystick
 {
  public:
 
- Joystick_Linux(const char *jsdev_path, const char *evdev_path);
- ~Joystick_Linux();
+ Joystick_Linux(const char *jsdev_path, const char *evdev_path, const uint64 bvpv) MDFN_COLD;
+ ~Joystick_Linux() MDFN_COLD;
 
  virtual unsigned HatToAxisCompat(unsigned hat);
 
@@ -54,7 +56,7 @@ class Joystick_Linux : public Joystick
 
  private:
 
- void InitFF(void);
+ void InitFF(void) MDFN_COLD;
 
  int jsdev_fd;
  int evdev_fd;
@@ -82,7 +84,7 @@ static bool TestEVBit(uint8 *data, unsigned bit_offset)
  return (bool)(data[(bit_offset >> 3)] & (1U << (bit_offset & 0x7)));
 }
 
-Joystick_Linux::Joystick_Linux(const char *jsdev_path, const char *evdev_path) : jsdev_fd(-1), evdev_fd(-1)
+Joystick_Linux::Joystick_Linux(const char *jsdev_path, const char *evdev_path, const uint64 bvpv) : jsdev_fd(-1), evdev_fd(-1)
 {
  unsigned char tmp;
 
@@ -130,7 +132,6 @@ Joystick_Linux::Joystick_Linux(const char *jsdev_path, const char *evdev_path) :
   fcntl(evdev_fd, F_SETFL, fcntl(evdev_fd, F_GETFL) | O_NONBLOCK);
 
 
-
  num_rel_axes = 0;
 
  if(ioctl(jsdev_fd, JSIOCGAXES, &tmp) == -1)
@@ -154,13 +155,50 @@ Joystick_Linux::Joystick_Linux(const char *jsdev_path, const char *evdev_path) :
  axis_state.resize(num_axes);
  button_state.resize(num_buttons);
 
- memset(name, 0, sizeof(name));
- ioctl(jsdev_fd, JSIOCGNAME(sizeof(name) - 1), name);
- if(name[0] == 0)
-  snprintf(name, sizeof(name), _("%u-button, %u-axis controller"), num_buttons, num_axes);
+ // Get name
+ {
+  name.resize(256);	// 1);
+
+  for(;;)
+  {
+   if(ioctl(jsdev_fd, JSIOCGNAME(name.size()), &name[0]) == -1)
+   {
+    ErrnoHolder ene(errno);
+
+    throw MDFN_Error(ene.Errno(), _("Failed to get joystick name: %s"), ene.StrError());
+   }
+
+   //printf("%s\n", name.c_str());
+
+   if(!name.back()) //strlen(name.c_str()) != (name.size() - 1)
+   {
+    name.resize(strlen(name.c_str()));
+    break;
+   }
+
+   name.resize(name.size() * 2);
+  }
+
+  if(!name.size())
+  {
+   char tn[128];
+
+   snprintf(tn, sizeof(tn), _("%u-button, %u-axis controller"), num_buttons, num_axes);
+   name = tn;
+  }
+ }
 
  compat_hat_offs = ~0U;
- CalcOldStyleID(num_axes, 0, 0, num_buttons);
+ Calc09xID(num_axes, 0, 0, num_buttons);
+
+ // 16-bit bus, 16-bit vendor, 16-bit product, 16-bit version
+ MDFN_en64msb(&id[ 0], bvpv);
+
+ // num axes, num buttons to handle some cases of kernel driver options being changed
+ MDFN_en16msb(&id[8], num_axes);
+ MDFN_en16msb(&id[10], num_buttons);
+ MDFN_en32msb(&id[12], 0);
+
  if(evdev_fd != -1)
  {
 #if 0
@@ -199,7 +237,24 @@ Joystick_Linux::Joystick_Linux(const char *jsdev_path, const char *evdev_path) :
    }
   }
   //printf("%u\n", compat_hat_offs);
-  CalcOldStyleID(ev_abs_count - ev_hat_count, 0, ev_hat_count / 2, num_buttons);
+  Calc09xID(ev_abs_count - ev_hat_count, 0, ev_hat_count / 2, num_buttons);
+
+#if 0
+  struct input_id iid;
+  if(ioctl(evdev_fd, EVIOCGID, &iid) == -1)
+  {
+   ErrnoHolder ene(errno);
+
+   throw MDFN_Error(ene.Errno(), _("Failed to get device ID: %s"), ene.StrError());
+  }
+
+  //printf("%04x %04x %04x %04x\n", iid.bustype, iid.vendor, iid.product, iid.version);
+  MDFN_en16msb(&id[0], iid.bustype);
+  MDFN_en16msb(&id[2], iid.vendor);
+  MDFN_en16msb(&id[4], iid.product);
+  MDFN_en16msb(&id[6], iid.version);
+  MDFN_en64msb(&id[8], 0);
+#endif
  }
 
 #if 0
@@ -370,84 +425,112 @@ static int evdev_filter(const struct dirent *de)
  int ccount = 0;
 
  if(sscanf(de->d_name, "event%u%n", &num, &ccount) >= 1 && de->d_name[ccount] == 0)
- {
-  return(1);
- }
+  return 1;
 
- return(0);
+ return 0;
 }
 
-
-std::string FindEVDevFullPathByJSDev(const char *jsdev_name)
+const char* FindSysFSInputBase(void)
 {
- char search_dir[512];
+ static const char* p[] = { "/sys/subsystem/input", "/sys/bus/input", "/sys/block/input", "/sys/class/input" };
+ struct stat stat_buf;
+
+ for(size_t i = 0; i < sizeof(p) / sizeof(p[0]); i++)
+ {
+  if(!stat(p[i], &stat_buf))
+  {
+   //printf("%s\n", p[i]);
+   return p[i];
+  }
+  else if(errno != ENOENT && errno != ENOTDIR)
+  {
+   ErrnoHolder ene(errno);
+
+   throw MDFN_Error(ene.Errno(), _("stat() failed: %s"), ene.StrError());
+  }
+ }
+
+ throw MDFN_Error(0, _("Couldn't find input subsystem under /sys."));
+}
+
+std::string FindSysFSInputDeviceByJSDev(const char* jsdev_name)
+{
+ std::string ret;
+ const char* input_subsys_path = FindSysFSInputBase();
+ char buf[256];
+ char* tmp;
+
+ snprintf(buf, sizeof(buf), "%s/%s", input_subsys_path, jsdev_name);
+ if(!(tmp = realpath(buf, NULL)))
+ {
+  ErrnoHolder ene(errno);
+
+  throw MDFN_Error(ene.Errno(), _("realpath(\"%s\") failed: %s"), buf, ene.StrError());
+ }
+
+ for(;;)
+ {
+  char* p = strrchr(tmp, '/');
+  unsigned idx;
+
+  if(!p)
+   throw MDFN_Error(0, _("Couldn't find parent input subsystem device of joystick device \"%s\"."), jsdev_name);
+
+  if(sscanf(p, "/input%u", &idx) == 1)
+   break;
+
+  *p = 0;
+ }
+
+ try { ret = tmp; free(tmp); } catch(...) { free(tmp); throw; }
+
+ //printf("%s\n", ret.c_str());
+
+ return ret;
+}
+
+std::string FindEVDevFullPath(const char* sysfs_input_dev_path)
+{
  struct dirent **namelist = NULL;
  int namelist_num = 0;
  std::string ret = "";
 
- snprintf(search_dir, sizeof(search_dir), "/sys/class/input/%s/device", jsdev_name);
-
- namelist_num = scandir(search_dir, &namelist, evdev_filter, alphasort);
+ namelist_num = scandir(sysfs_input_dev_path, &namelist, evdev_filter, versionsort);
  if(namelist_num > 0)
  {
-  ret = std::string("/dev/input") + std::string("/") + std::string(namelist[0]->d_name);
+  try { ret = std::string("/dev/input") + std::string("/") + std::string(namelist[0]->d_name); } catch(...) { FreeNamelist(namelist, namelist_num); throw; }
  }
  FreeNamelist(namelist, namelist_num);
  namelist = NULL;
 
- // Alternate matching, but a bit too complicated.
-#if 0
- if(ret == "")
+ //printf("%s\n", ret.c_str());
+
+ return ret;
+}
+
+static uint64 GetBVPV(const std::string& sysfs_input_dev_path)
+{
+ uint64 ret = 0;
+
+ for(unsigned i = 0; i < 4; i++)
  {
-  snprintf(search_dir, sizeof(search_dir), "/dev/input/by-id");
+  static const char* fns[4] = { "/id/bustype", "/id/vendor", "/id/product", "/id/version" };
+  const std::string idpath = sysfs_input_dev_path + fns[i];
+  FileStream fp(idpath, FileStream::MODE_READ);
+  std::string lb;
+  unsigned t = 0;
 
-  namelist_num = scandir(search_dir, &namelist, NULL, alphasort);
-  if(namelist_num > 0)
+  fp.get_line(lb);
+  if(sscanf(lb.c_str(), "%x", &t) != 1)
+   throw MDFN_Error(0, _("Bad data in \"%s\"."), idpath.c_str());
+  if(t > 0xFFFF)
   {
-   for(int i = 0; i < namelist_num; i++)
-   {
-    char link_buf[256 + 1];
-    std::string tmp_path;
-
-    memset(link_buf, 0, sizeof(link_buf));
-    tmp_path = std::string("/dev/input/by-id/") + std::string(namelist[i]->d_name);
-    if(readlink(tmp_path.c_str(), link_buf, sizeof(link_buf) - 1) > 0)
-    {
-     std::string link_str = std::string(link_buf);
-     size_t spos;
-     std::string fstr = std::string("/") + std::string(jsdev_name);
-
-     //printf("TP: %s, LS: %s, FS: %s\n", tmp_path.c_str(), link_str.c_str(), fstr.c_str());
-
-     spos = link_str.find(fstr);
-     if(spos != std::string::npos && ((link_str.size() - spos) == fstr.size()))
-     {
-      std::string jsuffix = std::string("-joystick");
-      std::string repsuffix = std::string("-event-joystick");
-      std::string new_path = tmp_path;
-      size_t jpos;
-
-      jpos = new_path.find(jsuffix);
-      if(jpos != std::string::npos && ((new_path.size() - jpos) == jsuffix.size()))
-      {
-       struct stat stat_buf;
-       new_path.replace(jpos, jsuffix.size(), repsuffix);
-
-       if(stat(new_path.c_str(), &stat_buf) != -1)
-       {
-        ret = new_path;
-        //printf("POO: %s\n", new_path.c_str());
-	break;
-       }
-      }
-     }
-    }
-   }
+   printf("Data read from \"%s\" has value(0x%x) larger than 0xFFFF\n", idpath.c_str(), t);
+   t &= 0xFFFF;
   }
-  FreeNamelist(namelist, namelist_num);
-  namelist_num = NULL;
+  ret <<= 16;
+  ret |= t;
  }
-#endif
 
  return ret;
 }
@@ -458,11 +541,9 @@ static int jsdev_filter(const struct dirent *de)
  int ccount = 0;
 
  if(sscanf(de->d_name, "js%u%n", &num, &ccount) >= 1 && de->d_name[ccount] == 0)
- {
-  return(1);
- }
+  return 1;
 
- return(0);
+ return 0;
 }
 
 JoystickDriver_Linux::JoystickDriver_Linux()
@@ -475,8 +556,8 @@ JoystickDriver_Linux::JoystickDriver_Linux()
  int namelist_num = 0;
  const char *base_path;
 
- inputdir_namelist_num = scandir("/dev/input", &inputdir_namelist, jsdev_filter, alphasort);
- basedir_namelist_num = scandir("/dev", &basedir_namelist, jsdev_filter, alphasort);
+ inputdir_namelist_num = scandir("/dev/input", &inputdir_namelist, jsdev_filter, versionsort);
+ basedir_namelist_num = scandir("/dev", &basedir_namelist, jsdev_filter, versionsort);
 
  if(basedir_namelist_num > inputdir_namelist_num)
  {
@@ -502,16 +583,16 @@ JoystickDriver_Linux::JoystickDriver_Linux()
 
    try
    {
-    std::string evdev_path;
+    const std::string sysfs_input_dev_path = FindSysFSInputDeviceByJSDev(namelist[i]->d_name);
+    const std::string evdev_path = FindEVDevFullPath(sysfs_input_dev_path.c_str());
+    const uint64 bvpv = GetBVPV(sysfs_input_dev_path);
 
-    evdev_path = FindEVDevFullPathByJSDev(namelist[i]->d_name); 
-
-    jslin = new Joystick_Linux(jsdev_path, (evdev_path.size() > 0) ? evdev_path.c_str() : NULL );
+    jslin = new Joystick_Linux(jsdev_path, (evdev_path.size() > 0) ? evdev_path.c_str() : NULL, bvpv);
     joys.push_back(jslin);
    }
    catch(std::exception &e)
    {
-    MDFND_PrintError(e.what());
+    MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
     if(jslin)
     {
      delete jslin;

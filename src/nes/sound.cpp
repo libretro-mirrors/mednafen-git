@@ -991,7 +991,7 @@ void MDFNSND_StateAction(StateMem *sm, const unsigned load, const bool data_only
  {
   SFVARN(fhcnt, "FHCN"),
   SFVARN(fcnt, "FCNT"),
-  SFARRAYN(PSG, 0x10, "PSG"),
+  SFPTR8N(PSG, 0x10, "PSG"),
 
   SFVARN(EnabledChannels, "ENCH"),
   SFVARN(IRQFrameMode, "IQFM"),
@@ -1025,7 +1025,7 @@ void MDFNSND_StateAction(StateMem *sm, const unsigned load, const bool data_only
   SFVARN(lengthcount[2], "LEN2"),
   SFVARN(lengthcount[3], "LEN3"),
 
-  SFARRAYN(SweepOn, 2, "SWEE"),
+  SFPTR8N(SweepOn, 2, "SWEE"),
 
   SFVARN(RectDutyCount[0], "RDC0"),
   SFVARN(RectDutyCount[1], "RDC1"),
@@ -1040,10 +1040,10 @@ void MDFNSND_StateAction(StateMem *sm, const unsigned load, const bool data_only
 
   SFVARN(curfreq[0], "CRF1"),
   SFVARN(curfreq[1], "CRF2"),
-  SFARRAYN(SweepCount, 2, "SWCT"),
-  SFARRAYN(SweepReload, 2, "SweepReload"),
-  SFARRAY32N(SweepPeriod, 2, "SweepPeriod"),
-  SFARRAY32N(SweepShift, 2, "SweepShift"), 
+  SFPTR8N(SweepCount, 2, "SWCT"),
+  SFPTR8N(SweepReload, 2, "SweepReload"),
+  SFPTR32N(SweepPeriod, 2, "SweepPeriod"),
+  SFPTR32N(SweepShift, 2, "SweepShift"), 
 
   SFVARN(SIRQStat, "SIRQ"),
 

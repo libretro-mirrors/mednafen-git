@@ -185,10 +185,10 @@ void SMS_SoundStateAction(StateMem *sm, int load, int data_only)
 
  SFORMAT StateRegs[] =
  {
-  SFARRAY32N(sn_state.volume, 4, "Volume"),
-  SFARRAY32N(sn_state.delay, 4, "Delay"),
-  SFARRAY32N(sn_state.sq_period, 3, "SQPeriod"),
-  SFARRAY32N(sn_state.sq_phase, 3, "SQPhase"),
+  SFVARN(sn_state.volume, "Volume"),
+  SFVARN(sn_state.delay, "Delay"),
+  SFVARN(sn_state.sq_period, "SQPeriod"),
+  SFVARN(sn_state.sq_phase, "SQPhase"),
   SFVARN(sn_state.noise_period, "NPeriod"),
   SFVARN(sn_state.noise_shifter, "NShifter"),
   SFVARN(sn_state.noise_feedback, "NFeedback"),

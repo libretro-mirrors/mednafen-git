@@ -29,10 +29,10 @@ static uint8 IRQCount,IRQa,IRQLatch;
 
 static void (*setchr1wrap)(unsigned int A, unsigned int V);
 static int nomirror;
+static int smallcount;
 
 static MDFN_FASTCALL void RAMBO1_IRQHook(int a)
 {
- static int smallcount;
  if(!IRQmode) return;
 
  smallcount+=a;
@@ -147,7 +147,8 @@ static int StateAction(StateMem *sm, int load, int data_only)
         SFVARN(IRQCount, "IRQC"),
         SFVARN(IRQa, "IRQA"),
         SFVARN(IRQLatch, "IRQL"),
-        SFARRAYN(DRegs, 11, "DREG"),
+        SFPTR8N(DRegs, 11, "DREG"),
+	SFVAR(smallcount),
         SFEND
  };
 

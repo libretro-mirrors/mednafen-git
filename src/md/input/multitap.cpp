@@ -215,7 +215,7 @@ void MD_Multitap::StateAction(StateMem *sm, const unsigned load, const bool data
   SFVAR(prev_th),
   SFVAR(prev_tr),
 
-  SFARRAY(&bb[0][0], sizeof(bb) / sizeof(bb[0][0])),
+  SFVARN(bb, "&bb[0][0]"),
   
   SFVAR(data_out),
   SFVAR(data_out_offs),

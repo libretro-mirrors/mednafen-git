@@ -382,7 +382,7 @@ static bool SWResetPending;
 static uint8 CDDevConn;
 static uint8 LastBufDest;
 
-enum { NumBuffers = 0xC8 };
+enum : int { NumBuffers = 0xC8 };
 static struct BufferT
 {
  uint8 Data[2352];
@@ -510,7 +510,7 @@ enum
 };
 static int64 DriveCounter;
 static int64 PeriodicIdleCounter;
-enum { PeriodicIdleCounter_Reload = (int64)187065 << 32 };
+enum : int64 { PeriodicIdleCounter_Reload = (int64)187065 << 32 };
 
 static uint8 PlayRepeatCounter;
 static uint8 CurPlayRepeat;
@@ -523,8 +523,8 @@ static uint32 PlayEndIRQType;
 static uint32 PlayCmdStartPos, PlayCmdEndPos;
 static uint8 PlayCmdRepCnt;
 
-enum { CDDABuf_PrefillCount = 4 };
-enum { CDDABuf_MaxCount = 4 + 588 + 4 };
+enum : int { CDDABuf_PrefillCount = 4 };
+enum : int { CDDABuf_MaxCount = 4 + 588 + 4 };
 static uint16 CDDABuf[CDDABuf_MaxCount][2];
 static uint32 CDDABuf_RP, CDDABuf_WP;
 static uint32 CDDABuf_Count;
@@ -864,7 +864,7 @@ static struct
 } FLS;
 
 
-enum { FLSPhaseBias = __COUNTER__ + 1 };
+enum : int { FLSPhaseBias = __COUNTER__ + 1 };
 
 #define FLS_PROLOGUE	 switch(FLS.Phase + FLSPhaseBias) { for(;;) { default: case __COUNTER__: ;
 #define FLS_EPILOGUE  }	} FLSGetOut:;
@@ -1278,7 +1278,7 @@ static INLINE void TriggerIRQ(unsigned bs)
  RecalcIRQOut();
 }
 
-enum { CommandPhaseBias = __COUNTER__ + 1 };
+enum : int { CommandPhaseBias = __COUNTER__ + 1 };
 
 #define CMD_YIELD	   {							\
 			    CommandPhase = __COUNTER__ - CommandPhaseBias + 1;	\
@@ -1388,7 +1388,7 @@ static uint8 FilterBuf(const unsigned fnum, const unsigned bfsidx)
  unsigned max_iter = 0x18;
  //uint32 done = 0;
 
- SS_DBG(SS_DBG_CDB, "[CDB] DT FilterBuf: fad=0x%08x -- %02x %02x --- %02x %02x\n", AMSF_to_ABA(BCD_to_U8(Buffers[bfsidx].Data[12 + 0]), BCD_to_U8(Buffers[bfsidx].Data[12 + 1]), BCD_to_U8(Buffers[bfsidx].Data[12 + 2])), fnum, bfsidx, Filters[fnum].TrueConn, Filters[fnum].FalseConn);
+ SS_DBG(SS_DBG_CDB, "[CDB] DT FilterBuf: fad=0x%08x -- %02x %02x --- %02x %02x\n", AMSF_to_ABA(BCD_to_U8(Buffers[bfsidx].Data[12 + 0]), BCD_to_U8(Buffers[bfsidx].Data[12 + 1]), BCD_to_U8(Buffers[bfsidx].Data[12 + 2])), fnum, bfsidx, (fnum == 0xFF) ? 0xFF : Filters[fnum].TrueConn, (fnum == 0xFF) ? 0xFF : Filters[fnum].FalseConn);
 
  while(cur != 0xFF && max_iter--)
  {
@@ -3711,8 +3711,8 @@ void CDB_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
   SFVAR(HIRQ),
   SFVAR(HIRQ_Mask),
-  SFARRAY16(CData, 4),
-  SFARRAY16(Results, 4),
+  SFVAR(CData),
+  SFVAR(Results),
 
   SFVAR(CommandPending),
   SFVAR(SWResetHIRQDeferred),
@@ -3723,31 +3723,31 @@ void CDB_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
   //
   //
-  SFARRAY(Buffers->Data, 2352, NumBuffers, sizeof(BufferT)),
-  SFVAR(Buffers->Prev, NumBuffers, sizeof(BufferT)),
-  SFVAR(Buffers->Next, NumBuffers, sizeof(BufferT)),
+  SFVAR(Buffers->Data, NumBuffers, sizeof(*Buffers), Buffers),
+  SFVAR(Buffers->Prev, NumBuffers, sizeof(*Buffers), Buffers),
+  SFVAR(Buffers->Next, NumBuffers, sizeof(*Buffers), Buffers),
   //
   //
-  SFVAR(Filters->Mode, 0x18, sizeof(FilterS)),
-  SFVAR(Filters->TrueConn, 0x18, sizeof(FilterS)),
-  SFVAR(Filters->FalseConn, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->Mode, 0x18, sizeof(*Filters), Filters),
+  SFVAR(Filters->TrueConn, 0x18, sizeof(*Filters), Filters),
+  SFVAR(Filters->FalseConn, 0x18, sizeof(*Filters), Filters),
 
-  SFVAR(Filters->FAD, 0x18, sizeof(FilterS)),
-  SFVAR(Filters->Range, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->FAD, 0x18, sizeof(*Filters), Filters),
+  SFVAR(Filters->Range, 0x18, sizeof(*Filters), Filters),
 
-  SFVAR(Filters->Channel, 0x18, sizeof(FilterS)),
-  SFVAR(Filters->File, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->Channel, 0x18, sizeof(*Filters), Filters),
+  SFVAR(Filters->File, 0x18, sizeof(*Filters), Filters),
 
-  SFVAR(Filters->SubMode, 0x18, sizeof(FilterS)),
-  SFVAR(Filters->SubModeMask, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->SubMode, 0x18, sizeof(*Filters), Filters),
+  SFVAR(Filters->SubModeMask, 0x18, sizeof(*Filters), Filters),
 
-  SFVAR(Filters->CInfo, 0x18, sizeof(FilterS)),
-  SFVAR(Filters->CInfoMask, 0x18, sizeof(FilterS)),
+  SFVAR(Filters->CInfo, 0x18, sizeof(*Filters), Filters),
+  SFVAR(Filters->CInfoMask, 0x18, sizeof(*Filters), Filters),
   //
   //
-  SFVAR(Partitions->FirstBuf, 0x18, sizeof(*Partitions)),
-  SFVAR(Partitions->LastBuf, 0x18, sizeof(*Partitions)),
-  SFVAR(Partitions->Count, 0x18, sizeof(*Partitions)),
+  SFVAR(Partitions->FirstBuf, 0x18, sizeof(*Partitions), Partitions),
+  SFVAR(Partitions->LastBuf, 0x18, sizeof(*Partitions), Partitions),
+  SFVAR(Partitions->Count, 0x18, sizeof(*Partitions), Partitions),
 
   SFVAR(FirstFreeBuf),
   SFVAR(FreeBufferCount),
@@ -3764,7 +3764,7 @@ void CDB_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFVAR(CommandClockCounter),
 
   SFVAR(CTR.Command),
-  SFARRAY16(CTR.CD, 4),
+  SFVAR(CTR.CD),
 
   SFVAR(DT.Active),
   SFVAR(DT.Writing),
@@ -3780,12 +3780,12 @@ void CDB_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
   SFVAR(DT.FNum),
 
-  SFARRAY16(DT.FIFO, 6),
+  SFVAR(DT.FIFO),
   SFVAR(DT.FIFO_RP),
   SFVAR(DT.FIFO_WP),
   SFVAR(DT.FIFO_In),
 
-  SFARRAY(DT.BufList, NumBuffers),
+  SFVAR(DT.BufList),
 
   SFVAR(StandbyTime),
   SFVAR(ECCEnable),
@@ -3812,15 +3812,15 @@ void CDB_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFVAR(PlayCmdEndPos),
   SFVAR(PlayCmdRepCnt),
 
-  SFARRAY16(&CDDABuf[0][0], CDDABuf_MaxCount * 2),
+  SFVARN(CDDABuf, "&CDDABuf[0][0]"),
   SFVAR(CDDABuf_RP),
   SFVAR(CDDABuf_WP),
   SFVAR(CDDABuf_Count),
 
-  SFARRAY(SecPreBuf, 2352 + 96),
+  SFVAR(SecPreBuf),
   SFVAR(SecPreBuf_In),
 
-  SFARRAY(TOC_Buffer, (99 + 3) * 4),
+  SFVAR(TOC_Buffer),
 
   SFVAR(CurPosInfo.status),
   SFVAR(CurPosInfo.fad),
@@ -3832,20 +3832,20 @@ void CDB_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFVAR(CurPosInfo.is_cdrom),
   SFVAR(CurPosInfo.repcount),
 
-  SFARRAY(SubCodeQBuf, 10),
-  SFARRAY(SubCodeRWBuf, 24),
+  SFVAR(SubCodeQBuf),
+  SFVAR(SubCodeRWBuf),
 
-  SFARRAY(SubQBuf, 0xC),
-  SFARRAY(SubQBuf_Safe, 0xC),
+  SFVAR(SubQBuf),
+  SFVAR(SubQBuf_Safe),
   SFVAR(SubQBuf_Safe_Valid),
 
   #define SFFIS(vs, tc)						\
-	SFARRAY((vs).fad_be, 4, tc, sizeof(FileInfoS)),		\
-	SFARRAY((vs).size_be, 4, tc, sizeof(FileInfoS)),	\
-	SFVAR((vs).unit_size, tc, sizeof(FileInfoS)),		\
-	SFVAR((vs).gap_size, tc, sizeof(FileInfoS)),		\
-	SFVAR((vs).fnum, tc, sizeof(FileInfoS)),		\
-	SFVAR((vs).attr, tc, sizeof(FileInfoS))
+	SFVAR((vs).fad_be, tc, sizeof(vs), &vs),		\
+	SFVAR((vs).size_be, tc, sizeof(vs), &vs),		\
+	SFVAR((vs).unit_size, tc, sizeof(vs), &vs),		\
+	SFVAR((vs).gap_size, tc, sizeof(vs), &vs),		\
+	SFVAR((vs).fnum, tc, sizeof(vs), &vs),			\
+	SFVAR((vs).attr, tc, sizeof(vs), &vs)
 
   SFFIS(*FileInfo, 256),
   SFVAR(FileInfoValid),
@@ -3867,14 +3867,14 @@ void CDB_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
   SFVAR(FLS.Phase),
 
-  SFARRAY(FLS.pbuf, 2048),
+  SFVAR(FLS.pbuf),
   SFVAR(FLS.pbuf_offs),
   SFVAR(FLS.pbuf_read_i),
 
   SFVAR(FLS.total_counter),
   SFVAR(FLS.total_max),
 
-  SFARRAY(FLS.record, 256),
+  SFVAR(FLS.record),
   SFVAR(FLS.record_counter),
 
   SFVAR(FLS.finfo_offs),

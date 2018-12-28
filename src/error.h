@@ -48,6 +48,8 @@ class MDFN_Error : public std::exception
  char *error_message;
 };
 
+//#define DEFMDFNERROR(name, en) struct Error_##name : public MDFN_Error { template<typename ...Z> INLINE Error_##name(Z... args) : MDFN_Error(en, args...) { } }
+
 class ErrnoHolder
 {
  public:

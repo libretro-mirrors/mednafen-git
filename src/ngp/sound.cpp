@@ -127,11 +127,11 @@ int MDFNNGPCSOUND_StateAction(StateMem *sm, int load, int data_only)
 
   SFVAR(schipenable),
 
-  SFARRAY32N(sn_state.delay, 4, "Delay"),
-  SFARRAY32N(sn_state.volume_left, 4, "VolumeLeft"),
-  SFARRAY32N(sn_state.volume_right, 4, "VolumeRight"),
-  SFARRAY32N(sn_state.sq_period, 3, "SQPeriod"),
-  SFARRAY32N(sn_state.sq_phase, 3, "SQPhase"),
+  SFVARN(sn_state.delay, "Delay"),
+  SFVARN(sn_state.volume_left, "VolumeLeft"),
+  SFVARN(sn_state.volume_right, "VolumeRight"),
+  SFVARN(sn_state.sq_period, "SQPeriod"),
+  SFVARN(sn_state.sq_phase, "SQPhase"),
   SFVARN(sn_state.noise_period, "NPeriod"),
   SFVARN(sn_state.noise_shifter, "NShifter"),
   SFVARN(sn_state.noise_tap, "NTap"),

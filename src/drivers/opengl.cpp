@@ -576,7 +576,7 @@ static bool CheckAlternateFormat(const uint32 version_h)
 }
 
 /* Rectangle, left, right(not inclusive), top, bottom(not inclusive). */
-OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const ShaderParams& shader_params, const int screen_w, const int screen_h, int *rs, int *gs, int *bs, int *as) : gl_screen_w(screen_w), gl_screen_h(screen_h)
+OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const ShaderParams& shader_params, int *rs, int *gs, int *bs, int *as)
 {
  try
  {
@@ -607,6 +607,8 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const Shader
  DummyBlack = NULL;
  DummyBlackSize = 0;
 
+ gl_screen_w = 0;
+ gl_screen_h = 0;
 
  #define LFG(x) if(!(p_##x = (x##_Func) SDL_GL_GetProcAddress(#x))) { throw MDFN_Error(0, _("Error getting proc address for: %s\n"), #x); }
  #define LFGN(x) p_##x = (x##_Func) SDL_GL_GetProcAddress(#x)
@@ -696,9 +698,6 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const Shader
  }
 
  MDFN_indent(-1);
-
- // x,y specify LOWER left corner of the viewport.
- p_glViewport(0, 0, gl_screen_w, gl_screen_h);
 
  p_glGenTextures(4, &textures[0]);
  using_scanlines = 0;
@@ -831,8 +830,6 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const Shader
 
  p_glPixelTransferf(GL_MAP_COLOR, GL_FALSE);
 
- p_glOrtho(0, gl_screen_w, gl_screen_h, 0, -1.0, 1.0);
-
  last_w = 0;
  last_h = 0;
 
@@ -903,6 +900,19 @@ OpenGL_Blitter::OpenGL_Blitter(int scanlines, ShaderType pixshader, const Shader
   Cleanup();
   throw;
  }
+}
+
+void OpenGL_Blitter::SetViewport(int w, int h)
+{
+ p_glFinish();
+ gl_screen_w = w;
+ gl_screen_h = h;
+
+ p_glMatrixMode(GL_MODELVIEW);
+ p_glLoadIdentity();
+ // x,y specify LOWER left corner of the viewport.
+ p_glViewport(0, 0, gl_screen_w, gl_screen_h);
+ p_glOrtho(0, gl_screen_w, gl_screen_h, 0, -1.0, 1.0);
 }
 
 void OpenGL_Blitter::ClearBackBuffer(void)

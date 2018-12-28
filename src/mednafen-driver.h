@@ -21,9 +21,11 @@ void MDFN_printf(const char *format, ...) noexcept MDFN_FORMATSTR(gnu_printf, 1,
 
 #define MDFNI_printf MDFN_printf
 
-/* Displays an error.  Can block or not. */
-void MDFND_PrintError(const char *s);
-void MDFND_Message(const char *s);
+// MDFN_NOTICE_ERROR may block(e.g. for user confirmation), other notice types should be as non-blocking as possible.
+void MDFND_OutputNotice(MDFN_NoticeType t, const char* s) noexcept;
+
+// Output from MDFN_printf(); fairly verbose informational messages.
+void MDFND_OutputInfo(const char* s) noexcept;
 
 // Synchronize virtual time to actual time using members of espec:
 //
@@ -94,11 +96,17 @@ void MDFNI_Power(void);
 
 // path = path of game/file to load.
 // Returns NULL on error.
-MDFNGI *MDFNI_LoadGame(const char *force_module, const char *path) MDFN_COLD;
-MDFNGI *MDFNI_LoadCD(const char *force_module, const char *path) MDFN_COLD;	// Deprecated interface.
+MDFNGI *MDFNI_LoadGame(const char *force_module, const char *path, bool force_cd = false) MDFN_COLD;
 
 // Call this function as early as possible, even before MDFNI_Initialize()
 bool MDFNI_InitializeModules(void) MDFN_COLD;
+
+// Call once, after MDFNI_Initialize()
+// returns -1 if settings file didn't exist, 0 on error, and 1 on success
+int MDFNI_LoadSettings(const char* path);
+
+// Call at least once right before MDFNI_Kill()
+bool MDFNI_SaveSettings(const char* path);
 
 /* allocates memory.  0 on failure, 1 on success. */
 /* Also pass it the base directory to load the configuration file. */
@@ -126,8 +134,6 @@ void MDFNI_Kill(void) MDFN_COLD;
 
 void MDFN_DispMessage(const char *format, ...) noexcept MDFN_FORMATSTR(gnu_printf, 1, 2);
 #define MDFNI_DispMessage MDFN_DispMessage
-
-uint32 MDFNI_CRC32(uint32 crc, uint8 *buf, uint32 len);
 
 // NES hackish function.  Should abstract in the future.
 int MDFNI_DatachSet(const uint8 *rcode);

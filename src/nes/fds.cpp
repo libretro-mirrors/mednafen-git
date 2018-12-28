@@ -178,17 +178,17 @@ static DECLFR(FDSRead4033)
 
 static DECLFW(FDSRAMWrite)
 {
- (FDSRAM-0x6000)[A]=V;
+ FDSRAM[(size_t)A - 0x6000]=V;
 }
 
 static DECLFR(FDSBIOSRead)
 {
- return (FDSBIOS-0xE000)[A];
+ return FDSBIOS[(size_t)A - 0xE000];
 }
 
 static DECLFR(FDSRAMRead)
 {
- return (FDSRAM-0x6000)[A];
+ return FDSRAM[(size_t)A - 0x6000];
 }
 
 static DECLFW(FDSWrite)
@@ -346,16 +346,16 @@ static void FDS_StateAction(StateMem *sm, const unsigned load, const bool data_o
  unsigned int x;
  SFORMAT StateRegs[] =
  {
-  SFARRAY(diskdata[0], 65500),
-  SFARRAY(diskdata[1], 65500),
-  SFARRAY(diskdata[2], 65500),
-  SFARRAY(diskdata[3], 65500),
-  SFARRAY(diskdata[4], 65500),
-  SFARRAY(diskdata[5], 65500),
-  SFARRAY(diskdata[6], 65500),
-  SFARRAY(diskdata[7], 65500),
-  SFARRAY(FDSRAM, 32768),
-  SFARRAY(CHRRAM, 8192),
+  SFPTR8(diskdata[0], 65500),
+  SFPTR8(diskdata[1], 65500),
+  SFPTR8(diskdata[2], 65500),
+  SFPTR8(diskdata[3], 65500),
+  SFPTR8(diskdata[4], 65500),
+  SFPTR8(diskdata[5], 65500),
+  SFPTR8(diskdata[6], 65500),
+  SFPTR8(diskdata[7], 65500),
+  SFPTR8(FDSRAM, 32768),
+  SFPTR8(CHRRAM, 8192),
 
   SFVAR(V4023),
   SFVAR(ExLatch),
@@ -728,7 +728,7 @@ static void FDSSaveNV(void)
   }
   catch(std::exception &e)
   {
-   MDFN_PrintError("Error saving FDS image: %s", e.what());
+   MDFN_Notify(MDFN_NOTICE_ERROR, _("Error saving FDS image: %s"), e.what());
   }
  }
 }

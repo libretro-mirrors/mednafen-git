@@ -98,6 +98,9 @@ static void DecodeGlyph(char32_t thisglyph, const uint8 **glyph_ptr, uint8 *glyp
  bool GlyphFound = false;
  uint32 recurse_fontid = fontid;
 
+ //if(thisglyph < 0x20)
+ // thisglyph = 0x2400 + thisglyph;
+
  while(!GlyphFound)
  {
   if(thisglyph < 0x10000 && FontDataIndexCache[recurse_fontid][thisglyph] != 0xFFFF)

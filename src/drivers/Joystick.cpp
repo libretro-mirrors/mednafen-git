@@ -22,6 +22,7 @@
 */
 #include "main.h"
 #include "input.h"
+#include <trio/trio.h>
 #include <mednafen/hash/md5.h>
 #include <mednafen/math_ops.h>
 
@@ -45,9 +46,9 @@
  //#include "Joystick_DOS_SideWinder.h"
 #endif
 
-Joystick::Joystick() : num_axes(0), num_rel_axes(0), num_buttons(0), id(0)
+Joystick::Joystick() : id_09x(0), id{{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}}, num_axes(0), num_rel_axes(0), num_buttons(0)
 {
- name[0] = 0;
+
 }
 
 Joystick::~Joystick()
@@ -55,7 +56,7 @@ Joystick::~Joystick()
 
 }
 
-void Joystick::CalcOldStyleID(unsigned arg_num_axes, unsigned arg_num_balls, unsigned arg_num_hats, unsigned arg_num_buttons)
+void Joystick::Calc09xID(unsigned arg_num_axes, unsigned arg_num_balls, unsigned arg_num_hats, unsigned arg_num_buttons)
 {
  uint8 digest[16];
  int tohash[4];
@@ -78,7 +79,7 @@ void Joystick::CalcOldStyleID(unsigned arg_num_axes, unsigned arg_num_balls, uns
   ret ^= (uint64)digest[x] << ((x & 7) * 8);
  }
 
- id = ret;
+ id_09x = ret;
 }
 
 void Joystick::SetRumble(uint8 weak_intensity, uint8 strong_intensity)
@@ -127,28 +128,50 @@ void JoystickDriver::UpdateJoysticks(void)
 
 }
 
-JoystickManager::JoystickManager()
+namespace JoystickManager
+{
+
+struct JoystickManager_Cache
+{
+ Joystick *joystick;
+ std::array<uint8, 16> UniqueID;
+ uint64 UniqueID_09x;
+
+ enum
+ {
+  AXIS_CONFIG_TYPE_GENERIC = 0,
+  AXIS_CONFIG_TYPE_ANABUTTON_POSPRESS,
+  AXIS_CONFIG_TYPE_ANABUTTON_NEGPRESS
+ };
+
+ // Helpers for input configuration(may have semantics that differ from what the names would suggest)!
+ int config_prio;	// Set to -1 to exclude this joystick instance from configuration, 0 is normal, 1 is SPECIALSAUCEWITHBACON.
+ std::vector<int16> axis_config_type;
+ bool prev_state_valid;
+ std::vector<int16> prev_axis_state;
+ std::vector<int> axis_hysterical_ax_murderer;
+ std::vector<bool> prev_button_state;
+ std::vector<int32> rel_axis_accum_state;
+};
+
+static INLINE int TestAnalogUnscaled(const ButtConfig& bc);
+
+static int AnalogThreshold;	// 15.12
+
+static std::vector<JoystickDriver *> JoystickDrivers;
+static std::vector<JoystickManager_Cache> JoystickCache;
+static ButtConfig BCPending;
+static int BCPending_Prio;
+static uint32 BCPending_Time;
+static uint32 BCPending_CCCC;
+
+void Init(void)
 {
  JoystickDriver *main_driver = NULL;
  JoystickDriver *hicp_driver = NULL;
 
  MDFNI_printf(_("Initializing joysticks...\n"));
  MDFN_indent(1);
-
-#if 0 && defined(WIN32)
- {
-  JoystickDriver *dx5_driver = JoystickDriver_DX5_New(false);
-  JoystickDriver *dx8_driver = JoystickDriver_DX8_New(false);
-
-  while(1)
-  {
-   dx5_driver->UpdateJoysticks();
-   dx8_driver->UpdateJoysticks();
-
-
-  }
- }
-#endif
 
  try
  {
@@ -181,6 +204,8 @@ JoystickManager::JoystickManager()
 
     ce.joystick = JoystickDrivers[jd]->GetJoystick(i);
     ce.UniqueID = ce.joystick->ID();
+    ce.UniqueID_09x = ce.joystick->ID_09x();
+
     ce.config_prio = (JoystickDrivers[jd] == hicp_driver) ? 1 : 0;
 
     TryAgain:
@@ -188,12 +213,22 @@ JoystickManager::JoystickManager()
     {
      if(JoystickCache[nji].UniqueID == ce.UniqueID)
      {
-      ce.UniqueID++;
+      MDFN_en64msb(&ce.UniqueID[8], MDFN_de64msb(&ce.UniqueID[8]) + 1);
       goto TryAgain;
      }
     }
 
-    MDFN_printf(_("Joystick %u - %s - Unique ID: %016llx\n"), (unsigned)JoystickCache.size(), ce.joystick->Name(), (unsigned long long)ce.UniqueID);
+    TryAgain_09x:
+    for(unsigned nji = 0; nji < JoystickCache.size(); nji++)
+    {
+     if(JoystickCache[nji].UniqueID_09x == ce.UniqueID_09x)
+     {
+      ce.UniqueID_09x++;
+      goto TryAgain_09x;
+     }
+    }
+
+    MDFN_printf(_("ID: 0x%016llx%016llx - %s\n"), (unsigned long long)MDFN_de64msb(&ce.UniqueID[0]), (unsigned long long)MDFN_de64msb(&ce.UniqueID[8]), ce.joystick->Name());
 
     ce.axis_config_type.resize(ce.joystick->NumAxes());
     ce.prev_state_valid = false;
@@ -209,7 +244,7 @@ JoystickManager::JoystickManager()
  }
  catch(std::exception &e)
  {
-  MDFND_PrintError(e.what());
+  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
   if(main_driver != NULL)
   {
    delete main_driver;
@@ -220,22 +255,28 @@ JoystickManager::JoystickManager()
    delete hicp_driver;
    hicp_driver = NULL;
   }
+
+  JoystickDrivers.clear();
+  JoystickCache.clear();
  }
  MDFN_indent(-1);
 }
 
-void JoystickManager::SetAnalogThreshold(double thresh)
+void SetAnalogThreshold(double thresh)
 {
- AnalogThreshold = thresh * 32767;
+ AnalogThreshold = std::max<int32>(1, std::min<int32>(32767 * 4096, thresh * 32767 * 4096));
 }
 
-JoystickManager::~JoystickManager()
+void Kill(void)
 {
  for(unsigned i = 0; i < JoystickDrivers.size(); i++)
   delete JoystickDrivers[i];
+
+ JoystickDrivers.clear();
+ JoystickCache.clear();
 }
 
-unsigned JoystickManager::DetectAnalogButtonsForChangeCheck(void)
+unsigned DetectAnalogButtonsForChangeCheck(void)
 {
  unsigned ret = 0;
 
@@ -267,43 +308,40 @@ unsigned JoystickManager::DetectAnalogButtonsForChangeCheck(void)
  return ret;
 }
 
-void JoystickManager::Reset_BC_ChangeCheck(void)
+void Reset_BC_ChangeCheck(void)
 {
  for(unsigned i = 0; i < JoystickCache.size(); i++)
   JoystickCache[i].prev_state_valid = false;
 
  memset(&BCPending, 0, sizeof(BCPending));
- BCPending.ButtType = BUTTC_NONE;
+ BCPending.DeviceType = BUTTC_NONE;
  BCPending_Prio = -1;
  BCPending_CCCC = 0;
 }
 
-bool JoystickManager::Do_BC_ChangeCheck(ButtConfig *bc) //, bool hint_analog)
+bool Do_BC_ChangeCheck(ButtConfig *bc) //, bool hint_analog)
 {
  const uint32 curtime = Time::MonoMS();
 
- if(BCPending.ButtType != BUTTC_NONE)
+ if(BCPending.DeviceType != BUTTC_NONE)
  {
   if((BCPending_Time + 150) <= curtime && BCPending_CCCC >= 5)
   {
    *bc = BCPending;
-   BCPending.ButtType = BUTTC_NONE;
+   BCPending.DeviceType = BUTTC_NONE;
    BCPending_Prio = -1;
    BCPending_CCCC = 0;
    return(true);
   }
 
-  int SaveAT = AnalogThreshold;	// Begin Kludge
-  AnalogThreshold = ((JoystickCache[BCPending.DeviceNum].config_prio > 0) ? 25000 : 26000);
-  if(!TestButton(BCPending))
+  if(TestAnalogUnscaled(BCPending) < ((JoystickCache[BCPending.DeviceNum].config_prio > 0) ? 25000 : 26000))
   {
-   BCPending.ButtType = BUTTC_NONE;
+   BCPending.DeviceType = BUTTC_NONE;
    BCPending_Prio = -1;
    BCPending_CCCC = 0;
   }
   else
    BCPending_CCCC++;
-  AnalogThreshold = SaveAT;	// End Kludge.
  }
 
   for(unsigned i = 0; i < JoystickCache.size(); i++)
@@ -322,7 +360,7 @@ bool JoystickManager::Do_BC_ChangeCheck(ButtConfig *bc) //, bool hint_analog)
     {
      ButtConfig bctmp;
 
-     bctmp.ButtType = BUTTC_JOYSTICK;
+     bctmp.DeviceType = BUTTC_JOYSTICK;
      bctmp.DeviceNum = i;
      bctmp.ButtonNum = button;
      bctmp.DeviceID = jsc->UniqueID;
@@ -367,15 +405,15 @@ bool JoystickManager::Do_BC_ChangeCheck(ButtConfig *bc) //, bool hint_analog)
      {
       ButtConfig bctmp;
 
-      bctmp.ButtType = BUTTC_JOYSTICK;
+      bctmp.DeviceType = BUTTC_JOYSTICK;
       bctmp.DeviceNum = i;
 
       if(jsc->axis_config_type[axis] == JoystickManager_Cache::AXIS_CONFIG_TYPE_ANABUTTON_POSPRESS)
-       bctmp.ButtonNum = (1 << 16) | axis;
+       bctmp.ButtonNum = JOY_BN_TYPE_ABS_AXIS | axis;
       else if(jsc->axis_config_type[axis] == JoystickManager_Cache::AXIS_CONFIG_TYPE_ANABUTTON_NEGPRESS)
-       bctmp.ButtonNum = (1 << 16) | (1 << 17) | axis;
+       bctmp.ButtonNum = JOY_BN_TYPE_ABS_AXIS | JOY_BN_NEGATE | axis;
       else
-       bctmp.ButtonNum = 0x8000 | axis | ((axis_state < 0) ? 0x4000 : 0);
+       bctmp.ButtonNum = JOY_BN_TYPE_ABS_AXIS | JOY_BN_HALFAXIS | ((axis_state < 0) ? JOY_BN_NEGATE : 0) | axis;
 
       bctmp.DeviceID = jsc->UniqueID;
 
@@ -410,11 +448,11 @@ bool JoystickManager::Do_BC_ChangeCheck(ButtConfig *bc) //, bool hint_analog)
  return(false);
 }
 
-void JoystickManager::SetRumble(const std::vector<ButtConfig> &bc, uint8 weak_intensity, uint8 strong_intensity)
+void SetRumble(const std::vector<ButtConfig> &bc, uint8 weak_intensity, uint8 strong_intensity)
 {
  for(unsigned i = 0; i < bc.size(); i++)
  {
-  if(bc[i].ButtType != BUTTC_JOYSTICK)
+  if(bc[i].DeviceType != BUTTC_JOYSTICK)
    continue;
 
   if(bc[i].DeviceNum >= JoystickCache.size())
@@ -425,7 +463,7 @@ void JoystickManager::SetRumble(const std::vector<ButtConfig> &bc, uint8 weak_in
  }
 }
 
-void JoystickManager::UpdateJoysticks(void)
+void UpdateJoysticks(void)
 {
  //TestRumble();
  for(unsigned i = 0; i < JoystickDrivers.size(); i++)
@@ -434,144 +472,273 @@ void JoystickManager::UpdateJoysticks(void)
  }
 }
 
-bool JoystickManager::TestButton(const ButtConfig &bc)
+static INLINE int TestAnalogUnscaled(const ButtConfig& bc)
 {
  if(bc.DeviceNum >= JoystickCache.size())
-  return(0);
-
- //printf("%u\n", AnalogThreshold);
+  return false;
 
  Joystick *joy = JoystickCache[bc.DeviceNum].joystick;
+ unsigned type = bc.ButtonNum & JOY_BN_TYPE_MASK;
+ unsigned index = bc.ButtonNum & JOY_BN_INDEX_MASK;
+ bool negate = (bool)(bc.ButtonNum & JOY_BN_NEGATE);
+ bool halfaxis = (bool)(bc.ButtonNum & JOY_BN_HALFAXIS);
+ int32 pos;
 
- if(bc.ButtonNum & (0x8000 | 0x2000))      /* Axis "button" (| 0x2000 for backwards-compat hat translation)*/
+ //
+ //
+ if(type == JOY_BN_TYPE_HATCOMPAT)
  {
-  bool neg_req = (bool)(bc.ButtonNum & 0x4000);
-  unsigned axis = bc.ButtonNum & 0x3FFF;
-  int pos;
+  const unsigned old_index = index;
 
-  if(bc.ButtonNum & 0x2000)
+  index = joy->HatToAxisCompat((old_index >> 4) & 0x1F);
+  if(index == ~0U)	// Not-implemented case.  See if implemented for buttons.
   {
-   axis = joy->HatToAxisCompat((bc.ButtonNum >> 8) & 0x1F);
-   if(axis == ~0U)	// Not-implemented case.  See if implemented for buttons.
+   index = joy->HatToButtonCompat((old_index >> 4) & 0x1F);
+
+   if(index != ~0U)
    {
-    unsigned button = joy->HatToButtonCompat((bc.ButtonNum >> 8) & 0x1F);
-
-    if(button != ~0U)
-    {
-     button += MDFN_log2(bc.ButtonNum & 0xF);
-
-     if(button >= joy->NumButtons())
-      return(0);
-
-     return joy->GetButton(button);
-    }
-    return(0);
+    type = JOY_BN_TYPE_BUTTON;
+    index += MDFN_log2(old_index & 0xF);
    }
-
-   if(bc.ButtonNum & 0x05)
-    axis++;
-
-   neg_req = bc.ButtonNum & 0x09;
+   else
+    return 0;
   }
+  else
+  {
+   type = JOY_BN_TYPE_ABS_AXIS;
+   halfaxis = true;
 
-  if(axis >= joy->NumAxes())
-   return(0);
+   if(old_index & 0x05)
+    index++;
 
-  pos = joy->GetAxis(axis);
-
-  if(neg_req && (pos <= -AnalogThreshold))
-   return(1);
-  else if(!neg_req && (pos >= AnalogThreshold))
-   return(1);
+   negate = (bool)(old_index & 0x09);
+  }
  }
- else if(bc.ButtonNum & (1 << 16))	// Analog button axis.
+ //
+ //
+
+ switch(bc.ButtonNum & JOY_BN_TYPE_MASK)
  {
-  unsigned axis = bc.ButtonNum & 0x3FFF;
-  int pos;
+  case JOY_BN_TYPE_BUTTON:
+	if(index >= joy->NumButtons())
+	 return 0;
 
-  if(axis >= joy->NumAxes())
-   return(0);
+	return joy->GetButton(index) ? 32767 : 0;
+  //
+  //
+  //
+  case JOY_BN_TYPE_ABS_AXIS:
+	if(index >= joy->NumAxes())
+	 return 0;
 
-  pos = joy->GetAxis(axis);
-  if(pos < -32767)
-   pos = -32767;
+	pos = joy->GetAxis(index);
+	if(pos < -32767)
+	 pos = -32767;
 
-  if(bc.ButtonNum & (1 << 17))
-   pos = -pos;
+	if(negate)
+	 pos = -pos;
 
-  pos += 32767;
-  pos >>= 1;
+	if(halfaxis)
+	 pos = std::max<int>(0, pos);
+	else
+	 pos = (pos + 32767) >> 1;
 
-  if(pos >= AnalogThreshold)
-   return(1);
- }
- else
- {
-  unsigned button = bc.ButtonNum;
-
-  if(button >= joy->NumButtons())
-   return(0);
-
-  return joy->GetButton(button);
+	return pos;
  }
 
- return(0);
+ return 0;
 }
 
-int JoystickManager::TestAnalogButton(const ButtConfig &bc)
+int TestAnalogButton(const ButtConfig &bc)
 {
- if(bc.DeviceNum >= JoystickCache.size())
-  return(0);
+ return std::min<int>(32767, (TestAnalogUnscaled(bc) * bc.Scale) >> 12);
+}
 
- Joystick *joy = JoystickCache[bc.DeviceNum].joystick;
+bool TestButton(const ButtConfig &bc)
+{
+ return (TestAnalogUnscaled(bc) * bc.Scale) >= AnalogThreshold;
+}
 
- if(bc.ButtonNum & 0x8000)      /* Axis "button" */
+int64 TestAxisRel(const ButtConfig &bc)
+{
+ if((bc.ButtonNum & JOY_BN_TYPE_MASK) == JOY_BN_TYPE_REL_AXIS)
  {
-  unsigned axis = bc.ButtonNum & 0x3FFF;
-  int pos;
+  if(bc.DeviceNum >= JoystickCache.size())
+   return 0;
 
-  if(axis >= joy->NumAxes())
-   return(0);
-  pos = joy->GetAxis(axis);
+  Joystick *joy = JoystickCache[bc.DeviceNum].joystick;
 
-  if((bc.ButtonNum & 0x4000) && pos < 0)
-   return(std::min<int>(-pos, 32767));
-  else if (!(bc.ButtonNum & 0x4000) && pos > 0)
-   return(pos);
+  const unsigned index = bc.ButtonNum & JOY_BN_INDEX_MASK;
+  const bool negate = (bool)(bc.ButtonNum & JOY_BN_NEGATE);
+  const bool halfaxis = (bool)(bc.ButtonNum & JOY_BN_HALFAXIS);
+
+  if(index >= joy->NumRelAxes())
+   return 0;
+
+  int32 ret = joy->GetRelAxis(index);
+
+  if(negate)
+   ret = -ret;
+
+  if(halfaxis)
+   ret = std::max<int32>(0, ret);
+
+  return (int64)ret * bc.Scale;
  }
- else if(bc.ButtonNum & (1 << 16))	// Analog button axis.
+ else
+  return (TestAnalogUnscaled(bc) * bc.Scale) >> 10;
+}
+
+std::string BNToString(const uint32 bn)
+{
+ char tmp[256] = { 0 };
+ const unsigned type = bn & JOY_BN_TYPE_MASK;
+
+ switch(type)
  {
-  unsigned axis = bc.ButtonNum & 0x3FFF;
-  int pos;
+  case JOY_BN_TYPE_BUTTON:
+	trio_snprintf(tmp, sizeof(tmp), "button_%u", bn & JOY_BN_INDEX_MASK);
+	break;
 
-  if(axis >= joy->NumAxes())
-   return(0);
+  case JOY_BN_TYPE_ABS_AXIS:
+  case JOY_BN_TYPE_REL_AXIS:
+	trio_snprintf(tmp, sizeof(tmp), "%s_%u%s%s",
+		(type == JOY_BN_TYPE_REL_AXIS) ? "rel" : "abs",
+		bn & JOY_BN_INDEX_MASK,
+		(bn & JOY_BN_HALFAXIS) ? ((bn & JOY_BN_NEGATE) ? "-" : "+") : ((bn & JOY_BN_NEGATE) ? "+-" : "-+"),
+		(bn & JOY_BN_GUN_TRANSLATE) ? "g" : "");
+	break;
 
-  pos = joy->GetAxis(axis);
-  if(pos < -32767)
-   pos = -32767;
+  case JOY_BN_TYPE_HATCOMPAT:
+	trio_snprintf(tmp, sizeof(tmp), "hatcompat_%04x", bn & JOY_BN_INDEX_MASK);
+	break;
+ }
 
-  if(bc.ButtonNum & (1 << 17))
-   pos = -pos;
+ return tmp;
+}
 
-  pos += 32767;
-  pos >>= 1;
+bool StringToBN(const char* s, uint16* bn)
+{
+ char type_str[32];
+ unsigned index;
+ char pol_str[3] = { 0 };
+ char flags_str[2] = { 0 };
 
-  return(pos);
+ if(trio_sscanf(s, "%31[^_]_%u%2[-+]%1s", type_str, &index, pol_str, flags_str) >= 2 && (index <= JOY_BN_INDEX_MASK))
+ {
+  unsigned type;
+
+  if(!strcmp(type_str, "abs"))
+   type = JOY_BN_TYPE_ABS_AXIS;
+  else if(!strcmp(type_str, "rel"))
+   type = JOY_BN_TYPE_REL_AXIS;
+  else if(!strcmp(type_str, "button"))
+   type = JOY_BN_TYPE_BUTTON;
+  else
+   return false;
+
+  if(type == JOY_BN_TYPE_BUTTON)
+  {
+   *bn = type | index;
+   return true;
+  }
+  else
+  {
+   unsigned flags = 0;
+
+   if(pol_str[0] == '-' && pol_str[1] == '+')
+   { }
+   else if(pol_str[0] == '+' && pol_str[1] == '-')
+    flags |= JOY_BN_NEGATE;
+   else if(pol_str[0] == '+' && pol_str[1] == 0)
+    flags |= JOY_BN_HALFAXIS;
+   else if(pol_str[0] == '-' && pol_str[1] == 0)
+    flags |= JOY_BN_HALFAXIS | JOY_BN_NEGATE;
+   else
+    return false;
+
+   if(flags_str[0] == 'g')
+    flags |= JOY_BN_GUN_TRANSLATE;
+
+   *bn = type | flags | index;
+   return true;
+  }
+ }
+
+ return false;
+}
+
+bool Translate09xBN(unsigned bn09x, uint16* bn, bool abs_pointer_axis_thing)
+{
+ unsigned type;
+ unsigned index;
+ unsigned flags = 0;
+
+ if(bn09x & 0x2000)
+ {
+  type = JOY_BN_TYPE_HATCOMPAT;
+  index = (bn09x & 0xF) | ((bn09x >> 4) & 0x1F0);
+ }
+ else if(bn09x & 0x18000)
+ {
+  type = JOY_BN_TYPE_ABS_AXIS;
+  index = bn09x & 0x1FFF;
+
+  if(abs_pointer_axis_thing)
+  {
+   if(bn09x & 0x4000)
+    flags |= JOY_BN_NEGATE;
+
+   if(bn09x & (1U << 18))
+    flags |= JOY_BN_GUN_TRANSLATE;
+  }
+  else
+  {
+   if(bn09x & (1U << 16))
+   {
+    if(bn09x & (1U << 17))
+     flags |= JOY_BN_NEGATE;
+   }
+   else
+   {
+    flags |= JOY_BN_HALFAXIS;
+
+    if(bn09x & 0x4000)
+     flags |= JOY_BN_NEGATE;
+   }
+  }
  }
  else
  {
-  return(TestButton(bc) ? 32767 : 0);
+  type = JOY_BN_TYPE_BUTTON;
+  index = bn09x & 0x1FFF;
  }
 
- return(0);
+ if(index > JOY_BN_INDEX_MASK)
+  return false;
+
+ *bn = type | flags | index;
+
+ return true;
 }
 
-unsigned JoystickManager::GetIndexByUniqueID(uint64 unique_id)
+
+unsigned GetIndexByUniqueID(const std::array<uint8, 16>& unique_id)
 {
  for(unsigned i = 0; i < JoystickCache.size(); i++)
  {
   if(JoystickCache[i].UniqueID == unique_id)
+   return i;
+ }
+
+ return ~0U;
+}
+
+unsigned GetIndexByUniqueID_09x(uint64 unique_id)
+{
+ for(unsigned i = 0; i < JoystickCache.size(); i++)
+ {
+  if(JoystickCache[i].UniqueID_09x == unique_id)
   {
    //printf("%16llx %u\n", unique_id, i);
    return(i);
@@ -581,7 +748,12 @@ unsigned JoystickManager::GetIndexByUniqueID(uint64 unique_id)
  return(~0U);
 }
 
-unsigned JoystickManager::GetUniqueIDByIndex(unsigned index)
+std::array<uint8, 16> GetUniqueIDByIndex(unsigned index)
 {
+ if(index >= JoystickCache.size())
+  return { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
  return JoystickCache[index].UniqueID;
+}
+
 }

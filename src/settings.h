@@ -24,11 +24,11 @@
 
 #include "settings-common.h"
 
-void MDFN_LoadSettings(const std::string& path, bool override = false);
+bool MDFN_LoadSettings(const std::string& path, bool override = false);
 void MDFN_MergeSettings(const MDFNSetting *);
 void MDFN_MergeSettings(const std::vector<MDFNSetting> &);
 void MDFN_FinalizeSettings(void);
-bool MDFN_SaveSettings(const std::string& path);
+void MDFN_SaveSettings(const std::string& path);
 
 void MDFN_ClearAllOverrideSettings(void);
 void MDFN_KillSettings(void);	// Free any resources acquired.

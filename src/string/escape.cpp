@@ -21,7 +21,7 @@
 static unsigned int hex_nibble_to_val(char nibble)
 {
  unsigned int ret = 0;
- nibble = tolower(nibble);
+ nibble = MDFN_azlower(nibble);
 
  if(nibble >= '0' && nibble <= '9')
   ret = nibble - '0';

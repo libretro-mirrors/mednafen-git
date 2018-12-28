@@ -21,7 +21,6 @@
 #include "wswan.h"
 #include "eeprom.h"
 #include "memory.h"
-#include <ctype.h>
 
 namespace MDFN_IEN_WSWAN
 {
@@ -187,7 +186,7 @@ void WSwan_EEPROMInit(const char *Name, const uint16 BYear, const uint8 BMonth, 
 
   if(x < strlen(Name))
   {
-   char tc = toupper(Name[x]);
+   char tc = MDFN_azupper(Name[x]);
    if(tc == ' ') zechar = 0;
    else if(tc >= '0' && tc <= '9') zechar = tc - '0' + 0x1;
    else if(tc >= 'A' && tc <= 'Z') zechar = tc - 'A' + 0xB;
@@ -217,8 +216,8 @@ void WSwan_EEPROMStateAction(StateMem *sm, const unsigned load, const bool data_
   SFVAR(iEEPROM_Address),
   SFVAR(EEPROM_Command),
   SFVAR(EEPROM_Address),
-  SFARRAY(iEEPROM, sizeof(iEEPROM)),
-  SFARRAYN(eeprom_size ? wsEEPROM : NULL, eeprom_size, "EEPROM"),
+  SFVAR(iEEPROM),
+  SFPTR8N(eeprom_size ? wsEEPROM : NULL, eeprom_size, "EEPROM"),
   SFEND
  };
 

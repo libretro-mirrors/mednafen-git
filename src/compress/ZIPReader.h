@@ -1,8 +1,8 @@
 /******************************************************************************/
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
-/* nongl.h:
-**  Copyright (C) 2012-2016 Mednafen Team
+/* ZIPReader.h:
+**  Copyright (C) 2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,11 +19,48 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef __MDFN_DRIVERS_NONGL_H
-#define __MDFN_DRIVERS_NONGL_H
+#ifndef __MDFN_COMPRESS_ZIPREADER_H
+#define __MDFN_COMPRESS_ZIPREADER_H
 
-// This function DOES NOT handle format conversions; IE the src_surface and dest_surface should be in the same color formats.
-// Also, clipping is...sketchy.  Just don't pass negative coordinates in the rects, and it should be ok.
-void MDFN_StretchBlitSurface(const MDFN_Surface* src_surface, const MDFN_Rect& src_rect, MDFN_Surface* dest_surface, const MDFN_Rect& dest_rect, bool source_alpha = false, int scanlines = 0, const MDFN_Rect* original_src_rect = NULL, int rotated = MDFN_ROTATE0, int InterlaceField = -1);
+class ZIPReader
+{
+ public:
+ ZIPReader(std::unique_ptr<Stream> s);
+
+ INLINE size_t num_files(void) { return entries.size(); }
+ INLINE const char* get_file_path(size_t which) { return entries[which].name.c_str(); }
+ INLINE size_t get_file_size(size_t which) { return entries[which].uncomp_size; }
+
+ Stream* open(size_t which);
+
+ private:
+
+ struct FileDesc
+ {
+  uint32 sig;
+  uint16 version_made;
+  uint16 version_need;
+  uint16 gpflags;
+  uint16 method;
+  uint16 mod_time;
+  uint16 mod_date;
+  uint32 crc32;
+  uint32 comp_size;
+  uint32 uncomp_size;
+  uint16 name_len;
+  uint16 extra_len;
+  uint16 comment_len;
+  uint16 disk_start;
+  uint16 int_attr;
+  uint32 ext_attr;
+  uint32 lh_reloffs;
+
+  std::string name;
+ };
+
+ std::unique_ptr<Stream> zs;
+ std::vector<FileDesc> entries;
+};
+
 
 #endif

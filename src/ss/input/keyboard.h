@@ -46,7 +46,7 @@ class IODevice_Keyboard final : public IODevice
  uint8 lock_pend;
  uint16 simbutt;
  uint16 simbutt_pend;
- enum { fifo_size = 16 };
+ enum : int { fifo_size = 16 };
  uint16 fifo[fifo_size];
  uint8 fifo_rdp;
  uint8 fifo_wrp;

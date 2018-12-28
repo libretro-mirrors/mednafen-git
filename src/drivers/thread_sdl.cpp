@@ -19,7 +19,7 @@
 
 MDFN_Thread *MDFND_CreateThread(int (*fn)(void *), void *data)
 {
- return (MDFN_Thread*)SDL_CreateThread(fn, data);
+ return (MDFN_Thread*)SDL_CreateThread(fn, NULL, data);
 }
 
 void MDFND_WaitThread(MDFN_Thread *thread, int *status)

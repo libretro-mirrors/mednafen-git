@@ -259,10 +259,10 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 	break;
 
     case 0x04:
-	s->AttackRate = SRV & 0x1F;
+	s->EnvRates[ENV_PHASE_ATTACK] = SRV & 0x1F;
 	s->AttackHold = (SRV >> 5) & 0x1;
-	s->Decay1Rate = (SRV >> 6) & 0x1F;
-	s->Decay2Rate = (SRV >> 11) & 0x1F;
+	s->EnvRates[ENV_PHASE_DECAY1] = (SRV >> 6) & 0x1F;
+	s->EnvRates[ENV_PHASE_DECAY2] = (SRV >> 11) & 0x1F;
 	break;
 
     case 0x05:
@@ -271,7 +271,7 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SCSP, "[SCSP] Unknown bits non-zero in slot %u, register %u\n", slotnum, (A >> 1) & 0xF);
 	}
 
-	s->ReleaseRate = SRV & 0x1F;
+	s->EnvRates[ENV_PHASE_RELEASE] = SRV & 0x1F;
 	s->DecayLevel = (SRV >> 5) & 0x1F;
 	s->KRS = (SRV >> 10) & 0xF;
 	s->AttackLoopLink = (SRV >> 14) & 0x1;
@@ -856,7 +856,7 @@ INLINE void SS_SCSP::RunEG(Slot* s, const unsigned key_eg_scale)
   const uint32 srac = ((0x20 - ermaxo) >> 1) + (ermaxo & 1 & (GlobalCounter >> (ERateWBT + 1)));
 
   //if(s == &Slots[0] && s->EnvLevel)
-  // printf("EP: %u, EL: 0x%04x, AR: 0x%02x, %d, %u --- %02x\n", s->EnvPhase, s->EnvLevel, s->AttackRate, inc_base, srac, ERate);
+  // printf("EP: %u, EL: 0x%04x, AR: 0x%02x, %d, %u --- %02x\n", s->EnvPhase, s->EnvLevel, s->EnvRates[ENV_PHASE_ATTACK], inc_base, srac, ERate);
 
   s->EnvLevel += inc_base >> srac;
 
@@ -1296,7 +1296,7 @@ INLINE void SS_SCSP::RunSample(int16* outlr)
     s->WFAllowAccess = true;
     s->EnvPhase = ENV_PHASE_ATTACK;
 
-    if((s->AttackRate + key_eg_scale) >= 0x20)
+    if((s->EnvRates[ENV_PHASE_ATTACK] + key_eg_scale) >= 0x20)
      s->EnvLevel = 0x000;
     else
      s->EnvLevel = 0x280;
@@ -1490,23 +1490,23 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY16N(&SlotRegs[0][0], 0x20 * 0x10, "SlotRegs"),
+  SFVARN(SlotRegs, "SlotRegs"),
 
-  SFVAR(Slots->PhaseWhacker, 32, sizeof(Slot)),
-  SFVAR(Slots->CurrentAddr, 32, sizeof(Slot)),
-  SFVAR(Slots->InLoop, 32, sizeof(Slot)),
-  SFVAR(Slots->LoopSub, 32, sizeof(Slot)),
-  SFVAR(Slots->WFAllowAccess, 32, sizeof(Slot)),
-  SFVAR(Slots->EnvLevel, 32, sizeof(Slot)),
-  SFVAR(Slots->EnvPhase, 32, sizeof(Slot)),
-  SFVAR(Slots->EnvGCBTPrev, 32, sizeof(Slot)),
-  SFVAR(Slots->LFOCounter, 32, sizeof(Slot)),
-  SFVAR(Slots->LFOTimeCounter, 32, sizeof(Slot)),
+  SFVAR(Slots->PhaseWhacker, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->CurrentAddr, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->InLoop, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->LoopSub, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->WFAllowAccess, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->EnvLevel, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->EnvPhase, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->EnvGCBTPrev, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->LFOCounter, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->LFOTimeCounter, 32, sizeof(*Slots), Slots),
 
-  SFARRAY16(EXTS, 2),
+  SFVAR(EXTS),
 
-  SFARRAY16(SoundStack, 0x40),
-  SFARRAY16(SoundStackDelayer, 4),
+  SFVAR(SoundStack),
+  SFVAR(SoundStackDelayer),
 
   SFVAR(MasterVolume),
   SFVAR(MVOL),
@@ -1520,11 +1520,11 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFVAR(LFSR),
   SFVAR(GlobalCounter),
 
-  SFARRAY(MIDI.InputFIFO, 4),
+  SFVAR(MIDI.InputFIFO),
   SFVAR(MIDI.InputRP),
   SFVAR(MIDI.InputWP),
   SFVAR(MIDI.InputCount),
-  SFARRAY(MIDI.OutputFIFO, 4),
+  SFVAR(MIDI.OutputFIFO),
   SFVAR(MIDI.OutputRP),
   SFVAR(MIDI.OutputWP),
   SFVAR(MIDI.OutputCount),
@@ -1536,12 +1536,12 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFVAR(MCIEB),
   SFVAR(MCIPD),
 
-  SFARRAY(SCILV, 3),
+  SFVAR(SCILV),
 
-  SFVAR(Timers->Control, 3, sizeof(*Timers)),
-  SFVAR(Timers->Counter, 3, sizeof(*Timers)),
-  SFVAR(Timers->PrevClockIn, 3, sizeof(*Timers)),
-  SFVAR(Timers->Reload, 3, sizeof(*Timers)),
+  SFVAR(Timers->Control, 3, sizeof(*Timers), Timers),
+  SFVAR(Timers->Counter, 3, sizeof(*Timers), Timers),
+  SFVAR(Timers->PrevClockIn, 3, sizeof(*Timers), Timers),
+  SFVAR(Timers->Reload, 3, sizeof(*Timers), Timers),
 
   SFVAR(DMEA),
   SFVAR(DRGA),
@@ -1554,13 +1554,13 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFVAR(RBP),
   SFVAR(RBL),
 
-  SFARRAY64(DSP.MPROG, 0x80),
-  SFARRAY32(DSP.TEMP, 0x80),
-  SFARRAY32(DSP.MEMS, 0x20),
-  SFARRAY16(DSP.COEF, 64),
-  SFARRAY16(DSP.MADRS, 32),
-  SFARRAY32(DSP.MIXS, 0x10),
-  SFARRAY16(DSP.EFREG, 0x10),
+  SFVAR(DSP.MPROG),
+  SFVAR(DSP.TEMP),
+  SFVAR(DSP.MEMS),
+  SFVAR(DSP.COEF),
+  SFVAR(DSP.MADRS),
+  SFVAR(DSP.MIXS),
+  SFVAR(DSP.EFREG),
 
   SFVAR(DSP.INPUTS),
 
@@ -1580,7 +1580,7 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFVAR(DSP.ReadPending),
   SFVAR(DSP.ReadValue),
   //
-  SFARRAY16(RAM, 262144),
+  SFPTR16(RAM, 262144),
 
   SFEND
  };
@@ -1614,7 +1614,7 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
 
   for(uint32 A = 0x100000; A < 0x100400; A += 2)
   {
-   RW<uint16, true>(A, *(&SlotRegs[0][0] + ((A & 0x3FE) >> 1)));
+   RW<uint16, true>(A, *(MDAP(SlotRegs) + ((A & 0x3FE) >> 1)));
   }
   RecalcSoundInt();
   RecalcMainInt();

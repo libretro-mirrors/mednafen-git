@@ -1783,9 +1783,9 @@ void VDC::StateAction(StateMem *sm, const unsigned load, const bool data_only, c
 
         SFVARN(status, "status"),
 
-        SFARRAY16N(SAT, 0x100, "SAT"),
+        SFPTR16N(SAT, 0x100, "SAT"),
 
-        SFARRAY16N(VRAM, VRAM_Size, "VRAM"),
+        SFPTR16N(VRAM, VRAM_Size, "VRAM"),
 
         SFVARN(DMAReadBuffer, "DMAReadBuffer"),
         SFVARN(DMAReadWrite, "DMAReadWrite"),
@@ -1827,8 +1827,8 @@ void VDC::StateAction(StateMem *sm, const unsigned load, const bool data_only, c
 
 	SFVAR(active_sprites),
 
-	SFARRAYN(&sl_packer[0], sl_packer.size(), "ExtraState"),
-	//SFARRAY(SpriteListTemp, sizeof(SpriteListTemp)),
+	SFPTR8N(&sl_packer[0], sl_packer.size(), "ExtraState"),
+	//SFPTR8(SpriteListTemp, sizeof(SpriteListTemp)),
 
 	SFEND
   };

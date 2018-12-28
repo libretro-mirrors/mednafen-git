@@ -437,8 +437,7 @@ static bool ValidateRawDataSector(uint8 *data, const uint32 lba)
 {
  if(!edc_lec_check_and_correct(data, false))
  {
-  MDFN_DispMessage(_("Uncorrectable data at sector %u"), lba);
-  MDFN_PrintError(_("Uncorrectable data at sector %u"), lba);
+  MDFN_Notify(MDFN_NOTICE_WARNING, _("Uncorrectable error(s) in sector %d."), lba);
 
   din.Flush();
   cd.data_transfer_done = false;
@@ -1261,12 +1260,12 @@ void PCECD_Drive_StateAction(StateMem * sm, int load, int data_only, const char 
   SFVARN(cd.ascq_pending, "ascq_pending"),
   SFVARN(cd.fru_pending, "fru_pending"),
 
-  SFARRAYN(cd.command_buffer, 256, "command_buffer"),
+  SFPTR8N(cd.command_buffer, 256, "command_buffer"),
   SFVARN(cd.command_buffer_pos, "command_buffer_pos"),
   SFVARN(cd.command_size_left, "command_size_left"),
 
   // Don't save the FIFO's write position, it will be reconstructed from read_pos and in_count
-  SFARRAYN(&din.data[0], din.data.size(), "din_fifo"),
+  SFPTR8N(&din.data[0], din.data.size(), "din_fifo"),
   SFVARN(din.read_pos, "din_read_pos"),
   SFVARN(din.in_count, "din_in_count"),
   SFVARN(cd.data_transfer_done, "data_transfer_done"),
@@ -1274,7 +1273,7 @@ void PCECD_Drive_StateAction(StateMem * sm, int load, int data_only, const char 
   SFVARN(cd.DiscChanged, "DiscChanged"),
 
   SFVAR(cdda.PlayMode),
-  SFARRAY16(cdda.CDDASectorBuffer, 1176),
+  SFPTR16(cdda.CDDASectorBuffer, 1176),
   SFVAR(cdda.CDDAReadPos),
   SFVAR(cdda.CDDAStatus),
   SFVAR(cdda.CDDADiv),
@@ -1289,9 +1288,9 @@ void PCECD_Drive_StateAction(StateMem * sm, int load, int data_only, const char 
   SFVAR(cdda.ScanMode),
   SFVAR(cdda.scan_sec_end),
 
-  SFARRAYN(&cd.SubQBuf[0][0], sizeof(cd.SubQBuf), "SubQBufs"),
-  SFARRAYN(cd.SubQBuf_Last, sizeof(cd.SubQBuf_Last), "SubQBufLast"),
-  SFARRAYN(cd.SubPWBuf, sizeof(cd.SubPWBuf), "SubPWBuf"),
+  SFVARN(cd.SubQBuf, "SubQBufs"),
+  SFVARN(cd.SubQBuf_Last, "SubQBufLast"),
+  SFVARN(cd.SubPWBuf, "SubPWBuf"),
 
   SFVAR(monotonic_timestamp),
   SFVAR(pce_lastsapsp_timestamp),

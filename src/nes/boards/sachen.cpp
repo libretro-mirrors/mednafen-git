@@ -30,9 +30,9 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  // FIXME to not abuse SFARRAYN:
-  SFARRAYN(&cmd, cmd_save, "cmd"),
-  SFARRAY(latch, latch_save),
+  // FIXME to not abuse SFPTRN:
+  SFPTR8N(&cmd, cmd_save, "cmd"),
+  SFPTR8(latch, latch_save),
   SFEND
  };
 

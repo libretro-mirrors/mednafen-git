@@ -825,9 +825,9 @@ void RAINBOW_StateAction(StateMem *sm, const unsigned load, const bool data_only
    SFVAR(NullRunU),
    SFVAR(NullRunV),
    SFVAR(HSync),
-   SFARRAY32(DecodeFormat, 2),
-   SFARRAY(DecodeBuffer[0], 0x2000 * 4),
-   SFARRAY(DecodeBuffer[1], 0x2000 * 4),
+   SFVAR(DecodeFormat),
+   SFPTR8(DecodeBuffer[0], 0x2000 * 4),
+   SFPTR8(DecodeBuffer[1], 0x2000 * 4),
    SFEND
  };
 

@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* ZLInflateFilter.cpp:
-**  Copyright (C) 2014-2016 Mednafen Team
+**  Copyright (C) 2014-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -25,8 +25,8 @@
 #include "ZLInflateFilter.h"
 #include <mednafen/mednafen.h>
 
-ZLInflateFilter::ZLInflateFilter(Stream *source_stream, FORMAT df, uint64 csize, uint64 ucs) 
-	: ss(source_stream), ss_startpos(source_stream->tell()), ss_boundpos(ss_startpos + csize), uc_size(ucs)
+ZLInflateFilter::ZLInflateFilter(Stream *source_stream, const std::string& vfp, FORMAT df, uint64 csize, uint64 ucs, uint64 ucrc32) 
+	: ss(source_stream), ss_startpos(source_stream->tell()), ss_boundpos(ss_startpos + csize), ss_pos(ss_startpos), uc_size(ucs), running_crc32(0), expected_crc32(ucrc32), vfpath(vfp)
 {
  int irc;
  int iiwbits;
@@ -58,7 +58,7 @@ ZLInflateFilter::ZLInflateFilter(Stream *source_stream, FORMAT df, uint64 csize,
  irc = inflateInit2(&zs, iiwbits);
 
  if(MDFN_UNLIKELY(irc < 0))
-  throw MDFN_Error(0, _("zlib error: %d"), irc);
+  throw MDFN_Error(0, _("zlib inflateInit2() failed: %d"), irc);
 
  position = 0;
 }
@@ -71,20 +71,26 @@ ZLInflateFilter::~ZLInflateFilter()
  }
  catch(std::exception &e)
  {
-  MDFND_PrintError(e.what());
+  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
  }
 }
 
 uint64 ZLInflateFilter::read(void *data, uint64 count, bool error_on_eos)
 {
- zs.next_out = (Bytef*)data;
- zs.avail_out = count;
+ const uint64 count_limited = std::min<uint64>(uc_size - position, count);
 
- while((uint64)(zs.next_out - (Bytef*)data) < count)
+ zs.next_out = (Bytef*)data;
+ zs.avail_out = count_limited;
+
+ while((uint64)(zs.next_out - (Bytef*)data) < count_limited)
  {
   if(!zs.avail_in)
   {
-   uint64 rc = ss->read(buf, std::min<uint64>(sizeof(buf), ss_boundpos - ss->tell()), false);
+   if(ss->tell() != ss_pos)
+    ss->seek(ss_pos, SEEK_SET);
+
+   uint64 rc = ss->read(buf, std::min<uint64>(sizeof(buf), ss_boundpos - ss_pos), false);
+   ss_pos += rc;
    zs.next_in = buf;
    zs.avail_in = rc;
   }
@@ -95,7 +101,14 @@ uint64 ZLInflateFilter::read(void *data, uint64 count, bool error_on_eos)
   zs.total_out = 0;
   irc = inflate(&zs, no_more_input ? Z_SYNC_FLUSH : Z_NO_FLUSH);
   if(MDFN_UNLIKELY(irc < 0))
-   throw MDFN_Error(0, _("zlib error %d"), irc);
+  {
+   if(irc == Z_DATA_ERROR)
+    throw MDFN_Error(0, _("Error reading from virtual file \"%s\": %s"), vfpath.c_str(), zs.msg);
+   else if(irc == Z_MEM_ERROR)
+    throw MDFN_Error(0, _("Error reading from virtual file \"%s\": %s"), vfpath.c_str(), _("insufficient memory"));
+   else
+    throw MDFN_Error(0, _("Error reading from virtual file \"%s\": zlib error %d"), vfpath.c_str(), irc);
+  }
   position += zs.total_out;
 
   if(no_more_input)
@@ -108,12 +121,23 @@ uint64 ZLInflateFilter::read(void *data, uint64 count, bool error_on_eos)
  }
 
  uint64 ret = zs.next_out - (Bytef*)data;
- assert(ret <= count);
+ assert(ret <= count_limited);
+ assert(position <= uc_size);
+
+ if(expected_crc32 != ~(uint64)0)
+ {
+  // Obviously won't work right if we're read()'ing into weirdly-mapped memory. ;)
+  running_crc32 = crc32/*_z*/(running_crc32, (Bytef*)data, ret);
+
+  if(position == uc_size)
+  {
+   if(running_crc32 != expected_crc32)
+    throw MDFN_Error(0, _("Error reading from virtual file \"%s\": %s"), vfpath.c_str(), _("decompressed data fails CRC32 check"));
+  }
+ }
 
  if(MDFN_UNLIKELY(ret < count && error_on_eos))
- {
-  throw MDFN_Error(0, _("Unexpected EOF"));
- }
+  throw MDFN_Error(0, _("Error reading from virtual file \"%s\": %s"), vfpath.c_str(), _("Unexpected EOF"));
 
  return ret;
 }
@@ -143,24 +167,26 @@ void ZLInflateFilter::seek(int64 offset, int whence)
 
    case SEEK_END:
 	if(MDFN_UNLIKELY(uc_size == ~(uint64)0))
-	 throw MDFN_Error(EINVAL, _("Attempted to seek relative to end-of-file in deflate-compressed stream of indeterminate uncompressed size."));
+         throw MDFN_Error(EINVAL, _("Error seeking in virtual file \"%s\": %s"), vfpath.c_str(), _("Attempted to seek relative to end-of-file in deflate-compressed stream of indeterminate uncompressed size."));
 	else
 	 new_position = uc_size + offset;
         break;
  }
 
  if(MDFN_UNLIKELY((int64)new_position < 0 || new_position > uc_size))
-  throw MDFN_Error(EINVAL, _("Attempted to seek to out-of-bounds position %llu in deflate-compressed stream."), (unsigned long long)new_position);
+  throw MDFN_Error(EINVAL, _("Error seeking in virtual file \"%s\": Attempted to seek to out-of-bounds position %llu in deflate-compressed stream."), vfpath.c_str(), (unsigned long long)new_position);
 
  if(new_position < position)
  {
   int irc = inflateReset(&zs);
 
   if(MDFN_UNLIKELY(irc < 0))
-   throw MDFN_Error(0, _("zlib error %d"), irc);
+   throw MDFN_Error(0, _("Error seeking in virtual file \"%s\": inflateReset() failed: %d"), vfpath.c_str(), irc);
 
   ss->seek(ss_startpos, SEEK_SET);
+  ss_pos = ss_startpos;
   position = 0;
+  running_crc32 = 0;
  }
 
  while(position < new_position)
@@ -169,7 +195,7 @@ void ZLInflateFilter::seek(int64 offset, int whence)
   uint64 toread = std::min<uint64>(new_position - position, sizeof(dummy));
 
   if(MDFN_UNLIKELY(read(dummy, toread, false) != toread))
-   throw MDFN_Error(EINVAL, _("Ran out of data while seeking to position %llu in deflate-compressed stream."), (unsigned long long)new_position);
+   throw MDFN_Error(EINVAL, _("Error seeking in virtual file \"%s\": Ran out of data while seeking to position %llu in deflate-compressed stream."), vfpath.c_str(), (unsigned long long)new_position);
  }
 }
 

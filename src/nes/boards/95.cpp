@@ -116,7 +116,7 @@ static void DBPower(CartInfo *info)
 static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[]={
-        SFARRAYN(DRegs, 8, "DREG"),
+        SFPTR8N(DRegs, 8, "DREG"),
 	SFVARN(cmd, "CMD"),
 	SFVARN(lastA, "LAST"),
 	SFVAR(lastmc),

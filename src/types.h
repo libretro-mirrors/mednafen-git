@@ -45,10 +45,10 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <strings.h>
 #include <errno.h>
 #include <math.h>
 
+#ifdef __cplusplus
 #include <limits>
 #include <exception>
 #include <stdexcept>
@@ -61,6 +61,7 @@
 #include <vector>
 #include <array>
 #include <list>
+#endif
 
 typedef int8_t int8;
 typedef int16_t int16;
@@ -238,8 +239,11 @@ typedef uint64_t uint64;
  #define MDFN_IS_BIGENDIAN true
 #endif
 
+#ifdef __cplusplus
+template<typename T> typename std::remove_all_extents<T>::type* MDAP(T* v) { return (typename std::remove_all_extents<T>::type*)v; }
 #include "error.h"
 #include "math_ops.h"
 #include "endian.h"
+#endif
 
 #endif

@@ -141,7 +141,7 @@ void InputDevice_GunCon::StateAction(StateMem* sm, const unsigned load, const bo
 
   SFVAR(command),
 
-  SFARRAY(transmit_buffer, sizeof(transmit_buffer)),
+  SFVAR(transmit_buffer),
   SFVAR(transmit_pos),
   SFVAR(transmit_count),
 
@@ -372,15 +372,15 @@ InputDevice *Device_GunCon_Create(void)
 
 IDIISG Device_GunCon_IDII =
 {
- { "x_axis", "X Axis", -1, IDIT_X_AXIS },
- { "y_axis", "Y Axis", -1, IDIT_Y_AXIS },
+ { "x_axis", "X Axis", -1, IDIT_POINTER_X },
+ { "y_axis", "Y Axis", -1, IDIT_POINTER_Y },
 
- { "trigger", "Trigger", 0, IDIT_BUTTON, NULL  },
+ IDIIS_Button("trigger", "Trigger", 0),
 
- { "a",	"A",		 1, IDIT_BUTTON,	NULL },
- { "b", "B",		 2, IDIT_BUTTON,	NULL },
+ IDIIS_Button("a", "A", 1),
+ IDIIS_Button("b", "B", 2),
 
- { "offscreen_shot", "Offscreen Shot(Simulated)", 3, IDIT_BUTTON, NULL },	// Useful for "Judge Dredd", and probably not much else.
+ IDIIS_Button("offscreen_shot", "Offscreen Shot(Simulated)", 3),	// Useful for "Judge Dredd", and probably not much else.
 };
 
 

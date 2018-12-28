@@ -24,6 +24,7 @@
 /****************************************************************/
 
 #include <mednafen/types.h>
+
 #include "args.h"
 
 static int ParseEA(int x, int argc, char *argv[], ARGPSTRUCT *argsps)

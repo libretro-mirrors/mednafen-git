@@ -306,7 +306,7 @@ int RTC::StateAction(StateMem *sm, int load, int data_only)
   SFVAR(dataLen),
   SFVAR(bits),
   SFVAR(state),
-  SFARRAY(data, 12),
+  SFPTR8(data, 12),
 
   SFVAR(ClockCounter),
 

@@ -52,7 +52,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(latches, 2),
+  SFPTR8(latches, 2),
   SFEND
  };
 

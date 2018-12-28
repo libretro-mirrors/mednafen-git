@@ -30,19 +30,6 @@
 
 using namespace CDUtility;
 
-static void MDFN_strtoupper(std::string &str)
-{
- const size_t len = str.length();
-
- for(size_t x = 0; x < len; x++)
- {
-  if(str[x] >= 'a' && str[x] <= 'z')
-  {
-   str[x] = str[x] - 'a' + 'A';
-  }
- }
-}
-
 typedef std::map<std::string, std::string> CCD_Section;
 
 template<typename T>
@@ -162,7 +149,7 @@ void CDAccess_CCD::Load(const std::string& path, bool image_memcache)
     throw MDFN_Error(0, _("Malformed section specifier: %s"), linebuf.c_str());
 
    cur_section_name = linebuf.substr(1, linebuf.length() - 2);
-   MDFN_strtoupper(cur_section_name);
+   MDFN_strazupper(cur_section_name);
   }
   else
   {
@@ -179,7 +166,7 @@ void CDAccess_CCD::Load(const std::string& path, bool image_memcache)
    MDFN_trim(k);
    MDFN_trim(v);
 
-   MDFN_strtoupper(k);
+   MDFN_strazupper(k);
 
    Sections[cur_section_name][k] = v;
   }

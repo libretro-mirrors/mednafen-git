@@ -19,7 +19,7 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-void RMDUI_Init(MDFNGI* gi, const int which_medium);
-void RMDUI_Kill(void);
+void RMDUI_Init(MDFNGI* gi, const int which_medium) MDFN_COLD;
+void RMDUI_Kill(void) MDFN_COLD;
 void RMDUI_Toggle_InsertEject(void);
 void RMDUI_Select(void);

@@ -595,13 +595,13 @@ void PCEFast_PSG::StateAction(StateMem *sm, int load, int data_only)
    SFVARN(pt->frequency, "frequency"),
    SFVARN(pt->control, "control"),
    SFVARN(pt->balance, "balance"),
-   SFARRAYN(pt->waveform, 32, "waveform"),
+   SFVARN(pt->waveform, "waveform"),
    SFVARN(pt->waveform_index, "waveform_index"),
    SFVARN(pt->dda, "dda"),
    SFVARN(pt->noisectrl, "noisectrl"),
    SFVARN(pt->noisecount, "noisecount"),
    SFVARN(pt->lfsr, "lfsr"),
-   SFARRAY32N(pt->vl, 2, "vl"), // TODO
+   SFVARN(pt->vl, "vl"), // TODO
    SFEND
   };
   tmpstr[3] = '0' + ch;

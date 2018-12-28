@@ -57,7 +57,7 @@ void IODevice_Gun::Draw(MDFN_Surface* surface, const MDFN_Rect& drect, const int
    continue;
 
   uint32* lpix = surface->pix<uint32>() + y * surface->pitchinpix;
-  int32 cx = floor(0.5 + (((nom_coord[0] - gun_x_offs) / gun_x_scale) - MDFNGameInfo->mouse_offs_x) * lw[y] / (MDFNGameInfo->mouse_scale_x * MDFNGameInfo->nominal_width));
+  int32 cx = floor(0.5 + (((nom_coord[0] - gun_x_offs) / gun_x_scale) - MDFNGameInfo->mouse_offs_x) * lw[y] / MDFNGameInfo->mouse_scale_x);
   int32 xmin, xmax;
 
   xmin = drect.x + cx;
@@ -184,7 +184,7 @@ void IODevice_Gun::StateAction(StateMem* sm, const unsigned load, const bool dat
   SFVAR(osshot_counter),
   SFVAR(prev_ossb),
 
-  SFARRAY32(nom_coord, 2),
+  SFVAR(nom_coord),
 
   SFEND
  };
@@ -254,12 +254,12 @@ void IODevice_Gun::LineHook(const sscpu_timestamp_t timestamp, int32 out_line, i
 
 IDIISG IODevice_Gun_IDII =
 {
- { "x_axis", "X Axis", -1, IDIT_X_AXIS },
- { "y_axis", "Y Axis", -1, IDIT_Y_AXIS },
+ { "x_axis", "X Axis", -1, IDIT_POINTER_X },
+ { "y_axis", "Y Axis", -1, IDIT_POINTER_Y },
 
- { "trigger", "Trigger", 0, IDIT_BUTTON },
- { "start", "START", 1, IDIT_BUTTON },
- { "offscreen_shot", "Offscreen Shot(Simulated)", 2, IDIT_BUTTON },
+ IDIIS_Button("trigger", "Trigger", 0),
+ IDIIS_Button("start", "START", 1),
+ IDIIS_Button("offscreen_shot", "Offscreen Shot(Simulated)", 2),
 };
 
 

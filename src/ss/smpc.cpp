@@ -47,7 +47,7 @@ using namespace CDUtility;
 #include "input/mission.h"
 #include "input/gun.h"
 #include "input/keyboard.h"
-//#include "input/jpkeyboard.h"
+#include "input/jpkeyboard.h"
 
 #include "input/multitap.h"
 
@@ -217,7 +217,7 @@ static struct
  IODevice_Mission dualmission{true};
  IODevice_Gun gun;
  IODevice_Keyboard keyboard;
-// IODevice_Keyboard jpkeyboard;
+ IODevice_JPKeyboard jpkeyboard;
 } PossibleDevices[12];
 
 static IODevice_Multitap PossibleMultitaps[2];
@@ -332,8 +332,8 @@ void SMPC_SetInput(unsigned port, const char* type, uint8* ptr)
   nd = &PossibleDevices[port].gun;
  else if(!strcmp(type, "keyboard"))
   nd = &PossibleDevices[port].keyboard;
-// else if(!strcmp(type, "jpkeyboard"))
-//  nd = &PossibleDevices[port].jpkeyboard;
+ else if(!strcmp(type, "jpkeyboard"))
+  nd = &PossibleDevices[port].jpkeyboard;
  else
   abort();
 
@@ -507,12 +507,12 @@ void SMPC_StateAction(StateMem* sm, const unsigned load, const bool data_only)
  {
   SFVAR(RTC.ClockAccum),
   SFVAR(RTC.Valid),
-  SFARRAY(RTC.raw, 7),
+  SFVAR(RTC.raw),
 
-  SFARRAY(SaveMem, 4),
+  SFVAR(SaveMem),
 
-  SFARRAY(IREG, 7),
-  SFARRAY(OREG, 0x20),
+  SFVAR(IREG),
+  SFVAR(OREG),
   SFVAR(SR),
   SFVAR(SF),
 
@@ -543,7 +543,7 @@ void SMPC_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFVAR(JRS.OptEatTime),
   SFVAR(JRS.OptReadTime),
 
-  SFARRAY(JRS.Mode, 2),
+  SFVAR(JRS.Mode),
   SFVAR(JRS.TimeOptEn),
   SFVAR(JRS.NextContBit),
 
@@ -556,22 +556,22 @@ void SMPC_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
   SFVAR(JRS.OWP),
 
-  SFARRAY(JRS.work, 8),
+  SFVAR(JRS.work),
 
   SFVAR(JRS.TapCounter),
   SFVAR(JRS.TapCount),
   SFVAR(JRS.ReadCounter),
   SFVAR(JRS.ReadCount),
-  SFARRAY(JRS.ReadBuffer, 256),
+  SFVAR(JRS.ReadBuffer),
   SFVAR(JRS.WriteCounter),
   SFVAR(JRS.PDCounter),
 
-  SFARRAY(&DataOut[0][0], 4),
-  SFARRAY(&DataDir[0][0], 4),
-  SFARRAYB(DirectModeEn, 2),
-  SFARRAYB(ExLatchEn, 2),
+  SFVARN(DataOut, "&DataOut[0][0]"),
+  SFVARN(DataDir, "&DataDir[0][0]"),
+  SFVAR(DirectModeEn),
+  SFVAR(ExLatchEn),
 
-  SFARRAY(IOBusState, 2),
+  SFVAR(IOBusState),
 
   SFVAR(vb),
   SFVAR(vsync),
@@ -795,7 +795,7 @@ uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A)
 	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SMPC, "[SMPC] Output register %u port read while command 0x%02x is executing.\n", A - 0x10, ExecutingCommand);
 	}
 
-	ret = (OREG - 0x10)[A];
+	ret = OREG[(size_t)A - 0x10];
 	break;
 
   case 0x30:
@@ -952,7 +952,7 @@ static void RTC_IncTime(void)
   RTC.second = RTC_BCDInc(RTC.second);
 }
 
-enum { SubPhaseBias = __COUNTER__ + 1 };
+enum : int { SubPhaseBias = __COUNTER__ + 1 };
 sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 {
  int64 clocks;
@@ -1535,15 +1535,7 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
   "Mission Stick",
   IODevice_Mission_IDII
  },
-#if 0
- // Mission Stick (No Autofire)
- {
-  "missionwoa",
-  "Mission (No AF)",
-  "Mission Stick, without autofire functionality(for less things to map).",
-  IODevice_MissionNoAF_IDII
- },
-#endif
+
  // Dual Mission Stick
  {
   "dmission",
@@ -1551,16 +1543,6 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
   "Dual Mission Sticks, useful for \"Panzer Dragoon Zwei\".  With 30 inputs to map, don't get distracted by..LOOK A LOBSTER!",
   IODevice_DualMission_IDII
  },
-
-#if 0
- // Dual Mission Stick (No Autofire)
- {
-  "dmissionwoa",
-  "Dual Mission (No AF)",
-  "Dual Mission Sticks (No Autofire)",
-  IODevice_DualMissionNoAF_IDII
- },
-#endif
 
  // Gun(Virtua Gun/Stunner)
  {
@@ -1579,22 +1561,20 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSSVPort =
   InputDeviceInfoStruct::FLAG_KEYBOARD
  },
 
-#if 0
  // Keyboard (Japanese)
  {
   "jpkeyboard",
   "Keyboard (JP)",
-  "89-key Japanese keyboard.",
+  "89-key Japanese keyboard(e.g. HSS-0129).",
   IODevice_JPKeyboard_IDII,
   InputDeviceInfoStruct::FLAG_KEYBOARD
  },
-#endif
 };
 
 static IDIISG IDII_Builtin =
 {
- { "reset", "Reset", -1, IDIT_RESET_BUTTON },
- { "smpc_reset", "SMPC Reset", -1, IDIT_BUTTON },
+ IDIIS_ResetButton(),
+ IDIIS_Button("smpc_reset", "SMPC Reset", -1),
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfoBuiltin =

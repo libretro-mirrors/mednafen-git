@@ -510,11 +510,11 @@ void HuC_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(PopRAM, IsPopulous ? 32768 : 0),
-  SFARRAY(TsushinRAM, IsTsushin ? 32768 : 0),
-  SFARRAY(SaveRAM, (IsPopulous || IsTsushin || BRAM_Disabled) ? 0 : 2048),
-  SFARRAY(CDRAM, CDRAM ? (8192 * 8) : 0),
-  SFARRAY(SysCardRAM, SysCardRAM ? (8192 * 24) : 0),
+  SFPTR8(PopRAM, IsPopulous ? 32768 : 0),
+  SFPTR8(TsushinRAM, IsTsushin ? 32768 : 0),
+  SFPTR8(SaveRAM, (IsPopulous || IsTsushin || BRAM_Disabled) ? 0 : 2048),
+  SFPTR8(CDRAM, CDRAM ? (8192 * 8) : 0),
+  SFPTR8(SysCardRAM, SysCardRAM ? (8192 * 24) : 0),
   SFVAR(HuCSF2Latch),
   SFEND
  };

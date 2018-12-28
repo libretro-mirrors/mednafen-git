@@ -38,9 +38,9 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(CHRBanks, 4),
+  SFPTR8(CHRBanks, 4),
   SFVAR(PRGBank16),
-  SFARRAY(WRAM, 8192),
+  SFPTR8(WRAM, 8192),
   SFEND
  };
 

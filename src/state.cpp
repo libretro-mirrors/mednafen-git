@@ -726,8 +726,6 @@ void MDFNI_SelectState(int w) noexcept
   else
    CurrentState = w;
 
-  MDFN_ResetMessages();
-
   std::unique_ptr<StateStatusStruct> status(new StateStatusStruct());
 
   memset(status.get(), 0, sizeof(StateStatusStruct));
@@ -742,7 +740,7 @@ void MDFNI_SelectState(int w) noexcept
  }
  catch(std::exception& e)
  {
-  MDFN_DispMessage("%s", e.what());
+  MDFN_Notify(MDFN_NOTICE_WARNING, "%s", e.what());
   MDFND_SetStateStatus(NULL);
  }
 }  
@@ -781,15 +779,15 @@ bool MDFNI_SaveState(const char *fname, const char *suffix, const MDFN_Surface *
   {
    SaveStateStatus[CurrentState] = true;
    RecentlySavedState = CurrentState;
-   MDFN_DispMessage(_("State %d saved."), CurrentState);
+   MDFN_Notify(MDFN_NOTICE_STATUS, _("State %d saved."), CurrentState);
   }
  }
  catch(std::exception &e)
  {
   if(!fname && !suffix)
-   MDFN_DispMessage(_("State %d save error: %s"), CurrentState, e.what());
+   MDFN_Notify(MDFN_NOTICE_ERROR, _("State %d save error: %s"), CurrentState, e.what());
   else
-   MDFN_PrintError("%s", e.what());
+   MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
 
   if(MDFNnetplay)
    MDFND_NetplayText(e.what(), false);
@@ -845,15 +843,23 @@ bool MDFNI_LoadState(const char *fname, const char *suffix) noexcept
   if(!fname && !suffix)
   {
    SaveStateStatus[CurrentState] = true;
-   MDFN_DispMessage(_("State %d loaded."), CurrentState);
+   MDFN_Notify(MDFN_NOTICE_STATUS, _("State %d loaded."), CurrentState);
   }
  }
  catch(std::exception &e)
  {
+  MDFN_Error* me = dynamic_cast<MDFN_Error*>(&e);
+
   if(!fname && !suffix)
-   MDFN_DispMessage(_("State %d load error: %s"), CurrentState, e.what());
+   MDFN_Notify(MDFN_NOTICE_ERROR, _("State %d load error: %s"), CurrentState, e.what());
   else
-   MDFN_PrintError("%s", e.what());
+  {
+   // FIXME: Autosave kludgery, refactor interfaces in the future to make cleaner.
+   if(suffix && me && me->GetErrno() == ENOENT)
+    return true;
+
+   MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
+  }
 
   if(MDFNnetplay)
    MDFND_NetplayText(e.what(), false);

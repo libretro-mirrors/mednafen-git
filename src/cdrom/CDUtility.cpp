@@ -174,9 +174,11 @@ void subq_generate_checksum(uint8 *buf)
  for(int i = 0; i < 0xA; i++)
   crc = subq_crctab[(crc >> 8) ^ buf[i]] ^ (crc << 8);
 
+ crc = ~crc;
+
  // Checksum
- buf[0xa] = ~(crc >> 8);
- buf[0xb] = ~(crc);
+ buf[0xa] = crc >> 8;
+ buf[0xb] = crc;
 }
 
 void subq_deinterleave(const uint8 *SubPWBuf, uint8 *qbuf)

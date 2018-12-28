@@ -39,8 +39,8 @@
 #include "vdp2.h"
 #include "vdp1_common.h"
 
-enum { VDP1_UpdateTimingGran = 263 };
-enum { VDP1_IdleTimingGran = 1019 };
+enum : int { VDP1_UpdateTimingGran = 263 };
+enum : int { VDP1_IdleTimingGran = 1019 };
 
 namespace MDFN_IEN_SS
 {
@@ -808,6 +808,7 @@ void Write8_DB(uint32 A, uint16 DB)
 
  if(A < 0x80000)
  {
+  SS_DBGTI(SS_DBG_VDP1_VRAMW, "[VDP1] Write to VRAM: 0x%02x->VRAM[0x%05x]", (DB >> (((A & 1) ^ 1) << 3)) & 0xFF, A);
   ne16_wbo_be<uint8>(VRAM, A, DB >> (((A & 1) ^ 1) << 3) );
   return;
  }
@@ -815,6 +816,8 @@ void Write8_DB(uint32 A, uint16 DB)
  if(A < 0x100000)
  {
   uint32 FBA = A;
+
+  SS_DBGTI(SS_DBG_VDP1_FBW, "[VDP1] Write to FB: 0x%02x->FB[%d][0x%05x]", (DB >> (((A & 1) ^ 1) << 3)) & 0xFF, FBDrawWhich, A & 0x3FFFF);
 
   if((TVMR & (TVMR_8BPP | TVMR_ROTATE)) == (TVMR_8BPP | TVMR_ROTATE))
    FBA = (FBA & 0x1FF) | ((FBA << 1) & 0x3FC00) | ((FBA >> 8) & 0x200);
@@ -841,6 +844,8 @@ void Write16_DB(uint32 A, uint16 DB)
  if(A < 0x100000)
  {
   uint32 FBA = A;
+
+  SS_DBGTI(SS_DBG_VDP1_FBW, "[VDP1] Write to FB: 0x%04x->FB[%d][0x%05x]", DB, FBDrawWhich, A & 0x3FFFF);
 
   if((TVMR & (TVMR_8BPP | TVMR_ROTATE)) == (TVMR_8BPP | TVMR_ROTATE))
    FBA = (FBA & 0x1FF) | ((FBA << 1) & 0x3FC00) | ((FBA >> 8) & 0x200);
@@ -876,8 +881,8 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY16(VRAM, 0x40000),
-  SFARRAY16(&FB[0][0], 2 * 0x20000),
+  SFVAR(VRAM),
+  SFVARN(FB, "&FB[0][0]"),
   SFVAR(FBDrawWhich),
 
   SFVAR(FBManualPending),

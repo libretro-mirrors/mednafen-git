@@ -141,7 +141,7 @@ static void StateAction(StateMem* sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(serdata, sizeof(serdata)),
+  SFVAR(serdata),
   SFVAR(serdata_stime),
   SFEND
  };

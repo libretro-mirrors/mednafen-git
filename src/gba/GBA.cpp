@@ -259,7 +259,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
  SFORMAT StateRegs[] =
  {
   // Type-cast to uint32* so the macro will work(they really are 32-bit elements, just wrapped up in a union)
-  SFARRAY32N((uint32 *)reg, sizeof(reg) / sizeof(reg_pair), "reg"),
+  SFPTR32N((uint32 *)reg, sizeof(reg) / sizeof(reg_pair), "reg"),
 
   SFVAR(busPrefetch),
   SFVAR(busPrefetchEnable),
@@ -279,8 +279,8 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVAR(BG3CNT),
 
 
-  SFARRAY16(BGHOFS, 4),
-  SFARRAY16(BGVOFS, 4),
+  SFVAR(BGHOFS),
+  SFVAR(BGVOFS),
 
   SFVAR(BG2PA),
   SFVAR(BG2PB),
@@ -310,12 +310,12 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVAR(COLEV),
   SFVAR(COLY),
 
-  SFARRAY16(DMSAD_L, 4),
-  SFARRAY16(DMSAD_H, 4),
-  SFARRAY16(DMDAD_L, 4),
-  SFARRAY16(DMDAD_H, 4),
-  SFARRAY16(DMCNT_L, 4),
-  SFARRAY16(DMCNT_H, 4),
+  SFVAR(DMSAD_L),
+  SFVAR(DMSAD_H),
+  SFVAR(DMDAD_L),
+  SFVAR(DMDAD_H),
+  SFVAR(DMCNT_L),
+  SFVAR(DMCNT_H),
 
   SFVAR(timers[0].D),
   SFVAR(timers[0].CNT),
@@ -355,8 +355,8 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVAR(timers[3].Reload),
   SFVAR(timers[3].ClockReload),
 
-  SFARRAY32(dmaSource, 4),
-  SFARRAY32(dmaDest, 4),
+  SFVAR(dmaSource),
+  SFVAR(dmaDest),
 
   SFVAR(fxOn),
   SFVAR(windowOn),
@@ -382,12 +382,12 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
  SFORMAT RAMState[] =
  {
-  SFARRAY(internalRAM, 0x8000),
-  SFARRAY(paletteRAM, 0x400),
-  SFARRAY(workRAM, 0x40000),
-  SFARRAY(vram, 0x20000),
-  SFARRAY(oam, 0x400),
-  SFARRAY(ioMem, 0x400),
+  SFPTR8(internalRAM, 0x8000),
+  SFPTR8(paletteRAM, 0x400),
+  SFPTR8(workRAM, 0x40000),
+  SFPTR8(vram, 0x20000),
+  SFPTR8(oam, 0x400),
+  SFPTR8(ioMem, 0x400),
   SFEND
  };
 
@@ -1266,7 +1266,7 @@ void CPUSoftwareInterrupt(int comment)
     // let it go, because we don't really emulate this function
   default:
     if(!disableMessage) {
-      MDFN_PrintError(_("Unsupported BIOS function %02x called from %08x. A BIOS file is needed in order to get correct behaviour."),
+      MDFN_Notify(MDFN_NOTICE_ERROR, _("Unsupported BIOS function %02x called from %08x. A BIOS file is needed in order to get correct behaviour."),
                     comment,
                     armMode ? armNextPC - 4: armNextPC - 2);
       disableMessage = true;
@@ -2406,11 +2406,11 @@ static void CPUInit(const std::string &bios_fn)
 
    //MDFN_printf(_("Backup memory type override: %s %s\n"), args[0], (acount > 1) ? args[1] : "");
 
-   if(!strcasecmp(args[0], "sram"))
+   if(!MDFN_strazicmp(args[0], "sram"))
    {
     cpuSramEnabled = true;
    }
-   else if(!strcasecmp(args[0], "flash"))
+   else if(!MDFN_strazicmp(args[0], "flash"))
    {
     cpuFlashEnabled = true;
     if(acount == 2)
@@ -2431,11 +2431,11 @@ static void CPUInit(const std::string &bios_fn)
       puts("Flash size error");
     }
    }
-   else if(!strcasecmp(args[0], "eeprom"))
+   else if(!MDFN_strazicmp(args[0], "eeprom"))
     cpuEEPROMEnabled = true;
-   else if(!strcasecmp(args[0], "sensor"))
+   else if(!MDFN_strazicmp(args[0], "sensor"))
     cpuEEPROMSensorEnabled = true;
-   else if(!strcasecmp(args[0], "rtc"))
+   else if(!MDFN_strazicmp(args[0], "rtc"))
     GBA_RTC = new RTC();
   }
  }
@@ -3271,31 +3271,31 @@ static void DoSimpleCommand(int cmd)
 
 static const MDFNSetting GBASettings[] =
 {
- { "gba.bios", 	MDFNSF_EMU_STATE,	gettext_noop("Path to optional GBA BIOS ROM image."), NULL, MDFNST_STRING, "" },
+ { "gba.bios", 	MDFNSF_EMU_STATE | MDFNSF_CAT_PATH,	gettext_noop("Path to optional GBA BIOS ROM image."), NULL, MDFNST_STRING, "" },
  { NULL }
 };
 
 static const IDIISG IDII =
 {
- { "a", "A", 		/*VIRTB_1,*/ 7, IDIT_BUTTON_CAN_RAPID, NULL },
+ IDIIS_ButtonCR("a", "A", 		/*VIRTB_1,*/ 7, NULL),
 
- { "b", "B", 		/*VIRTB_0,*/ 6, IDIT_BUTTON_CAN_RAPID, NULL },
+ IDIIS_ButtonCR("b", "B", 		/*VIRTB_0,*/ 6, NULL),
 
- { "select", "SELECT", 	/*VIRTB_SELECT,*/ 4, IDIT_BUTTON, NULL },
+ IDIIS_Button("select", "SELECT", 	/*VIRTB_SELECT,*/ 4, NULL),
 
- { "start", "START", 	/*VIRTB_START,*/ 5, IDIT_BUTTON, NULL },
+ IDIIS_Button("start", "START", 	/*VIRTB_START,*/ 5, NULL),
 
- { "right", "RIGHT →", 	/*VIRTB_DP0_R,*/ 3, IDIT_BUTTON, "left" },
+ IDIIS_Button("right", "RIGHT →", 	/*VIRTB_DP0_R,*/ 3, "left"),
 
- { "left", "LEFT ←", 	/*VIRTB_DP0_L,*/ 2, IDIT_BUTTON, "right" },
+ IDIIS_Button("left", "LEFT ←", 	/*VIRTB_DP0_L,*/ 2, "right"),
 
- { "up", "UP ↑", 	/*VIRTB_DP0_U,*/ 0, IDIT_BUTTON, "down" },
+ IDIIS_Button("up", "UP ↑", 	/*VIRTB_DP0_U,*/ 0, "down"),
 
- { "down", "DOWN ↓",	/*VIRTB_DP0_D,*/ 1, IDIT_BUTTON, "up" },
+ IDIIS_Button("down", "DOWN ↓",	/*VIRTB_DP0_D,*/ 1, "up"),
 
- { "shoulder_r", "SHOULDER R", /*VIRTB_SHLDR_L,*/	9, IDIT_BUTTON, NULL },
+ IDIIS_Button("shoulder_r", "SHOULDER R", /*VIRTB_SHLDR_L,*/	9, NULL),
 
- { "shoulder_l", "SHOULDER L", /*VIRTB_SHLDR_R,*/	8, IDIT_BUTTON, NULL },
+ IDIIS_Button("shoulder_l", "SHOULDER L", /*VIRTB_SHLDR_R,*/	8, NULL),
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =

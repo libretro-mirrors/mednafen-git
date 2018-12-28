@@ -185,9 +185,9 @@ int NGPGFX_CLASS::StateAction(StateMem *sm, int load, int data_only)
   SFVAR(SCREEN_PERIOD),
   SFVAR(K2GE_MODE),
 
-  SFARRAY(SPPLT, 6),
-  SFARRAY(SCRP1PLT, 6),
-  SFARRAY(SCRP2PLT, 6),
+  SFVAR(SPPLT),
+  SFVAR(SCRP1PLT),
+  SFVAR(SCRP2PLT),
 
   SFVAR(winx), SFVAR(winw),
   SFVAR(winy), SFVAR(winh),
@@ -199,11 +199,11 @@ int NGPGFX_CLASS::StateAction(StateMem *sm, int load, int data_only)
 
   SFVAR(negative),
 
-  SFARRAY(ScrollVRAM, 4096),
-  SFARRAY(CharacterRAM, 8192),
-  SFARRAY(SpriteVRAM, 256),
-  SFARRAY(SpriteVRAMColor, 0x40),
-  SFARRAY(ColorPaletteRAM, 0x200),
+  SFVAR(ScrollVRAM),
+  SFVAR(CharacterRAM),
+  SFVAR(SpriteVRAM),
+  SFVAR(SpriteVRAMColor),
+  SFVAR(ColorPaletteRAM),
 
   SFEND
  };

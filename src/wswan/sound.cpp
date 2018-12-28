@@ -406,8 +406,8 @@ void WSwan_SoundStateAction(StateMem *sm, const unsigned load, const bool data_o
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY16(period, 4),
-  SFARRAY(volume, 4),
+  SFVAR(period),
+  SFVAR(volume),
   SFVAR(voice_volume),
   SFVAR(sweep_step),
   SFVAR(sweep_value),
@@ -420,8 +420,8 @@ void WSwan_SoundStateAction(StateMem *sm, const unsigned load, const bool data_o
   SFVAR(sweep_8192_divider),
   SFVAR(sweep_counter),
   SFVAR(SampleRAMPos),
-  SFARRAY32(period_counter, 4),
-  SFARRAY(sample_pos, 4),
+  SFVAR(period_counter),
+  SFVAR(sample_pos),
   SFVAR(nreg),
   SFEND
  };

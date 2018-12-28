@@ -82,8 +82,8 @@ static void UNIF_StateAction(StateMem *sm, const unsigned load, const bool data_
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(exntar, 2048),
-  SFARRAY(UNIFchrrama, CHRRAMSize),
+  SFPTR8(exntar, 2048),
+  SFPTR8(UNIFchrrama, CHRRAMSize),
   SFEND
  };
 

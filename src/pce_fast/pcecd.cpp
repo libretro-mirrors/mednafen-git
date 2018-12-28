@@ -912,7 +912,7 @@ static int ADPCM_StateAction(StateMem *sm, int load, int data_only)
 
  SFORMAT StateRegs[] =
  {
-        SFARRAY(ADPCM.RAM, 0x10000),
+        SFPTR8(ADPCM.RAM, 0x10000),
 
         SFVAR(ADPCM.bigdiv),
         SFVAR(ADPCM.Addr),
@@ -968,8 +968,8 @@ void PCECD_StateAction(StateMem *sm, int load, int data_only)
 	 SFVAR(bBRAMEnabled),
 	 SFVAR(ACKStatus),
 	 SFVAR(ClearACKDelay),
-	 SFARRAY16(RawPCMVolumeCache, 2),
-	 SFARRAY(_Port, sizeof(_Port)),
+	 SFPTR16(RawPCMVolumeCache, 2),
+	 SFPTR8(_Port, sizeof(_Port)),
 
 	 SFVAR(Fader.Command),
 	 SFVAR(Fader.Volume),
@@ -977,7 +977,7 @@ void PCECD_StateAction(StateMem *sm, int load, int data_only)
 	 SFVAR(Fader.CountValue),
 	 SFVAR(Fader.Clocked),
 
-	 SFARRAY(&SubChannelFIFO.data[0], SubChannelFIFO.data.size()),
+	 SFPTR8(&SubChannelFIFO.data[0], SubChannelFIFO.data.size()),
 	 SFVAR(SubChannelFIFO.read_pos),
 	 SFVAR(SubChannelFIFO.write_pos),
 	 SFVAR(SubChannelFIFO.in_count),

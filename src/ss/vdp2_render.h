@@ -48,6 +48,7 @@ struct VDP2Rend_LIB
   uint32 DKAx;
  } rv[2];
  bool vdp1_hires8;
+ bool win_ymet[2];
  uint16 vdp1_line[352];
 };
 

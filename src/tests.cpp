@@ -68,6 +68,60 @@
 namespace MDFN_TESTS_CPP
 {
 
+static_assert(sizeof(uint8) == 1, "unexpected size");
+static_assert(sizeof(int8) == 1, "unexpected size");
+
+static_assert(sizeof(uint16) == 2, "unexpected size");
+static_assert(sizeof(int16) == 2, "unexpected size");
+
+static_assert(sizeof(uint32) == 4, "unexpected size");
+static_assert(sizeof(int32) == 4, "unexpected size");
+
+static_assert(sizeof(uint64) == 8, "unexpected size");
+static_assert(sizeof(int64) == 8, "unexpected size");
+
+static_assert(sizeof(char) == 1, "unexpected size");
+static_assert(sizeof(int) == 4, "unexpected size");
+
+static_assert(sizeof(short) >= 2, "unexpected size");
+static_assert(sizeof(long) >= 4, "unexpected size");
+static_assert(sizeof(long long) >= 8, "unexpected size");
+static_assert(sizeof(size_t) >= 4, "unexpected size");
+
+static_assert(sizeof(float) >= 4, "unexpected size");
+static_assert(sizeof(double) >= 8, "unexpected size");
+static_assert(sizeof(long double) >= 8, "unexpected size");
+
+static_assert(sizeof(void*) >= 4, "unexpected size");
+//static_assert(sizeof(void*) >= sizeof(void (*)(void)), "unexpected size");
+static_assert(sizeof(uintptr_t) >= sizeof(void*), "unexpected size");
+
+static_assert(sizeof(char) == SIZEOF_CHAR, "unexpected size");
+static_assert(sizeof(short) == SIZEOF_SHORT, "unexpected size");
+static_assert(sizeof(int) == SIZEOF_INT, "unexpected size");
+static_assert(sizeof(long) == SIZEOF_LONG, "unexpected size");
+static_assert(sizeof(long long) == SIZEOF_LONG_LONG, "unexpected size");
+
+static_assert(sizeof(off_t) == SIZEOF_OFF_T, "unexpected size");
+static_assert(sizeof(ptrdiff_t) == SIZEOF_PTRDIFF_T, "unexpected size");
+static_assert(sizeof(size_t) == SIZEOF_SIZE_T, "unexpected size");
+static_assert(sizeof(void*) == SIZEOF_VOID_P, "unexpected size");
+
+static_assert(sizeof(double) == SIZEOF_DOUBLE, "unexpected size");
+
+// Make sure the "char" type is signed(pass -fsigned-char to gcc).  New code in Mednafen shouldn't be written with the
+// assumption that "char" is signed, but there likely is at least some code that does.
+static_assert((char)255 == -1, "char type is not signed 8-bit");
+
+
+//
+//
+//
+//
+//
+//
+//
+
 // Don't define this static, and don't define it const.  We want these tests to be done at run time, not compile time(although maybe we should do both...).
 typedef struct
 {
@@ -177,52 +231,6 @@ static void TestSignExtend(void)
 
  assert(sign_x_to_s32(31, itoo->negative_one) == -1 && sign_x_to_s32(31, itoo->mostneg) == itoo->mostnegresult);
  itoo++;
-}
-
-static void DoSizeofTests(void)
-{
- assert(sizeof(uint8) == 1);
- assert(sizeof(int8) == 1);
-
- assert(sizeof(uint16) == 2);
- assert(sizeof(int16) == 2);
-
- assert(sizeof(uint32) == 4);
- assert(sizeof(int32) == 4);
-
- assert(sizeof(uint64) == 8);
- assert(sizeof(int64) == 8);
-
- assert(sizeof(char) == 1);
- assert(sizeof(int) == 4);
- assert(sizeof(long) >= 4);
- assert(sizeof(long long) >= 8);
-
- assert(sizeof(float) >= 4);
- assert(sizeof(double) >= 8);
- assert(sizeof(long double) >= 8);
-
- assert(sizeof(void*) >= 4);
-
- assert(sizeof(char) == SIZEOF_CHAR);
- assert(sizeof(short) == SIZEOF_SHORT);
- assert(sizeof(int) == SIZEOF_INT);
- assert(sizeof(long) == SIZEOF_LONG);
- assert(sizeof(long long) == SIZEOF_LONG_LONG);
-
- assert(sizeof(off_t) == SIZEOF_OFF_T);
- assert(sizeof(ptrdiff_t) == SIZEOF_PTRDIFF_T);
- assert(sizeof(size_t) == SIZEOF_SIZE_T);
- assert(sizeof(void*) == SIZEOF_VOID_P);
-
- assert(sizeof(double) == SIZEOF_DOUBLE);
-}
-
-static void TestTypesSign(void)
-{
- // Make sure the "char" type is signed(pass -fsigned-char to gcc).  New code in Mednafen shouldn't be written with the
- // assumption that "char" is signed, but there likely is at least some code that does.
- assert((char)255 < 0);
 }
 
 static void AntiNSOBugTest_Sub1_a(int *array) NO_INLINE;
@@ -783,13 +791,13 @@ NO_INLINE NO_CLONE void TestGCC81740(void)
  int v[4][5] = { 0 };
 
  for(unsigned i = 0; i < sizeof(v) / sizeof(int); i++)
-  (&v[0][0])[i] = i;
+  MDAP(v)[i] = i;
 
  for(int a = 3; a >= 0; a--)
   for(TestGCC81740_b = 0; TestGCC81740_b < 3; TestGCC81740_b++)
    v[TestGCC81740_b + 1][a + 1] = v[TestGCC81740_b][a];
 
- TestGCC81740_Sub(&v[0][0], sizeof(v) / sizeof(int));
+ TestGCC81740_Sub(MDAP(v), sizeof(v) / sizeof(int));
 }
 
 
@@ -1799,6 +1807,73 @@ static void TestDiv(void)
  assert(TestDiv_Sub4((uint64)1 << 63) == (int64)((uint64)1 << 63) >> 1);
 }
 
+static void TestMDAP(void)
+{
+ const int arr2[3][1] = { { 0 }, { 1 }, { 2 } };
+ const int arr3[4][1][1] = { { { 0 } }, { { 1 } } , { { 2 } }, { { 3 } }, };
+ const int arr4[5][1][1][1] = { { { { 0 } } }, { { { 1 } } }, { { { 2 } } }, { { { 3 } } }, { { { 4 } } } };
+ int a, b, c;
+
+ for(a = 0; MDAP(arr2)[a] != 2; a++);
+ for(b = 0; MDAP(arr3)[b] != 3; b++);
+ for(c = 0; MDAP(arr4)[c] != 4; c++);
+
+ assert(a == 2);
+ assert(b == 3);
+ assert(c == 4);
+}
+
+NO_INLINE NO_CLONE void TestArrayStruct_Sub(void* p, int s, int c)
+{
+ for(int i = 0; i < c; i++)
+  *(int*)((char*)p + s * i) = i * i;
+}
+
+static NO_INLINE NO_CLONE void TestArrayStruct(void)
+{
+ struct
+ {
+  int a;
+  int b;
+  int c;
+  int d;
+ } test[4];
+
+ TestArrayStruct_Sub((char*)test + ((char*)&test->c - (char*)test), sizeof(*test), 4);
+ assert(test[1].c == 1);
+ assert(test[3].c == 9);
+ //
+ //
+ //
+ struct
+ {
+  short a;
+  int b;
+  char c;
+ } test2[4];
+
+ for(int i = 0; i < 4; i++)
+  *(int*)((char*)test2 + ((char*)&test2->b - (char*)test2) + sizeof(*test2) * i) = i * i * i;
+
+ assert(test2[1].b == 1);
+ assert(test2[3].b == 27);
+ //
+ //
+ //
+ struct
+ {
+  float a;
+  int b;
+  long c;
+ } test3[3];
+
+ for(int i = 0; i < 3; i++)
+  *(int*)((uintptr_t)test3 + ((uintptr_t)&test3->b - (uintptr_t)test3) + sizeof(*test3) * i) = i * i * i * i;
+
+ assert(test3[1].b == 1);
+ assert(test3[2].b == 16);
+}
+
 static void Time_Test(void)
 {
  {
@@ -1845,6 +1920,13 @@ static void TestSStringNullChar(void)
 
 static void TestArithRightShift(void)
 {
+ static_assert(((int)(1U << 31) >> 31) == -1, "unexpected result");
+ static_assert(-1 == ((int)0xFFFFFFFF >> 31), "unexpected result");
+ static_assert(1 == ((1U + 2147483647) >> 31), "unexpected result");
+ static_assert(1 == ((2147483647 + 1U) >> 31), "unexpected result");
+ static_assert(-1 == ((int)(1U + 2147483647) >> 31), "unexpected result");
+ static_assert(-1 == ((int)(2147483647 + 1U) >> 31), "unexpected result");
+
  {
   int32 meow;
 
@@ -1947,6 +2029,56 @@ static void TestArithRightShift(void)
  }
 }
 
+NO_INLINE NO_CLONE uint64_t TestMemcpySanity_Sub0(void)
+{
+ void* p = malloc(8);
+ assert(p);
+ uint64_t v = 0x1234567812345678ULL;
+ uint64_t ret;
+ uint64_t tmp;
+
+ *((uint32_t*)p + 0) = 0x89ABCDEF;
+ *((uint32_t*)p + 1) = 0;
+ memcpy(p, &v, 8);
+ *((uint32_t*)p + 0) += 0x11111110;
+ *((uint32_t*)p + 1) += 0x11111110;
+ memcpy(&tmp, p, 8);
+ memcpy(p, &tmp, 8);
+
+ ret = *(uint64_t*)p;
+ free(p);
+
+ return ret;
+}
+
+NO_INLINE NO_CLONE uint32_t TestMemcpySanity_Sub1(void)
+{
+ void* p = malloc(4);
+ assert(p);
+ uint32_t v = 0x12341234;
+ uint32_t ret;
+ uint32_t tmp;
+
+ *((uint16_t*)p + 0) = 0xCDEF;
+ *((uint16_t*)p + 1) = 0;
+ memcpy(p, &v, 4);
+ *((uint16_t*)p + 0) += 0x1110;
+ *((uint16_t*)p + 1) += 0x1110;
+ memcpy(&tmp, p, 4);
+ memcpy(p, &tmp, 4);
+
+ ret = *(uint32_t*)p;
+ free(p);
+
+ return ret;
+}
+
+static void TestMemcpySanity(void)
+{
+ assert(TestMemcpySanity_Sub0() == 0x2345678823456788ULL);
+ assert(TestMemcpySanity_Sub1() == 0x23442344);
+}
+
 static int ThreadSafeErrno_Test_Entry(void* data)
 {
  MDFN_Sem** sem = (MDFN_Sem**)data;
@@ -2026,11 +2158,7 @@ void MDFN_RunExceptionTests(const unsigned thread_count, const unsigned thread_d
 
 bool MDFN_RunMathTests(void)
 {
- DoSizeofTests();
-
  TestSStringNullChar();
-
- TestTypesSign();
 
  TestArithRightShift();
 
@@ -2058,6 +2186,8 @@ bool MDFN_RunMathTests(void)
 
  DoAntiNSOBugTest();
  DoAntiNSOBugTest2014();
+
+ TestMemcpySanity();
 
  DoLEPackerTest();
 
@@ -2097,6 +2227,33 @@ bool MDFN_RunMathTests(void)
  TestSUSAlias();
 
  TestDiv();
+
+ TestMDAP();
+
+ TestArrayStruct();
+
+ //
+ assert(!MDFN_strazicmp("", ""));
+ assert(!MDFN_strazicmp("AA", "AZ", 1));
+ assert(!MDFN_strazicmp("\0A", "\0B", 2));
+ assert(!MDFN_strazicmp("abc0", "ABC1", 3) && !MDFN_strazicmp("ABC0", "abc1", 3));
+ assert(!MDFN_strazicmp("i", "I") && !MDFN_strazicmp("I", "i"));
+ assert(MDFN_strazicmp("A", "\xFF") < 0 && MDFN_strazicmp("\xFF", "A") > 0);
+ assert(MDFN_strazicmp("a", "[") > 0 && MDFN_strazicmp("A", "[") > 0);
+ assert(MDFN_strazicmp("a", "z") < 0 && MDFN_strazicmp("z", "a") > 0);
+ assert(MDFN_strazicmp("A", "z") < 0 && MDFN_strazicmp("z", "A") > 0);
+ assert(MDFN_strazicmp("a", "Z") < 0 && MDFN_strazicmp("Z", "a") > 0);
+ assert(MDFN_strazicmp("`", "@") > 0 && MDFN_strazicmp("@", "`") < 0);
+ assert(MDFN_strazicmp("{", "[") > 0 && MDFN_strazicmp("]", "}") < 0);
+
+ assert(!MDFN_memazicmp("", "", 0));
+ assert(!MDFN_memazicmp("abc0", "ABC1", 3) && !MDFN_memazicmp("ABC0", "abc1", 3));
+ assert(MDFN_memazicmp("a", "[", 1) > 0 && MDFN_memazicmp("A", "[", 1) > 0);
+ assert(MDFN_memazicmp("a", "z", 1) < 0 && MDFN_memazicmp("z", "a", 1) > 0);
+ assert(MDFN_memazicmp("A", "z", 1) < 0 && MDFN_memazicmp("z", "A", 1) > 0);
+ assert(MDFN_memazicmp("a", "Z", 1) < 0 && MDFN_memazicmp("Z", "a", 1) > 0);
+ assert(MDFN_memazicmp("{", "[", 1) > 0 && MDFN_memazicmp("]", "}", 1) < 0);
+ //
 
 #if 0
 // Not really a math test.

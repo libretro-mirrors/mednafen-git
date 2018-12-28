@@ -744,7 +744,7 @@ void HuC6280_StateAction(StateMem *sm, int load, int data_only)
 
   SFVARN(HuCPU.IRQMask, "IRQMask"),
   SFVARN(HuCPU.IRQMaskDelay, "IRQMaskDelay"),
-  SFARRAYN(HuCPU.MPR, 8, "MPR"),
+  SFPTR8N(HuCPU.MPR, 8, "MPR"),
   SFVARN(HuCPU.timer_status, "timer_status"),
   SFVARN(HuCPU.timer_value, "timer_value"),
   SFVARN(HuCPU.timer_load, "timer_load"),

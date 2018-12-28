@@ -233,7 +233,7 @@ void bSNES_v059::Interface::audio_sample(uint16_t l_sample, uint16_t r_sample)
  }
  else
  {
-  MDFN_DispMessage("Buffer overflow?");
+  MDFN_Notify(MDFN_NOTICE_WARNING, "SNES resample buffer overflow.");
  }
 }
 
@@ -289,9 +289,9 @@ void bSNES_v059::Interface::input_poll()
         break;
 
    case bSNES_v059::Input::DeviceMouse:
-	MouseXLatch[port] = (int32)MDFN_de32lsb(InputPtr[port] + 0);
-	MouseYLatch[port] = (int32)MDFN_de32lsb(InputPtr[port] + 4);
-	MouseBLatch[port] = *(uint8 *)(InputPtr[port] + 8);
+	MouseXLatch[port] = (int16)MDFN_de16lsb(InputPtr[port] + 0);
+	MouseYLatch[port] = (int16)MDFN_de16lsb(InputPtr[port] + 2);
+	MouseBLatch[port] = *(uint8 *)(InputPtr[port] + 4);
 	break;
 
    case bSNES_v059::Input::DeviceSuperScope:
@@ -556,8 +556,8 @@ static void SetupMisc(bool PAL)
   //
   // SuperScope coordinate translation stuff:
   //
-  MDFNGameInfo->mouse_scale_x = 256.0 / MDFNGameInfo->nominal_width;
-  MDFNGameInfo->mouse_scale_y = 1.0;
+  MDFNGameInfo->mouse_scale_x = 256.0;
+  MDFNGameInfo->mouse_scale_y = MDFNGameInfo->nominal_height;
   MDFNGameInfo->mouse_offs_x = 0.0;
   MDFNGameInfo->mouse_offs_y = 0.0;
  }
@@ -819,7 +819,7 @@ static void CloseGame(void)
   }
   catch(std::exception &e)
   {
-   MDFN_PrintError("%s", e.what());
+   MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
   }
  }
  Cleanup();
@@ -1001,16 +1001,16 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
  SFORMAT ExtraStateRegs[] =
  {
-   SFARRAY16(PadLatch, 8),
+   SFVAR(PadLatch),
 
-   SFARRAY16(MouseXLatch, 2),
-   SFARRAY16(MouseYLatch, 2),
-   SFARRAY(MouseBLatch, 2),
+   SFVAR(MouseXLatch),
+   SFVAR(MouseYLatch),
+   SFVAR(MouseBLatch),
 
-   SFARRAY16(ScopeXLatch, 2),
-   SFARRAY16(ScopeYLatch, 2),
-   SFARRAY(ScopeBLatch, 2),
-   SFARRAY(ScopeOSCounter, 2),
+   SFVAR(ScopeXLatch),
+   SFVAR(ScopeYLatch),
+   SFVAR(ScopeBLatch),
+   SFVAR(ScopeOSCounter),
 
    SFVAR(inpp->latchx),
    SFVAR(inpp->latchy),
@@ -1042,7 +1042,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
   SFORMAT StateRegs[] =
   {
-   SFARRAYN(ptr.get(), length, "OmniCat"),
+   SFPTR8N(ptr.get(), length, "OmniCat"),
    SFLINK(ExtraStateRegs),
    SFEND
   };
@@ -1073,7 +1073,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
   SFORMAT StateRegs[] =
   {
-   SFARRAYN(ptr, length, "OmniCat"),
+   SFPTR8N(ptr, length, "OmniCat"),
    SFLINK(ExtraStateRegs),
    SFEND
   };
@@ -1174,38 +1174,38 @@ static void DoSimpleCommand(int cmd)
 
 static const IDIISG GamepadIDII =
 {
- { "b", "B (center, lower)", 7, IDIT_BUTTON_CAN_RAPID, NULL },
- { "y", "Y (left)", 6, IDIT_BUTTON_CAN_RAPID, NULL },
- { "select", "SELECT", 4, IDIT_BUTTON, NULL },
- { "start", "START", 5, IDIT_BUTTON, NULL },
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
- { "a", "A (right)", 9, IDIT_BUTTON_CAN_RAPID, NULL },
- { "x", "X (center, upper)", 8, IDIT_BUTTON_CAN_RAPID, NULL },
- { "l", "Left Shoulder", 10, IDIT_BUTTON, NULL },
- { "r", "Right Shoulder", 11, IDIT_BUTTON, NULL },
+ IDIIS_ButtonCR("b", "B (center, lower)", 7),
+ IDIIS_ButtonCR("y", "Y (left)", 6),
+ IDIIS_Button("select", "SELECT", 4),
+ IDIIS_Button("start", "START", 5),
+ IDIIS_Button("up", "UP ↑", 0, "down"),
+ IDIIS_Button("down", "DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "LEFT ←", 2, "right"),
+ IDIIS_Button("right", "RIGHT →", 3, "left"),
+ IDIIS_ButtonCR("a", "A (right)", 9),
+ IDIIS_ButtonCR("x", "X (center, upper)", 8),
+ IDIIS_Button("l", "Left Shoulder", 10),
+ IDIIS_Button("r", "Right Shoulder", 11),
 };
 
 static const IDIISG MouseIDII =
 {
- { "x_axis", "X Axis", -1, IDIT_X_AXIS_REL },
- { "y_axis", "Y Axis", -1, IDIT_Y_AXIS_REL },
- { "left", "Left Button", 0, IDIT_BUTTON, NULL },
- { "right", "Right Button", 1, IDIT_BUTTON, NULL },
+ IDIIS_AxisRel("motion", "Motion",/**/ "left", "Left",/**/ "right", "Right", 0),
+ IDIIS_AxisRel("motion", "Motion",/**/ "up", "Up",/**/ "down", "Down", 1),
+ IDIIS_Button("left", "Left Button", 2),
+ IDIIS_Button("right", "Right Button", 3),
 };
 
 static const IDIISG SuperScopeIDII =
 {
- { "x_axis", "X Axis", -1, IDIT_X_AXIS },
- { "y_axis", "Y Axis", -1, IDIT_Y_AXIS },
+ { "x_axis", "X Axis", -1, IDIT_POINTER_X },
+ { "y_axis", "Y Axis", -1, IDIT_POINTER_Y },
 
- { "trigger", "Trigger", 0, IDIT_BUTTON, NULL  },
- { "offscreen_shot", "Offscreen Shot(Simulated)", 1, IDIT_BUTTON, NULL  },
- { "pause", "Pause", 2, IDIT_BUTTON, NULL },
- { "turbo", "Turbo", 3, IDIT_BUTTON, NULL },
- { "cursor", "Cursor", 4, IDIT_BUTTON, NULL },
+ IDIIS_Button("trigger", "Trigger", 0),
+ IDIIS_Button("offscreen_shot", "Offscreen Shot(Simulated)", 1),
+ IDIIS_Button("pause", "Pause", 2),
+ IDIIS_Button("turbo", "Turbo", 3),
+ IDIIS_Button("cursor", "Cursor", 4),
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfoSNESPort1 =

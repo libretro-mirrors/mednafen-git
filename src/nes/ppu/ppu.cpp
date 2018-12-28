@@ -1377,10 +1377,10 @@ void MDFNPPU_StateAction(StateMem *sm, const unsigned load, const bool data_only
 
  SFORMAT PPU_STATEINFO[]=
  {
-  SFARRAYN(NTARAM, 0x800, "NTAR"),
-  SFARRAYN(PALRAM, 0x20, "PRAM"),
-  SFARRAYN(SPRAM, 0x100, "SPRA"),
-  SFARRAYN(PPU, 0x4, "PPUR"),
+  SFPTR8N(NTARAM, 0x800, "NTAR"),
+  SFPTR8N(PALRAM, 0x20, "PRAM"),
+  SFPTR8N(SPRAM, 0x100, "SPRA"),
+  SFPTR8N(PPU, 0x4, "PPUR"),
   SFVARN(BurstPhase, "BurstPhase"),
   SFVARN(kook, "KOOK"),
   SFVARN(ppudead, "DEAD"),
@@ -1462,9 +1462,9 @@ static void RedoRL(void)
  MDFNGameInfo->nominal_width = NTSCBlitter ? (PPUDisplayRect.w * (MDFN_GetSettingB("nes.correct_aspect") ? 292 : 298) / 596) : (PPUDisplayRect.w * (MDFN_GetSettingB("nes.correct_aspect") ? (PAL ? 344 : 292) : 256) / 256);
  MDFNGameInfo->nominal_height = PPUDisplayRect.h;
 
- MDFNGameInfo->mouse_scale_x = (float)PPUDisplayRect.w / MDFNGameInfo->nominal_width * (NTSCBlitter ? 256.0 / 596.0 : 1.0);
+ MDFNGameInfo->mouse_scale_x = (float)PPUDisplayRect.w * (NTSCBlitter ? 256.0 / 596.0 : 1.0);
  MDFNGameInfo->mouse_offs_x = (float)PPUDisplayRect.x * (NTSCBlitter ? 256.0 / 596.0 : 1.0);
- MDFNGameInfo->mouse_scale_y = 1.0;
+ MDFNGameInfo->mouse_scale_y = (float)PPUDisplayRect.h;
  MDFNGameInfo->mouse_offs_y = (float)PPUDisplayRect.y;
 
  //printf("%f %f\n", MDFNGameInfo->mouse_scale_x, MDFNGameInfo->mouse_offs_x);

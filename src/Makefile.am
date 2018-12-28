@@ -140,6 +140,13 @@ include resampler/Makefile.am.inc
 include cputest/Makefile.am.inc
 include cheat_formats/Makefile.am.inc
 
+if HAVE_EXTERNAL_LZO2
+mednafen_LDADD		+=	@LZO2_LIBS@
+DEFS			+=	@LZO2_CFLAGS@
+else
+include minilzo/Makefile.am.inc
+endif
+
 if HAVE_EXTERNAL_TREMOR
 mednafen_LDADD		+=	@TREMOR_LIBS@
 else

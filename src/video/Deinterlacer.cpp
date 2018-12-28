@@ -167,7 +167,7 @@ void Deinterlacer::Process(MDFN_Surface *surface, MDFN_Rect &DisplayRect, int32 
    FieldBuffer.reset(new MDFN_Surface(NULL, surface->w, surface->h / 2, surface->w, surface->format));
    LWBuffer.resize(FieldBuffer->h);
   }
-  else if(memcmp(&surface->format, &FieldBuffer->format, sizeof(MDFN_PixelFormat)))
+  else if(surface->format != FieldBuffer->format)
   {
    FieldBuffer->SetFormat(surface->format, StateValid && PrevDRect.h == DisplayRect.h);
   }

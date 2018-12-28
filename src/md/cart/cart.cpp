@@ -478,7 +478,7 @@ void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp)
    MDFN_printf(_("SRAM End:   0x%08x\n"), sram_end);
    while(bh->boardname)
    {
-    if(!strcasecmp(bh->boardname, mapper))
+    if(!MDFN_strazicmp(bh->boardname, mapper))
     {
      cart_hardware = bh->MapperMake(ginfo, cart_rom, Cart_ROM_Size, bh->iparam, bh->sparam);
      BoardFound = true;

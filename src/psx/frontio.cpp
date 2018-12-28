@@ -912,9 +912,9 @@ void FrontIO::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFVAR(istatus),
 
   // FIXME: Step mode save states.
-  SFARRAY32(irq10_pulse_ts, sizeof(irq10_pulse_ts) / sizeof(irq10_pulse_ts[0])),
-  SFARRAY32(dsr_pulse_delay, sizeof(dsr_pulse_delay) / sizeof(dsr_pulse_delay[0])),
-  SFARRAY32(dsr_active_until_ts, sizeof(dsr_active_until_ts) / sizeof(dsr_active_until_ts[0])),
+  SFVAR(irq10_pulse_ts),
+  SFVAR(dsr_pulse_delay),
+  SFVAR(dsr_active_until_ts),
 
   SFEND
  };

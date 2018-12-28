@@ -354,9 +354,9 @@ void HuC_StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] = 
  {
-  SFARRAY(ROMSpace + 0x40 * 8192, IsPopulous ? 32768 : 0),
-  SFARRAY(SaveRAM, IsPopulous ? 0 : 2048),
-  SFARRAY(ROMSpace + 0x68 * 8192, PCE_IsCD ? 262144 : 0),
+  SFPTR8(ROMSpace + 0x40 * 8192, IsPopulous ? 32768 : 0),
+  SFPTR8(SaveRAM, IsPopulous ? 0 : 2048),
+  SFPTR8(ROMSpace + 0x68 * 8192, PCE_IsCD ? 262144 : 0),
   SFVAR(HuCSF2Latch),
   SFEND
  };

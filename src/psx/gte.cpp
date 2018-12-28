@@ -53,7 +53,10 @@ typedef struct
 {
  int16 MX[3][3];
  int16 dummy;
-}  __attribute__((__packed__)) gtematrix;
+} gtematrix;
+#ifndef PSXDEV_GTE_TESTING
+static_assert(sizeof(gtematrix) == 20, "gtematrix wrong size!");
+#endif
 
 typedef struct
 {
@@ -222,12 +225,12 @@ void GTE_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY32(CR, 32),
+  SFVAR(CR),
   SFVAR(FLAGS),
 
-  SFARRAY16(&Matrices.Raw16[0][0], 4 * 10),
+  SFVARN(Matrices.Raw16, "&Matrices.Raw16[0][0]"),
 
-  SFARRAY32(&CRVectors.All[0][0], 4 * 4),
+  SFVARN(CRVectors.All, "&CRVectors.All[0][0]"),
 
   SFVAR(OFX),
   SFVAR(OFY),
@@ -237,11 +240,11 @@ void GTE_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
   SFVAR(ZSF3),
   SFVAR(ZSF4),
-  SFARRAY16(&Vectors[0][0], 3 * 4),
+  SFVARN(Vectors, "&Vectors[0][0]"),
 
-  SFARRAY(RGB.Raw8, 4),
+  SFVAR(RGB.Raw8),
   SFVAR(OTZ),
-  SFARRAY16(IR, 4),
+  SFVAR(IR),
 
   SFVAR(XY_FIFO[0].X),
   SFVAR(XY_FIFO[0].Y),
@@ -252,13 +255,13 @@ void GTE_StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVAR(XY_FIFO[3].X),
   SFVAR(XY_FIFO[3].Y),
 
-  SFARRAY16(Z_FIFO, 4),
+  SFVAR(Z_FIFO),
 
-  SFARRAY(RGB_FIFO[0].Raw8, 4),
-  SFARRAY(RGB_FIFO[1].Raw8, 4),
-  SFARRAY(RGB_FIFO[2].Raw8, 4),
+  SFVAR(RGB_FIFO[0].Raw8),
+  SFVAR(RGB_FIFO[1].Raw8),
+  SFVAR(RGB_FIFO[2].Raw8),
 
-  SFARRAY32(MAC, 4),
+  SFVAR(MAC),
 
   SFVAR(LZCS),
   SFVAR(LZCR),

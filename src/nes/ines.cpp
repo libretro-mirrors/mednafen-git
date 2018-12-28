@@ -70,10 +70,10 @@ static void iNES_StateAction(StateMem *sm, const unsigned load, const bool data_
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(ExtraNTARAM, head.ROM_type & 8 ? 2048 : 0),
-  SFARRAY(VROM, VROM_size ? 0 : CHRRAMSize),
-  SFARRAY(TrainerRAM, (head.ROM_type & 4) ? 0x200 : 0),
-  SFARRAY(WRAM, WRAM ? 8192 : 0),
+  SFPTR8(ExtraNTARAM, head.ROM_type & 8 ? 2048 : 0),
+  SFPTR8(VROM, VROM_size ? 0 : CHRRAMSize),
+  SFPTR8(TrainerRAM, (head.ROM_type & 4) ? 0x200 : 0),
+  SFPTR8(WRAM, WRAM ? 8192 : 0),
   SFEND
  };
 
@@ -349,7 +349,7 @@ void CheckBad(uint64 md5partial)
  {
   if(bade.md5partial == md5partial)
   {
-   MDFN_PrintError(_("The copy of the game you have loaded, \"%s\", is bad, and will not work properly on Mednafen."), bade.name);
+   MDFN_Notify(MDFN_NOTICE_ERROR, _("The copy of the game you have loaded, \"%s\", is bad, and will not work properly on Mednafen."), bade.name);
    return;
   }
  }

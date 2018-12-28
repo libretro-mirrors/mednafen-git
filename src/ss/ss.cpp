@@ -31,8 +31,6 @@
 #include <mednafen/hash/md5.h>
 #include <mednafen/Time.h>
 
-#include <ctype.h>
-
 #include <bitset>
 
 #include <trio/trio.h>
@@ -887,7 +885,7 @@ static void Emulate(EmulateSpecStruct* espec_arg)
    }
    catch(std::exception& e)
    {
-    MDFN_DispMessage("%s", e.what());
+    MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
     BackupRAM_SaveDelay = (int64)60 * (EmulatedSS.MasterClock / MDFN_MASTERCLOCK_FIXED(1));	// 60 second retry delay.
    }
   }
@@ -907,7 +905,7 @@ static void Emulate(EmulateSpecStruct* espec_arg)
    }
    catch(std::exception& e)
    {
-    MDFN_DispMessage("%s", e.what());
+    MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
     CartNV_SaveDelay = (int64)60 * (EmulatedSS.MasterClock / MDFN_MASTERCLOCK_FIXED(1));	// 60 second retry delay.
    }
   }
@@ -972,7 +970,7 @@ static INLINE void CalcGameID(uint8* id_out16, uint8* fd_id_out16, char* sgid)
 
   for(unsigned i = 0; i < 512; i++)
   {
-   if(c->ReadSector(&buf[0], i, 1, true) >= 0x1)
+   if(c->ReadSector(&buf[0], i, 1) >= 0x1)
    {
     if(i == 0)
     {
@@ -1036,7 +1034,7 @@ static INLINE bool DetectRegion(unsigned* const region)
 
  for(auto& c : *cdifs)
  {
-  if(c->ReadSector(&buf[0], 0, 16, true) != 0x1)
+  if(c->ReadSector(&buf[0], 0, 16) != 0x1)
    continue;
 
   if(!IsSaturnDisc(&buf[0]))
@@ -1279,15 +1277,17 @@ static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned
    MDFN_GetFilePathComponents(biospath, nullptr, &fnbase, &fnext);
    fn = fnbase + fnext;
 
+   // Discourage people from renaming files instead of changing settings.
    for(auto const& dbe : BIOSDB)
    {
-    if(BIOS_SHA256 == dbe.hash)
-    {
-     if(!(dbe.areas & (1U << smpc_area)))
-      throw MDFN_Error(0, _("Wrong BIOS for region being emulated."));
-    }
-    else if(fn == dbe.fn)	// Discourage people from renaming files instead of changing settings.
-     throw MDFN_Error(0, _("BIOS hash does not match that as expected by filename."));
+    if(fn == dbe.fn && BIOS_SHA256 != dbe.hash)
+     throw MDFN_Error(0, _("The BIOS ROM data loaded from \"%s\" does not match what is expected by its filename(possibly due to erroneous file renaming by the user)."), biospath.c_str());
+   }
+
+   for(auto const& dbe : BIOSDB)
+   {
+    if(BIOS_SHA256 == dbe.hash && !(dbe.areas & (1U << smpc_area)))
+     throw MDFN_Error(0, _("The BIOS loaded from \"%s\" is the wrong BIOS for the region being emulated(possibly due to changing setting \"%s\" to point to the wrong file)."), biospath.c_str(), biospath_sname);
    }
   }
   //
@@ -1397,7 +1397,7 @@ static MDFN_COLD void Load(MDFNFILE* fp)
   {
    static uint8 sbuf[2048 * 16];
    CDIF* iface = CDIF_Open(linebuf, false);
-   int m = iface->ReadSector(sbuf, 0, 16, true);
+   int m = iface->ReadSector(sbuf, 0, 16);
    std::string fb;
 
    assert(m == 0x1); 
@@ -1508,7 +1508,7 @@ static MDFN_COLD bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
 {
  std::unique_ptr<uint8[]> buf(new uint8[2048 * 16]);
 
- if((*CDInterfaces)[0]->ReadSector(&buf[0], 0, 16, true) != 0x1)
+ if((*CDInterfaces)[0]->ReadSector(&buf[0], 0, 16) != 0x1)
   return false;
 
  return IsSaturnDisc(&buf[0]);
@@ -1634,9 +1634,9 @@ static MDFN_COLD void CloseGame(void)
  //
  //
 
- try { SaveBackupRAM(); } catch(std::exception& e) { MDFN_PrintError("%s", e.what()); }
- try { SaveCartNV();    } catch(std::exception& e) { MDFN_PrintError("%s", e.what()); }
- try { SaveRTC();	} catch(std::exception& e) { MDFN_PrintError("%s", e.what()); }
+ try { SaveBackupRAM(); } catch(std::exception& e) { MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what()); }
+ try { SaveCartNV();    } catch(std::exception& e) { MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what()); }
+ try { SaveRTC();	} catch(std::exception& e) { MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what()); }
 
  Cleanup();
 }
@@ -1842,7 +1842,7 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
 
   SFORMAT SRDStateRegs[] = 
   {
-   SFARRAY(sr_dig.data(), sr_dig.size()),
+   SFPTR8(sr_dig.data(), sr_dig.size()),
    SFEND
   };
 
@@ -1861,16 +1861,16 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
   SFVAR(UpdateInputLastBigTS),
 
   SFVAR(next_event_ts),
-  SFARRAY32N(ep.event_times, sizeof(ep.event_times) / sizeof(ep.event_times[0]), "event_times"),
-  SFARRAYN(ep.event_order, sizeof(ep.event_order) / sizeof(ep.event_order[0]), "event_order"),
+  SFVARN(ep.event_times, "event_times"),
+  SFVARN(ep.event_order, "event_order"),
 
   SFVAR(SH7095_mem_timestamp),
   SFVAR(SH7095_BusLock),
   SFVAR(SH7095_DB),
 
-  SFARRAY16(WorkRAML, sizeof(WorkRAML) / sizeof(WorkRAML[0])),
-  SFARRAY16(WorkRAMH, sizeof(WorkRAMH) / sizeof(WorkRAMH[0])),
-  SFARRAY(BackupRAM, sizeof(BackupRAM) / sizeof(BackupRAM[0])),
+  SFVAR(WorkRAML),
+  SFVAR(WorkRAMH),
+  SFVAR(BackupRAM),
 
   SFEND
  };
@@ -2011,6 +2011,7 @@ static const MDFNSetting_EnumList DBGMask_List[] =
  { "vdp1",	SS_DBG_VDP1,		gettext_noop("VDP1") 			},
  { "vdp1_regw", SS_DBG_VDP1_REGW,	gettext_noop("VDP1 register writes")	},
  { "vdp1_vramw",SS_DBG_VDP1_VRAMW,	gettext_noop("VDP1 VRAM writes")	},
+ { "vdp1_fbw",	SS_DBG_VDP1_FBW,	gettext_noop("VDP1 FB writes")		},
 
  { "vdp2",	SS_DBG_VDP2,		gettext_noop("VDP2")			},
  { "vdp2_regw", SS_DBG_VDP2_REGW,	gettext_noop("VDP2 register writes")	},
@@ -2024,8 +2025,8 @@ static const MDFNSetting_EnumList DBGMask_List[] =
 
 static const MDFNSetting SSSettings[] =
 {
- { "ss.bios_jp", MDFNSF_EMU_STATE, gettext_noop("Path to the Japan ROM BIOS"), NULL, MDFNST_STRING, "sega_101.bin" },
- { "ss.bios_na_eu", MDFNSF_EMU_STATE, gettext_noop("Path to the North America and Europe ROM BIOS"), NULL, MDFNST_STRING, "mpr-17933.bin" },
+ { "ss.bios_jp", MDFNSF_EMU_STATE | MDFNSF_CAT_PATH, gettext_noop("Path to the Japan ROM BIOS"), NULL, MDFNST_STRING, "sega_101.bin" },
+ { "ss.bios_na_eu", MDFNSF_EMU_STATE | MDFNSF_CAT_PATH, gettext_noop("Path to the North America and Europe ROM BIOS"), NULL, MDFNST_STRING, "mpr-17933.bin" },
 
  { "ss.scsp.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("SCSP output resampler quality."),
 	gettext_noop("0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors."), MDFNST_UINT, "4", "0", "10" },
@@ -2054,9 +2055,9 @@ static const MDFNSetting SSSettings[] =
  { "ss.smpc.autortc.lang", MDFNSF_NOFLAGS, gettext_noop("BIOS language."), gettext_noop("Also affects language used in some games(e.g. the European release of \"Panzer Dragoon\")."), MDFNST_ENUM, "english", NULL, NULL, NULL, NULL, RTCLang_List },
 
  { "ss.cart", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Expansion cart."), NULL, MDFNST_ENUM, "auto", NULL, NULL, NULL, NULL, Cart_List },
- { "ss.cart.kof95_path", MDFNSF_EMU_STATE, gettext_noop("Path to KoF 95 ROM image."), NULL, MDFNST_STRING, "mpr-18811-mx.ic1" },
- { "ss.cart.ultraman_path", MDFNSF_EMU_STATE, gettext_noop("Path to Ultraman ROM image."), NULL, MDFNST_STRING, "mpr-19367-mx.ic1" },
- { "ss.cart.satar4mp_path", MDFNSF_EMU_STATE | MDFNSF_SUPPRESS_DOC | MDFNSF_NONPERSISTENT, gettext_noop("Path to Action Replay 4M Plus firmware image."), NULL, MDFNST_STRING, "satar4mp.bin" },
+ { "ss.cart.kof95_path", MDFNSF_EMU_STATE | MDFNSF_CAT_PATH, gettext_noop("Path to KoF 95 ROM image."), NULL, MDFNST_STRING, "mpr-18811-mx.ic1" },
+ { "ss.cart.ultraman_path", MDFNSF_EMU_STATE | MDFNSF_CAT_PATH, gettext_noop("Path to Ultraman ROM image."), NULL, MDFNST_STRING, "mpr-19367-mx.ic1" },
+ { "ss.cart.satar4mp_path", MDFNSF_EMU_STATE | MDFNSF_CAT_PATH | MDFNSF_SUPPRESS_DOC | MDFNSF_NONPERSISTENT, gettext_noop("Path to Action Replay 4M Plus firmware image."), NULL, MDFNST_STRING, "satar4mp.bin" },
 // { "ss.cart.modem_port", MDFNSF_NOFLAGS, gettext_noop("TCP/IP port to use for modem emulation."), gettext_noop("A value of \"0\" disables network access."), MDFNST_UINT, "4920", "0", "65535" },
  
  { "ss.bios_sanity", MDFNSF_NOFLAGS, gettext_noop("Enable BIOS ROM image sanity checks."), NULL, MDFNST_BOOL, "1" },
@@ -2079,7 +2080,7 @@ static const MDFNSetting SSSettings[] =
 
 #ifdef MDFN_SS_DEV_BUILD
  { "ss.dbg_mask", MDFNSF_SUPPRESS_DOC, gettext_noop("Debug printf mask."), NULL, MDFNST_MULTI_ENUM, "none", NULL, NULL, NULL, NULL, DBGMask_List },
- { "ss.dbg_exe_cdpath", MDFNSF_SUPPRESS_DOC, gettext_noop("CD image to use with homebrew executable loading."), NULL, MDFNST_STRING, "" },
+ { "ss.dbg_exe_cdpath", MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_PATH, gettext_noop("CD image to use with homebrew executable loading."), NULL, MDFNST_STRING, "" },
 #endif
 
  { NULL },

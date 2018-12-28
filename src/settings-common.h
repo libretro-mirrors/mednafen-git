@@ -54,6 +54,9 @@ enum MDFNSettingType
 #define MDFNSF_CAT_VIDEO		(1U << 10)
 #define MDFNSF_CAT_INPUT_MAPPING	(1U << 11)	// User-configurable physical->virtual button/axes and hotkey mappings(driver-side code category mainly).
 
+// Setting is used as a path or filename(mostly intended for automatic charset conversion of 0.9.x settings on MS Windows).
+#define MDFNSF_CAT_PATH			(1U << 12)
+
 #define MDFNSF_EMU_STATE	(1U << 17) // If the setting affects emulation from the point of view of the emulated program
 #define MDFNSF_UNTRUSTED_SAFE	(1U << 18) // If it's safe for an untrusted source to modify it, probably only used in conjunction with
                                           // MDFNST_EX_EMU_STATE and network play

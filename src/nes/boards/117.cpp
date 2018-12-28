@@ -99,8 +99,33 @@ static void Power(CartInfo *info)
  //setprg16(0xc000, ~0);
 }
 
+static int StateAction(StateMem *sm, int load, int data_only)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(IRQLatch),
+  SFVAR(IRQCount),
+  SFVAR(CHRBanks),
+  SFVAR(PRGBanks),
+  SFVAR(IRQa),
+
+  SFEND
+ };
+
+ int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAPR");
+
+ if(load)
+ {
+  DoPRG();
+  DoCHR();
+ }
+
+ return ret;
+}
+
 int Mapper117_Init(CartInfo *info)
 {
+ info->StateAction = StateAction;
  info->Power = Power;
  GameHBIRQHook=Mapper117_hb;
  SetWriteHandler(0x8000,0xffff,Mapper117_write);

@@ -13,35 +13,35 @@
 
 #include <mednafen/gettext.h>
 
-#define CEVT_TOGGLEGUI	1
-#define CEVT_TOGGLEFS	2
-#define CEVT_VIDEOSYNC	5
-#define CEVT_SHOWCURSOR		0x0c
-#define CEVT_CHEATTOGGLEVIEW	0x10
+enum
+{
+ CEVT_TOGGLEGUI = 1,
+ CEVT_TOGGLEFS,
+ CEVT_VIDEOSYNC,
+ CEVT_CHEATTOGGLEVIEW,
 
+ CEVT_OUTPUT_NOTICE,
 
-#define CEVT_DISP_MESSAGE	0x11
+ CEVT_SET_WMINPUTBEHAVIOR,
 
-#define CEVT_SET_GRAB_INPUT	0x20
+ CEVT_SET_STATE_STATUS,
+ CEVT_SET_MOVIE_STATUS,
 
-#define CEVT_SET_STATE_STATUS	0x40
-#define CEVT_SET_MOVIE_STATUS	0x41
+ CEVT_WANT_EXIT,	// Emulator exit or GUI exit or bust!
 
-#define CEVT_WANT_EXIT		0x80 // Emulator exit or GUI exit or bust!
+ CEVT_NP_DISPLAY_TEXT,
+ CEVT_NP_TOGGLE_TT,
+ CEVT_NP_LINE,
+ CEVT_NP_LINE_RESPONSE,
 
+ CEVT_SET_INPUT_FOCUS,	// Main thread to game thread.
 
-#define CEVT_NP_DISPLAY_TEXT	0x101
-#define CEVT_NP_TOGGLE_TT	0x103
-#define CEVT_NP_LINE            0x180
-#define CEVT_NP_LINE_RESPONSE   0x181
+ CEVT__MAX = 0xFFFF
+};
 
-#define CEVT_SET_INPUT_FOCUS	0x1000	// Main thread to game thread.
-
-void SendCEvent(unsigned int code, void *data1, void *data2);
+void SendCEvent(unsigned int code, void *data1, void *data2, const uint16 idata16 = 0);
 
 void PauseGameLoop(bool p);
-
-void SDL_MDFN_ShowCursor(int toggle);
 
 extern int NoWaiting;
 extern bool MDFNDHaveFocus;
@@ -64,6 +64,7 @@ void DebuggerFudge(void);
 
 extern volatile int GameThreadRun;
 
+void GT_SetWMInputBehavior(bool CursorNeeded, bool MouseAbsNeeded, bool MouseRelNeeded, bool GrabNeeded);
 void GT_ToggleFS(void);
 bool GT_ReinitVideo(void);
 bool GT_ReinitSound(void);

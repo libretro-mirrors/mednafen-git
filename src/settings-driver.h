@@ -21,5 +21,6 @@ static INLINE bool MDFNI_SetSettingUI(const std::string& name, uint64 value) { r
 bool MDFNI_DumpSettingsDef(const char *path);
 
 const std::vector<MDFNCS>* MDFNI_GetSettings(void);
-
+std::string MDFNI_GetSettingDefault(const char* name);
+static INLINE std::string MDFNI_GetSettingDefault(const std::string& name) { return MDFNI_GetSettingDefault(name.c_str()); }
 #endif

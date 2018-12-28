@@ -74,7 +74,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(latch, 2),
+  SFPTR8(latch, 2),
   SFEND
  };
  int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAPR");

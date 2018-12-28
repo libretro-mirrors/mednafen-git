@@ -28,6 +28,7 @@
 #include "state.h"
 
 #include <mednafen/hash/md5.h>
+#include <mednafen/string/string.h>
 
 using namespace std;
 
@@ -38,7 +39,7 @@ static string FileBaseDirectory;
 
 void MDFN_SetBaseDirectory(const std::string& dir)
 {
- BaseDirectory = string(dir);
+ BaseDirectory = dir;
 }
 
 std::string MDFN_GetBaseDirectory(void)
@@ -109,6 +110,11 @@ void MDFN_CheckFIROPSafe(const std::string &path)
  // in some OS.
  std::string unsafe_reason;
 
+#ifdef WIN32
+ if(!UTF8_validate(path, true))
+  unsafe_reason += _("Invalid UTF-8. ");
+#endif
+
  if(path.find('\0') != string::npos)
   unsafe_reason += _("Contains null(0). ");
 
@@ -130,12 +136,11 @@ void MDFN_CheckFIROPSafe(const std::string &path)
  // http://googleprojectzero.blogspot.com/2016/02/the-definitive-guide-on-win32-to-nt.html
  //
  {
-  // TODO(after implementing Win32 unicode support): COM/LPT ¹,²,³
   static const char* dev_names[] = 
   {
    "CON", "PRN", "AUX", "CLOCK$", "NUL", "CONIN$", "CONOUT$",
-   "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
-   "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+   "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "COM¹", "COM²", "COM³",
+   "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9", "LPT¹", "LPT²", "LPT³",
    NULL
   };
   //
@@ -144,7 +149,7 @@ void MDFN_CheckFIROPSafe(const std::string &path)
   {
    size_t lssl = strlen(*ls);
 
-   if(!strncasecmp(*ls, pcs, lssl))
+   if(!MDFN_strazicmp(*ls, pcs, lssl))
    {
     if(pcs[lssl] == 0 || pcs[lssl] == ':' || pcs[lssl] == '.' || pcs[lssl] == ' ')
     {

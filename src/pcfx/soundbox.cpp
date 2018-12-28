@@ -713,25 +713,25 @@ void SoundBox_StateAction(StateMem *sm, const unsigned load, const bool data_onl
  SFORMAT SoundBox_StateRegs[] =
  {
   SFVARN(sbox.ADPCMControl, "ADPCMControl"),
-  SFARRAYN(&sbox.ADPCMVolume[0][0], 2 * 2, "ADPCMVolume"),
-  SFARRAYN(sbox.CDDAVolume, 2, "CDDAVolume"),
+  SFVARN(sbox.ADPCMVolume, "ADPCMVolume"),
+  SFVARN(sbox.CDDAVolume, "CDDAVolume"),
   SFVARN(sbox.bigdiv, "bigdiv"),
   SFVARN(sbox.smalldiv, "smalldiv"),
 
-  SFARRAY64N(&sbox.ResetAntiClick[0], 2, "ResetAntiClick"),
-  SFARRAYDN(&sbox.VolumeFiltered[0][0], 2 * 2, "VolumeFiltered"),
-  SFARRAYDN(&sbox.vf_xv[0][0][0], 2 * 2 * (1 + 1), "vf_xv"),
-  SFARRAYDN(&sbox.vf_yv[0][0][0], 2 * 2 * (1 + 1), "vf_yv"),
+  SFVARN(sbox.ResetAntiClick, "ResetAntiClick"),
+  SFVARN(sbox.VolumeFiltered, "VolumeFiltered"),
+  SFVARN(sbox.vf_xv, "vf_xv"),
+  SFVARN(sbox.vf_yv, "vf_yv"),
 
-  SFARRAY32N(sbox.ADPCMDelta, 2, "ADPCMDelta"),
-  SFARRAY32N(sbox.ADPCMHaveDelta, 2, "ADPCMHaveDelta"),
+  SFVARN(sbox.ADPCMDelta, "ADPCMDelta"),
+  SFVARN(sbox.ADPCMHaveDelta, "ADPCMHaveDelta"),
 
-  SFARRAY32N(&sbox.ADPCMPredictor[0], 2, "ADPCMPredictor"),
-  SFARRAY32N(&sbox.StepSizeIndex[0], 2, "ADPCMStepSizeIndex"),
+  SFVARN(sbox.ADPCMPredictor, "ADPCMPredictor"),
+  SFVARN(sbox.StepSizeIndex, "ADPCMStepSizeIndex"),
 
-  SFARRAY32N(sbox.ADPCMWhichNibble, 2, "ADPCMWNibble"),
-  SFARRAY16N(sbox.ADPCMHalfWord, 2, "ADPCMHalfWord"),
-  SFARRAYBN(sbox.ADPCMHaveHalfWord, 2, "ADPCMHHW"),
+  SFVARN(sbox.ADPCMWhichNibble, "ADPCMWNibble"),
+  SFVARN(sbox.ADPCMHalfWord, "ADPCMHalfWord"),
+  SFVARN(sbox.ADPCMHaveHalfWord, "ADPCMHHW"),
 
   SFEND
  };

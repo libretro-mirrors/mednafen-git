@@ -49,12 +49,12 @@ static MDFN_FASTCALL void IRQHook(int a)
 {
  if(regs[2] & 2)
  {
-  IRQCount += a;
-  if(IRQCount >= 24576)
-  {
+  IRQCount = (IRQCount + a) & 0x7FFF;
+
+  if(IRQCount >= 0x6000)
    X6502_IRQBegin(MDFN_IQEXT);
-   IRQCount = 24576;
-  }
+  else
+   X6502_IRQEnd(MDFN_IQEXT);
  }
 }
 
@@ -81,7 +81,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(regs, 4),
+  SFPTR8(regs, 4),
   SFVAR(IRQCount),
   SFVAR(CHRBank8),
   SFEND

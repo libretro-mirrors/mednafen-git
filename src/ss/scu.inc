@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* scu.inc - SCU Emulation
-**  Copyright (C) 2015-2017 Mednafen Team
+**  Copyright (C) 2015-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -26,6 +26,10 @@
 // TODO: Consider logging DMA status register reads.
 // TODO: Test indirect DMA table alignment requirements.
 // TODO: Indirect same-bus DMA has kind of weird effects that might actually be useful(and hence used), so test!
+//
+// TODO: Test and improve emulation of DSP single-stepping.
+//
+// TODO: Running DMA forces DSP into full execution mode when single-stepping; test the exact semantics, and implement it.
 
 /*
  Notes(assuming NTSC, HRES=0, VRES=0, LSMD=0):
@@ -47,6 +51,14 @@
 
  DMA speed for accesses to A-/B-bus, with the exceptions of A-bus CS2, should be best-case in this code
  (writes often take longer on the Saturn if the DMA write address doesn't increment).
+
+ On a Saturn, SCU DSP DMA to program RAM starts up when the instruction is executed, but the first write to program RAM(via whatever PC is at that time)
+ takes a few cycles.  Upon completion, PC is set to TOP, and the prefetched instruction is flushed.  MVI to PC should be placed immediately after the DMA
+ instruction, so that PC and TOP will be set properly, and to ensure instructions aren't being fetched at the time a write to program RAM occurs.
+ MVI to WAO/RAO can also be used for serializing(though it won't set up TOP and PC, and the new WAO/RAO won't affect the in-progress DMA...TODO: test with hold=1).
+ END/ENDI also kinda works, since the DMA forces execution to continue, but not sure about exact semantics and if any serializing/waiting occurs or if there is the potential for glitches.
+ In Mednafen, it's handled by doing the DMA instantaneously to a 256-entry buffer, and upon execution of the appropriate MVI or END/ENDI instruction, the buffer contents
+ are committed to program RAM and PC is set to TOP.
 */
 
 static const char* IntNames[0x20] =
@@ -86,19 +98,26 @@ struct DMAWriteTabS
  uint8 compare;
 };
 
-static const DMAWriteTabS dma_write_tab[2/*bus*/][8/*add setting*/][4/*write align*/][12/*count*/][5] =
+static const struct
 {
+ const DMAWriteTabS acb[2/*bus*/][8/*add setting*/][4/*write align*/][12/*count*/][5];
+ const DMAWriteTabS aciv1[4][24][8];
+} dma_write_tab =
+{
+ //
  {
-  #include "scu_actab.inc"
+  {
+   #include "scu_actab.inc"
+  },
+  {
+   #include "scu_btab.inc"
+  }
  },
- {
-  #include "scu_btab.inc"
- }
-};
 
-static const DMAWriteTabS dma_write_tab_aciv1[4][24][8] =
-{
- #include "scu_aciv1tab.inc"
+ //
+ {
+  #include "scu_aciv1tab.inc"
+ }
 };
 
 static struct DMALevelS
@@ -588,7 +607,6 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
 	 {
 	  if(DSP.State & DSPS::STATE_MASK_EXECUTE)
 	  {
-	   DSP.NextInstr = DSP_DecodeInstruction(0);
 	   DSP.State &= ~DSPS::STATE_MASK_EXECUTE;
 
 	   if(DSP.CycleCounter < 0)
@@ -611,7 +629,11 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
         }
 
 	if(*DB & (1U << 15))	// PC load
+	{
 	 DSP.PC = *DB;
+	 DSP.NextInstr = DSP_DecodeInstruction(0);
+	 DSP.PRAMDMABufCount = 0;	// Kludgy~
+	}
 
 	SS_SetEventNT(&events[SS_EVENT_SCU_DSP], (DSP.IsRunning() ? SH7095_mem_timestamp + (DSP_UpdateTimingGran / 2) : SS_EVENT_DISABLED_TS));
 	break;
@@ -627,7 +649,7 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
 
    case 0x8C:
 	if(!DSP.IsRunning())
-	 (&DSP.DataRAM[0][0])[DSP.RA++] = *DB;
+	 MDAP(DSP.DataRAM)[DSP.RA++] = *DB;
 	break;
   }
  }
@@ -725,7 +747,7 @@ static INLINE void SCU_RegRW_DB(uint32 A, uint32* DB)
 
    case 0x8C:
 	if(!DSP.IsRunning())
-	 *DB = (&DSP.DataRAM[0][0])[DSP.RA++];
+	 *DB = MDAP(DSP.DataRAM)[DSP.RA++];
 	else
 	 *DB = 0xFFFFFFFF;
 	break;
@@ -1241,9 +1263,9 @@ static bool StartDMATransfer(DMALevelS* d, const uint32 ra, const uint32 wa, con
  d->Buffer = d->ReadFunc(d->CurReadBase);
 
  if(wb != 0x1 && d->WriteAdd == 0x1)
-  d->WATable = &dma_write_tab_aciv1[wa & 0x3][(bc < 16) ? bc : (16 | (bc & 0x7))][0];
+  d->WATable = &dma_write_tab.aciv1[wa & 0x3][(bc < 16) ? bc : (16 | (bc & 0x7))][0];
  else
-  d->WATable = &dma_write_tab[wb == 1][d->WriteAdd][wa & 0x3][(bc < 12) ? bc : (8 | (bc & 0x3))][0];
+  d->WATable = &dma_write_tab.acb[wb == 1][d->WriteAdd][wa & 0x3][(bc < 12) ? bc : (8 | (bc & 0x3))][0];
 
  return true;
 }
@@ -1645,7 +1667,7 @@ static void DSP_Reset(bool powering_up)
    DSP.ProgRAM[i] = DSP_DecodeInstruction(0);
 
   for(unsigned i = 0; i < 256; i++)
-   (&DSP.DataRAM[0][0])[i] = 0;
+   MDAP(DSP.DataRAM)[i] = 0;
  }
 
  DSP.PC = 0;
@@ -1673,6 +1695,10 @@ static void DSP_Reset(bool powering_up)
 
  DSP.RAO = 0;
  DSP.WAO = 0;
+
+ DSP.PRAMDMABufCount = 0;
+ for(unsigned i = 0; i < 256; i++)
+  DSP.PRAMDMABuf[i] = 0;
 }
 
 void DSP_Init(void)
@@ -1693,6 +1719,23 @@ void DSP_Init(void)
 
  for(auto* f : DSP_MiscFuncTable)
   assert((uintptr_t)f == DSP_INSTR_BASE_UIPT + ((uintptr_t)(DSP_INSTR_RECOVER_TCAST)(uint32)((uintptr_t)f - DSP_INSTR_BASE_UIPT)));
+}
+
+void DSP_FinishPRAMDMA(void)
+{
+ SS_DBG(SS_DBG_SCU_DSP, "[SCU] Finishing %u-count DMA to program RAM; PC=0x%02x, TOP=0x%02x\n", DSP.PRAMDMABufCount, DSP.PC, DSP.TOP);
+
+ if(DSP.T0_Until < DSP.CycleCounter)
+  DSP.CycleCounter = DSP.T0_Until &~ 1;
+ DSP.T0_Until = DSP.CycleCounter;
+
+ for(uint32 i = 0; i < DSP.PRAMDMABufCount; i++)
+  DSP.ProgRAM[DSP.PC++] = DSP_DecodeInstruction(DSP.PRAMDMABuf[i & 0xFF]);
+
+ DSP.PRAMDMABufCount = 0;
+ //
+ DSP.PC = DSP.TOP;
+ DSP.NextInstr = DSP_DecodeInstruction(0);
 }
 
 template<bool looped, bool hold, bool format, bool dir, unsigned drw>
@@ -1798,6 +1841,8 @@ static NO_INLINE NO_CLONE void DMAInstr(void)
   if(drw & 0x4)
    SS_DBG(SS_DBG_WARNING | SS_DBG_SCU | SS_DBG_SCU_DSP, "[SCU] DSP DMA from 0x%08x to %s --- Instr=0x%08x, Next_Instr=0x%08x, PC=0x%02x\n", addr, ((drw == 0x4) ? "program RAM" : "unknown"), instr, (unsigned)(DSP.NextInstr >> 32), DSP.PC);
 
+  DSP.PRAMDMABufCount = 0;
+
   // Read from external bus, write to data RAM or program RAM
   do
   {
@@ -1833,7 +1878,7 @@ static NO_INLINE NO_CLONE void DMAInstr(void)
    {
     if(!(drw & 0x3))
     {
-     DSP.ProgRAM[DSP.PC++] = DSP_DecodeInstruction(DB);
+     DSP.PRAMDMABuf[DSP.PRAMDMABufCount++ & 0xFF] = DB;
     }
    }
    else
@@ -1893,7 +1938,7 @@ void SCU_Reset(bool powering_up)
   d.WriteUpdate = false;
   d.SF = 0;
 
-  d.WATable = &dma_write_tab[0][0][0][0][0];
+  d.WATable = &dma_write_tab.acb[0][0][0][0][0];
   d.ReadFunc = rftab[0];
   d.TableReadFunc = NULL;
  }
@@ -1944,7 +1989,7 @@ static MDFN_COLD void SCU_StateAction(StateMem* sm, const unsigned load, const b
   SFVAR(DSP.AC.T),
   SFVAR(DSP.P.T),
 
-  SFARRAY(DSP.CT, 4),
+  SFVAR(DSP.CT),
 
   SFVAR(DSP.RX),
   SFVAR(DSP.RY),
@@ -1952,34 +1997,37 @@ static MDFN_COLD void SCU_StateAction(StateMem* sm, const unsigned load, const b
   SFVAR(DSP.RAO),
   SFVAR(DSP.WAO),
 
-  SFARRAY32(&DSP.DataRAM[0][0], 4 * 64),
+  SFVARN(DSP.DataRAM, "&DSP.DataRAM[0][0]"),
 
-  SFARRAY32(DSP_ProgRAM, 256),
+  SFVAR(DSP_ProgRAM),
 
-  SFVAR(DMALevel->StartReadAddr, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->StartWriteAddr, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->StartByteCount, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->ReadAdd, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->WriteAdd, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->Enable, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->Active, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->GoGoGadget, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->Indirect, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->ReadUpdate, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->WriteUpdate, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->SF, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->FinishTime, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->WriteBus, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->CurReadBase, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->CurReadSub, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->CurWriteAddr, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->CurByteCount, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->Buffer, 3, sizeof(DMALevelS)),
-  SFARRAY32(DMALevel_WATable, 3),
-  SFARRAY(DMALevel_ReadFunc, 3),
-  SFARRAY(DMALevel_TableReadFunc, 3),
-  SFVAR(DMALevel->CurTableAddr, 3, sizeof(DMALevelS)),
-  SFVAR(DMALevel->FinalTransfer, 3, sizeof(DMALevelS)),
+  SFVAR(DSP.PRAMDMABuf),
+  SFVAR(DSP.PRAMDMABufCount),
+
+  SFVAR(DMALevel->StartReadAddr, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->StartWriteAddr, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->StartByteCount, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->ReadAdd, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->WriteAdd, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->Enable, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->Active, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->GoGoGadget, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->Indirect, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->ReadUpdate, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->WriteUpdate, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->SF, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->FinishTime, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->WriteBus, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->CurReadBase, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->CurReadSub, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->CurWriteAddr, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->CurByteCount, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->Buffer, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel_WATable),
+  SFVAR(DMALevel_ReadFunc),
+  SFVAR(DMALevel_TableReadFunc),
+  SFVAR(DMALevel->CurTableAddr, 3, sizeof(*DMALevel), DMALevel),
+  SFVAR(DMALevel->FinalTransfer, 3, sizeof(*DMALevel), DMALevel),
 
   SFVAR(SCU_DMA_TimeCounter),
   SFVAR(SCU_DMA_RunUntil),
@@ -2024,8 +2072,8 @@ static MDFN_COLD void SCU_StateAction(StateMem* sm, const unsigned load, const b
  DSP_NextInstrLooped = (DSP.NextInstr == DSP_DecodeInstruction<true>(DSP.NextInstr >> 32));
  //
  //
- const DMAWriteTabS* const dwt_ptrs[2] = { (const DMAWriteTabS*)dma_write_tab, (const DMAWriteTabS*)dma_write_tab_aciv1 };
- const size_t dwt_counts[2] = { sizeof(dma_write_tab) / sizeof(DMAWriteTabS), sizeof(dma_write_tab_aciv1) / sizeof(DMAWriteTabS) };
+ const DMAWriteTabS* const dwt_ptrs[2] = { (const DMAWriteTabS*)dma_write_tab.acb, (const DMAWriteTabS*)dma_write_tab.aciv1 };
+ const size_t dwt_counts[2] = { sizeof(dma_write_tab.acb) / sizeof(DMAWriteTabS), sizeof(dma_write_tab.aciv1) / sizeof(DMAWriteTabS) };
 
  for(unsigned level = 0; level < 3; level++)
  {
@@ -2083,6 +2131,11 @@ static MDFN_COLD void SCU_StateAction(StateMem* sm, const unsigned load, const b
    DSP.CT[i] &= 0x3F;
 
   DSP.LOP &= 0xFFF;
+
+  if(load < 0x00102102)
+   DSP.PRAMDMABufCount = 0;
+  else
+   DSP.PRAMDMABufCount = std::min<uint32>(DSP.PRAMDMABufCount, 0x100);
 
   //
   //

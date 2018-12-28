@@ -101,17 +101,7 @@ class SS_SCSP
 
   uint8 SBControl;
 
-  union
-  {
-   struct
-   {
-    uint8 AttackRate;
-    uint8 Decay1Rate;
-    uint8 Decay2Rate;
-    uint8 ReleaseRate;
-   };
-   uint8 EnvRates[4];
-  };
+  uint8 EnvRates[4];
 
   bool AttackHold;
   bool AttackLoopLink;

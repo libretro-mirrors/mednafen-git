@@ -28,11 +28,11 @@ class PCE_Input_TsushinKB : public PCE_Input_Device
 
  PCE_Input_TsushinKB();
 
- virtual void Power(int32 timestamp);
- virtual void Write(int32 timestamp, bool old_SEL, bool new_SEL, bool old_CLR, bool new_CLR);
- virtual uint8 Read(int32 timestamp);
- virtual void Update(const void *data);
- virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name);
+ virtual void Power(int32 timestamp) override;
+ virtual void Write(int32 timestamp, bool old_SEL, bool new_SEL, bool old_CLR, bool new_CLR) override;
+ virtual uint8 Read(int32 timestamp) override;
+ virtual void Update(const uint8* data) override;
+ virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name) override;
 
 
  private:
@@ -57,18 +57,17 @@ PCE_Input_TsushinKB::PCE_Input_TsushinKB()
  Power(0);
 }
 
-void PCE_Input_TsushinKB::Update(const void *data)
+void PCE_Input_TsushinKB::Update(const uint8* data)
 {
- uint8 *data_ptr = (uint8 *)data;
  bool capslock = TsuKBState[0xE] & 0x10;
- bool new_capslock = data_ptr[0xE] & 0x10;
+ bool new_capslock = data[0xE] & 0x10;
 
  if(!last_capslock && new_capslock)
   capslock ^= 1;
 
  for(int i = 0; i < 16; i++)
  {
-  TsuKBState[i] = data_ptr[i];
+  TsuKBState[i] = data[i];
  }
 
  TsuKBState[0xE] = (TsuKBState[0xE] & ~0x10) | (capslock ? 0x10 : 0x00);
@@ -120,8 +119,8 @@ int PCE_Input_TsushinKB::StateAction(StateMem *sm, int load, int data_only, cons
  {
   SFVAR(SEL),
   SFVAR(CLR),
-  SFARRAY(TsuKBState, sizeof(TsuKBState)),
-  SFARRAY(TsuKBLatch, sizeof(TsuKBLatch)),
+  SFVAR(TsuKBState),
+  SFVAR(TsuKBLatch),
   SFVAR(TsuKBIndex),
   SFVAR(last_capslock),
   SFEND
@@ -134,166 +133,166 @@ int PCE_Input_TsushinKB::StateAction(StateMem *sm, int load, int data_only, cons
 const IDIISG PCE_TsushinKBIDII = 
 {
  // 0 - DONE!
- { "kp_0", "Keypad 0", 0, IDIT_BUTTON },
- { "kp_1", "Keypad 1", 0, IDIT_BUTTON },
- { "kp_2", "Keypad 2", 0, IDIT_BUTTON },
- { "kp_3", "Keypad 3", 0, IDIT_BUTTON },
- { "kp_4", "Keypad 4", 0, IDIT_BUTTON },
- { "kp_5", "Keypad 5", 0, IDIT_BUTTON },
- { "kp_6", "Keypad 6", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("kp_0", "Keypad 0", 0),
+ IDIIS_Button("kp_1", "Keypad 1", 0),
+ IDIIS_Button("kp_2", "Keypad 2", 0),
+ IDIIS_Button("kp_3", "Keypad 3", 0),
+ IDIIS_Button("kp_4", "Keypad 4", 0),
+ IDIIS_Button("kp_5", "Keypad 5", 0),
+ IDIIS_Button("kp_6", "Keypad 6", 0),
+ IDIIS_Padding<1>(),
 
 // 1 - DONE!
- { "kp_8", "Keypad 8", 0, IDIT_BUTTON },
- { "kp_9", "Keypad 9", 0, IDIT_BUTTON },
- { "kp_multiply", "Keypad *", 0, IDIT_BUTTON },
- { "kp_plus", "Keypad +", 0, IDIT_BUTTON },
- { "kp_equals", "Keypad =", 0, IDIT_BUTTON },
- { "kp_comma", "Keypad ,", 0, IDIT_BUTTON },
- { "kp_period", "Keypad .", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("kp_8", "Keypad 8", 0),
+ IDIIS_Button("kp_9", "Keypad 9", 0),
+ IDIIS_Button("kp_multiply", "Keypad *", 0),
+ IDIIS_Button("kp_plus", "Keypad +", 0),
+ IDIIS_Button("kp_equals", "Keypad =", 0),
+ IDIIS_Button("kp_comma", "Keypad ,", 0),
+ IDIIS_Button("kp_period", "Keypad .", 0),
+ IDIIS_Padding<1>(),
 
 // 2 - DONE!
- { "at", "@", 0, IDIT_BUTTON },
- { "a", "a", 0, IDIT_BUTTON },
- { "b", "b", 0, IDIT_BUTTON },
- { "c", "c", 0, IDIT_BUTTON },
- { "d", "d", 0, IDIT_BUTTON },
- { "e", "e", 0, IDIT_BUTTON },
- { "f", "f", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("at", "@", 0),
+ IDIIS_Button("a", "a", 0),
+ IDIIS_Button("b", "b", 0),
+ IDIIS_Button("c", "c", 0),
+ IDIIS_Button("d", "d", 0),
+ IDIIS_Button("e", "e", 0),
+ IDIIS_Button("f", "f", 0),
+ IDIIS_Padding<1>(),
 
 // 3 - DONE!
- { "h", "h", 0, IDIT_BUTTON },
- { "i", "i", 0, IDIT_BUTTON },
- { "j", "j", 0, IDIT_BUTTON },
- { "k", "k", 0, IDIT_BUTTON },
- { "l", "l", 0, IDIT_BUTTON },
- { "m", "m", 0, IDIT_BUTTON },
- { "n", "n", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("h", "h", 0),
+ IDIIS_Button("i", "i", 0),
+ IDIIS_Button("j", "j", 0),
+ IDIIS_Button("k", "k", 0),
+ IDIIS_Button("l", "l", 0),
+ IDIIS_Button("m", "m", 0),
+ IDIIS_Button("n", "n", 0),
+ IDIIS_Padding<1>(),
  
 // 4 - DONE!
- { "p", "p", 0, IDIT_BUTTON },
- { "q", "q", 0, IDIT_BUTTON },
- { "r", "r", 0, IDIT_BUTTON },
- { "s", "s", 0, IDIT_BUTTON },
- { "t", "t", 0, IDIT_BUTTON },
- { "u", "u", 0, IDIT_BUTTON },
- { "v", "v", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("p", "p", 0),
+ IDIIS_Button("q", "q", 0),
+ IDIIS_Button("r", "r", 0),
+ IDIIS_Button("s", "s", 0),
+ IDIIS_Button("t", "t", 0),
+ IDIIS_Button("u", "u", 0),
+ IDIIS_Button("v", "v", 0),
+ IDIIS_Padding<1>(),
 
 // 5 - DONE!
- { "x", "x", 0, IDIT_BUTTON },
- { "y", "y", 0, IDIT_BUTTON },
- { "z", "z", 0, IDIT_BUTTON },
- { "left_bracket", "[", 0, IDIT_BUTTON },
- { "yen", "Yen", 0, IDIT_BUTTON },
- { "right_bracket", "]", 0, IDIT_BUTTON },
- { "caret", "^", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("x", "x", 0),
+ IDIIS_Button("y", "y", 0),
+ IDIIS_Button("z", "z", 0),
+ IDIIS_Button("left_bracket", "[", 0),
+ IDIIS_Button("yen", "Yen", 0),
+ IDIIS_Button("right_bracket", "]", 0),
+ IDIIS_Button("caret", "^", 0),
+ IDIIS_Padding<1>(),
 
 // 6 - DONE!
- { "0", "0", 0, IDIT_BUTTON },
- { "1", "1", 0, IDIT_BUTTON },
- { "2", "2", 0, IDIT_BUTTON },
- { "3", "3", 0, IDIT_BUTTON },
- { "4", "4", 0, IDIT_BUTTON },
- { "5", "5", 0, IDIT_BUTTON },
- { "6", "6", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("0", "0", 0),
+ IDIIS_Button("1", "1", 0),
+ IDIIS_Button("2", "2", 0),
+ IDIIS_Button("3", "3", 0),
+ IDIIS_Button("4", "4", 0),
+ IDIIS_Button("5", "5", 0),
+ IDIIS_Button("6", "6", 0),
+ IDIIS_Padding<1>(),
 
 // 7 - DONE!
- { "8", "8", 0, IDIT_BUTTON },
- { "9", "9", 0, IDIT_BUTTON },
- { "colon", ":", 0, IDIT_BUTTON },
- { "semicolon", ";", 0, IDIT_BUTTON },
- { "comma", ",", 0, IDIT_BUTTON },
- { "period", ".", 0, IDIT_BUTTON },
- { "slash", "/", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("8", "8", 0),
+ IDIIS_Button("9", "9", 0),
+ IDIIS_Button("colon", ":", 0),
+ IDIIS_Button("semicolon", ";", 0),
+ IDIIS_Button("comma", ",", 0),
+ IDIIS_Button("period", ".", 0),
+ IDIIS_Button("slash", "/", 0),
+ IDIIS_Padding<1>(),
 
 // 8 - DONE enough
- { "clear", "clear", 0, IDIT_BUTTON },
- { "up", "up", 0, IDIT_BUTTON },
- { "right", "right", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },	// Alternate backspace key on PC-88 keyboard??? { "unk80", "unknown", 0, IDIT_BUTTON },
- { "grph", "GRPH", 0, IDIT_BUTTON },
- { "kana", "カナ", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },	// Alternate shift key on PC-88 keyboard??? { "unk83", "unknown", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("clear", "clear", 0),
+ IDIIS_Button("up", "up", 0),
+ IDIIS_Button("right", "right", 0),
+ IDIIS_Padding<1>(),			// Alternate backspace key on PC-88 keyboard???
+ IDIIS_Button("grph", "GRPH", 0),
+ IDIIS_Button("kana", "カナ", 0),
+ IDIIS_Padding<1>(),			// Alternate shift key on PC-88 keyboard???
+ IDIIS_Padding<1>(),
 
 // 9 - DONE!
- { "stop", "STOP", 0, IDIT_BUTTON },	// Break / STOP
- { "f1", "F1", 0, IDIT_BUTTON },
- { "f2", "F2", 0, IDIT_BUTTON },
- { "f3", "F3", 0, IDIT_BUTTON },
- { "f4", "F4", 0, IDIT_BUTTON },
- { "f5", "F5", 0, IDIT_BUTTON },
- { "space", "space", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("stop", "STOP", 0),	// Break / STOP
+ IDIIS_Button("f1", "F1", 0),
+ IDIIS_Button("f2", "F2", 0),
+ IDIIS_Button("f3", "F3", 0),
+ IDIIS_Button("f4", "F4", 0),
+ IDIIS_Button("f5", "F5", 0),
+ IDIIS_Button("space", "space", 0),
+ IDIIS_Padding<1>(),
 
 // A - DONE!
- { "tab", "Tab", 0, IDIT_BUTTON },		// Tab
- { "down", "down", 0, IDIT_BUTTON },
- { "left", "left", 0, IDIT_BUTTON },
- { "help", "Help", 0, IDIT_BUTTON },	// -624
- { "copy", "Copy", 0, IDIT_BUTTON },	// -623
- { "kp_minus", "Keypad Minus", 0, IDIT_BUTTON },
- { "kp_divide", "Keypad Divide", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("tab", "Tab", 0),		// Tab
+ IDIIS_Button("down", "down", 0),
+ IDIIS_Button("left", "left", 0),
+ IDIIS_Button("help", "Help", 0),	// -624
+ IDIIS_Button("copy", "Copy", 0),	// -623
+ IDIIS_Button("kp_minus", "Keypad Minus", 0),
+ IDIIS_Button("kp_divide", "Keypad Divide", 0),
+ IDIIS_Padding<1>(),
 
  // B - DONE(most likely)
- { "roll_down", "ROLL DOWN", 0, IDIT_BUTTON },
- { "roll_up", "ROLL UP", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },		// { "unknownB2", "unknown", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },		// { "unknownB3", "unknown", 0, IDIT_BUTTON },
- { "o", "o", 0, IDIT_BUTTON },
- { "underscore", "Underscore", 0, IDIT_BUTTON },
- { "g", "g", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("roll_down", "ROLL DOWN", 0),
+ IDIIS_Button("roll_up", "ROLL UP", 0),
+ IDIIS_Padding<1>(),			// unknownB2
+ IDIIS_Padding<1>(),			// unknownB3
+ IDIIS_Button("o", "o", 0),
+ IDIIS_Button("underscore", "Underscore", 0),
+ IDIIS_Button("g", "g", 0),
+ IDIIS_Padding<1>(),
 
 // C - DONE!
- { "f6", "f6", 0, IDIT_BUTTON },
- { "f7", "f7", 0, IDIT_BUTTON },
- { "f8", "f8", 0, IDIT_BUTTON },
- { "f9", "f9", 0, IDIT_BUTTON },
- { "f10", "F10", 0, IDIT_BUTTON },
- { "backspace", "backspace", 0, IDIT_BUTTON },
- { "insert", "insert", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("f6", "f6", 0),
+ IDIIS_Button("f7", "f7", 0),
+ IDIIS_Button("f8", "f8", 0),
+ IDIIS_Button("f9", "f9", 0),
+ IDIIS_Button("f10", "F10", 0),
+ IDIIS_Button("backspace", "backspace", 0),
+ IDIIS_Button("insert", "insert", 0),
+ IDIIS_Padding<1>(),
 
 // D - DONE!
- { "convert", "変換", 0, IDIT_BUTTON },		 // (-620) Begin marking entered text, and disable marking after pressing the 
-					     	 // end-of-block key.
- { "nonconvert", "決定", 0, IDIT_BUTTON }, 	 // (-619) End text marking block
- { "pc", "PC", 0, IDIT_BUTTON }, 		 // (-617) Selects between Rgana and Rkana.  SHIFT+this key switches between
-					     	 // latin and kana/gana mode?
- { "width", "変換", 0, IDIT_BUTTON }, 	     	 // (-618) Chooses font width?
- { "ctrl", "CTRL/Control", 0, IDIT_BUTTON }, 	 // CTRL
- { "kp_7", "Keypad 7", 0, IDIT_BUTTON },
- { "w", "w", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("convert", "変換", 0),		// (-620) Begin marking entered text, and disable marking after pressing the 
+					    	// end-of-block key.
+ IDIIS_Button("nonconvert", "決定", 0),		// (-619) End text marking block
+ IDIIS_Button("pc", "PC", 0),			// (-617) Selects between Rgana and Rkana.  SHIFT+this key switches between
+					   	// latin and kana/gana mode?
+ IDIIS_Button("width", "変換", 0),		// (-618) Chooses font width?
+ IDIIS_Button("ctrl", "CTRL/Control", 0),	// CTRL
+ IDIIS_Button("kp_7", "Keypad 7", 0),
+ IDIIS_Button("w", "w", 0),
+ IDIIS_Padding<1>(),
 
 // E - DONE!
- { "return", "return", 0, IDIT_BUTTON }, // enter
- { "kp_enter", "Keypad Enter", 0, IDIT_BUTTON }, // enter
- { "left_shift", "Left Shift", 0, IDIT_BUTTON }, // Left Shift
- { "right_shift", "Right Shift", 0, IDIT_BUTTON }, // Right Shift
- { "caps_lock", "Caps Lock", 0, IDIT_BUTTON }, // Caps Lock(mechanically-locking...)
- { "delete", "Delete", 0, IDIT_BUTTON },
- { "escape", "Escape", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Button("return", "return", 0), // enter
+ IDIIS_Button("kp_enter", "Keypad Enter", 0), // enter
+ IDIIS_Button("left_shift", "Left Shift", 0), // Left Shift
+ IDIIS_Button("right_shift", "Right Shift", 0), // Right Shift
+ IDIIS_Button("caps_lock", "Caps Lock", 0), // Caps Lock(mechanically-locking...)
+ IDIIS_Button("delete", "Delete", 0),
+ IDIIS_Button("escape", "Escape", 0),
+ IDIIS_Padding<1>(),
 
 // F - DONE(most likely)
- { NULL, "empty", 0, IDIT_BUTTON },		// { "unknownF0", "unknown", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },		// { "unknownF1", "unknown", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },		// { "unknownF2", "unknown", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },		// { "unknownF3", "unknown", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },		// { "unknownF4", "unknown", 0, IDIT_BUTTON },
- { "minus", "Minus", 0, IDIT_BUTTON },
- { "7", "7", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
+ IDIIS_Padding<1>(),			// unknownF0
+ IDIIS_Padding<1>(),			// unknownF1
+ IDIIS_Padding<1>(),			// unknownF2
+ IDIIS_Padding<1>(),			// unknownF3
+ IDIIS_Padding<1>(),			// unknownF4
+ IDIIS_Button("minus", "Minus", 0),
+ IDIIS_Button("7", "7", 0),
+ IDIIS_Padding<1>(),
 };
 
 PCE_Input_Device *PCEINPUT_MakeTsushinKB(void)

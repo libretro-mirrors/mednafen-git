@@ -108,22 +108,22 @@ static const IDIIS_SwitchPos ModeSwitchPositions[] =
 
 const IDIISG PCFX_GamepadIDII =
 {
- { "i", "I", 11, IDIT_BUTTON, NULL },
- { "ii", "II", 10, IDIT_BUTTON, NULL },
- { "iii", "III", 9, IDIT_BUTTON, NULL },
- { "iv", "IV", 6, IDIT_BUTTON, NULL },
- { "v", "V", 7, IDIT_BUTTON, NULL },
- { "vi", "VI", 8, IDIT_BUTTON, NULL },
- { "select", "SELECT", 4, IDIT_BUTTON, NULL },
- { "run", "RUN", 5, IDIT_BUTTON, NULL },
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
+ IDIIS_Button("i", "I", 11),
+ IDIIS_Button("ii", "II", 10),
+ IDIIS_Button("iii", "III", 9),
+ IDIIS_Button("iv", "IV", 6),
+ IDIIS_Button("v", "V", 7),
+ IDIIS_Button("vi", "VI", 8),
+ IDIIS_Button("select", "SELECT", 4),
+ IDIIS_Button("run", "RUN", 5),
+ IDIIS_Button("up", "UP ↑", 0, "down"),
+ IDIIS_Button("right", "RIGHT →", 3, "left"),
+ IDIIS_Button("down", "DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "LEFT ←", 2, "right"),
 
- IDIIS_Switch("mode1", "MODE 1", 12, ModeSwitchPositions, sizeof(ModeSwitchPositions) / sizeof(ModeSwitchPositions[0])),
- { NULL, "empty", 0, IDIT_BUTTON },
- IDIIS_Switch("mode2", "MODE 2", 13, ModeSwitchPositions, sizeof(ModeSwitchPositions) / sizeof(ModeSwitchPositions[0])),
+ IDIIS_Switch("mode1", "MODE 1", 12, ModeSwitchPositions),
+ IDIIS_Padding<1>(),
+ IDIIS_Switch("mode2", "MODE 2", 13, ModeSwitchPositions),
 };
 
 PCFX_Input_Device *PCFXINPUT_MakeGamepad(void)

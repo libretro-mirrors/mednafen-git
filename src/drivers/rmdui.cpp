@@ -182,7 +182,7 @@ void MDFND_MediaSetNotification(uint32 drive_idx, uint32 state_idx, uint32 media
  if(dta)
  {
   if(!SupressDiskChangeNotifDisplay)
-   MDFN_DispMessage("%s", dta->text.c_str());
+   MDFN_Notify(MDFN_NOTICE_STATUS, "%s", dta->text.c_str());
  }
  else
   fprintf(stderr, "MDFND_MediaSetNotification() error");
@@ -218,13 +218,13 @@ void RMDUI_Select(void)
   if(rs->MediaPresent && rs->MediaUsable)
   {
    if(CurGame->RMD->Media[dta->media_idx].Orientations.size())
-    MDFN_DispMessage(_("%s, %s selected."), CurGame->RMD->Media[dta->media_idx].Name.c_str(), CurGame->RMD->Media[dta->media_idx].Orientations[dta->orientation_idx].c_str());
+    MDFN_Notify(MDFN_NOTICE_STATUS, _("%s, %s selected."), CurGame->RMD->Media[dta->media_idx].Name.c_str(), CurGame->RMD->Media[dta->media_idx].Orientations[dta->orientation_idx].c_str());
    else
-    MDFN_DispMessage(_("%s selected."), CurGame->RMD->Media[dta->media_idx].Name.c_str());
+    MDFN_Notify(MDFN_NOTICE_STATUS, _("%s selected."), CurGame->RMD->Media[dta->media_idx].Name.c_str());
   }
   else
   {
-   MDFN_DispMessage(_("Absence selected."));
+   MDFN_Notify(MDFN_NOTICE_STATUS, _("Absence selected."));
   }
  }
 }

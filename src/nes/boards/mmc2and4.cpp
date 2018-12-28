@@ -140,9 +140,9 @@ static int MMC2_StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAYN(CHRBanks, 4, "CHRBanks"),
+  SFPTR8N(CHRBanks, 4, "CHRBanks"),
   SFVARN(PRGBank, "PRGBank"),
-  SFARRAYN(latches, 2, "latches"),
+  SFPTR8N(latches, 2, "latches"),
   SFEND
  };
 
@@ -195,10 +195,10 @@ static int MMC4_StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAYN(CHRBanks, 4, "CHRBanks"),
+  SFPTR8N(CHRBanks, 4, "CHRBanks"),
   SFVARN(PRGBank, "PRGBank"),
-  SFARRAYN(latches, 2, "latches"),
-  SFARRAYN(MMC4_WRAM, 8192, "WRAM"),
+  SFPTR8N(latches, 2, "latches"),
+  SFPTR8N(MMC4_WRAM, 8192, "WRAM"),
   SFEND
  };
 

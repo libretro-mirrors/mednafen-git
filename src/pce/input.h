@@ -14,7 +14,7 @@ class PCE_Input_Device
  virtual void Write(int32 timestamp, bool old_SEL, bool new_SEL, bool old_CLR, bool new_CLR);
  virtual uint8 Read(int32 timestamp);
  virtual void Power(int32 timestamp);
- virtual void Update(const void *data);
+ virtual void Update(const uint8* data);
  virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name);
 };
 

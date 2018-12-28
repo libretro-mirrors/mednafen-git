@@ -93,7 +93,7 @@ static uint8 MDFN_HOT MDFN_FASTCALL SPC_Read(uint16 A)
  if(special_base >= 0xFFC0 && special_base <= 0xFFFF)	// IPL Area
  {
   if(MDFN_LIKELY(Control & 0x80))
-   ret = (IPL - 0xFFC0)[A];
+   ret = IPL[(size_t)A - 0xFFC0];
  }
  else if(special_base >= 0x00F0 && special_base <= 0x00FF)
  {
@@ -396,19 +396,19 @@ void APU_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(APURAM, 65536),
-  SFARRAY(IOFromSPC700, 4),
-  SFARRAY(IOToSPC700, 4),
+  SFVAR(APURAM),
+  SFVAR(IOFromSPC700),
+  SFVAR(IOToSPC700),
 
   SFVAR(Control),
 
-  SFARRAY(WizardRAM, 2),
+  SFVAR(WizardRAM),
   SFVAR(DSPAddr),
 
   SFVAR(T01PreDiv),
-  SFARRAY(TTARGET, 3),
-  SFARRAY(TCOUNT, 3),
-  SFARRAY(TOUT, 3),
+  SFVAR(TTARGET),
+  SFVAR(TCOUNT),
+  SFVAR(TOUT),
 
   SFVAR(run_count_mod),
 

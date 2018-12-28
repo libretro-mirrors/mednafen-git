@@ -207,11 +207,11 @@ void FXINPUT_SetInput(unsigned port, const char *type, uint8 *ptr)
 {
  data_ptr[port] = ptr;
 
- if(!strcasecmp(type, "mouse"))
+ if(!strcmp(type, "mouse"))
  {
   InputTypes[port] = FXIT_MOUSE;
  }
- else if(!strcasecmp(type, "gamepad"))
+ else if(!strcmp(type, "gamepad"))
   InputTypes[port] = FXIT_GAMEPAD;
  else
   InputTypes[port] = FXIT_NONE;
@@ -376,11 +376,12 @@ void FXINPUT_StateAction(StateMem *sm, const unsigned load, const bool data_only
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(TapCounter, 2),
-  SFARRAY32(LatchPending, 2),
-  SFARRAY(control, 2),
-  SFARRAYB(latched, 2),
-  SFARRAY32(data_latch, 2),
+  SFVAR(TapCounter),
+  SFVAR(LatchPending),
+  SFVAR(control),
+  SFVAR(latched),
+  SFPTR32(data_latch, 2),
+  SFPTR32(&data_latch[2], TOTAL_PORTS - 2),
   SFEND
  };
 

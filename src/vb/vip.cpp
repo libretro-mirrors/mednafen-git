@@ -1455,9 +1455,9 @@ void VIP_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(FB[0][0], 0x6000 * 2 * 2),
-  SFARRAY16(CHR_RAM, 0x8000 / sizeof(uint16)),
-  SFARRAY16(DRAM, 0x20000 / sizeof(uint16)),
+  SFVARN(FB, "FB[0][0]"),
+  SFVAR(CHR_RAM),
+  SFVAR(DRAM),
 
   SFVAR(InterruptPending),
   SFVAR(InterruptEnable),
@@ -1474,9 +1474,9 @@ void VIP_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
   SFVAR(XPCTRL),
   SFVAR(SBCMP),
-  SFARRAY16(SPT, 4),
-  SFARRAY16(GPLT, 4),	// FIXME
-  SFARRAY16(JPLT, 4),
+  SFVAR(SPT),
+  SFVAR(GPLT),	// FIXME
+  SFVAR(JPLT),
   
   SFVAR(BKCOL),
 

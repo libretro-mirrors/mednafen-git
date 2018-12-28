@@ -49,3 +49,20 @@ Some notes(and reminders) on the source code:
 	GPLv3-incompatible code:
 		WonderSwan emulation code from Cygne.
 		QuickLZ(old version used)
+
+	Don't do greater-than and less-than comparisons between pointers unless they're pointers to members of the same array/struct/etc.
+
+	Avoid using a pointer into a nested array of a multidimensional array to access elements of the multidimensional array that lie outside of that specific
+	nested array, as such behavior is probably undefined.
+
+	Pointer provenance, DR260.
+
+	Don't create temporarily-invalid pointers via careless pointer arithmetic; restructure the expressions if possible, or utilize uintptr_t instead.
+
+	x86_64 inline assembly, stack red zone.
+
+	https://gcc.gnu.org/onlinedocs/gccint/Memory-model.html#Memory-model
+
+	Don't use memcmp() on class/struct objects unless they're initialized with memset() and copied around with only memcpy()(or equivalent).
+
+	Don't rely on malloc(), realloc(), and calloc() setting errno to ENOMEM on a memory allocation error.

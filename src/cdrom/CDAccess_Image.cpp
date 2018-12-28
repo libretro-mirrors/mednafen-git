@@ -168,29 +168,20 @@ static size_t UnQuotify(const std::string &src, size_t source_offset, std::strin
 
 uint32 CDAccess_Image::GetSectorCount(CDRFILE_TRACK_INFO *track)
 {
- if(track->DIFormat == DI_FORMAT_AUDIO)
- {
-  if(track->AReader)
-   return(((track->AReader->FrameCount() * 4) - track->FileOffset) / 2352);
-  else
-  {
-   const int64 size = track->fp->size();
+ const int div = DI_Size_Table[track->DIFormat] + (track->SubchannelMode ? 96 : 0);
+ int64 size;
 
-   //printf("%d %d %d\n", (int)stat_buf.st_size, (int)track->FileOffset, (int)stat_buf.st_size - (int)track->FileOffset);
-   if(track->SubchannelMode)
-    return((size - track->FileOffset) / (2352 + 96));
-   else
-    return((size - track->FileOffset) / 2352);
-  }
- }
- else
- {
-  const int64 size = track->fp->size();
-  
-  return((size - track->FileOffset) / DI_Size_Table[track->DIFormat]);
- }
+ size = track->AReader ? track->AReader->FrameCount() * 4 : track->fp->size();
+ size -= track->FileOffset;
 
- return(0);
+ if(size < 0)
+  throw MDFN_Error(0, _("Track offset into file exceeds the amount of data available!"));
+
+ // Might need to update/fix TOC loading path before enabling this check.
+ //if(size % div)
+ // throw MDFN_Error(0, _("Garbage at end of referenced file?"));
+
+ return size / div;
 }
 
 void CDAccess_Image::ParseTOCFileLineInfo(CDRFILE_TRACK_INFO *track, const int tracknum, const std::string &filename, const char *binoffset, const char *msfoffset, const char *length, bool image_memcache, std::map<std::string, Stream*> &toc_streamcache)
@@ -226,7 +217,7 @@ void CDAccess_Image::ParseTOCFileLineInfo(CDRFILE_TRACK_INFO *track, const int t
   toc_streamcache[filename] = track->fp;
  }
 
- if(filename.length() >= 4 && !strcasecmp(filename.c_str() + filename.length() - 4, ".wav"))
+ if(filename.length() >= 4 && !MDFN_strazicmp(filename.c_str() + filename.length() - 4, ".wav"))
  {
   track->AReader = CDAFR_Open(track->fp);
 
@@ -404,26 +395,16 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
 
  MDFN_GetFilePathComponents(path, &base_dir, &file_base, &file_ext);
 
- if(!strcasecmp(file_ext.c_str(), ".toc"))
+ if(!MDFN_strazicmp(file_ext.c_str(), ".toc"))
  {
   MDFN_printf(_("TOC file detected.\n"));
   IsTOC = true;
  }
 
- // Check for annoying UTF-8 BOM.
- if(!IsTOC)
+ if(!IsTOC && !fp.read_utf8_bom())
  {
-  uint8 bom_tmp[3];
-
-  if(fp.read(bom_tmp, 3, false) == 3 && bom_tmp[0] == 0xEF && bom_tmp[1] == 0xBB && bom_tmp[2] == 0xBF)
-  {
-   // Print an annoying error message, but don't actually error out.
-   MDFN_PrintError(_("UTF-8 BOM detected at start of CUE sheet."));
-  }
-  else
-   fp.seek(0, SEEK_SET);
+  fp.mswin_utf8_convert_kludge();
  }
-
 
  // Assign opposite maximum values so our tests will work!
  FirstTrack = 99;
@@ -494,7 +475,7 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
      int format_lookup;
      for(format_lookup = 0; format_lookup < _DI_FORMAT_COUNT; format_lookup++)
      {
-      if(!strcasecmp(args[0].c_str(), DI_CDRDAO_Strings[format_lookup]))
+      if(!MDFN_strazicmp(args[0].c_str(), DI_CDRDAO_Strings[format_lookup]))
       {
        TmpTrack.DIFormat = format_lookup;
        break;
@@ -509,12 +490,12 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
      if(TmpTrack.DIFormat == DI_FORMAT_AUDIO)
       TmpTrack.RawAudioMSBFirst = true; // Silly cdrdao...
 
-     if(!strcasecmp(args[1].c_str(), "RW"))
+     if(!MDFN_strazicmp(args[1].c_str(), "RW"))
      {
       TmpTrack.SubchannelMode = CDRF_SUBM_RW;
       throw(MDFN_Error(0, _("\"RW\" format subchannel data not supported, only \"RW_RAW\" is!")));
      }
-     else if(!strcasecmp(args[1].c_str(), "RW_RAW"))
+     else if(!MDFN_strazicmp(args[1].c_str(), "RW_RAW"))
       TmpTrack.SubchannelMode = CDRF_SUBM_RW_RAW;
 
     } // end to TRACK
@@ -661,15 +642,15 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
      if(image_memcache)
       TmpTrack.fp = new MemoryStream(TmpTrack.fp);
 
-     if(!strcasecmp(args[1].c_str(), "BINARY"))
+     if(!MDFN_strazicmp(args[1].c_str(), "BINARY"))
      {
       //TmpTrack.Format = TRACK_FORMAT_DATA;
       //struct stat stat_buf;
       //fstat(fileno(TmpTrack.fp), &stat_buf);
       //TmpTrack.sectors = stat_buf.st_size; // / 2048;
      }
-     else if(!strcasecmp(args[1].c_str(), "OGG") || !strcasecmp(args[1].c_str(), "VORBIS") || !strcasecmp(args[1].c_str(), "WAVE") || !strcasecmp(args[1].c_str(), "WAV") || !strcasecmp(args[1].c_str(), "PCM")
-	|| !strcasecmp(args[1].c_str(), "MPC") || !strcasecmp(args[1].c_str(), "MP+"))
+     else if(!MDFN_strazicmp(args[1].c_str(), "OGG") || !MDFN_strazicmp(args[1].c_str(), "VORBIS") || !MDFN_strazicmp(args[1].c_str(), "WAVE") || !MDFN_strazicmp(args[1].c_str(), "WAV") || !MDFN_strazicmp(args[1].c_str(), "PCM")
+	|| !MDFN_strazicmp(args[1].c_str(), "MPC") || !MDFN_strazicmp(args[1].c_str(), "MP+"))
      {
       TmpTrack.AReader = CDAFR_Open(TmpTrack.fp);
       if(!TmpTrack.AReader)
@@ -713,7 +694,7 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
      int format_lookup;
      for(format_lookup = 0; format_lookup < _DI_FORMAT_COUNT; format_lookup++)
      {
-      if(!strcasecmp(args[1].c_str(), DI_CUE_Strings[format_lookup]))
+      if(!MDFN_strazicmp(args[1].c_str(), DI_CUE_Strings[format_lookup]))
       {
        TmpTrack.DIFormat = format_lookup;
        break;
@@ -886,15 +867,12 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
 
    // Make sure FileOffset this is set before the call to GetSectorCount()
    Tracks[x].FileOffset = FileOffset;
-   Tracks[x].sectors = GetSectorCount(&Tracks[x]);
 
    if((x + 1) >= (FirstTrack + NumTracks) || Tracks[x+1].FirstFileInstance)
-   {
-
-   }
+    Tracks[x].sectors = GetSectorCount(&Tracks[x]);
    else
    { 
-    // Fix the sector count if we have multiple tracks per one binary image file.
+    // Calculate the sector count if we have multiple tracks per one binary image file.
     if(Tracks[x + 1].index[0] == -1)
      Tracks[x].sectors = Tracks[x + 1].index[1] - Tracks[x].index[1];
     else

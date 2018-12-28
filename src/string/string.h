@@ -38,7 +38,29 @@ void MDFN_trim(std::string& s);
 void MDFN_zapctrlchars(char* s);
 void MDFN_zapctrlchars(std::string& s);
 
+// Replaces A-Z with a-z
+void MDFN_strazlower(char* s);
+void MDFN_strazlower(std::string& s);
+
+// Replaces a-z with A-Z
+void MDFN_strazupper(char* s);
+void MDFN_strazupper(std::string& s);
+
+static INLINE char MDFN_azlower(char c) { return (c >= 'A' && c <= 'Z') ? c - 'A' + 'a' : c; }
+static INLINE char MDFN_azupper(char c) { return (c >= 'a' && c <= 'z') ? c - 'a' + 'A' : c; }
+
+static INLINE bool MDFN_isspace(const char c) { return c == ' ' || c == '\f' || c == '\r' || c == '\n' || c == '\t' || c == '\v'; }
+
+int MDFN_strazicmp(const char* s, const char* t, size_t n = SIZE_MAX);
+int MDFN_memazicmp(const void* s, const void* t, size_t n);
+
 std::vector<std::string> MDFN_strsplit(const std::string& str, const std::string& delim = ",");
+
+static MDFN_WARN_UNUSED_RESULT INLINE char* MDFN_strskipspace(char* s) { while(MDFN_isspace(*s)) s++; return s; }
+static MDFN_WARN_UNUSED_RESULT INLINE const char* MDFN_strskipspace(const char* s) { while(MDFN_isspace(*s)) s++; return s; }
+
+static MDFN_WARN_UNUSED_RESULT INLINE char* MDFN_strskipnonspace(char* s) { while(*s && !MDFN_isspace(*s)) s++; return s; }
+static MDFN_WARN_UNUSED_RESULT INLINE const char* MDFN_strskipnonspace(const char* s) { while(*s && !MDFN_isspace(*s)) s++; return s; }
 
 // Don't confuse with number of codepoints.
 template<typename T>

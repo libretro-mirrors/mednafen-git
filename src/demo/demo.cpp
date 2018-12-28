@@ -95,7 +95,7 @@ static inline uint32_t DemoRandU32(void)
  return(x + y + z);
 }
 
-static void Draw(EmulateSpecStruct* espec, const uint8* weak, const uint8* strong)
+static void Draw(EmulateSpecStruct* espec, const uint8* weak, const uint8* strong, const uint16 (*axis)[2])
 {
  espec->DisplayRect.x = DemoRandU32() & 31;
  espec->DisplayRect.y = DemoRandU32() & 31;
@@ -246,11 +246,19 @@ static void Draw(EmulateSpecStruct* espec, const uint8* weak, const uint8* stron
    {
     char weakstr[64];
     char strongstr[64];
+    char xstr[64];
+    char ystr[64];
     trio_snprintf(weakstr, sizeof(weakstr),     "  Weak: %3d", weak[i]);
     trio_snprintf(strongstr, sizeof(strongstr), "Strong: %3d", strong[i]);
 
+    trio_snprintf(xstr, sizeof(xstr), "X: %5d", axis[i][0]);
+    trio_snprintf(ystr, sizeof(ystr), "Y: %5d", axis[i][1]);
+
     DrawTextShadow(espec->surface, w0r, espec->DisplayRect.x + (i ? 342 : 3), (y0 + (y1 - y0) / 2 - 8), weakstr, espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_5x7);
     DrawTextShadow(espec->surface, w0r, espec->DisplayRect.x + (i ? 342 : 3), (y0 + (y1 - y0) / 2 + 1), strongstr, espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_5x7);
+
+    DrawTextShadow(espec->surface, w0r, espec->DisplayRect.x + (i ? 260 : 85), (y0 + (y1 - y0) / 2 - 8), xstr, espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_5x7);
+    DrawTextShadow(espec->surface, w0r, espec->DisplayRect.x + (i ? 260 : 85), (y0 + (y1 - y0) / 2 + 1), ystr, espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_5x7);
    }
    MDFN_DrawFillRect(espec->surface, w1r.x, w1r.y, w1r.w, w1r.h, espec->surface->MakeColor(0xFF, 0xFF, 0xFF), espec->surface->MakeColor(0x00, 0x7F, 0xFF));
    DrawTextShadow(espec->surface, w1r, espec->DisplayRect.x, (y1 + (y2 - y1) / 2 - 9), "800", espec->surface->MakeColor(0xFF, 0, 0), espec->surface->MakeColor(0, 0, 0), MDFN_FONT_9x18_18x18, w1);
@@ -288,6 +296,7 @@ static void Emulate(EmulateSpecStruct* espec)
   SetSoundRate(espec->SoundRate);
 
  uint8 weak[2], strong[2];
+ uint16 axis[2][2];
 
  for(unsigned i = 0; i < 2; i++)
  {
@@ -309,14 +318,17 @@ static void Emulate(EmulateSpecStruct* espec)
   }
 
   {
-   weak[i] = MDFN_de16lsb(&controller_ptr[i][3]) >> 7;
-   strong[i] = MDFN_de16lsb(&controller_ptr[i][5]) >> 7;
+   weak[i] = MDFN_de16lsb(&controller_ptr[i][3]) >> 8;
+   strong[i] = MDFN_de16lsb(&controller_ptr[i][5]) >> 8;
 
    MDFN_en16lsb(&controller_ptr[i][1], (weak[i] << 0) | (strong[i] << 8));
   }
+  axis[i][0] = MDFN_de16lsb(&controller_ptr[i][7]);
+  axis[i][1] = MDFN_de16lsb(&controller_ptr[i][9]);
+  assert(MDFN_de32lsb(&controller_ptr[i][11]) == 0);
  }
 
- Draw(espec, weak, strong);
+ Draw(espec, weak, strong, axis);
 
  {
   int sc = 0;
@@ -440,6 +452,18 @@ struct DemoStateTest
  float arr_j[7];
  double arr_k[7];
 
+ uint8 alt_arr_a[7];
+ int8 alt_arr_b[7];
+ uint16 alt_arr_c[7];
+ int16 alt_arr_d[7];
+ uint32 alt_arr_e[7];
+ int32 alt_arr_f[7];
+ uint64 alt_arr_g[7];
+ int64 alt_arr_h[7];
+ bool alt_arr_i[7];
+ float alt_arr_j[7];
+ double alt_arr_k[7];
+
  struct
  {
   uint8 a;
@@ -465,6 +489,18 @@ struct DemoStateTest
   bool arr_i[7];
   float arr_j[7];
   double arr_k[7];
+
+  uint8 alt_arr_a[7];
+  int8 alt_arr_b[7];
+  uint16 alt_arr_c[7];
+  int16 alt_arr_d[7];
+  uint32 alt_arr_e[7];
+  int32 alt_arr_f[7];
+  uint64 alt_arr_g[7];
+  int64 alt_arr_h[7];
+  bool alt_arr_i[7];
+  float alt_arr_j[7];
+  double alt_arr_k[7];
  } __attribute__((__packed__)) stt[15];
 } __attribute__((__packed__));
 
@@ -480,13 +516,19 @@ static void randomoo(DemoStateTest* ptr, size_t count)
  }
  ptr->i = *(uint8*)&ptr->i & 0x1;
  for(unsigned i = 0; i < 7; i++)
+ {
   ptr->arr_i[i] = *(uint8*)&ptr->arr_i[i] & 0x1;
+  ptr->alt_arr_i[i] = *(uint8*)&ptr->arr_i[i] & 0x1;
+ }
 
  for(auto& s : ptr->stt)
  {
   s.i = *(uint8*)&s.i & 0x1;
   for(unsigned i = 0; i < 7; i++)
+  {
    s.arr_i[i] = *(uint8*)&s.arr_i[i] & 0x1;
+   s.alt_arr_i[i] = *(uint8*)&s.arr_i[i] & 0x1;
+  }
  }
 }
 
@@ -515,46 +557,71 @@ static void StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFVAR(dst[0].j),
   SFVAR(dst[0].k),
 
-  SFARRAY(dst[0].arr_a, 7),
-  SFARRAY(dst[0].arr_b, 7),
-  SFARRAY16(dst[0].arr_c, 7),
-  SFARRAY16(dst[0].arr_d, 7),
-  SFARRAY32(dst[0].arr_e, 7),
-  SFARRAY32(dst[0].arr_f, 7),
-  SFARRAY64(dst[0].arr_g, 7),
-  SFARRAY64(dst[0].arr_h, 7),
-  SFARRAYB(dst[0].arr_i, 7),
-  SFARRAYF(dst[0].arr_j, 7),
-  SFARRAYD(dst[0].arr_k, 7),
+  SFPTR8(dst[0].arr_a, 7),
+  SFPTR8(dst[0].arr_b, 7),
+  SFPTR16(dst[0].arr_c, 7),
+  SFPTR16(dst[0].arr_d, 7),
+  SFPTR32(dst[0].arr_e, 7),
+  SFPTR32(dst[0].arr_f, 7),
+  SFPTR64(dst[0].arr_g, 7),
+  SFPTR64(dst[0].arr_h, 7),
+  SFPTRB(dst[0].arr_i, 7),
+  SFPTRF(dst[0].arr_j, 7),
+  SFPTRD(dst[0].arr_k, 7),
 
-  SFVAR(dst[0].stt->i, 15, sizeof(*dst[0].stt)),
-  SFVAR(dst[0].stt->h, 15, sizeof(*dst[0].stt)),
-  SFVAR(dst[0].stt->g, 15, sizeof(*dst[0].stt)),
-  SFVAR(dst[0].stt->f, 15, sizeof(*dst[0].stt)),
-  SFVAR(dst[0].stt->e, 15, sizeof(*dst[0].stt)),
-  SFVAR(dst[0].stt->d, 15, sizeof(*dst[0].stt)),
-  SFVAR(dst[0].stt->c, 15, sizeof(*dst[0].stt)),
-  SFVAR(dst[0].stt->b, 15, sizeof(*dst[0].stt)),
-  SFVAR(dst[0].stt->a, 15, sizeof(*dst[0].stt)),
-  SFVAR(dst[0].stt->j, 15, sizeof(*dst[0].stt)),
-  SFVAR(dst[0].stt->k, 15, sizeof(*dst[0].stt)),
-  SFARRAYB(dst[0].stt->arr_i, 7, 15, sizeof(*dst[0].stt)),
-  SFARRAY(dst[0].stt->arr_a, 7, 15, sizeof(*dst[0].stt)),
-  SFARRAY32(dst[0].stt->arr_e, 7, 15, sizeof(*dst[0].stt)),
-  SFARRAY(dst[0].stt->arr_b, 7, 15, sizeof(*dst[0].stt)),
-  SFARRAY32(dst[0].stt->arr_f, 7, 15, sizeof(*dst[0].stt)),
-  SFARRAY16(dst[0].stt->arr_c, 7, 15, sizeof(*dst[0].stt)),
-  SFARRAY64(dst[0].stt->arr_g, 7, 15, sizeof(*dst[0].stt)),
-  SFARRAY16(dst[0].stt->arr_d, 7, 15, sizeof(*dst[0].stt)),
-  SFARRAY64(dst[0].stt->arr_h, 7, 15, sizeof(*dst[0].stt)),
-  SFARRAYF(dst[0].stt->arr_j, 7, 15, sizeof(*dst[0].stt)),
-  SFARRAYD(dst[0].stt->arr_k, 7, 15, sizeof(*dst[0].stt)),
+  SFVAR(dst[0].alt_arr_a),
+  SFVAR(dst[0].alt_arr_b),
+  SFVAR(dst[0].alt_arr_c),
+  SFVAR(dst[0].alt_arr_d),
+  SFVAR(dst[0].alt_arr_e),
+  SFVAR(dst[0].alt_arr_f),
+  SFVAR(dst[0].alt_arr_g),
+  SFVAR(dst[0].alt_arr_h),
+  SFVAR(dst[0].alt_arr_i),
+  SFVAR(dst[0].alt_arr_j),
+  SFVAR(dst[0].alt_arr_k),
+
+  SFVAR(dst[0].stt->i, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->h, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->g, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->f, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->e, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->d, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->c, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->b, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->a, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->j, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->k, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFPTRB(dst[0].stt->arr_i, 7, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFPTR8(dst[0].stt->arr_a, 7, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFPTR32(dst[0].stt->arr_e, 7, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFPTR8(dst[0].stt->arr_b, 7, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFPTR32(dst[0].stt->arr_f, 7, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFPTR16(dst[0].stt->arr_c, 7, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFPTR64(dst[0].stt->arr_g, 7, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFPTR16(dst[0].stt->arr_d, 7, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFPTR64(dst[0].stt->arr_h, 7, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFPTRF(dst[0].stt->arr_j, 7, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFPTRD(dst[0].stt->arr_k, 7, 15, sizeof(*dst[0].stt), dst[0].stt),
+
+  SFVAR(dst[0].stt->alt_arr_i, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->alt_arr_a, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->alt_arr_e, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->alt_arr_b, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->alt_arr_f, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->alt_arr_c, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->alt_arr_g, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->alt_arr_d, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->alt_arr_h, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->alt_arr_j, 15, sizeof(*dst[0].stt), dst[0].stt),
+  SFVAR(dst[0].stt->alt_arr_k, 15, sizeof(*dst[0].stt), dst[0].stt),
 
   SFEND
  };
 
  SFORMAT StateRegs[] =
  {
+  SFLINK(nullptr),
   SFLINK(MoreStateRegs),
   //
   //
@@ -650,12 +717,15 @@ static const IDIIS_SwitchPos SwitchPositions[] =
 
 static const IDIISG IDII =
 {
- { "toggle_ilace", "Toggle Interlace Mode", 0, IDIT_BUTTON, NULL },
- { "stm", "Select Test Mode", 1, IDIT_BUTTON, NULL },
- IDIIS_Switch("swt", "Switch Meow", 2, SwitchPositions, sizeof(SwitchPositions) / sizeof(SwitchPositions[0])),
- { "rumble", "RUMBLOOS", -1, IDIT_RUMBLE, NULL },
- { "rcweak", "Rumble Control Weak", 3, IDIT_BUTTON_ANALOG, NULL },
- { "rcstrong", "Rumble Control Strong", 4, IDIT_BUTTON_ANALOG, NULL },
+ IDIIS_Button("toggle_ilace", "Toggle Interlace Mode", 0, NULL),
+ IDIIS_Button("stm", "Select Test Mode", 1, NULL),
+ IDIIS_Switch("swt", "Switch Meow", 2, SwitchPositions),
+ IDIIS_Rumble(),
+ IDIIS_AnaButton("rcweak", "Rumble Control Weak", 3),
+ IDIIS_AnaButton("rcstrong", "Rumble Control Strong", 4),
+ IDIIS_Axis("stick", "Stick", "left", "LEFT", "right", "RIGHT", 5),
+ IDIIS_Axis("stick", "Stick", "up", "UP", "down", "DOWN", 6),
+ IDIIS_Padding<32>(),
 };
 
 static std::vector<InputDeviceInfoStruct> InputDeviceInfo =

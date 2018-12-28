@@ -237,7 +237,7 @@ static void CloseGame(void)
   }
   catch(std::exception &e)
   {
-   MDFN_PrintError("%s", e.what());
+   MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
   }
  }
 
@@ -559,39 +559,39 @@ static const MDFNSetting WSwanSettings[] =
 //
 static const IDIISG IDII_GP =
 {
- { "up-x",   	"X1(X UP ↑)", 0, IDIT_BUTTON },
- { "right-x",	"X2(X RIGHT →)", 3, IDIT_BUTTON },
- { "down-x",	"X3(X DOWN ↓)", 1, IDIT_BUTTON },
- { "left-x",	"X4(X LEFT ←)", 2, IDIT_BUTTON },
+ IDIIS_Button("up-x",   	"X1(X UP ↑)", 0),
+ IDIIS_Button("right-x",	"X2(X RIGHT →)", 3),
+ IDIIS_Button("down-x",	"X3(X DOWN ↓)", 1),
+ IDIIS_Button("left-x",	"X4(X LEFT ←)", 2),
 
- { "up-y", 	"Y1(Y UP ↑)", 4, IDIT_BUTTON },
- { "right-y", 	"Y2(Y RIGHT →)", 7, IDIT_BUTTON },
- { "down-y", 	"Y3(Y DOWN ↓)", 5, IDIT_BUTTON },
- { "left-y", 	"Y4(Y LEFT ←)", 6, IDIT_BUTTON },
+ IDIIS_Button("up-y", 	"Y1(Y UP ↑)", 4),
+ IDIIS_Button("right-y", 	"Y2(Y RIGHT →)", 7),
+ IDIIS_Button("down-y", 	"Y3(Y DOWN ↓)", 5),
+ IDIIS_Button("left-y", 	"Y4(Y LEFT ←)", 6),
 
- { "start", "Start", 8, IDIT_BUTTON },
- { "a", "A", 10, IDIT_BUTTON_CAN_RAPID },
- { "b", "B", 9, IDIT_BUTTON_CAN_RAPID },
+ IDIIS_Button("start", "Start", 8),
+ IDIIS_ButtonCR("a", "A", 10),
+ IDIIS_ButtonCR("b", "B", 9),
 };
 
 static const IDIISG IDII_GPRAA =
 {
- { "up-x",   	"X1(X UP ↑)", 0, IDIT_BUTTON },
- { "right-x",	"X2(X RIGHT →)", 3, IDIT_BUTTON },
- { "down-x",	"X3(X DOWN ↓)", 1, IDIT_BUTTON },
- { "left-x",	"X4(X LEFT ←)", 2, IDIT_BUTTON },
+ IDIIS_Button("up-x",   	"X1(X UP ↑)", 0),
+ IDIIS_Button("right-x",	"X2(X RIGHT →)", 3),
+ IDIIS_Button("down-x",	"X3(X DOWN ↓)", 1),
+ IDIIS_Button("left-x",	"X4(X LEFT ←)", 2),
 
- { "up-y", 	"Y1(Y UP ↑)", 4, IDIT_BUTTON },
- { "right-y", 	"Y2(Y RIGHT →)", 7, IDIT_BUTTON },
- { "down-y", 	"Y3(Y DOWN ↓)", 5, IDIT_BUTTON },
- { "left-y", 	"Y4(Y LEFT ←)", 6, IDIT_BUTTON },
+ IDIIS_Button("up-y", 	"Y1(Y UP ↑)", 4),
+ IDIIS_Button("right-y", 	"Y2(Y RIGHT →)", 7),
+ IDIIS_Button("down-y", 	"Y3(Y DOWN ↓)", 5),
+ IDIIS_Button("left-y", 	"Y4(Y LEFT ←)", 6),
 
- { "ap","A'(center, upper)", 11, IDIT_BUTTON },
- { "a", "A (right)", 12, IDIT_BUTTON },
- { "b", "B (center, lower)", 10, IDIT_BUTTON },
- { "bp","B'(left)", 9, IDIT_BUTTON },
+ IDIIS_Button("ap","A'(center, upper)", 11),
+ IDIIS_Button("a", "A (right)", 12),
+ IDIIS_Button("b", "B (center, lower)", 10),
+ IDIIS_Button("bp","B'(left)", 9),
 
- { "start", "Start", 8, IDIT_BUTTON },
+ IDIIS_Button("start", "Start", 8),
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =

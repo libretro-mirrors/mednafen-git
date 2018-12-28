@@ -28,7 +28,6 @@
 #include "opengl.h"
 #include "shader.h"
 #include "nongl.h"
-#include "overlay.h"
 
 #include "icon.h"
 #include "netplay.h"
@@ -103,7 +102,7 @@ enum
 {
  VDRIVER_OPENGL = 0,
  VDRIVER_SOFTSDL = 1,
- VDRIVER_OVERLAY = 2
+ VDRIVER__COUNT
 };
 
 enum
@@ -133,23 +132,30 @@ enum
 
 static const MDFNSetting_EnumList VDriver_List[] =
 {
- // Legacy:
+ { "default", VDRIVER__COUNT, gettext_noop("Default"), gettext_noop("Selects the default video driver.  Currently, this is OpenGL for all platforms, but may change in the future if better platform-specific drivers are added.") },
+
+ { "opengl", VDRIVER_OPENGL, "OpenGL", gettext_noop("All video-related Mednafen features are available with this video driver.") },
+ { "softfb", VDRIVER_SOFTSDL, "Software Blitting to Framebuffer", gettext_noop("Slower with lower-quality scaling than OpenGL, but if you don't have hardware-accelerated OpenGL rendering, it will probably be faster than software OpenGL rendering. Bilinear interpolation not available. OpenGL shaders do not work with this output method, of course.") },
+
+ // Backwards-compat:
  { "0", VDRIVER_OPENGL },
  { "1", VDRIVER_SOFTSDL },
-
-
- { "opengl", VDRIVER_OPENGL, "OpenGL + SDL", gettext_noop("This output method is preferred, as all features are available with it.") },
- { "sdl", VDRIVER_SOFTSDL, "SDL Surface", gettext_noop("Slower with lower-quality scaling than OpenGL, but if you don't have hardware-accelerated OpenGL rendering, it will be faster than software OpenGL rendering. Bilinear interpolation not available. OpenGL shaders do not work with this output method, of course.") },
- { "overlay", VDRIVER_OVERLAY, "SDL Overlay", gettext_noop("As fast as OpenGL, perhaps faster in some situations, *if* it's hardware-accelerated. Scanline effects are not available. hq2x, hq3x, hq4x are not available. The OSD may be missing or glitchy. PSX emulation will not display properly. Bilinear interpolation can't be turned off. Harsh chroma subsampling blurring in some picture types.  If you use this output method, it is strongly recommended to use a special scaler with it, such as nn2x.") },
+ { "sdl", VDRIVER_SOFTSDL },
+ { "overlay", VDRIVER__COUNT },
 
  { NULL, 0 },
 };
 
 static const MDFNSetting GlobalVideoSettings[] =
 {
- { "video.driver", MDFNSF_NOFLAGS, gettext_noop("Video output method/driver."), NULL, MDFNST_ENUM, "opengl", NULL, NULL, NULL, NULL, VDriver_List },
+ { "video.driver", MDFNSF_NOFLAGS, gettext_noop("Video output driver."), NULL, MDFNST_ENUM, "default", NULL, NULL, NULL, NULL, VDriver_List },
 
  { "video.fs", MDFNSF_NOFLAGS, gettext_noop("Enable fullscreen mode."), NULL, MDFNST_BOOL, "0", },
+ { "video.fs.display", MDFNSF_NOFLAGS, gettext_noop("Display to use with fullscreen mode."), gettext_noop("Specify -1 to use the display on which the center of the window lies in windowed mode."), MDFNST_INT, "-1", "-1", "32767" },
+
+ //{ "video.window.x", MDFNSF_NOFLAGS, gettext_noop("Window starting X position."), NULL, MDFNST_INT, "0x2FFF0000" },
+ //{ "video.window.y", MDFNSF_NOFLAGS, gettext_noop("Window starting Y position."), NULL, MDFNST_INT, "0x2FFF0000" },
+
  { "video.glvsync", MDFNSF_NOFLAGS, gettext_noop("Attempt to synchronize OpenGL page flips to vertical retrace period."), 
 			       gettext_noop("Note: Additionally, if the environment variable \"__GL_SYNC_TO_VBLANK\" does not exist, then it will be created and set to the value specified for this setting.  This has the effect of forcibly enabling or disabling vblank synchronization when running under Linux with NVidia's drivers."),
 				MDFNST_BOOL, "1" },
@@ -251,21 +257,21 @@ void Video_MakeSettings(std::vector <MDFNSetting> &settings)
 {
  static const char *CSD_xres = gettext_noop("Full-screen horizontal resolution.");
  static const char *CSD_yres = gettext_noop("Full-screen vertical resolution.");
- static const char *CSDE_xres = gettext_noop("A value of \"0\" will cause the desktop horizontal resolution to be used.");
- static const char *CSDE_yres = gettext_noop("A value of \"0\" will cause the desktop vertical resolution to be used.");
+ static const char *CSDE_xres = gettext_noop("A value of \"0\" will cause the current desktop horizontal resolution to be used.");
+ static const char *CSDE_yres = gettext_noop("A value of \"0\" will cause the current desktop vertical resolution to be used.");
 
  static const char *CSD_xscale = gettext_noop("Scaling factor for the X axis in windowed mode.");
  static const char *CSD_yscale = gettext_noop("Scaling factor for the Y axis in windowed mode.");
 
  static const char *CSD_xscalefs = gettext_noop("Scaling factor for the X axis in fullscreen mode.");
  static const char *CSD_yscalefs = gettext_noop("Scaling factor for the Y axis in fullscreen mode.");
- static const char *CSDE_xyscalefs = gettext_noop("For this settings to have any effect, the \"<system>.stretch\" setting must be set to \"0\".");
+ static const char *CSDE_xyscalefs = gettext_noop("For this setting to have any effect, the \"<system>.stretch\" setting must be set to \"0\".");
 
  static const char *CSD_scanlines = gettext_noop("Enable scanlines with specified opacity.");
  static const char *CSDE_scanlines = gettext_noop("Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field's lines.");
 
  static const char *CSD_stretch = gettext_noop("Stretch to fill screen.");
- static const char *CSD_videoip = gettext_noop("Enable (bi)linear interpolation.");
+ static const char *CSDvideo_settingsip = gettext_noop("Enable (bi)linear interpolation.");
 
  static const char *CSD_special = gettext_noop("Enable specified special video scaler.");
  static const char *CSDE_special = gettext_noop("The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).");
@@ -276,7 +282,7 @@ void Video_MakeSettings(std::vector <MDFNSetting> &settings)
  for(unsigned int i = 0; i < MDFNSystems.size() + 1; i++)
  {
   int nominal_width;
-  int nominal_height;
+  //int nominal_height;
   bool multires;
   const char *sysname;
   char default_value[256];
@@ -288,14 +294,14 @@ void Video_MakeSettings(std::vector <MDFNSetting> &settings)
   if(i == MDFNSystems.size())
   {
    nominal_width = 384;
-   nominal_height = 240;
+   //nominal_height = 240;
    multires = FALSE;
    sysname = "player";
   }
   else
   {
    nominal_width = MDFNSystems[i]->nominal_width;
-   nominal_height = MDFNSystems[i]->nominal_height;
+   //nominal_height = MDFNSystems[i]->nominal_height;
    multires = MDFNSystems[i]->multires;
    sysname = (const char *)MDFNSystems[i]->shortname;
   }
@@ -334,7 +340,7 @@ void Video_MakeSettings(std::vector <MDFNSetting> &settings)
   BuildSystemSetting(&setting, sysname, "stretch", CSD_stretch, NULL, MDFNST_ENUM, "aspect_mult2", NULL, NULL, NULL, NULL, StretchMode_List);
   settings.push_back(setting);
 
-  BuildSystemSetting(&setting, sysname, "videoip", CSD_videoip, NULL, MDFNST_ENUM, multires ? "1" : "0", NULL, NULL, NULL, NULL, VideoIP_List);
+  BuildSystemSetting(&setting, sysname, "videoip", CSDvideo_settingsip, NULL, MDFNST_ENUM, multires ? "1" : "0", NULL, NULL, NULL, NULL, VideoIP_List);
   settings.push_back(setting);
 
   BuildSystemSetting(&setting, sysname, "special", CSD_special, CSDE_special, MDFNST_ENUM, "none", NULL, NULL, NULL, NULL, Special_List);
@@ -366,28 +372,27 @@ void Video_MakeSettings(std::vector <MDFNSetting> &settings)
   settings.push_back(GlobalVideoSettings[i]);
 }
 
-
-typedef struct
+static struct
 {
-        int xres;
-        int yres;
-        double xscale, xscalefs;
-        double yscale, yscalefs;
-        int videoip;
-        int stretch;
-        int special;
-        int scanlines;
-	ShaderType shader;
-	ShaderParams shader_params;
-} CommonVS;
+ int fullscreen;
+ int fs_display;
+ int xres, yres;
+ double xscale, xscalefs;
+ double yscale, yscalefs;
+ int videoip;
+ int stretch;
+ int special;
+ int scanlines;
+ ShaderType shader;
+ ShaderParams shader_params;
 
-static CommonVS _video;
-static int _fullscreen;
+ std::string special_str, shader_str, goat_pat_str;
+} video_settings;
 
+static unsigned vdriver;
 static bool osd_alpha_blend;
-static unsigned int vdriver = VDRIVER_OPENGL;
 
-static struct ScalerDefinition
+static const struct ScalerDefinition
 {
 	int id;
 	int xscale;
@@ -417,18 +422,17 @@ static struct ScalerDefinition
 
 static MDFNGI *VideoGI;
 
-static bool sdlhaveogl = false;
+static const ScalerDefinition* CurrentScaler = NULL;
 
-static int best_xres = 0, best_yres = 0;
-
-static int cur_xres, cur_yres, cur_flags;
-
-static ScalerDefinition *CurrentScaler = NULL;
-
+static int winpos_x, winpos_y;
+static bool winpos_applied;
+static SDL_Window* window = NULL;
+static SDL_GLContext glcontext = NULL;
 static SDL_Surface *screen = NULL;
 static OpenGL_Blitter *ogl_blitter = NULL;
 static SDL_Surface *IconSurface=NULL;
 
+static int32 screen_w, screen_h;
 static MDFN_Rect screen_dest_rect;
 
 static MDFN_Surface *HelpSurface = NULL;
@@ -438,96 +442,137 @@ static MDFN_Surface *SMSurface = NULL;
 static MDFN_Rect SMRect;
 static MDFN_Rect SMDRect;
 
-static int curbpp;
-
 static double exs,eys;
 static int evideoip;
 
 static int NeedClear = 0;
 static uint32 LastBBClearTime = 0;
 
-static MDFN_PixelFormat pf_overlay, pf_normal;
+static WMInputBehavior CurWMIB;
 
-static void MarkNeedBBClear(void)
+static int rotated;
+
+static MDFN_PixelFormat pf_normal;
+
+static INLINE void MarkNeedBBClear(void)
 {
  NeedClear = 15;
 }
 
-static void ClearBackBuffer(void)
+static void SyncCleanup(void)
 {
- //printf("WOO: %u\n", Time::MonoMS());
- if(ogl_blitter)
- {
-  ogl_blitter->ClearBackBuffer();
- }
- else
- {
-  // Don't use SDL_FillRect() on hardware surfaces, it's borked(causes a long wait) with DirectX.
-  // ...on second thought, memset() is likely borked on PPC with hardware surface memory due to use of "dcbz" on uncachable memory. :(
-  //
-  // We'll do an icky #ifdef kludge instead for now.
-#ifdef WIN32
-  if(screen->flags & SDL_HWSURFACE)
-  {
-   if(SDL_MUSTLOCK(screen))
-    SDL_LockSurface(screen);
-   memset(screen->pixels, 0, screen->pitch * screen->h);
-   if(SDL_MUSTLOCK(screen))
-    SDL_UnlockSurface(screen);
-  }
-  else
-#endif
-  {
-   SDL_FillRect(screen, NULL, 0);
-  }
- }
-}
-
-void Video_Kill(void)
-{
- /*
- if(IconSurface)
- {
-  SDL_FreeSurface(IconSurface);
-  IconSurface = NULL;
- }
- */
-
  if(SMSurface)
  {
   delete SMSurface;
-  SMSurface = NULL;
+  SMSurface = nullptr;
  }
 
  if(HelpSurface)
  {
   delete HelpSurface;
-  HelpSurface = NULL;
+  HelpSurface = nullptr;
  }
 
  if(ogl_blitter)
  {
   delete ogl_blitter;
-  ogl_blitter = NULL;
+  ogl_blitter = nullptr;
  }
 
- if(vdriver == VDRIVER_OVERLAY)
-  OV_Kill();
+ if(glcontext)
+ {
+  SDL_GL_DeleteContext(glcontext);
+  glcontext = nullptr;
+ }
 
- screen = NULL;
- VideoGI = NULL;
- cur_xres = 0;
- cur_yres = 0;
- cur_flags = 0;
+/*
+*/
 }
 
-static void GenerateDestRect(void)
+void Video_Kill(void)
 {
- if(_video.stretch && _fullscreen)
+ SyncCleanup();
+
+ if(window)
+ {
+  if(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)
+   SDL_SetWindowFullscreen(window, 0);
+  //
+  SDL_SetRelativeMouseMode(SDL_FALSE);
+  SDL_ShowCursor(SDL_TRUE);
+  SDL_SetWindowGrab(window, SDL_FALSE);
+
+  SDL_DestroyWindow(window);
+  window = nullptr;
+ }
+ //
+ //
+ //
+ if(IconSurface)
+ {
+  //SDL_FreeSurface(IconSurface);
+  //IconSurface = nullptr;
+ }
+
+ screen = nullptr;
+ VideoGI = nullptr;
+ screen_w = 0;
+ screen_h = 0;
+}
+
+// May be called before Video_Init(), and after Video_Kill().
+bool Video_ErrorPopup(bool warning, const char* title, const char* text)
+{
+ bool ret = false;
+
+ #ifdef WIN32
+ if(window)
+ {
+  // Best not to drive the user stark raving mad.
+  SDL_SetRelativeMouseMode(SDL_FALSE);
+  SDL_ShowCursor(SDL_TRUE);
+  SDL_SetWindowGrab(window, SDL_FALSE);
+  // should we or shouldn't we...: SDL_SetHint(SDL_HINT_WINDOWS_NO_CLOSE_ON_ALT_F4, "0");
+ }
+#if 0
+ SDL_Window* pw = window;
+
+ // Avoid comically-horrible behavior.
+ if(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)
+  pw = nullptr;
+
+ ret = !SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title, text, pw);
+#endif
+ ret = (bool)MessageBoxW(NULL, (wchar_t*)UTF8_to_UTF16(text).c_str(), (wchar_t*)UTF8_to_UTF16(title).c_str(), MB_OK | (warning ? MB_ICONWARNING : MB_ICONERROR) | MB_TASKMODAL | MB_SETFOREGROUND | MB_TOPMOST);
+
+ if(window)
+  Video_SetWMInputBehavior(CurWMIB);
+ #endif
+
+ return ret;
+}
+
+static void GenerateWindowedDestRect(void)
+{
+ exs = video_settings.xscale;
+ eys = video_settings.yscale;
+
+ screen_dest_rect.x = 0;
+ screen_dest_rect.y = 0;
+ screen_dest_rect.w = floor(0.5 + VideoGI->nominal_width * exs);
+ screen_dest_rect.h = floor(0.5 + VideoGI->nominal_height * eys);
+
+ if(rotated == MDFN_ROTATE90 || rotated == MDFN_ROTATE270)
+  std::swap(screen_dest_rect.w, screen_dest_rect.h);
+}
+
+static bool GenerateFullscreenDestRect(void)
+{
+ if(video_settings.stretch)
  {
   int nom_width, nom_height;
 
-  if(VideoGI->rotated)
+  if(rotated)
   {
    nom_width = VideoGI->nominal_height;
    nom_height = VideoGI->nominal_width;
@@ -538,12 +583,12 @@ static void GenerateDestRect(void)
    nom_height = VideoGI->nominal_height;
   }
 
-  if (_video.stretch == 2 || _video.stretch == 3 || _video.stretch == 4)	// Aspect-preserve stretch
+  if(video_settings.stretch == 2 || video_settings.stretch == 3 || video_settings.stretch == 4)	// Aspect-preserve stretch
   {
-   exs = (double)cur_xres / nom_width;
-   eys = (double)cur_yres / nom_height;
+   exs = (double)screen_w / nom_width;
+   eys = (double)screen_h / nom_height;
 
-   if(_video.stretch == 3 || _video.stretch == 4)	// Round down to nearest int.
+   if(video_settings.stretch == 3 || video_settings.stretch == 4)	// Round down to nearest int.
    {
     double floor_exs = floor(exs);
     double floor_eys = floor(eys);
@@ -557,7 +602,7 @@ static void GenerateDestRect(void)
      exs = floor_exs;
      eys = floor_eys;
 
-     if(_video.stretch == 4)	// Round down to nearest multiple of 2.
+     if(video_settings.stretch == 4)	// Round down to nearest multiple of 2.
      {
       int even_exs = (int)exs & ~1;
       int even_eys = (int)eys & ~1;
@@ -589,120 +634,123 @@ static void GenerateDestRect(void)
 
    //printf("%f %f\n", exs, eys);
 
-   screen_dest_rect.w = (int)(exs*nom_width + 0.5); // +0.5 for rounding
-   screen_dest_rect.h = (int)(eys*nom_height + 0.5); // +0.5 for rounding
+   screen_dest_rect.w = floor(0.5 + exs * nom_width);
+   screen_dest_rect.h = floor(0.5 + eys * nom_height);
 
    // Centering:
-   int nx = (int)((cur_xres - screen_dest_rect.w) / 2);
+   int nx = (int)((screen_w - screen_dest_rect.w) / 2);
    if(nx < 0) nx = 0;
    screen_dest_rect.x = nx;
 
-   int ny = (int)((cur_yres - screen_dest_rect.h) / 2);
+   int ny = (int)((screen_h - screen_dest_rect.h) / 2);
    if(ny < 0) ny = 0;
    screen_dest_rect.y = ny;
   }
   else 	// Full-stretch
   {
    screen_dest_rect.x = 0;
-   screen_dest_rect.w = cur_xres;
+   screen_dest_rect.w = screen_w;
 
    screen_dest_rect.y = 0;
-   screen_dest_rect.h = cur_yres;
+   screen_dest_rect.h = screen_h;
 
-   exs = (double)cur_xres / nom_width;
-   eys = (double)cur_yres / nom_height;
+   exs = (double)screen_w / nom_width;
+   eys = (double)screen_h / nom_height;
   }
  }
  else
  {
-  if(VideoGI->rotated)
-  {
-   int32 ny = (int)((cur_yres - VideoGI->nominal_width * exs) / 2);
-   int32 nx = (int)((cur_xres - VideoGI->nominal_height * eys) / 2);
+  exs = video_settings.xscalefs;
+  eys = video_settings.yscalefs;
 
-   //if(ny < 0) ny = 0;
-   //if(nx < 0) nx = 0;
+  screen_dest_rect.w = floor(0.5 + VideoGI->nominal_width * exs);
+  screen_dest_rect.h = floor(0.5 + VideoGI->nominal_height * eys);
 
-   screen_dest_rect.x = _fullscreen ? nx : 0;
-   screen_dest_rect.y = _fullscreen ? ny : 0;
-   screen_dest_rect.w = (Uint16)(VideoGI->nominal_height * eys);
-   screen_dest_rect.h = (Uint16)(VideoGI->nominal_width * exs);
-  }
-  else
-  {
-   int nx = (int)((cur_xres - VideoGI->nominal_width * exs) / 2);
-   int ny = (int)((cur_yres - VideoGI->nominal_height * eys) / 2);
+  if(rotated == MDFN_ROTATE90 || rotated == MDFN_ROTATE270)
+   std::swap(screen_dest_rect.w, screen_dest_rect.h);
 
-   // Don't check to see if the coordinates go off screen here, offscreen coordinates are valid(though weird that the user would want them...)
-   // in OpenGL mode, and are clipped to valid coordinates in SDL blit mode code.
-   //if(nx < 0)
-   // nx = 0;
-   //if(ny < 0)
-   // ny = 0;
-
-   screen_dest_rect.x = _fullscreen ? nx : 0;
-   screen_dest_rect.y = _fullscreen ? ny : 0;
-
-   //printf("%.64f %d, %f, %d\n", exs, VideoGI->nominal_width, exs * VideoGI->nominal_width, (int)(exs * VideoGI->nominal_width));
-   // FIXME, stupid floating point
-   screen_dest_rect.w = (Uint16)(VideoGI->nominal_width * exs + 0.000000001);
-   screen_dest_rect.h = (Uint16)(VideoGI->nominal_height * eys + 0.000000001);
-  }
+  screen_dest_rect.x = (screen_w - screen_dest_rect.w) / 2;
+  screen_dest_rect.y = (screen_h - screen_dest_rect.h) / 2;
  }
-
-
- //screen_dest_rect.y = 0;
- //screen_dest_rect.x = 0;
 
  // Quick and dirty kludge for VB's "hli" and "vli" 3D modes.
  screen_dest_rect.x &= ~1;
  screen_dest_rect.y &= ~1;
- //printf("%d %d\n", screen_dest_rect.x & 1, screen_dest_rect.y & 1);
+
+ return screen_dest_rect.w < 16384 && screen_dest_rect.h < 16384;
 }
-
-// Argh, lots of thread safety and crashy problems with this, need to re-engineer code elsewhere.
-#if 0
-int VideoResize(int nw, int nh)
-{
- double xs, ys;
- char buf[256];
-
- if(VideoGI && !_fullscreen)
- {
-  std::string sn = std::string(VideoGI->shortname);
-
-  xs = (double)nw / VideoGI->nominal_width;
-  ys = (double)nh / VideoGI->nominal_height;
-
-  trio_snprintf(buf, 256, "%.30f", xs);
-//  MDFNI_SetSetting(sn + "." + std::string("xscale"), buf);
-
-  trio_snprintf(buf, 256, "%.30f", ys);
-//  MDFNI_SetSetting(sn + "." + std::string("yscale"), buf);
-
-  printf("%s, %d %d, %f %f\n", std::string(sn + "." + std::string("xscale")).c_str(), nw, nh, xs, ys);
-  return(1);
- }
-
- return(0);
-}
-#endif
 
 static bool weset_glstvb = false; 
 static uint32 real_rs, real_gs, real_bs, real_as;
 
-void Video_Init(MDFNGI *gi)
+void Video_SetWMInputBehavior(const WMInputBehavior& beeeeees)
 {
- const SDL_VideoInfo *vinf;
- int flags = 0; //SDL_RESIZABLE;
- int desbpp;
+ CurWMIB = beeeeees;
+ //
+ const bool fs = (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN);
+ const bool grab = CurWMIB.Grab;
+ const bool relm = CurWMIB.MouseRel && !CurWMIB.MouseAbs && !CurWMIB.Cursor && (grab || fs);
+ const bool curse = !relm && CurWMIB.Cursor;
 
- VideoGI = gi;
+ //printf("Grab: %d, RelM: %d, Curse: %d\n", grab, relm, curse);
 
+ if(grab)
+ {
+  SDL_ShowWindow(window);
+  SDL_RaiseWindow(window);
+  SDL_SetWindowGrab(window, SDL_TRUE);
+ }
+
+ SDL_ShowCursor(SDL_FALSE);
+ SDL_SetRelativeMouseMode(relm ? SDL_TRUE : SDL_FALSE);
+ SDL_ShowCursor(curse ? SDL_TRUE : SDL_FALSE);
+
+ if(!grab)
+  SDL_SetWindowGrab(window, SDL_FALSE);
+
+ SDL_SetHint(SDL_HINT_WINDOWS_NO_CLOSE_ON_ALT_F4, grab ? "1" : "0");
+}
+
+#if 0
+struct ModeInfo
+{
+ int32 width = 0;
+ int32 height = 0;
+ MDFN_PixelFormat format(MDFN_COLORSPACE_RGB, 0, 8, 16, 24);
+ bool fullscreen = false;
+ float refresh_rate = 0.0
+ bool vsync = false;
+};
+
+static ModeInfo SetMode(const ModeInfo& mode)
+{
+ if(window && !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN))
+  SDL_GetWindowPosition(window, &winpos_x, &winpos_y);
+
+ if(window && !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN))
+  SDL_GetWindowPosition(window, &winpos_x, &winpos_y);
+ //
+ SyncCleanup();
+}
+
+ if(new_mode == last_tried_mode && new_mode == cur_mode)
+  SetMode(new_mode);
+#endif
+
+void Video_Sync(MDFNGI *gi)
+{
  MDFNI_printf(_("Initializing video...\n"));
  MDFN_AutoIndent aindv(1);
 
+ if(window && winpos_applied && !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN))
+  SDL_GetWindowPosition(window, &winpos_x, &winpos_y);
+ //
+ SyncCleanup();
+ //Time::SleepMS(1000);
 
+ VideoGI = gi;
+ rotated = gi->rotated;
+ //
  #ifdef WIN32
  if(MDFN_GetSettingB("video.disable_composition"))
  {
@@ -727,25 +775,6 @@ void Video_Init(MDFNGI *gi)
  }
  #endif
 
- if(!IconSurface)
- {
-  #ifdef WIN32
-   #ifdef LSB_FIRST
-   IconSurface=SDL_CreateRGBSurfaceFrom((void *)mednafen_playicon.pixel_data,32,32,32,32*4,0xFF,0xFF00,0xFF0000,0xFF000000);
-   #else
-   IconSurface=SDL_CreateRGBSurfaceFrom((void *)mednafen_playicon.pixel_data,32,32,32,32*4,0xFF000000,0xFF0000,0xFF00,0xFF);
-   #endif
-  #else
-   #ifdef LSB_FIRST
-   IconSurface=SDL_CreateRGBSurfaceFrom((void *)mednafen_playicon128.pixel_data,128,128,32,128*4,0xFF,0xFF00,0xFF0000,0xFF000000);
-   #else
-   IconSurface=SDL_CreateRGBSurfaceFrom((void *)mednafen_playicon128.pixel_data,128,128,32,128*4,0xFF000000,0xFF0000,0xFF00,0xFF);
-   #endif
-  #endif
-
-  SDL_WM_SetIcon(IconSurface, 0);
- }
-
  if(!getenv("__GL_SYNC_TO_VBLANK") || weset_glstvb)
  {
   if(MDFN_GetSettingB("video.glvsync"))
@@ -768,7 +797,7 @@ void Video_Init(MDFNGI *gi)
   }
   weset_glstvb = true;
  }
-
+ //
  osd_alpha_blend = MDFN_GetSettingB("osd.alpha_blend");
 
  std::string snp = std::string(gi->shortname) + ".";
@@ -776,229 +805,395 @@ void Video_Init(MDFNGI *gi)
  if(gi->GameType == GMT_PLAYER)
   snp = "player.";
 
- const std::string special_string = MDFN_GetSettingS(snp + std::string("special"));
- const unsigned special_id = MDFN_GetSettingUI(snp + std::string("special"));
- const std::string goat_pat_string = MDFN_GetSettingS(snp + "shader.goat.pat");
+ video_settings.xres = MDFN_GetSettingUI(snp + "xres");
+ video_settings.yres = MDFN_GetSettingUI(snp + "yres");
+ video_settings.xscale = MDFN_GetSettingF(snp + "xscale");
+ video_settings.yscale = MDFN_GetSettingF(snp + "yscale");
+ video_settings.xscalefs = MDFN_GetSettingF(snp + "xscalefs");
+ video_settings.yscalefs = MDFN_GetSettingF(snp + "yscalefs");
+ video_settings.videoip = MDFN_GetSettingI(snp + "videoip");
+ video_settings.stretch = MDFN_GetSettingUI(snp + "stretch");
+ video_settings.scanlines = MDFN_GetSettingI(snp + "scanlines");
 
- _fullscreen = MDFN_GetSettingB("video.fs");
- _video.xres = MDFN_GetSettingUI(snp + "xres");
- _video.yres = MDFN_GetSettingUI(snp + "yres");
- _video.xscale = MDFN_GetSettingF(snp + "xscale");
- _video.yscale = MDFN_GetSettingF(snp + "yscale");
- _video.xscalefs = MDFN_GetSettingF(snp + "xscalefs");
- _video.yscalefs = MDFN_GetSettingF(snp + "yscalefs");
- _video.videoip = MDFN_GetSettingI(snp + "videoip");
- _video.stretch = MDFN_GetSettingUI(snp + "stretch");
- _video.scanlines = MDFN_GetSettingI(snp + "scanlines");
+ video_settings.special = MDFN_GetSettingUI(snp + std::string("special"));
+ video_settings.special_str = MDFN_GetSettingS(snp + std::string("special"));
 
- _video.special = special_id;
+ video_settings.shader_params.goat_hdiv = MDFN_GetSettingF(snp + "shader.goat.hdiv");
+ video_settings.shader_params.goat_vdiv = MDFN_GetSettingF(snp + "shader.goat.vdiv");
+ video_settings.shader_params.goat_pat = MDFN_GetSettingI(snp + "shader.goat.pat");
+ video_settings.goat_pat_str = MDFN_GetSettingS(snp + "shader.goat.pat");
+ video_settings.shader_params.goat_tp = MDFN_GetSettingF(snp + "shader.goat.tp");
+ video_settings.shader_params.goat_slen = MDFN_GetSettingB(snp + "shader.goat.slen");
+ video_settings.shader_params.goat_fprog = MDFN_GetSettingB(snp + "shader.goat.fprog");
+ //
 
- _video.shader = (ShaderType)MDFN_GetSettingI(snp + "shader");
- _video.shader_params.goat_hdiv = MDFN_GetSettingF(snp + "shader.goat.hdiv");
- _video.shader_params.goat_vdiv = MDFN_GetSettingF(snp + "shader.goat.vdiv");
- _video.shader_params.goat_pat = MDFN_GetSettingI(snp + "shader.goat.pat");
- _video.shader_params.goat_tp = MDFN_GetSettingF(snp + "shader.goat.tp");
- _video.shader_params.goat_slen = MDFN_GetSettingB(snp + "shader.goat.slen");
- _video.shader_params.goat_fprog = MDFN_GetSettingB(snp + "shader.goat.fprog");
+ video_settings.fullscreen = MDFN_GetSettingB("video.fs");
+ video_settings.fs_display = MDFN_GetSettingI("video.fs.display");
+ vdriver = MDFN_GetSettingI("video.driver");
+ if(vdriver == VDRIVER__COUNT) // "default"
+  vdriver = VDRIVER_OPENGL;
 
+ video_settings.shader = (ShaderType)MDFN_GetSettingI(snp + "shader");
+ video_settings.shader_str = MDFN_GetSettingS(snp + "shader");
+ //
+ //
+ if(0)
+ {
+  // Gotta keep the compiler on its toes(the floor is SPAGHETTI)!
+  TryWindowed:;
+  MDFNI_SetSettingB("video.fs", false);
+  video_settings.fullscreen = 0;
+  if(window)
+  {
+   if(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)
+    SDL_SetWindowFullscreen(window, 0);
+  }
+ }
+
+ GenerateWindowedDestRect();
+ screen_w = screen_dest_rect.w;
+ screen_h = screen_dest_rect.h;
+ //
+ //
+
+ if(screen_dest_rect.w > 16383 || screen_dest_rect.h > 16383)
+  throw MDFN_Error(0, _("Window size(%dx%d) is too large!"), screen_dest_rect.w, screen_dest_rect.h);
+
+ SDL_SetWindowFullscreen(window, 0);
+ SDL_PumpEvents();
+ SDL_SetWindowSize(window, screen_dest_rect.w, screen_dest_rect.h);
+ SDL_PumpEvents();
+ SDL_SetWindowPosition(window, winpos_x, winpos_y);
+ winpos_applied = true;
+ SDL_PumpEvents();
+ SDL_SetWindowTitle(window, (gi && gi->name.size()) ? gi->name.c_str() : "Mednafen");
+ SDL_PumpEvents();
+ SDL_ShowWindow(window);
+ SDL_PumpEvents();
+
+ //
+ if(0)
+ {
+  TryNonGL:;
+
+  if(ogl_blitter)
+  {
+   delete ogl_blitter;
+   ogl_blitter = nullptr;
+  }
+
+  if(glcontext)
+  {
+   SDL_GL_DeleteContext(glcontext);
+   glcontext = nullptr;
+  }
+  vdriver = VDRIVER_SOFTSDL;
+ }
+ //
+ if(vdriver == VDRIVER_OPENGL)
+ {
+  if(!(SDL_GetWindowFlags(window) & SDL_WINDOW_OPENGL))
+  {
+   MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to soft SDL driver because window is not OpenGL-capable."));
+   goto TryNonGL;
+  }
+  else
+  {
+   SDL_GL_ResetAttributes();
+   SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+   //SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1);
+   //SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 4);
+   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+   if(!(glcontext = SDL_GL_CreateContext(window)))
+   {
+    MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to soft SDL driver because of error creating OpenGL context: %s"), SDL_GetError());
+    goto TryNonGL;
+   }
+   else
+   {
+    SDL_GL_SetSwapInterval(MDFN_GetSettingB("video.glvsync"));
+   }
+  }
+ }
+
+#if 1
+ // Kludge, TODO: figure out where the bug exists in SDL or wherever...
+ {
+  int x, y;
+  SDL_GetWindowPosition(window, &x, &y);
+  SDL_PumpEvents();
+  SDL_SetWindowPosition(window, x, y);
+ }
+#endif
+
+ //
+ //
+ //
  CurrentScaler = nullptr;
  for(auto& scaler : Scalers)
-  if(_video.special == scaler.id)
+  if(video_settings.special == scaler.id)
    CurrentScaler = &scaler;
- assert(_video.special == NTVB_NONE || CurrentScaler);
+ assert(video_settings.special == NTVB_NONE || CurrentScaler);
 
- vinf = SDL_GetVideoInfo();
+ evideoip = video_settings.videoip;
 
- if(!best_xres)
+ //
+ //
+ //
+ if(video_settings.fullscreen)
  {
-  best_xres = vinf->current_w;
-  best_yres = vinf->current_h;
+  const unsigned xres = video_settings.xres;
+  const unsigned yres = video_settings.yres;
+  SDL_DisplayMode trymode;
+  SDL_DisplayMode mode;
+  int dindex;
 
-  if(!best_xres || !best_yres)
+  if(video_settings.fs_display >= 0)
+   dindex = video_settings.fs_display;
+  else
   {
-   best_xres = 640;
-   best_yres = 480;
+#if 0
+  if((dindex = SDL_GetWindowDisplayIndex(window)) < 0)
+  {
+   MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_GetWindowDisplayIndex() failed: %s"), SDL_GetError());
+   goto TryWindowed;
   }
- }
+#endif
+   int num_displays;
+   int wx, wy;
+   int ww, wh;
+   int wcx, wcy;
 
+   dindex = 0;
 
- if(vinf->hw_available)
-  flags |= SDL_HWSURFACE | SDL_DOUBLEBUF;
+   SDL_GetWindowPosition(window, &wx, &wy);
+   SDL_GetWindowSize(window, &ww, &wh);
 
- if(_fullscreen)
-  flags |= SDL_FULLSCREEN;
+   wcx = wx + ww / 2;
+   wcy = wy + wh / 2;
 
- vdriver = MDFN_GetSettingI("video.driver");
-
- if(vdriver == VDRIVER_OPENGL)
- {
-  if(!sdlhaveogl)
-  {
-   // SDL_GL_LoadLibrary returns 0 on success, -1 on failure
-   if(SDL_GL_LoadLibrary(NULL) == 0)
-    sdlhaveogl = true;
-   else
-    sdlhaveogl = false;
-  }
-
-  if(!sdlhaveogl)
-  {
-   MDFN_PrintError(_("Could not load OpenGL library, disabling OpenGL usage!"));
-   vdriver = VDRIVER_SOFTSDL;
-  }
- }
-
- if(vdriver == VDRIVER_OPENGL)
- {
-  flags |= SDL_OPENGL;
-
-  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1 );
-
-  #if SDL_VERSION_ATLEAST(1, 2, 10)
-  SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, MDFN_GetSettingB("video.glvsync"));
-  #endif
- }
- else if(vdriver == VDRIVER_SOFTSDL)
- {
-
- }
- else if(vdriver == VDRIVER_OVERLAY)
- {
-
- }
-
- exs = _fullscreen ? _video.xscalefs : _video.xscale;
- eys = _fullscreen ? _video.yscalefs : _video.yscale;
- evideoip = _video.videoip;
-
- desbpp = 32;
-
- if(!_video.stretch || !_fullscreen)
- {
-  if(exs > 50)
-  {
-   MDFND_PrintError(_("Eep!  Effective X scale setting is way too high.  Correcting."));
-   exs = 50;
-  }
-
-  if(eys > 50)
-  {
-   MDFND_PrintError(_("Eep!  Effective Y scale setting is way too high.  Correcting."));
-   eys = 50;
-  }
- }
-
- if(_fullscreen)
- {
-  if(!screen || cur_xres != _video.xres || cur_yres != _video.yres || cur_flags != flags || curbpp != desbpp)
-  {
-   if(!(screen = SDL_SetVideoMode(_video.xres ? _video.xres : best_xres, _video.yres ? _video.yres : best_yres, desbpp, flags)))
+   if((num_displays = SDL_GetNumVideoDisplays()) < 0)
    {
-    throw MDFN_Error(0, "%s", SDL_GetError());
+    MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_GetNumVideoDisplays() failed: %s"), SDL_GetError());
+    goto TryWindowed;
+   }
+
+   //
+   // Fullscreen with mirrored displays is kind of glitchy(maybe partly SDL2's fault?), but try to force usage of the one with the largest pixel count.
+   //
+   struct DIndexModeBounds
+   {
+    int dindex;
+    SDL_DisplayMode mode;
+    SDL_Rect bounds;
+   };
+   std::vector<DIndexModeBounds> dimbs;
+
+   for(int d = 0; d < num_displays; d++)
+   {
+    DIndexModeBounds z;
+
+    z.dindex = d;
+    if(SDL_GetCurrentDisplayMode(d, &z.mode) < 0)
+    {
+     MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_GetCurrentDisplayMode() failed: %s"), SDL_GetError());
+     goto TryWindowed;
+    }
+
+    if(SDL_GetDisplayBounds(d, &z.bounds) < 0)
+    {
+     MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_DisplayBounds() failed: %s"), SDL_GetError());
+     goto TryWindowed;     
+    }
+
+    bool add_at_end = true;
+    // Won't perform well if someone has thousands of displays ;)
+    for(DIndexModeBounds& dimbs_e : dimbs)
+    {
+     if(z.bounds.x == dimbs_e.bounds.x && z.bounds.y == dimbs_e.bounds.y)
+     {
+      if((z.mode.w * z.mode.h) > (dimbs_e.mode.w * dimbs_e.mode.h))
+       dimbs_e = z;
+
+      add_at_end = false;
+      break;
+     }
+    }
+
+    if(add_at_end)
+     dimbs.push_back(z);
+   }
+
+   int64 last_distance = INT64_MAX;
+   for(const DIndexModeBounds& e : dimbs)
+   {
+    const int bcx = e.bounds.x + (e.bounds.w / 2);
+    const int bcy = e.bounds.y + (e.bounds.h / 2);
+    const int dx = wcx - bcx;
+    const int dy = wcy - bcy;
+    const int64 distance = (int64)dx * dx + (int64)dy * dy;
+
+    if(distance < last_distance)
+    {
+     dindex = e.dindex;
+     last_distance = distance;
+    }
    }
   }
- }
- else
- {
-  GenerateDestRect();
-  if(!screen || cur_xres != screen_dest_rect.w || cur_yres != screen_dest_rect.h || cur_flags != flags || curbpp != desbpp)
+
+  //
+  //
   {
-   if(!(screen = SDL_SetVideoMode(screen_dest_rect.w, screen_dest_rect.h, desbpp, flags)))
+   SDL_Rect dbr;
+
+   if(SDL_GetDisplayBounds(dindex, &dbr) < 0)
    {
-    throw MDFN_Error(0, "%s", SDL_GetError());
+    MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_GetDisplayBounds() failed: %s"), SDL_GetError());
+    goto TryWindowed;
    }
+
+   SDL_SetWindowPosition(window, dbr.x, dbr.y);
+   SDL_SetWindowSize(window, dbr.w, dbr.h);
+  }
+  //
+  //
+
+  if(SDL_GetCurrentDisplayMode(dindex, &trymode) < 0)
+  {
+   MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_GetCurrentDisplayMode() failed: %s"), SDL_GetError());
+   goto TryWindowed;
+  }
+
+  if(xres > 0)
+   trymode.w = xres;
+
+  if(yres > 0)
+   trymode.h = yres;
+
+  if(!SDL_GetClosestDisplayMode(dindex, &trymode, &mode))
+  {
+   MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because no modes big enough for %dx%d."), trymode.w, trymode.h);
+   goto TryWindowed;
+  }
+
+  if(SDL_SetWindowDisplayMode(window, &mode) < 0)
+  {
+   MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_SetWindowDisplayMode() failed: %s"), SDL_GetError());
+   goto TryWindowed;
+  }
+
+#if 0
+  int old_mousex = 0;
+  int old_mousey = 0;
+  SDL_GetGlobalMouseState(&old_mousex, &old_mousey);
+#endif
+
+  if(SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN) < 0)
+  {
+   MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because SDL_SetWindowFullscreen() failed: %s"), SDL_GetError());
+   goto TryWindowed;
+  }
+
+#if 0
+  // ugggh
+  SDL_PumpEvents();
+  SDL_Delay(20);
+  SDL_PumpEvents();
+  SDL_WarpMouseGlobal(old_mousex, old_mousey);
+#endif
+
+  screen_w = mode.w;
+  screen_h = mode.h;
+  if(!GenerateFullscreenDestRect())
+  {
+   MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to windowed mode because screen destination rectangle(%dx%d) is too large!"), screen_dest_rect.w, screen_dest_rect.h);
+   goto TryWindowed;
+  }
+ }
+ //
+ //
+ MDFN_printf(_("Driver: %s\n"), (vdriver == VDRIVER_OPENGL) ? _("OpenGL") : _("Software SDL") );
+ //
+ //
+ int rs, gs, bs, as;
+
+ screen = nullptr;
+
+ {
+  SDL_DisplayMode mode;
+
+  if(SDL_GetCurrentDisplayMode(SDL_GetWindowDisplayIndex(window), &mode) < 0)
+   throw MDFN_Error(0, "SDL_GetCurrentDisplayMode() failed: %s", SDL_GetError());
+
+  if(mode.refresh_rate)
+   MDFN_printf(_("Display Mode: %u x %u x %u bpp @ %dHz  (Window: %u x %u)\n"), mode.w, mode.h, SDL_BITSPERPIXEL(mode.format), mode.refresh_rate, screen_w, screen_h);
+  else
+   MDFN_printf(_("Display Mode: %u x %u x %u bpp  (Window: %u x %u)\n"), mode.w, mode.h, SDL_BITSPERPIXEL(mode.format), screen_w, screen_h);
+
+  if(vdriver != VDRIVER_OPENGL)
+  {
+   if(!(screen = SDL_GetWindowSurface(window)))
+    throw MDFN_Error(0, _("SDL_GetWindowSurface() failed: %s"), SDL_GetError());
+
+   if(screen->format->BitsPerPixel != 32)
+    throw MDFN_Error(0, _("Window surface bit depth(%ubpp) is not supported by Mednafen."), screen->format->BitsPerPixel);
+
+   rs = screen->format->Rshift;
+   gs = screen->format->Gshift;
+   bs = screen->format->Bshift;
+
+   as = 0;
+   while(as == rs || as == gs || as == bs) // Find unused 8-bits to use as our alpha channel
+    as += 8;
   }
  }
 
- cur_xres = screen->w;
- cur_yres = screen->h;
- cur_flags = flags;
- curbpp = screen->format->BitsPerPixel;
-
- // Kludgey, we need to clean this up(vdriver vs cur_flags and whatnot).
- if(vdriver != VDRIVER_OVERLAY)
-  vdriver = (cur_flags & SDL_OPENGL) ? VDRIVER_OPENGL : VDRIVER_SOFTSDL;
-
- GenerateDestRect();
-
- MDFN_printf(_("Video Driver: %s\n"), (cur_flags & SDL_OPENGL) ? _("OpenGL") : (vdriver == VDRIVER_OVERLAY ? _("Overlay") :_("Software SDL") ) );
-
- MDFN_printf(_("Video Mode: %d x %d x %d bpp\n"),screen->w,screen->h,screen->format->BitsPerPixel);
- if(curbpp != 16 && curbpp != 24 && curbpp != 32)
- {
-  unsigned cbpp_copy = curbpp;
-
-  Video_Kill();
-
-  throw MDFN_Error(0, _("Sorry, %dbpp modes are not supported by Mednafen.  Supported bit depths are 16bpp, 24bpp, and 32bpp.\n"), cbpp_copy);
- }
-
- //MDFN_printf(_("OpenGL: %s\n"), (cur_flags & SDL_OPENGL) ? _("Yes") : _("No"));
-
- if(cur_flags & SDL_OPENGL)
+ if(vdriver == VDRIVER_OPENGL)
  {
   MDFN_AutoIndent aindps;
   char sp[128] = { 0 };
 
-  if(_video.shader == SHADER_GOAT)
+  if(video_settings.shader == SHADER_GOAT)
+  {
    trio_snprintf(sp, sizeof(sp), " (pat=%s, hdiv=%f, vdiv=%f, tp=%f, slen=%d, fprog=%d)",
-	goat_pat_string.c_str(), _video.shader_params.goat_hdiv, _video.shader_params.goat_vdiv, _video.shader_params.goat_tp, _video.shader_params.goat_slen, _video.shader_params.goat_fprog);
+	video_settings.goat_pat_str.c_str(), video_settings.shader_params.goat_hdiv, video_settings.shader_params.goat_vdiv, video_settings.shader_params.goat_tp, video_settings.shader_params.goat_slen, video_settings.shader_params.goat_fprog);
+  }
 
-  MDFN_printf(_("Shader: %s%s\n"), MDFN_GetSettingS(snp + "shader").c_str(), sp);
+  MDFN_printf(_("Shader: %s%s\n"), video_settings.shader_str.c_str(), sp);
  }
 
- MDFN_printf(_("Fullscreen: %s\n"), _fullscreen ? _("Yes") : _("No"));
- MDFN_printf(_("Special Scaler: %s\n"), (special_id == NTVB_NONE) ? _("None") : special_string.c_str());
+ MDFN_printf(_("Fullscreen: %s\n"), video_settings.fullscreen ? _("Yes") : _("No"));
+ MDFN_printf(_("Special Scaler: %s\n"), (video_settings.special == NTVB_NONE) ? _("None") : video_settings.special_str.c_str());
 
- if(!_video.scanlines)
+ if(!video_settings.scanlines)
   MDFN_printf(_("Scanlines: Off\n"));
  else
-  MDFN_printf(_("Scanlines: %d%% opacity%s\n"), abs(_video.scanlines), (_video.scanlines < 0) ? _(" (with interlace field obscure)") : "");
+  MDFN_printf(_("Scanlines: %d%% opacity%s\n"), abs(video_settings.scanlines), (video_settings.scanlines < 0) ? _(" (with interlace field obscure)") : "");
 
  MDFN_printf(_("Destination Rectangle: X=%d, Y=%d, W=%d, H=%d\n"), screen_dest_rect.x, screen_dest_rect.y, screen_dest_rect.w, screen_dest_rect.h);
- if(screen_dest_rect.x < 0 || screen_dest_rect.y < 0 || (screen_dest_rect.x + screen_dest_rect.w) > screen->w || (screen_dest_rect.y + screen_dest_rect.h) > screen->h)
+ if(screen_dest_rect.x < 0 || screen_dest_rect.y < 0 || (screen_dest_rect.x + screen_dest_rect.w) > screen_w || (screen_dest_rect.y + screen_dest_rect.h) > screen_h)
  {
   MDFN_AutoIndent ainddr;
   MDFN_printf(_("Warning:  Destination rectangle exceeds screen dimensions.  This is ok if you really do want the clipping...\n"));
  }
 
- if(gi && gi->name.size() > 0)
- {
-  const char* gics = gi->name.c_str();
-
-  SDL_WM_SetCaption(gics, gics);
- }
- else
-  SDL_WM_SetCaption("Mednafen", "Mednafen");
-
- int rs, gs, bs, as;
-
- if(cur_flags & SDL_OPENGL)
+ if(vdriver == VDRIVER_OPENGL)
  {
   try
   {
-   ogl_blitter = new OpenGL_Blitter(_video.scanlines, _video.shader, _video.shader_params, screen->w, screen->h, &rs, &gs, &bs, &as);
+   ogl_blitter = new OpenGL_Blitter(video_settings.scanlines, video_settings.shader, video_settings.shader_params, &rs, &gs, &bs, &as);
+   ogl_blitter->SetViewport(screen_w, screen_h);
   }
-  catch(std::exception &e)
+  catch(std::exception& e)
   {
-   Video_Kill();
-   throw;
+   MDFN_Notify(MDFN_NOTICE_WARNING, _("Reverting to soft SDL driver because of error initializing OpenGL blitter: %s"), e.what());
+   goto TryNonGL;
   }
- }
- else
- {
-  rs = screen->format->Rshift;
-  gs = screen->format->Gshift;
-  bs = screen->format->Bshift;
-
-  as = 0;
-  while(as == rs || as == gs || as == bs) // Find unused 8-bits to use as our alpha channel
-   as += 8;
  }
 
  //printf("%d %d %d %d\n", rs, gs, bs, as);
-
- SDL_ShowCursor(0);
 
  real_rs = rs;
  real_gs = gs;
@@ -1020,24 +1215,24 @@ void Video_Init(MDFNGI *gi)
   }
   else if(CurrentScaler->id == NTVB_2XSAI || CurrentScaler->id == NTVB_SUPER2XSAI || CurrentScaler->id == NTVB_SUPEREAGLE)
   {
-   Init_2xSaI(screen->format->BitsPerPixel, 555); // systemColorDepth, BitFormat
+   Init_2xSaI(32, 555); // systemColorDepth, BitFormat
   }
 #endif
  }
 
  {
-  int xmu = std::max<int>(1, screen->w / 402);
-  int ymu = std::max<int>(1, screen->h / 288);
+  int xmu = std::max<int>(1, screen_w / 402);
+  int ymu = std::max<int>(1, screen_h / 288);
 
   SMRect.h = 18 + 2;
   SMRect.x = 0;
   SMRect.y = 0;
-  SMRect.w = screen->w;
+  SMRect.w = screen_w;
 
   SMDRect.w = SMRect.w * xmu;
   SMDRect.h = SMRect.h * ymu;
-  SMDRect.x = (screen->w - SMDRect.w) / 2;
-  SMDRect.y = screen->h - SMDRect.h;
+  SMDRect.x = (screen_w - SMDRect.w) / 2;
+  SMDRect.y = screen_h - SMDRect.h;
 
   if(SMDRect.x < 0)
   {
@@ -1048,54 +1243,66 @@ void Video_Init(MDFNGI *gi)
   SMSurface = new MDFN_Surface(NULL, SMRect.w, SMRect.h, SMRect.w, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
  }
 
- //MDFNI_SetPixelFormat(rs, gs, bs, as);
- memset(&pf_normal, 0, sizeof(pf_normal));
- memset(&pf_overlay, 0, sizeof(pf_overlay));
+ pf_normal = MDFN_PixelFormat(MDFN_COLORSPACE_RGB, rs, gs, bs, as);
 
- pf_normal.bpp = 32;
- pf_normal.colorspace = MDFN_COLORSPACE_RGB;
- pf_normal.Rshift = rs;
- pf_normal.Gshift = gs;
- pf_normal.Bshift = bs;
- pf_normal.Ashift = as;
-
- if(vdriver == VDRIVER_OVERLAY)
+ if(vdriver == VDRIVER_OPENGL)
  {
-  pf_overlay.bpp = 32;
-  pf_overlay.colorspace = MDFN_COLORSPACE_YCbCr;
-  pf_overlay.Yshift = 0;
-  pf_overlay.Ushift = 8;
-  pf_overlay.Vshift = 16;
-  pf_overlay.Ashift = 24;
- }
-
- //SetPixelFormatHax((vdriver == VDRIVER_OVERLAY) ? pf_overlay : pf_normal); //rs, gs, bs, as);
-
- for(int i = 0; i < 2; i++)
- {
-  ClearBackBuffer();
-
-  if(cur_flags & SDL_OPENGL)
+  for(int i = 0; i < 2; i++)
   {
-   SDL_GL_SwapBuffers();
+   ogl_blitter->ClearBackBuffer();
+   SDL_GL_SwapWindow(window);
    //ogl_blitter->HardSync();
   }
-  else
-   SDL_Flip(screen);
+  ogl_blitter->ClearBackBuffer();
+ }
+ else
+ {
+  SDL_FillRect(screen, NULL, 0);
+  for(int i = 0; i < 2; i++)
+   SDL_UpdateWindowSurface(window);
  }
 
  MarkNeedBBClear();
+ //
+ //
+ //
+ Video_SetWMInputBehavior(CurWMIB);
+}
+
+void Video_Init(void)
+{
+ winpos_x = SDL_WINDOWPOS_CENTERED; //MDFN_GetSettingI("video.window.x");
+ winpos_y = SDL_WINDOWPOS_CENTERED; //MDFN_GetSettingI("video.window.y");
+ winpos_applied = false;
+
+ CurWMIB.Cursor = true;
+ CurWMIB.MouseAbs = true;
+ CurWMIB.MouseRel = false;
+ CurWMIB.Grab = false;
+ //
+ IconSurface = SDL_CreateRGBSurfaceFrom((void*)icon_128x128, 128, 128, 32, 128 * 4, 0xFF, 0xFF00, 0xFF0000, 0xFF000000);
+
+ for(unsigned i = (vdriver != VDRIVER_OPENGL); i < 2; i++)
+ {
+  if(!(window = SDL_CreateWindow("Mednafen", winpos_x, winpos_y, 64, 64, SDL_WINDOW_HIDDEN | (i ? 0 : SDL_WINDOW_OPENGL))))
+  {
+   if(i == 1)
+    throw MDFN_Error(0, _("SDL_CreateWindow() failed: %s\n"), SDL_GetError());
+  }
+
+  break;
+ }
+
+ SDL_SetWindowIcon(window, IconSurface);
 }
 
 static uint32 howlong = 0;
-static char *CurrentMessage = NULL;
+static char* CurrentMessage = NULL;
+static MDFN_NoticeType CurrentMessageType;
 
-void VideoShowMessage(char *text)
+void Video_ShowNotice(MDFN_NoticeType t, char* s)
 {
- if(text)
-  howlong = Time::MonoMS() + MDFN_GetSettingUI("osd.message_display_time");
- else
-  howlong = 0;
+ howlong = Time::MonoMS() + MDFN_GetSettingUI("osd.message_display_time");
 
  if(CurrentMessage)
  {
@@ -1103,7 +1310,8 @@ void VideoShowMessage(char *text)
   CurrentMessage = NULL;
  }
 
- CurrentMessage = text;
+ CurrentMessage = s;
+ CurrentMessageType = t;
 }
 
 void BlitRaw(MDFN_Surface *src, const MDFN_Rect *src_rect, const MDFN_Rect *dest_rect, int source_alpha)
@@ -1125,11 +1333,6 @@ void BlitRaw(MDFN_Surface *src, const MDFN_Rect *src_rect, const MDFN_Rect *dest
   MarkNeedBBClear();
 }
 
-static bool IsInternalMessageActive(void)
-{
- return(Time::MonoMS() < howlong);
-}
-
 static bool BlitInternalMessage(void)
 {
  if(Time::MonoMS() >= howlong)
@@ -1139,34 +1342,48 @@ static bool BlitInternalMessage(void)
    free(CurrentMessage);
    CurrentMessage = NULL;
   }
-  return(0);
+  return false;
  }
 
  if(CurrentMessage)
  {
-  SMSurface->Fill(0x00, 0x00, 0x00, 0xC0);
+  uint32 shad_color = SMSurface->MakeColor(0x00, 0x00, 0x00, 0xFF);
+  uint32 text_color;
+  uint8 fill_alpha = 0xC0;
 
-  DrawTextShadow(SMSurface, 0, 1, CurrentMessage,
-	SMSurface->MakeColor(0xFF, 0xFF, 0xFF, 0xFF), SMSurface->MakeColor(0x00, 0x00, 0x00, 0xFF), MDFN_FONT_9x18_18x18, SMRect.w);
+  switch(CurrentMessageType)
+  {
+   default:
+   case MDFN_NOTICE_STATUS:
+	text_color = SMSurface->MakeColor(0xFF, 0xFF, 0xFF, 0xFF);
+	break;
+
+   case MDFN_NOTICE_WARNING:
+	text_color = SMSurface->MakeColor(0xFF, 0xFF, 0x00, 0xFF);
+	break;
+
+   case MDFN_NOTICE_ERROR:
+	text_color = SMSurface->MakeColor(0xFF, 0x00, 0x00, 0xFF);
+	fill_alpha = 0xFF;
+	break;
+  }
+
+  SMSurface->Fill(0x00, 0x00, 0x00, fill_alpha);
+
+  DrawTextShadow(SMSurface, 0, 1, CurrentMessage, text_color, shad_color, MDFN_FONT_9x18_18x18, SMRect.w);
   free(CurrentMessage);
   CurrentMessage = NULL;
  }
 
  BlitRaw(SMSurface, &SMRect, &SMDRect);
- return(1);
-}
 
-static bool OverlayOK;	// Set to TRUE when vdriver == "overlay", and it's safe to use an overlay format
-			// "Safe" is equal to OSD being off, and not using a special scaler that
-			// requires an RGB pixel format(HQnx)
-			// Otherwise, set to FALSE.
-			// (Set in the BlitScreen function before any calls to SubBlit())
+ return true;
+}
 
 static void SubBlit(const MDFN_Surface *source_surface, const MDFN_Rect &src_rect, const MDFN_Rect &dest_rect, const int InterlaceField)
 {
  const MDFN_Surface *eff_source_surface = source_surface;
  MDFN_Rect eff_src_rect = src_rect;
- int overlay_softscale = 0;
 
  if(!(src_rect.w > 0 && src_rect.w <= 32767) || !(src_rect.h > 0 && src_rect.h <= 32767))
  {
@@ -1181,13 +1398,7 @@ static void SubBlit(const MDFN_Surface *source_surface, const MDFN_Rect &src_rec
  assert(dest_rect.w > 0);
  assert(dest_rect.h > 0);
 
- if(OverlayOK && CurrentScaler && !CurGame->rotated)
- {
-  if(CurrentScaler->id == NTVB_NN2X || CurrentScaler->id == NTVB_NN3X || CurrentScaler->id == NTVB_NN4X)
-   overlay_softscale = CurrentScaler->id - NTVB_NN2X + 2;
- }
-
-   if(CurrentScaler && !overlay_softscale)
+   if(CurrentScaler)
    {
     MDFN_Rect boohoo_rect({0, 0, eff_src_rect.w * CurrentScaler->xscale, eff_src_rect.h * CurrentScaler->yscale});
     MDFN_Surface bah_surface(NULL, boohoo_rect.w, boohoo_rect.h, boohoo_rect.w, eff_source_surface->format, false);
@@ -1288,69 +1499,117 @@ static void SubBlit(const MDFN_Surface *source_surface, const MDFN_Rect &src_rec
 #endif
 
     if(ogl_blitter)
-     ogl_blitter->Blit(&bah_surface, &boohoo_rect, &dest_rect, &eff_src_rect, InterlaceField, evideoip, CurGame->rotated);
+     ogl_blitter->Blit(&bah_surface, &boohoo_rect, &dest_rect, &eff_src_rect, InterlaceField, evideoip, rotated);
     else
     {
-     if(OverlayOK)
-     {
-      SDL_Rect tr;
+     SDL_to_MDFN_Surface_Wrapper m_surface(screen);
 
-      tr.x = dest_rect.x;
-      tr.y = dest_rect.y;
-      tr.w = dest_rect.w;
-      tr.h = dest_rect.h;
-
-      OV_Blit(&bah_surface, &boohoo_rect, &eff_src_rect, &tr, screen, 0, _video.scanlines, CurGame->rotated);
-     }
-     else
-     {
-      SDL_to_MDFN_Surface_Wrapper m_surface(screen);
-
-      MDFN_StretchBlitSurface(&bah_surface, boohoo_rect, &m_surface, dest_rect, false, _video.scanlines, &eff_src_rect, CurGame->rotated, InterlaceField);
-     }
+     MDFN_StretchBlitSurface(&bah_surface, boohoo_rect, &m_surface, dest_rect, false, video_settings.scanlines, &eff_src_rect, rotated, InterlaceField);
     }
    }
    else // No special scaler:
    {
     if(ogl_blitter)
-     ogl_blitter->Blit(eff_source_surface, &eff_src_rect, &dest_rect, &eff_src_rect, InterlaceField, evideoip, CurGame->rotated);
+     ogl_blitter->Blit(eff_source_surface, &eff_src_rect, &dest_rect, &eff_src_rect, InterlaceField, evideoip, rotated);
     else
     {
-     if(OverlayOK)
-     {
-      SDL_Rect tr;
+     SDL_to_MDFN_Surface_Wrapper m_surface(screen);
 
-      tr.x = dest_rect.x;
-      tr.y = dest_rect.y;
-      tr.w = dest_rect.w;
-      tr.h = dest_rect.h;
-
-      OV_Blit(eff_source_surface, &eff_src_rect, &eff_src_rect, &tr, screen, overlay_softscale, _video.scanlines, CurGame->rotated);
-     }
-     else
-     {
-      SDL_to_MDFN_Surface_Wrapper m_surface(screen);
-
-      MDFN_StretchBlitSurface(eff_source_surface, eff_src_rect, &m_surface, dest_rect, false, _video.scanlines, &eff_src_rect, CurGame->rotated, InterlaceField);
-     }
+     MDFN_StretchBlitSurface(eff_source_surface, eff_src_rect, &m_surface, dest_rect, false, video_settings.scanlines, &eff_src_rect, rotated, InterlaceField);
     }
    }
 }
 
-void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int32 *LineWidths, const int InterlaceField, const bool take_ssnapshot)
+// FIXME: JoyGunTranslate is kind of sloppy, not entirely thread safe, though the consequences in practice should be negligible...
+static struct
 {
- MDFN_Rect src_rect;
- const MDFN_PixelFormat *pf_needed = &pf_normal;
+ float mul;
+ float sub;
+} volatile JoyGunTranslate[2] = { { 0, 0 }, { 0, 0 } };
 
- if(!screen)
-  return;
-
+void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int32 *LineWidths, const int new_rotated, const int InterlaceField, const bool take_ssnapshot)
+{
  //
  // Reduce CPU usage when minimized, and prevent OpenGL memory quasi-leaks on Windows(though I have the feeling there's a
  // cleaner less-racey way to prevent that memory leak problem).
  //
- if(!(SDL_GetAppState() & SDL_APPACTIVE))
-  return;
+ {
+  int wflags = SDL_GetWindowFlags(window);
+
+  // printf("Borp %08x %u\n", wflags, Time::MonoMS());
+
+  if(wflags & (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED))
+  {
+   return;
+  }
+ }
+ //
+ //
+ //
+ MDFN_Rect src_rect;
+
+ if(rotated != new_rotated)
+ {
+  rotated = new_rotated;
+  //
+  if(video_settings.fullscreen)
+  {
+   if(MDFN_UNLIKELY(!GenerateFullscreenDestRect()))
+    Video_Sync(VideoGI);
+   else
+    MarkNeedBBClear();
+  }
+  else
+   Video_Sync(VideoGI);
+ }
+
+ if(vdriver != VDRIVER_OPENGL)
+ {
+  int ow, oh, op;
+  int nw, nh, np;
+  SDL_PixelFormat of, nf;
+
+  of = *screen->format;
+  ow = screen->w;
+  oh = screen->h;
+  op = screen->pitch;
+  if(!(screen = SDL_GetWindowSurface(window)))
+   throw MDFN_Error(0, _("SDL_GetWindowSurface() failed: %s"), SDL_GetError());
+
+  nf = *screen->format;
+  nw = screen->w;
+  nh = screen->h;
+  np = screen->pitch;
+
+  if((of.format != nf.format) || (of.BitsPerPixel != nf.BitsPerPixel) || (of.BytesPerPixel != nf.BytesPerPixel) ||
+     (of.Rmask != nf.Rmask) || (of.Gmask != nf.Gmask) || (of.Bmask != nf.Bmask) || (of.Amask != nf.Amask) ||
+     (ow != nw) || (oh != nh) || (op != np))
+  {
+   Video_Sync(VideoGI);
+  }
+ }
+
+#if 1
+ {
+  int sub[2] = { 0, 0 };
+  SDL_DisplayMode mode;
+
+  if(!(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN))
+   SDL_GetWindowPosition(window, &sub[0], &sub[1]);
+
+  sub[0] += screen_dest_rect.x;
+  sub[1] += screen_dest_rect.y;
+
+  if(SDL_GetCurrentDisplayMode(SDL_GetWindowDisplayIndex(window), &mode) >= 0)
+  {
+   JoyGunTranslate[0].mul = (float)mode.w / screen_dest_rect.w / 32768.0;
+   JoyGunTranslate[0].sub = (float)sub[0] / screen_dest_rect.w;
+
+   JoyGunTranslate[1].mul = (float)mode.h / screen_dest_rect.h / 32768.0;
+   JoyGunTranslate[1].sub = (float)sub[1] / screen_dest_rect.h;
+  }
+ }
+#endif
 
  if(NeedClear)
  {
@@ -1362,73 +1621,21 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
    NeedClear--;
   }
 
-  ClearBackBuffer();
+  if(vdriver == VDRIVER_OPENGL)
+   ogl_blitter->ClearBackBuffer();
+  else
+  {
+   SDL_FillRect(screen, NULL, 0);
+   NeedClear = 0;
+  }
  }
 
- OverlayOK = false;
- if(vdriver == VDRIVER_OVERLAY)
- {
-  bool osd_active = Help_IsActive() || SaveStatesActive() || CheatIF_Active() || Netplay_GetTextView() ||
-		   IsInternalMessageActive() || Debugger_IsActive();
-
-  OverlayOK = (vdriver == VDRIVER_OVERLAY) && !take_ssnapshot && !osd_active && (!CurrentScaler || (CurrentScaler->id != NTVB_HQ2X && CurrentScaler->id != NTVB_HQ3X &&
-		CurrentScaler->id != NTVB_HQ4X));
-
-  if(OverlayOK && LineWidths[0] != ~0)
-  {
-   const int32 first_width = LineWidths[DisplayRect->y];
-
-   for(int suby = DisplayRect->y; suby < DisplayRect->y + DisplayRect->h; suby++)
-   {
-    if(LineWidths[suby] != first_width)
-    {
-     //puts("Skippidy");
-     OverlayOK = FALSE;
-     break;
-    }
-   }
-  }
-
-  if(OverlayOK)
-   pf_needed = &pf_overlay;
- } // end if(vdriver == VDRIVER_OVERLAY)
-
- msurface->SetFormat(*pf_needed, TRUE);
+ msurface->SetFormat(pf_normal, true);
 
  src_rect.x = DisplayRect->x;
  src_rect.w = DisplayRect->w;
  src_rect.y = DisplayRect->y;
  src_rect.h = DisplayRect->h;
-
- // This drawing to the game's video surface can cause visual glitches, but better than killing performance which kind of
- // defeats the purpose of the FPS display.
- if(OverlayOK)
- {
-  int fps_w, fps_h;
-
-  if(FPS_IsActive(&fps_w, &fps_h))
-  {
-   int fps_xpos = DisplayRect->x;
-   int fps_ypos = DisplayRect->y;
-   int x_bound = DisplayRect->x + DisplayRect->w;
-   int y_bound = DisplayRect->y + DisplayRect->h;
-
-   if(LineWidths[0] != ~0)
-   {
-    x_bound = DisplayRect->x + LineWidths[DisplayRect->y];
-   }
-
-   if((fps_xpos + fps_w) > x_bound || (fps_ypos + fps_h) > y_bound)
-   {
-    puts("FPS draw error");
-   }
-   else
-   {
-    FPS_Draw(msurface, fps_xpos, DisplayRect->y);
-   }
-
-  }
- }
 
  if(LineWidths[0] == ~0) // Skip multi line widths code?
  {
@@ -1452,7 +1659,7 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
     sub_src_rect.y = last_y;
     sub_src_rect.h = y - last_y;
 
-    if(CurGame->rotated == MDFN_ROTATE90)
+    if(rotated == MDFN_ROTATE90)
     {
      sub_dest_rect.x = screen_dest_rect.x + (last_y - src_rect.y) * screen_dest_rect.w / src_rect.h;
      sub_dest_rect.y = screen_dest_rect.y;
@@ -1461,7 +1668,7 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
      sub_dest_rect.h = screen_dest_rect.h;
      //printf("sdr.x=%f, sdr.w=%f\n", (double)screen_dest_rect.x + (double)(last_y - src_rect.y) * screen_dest_rect.w / src_rect.h, (double)sub_src_rect.h * screen_dest_rect.w / src_rect.h);
     }
-    else if(CurGame->rotated == MDFN_ROTATE270)
+    else if(rotated == MDFN_ROTATE270)
     {
      sub_dest_rect.x = screen_dest_rect.x + (src_rect.h - (y - src_rect.y)) * screen_dest_rect.w / src_rect.h;
      sub_dest_rect.y = screen_dest_rect.y;
@@ -1507,8 +1714,8 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
    if(sr.y < 0) { sr.h += sr.y; sr.y = 0; }
    if(sr.w < 0) sr.w = 0;
    if(sr.h < 0) sr.h = 0;
-   if(sr.w > screen->w) sr.w = screen->w;
-   if(sr.h > screen->h) sr.h = screen->h;
+   if(sr.w > screen_w) sr.w = screen_w;
+   if(sr.h > screen_h) sr.h = screen_h;
 
    ib.reset(new MDFN_Surface(NULL, sr.w, sr.h, sr.w, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as)));
 
@@ -1539,20 +1746,20 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
   }
   catch(std::exception &e)
   {
-   MDFN_DispMessage("%s", e.what());
+   MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
   }
  }
 
 
- Debugger_MT_DrawToScreen(MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as), screen->w, screen->h);
+ Debugger_MT_DrawToScreen(MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as), screen_w, screen_h);
 
 #if 0
  if(CKGUI_IsActive())
  {
   if(!CKGUISurface)
   {
-   CKGUIRect.w = screen->w;
-   CKGUIRect.h = screen->h;
+   CKGUIRect.w = screen_w;
+   CKGUIRect.h = screen_h;
 
    CKGUISurface = SDL_CreateRGBSurface(SDL_SWSURFACE | SDL_SRCALPHA, CKGUIRect.w, CKGUIRect.h, 32, 0xFF << real_rs, 0xFF << real_gs, 0xFF << real_bs, 0xFF << real_as);
    SDL_SetColorKey(CKGUISurface, SDL_SRCCOLORKEY, 0);
@@ -1569,129 +1776,135 @@ void BlitScreen(MDFN_Surface *msurface, const MDFN_Rect *DisplayRect, const int3
  }
 #endif
 
- if(Help_IsActive())
- {
-  if(!HelpSurface)
-  {
-   HelpRect.x = 0;
-   HelpRect.y = 0;
-   HelpRect.w = std::min<int>(512, screen->w);
-   HelpRect.h = std::min<int>(408, screen->h);
-
-   HelpSurface = new MDFN_Surface(NULL, 512, 408, 512, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
-   Help_Draw(HelpSurface, HelpRect);
-  }
-
-  MDFN_Rect zederect;
-  int32 sfx = screen->w / HelpRect.w;
-  int32 sfy = screen->h / HelpRect.h;
-
-  if(sfy > sfx)
-   sfy = sfx + 1;
-
-  if(sfx > sfy)
-   sfx = sfy + 1;
-
-  zederect.w = HelpRect.w * sfx;
-  zederect.h = HelpRect.h * sfy;
-
-  zederect.x = (screen->w - zederect.w) / 2;
-  zederect.y = (screen->h - zederect.h) / 2;
-
-  BlitRaw(HelpSurface, &HelpRect, &zederect, 0);
- }
- else if(HelpSurface)
- {
-  delete HelpSurface;
-  HelpSurface = NULL;
- }
-
- DrawSaveStates(screen, exs, eys, real_rs, real_gs, real_bs, real_as);
-
  try
  {
-  CheatIF_MT_Draw(MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as), screen->w, screen->h);
-  Netplay_MT_Draw(MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as), screen->w, screen->h);
+  DrawSaveStates(screen_w, screen_h, exs, eys, real_rs, real_gs, real_bs, real_as);
+
+  CheatIF_MT_Draw(MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as), screen_w, screen_h);
+  Netplay_MT_Draw(MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as), screen_w, screen_h);
+
+  if(Help_IsActive())
+  {
+   if(!HelpSurface)
+   {
+    HelpRect.x = 0;
+    HelpRect.y = 0;
+    HelpRect.w = std::min<int>(512, screen_w);
+    HelpRect.h = std::min<int>(408, screen_h);
+
+    HelpSurface = new MDFN_Surface(NULL, 512, 408, 512, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, real_rs, real_gs, real_bs, real_as));
+    Help_Draw(HelpSurface, HelpRect);
+   }
+
+   MDFN_Rect zederect;
+   int32 sfx = screen_w / HelpRect.w;
+   int32 sfy = screen_h / HelpRect.h;
+
+   if(sfy > sfx)
+    sfy = sfx + 1;
+
+   if(sfx > sfy)
+    sfx = sfy + 1;
+
+   zederect.w = HelpRect.w * sfx;
+   zederect.h = HelpRect.h * sfy;
+
+   zederect.x = (screen_w - zederect.w) / 2;
+   zederect.y = (screen_h - zederect.h) / 2;
+
+   BlitRaw(HelpSurface, &HelpRect, &zederect, 0);
+  }
+  else if(HelpSurface)
+  {
+   delete HelpSurface;
+   HelpSurface = NULL;
+  }
  }
  catch(std::exception& e)
  {
-  MDFN_DispMessage("%s", e.what());
+  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
  }
 
  BlitInternalMessage();
 
- if(!OverlayOK)
+ //
  {
-  unsigned fps_offsx = 0, fps_offsy = 0;
+  int32 p[4] = { 0, 0, screen_w, screen_h };
+  MDFN_Rect cr;
 
   // When using soft-SDL, position the FPS display so we won't incur a potentially large(on older/slower hardware) penalty due
   // to a requisite backbuffer clear(we could avoid this with some sort of dirty-rects system so only parts of the backbuffer are cleared,
   // but that gets awfully complicated and prone to bugs when dealing with double/triple-buffered video...).
   //
   // std::max so we don't position it offscreen if the user has selected xscalefs or yscalefs values that are too large.
-  if(!(cur_flags & SDL_OPENGL))
+  if(vdriver != VDRIVER_OPENGL)
   {
-   fps_offsx = std::max<int32>(screen_dest_rect.x, 0);
-   fps_offsy = std::max<int32>(screen_dest_rect.y, 0);
-  }
-  FPS_DrawToScreen(screen, real_rs, real_gs, real_bs, real_as, fps_offsx, fps_offsy);
- }
+   p[0] = std::max<int32>(std::min<int32>(screen_w, screen_dest_rect.x), 0);
+   p[1] = std::max<int32>(std::min<int32>(screen_h, screen_dest_rect.y), 0);
 
- if(!(cur_flags & SDL_OPENGL))
- {
-  if(!OverlayOK)
-   SDL_Flip(screen);
+   p[2] = std::max<int32>(std::min<int32>(screen_w, screen_dest_rect.x + screen_dest_rect.w), 0);
+   p[3] = std::max<int32>(std::min<int32>(screen_w, screen_dest_rect.y + screen_dest_rect.y), 0);
+  }
+
+  cr = { p[0], p[1], p[2] - p[0], p[3] - p[1] };
+  FPS_DrawToScreen(real_rs, real_gs, real_bs, real_as, cr, std::min(screen_w, screen_h));
  }
+ //
+
+ if(vdriver != VDRIVER_OPENGL)
+  SDL_UpdateWindowSurface(window);
  else
  {
   PumpWrap();
-  SDL_GL_SwapBuffers();
+  SDL_GL_SwapWindow(window);
+  // Don't insert any GL calls after SDL_GL_SwapWindow() here that could block until the swap completes.
   //ogl_blitter->HardSync();
  }
 }
 
-void Video_PtoV(const int in_x, const int in_y, int32 *out_x, int32 *out_y)
+void Video_Exposed(void)
 {
- assert(VideoGI);
- if(VideoGI->rotated)
- {
-  double tmp_x, tmp_y;
-
-  // Swap X and Y
-  tmp_x = ((double)(in_y - screen_dest_rect.y) / eys);
-  tmp_y = ((double)(in_x - screen_dest_rect.x) / exs);
-
-  // Correct position(and movement)
-  if(VideoGI->rotated == MDFN_ROTATE90)
-   tmp_x = VideoGI->nominal_width - 1 - tmp_x;
-  else if(VideoGI->rotated == MDFN_ROTATE270)
-   tmp_y = VideoGI->nominal_height - 1 - tmp_y;
-
-  *out_x = (int32)round(65536 * tmp_x);
-  *out_y = (int32)round(65536 * tmp_y);
- }
- else
- {
-  *out_x = (int32)round(65536 * (double)(in_x - screen_dest_rect.x) / exs);
-  *out_y = (int32)round(65536 * (double)(in_y - screen_dest_rect.y) / eys);
- }
+ MarkNeedBBClear();
 }
 
-int32 Video_PtoV_J(const int32 inv, const bool axis, const bool scr_scale)
+void Video_PtoV(const int in_x, const int in_y, float* out_x, float* out_y)
 {
  assert(VideoGI);
+ //
+ int32 tmp_x = in_x - screen_dest_rect.x;
+ int32 tmp_y = in_y - screen_dest_rect.y;
+ int32 div_x = screen_dest_rect.w;
+ int32 div_y = screen_dest_rect.h;
+/*
+ switch(rotated)
+ {
+  case MDFN_ROTATE0:
+	break;
+
+  case MDFN_ROTATE90:
+	std::swap(tmp_x, tmp_y);
+	std::swap(div_x, div_y);
+	tmp_x = screen_dest_rect.h - 1 - tmp_x;
+	break;
+
+  case MDFN_ROTATE270:
+	std::swap(tmp_x, tmp_y);
+	std::swap(div_x, div_y);
+	tmp_y = screen_dest_rect.w - 1 - tmp_y;
+	break;
+ }
+*/
+ *out_x = (float)tmp_x / div_x;
+ *out_y = (float)tmp_y / div_y;
+}
+
+float Video_PtoV_J(const int32 inv, const bool axis, const bool scr_scale)
+{
+ assert(VideoGI);
+ assert(window);
+
  if(!scr_scale)
- {
-  return((inv - 32768) * std::max(VideoGI->nominal_width, VideoGI->nominal_height) + (32768 * (axis ? VideoGI->nominal_height : VideoGI->nominal_width)));
- }
+  return 0.5 + (inv / 32768.0 - 0.5) * std::max<int32>(VideoGI->nominal_width, VideoGI->nominal_height) / (axis ? VideoGI->nominal_height : VideoGI->nominal_width);
  else
- {
-  int32 prescale = (axis ? screen->h : screen->w);
-  int32 offs = -(axis ? screen_dest_rect.y : screen_dest_rect.x);
-  double postscale = 65536.0 / (axis ? eys : exs);
-
-  //printf("%.64f\n", floor(0.5 + ((((((int64)inv * prescale) + 0x8000) >> 16) + offs) * postscale)) / 65536.0);
-
-  return (int32)floor(0.5 + ((((((int64)inv * prescale) + 0x8000) >> 16) + offs) * postscale));
- }
+  return inv * JoyGunTranslate[axis].mul - JoyGunTranslate[axis].sub;
 }

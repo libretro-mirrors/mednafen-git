@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* Joystick_XInput.cpp:
-**  Copyright (C) 2012-2016 Mednafen Team
+**  Copyright (C) 2012-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -65,21 +65,29 @@ Joystick_XInput::Joystick_XInput(unsigned index, const XINPUT_CAPABILITIES &caps
  button_state.resize(num_buttons);
  axis_state.resize(num_axes);
 
- id = (caps.Type << 24) | (caps.SubType << 16);	// Don't include the XInput index in the id, it'll just cause problems, especially when multiple different subtypes of controllers are connected. | (index << 8);
+ id_09x = (caps.Type << 24) | (caps.SubType << 16);	// Don't include the XInput index in the id, it'll just cause problems, especially when multiple different subtypes of controllers are connected. | (index << 8);
 
- snprintf(name, sizeof(name), "XInput Unknown Controller");
+ // Leave first 8 bytes as 0 to reduce probability of collisions with DirectInput GUIDs?
+ MDFN_en64msb(&id[0], 0);
+ id[8] = caps.Type;
+ id[9] = caps.SubType;
+ MDFN_en16msb(&id[10], caps.Flags);
+ MDFN_en16msb(&id[12], caps.Gamepad.wButtons);
+ MDFN_en16msb(&id[14], 0);
+
+ const char* name_cs = "XInput Unknown Controller";
  if(caps.Type == XINPUT_DEVTYPE_GAMEPAD)
  {
   switch(caps.SubType)
   {
    default: break;
-   case XINPUT_DEVSUBTYPE_GAMEPAD: snprintf(name, sizeof(name), "XInput Gamepad"); break;
-   case XINPUT_DEVSUBTYPE_WHEEL: snprintf(name, sizeof(name), "XInput Wheel"); break;
-   case XINPUT_DEVSUBTYPE_ARCADE_STICK: snprintf(name, sizeof(name), "XInput Arcade Stick"); break;
+   case XINPUT_DEVSUBTYPE_GAMEPAD: name_cs = "XInput Gamepad"; break;
+   case XINPUT_DEVSUBTYPE_WHEEL: name_cs = "XInput Wheel"; break;
+   case XINPUT_DEVSUBTYPE_ARCADE_STICK: name_cs = "XInput Arcade Stick"; break;
 #ifdef XINPUT_DEVSUBTYPE_FLIGHT_STICK
-   case XINPUT_DEVSUBTYPE_FLIGHT_STICK: snprintf(name, sizeof(name), "XInput Flight Stick"); break;
+   case XINPUT_DEVSUBTYPE_FLIGHT_STICK: name_cs = "XInput Flight Stick"; break;
 #endif
-   case XINPUT_DEVSUBTYPE_DANCE_PAD: snprintf(name, sizeof(name), "XInput Dance Pad"); break;
+   case XINPUT_DEVSUBTYPE_DANCE_PAD: name_cs = "XInput Dance Pad"; break;
 
 #ifdef XINPUT_DEVSUBTYPE_GUITAR_ALTERNATE
    case XINPUT_DEVSUBTYPE_GUITAR_ALTERNATE:
@@ -87,14 +95,16 @@ Joystick_XInput::Joystick_XInput(unsigned index, const XINPUT_CAPABILITIES &caps
 #ifdef XINPUT_DEVSUBTYPE_GUITAR_BASS
    case XINPUT_DEVSUBTYPE_GUITAR_BASS:
 #endif
-   case XINPUT_DEVSUBTYPE_GUITAR: snprintf(name, sizeof(name), "XInput Guitar"); break;
+   case XINPUT_DEVSUBTYPE_GUITAR: name_cs = "XInput Guitar"; break;
 
-   case XINPUT_DEVSUBTYPE_DRUM_KIT: snprintf(name, sizeof(name), "XInput Drum Kit"); break;
+   case XINPUT_DEVSUBTYPE_DRUM_KIT: name_cs = "XInput Drum Kit"; break;
 #ifdef XINPUT_DEVSUBTYPE_ARCADE_PAD
-   case XINPUT_DEVSUBTYPE_ARCADE_PAD: snprintf(name, sizeof(name), "XInput Arcade Pad"); break;
+   case XINPUT_DEVSUBTYPE_ARCADE_PAD: name_cs = "XInput Arcade Pad"; break;
 #endif
   }
  }
+
+ name = name_cs;
 }
 
 
@@ -210,7 +220,7 @@ JoystickDriver_XInput::JoystickDriver_XInput()
   }
   catch(std::exception &e)
   {
-   MDFND_PrintError(e.what());
+   MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
   }
  }
 }

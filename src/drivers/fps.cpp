@@ -21,6 +21,7 @@
 
 static struct
 {
+ //int64 vcycles;
  uint32 t;
  uint8 mask;
 } TimeDrawn[128];
@@ -30,22 +31,50 @@ static MDFN_Surface *FPSSurface = NULL;
 static MDFN_Rect FPSRect;
 static volatile float cur_vfps, cur_dfps, cur_bfps;
 static uint8 inc_mask;
+//static int64 inc_vcycles;
 
-void FPS_Init(void)
+static unsigned position;
+static unsigned scale;
+
+static unsigned font;
+static unsigned font_width;
+static unsigned font_height;
+
+static uint32 text_color;
+static uint32 bg_color;
+
+void FPS_Init(const unsigned fps_pos, const unsigned fps_scale, const unsigned fps_font, const uint32 fps_tcolor, const uint32 fps_bgcolor)
 {
  TDIndex = 0;
 
  inc_mask = 0;
+ //inc_vcycles = 0;
 
  cur_vfps = 0;
  cur_dfps = 0;
  cur_bfps = 0;
 
  memset(TimeDrawn, 0, sizeof(TimeDrawn));
+
+ position = fps_pos;
+ scale = fps_scale;
+ font = fps_font;
+ font_width = GetTextPixLength("0", font);
+ font_height = GetFontHeight(fps_font);
+
+ text_color = fps_tcolor;
+ bg_color = fps_bgcolor;
+
+ FPSRect.x = FPSRect.y = 0;
+ FPSRect.w = 6 * font_width;
+ FPSRect.h = 3 * font_height;
+
+ FPSSurface = new MDFN_Surface(NULL, FPSRect.w, FPSRect.h, FPSRect.w, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, 0, 8, 16, 24));
 }
 
-void FPS_IncVirtual(void)
+void FPS_IncVirtual(int64 vcycles)
 {
+ //inc_vcycles = vcycles;
  inc_mask |= 1;
 }
 
@@ -66,37 +95,23 @@ void FPS_ToggleView(void)
  isactive ^= 1;
 }
 
-const int box_width = 6 * 5;
-const int box_height = 3 * 7;
-
-bool FPS_IsActive(int *w, int *h)
-{
- if(!isactive)
-  return(FALSE);
-
- if(w)
-  *w = box_width;
-
- if(h)
-  *h = box_height;
-
- return(TRUE);
-}
-
 void FPS_UpdateCalc(void)
 {
  uint32 curtime = Time::MonoMS();
  uint32 mintime = ~0U;
 
  TimeDrawn[TDIndex].t = curtime;
+ //TimeDrawn[TDIndex].vcycles = inc_vcycles;
  TimeDrawn[TDIndex].mask = inc_mask;
  TDIndex = (TDIndex + 1) & 127;
  inc_mask = 0;
- 
+ //inc_vcycles = 0; 
+
  if(!isactive)
   return;
 
  uint32 vt_frames_drawn = 0, dt_frames_drawn = 0, bt_frames_drawn = 0;
+ //uint64 vcyc_accum = 0;
 
  for(int x = 0; x < 128; x++)
  {
@@ -109,11 +124,15 @@ void FPS_UpdateCalc(void)
     vt_frames_drawn += (bool)(TimeDrawn[qi].mask & 0x1);
     dt_frames_drawn += (bool)(TimeDrawn[qi].mask & 0x2);
     bt_frames_drawn += (bool)(TimeDrawn[qi].mask & 0x4);
+
+    //vcyc_accum += TimeDrawn[qi].vcycles;
    }
 
    mintime = std::min<uint32>(TimeDrawn[qi].t, mintime);
   }
  }
+
+ //printf("%llu, %.1f\n", vcyc_accum, 100 * 1000.0 * vcyc_accum / ((curtime - mintime) * (CurGame->MasterClock >> 32)));
 
  if(curtime > mintime)
  {
@@ -149,62 +168,41 @@ static void CalcFramerates(char *virtfps, char *drawnfps, char *blitfps, size_t 
   trio_snprintf(blitfps, maxlen, "?");
 }
 
-void FPS_Draw(MDFN_Surface *target, const int xpos, const int ypos)
-{
- if(!isactive)
-  return;
-
- const uint32 bg_color = target->MakeColor(0, 0, 0);
- const uint32 text_color = target->MakeColor(0xFF, 0xFF, 0xFF);
- const unsigned fontid = MDFN_FONT_5x7;
- char virtfps[32], drawnfps[32], blitfps[32];
- const MDFN_Rect cr = { 0, 0, box_width, box_height };
-
- CalcFramerates(virtfps, drawnfps, blitfps, 32);
-
- MDFN_DrawFillRect(target, xpos, ypos, box_width, box_height, bg_color);
-
- DrawText(target, cr, xpos, ypos + 7 * 0, virtfps, text_color, fontid);
- DrawText(target, cr, xpos, ypos + 7 * 1, drawnfps, text_color, fontid);
- DrawText(target, cr, xpos, ypos + 7 * 2, blitfps, text_color, fontid);
-}
-
-void FPS_DrawToScreen(SDL_Surface *screen, int rs, int gs, int bs, int as, unsigned offsx, unsigned offsy)
+void FPS_DrawToScreen(int rs, int gs, int bs, int as, const MDFN_Rect& cr, unsigned min_screen_w_h)
 {
  if(!isactive) 
- {
-  if(FPSSurface)
-  {
-   delete FPSSurface;
-   FPSSurface = NULL;
-  }
   return;
- }
 
- if(!FPSSurface)
- {
-  FPSSurface = new MDFN_Surface(NULL, box_width, box_height, box_width, MDFN_PixelFormat(MDFN_COLORSPACE_RGB, rs, gs, bs, as));
-  FPSRect.w = box_width;
-  FPSRect.h = box_height;
-  FPSRect.x = FPSRect.y = 0;
- }
-
+ FPSSurface->SetFormat(MDFN_PixelFormat(MDFN_COLORSPACE_RGB, rs, gs, bs, as), false);
+ //
+ const unsigned eff_scale = scale ? scale : std::max<unsigned>(1, /*std::min(cr.w, cr.h)*/min_screen_w_h / std::max(FPSRect.w, FPSRect.h) / 8);
  char virtfps[32], drawnfps[32], blitfps[32];
- const uint32 text_color = FPSSurface->MakeColor(0xFF, 0xFF, 0xFF, 0xFF);
+ const uint32 surf_text_color = FPSSurface->MakeColor((text_color >> 16) & 0xFF, (text_color >> 8) & 0xFF, (text_color >> 0) & 0xFF, (text_color >> 24) & 0xFF);
 
  CalcFramerates(virtfps, drawnfps, blitfps, 32);
 
- FPSSurface->Fill(0, 0, 0, 0x80);
+ FPSSurface->Fill((bg_color >> 16) & 0xFF, (bg_color >> 8) & 0xFF, (bg_color >> 0) & 0xFF, (bg_color >> 24) & 0xFF);
 
- DrawText(FPSSurface, 0, 7 * 0, virtfps, text_color, MDFN_FONT_5x7);
- DrawText(FPSSurface, 0, 7 * 1, drawnfps, text_color, MDFN_FONT_5x7);
- DrawText(FPSSurface, 0, 7 * 2, blitfps, text_color, MDFN_FONT_5x7);
-
+ DrawText(FPSSurface, 0, font_height * 0, virtfps, surf_text_color, font);
+ DrawText(FPSSurface, 0, font_height * 1, drawnfps, surf_text_color, font);
+ DrawText(FPSSurface, 0, font_height * 2, blitfps, surf_text_color, font);
+ //
+ //
  MDFN_Rect drect;
- drect.x = offsx;
- drect.y = offsy;
- drect.w = FPSRect.w;
- drect.h = FPSRect.h;
+
+ drect.w = FPSRect.w * eff_scale;
+ drect.h = FPSRect.h * eff_scale;
+
+ if(position)
+ {
+  drect.x = cr.x + (cr.w - drect.w);
+  drect.y = cr.y;
+ }
+ else
+ {
+  drect.x = cr.x;
+  drect.y = cr.y;
+ }
 
  BlitRaw(FPSSurface, &FPSRect, &drect, -1);
 }

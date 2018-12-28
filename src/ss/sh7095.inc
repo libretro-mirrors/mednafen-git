@@ -2744,7 +2744,7 @@ uint32 NO_INLINE SH7095::Exception(const unsigned exnum, const unsigned vecnum)
  if(DebugMode)
   DBG_AddBranchTrace(this - CPU, new_PC, exnum, vecnum);
 
- //SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Exception %u, vecnum=%u, saved PC=0x%08x --- New PC=0x%08x\n", cpu_name, exnum, vecnum, PC, new_PC);
+ //SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] Exception %u, vecnum=%u, vbr=%08x, saved PC=0x%08x --- New PC=0x%08x, New R15=0x%08x\n", cpu_name, exnum, vecnum, VBR, PC, new_PC, R[15]);
 
  return new_PC;
 }
@@ -4795,9 +4795,9 @@ void SH7095::StateAction(StateMem* sm, const unsigned load, const bool data_only
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY32(R, 16),
+  SFVAR(R),
   SFVAR(PC),
-  SFARRAY32(CtrlRegs, 3),
+  SFVAR(CtrlRegs),
 
   SFVAR(timestamp),
   SFVAR(MA_until),
@@ -4806,7 +4806,7 @@ void SH7095::StateAction(StateMem* sm, const unsigned load, const bool data_only
 #if 0
  sscpu_timestamp_t WB_until[16];
 #endif
-  SFARRAY32(SysRegs, 3),
+  SFVAR(SysRegs),
 
   SFVAR(EPending),
   SFVAR(Pipe_ID),
@@ -4814,9 +4814,9 @@ void SH7095::StateAction(StateMem* sm, const unsigned load, const bool data_only
 
   SFVAR(IBuffer),
 
-  SFARRAY32(Cache->Tag, 4, 64, sizeof(*Cache)),
-  SFVAR(Cache->LRU, 64, sizeof(*Cache)),
-  SFARRAY32((uint32*)Cache->Data, 16, 64, sizeof(*Cache)),	// Cast because it's stored as native-endian 32-bit.
+  SFPTR32(Cache->Tag, 4, 64, sizeof(*Cache), Cache),
+  SFVAR(Cache->LRU, 64, sizeof(*Cache), Cache),
+  SFPTR32((uint32*)Cache->Data, 16, 64, sizeof(*Cache), Cache),	// Cast because it's stored as native-endian 32-bit.
 
   SFVAR(CCR),
 
@@ -4851,7 +4851,7 @@ void SH7095::StateAction(StateMem* sm, const unsigned load, const bool data_only
   SFVAR(FRT.FTI),
   SFVAR(FRT.FTCI),
   SFVAR(FRT.FRC),
-  SFARRAY16(FRT.OCR, 2),
+  SFVAR(FRT.OCR),
   SFVAR(FRT.FICR),
   SFVAR(FRT.TIER),
   SFVAR(FRT.FTCSR),
@@ -4879,13 +4879,13 @@ void SH7095::StateAction(StateMem* sm, const unsigned load, const bool data_only
   SFVAR(DMA_PenaltyKludgeAmount),
   SFVAR(DMA_PenaltyKludgeAccum),
 
-  SFVAR(DMACH->SAR, 2, sizeof(*DMACH)),
-  SFVAR(DMACH->DAR, 2, sizeof(*DMACH)),
-  SFVAR(DMACH->TCR, 2, sizeof(*DMACH)),
-  SFVAR(DMACH->CHCR, 2, sizeof(*DMACH)),
-  SFVAR(DMACH->CHCRM, 2, sizeof(*DMACH)),
-  SFVAR(DMACH->VCR, 2, sizeof(*DMACH)),
-  SFVAR(DMACH->DRCR, 2, sizeof(*DMACH)),
+  SFVAR(DMACH->SAR, 2, sizeof(*DMACH), DMACH),
+  SFVAR(DMACH->DAR, 2, sizeof(*DMACH), DMACH),
+  SFVAR(DMACH->TCR, 2, sizeof(*DMACH), DMACH),
+  SFVAR(DMACH->CHCR, 2, sizeof(*DMACH), DMACH),
+  SFVAR(DMACH->CHCRM, 2, sizeof(*DMACH), DMACH),
+  SFVAR(DMACH->VCR, 2, sizeof(*DMACH), DMACH),
+  SFVAR(DMACH->DRCR, 2, sizeof(*DMACH), DMACH),
 
   SFVAR(DMAOR),
   SFVAR(DMAORM),

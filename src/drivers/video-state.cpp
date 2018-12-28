@@ -94,9 +94,9 @@ static void SSCleanup(void)
 }
 
 // TODO: Handle memory allocation errors.
-void DrawSaveStates(SDL_Surface *screen, double exs, double eys, int rs, int gs, int bs, int as)
+void DrawSaveStates(int32 screen_w, int32 screen_h, double exs, double eys, int rs, int gs, int bs, int as)
 {
- if(StateShow < Time::MonoMS())
+ if(StateShow <= Time::MonoMS())
  {
   SSCleanup();
  }
@@ -164,20 +164,20 @@ void DrawSaveStates(SDL_Surface *screen, double exs, double eys, int rs, int gs,
  {
   MDFN_Rect tdrect, drect;
 
-  int meow = ((screen->w / CurGame->nominal_width) + 1) / 2;
+  int meow = ((screen_w / CurGame->nominal_width) + 1) / 2;
   if(!meow) meow = 1;
 
   tdrect.w = TextRect.w * meow;
   tdrect.h = TextRect.h * meow;
-  tdrect.x = (screen->w - tdrect.w) / 2;
-  tdrect.y = screen->h - tdrect.h;
+  tdrect.x = (screen_w - tdrect.w) / 2;
+  tdrect.y = screen_h - tdrect.h;
 
   BlitRaw(TextSurface, &TextRect, &tdrect);
 
   drect.w = PreviewRect.w * meow;
   drect.h = PreviewRect.h * meow;
-  drect.x = (screen->w - drect.w) / 2;
-  drect.y = screen->h - drect.h - tdrect.h - 4;
+  drect.x = (screen_w - drect.w) / 2;
+  drect.y = screen_h - drect.h - tdrect.h - 4;
 
   BlitRaw(PreviewSurface, &PreviewRect, &drect);
 

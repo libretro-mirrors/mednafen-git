@@ -2202,7 +2202,7 @@ void CSusie::StateAction(StateMem *sm, const unsigned load, const bool data_only
         SFVAR(mSPRGO),
         SFVAR(mEVERON),
 
-        SFARRAYN(mPenIndex, 16, "mPenIndex"),
+        SFPTR8N(mPenIndex, 16, "mPenIndex"),
 
         SFVAR(mLineType),
         SFVAR(mLineShiftRegCount),

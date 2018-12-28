@@ -49,189 +49,189 @@ extern INPUTCFC *MDFN_InitBBattler2(void);
 
 static const IDIISG GamepadIDII =
 {
- { "a", "A", 7, IDIT_BUTTON_CAN_RAPID, NULL },
- { "b", "B", 6, IDIT_BUTTON_CAN_RAPID, NULL },
- { "select", "SELECT", 4, IDIT_BUTTON, NULL },
- { "start", "START", 5, IDIT_BUTTON, NULL },
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
+ IDIIS_ButtonCR("a", "A", 7),
+ IDIIS_ButtonCR("b", "B", 6),
+ IDIIS_Button("select", "SELECT", 4),
+ IDIIS_Button("start", "START", 5),
+ IDIIS_Button("up", "UP ↑", 0, "down"),
+ IDIIS_Button("down", "DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "LEFT ←", 2, "right"),
+ IDIIS_Button("right", "RIGHT →", 3, "left"),
 };
 
 static const IDIISG ZapperIDII =
 {
- { "x_axis", "X Axis", -1, IDIT_X_AXIS },
- { "y_axis", "Y Axis", -1, IDIT_Y_AXIS },
- { "trigger", "Trigger", 0, IDIT_BUTTON, NULL  },
- { "away_trigger", "Away Trigger", 1, IDIT_BUTTON, NULL  },
+ { "x_axis", "X Axis", -1, IDIT_POINTER_X },
+ { "y_axis", "Y Axis", -1, IDIT_POINTER_Y },
+ IDIIS_Button("trigger", "Trigger", 0),
+ IDIIS_Button("away_trigger", "Away Trigger", 1),
 };
 
 static const IDIISG PowerpadIDII =
 {
- { "1", "1", 0, IDIT_BUTTON, NULL },
- { "2", "2", 1, IDIT_BUTTON, NULL },
- { "3", "3", 2, IDIT_BUTTON, NULL },
- { "4", "4", 3, IDIT_BUTTON, NULL },
- { "5", "5", 4, IDIT_BUTTON, NULL },
- { "6", "6", 5, IDIT_BUTTON, NULL },
- { "7", "7", 6, IDIT_BUTTON, NULL },
- { "8", "8", 7, IDIT_BUTTON, NULL },
- { "9", "9", 8, IDIT_BUTTON, NULL },
- { "10", "10", 9, IDIT_BUTTON, NULL },
- { "11", "11", 10, IDIT_BUTTON, NULL },
- { "12", "12", 11, IDIT_BUTTON, NULL },
+ IDIIS_Button("1", "1", 0),
+ IDIIS_Button("2", "2", 1),
+ IDIIS_Button("3", "3", 2),
+ IDIIS_Button("4", "4", 3),
+ IDIIS_Button("5", "5", 4),
+ IDIIS_Button("6", "6", 5),
+ IDIIS_Button("7", "7", 6),
+ IDIIS_Button("8", "8", 7),
+ IDIIS_Button("9", "9", 8),
+ IDIIS_Button("10", "10", 9),
+ IDIIS_Button("11", "11", 10),
+ IDIIS_Button("12", "12", 11),
 };
 
 static const IDIISG ArkanoidIDII =
 {
- { "x_axis", "X Axis", -1, IDIT_X_AXIS },
- { "button", "Button", 0, IDIT_BUTTON, NULL },
+ { "x_axis", "X Axis", -1, IDIT_POINTER_X },
+ IDIIS_Button("button", "Button", 0),
 };
 
 static const IDIISG FKBIDII =
 {
- { "f1", "F1", 0, IDIT_BUTTON },
- { "f2", "F2", 1, IDIT_BUTTON },
- { "f3", "F3", 2, IDIT_BUTTON },
- { "f4", "F4", 3, IDIT_BUTTON },
- { "f5", "F5", 4, IDIT_BUTTON },
- { "f6", "F6", 5, IDIT_BUTTON },
- { "f7", "F7", 6, IDIT_BUTTON },
- { "f8", "F8", 7, IDIT_BUTTON },
+ IDIIS_Button("f1", "F1", 0),
+ IDIIS_Button("f2", "F2", 1),
+ IDIIS_Button("f3", "F3", 2),
+ IDIIS_Button("f4", "F4", 3),
+ IDIIS_Button("f5", "F5", 4),
+ IDIIS_Button("f6", "F6", 5),
+ IDIIS_Button("f7", "F7", 6),
+ IDIIS_Button("f8", "F8", 7),
 
- { "1", "1", 8, IDIT_BUTTON },
- { "2", "2", 9, IDIT_BUTTON },
- { "3", "3", 10, IDIT_BUTTON },
- { "4", "4", 11, IDIT_BUTTON },
- { "5", "5", 12, IDIT_BUTTON },
- { "6", "6", 13, IDIT_BUTTON },
- { "7", "7", 14, IDIT_BUTTON },
- { "8", "8", 15, IDIT_BUTTON },
- { "9", "9", 16, IDIT_BUTTON },
- { "0", "0", 17, IDIT_BUTTON },
- { "minus", "-", 18, IDIT_BUTTON },
- { "caret", "^", 19, IDIT_BUTTON },
- { "backslash", "\\", 20, IDIT_BUTTON },
- { "stop", "STOP", 21, IDIT_BUTTON },
+ IDIIS_Button("1", "1", 8),
+ IDIIS_Button("2", "2", 9),
+ IDIIS_Button("3", "3", 10),
+ IDIIS_Button("4", "4", 11),
+ IDIIS_Button("5", "5", 12),
+ IDIIS_Button("6", "6", 13),
+ IDIIS_Button("7", "7", 14),
+ IDIIS_Button("8", "8", 15),
+ IDIIS_Button("9", "9", 16),
+ IDIIS_Button("0", "0", 17),
+ IDIIS_Button("minus", "-", 18),
+ IDIIS_Button("caret", "^", 19),
+ IDIIS_Button("backslash", "\\", 20),
+ IDIIS_Button("stop", "STOP", 21),
 
- { "escape", "ESC", 22, IDIT_BUTTON },
- { "q", "Q", 23, IDIT_BUTTON },
- { "w", "W", 24, IDIT_BUTTON },
- { "e", "E", 25, IDIT_BUTTON },
- { "r", "R", 26, IDIT_BUTTON },
- { "t", "T", 27, IDIT_BUTTON },
- { "y", "Y", 28, IDIT_BUTTON },
- { "u", "U", 29, IDIT_BUTTON },
- { "i", "I", 30, IDIT_BUTTON },
- { "o", "O", 31, IDIT_BUTTON },
- { "p", "P", 32, IDIT_BUTTON },
- { "at", "@", 33, IDIT_BUTTON },
- { "left_bracket", "[", 34, IDIT_BUTTON },
- { "return", "RETURN", 35, IDIT_BUTTON },
- { "ctrl", "CTR", 36, IDIT_BUTTON },
- { "a", "A", 37, IDIT_BUTTON },
- { "s", "S", 38, IDIT_BUTTON },
- { "d", "D", 39, IDIT_BUTTON },
- { "f", "F", 40, IDIT_BUTTON },
- { "g", "G", 41, IDIT_BUTTON },
- { "h", "H", 42, IDIT_BUTTON },
- { "j", "J", 43, IDIT_BUTTON },
- { "k", "K", 44, IDIT_BUTTON },
- { "l", "L", 45, IDIT_BUTTON },
- { "semicolon", ";", 46, IDIT_BUTTON },
- { "colon", ":", 47, IDIT_BUTTON },
- { "right_bracket", "]", 48, IDIT_BUTTON },
- { "kana", "カナ", 49, IDIT_BUTTON },
- { "left_shift", "Left SHIFT", 50, IDIT_BUTTON },
- { "z", "Z", 51, IDIT_BUTTON },
- { "x", "X", 52, IDIT_BUTTON },
- { "c", "C", 53, IDIT_BUTTON },
- { "v", "V", 54, IDIT_BUTTON },
- { "b", "B", 55, IDIT_BUTTON },
- { "n", "N", 56, IDIT_BUTTON },
- { "m", "M", 57, IDIT_BUTTON },
- { "comma", ",", 58, IDIT_BUTTON },
- { "period", ".", 59, IDIT_BUTTON },
- { "slash", "/", 60, IDIT_BUTTON },
- { "empty", "Empty", 61, IDIT_BUTTON },
- { "right_shift", "Right SHIFT", 62, IDIT_BUTTON },
- { "graph", "GRPH", 63, IDIT_BUTTON },
- { "space", "SPACE", 64, IDIT_BUTTON },
+ IDIIS_Button("escape", "ESC", 22),
+ IDIIS_Button("q", "Q", 23),
+ IDIIS_Button("w", "W", 24),
+ IDIIS_Button("e", "E", 25),
+ IDIIS_Button("r", "R", 26),
+ IDIIS_Button("t", "T", 27),
+ IDIIS_Button("y", "Y", 28),
+ IDIIS_Button("u", "U", 29),
+ IDIIS_Button("i", "I", 30),
+ IDIIS_Button("o", "O", 31),
+ IDIIS_Button("p", "P", 32),
+ IDIIS_Button("at", "@", 33),
+ IDIIS_Button("left_bracket", "[", 34),
+ IDIIS_Button("return", "RETURN", 35),
+ IDIIS_Button("ctrl", "CTR", 36),
+ IDIIS_Button("a", "A", 37),
+ IDIIS_Button("s", "S", 38),
+ IDIIS_Button("d", "D", 39),
+ IDIIS_Button("f", "F", 40),
+ IDIIS_Button("g", "G", 41),
+ IDIIS_Button("h", "H", 42),
+ IDIIS_Button("j", "J", 43),
+ IDIIS_Button("k", "K", 44),
+ IDIIS_Button("l", "L", 45),
+ IDIIS_Button("semicolon", ";", 46),
+ IDIIS_Button("colon", ":", 47),
+ IDIIS_Button("right_bracket", "]", 48),
+ IDIIS_Button("kana", "カナ", 49),
+ IDIIS_Button("left_shift", "Left SHIFT", 50),
+ IDIIS_Button("z", "Z", 51),
+ IDIIS_Button("x", "X", 52),
+ IDIIS_Button("c", "C", 53),
+ IDIIS_Button("v", "V", 54),
+ IDIIS_Button("b", "B", 55),
+ IDIIS_Button("n", "N", 56),
+ IDIIS_Button("m", "M", 57),
+ IDIIS_Button("comma", ",", 58),
+ IDIIS_Button("period", ".", 59),
+ IDIIS_Button("slash", "/", 60),
+ IDIIS_Button("empty", "Empty", 61),
+ IDIIS_Button("right_shift", "Right SHIFT", 62),
+ IDIIS_Button("graph", "GRPH", 63),
+ IDIIS_Button("space", "SPACE", 64),
 
- { "clear", "CLR", 65, IDIT_BUTTON },
- { "insert", "INS", 66, IDIT_BUTTON },
- { "delete", "DEL", 67, IDIT_BUTTON },
- { "up", "UP", 68, IDIT_BUTTON },
- { "left", "LEFT", 69, IDIT_BUTTON },
- { "right", "RIGHT", 70, IDIT_BUTTON },
- { "down", "DOWN", 71, IDIT_BUTTON },
+ IDIIS_Button("clear", "CLR", 65),
+ IDIIS_Button("insert", "INS", 66),
+ IDIIS_Button("delete", "DEL", 67),
+ IDIIS_Button("up", "UP", 68),
+ IDIIS_Button("left", "LEFT", 69),
+ IDIIS_Button("right", "RIGHT", 70),
+ IDIIS_Button("down", "DOWN", 71),
 };
 
 static const IDIISG HypershotIDII =
 {
- { "i_run", "I, RUN", 0, IDIT_BUTTON_CAN_RAPID, NULL },
- { "i_jump", "I, JUMP", 1, IDIT_BUTTON_CAN_RAPID, NULL },
- { "ii_run", "II, RUN", 2, IDIT_BUTTON_CAN_RAPID, NULL },
- { "ii_jump", "II, JUMP", 3, IDIT_BUTTON_CAN_RAPID, NULL },
+ IDIIS_ButtonCR("i_run", "I, RUN", 0),
+ IDIIS_ButtonCR("i_jump", "I, JUMP", 1),
+ IDIIS_ButtonCR("ii_run", "II, RUN", 2),
+ IDIIS_ButtonCR("ii_jump", "II, JUMP", 3),
 };
 
 static const IDIISG MahjongIDII =
 {
- { "1", "1", 0, IDIT_BUTTON, NULL },
- { "2", "2", 1, IDIT_BUTTON, NULL },
- { "3", "3", 2, IDIT_BUTTON, NULL },
- { "4", "4", 3, IDIT_BUTTON, NULL },
- { "5", "5", 4, IDIT_BUTTON, NULL },
- { "6", "6", 5, IDIT_BUTTON, NULL },
- { "7", "7", 6, IDIT_BUTTON, NULL },
- { "8", "8", 7, IDIT_BUTTON, NULL },
- { "9", "9", 8, IDIT_BUTTON, NULL },
- { "10", "10", 9, IDIT_BUTTON, NULL },
- { "11", "11", 10, IDIT_BUTTON, NULL },
- { "12", "12", 11, IDIT_BUTTON, NULL },
- { "13", "13", 12, IDIT_BUTTON, NULL },
- { "14", "14", 13, IDIT_BUTTON, NULL },
- { "15", "15", 14, IDIT_BUTTON, NULL },
- { "16", "16", 15, IDIT_BUTTON, NULL },
- { "17", "17", 16, IDIT_BUTTON, NULL },
- { "18", "18", 17, IDIT_BUTTON, NULL },
- { "19", "19", 18, IDIT_BUTTON, NULL },
- { "20", "20", 19, IDIT_BUTTON, NULL },
- { "21", "21", 20, IDIT_BUTTON, NULL },
+ IDIIS_Button("1", "1", 0),
+ IDIIS_Button("2", "2", 1),
+ IDIIS_Button("3", "3", 2),
+ IDIIS_Button("4", "4", 3),
+ IDIIS_Button("5", "5", 4),
+ IDIIS_Button("6", "6", 5),
+ IDIIS_Button("7", "7", 6),
+ IDIIS_Button("8", "8", 7),
+ IDIIS_Button("9", "9", 8),
+ IDIIS_Button("10", "10", 9),
+ IDIIS_Button("11", "11", 10),
+ IDIIS_Button("12", "12", 11),
+ IDIIS_Button("13", "13", 12),
+ IDIIS_Button("14", "14", 13),
+ IDIIS_Button("15", "15", 14),
+ IDIIS_Button("16", "16", 15),
+ IDIIS_Button("17", "17", 16),
+ IDIIS_Button("18", "18", 17),
+ IDIIS_Button("19", "19", 18),
+ IDIIS_Button("20", "20", 19),
+ IDIIS_Button("21", "21", 20),
 };
 
 static const IDIISG PartyTapIDII =
 {
- { "buzzer_1", "Buzzer 1", 0, IDIT_BUTTON, NULL },
- { "buzzer_2", "Buzzer 2", 1, IDIT_BUTTON, NULL },
- { "buzzer_3", "Buzzer 3", 2, IDIT_BUTTON, NULL },
- { "buzzer_4", "Buzzer 4", 3, IDIT_BUTTON, NULL },
- { "buzzer_5", "Buzzer 5", 4, IDIT_BUTTON, NULL },
- { "buzzer_6", "Buzzer 6", 5, IDIT_BUTTON, NULL },
+ IDIIS_Button("buzzer_1", "Buzzer 1", 0),
+ IDIIS_Button("buzzer_2", "Buzzer 2", 1),
+ IDIIS_Button("buzzer_3", "Buzzer 3", 2),
+ IDIIS_Button("buzzer_4", "Buzzer 4", 3),
+ IDIIS_Button("buzzer_5", "Buzzer 5", 4),
+ IDIIS_Button("buzzer_6", "Buzzer 6", 5),
 };
 
 static const IDIISG FTrainerIDII =
 {
- { "1", "1", 0, IDIT_BUTTON, NULL },
- { "2", "2", 1, IDIT_BUTTON, NULL },
- { "3", "3", 2, IDIT_BUTTON, NULL },
- { "4", "4", 3, IDIT_BUTTON, NULL },
- { "5", "5", 4, IDIT_BUTTON, NULL },
- { "6", "6", 5, IDIT_BUTTON, NULL },
- { "7", "7", 6, IDIT_BUTTON, NULL },
- { "8", "8", 7, IDIT_BUTTON, NULL },
- { "9", "9", 8, IDIT_BUTTON, NULL },
- { "10", "10", 9, IDIT_BUTTON, NULL },
- { "11", "11", 10, IDIT_BUTTON, NULL },
- { "12", "12", 11, IDIT_BUTTON, NULL },
+ IDIIS_Button("1", "1", 0),
+ IDIIS_Button("2", "2", 1),
+ IDIIS_Button("3", "3", 2),
+ IDIIS_Button("4", "4", 3),
+ IDIIS_Button("5", "5", 4),
+ IDIIS_Button("6", "6", 5),
+ IDIIS_Button("7", "7", 6),
+ IDIIS_Button("8", "8", 7),
+ IDIIS_Button("9", "9", 8),
+ IDIIS_Button("10", "10", 9),
+ IDIIS_Button("11", "11", 10),
+ IDIIS_Button("12", "12", 11),
 };
 
 static const IDIISG OekaIDII =
 {
- { "x_axis", "X Axis", -1, IDIT_X_AXIS },
- { "y_axis", "Y Axis", -1, IDIT_Y_AXIS },
- { "button", "Button", 0, IDIT_BUTTON, NULL },
+ { "x_axis", "X Axis", -1, IDIT_POINTER_X },
+ { "y_axis", "Y Axis", -1, IDIT_POINTER_Y },
+ IDIIS_Button("button", "Button", 0),
 };
 
 static const IDIISG BBattler2IDII =
@@ -575,8 +575,8 @@ static void StateActionGPFC(StateMem *sm, const unsigned load, const bool data_o
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(F4ReadBit, 2),
-  SFARRAY(joy, 4),
+  SFPTR8(F4ReadBit, 2),
+  SFPTR8(joy, 4),
   SFEND
  };
 
@@ -699,52 +699,52 @@ static void SetInputStuff(int x)
 
 	if(x == 4)
 	{
-	 if(!strcasecmp(ts, "none"))
+	 if(!strcmp(ts, "none"))
 	  FCExp = NULL;
-	 else if(!strcasecmp(ts, "arkanoid"))
+	 else if(!strcmp(ts, "arkanoid"))
 	  FCExp = MDFN_InitArkanoidFC();
-         else if(!strcasecmp(ts, "shadow"))
+         else if(!strcmp(ts, "shadow"))
 	  FCExp=MDFN_InitSpaceShadow();
-         else if(!strcasecmp(ts, "oekakids"))
+         else if(!strcmp(ts, "oekakids"))
 	  FCExp=MDFN_InitOekaKids();
-         else if(!strcasecmp(ts, "4player"))
+         else if(!strcmp(ts, "4player"))
 	 {
 	  FCExp=&FAMI4C;
 	  memset(&F4ReadBit,0,sizeof(F4ReadBit));
 	 }
-         else if(!strcasecmp(ts, "fkb"))
+         else if(!strcmp(ts, "fkb"))
 	  FCExp=MDFN_InitFKB();
-         else if(!strcasecmp(ts, "hypershot"))
+         else if(!strcmp(ts, "hypershot"))
 	  FCExp=MDFN_InitHS();
-         else if(!strcasecmp(ts, "mahjong"))
+         else if(!strcmp(ts, "mahjong"))
 	  FCExp=MDFN_InitMahjong();
-         else if(!strcasecmp(ts, "partytap"))
+         else if(!strcmp(ts, "partytap"))
 	  FCExp=MDFN_InitPartyTap();
-         else if(!strcasecmp(ts, "ftrainera"))
+         else if(!strcmp(ts, "ftrainera"))
 	  FCExp=MDFN_InitFamilyTrainerA();
-         else if(!strcasecmp(ts, "ftrainerb"))
+         else if(!strcmp(ts, "ftrainerb"))
 	  FCExp=MDFN_InitFamilyTrainerB();
-         else if(!strcasecmp(ts, "bworld"))
+         else if(!strcmp(ts, "bworld"))
 	  FCExp=MDFN_InitBBattler2();
 	}
 	else
 	{
-	 if(!strcasecmp(ts, "gamepad"))
+	 if(!strcmp(ts, "gamepad"))
 	 {
            if(NESIsVSUni)
 	    JPorts[x] = &GPCVS;
 	   else
 	    JPorts[x]=&GPC;
 	 }
-	 else if(!strcasecmp(ts, "arkanoid"))
+	 else if(!strcmp(ts, "arkanoid"))
 	  JPorts[x]=MDFN_InitArkanoid(x);
-	 else if(!strcasecmp(ts, "zapper"))
+	 else if(!strcmp(ts, "zapper"))
 	  JPorts[x]=MDFN_InitZapper(x);
-	 else if(!strcasecmp(ts, "powerpada"))
+	 else if(!strcmp(ts, "powerpada"))
 	  JPorts[x]=MDFN_InitPowerpadA(x);
-	 else if(!strcasecmp(ts, "powerpadb"))
+	 else if(!strcmp(ts, "powerpadb"))
 	  JPorts[x]=MDFN_InitPowerpadB(x);
-	 else if(!strcasecmp(ts, "none"))
+	 else if(!strcmp(ts, "none"))
 	  JPorts[x]=&DummyJPort;
         }
 

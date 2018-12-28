@@ -1208,13 +1208,13 @@ static void DSP_StateAction(StateMem* sm, const unsigned load, const bool data_o
 
  SFORMAT StateRegs[] =
  {
-  SFARRAY(Regs, 0x80),
+  SFVAR(Regs),
 
   SFVAR(HGS.KPollCycle),
   SFVAR(HGS.RateCounter),
   SFVAR(HGS.NoiseVal),
-  SFARRAY16(HGS.Accum, 2),
-  SFARRAY16(HGS.EchoAccum, 2),
+  SFVAR(HGS.Accum),
+  SFVAR(HGS.EchoAccum),
   SFVAR(HGS.IKON),
   SFVAR(HGS.Pending_ENDX),
   SFVAR(HGS.Latch_IKON),
@@ -1227,11 +1227,11 @@ static void DSP_StateAction(StateMem* sm, const unsigned load, const bool data_o
   SFVAR(HGS.Latch_EDL),
   SFVAR(HGS.Latch_ESA),
 
-  SFARRAY(HGS.Latch_FIR, 8),
+  SFVAR(HGS.Latch_FIR),
 
-  SFARRAY16(HGS.EchoFIROut, 2),
+  SFVAR(HGS.EchoFIROut),
 
-  SFARRAY16(&HGS.EchoFIRBuf[0][0], sizeof(HGS.EchoFIRBuf) / sizeof(HGS.EchoFIRBuf[0][0])),
+  SFVARN(HGS.EchoFIRBuf, "&HGS.EchoFIRBuf[0][0]"),
   SFVAR(HGS.EchoFIRBufPos),
 
   SFVAR(HGS.EchoBase),
@@ -1242,8 +1242,8 @@ static void DSP_StateAction(StateMem* sm, const unsigned load, const bool data_o
 	SFVAR(Voices[n].BRR_Addr),		\
 	SFVAR(Voices[n].BRR_Offs),		\
 	SFVAR(Voices[n].BRR_Header),		\
-	SFARRAY(Voices[n].BRR_Data, 2),		\
-	SFARRAY16(Voices[n].RB, 12 * 2),	\
+	SFVAR(Voices[n].BRR_Data),		\
+	SFVAR(Voices[n].RB),			\
 	SFVAR(Voices[n].RB_Pos),		\
 	SFVAR(Voices[n].RB_In),			\
 	SFVAR(Voices[n].Latch_SRCN),		\

@@ -230,6 +230,9 @@ class Stream
  void put_string(const std::string &str);
 #endif
 
+ bool read_utf8_bom(void);
+ void write_utf8_bom(void);
+
  //
  // Read until end-of-stream(or count), discarding any read data, and returns the amount of data "read".
  //  (Useful for detecting and printing warnings about extra garbage data without needing to call size(),
@@ -250,5 +253,31 @@ class Stream
  //
  uint64 alloc_and_read(void** data_out, uint64 size_limit = ~(uint64)0);
 };
+
+//
+//
+//
+/*
+class StreamPosFilter final : public Stream
+{
+ public:
+ StreamPosFilter(std::shared_ptr<Stream> s_);
+
+ virtual uint64 read(void *data, uint64 count, bool error_on_eos = true) override;
+ virtual void write(const void *data, uint64 count) override;
+ virtual void seek(int64 offset, int whence) override;
+ virtual uint64 tell(void) override;
+ virtual uint64 size(void) override;
+ virtual void close(void) override;
+ virtual uint64 attributes(void) override;
+ virtual void truncate(uint64 length) override;
+ virtual void flush(void) override;
+
+ private:
+
+ uint64 pos;
+ std::shared_ptr<Stream> s;
+};
+*/
 
 #endif

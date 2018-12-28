@@ -117,6 +117,9 @@
 /* Define to 1 if you have the `dup2' function. */
 #undef HAVE_DUP2
 
+/* Define if we are compiling and linking with external LZO. */
+#undef HAVE_EXTERNAL_LZO2
+
 /* Define if we are compiling and linking with external mpcdec. */
 #undef HAVE_EXTERNAL_MPCDEC
 

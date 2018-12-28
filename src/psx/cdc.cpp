@@ -240,30 +240,30 @@ void PS_CDC::StateAction(StateMem *sm, const unsigned load, const bool data_only
   SFVAR(DiscChanged),
   SFVAR(DiscStartupDelay),
 
-  SFARRAY16(&AudioBuffer.Samples[0][0], sizeof(AudioBuffer.Samples) / sizeof(AudioBuffer.Samples[0][0])),
+  SFVARN(AudioBuffer.Samples, "&AudioBuffer.Samples[0][0]"),
   SFVAR(AudioBuffer.Size),
   SFVAR(AudioBuffer.Freq),
   SFVAR(AudioBuffer.ReadPos),
 
-  SFARRAY(&Pending_DecodeVolume[0][0], 2 * 2),
-  SFARRAY(&DecodeVolume[0][0], 2 * 2),
+  SFVARN(Pending_DecodeVolume, "&Pending_DecodeVolume[0][0]"),
+  SFVARN(DecodeVolume, "&DecodeVolume[0][0]"),
 
-  SFARRAY16(&ADPCM_ResampBuf[0][0], sizeof(ADPCM_ResampBuf) / sizeof(ADPCM_ResampBuf[0][0])),
+  SFVARN(ADPCM_ResampBuf, "&ADPCM_ResampBuf[0][0]"),
   SFVAR(ADPCM_ResampCurPhase),
   SFVAR(ADPCM_ResampCurPos),
 
 
 
   SFVAR(RegSelector),
-  SFARRAY(ArgsBuf, 16),
+  SFVAR(ArgsBuf),
   SFVAR(ArgsWP),
   SFVAR(ArgsRP),
 
   SFVAR(ArgsReceiveLatch),
-  SFARRAY(ArgsReceiveBuf, 32),
+  SFVAR(ArgsReceiveBuf),
   SFVAR(ArgsReceiveIn),
 
-  SFARRAY(ResultsBuffer, 16),
+  SFVAR(ResultsBuffer),
   SFVAR(ResultsIn),
   SFVAR(ResultsWP),
   SFVAR(ResultsRP),
@@ -271,7 +271,7 @@ void PS_CDC::StateAction(StateMem *sm, const unsigned load, const bool data_only
   //
   //
   //
-  SFARRAY(&DMABuffer.data[0], DMABuffer.data.size()),
+  SFPTR8(&DMABuffer.data[0], DMABuffer.data.size()),
   SFVAR(DMABuffer.read_pos),
   SFVAR(DMABuffer.write_pos),
   SFVAR(DMABuffer.in_count),
@@ -279,20 +279,20 @@ void PS_CDC::StateAction(StateMem *sm, const unsigned load, const bool data_only
   //
   //
 
-  SFARRAY(SB, sizeof(SB) / sizeof(SB[0])),
+  SFVAR(SB),
   SFVAR(SB_In),
 
-  SFARRAY(&SectorPipe[0][0], sizeof(SectorPipe) / sizeof(SectorPipe[0][0])),
+  SFVARN(SectorPipe, "&SectorPipe[0][0]"),
   SFVAR(SectorPipe_Pos),
   SFVAR(SectorPipe_In),
 
-  SFARRAY(SubQBuf, sizeof(SubQBuf) / sizeof(SubQBuf[0])),
-  SFARRAY(SubQBuf_Safe, sizeof(SubQBuf_Safe) / sizeof(SubQBuf_Safe[0])),
+  SFVAR(SubQBuf),
+  SFVAR(SubQBuf_Safe),
 
   SFVAR(SubQChecksumOK),
 
   SFVAR(HeaderBufValid),
-  SFARRAY(HeaderBuf, sizeof(HeaderBuf) / sizeof(HeaderBuf[0])),
+  SFVAR(HeaderBuf),
 
   SFVAR(IRQBuffer),
   SFVAR(IRQOutTestMask),
@@ -323,7 +323,7 @@ void PS_CDC::StateAction(StateMem *sm, const unsigned load, const bool data_only
   SFVAR(SectorsRead),
 
   SFVAR(AsyncIRQPending),
-  SFARRAY(AsyncResultsPending, sizeof(AsyncResultsPending) / sizeof(AsyncResultsPending[0])),
+  SFVAR(AsyncResultsPending),
   SFVAR(AsyncResultsPendingCount),
 
   SFVAR(SeekTarget),
@@ -338,7 +338,7 @@ void PS_CDC::StateAction(StateMem *sm, const unsigned load, const bool data_only
 
   SFVAR(CommandLoc),
   SFVAR(CommandLoc_Dirty),
-  SFARRAY16(&xa_previous[0][0], sizeof(xa_previous) / sizeof(xa_previous[0][0])),
+  SFVARN(xa_previous, "&xa_previous[0][0]"),
 
   SFVAR(xa_cur_set),
   SFVAR(xa_cur_file),
@@ -610,13 +610,15 @@ struct XA_Subheader
  uint8 channel_dup;
  uint8 submode_dup;
  uint8 coding_dup;
-} __attribute__((__packed__));
+};
+static_assert(sizeof(XA_Subheader) == 8, "XA_Subheader wrong size!");
 
 struct XA_SoundGroup
 {
  uint8 params[16];
  uint8 samples[112];
-} __attribute__((__packed__));
+};
+static_assert(sizeof(XA_SoundGroup) == 128, "XA_SoundGroup wrong size!");
 
 #define XA_SUBMODE_EOF		0x80
 #define XA_SUBMODE_REALTIME	0x40
@@ -1020,7 +1022,7 @@ void PS_CDC::HandlePlayRead(void)
      {
       if(!edc_lec_check_and_correct(buf, true))
       {
-       MDFN_DispMessage("Bad sector? - %d", CurSector);
+       MDFN_Notify(MDFN_NOTICE_WARNING, _("Uncorrectable error(s) in sector %d."), CurSector);
       }
      }
 

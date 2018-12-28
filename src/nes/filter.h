@@ -28,7 +28,7 @@ class NES_Resampler
 	// The int32 pointed to by leftover is set to the number of input samples left over from this filter iteration.
 	// "in" should be aligned to a 16-byte boundary, for the SIMD versions of the filter to work properly.  "out" doesn't have any
 	// special alignment requirement.
-	int32 Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, int32 *leftover);
+	NO_INLINE int32 Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, int32 *leftover);
 
 	// Get the InputRate / OutputRate ratio, expressed as a / b
 	void GetRatio(int32 *a, int32 *b)

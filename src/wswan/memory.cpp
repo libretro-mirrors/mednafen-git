@@ -827,8 +827,8 @@ void WSwan_MemoryStateAction(StateMem *sm, const unsigned load, const bool data_
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAYN(wsRAM, 65536, "RAM"),
-  SFARRAYN(sram_size ? wsSRAM : NULL, sram_size, "SRAM"),
+  SFVARN(wsRAM, "RAM"),
+  SFPTR8N(sram_size ? wsSRAM : NULL, sram_size, "SRAM"),
   SFVAR(ButtonWhich),
   SFVAR(ButtonReadLatch),
   SFVAR(WSButtonStatus),
@@ -844,9 +844,9 @@ void WSwan_MemoryStateAction(StateMem *sm, const unsigned load, const bool data_
   SFVAR(SoundDMAControl),
   SFVAR(SoundDMATimer),
 
-  SFARRAY(BankSelector, 4),
+  SFVAR(BankSelector),
 
-  SFARRAYN(IsWW ? wsCartROM : NULL, 524288, "WW flash"),
+  SFPTR8N(IsWW ? wsCartROM : NULL, 524288, "WW flash"),
   SFVAR(WW_FlashLock),
   SFVAR(WW_FWSM),
 

@@ -97,7 +97,7 @@ void InputDevice_Gamepad::StateAction(StateMem* sm, const unsigned load, const b
  {
   SFVAR(dtr),
 
-  SFARRAY(buttons, sizeof(buttons)),
+  SFVAR(buttons),
 
   SFVAR(command_phase),
   SFVAR(bitpos),
@@ -105,7 +105,7 @@ void InputDevice_Gamepad::StateAction(StateMem* sm, const unsigned load, const b
 
   SFVAR(command),
 
-  SFARRAY(transmit_buffer, sizeof(transmit_buffer)),
+  SFVAR(transmit_buffer),
   SFVAR(transmit_pos),
   SFVAR(transmit_count),
 
@@ -251,47 +251,47 @@ InputDevice *Device_Gamepad_Create(void)
 
 IDIISG Device_Gamepad_IDII =
 {
- { "select", "SELECT", 4, IDIT_BUTTON, NULL },
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { "start", "START", 5, IDIT_BUTTON, NULL },
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
+ IDIIS_Button("select", "SELECT", 4, NULL),
+ IDIIS_Padding<1>(),
+ IDIIS_Padding<1>(),
+ IDIIS_Button("start", "START", 5, NULL),
+ IDIIS_Button("up", "UP ↑", 0, "down"),
+ IDIIS_Button("right", "RIGHT →", 3, "left"),
+ IDIIS_Button("down", "DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "LEFT ←", 2, "right"),
 
- { "l2", "L2 (rear left shoulder)", 11, IDIT_BUTTON, NULL },
- { "r2", "R2 (rear right shoulder)", 13, IDIT_BUTTON, NULL },
- { "l1", "L1 (front left shoulder)", 10, IDIT_BUTTON, NULL },
- { "r1", "R1 (front right shoulder)", 12, IDIT_BUTTON, NULL },
+ IDIIS_Button("l2", "L2 (rear left shoulder)", 11, NULL),
+ IDIIS_Button("r2", "R2 (rear right shoulder)", 13, NULL),
+ IDIIS_Button("l1", "L1 (front left shoulder)", 10, NULL),
+ IDIIS_Button("r1", "R1 (front right shoulder)", 12, NULL),
 
- { "triangle", "△ (upper)", 6, IDIT_BUTTON_CAN_RAPID, NULL },
- { "circle", "○ (right)", 9, IDIT_BUTTON_CAN_RAPID, NULL },
- { "cross", "x (lower)", 7, IDIT_BUTTON_CAN_RAPID, NULL },
- { "square", "□ (left)", 8, IDIT_BUTTON_CAN_RAPID, NULL },
+ IDIIS_ButtonCR("triangle", "△ (upper)", 6, NULL),
+ IDIIS_ButtonCR("circle", "○ (right)", 9, NULL),
+ IDIIS_ButtonCR("cross", "x (lower)", 7, NULL),
+ IDIIS_ButtonCR("square", "□ (left)", 8, NULL),
 };
 
 IDIISG Device_Dancepad_IDII =
 {
- { "select", "SELECT", 0, IDIT_BUTTON, NULL },
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { "start", "START", 1, IDIT_BUTTON, NULL },
+ IDIIS_Button("select", "SELECT", 0, NULL),
+ IDIIS_Padding<1>(),
+ IDIIS_Padding<1>(),
+ IDIIS_Button("start", "START", 1, NULL),
 
- { "up", "UP ↑", 3, IDIT_BUTTON, 	NULL },
- { "right", "RIGHT →", 6, IDIT_BUTTON, 	NULL },
- { "down", "DOWN ↓", 8, IDIT_BUTTON, 	NULL },
- { "left", "LEFT ←", 5, IDIT_BUTTON, 	NULL },
+ IDIIS_Button("up", "UP ↑", 3, 	NULL),
+ IDIIS_Button("right", "RIGHT →", 6, 	NULL),
+ IDIIS_Button("down", "DOWN ↓", 8, 	NULL),
+ IDIIS_Button("left", "LEFT ←", 5, 	NULL),
 
- { NULL, "empty", 0, IDIT_BUTTON, NULL },
- { NULL, "empty", 0, IDIT_BUTTON, NULL },
- { NULL, "empty", 0, IDIT_BUTTON, NULL },
- { NULL, "empty", 0, IDIT_BUTTON, NULL },
+ IDIIS_Padding<1>(),
+ IDIIS_Padding<1>(),
+ IDIIS_Padding<1>(),
+ IDIIS_Padding<1>(),
 
- { "triangle", "△ (lower left)", 7, IDIT_BUTTON, NULL },
- { "circle", "○ (upper right)", 4, IDIT_BUTTON, NULL },
- { "cross", "x (upper left)", 2, IDIT_BUTTON, NULL },
- { "square", "□ (lower right)", 9, IDIT_BUTTON, NULL },
+ IDIIS_Button("triangle", "△ (lower left)", 7, NULL),
+ IDIIS_Button("circle", "○ (upper right)", 4, NULL),
+ IDIIS_Button("cross", "x (upper left)", 2, NULL),
+ IDIIS_Button("square", "□ (lower right)", 9, NULL),
 };
 
 

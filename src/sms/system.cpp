@@ -74,7 +74,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
  {
   SFVAR(SoftResetCount),
   SFVAR(sms.cycle_counter),
-  SFARRAYN(sms.wram, 0x2000, "RAM"),
+  SFPTR8N(sms.wram, 0x2000, "RAM"),
 
   SFVAR(sms.paused),
 
@@ -90,7 +90,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVAR(sms.memctrl),
 
   //SFVAR(z80_runtime),
-  //SFARRAY(CPUExRAM, 16384),
+  //SFPTR8(CPUExRAM, 16384),
   //SFVAR(FlashStatusEnable),
   SFEND
  };
@@ -197,7 +197,7 @@ static void CloseGame(void)
  }
  catch(std::exception &e)
  {
-  MDFN_PrintError("%s", e.what());
+  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
  }
 
  Cleanup();
@@ -308,24 +308,24 @@ static void LoadGG(MDFNFILE *fp)
 
 static const IDIISG GGGamepadIDII =
 {
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
- { "button1", "Button 1", 4, IDIT_BUTTON_CAN_RAPID, NULL },
- { "button2", "Button 2", 5, IDIT_BUTTON_CAN_RAPID,  NULL },
- { "Start", "Start", 6, IDIT_BUTTON, NULL },
+ IDIIS_Button("up", "UP ↑", 0, "down"),
+ IDIIS_Button("down", "DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "LEFT ←", 2, "right"),
+ IDIIS_Button("right", "RIGHT →", 3, "left"),
+ IDIIS_ButtonCR("button1", "Button 1", 4, NULL),
+ IDIIS_ButtonCR("button2", "Button 2", 5,  NULL),
+ IDIIS_Button("Start", "Start", 6, NULL),
 };
 
 static const IDIISG SMSGamepadIDII =
 {
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
- { "fire1", "Fire 1/Start", 4, IDIT_BUTTON_CAN_RAPID, NULL },
- { "fire2", "Fire 2", 5, IDIT_BUTTON_CAN_RAPID,  NULL },
- { "pause", "Pause", 6, IDIT_BUTTON, NULL },
+ IDIIS_Button("up", "UP ↑", 0, "down"),
+ IDIIS_Button("down", "DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "LEFT ←", 2, "right"),
+ IDIIS_Button("right", "RIGHT →", 3, "left"),
+ IDIIS_ButtonCR("fire1", "Fire 1/Start", 4, NULL),
+ IDIIS_ButtonCR("fire2", "Fire 2", 5,  NULL),
+ IDIIS_Button("pause", "Pause", 6, NULL),
 };
 
 static const std::vector<InputDeviceInfoStruct> GGInputDeviceInfo =

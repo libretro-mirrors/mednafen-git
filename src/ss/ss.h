@@ -53,6 +53,7 @@ namespace MDFN_IEN_SS
   SS_DBG_VDP1 	   = (1U << 20),
   SS_DBG_VDP1_REGW = (1U << 21),
   SS_DBG_VDP1_VRAMW= (1U << 22),
+  SS_DBG_VDP1_FBW  = (1U << 23),
 
   SS_DBG_VDP2 	   = (1U << 24),
   SS_DBG_VDP2_REGW = (1U << 25),

@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* string.cpp:
-**  Copyright (C) 2007-2017 Mednafen Team
+**  Copyright (C) 2007-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -27,11 +27,6 @@
 #include <mednafen/mednafen.h>
 #include "string.h"
 
-static INLINE bool IsWS(const char c)
-{
- return c == ' ' || c == '\r' || c == '\n' || c == '\t' || c == 0x0b;
-}
-
 // Remove whitespace from beginning of s
 void MDFN_ltrim(char* s)
 {
@@ -41,7 +36,7 @@ void MDFN_ltrim(char* s)
 
  while(*si)
  {
-  if(!InWhitespace || !IsWS(*si))
+  if(!InWhitespace || !MDFN_isspace(*si))
   {
    InWhitespace = false;
    *di = *si;
@@ -62,7 +57,7 @@ void MDFN_ltrim(std::string& s)
 
  while(si < len)
  {
-  if(!InWhitespace || !IsWS(s[si]))
+  if(!InWhitespace || !MDFN_isspace(s[si]))
   {
    InWhitespace = false;
    s[di] = s[si];
@@ -88,7 +83,7 @@ void MDFN_rtrim(char* s)
  {
   x--;
 
-  if(!IsWS(s[x]))
+  if(!MDFN_isspace(s[x]))
    break;
  
   s[x] = 0;
@@ -110,7 +105,7 @@ void MDFN_rtrim(std::string& s)
  {
   x--;
 
-  if(!IsWS(s[x]))
+  if(!MDFN_isspace(s[x]))
    break;
  
   new_len--;
@@ -153,6 +148,68 @@ void MDFN_zapctrlchars(std::string& s)
    c = ' ';
 }
 
+void MDFN_strazlower(char* s)
+{
+ while(*s)
+ {
+  *s = MDFN_azlower(*s);
+  s++;
+ }
+}
+
+void MDFN_strazlower(std::string& s)
+{
+ for(auto& c : s)
+  c = MDFN_azlower(c);
+}
+
+void MDFN_strazupper(char* s)
+{
+ while(*s)
+ {
+  *s = MDFN_azupper(*s);
+  s++;
+ }
+}
+
+void MDFN_strazupper(std::string& s)
+{
+ for(auto& c : s)
+  c = MDFN_azupper(c);
+}
+
+int MDFN_strazicmp(const char* s, const char* t, size_t n)
+{
+ if(!n)
+  return 0;
+
+ do
+ {
+  const int d = (unsigned char)MDFN_azlower(*s) - (unsigned char)MDFN_azlower(*t);
+
+  if(d)
+   return d;
+
+ } while(*s++ && *t++ && --n);
+
+ return 0;
+}
+
+int MDFN_memazicmp(const void* s, const void* t, size_t n)
+{
+ unsigned char* a = (unsigned char*)s;
+ unsigned char* b = (unsigned char*)t;
+
+ while(n--)
+ {
+  const int d = (unsigned char)MDFN_azlower(*a++) - (unsigned char)MDFN_azlower(*b++);
+
+  if(d)
+   return d;
+ }
+
+ return 0;
+}
 
 std::vector<std::string> MDFN_strsplit(const std::string& str, const std::string& delim)
 {
@@ -316,7 +373,7 @@ std::u32string UTF8_to_UTF32(const char* s, size_t slen, bool* invalid_utf8, boo
  bool ec = UTF8_to_UTF32(s, slen, &ret[0], &dlen, permit_utf16_surrogates);
 
  if(invalid_utf8)
-  *invalid_utf8 = ec;
+  *invalid_utf8 = !ec;
 
  assert(dlen <= ret.size());
 
@@ -406,7 +463,7 @@ std::string UTF8_to_UTF8(const char* s, size_t slen, bool* invalid_utf8, bool pe
  bool ec = UTF8_to_UTF8(s, slen, &ret[0], &dlen, permit_utf16_surrogates);
 
  if(invalid_utf8)
-  *invalid_utf8 = ec;
+  *invalid_utf8 = !ec;
 
  assert(dlen <= ret.size());
 
@@ -434,7 +491,7 @@ std::u16string UTF8_to_UTF16(const char* s, size_t slen, bool* invalid_utf8, boo
  bool ec = UTF8_to_UTF16(s, slen, &ret[0], &dlen, permit_utf16_surrogates);
 
  if(invalid_utf8)
-  *invalid_utf8 = ec;
+  *invalid_utf8 = !ec;
 
  assert(dlen <= ret.size());
 

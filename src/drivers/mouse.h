@@ -1,8 +1,8 @@
 /******************************************************************************/
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
-/* nnx.h:
-**  Copyright (C) 2005-2016 Mednafen Team
+/* mouse.h:
+**  Copyright (C) 2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,10 +19,41 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef __MDFN_DRIVERS_NNX_H
-#define __MDFN_DRIVERS_NNX_H
+#ifndef __MDFN_DRIVERS_MOUSE_H
+#define __MDFN_DRIVERS_MOUSE_H
 
-void nnx(int factor, const MDFN_Surface* src, const MDFN_Rect& src_rect, MDFN_Surface* dest, const MDFN_Rect& dest_rect);
-void nnyx(int factor, const MDFN_Surface* src, const MDFN_Rect& src_rect, MDFN_Surface* dest, const MDFN_Rect& dest_rect);
+namespace MouseMan
+{
 
+enum
+{
+ MOUSE_BN_INDEX_MASK	= 0x0FFF,
+
+ MOUSE_BN_TYPE_SHIFT	= 12,
+ MOUSE_BN_TYPE_MASK	= 0x3 << MOUSE_BN_TYPE_SHIFT,
+ MOUSE_BN_TYPE_BUTTON	= 0U << MOUSE_BN_TYPE_SHIFT,
+ MOUSE_BN_TYPE_CURSOR	= 1U << MOUSE_BN_TYPE_SHIFT,
+ MOUSE_BN_TYPE_REL	= 2U << MOUSE_BN_TYPE_SHIFT,
+
+ MOUSE_BN_HALFAXIS	= 1U << 14,
+ MOUSE_BN_NEGATE	= 1U << 15
+};
+
+void Init(void) MDFN_COLD;
+std::string BNToString(const uint32 bn);
+bool StringToBN(const char* s, uint16* bn);
+bool Translate09xBN(unsigned bn09x, uint16* bn);
+
+void UpdateMice(void);
+void Reset_BC_ChangeCheck(void);
+bool Do_BC_ChangeCheck(ButtConfig *bc);
+
+bool TestButton(const ButtConfig& bc);
+int32 TestAnalogButton(const ButtConfig& bc);
+float TestPointer(const ButtConfig& bc);
+int64 TestAxisRel(const ButtConfig& bc);
+
+void Event(const SDL_Event* event);
+
+}
 #endif

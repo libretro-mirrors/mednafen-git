@@ -18,15 +18,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-// TODO: Remove this mapper or add a StateAction()
-
 #include "mapinc.h"
 
 static uint8 PRGSel;
 static uint8 PBuf[4],PSel;
 static uint8 cmd;
 static uint8 DRegs[8];
-static uint32 count;
+static uint32 cnt;
 static uint32 last;
 static int32 IRQCount;
 static uint8 IRQLatch;
@@ -84,7 +82,7 @@ static DECLFW(M208HWrite)
  switch(A&0xe001)
  {
   case 0xc000:IRQLatch=IRQCount=V;break;
-  case 0xc001:IRQCount=IRQLatch;last=count=0;break;
+  case 0xc001:IRQCount=IRQLatch;last=cnt=0;break;
   case 0xe000:IRQa=0;X6502_IRQEnd(MDFN_IQEXT);break;
   case 0xe001:IRQa=1;break;
   case 0x8000:cmd=V;break;
@@ -101,7 +99,7 @@ static void M208Power(CartInfo *info)
  PSel = 0;
  cmd = 0;
  memset(DRegs, 0, sizeof(DRegs));
- count = 0;
+ cnt = 0;
  last = 0;
  IRQCount = 0;
  IRQLatch = 0;
@@ -130,18 +128,48 @@ static MDFN_FASTCALL void foo(uint32 A)
 {
  if((A&0x2000) && !(last&0x2000))
  {
-  count++;
-  if(count==42)
+  cnt++;
+  if(cnt==42)
   { 
    sl();
-   count=0;
+   cnt=0;
   }
  }
  last=A;
 }
 
+static int StateAction(StateMem *sm, int load, int data_only)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(PRGSel),
+  SFVAR(PBuf),
+  SFVAR(PSel),
+  SFVAR(cmd),
+  SFVAR(DRegs),
+  SFVAR(cnt),
+  SFVAR(last),
+  SFVAR(IRQCount),
+  SFVAR(IRQLatch),
+  SFVAR(IRQa),
+
+  SFEND
+ };
+
+ int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAPR");
+
+ if(load)
+ {
+  Sync();
+  setprg32(0x8000, PRGSel);
+ }
+
+ return ret;
+}
+
 int Mapper208_Init(CartInfo *info)
 {
+ info->StateAction = StateAction;
  info->Power=M208Power;
  //GameHBIRQHook=sl;
  PPU_hook=foo;

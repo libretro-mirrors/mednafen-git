@@ -363,7 +363,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
         SFVAR(gSystemNMI),
         SFVAR(gSystemCPUSleep),
         SFVAR(gSystemHalt),
-	SFARRAYN(lynxie->GetRamPointer(), RAM_SIZE, "RAM"),
+	SFPTR8N(lynxie->GetRamPointer(), RAM_SIZE, "RAM"),
 	SFEND
  };
 
@@ -399,17 +399,17 @@ static const MDFNSetting LynxSettings[] =
 
 static const IDIISG IDII =
 {
- { "a", "A (outer)", 8, IDIT_BUTTON_CAN_RAPID },
- { "b", "B (inner)", 7, IDIT_BUTTON_CAN_RAPID },
- { "option_2", "Option 2 (lower)", 5, IDIT_BUTTON_CAN_RAPID },
- { "option_1", "Option 1 (upper)", 4, IDIT_BUTTON_CAN_RAPID },
+ IDIIS_ButtonCR("a", "A (outer)", 8),
+ IDIIS_ButtonCR("b", "B (inner)", 7),
+ IDIIS_ButtonCR("option_2", "Option 2 (lower)", 5),
+ IDIIS_ButtonCR("option_1", "Option 1 (upper)", 4),
 
- { "left", "LEFT ←", 	2, IDIT_BUTTON, "right" },
- { "right", "RIGHT →", 	3, IDIT_BUTTON, "left" },
- { "up", "UP ↑", 	0, IDIT_BUTTON, "down" },
- { "down", "DOWN ↓", 	1, IDIT_BUTTON, "up" },
+ IDIIS_Button("left", "LEFT ←", 	2, "right"),
+ IDIIS_Button("right", "RIGHT →", 	3, "left"),
+ IDIIS_Button("up", "UP ↑", 	0, "down"),
+ IDIIS_Button("down", "DOWN ↓", 	1, "up"),
 
- { "pause", "PAUSE", 6, IDIT_BUTTON },
+ IDIIS_Button("pause", "PAUSE", 6),
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =

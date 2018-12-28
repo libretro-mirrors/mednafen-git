@@ -9,14 +9,20 @@ enum
  VIDEOIP_LINEAR_Y
 };
 
-void Video_PtoV(const int in_x, const int in_y, int32 *out_x, int32 *out_y);
-int32 Video_PtoV_J(const int32 inv, const bool axis, const bool scr_scale);
+struct WMInputBehavior
+{
+ bool Cursor;
+ bool MouseAbs;
+ bool MouseRel;
+ bool Grab;
+};
 
-void BlitScreen(MDFN_Surface *, const MDFN_Rect *DisplayRect, const int32 *LineWidths, const int InterlaceField, const bool take_ssnapshot);
+//
+// Functions called from main thread:
+//
+void BlitScreen(MDFN_Surface *, const MDFN_Rect *DisplayRect, const int32 *LineWidths, const int rotated, const int InterlaceField, const bool take_ssnapshot);
 
-int VideoResize(int nw, int nh);
-
-void VideoShowMessage(char *text);
+void Video_ShowNotice(MDFN_NoticeType t, char* s);
 
 // source_alpha = 0 (disabled)
 //	        = 1 (enabled)
@@ -26,24 +32,23 @@ void BlitRaw(MDFN_Surface *src, const MDFN_Rect *src_rect, const MDFN_Rect *dest
 //
 void Video_MakeSettings(std::vector <MDFNSetting> &settings);
 
-// Called from the main thread
-void Video_Init(MDFNGI *gi);
+void Video_Init(void) MDFN_COLD;
 
-// Called from the main thread
-void Video_Kill(void);
+void Video_Sync(MDFNGI* gi);
 
-#if 0
-// Called from the game thread
-void Video_GetInternalBB(uint32 **XBuf, MDFN_Rect **LineWidths);
+void Video_Exposed(void);
 
-// Called from the game thread
-void Video_SetInternalBBReady(const MDFN_Rect &DisplayRect);
+void Video_Kill(void) MDFN_COLD;
 
-// Called from the main thread.
-bool Video_ScreenBlitReady(void);
+bool Video_ErrorPopup(bool warning, const char* title, const char* text);
 
-// Called from the main thread.
-void Video_BlitToScreen(void);
-#endif
+void Video_SetWMInputBehavior(const WMInputBehavior& beeeeees);
+
+
+//
+// Functions called from game thread:
+//
+void Video_PtoV(const int in_x, const int in_y, float* out_x, float* out_y);
+float Video_PtoV_J(const int32 inv, const bool axis, const bool scr_scale);
 
 #endif

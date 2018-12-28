@@ -76,7 +76,7 @@ static uint8 NSFROM[0x30+6]=
 
 static DECLFR(NSFROMRead)
 {
- return (NSFROM-0x3800)[A];
+ return NSFROM[(size_t)A - 0x3800];
 }
 
 static uint8 BSon;
@@ -129,7 +129,7 @@ static void NSF_StateAction(StateMem *sm, const unsigned load, const bool data_o
   SFVAR(SongReload),
   SFVAR(doreset),
   SFVAR(NSFNMIFlags),
-  SFARRAY(ExWRAM, ((NSFInfo->SoundChip&4) ? (32768+8192) : 8192)),
+  SFPTR8(ExWRAM, ((NSFInfo->SoundChip&4) ? (32768+8192) : 8192)),
 
   SFVAR(NSFInfo->CurrentSong),
 

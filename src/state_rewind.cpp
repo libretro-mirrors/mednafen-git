@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* state_rewind.cpp:
-**  Copyright (C) 2014-2016 Mednafen Team
+**  Copyright (C) 2014-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -34,20 +34,28 @@
 struct StateMemPacket
 {
 	std::unique_ptr<MemoryStream> data;
-	uint32 uncompressed_len = 0;	// Only non-zero when data is compressed.
+	uint32 uncompressed_len = 0;
 };
 
 static bool Active = false;
 static bool Enabled = false;
-static uint32 SRW_AllocHint;
 static std::vector<StateMemPacket> bcs;
 static size_t bcs_pos;
+
+static uint32 SRW_AllocHint;
+static std::unique_ptr<MemoryStream> ss_prev;
 
 static union
 {
  char compress[QLZ_SCRATCH_COMPRESS];
  char decompress[QLZ_SCRATCH_DECOMPRESS];
 } qlz_scratch;
+
+static void Cleanup(void)
+{
+ bcs.clear();
+ ss_prev.reset(nullptr);
+}
 
 void MDFNSRW_Begin(void) noexcept
 {
@@ -58,18 +66,19 @@ void MDFNSRW_Begin(void) noexcept
  {
   try
   {
-   bcs.resize(std::max<size_t>(3, MDFN_GetSettingUI("srwframes")));
+   bcs.resize(std::max<size_t>(3, MDFN_GetSettingUI("srwframes")) - 1);
    bcs_pos = 0;
    memset(&qlz_scratch, 0, sizeof(qlz_scratch));
+
    SRW_AllocHint = 8192;
+
    Active = true;
   }
   catch(std::exception &e)
   {
-   bcs.clear();
+   Cleanup();
 
-   MDFN_DispMessage("State rewinding error.");
-   MDFND_PrintError(e.what());
+   MDFN_Notify(MDFN_NOTICE_ERROR, _("State rewinding error: %s"), e.what());
   }
  }
 }
@@ -78,7 +87,7 @@ void MDFNSRW_End(void) noexcept
 {
  if(Active)
  {
-  bcs.clear();
+  Cleanup();
 
   Active = false;
  }
@@ -86,7 +95,7 @@ void MDFNSRW_End(void) noexcept
 
 bool MDFNSRW_IsRunning(void) noexcept
 {
- return(Active);
+ return Active;
 }
 
 static INLINE void DoXORFilter(MemoryStream* prev, MemoryStream* cur) noexcept
@@ -94,39 +103,19 @@ static INLINE void DoXORFilter(MemoryStream* prev, MemoryStream* cur) noexcept
  MDFN_FastMemXOR(prev->map(), cur->map(), std::min(prev->size(), cur->size()));
 }
 
-static INLINE void DoDecompress(StateMemPacket* dp)
+
+static INLINE std::unique_ptr<MemoryStream> DoCompress(MemoryStream* data)
 {
- std::unique_ptr<MemoryStream> tmp_buf(new MemoryStream(dp->uncompressed_len, -1));
-
- qlz_decompress((char*)dp->data->map(), tmp_buf->map(), qlz_scratch.decompress);
-
- //
- //
- //
-
- delete dp->data.release();
- dp->data = std::move(tmp_buf);
- dp->uncompressed_len = 0;
-}
-
-static INLINE void DoCompress(StateMemPacket* dp)
-{
- const uint32 uncompressed_len = dp->data->size();
+ const uint32 uncompressed_len = data->size();
  const uint32 max_compressed_len = (uncompressed_len + 400);
  std::unique_ptr<MemoryStream> tmp_buf(new MemoryStream(max_compressed_len, -1));
  uint32 dst_len;
 
- dst_len = qlz_compress(dp->data->map(), (char*)tmp_buf->map(), uncompressed_len, qlz_scratch.compress);
+ dst_len = qlz_compress(data->map(), (char*)tmp_buf->map(), uncompressed_len, qlz_scratch.compress);
  tmp_buf->truncate(dst_len);
  tmp_buf->shrink_to_fit();
 
- //
- //
- //
-
- delete dp->data.release();
- dp->data = std::move(tmp_buf);
- dp->uncompressed_len = uncompressed_len;
+ return tmp_buf;
 }
 
 //
@@ -134,51 +123,36 @@ static INLINE void DoCompress(StateMemPacket* dp)
 //
 static bool DoRewind(void)
 {
- bool ret = false;
+ //
+ // No save states available.
+ //
+ if(!ss_prev)
+  return false;
 
+ //
+ // Load most recent state.
+ //
+ ss_prev->rewind();
+ MDFNSS_LoadSM(ss_prev.get(), true);
+
+ //
+ // If a compressed state exists, decompress it.
+ //
+ StateMemPacket* smp = &bcs[(bcs_pos + bcs.size() - 1) % bcs.size()];
+
+ if(smp->data)
+ {
+  std::unique_ptr<MemoryStream> tmp(new MemoryStream(smp->uncompressed_len, -1));
+  qlz_decompress((char*)smp->data->map(), tmp->map(), qlz_scratch.decompress);
+  smp->data.reset(nullptr);
+  bcs_pos = (bcs_pos + bcs.size() - 1) % bcs.size();
   //
-  // If there's a save state to load, load it.
+  DoXORFilter(tmp.get(), ss_prev.get());
   //
-  {
-   StateMemPacket* smp = &bcs[(bcs_pos + bcs.size() - 1) % bcs.size()];
+  ss_prev = std::move(tmp);
+ }
 
-   if(smp->data)
-   {
-    assert(smp->uncompressed_len == 0);
-
-    smp->data->rewind();
-    MDFNSS_LoadSM(smp->data.get(), true);
-
-    ret = true;
-   }
-  }
-
-  //
-  // If more than one save state is available, then decompress the save state that comes before the one we just loaded,
-  // and THEN destroy the save state data we just loaded.
-  //
-  {
-   StateMemPacket* smp = &bcs[(bcs_pos + bcs.size() - 1) % bcs.size()];
-   StateMemPacket* smp_nr = &bcs[(bcs_pos + bcs.size() - 2) % bcs.size()];
-
-   if(smp_nr->data)
-   {
-#if 1
-    if(smp_nr->uncompressed_len != 0) 
-    {
-     DoDecompress(smp_nr);
-     DoXORFilter(smp_nr->data.get(), smp->data.get());
-    }
-#endif
-    //
-    //
-    //
-    *smp = StateMemPacket();
-    bcs_pos = (bcs_pos + bcs.size() - 1) % bcs.size();
-   }
-  }
-
- return(ret);
+ return true;
 }
 
 //
@@ -186,48 +160,39 @@ static bool DoRewind(void)
 //
 static void DoRecord(void)
 {
-  //
-  // Save current save state and push it onto the list.
-  //
-  {
-   StateMemPacket smp;
-   smp.data.reset(new MemoryStream(SRW_AllocHint));
-   MDFNSS_SaveSM(smp.data.get(), true);
+ //
+ // Save current state
+ //
+ std::unique_ptr<MemoryStream> ss_cur(new MemoryStream(SRW_AllocHint));
 
-   if(smp.data->size() > SRW_AllocHint)
-    SRW_AllocHint = smp.data->size();
+ MDFNSS_SaveSM(ss_cur.get(), true);
 
-   bcs[bcs_pos] = std::move(smp);
-   bcs_pos = (bcs_pos + 1) % bcs.size();
-  }
+ SRW_AllocHint = std::max<uint32>(SRW_AllocHint, ss_cur->size());
 
-  //
-  // Compress previous save states that need compression(AFTER we push the current state onto the list, for exception-safety).
-  //
-#if 1
-  {
-   for(size_t i = 0; i < bcs.size() - 1; i++)
-   {
-    StateMemPacket* smp = &bcs[(bcs_pos + bcs.size() - (1 + i)) % bcs.size()];
-    StateMemPacket* smp_nr = &bcs[(bcs_pos + bcs.size() - (2 + i)) % bcs.size()];
+ //
+ // Compress previous state if it exists.
+ //
+ if(ss_prev)
+ {
+  DoXORFilter(ss_prev.get(), ss_cur.get());
 
-    //printf("%u\n", smp_nr->uncompressed_len);
-    if(smp_nr->data && smp_nr->uncompressed_len == 0)
-    {
-     DoXORFilter(smp_nr->data.get(), smp->data.get());
-     try { DoCompress(smp_nr); } catch(...) { DoXORFilter(smp_nr->data.get(), smp->data.get()); }
-    }
-    else
-     break;
-   }
-  }
-#endif
+  //printf("Compress: %zu\n", ss_prev->size());
+
+  bcs[bcs_pos].data = DoCompress(ss_prev.get());
+  bcs[bcs_pos].uncompressed_len = ss_prev->size();
+  bcs_pos = (bcs_pos + 1) % bcs.size();
+ }
+
+ //
+ // Make current state previous for next time.
+ //
+ ss_prev = std::move(ss_cur);
 }
 
 bool MDFNSRW_Frame(bool rewind) noexcept
 {
  if(!Active)
-  return(false);
+  return false;
 
  try
  {
@@ -238,15 +203,16 @@ bool MDFNSRW_Frame(bool rewind) noexcept
   else
   {
    DoRecord();
-   return(false);
+   return false;
   }
  }
  catch(std::exception &e)
  {
   MDFNSRW_End();
-  MDFND_PrintError(e.what());
-  MDFN_DispMessage(_("State rewinding error."));
-  return(false);
+
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("State rewinding error: %s"), e.what());
+
+  return false;
  }
 }
 
@@ -259,6 +225,6 @@ bool MDFNI_EnableStateRewind(bool enable)
  else
   MDFNSRW_End();
 
- return(Active);
+ return Active;
 }
 

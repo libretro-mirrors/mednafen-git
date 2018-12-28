@@ -1258,7 +1258,7 @@ void PS_SPU::StateAction(StateMem *sm, const unsigned load, const bool data_only
 		   SFVAR((r).Current),	\
 		   SFVAR((r).Divider)
 
-#define SFVOICE(n) SFARRAY16(&Voices[n].DecodeBuffer[0], sizeof(Voices[n].DecodeBuffer) / sizeof(Voices[n].DecodeBuffer[0])),	\
+#define SFVOICE(n) SFVARN(Voices[n].DecodeBuffer, "&Voices[" #n "].DecodeBuffer[0]"),	\
 		   SFVAR(Voices[n].DecodeM2),											\
 		   SFVAR(Voices[n].DecodeM1),											\
 		   SFVAR(Voices[n].DecodePlayDelay),										\
@@ -1337,10 +1337,10 @@ void PS_SPU::StateAction(StateMem *sm, const unsigned load, const bool data_only
   SFSWEEP(GlobalSweep[0]),
   SFSWEEP(GlobalSweep[1]),
 
-  SFARRAY32(ReverbVol, sizeof(ReverbVol) / sizeof(ReverbVol[0])),
+  SFVAR(ReverbVol),
 
-  SFARRAY32(CDVol, sizeof(CDVol) / sizeof(CDVol[0])),
-  SFARRAY32(ExternVol, sizeof(ExternVol) / sizeof(ExternVol[0])),
+  SFVAR(CDVol),
+  SFVAR(ExternVol),
  
   SFVAR(IRQAddr),
 
@@ -1355,20 +1355,20 @@ void PS_SPU::StateAction(StateMem *sm, const unsigned load, const bool data_only
 
   SFVAR(CWA),
 
-  SFARRAY16(Regs, sizeof(Regs) / sizeof(Regs[0])),
-  SFARRAY16(AuxRegs, sizeof(AuxRegs) / sizeof(AuxRegs[0])),
+  SFVAR(Regs),
+  SFVAR(AuxRegs),
 
-  SFARRAY16(&RDSB[0][0], sizeof(RDSB) / sizeof(RDSB[0][0])),
+  SFVARN(RDSB, "&RDSB[0][0]"),
   SFVAR(RvbResPos),
 
-  SFARRAY16(&RUSB[0][0], sizeof(RUSB) / sizeof(RUSB[0][0])),
+  SFVARN(RUSB, "&RUSB[0][0]"),
 
   SFVAR(ReverbCur),
   SFVAR(IRQAsserted),
 
   SFVAR(clock_divider),
 
-  SFARRAY16(SPURAM, 524288 / sizeof(uint16)),
+  SFVAR(SPURAM),
   SFEND
  };
 #undef SFSWEEP

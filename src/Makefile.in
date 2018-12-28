@@ -116,6 +116,7 @@ DIST_COMMON = $(srcdir)/cdplay/Makefile.am.inc \
 	$(srcdir)/resampler/Makefile.am.inc \
 	$(srcdir)/cputest/Makefile.am.inc \
 	$(srcdir)/cheat_formats/Makefile.am.inc \
+	$(srcdir)/minilzo/Makefile.am.inc \
 	$(srcdir)/tremor/Makefile.am.inc \
 	$(srcdir)/mpcdec/Makefile.am.inc \
 	$(srcdir)/trio/Makefile.am.inc $(srcdir)/Makefile.in \
@@ -276,18 +277,21 @@ DIST_COMMON = $(srcdir)/cdplay/Makefile.am.inc \
 @WIN32_TRUE@am__append_55 = net/Net_WS2.cpp
 @ARCH_X86_TRUE@am__append_56 = cputest/x86_cpu.c
 @ARCH_POWERPC_TRUE@am__append_57 = cputest/ppc_cpu.c
-@HAVE_EXTERNAL_TREMOR_TRUE@am__append_58 = @TREMOR_LIBS@
-@HAVE_EXTERNAL_TREMOR_FALSE@am__append_59 = libvorbisidec.a
-@HAVE_EXTERNAL_TREMOR_FALSE@am__append_60 = libvorbisidec.a
-@HAVE_EXTERNAL_TREMOR_FALSE@am__append_61 = libvorbisidec.a
-@HAVE_EXTERNAL_MPCDEC_TRUE@am__append_62 = @MPCDEC_LIBS@
-@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_63 = libmpcdec.a
-@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_64 = libmpcdec.a
-@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_65 = libmpcdec.a
-@HAVE_EXTERNAL_TRIO_TRUE@am__append_66 = @TRIO_LIBS@
-@HAVE_EXTERNAL_TRIO_FALSE@am__append_67 = libtrio.a
-@HAVE_EXTERNAL_TRIO_FALSE@am__append_68 = libtrio.a
-@HAVE_EXTERNAL_TRIO_FALSE@am__append_69 = libtrio.a
+@HAVE_EXTERNAL_LZO2_TRUE@am__append_58 = @LZO2_LIBS@
+@HAVE_EXTERNAL_LZO2_TRUE@am__append_59 = @LZO2_CFLAGS@
+@HAVE_EXTERNAL_LZO2_FALSE@am__append_60 = minilzo/minilzo.c
+@HAVE_EXTERNAL_TREMOR_TRUE@am__append_61 = @TREMOR_LIBS@
+@HAVE_EXTERNAL_TREMOR_FALSE@am__append_62 = libvorbisidec.a
+@HAVE_EXTERNAL_TREMOR_FALSE@am__append_63 = libvorbisidec.a
+@HAVE_EXTERNAL_TREMOR_FALSE@am__append_64 = libvorbisidec.a
+@HAVE_EXTERNAL_MPCDEC_TRUE@am__append_65 = @MPCDEC_LIBS@
+@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_66 = libmpcdec.a
+@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_67 = libmpcdec.a
+@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_68 = libmpcdec.a
+@HAVE_EXTERNAL_TRIO_TRUE@am__append_69 = @TRIO_LIBS@
+@HAVE_EXTERNAL_TRIO_FALSE@am__append_70 = libtrio.a
+@HAVE_EXTERNAL_TRIO_FALSE@am__append_71 = libtrio.a
+@HAVE_EXTERNAL_TRIO_FALSE@am__append_72 = libtrio.a
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
@@ -302,12 +306,12 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
 	$(top_srcdir)/m4/lib-prefix.m4 $(top_srcdir)/m4/lock.m4 \
 	$(top_srcdir)/m4/longlong.m4 $(top_srcdir)/m4/nls.m4 \
 	$(top_srcdir)/m4/po.m4 $(top_srcdir)/m4/printf-posix.m4 \
-	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/m4/size_max.m4 \
-	$(top_srcdir)/m4/stdint_h.m4 $(top_srcdir)/m4/threadlib.m4 \
-	$(top_srcdir)/m4/uintmax_t.m4 $(top_srcdir)/m4/visibility.m4 \
-	$(top_srcdir)/m4/wchar_t.m4 $(top_srcdir)/m4/wint_t.m4 \
-	$(top_srcdir)/m4/xsize.m4 $(top_srcdir)/acinclude.m4 \
-	$(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/m4/sdl2.m4 \
+	$(top_srcdir)/m4/size_max.m4 $(top_srcdir)/m4/stdint_h.m4 \
+	$(top_srcdir)/m4/threadlib.m4 $(top_srcdir)/m4/uintmax_t.m4 \
+	$(top_srcdir)/m4/visibility.m4 $(top_srcdir)/m4/wchar_t.m4 \
+	$(top_srcdir)/m4/wint_t.m4 $(top_srcdir)/m4/xsize.m4 \
+	$(top_srcdir)/acinclude.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -588,17 +592,16 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	sound/Blip_Buffer.cpp sound/Stereo_Buffer.cpp \
 	sound/Fir_Resampler.cpp sound/WAVRecord.cpp \
 	sound/OwlResampler.cpp sound/okiadpcm.cpp net/Net.cpp \
-	net/Net_POSIX.cpp net/Net_WS2.cpp compress/minilzo.c \
-	compress/ioapi.c compress/unzip.c compress/GZFileStream.cpp \
-	compress/ZLInflateFilter.cpp hash/md5.cpp hash/sha1.cpp \
-	hash/sha256.cpp string/escape.cpp string/string.cpp \
-	video/surface.cpp video/font-data.cpp video/font-data-18x18.c \
-	video/font-data-12x13.c video/png.cpp video/primitives.cpp \
-	video/text.cpp video/video.cpp video/tblur.cpp \
-	video/resize.cpp video/Deinterlacer.cpp resampler/resample.c \
-	cputest/cputest.c cputest/x86_cpu.c cputest/ppc_cpu.c \
-	cheat_formats/gb.cpp cheat_formats/psx.cpp \
-	cheat_formats/snes.cpp
+	net/Net_POSIX.cpp net/Net_WS2.cpp compress/GZFileStream.cpp \
+	compress/ZLInflateFilter.cpp compress/ZIPReader.cpp \
+	hash/md5.cpp hash/sha1.cpp hash/sha256.cpp string/escape.cpp \
+	string/string.cpp video/surface.cpp video/font-data.cpp \
+	video/font-data-18x18.c video/font-data-12x13.c video/png.cpp \
+	video/primitives.cpp video/text.cpp video/video.cpp \
+	video/tblur.cpp video/resize.cpp video/Deinterlacer.cpp \
+	resampler/resample.c cputest/cputest.c cputest/x86_cpu.c \
+	cputest/ppc_cpu.c cheat_formats/gb.cpp cheat_formats/psx.cpp \
+	cheat_formats/snes.cpp minilzo/minilzo.c
 @HAVE_SDL_TRUE@@WIN32_TRUE@am__objects_1 =  \
 @HAVE_SDL_TRUE@@WIN32_TRUE@	drivers/win-resource.$(OBJEXT)
 @WANT_GB_EMU_TRUE@am__objects_2 = gb/gb.$(OBJEXT) gb/gfx.$(OBJEXT) \
@@ -880,6 +883,7 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 @WIN32_TRUE@am__objects_35 = net/Net_WS2.$(OBJEXT)
 @ARCH_X86_TRUE@am__objects_36 = cputest/x86_cpu.$(OBJEXT)
 @ARCH_POWERPC_TRUE@am__objects_37 = cputest/ppc_cpu.$(OBJEXT)
+@HAVE_EXTERNAL_LZO2_FALSE@am__objects_38 = minilzo/minilzo.$(OBJEXT)
 am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	mempatcher.$(OBJEXT) settings.$(OBJEXT) endian.$(OBJEXT) \
 	Time.$(OBJEXT) mednafen.$(OBJEXT) git.$(OBJEXT) file.$(OBJEXT) \
@@ -912,9 +916,9 @@ am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	sound/Fir_Resampler.$(OBJEXT) sound/WAVRecord.$(OBJEXT) \
 	sound/OwlResampler.$(OBJEXT) sound/okiadpcm.$(OBJEXT) \
 	net/Net.$(OBJEXT) $(am__objects_34) $(am__objects_35) \
-	compress/minilzo.$(OBJEXT) compress/ioapi.$(OBJEXT) \
-	compress/unzip.$(OBJEXT) compress/GZFileStream.$(OBJEXT) \
-	compress/ZLInflateFilter.$(OBJEXT) hash/md5.$(OBJEXT) \
+	compress/GZFileStream.$(OBJEXT) \
+	compress/ZLInflateFilter.$(OBJEXT) \
+	compress/ZIPReader.$(OBJEXT) hash/md5.$(OBJEXT) \
 	hash/sha1.$(OBJEXT) hash/sha256.$(OBJEXT) \
 	string/escape.$(OBJEXT) string/string.$(OBJEXT) \
 	video/surface.$(OBJEXT) video/font-data.$(OBJEXT) \
@@ -925,7 +929,8 @@ am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	video/resize.$(OBJEXT) video/Deinterlacer.$(OBJEXT) \
 	resampler/resample.$(OBJEXT) cputest/cputest.$(OBJEXT) \
 	$(am__objects_36) $(am__objects_37) cheat_formats/gb.$(OBJEXT) \
-	cheat_formats/psx.$(OBJEXT) cheat_formats/snes.$(OBJEXT)
+	cheat_formats/psx.$(OBJEXT) cheat_formats/snes.$(OBJEXT) \
+	$(am__objects_38)
 mednafen_OBJECTS = $(am_mednafen_OBJECTS)
 am__DEPENDENCIES_1 =
 AM_V_P = $(am__v_P_@AM_V@)
@@ -1078,7 +1083,7 @@ CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
-DEFS = @DEFS@ @SNDFILE_CFLAGS@
+DEFS = @DEFS@ @SNDFILE_CFLAGS@ $(am__append_59)
 DEPDIR = @DEPDIR@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
@@ -1128,6 +1133,8 @@ LTLIBMULTITHREAD = @LTLIBMULTITHREAD@
 LTLIBOBJS = @LTLIBOBJS@
 LTLIBPTH = @LTLIBPTH@
 LTLIBTHREAD = @LTLIBTHREAD@
+LZO2_CFLAGS = @LZO2_CFLAGS@
+LZO2_LIBS = @LZO2_LIBS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
 MPCDEC_LIBS = @MPCDEC_LIBS@
@@ -1151,8 +1158,9 @@ PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 POSUB = @POSUB@
 PRI_MACROS_BROKEN = @PRI_MACROS_BROKEN@
 RANLIB = @RANLIB@
+SDL2_CONFIG = @SDL2_CONFIG@
+SDL2_FRAMEWORK = @SDL2_FRAMEWORK@
 SDL_CFLAGS = @SDL_CFLAGS@
-SDL_CONFIG = @SDL_CONFIG@
 SDL_LIBS = @SDL_LIBS@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -1231,20 +1239,20 @@ AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_builddir)/intl
 SUBDIRS = $(am__append_1) $(am__append_5) sexyal $(SS_SUBDIRS)
 noinst_LIBRARIES = $(am__append_17) $(am__append_28) $(am__append_40) \
-	libmdfnquicklz.a $(am__append_59) $(am__append_63) \
-	$(am__append_67)
+	libmdfnquicklz.a $(am__append_62) $(am__append_66) \
+	$(am__append_70)
 mednafen_LDADD = $(am__append_2) $(am__append_6) sexyal/libsexyal.a \
 	@ALSA_LIBS@ @JACK_LIBS@ $(am__append_8) $(am__append_18) \
 	$(am__append_29) $(am__append_32) $(am__append_34) \
 	$(am__append_41) libmdfnquicklz.a $(am__append_58) \
-	$(am__append_60) $(am__append_62) $(am__append_64) \
-	$(am__append_66) $(am__append_68) @SNDFILE_LIBS@ @ZLIB_LIBS@ \
-	@LIBINTL@ @LIBICONV@ $(am__empty)
+	$(am__append_61) $(am__append_63) $(am__append_65) \
+	$(am__append_67) $(am__append_69) $(am__append_71) \
+	@SNDFILE_LIBS@ @ZLIB_LIBS@ @LIBINTL@ @LIBICONV@ $(am__empty)
 mednafen_DEPENDENCIES = $(am__append_3) $(am__append_7) \
 	sexyal/libsexyal.a $(am__append_19) $(am__append_30) \
 	$(am__append_33) $(am__append_35) $(am__append_42) \
-	libmdfnquicklz.a $(am__append_61) $(am__append_65) \
-	$(am__append_69)
+	libmdfnquicklz.a $(am__append_64) $(am__append_68) \
+	$(am__append_72)
 mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	endian.cpp Time.cpp mednafen.cpp git.cpp file.cpp general.cpp \
 	memory.cpp netplay.cpp state.cpp state_rewind.cpp movie.cpp \
@@ -1271,17 +1279,16 @@ mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	sound/Blip_Buffer.cpp sound/Stereo_Buffer.cpp \
 	sound/Fir_Resampler.cpp sound/WAVRecord.cpp \
 	sound/OwlResampler.cpp sound/okiadpcm.cpp net/Net.cpp \
-	$(am__append_54) $(am__append_55) compress/minilzo.c \
-	compress/ioapi.c compress/unzip.c compress/GZFileStream.cpp \
-	compress/ZLInflateFilter.cpp hash/md5.cpp hash/sha1.cpp \
-	hash/sha256.cpp string/escape.cpp string/string.cpp \
-	video/surface.cpp video/font-data.cpp video/font-data-18x18.c \
-	video/font-data-12x13.c video/png.cpp video/primitives.cpp \
-	video/text.cpp video/video.cpp video/tblur.cpp \
-	video/resize.cpp video/Deinterlacer.cpp resampler/resample.c \
-	cputest/cputest.c $(am__append_56) $(am__append_57) \
-	cheat_formats/gb.cpp cheat_formats/psx.cpp \
-	cheat_formats/snes.cpp
+	$(am__append_54) $(am__append_55) compress/GZFileStream.cpp \
+	compress/ZLInflateFilter.cpp compress/ZIPReader.cpp \
+	hash/md5.cpp hash/sha1.cpp hash/sha256.cpp string/escape.cpp \
+	string/string.cpp video/surface.cpp video/font-data.cpp \
+	video/font-data-18x18.c video/font-data-12x13.c video/png.cpp \
+	video/primitives.cpp video/text.cpp video/video.cpp \
+	video/tblur.cpp video/resize.cpp video/Deinterlacer.cpp \
+	resampler/resample.c cputest/cputest.c $(am__append_56) \
+	$(am__append_57) cheat_formats/gb.cpp cheat_formats/psx.cpp \
+	cheat_formats/snes.cpp $(am__append_60)
 @WANT_NGP_EMU_TRUE@libngp_a_CFLAGS = @AM_CFLAGS@ @NO_STRICT_ALIASING_FLAGS@
 @WANT_NGP_EMU_TRUE@libngp_a_CXXFLAGS = @AM_CXXFLAGS@ @NO_STRICT_ALIASING_FLAGS@
 @WANT_NGP_EMU_TRUE@libngp_a_SOURCES = ngp/bios.cpp ngp/biosHLE.cpp ngp/dma.cpp ngp/flash.cpp ngp/gfx.cpp ngp/T6W28_Apu.cpp	\
@@ -1382,7 +1389,7 @@ all: all-recursive
 
 .SUFFIXES:
 .SUFFIXES: .c .cpp .o .obj .rc
-$(srcdir)/Makefile.in:  $(srcdir)/Makefile.am $(srcdir)/cdplay/Makefile.am.inc $(srcdir)/demo/Makefile.am.inc $(srcdir)/gb/Makefile.am.inc $(srcdir)/gba/Makefile.am.inc $(srcdir)/lynx/Makefile.am.inc $(srcdir)/md/Makefile.am.inc $(srcdir)/nes/Makefile.am.inc $(srcdir)/nes/ppu/Makefile.am.inc $(srcdir)/nes/boards/Makefile.am.inc $(srcdir)/nes/input/Makefile.am.inc $(srcdir)/ngp/Makefile.am.inc $(srcdir)/pce/Makefile.am.inc $(srcdir)/pce_fast/Makefile.am.inc $(srcdir)/pcfx/Makefile.am.inc $(srcdir)/psx/Makefile.am.inc $(srcdir)/sms/Makefile.am.inc $(srcdir)/snes/Makefile.am.inc $(srcdir)/snes_faust/Makefile.am.inc $(srcdir)/vb/Makefile.am.inc $(srcdir)/wswan/Makefile.am.inc $(srcdir)/desa68/Makefile.am.inc $(srcdir)/hw_cpu/Makefile.am.inc $(srcdir)/hw_misc/Makefile.am.inc $(srcdir)/hw_sound/Makefile.am.inc $(srcdir)/hw_video/Makefile.am.inc $(srcdir)/cdrom/Makefile.am.inc $(srcdir)/sound/Makefile.am.inc $(srcdir)/net/Makefile.am.inc $(srcdir)/quicklz/Makefile.am.inc $(srcdir)/compress/Makefile.am.inc $(srcdir)/hash/Makefile.am.inc $(srcdir)/string/Makefile.am.inc $(srcdir)/video/Makefile.am.inc $(srcdir)/resampler/Makefile.am.inc $(srcdir)/cputest/Makefile.am.inc $(srcdir)/cheat_formats/Makefile.am.inc $(srcdir)/tremor/Makefile.am.inc $(srcdir)/mpcdec/Makefile.am.inc $(srcdir)/trio/Makefile.am.inc $(am__configure_deps)
+$(srcdir)/Makefile.in:  $(srcdir)/Makefile.am $(srcdir)/cdplay/Makefile.am.inc $(srcdir)/demo/Makefile.am.inc $(srcdir)/gb/Makefile.am.inc $(srcdir)/gba/Makefile.am.inc $(srcdir)/lynx/Makefile.am.inc $(srcdir)/md/Makefile.am.inc $(srcdir)/nes/Makefile.am.inc $(srcdir)/nes/ppu/Makefile.am.inc $(srcdir)/nes/boards/Makefile.am.inc $(srcdir)/nes/input/Makefile.am.inc $(srcdir)/ngp/Makefile.am.inc $(srcdir)/pce/Makefile.am.inc $(srcdir)/pce_fast/Makefile.am.inc $(srcdir)/pcfx/Makefile.am.inc $(srcdir)/psx/Makefile.am.inc $(srcdir)/sms/Makefile.am.inc $(srcdir)/snes/Makefile.am.inc $(srcdir)/snes_faust/Makefile.am.inc $(srcdir)/vb/Makefile.am.inc $(srcdir)/wswan/Makefile.am.inc $(srcdir)/desa68/Makefile.am.inc $(srcdir)/hw_cpu/Makefile.am.inc $(srcdir)/hw_misc/Makefile.am.inc $(srcdir)/hw_sound/Makefile.am.inc $(srcdir)/hw_video/Makefile.am.inc $(srcdir)/cdrom/Makefile.am.inc $(srcdir)/sound/Makefile.am.inc $(srcdir)/net/Makefile.am.inc $(srcdir)/quicklz/Makefile.am.inc $(srcdir)/compress/Makefile.am.inc $(srcdir)/hash/Makefile.am.inc $(srcdir)/string/Makefile.am.inc $(srcdir)/video/Makefile.am.inc $(srcdir)/resampler/Makefile.am.inc $(srcdir)/cputest/Makefile.am.inc $(srcdir)/cheat_formats/Makefile.am.inc $(srcdir)/minilzo/Makefile.am.inc $(srcdir)/tremor/Makefile.am.inc $(srcdir)/mpcdec/Makefile.am.inc $(srcdir)/trio/Makefile.am.inc $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
 	    *$$dep*) \
@@ -1403,7 +1410,7 @@ Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	    echo ' cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe)'; \
 	    cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe);; \
 	esac;
-$(srcdir)/cdplay/Makefile.am.inc $(srcdir)/demo/Makefile.am.inc $(srcdir)/gb/Makefile.am.inc $(srcdir)/gba/Makefile.am.inc $(srcdir)/lynx/Makefile.am.inc $(srcdir)/md/Makefile.am.inc $(srcdir)/nes/Makefile.am.inc $(srcdir)/nes/ppu/Makefile.am.inc $(srcdir)/nes/boards/Makefile.am.inc $(srcdir)/nes/input/Makefile.am.inc $(srcdir)/ngp/Makefile.am.inc $(srcdir)/pce/Makefile.am.inc $(srcdir)/pce_fast/Makefile.am.inc $(srcdir)/pcfx/Makefile.am.inc $(srcdir)/psx/Makefile.am.inc $(srcdir)/sms/Makefile.am.inc $(srcdir)/snes/Makefile.am.inc $(srcdir)/snes_faust/Makefile.am.inc $(srcdir)/vb/Makefile.am.inc $(srcdir)/wswan/Makefile.am.inc $(srcdir)/desa68/Makefile.am.inc $(srcdir)/hw_cpu/Makefile.am.inc $(srcdir)/hw_misc/Makefile.am.inc $(srcdir)/hw_sound/Makefile.am.inc $(srcdir)/hw_video/Makefile.am.inc $(srcdir)/cdrom/Makefile.am.inc $(srcdir)/sound/Makefile.am.inc $(srcdir)/net/Makefile.am.inc $(srcdir)/quicklz/Makefile.am.inc $(srcdir)/compress/Makefile.am.inc $(srcdir)/hash/Makefile.am.inc $(srcdir)/string/Makefile.am.inc $(srcdir)/video/Makefile.am.inc $(srcdir)/resampler/Makefile.am.inc $(srcdir)/cputest/Makefile.am.inc $(srcdir)/cheat_formats/Makefile.am.inc $(srcdir)/tremor/Makefile.am.inc $(srcdir)/mpcdec/Makefile.am.inc $(srcdir)/trio/Makefile.am.inc:
+$(srcdir)/cdplay/Makefile.am.inc $(srcdir)/demo/Makefile.am.inc $(srcdir)/gb/Makefile.am.inc $(srcdir)/gba/Makefile.am.inc $(srcdir)/lynx/Makefile.am.inc $(srcdir)/md/Makefile.am.inc $(srcdir)/nes/Makefile.am.inc $(srcdir)/nes/ppu/Makefile.am.inc $(srcdir)/nes/boards/Makefile.am.inc $(srcdir)/nes/input/Makefile.am.inc $(srcdir)/ngp/Makefile.am.inc $(srcdir)/pce/Makefile.am.inc $(srcdir)/pce_fast/Makefile.am.inc $(srcdir)/pcfx/Makefile.am.inc $(srcdir)/psx/Makefile.am.inc $(srcdir)/sms/Makefile.am.inc $(srcdir)/snes/Makefile.am.inc $(srcdir)/snes_faust/Makefile.am.inc $(srcdir)/vb/Makefile.am.inc $(srcdir)/wswan/Makefile.am.inc $(srcdir)/desa68/Makefile.am.inc $(srcdir)/hw_cpu/Makefile.am.inc $(srcdir)/hw_misc/Makefile.am.inc $(srcdir)/hw_sound/Makefile.am.inc $(srcdir)/hw_video/Makefile.am.inc $(srcdir)/cdrom/Makefile.am.inc $(srcdir)/sound/Makefile.am.inc $(srcdir)/net/Makefile.am.inc $(srcdir)/quicklz/Makefile.am.inc $(srcdir)/compress/Makefile.am.inc $(srcdir)/hash/Makefile.am.inc $(srcdir)/string/Makefile.am.inc $(srcdir)/video/Makefile.am.inc $(srcdir)/resampler/Makefile.am.inc $(srcdir)/cputest/Makefile.am.inc $(srcdir)/cheat_formats/Makefile.am.inc $(srcdir)/minilzo/Makefile.am.inc $(srcdir)/tremor/Makefile.am.inc $(srcdir)/mpcdec/Makefile.am.inc $(srcdir)/trio/Makefile.am.inc:
 
 $(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
@@ -2718,15 +2725,11 @@ compress/$(am__dirstamp):
 compress/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) compress/$(DEPDIR)
 	@: > compress/$(DEPDIR)/$(am__dirstamp)
-compress/minilzo.$(OBJEXT): compress/$(am__dirstamp) \
-	compress/$(DEPDIR)/$(am__dirstamp)
-compress/ioapi.$(OBJEXT): compress/$(am__dirstamp) \
-	compress/$(DEPDIR)/$(am__dirstamp)
-compress/unzip.$(OBJEXT): compress/$(am__dirstamp) \
-	compress/$(DEPDIR)/$(am__dirstamp)
 compress/GZFileStream.$(OBJEXT): compress/$(am__dirstamp) \
 	compress/$(DEPDIR)/$(am__dirstamp)
 compress/ZLInflateFilter.$(OBJEXT): compress/$(am__dirstamp) \
+	compress/$(DEPDIR)/$(am__dirstamp)
+compress/ZIPReader.$(OBJEXT): compress/$(am__dirstamp) \
 	compress/$(DEPDIR)/$(am__dirstamp)
 hash/$(am__dirstamp):
 	@$(MKDIR_P) hash
@@ -2810,6 +2813,14 @@ cheat_formats/psx.$(OBJEXT): cheat_formats/$(am__dirstamp) \
 	cheat_formats/$(DEPDIR)/$(am__dirstamp)
 cheat_formats/snes.$(OBJEXT): cheat_formats/$(am__dirstamp) \
 	cheat_formats/$(DEPDIR)/$(am__dirstamp)
+minilzo/$(am__dirstamp):
+	@$(MKDIR_P) minilzo
+	@: > minilzo/$(am__dirstamp)
+minilzo/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) minilzo/$(DEPDIR)
+	@: > minilzo/$(DEPDIR)/$(am__dirstamp)
+minilzo/minilzo.$(OBJEXT): minilzo/$(am__dirstamp) \
+	minilzo/$(DEPDIR)/$(am__dirstamp)
 
 mednafen$(EXEEXT): $(mednafen_OBJECTS) $(mednafen_DEPENDENCIES) $(EXTRA_mednafen_DEPENDENCIES) 
 	@rm -f mednafen$(EXEEXT)
@@ -2843,6 +2854,7 @@ mostlyclean-compile:
 	-rm -f md/cart/*.$(OBJEXT)
 	-rm -f md/cd/*.$(OBJEXT)
 	-rm -f md/input/*.$(OBJEXT)
+	-rm -f minilzo/*.$(OBJEXT)
 	-rm -f mpcdec/*.$(OBJEXT)
 	-rm -f nes/*.$(OBJEXT)
 	-rm -f nes/boards/*.$(OBJEXT)
@@ -2947,10 +2959,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@cheat_formats/$(DEPDIR)/psx.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cheat_formats/$(DEPDIR)/snes.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@compress/$(DEPDIR)/GZFileStream.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@compress/$(DEPDIR)/ZIPReader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@compress/$(DEPDIR)/ZLInflateFilter.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@compress/$(DEPDIR)/ioapi.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@compress/$(DEPDIR)/minilzo.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@compress/$(DEPDIR)/unzip.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cputest/$(DEPDIR)/cputest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cputest/$(DEPDIR)/ppc_cpu.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@cputest/$(DEPDIR)/x86_cpu.Po@am__quote@
@@ -3037,6 +3047,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@md/input/$(DEPDIR)/gamepad.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@md/input/$(DEPDIR)/megamouse.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@md/input/$(DEPDIR)/multitap.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@minilzo/$(DEPDIR)/minilzo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@mpcdec/$(DEPDIR)/libmpcdec_a-crc32.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@mpcdec/$(DEPDIR)/libmpcdec_a-huffman.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@mpcdec/$(DEPDIR)/libmpcdec_a-mpc_bits_reader.Po@am__quote@
@@ -4773,6 +4784,8 @@ distclean-generic:
 	-rm -f md/cd/$(am__dirstamp)
 	-rm -f md/input/$(DEPDIR)/$(am__dirstamp)
 	-rm -f md/input/$(am__dirstamp)
+	-rm -f minilzo/$(DEPDIR)/$(am__dirstamp)
+	-rm -f minilzo/$(am__dirstamp)
 	-rm -f mpcdec/$(DEPDIR)/$(am__dirstamp)
 	-rm -f mpcdec/$(am__dirstamp)
 	-rm -f nes/$(DEPDIR)/$(am__dirstamp)
@@ -4891,7 +4904,7 @@ clean-am: clean-binPROGRAMS clean-generic clean-noinstLIBRARIES \
 	mostlyclean-am
 
 distclean: distclean-recursive
-	-rm -rf ./$(DEPDIR) cdplay/$(DEPDIR) cdrom/$(DEPDIR) cheat_formats/$(DEPDIR) compress/$(DEPDIR) cputest/$(DEPDIR) demo/$(DEPDIR) desa68/$(DEPDIR) gb/$(DEPDIR) gba/$(DEPDIR) hash/$(DEPDIR) hw_cpu/m68k/$(DEPDIR) hw_cpu/v810/$(DEPDIR) hw_cpu/z80-fuse/$(DEPDIR) hw_misc/arcade_card/$(DEPDIR) hw_sound/gb_apu/$(DEPDIR) hw_sound/pce_psg/$(DEPDIR) hw_sound/sms_apu/$(DEPDIR) hw_sound/ym2413/$(DEPDIR) hw_sound/ym2612/$(DEPDIR) hw_video/huc6270/$(DEPDIR) lynx/$(DEPDIR) md/$(DEPDIR) md/cart/$(DEPDIR) md/cd/$(DEPDIR) md/input/$(DEPDIR) mpcdec/$(DEPDIR) nes/$(DEPDIR) nes/boards/$(DEPDIR) nes/input/$(DEPDIR) nes/ntsc/$(DEPDIR) nes/ppu/$(DEPDIR) net/$(DEPDIR) ngp/$(DEPDIR) ngp/TLCS-900h/$(DEPDIR) pce/$(DEPDIR) pce/input/$(DEPDIR) pce_fast/$(DEPDIR) pcfx/$(DEPDIR) pcfx/input/$(DEPDIR) psx/$(DEPDIR) psx/input/$(DEPDIR) quicklz/$(DEPDIR) resampler/$(DEPDIR) sms/$(DEPDIR) snes/$(DEPDIR) snes/src/cartridge/$(DEPDIR) snes/src/cheat/$(DEPDIR) snes/src/chip/bsx/$(DEPDIR) snes/src/chip/cx4/$(DEPDIR) snes/src/chip/dsp1/$(DEPDIR) snes/src/chip/dsp2/$(DEPDIR) snes/src/chip/dsp3/$(DEPDIR) snes/src/chip/dsp4/$(DEPDIR) snes/src/chip/obc1/$(DEPDIR) snes/src/chip/sa1/$(DEPDIR) snes/src/chip/sdd1/$(DEPDIR) snes/src/chip/spc7110/$(DEPDIR) snes/src/chip/srtc/$(DEPDIR) snes/src/chip/st010/$(DEPDIR) snes/src/chip/superfx/$(DEPDIR) snes/src/cpu/$(DEPDIR) snes/src/cpu/core/$(DEPDIR) snes/src/cpu/scpu/$(DEPDIR) snes/src/lib/libco/$(DEPDIR) snes/src/memory/$(DEPDIR) snes/src/memory/smemory/$(DEPDIR) snes/src/ppu/$(DEPDIR) snes/src/sdsp/$(DEPDIR) snes/src/smp/$(DEPDIR) snes/src/system/$(DEPDIR) snes_faust/$(DEPDIR) sound/$(DEPDIR) string/$(DEPDIR) tremor/$(DEPDIR) trio/$(DEPDIR) vb/$(DEPDIR) video/$(DEPDIR) wswan/$(DEPDIR) wswan/dis/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) cdplay/$(DEPDIR) cdrom/$(DEPDIR) cheat_formats/$(DEPDIR) compress/$(DEPDIR) cputest/$(DEPDIR) demo/$(DEPDIR) desa68/$(DEPDIR) gb/$(DEPDIR) gba/$(DEPDIR) hash/$(DEPDIR) hw_cpu/m68k/$(DEPDIR) hw_cpu/v810/$(DEPDIR) hw_cpu/z80-fuse/$(DEPDIR) hw_misc/arcade_card/$(DEPDIR) hw_sound/gb_apu/$(DEPDIR) hw_sound/pce_psg/$(DEPDIR) hw_sound/sms_apu/$(DEPDIR) hw_sound/ym2413/$(DEPDIR) hw_sound/ym2612/$(DEPDIR) hw_video/huc6270/$(DEPDIR) lynx/$(DEPDIR) md/$(DEPDIR) md/cart/$(DEPDIR) md/cd/$(DEPDIR) md/input/$(DEPDIR) minilzo/$(DEPDIR) mpcdec/$(DEPDIR) nes/$(DEPDIR) nes/boards/$(DEPDIR) nes/input/$(DEPDIR) nes/ntsc/$(DEPDIR) nes/ppu/$(DEPDIR) net/$(DEPDIR) ngp/$(DEPDIR) ngp/TLCS-900h/$(DEPDIR) pce/$(DEPDIR) pce/input/$(DEPDIR) pce_fast/$(DEPDIR) pcfx/$(DEPDIR) pcfx/input/$(DEPDIR) psx/$(DEPDIR) psx/input/$(DEPDIR) quicklz/$(DEPDIR) resampler/$(DEPDIR) sms/$(DEPDIR) snes/$(DEPDIR) snes/src/cartridge/$(DEPDIR) snes/src/cheat/$(DEPDIR) snes/src/chip/bsx/$(DEPDIR) snes/src/chip/cx4/$(DEPDIR) snes/src/chip/dsp1/$(DEPDIR) snes/src/chip/dsp2/$(DEPDIR) snes/src/chip/dsp3/$(DEPDIR) snes/src/chip/dsp4/$(DEPDIR) snes/src/chip/obc1/$(DEPDIR) snes/src/chip/sa1/$(DEPDIR) snes/src/chip/sdd1/$(DEPDIR) snes/src/chip/spc7110/$(DEPDIR) snes/src/chip/srtc/$(DEPDIR) snes/src/chip/st010/$(DEPDIR) snes/src/chip/superfx/$(DEPDIR) snes/src/cpu/$(DEPDIR) snes/src/cpu/core/$(DEPDIR) snes/src/cpu/scpu/$(DEPDIR) snes/src/lib/libco/$(DEPDIR) snes/src/memory/$(DEPDIR) snes/src/memory/smemory/$(DEPDIR) snes/src/ppu/$(DEPDIR) snes/src/sdsp/$(DEPDIR) snes/src/smp/$(DEPDIR) snes/src/system/$(DEPDIR) snes_faust/$(DEPDIR) sound/$(DEPDIR) string/$(DEPDIR) tremor/$(DEPDIR) trio/$(DEPDIR) vb/$(DEPDIR) video/$(DEPDIR) wswan/$(DEPDIR) wswan/dis/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -4937,7 +4950,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-recursive
-	-rm -rf ./$(DEPDIR) cdplay/$(DEPDIR) cdrom/$(DEPDIR) cheat_formats/$(DEPDIR) compress/$(DEPDIR) cputest/$(DEPDIR) demo/$(DEPDIR) desa68/$(DEPDIR) gb/$(DEPDIR) gba/$(DEPDIR) hash/$(DEPDIR) hw_cpu/m68k/$(DEPDIR) hw_cpu/v810/$(DEPDIR) hw_cpu/z80-fuse/$(DEPDIR) hw_misc/arcade_card/$(DEPDIR) hw_sound/gb_apu/$(DEPDIR) hw_sound/pce_psg/$(DEPDIR) hw_sound/sms_apu/$(DEPDIR) hw_sound/ym2413/$(DEPDIR) hw_sound/ym2612/$(DEPDIR) hw_video/huc6270/$(DEPDIR) lynx/$(DEPDIR) md/$(DEPDIR) md/cart/$(DEPDIR) md/cd/$(DEPDIR) md/input/$(DEPDIR) mpcdec/$(DEPDIR) nes/$(DEPDIR) nes/boards/$(DEPDIR) nes/input/$(DEPDIR) nes/ntsc/$(DEPDIR) nes/ppu/$(DEPDIR) net/$(DEPDIR) ngp/$(DEPDIR) ngp/TLCS-900h/$(DEPDIR) pce/$(DEPDIR) pce/input/$(DEPDIR) pce_fast/$(DEPDIR) pcfx/$(DEPDIR) pcfx/input/$(DEPDIR) psx/$(DEPDIR) psx/input/$(DEPDIR) quicklz/$(DEPDIR) resampler/$(DEPDIR) sms/$(DEPDIR) snes/$(DEPDIR) snes/src/cartridge/$(DEPDIR) snes/src/cheat/$(DEPDIR) snes/src/chip/bsx/$(DEPDIR) snes/src/chip/cx4/$(DEPDIR) snes/src/chip/dsp1/$(DEPDIR) snes/src/chip/dsp2/$(DEPDIR) snes/src/chip/dsp3/$(DEPDIR) snes/src/chip/dsp4/$(DEPDIR) snes/src/chip/obc1/$(DEPDIR) snes/src/chip/sa1/$(DEPDIR) snes/src/chip/sdd1/$(DEPDIR) snes/src/chip/spc7110/$(DEPDIR) snes/src/chip/srtc/$(DEPDIR) snes/src/chip/st010/$(DEPDIR) snes/src/chip/superfx/$(DEPDIR) snes/src/cpu/$(DEPDIR) snes/src/cpu/core/$(DEPDIR) snes/src/cpu/scpu/$(DEPDIR) snes/src/lib/libco/$(DEPDIR) snes/src/memory/$(DEPDIR) snes/src/memory/smemory/$(DEPDIR) snes/src/ppu/$(DEPDIR) snes/src/sdsp/$(DEPDIR) snes/src/smp/$(DEPDIR) snes/src/system/$(DEPDIR) snes_faust/$(DEPDIR) sound/$(DEPDIR) string/$(DEPDIR) tremor/$(DEPDIR) trio/$(DEPDIR) vb/$(DEPDIR) video/$(DEPDIR) wswan/$(DEPDIR) wswan/dis/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) cdplay/$(DEPDIR) cdrom/$(DEPDIR) cheat_formats/$(DEPDIR) compress/$(DEPDIR) cputest/$(DEPDIR) demo/$(DEPDIR) desa68/$(DEPDIR) gb/$(DEPDIR) gba/$(DEPDIR) hash/$(DEPDIR) hw_cpu/m68k/$(DEPDIR) hw_cpu/v810/$(DEPDIR) hw_cpu/z80-fuse/$(DEPDIR) hw_misc/arcade_card/$(DEPDIR) hw_sound/gb_apu/$(DEPDIR) hw_sound/pce_psg/$(DEPDIR) hw_sound/sms_apu/$(DEPDIR) hw_sound/ym2413/$(DEPDIR) hw_sound/ym2612/$(DEPDIR) hw_video/huc6270/$(DEPDIR) lynx/$(DEPDIR) md/$(DEPDIR) md/cart/$(DEPDIR) md/cd/$(DEPDIR) md/input/$(DEPDIR) minilzo/$(DEPDIR) mpcdec/$(DEPDIR) nes/$(DEPDIR) nes/boards/$(DEPDIR) nes/input/$(DEPDIR) nes/ntsc/$(DEPDIR) nes/ppu/$(DEPDIR) net/$(DEPDIR) ngp/$(DEPDIR) ngp/TLCS-900h/$(DEPDIR) pce/$(DEPDIR) pce/input/$(DEPDIR) pce_fast/$(DEPDIR) pcfx/$(DEPDIR) pcfx/input/$(DEPDIR) psx/$(DEPDIR) psx/input/$(DEPDIR) quicklz/$(DEPDIR) resampler/$(DEPDIR) sms/$(DEPDIR) snes/$(DEPDIR) snes/src/cartridge/$(DEPDIR) snes/src/cheat/$(DEPDIR) snes/src/chip/bsx/$(DEPDIR) snes/src/chip/cx4/$(DEPDIR) snes/src/chip/dsp1/$(DEPDIR) snes/src/chip/dsp2/$(DEPDIR) snes/src/chip/dsp3/$(DEPDIR) snes/src/chip/dsp4/$(DEPDIR) snes/src/chip/obc1/$(DEPDIR) snes/src/chip/sa1/$(DEPDIR) snes/src/chip/sdd1/$(DEPDIR) snes/src/chip/spc7110/$(DEPDIR) snes/src/chip/srtc/$(DEPDIR) snes/src/chip/st010/$(DEPDIR) snes/src/chip/superfx/$(DEPDIR) snes/src/cpu/$(DEPDIR) snes/src/cpu/core/$(DEPDIR) snes/src/cpu/scpu/$(DEPDIR) snes/src/lib/libco/$(DEPDIR) snes/src/memory/$(DEPDIR) snes/src/memory/smemory/$(DEPDIR) snes/src/ppu/$(DEPDIR) snes/src/sdsp/$(DEPDIR) snes/src/smp/$(DEPDIR) snes/src/system/$(DEPDIR) snes_faust/$(DEPDIR) sound/$(DEPDIR) string/$(DEPDIR) tremor/$(DEPDIR) trio/$(DEPDIR) vb/$(DEPDIR) video/$(DEPDIR) wswan/$(DEPDIR) wswan/dis/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

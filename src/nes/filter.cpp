@@ -519,6 +519,11 @@ int32 NES_Resampler::Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, i
 	}
         else if(SIMD_Type == SIMD_MMX)
         {
+	 //
+	 // FIXME: doing emms in a separate inline asm block below the while() loop isn't guaranteed safe...
+	 //
+	 asm volatile("" ::: "memory");
+
  	 while(InputIndex < max)
          {
           const unsigned int align_index = InputIndex & 0x3; //((int)(unsigned long long)wave & 0x6) >> 1;
@@ -534,7 +539,7 @@ int32 NES_Resampler::Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, i
 	  InputPhase = PhaseNext[InputPhase];
           InputIndex += PhaseStep[InputPhase];
 	 }
-	 asm volatile("emms\n\t");
+	 asm volatile("emms\n\t" ::: "memory");
 	}
 	#endif
 	#ifdef ARCH_POWERPC_ALTIVEC

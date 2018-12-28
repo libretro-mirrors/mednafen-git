@@ -430,18 +430,18 @@ static void VB_Power(void)
 
 static void SettingChanged(const char *name)
 {
- if(!strcasecmp(name, "vb.3dmode"))
+ if(!strcmp(name, "vb.3dmode"))
  {
   // FIXME, TODO (complicated)
   //VB3DMode = MDFN_GetSettingUI("vb.3dmode");
   //VIP_Set3DMode(VB3DMode);
  }
- else if(!strcasecmp(name, "vb.disable_parallax"))
+ else if(!strcmp(name, "vb.disable_parallax"))
  {
   VIP_SetParallaxDisable(MDFN_GetSettingB("vb.disable_parallax"));
  }
- else if(!strcasecmp(name, "vb.anaglyph.lcolor") || !strcasecmp(name, "vb.anaglyph.rcolor") ||
-	!strcasecmp(name, "vb.anaglyph.preset") || !strcasecmp(name, "vb.default_color"))
+ else if(!strcmp(name, "vb.anaglyph.lcolor") || !strcmp(name, "vb.anaglyph.rcolor") ||
+	!strcmp(name, "vb.anaglyph.preset") || !strcmp(name, "vb.default_color"))
 
  {
   uint32 lcolor = MDFN_GetSettingUI("vb.anaglyph.lcolor"), rcolor = MDFN_GetSettingUI("vb.anaglyph.rcolor");
@@ -455,15 +455,15 @@ static void SettingChanged(const char *name)
   VIP_SetAnaglyphColors(lcolor, rcolor);
   VIP_SetDefaultColor(MDFN_GetSettingUI("vb.default_color"));
  }
- else if(!strcasecmp(name, "vb.input.instant_read_hack"))
+ else if(!strcmp(name, "vb.input.instant_read_hack"))
  {
   VBINPUT_SetInstantReadHack(MDFN_GetSettingB("vb.input.instant_read_hack"));
  }
- else if(!strcasecmp(name, "vb.instant_display_hack"))
+ else if(!strcmp(name, "vb.instant_display_hack"))
   VIP_SetInstantDisplayHack(MDFN_GetSettingB("vb.instant_display_hack"));
- else if(!strcasecmp(name, "vb.allow_draw_skip"))
+ else if(!strcmp(name, "vb.allow_draw_skip"))
   VIP_SetAllowDrawSkip(MDFN_GetSettingB("vb.allow_draw_skip"));
- else if(!strcasecmp(name, "vb.ledonscale"))
+ else if(!strcmp(name, "vb.ledonscale"))
   VIP_SetLEDOnScale(MDFN_GetSettingF("vb.ledonscale"));
  else
   abort();
@@ -844,8 +844,8 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
  SFORMAT StateRegs[] =
  {
-  SFARRAY(WRAM, 65536),
-  SFARRAY(GPRAM, GPRAM_Mask ? (GPRAM_Mask + 1) : 0),
+  SFPTR8(WRAM, 65536),
+  SFPTR8(GPRAM, GPRAM_Mask ? (GPRAM_Mask + 1) : 0),
   SFVAR(WCR),
   SFVAR(IRQ_Asserted),
   SFVAR(VSU_CycleFix),
@@ -950,24 +950,24 @@ static const MDFNSetting VBSettings[] =
 
 static const IDIISG IDII =
 {
- { "a", "A", 7, IDIT_BUTTON_CAN_RAPID,  NULL },
- { "b", "B", 6, IDIT_BUTTON_CAN_RAPID, NULL },
- { "rt", "Right-Back", 13, IDIT_BUTTON, NULL },
- { "lt", "Left-Back", 12, IDIT_BUTTON, NULL },
+ IDIIS_ButtonCR("a", "A", 7,  NULL),
+ IDIIS_ButtonCR("b", "B", 6, NULL),
+ IDIIS_Button("rt", "Right-Back", 13, NULL),
+ IDIIS_Button("lt", "Left-Back", 12, NULL),
 
- { "up-r", "UP ↑ (Right D-Pad)", 8, IDIT_BUTTON, "down-r" },
- { "right-r", "RIGHT → (Right D-Pad)", 11, IDIT_BUTTON, "left-r" },
+ IDIIS_Button("up-r", "UP ↑ (Right D-Pad)", 8, "down-r"),
+ IDIIS_Button("right-r", "RIGHT → (Right D-Pad)", 11, "left-r"),
 
- { "right-l", "RIGHT → (Left D-Pad)", 3, IDIT_BUTTON, "left-l" },
- { "left-l", "LEFT ← (Left D-Pad)", 2, IDIT_BUTTON, "right-l" },
- { "down-l", "DOWN ↓ (Left D-Pad)", 1, IDIT_BUTTON, "up-l" },
- { "up-l", "UP ↑ (Left D-Pad)", 0, IDIT_BUTTON, "down-l" },
+ IDIIS_Button("right-l", "RIGHT → (Left D-Pad)", 3, "left-l"),
+ IDIIS_Button("left-l", "LEFT ← (Left D-Pad)", 2, "right-l"),
+ IDIIS_Button("down-l", "DOWN ↓ (Left D-Pad)", 1, "up-l"),
+ IDIIS_Button("up-l", "UP ↑ (Left D-Pad)", 0, "down-l"),
 
- { "start", "Start", 5, IDIT_BUTTON, NULL },
- { "select", "Select", 4, IDIT_BUTTON, NULL },
+ IDIIS_Button("start", "Start", 5, NULL),
+ IDIIS_Button("select", "Select", 4, NULL),
 
- { "left-r", "LEFT ← (Right D-Pad)", 10, IDIT_BUTTON, "right-r" },
- { "down-r", "DOWN ↓ (Right D-Pad)", 9, IDIT_BUTTON, "up-r" },
+ IDIIS_Button("left-r", "LEFT ← (Right D-Pad)", 10, "right-r"),
+ IDIIS_Button("down-r", "DOWN ↓ (Right D-Pad)", 9, "up-r"),
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =

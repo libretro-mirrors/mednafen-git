@@ -100,6 +100,8 @@ static void SetLPM(const uint32 v, const uint32 PortDevIdx[], const uint32 PortL
  outgoing_buffer.reset(new uint8[1 + LocalInputStateSize + 4]);
 
  RebuildPortVtoVMap(PortDevIdx);
+ //
+ MDFND_NetplaySetHints(true, Connection->CanReceive(), LocalPlayersMask);
 }
 
 
@@ -170,7 +172,7 @@ static void RecvData(void *data, uint32 len)
   }
  } while(len);
 
- MDFND_NetplaySetHints(true, Connection->CanReceive());
+ MDFND_NetplaySetHints(true, Connection->CanReceive(), LocalPlayersMask);
 }
 
 
@@ -329,7 +331,7 @@ static void NetplayStart(const uint32 PortDeviceCache[16], const uint32 PortData
  //printf("%d\n", TotalInputStateSize);
  //
  //
- MDFND_NetplaySetHints(true, Connection->CanReceive());
+ MDFND_NetplaySetHints(true, Connection->CanReceive(), LocalPlayersMask);
 }
 
 static void SendCommand(uint8 cmd, uint32 len, const void* data = NULL)
@@ -635,7 +637,7 @@ static void ProcessCommand(const uint8 cmd, const uint32 raw_len, const uint32 P
    case MDFNNPCMD_LOADSTATE:
 			RecvState(raw_len);
 			StateLoaded = true;
-			MDFN_DispMessage(_("Remote state loaded."));
+			MDFN_Notify(MDFN_NOTICE_STATUS, _("Remote state loaded."));
 			break;
 
    case MDFNNPCMD_SET_MEDIA:
@@ -1225,7 +1227,7 @@ void MDFNI_NetplayDisconnect(void)
   NetPrintText(_("*** In-progress connection attempt aborted"));
  }
 
- MDFND_NetplaySetHints(false, false);
+ MDFND_NetplaySetHints(false, false, 0);
 }
 
 
@@ -1527,7 +1529,7 @@ void MDFNI_NetplayLine(const char *text, bool &inputable, bool &viewable)
 
          for(unsigned int x = 0; ConsoleCommands[x].name; x++)
 	 {
-          if(!strncasecmp(ConsoleCommands[x].name, (char*)text, strlen(ConsoleCommands[x].name)) && text[strlen(ConsoleCommands[x].name)] <= 0x20)
+          if(!MDFN_strazicmp(ConsoleCommands[x].name, (char*)text, strlen(ConsoleCommands[x].name)) && text[strlen(ConsoleCommands[x].name)] <= 0x20)
           {
 	   std::string trim_text(&text[strlen(ConsoleCommands[x].name)]);
 

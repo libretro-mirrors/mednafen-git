@@ -601,9 +601,9 @@ void SMS_VDPStateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAYN(vdp.vram, 0x4000, "vram"),
-  SFARRAYN(vdp.cram, 0x40, "cram"),
-  SFARRAYN(vdp.reg, 0x10, "reg"),
+  SFPTR8N(vdp.vram, 0x4000, "vram"),
+  SFPTR8N(vdp.cram, 0x40, "cram"),
+  SFPTR8N(vdp.reg, 0x10, "reg"),
 
   SFVARN(vdp.status, "status"),
   SFVARN(vdp.latch, "latch"),

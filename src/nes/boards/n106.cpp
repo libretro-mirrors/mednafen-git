@@ -335,21 +335,21 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-        SFARRAY(PRG,3),
-        SFARRAY(CHR,8),
-        SFARRAYN(NTAPage, 4, "NTA"),
+        SFPTR8(PRG,3),
+        SFPTR8(CHR,8),
+        SFPTR8N(NTAPage, 4, "NTA"),
 	SFVARN(dopol, "DOPL"),
         SFVARN(gorfus, "GFUS"),
         SFVARN(gorko, "GRKO"),
         SFVARN(IRQCount, "IRQC"),
         SFVARN(IRQa, "IRQA"),
 
-        SFARRAY(WRAM, 8192),
-        SFARRAY(IRAM, 128),
+        SFPTR8(WRAM, 8192),
+        SFPTR8(IRAM, 128),
 
-	SFARRAY32(PlayIndex, 8),
-	SFARRAY32(vcount, 8),
-	SFARRAY64(PlayIndexBS, 8),
+	SFPTR32(PlayIndex, 8),
+	SFPTR32(vcount, 8),
+	SFPTR64(PlayIndexBS, 8),
         SFEND
  };
 
@@ -529,8 +529,8 @@ static int Mapper210_StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-        SFARRAY(PRG,3),
-        SFARRAY(CHR,8),
+        SFPTR8(PRG,3),
+        SFPTR8(CHR,8),
 	SFEND
  };
 

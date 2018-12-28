@@ -218,8 +218,8 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] = 
  {
-  SFARRAYN(CHRRAM, 8192, "CHRR"),
-  SFARRAYN(DRegBuf, 8, "DREG"),
+  SFPTR8N(CHRRAM, 8192, "CHRR"),
+  SFPTR8N(DRegBuf, 8, "DREG"),
   SFVARN(IRQCount, "IRQC"),
   SFVARN(IRQLatch, "IQL1"),
   SFVARN(IRQa, "IRQA"),

@@ -288,11 +288,11 @@ void Cart_StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(sram, 0x8000),
-  SFARRAY(fcr, 4),
+  SFPTR8(sram, 0x8000),
+  SFPTR8(fcr, 4),
   SFVAR(BankAdd),
-  SFARRAY(CodeMasters_Bank, 3),
-  SFARRAY(CastleRAM, CastleRAM ? 8192 : 0),
+  SFPTR8(CodeMasters_Bank, 3),
+  SFPTR8(CastleRAM, CastleRAM ? 8192 : 0),
   SFEND
  };
 

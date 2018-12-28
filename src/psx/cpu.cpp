@@ -160,7 +160,7 @@ void PS_CPU::StateAction(StateMem *sm, const unsigned load, const bool data_only
 
  SFORMAT StateRegs[] =
  {
-  SFARRAY32(GPR, 32),
+  SFPTR32(GPR, 32),
   SFVAR(LO),
   SFVAR(HI),
   SFVAR(BACKED_PC),
@@ -179,16 +179,16 @@ void PS_CPU::StateAction(StateMem *sm, const unsigned load, const bool data_only
   SFVAR(muldiv_ts_done),
 
   SFVAR(BIU),
-  SFARRAY32(ICache_Bulk, 2048),
+  SFVAR(ICache_Bulk),
 
-  SFARRAY32(CP0.Regs, 32),
+  SFVAR(CP0.Regs),
 
-  SFARRAY(ReadAbsorb, 0x20),
+  SFPTR8(ReadAbsorb, 0x20),
   SFVARN(ReadAbsorb[0x20], "ReadAbsorbDummy"),
   SFVAR(ReadAbsorbWhich),
   SFVAR(ReadFudge),
 
-  SFARRAY(ScratchRAM.data8, 1024),
+  SFPTR8(ScratchRAM.data8, 1024),
 
   SFEND
  };

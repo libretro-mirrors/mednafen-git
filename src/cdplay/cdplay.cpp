@@ -510,21 +510,21 @@ static const MDFNSetting CDPlaySettings[] =
 
 static const IDIISG IDII =
 {
- { "play_pause", "Play/Pause", 0, IDIT_BUTTON, NULL },
- { "stop", "Stop", 1, IDIT_BUTTON, NULL },
- { "next_track", "Next Track", 2, IDIT_BUTTON, NULL },
- { "previous_track", "Previous Track", 3, IDIT_BUTTON, NULL },
+ IDIIS_Button("play_pause", "Play/Pause", 0, NULL),
+ IDIIS_Button("stop", "Stop", 1, NULL),
+ IDIIS_Button("next_track", "Next Track", 2, NULL),
+ IDIIS_Button("previous_track", "Previous Track", 3, NULL),
 
- { "next_track_10", "Next Track 10", 4, IDIT_BUTTON, NULL },
- { "previous_track_10", "Previous Track 10", 5, IDIT_BUTTON, NULL },
+ IDIIS_Button("next_track_10", "Next Track 10", 4, NULL),
+ IDIIS_Button("previous_track_10", "Previous Track 10", 5, NULL),
 
- { "scan_forward", "Scan Forward", 6, IDIT_BUTTON, NULL },
- { "scan_reverse", "Scan Reverse", 7, IDIT_BUTTON, NULL },
+ IDIIS_Button("scan_forward", "Scan Forward", 6, NULL),
+ IDIIS_Button("scan_reverse", "Scan Reverse", 7, NULL),
 
- //{ "reverse_seek", "Reverse Seek", 1, IDIT_BUTTON, NULL },
- //{ "forward_seek", "Forward Seek", 2, IDIT_BUTTON, NULL },
- //{ "fast_reverse_seek", "Fast Reverse Seek", 3, IDIT_BUTTON, NULL },
- //{ "fast_forward_seek", "Fast Forward Seek", 4, IDIT_BUTTON, NULL },
+ //IDIIS_Button("reverse_seek", "Reverse Seek", 1, NULL),
+ //IDIIS_Button("forward_seek", "Forward Seek", 2, NULL),
+ //IDIIS_Button("fast_reverse_seek", "Fast Reverse Seek", 3, NULL),
+ //IDIIS_Button("fast_forward_seek", "Fast Forward Seek", 4, NULL),
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =

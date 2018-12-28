@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* Joystick_DX5.cpp:
-**  Copyright (C) 2012-2016 Mednafen Team
+**  Copyright (C) 2012-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -41,8 +41,8 @@ class Joystick_DX5 : public Joystick
 {
  public:
 
- Joystick_DX5(LPDIRECTINPUT dii, DIDEVICEINSTANCE *ddi);
- virtual ~Joystick_DX5();
+ Joystick_DX5(LPDIRECTINPUT dii, DIDEVICEINSTANCE *ddi) MDFN_COLD;
+ virtual ~Joystick_DX5() MDFN_COLD;
  virtual unsigned HatToAxisCompat(unsigned hat);
  virtual void SetRumble(uint8 weak_intensity, uint8 strong_intensity);
 
@@ -137,8 +137,14 @@ Joystick_DX5::Joystick_DX5(LPDIRECTINPUT dii, DIDEVICEINSTANCE *ddi) : dev(NULL)
 #endif
   RequestExclusive(false);
 
-  CalcOldStyleID(DIAxisInfo.size(), 0, DevCaps.dwPOVs, DevCaps.dwButtons);
-  snprintf(name, sizeof(name), "%s", ddi->tszProductName);
+  Calc09xID(DIAxisInfo.size(), 0, DevCaps.dwPOVs, DevCaps.dwButtons);
+ 
+  MDFN_en32msb(&id[0], ddi->guidProduct.Data1);
+  MDFN_en16msb(&id[4], ddi->guidProduct.Data2);
+  MDFN_en16msb(&id[6], ddi->guidProduct.Data3);
+  memcpy(&id[8], ddi->guidProduct.Data4, 8);
+
+  name = ddi->tszProductName;
  }
  catch(...)
  {
@@ -380,7 +386,7 @@ JoystickDriver_DX5::JoystickDriver_DX5(bool exclude_xinput) : dii(NULL)
    }
    catch(std::exception &e)
    {
-    MDFND_PrintError(e.what());
+    MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
     if(jdx5 != NULL)
     {
      delete jdx5;
@@ -391,7 +397,7 @@ JoystickDriver_DX5::JoystickDriver_DX5(bool exclude_xinput) : dii(NULL)
  }
  catch(std::exception &e)
  {
-  MDFND_PrintError(e.what());
+  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
  }
 }
 

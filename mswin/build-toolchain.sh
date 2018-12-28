@@ -10,15 +10,16 @@ CROSS_SOURCES="$HOME/toolchain-sources"
 CROSS_BUILD="$HOME/cross-mswin-build"
 
 PKGNAME_BINUTILS="binutils-2.28"
-PKGNAME_MINGWW64="mingw-w64-v5.0.2"
+PKGNAME_MINGWW64="mingw-w64-v5.0.3"
 PKGNAME_GCC="gcc-4.9.4"
 PKGNAME_LIBICONV="libiconv-1.15"
 PKGNAME_FLAC="flac-1.3.2"
-PKGNAME_LIBOGG="libogg-1.3.2"
-PKGNAME_LIBVORBIS="libvorbis-1.3.5"
+PKGNAME_LIBOGG="libogg-1.3.3"
+PKGNAME_LIBVORBIS="libvorbis-1.3.6"
 PKGNAME_LIBSNDFILE="libsndfile-1.0.28"
 PKGNAME_ZLIB="zlib-1.2.8"
 PKGNAME_SDL="SDL-1.2.15"
+PKGNAME_SDL2="SDL-2.0.8-11835"
 
 export PATH="$CROSS32_PATH/bin:$CROSS64_PATH/bin:$PATH"
 
@@ -39,12 +40,14 @@ cd .. && \
 rm --one-file-system -rf "buffalo32" && mkdir buffalo32 && cd buffalo32 && \
 tar -zxf "$CROSS_SOURCES/$PKGNAME_ZLIB.tar.gz" && \
 tar -zxf "$CROSS_SOURCES/$PKGNAME_SDL.tar.gz" && \
+tar -zxf "$CROSS_SOURCES/$PKGNAME_SDL2.tar.gz" && \
 patch -p0 < "$CROSS_SOURCES/$PKGNAME_ZLIB-mingw-w64.patch" && \
 cd .. && \
 
 rm --one-file-system -rf "buffalo64" && mkdir buffalo64 && cd buffalo64 && \
 tar -zxf "$CROSS_SOURCES/$PKGNAME_ZLIB.tar.gz" && \
 tar -zxf "$CROSS_SOURCES/$PKGNAME_SDL.tar.gz" && \
+tar -zxf "$CROSS_SOURCES/$PKGNAME_SDL2.tar.gz" && \
 patch -p0 < "$CROSS_SOURCES/$PKGNAME_ZLIB-mingw-w64.patch" && \
 cd .. && \
 #
@@ -126,6 +129,16 @@ cd "$PKGNAME_SDL" && \
 CPPFLAGS="-I$CROSS32_PATH/include" LDFLAGS="-L$CROSS32_PATH/lib" \
 	CFLAGS="-O2 -mstackrealign -fomit-frame-pointer -g -march=i686 -mtune=pentium3 -fno-exceptions -fno-asynchronous-unwind-tables" \
 	./configure --prefix="$CROSS32_PATH" --host=i686-w64-mingw32 --disable-pthreads --enable-shared --disable-static && \
+make -j4 && make install && \
+cd .. && \
+
+#
+# SDL 2.0
+#
+cd "$PKGNAME_SDL2" && \
+CPPFLAGS="-I$CROSS32_PATH/include" LDFLAGS="-L$CROSS32_PATH/lib" \
+	CFLAGS="-O2 -mstackrealign -fomit-frame-pointer -g -march=i686 -mtune=pentium3 -fno-exceptions -fno-asynchronous-unwind-tables" \
+	./configure --prefix="$CROSS32_PATH" --host=i686-w64-mingw32 --disable-pthreads --enable-shared --disable-static --disable-filesystem --disable-file --disable-ssemath --disable-libsamplerate && \
 make -j4 && make install && \
 cd .. && \
 
@@ -245,6 +258,16 @@ cd "$PKGNAME_SDL" && \
 CPPFLAGS="-I$CROSS64_PATH/include" LDFLAGS="-L$CROSS64_PATH/lib" \
 	CFLAGS="-O2 -mstackrealign -fomit-frame-pointer -g -fno-exceptions -fno-asynchronous-unwind-tables" \
 	./configure --prefix="$CROSS64_PATH" --host=x86_64-w64-mingw32 --disable-pthreads --enable-shared --disable-static && \
+make -j4 && make install && \
+cd .. && \
+
+#
+# SDL 2.0
+#
+cd "$PKGNAME_SDL2" && \
+CPPFLAGS="-I$CROSS64_PATH/include" LDFLAGS="-L$CROSS64_PATH/lib" \
+	CFLAGS="-O2 -mstackrealign -fomit-frame-pointer -g -fno-exceptions -fno-asynchronous-unwind-tables" \
+	./configure --prefix="$CROSS64_PATH" --host=x86_64-w64-mingw32 --disable-pthreads --enable-shared --disable-static --disable-filesystem --disable-file --disable-libsamplerate && \
 make -j4 && make install && \
 cd .. && \
 

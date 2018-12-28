@@ -105,7 +105,7 @@ class MCGenjin_CS_Device_RAM : public MCGenjin_CS_Device
  {
   SFORMAT StateRegs[] = 
   {
-   SFARRAY(&ram[0], ram.size()),
+   SFPTR8(&ram[0], ram.size()),
    SFVAR(bank_select),
    SFEND
   };

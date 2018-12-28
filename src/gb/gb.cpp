@@ -1817,9 +1817,9 @@ static const SFORMAT gbSaveGameStruct[] =
   SFVAR(register_FF74),
   SFVAR(register_FF75),
   SFVAR(register_IE),
-  SFARRAYN(gbBgp, 4, "BGP"),
-  SFARRAYN(gbObp0, 4, "OBP0"),
-  SFARRAYN(gbObp1, 4, "OBP1"),
+  SFVARN(gbBgp, "BGP"),
+  SFVARN(gbObp0, "OBP0"),
+  SFVARN(gbObp1, "OBP1"),
   SFEND
 };
 
@@ -1832,7 +1832,7 @@ static void CloseGame(void)
  }
  catch(std::exception &e)
  {
-  MDFN_PrintError("%s", e.what());
+  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
  }
 
  Cleanup();
@@ -2423,8 +2423,8 @@ static void Emulate(EmulateSpecStruct *espec)
 
  if(gbRom[0x147] == 0x22)
  {
-  gbDataMBC7.curtiltx = 2048 + ((int32)MDFN_de16lsb(&tilt_paddie[0x4]) - (int32)MDFN_de16lsb(&tilt_paddie[0x6])) / 200;
-  gbDataMBC7.curtilty = 2048 + ((int32)MDFN_de16lsb(&tilt_paddie[0x0]) - (int32)MDFN_de16lsb(&tilt_paddie[0x2])) / 200;
+  gbDataMBC7.curtiltx = 2048 + ((int32)MDFN_de16lsb(&tilt_paddie[0x0]) - 32768) / 200;
+  gbDataMBC7.curtilty = 2048 + ((int32)MDFN_de16lsb(&tilt_paddie[0x2]) - 32768) / 200;
  }
 
  if(*paddie != gbJoymask)
@@ -2711,12 +2711,12 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT RAMDesc[] =
  {
-  SFARRAYN(gbOAM, 0xA0, "OAM"),
-  SFARRAYN(HRAM, 0x80, "HRAM"),
-  SFARRAYN(gbRam, gbRamSize, "RAM"),
-  SFARRAYN(gbVram, gbCgbMode ? 0x4000 : 0x2000, "VRAM"),
-  SFARRAYN(gbWram, gbCgbMode ? 0x8000 : 0x2000, "WRAM"),
-  SFARRAY16(gbPalette, (gbCgbMode ? 128 : 0)),
+  SFPTR8N(gbOAM, 0xA0, "OAM"),
+  SFPTR8N(HRAM, 0x80, "HRAM"),
+  SFPTR8N(gbRam, gbRamSize, "RAM"),
+  SFPTR8N(gbVram, gbCgbMode ? 0x4000 : 0x2000, "VRAM"),
+  SFPTR8N(gbWram, gbCgbMode ? 0x8000 : 0x2000, "WRAM"),
+  SFPTR16(gbPalette, (gbCgbMode ? 128 : 0)),
   SFEND
  };
 
@@ -2769,21 +2769,21 @@ static const MDFNSetting GBSettings[] =
 
 static const IDIISG IDII =
 {
- { "a", "A", 		/*VIRTB_1,*/ 7, IDIT_BUTTON_CAN_RAPID, NULL },
+ IDIIS_ButtonCR("a", "A", 		/*VIRTB_1,*/ 7, NULL),
 
- { "b", "B", 		/*VIRTB_0,*/ 6, IDIT_BUTTON_CAN_RAPID, NULL },
+ IDIIS_ButtonCR("b", "B", 		/*VIRTB_0,*/ 6, NULL),
 
- { "select", "SELECT",	/*VIRTB_SELECT,*/ 4, IDIT_BUTTON, NULL },
+ IDIIS_Button("select", "SELECT",	/*VIRTB_SELECT,*/ 4, NULL),
 
- { "start", "START",	/*VIRTB_START,*/ 5, IDIT_BUTTON, NULL },
+ IDIIS_Button("start", "START",	/*VIRTB_START,*/ 5, NULL),
 
- { "right", "RIGHT →",	/*VIRTB_DP0_R,*/ 3, IDIT_BUTTON, "left" },
+ IDIIS_Button("right", "RIGHT →",	/*VIRTB_DP0_R,*/ 3, "left"),
 
- { "left", "LEFT ←",	/*VIRTB_DP0_L,*/ 2, IDIT_BUTTON, "right" },
+ IDIIS_Button("left", "LEFT ←",	/*VIRTB_DP0_L,*/ 2, "right"),
 
- { "up", "UP ↑", 	/*VIRTB_DP0_U,*/ 0, IDIT_BUTTON, "down" },
+ IDIIS_Button("up", "UP ↑", 	/*VIRTB_DP0_U,*/ 0, "down"),
 
- { "down", "DOWN ↓",	/*VIRTB_DP0_D,*/ 1, IDIT_BUTTON, "up" },
+ IDIIS_Button("down", "DOWN ↓",	/*VIRTB_DP0_D,*/ 1, "up"),
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
@@ -2798,10 +2798,8 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
 
 static const IDIISG Tilt_IDII =
 {
- { "up", "UP ↑", 	0, IDIT_BUTTON_ANALOG },
- { "down", "DOWN ↓",	1, IDIT_BUTTON_ANALOG },
- { "left", "LEFT ←",	2, IDIT_BUTTON_ANALOG },
- { "right", "RIGHT →",	3, IDIT_BUTTON_ANALOG },
+ IDIIS_Axis("", "", "right", "RIGHT →", "left", "LEFT ←", 1, true),
+ IDIIS_Axis("", "", "down", "DOWN ↓", "up", "UP ↑", 	  0, true),
 };
 
 

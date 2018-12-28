@@ -249,14 +249,14 @@ void InputDevice_DualShock::StateAction(StateMem* sm, const unsigned load, const
   SFVAR(analog_mode_locked),
 
   SFVAR(mad_munchkins),
-  SFARRAY(rumble_magic, sizeof(rumble_magic)),
+  SFVAR(rumble_magic),
 
-  SFARRAY(rumble_param, sizeof(rumble_param)),
+  SFVAR(rumble_param),
 
   SFVAR(dtr),
 
-  SFARRAY(buttons, sizeof(buttons)),
-  SFARRAY(&axes[0][0], sizeof(axes)),
+  SFVAR(buttons),
+  SFVARN(axes, "&axes[0][0]"),
 
   SFVAR(command_phase),
   SFVAR(bitpos),
@@ -264,7 +264,7 @@ void InputDevice_DualShock::StateAction(StateMem* sm, const unsigned load, const
 
   SFVAR(command),
 
-  SFARRAY(transmit_buffer, sizeof(transmit_buffer)),
+  SFVAR(transmit_buffer),
   SFVAR(transmit_pos),
   SFVAR(transmit_count),
 
@@ -298,11 +298,10 @@ void InputDevice_DualShock::UpdateInput(const void *data)
  {
   for(int axis = 0; axis < 2; axis++)
   {
-   const uint8* aba = &d8[3] + stick * 8 + axis * 4;
    int32 tmp;
 
-   tmp = 32767 + MDFN_de16lsb(&aba[0]) - MDFN_de16lsb(&aba[2]);
-   tmp = (tmp * 0x100) / 0xFFFF;
+   tmp = MDFN_de16lsb(&d8[3] + stick * 4 + axis * 2);
+   tmp = (tmp * 255 + 32767) / 65535;
 
    axes[stick][axis] = tmp;
   }
@@ -318,7 +317,7 @@ void InputDevice_DualShock::UpdateInput(const void *data)
 void InputDevice_DualShock::UpdateOutput(void* data)
 {
  uint8 *d8 = (uint8 *)data;
- uint8* const rumb_dp = &d8[3 + 16];
+ uint8* const rumb_dp = &d8[3 + 8];
 
  //printf("RUMBLE: 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n", rumble_magic[0], rumble_magic[1], rumble_magic[2], rumble_magic[3], rumble_magic[4], rumble_magic[5]);
  //printf("%d, 0x%02x 0x%02x\n", da_rumble_compat, rumble_param[0], rumble_param[1]);
@@ -1080,40 +1079,46 @@ static const IDIIS_StatusState AM_SS[] =
 
 const IDIISG Device_DualShock_IDII =
 {
- { "select", "SELECT", 4, IDIT_BUTTON, NULL },
- { "l3", "Left Stick, Button(L3)", 18, IDIT_BUTTON, NULL },
- { "r3", "Right stick, Button(R3)", 23, IDIT_BUTTON, NULL },
- { "start", "START", 5, IDIT_BUTTON, NULL },
- { "up", "D-Pad UP ↑", 0, IDIT_BUTTON, "down" },
- { "right", "D-Pad RIGHT →", 3, IDIT_BUTTON, "left" },
- { "down", "D-Pad DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "D-Pad LEFT ←", 2, IDIT_BUTTON, "right" },
+ IDIIS_Button("select", "SELECT", 4),
+ IDIIS_Button("l3", "Left Stick, Button(L3)", 16),
+ IDIIS_Button("r3", "Right stick, Button(R3)", 19),
+ IDIIS_Button("start", "START", 5),
+ IDIIS_Button("up", "D-Pad UP ↑", 0, "down"),
+ IDIIS_Button("right", "D-Pad RIGHT →", 3, "left"),
+ IDIIS_Button("down", "D-Pad DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "D-Pad LEFT ←", 2, "right"),
 
- { "l2", "L2 (rear left shoulder)", 11, IDIT_BUTTON, NULL },
- { "r2", "R2 (rear right shoulder)", 13, IDIT_BUTTON, NULL },
- { "l1", "L1 (front left shoulder)", 10, IDIT_BUTTON, NULL },
- { "r1", "R1 (front right shoulder)", 12, IDIT_BUTTON, NULL },
+ IDIIS_Button("l2", "L2 (rear left shoulder)", 11),
+ IDIIS_Button("r2", "R2 (rear right shoulder)", 13),
+ IDIIS_Button("l1", "L1 (front left shoulder)", 10),
+ IDIIS_Button("r1", "R1 (front right shoulder)", 12),
 
- { "triangle", "△ (upper)", 6, IDIT_BUTTON_CAN_RAPID, NULL },
- { "circle", "○ (right)", 9, IDIT_BUTTON_CAN_RAPID, NULL },
- { "cross", "x (lower)", 7, IDIT_BUTTON_CAN_RAPID, NULL },
- { "square", "□ (left)", 8, IDIT_BUTTON_CAN_RAPID, NULL },
+ IDIIS_ButtonCR("triangle", "△ (upper)", 6),
+ IDIIS_ButtonCR("circle", "○ (right)", 9),
+ IDIIS_ButtonCR("cross", "x (lower)", 7),
+ IDIIS_ButtonCR("square", "□ (left)", 8),
 
- { "analog", "Analog(mode toggle)", 24, IDIT_BUTTON, NULL },
+ IDIIS_Button("analog", "Analog(mode toggle)", 20),
 
- IDIIS_Status("amstatus", "Analog Mode", AM_SS, sizeof(AM_SS) / sizeof(AM_SS[0])),
+ IDIIS_Status("amstatus", "Analog Mode", AM_SS),
 
- { "rstick_right", "Right Stick RIGHT →", 22, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_left", "Right Stick LEFT ←", 21, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_down", "Right Stick DOWN ↓", 20, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_up", "Right Stick UP ↑", 19, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ IDIIS_Axis(	"rstick", "Right Stick",
+		"left", "LEFT ←",
+		"right", "RIGHT →", 18, false, true),
 
- { "lstick_right", "Left Stick RIGHT →", 17, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_left", "Left Stick LEFT ←", 16, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_down", "Left Stick DOWN ↓", 15, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_up", "Left Stick UP ↑", 14, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ IDIIS_Axis(	"rstick", "Right Stick",
+		"up", "UP ↑",
+		"down", "DOWN ↓", 17, false, true),
 
- { "rumble", "RUMBLE MONSTER RUMBA", 100, IDIT_RUMBLE },
+ IDIIS_Axis(	"lstick", "Left Stick",
+		"left", "LEFT ←",
+		"right", "RIGHT →", 15, false, true),
+
+ IDIIS_Axis(	"lstick", "Left Stick",
+		"up", "UP ↑",
+		"down", "DOWN ↓", 14, false, true),
+
+ IDIIS_Rumble()
 };
 
 }

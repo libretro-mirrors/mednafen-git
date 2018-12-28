@@ -173,10 +173,10 @@ void GPU_SetGetVideoParams(MDFNGI* gi, const int sls, const int sle, const bool 
  //
  // For Justifier and Guncon.
  //
- gi->mouse_scale_x = (float)gi->lcm_width / gi->nominal_width;
+ gi->mouse_scale_x = (float)gi->lcm_width;
  gi->mouse_offs_x = (float)(2800 - gi->lcm_width) / 2;
 
- gi->mouse_scale_y = 1.0;
+ gi->mouse_scale_y = gi->nominal_height;
  gi->mouse_offs_y = LineVisFirst;
 }
 
@@ -1484,13 +1484,13 @@ void GPU_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
  SFORMAT StateRegs[] =
  {
-  SFARRAY16(&GPURAM[0][0], sizeof(GPURAM) / sizeof(GPURAM[0][0])),
+  SFVARN(GPURAM, "&GPURAM[0][0]"),
 
-  SFARRAY16(&CLUT_Cache[0], sizeof(CLUT_Cache) / sizeof(CLUT_Cache[0])),
+  SFVARN(CLUT_Cache, "&CLUT_Cache[0]"),
   SFVAR(CLUT_Cache_VB),
 
-  SFARRAY32(TexCache_Tag, sizeof(TexCache_Tag) / sizeof(TexCache_Tag[0])),
-  SFARRAY16(&TexCache_Data[0][0], sizeof(TexCache_Data) / sizeof(TexCache_Data[0][0])),
+  SFVAR(TexCache_Tag),
+  SFVARN(TexCache_Data, "&TexCache_Data[0][0]"),
 
   SFVAR(DMAControl),
 
@@ -1524,7 +1524,7 @@ void GPU_StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVAR(abr),
   SFVAR(TexMode),
 
-  SFARRAY32(&BlitterFIFO.data[0], sizeof(BlitterFIFO.data) / sizeof(BlitterFIFO.data[0])),
+  SFPTR32(&BlitterFIFO.data[0], sizeof(BlitterFIFO.data) / sizeof(BlitterFIFO.data[0])),
   SFVAR(BlitterFIFO.read_pos),
   SFVAR(BlitterFIFO.write_pos),
   SFVAR(BlitterFIFO.in_count),

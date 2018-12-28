@@ -32,17 +32,17 @@ extern scsicd_bus_t cd_bus; // Don't access this structure directly by name outs
 #define SCSICD_kingATN_mask	0x080
 #define SCSICD_kingSEL_mask	0x100
 
-#define BSY_signal ((const bool)(cd_bus.signals & SCSICD_BSY_mask))
-#define ACK_signal ((const bool)(cd_bus.signals & SCSICD_kingACK_mask))
-#define RST_signal ((const bool)(cd_bus.signals & SCSICD_kingRST_mask))
-#define MSG_signal ((const bool)(cd_bus.signals & SCSICD_MSG_mask))
-#define SEL_signal ((const bool)(cd_bus.signals & SCSICD_kingSEL_mask))
-#define REQ_signal ((const bool)(cd_bus.signals & SCSICD_REQ_mask))
-#define IO_signal ((const bool)(cd_bus.signals & SCSICD_IO_mask))
-#define CD_signal ((const bool)(cd_bus.signals & SCSICD_CD_mask))
-#define ATN_signal ((const bool)(cd_bus.signals & SCSICD_kingATN_mask))
+#define BSY_signal ((bool)(cd_bus.signals & SCSICD_BSY_mask))
+#define ACK_signal ((bool)(cd_bus.signals & SCSICD_kingACK_mask))
+#define RST_signal ((bool)(cd_bus.signals & SCSICD_kingRST_mask))
+#define MSG_signal ((bool)(cd_bus.signals & SCSICD_MSG_mask))
+#define SEL_signal ((bool)(cd_bus.signals & SCSICD_kingSEL_mask))
+#define REQ_signal ((bool)(cd_bus.signals & SCSICD_REQ_mask))
+#define IO_signal ((bool)(cd_bus.signals & SCSICD_IO_mask))
+#define CD_signal ((bool)(cd_bus.signals & SCSICD_CD_mask))
+#define ATN_signal ((bool)(cd_bus.signals & SCSICD_kingATN_mask))
 
-#define DB_signal ((const uint8)cd_bus.DB)
+#define DB_signal ((uint8)cd_bus.DB)
 
 #define SCSICD_GetDB() DB_signal
 #define SCSICD_GetBSY() BSY_signal

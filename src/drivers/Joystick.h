@@ -1,15 +1,16 @@
-#ifndef __MDFN_DRIVERS_N_JOYSTICK_H
-#define __MDFN_DRIVERS_N_JOYSTICK_H
+#ifndef __MDFN_DRIVERS_JOYSTICK_H
+#define __MDFN_DRIVERS_JOYSTICK_H
 
 class Joystick
 {
  public:
 
- Joystick();
- virtual ~Joystick();
+ Joystick() MDFN_COLD;
+ virtual ~Joystick() MDFN_COLD;
 
- INLINE uint64 ID(void) { return id; }	// Should be guaranteed unique if at all possible, but if it's not, JoystickManager will handle clashes.
- INLINE const char *Name(void) { return name; }
+ INLINE std::array<uint8, 16> ID(void) { return id; }	// Should be guaranteed unique if at all possible, but if it's not, JoystickManager will handle clashes.
+ INLINE uint64 ID_09x(void) { return id_09x; }
+ INLINE const char* Name(void) { return name.c_str(); }
  INLINE unsigned NumAxes(void) { return num_axes; }
  INLINE unsigned NumRelAxes(void) { return num_rel_axes; }
  INLINE unsigned NumButtons(void) { return num_buttons; }
@@ -28,13 +29,15 @@ class Joystick
 
  protected:
 
- void CalcOldStyleID(unsigned num_axes, unsigned num_balls, unsigned num_hats, unsigned num_buttons);
+ void Calc09xID(unsigned num_axes, unsigned num_balls, unsigned num_hats, unsigned num_buttons) MDFN_COLD;
 
- char name[256];
+ std::string name;
+ uint64 id_09x;
+ std::array<uint8, 16> id;
+
  unsigned num_axes;
  unsigned num_rel_axes;
  unsigned num_buttons;
- uint64 id;
 
  std::vector<int16> axis_state;
  std::vector<int> rel_axis_state;
@@ -46,42 +49,18 @@ class JoystickDriver
 {
  public:
 
- JoystickDriver();
- virtual ~JoystickDriver();
+ JoystickDriver() MDFN_COLD;
+ virtual ~JoystickDriver() MDFN_COLD;
 
  virtual unsigned NumJoysticks();			// Cached internally on JoystickDriver instantiation.
  virtual Joystick *GetJoystick(unsigned index);
  virtual void UpdateJoysticks(void);
 };
 
-struct JoystickManager_Cache
+namespace JoystickManager
 {
- Joystick *joystick;
- uint64 UniqueID;
-
- enum
- {
-  AXIS_CONFIG_TYPE_GENERIC = 0,
-  AXIS_CONFIG_TYPE_ANABUTTON_POSPRESS,
-  AXIS_CONFIG_TYPE_ANABUTTON_NEGPRESS
- };
-
- // Helpers for input configuration(may have semantics that differ from what the names would suggest)!
- int config_prio;	// Set to -1 to exclude this joystick instance from configuration, 0 is normal, 1 is SPECIALSAUCEWITHBACON.
- std::vector<int16> axis_config_type;
- bool prev_state_valid;
- std::vector<int16> prev_axis_state;
- std::vector<int> axis_hysterical_ax_murderer;
- std::vector<bool> prev_button_state;
- std::vector<int32> rel_axis_accum_state;
-};
-
-class JoystickManager
-{
- public:
-
- JoystickManager();
- ~JoystickManager();
+ void Init(void) MDFN_COLD;
+ void Kill(void) MDFN_COLD;
 
  unsigned DetectAnalogButtonsForChangeCheck(void);
  void Reset_BC_ChangeCheck(void);
@@ -94,19 +73,39 @@ class JoystickManager
  void SetRumble(const std::vector<ButtConfig> &bc, uint8 weak_intensity, uint8 strong_intensity);
  bool TestButton(const ButtConfig &bc);
  int TestAnalogButton(const ButtConfig &bc);
+ int64 TestAxisRel(const ButtConfig& bc);
 
- unsigned GetIndexByUniqueID(uint64 unique_id);	// Returns ~0U if joystick was not found.
- unsigned GetUniqueIDByIndex(unsigned index);
+ // Returns ~0U if joystick was not found.
+ unsigned GetIndexByUniqueID(const std::array<uint8, 16>& unique_id);
+ unsigned GetIndexByUniqueID_09x(uint64 unique_id);
 
- private:
- int AnalogThreshold;
+ std::array<uint8, 16> GetUniqueIDByIndex(unsigned index);
 
- std::vector<JoystickDriver *> JoystickDrivers;
- std::vector<JoystickManager_Cache> JoystickCache;
- ButtConfig BCPending;
- int BCPending_Prio;
- uint32 BCPending_Time;
- uint32 BCPending_CCCC;
-};
+ std::string BNToString(const uint32 bn);
+ bool StringToBN(const char* s, uint16* bn);
+
+ bool Translate09xBN(unsigned bn09x, uint16* bn, bool abs_pointer_axis_thing);
+
+ //
+ // avoid using these enums directly outside of Joystick.cpp, as their semantics may change(with the exception of JOY_BN_GUN_TRANSLATE).
+ //
+ enum
+ {
+  JOY_BN_INDEX_MASK 	= 0x03FF,
+
+  //JOY_BN_HATCOMPAT_MASK	= 0x01FF,
+
+  JOY_BN_TYPE_SHIFT	= 10,
+  JOY_BN_TYPE_MASK	= 0x3 << JOY_BN_TYPE_SHIFT,
+  JOY_BN_TYPE_BUTTON	= 0U << JOY_BN_TYPE_SHIFT,
+  JOY_BN_TYPE_ABS_AXIS	= 1U << JOY_BN_TYPE_SHIFT,
+  JOY_BN_TYPE_REL_AXIS	= 2U << JOY_BN_TYPE_SHIFT,
+  JOY_BN_TYPE_HATCOMPAT	= 3U << JOY_BN_TYPE_SHIFT,
+
+  JOY_BN_GUN_TRANSLATE	= 1U << 13,
+  JOY_BN_HALFAXIS	= 1U << 14,
+  JOY_BN_NEGATE		= 1U << 15
+ };
+}
 
 #endif

@@ -49,6 +49,8 @@ typedef enum
 
 enum InputDeviceInputType : uint8
 {
+ IDIT_PADDING = 0,	// n-bit, zero
+
  IDIT_BUTTON,		// 1-bit
  IDIT_BUTTON_CAN_RAPID, // 1-bit
 
@@ -59,25 +61,31 @@ enum InputDeviceInputType : uint8
  IDIT_STATUS,		// ceil(log2(n))-bit
 			// emulation module->driver communication
 
- IDIT_X_AXIS,		// (mouse) 16-bits, signed - in-screen/window range: [0.0, nominal_width)
- IDIT_Y_AXIS,		// (mouse) 16-bits, signed - in-screen/window range: [0.0, nominal_height)
+ IDIT_AXIS,		// 16-bits; 0 through 65535; 32768 is centered position
 
- IDIT_X_AXIS_REL,	// (mouse) 32-bits, signed
- IDIT_Y_AXIS_REL,	// (mouse) 32-bits, signed
+ IDIT_POINTER_X,	// mouse pointer, 16-bits, signed - in-screen/window range before scaling/offseting normalized coordinates: [0.0, 1.0)
+ IDIT_POINTER_Y,	// see: mouse_scale_x, mouse_scale_y, mouse_offs_x, mouse_offs_y
+
+ IDIT_AXIS_REL,		// mouse relative motion, 16-bits, signed
 
  IDIT_BYTE_SPECIAL,
 
  IDIT_RESET_BUTTON,	// 1-bit
 
- IDIT_BUTTON_ANALOG,	// 16-bits, 0 - 32767
+ IDIT_BUTTON_ANALOG,	// 16-bits, 0 - 65535
 
  IDIT_RUMBLE,		// 16-bits, lower 8 bits are weak rumble(0-255), next 8 bits are strong rumble(0-255), 0=no rumble, 255=max rumble.  Somewhat subjective, too...
 			// It's a rather special case of game module->driver code communication.
 };
 
 
-#define IDIT_BUTTON_ANALOG_FLAG_SQLR	0x01	// Denotes analog data that may need to be scaled to ensure a more squareish logical range(for emulated analog sticks).
-#define IDIT_FLAG_AUX_SETTINGS_UNDOC	0x80
+enum : uint8
+{
+ IDIT_AXIS_FLAG_SQLR		= 0x01,	// Denotes analog data that may need to be scaled to ensure a more squareish logical range(for emulated analog sticks).
+ IDIT_AXIS_FLAG_INVERT_CO	= 0x02,	// Invert config order of the two components(neg,pos) of the axis.
+ IDIT_AXIS_REL_FLAG_INVERT_CO 	= IDIT_AXIS_FLAG_INVERT_CO,
+ IDIT_FLAG_AUX_SETTINGS_UNDOC	= 0x80,
+};
 
 struct IDIIS_StatusState
 {
@@ -97,16 +105,35 @@ struct InputDeviceInputInfoStruct
 {
 	const char *SettingName;	// No spaces, shouldbe all a-z0-9 and _. Definitely no ~!
 	const char *Name;
-        int ConfigOrder;          // Configuration order during in-game config process, -1 for no config.
+        int16 ConfigOrder;          	// Configuration order during in-game config process, -1 for no config.
 	InputDeviceInputType Type;
-	const char *ExcludeName;	// SettingName of a button that can't be pressed at the same time as this button
-					// due to physical limitations.
+
 	uint8 Flags;
 	uint8 BitSize;
 	uint16 BitOffset;
 
 	union
 	{
+	 struct
+	 {
+	  const char *ExcludeName;	// SettingName of a button that can't be pressed at the same time as this button
+					// due to physical limitations.
+	 } Button;
+	 //
+	 //
+	 //
+	 struct
+	 {
+	  const char* sname_dir[2];
+	  const char* name_dir[2];
+	 } Axis;
+
+	 struct
+	 {
+	  const char* sname_dir[2];
+	  const char* name_dir[2];
+	 } AxisRel;
+
          struct
          {
 	  const IDIIS_SwitchPos* Pos;
@@ -130,53 +157,82 @@ struct IDIISG : public std::vector<InputDeviceInputInfoStruct>
 
 extern const IDIISG IDII_Empty;
 
-#if 0
-template<bool CanRapid = false>
-struct IDIIS_Button : public InputDeviceInputInfoStruct
+static INLINE constexpr InputDeviceInputInfoStruct IDIIS_Button(const char* sname, const char* name, int16 co, const char* exn = nullptr)
 {
-	IDIIS_Button(const char* sname, const char* name, int co, const char* exn = NULL)
-	{
-	 SettingName = sname;
-	 Name = name;
-	 ConfigOrder = co;
-	 Type = (CanRapid ? IDIT_BUTTON_CAN_RAPID : IDIT_BUTTON);
+ return { sname, name, co, IDIT_BUTTON, 0, 0, 0, { exn } };
+}
 
-	 ExcludeName = exn;
-	}
-};
-#endif
-
-struct IDIIS_Switch : public InputDeviceInputInfoStruct
+static INLINE constexpr InputDeviceInputInfoStruct IDIIS_ButtonCR(const char* sname, const char* name, int16 co, const char* exn = nullptr)
 {
-	IDIIS_Switch(const char* sname, const char* name, int co, const IDIIS_SwitchPos* spn, const uint32 spn_num, bool undoc_defpos = true)
-	{
-	 SettingName = sname;
-	 Name = name;
-	 ConfigOrder = co;
-	 Type = IDIT_SWITCH;
+ return { sname, name, co, IDIT_BUTTON_CAN_RAPID, 0, 0, 0, { exn } };
+}
 
-	 ExcludeName = NULL;
-	 Flags = undoc_defpos ? IDIT_FLAG_AUX_SETTINGS_UNDOC : 0;
-	 Switch.Pos = spn;
-	 Switch.NumPos = spn_num;
-	}
-};
-
-struct IDIIS_Status : public InputDeviceInputInfoStruct
+static INLINE constexpr InputDeviceInputInfoStruct IDIIS_AnaButton(const char* sname, const char* name, int16 co)
 {
-	IDIIS_Status(const char* sname, const char* name, const IDIIS_StatusState* ss, const uint32 ss_num)
-	{
-	 SettingName = sname;
-	 Name = name;
-	 ConfigOrder = -1;
-	 Type = IDIT_STATUS;
+ return { sname, name, co, IDIT_BUTTON_ANALOG, 0, 0, 0 };
+}
 
-	 ExcludeName = NULL;
-	 Flags = 0;
-	 Status.States = ss;
-	 Status.NumStates = ss_num;
-	}
-};
+static INLINE constexpr InputDeviceInputInfoStruct IDIIS_Rumble(const char* sname = "rumble", const char* name = "Rumble")
+{
+ return { sname, name, -1, IDIT_RUMBLE, 0, 0, 0 };
+}
+
+static INLINE constexpr InputDeviceInputInfoStruct IDIIS_ResetButton(void)
+{
+ return { nullptr, nullptr, -1, IDIT_RESET_BUTTON, 0, 0, 0 };
+}
+
+template<unsigned nbits = 1>
+static INLINE constexpr InputDeviceInputInfoStruct IDIIS_Padding(void)
+{
+ return { nullptr, nullptr, -1, IDIT_PADDING, 0, nbits, 0 };
+}
+
+static INLINE /*constexpr*/ InputDeviceInputInfoStruct IDIIS_Axis(const char* sname_pfx, const char* name_pfx, const char* sname_neg, const char* name_neg, const char* sname_pos, const char* name_pos, int16 co, bool co_invert = false, bool sqlr = false)
+{
+ InputDeviceInputInfoStruct ret = { sname_pfx, name_pfx, co, IDIT_AXIS, (uint8)((sqlr ? IDIT_AXIS_FLAG_SQLR : 0) | (co_invert ? IDIT_AXIS_FLAG_INVERT_CO : 0)), 0, 0 };
+
+ ret.Axis.sname_dir[0] = sname_neg;
+ ret.Axis.sname_dir[1] = sname_pos;
+ ret.Axis.name_dir[0] = name_neg;
+ ret.Axis.name_dir[1] = name_pos;
+
+ return ret;
+}
+
+static INLINE /*constexpr*/ InputDeviceInputInfoStruct IDIIS_AxisRel(const char* sname_pfx, const char* name_pfx, const char* sname_neg, const char* name_neg, const char* sname_pos, const char* name_pos, int16 co, bool co_invert = false, bool sqlr = false)
+{
+ InputDeviceInputInfoStruct ret = { sname_pfx, name_pfx, co, IDIT_AXIS_REL, (uint8)(co_invert ? IDIT_AXIS_REL_FLAG_INVERT_CO : 0), 0, 0 };
+
+ ret.AxisRel.sname_dir[0] = sname_neg;
+ ret.AxisRel.sname_dir[1] = sname_pos;
+ ret.AxisRel.name_dir[0] = name_neg;
+ ret.AxisRel.name_dir[1] = name_pos;
+
+ return ret;
+}
+
+template<uint32 spn_count>
+static INLINE /*constexpr*/ InputDeviceInputInfoStruct IDIIS_Switch(const char* sname, const char* name, int16 co, const IDIIS_SwitchPos (&spn)[spn_count], bool undoc_defpos = true)
+{
+ InputDeviceInputInfoStruct ret = { sname, name, co, IDIT_SWITCH, (uint8)(undoc_defpos ? IDIT_FLAG_AUX_SETTINGS_UNDOC : 0), 0, 0 };
+
+ ret.Switch.Pos = spn;
+ ret.Switch.NumPos = spn_count;
+
+ return ret;
+}
+
+template<uint32 ss_count>
+static INLINE /*constexpr*/ InputDeviceInputInfoStruct IDIIS_Status(const char* sname, const char* name, const IDIIS_StatusState (&ss)[ss_count])
+{
+ InputDeviceInputInfoStruct ret = { sname, name, -1, IDIT_STATUS, 0, 0, 0 };
+
+ ret.Status.States = ss;
+ ret.Status.NumStates = ss_count;
+
+ return ret;
+}
 
 struct InputDeviceInfoStruct
 {

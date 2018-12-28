@@ -28,6 +28,7 @@
 #include <trio/trio.h>
 
 #include "video.h"
+#include "input.h"
 
 #include <mednafen/AtomicFIFO.h>
 
@@ -51,6 +52,7 @@ static int volatile viewable = 0;
 static int64 LastTextTime = -1;
 
 int MDFNDnetplay = 0;  // Only write/read this global variable in the game thread.
+static uint32 lpm;
 
 NetplayConsole::NetplayConsole(void)
 {
@@ -69,12 +71,27 @@ bool NetplayConsole::TextHook(const std::string &text)
 }
 
 // Called from game thread
-void MDFND_NetplaySetHints(bool active, bool behind)
+uint32 Netplay_GetLPM(void)
+{
+ if(!MDFNDnetplay)
+  return ~(uint32)0;
+
+ return lpm;
+}
+
+// Called from game thread
+void MDFND_NetplaySetHints(bool active, bool behind, uint32 local_players_mask)
 {
  if(!MDFNDnetplay && active)
   DoRunNormal();
 
- MDFNDnetplay = active;
+ if(MDFNDnetplay != active || lpm != local_players_mask)
+ {
+  MDFNDnetplay = active;
+  lpm = local_players_mask;
+  //
+  Input_NetplayLPMChanged();	// Will call Netplay_GetLPM(), so make sure variables are assigned beforehand.
+ }
 
  NoWaiting &= ~2;
  if(active && behind)

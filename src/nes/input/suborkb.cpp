@@ -91,7 +91,7 @@ static void StateActionFC(StateMem *sm, const unsigned load, const bool data_onl
 {
  SFORMAT StateRegs[] =
  {
-   SFARRAY(bufit, 0x61),
+   SFPTR8(bufit, 0x61),
    SFVAR(ksmode),
    SFVAR(ksindex),
    SFEND

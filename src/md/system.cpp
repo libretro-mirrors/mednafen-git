@@ -244,7 +244,7 @@ static void CloseGame(void)
  }
  catch(std::exception &e)
  {
-  MDFN_PrintError("%s", e.what());
+  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
  }
 
  Cleanup();
@@ -670,8 +670,8 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
  SFORMAT StateRegs[] =
  {
-  SFARRAY(work_ram, 65536),
-  SFARRAY(zram, 8192),
+  SFPTR8(work_ram, 65536),
+  SFPTR8(zram, 8192),
   SFVAR(zbusreq),
   SFVAR(zreset),
   SFVAR(zbusack),
@@ -683,7 +683,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
   SFVAR(obsim),
 
-  SFARRAYN((load && load < 0x939) ? c68k_state : NULL, sizeof(c68k_state), "c68k_state"),
+  SFPTR8N((load && load < 0x939) ? c68k_state : NULL, sizeof(c68k_state), "c68k_state"),
   SFEND
  };
 
@@ -754,7 +754,7 @@ static const MDFNSetting MDSettings[] =
  { "md.region", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulate the specified region's Genesis/MegaDrive"), NULL, MDFNST_ENUM, "game", NULL, NULL, NULL, NULL, RegionList },
  { "md.reported_region", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Region reported to the game."), NULL, MDFNST_ENUM, "same", NULL, NULL, NULL, NULL, ReportedRegionList },
 
- { "md.cdbios", MDFNSF_EMU_STATE, gettext_noop("Path to the CD BIOS"), gettext_noop("SegaCD/MegaCD emulation is currently nonfunctional."), MDFNST_STRING, "us_scd1_9210.bin" },
+ { "md.cdbios", MDFNSF_EMU_STATE | MDFNSF_CAT_PATH, gettext_noop("Path to the CD BIOS"), gettext_noop("SegaCD/MegaCD emulation is currently nonfunctional."), MDFNST_STRING, "us_scd1_9210.bin" },
 
  { "md.correct_aspect", MDFNSF_CAT_VIDEO, gettext_noop("Correct the aspect ratio."), NULL, MDFNST_BOOL, "1" },
 

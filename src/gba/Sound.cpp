@@ -86,17 +86,17 @@ int MDFNGBASOUND_StateAction(StateMem *sm, int load, int data_only)
   SFVAR(soundDSFifoAWriteIndex),
   SFVAR(soundDSAEnabled),
   SFVAR(soundDSATimer),
-  SFARRAYN(soundDSFifoA, sizeof(soundDSFifoA), "soundDSFifoA"),
+  SFPTR8N(soundDSFifoA, sizeof(soundDSFifoA), "soundDSFifoA"),
   SFVAR(soundDSAValue),
   SFVAR(soundDSFifoBIndex),
   SFVAR(soundDSFifoBCount),
   SFVAR(soundDSFifoBWriteIndex),
   SFVAR(soundDSBEnabled),
   SFVAR(soundDSBTimer),
-  SFARRAYN(soundDSFifoB, sizeof(soundDSFifoB), "soundDSFifoB"),
+  SFPTR8N(soundDSFifoB, sizeof(soundDSFifoB), "soundDSFifoB"),
   SFVAR(soundDSBValue),
 
-  SFARRAYN((uint8*)&apu_state, sizeof(apu_state), "apu_state"),
+  SFPTR8N((uint8*)&apu_state, sizeof(apu_state), "apu_state"),
   SFEND
  };
 

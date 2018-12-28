@@ -1141,8 +1141,8 @@ void v30mz_StateAction(StateMem *sm, const unsigned load, const bool data_only)
  SFORMAT StateRegs[] =
  {
   SFVARN(I.pc, "IP"),
-  SFARRAY16N(I.regs.w, 8, "regs"),
-  SFARRAY16N(I.sregs, 4, "sregs"),
+  SFPTR16N(I.regs.w, 8, "regs"),
+  SFPTR16N(I.sregs, 4, "sregs"),
 
   SFVARN(v30mz_ICount, "ICount"),
   SFVARN(InHLT, "InHLT"),

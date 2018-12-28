@@ -60,7 +60,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(PRGBanks, 3), SFARRAY(CHRBanks, 2), SFEND
+  SFPTR8(PRGBanks, 3), SFPTR8(CHRBanks, 2), SFEND
  };
 
  int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAPR");

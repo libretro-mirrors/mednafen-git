@@ -71,7 +71,7 @@ void OwlBuffer::StateAction(StateMem* sm, const unsigned load, const bool data_o
   SFVAR(accum),
   SFVAR(leftover),
 
-  SFARRAY64(filter_state, 2),
+  SFVAR(filter_state),
 
   SFVAR(InputIndex),
 
@@ -103,7 +103,7 @@ void OwlBuffer::StateAction(StateMem* sm, const unsigned load, const bool data_o
 
  SFORMAT StateRegs_LOD[] =
  {
-  SFARRAY32(Buf() - leftover, leftover + InBuf + HRBUF_OVERFLOW_PADDING),
+  SFPTR32(Buf() - leftover, leftover + InBuf + HRBUF_OVERFLOW_PADDING),
   SFEND
  };
 

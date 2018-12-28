@@ -18,7 +18,6 @@
 #include "shared.h"
 #include "header.h"
 #include <mednafen/string/string.h>
-#include <ctype.h>
 
 namespace MDFN_IEN_MD
 {
@@ -62,7 +61,7 @@ static const region_lut_t region_lut[] =
 
 static uint8 get_region_numeric(uint8 code)
 {
- code = toupper(code);
+ code = MDFN_azupper(code);
 
  for(unsigned i = 0; i < sizeof(region_lut) / sizeof(region_lut_t); i++)
  {

@@ -610,7 +610,7 @@ int MD_Cart_Type_EEPROM::StateAction(StateMem *sm, int load, int data_only, cons
   SFVAR(slave_mask),
   SFVAR(word_address),
   SFVAR(state),
-  SFARRAY(sram, type.size_mask + 1),
+  SFPTR8(sram, type.size_mask + 1),
   SFEND
  };
 

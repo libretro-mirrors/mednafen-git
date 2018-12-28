@@ -12,6 +12,6 @@ void MDFNI_NetplayLine(const char *text, bool &inputable, bool &viewable);
    echo of what we typed.
 */
 void MDFND_NetplayText(const char* text, bool NetEcho);
-void MDFND_NetplaySetHints(bool active, bool behind);
+void MDFND_NetplaySetHints(bool active, bool behind, uint32 local_players_mask);
 
 #endif

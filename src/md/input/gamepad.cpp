@@ -88,13 +88,13 @@ class Gamepad6 final : public MD_Input_Device
 
 const IDIISG Gamepad2IDII =
 {
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
- { "a", "A", 5, IDIT_BUTTON_CAN_RAPID, NULL },
- { "b", "B", 6, IDIT_BUTTON_CAN_RAPID, NULL },
- { "start", "Start", 4, IDIT_BUTTON, NULL },
+ IDIIS_Button("up", "UP ↑", 0, "down"),
+ IDIIS_Button("down", "DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "LEFT ←", 2, "right"),
+ IDIIS_Button("right", "RIGHT →", 3, "left"),
+ IDIIS_ButtonCR("a", "A", 5, NULL),
+ IDIIS_ButtonCR("b", "B", 6, NULL),
+ IDIIS_Button("start", "Start", 4, NULL),
 };
 
 Gamepad2::Gamepad2()
@@ -140,14 +140,14 @@ void Gamepad2::UpdatePhysicalState(const void *data)
 
 const IDIISG GamepadIDII =
 {
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
- { "b", "B", 6, IDIT_BUTTON_CAN_RAPID, NULL },
- { "c", "C", 7, IDIT_BUTTON_CAN_RAPID, NULL },
- { "a", "A", 5, IDIT_BUTTON_CAN_RAPID, NULL },
- { "start", "Start", 4, IDIT_BUTTON, NULL },
+ IDIIS_Button("up", "UP ↑", 0, "down"),
+ IDIIS_Button("down", "DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "LEFT ←", 2, "right"),
+ IDIIS_Button("right", "RIGHT →", 3, "left"),
+ IDIIS_ButtonCR("b", "B", 6, NULL),
+ IDIIS_ButtonCR("c", "C", 7, NULL),
+ IDIIS_ButtonCR("a", "A", 5, NULL),
+ IDIIS_Button("start", "Start", 4, NULL),
 };
 
 Gamepad3::Gamepad3()
@@ -201,18 +201,18 @@ void Gamepad3::StateAction(StateMem *sm, const unsigned load, const bool data_on
 
 const IDIISG Gamepad6IDII =
 {
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
- { "b", "B", 6, IDIT_BUTTON_CAN_RAPID, NULL },
- { "c", "C", 7, IDIT_BUTTON_CAN_RAPID, NULL },
- { "a", "A", 5, IDIT_BUTTON_CAN_RAPID, NULL },
- { "start", "Start", 4, IDIT_BUTTON, NULL },
- { "z", "Z", 10, IDIT_BUTTON_CAN_RAPID, NULL },
- { "y", "Y", 9, IDIT_BUTTON_CAN_RAPID, NULL },
- { "x", "X", 8, IDIT_BUTTON_CAN_RAPID, NULL },
- { "mode", "Mode", 11, IDIT_BUTTON, NULL },
+ IDIIS_Button("up", "UP ↑", 0, "down"),
+ IDIIS_Button("down", "DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "LEFT ←", 2, "right"),
+ IDIIS_Button("right", "RIGHT →", 3, "left"),
+ IDIIS_ButtonCR("b", "B", 6, NULL),
+ IDIIS_ButtonCR("c", "C", 7, NULL),
+ IDIIS_ButtonCR("a", "A", 5, NULL),
+ IDIIS_Button("start", "Start", 4, NULL),
+ IDIIS_ButtonCR("z", "Z", 10, NULL),
+ IDIIS_ButtonCR("y", "Y", 9, NULL),
+ IDIIS_ButtonCR("x", "X", 8, NULL),
+ IDIIS_Button("mode", "Mode", 11, NULL),
 };
 
 Gamepad6::Gamepad6()

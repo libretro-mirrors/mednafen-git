@@ -199,7 +199,7 @@ class PODFastVector
 
    if(tmp == NULL)
    {
-    throw MDFN_Error(ErrnoHolder(errno));
+    throw MDFN_Error(ErrnoHolder(ENOMEM));
    }
 
    data = (T*)tmp;

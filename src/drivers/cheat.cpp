@@ -16,7 +16,6 @@
  */
 
 #include "main.h"
-#include <ctype.h>
 #include <trio/trio.h>
 #include "console.h"
 #include "video.h"
@@ -26,7 +25,7 @@ static MDFN_Thread *CheatThread = NULL;
 static MDFN_Mutex *CheatMutex = NULL;
 static MDFN_Cond *CheatCond = NULL;
 static bool isactive = 0;
-static char* pending_text = NULL;
+static std::list<std::string> pending_text;
 static bool volatile need_thread_exit;
 
 class CheatConsoleT : public MDFNConsole
@@ -40,13 +39,16 @@ class CheatConsoleT : public MDFNConsole
 
         virtual bool TextHook(const std::string &text) override
         {
-	 char* tmp_ptr = strdup(text.c_str());
-
 	 MDFND_LockMutex(CheatMutex);
-	 if(!pending_text)
+	 try
 	 {
-	  pending_text = tmp_ptr;
+	  pending_text.push_back(text);
 	  MDFND_SignalCond(CheatCond);
+	 }
+	 catch(std::exception& e)
+	 {
+	  MDFND_UnlockMutex(CheatMutex);
+	  throw;
 	 }
 	 MDFND_UnlockMutex(CheatMutex);
 
@@ -107,78 +109,84 @@ static void CHEAT_puts(const char *string)
  CheatConsole.CheatConsoleT::WriteLine(string);
 }
 
-static void CHEAT_gets(char *s, int size)
+static std::string CHEAT_gets(void)
 {
- char* lpt = NULL;
+ std::string lpt;
 
  //
  //
  //
  MDFND_LockMutex(CheatMutex);
- while(!pending_text && !need_thread_exit)
+ while(!pending_text.size() && !need_thread_exit)
  {
   MDFND_WaitCond(CheatCond, CheatMutex);
  }
 
- lpt = pending_text;
- pending_text = NULL;
+ try
+ {
+  lpt = std::move(pending_text.front());
+  pending_text.pop_front();
+ }
+ catch(std::exception& e)
+ {
+  MDFND_UnlockMutex(CheatMutex);
+  throw;
+ }
  MDFND_UnlockMutex(CheatMutex);
  //
  //
  //
 
- if(lpt)
- {
-  strncpy(s, lpt, size - 1);
-  s[size - 1] = 0;
-  free(lpt);
-
-  CheatConsole.CheatConsoleT::AppendLastLine(s);
- }
+ if(lpt.size())
+  CheatConsole.CheatConsoleT::AppendLastLine(lpt);
 
  if(need_thread_exit)
  {
   puts("WHEEE");
   throw(0);	// Sloppy laziness, but it works!  SWEAT PANTS OF PRAGMATISM.
  }
+
+ return lpt;
 }
 
 static char CHEAT_getchar(char def)
 {
- uint8 buf[2];
+ std::string s = CHEAT_gets();
 
- CHEAT_gets((char *)buf, 2);
- if(buf[0] == 0)
-  return(def);
- return(buf[0]);
+ if(!s.size())
+  return def;
+
+ return s[0];
 }
 
 
-static void GetString(char *s, int max)
+static std::string GetString(const std::string& def = "")
 {
- CHEAT_gets(s, max);
+ std::string s = CHEAT_gets();
+
+ if(!s.size())
+  return def;
+
  MDFN_trim(s);
+
+ return s;
 }
 
 static uint64 GetUI(unsigned long long def)
 {
- char buf[64];
+ std::string s = CHEAT_gets();
 
- memset(buf, 0, sizeof(buf));
+ if(!s.size())
+  return def;
 
- CHEAT_gets(buf,64);
-
- if(!buf[0])
-  return(def);
-
- if(buf[0] == '$')
-  trio_sscanf(buf + 1, "%llx", &def);	// $0FCE
- else if(buf[0] == '0' && tolower(buf[1]) == 'x')
-  trio_sscanf(buf + 2, "%llx", &def);	// 0x0FCE
- else if(tolower(buf[strlen(buf) - 1]) == 'h') // 0FCEh
-  trio_sscanf(buf, "%llx", &def);
+ if(s[0] == '$')
+  trio_sscanf(s.c_str() + 1, "%llx", &def);	// $0FCE
+ else if(s.size() >= 2 && s[0] == '0' && MDFN_azlower(s[1]) == 'x')
+  trio_sscanf(s.c_str() + 2, "%llx", &def);	// 0x0FCE
+ else if(MDFN_azlower(s[s.size() - 1]) == 'h') // 0FCEh
+  trio_sscanf(s.c_str(), "%llx", &def);
  else
-  trio_sscanf(buf,"%lld", &def);
+  trio_sscanf(s.c_str(), "%lld", &def);
 
  return def;
 }
@@ -186,18 +194,21 @@ static uint64 GetUI(unsigned long long def)
 
 static int GetYN(int def)
 {
- char buf[32];
+ for(;;)
+ {
+  CHEAT_printf("(Y/N)[%s]: ", def ? "Y" : "N");
+  //
+  std::string s = CHEAT_gets();
 
- CHEAT_printf("(Y/N)[%s]: ", def ? "Y" : "N");
- CHEAT_gets(buf, 32);
+  if(!s.size())
+   return def;
 
- if(buf[0] == 'y' || buf[0] == 'Y')
-  return(1);
-
- if(buf[0] == 'n' || buf[0] == 'N')
-  return(0);
-
- return(def);
+  switch(MDFN_azlower(s[0]))
+  {
+   case 'y': return 1;
+   case 'n': return 0;
+  }
+ }
 }
 
 /*
@@ -220,36 +231,49 @@ void BeginListShow(void)
 /* Return equals 0 to continue, -1 to stop, otherwise a number. */
 int ListChoice(int hmm)
 {
-  char buf[32];
+ std::string s;
 
-  if(!hmm)
-  {
-   int num=0;
+ if(!hmm)
+ {
+  int num=0;
 
-   tryagain:
-   CHEAT_printf(" <'Enter' to continue, (S)top, or #> ");
-   CHEAT_gets(buf,32);
+  tryagain:
+  CHEAT_printf(" <'Enter' to continue, (S)top, or #> ");
+  s = CHEAT_gets();
 
-   if(buf[0]=='s' || buf[0]=='S') return(-1);
-   if(!buf[0]) return(0);
-   if(!trio_sscanf(buf,"%d",&num))
-    return(0);  
-   if(num<1) goto tryagain;
-   return(num);
-  }
-  else
-  {
-   int num=0;
+  if(!s.size())
+   return 0;
 
-   tryagain2:
-   CHEAT_printf(" <'Enter' to make no selection, or #> ");
-   CHEAT_gets(buf,32);
-   if(!buf[0]) return(0);
-   if(!trio_sscanf(buf,"%d",&num))
-    return(0);
-   if(num<1) goto tryagain2;
-   return(num);
-  }
+  if(MDFN_azlower(s[0]) == 's')
+   return -1;
+
+  if(!trio_sscanf(s.c_str(), "%d", &num))
+   return 0;
+
+  if(num < 1)
+   goto tryagain;
+
+  return num;
+ }
+ else
+ {
+  int num=0;
+
+  tryagain2:
+  CHEAT_printf(" <'Enter' to make no selection, or #> ");
+  s = CHEAT_gets();
+
+  if(!s.size())
+   return 0;
+
+  if(!trio_sscanf(s.c_str(), "%d", &num))
+   return 0;
+
+  if(num < 1)
+   goto tryagain2;
+
+  return num;
+ }
 }
 
 int EndListShow(void)
@@ -338,13 +362,10 @@ static void ToggleCheat(int num)
 static MemoryPatch GetCheatFields(const MemoryPatch &pin)
 {
  MemoryPatch patch = pin;
- char buf[256];
  const bool support_read_subst = CurGame->CheatInfo.InstallReadPatch && CurGame->CheatInfo.RemoveReadPatches;
 
  CHEAT_printf("Name [%s]: ", patch.name.c_str());
- GetString(buf, 256);
- if(buf[0] != 0)
-  patch.name = std::string(buf);
+ patch.name = GetString(patch.name);
 
  CHEAT_printf("Available types:");
  CHEAT_printf(" R - Replace/RAM write(high-level).");
@@ -353,14 +374,14 @@ static MemoryPatch GetCheatFields(const MemoryPatch &pin)
 
  if(support_read_subst)
  {
-  CHEAT_printf(" S - Subsitute on reads.");
+  CHEAT_printf(" S - Substitute on reads.");
   CHEAT_printf(" C - Substitute on reads, with compare.");
  }
 
  for(;;)
  {
   CHEAT_printf("Type [%c]: ", patch.type);
-  patch.type = toupper(CHEAT_getchar(patch.type));
+  patch.type = MDFN_azupper(CHEAT_getchar(patch.type));
 
   if(patch.type == 'R' || patch.type == 'A' || patch.type == 'T')
    break;
@@ -474,9 +495,9 @@ static void ModifyCheat(int num)
 static void AddCodeCheat(void* data)
 {
  const CheatFormatStruct* cf = (CheatFormatStruct*)data;
- char name[256],code[256];
  MemoryPatch patch;
  unsigned iter = 0;
+ std::string code;
 
  while(1)
  {
@@ -485,9 +506,8 @@ static void AddCodeCheat(void* data)
   else
    CHEAT_printf("%s Code(part %u): ", cf->FullName, iter + 1);
 
-  GetString(code, 256);
-
-  if(code[0] == 0)
+  code = GetString();
+  if(!code.size())
   {
    CHEAT_printf("Aborted.");
    return;
@@ -495,7 +515,7 @@ static void AddCodeCheat(void* data)
 
   try
   {
-   if(!cf->DecodeCheat(std::string(code), &patch))
+   if(!cf->DecodeCheat(code, &patch))
     break;
 
    iter++;
@@ -507,13 +527,13 @@ static void AddCodeCheat(void* data)
  }
 
  if(patch.name.size() == 0)
-  patch.name = std::string(code);
+  patch.name = code;
 
  CHEAT_printf("Name[%s]: ", patch.name.c_str());
- GetString(name, 256); 
+ std::string name = GetString(); 
 
- if(name[0] != 0)
-  patch.name = std::string(name);
+ if(name.size())
+  patch.name = name;
 
  patch.status = true;
 
@@ -616,29 +636,34 @@ static void ListCheats(void* data)
  which=EndListShow();
  if(which>=0)
  {
-  char tmp[32];
   CHEAT_printf(" <(T)oggle status, (M)odify, or (D)elete this cheat.> ");
-  CHEAT_gets(tmp,32);
-  switch(tolower(tmp[0]))
+  std::string tmp = CHEAT_gets();
+
+  if(tmp.size())
   {
-   case 't':ToggleCheat(which);
-	    break;
+   switch(MDFN_azlower(tmp[0]))
+   {
+    case 't':
+	ToggleCheat(which);
+	break;
 
-   case 'd':
-	    try
-	    {
-             MDFNI_DelCheat(which);
-	    }
-	    catch(std::exception &e)
-	    {
-	     CHEAT_printf("Error deleting cheat: %s", e.what());
-	     break;
-	    }
-	    CHEAT_puts("Cheat has been deleted.");
-	    break;
+    case 'd':
+	try
+	{
+	 MDFNI_DelCheat(which);
+	}
+	catch(std::exception &e)
+	{
+	 CHEAT_printf("Error deleting cheat: %s", e.what());
+	 break;
+	 }
+	CHEAT_puts("Cheat has been deleted.");
+	break;
 
-   case 'm':ModifyCheat(which);
-	    break;
+    case 'm':
+	ModifyCheat(which);
+	break;
+   }
   }
  }
 }
@@ -697,7 +722,6 @@ static int ShowShortList(const char *moe[], unsigned int n, int def)
  unsigned int x;
  int c;
  unsigned int baa;
- char tmp[256];
 
  red:
  for(x=0;x<n;x++)
@@ -707,15 +731,16 @@ static int ShowShortList(const char *moe[], unsigned int n, int def)
 
  CHEAT_puts("");
  CHEAT_printf("Selection [%d]> ",def+1);
- CHEAT_gets(tmp,256);
- if(!tmp[0])
+ std::string tmp = CHEAT_gets();
+ if(!tmp.size())
   return def;
- c=tolower(tmp[0]);
- baa=c-'1';
 
- if(baa<n)
+ c = MDFN_azlower(tmp[0]);
+ baa = c - '1';
+
+ if(baa < n)
   return baa;
- else if(c=='d')
+ else if(c == 'd')
   goto red;
  else
  {
@@ -782,16 +807,16 @@ static void DoMenu(const std::vector<MENU>& men, bool topmost = 0)
 
   while(CommandLoop)
   {
-   char buf[32];
    int c, c_numeral;
 
    CHEAT_printf("Command> ");
-   CHEAT_gets(buf,32);
+   std::string s = CHEAT_gets();
 
-   c = tolower(buf[0]);
-   if(c == 0)
+   if(!s.size())
     continue;
-   else if(c == 'd')
+
+   c = MDFN_azlower(s[0]);
+   if(c == 'd')
    {
     CommandLoop = FALSE;
    }
@@ -800,7 +825,7 @@ static void DoMenu(const std::vector<MENU>& men, bool topmost = 0)
     CommandLoop = FALSE;
     MenuLoop = FALSE;
    }
-   else if(trio_sscanf(buf, "%d", &c_numeral) == 1 && c_numeral <= x && c_numeral >= 1)
+   else if(trio_sscanf(s.c_str(), "%d", &c_numeral) == 1 && c_numeral <= x && c_numeral >= 1)
    {
     assert(!(men[c_numeral - 1].func_action && men[c_numeral - 1].menu_action));
 

@@ -13,8 +13,6 @@ PS1 emulation causing address space exhaustion on 32-bit builds.
 
 Draw lightgun crosshairs driver-side.
 
-SF*() state variable macro overhaul; add macro/function for handling std::array and std::vector.
-
 Save state preview images should reflect the screen-rotation(ALT+O) state somehow, probably at time of creation.
 
 Display current input setup(port mappings) in upper right corner of screen in smallest or second-smallest font, with black border, on
@@ -49,14 +47,6 @@ Internationalization issues:
 	Filesystem character coding vs UTF8 internal encoding vs locale.
 
 	Wrap iconv() in C++ classes.
-
-	Win32 Unicode:
-		MDFN_mkdir_T(), MDFN_stat(), MDFN_unlink(), MDFN_rename(), FileStream, GZFileStream, unzip code. GetCommandLineW, CommandLineToArgvW
-		Use UTF-16<->UTF-8 conversion that permits lone/mismatched surrogates.  UTF-8 to UTF-16 conversion MUST error out(exception) on
-		overlong encodings, though.  Don't use MultiByteToWideChar(), as it's documented to simply delete such characters on Windows XP,
-		which could allow subversion of the crude unsafe file-include-path checking code.
-		-municode -DUNICODE=1 -D_UNICODE=1
-		May cause problems with people's CUE sheets, especially with certain PCE CD dumps with the ² character in the filenames.
 
 Documentation:
 	Document systems with a debugger available.
@@ -303,6 +293,8 @@ Clean up intialization/deinitialization code so that more than one game can be l
  (This is a lot harder than it sounds! :b)
 
 Debugger(general):
+	GetAddressSpaceBytes()/PutAddressSpaceBytes() per-byte error reporting(open bus, CD data track read fail for PC-FX, etc.).
+
 	New aux breakpoint syntax, like:
 		vram[0-7fff]
 		vdc[0-5]

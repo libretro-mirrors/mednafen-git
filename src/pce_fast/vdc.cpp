@@ -1646,7 +1646,7 @@ void VDC_StateAction(StateMem *sm, int load, int data_only)
   SFVARN(vce.CR, "VCECR"),
   SFVARN(vce.dot_clock, "dot clock"),
   SFVARN(vce.ctaddress, "ctaddress"),
-  SFARRAY16N(vce.color_table, 0x200, "color_table"),
+  SFPTR16N(vce.color_table, 0x200, "color_table"),
   SFEND
  };
 
@@ -1666,8 +1666,8 @@ void VDC_StateAction(StateMem *sm, int load, int data_only)
   SFORMAT VPC_StateRegs[] =
   {
    SFVARN(vpc.st_mode, "st_mode"),
-   SFARRAYN(vpc.priority, 2, "priority"),
-   SFARRAY16N(vpc.winwidths, 2, "winwidths"),
+   SFPTR8N(vpc.priority, 2, "priority"),
+   SFPTR16N(vpc.winwidths, 2, "winwidths"),
    SFEND
   };
   MDFNSS_StateAction(sm, load, data_only, VPC_StateRegs, "VPC");
@@ -1709,9 +1709,9 @@ void VDC_StateAction(StateMem *sm, int load, int data_only)
         SFVARN(vdc->write_latch, "write_latch"),
         SFVARN(vdc->status, "status"),
 
-        SFARRAY16N(vdc->SAT, 0x100, "SAT"),
+        SFPTR16N(vdc->SAT, 0x100, "SAT"),
 
-        SFARRAY16N(vdc->VRAM, VRAM_Size, "VRAM"),
+        SFPTR16N(vdc->VRAM, VRAM_Size, "VRAM"),
         SFVARN(vdc->DMAReadBuffer, "DMAReadBuffer"),
         SFVARN(vdc->DMAReadWrite, "DMAReadWrite"),
         SFVARN(vdc->DMARunning, "DMARunning"),

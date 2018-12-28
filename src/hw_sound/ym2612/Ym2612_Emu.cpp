@@ -1050,14 +1050,14 @@ void Ym2612_Emu::serialize(MDFN::LEPacker &slizer, bool load)
   for(int slot = 0; slot < 4; slot++)
   {
    slot_t *sl = &c->SLOT[slot];
-   unsigned int tun = (unsigned int)(sl->DT - &g->DT_TAB[0][0]);
+   unsigned int tun = (unsigned int)(sl->DT - MDAP(g->DT_TAB));
 
    slizer ^ tun;
 
    if(load)
    {
     tun &= 0x07 * 32;
-    sl->DT = &g->DT_TAB[0][0] + tun;
+    sl->DT = MDAP(g->DT_TAB) + tun;
    }
 
    slizer ^ sl->MUL;
@@ -1073,74 +1073,3 @@ void Ym2612_Emu::serialize(MDFN::LEPacker &slizer, bool load)
   }
  }
 }
-
-
-
-#if 0
-
-#define SLOT_STATEREG(ch,sln)							\
-			SFVARN(s->CHANNEL[ch].SLOT[sln].DT, "DT"),		\
-			SFVARN(s->CHANNEL[ch].SLOT[sln].MUL, "MUL"),		\
-			SFVARN(s->CHANNEL[ch].SLOT[sln].KSR_S, "KSR_S"),	\
-			SFVARN(s->CHANNEL[ch].SLOT[sln].Fcnt, "Fcnt"),		\
-			SFVARN(s->CHANNEL[ch].SLOT[sln].INd, "INd"),		\
-			SFVARN(s->CHANNEL[ch].SLOT[sln].AMS, "AMS"),		\
-			SFVARN(s->CHANNEL[ch].SLOT[sln].AMSon, "AMSon"),
-
-#define CH_STATEREG(ch)	SFARRAY32N(s->CHANNEL[ch].S0_OUT, 4, "S0_OUT"),		\
-			SFVARN(s->CHANNEL[ch].LEFT, "LEFT"),			\
-			SFVARN(s->CHANNEL[ch].RIGHT, "RIGHT"),			\
-			SFVARN(s->CHANNEL[ch].ALGO, "ALGO"),			\
-			SFVARN(s->CHANNEL[ch].FB, "FB"),			\
-			SFVARN(s->CHANNEL[ch].FMS, "FMS"),			\
-			SFVARN(s->CHANNEL[ch].AMS, "AMS"),			\
-			SFARRAY32N(s->CHANNEL[ch].FNUM, 4, "FNUM"),		\
-			SFARRAY32N(s->CHANNEL[ch].FOCT, 4, "FOCT"),		\
-			SFARRAY32N(s->CHANNEL[ch].KC, 4, "KC"),			\
-			SLOT_STATEREG(ch,0)					\
-			SLOT_STATEREG(ch,1)					\
-			SLOT_STATEREG(ch,2)					\
-			SLOT_STATEREG(ch,3)
-
-// EG here
-
-#define STATEREG(n)	SFVARN(s->n, #n),
-
-int Ym2612_Emu::StateAction(StateMem *sm, int load, int data_only, const char *section_name)
-{
- state_t *s = &impl->YM2612;
- tables_t *g = &impl->g;
-
- SFORMAT StateRegs[] = 
- {
-  STATEREG(Status)
-  STATEREG(TimerA)
-  STATEREG(TimerAL)
-  STATEREG(TimerAcnt)
-  STATEREG(TimerB)
-  STATEREG(TimerBL)
-  STATEREG(TimerBcnt)
-  STATEREG(Mode)
-  STATEREG(DAC)
-  STATEREG(DACdata)
-  STATEREG(EGCycleCounter)
-  STATEREG(EGDivCounter)
-
-  CH_STATEREG(0)
-  CH_STATEREG(1)
-  CH_STATEREG(2)
-  CH_STATEREG(3)
-  CH_STATEREG(4)
-  CH_STATEREG(5)
-
-  SFARRAY32N(&s->REG[0][0], sizeof(s->REG) / sizeof(s->REG[0][0]), "REGS"),
-  SFEND
- };
-
-}
-
-#undef SLOT_STATEREG
-#undef CH_STATEREG
-#undef STATEREG
-
-#endif

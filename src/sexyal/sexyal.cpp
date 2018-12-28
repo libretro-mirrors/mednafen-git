@@ -287,7 +287,7 @@ std::vector<SexyAL_DriverInfo> SexyAL_GetDriverList(void)
 
 bool SexyAL_FindDriver(SexyAL_DriverInfo* out_di, const char* name)
 {
- bool need_default = ((name == NULL) || !strcasecmp(name, "default"));
+ bool need_default = ((name == NULL) || !MDFN_strazicmp(name, "default"));
 
  for(int x = 0; drivers[x].name; x++)
  {
@@ -296,7 +296,7 @@ bool SexyAL_FindDriver(SexyAL_DriverInfo* out_di, const char* name)
    if(drivers[x].Avail && !drivers[x].Avail())
     continue;
   }
-  else if(strcasecmp(drivers[x].short_name, name))
+  else if(MDFN_strazicmp(drivers[x].short_name, name))
    continue;
 
   out_di->short_name = drivers[x].short_name;

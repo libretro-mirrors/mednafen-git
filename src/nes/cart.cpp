@@ -801,9 +801,9 @@ void Genie_StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVAR(tmp_geniestage),
   SFVAR(tmp_modcon),
 
-  SFARRAY(tmp_genieval.data(), tmp_genieval.size()),
-  SFARRAY(tmp_geniech.data(), tmp_geniech.size()),
-  SFARRAY16(tmp_genieaddr.data(), tmp_genieaddr.size()),
+  SFPTR8(tmp_genieval.data(), tmp_genieval.size()),
+  SFPTR8(tmp_geniech.data(), tmp_geniech.size()),
+  SFPTR16(tmp_genieaddr.data(), tmp_genieaddr.size()),
 
   SFEND
  };

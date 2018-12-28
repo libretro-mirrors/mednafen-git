@@ -508,7 +508,7 @@ static MDFN_COLD void CloseGame(void)
   }
   catch(std::exception &e)
   {
-   MDFN_PrintError("%s", e.what());
+   MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
   }
  }
  Cleanup();
@@ -787,7 +787,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
  SFORMAT StateRegs[] =
  {
   SFVAR(MemSelect),
-  SFARRAY(WRAM, 0x20000),
+  SFVAR(WRAM),
 
   SFVAR(Multiplicand),
   SFVAR(MultProduct),

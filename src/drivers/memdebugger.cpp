@@ -25,7 +25,6 @@
 #include "prompt.h"
 #include <mednafen/FileStream.h>
 
-#include <ctype.h>
 #include <trio/trio.h>
 
 bool MemDebugger::ICV_Init(const char *newcode)
@@ -42,10 +41,10 @@ bool MemDebugger::ICV_Init(const char *newcode)
   ict_to_utf8 = (iconv_t)-1;
  }
 
- if((size_t)ict_utf16_to_game != (size_t)-1)
+ if((size_t)ict_utf8_to_game != (size_t)-1)
  {
-  iconv_close(ict_utf16_to_game);
-  ict_utf16_to_game = (iconv_t)-1;
+  iconv_close(ict_utf8_to_game);
+  ict_utf8_to_game = (iconv_t)-1;
  }
 
  ict = iconv_open(newcode, "UTF-8");
@@ -64,8 +63,8 @@ bool MemDebugger::ICV_Init(const char *newcode)
   return(0);
  }
 
- ict_utf16_to_game = iconv_open(newcode, "UTF-16");
- if((size_t)ict_utf16_to_game == (size_t)-1)
+ ict_utf8_to_game = iconv_open(newcode, "UTF-8");
+ if((size_t)ict_utf8_to_game == (size_t)-1)
  {
   error_string = trio_aprintf("iconv_open() error: %m");
   error_time = Time::MonoMS();
@@ -168,7 +167,7 @@ std::vector<uint8> MemDebugger::TextToBS(const std::string& text)
 
         for(size_t x = 0; x < text_len; x++)
         {
-         int c = tolower(text[x]);
+         int c = MDFN_azlower(text[x]);
 
          if(c >= '0' && c <= '9')
           c -= '0';
@@ -719,47 +718,61 @@ int MemDebugger::Event(const SDL_Event *event)
   delete myprompt;
   myprompt = NULL;
  }
- unsigned int keysym = event->key.keysym.sym;
 
  switch(event->type)
  {
+  case SDL_TEXTINPUT:
+	if(SDL_GetModState() & KMOD_LALT)
+  	 break;
+
+	if(PromptTAKC != SDLK_UNKNOWN)
+	 break;
+
+	if(InPrompt)
+	 myprompt->InsertKBB(event->text.text);
+	else if(InEditMode && InTextArea)
+	{
+	 uint8 to_write[512];
+	 size_t ibl, obl, obl_start;
+	 const char* inbuf;
+	 char* outbuf;
+
+	 ibl = strlen(event->text.text);
+	 obl_start = obl = sizeof(to_write);
+
+	 inbuf = event->text.text;
+	 outbuf = (char*)to_write;
+
+	 size_t result = iconv(ict_utf8_to_game, (ICONV_CONST char **)&inbuf, &ibl, &outbuf, &obl);
+	 if(result != (size_t)-1)
+	 {
+          unsigned to_write_len = obl_start - obl;
+
+	  ASpace->PutAddressSpaceBytes(ASpace->name.c_str(), ASpacePos[CurASpace], to_write_len, 1, true, to_write);
+
+	  LowNib = 0;
+	  ChangePos(to_write_len);
+	 }
+	}
+	break;
+
+  case SDL_KEYUP:
+	if(PromptTAKC == event->key.keysym.sym)
+	 PromptTAKC = SDLK_UNKNOWN;
+	break;
+
   case SDL_KEYDOWN:
-	if(event->key.keysym.mod & KMOD_ALT)
+	if(PromptTAKC == event->key.keysym.sym && event->key.repeat)
+	 PromptTAKC = SDLK_UNKNOWN;
+
+	if(event->key.keysym.mod & KMOD_LALT)
 	 break;
 
         if(InPrompt)
         {
          myprompt->Event(event);
         }
-	else if(InEditMode && InTextArea && keysym != SDLK_TAB && keysym != SDLK_INSERT && keysym != SDLK_UP && keysym != SDLK_DOWN && keysym != SDLK_LEFT
-	 && keysym != SDLK_RIGHT && (event->key.keysym.unicode >= 0x20))
-	{
-	 uint8 to_write[16];
-	 int to_write_len;
-
-	 size_t ibl, obl, obl_start;
-	 char *inbuf, *outbuf;
-
-	 ibl = 2;
-	 obl_start = obl = 16;
-
-	 inbuf = (char *)&event->key.keysym.unicode;
-	 outbuf = (char*)to_write;
-
-	 size_t result = iconv(ict_utf16_to_game, (ICONV_CONST char **)&inbuf, &ibl, &outbuf, &obl);
-	 if(result != (size_t)-1)
-	 {
-          to_write_len = obl_start - obl;
-
-	  
-	  ASpace->PutAddressSpaceBytes(ASpace->name.c_str(), ASpacePos[CurASpace], to_write_len, 1, true, to_write);
-	  
-
-	  LowNib = 0;
-	  ChangePos(to_write_len);
-	 }
-	}
-	else if(InEditMode && ((event->key.keysym.sym >= SDLK_0 && event->key.keysym.sym <= SDLK_9)	|| 
+	else if(InEditMode && !InTextArea && ((event->key.keysym.sym >= SDLK_0 && event->key.keysym.sym <= SDLK_9)	|| 
 	   (event->key.keysym.sym >= SDLK_a && event->key.keysym.sym <= SDLK_f)))
 	{
          uint8 tc = 0;
@@ -819,11 +832,15 @@ int MemDebugger::Event(const SDL_Event *event)
 	 case SDLK_d:
                 InPrompt = DumpMem;
                 myprompt = new MemDebuggerPrompt(this, "Dump Memory(start end filename)", "");
+		PromptTAKC = event->key.keysym.sym;
 		break;
+
 	 case SDLK_l:
                 InPrompt = LoadMem;
                 myprompt = new MemDebuggerPrompt(this, "Load Memory(start end filename)", "");
+		PromptTAKC = event->key.keysym.sym;
                 break;
+
 	 case SDLK_s:
 	        if(SizeCache[CurASpace] > (1 << 24))
                 {
@@ -834,8 +851,10 @@ int MemDebugger::Event(const SDL_Event *event)
 		{
 		 InPrompt = ByteStringSearch;
 		 myprompt = new MemDebuggerPrompt(this, "Byte String Search", BSS_String);
+		 PromptTAKC = event->key.keysym.sym;
 		}
 		break;
+
 	 case SDLK_r:
 		if(SizeCache[CurASpace] > (1 << 24))
                 {
@@ -846,12 +865,14 @@ int MemDebugger::Event(const SDL_Event *event)
                 {
 		 InPrompt = RelSearch;
 		 myprompt = new MemDebuggerPrompt(this, "Byte String Relative/Delta Search", RS_String);
+		 PromptTAKC = event->key.keysym.sym;
 		}
 		break;
 
 	 case SDLK_c:
 		InPrompt = SetCharset;
 		myprompt = new MemDebuggerPrompt(this, "Charset", GameCode);
+		PromptTAKC = event->key.keysym.sym;
 		break;
 
          case SDLK_t:
@@ -864,6 +885,7 @@ int MemDebugger::Event(const SDL_Event *event)
                 {
                  InPrompt = TextSearch;
                  myprompt = new MemDebuggerPrompt(this, "Text Search", TS_String);
+		 PromptTAKC = event->key.keysym.sym;
                 }
                 break;
 
@@ -873,11 +895,13 @@ int MemDebugger::Event(const SDL_Event *event)
 		{
                  InPrompt = GotoDD;
                  myprompt = new MemDebuggerPrompt(this, "Goto Address(DD)", "");
+		 PromptTAKC = event->key.keysym.sym;
 		}
 		else
 		{
 		 InPrompt = Goto;
 		 myprompt = new MemDebuggerPrompt(this, "Goto Address", "");
+		 PromptTAKC = event->key.keysym.sym;
 		}
 		break;
 
@@ -927,7 +951,7 @@ int MemDebugger::Event(const SDL_Event *event)
 // Called after a game is loaded.
 MemDebugger::MemDebugger() : AddressSpaces(NULL), ASpace(NULL), IsActive(false), CurASpace(0),
 			     LowNib(false), InEditMode(false), InTextArea(false), error_string(NULL), error_time(0),
-			     ict((iconv_t)-1), ict_to_utf8((iconv_t)-1), ict_utf16_to_game((iconv_t)-1), InPrompt(None), myprompt(NULL)			     
+			     ict((iconv_t)-1), ict_to_utf8((iconv_t)-1), ict_utf8_to_game((iconv_t)-1), InPrompt(None), myprompt(NULL), PromptTAKC(SDLK_UNKNOWN)			     
 {
  if(CurGame->Debugger)
  {
@@ -972,10 +996,10 @@ MemDebugger::~MemDebugger()
   ict_to_utf8 = (iconv_t)-1;
  }
 
- if(ict_utf16_to_game != (iconv_t)-1)
+ if(ict_utf8_to_game != (iconv_t)-1)
  {
-  iconv_close(ict_utf16_to_game);
-  ict_utf16_to_game = (iconv_t)-1;
+  iconv_close(ict_utf8_to_game);
+  ict_utf8_to_game = (iconv_t)-1;
  }
 
  if(error_string)

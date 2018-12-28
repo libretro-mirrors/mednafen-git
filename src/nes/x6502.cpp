@@ -688,7 +688,7 @@ void X6502_StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVARN(X.X, "X"),
   SFVARN(X.Y, "Y"),
   SFVARN(X.S, "S"),
-  SFARRAYN(RAM, 0x800, "RAM"),
+  SFPTR8N(RAM, 0x800, "RAM"),
   SFEND
  };
 

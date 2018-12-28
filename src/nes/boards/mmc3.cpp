@@ -1191,9 +1191,9 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(WRAM, WRAMSize),
-  SFARRAY(CHRRAM, CHRRAMSize),
-  SFARRAYN(DRegBuf, 8, "REGS"),
+  SFPTR8(WRAM, WRAMSize),
+  SFPTR8(CHRRAM, CHRRAMSize),
+  SFPTR8N(DRegBuf, 8, "REGS"),
   SFVARN(resetmode, "RMOD"),
   SFVARN(MMC3_cmd, "CMD"),
   SFVARN(A000B, "A000"),
@@ -1203,7 +1203,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
   SFVARN(IRQLatch, "IRQL"),
   SFVARN(IRQa, "IRQA"),
   SFVAR(PPUCHRBus),
-  SFARRAY(EXPREGS, EXPRCount),
+  SFPTR8(EXPREGS, EXPRCount),
   SFVAR(cmdin),
   SFEND
  };

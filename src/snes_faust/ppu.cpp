@@ -178,8 +178,8 @@ static DEFWRITE(Write_OAMDATA)
   OAMHI[OAM_Addr & 0x1F] = V;
  else if(OAM_Addr & 1)
  {
-  (OAM - 1)[OAM_Addr] = OAM_Buffer;
-  (OAM + 0)[OAM_Addr] = V;
+  OAM[(size_t)OAM_Addr - 1] = OAM_Buffer;
+  OAM[(size_t)OAM_Addr + 0] = V;
  }
 
  if(!(OAM_Addr & 1))
@@ -452,14 +452,14 @@ static DEFWRITE(Write_BGSC)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
- (BGSC - 0x07)[(uint8)A] = V;
+ BGSC[(size_t)(uint8)A - 0x07] = V;
 }
 
 static DEFWRITE(Write_BGNBA)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
- (BGNBA - 0x0B)[(uint8)A] = V;
+ BGNBA[(size_t)(uint8)A - 0x0B] = V;
 }
 
 template<bool bg0>
@@ -467,7 +467,7 @@ static DEFWRITE(Write_BGHOFS)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
- uint16* const t = &(BGHOFS - (0x0D >> 1))[(uint8)A >> 1];
+ uint16* const t = &BGHOFS[((size_t)(uint8)A >> 1) - (0x0D >> 1)];
  *t = BGOFSPrev | ((V & 0x3) << 8);
  BGOFSPrev = V;
 
@@ -484,7 +484,7 @@ static DEFWRITE(Write_BGVOFS)
  CPUM.timestamp += MEMCYC_FAST;
 
  //
- (BGVOFS - (0x0E >> 1))[(uint8)A >> 1] = BGOFSPrev | ((V & 0x3) << 8);
+ BGVOFS[((size_t)(uint8)A >> 1) - (0x0E >> 1)] = BGOFSPrev | ((V & 0x3) << 8);
  BGOFSPrev = V;
 
  if(bg0)
@@ -614,7 +614,7 @@ static DEFWRITE(Write_M7Matrix)		// $1b-$1e
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
- (M7Matrix - 0x1B)[(uint8)A] = M7Prev | (V << 8);
+ M7Matrix[(size_t)(uint8)A - 0x1B] = M7Prev | (V << 8);
  M7Prev = V;
 }
 
@@ -633,7 +633,7 @@ static DEFWRITE(Write_M7Center)
  CPUM.timestamp += MEMCYC_FAST;
  //
 
- (M7Center - 0x1F)[(uint8)A] = sign_13_to_s16(M7Prev | ((V & 0x1F) << 8));
+ M7Center[(size_t)(uint8)A - 0x1F] = sign_13_to_s16(M7Prev | ((V & 0x1F) << 8));
  M7Prev = V;
 }
 
@@ -723,7 +723,7 @@ static DEFWRITE(Write_WMSettings)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
- (WMSettings - 0x23)[(uint8)A] = V;
+ WMSettings[(size_t)(uint8)A - 0x23] = V;
 }
 
 
@@ -732,7 +732,7 @@ static DEFWRITE(Write_WindowPos)	// $26-$29
  CPUM.timestamp += MEMCYC_FAST;
  //
 
- ((uint8*)WindowPos - 0x26)[(uint8)A] = V;
+ ((uint8*)WindowPos)[(size_t)(uint8)A - 0x26] = V;
 
  //printf("%04x %02x\n", A, V);
 }
@@ -2512,10 +2512,10 @@ void PPU_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFVAR(LinePhase),
   SFVAR(scanline),
 
-  SFARRAY(BusLatch, 2),
-  SFARRAY(Status, 2),
+  SFVAR(BusLatch),
+  SFVAR(Status),
 
-  SFARRAY16(VRAM, 32768),
+  SFVAR(VRAM),
 
   SFVAR(ScreenMode),
   SFVAR(INIDisp),
@@ -2523,13 +2523,13 @@ void PPU_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFVAR(Mosaic),
   SFVAR(MosaicYOffset),
 
-  SFARRAY(BGSC, 4),
+  SFVAR(BGSC),
 
-  SFARRAY(BGNBA, 2),
+  SFVAR(BGNBA),
 
   SFVAR(BGOFSPrev),
-  SFARRAY16(BGHOFS, 4),
-  SFARRAY16(BGVOFS, 4),
+  SFVAR(BGHOFS),
+  SFVAR(BGVOFS),
 
   SFVAR(VRAM_Addr),
   SFVAR(VRAM_ReadBuffer),
@@ -2541,24 +2541,24 @@ void PPU_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
   SFVAR(M7Prev),
   SFVAR(M7SEL),
-  SFARRAY16(M7Matrix, 4),
-  SFARRAY16(M7Center, 2),
+  SFVAR(M7Matrix),
+  SFVAR(M7Center),
   SFVAR(M7HOFS),
   SFVAR(M7VOFS),
 
   SFVAR(CGRAM_Toggle),
   SFVAR(CGRAM_Buffer),
   SFVAR(CGRAM_Addr),
-  SFARRAY16(CGRAM, 256),
+  SFVAR(CGRAM),
 
   SFVAR(MSEnable),
   SFVAR(SSEnable),
 
-  SFARRAY(WMSettings, 3),
+  SFVAR(WMSettings),
   SFVAR(WMMainEnable),
   SFVAR(WMSubEnable),
   SFVAR(WMLogic),
-  SFARRAY(&WindowPos[0][0], sizeof(WindowPos) / sizeof(WindowPos[0][0])),
+  SFVARN(WindowPos, "&WindowPos[0][0]"),
 
   SFVAR(CGWSEL),
   SFVAR(CGADSUB),
@@ -2569,8 +2569,8 @@ void PPU_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFVAR(OAMADDH),
   SFVAR(OAM_Buffer),
   SFVAR(OAM_Addr),
-  SFARRAY(OAM, 512),
-  SFARRAY(OAMHI, 32),
+  SFVAR(OAM),
+  SFVAR(OAMHI),
 
   SFEND
  };

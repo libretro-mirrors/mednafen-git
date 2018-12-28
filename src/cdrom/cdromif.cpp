@@ -358,7 +358,7 @@ int CDIF_MT::ReadThreadStart()
    }
    catch(std::exception &e)
    {
-    MDFN_PrintError(_("Sector %u read error: %s"), ra_lba, e.what());
+    MDFN_Notify(MDFN_NOTICE_ERROR, _("Sector %u read error: %s"), ra_lba, e.what());
     memset(tmpbuf, 0, sizeof(tmpbuf));
     error_condition = true;
    }
@@ -444,7 +444,7 @@ CDIF_MT::~CDIF_MT()
  }
  catch(std::exception &e)
  {
-  MDFND_PrintError(e.what());
+  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
   thread_deaded_failed = true;
  }
 
@@ -574,12 +574,12 @@ void CDIF_MT::HintReadSector(int32 lba)
  ReadThreadQueue.Write(CDIF_Message(CDIF_MSG_READ_SECTOR, lba));
 }
 
-int CDIF::ReadSector(uint8* buf, int32 lba, uint32 sector_count, bool suppress_uncorrectable_message)
+int CDIF::ReadSector(uint8* buf, int32 lba, uint32 sector_count)
 {
  int ret = 0;
 
  if(UnrecoverableError)
-  return(false);
+  return false;
 
  while(sector_count--)
  {
@@ -588,19 +588,11 @@ int CDIF::ReadSector(uint8* buf, int32 lba, uint32 sector_count, bool suppress_u
   if(!ReadRawSector(tmpbuf, lba))
   {
    puts("CDIF Raw Read error");
-   return(false);
+   return false;
   }
 
   if(!ValidateRawSector(tmpbuf))
-  {
-   if(!suppress_uncorrectable_message)
-   {
-    MDFN_DispMessage(_("Uncorrectable data at sector %d"), lba);
-    MDFN_PrintError(_("Uncorrectable data at sector %d"), lba);
-   }
-
-   return(false);
-  }
+   return false;
 
   const int mode = tmpbuf[12 + 3];
 
@@ -618,7 +610,7 @@ int CDIF::ReadSector(uint8* buf, int32 lba, uint32 sector_count, bool suppress_u
   else
   {
    printf("CDIF_ReadSector() invalid sector type at LBA=%u\n", (unsigned int)lba);
-   return(false);
+   return false;
   }
 
   buf += 2048;
@@ -679,7 +671,7 @@ bool CDIF_ST::ReadRawSector(uint8 *buf, int32 lba)
  }
  catch(std::exception &e)
  {
-  MDFN_PrintError(_("Sector %u read error: %s"), lba, e.what());
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("Sector %u read error: %s"), lba, e.what());
   memset(buf, 0, 2352 + 96);
   return(false);
  }

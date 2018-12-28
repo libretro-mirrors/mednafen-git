@@ -310,8 +310,7 @@ static void Emulate(EmulateSpecStruct *espec)
    }
    catch(std::exception &e)
    {
-    MDFN_PrintError(_("Error saving save-game memory: %s"), e.what());
-    MDFN_DispMessage(_("Error saving save-game memory: %s"), e.what());
+    MDFN_Notify(MDFN_NOTICE_ERROR, _("Error saving save-game memory: %s"), e.what());
     BackupSaveDelay = 60 * 60;	// Try it again in about 60 seconds emulated time(unless more writes occur to the backup memory before then, then the regular delay
 				// will be used from that time).
    }
@@ -920,17 +919,15 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  {
   if(toc.tracks[track].control & 0x4)
   {
-   cdiface->ReadSector(sector_buffer, toc.tracks[track].lba, 1);
-   if(!strncmp("PC-FX:Hu_CD-ROM", (char*)sector_buffer, strlen("PC-FX:Hu_CD-ROM")))
-   {
-    return(true);
-   }
+   int m = cdiface->ReadSector(sector_buffer, toc.tracks[track].lba, 1);
 
-   if(!strncmp((char *)sector_buffer + 64, "PPPPHHHHOOOOTTTTOOOO____CCCCDDDD", 32))
-    return(true);
+   if(m == 0x1 && !strncmp("PC-FX:Hu_CD-ROM", (char*)sector_buffer, strlen("PC-FX:Hu_CD-ROM")))
+    return true;
+   else if((m == 0x1 || m == 0x2) && !strncmp((char *)sector_buffer + 64, "PPPPHHHHOOOOTTTTOOOO____CCCCDDDD", 32))
+    return true;
   }
  }
- return(false);
+ return false;
 }
 
 static MDFN_COLD void LoadCD(std::vector<CDIF *> *CDInterfaces)
@@ -996,7 +993,7 @@ static MDFN_COLD void CloseGame(void)
  }
  catch(std::exception &e)
  {
-  MDFN_PrintError(_("Error saving save-game memory: %s"), e.what());
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("Error saving save-game memory: %s"), e.what());
  }
 
  Cleanup();
@@ -1017,12 +1014,13 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
  SFORMAT StateRegs[] =
  {
-  SFARRAY(RAM, 0x200000),
-  SFARRAY16(Last_VDC_AR, 2),
+  SFPTR8(RAM, 0x200000),
+  SFVAR(Last_VDC_AR),
+  SFVAR(RAM_LPA),
   SFVAR(BackupControl),
   SFVAR(ExBusReset),
-  SFARRAY(BackupRAM, BRAMDisabled ? 0 : 0x8000),
-  SFARRAY(ExBackupRAM, BRAMDisabled ? 0 : 0x8000),
+  SFPTR8(BackupRAM, BRAMDisabled ? 0 : 0x8000),
+  SFPTR8(ExBackupRAM, BRAMDisabled ? 0 : 0x8000),
 
   SFEND
  };
@@ -1083,8 +1081,8 @@ static const MDFNSetting PCFXSettings[] =
   { "pcfx.disable_softreset", MDFNSF_NOFLAGS, gettext_noop("When RUN+SEL are pressed simultaneously, disable both buttons temporarily."), NULL, MDFNST_BOOL, "0", NULL, NULL, NULL, FXINPUT_SettingChanged },
 
   { "pcfx.cpu_emulation", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("CPU emulation mode."), NULL, MDFNST_ENUM, "auto", NULL, NULL, NULL, NULL, V810Mode_List },
-  { "pcfx.bios", MDFNSF_EMU_STATE, gettext_noop("Path to the ROM BIOS"), NULL, MDFNST_STRING, "pcfx.rom" },
-  { "pcfx.fxscsi", MDFNSF_EMU_STATE, gettext_noop("Path to the FX-SCSI ROM"), gettext_noop("Intended for developers only."), MDFNST_STRING, "0" },
+  { "pcfx.bios", MDFNSF_EMU_STATE | MDFNSF_CAT_PATH, gettext_noop("Path to the ROM BIOS"), NULL, MDFNST_STRING, "pcfx.rom" },
+  { "pcfx.fxscsi", MDFNSF_EMU_STATE | MDFNSF_CAT_PATH, gettext_noop("Path to the FX-SCSI ROM"), gettext_noop("Intended for developers only."), MDFNST_STRING, "0" },
   { "pcfx.disable_bram", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Disable internal and external BRAM."), gettext_noop("It is intended for viewing games' error screens that may be different from simple BRAM full and uninitialized BRAM error screens, though it can cause the game to crash outright."), MDFNST_BOOL, "0" },
   { "pcfx.cdspeed", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Emulated CD-ROM speed."), gettext_noop("Setting the value higher than 2, the default, will decrease loading times in most games by some degree."), MDFNST_UINT, "2", "2", "10" },
 

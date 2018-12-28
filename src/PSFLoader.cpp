@@ -31,7 +31,6 @@
 #include <mednafen/string/string.h>
 
 #include <trio/trio.h>
-#include <ctype.h>
 #include <iconv.h>
 
 #include <zlib.h>
@@ -64,9 +63,7 @@ void PSFTags::AddTag(char *tag_line)
 
   MDFN_trim(tag_line);
   MDFN_trim(eq + 1);
-
-  for(unsigned int i = 0; i < strlen(tag_line); i++)
-   tag_line[i] = tolower(tag_line[i]);
+  MDFN_strazlower(tag_line);
 
   if(TagExists(tag_line))
    tags[tag_line] = tags[std::string(tag_line)] + std::string(1, '\n') + std::string(eq + 1);
@@ -329,7 +326,7 @@ PSFTags PSFLoader::LoadInternal(uint8 version, uint32 max_exe_size, Stream *fp, 
  //
  {
   fp->seek(16 + reserved_size);
-  ZLInflateFilter ifs(fp, ZLInflateFilter::FORMAT::ZLIB, compressed_size);
+  ZLInflateFilter ifs(fp, "<Compressed EXE section of PSF>", ZLInflateFilter::FORMAT::ZLIB, compressed_size);
   HandleEXE(&ifs, force_ignore_pcsp | _lib_present);
  }
 
