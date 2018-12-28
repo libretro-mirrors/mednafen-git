@@ -91,7 +91,7 @@ enum
  CART_MDFN_DEBUG
 };
 
-void CART_Init(const int cart_type) MDFN_COLD;
+void CART_Init(const int cart_type, Stream* rom_stream) MDFN_COLD;
 static INLINE ss_event_handler CART_GetEventHandler(void) { extern CartInfo Cart; return Cart.EventHandler; }
 static INLINE void CART_AdjustTS(const int32 delta) { extern CartInfo Cart; Cart.AdjustTS(delta); }
 static INLINE void CART_SetCPUClock(const int32 master_clock, const int32 cpu_divider) { extern CartInfo Cart; Cart.SetCPUClock(master_clock, cpu_divider); }

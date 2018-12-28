@@ -21,6 +21,9 @@
 
 #include "png.h"
 
+namespace Mednafen
+{
+
 static unsigned GetIncSnapIndex(void)
 {
  FileStream pp(MDFN_MakeFName(MDFNMKF_SNAP_DAT, 0, NULL), FileStream::MODE_READ_WRITE, true);
@@ -53,4 +56,6 @@ void MDFNI_SaveSnapshot(const MDFN_Surface *src, const MDFN_Rect *rect, const in
  {
   MDFN_Notify(MDFN_NOTICE_ERROR, _("Error saving screen snapshot: %s"), e.what());
  }
+}
+
 }

@@ -24,7 +24,7 @@
 */
 
 #include <mednafen/mednafen.h>
-#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/cdrom/CDInterface.h>
 #include <mednafen/cdrom/SimpleFIFO.h>
 #include <mednafen/sound/okiadpcm.h>
 

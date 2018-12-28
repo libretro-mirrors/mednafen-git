@@ -22,6 +22,9 @@
 #ifndef __MDFN_SURFACE_H
 #define __MDFN_SURFACE_H
 
+namespace Mednafen
+{
+
 struct MDFN_Rect
 {
  int32 x, y, w, h;
@@ -290,4 +293,5 @@ class MDFN_Surface //typedef struct
  void Init(void *const p_pixels, const uint32 p_width, const uint32 p_height, const uint32 p_pitchinpix, const MDFN_PixelFormat &nf, const bool alloc_init_pixels);
 };
 
+}
 #endif

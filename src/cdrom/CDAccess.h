@@ -24,6 +24,9 @@
 
 #include "CDUtility.h"
 
+namespace Mednafen
+{
+
 class CDAccess
 {
  public:
@@ -46,6 +49,7 @@ class CDAccess
  CDAccess& operator=(const CDAccess&); // No assignment operator.
 };
 
-CDAccess* CDAccess_Open(const std::string& path, bool image_memcache);
+CDAccess* CDAccess_Open(VirtualFS* vfs, const std::string& path, bool image_memcache);
 
+}
 #endif

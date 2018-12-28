@@ -1,17 +1,16 @@
-#ifndef _DRIVERS_MAIN_H
-#define _DRIVERS_MAIN_H
+#ifndef __MDFN_DRIVERS_MAIN_H
+#define __MDFN_DRIVERS_MAIN_H
 
 #include <mednafen/driver.h>
 #include <mednafen/mednafen.h>
 #include <mednafen/settings.h>
 #include <mednafen/Time.h>
+#include <mednafen/MThreading.h>
 #include "config.h"
 #include "args.h"
 
 #include <SDL.h>
 #include <SDL_thread.h>
-
-#include <mednafen/gettext.h>
 
 enum
 {

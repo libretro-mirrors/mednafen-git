@@ -32,10 +32,6 @@
 #include	<trio/trio.h>
 #include	<math.h>
 
-#ifdef	__MMX__
- #include "mmintrin.h"
-#endif
-
 namespace MDFN_IEN_NES
 {
 void MMC5_hb(int);     /* Ugh ugh ugh. */
@@ -1122,9 +1118,9 @@ static void RefreshSprites(void)
 
 	for(int n = numsprites - 1; n >= 0; n--)
 	{
-	 register uint32 pixdata;
-	 register uint8 J,atr;
-	 register SPRB *spr = &SPRBUF[n];
+	 uint32 pixdata;
+	 uint8 J,atr;
+	 SPRB *spr = &SPRBUF[n];
 
 	 int x = spr->x;
          uint8 *C;

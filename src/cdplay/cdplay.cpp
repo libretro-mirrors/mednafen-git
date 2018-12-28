@@ -22,7 +22,7 @@
 // TODO: Clear Q subchannel data on disc change and manual track change, add Q subchannel mode have variable(s).
 
 #include <mednafen/mednafen.h>
-#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/cdrom/CDInterface.h>
 #include <trio/trio.h>
 
 using namespace CDUtility;
@@ -57,7 +57,7 @@ static int16 ResampBuffer[588 * 2][2];	// Resampler input buffer, * 2 for resamp
 static uint32 ResampBufferPos;
 static uint32 PrevRate;
 
-static std::vector<CDIF *> *cdifs;
+static std::vector<CDInterface *> *cdifs;
 
 static uint32 CurrentATLI;
 
@@ -81,7 +81,7 @@ static std::vector<AudioTrackInfo> AudioTrackList;
 
 static void InitLUT(void);
 
-static void LoadCD(std::vector<CDIF *> *CDInterfaces)
+static void LoadCD(std::vector<CDInterface *> *CDInterfaces)
 {
  cdifs = CDInterfaces;
 
@@ -126,7 +126,7 @@ static void LoadCD(std::vector<CDIF *> *CDInterfaces)
  EmulatedCDPlay.RMD->Media.clear();
 }
 
-static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
+static bool TestMagicCD(std::vector<CDInterface *> *CDInterfaces)
 {
  CDUtility::TOC magic_toc;
 
@@ -485,7 +485,7 @@ static void Emulate(EmulateSpecStruct *espec)
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { NULL, NULL }
+ { NULL, 0, NULL }
 };
 
 static void SetInput(unsigned port, const char *type, uint8* ptr)

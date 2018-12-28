@@ -1178,7 +1178,7 @@ static void MDFN_COLD SetActive(bool active, unsigned which_ms)
 
    if(NeedInit)
    {
-    DisFont = MDFN_GetSettingUI(std::string(std::string(CurGame->shortname) + "." + std::string("debugger.disfontsize")));
+    DisFont = MDFN_GetSettingUI(std::string(std::string(CurGame->shortname) + "." + "debugger.disfontsize"));
     DebuggerOpacity = 0xC8;
 
     // Debug remove me
@@ -1382,17 +1382,20 @@ void Debugger_GT_SyncDisToPC(void)
 // Called from game thread, or in the main thread game thread creation sequence code.
 void Debugger_GT_ForceSteppingMode(void)
 {
- if(!InSteppingMode)
+ if(CurGame->Debugger)
  {
-  NeedStep = 2;
-  UpdateCoreHooks();
+  if(!InSteppingMode)
+  {
+   NeedStep = 2;
+   UpdateCoreHooks();
+  }
  }
 }
 
 // Call this function from any thread:
 bool Debugger_IsActive(void)
 {
- return(IsActive);
+ return IsActive;
 }
 
 // Call this function from the game thread:
@@ -1401,7 +1404,7 @@ bool Debugger_GT_Toggle(void)
  if(CurGame->Debugger)
   SetActive(!IsActive, WhichMode);
 
- return(IsActive);
+ return IsActive;
 }
 
 void Debugger_GT_ModOpacity(int deltalove)

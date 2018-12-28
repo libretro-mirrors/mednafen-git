@@ -158,9 +158,9 @@ static void Emulate(EmulateSpecStruct *espec)
 	espec->SoundBufSize = MDFNNGPCSOUND_Flush(espec->SoundBuf, espec->SoundBufMaxSize);
 }
 
-static bool TestMagic(MDFNFILE *fp)
+static bool TestMagic(GameFile* gf)
 {
- if(fp->ext != "ngp" && fp->ext != "ngpc" && fp->ext != "ngc" && fp->ext != "npc")
+ if(gf->ext != "ngp" && gf->ext != "ngpc" && gf->ext != "ngc" && gf->ext != "npc")
   return false;
 
  return true;
@@ -177,18 +177,18 @@ static MDFN_COLD void Cleanup(void)
  }
 }
 
-static MDFN_COLD void Load(MDFNFILE *fp)
+static MDFN_COLD void Load(GameFile* gf)
 {
  try
  {
-  const uint64 fp_size = fp->size();
+  const uint64 fp_size = gf->stream->size();
 
   if(fp_size > 1024 * 1024 * 8) // 4MiB maximum ROM size, 2* to be a little tolerant of garbage.
    throw MDFN_Error(0, _("NGP/NGPC ROM image is too large."));
 
   ngpc_rom.length = fp_size;
   ngpc_rom.data = new uint8[ngpc_rom.length];
-  fp->read(ngpc_rom.data, ngpc_rom.length);
+  gf->stream->read(ngpc_rom.data, ngpc_rom.length);
 
   md5_context md5;
   md5.starts();
@@ -205,7 +205,6 @@ static MDFN_COLD void Load(MDFNFILE *fp)
   NGPGfx = new NGPGFX_CLASS();
 
   MDFNGameInfo->fps = (uint32)((uint64)6144000 * 65536 * 256 / 515 / 198); // 3072000 * 2 * 10000 / 515 / 198
-  MDFNGameInfo->GameSetMD5Valid = false;
 
   MDFNNGPCSOUND_Init();
 
@@ -375,9 +374,9 @@ static const std::vector<InputPortInfoStruct> PortInfo =
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".ngp", gettext_noop("Neo Geo Pocket ROM Image") },
- { ".ngc", gettext_noop("Neo Geo Pocket Color ROM Image") },
- { NULL, NULL }
+ { ".ngp", 0, gettext_noop("Neo Geo Pocket ROM Image") },
+ { ".ngc", 0, gettext_noop("Neo Geo Pocket Color ROM Image") },
+ { NULL, 0, NULL }
 };
 
 }

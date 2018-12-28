@@ -22,7 +22,7 @@
 #include "x6502.h"
 
 #include "sound.h"
-#include "filter.h"
+#include <mednafen/sound/SwiftResampler.h>
 
 #define SQ_SHIFT        8
 #define TRINPCM_SHIFT   0
@@ -37,14 +37,14 @@ static void DoNoiseAndPCM(void);
 
 static void KillResampler(void);
 
-static NES_Resampler *ff = NULL;
+static SwiftResampler *ff = NULL;
 
 static int SoundPAL;
 
 static uint32 wlookup1[32];
 static uint32 wlookup2[203];
 
-alignas(16) static int16 WaveHi[2 * 40000 + NES_Resampler::MaxLeftover + NES_Resampler::MaxWaveOverRead];
+alignas(16) static int16 WaveHi[2 * 40000 + SwiftResampler::MaxLeftover + SwiftResampler::MaxWaveOverRead];
 alignas(16) int16 WaveHiEx[2 * 40000];
 
 std::vector<EXPSOUND> GameExpSound;
@@ -780,7 +780,7 @@ static double phase_inc = 0.000;
 static double phase_inc_inc = 0.000000001;
 ff->SetVolume(1.0);
 
- *tmpo = 30000 * sin(phase);
+ *tmpo = floor(0.5 + 32767 * 0.95 * sin(phase));
  phase += phase_inc;
  phase_inc += phase_inc_inc;
 
@@ -929,7 +929,7 @@ static bool InitResampler(double rate)
 {
  KillResampler();
 
- ff = new NES_Resampler(PAL ? PAL_CPU : NTSC_CPU, rate, MDFN_GetSettingF("nes.sound_rate_error"), 5216.592e-6, MDFN_GetSettingI("nes.soundq"));
+ ff = new SwiftResampler(PAL ? PAL_CPU : NTSC_CPU, rate, MDFN_GetSettingF("nes.sound_rate_error"), 5216.592e-6, MDFN_GetSettingI("nes.soundq"));
  ff->SetVolume((double)3 / 2);
  return(true);
 }

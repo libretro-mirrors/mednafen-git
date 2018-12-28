@@ -15,39 +15,46 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include        "mednafen.h"
+#include "mednafen.h"
 
-#include	<sys/types.h>
-#include	<sys/stat.h>
-#include	<unistd.h>
-#include	<trio/trio.h>
+#include <mednafen/cdrom/CDUtility.h>
+#include <mednafen/cdrom/CDInterface.h>
 
-#include	"netplay.h"
-#include	"netplay-driver.h"
-#include	"general.h"
-#include	<mednafen/string/string.h>
+#include <mednafen/string/string.h>
+#include <mednafen/string/escape.h>
 
-#include	"state.h"
-#include	"movie.h"
-#include	"state_rewind.h"
-#include        "video.h"
-#include	"video/Deinterlacer.h"
-#include	"file.h"
-#include	"sound/WAVRecord.h"
-#include	"cdrom/cdromif.h"
-#include	"mempatcher.h"
-#include	<minilzo/minilzo.h>
-#include	"tests.h"
-#include	"video/tblur.h"
-#include	"qtrecord.h"
-#include	<mednafen/hash/md5.h>
-#include	<mednafen/MemoryStream.h>
-#include	<mednafen/Time.h>
-#include	"sound/Fir_Resampler.h"
+#include <mednafen/hash/md5.h>
+#include <mednafen/MemoryStream.h>
+#include <mednafen/Time.h>
 
-#include	"string/escape.h"
+#include <mednafen/sound/Fir_Resampler.h>
+#include <mednafen/sound/WAVRecord.h>
 
-#include	"cdrom/CDUtility.h"
+#include <mednafen/NativeVFS.h>
+
+#include <minilzo/minilzo.h>
+
+#include <trio/trio.h>
+
+#include "netplay.h"
+#include "netplay-driver.h"
+#include "general.h"
+
+#include "state.h"
+#include "movie.h"
+#include "state_rewind.h"
+#include "video.h"
+#include "video/Deinterlacer.h"
+#include "file.h"
+#include "mempatcher.h"
+#include "tests.h"
+#include "video/tblur.h"
+#include "qtrecord.h"
+
+namespace Mednafen
+{
+
+NativeVFS NVFS;
 
 static void SettingChanged(const char* name);
 
@@ -76,6 +83,9 @@ static const MDFNSetting_EnumList Deinterlacer_List[] =
  { "weave", Deinterlacer::DEINT_WEAVE, gettext_noop("Good for low-motion video; can be used in conjunction with negative <system>.scanlines setting values.") },
  { "bob", Deinterlacer::DEINT_BOB, gettext_noop("Good for causing a headache.  All glory to Bob.") },
  { "bob_offset", Deinterlacer::DEINT_BOB_OFFSET, gettext_noop("Good for high-motion video, but is a bit flickery; reduces the subjective vertical resolution.") },
+
+ { "blend", Deinterlacer::DEINT_BLEND, gettext_noop("Blend fields together; reduces vertical and temporal resolution.") },
+ { "blend_rg", Deinterlacer::DEINT_BLEND_RG, gettext_noop("Like the \"blend\" deinterlacer, but the blending is done in a manner that respects gamma, reducing unwanted brightness changes, at the cost of increased CPU usage.") },
 
  { NULL, 0 },
 };
@@ -109,8 +119,8 @@ static const MDFNSetting MednafenSettings[] =
 
   { "filesys.fname_movie", MDFNSF_CAT_PATH, gettext_noop("Format string for movie filename."), fname_extra, MDFNST_STRING, "%f.%M%p.%x" },
   { "filesys.fname_state", MDFNSF_CAT_PATH, gettext_noop("Format string for state filename."), fname_extra, MDFNST_STRING, "%f.%M%X" /*"%F.%M%p.%x"*/ },
-  { "filesys.fname_sav", MDFNSF_CAT_PATH, gettext_noop("Format string for save games filename."), gettext_noop("WARNING: %x should always be included, otherwise you run the risk of overwriting save data for games that create multiple save data files.\n\nSee fname_format.txt for more information.  Edit at your own risk."), MDFNST_STRING, "%F.%M%x" },
-  { "filesys.fname_savbackup", MDFNSF_CAT_PATH, gettext_noop("Format string for save game backups filename."), gettext_noop("WARNING: %x and %p should always be included.\n\nSee fname_format.txt for more information.  Edit at your own risk."), MDFNST_STRING, "%F.%m%z%p.%x" },
+  { "filesys.fname_sav", MDFNSF_CAT_PATH, gettext_noop("Format string for save games filename."), gettext_noop("WARNING: %x should always be included, otherwise you run the risk of overwriting save data for games that create multiple save data files.\n\nSee fname_format.txt for more information.  Edit at your own risk."), MDFNST_STRING, "%f.%M%x" },
+  { "filesys.fname_savbackup", MDFNSF_CAT_PATH, gettext_noop("Format string for save game backups filename."), gettext_noop("WARNING: %x and %p should always be included.\n\nSee fname_format.txt for more information.  Edit at your own risk."), MDFNST_STRING, "%f.%m%z%p.%x" },
   { "filesys.fname_snap", MDFNSF_CAT_PATH, gettext_noop("Format string for screen snapshot filenames."), gettext_noop("WARNING: %x or %p should always be included, otherwise there will be a conflict between the numeric counter text file and the image data file.\n\nSee fname_format.txt for more information.  Edit at your own risk."), MDFNST_STRING, "%f-%p.%x" },
 
   { "filesys.state_comp_level", MDFNSF_NOFLAGS, gettext_noop("Save state file compression level."), gettext_noop("gzip/deflate compression level for save states saved to files.  -1 will disable gzip compression and wrapping entirely."), MDFNST_INT, "6", "-1", "9" },
@@ -208,11 +218,11 @@ static double LastSoundMultiplier;
 static double last_sound_rate;
 static MDFN_PixelFormat last_pixel_format;
 static bool PrevInterlaced;
-static Deinterlacer deint;
+static std::unique_ptr<Deinterlacer> deint;
 
 static bool FFDiscard = false; // TODO:  Setting to discard sound samples instead of increasing pitch
 
-static std::vector<CDIF *> CDInterfaces;	// FIXME: Cleanup on error out.
+static std::vector<CDInterface *> CDInterfaces;	// FIXME: Cleanup on error out.
 
 struct DriveMediaStatus
 {
@@ -221,12 +231,17 @@ struct DriveMediaStatus
  uint32 orientation_idx = 0;
 };
 
-static std::vector<DriveMediaStatus> DMStatus;
+static std::vector<DriveMediaStatus> DMStatus, DMStatusSaveStateTemp;
+static std::vector<uint32> DMSNoMedia;
+static bool ValidateDMS(const std::vector<DriveMediaStatus>& dms);
 
 static void SettingChanged(const char* name)
 {
  if(!strcmp(name, "video.deinterlacer"))
-  deint.SetType(MDFN_GetSettingUI(name));
+ {
+  deint.reset(nullptr);
+  deint.reset(Deinterlacer::Create(MDFN_GetSettingUI(name)));
+ }
 }
 
 bool MDFNI_StartWAVRecord(const char *path, double SoundRate)
@@ -346,8 +361,6 @@ void MDFNI_CloseGame(void)
   //
   //
   memset(MDFNGameInfo->MD5, 0, sizeof(MDFNGameInfo->MD5));
-  memset(MDFNGameInfo->GameSetMD5, 0, sizeof(MDFNGameInfo->GameSetMD5));
-  MDFNGameInfo->GameSetMD5Valid = false;
   MDFNGameInfo = NULL;
 
   for(unsigned i = 0; i < CDInterfaces.size(); i++)
@@ -382,8 +395,18 @@ void MDFNI_CloseGame(void)
  MDFN_ClearAllOverrideSettings();
 }
 
+}
+
+#ifdef WANT_APPLE2_EMU
+extern MDFNGI EmulatedApple2;
+#endif
+
 #ifdef WANT_NES_EMU
 extern MDFNGI EmulatedNES;
+#endif
+
+#ifdef WANT_NES_NEW_EMU
+extern MDFNGI EmulatedNES_New;
 #endif
 
 #ifdef WANT_SNES_EMU
@@ -453,6 +476,8 @@ extern MDFNGI EmulatedSMS, EmulatedGG;
 extern MDFNGI EmulatedCDPlay;
 extern MDFNGI EmulatedDEMO;
 
+namespace Mednafen
+{
 std::vector<MDFNGI *> MDFNSystems;
 static std::list<MDFNGI *> MDFNSystemsPrio;
 
@@ -516,7 +541,7 @@ struct M3U_ListEntry
  std::unique_ptr<std::string> name;
 };
 
-static MDFN_COLD void ReadM3U(std::vector<M3U_ListEntry> &file_list, size_t* default_cd, std::string path, unsigned depth = 0)
+static MDFN_COLD void ReadM3U(std::vector<M3U_ListEntry> &file_list, size_t* default_cd, VirtualFS* vfs, std::string path, unsigned depth = 0)
 {
  MemoryStream m3u_file(new FileStream(path, FileStream::MODE_READ));
  std::string dir_path;
@@ -529,7 +554,7 @@ static MDFN_COLD void ReadM3U(std::vector<M3U_ListEntry> &file_list, size_t* def
   m3u_file.mswin_utf8_convert_kludge();
  }
 
- MDFN_GetFilePathComponents(path, &dir_path);
+ vfs->get_file_path_components(path, &dir_path);
 
  linebuf.reserve(2048);
 
@@ -537,7 +562,7 @@ static MDFN_COLD void ReadM3U(std::vector<M3U_ListEntry> &file_list, size_t* def
  {
   std::string efp;
 
-  MDFN_rtrim(linebuf);
+  MDFN_rtrim(&linebuf);
 
   // Blank line, skip it.
   if(linebuf.size() == 0)
@@ -551,14 +576,14 @@ static MDFN_COLD void ReadM3U(std::vector<M3U_ListEntry> &file_list, size_t* def
    else if(!strncmp(linebuf.c_str(), "#MEDNAFEN_LABEL", 15))
    {
     name.reset(new std::string(linebuf.substr(15)));
-    UTF8_sanitize(*name);
-    MDFN_zapctrlchars(*name);
-    MDFN_trim(*name);
+    UTF8_sanitize(name.get());
+    MDFN_zapctrlchars(name.get());
+    MDFN_trim(name.get());
    }
    continue;
   }
 
-  efp = MDFN_EvalFIP(dir_path, linebuf);
+  efp = vfs->eval_fip(dir_path, linebuf);
 
   if(efp.size() >= 4 && !MDFN_strazicmp(efp.substr(efp.size() - 4).c_str(), ".m3u"))
   {
@@ -568,14 +593,14 @@ static MDFN_COLD void ReadM3U(std::vector<M3U_ListEntry> &file_list, size_t* def
    if(depth == 99)
     throw(MDFN_Error(0, _("M3U load recursion too deep!")));
 
-   ReadM3U(file_list, default_cd, efp, depth++);
+   ReadM3U(file_list, default_cd, vfs, efp, depth++);
   }
   else
    file_list.emplace_back(M3U_ListEntry({efp, std::move(name)}));
  }
 }
 
-static MDFN_COLD void PrintDiscsLayout(std::vector<CDIF *> *ifaces)
+static MDFN_COLD void PrintDiscsLayout(std::vector<CDInterface *> *ifaces)
 {
  MDFN_AutoIndent aind(1);
 
@@ -643,7 +668,7 @@ static MDFN_COLD void PrintDiscsLayout(std::vector<CDIF *> *ifaces)
  }
 }
 
-static MDFN_COLD void CalcDiscsLayoutMD5(std::vector<CDIF *> *ifaces, uint8 out_md5[16])
+static MDFN_COLD void CalcDiscsLayoutMD5(std::vector<CDInterface *> *ifaces, uint8 out_md5[16])
 {
   md5_context layout_md5;
 
@@ -651,7 +676,7 @@ static MDFN_COLD void CalcDiscsLayoutMD5(std::vector<CDIF *> *ifaces, uint8 out_
 
   for(unsigned i = 0; i < (*ifaces).size(); i++)
   {
-   CD_TOC toc;
+   CDUtility::TOC toc;
 
    (*ifaces)[i]->ReadTOC(&toc);
 
@@ -740,19 +765,37 @@ static MDFN_COLD void LoadCustomPalette(void)
  }
 }
 
-static MDFN_COLD void LoadCommonPost(const char* path)
+static MDFN_COLD void LoadCommonPost(VirtualFS* vfs, const char* path)
 {
 	DMStatus.resize(MDFNGameInfo->RMD->Drives.size());
+        DMStatusSaveStateTemp.resize(DMStatus.size());
 
+	for(uint32 drive_idx = 0; drive_idx < MDFNGameInfo->RMD->Drives.size(); drive_idx++)
+	{
+         const RMD_Drive& drive = MDFNGameInfo->RMD->Drives[drive_idx];
+
+         for(uint32 state_idx = 0; state_idx < drive.PossibleStates.size(); state_idx++)
+	 {
+          const RMD_State& state = drive.PossibleStates[state_idx];
+          if(!state.MediaPresent)
+          {
+           DMSNoMedia.push_back(state_idx);
+           break;
+          }
+         }
+         assert(DMSNoMedia.size() == drive_idx + 1);
+	}
+        //
+        //
 	if(MDFNGameInfo->name.size() == 0 && path)
 	{
-	 MDFN_GetFilePathComponents(path, NULL, &MDFNGameInfo->name);
+	 vfs->get_file_path_components(path, NULL, &MDFNGameInfo->name);
 
 	 for(auto& c : MDFNGameInfo->name)
 	  if(c == '_' || (uint8)c < 0x20)
 	   c = ' ';
 
-	 MDFN_trim(MDFNGameInfo->name);
+	 MDFN_trim(&MDFNGameInfo->name);
 	}
 
         //
@@ -776,7 +819,6 @@ static MDFN_COLD void LoadCommonPost(const char* path)
 	MDFNMOV_CheckMovies();
 
 	PrevInterlaced = false;
-	deint.ClearState();
 	SettingChanged("video.deinterlacer");
 
 	TBlur_Init();
@@ -788,7 +830,7 @@ static MDFN_COLD void LoadCommonPost(const char* path)
 	last_pixel_format = MDFN_PixelFormat();
 }
 
-static MDFNGI *LoadCD(const char *force_module, const char *path)
+static MDFNGI *LoadCD(const char *force_module, VirtualFS* vfs, const char *path, CDInterface* cdif = nullptr)
 {
  std::vector<M3U_ListEntry> file_list;
  uint8 LayoutMD5[16];
@@ -799,14 +841,23 @@ static MDFNGI *LoadCD(const char *force_module, const char *path)
   MDFN_AutoIndent aind(1);
   const bool image_memcache = MDFN_GetSettingB("cd.image_memcache");
 
-  if(strlen(path) > 4 && !MDFN_strazicmp(path + strlen(path) - 4, ".m3u"))
-   ReadM3U(file_list, &default_cd, path);
-  else
+  if(cdif)
+  {
    file_list.emplace_back(M3U_ListEntry({ path }));
+   CDInterfaces.resize(1);
+   CDInterfaces[0] = cdif;
+  }
+  else
+  {
+   if(strlen(path) > 4 && !MDFN_strazicmp(path + strlen(path) - 4, ".m3u"))
+    ReadM3U(file_list, &default_cd, vfs, path);
+   else
+    file_list.emplace_back(M3U_ListEntry({ path }));
 
-  CDInterfaces.resize(file_list.size());
-  for(size_t i = 0; i < file_list.size(); i++)
-   CDInterfaces[i] = CDIF_Open(file_list[i].path, image_memcache);
+   CDInterfaces.resize(file_list.size());
+   for(size_t i = 0; i < file_list.size(); i++)
+    CDInterfaces[i] = CDInterface::Open(vfs, file_list[i].path, image_memcache);
+  }
 
   GetFileBase(path);
  }
@@ -850,7 +901,7 @@ static MDFNGI *LoadCD(const char *force_module, const char *path)
 	{
   	 RMD_Drive dr;
 
-	 dr.Name = std::string("Virtual CD Drive");
+	 dr.Name = "Virtual CD Drive";
 	 dr.PossibleStates.push_back(RMD_State({"Tray Open", false, false, true}));
 	 dr.PossibleStates.push_back(RMD_State({"Tray Closed (Empty)", false, false, false}));
 	 dr.PossibleStates.push_back(RMD_State({"Tray Closed", true, true, false}));
@@ -940,7 +991,7 @@ static MDFNGI *LoadCD(const char *force_module, const char *path)
 	 memcpy(MDFNGameInfo->MD5, LayoutMD5, 16);
 
 	 {
-	  std::string modoverride_settings_file_path = MDFN_GetBaseDirectory() + std::string(PSS) + std::string(MDFNGameInfo->shortname) + std::string(".cfg");
+	  std::string modoverride_settings_file_path = MDFN_GetBaseDirectory() + PSS + MDFNGameInfo->shortname + ".cfg";
 	  MDFN_LoadSettings(modoverride_settings_file_path.c_str(), true);
 	 }
 	 {
@@ -953,7 +1004,7 @@ static MDFNGI *LoadCD(const char *force_module, const char *path)
 	 MDFNGameInfo->LoadCD(&CDInterfaces);
 	}
 
-	LoadCommonPost(path);
+	LoadCommonPost(vfs, path);
 
 	//
 	//
@@ -995,7 +1046,12 @@ static MDFNGI *LoadCD(const char *force_module, const char *path)
  return MDFNGameInfo;
 }
 
-static MDFN_COLD void LoadIPS(MDFNFILE* GameFile, const std::string& path)
+MDFNGI *MDFNI_LoadExternalCD(const char* force_module, const char* path_hint, CDInterface* cdif)
+{
+ return LoadCD(force_module, nullptr, path_hint, cdif);
+}
+
+static MDFN_COLD void LoadIPS(MDFNFILE* mfgf, const std::string& path)
 {
  MDFN_printf(_("Applying IPS file \"%s\"...\n"), path.c_str());
 
@@ -1003,7 +1059,7 @@ static MDFN_COLD void LoadIPS(MDFNFILE* GameFile, const std::string& path)
  {
   FileStream IPSFile(path, FileStream::MODE_READ);
 
-  GameFile->ApplyIPS(&IPSFile);
+  mfgf->ApplyIPS(&IPSFile);
  }
  catch(MDFN_Error &e)
  {
@@ -1022,7 +1078,16 @@ static MDFN_COLD void LoadIPS(MDFNFILE* GameFile, const std::string& path)
  }
 }
 
-static MDFN_COLD MDFNGI* FindCompatibleModule(const char* force_module, MDFNFILE* gf)
+static bool IsModuleEnabled(MDFNGI* gi)
+{
+ char tmpstr[256];
+ trio_snprintf(tmpstr, 256, "%s.enable", gi->shortname);
+
+ // Is module enabled?
+ return MDFN_GetSettingB(tmpstr);
+}
+
+static MDFN_COLD MDFNGI* FindCompatibleModule(const char* force_module, GameFile* gf)
 {
  //for(unsigned pass = 0; pass < 2; pass++)
  //{
@@ -1057,7 +1122,7 @@ static MDFN_COLD MDFNGI* FindCompatibleModule(const char* force_module, MDFNFILE
 	  if(!(*it)->Load || !(*it)->TestMagic)
 	   continue;
 
-	  gf->rewind();
+	  gf->stream->rewind();
 
 	  if((*it)->TestMagic(gf))
 	  {
@@ -1070,7 +1135,7 @@ static MDFN_COLD MDFNGI* FindCompatibleModule(const char* force_module, MDFNFILE
  return(NULL);
 }
 
-MDFNGI *MDFNI_LoadGame(const char *force_module, const char* path, bool force_cd)
+MDFNGI *MDFNI_LoadGame(const char *force_module, VirtualFS* vfs, const char* path, bool force_cd)
 {
  assert(path != nullptr);
  const size_t path_len = strlen(path);
@@ -1081,20 +1146,14 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char* path, bool force_cd
 
  if(force_cd || (path_len > 4 && (!MDFN_strazicmp(path + path_len - 4, ".cue") || !MDFN_strazicmp(path + path_len - 4, ".toc") || !MDFN_strazicmp(path + path_len - 4, ".ccd") || !MDFN_strazicmp(path + path_len - 4, ".m3u"))))
  {
-  return LoadCD(force_module, path);
+  return LoadCD(force_module, vfs, path);
  }
 
  try
  {
-	MDFN_AutoIndent aind(1);
 	std::vector<FileExtensionSpecStruct> valid_iae;
-	std::unique_ptr<RMD_Layout> rmd(new RMD_Layout());
 
-	MDFNGameInfo = NULL;
-
-        GetFileBase(path);
-
-	// Construct a NULL-delimited list of known file extensions for MDFNFILE
+	// Construct a list of known file extensions for MDFNFILE
 	for(unsigned int i = 0; i < MDFNSystems.size(); i++)
 	{
 	 const FileExtensionSpecStruct *curexts = MDFNSystems[i]->FileExtensions;
@@ -1103,24 +1162,65 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char* path, bool force_cd
 	 if(force_module && strcmp(MDFNSystems[i]->shortname, force_module))
 	  continue;
 
-	 if(curexts)	
+	 if(!force_module && !IsModuleEnabled(MDFNSystems[i]))
+	  continue;
+
+	 if(curexts)
+         {
  	  while(curexts->extension && curexts->description)
 	  {
 	   valid_iae.push_back(*curexts);
            curexts++;
  	  }
+         }
 	}
+
+/*
+        //
+	// CD format extensions; refer to git.h for priorities.
+        //
+	valid_iae.push_back(FileExtensionSpecStruct({ "m3u", -40, "M3U" }));
+	valid_iae.push_back(FileExtensionSpecStruct({ "ccd", -50, "CloneCD" }));
+	valid_iae.push_back(FileExtensionSpecStruct({ "cue", -60, "CUE" }));
+	valid_iae.push_back(FileExtensionSpecStruct({ "toc", -70, "CDRDAO TOC" }));
+*/
+
+	MDFNFILE mfgf(vfs, path, valid_iae, _("game"));
+
+/*
+        if(mfgf.active_vfs() != vfs && (mfgf.ext == "m3u" || mfgf.ext == "ccd" || mfgf.ext == "cue" || mfgf.ext == "toc"))
 	{
-	 FileExtensionSpecStruct tmpext = { NULL, NULL };
-	 valid_iae.push_back(tmpext);
+         static std::unique_ptr<VirtualFS> vfs_save;
+
+         vfs_save = mfgf.steal_archive_vfs();
+
+	 if(!MDFN_GetSettingB("cd.image_memcache"))
+          throw MDFN_Error(0, _("Setting \"cd.image_memcache\" must be set to \"1\" to allow loading a CD image from a ZIP archive."));
+
+	 return LoadCD(force_module, vfs_save.get(), mfgf.active_path().c_str());
 	}
-
-	MDFNFILE GameFile(path, &valid_iae[0], _("game"));
+*/
 	//printf("FBASE=%s,EXT=%s\n", GameFile.fbase, GameFile.ext);
+	//
+	//
+	//
+	//
+	MDFN_AutoIndent aind(1);
+	std::unique_ptr<RMD_Layout> rmd(new RMD_Layout());
 
-	LoadIPS(&GameFile, MDFN_MakeFName(MDFNMKF_IPS, 0, 0));
+	MDFNGameInfo = NULL;
 
-	MDFNGameInfo = FindCompatibleModule(force_module, &GameFile);;
+        GetFileBase(path);
+	//
+	//
+	//
+
+	LoadIPS(&mfgf, MDFN_MakeFName(MDFNMKF_IPS, 0, 0));
+
+	//
+	GameFile gf({ mfgf.active_vfs(), mfgf.active_dir_path(), mfgf.stream(), mfgf.ext, mfgf.fbase });
+
+	MDFNGameInfo = FindCompatibleModule(force_module, &gf);
 
         if(!MDFNGameInfo)
         {
@@ -1142,7 +1242,7 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char* path, bool force_cd
 	 MDFNGameInfo->RMD = rmd.get();
 
          {
-	  std::string modoverride_settings_file_path = MDFN_GetBaseDirectory() + std::string(PSS) + std::string(MDFNGameInfo->shortname) + std::string(".cfg");
+	  std::string modoverride_settings_file_path = MDFN_GetBaseDirectory() + PSS + MDFNGameInfo->shortname + ".cfg";
 	  MDFN_LoadSettings(modoverride_settings_file_path.c_str(), true);
          }
 	 {
@@ -1152,11 +1252,11 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, const char* path, bool force_cd
 
 	 MDFN_printf("\n");
 
-	 GameFile.rewind();
-         MDFNGameInfo->Load(&GameFile);
+	 gf.stream->rewind();
+         MDFNGameInfo->Load(&gf);
 	}
 
-	LoadCommonPost(path);
+	LoadCommonPost(vfs, path);
 	rmd.release();
  }
  catch(std::exception &e)
@@ -1214,8 +1314,16 @@ bool MDFNI_InitializeModules(void)
  //
  static MDFNGI *InternalSystems[] =
  {
+  #ifdef WANT_APPLE2_EMU
+  &EmulatedApple2,
+  #endif
+
   #ifdef WANT_NES_EMU
   &EmulatedNES,
+  #endif
+
+  #ifdef WANT_NES_NEW_EMU
+  &EmulatedNES_New,
   #endif
 
   #ifdef WANT_SNES_EMU
@@ -1286,7 +1394,7 @@ bool MDFNI_InitializeModules(void)
   &EmulatedCDPlay,
   &EmulatedDEMO
  };
- static_assert(MEDNAFEN_VERSION_NUMERIC >= 0x00102103, "Bad MEDNAFEN_VERSION_NUMERIC");
+ static_assert(MEDNAFEN_VERSION_NUMERIC >= 0x00102200, "Bad MEDNAFEN_VERSION_NUMERIC");
 
  for(unsigned int i = 0; i < sizeof(InternalSystems) / sizeof(MDFNGI *); i++)
   AddSystem(InternalSystems[i]);
@@ -1303,7 +1411,7 @@ bool MDFNI_InitializeModules(void)
  {
   if(modules_string.size())
    modules_string += " ";
-  modules_string += std::string(m->shortname);
+  modules_string += m->shortname;
  }
  MDFNI_printf(_("Emulation modules: %s\n"), modules_string.c_str());
 
@@ -1570,7 +1678,7 @@ static void ProcessAudio(EmulateSpecStruct *espec)
   }
 
   // TODO: Optimize this.
-  if(MDFNGameInfo->soundchan == 2 && MDFN_GetSettingB(std::string(std::string(MDFNGameInfo->shortname) + ".forcemono")))
+  if(MDFNGameInfo->soundchan == 2 && MDFN_GetSettingB(std::string(MDFNGameInfo->shortname) + ".forcemono"))
   {
    for(int i = 0; i < SoundBufSize * MDFNGameInfo->soundchan; i += 2)
    {
@@ -1615,8 +1723,11 @@ void MDFNI_Emulate(EmulateSpecStruct *espec)
  multiplier_save = 1;
  volume_save = 1;
 
- espec->CustomPalette = CustomPalette;
- espec->CustomPaletteNumEntries = CustomPaletteNumEntries;
+ if(!espec->CustomPalette)
+ {
+  espec->CustomPalette = CustomPalette;
+  espec->CustomPaletteNumEntries = CustomPaletteNumEntries;
+ }
 
  // Initialize some espec member data to zero, to catch some types of bugs.
  espec->DisplayRect.x = 0;
@@ -1628,9 +1739,6 @@ void MDFNI_Emulate(EmulateSpecStruct *espec)
 
  espec->SoundBufSize = 0;
 
- espec->VideoFormatChanged = false;
- espec->SoundFormatChanged = false;
-
  if(last_pixel_format != espec->surface->format)
  {
   espec->VideoFormatChanged = true;
@@ -1638,8 +1746,9 @@ void MDFNI_Emulate(EmulateSpecStruct *espec)
   last_pixel_format = espec->surface->format;
  }
 
- if(espec->SoundRate != last_sound_rate)
+ if(fabs(espec->SoundRate - last_sound_rate) >= 0.5)
  {
+  //puts("Rate Change");
   espec->SoundFormatChanged = true;
   last_sound_rate = espec->SoundRate;
 
@@ -1720,9 +1829,9 @@ void MDFNI_Emulate(EmulateSpecStruct *espec)
  if(espec->InterlaceOn)
  {
   if(!PrevInterlaced)
-   deint.ClearState();
+   deint->ClearState();
 
-  deint.Process(espec->surface, espec->DisplayRect, espec->LineWidths, espec->InterlaceField);
+  deint->Process(espec->surface, espec->DisplayRect, espec->LineWidths, espec->InterlaceField);
   PrevInterlaced = true;
  }
  else
@@ -1788,31 +1897,57 @@ static void StateAction_RINP(StateMem* sm, const unsigned load, const bool data_
 
 void MDFN_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
- for(unsigned i = 0; i < DMStatus.size(); i++)
+ if(DMStatus.size())
  {
-  struct DriveMediaStatus tmp = DMStatus[i];
-  char sname[32];
+  std::copy(DMStatus.begin(), DMStatus.end(), DMStatusSaveStateTemp.begin());
+  //
+  //
   SFORMAT StateRegs[] =
   {
-   SFVARN(tmp.state_idx, "state_idx"),
-   SFVARN(tmp.media_idx, "media_idx"),
-   SFVARN(tmp.orientation_idx, "orientation_idx"),
+   SFVARN(DMStatusSaveStateTemp.data()->state_idx, DMStatusSaveStateTemp.size(), sizeof(*DMStatusSaveStateTemp.data()), DMStatusSaveStateTemp.data(), "state_idx"),
+   SFVARN(DMStatusSaveStateTemp.data()->media_idx, DMStatusSaveStateTemp.size(), sizeof(*DMStatusSaveStateTemp.data()), DMStatusSaveStateTemp.data(), "media_idx"),
+   SFVARN(DMStatusSaveStateTemp.data()->orientation_idx, DMStatusSaveStateTemp.size(), sizeof(*DMStatusSaveStateTemp.data()), DMStatusSaveStateTemp.data(), "orientation_idx"),
 
    SFEND
   };
 
-  trio_snprintf(sname, sizeof(sname), "MDFNDRIVE_%08x", i);
-
-  if(MDFNSS_StateAction(sm, load, data_only, StateRegs, sname, true) && load)
+  if(MDFNSS_StateAction(sm, load, data_only, StateRegs, "MDFNDRIVE_00000000", true) && load)
   {
    // Be sure to set media before loading the emulation module state, as setting media
    // may affect what state is saved in the emulation module code, and setting media
    // can also have side effects(that will be undone by the state load).
-   if(tmp.state_idx != DMStatus[i].state_idx || tmp.media_idx != DMStatus[i].media_idx || tmp.orientation_idx != DMStatus[i].orientation_idx)
-    MDFN_UntrustedSetMedia(i, tmp.state_idx, tmp.media_idx, tmp.orientation_idx);
+
+   if(ValidateDMS(DMStatusSaveStateTemp))
+   {
+    //
+    // Internally(to the emulation core) set all drives to a no-media-present state so the core won't freak
+    // out by the temporary insertion of the same medium into different drives simultaneously.
+    //
+    for(uint32 drive_idx = 0; drive_idx < DMSNoMedia.size(); drive_idx++)
+     MDFNGameInfo->SetMedia(drive_idx, DMSNoMedia[drive_idx], 0, 0);
+    //
+    //
+    for(uint32 drive_idx = 0; drive_idx < DMStatusSaveStateTemp.size(); drive_idx++)
+    {
+     auto const& dmssste = DMStatusSaveStateTemp[drive_idx];
+     const bool change_notif = dmssste.state_idx != DMStatus[drive_idx].state_idx ||
+			       dmssste.media_idx != DMStatus[drive_idx].media_idx ||
+                               dmssste.orientation_idx != DMStatus[drive_idx].orientation_idx;
+     //
+     DMStatus[drive_idx] = dmssste;
+     //
+     //
+     MDFNGameInfo->SetMedia(drive_idx, dmssste.state_idx, dmssste.media_idx, dmssste.orientation_idx);
+
+     if(change_notif)
+      MDFND_MediaSetNotification(drive_idx, dmssste.state_idx, dmssste.media_idx, dmssste.orientation_idx);
+    }
+   }
   }
  }
-
+ //
+ //
+ //
  StateAction_RINP(sm, load, data_only);
 
  if(data_only)
@@ -1960,12 +2095,17 @@ void MDFNI_Reset(void)
 //
 // Quick and dirty kludge until we can (re-)abstract DIP switch handling properly.
 //
+}
+
 #ifdef WANT_NES_EMU
 namespace MDFN_IEN_NES
 {
 void MDFN_VSUniToggleDIPView(void);
 }
 #endif
+
+namespace Mednafen
+{
 void MDFNI_ToggleDIPView(void)
 {
 #ifdef WANT_NES_EMU
@@ -1995,53 +2135,133 @@ void MDFNI_InsertCoin(void)
 // Disk/Disc-based system support functions
 //
 
-/* Normal chain: MDFNI_SetMedia() -> NetplaySendCommand()
-				-> MDFNMOVAddCommand()
-				-> MDFN_UntrustedSetMedia()->MDFNGameInfo->SetMedia
-							   ->MDFN_MediaSetNotification->MDFND_MediaSetNotification()
-
-  MDFN_UntrustedSetMedia() may be called from the movie and netplay code after receiving command data.
-  MDFN_UntrustedSetMedia() may be called from the core Mednafen save state code.
-
-  MDFN_MediaSetNotification() might be called(in the future) from the emulation module code, particularly to notify the core and driver interface
-  code of a program-triggered state change(like insert/ejecting a CD); assuming we ever emulate a system with such capabilities.
-*/
-void MDFN_MediaSetNotification(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
+static bool ValidateDMS(const std::vector<DriveMediaStatus>& dms)
 {
- assert(drive_idx < DMStatus.size());
- //if(drive_idx >= DMStatus.size())
- // DMStatus.resize(drive_idx + 1);
+ for(uint32 drive_idx = 0; drive_idx < dms.size(); drive_idx++)
+ {
+  const RMD_Drive& drive = MDFNGameInfo->RMD->Drives[drive_idx];
+  const uint32 state_idx = dms[drive_idx].state_idx;
+  const uint32 media_idx = dms[drive_idx].media_idx;
+  const uint32 orientation_idx = dms[drive_idx].orientation_idx;
 
- DMStatus[drive_idx].state_idx = state_idx;
- DMStatus[drive_idx].media_idx = media_idx;
- DMStatus[drive_idx].orientation_idx = orientation_idx;
+  // Ensure state is valid
+  if(state_idx >= drive.PossibleStates.size())
+  {
+   MDFN_Notify(MDFN_NOTICE_WARNING, _("Denied attempt to put drive into non-existent state(drive_idx=0x%08x, state_idx=0x%08x, media_idx=0x%08x, orientation_idx=0x%08x)."), drive_idx, state_idx, media_idx, orientation_idx);
+   return false;
+  }
+  const RMD_State& state = drive.PossibleStates[state_idx];
 
- MDFND_MediaSetNotification(drive_idx, state_idx, media_idx, orientation_idx);
+  // Ensure media(and orientation) is valid
+  if(state.MediaPresent)
+  {
+   if(media_idx >= MDFNGameInfo->RMD->Media.size())
+   {
+    MDFN_Notify(MDFN_NOTICE_WARNING, _("Denied attempt to put non-existent medium into drive(drive_idx=0x%08x, state_idx=0x%08x, media_idx=0x%08x, orientation_idx=0x%08x)."), drive_idx, state_idx, media_idx, orientation_idx);
+    return false;
+   }
+
+   if(orientation_idx && orientation_idx >= MDFNGameInfo->RMD->Media[media_idx].Orientations.size())
+   {
+    MDFN_Notify(MDFN_NOTICE_WARNING, _("Denied attempt to put medium with non-existent orientation into drive(drive_idx=0x%08x, state_idx=0x%08x, media_idx=0x%08x, orientation_idx=0x%08x)."), drive_idx, state_idx, media_idx, orientation_idx);
+    return false;
+   }
+   //
+   //
+   {
+    const uint32 media_type = MDFNGameInfo->RMD->Media[media_idx].MediaType;
+    bool cm_ok = false;
+
+    for(auto const& cme : MDFNGameInfo->RMD->Drives[drive_idx].CompatibleMedia)
+    {
+     if(cme == media_type)
+     {
+      cm_ok = true;
+      break;
+     }
+    }
+
+    if(!cm_ok)
+    {
+     MDFN_Notify(MDFN_NOTICE_WARNING, _("Denied attempt to put incompatible medium into drive(drive_idx=0x%08x, state_idx=0x%08x, media_idx=0x%08x, orientation_idx=0x%08x)."), drive_idx, state_idx, media_idx, orientation_idx);
+     return false;
+    }
+   }
+   //
+   //
+   for(uint32 check_drive_idx = 0; check_drive_idx < MDFNGameInfo->RMD->Drives.size(); check_drive_idx++)
+   {
+    if(check_drive_idx == drive_idx)
+     continue;
+    //
+    const RMD_Drive& check_drive = MDFNGameInfo->RMD->Drives[check_drive_idx];
+    const RMD_State& check_state = check_drive.PossibleStates[dms[check_drive_idx].state_idx];
+    const uint32 check_media_idx = dms[check_drive_idx].media_idx;
+
+    if(check_state.MediaPresent && media_idx == check_media_idx)
+    {
+     MDFN_Notify(MDFN_NOTICE_WARNING, _("Denied attempt to put in-use medium into another drive(drive_idx=0x%08x, state_idx=0x%08x, media_idx=0x%08x, orientation_idx=0x%08x - check_drive_idx=0x%08x)."), drive_idx, state_idx, media_idx, orientation_idx, check_drive_idx);
+     return false;
+    }
+   }
+  }
+ }
+
+ return true;
 }
 
+/* Normal chain:
+
+   MDFNI_SetMedia() 
+      NetplaySendCommand()
+      MDFNMOVAddCommand()
+      MDFN_UntrustedSetMedia()
+         ValidateDMS()
+         MDFNGameInfo->SetMedia()
+	 MDFND_MediaSetNotification()
+
+   MDFN_StateAction()
+      ValidateDMS()
+      MDFNGameInfo->SetMedia()
+      MDFND_MediaSetNotification()
+
+  MDFN_UntrustedSetMedia() may be called from the movie and netplay code after receiving command data.
+*/
 bool MDFN_UntrustedSetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
 {
  //printf("MDFN_UntrustedSetMedia: %d %d %d %d\n", drive_idx, state_idx, media_idx, orientation_idx);
 
  if(!MDFNGameInfo->SetMedia)
-  return(false);
+  return false;
 
+ // Ensure drive is valid.
  if(drive_idx >= MDFNGameInfo->RMD->Drives.size())
-  return(false);
+ {
+  MDFN_Notify(MDFN_NOTICE_WARNING, _("Rejected attempt to insert medium into non-existent drive(drive_idx=0x%08x, state_idx=0x%08x, media_idx=0x%08x, orientation_idx=0x%08x)."), drive_idx, state_idx, media_idx, orientation_idx);
+  return false;
+ }
+ //
+ //
+ //
+ assert(drive_idx < DMStatus.size());
+ //
+ std::vector<DriveMediaStatus> new_dms = DMStatus;
+ DriveMediaStatus& dmse = new_dms[drive_idx];
 
- if(state_idx >= MDFNGameInfo->RMD->Drives[drive_idx].PossibleStates.size())
-  return(false);
+ dmse.state_idx = state_idx;
+ dmse.media_idx = media_idx;
+ dmse.orientation_idx = orientation_idx;
 
- if(media_idx >= MDFNGameInfo->RMD->Media.size())
-  return(false);
+ if(!ValidateDMS(new_dms))
+  return false;
+ //
+ //
+ //
+ DMStatus[drive_idx] = dmse;
+ MDFNGameInfo->SetMedia(drive_idx, dmse.state_idx, dmse.media_idx, dmse.orientation_idx);
+ MDFND_MediaSetNotification(drive_idx, dmse.state_idx, dmse.media_idx, dmse.orientation_idx);
 
- if(orientation_idx && orientation_idx >= MDFNGameInfo->RMD->Media[media_idx].Orientations.size())
-  return(false);
-
- if(MDFNGameInfo->SetMedia(drive_idx, state_idx, media_idx, orientation_idx))
-  MDFN_MediaSetNotification(drive_idx, state_idx, media_idx, orientation_idx);
-
- return(true);
+ return true;
 }
 
 bool MDFNI_SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
@@ -2111,3 +2331,4 @@ uint8* MDFNI_SetInput(const uint32 port, const uint32 type)
   return(NULL);
 }
 
+}

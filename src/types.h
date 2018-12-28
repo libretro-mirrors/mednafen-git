@@ -2,6 +2,7 @@
 #define __MDFN_TYPES_H
 
 #define __STDC_LIMIT_MACROS 1
+#define _USE_MATH_DEFINES 1
 
 // Make sure this file is included BEFORE a few common standard C header files(stdio.h, errno.h, math.h, AND OTHERS, but this is not an exhaustive check, nor
 // should it be), so that any defines in config.h that change header file behavior will work properly.
@@ -49,6 +50,7 @@
 #include <math.h>
 
 #ifdef __cplusplus
+#include <cmath>
 #include <limits>
 #include <exception>
 #include <stdexcept>
@@ -61,6 +63,7 @@
 #include <vector>
 #include <array>
 #include <list>
+#include <map>
 #endif
 
 typedef int8_t int8;
@@ -75,11 +78,27 @@ typedef uint64_t uint64;
 
 
 #if !defined(HAVE_NATIVE64BIT) && (SIZEOF_VOID_P >= 8 || defined(__x86_64__))
-#define HAVE_NATIVE64BIT 1
+ #define HAVE_NATIVE64BIT 1
 #endif
 
 #if defined(__GNUC__) || defined(__clang__) || defined(__ICC) || defined(__INTEL_COMPILER)
  #define HAVE_COMPUTED_GOTO 1
+#endif
+
+#if defined(__MMX__)
+ #define HAVE_MMX_INTRINSICS 1
+#endif
+
+#if defined(__SSE__) || defined(__SSE2__) || _M_IX86_FP >= 1 || defined(_M_AMD64)
+ #define HAVE_SSE_INTRINSICS 1
+#endif
+
+#if defined(__SSE2__) || _M_IX86_FP >= 2 || defined(_M_AMD64)
+ #define HAVE_SSE2_INTRINSICS 1
+#endif
+
+#if defined(__ARM_NEON__) || defined(_M_ARM64)
+ #define HAVE_NEON_INTRINSICS 1
 #endif
 
 #if defined(__clang__)
@@ -102,6 +121,8 @@ typedef uint64_t uint64;
   #define MDFN_FORMATSTR(a,b,c)
   #define MDFN_WARN_UNUSED_RESULT __attribute__ ((warn_unused_result))
   #define MDFN_NOWARN_UNUSED __attribute__((unused))
+
+  #define MDFN_RESTRICT __restrict__
 
   #define MDFN_UNLIKELY(n) __builtin_expect((n) != 0, 0)
   #define MDFN_LIKELY(n) __builtin_expect((n) != 0, 1)
@@ -156,6 +177,8 @@ typedef uint64_t uint64;
   #define MDFN_WARN_UNUSED_RESULT __attribute__ ((warn_unused_result))
   #define MDFN_NOWARN_UNUSED __attribute__((unused))
 
+  #define MDFN_RESTRICT __restrict__
+
   #define MDFN_UNLIKELY(n) __builtin_expect((n) != 0, 0)
   #define MDFN_LIKELY(n) __builtin_expect((n) != 0, 1)
 
@@ -190,6 +213,8 @@ typedef uint64_t uint64;
 
   #define MDFN_NOWARN_UNUSED
 
+  #define MDFN_RESTRICT __restrict
+
   #define MDFN_UNLIKELY(n) ((n) != 0)
   #define MDFN_LIKELY(n) ((n) != 0)
 
@@ -209,6 +234,8 @@ typedef uint64_t uint64;
   #define MDFN_WARN_UNUSED_RESULT
 
   #define MDFN_NOWARN_UNUSED
+
+  #define MDFN_RESTRICT
 
   #define MDFN_UNLIKELY(n) ((n) != 0)
   #define MDFN_LIKELY(n) ((n) != 0)
@@ -239,11 +266,27 @@ typedef uint64_t uint64;
  #define MDFN_IS_BIGENDIAN true
 #endif
 
+#ifdef ENABLE_NLS
+ #include "gettext.h"
+#else
+ #define gettext(s) (s)
+ #define dgettext(d, s) (s)
+ #define dcgettext(d, s, c) (s)
+ #define gettext_noop(s) (s)
+#endif
+
+#define _(s) gettext(s)
+
 #ifdef __cplusplus
-template<typename T> typename std::remove_all_extents<T>::type* MDAP(T* v) { return (typename std::remove_all_extents<T>::type*)v; }
+namespace Mednafen
+{
+template<typename T> static INLINE typename std::remove_all_extents<T>::type* MDAP(T* v) { return (typename std::remove_all_extents<T>::type*)v; }
+}
 #include "error.h"
 #include "math_ops.h"
 #include "endian.h"
+
+using namespace Mednafen;
 #endif
 
 #endif

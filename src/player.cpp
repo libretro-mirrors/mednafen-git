@@ -21,6 +21,9 @@
 #include "video.h"
 #include "player.h"
 
+namespace Mednafen
+{
+
 static std::string AlbumName, Artist, Copyright;
 static std::vector<std::string> SongNames;
 static int TotalSongs;
@@ -209,4 +212,6 @@ void Player_Draw(MDFN_Surface* surface, MDFN_Rect* dr, int CurrentSong, int16* s
   trio_snprintf(snbuf, 32, "<%d/%d>", CurrentSong + 1, TotalSongs);
   DrawTextShadow(surface, 0, text_y, snbuf, text_color, text_shadow_color, fontid, dr->w);
  }
+}
+
 }

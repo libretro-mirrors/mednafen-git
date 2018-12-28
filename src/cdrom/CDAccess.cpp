@@ -24,6 +24,9 @@
 #include "CDAccess_Image.h"
 #include "CDAccess_CCD.h"
 
+namespace Mednafen
+{
+
 using namespace CDUtility;
 
 CDAccess::CDAccess()
@@ -36,15 +39,16 @@ CDAccess::~CDAccess()
 
 }
 
-CDAccess* CDAccess_Open(const std::string& path, bool image_memcache)
+CDAccess* CDAccess_Open(VirtualFS* vfs, const std::string& path, bool image_memcache)
 {
  CDAccess *ret = NULL;
 
  if(path.size() >= 4 && !MDFN_strazicmp(path.c_str() + path.size() - 4, ".ccd"))
-  ret = new CDAccess_CCD(path, image_memcache);
+  ret = new CDAccess_CCD(vfs, path, image_memcache);
  else
-  ret = new CDAccess_Image(path, image_memcache);
+  ret = new CDAccess_Image(vfs, path, image_memcache);
 
  return ret;
 }
 
+}

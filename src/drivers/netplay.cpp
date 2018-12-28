@@ -80,7 +80,7 @@ uint32 Netplay_GetLPM(void)
 }
 
 // Called from game thread
-void MDFND_NetplaySetHints(bool active, bool behind, uint32 local_players_mask)
+void Mednafen::MDFND_NetplaySetHints(bool active, bool behind, uint32 local_players_mask)
 {
  if(!MDFNDnetplay && active)
   DoRunNormal();
@@ -100,7 +100,7 @@ void MDFND_NetplaySetHints(bool active, bool behind, uint32 local_players_mask)
 }
 
 // Called from the game thread
-void MDFND_NetplayText(const char* text, bool NetEcho)
+void Mednafen::MDFND_NetplayText(const char* text, bool NetEcho)
 {
  char *tot = strdup(text);
  char *tmp;

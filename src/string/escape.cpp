@@ -18,6 +18,9 @@
 #include "../mednafen.h"
 #include "escape.h"
 
+namespace Mednafen
+{
+
 static unsigned int hex_nibble_to_val(char nibble)
 {
  unsigned int ret = 0;
@@ -154,4 +157,6 @@ char *escape_string(const char *text)
  *outoo = 0;
 
  return(ret);
+}
+
 }

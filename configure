@@ -645,6 +645,8 @@ SDL2_CONFIG
 SDL_LIBS
 SDL_CFLAGS
 SDL2_FRAMEWORK
+ENABLE_LIBXXX_MODE_FALSE
+ENABLE_LIBXXX_MODE_TRUE
 HAVE_LINUX_JOYSTICK_FALSE
 HAVE_LINUX_JOYSTICK_TRUE
 UNIX_FALSE
@@ -708,6 +710,8 @@ NEED_YM2413_EMU_FALSE
 NEED_YM2413_EMU_TRUE
 NEED_GB_APU_EMU_FALSE
 NEED_GB_APU_EMU_TRUE
+NEED_BLIP_BUFFER_FALSE
+NEED_BLIP_BUFFER_TRUE
 WANT_WSWAN_EMU_FALSE
 WANT_WSWAN_EMU_TRUE
 WANT_VB_EMU_FALSE
@@ -730,6 +734,8 @@ WANT_PCE_EMU_FALSE
 WANT_PCE_EMU_TRUE
 WANT_NGP_EMU_FALSE
 WANT_NGP_EMU_TRUE
+WANT_NES_NEW_EMU_FALSE
+WANT_NES_NEW_EMU_TRUE
 WANT_NES_EMU_FALSE
 WANT_NES_EMU_TRUE
 WANT_SMS_EMU_FALSE
@@ -742,6 +748,8 @@ WANT_GBA_EMU_FALSE
 WANT_GBA_EMU_TRUE
 WANT_GB_EMU_FALSE
 WANT_GB_EMU_TRUE
+WANT_APPLE2_EMU_FALSE
+WANT_APPLE2_EMU_TRUE
 WANT_FANCY_SCALERS_FALSE
 WANT_FANCY_SCALERS_TRUE
 WANT_DEBUGGER_FALSE
@@ -804,8 +812,6 @@ LIBICONV
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
-CROSS_COMPILING_FALSE
-CROSS_COMPILING_TRUE
 HAVE_VISIBILITY
 CFLAG_VISIBILITY
 CXXCPP
@@ -927,10 +933,12 @@ enable_threads
 with_libpth_prefix
 with_included_gettext
 with_libintl_prefix
+enable_libxxx_mode
 enable_debugger
 enable_cjk_fonts
 enable_fancy_scalers
 enable_altivec
+enable_apple2
 enable_gb
 enable_gba
 enable_lynx
@@ -1618,6 +1626,7 @@ Optional Features:
   --enable-threads={posix|solaris|pth|win32}
                           specify multithreading API
   --disable-threads       build without multithread safety
+  --enable-libxxx-mode    dev use only
   --enable-debugger       build with internal debugger [[default=yes]]
   --enable-cjk-fonts      build with internal CJK(Chinese, Japanese, Korean)
                           fonts [[default=yes]]
@@ -1625,6 +1634,7 @@ Optional Features:
                           software video scalers [[default=yes]]
   --enable-altivec        use AltiVec extensions on PowerPC/POWER ISA
                           processors [[default=yes]]
+  --enable-apple2         build with Apple II+ emulation [[default=yes]]
   --enable-gb             build with GameBoy emulation [[default=yes]]
   --enable-gba            build with GameBoy Advance emulation [[default=yes]]
   --enable-lynx           build with Atari Lynx emulation [[default=yes]]
@@ -4355,8 +4365,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='1.21.3'
-MEDNAFEN_VERSION_NUMERIC=0x00102103
+MEDNAFEN_VERSION='1.22.0-UNSTABLE'
+MEDNAFEN_VERSION_NUMERIC=0x00102200
 #                        0xJJJnnnRR
 
 # Make sure we can run config.sub.
@@ -7132,15 +7142,6 @@ $as_echo "#define _LARGEFILE64_SOURCE 1" >>confdefs.h
 $as_echo "#define _LARGEFILE_SOURCE 1" >>confdefs.h
 
 
- if test x$cross_compiling != xno; then
-  CROSS_COMPILING_TRUE=
-  CROSS_COMPILING_FALSE='#'
-else
-  CROSS_COMPILING_TRUE='#'
-  CROSS_COMPILING_FALSE=
-fi
-
-
 # sizeof tests need to come after largefile support macros
 
 ac_fn_cxx_check_type "$LINENO" "ptrdiff_t" "ac_cv_type_ptrdiff_t" "$ac_includes_default"
@@ -7327,39 +7328,6 @@ $as_echo "$ac_cv_sizeof_long_long" >&6; }
 
 cat >>confdefs.h <<_ACEOF
 #define SIZEOF_LONG_LONG $ac_cv_sizeof_long_long
-_ACEOF
-
-
-# The cast to long int works around a bug in the HP C Compiler
-# version HP92453-01 B.11.11.23709.GP, which incorrectly rejects
-# declarations like `int a3[[(sizeof (unsigned char)) >= 0]];'.
-# This bug is HP SR number 8606223364.
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking size of double" >&5
-$as_echo_n "checking size of double... " >&6; }
-if ${ac_cv_sizeof_double+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  if ac_fn_cxx_compute_int "$LINENO" "(long int) (sizeof (double))" "ac_cv_sizeof_double"        "$ac_includes_default"; then :
-
-else
-  if test "$ac_cv_type_double" = yes; then
-     { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error 77 "cannot compute sizeof (double)
-See \`config.log' for more details" "$LINENO" 5; }
-   else
-     ac_cv_sizeof_double=0
-   fi
-fi
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_sizeof_double" >&5
-$as_echo "$ac_cv_sizeof_double" >&6; }
-
-
-
-cat >>confdefs.h <<_ACEOF
-#define SIZEOF_DOUBLE $ac_cv_sizeof_double
 _ACEOF
 
 
@@ -13232,6 +13200,18 @@ fi
 
 
 
+
+ENABLE_LIBXXX_MODE=false
+# Check whether --enable-libxxx-mode was given.
+if test "${enable_libxxx_mode+set}" = set; then :
+  enableval=$enable_libxxx_mode;
+fi
+
+if test x$enable_libxxx_mode = xyes; then
+	ENABLE_LIBXXX_MODE=true
+fi
+
+
 OPTIMIZER_FLAGS=""
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking OPTIMIZER_FLAGS for gcc -fno-fast-math" >&5
 $as_echo_n "checking OPTIMIZER_FLAGS for gcc -fno-fast-math... " >&6; }
@@ -13683,6 +13663,7 @@ esac
 
 
 CODEGEN_FLAGS=""
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking CODEGEN_FLAGS for gcc -fno-pic" >&5
 $as_echo_n "checking CODEGEN_FLAGS for gcc -fno-pic... " >&6; }
 if ${ax_cv_cflags_gcc_option__fno_pic+:} false; then :
@@ -14066,6 +14047,7 @@ case ".$var" in
    fi
  ;;
 esac
+
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking CODEGEN_FLAGS for gcc -fwrapv" >&5
 $as_echo_n "checking CODEGEN_FLAGS for gcc -fwrapv... " >&6; }
@@ -14969,6 +14951,70 @@ case ".$var" in
  ;;
 esac
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking WARNING_FLAGS for gcc -Werror=write-strings" >&5
+$as_echo_n "checking WARNING_FLAGS for gcc -Werror=write-strings... " >&6; }
+if ${ax_cv_cflags_gcc_option__Werror_write_strings+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ax_cv_cflags_gcc_option__Werror_write_strings="no, unknown"
+
+ ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+ ac_save_CFLAGS="$CFLAGS"
+for ac_arg in "-pedantic -Werror % -Werror=write-strings"     "-pedantic % -Werror=write-strings %% no, obsolete"     #
+do CFLAGS="$ac_save_CFLAGS "`echo $ac_arg | sed -e 's,%%.*,,' -e 's,%,,'`
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ax_cv_cflags_gcc_option__Werror_write_strings=`echo $ac_arg | sed -e 's,.*% *,,'`; break
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+done
+ CFLAGS="$ac_save_CFLAGS"
+ ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_cflags_gcc_option__Werror_write_strings" >&5
+$as_echo "$ax_cv_cflags_gcc_option__Werror_write_strings" >&6; }
+var=$ax_cv_cflags_gcc_option__Werror_write_strings
+case ".$var" in
+     .ok|.ok,*)  ;;
+   .|.no|.no,*)  ;;
+   *)
+   if echo " $WARNING_FLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : WARNING_FLAGS does contain \$var"; } >&5
+  (: WARNING_FLAGS does contain $var) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : WARNING_FLAGS=\"\$WARNING_FLAGS \$var\""; } >&5
+  (: WARNING_FLAGS="$WARNING_FLAGS $var") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }
+                      WARNING_FLAGS="$WARNING_FLAGS $var"
+   fi
+ ;;
+esac
+
 
 
 #################################
@@ -15794,6 +15840,14 @@ fi
 
 
  if false; then
+  WANT_APPLE2_EMU_TRUE=
+  WANT_APPLE2_EMU_FALSE='#'
+else
+  WANT_APPLE2_EMU_TRUE='#'
+  WANT_APPLE2_EMU_FALSE=
+fi
+
+ if false; then
   WANT_GB_EMU_TRUE=
   WANT_GB_EMU_FALSE='#'
 else
@@ -15839,6 +15893,14 @@ fi
 else
   WANT_NES_EMU_TRUE='#'
   WANT_NES_EMU_FALSE=
+fi
+
+ if false; then
+  WANT_NES_NEW_EMU_TRUE=
+  WANT_NES_NEW_EMU_FALSE='#'
+else
+  WANT_NES_NEW_EMU_TRUE='#'
+  WANT_NES_NEW_EMU_FALSE=
 fi
 
  if false; then
@@ -15939,6 +16001,15 @@ fi
 
 
  if false; then
+  NEED_BLIP_BUFFER_TRUE=
+  NEED_BLIP_BUFFER_FALSE='#'
+else
+  NEED_BLIP_BUFFER_TRUE='#'
+  NEED_BLIP_BUFFER_FALSE=
+fi
+
+
+ if false; then
   NEED_GB_APU_EMU_TRUE=
   NEED_GB_APU_EMU_FALSE='#'
 else
@@ -16021,6 +16092,28 @@ else
 fi
 
 
+# Check whether --enable-apple2 was given.
+if test "${enable_apple2+set}" = set; then :
+  enableval=$enable_apple2;
+else
+  enable_apple2=yes
+fi
+
+
+if test x$enable_apple2 = xyes; then
+
+$as_echo "#define WANT_APPLE2_EMU 1" >>confdefs.h
+
+		 if true; then
+  WANT_APPLE2_EMU_TRUE=
+  WANT_APPLE2_EMU_FALSE='#'
+else
+  WANT_APPLE2_EMU_TRUE='#'
+  WANT_APPLE2_EMU_FALSE=
+fi
+
+fi
+
 # Check whether --enable-gb was given.
 if test "${enable_gb+set}" = set; then :
   enableval=$enable_gb;
@@ -16047,6 +16140,14 @@ fi
 else
   NEED_GB_APU_EMU_TRUE='#'
   NEED_GB_APU_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_BLIP_BUFFER_TRUE=
+  NEED_BLIP_BUFFER_FALSE='#'
+else
+  NEED_BLIP_BUFFER_TRUE='#'
+  NEED_BLIP_BUFFER_FALSE=
 fi
 
 fi
@@ -16079,6 +16180,14 @@ else
   NEED_GB_APU_EMU_FALSE=
 fi
 
+		 if true; then
+  NEED_BLIP_BUFFER_TRUE=
+  NEED_BLIP_BUFFER_FALSE='#'
+else
+  NEED_BLIP_BUFFER_TRUE='#'
+  NEED_BLIP_BUFFER_FALSE=
+fi
+
 fi
 
 # Check whether --enable-lynx was given.
@@ -16099,6 +16208,14 @@ $as_echo "#define WANT_LYNX_EMU 1" >>confdefs.h
 else
   WANT_LYNX_EMU_TRUE='#'
   WANT_LYNX_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_BLIP_BUFFER_TRUE=
+  NEED_BLIP_BUFFER_FALSE='#'
+else
+  NEED_BLIP_BUFFER_TRUE='#'
+  NEED_BLIP_BUFFER_FALSE=
 fi
 
 fi
@@ -16155,6 +16272,14 @@ else
   NEED_SMS_APU_EMU_FALSE=
 fi
 
+		 if true; then
+  NEED_BLIP_BUFFER_TRUE=
+  NEED_BLIP_BUFFER_FALSE='#'
+else
+  NEED_BLIP_BUFFER_TRUE='#'
+  NEED_BLIP_BUFFER_FALSE=
+fi
+
 fi
 
 # Check whether --enable-nes was given.
@@ -16178,6 +16303,15 @@ else
 fi
 
 fi
+
+#AC_ARG_ENABLE(nes_new,
+# AC_HELP_STRING([--enable-nes-new], [build with experimental, alternate new(ish) NES emulation [[default=yes]]]),
+#                  , enable_nes_new=yes)
+#
+#if test x$enable_nes_new = xyes; then
+#                AC_DEFINE([WANT_NES_NEW_EMU], [1], [Define if we are compiling with experimental, alternate new(ish) NES emulation.])
+#                AM_CONDITIONAL(WANT_NES_NEW_EMU, true)
+#fi
 
 # Check whether --enable-ngp was given.
 if test "${enable_ngp+set}" = set; then :
@@ -16205,6 +16339,14 @@ fi
 else
   NEED_Z80_EMU_TRUE='#'
   NEED_Z80_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_BLIP_BUFFER_TRUE=
+  NEED_BLIP_BUFFER_FALSE='#'
+else
+  NEED_BLIP_BUFFER_TRUE='#'
+  NEED_BLIP_BUFFER_FALSE=
 fi
 
 fi
@@ -16281,6 +16423,14 @@ fi
 else
   NEED_ARCADE_CARD_EMU_TRUE='#'
   NEED_ARCADE_CARD_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_BLIP_BUFFER_TRUE=
+  NEED_BLIP_BUFFER_FALSE='#'
+else
+  NEED_BLIP_BUFFER_TRUE='#'
+  NEED_BLIP_BUFFER_FALSE=
 fi
 
 fi
@@ -16395,6 +16545,14 @@ fi
 else
   NEED_YM2413_EMU_TRUE='#'
   NEED_YM2413_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_BLIP_BUFFER_TRUE=
+  NEED_BLIP_BUFFER_FALSE='#'
+else
+  NEED_BLIP_BUFFER_TRUE='#'
+  NEED_BLIP_BUFFER_FALSE=
 fi
 
 fi
@@ -16532,6 +16690,14 @@ else
   NEED_V810_EMU_FALSE=
 fi
 
+		 if true; then
+  NEED_BLIP_BUFFER_TRUE=
+  NEED_BLIP_BUFFER_FALSE='#'
+else
+  NEED_BLIP_BUFFER_TRUE='#'
+  NEED_BLIP_BUFFER_FALSE=
+fi
+
 fi
 
 
@@ -16553,6 +16719,14 @@ $as_echo "#define WANT_WSWAN_EMU 1" >>confdefs.h
 else
   WANT_WSWAN_EMU_TRUE='#'
   WANT_WSWAN_EMU_FALSE=
+fi
+
+		 if true; then
+  NEED_BLIP_BUFFER_TRUE=
+  NEED_BLIP_BUFFER_FALSE='#'
+else
+  NEED_BLIP_BUFFER_TRUE='#'
+  NEED_BLIP_BUFFER_FALSE=
 fi
 
 fi
@@ -17473,7 +17647,6 @@ fi
 
 
 
-
  if false; then
   HAVE_OSSDSP_TRUE=
   HAVE_OSSDSP_FALSE='#'
@@ -17538,7 +17711,30 @@ else
   HAVE_LINUX_JOYSTICK_FALSE=
 fi
 
+ if false; then
+  ENABLE_LIBXXX_MODE_TRUE=
+  ENABLE_LIBXXX_MODE_FALSE='#'
+else
+  ENABLE_LIBXXX_MODE_TRUE='#'
+  ENABLE_LIBXXX_MODE_FALSE=
+fi
+
 NEED_SDL=true
+
+if $ENABLE_LIBXXX_MODE; then
+	NEED_SDL=false
+
+$as_echo "#define ENABLE_LIBXXX_MODE 1" >>confdefs.h
+
+	 if true; then
+  ENABLE_LIBXXX_MODE_TRUE=
+  ENABLE_LIBXXX_MODE_FALSE='#'
+else
+  ENABLE_LIBXXX_MODE_TRUE='#'
+  ENABLE_LIBXXX_MODE_FALSE=
+fi
+
+fi
 
 if expr x"$host" : 'x.*-mingw*' > /dev/null; then
 	if test -n "$ac_tool_prefix"; then
@@ -17896,6 +18092,77 @@ fi
 else
 
 $as_echo "#define PSS_STYLE 1" >>confdefs.h
+
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pthread_create" >&5
+$as_echo_n "checking for library containing pthread_create... " >&6; }
+if ${ac_cv_search_pthread_create+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char pthread_create ();
+int
+main ()
+{
+return pthread_create ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' pthread; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_search_pthread_create=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_pthread_create+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_pthread_create+:} false; then :
+
+else
+  ac_cv_search_pthread_create=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_pthread_create" >&5
+$as_echo "$ac_cv_search_pthread_create" >&6; }
+ac_res=$ac_cv_search_pthread_create
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
+	for ac_func in pthread_create pthread_setname_np pthread_setaffinity_np sem_init
+do :
+  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
+ac_fn_cxx_check_func "$LINENO" "$ac_func" "$as_ac_var"
+if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
+_ACEOF
+
+else
+  as_fn_error $? "*** pthreads not found!" "$LINENO" 5
+fi
+done
 
 
 	ac_fn_cxx_check_header_mongrel "$LINENO" "sys/soundcard.h" "ac_cv_header_sys_soundcard_h" "$ac_includes_default"
@@ -19145,7 +19412,7 @@ AM_CFLAGS="$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGE
 AM_CXXFLAGS="$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGEN_CXXFLAGS"
 
 
-ac_config_files="$ac_config_files Makefile po/Makefile.in intl/Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/ss/Makefile"
+ac_config_files="$ac_config_files Makefile po/Makefile.in intl/Makefile src/Makefile src/drivers/Makefile src/drivers_libxxx/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/ss/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -19288,10 +19555,6 @@ if test -z "${am__fastdepCXX_TRUE}" && test -z "${am__fastdepCXX_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCXX\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${CROSS_COMPILING_TRUE}" && test -z "${CROSS_COMPILING_FALSE}"; then
-  as_fn_error $? "conditional \"CROSS_COMPILING\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
 if test -z "${WANT_DEBUGGER_TRUE}" && test -z "${WANT_DEBUGGER_FALSE}"; then
   as_fn_error $? "conditional \"WANT_DEBUGGER\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
@@ -19306,6 +19569,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_FANCY_SCALERS_TRUE}" && test -z "${WANT_FANCY_SCALERS_FALSE}"; then
   as_fn_error $? "conditional \"WANT_FANCY_SCALERS\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${WANT_APPLE2_EMU_TRUE}" && test -z "${WANT_APPLE2_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"WANT_APPLE2_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_GB_EMU_TRUE}" && test -z "${WANT_GB_EMU_FALSE}"; then
@@ -19330,6 +19597,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_NES_EMU_TRUE}" && test -z "${WANT_NES_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_NES_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${WANT_NES_NEW_EMU_TRUE}" && test -z "${WANT_NES_NEW_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"WANT_NES_NEW_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_NGP_EMU_TRUE}" && test -z "${WANT_NGP_EMU_FALSE}"; then
@@ -19380,6 +19651,10 @@ if test -z "${WANT_WSWAN_EMU_TRUE}" && test -z "${WANT_WSWAN_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_WSWAN_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${NEED_BLIP_BUFFER_TRUE}" && test -z "${NEED_BLIP_BUFFER_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_BLIP_BUFFER\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${NEED_GB_APU_EMU_TRUE}" && test -z "${NEED_GB_APU_EMU_FALSE}"; then
   as_fn_error $? "conditional \"NEED_GB_APU_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
@@ -19420,12 +19695,20 @@ if test -z "${NEED_ARCADE_CARD_EMU_TRUE}" && test -z "${NEED_ARCADE_CARD_EMU_FAL
   as_fn_error $? "conditional \"NEED_ARCADE_CARD_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${WANT_APPLE2_EMU_TRUE}" && test -z "${WANT_APPLE2_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"WANT_APPLE2_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${WANT_GB_EMU_TRUE}" && test -z "${WANT_GB_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_GB_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${NEED_GB_APU_EMU_TRUE}" && test -z "${NEED_GB_APU_EMU_FALSE}"; then
   as_fn_error $? "conditional \"NEED_GB_APU_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_BLIP_BUFFER_TRUE}" && test -z "${NEED_BLIP_BUFFER_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_BLIP_BUFFER\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_GBA_EMU_TRUE}" && test -z "${WANT_GBA_EMU_FALSE}"; then
@@ -19436,8 +19719,16 @@ if test -z "${NEED_GB_APU_EMU_TRUE}" && test -z "${NEED_GB_APU_EMU_FALSE}"; then
   as_fn_error $? "conditional \"NEED_GB_APU_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${NEED_BLIP_BUFFER_TRUE}" && test -z "${NEED_BLIP_BUFFER_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_BLIP_BUFFER\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${WANT_LYNX_EMU_TRUE}" && test -z "${WANT_LYNX_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_LYNX_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_BLIP_BUFFER_TRUE}" && test -z "${NEED_BLIP_BUFFER_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_BLIP_BUFFER\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_MD_EMU_TRUE}" && test -z "${WANT_MD_EMU_FALSE}"; then
@@ -19460,6 +19751,10 @@ if test -z "${NEED_SMS_APU_EMU_TRUE}" && test -z "${NEED_SMS_APU_EMU_FALSE}"; th
   as_fn_error $? "conditional \"NEED_SMS_APU_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${NEED_BLIP_BUFFER_TRUE}" && test -z "${NEED_BLIP_BUFFER_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_BLIP_BUFFER\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${WANT_NES_EMU_TRUE}" && test -z "${WANT_NES_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_NES_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
@@ -19470,6 +19765,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${NEED_Z80_EMU_TRUE}" && test -z "${NEED_Z80_EMU_FALSE}"; then
   as_fn_error $? "conditional \"NEED_Z80_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_BLIP_BUFFER_TRUE}" && test -z "${NEED_BLIP_BUFFER_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_BLIP_BUFFER\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_PCE_EMU_TRUE}" && test -z "${WANT_PCE_EMU_FALSE}"; then
@@ -19494,6 +19793,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${NEED_ARCADE_CARD_EMU_TRUE}" && test -z "${NEED_ARCADE_CARD_EMU_FALSE}"; then
   as_fn_error $? "conditional \"NEED_ARCADE_CARD_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_BLIP_BUFFER_TRUE}" && test -z "${NEED_BLIP_BUFFER_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_BLIP_BUFFER\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_PCFX_EMU_TRUE}" && test -z "${WANT_PCFX_EMU_FALSE}"; then
@@ -19532,6 +19835,10 @@ if test -z "${NEED_YM2413_EMU_TRUE}" && test -z "${NEED_YM2413_EMU_FALSE}"; then
   as_fn_error $? "conditional \"NEED_YM2413_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${NEED_BLIP_BUFFER_TRUE}" && test -z "${NEED_BLIP_BUFFER_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_BLIP_BUFFER\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${WANT_SNES_EMU_TRUE}" && test -z "${WANT_SNES_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_SNES_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
@@ -19564,8 +19871,16 @@ if test -z "${NEED_V810_EMU_TRUE}" && test -z "${NEED_V810_EMU_FALSE}"; then
   as_fn_error $? "conditional \"NEED_V810_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${NEED_BLIP_BUFFER_TRUE}" && test -z "${NEED_BLIP_BUFFER_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_BLIP_BUFFER\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${WANT_WSWAN_EMU_TRUE}" && test -z "${WANT_WSWAN_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_WSWAN_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_BLIP_BUFFER_TRUE}" && test -z "${NEED_BLIP_BUFFER_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_BLIP_BUFFER\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_ALSA_TRUE}" && test -z "${HAVE_ALSA_FALSE}"; then
@@ -19662,6 +19977,14 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_LINUX_JOYSTICK_TRUE}" && test -z "${HAVE_LINUX_JOYSTICK_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_LINUX_JOYSTICK\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${ENABLE_LIBXXX_MODE_TRUE}" && test -z "${ENABLE_LIBXXX_MODE_FALSE}"; then
+  as_fn_error $? "conditional \"ENABLE_LIBXXX_MODE\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${ENABLE_LIBXXX_MODE_TRUE}" && test -z "${ENABLE_LIBXXX_MODE_FALSE}"; then
+  as_fn_error $? "conditional \"ENABLE_LIBXXX_MODE\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_DIRECTSOUND_TRUE}" && test -z "${HAVE_DIRECTSOUND_FALSE}"; then
@@ -20362,6 +20685,7 @@ do
     "intl/Makefile") CONFIG_FILES="$CONFIG_FILES intl/Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
     "src/drivers/Makefile") CONFIG_FILES="$CONFIG_FILES src/drivers/Makefile" ;;
+    "src/drivers_libxxx/Makefile") CONFIG_FILES="$CONFIG_FILES src/drivers_libxxx/Makefile" ;;
     "src/drivers_dos/Makefile") CONFIG_FILES="$CONFIG_FILES src/drivers_dos/Makefile" ;;
     "src/sexyal/Makefile") CONFIG_FILES="$CONFIG_FILES src/sexyal/Makefile" ;;
     "src/ss/Makefile") CONFIG_FILES="$CONFIG_FILES src/ss/Makefile" ;;

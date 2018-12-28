@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* PSFLoader.cpp:
-**  Copyright (C) 2011-2016 Mednafen Team
+**  Copyright (C) 2011-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -35,6 +35,9 @@
 
 #include <zlib.h>
 
+namespace Mednafen
+{
+
 PSFTags::PSFTags()
 {
 
@@ -50,10 +53,7 @@ void PSFTags::AddTag(char *tag_line)
 {
  char *eq;
 
- // Transform 0x01-0x1F -> 0x20
- for(unsigned int i = 0; i < strlen(tag_line); i++)
-  if((unsigned char)tag_line[i] < 0x20)
-   tag_line[i] = 0x20;
+ MDFN_zapctrlchars(tag_line);
 
  eq = strchr(tag_line, '=');
 
@@ -262,7 +262,7 @@ bool PSFLoader::TestMagic(uint8 version, Stream* fp)
  return(true);
 }
 
-PSFTags PSFLoader::LoadInternal(uint8 version, uint32 max_exe_size, Stream *fp, uint32 level, bool force_ignore_pcsp)
+PSFTags PSFLoader::LoadInternal(uint8 version, uint32 max_exe_size, VirtualFS* vfs, const std::string& dir_path, Stream *fp, uint32 level, bool force_ignore_pcsp)
 {
  uint32 reserved_size, compressed_size, compressed_crc32;
  bool _lib_present = false;
@@ -299,15 +299,10 @@ PSFTags PSFLoader::LoadInternal(uint8 version, uint32 max_exe_size, Stream *fp, 
  {
   if(tags.TagExists("_lib"))
   {
-   std::string tp = tags.GetTag("_lib");
+   const std::string subpath = vfs->eval_fip(dir_path, tags.GetTag("_lib"));
+   std::unique_ptr<Stream> subfile(vfs->open(subpath, VirtualFS::MODE_READ));
 
-   MDFN_CheckFIROPSafe(tp);
-   //
-   //
-   //
-   FileStream subfile(MDFN_MakeFName(MDFNMKF_AUX, 0, tp.c_str()).c_str(), FileStream::MODE_READ);
-
-   LoadInternal(version, max_exe_size, &subfile, level + 1);
+   LoadInternal(version, max_exe_size, vfs, dir_path, subfile.get(), level + 1);
 
    _lib_present = true;
   }
@@ -326,7 +321,7 @@ PSFTags PSFLoader::LoadInternal(uint8 version, uint32 max_exe_size, Stream *fp, 
  //
  {
   fp->seek(16 + reserved_size);
-  ZLInflateFilter ifs(fp, "<Compressed EXE section of PSF>", ZLInflateFilter::FORMAT::ZLIB, compressed_size);
+  ZLInflateFilter ifs(fp, "compressed EXE section of PSF", ZLInflateFilter::FORMAT::ZLIB, compressed_size);
   HandleEXE(&ifs, force_ignore_pcsp | _lib_present);
  }
 
@@ -343,9 +338,10 @@ PSFTags PSFLoader::LoadInternal(uint8 version, uint32 max_exe_size, Stream *fp, 
 
    if(tags.TagExists(tmpbuf))
    {
-    FileStream subfile(MDFN_MakeFName(MDFNMKF_AUX, 0, tags.GetTag(tmpbuf).c_str()).c_str(), FileStream::MODE_READ);
+    const std::string subpath = vfs->eval_fip(dir_path, tags.GetTag(tmpbuf));
+    std::unique_ptr<Stream> subfile(vfs->open(subpath, VirtualFS::MODE_READ));
 
-    LoadInternal(version, max_exe_size, &subfile, level + 1, true);
+    LoadInternal(version, max_exe_size, vfs, dir_path, subfile.get(), level + 1, true);
    }
    else
     break;   
@@ -355,9 +351,9 @@ PSFTags PSFLoader::LoadInternal(uint8 version, uint32 max_exe_size, Stream *fp, 
  return(tags);
 }
 
-PSFTags PSFLoader::Load(uint8 version, uint32 max_exe_size, Stream* fp)
+PSFTags PSFLoader::Load(uint8 version, uint32 max_exe_size, VirtualFS* vfs, const std::string& dir_path, Stream *fp)
 {
- return(LoadInternal(version, max_exe_size, fp, 0, false));
+ return(LoadInternal(version, max_exe_size, vfs, dir_path, fp, 0, false));
 }
 
 void PSFLoader::HandleReserved(Stream* fp, uint32 len)
@@ -370,3 +366,4 @@ void PSFLoader::HandleEXE(Stream* fp, bool ignore_pcsp)
 
 }
 
+}

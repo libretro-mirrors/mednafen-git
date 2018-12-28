@@ -19,12 +19,8 @@
 
 #include <map>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <mednafen/Time.h>
 
-#include <trio/trio.h>
 #include "driver.h"
 #include "general.h"
 #include "state.h"
@@ -35,6 +31,9 @@
 
 #include "MemoryStream.h"
 #include "compress/GZFileStream.h"
+
+namespace Mednafen
+{
 
 struct StateSectionMapEntry
 {
@@ -627,26 +626,32 @@ static int RecentlySavedState = -1;
 
 void MDFNSS_CheckStates(void)
 {
-	time_t last_time = 0;
+	int64 last_time = 0;
 
         if(!MDFNGameInfo->StateAction) 
          return;
 
-
 	for(int ssel = 0; ssel < 10; ssel++)
         {
-	 struct stat stat_buf;
-
 	 SaveStateStatus[ssel] = false;
-	 //printf("%s\n", MDFN_MakeFName(MDFNMKF_STATE, ssel, 0).c_str());
-	 if(MDFN_stat(MDFN_MakeFName(MDFNMKF_STATE, ssel, 0).c_str(), &stat_buf) == 0)
+
+	 try
 	 {
+	  VirtualFS::FileInfo finfo;
+
+	  //printf("%s\n", MDFN_MakeFName(MDFNMKF_STATE, ssel, 0).c_str());
+	  NVFS.finfo(MDFN_MakeFName(MDFNMKF_STATE, ssel, 0), &finfo);
+	  //
 	  SaveStateStatus[ssel] = true;
-	  if(stat_buf.st_mtime > last_time)
+	  if(finfo.mtime_us > last_time)
 	  {
 	   RecentlySavedState = ssel;
-	   last_time = stat_buf.st_mtime;
+	   last_time = finfo.mtime_us;
  	  }
+	 }
+	 catch(...)
+	 {
+
 	 }
         }
 
@@ -868,4 +873,6 @@ bool MDFNI_LoadState(const char *fname, const char *suffix) noexcept
  }
 
  return(ret);
+}
+
 }

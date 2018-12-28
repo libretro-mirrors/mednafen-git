@@ -1,8 +1,8 @@
 /******************************************************************************/
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
-/* thread_win32.cpp:
-**  Copyright (C) 2014-2017 Mednafen Team
+/* MThreading_Win32.cpp:
+**  Copyright (C) 2014-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -27,12 +27,19 @@
  ...but at least the code is simple and should be much faster than SDL 1.2's condition variables for our purposes.
 */
 
-#include "main.h"
+#include <mednafen/types.h>
+#include <mednafen/MThreading.h>
 
 #include <stdio.h>
 #include <assert.h>
-#include <windows.h>
 #include <limits.h>
+
+#include <mednafen/win32-common.h>
+
+namespace Mednafen
+{
+namespace MThreading
+{
 
 #if 0
 typedef struct
@@ -71,14 +78,14 @@ static void InitCVStuff(void)
 }
 #endif
 
-struct MDFN_Thread
+struct Thread
 {
  HANDLE thr;
  int (*fn)(void *);
  void* data;
 };
 
-struct MDFN_Cond
+struct Cond
 {
 #if 0
  union
@@ -90,18 +97,17 @@ struct MDFN_Cond
  HANDLE evt;
 };
 
-struct MDFN_Sem
+struct Sem
 {
  HANDLE sem;
 };
 
-struct MDFN_Mutex
+struct Mutex
 {
  CRITICAL_SECTION cs;
 };
 
-static void TestStackAlign(void) NO_INLINE;
-static void TestStackAlign(void)
+static NO_INLINE void TestStackAlign(void)
 {
  alignas(16) char test_array[17];
  unsigned volatile memloc = ((unsigned long long)&test_array[0]);
@@ -121,21 +127,21 @@ static unsigned __stdcall ThreadPivot(void* data)
 {
  TestStackAlign();
 
- MDFN_Thread* t = (MDFN_Thread*)data;
+ Thread* t = (Thread*)data;
 
  return t->fn(t->data);
 }
 
-MDFN_Thread *MDFND_CreateThread(int (*fn)(void *), void *data)
+Thread *CreateThread(int (*fn)(void *), void *data, const char* debug_name)
 {
- MDFN_Thread* ret = NULL;
+ Thread* ret = NULL;
 
 #if 0
  if(use_cv < 0)
   InitCVStuff();
 #endif
 
- if(!(ret = (MDFN_Thread*)calloc(1, sizeof(MDFN_Thread))))
+ if(!(ret = (Thread*)calloc(1, sizeof(Thread))))
  {
   return(NULL);
  }
@@ -153,7 +159,7 @@ MDFN_Thread *MDFND_CreateThread(int (*fn)(void *), void *data)
  return(ret);
 }
 
-void MDFND_WaitThread(MDFN_Thread *thread, int *status)
+void WaitThread(Thread *thread, int *status)
 {
  DWORD exc = -1;
 
@@ -167,7 +173,7 @@ void MDFND_WaitThread(MDFN_Thread *thread, int *status)
  free(thread);
 }
 
-uint32 MDFND_ThreadID(void)
+uintptr_t ThreadID(void)
 {
  return GetCurrentThreadId();
 }
@@ -176,11 +182,11 @@ uint32 MDFND_ThreadID(void)
 //
 //
 
-MDFN_Mutex *MDFND_CreateMutex(void)
+Mutex *CreateMutex(void)
 {
- MDFN_Mutex* ret;
+ Mutex* ret;
 
- if(!(ret = (MDFN_Mutex*)calloc(1, sizeof(MDFN_Mutex))))
+ if(!(ret = (Mutex*)calloc(1, sizeof(Mutex))))
  {
   fprintf(stderr, "Error allocating memory for critical section.");
   return(NULL);
@@ -191,19 +197,19 @@ MDFN_Mutex *MDFND_CreateMutex(void)
  return ret;
 }
 
-void MDFND_DestroyMutex(MDFN_Mutex *mutex)
+void DestroyMutex(Mutex *mutex)
 {
  DeleteCriticalSection(&mutex->cs);
  free(mutex);
 }
 
-int MDFND_LockMutex(MDFN_Mutex *mutex)
+int LockMutex(Mutex *mutex)
 {
  EnterCriticalSection(&mutex->cs);
  return(0);
 }
 
-int MDFND_UnlockMutex(MDFN_Mutex *mutex)
+int UnlockMutex(Mutex *mutex)
 {
  LeaveCriticalSection(&mutex->cs);
  return(0);
@@ -213,16 +219,16 @@ int MDFND_UnlockMutex(MDFN_Mutex *mutex)
 //
 //
 
-MDFN_Cond* MDFND_CreateCond(void)
+Cond* CreateCond(void)
 {
 #if 0
  if(use_cv < 0)
   InitCVStuff();
 #endif
 
- MDFN_Cond* ret;
+ Cond* ret;
 
- if(!(ret = (MDFN_Cond*)calloc(1, sizeof(MDFN_Cond))))
+ if(!(ret = (Cond*)calloc(1, sizeof(Cond))))
  {
   return(NULL);
  }
@@ -250,7 +256,7 @@ MDFN_Cond* MDFND_CreateCond(void)
  return(ret);
 }
 
-void MDFND_DestroyCond(MDFN_Cond* cond)
+void DestroyCond(Cond* cond)
 {
 #if 0
  if(use_cv)
@@ -265,7 +271,7 @@ void MDFND_DestroyCond(MDFN_Cond* cond)
  free(cond);
 }
 
-int MDFND_SignalCond(MDFN_Cond* cond)
+int SignalCond(Cond* cond)
 {
 #if 0
  if(use_cv)
@@ -280,7 +286,7 @@ int MDFND_SignalCond(MDFN_Cond* cond)
  }
 }
 
-int MDFND_WaitCond(MDFN_Cond* cond, MDFN_Mutex* mutex)
+int WaitCond(Cond* cond, Mutex* mutex)
 {
 #if 0
  if(use_cv)
@@ -306,7 +312,7 @@ int MDFND_WaitCond(MDFN_Cond* cond, MDFN_Mutex* mutex)
  }
 }
 
-int MDFND_WaitCondTimeout(MDFN_Cond* cond, MDFN_Mutex* mutex, unsigned ms)
+int WaitCondTimeout(Cond* cond, Mutex* mutex, unsigned ms)
 {
  int ret = 0;
 
@@ -332,7 +338,7 @@ int MDFND_WaitCondTimeout(MDFN_Cond* cond, MDFN_Mutex* mutex, unsigned ms)
 	break;
 
    case WAIT_TIMEOUT:
-	ret = MDFND_COND_TIMEDOUT;
+	ret = COND_TIMEDOUT;
 	break;
 
    default:
@@ -350,11 +356,11 @@ int MDFND_WaitCondTimeout(MDFN_Cond* cond, MDFN_Mutex* mutex, unsigned ms)
 //
 //
 
-MDFN_Sem* MDFND_CreateSem(void)
+Sem* CreateSem(void)
 {
- MDFN_Sem* ret;
+ Sem* ret;
 
- if(!(ret = (MDFN_Sem*)calloc(1, sizeof(MDFN_Sem))))
+ if(!(ret = (Sem*)calloc(1, sizeof(Sem))))
  {
   fprintf(stderr, "Error allocating memory for semaphore.");
   return(NULL);
@@ -370,14 +376,14 @@ MDFN_Sem* MDFND_CreateSem(void)
  return(ret);
 }
 
-void MDFND_DestroySem(MDFN_Sem* sem)
+void DestroySem(Sem* sem)
 {
  CloseHandle(sem->sem);
  sem->sem = NULL;
  free(sem);
 }
 
-int MDFND_PostSem(MDFN_Sem* sem)
+int PostSem(Sem* sem)
 {
  if(ReleaseSemaphore(sem->sem, 1, NULL) != 0)
   return(0);
@@ -385,7 +391,7 @@ int MDFND_PostSem(MDFN_Sem* sem)
   return(-1);
 }
 
-int MDFND_WaitSem(MDFN_Sem* sem)
+int WaitSem(Sem* sem)
 {
  if(WaitForSingleObject(sem->sem, INFINITE) == WAIT_OBJECT_0)
   return(0);
@@ -393,7 +399,7 @@ int MDFND_WaitSem(MDFN_Sem* sem)
   return(-1);
 }
 
-int MDFND_WaitSemTimeout(MDFN_Sem* sem, unsigned ms)
+int WaitSemTimeout(Sem* sem, unsigned ms)
 {
  int ret = 0;
 
@@ -404,7 +410,7 @@ int MDFND_WaitSemTimeout(MDFN_Sem* sem, unsigned ms)
 	break;
 
    case WAIT_TIMEOUT:
-	ret = MDFND_SEM_TIMEDOUT;
+	ret = SEM_TIMEDOUT;
 	break;
 
    default:
@@ -414,3 +420,5 @@ int MDFND_WaitSemTimeout(MDFN_Sem* sem, unsigned ms)
  return(ret);
 }
 
+}
+}

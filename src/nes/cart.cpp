@@ -576,7 +576,11 @@ void Genie_Init(void)
    GENIEROM = new uint8[4096 + 1024];
 
    std::string fn = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("nes.ggrom"));
-   MDFNFILE fp(fn.c_str(), NULL, _("Game Genie ROM Image"));
+   static const std::vector<FileExtensionSpecStruct> KnownExtensions
+   {
+    { ".nes", 0, "iNES Format ROM Image" },
+   };
+   MDFNFILE fp(&NVFS, fn.c_str(), KnownExtensions, _("Game Genie ROM Image"));
 
    fp.read(GENIEROM, 16);
 

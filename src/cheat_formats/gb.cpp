@@ -26,6 +26,9 @@
 
 #include "gb.h"
 
+namespace Mednafen
+{
+
 static uint8 CharToNibble(char thechar)
 {
  const char lut[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
@@ -169,3 +172,4 @@ const std::vector<CheatFormatStruct> CheatFormats_GB =
  { "GameShark", gettext_noop("Sharks in your soup."), DecodeGS },
 };
 
+}

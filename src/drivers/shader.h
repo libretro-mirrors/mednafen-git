@@ -1,5 +1,5 @@
-#ifndef __DRIVERS_SHADER_H
-#define __DRIVERS_SHADER_H
+#ifndef __MDFN_DRIVERS_SHADER_H
+#define __MDFN_DRIVERS_SHADER_H
 
 #include <map>
 

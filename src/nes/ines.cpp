@@ -543,7 +543,7 @@ static void CheckHInfo(void)
 
 
 
-bool iNES_TestMagic(MDFNFILE *fp)
+bool iNES_TestMagic(Stream *fp)
 {
  uint8 header[16];
 

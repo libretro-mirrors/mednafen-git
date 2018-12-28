@@ -1,3 +1,1332 @@
+apple2.enable
+MDFNSF_COMMON_TEMPLATE 
+Enable (automatic) usage of this module.
+
+MDFNST_BOOL
+1
+
+
+0
+apple2.input.keyboard.twopiece.0
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: 0
+
+MDFNST_STRING
+keyboard 0x0 39
+
+
+0
+apple2.input.keyboard.twopiece.1
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: 1
+
+MDFNST_STRING
+keyboard 0x0 30
+
+
+0
+apple2.input.keyboard.twopiece.2
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: 2
+
+MDFNST_STRING
+keyboard 0x0 31
+
+
+0
+apple2.input.keyboard.twopiece.3
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: 3
+
+MDFNST_STRING
+keyboard 0x0 32
+
+
+0
+apple2.input.keyboard.twopiece.4
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: 4
+
+MDFNST_STRING
+keyboard 0x0 33
+
+
+0
+apple2.input.keyboard.twopiece.5
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: 5
+
+MDFNST_STRING
+keyboard 0x0 34
+
+
+0
+apple2.input.keyboard.twopiece.6
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: 6
+
+MDFNST_STRING
+keyboard 0x0 35
+
+
+0
+apple2.input.keyboard.twopiece.7
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: 7\'
+
+MDFNST_STRING
+keyboard 0x0 36
+
+
+0
+apple2.input.keyboard.twopiece.8
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: 8
+
+MDFNST_STRING
+keyboard 0x0 37
+
+
+0
+apple2.input.keyboard.twopiece.9
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: 9
+
+MDFNST_STRING
+keyboard 0x0 38
+
+
+0
+apple2.input.keyboard.twopiece.a
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: A
+
+MDFNST_STRING
+keyboard 0x0 4 || keyboard 0x0 82 || keyboard 0x0 96
+
+
+0
+apple2.input.keyboard.twopiece.b
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: B
+
+MDFNST_STRING
+keyboard 0x0 5
+
+
+0
+apple2.input.keyboard.twopiece.bs
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: ⭠
+
+MDFNST_STRING
+keyboard 0x0 80 || keyboard 0x0 42 || keyboard 0x0 93 || keyboard 0x0 76
+
+
+0
+apple2.input.keyboard.twopiece.c
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: C
+
+MDFNST_STRING
+keyboard 0x0 6
+
+
+0
+apple2.input.keyboard.twopiece.colon
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: :
+
+MDFNST_STRING
+keyboard 0x0 45
+
+
+0
+apple2.input.keyboard.twopiece.comma
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: ,
+
+MDFNST_STRING
+keyboard 0x0 54
+
+
+0
+apple2.input.keyboard.twopiece.cr
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: RETURN
+
+MDFNST_STRING
+keyboard 0x0 40 || keyboard 0x0 49 || keyboard 0x0 74
+
+
+0
+apple2.input.keyboard.twopiece.ctrl
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: CTRL
+
+MDFNST_STRING
+keyboard 0x0 57 || keyboard 0x0 224 || keyboard 0x0 228
+
+
+0
+apple2.input.keyboard.twopiece.d
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: D
+
+MDFNST_STRING
+keyboard 0x0 7
+
+
+0
+apple2.input.keyboard.twopiece.e
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: E
+
+MDFNST_STRING
+keyboard 0x0 8
+
+
+0
+apple2.input.keyboard.twopiece.esc
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: ESC
+
+MDFNST_STRING
+keyboard 0x0 41 || keyboard 0x0 43
+
+
+0
+apple2.input.keyboard.twopiece.f
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: F
+
+MDFNST_STRING
+keyboard 0x0 9
+
+
+0
+apple2.input.keyboard.twopiece.g
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: G
+
+MDFNST_STRING
+keyboard 0x0 10
+
+
+0
+apple2.input.keyboard.twopiece.h
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: H
+
+MDFNST_STRING
+keyboard 0x0 11
+
+
+0
+apple2.input.keyboard.twopiece.i
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: I
+
+MDFNST_STRING
+keyboard 0x0 12
+
+
+0
+apple2.input.keyboard.twopiece.j
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: J
+
+MDFNST_STRING
+keyboard 0x0 13
+
+
+0
+apple2.input.keyboard.twopiece.k
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: K
+
+MDFNST_STRING
+keyboard 0x0 14
+
+
+0
+apple2.input.keyboard.twopiece.l
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: L
+
+MDFNST_STRING
+keyboard 0x0 15
+
+
+0
+apple2.input.keyboard.twopiece.lshift
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: Left SHIFT
+
+MDFNST_STRING
+keyboard 0x0 225
+
+
+0
+apple2.input.keyboard.twopiece.m
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: M
+
+MDFNST_STRING
+keyboard 0x0 16
+
+
+0
+apple2.input.keyboard.twopiece.minus
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: -
+
+MDFNST_STRING
+keyboard 0x0 46
+
+
+0
+apple2.input.keyboard.twopiece.n
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: N
+
+MDFNST_STRING
+keyboard 0x0 17
+
+
+0
+apple2.input.keyboard.twopiece.nak
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: ⭢
+
+MDFNST_STRING
+keyboard 0x0 79 || keyboard 0x0 94 || keyboard 0x0 78
+
+
+0
+apple2.input.keyboard.twopiece.o
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: O
+
+MDFNST_STRING
+keyboard 0x0 18
+
+
+0
+apple2.input.keyboard.twopiece.p
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: P
+
+MDFNST_STRING
+keyboard 0x0 19
+
+
+0
+apple2.input.keyboard.twopiece.period
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: .
+
+MDFNST_STRING
+keyboard 0x0 55
+
+
+0
+apple2.input.keyboard.twopiece.q
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: Q
+
+MDFNST_STRING
+keyboard 0x0 20
+
+
+0
+apple2.input.keyboard.twopiece.r
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: R
+
+MDFNST_STRING
+keyboard 0x0 21
+
+
+0
+apple2.input.keyboard.twopiece.rept
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: REPT
+
+MDFNST_STRING
+keyboard 0x0 47 || keyboard 0x0 226 || keyboard 0x0 230
+
+
+0
+apple2.input.keyboard.twopiece.reset
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: RESET
+
+MDFNST_STRING
+keyboard 0x0 73
+
+
+0
+apple2.input.keyboard.twopiece.rshift
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: Right SHIFT
+
+MDFNST_STRING
+keyboard 0x0 229
+
+
+0
+apple2.input.keyboard.twopiece.s
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: S
+
+MDFNST_STRING
+keyboard 0x0 22
+
+
+0
+apple2.input.keyboard.twopiece.semicolon
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: ;
+
+MDFNST_STRING
+keyboard 0x0 51 || keyboard 0x0 92
+
+
+0
+apple2.input.keyboard.twopiece.slash
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: /
+
+MDFNST_STRING
+keyboard 0x0 56 || keyboard 0x0 77
+
+
+0
+apple2.input.keyboard.twopiece.sp
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: Space
+
+MDFNST_STRING
+keyboard 0x0 44
+
+
+0
+apple2.input.keyboard.twopiece.t
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: T
+
+MDFNST_STRING
+keyboard 0x0 23
+
+
+0
+apple2.input.keyboard.twopiece.u
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: U
+
+MDFNST_STRING
+keyboard 0x0 24
+
+
+0
+apple2.input.keyboard.twopiece.v
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: V
+
+MDFNST_STRING
+keyboard 0x0 25
+
+
+0
+apple2.input.keyboard.twopiece.w
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: W
+
+MDFNST_STRING
+keyboard 0x0 26
+
+
+0
+apple2.input.keyboard.twopiece.x
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: X
+
+MDFNST_STRING
+keyboard 0x0 27
+
+
+0
+apple2.input.keyboard.twopiece.y
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: Y
+
+MDFNST_STRING
+keyboard 0x0 28
+
+
+0
+apple2.input.keyboard.twopiece.z
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Keyboard, Apple II/II+ 2-piece keyboard: Z
+
+MDFNST_STRING
+keyboard 0x0 29 || keyboard 0x0 81 || keyboard 0x0 90
+
+
+0
+apple2.input.port1
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Gameport 1
+
+MDFNST_ENUM
+joystick
+
+
+5
+none
+None(all game I/O devices disabled)
+Will disable all game I/O devices if selected.
+paddle
+Paddle
+1-axis, 1-button rotary dial paddle.  Only usable on virtual port 2 if it\'s also selected on virtual port 1.
+joystick
+Joystick
+2-axis, 2-button joystick, with 4-state resistance switch.
+gamepad
+Gamepad
+Gamepad with D-pad and 2 buttons.  Seen by emulated software as a 2-axis, 2-button analog joystick(albeit with only axis extremes), but provides more configuration options for the user.
+atari
+Atari Joystick
+Atari joyport digital joystick.  Only usable on virtual port 2 if it\'s also selected on virtual port 1.  Limited compatibility with software.
+apple2.input.port1.atari.button
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Atari Joystick: Button
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.atari.down
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Atari Joystick: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.atari.left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Atari Joystick: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.atari.right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Atari Joystick: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.atari.up
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Atari Joystick: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.gamepad.button1
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Gamepad: Button 1
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.gamepad.button2
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Gamepad: Button 2
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.gamepad.down
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Gamepad: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.gamepad.left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Gamepad: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.gamepad.resistance_select
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Gamepad: Resistance
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.gamepad.resistance_select.defpos
+MDFNSF_SUPPRESS_DOC 
+Default position for switch \"Resistance\".
+Sets the position for the switch to the value specified upon startup and virtual input device change.
+MDFNST_ENUM
+2
+
+
+4
+1
+1 of 4
+
+2
+2 of 4
+
+3
+3 of 4
+
+4
+4 of 4
+
+apple2.input.port1.gamepad.right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Gamepad: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.gamepad.up
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Gamepad: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.joystick.axis_scale
+
+Analog axis scale coefficient for Joystick on Virtual Gameport 1.
+
+MDFNST_FLOAT
+1.00
+1.00
+1.50
+0
+apple2.input.port1.joystick.button1
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Joystick: Button 1
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.joystick.button2
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Joystick: Button 2
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.joystick.resistance_select
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Joystick: Resistance
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.joystick.resistance_select.defpos
+MDFNSF_SUPPRESS_DOC 
+Default position for switch \"Resistance\".
+Sets the position for the switch to the value specified upon startup and virtual input device change.
+MDFNST_ENUM
+2
+
+
+4
+1
+1 of 4
+
+2
+2 of 4
+
+3
+3 of 4
+
+4
+4 of 4
+
+apple2.input.port1.joystick.stick_down
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Joystick: Stick DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.joystick.stick_left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Joystick: Stick LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.joystick.stick_right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Joystick: Stick RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.joystick.stick_up
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Joystick: Stick UP ↑
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.paddle.button
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Paddle: Button
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.paddle.dial_left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Paddle: Dial LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port1.paddle.dial_right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 1, Paddle: Dial RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port2
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Input device for Virtual Gameport 2
+
+MDFNST_ENUM
+paddle
+
+
+2
+paddle
+Paddle
+1-axis, 1-button rotary dial paddle.  Only usable on virtual port 2 if it\'s also selected on virtual port 1.
+atari
+Atari Joystick
+Atari joyport digital joystick.  Only usable on virtual port 2 if it\'s also selected on virtual port 1.  Limited compatibility with software.
+apple2.input.port2.atari.button
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 2, Atari Joystick: Button
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port2.atari.down
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 2, Atari Joystick: DOWN ↓
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port2.atari.left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 2, Atari Joystick: LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port2.atari.right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 2, Atari Joystick: RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port2.atari.up
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 2, Atari Joystick: UP ↑
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port2.paddle.button
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 2, Paddle: Button
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port2.paddle.dial_left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 2, Paddle: Dial LEFT ←
+
+MDFNST_STRING
+
+
+
+0
+apple2.input.port2.paddle.dial_right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+apple2, Virtual Gameport 2, Paddle: Dial RIGHT →
+
+MDFNST_STRING
+
+
+
+0
+apple2.scanlines
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+apple2.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
+MDFNST_ENUM
+none
+
+
+11
+none
+None/Disabled
+
+autoip
+Auto Interpolation
+Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
+autoipsharper
+Sharper Auto Interpolation
+Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
+scale2x
+Scale2x
+
+sabr
+SABR v3.0
+GPU-intensive.
+ipsharper
+Sharper bilinear interpolation.
+
+ipxnoty
+Linear interpolation on X axis only.
+
+ipynotx
+Linear interpolation on Y axis only.
+
+ipxnotysharper
+Sharper version of \"ipxnoty\".
+
+ipynotxsharper
+Sharper version of \"ipynotx\".
+
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+apple2.shader.goat.fprog
+MDFNSF_COMMON_TEMPLATE 
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen.  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
+0
+
+
+0
+apple2.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+apple2.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+apple2.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+apple2.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+apple2.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+apple2.special
+MDFNSF_COMMON_TEMPLATE 
+Enable specified special video scaler.
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+MDFNST_ENUM
+none
+
+
+17
+0
+
+
+none
+None/Disabled
+
+hq2x
+hq2x
+
+hq3x
+hq3x
+
+hq4x
+hq4x
+
+scale2x
+scale2x
+
+scale3x
+scale3x
+
+scale4x
+scale4x
+
+2xsai
+2xSaI
+
+super2xsai
+Super 2xSaI
+
+supereagle
+Super Eagle
+
+nn2x
+Nearest-neighbor 2x
+
+nn3x
+Nearest-neighbor 3x
+
+nn4x
+Nearest-neighbor 4x
+
+nny2x
+Nearest-neighbor 2x, y axis only
+
+nny3x
+Nearest-neighbor 3x, y axis only
+
+nny4x
+Nearest-neighbor 4x, y axis only
+
+apple2.stretch
+MDFNSF_COMMON_TEMPLATE 
+Stretch to fill screen.
+
+MDFNST_ENUM
+aspect_mult2
+
+
+9
+0
+Disabled
+
+off
+
+
+none
+
+
+1
+
+
+full
+Full
+Full-screen stretch, disregarding aspect ratio.
+2
+
+
+aspect
+Aspect Preserve
+Full-screen stretch as far as the aspect ratio(in this sense, the equivalent xscalefs == yscalefs) can be maintained.
+aspect_int
+Aspect Preserve + Integer Scale
+Full-screen stretch, same as \"aspect\" except that the equivalent xscalefs and yscalefs are rounded down to the nearest integer.
+aspect_mult2
+Aspect Preserve + Integer Multiple-of-2 Scale
+Full-screen stretch, same as \"aspect_int\", but rounds down to the nearest multiple of 2.
+apple2.tblur
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Enable video temporal blur(50/50 previous/current frame by default).
+
+MDFNST_BOOL
+0
+
+
+0
+apple2.tblur.accum
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Accumulate color data rather than discarding it.
+
+MDFNST_BOOL
+0
+
+
+0
+apple2.tblur.accum.amount
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Blur amount in accumulation mode, specified in percentage of accumulation buffer to mix with the current frame.
+
+MDFNST_FLOAT
+50
+0
+100
+0
+apple2.video.brightness
+MDFNSF_CAT_VIDEO 
+Video brightness.
+
+MDFNST_FLOAT
+0.0
+-1.0
+1.0
+0
+apple2.video.color_lumafilter
+MDFNSF_CAT_VIDEO 
+Color video luma filter.
+Filters numbered closer to 0 have a stronger lowpass effect.  Negative-numbered filters have ringing.
+MDFNST_INT
+-3
+-3
+3
+0
+apple2.video.color_smooth
+MDFNSF_CAT_VIDEO 
+Enable color video smoothing.
+Reduces vertical stripes without making video blurrier, at the cost of some pixel irregularities.  May make small text illegible in graphics mode.
+MDFNST_BOOL
+0
+
+
+0
+apple2.video.contrast
+MDFNSF_CAT_VIDEO 
+Video contrast.
+
+MDFNST_FLOAT
+0.0
+-1.0
+1.0
+0
+apple2.video.force_mono
+MDFNSF_CAT_VIDEO 
+Force monochrome graphics color.
+Force monochrome graphics if non-zero, with the specified color.
+MDFNST_UINT
+0x000000
+0x000000
+0xFFFFFF
+0
+apple2.video.hue
+MDFNSF_CAT_VIDEO 
+Color video hue/tint.
+
+MDFNST_FLOAT
+0.0
+-1.0
+1.0
+0
+apple2.video.matrix
+MDFNSF_CAT_VIDEO 
+Color decoder matrix.
+The matrixes that correspond to the nominal demodulation angles and gains for various ICs are intended to get colors within the ballpark of what consumer-oriented NTSC TVs would display, and won\'t exactly replicate the colors these ICs would reproduce when fed an Apple II video signal.
+MDFNST_ENUM
+mednafen
+
+
+9
+custom
+Custom
+
+mednafen
+Mednafen
+
+la7620
+Sanyo LA7620-like.
+
+cxa2025as_usa
+Sony CXA2025AS-like, USA setting
+
+cxa2060bs_usa
+Sony CXA2060BS-like, USA setting.
+
+cxa2095s_usa
+Sony CXA2095S-like, USA setting.
+
+cxa2025as_japan
+Sony CXA2025AS-like, Japan setting.
+
+cxa2060bs_japan
+Sony CXA2060BS-like, Japan setting.
+
+cxa2095s_japan
+Sony CXA2095S-like, Japan setting.
+
+apple2.video.matrix.blue.i
+MDFNSF_CAT_VIDEO 
+Custom color decoder matrix; blue, I.
+Only used if \"apple2.video.matrix\" is set to \"custom\".
+MDFNST_FLOAT
+-1.11
+-4.00
+4.00
+0
+apple2.video.matrix.blue.q
+MDFNSF_CAT_VIDEO 
+Custom color decoder matrix; blue, Q.
+Only used if \"apple2.video.matrix\" is set to \"custom\".
+MDFNST_FLOAT
+1.70
+-4.00
+4.00
+0
+apple2.video.matrix.green.i
+MDFNSF_CAT_VIDEO 
+Custom color decoder matrix; green, I.
+Only used if \"apple2.video.matrix\" is set to \"custom\".
+MDFNST_FLOAT
+-0.28
+-4.00
+4.00
+0
+apple2.video.matrix.green.q
+MDFNSF_CAT_VIDEO 
+Custom color decoder matrix; green, Q.
+Only used if \"apple2.video.matrix\" is set to \"custom\".
+MDFNST_FLOAT
+-0.64
+-4.00
+4.00
+0
+apple2.video.matrix.red.i
+MDFNSF_CAT_VIDEO 
+Custom color decoder matrix; red, I.
+Only used if \"apple2.video.matrix\" is set to \"custom\".
+MDFNST_FLOAT
+0.96
+-4.00
+4.00
+0
+apple2.video.matrix.red.q
+MDFNSF_CAT_VIDEO 
+Custom color decoder matrix; red, Q.
+Only used if \"apple2.video.matrix\" is set to \"custom\".
+MDFNST_FLOAT
+0.62
+-4.00
+4.00
+0
+apple2.video.mixed_text_mono
+MDFNSF_CAT_VIDEO 
+Enable hack to treat mixed-mode text as monochrome.
+
+MDFNST_BOOL
+0
+
+
+0
+apple2.video.mono_lumafilter
+MDFNSF_CAT_VIDEO 
+Monochrome video luma filter.
+Filters numbered closer to 0 have a stronger lowpass effect.  Negative-numbered filters have ringing.
+MDFNST_INT
+5
+-2
+7
+0
+apple2.video.saturation
+MDFNSF_CAT_VIDEO 
+Color video saturation.
+
+MDFNST_FLOAT
+0.0
+-1.0
+1.0
+0
+apple2.videoip
+MDFNSF_COMMON_TEMPLATE 
+Enable (bi)linear interpolation.
+
+MDFNST_ENUM
+x
+
+
+4
+0
+Disabled
+
+1
+Bilinear
+
+x
+Linear (X)
+Interpolation only on the X axis.
+y
+Linear (Y)
+Interpolation only on the Y axis.
+apple2.xres
+MDFNSF_COMMON_TEMPLATE 
+Full-screen horizontal resolution.
+A value of \"0\" will cause the current desktop horizontal resolution to be used.
+MDFNST_UINT
+0
+0
+65536
+0
+apple2.xscale
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the X axis in windowed mode.
+
+MDFNST_FLOAT
+4.000000
+0.01
+256
+0
+apple2.xscalefs
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the X axis in fullscreen mode.
+For this setting to have any effect, the \"<system>.stretch\" setting must be set to \"0\".
+MDFNST_FLOAT
+1.000000
+0.01
+256
+0
+apple2.yres
+MDFNSF_COMMON_TEMPLATE 
+Full-screen vertical resolution.
+A value of \"0\" will cause the current desktop vertical resolution to be used.
+MDFNST_UINT
+0
+0
+65536
+0
+apple2.yscale
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the Y axis in windowed mode.
+
+MDFNST_FLOAT
+4.000000
+0.01
+256
+0
+apple2.yscalefs
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the Y axis in fullscreen mode.
+For this setting to have any effect, the \"<system>.stretch\" setting must be set to \"0\".
+MDFNST_FLOAT
+1.000000
+0.01
+256
+0
 autosave
 
 Automatically load/save state on game load/close.
@@ -1012,6 +2341,15 @@ keyboard 0x0 63
 
 
 0
+command.select_drive
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+Select drive
+
+MDFNST_STRING
+keyboard 0x0 63+shift
+
+
+0
 command.slow_forward
 MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
 Slow-forward
@@ -1875,7 +3213,7 @@ MDFNSF_CAT_PATH
 Format string for save games filename.
 WARNING: %x should always be included, otherwise you run the risk of overwriting save data for games that create multiple save data files.\n\nSee fname_format.txt for more information.  Edit at your own risk.
 MDFNST_STRING
-%F.%M%x
+%f.%M%x
 
 
 0
@@ -1884,7 +3222,7 @@ MDFNSF_CAT_PATH
 Format string for save game backups filename.
 WARNING: %x and %p should always be included.\n\nSee fname_format.txt for more information.  Edit at your own risk.
 MDFNST_STRING
-%F.%m%z%p.%x
+%f.%m%z%p.%x
 
 
 0
@@ -34003,6 +35341,33 @@ cs1ram16
 ar4mp
 
 
+ss.cart.auto_default
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Default expansion cart when autodetection fails.
+Expansion cart to emulate when \"ss.cart\" is set to \"auto\", but the game wasn\'t found in the internal database for carts.
+MDFNST_ENUM
+backup
+
+
+6
+none
+None
+
+backup
+Backup Memory(512KiB)
+
+extram1
+1MiB Extended RAM
+
+extram4
+4MiB Extended RAM
+
+cs1ram16
+16MiB RAM mapped in A-bus CS1
+
+ar4mp
+
+
 ss.cart.kof95_path
 MDFNSF_CAT_PATH MDFNSF_EMU_STATE 
 Path to KoF 95 ROM image.
@@ -34050,94 +35415,13 @@ MDFNST_BOOL
 0
 ss.dbg_exe_cdpath
 MDFNSF_CAT_PATH MDFNSF_SUPPRESS_DOC 
-CD image to use with homebrew executable loading.
+CD image to use with bootable cart ROM image loading.
 
 MDFNST_STRING
 
 
 
 0
-ss.dbg_mask
-MDFNSF_SUPPRESS_DOC 
-Debug printf mask.
-
-(nil)
-none
-
-
-24
-0
-
-
-none
-None
-
-all
-All
-
-warning
-Warnings
-
-m68k
-M68K
-
-sh2
-SH-2
-
-sh2_regw
-SH-2 (peripherals) register writes
-
-sh2_cache
-SH-2 cache
-
-scu
-SCU
-
-scu_regw
-SCU register writes
-
-scu_int
-SCU interrupt
-
-scu_dsp
-SCU DSP
-
-smpc
-SMPC
-
-smpc_regw
-SMPC register writes
-
-cdb
-CDB
-
-cdb_regw
-CDB register writes
-
-vdp1
-VDP1
-
-vdp1_regw
-VDP1 register writes
-
-vdp1_vramw
-VDP1 VRAM writes
-
-vdp1_fbw
-VDP1 FB writes
-
-vdp2
-VDP2
-
-vdp2_regw
-VDP2 register writes
-
-scsp
-SCSP
-
-scsp_regw
-SCSP register writes
-
 ss.debugger.disfontsize
 MDFNSF_COMMON_TEMPLATE 
 Disassembly font size.
@@ -72073,6 +73357,30 @@ MDFNST_BOOL
 
 
 0
+vb.input.system.misc.battery
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+vb, System, Misc: Battery Voltage
+
+MDFNST_STRING
+
+
+
+0
+vb.input.system.misc.battery.defpos
+MDFNSF_SUPPRESS_DOC 
+Default position for switch \"Battery Voltage\".
+Sets the position for the switch to the value specified upon startup and virtual input device change.
+MDFNST_ENUM
+normal
+
+
+2
+normal
+Normal
+
+low
+Low
+
 vb.instant_display_hack
 
 Display latency reduction hack.
@@ -72447,7 +73755,7 @@ MDFNST_ENUM
 weave
 
 
-3
+5
 weave
 Good for low-motion video; can be used in conjunction with negative <system>.scanlines setting values.
 
@@ -72456,6 +73764,12 @@ Good for causing a headache.  All glory to Bob.
 
 bob_offset
 Good for high-motion video, but is a bit flickery; reduces the subjective vertical resolution.
+
+blend
+Blend fields together; reduces vertical and temporal resolution.
+
+blend_rg
+Like the \"blend\" deinterlacer, but the blending is done in a manner that respects gamma, reducing unwanted brightness changes, at the cost of increased CPU usage.
 
 video.disable_composition
 

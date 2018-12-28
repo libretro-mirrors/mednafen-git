@@ -26,9 +26,6 @@ CTRL+SHIFT+1 intermediate disconnected state.
 Audit code to ensure proper handling of pointer variables when a constructor or new throws an exception(IE make sure cleanup code doesn't
 delete an uninitialized pointer).
 
-Write StreamSpace(or StreamArchive?) class, write ZIPReader and GZReader, write MappedMemoryStream(derived from MemoryStream), and
-rewrite file.cpp and other code to use these instead of MDFNFILE.
-
 CD emulation/handling:
 	Stricter CUE and TOC sheet parsing.
 
@@ -47,9 +44,6 @@ Internationalization issues:
 	Filesystem character coding vs UTF8 internal encoding vs locale.
 
 	Wrap iconv() in C++ classes.
-
-Documentation:
-	Document systems with a debugger available.
 
 Netplay:
 	Simplify name resolution and eventually remove hackish-sort-preference for IPv4 addresses over IPv6(in 2014 maybe?), split functionality
@@ -116,6 +110,8 @@ PCE_FAST:
 
 
 PCE:
+	More accurate CD seek timing: https://forum.fobby.net/index.php?t=msg&goto=5690
+
 	Test writes to $0806 when channel is enabled and DDA mode disabled, to track down the cause of some bus-conflicty-sounding
 	glitches in an old sound playback demo program I wrote.
 
@@ -268,14 +264,9 @@ undefined symbols, but the symbols that reference them are never referenced them
 
 Add dummy copy constructors to lots of our new classes.
 
-TODO:  Add a "SaveStateMD5" member to the MDFNGI struct, to allow the sharing of battery-backed save files between PCE and PCE_FAST
-without allowing save states to be shared.
-
 TODO: Do locking in drivers/remote.cpp
 
 TODO: Consider locking in MDFNI_printf() due to the indentation global variable.
-
-Alter MD5 hash of games based on the module's name for save states etc.?
 
 Save state timestamp-related variables consistency checks to avoid the possibility of buffer overruns and, less importantly, locking up the emulator
 by use of malicious save states.

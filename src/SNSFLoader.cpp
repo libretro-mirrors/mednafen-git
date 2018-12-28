@@ -22,14 +22,17 @@
 #include <mednafen/mednafen.h>
 #include <mednafen/SNSFLoader.h>
 
+namespace Mednafen
+{
+
 bool SNSFLoader::TestMagic(Stream* fp)
 {
  return PSFLoader::TestMagic(0x23, fp);
 }
 
-SNSFLoader::SNSFLoader(Stream *fp)
+SNSFLoader::SNSFLoader(VirtualFS* vfs, const std::string& dir_path, Stream* fp)
 {
- tags = Load(0x23, 8 + 1024 * 8192, fp);
+ tags = Load(0x23, 8 + 1024 * 8192, vfs, dir_path, fp);
 
  assert(ROM_Data.size() <= 8192 * 1024);
 }
@@ -133,3 +136,4 @@ void SNSFLoader::HandleEXE(Stream* fp, bool ignore_pcsp)
  fp->read(&ROM_Data.map()[header_offset], header_size);
 }
 
+}

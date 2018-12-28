@@ -35,6 +35,9 @@
 
 #include <zlib.h>
 
+namespace Mednafen
+{
+
 static bool SettingsFinalized = false;
 
 typedef struct
@@ -86,8 +89,8 @@ static bool TranslateSettingValueI(const char *value, long long &tlated_value)
 //
 // Note to self: test it with something like: LANG="fr_FR.UTF-8" ./mednafen
 //
-static bool MR_StringToDouble(const char* string_value, double* dvalue) NO_INLINE;	// noinline for *potential* x87 FPU extra precision weirdness in regards to optimizations.
-static bool MR_StringToDouble(const char* string_value, double* dvalue)
+// noinline for *potential* x87 FPU extra precision weirdness in regards to optimizations.
+static NO_INLINE bool MR_StringToDouble(const char* string_value, double* dvalue)
 {
  static char MR_Radix = 0;
  const unsigned slen = strlen(string_value);
@@ -209,6 +212,10 @@ static void ValidateSetting(const char *value, const MDFNSetting *setting)
   {
    throw MDFN_Error(0, _("Setting \"%s\", value \"%s\", is not set to a floating-point(real) number."), setting->name, value);
   }
+
+  if(std::isnan(dvalue))
+   throw MDFN_Error(0, _("Setting \"%s\", value \"%s\", is NaN!"), setting->name, value);
+
   if(setting->minimum)
   {
    double minimum;
@@ -275,7 +282,7 @@ static void ValidateSetting(const char *value, const MDFNSetting *setting)
    bool found = false;
    const MDFNSetting_EnumList* enum_list = setting->enum_list;
 
-   MDFN_trim(mee);
+   MDFN_trim(&mee);
 
    while(enum_list->string)
    {
@@ -411,6 +418,7 @@ bool MDFN_LoadSettings(const std::string& path, bool override)
   size_t unknown_count = 0;
 
   //uint32 st = MDFND_GetTime();
+  mp.read_utf8_bom();
   LoadSettings(&mp, &valid_count, &unknown_count, override);
   //printf("%u\n", MDFND_GetTime() - st);
 
@@ -698,7 +706,7 @@ static std::vector<T> GetMultiEnum(const MDFNCS* setting, const char* value)
   const MDFNSetting_EnumList *enum_list = setting->desc->enum_list;
   bool found = false;
 
-  MDFN_trim(mee);
+  MDFN_trim(&mee);
 
   while(enum_list->string)
   {
@@ -1001,4 +1009,6 @@ void MDFNI_DumpSettingsDef(const char *path)
  }
 
  fp.close();
+}
+
 }

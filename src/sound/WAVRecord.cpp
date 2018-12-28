@@ -22,6 +22,9 @@
 #include <mednafen/mednafen.h>
 #include "WAVRecord.h"
 
+namespace Mednafen
+{
+
 WAVRecord::WAVRecord(const char *path, double SoundRate_arg, uint32 SoundChan_arg) : wavfile(path, FileStream::MODE_WRITE_SAFE)
 {
  Finished = false;
@@ -99,4 +102,6 @@ WAVRecord::~WAVRecord()
  {
   MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
  }
+}
+
 }

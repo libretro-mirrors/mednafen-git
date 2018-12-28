@@ -3,6 +3,9 @@
 
 #ifdef WANT_DEBUGGER
 
+namespace Mednafen
+{
+
 enum
 {
  BPOINT_READ = 1,
@@ -218,6 +221,7 @@ void MDFNDBG_Init(void) MDFN_COLD;
 void MDFNDBG_PostGameLoad(void) MDFN_COLD;
 void MDFNDBG_Kill(void) MDFN_COLD;
 
+}
 #endif
 
 #endif

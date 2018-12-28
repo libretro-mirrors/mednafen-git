@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* ss.cpp - Saturn Core Emulation and Support Functions
-**  Copyright (C) 2015-2017 Mednafen Team
+**  Copyright (C) 2015-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -22,7 +22,7 @@
 // WARNING: Be careful with 32-bit access to 16-bit space, bus locking, etc. in respect to DMA and event updates(and where they can occur).
 
 #include <mednafen/mednafen.h>
-#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/cdrom/CDInterface.h>
 #include <mednafen/general.h>
 #include <mednafen/FileStream.h>
 #include <mednafen/compress/GZFileStream.h>
@@ -99,7 +99,7 @@ static uint32 SH7095_DB;
 #include "debug.inc"
 
 static sha256_digest BIOS_SHA256;	// SHA-256 hash of the currently-loaded BIOS; used for save state sanity checks.
-static std::vector<CDIF*> *cdifs = NULL;
+static std::vector<CDInterface*> *cdifs = NULL;
 static std::bitset<1U << (27 - SH7095_EXT_MAP_GRAN_BITS)> FMIsWriteable;
 
 template<typename T>
@@ -970,7 +970,7 @@ static INLINE void CalcGameID(uint8* id_out16, uint8* fd_id_out16, char* sgid)
 
   for(unsigned i = 0; i < 512; i++)
   {
-   if(c->ReadSector(&buf[0], i, 1) >= 0x1)
+   if(c->ReadSectors(&buf[0], i, 1) >= 0x1)
    {
     if(i == 0)
     {
@@ -1034,7 +1034,7 @@ static INLINE bool DetectRegion(unsigned* const region)
 
  for(auto& c : *cdifs)
  {
-  if(c->ReadSector(&buf[0], 0, 16) != 0x1)
+  if(c->ReadSectors(&buf[0], 0, 16) != 0x1)
    continue;
 
   if(!IsSaturnDisc(&buf[0]))
@@ -1133,8 +1133,10 @@ static MDFN_COLD bool DetectRegionByFN(const std::string& fn, unsigned* const re
  return false;
 }
 
-static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned cart_type, const unsigned smpc_area)
+static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned cart_type, const unsigned smpc_area, Stream* dbg_cart_rom_stream)
 {
+ const char* cart_rom_path_sname = nullptr;
+
 #ifdef MDFN_SS_DEV_BUILD
  ss_dbg_mask = SS_DBG_ERROR;
  {
@@ -1175,17 +1177,19 @@ static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned
   {
    const unsigned type;
    const char* name;
+   const char* rom_path_sname;
   } CartNames[] =
   {
-   { CART_NONE, _("None") },
-   { CART_BACKUP_MEM, _("Backup Memory") },
-   { CART_EXTRAM_1M, _("1MiB Extended RAM") },
-   { CART_EXTRAM_4M, _("4MiB Extended RAM") },
-   { CART_KOF95, _("King of Fighters '95 ROM") },
-   { CART_ULTRAMAN, _("Ultraman ROM") },
-   { CART_CS1RAM_16M, _("16MiB CS1 RAM") },
-   { CART_NLMODEM, _("Netlink Modem") },
-   { CART_MDFN_DEBUG, _("Mednafen Debug") }, 
+   { CART_NONE, _("None"), nullptr },
+   { CART_BACKUP_MEM, _("Backup Memory"), nullptr },
+   { CART_EXTRAM_1M, _("1MiB Extended RAM"), nullptr },
+   { CART_EXTRAM_4M, _("4MiB Extended RAM"), nullptr },
+   { CART_KOF95, _("King of Fighters '95 ROM"), "ss.cart.kof95_path" },
+   { CART_ULTRAMAN, _("Ultraman ROM"), "ss.cart.ultraman_path" },
+   { CART_AR4MP, _("Action Replay 4M Plus"), "ss.cart.satar4mp_path" },
+   { CART_CS1RAM_16M, _("16MiB CS1 RAM"), nullptr },
+   { CART_NLMODEM, _("Netlink Modem"), nullptr },
+   { CART_MDFN_DEBUG, _("Mednafen Debug"), nullptr }, 
   };
   const char* cn = _("Unknown");
 
@@ -1194,6 +1198,7 @@ static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned
    if(cne.type == cart_type)
    {
     cn = cne.name;
+    cart_rom_path_sname = cne.rom_path_sname;
     break;
    }
   }
@@ -1222,7 +1227,18 @@ static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned
  MDFNMP_RegSearchable(0x00200000, sizeof(WorkRAML));
  MDFNMP_RegSearchable(0x06000000, sizeof(WorkRAMH));
 
- CART_Init(cart_type);
+ {
+  std::unique_ptr<FileStream> cart_rom_stream;
+
+  if(cart_rom_path_sname)
+  {
+   const std::string cart_rom_path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(cart_rom_path_sname));
+
+   cart_rom_stream.reset(new FileStream(cart_rom_path, FileStream::MODE_READ));
+  }
+
+  CART_Init(cart_type, cart_rom_stream ? cart_rom_stream.get() : dbg_cart_rom_stream);
+ }
  //
  //
  //
@@ -1274,7 +1290,7 @@ static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned
    std::string fnbase, fnext;
    std::string fn;
 
-   MDFN_GetFilePathComponents(biospath, nullptr, &fnbase, &fnext);
+   NVFS.get_file_path_components(biospath, nullptr, &fnbase, &fnext);
    fn = fnbase + fnext;
 
    // Discourage people from renaming files instead of changing settings.
@@ -1375,13 +1391,15 @@ static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned
  SS_Reset(true);
 }
 
-#ifdef MDFN_SS_DEV_BUILD
-static MDFN_COLD bool TestMagic(MDFNFILE* fp)
+static MDFN_COLD bool TestMagic(GameFile* gf)
 {
+ if(gf->ext == "ss")
+  return true;
+
  return false;
 }
 
-static MDFN_COLD void Load(MDFNFILE* fp)
+static MDFN_COLD void Load(GameFile* gf)
 {
 #if 0
  // cat regiondb.inc | sort | uniq --all-repeated=separate -w 102 
@@ -1389,15 +1407,15 @@ static MDFN_COLD void Load(MDFNFILE* fp)
   FileStream rdbfp("/tmp/regiondb.inc", FileStream::MODE_WRITE);
   Stream* s = fp->stream();
   std::string linebuf;
-  static std::vector<CDIF *> CDInterfaces;
+  static std::vector<CDInterface*> CDInterfaces;
 
   cdifs = &CDInterfaces;
 
   while(s->get_line(linebuf) >= 0)
   {
    static uint8 sbuf[2048 * 16];
-   CDIF* iface = CDIF_Open(linebuf, false);
-   int m = iface->ReadSector(sbuf, 0, 16);
+   CDInterface* iface = CDInterface::Open(linebuf, false);
+   int m = iface->ReadSectors(sbuf, 0, 16);
    std::string fb;
 
    assert(m == 0x1); 
@@ -1408,7 +1426,7 @@ static MDFN_COLD void Load(MDFNFILE* fp)
    const char* regstr;
    unsigned region = ~0U;
 
-   MDFN_GetFilePathComponents(linebuf, nullptr, &fb);
+   NVFS.get_file_path_components(linebuf, nullptr, &fb);
 
    if(!DetectRegionByFN(fb, &region))
     abort();
@@ -1443,7 +1461,6 @@ static MDFN_COLD void Load(MDFNFILE* fp)
 
  return;
 #endif
- //uint8 elf_header[
 
  cdifs = NULL;
 
@@ -1470,31 +1487,13 @@ static MDFN_COLD void Load(MDFNFILE* fp)
    MDFNGameInfo->RMD->MediaTypes.push_back(RMD_MediaType({"CD"}));
    MDFNGameInfo->RMD->Media.push_back(RMD_Media({"Test CD", 0}));
 
-   static std::vector<CDIF *> CDInterfaces;
+   static std::vector<CDInterface*> CDInterfaces;
    CDInterfaces.clear();
-   CDInterfaces.push_back(CDIF_Open(MDFN_GetSettingS("ss.dbg_exe_cdpath").c_str(), false));
+   CDInterfaces.push_back(CDInterface::Open(&NVFS, MDFN_GetSettingS("ss.dbg_exe_cdpath"), false));
    cdifs = &CDInterfaces;
   }
 
-  InitCommon(CPUCACHE_EMUMODE_DATA, CART_MDFN_DEBUG, MDFN_GetSettingUI("ss.region_default"));
-
-  // 0x25FE00C4 = 0x1;
-  for(unsigned i = 0; i < fp->size(); i += 2)
-  {
-   uint8 tmp[2];
-
-   fp->read(tmp, 2);
-
-   *(uint16*)((uint8*)WorkRAMH + 0x4000 + i) = (tmp[0] << 8) | (tmp[1] << 0);
-  }
-  BIOSROM[0] = 0x0600;
-  BIOSROM[1] = 0x4000; //0x4130; //0x4060;
-
-  BIOSROM[2] = 0x0600;
-  BIOSROM[3] = 0x4000; //0x4130; //0x4060;
-
-  BIOSROM[4] = 0xDEAD;
-  BIOSROM[5] = 0xBEEF;
+  InitCommon(CPUCACHE_EMUMODE_DATA, CART_MDFN_DEBUG, MDFN_GetSettingUI("ss.region_default"), gf->stream);
  }
  catch(...)
  {
@@ -1502,13 +1501,12 @@ static MDFN_COLD void Load(MDFNFILE* fp)
   throw;
  }
 }
-#endif
 
-static MDFN_COLD bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
+static MDFN_COLD bool TestMagicCD(std::vector<CDInterface*> *CDInterfaces)
 {
  std::unique_ptr<uint8[]> buf(new uint8[2048 * 16]);
 
- if((*CDInterfaces)[0]->ReadSector(&buf[0], 0, 16) != 0x1)
+ if((*CDInterfaces)[0]->ReadSectors(&buf[0], 0, 16) != 0x1)
   return false;
 
  return IsSaturnDisc(&buf[0]);
@@ -1580,7 +1578,7 @@ static MDFN_COLD void DiscSanityChecks(void)
  }
 }
 
-static MDFN_COLD void LoadCD(std::vector<CDIF *>* CDInterfaces)
+static MDFN_COLD void LoadCD(std::vector<CDInterface*>* CDInterfaces)
 {
  try
  {
@@ -1597,7 +1595,7 @@ static MDFN_COLD void LoadCD(std::vector<CDIF *>* CDInterfaces)
   MDFN_printf("SGID: %s\n", sgid);
 
   region = region_default;
-  cart_type = CART_BACKUP_MEM;
+  cart_type = MDFN_GetSettingI("ss.cart.auto_default");
   cpucache_emumode = CPUCACHE_EMUMODE_DATA;
 
   DetectRegion(&region);
@@ -1616,7 +1614,7 @@ static MDFN_COLD void LoadCD(std::vector<CDIF *>* CDInterfaces)
 
    // TODO: auth ID calc
 
-  InitCommon(cpucache_emumode, cart_type, region);
+  InitCommon(cpucache_emumode, cart_type, region, nullptr);
  }
  catch(...)
  {
@@ -1901,7 +1899,7 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
  }
 }
 
-static MDFN_COLD bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
+static MDFN_COLD void SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
 {
  const RMD_Layout* rmd = EmulatedSS.RMD;
  const RMD_Drive* rd = &rmd->Drives[drive_idx];
@@ -1913,8 +1911,6 @@ static MDFN_COLD bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_
   CDB_SetDisc(false, (*cdifs)[media_idx]);
  else
   CDB_SetDisc(rs->MediaCanChange, NULL);
-
- return(true);
 }
 
 static void DoSimpleCommand(int cmd)
@@ -1928,9 +1924,9 @@ static void DoSimpleCommand(int cmd)
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".elf", gettext_noop("SS Homebrew ELF Executable") },
+ { ".ss", 0, gettext_noop("Sega Saturn Debug Cart ROM") },
 
- { NULL, NULL }
+ { NULL, 0, NULL }
 };
 
 static const MDFNSetting_EnumList Region_List[] =
@@ -1967,16 +1963,27 @@ static const MDFNSetting_EnumList RTCLang_List[] =
  { NULL, 0 },
 };
 
+#define CART_LIST_BASE											\
+ { "none", CART_NONE, gettext_noop("None") },								\
+ { "backup", CART_BACKUP_MEM, gettext_noop("Backup Memory(512KiB)") },					\
+ { "extram1", CART_EXTRAM_1M, gettext_noop("1MiB Extended RAM") },					\
+ { "extram4", CART_EXTRAM_4M, gettext_noop("4MiB Extended RAM") },					\
+ { "cs1ram16", CART_CS1RAM_16M, gettext_noop("16MiB RAM mapped in A-bus CS1") },			\
+ { "ar4mp", CART_AR4MP, NULL }, /* Undocumented, unfinished. gettext_noop("Action Replay 4M Plus") },*/	\
+ /* { "nlmodem", CART_NLMODEM, gettext_noop("NetLink Modem") }, */
+
 static const MDFNSetting_EnumList Cart_List[] =
 {
  { "auto", CART__RESERVED, gettext_noop("Automatic") },
- { "none", CART_NONE, gettext_noop("None") },
- { "backup", CART_BACKUP_MEM, gettext_noop("Backup Memory(512KiB)") },
- { "extram1", CART_EXTRAM_1M, gettext_noop("1MiB Extended RAM") },
- { "extram4", CART_EXTRAM_4M, gettext_noop("4MiB Extended RAM") },
- { "cs1ram16", CART_CS1RAM_16M, gettext_noop("16MiB RAM mapped in A-bus CS1") },
- { "ar4mp", CART_AR4MP, NULL }, // Undocumented, unfinished. gettext_noop("Action Replay 4M Plus") },
-// { "nlmodem", CART_NLMODEM, gettext_noop("NetLink Modem") },
+
+ CART_LIST_BASE
+
+ { NULL, 0 },
+};
+
+static const MDFNSetting_EnumList CartAD_List[] =
+{
+ CART_LIST_BASE
 
  { NULL, 0 },
 };
@@ -2055,6 +2062,8 @@ static const MDFNSetting SSSettings[] =
  { "ss.smpc.autortc.lang", MDFNSF_NOFLAGS, gettext_noop("BIOS language."), gettext_noop("Also affects language used in some games(e.g. the European release of \"Panzer Dragoon\")."), MDFNST_ENUM, "english", NULL, NULL, NULL, NULL, RTCLang_List },
 
  { "ss.cart", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Expansion cart."), NULL, MDFNST_ENUM, "auto", NULL, NULL, NULL, NULL, Cart_List },
+ { "ss.cart.auto_default", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Default expansion cart when autodetection fails."), gettext_noop("Expansion cart to emulate when \"ss.cart\" is set to \"auto\", but the game wasn't found in the internal database for carts."), MDFNST_ENUM, "backup", NULL, NULL, NULL, NULL, CartAD_List },
+
  { "ss.cart.kof95_path", MDFNSF_EMU_STATE | MDFNSF_CAT_PATH, gettext_noop("Path to KoF 95 ROM image."), NULL, MDFNST_STRING, "mpr-18811-mx.ic1" },
  { "ss.cart.ultraman_path", MDFNSF_EMU_STATE | MDFNSF_CAT_PATH, gettext_noop("Path to Ultraman ROM image."), NULL, MDFNST_STRING, "mpr-19367-mx.ic1" },
  { "ss.cart.satar4mp_path", MDFNSF_EMU_STATE | MDFNSF_CAT_PATH | MDFNSF_SUPPRESS_DOC | MDFNSF_NONPERSISTENT, gettext_noop("Path to Action Replay 4M Plus firmware image."), NULL, MDFNST_STRING, "satar4mp.bin" },
@@ -2080,8 +2089,8 @@ static const MDFNSetting SSSettings[] =
 
 #ifdef MDFN_SS_DEV_BUILD
  { "ss.dbg_mask", MDFNSF_SUPPRESS_DOC, gettext_noop("Debug printf mask."), NULL, MDFNST_MULTI_ENUM, "none", NULL, NULL, NULL, NULL, DBGMask_List },
- { "ss.dbg_exe_cdpath", MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_PATH, gettext_noop("CD image to use with homebrew executable loading."), NULL, MDFNST_STRING, "" },
 #endif
+ { "ss.dbg_exe_cdpath", MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_PATH, gettext_noop("CD image to use with bootable cart ROM image loading."), NULL, MDFNST_STRING, "" },
 
  { NULL },
 };
@@ -2115,13 +2124,8 @@ MDFNGI EmulatedSS =
  NULL,
  #endif
  SMPC_PortInfo,
-#ifdef MDFN_SS_DEV_BUILD
  Load,
  TestMagic,
-#else
- NULL,
- NULL,
-#endif
  LoadCD,
  TestMagicCD,
  CloseGame,

@@ -271,37 +271,71 @@ class SPC700 final
 
  void Instr_SLEEP(void) MDFN_COLD;
  void Instr_STOP(void) MDFN_COLD;
+
+#ifdef MDFN_SNES_FAUST_SPC700_IPL_HLE
+ void IPL_HLE(void);
+#endif
 };
 
-static void (* MDFN_FASTCALL *SPC700_WriteMap[256])(uint16, uint8);
-static uint8 (* MDFN_FASTCALL *SPC700_ReadMap[256])(uint16);
+static void (MDFN_FASTCALL **SPC700_WriteMap[256])(uint16, uint8);
+static uint8 (MDFN_FASTCALL **SPC700_ReadMap[256])(uint16);
 static void (*SPC700_IOHandler)(void);
 
 //static uint8 bazoom;
+
+#ifdef MDFN_SNES_FAUST_SPC700_IPL_EFFECTS_ANALYZE
+static int32 time_counter = 0;
+#endif
 
 INLINE uint8 SPC700::ReadMem(uint16 addr)
 {
  //if(addr >= 0xF4 && addr <= 0xF7)
  // fprintf(stderr, "%02x\n", bazoom);
-
  cycle_counter--;
+
+#ifdef MDFN_SNES_FAUST_SPC700_IPL_EFFECTS_ANALYZE
+ uint8 ret = SPC700_ReadMap[addr >> 8][(uint8)addr](addr);
+ if(addr < 0xFFC0)
+ {
+  printf("Read: %04x %02x --- %d\n", addr, ret, time_counter);
+  time_counter = 0;
+ }
+ time_counter++;
+
+ return ret;
+#else
  return SPC700_ReadMap[addr >> 8][(uint8)addr](addr);
+#endif
 }
 
 INLINE void SPC700::WriteMem(uint16 addr, uint8 value)
 {
+#ifdef MDFN_SNES_FAUST_SPC700_IPL_EFFECTS_ANALYZE
+ time_counter++;
+ printf("Write: %04x %02x --- %d\n", addr, value, time_counter);
+ time_counter = 0;
+#endif
+
  cycle_counter--;
  SPC700_WriteMap[addr >> 8][(uint8)addr](addr, value);
 }
 
 INLINE uint8 SPC700::ReadAtPC(void)
 {
+#ifdef MDFN_SNES_FAUST_SPC700_IPL_EFFECTS_ANALYZE
+ time_counter++;
+#endif
+
  cycle_counter--;
  return SPC700_ReadMap[PC >> 8][(uint8)PC](PC);
 }
 
 INLINE void SPC700::IO(void)
 {
+#ifdef MDFN_SNES_FAUST_SPC700_IPL_EFFECTS_ANALYZE
+ time_counter++;
+#endif
+
  cycle_counter--;
  SPC700_IOHandler();
 }
@@ -1386,7 +1420,7 @@ INLINE void SPC700::Instr_SLEEP(void)
 
 INLINE void SPC700::Instr_STOP(void)
 {
- fprintf(stderr, "[SPC700] STOP\n");
+ //fprintf(stderr, "[SPC700] STOP @ PC=%04x\n", PC);
  Halted = true;
 }
 
@@ -1481,7 +1515,20 @@ INLINE void SPC700::RunReal(void)
   HaltedBalted:
 
   while(cycle_counter > 0)
+  {
+#ifdef MDFN_SNES_FAUST_SPC700_IPL_HLE
+   if(PC >= 0xFFC0)
+   {
+    IPL_HLE();
+    if(!Halted)
+     goto HLEExit;
+   }
+   else
+    IO();
+#else
    IO();
+#endif
+  }
 
   return;
  }
@@ -1493,8 +1540,29 @@ INLINE void SPC700::RunReal(void)
   goto SkipOpcode;
  } 
 
+#ifdef MDFN_SNES_FAUST_SPC700_IPL_HLE
+ HLEExit:;
+#endif
  for(;;)
  {
+#ifdef MDFN_SNES_FAUST_SPC700_IPL_EFFECTS_ANALYZE
+ {
+  static uint16 old_PC = 0xFFFF;
+  if(old_PC >= 0xFFC0 && PC < 0xFFC0)
+  {
+   printf("Branchout: PC=0x%04x A=%02x X=%02x Y=%02x SP=%02x PSW=%02x --- %02x %02x %02x %02x --- %02x %02x %02x %02x --- %d\n", PC, A, X, Y, SP, PSW, IOFromSPC700[0], IOFromSPC700[1], IOFromSPC700[2], IOFromSPC700[3], IOToSPC700[0], IOToSPC700[1], IOToSPC700[2], IOToSPC700[3], time_counter);
+   {
+    FileStream fp("spc700.ram", FileStream::MODE_WRITE);
+    fp.write(APURAM, sizeof(APURAM));
+   }
+   time_counter = 0;
+   old_PC = PC;
+   fflush(stdout);
+   abort();
+  }
+ }
+#endif
+
   opcode = ReadAtPC();
   //bazoom = opcode;
   //fprintf(stderr, "Instr: %04x, %02x --- A=0x%02x, X=0x%02x, Y=0x%02x, PSW=0x%02x, SP=0x%02x\n", PC, opcode, A, X, Y, PSW, SP);

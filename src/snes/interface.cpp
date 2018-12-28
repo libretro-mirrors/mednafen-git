@@ -522,18 +522,18 @@ static void SaveLoadMemory(bool load)
 }
 
 
-static bool TestMagic(MDFNFILE *fp)
+static bool TestMagic(GameFile* gf)
 {
- if(PSFLoader::TestMagic(0x23, fp->stream()))
-  return(true);
+ if(PSFLoader::TestMagic(0x23, gf->stream))
+  return true;
 
- if(fp->ext != "smc" && fp->ext != "swc" && fp->ext != "sfc" && fp->ext != "fig" &&
-        fp->ext != "bs" && fp->ext != "st")
+ if(gf->ext != "smc" && gf->ext != "swc" && gf->ext != "sfc" && gf->ext != "fig" &&
+        gf->ext != "bs" && gf->ext != "st")
  {
-  return(false);
+  return false;
  }
 
- return(true);
+ return true;
 }
 
 static void SetupMisc(bool PAL)
@@ -566,7 +566,7 @@ static void SetupMisc(bool PAL)
  SoundLastRate = 0;
 }
 
-static void LoadSNSF(MDFNFILE *fp)
+static void LoadSNSF(GameFile* gf)
 {
  bool PAL = false;
 
@@ -577,7 +577,7 @@ static void LoadSNSF(MDFNFILE *fp)
 
  std::vector<std::string> SongNames;
 
- snsf_loader = new SNSFLoader(fp->stream());
+ snsf_loader = new SNSFLoader(gf->vfs, gf->dir, gf->stream);
  {
   uint8 *export_ptr;
 
@@ -664,7 +664,7 @@ static void CheatMap(bool uics, uint8 bank_lo, uint8 bank_hi, uint16 addr_lo, ui
  }
 }
 
-static void Load(MDFNFILE *fp)
+static void Load(GameFile* gf)
 {
  bool PAL = false;
 
@@ -672,9 +672,9 @@ static void Load(MDFNFILE *fp)
 
  try
  {
-  if(PSFLoader::TestMagic(0x23, fp->stream()))
+  if(PSFLoader::TestMagic(0x23, gf->stream))
   {
-   LoadSNSF(fp);
+   LoadSNSF(gf);
    return;
   }
 
@@ -684,7 +684,7 @@ static void Load(MDFNFILE *fp)
   // from crashing the bsnes cart loading code.
   {
    static const uint64 max_rom_size = 8192 * 1024;
-   const uint64 raw_size = fp->size();
+   const uint64 raw_size = gf->stream->size();
    const unsigned header_adjust = (((raw_size & 0x7FFF) == 512) ? 512 : 0);
    const uint64 size = raw_size - header_adjust;
    md5_context md5;
@@ -696,13 +696,13 @@ static void Load(MDFNFILE *fp)
    if(header_adjust)
    {
     uint8 header_tmp[512];
-    fp->read(header_tmp, 512);
+    gf->stream->read(header_tmp, 512);
     md5.update(header_tmp, 512);	// For Mednafen backwards compat
    }
 
    std::unique_ptr<uint8[]> export_ptr(new uint8[max_rom_size]);
    memset(export_ptr.get(), 0x00, max_rom_size);
-   fp->read(export_ptr.get(), size);
+   gf->stream->read(export_ptr.get(), size);
 
    md5.update(export_ptr.get(), size);
    md5.finish(MDFNGameInfo->MD5);
@@ -1345,15 +1345,15 @@ static const CheatInfoStruct CheatInfo =
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".smc", "Super Magicom ROM Image" },
- { ".swc", "Super Wildcard ROM Image" },
- { ".sfc", "Cartridge ROM Image" },
- { ".fig", "Cartridge ROM Image" },
+ { ".smc", 0, "Super Magicom ROM Image" },
+ { ".swc", 0, "Super Wildcard ROM Image" },
+ { ".sfc", 0, "Cartridge ROM Image" },
+ { ".fig", -10, "Cartridge ROM Image" },
 
- { ".bs", "BS-X EEPROM Image" },
- { ".st", "Sufami Turbo Cartridge ROM Image" },
+ { ".bs", -10, "BS-X EEPROM Image" },
+ { ".st", -10, "Sufami Turbo Cartridge ROM Image" },
 
- { NULL, NULL }
+ { NULL, 0, NULL }
 };
 
 MDFNGI EmulatedSNES =

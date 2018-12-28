@@ -41,7 +41,7 @@ static std::string MakeProgIpolate(unsigned ipolate_axis)	// X & 1, Y & 2, sharp
 {
  std::string ret;
 
- ret = std::string("\n\
+ ret = "\n\
 	uniform sampler2D Tex0;\n\
 	uniform vec2 TexSize;\n\
 	uniform vec2 TexSizeInverse;\n\
@@ -50,55 +50,55 @@ static std::string MakeProgIpolate(unsigned ipolate_axis)	// X & 1, Y & 2, sharp
 	void main(void)\n\
 	{\n\
 	        vec2 texelIndex = vec2(gl_TexCoord[0]) * TexSize - float(0.5);\n\
-	");
+	";
 
  if(ipolate_axis & 3)
  {
-  ret += std::string("vec2 texelInt = floor(texelIndex);\n");
-  ret += std::string("vec2 texelFract = texelIndex - texelInt - float(0.5);\n");
+  ret += "vec2 texelInt = floor(texelIndex);\n";
+  ret += "vec2 texelFract = texelIndex - texelInt - float(0.5);\n";
 
   switch(ipolate_axis & 3)
   {
    case 1:
 	if(ipolate_axis & 4)
-    	 ret += std::string("texelFract.s = clamp(texelFract.s * XSharp, -0.5, 0.5) + float(0.5);\n");
+    	 ret += "texelFract.s = clamp(texelFract.s * XSharp, -0.5, 0.5) + float(0.5);\n";
 	else
-	 ret += std::string("texelFract.s = texelFract.s + float(0.5);\n");
+	 ret += "texelFract.s = texelFract.s + float(0.5);\n";
 
-	ret += std::string("texelFract.t = floor(texelFract.t + float(1.0));\n");
+	ret += "texelFract.t = floor(texelFract.t + float(1.0));\n";
 	break;
 
    case 2:
-	ret += std::string("texelFract.s = floor(texelFract.s + float(1.0));\n");
+	ret += "texelFract.s = floor(texelFract.s + float(1.0));\n";
 
 	if(ipolate_axis & 4)
-    	 ret += std::string("texelFract.t = clamp(texelFract.t * YSharp, -0.5, 0.5) + float(0.5);\n");
+    	 ret += "texelFract.t = clamp(texelFract.t * YSharp, -0.5, 0.5) + float(0.5);\n";
 	else
-    	 ret += std::string("texelFract.t = texelFract.t + float(0.5);\n");
+    	 ret += "texelFract.t = texelFract.t + float(0.5);\n";
 	break;
 
    case 3:
 	if(ipolate_axis & 4)
 	{
-    	 ret += std::string("texelFract.s = clamp(texelFract.s * XSharp, -0.5, 0.5) + float(0.5);\n");
-    	 ret += std::string("texelFract.t = clamp(texelFract.t * YSharp, -0.5, 0.5) + float(0.5);\n");
+    	 ret += "texelFract.s = clamp(texelFract.s * XSharp, -0.5, 0.5) + float(0.5);\n";
+    	 ret += "texelFract.t = clamp(texelFract.t * YSharp, -0.5, 0.5) + float(0.5);\n";
 	}
 	else
 	{
-	 ret += std::string("texelFract = texelFract + float(0.5);\n");
+	 ret += "texelFract = texelFract + float(0.5);\n";
 	}
 	break;
   }
-  ret += std::string("texelIndex = texelFract + texelInt;\n");
+  ret += "texelIndex = texelFract + texelInt;\n";
  }
  else
-  ret += std::string("texelIndex = floor(texelIndex + float(0.5));\n");
+  ret += "texelIndex = floor(texelIndex + float(0.5));\n";
 
- ret += std::string("texelIndex += float(0.5);\n");
- ret += std::string("texelIndex *= TexSizeInverse;\n");
- ret += std::string("gl_FragColor = vec4( texture2D(Tex0, texelIndex));\n");
+ ret += "texelIndex += float(0.5);\n";
+ ret += "texelIndex *= TexSizeInverse;\n";
+ ret += "gl_FragColor = vec4( texture2D(Tex0, texelIndex));\n";
 
- ret += std::string("}");
+ ret += "}";
 
  return ret;
 }

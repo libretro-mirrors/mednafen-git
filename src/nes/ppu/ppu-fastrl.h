@@ -29,7 +29,7 @@ static void FastRefreshLine(int firsttile, uint8 *target)
         int X1;
 	int XOC;
 
-        register uint8 *P;
+        uint8 *P;
         static int norecurse=0; /*  Prevent recursion:
                                     PPU_hook() functions can call
                                     mirroring/chr bank switching functions,

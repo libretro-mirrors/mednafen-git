@@ -41,10 +41,10 @@ cause emulation glitches(and cause confusion if you ever distribute or otherwise
 The filenames listed below are per default psx.bios_* settings.
 </p>
 <table border>
- <tr><th>Filename:</th><th>Purpose:</th><th>Hash:</tr>
- <tr><td>scph5500.bin</td><td><b>SCPH-5500</b>/v<b>3.0J</b> BIOS image.<br>Required for Japan-region games.</td><td><b><u>MD5:</u></b> 8dd7d5296a650fac7319bce665a6a53c<br><b><u>SHA256:</u></b> 9c0421858e217805f4abe18698afea8d5aa36ff0727eb8484944e00eb5e7eadb</td></tr>
- <tr><td>scph5501.bin</td><td><b>SCPH-5501</b>/v<b>3.0A</b> BIOS image.<br>Required for North America/US-region games.<br>Reportedly the same as the SCPH-7003 BIOS image.</td><td><b><u>MD5:</u></b> 490f666e1afb15b7362b406ed1cea246<br><b><u>SHA256:</u></b> 11052b6499e466bbf0a709b1f9cb6834a9418e66680387912451e971cf8a1fef</td></tr>
- <tr><td>scph5502.bin</td><td><b>SCPH-5502</b>/v<b>3.0E</b> BIOS image.<br>Required for Europe-region games.</td><td><b><u>MD5:</b></u> 32736f17079d0b2b7024407c39bd3050<br><b><u>SHA256:</u></b> 1faaa18fa820a0225e488d9f086296b8e6c46df739666093987ff7d8fd352c09</td></tr>
+ <tr><th>Filename:</th><th>Purpose:</th><th>SHA-256 Hash:</tr>
+ <tr><td>scph5500.bin</td><td><b>SCPH-5500</b>/v<b>3.0J</b> BIOS image.<br>Required for Japan-region games.</td><td>9c0421858e217805f4abe18698afea8d5aa36ff0727eb8484944e00eb5e7eadb</td></tr>
+ <tr><td>scph5501.bin</td><td><b>SCPH-5501</b>/v<b>3.0A</b> BIOS image.<br>Required for North America/US-region games.<br>Reportedly the same as the SCPH-7003 BIOS image.</td><td>11052b6499e466bbf0a709b1f9cb6834a9418e66680387912451e971cf8a1fef</td></tr>
+ <tr><td>scph5502.bin</td><td><b>SCPH-5502</b>/v<b>3.0E</b> BIOS image.<br>Required for Europe-region games.</td><td>1faaa18fa820a0225e488d9f086296b8e6c46df739666093987ff7d8fd352c09</td></tr>
 </table>
 <?php EndSection(); ?>
 

@@ -24,6 +24,9 @@
 
 #include <mednafen/mednafen.h>
 
+namespace Mednafen
+{
+
 class M68K
 {
  public:
@@ -493,4 +496,5 @@ static uint8 TAS_Callback(uint8 data)
  }
 };
 
+}
 #endif

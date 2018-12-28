@@ -3,6 +3,9 @@
 
 #include <map>
 
+namespace Mednafen
+{
+
 class Stream;
 class CDAFReader;
 
@@ -63,7 +66,7 @@ class CDAccess_Image : public CDAccess
 {
  public:
 
- CDAccess_Image(const std::string& path, bool image_memcache);
+ CDAccess_Image(VirtualFS* vfs, const std::string& path, bool image_memcache);
  virtual ~CDAccess_Image();
 
  virtual void Read_Raw_Sector(uint8 *buf, int32 lba);
@@ -86,17 +89,17 @@ class CDAccess_Image : public CDAccess
 
  std::string base_dir;
 
- void ImageOpen(const std::string& path, bool image_memcache);
- void LoadSBI(const std::string& sbi_path);
+ void ImageOpen(VirtualFS* vfs, const std::string& path, bool image_memcache);
+ void LoadSBI(VirtualFS* vfs, const std::string& sbi_path);
  void GenerateTOC(void);
  void Cleanup(void);
 
  // MakeSubPQ will OR the simulated P and Q subchannel data into SubPWBuf.
  int32 MakeSubPQ(int32 lba, uint8 *SubPWBuf) const;
 
- void ParseTOCFileLineInfo(CDRFILE_TRACK_INFO *track, const int tracknum, const std::string &filename, const char *binoffset, const char *msfoffset, const char *length, bool image_memcache, std::map<std::string, Stream*> &toc_streamcache);
+ void ParseTOCFileLineInfo(VirtualFS* vfs, CDRFILE_TRACK_INFO *track, const int tracknum, const std::string &filename, const char *binoffset, const char *msfoffset, const char *length, bool image_memcache, std::map<std::string, Stream*> &toc_streamcache);
  uint32 GetSectorCount(CDRFILE_TRACK_INFO *track);
 };
 
-
+}
 #endif

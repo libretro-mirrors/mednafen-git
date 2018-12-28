@@ -22,14 +22,17 @@
 #include <mednafen/mednafen.h>
 #include <mednafen/SSFLoader.h>
 
+namespace Mednafen
+{
+
 bool SSFLoader::TestMagic(Stream* fp)
 {
  return PSFLoader::TestMagic(0x11, fp);
 }
 
-SSFLoader::SSFLoader(Stream *fp)
+SSFLoader::SSFLoader(VirtualFS* vfs, const std::string& dir_path, Stream* fp)
 {
- tags = Load(0x11, 4 + 524288, fp);
+ tags = Load(0x11, 4 + 524288, vfs, dir_path, fp);
  assert(RAM_Data.size() <= 524288);
 }
 
@@ -58,3 +61,4 @@ void SSFLoader::HandleEXE(Stream* fp, bool ignore_pcsp)
  fp->read(&RAM_Data.map()[load_addr], load_size, false);
 }
 
+}

@@ -2,7 +2,7 @@
 /* Mednafen Fast SNES Emulation Module                                        */
 /******************************************************************************/
 /* ppu.cpp:
-**  Copyright (C) 2015-2017 Mednafen Team
+**  Copyright (C) 2015-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -28,9 +28,6 @@
 //
 // FIXME: Interlaced support.
 //
-// FIXME: Handle PPU reads open bus.
-//
-// FIXME: VRAM mirrored or open bus?
 
 #include "snes.h"
 #include "ppu.h"
@@ -43,7 +40,7 @@ static uint32 lastts;
 
 static uint32 LineStartTS;
 static unsigned HLatch, VLatch;
-static unsigned HVLatchReadShift;
+static unsigned HLatchReadShift, VLatchReadShift;
 
 
 //
@@ -188,20 +185,26 @@ static DEFWRITE(Write_OAMDATA)
  OAM_Addr = (OAM_Addr + 1) & 0x3FF;
 }
 
+static DEFREAD(Read_PPU1_BL)
+{
+ CPUM.timestamp += MEMCYC_FAST;
+ //
+ return BusLatch[0];
+}
+
+// PPU1
 static DEFREAD(Read_OAMDATAREAD)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
- uint8 ret;
-
  if(OAM_Addr & 0x200)
-  ret = OAMHI[OAM_Addr & 0x1F];
+  BusLatch[0] = OAMHI[OAM_Addr & 0x1F];
  else
-  ret = OAM[OAM_Addr];
+  BusLatch[0] = OAM[OAM_Addr];
 
  OAM_Addr = (OAM_Addr + 1) & 0x3FF;
 
- return ret;
+ return BusLatch[0];
 }
 
 static union
@@ -572,11 +575,12 @@ static DEFWRITE(Write_2119)
   VRAM_Addr += VMAIN_AddrInc;
 }
 
+// PPU1
 static DEFREAD(Read_2139)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
- uint8 ret = VRAM_ReadBuffer;
+ BusLatch[0] = VRAM_ReadBuffer;
 
  if(!VMAIN_IncMode)
  {
@@ -584,14 +588,15 @@ static DEFREAD(Read_2139)
   VRAM_Addr += VMAIN_AddrInc;
  }
 
- return ret;
+ return BusLatch[0];
 }
 
+// PPU1
 static DEFREAD(Read_213A)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
- uint8 ret = VRAM_ReadBuffer >> 8;
+ BusLatch[0] = VRAM_ReadBuffer >> 8;
 
  if(VMAIN_IncMode)
  {
@@ -599,7 +604,7 @@ static DEFREAD(Read_213A)
   VRAM_Addr += VMAIN_AddrInc;
  }
 
- return ret;
+ return BusLatch[0];
 }
 
 static DEFWRITE(Write_211A)
@@ -618,14 +623,15 @@ static DEFWRITE(Write_M7Matrix)		// $1b-$1e
  M7Prev = V;
 }
 
+// PPU1
 template<unsigned shift>
 static DEFREAD(Read_M7Multiplier)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
+ BusLatch[0] = (uint32)((int16)M7Matrix[0] * (int8)(M7Matrix[1] >> 8)) >> shift;
 
- uint32 result = (int16)M7Matrix[0] * (int8)(M7Matrix[1] >> 8);
- return result >> shift;
+ return BusLatch[0];
 }
 
 static DEFWRITE(Write_M7Center)
@@ -661,23 +667,22 @@ static DEFWRITE(Write_CGDATA)
  CGRAM_Toggle = !CGRAM_Toggle;
 }
 
+// PPU2
 static DEFREAD(Read_CGDATAREAD)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
- uint8 ret;
-
  if(CGRAM_Toggle)
  {
-  ret = CGRAM[CGRAM_Addr] >> 8;
+  BusLatch[1] = (BusLatch[1] & 0x80) | (CGRAM[CGRAM_Addr] >> 8);
   CGRAM_Addr++;
  }
  else
-  ret = CGRAM[CGRAM_Addr] >> 0;
+  BusLatch[1] = CGRAM[CGRAM_Addr] >> 0;
 
  CGRAM_Toggle = !CGRAM_Toggle;
 
- return ret;
+ return BusLatch[1];
 }
 
 static DEFWRITE(Write_MSEnable)
@@ -799,52 +804,57 @@ static DEFREAD(Read_HVLatchTrigger)
   Status[1] |= 0x40;
  }
 
- return 0;	// FIXME: open bus
+ return CPUM.mdr;
 }
 
+// PPU2
 static DEFREAD(Read_HLatch)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
- uint8 ret = HLatch >> HVLatchReadShift; // FIXME: open bus
+ BusLatch[1] = (HLatch | ((BusLatch[1] & 0xFE) << 8)) >> HLatchReadShift;
 
- HVLatchReadShift ^= 8;
+ HLatchReadShift ^= 8;
 
- return ret;
+ return BusLatch[1];
 }
 
+// PPU2
 static DEFREAD(Read_VLatch)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
- uint8 ret = VLatch >> HVLatchReadShift; // FIXME: open bus
+ BusLatch[1] = (VLatch | ((BusLatch[1] & 0xFE) << 8)) >> VLatchReadShift;
 
- HVLatchReadShift ^= 8;
+ VLatchReadShift ^= 8;
 
- return ret;
+ return BusLatch[1];
 }
 
-static DEFREAD(Read_Status0)
+// PPU1
+static DEFREAD(Read_PPU1_Status)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
- uint8 ret = Status[0];
+ BusLatch[0] = (BusLatch[0] & 0x10) | Status[0];
 
- return ret;
+ return BusLatch[0];
 }
 
-static DEFREAD(Read_Status1)
+// PPU2
+static DEFREAD(Read_PPU2_Status)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
- uint8 ret = Status[1];
+ BusLatch[1] = (BusLatch[1] & 0x20) | Status[1];
 
  if(1)
   Status[1] &= ~0x40;
 
- HVLatchReadShift = 0;
+ HLatchReadShift = 0;
+ VLatchReadShift = 0;
 
- return ret;
+ return BusLatch[1];
 }
 
 //
@@ -873,9 +883,12 @@ static struct
  };
 } linebuf;
 
-static_assert(linebuf.main == linebuf.bg[0] && linebuf.main == linebuf.bghr[0] &&
-	      linebuf.sub == linebuf.bg[2] && linebuf.sub == linebuf.bghr[1], "linebuf structure malformed.");
-
+#ifndef _MSC_VER
+static_assert(linebuf.main == linebuf.bg[0], "linebuf structure malformed.");
+static_assert(linebuf.main == linebuf.bghr[0], "linebuf structure malformed.");
+static_assert(linebuf.sub == linebuf.bg[2], "linebuf structure malformed.");
+static_assert(linebuf.sub == linebuf.bghr[1], "linebuf structure malformed.");
+#endif
 
 void PPU_StartFrame(EmulateSpecStruct* espec)
 {
@@ -1258,7 +1271,7 @@ static MDFN_HOT MDFN_FASTCALL void DrawMODE7(unsigned line_y, uint16 prio_or, ui
 #pragma GCC push_options
 #pragma GCC optimize("no-unroll-loops,no-peel-loops,no-crossjumping")
 template<bool hires = false>
-static MDFN_HOT MDFN_FASTCALL NO_INLINE void DoXMosaic(unsigned layernum, uint32* __restrict__ buf)
+static MDFN_HOT MDFN_FASTCALL NO_INLINE void DoXMosaic(unsigned layernum, uint32* MDFN_RESTRICT buf)
 {
  if(!(Mosaic & (1U << layernum)))
   return;
@@ -1328,7 +1341,7 @@ static INLINE void CalcWindowPieces(void)
 }
 
 template<bool cwin = false, bool hires = false>
-static MDFN_HOT MDFN_FASTCALL void DoWindow(unsigned layernum, uint32* __restrict__ buf)
+static MDFN_HOT MDFN_FASTCALL void DoWindow(unsigned layernum, uint32* MDFN_RESTRICT buf)
 {
  const unsigned mask_settings = (WMSettings[layernum >> 1] >> ((layernum & 1) << 2)) & 0xF;
  const unsigned mask_logic = (WMLogic >> (layernum * 2)) & 0x3;
@@ -1567,7 +1580,7 @@ static INLINE uint32 ConvertRGB555(uint32 tmp)
 }
 
 template<bool any_hires, unsigned cmath_mode, bool hires_cmath_add_subscreen = false>
-static MDFN_HOT MDFN_FASTCALL NO_INLINE void MixMainSubSubSubMarine(uint32* __restrict__ target)
+static MDFN_HOT MDFN_FASTCALL NO_INLINE void MixMainSubSubSubMarine(uint32* MDFN_RESTRICT target)
 {
  //if(scanline == 100)
  // fprintf(stderr, "CGWSEL=0x%02x, CGADSUB=0x%02x, WOBJSEL=0x%02x, WMLogic=0x%02x\n", CGWSEL, CGADSUB, WMSettings[2], WMLogic);
@@ -1642,7 +1655,7 @@ static MDFN_HOT MDFN_FASTCALL NO_INLINE void MixMainSubSubSubMarine(uint32* __re
 }
 
 template<bool any_hires>
-static INLINE void MixMainSub(uint32* __restrict__ target)
+static INLINE void MixMainSub(uint32* MDFN_RESTRICT target)
 {
  if(any_hires && MDFN_UNLIKELY(CGWSEL & 0x2))
  {
@@ -1929,17 +1942,16 @@ static MDFN_HOT void RenderLine(void)
   LineTarget = 239;
 
  uint32* const out_target = es->surface->pixels + (LineTarget * es->surface->pitchinpix);
- int32* const out_lw = &es->LineWidths[LineTarget];
+ const uint32 w = ((BGMode & 0x7) == 0x5 || (BGMode & 0x7) == 0x6 || (ScreenMode & 0x08)) ? 512 : 256;
 
+ es->LineWidths[LineTarget] = w;
  //
  LineTarget++;
  //
 
  if(INIDisp & 0x80)
  {
-  *out_lw = 2;
-
-  for(unsigned i = 0; i < 2; i++)
+  for(unsigned i = 0; i < w; i++)
    out_target[i] = 0;
 
   return;
@@ -1964,18 +1976,15 @@ static MDFN_HOT void RenderLine(void)
  DrawBGAndMixToMS();
  DoWindow<true>(5, linebuf.main);
 
- if(MDFN_UNLIKELY((BGMode & 0x7) == 0x5 || (BGMode & 0x7) == 0x6 || (ScreenMode & 0x08)))
+ if(MDFN_UNLIKELY(w == 512))
  {
   // Nope, won't work right!
   //DoWindow<true>(5, linebuf.sub); // For color window masking to black.  Probably should find a more efficient/logical way to do this...
-
   MixMainSub<true>(out_target);
-  *out_lw = 512;
  }
  else
  {
   MixMainSub<false>(out_target);
-  *out_lw = 256;
  }
 }
 
@@ -2258,6 +2267,13 @@ void PPU_ResetTS(void)
 
 void PPU_Init(const bool IsPAL)
 {
+ assert(linebuf.main == linebuf.bg[0]);
+ assert(linebuf.main == linebuf.bghr[0]);
+ assert(linebuf.sub == linebuf.bg[2]);
+ assert(linebuf.sub == linebuf.bghr[1]);
+ //
+ //
+ //
  PAL = IsPAL;
  LinesPerFrame = IsPAL ? 312 : 262;
 
@@ -2266,14 +2282,18 @@ void PPU_Init(const bool IsPAL)
  Set_B_Handlers(0x01, OBRead_FAST, Write_OBSEL);
  Set_B_Handlers(0x02, OBRead_FAST, Write_OAMADDL);
  Set_B_Handlers(0x03, OBRead_FAST, Write_OAMADDH);
- Set_B_Handlers(0x04, OBRead_FAST, Write_OAMDATA);
+ Set_B_Handlers(0x04, Read_PPU1_BL, Write_OAMDATA);
 
- Set_B_Handlers(0x05, OBRead_FAST, Write_2105);
- Set_B_Handlers(0x06, OBRead_FAST, Write_2106);
+ Set_B_Handlers(0x05, Read_PPU1_BL, Write_2105);
+ Set_B_Handlers(0x06, Read_PPU1_BL, Write_2106);
 
- Set_B_Handlers(0x07, 0x0A, OBRead_FAST, Write_BGSC);
+ Set_B_Handlers(0x07, OBRead_FAST, Write_BGSC);
+ Set_B_Handlers(0x08, Read_PPU1_BL, Write_BGSC);
+ Set_B_Handlers(0x09, Read_PPU1_BL, Write_BGSC);
+ Set_B_Handlers(0x0A, Read_PPU1_BL, Write_BGSC);
 
- Set_B_Handlers(0x0B, 0x0C, OBRead_FAST, Write_BGNBA);
+ Set_B_Handlers(0x0B, OBRead_FAST, Write_BGNBA);
+ Set_B_Handlers(0x0C, OBRead_FAST, Write_BGNBA);
 
  Set_B_Handlers(0x0D, OBRead_FAST, Write_BGHOFS<true>);
  Set_B_Handlers(0x0F, OBRead_FAST, Write_BGHOFS<false>);
@@ -2283,26 +2303,35 @@ void PPU_Init(const bool IsPAL)
  Set_B_Handlers(0x0E, OBRead_FAST, Write_BGVOFS<true>);
  Set_B_Handlers(0x10, OBRead_FAST, Write_BGVOFS<false>);
  Set_B_Handlers(0x12, OBRead_FAST, Write_BGVOFS<false>);
- Set_B_Handlers(0x14, OBRead_FAST, Write_BGVOFS<false>);
+ Set_B_Handlers(0x14, Read_PPU1_BL, Write_BGVOFS<false>);
 
- Set_B_Handlers(0x15, OBRead_FAST, Write_2115);
- Set_B_Handlers(0x16, OBRead_FAST, Write_2116);
+ Set_B_Handlers(0x15, Read_PPU1_BL, Write_2115);
+ Set_B_Handlers(0x16, Read_PPU1_BL, Write_2116);
  Set_B_Handlers(0x17, OBRead_FAST, Write_2117);
- Set_B_Handlers(0x18, OBRead_FAST, Write_2118);
- Set_B_Handlers(0x19, OBRead_FAST, Write_2119);
+ Set_B_Handlers(0x18, Read_PPU1_BL, Write_2118);
+ Set_B_Handlers(0x19, Read_PPU1_BL, Write_2119);
 
- Set_B_Handlers(0x1A, OBRead_FAST, Write_211A);
- Set_B_Handlers(0x1B, 0x1E, OBRead_FAST, Write_M7Matrix);
+ Set_B_Handlers(0x1A, Read_PPU1_BL, Write_211A);
+ Set_B_Handlers(0x1B, OBRead_FAST, Write_M7Matrix);
+ Set_B_Handlers(0x1C, OBRead_FAST, Write_M7Matrix);
+ Set_B_Handlers(0x1D, OBRead_FAST, Write_M7Matrix);
+ Set_B_Handlers(0x1E, OBRead_FAST, Write_M7Matrix);
 
- Set_B_Handlers(0x1F, 0x20, OBRead_FAST, Write_M7Center);
+ Set_B_Handlers(0x1F, OBRead_FAST, Write_M7Center);
+ Set_B_Handlers(0x20, OBRead_FAST, Write_M7Center);
 
  Set_B_Handlers(0x21, OBRead_FAST, Write_CGADD);
  Set_B_Handlers(0x22, OBRead_FAST, Write_CGDATA);
 
- Set_B_Handlers(0x23, 0x25, OBRead_FAST, Write_WMSettings);
+ Set_B_Handlers(0x23, OBRead_FAST, Write_WMSettings);
+ Set_B_Handlers(0x24, Read_PPU1_BL, Write_WMSettings);
+ Set_B_Handlers(0x25, Read_PPU1_BL, Write_WMSettings);
 
- Set_B_Handlers(0x26, 0x29, OBRead_FAST, Write_WindowPos);
- Set_B_Handlers(0x2A, OBRead_FAST, Write_WMLogic<false>);
+ Set_B_Handlers(0x26, Read_PPU1_BL, Write_WindowPos);
+ Set_B_Handlers(0x27, OBRead_FAST, Write_WindowPos);
+ Set_B_Handlers(0x28, Read_PPU1_BL, Write_WindowPos);
+ Set_B_Handlers(0x29, Read_PPU1_BL, Write_WindowPos);
+ Set_B_Handlers(0x2A, Read_PPU1_BL, Write_WMLogic<false>);
  Set_B_Handlers(0x2B, OBRead_FAST, Write_WMLogic<true>);
 
  Set_B_Handlers(0x2C, OBRead_FAST, Write_MSEnable);
@@ -2334,8 +2363,8 @@ void PPU_Init(const bool IsPAL)
  Set_B_Handlers(0x3C, Read_HLatch, OBWrite_FAST);
  Set_B_Handlers(0x3D, Read_VLatch, OBWrite_FAST);
 
- Set_B_Handlers(0x3E, Read_Status0, OBWrite_FAST);
- Set_B_Handlers(0x3F, Read_Status1, OBWrite_FAST);
+ Set_B_Handlers(0x3E, Read_PPU1_Status, OBWrite_FAST);
+ Set_B_Handlers(0x3F, Read_PPU2_Status, OBWrite_FAST);
 
  Status[0] = 1;
  Status[1] = (IsPAL << 4) | 2;
@@ -2393,7 +2422,8 @@ void PPU_Reset(bool powering_up)
 {
  HLatch = 0;
  VLatch = 0;
- HVLatchReadShift = 0;
+ HLatchReadShift = 0;
+ VLatchReadShift = 0;
 
  BusLatch[0] = 0x00;
  BusLatch[1] = 0x00;
@@ -2495,7 +2525,8 @@ void PPU_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFVAR(LineStartTS),
   SFVAR(HLatch),
   SFVAR(VLatch),
-  SFVAR(HVLatchReadShift),
+  SFVAR(HLatchReadShift),
+  SFVAR(VLatchReadShift),
 
   SFVAR(NMITIMEEN),
 

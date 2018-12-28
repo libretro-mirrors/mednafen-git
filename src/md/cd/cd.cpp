@@ -16,7 +16,7 @@
  */
 
 #include "../shared.h"
-#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/cdrom/CDInterface.h>
 #include <mednafen/general.h>
 #include <mednafen/FileStream.h>
 #include "cd.h"
@@ -932,7 +932,7 @@ static void MDCD_Init(void)
 */
 }
 
-static int32 CheckValidTrack(CDIF *cdiface, uint8 *sector_buffer)
+static int32 CheckValidTrack(CDInterface* cdiface, uint8 *sector_buffer)
 {
  CDUtility::TOC toc;
  bool DTFound = 0;
@@ -951,7 +951,7 @@ static int32 CheckValidTrack(CDIF *cdiface, uint8 *sector_buffer)
 
  if(DTFound) // Only add the MD5 hash if we were able to find a data track.
  {
-  if(cdiface->ReadSector(sector_buffer, toc.tracks[track].lba, 1))
+  if(cdiface->ReadSectors(sector_buffer, toc.tracks[track].lba, 1))
   {
    if(!memcmp(sector_buffer + 0x100, "SEGA MEGA DRIVE", 15) || !memcmp(sector_buffer + 0x100, "SEGA GENESIS", 12))
     return(track);
@@ -961,14 +961,14 @@ static int32 CheckValidTrack(CDIF *cdiface, uint8 *sector_buffer)
  return(0);
 }
 
-bool MDCD_TestMagic(std::vector<CDIF *> *CDInterfaces)
+bool MDCD_TestMagic(std::vector<CDInterface*> *CDInterfaces)
 {
  uint8 sector_buffer[2048];
 
  return((bool)CheckValidTrack((*CDInterfaces)[0], sector_buffer));
 }
 
-void MDCD_Load(std::vector<CDIF *> *CDInterfaces, md_game_info *ginfo)
+void MDCD_Load(std::vector<CDInterface*> *CDInterfaces, md_game_info *ginfo)
 {
  try
  {

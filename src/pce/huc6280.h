@@ -69,7 +69,7 @@ class alignas(128) HuC6280
 	void StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
 	template<bool DebugMode>
-	void RunSub(void) NO_INLINE;
+	NO_INLINE void RunSub(void);
 
 	void Run(const bool StepMode = false);
 

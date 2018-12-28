@@ -25,6 +25,9 @@
 #include <math.h>
 #include "vdc.h"
 
+namespace Mednafen
+{
+
 #define VDC_DEBUG(...)     { }
 //#define VDC_DEBUG(x, ...)       printf(x ": HPhase=%d, HPhaseCounter=%d, RCRCount=%d\n", ## __VA_ARGS__, HPhase, HPhaseCounter, RCRCount);
 
@@ -1715,7 +1718,7 @@ VDC::~VDC()
 
 }
 
-void VDC::StateExtra(MDFN::LEPacker &sl_packer, bool load)
+void VDC::StateExtra(LEPacker &sl_packer, bool load)
 {
  sl_packer.set_read_mode(load);
 
@@ -1732,7 +1735,7 @@ void VDC::StateExtra(MDFN::LEPacker &sl_packer, bool load)
 
 void VDC::StateAction(StateMem *sm, const unsigned load, const bool data_only, const char *sname)
 {
- MDFN::LEPacker sl_packer;
+ LEPacker sl_packer;
 
  StateExtra(sl_packer, false);
 
@@ -1942,3 +1945,4 @@ bool VDC::DoGfxDecode(uint32 *target, const uint32 *color_table, const uint32 Tr
 }
 #endif
 
+}

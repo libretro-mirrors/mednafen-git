@@ -48,12 +48,12 @@ static uint16 InterruptEnable;
 static uint8 BRTA, BRTB, BRTC, REST;
 static uint8 Repeat;
 
-static void CopyFBColumnToTarget_Anaglyph(void) NO_INLINE;
-static void CopyFBColumnToTarget_AnaglyphSlow(void) NO_INLINE;
-static void CopyFBColumnToTarget_CScope(void) NO_INLINE;
-static void CopyFBColumnToTarget_SideBySide(void) NO_INLINE;
-static void CopyFBColumnToTarget_VLI(void) NO_INLINE;
-static void CopyFBColumnToTarget_HLI(void) NO_INLINE;
+static NO_INLINE void CopyFBColumnToTarget_Anaglyph(void);
+static NO_INLINE void CopyFBColumnToTarget_AnaglyphSlow(void);
+static NO_INLINE void CopyFBColumnToTarget_CScope(void);
+static NO_INLINE void CopyFBColumnToTarget_SideBySide(void);
+static NO_INLINE void CopyFBColumnToTarget_VLI(void);
+static NO_INLINE void CopyFBColumnToTarget_HLI(void);
 static void (*CopyFBColumnToTarget)(void) = NULL;
 static float VBLEDOnScale;
 static uint32 VB3DMode;

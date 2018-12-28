@@ -590,7 +590,7 @@ static uint8 BarcodeOut;
 
 }
 
-int MDFNI_DatachSet(const uint8 *rcode)
+int Mednafen::MDFNI_DatachSet(const uint8 *rcode)
 {
         static const uint8 prefix_parity_type[10][6] = {
                 {0,0,0,0,0,0}, {0,0,1,0,1,1}, {0,0,1,1,0,1}, {0,0,1,1,1,0},

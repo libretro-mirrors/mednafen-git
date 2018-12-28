@@ -49,10 +49,6 @@
 #include <mednafen/video.h>
 #include <mednafen/sound/OwlResampler.h>
 
-#ifdef __MMX__
-#include <mmintrin.h>
-#endif
-
 namespace MDFN_IEN_PCFX
 {
 
@@ -2708,8 +2704,7 @@ static INLINE void VDC_PIXELMIX(bool SPRCOMBO_ON, bool BGCOMBO_ON)
     }
 }
 
-static void MixVDC(void) NO_INLINE;
-static void MixVDC(void)
+static NO_INLINE void MixVDC(void)
 {
     // Optimization for when both layers are disabled in the VCE.
     if(!vce_rendercache.LayerPriority[LAYER_VDC_BG] && !vce_rendercache.LayerPriority[LAYER_VDC_SPR])

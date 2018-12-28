@@ -37,6 +37,9 @@
 
 #include "driver.h"
 
+namespace Mednafen
+{
+
 static std::unique_ptr<Net::Connection> Connection;
 
 int MDFNnetplay=0;
@@ -1049,6 +1052,14 @@ void Netplay_Update(const uint32 PortDevIdx[], uint8* const PortData[], const ui
   //
   //
   //
+  for(unsigned x = 0; x < NumPorts; x++)
+  {
+   if(!PortLen[x])
+    continue;
+
+   memcpy(PreNPPortDataPortData[x].data(), PortData[x], PortLen[x]);
+  }
+
   if(Joined)
   {
    outgoing_buffer[0] = 0; 	// Not a command
@@ -1057,8 +1068,6 @@ void Netplay_Update(const uint32 PortDevIdx[], uint8* const PortData[], const ui
    {
     if(!PortLen[x])
      continue;
-
-    memcpy(PreNPPortDataPortData[x].data(), PortData[x], PortLen[x]);
 
     auto n = PortVtoLVMap[x];
     if(n != 0xFF)
@@ -1533,7 +1542,7 @@ void MDFNI_NetplayLine(const char *text, bool &inputable, bool &viewable)
           {
 	   std::string trim_text(&text[strlen(ConsoleCommands[x].name)]);
 
-	   MDFN_trim(trim_text);
+	   MDFN_trim(&trim_text);
 
            inputable = viewable = ConsoleCommands[x].func(trim_text.c_str());
 
@@ -1546,4 +1555,6 @@ void MDFNI_NetplayLine(const char *text, bool &inputable, bool &viewable)
 	  MDFNI_NetplayText(text);
 	  viewable = true;
          }
+}
+
 }

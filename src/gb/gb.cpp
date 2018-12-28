@@ -42,7 +42,7 @@ static void Cleanup(void) MDFN_COLD;
 static uint32 *gbColorFilter = NULL;
 static uint32 gbMonoColorMap[12 + 1];	// Mono color map(+1 = LCD off color)!
 
-static void LoadROM(MDFNFILE *fp);
+static void LoadROM(Stream* s);
 static int32 SoundTS = 0;
 //extern uint16 gbLineMix[160];
 extern union __gblmt
@@ -2044,12 +2044,12 @@ static const char *GetGBTypeString(uint8 t)
  return(type);
 }
 
-static bool TestMagic(MDFNFILE *fp)
+static bool TestMagic(GameFile* gf)
 {
  static const uint8 GBMagic[8] = { 0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B };
  uint8 data[0x200];
 
- if(fp->read(data, 0x200, false) != 0x200 || memcmp(data + 0x104, GBMagic, 8))
+ if(gf->stream->read(data, 0x200, false) != 0x200 || memcmp(data + 0x104, GBMagic, 8))
   return false;
 
  return true;
@@ -2090,8 +2090,8 @@ static void Cleanup(void)
  }
 }
 
-static void Load(MDFNFILE *fp) MDFN_COLD;
-static void Load(MDFNFILE *fp)
+static void Load(GameFile* gf) MDFN_COLD;
+static void Load(GameFile* gf)
 {
  try
  {
@@ -2103,14 +2103,12 @@ static void Load(MDFNFILE *fp)
 
   SOUND_Init();
 
-  LoadROM(fp);
+  LoadROM(gf->stream);
 
   md5_context md5;
   md5.starts();
   md5.update(gbRom, gbRomSize);
   md5.finish(MDFNGameInfo->MD5);
-
-  MDFNGameInfo->GameSetMD5Valid = false;
 
   MDFN_printf(_("ROM:       %dKiB\n"), (gbRomSize + 1023) / 1024);
   MDFN_printf(_("ROM CRC32: 0x%08x\n"), (unsigned int)crc32(0, gbRom, gbRomSize));
@@ -2144,11 +2142,11 @@ static void Load(MDFNFILE *fp)
  }
 }
 
-static void LoadROM(MDFNFILE* fp)
+static void LoadROM(Stream* s)
 {
   uint8 header[0x200];
 
-  fp->read(header, 0x200);
+  s->read(header, 0x200);
 
   if(header[0x148] > 8) 
    throw MDFN_Error(0, _("Unsupported ROM size specified in GB header."));
@@ -2161,7 +2159,7 @@ static void LoadROM(MDFNFILE* fp)
   memcpy(gbRom, header, std::min<uint64>(0x200, gbRomSize));
 
   if(gbRomSize > 0x200) // && in_rom_size > 0x200)
-   fp->read(gbRom + 0x200, gbRomSize - 0x200); // std::min<uint64>(in_rom_size, gbRomSize) - 0x200);
+   s->read(gbRom + 0x200, gbRomSize - 0x200); // std::min<uint64>(in_rom_size, gbRomSize) - 0x200);
   
   if(header[0x149] > 5) 
    throw MDFN_Error(0, _("Unsupported RAM size specified in GB header."));
@@ -2832,10 +2830,10 @@ static void RemoveReadPatches(void)
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".gb", gettext_noop("GameBoy ROM Image") },
- { ".gbc", gettext_noop("GameBoy Color ROM Image") },
- { ".cgb", gettext_noop("GameBoy Color ROM Image") },
- { NULL, NULL }
+ { ".gb",  0, gettext_noop("GameBoy ROM Image") },
+ { ".gbc", 0, gettext_noop("GameBoy Color ROM Image") },
+ { ".cgb", 0, gettext_noop("GameBoy Color ROM Image") },
+ { NULL, 0, NULL }
 };
 
 static const CustomPalette_Spec CPInfo[] =

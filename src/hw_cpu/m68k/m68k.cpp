@@ -51,6 +51,9 @@
 
 #pragma GCC optimize ("no-crossjumping,no-gcse")
 
+namespace Mednafen
+{
+
 static MDFN_FASTCALL void Dummy_BusRESET(bool state)
 {
 
@@ -2361,3 +2364,4 @@ void M68K::SetRegister(unsigned which, uint32 value)
  }
 }
 
+}

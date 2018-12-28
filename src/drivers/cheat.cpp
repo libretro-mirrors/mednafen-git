@@ -21,9 +21,9 @@
 #include "video.h"
 #include <mednafen/string/string.h>
 
-static MDFN_Thread *CheatThread = NULL;
-static MDFN_Mutex *CheatMutex = NULL;
-static MDFN_Cond *CheatCond = NULL;
+static MThreading::Thread *CheatThread = NULL;
+static MThreading::Mutex *CheatMutex = NULL;
+static MThreading::Cond *CheatCond = NULL;
 static bool isactive = 0;
 static std::list<std::string> pending_text;
 static bool volatile need_thread_exit;
@@ -39,18 +39,18 @@ class CheatConsoleT : public MDFNConsole
 
         virtual bool TextHook(const std::string &text) override
         {
-	 MDFND_LockMutex(CheatMutex);
+	 MThreading::LockMutex(CheatMutex);
 	 try
 	 {
 	  pending_text.push_back(text);
-	  MDFND_SignalCond(CheatCond);
+	  MThreading::SignalCond(CheatCond);
 	 }
 	 catch(std::exception& e)
 	 {
-	  MDFND_UnlockMutex(CheatMutex);
+	  MThreading::UnlockMutex(CheatMutex);
 	  throw;
 	 }
-	 MDFND_UnlockMutex(CheatMutex);
+	 MThreading::UnlockMutex(CheatMutex);
 
          return(1);
         }
@@ -59,33 +59,33 @@ class CheatConsoleT : public MDFNConsole
 	{
 	 MDFN_Surface* ret;
 
-	 MDFND_LockMutex(CheatMutex);
+	 MThreading::LockMutex(CheatMutex);
 	 try
 	 {
 	  ret = MDFNConsole::Draw(pformat, dim_w, dim_h, fontid);
 	 }
 	 catch(...)
 	 {
-	  MDFND_UnlockMutex(CheatMutex);
+	  MThreading::UnlockMutex(CheatMutex);
 	  throw;
 	 }
-	 MDFND_UnlockMutex(CheatMutex);
+	 MThreading::UnlockMutex(CheatMutex);
 
 	 return ret;
 	}
 
 	void WriteLine(const std::string &text)
 	{
-	 MDFND_LockMutex(CheatMutex);
+	 MThreading::LockMutex(CheatMutex);
 	 MDFNConsole::WriteLine(text);
- 	 MDFND_UnlockMutex(CheatMutex);
+ 	 MThreading::UnlockMutex(CheatMutex);
 	}
 
         void AppendLastLine(const std::string &text)
         {
-         MDFND_LockMutex(CheatMutex);
+         MThreading::LockMutex(CheatMutex);
          MDFNConsole::AppendLastLine(text);
-         MDFND_UnlockMutex(CheatMutex);
+         MThreading::UnlockMutex(CheatMutex);
         }
 };
 
@@ -116,10 +116,10 @@ static std::string CHEAT_gets(void)
  //
  //
  //
- MDFND_LockMutex(CheatMutex);
+ MThreading::LockMutex(CheatMutex);
  while(!pending_text.size() && !need_thread_exit)
  {
-  MDFND_WaitCond(CheatCond, CheatMutex);
+  MThreading::WaitCond(CheatCond, CheatMutex);
  }
 
  try
@@ -129,10 +129,10 @@ static std::string CHEAT_gets(void)
  }
  catch(std::exception& e)
  {
-  MDFND_UnlockMutex(CheatMutex);
+  MThreading::UnlockMutex(CheatMutex);
   throw;
  }
- MDFND_UnlockMutex(CheatMutex);
+ MThreading::UnlockMutex(CheatMutex);
  //
  //
  //
@@ -167,7 +167,7 @@ static std::string GetString(const std::string& def = "")
  if(!s.size())
   return def;
 
- MDFN_trim(s);
+ MDFN_trim(&s);
 
  return s;
 }
@@ -886,10 +886,10 @@ int CheatLoop(void *arg)
 void CheatIF_GT_Show(bool show)
 {
  if(!CheatMutex)
-  CheatMutex = MDFND_CreateMutex();
+  CheatMutex = MThreading::CreateMutex();
 
  if(!CheatCond)
-  CheatCond = MDFND_CreateCond();
+  CheatCond = MThreading::CreateCond();
 
  PauseGameLoop(show);
  if(show)
@@ -897,7 +897,7 @@ void CheatIF_GT_Show(bool show)
   if(!CheatThread)
   {
    need_thread_exit = false;
-   CheatThread = MDFND_CreateThread(CheatLoop, NULL);
+   CheatThread = MThreading::CreateThread(CheatLoop, NULL, "MDFN Cheat Interface");
   }
  }
  isactive = show;
@@ -963,23 +963,23 @@ void CheatIF_Kill(void)
 {
  if(CheatThread != NULL)
  {
-  MDFND_LockMutex(CheatMutex);
+  MThreading::LockMutex(CheatMutex);
   need_thread_exit = true;
-  MDFND_SignalCond(CheatCond);
-  MDFND_UnlockMutex(CheatMutex);
+  MThreading::SignalCond(CheatCond);
+  MThreading::UnlockMutex(CheatMutex);
  
-  MDFND_WaitThread(CheatThread, NULL);
+  MThreading::WaitThread(CheatThread, NULL);
  }
 
  if(CheatCond != NULL)
  {
-  MDFND_DestroyCond(CheatCond);
+  MThreading::DestroyCond(CheatCond);
   CheatCond = NULL;
  }
 
  if(CheatMutex != NULL)
  {
-  MDFND_DestroyMutex(CheatMutex);
+  MThreading::DestroyMutex(CheatMutex);
   CheatMutex = NULL;
  }
 

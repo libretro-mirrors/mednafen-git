@@ -49,7 +49,7 @@ class GSFLoader : public PSFLoader
 {
  public:
 
- GSFLoader(Stream *fp) MDFN_COLD;
+ GSFLoader(VirtualFS* vfs, const std::string& dir_path, Stream *fp) MDFN_COLD;
  virtual ~GSFLoader() override MDFN_COLD;
 
  virtual void HandleEXE(Stream* fp, bool ignore_pcsp = false) override MDFN_COLD;
@@ -567,9 +567,9 @@ static void CloseGame(void)
  }
 }
 
-GSFLoader::GSFLoader(Stream *fp)
+GSFLoader::GSFLoader(VirtualFS* vfs, const std::string& dir_path, Stream *fp)
 {
- tags = Load(0x22, 1024 * 1024 * 32 + 12, fp);
+ tags = Load(0x22, 1024 * 1024 * 32 + 12, vfs, dir_path, fp);
 }
 
 GSFLoader::~GSFLoader()
@@ -655,20 +655,20 @@ static void RedoColorMap(const MDFN_PixelFormat &format, const uint8* CustomColo
  #endif
 }
 
-static bool TestMagic(MDFNFILE *fp) MDFN_COLD;
-static bool TestMagic(MDFNFILE *fp)
+static bool TestMagic(GameFile* gf) MDFN_COLD;
+static bool TestMagic(GameFile* gf)
 {
- if(fp->ext == "gba" || fp->ext == "agb")
+ if(gf->ext == "gba" || gf->ext == "agb")
   return true;
 
- if(PSFLoader::TestMagic(0x22, fp->stream()))
+ if(PSFLoader::TestMagic(0x22, gf->stream))
   return true;
 
- fp->rewind();
+ gf->stream->rewind();
 
  uint8 data[192];
 
- if(fp->ext == "bin" && fp->read(data, 192, false) == 192)
+ if(gf->ext == "bin" && gf->stream->read(data, 192, false) == 192)
  {
   if((data[0xb2] == 0x96 && data[0xb3] == 0x00) || (data[0] == 0x2E && data[3] == 0xEA))
    return true;
@@ -677,8 +677,8 @@ static bool TestMagic(MDFNFILE *fp)
  return false;
 }
 
-static void Load(MDFNFILE *fp) MDFN_COLD;
-static void Load(MDFNFILE *fp)
+static void Load(GameFile* gf) MDFN_COLD;
+static void Load(GameFile* gf)
 {
  try
  {
@@ -690,9 +690,9 @@ static void Load(MDFNFILE *fp)
   workRAM = new uint8[0x40000];
   memset(workRAM, 0x00, 0x40000);
 
-  if(PSFLoader::TestMagic(0x22, fp->stream()))
+  if(PSFLoader::TestMagic(0x22, gf->stream))
   {
-   gsf_loader = new GSFLoader(fp->stream());
+   gsf_loader = new GSFLoader(gf->vfs, gf->dir, gf->stream);
 
    std::vector<std::string> SongNames;
 
@@ -708,12 +708,12 @@ static void Load(MDFNFILE *fp)
    if(cpuIsMultiBoot)
    {
     whereToLoad = workRAM;
-    size = fp->read(whereToLoad, 0x40000, false);
+    size = gf->stream->read(whereToLoad, 0x40000, false);
    }
    else
    {
     whereToLoad = rom;
-    size = fp->read(whereToLoad, 0x2000000, false);
+    size = gf->stream->read(whereToLoad, 0x2000000, false);
    }
 
    md5_context md5;
@@ -744,8 +744,6 @@ static void Load(MDFNFILE *fp)
   systemColorMap = new SysCM;
 
   CPUUpdateRenderBuffers(true);
-
-  MDFNGameInfo->GameSetMD5Valid = false;
 
   MDFNGBASOUND_Init();
 
@@ -2449,15 +2447,14 @@ static void CPUInit(const std::string &bios_fn)
   
  if(bios_fn != "" && bios_fn != "0" && bios_fn != "none")
  {
-  static const FileExtensionSpecStruct KnownBIOSExtensions[] =
+  static const std::vector<FileExtensionSpecStruct> KnownBIOSExtensions =
   {
-   { ".gba", gettext_noop("GameBoy Advance ROM Image") },
-   { ".agb", gettext_noop("GameBoy Advance ROM Image") },
-   { ".bin", gettext_noop("GameBoy Advance ROM Image") },
-   { ".bios", gettext_noop("BIOS Image") },
-   { NULL, NULL }
+   { ".gba", 0, gettext_noop("GameBoy Advance ROM Image") },
+   { ".agb", 0, gettext_noop("GameBoy Advance ROM Image") },
+   { ".bin", -10, gettext_noop("GameBoy Advance ROM Image") },
+   { ".bios", 0, gettext_noop("BIOS Image") },
   };
-  MDFNFILE bios_fp(MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, bios_fn.c_str()).c_str(), KnownBIOSExtensions, _("GBA BIOS"));
+  MDFNFILE bios_fp(&NVFS, MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, bios_fn.c_str()).c_str(), KnownBIOSExtensions, _("GBA BIOS"));
   
   if(bios_fp.size() != 0x4000)
    throw MDFN_Error(0, _("Invalid BIOS file size"));
@@ -3315,12 +3312,12 @@ static const std::vector<InputPortInfoStruct> PortInfo =
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".gsf", gettext_noop("GSF Rip") },
- { ".minigsf", gettext_noop("MiniGSF Rip") },
- { ".gba", gettext_noop("GameBoy Advance ROM Image") },
- { ".agb", gettext_noop("GameBoy Advance ROM Image") },
- { ".bin", gettext_noop("GameBoy Advance ROM Image") },
- { NULL, NULL }
+ { ".gsf", -20, gettext_noop("GSF Rip") },
+ { ".minigsf", -20, gettext_noop("MiniGSF Rip") },
+ { ".gba",   0, gettext_noop("GameBoy Advance ROM Image") },
+ { ".agb",   0, gettext_noop("GameBoy Advance ROM Image") },
+ { ".bin", -80, gettext_noop("GameBoy Advance ROM Image") },
+ { NULL, 0, NULL }
 };
 
 static const CustomPalette_Spec CPInfo[] =

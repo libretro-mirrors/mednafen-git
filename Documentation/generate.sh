@@ -4,6 +4,7 @@
 
 # TODO: Dump to settings.def.tmp, and move to settings.def if different for more useful "last modified" time.
 
+php apple2.php > apple2.html
 php cdplay.php > cdplay.html
 php gba.php > gba.html
 php gb.php > gb.html

@@ -129,7 +129,7 @@ void CartInfo::CS2M_SetRW8W16(uint8 Ostart, uint8 Oend, void (*r16)(uint32 A, ui
 }
 
 
-void CART_Init(const int cart_type)
+void CART_Init(const int cart_type, Stream* rom_stream)
 {
  Cart.CS01_SetRW8W16(0x02000000, 0x04FFFFFF, DummyRead<uint16>, DummyWrite<uint8>, DummyWrite<uint16>);
  Cart.CS2M_SetRW8W16(0x00, 0x3F, DummyRead<uint16>, DummyWrite<uint8>, DummyWrite<uint16>);
@@ -160,21 +160,11 @@ void CART_Init(const int cart_type)
 
   case CART_KOF95:
   case CART_ULTRAMAN:
-	{
-	 const std::string path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS((cart_type == CART_KOF95) ? "ss.cart.kof95_path" : "ss.cart.ultraman_path"));
-	 FileStream fp(path, FileStream::MODE_READ);
-
-	 CART_ROM_Init(&Cart, &fp);
-	}
+	CART_ROM_Init(&Cart, rom_stream);
 	break;
 
   case CART_AR4MP:
-	{
-	 const std::string path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("ss.cart.satar4mp_path"));
-	 FileStream fp(path, FileStream::MODE_READ);
-
-	 CART_AR4MP_Init(&Cart, &fp);
-	}
+	CART_AR4MP_Init(&Cart, rom_stream);
 	break;
 
   case CART_CS1RAM_16M:
@@ -182,7 +172,7 @@ void CART_Init(const int cart_type)
 	break;
 
   case CART_MDFN_DEBUG:
-	CART_Debug_Init(&Cart);
+	CART_Debug_Init(&Cart, rom_stream);
 	break;
 
 //  case CART_NLMODEM:

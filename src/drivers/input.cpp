@@ -769,6 +769,7 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
  const InputDeviceInfoStruct *zedevice = NULL;
  char *port_device_name;
  unsigned int device;
+ const std::map<std::string, uint32>* switches_defov = nullptr;
 
  std::vector<std::pair<uint64, size_t>> bcc_stmp;
 
@@ -776,9 +777,10 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
 
   if(gi->PortInfo[port].DeviceInfo.size() > 1)
   {  
-   if(CurGame->DesiredInput.size() > port && CurGame->DesiredInput[port])
+   if(CurGame->DesiredInput.size() > port && CurGame->DesiredInput[port].device_name)
    {
-    port_device_name = strdup(CurGame->DesiredInput[port]);
+    port_device_name = strdup(CurGame->DesiredInput[port].device_name);
+    switches_defov = &CurGame->DesiredInput[port].switches;
    }
    else
    {
@@ -981,6 +983,8 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
  //
  // Set default switch positions.
  //
+ size_t switches_defov_found = 0;
+
  for(auto& bic : PIDC[port].BIC)
  {
   if(bic.IMType == IMTYPE_SWITCH)
@@ -988,9 +992,24 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
    char tmpsn[512];
    trio_snprintf(tmpsn, sizeof(tmpsn), "%s.defpos", bic.SettingName);
    bic.Switch.LastPos = MDFN_GetSettingUI(tmpsn);
+   //
+   //
+   if(switches_defov)
+   {
+    std::map<std::string, uint32>::const_iterator sdov_it = switches_defov->find(bic.IDII->SettingName);
+
+    if(sdov_it != switches_defov->end())
+    {
+     bic.Switch.LastPos = sdov_it->second;
+     switches_defov_found++;
+    }
+   }
+   //
+   //
    BitsIntract(PIDC[port].Data, bic.BitOffset, bic.Switch.BitSize, bic.Switch.LastPos);
   }
  }
+ assert(switches_defov_found == (switches_defov ? switches_defov->size() : 0));
 }
 
 static void IncSelectedDevice(unsigned int port)
@@ -1069,6 +1088,7 @@ enum CommandKey
 	CK_SLOW_FORWARD,
 
 	CK_SELECT_DISK,
+	CK_SELECT_DRIVE,
 	CK_TOGGLE_DIPVIEW,
 	CK_INSERT_COIN,
 	CK_INSERTEJECT_DISK,
@@ -1189,6 +1209,7 @@ static const COKE CKeys[_CK_COUNT]	=
         CKEYDEF( "slow_forward", "Slow-forward", 0, 	   MK_CK(BACKSLASH) ),
 
 	CKEYDEF( "select_disk", "Select disk/disc", 0, 		MK_CK(F6) ),
+	CKEYDEF( "select_drive", "Select drive", 0, MK_CK_SHIFT(F6) ),
 	CKEYDEF( "toggle_dipview", "Toggle DIP switch view", 0, MK_CK(F6) ),
 	CKEYDEF( "insert_coin", "Insert coin", 0, 		MK_CK(F8) ),
 	CKEYDEF( "insert_eject_disk", "Insert/Eject disk/disc", CKEYDEF_DANGEROUS, MK_CK(F8) ),
@@ -1726,8 +1747,14 @@ static void CheckCommandKeys(void)
   {
    if(CK_Check(CK_SELECT_DISK)) 
    {
-    RMDUI_Select();
+    RMDUI_SelectDisk();
    }
+
+   if(CK_Check(CK_SELECT_DRIVE))
+   {
+    RMDUI_SelectDrive();
+   }
+
    if(CK_Check(CK_INSERTEJECT_DISK)) 
    {
     RMDUI_Toggle_InsertEject();
@@ -2402,9 +2429,11 @@ static INLINE void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, co
     el[snp].description = NULL;
     el[snp].description_extra = NULL;
 
+    assert(info->IDII[x].Switch.DefPos < info->IDII[x].Switch.NumPos);
+
     tmp_setting.enum_list = el;
     tmp_setting.type = MDFNST_ENUM;
-    tmp_setting.default_value = el[0].string;
+    tmp_setting.default_value = el[info->IDII[x].Switch.DefPos].string;
    }
 
    settings.push_back(tmp_setting);

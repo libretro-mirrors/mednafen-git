@@ -19,7 +19,7 @@
 #include "main.h"
 
 #ifdef WIN32
-#include <windows.h>
+ #include <mednafen/win32-common.h>
 #endif
 
 #include <trio/trio.h>
@@ -283,7 +283,7 @@ void Video_MakeSettings(std::vector <MDFNSetting> &settings)
  {
   int nominal_width;
   //int nominal_height;
-  bool multires;
+  const char* default_videoip;
   const char *sysname;
   char default_value[256];
   MDFNSetting setting;
@@ -295,14 +295,23 @@ void Video_MakeSettings(std::vector <MDFNSetting> &settings)
   {
    nominal_width = 384;
    //nominal_height = 240;
-   multires = FALSE;
+   default_videoip = "0";
    sysname = "player";
   }
   else
   {
+   const int mr = MDFNSystems[i]->multires;
+
    nominal_width = MDFNSystems[i]->nominal_width;
    //nominal_height = MDFNSystems[i]->nominal_height;
-   multires = MDFNSystems[i]->multires;
+
+   if(mr < 0)
+    default_videoip = "x";
+   else if(!mr)
+    default_videoip = "0";
+   else
+    default_videoip = "1";
+
    sysname = (const char *)MDFNSystems[i]->shortname;
   }
 
@@ -340,7 +349,7 @@ void Video_MakeSettings(std::vector <MDFNSetting> &settings)
   BuildSystemSetting(&setting, sysname, "stretch", CSD_stretch, NULL, MDFNST_ENUM, "aspect_mult2", NULL, NULL, NULL, NULL, StretchMode_List);
   settings.push_back(setting);
 
-  BuildSystemSetting(&setting, sysname, "videoip", CSDvideo_settingsip, NULL, MDFNST_ENUM, multires ? "1" : "0", NULL, NULL, NULL, NULL, VideoIP_List);
+  BuildSystemSetting(&setting, sysname, "videoip", CSDvideo_settingsip, NULL, MDFNST_ENUM, default_videoip, NULL, NULL, NULL, NULL, VideoIP_List);
   settings.push_back(setting);
 
   BuildSystemSetting(&setting, sysname, "special", CSD_special, CSDE_special, MDFNST_ENUM, "none", NULL, NULL, NULL, NULL, Special_List);
@@ -815,8 +824,8 @@ void Video_Sync(MDFNGI *gi)
  video_settings.stretch = MDFN_GetSettingUI(snp + "stretch");
  video_settings.scanlines = MDFN_GetSettingI(snp + "scanlines");
 
- video_settings.special = MDFN_GetSettingUI(snp + std::string("special"));
- video_settings.special_str = MDFN_GetSettingS(snp + std::string("special"));
+ video_settings.special = MDFN_GetSettingUI(snp + "special");
+ video_settings.special_str = MDFN_GetSettingS(snp + "special");
 
  video_settings.shader_params.goat_hdiv = MDFN_GetSettingF(snp + "shader.goat.hdiv");
  video_settings.shader_params.goat_vdiv = MDFN_GetSettingF(snp + "shader.goat.vdiv");

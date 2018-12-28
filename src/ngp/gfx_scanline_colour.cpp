@@ -79,10 +79,10 @@ void NGPGFX_CLASS::drawColourPattern(uint8 screenx, uint16 tile, uint8 tiley, ui
 		index = mirrored[(index & 0xff00)>>8] | (mirrored[(index & 0xff)] << 8);
 
 	palette_ptr += pal << 2;
-	left = max(max(x, winx), 0);
+	left = std::max<int>(std::max<int>(x, winx), 0);
 	right = x+7;
 
-	highmark = min(winw+winx, SCREEN_WIDTH)-1;
+	highmark = std::min<int>(winw+winx, SCREEN_WIDTH)-1;
 
 	if (right > highmark) {
 		index >>= (right - highmark)*2;
@@ -169,10 +169,10 @@ void NGPGFX_CLASS::draw_scanline_colour(int layer_enable, int ngpc_scanline)
 		//Middle
 		if (ngpc_scanline < winy + winh)
 		{
-			for (int x = 0; x < min(winx, SCREEN_WIDTH); x++)
+			for (int x = 0; x < std::min<int>(winx, SCREEN_WIDTH); x++)
 				cfb_scanline[x] = win_color;
 			
-			for (int x = min(winx + winw, SCREEN_WIDTH); x < SCREEN_WIDTH; x++)
+			for (int x = std::min<int>(winx + winw, SCREEN_WIDTH); x < SCREEN_WIDTH; x++)
 				cfb_scanline[x] = win_color;
 		}
 		else	//Bottom
@@ -195,7 +195,7 @@ void NGPGFX_CLASS::draw_scanline_colour(int layer_enable, int ngpc_scanline)
 		if (negative) win_color = ~win_color;
 		
 		//Draw background!
-		for (int x = winx; x < min(winx + winw, SCREEN_WIDTH); x++)	
+		for (int x = winx; x < std::min<int>(winx + winw, SCREEN_WIDTH); x++)	
 			cfb_scanline[x] = win_color;
 
 		//Swap Front/Back scroll planes?

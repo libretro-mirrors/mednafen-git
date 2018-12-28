@@ -6,12 +6,6 @@ noinst_LIBRARIES	=	libmdfnsdl.a
 
 libmdfnsdl_a_SOURCES = main.cpp args.cpp help.cpp ers.cpp sound.cpp netplay.cpp
 
-if WIN32
-libmdfnsdl_a_SOURCES += thread_win32.cpp
-else
-libmdfnsdl_a_SOURCES += thread_sdl.cpp
-endif
-
 libmdfnsdl_a_SOURCES += input.cpp mouse.cpp keyboard.cpp
 libmdfnsdl_a_SOURCES += Joystick.cpp Joystick_SDL.cpp
 

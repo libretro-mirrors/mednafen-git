@@ -31,6 +31,9 @@
 
 #include "Stream.h"
 
+namespace Mednafen
+{
+
 class MemoryStream : public Stream
 {
  public:
@@ -71,7 +74,6 @@ class MemoryStream : public Stream
 
  void mswin_utf8_convert_kludge(void);
 
-#if 0
  // No methods on the object may be called externally(other than the destructor) after steal_malloced_ptr()
  INLINE void* steal_malloced_ptr(void)
  {
@@ -84,7 +86,6 @@ class MemoryStream : public Stream
 
   return ret;
  }
-#endif
 
  private:
  uint8 *data_buffer;
@@ -95,4 +96,6 @@ class MemoryStream : public Stream
 
  void grow_if_necessary(uint64 new_required_size, uint64 hole_end);
 };
+
+}
 #endif

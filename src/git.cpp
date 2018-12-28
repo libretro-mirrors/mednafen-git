@@ -21,6 +21,9 @@
 
 #include <mednafen/mednafen.h>
 
+namespace Mednafen
+{
+
 const IDIISG IDII_Empty;
 
 IDIISG::IDIISG()
@@ -149,3 +152,4 @@ const CheatInfoStruct CheatInfo_Empty =
  CheatFormatInfo_Empty
 };
 
+}

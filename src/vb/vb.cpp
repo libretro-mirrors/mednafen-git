@@ -510,9 +510,9 @@ static void ReadHeader(const uint8* const rom_data, const uint64 rom_size, VB_He
  hi->version = rom_data[0xFFFFFDFF & (rom_size - 1)];
 }
 
-static bool TestMagic(MDFNFILE *fp)
+static bool TestMagic(GameFile* gf)
 {
- if(fp->ext == "vb" || fp->ext == "vboy")
+ if(gf->ext == "vb" || gf->ext == "vboy")
   return true;
 
  return false;
@@ -538,11 +538,11 @@ static MDFN_COLD void Cleanup(void)
  }
 }
 
-static MDFN_COLD void Load(MDFNFILE *fp)
+static MDFN_COLD void Load(GameFile* gf)
 {
  try
  {
-  const uint64 rom_size = fp->size();
+  const uint64 rom_size = gf->stream->size();
   V810_Emu_Mode cpu_mode;
   md5_context md5;
 
@@ -610,7 +610,7 @@ static MDFN_COLD void Load(MDFNFILE *fp)
   GPROM = VB_V810->SetFastMap(&Map_Addresses[0], GPROM_Mask + 1, Map_Addresses.size(), "Cart ROM");
   Map_Addresses.clear();
 
-  fp->read(GPROM, rom_size);
+  gf->stream->read(GPROM, rom_size);
 
   // Mirror ROM images < 64KiB to 64KiB
   for(uint64 i = rom_size; i < 65536; i += rom_size)
@@ -948,7 +948,7 @@ static const MDFNSetting VBSettings[] =
 };
 
 
-static const IDIISG IDII =
+static const IDIISG PadIDII =
 {
  IDIIS_ButtonCR("a", "A", 7,  NULL),
  IDIIS_ButtonCR("b", "B", 6, NULL),
@@ -976,20 +976,42 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
   "gamepad",
   "Gamepad",
   NULL,
-  IDII,
+  PadIDII,
+ }
+};
+
+static const IDIIS_SwitchPos BatterySwitchPositions[] =
+{
+ { "normal", gettext_noop("Normal") },
+ { "low", gettext_noop("Low") },
+};
+
+static const IDIISG MiscIDII =
+{
+ IDIIS_Switch("battery", "Battery Voltage", 0, BatterySwitchPositions)
+};
+
+static const std::vector<InputDeviceInfoStruct> SystemInputDeviceInfo =
+{
+ {
+  "misc",
+  "Misc",
+  NULL,
+  MiscIDII,
  }
 };
 
 static const std::vector<InputPortInfoStruct> PortInfo =
 {
- { "builtin", "Built-In", InputDeviceInfo, "gamepad" }
+ { "builtin", "Built-In", InputDeviceInfo, "gamepad" },
+ { "system", "System", SystemInputDeviceInfo, "misc" },
 };
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".vb", gettext_noop("Nintendo Virtual Boy") },
- { ".vboy", gettext_noop("Nintendo Virtual Boy") },
- { NULL, NULL }
+ { ".vb", -30, gettext_noop("Nintendo Virtual Boy") },
+ { ".vboy", 0, gettext_noop("Nintendo Virtual Boy") },
+ { NULL, 0, NULL }
 };
 
 }

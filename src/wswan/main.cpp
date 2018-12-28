@@ -201,12 +201,12 @@ static const DLEntry Developers[] =
  { 0x36, "Capcom" },
 };
 
-static bool TestMagic(MDFNFILE *fp)
+static bool TestMagic(GameFile* gf)
 {
- if(fp->ext != "ws" && fp->ext != "wsc" && fp->ext != "wsr")
+ if(gf->ext != "ws" && gf->ext != "wsc" && gf->ext != "wsr")
   return false;
 
- if(fp->size() < 65536)
+ if(gf->stream->size() < 65536)
   return false;
 
  return true;
@@ -244,12 +244,12 @@ static void CloseGame(void)
  Cleanup();
 }
 
-static void Load(MDFNFILE *fp)
+static void Load(GameFile* gf)
 {
  try
  {
   bool IsWW = false;
-  const uint64 fp_in_size = fp->size();
+  const uint64 fp_in_size = gf->stream->size();
   uint32 real_rom_size;
 
   if(fp_in_size < 65536)
@@ -273,7 +273,7 @@ static void Load(MDFNFILE *fp)
   if(real_rom_size < rom_size)
    memset(wsCartROM, 0xFF, rom_size - real_rom_size);
 
-  fp->read(wsCartROM + (rom_size - real_rom_size), fp_in_size);
+  gf->stream->read(wsCartROM + (rom_size - real_rom_size), fp_in_size);
 
   if(!memcmp(wsCartROM + (rom_size - real_rom_size) + fp_in_size - 0x20, "WSRF", 4))
   {
@@ -402,7 +402,6 @@ static void Load(MDFNFILE *fp)
 
   WSwan_GfxInit();
   MDFNGameInfo->fps = (uint32)((uint64)3072000 * 65536 * 256 / (159*256));
-  MDFNGameInfo->GameSetMD5Valid = false;
 
   WSwan_SoundInit();
 
@@ -643,10 +642,10 @@ static DebuggerInfoStruct DBGInfo =
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".ws", gettext_noop("WonderSwan ROM Image") },
- { ".wsc", gettext_noop("WonderSwan Color ROM Image") },
- { ".wsr", gettext_noop("WonderSwan Music Rip") },
- { NULL, NULL }
+ { ".ws",    0, gettext_noop("WonderSwan ROM Image") },
+ { ".wsc",   0, gettext_noop("WonderSwan Color ROM Image") },
+ { ".wsr", -20, gettext_noop("WonderSwan Music Rip") },
+ { NULL, 0, NULL }
 };
 
 }

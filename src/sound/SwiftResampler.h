@@ -1,7 +1,13 @@
-#ifndef __NES_FILTER_H
-#define __NES_FILTER_H
+#ifndef __MDFN_SOUND_SWIFTRESAMPLER_H
+#define __MDFN_SOUND_SWIFTRESAMPLER_H
 
-class NES_Resampler
+namespace Mednafen
+{
+
+//
+// Read the notes at the top of SwiftResampler.cpp before using.
+//
+class SwiftResampler
 {
 	public:
 
@@ -17,9 +23,9 @@ class NES_Resampler
 	// A value of 0 will disable it entirely.
 	//
 	// quality is an arbitrary control of quality(-2 for lowest quality, 3 for highest quality)
-	NES_Resampler(double input_rate, double output_rate, double rate_error, double hp_tc, int quality) MDFN_COLD;
-	NES_Resampler(const NES_Resampler &resamp) MDFN_COLD;
-	~NES_Resampler() MDFN_COLD;
+	SwiftResampler(double input_rate, double output_rate, double rate_error, double hp_tc, int quality) MDFN_COLD;
+	SwiftResampler(const SwiftResampler &resamp) MDFN_COLD;
+	~SwiftResampler() MDFN_COLD;
 
 	// Specify volume in percent amplitude(range 0 through 1.000..., inclusive).  Default: SetVolume(1.0);
 	void SetVolume(double newvolume);
@@ -28,15 +34,22 @@ class NES_Resampler
 	// The int32 pointed to by leftover is set to the number of input samples left over from this filter iteration.
 	// "in" should be aligned to a 16-byte boundary, for the SIMD versions of the filter to work properly.  "out" doesn't have any
 	// special alignment requirement.
-	NO_INLINE int32 Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, int32 *leftover);
+	INLINE int32 Do(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, int32 *leftover)
+	{
+	 return (this->*SwiftResampler::Resample_)(in, out, maxoutlen, inlen, leftover);
+	}
 
 	// Get the InputRate / OutputRate ratio, expressed as a / b
-	void GetRatio(int32 *a, int32 *b)
+	INLINE void GetRatio(int32 *a, int32 *b)
 	{
 	 *a = Ratio_Dividend;
 	 *b = Ratio_Divisor;
 	}
 
+	INLINE const char* GetSIMDType(void)
+	{
+	 return SIMDTypeString;
+	}
 	private:
 
 	// Copy of the parameters passed to the constructor
@@ -82,10 +95,10 @@ class NES_Resampler
 	 SIMD_NONE,
 	 SIMD_MMX,
 	 SIMD_SSE2,
+	 SIMD_SSE2_INTRIN,
 	 SIMD_ALTIVEC,
 	 SIMD_NEON
 	};
-	uint32 SIMD_Type;
 
 	int32 debias;
 	int32 debias_multiplier;
@@ -93,5 +106,19 @@ class NES_Resampler
 	// for GetRatio()
 	int32 Ratio_Dividend;
 	int32 Ratio_Divisor;
+
+	//
+	//
+	//
+	template<size_t align_mask = 0>
+	uint32 ResampLoop(int16* in, int32* out, uint32 max, void (*MAC_Function)(const int16* wave, const int16* coeffs, int32 count, int32* accum_output));
+
+	template<unsigned TA_SIMD_Type, unsigned TA_NumFractBits>
+	int32 T_Resample(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, int32 *leftover);
+
+	int32 (SwiftResampler::*Resample_)(int16 *in, int16 *out, uint32 maxoutlen, uint32 inlen, int32 *leftover);
+	const char* SIMDTypeString;
 };
+
+}
 #endif

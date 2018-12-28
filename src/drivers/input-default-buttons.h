@@ -4,6 +4,8 @@
 
 #define MKDEF(sc) 	 "keyboard 0x0 " KBD_SCANCODE_STRING(sc)
 #define MKDEF2(sca, scb) "keyboard 0x0 " KBD_SCANCODE_STRING(sca) " || " "keyboard 0x0 " KBD_SCANCODE_STRING(scb)
+#define MKDEF3(sca, scb, scc) "keyboard 0x0 " KBD_SCANCODE_STRING(sca) " || " "keyboard 0x0 " KBD_SCANCODE_STRING(scb) " || " "keyboard 0x0 " KBD_SCANCODE_STRING(scc)
+#define MKDEF4(sca, scb, scc, scd) "keyboard 0x0 " KBD_SCANCODE_STRING(sca) " || " "keyboard 0x0 " KBD_SCANCODE_STRING(scb) " || " "keyboard 0x0 " KBD_SCANCODE_STRING(scc) " || " "keyboard 0x0 " KBD_SCANCODE_STRING(scd)
 
 #define MKMOUSEB(b) 	 "mouse 0x0 button_" b
 #define MKMOUSECURSOR(a) "mouse 0x0 cursor_" a "-+"
@@ -653,6 +655,78 @@ static const char* const SSJPKeyboardConfig[] =
  MKDEF(RIGHT),
 };
 
+//
+//
+//
+static const char* const A2PTwopieceKeyboard[] =
+{
+ MKDEF(3),
+ MKDEF(Q),
+ MKDEF(D),
+ MKDEF3(Z, DOWN, KP_2),
+ MKDEF(S),
+
+ MKDEF(4),
+ MKDEF(W),
+ MKDEF(F),
+ MKDEF(X),
+ MKDEF(2),
+
+ MKDEF(5),
+ MKDEF(E),
+ MKDEF(G),
+ MKDEF(C),
+ MKDEF(1),
+
+ MKDEF(6),
+ MKDEF(R),
+ MKDEF(H),
+ MKDEF(V),
+ MKDEF2(ESCAPE, TAB),
+
+ MKDEF(7),
+ MKDEF(T),
+ MKDEF(J),
+ MKDEF(B),
+ MKDEF3(A, UP, KP_8),
+
+ MKDEF(8),
+ MKDEF(Y),
+ MKDEF(K),
+ MKDEF(N),
+ MKDEF(SPACE),
+
+ MKDEF(9),
+ MKDEF(U),
+ MKDEF(L),
+ MKDEF(M),
+
+ MKDEF(0),
+ MKDEF(I),
+ MKDEF2(SEMICOLON, KP_4),
+ MKDEF(COMMA),
+
+ MKDEF(MINUS),
+ MKDEF(O),
+ MKDEF4(LEFT, BACKSPACE, KP_5, DELETE),
+ MKDEF(PERIOD),
+
+ MKDEF(EQUALS),
+ MKDEF(P),
+ MKDEF3(RIGHT, KP_6, PAGEDOWN),
+ MKDEF2(SLASH, END),
+ MKDEF3(RETURN, BACKSLASH, HOME),
+
+ MKDEF(LSHIFT),
+ MKDEF(RSHIFT),
+ MKDEF3(CAPSLOCK, LCTRL, RCTRL),
+ MKDEF3(LEFTBRACKET, LALT, RALT),
+ MKDEF(INSERT),
+};
+
+//
+//
+//
 
 static const char* const SNESPadConfig[] =
 {
@@ -957,6 +1031,8 @@ const std::map<const char*, DefaultSettingsMeow, cstrcomp> defset =
  DPDC("ss.input.port10.jpkeyboard", SSJPKeyboardConfig),
  DPDC("ss.input.port11.jpkeyboard", SSJPKeyboardConfig),
  DPDC("ss.input.port12.jpkeyboard", SSJPKeyboardConfig),
+
+ DPDC("apple2.input.keyboard.twopiece", A2PTwopieceKeyboard),
 
  DPDC("mmplay.input.builtin.controller", MMPlayInputConfig),
  DPDC("cdplay.input.builtin.controller", CDPlayInputConfig),

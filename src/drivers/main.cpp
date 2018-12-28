@@ -19,14 +19,14 @@
 #include <SDL_revision.h>
 
 #ifdef WIN32
-#include <windows.h>
+ #include <mednafen/win32-common.h>
+#else
+ #include <unistd.h>
 #endif
 
-#include <unistd.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <signal.h>
-#include <sys/time.h>
 #include <sys/stat.h>
 #include <trio/trio.h>
 #include <locale.h>
@@ -73,7 +73,7 @@ static bool NeededWMInputBehavior_Dirty = false;
 bool MDFNDHaveFocus;
 static bool RemoteOn = FALSE;
 bool pending_save_state, pending_snapshot, pending_ssnapshot, pending_save_movie;
-static uint32 volatile MainThreadID = 0;
+static uint64 MainThreadID = 0;
 static bool ffnosound;
 
 static const MDFNSetting_EnumList SDriver_List[] =
@@ -232,7 +232,7 @@ void MakeDebugSettings(std::vector <MDFNSetting> &settings)
  #endif
 }
 
-static MDFN_Thread* GameThread;
+static MThreading::Thread* GameThread;
 
 static struct
 {
@@ -247,9 +247,9 @@ static bool SoftFB_BackBuffer = false;
 static std::atomic_int VTReady;
 static unsigned VTRotated = 0;
 static bool VTSSnapshot = false;
-static MDFN_Sem* VTWakeupSem;
-static MDFN_Mutex *VTMutex = NULL, *EVMutex = NULL;
-static MDFN_Mutex *StdoutMutex = NULL;
+static MThreading::Sem* VTWakeupSem;
+static MThreading::Mutex *VTMutex = NULL, *EVMutex = NULL;
+static MThreading::Mutex *StdoutMutex = NULL;
 
 //
 //
@@ -395,7 +395,7 @@ static bool HandleConsoleMadness(void)
 }
 #endif
 
-void MDFND_OutputNotice(MDFN_NoticeType t, const char* s) noexcept
+void Mednafen::MDFND_OutputNotice(MDFN_NoticeType t, const char* s) noexcept
 {
  bool did_message_box = false;
 
@@ -409,17 +409,17 @@ void MDFND_OutputNotice(MDFN_NoticeType t, const char* s) noexcept
  else if(t != MDFN_NOTICE_STATUS)
  {
   if(StdoutMutex)
-   MDFND_LockMutex(StdoutMutex);
+   MThreading::LockMutex(StdoutMutex);
  
   puts(s);
   fflush(stdout);
 
   if(StdoutMutex)
-   MDFND_UnlockMutex(StdoutMutex);
+   MThreading::UnlockMutex(StdoutMutex);
   //
   //
   //
-  if(MDFND_ThreadID() == MainThreadID && !SuppressErrorPopups)
+  if(MThreading::ThreadID() == MainThreadID && !SuppressErrorPopups)
   {
    const char* title = "";
 
@@ -449,20 +449,20 @@ void MDFND_OutputNotice(MDFN_NoticeType t, const char* s) noexcept
  }
 }
 
-void MDFND_OutputInfo(const char *s) noexcept
+void Mednafen::MDFND_OutputInfo(const char *s) noexcept
 {
  if(RemoteOn)
   Remote_SendInfoMessage(s);
  else
  {
   if(StdoutMutex)
-   MDFND_LockMutex(StdoutMutex);
+   MThreading::LockMutex(StdoutMutex);
 
   fputs(s,stdout);
   fflush(stdout);
 
   if(StdoutMutex)
-   MDFND_UnlockMutex(StdoutMutex);
+   MThreading::UnlockMutex(StdoutMutex);
  }
 }
 
@@ -470,29 +470,13 @@ static void CreateDirs(void)
 {
  static const char* const subs[] = { "mcs", "mcm", "snaps", "palettes", "sav", "cheats", "firmware", "pgconfig" };
 
- try
- {
-  MDFN_mkdir_T(DrBaseDirectory.c_str());
- }
- catch(MDFN_Error &e)
- {
-  if(e.GetErrno() != EEXIST)
-   throw;
- }
+ NVFS.mkdir(DrBaseDirectory, false);
 
  for(auto const& s : subs)
  {
   std::string tdir = DrBaseDirectory + PSS + s;
 
-  try
-  {
-   MDFN_mkdir_T(tdir.c_str());
-  }
-  catch(MDFN_Error &e)
-  {
-   if(e.GetErrno() != EEXIST)
-    throw;
-  }
+  NVFS.mkdir(tdir, false);
  }
 }
 
@@ -736,16 +720,16 @@ static void Stream64Test(const char* path)
 //
 //
 //
-#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/cdrom/CDInterface.h>
 static void CDTest(const char* path)
 {
  try
  {
-  CDIF* cds[2];
+  CDInterface* cds[2];
   CDUtility::TOC toc[2];
 
-  cds[0] = CDIF_Open(path, false);
-  cds[1] = CDIF_Open(path, true);
+  cds[0] = CDInterface::Open(&NVFS, path, false);
+  cds[1] = CDInterface::Open(&NVFS, path, true);
 
   for(unsigned i = 0; i < 2; i++)
    cds[0]->ReadTOC(&toc[i]);
@@ -842,6 +826,8 @@ static bool DoArgs(int argc, char *argv[], char **filename)
 	char *stream64testpath = NULL;
 	char *cdtestpath = NULL;
 	int mtetest = 0;
+	int swiftresamptest = 0;
+	int owlresamptest = 0;
 
         ARGPSTRUCT MDFNArgs[] = 
 	{
@@ -878,6 +864,12 @@ static bool DoArgs(int argc, char *argv[], char **filename)
 
 	 // Save state rewind consistency test.
 	 { "staterctest", NULL, &StateRCTest, 0, 0 },
+
+	 // SwiftResampler test.
+	 { "swiftresamptest", NULL, &swiftresamptest, 0, 0 },
+
+	 // OwlResampler test.
+	 { "owlresamptest", NULL, &owlresamptest, 0, 0 },
 
 	 { 0, 0, 0, 0 }
         };
@@ -916,6 +908,12 @@ static bool DoArgs(int argc, char *argv[], char **filename)
 
 	 if(mtetest)
 	  MDFN_RunExceptionTests(4, 30000);
+
+	 if(swiftresamptest)
+	  MDFN_RunSwiftResamplerTest();
+
+	 if(owlresamptest)
+	  MDFN_RunOwlResamplerTest();
 
 	 if(stream64testpath)
 	 {
@@ -963,7 +961,7 @@ static bool autosave_load_error = false;
 
 static int LoadGame(const char *force_module, const char *path)
 {
-	assert(MDFND_ThreadID() == MainThreadID);
+	assert(MThreading::ThreadID() == MainThreadID);
 	//
 	MDFNGI *tmp;
 
@@ -976,12 +974,12 @@ static int LoadGame(const char *force_module, const char *path)
 
 	if(loadcd)	// Deprecated
 	{
-	 if(!(tmp = MDFNI_LoadGame(loadcd ? loadcd : force_module, path, true)))
+	 if(!(tmp = MDFNI_LoadGame(loadcd ? loadcd : force_module, &::Mednafen::NVFS, path, true)))
 	  return(0);
 	}
 	else
 	{
-         if(!(tmp=MDFNI_LoadGame(force_module, path)))
+         if(!(tmp=MDFNI_LoadGame(force_module, &::Mednafen::NVFS, path)))
 	  return 0;
 	}
 
@@ -1057,7 +1055,11 @@ int CloseGame(void)
 
 	GameThreadRun = 0;
 
-	MDFND_WaitThread(GameThread, NULL);
+	if(GameThread)
+	{
+	 MThreading::WaitThread(GameThread, NULL);
+	 GameThread = NULL;
+	}
 
         if(qtrecfn)	// Needs to be before MDFNI_Closegame() for now
          MDFNI_StopAVRecord();
@@ -1092,7 +1094,7 @@ void MainRequestExit(void)
  NeedExitNow = 1;
 }
 
-bool MDFND_CheckNeedExit(void)	// Called from netplay code, so we can break out of blocking loops after receiving a signal.
+bool Mednafen::MDFND_CheckNeedExit(void)	// Called from netplay code, so we can break out of blocking loops after receiving a signal.
 {
  return (bool)NeedExitNow;
 }
@@ -1176,8 +1178,6 @@ static int GameLoop(void *arg)
 	 //
 	 //
 	 EmulateSpecStruct espec;
-
- 	 memset(&espec, 0, sizeof(EmulateSpecStruct));
 
          espec.surface = SoftFB[SoftFB_BackBuffer].surface.get();
          espec.LineWidths = SoftFB[SoftFB_BackBuffer].lw.get();
@@ -1372,7 +1372,7 @@ static void GameThread_HandleEvents(void)
  SDL_Event gtevents_temp[gtevents_size];
  unsigned int numevents = 0;
 
- MDFND_LockMutex(EVMutex);
+ MThreading::LockMutex(EVMutex);
  while(gte_read != gte_write)
  {
   memcpy(&gtevents_temp[numevents], (void *)&gtevents[gte_read], sizeof(SDL_Event));
@@ -1380,7 +1380,7 @@ static void GameThread_HandleEvents(void)
   numevents++;
   gte_read = (gte_read + 1) & (gtevents_size - 1);
  }
- MDFND_UnlockMutex(EVMutex);
+ MThreading::UnlockMutex(EVMutex);
 
  for(unsigned int i = 0; i < numevents; i++)
  {
@@ -1430,21 +1430,21 @@ static void SendCEvent_to_GT(unsigned int code, void *data1, void *data2, uint16
  evt.user.data1 = data1;
  evt.user.data2 = data2;
 
- MDFND_LockMutex(EVMutex);
+ MThreading::LockMutex(EVMutex);
  memcpy((void *)&gtevents[gte_write], &evt, sizeof(SDL_Event));
  gte_write = (gte_write + 1) & (gtevents_size - 1);
- MDFND_UnlockMutex(EVMutex);
+ MThreading::UnlockMutex(EVMutex);
 }
 
 void GT_ToggleFS(void)
 {
- // assert(MDFN_ThreadID() == GameThreadID);
- MDFND_LockMutex(VTMutex);
+ // assert(MThreading::ThreadID() == GameThreadID);
+ MThreading::LockMutex(VTMutex);
  MDFNI_SetSettingB("video.fs", !MDFN_GetSettingB("video.fs"));
  NeedVideoSync++;
- MDFND_UnlockMutex(VTMutex);
+ MThreading::UnlockMutex(VTMutex);
 
- MDFND_PostSem(VTWakeupSem);
+ MThreading::PostSem(VTWakeupSem);
  while(NeedVideoSync && GameThreadRun)
  {
   Time::SleepMS(2);
@@ -1453,12 +1453,12 @@ void GT_ToggleFS(void)
 
 bool GT_ReinitVideo(void)
 {
- // assert(MDFN_ThreadID() == GameThreadID);
- MDFND_LockMutex(VTMutex);
+ // assert(MThreading::ThreadID() == GameThreadID);
+ MThreading::LockMutex(VTMutex);
  NeedVideoSync++;
- MDFND_UnlockMutex(VTMutex);
+ MThreading::UnlockMutex(VTMutex);
 
- MDFND_PostSem(VTWakeupSem);
+ MThreading::PostSem(VTWakeupSem);
  while(NeedVideoSync && GameThreadRun)
  {
   Time::SleepMS(2);
@@ -1592,13 +1592,13 @@ void PumpWrap(void)
 
  if(numevents > 0)
  {
-  MDFND_LockMutex(EVMutex);
+  MThreading::LockMutex(EVMutex);
   for(int i = 0; i < numevents; i++)
   {
    memcpy((void *)&gtevents[gte_write], &gtevents_temp[i], sizeof(SDL_Event));
    gte_write = (gte_write + 1) & (gtevents_size - 1);
   }
-  MDFND_UnlockMutex(EVMutex);
+  MThreading::UnlockMutex(EVMutex);
  }
 
  if(!CurGame)
@@ -1738,8 +1738,8 @@ char *GetFileDialog(void)
 #endif
 
 #if 0
-static MDFN_Mutex* milk_mutex = NULL;
-static MDFN_Cond* milk_cond = NULL;
+static MThreading::Mutex* milk_mutex = NULL;
+static MThreading::Cond* milk_cond = NULL;
 static volatile unsigned cow_milk = 0;
 static volatile unsigned farmer_milk = 0;
 static volatile unsigned calf_milk = 0;
@@ -1751,11 +1751,11 @@ static int CowEntry(void*)
 
  for(unsigned i = 0; i < 1000 * 1000; i++)
  {
-  MDFND_LockMutex(milk_mutex);
+  MThreading::LockMutex(milk_mutex);
   cow_milk++;
 
-  MDFND_SignalCond(milk_cond);
-  MDFND_UnlockMutex(milk_mutex);
+  MThreading::SignalCond(milk_cond);
+  MThreading::UnlockMutex(milk_mutex);
 
   while(cow_milk != 0);
  }
@@ -1767,60 +1767,60 @@ static int CowEntry(void*)
 
 static int FarmerEntry(void*)
 {
- MDFND_LockMutex(milk_mutex);
+ MThreading::LockMutex(milk_mutex);
  while(1)
  {
-  MDFND_WaitCond(milk_cond, milk_mutex);
+  MThreading::WaitCond(milk_cond, milk_mutex);
 
   farmer_milk += cow_milk;
   cow_milk = 0;
  }
- MDFND_UnlockMutex(milk_mutex);
+ MThreading::UnlockMutex(milk_mutex);
  return(0);
 }
 
 static int CalfEntry(void*)
 {
- MDFND_LockMutex(milk_mutex);
+ MThreading::LockMutex(milk_mutex);
  while(1)
  {
-  MDFND_WaitCond(milk_cond, milk_mutex);
+  MThreading::WaitCond(milk_cond, milk_mutex);
 
   calf_milk += cow_milk;
   cow_milk = 0;
  }
- MDFND_UnlockMutex(milk_mutex);
+ MThreading::UnlockMutex(milk_mutex);
  return(0);
 }
 
 static int AutoMilker3000Entry(void*)
 {
- MDFND_LockMutex(milk_mutex);
+ MThreading::LockMutex(milk_mutex);
  while(1)
  {
-  MDFND_WaitCond(milk_cond, milk_mutex);
+  MThreading::WaitCond(milk_cond, milk_mutex);
 
   am3000_milk += cow_milk;
   cow_milk = 0;
  }
- MDFND_UnlockMutex(milk_mutex);
+ MThreading::UnlockMutex(milk_mutex);
  return(0);
 }
 
 static void ThreadTest(void)
 {
- MDFN_Thread *cow_thread, *farmer_thread, *calf_thread, *am3000_thread;
+ MThreading::Thread *cow_thread, *farmer_thread, *calf_thread, *am3000_thread;
  int rec;
 
- milk_mutex = MDFND_CreateMutex();
- milk_cond = MDFND_CreateCond();
+ milk_mutex = MThreading::CreateMutex();
+ milk_cond = MThreading::CreateCond();
 
- //farmer_thread = MDFND_CreateThread(FarmerEntry, NULL);
- //calf_thread = MDFND_CreateThread(CalfEntry, NULL);
- //am3000_thread = MDFND_CreateThread(AutoMilker3000Entry, NULL);
+ //farmer_thread = MThreading::CreateThread(FarmerEntry, NULL);
+ //calf_thread = MThreading::CreateThread(CalfEntry, NULL);
+ //am3000_thread = MThreading::CreateThread(AutoMilker3000Entry, NULL);
 
- cow_thread = MDFND_CreateThread(CowEntry, NULL);
- MDFND_WaitThread(cow_thread, &rec);
+ cow_thread = MThreading::CreateThread(CowEntry, NULL);
+ MThreading::WaitThread(cow_thread, &rec);
 
  printf("%8u %8u %8u --- %8u, time=%u\n", farmer_milk, calf_milk, am3000_milk, farmer_milk + calf_milk + am3000_milk, rec);
 
@@ -1850,7 +1850,7 @@ static bool LoadSettings(void)
   {
    char tmp[256];
    trio_snprintf(tmp, sizeof(tmp), "%llu", (unsigned long long)Time::EpochTime());
-   MDFN_rename(npath.c_str(), (npath + "." + tmp).c_str());
+   NVFS.rename(npath, npath + "." + tmp);
   }
  }
  catch(MDFN_Error& e)
@@ -2014,7 +2014,7 @@ int main(int argc, char *argv[])
 	//
 	//
 	//
-	MainThreadID = MDFND_ThreadID();	// Must come before any direct or indirect calls to MDFND_OutputNotice()
+	MainThreadID = MThreading::ThreadID();	// Must come before any direct or indirect calls to MDFND_OutputNotice()
 	//
 	//
 	//
@@ -2085,7 +2085,7 @@ int main(int argc, char *argv[])
 	SDL_DisableScreenSaver();
 	//SDL_StopTextInput();
 
-	if(!(StdoutMutex = MDFND_CreateMutex()))
+	if(!(StdoutMutex = MThreading::CreateMutex()))
 	{
 	 MDFN_Notify(MDFN_NOTICE_ERROR, _("Could not create mutex: %s\n"), SDL_GetError());
 	 return -1;
@@ -2180,10 +2180,10 @@ int main(int argc, char *argv[])
 	*/
 	int ret = 0;
 
-	VTMutex = MDFND_CreateMutex();
-        EVMutex = MDFND_CreateMutex();
+	VTMutex = MThreading::CreateMutex();
+        EVMutex = MThreading::CreateMutex();
 
-	VTWakeupSem = MDFND_CreateSem();
+	VTWakeupSem = MThreading::CreateSem();
 	//
 	Video_Init();
 	//
@@ -2217,7 +2217,7 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 	 //
 	 //
 	 GameThreadRun = 1;
-	 GameThread = MDFND_CreateThread(GameLoop, NULL);
+	 GameThread = MThreading::CreateThread(GameLoop, NULL, "MDFN Emulation");
 	 //
 	 //
 	 //
@@ -2251,7 +2251,7 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 
 	while(MDFN_LIKELY(!NeedExitNow))
 	{
-	 MDFND_LockMutex(VTMutex);	/* Lock mutex */
+	 MThreading::LockMutex(VTMutex);	/* Lock mutex */
 
 	 try
 	 {
@@ -2303,21 +2303,21 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 	  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
 	  if(FatalVideoError == 0)
 	  {
- 	   MDFND_UnlockMutex(VTMutex);   /* Unlock mutex */ 
+ 	   MThreading::UnlockMutex(VTMutex);   /* Unlock mutex */ 
 	   FatalVideoError = 1;
 	  }
 	  else
 	  {	  
 	   ret = -1;
            NeedExitNow = 1;
-	   MDFND_UnlockMutex(VTMutex);   /* Unlock mutex */
+	   MThreading::UnlockMutex(VTMutex);   /* Unlock mutex */
 	   goto VideoErrorExit;
 	  }
 	 }
 
-         MDFND_UnlockMutex(VTMutex);   /* Unlock mutex */
+         MThreading::UnlockMutex(VTMutex);   /* Unlock mutex */
 
-	 MDFND_WaitSemTimeout(VTWakeupSem, 1);
+	 MThreading::WaitSemTimeout(VTWakeupSem, 1);
 	}
 	VideoErrorExit:;
 	//
@@ -2335,10 +2335,10 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 } // end game load test loop
 #endif
 
-	MDFND_DestroySem(VTWakeupSem);
+	MThreading::DestroySem(VTWakeupSem);
 
-	MDFND_DestroyMutex(VTMutex);
-        MDFND_DestroyMutex(EVMutex);
+	MThreading::DestroyMutex(VTMutex);
+        MThreading::DestroyMutex(EVMutex);
 
 	RemoveSignalHandlers();
 
@@ -2423,7 +2423,7 @@ static void UpdateSoundSync(int16 *Buffer, uint32 Count)
  }
 }
 
-void MDFND_MidSync(const EmulateSpecStruct *espec)
+void Mednafen::MDFND_MidSync(const EmulateSpecStruct *espec)
 {
  ers.AddEmuTime((espec->MasterCycles - espec->MasterCyclesALMS) / CurGameSpeed, false);
 
@@ -2464,7 +2464,7 @@ static bool PassBlit(const int WhichVideoBuffer)
  last_btime = Time::MonoMS();
  FPS_IncBlitted();
 
- MDFND_PostSem(VTWakeupSem);
+ MThreading::PostSem(VTWakeupSem);
 
  return true;
 }
@@ -2534,12 +2534,12 @@ static bool MDFND_Update(int WhichVideoBuffer, int16 *Buffer, int Count)
  return(ret);
 }
 
-void MDFND_SetStateStatus(StateStatusStruct *status) noexcept
+void Mednafen::MDFND_SetStateStatus(StateStatusStruct *status) noexcept
 {
  SendCEvent(CEVT_SET_STATE_STATUS, status, NULL);
 }
 
-void MDFND_SetMovieStatus(StateStatusStruct *status) noexcept
+void Mednafen::MDFND_SetMovieStatus(StateStatusStruct *status) noexcept
 {
  SendCEvent(CEVT_SET_MOVIE_STATUS, status, NULL);
 }

@@ -62,7 +62,7 @@ void MDFNGBASOUND_Kill(void) MDFN_COLD;
 uint8 soundRead(uint32 address);
 
 bool MDFNGBA_SetSoundRate(uint32 rate);
-int MDFNGBASOUND_StateAction(StateMem *sm, int load, int data_only);
+void MDFNGBASOUND_StateAction(StateMem* sm, const unsigned load, const bool data_only);
 
 }
 

@@ -20,6 +20,9 @@
 
 #include "IPSPatcher.h"
 
+namespace Mednafen
+{
+
 uint32 IPSPatcher::Apply(Stream* ips, Stream* targ)
 {
  std::unique_ptr<uint8[]> tmpbuf(new uint8[65536]);
@@ -73,4 +76,6 @@ uint32 IPSPatcher::Apply(Stream* ips, Stream* targ)
   }
   count++;
  }
+}
+
 }

@@ -152,9 +152,9 @@ void NGPGFX_CLASS::draw_scanline_mono(int layer_enable, int ngpc_scanline)
 		//Middle
 		if (ngpc_scanline < winy + winh)
 		{
-			for (int x = 0; x < min(winx, SCREEN_WIDTH); x++)
+			for (int x = 0; x < std::min<int>(winx, SCREEN_WIDTH); x++)
 				cfb_scanline[x] = data16;
-			for (int x = min(winx + winw, SCREEN_WIDTH); x < SCREEN_WIDTH; x++)
+			for (int x = std::min<int>(winx + winw, SCREEN_WIDTH); x < SCREEN_WIDTH; x++)
 				cfb_scanline[x] = data16;
 		}
 		else	//Bottom
@@ -180,7 +180,7 @@ void NGPGFX_CLASS::draw_scanline_mono(int layer_enable, int ngpc_scanline)
 		if (negative) data16 = ~data16;
 		
 		//Draw background!
-		for (int x = winx; x < min(winx + winw, SCREEN_WIDTH); x++)	
+		for (int x = winx; x < std::min<int>(winx + winw, SCREEN_WIDTH); x++)	
 			cfb_scanline[x] = data16;
 
 		//Swap Front/Back scroll planes?

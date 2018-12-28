@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* memdebugger.cpp:
-**  Copyright (C) 2007-2016 Mednafen Team
+**  Copyright (C) 2007-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -223,7 +223,7 @@ void MemDebugger::PromptFinish(const std::string &pstring)
 	 {
 	  if(ICV_Init(pstring.c_str()))
 	  {
-	   MDFNI_SetSetting(std::string(CurGame->shortname) + "." + std::string("debugger.memcharenc"), pstring);
+	   MDFNI_SetSetting(std::string(CurGame->shortname) + "." + "debugger.memcharenc", pstring);
 	  }
 	 }
          else if(which == DumpMem)
@@ -261,6 +261,8 @@ void MemDebugger::PromptFinish(const std::string &pstring)
 	    fp.write(write_buffer, to_write);
 	    a += to_write;
 	   }
+
+           fp.close();
           }
          }
          else if(which == LoadMem)
@@ -978,7 +980,7 @@ MemDebugger::MemDebugger() : AddressSpaces(NULL), ASpace(NULL), IsActive(false),
    SizeCache[i] = tmpsize;
   }
 
-  ICV_Init( MDFN_GetSettingS(std::string(CurGame->shortname) + "." + std::string("debugger.memcharenc")).c_str() );
+  ICV_Init( MDFN_GetSettingS(std::string(CurGame->shortname) + "." + "debugger.memcharenc").c_str() );
  }
 }
 

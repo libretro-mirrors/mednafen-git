@@ -24,7 +24,7 @@
 
 namespace MDFN_IEN_SS
 {
-void CART_Debug_Init(CartInfo* c) MDFN_COLD;
+void CART_Debug_Init(CartInfo* c, Stream* str = nullptr) MDFN_COLD;
 }
 
 #endif

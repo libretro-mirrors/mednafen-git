@@ -26,6 +26,9 @@
 
 #include "psx.h"
 
+namespace Mednafen
+{
+
 static void GSCondCode(MemoryPatch* patch, const char* cc, const unsigned len, const uint32 addr, const uint16 val)
 {
  char tmp[256];
@@ -213,3 +216,4 @@ const std::vector<CheatFormatStruct> CheatFormats_PSX =
  { "GameShark", gettext_noop("Sharks with lamprey eels for eyes."), DecodeGS },
 };
 
+}

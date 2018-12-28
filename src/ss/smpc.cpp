@@ -487,8 +487,16 @@ void SMPC_Reset(bool powering_up)
   DirectModeEn[port] = false;
   ExLatchEn[port] = false;
   UpdateIOBus(port, SH7095_mem_timestamp);
+  //
+  if(powering_up)
+  {
+   IOPorts[port]->Power();
+   UpdateIOBus(port, SH7095_mem_timestamp);
+  }
  }
-
+ //
+ //
+ //
  ResetPending = false;
 
  PendingClockDivisor = 0;

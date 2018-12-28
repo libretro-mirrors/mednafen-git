@@ -209,7 +209,7 @@ static void LoadNSF(Stream *fp)
 }
 
 
-bool NSF_TestMagic(MDFNFILE *fp)
+bool NSF_TestMagic(Stream *fp)
 {
  uint8 magic[5];
 

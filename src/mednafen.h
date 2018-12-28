@@ -2,9 +2,6 @@
 #define __MDFN_MEDNAFEN_H
 
 #include "types.h"
-#include "gettext.h"
-
-#define _(String) gettext (String)
 
 #if PSS_STYLE==2
  #define PSS "\\"
@@ -21,10 +18,13 @@
 #endif
 
 #include "git.h"
-
-extern MDFNGI *MDFNGameInfo;
-
 #include "settings.h"
+#include "NativeVFS.h"
+
+namespace Mednafen
+{
+extern NativeVFS NVFS;
+extern MDFNGI *MDFNGameInfo;
 
 enum MDFN_NoticeType : uint8
 {
@@ -58,9 +58,15 @@ void MDFN_MediaSetNotification(uint32 drive_idx, uint32 state_idx, uint32 media_
 void MDFN_MidSync(EmulateSpecStruct *espec);
 void MDFN_MidLineUpdate(EmulateSpecStruct *espec, int y);
 
+}
+
 #include "state.h"
 // MDFN_StateAction->(Emu Module)StateAction->MDFNSS_StateAction()
+
+namespace Mednafen
+{
 void MDFN_StateAction(StateMem *sm, const unsigned load, const bool data_only);
+}
 
 #include "mednafen-driver.h"
 #include "memory.h"

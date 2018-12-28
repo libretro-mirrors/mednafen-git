@@ -144,7 +144,7 @@ class PSF1Loader : public PSFLoader
 {
  public:
 
- PSF1Loader(Stream *fp) MDFN_COLD;
+ PSF1Loader(VirtualFS* vfs, const std::string& dir_path, Stream *fp) MDFN_COLD;
  virtual ~PSF1Loader() override MDFN_COLD;
 
  virtual void HandleEXE(Stream* fp, bool ignore_pcsp = false) override MDFN_COLD;
@@ -218,7 +218,7 @@ static const struct
 
 static sha256_digest BIOS_SHA256;	// SHA-256 hash of the currently-loaded BIOS; used for save state sanity checks.
 static PSF1Loader *psf_loader = NULL;
-static std::vector<CDIF*> *cdifs = NULL;
+static std::vector<CDInterface*> *cdifs = NULL;
 static std::vector<const char *> cdifs_scex_ids;
 
 static uint64 Memcard_PrevDC[8];
@@ -1122,41 +1122,44 @@ static void Emulate(EmulateSpecStruct *espec)
  FIO->UpdateOutput();
 
  // Save memcards if dirty.
- for(int i = 0; i < 8; i++)
+ if(!psf_loader)
  {
-  uint64 new_dc = FIO->GetMemcardDirtyCount(i);
-
-  if(new_dc > Memcard_PrevDC[i])
+  for(int i = 0; i < 8; i++)
   {
-   Memcard_PrevDC[i] = new_dc;
-   Memcard_SaveDelay[i] = 0;
-  }
+   uint64 new_dc = FIO->GetMemcardDirtyCount(i);
 
-  if(Memcard_SaveDelay[i] >= 0)
-  {
-   Memcard_SaveDelay[i] += timestamp;
-   if(Memcard_SaveDelay[i] >= (33868800 * 2))	// Wait until about 2 seconds of no new writes.
+   if(new_dc > Memcard_PrevDC[i])
    {
-    PSX_DBG(PSX_DBG_SPARSE, "Saving memcard %d...\n", i);
-    try
+    Memcard_PrevDC[i] = new_dc;
+    Memcard_SaveDelay[i] = 0;
+   }
+
+   if(Memcard_SaveDelay[i] >= 0)
+   {
+    Memcard_SaveDelay[i] += timestamp;
+    if(Memcard_SaveDelay[i] >= (33868800 * 2))	// Wait until about 2 seconds of no new writes.
     {
-     char ext[64];
-     trio_snprintf(ext, sizeof(ext), "%d.mcr", i);
-     FIO->SaveMemcard(i, MDFN_MakeFName(MDFNMKF_SAV, 0, ext));
-     Memcard_SaveDelay[i] = -1;
-     Memcard_PrevDC[i] = 0;
-    }
-    catch(std::exception &e)
-    {
-     MDFN_Notify(MDFN_NOTICE_ERROR, _("Memcard %d save error: %s"), i, e.what());
-     Memcard_SaveDelay[i] = 0; // Delay before trying to save again
+     PSX_DBG(PSX_DBG_SPARSE, "Saving memcard %d...\n", i);
+     try
+     {
+      char ext[64];
+      trio_snprintf(ext, sizeof(ext), "%d.mcr", i);
+      FIO->SaveMemcard(i, MDFN_MakeFName(MDFNMKF_SAV, 0, ext));
+      Memcard_SaveDelay[i] = -1;
+      Memcard_PrevDC[i] = 0;
+     }
+     catch(std::exception &e)
+     {
+      MDFN_Notify(MDFN_NOTICE_ERROR, _("Memcard %d save error: %s"), i, e.what());
+      Memcard_SaveDelay[i] = 0; // Delay before trying to save again
+     }
     }
    }
   }
  }
 }
 
-static bool CalcRegion_By_SYSTEMCNF(CDIF *c, unsigned *rr)
+static bool CalcRegion_By_SYSTEMCNF(CDInterface *c, unsigned *rr)
 {
  try
  {
@@ -1215,43 +1218,46 @@ static bool CalcRegion_By_SYSTEMCNF(CDIF *c, unsigned *rr)
     fp->seek(file_lba * 2048, SEEK_SET);
     fp->read(fb, 2048);
 
-    bootpos = strstr((char*)fb, "BOOT") + 4;
-    while(*bootpos == ' ' || *bootpos == '\t') bootpos++;
-    if(*bootpos == '=')
+    if((bootpos = strstr((char*)fb, "BOOT")))
     {
-     bootpos++;
+     bootpos += 4;
      while(*bootpos == ' ' || *bootpos == '\t') bootpos++;
-     if(!MDFN_strazicmp(bootpos, "cdrom:", 6))
-     { 
-      char* tmp;
+     if(*bootpos == '=')
+     {
+      bootpos++;
+      while(*bootpos == ' ' || *bootpos == '\t') bootpos++;
+      if(!MDFN_strazicmp(bootpos, "cdrom:", 6))
+      { 
+       char* tmp;
 
-      bootpos += 6;
+       bootpos += 6;
 
-      // strrchr() way will pick up Tekken 3, but only enable if needed due to possibility of regressions.
-      //if((tmp = strrchr(bootpos, '\\')))
-      // bootpos = tmp + 1;
-      while(*bootpos == '\\')
-       bootpos++;
+       // strrchr() way will pick up Tekken 3, but only enable if needed due to possibility of regressions.
+       //if((tmp = strrchr(bootpos, '\\')))
+       // bootpos = tmp + 1;
+       while(*bootpos == '\\')
+        bootpos++;
 
-      if((tmp = strchr(bootpos, '_'))) *tmp = 0;
-      if((tmp = strchr(bootpos, '.'))) *tmp = 0;
-      if((tmp = strchr(bootpos, ';'))) *tmp = 0;
-      //puts(bootpos);
+       if((tmp = strchr(bootpos, '_'))) *tmp = 0;
+       if((tmp = strchr(bootpos, '.'))) *tmp = 0;
+       if((tmp = strchr(bootpos, ';'))) *tmp = 0;
+       //puts(bootpos);
 
-      if(strlen(bootpos) == 4 && MDFN_azupper(bootpos[0]) == 'S' && (MDFN_azupper(bootpos[1]) == 'C' || MDFN_azupper(bootpos[1]) == 'L' || MDFN_azupper(bootpos[1]) == 'I'))
-      {
-       switch(MDFN_azupper(bootpos[2]))
+       if(strlen(bootpos) == 4 && MDFN_azupper(bootpos[0]) == 'S' && (MDFN_azupper(bootpos[1]) == 'C' || MDFN_azupper(bootpos[1]) == 'L' || MDFN_azupper(bootpos[1]) == 'I'))
        {
-	case 'E': *rr = REGION_EU;
-	          return(true);
+        switch(MDFN_azupper(bootpos[2]))
+        {
+	 case 'E': *rr = REGION_EU;
+	           return(true);
 
-	case 'U': *rr = REGION_NA;
-		  return(true);
+	 case 'U': *rr = REGION_NA;
+		   return(true);
 
-	case 'K':	// Korea?
-	case 'B':
-	case 'P': *rr = REGION_JP;
-		  return(true);
+	 case 'K':	// Korea?
+	 case 'B':
+	 case 'P': *rr = REGION_JP;
+		   return(true);
+        }
        }
       }
      }
@@ -1382,25 +1388,25 @@ static const char* Region_To_SCEx(const unsigned region)
  }
 }
 
-static bool TestMagic(MDFNFILE *fp)
+static bool TestMagic(GameFile* gf)
 {
- if(PSFLoader::TestMagic(0x01, fp->stream()))
+ if(PSFLoader::TestMagic(0x01, gf->stream))
   return(true);
 
- fp->rewind();
+ gf->stream->rewind();
 
  uint8 exe_header[0x800];
- if(fp->read(exe_header, 0x800, false) == 0x800 && !memcmp(exe_header, "PS-X EXE", 8))
+ if(gf->stream->read(exe_header, 0x800, false) == 0x800 && !memcmp(exe_header, "PS-X EXE", 8))
   return true;
 
  return false;
 }
 
-static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
+static bool TestMagicCD(std::vector<CDInterface*> *CDInterfaces)
 {
  std::unique_ptr<uint8[]> buf(new uint8[2048 * 8]);
 
- if((*CDInterfaces)[0]->ReadSector(&buf[0], 4, 8) != 0x2)
+ if((*CDInterfaces)[0]->ReadSectors(&buf[0], 4, 8) != 0x2)
   return(false);
 
  if(strncmp((char *)&buf[10], "Licensed  by", strlen("Licensed  by")) && crc32(0, &buf[0x800], 0x3278) != 0x0069c087)
@@ -1428,7 +1434,7 @@ static unsigned CalcDiscSCEx(void)
   //
   // Read the PS1 system area.
   //
-  if((*cdifs)[i]->ReadSector(buf.get(), 4, 8) == 0x2)
+  if((*cdifs)[i]->ReadSectors(buf.get(), 4, 8) == 0x2)
   {
    if(!CalcRegion_By_SYSTEMCNF((*cdifs)[i], &region))
    {
@@ -1441,7 +1447,7 @@ static unsigned CalcDiscSCEx(void)
       //
       uint8 pvd[2048];
 
-      if((*cdifs)[i]->ReadSector(pvd, 16, 1) != 0x2 || memcmp(&pvd[0], "\x01" "CD001", 6) || memcmp(&pvd[8], "PLAYSTATION", 11))
+      if((*cdifs)[i]->ReadSectors(pvd, 16, 1) != 0x2 || memcmp(&pvd[0], "\x01" "CD001", 6) || memcmp(&pvd[8], "PLAYSTATION", 11))
        is_ps1_disc = false;
      }
     }
@@ -1563,7 +1569,7 @@ static void DiscSanityChecks(void)
  }
 }
 
-static MDFN_COLD void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool EmulateMemcards = true, const bool WantPIOMem = false)
+static MDFN_COLD void InitCommon(std::vector<CDInterface*> *CDInterfaces, const bool IsPSF = false, const bool WantPIOMem = false)
 {
  unsigned region;
  int sls, sle;
@@ -1634,7 +1640,7 @@ static MDFN_COLD void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool E
    bool mcsv;
 
    trio_snprintf(buf, sizeof(buf), "psx.input.port%u.memcard", i + 1);
-   mcsv = EmulateMemcards && MDFN_GetSettingB(buf);
+   mcsv = !IsPSF && MDFN_GetSettingB(buf);
    FIO->SetMemcard(i, mcsv);
 
    //MDFN_printf(_("Memcard on Virtual Port %u: %s\n"), i + 1, mcsv ? _("Enabled") : _("Disabled"));
@@ -1727,20 +1733,22 @@ static MDFN_COLD void InitCommon(std::vector<CDIF *> *CDInterfaces, const bool E
    MDFN_printf(_("WARNING: BIOS ROM sanity checks disabled.\n"));
  }
 
- for(int i = 0; i < 8; i++)
+ if(!IsPSF)
  {
-  char ext[64];
-  trio_snprintf(ext, sizeof(ext), "%d.mcr", i);
-  //MDFN_BackupSavFile(5, ext);
-  FIO->LoadMemcard(i, MDFN_MakeFName(MDFNMKF_SAV, 0, ext));
- }
+  for(int i = 0; i < 8; i++)
+  {
+   char ext[64];
+   trio_snprintf(ext, sizeof(ext), "%d.mcr", i);
+   MDFN_BackupSavFile(5, ext);
+   FIO->LoadMemcard(i, MDFN_MakeFName(MDFNMKF_SAV, 0, ext));
+  }
 
- for(int i = 0; i < 8; i++)
- {
-  Memcard_PrevDC[i] = FIO->GetMemcardDirtyCount(i);
-  Memcard_SaveDelay[i] = -1;
+  for(int i = 0; i < 8; i++)
+  {
+   Memcard_PrevDC[i] = FIO->GetMemcardDirtyCount(i);
+   Memcard_SaveDelay[i] = -1;
+  }
  }
-
 
  #ifdef WANT_DEBUGGER
  DBG_Init();
@@ -1928,9 +1936,9 @@ static MDFN_COLD void LoadEXE(Stream* fp, bool ignore_pcsp = false)
  po += 4;
 }
 
-PSF1Loader::PSF1Loader(Stream *fp)
+PSF1Loader::PSF1Loader(VirtualFS* vfs, const std::string& dir_path, Stream *fp)
 {
- tags = Load(0x01, 2033664, fp);
+ tags = Load(0x01, 2033664, vfs, dir_path, fp);
 }
 
 PSF1Loader::~PSF1Loader()
@@ -1944,16 +1952,16 @@ void PSF1Loader::HandleEXE(Stream* fp, bool ignore_pcsp)
 }
 
 static void Cleanup(void);
-static MDFN_COLD void Load(MDFNFILE *fp)
+static MDFN_COLD void Load(GameFile* gf)
 {
  try
  {
-  const bool IsPSF = PSFLoader::TestMagic(0x01, fp->stream());
+  const bool IsPSF = PSFLoader::TestMagic(0x01, gf->stream);
 
-  if(!TestMagic(fp))
+  if(!TestMagic(gf))
    throw MDFN_Error(0, _("File format is unknown to module \"%s\"."), MDFNGameInfo->shortname);
 
-  fp->rewind();
+  gf->stream->rewind();
 
   if(MDFN_GetSettingS("psx.dbg_exe_cdpath") != "")	// For testing/debug purposes.
   {
@@ -1976,19 +1984,19 @@ static MDFN_COLD void Load(MDFNFILE *fp)
    MDFNGameInfo->RMD->MediaTypes.push_back(RMD_MediaType({"CD"}));
    MDFNGameInfo->RMD->Media.push_back(RMD_Media({"Test CD", 0}));
 
-   static std::vector<CDIF *> CDInterfaces;
+   static std::vector<CDInterface*> CDInterfaces;
    CDInterfaces.clear();
-   CDInterfaces.push_back(CDIF_Open(MDFN_GetSettingS("psx.dbg_exe_cdpath").c_str(), false));
-   InitCommon(&CDInterfaces, !IsPSF, true);
+   CDInterfaces.push_back(CDInterface::Open(&NVFS, MDFN_GetSettingS("psx.dbg_exe_cdpath"), false));
+   InitCommon(&CDInterfaces, IsPSF, true);
   }
   else
-   InitCommon(NULL, !IsPSF, true);
+   InitCommon(NULL, IsPSF, true);
 
   TextMem.resize(0);
 
   if(IsPSF)
   {
-   psf_loader = new PSF1Loader(fp->stream());
+   psf_loader = new PSF1Loader(gf->vfs, gf->dir, gf->stream);
 
    std::vector<std::string> SongNames;
 
@@ -1997,7 +2005,7 @@ static MDFN_COLD void Load(MDFNFILE *fp)
    Player_Init(1, psf_loader->tags.GetTag("game"), psf_loader->tags.GetTag("artist"), psf_loader->tags.GetTag("copyright"), SongNames);
   }
   else
-   LoadEXE(fp->stream());
+   LoadEXE(gf->stream);
  }
  catch(std::exception &e)
  {
@@ -2006,7 +2014,7 @@ static MDFN_COLD void Load(MDFNFILE *fp)
  }
 }
 
-static MDFN_COLD void LoadCD(std::vector<CDIF *> *CDInterfaces)
+static MDFN_COLD void LoadCD(std::vector<CDInterface*> *CDInterfaces)
 {
  try
  {
@@ -2166,7 +2174,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
  }
 }
 
-static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
+static void SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
 {
  const RMD_Layout* rmd = EmulatedPSX.RMD;
  const RMD_Drive* rd = &rmd->Drives[drive_idx];
@@ -2182,8 +2190,6 @@ static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint3
  {
   CDC->SetDisc(rs->MediaCanChange, NULL, NULL);
  }
-
- return(true);
 }
 
 static void DoSimpleCommand(int cmd)
@@ -2209,11 +2215,11 @@ static const CheatInfoStruct CheatInfo =
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".psf", gettext_noop("PSF1 Rip") },
- { ".minipsf", gettext_noop("MiniPSF1 Rip") },
- { ".psx", gettext_noop("PS-X Executable") },
- { ".exe", gettext_noop("PS-X Executable") },
- { NULL, NULL }
+ { ".psf", -20, gettext_noop("PSF1 Rip") },
+ { ".minipsf", -20, gettext_noop("MiniPSF1 Rip") },
+ { ".psx",   0, gettext_noop("PS-X Executable") },
+ { ".exe", -80, gettext_noop("PS-X Executable") },
+ { NULL, 0, NULL }
 };
 
 static const MDFNSetting PSXSettings[] =

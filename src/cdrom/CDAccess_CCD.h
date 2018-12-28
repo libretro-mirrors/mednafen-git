@@ -19,16 +19,16 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include <mednafen/FileStream.h>
-#include <mednafen/MemoryStream.h>
-
 #include "CDAccess.h"
+
+namespace Mednafen
+{
 
 class CDAccess_CCD : public CDAccess
 {
  public:
 
- CDAccess_CCD(const std::string& path, bool image_memcache);
+ CDAccess_CCD(VirtualFS* vfs, const std::string& path, bool image_memcache);
  virtual ~CDAccess_CCD();
 
  virtual void Read_Raw_Sector(uint8 *buf, int32 lba);
@@ -39,7 +39,7 @@ class CDAccess_CCD : public CDAccess
 
  private:
 
- void Load(const std::string& path, bool image_memcache);
+ void Load(VirtualFS* vfs, const std::string& path, bool image_memcache);
  void Cleanup(void);
 
  void CheckSubQSanity(void);
@@ -50,3 +50,5 @@ class CDAccess_CCD : public CDAccess
  size_t img_numsectors;
  CDUtility::TOC tocd;
 };
+
+}

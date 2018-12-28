@@ -27,6 +27,9 @@
 
 #include <zlib.h>
 
+namespace Mednafen
+{
+
 void QTRecord::w16(uint16 val)
 {
  uint8 buf[2];
@@ -1086,4 +1089,6 @@ QTRecord::~QTRecord(void)
   speex_resampler_destroy(resampler);
   resampler = NULL;
  }
+}
+
 }

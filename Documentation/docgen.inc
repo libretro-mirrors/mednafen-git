@@ -158,8 +158,9 @@ function EndPage()
 
  $toc_string .= '</ul><hr width="100%">';
 
+ $end_string = '';
 
- $end_string = ' </body>
+ $end_string .= ' </body>
 </html>';
 
  $section_depth--;

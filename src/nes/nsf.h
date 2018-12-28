@@ -1,8 +1,6 @@
 #ifndef __MDFN_NES_NSF_H
 #define __MDFN_NES_NSF_H
 
-class MDFNFILE;
-
 namespace MDFN_IEN_NES
 {
 
@@ -50,7 +48,7 @@ typedef struct {
 } NSF_HEADER;
 
 void NSFLoad(Stream *fp, NESGameType *gt) MDFN_COLD;
-bool NSF_TestMagic(MDFNFILE *fp);
+bool NSF_TestMagic(Stream *fp);
 
 void DoNSFFrame(void);
 void MDFNNES_DrawNSF(MDFN_Surface *surface, MDFN_Rect *DisplayRect, int16 *samples, int32 scount);

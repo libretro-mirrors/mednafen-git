@@ -25,6 +25,9 @@
 
 #include <sndfile.h>
 
+namespace Mednafen
+{
+
 class CDAFReader_SF final : public CDAFReader
 {
  public:
@@ -156,4 +159,6 @@ uint64 CDAFReader_SF::FrameCount(void)
 CDAFReader* CDAFR_SF_Open(Stream* fp)
 {
  return new CDAFReader_SF(fp);
+}
+
 }

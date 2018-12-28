@@ -2055,14 +2055,20 @@ CPU_Misc CPUM;
 
 void CPU_Run(void)
 {
+#ifdef HAVE_COMPUTED_GOTO
  const void* const LoopTable[4] =
  {
   &&Loop_0, &&Loop_1, &&Loop_2, &&Loop_3,
  };
+ #define GOTO_MXLOOPTABLE() goto *LoopTable[(lc.P >> 4) & 0x3];
+#else
+ #define GOTO_MXLOOPTABLE() { switch((lc.P >> 4) & 0x3) { case 0: goto Loop_0; case 1: goto Loop_1; case 2: goto Loop_2; case 3: goto Loop_3; } }
+#endif
+
  Core65816 lc = core;
 
  CPUM.running_mask = ~0U;
- goto *LoopTable[(lc.P >> 4) & 0x3];
+ GOTO_MXLOOPTABLE();
 
  #define CPULBMX Loop_0
  #define CPULBMTYPE	uint16

@@ -27,6 +27,7 @@
 #include "ss.h"
 #include <mednafen/mednafen.h>
 #include <mednafen/Time.h>
+#include <mednafen/MThreading.h>
 #include "vdp2_common.h"
 #include "vdp2_render.h"
 
@@ -3117,7 +3118,7 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
 //
 //
 //
-static MDFN_Thread* RThread = NULL;
+static MThreading::Thread* RThread = NULL;
 
 enum
 {
@@ -3146,7 +3147,7 @@ static size_t WQ_ReadPos, WQ_WritePos;
 static std::atomic_int_least32_t WQ_InCount;
 static std::atomic_int_least32_t DrawCounter;
 static bool DoBusyWait;
-static MDFN_Sem* WakeupSem;
+static MThreading::Sem* WakeupSem;
 static bool DoWakeupIfNecessary;
 
 static INLINE void WWQ(uint16 command, uint32 arg32 = 0, uint16 arg16 = 0)
@@ -3173,9 +3174,12 @@ static int RThreadEntry(void* data)
   while(MDFN_UNLIKELY(WQ_InCount.load(std::memory_order_acquire) == 0))
   {
    if(!DoBusyWait)
-    MDFND_WaitSemTimeout(WakeupSem, 1);
+    MThreading::WaitSemTimeout(WakeupSem, 1);
    else
    {
+#ifdef MDFN_SS_BUSYWAIT_PAUSE
+    asm volatile("pause\n\tpause\n\tpause\n\tpause\n\tpause\n\tpause\n\tpause\n\t");
+#else
     for(int i = 1000; i; i--)
     {
      #ifdef _MSC_VER
@@ -3184,6 +3188,7 @@ static int RThreadEntry(void* data)
      asm volatile("nop\n\t");
      #endif
     }
+#endif
    }
   }
   //
@@ -3253,8 +3258,8 @@ void VDP2REND_Init(const bool IsPAL)
  WQ_InCount.store(0, std::memory_order_release); 
  DrawCounter.store(0, std::memory_order_release);
 
- WakeupSem = MDFND_CreateSem();
- RThread = MDFND_CreateThread(RThreadEntry, NULL);
+ WakeupSem = MThreading::CreateSem();
+ RThread = MThreading::CreateThread(RThreadEntry, NULL, "MDFN VDP2 Render");
 }
 
 // Needed for ss.correct_aspect == 0
@@ -3319,12 +3324,12 @@ void VDP2REND_Kill(void)
  if(RThread != NULL)
  {
   WWQ(COMMAND_EXIT);
-  MDFND_WaitThread(RThread, NULL);
+  MThreading::WaitThread(RThread, NULL);
  }
 
  if(WakeupSem != NULL)
  {
-  MDFND_DestroySem(WakeupSem);
+  MThreading::DestroySem(WakeupSem);
   WakeupSem = NULL;
  }
 }
@@ -3406,7 +3411,7 @@ void VDP2REND_DrawLine(const int vdp2_line, const uint32 crt_line, const bool fi
   if(crt_line == bwthresh)
   {
    WWQ(COMMAND_SET_BUSYWAIT, true);
-   MDFND_PostSem(WakeupSem);
+   MThreading::PostSem(WakeupSem);
   }
   else if(crt_line < bwthresh)
   {
@@ -3415,7 +3420,7 @@ void VDP2REND_DrawLine(const int vdp2_line, const uint32 crt_line, const bool fi
    else if((wdcq + 1) >= 64 && DoWakeupIfNecessary)
    {
     //printf("Post Wakeup: %3d --- crt_line=%3d\n", wdcq + 1, crt_line);
-    MDFND_PostSem(WakeupSem);
+    MThreading::PostSem(WakeupSem);
     DoWakeupIfNecessary = false;
    }
   }

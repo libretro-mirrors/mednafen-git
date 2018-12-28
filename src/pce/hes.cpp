@@ -138,7 +138,7 @@ static const uint8 vdc_init_rom[] =
 	0x8D, 0x00, 0x04,
 };
 
-void HES_Load(MDFNFILE* fp)
+void HES_Load(Stream* s)
 {
  try
  {
@@ -149,7 +149,7 @@ void HES_Load(MDFNFILE* fp)
   uint8 header[0x10];
   uint8 sub_header[0x10];
 
-  fp->read(header, 0x10);
+  s->read(header, 0x10);
 
   if(memcmp(header, "HESM", 4))
    throw MDFN_Error(0, _("HES header magic is invalid."));
@@ -176,7 +176,7 @@ void HES_Load(MDFNFILE* fp)
   memset(rom, 0, 0x88 * 8192);
   memset(rom_backup, 0, 0x88 * 8192);
 
-  while(fp->read(sub_header, 0x10, false) == 0x10)
+  while(s->read(sub_header, 0x10, false) == 0x10)
   {
    LoadSize = MDFN_de32lsb(&sub_header[0x4]);
    LoadAddr = MDFN_de32lsb(&sub_header[0x8]);
@@ -185,7 +185,7 @@ void HES_Load(MDFNFILE* fp)
    MDFN_printf(_("Chunk load:\n"));
 
    MDFN_AutoIndent aindc(1);
-   MDFN_printf(_("File offset:  0x%08llx\n"), (unsigned long long)fp->tell() - 0x10);
+   MDFN_printf(_("File offset:  0x%08llx\n"), (unsigned long long)s->tell() - 0x10);
    MDFN_printf(_("Load size:  0x%08x\n"), LoadSize);
    MDFN_printf(_("Load target address:  0x%08x\n"), LoadAddr);
 
@@ -200,7 +200,7 @@ void HES_Load(MDFNFILE* fp)
     LoadSize = 0x110000 - LoadAddr;
    }
 
-   uint64 rc = fp->read(rom + LoadAddr, LoadSize, false);
+   uint64 rc = s->read(rom + LoadAddr, LoadSize, false);
    if(rc < LoadSize)
    {
     MDFN_printf(_("Warning:  HES tried to load %llu bytes more data than exists!\n"), (unsigned long long)(LoadSize - rc));

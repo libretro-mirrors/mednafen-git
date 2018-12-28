@@ -203,7 +203,7 @@ static void CloseGame(void)
  Cleanup();
 }
 
-static void LoadCommon(MDFNFILE *fp)
+static void LoadCommon(GameFile* gf)
 {
  try
  {
@@ -213,7 +213,7 @@ static void LoadCommon(MDFNFILE *fp)
   sms.territory   = MDFN_GetSettingI("sms.territory");
   sms.use_fm      = false;
 
-  Cart_Init(fp);
+  Cart_Init(gf);
   Cart_LoadNV();
 
   if(IS_SMS && sms.territory == TERRITORY_DOMESTIC)
@@ -230,8 +230,6 @@ static void LoadCommon(MDFNFILE *fp)
   pio_init();
   vdp_init(IS_SMS && sms.territory == TERRITORY_DOMESTIC);
   render_init();
-
-  MDFNGameInfo->GameSetMD5Valid = false;
 
   uint32 sndclk;
 
@@ -273,35 +271,35 @@ static void LoadCommon(MDFNFILE *fp)
  }
 }
 
-static bool TestMagicSMS(MDFNFILE *fp)
+static bool TestMagicSMS(GameFile* gf)
 {
- if(fp->ext != "sms" && fp->ext != "sg" && fp->ext != "sc")
+ if(gf->ext != "sms" && gf->ext != "sg" && gf->ext != "sc")
   return false;
 
  return true;
 }
 
-static bool TestMagicGG(MDFNFILE *fp)
+static bool TestMagicGG(GameFile* gf)
 {
- if(fp->ext != "gg")
+ if(gf->ext != "gg")
   return false;
 
  return true;
 }
 
 
-static void LoadSMS(MDFNFILE *fp)
+static void LoadSMS(GameFile* gf)
 {
  sms.console = CONSOLE_SMS;
 
- LoadCommon(fp);
+ LoadCommon(gf);
 }
 
-static void LoadGG(MDFNFILE *fp)
+static void LoadGG(GameFile* gf)
 {
  sms.console = CONSOLE_GG;
 
- LoadCommon(fp);
+ LoadCommon(gf);
 }
 
 }
@@ -404,14 +402,14 @@ static const MDFNSetting GGSettings[] =
 
 static const FileExtensionSpecStruct SMSKnownExtensions[] =
 {
- { ".sms", gettext_noop("Sega Master System ROM Image") },
- { NULL, NULL }
+ { ".sms", 0, gettext_noop("Sega Master System ROM Image") },
+ { NULL, 0, NULL }
 };
 
 static const FileExtensionSpecStruct GGKnownExtensions[] =
 {
- { ".gg", gettext_noop("Game Gear ROM Image") },
- { NULL, NULL }
+ { ".gg", 0, gettext_noop("Game Gear ROM Image") },
+ { NULL, 0, NULL }
 };
 
 static const CustomPalette_Spec SMSCPInfo[] =

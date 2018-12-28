@@ -965,7 +965,7 @@ void Ym2612_Impl::run( Ym2612_Emu::sample_t* out )
 void Ym2612_Emu::run( sample_t* out ) { impl->run( out ); }
 
 
-void Ym2612_Emu::serialize(MDFN::LEPacker &slizer, bool load)
+void Ym2612_Emu::serialize(Mednafen::LEPacker &slizer, bool load)
 {
  state_t *s = &impl->YM2612;
  tables_t *g = &impl->g;

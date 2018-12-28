@@ -24,9 +24,13 @@
 
 #include <mednafen/video.h>
 
+namespace Mednafen
+{
+
 void TBlur_Init(void);
 void TBlur_Kill(void);
 void TBlur_Run(EmulateSpecStruct *espec);
 bool TBlur_IsOn(void);
 
+}
 #endif

@@ -28,10 +28,17 @@
 #include "lepacker.h"
 #include "tests.h"
 
+#include <mednafen/hash/md5.h>
 #include <mednafen/hash/sha1.h>
 #include <mednafen/hash/sha256.h>
 
+#include <mednafen/sound/SwiftResampler.h>
+#include <mednafen/sound/OwlResampler.h>
+#include <mednafen/sound/WAVRecord.h>
+#include <mednafen/SimpleBitset.h>
+
 #include <mednafen/Time.h>
+#include <mednafen/MThreading.h>
 #include <time.h>
 
 #include <zlib.h>
@@ -53,17 +60,20 @@
  #include <altivec.h>
 #endif
 
-#ifdef __ARM_NEON__
+#ifdef HAVE_NEON_INTRINSICS
  #include <arm_neon.h>
 #endif
 
-#ifdef __MMX__
+#if defined(HAVE_MMX_INTRINSICS)
  #include <mmintrin.h>
 #endif
 
-#ifdef __SSE__
+#ifdef HAVE_SSE_INTRINSICS
  #include <xmmintrin.h>
 #endif
+
+namespace Mednafen
+{
 
 namespace MDFN_TESTS_CPP
 {
@@ -106,8 +116,6 @@ static_assert(sizeof(off_t) == SIZEOF_OFF_T, "unexpected size");
 static_assert(sizeof(ptrdiff_t) == SIZEOF_PTRDIFF_T, "unexpected size");
 static_assert(sizeof(size_t) == SIZEOF_SIZE_T, "unexpected size");
 static_assert(sizeof(void*) == SIZEOF_VOID_P, "unexpected size");
-
-static_assert(sizeof(double) == SIZEOF_DOUBLE, "unexpected size");
 
 // Make sure the "char" type is signed(pass -fsigned-char to gcc).  New code in Mednafen shouldn't be written with the
 // assumption that "char" is signed, but there likely is at least some code that does.
@@ -233,29 +241,25 @@ static void TestSignExtend(void)
  itoo++;
 }
 
-static void AntiNSOBugTest_Sub1_a(int *array) NO_INLINE;
-static void AntiNSOBugTest_Sub1_a(int *array)
+static NO_INLINE void AntiNSOBugTest_Sub1_a(int *array)
 {
  for(int value = 0; value < 127; value++)
   array[value] += (int8)value * 15;
 }
 
-static void AntiNSOBugTest_Sub1_b(int *array) NO_INLINE;
-static void AntiNSOBugTest_Sub1_b(int *array)
+static NO_INLINE void AntiNSOBugTest_Sub1_b(int *array)
 {
  for(int value = 127; value < 256; value++)
   array[value] += (int8)value * 15;
 }
 
-static void AntiNSOBugTest_Sub2(int *array) NO_INLINE;
-static void AntiNSOBugTest_Sub2(int *array)
+static NO_INLINE void AntiNSOBugTest_Sub2(int *array)
 {
  for(int value = 0; value < 256; value++)
   array[value] += (int8)value * 15;
 }
 
-static void AntiNSOBugTest_Sub3(int *array) NO_INLINE;
-static void AntiNSOBugTest_Sub3(int *array)
+static NO_INLINE void AntiNSOBugTest_Sub3(int *array)
 {
  for(int value = 0; value < 256; value++)
  {
@@ -293,8 +297,7 @@ static void DoAntiNSOBugTest(void)
 // Not found to be causing problems in Mednafen(unlike the earlier no-strict-overflow problem and associated test),
 // but better safe than sorry.
 //
-static void DoAntiNSOBugTest2014_SubA(int a) NO_INLINE NO_CLONE;
-static void DoAntiNSOBugTest2014_SubA(int a)
+static NO_INLINE NO_CLONE void DoAntiNSOBugTest2014_SubA(int a)
 {
  signed char c = 0;
 
@@ -310,16 +313,14 @@ static void DoAntiNSOBugTest2014_SubA(int a)
 }
 
 static int ANSOBT_CallCount;
-static void DoAntiNSOBugTest2014_SubMx_F(void) NO_INLINE NO_CLONE;
-static void DoAntiNSOBugTest2014_SubMx_F(void)
+static NO_INLINE NO_CLONE void DoAntiNSOBugTest2014_SubMx_F(void)
 {
  ANSOBT_CallCount++;
 
  assert(ANSOBT_CallCount < 1000);
 }
 
-static void DoAntiNSOBugTest2014_SubM1(void) NO_INLINE NO_CLONE;
-static void DoAntiNSOBugTest2014_SubM1(void)
+static NO_INLINE NO_CLONE void DoAntiNSOBugTest2014_SubM1(void)
 {
  signed char a;
 
@@ -327,8 +328,7 @@ static void DoAntiNSOBugTest2014_SubM1(void)
   DoAntiNSOBugTest2014_SubMx_F();
 }
 
-static void DoAntiNSOBugTest2014_SubM3(void) NO_INLINE NO_CLONE;
-static void DoAntiNSOBugTest2014_SubM3(void)
+static NO_INLINE NO_CLONE void DoAntiNSOBugTest2014_SubM3(void)
 {
  signed char a;
 
@@ -353,7 +353,7 @@ static void DoAntiNSOBugTest2014(void)
 
 void DoLEPackerTest(void)
 {
- MDFN::LEPacker mizer;
+ LEPacker mizer;
  static const uint8 correct_result[24] = { 0xed, 0xfe, 0xed, 0xde, 0xaa, 0xca, 0xef, 0xbe, 0xbe, 0xba, 0xfe, 0xca, 0xad, 0xde, 0x01, 0x9a, 0x0c, 0xa7, 0xff, 0x00, 0xff, 0xff, 0x55, 0x7f };
 
  uint64 u64_test = 0xDEADCAFEBABEBEEFULL;
@@ -573,20 +573,17 @@ static void TestDefinedOverShift(void)
  }
 }
 
-static uint8 BoolConvSupportFunc(void) MDFN_COLD NO_INLINE;
-static uint8 BoolConvSupportFunc(void)
+static MDFN_COLD NO_INLINE uint8 BoolConvSupportFunc(void)
 {
  return 0xFF;
 }
 
-static bool BoolConv0(void) MDFN_COLD NO_INLINE;
-static bool BoolConv0(void)
+static MDFN_COLD NO_INLINE bool BoolConv0(void)
 {
  return BoolConvSupportFunc() & 1;
 }
 
-static void BoolTestThing(unsigned val) MDFN_COLD NO_INLINE;
-static void BoolTestThing(unsigned val)
+static MDFN_COLD NO_INLINE void BoolTestThing(unsigned val)
 {
  if(val != 1)
   printf("%u\n", val);
@@ -599,8 +596,7 @@ static void TestBoolConv(void)
  BoolTestThing(BoolConv0());
 }
 
-static void TestNarrowConstFold(void) NO_INLINE MDFN_COLD;
-static void TestNarrowConstFold(void)
+static NO_INLINE MDFN_COLD void TestNarrowConstFold(void)
 {
  unsigned sa = 8;
  uint8 za[1] = { 0 };
@@ -614,14 +610,12 @@ static void TestNarrowConstFold(void)
 
 unsigned MDFNTests_ModTern_a = 2;
 unsigned MDFNTests_ModTern_b = 0;
-static void ModTernTestEval(unsigned v) NO_INLINE MDFN_COLD;
-static void ModTernTestEval(unsigned v)
+static NO_INLINE MDFN_COLD void ModTernTestEval(unsigned v)
 {
  assert(v == 0);
 }
 
-static void TestModTern(void) NO_INLINE MDFN_COLD;
-static void TestModTern(void)
+static NO_INLINE MDFN_COLD void TestModTern(void)
 {
  if(!MDFNTests_ModTern_b)
  {
@@ -633,8 +627,7 @@ static void TestModTern(void)
  ModTernTestEval(MDFNTests_ModTern_b);
 }
 
-static int TestBWNotMask31GTZ_Sub(int a) NO_INLINE NO_CLONE;
-static int TestBWNotMask31GTZ_Sub(int a)
+static NO_INLINE NO_CLONE int TestBWNotMask31GTZ_Sub(int a)
 {
  a = (((~a) & 0x80000000LL) > 0) + 1;
  return a;
@@ -800,6 +793,22 @@ NO_INLINE NO_CLONE void TestGCC81740(void)
  TestGCC81740_Sub(MDAP(v), sizeof(v) / sizeof(int));
 }
 
+NO_INLINE NO_CLONE int TestGCC86927_Sub(void)
+{
+ int data[4] = { 0, 0, 0, -1 };
+ int ret = true;
+
+ for(size_t i = 0; i < 4; i++)
+  if(data[3 - i] < 0)
+   ret = false;
+
+ return ret;
+}
+
+NO_INLINE NO_CLONE void TestGCC86927(void)
+{
+ assert(!TestGCC86927_Sub());
+}
 
 template<typename A, typename B>
 void NO_INLINE NO_CLONE TestSUCompare_Sub(A a, B b)
@@ -888,11 +897,11 @@ static void DoAlignmentChecks(void)
  CheckAlignasI<16>();
 #endif
 
-#if defined(__MMX__)
+#if defined(HAVE_MMX_INTRINSICS)
  CheckAlignasType<__m64>();
 #endif
 
-#if defined(__SSE__)
+#if defined(HAVE_SSE_INTRINSICS)
  CheckAlignasType<__m128>();
 #endif
 
@@ -901,7 +910,7 @@ static void DoAlignmentChecks(void)
  CheckAlignasType<vector unsigned short>();
 #endif
 
-#ifdef __ARM_NEON__
+#ifdef HAVE_NEON_INTRINSICS
  CheckAlignasType<int16x4_t>();
  CheckAlignasType<int32x4_t>();
  CheckAlignasType<float32x4_t>();
@@ -1246,8 +1255,7 @@ unsigned int mdfn_shifty_test[4] =
 
 
 // Don't make static.
-double mdfn_fptest0_sub(double x, double n) MDFN_COLD NO_INLINE;
-double mdfn_fptest0_sub(double x, double n)
+MDFN_COLD NO_INLINE double mdfn_fptest0_sub(double x, double n)
 {
  double u = x / (n * n);
 
@@ -1293,14 +1301,12 @@ static void libc_rounding_test(void)
 }
 #endif
 
-static int pow_test_sub_a(int y, double z) NO_INLINE NO_CLONE;
-static int pow_test_sub_a(int y, double z)
+static NO_INLINE NO_CLONE int pow_test_sub_a(int y, double z)
 {
  return std::min<int>(floor(pow(10, z)), std::min<int>(floor(pow(10, y)), (int)pow(10, y)));
 }
 
-static int pow_test_sub_b(int y) NO_INLINE NO_CLONE;
-static int pow_test_sub_b(int y)
+static NO_INLINE NO_CLONE int pow_test_sub_b(int y)
 {
  return std::min<int>(floor(pow(2, y)), (int)pow(2, y));
 }
@@ -2081,15 +2087,15 @@ static void TestMemcpySanity(void)
 
 static int ThreadSafeErrno_Test_Entry(void* data)
 {
- MDFN_Sem** sem = (MDFN_Sem**)data;
+ MThreading::Sem** sem = (MThreading::Sem**)data;
 
  errno = 0;
 
- MDFND_PostSem(sem[0]);
- MDFND_WaitSem(sem[1]);
+ MThreading::PostSem(sem[0]);
+ MThreading::WaitSem(sem[1]);
 
  errno = 0xDEAD;
- MDFND_PostSem(sem[0]);
+ MThreading::PostSem(sem[0]);
  return 0;
 }
 
@@ -2097,22 +2103,140 @@ static void ThreadSafeErrno_Test(void)
 {
  //uint64 st = Time::MonoUS();
  //
- MDFN_Sem* sem[2] = { MDFND_CreateSem(), MDFND_CreateSem() };
- MDFN_Thread* thr = MDFND_CreateThread(ThreadSafeErrno_Test_Entry, sem);
+ MThreading::Sem* sem[2] = { MThreading::CreateSem(), MThreading::CreateSem() };
+ MThreading::Thread* thr = MThreading::CreateThread(ThreadSafeErrno_Test_Entry, sem);
 
- MDFND_WaitSem(sem[0]);
+ MThreading::WaitSem(sem[0]);
  errno = 0;
- MDFND_PostSem(sem[1]);
- MDFND_WaitSem(sem[0]);
+ MThreading::PostSem(sem[1]);
+ MThreading::WaitSem(sem[0]);
  assert(errno != 0xDEAD);
- MDFND_WaitThread(thr, nullptr);
- MDFND_DestroySem(sem[0]);
- MDFND_DestroySem(sem[1]);
+ MThreading::WaitThread(thr, nullptr);
+ MThreading::DestroySem(sem[0]);
+ MThreading::DestroySem(sem[1]);
  //
  //
  //
  errno = 0;
  //printf("%llu\n", (unsigned long long)Time::MonoUS() - st);
+}
+
+static void TestSimpleBitset(void)
+{
+ SimpleBitset<1> a;
+ SimpleBitset<31> b;
+ SimpleBitset<32> c;
+ SimpleBitset<129> d;
+
+ assert(sizeof(a.data) == sizeof(uint32) * 1 && a.data_count == 1);
+ assert(sizeof(b.data) == sizeof(uint32) * 1 && b.data_count == 1);
+ assert(sizeof(c.data) == sizeof(uint32) * 1 && c.data_count == 1);
+ assert(sizeof(d.data) == sizeof(uint32) * 5 && d.data_count == 5);
+
+ //static const unsigned test_bit_counts[] = { 1, 2, 30, 31, 32, 33, 34, 63, 64, 65, 66 };
+ //static const unsigned test_bit_offsets[] = { 
+ //for(unsigned 
+
+ assert(!a.data[0]);
+ assert(!b.data[0]);
+ assert(!c.data[0]);
+ assert(!d.data[0] && !d.data[1] && !d.data[2] && !d.data[3] && !d.data[4]);
+
+ a.set_multi_wrap(0, true, 2);
+ assert(a.data[0] == 0x1);
+
+ a.data[0] = 0;
+ a.set_multi_wrap(0, true, 32);
+ assert(a.data[0] == 0x1);
+
+ a.data[0] = ~0U;
+ a.set_multi_wrap(0, false, 32);
+ assert(a.data[0] == ~(uint32)1);
+ //
+ //
+ b.set_multi_wrap(30, true, 2);
+ assert(b.data[0] == 0x40000001);
+
+ b.data[0] = 0;
+ b.set_multi_wrap(0, true, 32);
+ assert(b.data[0] == 0x7FFFFFFF);
+
+ b.data[0] = ~0U;
+ b.set_multi_wrap(0, false, 32);
+ assert(b.data[0] == 0x80000000);
+ //
+ //
+ c.set_multi_wrap(32, true, 31);
+ assert(c.data[0] == 0x7FFFFFFF);
+
+ c.data[0] = 0;
+ c.set_multi_wrap(16, true, 8);
+ assert(c.data[0] == 0x00FF0000);
+
+ c.data[0] = ~0U;
+ c.set_multi_wrap(31, false, 32);
+ assert(c.data[0] == 0x00000000);
+ //
+ //
+ //
+ d.set_multi_wrap(0, true, 129);
+ assert(d.data[0] == ~0U && d.data[1] == ~0U && d.data[2] == ~0U && d.data[3] == ~0U && d.data[4] == 1);
+
+ d.set_multi_wrap(1, false, 128);
+ assert(d.data[0] == 1 && d.data[1] == 0 && d.data[2] == 0 && d.data[3] == 0 && d.data[4] == 0);
+}
+
+static void TestStrArgsSplit(void)
+{
+ assert(MDFN_strargssplit("") == std::vector<std::string>({}));
+ assert(MDFN_strargssplit(" ") == std::vector<std::string>({}));
+ assert(MDFN_strargssplit("\"\"") == std::vector<std::string>({""}));
+ assert(MDFN_strargssplit("poodles") == std::vector<std::string>({"poodles"}));
+ assert(MDFN_strargssplit("poodles ") == std::vector<std::string>({"poodles"}));
+ assert(MDFN_strargssplit(" poodles") == std::vector<std::string>({"poodles"}));
+ assert(MDFN_strargssplit("poodles fur") == std::vector<std::string>({"poodles", "fur"}));
+ assert(MDFN_strargssplit("\"poodles\" \"fur\"") == std::vector<std::string>({"poodles", "fur"}));
+ assert(MDFN_strargssplit("\"poodle\"s \"fur") == std::vector<std::string>({"poodles", "fur"}));
+ assert(MDFN_strargssplit("\"poodle\"s \"fur fur\"\" fur\" \" brush\" \"") == std::vector<std::string>({"poodles", "fur fur fur", " brush", ""}));
+
+ assert(MDFN_strargssplit("\"Admiral Poodle's \\\"Fur Fur Fur, Brush Brush Brush\\\" Greatest Hits\" \"\\n") == std::vector<std::string>({"Admiral Poodle's \"Fur Fur Fur, Brush Brush Brush\" Greatest Hits", "\n"}));
+}
+
+static void TestEscapeString(void)
+{
+ //uint64 st = Time::MonoUS();
+ //
+ static const unsigned char esc_compare_seq[] =
+ {
+  0x5c, 0x30, 0x5c, 0x31, 0x5c, 0x32, 0x5c, 0x33, 0x5c, 0x34, 0x5c, 0x35, 0x5c, 0x36, 0x5c, 0x61, 0x5c, 0x62, 0x5c, 0x74, 0x5c, 0x6e, 0x5c, 0x76, 0x5c, 0x66, 0x5c, 0x72, 0x5c, 0x78, 0x30, 0x65, 0x5c, 0x78, 0x30, 0x66, 0x5c, 0x78, 0x31, 0x30, 0x5c, 0x78, 0x31, 0x31, 0x5c, 0x78, 0x31, 0x32, 0x5c, 0x78, 0x31, 0x33, 0x5c, 0x78, 0x31, 0x34, 0x5c, 0x78, 0x31, 0x35, 0x5c, 0x78, 0x31, 0x36, 0x5c, 0x78, 0x31, 0x37, 0x5c, 0x78, 0x31, 0x38, 0x5c, 0x78, 0x31, 0x39, 0x5c, 0x78, 0x31, 0x61, 0x5c, 0x78, 0x31, 0x62, 0x5c, 0x78, 0x31, 0x63, 0x5c, 0x78, 0x31, 0x64, 0x5c, 0x78, 0x31, 0x65, 0x5c, 0x78, 0x31, 0x66, 0x20, 0x21, 0x5c, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5c, 0x5d, 0x5e, 0x5f, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x5c, 0x78, 0x37, 0x66, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f, 0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8, 0xc9, 0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf, 0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde, 0xdf, 0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee, 0xef, 0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
+ };
+
+ std::string in_str;
+ std::string out_str;
+ std::string unesc_str;
+
+ in_str.resize(256);
+
+ for(unsigned i = 0; i < 256; i++)
+  in_str[i] = i;
+
+ out_str = MDFN_strescape(in_str);
+ unesc_str = MDFN_strunescape(out_str);
+
+ assert(out_str.size() == sizeof(esc_compare_seq) && !memcmp(out_str.data(), esc_compare_seq, sizeof(esc_compare_seq)));
+ assert(unesc_str == in_str);
+
+ //for(size_t i = 0; i < out_str.size(); i++)
+ //{
+ // printf("0x%02x, ", (unsigned char)out_str[i]);
+ //}
+
+ //printf("%s\n", out_str.c_str());
+ //for(unsigned i = 0; i < unesc_str.size(); i++)
+ // printf("0x%02x: 0x%02x\n", i, unesc_str[i]);
+
+ //
+ //printf("Time: %llu\n", (unsigned long long)(Time::MonoUS() - st));
 }
 
 }
@@ -2133,7 +2257,7 @@ void MDFN_RunExceptionTests(const unsigned thread_count, const unsigned thread_d
   ThreadSafeErrno_Test();
   //
   //
-  std::vector<MDFN_Thread*> t;
+  std::vector<MThreading::Thread*> t;
   std::vector<int> trv;
 
   t.resize(thread_count);
@@ -2142,17 +2266,131 @@ void MDFN_RunExceptionTests(const unsigned thread_count, const unsigned thread_d
   sv.store(thread_count, std::memory_order_release);
 
   for(unsigned i = 0; i < thread_count; i++)
-   t[i] = MDFND_CreateThread(RunExceptionTests_TEP, &sv);
+   t[i] = MThreading::CreateThread(RunExceptionTests_TEP, &sv);
 
   Time::SleepMS(thread_delay);
 
   sv.store(-1, std::memory_order_release);
 
   for(unsigned i = 0; i < thread_count; i++)
-   MDFND_WaitThread(t[i], &trv[i]);
+   MThreading::WaitThread(t[i], &trv[i]);
 
   for(unsigned i = 0; i < thread_count; i++)
    printf("%d: %d\n", i, trv[i]);
+ }
+}
+
+void MDFN_RunSwiftResamplerTest(void)
+{
+ static const double input_rates[] =
+ {
+  //1500000,
+  1662607.125,
+  1789772.72727272
+  //2000000
+ };
+
+ const double rate_error = 0.00004;
+
+ for(int quality = 3; quality <= 3; quality++)
+ {
+  for(unsigned iri = 0; iri < sizeof(input_rates) / sizeof(input_rates[0]); iri++)
+  {
+   const double irate = input_rates[iri];
+   const int32 output_rates[] =
+   {
+    //22050, 32000, 44100, 48000, 64000, 96000, 192000
+    22050,
+    44100,
+    48000, 96000, 192000, 
+    //(int32)floor(0.5 + irate / 32)
+   };
+
+   for(unsigned ori = 0; ori < sizeof(output_rates) / sizeof(output_rates[0]); ori++)
+   {
+    const int32 orate = output_rates[ori];
+    std::unique_ptr<SwiftResampler> res(new SwiftResampler(irate, orate, rate_error, 0, quality));
+    char fn[256];
+    snprintf(fn, sizeof(fn), "swift-%s-q%d-%u-%u.wav", res->GetSIMDType(), quality, (unsigned)irate, (unsigned)orate);
+    std::unique_ptr<WAVRecord> wr(new WAVRecord(fn, orate, 1));
+    std::unique_ptr<int16[]> ibuf(new int16[65536]);
+    std::unique_ptr<int16[]> obuf(new int16[65536]);
+    int32 leftover = 0;
+    double phase = 0;
+    double phase_inc = 0.000;
+    double phase_inc_inc = 0.000000001;
+
+    for(int base_i = 0; base_i < irate * 60 * 2; base_i += 32768)
+    {
+     for(int i = 0; i < 32768; i++)
+     {
+      ibuf[i + leftover] = floor(0.5 + 32767 * 0.95 * sin(phase));
+      phase += phase_inc;
+      phase_inc += phase_inc_inc;
+     }
+     const int32 inlen = leftover + 32768;
+     const int32 outlen = res->Do(&ibuf[0], &obuf[0], 65536, inlen, &leftover);
+
+     memmove(&ibuf[0], &ibuf[inlen - leftover], leftover * sizeof(int16));
+
+     wr->WriteSound(&obuf[0], outlen);
+    }
+   }
+  }
+ }
+}
+
+void MDFN_RunOwlResamplerTest(void)
+{
+ static const double input_rates[] =
+ {
+  /*1500000, 1662607.125,*/ 1789772.72727272 /*, 2000000*/
+ };
+
+ const double rate_error = 0.00004;
+ //for(int quality = -2; quality <= 5; quality++)
+ int quality = 5;
+ {
+  for(unsigned iri = 0; iri < sizeof(input_rates) / sizeof(input_rates[0]); iri++)
+  {
+   const double irate = input_rates[iri];
+
+   const int32 output_rates[] =
+   {
+    44100, 48000, 96000, 192000, (int32)floor(0.5 + irate / 32)
+   };
+
+   for(unsigned ori = 0; ori < sizeof(output_rates) / sizeof(output_rates[0]); ori++)
+   {
+    const int32 orate = output_rates[ori];
+    std::unique_ptr<OwlResampler> res(new OwlResampler(irate, orate, rate_error, 0, quality));
+    std::unique_ptr<OwlBuffer> ibuf(new OwlBuffer());
+    char fn[256];
+    snprintf(fn, sizeof(fn), "owl-%s-q%d-%u-%u.wav", res->GetSIMDType(), quality, (unsigned)irate, (unsigned)orate);
+    std::unique_ptr<WAVRecord> wr(new WAVRecord(fn, orate, 1));
+    std::unique_ptr<int16[]> obuf(new int16[65536 * 2]);
+    double phase = 0;
+    double phase_inc = 0.000;
+    double phase_inc_inc = 0.000000001;
+    const int32 inlen = 16384;
+
+    for(int base_i = 0; base_i < irate * 60 * 2; base_i += inlen)
+    {
+     for(int i = 0; i < inlen; i++)
+     {
+      ibuf->BufPudding()[i].f = 256 * 32767 * 0.95 * sin(phase);
+      phase += phase_inc;
+      phase_inc += phase_inc_inc;
+     }
+     const int32 outlen = res->Resample(ibuf.get(), inlen, &obuf[0], 65536);
+
+     for(int32 i = 0; i < outlen; i++)
+      obuf[i] = obuf[i * 2];
+
+     wr->WriteSound(&obuf[0], outlen);
+    }
+   }
+  }
  }
 }
 
@@ -2174,6 +2412,7 @@ bool MDFN_RunMathTests(void)
  TestGCC71488();
  TestGCC80631();
  TestGCC81740();
+ TestGCC86927();
 
  TestModTern();
  TestBWNotMask31GTZ();
@@ -2209,6 +2448,7 @@ bool MDFN_RunMathTests(void)
 
  NE1664_Test();
 
+ md5_test();
  sha1_test();
  sha256_test();
 
@@ -2232,6 +2472,11 @@ bool MDFN_RunMathTests(void)
 
  TestArrayStruct();
 
+ TestSimpleBitset();
+
+ TestStrArgsSplit();
+
+ TestEscapeString();
  //
  assert(!MDFN_strazicmp("", ""));
  assert(!MDFN_strazicmp("AA", "AZ", 1));
@@ -2253,6 +2498,12 @@ bool MDFN_RunMathTests(void)
  assert(MDFN_memazicmp("A", "z", 1) < 0 && MDFN_memazicmp("z", "A", 1) > 0);
  assert(MDFN_memazicmp("a", "Z", 1) < 0 && MDFN_memazicmp("Z", "a", 1) > 0);
  assert(MDFN_memazicmp("{", "[", 1) > 0 && MDFN_memazicmp("]", "}", 1) < 0);
+
+ assert(MDFN_strazlower(std::string("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[@abcdefghijklmnopqrstuvwxyz[")) == "@abcdefghijklmnopqrstuvwxyz[@abcdefghijklmnopqrstuvwxyz[");
+ assert(MDFN_strazupper(std::string("@ABCDEFGHIJKLMNOPQRSTUVWXYZ[@abcdefghijklmnopqrstuvwxyz[")) == "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[@ABCDEFGHIJKLMNOPQRSTUVWXYZ[");
+ assert(MDFN_trim(std::string(" \f\r\n\t\v! \f\r\n\t\v")) == "!");
+ assert(MDFN_rtrim(std::string(" \f\r\n\t\v! \f\r\n\t\v")) == " \f\r\n\t\v!");
+ assert(MDFN_ltrim(std::string(" \f\r\n\t\v! \f\r\n\t\v")) == "! \f\r\n\t\v");
  //
 
 #if 0
@@ -2283,3 +2534,4 @@ bool MDFN_RunMathTests(void)
  return(1);
 }
 
+}

@@ -31,7 +31,7 @@
 #include "fxscsi.h"
 #include <mednafen/cdrom/scsicd.h>
 #include <mednafen/mempatcher.h>
-#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/cdrom/CDInterface.h>
 #include <mednafen/hash/md5.h>
 #include <mednafen/FileStream.h>
 #include <mednafen/compress/GZFileStream.h>
@@ -46,7 +46,7 @@ namespace MDFN_IEN_PCFX
 /* FIXME:  soundbox, vce, vdc, rainbow, and king store wait states should be 4, not 2, but V810 has write buffers which can mask wait state penalties.
   This is a hack to somewhat address the issue, but to really fix it, we need to handle write buffer emulation in the V810 emulation core itself.
 */
-static std::vector<CDIF*> *cdifs = NULL;
+static std::vector<CDInterface*> *cdifs = NULL;
 
 V810 PCFX_V810;
 
@@ -439,7 +439,7 @@ static void PCFXDBG_GetAddressSpaceBytes(const char *name, uint32 Address, uint3
 
    if((sector | (disc << 24)) != GAS_SectorCacheWhich)
    {
-    if(!(*cdifs)[disc]->ReadSector(GAS_SectorCache, sector, 1))
+    if(!(*cdifs)[disc]->ReadSectors(GAS_SectorCache, sector, 1))
      memset(GAS_SectorCache, 0, 2048);
 
     GAS_SectorCacheWhich = sector | (disc << 24);
@@ -566,7 +566,7 @@ static MDFN_COLD void Cleanup(void)
  BIOSROM = NULL;
 }
 
-static MDFN_COLD void LoadCommon(std::vector<CDIF *> *CDInterfaces)
+static MDFN_COLD void LoadCommon(std::vector<CDInterface*> *CDInterfaces)
 {
  V810_Emu_Mode cpu_mode;
 
@@ -596,7 +596,11 @@ static MDFN_COLD void LoadCommon(std::vector<CDIF *> *CDInterfaces)
 
  {
   std::string biospath = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS("pcfx.bios"));
-  MDFNFILE BIOSFile(biospath.c_str(), NULL, "BIOS");
+  static const std::vector<FileExtensionSpecStruct> KnownBIOSExtensions =
+  {
+   { ".rom", 0, "" },
+  };
+  MDFNFILE BIOSFile(&NVFS, biospath.c_str(), KnownBIOSExtensions, "BIOS");
 
   if(BIOSFile.size() != 1024 * 1024)
    throw MDFN_Error(0, _("BIOS ROM file is incorrect size.\n"));
@@ -781,7 +785,7 @@ static MDFN_COLD void LoadCommon(std::vector<CDIF *> *CDInterfaces)
  PCFX_V810.SetIOWriteHandlers(port_wbyte, port_whword, NULL);
 }
 
-static void DoMD5CDVoodoo(std::vector<CDIF *> *CDInterfaces)
+static void DoMD5CDVoodoo(std::vector<CDInterface*> *CDInterfaces)
 {
  const CDGameEntry *found_entry = NULL;
  CDUtility::TOC toc;
@@ -863,34 +867,6 @@ static void DoMD5CDVoodoo(std::vector<CDIF *> *CDInterfaces)
   if(found_entry)
   {
    EmuFlags = found_entry->flags;
-
-   if(found_entry->discs > 1)
-   {
-    const char *hash_prefix = "Mednafen PC-FX Multi-Game Set";
-    md5_context md5_gameset;
-
-    md5_gameset.starts();
-
-    md5_gameset.update_string(hash_prefix);
-
-    for(unsigned int disc = 0; disc < found_entry->discs; disc++)
-    {
-     const CDGameEntryTrack *et = found_entry->tracks[disc];
-
-     while(et->tracknum)
-     {
-      md5_gameset.update_u32_as_lsb(et->tracknum);
-      md5_gameset.update_u32_as_lsb((uint32)et->format);
-      md5_gameset.update_u32_as_lsb(et->lba);
-
-      if(et->tracknum == -1)
-       break;
-      et++;
-     }
-    }
-    md5_gameset.finish(MDFNGameInfo->GameSetMD5);
-    MDFNGameInfo->GameSetMD5Valid = true;
-   }
    //printf("%s\n", found_entry->name);
    MDFNGameInfo->name = std::string(found_entry->name);
    break;
@@ -898,16 +874,13 @@ static void DoMD5CDVoodoo(std::vector<CDIF *> *CDInterfaces)
  } // end: for(unsigned if_disc = 0; if_disc < CDInterfaces->size(); if_disc++)
 
  MDFN_printf(_("CD Layout MD5:   0x%s\n"), md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str());
-
- if(MDFNGameInfo->GameSetMD5Valid)
-  MDFN_printf(_("GameSet MD5:     0x%s\n"), md5_context::asciistr(MDFNGameInfo->GameSetMD5, 0).c_str());
 }
 
 // PC-FX BIOS will look at all data tracks(not just the first one), in contrast to the PCE CD BIOS, which only looks
 // at the first data track.
-static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
+static bool TestMagicCD(std::vector<CDInterface*> *CDInterfaces)
 {
- CDIF *cdiface = (*CDInterfaces)[0];
+ CDInterface* cdiface = (*CDInterfaces)[0];
  CDUtility::TOC toc;
  uint8 sector_buffer[2048];
 
@@ -919,7 +892,7 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  {
   if(toc.tracks[track].control & 0x4)
   {
-   int m = cdiface->ReadSector(sector_buffer, toc.tracks[track].lba, 1);
+   int m = cdiface->ReadSectors(sector_buffer, toc.tracks[track].lba, 1);
 
    if(m == 0x1 && !strncmp("PC-FX:Hu_CD-ROM", (char*)sector_buffer, strlen("PC-FX:Hu_CD-ROM")))
     return true;
@@ -930,7 +903,7 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  return false;
 }
 
-static MDFN_COLD void LoadCD(std::vector<CDIF *> *CDInterfaces)
+static MDFN_COLD void LoadCD(std::vector<CDInterface*> *CDInterfaces)
 {
  try
  {
@@ -953,7 +926,7 @@ static MDFN_COLD void LoadCD(std::vector<CDIF *> *CDInterfaces)
  }
 }
 
-static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
+static void SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
 {
  const RMD_Layout* rmd = EmulatedPCFX.RMD;
  const RMD_Drive* rd = &rmd->Drives[drive_idx];
@@ -967,8 +940,6 @@ static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint3
  {
   SCSICD_SetDisc(rs->MediaCanChange, NULL);
  }
-
- return(true);
 }
 
 static void SaveBackupMemory(void)
@@ -1110,7 +1081,7 @@ static const MDFNSetting PCFXSettings[] =
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
  //{ ".ex", gettext_noop("PC-FX HuEXE") },
- { NULL, NULL }
+ { NULL, 0, NULL }
 };
 
 }

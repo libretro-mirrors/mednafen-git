@@ -137,15 +137,19 @@ DEFWRITE(OBWrite_VAR) { OBWrite<-1>(A, V); }
 
 
 static uint8 WRAM[0x20000];
+#ifdef SNES_DBG_ENABLE
 static std::bitset<0x20000> WRAMWritten;	// for debugging
+#endif
 
 template<uint32 mask>
 static DEFREAD(WRAMRead)
 {
  CPUM.timestamp += MEMCYC_SLOW;
 
+#ifdef SNES_DBG_ENABLE
  if(!WRAMWritten[A & mask])
   SNES_DBG("[SNES] Read from uninitialized WRAM at 0x%08x!\n", A & mask);
+#endif
 
  return WRAM[A & mask];
 }
@@ -157,7 +161,9 @@ static DEFWRITE(WRAMWrite)
 
  WRAM[A & mask] = V;
 
+#ifdef SNES_DBG_ENABLE
  WRAMWritten[A & mask] = true;
+#endif
 }
 
 static uint8 Multiplicand;
@@ -261,7 +267,9 @@ static DEFWRITE(Write_2180)
 {
  CPUM.timestamp += MEMCYC_FAST;
 
+#ifdef SNES_DBG_ENABLE
  WRAMWritten[WMAddress] = true;
+#endif
 
  WRAM[WMAddress] = V;
  WMAddress = (WMAddress + 1) & 0x1FFFF;
@@ -327,7 +335,9 @@ static MDFN_COLD void Reset(bool powering_up)
   //memset(WRAM, 0x02, sizeof(WRAM));
   //WRAM[0x1D0FF] = 0x0;	// lufia 2...
 
+#ifdef SNES_DBG_ENABLE
   WRAMWritten.reset();
+#endif
  }
 
  ICRegsReset(powering_up);
@@ -348,15 +358,15 @@ static MDFN_COLD void Reset(bool powering_up)
 //
 //
 
-static MDFN_COLD bool TestMagic(MDFNFILE *fp)
+static MDFN_COLD bool TestMagic(GameFile* gf)
 {
- if(fp->ext == "sfc" || fp->ext == "smc")
+ if(gf->ext == "sfc" || gf->ext == "smc" || gf->ext == "swc" || gf->ext == "fig")
   return true;
 
- if(SNSFLoader::TestMagic(fp->stream()))
+ if(SNSFLoader::TestMagic(gf->stream))
   return true;
 
- if(SPCReader::TestMagic(fp->stream()))
+ if(SPCReader::TestMagic(gf->stream))
   return true;
 
  return false;
@@ -391,11 +401,11 @@ static MDFN_COLD void Cleanup(void)
  }
 }
 
-static MDFN_COLD void Load(MDFNFILE *fp)
+static MDFN_COLD void Load(GameFile* gf)
 {
- if(SPCReader::TestMagic(fp->stream()))
+ if(SPCReader::TestMagic(gf->stream))
  {
-  spc_reader = new SPCReader(fp->stream());
+  spc_reader = new SPCReader(gf->stream);
   Player_Init(1, spc_reader->GameName(), spc_reader->ArtistName(), "", std::vector<std::string>({ spc_reader->SongName() }));
   EmulatedSNES_Faust.fps = (1U << 24) * 75;
   EmulatedSNES_Faust.MasterClock = MDFN_MASTERCLOCK_FIXED(21477272.7);
@@ -409,6 +419,9 @@ static MDFN_COLD void Load(MDFNFILE *fp)
  SpecEx = MDFN_GetSettingB("snes_faust.spex");
  SpecExSoundToo = MDFN_GetSettingB("snes_faust.spex.sound");
  SpecExAudioExpected = -1;
+
+ MDFNMP_Init(8192, (1U << 24) / 8192);
+ MDFNMP_RegSearchable(0x7E0000, 0x20000);
 
  CPU_Init();
 
@@ -472,13 +485,13 @@ static MDFN_COLD void Load(MDFNFILE *fp)
   }
  }
 
- if(SNSFLoader::TestMagic(fp->stream()))
+ if(SNSFLoader::TestMagic(gf->stream))
  {
-  snsf_loader = new SNSFLoader(fp->stream());
+  snsf_loader = new SNSFLoader(gf->vfs, gf->dir, gf->stream);
   Player_Init(1, snsf_loader->tags.GetTag("game"), snsf_loader->tags.GetTag("artist"), snsf_loader->tags.GetTag("copyright"), std::vector<std::string>({ snsf_loader->tags.GetTag("title") }));
  }
 
- const bool IsPAL = CART_Init(snsf_loader ? &snsf_loader->ROM_Data : fp->stream(), EmulatedSNES_Faust.MD5);
+ const bool IsPAL = CART_Init(snsf_loader ? &snsf_loader->ROM_Data : gf->stream, EmulatedSNES_Faust.MD5);
  CART_LoadNV();
 
  DMA_Init();
@@ -512,6 +525,42 @@ static MDFN_COLD void CloseGame(void)
   }
  }
  Cleanup();
+}
+
+static MDFN_COLD uint8* CheatMemGetPointer(uint32 A)
+{
+ A &= (1U << 24) - 1;
+
+ const uint8 bank = A >> 16;
+ const uint16 offset = A & 0xFFFF;
+
+ if(bank == 0x7E || bank == 0x7F)
+  return &WRAM[A & 0x1FFFF];
+ else if(bank <= 0x3F || (bank >= 0x80 && bank <= 0xBF))
+ {
+  if(offset >= 0x0000 && offset <= 0x1FFF)
+   return &WRAM[A & 0x1FFF];
+ }
+
+ return nullptr;
+}
+
+static MDFN_COLD uint8 CheatMemRead(uint32 A)
+{
+ const uint8* p = CheatMemGetPointer(A);
+
+ if(p)
+  return *p;
+
+ return 0x00;
+}
+
+static MDFN_COLD void CheatMemWrite(uint32 A, uint8 V)
+{
+ uint8* p = CheatMemGetPointer(A);
+
+ if(p)
+  *p = V;
 }
 
 struct event_list_entry
@@ -669,6 +718,8 @@ static void NO_INLINE EmulateReal(EmulateSpecStruct* espec)
   const bool skip_save = espec->skip;
   espec->skip |= snsf_loader != NULL;
 
+  MDFNMP_ApplyPeriodicCheats();
+
   // Call before PPU_StartFrame(), as PPU_StartFrame() may call INPUT_AutoRead().
   INPUT_UpdatePhysicalState();
 
@@ -693,7 +744,9 @@ static void NO_INLINE EmulateReal(EmulateSpecStruct* espec)
  CPUM.timestamp = 0;
 }
 
-//static sha1_digest doggy;
+#ifdef SNES_DBG_ENABLE
+static sha1_digest doggy;
+#endif
 
 static void Emulate(EmulateSpecStruct* espec)
 {
@@ -733,17 +786,21 @@ static void Emulate(EmulateSpecStruct* espec)
    const int expected_delta = (SpecExAudioExpected >= 0) ? SpecExAudioExpected - tmp_espec.SoundBufSize : 0;
    const int sbo = (expected_delta < 0) ? -expected_delta : 0;
 
-   //if(!expected_delta && doggy != sha1(tmp_espec.SoundBuf, tmp_espec.SoundBufSize * 2 * sizeof(int16)))
-   // fprintf(stderr, "Oops\n");
+#ifdef SNES_DBG_ENABLE
+   if(!expected_delta && doggy != sha1(tmp_espec.SoundBuf, tmp_espec.SoundBufSize * 2 * sizeof(int16)))
+    fprintf(stderr, "Oops\n");
 
-   //if(expected_delta)
-   // fprintf(stderr, "%d\n", expected_delta);
+   if(expected_delta)
+    fprintf(stderr, "%d\n", expected_delta);
+#endif
 
    memmove(espec->SoundBuf, espec->SoundBuf + (tmp_espec.SoundBufSize - sbo) * 2, sbo * 2 * sizeof(int16));
    espec->SoundBuf += sbo * 2;
 
    EmulateReal(espec);
-   //doggy = sha1(espec->SoundBuf, espec->SoundBufSize * 2 * sizeof(int16));
+#ifdef SNES_DBG_ENABLE
+   doggy = sha1(espec->SoundBuf, espec->SoundBufSize * 2 * sizeof(int16));
+#endif
    SpecExAudioExpected = espec->SoundBufSize;
 
    espec->SoundBuf -= sbo * 2;
@@ -817,11 +874,12 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".smc", "Super Magicom ROM Image" },
- { ".swc", "Super Wildcard ROM Image" },
- { ".sfc", "SNES/SFC ROM Image" },
+ { ".smc", 0, "Super Magicom ROM Image" },
+ { ".swc", 0, "Super Wildcard ROM Image" },
+ { ".sfc", 0, "SNES/SFC ROM Image" },
+ { ".fig", -10, "SNES/SFC ROM Image" },
 
- { NULL, NULL }
+ { NULL, 0, NULL }
 };
 
 static const MDFNSetting Settings[] =
@@ -840,6 +898,17 @@ static const MDFNSetting Settings[] =
  { NULL }
 };
 
+static const CheatInfoStruct CheatInfo =
+{
+ NULL,
+ NULL,
+
+ CheatMemRead,
+ CheatMemWrite,
+
+ CheatFormatInfo_Empty,
+ false
+};
 
 }
 
@@ -872,7 +941,7 @@ MDFNGI EmulatedSNES_Faust =
  NULL,
  0,
 
- CheatInfo_Empty,
+ CheatInfo,
 
  false,
  StateAction,

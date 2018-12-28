@@ -18,7 +18,7 @@
  * scaled fixed-point arithmetic, with a minimal number of shifts.
  */
 
-/* Modified 2007-2016 for usage in Mednafen */
+/* Modified 2007-2018 for usage in Mednafen */
 
 #include <mednafen/types.h>
 #include "jrevdct.h"
@@ -136,7 +136,7 @@ void j_rev_dct(DCTBLOCK data)
   int32 tmp0, tmp1, tmp2, tmp3;
   int32 tmp10, tmp11, tmp12, tmp13;
   int32 z1, z2, z3, z4, z5;
-  register DCTELEM *dataptr;
+  DCTELEM *dataptr;
   int rowctr;
 
   /* Pass 1: process rows. */

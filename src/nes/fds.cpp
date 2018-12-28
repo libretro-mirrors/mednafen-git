@@ -80,7 +80,7 @@ static int32 DiskSeekIRQ;
 
 static int ActiveDisk = -1;
 
-bool FDS_SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
+void FDS_SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
 {
  const RMD_Layout* rmd = MDFNGameInfo->RMD;
  const RMD_Drive* rd = &rmd->Drives[drive_idx];
@@ -90,8 +90,6 @@ bool FDS_SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 o
   ActiveDisk = (media_idx * 2) | (orientation_idx & 1);
  else
   ActiveDisk = -1;
-
- return true;
 }
 
 static MDFN_FASTCALL void FDSFix(int a)
@@ -571,7 +569,7 @@ static const char* GetManName(uint8 code)
  return(_("Unknown"));
 }
 
-bool FDS_TestMagic(MDFNFILE *fp)
+bool FDS_TestMagic(Stream *fp)
 {
  uint8 header[16];
 

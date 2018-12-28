@@ -8,7 +8,8 @@ SUBDIRS			=
 noinst_LIBRARIES	=
 mednafen_LDADD		=
 mednafen_DEPENDENCIES	=
-mednafen_SOURCES 	= 	debug.cpp error.cpp mempatcher.cpp settings.cpp endian.cpp Time.cpp mednafen.cpp git.cpp file.cpp general.cpp memory.cpp netplay.cpp state.cpp state_rewind.cpp movie.cpp player.cpp PSFLoader.cpp SSFLoader.cpp SNSFLoader.cpp SPCReader.cpp tests.cpp qtrecord.cpp Stream.cpp MemoryStream.cpp FileStream.cpp IPSPatcher.cpp
+mednafen_SOURCES 	= 	debug.cpp error.cpp mempatcher.cpp settings.cpp endian.cpp Time.cpp mednafen.cpp git.cpp file.cpp general.cpp memory.cpp netplay.cpp state.cpp state_rewind.cpp movie.cpp player.cpp PSFLoader.cpp SSFLoader.cpp SNSFLoader.cpp SPCReader.cpp tests.cpp qtrecord.cpp IPSPatcher.cpp
+mednafen_SOURCES	+=	VirtualFS.cpp NativeVFS.cpp Stream.cpp MemoryStream.cpp ExtMemStream.cpp FileStream.cpp
 
 if HAVE_SDL
 SUBDIRS 		+=	drivers
@@ -22,7 +23,7 @@ if WIN32
 .rc.o:
 	@WINDRES@ -o $@ $<
 
-mednafen_SOURCES	+=	drivers/win-resource.rc
+mednafen_SOURCES	+=	win32-common.cpp drivers/win-resource.rc
 endif
 
 endif
@@ -31,6 +32,12 @@ if DOS
 SUBDIRS			+=	drivers_dos
 mednafen_LDADD		+=	drivers_dos/libmdfndos.a
 mednafen_DEPENDENCIES	+=	drivers_dos/libmdfndos.a
+endif
+
+if ENABLE_LIBXXX_MODE
+SUBDIRS			+=	drivers_libxxx
+mednafen_LDADD		+=	drivers_libxxx/libmdfnxxx.a
+mednafen_DEPENDENCIES	+=	drivers_libxxx/libmdfnxxx.a
 endif
 
 SUBDIRS			+=	sexyal
@@ -43,6 +50,10 @@ endif
 
 include cdplay/Makefile.am.inc
 include demo/Makefile.am.inc
+
+if WANT_APPLE2_EMU
+include apple2/Makefile.am.inc
+endif
 
 if WANT_GB_EMU
 include gb/Makefile.am.inc
@@ -63,6 +74,10 @@ endif
 if WANT_NES_EMU
 include nes/Makefile.am.inc
 endif
+
+#if WANT_NES_NEW_EMU
+#include nes_new/Makefile.am.inc
+#endif
 
 if WANT_NGP_EMU
 include ngp/Makefile.am.inc
@@ -128,6 +143,7 @@ include hw_cpu/Makefile.am.inc
 include hw_misc/Makefile.am.inc
 include hw_sound/Makefile.am.inc
 include hw_video/Makefile.am.inc
+include mthreading/Makefile.am.inc
 include cdrom/Makefile.am.inc
 include sound/Makefile.am.inc
 include net/Makefile.am.inc

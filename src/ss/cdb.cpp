@@ -56,7 +56,7 @@
 #include "sound.h"
 
 #include <mednafen/cdrom/CDUtility.h>
-#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/cdrom/CDInterface.h>
 using namespace CDUtility;
 
 namespace MDFN_IEN_SS
@@ -444,7 +444,7 @@ static uint32 CalcedActualSize;
 //
 //
 static bool TrayOpen;
-static CDIF* Cur_CDIF;
+static CDInterface* Cur_CDIF;
 static CDUtility::TOC toc;
 static sscpu_timestamp_t lastts;
 static int32 CommandPhase;
@@ -1239,7 +1239,7 @@ void CDB_Kill(void)
 
 }
 
-void CDB_SetDisc(bool tray_open, CDIF *cdif)
+void CDB_SetDisc(bool tray_open, CDInterface* cdif)
 {
  TrayOpen = tray_open;
  Cur_CDIF = tray_open ? NULL : cdif;
@@ -1750,6 +1750,11 @@ static void Drive_Run(int64 clocks)
 	  {
 	   DrivePhase = DRIVEPHASE_PLAY;
 	   DriveCounter += (int64)((44100 * 256) / ((SubQBuf_Safe[0] & 0x40) ? 150 : 75)) << 32;
+
+#if 0
+	   if(!Cur_CDIF->NonDeterministic_CheckSectorReady(CurSector - 150))
+	    DrivePhase = DRIVEPHASE_SEEK;
+#endif
 	  }
 	  //else
 	  // printf("%d\n", CurSector);

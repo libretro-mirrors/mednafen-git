@@ -163,7 +163,7 @@ void MDSound_Power(void)
 void MDSound_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  Sms_ApuState sn_state;
- MDFN::LEPacker fm_slizer;
+ LEPacker fm_slizer;
 
  apu.save_state(&sn_state);
  FMUnit.serialize(fm_slizer, false);

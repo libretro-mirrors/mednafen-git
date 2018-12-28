@@ -22,6 +22,9 @@
 #include <mednafen/mednafen.h>
 #include "sha256.h"
 
+namespace Mednafen
+{
+
 static const uint32 K[64] =
 {
  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -70,13 +73,26 @@ static INLINE uint32 ls1(const uint32 x)
  return rotr<17>(x) ^ rotr<19>(x) ^ (x >> 10);
 }
 
-static INLINE void block(std::array<uint32, 8> &h, void* blk_data)
+sha256_hasher::sha256_hasher()
+{
+ reset();
+}
+
+void sha256_hasher::reset(void)
+{
+ buf_count = 0;
+ bytes_processed = 0;
+
+ h = { 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 };
+}
+
+INLINE void sha256_hasher::process_block(const uint8* blk_data)
 {
  alignas(16) uint32 w[64];
  alignas(16) auto v = h;
 
  for(unsigned t = 0; t < 16; t++)
-  w[t] = MDFN_de32msb((uint8*)blk_data + (t << 2));
+  w[t] = MDFN_de32msb(blk_data + (t << 2));
 
  for(unsigned t = 16; t < 64; t++)
   w[t] = ls1(w[t - 2]) + w[t - 7] + ls0(w[t - 15]) + w[t - 16];
@@ -100,41 +116,54 @@ static INLINE void block(std::array<uint32, 8> &h, void* blk_data)
   h[i] += v[i];
 }
 
-sha256_digest sha256(const void* data, const uint64 len)
+void sha256_hasher::process(const void* data, size_t len)
+{
+ uint8* d8 = (uint8*)data;
+
+ bytes_processed += len;
+
+ while(len)
+ {
+  if(buf_count || len < 0x40)
+  {
+   const size_t copy_len = std::min<size_t>(0x40 - buf_count, len);
+
+   memcpy(&buf[buf_count], d8, copy_len);
+   len -= copy_len;
+   d8 += copy_len;
+   buf_count += copy_len;
+   if(buf_count == 0x40)
+   {
+    process_block(buf);
+    buf_count = 0;
+   }
+  }
+  else
+  {
+   process_block(d8);
+   d8 += 0x40;
+   len -= 0x40;
+  }
+ }
+}
+
+
+sha256_digest sha256_hasher::digest(void) const
 {
  sha256_digest ret;
- alignas(16) std::array<uint32, 8> h({{ 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19 }});
- uint8* p = (uint8*)data;
- uint64 dc = len;
+ sha256_hasher tmp = *this;
+ const size_t footer_len = ((buf_count <= (0x40 - 9)) ? 0x40 : 0x80) - buf_count;
+ alignas(16) uint8 footer[0x80];
 
- while(MDFN_LIKELY(dc >= 64))
- {
-  block(h, p);
+ memset(footer, 0, sizeof(footer));
+ footer[0] |= 0x80;
 
-  p += 64;
-  dc -= 64;
- }
+ MDFN_en64msb(&footer[footer_len - 8], bytes_processed * 8);
 
- {
-  alignas(16) uint8 tmp[128];
-
-  memcpy(tmp, p, dc);
-  memset(tmp + dc, 0, 128 - dc);
-  tmp[dc] |= 0x80;
-
-  dc = ((dc + 8) &~ 63) + 56;
-
-  MDFN_en64msb<true>(&tmp[dc], len * 8);
-
-  block(h, tmp);
-  if(dc >= 64)
-   block(h, tmp + 64);
- }
+ tmp.process(footer, footer_len);
 
  for(unsigned i = 0; i < 8; i++)
-  MDFN_en32msb(&ret[i * 4], h[i]);
-
- //printf("%08x %08x %08x %08x %08x %08x %08x %08x\n", h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7]);
+  MDFN_en32msb(&ret[i * 4], tmp.h[i]);
 
  return ret;
 }
@@ -160,8 +189,11 @@ void sha256_test(void)
  abort();
 #endif
 
- static const sha256_digest expected[6] =
+ static const sha256_digest expected[9] =
  {
+  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"_sha256,
+  "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"_sha256,
+  "ab99932aac911daf496af23de1f8c6725f2c53e03d9b9d2801c362479076edc2"_sha256,
   "16f868c5d6f278b54eacc307c56c0cd6ece81bb3784a531f0d6d75d4200c6fe6"_sha256,
   "4ccac470d07efd7f989c1f9a5045bc2cfe446622dbb50d4ad7f53996e574cd29"_sha256,
   "a9d56e4e0d999c82ac86ce58b6b711e95e40eaddceb3bbc2ee0dc213236d7056"_sha256,
@@ -170,12 +202,15 @@ void sha256_test(void)
   "fd833d1be324b92272bc7c17a0ee9cad152cae24c622082f912e4552afe6bdbd"_sha256
  };
 
- assert(sha256(tv, 55) == expected[0]);
- assert(sha256(tv, 56) == expected[1]);
- assert(sha256(tv, 57) == expected[2]);
- assert(sha256(tv, 63) == expected[3]);
- assert(sha256(tv, 64) == expected[4]);
- assert(sha256(tv, 65) == expected[5]);
-
+ assert(sha256(tv,  0) == expected[0]);
+ assert(sha256(tv,  1) == expected[1]);
+ assert(sha256(tv, 54) == expected[2]);
+ assert(sha256(tv, 55) == expected[3]);
+ assert(sha256(tv, 56) == expected[4]);
+ assert(sha256(tv, 57) == expected[5]);
+ assert(sha256(tv, 63) == expected[6]);
+ assert(sha256(tv, 64) == expected[7]);
+ assert(sha256(tv, 65) == expected[8]);
 }
 
+}

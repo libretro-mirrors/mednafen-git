@@ -5,7 +5,7 @@ class OpEG
  OpEG();
  ~OpEG();
 
- void serialize(MDFN::LEPacker &slizer, bool load);
+ void serialize(Mednafen::LEPacker &slizer, bool load);
 
  void Reset(void);
 
@@ -77,7 +77,7 @@ OpEG::~OpEG()
 
 }
 
-void OpEG::serialize(MDFN::LEPacker &slizer, bool load)
+void OpEG::serialize(Mednafen::LEPacker &slizer, bool load)
 {
  slizer ^ KONOFF;
  slizer ^ CSMKONOFF;

@@ -372,9 +372,9 @@ static void Emulate(EmulateSpecStruct* espec)
   InterlaceField = 0;
 }
 
-static bool TestMagic(MDFNFILE* fp)
+static bool TestMagic(GameFile* gf)
 {
- return(false);
+ return false;
 }
 
 static void Cleanup(void)
@@ -395,7 +395,7 @@ static void Cleanup(void)
  }
 }
 
-static void Load(MDFNFILE* fp)
+static void Load(GameFile* gf)
 {
  try
  {
@@ -669,7 +669,7 @@ static void StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { NULL, NULL }
+ { NULL, 0, NULL }
 };
 
 static void SetInput(unsigned port, const char *type, uint8 *ptr)

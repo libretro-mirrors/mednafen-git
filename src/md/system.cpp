@@ -261,8 +261,8 @@ static const struct
 InputDB[] =
 {
  { NULL, 0x2c6cbd77, 		true, MTAP_TP_PRT1, 4 }, // Aq Renkan Awa (China) (Unl)
- { "MK-1234 -00", 0x8c822884, 	true, MTAP_TP_PRT1, 4 }, // ATP Tour Championship Tennis (USA)
- { "MK-1234 -50", 0x1a3da8c5, 	true, MTAP_TP_PRT1, 4 }, // ATP Tour (Europe)
+ { "MK-1234 -00", 0x8c822884, 	true, MTAP_TP_PRT2, 4 }, // ATP Tour Championship Tennis (USA)
+ { "MK-1234 -50", 0x1a3da8c5, 	true, MTAP_TP_PRT2, 4 }, // ATP Tour (Europe)
  { "T-172106-01", 0xac5bc26a,	true, MTAP_4WAY,    4 }, // Australian Rugby League (Europe)
  { "T-119066-01", 0xde27357b, 	true, MTAP_TP_PRT1, 4 }, // Barkley Shut Up and Jam 2 (USA) (Beta)
  { "T-119186-00", 0x321bb6bd, 	true, MTAP_TP_PRT1, 4 }, // Barkley Shut Up and Jam 2 (USA)
@@ -287,7 +287,7 @@ InputDB[] =
  { "T-172096-00", 0x9821d0a3,	true, MTAP_4WAY,    4 }, // Elitserien 96 (Sweden)
  { NULL, 0xa427814a, 		true, MTAP_TP_PRT1, 4 }, // ESPN National Hockey Night (USA) (Beta)
  { "T-93176 -00", 0x1d08828c, 	true, MTAP_TP_PRT1, 4 }, // ESPN National Hockey Night (USA)
- { "T-79196-50", 0xfac29677, 	true, MTAP_TP_PRT1, 5 }, // Fever Pitch Soccer (Europe) (En,Fr,De,Es,It)
+ { "T-79196-50", 0xfac29677, 	true, MTAP_TP_DUAL, 8 }, // Fever Pitch Soccer (Europe) (En,Fr,De,Es,It)
  { "T-172206-00", 0x96947f57,	true, MTAP_4WAY,    4 }, // FIFA 98 - Road to World Cup (Europe) (En,Fr,Es,It,Sv)
  { "T-50706 -00", 0xbddbb763,	true, MTAP_4WAY,    4 }, // FIFA International Soccer (USA, Europe) (En,Fr,De,Es)
  { "T-50916 -01", 0x012591f9,	true, MTAP_4WAY,    4 }, // FIFA Soccer 95 (Korea) (En,Fr,De,Es)
@@ -301,19 +301,19 @@ InputDB[] =
  { "T-48123 -00", 0xf9872055, 	true, MTAP_TP_PRT1, 4 }, // Gauntlet (Japan) (En,Ja)
  { "T-106253-00", 0x05cc7369,	true, MTAP_4WAY,    4 }, // General Chaos (Japan)
  { "T-50626 -00", 0xf1ecc4df,	true, MTAP_4WAY,    4 }, // General Chaos (USA, Europe)
- { "T-79196", 0xdcffa327, 	true, MTAP_TP_PRT1, 5 }, // Head-On Soccer (USA)
+ { "T-79196", 0xdcffa327, 	true, MTAP_TP_DUAL, 8 }, // Head-On Soccer (USA)
  /* Can support dual multitap, *BUT* Some game modes are incompatible with multitap
  { "T-95126-00", 0xf27c576a, 	true, * }, // Hyper Dunk (Europe)
  { NULL, 0xdb124bbb, 		true, * }, // Hyper Dunk - The Playoff Edition (Japan) (Beta)
  { "T-95083-00", 0x5baf53d7, 	true, * }, // Hyper Dunk - The Playoff Edition (Japan)
  */
  { "T-50836 -00", 0xe04ffc2b,	true, MTAP_4WAY,    4 }, // IMG International Tour Tennis (USA, Europe)
- { "T-95196-50", 0x9bb3b180, 	true, MTAP_TP_PRT1, 5 }, // International Superstar Soccer Deluxe (Europe)
- //{ "G-5540  00", 0x9fe71002, 	true, MTAP_TP_PRT2, 4 }, // J. League Pro Striker 2 (Japan)
+ { "T-95196-50", 0x9bb3b180, 	true, MTAP_TP_DUAL, 8 }, // International Superstar Soccer Deluxe (Europe)
+ { "G-5540  00", 0x9fe71002, 	true, MTAP_TP_PRT2, 4 }, // J. League Pro Striker 2 (Japan)
  { "G-5547", 0xe35e25fb, 	true, MTAP_TP_PRT1, 4 }, // J. League Pro Striker Final Stage (Japan)
- //{ "00005518-00", 0xec229156, 	true, MTAP_TP_PRT1, 4 }, // J. League Pro Striker (Japan) (v1.0)
- //{ "00005518-03", 0x2d5b7a11, 	true, MTAP_TP_PRT1, 4 }, // J. League Pro Striker (Japan) (v1.3)
- //{ "00005532-00", 0x0abed379, 	true, MTAP_TP_PRT1, 4 }, // J. League Pro Striker Perfect (Japan)
+ { "00005518-00", 0xec229156, 	true, MTAP_TP_PRT2, 4 }, // J. League Pro Striker (Japan) (v1.0)
+ { "00005518-03", 0x2d5b7a11, 	true, MTAP_TP_PRT2, 4 }, // J. League Pro Striker (Japan) (v1.3)
+ { "00005532-00", 0x0abed379, 	true, MTAP_TP_PRT2, 4 }, // J. League Pro Striker Perfect (Japan)
  { NULL, 0x17bed25f, 		true, MTAP_TP_PRT1, 3 }, // Lost Vikings, The (Europe) (Beta)
  { "T-70226-500", 0x1f14efc6, 	true, MTAP_TP_PRT1, 3 }, // Lost Vikings, The (Europe)
  { "T-125016-00", 0x7ba49edb, 	true, MTAP_TP_PRT1, 3 }, // Lost Vikings, The (USA)
@@ -376,7 +376,7 @@ InputDB[] =
  { "T-172026-04", 0xf1748e91,	true, MTAP_4WAY,    4 }, // Triple Play 96 (USA)
  { "T-172116-00", 0xbbe69017,	true, MTAP_4WAY,    4 }, // Triple Play - Gold Edition (USA)
  //maybe port2? { NULL, 0x9d451f72, 		true, MTAP_TP_PRT1, 4 }, // Ultimate Soccer (Europe) (En,Fr,De,Es,It) (Beta)
- //{ "MK1219  -00", 0x83db6e58, 	true, MTAP_TP_PRT1, 4 }, // Ultimate Soccer (Europe) (En,Fr,De,Es,It)
+ { "MK1219  -00", 0x83db6e58, 	true, MTAP_TP_DUAL, 8 }, // Ultimate Soccer (Europe) (En,Fr,De,Es,It)
  { "T-119156-00", 0x9920e7b7, 	true, MTAP_TP_PRT1, 4 }, // Unnecessary Roughness '95 (USA)
  { "T-048416-00", 0xc2c13b81, 	true, MTAP_TP_PRT1, 4 }, // Wayne Gretzky and the NHLPA All-Stars (USA, Europe)
  { "MK-1224 -50", 0xb791a435, 	true, MTAP_TP_PRT2, 4 }, // Wimbledon Championship Tennis (Europe)
@@ -448,8 +448,6 @@ static void LoadCommonPost(const md_game_info &ginfo)
 
  for(uint32 A = (0x7 << 21); A < (0x8 << 21); A += 65536)
   MDFNMP_AddRAM(65536, A, work_ram, (A == 0xFF0000));
-
- MDFNGameInfo->GameSetMD5Valid = false;
 
  MDSound_Init();
 
@@ -600,14 +598,14 @@ static void LoadCommonPost(const md_game_info &ginfo)
  system_reset(true);
 }
 
-static void Load(MDFNFILE *fp)
+static void Load(GameFile* gf)
 {
  try
  {
   md_game_info ginfo;
 
   memset(&ginfo, 0, sizeof(md_game_info));
-  MDCart_Load(&ginfo, fp);
+  MDCart_Load(&ginfo, gf);
 
   memcpy(MDFNGameInfo->MD5, ginfo.md5, 16);
 
@@ -629,7 +627,7 @@ static void Load(MDFNFILE *fp)
  }
 }
 
-static void LoadCD(std::vector<CDIF *> *CDInterfaces)
+static void LoadCD(std::vector<CDInterface*> *CDInterfaces)
 {
  try
  {
@@ -650,7 +648,7 @@ static void LoadCD(std::vector<CDIF *> *CDInterfaces)
  }
 }
 
-static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
+static bool TestMagicCD(std::vector<CDInterface*> *CDInterfaces)
 {
  return(MDCD_TestMagic(CDInterfaces));
 }
@@ -770,10 +768,11 @@ static const MDFNSetting MDSettings[] =
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".bin", gettext_noop("Super Magic Drive binary ROM Image") },
- { ".smd", gettext_noop("Super Magic Drive interleaved format ROM Image") },
- { ".md", gettext_noop("Multi Game Doctor format ROM Image") },
- { NULL, NULL }
+ { ".bin", -80, gettext_noop("Super Magic Drive binary ROM Image") },
+ { ".smd", -10, gettext_noop("Super Magic Drive interleaved format ROM Image") },
+ { ".md", 0, gettext_noop("Multi Game Doctor format ROM Image") },
+
+ { NULL, 0, NULL }
 };
 
 void SetLayerEnableMask(uint64 mask)

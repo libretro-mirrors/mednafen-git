@@ -1,9 +1,9 @@
         uint8 *C; 
-        register uint8 cc;
+        uint8 cc;
         uint32 vadr;
        
 	#if !defined(PPUT_MMC5SP) && !defined(PPUT_MMC5CHR1)
-	register uint8 zz;
+	uint8 zz;
 	#endif
 	
         {

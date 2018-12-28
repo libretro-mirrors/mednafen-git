@@ -36,7 +36,6 @@
 
 #include <mednafen/general.h>
 #include <mednafen/string/string.h>
-#include <mednafen/FileStream.h>
 #include <mednafen/MemoryStream.h>
 
 #include "CDAccess.h"
@@ -45,6 +44,9 @@
 #include "CDAFReader.h"
 
 #include <map>
+
+namespace Mednafen
+{
 
 using namespace CDUtility;
 
@@ -184,7 +186,7 @@ uint32 CDAccess_Image::GetSectorCount(CDRFILE_TRACK_INFO *track)
  return size / div;
 }
 
-void CDAccess_Image::ParseTOCFileLineInfo(CDRFILE_TRACK_INFO *track, const int tracknum, const std::string &filename, const char *binoffset, const char *msfoffset, const char *length, bool image_memcache, std::map<std::string, Stream*> &toc_streamcache)
+void CDAccess_Image::ParseTOCFileLineInfo(VirtualFS* vfs, CDRFILE_TRACK_INFO *track, const int tracknum, const std::string &filename, const char *binoffset, const char *msfoffset, const char *length, bool image_memcache, std::map<std::string, Stream*> &toc_streamcache)
 {
  long offset = 0; // In bytes!
  long tmp_long;
@@ -207,12 +209,15 @@ void CDAccess_Image::ParseTOCFileLineInfo(CDRFILE_TRACK_INFO *track, const int t
 
   track->FirstFileInstance = 1;
 
-  efn = MDFN_EvalFIP(base_dir, filename);
+  efn = vfs->eval_fip(base_dir, filename);
 
   if(image_memcache)
-   track->fp = new MemoryStream(new FileStream(efn, FileStream::MODE_READ));
+   track->fp = new MemoryStream(vfs->open(efn, VirtualFS::MODE_READ));
   else
-   track->fp = new FileStream(efn, FileStream::MODE_READ);
+  {
+   track->fp = vfs->open(efn, VirtualFS::MODE_READ);
+   track->fp->require_fast_seekable();
+  }
 
   toc_streamcache[filename] = track->fp;
  }
@@ -309,7 +314,7 @@ std::string MDFN_toupper(const std::string &str)
 }
 #endif
 
-void CDAccess_Image::LoadSBI(const std::string& sbi_path)
+void CDAccess_Image::LoadSBI(VirtualFS* vfs, const std::string& sbi_path)
 {
  MDFN_printf(_("Loading SBI file \"%s\"...\n"), sbi_path.c_str());
  {
@@ -317,17 +322,17 @@ void CDAccess_Image::LoadSBI(const std::string& sbi_path)
 
   try
   {
-   FileStream sbis(sbi_path, FileStream::MODE_READ);
+   std::unique_ptr<Stream> sbis(vfs->open(sbi_path, VirtualFS::MODE_READ));
    uint8 header[4];
    uint8 ed[4 + 10];
    uint8 tmpq[12];
 
-   sbis.read(header, 4);
+   sbis->read(header, 4);
 
    if(memcmp(header, "SBI\0", 4))
     throw MDFN_Error(0, _("Not recognized a valid SBI file."));
 
-   while(sbis.read(ed, sizeof(ed), false) == sizeof(ed))
+   while(sbis->read(ed, sizeof(ed), false) == sizeof(ed))
    {
     if(!BCD_is_valid(ed[0]) || !BCD_is_valid(ed[1]) || !BCD_is_valid(ed[2]))
      throw MDFN_Error(0, _("Bad BCD MSF offset in SBI file: %02x:%02x:%02x"), ed[0], ed[1], ed[2]);
@@ -377,9 +382,9 @@ static void StringToMSF(const char* str, unsigned* m, unsigned* s, unsigned* f)
   throw MDFN_Error(0, _("M:S:F time \"%s\" contains component(s) out of range."), str);
 }
 
-void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
+void CDAccess_Image::ImageOpen(VirtualFS* vfs, const std::string& path, bool image_memcache)
 {
- MemoryStream fp(new FileStream(path, FileStream::MODE_READ));
+ MemoryStream fp(vfs->open(path, VirtualFS::MODE_READ));
  static const unsigned max_args = 4;
  std::string linebuf;
  std::string cmdbuf, args[max_args];
@@ -393,7 +398,7 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
  disc_type = DISC_TYPE_CDDA_OR_M1;
  memset(&TmpTrack, 0, sizeof(TmpTrack));
 
- MDFN_GetFilePathComponents(path, &base_dir, &file_base, &file_ext);
+ vfs->get_file_path_components(path, &base_dir, &file_base, &file_ext);
 
  if(!MDFN_strazicmp(file_ext.c_str(), ".toc"))
  {
@@ -425,7 +430,7 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
    }
 
    // Call trim AFTER we handle TOC-style comments, so we'll be sure to remove trailing whitespace in lines like: MONKEY  // BABIES
-   MDFN_trim(linebuf);
+   MDFN_trim(&linebuf);
 
    if(linebuf.length() == 0)	// Skip blank lines.
     continue;
@@ -529,7 +534,7 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
       length = args[2].c_str();
      }
      //printf("%s, %s, %s, %s\n", args[0].c_str(), binoffset, msfoffset, length);
-     ParseTOCFileLineInfo(&TmpTrack, active_track, args[0], binoffset, msfoffset, length, image_memcache, toc_streamcache);
+     ParseTOCFileLineInfo(vfs, &TmpTrack, active_track, args[0], binoffset, msfoffset, length, image_memcache, toc_streamcache);
     }
     else if(cmdbuf == "DATAFILE")
     {
@@ -544,7 +549,7 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
      else
       length = args[1].c_str();
 
-     ParseTOCFileLineInfo(&TmpTrack, active_track, args[0], binoffset, NULL, length, image_memcache, toc_streamcache);
+     ParseTOCFileLineInfo(vfs, &TmpTrack, active_track, args[0], binoffset, NULL, length, image_memcache, toc_streamcache);
     }
     else if(cmdbuf == "INDEX")
     {
@@ -635,12 +640,14 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
       active_track = -1;
      }
 
-     std::string efn = MDFN_EvalFIP(base_dir, args[0]);
-     TmpTrack.fp = new FileStream(efn, FileStream::MODE_READ);
+     std::string efn = vfs->eval_fip(base_dir, args[0]);
+     TmpTrack.fp = vfs->open(efn, VirtualFS::MODE_READ);
      TmpTrack.FirstFileInstance = 1;
 
      if(image_memcache)
       TmpTrack.fp = new MemoryStream(TmpTrack.fp);
+     else
+      TmpTrack.fp->require_fast_seekable();
 
      if(!MDFN_strazicmp(args[1].c_str(), "BINARY"))
      {
@@ -795,11 +802,9 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
   throw(MDFN_Error(0, _("No tracks found!\n")));
  }
 
- FirstTrack = FirstTrack;
  NumTracks = 1 + LastTrack - FirstTrack;
 
  int32 RunningLBA = 0;
- int32 LastIndex = 0;
  long FileOffset = 0;
 
  RunningLBA -= 150;
@@ -848,7 +853,6 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
   {
    if(Tracks[x].FirstFileInstance) 
    {
-    LastIndex = 0;
     FileOffset = 0;
    }
 
@@ -925,7 +929,7 @@ void CDAccess_Image::ImageOpen(const std::string& path, bool image_memcache)
    }
   }
 
-  LoadSBI(MDFN_EvalFIP(base_dir, file_base + std::string(".") + std::string(sbi_ext), true).c_str());
+  LoadSBI(vfs, vfs->eval_fip(base_dir, file_base + "." + sbi_ext, true));
  }
 
  GenerateTOC();
@@ -954,13 +958,13 @@ void CDAccess_Image::Cleanup(void)
  }
 }
 
-CDAccess_Image::CDAccess_Image(const std::string& path, bool image_memcache) : NumTracks(0), FirstTrack(0), LastTrack(0), total_sectors(0)
+CDAccess_Image::CDAccess_Image(VirtualFS* vfs, const std::string& path, bool image_memcache) : NumTracks(0), FirstTrack(0), LastTrack(0), total_sectors(0)
 {
  memset(Tracks, 0, sizeof(Tracks));
 
  try
  {
-  ImageOpen(path, image_memcache);
+  ImageOpen(vfs, path, image_memcache);
  }
  catch(...)
  {
@@ -1173,8 +1177,6 @@ int32 CDAccess_Image::MakeSubPQ(int32 lba, uint8 *SubPWBuf) const
  uint8 buf[0xC];
  int32 track;
  uint32 lba_relative;
- uint32 ma, sa, fa;
- uint32 m, s, f;
  uint8 pause_or = 0x00;
  bool track_found = false;
 
@@ -1194,14 +1196,6 @@ int32 CDAccess_Image::MakeSubPQ(int32 lba, uint8 *SubPWBuf) const
   lba_relative = Tracks[track].LBA - 1 - lba;
  else
   lba_relative = lba - Tracks[track].LBA;
-
- f = (lba_relative % 75);
- s = ((lba_relative / 75) % 60);
- m = (lba_relative / 75 / 60);
-
- fa = (lba + 150) % 75;
- sa = ((lba + 150) / 75) % 60;
- ma = ((lba + 150) / 75 / 60);
 
  uint8 adr = 0x1; // Q channel data encodes position
  uint8 control = Tracks[track].subq_control;
@@ -1232,16 +1226,13 @@ int32 CDAccess_Image::MakeSubPQ(int32 lba, uint8 *SubPWBuf) const
   }
  }
 
-
  memset(buf, 0, 0xC);
  buf[0] = (adr << 0) | (control << 4);
  buf[1] = U8_to_BCD(track);
 
- // Index
- //if(lba < Tracks[track].LBA) // Index is 00 in pregap
- // buf[2] = U8_to_BCD(0x00);
- //else
- // buf[2] = U8_to_BCD(0x01);
+ //
+ //
+ //
  {
   int index = 0;
 
@@ -1253,18 +1244,23 @@ int32 CDAccess_Image::MakeSubPQ(int32 lba, uint8 *SubPWBuf) const
   buf[2] = U8_to_BCD(index);
  }
 
+ //
  // Track relative MSF address
- buf[3] = U8_to_BCD(m);
- buf[4] = U8_to_BCD(s);
- buf[5] = U8_to_BCD(f);
+ //
+ ABA_to_AMSF_BCD(lba_relative, &buf[3], &buf[4], &buf[5]);
 
- buf[6] = 0; // Zerroooo
+ //
+ // Zero, the best number.
+ //
+ buf[6] = 0;
 
+ //
  // Absolute MSF address
- buf[7] = U8_to_BCD(ma);
- buf[8] = U8_to_BCD(sa);
- buf[9] = U8_to_BCD(fa);
+ //
+ ABA_to_AMSF_BCD(LBA_to_ABA(lba), &buf[7], &buf[8], &buf[9]);
 
+ //
+ //
  subq_generate_checksum(buf);
 
  if(!SubQReplaceMap.empty())
@@ -1318,4 +1314,4 @@ void CDAccess_Image::GenerateTOC(void)
  toc.tracks[100].valid = true;
 }
 
-
+}
