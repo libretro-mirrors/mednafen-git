@@ -23,25 +23,43 @@
 #define __MDFN_FILESTREAM_H
 
 #include "Stream.h"
+#include "VirtualFS.h"
+
+namespace Mednafen
+{
 
 class FileStream : public Stream
 {
  public:
 
+ // Convenience function so we don't need so many try { } catch { } for ENOENT
+ static INLINE FileStream* open(const std::string& path, const uint32 mode, const int do_lock = false)
+ {
+  try
+  {
+   return new FileStream(path, mode, do_lock);
+  }
+  catch(MDFN_Error& e)
+  {
+   if(e.GetErrno() == ENOENT)
+    return nullptr;
+
+   throw;
+  }
+ }
+
  enum
  {
-  MODE_READ = 0,
+  MODE_READ = VirtualFS::MODE_READ,
 
-  MODE_READ_WRITE,	// Will create file if it doesn't already exist.  Will not truncate existing file.
-			// Any necessary synchronization when switching between read and write operations is handled internally in
-			// FileStream.
+  MODE_READ_WRITE = VirtualFS::MODE_READ_WRITE,
 
-  MODE_WRITE,
-  MODE_WRITE_SAFE,	// Will throw an exception instead of overwriting an existing file.
-  MODE_WRITE_INPLACE,	// Like MODE_WRITE, but won't truncate the file if it already exists.
+  MODE_WRITE = VirtualFS::MODE_WRITE,
+  MODE_WRITE_SAFE = VirtualFS::MODE_WRITE_SAFE,	// Will throw an exception instead of overwriting an existing file.
+  MODE_WRITE_INPLACE = VirtualFS::MODE_WRITE_INPLACE,	// Like MODE_WRITE, but won't truncate the file if it already exists.
  };
 
- FileStream(const std::string& path, const int mode, const bool do_lock = false);
+ FileStream(const std::string& path, const uint32 mode, const int do_lock = false);
  virtual ~FileStream() override;
 
  virtual uint64 attributes(void) override;
@@ -86,7 +104,7 @@ class FileStream : public Stream
 
  FILE *fp;
  std::string path_save;
- const int OpenedMode;
+ const uint32 OpenedMode;
 
  void* mapping;
  uint64 mapping_size;
@@ -95,10 +113,9 @@ class FileStream : public Stream
  int prev_was_write;	// -1 for no state, 0 for last op was read, 1 for last op was write(used for MODE_READ_WRITE)
 
  //
- void lock(void);
+ void lock(bool nb);
  void unlock(void);
 };
 
-
-
+}
 #endif

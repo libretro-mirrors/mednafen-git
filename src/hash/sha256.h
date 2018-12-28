@@ -22,10 +22,68 @@
 #ifndef __MDFN_SHA256_H
 #define __MDFN_SHA256_H
 
+namespace Mednafen
+{
+
 typedef std::array<uint8, 32> sha256_digest;
+class sha256_hasher
+{
+ public:
+
+ sha256_hasher();
+
+ void reset(void);
+
+ void process(const void* data, size_t len);
+
+ INLINE void process_cstr(const char* s)
+ {
+  return process(s, strlen(s));
+ }
+
+ template<typename T>
+ INLINE void process_scalar(const T v)
+ {
+  if(std::is_same<T, bool>::value)
+  {
+   uint8 tmp = v;
+
+   process(&tmp, 1);
+  }
+  else
+  {
+   alignas(T) uint8 tmp[sizeof(T)];
+
+   MDFN_enlsb<T, true>(&tmp[0], v);
+
+   process(tmp, sizeof(tmp));
+  }
+ }
+
+ sha256_digest digest(void) const;
+
+ private:
+
+ void process_block(const uint8* data);
+ std::array<uint32, 8> h;
+
+ uint8 buf[64];
+ size_t buf_count;
+
+ uint64 bytes_processed;
+};
 
 void sha256_test(void);
-sha256_digest sha256(const void* data, const uint64 len);
+
+static INLINE sha256_digest sha256(const void* data, uint64 len)
+{
+ sha256_hasher h;
+
+ h.process(data, len);
+
+ return h.digest();
+}
+
 
 static INLINE constexpr uint8 sha256_cton(char c)
 {
@@ -51,5 +109,5 @@ static INLINE constexpr sha256_digest operator "" _sha256(const char *s, std::si
 		    });
 }
 
-
+}
 #endif

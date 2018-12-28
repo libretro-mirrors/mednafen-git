@@ -26,7 +26,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <wspiapi.h>
-#include <windows.h>
+#include <mednafen/win32-common.h>
 #include <strsafe.h>
 
 #ifndef AI_ADDRCONFIG
@@ -64,37 +64,6 @@ class WS2_Client : public WS2_Connection
  virtual bool Established(int32 timeout = 0) override;
 };
 
-static std::string ErrCodeToString(int errcode)
-{
- std::string ret;
- void* msg_buffer = NULL;
- unsigned int tchar_count;
-
- tchar_count = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-	       		     NULL, errcode,
-		             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-               		     (LPWSTR)&msg_buffer, 0, NULL);
-
- if(tchar_count == 0)
-  return "Error Error";
-
- //{
- // TCHAR trim_chars[] = TEXT("\r\n\t ");
- //
- // StrTrim((PTSTR)msg_buffer, trim_chars);
- //}
- try
- {
-  ret = UTF16_to_UTF8((char16_t*)msg_buffer, tchar_count);
- }
- catch(...)
- {
-  LocalFree(msg_buffer);
-  throw;
- }
- LocalFree(msg_buffer);
- return ret;
-}
 
 WS2_Connection::WS2_Connection()
 {
@@ -107,7 +76,7 @@ WS2_Connection::WS2_Connection()
  {
   int errcode = WSAGetLastError();
 
-  throw MDFN_Error(0, _("WSAStartup() failed: %d %s"), errcode, ErrCodeToString(errcode).c_str());
+  throw MDFN_Error(0, _("WSAStartup() failed: %d %s"), errcode, Win32Common::ErrCodeToString(errcode).c_str());
  }
 
  if(wsa_data.wVersion < 0x202)
@@ -150,7 +119,7 @@ WS2_Client::WS2_Client(const char *host, unsigned int port)
   {
    int errcode = WSAGetLastError();
 
-   throw MDFN_Error(0, _("getaddrinfo() failed: %d %s"), errcode, ErrCodeToString(errcode).c_str());
+   throw MDFN_Error(0, _("getaddrinfo() failed: %d %s"), errcode, Win32Common::ErrCodeToString(errcode).c_str());
   }
 
   for(int tryit = 0; tryit < 2; tryit++) // Quick hackish way to "sort" IPv4 ahead of everything else.
@@ -168,7 +137,7 @@ WS2_Client::WS2_Client(const char *host, unsigned int port)
 
      freeaddrinfo(result);
 
-     throw MDFN_Error(0, _("socket() failed: %d %s"), errcode, ErrCodeToString(errcode).c_str());
+     throw MDFN_Error(0, _("socket() failed: %d %s"), errcode, Win32Common::ErrCodeToString(errcode).c_str());
     }
 
     {
@@ -182,7 +151,7 @@ WS2_Client::WS2_Client(const char *host, unsigned int port)
       closesocket(sd);
       sd = INVALID_SOCKET;
 
-      throw MDFN_Error(0, _("WSAIoctl() failed: %d %s"), errcode, ErrCodeToString(errcode).c_str());
+      throw MDFN_Error(0, _("WSAIoctl() failed: %d %s"), errcode, Win32Common::ErrCodeToString(errcode).c_str());
      }
     }
 
@@ -197,7 +166,7 @@ WS2_Client::WS2_Client(const char *host, unsigned int port)
       closesocket(sd);
       sd = INVALID_SOCKET;
 
-      throw MDFN_Error(0, _("connect() failed: %d %s"), errcode, ErrCodeToString(errcode).c_str());
+      throw MDFN_Error(0, _("connect() failed: %d %s"), errcode, Win32Common::ErrCodeToString(errcode).c_str());
      }
     }
     goto BreakOut;
@@ -240,7 +209,7 @@ bool WS2_Client::Established(int32 timeout)
   {
    int errcode = WSAGetLastError();
 
-   throw MDFN_Error(0, _("select() failed: %d %s"), errcode, ErrCodeToString(errcode).c_str());
+   throw MDFN_Error(0, _("select() failed: %d %s"), errcode, Win32Common::ErrCodeToString(errcode).c_str());
   }
   else if(!rv)
    return false;
@@ -255,10 +224,10 @@ bool WS2_Client::Established(int32 timeout)
     {
      const int errcode = WSAGetLastError();
 
-     throw MDFN_Error(0, _("getsockopt() failed: %d %s"), errcode, ErrCodeToString(errcode).c_str());
+     throw MDFN_Error(0, _("getsockopt() failed: %d %s"), errcode, Win32Common::ErrCodeToString(errcode).c_str());
     }
 
-    throw MDFN_Error(0, _("connect() failed: %d %s"), errc, ErrCodeToString(errc).c_str());
+    throw MDFN_Error(0, _("connect() failed: %d %s"), errc, Win32Common::ErrCodeToString(errc).c_str());
    }
   }
  }
@@ -272,7 +241,7 @@ bool WS2_Client::Established(int32 timeout)
    closesocket(sd);
    sd = INVALID_SOCKET;
 
-   throw MDFN_Error(0, _("setsockopt() failed: %d %s"), errcode, ErrCodeToString(errcode).c_str());
+   throw MDFN_Error(0, _("setsockopt() failed: %d %s"), errcode, Win32Common::ErrCodeToString(errcode).c_str());
   }
  }
 
@@ -300,7 +269,7 @@ bool WS2_Connection::CanSend(int32 timeout)
  {
   int errcode = WSAGetLastError();
 
-  throw MDFN_Error(0, _("select() failed: %d %s"), errcode, ErrCodeToString(errcode).c_str());
+  throw MDFN_Error(0, _("select() failed: %d %s"), errcode, Win32Common::ErrCodeToString(errcode).c_str());
  }
 
  return (bool)rv;
@@ -324,7 +293,7 @@ bool WS2_Connection::CanReceive(int32 timeout)
  {
   int errcode = WSAGetLastError();
 
-  throw MDFN_Error(0, _("select() failed: %d %s"), errcode, ErrCodeToString(errcode).c_str());
+  throw MDFN_Error(0, _("select() failed: %d %s"), errcode, Win32Common::ErrCodeToString(errcode).c_str());
  }
 
  return (bool)rv;
@@ -344,7 +313,7 @@ uint32 WS2_Connection::Send(const void *data, uint32 len)
   int errcode = WSAGetLastError();
   if(errcode != WSAEWOULDBLOCK && errcode != WSAEINTR)
   {
-   throw MDFN_Error(0, _("send() failed: %d %s"), errcode, ErrCodeToString(errcode).c_str());
+   throw MDFN_Error(0, _("send() failed: %d %s"), errcode, Win32Common::ErrCodeToString(errcode).c_str());
   }
   return(0);
  }
@@ -366,7 +335,7 @@ uint32 WS2_Connection::Receive(void *data, uint32 len)
   int errcode = WSAGetLastError();
   if(errcode != WSAEWOULDBLOCK && errcode != WSAEINTR)
   {
-   throw MDFN_Error(0, _("recv() failed: %d %s"), errcode, ErrCodeToString(errcode).c_str());
+   throw MDFN_Error(0, _("recv() failed: %d %s"), errcode, Win32Common::ErrCodeToString(errcode).c_str());
   }
   return(0);
  }

@@ -24,6 +24,9 @@
 
 #ifdef __cplusplus
 
+namespace Mednafen
+{
+
 class ErrnoHolder;
 class MDFN_Error : public std::exception
 {
@@ -47,6 +50,8 @@ class MDFN_Error : public std::exception
  int errno_code;
  char *error_message;
 };
+
+//#define DEFMDFNERROR(name, en) struct Error_##name : public MDFN_Error { template<typename ...Z> INLINE Error_##name(Z... args) : MDFN_Error(en, args...) { } }
 
 class ErrnoHolder
 {
@@ -87,6 +92,7 @@ class ErrnoHolder
  char local_strerror[256];
 };
 
+}
 #endif
 
 #endif

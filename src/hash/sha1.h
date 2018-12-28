@@ -19,9 +19,11 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-
 #ifndef __MDFN_SHA1_H
 #define __MDFN_SHA1_H
+
+namespace Mednafen
+{
 
 typedef std::array<uint8, 20> sha1_digest;
 
@@ -72,5 +74,5 @@ static INLINE constexpr sha1_digest operator "" _sha1(const char *s, std::size_t
 		    }});
 }
 
-
+}
 #endif

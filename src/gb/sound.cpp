@@ -109,7 +109,7 @@ void SOUND_StateAction(StateMem *sm, int load, int data_only)
 
  SFORMAT StateRegs[] =
  {
-  SFARRAYN((uint8*)&gb_state, sizeof(gb_state), "apu_state"),
+  SFPTR8N((uint8*)&gb_state, sizeof(gb_state), "apu_state"),
   SFEND
  };
 

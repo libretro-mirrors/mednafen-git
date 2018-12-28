@@ -60,13 +60,13 @@
 #include <mednafen/mempatcher.h>
 #include <mednafen/hash/md5.h>
 
-CSystem::CSystem(MDFNFILE* fp)
+CSystem::CSystem(GameFile* gf)
 {
 	mFileType = HANDY_FILETYPE_LNX;
 
 	char clip[11];
-	fp->read(clip, 11);
-	fp->seek(0, SEEK_SET);
+	gf->stream->read(clip, 11);
+	gf->stream->seek(0, SEEK_SET);
 	clip[4]=0;
 	clip[10]=0;
 
@@ -95,14 +95,14 @@ CSystem::CSystem(MDFNFILE* fp)
 			break;
 
 		case HANDY_FILETYPE_LNX:
-			mCart.reset(new CCart(fp->stream()));
+			mCart.reset(new CCart(gf->stream));
 			mRam.reset(new CRam(NULL));
 			break;
 
 		case HANDY_FILETYPE_HOMEBREW:
 			{
 			 mCart.reset(new CCart(NULL));
-			 mRam.reset(new CRam(fp->stream()));
+			 mRam.reset(new CRam(gf->stream));
 			}
 			break;
 	}
@@ -170,12 +170,12 @@ bool LynxLineDrawn[256];
 static CSystem *lynxie = NULL;
 extern MDFNGI EmulatedLynx;
 
-static bool TestMagic(MDFNFILE *fp)
+static bool TestMagic(GameFile* gf)
 {
  uint8 data[((size_t)CCart::HEADER_RAW_SIZE > (size_t)CRam::HEADER_RAW_SIZE) ? (size_t)CCart::HEADER_RAW_SIZE : (size_t)CRam::HEADER_RAW_SIZE];
  uint64 rc;
 
- rc = fp->read(data, sizeof(data), false);
+ rc = gf->stream->read(data, sizeof(data), false);
 
  if(rc >= CCart::HEADER_RAW_SIZE && CCart::TestMagic(data, sizeof(data)))
   return true;
@@ -195,11 +195,11 @@ static void Cleanup(void)
  }
 }
 
-static void Load(MDFNFILE *fp)
+static void Load(GameFile* gf)
 {
  try
  {
-  lynxie = new CSystem(fp);
+  lynxie = new CSystem(gf);
 
   switch(lynxie->CartGetRotate())
   {
@@ -212,7 +212,6 @@ static void Load(MDFNFILE *fp)
 	break;
   }
 
-  MDFNGameInfo->GameSetMD5Valid = false;
   if(lynxie->mRam->InfoRAMSize)
   {
    memcpy(MDFNGameInfo->MD5, lynxie->mRam->MD5, 16);
@@ -363,7 +362,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
         SFVAR(gSystemNMI),
         SFVAR(gSystemCPUSleep),
         SFVAR(gSystemHalt),
-	SFARRAYN(lynxie->GetRamPointer(), RAM_SIZE, "RAM"),
+	SFPTR8N(lynxie->GetRamPointer(), RAM_SIZE, "RAM"),
 	SFEND
  };
 
@@ -399,17 +398,17 @@ static const MDFNSetting LynxSettings[] =
 
 static const IDIISG IDII =
 {
- { "a", "A (outer)", 8, IDIT_BUTTON_CAN_RAPID },
- { "b", "B (inner)", 7, IDIT_BUTTON_CAN_RAPID },
- { "option_2", "Option 2 (lower)", 5, IDIT_BUTTON_CAN_RAPID },
- { "option_1", "Option 1 (upper)", 4, IDIT_BUTTON_CAN_RAPID },
+ IDIIS_ButtonCR("a", "A (outer)", 8),
+ IDIIS_ButtonCR("b", "B (inner)", 7),
+ IDIIS_ButtonCR("option_2", "Option 2 (lower)", 5),
+ IDIIS_ButtonCR("option_1", "Option 1 (upper)", 4),
 
- { "left", "LEFT ←", 	2, IDIT_BUTTON, "right" },
- { "right", "RIGHT →", 	3, IDIT_BUTTON, "left" },
- { "up", "UP ↑", 	0, IDIT_BUTTON, "down" },
- { "down", "DOWN ↓", 	1, IDIT_BUTTON, "up" },
+ IDIIS_Button("left", "LEFT ←", 	2, "right"),
+ IDIIS_Button("right", "RIGHT →", 	3, "left"),
+ IDIIS_Button("up", "UP ↑", 	0, "down"),
+ IDIIS_Button("down", "DOWN ↓", 	1, "up"),
 
- { "pause", "PAUSE", 6, IDIT_BUTTON },
+ IDIIS_Button("pause", "PAUSE", 6),
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
@@ -429,8 +428,8 @@ static const std::vector<InputPortInfoStruct> PortInfo =
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".lnx", gettext_noop("Atari Lynx ROM Image") },
- { NULL, NULL }
+ { ".lnx", 0, gettext_noop("Atari Lynx ROM Image") },
+ { NULL, 0, NULL }
 };
 
 static const CustomPalette_Spec CPInfo[] =

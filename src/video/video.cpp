@@ -17,68 +17,45 @@
 
 #include "video-common.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
 #include <trio/trio.h>
 
 #include "png.h"
+
+namespace Mednafen
+{
+
+static unsigned GetIncSnapIndex(void)
+{
+ FileStream pp(MDFN_MakeFName(MDFNMKF_SNAP_DAT, 0, NULL), FileStream::MODE_READ_WRITE, true);
+ std::string linebuf;
+ unsigned ret = 0;
+
+ if(pp.get_line(linebuf) >= 0)
+  if(trio_sscanf(linebuf.c_str(), "%u", &ret) != 1)
+   ret = 0;
+
+ pp.rewind();
+ pp.print_format("%u\n", ret + 1);
+ pp.truncate(pp.tell());
+ pp.close();
+
+ return ret;
+}
 
 void MDFNI_SaveSnapshot(const MDFN_Surface *src, const MDFN_Rect *rect, const int32 *LineWidths)
 {
  try
  {
-  unsigned u = 0;
+  const unsigned u = GetIncSnapIndex();
 
-  try
-  {
-   FileStream pp(MDFN_MakeFName(MDFNMKF_SNAP_DAT, 0, NULL), FileStream::MODE_READ);
-   std::string linebuf;
+  PNGWrite(MDFN_MakeFName(MDFNMKF_SNAP, u, "png"), src, *rect, LineWidths);
 
-   if(pp.get_line(linebuf) >= 0)
-    if(trio_sscanf(linebuf.c_str(), "%u", &u) != 1)
-     u = 0;
-  }
-  catch(std::exception &e)
-  {
-
-  }
-
-  {
-   FileStream pp(MDFN_MakeFName(MDFNMKF_SNAP_DAT, 0, NULL), FileStream::MODE_WRITE);
-
-   pp.print_format("%u\n", u + 1);
-  }
-
-  std::string fn = MDFN_MakeFName(MDFNMKF_SNAP, u, "png");
-
-  PNGWrite(fn, src, *rect, LineWidths);
-
-  MDFN_DispMessage(_("Screen snapshot %u saved."), u);
+  MDFN_Notify(MDFN_NOTICE_STATUS, _("Screen snapshot %u saved."), u);
  }
  catch(std::exception &e)
  {
-  MDFN_PrintError(_("Error saving screen snapshot: %s"), e.what());
-  MDFN_DispMessage(_("Error saving screen snapshot: %s"), e.what());
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("Error saving screen snapshot: %s"), e.what());
  }
 }
 
-void MDFN_DispMessage(const char *format, ...) noexcept
-{
- va_list ap;
- va_start(ap,format);
- char *msg = NULL;
-
- trio_vasprintf(&msg, format,ap);
- va_end(ap);
-
- MDFND_DispMessage(msg);
 }
-
-void MDFN_ResetMessages(void)
-{
- MDFND_DispMessage(NULL);
-}
-
-

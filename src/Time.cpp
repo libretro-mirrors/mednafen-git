@@ -24,8 +24,11 @@
 #include "Time.h"
 
 #if defined(WIN32)
- #include <windows.h>
+ #include <mednafen/win32-common.h>
 #endif
+
+namespace Mednafen
+{
 
 namespace Time
 {
@@ -235,6 +238,8 @@ void SleepMS(uint32 amount) noexcept
   nanosleep(&want, &rem);
  }
  #endif
+}
+
 }
 
 }

@@ -482,12 +482,12 @@ void FDSSound_StateAction(StateMem *sm, const unsigned load, const bool data_onl
   SFVAR(master_control),
   SFVAR(env_speed),
 
-  SFARRAY(env_control, 2),
-  SFARRAY(volume, 2),
-  SFARRAY32(mwave, 0x20),
-  SFARRAY(cwave, 0x40),
+  SFPTR8(env_control, 2),
+  SFPTR8(volume, 2),
+  SFPTR32(mwave, 0x20),
+  SFPTR8(cwave, 0x40),
   
-  SFARRAY32(env_counter, 2),
+  SFPTR32(env_counter, 2),
   
   SFVAR(sweep_bias),
   

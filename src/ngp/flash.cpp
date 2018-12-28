@@ -236,7 +236,7 @@ void flash_write(uint32 start_address, uint16 length)
 
 	if(block_count >= FLASH_MAX_BLOCKS)
 	{
-	 MDFN_PrintError(_("[FLASH] Block list overflow!"));
+	 MDFN_Notify(MDFN_NOTICE_ERROR, _("[FLASH] Block list overflow!"));
 	 return;
 	}
 	else
@@ -342,7 +342,7 @@ void FLASH_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
  SFORMAT FLSH_StateRegs[] =
  {
-  SFARRAYN(&flashdata[0], FlashLength, "flashdata"),
+  SFPTR8N(&flashdata[0], FlashLength, "flashdata"),
   SFEND
  };
 

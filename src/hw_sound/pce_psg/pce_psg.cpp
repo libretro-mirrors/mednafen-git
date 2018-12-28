@@ -19,12 +19,11 @@
  */
 
 #include <mednafen/mednafen.h>
+#include <trio/trio.h>
 #include "pce_psg.h"
 
-#include <math.h>
-#include <string.h>
-#include <trio/trio.h>
-
+namespace Mednafen
+{
 // Frequency cache cutoff optimization threshold (<= FREQC7M_COT)
 #define FREQC7M_COT	0x7 //0xA
 
@@ -834,13 +833,13 @@ void PCE_PSG::StateAction(StateMem *sm, const unsigned load, const bool data_onl
    SFVARN(pt->frequency, "frequency"),
    SFVARN(pt->control, "control"),
    SFVARN(pt->balance, "balance"),
-   SFARRAYN(pt->waveform, 32, "waveform"),
+   SFVARN(pt->waveform, "waveform"),
    SFVARN(pt->waveform_index, "waveform_index"),
    SFVARN(pt->dda, "dda"),
    SFVARN(pt->noisectrl, "noisectrl"),
    SFVARN(pt->noisecount, "noisecount"),
    SFVARN(pt->lfsr, "lfsr"),
-   SFARRAY32N(pt->vl, 2, "vl"), // TODO
+   SFVARN(pt->vl, "vl"), // TODO
    SFEND
   };
   tmpstr[3] = '0' + ch;
@@ -907,4 +906,6 @@ void PCE_PSG::StateAction(StateMem *sm, const unsigned load, const bool data_onl
    RecalcUOFunc(ch);
   }
  }
+}
+
 }

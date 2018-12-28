@@ -3,6 +3,9 @@
 
 #include <mednafen/lepacker.h>
 
+namespace Mednafen
+{
+
 #define VDC_PIXEL_OUT_MASK	0x01FF
 
 // This bit will be set for a non-sprite pixel if the BG layer is disabled(via ToggleLayer()),
@@ -265,7 +268,7 @@ class VDC
 	void DoVBIRQTest(void);
 	void HDS_Start(void);
 
-	void StateExtra(MDFN::LEPacker &sl_packer, bool load);
+	void StateExtra(LEPacker &sl_packer, bool load);
 	void StateAction(StateMem *sm, const unsigned load, const bool data_only, const char *sname);
 
 	// Peek(VRAM/SAT) and Poke(VRAM/SAT) work in 16-bit VRAM word units.
@@ -523,4 +526,5 @@ class VDC
 	SPRLE SpriteList[64 * 2]; // (see unlimited_sprites option, *2 to accommodate 32-pixel-width sprites ) //16];
 };
 
+}
 #endif

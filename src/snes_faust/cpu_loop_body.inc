@@ -105,7 +105,7 @@ while(MDFN_LIKELY(CPUM.running_mask))
    case 0x25: lc.RunInstruction<0x25, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0x26: lc.RunInstruction<0x26, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0x27: lc.RunInstruction<0x27, CPULBMTYPE, CPULBXTYPE>(); continue;
-   case 0x28: lc.RunInstruction<0x28, CPULBMTYPE, CPULBXTYPE>(); goto *LoopTable[(lc.P >> 4) & 0x3];
+   case 0x28: lc.RunInstruction<0x28, CPULBMTYPE, CPULBXTYPE>(); GOTO_MXLOOPTABLE()
    case 0x29: lc.RunInstruction<0x29, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0x2A: lc.RunInstruction<0x2A, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0x2B: lc.RunInstruction<0x2B, CPULBMTYPE, CPULBXTYPE>(); continue;
@@ -129,7 +129,7 @@ while(MDFN_LIKELY(CPUM.running_mask))
    case 0x3D: lc.RunInstruction<0x3D, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0x3E: lc.RunInstruction<0x3E, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0x3F: lc.RunInstruction<0x3F, CPULBMTYPE, CPULBXTYPE>(); continue;
-   case 0x40: lc.RunInstruction<0x40, CPULBMTYPE, CPULBXTYPE>(); goto *LoopTable[(lc.P >> 4) & 0x3];
+   case 0x40: lc.RunInstruction<0x40, CPULBMTYPE, CPULBXTYPE>(); GOTO_MXLOOPTABLE()
    case 0x41: lc.RunInstruction<0x41, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0x42: lc.RunInstruction<0x42, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0x43: lc.RunInstruction<0x43, CPULBMTYPE, CPULBXTYPE>(); continue;
@@ -259,7 +259,7 @@ while(MDFN_LIKELY(CPUM.running_mask))
    case 0xBF: lc.RunInstruction<0xBF, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0xC0: lc.RunInstruction<0xC0, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0xC1: lc.RunInstruction<0xC1, CPULBMTYPE, CPULBXTYPE>(); continue;
-   case 0xC2: lc.RunInstruction<0xC2, CPULBMTYPE, CPULBXTYPE>(); goto *LoopTable[(lc.P >> 4) & 0x3];
+   case 0xC2: lc.RunInstruction<0xC2, CPULBMTYPE, CPULBXTYPE>(); GOTO_MXLOOPTABLE()
    case 0xC3: lc.RunInstruction<0xC3, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0xC4: lc.RunInstruction<0xC4, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0xC5: lc.RunInstruction<0xC5, CPULBMTYPE, CPULBXTYPE>(); continue;
@@ -291,7 +291,7 @@ while(MDFN_LIKELY(CPUM.running_mask))
    case 0xDF: lc.RunInstruction<0xDF, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0xE0: lc.RunInstruction<0xE0, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0xE1: lc.RunInstruction<0xE1, CPULBMTYPE, CPULBXTYPE>(); continue;
-   case 0xE2: lc.RunInstruction<0xE2, CPULBMTYPE, CPULBXTYPE>(); goto *LoopTable[(lc.P >> 4) & 0x3];
+   case 0xE2: lc.RunInstruction<0xE2, CPULBMTYPE, CPULBXTYPE>(); GOTO_MXLOOPTABLE()
    case 0xE3: lc.RunInstruction<0xE3, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0xE4: lc.RunInstruction<0xE4, CPULBMTYPE, CPULBXTYPE>(); continue;
    case 0xE5: lc.RunInstruction<0xE5, CPULBMTYPE, CPULBXTYPE>(); continue;

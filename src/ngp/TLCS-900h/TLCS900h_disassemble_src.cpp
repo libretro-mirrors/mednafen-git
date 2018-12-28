@@ -502,6 +502,6 @@ void TLCS900h_disassemble_src(int opsize)
 	else
 		sprintf(instr, "unknown src instr. %02X", second);
 }
-};
+}
 
 //=============================================================================

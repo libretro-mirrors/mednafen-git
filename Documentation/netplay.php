@@ -3,7 +3,17 @@
 <?php BeginPage('', 'Netplay'); ?>
 
 <?php BeginSection('Introduction', 'Section_intro'); ?>
- (To be written; topics: standalone-server based, potential for losing saved games, save state usage, latency issues, bandwidth usage)
+ <p>
+ Mednafen's netplay is standalone-server based, with multiple clients(players) connecting to the same server.  Save states are utilized upon connection, and whenever
+ a player loads a save state on their end, so having decent bandwidth is critical, especially for newer systems with large save states like PS1 and Sega Saturn.
+ Since nonvolatile memories(save RAM, floppy disks, etc.) are preserved in save states, you may want to backup any important save game files before netplaying
+ with the corresponding game(s).  Using a different Mednafen installation, or Mednafen base directory, solely for netplay, is an option as well.  <font color="yellow">Be aware that the utilization of save states does bring about some potential <a href="mednafen.html#Section_security_savestates">security issues</a>.</font>
+ </p>
+
+ <p>
+ Players with lower ping times to the server will have a latency/lag advantage.  To reduce latency, it's recommended to make the setting changes described <a href="mednafen.html#Section_minimize_video_lag">here</a>.  If emulating SNES
+ games, try the alternate <a href="snes_faust.html">snes_faust</a> emulation module, with setting "<a href="snes_faust.html#snes_faust.spex">snes_faust.spex</a>" set to "1".
+ </p>
 <?php EndSection(); ?>
 
 

@@ -27,7 +27,7 @@
 #include "tsushin.h"
 #include <mednafen/hw_misc/arcade_card/arcade_card.h>
 #include <mednafen/mempatcher.h>
-#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/cdrom/CDInterface.h>
 #include <mednafen/hash/md5.h>
 #include <mednafen/FileStream.h>
 #include <mednafen/sound/OwlResampler.h>
@@ -49,7 +49,7 @@ static const MDFNSetting_EnumList PSGRevisionList[] =
  { NULL, 0 },
 };
 
-static std::vector<CDIF*> *cdifs = NULL;
+static std::vector<CDInterface*> *cdifs = NULL;
 
 HuC6280 HuCPU;
 
@@ -284,9 +284,9 @@ static void PCECDIRQCB(bool asserted)
 static int LoadCommon(void);
 static void LoadCommonPre(void);
 
-static bool TestMagic(MDFNFILE *fp)
+static bool TestMagic(GameFile* gf)
 {
- if(fp->ext != "hes" && fp->ext != "pce" && fp->ext != "sgx")
+ if(gf->ext != "hes" && gf->ext != "pce" && gf->ext != "sgx")
   return false;
 
  return true;
@@ -351,7 +351,7 @@ static const struct
 	{ 0x3b13af61, "Battle Ace" },
 };
 
-static MDFN_COLD void Load(MDFNFILE *fp)
+static MDFN_COLD void Load(GameFile* gf)
 {
  try
  {
@@ -360,8 +360,8 @@ static MDFN_COLD void Load(MDFNFILE *fp)
   IsHES = false;
   IsSGX = false;
 
-  fp->read(hes_header, 4);
-  fp->seek(0, SEEK_SET);
+  gf->stream->read(hes_header, 4);
+  gf->stream->seek(0, SEEK_SET);
 
   if(!memcmp(hes_header, "HESM", 4))
    IsHES = true;
@@ -370,7 +370,7 @@ static MDFN_COLD void Load(MDFNFILE *fp)
 
   if(IsHES)
   {
-   HES_Load(fp);
+   HES_Load(gf->stream);
 
    ADPCMBuf = new RavenBuffer();
    PCE_IsCD = 1;
@@ -380,9 +380,9 @@ static MDFN_COLD void Load(MDFNFILE *fp)
   {
    uint32 crc;
 
-   crc = HuC_Load(fp, MDFN_GetSettingB("pce.disable_bram_hucard"));
+   crc = HuC_Load(gf->stream, MDFN_GetSettingB("pce.disable_bram_hucard"));
 
-   if(fp->ext == "sgx")
+   if(gf->ext == "sgx")
     IsSGX = true;
    else
    {
@@ -512,7 +512,7 @@ static MDFN_COLD int LoadCommon(void)
  return(1);
 }
 
-static bool DetectGECD(CDIF *cdiface)	// Very half-assed detection until(if) we get ISO-9660 reading code.
+static bool DetectGECD(CDInterface* cdiface)	// Very half-assed detection until(if) we get ISO-9660 reading code.
 {
  uint8 sector_buffer[2048];
  CDUtility::TOC toc;
@@ -523,14 +523,14 @@ static bool DetectGECD(CDIF *cdiface)	// Very half-assed detection until(if) we 
  // data track.
  if(toc.first_track == 1 && (toc.tracks[1].control & 0x4))
  {
-  if(cdiface->ReadSector(sector_buffer, 0x10, 1) == 0x1)
+  if(cdiface->ReadSectors(sector_buffer, 0x10, 1) == 0x1)
   {
    if(!memcmp((char *)sector_buffer + 0x8, "HACKER CD ROM SYSTEM", 0x14))
     return(true);
 
    if(!memcmp((char *)sector_buffer + 0x01, "CD001", 0x5))
    {
-    if(cdiface->ReadSector(sector_buffer, 0x14, 1) == 0x1)
+    if(cdiface->ReadSectors(sector_buffer, 0x14, 1) == 0x1)
     {
      static const uint32 known_crcs[] =
      {
@@ -553,12 +553,12 @@ static bool DetectGECD(CDIF *cdiface)	// Very half-assed detection until(if) we 
  return(false);
 }
 
-static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
+static bool TestMagicCD(std::vector<CDInterface*> *CDInterfaces)
 {
  static const uint8 magic_test[0x20] = { 0x82, 0xB1, 0x82, 0xCC, 0x83, 0x76, 0x83, 0x8D, 0x83, 0x4F, 0x83, 0x89, 0x83, 0x80, 0x82, 0xCC,  
 				   	 0x92, 0x98, 0x8D, 0xEC, 0x8C, 0xA0, 0x82, 0xCD, 0x8A, 0x94, 0x8E, 0xAE, 0x89, 0xEF, 0x8E, 0xD0
 				       };
- CDIF *cdiface = (*CDInterfaces)[0];
+ CDInterface* cdiface = (*CDInterfaces)[0];
  uint8 sector_buffer[2048];
  CDUtility::TOC toc;
  bool ret = false;
@@ -571,7 +571,7 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  {
   if(toc.tracks[track].control & 0x4)
   {
-   if(cdiface->ReadSector(sector_buffer, toc.tracks[track].lba, 1) != 0x1)
+   if(cdiface->ReadSectors(sector_buffer, toc.tracks[track].lba, 1) != 0x1)
     break;
 
    if(!memcmp((char*)sector_buffer, (char *)magic_test, 0x20))
@@ -588,10 +588,12 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  {
   if(toc.tracks[track].control & 0x4)
   {
-   cdiface->ReadSector(sector_buffer, toc.tracks[track].lba, 1);
-   if(!strncmp("PC-FX:Hu_CD-ROM", (char*)sector_buffer, strlen("PC-FX:Hu_CD-ROM")))
+   if(cdiface->ReadSectors(sector_buffer, toc.tracks[track].lba, 1) == 0x1)
    {
-    return(false);
+    if(!strncmp("PC-FX:Hu_CD-ROM", (char*)sector_buffer, strlen("PC-FX:Hu_CD-ROM")))
+    {
+     return false;
+    }
    }
   }
  }
@@ -602,9 +604,9 @@ static bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  return(ret);
 }
 
-static MDFN_COLD bool DetectSGXCD(std::vector<CDIF*>* CDInterfaces)
+static MDFN_COLD bool DetectSGXCD(std::vector<CDInterface*>* CDInterfaces)
 {
- CDIF *cdiface = (*CDInterfaces)[0];
+ CDInterface* cdiface = (*CDInterfaces)[0];
  CDUtility::TOC toc;
  uint8 sector_buffer[2048];
  bool ret = false;
@@ -618,7 +620,7 @@ static MDFN_COLD bool DetectSGXCD(std::vector<CDIF*>* CDInterfaces)
  {
   if(toc.tracks[track].control & 0x4)
   {
-   if(cdiface->ReadSector(sector_buffer, toc.tracks[track].lba + 1, 1) != 0x1)
+   if(cdiface->ReadSectors(sector_buffer, toc.tracks[track].lba + 1, 1) != 0x1)
     continue;
 
    if(MDFN_de64msb(&sector_buffer[0x6A]) == 0x4D65646E6166656EULL && MDFN_de64msb(&sector_buffer[0x6A + 8]) == 0x74AB901942627DE6ULL)
@@ -629,16 +631,15 @@ static MDFN_COLD bool DetectSGXCD(std::vector<CDIF*>* CDInterfaces)
  return ret;
 }
 
-static MDFN_COLD void LoadCD(std::vector<CDIF *> *CDInterfaces)
+static MDFN_COLD void LoadCD(std::vector<CDInterface*> *CDInterfaces)
 {
  try
  {
-  static const FileExtensionSpecStruct KnownBIOSExtensions[] =
+  static const std::vector<FileExtensionSpecStruct> KnownBIOSExtensions =
   {
-   { ".pce", gettext_noop("PC Engine ROM Image") },
-   { ".bin", gettext_noop("PC Engine ROM Image") },
-   { ".bios", gettext_noop("BIOS Image") },
-   { NULL, NULL }
+   { ".pce", 0, gettext_noop("PC Engine ROM Image") },
+   { ".bin", -10, gettext_noop("PC Engine ROM Image") },
+   { ".bios", 0, gettext_noop("BIOS Image") },
   };
   IsHES = 0;
   IsSGX = DetectSGXCD(CDInterfaces);
@@ -647,14 +648,14 @@ static MDFN_COLD void LoadCD(std::vector<CDIF *> *CDInterfaces)
 
   const char *bios_sname = DetectGECD((*CDInterfaces)[0]) ? "pce.gecdbios" : "pce.cdbios";
   std::string bios_path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(bios_sname));
-  MDFNFILE fp(bios_path.c_str(), KnownBIOSExtensions, _("CD BIOS"));
+  MDFNFILE fp(&NVFS, bios_path.c_str(), KnownBIOSExtensions, _("CD BIOS"));
 
   bool disable_bram_cd = MDFN_GetSettingB("pce.disable_bram_cd");
 
   if(disable_bram_cd)
    MDFN_printf(_("Warning: BRAM is disabled per pcfx.disable_bram_cd setting.  This is simulating a malfunction.\n"));
 
-  HuC_Load(&fp, disable_bram_cd, PCE_ACEnabled ? SYSCARD_ARCADE : SYSCARD_3);
+  HuC_Load(fp.stream(), disable_bram_cd, PCE_ACEnabled ? SYSCARD_ARCADE : SYSCARD_3);
 
   ADPCMBuf = new RavenBuffer();
   for(unsigned lr = 0; lr < 2; lr++)
@@ -999,7 +1000,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(BaseRAM, IsSGX? 32768 : 8192),
+  SFPTR8(BaseRAM, IsSGX? 32768 : 8192),
   SFVAR(PCE_TimestampBase),
 
   SFEND
@@ -1052,7 +1053,7 @@ void PCE_Power(void)
  //printf("%d\n", HuCPU.Timestamp());
 }
 
-static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
+static void SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
 {
  const RMD_Layout* rmd = EmulatedPCE.RMD;
  const RMD_Drive* rd = &rmd->Drives[drive_idx];
@@ -1066,8 +1067,6 @@ static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint3
  {
   SCSICD_SetDisc(rs->MediaCanChange, NULL);
  }
-
- return(true);
 }
 
 static void DoSimpleCommand(int cmd)
@@ -1103,8 +1102,8 @@ static const MDFNSetting PCESettings[] =
   { "pce.nospritelimit", MDFNSF_NOFLAGS, gettext_noop("Remove 16-sprites-per-scanline hardware limit."), 
 					 gettext_noop("WARNING: Enabling this option may cause undesirable graphics glitching on some games(such as \"Bloody Wolf\")."), MDFNST_BOOL, "0" },
 
-  { "pce.cdbios", MDFNSF_EMU_STATE, gettext_noop("Path to the CD BIOS"), NULL, MDFNST_STRING, "syscard3.pce" },
-  { "pce.gecdbios", MDFNSF_EMU_STATE, gettext_noop("Path to the GE CD BIOS"), gettext_noop("Games Express CD Card BIOS (Unlicensed)"), MDFNST_STRING, "gecard.pce" },
+  { "pce.cdbios", MDFNSF_EMU_STATE | MDFNSF_CAT_PATH, gettext_noop("Path to the CD BIOS"), NULL, MDFNST_STRING, "syscard3.pce" },
+  { "pce.gecdbios", MDFNSF_EMU_STATE | MDFNSF_CAT_PATH, gettext_noop("Path to the GE CD BIOS"), gettext_noop("Games Express CD Card BIOS (Unlicensed)"), MDFNST_STRING, "gecard.pce" },
 
   { "pce.psgrevision", MDFNSF_NOFLAGS, gettext_noop("Select PSG revision."), gettext_noop("WARNING: HES playback will always use the \"huc6280a\" revision if this setting is set to \"match\", since HES playback is always done with SuperGrafx emulation enabled."), MDFNST_ENUM, "match", NULL, NULL, NULL, NULL, PSGRevisionList  },
 
@@ -1164,10 +1163,10 @@ static void SetLayerEnableMask(uint64 mask)
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".pce", gettext_noop("PC Engine ROM Image") },
- { ".hes", gettext_noop("PC Engine Music Rip") },
- { ".sgx", gettext_noop("SuperGrafx ROM Image") },
- { NULL, NULL }
+ { ".pce",   0, gettext_noop("PC Engine ROM Image") },
+ { ".hes", -20, gettext_noop("PC Engine Music Rip") },
+ { ".sgx",   0, gettext_noop("SuperGrafx ROM Image") },
+ { NULL, 0, NULL }
 };
 
 static bool SetSoundRate(double rate)

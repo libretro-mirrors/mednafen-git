@@ -43,7 +43,7 @@ class MCGenjin
 {
  public:
 
- MCGenjin(MDFNFILE* fp);
+ MCGenjin(Stream* fp);
  ~MCGenjin();
 
  void Power(void);

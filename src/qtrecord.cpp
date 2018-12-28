@@ -22,10 +22,13 @@
 #include <mednafen/mednafen.h>
 #include <mednafen/Time.h>
 #include "qtrecord.h"
-#include "compress/minilzo.h"
+#include <minilzo/minilzo.h>
 #include "video/png.h"
 
 #include <zlib.h>
+
+namespace Mednafen
+{
 
 void QTRecord::w16(uint16 val)
 {
@@ -1078,7 +1081,7 @@ QTRecord::~QTRecord(void)
  }
  catch(std::exception &e)
  {
-  MDFND_PrintError(e.what());
+  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
  }
 
  if(resampler)
@@ -1086,4 +1089,6 @@ QTRecord::~QTRecord(void)
   speex_resampler_destroy(resampler);
   resampler = NULL;
  }
+}
+
 }

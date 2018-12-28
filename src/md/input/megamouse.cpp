@@ -60,12 +60,12 @@ class MegaMouse final : public MD_Input_Device
 
 const IDIISG MegaMouseIDII =
 {
- { "x_axis", "X Axis", -1, IDIT_X_AXIS_REL },
- { "y_axis", "Y Axis", -1, IDIT_Y_AXIS_REL },
- { "left", "Left Button", 0, IDIT_BUTTON, NULL },
- { "right", "Right Button", 1, IDIT_BUTTON, NULL },
- { "middle", "Middle Button", 2, IDIT_BUTTON, NULL },
- { "start", "Start Button", 3, IDIT_BUTTON, NULL },
+ IDIIS_AxisRel("motion", "Motion",/**/ "left", "Left",/**/ "right", "Right", 0),
+ IDIIS_AxisRel("motion", "Motion",/**/ "up", "Up",/**/ "down", "Down", 1),
+ IDIIS_Button("left", "Left Button", 2),
+ IDIIS_Button("right", "Right Button", 3),
+ IDIIS_Button("middle", "Middle Button", 4),
+ IDIIS_Button("start", "Start Button", 5),
 };
 
 enum
@@ -246,9 +246,9 @@ void MegaMouse::UpdateBus(const int32 master_timestamp, uint8 &bus, const uint8 
 
 void MegaMouse::UpdatePhysicalState(const void *data)
 {
- mouse_x += (int32)MDFN_de32lsb((uint8 *)data + 0);
- mouse_y += (int32)MDFN_de32lsb((uint8 *)data + 4);
- buttons = ((uint8 *)data)[8];
+ mouse_x += (int16)MDFN_de16lsb((uint8 *)data + 0);
+ mouse_y += (int16)MDFN_de16lsb((uint8 *)data + 2);
+ buttons = ((uint8 *)data)[4];
 }
 
 void MegaMouse::StateAction(StateMem *sm, const unsigned load, const bool data_only, const char *section_prefix)
@@ -263,7 +263,7 @@ void MegaMouse::StateAction(StateMem *sm, const unsigned load, const bool data_o
 
   SFVAR(phase),
   SFVAR(bus_av),
-  SFARRAY(data_buffer, sizeof(data_buffer)),
+  SFVAR(data_buffer),
 
   SFEND
  };

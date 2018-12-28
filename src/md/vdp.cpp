@@ -695,11 +695,11 @@ void MDVDP::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(sat, 0x400),
-  SFARRAY(vram, 0x10000),
-  SFARRAY16(cram, 0x40),
-  SFARRAY16(vsram, 0x40),
-  SFARRAY(reg, 0x20),
+  SFPTR8(sat, 0x400),
+  SFPTR8(vram, 0x10000),
+  SFPTR16(cram, 0x40),
+  SFPTR16(vsram, 0x40),
+  SFPTR8(reg, 0x20),
 
   SFVAR(addr),
   SFVAR(addr_latch),

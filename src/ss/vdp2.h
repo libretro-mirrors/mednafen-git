@@ -34,6 +34,7 @@ uint16 Read16_DB(uint32 A) MDFN_HOT;
 void Init(const bool IsPAL) MDFN_COLD;
 void SetGetVideoParams(MDFNGI* gi, const bool caspect, const int sls, const int sle, const bool show_h_overscan, const bool dohblend) MDFN_COLD;
 void Kill(void) MDFN_COLD;
+void StateAction(StateMem* sm, const unsigned load, const bool data_only) MDFN_COLD;
 
 void Reset(bool powering_up) MDFN_COLD;
 void SetLayerEnableMask(uint64 mask) MDFN_COLD;
@@ -89,7 +90,15 @@ enum
  GSREG_BM,
  GSREG_IM,
  GSREG_VRES,
- GSREG_HRES
+ GSREG_HRES,
+
+ GSREG_RAMCTL,
+
+ GSREG_CYCA0,
+ GSREG_CYCA1 = GSREG_CYCA0 + 1,
+ GSREG_CYCB0 = GSREG_CYCA0 + 2,
+ GSREG_CYCB1 = GSREG_CYCA0 + 3
+
 };
 
 uint32 GetRegister(const unsigned id, char* const special, const uint32 special_len);

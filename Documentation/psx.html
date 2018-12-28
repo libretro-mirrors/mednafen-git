@@ -9,7 +9,7 @@
  <body>
   <center><h1><img alt="Mednafen" src="mednafen.png" width="696" height="204"></h1></center>
   <center><h1>Sony PlayStation Documentation</h1></center>
-  <center><i>Last updated June  9, 2017<br>Valid as of 0.9.45.1</i></center>
+  <center><i>Last updated December 20, 2018<br>Valid as of 1.22.0-UNSTABLE</i></center>
  <p></p>
  <b>Table of Contents:</b>
  <ul><li><a href="#Section_intro">Introduction</a><ul></ul></li><li><a href="#Section_firmware_bios">Firmware/BIOS</a><ul></ul></li><li><a href="#Section_analog_range">Analog Sticks Range Issues</a><ul></ul></li><li><a href="#Section_multitap">Multitap Usage</a><ul></ul></li><li><a href="#Section_default_keys">Default Input Mappings</a><ul><li><a href="#Section_default_keys_gamepad">Digital Gamepad on Virtual Port 1</a><ul></ul></li></ul></li><li><a href="#Settings+Reference">Settings Reference</a><ul></ul></li></ul><hr width="100%">
@@ -49,10 +49,10 @@ cause emulation glitches(and cause confusion if you ever distribute or otherwise
 The filenames listed below are per default psx.bios_* settings.
 </p>
 <table border>
- <tr><th>Filename:</th><th>Purpose:</th><th>Hash:</tr>
- <tr><td>scph5500.bin</td><td><b>SCPH-5500</b>/v<b>3.0J</b> BIOS image.<br>Required for Japan-region games.</td><td><b><u>MD5:</u></b> 8dd7d5296a650fac7319bce665a6a53c<br><b><u>SHA256:</u></b> 9c0421858e217805f4abe18698afea8d5aa36ff0727eb8484944e00eb5e7eadb</td></tr>
- <tr><td>scph5501.bin</td><td><b>SCPH-5501</b>/v<b>3.0A</b> BIOS image.<br>Required for North America/US-region games.<br>Reportedly the same as the SCPH-7003 BIOS image.</td><td><b><u>MD5:</u></b> 490f666e1afb15b7362b406ed1cea246<br><b><u>SHA256:</u></b> 11052b6499e466bbf0a709b1f9cb6834a9418e66680387912451e971cf8a1fef</td></tr>
- <tr><td>scph5502.bin</td><td><b>SCPH-5502</b>/v<b>3.0E</b> BIOS image.<br>Required for Europe-region games.</td><td><b><u>MD5:</b></u> 32736f17079d0b2b7024407c39bd3050<br><b><u>SHA256:</u></b> 1faaa18fa820a0225e488d9f086296b8e6c46df739666093987ff7d8fd352c09</td></tr>
+ <tr><th>Filename:</th><th>Purpose:</th><th>SHA-256 Hash:</tr>
+ <tr><td>scph5500.bin</td><td><b>SCPH-5500</b>/v<b>3.0J</b> BIOS image.<br>Required for Japan-region games.</td><td>9c0421858e217805f4abe18698afea8d5aa36ff0727eb8484944e00eb5e7eadb</td></tr>
+ <tr><td>scph5501.bin</td><td><b>SCPH-5501</b>/v<b>3.0A</b> BIOS image.<br>Required for North America/US-region games.<br>Reportedly the same as the SCPH-7003 BIOS image.</td><td>11052b6499e466bbf0a709b1f9cb6834a9418e66680387912451e971cf8a1fef</td></tr>
+ <tr><td>scph5502.bin</td><td><b>SCPH-5502</b>/v<b>3.0E</b> BIOS image.<br>Required for Europe-region games.</td><td>1faaa18fa820a0225e488d9f086296b8e6c46df739666093987ff7d8fd352c09</td></tr>
 </table>
 <hr width="100%">
 <h2><a name="Section_analog_range">Analog Sticks Range Issues</a></h2><p></p>The DualShock and Dual Analog controllers' analog sticks have a circular physical range of movement, but a much more squareish(corners are a bit rounded for
@@ -258,12 +258,12 @@ Negative values are the same as positive values for non-interlaced video, but fo
 <tr class="RowB"><td class="ColA">psx.tblur.accum</td><td class="ColB">boolean</td><td class="ColC">0<br>1</td><td class="ColD">0</td><td class="ColE"><a name="psx.tblur.accum">Accumulate color data rather than discarding it.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA">psx.tblur.accum.amount</td><td class="ColB">real</td><td class="ColC">0 <i>through</i> 100</td><td class="ColD">50</td><td class="ColE"><a name="psx.tblur.accum.amount">Blur amount in accumulation mode, specified in percentage of accumulation buffer to mix with the current frame.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA">psx.videoip</td><td class="ColB">enum</td><td class="ColC">0<br>1<br>x<br>y</td><td class="ColD">1</td><td class="ColE"><a name="psx.videoip">Enable (bi)linear interpolation.</a><ul><li><b>0</b> - Disabled<br></li><br><li><b>1</b> - Bilinear<br></li><br><li><b>x</b> - Linear (X)<br>Interpolation only on the X axis.</li><br><li><b>y</b> - Linear (Y)<br>Interpolation only on the Y axis.</li></ul></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowA"><td class="ColA">psx.xres</td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 65536</td><td class="ColD">0</td><td class="ColE"><a name="psx.xres">Full-screen horizontal resolution.</a><p>A value of "0" will cause the desktop horizontal resolution to be used.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowA"><td class="ColA">psx.xres</td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 65536</td><td class="ColD">0</td><td class="ColE"><a name="psx.xres">Full-screen horizontal resolution.</a><p>A value of "0" will cause the current desktop horizontal resolution to be used.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowB"><td class="ColA">psx.xscale</td><td class="ColB">real</td><td class="ColC">0.01 <i>through</i> 256</td><td class="ColD">3.000000</td><td class="ColE"><a name="psx.xscale">Scaling factor for the X axis in windowed mode.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowA"><td class="ColA">psx.xscalefs</td><td class="ColB">real</td><td class="ColC">0.01 <i>through</i> 256</td><td class="ColD">1.000000</td><td class="ColE"><a name="psx.xscalefs">Scaling factor for the X axis in fullscreen mode.</a><p>For this settings to have any effect, the "<system>.stretch" setting must be set to "0".</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowB"><td class="ColA">psx.yres</td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 65536</td><td class="ColD">0</td><td class="ColE"><a name="psx.yres">Full-screen vertical resolution.</a><p>A value of "0" will cause the desktop vertical resolution to be used.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowA"><td class="ColA">psx.xscalefs</td><td class="ColB">real</td><td class="ColC">0.01 <i>through</i> 256</td><td class="ColD">1.000000</td><td class="ColE"><a name="psx.xscalefs">Scaling factor for the X axis in fullscreen mode.</a><p>For this setting to have any effect, the "<system>.stretch" setting must be set to "0".</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowB"><td class="ColA">psx.yres</td><td class="ColB">integer</td><td class="ColC">0 <i>through</i> 65536</td><td class="ColD">0</td><td class="ColE"><a name="psx.yres">Full-screen vertical resolution.</a><p>A value of "0" will cause the current desktop vertical resolution to be used.</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 <tr class="RowA"><td class="ColA">psx.yscale</td><td class="ColB">real</td><td class="ColC">0.01 <i>through</i> 256</td><td class="ColD">3.000000</td><td class="ColE"><a name="psx.yscale">Scaling factor for the Y axis in windowed mode.</a></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
-<tr class="RowB"><td class="ColA">psx.yscalefs</td><td class="ColB">real</td><td class="ColC">0.01 <i>through</i> 256</td><td class="ColD">1.000000</td><td class="ColE"><a name="psx.yscalefs">Scaling factor for the Y axis in fullscreen mode.</a><p>For this settings to have any effect, the "<system>.stretch" setting must be set to "0".</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
+<tr class="RowB"><td class="ColA">psx.yscalefs</td><td class="ColB">real</td><td class="ColC">0.01 <i>through</i> 256</td><td class="ColD">1.000000</td><td class="ColE"><a name="psx.yscalefs">Scaling factor for the Y axis in fullscreen mode.</a><p>For this setting to have any effect, the "<system>.stretch" setting must be set to "0".</p></td></tr><tr><td class="RowSpacer" colspan="5">&nbsp</td></tr>
 </table><hr width="100%">
  </body>
 </html>

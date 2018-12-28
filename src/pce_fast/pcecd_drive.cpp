@@ -18,7 +18,7 @@
 #include <mednafen/mednafen.h>
 #include <trio/trio.h>
 #include "pcecd_drive.h"
-#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/cdrom/CDInterface.h>
 #include <mednafen/cdrom/SimpleFIFO.h>
 
 namespace PCE_Fast
@@ -34,7 +34,7 @@ static void (*CDIRQCallback)(int);
 static void (*CDStuffSubchannels)(uint8, int);
 static Blip_Buffer* sbuf;
 
-static CDIF *Cur_CDIF;
+static CDInterface* Cur_CDIF;
 static bool TrayOpen;
 
 // Internal operation to the SCSI CD unit.  Only pass 1 or 0 to these macros!
@@ -394,7 +394,7 @@ static void DoSimpleDataIn(const uint8 *data_in, uint32 len)
  ChangePhase(PHASE_DATA_IN);
 }
 
-void PCECD_Drive_SetDisc(bool new_tray_open, CDIF *cdif, bool no_emu_side_effects)
+void PCECD_Drive_SetDisc(bool new_tray_open, CDInterface* cdif, bool no_emu_side_effects)
 {
  Cur_CDIF = cdif;
 
@@ -437,8 +437,7 @@ static bool ValidateRawDataSector(uint8 *data, const uint32 lba)
 {
  if(!edc_lec_check_and_correct(data, false))
  {
-  MDFN_DispMessage(_("Uncorrectable data at sector %u"), lba);
-  MDFN_PrintError(_("Uncorrectable data at sector %u"), lba);
+  MDFN_Notify(MDFN_NOTICE_WARNING, _("Uncorrectable error(s) in sector %d."), lba);
 
   din.Flush();
   cd.data_transfer_done = false;
@@ -1261,12 +1260,12 @@ void PCECD_Drive_StateAction(StateMem * sm, int load, int data_only, const char 
   SFVARN(cd.ascq_pending, "ascq_pending"),
   SFVARN(cd.fru_pending, "fru_pending"),
 
-  SFARRAYN(cd.command_buffer, 256, "command_buffer"),
+  SFPTR8N(cd.command_buffer, 256, "command_buffer"),
   SFVARN(cd.command_buffer_pos, "command_buffer_pos"),
   SFVARN(cd.command_size_left, "command_size_left"),
 
   // Don't save the FIFO's write position, it will be reconstructed from read_pos and in_count
-  SFARRAYN(&din.data[0], din.data.size(), "din_fifo"),
+  SFPTR8N(&din.data[0], din.data.size(), "din_fifo"),
   SFVARN(din.read_pos, "din_read_pos"),
   SFVARN(din.in_count, "din_in_count"),
   SFVARN(cd.data_transfer_done, "data_transfer_done"),
@@ -1274,7 +1273,7 @@ void PCECD_Drive_StateAction(StateMem * sm, int load, int data_only, const char 
   SFVARN(cd.DiscChanged, "DiscChanged"),
 
   SFVAR(cdda.PlayMode),
-  SFARRAY16(cdda.CDDASectorBuffer, 1176),
+  SFPTR16(cdda.CDDASectorBuffer, 1176),
   SFVAR(cdda.CDDAReadPos),
   SFVAR(cdda.CDDAStatus),
   SFVAR(cdda.CDDADiv),
@@ -1289,9 +1288,9 @@ void PCECD_Drive_StateAction(StateMem * sm, int load, int data_only, const char 
   SFVAR(cdda.ScanMode),
   SFVAR(cdda.scan_sec_end),
 
-  SFARRAYN(&cd.SubQBuf[0][0], sizeof(cd.SubQBuf), "SubQBufs"),
-  SFARRAYN(cd.SubQBuf_Last, sizeof(cd.SubQBuf_Last), "SubQBufLast"),
-  SFARRAYN(cd.SubPWBuf, sizeof(cd.SubPWBuf), "SubPWBuf"),
+  SFVARN(cd.SubQBuf, "SubQBufs"),
+  SFVARN(cd.SubQBuf_Last, "SubQBufLast"),
+  SFVARN(cd.SubPWBuf, "SubPWBuf"),
 
   SFVAR(monotonic_timestamp),
   SFVAR(pce_lastsapsp_timestamp),

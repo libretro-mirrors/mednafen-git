@@ -57,7 +57,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
  SFORMAT StateRegs[] =
  {
   SFVAR(IRQCount), SFVAR(IRQa), SFVAR(Mirroring), SFVAR(cmd),
-  SFARRAY(regs, 8),
+  SFPTR8(regs, 8),
   SFEND
  };
  int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAPR");

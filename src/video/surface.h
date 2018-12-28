@@ -22,6 +22,9 @@
 #ifndef __MDFN_SURFACE_H
 #define __MDFN_SURFACE_H
 
+namespace Mednafen
+{
+
 struct MDFN_Rect
 {
  int32 x, y, w, h;
@@ -30,8 +33,7 @@ struct MDFN_Rect
 enum
 {
  MDFN_COLORSPACE_RGB = 0,
- MDFN_COLORSPACE_YCbCr = 1,
- //MDFN_COLORSPACE_YUV = 2, // TODO, maybe.
+ MDFN_COLORSPACE_YCbCr = 1
 };
 
 struct MDFN_PaletteEntry
@@ -46,6 +48,26 @@ class MDFN_PixelFormat
  MDFN_PixelFormat();
  MDFN_PixelFormat(const unsigned int p_colorspace, const uint8 p_rs, const uint8 p_gs, const uint8 p_bs, const uint8 p_as);
 
+ bool operator==(const MDFN_PixelFormat& a)
+ {
+  return
+	bpp == a.bpp &&
+	colorspace == a.colorspace &&
+	Rshift == a.Rshift &&
+	Gshift == a.Gshift &&
+	Bshift == a.Bshift &&
+	Ashift == a.Ashift &&
+	Rprec == a.Rprec &&	
+	Gprec == a.Gprec &&
+	Bprec == a.Bprec &&
+	Aprec == a.Aprec;
+ }
+
+ bool operator!=(const MDFN_PixelFormat& a)
+ {
+  return !(*this == a);
+ }
+
  unsigned int bpp;	// 32 only for now(16 and 8 wip)
  unsigned int colorspace;
 
@@ -58,14 +80,12 @@ class MDFN_PixelFormat
  union
  {
   uint8 Gshift;  // [...] green component
-  uint8 Ushift;
   uint8 Cbshift;
  };
 
  union
  {
   uint8 Bshift;  // [...] blue component
-  uint8 Vshift;
   uint8 Crshift;
  };
 
@@ -88,7 +108,7 @@ class MDFN_PixelFormat
    u = 128 + ((r * -9699 + g * -19071 + b * 28770) >> 16);
    v = 128 + ((r * 28770 + g * -24117 + b * -4653) >> 16);
 
-   return((y << Yshift) | (u << Ushift) | (v << Vshift) | (a << Ashift));
+   return((y << Yshift) | (u << Cbshift) | (v << Crshift) | (a << Ashift));
   }
   else
   {
@@ -248,6 +268,7 @@ class MDFN_Surface //typedef struct
  MDFN_PixelFormat format;
 
  void Fill(uint8 r, uint8 g, uint8 b, uint8 a);
+ //void FillOutside(
  void SetFormat(const MDFN_PixelFormat &new_format, bool convert);
 
  // Creates a 32-bit value for the surface corresponding to the R/G/B/A color passed.
@@ -272,4 +293,5 @@ class MDFN_Surface //typedef struct
  void Init(void *const p_pixels, const uint32 p_width, const uint32 p_height, const uint32 p_pitchinpix, const MDFN_PixelFormat &nf, const bool alloc_init_pixels);
 };
 
+}
 #endif

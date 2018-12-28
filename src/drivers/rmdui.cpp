@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* rmdui.cpp:
-**  Copyright (C) 2014-2017 Mednafen Team
+**  Copyright (C) 2014-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -24,9 +24,6 @@
 
 #include <trio/trio.h>
 
-static bool DiskEjected;
-static unsigned DiskSelected;
-
 struct DiskSelectType
 {
  std::string text;
@@ -37,26 +34,125 @@ struct DiskSelectType
  uint32 orientation_idx;
 };
 
-static DiskSelectType DiskEjectOption;
-static std::vector<DiskSelectType> DiskSelectOptions;
+struct DriveSelectType
+{
+ bool DiskEjected;
+ unsigned DiskSelected;
+
+ DiskSelectType DiskEjectOption;
+ std::vector<DiskSelectType> DiskSelectOptions;
+};
+
+static std::vector<DriveSelectType> Drives;
+static uint32 SelectedDrive;
 static bool SupressDiskChangeNotifDisplay;
 
 void RMDUI_Init(MDFNGI* gi, const int which_medium)
 {
  const RMD_Layout* rmd = gi->RMD;
  char textbuf[256];
- bool deo_set = false;
- std::vector<DiskSelectType> PUOptions;
- std::vector<DiskSelectType> EmptyOptions;
+
+#if 0
+ for(size_t i = 0; i < rmd->MediaTypes.size(); i++)
+ {
+  auto const& mt = rmd->MediaTypes[i];
+
+  MDFN_printf(_("Media Type %zu:\n"), i);
+  {
+   MDFN_AutoIndent aind(1);
+
+   MDFN_printf(_("Name: %s\n"), mt.Name.c_str());
+  }
+ }
+
+ for(size_t i = 0; i < rmd->Media.size(); i++)
+ {
+  auto const& m = rmd->Media[i];
+
+  MDFN_printf(_("Medium %zu:\n"), i);
+  {
+   MDFN_AutoIndent aind(1);
+
+   MDFN_printf(_("Name: %s\n"), m.Name.c_str());
+   MDFN_printf(_("Media Type: %u\n"), m.MediaType);
+   if(m.Orientations.size())
+   {
+    MDFN_printf(_("Orientations:\n"));
+    {
+     MDFN_AutoIndent aindo(1);
+
+     for(size_t j = 0; j < m.Orientations.size(); j++)
+     {
+      MDFN_printf(_("Orientation %zu:\n"), j);
+      {
+       MDFN_AutoIndent aindoi(1);
+
+       MDFN_printf(_("Name: %s\n"), m.Orientations[j].c_str());
+      }
+     }
+    }
+   }
+  }
+ }
+
+ for(size_t i = 0; i < rmd->Drives.size(); i++)
+ {
+  auto const& dri = rmd->Drives[i];
+  MDFN_printf(_("Drive %zu:\n"), i);
+  {
+   MDFN_AutoIndent aind(1);
+
+   MDFN_printf(_("Name: %s\n"), dri.Name.c_str());
+   MDFN_printf(_("Possible States:\n"));
+   {
+    MDFN_AutoIndent ainds(1);
+
+    for(size_t j = 0; j < dri.PossibleStates.size(); j++)
+    {
+     auto const& state = dri.PossibleStates[j];
+
+     MDFN_printf(_("State %zu:\n"), j);
+     {
+      MDFN_AutoIndent aindsi(1);
+      MDFN_printf(_("Name: %s\n"), state.Name.c_str());
+      MDFN_printf(_("Media Present: %s\n"), state.MediaPresent ? "true" : "false");
+      MDFN_printf(_("Media Usable: %s\n"), state.MediaUsable ? "true" : "false");
+      MDFN_printf(_("Media Can Change: %s\n"), state.MediaCanChange ? "true" : "false");
+     }
+    }
+   }
+ 
+   MDFN_printf(_("Media Change Delay: %u\n"), dri.MediaMtoPDelay);
+
+   MDFN_printf(_("Defaults:\n"));
+   {
+    auto const& dridefs = rmd->DrivesDefaults[i];
+    MDFN_AutoIndent aindd(1);
+
+    MDFN_printf(_("State: %u\n"), dridefs.State);
+    MDFN_printf(_("Medium: %u\n"), dridefs.Media);
+    MDFN_printf(_("Orientation: %u\n"), dridefs.Orientation);
+   }
+  }
+ }
+#endif
+
 
  assert(rmd->Drives.size() == rmd->DrivesDefaults.size());
 
- DiskEjected = true;
- DiskSelected = 0;
+ SelectedDrive = 0;
+ Drives.clear();
+ Drives.resize(rmd->Drives.size());
 
- for(unsigned d = 0; d < rmd->Drives.size() && d < 1; d++)
+ for(unsigned d = 0; d < rmd->Drives.size(); d++)
  {
   const RMD_Drive* rd = &rmd->Drives[d];
+  bool deo_set = false;
+  std::vector<DiskSelectType> PUOptions;
+  std::vector<DiskSelectType> EmptyOptions;
+
+  Drives[d].DiskEjected = true;
+  Drives[d].DiskSelected = 0;
 
   for(unsigned s = 0; s < rd->PossibleStates.size(); s++)
   {
@@ -68,7 +164,7 @@ void RMDUI_Init(MDFNGI* gi, const int which_medium)
 
     if(rs->MediaCanChange && !deo_set)
     {
-     DiskEjectOption = { textbuf, d, s, 0, 0 };
+     Drives[d].DiskEjectOption = { textbuf, d, s, 0, 0 };
      deo_set = true;
     }
     else
@@ -78,103 +174,116 @@ void RMDUI_Init(MDFNGI* gi, const int which_medium)
    {
     for(unsigned m = 0; m < rmd->Media.size(); m++)
     {
-     for(unsigned o = 0; o < rmd->Media[m].Orientations.size() || o == 0; o++)
-     {
-      if(rmd->Media[m].Orientations.size())
-       trio_snprintf(textbuf, sizeof(textbuf), "%s: %s (%s, %s)", rd->Name.c_str(), rs->Name.c_str(), rmd->Media[m].Name.c_str(), rmd->Media[m].Orientations[o].c_str());
-      else
-       trio_snprintf(textbuf, sizeof(textbuf), "%s: %s (%s)", rd->Name.c_str(), rs->Name.c_str(), rmd->Media[m].Name.c_str());
+     bool media_compatible = false;
 
-      PUOptions.push_back(DiskSelectType({textbuf, d, s, m, o}));
+     for(unsigned cm : rmd->Drives[d].CompatibleMedia)
+     {
+      if(rmd->Media[m].MediaType == cm)
+      {
+       media_compatible = true;
+       break;
+      }
+     }
+
+     if(media_compatible)
+     {
+      for(unsigned o = 0; o < rmd->Media[m].Orientations.size() || o == 0; o++)
+      {
+       if(rmd->Media[m].Orientations.size())
+        trio_snprintf(textbuf, sizeof(textbuf), "%s: %s (%s, %s)", rd->Name.c_str(), rs->Name.c_str(), rmd->Media[m].Name.c_str(), rmd->Media[m].Orientations[o].c_str());
+       else
+        trio_snprintf(textbuf, sizeof(textbuf), "%s: %s (%s)", rd->Name.c_str(), rs->Name.c_str(), rmd->Media[m].Name.c_str());
+
+       PUOptions.push_back(DiskSelectType({textbuf, d, s, m, o}));
+      }
      }
     }
    }
   }
- }
+  //
+  //
+  //
+  Drives[d].DiskSelectOptions = EmptyOptions;
+  Drives[d].DiskSelectOptions.insert(Drives[d].DiskSelectOptions.end(), PUOptions.begin(), PUOptions.end());
 
- //
- //
- //
- DiskSelectOptions = EmptyOptions;
- DiskSelectOptions.insert(DiskSelectOptions.end(), PUOptions.begin(), PUOptions.end());
-
- for(size_t i = 0; i < DiskSelectOptions.size(); i++)
- {
-  const auto& dso = DiskSelectOptions[i];
-  const auto& dd = rmd->DrivesDefaults[0];
-
-  if(dso.state_idx == dd.State && dso.media_idx == dd.Media && dso.orientation_idx == dd.Orientation)
+  for(size_t i = 0; i < Drives[d].DiskSelectOptions.size(); i++)
   {
-   DiskEjected = false;
-   DiskSelected = i;
+   const auto& dso = Drives[d].DiskSelectOptions[i];
+   const auto& dd = rmd->DrivesDefaults[d];
+
+   if(dso.state_idx == dd.State && dso.media_idx == dd.Media && dso.orientation_idx == dd.Orientation)
+   {
+    Drives[d].DiskEjected = false;
+    Drives[d].DiskSelected = i;
+   }
   }
- }
 
- if(which_medium == -1)
-  DiskEjected = true;
- else if(which_medium >= 0 && DiskSelectOptions.size())
- {
-  DiskEjected = false;
-  DiskSelected = (std::min<size_t>(which_medium, DiskSelectOptions.size() - 1) + EmptyOptions.size()) % DiskSelectOptions.size();
- }
+  if(which_medium == -1)
+   Drives[d].DiskEjected = true;
+  else if(which_medium >= 0 && Drives[d].DiskSelectOptions.size())
+  {
+   Drives[d].DiskEjected = false;
+   Drives[d].DiskSelected = (std::min<size_t>(which_medium, Drives[d].DiskSelectOptions.size() - 1) + EmptyOptions.size()) % Drives[d].DiskSelectOptions.size();
+  }
+  //
+  //
+  //
+  SupressDiskChangeNotifDisplay = true;
 
- SupressDiskChangeNotifDisplay = true;
- if(rmd->Drives.size())
- {
-  if(DiskEjected)
-   MDFNI_SetMedia(DiskEjectOption.drive_idx, DiskEjectOption.state_idx, DiskEjectOption.media_idx, DiskEjectOption.orientation_idx);
+  if(Drives[d].DiskEjected)
+   MDFNI_SetMedia(Drives[d].DiskEjectOption.drive_idx, Drives[d].DiskEjectOption.state_idx, Drives[d].DiskEjectOption.media_idx, Drives[d].DiskEjectOption.orientation_idx);
   else
   {
-   DiskSelectType* dta = &DiskSelectOptions[DiskSelected];
+   DiskSelectType* dta = &Drives[d].DiskSelectOptions[Drives[d].DiskSelected];
    MDFNI_SetMedia(dta->drive_idx, dta->state_idx, dta->media_idx, dta->orientation_idx);
   }
+  SupressDiskChangeNotifDisplay = false;
  }
- SupressDiskChangeNotifDisplay = false;
 }
 
 void RMDUI_Kill(void)
 {
-
-
+ Drives.clear();
 }
 
-void MDFND_MediaSetNotification(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
+void Mednafen::MDFND_MediaSetNotification(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
 {
  const RMD_Layout* rmd = CurGame->RMD;
  const RMD_Drive* rd = &rmd->Drives[drive_idx];
  const RMD_State* rs = &rd->PossibleStates[state_idx];
+ auto& dri = Drives[drive_idx];
  DiskSelectType* dta = NULL;
 
- if(drive_idx == DiskEjectOption.drive_idx && state_idx == DiskEjectOption.state_idx)
+ if(drive_idx == dri.DiskEjectOption.drive_idx && state_idx == dri.DiskEjectOption.state_idx)
  {
-  DiskEjected = true;
-  dta = &DiskEjectOption;
+  dri.DiskEjected = true;
+  dta = &dri.DiskEjectOption;
  }
  else
  {
-  for(unsigned i = 0; i < DiskSelectOptions.size(); i++)
+  for(unsigned i = 0; i < dri.DiskSelectOptions.size(); i++)
   {
-   if(drive_idx != DiskSelectOptions[i].drive_idx)
+   if(drive_idx != dri.DiskSelectOptions[i].drive_idx)
     continue;
 
-   if(state_idx != DiskSelectOptions[i].state_idx)
+   if(state_idx != dri.DiskSelectOptions[i].state_idx)
     continue;
 
    if(rs->MediaUsable && rs->MediaPresent)
    {
-    if(media_idx != DiskSelectOptions[i].media_idx)
+    if(media_idx != dri.DiskSelectOptions[i].media_idx)
      continue;
 
     if(rmd->Media[media_idx].Orientations.size())
     {
-     if(orientation_idx != DiskSelectOptions[i].orientation_idx)
+     if(orientation_idx != dri.DiskSelectOptions[i].orientation_idx)
       continue;
     }
    }
 
-   DiskEjected = false;
-   DiskSelected = i;
-   dta = &DiskSelectOptions[i];
+   dri.DiskEjected = false;
+   dri.DiskSelected = i;
+   dta = &dri.DiskSelectOptions[i];
    break;
   }
  }
@@ -182,7 +291,7 @@ void MDFND_MediaSetNotification(uint32 drive_idx, uint32 state_idx, uint32 media
  if(dta)
  {
   if(!SupressDiskChangeNotifDisplay)
-   MDFN_DispMessage("%s", dta->text.c_str());
+   MDFN_Notify(MDFN_NOTICE_STATUS, "%s", dta->text.c_str());
  }
  else
   fprintf(stderr, "MDFND_MediaSetNotification() error");
@@ -192,40 +301,71 @@ void RMDUI_Toggle_InsertEject(void)
 {
  if(!CurGame->RMD->Drives.size())
   return;
+ //
+ //
+ //
+ auto& dri = Drives[SelectedDrive];
 
- DiskSelectType* dta = &DiskEjectOption;
+ if(dri.DiskSelectOptions.size())
+ {
+  DiskSelectType* dta = &dri.DiskEjectOption;
 
- if(DiskEjected)
-  dta = &DiskSelectOptions[DiskSelected];
+  if(dri.DiskEjected)
+   dta = &dri.DiskSelectOptions[dri.DiskSelected];
 
- MDFNI_SetMedia(dta->drive_idx, dta->state_idx, dta->media_idx, dta->orientation_idx);
+  MDFNI_SetMedia(dta->drive_idx, dta->state_idx, dta->media_idx, dta->orientation_idx);
+ }
+ else
+  MDFN_Notify(MDFN_NOTICE_STATUS, _("No media available to insert into %s!"), CurGame->RMD->Drives[SelectedDrive].Name.c_str());
 }
 
-void RMDUI_Select(void)
+void RMDUI_SelectDisk(void)
 {
- if(!DiskEjected)
+ if(!Drives.size())
   return;
 
- if(!DiskSelectOptions.size())
+ auto& dri = Drives[SelectedDrive];
+
+ if(!dri.DiskEjected)
   return;
 
- DiskSelected = (DiskSelected + 1) % DiskSelectOptions.size();
+ if(!dri.DiskSelectOptions.size())
+ {
+  MDFN_Notify(MDFN_NOTICE_STATUS, _("No media available to select for %s!"), CurGame->RMD->Drives[SelectedDrive].Name.c_str());
+  return;
+ }
+
+ dri.DiskSelected = (dri.DiskSelected + 1) % dri.DiskSelectOptions.size();
 
  {
-  const DiskSelectType* dta = &DiskSelectOptions[DiskSelected];
+  const DiskSelectType* dta = &dri.DiskSelectOptions[dri.DiskSelected];
   const RMD_State* rs = &CurGame->RMD->Drives[dta->drive_idx].PossibleStates[dta->state_idx];
 
   if(rs->MediaPresent && rs->MediaUsable)
   {
    if(CurGame->RMD->Media[dta->media_idx].Orientations.size())
-    MDFN_DispMessage(_("%s, %s selected."), CurGame->RMD->Media[dta->media_idx].Name.c_str(), CurGame->RMD->Media[dta->media_idx].Orientations[dta->orientation_idx].c_str());
+    MDFN_Notify(MDFN_NOTICE_STATUS, _("%s, %s selected."), CurGame->RMD->Media[dta->media_idx].Name.c_str(), CurGame->RMD->Media[dta->media_idx].Orientations[dta->orientation_idx].c_str());
    else
-    MDFN_DispMessage(_("%s selected."), CurGame->RMD->Media[dta->media_idx].Name.c_str());
+    MDFN_Notify(MDFN_NOTICE_STATUS, _("%s selected."), CurGame->RMD->Media[dta->media_idx].Name.c_str());
   }
   else
   {
-   MDFN_DispMessage(_("Absence selected."));
+   MDFN_Notify(MDFN_NOTICE_STATUS, _("Absence selected."));
   }
  }
 }
 
+void RMDUI_SelectDrive(void)
+{
+ if(!Drives.size())
+  return;
+
+ SelectedDrive = (SelectedDrive + 1) % Drives.size();
+ //
+ //
+ //
+ auto& dri = Drives[SelectedDrive];
+ const char* t = dri.DiskEjected ? dri.DiskEjectOption.text.c_str() : dri.DiskSelectOptions[dri.DiskSelected].text.c_str();
+
+ MDFN_Notify(MDFN_NOTICE_STATUS, _("%s selected(%s)."), CurGame->RMD->Drives[SelectedDrive].Name.c_str(), t);
+}

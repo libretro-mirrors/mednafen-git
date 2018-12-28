@@ -25,13 +25,16 @@
 #include <math.h>
 #include "vdc.h"
 
-#define VDC_DEBUG(x, ...)     { }
+namespace Mednafen
+{
+
+#define VDC_DEBUG(...)     { }
 //#define VDC_DEBUG(x, ...)       printf(x ": HPhase=%d, HPhaseCounter=%d, RCRCount=%d\n", ## __VA_ARGS__, HPhase, HPhaseCounter, RCRCount);
 
-#define VDC_UNDEFINED(format, ...)   { }
+#define VDC_UNDEFINED(...)   { }
 //#define VDC_UNDEFINED(format, ...)      printf(format " RCRCount=%d" "\n", ## __VA_ARGS__, RCRCount)
 
-#define VDC_WARNING(format, ...)      { }
+#define VDC_WARNING(...)      { }
 //#define VDC_WARNING(format, ...)     { printf(format "\n", ## __VA_ARGS__); }
 
 #define ULE_BG		1
@@ -1715,7 +1718,7 @@ VDC::~VDC()
 
 }
 
-void VDC::StateExtra(MDFN::LEPacker &sl_packer, bool load)
+void VDC::StateExtra(LEPacker &sl_packer, bool load)
 {
  sl_packer.set_read_mode(load);
 
@@ -1732,7 +1735,7 @@ void VDC::StateExtra(MDFN::LEPacker &sl_packer, bool load)
 
 void VDC::StateAction(StateMem *sm, const unsigned load, const bool data_only, const char *sname)
 {
- MDFN::LEPacker sl_packer;
+ LEPacker sl_packer;
 
  StateExtra(sl_packer, false);
 
@@ -1783,9 +1786,9 @@ void VDC::StateAction(StateMem *sm, const unsigned load, const bool data_only, c
 
         SFVARN(status, "status"),
 
-        SFARRAY16N(SAT, 0x100, "SAT"),
+        SFPTR16N(SAT, 0x100, "SAT"),
 
-        SFARRAY16N(VRAM, VRAM_Size, "VRAM"),
+        SFPTR16N(VRAM, VRAM_Size, "VRAM"),
 
         SFVARN(DMAReadBuffer, "DMAReadBuffer"),
         SFVARN(DMAReadWrite, "DMAReadWrite"),
@@ -1827,8 +1830,8 @@ void VDC::StateAction(StateMem *sm, const unsigned load, const bool data_only, c
 
 	SFVAR(active_sprites),
 
-	SFARRAYN(&sl_packer[0], sl_packer.size(), "ExtraState"),
-	//SFARRAY(SpriteListTemp, sizeof(SpriteListTemp)),
+	SFPTR8N(&sl_packer[0], sl_packer.size(), "ExtraState"),
+	//SFPTR8(SpriteListTemp, sizeof(SpriteListTemp)),
 
 	SFEND
   };
@@ -1942,3 +1945,4 @@ bool VDC::DoGfxDecode(uint32 *target, const uint32 *color_table, const uint32 Tr
 }
 #endif
 
+}

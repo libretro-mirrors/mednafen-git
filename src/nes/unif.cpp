@@ -82,8 +82,8 @@ static void UNIF_StateAction(StateMem *sm, const unsigned load, const bool data_
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(exntar, 2048),
-  SFARRAY(UNIFchrrama, CHRRAMSize),
+  SFPTR8(exntar, 2048),
+  SFPTR8(UNIFchrrama, CHRRAMSize),
   SFEND
  };
 
@@ -177,7 +177,7 @@ static void NAME(Stream *fp)
 
  MDFNGameInfo->name.resize((size_t)uchead.info);
  fp->read(&MDFNGameInfo->name[0], (size_t)uchead.info);
- MDFN_zapctrlchars(MDFNGameInfo->name);
+ MDFN_zapctrlchars(&MDFNGameInfo->name);
 
  MDFN_printf(_("Name: %s\n"), MDFNGameInfo->name.c_str());
 }
@@ -534,7 +534,7 @@ static MDFN_COLD void UNIF_Kill(void)
  FreeUNIF();
 }
 
-bool UNIF_TestMagic(MDFNFILE *fp)
+bool UNIF_TestMagic(Stream *fp)
 {
  uint8 magic[4];
 

@@ -26,6 +26,9 @@
 
 #include <new>
 
+namespace Mednafen
+{
+
 // "Array" is a bit of a misnomer, but it helps avoid confusion with memset() semantics hopefully.
 static INLINE void MDFN_FastArraySet(uint64* const dst, const uint64 value, const size_t count)
 {
@@ -199,7 +202,7 @@ class PODFastVector
 
    if(tmp == NULL)
    {
-    throw MDFN_Error(ErrnoHolder(errno));
+    throw MDFN_Error(ErrnoHolder(ENOMEM));
    }
 
    data = (T*)tmp;
@@ -224,4 +227,6 @@ class PODFastVector
  T* data;
  size_t data_size_ine;
 };
+
+}
 #endif

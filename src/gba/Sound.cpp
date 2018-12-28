@@ -71,42 +71,74 @@ GBADigiSound DSChans[2]; // Digital sound channels, not Nintendo DS :b
 #define soundDSFifoB DSChans[1].Fifo
 #define soundDSBValue DSChans[1].Value
 
-int MDFNGBASOUND_StateAction(StateMem *sm, int load, int data_only)
+void MDFNGBASOUND_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 {
  gb_apu_state_t apu_state;
  
- //if(!load) // always save state, in case there is none to load
-  gba_apu.save_state( &apu_state );
- 
- SFORMAT StateRegs[] = 
+ /// always save state, in case there is none to load
+ gba_apu.save_state( &apu_state );
+
+ if(load && (load >= 0x00094700 && load < 0x00102200))
  {
-  SFVAR(soundControl),
-  SFVAR(soundDSFifoAIndex),
-  SFVAR(soundDSFifoACount),
-  SFVAR(soundDSFifoAWriteIndex),
-  SFVAR(soundDSAEnabled),
-  SFVAR(soundDSATimer),
-  SFARRAYN(soundDSFifoA, sizeof(soundDSFifoA), "soundDSFifoA"),
-  SFVAR(soundDSAValue),
-  SFVAR(soundDSFifoBIndex),
-  SFVAR(soundDSFifoBCount),
-  SFVAR(soundDSFifoBWriteIndex),
-  SFVAR(soundDSBEnabled),
-  SFVAR(soundDSBTimer),
-  SFARRAYN(soundDSFifoB, sizeof(soundDSFifoB), "soundDSFifoB"),
-  SFVAR(soundDSBValue),
+  SFORMAT StateRegs[] = 
+  {
+   SFVAR(soundControl),
+   SFVARN(soundDSFifoAIndex, "DSChans[0].FifoIndex"),
+   SFVARN(soundDSFifoACount, "DSChans[0].FifoCount"),
+   SFVARN(soundDSFifoAWriteIndex, "DSChans[0].FifoWriteIndex"),
+   SFVARN(soundDSAEnabled, "DSChans[0].Enabled"),
+   SFVARN(soundDSATimer, "DSChans[0].Timer"),
+   SFPTR8N(soundDSFifoA, sizeof(soundDSFifoA), "soundDSFifoA"),
+   SFVARN(soundDSAValue, "DSChans[0].Value"),
 
-  SFARRAYN((uint8*)&apu_state, sizeof(apu_state), "apu_state"),
-  SFEND
- };
+   SFVARN(soundDSFifoBIndex, "DSChans[1].FifoIndex"),
+   SFVARN(soundDSFifoBCount, "DSChans[1].FifoCount"),
+   SFVARN(soundDSFifoBWriteIndex, "DSChans[1].FifoWriteIndex"),
+   SFVARN(soundDSBEnabled, "DSChans[1].Enabled"),
+   SFVARN(soundDSBTimer, "DSChans[1].Timer"),
+   SFPTR8N(soundDSFifoB, sizeof(soundDSFifoB), "soundDSFifoB"),
+   SFVARN(soundDSBValue, "DSChans[1].Value"),
 
- int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "SND");
- if(ret && load)
+   SFPTR8N((uint8*)&apu_state, sizeof(apu_state), "apu_state"),
+   SFEND
+  };
+
+  MDFNSS_StateAction(sm, load, data_only, StateRegs, "SND");
+ }
+ else
+ {
+  SFORMAT StateRegs[] = 
+  {
+   SFVAR(soundControl),
+
+   SFVAR(soundDSFifoAIndex),
+   SFVAR(soundDSFifoACount),
+   SFVAR(soundDSFifoAWriteIndex),
+   SFVAR(soundDSAEnabled),
+   SFVAR(soundDSATimer),
+   SFPTR8N(soundDSFifoA, sizeof(soundDSFifoA), "soundDSFifoA"),
+   SFVAR(soundDSAValue),
+
+   SFVAR(soundDSFifoBIndex),
+   SFVAR(soundDSFifoBCount),
+   SFVAR(soundDSFifoBWriteIndex),
+   SFVAR(soundDSBEnabled),
+   SFVAR(soundDSBTimer),
+   SFPTR8N(soundDSFifoB, sizeof(soundDSFifoB), "soundDSFifoB"),
+   SFVAR(soundDSBValue),
+
+   SFPTR8N((uint8*)&apu_state, sizeof(apu_state), "apu_state"),
+   SFEND
+  };
+
+  MDFNSS_StateAction(sm, load, data_only, StateRegs, "SND");
+ }
+
+ if(load)
  {
   gba_apu.reset( gba_apu.mode_agb, true );
   (void) gba_apu.load_state( apu_state ); // TODO: warn if this returns error
  }
- return(ret);
 }
 
 uint8 soundRead(uint32 address)

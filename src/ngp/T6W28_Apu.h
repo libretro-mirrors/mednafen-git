@@ -24,6 +24,7 @@ typedef struct
 	uint32 noise_shifter;
 	uint32 noise_tap;
 
+	int32 delay[4];
 	int32 volume_left[4];
 	int32 volume_right[4];
 	uint8 latch_left, latch_right;

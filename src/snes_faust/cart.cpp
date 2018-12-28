@@ -360,7 +360,7 @@ void CART_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAYN(CartRAM.size() ? &CartRAM[0] : NULL, CartRAM.size(), "&CartRAM[0]"),
+  SFPTR8N(CartRAM.size() ? &CartRAM[0] : NULL, CartRAM.size(), "&CartRAM[0]"),
 
   SFEND
  };

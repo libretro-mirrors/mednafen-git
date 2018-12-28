@@ -302,10 +302,10 @@ int MDFNNGPCDMA_StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY32N(dmaS, 4, "DMAS"),
-  SFARRAY32N(dmaD, 4, "DMAD"),
-  SFARRAY16N(dmaC, 4, "DMAC"),
-  SFARRAYN(dmaM, 4, "DMAM"),
+  SFVARN(dmaS, "DMAS"),
+  SFVARN(dmaD, "DMAD"),
+  SFVARN(dmaC, "DMAC"),
+  SFVARN(dmaM, "DMAM"),
   SFEND
  };
 

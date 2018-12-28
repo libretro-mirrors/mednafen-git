@@ -25,11 +25,14 @@
 #include <mednafen/PSFLoader.h>
 #include <mednafen/MemoryStream.h>
 
+namespace Mednafen
+{
+
 class SSFLoader : public PSFLoader
 {
  public:
 
- SSFLoader(Stream *fp);
+ SSFLoader(VirtualFS* vfs, const std::string& dir_path, Stream* fp);
  virtual ~SSFLoader();
 
  static bool TestMagic(Stream* fp);
@@ -41,5 +44,5 @@ class SSFLoader : public PSFLoader
  MemoryStream RAM_Data;
 };
 
-
+}
 #endif

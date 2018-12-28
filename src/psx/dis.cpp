@@ -298,7 +298,7 @@ std::string DisassembleMIPS(uint32 PC, uint32 instr)
    trio_snprintf(s_c, sizeof(s_c), "CPR%d", rd);
    trio_snprintf(s_C, sizeof(s_C), "CCR%d", rd);
 
-   ret = std::string(op->mnemonic);
+   ret = op->mnemonic;
    ret.append(10 - ret.size(), ' ');
 
    for(unsigned int i = 0; i < strlen(op->format); i++)

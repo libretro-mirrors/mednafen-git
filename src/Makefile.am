@@ -1,13 +1,15 @@
-SUBDIRS	= trio
 AUTOMAKE_OPTIONS = subdir-objects
 DEFS = @DEFS@ @SNDFILE_CFLAGS@
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_builddir)/intl
 
 bin_PROGRAMS	=	mednafen
 
-mednafen_SOURCES 	= 	debug.cpp error.cpp mempatcher.cpp settings.cpp endian.cpp Time.cpp mednafen.cpp git.cpp file.cpp general.cpp memory.cpp netplay.cpp state.cpp state_rewind.cpp movie.cpp player.cpp PSFLoader.cpp SSFLoader.cpp SNSFLoader.cpp SPCReader.cpp tests.cpp qtrecord.cpp Stream.cpp MemoryStream.cpp FileStream.cpp IPSPatcher.cpp
-mednafen_LDADD 		= 	trio/libtrio.a
-mednafen_DEPENDENCIES	=	trio/libtrio.a
+SUBDIRS			=
+noinst_LIBRARIES	=
+mednafen_LDADD		=
+mednafen_DEPENDENCIES	=
+mednafen_SOURCES 	= 	debug.cpp error.cpp mempatcher.cpp settings.cpp endian.cpp Time.cpp mednafen.cpp git.cpp file.cpp general.cpp memory.cpp netplay.cpp state.cpp state_rewind.cpp movie.cpp player.cpp PSFLoader.cpp SSFLoader.cpp SNSFLoader.cpp SPCReader.cpp tests.cpp qtrecord.cpp IPSPatcher.cpp
+mednafen_SOURCES	+=	VirtualFS.cpp NativeVFS.cpp Stream.cpp MemoryStream.cpp ExtMemStream.cpp FileStream.cpp
 
 if HAVE_SDL
 SUBDIRS 		+=	drivers
@@ -21,7 +23,7 @@ if WIN32
 .rc.o:
 	@WINDRES@ -o $@ $<
 
-mednafen_SOURCES	+=	drivers/win-resource.rc
+mednafen_SOURCES	+=	win32-common.cpp drivers/win-resource.rc
 endif
 
 endif
@@ -30,6 +32,12 @@ if DOS
 SUBDIRS			+=	drivers_dos
 mednafen_LDADD		+=	drivers_dos/libmdfndos.a
 mednafen_DEPENDENCIES	+=	drivers_dos/libmdfndos.a
+endif
+
+if ENABLE_LIBXXX_MODE
+SUBDIRS			+=	drivers_libxxx
+mednafen_LDADD		+=	drivers_libxxx/libmdfnxxx.a
+mednafen_DEPENDENCIES	+=	drivers_libxxx/libmdfnxxx.a
 endif
 
 SUBDIRS			+=	sexyal
@@ -42,6 +50,10 @@ endif
 
 include cdplay/Makefile.am.inc
 include demo/Makefile.am.inc
+
+if WANT_APPLE2_EMU
+include apple2/Makefile.am.inc
+endif
 
 if WANT_GB_EMU
 include gb/Makefile.am.inc
@@ -63,10 +75,12 @@ if WANT_NES_EMU
 include nes/Makefile.am.inc
 endif
 
+#if WANT_NES_NEW_EMU
+#include nes_new/Makefile.am.inc
+#endif
+
 if WANT_NGP_EMU
-SUBDIRS += ngp
-mednafen_LDADD          +=      ngp/libngp.a
-mednafen_DEPENDENCIES   +=      ngp/libngp.a
+include ngp/Makefile.am.inc
 endif
 
 if WANT_PCE_EMU
@@ -90,9 +104,7 @@ include sms/Makefile.am.inc
 endif
 
 if WANT_SNES_EMU
-SUBDIRS += snes
-mednafen_LDADD          +=      snes/libsnes.a
-mednafen_DEPENDENCIES   +=      snes/libsnes.a
+include snes/Makefile.am.inc
 endif
 
 if WANT_SNES_FAUST_EMU
@@ -124,23 +136,18 @@ endif
 
 
 if WANT_DEBUGGER
-SUBDIRS += desa68
-mednafen_LDADD		+=	desa68/libdesa68.a
-mednafen_DEPENDENCIES	+=	desa68/libdesa68.a
+include desa68/Makefile.am.inc
 endif
 
 include hw_cpu/Makefile.am.inc
 include hw_misc/Makefile.am.inc
 include hw_sound/Makefile.am.inc
 include hw_video/Makefile.am.inc
+include mthreading/Makefile.am.inc
 include cdrom/Makefile.am.inc
 include sound/Makefile.am.inc
 include net/Makefile.am.inc
-
-SUBDIRS                 +=      quicklz
-mednafen_LDADD          +=      quicklz/libmdfnquicklz.a
-mednafen_DEPENDENCIES   +=      quicklz/libmdfnquicklz.a
-
+include quicklz/Makefile.am.inc
 include compress/Makefile.am.inc
 include hash/Makefile.am.inc
 include string/Makefile.am.inc
@@ -149,20 +156,29 @@ include resampler/Makefile.am.inc
 include cputest/Makefile.am.inc
 include cheat_formats/Makefile.am.inc
 
+if HAVE_EXTERNAL_LZO2
+mednafen_LDADD		+=	@LZO2_LIBS@
+DEFS			+=	@LZO2_CFLAGS@
+else
+include minilzo/Makefile.am.inc
+endif
+
 if HAVE_EXTERNAL_TREMOR
 mednafen_LDADD		+=	@TREMOR_LIBS@
 else
-SUBDIRS += tremor
-mednafen_LDADD          +=      tremor/libvorbisidec.a
-mednafen_DEPENDENCIES   +=      tremor/libvorbisidec.a
+include tremor/Makefile.am.inc
 endif
 
 if HAVE_EXTERNAL_MPCDEC
 mednafen_LDADD		+=	@MPCDEC_LIBS@
 else
-SUBDIRS += mpcdec
-mednafen_LDADD          +=      mpcdec/libmpcdec.a
-mednafen_DEPENDENCIES   +=      mpcdec/libmpcdec.a
+include mpcdec/Makefile.am.inc
+endif
+
+if HAVE_EXTERNAL_TRIO
+mednafen_LDADD		+=	@TRIO_LIBS@
+else
+include trio/Makefile.am.inc
 endif
 
 mednafen_LDADD		+= 	@SNDFILE_LIBS@ @ZLIB_LIBS@ @LIBINTL@ @LIBICONV@

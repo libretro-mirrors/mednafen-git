@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* vdp2.cpp - VDP2 Emulation
-**  Copyright (C) 2015-2017 Mednafen Team
+**  Copyright (C) 2015-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -79,6 +79,13 @@ static uint32 VRAMPenalty[4];
 static uint32 RPTA;
 static uint8 RPRCTL[2];
 static uint8 KTAOF[2];
+
+static struct
+{
+ uint16 YStart, YEnd;
+ bool YEndMet;
+ bool YIn;
+} Window[2];
 
 static uint16 VRAM[262144];
 
@@ -308,21 +315,25 @@ static bool HVIsExLatched;
 bool ExLatchIn;
 bool ExLatchPending;
 
+
+static INLINE unsigned GetNLVCounter(void)
+{
+ unsigned ret;
+
+ if(VPhase >= VPHASE_VSYNC)
+  ret = VCounter + (0x200 - VTimings[PAL][VRes][VPHASE__COUNT - 1]);
+ else
+  ret = VCounter;
+
+ if(InterlaceMode == IM_DOUBLE)
+  ret = (ret << 1) | !Odd;
+
+ return ret;
+}
+
 static void LatchHV(void)
 {
- {
-  unsigned vtmp;
-
-  if(VPhase >= VPHASE_VSYNC)
-   vtmp = VCounter + (0x200 - VTimings[PAL][VRes][VPHASE__COUNT - 1]);
-  else
-   vtmp = VCounter;
-
-  if(InterlaceMode == IM_DOUBLE)
-   vtmp = (vtmp << 1) | !Odd;
-
-  Latched_VCNT = vtmp;
- }
+ Latched_VCNT = GetNLVCounter();
 
  if(HPhase >= HPHASE_HSYNC)
   Latched_HCNT = (HCounter + (0x200 - HTimings[HRes & 1][HPHASE__COUNT - 1])) << 1;
@@ -349,10 +360,15 @@ void StartFrame(EmulateSpecStruct* espec, const bool clock28m)
 //
 static INLINE void IncVCounter(const sscpu_timestamp_t event_timestamp)
 {
+ const unsigned prev_nlvc = GetNLVCounter();
+ //
  VCounter = (VCounter + 1) & 0x1FF;
 
  if(VCounter == (VTimings[PAL][VRes][VPHASE__COUNT - 1] - 1))
+ {
   Out_VB = false;
+  Window[0].YEndMet = Window[1].YEndMet = false;
+ }
 
  // - 1, so the CPU loop will  have plenty of time to exit before we reach non-hblank top border area
  // (exit granularity could be large if program is executing from SCSP RAM space, for example).
@@ -411,6 +427,32 @@ static INLINE void IncVCounter(const sscpu_timestamp_t event_timestamp)
   }
  }
 
+ //
+ //
+ {
+  const unsigned nlvc = GetNLVCounter();
+  const unsigned mask = (InterlaceMode == IM_DOUBLE) ? 0x1FE : 0x1FF;
+
+  for(unsigned d = 0; d < 2; d++)
+  {
+   if((nlvc & mask) == (Window[d].YStart & mask))
+   {
+    //printf("Window%d YStartMet at VC=0x%03x ---- %03x %03x\n", d, nlvc, Window[d].YStart, Window[d].YEnd);
+    Window[d].YIn = true;
+   }
+
+   if((prev_nlvc & mask) == (Window[d].YEnd & mask))
+   {
+    //printf("Window%d YEndMet at VC=0x%03x ---- %03x %03x\n", d, nlvc, Window[d].YStart, Window[d].YEnd);
+    Window[d].YEndMet = true;
+   }
+
+   Window[d].YIn &= !Window[d].YEndMet;
+  }
+ }
+ //
+ //
+
  RecalcVRAMPenalty();
 
  SMPC_SetVBVS(event_timestamp, Out_VB, VPhase == VPHASE_VSYNC);
@@ -447,6 +489,9 @@ static INLINE int32 AddHCounter(const sscpu_timestamp_t event_timestamp, int32 c
    if(VPhase == VPHASE_ACTIVE)
    {
     VDP2Rend_LIB* lib = VDP2REND_GetLIB(VCounter);
+
+    lib->win_ymet[0] = Window[0].YIn;
+    lib->win_ymet[1] = Window[1].YIn;
 
     if(!InternalVB)
     {
@@ -636,6 +681,12 @@ static INLINE void RegsWrite(uint32 A, uint16 V)
   case 0xBE:
 	RPTA = (RPTA & ~0xFFFF) | (V & 0xFFFE);
 	break;
+
+  case 0xC2: Window[0].YStart = V & 0x1FF; break;
+  case 0xC6: Window[0].YEnd = V & 0x1FF; break;
+
+  case 0xCA: Window[1].YStart = V & 0x1FF; break;
+  case 0xCE: Window[1].YEnd = V & 0x1FF; break;
  }
 }
 
@@ -887,6 +938,14 @@ void Reset(bool powering_up)
  }
  RPTA = 0;
  memset(RotParams, 0, sizeof(RotParams));
+
+ for(unsigned w = 0; w < 2; w++)
+ {
+  Window[w].YStart = 0;
+  Window[w].YEnd = 0;
+  Window[w].YEndMet = false;
+  Window[w].YIn = false;
+ }
  //
  //
  //
@@ -928,24 +987,50 @@ uint32 GetRegister(const unsigned id, char* const special, const uint32 special_
 	ret = VCounter;
 	break;
 
- case GSREG_DON:
+  case GSREG_DON:
 	ret = DisplayOn;
 	break;
 
- case GSREG_BM:
+  case GSREG_BM:
 	ret = BorderMode;
 	break;
 
- case GSREG_IM:
+  case GSREG_IM:
 	ret = InterlaceMode;
 	break;
 
- case GSREG_VRES:
+  case GSREG_VRES:
 	ret = VRes;
 	break;
 
- case GSREG_HRES:
+  case GSREG_HRES:
 	ret = HRes;
+	break;
+
+  case GSREG_RAMCTL:
+	ret = RAMCTL_Raw;
+	break;
+
+  case GSREG_CYCA0:
+  case GSREG_CYCA1:
+  case GSREG_CYCB0:
+  case GSREG_CYCB1:
+	{
+	 static const char* tab[0x10] =
+	 {
+	  "NBG0 PN", "NBG1 PN", "NBG2 PN", "NBG3 PN",
+	  "NBG0 CG", "NBG1 CG", "NBG2 CG", "NBG3 CG",
+	  "ILLEGAL", "ILLEGAL", "ILLEGAL", "ILLEGAL",
+	  "NBG0 VCS", "NBG1 VCS", "CPU", "NOP"
+	 };
+	 const size_t idx = (id - GSREG_CYCA0);
+	 ret = (RawRegs[(0x10 >> 1) + (idx << 1)] << 16) | RawRegs[(0x12 >> 1) + (idx << 1)];
+
+	 if(special)
+	  trio_snprintf(special, special_len, "0: %s, 1: %s, 2: %s, 3: %s, 4: %s, 5: %s, 6: %s, 7: %s",
+		tab[(ret >> 28) & 0xF], tab[(ret >> 24) & 0xF], tab[(ret >> 20) & 0xF], tab[(ret >> 16) & 0xF],
+		tab[(ret >> 12) & 0xF], tab[(ret >>  8) & 0xF], tab[(ret >>  4) & 0xF], tab[(ret >>  0) & 0xF]);
+	}
 	break;
  }
 
@@ -971,6 +1056,119 @@ void PokeVRAM(const uint32 addr, const uint8 val)
 void SetLayerEnableMask(uint64 mask)
 {
  VDP2REND_SetLayerEnableMask(mask);
+}
+
+void StateAction(StateMem* sm, const unsigned load, const bool data_only)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(lastts),
+
+  SFVAR(RawRegs),
+  SFVAR(DisplayOn),
+  SFVAR(BorderMode),
+  SFVAR(ExLatchEnable),
+  SFVAR(ExSyncEnable),
+  SFVAR(ExBGEnable),
+  SFVAR(DispAreaSelect),
+
+  SFVAR(VRAMSize),
+
+  SFVAR(HRes),
+  SFVAR(VRes),
+  SFVAR(InterlaceMode),
+
+  SFVAR(RAMCTL_Raw),
+  SFVAR(CRAM_Mode),
+
+  SFVAR(BGON),
+  SFVARN(VCPRegs, "&VCPRegs[0][0]"),
+  SFVAR(VRAMPenalty),
+
+  SFVAR(RPTA),
+  SFVAR(RPRCTL),
+  SFVAR(KTAOF),
+
+  SFVAR(VRAM),
+  SFVAR(CRAM),
+
+  SFVAR(RotParams->Xst, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Yst, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Zst, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->DXst, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->DYst, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->DX, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->DY, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->RotMatrix, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Px, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Py, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Pz, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Cx, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Cy, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Cz, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->Mx, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->My, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->kx, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->ky, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->KAst, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->DKAst, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->DKAx, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->XstAccum, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->YstAccum, 2, sizeof(*RotParams), RotParams),
+  SFVAR(RotParams->KAstAccum, 2, sizeof(*RotParams), RotParams),
+
+  SFVAR(Out_VB),
+
+  SFVAR(VPhase),
+  SFVAR(VCounter),
+  SFVAR(InternalVB),
+  SFVAR(Odd),
+
+  SFVAR(CRTLineCounter),
+  SFVAR(Clock28M),
+//
+  SFVAR(SurfInterlaceField),
+
+  SFVAR(HPhase),
+  SFVAR(HCounter),
+
+  SFVAR(Latched_VCNT),
+  SFVAR(Latched_HCNT),
+  SFVAR(HVIsExLatched),
+  SFVAR(ExLatchIn),
+  SFVAR(ExLatchPending),
+
+  SFVAR(Window->YStart, 2, sizeof(*Window), Window),
+  SFVAR(Window->YEnd, 2, sizeof(*Window), Window),
+  SFVAR(Window->YEndMet, 2, sizeof(*Window), Window),
+  SFVAR(Window->YIn, 2, sizeof(*Window), Window),
+
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "VDP2");
+
+ if(load)
+ {
+  if(load < 0x00102100)
+  {
+   Window[0].YStart = RawRegs[0xC2 >> 1] & 0x1FF;
+   Window[0].YEnd = RawRegs[0xC6 >> 1] & 0x1FF;
+
+   Window[1].YStart = RawRegs[0xCA >> 1] & 0x1FF;
+   Window[1].YEnd = RawRegs[0xCE >> 1] & 0x1FF;
+
+   //printf("%08x %03x:%03x, %03x:%03x\n", load, Window[0].YStart, Window[0].YEnd, Window[1].YStart, Window[1].YEnd);
+
+   for(unsigned d = 0; d < 2; d++)
+   {
+    Window[d].YEndMet = false;
+    Window[d].YIn = false;
+   }
+  }
+ }
+
+ VDP2REND_StateAction(sm, load, data_only, RawRegs, CRAM, VRAM);
 }
 
 void MakeDump(const std::string& path)

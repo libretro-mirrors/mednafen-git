@@ -29,9 +29,9 @@ class MDFNConsole
 
 	// Returns pointer to internal surface, will remain valid until at least the next
 	// call to Draw()(or the MDFNConsole object is destroyed).
-	MDFN_Surface* Draw(const MDFN_PixelFormat& pformat, const int32 dim_w, const int32 dim_h, const unsigned fontid = MDFN_FONT_9x18_18x18, const uint32 hex_color = 0xFFFFFF);
+	MDFN_Surface* Draw(const MDFN_PixelFormat& pformat, const int32 dim_w, const int32 dim_h, const unsigned fontid = MDFN_FONT_9x18_18x18, const uint32 hex_color = 0xFFFFFF); //, const uint32 hex_cursorcolor = 0x00AA00);
 
-	int Event(const SDL_Event *event);
+	bool Event(const SDL_Event *event);
 
 	void WriteLine(const std::string &text);
 	void AppendLastLine(const std::string &text);
@@ -42,9 +42,9 @@ class MDFNConsole
 
 	private:
 	std::vector<std::string> TextLog;
-	std::vector<std::string> kb_buffer;
+	std::u32string kb_buffer;
 
-	unsigned int kb_cursor_pos;
+	size_t kb_cursor_pos;
 	bool shellstyle;
 	bool prompt_visible;
 	int32 Scrolled;
@@ -57,4 +57,7 @@ class MDFNConsole
 	// inside Draw(), for the Draw() return value guarantee.
 	std::unique_ptr<MDFN_Surface> surface;
 	std::unique_ptr<MDFN_Surface> tmp_surface;
+
+	void PasteText(const std::u32string& text);
+	void ProcessKBBuffer(void);
 };

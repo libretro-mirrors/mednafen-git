@@ -128,17 +128,6 @@ void HappyPrompt::Event(const SDL_Event *event)
  {
   switch(event->key.keysym.sym)
   {
-   default:
-	if(event->key.keysym.unicode)
-	{
-	 const char16_t tmp = event->key.keysym.unicode; 
-	 std::u32string tmpstr = UTF16_to_UTF32(&tmp, 1);
-
-	 kb_buffer.insert(kb_cursor_pos, tmpstr);
-	 kb_cursor_pos += tmpstr.size();
-	}
-	break;
-
    case SDLK_HOME:
         kb_cursor_pos = 0;
         break;

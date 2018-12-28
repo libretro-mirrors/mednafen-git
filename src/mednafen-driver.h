@@ -3,6 +3,9 @@
 
 #include "settings-common.h"
 
+namespace Mednafen
+{
+
 extern std::vector<MDFNGI *>MDFNSystems;
 
 /* Indent stdout newlines +- "indent" amount */
@@ -21,9 +24,11 @@ void MDFN_printf(const char *format, ...) noexcept MDFN_FORMATSTR(gnu_printf, 1,
 
 #define MDFNI_printf MDFN_printf
 
-/* Displays an error.  Can block or not. */
-void MDFND_PrintError(const char *s);
-void MDFND_Message(const char *s);
+// MDFN_NOTICE_ERROR may block(e.g. for user confirmation), other notice types should be as non-blocking as possible.
+void MDFND_OutputNotice(MDFN_NoticeType t, const char* s) noexcept;
+
+// Output from MDFN_printf(); fairly verbose informational messages.
+void MDFND_OutputInfo(const char* s) noexcept;
 
 // Synchronize virtual time to actual time using members of espec:
 //
@@ -42,63 +47,35 @@ void MDFND_MidSync(const EmulateSpecStruct *espec);
 // Called from inside blocking loops on unreliable resources(e.g. netplay).
 bool MDFND_CheckNeedExit(void);
 
-//
-// Begin threading support.
-//
-// Mostly based off SDL's prototypes and semantics.
-// Driver code should actually define MDFN_Thread and MDFN_Mutex.
-//
-// Caution: Do not attempt to use the synchronization primitives(mutex, cond variables, etc.) for inter-process synchronization, they'll only work reliably with
-// intra-process synchronization(the "mutex" is implemented as a a critical section under Windows, for example).
-//
-struct MDFN_Thread;
-struct MDFN_Mutex;
-struct MDFN_Cond;	// mmm condiments
-struct MDFN_Sem;
-
-MDFN_Thread *MDFND_CreateThread(int (*fn)(void *), void *data);
-void MDFND_WaitThread(MDFN_Thread *thread, int *status);
-uint32 MDFND_ThreadID(void);
-
-MDFN_Mutex *MDFND_CreateMutex(void) MDFN_COLD;
-void MDFND_DestroyMutex(MDFN_Mutex *mutex) MDFN_COLD;
-
-int MDFND_LockMutex(MDFN_Mutex *mutex);
-int MDFND_UnlockMutex(MDFN_Mutex *mutex);
-
-MDFN_Cond* MDFND_CreateCond(void) MDFN_COLD;
-void MDFND_DestroyCond(MDFN_Cond* cond) MDFN_COLD;
-
-/* MDFND_SignalCond() *MUST* be called with a lock on the mutex used with MDFND_WaitCond() or MDFND_WaitCondTimeout() */
-int MDFND_SignalCond(MDFN_Cond* cond);
-int MDFND_WaitCond(MDFN_Cond* cond, MDFN_Mutex* mutex);
-
-#define MDFND_COND_TIMEDOUT	1
-int MDFND_WaitCondTimeout(MDFN_Cond* cond, MDFN_Mutex* mutex, unsigned ms);
-
-
-MDFN_Sem* MDFND_CreateSem(void);
-void MDFND_DestroySem(MDFN_Sem* sem);
-
-int MDFND_WaitSem(MDFN_Sem* sem);
-#define MDFND_SEM_TIMEDOUT	1
-int MDFND_WaitSemTimeout(MDFN_Sem* sem, unsigned ms);
-int MDFND_PostSem(MDFN_Sem* sem);
-//
-// End threading support.
-//
-
 void MDFNI_Reset(void);
 void MDFNI_Power(void);
 
 
 // path = path of game/file to load.
 // Returns NULL on error.
-MDFNGI *MDFNI_LoadGame(const char *force_module, const char *path) MDFN_COLD;
-MDFNGI *MDFNI_LoadCD(const char *force_module, const char *path) MDFN_COLD;	// Deprecated interface.
+//
+// Don't pass anything other than &::Mednafen::NVFS for vfs unless you absolutely know what
+// you're doing; the object it points to must remain valid until MDFNI_CloseGame() returns,
+// and if the file you're loading is a CD image, it will be cached in memory regardless of 
+// the cd.image_memcache setting, in order to avoid thread safety issues.  You'd also need to make
+// sure filesys.fname_* settings are appropriate given the "path" specified, and be aware of
+// other similar issues with naming.
+//
+MDFNGI* MDFNI_LoadGame(const char* force_module, VirtualFS* vfs, const char* path, bool force_cd = false) MDFN_COLD;
+
+// Advanced usage; normally don't call.
+class CDInterface;
+MDFNGI *MDFNI_LoadExternalCD(const char* force_module, const char* path_hint, CDInterface* cdif) MDFN_COLD;
 
 // Call this function as early as possible, even before MDFNI_Initialize()
 bool MDFNI_InitializeModules(void) MDFN_COLD;
+
+// Call once, after MDFNI_Initialize()
+// returns -1 if settings file didn't exist, 0 on error, and 1 on success
+int MDFNI_LoadSettings(const char* path);
+
+// Call at least once right before MDFNI_Kill()
+bool MDFNI_SaveSettings(const char* path);
 
 /* allocates memory.  0 on failure, 1 on success. */
 /* Also pass it the base directory to load the configuration file. */
@@ -126,8 +103,6 @@ void MDFNI_Kill(void) MDFN_COLD;
 
 void MDFN_DispMessage(const char *format, ...) noexcept MDFN_FORMATSTR(gnu_printf, 1, 2);
 #define MDFNI_DispMessage MDFN_DispMessage
-
-uint32 MDFNI_CRC32(uint32 crc, uint8 *buf, uint32 len);
 
 // NES hackish function.  Should abstract in the future.
 int MDFNI_DatachSet(const uint8 *rcode);
@@ -160,4 +135,5 @@ void MDFNI_StopWAVRecord(void) MDFN_COLD;
 
 void MDFNI_DumpModulesDef(const char *fn) MDFN_COLD;
 
+}
 #endif

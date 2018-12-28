@@ -95,6 +95,7 @@ Mednafen's NES/Famicom emulation is based off of FCE Ultra.
  <tr><td>34</td><td>NINA-001 and BNROM</td><td>Impossible Mission 2, Deadly Towers, Bug Honey</td></tr>
  <tr><td>37</td><td>??</td><td>Super Mario Bros/Tetris/Nintendo World Cup</td></tr>
  <tr><td>38</td><td>??</td><td>Crime Busters</td></tr>
+ <tr><td>40</td><td>??</td><td>Super Mario Bros. 2j bootleg</td></tr>
  <tr><td>41</td><td>Caltron 6-in-1</td><td>Caltron 6-in-1</td></tr>
  <tr><td>42</td><td>(bootleg)</td><td>Mario Baby</td></tr>
  <tr><td>44</td><td>Multi-cart(bootleg)</td><td>Super HiK 7 in 1</td></tr>
@@ -174,7 +175,7 @@ Mednafen's NES/Famicom emulation is based off of FCE Ultra.
  <tr><td>208</td><td>??</td><td>Street Fighter IV (by Gouder)</td></tr>
  <tr><td>209</td><td>(mapper 90 w/ name-table control mode enabled)</td><td>Shin Samurai Spirits 2, Power Rangers III</td></tr>
  <tr><td>210</td><td>Namco ??</td><td>Famista '92, Famista '93, Wagyan Land 2</td></tr>
- <tr><td>215</td><td>Bootleg multi-cart ??</td><td>Super\ 308\ 3-in-1\</td></tr>
+ <tr><td>215</td><td>Bootleg multi-cart ??</td><td>Super 308 3-in-1</td></tr>
  <tr><td>217</td><td>Bootleg multi-cart ??</td><td>Golden Card 6-in-1</td></tr>
  <tr><td>222</td><td>Bootleg ??</td><td>Dragon Ninja</td></tr>
  <tr><td>228</td><td>Action 52</td><td>Action 52, Cheetahmen 2</td></tr>

@@ -51,7 +51,7 @@ int Flash_StateAction(StateMem *sm, int load, int data_only)
    SFVAR(flashReadState),
    SFVAR(flashSize),
    SFVAR(flashBank),
-   SFARRAYN(flashSaveMemory, 0x20000, "flashSaveMemory"),
+   SFPTR8N(flashSaveMemory, 0x20000, "flashSaveMemory"),
    SFEND
  };
 

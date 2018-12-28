@@ -27,6 +27,7 @@
 #include "ss.h"
 #include <mednafen/mednafen.h>
 #include <mednafen/Time.h>
+#include <mednafen/MThreading.h>
 #include "vdp2_common.h"
 #include "vdp2_render.h"
 
@@ -148,7 +149,6 @@ static uint8 BackCCRatio;
 static struct
 {
  uint16 XStart, XEnd;
- uint16 YStart, YEnd;
  uint32 LineWinAddr;
  bool LineWinEn;
  //
@@ -788,14 +788,10 @@ static INLINE void RegsWrite(uint32 A, uint16 V)
 
   //
   case 0xC0: Window[0].XStart = V & 0x3FF; break;
-  case 0xC2: Window[0].YStart = V & 0x1FF; break;
   case 0xC4: Window[0].XEnd = V & 0x3FF; break;
-  case 0xC6: Window[0].YEnd = V & 0x1FF; break;
 
   case 0xC8: Window[1].XStart = V & 0x3FF; break;
-  case 0xCA: Window[1].YStart = V & 0x1FF; break;
   case 0xCC: Window[1].XEnd = V & 0x3FF; break;
-  case 0xCE: Window[1].YEnd = V & 0x1FF; break;
 
   case 0xD0:
   case 0xD2:
@@ -1105,8 +1101,6 @@ static void Reset(bool powering_up)
  {
   Window[w].XStart = 0;
   Window[w].XEnd = 0;
-  Window[w].YStart = 0;
-  Window[w].YEnd = 0;
   Window[w].LineWinAddr = 0;
   Window[w].LineWinEn = false;
 
@@ -1705,10 +1699,16 @@ static void T_DrawNBG23(const unsigned n, uint64* bgbuf, const unsigned w, const
  bgbuf -= xscr & 0x7;
  tx = xscr >> 3;
 
- //if(TA_bpp == 4 && n == 3)
- // printf("Goop: %d %d %02x, %016llx %016llx %016llx %016llx\n", n, TA_bpp, VRAM_Mode, MDFN_de64lsb(VCPRegs[0]), MDFN_de64lsb(VCPRegs[1]), MDFN_de64lsb(VCPRegs[2]), MDFN_de64lsb(VCPRegs[3]));
- // Kludge for Akumajou Dracula X
- if(MDFN_UNLIKELY(TA_bpp == 4 && n == 3 && VRAM_Mode == 0x2 && MDFN_de64lsb(VCPRegs[0]) == 0x0f0f070406060505ULL && MDFN_de64lsb(VCPRegs[2]) == 0x0f0f03000f0f0201ULL && MDFN_de64lsb(VCPRegs[3]) == 0x0f0f0f0f0f0f0f0fULL))
+ //
+ // Layer offset kludges
+ //
+ // Note: When/If adding new kludges, check that the NT and CG fetches for the layer each occur only in one bank, to safely handle other cases may require something more complex.
+ // printf("(TA_bpp == %d && n == %d && VRAM_Mode == 0x%01x && (HRes & 0x6) == 0x%01x && MDFN_de64lsb(VCPRegs[0]) == 0x%016llxULL && MDFN_de64lsb(VCPRegs[1]) == 0x%016llxULL && MDFN_de64lsb(VCPRegs[2]) == 0x%016llxULL && MDFN_de64lsb(VCPRegs[3]) == 0x%016llxULL) || \n", TA_bpp, n, VRAM_Mode, HRes & 0x6, (unsigned long long)MDFN_de64lsb(VCPRegs[0]), (unsigned long long)MDFN_de64lsb(VCPRegs[1]), (unsigned long long)MDFN_de64lsb(VCPRegs[2]), (unsigned long long)MDFN_de64lsb(VCPRegs[3]));
+ if(MDFN_UNLIKELY(
+  /* Akumajou Dracula X */ (TA_bpp == 4 && n == 3 && VRAM_Mode == 0x2 && (HRes & 0x6) == 0x0 && MDFN_de64lsb(VCPRegs[0]) == 0x0f0f070406060505ULL && MDFN_de64lsb(VCPRegs[1]) == 0x0f0f0f0f0f0f0f0fULL && MDFN_de64lsb(VCPRegs[2]) == 0x0f0f03000f0f0201ULL && MDFN_de64lsb(VCPRegs[3]) == 0x0f0f0f0f0f0f0f0fULL) ||
+  /* Alien Trilogy      */ (TA_bpp == 4 && n == 3 && VRAM_Mode == 0x2 && (HRes & 0x6) == 0x0 && MDFN_de64lsb(VCPRegs[0]) == 0x07050f0f0f0f0606ULL && MDFN_de64lsb(VCPRegs[1]) == 0x0f0f0f0f0f0f0f0fULL && MDFN_de64lsb(VCPRegs[2]) == 0x0f0f0f0f0f0f0f0fULL && MDFN_de64lsb(VCPRegs[3]) == 0x0f0103020f0f0f0fULL) ||
+  /* Daytona USA CCE    */ (TA_bpp == 4 && n == 2 && VRAM_Mode == 0x3 && (HRes & 0x6) == 0x0 && MDFN_de64lsb(VCPRegs[0]) == 0x0f0f0f0f00000404ULL && MDFN_de64lsb(VCPRegs[1]) == 0x0f0f0f060f0f0f0fULL && MDFN_de64lsb(VCPRegs[2]) == 0x0f0f0f0f0505070fULL && MDFN_de64lsb(VCPRegs[3]) == 0x0f0f03020f010f00ULL) ||
+  0))
  {
   for(unsigned i = 0; i < 8; i++)
    *bgbuf++ = 0;
@@ -2788,17 +2788,8 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
   // Line Window
   //
   {
-   int32 w_ycomp_line;
-
-   if(InterlaceMode == IM_DOUBLE)
-    w_ycomp_line = (vdp2_line << 1) + field;
-   else
-    w_ycomp_line = vdp2_line;
-
    for(unsigned d = 0; d < 2; d++)
    {
-    int32 ys = Window[d].YStart, ye = Window[d].YEnd;
-
     if(Window[d].LineWinEn)
     {
      const uint16* vrt = &VRAM[Window[d].CurLineWinAddr & 0x3FFFE];
@@ -2834,13 +2825,7 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
 
     Window[d].CurLineWinAddr += 2 << (InterlaceMode == IM_DOUBLE);
 
-    if(InterlaceMode != IM_DOUBLE)
-    {
-     ys >>= 1;
-     ye >>= 1;
-    }
-
-    Window[d].YMet = (w_ycomp_line >= Window[d].YStart) & (w_ycomp_line <= Window[d].YEnd);
+    Window[d].YMet = LIB[vdp2_line].win_ymet[d];
     //
     //
     //
@@ -3133,7 +3118,7 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
 //
 //
 //
-static MDFN_Thread* RThread = NULL;
+static MThreading::Thread* RThread = NULL;
 
 enum
 {
@@ -3162,7 +3147,7 @@ static size_t WQ_ReadPos, WQ_WritePos;
 static std::atomic_int_least32_t WQ_InCount;
 static std::atomic_int_least32_t DrawCounter;
 static bool DoBusyWait;
-static MDFN_Sem* WakeupSem;
+static MThreading::Sem* WakeupSem;
 static bool DoWakeupIfNecessary;
 
 static INLINE void WWQ(uint16 command, uint32 arg32 = 0, uint16 arg16 = 0)
@@ -3189,9 +3174,12 @@ static int RThreadEntry(void* data)
   while(MDFN_UNLIKELY(WQ_InCount.load(std::memory_order_acquire) == 0))
   {
    if(!DoBusyWait)
-    MDFND_WaitSemTimeout(WakeupSem, 1);
+    MThreading::WaitSemTimeout(WakeupSem, 1);
    else
    {
+#ifdef MDFN_SS_BUSYWAIT_PAUSE
+    asm volatile("pause\n\tpause\n\tpause\n\tpause\n\tpause\n\tpause\n\tpause\n\t");
+#else
     for(int i = 1000; i; i--)
     {
      #ifdef _MSC_VER
@@ -3200,6 +3188,7 @@ static int RThreadEntry(void* data)
      asm volatile("nop\n\t");
      #endif
     }
+#endif
    }
   }
   //
@@ -3269,8 +3258,8 @@ void VDP2REND_Init(const bool IsPAL)
  WQ_InCount.store(0, std::memory_order_release); 
  DrawCounter.store(0, std::memory_order_release);
 
- WakeupSem = MDFND_CreateSem();
- RThread = MDFND_CreateThread(RThreadEntry, NULL);
+ WakeupSem = MThreading::CreateSem();
+ RThread = MThreading::CreateThread(RThreadEntry, NULL, "MDFN VDP2 Render");
 }
 
 // Needed for ss.correct_aspect == 0
@@ -3313,9 +3302,9 @@ void VDP2REND_SetGetVideoParams(MDFNGI* gi, const bool caspect, const int sls, c
  gi->lcm_width = (ShowHOverscan? 10560 : 10240);
  gi->lcm_height = (LineVisLast + 1 - LineVisFirst) * 2;
 
- gi->mouse_scale_x = (float)(ShowHOverscan? 21472 : 20821) / gi->nominal_width;
+ gi->mouse_scale_x = (float)(ShowHOverscan? 21472 : 20821);
  gi->mouse_offs_x = (float)(ShowHOverscan? 0 : 651) / 2;
- gi->mouse_scale_y = 1.0;
+ gi->mouse_scale_y = gi->nominal_height;
  gi->mouse_offs_y = LineVisFirst;
  //
  //
@@ -3325,7 +3314,7 @@ void VDP2REND_SetGetVideoParams(MDFNGI* gi, const bool caspect, const int sls, c
   gi->nominal_width = (ShowHOverscan ? 352 : 341);
   gi->lcm_width = gi->nominal_width * 2;
 
-  gi->mouse_scale_x = (float)(ShowHOverscan? 21472 : 20821) / gi->nominal_width;
+  gi->mouse_scale_x = (float)(ShowHOverscan? 21472 : 20821);
   gi->mouse_offs_x = (float)(ShowHOverscan? 0 : 651) / 2;
  }
 }
@@ -3335,12 +3324,12 @@ void VDP2REND_Kill(void)
  if(RThread != NULL)
  {
   WWQ(COMMAND_EXIT);
-  MDFND_WaitThread(RThread, NULL);
+  MThreading::WaitThread(RThread, NULL);
  }
 
  if(WakeupSem != NULL)
  {
-  MDFND_DestroySem(WakeupSem);
+  MThreading::DestroySem(WakeupSem);
   WakeupSem = NULL;
  }
 }
@@ -3422,7 +3411,7 @@ void VDP2REND_DrawLine(const int vdp2_line, const uint32 crt_line, const bool fi
   if(crt_line == bwthresh)
   {
    WWQ(COMMAND_SET_BUSYWAIT, true);
-   MDFND_PostSem(WakeupSem);
+   MThreading::PostSem(WakeupSem);
   }
   else if(crt_line < bwthresh)
   {
@@ -3431,7 +3420,7 @@ void VDP2REND_DrawLine(const int vdp2_line, const uint32 crt_line, const bool fi
    else if((wdcq + 1) >= 64 && DoWakeupIfNecessary)
    {
     //printf("Post Wakeup: %3d --- crt_line=%3d\n", wdcq + 1, crt_line);
-    MDFND_PostSem(WakeupSem);
+    MThreading::PostSem(WakeupSem);
     DoWakeupIfNecessary = false;
    }
   }
@@ -3464,6 +3453,68 @@ void VDP2REND_Write16_DB(uint32 A, uint16 DB)
   WWQ(COMMAND_WRITE16, A, DB);
  //else
  // MemW<uint16>(A, DB);
+}
+
+void VDP2REND_StateAction(StateMem* sm, const unsigned load, const bool data_only, uint16 (&rr)[0x100], uint16 (&cr)[2048], uint16 (&vr)[262144])
+{
+ while(MDFN_UNLIKELY(WQ_InCount.load(std::memory_order_acquire) != 0))
+  Time::SleepMS(1);
+ //
+ //
+ //
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(Clock28M),	// DUBIOUS
+
+  SFVAR(MosaicVCount),
+
+  SFVAR(VCLast),
+
+  SFVAR(YCoordAccum),
+  SFVAR(MosEff_YCoordAccum),
+
+  SFVAR(CurXScrollIF),
+  SFVAR(CurYScrollIF),
+  SFVAR(CurXCoordInc),
+  SFVAR(CurLSA),
+
+  SFVAR(NBG23_YCounter),
+  SFVAR(MosEff_NBG23_YCounter),
+
+  SFVAR(CurBackTabAddr),
+  SFVAR(CurBackColor),
+
+  SFVAR(CurLCTabAddr),
+  SFVAR(CurLCColor),
+
+  // XStart and XEnd can be modified by line window processing.
+  SFVAR(Window->XStart, 2, sizeof(*Window), Window),
+  SFVAR(Window->XEnd, 2, sizeof(*Window), Window),
+  SFVAR(Window->CurXStart, 2, sizeof(*Window), Window),
+  SFVAR(Window->CurXEnd, 2, sizeof(*Window), Window),
+  SFVAR(Window->CurLineWinAddr, 2, sizeof(*Window), Window),
+
+  SFEND
+ };
+
+ // Calls to RegsWrite() should go before MDFNSS_StateAction(), and before memcpy() to VRAM and CRAM.
+ if(load)
+ {
+  for(unsigned i = 0; i < 0x100; i++)
+  {
+   RegsWrite(i << 1, rr[i]);
+  }
+ }
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "VDP2REND");
+
+ if(load)
+ {
+  memcpy(VRAM, vr, sizeof(VRAM));
+  memcpy(CRAM, cr, sizeof(CRAM));
+
+  RecalcColorCache();
+ }
 }
 
 }

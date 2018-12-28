@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* cdb.h:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -22,15 +22,14 @@
 #ifndef __MDFN_SS_CDB_H
 #define __MDFN_SS_CDB_H
 
-class CDIF;
-
 namespace MDFN_IEN_SS
 {
 
 void CDB_Init(void) MDFN_COLD;
 void CDB_Kill(void) MDFN_COLD;
+void CDB_StateAction(StateMem* sm, const unsigned load, const bool data_only) MDFN_COLD;
 
-void CDB_SetDisc(bool tray_open, CDIF *cdif) MDFN_COLD;
+void CDB_SetDisc(bool tray_open, CDInterface* cdif) MDFN_COLD;
 
 void CDB_Write_DBM(uint32 offset, uint16 DB, uint16 mask) MDFN_HOT;
 uint16 CDB_Read(uint32 offset) MDFN_HOT;

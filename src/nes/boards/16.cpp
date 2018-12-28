@@ -47,7 +47,7 @@ struct X24C0xP
  {
   SFORMAT StateRegs[] = 
   {
-   SFARRAY(mem, mem_size),
+   SFPTR8(mem, mem_size),
    SFVAR(prev_sda_in),
    SFVAR(prev_scl_in),
    SFVAR(phase),
@@ -402,7 +402,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(CHRBanks, 8),
+  SFPTR8(CHRBanks, 8),
   SFVAR(PRGBank16),
 
   SFVAR(IRQa), SFVAR(IRQCount), SFVAR(IRQLatch),
@@ -521,11 +521,11 @@ static int StateAction_153(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(CHRBanks, 8),
+  SFPTR8(CHRBanks, 8),
   SFVAR(PRGBank16),
   SFVAR(IRQa), SFVAR(IRQCount), SFVAR(IRQLatch),
   SFVAR(Mirroring),
-  SFARRAY(WRAM, 8192),
+  SFPTR8(WRAM, 8192),
   SFEND
  };
 
@@ -590,7 +590,7 @@ static uint8 BarcodeOut;
 
 }
 
-int MDFNI_DatachSet(const uint8 *rcode)
+int Mednafen::MDFNI_DatachSet(const uint8 *rcode)
 {
         static const uint8 prefix_parity_type[10][6] = {
                 {0,0,0,0,0,0}, {0,0,1,0,1,1}, {0,0,1,1,0,1}, {0,0,1,1,1,0},
@@ -766,9 +766,9 @@ static int StateAction_157(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(BarcodeData, 256),
+  SFPTR8(BarcodeData, 256),
   SFVAR(BarcodeReadPos), SFVAR(BarcodeCycleCount), SFVAR(BarcodeOut),
-  SFARRAY(CHRBanks, 8),
+  SFPTR8(CHRBanks, 8),
   SFVAR(PRGBank16),
   SFVAR(IRQa), SFVAR(IRQCount), SFVAR(IRQLatch),
   SFVAR(Mirroring),

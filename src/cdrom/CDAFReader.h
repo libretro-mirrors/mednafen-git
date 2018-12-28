@@ -24,6 +24,9 @@
 
 #include <mednafen/Stream.h>
 
+namespace Mednafen
+{
+
 class CDAFReader
 {
  public:
@@ -59,4 +62,5 @@ class CDAFReader
 // to it for as long as the CDAFReader object exists.
 CDAFReader *CDAFR_Open(Stream *fp);
 
+}
 #endif

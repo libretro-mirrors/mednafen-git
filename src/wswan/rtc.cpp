@@ -297,7 +297,7 @@ void RTC_StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVAR(ClockCycleCounter),
 
   SFVAR(Command),
-  SFARRAY(CommandBuffer, sizeof(CommandBuffer)),
+  SFVAR(CommandBuffer),
   SFVAR(CommandCount),
   SFVAR(CommandIndex),
   SFEND

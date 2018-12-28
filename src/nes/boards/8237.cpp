@@ -133,7 +133,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAYN(regs, 8, "REGS"),
+  SFPTR8N(regs, 8, "REGS"),
   SFVARN(IRQCount, "IRQC"),
   SFVARN(IRQa, "IRQA"),
   SFVARN(master, "MAST"),

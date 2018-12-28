@@ -162,7 +162,7 @@ int MD_Cart_Type_SRAM::StateAction(StateMem *sm, int load, int data_only, const 
  SFORMAT StateRegs[] =
  {
   SFVAR(sram_enabled),
-  SFARRAY(sram, sram_size),
+  SFPTR8(sram, sram_size),
   SFEND
  };
 

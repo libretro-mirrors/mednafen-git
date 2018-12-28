@@ -56,8 +56,8 @@ int EEPROM_StateAction(StateMem *sm, int load, int data_only)
   SFVAR(eepromAddress),
   SFVAR(eepromInUse),
   SFVAR(eepromSize),
-  SFARRAYN(eepromData, 0x2000, "eepromData"),
-  SFARRAYN(eepromBuffer, 16, "eepromBuffer"),
+  SFPTR8N(eepromData, 0x2000, "eepromData"),
+  SFPTR8N(eepromBuffer, 16, "eepromBuffer"),
   SFEND
  };
  int ret = MDFNSS_StateAction(sm, load, data_only, eepromSaveData, "EEPR");

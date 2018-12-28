@@ -26,13 +26,13 @@ class PCE_Input_Mouse : public PCE_Input_Device
 {
  public:
  PCE_Input_Mouse();
- virtual void Power(int32 timestamp);
+ virtual void Power(int32 timestamp) override;
 
- virtual void AdjustTS(int32 delta);
- virtual void Write(int32 timestamp, bool old_SEL, bool new_SEL, bool old_CLR, bool new_CLR);
- virtual uint8 Read(int32 timestamp);
- virtual void Update(const void *data);
- virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name);
+ virtual void AdjustTS(int32 delta) override;
+ virtual void Write(int32 timestamp, bool old_SEL, bool new_SEL, bool old_CLR, bool new_CLR) override;
+ virtual uint8 Read(int32 timestamp) override;
+ virtual void Update(const uint8* data) override;
+ virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name) override;
 
  private:
  bool SEL, CLR;
@@ -61,14 +61,12 @@ PCE_Input_Mouse::PCE_Input_Mouse()
  Power(0);
 }
 
-void PCE_Input_Mouse::Update(const void *data)
+void PCE_Input_Mouse::Update(const uint8* data)
 {
  //puts("Frame");
- uint8 *data_ptr = (uint8 *)data;
-
- mouse_x += (int32)MDFN_de32lsb(data_ptr + 0);
- mouse_y += (int32)MDFN_de32lsb(data_ptr + 4);
- pce_mouse_button = *(uint8 *)(data_ptr + 8);
+ mouse_x += (int16)MDFN_de16lsb(data + 0);
+ mouse_y += (int16)MDFN_de16lsb(data + 2);
+ pce_mouse_button = *(data + 4);
 }
 
 void PCE_Input_Mouse::AdjustTS(int32 delta)
@@ -155,12 +153,12 @@ int PCE_Input_Mouse::StateAction(StateMem *sm, int load, int data_only, const ch
 
 const IDIISG PCE_MouseIDII =
 {
- { "x_axis", "X Axis", -1, IDIT_X_AXIS_REL },
- { "y_axis", "Y Axis", -1, IDIT_Y_AXIS_REL },
- { "right", "Right Button", 3, IDIT_BUTTON, NULL },
- { "left", "Left Button", 2, IDIT_BUTTON, NULL },
- { "select", "SELECT", 0, IDIT_BUTTON, NULL },
- { "run", "RUN", 1, IDIT_BUTTON, NULL },
+ IDIIS_AxisRel("motion", "Motion",/**/ "left", "Left",/**/ "right", "Right", 0),
+ IDIIS_AxisRel("motion", "Motion",/**/ "up", "Up",/**/ "down", "Down", 1),
+ IDIIS_Button("right", "Right Button", 5),
+ IDIIS_Button("left", "Left Button", 4),
+ IDIIS_Button("select", "SELECT", 2),
+ IDIIS_Button("run", "RUN", 3),
 };
 
 PCE_Input_Device *PCEINPUT_MakeMouse(void)

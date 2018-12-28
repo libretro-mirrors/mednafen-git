@@ -99,8 +99,8 @@ void InputDevice_DualAnalog::StateAction(StateMem* sm, const unsigned load, cons
  {
   SFVAR(dtr),
 
-  SFARRAY(buttons, sizeof(buttons)),
-  SFARRAY(&axes[0][0], sizeof(axes)),
+  SFVAR(buttons),
+  SFVARN(axes, "&axes[0][0]"),
 
   SFVAR(command_phase),
   SFVAR(bitpos),
@@ -108,7 +108,7 @@ void InputDevice_DualAnalog::StateAction(StateMem* sm, const unsigned load, cons
 
   SFVAR(command),
 
-  SFARRAY(transmit_buffer, sizeof(transmit_buffer)),
+  SFVAR(transmit_buffer),
   SFVAR(transmit_pos),
   SFVAR(transmit_count),
 
@@ -141,13 +141,7 @@ void InputDevice_DualAnalog::UpdateInput(const void *data)
  {
   for(int axis = 0; axis < 2; axis++)
   {
-   const uint8* aba = &d8[2] + stick * 8 + axis * 4;
-   int32 tmp;
-
-   tmp = 32768 + MDFN_de16lsb(&aba[0]) - ((int32)MDFN_de16lsb(&aba[2]) * 32768 / 32767);
-   tmp >>= 8;
-
-   axes[stick][axis] = tmp;
+   axes[stick][axis] = MDFN_de16lsb(&d8[2] + stick * 4 + axis * 2) >> 8;
   }
  }
 
@@ -275,67 +269,79 @@ InputDevice *Device_DualAnalog_Create(bool joystick_mode)
 
 IDIISG Device_DualAnalog_IDII =
 {
- { "select", "SELECT", 4, IDIT_BUTTON, NULL },
- { "l3", "Left Stick, Button(L3)", 18, IDIT_BUTTON, NULL },
- { "r3", "Right stick, Button(R3)", 23, IDIT_BUTTON, NULL },
- { "start", "START", 5, IDIT_BUTTON, NULL },
- { "up", "D-Pad UP ↑", 0, IDIT_BUTTON, "down" },
- { "right", "D-Pad RIGHT →", 3, IDIT_BUTTON, "left" },
- { "down", "D-Pad DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "D-Pad LEFT ←", 2, IDIT_BUTTON, "right" },
+ IDIIS_Button("select", "SELECT", 4),
+ IDIIS_Button("l3", "Left Stick, Button(L3)", 16),
+ IDIIS_Button("r3", "Right stick, Button(R3)", 19),
+ IDIIS_Button("start", "START", 5),
+ IDIIS_Button("up", "D-Pad UP ↑", 0, "down"),
+ IDIIS_Button("right", "D-Pad RIGHT →", 3, "left"),
+ IDIIS_Button("down", "D-Pad DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "D-Pad LEFT ←", 2, "right"),
 
- { "l2", "L2 (rear left shoulder)", 11, IDIT_BUTTON, NULL },
- { "r2", "R2 (rear right shoulder)", 13, IDIT_BUTTON, NULL },
- { "l1", "L1 (front left shoulder)", 10, IDIT_BUTTON, NULL },
- { "r1", "R1 (front right shoulder)", 12, IDIT_BUTTON, NULL },
+ IDIIS_Button("l2", "L2 (rear left shoulder)", 11),
+ IDIIS_Button("r2", "R2 (rear right shoulder)", 13),
+ IDIIS_Button("l1", "L1 (front left shoulder)", 10),
+ IDIIS_Button("r1", "R1 (front right shoulder)", 12),
 
- { "triangle", "△ (upper)", 6, IDIT_BUTTON_CAN_RAPID, NULL },
- { "circle", "○ (right)", 9, IDIT_BUTTON_CAN_RAPID, NULL },
- { "cross", "x (lower)", 7, IDIT_BUTTON_CAN_RAPID, NULL },
- { "square", "□ (left)", 8, IDIT_BUTTON_CAN_RAPID, NULL },
+ IDIIS_ButtonCR("triangle", "△ (upper)", 6),
+ IDIIS_ButtonCR("circle", "○ (right)", 9),
+ IDIIS_ButtonCR("cross", "x (lower)", 7),
+ IDIIS_ButtonCR("square", "□ (left)", 8),
 
- { "rstick_right", "Right Stick RIGHT →", 22, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_left", "Right Stick LEFT ←", 21, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_down", "Right Stick DOWN ↓", 20, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_up", "Right Stick UP ↑", 19, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ IDIIS_Axis(	"rstick", "Right Stick",
+		"left", "LEFT ←",
+		"right", "RIGHT →", 18, false, true),
 
- { "lstick_right", "Left Stick RIGHT →", 17, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_left", "Left Stick LEFT ←", 16, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_down", "Left Stick DOWN ↓", 15, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_up", "Left Stick UP ↑", 14, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ IDIIS_Axis(	"rstick", "Right Stick",
+		"up", "UP ↑",
+		"down", "DOWN ↓", 17, false, true),
+
+ IDIIS_Axis(	"lstick", "Left Stick",
+		"left", "LEFT ←",
+		"right", "RIGHT →", 15, false, true),
+
+ IDIIS_Axis(	"lstick", "Left Stick",
+		"up", "UP ↑",
+		"down", "DOWN ↓", 14, false, true),
 };
 
 // Not sure if all these buttons are named correctly!
 IDIISG Device_AnalogJoy_IDII =
 {
- { "select", "SELECT", 8, IDIT_BUTTON, NULL },
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { "start", "START", 9, IDIT_BUTTON, NULL },
- { "up", "Thumbstick UP ↑", 14, IDIT_BUTTON, "down" },
- { "right", "Thumbstick RIGHT →", 17, IDIT_BUTTON, "left" },
- { "down", "Thumbstick DOWN ↓", 15, IDIT_BUTTON, "up" },
- { "left", "Thumbstick LEFT ←", 16, IDIT_BUTTON, "right" },
+ IDIIS_Button("select", "SELECT", 8),
+ IDIIS_Padding<2>(),
+ IDIIS_Button("start", "START", 9),
 
- { "l2", "Left stick, Trigger", 2, IDIT_BUTTON, NULL },
- { "r2", "Left stick, Pinky", 3, IDIT_BUTTON, NULL },
- { "l1", "Left stick, L-thumb", 0, IDIT_BUTTON, NULL },
- { "r1", "Left stick, R-thumb", 1, IDIT_BUTTON, NULL },
+ IDIIS_Button("up", "Thumbstick UP ↑", 14, "down"),
+ IDIIS_Button("right", "Thumbstick RIGHT →", 17, "left"),
+ IDIIS_Button("down", "Thumbstick DOWN ↓", 15, "up"),
+ IDIIS_Button("left", "Thumbstick LEFT ←", 16, "right"),
 
- { "triangle", "Right stick, Pinky", 13, IDIT_BUTTON, NULL },
- { "circle", "Right stick, R-thumb", 11, IDIT_BUTTON, NULL },
- { "cross",  "Right stick, L-thumb", 10, IDIT_BUTTON, NULL },
- { "square", "Right stick, Trigger", 12, IDIT_BUTTON, NULL },
+ IDIIS_Button("l2", "Left stick, Trigger", 2),
+ IDIIS_Button("r2", "Left stick, Pinky", 3),
+ IDIIS_Button("l1", "Left stick, L-thumb", 0),
+ IDIIS_Button("r1", "Left stick, R-thumb", 1),
 
- { "rstick_right", "Right Stick, RIGHT →", 21, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_left", "Right Stick, LEFT ←", 20, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_down", "Right Stick, BACK ↓", 19, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "rstick_up", "Right Stick, FORE ↑", 18, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ IDIIS_Button("triangle", "Right stick, Pinky", 13),
+ IDIIS_Button("circle", "Right stick, R-thumb", 11),
+ IDIIS_Button("cross",  "Right stick, L-thumb", 10),
+ IDIIS_Button("square", "Right stick, Trigger", 12),
 
- { "lstick_right", "Left Stick, RIGHT →", 7, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_left", "Left Stick, LEFT ←", 6, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_down", "Left Stick, BACK ↓", 5, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
- { "lstick_up", "Left Stick, FORE ↑", 4, IDIT_BUTTON_ANALOG, NULL, IDIT_BUTTON_ANALOG_FLAG_SQLR },
+ IDIIS_Axis(	"rstick", "Right Stick,",
+		"left", "LEFT ←",
+		"right", "RIGHT →", 19, false, true),
+
+ IDIIS_Axis(	"rstick", "Right Stick,",
+		"up", "FORE ↑",
+		"down", "BACK ↓", 18, false, true),
+
+ IDIIS_Axis(	"lstick", "Left Stick,",
+		"left", "LEFT ←",
+		"right", "RIGHT →", 5, false, true),
+
+ IDIIS_Axis(	"lstick", "Left Stick,",
+		"up", "FORE ↑",
+		"down", "BACK ↓", 4, false, true),
 };
 
 

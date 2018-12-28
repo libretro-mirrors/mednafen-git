@@ -21,19 +21,23 @@
 #include <mednafen/mednafen.h>
 #include <mednafen/state.h>
 #include "OwlResampler.h"
+#include "DSPUtility.h"
 #include "../cputest/cputest.h"
 
 #if defined(ARCH_POWERPC_ALTIVEC) && defined(HAVE_ALTIVEC_H)
  #include <altivec.h>
 #endif
 
-#ifdef __ARM_NEON__
+#ifdef HAVE_NEON_INTRINSICS
  #include <arm_neon.h>
 #endif
 
-#ifdef __FAST_MATH__
- #error "OwlResampler.cpp not compatible with unsafe math optimizations!"
+#if defined(HAVE_SSE_INTRINSICS)
+ #include <xmmintrin.h>
 #endif
+
+namespace Mednafen
+{
 
 OwlBuffer::OwlBuffer()
 {
@@ -71,7 +75,7 @@ void OwlBuffer::StateAction(StateMem* sm, const unsigned load, const bool data_o
   SFVAR(accum),
   SFVAR(leftover),
 
-  SFARRAY64(filter_state, 2),
+  SFVAR(filter_state),
 
   SFVAR(InputIndex),
 
@@ -103,7 +107,7 @@ void OwlBuffer::StateAction(StateMem* sm, const unsigned load, const bool data_o
 
  SFORMAT StateRegs_LOD[] =
  {
-  SFARRAY32(Buf() - leftover, leftover + InBuf + HRBUF_OVERFLOW_PADDING),
+  SFPTR32(Buf() - leftover, leftover + InBuf + HRBUF_OVERFLOW_PADDING),
   SFEND
  };
 
@@ -261,74 +265,6 @@ void RavenBuffer::Finish(unsigned count)
  memset(&BB[OwlBuffer::HRBUF_OVERFLOW_PADDING], 0, count * sizeof(BB[0]));
 }
 
-
-
-static void kaiser_window( double* io, int count, double beta )
-{
-        int const accuracy = 16; //12;
-
-        double* end = io + count;
-
-        double beta2    = beta * beta * (double) -0.25;
-        double to_fract = beta2 / ((double) count * count);
-        double i        = 0;
-        double rescale = 0; // Doesn't need an initializer, to shut up gcc
-
-        for ( ; io < end; ++io, i += 1 )
-        {
-                double x = i * i * to_fract - beta2;
-                double u = x;
-                double k = x + 1;
-
-                double n = 2;
-                do
-                {
-                        u *= x / (n * n);
-                        n += 1;
-                        k += u;
-                }
-                while ( k <= u * (1 << accuracy) );
-
-                if ( !i )
-                        rescale = 1 / k; // otherwise values get large
-
-                *io *= k * rescale;
-        }
-}
-
-static void gen_sinc( double* out, int size, double cutoff, double kaiser )
-{
-	assert( size % 2 == 0 ); // size must be enev
- 
-	int const half_size = size / 2;
-	double* const mid = &out [half_size];
- 
-	// Generate right half of sinc
-	for ( int i = 0; i < half_size; i++ )
-	{
-		double angle = (i * 2 + 1) * (M_PI / 2);
-		mid [i] = sin( angle * cutoff ) / angle;
-	}
- 
-	kaiser_window( mid, half_size, kaiser );
- 
-	// Mirror for left half
-	for ( int i = 0; i < half_size; i++ )
-		out [i] = mid [half_size - 1 - i];
-}
- 
-static void normalize( double* io, int size, double gain = 1.0 )
-{
-	double sum = 0;
-	for ( int i = 0; i < size; i++ )
-		sum += io [i];
-
-	double scale = gain / sum;
-	for ( int i = 0; i < size; i++ )
-		io [i] *= scale;
-}
-
-
 static INLINE void DoMAC(float *wave, float *coeffs, int32 count, int32 *accum_output)
 {
  float acc[4] = { 0, 0, 0, 0 };
@@ -344,17 +280,17 @@ static INLINE void DoMAC(float *wave, float *coeffs, int32 count, int32 *accum_o
  *accum_output = (acc[0] + acc[2]) + (acc[1] + acc[3]);
 }
 
-
-
 #ifdef ARCH_X86
  #include "OwlResampler_x86.inc"
+#elif defined(HAVE_SSE_INTRINSICS)
+ #include "OwlResampler_sse.inc"
 #endif
 
 #ifdef ARCH_POWERPC_ALTIVEC
  #include "OwlResampler_altivec.inc"
 #endif
 
-#ifdef __ARM_NEON__
+#ifdef HAVE_NEON_INTRINSICS
  #include "OwlResampler_neon.inc"
 #endif
 
@@ -382,9 +318,11 @@ enum
 #else
  #warning "Compiling without AVX inline assembly."
 #endif
+#elif defined(HAVE_SSE_INTRINSICS)
+ SIMD_SSE_16X,
 #elif defined(ARCH_POWERPC_ALTIVEC)
  SIMD_ALTIVEC,
-#elif defined __ARM_NEON__
+#elif defined HAVE_NEON_INTRINSICS
  SIMD_NEON
 #endif
 };
@@ -399,7 +337,7 @@ NO_INLINE int32 OwlResampler::T_Resample(OwlBuffer* in, const uint32 in_count, i
 
 	 while(MDFN_LIKELY(a < b))
 	 {
-	  std::swap<int32>(*a, *b);
+	  std::swap(*a, *b);
 	  a++;
 	  b--;
 	 }
@@ -450,11 +388,15 @@ NO_INLINE int32 OwlResampler::T_Resample(OwlBuffer* in, const uint32 in_count, i
 		break;
 #endif
 
+#elif defined(HAVE_SSE_INTRINSICS)
+	case SIMD_SSE_16X:
+		DoMAC_SSE_16X(wave, coeffs, coeff_count, I32Out);
+		break;
 #elif defined(ARCH_POWERPC_ALTIVEC)
 	  case SIMD_ALTIVEC:
 		DoMAC_AltiVec(wave, coeffs, coeff_count, I32Out);
 		break;
-#elif defined __ARM_NEON__
+#elif defined HAVE_NEON_INTRINSICS
 	  case SIMD_NEON:
 		DoMAC_NEON(wave, coeffs, coeff_count, I32Out);
 		break;
@@ -518,7 +460,12 @@ NO_INLINE int32 OwlResampler::T_Resample(OwlBuffer* in, const uint32 in_count, i
 	  int32 s;
 
           debias += (((int64)((uint64)(int64)sample << 16) - debias) * debias_multiplier) >> 16;
-          s = SDP2<int32, 8>(sample - (debias >> 16));
+	  sample -= debias >> 16;
+#if 0
+	  s = (sample + ((rand() & 0xFF) - 0x80)) / 256; //>> 8;
+#else
+          s = SDP2<int32, 8>(sample);
+#endif
 	  if(s < -32768 || s > 32767)
 	  {
 	   //printf("Flow: %6d\n", s);
@@ -710,7 +657,7 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
  #ifdef HAVE_INLINEASM_AVX
  else if((cpuext & CPUTEST_FLAG_AVX) && (NumCoeffs + 0xF) >= 32)
  {
-  MDFN_printf("SIMD: AVX\n");
+  SIMDTypeString = "AVX (assembly)";
 
   // AVX loop can't handle less than 32 MACs properly.
   NumCoeffs = std::max<uint32>(32, NumCoeffs);
@@ -726,9 +673,18 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
  #endif
  else if(cpuext & CPUTEST_FLAG_SSE)
  {
-  MDFN_printf("SIMD: SSE\n");
+  SIMDTypeString = "SSE (assembly)";
 
   // SSE loop does 16 MACs per iteration.
+  NumCoeffs = (NumCoeffs + 0xF) &~ 0xF;
+  Resample_ = &OwlResampler::T_Resample<SIMD_SSE_16X>;
+ }
+ #elif defined(HAVE_SSE_INTRINSICS)
+ else if(cpuext & CPUTEST_FLAG_SSE)
+ {
+  SIMDTypeString = "SSE (intrinsics)";
+
+  // SSE(intrinsics) loop does 16 MACs per iteration.
   NumCoeffs = (NumCoeffs + 0xF) &~ 0xF;
   Resample_ = &OwlResampler::T_Resample<SIMD_SSE_16X>;
  }
@@ -736,17 +692,17 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
  #ifdef ARCH_POWERPC_ALTIVEC
  else if(1)
  {
-  MDFN_printf("SIMD: AltiVec\n");
+  SIMDTypeString = "AltiVec";
 
   // AltiVec loop does 16 MACs per iteration.
   NumCoeffs = (NumCoeffs + 0xF) &~ 0xF;
   Resample_ = &OwlResampler::T_Resample<SIMD_ALTIVEC>;
  }
  #endif
- #ifdef __ARM_NEON__
+ #ifdef HAVE_NEON_INTRINSICS
  else if(1)
  {
-  MDFN_printf("SIMD: NEON\n");
+  SIMDTypeString = "NEON";
 
   // NEON loop does 16 MACs per iteration.
   NumCoeffs = (NumCoeffs + 0xF) &~ 0xF;
@@ -755,15 +711,20 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
  #endif
  else
  {
+  SIMDTypeString = "None";
+
   // Default loop does 4 MACs per iteration.
   NumCoeffs = (NumCoeffs + 3) &~ 3;
   Resample_ = &OwlResampler::T_Resample<SIMD_NONE>;
  }
+
+ MDFN_printf("SIMD: %s\n", SIMDTypeString);
+
  //
  // Don't alter NumCoeffs anymore from here on.
  //
 
- #if !defined(ARCH_X86) && !defined(ARCH_POWERPC_ALTIVEC) && !defined(__ARM_NEON__)
+ #if !defined(ARCH_X86) && !defined(HAVE_SSE_INTRINSICS) && !defined(ARCH_POWERPC_ALTIVEC) && !defined(HAVE_NEON_INTRINSICS)
   #warning "OwlResampler is being compiled without SIMD support."
  #endif
 
@@ -790,8 +751,8 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
  MDFN_printf("Impulse response table memory usage: %zu bytes\n", CoeffsBuffer.size() * sizeof(float));
 
  FilterBuf.reset(new double[NumCoeffs * NumPhases]);
- gen_sinc(&FilterBuf[0], NumCoeffs * NumPhases, cutoff / NumPhases, k_beta);
- normalize(&FilterBuf[0], NumCoeffs * NumPhases); 
+ DSPUtility::generate_kaiser_sinc_lp(&FilterBuf[0], NumCoeffs * NumPhases, cutoff / NumPhases / 2.0, k_beta);
+ DSPUtility::normalize(&FilterBuf[0], NumCoeffs * NumPhases); 
 
  #if 0
  for(int i = 0; i < NumCoeffs * NumPhases; i++)
@@ -849,4 +810,6 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
   abort();
  }
  #endif
+}
+
 }

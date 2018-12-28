@@ -617,7 +617,7 @@ int BIOSHLE_StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(CacheIntPrio, 0xB),
+  SFVAR(CacheIntPrio),
   SFEND
  };
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, "BHLE"))

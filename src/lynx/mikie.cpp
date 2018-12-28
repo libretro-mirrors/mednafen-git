@@ -1585,7 +1585,7 @@ void CMikie::StateAction(StateMem *sm, const unsigned load, const bool data_only
         SFVAR(mTimerInterruptMask),
 
 	// TPALETTE is a union'd 32-bit integer
-	SFARRAY32N((uint32 *)mPalette, 16, "mPalette"),
+	SFPTR32N((uint32 *)mPalette, 16, "mPalette"),
         SFVAR(mIODAT),
         SFVAR(mIODAT_REST_SIGNAL),
         SFVAR(mIODIR),

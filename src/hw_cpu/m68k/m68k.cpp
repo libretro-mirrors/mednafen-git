@@ -51,6 +51,9 @@
 
 #pragma GCC optimize ("no-crossjumping,no-gcse")
 
+namespace Mednafen
+{
+
 static MDFN_FASTCALL void Dummy_BusRESET(bool state)
 {
 
@@ -85,7 +88,7 @@ void M68K::StateAction(StateMem* sm, const unsigned load, const bool data_only, 
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY32(DA, 16),
+  SFVAR(DA),
   SFVAR(PC),
   SFVAR(SRHB),
   SFVAR(IPL),
@@ -2361,3 +2364,4 @@ void M68K::SetRegister(unsigned which, uint32 value)
  }
 }
 
+}

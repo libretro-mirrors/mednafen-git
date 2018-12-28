@@ -237,4 +237,4 @@ void TLCS900h_disassemble_dst(void)
 	else
 		sprintf(instr, "unknown dst instr. %02X", second);
 }
-};
+}

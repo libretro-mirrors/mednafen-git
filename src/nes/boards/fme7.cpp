@@ -46,7 +46,7 @@ static uint32 CAYBC[3];
 static DECLFW(SUN5BWRAM)
 {
  if((wram_control&0xC0)==0xC0)
-  (WRAM-0x6000)[A]=V;
+  WRAM[(size_t)A - 0x6000]=V;
 }
 
 static DECLFR(SUN5AWRAM)
@@ -205,18 +205,18 @@ static int StateAction(StateMem *sm, int load, int data_only)
  {
         SFVARN(reg_select, "FM7S"),
         SFVARN(wram_control, "FM7W"),
-        SFARRAYN(sr, 0x10, "FM7SR"),
+        SFPTR8N(sr, 0x10, "FM7SR"),
         SFVARN(sr_index, "FM7I"),
-	SFARRAY(PRGRegs, 3),
-	SFARRAY(CHRRegs, 8),
+	SFPTR8(PRGRegs, 3),
+	SFPTR8(CHRRegs, 8),
 	SFVAR(Mirroring),
-	SFARRAY32(vcount, 3),
-	SFARRAY32(dcount, 3),
+	SFPTR32(vcount, 3),
+	SFPTR32(dcount, 3),
 
 	SFVAR(IRQa),
 	SFVAR(IRQCount),
 	
-	SFARRAY(WRAM, 8192),
+	SFPTR8(WRAM, 8192),
 
 	SFEND
  };

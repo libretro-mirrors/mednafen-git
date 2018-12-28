@@ -26,6 +26,9 @@
 
 #include "snes.h"
 
+namespace Mednafen
+{
+
 static bool DecodeGG(const std::string& cheat_string, MemoryPatch* patch)
 {
  if(cheat_string.size() != 8 && cheat_string.size() != 9)
@@ -126,3 +129,4 @@ const std::vector<CheatFormatStruct> CheatFormats_SNES =
  { "Pro Action Replay", "", DecodePAR },
 };
 
+}

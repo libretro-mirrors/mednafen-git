@@ -146,7 +146,7 @@ int MD_Cart_Type_FF::StateAction(StateMem *sm, int load, int data_only, const ch
  SFORMAT StateRegs[] =
  {
   SFVAR(latch),
-  SFARRAY(sram, 8192),
+  SFPTR8(sram, 8192),
   SFEND
  };
 

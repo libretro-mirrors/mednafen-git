@@ -74,8 +74,8 @@ static int StateAction(StateMem *sm, int load, int data_only)
  {
   SFVAR(cmd),
   SFVAR(Mirroring),
-  SFARRAY(CHRBanks, 4),
-  SFARRAY(PRGBanks, 2),
+  SFPTR8(CHRBanks, 4),
+  SFPTR8(PRGBanks, 2),
   SFEND
  };
 

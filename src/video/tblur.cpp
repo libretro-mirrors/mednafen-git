@@ -22,6 +22,9 @@
 #include <mednafen/mednafen.h>
 #include "tblur.h"
 
+namespace Mednafen
+{
+
 struct HQPixelEntry
 {
  uint16 a, b, c, d;
@@ -37,10 +40,10 @@ void TBlur_Init(void)
  {
         std::string sn = MDFNGameInfo->shortname;
 
-        if(MDFN_GetSettingB(std::string(sn + "." + std::string("tblur"))))
+        if(MDFN_GetSettingB(sn + "." + "tblur"))
         {
-         AccumBlurAmount = (uint32)(16384 * MDFN_GetSettingF(std::string(sn + "." + std::string("tblur.accum.amount"))) / 100);
-         if(MDFN_GetSettingB(std::string(sn + "." + std::string("tblur.accum"))))
+         AccumBlurAmount = (uint32)(16384 * MDFN_GetSettingF(sn + "." + "tblur.accum.amount") / 100);
+         if(MDFN_GetSettingB(sn + "." + "tblur.accum"))
          {
           AccumBlurBuf.reset(new HQPixelEntry[MDFNGameInfo->fb_width * MDFNGameInfo->fb_height]);
           MDFN_printf(_("Video temporal frame blur enabled with accumulation: %f.\n"), (double)AccumBlurAmount * 100 / 16384);
@@ -173,4 +176,6 @@ void TBlur_Kill(void)
 bool TBlur_IsOn(void)
 {
  return(BlurBuf || AccumBlurBuf);
+}
+
 }

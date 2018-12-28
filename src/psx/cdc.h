@@ -2,7 +2,7 @@
 /* Mednafen Sony PS1 Emulation Module                                         */
 /******************************************************************************/
 /* cdc.h:
-**  Copyright (C) 2011-2016 Mednafen Team
+**  Copyright (C) 2011-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -22,7 +22,7 @@
 #ifndef __MDFN_PSX_CDC_H
 #define __MDFN_PSX_CDC_H
 
-#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/cdrom/CDInterface.h>
 #include <mednafen/cdrom/SimpleFIFO.h>
 
 namespace MDFN_IEN_PSX
@@ -43,7 +43,7 @@ class PS_CDC
  PS_CDC() MDFN_COLD;
  ~PS_CDC() MDFN_COLD;
 
- void SetDisc(bool tray_open, CDIF *cdif, const char disc_id[4]);
+ void SetDisc(bool tray_open, CDInterface* cdif, const char disc_id[4]);
 
  void Power(void) MDFN_COLD;
  void StateAction(StateMem *sm, const unsigned load, const bool data_only);
@@ -63,7 +63,7 @@ class PS_CDC
  void GetCDAudio(int32 samples[2]);
 
  private:
- CDIF *Cur_CDIF;
+ CDInterface* Cur_CDIF;
  bool DiscChanged;
  int32 DiscStartupDelay;
 
@@ -176,10 +176,10 @@ class PS_CDC
   DS_STOPPED = 0,
   DS_SEEKING,
   DS_SEEKING_LOGICAL,
-  DS_PLAY_SEEKING,
+  DS_SEEKING_LOGICAL2,
   DS_PLAYING,
   DS_READING,
-  DS_RESETTING
+  //DS_RESETTING
  };
  int DriveStatus;
  int StatusAfterSeek;
@@ -190,6 +190,8 @@ class PS_CDC
  int32 PlayTrackMatch;
 
  int32 PSRCounter;
+
+ bool HoldLogicalPos;
 
  int32 CurSector;
  uint32 SectorsRead;	// Reset to 0 on Read*/Play command start; used in the rough simulation of PS1 SetLoc->Read->Pause->Read behavior.
@@ -208,6 +210,7 @@ class PS_CDC
 
  int32 SeekTarget;
  uint32 SeekRetryCounter;
+ int SeekFinished;
 
  pscpu_timestamp_t lastts;
 
@@ -221,7 +224,6 @@ class PS_CDC
  uint8 MakeStatus(bool cmd_error = false);
  bool DecodeSubQ(uint8 *subpw);
  bool CommandCheckDiscPresent(void);
- void DMForceStop();
 
  void EnbufferizeCDDASector(const uint8 *buf);
  bool XA_Test(const uint8 *sdata);
@@ -232,6 +234,7 @@ class PS_CDC
  uint8 xa_cur_chan;
 
  uint8 ReportLastF;
+ int32 ReportStartupDelay;
 
  void HandlePlayRead(void);
 

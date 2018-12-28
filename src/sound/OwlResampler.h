@@ -1,6 +1,9 @@
 #ifndef __MDFN_SOUND_OWLRESAMPLER_H
 #define __MDFN_SOUND_OWLRESAMPLER_H
 
+namespace Mednafen
+{
+
 class OwlResampler;
 class RavenBuffer;
 
@@ -117,6 +120,11 @@ class OwlResampler
 	 *b = Ratio_Divisor;
 	}
 
+	INLINE const char* GetSIMDType(void)
+	{
+	 return SIMDTypeString;
+	}
+
 	private:
 
 	// Copy of the parameters passed to the constructor
@@ -155,5 +163,9 @@ class OwlResampler
 	// for GetRatio()
 	int32 Ratio_Dividend;
 	int32 Ratio_Divisor;
+
+	const char* SIMDTypeString;
 };
+
+}
 #endif

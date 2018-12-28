@@ -34,6 +34,9 @@
 #include "CDAFReader_SF.h"
 #endif
 
+namespace Mednafen
+{
+
 CDAFReader::CDAFReader() : LastReadPos(0)
 {
 
@@ -71,3 +74,4 @@ CDAFReader *CDAFR_Open(Stream *fp)
  return(NULL);
 }
 
+}

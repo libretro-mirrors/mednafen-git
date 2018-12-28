@@ -20,7 +20,6 @@
 
 #if defined(HAVE_FCNTL) && defined(HAVE_FCNTL_H)
 #include <trio/trio.h>
-#include <ctype.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -116,24 +115,24 @@ static void ParseSTDIOCommand(char *buf)
 
  if(numargs)
  {
-  if(!strcasecmp(arguments[0], "exit"))
+  if(!MDFN_strazicmp(arguments[0], "exit"))
   {
    MainRequestExit();
    suppress_success = TRUE;
   }
-  else if(!strcasecmp(arguments[0], "nop"))
+  else if(!MDFN_strazicmp(arguments[0], "nop"))
   {
    success = true;
   }
-  else if(!strcasecmp(arguments[0], "sync_video"))
+  else if(!MDFN_strazicmp(arguments[0], "sync_video"))
   {
    success = GT_ReinitVideo();
   }
-  else if(!strcasecmp(arguments[0], "sync_sound"))
+  else if(!MDFN_strazicmp(arguments[0], "sync_sound"))
   {
    success = GT_ReinitSound();
   }
-  else if(!strcasecmp(arguments[0], "get_setting"))
+  else if(!MDFN_strazicmp(arguments[0], "get_setting"))
   {
    if(numargs == 2)
    {
@@ -148,7 +147,7 @@ static void ParseSTDIOCommand(char *buf)
    else
     puts("Invalid number of arguments");
   }
-  else if(!strcasecmp(arguments[0], "set_setting"))
+  else if(!MDFN_strazicmp(arguments[0], "set_setting"))
   {
    if(numargs == 3)
    {
@@ -157,7 +156,7 @@ static void ParseSTDIOCommand(char *buf)
    else
     puts("Invalid number of arguments");
   }
-  else if(!strcasecmp(arguments[0], "get_known_fileexts"))
+  else if(!MDFN_strazicmp(arguments[0], "get_known_fileexts"))
   {
    uint32 count = 0;
    char count_string[64];
@@ -254,9 +253,14 @@ bool InitSTDIOInterface(const char *key)
  return(TRUE);
 }
 
-void Remote_SendStatusMessage(const char *message)
+void Remote_SendInfoMessage(const char *message)
 {
  Remote_SendCommand("status_message", 1, message);
+}
+
+void Remote_SendWarningMessage(const char *message)
+{
+ Remote_SendCommand("warning_message", 1, message);
 }
 
 void Remote_SendErrorMessage(const char *message)
@@ -277,7 +281,12 @@ bool InitSTDIOInterface(const char *key)
  return(0);
 }
 
-void Remote_SendStatusMessage(const char *message)
+void Remote_SendInfoMessage(const char *message)
+{
+
+}
+
+void Remote_SendWarningMessage(const char *message)
 {
 
 }

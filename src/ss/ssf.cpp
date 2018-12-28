@@ -75,9 +75,9 @@ static void Cleanup(void)
 }
 
 
-static bool TestMagic(MDFNFILE* fp)
+static bool TestMagic(GameFile* gf)
 {
- if(SSFLoader::TestMagic(fp->stream()))
+ if(SSFLoader::TestMagic(gf->stream))
   return true;
 
  return false;
@@ -97,13 +97,13 @@ static void Reset(void)
  }
 }
 
-static void Load(MDFNFILE* fp)
+static void Load(GameFile* gf)
 {
  try
  {
   std::vector<std::string> SongNames;
 
-  ssf_loader = new SSFLoader(fp->stream());
+  ssf_loader = new SSFLoader(gf->vfs, gf->dir, gf->stream);
 
   SongNames.push_back(ssf_loader->tags.GetTag("title"));
   Player_Init(1, ssf_loader->tags.GetTag("game"), ssf_loader->tags.GetTag("artist"), ssf_loader->tags.GetTag("copyright"), SongNames, false);
@@ -140,10 +140,10 @@ static void DoSimpleCommand(int cmd)
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".ssf", gettext_noop("SSF Rip") },
- { ".minissf", gettext_noop("MiniSSF Rip") },
+ { ".ssf", -20, gettext_noop("SSF Rip") },
+ { ".minissf", -20, gettext_noop("MiniSSF Rip") },
 
- { NULL, NULL }
+ { NULL, 0, NULL }
 };
 
 

@@ -16,15 +16,18 @@
  */
 
 #include <mednafen/mednafen.h>
+#include <mednafen/cdrom/CDInterface.h>
 #include <trio/trio.h>
 #include "scsicd.h"
-#include "cdromif.h"
 #include "SimpleFIFO.h"
 
 #if defined(__SSE2__)
 #include <xmmintrin.h>
 #include <emmintrin.h>
 #endif
+
+namespace Mednafen
+{
 
 //#define SCSIDBG(format, ...) { printf("[SCSICD] " format "\n",  ## __VA_ARGS__); }
 //#define SCSIDBG(format, ...) { }
@@ -38,7 +41,7 @@ static void (*CDStuffSubchannels)(uint8, int);
 static int32* HRBufs[2];
 static int WhichSystem;
 
-static CDIF *Cur_CDIF;
+static CDInterface *Cur_CDIF;
 static bool TrayOpen;
 
 // Internal operation to the SCSI CD unit.  Only pass 1 or 0 to these macros!
@@ -485,7 +488,7 @@ static void DoSimpleDataIn(const uint8 *data_in, uint32 len)
  ChangePhase(PHASE_DATA_IN);
 }
 
-void SCSICD_SetDisc(bool new_tray_open, CDIF *cdif, bool no_emu_side_effects)
+void SCSICD_SetDisc(bool new_tray_open, CDInterface *cdif, bool no_emu_side_effects)
 {
  Cur_CDIF = cdif;
 
@@ -526,10 +529,20 @@ static void CommandCCError(int key, int asc = 0, int ascq = 0)
 
 static bool ValidateRawDataSector(uint8 *data, const uint32 lba)
 {
- if(!Cur_CDIF->ValidateRawSector(data))
+ bool ok = true;
+ const uint8 mode = data[12 + 3];
+
+ // TODO: Don't accept mode 2 on PC Engine
+ if(mode != 0x1 && mode != 0x2)
+  ok = false;
+ else if(mode == 0x2 && (data[12 + 6] & 0x20)) // Error if mode 2 form 2.
+  ok = false;
+ else if(!edc_lec_check_and_correct(data, mode == 2))
+  ok = false;
+
+ if(!ok)
  {
-  MDFN_DispMessage(_("Uncorrectable data at sector %d"), lba);
-  MDFN_PrintError(_("Uncorrectable data at sector %d"), lba);
+  MDFN_Notify(MDFN_NOTICE_WARNING, _("Uncorrectable error(s) in sector %d."), lba);
 
   din->Flush();
   cd.data_transfer_done = false;
@@ -1926,7 +1939,7 @@ static void DoREADBase(uint32 sa, uint32 sc)
  {
   Cur_CDIF->HintReadSector(sa);	//, sa + sc);
 
-  CDReadTimer = (uint64)((WhichSystem == SCSICD_PCE) ? 3 : 1) * 2048 * System_Clock / CD_DATA_TRANSFER_RATE;
+  CDReadTimer = (uint64)((WhichSystem == SCSICD_PCE) ? 8 : 1) * 2048 * System_Clock / CD_DATA_TRANSFER_RATE;
  }
  else
  {
@@ -3162,24 +3175,24 @@ void SCSICD_StateAction(StateMem* sm, const unsigned load, const bool data_only,
   SFVARN(cd.ascq_pending, "ascq_pending"),
   SFVARN(cd.fru_pending, "fru_pending"),
 
-  SFARRAYN(cd.command_buffer, 256, "command_buffer"),
+  SFPTR8N(cd.command_buffer, 256, "command_buffer"),
   SFVARN(cd.command_buffer_pos, "command_buffer_pos"),
   SFVARN(cd.command_size_left, "command_size_left"),
 
   // Don't save the FIFO's write position, it will be reconstructed from read_pos and in_count
-  SFARRAYN(&din->data[0], din->data.size(), "din_fifo"),
+  SFPTR8N(&din->data[0], din->data.size(), "din_fifo"),
   SFVARN(din->read_pos, "din_read_pos"),
   SFVARN(din->in_count, "din_in_count"),
   SFVARN(cd.data_transfer_done, "data_transfer_done"),
 
-  SFARRAYN(cd.data_out, sizeof(cd.data_out), "data_out"),
+  SFPTR8N(cd.data_out, sizeof(cd.data_out), "data_out"),
   SFVARN(cd.data_out_pos, "data_out_pos"),
   SFVARN(cd.data_out_want, "data_out_want"),
 
   SFVARN(cd.DiscChanged, "DiscChanged"),
 
   SFVAR(cdda.PlayMode),
-  SFARRAY16(cdda.CDDASectorBuffer, 1176),
+  SFPTR16(cdda.CDDASectorBuffer, 1176),
   SFVAR(cdda.CDDAReadPos),
   SFVAR(cdda.CDDAStatus),
   SFVAR(cdda.CDDADiv),
@@ -3195,17 +3208,17 @@ void SCSICD_StateAction(StateMem* sm, const unsigned load, const bool data_only,
   SFVAR(cdda.scan_sec_end),
 
   SFVAR(cdda.OversamplePos),
-  SFARRAY16(&cdda.sr[0], sizeof(cdda.sr) / sizeof(cdda.sr[0])),
-  SFARRAY16(&cdda.OversampleBuffer[0][0], sizeof(cdda.OversampleBuffer) / sizeof(cdda.OversampleBuffer[0][0])),
+  SFPTR16(&cdda.sr[0], sizeof(cdda.sr) / sizeof(cdda.sr[0])),
+  SFVARN(cdda.OversampleBuffer, "&cdda.OversampleBuffer[0][0]"),
 
   SFVAR(cdda.DeemphState[0][0]),
   SFVAR(cdda.DeemphState[0][1]),
   SFVAR(cdda.DeemphState[1][0]),
   SFVAR(cdda.DeemphState[1][1]),
 
-  SFARRAYN(&cd.SubQBuf[0][0], sizeof(cd.SubQBuf), "SubQBufs"),
-  SFARRAYN(cd.SubQBuf_Last, sizeof(cd.SubQBuf_Last), "SubQBufLast"),
-  SFARRAYN(cd.SubPWBuf, sizeof(cd.SubPWBuf), "SubPWBuf"),
+  SFVARN(cd.SubQBuf, "SubQBufs"),
+  SFVARN(cd.SubQBuf_Last, "SubQBufLast"),
+  SFVARN(cd.SubPWBuf, "SubPWBuf"),
 
   SFVAR(monotonic_timestamp),
   SFVAR(pce_lastsapsp_timestamp),
@@ -3213,11 +3226,11 @@ void SCSICD_StateAction(StateMem* sm, const unsigned load, const bool data_only,
   //
   //
   //
-  SFARRAY(ModePages[0].current_value, ModePages[0].param_length),
-  SFARRAY(ModePages[1].current_value, ModePages[1].param_length),
-  SFARRAY(ModePages[2].current_value, ModePages[2].param_length),
-  SFARRAY(ModePages[3].current_value, ModePages[3].param_length),
-  SFARRAY(ModePages[4].current_value, ModePages[4].param_length),
+  SFPTR8(ModePages[0].current_value, ModePages[0].param_length),
+  SFPTR8(ModePages[1].current_value, ModePages[1].param_length),
+  SFPTR8(ModePages[2].current_value, ModePages[2].param_length),
+  SFPTR8(ModePages[3].current_value, ModePages[3].param_length),
+  SFPTR8(ModePages[4].current_value, ModePages[4].param_length),
   SFEND
  };
 
@@ -3243,4 +3256,6 @@ void SCSICD_StateAction(StateMem* sm, const unsigned load, const bool data_only,
   for(int i = 0; i < NumModePages; i++)
    UpdateMPCacheP(&ModePages[i]);
  }
+}
+
 }

@@ -3,7 +3,7 @@
 <?php BeginPage('snes', 'Super Nintendo Entertainment System/Super Famicom'); ?>
 
 <?php BeginSection('Introduction', 'Section_intro'); ?>
-Mednafen's SNES emulation is a fork of <a href="http://byuu.org/">bsnes</a> v0.059, with(but not limited to) the following modifications:
+Mednafen's primary SNES emulation module is a fork of <a href="http://byuu.org/">bsnes</a> v0.059, with(but not limited to) the following modifications:
 <ul>
  <li>Cx4 Op10 fix patch</li>
  <li>blargg_libco_ppc64-5</li>
@@ -20,7 +20,7 @@ SNSF playback is supported to a degree; however, its implementation in Mednafen 
 SPC playback is not supported, but it is supported (experimentally) by the <b><a href="snes_faust.html">snes_faust</a></b> module.
 </p>
 <p>
-<b><font color="red">WARNING:</font></b> Saving state(and by extension rewinding and netplay) with Mednafen's SNES emulation may break some games.
+<b><font color="red">WARNING:</font></b> Saving state(and by extension rewinding and netplay) with this module's SNES emulation may break some games.
 "Tales of Phantasia" is a known problematic game in this regard.
 </p>
 <?php EndSection(); ?>

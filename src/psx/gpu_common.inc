@@ -21,7 +21,7 @@
 
 //
 // Reference voodoo, since section anchors don't work with externs
-// WARNING: Don't use with members of (transparent) unions!
+// WARNING: Don't use with members of (anonymous) unions!
 //
 #define GLBVAR(x) static auto& x = GPU.x;
 
@@ -139,6 +139,9 @@ static INLINE void PlotPixel(uint32 x, uint32 y, uint16 fore_pix)
   // Efficient 15bpp pixel math algorithms from blargg
   switch(BlendMode)
   {
+   default:	// to silence clang
+	break;
+
    case 0:
 	bg_pix |= 0x8000;
 	pix = ((fore_pix + bg_pix) - ((fore_pix ^ bg_pix) & 0x0421)) >> 1;
@@ -286,10 +289,7 @@ static INLINE uint16 GetTexel(uint32 u_arg, uint32 v_arg)
       // We'll be conservative and just go with 4 for now, until we can run some tests with triangles too.
       //
       DrawTimeAvail -= 4;
-      c->Data[0] = (&GPURAM[0][0])[gro &~ 0x3];
-      c->Data[1] = (&GPURAM[0][1])[gro &~ 0x3];
-      c->Data[2] = (&GPURAM[0][2])[gro &~ 0x3];
-      c->Data[3] = (&GPURAM[0][3])[gro &~ 0x3];
+      memcpy(c->Data, (uint16*)GPURAM + (gro &~ 0x3), 4 * sizeof(uint16));
       c->Tag = (gro &~ 0x3);
      }
 

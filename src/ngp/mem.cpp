@@ -212,7 +212,7 @@ uint8 loadB(uint32 address)
 	 return(NGPGfx->read8(address));
 	if(address >= 0x4000 && address <= 0x7fff)
 	{
-	 return(*(uint8 *)(CPUExRAM + address - 0x4000));
+	 return CPUExRAM[(size_t)address - 0x4000];
 	}
 
 	if(address >= 0x70 && address <= 0x7F)
@@ -267,7 +267,7 @@ uint16 loadW(uint32 address)
 
         if(address >= 0x4000 && address <= 0x7fff)
 	{
-         return(MDFN_de16lsb<true>(CPUExRAM + address - 0x4000));
+         return MDFN_de16lsb<true>(&CPUExRAM[(size_t)address - 0x4000]);
 	}
 	if(address == 0x50)
 	 return(SC0BUF);
@@ -333,7 +333,7 @@ void storeB(uint32 address, uint8 data)
 	}
         if(address >= 0x4000 && address <= 0x7fff)
         {
-         *(uint8 *)(CPUExRAM + address - 0x4000) = data;
+         CPUExRAM[(size_t)address - 0x4000] = data;
          return;
         }
 	if(address >= 0x70 && address <= 0x7F)
@@ -444,7 +444,7 @@ void storeW(uint32 address, uint16 data)
         }
         if(address >= 0x4000 && address <= 0x7fff)
         {
-         MDFN_en16lsb<true>(CPUExRAM + address - 0x4000, data);
+         MDFN_en16lsb<true>(&CPUExRAM[(size_t)address - 0x4000], data);
          return;
         }
         if(address >= 0x70 && address <= 0x7F)

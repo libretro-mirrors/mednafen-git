@@ -81,7 +81,7 @@ static void Cleanup(void)
  }
 }
 
-void HES_Load(MDFNFILE* fp)
+void HES_Load(Stream* fp)
 {
  try
  {

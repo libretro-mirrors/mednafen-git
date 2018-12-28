@@ -17,12 +17,10 @@
 
 #include "mednafen.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <map>
+
 #include <mednafen/Time.h>
 
-#include <trio/trio.h>
 #include "driver.h"
 #include "general.h"
 #include "state.h"
@@ -33,6 +31,9 @@
 
 #include "MemoryStream.h"
 #include "compress/GZFileStream.h"
+
+namespace Mednafen
+{
 
 struct StateSectionMapEntry
 {
@@ -86,21 +87,24 @@ static void SubWrite(Stream *st, const SFORMAT *sf)
 {
  while(sf->size || sf->name)	// Size can sometimes be zero, so also check for the text name.  These two should both be zero only at the end of a struct.
  {
-  if(!sf->size || !sf->v)
+  if(!sf->size || !sf->data)
   {
    sf++;
    continue;
   }
 
-  if(sf->size == (uint32)~0)		/* Link to another struct.	*/
+  if(sf->size == ~0U)		/* Link to another struct.	*/
   {
-   SubWrite(st, (const SFORMAT *)sf->v);
+   SubWrite(st, (const SFORMAT *)sf->data);
 
    sf++;
    continue;
   }
 
   int32 bytesize = sf->size;
+  uintptr_t p = (uintptr_t)sf->data;
+  uint32 repcount = sf->repcount;
+  const size_t repstride = sf->repstride; 
   char nameo[1 + 255];
   const int slen = strlen(sf->name);
 
@@ -111,22 +115,25 @@ static void SubWrite(Stream *st, const SFORMAT *sf)
   nameo[0] = slen;
 
   st->write(nameo, 1 + nameo[0]);
-  st->put_LE<uint32>(bytesize);
+  st->put_LE<uint32>(bytesize * (repcount + 1));
 
-  // Special case for the evil bool type, to convert bool to 1-byte elements.
-  if(sf->flags & SFORMAT::FLAG_BOOL)
+  do
   {
-   for(int32 bool_monster = 0; bool_monster < bytesize; bool_monster++)
+   // Special case for the evil bool type, to convert bool to 1-byte elements.
+   if(!sf->type)
    {
-    uint8 tmp_bool = ((bool *)sf->v)[bool_monster];
-    //printf("Bool write: %.31s\n", sf->name);
-    st->write(&tmp_bool, 1);
+    for(int32 bool_monster = 0; bool_monster < bytesize; bool_monster++)
+    {
+     uint8 tmp_bool = ((bool *)p)[bool_monster];
+     //printf("Bool write: %.31s\n", sf->name);
+     st->write(&tmp_bool, 1);
+    }
    }
-  }
-  else
-  {
-   st->write((uint8 *)sf->v, bytesize);
-  }
+   else
+   {
+    st->write((void*)p, bytesize);
+   }
+  } while(p += repstride, repcount--);
 
   sf++; 
  }
@@ -146,14 +153,14 @@ static void MakeSFMap(const SFORMAT *sf, SFMap_t &sfmap)
 {
  while(sf->size || sf->name) // Size can sometimes be zero, so also check for the text name.  These two should both be zero only at the end of a struct.
  {
-  if(!sf->size || !sf->v)
+  if(!sf->size || !sf->data)
   {
    sf++;
    continue;
   }
 
-  if(sf->size == (uint32)~0)            /* Link to another SFORMAT structure. */
-   MakeSFMap((const SFORMAT *)sf->v, sfmap);
+  if(sf->size == ~0U)            /* Link to another SFORMAT structure. */
+   MakeSFMap((const SFORMAT *)sf->data, sfmap);
   else
   {
    assert(sf->name);
@@ -195,65 +202,57 @@ static void ReadStateChunk(Stream *st, const SFORMAT *sf, uint32 size, const boo
   if(sfmit != sfmap.end())
   {
    const SFORMAT *tmp = sfmit->second;
-   uint32 expected_size = tmp->size;	// In bytes
 
-   if(recorded_size != expected_size)
+   if(recorded_size != tmp->size * (1 + tmp->repcount))
    {
     // Don't error out(throw), but still printf-log it.
-    printf("Variable in save state wrong size: %s.  Need: %u, got: %u\n", toa + 1, expected_size, recorded_size);
+    printf("Variable in save state wrong size: %s.  Need: %u, got: %u\n", toa + 1, tmp->size * (1 + tmp->repcount), recorded_size);
     st->seek(recorded_size, SEEK_CUR);
    }
    else
    {
+    const auto type = tmp->type;
+    const uint32 expected_size = tmp->size;	// In bytes
+    uintptr_t p = (uintptr_t)tmp->data;
+    uint32 repcount = tmp->repcount;
+    const size_t repstride = tmp->repstride; 
+
     sfmap_found[tmp->name] = tmp;
 
-    st->read((uint8 *)tmp->v, expected_size);
+    do
+    {
+     st->read((void*)p, expected_size);
 #if 0
-    if(MDFN_UNLIKELY(fuzz))
-    {
-     static uint64 lcg[2] = { 0xDEADBEEFCAFEBABEULL, 0x0123456789ABCDEFULL };
+     if(MDFN_UNLIKELY(fuzz))
+     {
+      static uint64 lcg[2] = { 0xDEADBEEFCAFEBABEULL, 0x0123456789ABCDEFULL };
 
-     for(unsigned i = 0; i < expected_size; i++)
-     {
-      ((uint8*)tmp->v)[i] = (lcg[0] ^ lcg[1]) >> 28;
-      lcg[0] = (19073486328125ULL * lcg[0]) + 1;
-      lcg[1] = (6364136223846793005ULL * lcg[1]) + 1442695040888963407ULL;
+      for(unsigned i = 0; i < expected_size; i++)
+      {
+       ((uint8*)tmp->data)[i] = (lcg[0] ^ lcg[1]) >> 28;
+       lcg[0] = (19073486328125ULL * lcg[0]) + 1;
+       lcg[1] = (6364136223846793005ULL * lcg[1]) + 1442695040888963407ULL;
+      }
      }
-    }
 #endif
-    if(tmp->flags & SFORMAT::FLAG_BOOL)
-    {
-     // Converting downwards is necessary for the case of sizeof(bool) > 1
-     for(int32 bool_monster = expected_size - 1; bool_monster >= 0; bool_monster--)
+     if(!type)
      {
-      ((bool *)tmp->v)[bool_monster] = ((uint8 *)tmp->v)[bool_monster];
+      // Converting downwards is necessary for the case of sizeof(bool) > 1
+      for(int32 bool_monster = expected_size - 1; bool_monster >= 0; bool_monster--)
+      {
+       ((bool *)p)[bool_monster] = ((uint8 *)p)[bool_monster];
+      }
      }
-    }
-    else
-    {
-     if(svbe)
+     else if(svbe != MDFN_IS_BIGENDIAN)
      {
-      if(tmp->flags & SFORMAT::FLAG_RLSB64)
-       Endian_A64_NE_BE(tmp->v, expected_size / sizeof(uint64));
-      else if(tmp->flags & SFORMAT::FLAG_RLSB32)
-       Endian_A32_NE_BE(tmp->v, expected_size / sizeof(uint32));
-      else if(tmp->flags & SFORMAT::FLAG_RLSB16)
-       Endian_A16_NE_BE(tmp->v, expected_size / sizeof(uint16));
-      else if(tmp->flags & SFORMAT::FLAG_RLSB)
-       Endian_V_NE_BE(tmp->v, expected_size);
+      switch(type)
+      {
+       case 2: Endian_A16_Swap((void*)p, expected_size / sizeof(uint16)); break;
+       case 4: Endian_A32_Swap((void*)p, expected_size / sizeof(uint32)); break;
+       case 8: Endian_A64_Swap((void*)p, expected_size / sizeof(uint64)); break;
+      }
      }
-     else
-     {
-      if(tmp->flags & SFORMAT::FLAG_RLSB64)
-       Endian_A64_NE_LE(tmp->v, expected_size / sizeof(uint64));
-      else if(tmp->flags & SFORMAT::FLAG_RLSB32)
-       Endian_A32_NE_LE(tmp->v, expected_size / sizeof(uint32));
-      else if(tmp->flags & SFORMAT::FLAG_RLSB16)
-       Endian_A16_NE_LE(tmp->v, expected_size / sizeof(uint16));
-      else if(tmp->flags & SFORMAT::FLAG_RLSB)
-       Endian_V_NE_LE(tmp->v, expected_size);
-     }
-    }
+    } while(p += repstride, repcount--);
    }
   }
   else
@@ -267,7 +266,7 @@ static void ReadStateChunk(Stream *st, const SFORMAT *sf, uint32 size, const boo
  {
   if(sfmap_found.find(it->second->name) == sfmap_found.end())
   {
-   printf("Variable of bytesize %u missing from save state: %s\n", it->second->size, it->second->name);
+   printf("Variable of bytesize %u missing from save state: %s\n", it->second->size * (1 + it->second->repcount), it->second->name);
   }
  }
 }
@@ -280,26 +279,29 @@ static void FastRWChunk(Stream *st, const SFORMAT *sf)
 {
  while(sf->size || sf->name)	// Size can sometimes be zero, so also check for the text name.  These two should both be zero only at the end of a struct.
  {
-  if(!sf->size || !sf->v)
+  if(!sf->size || !sf->data)
   {
    sf++;
    continue;
   }
 
-  if(sf->size == (uint32)~0)		/* Link to another struct.	*/
+  if(sf->size == ~0U)		/* Link to another struct.	*/
   {
-   FastRWChunk<load>(st, (const SFORMAT *)sf->v);
+   FastRWChunk<load>(st, (const SFORMAT *)sf->data);
 
    sf++;
    continue;
   }
 
   int32 bytesize = sf->size;
+  uintptr_t p = (uintptr_t)sf->data;
+  uint32 repcount = sf->repcount;
+  const size_t repstride = sf->repstride; 
 
   // If we're only saving the raw data, and we come across a bool type, we save it as it is in memory, rather than converting it to
   // 1-byte.  In the SFORMAT structure, the size member for bool entries is the number of bool elements, not the total in-memory size,
   // so we adjust it here.
-  if(sf->flags & SFORMAT::FLAG_BOOL)
+  if(!sf->type)
    bytesize *= sizeof(bool);
   
   //
@@ -308,10 +310,13 @@ static void FastRWChunk(Stream *st, const SFORMAT *sf)
   if(bytesize >= 65536)
    st->seek((st->tell() + 15) &~ 15, SEEK_SET);
 
-  if(load)
-   st->read((uint8 *)sf->v, bytesize);
-  else
-   st->write((uint8 *)sf->v, bytesize);
+  do
+  {
+   if(load)
+    st->read((void*)p, bytesize);
+   else
+    st->write((void*)p, bytesize);
+  } while(p += repstride, repcount--);
   sf++; 
  }
 }
@@ -621,26 +626,32 @@ static int RecentlySavedState = -1;
 
 void MDFNSS_CheckStates(void)
 {
-	time_t last_time = 0;
+	int64 last_time = 0;
 
         if(!MDFNGameInfo->StateAction) 
          return;
 
-
 	for(int ssel = 0; ssel < 10; ssel++)
         {
-	 struct stat stat_buf;
-
 	 SaveStateStatus[ssel] = false;
-	 //printf("%s\n", MDFN_MakeFName(MDFNMKF_STATE, ssel, 0).c_str());
-	 if(MDFN_stat(MDFN_MakeFName(MDFNMKF_STATE, ssel, 0).c_str(), &stat_buf) == 0)
+
+	 try
 	 {
+	  VirtualFS::FileInfo finfo;
+
+	  //printf("%s\n", MDFN_MakeFName(MDFNMKF_STATE, ssel, 0).c_str());
+	  NVFS.finfo(MDFN_MakeFName(MDFNMKF_STATE, ssel, 0), &finfo);
+	  //
 	  SaveStateStatus[ssel] = true;
-	  if(stat_buf.st_mtime > last_time)
+	  if(finfo.mtime_us > last_time)
 	  {
 	   RecentlySavedState = ssel;
-	   last_time = stat_buf.st_mtime;
+	   last_time = finfo.mtime_us;
  	  }
+	 }
+	 catch(...)
+	 {
+
 	 }
         }
 
@@ -720,8 +731,6 @@ void MDFNI_SelectState(int w) noexcept
   else
    CurrentState = w;
 
-  MDFN_ResetMessages();
-
   std::unique_ptr<StateStatusStruct> status(new StateStatusStruct());
 
   memset(status.get(), 0, sizeof(StateStatusStruct));
@@ -736,7 +745,7 @@ void MDFNI_SelectState(int w) noexcept
  }
  catch(std::exception& e)
  {
-  MDFN_DispMessage("%s", e.what());
+  MDFN_Notify(MDFN_NOTICE_WARNING, "%s", e.what());
   MDFND_SetStateStatus(NULL);
  }
 }  
@@ -775,15 +784,15 @@ bool MDFNI_SaveState(const char *fname, const char *suffix, const MDFN_Surface *
   {
    SaveStateStatus[CurrentState] = true;
    RecentlySavedState = CurrentState;
-   MDFN_DispMessage(_("State %d saved."), CurrentState);
+   MDFN_Notify(MDFN_NOTICE_STATUS, _("State %d saved."), CurrentState);
   }
  }
  catch(std::exception &e)
  {
   if(!fname && !suffix)
-   MDFN_DispMessage(_("State %d save error: %s"), CurrentState, e.what());
+   MDFN_Notify(MDFN_NOTICE_ERROR, _("State %d save error: %s"), CurrentState, e.what());
   else
-   MDFN_PrintError("%s", e.what());
+   MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
 
   if(MDFNnetplay)
    MDFND_NetplayText(e.what(), false);
@@ -839,15 +848,23 @@ bool MDFNI_LoadState(const char *fname, const char *suffix) noexcept
   if(!fname && !suffix)
   {
    SaveStateStatus[CurrentState] = true;
-   MDFN_DispMessage(_("State %d loaded."), CurrentState);
+   MDFN_Notify(MDFN_NOTICE_STATUS, _("State %d loaded."), CurrentState);
   }
  }
  catch(std::exception &e)
  {
+  MDFN_Error* me = dynamic_cast<MDFN_Error*>(&e);
+
   if(!fname && !suffix)
-   MDFN_DispMessage(_("State %d load error: %s"), CurrentState, e.what());
+   MDFN_Notify(MDFN_NOTICE_ERROR, _("State %d load error: %s"), CurrentState, e.what());
   else
-   MDFN_PrintError("%s", e.what());
+  {
+   // FIXME: Autosave kludgery, refactor interfaces in the future to make cleaner.
+   if(suffix && me && me->GetErrno() == ENOENT)
+    return true;
+
+   MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
+  }
 
   if(MDFNnetplay)
    MDFND_NetplayText(e.what(), false);
@@ -856,4 +873,6 @@ bool MDFNI_LoadState(const char *fname, const char *suffix) noexcept
  }
 
  return(ret);
+}
+
 }

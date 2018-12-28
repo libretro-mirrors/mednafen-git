@@ -16,16 +16,14 @@
  */
 
 /*
- The ugly kludges with the strcasecmp(MDFNGameInfo->shortname, "psx") are to work around the mess created by our
+ The ugly kludges with the MDFN_strazicmp(MDFNGameInfo->shortname, "psx") are to work around the mess created by our
  flawed game ID generation code(the PS1 game library is enormous, and many games only have one track, leading to many collisions);
  TODO: a more permanent, system-agnostic solution to the problem.
 */
 
 #include "mednafen.h"
 
-#include <ctype.h>
 #include <trio/trio.h>
-#include <unistd.h>
 
 #include "general.h"
 #include <mednafen/string/string.h>
@@ -33,6 +31,9 @@
 #include "mempatcher.h"
 #include "FileStream.h"
 #include "MemoryStream.h"
+
+namespace Mednafen
+{
 
 static std::string compat0938_name;	// PS1 cheat kludge, <= 0.9.38.x stripped bytes with upper bit == 1 in MDFNGameInfo->name
 
@@ -68,7 +69,7 @@ static std::vector<RAMInfoS> RAMInfo;
 
 static INLINE uint8 ReadU8(uint32 addr)
 {
- addr %= (PageSize * NumPages);
+ addr %= (uint64)PageSize * NumPages;
  //
  //
  //
@@ -88,7 +89,7 @@ static INLINE uint8 ReadU8(uint32 addr)
 
 static INLINE void WriteU8(uint32 addr, const uint8 val)
 {
- addr %= (PageSize * NumPages);
+ addr %= (uint64)PageSize * NumPages;
  //
  //
  //
@@ -191,6 +192,7 @@ void MDFNMP_AddRAM(uint32 size, uint32 A, uint8 *RAM, bool use_in_search)
 
  for(uint32 page = 0; page < page_count; page++)
  {
+  assert((page_base + page) < RAMInfo.size());
   auto& ri = RAMInfo[page_base + page];
 
   ri.Ptr = RAM;
@@ -237,7 +239,7 @@ static bool SeekToOurSection(Stream* fp)
   if(linebuf.size() >= 1 && linebuf[0] == '[')
   {
    if(!strncmp(linebuf.c_str() + 1, md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str(), 32) &&
-	(strcasecmp(MDFNGameInfo->shortname, "psx") || linebuf.size() < 36 || !compat0938_name.size() || linebuf[34] != ' ' || !strcmp(linebuf.c_str() + 35, compat0938_name.c_str())))
+	(MDFN_strazicmp(MDFNGameInfo->shortname, "psx") || linebuf.size() < 36 || !compat0938_name.size() || linebuf[34] != ' ' || !strcmp(linebuf.c_str() + 35, compat0938_name.c_str())))
     return(true);
   }
  }
@@ -252,13 +254,13 @@ void MDFN_LoadGameCheats(Stream* override)
 
  //
  compat0938_name = MDFNGameInfo->name;
- if(!strcasecmp(MDFNGameInfo->shortname, "psx"))
+ if(!MDFN_strazicmp(MDFNGameInfo->shortname, "psx"))
  {
   for(auto& c : compat0938_name)
    if((int8)c < 0x20)	// (int8) here, not (uint8)
     c = ' ';
  }
- MDFN_trim(compat0938_name);
+ MDFN_trim(&compat0938_name);
  //
 
  if(!override)
@@ -309,13 +311,13 @@ void MDFN_LoadGameCheats(Stream* override)
     if(tbuf.size() >= 1 && tbuf[0] == '[') // No more cheats for this game, so sad :(
      break;
 
-    MDFN_trim(tbuf);
+    MDFN_trim(&tbuf);
 
     if(tbuf.size() >= 1 && tbuf[0] == '!')
     {
      ext_format = true;
      tbuf = tbuf.substr(1);
-     MDFN_trim(tbuf);
+     MDFN_trim(&tbuf);
     }
 
     if(!tbuf.size()) // Don't parse if the line is empty.
@@ -354,7 +356,7 @@ void MDFN_LoadGameCheats(Stream* override)
      if(name[i] < 0x20)
       name[i] = ' ';
 
-    MDFN_trim(name);
+    MDFN_trim(&name);
 
     //
     // Grab the conditions.
@@ -367,7 +369,7 @@ void MDFN_LoadGameCheats(Stream* override)
       if(conditions[i] < 0x20)
        conditions[i] = ' ';
 
-     MDFN_trim(conditions);
+     MDFN_trim(&conditions);
     }
 
     {
@@ -495,7 +497,7 @@ static void WriteCheats(void)
     if(linebuf.size() >= 1 && linebuf[0] == '[' && !insection)
     {
      if(!strncmp((char *)linebuf.c_str() + 1, md5_context::asciistr(MDFNGameInfo->MD5, 0).c_str(), 32) &&
-	(strcasecmp(MDFNGameInfo->shortname, "psx") || linebuf.size() < 36 || !compat0938_name.size() || linebuf[34] != ' ' || !strcmp(linebuf.c_str() + 35, compat0938_name.c_str())))
+	(MDFN_strazicmp(MDFNGameInfo->shortname, "psx") || linebuf.size() < 36 || !compat0938_name.size() || linebuf[34] != ' ' || !strcmp(linebuf.c_str() + 35, compat0938_name.c_str())))
      {
       insection = 1;
 
@@ -534,11 +536,7 @@ static void WriteCheats(void)
 
   tmp_fp->close();
 
-  if(MDFN_rename(tmp_fn.c_str(), fn.c_str()) != 0 && errno == EACCES)	// For Windows especially; see http://msdn.microsoft.com/en-us/library/zw5t957f.aspx
-  {
-   MDFN_unlink(fn.c_str());
-   MDFN_rename(tmp_fn.c_str(), fn.c_str());
-  }
+  NVFS.rename(tmp_fn, fn);
  }
 }
 
@@ -553,7 +551,7 @@ void MDFN_FlushGameCheats(int nosave)
   }
   catch(std::exception &e)
   {
-   MDFN_PrintError("%s", e.what());
+   MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
   }
  }
 
@@ -861,7 +859,7 @@ static INLINE void Read_CCV_RAMV(const uint32 A, const unsigned len, const bool 
 
  for(unsigned x = 0; x < len; x++)
  {
-  const uint32 cur_addr = (A + x) % (NumPages * PageSize);
+  const uint32 cur_addr = (A + x) % ((uint64)NumPages * PageSize);
   const uint32 cur_page = cur_addr / PageSize;
   const uint32 cur_offs = cur_addr % PageSize;
 
@@ -1002,3 +1000,5 @@ extern const MDFNSetting MDFNMP_Settings[] =
  { "cheats", MDFNSF_NOFLAGS, "Enable cheats.", NULL, MDFNST_BOOL, "1", NULL, NULL, NULL, SettingChanged },
  { NULL}
 };
+
+}

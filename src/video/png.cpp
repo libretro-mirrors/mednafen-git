@@ -20,6 +20,9 @@
 #include <zlib.h>
 #include "png.h"
 
+namespace Mednafen
+{
+
 void PNGWrite::WriteChunk(FileStream &pngfile, uint32 size, const char *type, const uint8 *data)
 {
  uint32 crc;
@@ -50,6 +53,7 @@ PNGWrite::~PNGWrite()
 PNGWrite::PNGWrite(const std::string& path, const MDFN_Surface *src, const MDFN_Rect &rect, const int32 *LineWidths) : ownfile(path, FileStream::MODE_WRITE_SAFE)
 {
  WriteIt(ownfile, src, rect, LineWidths);
+ ownfile.close();
 }
 
 INLINE void PNGWrite::EncodeImage(const MDFN_Surface *src, const MDFN_PixelFormat &format, const MDFN_Rect &rect, const int32 *LineWidths, const int png_width)
@@ -235,4 +239,6 @@ void PNGWrite::WriteIt(FileStream &pngfile, const MDFN_Surface *src, const MDFN_
  //
 
  WriteChunk(pngfile, 0, "IEND", 0);
+}
+
 }

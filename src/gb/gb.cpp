@@ -42,7 +42,7 @@ static void Cleanup(void) MDFN_COLD;
 static uint32 *gbColorFilter = NULL;
 static uint32 gbMonoColorMap[12 + 1];	// Mono color map(+1 = LCD off color)!
 
-static void LoadROM(MDFNFILE *fp);
+static void LoadROM(Stream* s);
 static int32 SoundTS = 0;
 //extern uint16 gbLineMix[160];
 extern union __gblmt
@@ -1817,9 +1817,9 @@ static const SFORMAT gbSaveGameStruct[] =
   SFVAR(register_FF74),
   SFVAR(register_FF75),
   SFVAR(register_IE),
-  SFARRAYN(gbBgp, 4, "BGP"),
-  SFARRAYN(gbObp0, 4, "OBP0"),
-  SFARRAYN(gbObp1, 4, "OBP1"),
+  SFVARN(gbBgp, "BGP"),
+  SFVARN(gbObp0, "OBP0"),
+  SFVARN(gbObp1, "OBP1"),
   SFEND
 };
 
@@ -1832,7 +1832,7 @@ static void CloseGame(void)
  }
  catch(std::exception &e)
  {
-  MDFN_PrintError("%s", e.what());
+  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
  }
 
  Cleanup();
@@ -2044,12 +2044,12 @@ static const char *GetGBTypeString(uint8 t)
  return(type);
 }
 
-static bool TestMagic(MDFNFILE *fp)
+static bool TestMagic(GameFile* gf)
 {
  static const uint8 GBMagic[8] = { 0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B };
  uint8 data[0x200];
 
- if(fp->read(data, 0x200, false) != 0x200 || memcmp(data + 0x104, GBMagic, 8))
+ if(gf->stream->read(data, 0x200, false) != 0x200 || memcmp(data + 0x104, GBMagic, 8))
   return false;
 
  return true;
@@ -2090,8 +2090,8 @@ static void Cleanup(void)
  }
 }
 
-static void Load(MDFNFILE *fp) MDFN_COLD;
-static void Load(MDFNFILE *fp)
+static void Load(GameFile* gf) MDFN_COLD;
+static void Load(GameFile* gf)
 {
  try
  {
@@ -2103,14 +2103,12 @@ static void Load(MDFNFILE *fp)
 
   SOUND_Init();
 
-  LoadROM(fp);
+  LoadROM(gf->stream);
 
   md5_context md5;
   md5.starts();
   md5.update(gbRom, gbRomSize);
   md5.finish(MDFNGameInfo->MD5);
-
-  MDFNGameInfo->GameSetMD5Valid = false;
 
   MDFN_printf(_("ROM:       %dKiB\n"), (gbRomSize + 1023) / 1024);
   MDFN_printf(_("ROM CRC32: 0x%08x\n"), (unsigned int)crc32(0, gbRom, gbRomSize));
@@ -2144,11 +2142,11 @@ static void Load(MDFNFILE *fp)
  }
 }
 
-static void LoadROM(MDFNFILE* fp)
+static void LoadROM(Stream* s)
 {
   uint8 header[0x200];
 
-  fp->read(header, 0x200);
+  s->read(header, 0x200);
 
   if(header[0x148] > 8) 
    throw MDFN_Error(0, _("Unsupported ROM size specified in GB header."));
@@ -2161,7 +2159,7 @@ static void LoadROM(MDFNFILE* fp)
   memcpy(gbRom, header, std::min<uint64>(0x200, gbRomSize));
 
   if(gbRomSize > 0x200) // && in_rom_size > 0x200)
-   fp->read(gbRom + 0x200, gbRomSize - 0x200); // std::min<uint64>(in_rom_size, gbRomSize) - 0x200);
+   s->read(gbRom + 0x200, gbRomSize - 0x200); // std::min<uint64>(in_rom_size, gbRomSize) - 0x200);
   
   if(header[0x149] > 5) 
    throw MDFN_Error(0, _("Unsupported RAM size specified in GB header."));
@@ -2423,8 +2421,8 @@ static void Emulate(EmulateSpecStruct *espec)
 
  if(gbRom[0x147] == 0x22)
  {
-  gbDataMBC7.curtiltx = 2048 + ((int32)MDFN_de16lsb(&tilt_paddie[0x4]) - (int32)MDFN_de16lsb(&tilt_paddie[0x6])) / 200;
-  gbDataMBC7.curtilty = 2048 + ((int32)MDFN_de16lsb(&tilt_paddie[0x0]) - (int32)MDFN_de16lsb(&tilt_paddie[0x2])) / 200;
+  gbDataMBC7.curtiltx = 2048 + ((int32)MDFN_de16lsb(&tilt_paddie[0x0]) - 32768) / 200;
+  gbDataMBC7.curtilty = 2048 + ((int32)MDFN_de16lsb(&tilt_paddie[0x2]) - 32768) / 200;
  }
 
  if(*paddie != gbJoymask)
@@ -2711,12 +2709,12 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT RAMDesc[] =
  {
-  SFARRAYN(gbOAM, 0xA0, "OAM"),
-  SFARRAYN(HRAM, 0x80, "HRAM"),
-  SFARRAYN(gbRam, gbRamSize, "RAM"),
-  SFARRAYN(gbVram, gbCgbMode ? 0x4000 : 0x2000, "VRAM"),
-  SFARRAYN(gbWram, gbCgbMode ? 0x8000 : 0x2000, "WRAM"),
-  SFARRAY16(gbPalette, (gbCgbMode ? 128 : 0)),
+  SFPTR8N(gbOAM, 0xA0, "OAM"),
+  SFPTR8N(HRAM, 0x80, "HRAM"),
+  SFPTR8N(gbRam, gbRamSize, "RAM"),
+  SFPTR8N(gbVram, gbCgbMode ? 0x4000 : 0x2000, "VRAM"),
+  SFPTR8N(gbWram, gbCgbMode ? 0x8000 : 0x2000, "WRAM"),
+  SFPTR16(gbPalette, (gbCgbMode ? 128 : 0)),
   SFEND
  };
 
@@ -2769,21 +2767,21 @@ static const MDFNSetting GBSettings[] =
 
 static const IDIISG IDII =
 {
- { "a", "A", 		/*VIRTB_1,*/ 7, IDIT_BUTTON_CAN_RAPID, NULL },
+ IDIIS_ButtonCR("a", "A", 		/*VIRTB_1,*/ 7, NULL),
 
- { "b", "B", 		/*VIRTB_0,*/ 6, IDIT_BUTTON_CAN_RAPID, NULL },
+ IDIIS_ButtonCR("b", "B", 		/*VIRTB_0,*/ 6, NULL),
 
- { "select", "SELECT",	/*VIRTB_SELECT,*/ 4, IDIT_BUTTON, NULL },
+ IDIIS_Button("select", "SELECT",	/*VIRTB_SELECT,*/ 4, NULL),
 
- { "start", "START",	/*VIRTB_START,*/ 5, IDIT_BUTTON, NULL },
+ IDIIS_Button("start", "START",	/*VIRTB_START,*/ 5, NULL),
 
- { "right", "RIGHT →",	/*VIRTB_DP0_R,*/ 3, IDIT_BUTTON, "left" },
+ IDIIS_Button("right", "RIGHT →",	/*VIRTB_DP0_R,*/ 3, "left"),
 
- { "left", "LEFT ←",	/*VIRTB_DP0_L,*/ 2, IDIT_BUTTON, "right" },
+ IDIIS_Button("left", "LEFT ←",	/*VIRTB_DP0_L,*/ 2, "right"),
 
- { "up", "UP ↑", 	/*VIRTB_DP0_U,*/ 0, IDIT_BUTTON, "down" },
+ IDIIS_Button("up", "UP ↑", 	/*VIRTB_DP0_U,*/ 0, "down"),
 
- { "down", "DOWN ↓",	/*VIRTB_DP0_D,*/ 1, IDIT_BUTTON, "up" },
+ IDIIS_Button("down", "DOWN ↓",	/*VIRTB_DP0_D,*/ 1, "up"),
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
@@ -2798,10 +2796,8 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
 
 static const IDIISG Tilt_IDII =
 {
- { "up", "UP ↑", 	0, IDIT_BUTTON_ANALOG },
- { "down", "DOWN ↓",	1, IDIT_BUTTON_ANALOG },
- { "left", "LEFT ←",	2, IDIT_BUTTON_ANALOG },
- { "right", "RIGHT →",	3, IDIT_BUTTON_ANALOG },
+ IDIIS_Axis("", "", "right", "RIGHT →", "left", "LEFT ←", 1, true),
+ IDIIS_Axis("", "", "down", "DOWN ↓", "up", "UP ↑", 	  0, true),
 };
 
 
@@ -2834,10 +2830,10 @@ static void RemoveReadPatches(void)
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".gb", gettext_noop("GameBoy ROM Image") },
- { ".gbc", gettext_noop("GameBoy Color ROM Image") },
- { ".cgb", gettext_noop("GameBoy Color ROM Image") },
- { NULL, NULL }
+ { ".gb",  0, gettext_noop("GameBoy ROM Image") },
+ { ".gbc", 0, gettext_noop("GameBoy Color ROM Image") },
+ { ".cgb", 0, gettext_noop("GameBoy Color ROM Image") },
+ { NULL, 0, NULL }
 };
 
 static const CustomPalette_Spec CPInfo[] =

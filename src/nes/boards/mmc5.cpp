@@ -707,21 +707,21 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
 	SFORMAT StateRegs[]=
 	{
-	 SFARRAY(WRAM, MMC5WRAMsize * 8192),
-	 SFARRAY(ExRAM, 1024),
-         SFARRAYN(PRGBanks, 4, "PRGB"),
-         SFARRAY32N(CHRBanksA, 8, "CHRA"),
-         SFARRAY32N(CHRBanksB, 4, "CHRB"),
+	 SFPTR8(WRAM, MMC5WRAMsize * 8192),
+	 SFPTR8(ExRAM, 1024),
+         SFPTR8N(PRGBanks, 4, "PRGB"),
+         SFPTR32N(CHRBanksA, 8, "CHRA"),
+         SFPTR32N(CHRBanksB, 4, "CHRB"),
 
 	 SFVAR(MMC5BigCHRSelect),
 	 SFVAR(mmc5psize),
 	 SFVAR(mmc5vsize),
-	 SFARRAY(mul, 2),
+	 SFPTR8(mul, 2),
 	 SFVAR(MMC5IRQR),
 	 SFVAR(MMC5LineCounter),
 
          SFVARN(WRAMPage, "WRMP"), 
-	 SFARRAYN(WRAMMaskEnable, 2, "WRME"),
+	 SFPTR8N(WRAMMaskEnable, 2, "WRME"),
 	 SFVARN(ABMode, "ABMD"),
 	 SFVARN(IRQScanline, "IRQS"),
 	 SFVARN(IRQEnable, "IRQE"),
@@ -736,7 +736,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
 
          SFVARN(MMC5Sound.wl[0], "SDW0"),
          SFVARN(MMC5Sound.wl[1], "SDW1"),
-         SFARRAYN(MMC5Sound.env, 2, "SDEV"),
+         SFPTR8N(MMC5Sound.env, 2, "SDEV"),
          SFVARN(MMC5Sound.enable, "SDEN"),
 	 SFVARN(MMC5Sound.running, "SDRU"),
          SFVARN(MMC5Sound.raw, "SDRW"),

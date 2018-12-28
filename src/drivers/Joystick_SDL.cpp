@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* Joystick_SDL.cpp:
-**  Copyright (C) 2012-2016 Mednafen Team
+**  Copyright (C) 2012-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -23,6 +23,7 @@
 #include "input.h"
 #include "Joystick.h"
 #include "Joystick_SDL.h"
+#include <mednafen/hash/md5.h>
 
 #include <SDL.h>
 
@@ -30,8 +31,8 @@ class Joystick_SDL : public Joystick
 {
  public:
 
- Joystick_SDL(unsigned index);
- ~Joystick_SDL();
+ Joystick_SDL(unsigned index) MDFN_COLD;
+ ~Joystick_SDL() MDFN_COLD;
 
  void UpdateInternal(void);
 
@@ -58,23 +59,50 @@ Joystick_SDL::Joystick_SDL(unsigned index) : sdl_joy(NULL)
   throw MDFN_Error(0, "SDL_JoystickOpen(%u) failed: %s", index, SDL_GetError());
  }
 
- strncpy(name, SDL_JoystickName(index), sizeof(name));
- name[sizeof(name) - 1] = 0;
+ try
+ {
+  name = SDL_JoystickName(sdl_joy);
 
- sdl_num_axes = SDL_JoystickNumAxes(sdl_joy);
- sdl_num_balls = SDL_JoystickNumBalls(sdl_joy);
- sdl_num_buttons = SDL_JoystickNumButtons(sdl_joy);
- sdl_num_hats = SDL_JoystickNumHats(sdl_joy);
+  sdl_num_axes = SDL_JoystickNumAxes(sdl_joy);
+  sdl_num_balls = SDL_JoystickNumBalls(sdl_joy);
+  sdl_num_buttons = SDL_JoystickNumButtons(sdl_joy);
+  sdl_num_hats = SDL_JoystickNumHats(sdl_joy);
 
- CalcOldStyleID(sdl_num_axes, sdl_num_balls, sdl_num_hats, sdl_num_buttons);
+  Calc09xID(sdl_num_axes, sdl_num_balls, sdl_num_hats, sdl_num_buttons);
+  {
+   //SDL_JoystickGUID guid = SDL_JoystickGetGUID(sdl_joy);
+   //memcpy(&id[0], guid.data, 16);
+   //
+   // Don't use SDL's GUID, as it's just equivalent to part of the joystick name on many platforms.
+   // 
+   md5_context h;
+   uint8 d[16];
 
- num_axes = sdl_num_axes;
- num_rel_axes = sdl_num_balls * 2;
- num_buttons = sdl_num_buttons + (sdl_num_hats * 4);
+   h.starts();
+   h.update((const uint8*)name.data(), name.size());
+   h.finish(d);
+   memcpy(&id[0], d, 8);
 
- axis_state.resize(num_axes);
- rel_axis_state.resize(num_rel_axes);
- button_state.resize(num_buttons);
+   MDFN_en16msb(&id[ 8], sdl_num_axes);
+   MDFN_en16msb(&id[10], sdl_num_buttons);
+   MDFN_en16msb(&id[12], sdl_num_hats);
+   MDFN_en16msb(&id[14], sdl_num_balls);
+  }
+  num_axes = sdl_num_axes;
+  num_rel_axes = sdl_num_balls * 2;
+  num_buttons = sdl_num_buttons + (sdl_num_hats * 4);
+
+  axis_state.resize(num_axes);
+  rel_axis_state.resize(num_rel_axes);
+  button_state.resize(num_buttons);
+ }
+ catch(...)
+ {
+  if(sdl_joy)
+   SDL_JoystickClose(sdl_joy);
+
+  throw;
+ }
 }
 
 Joystick_SDL::~Joystick_SDL()
@@ -150,7 +178,7 @@ JoystickDriver_SDL::JoystickDriver_SDL()
   }
   catch(std::exception &e)
   {
-   MDFND_PrintError(e.what());
+   MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
   }
  }
 }

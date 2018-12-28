@@ -158,9 +158,9 @@ static void Emulate(EmulateSpecStruct *espec)
 	espec->SoundBufSize = MDFNNGPCSOUND_Flush(espec->SoundBuf, espec->SoundBufMaxSize);
 }
 
-static bool TestMagic(MDFNFILE *fp)
+static bool TestMagic(GameFile* gf)
 {
- if(fp->ext != "ngp" && fp->ext != "ngpc" && fp->ext != "ngc" && fp->ext != "npc")
+ if(gf->ext != "ngp" && gf->ext != "ngpc" && gf->ext != "ngc" && gf->ext != "npc")
   return false;
 
  return true;
@@ -177,18 +177,18 @@ static MDFN_COLD void Cleanup(void)
  }
 }
 
-static MDFN_COLD void Load(MDFNFILE *fp)
+static MDFN_COLD void Load(GameFile* gf)
 {
  try
  {
-  const uint64 fp_size = fp->size();
+  const uint64 fp_size = gf->stream->size();
 
   if(fp_size > 1024 * 1024 * 8) // 4MiB maximum ROM size, 2* to be a little tolerant of garbage.
    throw MDFN_Error(0, _("NGP/NGPC ROM image is too large."));
 
   ngpc_rom.length = fp_size;
   ngpc_rom.data = new uint8[ngpc_rom.length];
-  fp->read(ngpc_rom.data, ngpc_rom.length);
+  gf->stream->read(ngpc_rom.data, ngpc_rom.length);
 
   md5_context md5;
   md5.starts();
@@ -205,7 +205,6 @@ static MDFN_COLD void Load(MDFNFILE *fp)
   NGPGfx = new NGPGFX_CLASS();
 
   MDFNGameInfo->fps = (uint32)((uint64)6144000 * 65536 * 256 / 515 / 198); // 3072000 * 2 * 10000 / 515 / 198
-  MDFNGameInfo->GameSetMD5Valid = false;
 
   MDFNNGPCSOUND_Init();
 
@@ -235,7 +234,7 @@ static MDFN_COLD void CloseGame(void)
  }
  catch(std::exception &e)
  {
-  MDFN_PrintError("%s", e.what());
+  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
  }
 
  Cleanup();
@@ -252,7 +251,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
  SFORMAT StateRegs[] =
  {
   SFVAR(z80_runtime),
-  SFARRAY(CPUExRAM, 16384),
+  SFVAR(CPUExRAM),
   SFVAR(FlashStatusEnable),
   SFEND
  };
@@ -262,11 +261,11 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVARN(pc, "PC"),
   SFVARN(sr, "SR"),
   SFVARN(f_dash, "F_DASH"),
-  SFARRAY32N(gpr, 4, "GPR"),
-  SFARRAY32N(gprBank[0], 4, "GPRB0"),
-  SFARRAY32N(gprBank[1], 4, "GPRB1"),
-  SFARRAY32N(gprBank[2], 4, "GPRB2"),
-  SFARRAY32N(gprBank[3], 4, "GPRB3"),
+  SFVARN(gpr, "GPR"),
+  SFVARN(gprBank[0], "GPRB0"),
+  SFVARN(gprBank[1], "GPRB1"),
+  SFVARN(gprBank[2], "GPRB2"),
+  SFVARN(gprBank[3], "GPRB3"),
   SFEND
  };
 
@@ -349,13 +348,13 @@ static void SetLayerEnableMask(uint64 mask)
 
 static const IDIISG IDII =
 {
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
- { "a", "A", 5, IDIT_BUTTON_CAN_RAPID,  NULL },
- { "b", "B", 6, IDIT_BUTTON_CAN_RAPID, NULL },
- { "option", "OPTION", 4, IDIT_BUTTON, NULL },
+ IDIIS_Button("up", "UP ↑", 0, "down"),
+ IDIIS_Button("down", "DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "LEFT ←", 2, "right"),
+ IDIIS_Button("right", "RIGHT →", 3, "left"),
+ IDIIS_ButtonCR("a", "A", 5,  NULL),
+ IDIIS_ButtonCR("b", "B", 6, NULL),
+ IDIIS_Button("option", "OPTION", 4, NULL),
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
@@ -375,9 +374,9 @@ static const std::vector<InputPortInfoStruct> PortInfo =
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".ngp", gettext_noop("Neo Geo Pocket ROM Image") },
- { ".ngc", gettext_noop("Neo Geo Pocket Color ROM Image") },
- { NULL, NULL }
+ { ".ngp", 0, gettext_noop("Neo Geo Pocket ROM Image") },
+ { ".ngc", 0, gettext_noop("Neo Geo Pocket Color ROM Image") },
+ { NULL, 0, NULL }
 };
 
 }

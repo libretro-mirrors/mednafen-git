@@ -74,7 +74,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
  {
   SFVAR(SoftResetCount),
   SFVAR(sms.cycle_counter),
-  SFARRAYN(sms.wram, 0x2000, "RAM"),
+  SFPTR8N(sms.wram, 0x2000, "RAM"),
 
   SFVAR(sms.paused),
 
@@ -90,7 +90,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVAR(sms.memctrl),
 
   //SFVAR(z80_runtime),
-  //SFARRAY(CPUExRAM, 16384),
+  //SFPTR8(CPUExRAM, 16384),
   //SFVAR(FlashStatusEnable),
   SFEND
  };
@@ -151,8 +151,6 @@ static void Emulate(EmulateSpecStruct *espec)
    input.system &= ~INPUT_START;
  }
 
- //NGPJoyLatch = *chee;
-
  MDFNMP_ApplyPeriodicCheats();
 
  if(sms.console == CONSOLE_GG)
@@ -199,13 +197,13 @@ static void CloseGame(void)
  }
  catch(std::exception &e)
  {
-  MDFN_PrintError("%s", e.what());
+  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
  }
 
  Cleanup();
 }
 
-static void LoadCommon(MDFNFILE *fp)
+static void LoadCommon(GameFile* gf)
 {
  try
  {
@@ -215,7 +213,7 @@ static void LoadCommon(MDFNFILE *fp)
   sms.territory   = MDFN_GetSettingI("sms.territory");
   sms.use_fm      = false;
 
-  Cart_Init(fp);
+  Cart_Init(gf);
   Cart_LoadNV();
 
   if(IS_SMS && sms.territory == TERRITORY_DOMESTIC)
@@ -232,8 +230,6 @@ static void LoadCommon(MDFNFILE *fp)
   pio_init();
   vdp_init(IS_SMS && sms.territory == TERRITORY_DOMESTIC);
   render_init();
-
-  MDFNGameInfo->GameSetMD5Valid = false;
 
   uint32 sndclk;
 
@@ -275,59 +271,59 @@ static void LoadCommon(MDFNFILE *fp)
  }
 }
 
-static bool TestMagicSMS(MDFNFILE *fp)
+static bool TestMagicSMS(GameFile* gf)
 {
- if(fp->ext != "sms" && fp->ext != "sg" && fp->ext != "sc")
+ if(gf->ext != "sms" && gf->ext != "sg" && gf->ext != "sc")
   return false;
 
  return true;
 }
 
-static bool TestMagicGG(MDFNFILE *fp)
+static bool TestMagicGG(GameFile* gf)
 {
- if(fp->ext != "gg")
+ if(gf->ext != "gg")
   return false;
 
  return true;
 }
 
 
-static void LoadSMS(MDFNFILE *fp)
+static void LoadSMS(GameFile* gf)
 {
  sms.console = CONSOLE_SMS;
 
- LoadCommon(fp);
+ LoadCommon(gf);
 }
 
-static void LoadGG(MDFNFILE *fp)
+static void LoadGG(GameFile* gf)
 {
  sms.console = CONSOLE_GG;
 
- LoadCommon(fp);
+ LoadCommon(gf);
 }
 
 }
 
 static const IDIISG GGGamepadIDII =
 {
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
- { "button1", "Button 1", 4, IDIT_BUTTON_CAN_RAPID, NULL },
- { "button2", "Button 2", 5, IDIT_BUTTON_CAN_RAPID,  NULL },
- { "Start", "Start", 6, IDIT_BUTTON, NULL },
+ IDIIS_Button("up", "UP ↑", 0, "down"),
+ IDIIS_Button("down", "DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "LEFT ←", 2, "right"),
+ IDIIS_Button("right", "RIGHT →", 3, "left"),
+ IDIIS_ButtonCR("button1", "Button 1", 4, NULL),
+ IDIIS_ButtonCR("button2", "Button 2", 5,  NULL),
+ IDIIS_Button("Start", "Start", 6, NULL),
 };
 
 static const IDIISG SMSGamepadIDII =
 {
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
- { "fire1", "Fire 1/Start", 4, IDIT_BUTTON_CAN_RAPID, NULL },
- { "fire2", "Fire 2", 5, IDIT_BUTTON_CAN_RAPID,  NULL },
- { "pause", "Pause", 6, IDIT_BUTTON, NULL },
+ IDIIS_Button("up", "UP ↑", 0, "down"),
+ IDIIS_Button("down", "DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "LEFT ←", 2, "right"),
+ IDIIS_Button("right", "RIGHT →", 3, "left"),
+ IDIIS_ButtonCR("fire1", "Fire 1/Start", 4, NULL),
+ IDIIS_ButtonCR("fire2", "Fire 2", 5,  NULL),
+ IDIIS_Button("pause", "Pause", 6, NULL),
 };
 
 static const std::vector<InputDeviceInfoStruct> GGInputDeviceInfo =
@@ -406,14 +402,14 @@ static const MDFNSetting GGSettings[] =
 
 static const FileExtensionSpecStruct SMSKnownExtensions[] =
 {
- { ".sms", gettext_noop("Sega Master System ROM Image") },
- { NULL, NULL }
+ { ".sms", 0, gettext_noop("Sega Master System ROM Image") },
+ { NULL, 0, NULL }
 };
 
 static const FileExtensionSpecStruct GGKnownExtensions[] =
 {
- { ".gg", gettext_noop("Game Gear ROM Image") },
- { NULL, NULL }
+ { ".gg", 0, gettext_noop("Game Gear ROM Image") },
+ { NULL, 0, NULL }
 };
 
 static const CustomPalette_Spec SMSCPInfo[] =

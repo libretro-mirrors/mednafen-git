@@ -417,15 +417,15 @@ void MDINPUT_SetInput(unsigned vp, const char *type, uint8 *ptr)
   InputDevice[vp] = nullptr;
  }
 
- if(!strcasecmp(type, "none"))
+ if(!strcmp(type, "none"))
   InputDevice[vp] = nullptr;
- else if(!strcasecmp(type, "gamepad"))
+ else if(!strcmp(type, "gamepad"))
   InputDevice[vp] = MDInput_MakeMD3B();
- else if(!strcasecmp(type, "gamepad6"))
+ else if(!strcmp(type, "gamepad6"))
   InputDevice[vp] = MDInput_MakeMD6B();
- else if(!strcasecmp(type, "gamepad2"))
+ else if(!strcmp(type, "gamepad2"))
   InputDevice[vp] = MDInput_MakeMS2B();
- else if(!strcasecmp(type, "megamouse"))
+ else if(!strcmp(type, "megamouse"))
   InputDevice[vp] = MDInput_MakeMegaMouse();
  else
   abort();
@@ -444,12 +444,12 @@ void MDINPUT_StateAction(StateMem *sm, const unsigned load, const bool data_only
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(PortData, 3),
-  SFARRAY(PortCtrl, 3),
-  SFARRAY(PortTxData, 3),
-  SFARRAY(PortSCtrl, 3),
+  SFVAR(PortData),
+  SFVAR(PortCtrl),
+  SFVAR(PortTxData),
+  SFVAR(PortSCtrl),
 
-  SFARRAY(PortDataBus, 3),
+  SFVAR(PortDataBus),
   SFEND
  };
 

@@ -42,14 +42,6 @@ namespace MDFN_IEN_NGP
 // GCC specific 
 //===========================
 
-#ifndef max
-#define max(a,b) ((a)>(b)?(a):(b))
-#endif
-
-#ifndef min
-#define min(a,b) ((a)<(b)?(a):(b))
-#endif
-
 //COLOURMODE
 typedef enum
 {
@@ -85,7 +77,8 @@ typedef struct
 	uint8	reserved2[4];	// 0x34 - 0x37
 	uint8	reserved3[4];	// 0x38 - 0x3B
 	uint8	reserved4[4];	// 0x3C - 0x3F
-} __attribute__((__packed__)) RomHeader;
+} RomHeader;
+static_assert(sizeof(RomHeader) == 0x40, "RomHeader wrong size!");
 
 //=============================================================================
 

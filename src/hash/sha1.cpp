@@ -22,6 +22,9 @@
 #include <mednafen/mednafen.h>
 #include "sha1.h"
 
+namespace Mednafen
+{
+
 template<unsigned n>
 static INLINE uint32 rotl(uint32 val)
 {
@@ -152,3 +155,4 @@ void sha1_test(void)
  assert(sha1(tv, 65) == expected[5]);
 }
 
+}

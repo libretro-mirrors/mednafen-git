@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* debugger.cpp:
-**  Copyright (C) 2006-2016 Mednafen Team
+**  Copyright (C) 2006-2017 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -141,7 +141,7 @@ static unsigned long long ParsePhysAddr(const char *za)
  {
   unsigned int bank = 0, offset = 0;
 
-  if(!strcasecmp(CurGame->shortname, "wswan"))
+  if(!MDFN_strazicmp(CurGame->shortname, "wswan"))
   {
    trio_sscanf(za, "%04x:%04x", &bank, &offset);
    ret = ((bank << 4) + offset) & 0xFFFFF;
@@ -506,6 +506,7 @@ typedef enum
 
 // FIXME, cleanup, less spaghetti:
 static PromptType InPrompt = None;
+static SDL_Keycode PromptTAKC = SDLK_UNKNOWN;
 static const RegType* CurRegIP;
 static const RegGroupType* CurRegGroupIP;
 
@@ -599,7 +600,7 @@ class DebuggerPrompt : public HappyPrompt
 		      if(TraceLog->tell() != 0)
 		       TraceLog->print_format("\n\n\n");
 
-		      TraceLog->print_format("Tracing began: %s", Time::StrTime().c_str());
+		      TraceLog->print_format("Tracing began: %s\n", Time::StrTime().c_str());
 		      TraceLog->print_format("[ADDRESS]: [INSTRUCTION]   [REGISTERS(before instruction exec)]");
 
 		      if(num == 1)
@@ -614,7 +615,7 @@ class DebuggerPrompt : public HappyPrompt
 		     {
 		      TraceLog.reset(nullptr);
 
-		      MDFN_DispMessage("%s", e.what());
+		      MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
 		     }
 		    }
 		   }
@@ -674,7 +675,8 @@ class DebuggerPrompt : public HappyPrompt
                    if(WatchLogical)
                    {
                     trio_sscanf(tmp_c_str, "%x", &WatchAddr);
-                    WatchAddr &= 0xFFF0;
+                    WatchAddr &= (((uint64)1 << CurGame->Debugger->LogAddrBits) - 1);
+		    WatchAddr &= ~0xF;
                    }
                    else
                    {
@@ -1176,7 +1178,7 @@ static void MDFN_COLD SetActive(bool active, unsigned which_ms)
 
    if(NeedInit)
    {
-    DisFont = MDFN_GetSettingUI(std::string(std::string(CurGame->shortname) + "." + std::string("debugger.disfontsize")));
+    DisFont = MDFN_GetSettingUI(std::string(std::string(CurGame->shortname) + "." + "debugger.disfontsize"));
     DebuggerOpacity = 0xC8;
 
     // Debug remove me
@@ -1237,8 +1239,6 @@ static void MDFN_COLD SetActive(bool active, unsigned which_ms)
   GfxDebugger_SetActive((WhichMode == 1) && IsActive);
   memdbg->SetActive((WhichMode == 2) && IsActive);
   LogDebugger_SetActive((WhichMode == 3) && IsActive);
-
-  SDL_MDFN_ShowCursor(IsActive);
 }
 
 static const char HexLUT[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
@@ -1336,9 +1336,6 @@ static void CPUCallback(uint32 PC, bool bpoint)
   NeedStep = 0;
  }
 
- if(TraceLog)
-  DoTraceLog(PC);
-
  while(InSteppingMode && GameThreadRun)
  {
   DebuggerFudge();
@@ -1357,6 +1354,11 @@ static void CPUCallback(uint32 PC, bool bpoint)
    UpdateCoreHooks();
  }
  if(NeedRun) NeedRun = 0;
+
+ //
+ //
+ if(TraceLog)
+  DoTraceLog(PC);
 }
 
 
@@ -1380,17 +1382,20 @@ void Debugger_GT_SyncDisToPC(void)
 // Called from game thread, or in the main thread game thread creation sequence code.
 void Debugger_GT_ForceSteppingMode(void)
 {
- if(!InSteppingMode)
+ if(CurGame->Debugger)
  {
-  NeedStep = 2;
-  UpdateCoreHooks();
+  if(!InSteppingMode)
+  {
+   NeedStep = 2;
+   UpdateCoreHooks();
+  }
  }
 }
 
 // Call this function from any thread:
 bool Debugger_IsActive(void)
 {
- return(IsActive);
+ return IsActive;
 }
 
 // Call this function from the game thread:
@@ -1399,7 +1404,7 @@ bool Debugger_GT_Toggle(void)
  if(CurGame->Debugger)
   SetActive(!IsActive, WhichMode);
 
- return(IsActive);
+ return IsActive;
 }
 
 void Debugger_GT_ModOpacity(int deltalove)
@@ -1413,7 +1418,7 @@ void Debugger_GT_Event(const SDL_Event *event)
 {
   if(event->type == SDL_KEYDOWN)
   {
-   if(event->key.keysym.mod & KMOD_ALT)
+   if((event->key.keysym.mod & KMOD_LALT) && !(event->key.keysym.mod & KMOD_CTRL))
    {
     switch(event->key.keysym.sym)
     {
@@ -1467,8 +1472,28 @@ void Debugger_GT_Event(const SDL_Event *event)
 
   switch(event->type)
   {
+   case SDL_TEXTINPUT:
+	if(SDL_GetModState() & KMOD_LALT)
+  	 break;
+
+	if(PromptTAKC != SDLK_UNKNOWN)
+	 break;
+
+	if(InPrompt)
+	 myprompt->InsertKBB(event->text.text);
+
+	break;
+
+   case SDL_KEYUP:
+	if(PromptTAKC == event->key.keysym.sym)
+	 PromptTAKC = SDLK_UNKNOWN;
+	break;
+
    case SDL_KEYDOWN:
-        if(event->key.keysym.mod & KMOD_ALT)
+	if(PromptTAKC == event->key.keysym.sym && event->key.repeat)
+	 PromptTAKC = SDLK_UNKNOWN;
+
+        if(event->key.keysym.mod & KMOD_LALT)
          break;
 
         if(InPrompt)
@@ -1666,17 +1691,20 @@ void Debugger_GT_Event(const SDL_Event *event)
 		 {
 		  InPrompt = IOWriteBPS;
 		  myprompt = new DebuggerPrompt("I/O Write Breakpoints", IOWriteBreakpoints);
+		  PromptTAKC = event->key.keysym.sym;
 		 }
 		 else
 		 {
                   InPrompt = WriteBPS;
 		  myprompt = new DebuggerPrompt("Write Breakpoints", WriteBreakpoints);
+		  PromptTAKC = event->key.keysym.sym;
                  }
                 }
                 else if(event->key.keysym.mod & KMOD_CTRL)
                 {
                  InPrompt = AuxWriteBPS;
                  myprompt = new DebuggerPrompt("Aux Write Breakpoints", AuxWriteBreakpoints);
+		 PromptTAKC = event->key.keysym.sym;
                 }
 		break;
 
@@ -1685,6 +1713,7 @@ void Debugger_GT_Event(const SDL_Event *event)
 		{
 		 InPrompt = OpBPS;
 		 myprompt = new DebuggerPrompt("Opcode Breakpoints", OpBreakpoints);
+		 PromptTAKC = event->key.keysym.sym;
 		}
 		break;
 	 case SDLK_r:
@@ -1694,17 +1723,20 @@ void Debugger_GT_Event(const SDL_Event *event)
 		 {
 		  InPrompt = IOReadBPS;
 		  myprompt = new DebuggerPrompt("I/O Read Breakpoints", IOReadBreakpoints);
+		  PromptTAKC = event->key.keysym.sym;
 		 }
 		 else
 		 {
 		  InPrompt = ReadBPS;
 		  myprompt = new DebuggerPrompt("Read Breakpoints", ReadBreakpoints);
+		  PromptTAKC = event->key.keysym.sym;
 		 }
 		}
                 else if(event->key.keysym.mod & KMOD_CTRL)
                 {
                  InPrompt = AuxReadBPS;
                  myprompt = new DebuggerPrompt("Aux Read Breakpoints", AuxReadBreakpoints);
+		 PromptTAKC = event->key.keysym.sym;
                 }
 		else if(InSteppingMode)
 		 NeedRun = true;
@@ -1715,14 +1747,19 @@ void Debugger_GT_Event(const SDL_Event *event)
 		{
 		 InPrompt = TraceLogPrompt;
 		 myprompt = new DebuggerPrompt("Trace Log(filename end_pc)", TraceLogSpec);
+		 PromptTAKC = event->key.keysym.sym;
 		}
+		break;
+
 	 case SDLK_i:
 	 	if(!InPrompt && CurGame->Debugger->IRQ)
 		{
 		 InPrompt = ForceInt;
 		 myprompt = new DebuggerPrompt("Force Interrupt", "");
+		 PromptTAKC = event->key.keysym.sym;
 		}
 		break;
+
 	 case SDLK_p:
 		if(!InPrompt)
 		{
@@ -1730,11 +1767,13 @@ void Debugger_GT_Event(const SDL_Event *event)
 		 {
 		  InPrompt = PokeMeHL;
 		  myprompt = new DebuggerPrompt("HL Poke(address value size)", "");
+		  PromptTAKC = event->key.keysym.sym;
 		 }
 		 else
 		 {
 		  InPrompt = PokeMe;
 		  myprompt = new DebuggerPrompt("Poke(address value size)", "");
+		  PromptTAKC = event->key.keysym.sym;
 		 }
 		}
 		break;
@@ -1781,6 +1820,7 @@ void Debugger_GT_Event(const SDL_Event *event)
 		  }
 
                   myprompt = new DebuggerPrompt(ptext, buf);
+		  PromptTAKC = event->key.keysym.sym;
 		 }
 	         break;
          }

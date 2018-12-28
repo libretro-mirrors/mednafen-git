@@ -183,8 +183,6 @@ static MDFN_COLD void InitCommon(const std::string& fbase)
         MDFNGameInfo->VideoSystem = VIDSYS_NONE;
 
         MDFNGameInfo->cspecial = NULL;
-        MDFNGameInfo->GameSetMD5Valid = false;
-
 
         if(MDFN_GetSettingB("nes.fnscan"))
         {
@@ -192,8 +190,8 @@ static MDFN_COLD void InitCommon(const std::string& fbase)
           MDFNGameInfo->VideoSystem = VIDSYS_NTSC;
          else if(fbase.find("(J)") != std::string::npos || fbase.find("(Japan)") != std::string::npos)
           MDFNGameInfo->VideoSystem = VIDSYS_NTSC;
-         else if(fbase.find("(E)") != std::string::npos || fbase.find("(G)") != std::string::npos ||
-	         fbase.find("(Europe)") != std::string::npos || fbase.find("(Germany)") != std::string::npos)
+         else if(fbase.find("(E)") != std::string::npos || fbase.find("(G)") != std::string::npos || fbase.find("(F)") != std::string::npos ||
+	         fbase.find("(Europe)") != std::string::npos || fbase.find("(Germany)") != std::string::npos || fbase.find("(France)") != std::string::npos)
           MDFNGameInfo->VideoSystem = VIDSYS_PAL;
         }
 
@@ -227,24 +225,24 @@ void UNIFLoad(Stream *fp, NESGameType *) MDFN_COLD;
 void iNESLoad(Stream *fp, NESGameType *) MDFN_COLD;
 void FDSLoad(Stream *fp, NESGameType *) MDFN_COLD;
 
-bool iNES_TestMagic(MDFNFILE *fp);
-bool UNIF_TestMagic(MDFNFILE *fp);
-bool FDS_TestMagic(MDFNFILE *fp);
+bool iNES_TestMagic(Stream* fp);
+bool UNIF_TestMagic(Stream* fp);
+bool FDS_TestMagic(Stream* fp);
 
 typedef void (*LoadFunction_t)(Stream *fp, NESGameType *);
 
-static LoadFunction_t GetLoadFunctionByMagic(MDFNFILE *fp)
+static LoadFunction_t GetLoadFunctionByMagic(GameFile* gf)
 {
- bool (*MagicFunctions[4])(MDFNFILE *fp) = { iNES_TestMagic, UNIF_TestMagic, NSF_TestMagic, FDS_TestMagic };
+ bool (*MagicFunctions[4])(Stream* fp) = { iNES_TestMagic, UNIF_TestMagic, NSF_TestMagic, FDS_TestMagic };
  LoadFunction_t LoadFunctions[4] = { iNESLoad, UNIFLoad, NSFLoad, FDSLoad };
  LoadFunction_t ret = NULL;
 
  for(int x = 0; x < 4; x++)
  {
-  fp->rewind();
-  if(MagicFunctions[x](fp))
+  gf->stream->rewind();
+  if(MagicFunctions[x](gf->stream))
   {
-   fp->rewind();
+   gf->stream->rewind();
    ret = LoadFunctions[x];
    break;
   }
@@ -252,26 +250,26 @@ static LoadFunction_t GetLoadFunctionByMagic(MDFNFILE *fp)
  return(ret);
 }
 
-static bool TestMagic(MDFNFILE *fp)
+static bool TestMagic(GameFile* gf)
 {
- return(GetLoadFunctionByMagic(fp) != NULL);
+ return(GetLoadFunctionByMagic(gf) != NULL);
 }
 
-static MDFN_COLD void Load(MDFNFILE *fp)
+static MDFN_COLD void Load(GameFile* gf)
 {
  try
  {
 	LoadFunction_t LoadFunction = NULL;
 
-	LoadFunction = GetLoadFunctionByMagic(fp);
+	LoadFunction = GetLoadFunctionByMagic(gf);
 
 	// If the file type isn't recognized, return -1!
 	if(!LoadFunction)
 	 throw MDFN_Error(0, _("File format is unknown to module \"%s\"."), MDFNGameInfo->shortname);
 
-	InitCommon(fp->fbase);
+	InitCommon(gf->fbase);
 
-	LoadFunction(fp->stream(), &GameInterface);
+	LoadFunction(gf->stream, &GameInterface);
 
 	{
 	 int w;
@@ -480,7 +478,7 @@ static const MDFNSetting NESSettings[] =
 
   { "nes.pal", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable PAL(50Hz) NES emulation."), NULL, MDFNST_BOOL, "0" },
   { "nes.gg", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable Game Genie emulation."), NULL, MDFNST_BOOL, "0" },
-  { "nes.ggrom", MDFNSF_EMU_STATE, gettext_noop("Path to Game Genie ROM image."), NULL, MDFNST_STRING, "gg.rom" },
+  { "nes.ggrom", MDFNSF_EMU_STATE | MDFNSF_CAT_PATH, gettext_noop("Path to Game Genie ROM image."), NULL, MDFNST_STRING, "gg.rom" },
   { "nes.clipsides", MDFNSF_NOFLAGS, gettext_noop("Clip left+right 8 pixel columns."), NULL, MDFNST_BOOL, "0" },
   { "nes.slstart", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in NTSC mode."), NULL, MDFNST_UINT, "8", "0", "239" },
   { "nes.slend", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in NTSC mode."), NULL, MDFNST_UINT, "231", "0", "239" },
@@ -566,7 +564,7 @@ static int GGtobin(char c)
  static char lets[16]={'A','P','Z','L','G','I','T','Y','E','O','X','U','K','S','V','N'};
 
  for(int x = 0; x < 16; x++)
-  if(lets[x] == toupper(c))
+  if(lets[x] == MDFN_azupper(c))
    return(x);
 
  if(c & 0x80)
@@ -743,14 +741,15 @@ static std::vector<CheatFormatStruct> CheatFormats =
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".nes", "iNES Format ROM Image" },
- { ".nez", "iNES Format ROM Image" }, // Odd naming variant
- { ".fds", "Famicom Disk System Disk Image" },
- { ".nsf", "Nintendo Sound Format" },
- { ".nsfe", "Extended Nintendo Sound Format" },
- { ".unf", "UNIF Format ROM Image" }, // Sexy 8.3 variant
- { ".unif", "UNIF Format ROM Image" },
- { NULL, NULL }
+ { ".nes",    0, "iNES Format ROM Image" },
+ { ".nez",    0, "iNES Format ROM Image" }, // Odd naming variant
+ { ".fds",    0, "Famicom Disk System Disk Image" },
+ { ".nsf",  -20, "Nintendo Sound Format" },
+ { ".nsfe", -20, "Extended Nintendo Sound Format" },
+ { ".unf",    0, "UNIF Format ROM Image" }, // Sexy 8.3 variant
+ { ".unif",   0, "UNIF Format ROM Image" },
+
+ { NULL, 0, NULL }
 };
 
 static const CheatInfoStruct CheatInfo =

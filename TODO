@@ -13,8 +13,6 @@ PS1 emulation causing address space exhaustion on 32-bit builds.
 
 Draw lightgun crosshairs driver-side.
 
-SF*() state variable macro overhaul; add macro/function for handling std::array and std::vector.
-
 Save state preview images should reflect the screen-rotation(ALT+O) state somehow, probably at time of creation.
 
 Display current input setup(port mappings) in upper right corner of screen in smallest or second-smallest font, with black border, on
@@ -27,9 +25,6 @@ CTRL+SHIFT+1 intermediate disconnected state.
 
 Audit code to ensure proper handling of pointer variables when a constructor or new throws an exception(IE make sure cleanup code doesn't
 delete an uninitialized pointer).
-
-Write StreamSpace(or StreamArchive?) class, write ZIPReader and GZReader, write MappedMemoryStream(derived from MemoryStream), and
-rewrite file.cpp and other code to use these instead of MDFNFILE.
 
 CD emulation/handling:
 	Stricter CUE and TOC sheet parsing.
@@ -49,17 +44,6 @@ Internationalization issues:
 	Filesystem character coding vs UTF8 internal encoding vs locale.
 
 	Wrap iconv() in C++ classes.
-
-	Win32 Unicode:
-		MDFN_mkdir_T(), MDFN_stat(), MDFN_unlink(), MDFN_rename(), FileStream, GZFileStream, unzip code. GetCommandLineW, CommandLineToArgvW
-		Use UTF-16<->UTF-8 conversion that permits lone/mismatched surrogates.  UTF-8 to UTF-16 conversion MUST error out(exception) on
-		overlong encodings, though.  Don't use MultiByteToWideChar(), as it's documented to simply delete such characters on Windows XP,
-		which could allow subversion of the crude unsafe file-include-path checking code.
-		-municode -DUNICODE=1 -D_UNICODE=1
-		May cause problems with people's CUE sheets, especially with certain PCE CD dumps with the ² character in the filenames.
-
-Documentation:
-	Document systems with a debugger available.
 
 Netplay:
 	Simplify name resolution and eventually remove hackish-sort-preference for IPv4 addresses over IPv6(in 2014 maybe?), split functionality
@@ -126,6 +110,8 @@ PCE_FAST:
 
 
 PCE:
+	More accurate CD seek timing: https://forum.fobby.net/index.php?t=msg&goto=5690
+
 	Test writes to $0806 when channel is enabled and DDA mode disabled, to track down the cause of some bus-conflicty-sounding
 	glitches in an old sound playback demo program I wrote.
 
@@ -278,14 +264,9 @@ undefined symbols, but the symbols that reference them are never referenced them
 
 Add dummy copy constructors to lots of our new classes.
 
-TODO:  Add a "SaveStateMD5" member to the MDFNGI struct, to allow the sharing of battery-backed save files between PCE and PCE_FAST
-without allowing save states to be shared.
-
 TODO: Do locking in drivers/remote.cpp
 
 TODO: Consider locking in MDFNI_printf() due to the indentation global variable.
-
-Alter MD5 hash of games based on the module's name for save states etc.?
 
 Save state timestamp-related variables consistency checks to avoid the possibility of buffer overruns and, less importantly, locking up the emulator
 by use of malicious save states.
@@ -303,6 +284,8 @@ Clean up intialization/deinitialization code so that more than one game can be l
  (This is a lot harder than it sounds! :b)
 
 Debugger(general):
+	GetAddressSpaceBytes()/PutAddressSpaceBytes() per-byte error reporting(open bus, CD data track read fail for PC-FX, etc.).
+
 	New aux breakpoint syntax, like:
 		vram[0-7fff]
 		vdc[0-5]

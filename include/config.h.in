@@ -29,6 +29,9 @@
 /* Define if we are compiling for DOS. */
 #undef DOS
 
+/* Define if we are compiling in libxxx mode. */
+#undef ENABLE_LIBXXX_MODE
+
 /* Define to 1 if translation of program messages to the user's native
    language is requested. */
 #undef ENABLE_NLS
@@ -117,11 +120,17 @@
 /* Define to 1 if you have the `dup2' function. */
 #undef HAVE_DUP2
 
+/* Define if we are compiling and linking with external LZO. */
+#undef HAVE_EXTERNAL_LZO2
+
 /* Define if we are compiling and linking with external mpcdec. */
 #undef HAVE_EXTERNAL_MPCDEC
 
 /* Define if we are compiling and linking with external tremor. */
 #undef HAVE_EXTERNAL_TREMOR
+
+/* Define if we are compiling and linking with external trio. */
+#undef HAVE_EXTERNAL_TRIO
 
 /* Define to 1 if you have the `fcntl' function. */
 #undef HAVE_FCNTL
@@ -244,6 +253,9 @@
 /* Define if we are compiling with libsndfile support. */
 #undef HAVE_LIBSNDFILE
 
+/* Define to 1 if you have the `trio' library (-ltrio). */
+#undef HAVE_LIBTRIO
+
 /* Define to 1 if you have the `vorbisidec' library (-lvorbisidec). */
 #undef HAVE_LIBVORBISIDEC
 
@@ -325,11 +337,20 @@
 /* Define if we are compiling with POSIX sockets support. */
 #undef HAVE_POSIX_SOCKETS
 
+/* Define to 1 if you have the `pthread_create' function. */
+#undef HAVE_PTHREAD_CREATE
+
 /* Define if the <pthread.h> defines PTHREAD_MUTEX_RECURSIVE. */
 #undef HAVE_PTHREAD_MUTEX_RECURSIVE
 
 /* Define if the POSIX multithreading library has read/write locks. */
 #undef HAVE_PTHREAD_RWLOCK
+
+/* Define to 1 if you have the `pthread_setaffinity_np' function. */
+#undef HAVE_PTHREAD_SETAFFINITY_NP
+
+/* Define to 1 if you have the `pthread_setname_np' function. */
+#undef HAVE_PTHREAD_SETNAME_NP
 
 /* Define to 1 if you have the `putenv' function. */
 #undef HAVE_PUTENV
@@ -351,6 +372,9 @@
 
 /* Define to 1 if you have the `select' function. */
 #undef HAVE_SELECT
+
+/* Define to 1 if you have the `sem_init' function. */
+#undef HAVE_SEM_INIT
 
 /* Define to 1 if you have the `send' function. */
 #undef HAVE_SEND
@@ -540,9 +564,6 @@
 /* The size of `char', as computed by sizeof. */
 #undef SIZEOF_CHAR
 
-/* The size of `double', as computed by sizeof. */
-#undef SIZEOF_DOUBLE
-
 /* The size of `int', as computed by sizeof. */
 #undef SIZEOF_INT
 
@@ -635,6 +656,9 @@
 
 /* Version number of package */
 #undef VERSION
+
+/* Define if we are compiling with Apple II+ emulation. */
+#undef WANT_APPLE2_EMU
 
 /* Define if we are compiling with debugger. */
 #undef WANT_DEBUGGER

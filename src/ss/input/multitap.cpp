@@ -106,8 +106,8 @@ void IODevice_Multitap::StateAction(StateMem* sm, const unsigned load, const boo
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(sub_state, 6),
-  SFARRAY(tmp, 4),
+  SFVAR(sub_state),
+  SFVAR(tmp),
   SFVAR(id1),
   SFVAR(id2),
 
@@ -138,7 +138,7 @@ void IODevice_Multitap::StateAction(StateMem* sm, const unsigned load, const boo
  }
 }
 
-enum { PhaseBias = __COUNTER__ + 1 };
+enum : int { PhaseBias = __COUNTER__ + 1 };
 
 #define WAIT_UNTIL(cond)  {					\
 			    case __COUNTER__:				\
@@ -257,6 +257,7 @@ uint8 IODevice_Multitap::UpdateBus(const sscpu_timestamp_t timestamp, const uint
      sub_state[port_counter] = 0x60;
      UASB(timestamp);
     } while(++port_counter < 6);
+    port_counter = 0;	// Save state consistency.
 
     //
     //

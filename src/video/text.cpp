@@ -27,6 +27,9 @@
 #include <mednafen/string/string.h>
 #include "font-data.h"
 
+namespace Mednafen
+{
+
 static const struct
 {
         uint8 glyph_width;
@@ -97,6 +100,9 @@ static void DecodeGlyph(char32_t thisglyph, const uint8 **glyph_ptr, uint8 *glyp
 {
  bool GlyphFound = false;
  uint32 recurse_fontid = fontid;
+
+ //if(thisglyph < 0x20)
+ // thisglyph = 0x2400 + thisglyph;
 
  while(!GlyphFound)
  {
@@ -336,4 +342,6 @@ uint32 DrawTextShadow(MDFN_Surface* surf, int32 x, int32 y, const char32_t* text
 uint32 DrawTextShadow(MDFN_Surface* surf, const MDFN_Rect& cr, int32 x, int32 y, const char32_t* text, uint32 color, uint32 shadcolor, uint32 fontid, uint32 hcenterw)
 {
  return DrawTextUTF32(surf, &cr, x, y, text, utf32_strlen(text), color, shadcolor, fontid, hcenterw, true);
+}
+
 }

@@ -49,10 +49,6 @@
 #include <mednafen/video.h>
 #include <mednafen/sound/OwlResampler.h>
 
-#ifdef __MMX__
-#include <mmintrin.h>
-#endif
-
 namespace MDFN_IEN_PCFX
 {
 
@@ -2708,8 +2704,7 @@ static INLINE void VDC_PIXELMIX(bool SPRCOMBO_ON, bool BGCOMBO_ON)
     }
 }
 
-static void MixVDC(void) NO_INLINE;
-static void MixVDC(void)
+static NO_INLINE void MixVDC(void)
 {
     // Optimization for when both layers are disabled in the VCE.
     if(!vce_rendercache.LayerPriority[LAYER_VDC_BG] && !vce_rendercache.LayerPriority[LAYER_VDC_SPR])
@@ -3177,8 +3172,8 @@ void KING_StateAction(StateMem *sm, const unsigned load, const bool data_only)
  SFORMAT KINGStateRegs[] =
  {
   SFVARN(king->AR, "AR"),
-  SFARRAY16N(king->KRAM[0], 262144, "KRAM0"),
-  SFARRAY16N(king->KRAM[1], 262144, "KRAM1"),
+  SFVARN(king->KRAM[0], "KRAM0"),
+  SFVARN(king->KRAM[1], "KRAM1"),
   SFVARN(king->KRAMWA, "KRAMWA"),
   SFVARN(king->KRAMRA, "KRAMRA"),
   SFVARN(king->KRAM_Mode, "KRAM_Mode"),
@@ -3186,15 +3181,15 @@ void KING_StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVARN(king->bgmode, "bgmode"),
   SFVARN(king->priority, "priority"),
   SFVARN(king->BGScrollMode, "BGScrollMode"),
-  SFARRAY16N(king->BGSize, 4, "BGSize"),
+  SFVARN(king->BGSize, "BGSize"),
 
-  SFARRAYN(king->BGBATAddr, 4, "BGBATAddr"),
-  SFARRAYN(king->BGCGAddr, 4, "BGCGAddr"),
+  SFVARN(king->BGBATAddr, "BGBATAddr"),
+  SFVARN(king->BGCGAddr, "BGCGAddr"),
   SFVARN(king->BG0SubBATAddr, "BG0SubBATAddr"),
   SFVARN(king->BG0SubCGAddr, "BG0SubCGAddr"),
 
-  SFARRAY16N(king->BGXScroll, 4, "BGXScroll"),
-  SFARRAY16N(king->BGYScroll, 4, "BGYScroll"),
+  SFVARN(king->BGXScroll, "BGXScroll"),
+  SFVARN(king->BGYScroll, "BGYScroll"),
   SFVARN(king->BGAffinA, "BGAffinA"),
   SFVARN(king->BGAffinB, "BGAffinB"),
   SFVARN(king->BGAffinC, "BGAffinC"),
@@ -3203,12 +3198,12 @@ void KING_StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVARN(king->BGAffinCenterY, "BGAffinCenterY"),
 
   SFVARN(king->ADPCMControl, "ADPCMControl"),
-  SFARRAY16N(king->ADPCMBufferMode, 2, "ADPCMBufferMode"),
-  SFARRAY16N(king->ADPCMSAL, 2, "ADPCMSAL"),
-  SFARRAY32N(king->ADPCMEndAddress, 2, "ADPCMEndAddress"),
-  SFARRAY32N(king->ADPCMPlayAddress, 2, "ADPCMPlayAddress"),
-  SFARRAY16N(king->ADPCMIntermediateAddress, 2, "ADPCMIntermediateAddress"),
-  SFARRAY16N(king->ADPCMStatus, 2, "ADPCMStatus"),
+  SFVARN(king->ADPCMBufferMode, "ADPCMBufferMode"),
+  SFVARN(king->ADPCMSAL, "ADPCMSAL"),
+  SFVARN(king->ADPCMEndAddress, "ADPCMEndAddress"),
+  SFVARN(king->ADPCMPlayAddress, "ADPCMPlayAddress"),
+  SFVARN(king->ADPCMIntermediateAddress, "ADPCMIntermediateAddress"),
+  SFVARN(king->ADPCMStatus, "ADPCMStatus"),
   SFVARN(king->ADPCMIRQPending, "ADPCMIRQPending"),
   SFVARN(king->RAINBOWTransferControl, "RAINBOWTransferControl"),
   SFVARN(king->RAINBOWKRAMA, "RAINBOWKRAMA"),
@@ -3230,7 +3225,7 @@ void KING_StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVARN(king->DMALatch, "DMALatch"),
   SFVARN(king->MPROGControl, "MPROGControl"),
   SFVARN(king->MPROGAddress, "MPROGAddress"),
-  SFARRAY16N(king->MPROGData, 16, "MPROGData"),
+  SFVARN(king->MPROGData, "MPROGData"),
   SFVARN(king->Reg00, "Port00"),
   SFVARN(king->Reg01, "Port01"),
   SFVARN(king->Reg02, "Port02"),
@@ -3254,7 +3249,7 @@ void KING_StateAction(StateMem *sm, const unsigned load, const bool data_only)
  SFORMAT VCEStateRegs[] =
  {
   SFVARN(fx_vce.AR, "AR"),
-  SFARRAY16N(fx_vce.priority, 2, "priority"),
+  SFVARN(fx_vce.priority, "priority"),
   SFVARN(fx_vce.odd_field, "odd_field"),
   SFVARN(fx_vce.in_hblank, "in_hblank"),
   SFVARN(fx_vce.in_vdc_hsync, "in_vdc_hsync"),
@@ -3267,34 +3262,34 @@ void KING_StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVARN(fx_vce.dot_clock, "dot_clock"),
   SFVARN(fx_vce.clock_divider, "clock_divider"),
 
-  SFARRAY32N(fx_vce.vdc_event, 2, "vdc_event"),
+  SFVARN(fx_vce.vdc_event, "vdc_event"),
 
   SFVARN(fx_vce.raster_counter, "raster_counter"),
   SFVARN(fx_vce.palette_rw_offset, "palette_rw_offset"),
   SFVARN(fx_vce.palette_rw_latch, "palette_rw_latch"),
-  SFARRAY16N(fx_vce.palette_offset, 4, "palette_offset"),
-  SFARRAY16N(fx_vce.palette_table, 512, "palette_table"),
+  SFVARN(fx_vce.palette_offset, "palette_offset"),
+  SFVARN(fx_vce.palette_table, "palette_table"),
   SFVARN(fx_vce.ChromaKeyY, "ChromaKeyY"),
   SFVARN(fx_vce.ChromaKeyU, "ChromaKeyU"),
   SFVARN(fx_vce.ChromaKeyV, "ChromaKeyV"),
   SFVARN(fx_vce.CCR, "CCR"),
   SFVARN(fx_vce.BLE, "BLE"),
   SFVARN(fx_vce.SPBL, "SPBL"),
-  SFARRAY16N(fx_vce.coefficients, 6, "coefficients"),
+  SFVARN(fx_vce.coefficients, "coefficients"),
 
 
   // HB render cache:
   // FIXME
-  SFARRAY16N(vce_rendercache.priority, 2, "rc_priority"),
+  SFVARN(vce_rendercache.priority, "rc_priority"),
   SFVARN(vce_rendercache.picture_mode, "rc_picture_mode"),
-  SFARRAY16N(vce_rendercache.palette_offset, 4, "rc_palette_offset"),
+  SFVARN(vce_rendercache.palette_offset, "rc_palette_offset"),
   SFVARN(vce_rendercache.ChromaKeyY, "rc_ChromaKeyY"),
   SFVARN(vce_rendercache.ChromaKeyU, "rc_ChromaKeyU"),
   SFVARN(vce_rendercache.ChromaKeyV, "rc_ChromaKeyV"),
   SFVARN(vce_rendercache.CCR, "rc_CCR"),
   SFVARN(vce_rendercache.BLE, "rc_BLE"),
   SFVARN(vce_rendercache.SPBL, "rc_SPBL"),
-  SFARRAY16N(vce_rendercache.coefficients, 6, "rc_coefficients"),
+  SFVARN(vce_rendercache.coefficients, "rc_coefficients"),
 
   SFEND
  };

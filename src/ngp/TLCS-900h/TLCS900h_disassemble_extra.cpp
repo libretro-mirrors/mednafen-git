@@ -196,4 +196,4 @@ void TLCS900h_disassemble_extra(void)
 		(*decodeExtra[first])();
 }
 
-};
+}

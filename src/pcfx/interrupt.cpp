@@ -127,7 +127,7 @@ void PCFXIRQ_StateAction(StateMem *sm, const unsigned load, const bool data_only
  {
   SFVAR(InterruptAsserted),
   SFVAR(InterruptMask),
-  SFARRAY16(InterruptPriority, 2),
+  SFVAR(InterruptPriority),
   SFEND
  };
 

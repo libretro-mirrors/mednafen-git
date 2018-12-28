@@ -29,6 +29,9 @@
  #include <mednafen/tremor/ivorbisfile.h>
 #endif
 
+namespace Mednafen
+{
+
 class CDAFReader_Vorbis final : public CDAFReader
 {
  public:
@@ -159,4 +162,6 @@ uint64 CDAFReader_Vorbis::FrameCount(void)
 CDAFReader* CDAFR_Vorbis_Open(Stream* fp)
 {
  return new CDAFReader_Vorbis(fp);
+}
+
 }

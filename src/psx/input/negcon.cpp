@@ -103,9 +103,9 @@ void InputDevice_neGcon::StateAction(StateMem* sm, const unsigned load, const bo
  {
   SFVAR(dtr),
 
-  SFARRAY(buttons, sizeof(buttons)),
+  SFVAR(buttons),
   SFVAR(twist),
-  SFARRAY(anabuttons, sizeof(anabuttons)),
+  SFVAR(anabuttons),
 
   SFVAR(command_phase),
   SFVAR(bitpos),
@@ -113,7 +113,7 @@ void InputDevice_neGcon::StateAction(StateMem* sm, const unsigned load, const bo
 
   SFVAR(command),
 
-  SFARRAY(transmit_buffer, sizeof(transmit_buffer)),
+  SFVAR(transmit_buffer),
   SFVAR(transmit_pos),
   SFVAR(transmit_count),
 
@@ -142,11 +142,11 @@ void InputDevice_neGcon::UpdateInput(const void *data)
  buttons[0] = d8[0];
  buttons[1] = d8[1];
 
- twist = ((32768 + MDFN_de16lsb((const uint8 *)data + 2) - (((int32)MDFN_de16lsb((const uint8 *)data + 4) * 32768 + 16383) / 32767)) * 255 + 32767) / 65535;
+ twist = (MDFN_de16lsb((const uint8 *)data + 2) * 255 + 32767) / 65535;
 
- anabuttons[0] = (MDFN_de16lsb((const uint8 *)data + 6) * 255 + 16383) / 32767; 
- anabuttons[1] = (MDFN_de16lsb((const uint8 *)data + 8) * 255 + 16383) / 32767;
- anabuttons[2] = (MDFN_de16lsb((const uint8 *)data + 10) * 255 + 16383) / 32767;
+ anabuttons[0] = (MDFN_de16lsb((const uint8 *)data + 4) * 255 + 32767) / 65535;
+ anabuttons[1] = (MDFN_de16lsb((const uint8 *)data + 6) * 255 + 32767) / 65535;
+ anabuttons[2] = (MDFN_de16lsb((const uint8 *)data + 8) * 255 + 32767) / 65535;
 
  //printf("%02x %02x %02x %02x\n", twist, anabuttons[0], anabuttons[1], anabuttons[2]);
 }
@@ -272,31 +272,28 @@ InputDevice *Device_neGcon_Create(void)
 
 IDIISG Device_neGcon_IDII =
 {
- { NULL, "empty", -1, IDIT_BUTTON, NULL },
- { NULL, "empty", -1, IDIT_BUTTON, NULL },
- { NULL, "empty", -1, IDIT_BUTTON, NULL },
- { "start", "START", 4, IDIT_BUTTON, NULL },
- { "up", "D-Pad UP ↑", 0, IDIT_BUTTON, "down" },
- { "right", "D-Pad RIGHT →", 3, IDIT_BUTTON, "left" },
- { "down", "D-Pad DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "D-Pad LEFT ←", 2, IDIT_BUTTON, "right" },
+ IDIIS_Padding<3>(),
+ IDIIS_Button("start", "START", 4),
+ IDIIS_Button("up", "D-Pad UP ↑", 0, "down"),
+ IDIIS_Button("right", "D-Pad RIGHT →", 3, "left"),
+ IDIIS_Button("down", "D-Pad DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "D-Pad LEFT ←", 2, "right"),
 
- { NULL, "empty", -1, IDIT_BUTTON, NULL },
- { NULL, "empty", -1, IDIT_BUTTON, NULL },
- { NULL, "empty", -1, IDIT_BUTTON, NULL },
- { "r", "Right Shoulder", 12, IDIT_BUTTON },
+ IDIIS_Padding<3>(),
+ IDIIS_Button("r", "Right Shoulder", 11),
 
- { "b", "B", 9, IDIT_BUTTON, NULL },
- { "a", "A", 10, IDIT_BUTTON, NULL },
- { NULL, "empty", -1, IDIT_BUTTON, NULL },
- { NULL, "empty", -1, IDIT_BUTTON, NULL },
+ IDIIS_Button("b", "B", 8),
+ IDIIS_Button("a", "A", 9),
+ IDIIS_Padding<2>(),
 
- { "twist_cwise",  "Twist ↓|↑ (Analog, Turn Right)", 6, IDIT_BUTTON_ANALOG },
- { "twist_ccwise", "Twist ↑|↓ (Analog, Turn Left)", 5, IDIT_BUTTON_ANALOG },
- { "i", "I (Analog)", 8, IDIT_BUTTON_ANALOG },
- { "ii", "II (Analog)", 7, IDIT_BUTTON_ANALOG },
+ IDIIS_Axis(	"twist", "Twist", 
+		"ccwise", "↑|↓ (Analog, Turn Left)", 
+		"cwise", "↓|↑ (Analog, Turn Right)", 5),
 
- { "l", "Left Shoulder (Analog)", 11, IDIT_BUTTON_ANALOG },
+ IDIIS_AnaButton("i", "I (Analog)", 7),
+ IDIIS_AnaButton("ii", "II (Analog)", 6),
+
+ IDIIS_AnaButton("l", "Left Shoulder (Analog)", 10),
 };
 
 }

@@ -201,12 +201,12 @@ static const DLEntry Developers[] =
  { 0x36, "Capcom" },
 };
 
-static bool TestMagic(MDFNFILE *fp)
+static bool TestMagic(GameFile* gf)
 {
- if(fp->ext != "ws" && fp->ext != "wsc" && fp->ext != "wsr")
+ if(gf->ext != "ws" && gf->ext != "wsc" && gf->ext != "wsr")
   return false;
 
- if(fp->size() < 65536)
+ if(gf->stream->size() < 65536)
   return false;
 
  return true;
@@ -237,19 +237,19 @@ static void CloseGame(void)
   }
   catch(std::exception &e)
   {
-   MDFN_PrintError("%s", e.what());
+   MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
   }
  }
 
  Cleanup();
 }
 
-static void Load(MDFNFILE *fp)
+static void Load(GameFile* gf)
 {
  try
  {
   bool IsWW = false;
-  const uint64 fp_in_size = fp->size();
+  const uint64 fp_in_size = gf->stream->size();
   uint32 real_rom_size;
 
   if(fp_in_size < 65536)
@@ -273,7 +273,7 @@ static void Load(MDFNFILE *fp)
   if(real_rom_size < rom_size)
    memset(wsCartROM, 0xFF, rom_size - real_rom_size);
 
-  fp->read(wsCartROM + (rom_size - real_rom_size), fp_in_size);
+  gf->stream->read(wsCartROM + (rom_size - real_rom_size), fp_in_size);
 
   if(!memcmp(wsCartROM + (rom_size - real_rom_size) + fp_in_size - 0x20, "WSRF", 4))
   {
@@ -402,7 +402,6 @@ static void Load(MDFNFILE *fp)
 
   WSwan_GfxInit();
   MDFNGameInfo->fps = (uint32)((uint64)3072000 * 65536 * 256 / (159*256));
-  MDFNGameInfo->GameSetMD5Valid = false;
 
   WSwan_SoundInit();
 
@@ -559,39 +558,39 @@ static const MDFNSetting WSwanSettings[] =
 //
 static const IDIISG IDII_GP =
 {
- { "up-x",   	"X1(X UP ↑)", 0, IDIT_BUTTON },
- { "right-x",	"X2(X RIGHT →)", 3, IDIT_BUTTON },
- { "down-x",	"X3(X DOWN ↓)", 1, IDIT_BUTTON },
- { "left-x",	"X4(X LEFT ←)", 2, IDIT_BUTTON },
+ IDIIS_Button("up-x",   	"X1(X UP ↑)", 0),
+ IDIIS_Button("right-x",	"X2(X RIGHT →)", 3),
+ IDIIS_Button("down-x",	"X3(X DOWN ↓)", 1),
+ IDIIS_Button("left-x",	"X4(X LEFT ←)", 2),
 
- { "up-y", 	"Y1(Y UP ↑)", 4, IDIT_BUTTON },
- { "right-y", 	"Y2(Y RIGHT →)", 7, IDIT_BUTTON },
- { "down-y", 	"Y3(Y DOWN ↓)", 5, IDIT_BUTTON },
- { "left-y", 	"Y4(Y LEFT ←)", 6, IDIT_BUTTON },
+ IDIIS_Button("up-y", 	"Y1(Y UP ↑)", 4),
+ IDIIS_Button("right-y", 	"Y2(Y RIGHT →)", 7),
+ IDIIS_Button("down-y", 	"Y3(Y DOWN ↓)", 5),
+ IDIIS_Button("left-y", 	"Y4(Y LEFT ←)", 6),
 
- { "start", "Start", 8, IDIT_BUTTON },
- { "a", "A", 10, IDIT_BUTTON_CAN_RAPID },
- { "b", "B", 9, IDIT_BUTTON_CAN_RAPID },
+ IDIIS_Button("start", "Start", 8),
+ IDIIS_ButtonCR("a", "A", 10),
+ IDIIS_ButtonCR("b", "B", 9),
 };
 
 static const IDIISG IDII_GPRAA =
 {
- { "up-x",   	"X1(X UP ↑)", 0, IDIT_BUTTON },
- { "right-x",	"X2(X RIGHT →)", 3, IDIT_BUTTON },
- { "down-x",	"X3(X DOWN ↓)", 1, IDIT_BUTTON },
- { "left-x",	"X4(X LEFT ←)", 2, IDIT_BUTTON },
+ IDIIS_Button("up-x",   	"X1(X UP ↑)", 0),
+ IDIIS_Button("right-x",	"X2(X RIGHT →)", 3),
+ IDIIS_Button("down-x",	"X3(X DOWN ↓)", 1),
+ IDIIS_Button("left-x",	"X4(X LEFT ←)", 2),
 
- { "up-y", 	"Y1(Y UP ↑)", 4, IDIT_BUTTON },
- { "right-y", 	"Y2(Y RIGHT →)", 7, IDIT_BUTTON },
- { "down-y", 	"Y3(Y DOWN ↓)", 5, IDIT_BUTTON },
- { "left-y", 	"Y4(Y LEFT ←)", 6, IDIT_BUTTON },
+ IDIIS_Button("up-y", 	"Y1(Y UP ↑)", 4),
+ IDIIS_Button("right-y", 	"Y2(Y RIGHT →)", 7),
+ IDIIS_Button("down-y", 	"Y3(Y DOWN ↓)", 5),
+ IDIIS_Button("left-y", 	"Y4(Y LEFT ←)", 6),
 
- { "ap","A'(center, upper)", 11, IDIT_BUTTON },
- { "a", "A (right)", 12, IDIT_BUTTON },
- { "b", "B (center, lower)", 10, IDIT_BUTTON },
- { "bp","B'(left)", 9, IDIT_BUTTON },
+ IDIIS_Button("ap","A'(center, upper)", 11),
+ IDIIS_Button("a", "A (right)", 12),
+ IDIIS_Button("b", "B (center, lower)", 10),
+ IDIIS_Button("bp","B'(left)", 9),
 
- { "start", "Start", 8, IDIT_BUTTON },
+ IDIIS_Button("start", "Start", 8),
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
@@ -643,10 +642,10 @@ static DebuggerInfoStruct DBGInfo =
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".ws", gettext_noop("WonderSwan ROM Image") },
- { ".wsc", gettext_noop("WonderSwan Color ROM Image") },
- { ".wsr", gettext_noop("WonderSwan Music Rip") },
- { NULL, NULL }
+ { ".ws",    0, gettext_noop("WonderSwan ROM Image") },
+ { ".wsc",   0, gettext_noop("WonderSwan Color ROM Image") },
+ { ".wsr", -20, gettext_noop("WonderSwan Music Rip") },
+ { NULL, 0, NULL }
 };
 
 }

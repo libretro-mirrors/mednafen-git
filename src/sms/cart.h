@@ -4,7 +4,7 @@
 namespace MDFN_IEN_SMS
 {
 
-void Cart_Init(MDFNFILE *fp) MDFN_COLD;
+void Cart_Init(GameFile* gf) MDFN_COLD;
 void Cart_Close(void) MDFN_COLD;
 
 void Cart_Reset(void);
@@ -15,7 +15,7 @@ void Cart_SaveNV(void);
 void Cart_Write(uint16 A, uint8 V);
 uint8 Cart_Read(uint16 A);
 
-int Cart_StateAction(StateMem *sm, int load, int data_only);
+void Cart_StateAction(StateMem *sm, int load, int data_only);
 
 }
 #endif

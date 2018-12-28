@@ -111,7 +111,7 @@ class CSystem;
 class CSystem : public CSystemBase
 {
 	public:
-		CSystem(MDFNFILE* fp) MDFN_COLD;
+		CSystem(GameFile* gf) MDFN_COLD;
 		~CSystem() MDFN_COLD;
 
 	public:

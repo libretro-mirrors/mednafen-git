@@ -1,6 +1,9 @@
 #ifndef __MDFN_NETPLAY_H
 #define __MDFN_NETPLAY_H
 
+namespace Mednafen
+{
+
 void Netplay_Update(const uint32 PortDeviceCache[], uint8* const PortData[], const uint32 PortLen[]);
 void Netplay_PostProcess(const uint32 PortDevIdx[], uint8* const PortData[], const uint32 PortLen[]);
 
@@ -75,4 +78,5 @@ extern int MDFNnetplay;
 
 #define MDFNNPCMD_QUIT          0xFF // Client->server
 
+}
 #endif

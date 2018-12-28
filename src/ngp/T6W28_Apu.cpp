@@ -375,6 +375,7 @@ void T6W28_Apu::save_state(T6W28_ApuState *ret)
 {
  for(int x = 0; x < 4; x++)
  {
+  ret->delay[x] = oscs[x]->delay;
   ret->volume_left[x] = oscs[x]->volume_left;
   ret->volume_right[x] = oscs[x]->volume_right;
  }
@@ -403,6 +404,7 @@ void T6W28_Apu::load_state(const T6W28_ApuState *state)
 {
  for(int x = 0; x < 4; x++)
  {
+  oscs[x]->delay = state->delay[x];
   oscs[x]->volume_left = state->volume_left[x];
   oscs[x]->volume_right = state->volume_right[x];
  }

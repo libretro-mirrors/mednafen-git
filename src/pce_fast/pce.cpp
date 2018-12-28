@@ -26,14 +26,14 @@
 #include "hes.h"
 #include <mednafen/hw_misc/arcade_card/arcade_card.h>
 #include <mednafen/mempatcher.h>
-#include <mednafen/cdrom/cdromif.h>
+#include <mednafen/cdrom/CDInterface.h>
 
 extern MDFNGI EmulatedPCE_Fast;
 
 namespace PCE_Fast
 {
 
-static std::vector<CDIF*> *cdifs = NULL;
+static std::vector<CDInterface*> *cdifs = NULL;
 static PCEFast_PSG *psg = NULL;
 extern ArcadeCard *arcade_card; // Bah, lousy globals.
 
@@ -65,17 +65,17 @@ static DECLFW(PCENullWrite)
 
 static DECLFR(BaseRAMReadSGX)
 {
- return((BaseRAM - (0xF8 * 8192))[A]);
+ return BaseRAM[(size_t)A - (0xF8 * 8192)];
 }
 
 static DECLFW(BaseRAMWriteSGX)
 {
- (BaseRAM - (0xF8 * 8192))[A] = V;
+ BaseRAM[(size_t)A - (0xF8 * 8192)] = V;
 }
 
 static DECLFR(BaseRAMRead)
 {
- return((BaseRAM - (0xF8 * 8192))[A]);
+ return BaseRAM[(size_t)A - (0xF8 * 8192)];
 }
 
 static DECLFR(BaseRAMRead_Mirrored)
@@ -85,7 +85,7 @@ static DECLFR(BaseRAMRead_Mirrored)
 
 static DECLFW(BaseRAMWrite)
 {
- (BaseRAM - (0xF8 * 8192))[A] = V;
+ BaseRAM[(size_t)A - (0xF8 * 8192)] = V;
 }
 
 static DECLFW(BaseRAMWrite_Mirrored)
@@ -182,9 +182,9 @@ void PCE_InitCD(void)
 static void LoadCommon(void) MDFN_COLD;
 static void LoadCommonPre(void) MDFN_COLD;
 
-static MDFN_COLD bool TestMagic(MDFNFILE *fp)
+static MDFN_COLD bool TestMagic(GameFile* gf)
 {
- if(fp->ext != "hes" && fp->ext != "pce" && fp->ext != "sgx")
+ if(gf->ext != "hes" && gf->ext != "pce" && gf->ext != "sgx")
   return false;
 
  return true;
@@ -230,7 +230,7 @@ static const struct
 	{ 0x3b13af61, "Battle Ace" },
 };
 
-static MDFN_COLD void Load(MDFNFILE *fp)
+static MDFN_COLD void Load(GameFile* gf)
 {
  try
  {
@@ -239,8 +239,8 @@ static MDFN_COLD void Load(MDFNFILE *fp)
   IsHES = false;
   IsSGX = false;
 
-  fp->read(hes_header, 4);
-  fp->seek(0, SEEK_SET);
+  gf->stream->read(hes_header, 4);
+  gf->stream->seek(0, SEEK_SET);
 
   if(!memcmp(hes_header, "HESM", 4))
    IsHES = true;
@@ -254,14 +254,14 @@ static MDFN_COLD void Load(MDFNFILE *fp)
   }
 
   if(IsHES)
-   HES_Load(fp);
+   HES_Load(gf->stream);
   else
   {
    uint32 crc;
 
-   crc = HuC_Load(fp);
+   crc = HuC_Load(gf->stream);
 
-   if(fp->ext == "sgx")
+   if(gf->ext == "sgx")
     IsSGX = true;
    else
    {
@@ -389,13 +389,13 @@ static void LoadCommon(void)
  }
 }
 
-static MDFN_COLD bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
+static MDFN_COLD bool TestMagicCD(std::vector<CDInterface*> *CDInterfaces)
 {
  static const uint8 magic_test[0x20] = { 0x82, 0xB1, 0x82, 0xCC, 0x83, 0x76, 0x83, 0x8D, 0x83, 0x4F, 0x83, 0x89, 0x83, 0x80, 0x82, 0xCC,
                                          0x92, 0x98, 0x8D, 0xEC, 0x8C, 0xA0, 0x82, 0xCD, 0x8A, 0x94, 0x8E, 0xAE, 0x89, 0xEF, 0x8E, 0xD0
                                        };
  uint8 sector_buffer[2048];
- CDIF *cdiface = (*CDInterfaces)[0];
+ CDInterface* cdiface = (*CDInterfaces)[0];
  CDUtility::TOC toc;
  bool ret = false;
 
@@ -407,7 +407,8 @@ static MDFN_COLD bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  {
   if(toc.tracks[track].control & 0x4)
   {
-   cdiface->ReadSector(sector_buffer, toc.tracks[track].lba, 1);
+   if(cdiface->ReadSectors(sector_buffer, toc.tracks[track].lba, 1) != 0x1)
+    break;
 
    if(!memcmp((char*)sector_buffer, (char *)magic_test, 0x20))
     ret = true;
@@ -417,27 +418,27 @@ static MDFN_COLD bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
   }
  }
 
-
  // If it's a PC-FX CD(Battle Heat), return false.
  // This is very kludgy.
  for(int32 track = toc.first_track; track <= toc.last_track; track++)
  {
   if(toc.tracks[track].control & 0x4)
   {
-   cdiface->ReadSector(sector_buffer, toc.tracks[track].lba, 1);
-   if(!strncmp("PC-FX:Hu_CD-ROM", (char*)sector_buffer, strlen("PC-FX:Hu_CD-ROM")))
+   if(cdiface->ReadSectors(sector_buffer, toc.tracks[track].lba, 1) == 0x1)
    {
-    return(false);
+    if(!strncmp("PC-FX:Hu_CD-ROM", (char*)sector_buffer, strlen("PC-FX:Hu_CD-ROM")))
+    {
+     return false;
+    }
    }
   }
  }
-
 
  // Now, test for the Games Express CD games.  The GE BIOS seems to always look at sector 0x10, but only if the first track is a
  // data track.
  if(toc.first_track == 1 && (toc.tracks[1].control & 0x4))
  {
-  if(cdiface->ReadSector(sector_buffer, 0x10, 1))
+  if(cdiface->ReadSectors(sector_buffer, 0x10, 1) == 0x1)
   {
    if(!memcmp((char *)sector_buffer + 0x8, "HACKER CD ROM SYSTEM", 0x14))
    {
@@ -449,9 +450,9 @@ static MDFN_COLD bool TestMagicCD(std::vector<CDIF *> *CDInterfaces)
  return(ret);
 }
 
-static MDFN_COLD bool DetectSGXCD(std::vector<CDIF*>* CDInterfaces)
+static MDFN_COLD bool DetectSGXCD(std::vector<CDInterface*>* CDInterfaces)
 {
- CDIF *cdiface = (*CDInterfaces)[0];
+ CDInterface* cdiface = (*CDInterfaces)[0];
  CDUtility::TOC toc;
  uint8 sector_buffer[2048];
  bool ret = false;
@@ -465,7 +466,7 @@ static MDFN_COLD bool DetectSGXCD(std::vector<CDIF*>* CDInterfaces)
  {
   if(toc.tracks[track].control & 0x4)
   {
-   if(cdiface->ReadSector(sector_buffer, toc.tracks[track].lba + 1, 1) != 0x1)
+   if(cdiface->ReadSectors(sector_buffer, toc.tracks[track].lba + 1, 1) != 0x1)
     continue;
 
    if(MDFN_de64msb(&sector_buffer[0x6A]) == 0x4D65646E6166656EULL && MDFN_de64msb(&sector_buffer[0x6A + 8]) == 0x74AB901942627DE6ULL)
@@ -476,7 +477,7 @@ static MDFN_COLD bool DetectSGXCD(std::vector<CDIF*>* CDInterfaces)
  return ret;
 }
 
-static MDFN_COLD void LoadCD(std::vector<CDIF *> *CDInterfaces)
+static MDFN_COLD void LoadCD(std::vector<CDInterface*> *CDInterfaces)
 {
  try
  {
@@ -607,7 +608,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(BaseRAM, IsSGX? 32768 : 8192),
+  SFPTR8(BaseRAM, IsSGX? 32768 : 8192),
   SFVAR(PCEIODataBuffer),
   SFEND
  };
@@ -654,8 +655,7 @@ void PCE_Power(void)
  }
 }
 
-static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx) MDFN_COLD;
-static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
+static MDFN_COLD void SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx)
 {
  const RMD_Layout* rmd = EmulatedPCE_Fast.RMD;
  const RMD_Drive* rd = &rmd->Drives[drive_idx];
@@ -669,13 +669,10 @@ static bool SetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint3
  {
   PCECD_Drive_SetDisc(rs->MediaCanChange, NULL);
  }
-
- return(true);
 }
 
 
-static void DoSimpleCommand(int cmd) MDFN_COLD;
-static void DoSimpleCommand(int cmd)
+static MDFN_COLD void DoSimpleCommand(int cmd)
 {
  switch(cmd)
  {
@@ -697,7 +694,7 @@ static const MDFNSetting PCESettings[] =
   { "pce_fast.cdspeed", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("CD-ROM data transfer speed multiplier."), NULL, MDFNST_UINT, "1", "1", "100" },
   { "pce_fast.nospritelimit", MDFNSF_NOFLAGS, gettext_noop("Remove 16-sprites-per-scanline hardware limit."), NULL, MDFNST_BOOL, "0" },
 
-  { "pce_fast.cdbios", MDFNSF_EMU_STATE, gettext_noop("Path to the CD BIOS"), NULL, MDFNST_STRING, "syscard3.pce" },
+  { "pce_fast.cdbios", MDFNSF_EMU_STATE | MDFNSF_CAT_PATH, gettext_noop("Path to the CD BIOS"), NULL, MDFNST_STRING, "syscard3.pce" },
 
   { "pce_fast.adpcmlp", MDFNSF_NOFLAGS, gettext_noop("Enable dynamic ADPCM lowpass filter."), NULL, MDFNST_BOOL, "0" },
   { "pce_fast.cdpsgvolume", MDFNSF_NOFLAGS, gettext_noop("PSG volume when playing a CD game."), NULL, MDFNST_UINT, "100", "0", "200" },
@@ -713,10 +710,11 @@ static uint8 MemRead(uint32 addr)
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".pce", gettext_noop("PC Engine ROM Image") },
- { ".hes", gettext_noop("PC Engine Music Rip") },
- { ".sgx", gettext_noop("SuperGrafx ROM Image") },
- { NULL, NULL }
+ { ".pce",   0, gettext_noop("PC Engine ROM Image") },
+ { ".hes", -20, gettext_noop("PC Engine Music Rip") },
+ { ".sgx",   0, gettext_noop("SuperGrafx ROM Image") },
+
+ { NULL, 0, NULL }
 };
 
 static const CustomPalette_Spec CPInfo[] =

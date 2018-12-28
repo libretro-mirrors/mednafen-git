@@ -950,13 +950,13 @@ void WSwan_GfxStateAction(StateMem *sm, const unsigned load, const bool data_onl
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY32N(&wsMonoPal[0][0], 16 * 4, "wsMonoPal"),
-  SFARRAY32(wsColors, 8),
+  SFVARN(wsMonoPal, "wsMonoPal"),
+  SFVAR(wsColors),
 
   SFVAR(wsLine),
 
-  SFARRAYN(&SpriteTable[0][0][0], 0x80 * 4, "SpriteTable"),
-  SFARRAYN(&SpriteTable[1][0][0], 0x80 * 4, "SpriteTable1"),
+  SFVARN(SpriteTable[0], "SpriteTable"),
+  SFVARN(SpriteTable[1], "SpriteTable1"),
   SFVARN(SpriteCountCache[0], "SpriteCountCache"),
   SFVARN(SpriteCountCache[1], "SpriteCountCache1"),
   SFVAR(FrameWhichActive),
@@ -1007,7 +1007,7 @@ void WSwan_GfxStateAction(StateMem *sm, const unsigned load, const bool data_onl
   {
    FrameWhichActive = 0;
    SpriteCountCache[1] = SpriteCountCache[0];
-   memcpy(&SpriteTable[1][0][0], &SpriteTable[0][0][0], 0x80 * 4);
+   memcpy(SpriteTable[1], SpriteTable[0], 0x80 * 4);
 
    if(weppy == 2)
     weppy = 3;

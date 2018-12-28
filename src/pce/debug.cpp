@@ -311,8 +311,7 @@ void PCEDBG_Disassemble(uint32 &a, uint32 SpecialA, char *TextBuf)
 	a = tmpa;
 }
 
-static void TestRWBP(void) NO_INLINE;
-static void TestRWBP(void)
+static NO_INLINE void TestRWBP(void)
 {
  ShadowCPU.LoadShadow(HuCPU);
 

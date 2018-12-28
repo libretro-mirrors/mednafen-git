@@ -25,7 +25,7 @@
 namespace MDFN_IEN_SS
 {
 
-IODevice_Gamepad::IODevice_Gamepad() : buttons(~3)
+IODevice_Gamepad::IODevice_Gamepad() : buttons(0xCFFF)
 {
 
 }
@@ -58,7 +58,7 @@ void IODevice_Gamepad::StateAction(StateMem* sm, const unsigned load, const bool
  if(!MDFNSS_StateAction(sm, load, data_only, StateRegs, section_name, true) && load)
   Power();
  else if(load)
-  buttons &= ~3;
+  buttons = (buttons | 0x4000) &~ 0x3000;
 }
 
 uint8 IODevice_Gamepad::UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted)
@@ -72,25 +72,25 @@ uint8 IODevice_Gamepad::UpdateBus(const sscpu_timestamp_t timestamp, const uint8
 
 IDIISG IODevice_Gamepad_IDII =
 {
- { "z", "Z", 10, IDIT_BUTTON },
- { "y", "Y", 9, IDIT_BUTTON },
- { "x", "X", 8, IDIT_BUTTON },
- { "rs", "Right Shoulder", 12, IDIT_BUTTON },
+ IDIIS_Button("z", "Z", 10),
+ IDIIS_Button("y", "Y", 9),
+ IDIIS_Button("x", "X", 8),
+ IDIIS_Button("rs", "Right Shoulder", 12),
 
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
+ IDIIS_Button("up", "UP ↑", 0, "down"),
+ IDIIS_Button("down", "DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "LEFT ←", 2, "right"),
+ IDIIS_Button("right", "RIGHT →", 3, "left"),
 
- { "b", "B", 6, IDIT_BUTTON },
- { "c", "C", 7, IDIT_BUTTON },
- { "a", "A", 5, IDIT_BUTTON },
- { "start", "START", 4, IDIT_BUTTON },
+ IDIIS_Button("b", "B", 6),
+ IDIIS_Button("c", "C", 7),
+ IDIIS_Button("a", "A", 5),
+ IDIIS_Button("start", "START", 4),
 
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { NULL, "empty", 0, IDIT_BUTTON },
- { "ls", "Left Shoulder", 11, IDIT_BUTTON },
+ IDIIS_Padding<1>(),
+ IDIIS_Padding<1>(),
+ IDIIS_Padding<1>(),
+ IDIIS_Button("ls", "Left Shoulder", 11),
 };
 
 

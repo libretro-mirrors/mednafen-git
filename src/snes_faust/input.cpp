@@ -481,7 +481,7 @@ void INPUT_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(JoyARData, 8),
+  SFVAR(JoyARData),
   SFVAR(JoyLS),
 
   SFVAR(WRIO),
@@ -509,18 +509,18 @@ void INPUT_UpdatePhysicalState(void)
 
 static const IDIISG GamepadIDII =
 {
- { "b", "B (center, lower)", 7, IDIT_BUTTON_CAN_RAPID, NULL },
- { "y", "Y (left)", 6, IDIT_BUTTON_CAN_RAPID, NULL },
- { "select", "SELECT", 4, IDIT_BUTTON, NULL },
- { "start", "START", 5, IDIT_BUTTON, NULL },
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
- { "a", "A (right)", 9, IDIT_BUTTON_CAN_RAPID, NULL },
- { "x", "X (center, upper)", 8, IDIT_BUTTON_CAN_RAPID, NULL },
- { "l", "Left Shoulder", 10, IDIT_BUTTON, NULL },
- { "r", "Right Shoulder", 11, IDIT_BUTTON, NULL },
+ IDIIS_ButtonCR("b", "B (center, lower)", 7, NULL),
+ IDIIS_ButtonCR("y", "Y (left)", 6, NULL),
+ IDIIS_Button("select", "SELECT", 4, NULL),
+ IDIIS_Button("start", "START", 5, NULL),
+ IDIIS_Button("up", "UP ↑", 0, "down"),
+ IDIIS_Button("down", "DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "LEFT ←", 2, "right"),
+ IDIIS_Button("right", "RIGHT →", 3, "left"),
+ IDIIS_ButtonCR("a", "A (right)", 9, NULL),
+ IDIIS_ButtonCR("x", "X (center, upper)", 8, NULL),
+ IDIIS_Button("l", "Left Shoulder", 10, NULL),
+ IDIIS_Button("r", "Right Shoulder", 11, NULL),
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =

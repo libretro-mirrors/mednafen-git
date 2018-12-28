@@ -15,7 +15,7 @@
   <?php BeginSection("Base Directory", "Section_base_directory"); ?>
    <p>
     Mednafen's "base directory" is the directory under which Mednafen stores its data and
-    looks for various auxillary data by default.  If the "<b>HOME</b>" environment variable is set, it will be suffixed with "/.mednafen"
+    looks for various auxiliary data by default.  If the "<b>HOME</b>" environment variable is set, it will be suffixed with "/.mednafen"
     and used as the base directory(in other words ~/.mednafen, or $HOME/.mednafen).  If the "<b>MEDNAFEN_HOME</b>" environment variable is set,
     it will be used as the base directory.  If neither the "HOME" nor "MEDNAFEN_HOME" environment
     variable is set, and the current user has an entry in the password file, the corresponding home directory
@@ -154,9 +154,7 @@
  </p>
  <?php BeginSection("Key Assignments", "Section_key_assignments"); ?>
  <p>
-  A single-press (un)pause function can be achieved by mapping the <a href="#command.advance_frame">frame advance</a> and
-  <a href="#command.run_normal">exit frame advance mode/run normal</a> functions to the same key via the
-  <a href="#command.input_configc">command key mapping</a> function.
+  All default key mappings are by scancode, so you'll need to press the keys corresponding to the appropriate positions on the standard U.S keyboard layout.
  </p>
  <p>
  </p>
@@ -168,26 +166,27 @@
  <tr><td>0-9</td><td>Select save state slot.</td><td>"0" through "9"</td></tr>
  <tr><td>-</td><td><a name="command.state_slot_dec">Decrement selected save state slot.</a></td><td>state_slot_dec</td></tr>
  <tr><td>=</td><td><a name="command.state_slot_inc">Increment selected save state slot.</a></td><td>state_slot_inc</td></tr>
- <tr><td>ALT + S</td><td>Toggle <a href="#srwframes">600-frame</a> save-state rewinding functionality, disabled by default.</td><td>state_rewind_toggle</td></tr>
+ <tr><td>ALT&nbsp;+&nbsp;S</td><td>Toggle <a href="#srwframes">600-frame</a> save-state rewinding functionality, disabled by default.</td><td>toggle_state_rewind</td></tr>
  <tr><td>SHIFT + F5</td><td>Record movie.</td><td>save_movie</td></tr>
  <tr><td>SHIFT + F7</td><td>Play movie.</td><td>load_movie</td></tr>
  <tr><td>SHIFT + 0-9</td><td>Select movie slot.</td><td>"m0" through "m9"</td></tr>
- <tr><td>ALT + C</td><td>Toggle cheat console.</td><td>togglecheatview</td></tr>
- <tr><td>ALT + T</td><td>Toggle cheats active.</td><td>togglecheatactive</td></tr>
+ <tr><td>LALT&nbsp;+&nbsp;C</td><td>Toggle cheat console.<br><b>Note</b>: Will not respond to RALT/AltGr even if remapped.</td><td>togglecheatview</td></tr>
+ <tr><td>ALT&nbsp;+&nbsp;T</td><td>Toggle cheats active.</td><td>togglecheatactive</td></tr>
  <tr><td>T</td><td>Enable network play console input.</td><td>togglenetview</td></tr>
- <tr><td>ALT + D</td><td>Toggle debugger.</td><td>toggle_debugger</td></tr>
+ <tr><td>LALT&nbsp;+&nbsp;D</td><td>Toggle <a href="debugger.html">debugger</a>.<br><b>Note</b>: Will not respond to RALT/AltGr even if remapped.</td><td>toggle_debugger</td></tr>
  <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
- <tr><td>ALT + A</td><td><a name="command.advance_frame">Enter frame advance mode, or advance the frame if already in it.</a></td><td>advance_frame</td></tr>
- <tr><td>ALT + R</td><td><a name="command.run_normal">Exit frame advance mode.</a></td><td>run_normal</td></tr>
+ <tr><td>`</td><td>Fast-forward.</td><td>fast_forward</td></tr>
+ <tr><td>\</td><td>Slow-forward.</td><td>slow_forward</td></tr>
+ <tr><td>ALT&nbsp;+&nbsp;A</td><td><a name="command.advance_frame">Enter frame advance mode, or advance the frame if already in it.</a></td><td>advance_frame</td></tr>
+ <tr><td>ALT&nbsp;+&nbsp;R</td><td><a name="command.run_normal">Exit frame advance mode.</a></td><td>run_normal</td></tr>
+ <tr><td>Pause</td><td><a name="command.pause">Pause/Unpause.</a></td><td>pause</td></tr>
  <tr><td>SHIFT + F1</td><td>Toggle frames-per-second display(from top to bottom, the display format is: virtual, rendered, blitted).</td><td>toggle_fps_view</td></tr>
  <tr><td>Backspace</td><td>Rewind emulation, if save-state rewinding functionality is enabled, up to <a href="#srwframes">600 frames</a>.</td><td>state_rewind</td></tr>
  <tr><td>F9</td><td>Save (rawish) screen snapshot.</td><td>take_snapshot</td></tr>
  <tr><td>SHIFT + F9</td><td>Save screen snapshot, taken after all scaling and special filters/shaders are applied.</td><td>take_scaled_snapshot</td></tr>
- <tr><td>ALT + O</td><td>Rotate the screen</td><td>rotate_screen</td></tr>
+ <tr><td>ALT&nbsp;+&nbsp;O</td><td>Rotate the screen</td><td>rotate_screen</td></tr>
  <tr><td>ALT + Enter</td><td>Toggle fullscreen mode.</td><td>toggle_fs</td></tr>
  <tr><td nowrap>CTRL + 1<br>through<br>Ctrl + 9</td><td>Toggle layer.</td><td>"tl1" through "tl9"</td></tr>
- <tr><td>`</td><td>Fast-forward.</td><td>fast_forward</td></tr>
- <tr><td>\</td><td>Slow-forward.</td><td>slow_forward</td></tr>
  <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
  <tr><td>F3</td><td><a name="command.input_config_abd"><a href="#Section_analog_detection">Detect analog buttons</a> on physical joysticks/gamepads(for use with the input configuration process).</a></td><td>input_config_abd</td></tr>
  <tr><td nowrap>ALT + SHIFT + [<i>n</i>]</td><td>Configure buttons for emulated device on input port <i>n</i>(1-8).</td><td>input_config<i>n</i></td></tr>
@@ -196,6 +195,9 @@
  <tr><td>SHIFT + F2</td><td>Like F2, but after configuration completes, to activate the configured command key will require all buttons configured to it to be in a pressed state simultaneously to trigger the action.  Note that keyboard modifier keys(CTRL, ALT, SHIFT) are still treated as modifiers and not discrete keys.<br><br>Especially useful in conjunction with the <a href="#ckdelay">ckdelay</a> setting.</td><td>input_configc_am</td></tr>
  <tr><td nowrap>CTRL + SHIFT + Menu</td><td><a name="command.toggle_grab">Toggle <a href="#Section_input_grabbing">input grabbing</a>(for emulated mice and keyboards).</a></td><td>toggle_grab</td></tr>
  <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
+ <tr><td>SHIFT + F6</td><td>Select drive.</td><td>select_drive</td></tr>
+ <tr><td>F6</td><td>Select medium(CD, floppy disk, etc.) for selected drive.</td><td>select_disk</td></tr>
+ <tr><td>F8</td><td>Insert/Eject medium(CD, floppy disk, etc.) for selected drive.</td><td>insert_eject_disk</td></tr>
  <tr><td>F10</td><td>Reset.</td><td>reset</td></tr>
  <tr><td>F11</td><td>Hard reset(toggle power switch).</td><td>power</td></tr>
  <tr><td>Escape/F12</td><td>Exit(the emulator, or netplay chat mode).</td><td>exit</td></tr>
@@ -211,6 +213,11 @@
   Emulated keyboards will only function when input grabbing is enabled.  When input grabbing is enabled, and at least one emulated keyboard that has an emulated key mapped
   to a host keyboard key is enabled, all(except for the input grab toggling mapping) other host keyboard input mappings will see all keyboard keys as being unpressed.  In
   other words, this disables hotkeys/command keys(unless the user has mapped them to a non-keyboard device), and the keyboard mappings of any non-keyboard emulated devices.
+ </p>
+
+ <p>
+  Emulated mice mapped to the system mouse will only function properly when input grabbing is enabled or when in a fullscreen video mode, the debugger is inactive, and no
+  other emulated input devices that rely on absolute mouse coordinates(e.g. lightguns) are active and mapped to the system mouse.
  </p>
  <?php EndSection(); ?>
 
@@ -271,7 +278,7 @@
 
 <?php BeginSection("Configuration Files", "Section_config_files"); ?>
  <p>
-  Mednafen loads/saves its settings from/to a primary configuration file, named "<b>mednafen-09x.cfg</b>", under the Mednafen
+  Mednafen loads/saves its settings from/to a primary configuration file, named "<b>mednafen.cfg</b>", under the Mednafen
   <a href="#Section_base_directory">base directory</a>.  This file is created and written to when Mednafen shuts down.
  </p>
  <p>
@@ -453,12 +460,66 @@ has the minimum amount of processing done to it before being passed to the DAC o
    <?php EndSection(); ?>
 
   <?php EndSection(); ?>
+
+  <?php BeginSection("Input Mapping Settings Format", "Section_input_mapping_format"); ?>
+<p>
+The general format of an input mapping is: <b><u>DEVICE_TYPE</u></b> <b><u>DEVICE_ID</u></b> <b><u>DEVICE_INPUT</u></b> [<b><u>SCALE</u></b>] [<b><u>LOGIC</u></b>] [...]
+</p>
+<p><b><u>DEVICE_TYPE</u></b> is one of "<a href="#Section_ims_keyboard">keyboard</a>", "<a href="#Section_ims_mouse">mouse</a>", or "<a href="#Section_ims_joystick">joystick</a>".</p>
+<p><b><u>DEVICE_ID</u></b> is the ID Mednafen uses for the device to differentiate it from other devices of the same type.  Currently, only "0x0" is allowed for the "keyboard" and "mouse" <b><u>DEVICE_TYPE</u></b>.  The IDs Mednafen uses for the "joystick" type are printed to stdout on startup, like so:
+<blockquote>
+<pre>
+ Initializing joysticks...
+  ID: 0x00030428400101000002000a00000000 - Gravis GamePad Pro USB 
+  ID: 0x00030e8f000301100007000c00000000 - GreenAsia Inc.    USB Joystick     
+  ID: 0x0003046dc21e20200008000b00000000 - Generic X-Box pad
+  ID: 0x0003045e003801100006000800000000 - Microsoft SideWinder Precision 2 Joystick
+  ID: 0x00030428400101000002000a00000001 - Gravis GamePad Pro USB 
+  ID: 0x0003046dc21a01100002000a00000000 - Logitech Logitech(R) Precision(TM) Gamepad
+  ID: 0x0003045e020201000008000a00000000 - Microsoft X-Box pad v1 (US)
+  ID: 0x00140007000101000002000a00000000 - Microsoft SideWinder GamePad
+  ID: 0x00140007000101000002000a00000001 - Microsoft SideWinder GamePad
+  ID: 0x00140007000101000002000a00000002 - Microsoft SideWinder GamePad
+</pre>
+</blockquote>
+</p>
+<p><b><u>DEVICE_INPUT</u></b> is a string, without any whitespace inside, specific to the device type being used.</p>
+<p><b><u>SCALE</u></b> is an optional integer between 0-65535, representing a 4.12 fixed-point quantity used to scale analog(e.g. axis) inputs in most usage contexts.  The default is 4096(equivalent to 1.0).</p>
+<p><b><u>LOGIC</u></b> is an optional string, "||" or "&&" or "&!", specifying a boolean operation, OR and AND and AND NOT respectively, used to join multiple physical input specifications together.  Evaluated left to right, with "&&" and "&!" having the same higher precedence over "||".  The exact behavior and semantics when used with a virtual input that expects an analog value is currently unspecified and may be subject to change, but will generally allow control from any of the specified physical inputs when they are manipulated individually.
+
+   <?php BeginSection("Keyboard", "Section_ims_keyboard"); ?>
+<b><u>SCANCODE</u></b>[<b><u>MODIFIER</u></b>]...<br>
+<p><b>Modifiers:</b> (only valid with command key mappings)
+<ul>
+ <li>+ctrl</li>
+ <li>+alt</li>
+ <li>+shift</u></b>
+</ul></p>
+   <?php EndSection(); ?>
+
+   <?php BeginSection("Mouse", "Section_ims_mouse"); ?>
+<ul>
+ <li>(cursor|rel)_(x|y)(-|+|-+|+-)</li>
+ <li>button_(left|middle|right|x1|x2|0| ... |31)</li>
+</ul>
+   <?php EndSection(); ?>
+
+   <?php BeginSection("Joystick", "Section_ims_joystick"); ?>
+When manually mapping the axes of an emulated lightgun to the axes of a physical lightgun that presents itself as a joystick device, use
+the optional "g" flag with "-+" polarity(e.g. "abs_0-+g").
+<ul>
+ <li>abs_(0| ... |1023)(-|+|-+|+-)[g]</li>
+ <li>button_(0| ... |1023)</li>
+</ul>
+   <?php EndSection(); ?>
+
+  <?php EndSection(); ?>
  <?php EndSection(); ?>
 
  <?php BeginSection("Troubleshooting and Common Solutions", "Section_troubleshooting"); ?>
   <p>
    When Mednafen encounters a fatal error, it will print details of the error to stdout and/or stderr before exiting.  On the Microsoft Windows builds of Mednafen,
-   stdout and stderr are redirected to files "<b>stdout.txt</b>" and "<b>stderr.txt</b>", respectively.
+   when Mednafen is not being run from a console, stdout and stderr are redirected to files "<b>stdout.txt</b>" and "<b>stderr.txt</b>", respectively.
   </p>
   <?php BeginSection("No sound output on Linux.", "Section_troubleshooting_nosoundlinux"); ?>
    <p>
@@ -581,6 +642,278 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   </blockquote>
   <?php EndSection(); ?>
 
+<?php BeginSection("MiniLZO", "Section_legal_minilzo", "http://www.oberhumer.com/opensource/lzo/"); ?>
+<blockquote>
+<pre>
+   Copyright (C) 1996-2015 Markus Franz Xaver Johannes Oberhumer
+   All Rights Reserved.
+
+   The LZO library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU General Public License as
+   published by the Free Software Foundation; either version 2 of
+   the License, or (at your option) any later version.
+
+   The LZO library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with the LZO library; see the file COPYING.
+   If not, write to the Free Software Foundation, Inc.,
+   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+
+   Markus F.X.J. Oberhumer
+   &lt;markus@oberhumer.com&gt;
+   http://www.oberhumer.com/opensource/lzo/
+</pre>
+</blockquote>
+<?php EndSection(); ?>
+
+<?php BeginSection("QuickLZ", "Section_legal_quicklz", "http://www.quicklz.com/"); ?>
+<blockquote>
+<pre>
+// QuickLZ data compression library
+// Copyright (C) 2006-2008 Lasse Mikkel Reinhold
+// lar@quicklz.com
+//
+// QuickLZ can be used for free under the GPL-1 or GPL-2 license (where anything 
+// released into public must be open source) or under a commercial license if such 
+// has been acquired (see http://www.quicklz.com/order.html). The commercial license 
+// does not cover derived or ported versions created by third parties under GPL.
+</pre>
+</blockquote>
+<?php EndSection(); ?>
+
+<?php BeginSection("trio", "Section_legal_trio", "http://daniel.haxx.se/projects/trio/"); ?>
+<blockquote>
+<pre>
+ * Copyright (C) 1998, 2009 Bjorn Reese and Daniel Stenberg.
+ * Copyright (C) 2001 Bjorn Reese <breese@users.sourceforge.net>
+ * Copyright (C) 2001 Bjorn Reese and Daniel Stenberg.
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
+ * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE AUTHORS AND
+ * CONTRIBUTORS ACCEPT NO RESPONSIBILITY IN ANY CONCEIVABLE MANNER.
+ *
+</pre>
+</blockquote>
+<?php EndSection(); ?>
+
+<?php BeginSection("Speex Resampler", "Section_legal_speex", "http://speex.org/"); ?>
+<blockquote>
+<pre>
+/* Copyright (C) 2007-2008 Jean-Marc Valin
+   Copyright (C) 2008      Thorvald Natvig
+
+   File: resample.c
+   Arbitrary resampling code
+
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions are
+   met:
+
+   1. Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+
+   2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+
+   3. The name of the author may not be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+   THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+   IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+   OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+   DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+   INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+   (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+   SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+   HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+   STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+   POSSIBILITY OF SUCH DAMAGE.
+*/
+</pre>
+</blockquote>
+ <?php EndSection(); ?>
+
+<?php BeginSection("ffmpeg cputest", "Section_legal_ffmpeg"); ?>
+<blockquote>
+<pre>
+/*
+ * CPU detection code, extracted from mmx.h
+ * (c)1997-99 by H. Dietz and R. Fisher
+ * Converted to C and improved by Fabrice Bellard.
+ *
+ * This file is part of FFmpeg.
+ *
+ * FFmpeg is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * FFmpeg is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with FFmpeg; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
+</pre>
+</blockquote>
+<?php EndSection(); ?>
+
+<?php BeginSection("CD-ROM data correction code", "Section_legal_dvdisaster"); ?>
+<blockquote>
+<pre>
+/*  dvdisaster: Additional error correction for optical media.
+ *  Copyright (C) 2004-2007 Carsten Gnoerlich.
+ *  Project home page: http://www.dvdisaster.com
+ *  Email: carsten@dvdisaster.com  -or-  cgnoerlich@fsfe.org
+ *
+ *  The Reed-Solomon error correction draws a lot of inspiration - and even code -
+ *  from Phil Karn's excellent Reed-Solomon library: http://www.ka9q.net/code/fec/
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA,
+ *  or direct your browser at http://www.gnu.org.
+ */
+</pre>
+</blockquote>
+<?php EndSection(); ?>
+
+ <?php BeginSection("Scale2x", "Section_legal_scale2x", "http://scale2x.sf.net/"); ?>
+<blockquote>
+<pre>
+ * Copyright (C) 2001, 2002, 2003, 2004 Andrea Mazzoleni
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+</pre>
+</blockquote>
+ <?php EndSection(); ?>
+
+<?php BeginSection("hq2x, hq3x, hq4x", "Section_legal_hqnx", "http://www.hiend3d.com/hq2x.html"); ?>
+<blockquote>
+<pre>
+//Copyright (C) 2003 MaxSt ( maxst@hiend3d.com )
+
+//This program is free software; you can redistribute it and/or
+//modify it under the terms of the GNU Lesser General Public
+//License as published by the Free Software Foundation; either
+//version 2.1 of the License, or (at your option) any later version.
+//
+//This program is distributed in the hope that it will be useful,
+//but WITHOUT ANY WARRANTY; without even the implied warranty of
+//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+//Lesser General Public License for more details.
+//
+//You should have received a copy of the GNU Lesser General Public
+//License along with this program; if not, write to the Free Software
+//Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+</pre>
+</blockquote>
+ <?php EndSection(); ?>
+
+<?php BeginSection("2xSaI", "Section_legal_2xsai"); ?>
+<blockquote>
+<pre>
+/* 2xSaI
+ * Copyright (c) Derek Liauw Kie Fa, 1999-2002
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+/* http://lists.fedoraproject.org/pipermail/legal/2009-October/000928.html */
+</pre>
+</blockquote>
+<?php EndSection(); ?>
+
+<?php BeginSection("SABR v3.0 Shader", "Section_legal_sabr"); ?>
+<blockquote>
+<pre>
+        SABR v3.0 Shader
+        Joshua Street
+
+        Portions of this algorithm were taken from Hyllian's 5xBR v3.7c
+        shader.
+
+        This program is free software; you can redistribute it and/or
+        modify it under the terms of the GNU General Public License
+        as published by the Free Software Foundation; either version 2
+        of the License, or (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program; if not, write to the Free Software
+        Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+</pre>
+</blockquote>
+<?php EndSection(); ?>
+
+<?php BeginSection("nes_ntsc", "Section_legal_nes_ntsc", "http://www.slack.net/~ant/libs/ntsc.html#nes_ntsc"); ?>
+<blockquote>
+<pre>
+/* Copyright (C) 2006 Shay Green. This module is free software; you
+can redistribute it and/or modify it under the terms of the GNU Lesser
+General Public License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version. This
+module is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
+more details. You should have received a copy of the GNU Lesser General
+Public License along with this module; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
+</pre>
+</blockquote>
+ <?php EndSection(); ?>
+
  <?php BeginSection("Gb_Snd_Emu", "Section_legal_gb_snd_emu", "http://slack.net/~ant/libs/audio.html"); ?>
 <blockquote>
 <pre>
@@ -632,193 +965,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 </blockquote>
  <?php EndSection(); ?>
 
-<?php BeginSection("Handy", "Section_legal_handy", "http://handy.sourceforge.net/"); ?>
-<blockquote>
-<pre>
-Copyright (c) 2004 K. Wilkins
-
-This software is provided 'as-is', without any express or implied warranty.
-In no event will the authors be held liable for any damages arising from
-the use of this software.
-
-Permission is granted to anyone to use this software for any purpose,
-including commercial applications, and to alter it and redistribute it
-freely, subject to the following restrictions:
-
-1. The origin of this software must not be misrepresented; you must not
-   claim that you wrote the original software. If you use this software
-   in a product, an acknowledgment in the product documentation would be
-   appreciated but is not required.
-
-2. Altered source versions must be plainly marked as such, and must not
-   be misrepresented as being the original software.
-
-3. This notice may not be removed or altered from any source distribution.
-</pre>
-</blockquote>
- <?php EndSection(); ?>
-
- <?php BeginSection("PC2e (Used in portions of PC Engine CD emulation)", "Section_legal_pc2e"); ?>
-<blockquote>
-<pre>
-        Copyright (C) 2004 Ki
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-</pre>
-</blockquote>
- <?php EndSection(); ?>
-
- <?php BeginSection("Scale2x", "Section_legal_scale2x", "http://scale2x.sf.net/"); ?>
-<blockquote>
-<pre>
- * Copyright (C) 2001, 2002, 2003, 2004 Andrea Mazzoleni
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-</pre>
-</blockquote>
- <?php EndSection(); ?>
-
-<?php BeginSection("hq2x, hq3x, hq4x", "Section_legal_hqnx", "http://www.hiend3d.com/hq2x.html"); ?>
-<blockquote>
-<pre>
-//Copyright (C) 2003 MaxSt ( maxst@hiend3d.com )
-
-//This program is free software; you can redistribute it and/or
-//modify it under the terms of the GNU Lesser General Public
-//License as published by the Free Software Foundation; either
-//version 2.1 of the License, or (at your option) any later version.
-//
-//This program is distributed in the hope that it will be useful,
-//but WITHOUT ANY WARRANTY; without even the implied warranty of
-//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-//Lesser General Public License for more details.
-//
-//You should have received a copy of the GNU Lesser General Public
-//License along with this program; if not, write to the Free Software
-//Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-</pre>
-</blockquote>
- <?php EndSection(); ?>
-
-<?php BeginSection("nes_ntsc", "Section_legal_nes_ntsc", "http://www.slack.net/~ant/libs/ntsc.html#nes_ntsc"); ?>
-<blockquote>
-<pre>
-/* Copyright (C) 2006 Shay Green. This module is free software; you
-can redistribute it and/or modify it under the terms of the GNU Lesser
-General Public License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version. This
-module is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
-more details. You should have received a copy of the GNU Lesser General
-Public License along with this module; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
-</pre>
-</blockquote>
- <?php EndSection(); ?>
-
-<?php BeginSection("2xSaI", "Section_legal_2xsai"); ?>
-<blockquote>
-<pre>
-/* 2xSaI
- * Copyright (c) Derek Liauw Kie Fa, 1999-2002
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
-/* http://lists.fedoraproject.org/pipermail/legal/2009-October/000928.html */
-</pre>
-</blockquote>
-<?php EndSection(); ?>
-
-<?php BeginSection("VisualBoyAdvance GameBoy and GBA code", "Section_legal_vba"); ?>
-<blockquote>
-<pre>
-// VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
-// Copyright (C) 1999-2003 Forgotten
-// Copyright (C) 2004-2006 Forgotten and the VBA development team
-
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2, or(at your option)
-// any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software Foundation,
-// Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-</pre>
-</blockquote>
- <?php EndSection(); ?>
-
-<?php BeginSection("trio", "Section_legal_trio", "http://daniel.haxx.se/projects/trio/"); ?>
-<blockquote>
-<pre>
- * Copyright (C) 1998, 2009 Bjorn Reese and Daniel Stenberg.
- * Copyright (C) 2001 Bjorn Reese <breese@users.sourceforge.net>
- * Copyright (C) 2001 Bjorn Reese and Daniel Stenberg.
- *
- * Permission to use, copy, modify, and distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
- * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE AUTHORS AND
- * CONTRIBUTORS ACCEPT NO RESPONSIBILITY IN ANY CONCEIVABLE MANNER.
- *
-</pre>
-</blockquote>
-
-<?php EndSection(); ?>
-
-<?php BeginSection("MD5 Hashing", "Section_legal_md5"); ?>
-<blockquote>
-<pre>
-/*
- * RFC 1321 compliant MD5 implementation,
- * by Christophe Devine <devine@cr0.net>;
- * this program is licensed under the GPL.
- */
-</pre>
-</blockquote>
- <?php EndSection(); ?>
-
 <?php BeginSection("V810 Emulator", "Section_legal_v810"); ?>
 <blockquote>
 <pre>
@@ -837,62 +983,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-</pre>
-</blockquote>
-<?php EndSection(); ?>
-
-<?php BeginSection("Unzipping Code", "Section_legal_minizip"); ?>
-<blockquote>
-<pre>
-/* unzip.c -- IO for uncompress .zip files using zlib
-   Version 1.01e, February 12th, 2005
-
-   Copyright (C) 1998-2005 Gilles Vollant
-
-   Read unzip.h for more info
-*/
-
-/* Decryption code comes from crypt.c by Info-ZIP but has been greatly reduced in terms of
-compatibility with older software. The following is from the original crypt.c. Code
-woven in by Terry Thorsen 1/2003.
-*/
-/*
-  Copyright (c) 1990-2000 Info-ZIP.  All rights reserved.
-
-  See the accompanying file LICENSE, version 2000-Apr-09 or later
-  (the contents of which are also included in zip.h) for terms of use.
-  If, for some reason, all these files are missing, the Info-ZIP license
-  also may be found at:  ftp://ftp.info-zip.org/pub/infozip/license.html
-*/
-</pre>
-</blockquote>
-
-<?php EndSection(); ?>
-
-<?php BeginSection("MiniLZO", "Section_legal_minilzo", "http://www.oberhumer.com/opensource/lzo/"); ?>
-<blockquote>
-<pre>
-   Copyright (C) 1996-2015 Markus Franz Xaver Johannes Oberhumer
-   All Rights Reserved.
-
-   The LZO library is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License as
-   published by the Free Software Foundation; either version 2 of
-   the License, or (at your option) any later version.
-
-   The LZO library is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with the LZO library; see the file COPYING.
-   If not, write to the Free Software Foundation, Inc.,
-   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-
-   Markus F.X.J. Oberhumer
-   &lt;markus@oberhumer.com&gt;
-   http://www.oberhumer.com/opensource/lzo/
 </pre>
 </blockquote>
 <?php EndSection(); ?>
@@ -920,23 +1010,6 @@ woven in by Terry Thorsen 1/2003.
    Author contact information:
 
    E-mail: philip-fuse@shadowmagic.org.uk
-</pre>
-</blockquote>
-<?php EndSection(); ?>
-
-<?php BeginSection("NeoPop Neo Geo Pocket (Color) Code", "Section_legal_neopop"); ?>
-<blockquote>
-<pre>
-//---------------------------------------------------------------------------
-// NEOPOP : Emulator as in Dreamland
-//
-// Copyright (c) 2001-2002 by neopop_uk
-//---------------------------------------------------------------------------
-//      This program is free software; you can redistribute it and/or modify
-//      it under the terms of the GNU General Public License as published by
-//      the Free Software Foundation; either version 2 of the License, or
-//      (at your option) any later version. See also the license.txt file for
-//      additional informations.
 </pre>
 </blockquote>
 <?php EndSection(); ?>
@@ -1002,6 +1075,168 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 </blockquote>
 <?php EndSection(); ?>
 
+<?php BeginSection("EMU2413(used in SMS emulation)", "Section_legal_emu2413_sms"); ?>
+<blockquote>
+<pre>
+  Copyright (C) Mitsutaka Okazaki 2004
+
+  This software is provided 'as-is', without any express or implied warranty.
+  In no event will the authors be held liable for any damages arising from
+  the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not
+     be misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+</pre>
+</blockquote>
+<?php EndSection(); ?>
+
+<?php BeginSection("YM2612 Emulator", "Section_legal_ym2612"); ?>
+<blockquote>
+<pre>
+/* Copyright (C) 2002 St�phane Dallongeville (gens AT consolemul.com) */
+/* Copyright (C) 2004-2006 Shay Green. This module is free software; you
+can redistribute it and/or modify it under the terms of the GNU Lesser
+General Public License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version. This
+module is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+details. You should have received a copy of the GNU Lesser General Public
+License along with this module; if not, write to the Free Software Foundation,
+Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
+</pre>
+</blockquote>
+<?php EndSection(); ?>
+
+<?php BeginSection("Sega Genesis SVP/SSP16 Emulator", "Section_legal_svp_ssp16"); ?>
+<blockquote>
+<pre>
+/*
+ * basic, incomplete SSP160x (SSP1601?) interpreter
+ * with SVP memory controller emu
+ *
+ * Copyright (c) Gražvydas "notaz" Ignotas, 2008
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the organization nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+</pre>
+</blockquote>
+<?php EndSection(); ?>
+
+ <?php BeginSection("PC2e (Used in portions of PC Engine CD emulation)", "Section_legal_pc2e"); ?>
+<blockquote>
+<pre>
+        Copyright (C) 2004 Ki
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+</pre>
+</blockquote>
+ <?php EndSection(); ?>
+
+<?php BeginSection("Handy", "Section_legal_handy", "http://handy.sourceforge.net/"); ?>
+<blockquote>
+<pre>
+Copyright (c) 2004 K. Wilkins
+
+This software is provided 'as-is', without any express or implied warranty.
+In no event will the authors be held liable for any damages arising from
+the use of this software.
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not
+   claim that you wrote the original software. If you use this software
+   in a product, an acknowledgment in the product documentation would be
+   appreciated but is not required.
+
+2. Altered source versions must be plainly marked as such, and must not
+   be misrepresented as being the original software.
+
+3. This notice may not be removed or altered from any source distribution.
+</pre>
+</blockquote>
+ <?php EndSection(); ?>
+
+<?php BeginSection("VisualBoyAdvance GameBoy and GBA code", "Section_legal_vba"); ?>
+<blockquote>
+<pre>
+// VisualBoyAdvance - Nintendo Gameboy/GameboyAdvance (TM) emulator.
+// Copyright (C) 1999-2003 Forgotten
+// Copyright (C) 2004-2006 Forgotten and the VBA development team
+
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2, or(at your option)
+// any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software Foundation,
+// Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+</pre>
+</blockquote>
+ <?php EndSection(); ?>
+
+<?php BeginSection("NeoPop Neo Geo Pocket (Color) Code", "Section_legal_neopop"); ?>
+<blockquote>
+<pre>
+//---------------------------------------------------------------------------
+// NEOPOP : Emulator as in Dreamland
+//
+// Copyright (c) 2001-2002 by neopop_uk
+//---------------------------------------------------------------------------
+//      This program is free software; you can redistribute it and/or modify
+//      it under the terms of the GNU General Public License as published by
+//      the Free Software Foundation; either version 2 of the License, or
+//      (at your option) any later version. See also the license.txt file for
+//      additional informations.
+</pre>
+</blockquote>
+<?php EndSection(); ?>
+
 <?php BeginSection("Cygne", "Section_legal_cygne", "http://cygne.emuunlim.com/"); ?>
 <p>
 Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyright 2002 Dox, dox@space.pl.
@@ -1033,47 +1268,6 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
  */
 </pre>
 </blockquote>
-<?php EndSection(); ?>
-
-<?php BeginSection("QuickLZ", "Section_legal_quicklz", "http://www.quicklz.com/"); ?>
-<blockquote>
-<pre>
-// QuickLZ data compression library
-// Copyright (C) 2006-2008 Lasse Mikkel Reinhold
-// lar@quicklz.com
-//
-// QuickLZ can be used for free under the GPL-1 or GPL-2 license (where anything 
-// released into public must be open source) or under a commercial license if such 
-// has been acquired (see http://www.quicklz.com/order.html). The commercial license 
-// does not cover derived or ported versions created by third parties under GPL.
-</pre>
-</blockquote>
-<?php EndSection(); ?>
-
-<?php BeginSection("Q-Subchannel CRC16 Code", "Section_legal_cdrdao", "http://cdrdao.sourceforge.net/"); ?>
-<blockquote>
-<pre>
-/*  cdrdao - write audio CD-Rs in disc-at-once mode
- *
- *  Copyright (C) 1998  Andreas Mueller <mueller@daneb.ping.de>
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
-</pre>
-</blockquote>
-
 <?php EndSection(); ?>
 
 <?php BeginSection("SMS Plus", "Section_legal_sms_plus", "http://www.techno-junk.org/"); ?>
@@ -1141,178 +1335,6 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-</pre>
-</blockquote>
-<?php EndSection(); ?>
-
-<?php BeginSection("EMU2413(used in SMS emulation)", "Section_legal_emu2413_sms"); ?>
-<blockquote>
-<pre>
-  Copyright (C) Mitsutaka Okazaki 2004
-
-  This software is provided 'as-is', without any express or implied warranty.
-  In no event will the authors be held liable for any damages arising from
-  the use of this software.
-
-  Permission is granted to anyone to use this software for any purpose,
-  including commercial applications, and to alter it and redistribute it
-  freely, subject to the following restrictions:
-
-  1. The origin of this software must not be misrepresented; you must not
-     claim that you wrote the original software. If you use this software
-     in a product, an acknowledgment in the product documentation would be
-     appreciated but is not required.
-  2. Altered source versions must be plainly marked as such, and must not
-     be misrepresented as being the original software.
-  3. This notice may not be removed or altered from any source distribution.
-</pre>
-</blockquote>
-<?php EndSection(); ?>
-
-<?php BeginSection("CD-ROM data correction code", "Section_legal_dvdisaster"); ?>
-<blockquote>
-<pre>
-/*  dvdisaster: Additional error correction for optical media.
- *  Copyright (C) 2004-2007 Carsten Gnoerlich.
- *  Project home page: http://www.dvdisaster.com
- *  Email: carsten@dvdisaster.com  -or-  cgnoerlich@fsfe.org
- *
- *  The Reed-Solomon error correction draws a lot of inspiration - and even code -
- *  from Phil Karn's excellent Reed-Solomon library: http://www.ka9q.net/code/fec/
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA,
- *  or direct your browser at http://www.gnu.org.
- */
-</pre>
-</blockquote>
-<?php EndSection(); ?>
-
-<?php BeginSection("YM2612 Emulator", "Section_legal_ym2612"); ?>
-<blockquote>
-<pre>
-/* Copyright (C) 2002 St�phane Dallongeville (gens AT consolemul.com) */
-/* Copyright (C) 2004-2006 Shay Green. This module is free software; you
-can redistribute it and/or modify it under the terms of the GNU Lesser
-General Public License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version. This
-module is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
-details. You should have received a copy of the GNU Lesser General Public
-License along with this module; if not, write to the Free Software Foundation,
-Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
-</pre>
-</blockquote>
-<?php EndSection(); ?>
-
-<?php BeginSection("Sega Genesis SVP/SSP16 Emulator", "Section_legal_svp_ssp16"); ?>
-<blockquote>
-<pre>
-/*
- * basic, incomplete SSP160x (SSP1601?) interpreter
- * with SVP memory controller emu
- *
- * Copyright (c) Gražvydas "notaz" Ignotas, 2008
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the organization nor the
- *       names of its contributors may be used to endorse or promote products
- *       derived from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-</pre>
-</blockquote>
-<?php EndSection(); ?>
-
-<?php BeginSection("Speex Resampler", "Section_legal_speex", "http://speex.org/"); ?>
-<blockquote>
-<pre>
-/* Copyright (C) 2007-2008 Jean-Marc Valin
-   Copyright (C) 2008      Thorvald Natvig
-
-   File: resample.c
-   Arbitrary resampling code
-
-   Redistribution and use in source and binary forms, with or without
-   modification, are permitted provided that the following conditions are
-   met:
-
-   1. Redistributions of source code must retain the above copyright notice,
-   this list of conditions and the following disclaimer.
-
-   2. Redistributions in binary form must reproduce the above copyright
-   notice, this list of conditions and the following disclaimer in the
-   documentation and/or other materials provided with the distribution.
-
-   3. The name of the author may not be used to endorse or promote products
-   derived from this software without specific prior written permission.
-
-   THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
-   IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
-   OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-   DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
-   INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-   (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-   SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-   HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
-   STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-   POSSIBILITY OF SUCH DAMAGE.
-*/
-</pre>
-</blockquote>
- <?php EndSection(); ?>
-
-<?php BeginSection("SABR v3.0 Shader", "Section_legal_sabr"); ?>
-<blockquote>
-<pre>
-        SABR v3.0 Shader
-        Joshua Street
-
-        Portions of this algorithm were taken from Hyllian's 5xBR v3.7c
-        shader.
-
-        This program is free software; you can redistribute it and/or
-        modify it under the terms of the GNU General Public License
-        as published by the Free Software Foundation; either version 2
-        of the License, or (at your option) any later version.
-
-        This program is distributed in the hope that it will be useful,
-        but WITHOUT ANY WARRANTY; without even the implied warranty of
-        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-        GNU General Public License for more details.
-
-        You should have received a copy of the GNU General Public License
-        along with this program; if not, write to the Free Software
-        Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 </pre>
 </blockquote>
 <?php EndSection(); ?>

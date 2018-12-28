@@ -6,8 +6,9 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='0.9.45.1'
-MEDNAFEN_VERSION_NUMERIC=0x00094501
+MEDNAFEN_VERSION='1.22.0-UNSTABLE'
+MEDNAFEN_VERSION_NUMERIC=0x00102200
+#                        0xJJJnnnRR
 
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([mednafen], $MEDNAFEN_VERSION)
@@ -39,8 +40,6 @@ AC_FUNC_FSEEKO
 AC_DEFINE(_LARGEFILE64_SOURCE, [1], [Define for largefile support through extra functions.])
 AC_DEFINE(_LARGEFILE_SOURCE, [1], [Define for fseeko and ftello on some hosts.])
 
-AM_CONDITIONAL(CROSS_COMPILING, [test x$cross_compiling != xno])
-
 # sizeof tests need to come after largefile support macros
 
 AC_CHECK_TYPE(ptrdiff_t,long)
@@ -50,7 +49,6 @@ AC_CHECK_SIZEOF(short)
 AC_CHECK_SIZEOF(int)
 AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(long long)
-AC_CHECK_SIZEOF(double)
 AC_CHECK_SIZEOF(__int64)
 AC_CHECK_SIZEOF(void *)
 AC_CHECK_SIZEOF(size_t)
@@ -90,6 +88,14 @@ dnl Check for zlib
 AC_CHECK_LIB([z], [zlibVersion], ZLIB_LIBS="-lz", AC_MSG_ERROR([*** zlib not found!]))
 AC_SUBST([ZLIB_LIBS])
 
+
+ENABLE_LIBXXX_MODE=false
+AC_ARG_ENABLE(libxxx-mode, AC_HELP_STRING([--enable-libxxx-mode], [dev use only]))
+if test x$enable_libxxx_mode = xyes; then
+	ENABLE_LIBXXX_MODE=true
+fi
+
+
 dnl -fno-fast-math and -fno-unsafe-math-optimizations to make sure it's disabled, as the fast-math feature on certain older
 dnl versions of gcc produces horribly broken code(and even when it's working correctly, it can have somewhat unpredictable effects).
 dnl
@@ -98,6 +104,8 @@ dnl in Mednafen that would cause problems.
 dnl
 dnl -fomit-frame-pointer is required for some x86 inline assembly to compile.
 dnl
+dnl -fstrict-aliasing for OpenBSD
+dnl
 OPTIMIZER_FLAGS=""
 AX_CFLAGS_GCC_OPTION([-fno-fast-math], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-unsafe-math-optimizations], OPTIMIZER_FLAGS)
@@ -105,6 +113,7 @@ AX_CFLAGS_GCC_OPTION([-fno-aggressive-loop-optimizations], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-ipa-icf], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-printf-return-value], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fomit-frame-pointer], OPTIMIZER_FLAGS)
+AX_CFLAGS_GCC_OPTION([-fstrict-aliasing], OPTIMIZER_FLAGS)
 
 dnl
 dnl Aggressively try to disable PIC and PIE, as it has a significant performance overhead and will
@@ -112,15 +121,23 @@ dnl break some code(with compile-time failures or run-time assert()s triggering)
 dnl
 dnl Use -fwrapv instead of -fno-strict-overflow; -fno-strict-overflow is buggy on gcc and does not work as documented/implied.
 dnl
+dnl -mfunction-return=keep, -mindirect-branch=keep, -mno-indirect-branch-register to disable performance-murdering Spectre mitigations.
+dnl
 CODEGEN_FLAGS=""
+
 AX_CFLAGS_GCC_OPTION([-fno-pic], CODEGEN_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-pie], CODEGEN_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-PIC], CODEGEN_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-PIE], CODEGEN_FLAGS)
 AX_CFLAGS_GCC_OPTION([-nopie], CODEGEN_FLAGS)
 AX_CFLAGS_GCC_OPTION([-no-pie], CODEGEN_FLAGS)
+
 AX_CFLAGS_GCC_OPTION([-fwrapv],  CODEGEN_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fjump-tables], CODEGEN_FLAGS)
+AX_CFLAGS_GCC_OPTION([-mfunction-return=keep], CODEGEN_FLAGS)
+AX_CFLAGS_GCC_OPTION([-mindirect-branch=keep], CODEGEN_FLAGS)
+AX_CFLAGS_GCC_OPTION([-mno-indirect-branch-register], CODEGEN_FLAGS)
+AX_CFLAGS_GCC_OPTION([-mno-retpoline], CODEGEN_FLAGS)
 
 CODEGEN_CFLAGS=""
 
@@ -135,6 +152,7 @@ AX_CFLAGS_GCC_OPTION([-Wignored-qualifiers], WARNING_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wvla], WARNING_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wvariadic-macros], WARNING_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wdisabled-optimization], WARNING_FLAGS)
+AX_CFLAGS_GCC_OPTION([-Werror=write-strings], WARNING_FLAGS)
 AC_SUBST(WARNING_FLAGS)
 
 #################################
@@ -146,6 +164,11 @@ AX_CFLAGS_GCC_OPTION([-fno-stack-protector], NO_STACK_PROTECTOR_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-stack-protector-all], NO_STACK_PROTECTOR_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fno-stack-protector-strong], NO_STACK_PROTECTOR_FLAGS)
 AC_SUBST(NO_STACK_PROTECTOR_FLAGS)
+
+# Used for ngp and quicklz
+NO_STRICT_ALIASING_FLAGS=""
+AX_CFLAGS_GCC_OPTION([-fno-strict-aliasing], NO_STRICT_ALIASING_FLAGS)
+AC_SUBST(NO_STRICT_ALIASING_FLAGS)
 
 # -----------------------------------
 # Begin snes flags
@@ -214,12 +237,14 @@ AC_ARG_ENABLE(altivec,
                   , enable_altivec=yes)
 
 
+AM_CONDITIONAL(WANT_APPLE2_EMU, false)
 AM_CONDITIONAL(WANT_GB_EMU, false)
 AM_CONDITIONAL(WANT_GBA_EMU, false)
 AM_CONDITIONAL(WANT_LYNX_EMU, false)
 AM_CONDITIONAL(WANT_MD_EMU, false)
 AM_CONDITIONAL(WANT_SMS_EMU, false)
 AM_CONDITIONAL(WANT_NES_EMU, false)
+AM_CONDITIONAL(WANT_NES_NEW_EMU, false)
 AM_CONDITIONAL(WANT_NGP_EMU, false)
 AM_CONDITIONAL(WANT_PCE_EMU, false)
 AM_CONDITIONAL(WANT_PCE_FAST_EMU, false)
@@ -232,6 +257,8 @@ AM_CONDITIONAL(WANT_SS_EMU, false)
 AM_CONDITIONAL(WANT_SSFPLAY_EMU, false)
 AM_CONDITIONAL(WANT_VB_EMU, false)
 AM_CONDITIONAL(WANT_WSWAN_EMU, false)
+
+AM_CONDITIONAL(NEED_BLIP_BUFFER, false)
 
 AM_CONDITIONAL(NEED_GB_APU_EMU, false)
 AM_CONDITIONAL(NEED_YM2413_EMU, false)
@@ -246,6 +273,15 @@ AM_CONDITIONAL(NEED_V810_EMU, false)
 AM_CONDITIONAL(NEED_HUC6270_EMU, false)
 AM_CONDITIONAL(NEED_ARCADE_CARD_EMU, false)
 
+AC_ARG_ENABLE(apple2,
+ AC_HELP_STRING([--enable-apple2], [build with Apple II+ emulation [[default=yes]]]),
+                  , enable_apple2=yes)
+
+if test x$enable_apple2 = xyes; then
+                AC_DEFINE([WANT_APPLE2_EMU], [1], [Define if we are compiling with Apple II+ emulation.])
+		AM_CONDITIONAL(WANT_APPLE2_EMU, true)
+fi
+
 AC_ARG_ENABLE(gb,
  AC_HELP_STRING([--enable-gb], [build with GameBoy emulation [[default=yes]]]),
                   , enable_gb=yes)
@@ -254,6 +290,7 @@ if test x$enable_gb = xyes; then
                 AC_DEFINE([WANT_GB_EMU], [1], [Define if we are compiling with GB emulation.])
 		AM_CONDITIONAL(WANT_GB_EMU, true)
 		AM_CONDITIONAL(NEED_GB_APU_EMU, true)
+		AM_CONDITIONAL(NEED_BLIP_BUFFER, true)
 fi
 
 AC_ARG_ENABLE(gba,
@@ -264,6 +301,7 @@ if test x$enable_gba = xyes; then
                 AC_DEFINE([WANT_GBA_EMU], [1], [Define if we are compiling with GBA emulation.])
 		AM_CONDITIONAL(WANT_GBA_EMU, true)
 		AM_CONDITIONAL(NEED_GB_APU_EMU, true)
+		AM_CONDITIONAL(NEED_BLIP_BUFFER, true)
 fi
 
 AC_ARG_ENABLE(lynx,
@@ -273,6 +311,7 @@ AC_ARG_ENABLE(lynx,
 if test x$enable_lynx = xyes; then
                 AC_DEFINE([WANT_LYNX_EMU], [1], [Define if we are compiling with Lynx emulation.])
 		AM_CONDITIONAL(WANT_LYNX_EMU, true)
+		AM_CONDITIONAL(NEED_BLIP_BUFFER, true)
 fi
 
 AC_ARG_ENABLE(md,
@@ -286,6 +325,7 @@ if test x$enable_md = xyes; then
 		AM_CONDITIONAL(NEED_Z80_EMU, true)
 		AM_CONDITIONAL(NEED_YM2612_EMU, true)
 		AM_CONDITIONAL(NEED_SMS_APU_EMU, true)
+		AM_CONDITIONAL(NEED_BLIP_BUFFER, true)
 fi
 
 AC_ARG_ENABLE(nes,
@@ -297,6 +337,15 @@ if test x$enable_nes = xyes; then
                 AM_CONDITIONAL(WANT_NES_EMU, true)
 fi
 
+#AC_ARG_ENABLE(nes_new,
+# AC_HELP_STRING([--enable-nes-new], [build with experimental, alternate new(ish) NES emulation [[default=yes]]]),
+#                  , enable_nes_new=yes)
+#
+#if test x$enable_nes_new = xyes; then
+#                AC_DEFINE([WANT_NES_NEW_EMU], [1], [Define if we are compiling with experimental, alternate new(ish) NES emulation.])
+#                AM_CONDITIONAL(WANT_NES_NEW_EMU, true)
+#fi
+
 AC_ARG_ENABLE(ngp,
  AC_HELP_STRING([--enable-ngp], [build with Neo Geo Pocket emulation [[default=yes]]]),
                   , enable_ngp=yes)
@@ -305,6 +354,7 @@ if test x$enable_ngp = xyes; then
                 AC_DEFINE([WANT_NGP_EMU], [1], [Define if we are compiling with NGP emulation.])
 		AM_CONDITIONAL(WANT_NGP_EMU, true)
 		AM_CONDITIONAL(NEED_Z80_EMU, true)
+		AM_CONDITIONAL(NEED_BLIP_BUFFER, true)
 fi
 
 AC_ARG_ENABLE(pce,
@@ -327,6 +377,7 @@ if test x$enable_pce_fast = xyes; then
                 AC_DEFINE([WANT_PCE_FAST_EMU], [1], [Define if we are compiling with separate fast PCE emulation.])
                 AM_CONDITIONAL(WANT_PCE_FAST_EMU, true)
 		AM_CONDITIONAL(NEED_ARCADE_CARD_EMU, true)
+		AM_CONDITIONAL(NEED_BLIP_BUFFER, true)
 fi
 
 AC_ARG_ENABLE(pcfx,
@@ -360,6 +411,7 @@ if test x$enable_sms = xyes; then
 		AM_CONDITIONAL(NEED_Z80_EMU, true)
 		AM_CONDITIONAL(NEED_SMS_APU_EMU, true)
 		AM_CONDITIONAL(NEED_YM2413_EMU, true)
+		AM_CONDITIONAL(NEED_BLIP_BUFFER, true)
 fi
 
 AC_ARG_ENABLE(snes,
@@ -409,6 +461,7 @@ if test x$enable_vb = xyes; then
                 AC_DEFINE([WANT_VB_EMU], [1], [Define if we are compiling with Virtual Boy emulation.])
                 AM_CONDITIONAL(WANT_VB_EMU, true)
 		AM_CONDITIONAL(NEED_V810_EMU, true)
+		AM_CONDITIONAL(NEED_BLIP_BUFFER, true)
 fi
 
 
@@ -419,6 +472,7 @@ AC_ARG_ENABLE(wswan,
 if test x$enable_wswan = xyes; then
                 AC_DEFINE([WANT_WSWAN_EMU], [1], [Define if we are compiling with WonderSwan emulation.])
                 AM_CONDITIONAL(WANT_WSWAN_EMU, true)
+		AM_CONDITIONAL(NEED_BLIP_BUFFER, true)
 fi
 
 ##
@@ -524,6 +578,49 @@ if test x$with_external_tremor = xyes; then
 fi
 
 #
+# trio
+#
+AM_CONDITIONAL(HAVE_EXTERNAL_TRIO, false)
+AC_ARG_WITH([external-trio], [AS_HELP_STRING([--with-external-trio], [compile and link with external trio @<:@default=no@:>@])],
+	[],
+	[with_external_trio=no])
+if test x$with_external_trio = xyes; then
+	AC_CHECK_LIB([trio], [trio_printf], [], AC_MSG_ERROR([*** libtrio not found!]))
+	AC_CHECK_HEADER([trio.h], [], AC_MSG_ERROR([*** libtrio not found!]))
+
+	AC_DEFINE([HAVE_EXTERNAL_TRIO], [1], [Define if we are compiling and linking with external trio.])
+	AM_CONDITIONAL(HAVE_EXTERNAL_TRIO, true)
+	AC_SUBST([TRIO_LIBS], ["-ltrio"])
+	trio_include_symsrc="include/trio_external"
+else
+	trio_include_symsrc="src/trio"
+fi
+AC_CONFIG_LINKS([include/trio/triodef.h:$trio_include_symsrc/triodef.h])
+AC_CONFIG_LINKS([include/trio/trio.h:$trio_include_symsrc/trio.h])
+AC_CONFIG_LINKS([include/trio/trionan.h:$trio_include_symsrc/trionan.h])
+AC_CONFIG_LINKS([include/trio/triop.h:$trio_include_symsrc/triop.h])
+AC_CONFIG_LINKS([include/trio/triostr.h:$trio_include_symsrc/triostr.h])
+
+#
+# minilzo/lzo
+#
+AM_CONDITIONAL(HAVE_EXTERNAL_LZO2, false)
+AC_ARG_WITH([external-lzo], [AS_HELP_STRING([--with-external-lzo], [compile and link with external LZO @<:@default=no@:>@])],
+	[],
+	[with_external_lzo=no])
+if test x$with_external_lzo = xyes; then
+	PKG_CHECK_MODULES(LZO2, lzo2 >= 2.0.9, [], AC_MSG_ERROR([*** lzo2 >= 2.0.9 not found!]))
+	AC_SUBST([LZO2_LIBS])
+	AC_SUBST([LZO2_CFLAGS])
+	AC_DEFINE([HAVE_EXTERNAL_LZO2], [1], [Define if we are compiling and linking with external LZO.])
+	AM_CONDITIONAL(HAVE_EXTERNAL_LZO2, true)
+	minilzo_include_symsrc="include/minilzo_external"
+else
+	minilzo_include_symsrc="include/minilzo_internal"
+fi
+AC_CONFIG_LINKS([include/minilzo/minilzo.h:$minilzo_include_symsrc/minilzo.h])
+
+#
 # libsndfile
 #
 AM_CONDITIONAL(HAVE_LIBSNDFILE, false)
@@ -540,7 +637,6 @@ fi
 AC_SUBST([SNDFILE_LIBS])
 AC_SUBST([SNDFILE_CFLAGS])
 
-
 AM_CONDITIONAL(HAVE_OSSDSP, false)
 AM_CONDITIONAL(HAVE_DIRECTSOUND, false)
 AM_CONDITIONAL(HAVE_WASAPI, false)
@@ -549,7 +645,14 @@ AM_CONDITIONAL(DOS, false)
 AM_CONDITIONAL(WIN32, false)
 AM_CONDITIONAL(UNIX, false)
 AM_CONDITIONAL(HAVE_LINUX_JOYSTICK, false)
+AM_CONDITIONAL(ENABLE_LIBXXX_MODE, false)
 NEED_SDL=true
+
+if $ENABLE_LIBXXX_MODE; then
+	NEED_SDL=false
+	AC_DEFINE([ENABLE_LIBXXX_MODE], [1], [Define if we are compiling in libxxx mode.])
+	AM_CONDITIONAL(ENABLE_LIBXXX_MODE, true)
+fi
 
 if expr x"$host" : 'x.*-mingw*' > /dev/null; then
 	AC_CHECK_TOOL([WINDRES], [windres])
@@ -577,7 +680,7 @@ if expr x"$host" : 'x.*-mingw*' > /dev/null; then
 	AC_DEFINE([WIN32], [1], [Define if we are compiling for Win32.])
 	AM_CONDITIONAL(WIN32, true)
 
-	LIBS="-mwindows -lws2_32 -ldxguid -lwinmm -ldinput $LIBS -lwinmm"
+	LIBS="-mconsole -lws2_32 -ldxguid -lwinmm -ldinput $LIBS -lwinmm"
 	CPPFLAGS="-D_LFS64_LARGEFILE=1 $CPPFLAGS"
 elif expr x"$host" : 'x.*djgpp' > /dev/null; then
        	AC_DEFINE([PSS_STYLE],[2], [Defines the filesystem path-separator type.])
@@ -587,14 +690,17 @@ elif expr x"$host" : 'x.*djgpp' > /dev/null; then
 else
 	AC_DEFINE([PSS_STYLE],[1], [Defines the filesystem path-separator type.])
 
+	AC_SEARCH_LIBS(pthread_create, [pthread])
+	AC_CHECK_FUNCS(pthread_create pthread_setname_np pthread_setaffinity_np sem_init, [], AC_MSG_ERROR([*** pthreads not found!]))
+
 	AC_CHECK_HEADER([sys/soundcard.h],[AM_CONDITIONAL(HAVE_OSSDSP,true) AC_DEFINE([HAVE_OSSDSP], [1], [Define if we are compiling with OSS support.])])
 	AC_CHECK_HEADER([linux/joystick.h],[AM_CONDITIONAL(HAVE_LINUX_JOYSTICK,true) AC_DEFINE([HAVE_LINUX_JOYSTICK], [1], [Define if we are compiling with Linux joystick support.])])
 fi
 
 if $NEED_SDL
 then
-	SDL_VERSION=1.2.0
-	AM_PATH_SDL($SDL_VERSION, HAVE_SDL=true, HAVE_SDL=false)
+	SDL_VERSION=2.0.5
+	AM_PATH_SDL2($SDL_VERSION, HAVE_SDL=true, HAVE_SDL=false)
 	if $HAVE_SDL
 	then
 		AM_CONDITIONAL(HAVE_SDL, true)
@@ -602,7 +708,7 @@ then
 		AC_SUBST(SDL_LIBS)
 		AC_SUBST(SDL_CFLAGS)
 	else
-		AC_MSG_ERROR([*** SDL 1.2.x not found!])
+		AC_MSG_ERROR([*** SDL >= 2.0.5 not found!])
 	fi
 fi
 
@@ -697,4 +803,4 @@ AC_SUBST([AM_CFLAGS], "$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_F
 AC_SUBST([AM_CXXFLAGS], "$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGEN_CXXFLAGS")
 
 dnl Output Makefiles
-AC_OUTPUT([Makefile src/Makefile src/drivers/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/tremor/Makefile src/mpcdec/Makefile src/trio/Makefile src/ngp/Makefile src/snes/Makefile src/ss/Makefile src/desa68/Makefile src/quicklz/Makefile po/Makefile.in  intl/Makefile])
+AC_OUTPUT([Makefile po/Makefile.in intl/Makefile src/Makefile src/drivers/Makefile src/drivers_libxxx/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/ss/Makefile])

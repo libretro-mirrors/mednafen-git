@@ -23,6 +23,9 @@
 #include <mednafen/SPCReader.h>
 #include <mednafen/string/string.h>
 
+namespace Mednafen
+{
+
 bool SPCReader::TestMagic(Stream* fp)
 {
 #if 0
@@ -59,8 +62,8 @@ static std::string GrabString(Stream* fp, size_t len)
  if(null_pos != std::string::npos)
   ret.resize(null_pos);
 
- MDFN_zapctrlchars(ret);
- MDFN_trim(ret);
+ MDFN_zapctrlchars(&ret);
+ MDFN_trim(&ret);
 
  return ret;
 }
@@ -162,5 +165,7 @@ SPCReader::SPCReader(Stream* fp)
 
 SPCReader::~SPCReader()
 {
+
+}
 
 }

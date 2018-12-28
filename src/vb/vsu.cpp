@@ -465,35 +465,35 @@ void VSU::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(IntlControl, 6),
-  SFARRAY(LeftLevel, 6),
-  SFARRAY(RightLevel, 6),
+  SFVAR(IntlControl),
+  SFVAR(LeftLevel),
+  SFVAR(RightLevel),
 
-  SFARRAY16(Frequency, 6),
-  SFARRAY16(EnvControl, 6),
-  SFARRAY(RAMAddress, 6),
+  SFVAR(Frequency),
+  SFVAR(EnvControl),
+  SFVAR(RAMAddress),
   SFVAR(SweepControl),
 
-  SFARRAY(&WaveData[0][0], 5 * 0x20),
-  SFARRAY(ModData, 0x20),
+  SFVARN(WaveData, "&WaveData[0][0]"),
+  SFVAR(ModData),
 
-  SFARRAY32(EffFreq, 6),
-  SFARRAY32(Envelope, 6),
+  SFVAR(EffFreq),
+  SFVAR(Envelope),
  
-  SFARRAY32(WavePos, 6),
+  SFVAR(WavePos),
 
   SFVAR(ModWavePos),
 
-  SFARRAY32(LatcherClockDivider, 6),
-  SFARRAY32(FreqCounter, 6),
-  SFARRAY32(IntervalCounter, 6),
-  SFARRAY32(EnvelopeCounter, 6),
+  SFVAR(LatcherClockDivider),
+  SFVAR(FreqCounter),
+  SFVAR(IntervalCounter),
+  SFVAR(EnvelopeCounter),
 
   SFVAR(SweepModCounter),
 
-  SFARRAY32(EffectsClockDivider, 6),
-  SFARRAY32(IntervalClockDivider, 6),
-  SFARRAY32(EnvelopeClockDivider, 6),
+  SFVAR(EffectsClockDivider),
+  SFVAR(IntervalClockDivider),
+  SFVAR(EnvelopeClockDivider),
 
   SFVAR(SweepModClockDivider),
 

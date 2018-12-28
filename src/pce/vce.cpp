@@ -867,10 +867,10 @@ void VCE::StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVAR(ws_counter),
 
   SFVARN(ctaddress, "ctaddress"),
-  SFARRAY16N(color_table, 0x200, "color_table"),
+  SFVARN(color_table, "color_table"),
 
   SFVARN(clock_divider, "clock_divider"),
-  SFARRAY32N(child_event, 2, "child_event"),
+  SFVARN(child_event, "child_event"),
   SFVARN(scanline, "scanline"),
   SFVARN(pixel_offset, "pixel_offset"),
   SFVARN(hblank_counter, "hblank_counter"),
@@ -887,10 +887,10 @@ void VCE::StateAction(StateMem *sm, const unsigned load, const bool data_only)
  {
   SFORMAT VPC_StateRegs[] =
   {
-   SFARRAYN(priority, 2, "priority"),
-   SFARRAY16N(winwidths, 2, "winwidths"),
+   SFVARN(priority, "priority"),
+   SFVARN(winwidths, "winwidths"),
    SFVARN(st_mode, "st_mode"),
-   SFARRAY32N(window_counter, 2, "window_counter"),
+   SFVARN(window_counter, "window_counter"),
    SFEND
   };
 

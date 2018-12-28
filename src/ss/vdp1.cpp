@@ -39,8 +39,8 @@
 #include "vdp2.h"
 #include "vdp1_common.h"
 
-enum { VDP1_UpdateTimingGran = 263 };
-enum { VDP1_IdleTimingGran = 1019 };
+enum : int { VDP1_UpdateTimingGran = 263 };
+enum : int { VDP1_IdleTimingGran = 1019 };
 
 namespace MDFN_IEN_SS
 {
@@ -158,23 +158,23 @@ void Reset(bool powering_up)
   memset(&LineSetup, 0, sizeof(LineSetup));
 
   //
-  //
+  // Registers with somewhat undefined state on power-on:
   //
   EWDR = 0;
   EWLR = 0;
   EWRR = 0;
- }
 
- UserClipX0 = 0;
- UserClipY0 = 0;
- UserClipX1 = 0;
- UserClipY1 = 0;
+  UserClipX0 = 0;
+  UserClipY0 = 0;
+  UserClipX1 = 0;
+  UserClipY1 = 0;
 
- SysClipX = 0;
- SysClipY = 0;
+  SysClipX = 0;
+  SysClipY = 0;
  
- LocalX = 0;
- LocalY = 0;
+  LocalX = 0;
+  LocalY = 0;
+ }
 
  FBDrawWhich = 0;
  //SS_SetPhysMemMap(0x05C80000, 0x05CFFFFF, FB[FBDrawWhich], sizeof(FB[0]), true);
@@ -189,7 +189,7 @@ void Reset(bool powering_up)
  DrawingActive = false;
 
  //
- // Begin confirmed.
+ // Begin registers/variables confirmed to be initialized on reset.
  TVMR = 0;
  FBCR = 0;
  PTMR = 0;
@@ -808,6 +808,7 @@ void Write8_DB(uint32 A, uint16 DB)
 
  if(A < 0x80000)
  {
+  SS_DBGTI(SS_DBG_VDP1_VRAMW, "[VDP1] Write to VRAM: 0x%02x->VRAM[0x%05x]", (DB >> (((A & 1) ^ 1) << 3)) & 0xFF, A);
   ne16_wbo_be<uint8>(VRAM, A, DB >> (((A & 1) ^ 1) << 3) );
   return;
  }
@@ -815,6 +816,8 @@ void Write8_DB(uint32 A, uint16 DB)
  if(A < 0x100000)
  {
   uint32 FBA = A;
+
+  SS_DBGTI(SS_DBG_VDP1_FBW, "[VDP1] Write to FB: 0x%02x->FB[%d][0x%05x]", (DB >> (((A & 1) ^ 1) << 3)) & 0xFF, FBDrawWhich, A & 0x3FFFF);
 
   if((TVMR & (TVMR_8BPP | TVMR_ROTATE)) == (TVMR_8BPP | TVMR_ROTATE))
    FBA = (FBA & 0x1FF) | ((FBA << 1) & 0x3FC00) | ((FBA >> 8) & 0x200);
@@ -833,6 +836,7 @@ void Write16_DB(uint32 A, uint16 DB)
 
  if(A < 0x80000)
  {
+  SS_DBGTI(SS_DBG_VDP1_VRAMW, "[VDP1] Write to VRAM: 0x%04x->VRAM[0x%05x]", DB, A);
   VRAM[A >> 1] = DB;
   return;
  }
@@ -840,6 +844,8 @@ void Write16_DB(uint32 A, uint16 DB)
  if(A < 0x100000)
  {
   uint32 FBA = A;
+
+  SS_DBGTI(SS_DBG_VDP1_FBW, "[VDP1] Write to FB: 0x%04x->FB[%d][0x%05x]", DB, FBDrawWhich, A & 0x3FFFF);
 
   if((TVMR & (TVMR_8BPP | TVMR_ROTATE)) == (TVMR_8BPP | TVMR_ROTATE))
    FBA = (FBA & 0x1FF) | ((FBA << 1) & 0x3FC00) | ((FBA >> 8) & 0x200);
@@ -871,15 +877,83 @@ uint16 Read16_DB(uint32 A)
  return ReadReg((A - 0x100000) >> 1);
 }
 
-
-uint8 PeekVRAM(const uint32 addr)
+void StateAction(StateMem* sm, const unsigned load, const bool data_only)
 {
- return ne16_rbo_be<uint8>(VRAM, addr & 0x7FFFF);
-}
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(VRAM),
+  SFVARN(FB, "&FB[0][0]"),
+  SFVAR(FBDrawWhich),
 
-void PokeVRAM(const uint32 addr, const uint8 val)
-{
- ne16_wbo_be<uint8>(VRAM, addr & 0x7FFFF, val);
+  SFVAR(FBManualPending),
+
+  SFVAR(FBVBErasePending),
+  SFVAR(FBVBEraseActive),
+  SFVAR(FBVBEraseLastTS),
+
+  SFVAR(SysClipX),
+  SFVAR(SysClipY),
+  SFVAR(UserClipX0),
+  SFVAR(UserClipY0),
+  SFVAR(UserClipX1),
+  SFVAR(UserClipY1),
+  SFVAR(LocalX),
+  SFVAR(LocalY),
+
+  SFVAR(CurCommandAddr),
+  SFVAR(RetCommandAddr),
+  SFVAR(DrawingActive),
+
+  SFVAR(LOPR),
+
+  SFVAR(EWDR),
+  SFVAR(EWLR),
+  SFVAR(EWRR),	// Erase/Write Lower Right Coordinate
+
+  SFVAR(EraseParams.rot8),
+  // Recovered in if(load): SFVAR(EraseParams.fb_x_mask),
+
+  SFVAR(EraseParams.y_start),
+  SFVAR(EraseParams.x_start),
+
+  SFVAR(EraseParams.y_end),
+  SFVAR(EraseParams.x_bound),
+
+  SFVAR(EraseParams.fill_data),
+
+  SFVAR(EraseYCounter),
+
+  SFVAR(TVMR),
+  SFVAR(FBCR),
+  SFVAR(PTMR),
+  SFVAR(EDSR),
+
+  SFVAR(vb_status),
+  SFVAR(hb_status),
+  SFVAR(lastts),
+  SFVAR(CycleCounter),
+
+  SFVAR(vbcdpending),
+
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "VDP1");
+
+ if(load)
+ {
+  CurCommandAddr &= 0x3FFFF;
+  if(RetCommandAddr >= 0)
+   RetCommandAddr &= 0x3FFFF;
+
+  EraseParams.fb_x_mask = EraseParams.rot8 ? 0xFF : 0x1FF;
+
+  EraseParams.y_start &= 0x1FF;
+  EraseParams.x_start &= 0x3F << 3;
+
+  EraseParams.y_end &= 0x1FF;
+  EraseParams.x_bound &= 0x7F << 3;
+ }
 }
 
 void MakeDump(const std::string& path)

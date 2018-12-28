@@ -203,6 +203,6 @@ void reset_registers(void)
 						//immediately changes value from default of 0x100
 }
 
-};
+}
 
 //=============================================================================

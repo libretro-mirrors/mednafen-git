@@ -243,14 +243,14 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(WRAM, 8192),
-  SFARRAY(CHRBanks, 8),
+  SFPTR8(WRAM, 8192),
+  SFPTR8(CHRBanks, 8),
   SFVAR(PRGBank8), SFVAR(PRGBank16),
   SFVAR(IRQCount), SFVAR(IRQLatch), SFVAR(IRQEnabled),
   SFVAR(b3), SFVAR(phaseacc), SFVAR(acount),
   SFVAR(vcount[0]), SFVAR(vcount[1]), SFVAR(vcount[2]),
   SFVAR(dcount[0]), SFVAR(dcount[1]),
-  SFARRAYN(&VPSG[0][0], 3 * 3, "VPSG"),
+  SFVARN(VPSG, "VPSG"),
   SFEND
  };
  int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "VRC6");

@@ -328,20 +328,20 @@ static const BoardHandler_t BoardHandlers[] =
  { NULL, NULL, 0, NULL },
 };
 
-bool MDCart_TestMagic(MDFNFILE *fp)
+bool MDCart_TestMagic(GameFile* gf)
 {
- if(fp->ext == "gen" || fp->ext == "md")
+ if(gf->ext == "gen" || gf->ext == "md")
   return true;
 
  uint8 data[512];
 
- if(fp->read(data, 512, false) != 512)
+ if(gf->stream->read(data, 512, false) != 512)
   return false;
 
  if(!memcmp(data + 0x100, "SEGA MEGA DRIVE", 15) || !memcmp(data + 0x100, "SEGA GENESIS", 12) || !memcmp(data + 0x100, "SEGA 32X", 8))
   return true;
 
- if((!memcmp(data + 0x100, "SEGA", 4) || !memcmp(data + 0x100, " SEGA", 5)) && fp->ext == "bin")
+ if((!memcmp(data + 0x100, "SEGA", 4) || !memcmp(data + 0x100, " SEGA", 5)) && gf->ext == "bin")
   return true;
 
  return false;
@@ -362,12 +362,12 @@ static void Cleanup(void)
  }
 }
 
-void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp)
+void MDCart_Load(md_game_info *ginfo, GameFile* gf)
 {
  try
  {
   const char *mapper = NULL;
-  const uint64 fp_in_size = fp->size();
+  const uint64 fp_in_size = gf->stream->size();
 
   if(fp_in_size < 0x200)
    throw MDFN_Error(0, _("ROM image is too small."));
@@ -377,7 +377,7 @@ void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp)
 
   Cart_ROM_Size = fp_in_size;
   cart_rom = new uint8[Cart_ROM_Size];
-  fp->read(cart_rom, Cart_ROM_Size);
+  gf->stream->read(cart_rom, Cart_ROM_Size);
 
   MD_ReadSegaHeader(cart_rom + 0x100, ginfo);
   ginfo->rom_size = Cart_ROM_Size;
@@ -478,7 +478,7 @@ void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp)
    MDFN_printf(_("SRAM End:   0x%08x\n"), sram_end);
    while(bh->boardname)
    {
-    if(!strcasecmp(bh->boardname, mapper))
+    if(!MDFN_strazicmp(bh->boardname, mapper))
     {
      cart_hardware = bh->MapperMake(ginfo, cart_rom, Cart_ROM_Size, bh->iparam, bh->sparam);
      BoardFound = true;

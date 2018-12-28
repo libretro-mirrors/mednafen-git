@@ -25,6 +25,9 @@
 #include <mednafen/mednafen.h>
 #include <mednafen/FileStream.h>
 
+namespace Mednafen
+{
+
 class WAVRecord
 {
  public:
@@ -48,5 +51,5 @@ class WAVRecord
  uint32 SoundChan;
 };
 
-
+}
 #endif

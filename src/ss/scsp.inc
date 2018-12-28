@@ -29,6 +29,12 @@
 	Proper reset/power-on state.
 
 	Mem4Mb
+
+	DSP: Handle instruction with MRT=1 and MWT=1 correctly.
+
+	DSP: Handle IWT=1 when MRT=0 and MWT=0 for the instruction a couple instructions back(NOFL influences the value...)
+
+	DSP: Test IWT=1 when MRT=0 and MWT=1 for the intruction a couple back.
 */
 
 SS_SCSP::SS_SCSP()
@@ -259,10 +265,10 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 	break;
 
     case 0x04:
-	s->AttackRate = SRV & 0x1F;
+	s->EnvRates[ENV_PHASE_ATTACK] = SRV & 0x1F;
 	s->AttackHold = (SRV >> 5) & 0x1;
-	s->Decay1Rate = (SRV >> 6) & 0x1F;
-	s->Decay2Rate = (SRV >> 11) & 0x1F;
+	s->EnvRates[ENV_PHASE_DECAY1] = (SRV >> 6) & 0x1F;
+	s->EnvRates[ENV_PHASE_DECAY2] = (SRV >> 11) & 0x1F;
 	break;
 
     case 0x05:
@@ -271,7 +277,7 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 	 //SS_DBG(SS_DBG_WARNING | SS_DBG_SCSP, "[SCSP] Unknown bits non-zero in slot %u, register %u\n", slotnum, (A >> 1) & 0xF);
 	}
 
-	s->ReleaseRate = SRV & 0x1F;
+	s->EnvRates[ENV_PHASE_RELEASE] = SRV & 0x1F;
 	s->DecayLevel = (SRV >> 5) & 0x1F;
 	s->KRS = (SRV >> 10) & 0xF;
 	s->AttackLoopLink = (SRV >> 14) & 0x1;
@@ -660,6 +666,9 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
   //
   ne64_rwbo_be<T, IsWrite>(DSP.MPROG, A & 0x3FF, &DBV);
 
+  if(IsWrite)
+   DSP.MPROG_Dirty = true;
+
   return;
  }
 
@@ -856,7 +865,7 @@ INLINE void SS_SCSP::RunEG(Slot* s, const unsigned key_eg_scale)
   const uint32 srac = ((0x20 - ermaxo) >> 1) + (ermaxo & 1 & (GlobalCounter >> (ERateWBT + 1)));
 
   //if(s == &Slots[0] && s->EnvLevel)
-  // printf("EP: %u, EL: 0x%04x, AR: 0x%02x, %d, %u --- %02x\n", s->EnvPhase, s->EnvLevel, s->AttackRate, inc_base, srac, ERate);
+  // printf("EP: %u, EL: 0x%04x, AR: 0x%02x, %d, %u --- %02x\n", s->EnvPhase, s->EnvLevel, s->EnvRates[ENV_PHASE_ATTACK], inc_base, srac, ERate);
 
   s->EnvLevel += inc_base >> srac;
 
@@ -966,6 +975,10 @@ INLINE void SS_SCSP::RunLFO(Slot* s)
 //
 //
 //
+#ifdef MDFN_SS_SCSP_DSP_DYNAREC
+ #include "scsp_dsp_dynarec.inc"
+#else
+
 static INLINE uint32 dspfloat_to_int(const uint16 inv)
 {
  const uint32 sign_xor = (int32)((inv & 0x8000) << 16) >> 1;
@@ -1096,10 +1109,7 @@ INLINE void SS_SCSP::RunDSP(void)
   }
 
   const int32 INPUTS = sign_x_to_s32(24, DSP.INPUTS);
-  const int32 TEMP = sign_x_to_s32(24, DSP.TEMP[TEMPReadAddr]);
-  const int32 X_SEL_Inputs[2] = { TEMP, INPUTS };
   const uint16 Y_SEL_Inputs[4] = { DSP.FRC_REG, DSP.COEF[CRA], (uint16)((DSP.Y_REG >> 11) & 0x1FFF), (uint16)((DSP.Y_REG >> 4) & 0x0FFF) };
-  const uint32 SGA_Inputs[2] = { (uint32)TEMP, DSP.SFT_REG };
   //
   //
   //
@@ -1110,9 +1120,7 @@ INLINE void SS_SCSP::RunDSP(void)
   //
   //
   //
-  int32 ShifterOutput;
-
-  ShifterOutput = (uint32)sign_x_to_s32(26, DSP.SFT_REG) << (SHFT0 ^ SHFT1);
+  int32 ShifterOutput = (uint32)sign_x_to_s32(26, DSP.SFT_REG) << (SHFT0 ^ SHFT1);
 
   if(!SHFT1)
   {
@@ -1122,13 +1130,6 @@ INLINE void SS_SCSP::RunDSP(void)
     ShifterOutput = 0x800000;
   }
   ShifterOutput &= 0xFFFFFF;
-
-  if(EWT)
-   DSP.EFREG[EWA] = (ShifterOutput >> 8);
-
-  if(TWT)
-   DSP.TEMP[TEMPWriteAddr] = ShifterOutput;
-
   //
   //
   if(FRCL)
@@ -1140,27 +1141,31 @@ INLINE void SS_SCSP::RunDSP(void)
   }
   //
   //
-  DSP.Product = ((int64)sign_x_to_s32(13, Y_SEL_Inputs[YSEL]) * X_SEL_Inputs[XSEL]) >> 12;
-  // if(step < 4)
-  //  printf("%u %08x %08x product=0x%08x\n", step, Y_SEL_Inputs[YSEL], X_SEL_Inputs[XSEL], DSP.Product);
+  {
+   const int32 TEMP = sign_x_to_s32(24, DSP.TEMP[TEMPReadAddr]);
+   const uint32 SGA_Inputs[2] = { (uint32)TEMP, DSP.SFT_REG };
+   const int32 X_SEL_Inputs[2] = { TEMP, INPUTS };
+   const uint32 Product = ((int64)sign_x_to_s32(13, Y_SEL_Inputs[YSEL]) * X_SEL_Inputs[XSEL]) >> 12;
+   uint32 SGAOutput;
+
+   SGAOutput = SGA_Inputs[BSEL];
+
+   if(NEGB)
+    SGAOutput = -SGAOutput;
+
+   if(ZERO)
+    SGAOutput = 0;
+
+   DSP.SFT_REG = (Product + SGAOutput) & 0x3FFFFFF;
+  }
   //
   //
-  //if((step == 3 || step == 7) && CRA)
-  // printf("Step %u: %08x %08x %08x  --- ysel=%u cra=0x%02x[0x%04x] temp=0x%08x\n", step, SGA_Inputs[BSEL], Y_SEL_Inputs[YSEL], X_SEL_Inputs[XSEL], YSEL, CRA, DSP.COEF[CRA], TEMP);
+  if(EWT)
+   DSP.EFREG[EWA] = (ShifterOutput >> 8);
 
-  uint32 SGAOutput;
+  if(TWT)
+   DSP.TEMP[TEMPWriteAddr] = ShifterOutput;
 
-  SGAOutput = SGA_Inputs[BSEL];
-
-  if(NEGB)
-   SGAOutput = -SGAOutput;
-
-  if(ZERO)
-   SGAOutput = 0;
-
-  DSP.SFT_REG = (DSP.Product + SGAOutput) & 0x3FFFFFF;
-  //
-  //
   if(IWT)
   {
    DSP.MEMS[IWA] = DSP.ReadValue;
@@ -1224,6 +1229,7 @@ INLINE void SS_SCSP::RunDSP(void)
   DSP.MDEC_CT = (0x2000 << RBL);
  DSP.MDEC_CT--;
 }
+#endif
 //
 //
 //
@@ -1296,7 +1302,7 @@ INLINE void SS_SCSP::RunSample(int16* outlr)
     s->WFAllowAccess = true;
     s->EnvPhase = ENV_PHASE_ATTACK;
 
-    if((s->AttackRate + key_eg_scale) >= 0x20)
+    if((s->EnvRates[ENV_PHASE_ATTACK] + key_eg_scale) >= 0x20)
      s->EnvLevel = 0x000;
     else
      s->EnvLevel = 0x280;
@@ -1490,29 +1496,23 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY16N(&SlotRegs[0][0], 0x20 * 0x10, "SlotRegs"),
+  SFVARN(SlotRegs, "SlotRegs"),
 
-  #define SFSLOT(n)			\
-	SFVAR(Slots[n].PhaseWhacker),	\
-	SFVAR(Slots[n].CurrentAddr),	\
-	SFVAR(Slots[n].InLoop),		\
-	SFVAR(Slots[n].LoopSub),	\
-	SFVAR(Slots[n].WFAllowAccess),	\
-	SFVAR(Slots[n].EnvLevel),	\
-	SFVAR(Slots[n].EnvPhase),	\
-	SFVAR(Slots[n].EnvGCBTPrev),	\
-	SFVAR(Slots[n].LFOCounter),	\
-	SFVAR(Slots[n].LFOTimeCounter)
-  SFSLOT(0x00), SFSLOT(0x01), SFSLOT(0x02), SFSLOT(0x03), SFSLOT(0x04), SFSLOT(0x05), SFSLOT(0x06), SFSLOT(0x07),
-  SFSLOT(0x08), SFSLOT(0x09), SFSLOT(0x0A), SFSLOT(0x0B), SFSLOT(0x0C), SFSLOT(0x0D), SFSLOT(0x0E), SFSLOT(0x0F),
-  SFSLOT(0x10), SFSLOT(0x11), SFSLOT(0x12), SFSLOT(0x13), SFSLOT(0x14), SFSLOT(0x15), SFSLOT(0x16), SFSLOT(0x17),
-  SFSLOT(0x18), SFSLOT(0x19), SFSLOT(0x1A), SFSLOT(0x1B), SFSLOT(0x1C), SFSLOT(0x1D), SFSLOT(0x1E), SFSLOT(0x1F),
-  #undef SFSLOT
+  SFVAR(Slots->PhaseWhacker, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->CurrentAddr, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->InLoop, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->LoopSub, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->WFAllowAccess, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->EnvLevel, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->EnvPhase, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->EnvGCBTPrev, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->LFOCounter, 32, sizeof(*Slots), Slots),
+  SFVAR(Slots->LFOTimeCounter, 32, sizeof(*Slots), Slots),
 
-  SFARRAY16(EXTS, 2),
+  SFVAR(EXTS),
 
-  SFARRAY16(SoundStack, 0x40),
-  SFARRAY16(SoundStackDelayer, 4),
+  SFVAR(SoundStack),
+  SFVAR(SoundStackDelayer),
 
   SFVAR(MasterVolume),
   SFVAR(MVOL),
@@ -1526,11 +1526,11 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFVAR(LFSR),
   SFVAR(GlobalCounter),
 
-  SFARRAY(MIDI.InputFIFO, 4),
+  SFVAR(MIDI.InputFIFO),
   SFVAR(MIDI.InputRP),
   SFVAR(MIDI.InputWP),
   SFVAR(MIDI.InputCount),
-  SFARRAY(MIDI.OutputFIFO, 4),
+  SFVAR(MIDI.OutputFIFO),
   SFVAR(MIDI.OutputRP),
   SFVAR(MIDI.OutputWP),
   SFVAR(MIDI.OutputCount),
@@ -1542,17 +1542,12 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFVAR(MCIEB),
   SFVAR(MCIPD),
 
-  SFARRAY(SCILV, 3),
+  SFVAR(SCILV),
 
-  #define SFTIMER(n)			\
-	SFVAR(Timers[n].Control),	\
-	SFVAR(Timers[n].Counter),	\
-	SFVAR(Timers[n].PrevClockIn),	\
-	SFVAR(Timers[n].Reload)
-  SFTIMER(0),
-  SFTIMER(1),
-  SFTIMER(2),
-  #undef SFTIMER
+  SFVAR(Timers->Control, 3, sizeof(*Timers), Timers),
+  SFVAR(Timers->Counter, 3, sizeof(*Timers), Timers),
+  SFVAR(Timers->PrevClockIn, 3, sizeof(*Timers), Timers),
+  SFVAR(Timers->Reload, 3, sizeof(*Timers), Timers),
 
   SFVAR(DMEA),
   SFVAR(DRGA),
@@ -1565,17 +1560,16 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFVAR(RBP),
   SFVAR(RBL),
 
-  SFARRAY64(DSP.MPROG, 0x80),
-  SFARRAY32(DSP.TEMP, 0x80),
-  SFARRAY32(DSP.MEMS, 0x20),
-  SFARRAY16(DSP.COEF, 64),
-  SFARRAY16(DSP.MADRS, 32),
-  SFARRAY32(DSP.MIXS, 0x10),
-  SFARRAY16(DSP.EFREG, 0x10),
+  SFVAR(DSP.MPROG),
+  SFVAR(DSP.TEMP),
+  SFVAR(DSP.MEMS),
+  SFVAR(DSP.COEF),
+  SFVAR(DSP.MADRS),
+  SFVAR(DSP.MIXS),
+  SFVAR(DSP.EFREG),
 
   SFVAR(DSP.INPUTS),
 
-  SFVAR(DSP.Product),
   SFVAR(DSP.SFT_REG),
   SFVAR(DSP.FRC_REG),
   SFVAR(DSP.Y_REG),
@@ -1591,7 +1585,7 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFVAR(DSP.ReadPending),
   SFVAR(DSP.ReadValue),
   //
-  SFARRAY16(RAM, 262144),
+  SFPTR16(RAM, 262144),
 
   SFEND
  };
@@ -1622,10 +1616,12 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   RBL &= 0x3;
 
   DSP.RWAddr &= 0x7FFFF;
+  
+  DSP.MPROG_Dirty = true;
 
   for(uint32 A = 0x100000; A < 0x100400; A += 2)
   {
-   RW<uint16, true>(A, *(&SlotRegs[0][0] + ((A & 0x3FE) >> 1)));
+   RW<uint16, true>(A, *(MDAP(SlotRegs) + ((A & 0x3FE) >> 1)));
   }
   RecalcSoundInt();
   RecalcMainInt();

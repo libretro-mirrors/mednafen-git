@@ -1,4 +1,5 @@
-#ifndef _DRIVERS_ARGH
+#ifndef __MDFN_DRIVERS_ARGS_H
+#define __MDFN_DRIVERS_ARGS_H
 
 enum
 {
@@ -23,5 +24,4 @@ typedef struct {
 int ParseArguments(int argc, char *argv[], ARGPSTRUCT *argsps, char **);
 int ShowArgumentsHelp(ARGPSTRUCT *argsps, bool show_linked = true);
 
-#define _DRIVERS_ARGH
 #endif

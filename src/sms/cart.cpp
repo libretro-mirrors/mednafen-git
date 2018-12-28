@@ -91,14 +91,14 @@ static const char *sms_mapper_string_table[] =
  "32KiB ROM + 8KiB RAM",
 };
 
-void Cart_Init(MDFNFILE* fp)
+void Cart_Init(GameFile* gf)
 {
- uint64 size = fp->size();
+ uint64 size = gf->stream->size();
 
  if(size & 512)
  {
   size &= ~512;
-  fp->seek(512, SEEK_SET);
+  gf->stream->seek(512, SEEK_SET);
  }
 
  if(size > 1024 * 1024)
@@ -107,7 +107,7 @@ void Cart_Init(MDFNFILE* fp)
  rom = new uint8[std::max<uint64>(size, 0x2000)];
  if(size < 0x2000)
   memset(rom + size, 0xFF, 0x2000 - size);
- fp->read(rom, size);
+ gf->stream->read(rom, size);
 
  pages = size / 0x2000;
  page_mask8 = round_up_pow2(pages) - 1;
@@ -284,23 +284,24 @@ uint8 Cart_Read(uint16 A)
  return((((A >> 8) | data_bus_pullup) & ~data_bus_pulldown));
 }
 
-int Cart_StateAction(StateMem *sm, int load, int data_only)
+void Cart_StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(sram, 0x8000),
-  SFARRAY(fcr, 4),
+  SFPTR8(sram, 0x8000),
+  SFPTR8(fcr, 4),
   SFVAR(BankAdd),
-  SFARRAY(CodeMasters_Bank, 3),
-  SFARRAY(CastleRAM, CastleRAM ? 8192 : 0),
+  SFPTR8(CodeMasters_Bank, 3),
+  SFPTR8(CastleRAM, CastleRAM ? 8192 : 0),
   SFEND
  };
 
- int ret = 1;
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "CART");
 
- ret &= MDFNSS_StateAction(sm, load, data_only, StateRegs, "CART");
+ if(load)
+ {
 
- return(ret);
+ }
 }
 
 }

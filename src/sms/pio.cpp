@@ -258,7 +258,7 @@ void sio_w(int offset, int data)
     }
 }
 
-int SMS_PIOStateAction(StateMem *sm, int load, int data_only)
+void SMS_PIOStateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -269,21 +269,15 @@ int SMS_PIOStateAction(StateMem *sm, int load, int data_only)
   SFVAR(sms.sio.sctrl),
   SFVAR(sms.ioctrl),
 
-
   SFEND
  };
 
-
- int ret;
-
- ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "PIO");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "PIO");
 
  if(load)
  {
   io_current = &io_lut[sms.territory][sms.ioctrl];
  }
-
- return(ret);
 }
 
 }

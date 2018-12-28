@@ -100,7 +100,7 @@ static v30mz_regs_t I;
 static bool InHLT;
 
 static uint32 prefix_base;	/* base address of the latest prefix segment */
-static char seg_prefix;		/* prefix segment indicator */
+static int8 seg_prefix;		/* prefix segment indicator */
 
 #ifdef WANT_DEBUGGER
 static void (*cpu_hook)(uint32) = NULL;
@@ -1141,8 +1141,8 @@ void v30mz_StateAction(StateMem *sm, const unsigned load, const bool data_only)
  SFORMAT StateRegs[] =
  {
   SFVARN(I.pc, "IP"),
-  SFARRAY16N(I.regs.w, 8, "regs"),
-  SFARRAY16N(I.sregs, 4, "sregs"),
+  SFPTR16N(I.regs.w, 8, "regs"),
+  SFPTR16N(I.sregs, 4, "sregs"),
 
   SFVARN(v30mz_ICount, "ICount"),
   SFVARN(InHLT, "InHLT"),

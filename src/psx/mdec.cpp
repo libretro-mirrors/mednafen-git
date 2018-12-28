@@ -68,7 +68,7 @@
 #include <emmintrin.h>
 #endif
 
-#if 0 //defined(__ARM_NEON__)
+#if 0 //defined(HAVE_NEON_INTRINSICS)
 #include <arm_neon.h>
 #endif
 
@@ -177,7 +177,7 @@ void MDEC_StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVAR(ClockCounter),
   SFVAR(MDRPhase),
 
-#define SFFIFO32(fifoobj)  SFARRAY32(&fifoobj.data[0], sizeof(fifoobj.data) / sizeof(fifoobj.data[0])),	\
+#define SFFIFO32(fifoobj)  SFPTR32(&fifoobj.data[0], sizeof(fifoobj.data) / sizeof(fifoobj.data[0])),	\
 			 SFVAR(fifoobj.read_pos),				\
 			 SFVAR(fifoobj.write_pos),				\
 			 SFVAR(fifoobj.in_count)
@@ -186,27 +186,27 @@ void MDEC_StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFFIFO32(OutFIFO),
 #undef SFFIFO
 
-  SFARRAY(&block_y[0][0], sizeof(block_y) / sizeof(block_y[0][0])),
-  SFARRAY(&block_cb[0][0], sizeof(block_cb) / sizeof(block_cb[0][0])),
-  SFARRAY(&block_cr[0][0], sizeof(block_cr) / sizeof(block_cr[0][0])),
+  SFVARN(block_y, "&block_y[0][0]"),
+  SFVARN(block_cb, "&block_cb[0][0]"),
+  SFVARN(block_cr, "&block_cr[0][0]"),
 
   SFVAR(Control),
   SFVAR(Command),
   SFVAR(InCommand),
 
-  SFARRAY(&QMatrix[0][0], sizeof(QMatrix) / sizeof(QMatrix[0][0])),
+  SFVARN(QMatrix, "&QMatrix[0][0]"),
   SFVAR(QMIndex),
 
-  SFARRAY16(&IDCTMatrix[0], sizeof(IDCTMatrix) / sizeof(IDCTMatrix[0])),
+  SFVARN(IDCTMatrix, "&IDCTMatrix[0]"),
   SFVAR(IDCTMIndex),
 
   SFVAR(QScale),
 
-  SFARRAY16(&Coeff[0], sizeof(Coeff) / sizeof(Coeff[0])),
+  SFVARN(Coeff, "&Coeff[0]"),
   SFVAR(CoeffIndex),
   SFVAR(DecodeWB),
 
-  SFARRAY32(&PixelBuffer.pix32[0], sizeof(PixelBuffer.pix32) / sizeof(PixelBuffer.pix32[0])),
+  SFVARN(PixelBuffer.pix32, "&PixelBuffer.pix32[0]"),
   SFVAR(PixelBufferReadOffset),
   SFVAR(PixelBufferCount32),
 
@@ -284,7 +284,7 @@ static INLINE void IDCT_1D_Multi(int16 *in_coeff, T *out_coeff)
 //
 //
 //
-#elif 0 //defined(__ARM_NEON__)
+#elif 0 //defined(HAVE_NEON_INTRINSICS)
 //
 //
 //
@@ -352,8 +352,7 @@ static INLINE void IDCT_1D_Multi(int16 *in_coeff, T *out_coeff)
 //
 #endif
 
-static void IDCT(int16 *in_coeff, int8 *out_coeff) NO_INLINE;
-static void IDCT(int16 *in_coeff, int8 *out_coeff)
+static NO_INLINE void IDCT(int16 *in_coeff, int8 *out_coeff)
 {
  alignas(16) int16 tmpbuf[64];
 
@@ -574,12 +573,12 @@ static INLINE void WriteImageData(uint16 V, int32* eat_cycles)
 
    switch(DecodeWB)
    {
-    case 0: IDCT(Coeff, &block_cr[0][0]); break;
-    case 1: IDCT(Coeff, &block_cb[0][0]); break;
-    case 2: IDCT(Coeff, &block_y[0][0]); break;
-    case 3: IDCT(Coeff, &block_y[0][0]); break;
-    case 4: IDCT(Coeff, &block_y[0][0]); break;
-    case 5: IDCT(Coeff, &block_y[0][0]); break;
+    case 0: IDCT(Coeff, MDAP(block_cr)); break;
+    case 1: IDCT(Coeff, MDAP(block_cb)); break;
+    case 2: IDCT(Coeff, MDAP(block_y)); break;
+    case 3: IDCT(Coeff, MDAP(block_y)); break;
+    case 4: IDCT(Coeff, MDAP(block_y)); break;
+    case 5: IDCT(Coeff, MDAP(block_y)); break;
    }   
 
    // Timing in the PS1 MDEC is complex due to (apparent) pipelining, but the average when decoding a large number of blocks is

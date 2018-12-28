@@ -20,11 +20,11 @@
 
     // Macro test taken from http://gcc.gnu.org/viewcvs/trunk/gcc/testsuite/gcc.dg/20020919-1.c?view=markup&pathrev=142696
     //#if defined (__powerpc__) || defined (__PPC__) || defined (__ppc__)	|| defined (__POWERPC__) || defined (PPC) || defined (_IBMR2) 
-    //	register v810_timestamp_t timestamp_rl asm("15") = v810_timestamp;
+    //	v810_timestamp_t timestamp_rl asm("15") = v810_timestamp;
     //#elif defined(__x86_64__)
-    //	register v810_timestamp_t timestamp_rl asm("r11") = v810_timestamp;
+    //	v810_timestamp_t timestamp_rl asm("r11") = v810_timestamp;
     //#else
-	register v810_timestamp_t timestamp_rl = v810_timestamp;
+	v810_timestamp_t timestamp_rl = v810_timestamp;
     //#endif
 
     uint32 opcode;

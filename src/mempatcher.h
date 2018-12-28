@@ -4,6 +4,9 @@
 #include "mempatcher-driver.h"
 #include "Stream.h"
 
+namespace Mednafen
+{
+
 // Substitution cheat/patch stuff
 struct SUBCHEAT
 {
@@ -29,4 +32,5 @@ void MDFNMP_ApplyPeriodicCheats(void);
 
 extern const MDFNSetting MDFNMP_Settings[];
 
+}
 #endif

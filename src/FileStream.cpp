@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* FileStream.cpp:
-**  Copyright (C) 2010-2017 Mednafen Team
+**  Copyright (C) 2010-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -31,20 +31,20 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
 
 #ifdef WIN32
-#include <windows.h>
+ #include <mednafen/win32-common.h>
 #else
-#include <sys/file.h>
+ #include <unistd.h>
+ #include <sys/file.h>
 #endif
 
 #ifdef HAVE_MMAP
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+ #include <sys/mman.h>
 #endif
+
+namespace Mednafen
+{
 
 // Some really bad preprocessor abuse follows to handle platforms that don't have fseeko and ftello...and of course
 // for largefile support on Windows:
@@ -87,7 +87,7 @@
  #endif
 #endif
 
-FileStream::FileStream(const std::string& path, const int mode, const bool do_lock) : OpenedMode(mode), mapping(NULL), mapping_size(0), locked(false), prev_was_write(-1)
+FileStream::FileStream(const std::string& path, const uint32 mode, const int do_lock) : OpenedMode(mode), mapping(NULL), mapping_size(0), locked(false), prev_was_write(-1)
 {
  const char* fpom;
  int open_flags;
@@ -127,7 +127,11 @@ FileStream::FileStream(const std::string& path, const int mode, const bool do_lo
   open_flags |= _O_BINARY;
  #endif
 
+#ifdef WIN32
+ auto perm_mode = _S_IREAD | _S_IWRITE;
+#else
  auto perm_mode = S_IRUSR | S_IWUSR;
+#endif
 
  #if defined(S_IRGRP)
  perm_mode |= S_IRGRP;
@@ -137,7 +141,24 @@ FileStream::FileStream(const std::string& path, const int mode, const bool do_lo
  perm_mode |= S_IROTH;
  #endif
 
- int tmpfd = ::open(path.c_str(), open_flags, perm_mode);
+ if(path.find('\0') != std::string::npos)
+  throw MDFN_Error(EINVAL, _("Error opening file \"%s\": %s"), path_save.c_str(), _("Null character in path."));
+
+ int tmpfd;
+ #ifdef WIN32
+ {
+  bool invalid_utf8;
+  std::u16string u16path = UTF8_to_UTF16(path, &invalid_utf8, true);
+
+  if(invalid_utf8)
+   throw MDFN_Error(EINVAL, _("Error opening file \"%s\": %s"), path_save.c_str(), _("Invalid UTF-8 in path."));
+
+  tmpfd = ::_wopen((const wchar_t*)u16path.c_str(), open_flags, perm_mode);
+ }
+ #else
+ tmpfd = ::open(path.c_str(), open_flags, perm_mode);
+ #endif
+
  if(tmpfd == -1)
  {
   ErrnoHolder ene(errno);
@@ -159,7 +180,7 @@ FileStream::FileStream(const std::string& path, const int mode, const bool do_lo
  {
   try 
   {
-   lock();
+   lock(do_lock < 0);
   }
   catch(...)
   {
@@ -186,11 +207,18 @@ FileStream::~FileStream()
 {
  try
  {
+#if 0
+  if(fp && (attributes() & ATTRIBUTE_WRITEABLE))
+  {
+   MDFN_printf(_("FileStream::close() not explicitly called for file \"%s\" opened for writing!\n"), path_save.c_str());
+  } 
+#endif
+
   close();
  }
  catch(std::exception &e)
  {
-  MDFND_PrintError(e.what());
+  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
  }
 }
 
@@ -321,12 +349,58 @@ void FileStream::write(const void *data, uint64 count)
 
 void FileStream::truncate(uint64 length)
 {
+#ifdef WIN32
+ if(fflush(fp) == EOF)
+ {
+  ErrnoHolder ene(errno);
+
+  throw MDFN_Error(ene.Errno(), _("Error truncating opened file \"%s\": %s"), path_save.c_str(), ene.StrError());
+ }
+
+ LARGE_INTEGER pos_set;
+ LARGE_INTEGER pos_save;
+ HANDLE fhand = (HANDLE)_get_osfhandle(fileno(fp));
+
+ pos_set.QuadPart = 0;
+ if(!SetFilePointerEx(fhand, pos_set, &pos_save, FILE_CURRENT))
+ {
+  const uint32 ec = GetLastError();
+
+  throw MDFN_Error(0, _("Error truncating opened file \"%s\": %s"), path_save.c_str(), Win32Common::ErrCodeToString(ec).c_str());
+ }
+
+ pos_set.QuadPart = length;
+ if(!SetFilePointerEx(fhand, pos_set, nullptr, FILE_BEGIN))
+ {
+  const uint32 ec = GetLastError();
+
+  throw MDFN_Error(0, _("Error truncating opened file \"%s\": %s"), path_save.c_str(), Win32Common::ErrCodeToString(ec).c_str());
+ }
+
+ if(!SetEndOfFile(fhand))
+ {
+  const uint32 ec = GetLastError();
+
+  SetFilePointerEx(fhand, pos_save, nullptr, FILE_BEGIN);
+
+  throw MDFN_Error(0, _("Error truncating opened file \"%s\": %s"), path_save.c_str(), Win32Common::ErrCodeToString(ec).c_str());
+ }
+
+ if(!SetFilePointerEx(fhand, pos_save, nullptr, FILE_BEGIN))
+ {
+  // Can SetFilePointerEx() fail here?
+  const uint32 ec = GetLastError();
+
+  throw MDFN_Error(0, _("Error truncating opened file \"%s\": %s"), path_save.c_str(), Win32Common::ErrCodeToString(ec).c_str());
+ }
+#else
  if(fflush(fp) == EOF || ftruncate(fileno(fp), length) != 0)
  {
   ErrnoHolder ene(errno);
 
-  throw(MDFN_Error(ene.Errno(), _("Error truncating opened file \"%s\": %s"), path_save.c_str(), ene.StrError()));
+  throw MDFN_Error(ene.Errno(), _("Error truncating opened file \"%s\": %s"), path_save.c_str(), ene.StrError());
  }
+#endif
 }
 
 void FileStream::seek(int64 offset, int whence)
@@ -366,19 +440,39 @@ uint64 FileStream::tell(void)
 
 uint64 FileStream::size(void)
 {
+#ifdef WIN32
+ LARGE_INTEGER fsz;
+
+ if(OpenedMode != MODE_READ && fflush(fp) == EOF)
+ {
+  ErrnoHolder ene(errno);
+
+  throw MDFN_Error(ene.Errno(), _("Error getting the size of opened file \"%s\": %s"), path_save.c_str(), ene.StrError());
+ }
+
+ if(!GetFileSizeEx((HANDLE)_get_osfhandle(fileno(fp)), &fsz))
+ {
+  const uint32 ec = GetLastError();
+
+  throw MDFN_Error(0, _("Error getting the size of opened file \"%s\": %s"), path_save.c_str(), Win32Common::ErrCodeToString(ec).c_str());
+ }
+
+ return (uint64)fsz.QuadPart;
+#else
  STRUCT_STAT buf;
 
  if((OpenedMode != MODE_READ && fflush(fp) == EOF) || fstat(fileno(fp), &buf) == -1)
  {
   ErrnoHolder ene(errno);
 
-  throw(MDFN_Error(ene.Errno(), _("Error getting the size of opened file \"%s\": %s"), path_save.c_str(), ene.StrError()));
+  throw MDFN_Error(ene.Errno(), _("Error getting the size of opened file \"%s\": %s"), path_save.c_str(), ene.StrError());
  }
 
  return (std::make_unsigned<decltype(buf.st_size)>::type)buf.st_size;
+#endif
 }
 
-void FileStream::lock(void)
+void FileStream::lock(bool nb)
 {
  if(locked)
   return;
@@ -389,12 +483,14 @@ void FileStream::lock(void)
  memset(&olp, 0, sizeof(OVERLAPPED));
  olp.Offset = ~(DWORD)0;
  olp.OffsetHigh = ~(DWORD)0;
- if(!LockFileEx((HANDLE)_get_osfhandle(fileno(fp)), LOCKFILE_EXCLUSIVE_LOCK, 0, 1, 0, &olp))
+ if(!LockFileEx((HANDLE)_get_osfhandle(fileno(fp)), LOCKFILE_EXCLUSIVE_LOCK | (nb ? LOCKFILE_FAIL_IMMEDIATELY : 0), 0, 1, 0, &olp))
  {
-  throw MDFN_Error(0, _("Error locking opened file \"%s\": 0x%08x"), path_save.c_str(), (unsigned)GetLastError());
+  const uint32 ec = GetLastError();
+
+  throw MDFN_Error((ec == ERROR_LOCK_VIOLATION) ? EWOULDBLOCK : 0, _("Error locking opened file \"%s\": %s"), path_save.c_str(), Win32Common::ErrCodeToString(ec).c_str());
  }
  #else
- if(flock(fileno(fp), LOCK_EX) == -1)
+ if(flock(fileno(fp), LOCK_EX | (nb ? LOCK_NB : 0)) == -1)
  {
   ErrnoHolder ene(errno);
 
@@ -413,7 +509,9 @@ void FileStream::unlock(void)
  #ifdef WIN32
  if(!UnlockFile((HANDLE)_get_osfhandle(fileno(fp)), ~(DWORD)0, ~(DWORD)0, 1, 0))
  {
-  throw MDFN_Error(0, _("Error unlocking opened file \"%s\": 0x%08x"), path_save.c_str(), (unsigned)GetLastError());
+  const uint32 ec = GetLastError();
+
+  throw MDFN_Error(0, _("Error unlocking opened file \"%s\": %s"), path_save.c_str(), Win32Common::ErrCodeToString(ec).c_str());
  }
  #else
  if(flock(fileno(fp), LOCK_UN) == -1)
@@ -488,3 +586,4 @@ int FileStream::get_line(std::string &str)
  return(str.length() ? 256 : -1);
 }
 
+}

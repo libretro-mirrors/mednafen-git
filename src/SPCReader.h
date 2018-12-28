@@ -24,6 +24,9 @@
 
 #include <mednafen/Stream.h>
 
+namespace Mednafen
+{
+
 class SPCReader
 {
  public:
@@ -61,5 +64,5 @@ class SPCReader
  std::string song_name;
 };
 
-
+}
 #endif

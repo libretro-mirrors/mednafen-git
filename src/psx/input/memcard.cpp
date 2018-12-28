@@ -165,7 +165,7 @@ void InputDevice_Memcard::StateAction(StateMem* sm, const unsigned load, const b
  {
   SFVAR(presence_new),
 
-  SFARRAY(rw_buffer, sizeof(rw_buffer)),
+  SFVAR(rw_buffer),
   SFVAR(write_xor),
 
   SFVAR(dtr),
@@ -187,7 +187,7 @@ void InputDevice_Memcard::StateAction(StateMem* sm, const unsigned load, const b
 
  SFORMAT CD_StateRegs[] =
  {
-  SFARRAY(card_data, sizeof(card_data)),
+  SFVAR(card_data),
   SFEND
  };
 

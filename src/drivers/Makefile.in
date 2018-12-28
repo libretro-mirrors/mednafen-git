@@ -78,12 +78,10 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@WIN32_TRUE@am__append_1 = thread_win32.cpp
-@WIN32_FALSE@am__append_2 = thread_sdl.cpp
+@HAVE_LINUX_JOYSTICK_TRUE@am__append_1 = Joystick_Linux.cpp
+@WIN32_TRUE@am__append_2 = Joystick_XInput.cpp Joystick_DX5.cpp
 @WANT_FANCY_SCALERS_TRUE@am__append_3 = hqxx-common.cpp hq2x.cpp hq3x.cpp hq4x.cpp scale2x.c scale3x.c scalebit.c 2xSaI.cpp
-@HAVE_LINUX_JOYSTICK_TRUE@am__append_4 = Joystick_Linux.cpp
-@WIN32_TRUE@am__append_5 = Joystick_XInput.cpp Joystick_DX5.cpp
-@WANT_DEBUGGER_TRUE@am__append_6 = debugger.cpp gfxdebugger.cpp memdebugger.cpp logdebugger.cpp prompt.cpp
+@WANT_DEBUGGER_TRUE@am__append_4 = debugger.cpp gfxdebugger.cpp memdebugger.cpp logdebugger.cpp prompt.cpp
 subdir = src/drivers
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/mkinstalldirs $(top_srcdir)/depcomp
@@ -100,12 +98,12 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
 	$(top_srcdir)/m4/lib-prefix.m4 $(top_srcdir)/m4/lock.m4 \
 	$(top_srcdir)/m4/longlong.m4 $(top_srcdir)/m4/nls.m4 \
 	$(top_srcdir)/m4/po.m4 $(top_srcdir)/m4/printf-posix.m4 \
-	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/m4/size_max.m4 \
-	$(top_srcdir)/m4/stdint_h.m4 $(top_srcdir)/m4/threadlib.m4 \
-	$(top_srcdir)/m4/uintmax_t.m4 $(top_srcdir)/m4/visibility.m4 \
-	$(top_srcdir)/m4/wchar_t.m4 $(top_srcdir)/m4/wint_t.m4 \
-	$(top_srcdir)/m4/xsize.m4 $(top_srcdir)/acinclude.m4 \
-	$(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/m4/sdl2.m4 \
+	$(top_srcdir)/m4/size_max.m4 $(top_srcdir)/m4/stdint_h.m4 \
+	$(top_srcdir)/m4/threadlib.m4 $(top_srcdir)/m4/uintmax_t.m4 \
+	$(top_srcdir)/m4/visibility.m4 $(top_srcdir)/m4/wchar_t.m4 \
+	$(top_srcdir)/m4/wint_t.m4 $(top_srcdir)/m4/xsize.m4 \
+	$(top_srcdir)/acinclude.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -121,39 +119,36 @@ am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
 libmdfnsdl_a_AR = $(AR) $(ARFLAGS)
 libmdfnsdl_a_LIBADD =
-am__libmdfnsdl_a_SOURCES_DIST = main.cpp input.cpp args.cpp help.cpp \
-	ers.cpp sound.cpp netplay.cpp input-config.cpp console.cpp \
-	cheat.cpp fps.cpp video-state.cpp remote.cpp rmdui.cpp \
-	opengl.cpp shader.cpp overlay.cpp video.cpp nongl.cpp nnx.cpp \
-	thread_win32.cpp thread_sdl.cpp hqxx-common.cpp hq2x.cpp \
-	hq3x.cpp hq4x.cpp scale2x.c scale3x.c scalebit.c 2xSaI.cpp \
+am__libmdfnsdl_a_SOURCES_DIST = main.cpp args.cpp help.cpp ers.cpp \
+	sound.cpp netplay.cpp input.cpp mouse.cpp keyboard.cpp \
 	Joystick.cpp Joystick_SDL.cpp Joystick_Linux.cpp \
-	Joystick_XInput.cpp Joystick_DX5.cpp debugger.cpp \
-	gfxdebugger.cpp memdebugger.cpp logdebugger.cpp prompt.cpp
-@WIN32_TRUE@am__objects_1 = thread_win32.$(OBJEXT)
-@WIN32_FALSE@am__objects_2 = thread_sdl.$(OBJEXT)
+	Joystick_XInput.cpp Joystick_DX5.cpp console.cpp cheat.cpp \
+	fps.cpp video-state.cpp remote.cpp rmdui.cpp opengl.cpp \
+	shader.cpp nongl.cpp nnx.cpp video.cpp hqxx-common.cpp \
+	hq2x.cpp hq3x.cpp hq4x.cpp scale2x.c scale3x.c scalebit.c \
+	2xSaI.cpp debugger.cpp gfxdebugger.cpp memdebugger.cpp \
+	logdebugger.cpp prompt.cpp
+@HAVE_LINUX_JOYSTICK_TRUE@am__objects_1 = Joystick_Linux.$(OBJEXT)
+@WIN32_TRUE@am__objects_2 = Joystick_XInput.$(OBJEXT) \
+@WIN32_TRUE@	Joystick_DX5.$(OBJEXT)
 @WANT_FANCY_SCALERS_TRUE@am__objects_3 = hqxx-common.$(OBJEXT) \
 @WANT_FANCY_SCALERS_TRUE@	hq2x.$(OBJEXT) hq3x.$(OBJEXT) \
 @WANT_FANCY_SCALERS_TRUE@	hq4x.$(OBJEXT) scale2x.$(OBJEXT) \
 @WANT_FANCY_SCALERS_TRUE@	scale3x.$(OBJEXT) scalebit.$(OBJEXT) \
 @WANT_FANCY_SCALERS_TRUE@	2xSaI.$(OBJEXT)
-@HAVE_LINUX_JOYSTICK_TRUE@am__objects_4 = Joystick_Linux.$(OBJEXT)
-@WIN32_TRUE@am__objects_5 = Joystick_XInput.$(OBJEXT) \
-@WIN32_TRUE@	Joystick_DX5.$(OBJEXT)
-@WANT_DEBUGGER_TRUE@am__objects_6 = debugger.$(OBJEXT) \
+@WANT_DEBUGGER_TRUE@am__objects_4 = debugger.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@	gfxdebugger.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@	memdebugger.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@	logdebugger.$(OBJEXT) prompt.$(OBJEXT)
-am_libmdfnsdl_a_OBJECTS = main.$(OBJEXT) input.$(OBJEXT) \
-	args.$(OBJEXT) help.$(OBJEXT) ers.$(OBJEXT) sound.$(OBJEXT) \
-	netplay.$(OBJEXT) input-config.$(OBJEXT) console.$(OBJEXT) \
-	cheat.$(OBJEXT) fps.$(OBJEXT) video-state.$(OBJEXT) \
-	remote.$(OBJEXT) rmdui.$(OBJEXT) opengl.$(OBJEXT) \
-	shader.$(OBJEXT) overlay.$(OBJEXT) video.$(OBJEXT) \
-	nongl.$(OBJEXT) nnx.$(OBJEXT) $(am__objects_1) \
-	$(am__objects_2) $(am__objects_3) Joystick.$(OBJEXT) \
-	Joystick_SDL.$(OBJEXT) $(am__objects_4) $(am__objects_5) \
-	$(am__objects_6)
+am_libmdfnsdl_a_OBJECTS = main.$(OBJEXT) args.$(OBJEXT) help.$(OBJEXT) \
+	ers.$(OBJEXT) sound.$(OBJEXT) netplay.$(OBJEXT) \
+	input.$(OBJEXT) mouse.$(OBJEXT) keyboard.$(OBJEXT) \
+	Joystick.$(OBJEXT) Joystick_SDL.$(OBJEXT) $(am__objects_1) \
+	$(am__objects_2) console.$(OBJEXT) cheat.$(OBJEXT) \
+	fps.$(OBJEXT) video-state.$(OBJEXT) remote.$(OBJEXT) \
+	rmdui.$(OBJEXT) opengl.$(OBJEXT) shader.$(OBJEXT) \
+	nongl.$(OBJEXT) nnx.$(OBJEXT) video.$(OBJEXT) $(am__objects_3) \
+	$(am__objects_4)
 libmdfnsdl_a_OBJECTS = $(am_libmdfnsdl_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -301,6 +296,8 @@ LTLIBMULTITHREAD = @LTLIBMULTITHREAD@
 LTLIBOBJS = @LTLIBOBJS@
 LTLIBPTH = @LTLIBPTH@
 LTLIBTHREAD = @LTLIBTHREAD@
+LZO2_CFLAGS = @LZO2_CFLAGS@
+LZO2_LIBS = @LZO2_LIBS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
 MPCDEC_LIBS = @MPCDEC_LIBS@
@@ -308,6 +305,7 @@ MSGFMT = @MSGFMT@
 MSGFMT_015 = @MSGFMT_015@
 MSGMERGE = @MSGMERGE@
 NO_STACK_PROTECTOR_FLAGS = @NO_STACK_PROTECTOR_FLAGS@
+NO_STRICT_ALIASING_FLAGS = @NO_STRICT_ALIASING_FLAGS@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -323,8 +321,9 @@ PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 POSUB = @POSUB@
 PRI_MACROS_BROKEN = @PRI_MACROS_BROKEN@
 RANLIB = @RANLIB@
+SDL2_CONFIG = @SDL2_CONFIG@
+SDL2_FRAMEWORK = @SDL2_FRAMEWORK@
 SDL_CFLAGS = @SDL_CFLAGS@
-SDL_CONFIG = @SDL_CONFIG@
 SDL_LIBS = @SDL_LIBS@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -336,6 +335,7 @@ SS_EXTRA_FLAGS = @SS_EXTRA_FLAGS@
 STRIP = @STRIP@
 TREMOR_LIBS = @TREMOR_LIBS@
 TRIO_CFLAGS = @TRIO_CFLAGS@
+TRIO_LIBS = @TRIO_LIBS@
 USE_INCLUDED_LIBINTL = @USE_INCLUDED_LIBINTL@
 USE_NLS = @USE_NLS@
 VERSION = @VERSION@
@@ -401,13 +401,12 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_builddir)/intl
 noinst_LIBRARIES = libmdfnsdl.a
-libmdfnsdl_a_SOURCES = main.cpp input.cpp args.cpp help.cpp ers.cpp \
-	sound.cpp netplay.cpp input-config.cpp console.cpp cheat.cpp \
-	fps.cpp video-state.cpp remote.cpp rmdui.cpp opengl.cpp \
-	shader.cpp overlay.cpp video.cpp nongl.cpp nnx.cpp \
-	$(am__append_1) $(am__append_2) $(am__append_3) Joystick.cpp \
-	Joystick_SDL.cpp $(am__append_4) $(am__append_5) \
-	$(am__append_6)
+libmdfnsdl_a_SOURCES = main.cpp args.cpp help.cpp ers.cpp sound.cpp \
+	netplay.cpp input.cpp mouse.cpp keyboard.cpp Joystick.cpp \
+	Joystick_SDL.cpp $(am__append_1) $(am__append_2) console.cpp \
+	cheat.cpp fps.cpp video-state.cpp remote.cpp rmdui.cpp \
+	opengl.cpp shader.cpp nongl.cpp nnx.cpp video.cpp \
+	$(am__append_3) $(am__append_4)
 all: all-am
 
 .SUFFIXES:
@@ -475,16 +474,16 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hq3x.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hq4x.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hqxx-common.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/input-config.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/input.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/keyboard.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/logdebugger.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/memdebugger.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mouse.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/netplay.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nnx.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nongl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/opengl.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/overlay.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/prompt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/remote.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rmdui.Po@am__quote@
@@ -493,8 +492,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/scalebit.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/shader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sound.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/thread_sdl.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/thread_win32.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/video-state.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/video.Po@am__quote@
 

@@ -26,6 +26,9 @@
 
 #include <map>
 
+namespace Mednafen
+{
+
 class PSFTags
 {
  public:
@@ -55,15 +58,15 @@ class PSFLoader
 
  static bool TestMagic(uint8 version, Stream *fp);
 
- PSFTags Load(uint8 version, uint32 max_exe_size, Stream *fp);
+ PSFTags Load(uint8 version, uint32 max_exe_size, VirtualFS* vfs, const std::string& dir_path, Stream *fp);
 
  virtual void HandleReserved(Stream* fp, uint32 len);
  virtual void HandleEXE(Stream* fp, bool ignore_pcsp = false);
 
  private:
 
- PSFTags LoadInternal(uint8 version, uint32 max_exe_size, Stream *fp, uint32 level, bool force_ignore_pcsp = false);
+ PSFTags LoadInternal(uint8 version, uint32 max_exe_size, VirtualFS* vfs, const std::string& dir_path, Stream *fp, uint32 level, bool force_ignore_pcsp = false);
 };
 
-
+}
 #endif

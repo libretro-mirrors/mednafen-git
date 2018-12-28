@@ -167,7 +167,7 @@ static bool RunSexyALTest(SexyAL_buffering* buffering, const char* device, int d
 
      if(!(Output = SexyAL_Open(device, &format, buffering, driver_type)))
      {
-      MDFND_PrintError(_("Error opening a sound device."));
+      MDFN_Notify(MDFN_NOTICE_ERROR, _("Error opening a sound device."));
       return false;
      }
 
@@ -275,7 +275,7 @@ bool Sound_Init(MDFNGI *gi)
   return false;
  }
 
- if(!strcasecmp(zedevice.c_str(), "default"))
+ if(!MDFN_strazicmp(zedevice.c_str(), "default"))
   MDFNI_printf(_("Using \"%s\" audio driver with SexyAL's default device selection."), CurDriver.name);
  else
   MDFNI_printf(_("Using \"%s\" audio driver with device \"%s\":"), CurDriver.name, zedevice.c_str());
@@ -288,7 +288,7 @@ bool Sound_Init(MDFNGI *gi)
 
  if(!(Output = SexyAL_Open(zedevice.c_str(), &format, &buffering, CurDriver.type)))
  {
-  MDFND_PrintError(_("Error opening a sound device."));
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("Error opening a sound device."));
 
   MDFN_indent(-2);
   return false;
@@ -296,7 +296,7 @@ bool Sound_Init(MDFNGI *gi)
 
  if(format.rate < 22050 || format.rate > 192000)
  {
-  MDFND_PrintError(_("Set rate is out of range [22050-192000]"));
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("Set rate is out of range [22050-192000]"));
   Sound_Kill();
   MDFN_indent(-2);
   return false;

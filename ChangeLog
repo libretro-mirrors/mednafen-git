@@ -1,3 +1,436 @@
+-- 1.22.0-UNSTABLE: --
+
+December 11, 2018:
+	SS: Added support for directly loading <= 1MiB bootable cart ROM images, with the expected file extension being "ss", for debugging and testing
+	purposes.
+
+December 2, 2018:
+	SS: Added "Fighting Vipers" to the internal database of games to use the data cache read bypass kludge with, to fix the problem of the
+	computer-controlled opponent sometimes losing the will to not be a statue.
+
+December 1, 2018:
+	PSX: Memory cards are now backed up on startup(maximum number of backup copies kept for each memory card is 5).
+
+November 30, 2018:
+	PCE: Increased CD read startup delay per tip from dshadoff.  Fixes ADPCM voice playback	issues in "Downtown Nekketsu Monogatari" when text
+	speed is set to fast.
+
+	MD: Fixed a few errors in the internal automatic multitap database, per tip from clobber.
+
+	SS: Added setting "ss.cart.auto_default".
+
+	NES: Removed apparently erroneous iNES header correction database entry for "Dragon Quest II" that was breaking the game.
+
+November 6, 2018:
+	VB: Added the ability to toggle the state of the low battery sensor bit; configure the device on virtual input port 2(e.g. ALT+SHIFT+2) to assign a
+	key/button to this function.
+
+November 4, 2018:
+	PSX: Added a pseudorandom component to Pause command timing to address loading-related hangs in "Colony Wars - Vengeance (Europe)"
+	and "Army Men - Air Attack (Europe)".
+
+	PSX: Generate a seek error if the tray is opened while the CD drive is not stopped; fixes broken disc switching in "Arc the Lad III".
+
+November 3, 2018:
+	PSX: Improved emulation of the behavior of CDC command 0x0A per tests on a PS1; fixes hang in "Goryuujin Electro".
+
+November 2, 2018:
+	PSX: Don't set the autopause track test value unless autopause is enabled; fixes missing music in "Pitball".
+
+	PSX: Delay first CD-DA report after playback begins, per tests on a PS1; fixes missing music in "Roswell Conspiracies - Aliens, Myths & Legends".
+
+October 31, 2018:
+	PSX: Improved timing of CDC command 0x0A per tests on a PS1; fixes missing music and hangs in "Grind Session".
+
+	PSX: Altered seek and pause timing and behavior per tests on a PS1; fixes hangs in "Incredible Crisis", "Ballerburg - Castle Chaos", "Transformers - Beast Wars Transmetals",
+	and "Simple 1500 Series Vol. 057 - The Maze".
+
+October 28, 2018:
+	The settings management code will now throw an exception if a floating-point setting is NaN.
+
+	Fixed a crash that occurred when "debugger.autostepmode" was set to "1" and a game was loaded for a system for which debugger functionality was not implemented.
+
+	NativeVFS, FileStream, and GZFileStream methods taking a path will now throw an error when the path contains a null character.
+
+October 23, 2018:
+	SNES-Faust: Added recognition of files with "fig" and "swc" file extensions as SNES ROM images.
+
+October 9, 2018:
+	Altered the variants of MDFN_rtrim(), MDFN_ltrim(), MDFN_trim(), MDFN_zapctrlchars(), MDFN_strazlower(), MDFN_strazupper(), and UTF8_sanitize()
+	that operate on a mutable std::string to take a pointer to the std::string instead of a non-const reference, and added variants that take a const std::string
+	reference and return a std::string result.
+
+October 8, 2018:
+	Dropped support for "game set" hashes used to change the naming of save state and save game files.  The feature was mostly broken by changes made years ago,
+	and is redundant now with M3U support.  Save game files for multi-disc PC-FX games created in previous versions of Mednafen will need to be renamed to be
+	seen by this and newer versions of Mednafen.  Other files, including save states, should generally be unaffected, unless the user has changed filesys.fname_*
+	settings to use the %F specifier where they wouldn't by default.
+
+	Removed usage of the deprecated "register" keyword in some old code.
+
+October 7, 2018:
+	Adjusted placement of MDFN_FASTCALL and NO_INLINE to fix some compilation errors with MSVC.
+
+	In addition to nonvolatile memory backup files as before, any missing directories in the file path for input-recording movies, save states, screen snapshots, and
+	nonvolatile memory files are now created as necessary, to increase the versatility of the filesys.fname_* settings.
+
+October 6, 2018:
+	Implemented partial virtual filesystem support via classes VirtualFS, NativeVFS, and ZIPReader.
+
+	Emulation modules' loading of files referenced from the main file being loaded is now done through its associated VFS.  This does create a
+	small backwards-compatibility issue with PSF-family(PSF, SSF, GSF, etc.) files, in that previously a ZIP'd PSF-family file that referenced
+	a library file would have the referenced file loaded from the directory containing the ZIP file, but now will
+	have it loaded from within the same ZIP file.
+
+October 4, 2018:
+	NGP: Replaced min/max macros with usage of std::min/std::max.
+
+September 30, 2018:
+	Modified usage of std::swap in OwlResampler.cpp to not explicitly(and unnecessarily) specify the template argument, to fix a compilation error on MSVC.
+
+	Reworked FileStream.cpp to fix some issues causing errors on MSVC.
+
+	GBA: Fixed a regression introduced in 0.9.47 that partially broke compatibility with save states created in previous versions(< 0.9.47), while
+	preserving compatibility for save states created in versions between and including 0.9.47 and 1.21.3.
+
+September 29, 2018:
+	SNES-Faust: Added RAM cheat support(main WRAM only for now).
+
+	SNES-Faust: Added emulation of PPU-area open bus/bus read latches; fixes missing sprites in the water stage of "Mario's Time Machine".
+
+	SNES-Faust: Corrected H/V latch reading to use two separate high/low byte toggles.
+
+September 24, 2018:
+	SNES-Faust: Made minor changes to the CPU emulation core to not require computed goto support in the compiler.
+
+September 23, 2018:
+	Added "blend" and "blend_rg" deinterlacers.
+
+	Moved multithreading management code into the core.
+
+	Encapsulated most(ish) core Mednafen code in the "Mednafen" namespace.
+
+	Slightly improved the quality of audio output by SwiftResampler when running at the higher quality settings.
+
+September 22, 2018:
+	Moved NES audio resampler so it can be used by any emulation module, and renamed it to "SwiftResampler".
+
+	Added an SSE intrinsics-utilizing MAC loop to OwlResampler as a fallback(for the inline assembly) when compiling with MSVC.
+
+	Added an SSE2 intrinsics-utilizing MAC loop to SwiftResampler as a fallback(for the inline assembly) when compiling with MSVC.
+
+September 21, 2018:
+	Wrote new Kaiser-windowed sinc generation code, and modified OwlResampler and the NES resampler to use it.  It shouldn't have any particularly noticeable end-user
+	effects, other than slightly different startup performance(assuming no mistakes were made :p).
+
+September 11, 2018:
+	SS: Emulated input devices' internal states were not being reset on virtual power toggle; fixed.
+
+September 5, 2018:
+	SS: Reorganized SCSP DSP emulation code to make the lifetime of variables clearer, for a possible x86_64 dynarec in the future.
+
+August 30, 2018:
+	Modified SHA-256 hashing code to allow for piecemeal hashing of data, instead of requiring the hash to be generated from one contiguous
+	chunk of memory.
+
+August 8, 2018:
+	PSX: Fixed a startup crash that could occur with a malformed or corrupted SYSTEM.CNF file.
+
+July 31, 2018:
+	Replaced MD5 hashing code with newly-written code.
+
+July 29, 2018:
+	Replaced SDL threading code with new code that uses pthreads directly.
+
+July 28, 2018:
+	Replaced Q subchannel CRC16 calculation code from cdrdao with newly-written code.
+
+July 24, 2018:
+	gzip-compressed ROM/disk image files are now recognized by file extension instead of header magic.
+
+June 13, 2018:
+	SS: Fixed an emulation inaccuracy with the handling of the SH-2 "mac.l" instruction when saturation is enabled, per tests on a SS.
+
+-- 1.21.3: --
+
+April 29, 2018:
+	SNES: Fixed an off-by-1 bug in the PPU code that would cause writing past the end of the OAM tile list array.
+
+April 24, 2018:
+	SS: Added "House of the Dead (Japan)" to internal database of games to use the data cache read
+	bypass kludge with, to fix a game crash on the gun calibration screen.
+
+	SS: Added "Virtua Fighter Kids (Java Tea Original)" and "World Series Baseball" to internal database of games to use the data cache read
+	bypass kludge with, to fix gameplay glitches.
+
+April 22, 2018:
+	Removed some unnecessary memory allocations in the old settings to argument parsing glue code.
+
+	Fixed a crash bug with 2xSaI-family scalers during initialization(regression introduced in 1.21.0-UNSTABLE).
+
+	Create the Mednafen base directory(e.g. ~/.mednafen) before opening the lockfile to fix a startup error when the directory does not already exist(regression
+	introduced in 1.21.0-UNSTABLE).
+
+April 21, 2018:
+	SS: Added kludge to fix layer offset problem in "Alien Trilogy".
+
+	SS: Added "WipEout" to internal database of games to use the data cache read bypass kludge with, to fix a hang that occurred when trying to exit gameplay
+	back to the main menu.
+
+-- 1.21.2: --
+
+April 2, 2018:
+	Updated bundled copy of Tremor to address a security vulnerability.
+
+	SS: Improved emulation of SCU DSP DMA to program RAM, per tests on a SS(still nowhere near perfect, the way it's implemented on hardware is kind of
+	horrible, but it should work ok if games use it how it's meant to be used); fixes graphical glitches in "Shining Force III - Scenario 2", and perhaps
+	in the other "Shining Force III" games as well.
+
+	SS: Flush the prefetched SCU DSP instruction when PC is set via PPAF, instead of when END/ENDI executes or when execution is forcibly stopped, per tests on a SS.
+
+	SS: Disallow SCU DSP LOP from being written in a looped single instruction unless it's the final iteration, per tests on a SS.
+
+	SS: Allow SCU DSP LOP to underflow to 0xFFF with LPS and BTM, per tests on a SS.
+
+-- 1.21.1: --
+
+March 9, 2018:
+	Enabling the automatic save state loading/saving feature will no longer cause an error to be outputted on game load if the save state does not exist.
+
+March 3, 2018:
+	Added support for compiling and linking with external LZO instead of the bundled miniLZO.
+
+	A CD image loading hint will now be appended to the ROM image too large error message in certain circumstances.
+
+February 25, 2018:
+	PC-FX: Added a missing variable to save states.
+
+	(Re)Added backwards-compatibility "video.driver" setting value aliases.
+
+February 24, 2018:
+	NES: Misc minor fixes for a few bootleg mappers.
+
+	NES: Added missing data to VS Unisystem save states.
+
+	NES: Added missing variable to mapper 64 save states.
+
+	NES: Added missing save state support to the mapper 22 code.
+
+	NES: Fixed improper handling of an MMC1 variable in save states.
+
+February 22, 2018:
+	Fixed handling of the "osd.state_display_time" setting to allow a value of "0" to work as expected.
+
+-- 1.21.0-UNSTABLE: --
+
+February 19, 2018:
+	An attempt to run an instance of Mednafen while another instance is already running with the same base directory is now blocked during startup, via
+	a lock file; note that this check occurs after stdout and stderr are potentially redirected to stdout.txt and stderr.txt on Windows.
+
+February 15, 2018:
+	Changed the default value of setting "video.driver" from "opengl" to "default", removed the old "0" and "1" backwards-compatibility value aliases,
+	renamed the "sdl" driver to "softfb"(without backwards-compat aliases), and made it so the setting's value will be reset to "default" after 
+	automatically importing settings from "mednafen-09x.cfg".
+
+	On Windows, no longer exit on ALT+F4 while input is grabbed.
+
+	Added settings "fps.autoenable", "fps.position", "fps.textcolor", and "fps.bgcolor".
+
+February 11, 2018:
+	Removed reliance on malloc(), realloc(), and calloc() setting errno to ENOMEM on failure, since it's not the case on Windows XP, and possibly other
+	platforms/operating systems too.
+
+February 9, 2018:
+	ZIP files are now recognized by file extension instead of by magic(wizards).
+
+	Replaced old minizip code with newly-written ZIP archive reading code.
+
+	Replaced MDFN_PrintError() and MDFN_DispMessage() with MDFN_Notify().
+
+February 6, 2018:
+	Use versionsort() instead of alphasort() when scanning for js* joystick devices on Linux.
+
+February 1, 2018:
+	Added settings "fps.scale" and "fps.font".
+
+January 31, 2018:
+	On Windows, in-memory conversion of M3U and CUE files to UTF-8 will be attempted if they lack a UTF-8 BOM and contain byte sequences that are not
+	valid UTF-8.
+
+	On Windows, path/filename settings loaded from the old mednafen-09x.cfg(before being saved to mednafen.cfg on exit) will now be converted to UTF-8.
+
+January 29, 2018:
+	Added support for pasting text into the cheat and netplay consoles.
+
+January 28, 2018:
+	SS: Added Japanese keyboard emulation.
+
+	SS: Improved VDP2 window Y coordinate evaluation emulation; fixes at least one background layer graphical glitch
+	in "Radiant Silvergun"(at the start of stage 2C), and the graphical glitch near the end of the intro in "Snatcher".
+
+January 20, 2018:
+	Altered calculations involving *.xscale(fs)/*.yscale(fs) settings to be more predictable given floating point nuances; any user using non-integer scaling values
+	for these settings may need to adjust them to get the same result as in previous versions of Mednafen, however.
+
+	Added setting "video.fs.display".
+
+January 18, 2018:
+	SDL2(2.0.5+) is now used and required.
+
+	Removed the "overlay" video driver.
+
+	On Windows, error messages during startup will now be displayed in a popup message box.
+
+	On Windows, Mednafen will now output text to a console if it's started from a console(e.g. cmd.exe or Cygwin), and if not, write
+	to stdout.txt and stderr.txt like before.
+
+	On Windows, Mednafen now uses Unicode variants of CRT and Win32 functions; this may require the user to convert their CUE sheets to UTF-8 if filenames use
+	exotic(e.g. not directly typable on a standard US-layout keyboard) characters.
+
+	For key bindings relating to the debugger and cheat management interface, the Right ALT key modifier will no longer be respected(only the Left ALT has
+	any effect now), for internationalization reasons.
+
+	The configuration file is back to "mednafen.cfg" instead of "mednafen-09x.cfg".  If a 0.8.x "mednafen.cfg" is in the way, it will be renamed.  If "mednafen.cfg"
+	does not exist, or is from an old version of Mednafen, settings will initially be loaded from "mednafen-09x.cfg", but still saved to "mednafen.cfg" on exit(and
+	loaded from "mednafen.cfg" from that point on).
+
+	Reworked the input mapping setting format to be more human-readable(and editable).  Details are in the documentation, in the "Advanced Usage" section.  Old
+	input mappings will be translated internally, except for keyboard mappings, due to incompatibilities between how SDL 1.2 and 2 handle keyboards.
+
+	Added support for mapping joystick axes and buttons, mouse buttons, and keyboard keys to emulated mouse device relative motion for testing purposes(via
+	manually editing the configuration file, as the in-emulator configuration process currently won't create such mappings).
+
+	Added support for digital button input mappings that mix AND, ANDNOT, and OR-style operations together(previously it was either just AND or OR); refer to the
+	documentation for more details.  Note that the in-emulator configuration process won't create complex mappings that mix different boolean operations, 
+	but you can map combinations using simpler logic in-emulator, and then edit the configuration file to adjust the boolean operations used.
+
+January 15, 2018:
+	SS: Fixed a bug that caused a crash if an error occurred early in the process of loading a game.
+
+	Updated the configure script to disable gcc's mitigations for Spectre, in the event distributions configure their compilers to enable them by default.
+
+	Stopped (erroneously) memset()'ing some MDFN_PixelFormat objects.
+
+January 12, 2018:
+	Cleaned up the handling and reduced the size of axis-related inputs as communicated from the driver-side code to core Mednafen.
+
+	PCE_FAST: Fixed fubared mouse emulation.
+
+December 28, 2017:
+	Replaced usage of strcasecmp() and strncasecmp() with MDFN_strazicmp(), for consistent behavior across locales.
+
+	Added MDFN_strazlower(), MDFN_strazupper(), MDFN_memazicmp(), and MDFN_strazicmp() functions.
+
+December 14, 2017:
+	SS: Fixed a logic error in the BIOS sanity check code that caused it to throw a less helpful error message than intended in certain circumstances, and
+	made the error messages related to BIOS file misconfiguration more verbose(and hopefully more helpful...).
+
+December 6, 2017:
+	Fixed broken cheat file saving on MS Windows.
+
+November 12, 2017:
+	Changed how some multidimensional arrays and arrays of structs are accessed, to try to avoid behavior that's probably undefined and may be a problem
+	in the future.
+
+	PC-FX: Fixed integer overflows that caused fatal division by zero when Mednafen's cheat functionality was used(a regression introduced around 0.9.39).
+
+	SS: Stuck SCU DMA table arrays in a struct to avoid unspecified behavior in the SCU save state code.
+
+-- 0.9.48: --
+
+September 16, 2017:
+	Set cheat's default endianness to that preferred by the system being emulated when manually adding a cheat that's not
+	a cheat device code nor the result of a cheat search.
+
+September 15, 2017:
+	SS: Fixed SCU DSP DMA from B-bus; fixes the periodic loud popping in Grandia's FMV.
+
+September 12, 2017:
+	SS: Added a hack/kludge to allow bypassing of data cache on reads(such that the timing benefits of partial cache emulation are preserved, without cache
+	coherency problems that partial cache emulation sometimes leads to with poorly programmed games), and added an internal database to enable it on select games;
+	fixes graphical glitches and/or hangs in "Area 51 (USA and Europe)", "Clockwork Knight 2 (USA)", "DeJig - Lassen Art Collection", "Father Christmas",
+	"Golden Axe The Duel", "Sega Saturn Choice Cuts", "Spot Goes to Hollywood (USA and Japan)", "Street Fighter Zero", "Street Fighter Zero 3",
+	"Super Puzzle Fighter II Turbo", and "Virtual Volleyball".
+
+	SS: Full cache emulation is now enabled for "Whizz"(by using an internal database), to resolve(or at least reduce) quasi-random hanging issues during startup. 
+
+September 11, 2017:
+	SS: Corrected an inaccuracy with CDB play repeat handling; fixes hang when trying to resume a suspended game in "Tactics Ogre".
+
+	SS: Initialize VDP1 clipping and local coordinate registers only on power-on, and not on reset.
+
+September 7, 2017:
+	SS: Fixed side-effect inaccuracies in the CDB Put Sector Data, Copy Sector Data, and Move Sector Data command emulation.
+
+September 6, 2017:
+	Added configure option "--with-external-trio", for distribution packagers.
+
+	SS: Added partial emulation of SH-2 external bus open bus behavior; fixes messed up colors in "Discworld 2".
+
+September 4, 2017:
+	SS: Improved CDB Initialize command emulation; fixes crash in "Tenchi Muyou! Ryououki Gokuraku" when it tries to play an opening movie during startup.
+
+August 28, 2017:
+	SS: Made CD seek overhead calculation less completely wrong; fixes graphics corruption in intro of "Batman Forever", and fixes hang in "Jung Rhythm" when
+	trying to retry a failed stage.
+
+-- 0.9.47: --
+
+August 25, 2017:
+	Lynx, MD, NGP, SMS: Added a few missing variables to save states.
+
+August 24, 2017:
+	SS: Added save state support.
+
+	Revamped save state helper macros and functions, to allow save-stating of variables in arrays of structs to be simpler.
+
+August 22, 2017:
+	SS: Fixed BCR1 write protect, and added stub emulation of the other BSC registers.
+
+	SS: Added incomplete stub Action Replay 4M Plus emulation(for experimentation); proper Action Replay support would require SH-2 UBC emulation, and that
+	may be too costly performance wise.
+
+August 21, 2017:
+	SS: Implemented very rough approximation of bus timing side effects when master SH-2 DMA is active(accurate handling of bus priorities and sharing would increase
+	CPU requirements noticeably, but it may ultimately be necessary as a database-driven option for some stubborn games in the future).  Fixes startup hangs in
+	"Device Reign", "Real Sound", "Resident Evil", "SD Gundam G Century S", "Super Tempo", "Tennis Arena", "Tilk", "Yuukyuu Gensoukyoku",
+	"Yuukyuu Gensoukyoku 2nd Album", "Yuukyuu Gensoukyoku ensemble", "Yuukyuu Gensoukyoku ensemble 2", "Yuukyuu no Kobako Official Collection", and "Zero4 Champ". 
+
+-- 0.9.46: --
+
+August 10, 2017:
+	Compile with explicit -fstrict-aliasing, for distributions/OSes that have configured gcc to not enable strict aliasing at -O2(and possibly other levels).
+
+	Fixed a bug that could, under certain conditions, cause emulator OSD elements to not be updated in the time after entering frame advance mode
+	and before a frame advance.
+
+August 7, 2017:
+	Use a sorted std::vector instead of std::multimap to store current settings, to reduce memory usage.
+
+August 6, 2017:
+	SS: Added ss.input.port*.3dpad.mode.defpos settings to control the default position of the digital/analog mode switch.
+
+August 5, 2017:
+	Allow addresses above FFFF to be entered as the logical watch address in the debugger.
+
+August 4, 2017:
+	SS: Added kludge to fix layer offset problem in "Daytona USA CCE".
+
+	NES: The functionality controlled by setting "nes.fnscan" now recognizes "(F)" and "(France)" as PAL.
+
+	NES: Added support for iNES mapper 40.
+
+July 11, 2017:
+	Utilize _byteswap_*() functions in endian.h when compiling with Microsoft's C++ compiler.
+
+June 22, 2017:
+	Fixed a couple of minor issues(log header formatting, and skipped logging of first instruction in step mode) with the debugger's undocumented trace log feature.
+
+	NES: Corrected the period of PAL noise channel frequency setting 0x1.
+
+June 21, 2017:
+	NES: Fixed a few square wave sound channel emulation bugs(wrong phase for duty setting 3, and failing to clock the period counter when the channel is silenced).
+
 -- 0.9.45.1: --
 
 June 5, 2017:

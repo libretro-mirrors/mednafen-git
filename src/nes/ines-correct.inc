@@ -143,7 +143,6 @@
 {0x6e0eb43e,2,1},	/* Puss n Boots */
 {0x266ce198,2,1},	/* City Adventure Touch */
 
-{0x48349b0b,1,8},      /* Dragon Quest 2 */
 {0xd09b74dc,1,8},	/* Great Tank (J) */
 {0xe8baa782,1,8},	/* Gun Hed (J) */
 {0x970bd9c2,1,8},      /* Hanjuku Hero */

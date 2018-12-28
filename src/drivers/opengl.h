@@ -1,5 +1,5 @@
-#ifndef __DRIVERS_OPENGL_H
-#define __DRIVERS_OPENGL_H
+#ifndef __MDFN_DRIVERS_OPENGL_H
+#define __MDFN_DRIVERS_OPENGL_H
 
 //#define GL_GLEXT_LEGACY
 //#ifdef HAVE_APPLE_OPENGL_FRAMEWORK
@@ -149,8 +149,10 @@ class OpenGL_Blitter
 {
  public:
 
- OpenGL_Blitter(int scanlines, ShaderType pixshader, const ShaderParams& shader_params, const int screen_w, const int screen_h, int *rs, int *gs, int *bs, int *as);
+ OpenGL_Blitter(int scanlines, ShaderType pixshader, const ShaderParams& shader_params, int *rs, int *gs, int *bs, int *as);
  ~OpenGL_Blitter();
+
+ void SetViewport(int w, int h);
 
  void BlitRaw(const MDFN_Surface *surface, const MDFN_Rect *rect, const MDFN_Rect *dest_rect, const bool source_alpha);
  void Blit(const MDFN_Surface *src_surface, const MDFN_Rect *src_rect, const MDFN_Rect *dest_rect, const MDFN_Rect *original_src_rect, int InterlaceField, int UsingIP, int rotated);
@@ -247,7 +249,7 @@ class OpenGL_Blitter
  GLenum PixelFormat;		// For glTexSubImage2D()
  GLenum PixelType;		// For glTexSubImage2D()
 
- const int gl_screen_w, gl_screen_h;
+ int gl_screen_w, gl_screen_h;
  GLuint textures[4];		// emulated fb, scanlines, osd, raw(netplay)
 
  int using_scanlines;	// Don't change to bool.

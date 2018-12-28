@@ -396,6 +396,7 @@ void MDFNNES_VSUNIStateAction(StateMem *sm, const unsigned load, const bool data
  SFORMAT StateRegs[]=
  {
   SFVAR(vsdip), SFVAR(coinon), SFVAR(VSindex),
+  SFVAR(WRAM),
   SFEND
  };
 

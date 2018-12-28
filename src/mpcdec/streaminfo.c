@@ -87,7 +87,7 @@ mpc_get_encoder_string(mpc_streaminfo* si)
 		int major = si->encoder_version >> 24;
 		int minor = (si->encoder_version >> 16) & 0xFF;
 		int build = (si->encoder_version >> 8) & 0xFF;
-		char * tmp = "--Stable--";
+		const char * tmp = "--Stable--";
 
 		if (minor & 1)
 			tmp = "--Unstable--";

@@ -47,7 +47,7 @@ void pio_reset(void);
 void pio_shutdown(void);
 void system_assign_device(int port, int type);
 
-int SMS_PIOStateAction(StateMem *sm, int load, int data_only);
+void SMS_PIOStateAction(StateMem *sm, int load, int data_only);
 
 void io_lut_init(void);
 void ioctrl_w(uint8 data);

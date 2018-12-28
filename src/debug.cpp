@@ -20,6 +20,9 @@
 
 #ifdef WANT_DEBUGGER
 
+namespace Mednafen
+{
+
 static std::vector<AddressSpaceType> AddressSpaces;
 static std::vector<const RegGroupType*> RegGroups;
 
@@ -232,4 +235,5 @@ void ASpace_Reset(void)
  AddressSpaces.clear();
 }
 
+}
 #endif

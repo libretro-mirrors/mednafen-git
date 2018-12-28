@@ -5,8 +5,9 @@
 #include "video/primitives.h"
 #include "video/text.h"
 
-void MDFN_ResetMessages(void);
+namespace Mednafen
+{
 void MDFN_InitFontData(void) MDFN_COLD;
-void MDFN_DispMessage(const char* format, ...) noexcept MDFN_FORMATSTR(gnu_printf, 1, 2);
+}
 
 #endif

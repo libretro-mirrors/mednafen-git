@@ -1444,55 +1444,43 @@ void V810::Exception(uint32 handler, uint16 eCode)
 
 void V810::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
- PODFastVector<uint32> cache_tag_temp;
- PODFastVector<uint32> cache_data_temp;
- PODFastVector<bool> cache_data_valid_temp;
-
  uint32 PC_tmp = GetPC();
 
  if(EmuMode == V810_EMU_MODE_ACCURATE)
  {
-  cache_tag_temp.resize(128);
-  cache_data_temp.resize(128 * 2);
-  cache_data_valid_temp.resize(128 * 2);
-
-  if(!load)
+  // If we're loading while in "accurate" mode, go ahead and clear the cache validity bits,
+  // in case the save state was saved while in fast mode and the cache data isn't present and thus won't be loaded.
+  if(load)
   {
    for(int i = 0; i < 128; i++)
    {
-    cache_tag_temp[i] = Cache[i].tag;
-
-    cache_data_temp[i * 2 + 0] = Cache[i].data[0];
-    cache_data_temp[i * 2 + 1] = Cache[i].data[1];
-
-    cache_data_valid_temp[i * 2 + 0] = Cache[i].data_valid[0];
-    cache_data_valid_temp[i * 2 + 1] = Cache[i].data_valid[1];
+    Cache[i].data_valid[0] = false;
+    Cache[i].data_valid[1] = false;
    }
-  }
-  else // If we're loading, go ahead and clear the cache temporaries,
-       // in case the save state was saved while in fast mode
-       // and the cache data isn't present and thus won't be loaded.
-  {
-   cache_tag_temp.fill(0);
-   cache_data_temp.fill(0);
-   cache_data_valid_temp.fill(false);
   }
  }
 
  int32 next_event_ts_delta = next_event_ts - v810_timestamp;
 
+ SFORMAT CacheRegs[] =
+ {
+  SFVARN(Cache->tag, 128, sizeof(*Cache), Cache, "cache_tag_temp"),
+  SFVARN(Cache->data, 128, sizeof(*Cache), Cache, "cache_data_temp"),
+  SFVARN(Cache->data_valid, 128, sizeof(*Cache), Cache, "cache_data_valid_temp"),
+
+  SFEND
+ };
+
  SFORMAT StateRegs[] =
  {
-  SFARRAY32(P_REG, 32),
-  SFARRAY32(S_REG, 32),
+  SFVAR(P_REG),
+  SFVAR(S_REG),
   SFVARN(PC_tmp, "PC"),
   SFVAR(Halted),
 
   SFVAR(lastop),
 
-  SFARRAY32N(&cache_tag_temp[0], cache_tag_temp.size(), "cache_tag_temp"),
-  SFARRAY32N(&cache_data_temp[0], cache_data_temp.size(), "cache_data_temp"),
-  SFARRAYBN(&cache_data_valid_temp[0], cache_data_valid_temp.size(), "cache_data_valid_temp"),
+  SFLINK((EmuMode == V810_EMU_MODE_ACCURATE) ? CacheRegs : nullptr),
 
   SFVAR(ilevel),		// Perhaps remove in future?
   SFVAR(next_event_ts_delta),
@@ -1521,20 +1509,5 @@ void V810::StateAction(StateMem *sm, const unsigned load, const bool data_only)
   RecalcIPendingCache();
 
   SetPC(PC_tmp);
-  if(EmuMode == V810_EMU_MODE_ACCURATE)
-  {
-   for(int i = 0; i < 128; i++)
-   {
-    Cache[i].tag = cache_tag_temp[i];
-
-    Cache[i].data[0] = cache_data_temp[i * 2 + 0];
-    Cache[i].data[1] = cache_data_temp[i * 2 + 1];
-
-    Cache[i].data_valid[0] = cache_data_valid_temp[i * 2 + 0];
-    Cache[i].data_valid[1] = cache_data_valid_temp[i * 2 + 1];
-
-    //printf("%d %08x %08x %08x %d %d\n", i, Cache[i].tag << 10, Cache[i].data[0], Cache[i].data[1], Cache[i].data_valid[0], Cache[i].data_valid[1]);
-   }
-  }
  }
 }

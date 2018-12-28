@@ -1,39 +1,36 @@
-#ifndef _MDFN_DRIVERS_INPUT_H
-#define _MDFN_DRIVERS_INPUT_H
+#ifndef __MDFN_DRIVERS_INPUT_H
+#define __MDFN_DRIVERS_INPUT_H
 
-typedef struct {
-        uint8  ButtType;
-        uint8  DeviceNum;
-        uint32 ButtonNum;
-	uint64 DeviceID;
-} ButtConfig;
+enum : uint8
+{
+ BUTTC_NONE 	= 0,	// Must be zero.
+ BUTTC_KEYBOARD,
+ BUTTC_JOYSTICK,
+ BUTTC_MOUSE
+};
 
-#define BUTTC_NONE		0x00
-#define BUTTC_KEYBOARD          0x01
-#define BUTTC_JOYSTICK          0x02
-#define BUTTC_MOUSE             0x03
+struct ButtConfig
+{
+ uint8 DeviceType;
+ uint8 DeviceNum;
+ int8 ANDGroupCont;
+ uint16 ButtonNum;
+ uint16 Scale;
+ std::array<uint8, 16> DeviceID;
+};
 
-#define MKK(k) SDLK_##k
-#define MKK_COUNT (SDLK_LAST+1)
+void Input_Event(const SDL_Event* event);
 
-void Input_Event(const SDL_Event *event);
-void MainSetEventHook(int (*eh)(const SDL_Event *event));	// TODO: factor out eventually.
+void Input_GameLoaded(MDFNGI* gi) MDFN_COLD;
+void Input_GameClosed(void) MDFN_COLD;
 
-// Called after a game is loaded.
-void InitGameInput(MDFNGI *GI);
+void Input_Update(bool VirtualDevicesOnly = false, bool UpdateRapidFire = true);
 
-// Called when a game is closed.
-void KillGameInput(void);
+void Input_MakeSettings(std::vector <MDFNSetting> &settings);
 
-void MDFND_UpdateInput(bool VirtualDevicesOnly = false, bool UpdateRapidFire = true);
-
-void MakeInputSettings(std::vector <MDFNSetting> &settings);
-void KillInputSettings(void); // Called after MDFNI_Kill() is called
+void Input_NetplayLPMChanged(void);
 
 extern bool DNeedRewind; // Only read/write in game thread(or before creating game thread).
 extern bool RewindState; // " " " "
-
-bool InitCommandInput(MDFNGI* gi);
-void KillCommandInput(void);
 
 #endif

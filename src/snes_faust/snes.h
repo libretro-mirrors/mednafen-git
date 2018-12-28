@@ -34,6 +34,7 @@
 #define MEMCYC_XSLOW 12
 
 #if 0
+ #define SNES_DBG_ENABLE 1
  #define SNES_DBG(s, ...) printf(s, ## __VA_ARGS__)
 #else
  static INLINE void SNES_DBG(const char* format, ...) { }

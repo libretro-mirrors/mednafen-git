@@ -33,7 +33,7 @@ public:
 	enum { out_chan_count = 2 }; // stereo
 	void run( sample_t* out );
 
-	void serialize(MDFN::LEPacker &slizer, bool load);
+	void serialize(Mednafen::LEPacker &slizer, bool load);
 };
 
 #endif

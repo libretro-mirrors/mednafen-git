@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* Deinterlacer.h:
-**  Copyright (C) 2011-2016 Mednafen Team
+**  Copyright (C) 2011-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,43 +19,33 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef __MDFN_DEINTERLACER_H
-#define __MDFN_DEINTERLACER_H
+#ifndef __MDFN_VIDEO_DEINTERLACER_H
+#define __MDFN_VIDEO_DEINTERLACER_H
+
+namespace Mednafen
+{
 
 class Deinterlacer
 {
  public:
-
- Deinterlacer();
- ~Deinterlacer();
 
  enum
  {
   DEINT_BOB_OFFSET = 0,	// Code will fall-through to this case under certain conditions, too.
   DEINT_BOB,
   DEINT_WEAVE,
+  DEINT_BLEND,
+  DEINT_BLEND_RG
  };
 
- void SetType(unsigned t);
- inline unsigned GetType(void)
- {
-  return(DeintType);
- }
+ static Deinterlacer* Create(unsigned type);
 
- void Process(MDFN_Surface *surface, MDFN_Rect &DisplayRect, int32 *LineWidths, const bool field);
+ Deinterlacer();
+ virtual ~Deinterlacer();
 
- void ClearState(void);
-
- private:
-
- template<typename T>
- void InternalProcess(MDFN_Surface *surface, MDFN_Rect &DisplayRect, int32 *LineWidths, const bool field);
-
- std::unique_ptr<MDFN_Surface> FieldBuffer;
- std::vector<int32> LWBuffer;
- bool StateValid;
- MDFN_Rect PrevDRect;
- unsigned DeintType;
+ virtual void Process(MDFN_Surface *surface, MDFN_Rect &DisplayRect, int32 *LineWidths, const bool field) = 0;
+ virtual void ClearState(void) = 0;
 };
 
+}
 #endif

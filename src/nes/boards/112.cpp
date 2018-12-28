@@ -20,7 +20,7 @@
 
 #include "mapinc.h"
 
-static char Mirroring;
+static int8 Mirroring;
 static uint8 RegSelect;
 static uint8 Regs[8];
 
@@ -76,8 +76,8 @@ static int StateAction(StateMem *sm, int load, int data_only)
  {
   SFVAR(RegSelect),
   SFVAR(Mirroring),
-  SFARRAY(Regs, 8),
-  SFARRAY(WRAM, 8192),
+  SFPTR8(Regs, 8),
+  SFPTR8(WRAM, 8192),
   SFEND
  };
 

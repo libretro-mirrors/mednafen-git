@@ -24,7 +24,7 @@ static uint8 WRAM[2048];
 
 static DECLFW(MWrite)
 {
- (WRAM-0x7000)[A]=V;
+ WRAM[(size_t)A - 0x7000]=V;
 }
 
 static void MALEEReset(CartInfo *info)
@@ -40,7 +40,7 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(WRAM, 2048),
+  SFPTR8(WRAM, 2048),
   SFEND
  };
  int ret = MDFNSS_StateAction(sm, load, data_only, StateRegs, "MAPR");

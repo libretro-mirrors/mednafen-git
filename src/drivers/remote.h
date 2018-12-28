@@ -5,7 +5,8 @@
 
 void CheckForSTDIOMessages(void);
 bool InitSTDIOInterface(const char *key);
-void Remote_SendStatusMessage(const char *message);
+void Remote_SendInfoMessage(const char *message);
 void Remote_SendErrorMessage(const char *message);
+void Remote_SendWarningMessage(const char *message);
 
 #endif

@@ -188,24 +188,24 @@ static int StateAction(StateMem *sm, int load, int data_only)
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(CHRBanks, 8), SFARRAY(PRGBanks, 3),
-  SFARRAY(WRAM, 8192), SFVAR(Mirroring),
+  SFPTR8(CHRBanks, 8), SFPTR8(PRGBanks, 3),
+  SFPTR8(WRAM, 8192), SFVAR(Mirroring),
   SFVAR(IRQLatch), SFVAR(IRQCount), SFVAR(IRQEnabled),
   SFVAR(vrctemp), SFVAR(indox), SFVAR(acount),
   SFVAR(divc),
 
-  SFARRAY(VRC7Sound->LowFreq, 6),
-  SFARRAY(VRC7Sound->HiFreq, 6),
-  SFARRAY(VRC7Sound->InstVol, 6),
-  SFARRAY(VRC7Sound->CustInst, 8),
-  SFARRAY32(VRC7Sound->slot_on_flag, 6 * 2),
+  SFPTR8(VRC7Sound->LowFreq, 6),
+  SFPTR8(VRC7Sound->HiFreq, 6),
+  SFPTR8(VRC7Sound->InstVol, 6),
+  SFPTR8(VRC7Sound->CustInst, 8),
+  SFPTR32(VRC7Sound->slot_on_flag, 6 * 2),
   SFVAR(VRC7Sound->pm_phase), SFVAR(VRC7Sound->lfo_pm),
   SFVAR(VRC7Sound->am_phase), SFVAR(VRC7Sound->lfo_am),
-  SFARRAY32(VRC7Sound->patch_number, 6),
-  SFARRAY32(VRC7Sound->key_status, 6),
+  SFPTR32(VRC7Sound->patch_number, 6),
+  SFPTR32(VRC7Sound->key_status, 6),
 
   // FIXME
-  SFARRAYN((uint8 *)VRC7Sound->slot, sizeof(VRC7Sound->slot), "VRC7Sound->slot"),
+  SFPTR8N((uint8 *)VRC7Sound->slot, sizeof(VRC7Sound->slot), "VRC7Sound->slot"),
   SFEND
  };
 

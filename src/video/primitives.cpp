@@ -21,6 +21,9 @@
 
 #include "video-common.h"
 
+namespace Mednafen
+{
+
 template<typename T, bool fill>
 static void SuperDrawRect(MDFN_Surface *surface, uint32 x, uint32 y, uint32 w, uint32 h, uint32 border_color, uint32 fill_color)
 {
@@ -311,5 +314,4 @@ void MDFN_DrawLine(MDFN_Surface *surface, int x0, int y0, int x1, int y1, uint32
  }
 }
 
-
-
+}

@@ -16,6 +16,7 @@
  */
 
 #include <mednafen/types.h>
+#include <mednafen/string/string.h>
 
 struct SexyAL_DriverInfo
 {

@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* CDAccess_CCD.cpp:
-**  Copyright (C) 2013-2016 Mednafen Team
+**  Copyright (C) 2013-2018 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -22,26 +22,17 @@
 #include <mednafen/mednafen.h>
 #include <mednafen/general.h>
 #include <mednafen/string/string.h>
+#include <mednafen/MemoryStream.h>
 
 #include "CDAccess_CCD.h"
 #include <trio/trio.h>
 
 #include <map>
 
-using namespace CDUtility;
-
-static void MDFN_strtoupper(std::string &str)
+namespace Mednafen
 {
- const size_t len = str.length();
 
- for(size_t x = 0; x < len; x++)
- {
-  if(str[x] >= 'a' && str[x] <= 'z')
-  {
-   str[x] = str[x] - 'a' + 'A';
-  }
- }
-}
+using namespace CDUtility;
 
 typedef std::map<std::string, std::string> CCD_Section;
 
@@ -91,14 +82,14 @@ static T CCD_ReadInt(CCD_Section &s, const std::string &propname, const bool hav
 }
 
 
-CDAccess_CCD::CDAccess_CCD(const std::string& path, bool image_memcache) : img_numsectors(0)
+CDAccess_CCD::CDAccess_CCD(VirtualFS* vfs, const std::string& path, bool image_memcache) : img_numsectors(0)
 {
- Load(path, image_memcache);
+ Load(vfs, path, image_memcache);
 }
 
-void CDAccess_CCD::Load(const std::string& path, bool image_memcache)
+void CDAccess_CCD::Load(VirtualFS* vfs, const std::string& path, bool image_memcache)
 {
- FileStream cf(path, FileStream::MODE_READ);
+ std::unique_ptr<Stream> cf(vfs->open(path, VirtualFS::MODE_READ));
  std::map<std::string, CCD_Section> Sections;
  std::string linebuf;
  std::string cur_section_name;
@@ -106,7 +97,7 @@ void CDAccess_CCD::Load(const std::string& path, bool image_memcache)
  char img_extsd[4] = { 'i', 'm', 'g', 0 };
  char sub_extsd[4] = { 's', 'u', 'b', 0 };
 
- MDFN_GetFilePathComponents(path, &dir_path, &file_base, &file_ext);
+ vfs->get_file_path_components(path, &dir_path, &file_base, &file_ext);
 
  if(file_ext.length() == 4 && file_ext[0] == '.')
  {
@@ -149,9 +140,9 @@ void CDAccess_CCD::Load(const std::string& path, bool image_memcache)
 
  linebuf.reserve(256);
 
- while(cf.get_line(linebuf) >= 0)
+ while(cf->get_line(linebuf) >= 0)
  {
-  MDFN_trim(linebuf);
+  MDFN_trim(&linebuf);
 
   if(linebuf.length() == 0)	// Skip blank lines.
    continue;
@@ -162,7 +153,7 @@ void CDAccess_CCD::Load(const std::string& path, bool image_memcache)
     throw MDFN_Error(0, _("Malformed section specifier: %s"), linebuf.c_str());
 
    cur_section_name = linebuf.substr(1, linebuf.length() - 2);
-   MDFN_strtoupper(cur_section_name);
+   MDFN_strazupper(&cur_section_name);
   }
   else
   {
@@ -176,10 +167,10 @@ void CDAccess_CCD::Load(const std::string& path, bool image_memcache)
    k = linebuf.substr(0, feqpos);
    v = linebuf.substr(feqpos + 1);
 
-   MDFN_trim(k);
-   MDFN_trim(v);
+   MDFN_trim(&k);
+   MDFN_trim(&v);
 
-   MDFN_strtoupper(k);
+   MDFN_strazupper(&k);
 
    Sections[cur_section_name][k] = v;
   }
@@ -252,15 +243,16 @@ void CDAccess_CCD::Load(const std::string& path, bool image_memcache)
  //
  // Open image stream.
  {
-  std::string image_path = MDFN_EvalFIP(dir_path, file_base + std::string(".") + std::string(img_extsd), true);
+  std::string image_path = vfs->eval_fip(dir_path, file_base + "." + img_extsd, true);
 
   if(image_memcache)
   {
-   img_stream.reset(new MemoryStream(new FileStream(image_path, FileStream::MODE_READ)));
+   img_stream.reset(new MemoryStream(vfs->open(image_path, VirtualFS::MODE_READ)));
   }
   else
   {
-   img_stream.reset(new FileStream(image_path, FileStream::MODE_READ));
+   img_stream.reset(vfs->open(image_path, VirtualFS::MODE_READ));
+   img_stream->require_fast_seekable();
   }
 
   uint64 ss = img_stream->size();
@@ -277,14 +269,14 @@ void CDAccess_CCD::Load(const std::string& path, bool image_memcache)
  //
  // Open subchannel stream
  {
-  std::string sub_path = MDFN_EvalFIP(dir_path, file_base + std::string(".") + std::string(sub_extsd), true);
-  FileStream sub_stream(sub_path, FileStream::MODE_READ);
+  std::string sub_path = vfs->eval_fip(dir_path, file_base + "." + sub_extsd, true);
+  std::unique_ptr<Stream> sub_stream(vfs->open(sub_path, VirtualFS::MODE_READ));
 
-  if(sub_stream.size() != (uint64)img_numsectors * 96)
+  if(sub_stream->size() != (uint64)img_numsectors * 96)
    throw MDFN_Error(0, _("CCD SUB file size mismatch."));
 
   sub_data.reset(new uint8[(uint64)img_numsectors * 96]);
-  sub_stream.read(sub_data.get(), (uint64)img_numsectors * 96);
+  sub_stream->read(sub_data.get(), (uint64)img_numsectors * 96);
  }
 
  CheckSubQSanity();
@@ -417,3 +409,4 @@ void CDAccess_CCD::Read_TOC(CDUtility::TOC *toc)
  *toc = tocd;
 }
 
+}

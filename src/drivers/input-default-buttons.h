@@ -1,664 +1,833 @@
+//
 // This file should only be included *ONCE* from drivers/input.cpp!!!
+//
 
+#define MKDEF(sc) 	 "keyboard 0x0 " KBD_SCANCODE_STRING(sc)
+#define MKDEF2(sca, scb) "keyboard 0x0 " KBD_SCANCODE_STRING(sca) " || " "keyboard 0x0 " KBD_SCANCODE_STRING(scb)
+#define MKDEF3(sca, scb, scc) "keyboard 0x0 " KBD_SCANCODE_STRING(sca) " || " "keyboard 0x0 " KBD_SCANCODE_STRING(scb) " || " "keyboard 0x0 " KBD_SCANCODE_STRING(scc)
+#define MKDEF4(sca, scb, scc, scd) "keyboard 0x0 " KBD_SCANCODE_STRING(sca) " || " "keyboard 0x0 " KBD_SCANCODE_STRING(scb) " || " "keyboard 0x0 " KBD_SCANCODE_STRING(scc) " || " "keyboard 0x0 " KBD_SCANCODE_STRING(scd)
 
-#define GPZ()   {MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ()}
-static const ButtConfig NESGamePadConfig[4][8]={
-        /* Gamepad 1 */
-        {
-         MK(KP3), MK(KP2), MK(TAB), MK(RETURN), MK(w),MK(s),
-                MK(a), MK(d)
-        },
+#define MKMOUSEB(b) 	 "mouse 0x0 button_" b
+#define MKMOUSECURSOR(a) "mouse 0x0 cursor_" a "-+"
 
-        /* Gamepad 2 */
-        GPZ(),
+#define MKMOUSEAXRELPAIR(a) "mouse 0x0 rel_" a "-", "mouse 0x0 rel_" a "+"
 
-        /* Gamepad 3 */
-        GPZ(),
-
-        /* Gamepad 4 */
-        GPZ()
-};
-#undef GPZ
-
-static const ButtConfig GBPadConfig[8] =
-{
-         MK(KP3), MK(KP2), MK(TAB), MK(RETURN), MK(d),MK(a),
-                MK(w), MK(s)
-};
-
-static const ButtConfig GBAPadConfig[10] =
-{
-         MK(KP3), MK(KP2), MK(TAB), MK(RETURN), MK(d),MK(a),
-                MK(w), MK(s), MK(KP6), MK(KP5)
-};
-
-#define GPZ()   {MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ()}
-static const ButtConfig PCFXPadConfig[2][15]=
+static const char* const NESGamePadConfig[] =
 {
         /* Gamepad 1 */
-        {
-         MK(KP3), MK(KP2), MK(KP1), MK(KP4), MK(KP5), MK(KP6), MK(TAB), MK(RETURN),
-         MK(w), MK(d), MK(s), MK(a),
-	 MK(KP8), MK(KP9),
-        },
-
-        /* Gamepad 2 */
-	GPZ(),
+         MKDEF(KP_3), MKDEF(KP_2), MKDEF(TAB), MKDEF(RETURN), MKDEF(W),MKDEF(S),
+                MKDEF(A), MKDEF(D)
 };
-#undef GPZ
 
-#define GPZ()   {MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ()}
-static const ButtConfig PCEPadConfig[5][13]={
+static const char* const GBPadConfig[] =
+{
+         MKDEF(KP_3), MKDEF(KP_2), MKDEF(TAB), MKDEF(RETURN), MKDEF(D),MKDEF(A),
+                MKDEF(W), MKDEF(S)
+};
+
+static const char* const GBAPadConfig[] =
+{
+         MKDEF(KP_3), MKDEF(KP_2), MKDEF(TAB), MKDEF(RETURN), MKDEF(D),MKDEF(A),
+                MKDEF(W), MKDEF(S), MKDEF(KP_6), MKDEF(KP_5)
+};
+
+static const char* const PCFXPadConfig[] =
+{
         /* Gamepad 1 */
-        {
-         MK(KP3), MK(KP2), MK(TAB), MK(RETURN), MK(w), MK(d), MK(s), MK(a),
-
-         // Extra 4 buttons on 6-button pad
-         MK(KP1), MK(KP4), MK(KP5), MK(KP6),
-
-         // ..and special 2/6 mode select
-         MK(m),
-        },
-
-        /* Gamepad 2 */
-        GPZ(),
-
-        /* Gamepad 3 */
-        GPZ(),
-
-        /* Gamepad 4 */
-        GPZ(),
-
-        /* Gamepad 5 */
-        GPZ()
+        MKDEF(KP_3), MKDEF(KP_2), MKDEF(KP_1), MKDEF(KP_4), MKDEF(KP_5), MKDEF(KP_6), MKDEF(TAB), MKDEF(RETURN),
+        MKDEF(W), MKDEF(D), MKDEF(S), MKDEF(A),
+	MKDEF(KP_8), MKDEF(KP_9),
 };
-#undef GPZ
 
-static const ButtConfig LynxPadConfig[9] =
+static const char* const PCEPadConfig[] = 
+{
+        /* Gamepad 1 */
+        MKDEF(KP_3), MKDEF(KP_2), MKDEF(TAB), MKDEF(RETURN), MKDEF(W), MKDEF(D), MKDEF(S), MKDEF(A),
+
+        // Extra 4 buttons on 6-button pad
+        MKDEF(KP_1), MKDEF(KP_4), MKDEF(KP_5), MKDEF(KP_6),
+
+        // ..and special 2/6 mode select
+        MKDEF(M),
+};
+
+static const char* const LynxPadConfig[] =
 {
         // A, B, Option 2, Option 1, Left, Right, Up, Down, Pause
-         MK(KP3), MK(KP2), MK(KP1), MK(KP7), MK(a),MK(d),
-                MK(w), MK(s), MK(RETURN)
+         MKDEF(KP_3), MKDEF(KP_2), MKDEF(KP_1), MKDEF(KP_7), MKDEF(A),MKDEF(D),
+                MKDEF(W), MKDEF(S), MKDEF(RETURN)
 };
 
-static const ButtConfig NGPPadConfig[7 + 2] =
+static const char* const NGPPadConfig[] =
 {
         // Up, down, left, right, a(inner), b(outer), option
-        MK(w), MK(s), MK(a), MK(d), MK(KP2), MK(KP3), MK(RETURN), MK(KP5), MK(KP6)
+        MKDEF(W), MKDEF(S), MKDEF(A), MKDEF(D), MKDEF(KP_2), MKDEF(KP_3), MKDEF(RETURN)
 };
 
-static const ButtConfig WSwanPadConfig[11] =
+static const char* const WSwanPadConfig[] =
 {
         // Up, right, down, left,
         // up-y, right-y, down-y, left-y,
 	//  start, a(outer), b(inner)
-        MK(w), MK(d), MK(s), MK(a), 
-	MK(UP), MK(RIGHT), MK(DOWN), MK(LEFT),
-	MK(RETURN), MK(KP3), MK(KP2)
+        MKDEF(W), MKDEF(D), MKDEF(S), MKDEF(A), 
+	MKDEF(UP), MKDEF(RIGHT), MKDEF(DOWN), MKDEF(LEFT),
+	MKDEF(RETURN), MKDEF(KP_3), MKDEF(KP_2)
 };
 
-static const ButtConfig WSwanPadRAAConfig[13] = 
+static const char* const WSwanPadRAAConfig[] =
 {
         // Up, right, down, left,
         // up-y, right-y, down-y, left-y,
 	// a', a, b, b'
 	// start
-        MK(w), MK(d), MK(s), MK(a), 
-	MK(UP), MK(RIGHT), MK(DOWN), MK(LEFT),
+        MKDEF(W), MKDEF(D), MKDEF(S), MKDEF(A), 
+	MKDEF(UP), MKDEF(RIGHT), MKDEF(DOWN), MKDEF(LEFT),
 
-	MK(KP6),
-	MK(KP3),
-	MK(KP2),
-	MK(KP5),
+	MKDEF(KP_6),
+	MKDEF(KP_3),
+	MKDEF(KP_2),
+	MKDEF(KP_5),
 
-	MK(RETURN)
+	MKDEF(RETURN)
 };
 
-static const ButtConfig PowerPadConfig[12] =
+
+static const char* const PowerPadConfig[] =
 {
- MK(o),MK(p),MK(LEFTBRACKET),MK(RIGHTBRACKET),
- MK(k),MK(l),MK(SEMICOLON),MK(QUOTE),
- MK(m),MK(COMMA),MK(PERIOD),MK(SLASH)
+ MKDEF(O),MKDEF(P),MKDEF(LEFTBRACKET),MKDEF(RIGHTBRACKET),
+ MKDEF(K),MKDEF(L),MKDEF(SEMICOLON),MKDEF(APOSTROPHE),
+ MKDEF(M),MKDEF(COMMA),MKDEF(PERIOD),MKDEF(SLASH)
 };
 
-static const ButtConfig fkbmap[0x48]=
+static const char* const fkbmap[] =
 {
- MK(F1),MK(F2),MK(F3),MK(F4),MK(F5),MK(F6),MK(F7),MK(F8),
- MK(1),MK(2),MK(3),MK(4),MK(5),MK(6),MK(7),MK(8),MK(9),MK(0),MK(MINUS),MK(EQUALS),MK(BACKSLASH),MK(BACKSPACE),
- MK(ESCAPE),MK(q),MK(w),MK(e),MK(r),MK(t),MK(y),MK(u),MK(i),MK(o),MK(p),MK(BACKQUOTE),MK(LEFTBRACKET),MK(RETURN),
- MK(LCTRL),MK(a),MK(s),MK(d),MK(f),MK(g),MK(h),MK(j),MK(k),MK(l),MK(SEMICOLON),MK(QUOTE),MK(RIGHTBRACKET),MK(INSERT),
- MK(LSHIFT),MK(z),MK(x),MK(c),MK(v),MK(b),MK(n),MK(m),MK(COMMA),MK(PERIOD),MK(SLASH),MK(RALT),MK(RSHIFT),MK(LALT),MK(SPACE),
- MK(DELETE),MK(END),MK(PAGEDOWN),MK(UP),MK(LEFT),MK(RIGHT),MK(DOWN)
+ MKDEF(F1),MKDEF(F2),MKDEF(F3),MKDEF(F4),MKDEF(F5),MKDEF(F6),MKDEF(F7),MKDEF(F8),
+ MKDEF(1),MKDEF(2),MKDEF(3),MKDEF(4),MKDEF(5),MKDEF(6),MKDEF(7),MKDEF(8),MKDEF(9),MKDEF(0),MKDEF(MINUS),MKDEF(EQUALS),MKDEF(BACKSLASH),MKDEF(BACKSPACE),
+ MKDEF(ESCAPE),MKDEF(Q),MKDEF(W),MKDEF(E),MKDEF(R),MKDEF(T),MKDEF(Y),MKDEF(U),MKDEF(I),MKDEF(O),MKDEF(P),MKDEF(GRAVE),MKDEF(LEFTBRACKET),MKDEF(RETURN),
+ MKDEF(LCTRL),MKDEF(A),MKDEF(S),MKDEF(D),MKDEF(F),MKDEF(G),MKDEF(H),MKDEF(J),MKDEF(K),MKDEF(L),MKDEF(SEMICOLON),MKDEF(APOSTROPHE),MKDEF(RIGHTBRACKET),MKDEF(INSERT),
+ MKDEF(LSHIFT),MKDEF(Z),MKDEF(X),MKDEF(C),MKDEF(V),MKDEF(B),MKDEF(N),MKDEF(M),MKDEF(COMMA),MKDEF(PERIOD),MKDEF(SLASH),MKDEF(RALT),MKDEF(RSHIFT),MKDEF(LALT),MKDEF(SPACE),
+ MKDEF(DELETE),MKDEF(END),MKDEF(PAGEDOWN),MKDEF(UP),MKDEF(LEFT),MKDEF(RIGHT),MKDEF(DOWN)
 };
 
-static const ButtConfig HyperShotButtons[4]=
+static const char* const HyperShotButtons[] =
 {
- MK(q),MK(w),MK(e),MK(r)
+ MKDEF(Q),MKDEF(W),MKDEF(E),MKDEF(R)
 };
 
-static const ButtConfig MahjongButtons[21]=
+static const char* const MahjongButtons[] =
 {
- MK(q),MK(w),MK(e),MK(r),MK(t),
- MK(a),MK(s),MK(d),MK(f),MK(g),MK(h),MK(j),MK(k),MK(l),
- MK(z),MK(x),MK(c),MK(v),MK(b),MK(n),MK(m)
+ MKDEF(Q),MKDEF(W),MKDEF(E),MKDEF(R),MKDEF(T),
+ MKDEF(A),MKDEF(S),MKDEF(D),MKDEF(F),MKDEF(G),MKDEF(H),MKDEF(J),MKDEF(K),MKDEF(L),
+ MKDEF(Z),MKDEF(X),MKDEF(C),MKDEF(V),MKDEF(B),MKDEF(N),MKDEF(M)
 };
 
-static const ButtConfig PartyTapButtons[6]=
+static const char* const PartyTapButtons[] =
 {
- MK(q),MK(w),MK(e),MK(r),MK(t),MK(y)
+ MKDEF(Q),MKDEF(W),MKDEF(E),MKDEF(R),MKDEF(T),MKDEF(Y)
 };
 
-static const ButtConfig FTrainerButtons[12]=
+static const char* const FTrainerButtons[] =
 {
-                               MK(o),MK(p),MK(LEFTBRACKET),
-                               MK(RIGHTBRACKET),MK(k),MK(l),MK(SEMICOLON),
-                                MK(QUOTE),
-                               MK(m),MK(COMMA),MK(PERIOD),MK(SLASH)
+ MKDEF(O),MKDEF(P),MKDEF(LEFTBRACKET),
+ MKDEF(RIGHTBRACKET),MKDEF(K),MKDEF(L),MKDEF(SEMICOLON),
+ MKDEF(APOSTROPHE),
+ MKDEF(M),MKDEF(COMMA),MKDEF(PERIOD),MKDEF(SLASH)
 };
 
-static const ButtConfig OekaKidsConfig[3] =
+static const char* const OekaKidsConfig[] =
 {
- { BUTTC_MOUSE, 0, 0x8000, 0 },
- { BUTTC_MOUSE, 0, 0x8001, 0 },
+ MKMOUSECURSOR("x"),
+ MKMOUSECURSOR("y"),
 
- { BUTTC_MOUSE, 0, 0, 0 },
+ MKMOUSEB("left"),
 };
 
-static const ButtConfig ArkanoidConfig[2] =
+static const char* const ArkanoidConfig[] =
 {
- { BUTTC_MOUSE, 0, 0x8000, 0 },
+ MKMOUSECURSOR("x"),
 
- { BUTTC_MOUSE, 0, 0, 0 },
+ MKMOUSEB("left"),
 };
 
-static const ButtConfig ShadowConfig[4] =
+static const char* const ShadowConfig[] =
 {
- { BUTTC_MOUSE, 0, 0x8000, 0 },
- { BUTTC_MOUSE, 0, 0x8001, 0 },
+ MKMOUSECURSOR("x"),
+ MKMOUSECURSOR("y"),
 
- { BUTTC_MOUSE, 0, 0, 0 },
- { BUTTC_MOUSE, 0, 2, 0 },
+ MKMOUSEB("left"),
+ MKMOUSEB("right"),
 };
 
 
-static const ButtConfig NESZapperConfig[4] =
+static const char* const NESZapperConfig[] =
 {
- { BUTTC_MOUSE, 0, 0x8000, 0 },
- { BUTTC_MOUSE, 0, 0x8001, 0 },
+ MKMOUSECURSOR("x"),
+ MKMOUSECURSOR("y"),
 
- { BUTTC_MOUSE, 0, 0, 0 },
- { BUTTC_MOUSE, 0, 2, 0 },
+ MKMOUSEB("left"),
+ MKMOUSEB("right"),
 };
 
-static const ButtConfig PCEMouseConfig[4] =
+static const char* const PCEMouseConfig[] =
 {
- { BUTTC_MOUSE, 0, 2, 0 },
- { BUTTC_MOUSE, 0, 0, 0 },
- MK(TAB),
- MK(RETURN)
+ MKMOUSEAXRELPAIR("x"),
+ MKMOUSEAXRELPAIR("y"),
+ MKMOUSEB("right"),
+ MKMOUSEB("left"),
+ MKDEF(TAB),
+ MKDEF(RETURN)
 };
 
-static const ButtConfig PCFXMouseConfig[2] =
+static const char* const PCEFastMouseConfig[] =
 {
- { BUTTC_MOUSE, 0, 0, 0 },
- { BUTTC_MOUSE, 0, 2, 0 },
+ MKMOUSEAXRELPAIR("x"),
+ MKMOUSEAXRELPAIR("y"),
+ MKMOUSEB("right"),
+ MKMOUSEB("left"),
+ MKDEF(TAB),
+ MKDEF(RETURN)
 };
 
-static const ButtConfig SMSPadConfig[2][12]=
+
+static const char* const PCFXMouseConfig[] =
+{
+ MKMOUSEAXRELPAIR("x"),
+ MKMOUSEAXRELPAIR("y"),
+ MKMOUSEB("left"),
+ MKMOUSEB("right"),
+};
+
+static const char* const SMSPadConfig[] =
 {
         /* Gamepad 1 */
-        {
-	 MK(w), MK(s), MK(a), MK(d), MK(KP2), MK(KP3), MK(RETURN)
-        },
-
-        /* Gamepad 2 */
-        {MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ(), MKZ()}
+	MKDEF(W), MKDEF(S), MKDEF(A), MKDEF(D), MKDEF(KP_2), MKDEF(KP_3), MKDEF(RETURN)
 };
 
-static const ButtConfig GGPadConfig[12]=
+static const char* const GGPadConfig[] =
 {
-         MK(w), MK(s), MK(a), MK(d), MK(KP2), MK(KP3), MK(RETURN)
+         MKDEF(W), MKDEF(S), MKDEF(A), MKDEF(D), MKDEF(KP_2), MKDEF(KP_3), MKDEF(RETURN)
 };
 
-static const ButtConfig TsushinKBConfig[0x80]=
+static const char* const TsushinKBConfig[] =
 {
  // 0
- MK(KP0),
- MK(KP1),
- MK(KP2),
- MK(KP3),
- MK(KP4),
- MK(KP5),
- MK(KP6),
+ MKDEF(KP_0),
+ MKDEF(KP_1),
+ MKDEF(KP_2),
+ MKDEF(KP_3),
+ MKDEF(KP_4),
+ MKDEF(KP_5),
+ MKDEF(KP_6),
 
 // 1
- MK(KP8),
- MK(KP9),
- MK(KP_MULTIPLY),		// Keypad Multiply
- MK(KP_PLUS),			// Keypad Plus
- MK(KP_EQUALS),			// Keypad Equals
- MK(UNKNOWN), // KP_COMMA	// Keypad Comma
- MK(KP_PERIOD),			// Keypad Period
+ MKDEF(KP_8),
+ MKDEF(KP_9),
+ MKDEF(KP_MULTIPLY),		// Keypad Multiply
+ MKDEF(KP_PLUS),			// Keypad Plus
+ MKDEF(KP_EQUALS),			// Keypad Equals
+ MKDEF(UNKNOWN), // KP_COMMA	// Keypad Comma
+ MKDEF(KP_PERIOD),			// Keypad Period
 
 // 2
- MK(BACKQUOTE),		// @
- MK(a),
- MK(b),
- MK(c),
- MK(d),
- MK(e),
- MK(f),
+ MKDEF(GRAVE),		// @
+ MKDEF(A),
+ MKDEF(B),
+ MKDEF(C),
+ MKDEF(D),
+ MKDEF(E),
+ MKDEF(F),
 
 // 3
- MK(h),
- MK(i),
- MK(j),
- MK(k),
- MK(l),
- MK(m),
- MK(n),
+ MKDEF(H),
+ MKDEF(I),
+ MKDEF(J),
+ MKDEF(K),
+ MKDEF(L),
+ MKDEF(M),
+ MKDEF(N),
 
 // 4
- MK(p),
- MK(q),
- MK(r),
- MK(s),
- MK(t),
- MK(u),
- MK(v),
+ MKDEF(P),
+ MKDEF(Q),
+ MKDEF(R),
+ MKDEF(S),
+ MKDEF(T),
+ MKDEF(U),
+ MKDEF(V),
 
 // 5
- MK(x),
- MK(y),
- MK(z),
- MK(LEFTBRACKET),	// Left bracket
- MK(PLUS),		// Yen
- MK(RIGHTBRACKET),	// Right bracket
- MK(EQUALS),		// Caret
+ MKDEF(X),
+ MKDEF(Y),
+ MKDEF(Z),
+ MKDEF(LEFTBRACKET),	// Left bracket
+ MKDEF(EQUALS),		// Yen
+ MKDEF(RIGHTBRACKET),	// Right bracket
+ MKDEF(EQUALS),		// Caret
 
 // 6
- MK(0),
- MK(1),
- MK(2),
- MK(3),
- MK(4),
- MK(5),
- MK(6),
+ MKDEF(0),
+ MKDEF(1),
+ MKDEF(2),
+ MKDEF(3),
+ MKDEF(4),
+ MKDEF(5),
+ MKDEF(6),
 
 // 7
- MK(8),
- MK(9),
- MK(QUOTE),		// Colon
- MK(SEMICOLON),		// Semicolon
- MK(COMMA),		// Comma
- MK(PERIOD),		// Period
- MK(SLASH),		// Slash
+ MKDEF(8),
+ MKDEF(9),
+ MKDEF(APOSTROPHE),		// Colon
+ MKDEF(SEMICOLON),		// Semicolon
+ MKDEF(COMMA),		// Comma
+ MKDEF(PERIOD),		// Period
+ MKDEF(SLASH),		// Slash
 
 // 8
- MK(HOME),		// HOME CLEAR
- MK(UP),
- MK(RIGHT),
- //MK(UNKNOWN),
- MK(UNKNOWN),		// GRPH
- MK(LSUPER),		// カナ
- //MK(UNKNOWN),
+ MKDEF(HOME),		// HOME CLEAR
+ MKDEF(UP),
+ MKDEF(RIGHT),
+ //MKDEF(UNKNOWN),
+ MKDEF(UNKNOWN),		// GRPH
+ MKDEF(LGUI),		// カナ
+ //MKDEF(UNKNOWN),
 
 // 9
- MK(BREAK),		// STOP
- MK(F1),
- MK(F2),
- MK(F3),
- MK(F4),
- MK(F5),
- MK(SPACE),
+ MKDEF(PAUSE),		// STOP
+ MKDEF(F1),
+ MKDEF(F2),
+ MKDEF(F3),
+ MKDEF(F4),
+ MKDEF(F5),
+ MKDEF(SPACE),
 
  // A
- MK(TAB),
- MK(DOWN),
- MK(LEFT),
- MK(END),		// HELP
- MK(PRINT),		// COPY
- MK(KP_MINUS),
- MK(KP_DIVIDE),
+ MKDEF(TAB),
+ MKDEF(DOWN),
+ MKDEF(LEFT),
+ MKDEF(END),		// HELP
+ MKDEF(PRINTSCREEN),	// COPY
+ MKDEF(KP_MINUS),
+ MKDEF(KP_DIVIDE),
 
 // B
- MK(PAGEDOWN),		// ROLL DOWN
- MK(PAGEUP),		// ROLL UP
- //MK(UNKNOWN),
- //MK(UNKNOWN),
- MK(o),
- MK(UNKNOWN),	// TODO: Underscore
- MK(g),
+ MKDEF(PAGEDOWN),		// ROLL DOWN
+ MKDEF(PAGEUP),		// ROLL UP
+ //MKDEF(UNKNOWN),
+ //MKDEF(UNKNOWN),
+ MKDEF(O),
+ MKDEF(UNKNOWN),	// TODO: Underscore
+ MKDEF(G),
 
 // C
- MK(F6),
- MK(F7),
- MK(F8),
- MK(F9),
- MK(F10),
- MK(BACKSPACE),
- MK(INSERT),
+ MKDEF(F6),
+ MKDEF(F7),
+ MKDEF(F8),
+ MKDEF(F9),
+ MKDEF(F10),
+ MKDEF(BACKSPACE),
+ MKDEF(INSERT),
 
 // D
- MK(RALT),		// 変換
- MK(LALT),		// 決定
- MK(RSUPER),		// PC
- MK(RCTRL),		// 変換
- MK(LCTRL),		// CTRL
- MK(KP7),
- MK(w),
+ MKDEF(RALT),		// 変換
+ MKDEF(LALT),		// 決定
+ MKDEF(RGUI),		// PC
+ MKDEF(RCTRL),		// 変換
+ MKDEF(LCTRL),		// CTRL
+ MKDEF(KP_7),
+ MKDEF(W),
 
 // E
- MK(RETURN),
- MK(KP_ENTER),
- MK(LSHIFT),
- MK(RSHIFT),
- MK(CAPSLOCK),
- MK(DELETE),
- MK(ESCAPE),
+ MKDEF(RETURN),
+ MKDEF(KP_ENTER),
+ MKDEF(LSHIFT),
+ MKDEF(RSHIFT),
+ MKDEF(CAPSLOCK),
+ MKDEF(DELETE),
+ MKDEF(ESCAPE),
 
 // F
- //MK(UNKNOWN),
- //MK(UNKNOWN),
- //MK(UNKNOWN),
- //MK(UNKNOWN),
- //MK(UNKNOWN),
- MK(MINUS),		// Minus
- MK(7),			// 7
+ //MKDEF(UNKNOWN),
+ //MKDEF(UNKNOWN),
+ //MKDEF(UNKNOWN),
+ //MKDEF(UNKNOWN),
+ //MKDEF(UNKNOWN),
+ MKDEF(MINUS),		// Minus
+ MKDEF(7),			// 7
 };
 
 
-static const ButtConfig MMPlayInputConfig[] =
+static const char* const MMPlayInputConfig[] =
 {
-	MK(p),
-	MK(LEFT),
-	MK(RIGHT),
-	MK(DOWN),
-	MK(UP),
+	MKDEF(P),
+	MKDEF(LEFT),
+	MKDEF(RIGHT),
+	MKDEF(DOWN),
+	MKDEF(UP),
 };
 
-static const ButtConfig CDPlayInputConfig[] =
+static const char* const CDPlayInputConfig[] =
 {
-        MK(SPACE),
-	MK(RETURN),
-        MK(RIGHT),
-	MK(LEFT),
-        MK(UP),
-	MK(DOWN),
-	MK(PAGEUP),
-	MK(PAGEDOWN),
-};
-
-
-static const ButtConfig MDPad3Config[2][8] =
-{
- { MK(w), MK(s), MK(a), MK(d), MK(KP2), MK(KP3), MK(KP1), MK(RETURN) },
- { MKZ(), MKZ(), MKZ(), MKZ(), MKZ(),   MKZ(),   MKZ(),   MKZ() },
-};
-
-static const ButtConfig MDPad6Config[2][12] =
-{
- { MK(w), MK(s), MK(a), MK(d), MK(KP2), MK(KP3), MK(KP1), MK(RETURN), MK(KP6), MK(KP5), MK(KP4), MK(m) },
- { MKZ(), MKZ(), MKZ(), MKZ(), MKZ(),   MKZ(),   MKZ(),   MKZ(),      MKZ(),   MKZ(),   MKZ(),   MKZ() },
-};
-
-static const ButtConfig MDMegaMouseConfig[4] =
-{
- { BUTTC_MOUSE, 0, 0, 0 },
- { BUTTC_MOUSE, 0, 2, 0 },
- { BUTTC_MOUSE, 0, 1, 0 },
- MK(RETURN),
-};
-
-static const ButtConfig SSPadConfig[13] =
-{
- MK(KP6),
- MK(KP5),
- MK(KP4),
- MK(KP9),
-
- MK(w),
- MK(s),
- MK(a),
- MK(d),
-
- MK(KP2),
- MK(KP3),
- MK(KP1),
- MK(RETURN),
-
- MK(KP7),
-
-};
-
-static const ButtConfig SSMouseConfig[4] =
-{
- { BUTTC_MOUSE, 0, 0, 0 },
- { BUTTC_MOUSE, 0, 2, 0 },
- { BUTTC_MOUSE, 0, 1, 0 },
- MK(RETURN),
-};
-
-static const ButtConfig SSGunConfig[5] =
-{
- { BUTTC_MOUSE, 0, 0x8000, 0 },
- { BUTTC_MOUSE, 0, 0x8001, 0 },
-
- { BUTTC_MOUSE, 0, 0, 0 },
- { BUTTC_MOUSE, 0, 1, 0 },
- { BUTTC_MOUSE, 0, 2, 0 },
+        MKDEF(SPACE),
+	MKDEF(RETURN),
+        MKDEF(RIGHT),
+	MKDEF(LEFT),
+        MKDEF(UP),
+	MKDEF(DOWN),
+	MKDEF(PAGEUP),
+	MKDEF(PAGEDOWN),
 };
 
 
-static const ButtConfig SSKeyboardConfig[] =
+static const char* const MDPad3Config[] =
 {
- MK(F9),
- MK(F5),
- MK(F3),
- MK(F1),
- MK(F2),
- MK(F12),
- MK(F10),
- MK(F8),
- MK(F6),
- MK(F4),
- MK(TAB),
- MK(BACKQUOTE),
-
- MK(LALT),
- MK(LSHIFT),
- MK(LCTRL),
- MK(q),
- MK(1),
- MK(RALT),
- MK(RCTRL),
- MK(KP_ENTER),
- MK(z),
- MK(s),
- MK(a),
- MK(w),
- MK(2),
-
- MK(c),
- MK(x),
- MK(d),
- MK(e),
- MK(4),
- MK(3),
- MK(SPACE),
- MK(v),
- MK(f),
- MK(t),
- MK(r),
- MK(5),
-
- MK(n),
- MK(b),
- MK(h),
- MK(g),
- MK(y),
- MK(6),
- MK(m),
- MK(j),
- MK(u),
- MK(7),
- MK(8),
-
- MK(COMMA),
- MK(k),
- MK(i),
- MK(o),
- MK(0),
- MK(9),
- MK(PERIOD),
- MK(SLASH),
- MK(l),
- MK(SEMICOLON),
- MK(p),
- MK(MINUS),
-
- MK(QUOTE),
- MK(LEFTBRACKET),
- MK(EQUALS),
- MK(CAPSLOCK),
- MK(RSHIFT),
- MK(RETURN),
- MK(RIGHTBRACKET),
- MK(BACKSLASH),
-
- MK(BACKSPACE),
- MK(KP1),
- MK(KP4),
- MK(KP7),
-
- MK(KP0),
- MK(KP_PERIOD),
- MK(KP2),
- MK(KP5),
- MK(KP6),
- MK(KP8),
- MK(ESCAPE),
- MK(NUMLOCK),
- MK(F11),
- MK(KP_PLUS),
- MK(KP3),
- MK(KP_MINUS),
- MK(KP_MULTIPLY),
- MK(KP9),
- MK(SCROLLOCK),
-
- MK(KP_DIVIDE),
- MK(INSERT),
- MK(PAUSE),
- MK(F7),
- MK(PRINT),
- MK(DELETE),
- MK(LEFT),
- MK(HOME),
- MK(END),
- MK(UP),
- MK(DOWN),
- MK(PAGEUP),
- MK(PAGEDOWN),
- MK(RIGHT),
+ MKDEF(W), MKDEF(S), MKDEF(A), MKDEF(D), MKDEF(KP_2), MKDEF(KP_3), MKDEF(KP_1), MKDEF(RETURN)
 };
 
-static const ButtConfig SNESPadConfig[12] =
+static const char* const MDPad6Config[] =
 {
- MK(KP2),
- MK(KP4),
- MK(TAB),
- MK(RETURN),
- MK(w),
- MK(s),
- MK(a),
- MK(d),
- MK(KP6),
- MK(KP8),
- MK(KP7),
- MK(KP9),
+ MKDEF(W), MKDEF(S), MKDEF(A), MKDEF(D), MKDEF(KP_2), MKDEF(KP_3), MKDEF(KP_1), MKDEF(RETURN), MKDEF(KP_6), MKDEF(KP_5), MKDEF(KP_4), MKDEF(M)
+};
+
+static const char* const MDMegaMouseConfig[] =
+{
+ MKMOUSEAXRELPAIR("x"),
+ MKMOUSEAXRELPAIR("y"),
+ MKMOUSEB("left"),
+ MKMOUSEB("right"),
+ MKMOUSEB("middle"),
+ MKDEF(RETURN),
+};
+
+static const char* const SSPadConfig[] =
+{
+ MKDEF(KP_6),
+ MKDEF(KP_5),
+ MKDEF(KP_4),
+ MKDEF(KP_9),
+
+ MKDEF(W),
+ MKDEF(S),
+ MKDEF(A),
+ MKDEF(D),
+
+ MKDEF(KP_2),
+ MKDEF(KP_3),
+ MKDEF(KP_1),
+ MKDEF(RETURN),
+
+ MKDEF(KP_7),
+
+};
+
+static const char* const SSMouseConfig[] =
+{
+ MKMOUSEAXRELPAIR("x"),
+ MKMOUSEAXRELPAIR("y"),
+ MKMOUSEB("left"),
+ MKMOUSEB("right"),
+ MKMOUSEB("middle"),
+ MKDEF(RETURN),
+};
+
+static const char* const SSGunConfig[] =
+{
+ MKMOUSECURSOR("x"),
+ MKMOUSECURSOR("y"),
+
+ MKMOUSEB("left"),
+ MKMOUSEB("middle"),
+ MKMOUSEB("right"),
 };
 
 
-static const ButtConfig SNESMouseConfig[2] =
+static const char* const SSKeyboardConfig[] =
 {
- { BUTTC_MOUSE, 0, 0, 0 },
- { BUTTC_MOUSE, 0, 2, 0 },
+ MKDEF(F9),
+ MKDEF(F5),
+ MKDEF(F3),
+ MKDEF(F1),
+ MKDEF(F2),
+ MKDEF(F12),
+ MKDEF(F10),
+ MKDEF(F8),
+ MKDEF(F6),
+ MKDEF(F4),
+ MKDEF(TAB),
+ MKDEF(GRAVE),
+
+ MKDEF(LALT),
+ MKDEF(LSHIFT),
+ MKDEF(LCTRL),
+ MKDEF(Q),
+ MKDEF(1),
+ MKDEF(RALT),
+ MKDEF(RCTRL),
+ MKDEF(KP_ENTER),
+ MKDEF(Z),
+ MKDEF(S),
+ MKDEF(A),
+ MKDEF(W),
+ MKDEF(2),
+
+ MKDEF(C),
+ MKDEF(X),
+ MKDEF(D),
+ MKDEF(E),
+ MKDEF(4),
+ MKDEF(3),
+ MKDEF(SPACE),
+ MKDEF(V),
+ MKDEF(F),
+ MKDEF(T),
+ MKDEF(R),
+ MKDEF(5),
+
+ MKDEF(N),
+ MKDEF(B),
+ MKDEF(H),
+ MKDEF(G),
+ MKDEF(Y),
+ MKDEF(6),
+ MKDEF(M),
+ MKDEF(J),
+ MKDEF(U),
+ MKDEF(7),
+ MKDEF(8),
+
+ MKDEF(COMMA),
+ MKDEF(K),
+ MKDEF(I),
+ MKDEF(O),
+ MKDEF(0),
+ MKDEF(9),
+ MKDEF(PERIOD),
+ MKDEF(SLASH),
+ MKDEF(L),
+ MKDEF(SEMICOLON),
+ MKDEF(P),
+ MKDEF(MINUS),
+
+ MKDEF(APOSTROPHE),
+ MKDEF(LEFTBRACKET),
+ MKDEF(EQUALS),
+ MKDEF(CAPSLOCK),
+ MKDEF(RSHIFT),
+ MKDEF(RETURN),
+ MKDEF(RIGHTBRACKET),
+ MKDEF2(BACKSLASH, INTERNATIONAL1),
+
+ MKDEF(BACKSPACE),
+ MKDEF(KP_1),
+ MKDEF(KP_4),
+ MKDEF(KP_7),
+
+ MKDEF(KP_0),
+ MKDEF(KP_PERIOD),
+ MKDEF(KP_2),
+ MKDEF(KP_5),
+ MKDEF(KP_6),
+ MKDEF(KP_8),
+ MKDEF(ESCAPE),
+ MKDEF(NUMLOCKCLEAR),
+ MKDEF(F11),
+ MKDEF(KP_PLUS),
+ MKDEF(KP_3),
+ MKDEF(KP_MINUS),
+ MKDEF(KP_MULTIPLY),
+ MKDEF(KP_9),
+ MKDEF(SCROLLLOCK),
+
+ MKDEF(KP_DIVIDE),
+ MKDEF(INSERT),
+ MKDEF(PAUSE),
+ MKDEF(F7),
+ MKDEF(PRINTSCREEN),
+ MKDEF(DELETE),
+ MKDEF(LEFT),
+ MKDEF(HOME),
+ MKDEF(END),
+ MKDEF(UP),
+ MKDEF(DOWN),
+ MKDEF(PAGEUP),
+ MKDEF(PAGEDOWN),
+ MKDEF(RIGHT),
 };
 
-static const ButtConfig SNESSuperScopeConfig[7] =
-{
- { BUTTC_MOUSE, 0, 0x8000, 0 },
- { BUTTC_MOUSE, 0, 0x8001, 0 },
 
- { BUTTC_MOUSE, 0, 0, 0 },	// Trigger
- MK(SPACE),			// Away trigger
- { BUTTC_MOUSE, 0, 1, 0 },	// Pause
- MK(END),			// Turbo
- { BUTTC_MOUSE, 0, 2, 0 },	// Cursor
+static const char* const SSJPKeyboardConfig[] =
+{
+ MKDEF(F9),
+ MKDEF(F5),
+ MKDEF(F3),
+ MKDEF(F1),
+ MKDEF(F2),
+ MKDEF(F12),
+ MKDEF(F10),
+ MKDEF(F8),
+ MKDEF(F6),
+ MKDEF(F4),
+ MKDEF(TAB),
+ MKDEF(GRAVE),
+
+ MKDEF(LALT),
+ MKDEF(LSHIFT),
+ MKDEF(INTERNATIONAL2),
+ MKDEF(LCTRL),
+ MKDEF(Q),
+ MKDEF(1),
+ MKDEF(RALT),
+ MKDEF(RCTRL),
+ MKDEF(Z),
+ MKDEF(S),
+ MKDEF(A),
+ MKDEF(W),
+ MKDEF(2),
+
+ MKDEF(C),
+ MKDEF(X),
+ MKDEF(D),
+ MKDEF(E),
+ MKDEF(4),
+ MKDEF(3),
+ MKDEF(SPACE),
+ MKDEF(V),
+ MKDEF(F),
+ MKDEF(T),
+ MKDEF(R),
+ MKDEF(5),
+
+ MKDEF(N),
+ MKDEF(B),
+ MKDEF(H),
+ MKDEF(G),
+ MKDEF(Y),
+ MKDEF(6),
+ MKDEF(M),
+ MKDEF(J),
+ MKDEF(U),
+ MKDEF(7),
+ MKDEF(8),
+
+ MKDEF(COMMA),
+ MKDEF(K),
+ MKDEF(I),
+ MKDEF(O),
+ MKDEF(0),
+ MKDEF(9),
+ MKDEF(PERIOD),
+ MKDEF(SLASH),
+ MKDEF(L),
+ MKDEF(SEMICOLON),
+ MKDEF(P),
+ MKDEF(MINUS),
+
+ MKDEF(INTERNATIONAL1),
+ MKDEF(APOSTROPHE),
+ MKDEF(LEFTBRACKET),
+ MKDEF(EQUALS),
+ MKDEF(CAPSLOCK),
+ MKDEF(RSHIFT),
+ MKDEF(RETURN),
+ MKDEF(RIGHTBRACKET),
+ MKDEF(BACKSLASH),
+
+ MKDEF(INTERNATIONAL4),
+ MKDEF(BACKSPACE),
+ MKDEF(INTERNATIONAL5),
+ MKDEF(INTERNATIONAL3),
+
+ MKDEF(ESCAPE),
+ MKDEF(F11),
+ MKDEF(SCROLLLOCK),
+
+ MKDEF(INSERT),
+ MKDEF2(PAUSE, NUMLOCKCLEAR),	// JP Saturn keyboard pause key acts like a normal key, so provide options for keyboards or keyboard interfaces with lousy pause key support
+ MKDEF(F7),
+ MKDEF(PRINTSCREEN),
+ MKDEF(DELETE),
+ MKDEF(LEFT),
+ MKDEF(HOME),
+ MKDEF(END),
+ MKDEF(UP),
+ MKDEF(DOWN),
+ MKDEF(PAGEUP),
+ MKDEF(PAGEDOWN),
+ MKDEF(RIGHT),
 };
 
-static const ButtConfig PSXPadConfig[14] =
+//
+//
+//
+static const char* const A2PTwopieceKeyboard[] =
 {
- MK(TAB),
- MK(RETURN),
- MK(w),
- MK(d),
- MK(s),
- MK(a),
+ MKDEF(3),
+ MKDEF(Q),
+ MKDEF(D),
+ MKDEF3(Z, DOWN, KP_2),
+ MKDEF(S),
 
- MK(KP7),
- MK(KP9),
- MK(KP1),
- MK(KP3),
+ MKDEF(4),
+ MKDEF(W),
+ MKDEF(F),
+ MKDEF(X),
+ MKDEF(2),
 
- MK(KP8),
- MK(KP6),
- MK(KP2),
- MK(KP4),
+ MKDEF(5),
+ MKDEF(E),
+ MKDEF(G),
+ MKDEF(C),
+ MKDEF(1),
+
+ MKDEF(6),
+ MKDEF(R),
+ MKDEF(H),
+ MKDEF(V),
+ MKDEF2(ESCAPE, TAB),
+
+ MKDEF(7),
+ MKDEF(T),
+ MKDEF(J),
+ MKDEF(B),
+ MKDEF3(A, UP, KP_8),
+
+ MKDEF(8),
+ MKDEF(Y),
+ MKDEF(K),
+ MKDEF(N),
+ MKDEF(SPACE),
+
+ MKDEF(9),
+ MKDEF(U),
+ MKDEF(L),
+ MKDEF(M),
+
+ MKDEF(0),
+ MKDEF(I),
+ MKDEF2(SEMICOLON, KP_4),
+ MKDEF(COMMA),
+
+ MKDEF(MINUS),
+ MKDEF(O),
+ MKDEF4(LEFT, BACKSPACE, KP_5, DELETE),
+ MKDEF(PERIOD),
+
+ MKDEF(EQUALS),
+ MKDEF(P),
+ MKDEF3(RIGHT, KP_6, PAGEDOWN),
+ MKDEF2(SLASH, END),
+ MKDEF3(RETURN, BACKSLASH, HOME),
+
+ MKDEF(LSHIFT),
+ MKDEF(RSHIFT),
+ MKDEF3(CAPSLOCK, LCTRL, RCTRL),
+ MKDEF3(LEFTBRACKET, LALT, RALT),
+ MKDEF(INSERT),
 };
 
-static const ButtConfig PSXDancePadConfig[10] =
-{
- MK(KP_DIVIDE),
- MK(KP_MULTIPLY),
- MK(KP8),
- MK(KP6),
- MK(KP2),
- MK(KP4),
+//
+//
+//
 
- MK(KP1),
- MK(KP9),
- MK(KP7),
- MK(KP3),
+static const char* const SNESPadConfig[] =
+{
+ MKDEF(KP_2),
+ MKDEF(KP_4),
+ MKDEF(TAB),
+ MKDEF(RETURN),
+ MKDEF(W),
+ MKDEF(S),
+ MKDEF(A),
+ MKDEF(D),
+ MKDEF(KP_6),
+ MKDEF(KP_8),
+ MKDEF(KP_7),
+ MKDEF(KP_9),
 };
 
-static const ButtConfig PSXMouseConfig[2] =
+
+static const char* const SNESMouseConfig[] =
 {
- { BUTTC_MOUSE, 0, 2, 0 },
- { BUTTC_MOUSE, 0, 0, 0 },
+ MKMOUSEAXRELPAIR("x"),
+ MKMOUSEAXRELPAIR("y"),
+ MKMOUSEB("left"),
+ MKMOUSEB("right"),
 };
 
-static const ButtConfig PSXGunConConfig[6] =
+static const char* const SNESSuperScopeConfig[] =
 {
- { BUTTC_MOUSE, 0, 0x8000, 0 },
- { BUTTC_MOUSE, 0, 0x8001, 0 },
+ MKMOUSECURSOR("x"),
+ MKMOUSECURSOR("y"),
 
- { BUTTC_MOUSE, 0, 0, 0 },
- { BUTTC_MOUSE, 0, 2, 0 },
- { BUTTC_MOUSE, 0, 1, 0 },
- MK(SPACE)
+ MKMOUSEB("left"),	// Trigger
+ MKDEF(SPACE),			// Away trigger
+ MKMOUSEB("middle"),	// Pause
+ MKDEF(END),			// Turbo
+ MKMOUSEB("right"),	// Cursor
 };
 
-static const ButtConfig PSXJustifierConfig[6] =
+static const char* const PSXPadConfig[] =
 {
- { BUTTC_MOUSE, 0, 0x8000, 0 },
- { BUTTC_MOUSE, 0, 0x8001, 0 },
+ MKDEF(TAB),
+ MKDEF(RETURN),
+ MKDEF(W),
+ MKDEF(D),
+ MKDEF(S),
+ MKDEF(A),
 
- { BUTTC_MOUSE, 0, 0, 0 },
- { BUTTC_MOUSE, 0, 2, 0 },
- { BUTTC_MOUSE, 0, 1, 0 },
- MK(SPACE)
+ MKDEF(KP_7),
+ MKDEF(KP_9),
+ MKDEF(KP_1),
+ MKDEF(KP_3),
+
+ MKDEF(KP_8),
+ MKDEF(KP_6),
+ MKDEF(KP_2),
+ MKDEF(KP_4),
+};
+
+static const char* const PSXDancePadConfig[] =
+{
+ MKDEF(KP_DIVIDE),
+ MKDEF(KP_MULTIPLY),
+ MKDEF(KP_8),
+ MKDEF(KP_6),
+ MKDEF(KP_2),
+ MKDEF(KP_4),
+
+ MKDEF(KP_1),
+ MKDEF(KP_9),
+ MKDEF(KP_7),
+ MKDEF(KP_3),
+};
+
+static const char* const PSXMouseConfig[] =
+{
+ MKMOUSEAXRELPAIR("x"),
+ MKMOUSEAXRELPAIR("y"),
+ MKMOUSEB("right"),
+ MKMOUSEB("left"),
+};
+
+static const char* const PSXGunConConfig[] =
+{
+ MKMOUSECURSOR("x"),
+ MKMOUSECURSOR("y"),
+
+ MKMOUSEB("left"),
+ MKMOUSEB("right"),
+ MKMOUSEB("middle"),
+ MKDEF(SPACE)
+};
+
+static const char* const PSXJustifierConfig[] =
+{
+ MKMOUSECURSOR("x"),
+ MKMOUSECURSOR("y"),
+
+ MKMOUSEB("left"),
+ MKMOUSEB("right"),
+ MKMOUSEB("middle"),
+ MKDEF(SPACE)
 };
 
 #if 0
@@ -666,199 +835,207 @@ static ButtConfig VBPadConfig[14] =
 {
 
 
- MK(I),	// RPad, Up
- MK(L), // RPad, Right
+ MKDEF(I),	// RPad, Up
+ MKDEF(L), // RPad, Right
 
- MK(F), // LPad, Right
- MK(S), // LPad, Left
- MK(D), // LPad, Down
- MK(E), // LPad, Up
+ MKDEF(F), // LPad, Right
+ MKDEF(S), // LPad, Left
+ MKDEF(D), // LPad, Down
+ MKDEF(E), // LPad, Up
 };
 #endif
 
-typedef struct
+struct cstrcomp
 {
- const char *base_name;
- const ButtConfig *bc;
- int num;
-} DefaultSettingsMeow;
+ bool operator()(const char * const &a, const char * const &b) const
+ {
+  return(strcmp(a, b) < 0);
+ }
+};
 
-static const DefaultSettingsMeow defset[] =
+const std::map<const char*, DefaultSettingsMeow, cstrcomp> defset =
 {
- { "nes.input.port1.gamepad", NESGamePadConfig[0], sizeof(NESGamePadConfig[0]) / sizeof(ButtConfig) },
- { "nes.input.port2.gamepad", NESGamePadConfig[1], sizeof(NESGamePadConfig[1]) / sizeof(ButtConfig) },
- { "nes.input.port3.gamepad", NESGamePadConfig[2], sizeof(NESGamePadConfig[2]) / sizeof(ButtConfig) },
- { "nes.input.port4.gamepad", NESGamePadConfig[3], sizeof(NESGamePadConfig[3]) / sizeof(ButtConfig) },
+ #define DPDC(a, b) { a, { b, sizeof(b) / sizeof(b[0]) } }
+ DPDC("nes.input.port1.gamepad", NESGamePadConfig),
 
- { "nes.input.port1.powerpada", PowerPadConfig, sizeof(PowerPadConfig) / sizeof(ButtConfig) },
- { "nes.input.port2.powerpada", PowerPadConfig, sizeof(PowerPadConfig) / sizeof(ButtConfig) },
- { "nes.input.port1.powerpadb", PowerPadConfig, sizeof(PowerPadConfig) / sizeof(ButtConfig) },
- { "nes.input.port2.powerpadb", PowerPadConfig, sizeof(PowerPadConfig) / sizeof(ButtConfig) },
+ DPDC("nes.input.port1.powerpada", PowerPadConfig),
+ DPDC("nes.input.port2.powerpada", PowerPadConfig),
+ DPDC("nes.input.port1.powerpadb", PowerPadConfig),
+ DPDC("nes.input.port2.powerpadb", PowerPadConfig),
 
- { "nes.input.port1.zapper", NESZapperConfig, sizeof(NESZapperConfig) / sizeof(ButtConfig) },
- { "nes.input.port2.zapper", NESZapperConfig, sizeof(NESZapperConfig) / sizeof(ButtConfig) },
+ DPDC("nes.input.port1.zapper", NESZapperConfig),
+ DPDC("nes.input.port2.zapper", NESZapperConfig),
 
- { "nes.input.fcexp.fkb", fkbmap, sizeof(fkbmap) / sizeof(ButtConfig) },
- { "nes.input.fcexp.mahjong", MahjongButtons, sizeof(MahjongButtons) / sizeof(ButtConfig) },
- { "nes.input.fcexp.ftrainera", FTrainerButtons, sizeof(FTrainerButtons) / sizeof(ButtConfig) },
- { "nes.input.fcexp.ftrainerb", FTrainerButtons, sizeof(FTrainerButtons) / sizeof(ButtConfig) },
+ DPDC("nes.input.fcexp.fkb", fkbmap),
+ DPDC("nes.input.fcexp.mahjong", MahjongButtons),
+ DPDC("nes.input.fcexp.ftrainera", FTrainerButtons),
+ DPDC("nes.input.fcexp.ftrainerb", FTrainerButtons),
 
- { "nes.input.fcexp.hypershot", HyperShotButtons, sizeof(HyperShotButtons) / sizeof(ButtConfig) },
- { "nes.input.fcexp.partytap", PartyTapButtons, sizeof(PartyTapButtons) / sizeof(ButtConfig) },
+ DPDC("nes.input.fcexp.hypershot", HyperShotButtons),
+ DPDC("nes.input.fcexp.partytap", PartyTapButtons),
 
- { "nes.input.fcexp.oekakids", OekaKidsConfig, sizeof(OekaKidsConfig) / sizeof(ButtConfig) },
+ DPDC("nes.input.fcexp.oekakids", OekaKidsConfig),
 
- { "nes.input.fcexp.shadow", ShadowConfig, sizeof(ShadowConfig) / sizeof(ButtConfig) },
+ DPDC("nes.input.fcexp.shadow", ShadowConfig),
 
- { "nes.input.port1.arkanoid", ArkanoidConfig, sizeof(ArkanoidConfig) / sizeof(ArkanoidConfig) },
- { "nes.input.port2.arkanoid", ArkanoidConfig, sizeof(ArkanoidConfig) / sizeof(ArkanoidConfig) },
- { "nes.input.port3.arkanoid", ArkanoidConfig, sizeof(ArkanoidConfig) / sizeof(ArkanoidConfig) },
- { "nes.input.port4.arkanoid", ArkanoidConfig, sizeof(ArkanoidConfig) / sizeof(ArkanoidConfig) },
- { "nes.input.fcexp.arkanoid", ArkanoidConfig, sizeof(ArkanoidConfig) / sizeof(ArkanoidConfig) },
- { "lynx.input.builtin.gamepad", LynxPadConfig, sizeof(LynxPadConfig) / sizeof(ButtConfig) },
- { "gb.input.builtin.gamepad", GBPadConfig, sizeof(GBPadConfig) / sizeof(ButtConfig) },
- { "gba.input.builtin.gamepad", GBAPadConfig, sizeof(GBAPadConfig) / sizeof(ButtConfig) },
- { "ngp.input.builtin.gamepad", NGPPadConfig, sizeof(NGPPadConfig) / sizeof(ButtConfig) },
- { "wswan.input.builtin.gamepad", WSwanPadConfig, sizeof(WSwanPadConfig) / sizeof(ButtConfig) },
- { "wswan.input.builtin.gamepadraa", WSwanPadRAAConfig, sizeof(WSwanPadRAAConfig) / sizeof(ButtConfig) },
+ DPDC("nes.input.port1.arkanoid", ArkanoidConfig),
+ DPDC("nes.input.port2.arkanoid", ArkanoidConfig),
+ DPDC("nes.input.port3.arkanoid", ArkanoidConfig),
+ DPDC("nes.input.port4.arkanoid", ArkanoidConfig),
+ DPDC("nes.input.fcexp.arkanoid", ArkanoidConfig),
+ DPDC("lynx.input.builtin.gamepad", LynxPadConfig),
+ DPDC("gb.input.builtin.gamepad", GBPadConfig),
+ DPDC("gba.input.builtin.gamepad", GBAPadConfig),
+ DPDC("ngp.input.builtin.gamepad", NGPPadConfig),
+ DPDC("wswan.input.builtin.gamepad", WSwanPadConfig),
+ DPDC("wswan.input.builtin.gamepadraa", WSwanPadRAAConfig),
 
- { "pce.input.port1.gamepad", PCEPadConfig[0], sizeof(PCEPadConfig[0]) / sizeof(ButtConfig) },
- { "pce.input.port2.gamepad", PCEPadConfig[1], sizeof(PCEPadConfig[1]) / sizeof(ButtConfig)  },
- { "pce.input.port3.gamepad", PCEPadConfig[2], sizeof(PCEPadConfig[2]) / sizeof(ButtConfig)  },
- { "pce.input.port4.gamepad", PCEPadConfig[3], sizeof(PCEPadConfig[3]) / sizeof(ButtConfig)  },
- { "pce.input.port5.gamepad", PCEPadConfig[4], sizeof(PCEPadConfig[4]) / sizeof(ButtConfig)  },
+ //
+ DPDC("pce.input.port1.gamepad", PCEPadConfig),
 
- { "pce.input.port1.mouse", PCEMouseConfig, sizeof(PCEMouseConfig) / sizeof(ButtConfig) },
- { "pce.input.port2.mouse", PCEMouseConfig, sizeof(PCEMouseConfig) / sizeof(ButtConfig) },
- { "pce.input.port3.mouse", PCEMouseConfig, sizeof(PCEMouseConfig) / sizeof(ButtConfig) },
- { "pce.input.port4.mouse", PCEMouseConfig, sizeof(PCEMouseConfig) / sizeof(ButtConfig) },
- { "pce.input.port5.mouse", PCEMouseConfig, sizeof(PCEMouseConfig) / sizeof(ButtConfig) },
+ DPDC("pce.input.port1.mouse", PCEMouseConfig),
+ DPDC("pce.input.port2.mouse", PCEMouseConfig),
+ DPDC("pce.input.port3.mouse", PCEMouseConfig),
+ DPDC("pce.input.port4.mouse", PCEMouseConfig),
+ DPDC("pce.input.port5.mouse", PCEMouseConfig),
 
- { "pce.input.port1.tsushinkb", TsushinKBConfig, sizeof(TsushinKBConfig) / sizeof(ButtConfig) },
+ DPDC("pce.input.port1.tsushinkb", TsushinKBConfig),
+ //
+ DPDC("pce_fast.input.port1.mouse", PCEFastMouseConfig),
+ DPDC("pce_fast.input.port2.mouse", PCEFastMouseConfig),
+ DPDC("pce_fast.input.port3.mouse", PCEFastMouseConfig),
+ DPDC("pce_fast.input.port4.mouse", PCEFastMouseConfig),
+ DPDC("pce_fast.input.port5.mouse", PCEFastMouseConfig),
+ //
+ DPDC("pcfx.input.port1.gamepad", PCFXPadConfig),
 
- { "pcfx.input.port1.gamepad", PCFXPadConfig[0], sizeof(PCFXPadConfig[0]) / sizeof(ButtConfig)  },
- { "pcfx.input.port2.gamepad", PCFXPadConfig[1], sizeof(PCFXPadConfig[1]) / sizeof(ButtConfig)  },
- { "pcfx.input.port3.gamepad", PCFXPadConfig[1], sizeof(PCFXPadConfig[1]) / sizeof(ButtConfig)  },
- { "pcfx.input.port4.gamepad", PCFXPadConfig[1], sizeof(PCFXPadConfig[1]) / sizeof(ButtConfig)  },
- { "pcfx.input.port5.gamepad", PCFXPadConfig[1], sizeof(PCFXPadConfig[1]) / sizeof(ButtConfig)  },
- { "pcfx.input.port6.gamepad", PCFXPadConfig[1], sizeof(PCFXPadConfig[1]) / sizeof(ButtConfig)  },
- { "pcfx.input.port7.gamepad", PCFXPadConfig[1], sizeof(PCFXPadConfig[1]) / sizeof(ButtConfig)  },
- { "pcfx.input.port8.gamepad", PCFXPadConfig[1], sizeof(PCFXPadConfig[1]) / sizeof(ButtConfig)  },
+ DPDC("pcfx.input.port1.mouse", PCFXMouseConfig),
+ DPDC("pcfx.input.port2.mouse", PCFXMouseConfig),
+ DPDC("pcfx.input.port3.mouse", PCFXMouseConfig),
+ DPDC("pcfx.input.port4.mouse", PCFXMouseConfig),
+ DPDC("pcfx.input.port5.mouse", PCFXMouseConfig),
+ DPDC("pcfx.input.port6.mouse", PCFXMouseConfig),
+ DPDC("pcfx.input.port7.mouse", PCFXMouseConfig),
+ DPDC("pcfx.input.port8.mouse", PCFXMouseConfig),
 
+ //
+ DPDC("sms.input.port1.gamepad", SMSPadConfig),
 
- { "pcfx.input.port1.mouse", PCFXMouseConfig, sizeof(PCFXMouseConfig) / sizeof(ButtConfig) },
- { "pcfx.input.port2.mouse", PCFXMouseConfig, sizeof(PCFXMouseConfig) / sizeof(ButtConfig) },
-
- { "sms.input.port1.gamepad", SMSPadConfig[0], sizeof(SMSPadConfig[0]) / sizeof(ButtConfig) },
- { "sms.input.port1.gamepad", SMSPadConfig[0], sizeof(SMSPadConfig[0]) / sizeof(ButtConfig) },
- { "gg.input.builtin.gamepad", GGPadConfig, sizeof(GGPadConfig) / sizeof(ButtConfig) },
-
-
- { "md.input.port1.gamepad", MDPad3Config[0], sizeof(MDPad3Config[0]) / sizeof(ButtConfig) },
- { "md.input.port2.gamepad", MDPad3Config[1], sizeof(MDPad3Config[1]) / sizeof(ButtConfig) }, 
- { "md.input.port3.gamepad", MDPad3Config[1], sizeof(MDPad3Config[1]) / sizeof(ButtConfig) },
- { "md.input.port4.gamepad", MDPad3Config[1], sizeof(MDPad3Config[1]) / sizeof(ButtConfig) },
- { "md.input.port5.gamepad", MDPad3Config[1], sizeof(MDPad3Config[1]) / sizeof(ButtConfig) },
- { "md.input.port6.gamepad", MDPad3Config[1], sizeof(MDPad3Config[1]) / sizeof(ButtConfig) },
- { "md.input.port7.gamepad", MDPad3Config[1], sizeof(MDPad3Config[1]) / sizeof(ButtConfig) },
- { "md.input.port8.gamepad", MDPad3Config[1], sizeof(MDPad3Config[1]) / sizeof(ButtConfig) },
-
- { "md.input.port1.gamepad6", MDPad6Config[0], sizeof(MDPad6Config[0]) / sizeof(ButtConfig) },
- { "md.input.port2.gamepad6", MDPad6Config[1], sizeof(MDPad6Config[1]) / sizeof(ButtConfig) }, 
- { "md.input.port3.gamepad6", MDPad6Config[1], sizeof(MDPad6Config[1]) / sizeof(ButtConfig) },
- { "md.input.port4.gamepad6", MDPad6Config[1], sizeof(MDPad6Config[1]) / sizeof(ButtConfig) },
- { "md.input.port5.gamepad6", MDPad6Config[1], sizeof(MDPad6Config[1]) / sizeof(ButtConfig) },
- { "md.input.port6.gamepad6", MDPad6Config[1], sizeof(MDPad6Config[1]) / sizeof(ButtConfig) },
- { "md.input.port7.gamepad6", MDPad6Config[1], sizeof(MDPad6Config[1]) / sizeof(ButtConfig) },
- { "md.input.port8.gamepad6", MDPad6Config[1], sizeof(MDPad6Config[1]) / sizeof(ButtConfig) },
-
- { "md.input.port1.megamouse", MDMegaMouseConfig, sizeof(MDMegaMouseConfig) / sizeof(ButtConfig) },
- { "md.input.port2.megamouse", MDMegaMouseConfig, sizeof(MDMegaMouseConfig) / sizeof(ButtConfig) },
- { "md.input.port3.megamouse", MDMegaMouseConfig, sizeof(MDMegaMouseConfig) / sizeof(ButtConfig) },
- { "md.input.port4.megamouse", MDMegaMouseConfig, sizeof(MDMegaMouseConfig) / sizeof(ButtConfig) },
- { "md.input.port5.megamouse", MDMegaMouseConfig, sizeof(MDMegaMouseConfig) / sizeof(ButtConfig) },
- { "md.input.port6.megamouse", MDMegaMouseConfig, sizeof(MDMegaMouseConfig) / sizeof(ButtConfig) },
- { "md.input.port7.megamouse", MDMegaMouseConfig, sizeof(MDMegaMouseConfig) / sizeof(ButtConfig) },
- { "md.input.port8.megamouse", MDMegaMouseConfig, sizeof(MDMegaMouseConfig) / sizeof(ButtConfig) },
+ //
+ DPDC("gg.input.builtin.gamepad", GGPadConfig),
 
 
- { "snes.input.port1.gamepad", SNESPadConfig, sizeof(SNESPadConfig) / sizeof(ButtConfig) },
- { "snes.input.port1.mouse", SNESMouseConfig, sizeof(SNESMouseConfig) / sizeof(ButtConfig) },
- { "snes.input.port2.mouse", SNESMouseConfig, sizeof(SNESMouseConfig) / sizeof(ButtConfig) },
- { "snes.input.port2.superscope", SNESSuperScopeConfig, sizeof(SNESSuperScopeConfig) / sizeof(ButtConfig) },
+ //
+ DPDC("md.input.port1.gamepad", MDPad3Config),
 
- { "snes_faust.input.port1.gamepad", SNESPadConfig, sizeof(SNESPadConfig) / sizeof(ButtConfig) },
+ DPDC("md.input.port1.gamepad6", MDPad6Config),
 
- { "psx.input.port1.gamepad", PSXPadConfig, sizeof(PSXPadConfig) / sizeof(ButtConfig) },
+ DPDC("md.input.port1.megamouse", MDMegaMouseConfig),
+ DPDC("md.input.port2.megamouse", MDMegaMouseConfig),
+ DPDC("md.input.port3.megamouse", MDMegaMouseConfig),
+ DPDC("md.input.port4.megamouse", MDMegaMouseConfig),
+ DPDC("md.input.port5.megamouse", MDMegaMouseConfig),
+ DPDC("md.input.port6.megamouse", MDMegaMouseConfig),
+ DPDC("md.input.port7.megamouse", MDMegaMouseConfig),
+ DPDC("md.input.port8.megamouse", MDMegaMouseConfig),
 
- { "psx.input.port1.dancepad", PSXDancePadConfig, sizeof(PSXDancePadConfig) / sizeof(ButtConfig) },
 
- { "psx.input.port1.mouse", PSXMouseConfig, sizeof(PSXMouseConfig) / sizeof(ButtConfig) },
- { "psx.input.port2.mouse", PSXMouseConfig, sizeof(PSXMouseConfig) / sizeof(ButtConfig) },
- { "psx.input.port3.mouse", PSXMouseConfig, sizeof(PSXMouseConfig) / sizeof(ButtConfig) },
- { "psx.input.port4.mouse", PSXMouseConfig, sizeof(PSXMouseConfig) / sizeof(ButtConfig) },
- { "psx.input.port5.mouse", PSXMouseConfig, sizeof(PSXMouseConfig) / sizeof(ButtConfig) },
- { "psx.input.port6.mouse", PSXMouseConfig, sizeof(PSXMouseConfig) / sizeof(ButtConfig) },
- { "psx.input.port7.mouse", PSXMouseConfig, sizeof(PSXMouseConfig) / sizeof(ButtConfig) },
- { "psx.input.port8.mouse", PSXMouseConfig, sizeof(PSXMouseConfig) / sizeof(ButtConfig) },
+ //
+ DPDC("snes.input.port1.gamepad", SNESPadConfig),
+ DPDC("snes.input.port1.mouse", SNESMouseConfig),
+ DPDC("snes.input.port2.mouse", SNESMouseConfig),
+ DPDC("snes.input.port2.superscope", SNESSuperScopeConfig),
 
- { "psx.input.port1.guncon", PSXGunConConfig, sizeof(PSXGunConConfig) / sizeof(ButtConfig) },
- { "psx.input.port2.guncon", PSXGunConConfig, sizeof(PSXGunConConfig) / sizeof(ButtConfig) },
- { "psx.input.port3.guncon", PSXGunConConfig, sizeof(PSXGunConConfig) / sizeof(ButtConfig) },
- { "psx.input.port4.guncon", PSXGunConConfig, sizeof(PSXGunConConfig) / sizeof(ButtConfig) },
- { "psx.input.port5.guncon", PSXGunConConfig, sizeof(PSXGunConConfig) / sizeof(ButtConfig) },
- { "psx.input.port6.guncon", PSXGunConConfig, sizeof(PSXGunConConfig) / sizeof(ButtConfig) },
- { "psx.input.port7.guncon", PSXGunConConfig, sizeof(PSXGunConConfig) / sizeof(ButtConfig) },
- { "psx.input.port8.guncon", PSXGunConConfig, sizeof(PSXGunConConfig) / sizeof(ButtConfig) },
+ //
+ DPDC("snes_faust.input.port1.gamepad", SNESPadConfig),
 
- { "psx.input.port1.justifier", PSXJustifierConfig, sizeof(PSXJustifierConfig) / sizeof(ButtConfig) },
- { "psx.input.port2.justifier", PSXJustifierConfig, sizeof(PSXJustifierConfig) / sizeof(ButtConfig) },
+ //
+ DPDC("psx.input.port1.gamepad", PSXPadConfig),
 
- //{ "vb.input.builtin.gamepad", VBPadConfig, sizeof(VBPadConfig) / sizeof(VBPadConfig) },
+ DPDC("psx.input.port1.dancepad", PSXDancePadConfig),
 
- { "ss.input.port1.gamepad", SSPadConfig, sizeof(SSPadConfig) / sizeof(ButtConfig) },
+ DPDC("psx.input.port1.mouse", PSXMouseConfig),
+ DPDC("psx.input.port2.mouse", PSXMouseConfig),
+ DPDC("psx.input.port3.mouse", PSXMouseConfig),
+ DPDC("psx.input.port4.mouse", PSXMouseConfig),
+ DPDC("psx.input.port5.mouse", PSXMouseConfig),
+ DPDC("psx.input.port6.mouse", PSXMouseConfig),
+ DPDC("psx.input.port7.mouse", PSXMouseConfig),
+ DPDC("psx.input.port8.mouse", PSXMouseConfig),
 
- { "ss.input.port1.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
- { "ss.input.port2.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
- { "ss.input.port3.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
- { "ss.input.port4.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
- { "ss.input.port5.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
- { "ss.input.port6.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
- { "ss.input.port7.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
- { "ss.input.port8.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
- { "ss.input.port9.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
- { "ss.input.port10.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
- { "ss.input.port11.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
- { "ss.input.port12.mouse", SSMouseConfig, sizeof(SSMouseConfig) / sizeof(ButtConfig) },
+ DPDC("psx.input.port1.guncon", PSXGunConConfig),
+ DPDC("psx.input.port2.guncon", PSXGunConConfig),
+ DPDC("psx.input.port3.guncon", PSXGunConConfig),
+ DPDC("psx.input.port4.guncon", PSXGunConConfig),
+ DPDC("psx.input.port5.guncon", PSXGunConConfig),
+ DPDC("psx.input.port6.guncon", PSXGunConConfig),
+ DPDC("psx.input.port7.guncon", PSXGunConConfig),
+ DPDC("psx.input.port8.guncon", PSXGunConConfig),
 
- { "ss.input.port1.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
- { "ss.input.port2.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
- { "ss.input.port3.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
- { "ss.input.port4.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
- { "ss.input.port5.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
- { "ss.input.port6.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
- { "ss.input.port7.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
- { "ss.input.port8.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
- { "ss.input.port9.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
- { "ss.input.port10.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
- { "ss.input.port11.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
- { "ss.input.port12.gun", SSGunConfig, sizeof(SSGunConfig) / sizeof(ButtConfig) },
+ DPDC("psx.input.port1.justifier", PSXJustifierConfig),
+ DPDC("psx.input.port2.justifier", PSXJustifierConfig),
 
- { "ss.input.port1.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
- { "ss.input.port2.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
- { "ss.input.port3.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
- { "ss.input.port4.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
- { "ss.input.port5.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
- { "ss.input.port6.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
- { "ss.input.port7.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
- { "ss.input.port8.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
- { "ss.input.port9.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
- { "ss.input.port10.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
- { "ss.input.port11.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
- { "ss.input.port12.keyboard", SSKeyboardConfig, sizeof(SSKeyboardConfig) / sizeof(ButtConfig) },
+ //{ "vb.input.builtin.gamepad", VBPadConfig),
 
- { "mmplay.input.builtin.controller", MMPlayInputConfig, sizeof(MMPlayInputConfig) / sizeof(ButtConfig) },
- { "cdplay.input.builtin.controller", CDPlayInputConfig, sizeof(CDPlayInputConfig) / sizeof(ButtConfig) },
+ //
+ DPDC("ss.input.port1.gamepad", SSPadConfig),
 
+ DPDC("ss.input.port1.mouse", SSMouseConfig),
+ DPDC("ss.input.port2.mouse", SSMouseConfig),
+ DPDC("ss.input.port3.mouse", SSMouseConfig),
+ DPDC("ss.input.port4.mouse", SSMouseConfig),
+ DPDC("ss.input.port5.mouse", SSMouseConfig),
+ DPDC("ss.input.port6.mouse", SSMouseConfig),
+ DPDC("ss.input.port7.mouse", SSMouseConfig),
+ DPDC("ss.input.port8.mouse", SSMouseConfig),
+ DPDC("ss.input.port9.mouse", SSMouseConfig),
+ DPDC("ss.input.port10.mouse", SSMouseConfig),
+ DPDC("ss.input.port11.mouse", SSMouseConfig),
+ DPDC("ss.input.port12.mouse", SSMouseConfig),
+
+ DPDC("ss.input.port1.gun", SSGunConfig),
+ DPDC("ss.input.port2.gun", SSGunConfig),
+ DPDC("ss.input.port3.gun", SSGunConfig),
+ DPDC("ss.input.port4.gun", SSGunConfig),
+ DPDC("ss.input.port5.gun", SSGunConfig),
+ DPDC("ss.input.port6.gun", SSGunConfig),
+ DPDC("ss.input.port7.gun", SSGunConfig),
+ DPDC("ss.input.port8.gun", SSGunConfig),
+ DPDC("ss.input.port9.gun", SSGunConfig),
+ DPDC("ss.input.port10.gun", SSGunConfig),
+ DPDC("ss.input.port11.gun", SSGunConfig),
+ DPDC("ss.input.port12.gun", SSGunConfig),
+
+ DPDC("ss.input.port1.keyboard", SSKeyboardConfig),
+ DPDC("ss.input.port2.keyboard", SSKeyboardConfig),
+ DPDC("ss.input.port3.keyboard", SSKeyboardConfig),
+ DPDC("ss.input.port4.keyboard", SSKeyboardConfig),
+ DPDC("ss.input.port5.keyboard", SSKeyboardConfig),
+ DPDC("ss.input.port6.keyboard", SSKeyboardConfig),
+ DPDC("ss.input.port7.keyboard", SSKeyboardConfig),
+ DPDC("ss.input.port8.keyboard", SSKeyboardConfig),
+ DPDC("ss.input.port9.keyboard", SSKeyboardConfig),
+ DPDC("ss.input.port10.keyboard", SSKeyboardConfig),
+ DPDC("ss.input.port11.keyboard", SSKeyboardConfig),
+ DPDC("ss.input.port12.keyboard", SSKeyboardConfig),
+
+ DPDC("ss.input.port1.jpkeyboard", SSJPKeyboardConfig),
+ DPDC("ss.input.port2.jpkeyboard", SSJPKeyboardConfig),
+ DPDC("ss.input.port3.jpkeyboard", SSJPKeyboardConfig),
+ DPDC("ss.input.port4.jpkeyboard", SSJPKeyboardConfig),
+ DPDC("ss.input.port5.jpkeyboard", SSJPKeyboardConfig),
+ DPDC("ss.input.port6.jpkeyboard", SSJPKeyboardConfig),
+ DPDC("ss.input.port7.jpkeyboard", SSJPKeyboardConfig),
+ DPDC("ss.input.port8.jpkeyboard", SSJPKeyboardConfig),
+ DPDC("ss.input.port9.jpkeyboard", SSJPKeyboardConfig),
+ DPDC("ss.input.port10.jpkeyboard", SSJPKeyboardConfig),
+ DPDC("ss.input.port11.jpkeyboard", SSJPKeyboardConfig),
+ DPDC("ss.input.port12.jpkeyboard", SSJPKeyboardConfig),
+
+ DPDC("apple2.input.keyboard.twopiece", A2PTwopieceKeyboard),
+
+ DPDC("mmplay.input.builtin.controller", MMPlayInputConfig),
+ DPDC("cdplay.input.builtin.controller", CDPlayInputConfig),
+ #undef DPDC
 };
 

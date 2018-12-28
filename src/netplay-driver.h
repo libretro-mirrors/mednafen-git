@@ -1,6 +1,9 @@
 #ifndef __MDFN_NETPLAY_DRIVER_H
 #define __MDFN_NETPLAY_DRIVER_H
 
+namespace Mednafen
+{
+
 void MDFNI_NetplayConnect(void);
 void MDFNI_NetplayDisconnect(void);
 
@@ -12,6 +15,8 @@ void MDFNI_NetplayLine(const char *text, bool &inputable, bool &viewable);
    echo of what we typed.
 */
 void MDFND_NetplayText(const char* text, bool NetEcho);
-void MDFND_NetplaySetHints(bool active, bool behind);
+void MDFND_NetplaySetHints(bool active, bool behind, uint32 local_players_mask);
+
+}
 
 #endif

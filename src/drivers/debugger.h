@@ -43,9 +43,9 @@ void Debugger_MT_DrawToScreen(const MDFN_PixelFormat& pf, signed screen_w, signe
 
 bool Debugger_IsActive(void);
 
-void Debugger_Init(void);
+void Debugger_Init(void) MDFN_COLD;
 
-void Debugger_Kill(void);
+void Debugger_Kill(void) MDFN_COLD;
 #else
 
 static INLINE void Debugger_GT_Draw(void) { }

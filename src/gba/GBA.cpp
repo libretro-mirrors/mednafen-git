@@ -49,7 +49,7 @@ class GSFLoader : public PSFLoader
 {
  public:
 
- GSFLoader(Stream *fp) MDFN_COLD;
+ GSFLoader(VirtualFS* vfs, const std::string& dir_path, Stream *fp) MDFN_COLD;
  virtual ~GSFLoader() override MDFN_COLD;
 
  virtual void HandleEXE(Stream* fp, bool ignore_pcsp = false) override MDFN_COLD;
@@ -259,7 +259,7 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
  SFORMAT StateRegs[] =
  {
   // Type-cast to uint32* so the macro will work(they really are 32-bit elements, just wrapped up in a union)
-  SFARRAY32N((uint32 *)reg, sizeof(reg) / sizeof(reg_pair), "reg"),
+  SFPTR32N((uint32 *)reg, sizeof(reg) / sizeof(reg_pair), "reg"),
 
   SFVAR(busPrefetch),
   SFVAR(busPrefetchEnable),
@@ -279,8 +279,8 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVAR(BG3CNT),
 
 
-  SFARRAY16(BGHOFS, 4),
-  SFARRAY16(BGVOFS, 4),
+  SFVAR(BGHOFS),
+  SFVAR(BGVOFS),
 
   SFVAR(BG2PA),
   SFVAR(BG2PB),
@@ -310,12 +310,12 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVAR(COLEV),
   SFVAR(COLY),
 
-  SFARRAY16(DMSAD_L, 4),
-  SFARRAY16(DMSAD_H, 4),
-  SFARRAY16(DMDAD_L, 4),
-  SFARRAY16(DMDAD_H, 4),
-  SFARRAY16(DMCNT_L, 4),
-  SFARRAY16(DMCNT_H, 4),
+  SFVAR(DMSAD_L),
+  SFVAR(DMSAD_H),
+  SFVAR(DMDAD_L),
+  SFVAR(DMDAD_H),
+  SFVAR(DMCNT_L),
+  SFVAR(DMCNT_H),
 
   SFVAR(timers[0].D),
   SFVAR(timers[0].CNT),
@@ -355,8 +355,8 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
   SFVAR(timers[3].Reload),
   SFVAR(timers[3].ClockReload),
 
-  SFARRAY32(dmaSource, 4),
-  SFARRAY32(dmaDest, 4),
+  SFVAR(dmaSource),
+  SFVAR(dmaDest),
 
   SFVAR(fxOn),
   SFVAR(windowOn),
@@ -382,12 +382,12 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
  SFORMAT RAMState[] =
  {
-  SFARRAY(internalRAM, 0x8000),
-  SFARRAY(paletteRAM, 0x400),
-  SFARRAY(workRAM, 0x40000),
-  SFARRAY(vram, 0x20000),
-  SFARRAY(oam, 0x400),
-  SFARRAY(ioMem, 0x400),
+  SFPTR8(internalRAM, 0x8000),
+  SFPTR8(paletteRAM, 0x400),
+  SFPTR8(workRAM, 0x40000),
+  SFPTR8(vram, 0x20000),
+  SFPTR8(oam, 0x400),
+  SFPTR8(ioMem, 0x400),
   SFEND
  };
 
@@ -567,9 +567,9 @@ static void CloseGame(void)
  }
 }
 
-GSFLoader::GSFLoader(Stream *fp)
+GSFLoader::GSFLoader(VirtualFS* vfs, const std::string& dir_path, Stream *fp)
 {
- tags = Load(0x22, 1024 * 1024 * 32 + 12, fp);
+ tags = Load(0x22, 1024 * 1024 * 32 + 12, vfs, dir_path, fp);
 }
 
 GSFLoader::~GSFLoader()
@@ -655,20 +655,20 @@ static void RedoColorMap(const MDFN_PixelFormat &format, const uint8* CustomColo
  #endif
 }
 
-static bool TestMagic(MDFNFILE *fp) MDFN_COLD;
-static bool TestMagic(MDFNFILE *fp)
+static bool TestMagic(GameFile* gf) MDFN_COLD;
+static bool TestMagic(GameFile* gf)
 {
- if(fp->ext == "gba" || fp->ext == "agb")
+ if(gf->ext == "gba" || gf->ext == "agb")
   return true;
 
- if(PSFLoader::TestMagic(0x22, fp->stream()))
+ if(PSFLoader::TestMagic(0x22, gf->stream))
   return true;
 
- fp->rewind();
+ gf->stream->rewind();
 
  uint8 data[192];
 
- if(fp->ext == "bin" && fp->read(data, 192, false) == 192)
+ if(gf->ext == "bin" && gf->stream->read(data, 192, false) == 192)
  {
   if((data[0xb2] == 0x96 && data[0xb3] == 0x00) || (data[0] == 0x2E && data[3] == 0xEA))
    return true;
@@ -677,8 +677,8 @@ static bool TestMagic(MDFNFILE *fp)
  return false;
 }
 
-static void Load(MDFNFILE *fp) MDFN_COLD;
-static void Load(MDFNFILE *fp)
+static void Load(GameFile* gf) MDFN_COLD;
+static void Load(GameFile* gf)
 {
  try
  {
@@ -690,9 +690,9 @@ static void Load(MDFNFILE *fp)
   workRAM = new uint8[0x40000];
   memset(workRAM, 0x00, 0x40000);
 
-  if(PSFLoader::TestMagic(0x22, fp->stream()))
+  if(PSFLoader::TestMagic(0x22, gf->stream))
   {
-   gsf_loader = new GSFLoader(fp->stream());
+   gsf_loader = new GSFLoader(gf->vfs, gf->dir, gf->stream);
 
    std::vector<std::string> SongNames;
 
@@ -708,12 +708,12 @@ static void Load(MDFNFILE *fp)
    if(cpuIsMultiBoot)
    {
     whereToLoad = workRAM;
-    size = fp->read(whereToLoad, 0x40000, false);
+    size = gf->stream->read(whereToLoad, 0x40000, false);
    }
    else
    {
     whereToLoad = rom;
-    size = fp->read(whereToLoad, 0x2000000, false);
+    size = gf->stream->read(whereToLoad, 0x2000000, false);
    }
 
    md5_context md5;
@@ -744,8 +744,6 @@ static void Load(MDFNFILE *fp)
   systemColorMap = new SysCM;
 
   CPUUpdateRenderBuffers(true);
-
-  MDFNGameInfo->GameSetMD5Valid = false;
 
   MDFNGBASOUND_Init();
 
@@ -1266,7 +1264,7 @@ void CPUSoftwareInterrupt(int comment)
     // let it go, because we don't really emulate this function
   default:
     if(!disableMessage) {
-      MDFN_PrintError(_("Unsupported BIOS function %02x called from %08x. A BIOS file is needed in order to get correct behaviour."),
+      MDFN_Notify(MDFN_NOTICE_ERROR, _("Unsupported BIOS function %02x called from %08x. A BIOS file is needed in order to get correct behaviour."),
                     comment,
                     armMode ? armNextPC - 4: armNextPC - 2);
       disableMessage = true;
@@ -2406,11 +2404,11 @@ static void CPUInit(const std::string &bios_fn)
 
    //MDFN_printf(_("Backup memory type override: %s %s\n"), args[0], (acount > 1) ? args[1] : "");
 
-   if(!strcasecmp(args[0], "sram"))
+   if(!MDFN_strazicmp(args[0], "sram"))
    {
     cpuSramEnabled = true;
    }
-   else if(!strcasecmp(args[0], "flash"))
+   else if(!MDFN_strazicmp(args[0], "flash"))
    {
     cpuFlashEnabled = true;
     if(acount == 2)
@@ -2431,11 +2429,11 @@ static void CPUInit(const std::string &bios_fn)
       puts("Flash size error");
     }
    }
-   else if(!strcasecmp(args[0], "eeprom"))
+   else if(!MDFN_strazicmp(args[0], "eeprom"))
     cpuEEPROMEnabled = true;
-   else if(!strcasecmp(args[0], "sensor"))
+   else if(!MDFN_strazicmp(args[0], "sensor"))
     cpuEEPROMSensorEnabled = true;
-   else if(!strcasecmp(args[0], "rtc"))
+   else if(!MDFN_strazicmp(args[0], "rtc"))
     GBA_RTC = new RTC();
   }
  }
@@ -2449,15 +2447,14 @@ static void CPUInit(const std::string &bios_fn)
   
  if(bios_fn != "" && bios_fn != "0" && bios_fn != "none")
  {
-  static const FileExtensionSpecStruct KnownBIOSExtensions[] =
+  static const std::vector<FileExtensionSpecStruct> KnownBIOSExtensions =
   {
-   { ".gba", gettext_noop("GameBoy Advance ROM Image") },
-   { ".agb", gettext_noop("GameBoy Advance ROM Image") },
-   { ".bin", gettext_noop("GameBoy Advance ROM Image") },
-   { ".bios", gettext_noop("BIOS Image") },
-   { NULL, NULL }
+   { ".gba", 0, gettext_noop("GameBoy Advance ROM Image") },
+   { ".agb", 0, gettext_noop("GameBoy Advance ROM Image") },
+   { ".bin", -10, gettext_noop("GameBoy Advance ROM Image") },
+   { ".bios", 0, gettext_noop("BIOS Image") },
   };
-  MDFNFILE bios_fp(MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, bios_fn.c_str()).c_str(), KnownBIOSExtensions, _("GBA BIOS"));
+  MDFNFILE bios_fp(&NVFS, MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, bios_fn.c_str()).c_str(), KnownBIOSExtensions, _("GBA BIOS"));
   
   if(bios_fp.size() != 0x4000)
    throw MDFN_Error(0, _("Invalid BIOS file size"));
@@ -3271,31 +3268,31 @@ static void DoSimpleCommand(int cmd)
 
 static const MDFNSetting GBASettings[] =
 {
- { "gba.bios", 	MDFNSF_EMU_STATE,	gettext_noop("Path to optional GBA BIOS ROM image."), NULL, MDFNST_STRING, "" },
+ { "gba.bios", 	MDFNSF_EMU_STATE | MDFNSF_CAT_PATH,	gettext_noop("Path to optional GBA BIOS ROM image."), NULL, MDFNST_STRING, "" },
  { NULL }
 };
 
 static const IDIISG IDII =
 {
- { "a", "A", 		/*VIRTB_1,*/ 7, IDIT_BUTTON_CAN_RAPID, NULL },
+ IDIIS_ButtonCR("a", "A", 		/*VIRTB_1,*/ 7, NULL),
 
- { "b", "B", 		/*VIRTB_0,*/ 6, IDIT_BUTTON_CAN_RAPID, NULL },
+ IDIIS_ButtonCR("b", "B", 		/*VIRTB_0,*/ 6, NULL),
 
- { "select", "SELECT", 	/*VIRTB_SELECT,*/ 4, IDIT_BUTTON, NULL },
+ IDIIS_Button("select", "SELECT", 	/*VIRTB_SELECT,*/ 4, NULL),
 
- { "start", "START", 	/*VIRTB_START,*/ 5, IDIT_BUTTON, NULL },
+ IDIIS_Button("start", "START", 	/*VIRTB_START,*/ 5, NULL),
 
- { "right", "RIGHT →", 	/*VIRTB_DP0_R,*/ 3, IDIT_BUTTON, "left" },
+ IDIIS_Button("right", "RIGHT →", 	/*VIRTB_DP0_R,*/ 3, "left"),
 
- { "left", "LEFT ←", 	/*VIRTB_DP0_L,*/ 2, IDIT_BUTTON, "right" },
+ IDIIS_Button("left", "LEFT ←", 	/*VIRTB_DP0_L,*/ 2, "right"),
 
- { "up", "UP ↑", 	/*VIRTB_DP0_U,*/ 0, IDIT_BUTTON, "down" },
+ IDIIS_Button("up", "UP ↑", 	/*VIRTB_DP0_U,*/ 0, "down"),
 
- { "down", "DOWN ↓",	/*VIRTB_DP0_D,*/ 1, IDIT_BUTTON, "up" },
+ IDIIS_Button("down", "DOWN ↓",	/*VIRTB_DP0_D,*/ 1, "up"),
 
- { "shoulder_r", "SHOULDER R", /*VIRTB_SHLDR_L,*/	9, IDIT_BUTTON, NULL },
+ IDIIS_Button("shoulder_r", "SHOULDER R", /*VIRTB_SHLDR_L,*/	9, NULL),
 
- { "shoulder_l", "SHOULDER L", /*VIRTB_SHLDR_R,*/	8, IDIT_BUTTON, NULL },
+ IDIIS_Button("shoulder_l", "SHOULDER L", /*VIRTB_SHLDR_R,*/	8, NULL),
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfo =
@@ -3315,12 +3312,12 @@ static const std::vector<InputPortInfoStruct> PortInfo =
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".gsf", gettext_noop("GSF Rip") },
- { ".minigsf", gettext_noop("MiniGSF Rip") },
- { ".gba", gettext_noop("GameBoy Advance ROM Image") },
- { ".agb", gettext_noop("GameBoy Advance ROM Image") },
- { ".bin", gettext_noop("GameBoy Advance ROM Image") },
- { NULL, NULL }
+ { ".gsf", -20, gettext_noop("GSF Rip") },
+ { ".minigsf", -20, gettext_noop("MiniGSF Rip") },
+ { ".gba",   0, gettext_noop("GameBoy Advance ROM Image") },
+ { ".agb",   0, gettext_noop("GameBoy Advance ROM Image") },
+ { ".bin", -80, gettext_noop("GameBoy Advance ROM Image") },
+ { NULL, 0, NULL }
 };
 
 static const CustomPalette_Spec CPInfo[] =

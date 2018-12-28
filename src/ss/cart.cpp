@@ -31,6 +31,7 @@
 #include "cart/extram.h"
 //#include "cart/nlmodem.h"
 #include "cart/rom.h"
+#include "cart/ar4mp.h"
 
 namespace MDFN_IEN_SS
 {
@@ -80,10 +81,11 @@ static MDFN_COLD bool DummyGetClearNVDirty(void)
  return false;
 }
 
-static MDFN_COLD void DummyGetNVInfo(const char** ext, void** nv_ptr, uint64* nv_size)
+static MDFN_COLD void DummyGetNVInfo(const char** ext, void** nv_ptr, bool* nv16, uint64* nv_size)
 {
  *ext = nullptr;
  *nv_ptr = nullptr;
+ *nv16 = false;
  *nv_size = 0;
 }
 
@@ -127,7 +129,7 @@ void CartInfo::CS2M_SetRW8W16(uint8 Ostart, uint8 Oend, void (*r16)(uint32 A, ui
 }
 
 
-void CART_Init(const int cart_type)
+void CART_Init(const int cart_type, Stream* rom_stream)
 {
  Cart.CS01_SetRW8W16(0x02000000, 0x04FFFFFF, DummyRead<uint16>, DummyWrite<uint8>, DummyWrite<uint16>);
  Cart.CS2M_SetRW8W16(0x00, 0x3F, DummyRead<uint16>, DummyWrite<uint8>, DummyWrite<uint16>);
@@ -158,12 +160,11 @@ void CART_Init(const int cart_type)
 
   case CART_KOF95:
   case CART_ULTRAMAN:
-	{
-	 const std::string path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS((cart_type == CART_KOF95) ? "ss.cart.kof95_path" : "ss.cart.ultraman_path"));
-	 FileStream fp(path, FileStream::MODE_READ);
+	CART_ROM_Init(&Cart, rom_stream);
+	break;
 
-	 CART_ROM_Init(&Cart, &fp);
-	}
+  case CART_AR4MP:
+	CART_AR4MP_Init(&Cart, rom_stream);
 	break;
 
   case CART_CS1RAM_16M:
@@ -171,7 +172,7 @@ void CART_Init(const int cart_type)
 	break;
 
   case CART_MDFN_DEBUG:
-	CART_Debug_Init(&Cart);
+	CART_Debug_Init(&Cart, rom_stream);
 	break;
 
 //  case CART_NLMODEM:

@@ -10,8 +10,8 @@ MDFN_FASTCALL uint16 MDCart_Read16(uint32 address);
 
 void MDCart_Reset(void);
 
-void MDCart_Load(md_game_info *ginfo, MDFNFILE *fp);
-bool MDCart_TestMagic(MDFNFILE *fp);
+void MDCart_Load(md_game_info *ginfo, GameFile* gf);
+bool MDCart_TestMagic(GameFile* gf);
 void MDCart_LoadNV(void);
 void MDCart_SaveNV(void);
 void MDCart_Kill(void);

@@ -17,9 +17,6 @@
 
 #include "mednafen.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <trio/trio.h>
 
 #include "driver.h"
@@ -31,6 +28,9 @@
 #include "state.h"
 
 #include "FileStream.h"
+
+namespace Mednafen
+{
 
 enum
 {
@@ -60,12 +60,12 @@ static void HandleMovieError(const std::exception &e)
   MovieStatus[ActiveSlotNumber] = 0;
 
   if(ActiveMovieMode == MOVIE_PLAYING)
-   MDFN_DispMessage(_("Movie %u playback failed."), ActiveSlotNumber);
+   MDFN_Notify(MDFN_NOTICE_ERROR, _("Movie %u playback failed."), ActiveSlotNumber);
   else
-   MDFN_DispMessage(_("Movie %u recording failed."), ActiveSlotNumber);
+   MDFN_Notify(MDFN_NOTICE_ERROR, _("Movie %u recording failed."), ActiveSlotNumber);
  }
 
- MDFN_PrintError(_("Movie error: %s"), e.what());
+ MDFN_Notify(MDFN_NOTICE_ERROR, _("Movie error: %s"), e.what());
  ActiveMovieMode = MOVIE_STOPPED;
  ActiveSlotNumber = -1;
 }
@@ -117,7 +117,7 @@ void MDFNI_SaveMovie(char *fname, const MDFN_Surface *surface, const MDFN_Rect *
   ActiveMovieStream->flush(); 	    // Flush output so that previews will still work right while
 			    	    // the movie is being recorded.
 
-  MDFN_DispMessage(_("Movie recording started."));
+  MDFN_Notify(MDFN_NOTICE_STATUS, _("Movie recording started."));
   MovieStatus[ActiveSlotNumber] = 1;
   RecentlySavedMovie = ActiveSlotNumber;
  }
@@ -150,9 +150,9 @@ void MDFNMOV_Stop(void) noexcept
   ActiveSlotNumber = -1;
 
   if(PAMM == MOVIE_PLAYING)
-   MDFN_DispMessage(_("Movie playback stopped."));
+   MDFN_Notify(MDFN_NOTICE_STATUS, _("Movie playback stopped."));
   else if(PAMM == MOVIE_RECORDING)
-   MDFN_DispMessage(_("Movie recording stopped."));
+   MDFN_Notify(MDFN_NOTICE_STATUS, _("Movie recording stopped."));
  }
 }
 
@@ -198,7 +198,7 @@ void MDFNI_LoadMovie(char *fname)
   //
   MDFNSS_LoadSM(ActiveMovieStream, false);
 
-  MDFN_DispMessage(_("Movie playback started."));
+  MDFN_Notify(MDFN_NOTICE_STATUS, _("Movie playback started."));
  }
  catch(std::exception &e)
  {
@@ -317,53 +317,72 @@ void MDFNMOV_StateAction(StateMem* sm, const unsigned load)
 
 void MDFNMOV_CheckMovies(void)
 {
-        time_t last_time = 0;
+	int64 last_time = 0;
 
-        for(int ssel = 0; ssel < 10; ssel++)
+        if(!MDFNGameInfo->StateAction) 
+         return;
+
+	for(int ssel = 0; ssel < 10; ssel++)
         {
-         struct stat stat_buf;
+         MovieStatus[ssel] = false;
 
-         MovieStatus[ssel] = 0;
-         if(MDFN_stat(MDFN_MakeFName(MDFNMKF_MOVIE, ssel, 0).c_str(), &stat_buf) == 0)
-         {
-          MovieStatus[ssel] = 1;
-          if(stat_buf.st_mtime > last_time)
-          {
-           RecentlySavedMovie = ssel;
-           last_time = stat_buf.st_mtime;
-          }
-         }
+	 try
+	 {
+	  VirtualFS::FileInfo finfo;
+
+	  NVFS.finfo(MDFN_MakeFName(MDFNMKF_MOVIE, ssel, 0), &finfo);
+	  //
+	  MovieStatus[ssel] = true;
+	  if(finfo.mtime_us > last_time)
+	  {
+	   RecentlySavedMovie = ssel;
+	   last_time = finfo.mtime_us;
+ 	  }
+	 }
+	 catch(...)
+	 {
+
+	 }
         }
+
         CurrentMovie = 0;
 }
 
 void MDFNI_SelectMovie(int w)
 {
- StateStatusStruct *status = NULL;
-
  if(w == -1)
  { 
   return; 
  }
  MDFNI_SelectState(-1);
 
- CurrentMovie = w;
- MDFN_ResetMessages();
+ try
+ {
+  CurrentMovie = w;
 
- status = new StateStatusStruct();
- memset(status, 0, sizeof(StateStatusStruct));
+  std::unique_ptr<StateStatusStruct> status(new StateStatusStruct());
 
- memcpy(status->status, MovieStatus, 10 * sizeof(int));
- status->current = CurrentMovie;
- status->current_movie = 0;
- if(ActiveMovieMode == MOVIE_RECORDING)
-  status->current_movie = 1 + ActiveSlotNumber;
- else if(ActiveMovieMode == MOVIE_PLAYING)
-  status->current_movie = -1 - ActiveSlotNumber;
+  memset(status.get(), 0, sizeof(StateStatusStruct));
+  memcpy(status->status, MovieStatus, 10 * sizeof(int));
 
- status->recently_saved = RecentlySavedMovie;
+  status->current = CurrentMovie;
+  status->current_movie = 0;
 
- MDFNSS_GetStateInfo(MDFN_MakeFName(MDFNMKF_MOVIE, CurrentMovie, NULL), status);
- MDFND_SetMovieStatus(status);
+  if(ActiveMovieMode == MOVIE_RECORDING)
+   status->current_movie = 1 + ActiveSlotNumber;
+  else if(ActiveMovieMode == MOVIE_PLAYING)
+   status->current_movie = -1 - ActiveSlotNumber;
+
+  status->recently_saved = RecentlySavedMovie;
+
+  MDFNSS_GetStateInfo(MDFN_MakeFName(MDFNMKF_MOVIE, CurrentMovie, NULL), status.get());
+  MDFND_SetMovieStatus(status.release());
+ }
+ catch(std::exception& e)
+ {
+  MDFN_Notify(MDFN_NOTICE_WARNING, "%s", e.what());
+  MDFND_SetMovieStatus(NULL);
+ }
 }
 
+}

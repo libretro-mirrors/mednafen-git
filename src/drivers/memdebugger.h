@@ -86,13 +86,14 @@ class MemDebugger
 
  iconv_t ict;
  iconv_t ict_to_utf8;
- iconv_t ict_utf16_to_game;
+ iconv_t ict_utf8_to_game;
 
  std::string GameCode;
 
  PromptType InPrompt;
 
  MemDebuggerPrompt *myprompt;
+ SDL_Keycode PromptTAKC;
 
  friend class MemDebuggerPrompt;
 };

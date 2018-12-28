@@ -136,7 +136,7 @@ int MD_Cart_Type_SSF2::StateAction(StateMem *sm, int load, int data_only, const 
 {
  SFORMAT StateRegs[] =
  {
-  SFARRAY(sf2_banks, 8),
+  SFPTR8(sf2_banks, 8),
   SFVAR(control),
   SFEND
  };

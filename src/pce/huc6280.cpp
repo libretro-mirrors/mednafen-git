@@ -801,7 +801,7 @@ void HuC6280::StateAction(StateMem *sm, const unsigned load, const bool data_onl
   SFVARN(IRQSample, "IRQSample"),
   SFVARN(IRQlow, "IRQlow"),
   SFVARN(IRQMask, "IRQMask"),
-  SFARRAYN(MPR, 8, "MPR"),
+  SFPTR8N(MPR, 8, "MPR"),
   SFVARN(speed, "speed"),
 
   SFVARN(timer_inreload, "timer_inreload"),

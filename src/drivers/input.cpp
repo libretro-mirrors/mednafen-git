@@ -17,23 +17,21 @@
 
 #include "main.h"
 
-#include <ctype.h>
 #include <trio/trio.h>
 #include <map>
 
 #include "input.h"
-#include "input-config.h"
 #include "sound.h"
 #include "video.h"
 #include "Joystick.h"
+#include "mouse.h"
+#include "keyboard.h"
 #include "netplay.h"
 #include "cheat.h"
 #include "fps.h"
 #include "debugger.h"
 #include "help.h"
 #include "rmdui.h"
-
-extern JoystickManager *joy_manager;
 
 int NoWaiting = 0;
 
@@ -48,162 +46,579 @@ static bool insf = 0;
 bool RewindState = true;
 bool DNeedRewind = false;
 
-static uint32 MouseData[3];
-static double MouseDataRel[2];
-
 static unsigned int autofirefreq;
 static unsigned int ckdelay;
 
 static bool fftoggle_setting;
 static bool sftoggle_setting;
 
-int ConfigDevice(int arg);
+static int ConfigDevice(int arg);
 static void ConfigDeviceBegin(void);
 
-static void subcon_begin(std::vector<ButtConfig> &bc);
-static int subcon(const char *text, std::vector<ButtConfig> &bc, int commandkey);
+static void subcon_begin(void);
+static bool subcon(const char *text, std::vector<ButtConfig> &bc, const bool commandkey, const bool AND_Mode);
 
 static void ResyncGameInputSettings(unsigned port);
+static void CalcWMInputBehavior(void);
 
-static uint8 keys[MKK_COUNT];
-static uint8 keys_untouched[MKK_COUNT];	// == 0 if not pressed, != 0 if pressed
-
-static std::string BCToString(const ButtConfig &bc)
+static bool DTestButton(const std::vector<ButtConfig>& bc, const bool bypass_key_masking)
 {
- std::string string = "";
- char tmp[256];
+ size_t match_count = 0;
+ bool invert = false;
 
- if(bc.ButtType == BUTTC_KEYBOARD)
+ for(size_t i = 0; i < bc.size(); i++)
  {
-  trio_snprintf(tmp, 256, "keyboard %d", bc.ButtonNum & 0xFFFF);
+  auto const& bce = bc[i];
 
-  string = string + std::string(tmp);
-
-  if(bc.ButtonNum & (4 << 24))
-   string = string + "+ctrl";
-  if(bc.ButtonNum & (1 << 24))
-   string = string + "+alt";
-  if(bc.ButtonNum & (2 << 24))
-   string = string + "+shift";
- }
- else if(bc.ButtType == BUTTC_JOYSTICK)
- {
-  trio_snprintf(tmp, 256, "joystick %016llx %08x", (unsigned long long)bc.DeviceID, bc.ButtonNum);
-
-  string = string + std::string(tmp);
- }
- else if(bc.ButtType == BUTTC_MOUSE)
- {
-  trio_snprintf(tmp, 256, "mouse %016llx %08x", (unsigned long long)bc.DeviceID, bc.ButtonNum);
-
-  string = string + std::string(tmp);
- }
- return(string);
-}
-
-static std::string BCsToString(const ButtConfig *bc, unsigned int n)
-{
- std::string ret = "";
-
- for(unsigned int x = 0; x < n; x++)
- {
-  if(bc[x].ButtType)
+  switch(bce.DeviceType)
   {
-   if(x) ret += "~";
-   ret += BCToString(bc[x]);
+   case BUTTC_KEYBOARD:
+	match_count += invert ^ (bool)KBMan::TestButton(bce, bypass_key_masking);
+	break;
+
+   case BUTTC_JOYSTICK:
+	match_count += invert ^ (bool)JoystickManager::TestButton(bce);
+	break;
+
+   case BUTTC_MOUSE:
+	match_count += invert ^ (bool)MouseMan::TestButton(bce);
+	break;
+  }
+  invert = (bce.ANDGroupCont < 0);
+
+  if(!bce.ANDGroupCont)
+  {
+   if(match_count > i)
+    return true;
+
+   match_count = i + 1;
   }
  }
 
- return(ret);
+ return false;
 }
 
-static std::string BCsToString(const std::vector<ButtConfig> &bc, const bool AND_Mode)
+static INLINE int32 DTestAnalogButton(const std::vector<ButtConfig>& bc, const bool bypass_key_masking)
 {
- std::string ret = "";
+ int32 accum = 0;
 
- if(AND_Mode)
-  ret += "/&&\\ ";
-
- for(unsigned int x = 0; x < bc.size(); x++)
+ for(auto const& bce : bc)
  {
-  if(x) ret += "~";
-  ret += BCToString(bc[x]);
+  switch(bce.DeviceType)
+  {
+   case BUTTC_KEYBOARD:	accum += KBMan::TestAnalogButton(bce, bypass_key_masking); break;
+   case BUTTC_JOYSTICK:	accum += JoystickManager::TestAnalogButton(bce); break;
+   case BUTTC_MOUSE:	accum += MouseMan::TestAnalogButton(bce); break;
+  }
  }
 
- return(ret);
+ return std::min<int32>(32767, accum);
+}
+
+static INLINE uint32 DTestAxis(const std::vector<ButtConfig>& neg_bc, const std::vector<ButtConfig>& pos_bc, const bool bypass_key_masking, const float dev_axis_scale)
+{
+ int32 accum = 0;
+
+ for(auto const& bce : neg_bc)
+ {
+  switch(bce.DeviceType)
+  {
+   case BUTTC_KEYBOARD:	accum -= KBMan::TestAnalogButton(bce, bypass_key_masking); break;
+   case BUTTC_JOYSTICK:	accum -= JoystickManager::TestAnalogButton(bce); break;
+   case BUTTC_MOUSE:	accum -= MouseMan::TestAnalogButton(bce); break;
+  }
+ }
+
+ for(auto const& bce : pos_bc)
+ {
+  switch(bce.DeviceType)
+  {
+   case BUTTC_KEYBOARD:	accum += KBMan::TestAnalogButton(bce, bypass_key_masking); break;
+   case BUTTC_JOYSTICK:	accum += JoystickManager::TestAnalogButton(bce); break;
+   case BUTTC_MOUSE:	accum += MouseMan::TestAnalogButton(bce); break;
+  }
+ }
+
+ return 32768 + std::max<int32>(-32768, std::min<int32>(32767, floor(0.5 + accum * dev_axis_scale)));
+}
+
+// Returns 1.51.12 value
+static int64 DTestAxisRel(const std::vector<ButtConfig>& neg_bc, const std::vector<ButtConfig>& pos_bc, const bool bypass_key_masking)
+{
+ int64 accum = 0;
+
+ for(auto const& bce : neg_bc)
+ {
+  switch(bce.DeviceType)
+  {
+   case BUTTC_KEYBOARD:	accum -= KBMan::TestAxisRel(bce, bypass_key_masking); break;
+   case BUTTC_JOYSTICK: accum -= JoystickManager::TestAxisRel(bce); break;
+   case BUTTC_MOUSE:	accum -= MouseMan::TestAxisRel(bce); break;
+  }
+ }
+
+ for(auto const& bce : pos_bc)
+ {
+  switch(bce.DeviceType)
+  {
+   case BUTTC_KEYBOARD:	accum += KBMan::TestAxisRel(bce, bypass_key_masking); break;
+   case BUTTC_JOYSTICK: accum += JoystickManager::TestAxisRel(bce); break;
+   case BUTTC_MOUSE:	accum += MouseMan::TestAxisRel(bce); break;
+  }
+ }
+
+ return accum;
+}
+
+static float DTestPointer(const std::vector<ButtConfig>& bc, const bool bypass_key_masking, const bool axis_hint)
+{
+ if(MDFN_LIKELY(bc.size()))
+ {
+  const ButtConfig& bce = bc[0];
+
+  switch(bce.DeviceType)
+  {
+   case BUTTC_JOYSTICK:
+	printf("%d %d %f\n", axis_hint, JoystickManager::TestAnalogButton(bce), Video_PtoV_J(JoystickManager::TestAnalogButton(bce), axis_hint, bce.ButtonNum & JoystickManager::JOY_BN_GUN_TRANSLATE));
+	return Video_PtoV_J(JoystickManager::TestAnalogButton(bce), axis_hint, bce.ButtonNum & JoystickManager::JOY_BN_GUN_TRANSLATE);
+
+   case BUTTC_MOUSE:
+	return MouseMan::TestPointer(bce);
+  }
+ }
+
+ return 0;
+}
+
+/* Used for command keys */
+static bool DTestButtonCombo(std::vector<ButtConfig> &bc, const bool bypass_key_masking, const bool ignore_ralt)
+{
+ size_t match_count = 0;
+ bool invert = false;
+
+ for(size_t i = 0; i < bc.size(); i++)
+ {
+  auto const& bce = bc[i];
+
+  switch(bce.DeviceType)
+  {
+   case BUTTC_KEYBOARD:
+	match_count += invert ^ (bool)KBMan::TestButtonWithMods(bce, bypass_key_masking, ignore_ralt);
+	break;
+
+   case BUTTC_JOYSTICK:
+	match_count += invert ^ (bool)JoystickManager::TestButton(bce);
+	break;
+
+   case BUTTC_MOUSE:
+	match_count += invert ^ (bool)MouseMan::TestButton(bce);
+	break;
+  }
+  invert = (bce.ANDGroupCont < 0);
+
+  if(!bce.ANDGroupCont)
+  {
+   if(match_count > i)
+    return true;
+
+   match_count = i + 1;
+  }
+ }
+
+ return false;
 }
 
 
-static bool StringToBC(const char *string, std::vector<ButtConfig> &bc)
+//
+//
+//
+static std::string BCGToString(const std::vector<ButtConfig>& bcg)
 {
- bool AND_Mode = false;
- char device_name[64];
- char extra[256];
- ButtConfig tmp_bc;
+ std::string ret;
 
- while(*string && *string <= 0x20) string++;
-
- if(!strncmp(string, "/&&\\", 4))
+ for(size_t i = 0; i < bcg.size(); i++)
  {
-  AND_Mode = true;
-  string += 4;
+  char tmp[256] = { 0 };
+  char devidstr[2 + 32 + 1];
+  const ButtConfig& bc = bcg[i];
+  char scalestr[32];
+
+  if(!MDFN_de64msb(&bc.DeviceID[0]) && !MDFN_de64msb(&bc.DeviceID[8]))
+   trio_snprintf(devidstr, sizeof(devidstr), "0x0");
+  else
+   trio_snprintf(devidstr, sizeof(devidstr), "0x%016llx%016llx", (unsigned long long)MDFN_de64msb(&bc.DeviceID[0]), (unsigned long long)MDFN_de64msb(&bc.DeviceID[8]));
+
+  if(bc.Scale == 4096)
+   scalestr[0] = 0;
+  else
+   trio_snprintf(scalestr, sizeof(scalestr), " %u", bc.Scale);
+
+  if(bc.DeviceType == BUTTC_KEYBOARD)
+   trio_snprintf(tmp, sizeof(tmp), "keyboard %s %s%s", devidstr, KBMan::BNToString(bc.ButtonNum).c_str(), scalestr);
+  else if(bc.DeviceType == BUTTC_JOYSTICK)
+   trio_snprintf(tmp, sizeof(tmp), "joystick %s %s%s", devidstr, JoystickManager::BNToString(bc.ButtonNum).c_str(), scalestr);
+  else if(bc.DeviceType == BUTTC_MOUSE)
+   trio_snprintf(tmp, sizeof(tmp), "mouse %s %s%s", devidstr, MouseMan::BNToString(bc.ButtonNum).c_str(), scalestr);
+
+  if(tmp[0])
+  {
+   if(i)
+   {
+    const int agc = bcg[i - 1].ANDGroupCont;
+
+    if(agc < 0)
+     ret += " &! ";
+    else if(agc > 0)
+     ret += " && ";
+    else
+     ret += " || ";
+   }
+
+   ret += tmp;
+  }
  }
 
- while(*string && *string <= 0x20) string++;
+ return ret;
+}
+
+static bool StringToDeviceID(const char* s, size_t len, std::array<uint8, 16>* device_id)
+{
+ uint64 a = 0, b = 0;
+
+ while(len--)
+ {
+  int nyb;
+
+  if(*s >= '0' && *s <= '9')
+   nyb = *s - '0';
+  else if(*s >= 'A' && *s <= 'F')
+   nyb = 0xA + (*s - 'A');
+  else if(*s >= 'a' && *s <= 'f')
+   nyb = 0xA + (*s - 'a');
+  else
+   return false;
+
+  a <<= 4;
+  a |= b >> 60;
+  b <<= 4;
+  b |= nyb;
+
+  s++;
+ }
+
+ //printf("HOW: %016llx%016llx\n", a, b);
+
+ MDFN_en64msb(&(*device_id)[0], a);
+ MDFN_en64msb(&(*device_id)[8], b);
+
+ return true;
+}
+
+//
+//
+//
+static bool StringToBCG(std::vector<ButtConfig>* bcg, const char* s, const char* defs = "", const bool abs_pointer_axis_thing = false)
+{
+ if(bcg)
+  bcg->clear();
+
+#if 1
+ if(strstr(s, "0x") == NULL)
+ {
+  //
+  // Backwards-compat for 0.9.x joystick mappings
+  //
+  bool AND_Mode = false;
+  char device_name[64];
+  char extra[256];
+  bool any_kb = false;
+  bool any_mouse = false;
+  bool any_joy = false;
+
+  s = MDFN_strskipspace(s);
+
+  if(!strncmp(s, "/&&\\", 4))
+  {
+   AND_Mode = true;
+   s += 4;
+  }
+
+  s = MDFN_strskipspace(s);
+
+  do
+  {
+   if(trio_sscanf(s, "%63s %255[^~]", device_name, extra) == 2)
+   {
+    if(!MDFN_strazicmp(device_name, "keyboard"))
+     any_kb = true;
+    else
+    {
+     ButtConfig bc;
+
+     bc.ANDGroupCont = AND_Mode;
+     bc.Scale = 4096;
+
+     if(!MDFN_strazicmp(device_name, "joystick"))
+     {
+      any_joy = true;
+      //
+      unsigned long long devid = 0;
+      unsigned bn = 0;
+
+      if(trio_sscanf(extra, "%016llx %08x", &devid, &bn) == 2)
+      {
+       bc.DeviceType = BUTTC_JOYSTICK;
+       bc.DeviceNum = JoystickManager::GetIndexByUniqueID_09x(devid);
+       bc.DeviceID = JoystickManager::GetUniqueIDByIndex(bc.DeviceNum);	// Not perfect, but eh...
+
+       if(!JoystickManager::Translate09xBN(bn, &bc.ButtonNum, abs_pointer_axis_thing))
+        return false;
+      }
+      else
+       return false;
+     }
+     else if(!MDFN_strazicmp(device_name, "mouse"))
+     {
+      any_mouse = true;
+      //
+      unsigned long long dummy_devid = 0;
+      unsigned bn = 0;
+
+      if(trio_sscanf(extra, "%016llx %08x", &dummy_devid, &bn) == 2 || trio_sscanf(extra, "%d", &bn) == 1)
+      {
+       bc.DeviceID = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+       bc.DeviceType = BUTTC_MOUSE;
+       bc.DeviceNum = 0;
+
+       if(!MouseMan::Translate09xBN(bn, &bc.ButtonNum))
+        return false;
+      }
+      else
+       return false;
+     }
+     else
+      return false;
+
+     if(bcg)
+      bcg->push_back(bc);
+    }
+   }
+   s = strchr(s, '~');
+   if(s) s++;
+  } while(s);
+
+  if(bcg)
+  {
+   if(bcg->size())
+    bcg->back().ANDGroupCont = false;
+   //
+   //
+   //
+   if(any_kb)
+   {
+    bool need_mouse_defaults = false;
+
+    if(AND_Mode && (any_mouse || any_joy))
+    {
+     need_mouse_defaults = any_mouse;
+     bcg->clear();
+    }
+
+    std::vector<ButtConfig> defbc;
+
+    if(!StringToBCG(&defbc, defs))
+    {
+     assert(0);
+    }
+
+    for(auto const& bc : defbc)
+    {
+     assert(!bc.ANDGroupCont);
+     if(bc.DeviceType == BUTTC_KEYBOARD || (bc.DeviceType == BUTTC_MOUSE && need_mouse_defaults))
+     {
+      bcg->push_back(bc);
+     }
+    }
+   }
+  }
+
+  //printf("\"%s\" ---> \"%s\"\n", s.c_str(), BCGToString(ret).c_str());
+
+  return true;
+ }
+#endif
+ //
+ // 
+ //
+ unsigned which_part = 0;
+ ButtConfig bc;
+ size_t len;
 
  do
  {
-  if(trio_sscanf(string, "%63s %255[^~]", device_name, extra) == 2)
+  const char* start_s;
+  int agc = INT_MAX;
+
+  s = MDFN_strskipspace(s);
+  start_s = s;
+
+  s = MDFN_strskipnonspace(s);
+  len = s - start_s;
+
+  if(len == 2)
   {
-   if(!strcasecmp(device_name, "keyboard"))
-   {
-    uint32 bnum = atoi(extra);
-  
-    if(strstr(extra, "+shift"))
-     bnum |= 2 << 24;
-    if(strstr(extra, "+alt"))
-     bnum |= 1 << 24;
-    if(strstr(extra, "+ctrl"))
-     bnum |= 4 << 24;
-
-    tmp_bc.ButtType = BUTTC_KEYBOARD;
-    tmp_bc.DeviceNum = 0;
-    tmp_bc.ButtonNum = bnum;
-    tmp_bc.DeviceID = 0;
-
-    bc.push_back(tmp_bc);
-   }
-   else if(!strcasecmp(device_name, "joystick"))
-   {
-    tmp_bc.ButtType = BUTTC_JOYSTICK;
-    tmp_bc.DeviceNum = 0;
-    tmp_bc.ButtonNum = 0;
-    tmp_bc.DeviceID = 0;
-
-    trio_sscanf(extra, "%016llx %08x", &tmp_bc.DeviceID, &tmp_bc.ButtonNum);
-
-    tmp_bc.DeviceNum = joy_manager->GetIndexByUniqueID(tmp_bc.DeviceID);
-    bc.push_back(tmp_bc);
-   }
-   else if(!strcasecmp(device_name, "mouse"))
-   {
-    tmp_bc.ButtType = BUTTC_MOUSE;
-    tmp_bc.DeviceNum = 0;
-    tmp_bc.ButtonNum = 0;
-    tmp_bc.DeviceID = 0;
-  
-    if(trio_sscanf(extra, "%016llx %08x", &tmp_bc.DeviceID, &tmp_bc.ButtonNum) < 2)
-     trio_sscanf(extra, "%d", &tmp_bc.ButtonNum);
-
-    bc.push_back(tmp_bc);
-   }
+   if(start_s[0] == '&' && start_s[1] == '&')
+    agc = true;
+   else if(start_s[0] == '|' && start_s[1] == '|')
+    agc = false;
+   else if(start_s[0] == '&' && start_s[1] == '!')
+    agc = -1;
   }
-  string = strchr(string, '~');
-  if(string) string++;
- } while(string);
+  else if(!len)
+   agc = false;
 
- return(AND_Mode);
+  if(agc != INT_MAX)
+  {
+   if(which_part < 3)
+   {
+    printf("Incomplete?\n");
+    return false;
+   }
+   else if(which_part < 4)
+    bc.Scale = 4096;
+
+   bc.ANDGroupCont = agc;
+
+   if(bcg)
+    bcg->push_back(bc);
+
+   which_part = 0;
+  }
+  else if(which_part == 0)
+  {
+   if(len == 8 && !MDFN_memazicmp(start_s, "keyboard", 8))
+    bc.DeviceType = BUTTC_KEYBOARD;
+   else if(len == 8 && !MDFN_memazicmp(start_s, "joystick", 8))
+    bc.DeviceType = BUTTC_JOYSTICK;
+   else if(len == 5 && !MDFN_memazicmp(start_s, "mouse", 5))
+    bc.DeviceType = BUTTC_MOUSE;
+   else
+   {
+    printf("Unknown device type\n");
+    return false;
+   }
+
+   which_part++;
+  }
+  else if(which_part == 1)
+  {
+   if(len < (2 + 1) || start_s[0] != '0' || start_s[1] != 'x' || !StringToDeviceID(start_s + 2, len - 2, &bc.DeviceID))
+   {
+    printf("Bad device id\n");
+    return false;
+   }
+
+   which_part++;
+  }
+  else if(which_part == 2)
+  {
+   char bnstr[256];
+
+   if((len + 1) > sizeof(bnstr))
+   {
+    printf("bn string too long.");
+    return false;
+   }
+
+   memcpy(bnstr, start_s, len);
+   bnstr[len] = 0;
+
+   if(bc.DeviceType == BUTTC_KEYBOARD)
+   {
+    if(!KBMan::StringToBN(bnstr, &bc.ButtonNum))
+    {
+     printf("Bad keyboard bn string\n");
+     return false;
+    }
+
+    bc.DeviceNum = 0;	// TODO
+   }
+   else if(bc.DeviceType == BUTTC_JOYSTICK)
+   {
+    if(!JoystickManager::StringToBN(bnstr, &bc.ButtonNum))
+    {
+     printf("Bad joystick bn string\n");
+     return false;
+    }
+
+    bc.DeviceNum = JoystickManager::GetIndexByUniqueID(bc.DeviceID);
+   }
+   else if(bc.DeviceType == BUTTC_MOUSE)
+   {
+    if(!MouseMan::StringToBN(bnstr, &bc.ButtonNum))
+    {
+     printf("Bad mouse bn string\n");
+     return false;
+    }
+
+    bc.DeviceNum = 0;	// TODO
+   }
+   which_part++;
+  }
+  else if(which_part == 3)
+  {
+   unsigned scale = 0;
+
+   for(const char* sls = start_s; sls != (start_s + len); sls++)
+   {
+    if(*sls >= '0' && *sls <= '9')
+    {
+     scale = (scale * 10) + (*sls - '0');
+     if(scale > 0xFFFF) 
+     {
+      printf("Scale overflow\n");
+      return false;
+     }
+    }
+    else
+    {
+     printf("Bad scale value\n");
+     return false;
+    }
+   }
+
+   bc.Scale = scale;
+   which_part++;
+  }
+  else if(which_part == 4)
+  {
+   printf("Junk at end of input mapping?\n");
+   return false;
+  }
+ } while(len);
+
+ if(bcg && bcg->size() > 0)
+  bcg->back().ANDGroupCont = false;
+
+ return true;
 }
+
+static bool ValidateIMSetting(const char* name, const char* value)
+{
+#if 0
+ {
+  std::vector<ButtConfig> m;
+  StringToBCG(&m, value, MDFNI_GetSettingDefault(name).c_str());
+
+  std::string tmp = BCGToString(m);
+  printf("%s -------- %s\n", value, tmp.c_str());
+  assert(tmp == value);
+ }
+#endif
+
+ return StringToBCG(nullptr, value);
+}
+
 
 static char *CleanSettingName(char *string)
 {
@@ -220,27 +635,47 @@ static char *CleanSettingName(char *string)
  return string;
 }
 
+enum InputMappingType : unsigned
+{
+ IMTYPE_UNKNOWN = 0,
+ IMTYPE_BUTTON,
+ IMTYPE_BUTTON_RAPID,
+ IMTYPE_BUTTON_ANALOG,
+ IMTYPE_AXIS_NEG,
+ IMTYPE_AXIS_POS,
+ IMTYPE_AXIS_REL_POS,
+ IMTYPE_AXIS_REL_NEG,
+ IMTYPE_POINTER_X,
+ IMTYPE_POINTER_Y,
+ IMTYPE_SWITCH,
+ //IMTYPE_STATUS
+};
+
 struct ButtonInfoCache
 {
- char* SettingName = NULL;
- char* CPName = NULL;
- const InputDeviceInputInfoStruct* IDII = NULL;
-
- std::vector<ButtConfig> BC;
- bool BCANDMode = false;
- int BCPrettyPrio = 0;
-
- unsigned Flags = 0;
+ char* SettingName = nullptr;
+ char* CPName = nullptr;
+ const InputDeviceInputInfoStruct* IDII = nullptr;
+ InputMappingType IMType = IMTYPE_UNKNOWN;
  uint16 BitOffset = 0;
  uint16 ExclusionBitOffset = 0xFFFF;
- InputDeviceInputType Type = IDIT_BUTTON;
- bool Rapid = false;
+ std::vector<ButtConfig> BC;
 
- uint8 SwitchNumPos = 0;
- uint8 SwitchLastPos = 0;
- uint8 SwitchBitSize = 0;
- bool SwitchLastPress = false;
+ struct
+ {
+  uint8 NumPos = 0;
+  uint8 LastPos = 0;
+  uint8 BitSize = 0;
+  bool LastPress = false;
+ } Switch;
+
+ struct
+ {
+  int64 AccumError = 0;
+ } AxisRel;
 };
+
+//static_assert(sizeof(ButtonInfoCache) == 64, "hm");
 
 struct StatusInfoCache
 {
@@ -268,6 +703,7 @@ struct PortInfoCache
  std::vector<ButtonInfoCache> BIC;
  std::vector<StatusInfoCache> SIC;
  std::vector<RumbleInfoCache> RIC;
+ std::vector<unsigned> BCC; // Button config cache
 
  float AxisScale = 0;
 };
@@ -288,21 +724,63 @@ static void KillPortInfo(unsigned int port)
  PIDC[port].BIC.clear();
  PIDC[port].SIC.clear();
  PIDC[port].RIC.clear();
+ PIDC[port].BCC.clear();
 }
 
+
+//
+// trio_aprintf() was taking too long when building all the input mapping settings we have now from Saturn keyboards...
+//
+static char* build_string(const char *s0, const char* s1, const char* s2 = "", const char* s3 = "", const char* s4 = "", const char* s5 = "", const char *s6 = "", const char* s7 = "", const char* s8 = "")
+{
+ const size_t s0_len = strlen(s0);
+ const size_t s1_len = strlen(s1);
+ const size_t s2_len = strlen(s2);
+ const size_t s3_len = strlen(s3);
+ const size_t s4_len = strlen(s4);
+ const size_t s5_len = strlen(s5);
+ const size_t s6_len = strlen(s6);
+ const size_t s7_len = strlen(s7);
+ const size_t s8_len = strlen(s8);
+
+ char* ret = (char*)malloc(s0_len + s1_len + s2_len + s3_len + s4_len + s5_len + s6_len + s7_len + s8_len + 1);
+ char* t = ret;
+
+ t = (char*)memcpy(t, s0, s0_len) + s0_len;
+ t = (char*)memcpy(t, s1, s1_len) + s1_len;
+ t = (char*)memcpy(t, s2, s2_len) + s2_len;
+ t = (char*)memcpy(t, s3, s3_len) + s3_len;
+ t = (char*)memcpy(t, s4, s4_len) + s4_len;
+ t = (char*)memcpy(t, s5, s5_len) + s5_len;
+ t = (char*)memcpy(t, s6, s6_len) + s6_len;
+ t = (char*)memcpy(t, s7, s7_len) + s7_len;
+ t = (char*)memcpy(t, s8, s8_len) + s8_len;
+ *t = 0;
+
+ return ret;
+}
+
+
+//
+// Only call on init, or when the device on a port changes.
+//
 static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
 {
  const InputDeviceInfoStruct *zedevice = NULL;
  char *port_device_name;
  unsigned int device;
- 
+ const std::map<std::string, uint32>* switches_defov = nullptr;
+
+ std::vector<std::pair<uint64, size_t>> bcc_stmp;
+
  PIDC[port].AxisScale = 1.0;
 
   if(gi->PortInfo[port].DeviceInfo.size() > 1)
   {  
-   if(CurGame->DesiredInput.size() > port && CurGame->DesiredInput[port])
+   if(CurGame->DesiredInput.size() > port && CurGame->DesiredInput[port].device_name)
    {
-    port_device_name = strdup(CurGame->DesiredInput[port]);
+    port_device_name = strdup(CurGame->DesiredInput[port].device_name);
+    switches_defov = &CurGame->DesiredInput[port].switches;
    }
    else
    {
@@ -318,7 +796,7 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
 
   for(device = 0; device < gi->PortInfo[port].DeviceInfo.size(); device++)
   {
-   if(!strcasecmp(gi->PortInfo[port].DeviceInfo[device].ShortName, port_device_name))
+   if(!MDFN_strazicmp(gi->PortInfo[port].DeviceInfo[device].ShortName, port_device_name))
    {
     zedevice = &gi->PortInfo[port].DeviceInfo[device];
     break;
@@ -339,49 +817,108 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
   {
    // Handle dummy/padding button entries(the setting name will be NULL in such cases)
    if(idii.SettingName == NULL)
-    continue;   
+    continue;
+   //
+   char sname_pdpfx[384];
 
-   if(idii.Type == IDIT_BUTTON_ANALOG && (idii.Flags & IDIT_BUTTON_ANALOG_FLAG_SQLR) && !analog_axis_scale_grabbed)
+   trio_snprintf(sname_pdpfx, sizeof(sname_pdpfx), "%s.input.%s.%s", gi->shortname, gi->PortInfo[port].ShortName, zedevice->ShortName);
+
+   if(idii.Type == IDIT_AXIS && (idii.Flags & IDIT_AXIS_FLAG_SQLR) && !analog_axis_scale_grabbed)
    {
     char tmpsn[512];
 
-    trio_snprintf(tmpsn, sizeof(tmpsn), "%s.input.%s.%s.axis_scale", gi->shortname, gi->PortInfo[port].ShortName, zedevice->ShortName);
+    trio_snprintf(tmpsn, sizeof(tmpsn), "%s.axis_scale", sname_pdpfx);
     PIDC[port].AxisScale = MDFN_GetSettingF(tmpsn);
     analog_axis_scale_grabbed = true;
    }
 
-   if(idii.Type == IDIT_BUTTON || idii.Type == IDIT_BUTTON_CAN_RAPID
-	 || idii.Type == IDIT_BUTTON_ANALOG || idii.Type == IDIT_X_AXIS || idii.Type == IDIT_Y_AXIS
-	 || idii.Type == IDIT_SWITCH)
+   if(idii.Type == IDIT_BUTTON || idii.Type == IDIT_BUTTON_CAN_RAPID ||
+	 idii.Type == IDIT_BUTTON_ANALOG ||
+	 idii.Type == IDIT_AXIS || 
+	 idii.Type == IDIT_POINTER_X || idii.Type == IDIT_POINTER_Y ||
+	 idii.Type == IDIT_AXIS_REL ||
+	 idii.Type == IDIT_SWITCH)
    {
-    for(unsigned r = 0; r < ((idii.Type == IDIT_BUTTON_CAN_RAPID) ? 2 : 1); r++)
+    for(unsigned part = 0; part < ((idii.Type == IDIT_BUTTON_CAN_RAPID || idii.Type == IDIT_AXIS || idii.Type == IDIT_AXIS_REL) ? 2 : 1); part++)
     {
      ButtonInfoCache bic;
 
      bic.IDII = &idii;
-     bic.SettingName = trio_aprintf("%s.input.%s.%s.%s%s", gi->shortname, gi->PortInfo[port].ShortName, zedevice->ShortName, (r ? "rapid_" : ""), idii.SettingName);
-     CleanSettingName(bic.SettingName);
-     bic.BCANDMode = StringToBC(MDFN_GetSettingS(bic.SettingName).c_str(), bic.BC);
-     bic.BitOffset = idii.BitOffset;
 
-     if(idii.Type == IDIT_SWITCH)
+     switch(idii.Type)
      {
-      bic.SwitchNumPos = idii.SwitchNumPos;
-      bic.SwitchLastPos = 0;
-      bic.SwitchBitSize = idii.BitSize;
-      bic.SwitchLastPress = false;
+      default:
+	break;
+
+      case IDIT_BUTTON:
+	bic.IMType = IMTYPE_BUTTON;
+	break;
+
+      case IDIT_BUTTON_CAN_RAPID:
+	bic.IMType = part ? IMTYPE_BUTTON_RAPID : IMTYPE_BUTTON;
+	break;
+
+      case IDIT_BUTTON_ANALOG:
+	bic.IMType = IMTYPE_BUTTON_ANALOG;
+	break;
+
+      case IDIT_AXIS:
+	bic.IMType = part ? IMTYPE_AXIS_POS : IMTYPE_AXIS_NEG;
+	break;
+
+      case IDIT_AXIS_REL:
+	bic.IMType = part ? IMTYPE_AXIS_REL_POS : IMTYPE_AXIS_REL_NEG;
+	break;
+
+      case IDIT_POINTER_X:
+	bic.IMType = IMTYPE_POINTER_X;
+	break;
+
+      case IDIT_POINTER_Y:
+	bic.IMType = IMTYPE_POINTER_Y;
+	break;
+
+      case IDIT_SWITCH:
+	bic.IMType = IMTYPE_SWITCH;
+	bic.Switch.NumPos = idii.Switch.NumPos;
+	bic.Switch.LastPos = 0;
+	bic.Switch.BitSize = idii.BitSize;
+	bic.Switch.LastPress = false;
+	break;
+     }
+     //
+     //
+     //
+     if(idii.Type == IDIT_AXIS_REL)
+     {
+      bic.SettingName = build_string(sname_pdpfx, ".", idii.SettingName, idii.SettingName[0] ? "_" : "", idii.AxisRel.sname_dir[part]);
+      bic.CPName = build_string(idii.Name, " ", idii.AxisRel.name_dir[part]);
+     }
+     else if(idii.Type == IDIT_AXIS)
+     {
+      bic.SettingName = build_string(sname_pdpfx, ".", idii.SettingName, idii.SettingName[0] ? "_" : "", idii.Axis.sname_dir[part]);
+      bic.CPName = build_string(idii.Name, " ", idii.Axis.name_dir[part]);
      }
      else
      {
-      bic.Rapid = r;
+      bic.SettingName = build_string(sname_pdpfx, ".", bic.IMType == IMTYPE_BUTTON_RAPID ? "rapid_" : "", idii.SettingName);
+      bic.CPName = trio_aprintf(_("%s%s%s"), (bic.IMType == IMTYPE_BUTTON_RAPID ? _("Rapid ") : ""), idii.Name, (bic.IMType == IMTYPE_SWITCH) ? _(" Select") : "");
      }
+     CleanSettingName(bic.SettingName);
+     if(!StringToBCG(&bic.BC, MDFN_GetSettingS(bic.SettingName).c_str(), MDFNI_GetSettingDefault(bic.SettingName).c_str(), (idii.Type == IDIT_POINTER_X || idii.Type == IDIT_POINTER_Y)))
+      abort();
+     bic.BitOffset = idii.BitOffset;
 
-     bic.Type = ((idii.Type == IDIT_BUTTON_CAN_RAPID) ? IDIT_BUTTON : idii.Type);
-     bic.Flags = idii.Flags;
+     if(idii.ConfigOrder >= 0 && idii.Type != IDIT_AXIS_REL)
+     {
+      std::pair<uint64, size_t> pot;
 
-     bic.CPName = trio_aprintf(_("%s%s%s"), (r ? _("Rapid ") : ""), idii.Name, (bic.Type == IDIT_SWITCH) ? _(" Select") : "");
+      pot.first = ((uint64)idii.ConfigOrder << 32) + (part ^ (idii.Type == IDIT_AXIS && (idii.Flags & IDIT_AXIS_FLAG_INVERT_CO)) ^ (idii.Type == IDIT_AXIS_REL && (idii.Flags & IDIT_AXIS_REL_FLAG_INVERT_CO)));
+      pot.second = PIDC[port].BIC.size();
 
-     bic.BCPrettyPrio = idii.ConfigOrder;
+      bcc_stmp.push_back(pot);
+     }
+     //
      PIDC[port].BIC.push_back(bic);
     }
    }
@@ -392,7 +929,7 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
     sic.IDII = &idii;
     sic.StatusLastState = 0;
 
-    sic.StatusNumStates = idii.StatusNumStates;
+    sic.StatusNumStates = idii.Status.NumStates;
     sic.StatusBitSize = idii.BitSize;
     sic.BitOffset = idii.BitOffset;
 
@@ -408,72 +945,87 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
    }
   }
 
-  for(unsigned int x = 0; x < PIDC[port].BIC.size(); x++)
+
+ //
+ // Calculate configuration order.
+ //
+ std::sort(bcc_stmp.begin(), bcc_stmp.end(),
+	[](const std::pair<uint64, size_t>& a, const std::pair<uint64, size_t>& b) { return a.first < b.first || (a.first == b.first && a.second < b.second); });
+
+ for(const auto& p : bcc_stmp)
+  PIDC[port].BCC.push_back(p.second);
+
+ //
+ // Now, search for exclusion buttons.
+ //
+ for(auto& bic : PIDC[port].BIC)
+ {
+  if((bic.IDII->Type == IDIT_BUTTON || bic.IDII->Type == IDIT_BUTTON_CAN_RAPID) && bic.IDII->Button.ExcludeName)
   {
-   int this_prio = PIDC[port].BIC[x].BCPrettyPrio;
+   bool found = false;
 
-   if(this_prio >= 0)
+   for(auto const& sub_bic : PIDC[port].BIC)
    {
-    bool FooFound = FALSE;
-
-    // First, see if any duplicate priorities come after this one! or something
-    for(unsigned int i = x + 1; i < PIDC[port].BIC.size(); i++)
+    if(!MDFN_strazicmp(bic.IDII->Button.ExcludeName, sub_bic.IDII->SettingName))
     {
-     if(PIDC[port].BIC[i].BCPrettyPrio == this_prio)
-     {
-      FooFound = TRUE;
-      break;
-     }
-    }
-
-    // Now adjust all priorities >= this_prio except for 'x' by +1
-    if(FooFound)
-    {
-     for(unsigned int i = 0; i < PIDC[port].BIC.size(); i++)
-     {
-      if(i != x && PIDC[port].BIC[i].BCPrettyPrio >= this_prio)
-       PIDC[port].BIC[i].BCPrettyPrio++;
-     }
-    }
-    
-   } 
-  }
-
-  //
-  // Now, search for exclusion buttons.
-  //
-  for(auto& bic : PIDC[port].BIC)
-  {
-   if(bic.IDII->ExcludeName)
-   {
-    for(auto const& sub_bic : PIDC[port].BIC)
-    {
-     if(!strcasecmp(bic.IDII->ExcludeName, sub_bic.IDII->SettingName))
-     {
-      bic.ExclusionBitOffset = sub_bic.BitOffset;
-      break;
-     }
+     assert(sub_bic.IDII->Type == IDIT_BUTTON || sub_bic.IDII->Type == IDIT_BUTTON_CAN_RAPID);
+     bic.ExclusionBitOffset = sub_bic.BitOffset;
+     found = true;
+     break;
     }
    }
+   assert(found);
   }
+ }
 
  PIDC[port].Data = MDFNI_SetInput(port, device);
+
+ //
+ // Set default switch positions.
+ //
+ size_t switches_defov_found = 0;
+
+ for(auto& bic : PIDC[port].BIC)
+ {
+  if(bic.IMType == IMTYPE_SWITCH)
+  {
+   char tmpsn[512];
+   trio_snprintf(tmpsn, sizeof(tmpsn), "%s.defpos", bic.SettingName);
+   bic.Switch.LastPos = MDFN_GetSettingUI(tmpsn);
+   //
+   //
+   if(switches_defov)
+   {
+    std::map<std::string, uint32>::const_iterator sdov_it = switches_defov->find(bic.IDII->SettingName);
+
+    if(sdov_it != switches_defov->end())
+    {
+     bic.Switch.LastPos = sdov_it->second;
+     switches_defov_found++;
+    }
+   }
+   //
+   //
+   BitsIntract(PIDC[port].Data, bic.BitOffset, bic.Switch.BitSize, bic.Switch.LastPos);
+  }
+ }
+ assert(switches_defov_found == (switches_defov ? switches_defov->size() : 0));
 }
 
 static void IncSelectedDevice(unsigned int port)
 {
  if(MDFNDnetplay)
  {
-  MDFN_DispMessage(_("Cannot change input device during netplay."));
+  MDFN_Notify(MDFN_NOTICE_STATUS, _("Cannot change input device during netplay."));
  }
  else if(RewindState)
  {
-  MDFN_DispMessage(_("Cannot change input device while state rewinding is active."));
+  MDFN_Notify(MDFN_NOTICE_STATUS, _("Cannot change input device while state rewinding is active."));
  }
  else if(port >= CurGame->PortInfo.size())
-  MDFN_DispMessage(_("Port %u does not exist."), port + 1);
+  MDFN_Notify(MDFN_NOTICE_STATUS, _("Port %u does not exist."), port + 1);
  else if(CurGame->PortInfo[port].DeviceInfo.size() <= 1)
-  MDFN_DispMessage(_("Port %u device not selectable."), port + 1);
+  MDFN_Notify(MDFN_NOTICE_STATUS, _("Port %u device not selectable."), port + 1);
  else
  {
   char tmp_setting_name[512];
@@ -490,23 +1042,33 @@ static void IncSelectedDevice(unsigned int port)
   KillPortInfo(port);
   MDFNI_SetSetting(tmp_setting_name, devname);
   BuildPortInfo(CurGame, port);
+  CalcWMInputBehavior();
 
-  MDFN_DispMessage(_("%s selected on port %d"), CurGame->PortInfo[port].DeviceInfo[PIDC[port].CurrentDeviceIndex].FullName, port + 1);
+  MDFN_Notify(MDFN_NOTICE_STATUS, _("%s selected on port %d"), CurGame->PortInfo[port].DeviceInfo[PIDC[port].CurrentDeviceIndex].FullName, port + 1);
  }
 }
 
-#define MK(x)		{ BUTTC_KEYBOARD, 0, MKK(x) }
+//
+// Don't use CTRL+ALT modifier for any defaults(due to AltGr on Windows, and usage as WM/OS-level hotkeys).
+//
+#define MK(x)			"keyboard 0x0 " KBD_SCANCODE_STRING(x)
 
-#define MK_CK(x)        { { BUTTC_KEYBOARD, 0, MKK(x) }, { 0, 0, 0 } }
-#define MK_CK2(x,y)        { { BUTTC_KEYBOARD, 0, MKK(x) }, { BUTTC_KEYBOARD, 0, MKK(y) } }
-
-#define MK_CK_SHIFT(x)	{ { BUTTC_KEYBOARD, 0, MKK(x) | (2<<24) }, { 0, 0, 0 } }
-#define MK_CK_ALT(x)	{ { BUTTC_KEYBOARD, 0, MKK(x) | (1<<24) }, { 0, 0, 0 } }
-#define MK_CK_ALT_SHIFT(x)    { { BUTTC_KEYBOARD, 0, MKK(x) | (3<<24) }, { 0, 0, 0 } }
-#define MK_CK_CTRL(x)	{ { BUTTC_KEYBOARD, 0, MKK(x) | (4 << 24) },  { 0, 0, 0 } }
-#define MK_CK_CTRL_SHIFT(x) { { BUTTC_KEYBOARD, 0, MKK(x) | (6 << 24) },  { 0, 0, 0 } }
-
-#define MKZ()   {0, 0, 0}
+#define MK_CK_(x)		MK(x)
+#define MK_CK_ALT_(x)		MK(x) "+alt"
+#define MK_CK_SHIFT_(x)		MK(x) "+shift"
+#define MK_CK_CTRL_(x)		MK(x) "+ctrl"
+#define MK_CK_ALT_SHIFT_(x)	MK(x) "+alt+shift"
+#define MK_CK_CTRL_SHIFT_(x)	MK(x) "+ctrl+shift"
+//
+#define MK_CK(x)		MK_CK_(x)
+#define MK_CK_SHIFT(x)		MK_CK_SHIFT_(x)
+#define MK_CK_ALT(x)		MK_CK_ALT_(x)
+#define MK_CK_ALT_SHIFT(x)	MK_CK_ALT_SHIFT_(x)
+#define MK_CK_CTRL(x)		MK_CK_CTRL_(x)
+#define MK_CK_CTRL_SHIFT(x)	MK_CK_CTRL_SHIFT_(x)
+//
+#define MK_CK2(x,y)		MK_CK_(x) " || " MK_CK_(y)
+#define MK_CK_ALT2(x,y)		MK_CK_ALT_(x) " || " MK_CK_ALT_(y)
 
 enum CommandKey
 {
@@ -525,9 +1087,10 @@ enum CommandKey
 	CK_FAST_FORWARD,
 	CK_SLOW_FORWARD,
 
-	CK_INSERT_COIN,
-	CK_TOGGLE_DIPVIEW,
 	CK_SELECT_DISK,
+	CK_SELECT_DRIVE,
+	CK_TOGGLE_DIPVIEW,
+	CK_INSERT_COIN,
 	CK_INSERTEJECT_DISK,
 	CK_ACTIVATE_BARCODE,
 
@@ -556,6 +1119,7 @@ enum CommandKey
 	CK_TOGGLENETVIEW,
 	CK_ADVANCE_FRAME,
 	CK_RUN_NORMAL,
+	CK_PAUSE,
 	CK_TOGGLECHEATVIEW,
 	CK_TOGGLE_CHEAT_ACTIVE,
 	CK_TOGGLE_FPS_VIEW,
@@ -581,123 +1145,132 @@ enum CommandKey
 
 struct COKE
 {
- ButtConfig bc[2];
- const char *text;
+ const char* text;
+ const char* description;
+ const char* setting_name;
+ const char* setting_default;
+
  bool BypassKeyZeroing;
  bool SkipCKDelay;
- const char *description;
+ bool TextInputExit;
 };
+
+#define CKEYDEF_BYPASSKEYZEROING 1
+#define CKEYDEF_DANGEROUS	 2	// For CK delay
+#define CKEYDEF_TEXTINPUTEXIT	 4	// Set with with cheat interface and debugger; for AltGr madness.
+
+#define CKEYDEF(n, d, f, c)	{ n, gettext_noop(d), "command." n, c, (bool)((f) & CKEYDEF_BYPASSKEYZEROING), (bool)!((f) & CKEYDEF_DANGEROUS), (bool)((f) & CKEYDEF_TEXTINPUTEXIT) }
 
 static const COKE CKeys[_CK_COUNT]	=
 {
-	{ MK_CK(F5), 	   "save_state", false, 1, gettext_noop("Save state") },
-	{ MK_CK(F7),	   "load_state", false, 0, gettext_noop("Load state") },
-	{ MK_CK_SHIFT(F5), "save_movie", false, 1, gettext_noop("Save movie") },
-	{ MK_CK_SHIFT(F7), "load_movie", false, 0, gettext_noop("Load movie") },
-	{ MK_CK_ALT(s),     "toggle_state_rewind", false, 1, gettext_noop("Toggle state rewind functionality") },
+	CKEYDEF( "save_state", "Save state", 0, 		MK_CK(F5) ),
+	CKEYDEF( "load_state", "Load state", CKEYDEF_DANGEROUS, MK_CK(F7) ),
+	CKEYDEF( "save_movie", "Save movie", 0, 		MK_CK_SHIFT(F5) ),
+	CKEYDEF( "load_movie", "Load movie", CKEYDEF_DANGEROUS, MK_CK_SHIFT(F7) ),
+	CKEYDEF( "toggle_state_rewind", "Toggle state rewind functionality", 0, MK_CK_ALT(S) ),
 
-	{ MK_CK(0), "0", false, 1, gettext_noop("Save state 0 select")},
-        { MK_CK(1), "1", false, 1, gettext_noop("Save state 1 select")},
-        { MK_CK(2), "2", false, 1, gettext_noop("Save state 2 select")},
-        { MK_CK(3), "3", false, 1, gettext_noop("Save state 3 select")},
-        { MK_CK(4), "4", false, 1, gettext_noop("Save state 4 select")},
-        { MK_CK(5), "5", false, 1, gettext_noop("Save state 5 select")},
-        { MK_CK(6), "6", false, 1, gettext_noop("Save state 6 select")},
-        { MK_CK(7), "7", false, 1, gettext_noop("Save state 7 select")},
-        { MK_CK(8), "8", false, 1, gettext_noop("Save state 8 select")},
-        { MK_CK(9), "9", false, 1, gettext_noop("Save state 9 select")},
+	CKEYDEF( "0", "Save state 0 select", 0, MK_CK(0) ),
+        CKEYDEF( "1", "Save state 1 select", 0, MK_CK(1) ),
+        CKEYDEF( "2", "Save state 2 select", 0, MK_CK(2) ),
+        CKEYDEF( "3", "Save state 3 select", 0, MK_CK(3) ),
+        CKEYDEF( "4", "Save state 4 select", 0, MK_CK(4) ),
+        CKEYDEF( "5", "Save state 5 select", 0, MK_CK(5) ),
+        CKEYDEF( "6", "Save state 6 select", 0, MK_CK(6) ),
+        CKEYDEF( "7", "Save state 7 select", 0, MK_CK(7) ),
+        CKEYDEF( "8", "Save state 8 select", 0, MK_CK(8) ),
+        CKEYDEF( "9", "Save state 9 select", 0, MK_CK(9) ),
 
-	{ MK_CK_SHIFT(0), "m0", false, 1, gettext_noop("Movie 0 select") },
-        { MK_CK_SHIFT(1), "m1", false, 1, gettext_noop("Movie 1 select")  },
-        { MK_CK_SHIFT(2), "m2", false, 1, gettext_noop("Movie 2 select")  },
-        { MK_CK_SHIFT(3), "m3", false, 1, gettext_noop("Movie 3 select")  },
-        { MK_CK_SHIFT(4), "m4", false, 1, gettext_noop("Movie 4 select")  },
-        { MK_CK_SHIFT(5), "m5", false, 1, gettext_noop("Movie 5 select")  },
-        { MK_CK_SHIFT(6), "m6", false, 1, gettext_noop("Movie 6 select")  },
-        { MK_CK_SHIFT(7), "m7", false, 1, gettext_noop("Movie 7 select")  },
-        { MK_CK_SHIFT(8), "m8", false, 1, gettext_noop("Movie 8 select")  },
-        { MK_CK_SHIFT(9), "m9", false, 1, gettext_noop("Movie 9 select")  },
+	CKEYDEF( "m0", "Movie 0 select", 0, MK_CK_SHIFT(0) ),
+        CKEYDEF( "m1", "Movie 1 select", 0, MK_CK_SHIFT(1) ),
+        CKEYDEF( "m2", "Movie 2 select", 0, MK_CK_SHIFT(2) ),
+        CKEYDEF( "m3", "Movie 3 select", 0, MK_CK_SHIFT(3) ),
+        CKEYDEF( "m4", "Movie 4 select", 0, MK_CK_SHIFT(4) ),
+        CKEYDEF( "m5", "Movie 5 select", 0, MK_CK_SHIFT(5) ),
+        CKEYDEF( "m6", "Movie 6 select", 0, MK_CK_SHIFT(6) ),
+        CKEYDEF( "m7", "Movie 7 select", 0, MK_CK_SHIFT(7) ),
+        CKEYDEF( "m8", "Movie 8 select", 0, MK_CK_SHIFT(8) ),
+        CKEYDEF( "m9", "Movie 9 select", 0, MK_CK_SHIFT(9) ),
 
-        { MK_CK_CTRL(1), "tl1", false, 1, gettext_noop("Toggle graphics layer 1")  },
-        { MK_CK_CTRL(2), "tl2", false, 1, gettext_noop("Toggle graphics layer 2") },
-        { MK_CK_CTRL(3), "tl3", false, 1, gettext_noop("Toggle graphics layer 3") },
-        { MK_CK_CTRL(4), "tl4", false, 1, gettext_noop("Toggle graphics layer 4") },
-        { MK_CK_CTRL(5), "tl5", false, 1, gettext_noop("Toggle graphics layer 5") },
-        { MK_CK_CTRL(6), "tl6", false, 1, gettext_noop("Toggle graphics layer 6") },
-        { MK_CK_CTRL(7), "tl7", false, 1, gettext_noop("Toggle graphics layer 7") },
-        { MK_CK_CTRL(8), "tl8", false, 1, gettext_noop("Toggle graphics layer 8") },
-        { MK_CK_CTRL(9), "tl9", false, 1, gettext_noop("Toggle graphics layer 9") },
+        CKEYDEF( "tl1", "Toggle graphics layer 1", 0, MK_CK_CTRL(1) ),
+        CKEYDEF( "tl2", "Toggle graphics layer 2", 0, MK_CK_CTRL(2) ),
+        CKEYDEF( "tl3", "Toggle graphics layer 3", 0, MK_CK_CTRL(3) ),
+        CKEYDEF( "tl4", "Toggle graphics layer 4", 0, MK_CK_CTRL(4) ),
+        CKEYDEF( "tl5", "Toggle graphics layer 5", 0, MK_CK_CTRL(5) ),
+        CKEYDEF( "tl6", "Toggle graphics layer 6", 0, MK_CK_CTRL(6) ),
+        CKEYDEF( "tl7", "Toggle graphics layer 7", 0, MK_CK_CTRL(7) ),
+        CKEYDEF( "tl8", "Toggle graphics layer 8", 0, MK_CK_CTRL(8) ),
+        CKEYDEF( "tl9", "Toggle graphics layer 9", 0, MK_CK_CTRL(9) ),
 
-	{ MK_CK(F9), "take_snapshot", false, 1, gettext_noop("Take screen snapshot") },
-	{ MK_CK_SHIFT(F9), "take_scaled_snapshot", false, 1, gettext_noop("Take scaled(and filtered) screen snapshot") },
+	CKEYDEF( "take_snapshot", 	 "Take screen snapshot", 0, MK_CK(F9) ),
+	CKEYDEF( "take_scaled_snapshot", "Take scaled(and filtered) screen snapshot", 0, MK_CK_SHIFT(F9) ),
 
-	{ MK_CK_ALT(RETURN), "toggle_fs", false, 1, gettext_noop("Toggle fullscreen mode") },
-	{ MK_CK(BACKQUOTE), "fast_forward", false, 1, gettext_noop("Fast-forward") },
-        { MK_CK(BACKSLASH), "slow_forward", false, 1, gettext_noop("Slow-forward") },
+	CKEYDEF( "toggle_fs", "Toggle fullscreen mode", 0, MK_CK_ALT(RETURN) ),
+	CKEYDEF( "fast_forward", "Fast-forward", 0, 	   MK_CK(GRAVE) ),
+        CKEYDEF( "slow_forward", "Slow-forward", 0, 	   MK_CK(BACKSLASH) ),
 
-	{ MK_CK(F8), "insert_coin", false, 1, gettext_noop("Insert coin") },
-	{ MK_CK(F6), "toggle_dipview", false, 1, gettext_noop("Toggle DIP switch view") },
-	{ MK_CK(F6), "select_disk", false, 1, gettext_noop("Select disk/disc") },
-	{ MK_CK(F8), "insert_eject_disk", false, 0, gettext_noop("Insert/Eject disk/disc") },
-	{ MK_CK(F8), "activate_barcode", false, 1, gettext_noop("Activate barcode(for Famicom)") },
-	{ MK_CK_CTRL_SHIFT(MENU), "toggle_grab", true, 1, gettext_noop("Grab input") },
-	{ MK_CK_ALT_SHIFT(1), "input_config1", false, 0, gettext_noop("Configure buttons on virtual port 1") },
-	{ MK_CK_ALT_SHIFT(2), "input_config2", false, 0, gettext_noop("Configure buttons on virtual port 2")  },
-        { MK_CK_ALT_SHIFT(3), "input_config3", false, 0, gettext_noop("Configure buttons on virtual port 3")  },
-        { MK_CK_ALT_SHIFT(4), "input_config4", false, 0, gettext_noop("Configure buttons on virtual port 4")  },
-	{ MK_CK_ALT_SHIFT(5), "input_config5", false, 0, gettext_noop("Configure buttons on virtual port 5")  },
-        { MK_CK_ALT_SHIFT(6), "input_config6", false, 0, gettext_noop("Configure buttons on virtual port 6")  },
-        { MK_CK_ALT_SHIFT(7), "input_config7", false, 0, gettext_noop("Configure buttons on virtual port 7")  },
-        { MK_CK_ALT_SHIFT(8), "input_config8", false, 0, gettext_noop("Configure buttons on virtual port 8")  },
-        { MK_CK_ALT_SHIFT(9), "input_config9", false, 0, gettext_noop("Configure buttons on virtual port 9")  },
-        { MK_CK_ALT_SHIFT(0), "input_config10", false, 0, gettext_noop("Configure buttons on virtual port 10")  },
-        { MK_CK_ALT_SHIFT(KP1), "input_config11", false, 0, gettext_noop("Configure buttons on virtual port 11")  },
-        { MK_CK_ALT_SHIFT(KP2), "input_config12", false, 0, gettext_noop("Configure buttons on virtual port 12")  },
+	CKEYDEF( "select_disk", "Select disk/disc", 0, 		MK_CK(F6) ),
+	CKEYDEF( "select_drive", "Select drive", 0, MK_CK_SHIFT(F6) ),
+	CKEYDEF( "toggle_dipview", "Toggle DIP switch view", 0, MK_CK(F6) ),
+	CKEYDEF( "insert_coin", "Insert coin", 0, 		MK_CK(F8) ),
+	CKEYDEF( "insert_eject_disk", "Insert/Eject disk/disc", CKEYDEF_DANGEROUS, MK_CK(F8) ),
+	CKEYDEF( "activate_barcode", "Activate barcode(for Famicom)", 0, 	   MK_CK(F8) ),
+	CKEYDEF( "toggle_grab", "Grab input", CKEYDEF_BYPASSKEYZEROING, MK_CK_CTRL_SHIFT(APPLICATION) ),
 
-        { MK_CK(F2), "input_configc", false, 0, gettext_noop("Configure command key") },
-        { MK_CK_SHIFT(F2), "input_configc_am", false, 0, gettext_noop("Configure command key, for all-pressed-to-trigger mode") },
+	CKEYDEF( "input_config1",  "Configure buttons on virtual port 1",  CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(1) ),
+	CKEYDEF( "input_config2",  "Configure buttons on virtual port 2",  CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(2) ),
+        CKEYDEF( "input_config3",  "Configure buttons on virtual port 3",  CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(3) ),
+        CKEYDEF( "input_config4",  "Configure buttons on virtual port 4",  CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(4) ),
+	CKEYDEF( "input_config5",  "Configure buttons on virtual port 5",  CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(5) ),
+        CKEYDEF( "input_config6",  "Configure buttons on virtual port 6",  CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(6) ),
+        CKEYDEF( "input_config7",  "Configure buttons on virtual port 7",  CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(7) ),
+        CKEYDEF( "input_config8",  "Configure buttons on virtual port 8",  CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(8) ),
+        CKEYDEF( "input_config9",  "Configure buttons on virtual port 9",  CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(9) ),
+        CKEYDEF( "input_config10", "Configure buttons on virtual port 10", CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(0) ),
+        CKEYDEF( "input_config11", "Configure buttons on virtual port 11", CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(KP_1) ),
+        CKEYDEF( "input_config12", "Configure buttons on virtual port 12", CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(KP_2) ),
 
-	{ MK_CK(F3), "input_config_abd", false, 0, gettext_noop("Detect analog buttons on physical joysticks/gamepads(for use with the input configuration process).") },
+        CKEYDEF( "input_configc", "Configure command key", 				       CKEYDEF_DANGEROUS, MK_CK(F2) ),
+        CKEYDEF( "input_configc_am", "Configure command key, for all-pressed-to-trigger mode", CKEYDEF_DANGEROUS, MK_CK_SHIFT(F2) ),
 
-	{ MK_CK(F10), "reset", false, 0, gettext_noop("Reset") },
-	{ MK_CK(F11), "power", false, 0, gettext_noop("Power toggle") },
-	{ MK_CK2(F12, ESCAPE), "exit", true, 0, gettext_noop("Exit") },
-	{ MK_CK(BACKSPACE), "state_rewind", false, 1, gettext_noop("Rewind") },
-	{ MK_CK_ALT(o), "rotate_screen", false, 1, gettext_noop("Rotate screen") },
+	CKEYDEF( "input_config_abd", "Detect analog buttons on physical joysticks/gamepads(for use with the input configuration process).", CKEYDEF_DANGEROUS, MK_CK(F3) ),
 
-	{ MK_CK(t), "togglenetview", false, 1, gettext_noop("Toggle netplay console")},
-	{ MK_CK_ALT(a), "advance_frame", false, 1, gettext_noop("Advance frame") },
-	{ MK_CK_ALT(r), "run_normal", false, 1, gettext_noop("Return to normal mode after advancing frames") },
-	{ MK_CK_ALT(c), "togglecheatview", true, 1, gettext_noop("Toggle cheat console") },
-	{ MK_CK_ALT(t), "togglecheatactive", false, 1, gettext_noop("Enable/Disable cheats") },
-        { MK_CK_SHIFT(F1), "toggle_fps_view", false, 1, gettext_noop("Toggle frames-per-second display") },
-	{ MK_CK_ALT(d), "toggle_debugger", true, 1, gettext_noop("Toggle debugger") },
-	{ MK_CK(MINUS), "state_slot_dec", false, 1, gettext_noop("Decrease selected save state slot by 1") },
-	{ MK_CK(EQUALS), "state_slot_inc", false, 1, gettext_noop("Increase selected save state slot by 1") },
-	{ MK_CK(F1), "toggle_help", true, 1, gettext_noop("Toggle help screen") },
-	{ MK_CK_CTRL_SHIFT(1), "device_select1", false, 1, gettext_noop("Select virtual device on virtual input port 1") },
-        { MK_CK_CTRL_SHIFT(2), "device_select2", false, 1, gettext_noop("Select virtual device on virtual input port 2") },
-        { MK_CK_CTRL_SHIFT(3), "device_select3", false, 1, gettext_noop("Select virtual device on virtual input port 3") },
-        { MK_CK_CTRL_SHIFT(4), "device_select4", false, 1, gettext_noop("Select virtual device on virtual input port 4") },
-        { MK_CK_CTRL_SHIFT(5), "device_select5", false, 1, gettext_noop("Select virtual device on virtual input port 5") },
-        { MK_CK_CTRL_SHIFT(6), "device_select6", false, 1, gettext_noop("Select virtual device on virtual input port 6") },
-        { MK_CK_CTRL_SHIFT(7), "device_select7", false, 1, gettext_noop("Select virtual device on virtual input port 7") },
-        { MK_CK_CTRL_SHIFT(8), "device_select8", false, 1, gettext_noop("Select virtual device on virtual input port 8") },
-        { MK_CK_CTRL_SHIFT(9), "device_select9", false, 1, gettext_noop("Select virtual device on virtual input port 9") },
-        { MK_CK_CTRL_SHIFT(0), "device_select10", false, 1, gettext_noop("Select virtual device on virtual input port 10") },
-        { MK_CK_CTRL_SHIFT(KP1), "device_select11", false, 1, gettext_noop("Select virtual device on virtual input port 11") },
-        { MK_CK_CTRL_SHIFT(KP2), "device_select12", false, 1, gettext_noop("Select virtual device on virtual input port 12") },
+	CKEYDEF( "reset", "Reset", CKEYDEF_DANGEROUS, MK_CK(F10) ),
+	CKEYDEF( "power", "Power toggle", CKEYDEF_DANGEROUS, MK_CK(F11) ),
+	CKEYDEF( "exit", "Exit", CKEYDEF_BYPASSKEYZEROING | CKEYDEF_DANGEROUS, MK_CK2(F12, ESCAPE) ),
+	CKEYDEF( "state_rewind", "Rewind", 0, MK_CK(BACKSPACE) ),
+	CKEYDEF( "rotate_screen", "Rotate screen", 0, MK_CK_ALT(O) ),
+
+	CKEYDEF( "togglenetview", "Toggle netplay console", 0, MK_CK(T) ),
+	CKEYDEF( "advance_frame", "Advance frame", 0, MK_CK_ALT(A) ),
+	CKEYDEF( "run_normal", "Return to normal mode after advancing frames", 0, MK_CK_ALT(R) ),
+	CKEYDEF( "pause", "Pause/Unpause", 0, MK_CK(PAUSE) ),
+	CKEYDEF( "togglecheatview", "Toggle cheat console", CKEYDEF_BYPASSKEYZEROING | CKEYDEF_TEXTINPUTEXIT, MK_CK_ALT(C) ),
+	CKEYDEF( "togglecheatactive", "Enable/Disable cheats", 0, MK_CK_ALT(T) ),
+        CKEYDEF( "toggle_fps_view", "Toggle frames-per-second display", 0, MK_CK_SHIFT(F1) ),
+	CKEYDEF( "toggle_debugger", "Toggle debugger", CKEYDEF_BYPASSKEYZEROING | CKEYDEF_TEXTINPUTEXIT, MK_CK_ALT(D) ),
+	CKEYDEF( "state_slot_dec", "Decrease selected save state slot by 1", 0, MK_CK(MINUS) ),
+	CKEYDEF( "state_slot_inc", "Increase selected save state slot by 1", 0, MK_CK(EQUALS) ),
+	CKEYDEF( "toggle_help", "Toggle help screen", CKEYDEF_BYPASSKEYZEROING, MK_CK(F1) ),
+
+	CKEYDEF( "device_select1",  "Select virtual device on virtual input port 1",  0, MK_CK_CTRL_SHIFT(1) ),
+        CKEYDEF( "device_select2",  "Select virtual device on virtual input port 2",  0, MK_CK_CTRL_SHIFT(2) ),
+        CKEYDEF( "device_select3",  "Select virtual device on virtual input port 3",  0, MK_CK_CTRL_SHIFT(3) ),
+        CKEYDEF( "device_select4",  "Select virtual device on virtual input port 4",  0, MK_CK_CTRL_SHIFT(4) ),
+        CKEYDEF( "device_select5",  "Select virtual device on virtual input port 5",  0, MK_CK_CTRL_SHIFT(5) ),
+        CKEYDEF( "device_select6",  "Select virtual device on virtual input port 6",  0, MK_CK_CTRL_SHIFT(6) ),
+        CKEYDEF( "device_select7",  "Select virtual device on virtual input port 7",  0, MK_CK_CTRL_SHIFT(7) ),
+        CKEYDEF( "device_select8",  "Select virtual device on virtual input port 8",  0, MK_CK_CTRL_SHIFT(8) ),
+        CKEYDEF( "device_select9",  "Select virtual device on virtual input port 9",  0, MK_CK_CTRL_SHIFT(9) ),
+        CKEYDEF( "device_select10", "Select virtual device on virtual input port 10", 0, MK_CK_CTRL_SHIFT(0) ),
+        CKEYDEF( "device_select11", "Select virtual device on virtual input port 11", 0, MK_CK_CTRL_SHIFT(KP_1) ),
+        CKEYDEF( "device_select12", "Select virtual device on virtual input port 12", 0, MK_CK_CTRL_SHIFT(KP_2) ),
 };
+#undef CKEYDEF_BYPASSKEYZEROING
+#undef CKEYDEF_DANGEROUS
+#undef CKEYDEF_TEXTINPUTEXIT
+#undef CKEYDEF
 
-static const char *CKeysSettingName[_CK_COUNT];
-
-struct CKeyConfig
-{
- bool AND_Mode;
- std::vector<ButtConfig> bc;
-};
-
-static CKeyConfig CKeysConfig[_CK_COUNT];
+static std::vector<ButtConfig> CKeysConfig[_CK_COUNT];
 static uint32 CKeysPressTime[_CK_COUNT];
 static bool CKeysActive[_CK_COUNT];
 static bool CKeysTrigger[_CK_COUNT];
@@ -717,7 +1290,7 @@ static void CK_Init(void)
 
 static void CK_PostRemapUpdate(CommandKey which)
 {
- CKeysActive[which] = DTestButtonCombo(CKeysConfig[which].bc, ((CKeys[which].BypassKeyZeroing && (!EmuKeyboardKeysGrabbed || which == CK_TOGGLE_GRAB)) ? keys_untouched : keys), MouseData, CKeysConfig[which].AND_Mode);
+ CKeysActive[which] = DTestButtonCombo(CKeysConfig[which], (CKeys[which].BypassKeyZeroing && (!EmuKeyboardKeysGrabbed || which == CK_TOGGLE_GRAB)), CKeys[which].TextInputExit);
  CKeysTrigger[which] = false;
  CKeysPressTime[which] = 0xFFFFFFFF;
 }
@@ -732,7 +1305,7 @@ static void CK_UpdateState(bool skipckd_tc)
  for(CommandKey i = _CK_FIRST; i < _CK_COUNT; i = (CommandKey)((unsigned)i + 1))
  {
   const bool prev_state = CKeysActive[i];
-  const bool cur_state = DTestButtonCombo(CKeysConfig[i].bc, ((CKeys[i].BypassKeyZeroing && (!EmuKeyboardKeysGrabbed || i == CK_TOGGLE_GRAB)) ? keys_untouched : keys), MouseData, CKeysConfig[i].AND_Mode);
+  const bool cur_state = DTestButtonCombo(CKeysConfig[i], (CKeys[i].BypassKeyZeroing && (!EmuKeyboardKeysGrabbed || i == CK_TOGGLE_GRAB)), CKeys[i].TextInputExit);
   unsigned tmp_ckdelay = ckdelay;
 
   if(CKeys[i].SkipCKDelay || skipckd_tc)
@@ -789,25 +1362,8 @@ static ICType IConfig = none;
 static int ICLatch;
 static uint32 ICDeadDelay = 0;
 
-static struct __MouseState
-{
- int x, y;
- int xrel_accum;
- int yrel_accum;
-
- uint32 button;
- uint32 button_realstate;
- uint32 button_prevsent;
-} MouseState = { 0, 0, 0, 0, 0, 0, 0 };
-
 //#include "InputConfigurator.inc"
 //static InputConfigurator *IConfigurator = NULL;
-static int (*EventHook)(const SDL_Event *event) = NULL;
-void MainSetEventHook(int (*eh)(const SDL_Event *event))
-{
- EventHook = eh;
-}
-
 
 // Can be called from MDFND_MidSync(), so be careful.
 void Input_Event(const SDL_Event *event)
@@ -815,59 +1371,19 @@ void Input_Event(const SDL_Event *event)
  switch(event->type)
  {
   case SDL_KEYDOWN:
-	{
-	 //printf("Down: %3u\n", event->key.keysym.sym);
-	 size_t s = event->key.keysym.sym;
-
-	 if(s < MKK_COUNT)
-	 {
-          keys_untouched[s] = (keys_untouched[s] & 0x7F) | 0x01;
-	 }
-	}
-	break;
-
   case SDL_KEYUP:
-	{
-	 //printf("Up: %3u\n", event->key.keysym.sym);
-	 size_t s = event->key.keysym.sym;
-
-	 if(s < MKK_COUNT)
-	  keys_untouched[s] |= 0x80;
-	}
+	KBMan::Event(event);
 	break;
 
   case SDL_MOUSEBUTTONDOWN:
-	if(event->button.state == SDL_PRESSED)
-	{
-	 MouseState.button |= 1 << (event->button.button - 1);
-	 MouseState.button_realstate |= 1 << (event->button.button - 1);
-	}
-	break;
-
   case SDL_MOUSEBUTTONUP:
-	if(event->button.state == SDL_RELEASED)
-	{
-	 MouseState.button_realstate &= ~(1 << (event->button.button - 1));
-	}
-        break;
-
   case SDL_MOUSEMOTION:
-	MouseState.x = event->motion.x;
-	MouseState.y = event->motion.y;
-	MouseState.xrel_accum += event->motion.xrel;
-	MouseState.yrel_accum += event->motion.yrel;
+  case SDL_MOUSEWHEEL:
+	MouseMan::Event(event);
 	break;
  }
-
- if(EventHook)
-  EventHook(event);
 }
 
-/*
- The mouse button handling convolutedness is to make sure that extremely quick mouse button press and release
- still register as pressed for 1 emulated frame, and without otherwise increasing the lag of a mouse button release(which
- is what the button_prevsent is for).
-*/
 /*
  Note: Don't call this function frivolously or any more than needed, or else the logic to prevent lost key and mouse button
  presses won't work properly in regards to emulated input devices(has particular significance with the "Pause" key and the emulated
@@ -875,51 +1391,11 @@ void Input_Event(const SDL_Event *event)
 */
 static void UpdatePhysicalDeviceState(void)
 {
- const bool clearify_mdr = true;
- int mouse_x = MouseState.x, mouse_y = MouseState.y;
-
- //printf("%08x -- %08x %08x\n", MouseState.button & (MouseState.button_realstate | ~MouseState.button_prevsent), MouseState.button, MouseState.button_realstate);
-
- Video_PtoV(mouse_x, mouse_y, (int32*)&MouseData[0], (int32*)&MouseData[1]);
- MouseData[2] = MouseState.button & (MouseState.button_realstate | ~MouseState.button_prevsent);
-
- if(clearify_mdr)
- {
-  MouseState.button_prevsent = MouseData[2];
-  MouseState.button &= MouseState.button_realstate;
-  MouseDataRel[0] -= (int32)MouseDataRel[0]; //floor(MouseDataRel[0]);
-  MouseDataRel[1] -= (int32)MouseDataRel[1]; //floor(MouseDataRel[1]);
- }
-
- MouseDataRel[0] += CurGame->mouse_sensitivity * MouseState.xrel_accum;
- MouseDataRel[1] += CurGame->mouse_sensitivity * MouseState.yrel_accum;
-
- //
- //
- //
- MouseState.xrel_accum = 0;
- MouseState.yrel_accum = 0;
- //
- //
- //
- for(unsigned i = 0; i < MKK_COUNT; i++)
- {
-  uint8 tmp = keys_untouched[i];
-
-  if((tmp & 0x80) && ((tmp & 0x02) || !(tmp & 0x01)))
-   tmp = 0;
-
-  tmp = (tmp & 0x81) | ((tmp << 1) & 0x02);
-
-  keys_untouched[i] = tmp;
-
-  //if(tmp)
-  // printf("%3u, 0x%02x\n", i, tmp);
- }
- memcpy(keys, keys_untouched, MKK_COUNT);
+ MouseMan::UpdateMice();
+ KBMan::UpdateKeyboards();
 
  if(MDFNDHaveFocus || MDFN_GetSettingB("input.joystick.global_focus"))
-  joy_manager->UpdateJoysticks();
+  JoystickManager::UpdateJoysticks();
 
  CurTicks = Time::MonoMS();
 }
@@ -957,9 +1433,9 @@ static void ToggleLayer(int which)
   MDFNI_SetLayerEnableMask(le_mask);
 
   if(le_mask & (1ULL << which))
-   MDFN_DispMessage(_("%s enabled."), _(goodies));
+   MDFN_Notify(MDFN_NOTICE_STATUS, _("%s enabled."), _(goodies));
   else
-   MDFN_DispMessage(_("%s disabled."), _(goodies));
+   MDFN_Notify(MDFN_NOTICE_STATUS, _("%s disabled."), _(goodies));
  }
 }
 
@@ -976,29 +1452,22 @@ static void DoKeyStateZeroing(void)
  {
   if(Debugger_IsActive())
   {
-   memset(keys, 0, sizeof(keys));
-   NPCheatDebugKeysGrabbed = true;
+   static const unsigned sc_um[] =
+   {
+    SDL_SCANCODE_F1, SDL_SCANCODE_F2, SDL_SCANCODE_F3, SDL_SCANCODE_F4, SDL_SCANCODE_F5, SDL_SCANCODE_F6, SDL_SCANCODE_F7, SDL_SCANCODE_F8,
+    SDL_SCANCODE_F9, SDL_SCANCODE_F10, SDL_SCANCODE_F11, SDL_SCANCODE_F12, SDL_SCANCODE_F13, SDL_SCANCODE_F14, SDL_SCANCODE_F15, SDL_SCANCODE_F16,
+    SDL_SCANCODE_F17, SDL_SCANCODE_F18, SDL_SCANCODE_F19, SDL_SCANCODE_F20, SDL_SCANCODE_F21, SDL_SCANCODE_F22, SDL_SCANCODE_F23, SDL_SCANCODE_F24
+   };
 
-   keys[SDLK_F1] = keys_untouched[SDLK_F1];
-   keys[SDLK_F2] = keys_untouched[SDLK_F2];
-   keys[SDLK_F3] = keys_untouched[SDLK_F3];
-   keys[SDLK_F4] = keys_untouched[SDLK_F4];
-   keys[SDLK_F5] = keys_untouched[SDLK_F5];
-   keys[SDLK_F6] = keys_untouched[SDLK_F6];
-   keys[SDLK_F7] = keys_untouched[SDLK_F7];
-   keys[SDLK_F8] = keys_untouched[SDLK_F8];
-   keys[SDLK_F9] = keys_untouched[SDLK_F9];
-   keys[SDLK_F10] = keys_untouched[SDLK_F10];
-   keys[SDLK_F11] = keys_untouched[SDLK_F11];
-   keys[SDLK_F12] = keys_untouched[SDLK_F12];
-   keys[SDLK_F13] = keys_untouched[SDLK_F13];
-   keys[SDLK_F14] = keys_untouched[SDLK_F14];
-   keys[SDLK_F15] = keys_untouched[SDLK_F15];
+   KBMan::MaskSysKBKeys();
+   NPCheatDebugKeysGrabbed = true;
+   KBMan::UnmaskSysKBKeys(sc_um, sizeof(sc_um) / sizeof(sc_um[0]));
   }
   else if(Netplay_IsTextInput() || CheatIF_Active())
   {
-   memset(keys, 0, sizeof(keys)); // This effectively disables keyboard input, but still
-                                   // allows physical joystick input when in the chat mode.
+   // This effectively disables keyboard input, but still
+   // allows physical joystick input when in the chat mode
+   KBMan::MaskSysKBKeys();
    NPCheatDebugKeysGrabbed = true;
   }
   else if(InputGrab)
@@ -1012,27 +1481,13 @@ static void DoKeyStateZeroing(void)
     {
      for(auto& b : bic.BC)
      {
-      if(b.ButtType != BUTTC_KEYBOARD)
+      if(b.DeviceType != BUTTC_KEYBOARD)
        continue;
 
       EmuKeyboardKeysGrabbed = true;
 
-#if 1
-      memset(keys, 0, sizeof(keys));
+      KBMan::MaskSysKBKeys();
       goto IGrabEnd;
-#else
-      //
-      if(b.ButtonNum & (2 << 24)) // Shift
-       keys[MKK(LSHIFT)] = keys[MKK(RSHIFT)] = 0;
-      if(b.ButtonNum & (1 << 24)) // Alt
-       keys[MKK(LALT)] = keys[MKK(RALT)] = 0;
-      if(b.ButtonNum & (4 << 24)) // Ctrl
-       keys[MKK(LCTRL)] = keys[MKK(RCTRL)] = 0;
-      //
-      unsigned k = b.ButtonNum & 0xFFFFFF;
-      if(k < MKK_COUNT)
-       keys[k] = 0;
-#endif
      }
     }
    }
@@ -1052,13 +1507,15 @@ static void CheckCommandKeys(void)
      CK_PostRemapUpdate((CommandKey)(CK_INPUT_CONFIG1 + i));	// Kind of abusing that function if going by its name, but meh.
 
      ResyncGameInputSettings(i);
+     CalcWMInputBehavior();
      IConfig = none;
 
-     MDFNI_DispMessage(_("Configuration interrupted."));
+     MDFN_Notify(MDFN_NOTICE_STATUS, _("Configuration interrupted."));
     }
     else if(ConfigDevice(i))
     {
      ResyncGameInputSettings(i);
+     CalcWMInputBehavior();
      ICDeadDelay = CurTicks + 300;
      IConfig = none;
     }
@@ -1070,29 +1527,29 @@ static void CheckCommandKeys(void)
   {
    if(ICLatch != -1)
    {
-    if(subcon(CKeys[ICLatch].text, CKeysConfig[ICLatch].bc, 1))
+    if(subcon(CKeys[ICLatch].text, CKeysConfig[ICLatch], true, IConfig == CommandAM))
     {
-     MDFNI_DispMessage(_("Configuration finished."));
+     MDFN_Notify(MDFN_NOTICE_STATUS, _("Configuration finished."));
 
-     MDFNI_SetSetting(CKeysSettingName[ICLatch], BCsToString(CKeysConfig[ICLatch].bc, CKeysConfig[ICLatch].AND_Mode));
+     MDFNI_SetSetting(CKeys[ICLatch].setting_name, BCGToString(CKeysConfig[ICLatch]));
      ICDeadDelay = CurTicks + 300;
      IConfig = none;
 
      // Prevent accidentally triggering the command
      CK_PostRemapUpdate((CommandKey)ICLatch);
+     CalcWMInputBehavior();
     }
    }
    else
    {
-    MDFNI_DispMessage(_("Press command key to remap now%s..."), (IConfig == CommandAM) ? _("(AND Mode)") : "");
+    MDFN_Notify(MDFN_NOTICE_STATUS, _("Press command key to remap now%s..."), (IConfig == CommandAM) ? _("(AND Mode)") : "");
 
     for(CommandKey x = _CK_FIRST; x < _CK_COUNT; x = (CommandKey)((unsigned)x + 1))
     {
      if(CK_Check((CommandKey)x))
      {
       ICLatch = x;
-      CKeysConfig[ICLatch].AND_Mode = (IConfig == CommandAM);
-      subcon_begin(CKeysConfig[ICLatch].bc);
+      subcon_begin();
       break;
      }
     }
@@ -1105,31 +1562,28 @@ static void CheckCommandKeys(void)
   if(CK_Check(CK_TOGGLE_GRAB))
   {
    InputGrab = !InputGrab;
-   //
-   SDL_Event evt;
-   evt.user.type = SDL_USEREVENT;
-   evt.user.code = CEVT_SET_GRAB_INPUT;
-   evt.user.data1 = malloc(1);
+   CalcWMInputBehavior();
 
-   *(uint8 *)evt.user.data1 = InputGrab;
-   SDL_PushEvent(&evt);
-
-   MDFNI_DispMessage(_("Input grabbing: %s"), InputGrab ? _("On") : _("Off"));
+   MDFN_Notify(MDFN_NOTICE_STATUS, _("Input grabbing: %s"), InputGrab ? _("On") : _("Off"));
   }
 
-  if(!CheatIF_Active() && !MDFNDnetplay)
+  if(!MDFNDnetplay && !Netplay_IsTextInput())
   {
-   if(CK_Check(CK_TOGGLE_DEBUGGER))
+   if(!CheatIF_Active())
    {
-    Debugger_GT_Toggle();
+    if(CK_Check(CK_TOGGLE_DEBUGGER))
+    {
+     Debugger_GT_Toggle();
+     CalcWMInputBehavior();
+    }
    }
-  }
 
-  if(!Debugger_IsActive() && !MDFNDnetplay)
-  {
-   if(CK_Check(CK_TOGGLECHEATVIEW))
+   if(!Debugger_IsActive() && !MDFNDnetplay)
    {
-    CheatIF_GT_Show(!CheatIF_Active());
+    if(CK_Check(CK_TOGGLECHEATVIEW))
+    {
+     CheatIF_GT_Show(!CheatIF_Active());
+    }
    }
   }
 
@@ -1158,9 +1612,9 @@ static void CheckCommandKeys(void)
    MDFNI_SetSettingB("cheats", isactive);
 
    if(isactive)
-    MDFNI_DispMessage(_("Application of cheats enabled."));
+    MDFN_Notify(MDFN_NOTICE_STATUS, _("Application of cheats enabled."));
    else
-    MDFNI_DispMessage(_("Application of cheats disabled."));
+    MDFN_Notify(MDFN_NOTICE_STATUS, _("Application of cheats disabled."));
   }
 
   if(CK_Check(CK_TOGGLE_FPS_VIEW))
@@ -1176,22 +1630,32 @@ static void CheckCommandKeys(void)
   
   if(!MDFNDnetplay)
   {
-   bool ck_af = CK_Check(CK_ADVANCE_FRAME);
-   bool ck_rn = CK_Check(CK_RUN_NORMAL);
-   bool iifa = IsInFrameAdvance();
+   if(CK_Check(CK_PAUSE))
+   {
+    if(IsInFrameAdvance())
+     DoRunNormal();
+    else
+     DoFrameAdvance();
+   }
+   else
+   {
+    bool ck_af = CK_Check(CK_ADVANCE_FRAME);
+    bool ck_rn = CK_Check(CK_RUN_NORMAL);
+    bool iifa = IsInFrameAdvance();
 
-   //
-   // Change the order of processing based on being in frame advance mode to allow for the derivation of single-key (un)pause functionality.
-   //
+    //
+    // Change the order of processing based on being in frame advance mode to allow for the derivation of single-key (un)pause functionality.
+    //
 
-   if(ck_af & iifa)
-    DoFrameAdvance();
+    if(ck_af & iifa)
+     DoFrameAdvance();
 
-   if(ck_rn)
-    DoRunNormal();
+    if(ck_rn)
+     DoRunNormal();
 
-   if(ck_af & !iifa)
-    DoFrameAdvance();
+    if(ck_af & !iifa)
+     DoFrameAdvance();
+   }
   }
 
   if(!Debugger_IsActive()) // We don't want to start button configuration when the debugger is active!
@@ -1201,10 +1665,10 @@ static void CheckCommandKeys(void)
     if(CK_Check((CommandKey)(CK_INPUT_CONFIG1 + i)))
     {
      if(i >= CurGame->PortInfo.size())
-      MDFN_DispMessage(_("Port %u does not exist."), i + 1);
+      MDFN_Notify(MDFN_NOTICE_STATUS, _("Port %u does not exist."), i + 1);
      else if(!PIDC[i].BIC.size())
      {
-      MDFN_DispMessage(_("No buttons to configure for input port %u!"), i + 1);
+      MDFN_Notify(MDFN_NOTICE_STATUS, _("No buttons to configure on port %u device \"%s\"!"), i + 1, PIDC[i].Device->FullName);
      }
      else
      {
@@ -1234,7 +1698,7 @@ static void CheckCommandKeys(void)
 
    if(CK_Check(CK_INPUT_CONFIG_ABD))
    {
-    MDFN_DispMessage("%u joystick/gamepad analog button(s) detected.", joy_manager->DetectAnalogButtonsForChangeCheck());
+    MDFN_Notify(MDFN_NOTICE_STATUS, "%u joystick/gamepad analog button(s) detected.", JoystickManager::DetectAnalogButtonsForChangeCheck());
    }
   }
 
@@ -1246,8 +1710,6 @@ static void CheckCommandKeys(void)
     CurGame->rotated = MDFN_ROTATE270;
    else if(CurGame->rotated == MDFN_ROTATE270)
     CurGame->rotated = MDFN_ROTATE0;
-
-   GT_ReinitVideo();
   }
 
   if(CK_CheckActive(CK_STATE_REWIND))
@@ -1260,7 +1722,7 @@ static void CheckCommandKeys(void)
    RewindState = !RewindState;
    MDFNI_EnableStateRewind(RewindState);
 
-   MDFNI_DispMessage(RewindState ? _("State rewinding functionality enabled.") : _("State rewinding functionality disabled."));
+   MDFN_Notify(MDFN_NOTICE_STATUS, RewindState ? _("State rewinding functionality enabled.") : _("State rewinding functionality disabled."));
   }
 
   {
@@ -1285,8 +1747,14 @@ static void CheckCommandKeys(void)
   {
    if(CK_Check(CK_SELECT_DISK)) 
    {
-    RMDUI_Select();
+    RMDUI_SelectDisk();
    }
+
+   if(CK_Check(CK_SELECT_DRIVE))
+   {
+    RMDUI_SelectDrive();
+   }
+
    if(CK_Check(CK_INSERTEJECT_DISK)) 
    {
     RMDUI_Toggle_InsertEject();
@@ -1397,7 +1865,7 @@ static void CheckCommandKeys(void)
    static int bbuft;
    static int barcoder = 0;
 
-   if(!strcmp(CurGame->shortname, "nes") && (!strcmp(PIDC[4].Device->ShortName, "bworld") || (CurGame->cspecial && !strcasecmp(CurGame->cspecial, "datach"))))
+   if(!strcmp(CurGame->shortname, "nes") && (!strcmp(PIDC[4].Device->ShortName, "bworld") || (CurGame->cspecial && !MDFN_strazicmp(CurGame->cspecial, "datach"))))
    {
     if(CK_Check(CK_ACTIVATE_BARCODE))
     {
@@ -1413,15 +1881,15 @@ static void CheckCommandKeys(void)
       }
       else
        MDFNI_DatachSet(bbuf);
-      MDFNI_DispMessage(_("Barcode Entered"));
+      MDFN_Notify(MDFN_NOTICE_STATUS, _("Barcode Entered"));
      } 
-     else { bbuft = 0; MDFNI_DispMessage(_("Enter Barcode"));}
+     else { bbuft = 0; MDFN_Notify(MDFN_NOTICE_STATUS, _("Enter Barcode"));}
     }
    } 
    else 
     barcoder = 0;
 
-   #define SSM(x) { if(bbuft < 13) {bbuf[bbuft++] = '0' + x; bbuf[bbuft] = 0;} MDFNI_DispMessage(_("Barcode: %s"),bbuf); }
+   #define SSM(x) { if(bbuft < 13) {bbuf[bbuft++] = '0' + x; bbuf[bbuft] = 0;} MDFN_Notify(MDFN_NOTICE_STATUS, _("Barcode: %s"),bbuf); }
 
    DIPSless:
 
@@ -1449,7 +1917,7 @@ static void CheckCommandKeys(void)
  }
 }
 
-void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
+void Input_Update(bool VirtualDevicesOnly, bool UpdateRapidFire)
 {
  static unsigned int rapid=0;
 
@@ -1474,7 +1942,7 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
  // Do stuff here
  for(unsigned int x = 0; x < CurGame->PortInfo.size(); x++)
  {
-  uint8* kk = keys;
+  bool bypass_key_masking = false;
 
   if(!PIDC[x].Data)
    continue;
@@ -1484,7 +1952,7 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
    if(!InputGrab || NPCheatDebugKeysGrabbed)
     continue;
    else
-    kk = keys_untouched;
+    bypass_key_masking = true;
   }
 
   //
@@ -1496,7 +1964,7 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
    const uint8 weak = (rumble_data >> 0) & 0xFF;
    const uint8 strong = (rumble_data >> 8) & 0xFF;
 
-   joy_manager->SetRumble(PIDC[x].BIC[ric.AssocBICIndex].BC, weak, strong);
+   JoystickManager::SetRumble(PIDC[x].BIC[ric.AssocBICIndex].BC, weak, strong);
    //printf("Rumble: %04x --- Weak: %02x, Strong: %02x\n", rumble_data, weak, strong);
   }
 
@@ -1511,72 +1979,96 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
   //
   // Handle configurable inputs/buttons.
   //
-  for(auto& bic : PIDC[x].BIC)
+  for(size_t bic_i = 0; bic_i < PIDC[x].BIC.size(); bic_i++)
   {
+   auto& bic = PIDC[x].BIC[bic_i];
    uint8* tptr = PIDC[x].Data;
    const uint32 bo = bic.BitOffset;
    uint8* const btptr = &tptr[bo >> 3];
 
-
-   //
-   // Mice axes aren't buttons!  Oh well...
-   //
-   if(bic.Type == IDIT_X_AXIS || bic.Type == IDIT_Y_AXIS)
+   switch(bic.IMType)
    {
-    float tv = 0;
+    default:
+	break;
 
-    if(bic.BC.size() > 0)
-     tv = DTestMouseAxis(bic.BC[0], kk, MouseData, (bic.Type == IDIT_Y_AXIS));
+    case IMTYPE_BUTTON:
+	*btptr &= ~(1 << (bo & 7));
+	*btptr |= DTestButton(bic.BC, bypass_key_masking) << (bo & 7);
+	break;
 
-    if(bic.Type == IDIT_Y_AXIS)
-     tv = floor(0.5 + (tv * (1.0 / 65536) * CurGame->mouse_scale_y) + CurGame->mouse_offs_y);
-    else
-     tv = floor(0.5 + (tv * (1.0 / 65536) * CurGame->mouse_scale_x) + CurGame->mouse_offs_x);
+    case IMTYPE_BUTTON_RAPID:
+	*btptr |= (DTestButton(bic.BC, bypass_key_masking) & (rapid >= ((autofirefreq + 1) >> 1))) << (bo & 7);
+	break;
 
-    MDFN_en16lsb(btptr, (int16)std::max<float>(-32768, std::min<float>(tv, 32767)));
-   }
-   else if(bic.Type == IDIT_BUTTON_ANALOG)	// Analog button
-   {
-    uint32 intv;
+    case IMTYPE_AXIS_NEG:
+	break;
 
-    intv = DTestAnalogButton(bic.BC, kk, MouseData);
- 
-    if(bic.Flags & IDIT_BUTTON_ANALOG_FLAG_SQLR)
-     intv = std::min<unsigned>((unsigned)floor(0.5 + intv * PIDC[x].AxisScale), 32767);
+    case IMTYPE_AXIS_POS:
+	//assert(PIDC[x].BIC[bic_i - 1].IMType == IMTYPE_AXIS_NEG);
+	MDFN_en16lsb(btptr, DTestAxis(PIDC[x].BIC[bic_i - 1].BC, bic.BC, bypass_key_masking, PIDC[x].AxisScale));
+	break;
 
-    MDFN_en16lsb(btptr, intv);
-   }
-   else if(bic.Type == IDIT_SWITCH)
-   {
-    const bool nps = DTestButton(bic.BC, kk, MouseData, bic.BCANDMode);
-    uint8 cv = BitsExtract(tptr, bo, bic.SwitchBitSize);
+    case IMTYPE_BUTTON_ANALOG:
+	MDFN_en16lsb(btptr, DTestAnalogButton(bic.BC, bypass_key_masking) << 1);
+	break;
 
-    if(MDFN_UNLIKELY(!bic.SwitchLastPress && nps))
-    {
-     cv = (cv + 1) % bic.SwitchNumPos;
-     BitsIntract(tptr, bo, bic.SwitchBitSize, cv);
-    }
+    // Ordered before IMTYPE_AXIS_REL_POS
+    case IMTYPE_AXIS_REL_NEG:
+	break;
 
-    if(MDFN_UNLIKELY(cv >= bic.SwitchNumPos))	// Can also be triggered intentionally by a bad save state/netplay.
-     fprintf(stderr, "[BUG] cv(%u) >= bic.SwitchNumPos(%u)\n", cv, bic.SwitchNumPos);
-    else if(MDFN_UNLIKELY(cv != bic.SwitchLastPos))
-    {
-     MDFN_DispMessage(_("%s %u: %s: %s selected."), PIDC[x].Device->FullName, x + 1, bic.IDII->Name, bic.IDII->SwitchPosName[cv]);
-     bic.SwitchLastPos = cv;
-    }
+    // Ordered after IMPTYPE_AXIS_REL_NEG
+    case IMTYPE_AXIS_REL_POS:
+	//assert(PIDC[x].BIC[bic_i - 1].IMType == IMTYPE_AXIS_REL_NEG);
+	bic.AxisRel.AccumError += (int64)DTestAxisRel(PIDC[x].BIC[bic_i - 1].BC, bic.BC, bypass_key_masking) * (int64)floor(0.5 + CurGame->mouse_sensitivity * (1 << 20));
+	{
+	 int32 tosend = bic.AxisRel.AccumError / ((int64)1 << 32);	// Division, not simple right arithmetic shift.
+	 //printf("%lld, %d\n", tosend, bic.AxisRel.AccumError >> 32);
+	 MDFN_en16lsb(btptr, std::max<int32>(-32768, std::min<int32>(32767, tosend)));	// don't assign result of min/max to tosend
+	 bic.AxisRel.AccumError -= tosend * ((int64)1 << 32);
+	}
+	break;
 
-    bic.SwitchLastPress = nps;
-   }
-   else
-   {
-    if(!bic.Rapid)
-     *btptr &= ~(1 << (bo & 7));
+    //
+    // Mice axes aren't buttons!  Oh well...
+    //
+    case IMTYPE_POINTER_X:
+    case IMTYPE_POINTER_Y:
+	{
+	 float tv = DTestPointer(bic.BC, bypass_key_masking, (bic.IMType == IMTYPE_POINTER_Y));
 
-    if(DTestButton(bic.BC, kk, MouseData, bic.BCANDMode)) // boolean button
-    {
-     if(!bic.Rapid || rapid >= (autofirefreq + 1) / 2)
-      *btptr |= 1 << (bo & 7);
-    }
+	 if(bic.IMType == IMTYPE_POINTER_Y)
+	  tv = floor(0.5 + (tv * CurGame->mouse_scale_y) + CurGame->mouse_offs_y);
+	 else
+	  tv = floor(0.5 + (tv * CurGame->mouse_scale_x) + CurGame->mouse_offs_x);
+
+	 //printf("msx: %f, msy: %f --- %f\n", CurGame->mouse_scale_x, CurGame->mouse_scale_y, tv);
+
+	 MDFN_en16lsb(btptr, (int16)std::max<float>(-32768, std::min<float>(tv, 32767)));
+	}
+	break;
+
+    case IMTYPE_SWITCH:
+	{
+	 const bool nps = DTestButton(bic.BC, bypass_key_masking);
+	 uint8 cv = BitsExtract(tptr, bo, bic.Switch.BitSize);
+
+	 if(MDFN_UNLIKELY(!bic.Switch.LastPress && nps))
+	 {
+	  cv = (cv + 1) % bic.Switch.NumPos;
+	  BitsIntract(tptr, bo, bic.Switch.BitSize, cv);
+	 }
+
+	 if(MDFN_UNLIKELY(cv >= bic.Switch.NumPos))	// Can also be triggered intentionally by a bad save state/netplay.
+	  fprintf(stderr, "[BUG] cv(%u) >= bic.Switch.NumPos(%u)\n", cv, bic.Switch.NumPos);
+	 else if(MDFN_UNLIKELY(cv != bic.Switch.LastPos))
+	 {
+	  MDFN_Notify(MDFN_NOTICE_STATUS, _("%s %u: %s: %s selected."), PIDC[x].Device->FullName, x + 1, bic.IDII->Name, bic.IDII->Switch.Pos[cv].Name);
+	  bic.Switch.LastPos = cv;
+	 }
+
+	 bic.Switch.LastPress = nps;
+	}
+	break;
    }
   }
 
@@ -1616,7 +2108,7 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
     fprintf(stderr, "[BUG] cv(%u) >= sic.StatusNumStates(%u)\n", cv,sic.StatusNumStates);
    else if(MDFN_UNLIKELY(cv != sic.StatusLastState))
    {
-    MDFN_DispMessage(_("%s %u: %s: %s"), PIDC[x].Device->FullName, x + 1, sic.IDII->Name, sic.IDII->StatusStates[cv].Name);
+    MDFN_Notify(MDFN_NOTICE_STATUS, _("%s %u: %s: %s"), PIDC[x].Device->FullName, x + 1, sic.IDII->Name, sic.IDII->Status.States[cv].Name);
     sic.StatusLastState = cv;
    }
   }
@@ -1644,11 +2136,6 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
 	assert(tmi < 13 + 1);
 	PIDC[x].Data[tmi] = BarcodeWorldData[tmi];
 	break;
-
-    case IDIT_X_AXIS_REL:
-    case IDIT_Y_AXIS_REL:
-        MDFN_en32lsb((PIDC[x].Data + PIDC[x].Device->IDII[tmi].BitOffset / 8), (uint32)((PIDC[x].Device->IDII[tmi].Type == IDIT_Y_AXIS_REL) ? MouseDataRel[1] : MouseDataRel[0]));
-	break;
    }
   }
  }
@@ -1656,7 +2143,7 @@ void MDFND_UpdateInput(bool VirtualDevicesOnly, bool UpdateRapidFire)
  memset(BarcodeWorldData, 0, sizeof(BarcodeWorldData));
 }
 
-void InitGameInput(MDFNGI *gi)
+void Input_GameLoaded(MDFNGI *gi)
 {
  autofirefreq = MDFN_GetSettingUI("autofirefreq");
  fftoggle_setting = MDFN_GetSettingB("fftoggle");
@@ -1664,67 +2151,81 @@ void InitGameInput(MDFNGI *gi)
 
  CK_Init();
 
- //SetJoyReadMode(1); // Disable joystick event handling, and allow manual state updates.
-
  for(size_t p = 0; p < gi->PortInfo.size(); p++)
   BuildPortInfo(gi, p);
+
+ // Load the command key mappings from settings
+ for(int x = 0; x < _CK_COUNT; x++)
+ {
+  const char* const sname = CKeys[x].setting_name;
+
+  if(!StringToBCG(&CKeysConfig[x], MDFN_GetSettingS(sname).c_str(), MDFNI_GetSettingDefault(sname).c_str()))
+   abort();
+ }
+ //
+ //
+ CalcWMInputBehavior();
 }
 
 // Update setting strings with butt configs.
 static void ResyncGameInputSettings(unsigned port)
 {
  for(unsigned int x = 0; x < PIDC[port].BIC.size(); x++)
-  MDFNI_SetSetting(PIDC[port].BIC[x].SettingName, BCsToString(PIDC[port].BIC[x].BC, PIDC[port].BIC[x].BCANDMode));
+  MDFNI_SetSetting(PIDC[port].BIC[x].SettingName, BCGToString(PIDC[port].BIC[x].BC));
 }
 
 
+static std::vector<ButtConfig> subcon_bcg;
 static ButtConfig subcon_bc;
-static int subcon_tb;
-static int subcon_wc;
+static size_t subcon_tb;
 
-static void subcon_begin(std::vector<ButtConfig> &bc)
+static void subcon_begin(void)
 {
- bc.clear();
+ subcon_bcg.clear();
 
  memset(&subcon_bc, 0, sizeof(subcon_bc));
- subcon_tb = -1;
- subcon_wc = 0;
+ subcon_tb = ~(size_t)0;
 }
 
 /* Configures an individual virtual button. */
-static int subcon(const char *text, std::vector<ButtConfig> &bc, int commandkey)
+static bool subcon(const char *text, std::vector<ButtConfig>& bcg, const bool commandkey, const bool AND_Mode)
 {
  while(1)
  {
-  MDFNI_DispMessage("%s (%d)", text, subcon_wc + 1);
+  MDFN_Notify(MDFN_NOTICE_STATUS, "%s (%zu)", text, subcon_bcg.size() + 1);
 
-  if(subcon_tb != subcon_wc)
+  if(subcon_tb != subcon_bcg.size())
   {
-   joy_manager->Reset_BC_ChangeCheck();
-   DTryButtonBegin(&subcon_bc, commandkey);
-   subcon_tb = subcon_wc;
+   JoystickManager::Reset_BC_ChangeCheck();
+   MouseMan::Reset_BC_ChangeCheck();
+   KBMan::Reset_BC_ChangeCheck(commandkey);
+   subcon_tb = subcon_bcg.size();
   }
 
-  if(DTryButton())
+  if(!KBMan::Do_BC_ChangeCheck(&subcon_bc) && !MouseMan::Do_BC_ChangeCheck(&subcon_bc) && !JoystickManager::Do_BC_ChangeCheck(&subcon_bc))
+   return false;
+  //
+  //
+  if(subcon_bcg.size())
   {
-   DTryButtonEnd(&subcon_bc);
+   auto const& c = subcon_bc;
+   auto const& p = subcon_bcg.back();
+
+   if(c.DeviceType == p.DeviceType && c.DeviceNum == p.DeviceNum && c.ButtonNum == p.ButtonNum && c.DeviceID == p.DeviceID)
+    break;
   }
-  else if(joy_manager->Do_BC_ChangeCheck(&subcon_bc))
-  {
 
-  }
-  else
-   return(0);
-
-  if(subcon_wc && !memcmp(&subcon_bc, &bc[subcon_wc - 1], sizeof(ButtConfig)))
-   break;
-
-  bc.push_back(subcon_bc);
-  subcon_wc++;
+  subcon_bc.ANDGroupCont = AND_Mode;
+  subcon_bc.Scale = 4096;
+  subcon_bcg.push_back(subcon_bc);
  }
 
- //puts("DONE");
- return(1);
+ if(subcon_bcg.size())
+  subcon_bcg.back().ANDGroupCont = false;
+
+ bcg = subcon_bcg;
+
+ return true;
 }
 
 static int cd_x;
@@ -1735,7 +2236,7 @@ static void ConfigDeviceBegin(void)
  cd_lx = -1;
 }
 
-int ConfigDevice(int arg)
+static int ConfigDevice(int arg)
 {
  char buf[512];
 
@@ -1743,16 +2244,9 @@ int ConfigDevice(int arg)
  // printf("%d\n", PIDC[arg].BCPrettyPrio[i]);
  //exit(1);
 
- for(;cd_x < (int)PIDC[arg].BIC.size(); cd_x++)
+ for(;cd_x < (int)PIDC[arg].BCC.size(); cd_x++)
  {
-  int snooty = -1;
-
-  for(unsigned int i = 0; i < PIDC[arg].BIC.size(); i++)
-   if(PIDC[arg].BIC[i].BCPrettyPrio == cd_x)
-    snooty = i;
-
-  if(snooty < 0)
-   continue;
+  size_t snooty = PIDC[arg].BCC[cd_x];
 
   // For Lynx, GB, GBA, NGP, WonderSwan(especially wonderswan!)
   if(CurGame->PortInfo.size() == 1 && CurGame->PortInfo[0].DeviceInfo.size() == 1)
@@ -1763,109 +2257,67 @@ int ConfigDevice(int arg)
   if(cd_x != cd_lx)
   {
    cd_lx = cd_x;
-   subcon_begin(PIDC[arg].BIC[snooty].BC);
+   subcon_begin();
   }
-  if(!subcon(buf, PIDC[arg].BIC[snooty].BC, 0))
+  if(!subcon(buf, PIDC[arg].BIC[snooty].BC, false, false))
    return(0);
  }
 
- MDFNI_DispMessage(_("Configuration finished."));
+ MDFN_Notify(MDFN_NOTICE_STATUS, _("Configuration finished."));
 
  return(1);
 }
 
-#include "input-default-buttons.h"
-struct cstrcomp
+
+struct DefaultSettingsMeow
 {
- bool operator()(const char * const &a, const char * const &b) const
- {
-  return(strcmp(a, b) < 0);
- }
+ const char*const* bc;
+ size_t count;
 };
 
+/*
 static std::map<const char *, const DefaultSettingsMeow *, cstrcomp> DefaultButtonSettingsMap;
-static std::vector<void *> PendingGarbage;
+*/
 
-static void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, const MDFNGI *system, const int w, const InputDeviceInfoStruct *info)
+static INLINE void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, const MDFNGI *system, const int w, const InputDeviceInfoStruct *info, const DefaultSettingsMeow* defs)
 {
- const ButtConfig *def_bc = NULL;
- char setting_def_search[512];
-
- trio_snprintf(setting_def_search, 512, "%s.input.%s.%s", system->shortname, system->PortInfo[w].ShortName, info->ShortName);
- CleanSettingName(setting_def_search);
-
- {
-  std::map<const char *, const DefaultSettingsMeow *, cstrcomp>::iterator fit = DefaultButtonSettingsMap.find(setting_def_search);
-  if(fit != DefaultButtonSettingsMap.end())
-   def_bc = fit->second->bc;
- }
-
- //for(unsigned int d = 0; d < sizeof(defset) / sizeof(DefaultSettingsMeow); d++)
- //{
- // if(!strcasecmp(setting_def_search, defset[d].base_name))
- // {
- //  def_bc = defset[d].bc;
- //  break;
- // }
- //}
-
- int butti = 0;
+ size_t def_butti = 0;
  bool analog_scale_made = false;
  for(size_t x = 0; x < info->IDII.size(); x++)
  {
-  if(info->IDII[x].Type != IDIT_BUTTON && info->IDII[x].Type != IDIT_BUTTON_CAN_RAPID && info->IDII[x].Type != IDIT_BUTTON_ANALOG &&
-	info->IDII[x].Type != IDIT_X_AXIS && info->IDII[x].Type != IDIT_Y_AXIS &&
+  if(info->IDII[x].Type != IDIT_BUTTON && info->IDII[x].Type != IDIT_BUTTON_CAN_RAPID && info->IDII[x].Type != IDIT_BUTTON_ANALOG && info->IDII[x].Type != IDIT_AXIS &&
+	info->IDII[x].Type != IDIT_POINTER_X && info->IDII[x].Type != IDIT_POINTER_Y && info->IDII[x].Type != IDIT_AXIS_REL &&
 	info->IDII[x].Type != IDIT_SWITCH)
    continue;
 
   if(NULL == info->IDII[x].SettingName)
    continue;
 
-  MDFNSetting tmp_setting;
-
-  const char *default_value = "";
-
-  if(def_bc)
-   PendingGarbage.push_back((void *)(default_value = strdup(BCToString(def_bc[butti]).c_str()) ));
-
-  memset(&tmp_setting, 0, sizeof(tmp_setting));
-
-  PendingGarbage.push_back((void *)(tmp_setting.name = CleanSettingName(trio_aprintf("%s.input.%s.%s.%s", system->shortname, system->PortInfo[w].ShortName, info->ShortName, info->IDII[x].SettingName)) ));
-  PendingGarbage.push_back((void *)(tmp_setting.description = trio_aprintf("%s, %s, %s: %s", system->shortname, system->PortInfo[w].FullName, info->FullName, info->IDII[x].Name) ));
-  tmp_setting.type = MDFNST_STRING;
-  tmp_setting.default_value = default_value;
-  
-  tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING;
-  tmp_setting.description_extra = NULL;
-
-  //printf("Maketset: %s %s\n", tmp_setting.name, tmp_setting.default_value);
-
-  settings.push_back(tmp_setting);
-
-  // Now make a rapid butt-on-stick-on-watermelon
-  if(info->IDII[x].Type == IDIT_BUTTON_CAN_RAPID)
+  if(info->IDII[x].Type == IDIT_AXIS)
   {
-   memset(&tmp_setting, 0, sizeof(tmp_setting));
-
-   PendingGarbage.push_back((void *)( tmp_setting.name = CleanSettingName(trio_aprintf("%s.input.%s.%s.rapid_%s", system->shortname, system->PortInfo[w].ShortName, info->ShortName, info->IDII[x].SettingName)) ));
-   PendingGarbage.push_back((void *)( tmp_setting.description = trio_aprintf("%s, %s, %s: Rapid %s", system->shortname, system->PortInfo[w].FullName, info->FullName, info->IDII[x].Name) ));
-   tmp_setting.type = MDFNST_STRING;
-
-   tmp_setting.default_value = "";
-
-   tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING;
-   tmp_setting.description_extra = NULL;
-
-   settings.push_back(tmp_setting);
-  }
-  else if(info->IDII[x].Type == IDIT_BUTTON_ANALOG)
-  {
-   if((info->IDII[x].Flags & IDIT_BUTTON_ANALOG_FLAG_SQLR) && !analog_scale_made)
+   for(unsigned part = 0; part < 2; part++)
    {
+    MDFNSetting tmp_setting;
     memset(&tmp_setting, 0, sizeof(tmp_setting));
 
-    PendingGarbage.push_back((void *)( tmp_setting.name = CleanSettingName(trio_aprintf("%s.input.%s.%s.axis_scale", system->shortname, system->PortInfo[w].ShortName, info->ShortName)) ));
-    PendingGarbage.push_back((void *)( tmp_setting.description = trio_aprintf("Analog axis scale coefficient for %s on %s.", info->FullName, system->PortInfo[w].FullName) ));
+    tmp_setting.name = CleanSettingName(build_string(system->shortname, ".input.", system->PortInfo[w].ShortName, ".", info->ShortName, ".", info->IDII[x].SettingName, info->IDII[x].SettingName[0] ? "_" : "", info->IDII[x].Axis.sname_dir[part]));
+    tmp_setting.description = build_string(system->shortname, ", ", system->PortInfo[w].FullName, ", ", info->FullName, ": ", info->IDII[x].Name, info->IDII[x].Name[0] ? " " : "", info->IDII[x].Axis.name_dir[part]);
+    tmp_setting.type = MDFNST_STRING;
+    tmp_setting.default_value = "";
+  
+    tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING;
+    tmp_setting.description_extra = NULL;
+    tmp_setting.validate_func = ValidateIMSetting;
+    settings.push_back(tmp_setting);
+   }
+
+   if((info->IDII[x].Flags & IDIT_AXIS_FLAG_SQLR) && !analog_scale_made)
+   {
+    MDFNSetting tmp_setting;
+    memset(&tmp_setting, 0, sizeof(tmp_setting));
+
+    tmp_setting.name = CleanSettingName(build_string(system->shortname, ".input.", system->PortInfo[w].ShortName, ".", info->ShortName, ".axis_scale"));
+    tmp_setting.description = trio_aprintf(gettext_noop("Analog axis scale coefficient for %s on %s."), info->FullName, system->PortInfo[w].FullName);
     tmp_setting.description_extra = NULL;
 
     tmp_setting.type = MDFNST_FLOAT;
@@ -1877,14 +2329,126 @@ static void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, const MDF
     analog_scale_made = true;
    }
   }
-  butti++;
+  else if(info->IDII[x].Type == IDIT_AXIS_REL)
+  {
+   for(unsigned part = 0; part < 2; part++)
+   {
+    const char *default_value = "";
+    MDFNSetting tmp_setting;
+    memset(&tmp_setting, 0, sizeof(tmp_setting));
+
+    if(defs)
+    {
+     assert(def_butti < defs->count);
+     default_value = defs->bc[def_butti];
+    }
+
+    tmp_setting.name = CleanSettingName(build_string(system->shortname, ".input.", system->PortInfo[w].ShortName, ".", info->ShortName, ".", info->IDII[x].SettingName, info->IDII[x].SettingName[0] ? "_" : "", info->IDII[x].AxisRel.sname_dir[part]));
+    tmp_setting.description = build_string(system->shortname, ", ", system->PortInfo[w].FullName, ", ", info->FullName, ": ", info->IDII[x].Name, info->IDII[x].Name[0] ? " " : "", info->IDII[x].AxisRel.name_dir[part]);
+
+    tmp_setting.type = MDFNST_STRING;
+    tmp_setting.default_value = default_value;
+  
+    tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING;
+    tmp_setting.description_extra = NULL;
+    tmp_setting.validate_func = ValidateIMSetting;
+    settings.push_back(tmp_setting);
+    def_butti++;
+   }
+  }
+  else
+  {
+   const char *default_value = "";
+   MDFNSetting tmp_setting;
+
+   memset(&tmp_setting, 0, sizeof(tmp_setting));
+
+   if(defs)
+   {
+    assert(def_butti < defs->count);
+    default_value = defs->bc[def_butti];
+   }
+
+   tmp_setting.name = CleanSettingName(build_string(system->shortname, ".input.", system->PortInfo[w].ShortName, ".", info->ShortName, ".", info->IDII[x].SettingName));
+   tmp_setting.description = build_string(system->shortname, ", ", system->PortInfo[w].FullName, ", ", info->FullName, ": ", info->IDII[x].Name);
+
+   tmp_setting.type = MDFNST_STRING;
+   tmp_setting.default_value = default_value;
+  
+   tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING;
+   tmp_setting.description_extra = NULL;
+   tmp_setting.validate_func = ValidateIMSetting;
+   settings.push_back(tmp_setting);
+   def_butti++;
+  }
+  //printf("Maketset: %s %s\n", tmp_setting.name, tmp_setting.default_value);
+
+  // Now make a rapid butt-on-stick-on-watermelon
+  if(info->IDII[x].Type == IDIT_BUTTON_CAN_RAPID)
+  {
+   MDFNSetting tmp_setting;
+
+   memset(&tmp_setting, 0, sizeof(tmp_setting));
+
+   tmp_setting.name = CleanSettingName(build_string(system->shortname, ".input.", system->PortInfo[w].ShortName, ".", info->ShortName, ".rapid_", info->IDII[x].SettingName));
+   tmp_setting.description = build_string(system->shortname, ", ", system->PortInfo[w].FullName, ", ", info->FullName, ": Rapid ", info->IDII[x].Name);
+   tmp_setting.type = MDFNST_STRING;
+
+   tmp_setting.default_value = "";
+
+   tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING;
+   tmp_setting.description_extra = NULL;
+   tmp_setting.validate_func = ValidateIMSetting;
+
+   settings.push_back(tmp_setting);
+  }
+  else if(info->IDII[x].Type == IDIT_SWITCH)
+  {
+   MDFNSetting tmp_setting;
+
+   memset(&tmp_setting, 0, sizeof(tmp_setting));
+
+   tmp_setting.name = CleanSettingName(build_string(system->shortname, ".input.", system->PortInfo[w].ShortName, ".", info->ShortName, ".", info->IDII[x].SettingName, ".defpos"));
+   tmp_setting.description = trio_aprintf(gettext_noop("Default position for switch \"%s\"."), info->IDII[x].Name);
+   tmp_setting.description_extra = gettext_noop("Sets the position for the switch to the value specified upon startup and virtual input device change.");
+
+   tmp_setting.flags = (info->IDII[x].Flags & IDIT_FLAG_AUX_SETTINGS_UNDOC) ? MDFNSF_SUPPRESS_DOC : 0;
+   {
+    MDFNSetting_EnumList* el = (MDFNSetting_EnumList*)calloc(info->IDII[x].Switch.NumPos + 1, sizeof(MDFNSetting_EnumList));
+    const uint32 snp = info->IDII[x].Switch.NumPos;
+
+    for(uint32 i = 0; i < snp; i++)
+    {
+     el[i].string = info->IDII[x].Switch.Pos[i].SettingName;
+     el[i].number = i;
+     el[i].description = info->IDII[x].Switch.Pos[i].Name;
+     el[i].description_extra = info->IDII[x].Switch.Pos[i].Description;
+    }
+    el[snp].string = NULL;
+    el[snp].number = 0;
+    el[snp].description = NULL;
+    el[snp].description_extra = NULL;
+
+    assert(info->IDII[x].Switch.DefPos < info->IDII[x].Switch.NumPos);
+
+    tmp_setting.enum_list = el;
+    tmp_setting.type = MDFNST_ENUM;
+    tmp_setting.default_value = el[info->IDII[x].Switch.DefPos].string;
+   }
+
+   settings.push_back(tmp_setting);
+  }
+ }
+ if(defs)
+ {
+  //printf("%s --- %zu, %zu\n", setting_def_search, def_butti, defs->count);
+  assert(def_butti == defs->count);
  }
 }
 
-
-static void MakeSettingsForPort(std::vector <MDFNSetting> &settings, const MDFNGI *system, const int w, const InputPortInfoStruct *info)
+template<typename T>
+static INLINE void MakeSettingsForPort(std::vector <MDFNSetting> &settings, const MDFNGI *system, const int w, const InputPortInfoStruct *info, const T& defset)
 {
-#if 1
  if(info->DeviceInfo.size() > 1)
  {
   MDFNSetting tmp_setting;
@@ -1905,23 +2469,15 @@ static void MakeSettingsForPort(std::vector <MDFNSetting> &settings, const MDFNG
    EnumList[device].description_extra = NULL;
    if(info->DeviceInfo[device].Description || (info->DeviceInfo[device].Flags & InputDeviceInfoStruct::FLAG_KEYBOARD))
    {
-    EnumList[device].description_extra = trio_aprintf("%s%s%s",
-	info->DeviceInfo[device].Description ? info->DeviceInfo[device].Description : "",
+    EnumList[device].description_extra = build_string(
+	 info->DeviceInfo[device].Description ? info->DeviceInfo[device].Description : "",
 	(info->DeviceInfo[device].Description && (info->DeviceInfo[device].Flags & InputDeviceInfoStruct::FLAG_KEYBOARD)) ? "\n" : "",
 	(info->DeviceInfo[device].Flags & InputDeviceInfoStruct::FLAG_KEYBOARD) ? _("Emulated keyboard key state is not updated unless input grabbing(by default, mapped to CTRL+SHIFT+Menu) is toggled on; refer to the main documentation for details.") : "");
    }
-
-   PendingGarbage.push_back((void *)EnumList[device].string);
-   PendingGarbage.push_back((void *)EnumList[device].description);
   }
 
-  PendingGarbage.push_back(EnumList);
-
-  tmp_setting.name = trio_aprintf("%s.input.%s", system->shortname, info->ShortName);
-  PendingGarbage.push_back((void *)tmp_setting.name);
-
+  tmp_setting.name = build_string(system->shortname, ".input.", info->ShortName);
   tmp_setting.description = trio_aprintf("Input device for %s", info->FullName);
-  PendingGarbage.push_back((void *)tmp_setting.description);
 
   tmp_setting.type = MDFNST_ENUM;
   tmp_setting.default_value = info->DefaultDevice;
@@ -1934,30 +2490,43 @@ static void MakeSettingsForPort(std::vector <MDFNSetting> &settings, const MDFNG
 
   settings.push_back(tmp_setting);
  }
-#endif
 
  for(unsigned device = 0; device < info->DeviceInfo.size(); device++)
  {
-  MakeSettingsForDevice(settings, system, w, &info->DeviceInfo[device]);
+  const DefaultSettingsMeow* defs = nullptr;
+  char setting_def_search[256];
+  trio_snprintf(setting_def_search, sizeof(setting_def_search), "%s.input.%s.%s", system->shortname, system->PortInfo[w].ShortName, info->DeviceInfo[device].ShortName);
+  CleanSettingName(setting_def_search);
+
+  {
+   auto fit = defset.find(setting_def_search);
+   if(fit != defset.end())
+    defs = &fit->second;
+  }
+
+  MakeSettingsForDevice(settings, system, w, &info->DeviceInfo[device], defs);
  }
 }
 
 // Called on emulator startup
-void MakeInputSettings(std::vector <MDFNSetting> &settings)
+void Input_MakeSettings(std::vector <MDFNSetting> &settings)
 {
- // Construct default button group map
- for(unsigned int d = 0; d < sizeof(defset) / sizeof(DefaultSettingsMeow); d++)
-  DefaultButtonSettingsMap[defset[d].base_name] = &defset[d];
+ //uint64 st = Time::MonoUS();
 
- // First, build system settings
- for(unsigned int x = 0; x < MDFNSystems.size(); x++)
  {
-  assert(MDFNSystems[x]->PortInfo.size() <= 16);
+  #include "input-default-buttons.h"
 
-  for(unsigned port = 0; port < MDFNSystems[x]->PortInfo.size(); port++)
-   MakeSettingsForPort(settings, MDFNSystems[x], port, &MDFNSystems[x]->PortInfo[port]);
+  // First, build system settings
+  for(unsigned int x = 0; x < MDFNSystems.size(); x++)
+  {
+   assert(MDFNSystems[x]->PortInfo.size() <= 16);
+
+   for(unsigned port = 0; port < MDFNSystems[x]->PortInfo.size(); port++)
+    MakeSettingsForPort(settings, MDFNSystems[x], port, &MDFNSystems[x]->PortInfo[port], defset);
+  }
  }
- DefaultButtonSettingsMap.clear();
+
+ //printf("%llu\n", Time::MonoUS() - st);
 
  // Now build command key settings
  for(int x = 0; x < _CK_COUNT; x++)
@@ -1966,47 +2535,109 @@ void MakeInputSettings(std::vector <MDFNSetting> &settings)
 
   memset(&tmp_setting, 0, sizeof(MDFNSetting));
 
-  CKeysSettingName[x] = trio_aprintf("command.%s", CKeys[x].text);
-  tmp_setting.name = CKeysSettingName[x];
-  PendingGarbage.push_back((void *)( CKeysSettingName[x] ));
+  tmp_setting.name = CKeys[x].setting_name;
 
   tmp_setting.description = CKeys[x].description;
   tmp_setting.type = MDFNST_STRING;
 
   tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING;
   tmp_setting.description_extra = NULL;
+  tmp_setting.validate_func = ValidateIMSetting;
 
-  PendingGarbage.push_back((void *)( tmp_setting.default_value = strdup(BCsToString(CKeys[x].bc, 2).c_str()) ));
+  tmp_setting.default_value = CKeys[x].setting_default;
   settings.push_back(tmp_setting);
  }
+
+#if 0
+ for(auto const& sys : MDFNSystems)
+ {
+  for(auto const& port : sys->PortInfo)
+  {
+   for(auto const& dev : port.DeviceInfo)
+   {
+    fprintf(stderr, "Input size: %u (%s)\n", (unsigned)dev.IDII.InputByteSize, dev.FullName);
+    for(auto const& idii : dev.IDII)
+    {
+     if(idii.Type == IDIT_BUTTON || idii.Type == IDIT_BUTTON_CAN_RAPID)
+      fprintf(stderr, "%s %s(%s) %s(%s) %s(%s): %u %u %s %u --- co=%d\n", sys->shortname, port.ShortName, port.FullName, dev.ShortName, dev.FullName, idii.SettingName, idii.Name, idii.BitSize, idii.BitOffset, (idii.Type == IDIT_BUTTON && idii.Button.ExcludeName) ? idii.Button.ExcludeName : "", idii.Flags, idii.ConfigOrder);
+    }
+   }
+  }
+ }
+#endif
 }
 
-void KillGameInput(void)
+void Input_GameClosed(void)
 {
  for(size_t p = 0; p < CurGame->PortInfo.size(); p++)
   KillPortInfo(p);
+ //
+ CalcWMInputBehavior();
 }
 
-bool InitCommandInput(MDFNGI* gi)
+// TODO: multiple mice support
+static void CalcWMInputBehavior_Sub(const InputMappingType IMType, const ButtConfig& bc, bool* CursorNeeded, bool* MouseAbsNeeded, bool* MouseRelNeeded)
 {
- // Load the command key mappings from settings
+ const bool is_mouse_mapping = (bc.DeviceType == BUTTC_MOUSE);
+ const bool is_mouse_cursor_mapping = is_mouse_mapping && ((bc.ButtonNum & MouseMan::MOUSE_BN_TYPE_MASK) == MouseMan::MOUSE_BN_TYPE_CURSOR);
+ const bool is_mouse_rel_mapping = is_mouse_mapping && ((bc.ButtonNum & MouseMan::MOUSE_BN_TYPE_MASK) == MouseMan::MOUSE_BN_TYPE_REL);
+
+ if(is_mouse_cursor_mapping)
+ {
+  *MouseAbsNeeded = true;
+  if(IMType != IMTYPE_POINTER_X && IMType != IMTYPE_POINTER_Y)
+   *CursorNeeded = true;
+ }
+
+ if(is_mouse_rel_mapping)
+  *MouseRelNeeded = true;
+}
+
+static void CalcWMInputBehavior(void)
+{
+ const uint32 lpm = Netplay_GetLPM();
+ bool CursorNeeded = false;
+ bool MouseAbsNeeded = false;
+ bool MouseRelNeeded = false;
+ bool GrabNeeded = InputGrab;
+
+ for(size_t p = 0; p < (CurGame ? CurGame->PortInfo.size() : 0); p++)
+ {
+  if(!(lpm & (1U << p)))
+   continue;
+
+  //
+  auto const& pic = PIDC[p];
+  for(auto const& bic : pic.BIC)
+  {
+   for(auto const& bc : bic.BC)
+   {
+    CalcWMInputBehavior_Sub(bic.IMType, bc, &CursorNeeded, &MouseAbsNeeded, &MouseRelNeeded);
+   }
+  }
+ }
+
  for(int x = 0; x < _CK_COUNT; x++)
  {
-  CKeysConfig[x].AND_Mode = StringToBC(MDFN_GetSettingS(CKeysSettingName[x]).c_str(), CKeysConfig[x].bc);
+  for(auto const& bc : CKeysConfig[x])
+  {
+   CalcWMInputBehavior_Sub(IMTYPE_BUTTON, bc, &CursorNeeded, &MouseAbsNeeded, &MouseRelNeeded);
+  }
  }
- return(1);
+
+ if(Debugger_IsActive())
+ {
+  MouseAbsNeeded = true;
+  CursorNeeded = true;
+ }
+ //
+ //
+ //
+ GT_SetWMInputBehavior(CursorNeeded, MouseAbsNeeded, MouseRelNeeded, GrabNeeded);
 }
 
-void KillCommandInput(void)
+void Input_NetplayLPMChanged(void)
 {
-
-}
-
-void KillInputSettings(void)
-{
- for(unsigned int x = 0; x < PendingGarbage.size(); x++)
-  free(PendingGarbage[x]);
-
- PendingGarbage.clear();
+ CalcWMInputBehavior();
 }
 

@@ -146,7 +146,7 @@ void InputDevice_Mouse::StateAction(StateMem* sm, const unsigned load, const boo
 
   SFVAR(command),
 
-  SFARRAY(transmit_buffer, sizeof(transmit_buffer)),
+  SFVAR(transmit_buffer),
   SFVAR(transmit_pos),
   SFVAR(transmit_count),
 
@@ -170,8 +170,8 @@ void InputDevice_Mouse::StateAction(StateMem* sm, const unsigned load, const boo
 
 void InputDevice_Mouse::UpdateInput(const void *data)
 {
- accum_xdelta += (int32)MDFN_de32lsb((uint8*)data + 0);
- accum_ydelta += (int32)MDFN_de32lsb((uint8*)data + 4);
+ accum_xdelta += (int16)MDFN_de16lsb((uint8*)data + 0);
+ accum_ydelta += (int16)MDFN_de16lsb((uint8*)data + 2);
 
  if(accum_xdelta > 30 * 127) accum_xdelta = 30 * 127;
  if(accum_xdelta < 30 * -128) accum_xdelta = 30 * -128;
@@ -179,8 +179,8 @@ void InputDevice_Mouse::UpdateInput(const void *data)
  if(accum_ydelta > 30 * 127) accum_ydelta = 30 * 127;
  if(accum_ydelta < 30 * -128) accum_ydelta = 30 * -128;
 
- button |= *((uint8 *)data + 8);
- button_post_mask = *((uint8 *)data + 8);
+ button |= *((uint8 *)data + 4);
+ button_post_mask = *((uint8 *)data + 4);
 
  //if(button)
  // MDFN_DispMessage("Button\n");
@@ -304,10 +304,10 @@ InputDevice *Device_Mouse_Create(void)
 
 IDIISG Device_Mouse_IDII =
 {
- { "x_axis", "X Axis", -1, IDIT_X_AXIS_REL },
- { "y_axis", "Y Axis", -1, IDIT_Y_AXIS_REL },
- { "right", "Right Button", 1, IDIT_BUTTON, NULL },
- { "left", "Left Button", 0, IDIT_BUTTON, NULL },
+ IDIIS_AxisRel("motion", "Motion",/**/ "left", "Left",/**/ "right", "Right", 0),
+ IDIIS_AxisRel("motion", "Motion",/**/ "up", "Up",/**/ "down", "Down", 1),
+ IDIIS_Button("right", "Right Button", 3),
+ IDIIS_Button("left", "Left Button", 2),
 };
 
 

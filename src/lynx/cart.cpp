@@ -420,7 +420,7 @@ void CCart::StateAction(StateMem *sm, const unsigned load, const bool data_only)
         SFVAR(mWriteEnableBank0),
         SFVAR(mWriteEnableBank1),
 	SFVAR(last_strobe),
-	SFARRAYN(mCartBank1.get(), mCartRAM ? mMaskBank1 + 1 : 0, "mCartBank1"),
+	SFPTR8N(mCartBank1.get(), mCartRAM ? mMaskBank1 + 1 : 0, "mCartBank1"),
 	SFEND
  };
 

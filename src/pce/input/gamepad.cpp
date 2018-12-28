@@ -30,7 +30,7 @@ class PCE_Input_Gamepad : public PCE_Input_Device
  virtual void Power(int32 timestamp) override;
  virtual void Write(int32 timestamp, bool old_SEL, bool new_SEL, bool old_CLR, bool new_CLR) override;
  virtual uint8 Read(int32 timestamp) override;
- virtual void Update(const void *data) override;
+ virtual void Update(const uint8* data) override;
  virtual int StateAction(StateMem *sm, int load, int data_only, const char *section_name) override;
 
 
@@ -67,9 +67,9 @@ void PCE_Input_Gamepad::TransformInput(uint8* data, const bool DisableSR)
  }
 }
 
-void PCE_Input_Gamepad::Update(const void *data)
+void PCE_Input_Gamepad::Update(const uint8* data)
 {
- buttons = MDFN_de16lsb((uint8 *)data);
+ buttons = MDFN_de16lsb(data);
 }
 
 uint8 PCE_Input_Gamepad::Read(int32 timestamp)
@@ -122,27 +122,27 @@ int PCE_Input_Gamepad::StateAction(StateMem *sm, int load, int data_only, const 
  return(ret);
 }
 
-static const char* const ModeSwitchPositions[] =
+static const IDIIS_SwitchPos ModeSwitchPositions[] =
 {
- gettext_noop("2-button"),
- gettext_noop("6-button"),
+ { "2", gettext_noop("2-button"), gettext_noop("Basic 2-button controller mode, compatible with practically all games.") },
+ { "6", gettext_noop("6-button"), gettext_noop("6-button controller mode, only for compatible games(incompatible games will behave in a quite loopy manner).") },
 };
 
 const IDIISG PCE_GamepadIDII =
 {
- { "i", "I", 12, IDIT_BUTTON_CAN_RAPID, NULL },
- { "ii", "II", 11, IDIT_BUTTON_CAN_RAPID, NULL },
- { "select", "SELECT", 4, IDIT_BUTTON, NULL },
- { "run", "RUN", 5, IDIT_BUTTON, NULL },
- { "up", "UP ↑", 0, IDIT_BUTTON, "down" },
- { "right", "RIGHT →", 3, IDIT_BUTTON, "left" },
- { "down", "DOWN ↓", 1, IDIT_BUTTON, "up" },
- { "left", "LEFT ←", 2, IDIT_BUTTON, "right" },
- { "iii", "III", 10, IDIT_BUTTON, NULL },
- { "iv", "IV", 7, IDIT_BUTTON, NULL },
- { "v", "V", 8, IDIT_BUTTON, NULL },
- { "vi", "VI", 9, IDIT_BUTTON, NULL },
- IDIIS_Switch("mode_select", "Mode", 6, ModeSwitchPositions, sizeof(ModeSwitchPositions) / sizeof(ModeSwitchPositions[0])),
+ IDIIS_ButtonCR("i", "I", 12),
+ IDIIS_ButtonCR("ii", "II", 11),
+ IDIIS_Button("select", "SELECT", 4),
+ IDIIS_Button("run", "RUN", 5),
+ IDIIS_Button("up", "UP ↑", 0, "down"),
+ IDIIS_Button("right", "RIGHT →", 3, "left"),
+ IDIIS_Button("down", "DOWN ↓", 1, "up"),
+ IDIIS_Button("left", "LEFT ←", 2, "right"),
+ IDIIS_Button("iii", "III", 10),
+ IDIIS_Button("iv", "IV", 7),
+ IDIIS_Button("v", "V", 8),
+ IDIIS_Button("vi", "VI", 9),
+ IDIIS_Switch("mode_select", "Mode", 6, ModeSwitchPositions),
 };
 
 PCE_Input_Device *PCEINPUT_MakeGamepad(void)

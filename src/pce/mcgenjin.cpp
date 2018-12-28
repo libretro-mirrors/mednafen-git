@@ -105,7 +105,7 @@ class MCGenjin_CS_Device_RAM : public MCGenjin_CS_Device
  {
   SFORMAT StateRegs[] = 
   {
-   SFARRAY(&ram[0], ram.size()),
+   SFPTR8(&ram[0], ram.size()),
    SFVAR(bank_select),
    SFEND
   };
@@ -195,7 +195,7 @@ void MCGenjin::WriteNV(const unsigned di, const uint8 *buffer, uint32 offset, ui
  cs[di]->WriteNV(buffer, offset, count);
 }
 
-MCGenjin::MCGenjin(MDFNFILE* fp)
+MCGenjin::MCGenjin(Stream* fp)
 {
  const uint64 rr_size = fp->size();
  uint8 revision, num256_pages, region, cs_di[2];
