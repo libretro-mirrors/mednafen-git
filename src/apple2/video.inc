@@ -71,7 +71,7 @@ struct Settings
  uint32 force_mono = 0x000000;
  bool mixed_text_mono = false;
 
- int mono_lumafilter = 6;
+ int mono_lumafilter = 5;
  int color_lumafilter = -3;
 
  enum

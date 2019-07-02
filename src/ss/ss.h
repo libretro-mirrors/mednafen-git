@@ -47,6 +47,8 @@ namespace MDFN_IEN_SS
   SS_DBG_SMPC 	   = (1U << 12),
   SS_DBG_SMPC_REGW = (1U << 13),
 
+  SS_DBG_BIOS	   = (1U << 15),
+
   SS_DBG_CDB  	   = (1U << 16),
   SS_DBG_CDB_REGW  = (1U << 17),
 

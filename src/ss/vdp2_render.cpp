@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* vdp2_render.cpp - VDP2 Rendering
-**  Copyright (C) 2016-2017 Mednafen Team
+**  Copyright (C) 2016-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -2682,8 +2682,10 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
    if(InterlaceMode == IM_DOUBLE && field)
    {
     const uint8 sc = (SCRCTL >> (n << 3));
+    const uint8 lss = ((sc >> 4) & 0x3);
 
-    CurLSA[n] += ((bool)(sc & 0x2) + (bool)(sc & 0x4) + (bool)(sc & 0x8)) << 1;
+    if(!lss)
+     CurLSA[n] += ((bool)(sc & 0x2) + (bool)(sc & 0x4) + (bool)(sc & 0x8)) << 1;
    }
    //
    //
@@ -2730,7 +2732,7 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
   //
   // Line scroll
   //
-  unsigned ls_comp_line = vdp2_line;
+  const unsigned ls_comp_line = vdp2_line << (InterlaceMode == IM_DOUBLE);
 
   for(unsigned n = 0; n < 2; n++)
   {
@@ -2770,7 +2772,7 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
      CurLSA[n]++;
     }
 
-    if(InterlaceMode == IM_DOUBLE)
+    if(InterlaceMode == IM_DOUBLE && !lss)
      CurLSA[n] += ((bool)(sc & 0x2) + (bool)(sc & 0x4) + (bool)(sc & 0x8)) << 1;
    }
 

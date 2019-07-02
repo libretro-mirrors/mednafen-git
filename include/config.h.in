@@ -337,6 +337,13 @@
 /* Define if we are compiling with POSIX sockets support. */
 #undef HAVE_POSIX_SOCKETS
 
+/* Define to 1 if you have the `pthread_condattr_setclock' function. */
+#undef HAVE_PTHREAD_CONDATTR_SETCLOCK
+
+/* Define to 1 if you have the `pthread_cond_timedwait_relative_np' function.
+   */
+#undef HAVE_PTHREAD_COND_TIMEDWAIT_RELATIVE_NP
+
 /* Define to 1 if you have the `pthread_create' function. */
 #undef HAVE_PTHREAD_CREATE
 
@@ -375,6 +382,12 @@
 
 /* Define to 1 if you have the `sem_init' function. */
 #undef HAVE_SEM_INIT
+
+/* Define to 1 if you have the `sem_timedwait' function. */
+#undef HAVE_SEM_TIMEDWAIT
+
+/* Define to 1 if you have the `sem_timedwait_monotonic' function. */
+#undef HAVE_SEM_TIMEDWAIT_MONOTONIC
 
 /* Define to 1 if you have the `send' function. */
 #undef HAVE_SEND

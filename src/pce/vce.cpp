@@ -562,11 +562,17 @@ INLINE int32 VCE::SyncReal(const int32 timestamp)
  if(cd_event <= 0)
   cd_event = PCECD_Run(timestamp);
 
+#ifdef MDFN_PCE_VCE_AWESOMEMODE
+ if(sgfx)
+  SyncSub<true, true>(clocks);
+ else
+  SyncSub<false, true>(clocks);
+#else
  if(sgfx)
   SyncSub<true, false>(clocks);
  else
   SyncSub<false, false>(clocks);
-
+#endif
  //
  //
  //

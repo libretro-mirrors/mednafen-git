@@ -770,6 +770,7 @@ static MDFN_COLD void LoadCommonPost(VirtualFS* vfs, const char* path)
 	DMStatus.resize(MDFNGameInfo->RMD->Drives.size());
         DMStatusSaveStateTemp.resize(DMStatus.size());
 
+	DMSNoMedia.clear();
 	for(uint32 drive_idx = 0; drive_idx < MDFNGameInfo->RMD->Drives.size(); drive_idx++)
 	{
          const RMD_Drive& drive = MDFNGameInfo->RMD->Drives[drive_idx];
@@ -1048,7 +1049,7 @@ static MDFNGI *LoadCD(const char *force_module, VirtualFS* vfs, const char *path
 
 MDFNGI *MDFNI_LoadExternalCD(const char* force_module, const char* path_hint, CDInterface* cdif)
 {
- return LoadCD(force_module, nullptr, path_hint, cdif);
+ return LoadCD(force_module, &::Mednafen::NVFS, path_hint, cdif);
 }
 
 static MDFN_COLD void LoadIPS(MDFNFILE* mfgf, const std::string& path)

@@ -44,7 +44,7 @@ namespace MDFN_IEN_PCE
 static const MDFNSetting_EnumList PSGRevisionList[] =
 {
  { "huc6280", PCE_PSG::REVISION_HUC6280, "HuC6280", gettext_noop("HuC6280 as found in the original PC Engine.") },
- { "huc6280a", PCE_PSG::REVISION_HUC6280A, "HuC6280A", gettext_noop("HuC6280A as found in the SuperGrafx and CoreGrafx I.  Provides proper channel amplitude centering, but may cause clicking in a few games designed with the original HuC6280's sound characteristics in mind.") },
+ { "huc6280a", PCE_PSG::REVISION_HUC6280A, "HuC6280A", gettext_noop("HuC6280A as found in the SuperGrafx and CoreGrafx I.  Provides proper channel amplitude centering.  Many games will have less clicking with the HuC6280A, but it may cause clicking in a few games designed with the original HuC6280's sound characteristics in mind.") },
  { "match", PCE_PSG::_REVISION_COUNT, gettext_noop("Match emulation mode."), gettext_noop("Selects \"huc6280\" for non-SuperGrafx mode, and \"huc6280a\" for SuperGrafx(full) mode.") },
  { NULL, 0 },
 };
@@ -333,7 +333,8 @@ static void SetCDSettings(bool silent_status = false)
 
 static void CDSettingChanged(const char *name)
 {
- SetCDSettings(true);
+ if(PCE_IsCD)
+  SetCDSettings(true);
 }
 
 

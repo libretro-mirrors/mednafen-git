@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* debug.inc:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -637,7 +637,7 @@ static const RegGroupType DBG_RegGroup_CPUE =
 };
 
 
-static const RegType DBG_Regs_SCU[] =
+static const RegType DBG_Regs_SCU_CDB_VDP1[] =
 {
  { SCU_GSREG_ILEVEL, "ILevel", "IRL Output to SH2-M", 1 },
  { SCU_GSREG_IVEC, "IVec", "Pending IRQ Vector Number", 1 },
@@ -668,79 +668,146 @@ static const RegType DBG_Regs_SCU[] =
  { SCU_GSREG_DSP_PC, "PC", "Program Counter", 1 },
  { SCU_GSREG_DSP_END, "END", "End Flag", 0x100 | 1 },
 
- { 0, "", "", 0 },
-};
-
-static const RegGroupType DBG_RegGroup_SCU =
-{
- NULL,
- DBG_Regs_SCU,
- SCU_GetRegister,
- SCU_SetRegister
-};
-
-//
-//
-
-static const RegType DBG_Regs_VDP1_VDP2_SCSP[] =
-{
  { 0, "------", "", 0xFFFF },
 
- { (1 << 16) | VDP2::GSREG_LINE, "Line", "Line", 2 },
- { (1 << 16) | VDP2::GSREG_DON, "DON", "Display On", 0x100 | 1 },
- { (1 << 16) | VDP2::GSREG_BM, "BM", "Border Mode", 0x100 | 1 },
- { (1 << 16) | VDP2::GSREG_IM, "IM", "Interlace Mode", 0x100 | 2 },
- { (1 << 16) | VDP2::GSREG_VRES, "VRES", "Vertical Resolution", 0x100 | 2 },
- { (1 << 16) | VDP2::GSREG_HRES, "HRES", "Horizontal Resolution", 0x100 | 3 },
+ { (1 << 16) | CDB_GSREG_HIRQ, "HIRQ", "HIRQ", 2 },
+ { (1 << 16) | CDB_GSREG_HIRQ_MASK, "HIRQM", "HIRQ Mask", 2 },
+
+ { (1 << 16) | CDB_GSREG_CDATA0, "CDATA0", "Command Data 0", 2 },
+ { (1 << 16) | CDB_GSREG_CDATA1, "CDATA1", "Command Data 1", 2 },
+ { (1 << 16) | CDB_GSREG_CDATA2, "CDATA2", "Command Data 2", 2 },
+ { (1 << 16) | CDB_GSREG_CDATA3, "CDATA3", "Command Data 3", 2 },
+
+ { (1 << 16) | CDB_GSREG_RESULT0, "RES0", "Result Data 0", 2 },
+ { (1 << 16) | CDB_GSREG_RESULT1, "RES1", "Result Data 1", 2 },
+ { (1 << 16) | CDB_GSREG_RESULT2, "RES2", "Result Data 2", 2 },
+ { (1 << 16) | CDB_GSREG_RESULT3, "RES3", "Result Data 3", 2 },
 
  { 0, "------", "", 0xFFFF },
 
- { (1 << 16) | VDP2::GSREG_RAMCTL, "RAMCTL", "RAM Control", 2 },
- { (1 << 16) | VDP2::GSREG_CYCA0, "A0", "CYCA0", 4 },
- { (1 << 16) | VDP2::GSREG_CYCA1, "A1", "CYCA1", 4 },
- { (1 << 16) | VDP2::GSREG_CYCB0, "B0", "CYCB0", 4 },
- { (1 << 16) | VDP2::GSREG_CYCB1, "B1", "CYCB1", 4 },
+ { (2 << 16) | VDP1::GSREG_SYSCLIPX, "SClipX", "SysClipX", 2 },
+ { (2 << 16) | VDP1::GSREG_SYSCLIPY, "SClipY", "SysClipY", 2 },
+ { (2 << 16) | VDP1::GSREG_USERCLIPX0, "UClipX0", "UserClipX0", 2 },
+ { (2 << 16) | VDP1::GSREG_USERCLIPY0, "UClipY0", "UserClipY0", 2 },
+ { (2 << 16) | VDP1::GSREG_USERCLIPX1, "UClipX1", "UserClipX1", 2 },
+ { (2 << 16) | VDP1::GSREG_USERCLIPY1, "UClipY1", "UserClipY1", 2 },
+ { (2 << 16) | VDP1::GSREG_LOCALX, "LocalX", "LocalX", 2 },
+ { (2 << 16) | VDP1::GSREG_LOCALY, "LocalY", "LocalY", 2 },
 
- { 0, "------", "", 0xFFFF },
-
- { (2 << 16) | SS_SCSP::GSREG_MVOL, "MVOL", "Master Volume", 0x100 | 4 },
- { (2 << 16) | SS_SCSP::GSREG_DAC18B, "DAC18B", "18-bit DAC Enable", 0x100 | 1 },
- { (2 << 16) | SS_SCSP::GSREG_MEM4MB, "Mem4Mb", "4Mb Memory Enable", 0x100 | 1 },
- { (2 << 16) | SS_SCSP::GSREG_RBP, "RBP", "DSP Ringbuffer Base Address", 0x100 | 7 },
- { (2 << 16) | SS_SCSP::GSREG_RBL, "RBL", "DSP Ringbuffer Length", 0x100 | 2 },
- { (2 << 16) | SS_SCSP::GSREG_MSLC, "MSLC", "Slot to Monitor", 0x100 | 5 },
 
  { 0, "", "", 0 },
 };
 
-static uint32 VDP1_VDP2_SCSP_GetRegister(const unsigned id, char* const special, const uint32 special_len)
+static uint32 GetRegister(const unsigned id, char* const special, const uint32 special_len)
 {
  switch(id >> 16)
  {
-  case 0: return 0; //return VDP1::GetRegister((uint16)id, special, special_len);
-  case 1: return VDP2::GetRegister((uint16)id, special, special_len);
-  case 2: return SOUND_GetSCSPRegister((uint16)id, special, special_len);
+  case 0: return SCU_GetRegister((uint16)id, special, special_len);
+  case 1: return CDB_GetRegister((uint16)id, special, special_len);
+  case 2: return VDP1::GetRegister((uint16)id, special, special_len);
+  case 3: return VDP2::GetRegister((uint16)id, special, special_len);
+  case 4: return SOUND_GetSCSPRegister((uint16)id, special, special_len);
  }
 
  return 0;
 }
 
-static void VDP1_VDP2_SCSP_SetRegister(const unsigned id, const uint32 value)
+static void SetRegister(const unsigned id, const uint32 value)
 {
  switch(id >> 16)
  {
-  case 0: break; //return VDP1::GetRegister((uint16)id, special, special_len);
-  case 1: VDP2::SetRegister((uint16)id, value); break;
-  case 2: SOUND_SetSCSPRegister((uint16)id, value); break;
+  case 0: SCU_SetRegister((uint16)id, value); break;
+  case 1: CDB_SetRegister((uint16)id, value); break;
+  case 2: VDP1::SetRegister((uint16)id, value); break;
+  case 3: VDP2::SetRegister((uint16)id, value); break;
+  case 4: SOUND_SetSCSPRegister((uint16)id, value); break;
  }
 }
 
-static const RegGroupType DBG_RegGroup_VDP1_VDP2_SCSP =
+
+static const RegGroupType DBG_RegGroup_SCU_CDB_VDP1 =
 {
  NULL,
- DBG_Regs_VDP1_VDP2_SCSP,
- VDP1_VDP2_SCSP_GetRegister,
- VDP1_VDP2_SCSP_SetRegister
+ DBG_Regs_SCU_CDB_VDP1,
+ GetRegister,
+ SetRegister
+};
+
+//
+//
+
+static const RegType DBG_Regs_VDP2_SCSP[] =
+{
+ { (3 << 16) | VDP2::GSREG_LINE, "Line", "Line", 2 },
+ { (3 << 16) | VDP2::GSREG_DON, "DON", "Display On", 0x100 | 1 },
+ { (3 << 16) | VDP2::GSREG_BM, "BM", "Border Mode", 0x100 | 1 },
+ { (3 << 16) | VDP2::GSREG_IM, "IM", "Interlace Mode", 0x100 | 2 },
+ { (3 << 16) | VDP2::GSREG_VRES, "VRES", "Vertical Resolution", 0x100 | 2 },
+ { (3 << 16) | VDP2::GSREG_HRES, "HRES", "Horizontal Resolution", 0x100 | 3 },
+
+ { 0, "------", "", 0xFFFF },
+
+ { (3 << 16) | VDP2::GSREG_RAMCTL, "RAMCTL", "RAM Control", 2 },
+ { (3 << 16) | VDP2::GSREG_CYCA0, "A0", "CYCA0", 4 },
+ { (3 << 16) | VDP2::GSREG_CYCA1, "A1", "CYCA1", 4 },
+ { (3 << 16) | VDP2::GSREG_CYCB0, "B0", "CYCB0", 4 },
+ { (3 << 16) | VDP2::GSREG_CYCB1, "B1", "CYCB1", 4 },
+
+ { 0, "------", "", 0xFFFF },
+
+ { (3 << 16) | VDP2::GSREG_BGON, "BGON", "BGON", 2 },
+ { (3 << 16) | VDP2::GSREG_MZCTL, "MZCTL", "MZCTL", 2 },
+ { (3 << 16) | VDP2::GSREG_SFSEL, "SFSEL", "SFSEL", 2 },
+ { (3 << 16) | VDP2::GSREG_SFCODE, "SFCODE", "SFCODE", 2 },
+ { (3 << 16) | VDP2::GSREG_CHCTLA, "CHCTLA", "CHCTLA", 2 },
+ { (3 << 16) | VDP2::GSREG_CHCTLB, "CHCTLB", "CHCTLB", 2 },
+
+ { 0, "------", "", 0xFFFF },
+
+ { (3 << 16) | VDP2::GSREG_SCXIN0, "SCXIN0", "SCXIN0", 2 },
+ { (3 << 16) | VDP2::GSREG_SCXDN0, "SCXDN0", "SCXDN0", 2 },
+ { (3 << 16) | VDP2::GSREG_SCYIN0, "SCYIN0", "SCYIN0", 2 },
+ { (3 << 16) | VDP2::GSREG_SCYDN0, "SCYDN0", "SCYDN0", 2 },
+ { (3 << 16) | VDP2::GSREG_ZMXIN0, "ZMXIN0", "ZMXIN0", 2 },
+ { (3 << 16) | VDP2::GSREG_ZMXDN0, "ZMXDN0", "ZMXDN0", 2 },
+ { (3 << 16) | VDP2::GSREG_ZMYIN0, "ZMYIN0", "ZMYIN0", 2 },
+ { (3 << 16) | VDP2::GSREG_ZMYDN0, "ZMYDN0", "ZMYDN0", 2 },
+
+ { (3 << 16) | VDP2::GSREG_SCXIN1, "SCXIN1", "SCXIN1", 2 },
+ { (3 << 16) | VDP2::GSREG_SCXDN1, "SCXDN1", "SCXDN1", 2 },
+ { (3 << 16) | VDP2::GSREG_SCYIN1, "SCYIN1", "SCYIN1", 2 },
+ { (3 << 16) | VDP2::GSREG_SCYDN1, "SCYDN1", "SCYDN1", 2 },
+ { (3 << 16) | VDP2::GSREG_ZMXIN1, "ZMXIN1", "ZMXIN1", 2 },
+ { (3 << 16) | VDP2::GSREG_ZMXDN1, "ZMXDN1", "ZMXDN1", 2 },
+ { (3 << 16) | VDP2::GSREG_ZMYIN1, "ZMYIN1", "ZMYIN1", 2 },
+ { (3 << 16) | VDP2::GSREG_ZMYDN1, "ZMYDN1", "ZMYDN1", 2 },
+
+ { (3 << 16) | VDP2::GSREG_SCYN3, "SCXN2", "SCXN2", 2 },
+ { (3 << 16) | VDP2::GSREG_SCYN3, "SCYN2", "SCYN2", 2 },
+ { (3 << 16) | VDP2::GSREG_SCYN3, "SCXN3", "SCXN3", 2 },
+ { (3 << 16) | VDP2::GSREG_SCYN3, "SCYN3", "SCYN3", 2 },
+
+ { (3 << 16) | VDP2::GSREG_ZMCTL, "ZMCTL", "ZMCTL", 2 },
+ { (3 << 16) | VDP2::GSREG_SCRCTL, "SCRCTL", "SCRCTL", 2 },
+
+ { 0, "------", "", 0xFFFF },
+
+ { (4 << 16) | SS_SCSP::GSREG_MVOL, "MVOL", "Master Volume", 0x100 | 4 },
+ { (4 << 16) | SS_SCSP::GSREG_DAC18B, "DAC18B", "18-bit DAC Enable", 0x100 | 1 },
+ { (4 << 16) | SS_SCSP::GSREG_MEM4MB, "Mem4Mb", "4Mb Memory Enable", 0x100 | 1 },
+ { (4 << 16) | SS_SCSP::GSREG_RBP, "RBP", "DSP Ringbuffer Base Address", 0x100 | 7 },
+ { (4 << 16) | SS_SCSP::GSREG_RBL, "RBL", "DSP Ringbuffer Length", 0x100 | 2 },
+ { (4 << 16) | SS_SCSP::GSREG_MSLC, "MSLC", "Slot to Monitor", 0x100 | 5 },
+
+ { 0, "", "", 0 },
+};
+
+static const RegGroupType DBG_RegGroup_VDP2_SCSP =
+{
+ NULL,
+ DBG_Regs_VDP2_SCSP,
+ GetRegister,
+ SetRegister
 };
 
 //
@@ -766,8 +833,8 @@ static void DBG_Init(void)
 
  MDFNDBG_AddRegGroup(&DBG_RegGroup_CPU);
  MDFNDBG_AddRegGroup(&DBG_RegGroup_CPUE);
- MDFNDBG_AddRegGroup(&DBG_RegGroup_SCU);
- MDFNDBG_AddRegGroup(&DBG_RegGroup_VDP1_VDP2_SCSP);
+ MDFNDBG_AddRegGroup(&DBG_RegGroup_SCU_CDB_VDP1);
+ MDFNDBG_AddRegGroup(&DBG_RegGroup_VDP2_SCSP);
  //
  //
  //

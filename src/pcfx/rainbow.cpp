@@ -2,7 +2,7 @@
 /* Mednafen NEC PC-FX Emulation Module                                        */
 /******************************************************************************/
 /* rainbow.cpp:
-**  Copyright (C) 2006-2016 Mednafen Team
+**  Copyright (C) 2006-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -28,7 +28,7 @@
 #include "rainbow.h"
 #include "king.h"
 #include "interrupt.h"
-#include "jrevdct.h"
+#include "idct.h"
 
 #include <mednafen/FileStream.h>
 
@@ -583,12 +583,12 @@ void RAINBOW_DecodeBlock(bool arg_FirstDecode, bool Skip)
       if(Skip)
        continue;
 
-      j_rev_dct(&dct_y[0x00]);
-      j_rev_dct(&dct_y[0x40]);
-      j_rev_dct(&dct_y[0x80]);
-      j_rev_dct(&dct_y[0xC0]);
-      j_rev_dct(&dct_u[0x00]);
-      j_rev_dct(&dct_v[0x00]);
+      IDCT(&dct_y[0x00]);
+      IDCT(&dct_y[0x40]);
+      IDCT(&dct_y[0x80]);
+      IDCT(&dct_y[0xC0]);
+      IDCT(&dct_u[0x00]);
+      IDCT(&dct_v[0x00]);
 
       for(int y = 0; y < 16; y++)
        for(int x = 0; x < 16; x++)

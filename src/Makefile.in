@@ -233,7 +233,7 @@ DIST_COMMON = $(srcdir)/cdplay/Makefile.am.inc \
 @WANT_PCFX_EMU_TRUE@am__append_27 = pcfx/king.cpp pcfx/soundbox.cpp \
 @WANT_PCFX_EMU_TRUE@	pcfx/pcfx.cpp pcfx/interrupt.cpp \
 @WANT_PCFX_EMU_TRUE@	pcfx/input.cpp pcfx/timer.cpp \
-@WANT_PCFX_EMU_TRUE@	pcfx/rainbow.cpp pcfx/jrevdct.cpp \
+@WANT_PCFX_EMU_TRUE@	pcfx/rainbow.cpp pcfx/idct.cpp \
 @WANT_PCFX_EMU_TRUE@	pcfx/huc6273.cpp pcfx/fxscsi.cpp \
 @WANT_PCFX_EMU_TRUE@	pcfx/input/gamepad.cpp \
 @WANT_PCFX_EMU_TRUE@	pcfx/input/mouse.cpp
@@ -565,7 +565,7 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	pce_fast/hes.cpp pce_fast/pcecd.cpp pce_fast/pcecd_drive.cpp \
 	pce_fast/psg.cpp pcfx/king.cpp pcfx/soundbox.cpp pcfx/pcfx.cpp \
 	pcfx/interrupt.cpp pcfx/input.cpp pcfx/timer.cpp \
-	pcfx/rainbow.cpp pcfx/jrevdct.cpp pcfx/huc6273.cpp \
+	pcfx/rainbow.cpp pcfx/idct.cpp pcfx/huc6273.cpp \
 	pcfx/fxscsi.cpp pcfx/input/gamepad.cpp pcfx/input/mouse.cpp \
 	pcfx/debug.cpp psx/psx.cpp psx/cpu.cpp psx/gte.cpp psx/irq.cpp \
 	psx/timer.cpp psx/dma.cpp psx/mdec.cpp psx/sio.cpp psx/cdc.cpp \
@@ -812,8 +812,7 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 @WANT_PCFX_EMU_TRUE@	pcfx/pcfx.$(OBJEXT) \
 @WANT_PCFX_EMU_TRUE@	pcfx/interrupt.$(OBJEXT) \
 @WANT_PCFX_EMU_TRUE@	pcfx/input.$(OBJEXT) pcfx/timer.$(OBJEXT) \
-@WANT_PCFX_EMU_TRUE@	pcfx/rainbow.$(OBJEXT) \
-@WANT_PCFX_EMU_TRUE@	pcfx/jrevdct.$(OBJEXT) \
+@WANT_PCFX_EMU_TRUE@	pcfx/rainbow.$(OBJEXT) pcfx/idct.$(OBJEXT) \
 @WANT_PCFX_EMU_TRUE@	pcfx/huc6273.$(OBJEXT) \
 @WANT_PCFX_EMU_TRUE@	pcfx/fxscsi.$(OBJEXT) \
 @WANT_PCFX_EMU_TRUE@	pcfx/input/gamepad.$(OBJEXT) \
@@ -2444,7 +2443,7 @@ pcfx/timer.$(OBJEXT): pcfx/$(am__dirstamp) \
 	pcfx/$(DEPDIR)/$(am__dirstamp)
 pcfx/rainbow.$(OBJEXT): pcfx/$(am__dirstamp) \
 	pcfx/$(DEPDIR)/$(am__dirstamp)
-pcfx/jrevdct.$(OBJEXT): pcfx/$(am__dirstamp) \
+pcfx/idct.$(OBJEXT): pcfx/$(am__dirstamp) \
 	pcfx/$(DEPDIR)/$(am__dirstamp)
 pcfx/huc6273.$(OBJEXT): pcfx/$(am__dirstamp) \
 	pcfx/$(DEPDIR)/$(am__dirstamp)
@@ -3316,9 +3315,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@pcfx/$(DEPDIR)/debug.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@pcfx/$(DEPDIR)/fxscsi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@pcfx/$(DEPDIR)/huc6273.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@pcfx/$(DEPDIR)/idct.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@pcfx/$(DEPDIR)/input.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@pcfx/$(DEPDIR)/interrupt.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@pcfx/$(DEPDIR)/jrevdct.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@pcfx/$(DEPDIR)/king.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@pcfx/$(DEPDIR)/pcfx.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@pcfx/$(DEPDIR)/rainbow.Po@am__quote@

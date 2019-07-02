@@ -769,13 +769,17 @@ int MemDebugger::Event(const SDL_Event *event)
 
 	if(event->key.keysym.mod & KMOD_LALT)
 	 break;
+	//
+	//
+	//
+	const unsigned ks = event->key.keysym.sym;
 
         if(InPrompt)
         {
          myprompt->Event(event);
         }
-	else if(InEditMode && !InTextArea && ((event->key.keysym.sym >= SDLK_0 && event->key.keysym.sym <= SDLK_9)	|| 
-	   (event->key.keysym.sym >= SDLK_a && event->key.keysym.sym <= SDLK_f)))
+	else if(InEditMode && !InTextArea && ((ks >= SDLK_0 && ks <= SDLK_9)	|| 
+	   (ks >= SDLK_a && ks <= SDLK_f)))
 	{
          uint8 tc = 0;
          uint8 meowbyte = 0;
@@ -795,7 +799,12 @@ int MemDebugger::Event(const SDL_Event *event)
          LowNib = !LowNib;
          if(!LowNib)
 	  ChangePos(1);
-        }
+	}
+	else if(InEditMode && InTextArea && ks != SDLK_TAB && ks != SDLK_RETURN && ks != SDLK_INSERT && ks != SDLK_END && ks != SDLK_HOME &&
+		ks != SDLK_PAGEUP && ks != SDLK_PAGEDOWN && ks != SDLK_UP && ks != SDLK_DOWN && ks != SDLK_LEFT && ks != SDLK_RIGHT)
+	{
+	 //
+	}
 	else switch(event->key.keysym.sym)
 	{
 	 default: break;

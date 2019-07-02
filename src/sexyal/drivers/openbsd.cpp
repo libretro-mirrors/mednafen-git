@@ -165,7 +165,7 @@ SexyAL_device* SexyALI_OpenBSD_Open(const char* id, SexyAL_format* format, SexyA
 
  AUDIO_INITPAR(&par);
 
- OBSD_TRY(fd = open(id ? id : "/dev/audio", O_WRONLY));
+ OBSD_TRY(fd = open(id ? id : "/dev/audio0", O_WRONLY));
 
  par.bits = SAMPFORMAT_BITS(format->sampformat);
  par.bps = SAMPFORMAT_BYTES(format->sampformat);

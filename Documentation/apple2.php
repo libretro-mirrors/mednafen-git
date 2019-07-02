@@ -26,7 +26,7 @@ Sample MAI configuration file:
 MEDNAFEN_SYSTEM_APPLE2
 # Above signature must be the first line.
 #
-# File paths specified in this file are relative to the directory containing the MAI file, as passed to Mednafen.
+# File paths specified in this file are relative to the directory containing the MAI file.
 #
 
 #
@@ -167,7 +167,7 @@ The following 5.25" Apple II floppy disk image formats are supported:
  <tr><td>d13</td><td>116480</td><td>Apple DOS 13 sectors/track</td></tr>
  <tr><td>dsk<br>do</td><td>143360</td><td>Apple DOS-order 16 sectors/track</td></tr>
  <tr><td>po</td><td>143360</td><td>Apple ProDOS-order 16 sectors/track</td></tr>
- <tr><td>woz</td><td><i>(variable)</i></td><td>http://evolutioninteractive.com/applesauce/woz_reference.pdf</td></tr>
+ <tr><td>woz</td><td><i>(variable)</i></td><td>https://applesaucefdc.com/woz/</td></tr>
 </table>
 </p>
 
@@ -301,6 +301,7 @@ The following software is known to be compatible with one or more Atari joystick
  <li>Ardy</li>
  <li>Bandits <i>(press CTRL+SHIFT+P)</i></li>
  <li>Beer Run <i>(press CTRL+SHIFT+P on control method screen)</i></li>
+ <li>Berzap</li>
  <li>Borg</li>
  <li>Borrowed Time</li>
  <li>Boulder Dash</li>

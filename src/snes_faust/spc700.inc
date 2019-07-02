@@ -2,7 +2,7 @@
 /* Mednafen Fast SNES Emulation Module                                        */
 /******************************************************************************/
 /* spc700.inc:
-**  Copyright (C) 2015-2017 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -1548,6 +1548,8 @@ INLINE void SPC700::RunReal(void)
 #ifdef MDFN_SNES_FAUST_SPC700_IPL_EFFECTS_ANALYZE
  {
   static uint16 old_PC = 0xFFFF;
+  static bool branchedin = false;
+
   if(old_PC >= 0xFFC0 && PC < 0xFFC0)
   {
    printf("Branchout: PC=0x%04x A=%02x X=%02x Y=%02x SP=%02x PSW=%02x --- %02x %02x %02x %02x --- %02x %02x %02x %02x --- %d\n", PC, A, X, Y, SP, PSW, IOFromSPC700[0], IOFromSPC700[1], IOFromSPC700[2], IOFromSPC700[3], IOToSPC700[0], IOToSPC700[1], IOToSPC700[2], IOToSPC700[3], time_counter);
@@ -1556,10 +1558,19 @@ INLINE void SPC700::RunReal(void)
     fp.write(APURAM, sizeof(APURAM));
    }
    time_counter = 0;
-   old_PC = PC;
-   fflush(stdout);
-   abort();
+   if(branchedin)
+   {
+    fflush(stdout);
+    abort();
+   }
   }
+  if(old_PC < 0xFFC0 && PC >= 0xFFC0)
+  {
+   printf("Branchin: PC=0x%04x->0x%04x A=%02x X=%02x Y=%02x SP=%02x PSW=%02x --- %02x %02x %02x %02x --- %02x %02x %02x %02x --- %d\n", old_PC, PC, A, X, Y, SP, PSW, IOFromSPC700[0], IOFromSPC700[1], IOFromSPC700[2], IOFromSPC700[3], IOToSPC700[0], IOToSPC700[1], IOToSPC700[2], IOToSPC700[3], time_counter);
+   branchedin = true;
+   time_counter = 0;
+  }
+  old_PC = PC;
  }
 #endif
 
