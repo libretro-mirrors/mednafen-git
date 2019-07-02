@@ -1240,7 +1240,7 @@ Monochrome video luma filter.
 Filters numbered closer to 0 have a stronger lowpass effect.  Negative-numbered filters have ringing.
 MDFNST_INT
 5
--2
+-3
 7
 0
 apple2.video.saturation
@@ -15210,7 +15210,7 @@ HuC6280
 HuC6280 as found in the original PC Engine.
 huc6280a
 HuC6280A
-HuC6280A as found in the SuperGrafx and CoreGrafx I.  Provides proper channel amplitude centering, but may cause clicking in a few games designed with the original HuC6280\'s sound characteristics in mind.
+HuC6280A as found in the SuperGrafx and CoreGrafx I.  Provides proper channel amplitude centering.  Many games will have less clicking with the HuC6280A, but it may cause clicking in a few games designed with the original HuC6280\'s sound characteristics in mind.
 match
 Match emulation mode.
 Selects \"huc6280\" for non-SuperGrafx mode, and \"huc6280a\" for SuperGrafx(full) mode.

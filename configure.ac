@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='1.22.0-UNSTABLE'
-MEDNAFEN_VERSION_NUMERIC=0x00102200
+MEDNAFEN_VERSION='1.22.2'
+MEDNAFEN_VERSION_NUMERIC=0x00102202
 #                        0xJJJnnnRR
 
 AC_CANONICAL_HOST
@@ -691,7 +691,8 @@ else
 	AC_DEFINE([PSS_STYLE],[1], [Defines the filesystem path-separator type.])
 
 	AC_SEARCH_LIBS(pthread_create, [pthread])
-	AC_CHECK_FUNCS(pthread_create pthread_setname_np pthread_setaffinity_np sem_init, [], AC_MSG_ERROR([*** pthreads not found!]))
+	AC_CHECK_FUNCS(pthread_create sem_init, [], AC_MSG_ERROR([*** pthreads not found!]))
+	AC_CHECK_FUNCS(sem_timedwait sem_timedwait_monotonic pthread_condattr_setclock pthread_setname_np pthread_setaffinity_np pthread_cond_timedwait_relative_np)
 
 	AC_CHECK_HEADER([sys/soundcard.h],[AM_CONDITIONAL(HAVE_OSSDSP,true) AC_DEFINE([HAVE_OSSDSP], [1], [Define if we are compiling with OSS support.])])
 	AC_CHECK_HEADER([linux/joystick.h],[AM_CONDITIONAL(HAVE_LINUX_JOYSTICK,true) AC_DEFINE([HAVE_LINUX_JOYSTICK], [1], [Define if we are compiling with Linux joystick support.])])

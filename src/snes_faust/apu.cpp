@@ -2,7 +2,7 @@
 /* Mednafen Fast SNES Emulation Module                                        */
 /******************************************************************************/
 /* apu.cpp:
-**  Copyright (C) 2015-2018 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -281,7 +281,6 @@ enum : int { HLEPhaseBias = __COUNTER__ + 1 };
 //
 INLINE void SPC700::IPL_HLE(void)
 {
- assert(PC == 0xFFC1);
  switch(HLEPhase + HLEPhaseBias)
  {
   for(;;)
@@ -290,13 +289,24 @@ INLINE void SPC700::IPL_HLE(void)
    case __COUNTER__:
    //
    //
-   //printf("Begin\n");
+   //if(PC != 0xFFC1)
+   // printf("Begin %04x\n", PC);
+
+   if(PC == 0xFFCA)
+    goto SkipMemInit;
+
+   assert(PC == 0xFFC1);
+
+   PSW = 0x00;
+   SP = 0xEF;
+
    for(A = 0xEF; A >= 0x01; A--)
    {
     HLE_SUCK((A == 0xEF) ? 7 : 8);
     HLE_DUMMY_READ(A);
     HLE_WRITE(A, 0x00);
    }
+   SkipMemInit:;
 
    HLE_SUCK(7);
    HLE_DUMMY_READ(0xF4);
@@ -344,8 +354,7 @@ INLINE void SPC700::IPL_HLE(void)
      A = 0x00;
      X = 0x00;
      Y = 0x00;
-     SP = 0xEF;
-     PSW = 0x06;
+     PSW = (PSW & H_FLAG) | 0x06;
      PC = HLELoadAddr;
      Halted = false;
      //printf("Done: PC=0x%04x A=%02x X=%02x Y=%02x SP=%02x PSW=%02x --- %02x %02x %02x %02x\n", PC, A, X, Y, SP, PSW, IOFromSPC700[0], IOFromSPC700[1], IOFromSPC700[2], IOFromSPC700[3]);

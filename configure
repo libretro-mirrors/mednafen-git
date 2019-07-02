@@ -4365,8 +4365,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='1.22.0-UNSTABLE'
-MEDNAFEN_VERSION_NUMERIC=0x00102200
+MEDNAFEN_VERSION='1.22.2'
+MEDNAFEN_VERSION_NUMERIC=0x00102202
 #                        0xJJJnnnRR
 
 # Make sure we can run config.sub.
@@ -18150,7 +18150,7 @@ if test "$ac_res" != no; then :
 
 fi
 
-	for ac_func in pthread_create pthread_setname_np pthread_setaffinity_np sem_init
+	for ac_func in pthread_create sem_init
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_cxx_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -18161,6 +18161,18 @@ _ACEOF
 
 else
   as_fn_error $? "*** pthreads not found!" "$LINENO" 5
+fi
+done
+
+	for ac_func in sem_timedwait sem_timedwait_monotonic pthread_condattr_setclock pthread_setname_np pthread_setaffinity_np pthread_cond_timedwait_relative_np
+do :
+  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
+ac_fn_cxx_check_func "$LINENO" "$ac_func" "$as_ac_var"
+if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
+_ACEOF
+
 fi
 done
 

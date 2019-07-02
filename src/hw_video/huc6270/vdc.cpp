@@ -413,13 +413,13 @@ void VDC::IncRCR(void)
 		    {
 		     if(sat_dma_counter > 0)
 		     {
-		      printf("SAT DMA cancelled???\n");
+		      //printf("SAT DMA cancelled???\n");
 		      sat_dma_counter = 0;
 		      CheckAndCommitPending();
 		     }
 		     if(DMARunning)
 		     {
-		      printf("DMA Running Cancelled\n");
+		      //printf("DMA Running Cancelled\n");
 		      DMARunning = false;
 		      CheckAndCommitPending();
 		     }

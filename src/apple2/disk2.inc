@@ -38,7 +38,7 @@ namespace Disk2
 enum : unsigned { num_tracks = 160 };
 //enum : unsigned { samples_per_track = 1431818 };
 enum : unsigned { min_bits_per_track = 46000 };
-enum : unsigned { max_bits_per_track = 53168 };
+enum : unsigned { max_bits_per_track = 56048 };
 
 static uint8 BootROM[256];
 static uint8 SequencerROM[256];
@@ -868,7 +868,8 @@ static void LoadD13(Stream* sp, FloppyDisk* disk)
  }
 }
 
-static const uint8 woz_header_magic[8] = { 0x57, 0x4F, 0x5A, 0x31, 0xFF, 0x0A, 0x0D, 0x0A };
+static const uint8 woz_header_magic[8]  = { 0x57, 0x4F, 0x5A, 0x31, 0xFF, 0x0A, 0x0D, 0x0A };
+static const uint8 woz2_header_magic[8] = { 0x57, 0x4F, 0x5A, 0x32, 0xFF, 0x0A, 0x0D, 0x0A };
 
 static void LoadWOZ(Stream* sp, FloppyDisk* disk)
 {
@@ -876,13 +877,18 @@ static void LoadWOZ(Stream* sp, FloppyDisk* disk)
 
  MDFN_printf(_("Parsing WOZ-format disk image...\n"));
 
- if(sp->read(header, 12, false) != 12 || memcmp(header, woz_header_magic, sizeof(woz_header_magic)))
+ if(sp->read(header, 12, false) != 12 || (memcmp(header, woz_header_magic, sizeof(woz_header_magic)) && memcmp(header, woz2_header_magic, sizeof(woz2_header_magic))))
   throw MDFN_Error(0, _("Bad or missing WOZ file header."));
+ //
+ const bool woz2 = !memcmp(header, woz2_header_magic, sizeof(woz2_header_magic));
  //
  uint8 disk_type;
  uint8 write_protected;
  uint8 synchronized;
  uint8 cleaned;
+ uint8 optimal_bit_timing = 32;
+ uint16 compat_hw = 0;
+ uint16 req_ram = 0;
  //
  uint8 chunk_header[8];
  unsigned required_chunks = 0;
@@ -922,6 +928,13 @@ static void LoadWOZ(Stream* sp, FloppyDisk* disk)
    MDFN_zapctrlchars(creator);
    MDFN_trim(creator);
 
+   if(woz2) 
+   {
+    optimal_bit_timing = info[39];
+    compat_hw = MDFN_de16lsb(&info[40]);
+    req_ram = MDFN_de16lsb(&info[42]);
+   }
+
    if(disk_type == 0x02)
     throw MDFN_Error(0, _("3.5\" floppy disk images not currently supported."));
 
@@ -930,13 +943,40 @@ static void LoadWOZ(Stream* sp, FloppyDisk* disk)
 
    disk->write_protect = (bool)write_protected;
 
-   MDFN_printf(" INFO:\n");
-   MDFN_printf("  Version: %u\n", info_version);
-   MDFN_printf("  Disk type: %u\n", disk_type);
-   MDFN_printf("  Write protected: %u\n", write_protected);
-   MDFN_printf("  Synchronized: %u\n", synchronized);
-   MDFN_printf("  Cleaned: %u\n", cleaned);
-   MDFN_printf("  Creator: %s\n", creator);
+   MDFN_printf(_(" INFO:\n"));
+   MDFN_printf(_("  Version: %u\n"), info_version);
+   MDFN_printf(_("  Disk type: %u\n"), disk_type);
+   MDFN_printf(_("  Write protected: %u\n"), write_protected);
+   MDFN_printf(_("  Synchronized: %u\n"), synchronized);
+   MDFN_printf(_("  Cleaned: %u\n"), cleaned);
+   MDFN_printf(_("  Creator: %s\n"), creator);
+
+   if(woz2)
+   {
+    static const char* compat_hw_tab[] = { "Apple II", "Apple II+", "Apple IIe", "Apple IIc", "Apple IIe Enhanced", "Apple IIgs", "Apple IIc Plus", "Apple III", "Apple III Plus" };
+    std::string compat_hw_str;
+
+    for(size_t i = 0; i < sizeof(compat_hw_tab) / sizeof(compat_hw_tab[0]); i++)
+    {
+     if(compat_hw & (1U << i))
+     {
+      if(compat_hw_str.size())
+       compat_hw_str += ", ";
+
+      compat_hw_str += compat_hw_tab[i];
+     }
+    }
+
+    if(!compat_hw_str.size())
+     compat_hw_str = _("Unknown");
+
+    MDFN_printf(_("  Optimal bit timing: %u\n"), optimal_bit_timing);
+    MDFN_printf(_("  Compatible hardware: %s\n"), compat_hw_str.c_str());
+    if(!req_ram)
+     MDFN_printf(_("  Required RAM: %s\n"), _("Unknown"));
+    else
+     MDFN_printf(_("  Required RAM: %u KiB\n"), req_ram);
+   }
    //
    required_chunks |= 1;
   }
@@ -963,57 +1003,98 @@ static void LoadWOZ(Stream* sp, FloppyDisk* disk)
    if(sp->tell() != 256)
     throw MDFN_Error(0, _("Required chunk \"%s\" is at the wrong offset."), "TRKS");
 
-   if(chunk_size != num_src_tracks * 6656)
-    throw MDFN_Error(0, _("Required chunk \"%s\" is of the wrong size."), "TRKS");
-   //
    src_tracks.reset(new FloppyDisk::Track[num_src_tracks]);
 
    MDFN_printf(" TRKS:\n");
 
-   for(unsigned i = 0; i < num_src_tracks; i++)
+   if(woz2)
    {
-    uint8 trk[6656];
+    std::unique_ptr<uint8[]> index(new uint8[1280]);
+    std::unique_ptr<uint8[]> trk(new uint8[(max_bits_per_track + 7) >> 3]);
 
-    sp->read(trk, 6656);
-    //
-    const uint16 bytes_used = MDFN_de16lsb(&trk[6646]);
-    const uint16 bit_count = MDFN_de16lsb(&trk[6648]);
-    const uint16 splice_point = MDFN_de16lsb(&trk[6650]);
-    const uint8 splice_nibble = trk[6652];
-    const uint8 splice_bit_count = trk[6653];
-    const uint16 reserved = MDFN_de16lsb(&trk[6654]);
+    sp->read(index.get(), 1280);
 
-    if(bytes_used > 6646)
-     throw MDFN_Error(0, _("Bytes used of TRKS chunk TRK entry %u is larger than 6646!"), i);
-
-    if(bit_count > bytes_used * 8)
-     throw MDFN_Error(0, _("Bit count of TRKS chunk TRK entry %u is larger than the number of bytes used * 8!"), i);
-
-    //
-    // Sanity check, various assumptions to boost performance break down if the number of bits is too low or high.
-    // Maybe should check if the maximum absolute difference of one track's bit count compared to another track's bit count
-    // is too large too...
-    //
-    if(bit_count < min_bits_per_track || bit_count > max_bits_per_track)
-     throw MDFN_Error(0, _("Bit count(%u) of TRKS chunk TRK entry %u is out of the acceptable range of %u through %u!"), bit_count, i, min_bits_per_track, max_bits_per_track);
-
-    MDFN_printf("  Source track %u:\n", i);
-
-    MDFN_printf(_("    Bytes used: %u\n"), bytes_used);
-    MDFN_printf(_("    Bit count: %u\n"), bit_count);
-    MDFN_printf(_("    Splice point: %u\n"), splice_point);
-    MDFN_printf(_("    Splice nibble: 0x%02x\n"), splice_nibble);
-    MDFN_printf(_("    Splice bit count: %u\n"), splice_bit_count);
-    MDFN_printf(_("    Reserved: 0x%04x\n"), reserved);
-
-    //
-    apple2_track_encoder te(&src_tracks[i], bit_count);
-
-    for(size_t bi = 0; bi < bit_count; bi++)
+    for(unsigned i = 0; i < num_src_tracks; i++)
     {
-     te.encode_bit((trk[bi >> 3] >> (0x7 - (bi & 0x7))) & 1);
+     const uint16 starting_block = MDFN_de16lsb(&index[i * 8 + 0]);
+     const uint16 block_count = MDFN_de16lsb(&index[i * 8 + 2]);
+     const uint32 bit_count = MDFN_de32lsb(&index[i * 8 + 4]);
+
+     if(bit_count > (block_count * 8 * 512))
+      throw MDFN_Error(0, _("Bit count of TRKS chunk TRK entry %u is larger than the block count * 512 * 8!"), i);
+
+     if(bit_count < min_bits_per_track || bit_count > max_bits_per_track)
+      throw MDFN_Error(0, _("Bit count(%u) of TRKS chunk TRK entry %u is out of the acceptable range of %u through %u!"), bit_count, i, min_bits_per_track, max_bits_per_track);
+     //
+     //
+     //
+     sp->seek(starting_block * 512);
+     sp->read(trk.get(), (bit_count + 7) >> 3);
+     //
+     MDFN_printf(_("  Source track %u:\n"), i);
+
+     MDFN_printf(_("    Starting block: %u\n"), starting_block);
+     MDFN_printf(_("    Block count: %u\n"), block_count);
+     MDFN_printf(_("    Bit count: %u\n"), bit_count);
+     //
+     apple2_track_encoder te(&src_tracks[i], bit_count);
+
+     for(size_t bi = 0; bi < bit_count; bi++)
+     {
+      te.encode_bit((trk[bi >> 3] >> (0x7 - (bi & 0x7))) & 1);
+     }
+     te.finish();
     }
-    te.finish();
+   }
+   else
+   {
+    if(chunk_size != num_src_tracks * 6656)
+     throw MDFN_Error(0, _("Required chunk \"%s\" is of the wrong size."), "TRKS");
+
+    for(unsigned i = 0; i < num_src_tracks; i++)
+    {
+     uint8 trk[6656];
+
+     sp->read(trk, 6656);
+     //
+     const uint16 bytes_used = MDFN_de16lsb(&trk[6646]);
+     const uint16 bit_count = MDFN_de16lsb(&trk[6648]);
+     const uint16 splice_point = MDFN_de16lsb(&trk[6650]);
+     const uint8 splice_nibble = trk[6652];
+     const uint8 splice_bit_count = trk[6653];
+     const uint16 reserved = MDFN_de16lsb(&trk[6654]);
+
+     if(bytes_used > 6646)
+      throw MDFN_Error(0, _("Bytes used of TRKS chunk TRK entry %u is larger than 6646!"), i);
+
+     if(bit_count > bytes_used * 8)
+      throw MDFN_Error(0, _("Bit count of TRKS chunk TRK entry %u is larger than the number of bytes used * 8!"), i);
+
+     //
+     // Sanity check, various assumptions to boost performance break down if the number of bits is too low or high.
+     // Maybe should check if the maximum absolute difference of one track's bit count compared to another track's bit count
+     // is too large too...
+     //
+     if(bit_count < min_bits_per_track || bit_count > max_bits_per_track)
+      throw MDFN_Error(0, _("Bit count(%u) of TRKS chunk TRK entry %u is out of the acceptable range of %u through %u!"), bit_count, i, min_bits_per_track, max_bits_per_track);
+
+     MDFN_printf(_("  Source track %u:\n"), i);
+
+     MDFN_printf(_("    Bytes used: %u\n"), bytes_used);
+     MDFN_printf(_("    Bit count: %u\n"), bit_count);
+     MDFN_printf(_("    Splice point: %u\n"), splice_point);
+     MDFN_printf(_("    Splice nibble: 0x%02x\n"), splice_nibble);
+     MDFN_printf(_("    Splice bit count: %u\n"), splice_bit_count);
+     MDFN_printf(_("    Reserved: 0x%04x\n"), reserved);
+     //
+     apple2_track_encoder te(&src_tracks[i], bit_count);
+
+     for(size_t bi = 0; bi < bit_count; bi++)
+     {
+      te.encode_bit((trk[bi >> 3] >> (0x7 - (bi & 0x7))) & 1);
+     }
+     te.finish();
+    }
    }
 
    for(unsigned i = 0; i < sizeof(tmap); i++)
@@ -1406,7 +1487,7 @@ static void LoadDisk(Stream* sp, const std::string& ext, FloppyDisk* disk)
 
   MDFN_printf("Warning: Detecting Apple II disk image format by contents and/or size(ext=%s).\n", ext.c_str());
 
-  woz_header_detected = (sp->read(header, 12, false) == 12 && !memcmp(header, woz_header_magic, sizeof(woz_header_magic)));
+  woz_header_detected = (sp->read(header, 12, false) == 12 && (!memcmp(header, woz_header_magic, sizeof(woz_header_magic)) || !memcmp(header, woz2_header_magic, sizeof(woz2_header_magic))));
   sp->rewind();
 
   if(woz_header_detected)

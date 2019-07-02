@@ -158,14 +158,6 @@ class CSystem : public CSystemBase
 		inline void  PokeW_CPU(uint32 addr,uint16 data) { mMemoryHandlers[addr]->Poke(addr,data&0xff);addr++;mMemoryHandlers[addr]->Poke(addr,data>>8);};
 		inline uint16 PeekW_CPU(uint32 addr) {return ((mMemoryHandlers[addr]->Peek(addr))+(mMemoryHandlers[addr]->Peek(addr+1)<<8));};
 
-		//
-		// RAM
-		//
-		inline void  Poke_RAM(uint32 addr, uint8 data) { mRam->Poke(addr,data);};
-		inline uint8 Peek_RAM(uint32 addr) { return mRam->Peek(addr);};
-		inline void  PokeW_RAM(uint32 addr,uint16 data) { mRam->Poke(addr,data&0xff);addr++;mRam->Poke(addr,data>>8);};
-		inline uint16 PeekW_RAM(uint32 addr) {return ((mRam->Peek(addr))+(mRam->Peek(addr+1)<<8));};
-
 // High level cart access for debug etc
 
 		inline void  Poke_CART(uint32 addr, uint8 data) {mCart->Poke(addr,data);};

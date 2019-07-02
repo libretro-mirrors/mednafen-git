@@ -20,7 +20,7 @@ static INLINE bool MDFNI_SetSettingB(const std::string& name, bool value) { retu
 bool MDFNI_SetSettingUI(const char *name, uint64 value);
 static INLINE bool MDFNI_SetSettingUI(const std::string& name, uint64 value) { return MDFNI_SetSettingUI(name.c_str(), value); }
 
-bool MDFNI_DumpSettingsDef(const char *path);
+void MDFNI_DumpSettingsDef(const char *path) MDFN_COLD;
 
 const std::vector<MDFNCS>* MDFNI_GetSettings(void);
 std::string MDFNI_GetSettingDefault(const char* name);

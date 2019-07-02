@@ -61,11 +61,6 @@ class CSystemBase
 		virtual void	PokeW_CPU(uint32 addr,uint16 data)=0;
 		virtual uint16	PeekW_CPU(uint32 addr)=0;
 
-		virtual void	Poke_RAM(uint32 addr,uint8 data)=0;
-		virtual uint8	Peek_RAM(uint32 addr)=0;
-		virtual void	PokeW_RAM(uint32 addr,uint16 data)=0;
-		virtual uint16	PeekW_RAM(uint32 addr)=0;
-
 		virtual uint8*	GetRamPointer(void)=0;
 
 };

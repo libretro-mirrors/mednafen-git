@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* ss.cpp - Saturn Core Emulation and Support Functions
-**  Copyright (C) 2015-2018 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -57,7 +57,9 @@ static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp);
 
 #ifdef MDFN_SS_DEV_BUILD
 uint32 ss_dbg_mask;
+static std::bitset<0x200> BWMIgnoreAddr[2]; // 0=read, 1=write
 #endif
+
 static bool NeedEmuICache;
 static const uint8 BRAM_Init_Data[0x10] = { 0x42, 0x61, 0x63, 0x6b, 0x55, 0x70, 0x52, 0x61, 0x6d, 0x20, 0x46, 0x6f, 0x72, 0x6d, 0x61, 0x74 };
 
@@ -1145,7 +1147,22 @@ static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned
   for(uint64 dmse : dms)
    ss_dbg_mask |= dmse;
  }
+
+ static const uint32 addrs[] =
+ {
+  0x280, 0x300, 0x304, 0x308, 0x30C, 0x310, 0x314, 0x318, 0x31C, 0x320, 0x324, 0x330, 0x334, 0x340, 0x344, 0x348,
+  0x34C, 0x354, 0x358
+ };
+
+ static const uint32 wr_addrs[] = { 0x250, 0x348 };
+
+ for(size_t i = 0; i < sizeof(addrs) / sizeof(addrs[0]); i++)
+  BWMIgnoreAddr[0][addrs[i] & 0x1FF] = true;
+
+ for(size_t i = 0; i < sizeof(wr_addrs) / sizeof(wr_addrs[0]); i++)
+  BWMIgnoreAddr[1][wr_addrs[i] & 0x1FF] = true;
 #endif
+
  //
  {
   const struct
@@ -2025,6 +2042,8 @@ static const MDFNSetting_EnumList DBGMask_List[] =
 
  { "scsp",	SS_DBG_SCSP,		gettext_noop("SCSP")			},
  { "scsp_regw", SS_DBG_SCSP_REGW,	gettext_noop("SCSP register writes")	},
+
+ { "bios",	SS_DBG_BIOS,		gettext_noop("BIOS")			},
 
  { NULL, 0 },
 };

@@ -115,9 +115,13 @@ am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
 libmdfnxxx_a_AR = $(AR) $(ARFLAGS)
 libmdfnxxx_a_LIBADD =
-am_libmdfnxxx_a_OBJECTS = interface.$(OBJEXT) \
-	CDInterface_EXT.$(OBJEXT) main.$(OBJEXT)
+am_libmdfnxxx_a_OBJECTS = main.$(OBJEXT)
 libmdfnxxx_a_OBJECTS = $(am_libmdfnxxx_a_OBJECTS)
+libmdfnxxx_extra_a_AR = $(AR) $(ARFLAGS)
+libmdfnxxx_extra_a_LIBADD =
+am_libmdfnxxx_extra_a_OBJECTS = interface.$(OBJEXT) \
+	CDInterface_EXT.$(OBJEXT)
+libmdfnxxx_extra_a_OBJECTS = $(am_libmdfnxxx_extra_a_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -146,8 +150,8 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(libmdfnxxx_a_SOURCES)
-DIST_SOURCES = $(libmdfnxxx_a_SOURCES)
+SOURCES = $(libmdfnxxx_a_SOURCES) $(libmdfnxxx_extra_a_SOURCES)
+DIST_SOURCES = $(libmdfnxxx_a_SOURCES) $(libmdfnxxx_extra_a_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -356,8 +360,9 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_builddir)/intl
-noinst_LIBRARIES = libmdfnxxx.a
-libmdfnxxx_a_SOURCES = interface.cpp CDInterface_EXT.cpp main.cpp
+noinst_LIBRARIES = libmdfnxxx.a libmdfnxxx_extra.a
+libmdfnxxx_a_SOURCES = main.cpp
+libmdfnxxx_extra_a_SOURCES = interface.cpp CDInterface_EXT.cpp
 all: all-am
 
 .SUFFIXES:
@@ -400,6 +405,11 @@ libmdfnxxx.a: $(libmdfnxxx_a_OBJECTS) $(libmdfnxxx_a_DEPENDENCIES) $(EXTRA_libmd
 	$(AM_V_at)-rm -f libmdfnxxx.a
 	$(AM_V_AR)$(libmdfnxxx_a_AR) libmdfnxxx.a $(libmdfnxxx_a_OBJECTS) $(libmdfnxxx_a_LIBADD)
 	$(AM_V_at)$(RANLIB) libmdfnxxx.a
+
+libmdfnxxx_extra.a: $(libmdfnxxx_extra_a_OBJECTS) $(libmdfnxxx_extra_a_DEPENDENCIES) $(EXTRA_libmdfnxxx_extra_a_DEPENDENCIES) 
+	$(AM_V_at)-rm -f libmdfnxxx_extra.a
+	$(AM_V_AR)$(libmdfnxxx_extra_a_AR) libmdfnxxx_extra.a $(libmdfnxxx_extra_a_OBJECTS) $(libmdfnxxx_extra_a_LIBADD)
+	$(AM_V_at)$(RANLIB) libmdfnxxx_extra.a
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)

@@ -547,7 +547,7 @@ case 0xCB:
 	if(EmulateWAI)
 	{
 	 if(next_event > 1)
-	  ADDCYC(next_event - 1);
+	  ADDCYC_MASTER(next_event - 1);
 	 LastCycle();
 	 break;
 	}

@@ -58,13 +58,9 @@
 // wa can access this directly without the hassle of
 // going through the system object, much faster
 //
-//#define RAM_PEEK(m)			(mSystem.Peek_RAM((m)))
-//#define RAM_POKE(m1,m2)		(mSystem.Poke_RAM((m1),(m2)))
-//#define RAM_PEEKW(m)			(mSystem.PeekW_RAM((m)))
-
-#define RAM_PEEK(m)				(mRamPointer[(m)])
-#define RAM_PEEKW(m)			(mRamPointer[(m)]+(mRamPointer[(m)+1]<<8))
-#define RAM_POKE(m1,m2)			{mRamPointer[(m1)]=(m2);}
+#define RAM_PEEK(m)			(mRamPointer[(uint16)(m)])
+#define RAM_PEEKW(m)			(mRamPointer[(uint16)(m)]+(mRamPointer[(uint16)((m)+1)]<<8))
+#define RAM_POKE(m1,m2)			{mRamPointer[(uint16)(m1)]=(m2);}
 
 uint32 cycles_used=0;
 
@@ -838,7 +834,7 @@ uint32 CSusie::PaintSprites(void)
 
 INLINE void CSusie::WritePixel(uint32 hoff,uint32 pixel)
 {
-        uint32 scr_addr=mLineBaseAddress+(hoff/2);
+        const uint16 scr_addr=mLineBaseAddress+(hoff/2);
 
         uint8 dest=RAM_PEEK(scr_addr);
         if(!(hoff&0x01))
@@ -861,7 +857,7 @@ INLINE void CSusie::WritePixel(uint32 hoff,uint32 pixel)
 
 INLINE uint32 CSusie::ReadPixel(uint32 hoff)
 {
-        uint32 scr_addr=mLineBaseAddress+(hoff/2);
+        const uint16 scr_addr=mLineBaseAddress+(hoff/2);
 
         uint32 data=RAM_PEEK(scr_addr);
         if(!(hoff&0x01))
@@ -883,7 +879,7 @@ INLINE uint32 CSusie::ReadPixel(uint32 hoff)
 
 INLINE void CSusie::WriteCollision(uint32 hoff,uint32 pixel)
 {
-        uint32 col_addr=mLineCollisionAddress+(hoff/2);
+        const uint16 col_addr=mLineCollisionAddress+(hoff/2);
 
         uint8 dest=RAM_PEEK(col_addr);
         if(!(hoff&0x01))
@@ -906,7 +902,7 @@ INLINE void CSusie::WriteCollision(uint32 hoff,uint32 pixel)
 
 INLINE uint32 CSusie::ReadCollision(uint32 hoff)
 {
-        uint32 col_addr=mLineCollisionAddress+(hoff/2);
+        const uint16 col_addr=mLineCollisionAddress+(hoff/2);
 
         uint32 data=RAM_PEEK(col_addr);
         if(!(hoff&0x01))
