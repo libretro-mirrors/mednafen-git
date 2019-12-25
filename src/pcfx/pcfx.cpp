@@ -1102,6 +1102,7 @@ MDFNGI EmulatedPCFX =
  PCFXPortInfo,
  NULL,
  NULL,
+ NULL,
  LoadCD,
  TestMagicCD,
  CloseGame,

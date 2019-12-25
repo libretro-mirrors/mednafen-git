@@ -1222,6 +1222,7 @@ MDFNGI EmulatedPCE =
  NULL,
  #endif
  PCEPortInfo,
+ NULL,
  Load,
  TestMagic,
  LoadCD,

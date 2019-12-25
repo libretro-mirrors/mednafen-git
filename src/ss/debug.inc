@@ -54,7 +54,7 @@ static struct DBGS
  unsigned ActiveCPU;
 } DBG;
 
-static void DBG_Break(void)
+static MDFN_NOWARN_UNUSED void DBG_Break(void)
 {
  DBG.FoundBPoint = true;
 }
@@ -650,6 +650,23 @@ static const RegType DBG_Regs_SCU_CDB_VDP1[] =
 
  { 0, "------", "", 0xFFFF },
 
+ { SCU_GSREG_D0MD, "D0MD", "D0MD", 4 },
+ { SCU_GSREG_D1MD, "D1MD", "D1MD", 4 },
+ { SCU_GSREG_D2MD, "D2MD", "D2MD", 4 },
+
+ { 0, "------", "", 0xFFFF },
+
+ { SCU_GSREG_ASR0_CS0, "ASR0_CS0", "A-bus CS0 Config", 2 },
+ { SCU_GSREG_ASR0_CS1, "ASR0_CS1", "A-bus CS1 Config", 2 },
+ { SCU_GSREG_ASR1_CS2, "ASR1_CS2", "A-bus CS2 Config", 2 },
+ { SCU_GSREG_ASR1_CSD, "ASR1_CSD", "A-bus Dummy Config", 2 },
+
+ { SCU_GSREG_AREF, "AREF", "A-bus Refresh Config", 1 },
+
+ { SCU_GSREG_RSEL, "RSEL", "SDRAM Size Config", 0x100 | 1 },
+
+ { 0, "------", "", 0xFFFF },
+
  { SCU_GSREG_TENBL, "TENBL", "Timers Enable", 0x100 | 1 },
 
  { SCU_GSREG_T0CNT, "T0CNT", "Timer0 Counter", 0x100 | 10 },
@@ -694,6 +711,11 @@ static const RegType DBG_Regs_SCU_CDB_VDP1[] =
  { (2 << 16) | VDP1::GSREG_LOCALX, "LocalX", "LocalX", 2 },
  { (2 << 16) | VDP1::GSREG_LOCALY, "LocalY", "LocalY", 2 },
 
+ { (2 << 16) | VDP1::GSREG_TVMR, "TVMR", "TVMR", 1 },
+ { (2 << 16) | VDP1::GSREG_FBCR, "FBCR", "FBCR", 1 },
+ { (2 << 16) | VDP1::GSREG_EWDR, "EWDR", "EWDR", 2 },
+ { (2 << 16) | VDP1::GSREG_EWLR, "EWLR", "EWLR", 2 },
+ { (2 << 16) | VDP1::GSREG_EWRR, "EWRR", "EWRR", 2 },
 
  { 0, "", "", 0 },
 };

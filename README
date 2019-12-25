@@ -66,3 +66,12 @@ Some notes(and reminders) on the source code:
 	Don't use memcmp() on class/struct objects unless they're initialized with memset() and copied around with only memcpy()(or equivalent).
 
 	Don't rely on malloc(), realloc(), and calloc() setting errno to ENOMEM on a memory allocation error.
+
+
+---------------------------------------------
+Code contributions:
+---------------------------------------------
+	To keep things simpler for commercial licensing, any patches or new code offered for emulation modules "apple2", "psx", "snes_faust", and "ss",
+	along with contributions to core Mednafen functionality with code that is not self-contained(e.g. support for a new CD image format), will be ignored.
+	Distributing a separate patch set or an outright fork(with branding that clearly conveys the forkiness) is recommended.
+

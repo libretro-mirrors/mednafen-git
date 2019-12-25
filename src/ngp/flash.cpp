@@ -69,7 +69,7 @@ static uint16 block_count;
 //-----------------------------------------------------------------------------
 // optimise_blocks()
 //-----------------------------------------------------------------------------
-static void optimise_blocks(void)
+void flash_optimise_blocks(void)
 {
 	int i, j;
 
@@ -105,9 +105,8 @@ static void optimise_blocks(void)
 			(blocks[i].start_address + blocks[i].data_length))
 		{
 			//Extend the first block
-			blocks[i].data_length = 
-				(uint16)((blocks[i+1].start_address + blocks[i+1].data_length) - 
-				blocks[i].start_address);
+			blocks[i].data_length = (uint16)(std::max<uint32>(blocks[i + 0].start_address + blocks[i + 0].data_length,
+									  blocks[i + 1].start_address + blocks[i + 1].data_length) - blocks[i].start_address);
 
 			//Remove the next one.
 			for (j = i+2; j < block_count; j++)
@@ -122,6 +121,9 @@ static void optimise_blocks(void)
 			i++;	// Try the next block
 		}
 	}
+
+	//for(i = 0; i < block_count; i++)
+	// printf("block: 0x%08x 0x%04x\n", blocks[i].start_address, blocks[i].data_length);
 }
 
 static void do_flash_read(const uint8 *flashdata)
@@ -162,7 +164,7 @@ static void do_flash_read(const uint8 *flashdata)
 	}
 	memory_unlock_flash_write = PREV_memory_unlock_flash_write;
 
-	optimise_blocks();		//Optimise
+	flash_optimise_blocks();		//Optimise
 
 #if 0
 	//Output block list...
@@ -210,6 +212,8 @@ void FLASH_LoadNV(void)
 void flash_write(uint32 start_address, uint16 length)
 {
 	uint16 i;
+
+	//printf("flash_write 0x%08x 0x%04x\n", start_address, length);
 
 	//Now we need a new flash command before the next flash write will work!
 	memory_flash_command = false;
@@ -260,7 +264,7 @@ static void make_flash_commit(PODFastVector<uint8> &flashdata)
 		return;
 
 	//Optimise before writing
-	optimise_blocks();
+	flash_optimise_blocks();
 
 	//Build a header;
 	header.valid_flash_id = FLASH_VALID_ID;

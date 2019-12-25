@@ -35,7 +35,11 @@ void APU_StartFrame(double master_clock, double rate);
 void APU_SetSPC(SPCReader* s) MDFN_COLD;	// Call after APU_Reset()
 
 void APU_StateAction(StateMem* sm, const unsigned load, const bool data_only);
-
+//
+//
+//
+uint8 APU_PeekRAM(uint32 addr) MDFN_COLD;
+void APU_PokeRAM(uint32 addr, const uint8 val) MDFN_COLD;
 }
 
 #endif

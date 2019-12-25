@@ -1364,6 +1364,7 @@ MDFNGI EmulatedSNES =
  MODPRIO_INTERNAL_HIGH,
  NULL,						// Debugger
  PortInfo,
+ NULL,
  Load,
  TestMagic,
  NULL,

@@ -102,7 +102,7 @@ typedef uint64_t uint64;
  #define HAVE_SSE2_INTRINSICS 1
 #endif
 
-#if defined(__ARM_NEON__) || defined(_M_ARM64)
+#if defined(__ARM_NEON__) || defined(__ARM_NEON) || defined(_M_ARM64)
  #define HAVE_NEON_INTRINSICS 1
 #endif
 

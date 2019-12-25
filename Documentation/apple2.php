@@ -5,6 +5,7 @@
 <?php BeginSection('Introduction', "Section_intro"); ?>
 Mednafen's "<b>apple2</b>" emulation module emulates an Apple II/II+.  It is geared more towards running individual software releases independently of other
 software releases; it can be used differently, but the abstractions chosen may make it rather awkward.
+
 <?php EndSection(); ?>
 
 <?php BeginSection("MAI System and Disks Configuration File", "Section_mai"); ?>
@@ -376,6 +377,8 @@ The following software is known to be compatible with one or more Atari joystick
 <?php EndSection(); ?>
 
 <?php EndSection(); ?>
+
+<?php PrintCustomPalettes(); ?>
 
 <?php PrintSettings(); ?>
 

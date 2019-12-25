@@ -1234,6 +1234,27 @@ MDFNST_BOOL
 
 
 0
+apple2.video.mode
+MDFNSF_CAT_VIDEO 
+Video rendering mode.
+When an RGB mode is enabled, settings \"apple2.video.force_mono\", \"apple2.video.mixed_text_mono\", \"apple2.video.mono_lumafilter\", \"apple2.video.color_lumafilter\", and \"apple2.video.color_smooth\" are effectively ignored.
+MDFNST_ENUM
+composite
+
+
+4
+composite
+Composite
+Internal video dimensions of 584x192.
+rgb
+RGB
+Internal video dimensions of 292x192; suitable for use with scalers like hq2x.
+rgb_alt1
+RGB (alternate algorithm 1)
+Internal video dimensions of 584x192.
+rgb_alt2
+RGB (alternate algorithm 2)
+Internal video dimensions of 584x192.
 apple2.video.mono_lumafilter
 MDFNSF_CAT_VIDEO 
 Monochrome video luma filter.
@@ -3187,7 +3208,7 @@ Fast-forwarding speed multiplier.
 
 MDFNST_FLOAT
 4
-1
+0.25
 15
 0
 fftoggle
@@ -31172,7 +31193,7 @@ SLOW-forwarding speed multiplier.
 MDFNST_FLOAT
 0.75
 0.25
-1
+15
 0
 sftoggle
 
@@ -33508,6 +33529,66 @@ MDFNST_BOOL
 
 
 0
+snes_faust.cx4.clock_rate
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+CX4 clock rate, specified in percentage of normal.
+Overclocking the CX4 will cause or worsen attract mode desynchronization.
+MDFNST_UINT
+100
+100
+500
+0
+snes_faust.debugger.disfontsize
+MDFNSF_COMMON_TEMPLATE 
+Disassembly font size.
+Note: Setting the font size to larger than the default may cause text overlap in the debugger.
+MDFNST_ENUM
+5x7
+
+
+11
+5x7
+5x7
+
+6x9
+6x9
+
+6x12
+6x12
+
+6x13
+6x13.  CJK support.
+
+9x18
+9x18;  CJK support.
+
+xsmall
+
+
+small
+
+
+medium
+
+
+large
+
+
+0
+
+
+1
+
+
+snes_faust.debugger.memcharenc
+MDFNSF_COMMON_TEMPLATE 
+Character encoding for the debugger\'s memory editor.
+
+MDFNST_STRING
+cp437
+
+
+0
 snes_faust.enable
 MDFNSF_COMMON_TEMPLATE 
 Enable (automatic) usage of this module.
@@ -33526,6 +33607,30 @@ MDFNST_BOOL
 
 
 0
+snes_faust.h_filter
+
+Horizontal blending/doubling filter.
+
+MDFNST_ENUM
+none
+
+
+5
+none
+None
+
+512
+Force 512.
+Double width of line if it\'s 256.
+phr256blend
+Pseudo-hires halve-blend.
+Blend line down to 256 pixels if it\'s pseudo-hires.
+phr256blend_512
+Pseudo-hires halve-blend and force 512.
+Blend line down to 256 pixels if it\'s pseudo-hires.  After, double width of line if it\'s 256.
+512_blend
+Force 512 and blend.
+Double width of line if it\'s 256.  After, blend line.
 snes_faust.input.port1
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 Input device for Virtual Port 1
@@ -35422,6 +35527,138 @@ MDFNST_STRING
 
 
 0
+ss.dbg_exe_cem
+MDFNSF_SUPPRESS_DOC MDFNSF_NONPERSISTENT 
+Cache emulation mode to use with bootable cart ROM image loading.
+
+MDFNST_ENUM
+data
+
+
+3
+data_cb
+Data only, with high-level bypass
+
+data
+Data only
+
+full
+Full
+
+ss.dbg_exe_hh
+MDFNSF_SUPPRESS_DOC MDFNSF_NONPERSISTENT 
+Horrible hacks to use with bootable cart ROM image loading.
+
+(nil)
+none
+
+
+7
+0
+
+
+none
+None
+
+nosh2dmaline106
+nosh2dmaline106
+
+nosh2dmapenalty
+nosh2dmapenalty
+
+vdp1vram5000fix
+vdp1vram5000fix
+
+vdp1rwdrawslowdown
+vdp1rwdrawslowdown
+
+vdp1instant
+vdp1instant
+
+ss.dbg_mask
+MDFNSF_SUPPRESS_DOC 
+Debug printf mask.
+
+(nil)
+none
+
+
+25
+0
+
+
+none
+None
+
+all
+All
+
+warning
+Warnings
+
+m68k
+M68K
+
+sh2
+SH-2
+
+sh2_regw
+SH-2 (peripherals) register writes
+
+sh2_cache
+SH-2 cache
+
+scu
+SCU
+
+scu_regw
+SCU register writes
+
+scu_int
+SCU interrupt
+
+scu_dsp
+SCU DSP
+
+smpc
+SMPC
+
+smpc_regw
+SMPC register writes
+
+cdb
+CDB
+
+cdb_regw
+CDB register writes
+
+vdp1
+VDP1
+
+vdp1_regw
+VDP1 register writes
+
+vdp1_vramw
+VDP1 VRAM writes
+
+vdp1_fbw
+VDP1 FB writes
+
+vdp2
+VDP2
+
+vdp2_regw
+VDP2 register writes
+
+scsp
+SCSP
+
+scsp_regw
+SCSP register writes
+
+bios
+BIOS
+
 ss.debugger.disfontsize
 MDFNSF_COMMON_TEMPLATE 
 Disassembly font size.

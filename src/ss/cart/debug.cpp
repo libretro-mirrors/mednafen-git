@@ -39,7 +39,7 @@ static void Debug_RW_DB(uint32 A, uint16* DB)
   {
    if(A == 0x02100001)
    {
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
     fputc(*DB, stderr);
     fflush(stderr);
 #endif

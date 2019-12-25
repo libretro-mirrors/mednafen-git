@@ -755,6 +755,7 @@ MDFNGI EmulatedDEMO =
  MODPRIO_INTERNAL_LOW,
  NULL,
  PortInfo,
+ NULL,
  Load,
  TestMagic,
  NULL,

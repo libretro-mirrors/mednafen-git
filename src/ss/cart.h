@@ -71,24 +71,29 @@ static INLINE void CART_CS2_Read16_DB(uint32 A, uint16* DB)  { extern CartInfo C
 static INLINE void CART_CS2_Write8_DB(uint32 A, uint16* DB)  { extern CartInfo Cart; Cart.CS2M_RW[(A >> 1) & 0x1F].Write8 (A, DB); }
 static INLINE void CART_CS2_Write16_DB(uint32 A, uint16* DB) { extern CartInfo Cart; Cart.CS2M_RW[(A >> 1) & 0x1F].Write16(A, DB); }
 
+//
+// Don't change the values for existing cart types, or a save state sanity check will break.
+//
 enum
 {
- CART__RESERVED = -1,
- CART_NONE = 0,
- CART_BACKUP_MEM,
- CART_EXTRAM_1M,
- CART_EXTRAM_4M,
+ CART__RESERVED  = -1,
+ CART_NONE	 = 0x000,
 
- CART_KOF95,
- CART_ULTRAMAN,
+ CART_BACKUP_MEM = 0x100,
 
- CART_AR4MP,
+ CART_EXTRAM_1M	 = 0x200,
+ CART_EXTRAM_4M	 = 0x201,
 
- CART_CS1RAM_16M,
+ CART_KOF95	 = 0x300,
+ CART_ULTRAMAN	 = 0x301,
 
- CART_NLMODEM,
+ CART_AR4MP	 = 0x400,
 
- CART_MDFN_DEBUG
+ CART_CS1RAM_16M = 0x500,
+
+ CART_NLMODEM	 = 0x600,
+
+ CART_MDFN_DEBUG = 0xF00
 };
 
 void CART_Init(const int cart_type, Stream* rom_stream) MDFN_COLD;

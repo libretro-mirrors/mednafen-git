@@ -3253,7 +3253,7 @@ void VDP2REND_Init(const bool IsPAL)
  VisibleLines = PAL ? 288 : 240;
  //
  UserLayerEnableMask = ~0U;
-
+ Clock28M = false;
  //
  WQ_ReadPos = 0;
  WQ_WritePos = 0;
@@ -3262,6 +3262,9 @@ void VDP2REND_Init(const bool IsPAL)
 
  WakeupSem = MThreading::CreateSem();
  RThread = MThreading::CreateThread(RThreadEntry, NULL, "MDFN VDP2 Render");
+ #ifdef MDFN_SS_VDP2_THREAD_AFFINITY
+ MThreading::SetAffinity(RThread, MDFN_SS_VDP2_THREAD_AFFINITY);
+ #endif
 }
 
 // Needed for ss.correct_aspect == 0

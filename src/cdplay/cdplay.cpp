@@ -555,6 +555,7 @@ MDFNGI EmulatedCDPlay =
  PortInfo,    //
  NULL,
  NULL,
+ NULL,
  LoadCD,
  TestMagicCD,
  CloseGame,

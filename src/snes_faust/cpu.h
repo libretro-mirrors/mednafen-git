@@ -36,12 +36,14 @@ struct CPU_Misc
  uint32 next_event_ts;
  uint32 running_mask;
 
+ uint32 PIN_Delay;
+
  enum
  {
   HALTED_NOT = 0,
-  HALTED_WAI = 1,
-  HALTED_STP = 2,
-  HALTED_DMA = 3
+  HALTED_WAI = 1 << 0,
+  HALTED_STP = 1 << 1,
+  HALTED_DMA = 1 << 2
  };
 
  uint8 halted;
@@ -50,6 +52,7 @@ struct CPU_Misc
  uint8 CombinedNIState;
  bool NMILineState;
  bool PrevNMILineState;
+ uint8 MultiIRQState;
 
  readfunc ReadFuncs[256];	// A and B bus read handlers
  writefunc WriteFuncs[256];	// A and B bus write handlers
@@ -125,10 +128,18 @@ INLINE void CPU_IO(void)
  CPUM.timestamp += 6;
 }
 
-INLINE void CPU_SetIRQ(bool active)
+enum
 {
+ CPU_IRQSOURCE_PPU = 0,
+ CPU_IRQSOURCE_CART
+};
+
+INLINE void CPU_SetIRQ(bool active, unsigned w = CPU_IRQSOURCE_PPU)
+{
+ CPUM.MultiIRQState &= ~(1 << w);
+ CPUM.MultiIRQState |= active << w;
  CPUM.CombinedNIState &= ~0x04;
- CPUM.CombinedNIState |= active ? 0x04 : 0x00;
+ CPUM.CombinedNIState |= CPUM.MultiIRQState ? 0x04 : 0x00;
 }
 
 INLINE void CPU_SetNMI(bool active)
@@ -139,9 +150,14 @@ INLINE void CPU_SetNMI(bool active)
  CPUM.NMILineState = active;
 }
 
+INLINE void CPU_TriggerIRQNMIDelayKludge(void)
+{
+ CPUM.PIN_Delay |= 0x80;
+}
+
 void CPU_Init(void) MDFN_COLD;
 void CPU_Reset(bool powering_up) MDFN_COLD;
-void CPU_StateAction(StateMem* sm, const unsigned load, const bool data_only);
+void CPU_StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname, const char* sname_core);
 void CPU_Run(void) MDFN_HOT;
 
 INLINE void CPU_Exit(void)
@@ -149,6 +165,17 @@ INLINE void CPU_Exit(void)
  CPUM.running_mask = 0;
  CPUM.next_event_ts = 0;
 }
+//
+//
+//
+/*
+enum
+{
+ CPU_GSREG_WHATEVER = Core65816::GSREG__BOUND,
+};
+*/
+uint32 CPU_GetRegister(const unsigned id, char* const special = nullptr, const uint32 special_len = 0) MDFN_COLD;
+void CPU_SetRegister(const unsigned id, const uint32 value) MDFN_COLD;
 
 }
 

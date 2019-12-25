@@ -2297,6 +2297,7 @@ MDFNGI EmulatedPSX =
  NULL,
  #endif
  FIO_PortInfo,
+ NULL,
  Load,
  TestMagic,
  LoadCD,

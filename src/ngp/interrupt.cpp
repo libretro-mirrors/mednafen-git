@@ -48,15 +48,15 @@ static bool h_int, timer0, timer2;
 // a device sets the virual interrupt latch register, signaling it wants an interrupt.
 
 // FIXME in the future if we ever add real bios support?
-void interrupt(uint8 index)
+void interrupt(const uint8 index, const int level)
 {
 	//printf("INT: %d\n", index);
 	push32(pc);
 	push16(sr);
 
-        //Up the IFF
-        if (((sr & 0x7000) >> 12) < 7)
-                setStatusIFF(((sr & 0x7000) >> 12) + 1);
+	//Up the IFF
+	if(level >= 0)
+	 setStatusIFF((level < 7) ? (level + 1) : 7);
 
         //Access the interrupt vector table to find the jump destination
         pc = loadL(0x6FB8 + index * 4);
@@ -82,7 +82,7 @@ void int_check_pending(void)
  if(ipending[5] && curIFF <= prio && prio && prio != 7)
  {
   ipending[5] = 0;
-  interrupt(5);
+  interrupt(5, prio);
   return;
  }
 
@@ -90,7 +90,7 @@ void int_check_pending(void)
  if(ipending[6] && curIFF <= prio && prio && prio != 7)
  {
   ipending[6] = 0;
-  interrupt(6);
+  interrupt(6, prio);
   return;
  }
 
@@ -98,7 +98,7 @@ void int_check_pending(void)
  if(ipending[7] && curIFF <= prio && prio && prio != 7)
  {
   ipending[7] = 0;
-  interrupt(7);  
+  interrupt(7, prio);
   return;
  }
 
@@ -106,7 +106,7 @@ void int_check_pending(void)
  if(ipending[8] && curIFF <= prio && prio && prio != 7)
  {
   ipending[8] = 0;
-  interrupt(8);
+  interrupt(8, prio);
   return;
  }
 
@@ -114,7 +114,7 @@ void int_check_pending(void)
  if(ipending[9] && curIFF <= prio && prio && prio != 7)
  {
   ipending[9] = 0;
-  interrupt(9);
+  interrupt(9, prio);
   return;
  }
 
@@ -122,7 +122,7 @@ void int_check_pending(void)
  if(ipending[10] && curIFF <= prio && prio && prio != 7)
  {
   ipending[10] = 0;
-  interrupt(10);
+  interrupt(10, prio);
   return;
  }
 
@@ -130,7 +130,7 @@ void int_check_pending(void)
  if(ipending[11] && curIFF <= prio && prio && prio != 7)
  {
   ipending[11] = 0;
-  interrupt(11);
+  interrupt(11, prio);
   return;
  }
 
@@ -138,7 +138,7 @@ void int_check_pending(void)
  if(ipending[12] && curIFF <= prio && prio && prio != 7)
  {
   ipending[12] = 0;
-  interrupt(12);
+  interrupt(12, prio);
   return;
  }
 

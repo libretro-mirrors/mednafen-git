@@ -188,7 +188,8 @@ void DMA_update(int channel)
 	dmaC[channel] --;
 	if (dmaC[channel] == 0)
 	{
-		interrupt(14 + channel);
+		//printf("dma end: %d\n", channel);
+		interrupt(14 + channel, 7);
 		storeB(0x7C + channel, 0);
 	}
 }

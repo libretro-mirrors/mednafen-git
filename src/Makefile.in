@@ -256,7 +256,21 @@ DIST_COMMON = $(srcdir)/cdplay/Makefile.am.inc \
 @WANT_SNES_EMU_TRUE@am__append_32 = libsnes.a
 @WANT_SNES_EMU_TRUE@am__append_33 = libsnes.a
 @WANT_SNES_EMU_TRUE@am__append_34 = libsnes.a
-@WANT_SNES_FAUST_EMU_TRUE@am__append_35 = snes_faust/cpu.cpp snes_faust/snes.cpp snes_faust/apu.cpp snes_faust/cart.cpp snes_faust/input.cpp snes_faust/ppu.cpp
+@WANT_SNES_FAUST_EMU_TRUE@am__append_35 = snes_faust/cpu.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/snes.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/apu.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/input.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/dsp1.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/dsp2.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/sdd1.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/cx4.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/superfx.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/sa1.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/sa1cpu.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/debug.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/dis65816.cpp
 @WANT_SS_EMU_TRUE@am__append_36 = ss/libss.a
 @WANT_SS_EMU_TRUE@am__append_37 = ss/libss.a
 @WANT_SSFPLAY_EMU_TRUE@am__append_38 = ss/libssfplay.a
@@ -369,17 +383,12 @@ am__libngp_a_SOURCES_DIST = ngp/bios.cpp ngp/biosHLE.cpp ngp/dma.cpp \
 	ngp/gfx_scanline_mono.cpp ngp/gfx_scanline_colour.cpp \
 	ngp/interrupt.cpp ngp/mem.cpp ngp/neopop.cpp ngp/rom.cpp \
 	ngp/rtc.cpp ngp/sound.cpp ngp/Z80_interface.cpp \
-	ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp \
-	ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp \
 	ngp/TLCS-900h/TLCS900h_interpret_single.cpp \
-	ngp/TLCS-900h/TLCS900h_disassemble_src.cpp \
 	ngp/TLCS-900h/TLCS900h_interpret.cpp \
 	ngp/TLCS-900h/TLCS900h_registers.cpp \
 	ngp/TLCS-900h/TLCS900h_interpret_reg.cpp \
-	ngp/TLCS-900h/TLCS900h_disassemble.cpp \
 	ngp/TLCS-900h/TLCS900h_interpret_src.cpp \
-	ngp/TLCS-900h/TLCS900h_interpret_dst.cpp \
-	ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp
+	ngp/TLCS-900h/TLCS900h_interpret_dst.cpp
 @WANT_NGP_EMU_TRUE@am_libngp_a_OBJECTS = ngp/libngp_a-bios.$(OBJEXT) \
 @WANT_NGP_EMU_TRUE@	ngp/libngp_a-biosHLE.$(OBJEXT) \
 @WANT_NGP_EMU_TRUE@	ngp/libngp_a-dma.$(OBJEXT) \
@@ -395,17 +404,12 @@ am__libngp_a_SOURCES_DIST = ngp/bios.cpp ngp/biosHLE.cpp ngp/dma.cpp \
 @WANT_NGP_EMU_TRUE@	ngp/libngp_a-rtc.$(OBJEXT) \
 @WANT_NGP_EMU_TRUE@	ngp/libngp_a-sound.$(OBJEXT) \
 @WANT_NGP_EMU_TRUE@	ngp/libngp_a-Z80_interface.$(OBJEXT) \
-@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_extra.$(OBJEXT) \
-@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_reg.$(OBJEXT) \
 @WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/libngp_a-TLCS900h_interpret_single.$(OBJEXT) \
-@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_src.$(OBJEXT) \
 @WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/libngp_a-TLCS900h_interpret.$(OBJEXT) \
 @WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/libngp_a-TLCS900h_registers.$(OBJEXT) \
 @WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/libngp_a-TLCS900h_interpret_reg.$(OBJEXT) \
-@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/libngp_a-TLCS900h_disassemble.$(OBJEXT) \
 @WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/libngp_a-TLCS900h_interpret_src.$(OBJEXT) \
-@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/libngp_a-TLCS900h_interpret_dst.$(OBJEXT) \
-@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_dst.$(OBJEXT)
+@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/libngp_a-TLCS900h_interpret_dst.$(OBJEXT)
 libngp_a_OBJECTS = $(am_libngp_a_OBJECTS)
 libsnes_a_AR = $(AR) $(ARFLAGS)
 libsnes_a_LIBADD =
@@ -579,16 +583,21 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	sms/romdb.cpp sms/sms.cpp sms/sound.cpp sms/system.cpp \
 	sms/tms.cpp sms/vdp.cpp snes_faust/cpu.cpp snes_faust/snes.cpp \
 	snes_faust/apu.cpp snes_faust/cart.cpp snes_faust/input.cpp \
-	snes_faust/ppu.cpp vb/vb.cpp vb/timer.cpp vb/input.cpp \
-	vb/vip.cpp vb/vsu.cpp vb/debug.cpp wswan/gfx.cpp \
-	wswan/main.cpp wswan/memory.cpp wswan/comm.cpp wswan/v30mz.cpp \
-	wswan/sound.cpp wswan/tcache.cpp wswan/interrupt.cpp \
-	wswan/eeprom.cpp wswan/rtc.cpp wswan/debug.cpp \
-	wswan/dis/dis_decode.cpp wswan/dis/dis_groups.cpp \
-	wswan/dis/resolve.cpp wswan/dis/syntax.cpp \
-	hw_cpu/m68k/m68k.cpp hw_cpu/z80-fuse/z80.cpp \
-	hw_cpu/z80-fuse/z80_ops.cpp hw_cpu/v810/v810_cpu.cpp \
-	hw_cpu/v810/v810_cpuD.cpp hw_cpu/v810/v810_fp_ops.cpp \
+	snes_faust/ppu.cpp snes_faust/cart/dsp1.cpp \
+	snes_faust/cart/dsp2.cpp snes_faust/cart/sdd1.cpp \
+	snes_faust/cart/cx4.cpp snes_faust/cart/superfx.cpp \
+	snes_faust/cart/sa1.cpp snes_faust/cart/sa1cpu.cpp \
+	snes_faust/debug.cpp snes_faust/dis65816.cpp vb/vb.cpp \
+	vb/timer.cpp vb/input.cpp vb/vip.cpp vb/vsu.cpp vb/debug.cpp \
+	wswan/gfx.cpp wswan/main.cpp wswan/memory.cpp wswan/comm.cpp \
+	wswan/v30mz.cpp wswan/sound.cpp wswan/tcache.cpp \
+	wswan/interrupt.cpp wswan/eeprom.cpp wswan/rtc.cpp \
+	wswan/debug.cpp wswan/dis/dis_decode.cpp \
+	wswan/dis/dis_groups.cpp wswan/dis/resolve.cpp \
+	wswan/dis/syntax.cpp hw_cpu/m68k/m68k.cpp \
+	hw_cpu/z80-fuse/z80.cpp hw_cpu/z80-fuse/z80_ops.cpp \
+	hw_cpu/v810/v810_cpu.cpp hw_cpu/v810/v810_cpuD.cpp \
+	hw_cpu/v810/v810_fp_ops.cpp \
 	hw_misc/arcade_card/arcade_card.cpp \
 	hw_sound/ym2413/emu2413.cpp hw_sound/ym2612/Ym2612_Emu.cpp \
 	hw_sound/gb_apu/Gb_Apu.cpp hw_sound/gb_apu/Gb_Apu_State.cpp \
@@ -851,7 +860,16 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/apu.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/input.$(OBJEXT) \
-@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu.$(OBJEXT)
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/dsp1.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/dsp2.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/sdd1.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/cx4.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/superfx.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/sa1.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/sa1cpu.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/debug.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/dis65816.$(OBJEXT)
 @WANT_VB_EMU_TRUE@am__objects_20 = vb/vb.$(OBJEXT) vb/timer.$(OBJEXT) \
 @WANT_VB_EMU_TRUE@	vb/input.$(OBJEXT) vb/vip.$(OBJEXT) \
 @WANT_VB_EMU_TRUE@	vb/vsu.$(OBJEXT)
@@ -1325,11 +1343,12 @@ mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 @WANT_NGP_EMU_TRUE@libngp_a_SOURCES = ngp/bios.cpp ngp/biosHLE.cpp ngp/dma.cpp ngp/flash.cpp ngp/gfx.cpp ngp/T6W28_Apu.cpp	\
 @WANT_NGP_EMU_TRUE@	ngp/gfx_scanline_mono.cpp ngp/gfx_scanline_colour.cpp ngp/interrupt.cpp ngp/mem.cpp ngp/neopop.cpp \
 @WANT_NGP_EMU_TRUE@	ngp/rom.cpp ngp/rtc.cpp ngp/sound.cpp ngp/Z80_interface.cpp \
-@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp \
-@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/TLCS900h_interpret_single.cpp ngp/TLCS-900h/TLCS900h_disassemble_src.cpp \
-@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/TLCS900h_interpret.cpp ngp/TLCS-900h/TLCS900h_registers.cpp ngp/TLCS-900h/TLCS900h_interpret_reg.cpp \
-@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/TLCS900h_disassemble.cpp ngp/TLCS-900h/TLCS900h_interpret_src.cpp \
-@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/TLCS900h_interpret_dst.cpp ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp
+@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/TLCS900h_interpret_single.cpp	\
+@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/TLCS900h_interpret.cpp		\
+@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/TLCS900h_registers.cpp		\
+@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/TLCS900h_interpret_reg.cpp	\
+@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/TLCS900h_interpret_src.cpp	\
+@WANT_NGP_EMU_TRUE@	ngp/TLCS-900h/TLCS900h_interpret_dst.cpp
 
 @WANT_SNES_EMU_TRUE@libsnes_a_CFLAGS = @AM_CFLAGS@ @SNES_EXTRA_FLAGS@
 @WANT_SNES_EMU_TRUE@libsnes_a_CXXFLAGS = @AM_CXXFLAGS@ @SNES_EXTRA_FLAGS@ @SNES_EXTRA_CXXFLAGS@
@@ -1555,16 +1574,7 @@ ngp/TLCS-900h/$(am__dirstamp):
 ngp/TLCS-900h/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) ngp/TLCS-900h/$(DEPDIR)
 	@: > ngp/TLCS-900h/$(DEPDIR)/$(am__dirstamp)
-ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_extra.$(OBJEXT):  \
-	ngp/TLCS-900h/$(am__dirstamp) \
-	ngp/TLCS-900h/$(DEPDIR)/$(am__dirstamp)
-ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_reg.$(OBJEXT):  \
-	ngp/TLCS-900h/$(am__dirstamp) \
-	ngp/TLCS-900h/$(DEPDIR)/$(am__dirstamp)
 ngp/TLCS-900h/libngp_a-TLCS900h_interpret_single.$(OBJEXT):  \
-	ngp/TLCS-900h/$(am__dirstamp) \
-	ngp/TLCS-900h/$(DEPDIR)/$(am__dirstamp)
-ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_src.$(OBJEXT):  \
 	ngp/TLCS-900h/$(am__dirstamp) \
 	ngp/TLCS-900h/$(DEPDIR)/$(am__dirstamp)
 ngp/TLCS-900h/libngp_a-TLCS900h_interpret.$(OBJEXT):  \
@@ -1576,16 +1586,10 @@ ngp/TLCS-900h/libngp_a-TLCS900h_registers.$(OBJEXT):  \
 ngp/TLCS-900h/libngp_a-TLCS900h_interpret_reg.$(OBJEXT):  \
 	ngp/TLCS-900h/$(am__dirstamp) \
 	ngp/TLCS-900h/$(DEPDIR)/$(am__dirstamp)
-ngp/TLCS-900h/libngp_a-TLCS900h_disassemble.$(OBJEXT):  \
-	ngp/TLCS-900h/$(am__dirstamp) \
-	ngp/TLCS-900h/$(DEPDIR)/$(am__dirstamp)
 ngp/TLCS-900h/libngp_a-TLCS900h_interpret_src.$(OBJEXT):  \
 	ngp/TLCS-900h/$(am__dirstamp) \
 	ngp/TLCS-900h/$(DEPDIR)/$(am__dirstamp)
 ngp/TLCS-900h/libngp_a-TLCS900h_interpret_dst.$(OBJEXT):  \
-	ngp/TLCS-900h/$(am__dirstamp) \
-	ngp/TLCS-900h/$(DEPDIR)/$(am__dirstamp)
-ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_dst.$(OBJEXT):  \
 	ngp/TLCS-900h/$(am__dirstamp) \
 	ngp/TLCS-900h/$(DEPDIR)/$(am__dirstamp)
 
@@ -2549,6 +2553,30 @@ snes_faust/input.$(OBJEXT): snes_faust/$(am__dirstamp) \
 	snes_faust/$(DEPDIR)/$(am__dirstamp)
 snes_faust/ppu.$(OBJEXT): snes_faust/$(am__dirstamp) \
 	snes_faust/$(DEPDIR)/$(am__dirstamp)
+snes_faust/cart/$(am__dirstamp):
+	@$(MKDIR_P) snes_faust/cart
+	@: > snes_faust/cart/$(am__dirstamp)
+snes_faust/cart/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) snes_faust/cart/$(DEPDIR)
+	@: > snes_faust/cart/$(DEPDIR)/$(am__dirstamp)
+snes_faust/cart/dsp1.$(OBJEXT): snes_faust/cart/$(am__dirstamp) \
+	snes_faust/cart/$(DEPDIR)/$(am__dirstamp)
+snes_faust/cart/dsp2.$(OBJEXT): snes_faust/cart/$(am__dirstamp) \
+	snes_faust/cart/$(DEPDIR)/$(am__dirstamp)
+snes_faust/cart/sdd1.$(OBJEXT): snes_faust/cart/$(am__dirstamp) \
+	snes_faust/cart/$(DEPDIR)/$(am__dirstamp)
+snes_faust/cart/cx4.$(OBJEXT): snes_faust/cart/$(am__dirstamp) \
+	snes_faust/cart/$(DEPDIR)/$(am__dirstamp)
+snes_faust/cart/superfx.$(OBJEXT): snes_faust/cart/$(am__dirstamp) \
+	snes_faust/cart/$(DEPDIR)/$(am__dirstamp)
+snes_faust/cart/sa1.$(OBJEXT): snes_faust/cart/$(am__dirstamp) \
+	snes_faust/cart/$(DEPDIR)/$(am__dirstamp)
+snes_faust/cart/sa1cpu.$(OBJEXT): snes_faust/cart/$(am__dirstamp) \
+	snes_faust/cart/$(DEPDIR)/$(am__dirstamp)
+snes_faust/debug.$(OBJEXT): snes_faust/$(am__dirstamp) \
+	snes_faust/$(DEPDIR)/$(am__dirstamp)
+snes_faust/dis65816.$(OBJEXT): snes_faust/$(am__dirstamp) \
+	snes_faust/$(DEPDIR)/$(am__dirstamp)
 vb/$(am__dirstamp):
 	@$(MKDIR_P) vb
 	@: > vb/$(am__dirstamp)
@@ -2968,6 +2996,7 @@ mostlyclean-compile:
 	-rm -f snes/src/smp/*.$(OBJEXT)
 	-rm -f snes/src/system/*.$(OBJEXT)
 	-rm -f snes_faust/*.$(OBJEXT)
+	-rm -f snes_faust/cart/*.$(OBJEXT)
 	-rm -f sound/*.$(OBJEXT)
 	-rm -f string/*.$(OBJEXT)
 	-rm -f tremor/*.$(OBJEXT)
@@ -3278,11 +3307,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@ngp/$(DEPDIR)/libngp_a-rom.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@ngp/$(DEPDIR)/libngp_a-rtc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@ngp/$(DEPDIR)/libngp_a-sound.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_dst.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_extra.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_reg.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_src.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_interpret.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_interpret_dst.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_interpret_reg.Po@am__quote@
@@ -3392,9 +3416,18 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/apu.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/cart.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/cpu.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/debug.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/dis65816.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/input.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/ppu.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/snes.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/cart/$(DEPDIR)/cx4.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/cart/$(DEPDIR)/dsp1.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/cart/$(DEPDIR)/dsp2.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/cart/$(DEPDIR)/sa1.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/cart/$(DEPDIR)/sa1cpu.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/cart/$(DEPDIR)/sdd1.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/cart/$(DEPDIR)/superfx.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@sound/$(DEPDIR)/Blip_Buffer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@sound/$(DEPDIR)/DSPUtility.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@sound/$(DEPDIR)/Fir_Resampler.Po@am__quote@
@@ -4120,34 +4153,6 @@ ngp/libngp_a-Z80_interface.obj: ngp/Z80_interface.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -c -o ngp/libngp_a-Z80_interface.obj `if test -f 'ngp/Z80_interface.cpp'; then $(CYGPATH_W) 'ngp/Z80_interface.cpp'; else $(CYGPATH_W) '$(srcdir)/ngp/Z80_interface.cpp'; fi`
 
-ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_extra.o: ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -MT ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_extra.o -MD -MP -MF ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_extra.Tpo -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_extra.o `test -f 'ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp' || echo '$(srcdir)/'`ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_extra.Tpo ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_extra.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp' object='ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_extra.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_extra.o `test -f 'ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp' || echo '$(srcdir)/'`ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp
-
-ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_extra.obj: ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -MT ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_extra.obj -MD -MP -MF ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_extra.Tpo -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_extra.obj `if test -f 'ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp'; then $(CYGPATH_W) 'ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp'; else $(CYGPATH_W) '$(srcdir)/ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_extra.Tpo ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_extra.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp' object='ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_extra.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_extra.obj `if test -f 'ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp'; then $(CYGPATH_W) 'ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp'; else $(CYGPATH_W) '$(srcdir)/ngp/TLCS-900h/TLCS900h_disassemble_extra.cpp'; fi`
-
-ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_reg.o: ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -MT ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_reg.o -MD -MP -MF ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_reg.Tpo -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_reg.o `test -f 'ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp' || echo '$(srcdir)/'`ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_reg.Tpo ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_reg.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp' object='ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_reg.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_reg.o `test -f 'ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp' || echo '$(srcdir)/'`ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp
-
-ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_reg.obj: ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -MT ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_reg.obj -MD -MP -MF ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_reg.Tpo -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_reg.obj `if test -f 'ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp'; then $(CYGPATH_W) 'ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp'; else $(CYGPATH_W) '$(srcdir)/ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_reg.Tpo ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_reg.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp' object='ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_reg.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_reg.obj `if test -f 'ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp'; then $(CYGPATH_W) 'ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp'; else $(CYGPATH_W) '$(srcdir)/ngp/TLCS-900h/TLCS900h_disassemble_reg.cpp'; fi`
-
 ngp/TLCS-900h/libngp_a-TLCS900h_interpret_single.o: ngp/TLCS-900h/TLCS900h_interpret_single.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -MT ngp/TLCS-900h/libngp_a-TLCS900h_interpret_single.o -MD -MP -MF ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_interpret_single.Tpo -c -o ngp/TLCS-900h/libngp_a-TLCS900h_interpret_single.o `test -f 'ngp/TLCS-900h/TLCS900h_interpret_single.cpp' || echo '$(srcdir)/'`ngp/TLCS-900h/TLCS900h_interpret_single.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_interpret_single.Tpo ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_interpret_single.Po
@@ -4161,20 +4166,6 @@ ngp/TLCS-900h/libngp_a-TLCS900h_interpret_single.obj: ngp/TLCS-900h/TLCS900h_int
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ngp/TLCS-900h/TLCS900h_interpret_single.cpp' object='ngp/TLCS-900h/libngp_a-TLCS900h_interpret_single.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -c -o ngp/TLCS-900h/libngp_a-TLCS900h_interpret_single.obj `if test -f 'ngp/TLCS-900h/TLCS900h_interpret_single.cpp'; then $(CYGPATH_W) 'ngp/TLCS-900h/TLCS900h_interpret_single.cpp'; else $(CYGPATH_W) '$(srcdir)/ngp/TLCS-900h/TLCS900h_interpret_single.cpp'; fi`
-
-ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_src.o: ngp/TLCS-900h/TLCS900h_disassemble_src.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -MT ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_src.o -MD -MP -MF ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_src.Tpo -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_src.o `test -f 'ngp/TLCS-900h/TLCS900h_disassemble_src.cpp' || echo '$(srcdir)/'`ngp/TLCS-900h/TLCS900h_disassemble_src.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_src.Tpo ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_src.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ngp/TLCS-900h/TLCS900h_disassemble_src.cpp' object='ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_src.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_src.o `test -f 'ngp/TLCS-900h/TLCS900h_disassemble_src.cpp' || echo '$(srcdir)/'`ngp/TLCS-900h/TLCS900h_disassemble_src.cpp
-
-ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_src.obj: ngp/TLCS-900h/TLCS900h_disassemble_src.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -MT ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_src.obj -MD -MP -MF ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_src.Tpo -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_src.obj `if test -f 'ngp/TLCS-900h/TLCS900h_disassemble_src.cpp'; then $(CYGPATH_W) 'ngp/TLCS-900h/TLCS900h_disassemble_src.cpp'; else $(CYGPATH_W) '$(srcdir)/ngp/TLCS-900h/TLCS900h_disassemble_src.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_src.Tpo ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_src.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ngp/TLCS-900h/TLCS900h_disassemble_src.cpp' object='ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_src.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_src.obj `if test -f 'ngp/TLCS-900h/TLCS900h_disassemble_src.cpp'; then $(CYGPATH_W) 'ngp/TLCS-900h/TLCS900h_disassemble_src.cpp'; else $(CYGPATH_W) '$(srcdir)/ngp/TLCS-900h/TLCS900h_disassemble_src.cpp'; fi`
 
 ngp/TLCS-900h/libngp_a-TLCS900h_interpret.o: ngp/TLCS-900h/TLCS900h_interpret.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -MT ngp/TLCS-900h/libngp_a-TLCS900h_interpret.o -MD -MP -MF ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_interpret.Tpo -c -o ngp/TLCS-900h/libngp_a-TLCS900h_interpret.o `test -f 'ngp/TLCS-900h/TLCS900h_interpret.cpp' || echo '$(srcdir)/'`ngp/TLCS-900h/TLCS900h_interpret.cpp
@@ -4218,20 +4209,6 @@ ngp/TLCS-900h/libngp_a-TLCS900h_interpret_reg.obj: ngp/TLCS-900h/TLCS900h_interp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -c -o ngp/TLCS-900h/libngp_a-TLCS900h_interpret_reg.obj `if test -f 'ngp/TLCS-900h/TLCS900h_interpret_reg.cpp'; then $(CYGPATH_W) 'ngp/TLCS-900h/TLCS900h_interpret_reg.cpp'; else $(CYGPATH_W) '$(srcdir)/ngp/TLCS-900h/TLCS900h_interpret_reg.cpp'; fi`
 
-ngp/TLCS-900h/libngp_a-TLCS900h_disassemble.o: ngp/TLCS-900h/TLCS900h_disassemble.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -MT ngp/TLCS-900h/libngp_a-TLCS900h_disassemble.o -MD -MP -MF ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble.Tpo -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble.o `test -f 'ngp/TLCS-900h/TLCS900h_disassemble.cpp' || echo '$(srcdir)/'`ngp/TLCS-900h/TLCS900h_disassemble.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble.Tpo ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ngp/TLCS-900h/TLCS900h_disassemble.cpp' object='ngp/TLCS-900h/libngp_a-TLCS900h_disassemble.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble.o `test -f 'ngp/TLCS-900h/TLCS900h_disassemble.cpp' || echo '$(srcdir)/'`ngp/TLCS-900h/TLCS900h_disassemble.cpp
-
-ngp/TLCS-900h/libngp_a-TLCS900h_disassemble.obj: ngp/TLCS-900h/TLCS900h_disassemble.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -MT ngp/TLCS-900h/libngp_a-TLCS900h_disassemble.obj -MD -MP -MF ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble.Tpo -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble.obj `if test -f 'ngp/TLCS-900h/TLCS900h_disassemble.cpp'; then $(CYGPATH_W) 'ngp/TLCS-900h/TLCS900h_disassemble.cpp'; else $(CYGPATH_W) '$(srcdir)/ngp/TLCS-900h/TLCS900h_disassemble.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble.Tpo ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ngp/TLCS-900h/TLCS900h_disassemble.cpp' object='ngp/TLCS-900h/libngp_a-TLCS900h_disassemble.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble.obj `if test -f 'ngp/TLCS-900h/TLCS900h_disassemble.cpp'; then $(CYGPATH_W) 'ngp/TLCS-900h/TLCS900h_disassemble.cpp'; else $(CYGPATH_W) '$(srcdir)/ngp/TLCS-900h/TLCS900h_disassemble.cpp'; fi`
-
 ngp/TLCS-900h/libngp_a-TLCS900h_interpret_src.o: ngp/TLCS-900h/TLCS900h_interpret_src.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -MT ngp/TLCS-900h/libngp_a-TLCS900h_interpret_src.o -MD -MP -MF ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_interpret_src.Tpo -c -o ngp/TLCS-900h/libngp_a-TLCS900h_interpret_src.o `test -f 'ngp/TLCS-900h/TLCS900h_interpret_src.cpp' || echo '$(srcdir)/'`ngp/TLCS-900h/TLCS900h_interpret_src.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_interpret_src.Tpo ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_interpret_src.Po
@@ -4259,20 +4236,6 @@ ngp/TLCS-900h/libngp_a-TLCS900h_interpret_dst.obj: ngp/TLCS-900h/TLCS900h_interp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ngp/TLCS-900h/TLCS900h_interpret_dst.cpp' object='ngp/TLCS-900h/libngp_a-TLCS900h_interpret_dst.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -c -o ngp/TLCS-900h/libngp_a-TLCS900h_interpret_dst.obj `if test -f 'ngp/TLCS-900h/TLCS900h_interpret_dst.cpp'; then $(CYGPATH_W) 'ngp/TLCS-900h/TLCS900h_interpret_dst.cpp'; else $(CYGPATH_W) '$(srcdir)/ngp/TLCS-900h/TLCS900h_interpret_dst.cpp'; fi`
-
-ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_dst.o: ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -MT ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_dst.o -MD -MP -MF ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_dst.Tpo -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_dst.o `test -f 'ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp' || echo '$(srcdir)/'`ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_dst.Tpo ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_dst.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp' object='ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_dst.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_dst.o `test -f 'ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp' || echo '$(srcdir)/'`ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp
-
-ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_dst.obj: ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -MT ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_dst.obj -MD -MP -MF ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_dst.Tpo -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_dst.obj `if test -f 'ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp'; then $(CYGPATH_W) 'ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp'; else $(CYGPATH_W) '$(srcdir)/ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_dst.Tpo ngp/TLCS-900h/$(DEPDIR)/libngp_a-TLCS900h_disassemble_dst.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp' object='ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_dst.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(libngp_a_CXXFLAGS) $(CXXFLAGS) -c -o ngp/TLCS-900h/libngp_a-TLCS900h_disassemble_dst.obj `if test -f 'ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp'; then $(CYGPATH_W) 'ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp'; else $(CYGPATH_W) '$(srcdir)/ngp/TLCS-900h/TLCS900h_disassemble_dst.cpp'; fi`
 
 snes/libsnes_a-interface.o: snes/interface.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsnes_a_CPPFLAGS) $(CPPFLAGS) $(libsnes_a_CXXFLAGS) $(CXXFLAGS) -MT snes/libsnes_a-interface.o -MD -MP -MF snes/$(DEPDIR)/libsnes_a-interface.Tpo -c -o snes/libsnes_a-interface.o `test -f 'snes/interface.cpp' || echo '$(srcdir)/'`snes/interface.cpp
@@ -4962,6 +4925,8 @@ distclean-generic:
 	-rm -f snes/src/system/$(am__dirstamp)
 	-rm -f snes_faust/$(DEPDIR)/$(am__dirstamp)
 	-rm -f snes_faust/$(am__dirstamp)
+	-rm -f snes_faust/cart/$(DEPDIR)/$(am__dirstamp)
+	-rm -f snes_faust/cart/$(am__dirstamp)
 	-rm -f sound/$(DEPDIR)/$(am__dirstamp)
 	-rm -f sound/$(am__dirstamp)
 	-rm -f string/$(DEPDIR)/$(am__dirstamp)
@@ -4988,7 +4953,7 @@ clean-am: clean-binPROGRAMS clean-generic clean-noinstLIBRARIES \
 	mostlyclean-am
 
 distclean: distclean-recursive
-	-rm -rf ./$(DEPDIR) apple2/$(DEPDIR) cdplay/$(DEPDIR) cdrom/$(DEPDIR) cheat_formats/$(DEPDIR) compress/$(DEPDIR) cputest/$(DEPDIR) demo/$(DEPDIR) desa68/$(DEPDIR) gb/$(DEPDIR) gba/$(DEPDIR) hash/$(DEPDIR) hw_cpu/m68k/$(DEPDIR) hw_cpu/v810/$(DEPDIR) hw_cpu/z80-fuse/$(DEPDIR) hw_misc/arcade_card/$(DEPDIR) hw_sound/gb_apu/$(DEPDIR) hw_sound/pce_psg/$(DEPDIR) hw_sound/sms_apu/$(DEPDIR) hw_sound/ym2413/$(DEPDIR) hw_sound/ym2612/$(DEPDIR) hw_video/huc6270/$(DEPDIR) lynx/$(DEPDIR) md/$(DEPDIR) md/cart/$(DEPDIR) md/cd/$(DEPDIR) md/input/$(DEPDIR) minilzo/$(DEPDIR) mpcdec/$(DEPDIR) mthreading/$(DEPDIR) nes/$(DEPDIR) nes/boards/$(DEPDIR) nes/input/$(DEPDIR) nes/ntsc/$(DEPDIR) nes/ppu/$(DEPDIR) net/$(DEPDIR) ngp/$(DEPDIR) ngp/TLCS-900h/$(DEPDIR) pce/$(DEPDIR) pce/input/$(DEPDIR) pce_fast/$(DEPDIR) pcfx/$(DEPDIR) pcfx/input/$(DEPDIR) psx/$(DEPDIR) psx/input/$(DEPDIR) quicklz/$(DEPDIR) resampler/$(DEPDIR) sms/$(DEPDIR) snes/$(DEPDIR) snes/src/cartridge/$(DEPDIR) snes/src/cheat/$(DEPDIR) snes/src/chip/bsx/$(DEPDIR) snes/src/chip/cx4/$(DEPDIR) snes/src/chip/dsp1/$(DEPDIR) snes/src/chip/dsp2/$(DEPDIR) snes/src/chip/dsp3/$(DEPDIR) snes/src/chip/dsp4/$(DEPDIR) snes/src/chip/obc1/$(DEPDIR) snes/src/chip/sa1/$(DEPDIR) snes/src/chip/sdd1/$(DEPDIR) snes/src/chip/spc7110/$(DEPDIR) snes/src/chip/srtc/$(DEPDIR) snes/src/chip/st010/$(DEPDIR) snes/src/chip/superfx/$(DEPDIR) snes/src/cpu/$(DEPDIR) snes/src/cpu/core/$(DEPDIR) snes/src/cpu/scpu/$(DEPDIR) snes/src/lib/libco/$(DEPDIR) snes/src/memory/$(DEPDIR) snes/src/memory/smemory/$(DEPDIR) snes/src/ppu/$(DEPDIR) snes/src/sdsp/$(DEPDIR) snes/src/smp/$(DEPDIR) snes/src/system/$(DEPDIR) snes_faust/$(DEPDIR) sound/$(DEPDIR) string/$(DEPDIR) tremor/$(DEPDIR) trio/$(DEPDIR) vb/$(DEPDIR) video/$(DEPDIR) wswan/$(DEPDIR) wswan/dis/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) apple2/$(DEPDIR) cdplay/$(DEPDIR) cdrom/$(DEPDIR) cheat_formats/$(DEPDIR) compress/$(DEPDIR) cputest/$(DEPDIR) demo/$(DEPDIR) desa68/$(DEPDIR) gb/$(DEPDIR) gba/$(DEPDIR) hash/$(DEPDIR) hw_cpu/m68k/$(DEPDIR) hw_cpu/v810/$(DEPDIR) hw_cpu/z80-fuse/$(DEPDIR) hw_misc/arcade_card/$(DEPDIR) hw_sound/gb_apu/$(DEPDIR) hw_sound/pce_psg/$(DEPDIR) hw_sound/sms_apu/$(DEPDIR) hw_sound/ym2413/$(DEPDIR) hw_sound/ym2612/$(DEPDIR) hw_video/huc6270/$(DEPDIR) lynx/$(DEPDIR) md/$(DEPDIR) md/cart/$(DEPDIR) md/cd/$(DEPDIR) md/input/$(DEPDIR) minilzo/$(DEPDIR) mpcdec/$(DEPDIR) mthreading/$(DEPDIR) nes/$(DEPDIR) nes/boards/$(DEPDIR) nes/input/$(DEPDIR) nes/ntsc/$(DEPDIR) nes/ppu/$(DEPDIR) net/$(DEPDIR) ngp/$(DEPDIR) ngp/TLCS-900h/$(DEPDIR) pce/$(DEPDIR) pce/input/$(DEPDIR) pce_fast/$(DEPDIR) pcfx/$(DEPDIR) pcfx/input/$(DEPDIR) psx/$(DEPDIR) psx/input/$(DEPDIR) quicklz/$(DEPDIR) resampler/$(DEPDIR) sms/$(DEPDIR) snes/$(DEPDIR) snes/src/cartridge/$(DEPDIR) snes/src/cheat/$(DEPDIR) snes/src/chip/bsx/$(DEPDIR) snes/src/chip/cx4/$(DEPDIR) snes/src/chip/dsp1/$(DEPDIR) snes/src/chip/dsp2/$(DEPDIR) snes/src/chip/dsp3/$(DEPDIR) snes/src/chip/dsp4/$(DEPDIR) snes/src/chip/obc1/$(DEPDIR) snes/src/chip/sa1/$(DEPDIR) snes/src/chip/sdd1/$(DEPDIR) snes/src/chip/spc7110/$(DEPDIR) snes/src/chip/srtc/$(DEPDIR) snes/src/chip/st010/$(DEPDIR) snes/src/chip/superfx/$(DEPDIR) snes/src/cpu/$(DEPDIR) snes/src/cpu/core/$(DEPDIR) snes/src/cpu/scpu/$(DEPDIR) snes/src/lib/libco/$(DEPDIR) snes/src/memory/$(DEPDIR) snes/src/memory/smemory/$(DEPDIR) snes/src/ppu/$(DEPDIR) snes/src/sdsp/$(DEPDIR) snes/src/smp/$(DEPDIR) snes/src/system/$(DEPDIR) snes_faust/$(DEPDIR) snes_faust/cart/$(DEPDIR) sound/$(DEPDIR) string/$(DEPDIR) tremor/$(DEPDIR) trio/$(DEPDIR) vb/$(DEPDIR) video/$(DEPDIR) wswan/$(DEPDIR) wswan/dis/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -5034,7 +4999,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-recursive
-	-rm -rf ./$(DEPDIR) apple2/$(DEPDIR) cdplay/$(DEPDIR) cdrom/$(DEPDIR) cheat_formats/$(DEPDIR) compress/$(DEPDIR) cputest/$(DEPDIR) demo/$(DEPDIR) desa68/$(DEPDIR) gb/$(DEPDIR) gba/$(DEPDIR) hash/$(DEPDIR) hw_cpu/m68k/$(DEPDIR) hw_cpu/v810/$(DEPDIR) hw_cpu/z80-fuse/$(DEPDIR) hw_misc/arcade_card/$(DEPDIR) hw_sound/gb_apu/$(DEPDIR) hw_sound/pce_psg/$(DEPDIR) hw_sound/sms_apu/$(DEPDIR) hw_sound/ym2413/$(DEPDIR) hw_sound/ym2612/$(DEPDIR) hw_video/huc6270/$(DEPDIR) lynx/$(DEPDIR) md/$(DEPDIR) md/cart/$(DEPDIR) md/cd/$(DEPDIR) md/input/$(DEPDIR) minilzo/$(DEPDIR) mpcdec/$(DEPDIR) mthreading/$(DEPDIR) nes/$(DEPDIR) nes/boards/$(DEPDIR) nes/input/$(DEPDIR) nes/ntsc/$(DEPDIR) nes/ppu/$(DEPDIR) net/$(DEPDIR) ngp/$(DEPDIR) ngp/TLCS-900h/$(DEPDIR) pce/$(DEPDIR) pce/input/$(DEPDIR) pce_fast/$(DEPDIR) pcfx/$(DEPDIR) pcfx/input/$(DEPDIR) psx/$(DEPDIR) psx/input/$(DEPDIR) quicklz/$(DEPDIR) resampler/$(DEPDIR) sms/$(DEPDIR) snes/$(DEPDIR) snes/src/cartridge/$(DEPDIR) snes/src/cheat/$(DEPDIR) snes/src/chip/bsx/$(DEPDIR) snes/src/chip/cx4/$(DEPDIR) snes/src/chip/dsp1/$(DEPDIR) snes/src/chip/dsp2/$(DEPDIR) snes/src/chip/dsp3/$(DEPDIR) snes/src/chip/dsp4/$(DEPDIR) snes/src/chip/obc1/$(DEPDIR) snes/src/chip/sa1/$(DEPDIR) snes/src/chip/sdd1/$(DEPDIR) snes/src/chip/spc7110/$(DEPDIR) snes/src/chip/srtc/$(DEPDIR) snes/src/chip/st010/$(DEPDIR) snes/src/chip/superfx/$(DEPDIR) snes/src/cpu/$(DEPDIR) snes/src/cpu/core/$(DEPDIR) snes/src/cpu/scpu/$(DEPDIR) snes/src/lib/libco/$(DEPDIR) snes/src/memory/$(DEPDIR) snes/src/memory/smemory/$(DEPDIR) snes/src/ppu/$(DEPDIR) snes/src/sdsp/$(DEPDIR) snes/src/smp/$(DEPDIR) snes/src/system/$(DEPDIR) snes_faust/$(DEPDIR) sound/$(DEPDIR) string/$(DEPDIR) tremor/$(DEPDIR) trio/$(DEPDIR) vb/$(DEPDIR) video/$(DEPDIR) wswan/$(DEPDIR) wswan/dis/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) apple2/$(DEPDIR) cdplay/$(DEPDIR) cdrom/$(DEPDIR) cheat_formats/$(DEPDIR) compress/$(DEPDIR) cputest/$(DEPDIR) demo/$(DEPDIR) desa68/$(DEPDIR) gb/$(DEPDIR) gba/$(DEPDIR) hash/$(DEPDIR) hw_cpu/m68k/$(DEPDIR) hw_cpu/v810/$(DEPDIR) hw_cpu/z80-fuse/$(DEPDIR) hw_misc/arcade_card/$(DEPDIR) hw_sound/gb_apu/$(DEPDIR) hw_sound/pce_psg/$(DEPDIR) hw_sound/sms_apu/$(DEPDIR) hw_sound/ym2413/$(DEPDIR) hw_sound/ym2612/$(DEPDIR) hw_video/huc6270/$(DEPDIR) lynx/$(DEPDIR) md/$(DEPDIR) md/cart/$(DEPDIR) md/cd/$(DEPDIR) md/input/$(DEPDIR) minilzo/$(DEPDIR) mpcdec/$(DEPDIR) mthreading/$(DEPDIR) nes/$(DEPDIR) nes/boards/$(DEPDIR) nes/input/$(DEPDIR) nes/ntsc/$(DEPDIR) nes/ppu/$(DEPDIR) net/$(DEPDIR) ngp/$(DEPDIR) ngp/TLCS-900h/$(DEPDIR) pce/$(DEPDIR) pce/input/$(DEPDIR) pce_fast/$(DEPDIR) pcfx/$(DEPDIR) pcfx/input/$(DEPDIR) psx/$(DEPDIR) psx/input/$(DEPDIR) quicklz/$(DEPDIR) resampler/$(DEPDIR) sms/$(DEPDIR) snes/$(DEPDIR) snes/src/cartridge/$(DEPDIR) snes/src/cheat/$(DEPDIR) snes/src/chip/bsx/$(DEPDIR) snes/src/chip/cx4/$(DEPDIR) snes/src/chip/dsp1/$(DEPDIR) snes/src/chip/dsp2/$(DEPDIR) snes/src/chip/dsp3/$(DEPDIR) snes/src/chip/dsp4/$(DEPDIR) snes/src/chip/obc1/$(DEPDIR) snes/src/chip/sa1/$(DEPDIR) snes/src/chip/sdd1/$(DEPDIR) snes/src/chip/spc7110/$(DEPDIR) snes/src/chip/srtc/$(DEPDIR) snes/src/chip/st010/$(DEPDIR) snes/src/chip/superfx/$(DEPDIR) snes/src/cpu/$(DEPDIR) snes/src/cpu/core/$(DEPDIR) snes/src/cpu/scpu/$(DEPDIR) snes/src/lib/libco/$(DEPDIR) snes/src/memory/$(DEPDIR) snes/src/memory/smemory/$(DEPDIR) snes/src/ppu/$(DEPDIR) snes/src/sdsp/$(DEPDIR) snes/src/smp/$(DEPDIR) snes/src/system/$(DEPDIR) snes_faust/$(DEPDIR) snes_faust/cart/$(DEPDIR) sound/$(DEPDIR) string/$(DEPDIR) tremor/$(DEPDIR) trio/$(DEPDIR) vb/$(DEPDIR) video/$(DEPDIR) wswan/$(DEPDIR) wswan/dis/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

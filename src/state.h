@@ -46,7 +46,7 @@ struct StateMem;
 // throws exceptions on errors.
 //
 void MDFNSS_SaveSM(Stream *st, bool data_only = false, const MDFN_Surface *surface = (MDFN_Surface *)NULL, const MDFN_Rect *DisplayRect = (MDFN_Rect*)NULL, const int32 *LineWidths = (int32*)NULL);
-void MDFNSS_LoadSM(Stream *st, bool data_only = false);
+void MDFNSS_LoadSM(Stream *st, bool data_only = false, const bool fuzz = false);
 
 void MDFNSS_CheckStates(void);
 

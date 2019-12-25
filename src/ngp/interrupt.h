@@ -19,7 +19,7 @@
 namespace MDFN_IEN_NGP
 {
 
-void interrupt(uint8 index);
+void interrupt(const uint8 index, const int level);
 
 #define TIMER_HINT_RATE		515		//CPU Ticks between horizontal interrupts
 

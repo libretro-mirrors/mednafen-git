@@ -2,7 +2,7 @@
 /* Mednafen Fast SNES Emulation Module                                        */
 /******************************************************************************/
 /* ppu.cpp:
-**  Copyright (C) 2015-2018 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -26,102 +26,186 @@
 //
 // FIXME: Correct handling of lower 3 bits of BGHOFS registers.
 //
-// FIXME: Interlaced support.
+// FIXME: Short/long line.
 //
 
 #include "snes.h"
 #include "ppu.h"
 #include "input.h"
+#include "cart.h"
 
 namespace MDFN_IEN_SNES_FAUST
 {
 
-static uint32 lastts;
+uint32 scanline;
 
-static uint32 LineStartTS;
-static unsigned HLatch, VLatch;
-static unsigned HLatchReadShift, VLatchReadShift;
+static struct
+{
+ uint32 lastts;
 
+ uint32 LineStartTS;
+ uint32 HLatch;
+ uint32 VLatch;
+ uint32 HLatchReadShift;
+ uint32 VLatchReadShift;
 
-//
-// Cheaty registers and state:
-static uint16 HTime;
-static uint16 VTime;
+ //
+ // Cheaty registers and state:
+ uint32 InHDMA;
+ uint16 HTime;
+ uint16 VTime;
+ bool IRQThing;
 
-static uint8 NMITIMEEN;
+ uint8 NMITIMEEN;
 
-static uint8 HVBJOY;
-static uint8 NMIFlag;	// 0x00 or 0x80
-static uint8 IRQFlag;	// 0x00 or 0x80
-static uint8 JPReadCounter;
-//
-//
+ uint8 HVBJOY;
+ uint8 NMIFlag;	// 0x00 or 0x80
+ uint8 IRQFlag;	// 0x00 or 0x80
+ uint8 JPReadCounter;
+ //
+ //
 
-static bool PAL;
-static bool VBlank;
-static bool LinePhase;
-static uint32 LineCounter;
-/*static*/ uint32 scanline;
-static uint32 LinesPerFrame;
-static uint32 LineTarget;
+ bool PAL;
+ bool VBlank;
+ uint32 LinePhase;
+ uint32 LineCounter;
+///*static*/ uint32 scanline;
+ uint32 LinesPerFrame;
+ uint32 LineTarget;
 
-static uint8 BusLatch[2];
-static uint8 Status[2];	// $3E and $3F.
+ uint8 BusLatch[2];
+ uint8 Status[2];	// $3E and $3F.
 
-static uint16 VRAM[32768];
+ uint8 ScreenMode;	// $33
+ uint8 INIDisp;
+ uint8 BGMode;
+ uint8 Mosaic;
+ uint8 MosaicYOffset;
 
-static uint8 ScreenMode;	// $33
-static uint8 INIDisp;
-static uint8 BGMode;
-static uint8 Mosaic;
-static uint8 MosaicYOffset;
+ uint8 BGSC[4];
 
-static uint8 BGSC[4];
+ uint8 BGNBA[2];
 
-static uint8 BGNBA[2];
+ uint8 BGOFSPrev;
+ uint16 BGHOFS[4];
+ uint16 BGVOFS[4];
 
-static uint8 BGOFSPrev;
-static uint16 BGHOFS[4];
-static uint16 BGVOFS[4];
+ uint16 VRAM_Addr;
+ uint16 VRAM_ReadBuffer;
+ bool VMAIN_IncMode;
+ unsigned VMAIN_AddrInc;
+ unsigned VMAIN_AddrTransMaskA;
+ unsigned VMAIN_AddrTransShiftB;
+ unsigned VMAIN_AddrTransMaskC;
 
-static uint16 VRAM_Addr;
-static uint16 VRAM_ReadBuffer;
-static bool VMAIN_IncMode;
-static unsigned VMAIN_AddrInc;
-static unsigned VMAIN_AddrTransMaskA;
-static unsigned VMAIN_AddrTransShiftB;
-static unsigned VMAIN_AddrTransMaskC;
+ uint8 M7Prev;
+ uint8 M7SEL;
+ int16 M7Matrix[4];
+ int16 M7Center[2];
+ int16 M7HOFS;
+ int16 M7VOFS;
 
-static uint8 M7Prev;
-static uint8 M7SEL;
-static int16 M7Matrix[4];
-static int16 M7Center[2];
-static int16 M7HOFS, M7VOFS;
+ bool CGRAM_Toggle;
+ uint8 CGRAM_Buffer;
+ uint8 CGRAM_Addr;
+ uint16 CGRAM[256];
 
-static bool CGRAM_Toggle;
-static uint8 CGRAM_Buffer;
-static uint8 CGRAM_Addr;
-static uint16 CGRAM[256];
+ uint8 MSEnable;
+ uint8 SSEnable;
 
-static uint8 MSEnable;
-static uint8 SSEnable;
+ uint8 WMSettings[3];
+ uint8 WMMainEnable;
+ uint8 WMSubEnable;
+ uint16 WMLogic;
+ uint8 WindowPos[2][2];
+ unsigned WindowPieces[5];	// Derived data, calculated at start of rendering for a scanline.
 
-static uint8 WMSettings[3];
-static uint8 WMMainEnable, WMSubEnable;
-static uint16 WMLogic;
-static uint8 WindowPos[2][2];
-static unsigned WindowPieces[5];	// Derived data, calculated at start of rendering for a scanline.
+ uint8 CGWSEL;
+ uint8 CGADSUB;
+ uint16 FixedColor;
 
-static uint8 CGWSEL;
-static uint8 CGADSUB;
-static uint16 FixedColor;
+ uint8 OBSEL;
+ uint8 OAMADDL;
+ uint8 OAMADDH;
+ uint8 OAM_Buffer;
+ uint32 OAM_Addr;
+ uint8 OAM[512];
+ uint8 OAMHI[32];
 
-static uint8 OBSEL;
-static uint8 OAMADDL, OAMADDH;
-static uint8 OAM_Buffer;
-static uint32 OAM_Addr;
-static uint8 OAM[512];
-static uint8 OAMHI[32];
+ uint16 VRAM[32768];
+} PPU;
+
+#define GLBVAR(x) static auto& x = PPU.x;
+ GLBVAR(lastts)
+ GLBVAR(LineStartTS)
+ GLBVAR(HLatch)
+ GLBVAR(VLatch)
+ GLBVAR(HLatchReadShift)
+ GLBVAR(VLatchReadShift)
+ GLBVAR(InHDMA)
+ GLBVAR(IRQThing)
+ GLBVAR(HTime)
+ GLBVAR(VTime)
+ GLBVAR(NMITIMEEN)
+ GLBVAR(HVBJOY)
+ GLBVAR(NMIFlag)
+ GLBVAR(IRQFlag)
+ GLBVAR(JPReadCounter)
+ GLBVAR(PAL)
+ GLBVAR(VBlank)
+ GLBVAR(LinePhase)
+ GLBVAR(LineCounter)
+ GLBVAR(LinesPerFrame)
+ GLBVAR(LineTarget)
+ GLBVAR(BusLatch)
+ GLBVAR(Status)
+ GLBVAR(ScreenMode)
+ GLBVAR(INIDisp)
+ GLBVAR(BGMode)
+ GLBVAR(Mosaic)
+ GLBVAR(MosaicYOffset)
+ GLBVAR(BGSC)
+ GLBVAR(BGNBA)
+ GLBVAR(BGOFSPrev)
+ GLBVAR(BGHOFS)
+ GLBVAR(BGVOFS)
+ GLBVAR(VRAM_Addr)
+ GLBVAR(VRAM_ReadBuffer)
+ GLBVAR(VMAIN_IncMode)
+ GLBVAR(VMAIN_AddrInc)
+ GLBVAR(VMAIN_AddrTransMaskA)
+ GLBVAR(VMAIN_AddrTransShiftB)
+ GLBVAR(VMAIN_AddrTransMaskC)
+ GLBVAR(M7Prev)
+ GLBVAR(M7SEL)
+ GLBVAR(M7Matrix)
+ GLBVAR(M7Center)
+ GLBVAR(M7HOFS)
+ GLBVAR(M7VOFS)
+ GLBVAR(CGRAM_Toggle)
+ GLBVAR(CGRAM_Buffer)
+ GLBVAR(CGRAM_Addr)
+ GLBVAR(CGRAM)
+ GLBVAR(MSEnable)
+ GLBVAR(SSEnable)
+ GLBVAR(WMSettings)
+ GLBVAR(WMMainEnable)
+ GLBVAR(WMSubEnable)
+ GLBVAR(WMLogic)
+ GLBVAR(WindowPos)
+ GLBVAR(WindowPieces)
+ GLBVAR(CGWSEL)
+ GLBVAR(CGADSUB)
+ GLBVAR(FixedColor)
+ GLBVAR(OBSEL)
+ GLBVAR(OAMADDL)
+ GLBVAR(OAMADDH)
+ GLBVAR(OAM_Buffer)
+ GLBVAR(OAM_Addr)
+ GLBVAR(OAM)
+ GLBVAR(OAMHI)
+ GLBVAR(VRAM)
+#undef GLBVAR
 
 static DEFWRITE(Write_ScreenMode)
 {
@@ -169,8 +253,17 @@ static DEFWRITE(Write_OAMDATA)
 {
  CPUM.timestamp += MEMCYC_FAST;
 
- //fprintf(stderr, "OAMDATA Write: 0x%04x 0x%02x\n", OAM_Addr, V);
+ //fprintf(stderr, "OAMDATA Write: 0x%04x 0x%02x, %d %d\n", OAM_Addr, V, scanline, (CPUM.timestamp - LineStartTS) >> 2);
  //
+#if 0
+ // Uniracers test fix
+ if(MDFN_UNLIKELY(scanline == 112) && MDFN_UNLIKELY(!(INIDisp & 0x80)))
+ {
+  OAMHI[0x18] = V;
+  return;
+ }
+#endif
+
  if(OAM_Addr & 0x200)
   OAMHI[OAM_Addr & 0x1F] = V;
  else if(OAM_Addr & 1)
@@ -187,6 +280,11 @@ static DEFWRITE(Write_OAMDATA)
 
 static DEFREAD(Read_PPU1_BL)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return BusLatch[0];
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
  //
  return BusLatch[0];
@@ -195,6 +293,11 @@ static DEFREAD(Read_PPU1_BL)
 // PPU1
 static DEFREAD(Read_OAMDATAREAD)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return (OAM_Addr & 0x200) ? OAMHI[OAM_Addr & 0x1F] : OAM[OAM_Addr];
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
  //
  if(OAM_Addr & 0x200)
@@ -287,7 +390,7 @@ static INLINE void FetchSpriteData(signed line_y)
   const uint8* const oa = &OAM[SpriteIndex << 2];
   const uint8 hob = OAMHI[SpriteIndex >> 2] >> ((SpriteIndex & 0x3) << 1);
   const bool sizebit = hob & 0x2;
-  signed x = sign_x_to_s32(9, oa[0] | ((hob & 1) << 8));
+  const signed x = sign_x_to_s32(9, oa[0] | ((hob & 1) << 8));
   uint8 y_offset = line_y - oa[1];
   uint8 w = whtab[sizebit][0];
   uint8 h = whtab[sizebit][1];
@@ -296,8 +399,7 @@ static INLINE void FetchSpriteData(signed line_y)
    continue;
 
   //printf("Line %d, Sprite: %d:%d, %d:%d\n", line_y, x, y_offset, w, h);
-
-  if(x <= -w)	// fixme: x == -256 special case
+  if(w <= sign_x_to_s32(9, -x))
    continue;
 
   if(SpriteCount == 32)
@@ -344,54 +446,72 @@ static INLINE void FetchSpriteData(signed line_y)
  {
   const auto* const l = &SpriteList[i];
 
-  for(int ht = 0; ht < (l->w >> 3); ht++)
+  if(MDFN_UNLIKELY(l->x == -256))
   {
-   int xo = l->x + (ht << 3);
-
-   if(xo <= -8 || xo >= 256) //rof > (255 + 7))
-    continue;
-
-   if(SpriteTileCount == 34)
+   for(int ht = 0; ht < l->w; ht += 8)
    {
-    //printf("Sprite tile overflow on %u\n", line_y);
-    Status[0] |= 0x80;
-    goto ExitTileLoop;
+    if(SpriteTileCount == 34)
+    {
+     //printf("Sprite tile overflow on %u\n", line_y);
+     Status[0] |= 0x80;
+     goto ExitTileLoop;
+    }
+
+    // TODO: initialize the other members if we ever make SpriteTileList temporarily allocated
+    SpriteTileList[SpriteTileCount++].td = 0;
    }
-   auto* const t = &SpriteTileList[SpriteTileCount++];
-
-   t->x = xo;
-   t->prio_or = (l->prio + 1) * 0x3030 | ((l->paloffs & 0x40) >> 6) | 2;
-
-   uint8 wt;
-
-   unsigned rof = ((ht << 3) ^ l->hfxor) >> 3;
-
-   wt = ((l->tilebase & 0xF0) + (l->y_offset << 1)) & 0xF0;
-   wt |= (l->tilebase + rof) & 0x0F;
-
-   uint16* chr = chrbase[l->n] + (wt << 4) + (l->y_offset & 0x7);
-
-   uint32 bp = chr[0] | (chr[8] << 16);
-   for(unsigned x = 0; x < 8; x++)
+  }
+  else
+  {
+   for(int ht = 0; ht < l->w; ht += 8)
    {
-    uint32 pix;
+    int xo = l->x + ht;
 
-    pix =  ((bp >>  7) & 0x01);
-    pix |= ((bp >> 14) & 0x02);
-    pix |= ((bp >> 21) & 0x04);
-    pix |= ((bp >> 28) & 0x08);
+    if(xo <= -8 || xo >= 256) //rof > (255 + 7))
+     continue;
 
-    if(!l->hfxor)
+    if(SpriteTileCount == 34)
     {
-     t->td >>= 8;
-     t->td |= (uint64)(pix | l->paloffs) << 56;
+     //printf("Sprite tile overflow on %u\n", line_y);
+     Status[0] |= 0x80;
+     goto ExitTileLoop;
     }
-    else
+    auto* const t = &SpriteTileList[SpriteTileCount++];
+
+    t->x = xo;
+    t->prio_or = (l->prio + 1) * 0x3030 | ((l->paloffs & 0x40) >> 6) | 2;
+
+    uint8 wt;
+
+    unsigned rof = (ht ^ l->hfxor) >> 3;
+
+    wt = ((l->tilebase & 0xF0) + (l->y_offset << 1)) & 0xF0;
+    wt |= (l->tilebase + rof) & 0x0F;
+
+    uint16* chr = chrbase[l->n] + (wt << 4) + (l->y_offset & 0x7);
+
+    uint32 bp = chr[0] | (chr[8] << 16);
+    for(unsigned x = 0; x < 8; x++)
     {
-     t->td <<= 8;
-     t->td |= pix | l->paloffs;
+     uint32 pix;
+
+     pix =  ((bp >>  7) & 0x01);
+     pix |= ((bp >> 14) & 0x02);
+     pix |= ((bp >> 21) & 0x04);
+     pix |= ((bp >> 28) & 0x08);
+
+     if(!l->hfxor)
+     {
+      t->td >>= 8;
+      t->td |= (uint64)(pix | l->paloffs) << 56;
+     }
+     else
+     {
+      t->td <<= 8;
+      t->td |= pix | l->paloffs;
+     }
+     bp <<= 1;
     }
-    bp <<= 1;
    }
   }
  }
@@ -470,12 +590,15 @@ static DEFWRITE(Write_BGHOFS)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
+ //printf("BG%dHOFS Write; Prev=0x%02x, V=0x%02x, InHDMA=0x%08x, scanline=%u\n", 1 + ((uint8)A >> 1) - (0x0D >> 1), BGOFSPrev, V, InHDMA, scanline);
+ //
  uint16* const t = &BGHOFS[((size_t)(uint8)A >> 1) - (0x0D >> 1)];
  *t = BGOFSPrev | ((V & 0x3) << 8);
  BGOFSPrev = V;
 
  if(bg0)
  {
+  //printf("M7HOFS: %u, %02x\n", scanline, V);
   M7HOFS = sign_13_to_s16(M7Prev | ((V & 0x1F) << 8));
   M7Prev = V;
  }
@@ -485,13 +608,15 @@ template<bool bg0>
 static DEFWRITE(Write_BGVOFS)
 {
  CPUM.timestamp += MEMCYC_FAST;
-
+ //
+ //printf("BG%dVOFS Write; Prev=0x%02x, V=0x%02x, InHDMA=0x%08x, scanline=%u\n", 1 + ((uint8)A >> 1) - (0x0E >> 1), BGOFSPrev, V, InHDMA, scanline);
  //
  BGVOFS[((size_t)(uint8)A >> 1) - (0x0E >> 1)] = BGOFSPrev | ((V & 0x3) << 8);
  BGOFSPrev = V;
 
  if(bg0)
  {
+  //printf("M7VOFS: %u, %02x\n", scanline, V);
   M7VOFS = sign_13_to_s16(M7Prev | ((V & 0x1F) << 8));
   M7Prev = V;
  }
@@ -547,6 +672,12 @@ static DEFWRITE(Write_2118)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
+ // TODO: Block all VRAM writes during active display, not just those from HDMA(just doing the latter
+ // for now in case small timing errors might break legitimate write attempts).
+ if(MDFN_UNLIKELY(InHDMA != 0x80000000U && !(INIDisp & 0x80)))
+  return;
+ //
+ //
  const unsigned va = GetVAddr();
 
  //if(va >= 0x2000 && va < 0x3000)
@@ -563,6 +694,12 @@ static DEFWRITE(Write_2119)
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
+ // TODO: Block all VRAM writes during active display, not just those from HDMA(just doing the latter
+ // for now in case small timing errors might break legitimate write attempts).
+ if(MDFN_UNLIKELY(InHDMA != 0x80000000U && !(INIDisp & 0x80)))
+  return;
+ //
+ //
  const unsigned va = GetVAddr();
 
  //if(va >= 0x2000 && va < 0x3000)
@@ -578,6 +715,11 @@ static DEFWRITE(Write_2119)
 // PPU1
 static DEFREAD(Read_2139)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return VRAM_ReadBuffer;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
  //
  BusLatch[0] = VRAM_ReadBuffer;
@@ -594,6 +736,11 @@ static DEFREAD(Read_2139)
 // PPU1
 static DEFREAD(Read_213A)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return VRAM_ReadBuffer >> 8;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
  //
  BusLatch[0] = VRAM_ReadBuffer >> 8;
@@ -627,6 +774,11 @@ static DEFWRITE(Write_M7Matrix)		// $1b-$1e
 template<unsigned shift>
 static DEFREAD(Read_M7Multiplier)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return (uint32)((int16)M7Matrix[0] * (int8)(M7Matrix[1] >> 8)) >> shift;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
  //
  BusLatch[0] = (uint32)((int16)M7Matrix[0] * (int8)(M7Matrix[1] >> 8)) >> shift;
@@ -670,6 +822,11 @@ static DEFWRITE(Write_CGDATA)
 // PPU2
 static DEFREAD(Read_CGDATAREAD)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return CGRAM_Toggle ? ((BusLatch[1] & 0x80) | (CGRAM[CGRAM_Addr] >> 8)) : (CGRAM[CGRAM_Addr] >> 0);
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
  //
  if(CGRAM_Toggle)
@@ -775,6 +932,11 @@ static DEFWRITE(Write_COLDATA)
 
 static DEFREAD(Read_HVLatchTrigger)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return CPUM.mdr;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
  //
 
@@ -795,7 +957,7 @@ static DEFREAD(Read_HVLatchTrigger)
    else
    {
     HLatch -= 341;
-    VLatch = (VLatch + 1) % LinesPerFrame;	// FIXME
+    VLatch = (VLatch + 1) % (LinesPerFrame + ((~Status[1] >> 7) & ScreenMode & 1));	// FIXME
    }
   }
 
@@ -810,6 +972,11 @@ static DEFREAD(Read_HVLatchTrigger)
 // PPU2
 static DEFREAD(Read_HLatch)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return (HLatch | ((BusLatch[1] & 0xFE) << 8)) >> HLatchReadShift;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
  //
  BusLatch[1] = (HLatch | ((BusLatch[1] & 0xFE) << 8)) >> HLatchReadShift;
@@ -822,6 +989,11 @@ static DEFREAD(Read_HLatch)
 // PPU2
 static DEFREAD(Read_VLatch)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return (VLatch | ((BusLatch[1] & 0xFE) << 8)) >> VLatchReadShift;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
  //
  BusLatch[1] = (VLatch | ((BusLatch[1] & 0xFE) << 8)) >> VLatchReadShift;
@@ -834,6 +1006,11 @@ static DEFREAD(Read_VLatch)
 // PPU1
 static DEFREAD(Read_PPU1_Status)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return (BusLatch[0] & 0x10) | Status[0];
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
  //
  BusLatch[0] = (BusLatch[0] & 0x10) | Status[0];
@@ -844,6 +1021,11 @@ static DEFREAD(Read_PPU1_Status)
 // PPU2
 static DEFREAD(Read_PPU2_Status)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return (BusLatch[1] & 0x20) | Status[1];
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
  //
  BusLatch[1] = (BusLatch[1] & 0x20) | Status[1];
@@ -894,11 +1076,12 @@ void PPU_StartFrame(EmulateSpecStruct* espec)
 {
  es = espec;
 
+ es->InterlaceOn = false;
  es->LineWidths[0] = 0;
  es->DisplayRect.x = 0;
- es->DisplayRect.y = PAL ? 0 : 8;
  es->DisplayRect.w = 256;
- es->DisplayRect.h = PAL ? 239 : 224;
+ es->DisplayRect.y = 0;
+ es->DisplayRect.h = 0;
 
  if(es->VideoFormatChanged)
  {
@@ -1001,15 +1184,29 @@ static INLINE unsigned DirColCvt(unsigned inpix, unsigned palbase = 0)
 template<bool size16, unsigned bpp, bool palbase_n = false, bool opt = false, bool hires = false, bool dircolor = false>
 static MDFN_HOT MDFN_FASTCALL void DrawBG(const unsigned n, const unsigned y, uint32 prio_or)
 {
- unsigned VOFS = BGVOFS[n] + (y - ((Mosaic & (1U << n)) ? MosaicYOffset : 0));
+ const bool MosaicOn = Mosaic & (1U << n);
+ unsigned VOFS = y - (MosaicOn ? MosaicYOffset : 0);
  unsigned HOFS = BGHOFS[n];
  unsigned tm_w_mask = ((BGSC[n] & 0x1) << 10);
  unsigned tm_h_shift = ((BGSC[n] & 0x2) ? ((BGSC[n] & 0x1) ? 3 : 2) : 24);
- unsigned tile_y_offs = (VOFS & 0x7);
 
  //if(scanline == 100 && n == 0)
  // MDFN_DispMessage("%d %d --- BGHOFS0=%u BGHOFS1=%u\n", hires, size16, BGHOFS[0], BGHOFS[1]);
 
+ if(hires && (ScreenMode & 0x01))
+ {
+  VOFS <<= 1;
+
+  if(!MosaicOn)
+   VOFS += Status[1] >> 7;
+ }
+
+ VOFS += BGVOFS[n];
+ //
+ unsigned tile_y_offs = (VOFS & 0x7);
+ //
+ //
+ //
  if(hires)
   HOFS <<= 1;
 
@@ -1624,6 +1821,8 @@ static MDFN_HOT MDFN_FASTCALL NO_INLINE void MixMainSubSubSubMarine(uint32* MDFN
      sub_color  = CMath<(bool)(cmath_mode & 1), (bool)(cmath_mode & 2)>(sub_color,  FixedColor);
     }
    }
+   else if(!(main & 0x2))
+    sub_color = 0; //rand();
 
    target[(i << 1) + 0] = ConvertRGB555(sub_color);
    target[(i << 1) + 1] = ConvertRGB555(main_color);
@@ -1936,55 +2135,142 @@ static INLINE void DrawBGAndMixToMS(void)
   SNES_DBG("[PPU] BGMODE: %02x\n", BGMode);
 }
 
+static INLINE uint32 Blend32(uint32 a, uint32 b)
+{
+ #ifdef HAVE_NATIVE64BIT
+ a = ((((uint64)a + b) - ((a ^ b) & 0x01010101))) >> 1;
+ #else
+ a = ((((a & 0x00FF00FF) + (b & 0x00FF00FF)) >> 1) & 0x00FF00FF) | (((((a & 0xFF00FF00) >> 1) + ((b & 0xFF00FF00) >> 1))) & 0xFF00FF00);
+ #endif
+ return a;
+}
+
+template<unsigned Mode>
+static uint32 T_DoHFilter(uint32* const t, const uint32 w, const bool hires)
+{
+ //assert(w == 512 || w == 256);
+ if(w == 512)
+ {
+  if(!hires && Mode == PPU_HFILTER_PHR256BLEND)
+  {
+   for(uint32 i = 0; i < 256; i++)
+   {
+    t[i] = Blend32(t[(i << 1) + 0], t[(i << 1) + 1]);
+   }
+   return 256;
+  }
+  else if(!hires && Mode == PPU_HFILTER_PHR256BLEND_512)
+  {
+   for(uint32 i = 0; i < 512; i += 2)
+   {
+    const uint32 pix = Blend32(t[i + 0], t[i + 1]);
+
+    t[i + 0] = pix;
+    t[i + 1] = pix;
+   }
+   return 512;
+  }
+  else if(Mode == PPU_HFILTER_512_BLEND)
+  {
+   uint32 prev = t[0];
+   for(uint32 i = 0; i < 512; i++)
+   {
+    const uint32 pix = Blend32(t[i], prev);
+
+    prev = t[i];
+
+    t[i] = pix;
+   }
+   return 512;
+  }
+  else
+   return 512;
+ }
+ else
+ {
+  if(Mode == PPU_HFILTER_PHR256BLEND_512 || Mode == PPU_HFILTER_512)
+  {
+   for(int32 i = 255; i >= 0; i--)
+   {
+    const uint32 pix = t[i];
+
+    t[(i << 1) + 0] = pix;
+    t[(i << 1) + 1] = pix;
+   }
+   return 512;
+  }
+  else if(Mode == PPU_HFILTER_512_BLEND)
+  {
+   for(uint32 i = 255; i > 0; i--)
+   {
+    t[(i << 1) + 0] = Blend32(t[i], t[i - 1]);
+    t[(i << 1) + 1] = t[i];
+   }
+   t[1] = t[0];
+   return 512;
+  }
+  else
+   return 256;
+ }
+}
+
+static uint32 (*DoHFilter)(uint32* const t, const uint32 w, const bool hires);
+
 static MDFN_HOT void RenderLine(void)
 {
  if(MDFN_UNLIKELY(LineTarget > 239))	// Sanity check(239 isn't shown, too...)
   LineTarget = 239;
 
- uint32* const out_target = es->surface->pixels + (LineTarget * es->surface->pitchinpix);
+ const int32 out_line = (LineTarget << es->InterlaceOn) + (es->InterlaceOn & es->InterlaceField);
+ uint32* const out_target = es->surface->pixels + out_line * es->surface->pitchinpix;
  const uint32 w = ((BGMode & 0x7) == 0x5 || (BGMode & 0x7) == 0x6 || (ScreenMode & 0x08)) ? 512 : 256;
 
- es->LineWidths[LineTarget] = w;
+ es->LineWidths[out_line] = w;
  //
  LineTarget++;
  //
 
- if(INIDisp & 0x80)
+ if(MDFN_UNLIKELY(INIDisp & 0x80))
  {
   for(unsigned i = 0; i < w; i++)
    out_target[i] = 0;
-
-  return;
  }
-
- if(scanline == 1)
-  MosaicYOffset = 0;
  else
  {
-  MosaicYOffset++;
-  if(MosaicYOffset > (Mosaic >> 4))
+  if(scanline == 1)
    MosaicYOffset = 0;
+  else
+  {
+   MosaicYOffset++;
+   if(MosaicYOffset > (Mosaic >> 4))
+    MosaicYOffset = 0;
+  }
+
+  CalcWindowPieces();
+  //
+  //
+  //
+  DrawSprites();
+  DoWindow(4, &objbuf[8]);
+
+  DrawBGAndMixToMS();
+  DoWindow<true>(5, linebuf.main);
+
+  if(MDFN_UNLIKELY(w == 512))
+  {
+   // Nope, won't work right!
+   //DoWindow<true>(5, linebuf.sub); // For color window masking to black.  Probably should find a more efficient/logical way to do this...
+   MixMainSub<true>(out_target);
+  }
+  else
+  {
+   MixMainSub<false>(out_target);
+  }
  }
 
- CalcWindowPieces();
- //
- //
- //
- DrawSprites();
- DoWindow(4, &objbuf[8]);
-
- DrawBGAndMixToMS();
- DoWindow<true>(5, linebuf.main);
-
- if(MDFN_UNLIKELY(w == 512))
+ if(MDFN_UNLIKELY(DoHFilter))
  {
-  // Nope, won't work right!
-  //DoWindow<true>(5, linebuf.sub); // For color window masking to black.  Probably should find a more efficient/logical way to do this...
-  MixMainSub<true>(out_target);
- }
- else
- {
-  MixMainSub<false>(out_target);
+  es->LineWidths[out_line] = DoHFilter(out_target, w, (BGMode & 0x7) == 0x5 || (BGMode & 0x7) == 0x6);
  }
 }
 
@@ -2000,15 +2286,26 @@ static DEFWRITE(Write_NMITIMEEN)	// $4200
 {
  CPUM.timestamp += MEMCYC_FAST;
  //
- NMITIMEEN = V;
+ SNES_DBG("[SNES] Write NMITIMEEN: 0x%02x --- scanline=%u, %u\n", V, scanline, (CPUM.timestamp - LineStartTS) >> 2);
 
- if(!(NMITIMEEN & 0x30))
-  IRQFlag = 0x00;
+ if(NMITIMEEN != V)
+ {
+#if 1
+  // Mortal Kombat II kludge
+  if(MDFN_UNLIKELY(CPUM.timestamp >= events[SNES_EVENT_PPU].event_time) && InHDMA == 0x80000000U)
+   CPUM.EventHandler();
+#endif
+  //
+  NMITIMEEN = V;
 
- CPU_SetNMI(NMIFlag & NMITIMEEN & 0x80);
- CPU_SetIRQ(IRQFlag);
+  if(!(NMITIMEEN & 0x30))
+   IRQFlag = 0x00;
 
- SNES_DBG("[SNES] Write NMITIMEEN: 0x%02x --- scanline=%u, LineCounter=%u, LinePhase=%u\n", V, scanline, LineCounter, LinePhase);
+  CPU_SetNMI(NMIFlag & NMITIMEEN & 0x80);
+  CPU_SetIRQ(IRQFlag);
+
+  SNES_SetEventNT(SNES_EVENT_PPU_LINEIRQ, PPU_UpdateLineIRQ((InHDMA != 0x80000000U) ? InHDMA : CPUM.timestamp));
+ }
 }
 
 static DEFWRITE(Write_HTIME)	// $4207 and $4208
@@ -2016,16 +2313,18 @@ static DEFWRITE(Write_HTIME)	// $4207 and $4208
  CPUM.timestamp += MEMCYC_FAST;
  //
  const unsigned shift = (~A & 1) << 3;
- unsigned New_HTime = HTime;
+ const unsigned Old_HTime = HTime;
 
- New_HTime &= 0xFF00 >> shift;
- New_HTime |= V << shift;
- New_HTime &= 0x1FF;
+ HTime &= 0xFF00 >> shift;
+ HTime |= V << shift;
+ HTime &= 0x1FF;
 
- if(New_HTime != HTime)
-  SNES_DBG("[SNES] HTIME Changed: new=0x%04x(old=0x%04x) --- scanline=%u, LineCounter=%u, LinePhase=%u\n", New_HTime, HTime, scanline, LineCounter, LinePhase);
+ if(HTime != Old_HTime)
+ {
+  SNES_DBG("[SNES] HTIME Changed: new=0x%04x(old=0x%04x) --- scanline=%u, LineCounter=%u, LinePhase=%u -- %u\n", HTime, Old_HTime, scanline, LineCounter, LinePhase, (CPUM.timestamp - LineStartTS) >> 2);
 
- HTime = New_HTime;
+  SNES_SetEventNT(SNES_EVENT_PPU_LINEIRQ, PPU_UpdateLineIRQ((InHDMA != 0x80000000U) ? InHDMA : CPUM.timestamp));
+ }
 }
 
 static DEFWRITE(Write_VTIME)	// $4209 and $420A
@@ -2033,39 +2332,34 @@ static DEFWRITE(Write_VTIME)	// $4209 and $420A
  CPUM.timestamp += MEMCYC_FAST;
  //
  const unsigned shift = (~A & 1) << 3;
- unsigned New_VTime = VTime;
+ const unsigned Old_VTime = VTime;
 
- New_VTime &= 0xFF00 >> shift;
- New_VTime |= V << shift;
- New_VTime &= 0x1FF;
+ VTime &= 0xFF00 >> shift;
+ VTime |= V << shift;
+ VTime &= 0x1FF;
 
- if(New_VTime != VTime)
+ if(VTime != Old_VTime)
  {
-  SNES_DBG("[SNES] VTIME Changed: new=0x%04x(old=0x%04x) --- HTIME=0x%04x, scanline=%u, LineCounter=%u, LinePhase=%u -- %u\n", New_VTime, VTime, HTime, scanline, LineCounter, LinePhase, (CPUM.timestamp - LineStartTS));
+  SNES_DBG("[SNES] VTIME Changed: new=0x%04x(old=0x%04x) --- HTIME=0x%04x, scanline=%u, LineCounter=%u, LinePhase=%u -- %u\n", VTime, Old_VTime, HTime, scanline, LineCounter, LinePhase, (CPUM.timestamp - LineStartTS) >> 2);
 
-#if 0
-  // Kludge for F-1 Grand Prix
-  if(!LinePhase && LineCounter >= 1088) //(CPUM.timestamp - LineStartTS) < 10)
-  {
-   if(!(NMITIMEEN & 0x10) || HTime == 0)
-   {
-    if(((NMITIMEEN & 0x20) && scanline == New_VTime) || ((NMITIMEEN & 0x30) == 0x10))
-    {
-     printf("Kludge IRQ: %d\n", scanline);
-     IRQFlag = 0x80;
-     CPU_SetIRQ(IRQFlag);
-    }
-   }
-  }
-#endif
+  SNES_SetEventNT(SNES_EVENT_PPU_LINEIRQ, PPU_UpdateLineIRQ((InHDMA != 0x80000000U) ? InHDMA : CPUM.timestamp));
  }
-
- VTime = New_VTime;
 }
 
 static DEFREAD(Read_4210)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return NMIFlag | 0x01;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
+ //
+#if 1
+ // Kludge of doooooom~
+ if(MDFN_UNLIKELY(CPUM.timestamp >= events[SNES_EVENT_PPU].event_time) && InHDMA == 0x80000000U)
+  CPUM.EventHandler();
+#endif
  //
  uint8 ret = NMIFlag | 0x01;
 
@@ -2077,6 +2371,11 @@ static DEFREAD(Read_4210)
 
 static DEFREAD(Read_4211)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return IRQFlag;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
  //
  uint8 ret = IRQFlag;
@@ -2091,6 +2390,11 @@ static DEFREAD(Read_4211)
 
 static DEFREAD(Read_4212)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return HVBJOY;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
  //
  return HVBJOY;
@@ -2098,6 +2402,11 @@ static DEFREAD(Read_4212)
 
 static DEFREAD(Read_4213)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return 0;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
  //
  SNES_DBG("[PPU] Read 4213\n");
@@ -2113,19 +2422,125 @@ static DEFREAD(Read_4213)
 //
 //
 //
-static INLINE void RenderZero(uint32 bound)
+static void RenderZero(uint32 bound)
 {
+ if(MDFN_UNLIKELY(es->skip))
+ {
+  LineTarget = std::max<uint32>(LineTarget, bound);
+  return;
+ }
+
  while(LineTarget < bound)
  {
-  uint32* const out_target = es->surface->pixels + (LineTarget * es->surface->pitchinpix);
+  const int32 out_line = (LineTarget << es->InterlaceOn) + (es->InterlaceOn & es->InterlaceField);
 
-  es->LineWidths[LineTarget] = 2;
-  out_target[0] = 0;
-  out_target[1] = 0;
+  if(MDFN_LIKELY(out_line >= es->DisplayRect.y && out_line < (es->DisplayRect.y + es->DisplayRect.h)))
+  {
+   uint32* const out_target = es->surface->pixels + out_line * es->surface->pitchinpix;
+
+   if(MDFN_UNLIKELY(DoHFilter))
+   {
+    const unsigned w = (DoHFilter == &T_DoHFilter<PPU_HFILTER_512> || DoHFilter == &T_DoHFilter<PPU_HFILTER_PHR256BLEND_512> || DoHFilter == &T_DoHFilter<PPU_HFILTER_512_BLEND>) ? 512 : 256;
+
+    //printf("BORP: %d\n", LineTarget);
+
+    es->LineWidths[out_line] = w;
+
+    for(unsigned i = 0; i < w; i++)
+     out_target[i] = 0;
+   }
+   else
+   {
+    es->LineWidths[out_line] = 2;
+    out_target[0] = 0;
+    out_target[1] = 0;
+   }
+  }
 
   LineTarget++;
  }
 }
+
+/*
+uint32 PPU_UpdateLineIRQ(uint32 timestamp)
+{
+ uint32 ret = SNES_EVENT_MAXTS;
+ bool NewIRQThing = false;
+
+ if(NMITIMEEN & 0x30)
+ {
+  if((scanline == VTime) || !(NMITIMEEN & 0x20))
+  {
+   if(!(NMITIMEEN & 0x10))
+    NewIRQThing = true;
+   else if(HTime < 340)
+   {
+    const int32 td = (timestamp - LineStartTS) - (HTime << 2);
+
+    if(td < 0)
+     ret = timestamp - td;
+    else if(td < 4)
+    {
+     NewIRQThing = true;
+     ret = timestamp + 4;
+    }
+   }
+  }
+ }
+
+ if(NewIRQThing && !IRQThing && !IRQFlag)
+ {
+  SNES_DBG("[SNES] IRQ: %d\n", scanline);
+  IRQFlag = 0x80;
+  CPU_SetIRQ(IRQFlag);
+ }
+
+ IRQThing = NewIRQThing;
+
+ return ret;
+}
+*/
+
+uint32 PPU_UpdateLineIRQ(uint32 timestamp)
+{
+ uint32 ret = SNES_EVENT_MAXTS;
+ bool NewIRQThing = false;
+
+ if(NMITIMEEN & 0x30)
+ {
+  if((scanline == VTime) || !(NMITIMEEN & 0x20))
+  {
+   if(!(NMITIMEEN & 0x10))
+    NewIRQThing = true;
+   else if(HTime < 340)
+   {
+    const int32 td = (timestamp - LineStartTS) - (HTime << 2);
+
+    if(td < 0)
+     ret = timestamp - td;
+    else if(td < 4)
+    {
+     NewIRQThing = true;
+     ret = timestamp + 4;
+    }
+   }
+  }
+ }
+
+ if(NewIRQThing && !IRQThing && !IRQFlag)
+ {
+  SNES_DBG("[SNES] IRQ: %d, %u\n", scanline, (timestamp - LineStartTS) >> 2);
+  IRQFlag = 0x80;
+  CPU_SetIRQ(IRQFlag);
+ }
+
+ IRQThing = NewIRQThing;
+
+ return ret;
+}
+
+
+static const int RenderLineDelay = 512; //64;
 
 uint32 PPU_Update(uint32 timestamp)
 {
@@ -2139,46 +2554,19 @@ uint32 PPU_Update(uint32 timestamp)
 
  if(LineCounter <= 0)
  {
-  LinePhase = !LinePhase;
+  LinePhase = (LinePhase + 1) % 4;
 
-  if(LinePhase)	// HBlank begin
+  if(LinePhase == 0) // HBlank end
   {
-   //
-   //
-   HVBJOY |= 0x40;
-   //
-   //
-
-   if(!VBlank)
-   {
-    FetchSpriteData(scanline);
-    DMA_RunHDMA();
-   }
-
-   //
-   LineCounter += 67 * 4;
-  }
-  else	// HBlank end
-  {
-   scanline = (scanline + 1) % LinesPerFrame;
+   scanline = (scanline + 1) % (LinesPerFrame + ((~Status[1] >> 7) & ScreenMode & 1));
    //
    LineStartTS = timestamp;
-   
    //
    //
-   // CPUM.timestamp += 40;
    HVBJOY &= ~0x40;
 
-   // FIXME, HORRIBLE(and stuff)
-   if(!(NMITIMEEN & 0x10) || HTime < 340)
-   {
-    if(((NMITIMEEN & 0x20) && scanline == VTime) || ((NMITIMEEN & 0x30) == 0x10))
-    {
-     SNES_DBG("[SNES] IRQ: %d\n", scanline);
-     IRQFlag = 0x80;
-     CPU_SetIRQ(IRQFlag);
-    }
-   }
+   SNES_SetEventNT(SNES_EVENT_PPU_LINEIRQ, PPU_UpdateLineIRQ(timestamp));
+
    if(JPReadCounter > 0)
    {
     if(JPReadCounter == 3)
@@ -2192,11 +2580,21 @@ uint32 PPU_Update(uint32 timestamp)
    //
    //
 
-   if(VBlank && scanline == 0)	// VBlank end
+   if(scanline == 0)	// VBlank end
    {
     VBlank = false;
     Status[0] &= ~0xC0;	// Reset Time Over and Range Over flags.
-
+    Status[1] ^= 0x80;
+    //
+    //
+    // FIXME: Should technically do this earlier, in vblank.
+    if(ScreenMode & 0x1)
+    {
+     es->InterlaceOn = true;
+     es->InterlaceField = (bool)(Status[1] & 0x80);
+    }
+    es->DisplayRect.y = (PAL ? 0 : 8) << es->InterlaceOn;
+    es->DisplayRect.h = (PAL ? 239 : 224) << es->InterlaceOn;
     //
     //
     //
@@ -2221,6 +2619,7 @@ uint32 PPU_Update(uint32 timestamp)
     VBlank = true;
 
     RenderZero(239);
+    //assert(es->DisplayRect.y != 0);
     //
     //
     //
@@ -2228,6 +2627,8 @@ uint32 PPU_Update(uint32 timestamp)
 
     HVBJOY |= 0x80;
     NMIFlag = 0x80;
+
+    SNES_DBG("NMI: %u %u\n", scanline, timestamp);
 
     CPU_SetNMI(NMIFlag & NMITIMEEN & 0x80);
 
@@ -2242,15 +2643,42 @@ uint32 PPU_Update(uint32 timestamp)
     if(!(INIDisp & 0x80))
      OAM_Addr = (OAMADDL | ((OAMADDH & 0x1) << 8)) << 1;
    }
-
+   //
+   LineCounter += RenderLineDelay;
+  }
+  else if(LinePhase == 1)
+  {
    if(MDFN_LIKELY(!VBlank))
    {
-    if(scanline > 0 && !es->skip)
+    if(scanline > 0 && scanline < 240 && !es->skip)
      RenderLine();
    }
 
+   LineCounter += 534 - RenderLineDelay;
+  }
+  else if(LinePhase == 2)
+  {
+   CPUM.timestamp += 40;
+   LineCounter += 1096 - 534;
+  }
+  else if(LinePhase == 3)	// HBlank begin
+  {
    //
-   LineCounter += 274 * 4;
+   //
+   HVBJOY |= 0x40;
+   //
+   //
+
+   if(!VBlank)
+   {
+    InHDMA = timestamp;
+    DMA_RunHDMA();
+    InHDMA = 0x80000000U;
+    FetchSpriteData(scanline);
+   }
+
+   //
+   LineCounter += 1364 - 1096;
   }
  }
 
@@ -2274,8 +2702,13 @@ void PPU_Init(const bool IsPAL)
  //
  //
  //
+ lastts = 0;
+ LineStartTS = 0;
+
+ DoHFilter = NULL;
  PAL = IsPAL;
  LinesPerFrame = IsPAL ? 312 : 262;
+ InHDMA = 0x80000000U;
 
  Set_B_Handlers(0x00, OBRead_FAST, Write_2100);
 
@@ -2388,7 +2821,7 @@ void PPU_Init(const bool IsPAL)
  }
 }
 
-void PPU_SetGetVideoParams(MDFNGI* gi, const bool caspect)
+void PPU_SetGetVideoParams(MDFNGI* gi, const bool caspect, const unsigned hfilter)
 {
  gi->fb_width = 512;
  gi->fb_height = 480;	// Don't change to less than 480
@@ -2410,6 +2843,33 @@ void PPU_SetGetVideoParams(MDFNGI* gi, const bool caspect)
 
  gi->lcm_width = 512;
  gi->lcm_height = gi->nominal_height * 2;
+ //
+ switch(hfilter)
+ {
+  default:
+	assert(0);
+	break;
+
+  case PPU_HFILTER_NONE:
+	DoHFilter = NULL;
+	break;
+
+  case PPU_HFILTER_512:
+	DoHFilter = T_DoHFilter<PPU_HFILTER_512>;
+	break;
+
+  case PPU_HFILTER_PHR256BLEND:
+	DoHFilter = T_DoHFilter<PPU_HFILTER_PHR256BLEND>;
+	break;
+
+  case PPU_HFILTER_PHR256BLEND_512:
+	DoHFilter = T_DoHFilter<PPU_HFILTER_PHR256BLEND_512>;
+	break;
+
+  case PPU_HFILTER_512_BLEND:
+	DoHFilter = T_DoHFilter<PPU_HFILTER_512_BLEND>;
+	break;
+ }
 }
 
 void PPU_Kill(void)
@@ -2420,6 +2880,8 @@ void PPU_Kill(void)
 
 void PPU_Reset(bool powering_up)
 {
+ IRQThing = false;
+
  HLatch = 0;
  VLatch = 0;
  HLatchReadShift = 0;
@@ -2431,10 +2893,13 @@ void PPU_Reset(bool powering_up)
  Status[0] &= ~0xC0;
  Status[1] &= ~0xC0;
 
- // FIXME?
- scanline = 0;
- LinePhase = 0;
+ //
+ // Be careful:
+ scanline = LinesPerFrame - 1;
+ LinePhase = 3;
  LineCounter = 1;
+ //
+ //
 
  VBlank = false;
 
@@ -2501,6 +2966,7 @@ void PPU_Reset(bool powering_up)
   memset(OAM, 0x00, sizeof(OAM));
   memset(OAMHI, 0x00, sizeof(OAMHI));
  }
+ SpriteTileCount = 0;
 
  //
  //
@@ -2511,6 +2977,8 @@ void PPU_Reset(bool powering_up)
   VTime = 0x1FF;
  }
 
+ JPReadCounter = 0;
+ HVBJOY = 0x00;
  NMIFlag = 0x00;
  IRQFlag = 0x00;
  NMITIMEEN = 0;
@@ -2530,6 +2998,7 @@ void PPU_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
   SFVAR(NMITIMEEN),
 
+  SFVAR(IRQThing),
   SFVAR(HTime),
   SFVAR(VTime),
 
@@ -2617,6 +3086,279 @@ void PPU_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   VMAIN_AddrTransMaskC &= 0x7FFF;
  }
 }
+
+
+uint16 PPU_PeekVRAM(uint32 addr)
+{
+ return VRAM[addr & 0x7FFF];
+}
+
+void PPU_PokeVRAM(uint32 addr, uint16 val)
+{
+ VRAM[addr & 0x7FFF] = val;
+}
+
+uint16 PPU_PeekCGRAM(uint32 addr)
+{
+ return CGRAM[addr & 0xFF];
+}
+
+void PPU_PokeCGRAM(uint32 addr, uint16 val)
+{
+ CGRAM[addr & 0xFF] = val;
+}
+
+uint8 PPU_PeekOAM(uint32 addr)
+{
+ return OAM[addr & 0x1FF];
+}
+
+void PPU_PokeOAM(uint32 addr, uint8 val)
+{
+ OAM[addr & 0x1FF] = val;
+}
+
+uint8 PPU_PeekOAMHI(uint32 addr)
+{
+ return OAMHI[addr & 0x1F];
+}
+
+void PPU_PokeOAMHI(uint32 addr, uint8 val)
+{
+ OAMHI[addr & 0x1F] = val;
+}
+
+uint32 PPU_GetRegister(const unsigned id, char* const special, const uint32 special_len)
+{
+ uint32 ret = 0xDEADBEEF;
+
+ switch(id)
+ {
+  case PPU_GSREG_NMITIMEEN:
+	ret = NMITIMEEN;
+	break;
+
+  case PPU_GSREG_HTIME:
+	ret = HTime;
+	break;
+
+  case PPU_GSREG_VTIME:
+	ret = VTime;
+	break;
+
+  case PPU_GSREG_NMIFLAG:
+	ret = NMIFlag;
+	break;
+
+  case PPU_GSREG_IRQFLAG:
+	ret = IRQFlag;
+	break;
+
+  case PPU_GSREG_HVBJOY:
+	ret = HVBJOY;
+	break;
+
+  case PPU_GSREG_SCANLINE:
+	ret = scanline;
+	break;
+  //
+  //
+  //
+
+  case PPU_GSREG_BGMODE:
+	ret = BGMode;
+	break;
+
+  case PPU_GSREG_MOSAIC:
+	ret = Mosaic;
+	break;
+
+  case PPU_GSREG_W12SEL:
+	ret = WMSettings[0];
+	break;
+
+  case PPU_GSREG_W34SEL:
+	ret = WMSettings[1];
+	break;
+
+  case PPU_GSREG_WOBJSEL:
+	ret = WMSettings[2];
+	break;
+
+  case PPU_GSREG_WH0:
+	ret = WindowPos[0][0];
+	break;
+     
+  case PPU_GSREG_WH1:
+	ret = WindowPos[0][1];
+	break;
+
+  case PPU_GSREG_WH2:
+	ret = WindowPos[1][0];
+	break;
+
+  case PPU_GSREG_WH3:
+	ret = WindowPos[1][1];
+	break;
+
+  case PPU_GSREG_WBGLOG:
+	ret = WMLogic & 0xFF;
+	break;
+
+  case PPU_GSREG_WOBJLOG:
+	ret = WMLogic >> 8;
+	break;
+
+  case PPU_GSREG_TM:
+	ret = WMMainEnable;
+	break;
+
+  case PPU_GSREG_TS:
+	ret = WMSubEnable;
+	break;
+
+  case PPU_GSREG_CGWSEL:
+	ret = CGWSEL;
+	break;
+
+  case PPU_GSREG_CGADSUB:
+	ret = CGADSUB;
+	break;
+
+  case PPU_GSREG_BG1HOFS:
+	ret = BGHOFS[0];
+	break;
+
+  case PPU_GSREG_BG1VOFS:
+	ret = BGVOFS[0];
+	break;
+
+  case PPU_GSREG_BG2HOFS:
+	ret = BGHOFS[1];
+	break;
+
+  case PPU_GSREG_BG2VOFS:
+	ret = BGVOFS[1];
+	break;
+
+  case PPU_GSREG_BG3HOFS:
+	ret = BGHOFS[2];
+	break;
+
+  case PPU_GSREG_BG3VOFS:
+	ret = BGVOFS[2];
+	break;
+
+  case PPU_GSREG_BG4HOFS:
+	ret = BGHOFS[3];
+	break;
+
+  case PPU_GSREG_BG4VOFS:
+	ret = BGVOFS[3];
+	break;
+
+  //
+  //
+  //
+  case PPU_GSREG_M7SEL:
+	ret = M7SEL;
+	break;
+
+  case PPU_GSREG_M7A:
+	ret = (uint16)M7Matrix[0];
+	break;
+
+  case PPU_GSREG_M7B:
+	ret = (uint16)M7Matrix[1];
+	break;
+
+  case PPU_GSREG_M7C:
+	ret = (uint16)M7Matrix[2];
+	break;
+
+  case PPU_GSREG_M7D:
+	ret = (uint16)M7Matrix[3];
+	break;
+
+  case PPU_GSREG_M7X:
+	ret = M7Center[0] & 0x1FFF;
+	break;
+
+  case PPU_GSREG_M7Y:
+	ret = M7Center[1] & 0x1FFF;
+	break;
+
+  case PPU_GSREG_M7HOFS:
+	ret = M7HOFS & 0x1FFF;
+	break;
+
+  case PPU_GSREG_M7VOFS:
+	ret = M7VOFS & 0x1FFF;
+	break;
+
+
+  case PPU_GSREG_SCREENMODE:
+	ret = ScreenMode;
+	break;
+ }
+ return ret;
+}
+
+void PPU_SetRegister(const unsigned id, const uint32 value)
+{
+ switch(id)
+ {
+  // TODO
+
+  case PPU_GSREG_HTIME:
+	HTime = value & 0x1FF;
+	break;
+
+  case PPU_GSREG_VTIME:
+	VTime = value & 0x1FF;
+	break;
+  //
+  //
+  //
+  case PPU_GSREG_CGADSUB:
+	CGADSUB = value & 0xFF;
+	break;
+
+  case PPU_GSREG_BG1HOFS:
+	BGHOFS[0] = value & 0x3FF;
+	break;
+
+  case PPU_GSREG_BG1VOFS:
+	BGVOFS[0] = value & 0x3FF;
+	break;
+
+  case PPU_GSREG_BG2HOFS:
+	BGHOFS[1] = value & 0x3FF;
+	break;
+
+  case PPU_GSREG_BG2VOFS:
+	BGVOFS[1] = value & 0x3FF;
+	break;
+
+  case PPU_GSREG_BG3HOFS:
+	BGHOFS[2] = value & 0x3FF;
+	break;
+
+  case PPU_GSREG_BG3VOFS:
+	BGVOFS[2] = value & 0x3FF;
+	break;
+
+  case PPU_GSREG_BG4HOFS:
+	BGHOFS[3] = value & 0x3FF;
+	break;
+
+  case PPU_GSREG_BG4VOFS:
+	BGVOFS[3] = value & 0x3FF;
+	break;
+
+ }
+}
+
 
 }
 

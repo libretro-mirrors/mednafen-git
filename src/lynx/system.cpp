@@ -447,6 +447,7 @@ MDFNGI EmulatedLynx =
  MODPRIO_INTERNAL_HIGH,
  NULL,
  PortInfo,
+ NULL,
  Load,
  TestMagic,
  NULL,

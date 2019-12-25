@@ -44,11 +44,12 @@ struct StateSectionMapEntry
 
 struct StateMem
 {
- StateMem(Stream*s, bool svbe_ = false) : st(s), svbe(svbe_) { };
+ StateMem(Stream*s, bool svbe_ = false, bool fuzz_ = false) : st(s), svbe(svbe_), fuzz(fuzz_) { };
  ~StateMem();
 
  Stream* st = nullptr;
  bool svbe = false;	// State variable data is stored big-endian(for normal-path state loading only).
+ bool fuzz = false;
 
  std::map<std::string, StateSectionMapEntry> secmap; // For loads
 
@@ -175,7 +176,7 @@ static void MakeSFMap(const SFORMAT *sf, SFMap_t &sfmap)
  }
 }
 
-static void ReadStateChunk(Stream *st, const SFORMAT *sf, uint32 size, const bool svbe, const bool fuzz)
+static void ReadStateChunk(Stream *st, const SFORMAT *sf, const char* sname, uint32 size, const bool svbe, const bool fuzz)
 {
  SFMap_t sfmap;
  SFMap_t sfmap_found;	// Used for identifying variables that are missing in the save state.
@@ -222,25 +223,25 @@ static void ReadStateChunk(Stream *st, const SFORMAT *sf, uint32 size, const boo
     do
     {
      st->read((void*)p, expected_size);
-#if 0
+
      if(MDFN_UNLIKELY(fuzz))
      {
       static uint64 lcg[2] = { 0xDEADBEEFCAFEBABEULL, 0x0123456789ABCDEFULL };
 
       for(unsigned i = 0; i < expected_size; i++)
       {
-       ((uint8*)tmp->data)[i] = (lcg[0] ^ lcg[1]) >> 28;
+       ((uint8*)p)[i] = (lcg[0] ^ lcg[1]) >> 28;
        lcg[0] = (19073486328125ULL * lcg[0]) + 1;
        lcg[1] = (6364136223846793005ULL * lcg[1]) + 1442695040888963407ULL;
       }
      }
-#endif
+
      if(!type)
      {
       // Converting downwards is necessary for the case of sizeof(bool) > 1
       for(int32 bool_monster = expected_size - 1; bool_monster >= 0; bool_monster--)
       {
-       ((bool *)p)[bool_monster] = ((uint8 *)p)[bool_monster];
+       ((bool *)p)[bool_monster] = ((uint8 *)p)[bool_monster] & 1;
       }
      }
      else if(svbe != MDFN_IS_BIGENDIAN)
@@ -257,7 +258,7 @@ static void ReadStateChunk(Stream *st, const SFORMAT *sf, uint32 size, const boo
   }
   else
   {
-   printf("Unknown variable in save state: %s\n", toa + 1);
+   printf("Unknown variable in save state section \"%s\": %s\n", sname, toa + 1);
    st->seek(recorded_size, SEEK_CUR);
   }
  } // while(...)
@@ -266,7 +267,7 @@ static void ReadStateChunk(Stream *st, const SFORMAT *sf, uint32 size, const boo
  {
   if(sfmap_found.find(it->second->name) == sfmap_found.end())
   {
-   printf("Variable of bytesize %u missing from save state: %s\n", it->second->size * (1 + it->second->repcount), it->second->name);
+   printf("Variable of bytesize %u missing from save state section \"%s\": %s\n", it->second->size * (1 + it->second->repcount), sname, it->second->name);
   }
  }
 }
@@ -385,7 +386,7 @@ bool MDFNSS_StateAction(StateMem *sm, const unsigned load, const bool data_only,
     {
      msme->second.used = true;
      st->seek(msme->second.pos, SEEK_SET);
-     ReadStateChunk(st, sf, msme->second.size, sm->svbe, (bool)(load & 0x80000000));
+     ReadStateChunk(st, sf, sname, msme->second.size, sm->svbe, sm->fuzz);
     }
    }
    else
@@ -558,7 +559,7 @@ void MDFNSS_SaveSM(Stream *st, bool data_only, const MDFN_Surface *surface, cons
 	}
 }
 
-void MDFNSS_LoadSM(Stream *st, bool data_only)
+void MDFNSS_LoadSM(Stream *st, bool data_only, bool fuzz)
 {
 	if(!MDFNGameInfo->StateAction)
 	{
@@ -599,7 +600,7 @@ void MDFNSS_LoadSM(Stream *st, bool data_only)
 	 st->seek(preview_len, SEEK_CUR);				// Skip preview
 
 	 {
-	  StateMem sm(st, svbe);
+	  StateMem sm(st, svbe, fuzz);
 
 	  MakeSectionMap(&sm, start_pos + total_len);
 

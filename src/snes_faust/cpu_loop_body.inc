@@ -2,7 +2,7 @@
 /* Mednafen Fast SNES Emulation Module                                        */
 /******************************************************************************/
 /* cpu_loop_body.inc:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -23,46 +23,102 @@ CPULBMX :
 
 while(MDFN_LIKELY(CPUM.running_mask))
 {
- if(CPUM.halted)
+ if(MDFN_UNLIKELY(CPUM.halted))
  {
-  if(CPUM.halted == CPU_Misc::HALTED_DMA)
+  if(CPUM.halted & CPU_Misc::HALTED_DMA)
    CPUM.RunDMA();
-  else
+  //
+  //
+  if(CPUM.halted && !(CPUM.halted & CPU_Misc::HALTED_DMA))
   {
-   lc.SampleIRQ();
-
-   if(CPUM.halted == CPU_Misc::HALTED_WAI && CPUM.CombinedNIState)
+   if((CPUM.halted & CPU_Misc::HALTED_WAI) && CPUM.CombinedNIState)
+   {
+    lc.SampleIRQ();
+    lc.IO();
+    lc.IO();
+#if 1
+    // Mortal Kombat II-related kludge.
+    lc.IO();
+#endif
+    SNES_DBG("WAI done\n");
     CPUM.halted = CPU_Misc::HALTED_NOT;
+   }
    else if(CPUM.timestamp < CPUM.next_event_ts)
     CPUM.timestamp = CPUM.next_event_ts;
   }
+#ifdef SNES_DBG_ENABLE
+  if(!CPUM.halted)
+   printf("CPU halted finished: %u\n", CPUM.timestamp);
+#endif
  }
 
  while(MDFN_LIKELY(CPUM.timestamp < CPUM.next_event_ts))
  {
   uint8 opcode;
 
-  if(MDFN_UNLIKELY(lc.PIN_Delay))
+#ifdef SNES_DBG_ENABLE
+  core = lc;
+  DBG_CPUHook(core.PCPBR, core.P);
+  lc = core;
+#endif
+
   {
-   lc.OpRead(lc.PCPBR);
-   lc.IO();
+   const uint32 pind = CPUM.PIN_Delay;
 
-   if(MDFN_UNLIKELY(lc.PIN_Delay & 1))
+   if(MDFN_UNLIKELY(pind))
    {
-    lc.ISequence(Core65816::ISEQ_NMI);
-    CPUM.CombinedNIState &= ~0x01;
-   }
-   else
-    lc.ISequence(Core65816::ISEQ_IRQ);
-  }
-  lc.SampleIRQ();
+    if(MDFN_LIKELY(!(pind & 0xC1)))	// IRQ
+    {
+     lc.OpRead(lc.PCPBR);
+     lc.IO();
+     lc.ISequence(Core65816::ISEQ_IRQ);
+     CPUM.PIN_Delay = 0;
+    }
+    else
+    {
+     if(MDFN_UNLIKELY(pind & 0x40))	// Reset
+     {
+      lc.Reset();
+      CPUM.PIN_Delay = 0;
+      GOTO_MXLOOPTABLE()
+     }
+     else if(pind & 0x01)	// NMI
+     {
+      lc.OpRead(lc.PCPBR);
+      lc.IO();
+      lc.ISequence(Core65816::ISEQ_NMI);
+      CPUM.CombinedNIState &= ~0x01;
+      CPUM.PIN_Delay = 0;
+     }
+     else	// DMA IRQ/NMI delay kludge
+     {
+      lc.SampleIRQ();
+      opcode = lc.OpRead(lc.PCPBR);
+      lc.PC++;
+      //
+      //
+      //
+#define COMBINE2(a,b) a ## b
+#define COMBINE(a,b) COMBINE2(a,b)
+      if(opcode == 0xA9 && (lc.P & Core65816::M_FLAG))
+       CPUM.PIN_Delay = 0;
 
-//popread = false;
+      goto COMBINE(CPULBMX, OpDispatch);
+     }
+    }
+    continue;
+   }
+  }
+  //
+  //
+  //
+  lc.SampleIRQ();
   opcode = lc.OpRead(lc.PCPBR);
-//popread = true;
-//  printf("Instr: %02x:%04x, %02x --- C=0x%04x, X=0x%04x, Y=0x%04x -- S=0x%04x, D=0x%04x --- P=0x%02x\n", lc.PBR, lc.PC, opcode, lc.C, lc.X, lc.Y, lc.S, lc.D, lc.P);
   lc.PC++;
 
+  COMBINE(CPULBMX, OpDispatch):;
+#undef COMBINE2
+#undef COMBINE
   switch(opcode)
   {
    case 0x00: lc.RunInstruction<0x00, CPULBMTYPE, CPULBXTYPE>(); continue;

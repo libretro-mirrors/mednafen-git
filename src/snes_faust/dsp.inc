@@ -2,7 +2,7 @@
 /* Mednafen Fast SNES Emulation Module                                        */
 /******************************************************************************/
 /* dsp.inc:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -63,7 +63,6 @@ static INLINE int16 ClampS16(int32 v)
  return v;
 }
 
-static int16 ResampHalfImp[512];
 static const int16 ResampHalfImp_Init[512] =
 {
     0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
@@ -144,8 +143,6 @@ enum
  GRA_FIR7 = 0x7F,
 };
 
-static uint8 Regs[0x80];
-
 struct DSP_HGS
 {
  bool KPollCycle;
@@ -213,16 +210,16 @@ struct DSP_Voice
  uint8 RB_Pos;
  uint8 RB_In;
 
- uint8 Latch_SRCN;
  uint16 Addr;
+ uint8 Latch_SRCN;
 
  bool StartReload;
  bool LoopReload;
 
  uint8 Latch_ADSR1;
  uint8 ADSRPhase;
- uint16 ADSRLevel;
  bool ADSRBentFastNext;
+ uint16 ADSRLevel;
 
  uint8 Pending_ENVX;
  uint8 Pending_OUTX;
@@ -233,10 +230,47 @@ struct DSP_Voice
  unsigned Phase;
 };
 
-static DSP_HGS HGS;
-static DSP_Voice Voices[8];
+static struct
+{
+ DSP_Voice Voices[8];
+ DSP_HGS HGS;
 
-static int8 weights[4][2];
+ int8 weights[4][2];
+ uint16 RateMasks[32];
+ uint16 RateCompares[32];
+
+ uint8 Regs[0x80];
+
+ int16 ResampHalfImp[512];
+ //
+ //
+ //
+ int16 OutputL; // To avoid distortion, since L and R aren't updated at the same time(and the emulation frame can end between them).
+ unsigned OutputBufPos;
+ OwlResampler* Resampler;
+ double ResampLastRate;
+ OwlBuffer ResampBuf[2];
+} DSP;
+
+#define GLBVAR(x) static auto& x = DSP.x;
+ GLBVAR(Voices)
+ GLBVAR(HGS)
+ GLBVAR(weights)
+ GLBVAR(RateMasks)
+ GLBVAR(RateCompares)
+ GLBVAR(Regs)
+ GLBVAR(ResampHalfImp)
+ GLBVAR(OutputL)
+ GLBVAR(OutputBufPos)
+ GLBVAR(Resampler)
+ GLBVAR(ResampLastRate)
+ GLBVAR(ResampBuf)
+#undef GLBVAR
+
+//static uint16 sawthing;
+
+//static int KONCounter[8] = { 9, 9, 9, 9, 9, 9, 9, 9 };
+
 static const int8 weights_init[4][2] =
 {
  // i-2, i-1
@@ -246,7 +280,6 @@ static const int8 weights_init[4][2] =
  { -52, 115 },
 };
 
-static uint16 RateMasks[32];
 static const uint16 RateMasks_Init[32] =
 {
  0x0000, 0xFFE0, 0x3FF8,
@@ -263,7 +296,6 @@ static const uint16 RateMasks_Init[32] =
          0x0000
 };
 
-static uint16 RateCompares[32];
 static const uint16 RateCompares_Init[32] =
 {
  0xffff, 0x0000, 0x3e08, 
@@ -280,16 +312,6 @@ static const uint16 RateCompares_Init[32] =
 	 0x0000
 };
 
-
-static int16 OutputL; // To avoid distortion, since L and R aren't updated at the same time(and the emulation frame can end between them).
-static unsigned OutputBufPos;
-static OwlResampler* Resampler;
-static double ResampLastRate;
-static OwlBuffer ResampBuf[2];
-
-//static uint16 sawthing;
-
-//static int KONCounter[8] = { 9, 9, 9, 9, 9, 9, 9, 9 };
 
 static INLINE bool CheckRC(unsigned rate)
 {
@@ -1037,6 +1059,7 @@ static MDFN_COLD void DSP_Reset(bool powering_up)
  Regs[GRA_FLG] = 0xE0;
  HGS.EchoWriteDisable = true;
 
+ OutputL = 0;
  OutputBufPos = 0;
 
  HGS.NoiseVal = 0x4000;

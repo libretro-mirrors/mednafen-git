@@ -66,7 +66,9 @@ static bool SuppressErrorPopups;	// Set from env variable "MEDNAFEN_NOPOPUPS"
 
 static int StateSLSTest = false;
 static int StateRCTest = false;	// Rewind consistency
-
+#if 0
+static int StatePCTest = false;	// Power(toggle) consistency
+#endif
 static WMInputBehavior NeededWMInputBehavior = { false, false, false, false };
 static bool NeededWMInputBehavior_Dirty = false;
 
@@ -152,11 +154,11 @@ static const MDFNSetting DriverSettings[] =
 					gettext_noop("Disable to reduce latency, at the cost of potentially increased video \"juddering\", with the maximum reduction in latency being about 1 video frame's time.\nWill work best with emulated systems that are not very computationally expensive to emulate, combined with running on a relatively fast CPU."),
 					MDFNST_BOOL, "1" },
 
-  { "ffspeed", MDFNSF_NOFLAGS, gettext_noop("Fast-forwarding speed multiplier."), NULL, MDFNST_FLOAT, "4", "1", "15" },
+  { "ffspeed", MDFNSF_NOFLAGS, gettext_noop("Fast-forwarding speed multiplier."), NULL, MDFNST_FLOAT, "4", "0.25", "15" },
   { "fftoggle", MDFNSF_NOFLAGS, gettext_noop("Treat the fast-forward button as a toggle."), NULL, MDFNST_BOOL, "0" },
   { "ffnosound", MDFNSF_NOFLAGS, gettext_noop("Silence sound output when fast-forwarding."), NULL, MDFNST_BOOL, "0" },
 
-  { "sfspeed", MDFNSF_NOFLAGS, gettext_noop("SLOW-forwarding speed multiplier."), NULL, MDFNST_FLOAT, "0.75", "0.25", "1" },
+  { "sfspeed", MDFNSF_NOFLAGS, gettext_noop("SLOW-forwarding speed multiplier."), NULL, MDFNST_FLOAT, "0.75", "0.25", "15" },
   { "sftoggle", MDFNSF_NOFLAGS, gettext_noop("Treat the SLOW-forward button as a toggle."), NULL, MDFNST_BOOL, "0" },
 
   { "nothrottle", MDFNSF_NOFLAGS, gettext_noop("Disable speed throttling when sound is disabled."), NULL, MDFNST_BOOL, "0"},
@@ -865,6 +867,11 @@ static bool DoArgs(int argc, char *argv[], char **filename)
 	 // Save state rewind consistency test.
 	 { "staterctest", NULL, &StateRCTest, 0, 0 },
 
+#if 0
+	 // Save state power consistency test.
+	 { "statepctest", NULL, &StatePCTest, 0, 0 },
+#endif
+
 	 // SwiftResampler test.
 	 { "swiftresamptest", NULL, &swiftresamptest, 0, 0 },
 
@@ -982,7 +989,45 @@ static int LoadGame(const char *force_module, const char *path)
          if(!(tmp=MDFNI_LoadGame(force_module, &::Mednafen::NVFS, path)))
 	  return 0;
 	}
+	//
+	//
+	//
+#if 0
+	if(StatePCTest)
+	{
+	 MemoryStream state0(524288);
+	 MemoryStream state1(524288);
+	 MDFNI_Power();
+	 MDFNSS_SaveSM(&state0);
+	 state0.rewind();
+	 MDFNSS_LoadSM(&state0, false, true);
+	 MDFNI_CloseGame();
+         if(!(tmp=MDFNI_LoadGame(force_module, &::Mednafen::NVFS, path)))
+	  abort();
+	 MDFNI_Power();
+	 MDFNSS_SaveSM(&state1);
+	 state0.rewind();
+	 MDFNSS_LoadSM(&state0);
+	 MDFNI_CloseGame();
+         if(!(tmp=MDFNI_LoadGame(force_module, &::Mednafen::NVFS, path)))
+	  abort();
 
+	 if(!(state0.map_size() == state1.map_size() && !memcmp(state0.map() + 32, state1.map() + 32, state1.map_size() - 32)))
+	 {
+	  FileStream sd0("/tmp/sdump0", FileStream::MODE_WRITE);
+	  FileStream sd1("/tmp/sdump1", FileStream::MODE_WRITE);
+
+	  sd0.write(state0.map(), state0.map_size());
+	  sd1.write(state1.map(), state1.map_size());
+	  sd0.close();
+	  sd1.close();
+	  abort();
+	 }
+	}
+#endif
+	//
+	//
+	//
 	CurGame = tmp;
 	Input_GameLoaded(tmp);
 	RMDUI_Init(tmp, which_medium);

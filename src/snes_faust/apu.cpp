@@ -19,7 +19,7 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-//#define MDFN_SNES_FAUST_SPC700_IPL_HLE 1
+#define MDFN_SNES_FAUST_SPC700_IPL_HLE 1
 //#define MDFN_SNES_FAUST_SPC700_IPL_EFFECTS_ANALYZE 1
 
 #include "snes.h"
@@ -236,6 +236,11 @@ static void MDFN_HOT MDFN_FASTCALL NO_INLINE APU_Update(uint32 master_timestamp)
 
 static DEFREAD(MainCPU_APUIORead)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return IOFromSPC700[A & 0x3];
+ }
+
  CPUM.timestamp += MEMCYC_FAST / 2;
 
  APU_Update(CPUM.timestamp);
@@ -292,10 +297,23 @@ INLINE void SPC700::IPL_HLE(void)
    //if(PC != 0xFFC1)
    // printf("Begin %04x\n", PC);
 
+/*
+   if(PC == 0xFFC3)	// Not sure what effect this has.
+   {
+    // Bishoujo Senshi Sailor Moon S - Jougai Rantou! Shuyaku Soudatsusen
+    // Gaia Saver - Hero Saidai no Sakusen
+    // Kawa no Nushi Tsuri 2
+    // Umi no Nushi Tsuri
+    // Zero 4 Champ RR
+    printf("%02x %02x %02x\n", PSW, SP, A);
+    abort();
+   }
+*/
+
    if(PC == 0xFFCA)
     goto SkipMemInit;
 
-   assert(PC == 0xFFC1);
+   assert(PC == 0xFFC1 || PC == 0xFFC3);
 
    PSW = 0x00;
    SP = 0xEF;
@@ -315,6 +333,8 @@ INLINE void SPC700::IPL_HLE(void)
    HLE_SUCK(3);
    HLE_DUMMY_READ(0xF5);
    HLE_WRITE(0xF5, 0xBB);
+
+   HLE_SUCK(1);
 
    do
    {
@@ -379,7 +399,7 @@ INLINE void SPC700::IPL_HLE(void)
      {
       HLE_SUCK(4);
       HLE_READ(0xF5, A);
-      HLE_SUCK(1);
+      HLE_SUCK(2);
       HLE_READ(0xF4, HLETemp);
       HLE_WRITE(0xF4, HLETemp);
 
@@ -634,8 +654,28 @@ void APU_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFEND
  };
 
- MDFNSS_StateAction(sm, load, data_only, HLE_StateRegs, "APU_IPL_HLE");
+ const bool hle_section_optional = SPC_CPU.GetRegister(SPC700::GSREG_PC) < 0xFFC0;
+
+ if(!MDFNSS_StateAction(sm, load, data_only, HLE_StateRegs, "APU_IPL_HLE", hle_section_optional))
+ {
+  HLEPhase = 0;
+  HLELoadAddr = 0;
+  HLECounter = 0;
+  HLEHS = 0;
+  HLESuckCounter = 0;
+  HLETemp = 0;
+ }
 #endif
+}
+
+void APU_PokeRAM(uint32 addr, const uint8 val)
+{
+ APURAM[addr & 0xFFFF] = val;
+}
+
+uint8 APU_PeekRAM(uint32 addr)
+{
+ return APURAM[addr & 0xFFFF];
 }
 
 }

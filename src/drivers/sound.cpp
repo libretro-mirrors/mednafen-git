@@ -74,6 +74,7 @@ void Sound_WriteSilence(int ms)
  Output->Write(Output, SBuffer, frames);
 }
 
+#if 0
 static std::string sampformat_to_string(const uint32 sampformat)
 {
  char buf[256];
@@ -95,7 +96,6 @@ static std::string sampformat_to_string(const uint32 sampformat)
  return buf;
 }
 
-#if 0
 static bool RunSexyALTest(SexyAL_buffering* buffering, const char* device, int driver_type)
 {
  static const uint32 sampformats[] = 

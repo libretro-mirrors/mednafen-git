@@ -39,7 +39,7 @@
 
 SS_SCSP::SS_SCSP()
 {
- memset(&RAM[0x40000], 0x00, 0x80000);	// Zero out dummy part.
+ memset(&RAM[0x40000], 0x00, 0x40000 * sizeof(uint16));	// Zero out dummy part.
 
  Reset(true);
 }
@@ -114,12 +114,15 @@ void SS_SCSP::Reset(bool powering_up)
   Slots[i].LFOTimeCounter = 1;
  }
 
+ for(unsigned i = 0; i < 2; i++)
+  EXTS[i] = 0;
+
  memset(SoundStack, 0, sizeof(SoundStack));
  memset(SoundStackDelayer, 0, sizeof(SoundStackDelayer));
 
  if(powering_up)
  {
-  memset(RAM, 0x00, 0x80000);	// or something else?
+  memset(RAM, 0x00, 0x40000 * sizeof(uint16));	// or something else?
  }
 
  //
@@ -154,6 +157,7 @@ void SS_SCSP::Reset(bool powering_up)
   Timers[i].Control = 0;
   Timers[i].Counter = 0;
   Timers[i].PrevClockIn = false;
+  Timers[i].Reload = -1;
  }
 
  //

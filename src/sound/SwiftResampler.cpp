@@ -621,6 +621,30 @@ SwiftResampler::SwiftResampler(double input_rate, double output_rate, double rat
   debias_multiplier = 0;
 
  MDFN_indent(-1);
+ //
+ //
+ //
+#if 0
+ fprintf(stderr, " { ");
+
+ for(unsigned phase = 0; phase < NumPhases; phase++)
+ {
+  fprintf(stderr, "%u, ", PhaseStep[phase]);
+ }
+ fprintf(stderr, "},\n");
+ fprintf(stderr, " {{\n");
+ for(unsigned phase = 0; phase < NumPhases; phase++)
+ {
+  fprintf(stderr, "  {");
+  for(unsigned i = 0; i < NumCoeffs; i++)
+  {
+   fprintf(stderr, " %d, ", FIR_ENTRY(0, phase, i));
+  }
+  fprintf(stderr, " },\n");
+ }
+ fprintf(stderr, " }}\n");
+
+#endif
 }
 
 }

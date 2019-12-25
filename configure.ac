@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='1.22.2'
-MEDNAFEN_VERSION_NUMERIC=0x00102202
+MEDNAFEN_VERSION='1.23.0-UNSTABLE'
+MEDNAFEN_VERSION_NUMERIC=0x00102300
 #                        0xJJJnnnRR
 
 AC_CANONICAL_HOST
@@ -95,6 +95,13 @@ if test x$enable_libxxx_mode = xyes; then
 	ENABLE_LIBXXX_MODE=true
 fi
 
+AC_ARG_ENABLE(dev-build,
+ AC_HELP_STRING([--enable-dev-build], [enable expensive Mednafen developer features [[default=no]]]),
+                  , enable_dev_build=no)
+
+if test x$enable_dev_build = xyes; then
+                AC_DEFINE([MDFN_ENABLE_DEV_BUILD], [1], [Define if we are compiling with expensive Mednafen developer features enabled.])
+fi
 
 dnl -fno-fast-math and -fno-unsafe-math-optimizations to make sure it's disabled, as the fast-math feature on certain older
 dnl versions of gcc produces horribly broken code(and even when it's working correctly, it can have somewhat unpredictable effects).

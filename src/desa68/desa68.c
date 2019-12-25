@@ -124,7 +124,7 @@ static void desa_char(const unsigned char c)
 #endif
 
 /* Add a string to disassembly string */
-static void desa_str(char *str)
+static void desa_str(const char *str)
 {
   char c;
   while(c=*str++, c)
@@ -1017,7 +1017,7 @@ static void desa_line4(void)
 		return;
 	      case 6:	/* FUNKY LINE 4 MODE 6 (4E */
 		{
-		  static char *str[8] =	/* $4E70 - $4E77 */
+		  static const char *str[8] =	/* $4E70 - $4E77 */
 		    {
 		      /* 0      1      2      3     4    5      6      7 */
 		      "RESET","NOP","STOP ","RTE", "?","RTS","TRAPV","RTR"

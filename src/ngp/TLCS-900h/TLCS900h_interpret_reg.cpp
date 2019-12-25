@@ -732,12 +732,61 @@ void regTSET()
 	cycles = 6;
 }
 
+#if 0
+// TODO, test on an actual TLCS-900H CPU:
+
+//===== MINC1 #,r
+void regMINC1()
+{
+	const uint16 mask = fetch16() | 0;
+	const uint16 origval = rCodeW(rCode);
+
+	if(size == 1)
+	 rCodeW(rCode) = (origval & ~mask) + ((origval + 1) & mask);
+
+	printf("MINC1: 0x%04x, 0x%04x->0x%04x%s\n", mask, origval, rCodeW(rCode), (rCodeW(rCode) < origval) ? " (wrap)" : "");
+
+	cycles = 8;
+}
+
+//===== MINC2 #,r
+// Densetsu no Ogre Battle Gaiden
+void regMINC2()
+{
+	const uint16 mask = fetch16() | 1;
+	const uint16 origval = rCodeW(rCode);
+
+	if(size == 1)
+	 rCodeW(rCode) = (origval & ~mask) + ((origval + 2) & mask);
+
+	printf("MINC2: 0x%04x, 0x%04x->0x%04x%s\n", mask, origval, rCodeW(rCode), (rCodeW(rCode) < origval) ? " (wrap)" : "");
+
+	cycles = 8;
+}
+
+//===== MINC4 #,r
+// Pocket Tennis Color
+void regMINC4()
+{
+	const uint16 mask = fetch16() | 3;
+	const uint16 origval = rCodeW(rCode);
+
+	if(size == 1)
+	 rCodeW(rCode) = (origval & ~mask) + ((origval + 4) & mask);
+
+	printf("MINC4: 0x%04x, 0x%04x->0x%04x%s\n", mask, origval, rCodeW(rCode), (rCodeW(rCode) < origval) ? " (wrap)" : "");
+
+	cycles = 8;
+}
+
+#endif
+
 //===== MINC1 #,r
 void regMINC1()
 {
 	uint16 num = fetch16() + 1;
 
-	if (size == 1)
+	if (size == 1 && num)
 	{
 		if ((rCodeW(rCode) % num) == (num - 1))
 			rCodeW(rCode) -= (num - 1);
@@ -753,7 +802,7 @@ void regMINC2()
 {
 	uint16 num = fetch16() + 2;
 
-	if (size == 1)
+	if (size == 1 && num)
 	{
 		if ((rCodeW(rCode) % num) == (num - 2))
 			rCodeW(rCode) -= (num - 2);
@@ -769,7 +818,7 @@ void regMINC4()
 {
 	uint16 num = fetch16() + 4;
 
-	if (size == 1)
+	if (size == 1 && num)
 	{
 		if ((rCodeW(rCode) % num) == (num - 4))
 			rCodeW(rCode) -= (num - 4);
@@ -785,7 +834,7 @@ void regMDEC1()
 {
 	uint16 num = fetch16() + 1;
 
-	if (size == 1)
+	if (size == 1 && num)
 	{
 		if ((rCodeW(rCode) % num) == 0)
 			rCodeW(rCode) += (num - 1);
@@ -801,7 +850,7 @@ void regMDEC2()
 {
 	uint16 num = fetch16() + 2;
 
-	if (size == 1)
+	if (size == 1 && num)
 	{
 		if ((rCodeW(rCode) % num) == 0)
 			rCodeW(rCode) += (num - 2);
@@ -817,7 +866,7 @@ void regMDEC4()
 {
 	uint16 num = fetch16() + 4;
 
-	if (size == 1)
+	if (size == 1 && num)
 	{
 		if ((rCodeW(rCode) % num) == 0)
 			rCodeW(rCode) += (num - 4);

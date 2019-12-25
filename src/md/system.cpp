@@ -795,6 +795,7 @@ MDFNGI EmulatedMD =
  NULL,
  #endif
  MDPortInfo,
+ NULL,
  Load,
  MDCart_TestMagic,
  LoadCD,

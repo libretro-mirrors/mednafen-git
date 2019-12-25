@@ -934,6 +934,7 @@ with_libpth_prefix
 with_included_gettext
 with_libintl_prefix
 enable_libxxx_mode
+enable_dev_build
 enable_debugger
 enable_cjk_fonts
 enable_fancy_scalers
@@ -1627,6 +1628,8 @@ Optional Features:
                           specify multithreading API
   --disable-threads       build without multithread safety
   --enable-libxxx-mode    dev use only
+  --enable-dev-build      enable expensive Mednafen developer features
+                          [[default=no]]
   --enable-debugger       build with internal debugger [[default=yes]]
   --enable-cjk-fonts      build with internal CJK(Chinese, Japanese, Korean)
                           fonts [[default=yes]]
@@ -4365,8 +4368,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='1.22.2'
-MEDNAFEN_VERSION_NUMERIC=0x00102202
+MEDNAFEN_VERSION='1.23.0-UNSTABLE'
+MEDNAFEN_VERSION_NUMERIC=0x00102300
 #                        0xJJJnnnRR
 
 # Make sure we can run config.sub.
@@ -13211,6 +13214,19 @@ if test x$enable_libxxx_mode = xyes; then
 	ENABLE_LIBXXX_MODE=true
 fi
 
+# Check whether --enable-dev-build was given.
+if test "${enable_dev_build+set}" = set; then :
+  enableval=$enable_dev_build;
+else
+  enable_dev_build=no
+fi
+
+
+if test x$enable_dev_build = xyes; then
+
+$as_echo "#define MDFN_ENABLE_DEV_BUILD 1" >>confdefs.h
+
+fi
 
 OPTIMIZER_FLAGS=""
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking OPTIMIZER_FLAGS for gcc -fno-fast-math" >&5

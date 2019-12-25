@@ -408,16 +408,16 @@ void sngSWI()
 			pc = loadL(0xFFFE00 + ((rCodeB(0x31) & 0x1F) << 2));
 			break;
 
-	case 3: interrupt(0);	//SWI 3
+	case 3: interrupt(0, -1);	//SWI 3
 			break;
 
-	case 4:	interrupt(1);	//SWI 4
+	case 4:	interrupt(1, -1);	//SWI 4
 			break;
 
-	case 5: interrupt(2);	//SWI 5
+	case 5: interrupt(2, -1);	//SWI 5
 			break;
 
-	case 6: interrupt(3);	//SWI 6
+	case 6: interrupt(3, -1);	//SWI 6
 			break;
 
 	default:	instruction_error("SWI %d is not valid.", first & 7);

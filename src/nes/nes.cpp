@@ -775,6 +775,7 @@ MDFNGI EmulatedNES =
  NULL,
  #endif
  NESPortInfo,
+ NULL,
  Load,
  TestMagic,
  NULL,

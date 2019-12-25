@@ -58,6 +58,8 @@ class SPC700 final
    case GSREG_PSW: return PSW;
    case GSREG_SP: return SP;
   }
+
+  return 0xDEADBEEF;
  }
 
  INLINE void SetRegister(unsigned which, unsigned value)

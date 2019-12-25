@@ -2,7 +2,7 @@
 /* Mednafen Fast SNES Emulation Module                                        */
 /******************************************************************************/
 /* input.cpp:
-**  Copyright (C) 2015-2017 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -294,6 +294,11 @@ static uint8 JoyARData[8];
 
 static DEFREAD(Read_JoyARData)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return JoyARData[A & 0x7];
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
 
  //printf("Read: %08x\n", A);
@@ -303,6 +308,11 @@ static DEFREAD(Read_JoyARData)
 
 static DEFREAD(Read_4016)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return CPUM.mdr & 0xFC; // | TODO!
+ }
+
  CPUM.timestamp += MEMCYC_XSLOW;
 
  uint8 ret = CPUM.mdr & 0xFC;
@@ -326,6 +336,11 @@ static DEFWRITE(Write_4016)
 
 static DEFREAD(Read_4017)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return (CPUM.mdr & 0xE0) | 0x1C; // | TODO!
+ }
+
  CPUM.timestamp += MEMCYC_XSLOW;
  uint8 ret = (CPUM.mdr & 0xE0) | 0x1C;
 
@@ -344,6 +359,11 @@ static DEFWRITE(Write_WRIO)
 
 static DEFREAD(Read_4213)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return WRIO;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
 
  return WRIO;
@@ -446,6 +466,8 @@ void INPUT_Reset(bool powering_up)
  JoyLS = false;
  for(unsigned sport = 0; sport < 2; sport++)
   Ports[sport]->SetLatch(JoyLS);
+
+ memset(JoyARData, 0x00, sizeof(JoyARData));
 
  if(powering_up)
  {

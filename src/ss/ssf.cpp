@@ -169,6 +169,7 @@ MDFNGI EmulatedSSFPlay =
  MODPRIO_INTERNAL_HIGH,
  NULL,
  DummyPortInfo,
+ NULL,
  Load,
  TestMagic,
  NULL,

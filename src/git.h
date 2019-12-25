@@ -528,6 +528,24 @@ struct DesiredInputType
  std::map<std::string, uint32> switches;
 };
 
+struct GameDB_Entry
+{
+ std::string GameID;
+ bool GameIDIsHash = false;
+ std::string Name;
+ std::string Setting;
+ std::string Purpose;
+};
+
+struct GameDB_Database
+{
+ std::string ShortName;
+ std::string FullName;
+ std::string Description;
+
+ std::vector<GameDB_Entry> Entries;
+};
+
 typedef struct
 {
  /* Private functions to Mednafen.  Do not call directly
@@ -553,6 +571,8 @@ typedef struct
  void *Debugger;
  #endif
  const std::vector<InputPortInfoStruct> &PortInfo;
+
+ void (*GetInternalDB)(std::vector<GameDB_Database>* databases);
 
  //
  // throws exception on fatal error.

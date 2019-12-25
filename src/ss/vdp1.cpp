@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* vdp1.cpp - VDP1 Emulation
-**  Copyright (C) 2015-2017 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -18,6 +18,10 @@
 ** along with this program; if not, write to the Free Software Foundation, Inc.,
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
+
+// TODO: 32-bit writes from the SH-2 CPUs to VDP1 registers seem to be broken on a Saturn; test, and implement here.
+
+// TODO: COPR shouldn't be updated(from the view of the program) until the current command finishes.
 
 // TODO: Check to see what registers are reset on reset.
 
@@ -47,6 +51,82 @@ namespace MDFN_IEN_SS
 namespace VDP1
 {
 
+#if 0
+struct VRAMUsageInfo
+{
+ uint64 earliest;
+ uint64 latest;
+};
+
+static VRAMUsageInfo VRAMDrawReads[0x40000];
+static VRAMUsageInfo VRAMWrites[0x40000];
+static uint64 VRAMUsageTSBase;
+static uint64 VRAMUsageStartTS;
+
+static void VRAMUsageInit(void)
+{
+ VRAMUsageTSBase = 0;
+}
+
+static void VRAMUsageAddBaseTime(int32 amount)
+{
+ VRAMUsageTSBase += amount;
+}
+
+static void VRAMUsageStart(void)
+{
+ for(size_t i = 0; i < 0x40000; i++)
+ {
+  VRAMDrawReads[i].earliest = ~(uint64)0;
+  VRAMDrawReads[i].latest = ~(uint64)0;
+
+  VRAMWrites[i].earliest = ~(uint64)0;
+  VRAMWrites[i].latest = ~(uint64)0;
+ }
+ VRAMUsageStartTS = VRAMUsageTSBase;
+}
+
+static void VRAMUsageWrite(uint32 A)
+{
+ const uint64 fullts = VRAMUsageTSBase + SH7095_mem_timestamp;
+ const size_t index = (A >> 1) & 0x3FFFF;
+
+ if(VRAMWrites[index].earliest == ~(uint64)0)
+  VRAMWrites[index].earliest = fullts;
+
+ VRAMWrites[index].latest = fullts;
+}
+
+static void VRAMUsageDrawRead(uint32 A)
+{
+ const uint64 fullts = VRAMUsageTSBase + SH7095_mem_timestamp;
+ const size_t index = (A >> 1) & 0x3FFFF;
+
+ if(VRAMDrawReads[index].earliest == ~(uint64)0)
+  VRAMDrawReads[index].earliest = fullts;
+
+ VRAMDrawReads[index].latest = fullts;
+}
+
+static void VRAMUsageEnd(void)
+{
+ for(unsigned i = 0; i < 0x40000; i++)
+ {
+  if(VRAMWrites[i].latest != ~(uint64)0 && VRAMDrawReads[i].latest != ~(uint64)0)
+  {
+   printf("VRAM[0x%06x] Race --- Write, earliest=%llu, latest=%llu --- Draw Read, earliest=%llu, latest=%llu\n", i * 2, (unsigned long long)(VRAMWrites[i].earliest - VRAMUsageStartTS), (unsigned long long)(VRAMWrites[i].latest - VRAMUsageStartTS), (unsigned long long)(VRAMDrawReads[i].earliest - VRAMUsageStartTS), (unsigned long long)(VRAMDrawReads[i].latest - VRAMUsageStartTS));
+  }
+ }
+}
+#else
+static INLINE void VRAMUsageInit(void) { }
+static INLINE void VRAMUsageAddBaseTime(int32 amount) { }
+static INLINE void VRAMUsageStart(void) { }
+static INLINE void VRAMUsageWrite(uint32 A) { }
+static INLINE void VRAMUsageDrawRead(uint32 A) { }
+static INLINE void VRAMUsageEnd(void) { }
+#endif
+
 uint8 spr_w_shift_tab[8];
 line_data LineSetup;
 uint8 gouraud_lut[0x40];
@@ -60,6 +140,7 @@ static bool FBManualPending;
 static bool FBVBErasePending;
 static bool FBVBEraseActive;
 static sscpu_timestamp_t FBVBEraseLastTS;
+static sscpu_timestamp_t LastRWTS; // ss_horrible_hacks
 
 int32 SysClipX, SysClipY;
 int32 UserClipX0, UserClipY0, UserClipX1, UserClipY1;
@@ -100,6 +181,10 @@ static bool vb_status, hb_status;
 static sscpu_timestamp_t lastts;
 static int32 CycleCounter;
 
+#if 1
+static uint32 InstantDrawSanityLimit; // ss_horrible_hacks
+#endif
+
 static bool vbcdpending;
 
 void Init(void)
@@ -126,6 +211,9 @@ void Init(void)
  hb_status = false;
  lastts = 0;
  FBVBEraseLastTS = 0;
+ LastRWTS = 0;
+
+ VRAMUsageInit();
 }
 
 void Kill(void)
@@ -201,6 +289,7 @@ void Reset(bool powering_up)
  EraseYCounter = ~0U;
 
  CycleCounter = 0;
+ InstantDrawSanityLimit = 0;
 }
 
 static int32 CMD_SetUserClip(const uint16* cmd_data)
@@ -245,6 +334,7 @@ static uint32 MDFN_FASTCALL TexFetch(uint32 x)
  {
   case 0:	// 16 colors, color bank
 	rtd = (VRAM[(base + (x >> 2)) & 0x3FFFF] >> (((x & 0x3) ^ 0x3) << 2)) & 0xF;
+	VRAMUsageDrawRead((base + (x >> 2)) & 0x3FFFF);
 
 	if(!ECD && rtd == 0xF)
 	{
@@ -259,6 +349,7 @@ static uint32 MDFN_FASTCALL TexFetch(uint32 x)
 
   case 1:	// 16 colors, LUT
 	rtd = (VRAM[(base + (x >> 2)) & 0x3FFFF] >> (((x & 0x3) ^ 0x3) << 2)) & 0xF;
+	VRAMUsageDrawRead((base + (x >> 2)) & 0x3FFFF);
 
 	if(!ECD && rtd == 0xF)
 	{
@@ -272,6 +363,7 @@ static uint32 MDFN_FASTCALL TexFetch(uint32 x)
 
   case 2:	// 64 colors, color bank
 	rtd = (VRAM[(base + (x >> 1)) & 0x3FFFF] >> (((x & 0x1) ^ 0x1) << 3)) & 0xFF;
+	VRAMUsageDrawRead((base + (x >> 1)) & 0x3FFFF);
 
 	if(!ECD && rtd == 0xFF)
 	{
@@ -287,6 +379,7 @@ static uint32 MDFN_FASTCALL TexFetch(uint32 x)
 
   case 3:	// 128 colors, color bank
 	rtd = (VRAM[(base + (x >> 1)) & 0x3FFFF] >> (((x & 0x1) ^ 0x1) << 3)) & 0xFF;
+	VRAMUsageDrawRead((base + (x >> 1)) & 0x3FFFF);
 
 	if(!ECD && rtd == 0xFF)
 	{
@@ -302,6 +395,7 @@ static uint32 MDFN_FASTCALL TexFetch(uint32 x)
 
   case 4:	// 256 colors, color bank
 	rtd = (VRAM[(base + (x >> 1)) & 0x3FFFF] >> (((x & 0x1) ^ 0x1) << 3)) & 0xFF;
+	VRAMUsageDrawRead((base + (x >> 1)) & 0x3FFFF);
 
 	if(!ECD && rtd == 0xFF)
 	{
@@ -322,6 +416,7 @@ static uint32 MDFN_FASTCALL TexFetch(uint32 x)
 	 rtd = VRAM[0];
 	else
 	 rtd = VRAM[(base + x) & 0x3FFFF];
+	VRAMUsageDrawRead((ColorMode >= 6) ? 0 : ((base + x) & 0x3FFFF));
 
 	if(!ECD && (rtd & 0xC000) == 0x4000)
 	{
@@ -397,6 +492,11 @@ sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
  }
  else if(DrawingActive)
  {
+#if 1
+  if(MDFN_UNLIKELY(ss_horrible_hacks & HORRIBLEHACK_VDP1INSTANT))
+   CycleCounter = InstantDrawSanityLimit; 
+#endif
+
   while(CycleCounter > 0)
   {
    uint16 cmd_data[0x10];
@@ -404,6 +504,9 @@ sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
    // Fetch command data
    memcpy(cmd_data, &VRAM[CurCommandAddr], sizeof(cmd_data));
    CycleCounter -= 16;
+
+   for(unsigned i = 0; i < 16; i++)
+    VRAMUsageDrawRead((CurCommandAddr + i) * 2);
 
    //SS_DBGTI(SS_DBG_WARNING | SS_DBG_VDP1, "[VDP1] Command @ 0x%06x: 0x%04x\n", CurCommandAddr, cmd_data[0]);
 
@@ -414,6 +517,7 @@ sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
     if(MDFN_UNLIKELY(cc >= 0xC))
     {
      DrawingActive = false;
+     VRAMUsageEnd();
      break;
     }
     else
@@ -437,6 +541,7 @@ sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
    {
     SS_DBGTI(SS_DBG_VDP1, "[VDP1] Drawing finished at 0x%05x", CurCommandAddr);
     DrawingActive = false;
+    VRAMUsageEnd();
 
     EDSR |= 0x2;	// TODO: Does EDSR reflect IRQ out status?
 
@@ -471,6 +576,11 @@ sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
 	break;
    }
   }
+
+#if 1
+  if(MDFN_UNLIKELY(ss_horrible_hacks & HORRIBLEHACK_VDP1INSTANT))
+   InstantDrawSanityLimit = CycleCounter;
+#endif
  }
 
  return timestamp + (DrawingActive ? std::max<int32>(VDP1_UpdateTimingGran, 0 - CycleCounter) : VDP1_IdleTimingGran);
@@ -494,6 +604,8 @@ static void StartDrawing(void)
  CurCommandAddr = 0;
  RetCommandAddr = -1;
  DrawingActive = true;
+ VRAMUsageStart();
+
  CycleCounter = VDP1_UpdateTimingGran;
 }
 
@@ -525,6 +637,8 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
   }
   else // Leaving v-blank
   {
+   InstantDrawSanityLimit = 1000000;
+
    // Run vblank erase at end of vblank all at once(not strictly accurate, but should only have visible side effects wrt the debugger and reset).
    if(FBVBEraseActive)
    {
@@ -573,10 +687,16 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
    //
    if(!(FBCR & FBCR_FCM) || (FBManualPending && (FBCR & FBCR_FCT)))	// Swap framebuffers
    {
+#if 1
+    if((ss_horrible_hacks & HORRIBLEHACK_VDP1VRAM5000FIX) && DrawingActive && VRAM[0] == 0x5000 && VRAM[1] == 0x0000)
+     VRAM[0] = 0x8000;
+#endif
+
     if(DrawingActive)
     {
      SS_DBGTI(SS_DBG_WARNING | SS_DBG_VDP1, "[VDP1] Drawing aborted by framebuffer swap.");
      DrawingActive = false;
+     VRAMUsageEnd();
     }
 
     FBDrawWhich = !FBDrawWhich;
@@ -607,17 +727,13 @@ void SetHBVB(const sscpu_timestamp_t event_timestamp, const bool new_hb_status, 
     }
    }
 
+   EraseYCounter = ~0U;
    if(!(FBCR & FBCR_FCM) || (FBManualPending && !(FBCR & FBCR_FCT)))
    {
     if(TVMR & TVMR_ROTATE)
-    {
-     EraseYCounter = ~0U;
      FBVBErasePending = true;
-    }
     else
-    {
      EraseYCounter = EraseParams.y_start;
-    }
    }
 
    FBManualPending = false;
@@ -719,6 +835,11 @@ void AdjustTS(const int32 delta)
  lastts += delta;
  if(FBVBEraseActive)
   FBVBEraseLastTS += delta;
+
+ if(LastRWTS >= 0)
+  LastRWTS += delta;
+
+ VRAMUsageAddBaseTime(-delta);
 }
 
 static INLINE void WriteReg(const unsigned which, const uint16 value)
@@ -768,6 +889,7 @@ static INLINE void WriteReg(const unsigned which, const uint16 value)
 	if(DrawingActive)
 	{
 	 DrawingActive = false;
+         VRAMUsageEnd();
 	 if(CycleCounter < 0)
 	  CycleCounter = 0;
 	 nt = SH7095_mem_timestamp + VDP1_IdleTimingGran;
@@ -802,12 +924,44 @@ static INLINE uint16 ReadReg(const unsigned which)
  }
 }
 
-void Write8_DB(uint32 A, uint16 DB)
+//
+// Due to the emulated CPUs running faster than they should(due to lack of instruction cache emulation, lack of emulation of some pipeline details,
+// lack of memory refresh cycle emulation), there is the potential that a game may write too much data too fast, causing drawing to timeout and abort,
+// and the game could subsequently hang waiting for drawing to complete.  With this in mind, only selectively enable it for games that are known
+// to benefit, via the horrible hacks mechanism.
+//
+MDFN_FASTCALL void Write_CheckDrawSlowdown(uint32 A, sscpu_timestamp_t time_thing)
+{
+ if(DrawingActive && (ss_horrible_hacks & HORRIBLEHACK_VDP1RWDRAWSLOWDOWN))
+ {
+  const int32 count = (A & 0x100000) ? 22 : 25;
+  const uint32 a = std::min<uint32>(count, time_thing - LastRWTS);
+
+  CycleCounter -= a;
+  LastRWTS = time_thing;
+ }
+}
+
+MDFN_FASTCALL void Read_CheckDrawSlowdown(uint32 A, sscpu_timestamp_t time_thing)
+{
+ //printf("%08x\n", A);
+ if(!(A & 0x100000) && DrawingActive && (ss_horrible_hacks & HORRIBLEHACK_VDP1RWDRAWSLOWDOWN))
+ {
+  const int32 count = (A & 0x80000) ? 44 : 41;
+  const uint32 a = std::min<uint32>(count, time_thing - LastRWTS);
+
+  CycleCounter -= a;
+  LastRWTS = time_thing;
+ }
+}
+
+MDFN_FASTCALL void Write8_DB(uint32 A, uint16 DB)
 {
  A &= 0x1FFFFF;
 
  if(A < 0x80000)
  {
+  VRAMUsageWrite(A);
   SS_DBGTI(SS_DBG_VDP1_VRAMW, "[VDP1] Write to VRAM: 0x%02x->VRAM[0x%05x]", (DB >> (((A & 1) ^ 1) << 3)) & 0xFF, A);
   ne16_wbo_be<uint8>(VRAM, A, DB >> (((A & 1) ^ 1) << 3) );
   return;
@@ -830,12 +984,13 @@ void Write8_DB(uint32 A, uint16 DB)
  WriteReg((A - 0x100000) >> 1, DB);
 }
 
-void Write16_DB(uint32 A, uint16 DB)
+MDFN_FASTCALL void Write16_DB(uint32 A, uint16 DB)
 {
  A &= 0x1FFFFE;
 
  if(A < 0x80000)
  {
+  VRAMUsageWrite(A);
   SS_DBGTI(SS_DBG_VDP1_VRAMW, "[VDP1] Write to VRAM: 0x%04x->VRAM[0x%05x]", DB, A);
   VRAM[A >> 1] = DB;
   return;
@@ -857,7 +1012,7 @@ void Write16_DB(uint32 A, uint16 DB)
  WriteReg((A - 0x100000) >> 1, DB);
 }
 
-uint16 Read16_DB(uint32 A)
+MDFN_FASTCALL uint16 Read16_DB(uint32 A)
 {
  A &= 0x1FFFFE;
 
@@ -935,6 +1090,10 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
   SFVAR(vbcdpending),
 
+  SFVAR(LastRWTS),
+
+  SFVAR(InstantDrawSanityLimit),
+
   SFEND
  };
 
@@ -1003,6 +1162,26 @@ uint32 GetRegister(const unsigned id, char* const special, const uint32 special_
   case GSREG_LOCALY:
 	ret = LocalY;
  	break;
+
+  case GSREG_TVMR:
+	ret = TVMR;
+	break;
+
+  case GSREG_FBCR:
+	ret = FBCR;
+	break;
+
+  case GSREG_EWDR:
+	ret = EWDR;
+	break;
+
+  case GSREG_EWLR:
+	ret = EWLR;
+	break;
+
+  case GSREG_EWRR:
+	ret = EWRR;
+	break;
  }
 
  return ret;

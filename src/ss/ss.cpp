@@ -55,10 +55,11 @@ namespace MDFN_IEN_SS
 
 static sscpu_timestamp_t MidSync(const sscpu_timestamp_t timestamp);
 
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
 uint32 ss_dbg_mask;
 static std::bitset<0x200> BWMIgnoreAddr[2]; // 0=read, 1=write
 #endif
+uint32 ss_horrible_hacks;
 
 static bool NeedEmuICache;
 static const uint8 BRAM_Init_Data[0x10] = { 0x42, 0x61, 0x63, 0x6b, 0x55, 0x70, 0x52, 0x61, 0x6d, 0x20, 0x46, 0x6f, 0x72, 0x6d, 0x61, 0x74 };
@@ -101,6 +102,7 @@ static uint32 SH7095_DB;
 #include "debug.inc"
 
 static sha256_digest BIOS_SHA256;	// SHA-256 hash of the currently-loaded BIOS; used for save state sanity checks.
+static int ActiveCartType;		// Used in save states.
 static std::vector<CDInterface*> *cdifs = NULL;
 static std::bitset<1U << (27 - SH7095_EXT_MAP_GRAN_BITS)> FMIsWriteable;
 
@@ -634,14 +636,14 @@ static INLINE bool EventHandler(const sscpu_timestamp_t timestamp)
 
  while(timestamp >= (e = events[SS_EVENT__SYNFIRST].next)->event_time)	// If Running = 0, EventHandler() may be called even if there isn't an event per-se, so while() instead of do { ... } while
  {
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
   const sscpu_timestamp_t etime = e->event_time;
 #endif
   sscpu_timestamp_t nt;
 
   nt = e->event_handler(e->event_time);
 
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
   if(MDFN_UNLIKELY(nt <= etime))
   {
    fprintf(stderr, "which=%d event_time=%d nt=%d timestamp=%d\n", (int)(e - events), etime, nt, timestamp);
@@ -1067,7 +1069,7 @@ static INLINE bool DetectRegion(unsigned* const region)
 
  return false;
 }
-
+#if 0
 static MDFN_COLD bool DetectRegionByFN(const std::string& fn, unsigned* const region)
 {
  std::string ss = fn;
@@ -1134,12 +1136,12 @@ static MDFN_COLD bool DetectRegionByFN(const std::string& fn, unsigned* const re
 
  return false;
 }
-
-static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned cart_type, const unsigned smpc_area, Stream* dbg_cart_rom_stream)
+#endif
+static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned horrible_hacks, const unsigned cart_type, const unsigned smpc_area, Stream* dbg_cart_rom_stream)
 {
  const char* cart_rom_path_sname = nullptr;
 
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
  ss_dbg_mask = SS_DBG_ERROR;
  {
   std::vector<uint64> dms = MDFN_GetSettingMultiUI("ss.dbg_mask");
@@ -1188,6 +1190,9 @@ static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned
   MDFN_printf(_("CPU Cache Emulation Mode: %s\n"), cem);
  }
  //
+ if(horrible_hacks)
+  MDFN_printf(_("Horrible hacks: 0x%08x\n"), horrible_hacks);
+ //
  {
   MDFN_printf(_("Region: 0x%01x\n"), smpc_area);
   const struct
@@ -1228,6 +1233,10 @@ static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned
   CPU[c].Init(cpucache_emumode == CPUCACHE_EMUMODE_DATA_CB);
   CPU[c].SetMD5((bool)c);
  }
+ SH7095_mem_timestamp = 0;
+ SH7095_DB = 0;
+
+ ss_horrible_hacks = horrible_hacks;
 
  //
  // Initialize backup memory.
@@ -1255,6 +1264,7 @@ static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned
   }
 
   CART_Init(cart_type, cart_rom_stream ? cart_rom_stream.get() : dbg_cart_rom_stream);
+  ActiveCartType = cart_type;
  }
  //
  //
@@ -1509,8 +1519,17 @@ static MDFN_COLD void Load(GameFile* gf)
    CDInterfaces.push_back(CDInterface::Open(&NVFS, MDFN_GetSettingS("ss.dbg_exe_cdpath"), false));
    cdifs = &CDInterfaces;
   }
+  //
+  //
+  uint32 horrible_hacks = 0;
+  {
+   std::vector<uint64> dhhs = MDFN_GetSettingMultiUI("ss.dbg_exe_hh");
 
-  InitCommon(CPUCACHE_EMUMODE_DATA, CART_MDFN_DEBUG, MDFN_GetSettingUI("ss.region_default"), gf->stream);
+   for(uint64 dhhse : dhhs)
+    horrible_hacks |= dhhse;
+  }
+
+  InitCommon(MDFN_GetSettingUI("ss.dbg_exe_cem"), horrible_hacks, CART_MDFN_DEBUG, MDFN_GetSettingUI("ss.region_default"), gf->stream);
  }
  catch(...)
  {
@@ -1604,6 +1623,7 @@ static MDFN_COLD void LoadCD(std::vector<CDInterface*>* CDInterfaces)
   unsigned region;
   int cart_type;
   unsigned cpucache_emumode;
+  unsigned horrible_hacks;
   uint8 fd_id[16];
   char sgid[16 + 1] = { 0 };
   cdifs = CDInterfaces;
@@ -1617,6 +1637,7 @@ static MDFN_COLD void LoadCD(std::vector<CDInterface*>* CDInterfaces)
 
   DetectRegion(&region);
   DB_Lookup(nullptr, sgid, fd_id, &region, &cart_type, &cpucache_emumode);
+  horrible_hacks = DB_LookupHH(sgid, fd_id);
   //
   if(!MDFN_GetSettingB("ss.region_autodetect"))
    region = region_default;
@@ -1631,7 +1652,7 @@ static MDFN_COLD void LoadCD(std::vector<CDInterface*>* CDInterfaces)
 
    // TODO: auth ID calc
 
-  InitCommon(cpucache_emumode, cart_type, region, nullptr);
+  InitCommon(cpucache_emumode, horrible_hacks, cart_type, region, nullptr);
  }
  catch(...)
  {
@@ -1642,7 +1663,7 @@ static MDFN_COLD void LoadCD(std::vector<CDInterface*>* CDInterfaces)
 
 static MDFN_COLD void CloseGame(void)
 {
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
  VDP1::MakeDump("/tmp/vdp1_dump.h");
  VDP2::MakeDump("/tmp/vdp2_dump.h");
 #endif
@@ -1854,19 +1875,38 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
  if(!data_only)
  {
   sha256_digest sr_dig = BIOS_SHA256;
+  int cart_type = ActiveCartType;
 
   SFORMAT SRDStateRegs[] = 
   {
    SFPTR8(sr_dig.data(), sr_dig.size()),
+   SFVAR(cart_type),
    SFEND
   };
 
-  MDFNSS_StateAction(sm, load, data_only, SRDStateRegs, "BIOS_HASH", true);
+  MDFNSS_StateAction(sm, load, data_only, SRDStateRegs, "BIOS_HASH");
 
-  if(load && sr_dig != BIOS_SHA256)
-   throw MDFN_Error(0, _("BIOS hash mismatch(save state created under a different BIOS)!"));
+  if(load)
+  {
+   if(sr_dig != BIOS_SHA256)
+    throw MDFN_Error(0, _("BIOS hash mismatch(save state created under a different BIOS)!"));
+/*
+   if(load < 0x00102300)
+   {
+    SFORMAT DummyStateRegs[] = { SFEND };
+
+    if(MDFNSS_StateAction(sm, load, data_only, DummyStateRegs, "CART_BACKUP", true))
+     cart_type = CART_BACKUP_MEM;
+   }
+*/
+   if(cart_type != ActiveCartType)
+    throw MDFN_Error(0, _("Cart type mismatch(save state created with a different cart)!"));
+  }
  }
-
+ //
+ //
+ //
+ bool RecordedNeedEmuICache = load ? false : NeedEmuICache;
  EventsPacker ep;
  ep.Save();
 
@@ -1886,6 +1926,8 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
   SFVAR(WorkRAML),
   SFVAR(WorkRAMH),
   SFVAR(BackupRAM),
+
+  SFVAR(RecordedNeedEmuICache),
 
   SFEND
  };
@@ -1912,6 +1954,14 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
   {
    printf("Bad state events data.");
    InitEvents();
+  }
+
+  if(NeedEmuICache && !RecordedNeedEmuICache)
+  {
+   //printf("NeedEmuICache=%d, RecordedNeedEmuICache=%d\n", NeedEmuICache, RecordedNeedEmuICache);
+
+   for(size_t i = 0; i < 2; i++)
+    CPU[i].FixupICacheModeState();	// Only call it after all RAM has been loaded from the save state.
   }
  }
 }
@@ -2005,7 +2055,7 @@ static const MDFNSetting_EnumList CartAD_List[] =
  { NULL, 0 },
 };
 
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
 static const MDFNSetting_EnumList DBGMask_List[] =
 {
  { "0",		0								},
@@ -2048,6 +2098,29 @@ static const MDFNSetting_EnumList DBGMask_List[] =
  { NULL, 0 },
 };
 #endif
+
+static const MDFNSetting_EnumList CEM_List[] =
+{
+ { "data_cb",	CPUCACHE_EMUMODE_DATA_CB,	gettext_noop("Data only, with high-level bypass") },
+ { "data",	CPUCACHE_EMUMODE_DATA, 		gettext_noop("Data only") },
+ { "full",	CPUCACHE_EMUMODE_FULL,		gettext_noop("Full") },
+
+ { NULL, 0 },
+};
+
+static const MDFNSetting_EnumList HH_List[] =
+{
+ { "0",			0								},
+ { "none",		0,				gettext_noop("None")		},
+
+ { "nosh2dmaline106",	HORRIBLEHACK_NOSH2DMALINE106,	gettext_noop("nosh2dmaline106") },
+ { "nosh2dmapenalty",	HORRIBLEHACK_NOSH2DMAPENALTY,	gettext_noop("nosh2dmapenalty")	},
+ { "vdp1vram5000fix",	HORRIBLEHACK_VDP1VRAM5000FIX,	gettext_noop("vdp1vram5000fix")	},
+ { "vdp1rwdrawslowdown",HORRIBLEHACK_VDP1RWDRAWSLOWDOWN,gettext_noop("vdp1rwdrawslowdown") },
+ { "vdp1instant",	HORRIBLEHACK_VDP1INSTANT,	gettext_noop("vdp1instant") },
+
+ { NULL, 0 },
+};
 
 static const MDFNSetting SSSettings[] =
 {
@@ -2106,10 +2179,13 @@ static const MDFNSetting SSSettings[] =
 
  { "ss.midsync", MDFNSF_NOFLAGS, gettext_noop("Enable mid-frame synchronization."), gettext_noop("Mid-frame synchronization can reduce input latency, but it will increase CPU requirements."), MDFNST_BOOL, "0" },
 
-#ifdef MDFN_SS_DEV_BUILD
+#ifdef MDFN_ENABLE_DEV_BUILD
  { "ss.dbg_mask", MDFNSF_SUPPRESS_DOC, gettext_noop("Debug printf mask."), NULL, MDFNST_MULTI_ENUM, "none", NULL, NULL, NULL, NULL, DBGMask_List },
 #endif
+
  { "ss.dbg_exe_cdpath", MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_PATH, gettext_noop("CD image to use with bootable cart ROM image loading."), NULL, MDFNST_STRING, "" },
+ { "ss.dbg_exe_cem", MDFNSF_SUPPRESS_DOC | MDFNSF_NONPERSISTENT, gettext_noop("Cache emulation mode to use with bootable cart ROM image loading."), NULL, MDFNST_ENUM, "data", NULL, NULL, NULL, NULL, CEM_List },
+ { "ss.dbg_exe_hh", MDFNSF_SUPPRESS_DOC | MDFNSF_NONPERSISTENT, gettext_noop("Horrible hacks to use with bootable cart ROM image loading."), NULL, MDFNST_MULTI_ENUM, "none", NULL, NULL, NULL, NULL, HH_List },
 
  { NULL },
 };
@@ -2143,6 +2219,7 @@ MDFNGI EmulatedSS =
  NULL,
  #endif
  SMPC_PortInfo,
+ DB_GetInternalDB,
  Load,
  TestMagic,
  LoadCD,

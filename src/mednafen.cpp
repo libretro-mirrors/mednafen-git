@@ -530,6 +530,30 @@ void MDFNI_DumpModulesDef(const char *fn)
     fp.print_format("\n");
    }
   }
+
+  std::vector<GameDB_Database> gamedb;
+
+  if(MDFNSystems[i]->GetInternalDB)
+   MDFNSystems[i]->GetInternalDB(&gamedb);
+
+  fp.print_format("%zu\n", gamedb.size());
+
+  for(const GameDB_Database& db : gamedb)
+  {
+   fp.print_format("%s\n", MDFN_strescape(db.ShortName).c_str());
+   fp.print_format("%s\n", MDFN_strescape(db.FullName).c_str());
+   fp.print_format("%s\n", MDFN_strescape(db.Description).c_str());
+
+   fp.print_format("%zu\n", db.Entries.size());
+   for(const GameDB_Entry& gdbe : db.Entries)
+   {
+    fp.print_format("%s\n", MDFN_strescape(gdbe.Name).c_str());
+    fp.print_format("%s\n", MDFN_strescape(gdbe.GameID).c_str());
+    fp.print_format("%u\n", gdbe.GameIDIsHash);
+    fp.print_format("%s\n", MDFN_strescape(gdbe.Setting).c_str());
+    fp.print_format("%s\n", MDFN_strescape(gdbe.Purpose).c_str());
+   }
+  }
  }
 
  fp.close();
