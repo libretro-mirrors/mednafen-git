@@ -48,7 +48,7 @@ class IODevice_Wheel final : public IODevice
 };
 
 
-extern IDIISG IODevice_Wheel_IDII;
+MDFN_HIDE extern IDIISG IODevice_Wheel_IDII;
 
 }
 

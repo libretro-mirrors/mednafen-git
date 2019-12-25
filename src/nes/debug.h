@@ -20,7 +20,7 @@ void NESDBG_PutAddressSpaceBytes(const char *name, uint32 Address, uint32 Length
 
 bool NESDBG_Init(void) MDFN_COLD;
 
-extern DebuggerInfoStruct NESDBGInfo;
+MDFN_HIDE extern DebuggerInfoStruct NESDBGInfo;
 }
 
 #endif

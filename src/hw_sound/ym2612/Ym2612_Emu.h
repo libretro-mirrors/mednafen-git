@@ -5,6 +5,9 @@
 #include <mednafen/mednafen.h>
 #include <mednafen/lepacker.h>
 
+namespace Mednafen
+{
+
 struct Ym2612_Impl;
 
 class Ym2612_Emu  {
@@ -36,4 +39,5 @@ public:
 	void serialize(Mednafen::LEPacker &slizer, bool load);
 };
 
+}
 #endif

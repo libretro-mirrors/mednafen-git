@@ -1,3 +1,30 @@
+affinity.cd
+
+CD read threads CPU affinity mask.
+Set to 0 to disable changing affinity.
+MDFNST_UINT
+0
+0x0000000000000000
+0xFFFFFFFFFFFFFFFF
+0
+affinity.emu
+
+Main emulation thread CPU affinity mask.
+Set to 0 to disable changing affinity.
+MDFNST_UINT
+0
+0x0000000000000000
+0xFFFFFFFFFFFFFFFF
+0
+affinity.video
+
+Video blitting thread CPU affinity mask.
+Set to 0 to disable changing affinity.
+MDFNST_UINT
+0
+0x0000000000000000
+0xFFFFFFFFFFFFFFFF
+0
 apple2.enable
 MDFNSF_COMMON_TEMPLATE 
 Enable (automatic) usage of this module.
@@ -1242,19 +1269,28 @@ MDFNST_ENUM
 composite
 
 
-4
+7
 composite
 Composite
 Internal video dimensions of 584x192.
 rgb
 RGB
 Internal video dimensions of 292x192; suitable for use with scalers like hq2x.
+rgb_tfr
+RGB, with HGR text fringe reduction.
+Internal video dimensions of 292x192; suitable for use with scalers like hq2x.  Reduced brightness of colored pixels horizontally sandwiched between white pixels in HGR mode.
+rgb_alt
+RGB (alternate algorithm)
+Internal video dimensions of 584x192.
+rgb_alt_tfr
+RGB (alternate algorithm), with HGR text fringe reduction.
+Internal video dimensions of 584x192.    Reduced brightness of colored pixels horizontally sandwiched between white pixels in HGR mode.
 rgb_alt1
-RGB (alternate algorithm 1)
-Internal video dimensions of 584x192.
+
+
 rgb_alt2
-RGB (alternate algorithm 2)
-Internal video dimensions of 584x192.
+
+
 apple2.video.mono_lumafilter
 MDFNSF_CAT_VIDEO 
 Monochrome video luma filter.
@@ -20008,6 +20044,15 @@ MDFNST_BOOL
 
 
 0
+psx.correct_aspect
+
+Correct aspect ratio.
+Disabling aspect ratio correction with this setting should be considered a hack.\n\nIf disabling it to allow for sharper pixels by also separately disabling interpolation(though using Mednafen\'s \"autoipsharper\" OpenGL shader is usually a better option), remember to use scale factors that are multiples of 2, or else games that use high-resolution and interlaced modes will have distorted pixels.\n\nDisabling aspect ratio correction with this setting will allow for the QuickTime movie recording feature to produce much smaller files using much less CPU time.
+MDFNST_BOOL
+1
+
+
+0
 psx.dbg_exe_cdpath
 MDFNSF_CAT_PATH MDFNSF_SUPPRESS_DOC 
 CD image to use with .PSX/.EXE loading.
@@ -33520,15 +33565,60 @@ MDFNST_FLOAT
 0.01
 256
 0
+snes_faust.affinity.msu1.audio
+
+MSU1 audio read thread CPU affinity mask.
+Set to 0 to disable changing affinity.
+MDFNST_UINT
+0
+0x0000000000000000
+0xFFFFFFFFFFFFFFFF
+0
+snes_faust.affinity.msu1.data
+
+MSU1 data read thread CPU affinity mask.
+Set to 0 to disable changing affinity.
+MDFNST_UINT
+0
+0x0000000000000000
+0xFFFFFFFFFFFFFFFF
+0
+snes_faust.affinity.ppu
+
+PPU rendering thread CPU affinity mask.
+Set to 0 to disable changing affinity.
+MDFNST_UINT
+0
+0x0000000000000000
+0xFFFFFFFFFFFFFFFF
+0
 snes_faust.correct_aspect
 
 Correct aspect ratio.
 
-MDFNST_BOOL
+MDFNST_ENUM
 1
 
 
+6
 0
+Disabled
+
+1
+Enabled
+
+force_ntsc
+Enabled, force NTSC PAR.
+
+force_pal
+Enabled, force PAL PAR.
+
+disabled
+
+
+enabled
+
+
 snes_faust.cx4.clock_rate
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 CX4 clock rate, specified in percentage of normal.
@@ -33607,6 +33697,15 @@ MDFNST_BOOL
 
 
 0
+snes_faust.frame_begin_vblank
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE MDFNSF_SUPPRESS_DOC MDFNSF_NONPERSISTENT 
+Begin frame in emulated VBlank.
+Disabling will make the multithreaded PPU renderer more effective, but will also increase latency.
+MDFNST_BOOL
+1
+
+
+0
 snes_faust.h_filter
 
 Horizontal blending/doubling filter.
@@ -33615,7 +33714,7 @@ MDFNST_ENUM
 none
 
 
-5
+6
 none
 None
 
@@ -33625,6 +33724,9 @@ Double width of line if it\'s 256.
 phr256blend
 Pseudo-hires halve-blend.
 Blend line down to 256 pixels if it\'s pseudo-hires.
+phr256blend_auto512
+Pseudo-hires halve-blend and force 512 if necessary.
+Blend line down to 256 pixels if it\'s pseudo-hires.  After, double width of line if any other lines use hires mode.
 phr256blend_512
 Pseudo-hires halve-blend and force 512.
 Blend line down to 256 pixels if it\'s pseudo-hires.  After, double width of line if it\'s 256.
@@ -34921,6 +35023,60 @@ MDFNST_BOOL
 
 
 0
+snes_faust.msu1.resamp_quality
+
+MSU1 sound quality.
+Higher values correspond to better SNR and better preservation of higher frequencies(\"brightness\"), at the cost of increased computational complexity and a negligible increase in latency.\n\nHigher values will also slightly increase the probability of sample clipping(relevant if Mednafen\'s volume control settings are set too high), due to increased (time-domain) ringing.
+MDFNST_INT
+4
+0
+5
+0
+snes_faust.region
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Region of SNES to emulate.
+
+MDFNST_ENUM
+auto
+
+
+7
+auto
+Auto
+
+ntsc
+NTSC(North America/Japan)
+
+pal
+PAL(Europe)
+
+ntsc_lie_auto
+NTSC, but PPU bit as if \"auto\".
+
+pal_lie_auto
+PAL, but PPU bit as if \"auto\".
+
+ntsc_lie_pal
+NTSC, but PPU bit as if PAL.
+
+pal_lie_ntsc
+PAL, but PPU bit as if NTSC.
+
+snes_faust.renderer
+
+PPU renderer.
+If you have only one CPU with one physical CPU core, select the single-threaded renderer for better performance.
+MDFNST_ENUM
+st
+
+
+2
+st
+Single-threaded
+PPU rendering is performed in the main emulation thread.
+mt
+Multi-threaded
+PPU rendering is performed in a dedicated thread.
 snes_faust.resamp_quality
 
 Sound quality.
@@ -35062,6 +35218,42 @@ MDFNST_FLOAT
 -2.00
 2.00
 0
+snes_faust.slend
+
+Last displayed scanline in NTSC mode.
+
+MDFNST_INT
+223
+0
+223
+0
+snes_faust.slendp
+
+Last displayed scanline in PAL mode.
+
+MDFNST_INT
+238
+0
+238
+0
+snes_faust.slstart
+
+First displayed scanline in NTSC mode.
+
+MDFNST_INT
+0
+0
+223
+0
+snes_faust.slstartp
+
+First displayed scanline in PAL mode.
+
+MDFNST_INT
+0
+0
+238
+0
 snes_faust.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
@@ -35176,6 +35368,24 @@ Full-screen stretch, same as \"aspect\" except that the equivalent xscalefs and 
 aspect_mult2
 Aspect Preserve + Integer Multiple-of-2 Scale
 Full-screen stretch, same as \"aspect_int\", but rounds down to the nearest multiple of 2.
+snes_faust.superfx.clock_rate
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Super FX clock rate, specified in percentage of normal.
+Overclocking the Super FX will cause or worsen attract mode desynchronization.
+MDFNST_UINT
+100
+25
+500
+0
+snes_faust.superfx.icache
+MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
+Enable SuperFX instruction cache emulation.
+Enabling will likely increase CPU usage.
+MDFNST_BOOL
+0
+
+
+0
 snes_faust.tblur
 MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
 Enable video temporal blur(50/50 previous/current frame by default).
@@ -35388,6 +35598,15 @@ MDFNST_UINT
 600
 10
 99999
+0
+ss.affinity.vdp2
+
+VDP2 rendering thread CPU affinity mask.
+Set to 0 to disable changing affinity.
+MDFNST_UINT
+0
+0x0000000000000000
+0xFFFFFFFFFFFFFFFF
 0
 ss.bios_jp
 MDFNSF_CAT_PATH MDFNSF_EMU_STATE 
@@ -72425,15 +72644,6 @@ ss.input.sport2.multitap
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 Enable multitap on Saturn port 2.
 
-MDFNST_BOOL
-0
-
-
-0
-ss.midsync
-
-Enable mid-frame synchronization.
-Mid-frame synchronization can reduce input latency, but it will increase CPU requirements.
 MDFNST_BOOL
 0
 

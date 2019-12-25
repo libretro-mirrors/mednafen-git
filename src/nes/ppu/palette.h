@@ -8,9 +8,9 @@ typedef struct {
         uint8 r,g,b;
 } MDFNPalStruct;
 
-extern MDFNPalStruct ActiveNESPalette[0x200];
+MDFN_HIDE extern MDFNPalStruct ActiveNESPalette[0x200];
 
-extern const CustomPalette_Spec NES_CPInfo[];
+MDFN_HIDE extern const CustomPalette_Spec NES_CPInfo[];
 
 void MDFN_InitPalette(const unsigned int which, const uint8* custom_palette, const unsigned cp_numentries);
 

@@ -63,7 +63,7 @@ static INLINE void WrMemNorm(unsigned int A, uint8 V)
 }
 
 #ifdef WANT_DEBUGGER
-X6502 XSave;     /* This is getting ugly. */
+static X6502 XSave;     /* This is getting ugly. */
 //#define RdMemHook(A)	( X.ReadHook?(_DB=X.ReadHook(&X,A)):(_DB=ARead[A](A)) )
 //#define WrMemHook(A,V)	{ if(X.WriteHook) X.WriteHook(&X,A,V); else BWrite[A](A,V); }
 
@@ -678,7 +678,7 @@ void X6502_Run(int32 cycles)
 
 void X6502_StateAction(StateMem *sm, const unsigned load, const bool data_only)
 {
- extern uint8 RAM[0x800]; // from nes.cpp
+ MDFN_HIDE extern uint8 RAM[0x800]; // from nes.cpp
 
  SFORMAT SFCPU[]={
   SFVARN(X.PC, "PC"),

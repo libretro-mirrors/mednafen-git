@@ -14,15 +14,15 @@ void MDFNPPU_LineUpdate();
 void NESPPU_GetDisplayRect(MDFN_Rect *DisplayRect);
 
 
-extern void (MDFN_FASTCALL *PPU_hook)(uint32 A);
-extern void (*GameHBIRQHook)(void), (*GameHBIRQHook2)(void);
+MDFN_HIDE extern void (MDFN_FASTCALL *PPU_hook)(uint32 A);
+MDFN_HIDE extern void (*GameHBIRQHook)(void), (*GameHBIRQHook2)(void);
 
 /* For cart.c and banksw.h, mostly */
-extern uint8 NTARAM[0x800],*vnapage[4];
-extern uint8 PPUNTARAM;
-extern uint8 PPUCHRRAM;
+MDFN_HIDE extern uint8 NTARAM[0x800],*vnapage[4];
+MDFN_HIDE extern uint8 PPUNTARAM;
+MDFN_HIDE extern uint8 PPUCHRRAM;
 
-extern int scanline;
+MDFN_HIDE extern int scanline;
 
 void MDFNNES_SetPixelFormat(const MDFN_PixelFormat &nf) MDFN_COLD;
 void MDFNPPU_StateAction(StateMem *sm, const unsigned load, const bool data_only);

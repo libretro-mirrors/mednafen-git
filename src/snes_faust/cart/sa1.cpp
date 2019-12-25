@@ -27,72 +27,162 @@
 
 namespace MDFN_IEN_SNES_FAUST
 {
-static uint8 SA1VectorSpace[0x10];
-static uint8 SA1VectorMask[0x10];
-static uint8 MainVectors[4];
 
-static uint8 SA1CPUControl;
-static uint8 SA1CPUIRQEnable;
-static uint8 SA1CPUIRQPending;
+namespace SA1CPU
+{
+#ifdef ARCH_X86
+MDFN_HIDE CPU_Misc CPUM;
+#else
+static CPU_Misc CPUM;
+#endif
 
-static uint8 MainCPUControl;
-static uint8 MainCPUIRQEnable;
-static uint8 MainCPUIRQPending;
+static INLINE void CPU_SetIRQ(bool active)
+{
+ CPUM.CombinedNIState &= ~0x04;
+ CPUM.CombinedNIState |= active ? 0x04 : 0x00;
+}
 
-static uint8 DMAControl;
-static uint8 DMACharConvParam;
-static uint32 DMASourceAddr;
-static uint32 DMADestAddr;
-static uint32 DMALength;
-static uint32 DMAFinishTS;
+static INLINE void CPU_SetNMI(bool active)
+{
+ if((CPUM.NMILineState ^ active) & active)
+  CPUM.CombinedNIState |= 0x01;
 
-static bool DMACharConvAutoActive;
-static uint32 DMACharConvSourceXTile;
-static uint32 DMACharConvSourceYTile;
-static uint32 DMACharConvCCVBWRAMCounter;
-static uint8 CharConvBMRegs[0x10];
-static unsigned CharConvTileY;
+ CPUM.NMILineState = active;
+}
+
+static INLINE void CPU_SetIRQNMISuppress(bool active)
+{
+ CPUM.CombinedNIState &= ~0x80;
+ CPUM.CombinedNIState |= active ? 0x80 : 0x00;
+}
 
 
-static uint8 ROMBank[4];
-static uintptr_t ROMPtr[8];
+static INLINE void CPU_Exit(void)
+{
+ CPUM.running_mask = 0;
+ CPUM.next_event_ts = 0;
+}
+
+//
+//
+static MDFN_COLD void CPU_ClearRWFuncs(void)
+{
+ memset(CPUM.ReadFuncs, 0, sizeof(CPUM.ReadFuncs));
+ memset(CPUM.WriteFuncs, 0, sizeof(CPUM.WriteFuncs));
+}
+
+static MDFN_COLD void CPU_SetRWHandlers(uint32 A1, uint32 A2, readfunc read_handler, writefunc write_handler, bool special = false)
+{
+ if(special)
+ {
+  assert(!((A1 ^ A2) >> 9));
+
+  CPUM.RWIndex[A1 >> 9] = 0;
+
+  for(uint32 A = A1; A <= A2; A++)
+  {
+   const size_t am = A & 0x1FF;
+
+   //assert((!CPUM.ReadFuncs[am] && !CPUM.WriteFuncs[am]) || (CPUM.ReadFuncs[am] == read_handler && CPUM.WriteFuncs[am] == write_handler));
+
+   CPUM.ReadFuncs[am] = read_handler;
+   CPUM.WriteFuncs[am] = write_handler;
+  }
+ }
+ else
+ {
+  assert(!(A1 & 0x1FF) && (A2 & 0x1FF) == 0x1FF);
+  assert(A1 <= A2);
+  assert((A2 >> 9) < 0x8000);
+
+  size_t index = 512;
+
+  while(index < (512 + 256) && CPUM.ReadFuncs[index] && CPUM.WriteFuncs[index] && (CPUM.ReadFuncs[index] != read_handler || CPUM.WriteFuncs[index] != write_handler))
+   index++;
+
+  assert(index < (512 + 256));
+
+  CPUM.ReadFuncs[index] = read_handler;
+  CPUM.WriteFuncs[index] = write_handler;
+
+  for(uint32 A = A1; A <= A2; A += 512)
+   CPUM.RWIndex[A >> 9] = index;
+
+  CPUM.RWIndex[0x8000] = CPUM.RWIndex[0x7FFF];
+ }
+}
+}
+
+#define GLBVAR(x) static auto& x = SA1CPU::CPUM.x;
+GLBVAR(SA1VectorSpace)
+GLBVAR(SA1VectorMask)
+GLBVAR(MainVectors)
+
+GLBVAR(SA1CPUControl)
+GLBVAR(SA1CPUIRQEnable)
+GLBVAR(SA1CPUIRQPending)
+
+GLBVAR(MainCPUControl)
+GLBVAR(MainCPUIRQEnable)
+GLBVAR(MainCPUIRQPending)
+
+GLBVAR(DMAControl)
+GLBVAR(DMACharConvParam)
+GLBVAR(DMASourceAddr)
+GLBVAR(DMADestAddr)
+GLBVAR(DMALength)
+GLBVAR(DMAFinishTS)
+
+GLBVAR(DMACharConvAutoActive)
+GLBVAR(DMACharConvSourceXTile)
+GLBVAR(DMACharConvSourceYTile)
+GLBVAR(DMACharConvCCVBWRAMCounter)
+GLBVAR(CharConvBMRegs)
+GLBVAR(CharConvTileY)
+
+
+GLBVAR(ROMBank)
+GLBVAR(ROMPtr)
+
+GLBVAR(MainBWRAMBank)
+GLBVAR(SA1BWRAMBank)
+GLBVAR(BWRAMWriteEnable)
+GLBVAR(BWRAMWriteProtectSize)
+GLBVAR(IWRAMWriteEnable)
+
+GLBVAR(BWRAMBitmapFormat)
+
+//
+GLBVAR(MathControl)
+GLBVAR(MathParam)
+GLBVAR(MathResult)
+
+GLBVAR(VarLenControl)
+GLBVAR(VarLenAddr)
+GLBVAR(VarLenCurAddr)
+GLBVAR(VarLenCurBitOffs)
+GLBVAR(VarLenBuffer)
+
+GLBVAR(IRAM)
+
+GLBVAR(SA1CPUBoundTS)
+
+#undef GLBVAR
+//
+//
+//
 static INLINE void RecalcROMPtr(unsigned w)
 {
  ROMPtr[0 + w] = (uintptr_t)&Cart.ROM[(ROMBank[w] & 0x80) ? ((ROMBank[w] & 0x7) << 20) : (w << 20)];
  ROMPtr[4 + w] = (uintptr_t)&Cart.ROM[(ROMBank[w] & 0x7) << 20] - ((0xC0 + (w << 4)) << 16);
 }
 
-static uint8 MainBWRAMBank;		// $2224
-static uint8 SA1BWRAMBank;		// $2225
-static bool BWRAMWriteEnable[2];	// [0]=$2226(main), [1]=$2227(SA1 CPU side)
-static uint8 BWRAMWriteProtectSize;	// $2228
-static uint8 IWRAMWriteEnable[2];	// [0]=$2229(main), [1]=$222A(SA1 CPU side)
-
-static bool BWRAMBitmapFormat;		// $223F(SA1 CPU)
-
-//
-static uint8 MathControl;		// $2250(SA1 CPU)
-static uint16 MathParam[2];		// $2251...$2254
-static uint64 MathResult;
-
-static uint8 VarLenControl;		// $2258 (SA1 CPU)
-static uint32 VarLenAddr;
-static uint32 VarLenCurAddr;
-static uint32 VarLenCurBitOffs;
-static uint32 VarLenBuffer;
-
-static uint8 IRAM[0x800];
-//
-//
-//
 static void AdjustTS(int32 delta)
 {
  SA1CPU::CPUM.timestamp += delta;
  if(DMAFinishTS != 0x7FFFFFFF)
   DMAFinishTS = std::max<int64>(0, (int64)DMAFinishTS + delta);
 }
-
-static uint32 SA1CPUBoundTS;
 
 static NO_INLINE void Update(uint32 timestamp)
 {
@@ -546,6 +636,24 @@ static DEFREAD(MainCPU_ReadVector)
  return ReadROM(0, A);
 }
 
+static DEFREAD(SA1CPU_ReadVector)
+{
+ SA1CPU::CPUM.timestamp += 2;
+ //
+ uint8 ret = ReadROM(0, A);
+
+ if(MDFN_UNLIKELY(A >= 0xFFE0))
+ {
+  if(SA1CPU::CPUM.VectorPull)
+  {
+   const size_t index = A & 0xF;
+   ret = (ret & SA1VectorMask[index]) | SA1VectorSpace[index];
+  }
+ }
+
+ return ret;
+}
+
 template<unsigned T_Region, bool SA1Side>
 static DEFREAD(ReadROM)
 {
@@ -555,16 +663,11 @@ static DEFREAD(ReadROM)
  {
   if(MDFN_LIKELY(!DBG_InHLRead))
   {
-   CPUM.timestamp += (T_Region >= 2) ? (MemSelect ? MEMCYC_FAST : MEMCYC_SLOW) : MEMCYC_SLOW;
+   CPUM.timestamp += (T_Region >= 2) ? CPUM.MemSelectCycles : MEMCYC_SLOW;
   }
  }
  //
- uint8 ret = ReadROM(T_Region, A);;
-
- if(SA1Side && T_Region == 0 && (uint16)A >= 0xFFE0)
-  ret = (ret & SA1VectorMask[A & 0xF]) | SA1VectorSpace[A & 0xF];
-
- return ret;
+ return ReadROM(T_Region, A);;
 }
 
 template<bool SA1Side>
@@ -1130,7 +1233,7 @@ void CART_SA1_Init(const int32 master_clock)
   SA1VectorSpace[i] = 0;
  }
 
- SA1CPU::CPU_Init();
+ SA1CPU::CPU_Init(&SA1CPU::CPUM);
  SA1CPU::CPU_ClearRWFuncs();
  SA1CPU::CPU_SetRWHandlers(0x000000, 0xFFFFFF, SA1CPU_OBRead, SA1CPU_OBWrite);
 
@@ -1172,7 +1275,7 @@ void CART_SA1_Init(const int32 master_clock)
     sa1cpu_rf = ReadROM<3, true>;
    }
 
-   Set_A_Handlers((bank << 16) | 0x8000, (bank << 16) | 0xFFFF, rf, OBWrite_SLOW);
+   Set_A_Handlers((bank << 16) | 0x8000, (bank << 16) | 0xFFFF, rf, (bank & 0x80) ? OBWrite_VAR : OBWrite_SLOW);
    SA1CPU::CPU_SetRWHandlers((bank << 16) | 0x8000, (bank << 16) | 0xFFFF, sa1cpu_rf, SA1CPU_OBWrite);
 
    if(!bank)
@@ -1183,6 +1286,8 @@ void CART_SA1_Init(const int32 master_clock)
      Set_A_Handlers(0xFFEA + offs, MainCPU_ReadVector<0>, OBWrite_SLOW);
      Set_A_Handlers(0xFFEE + offs, MainCPU_ReadVector<1>, OBWrite_SLOW);
     }
+
+    SA1CPU::CPU_SetRWHandlers(0xFE00, 0xFFFF, SA1CPU_ReadVector, SA1CPU_OBWrite);
    }
   }
   else if(bank >= 0xC0)

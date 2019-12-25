@@ -26,8 +26,13 @@
 
 #include <mednafen/mednafen.h>
 
+using namespace Mednafen;
+
 #define DEFREAD(x) uint8 MDFN_FASTCALL MDFN_HOT x (uint32 A)
 #define DEFWRITE(x) void MDFN_FASTCALL MDFN_HOT x (uint32 A, uint8 V)
+
+#define DEFREAD_NOHOT(x) uint8 MDFN_FASTCALL x (uint32 A)
+#define DEFWRITE_NOHOT(x) void MDFN_FASTCALL x (uint32 A, uint8 V)
 
 #define MEMCYC_FAST   6
 #define MEMCYC_SLOW   8
@@ -45,7 +50,6 @@
 
 namespace MDFN_IEN_SNES_FAUST
 {
-extern bool MemSelect;
 
 DEFREAD(OBRead_XSLOW);
 DEFREAD(OBRead_SLOW);
@@ -76,6 +80,15 @@ static INLINE void Set_A_Handlers(uint32 A1, readfunc read_handler, writefunc wr
 void DMA_InitHDMA(void) MDFN_HOT;
 void DMA_RunHDMA(void) MDFN_HOT;
 
+// For S-DD1 write handler chaining
+DEFWRITE(DMA_Write_43x0);
+DEFWRITE(DMA_Write_43x2);
+DEFWRITE(DMA_Write_43x3);
+DEFWRITE(DMA_Write_43x4);
+DEFWRITE(DMA_Write_43x5);
+DEFWRITE(DMA_Write_43x6);
+//
+
 typedef uint32 (*snes_event_handler)(const uint32 timestamp);
 
 struct event_list_entry
@@ -93,13 +106,14 @@ enum
  SNES_EVENT_PPU_LINEIRQ,
  SNES_EVENT_DMA_DUMMY,
  SNES_EVENT_CART,
+ SNES_EVENT_MSU1,
  SNES_EVENT__SYNLAST,
  SNES_EVENT__COUNT,
 };
 
 #define SNES_EVENT_MAXTS       		0x20000000
 
-extern event_list_entry events[SNES_EVENT__COUNT];
+MDFN_HIDE extern event_list_entry events[SNES_EVENT__COUNT];
 
 void ForceEventUpdates(const uint32 timestamp);
 

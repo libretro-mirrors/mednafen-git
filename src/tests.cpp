@@ -39,6 +39,10 @@
 
 #include <mednafen/Time.h>
 #include <mednafen/MThreading.h>
+
+#include <mednafen/MemoryStream.h>
+#include <mednafen/MTStreamReader.h>
+
 #include <time.h>
 
 #include <zlib.h>
@@ -56,7 +60,7 @@
 
 #include <atomic>
 
-#if defined(ARCH_POWERPC_ALTIVEC) && defined(HAVE_ALTIVEC_H)
+#if defined(HAVE_ALTIVEC_INTRINSICS) && defined(HAVE_ALTIVEC_H)
  #include <altivec.h>
 #endif
 
@@ -905,7 +909,7 @@ static void DoAlignmentChecks(void)
  CheckAlignasType<__m128>();
 #endif
 
-#if defined(ARCH_POWERPC_ALTIVEC)
+#if defined(HAVE_ALTIVEC_INTRINSICS)
  CheckAlignasType<vector unsigned int>();
  CheckAlignasType<vector unsigned short>();
 #endif
@@ -2091,11 +2095,11 @@ static int ThreadSafeErrno_Test_Entry(void* data)
 
  errno = 0;
 
- MThreading::PostSem(sem[0]);
- MThreading::WaitSem(sem[1]);
+ MThreading::Sem_Post(sem[0]);
+ MThreading::Sem_Wait(sem[1]);
 
  errno = 0xDEAD;
- MThreading::PostSem(sem[0]);
+ MThreading::Sem_Post(sem[0]);
  return 0;
 }
 
@@ -2103,17 +2107,17 @@ static void ThreadSafeErrno_Test(void)
 {
  //uint64 st = Time::MonoUS();
  //
- MThreading::Sem* sem[2] = { MThreading::CreateSem(), MThreading::CreateSem() };
- MThreading::Thread* thr = MThreading::CreateThread(ThreadSafeErrno_Test_Entry, sem);
+ MThreading::Sem* sem[2] = { MThreading::Sem_Create(), MThreading::Sem_Create() };
+ MThreading::Thread* thr = MThreading::Thread_Create(ThreadSafeErrno_Test_Entry, sem);
 
- MThreading::WaitSem(sem[0]);
+ MThreading::Sem_Wait(sem[0]);
  errno = 0;
- MThreading::PostSem(sem[1]);
- MThreading::WaitSem(sem[0]);
+ MThreading::Sem_Post(sem[1]);
+ MThreading::Sem_Wait(sem[0]);
  assert(errno != 0xDEAD);
- MThreading::WaitThread(thr, nullptr);
- MThreading::DestroySem(sem[0]);
- MThreading::DestroySem(sem[1]);
+ MThreading::Thread_Wait(thr, nullptr);
+ MThreading::Sem_Destroy(sem[0]);
+ MThreading::Sem_Destroy(sem[1]);
  //
  //
  //
@@ -2266,14 +2270,14 @@ void MDFN_RunExceptionTests(const unsigned thread_count, const unsigned thread_d
   sv.store(thread_count, std::memory_order_release);
 
   for(unsigned i = 0; i < thread_count; i++)
-   t[i] = MThreading::CreateThread(RunExceptionTests_TEP, &sv);
+   t[i] = MThreading::Thread_Create(RunExceptionTests_TEP, &sv);
 
   Time::SleepMS(thread_delay);
 
   sv.store(-1, std::memory_order_release);
 
   for(unsigned i = 0; i < thread_count; i++)
-   MThreading::WaitThread(t[i], &trv[i]);
+   MThreading::Thread_Wait(t[i], &trv[i]);
 
   for(unsigned i = 0; i < thread_count; i++)
    printf("%d: %d\n", i, trv[i]);
@@ -2394,6 +2398,75 @@ void MDFN_RunOwlResamplerTest(void)
  }
 }
 
+#if 0
+void TestMTStreamReader(void)
+{
+ for(uint32 pzb = 0; pzb < 256; pzb = (pzb * 3) + 1)
+ for(uint32 test_size = 0; test_size < 256 * 2; test_size++)
+ for(uint32 loop_pos = 0; loop_pos <= test_size; loop_pos++)
+ {
+  printf("pzb=0x%04x, test_size=0x%04x, loop_pos=0x%04x\n", pzb, test_size, loop_pos);
+  //
+  std::unique_ptr<MTStreamReader> test_mtsr(new MTStreamReader(0));
+  std::unique_ptr<MemoryStream> test_stream(new MemoryStream(test_size, true));
+  //
+  for(uint64 i = 0, lcg = 0xDEADBEEFCAFEBABEULL; i < test_size; i++, lcg = (lcg * 6364136223846793005ULL) + 1442695040888963407ULL)
+  {
+   test_stream->map()[i] = lcg >> 32;
+   //printf("%u: 0x%02x\n", (unsigned)i, (uint8)(lcg >> 32));
+  }
+  //
+  const uint8* const g = test_stream->map();
+  {
+   MTStreamReader::StreamInfo si;
+   si.size = test_stream->size();
+   si.loop_pos = loop_pos;
+   si.stream = std::move(test_stream);
+   si.pos = 0;
+
+   test_mtsr->add_stream(std::move(si));
+   test_mtsr->set_active_stream(0, 0, pzb);
+   test_mtsr->sync();
+  }
+  //
+  for(uint64 i = 0; i < pzb; i++)
+  {
+   uint8* b =  test_mtsr->get_buffer(1);
+   if(*b != 0)
+   {
+    printf("0x%02x\n", *b);
+    assert(*b == 0);
+   }
+   test_mtsr->advance(1);
+  }
+  
+  for(uint32 i = 0; i < /*1024 * 1024*/16384; i++)
+  {
+   uint8* b = test_mtsr->get_buffer(1);
+
+   if(test_size == loop_pos && i >= test_size)
+   {
+    assert(*b == 0);
+   }
+   else
+   {
+    uint8 test_b = g[(i < test_size) ? i : loop_pos + ((i - test_size) % (test_size - loop_pos))];
+
+    //printf("%u: 0x%02x 0x%02x\n", (unsigned)i, *b, test_b);
+
+    if(*b != test_b)
+    {
+     fprintf(stderr, "TestMTStreamReader() test_size=%llu, i=%llu\n", (unsigned long long)test_size, (unsigned long long)i);
+     abort();
+    }
+   }
+   //
+   test_mtsr->advance(1);
+  }
+ }
+}
+#endif
+
 bool MDFN_RunMathTests(void)
 {
  TestSStringNullChar();
@@ -2477,6 +2550,8 @@ bool MDFN_RunMathTests(void)
  TestStrArgsSplit();
 
  TestEscapeString();
+
+ //TestMTStreamReader();
  //
  assert(!MDFN_strazicmp("", ""));
  assert(!MDFN_strazicmp("AA", "AZ", 1));

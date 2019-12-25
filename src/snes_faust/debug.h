@@ -28,9 +28,9 @@ namespace MDFN_IEN_SNES_FAUST
 #ifdef SNES_DBG_ENABLE
 void DBG_AddBranchTrace(uint32 to, unsigned iseq);
 void DBG_Init(void);
-extern DebuggerInfoStruct DBG_DBGInfo;
+MDFN_HIDE extern DebuggerInfoStruct DBG_DBGInfo;
 
-extern bool DBG_InHLRead;
+MDFN_HIDE extern bool DBG_InHLRead;
 #else
 static INLINE void DBG_AddBranchTrace(uint32 to, unsigned iseq) { }
 static INLINE void DBG_Init(void) { }

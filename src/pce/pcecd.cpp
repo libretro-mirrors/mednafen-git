@@ -86,6 +86,8 @@
 #include <mednafen/sound/okiadpcm.h>
 #include <mednafen/cdrom/SimpleFIFO.h>
 
+using namespace Mednafen;
+
 #include "pcecd.h"
 
 namespace MDFN_IEN_PCE

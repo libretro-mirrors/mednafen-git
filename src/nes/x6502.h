@@ -9,13 +9,13 @@ void X6502_Debug(void (*CPUHook)(uint32),
                 uint8 (*ReadHook)(X6502 *, unsigned int),
                 void (*WriteHook)(X6502 *, unsigned int, uint8));
 
-extern void (*X6502_Run)(int32 cycles);
+MDFN_HIDE extern void (*X6502_Run)(int32 cycles);
 #else
 void X6502_Run(int32 cycles);
 #endif
 
-extern uint32 timestamp;
-extern X6502 X;
+MDFN_HIDE extern uint32 timestamp;
+MDFN_HIDE extern X6502 X;
 
 #define N_FLAG  0x80
 #define V_FLAG  0x40
@@ -26,7 +26,7 @@ extern X6502 X;
 #define Z_FLAG  0x02
 #define C_FLAG  0x01
 
-extern void (MDFN_FASTCALL *MapIRQHook)(int a);
+MDFN_HIDE extern void (MDFN_FASTCALL *MapIRQHook)(int a);
 
 #define NTSC_CPU 1789772.7272727272727272
 #define PAL_CPU  1662607.125

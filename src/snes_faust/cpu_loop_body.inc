@@ -21,17 +21,17 @@
 
 CPULBMX :
 
-while(MDFN_LIKELY(CPUM.running_mask))
+while(MDFN_LIKELY(lc.cpum->running_mask))
 {
- if(MDFN_UNLIKELY(CPUM.halted))
+ if(MDFN_UNLIKELY(lc.cpum->halted))
  {
-  if(CPUM.halted & CPU_Misc::HALTED_DMA)
-   CPUM.RunDMA();
+  if(lc.cpum->halted & CPU_Misc::HALTED_DMA)
+   lc.cpum->RunDMA();
   //
   //
-  if(CPUM.halted && !(CPUM.halted & CPU_Misc::HALTED_DMA))
+  if(lc.cpum->halted && !(lc.cpum->halted & CPU_Misc::HALTED_DMA))
   {
-   if((CPUM.halted & CPU_Misc::HALTED_WAI) && CPUM.CombinedNIState)
+   if((lc.cpum->halted & CPU_Misc::HALTED_WAI) && lc.cpum->CombinedNIState)
    {
     lc.SampleIRQ();
     lc.IO();
@@ -41,18 +41,18 @@ while(MDFN_LIKELY(CPUM.running_mask))
     lc.IO();
 #endif
     SNES_DBG("WAI done\n");
-    CPUM.halted = CPU_Misc::HALTED_NOT;
+    lc.cpum->halted = CPU_Misc::HALTED_NOT;
    }
-   else if(CPUM.timestamp < CPUM.next_event_ts)
-    CPUM.timestamp = CPUM.next_event_ts;
+   else if(lc.cpum->timestamp < lc.cpum->next_event_ts)
+    lc.cpum->timestamp = lc.cpum->next_event_ts;
   }
 #ifdef SNES_DBG_ENABLE
-  if(!CPUM.halted)
-   printf("CPU halted finished: %u\n", CPUM.timestamp);
+  if(!lc.cpum->halted)
+   printf("CPU halted finished: %u\n", lc.cpum->timestamp);
 #endif
  }
 
- while(MDFN_LIKELY(CPUM.timestamp < CPUM.next_event_ts))
+ while(MDFN_LIKELY(lc.cpum->timestamp < lc.cpum->next_event_ts))
  {
   uint8 opcode;
 
@@ -63,7 +63,7 @@ while(MDFN_LIKELY(CPUM.running_mask))
 #endif
 
   {
-   const uint32 pind = CPUM.PIN_Delay;
+   const uint32 pind = lc.cpum->PIN_Delay;
 
    if(MDFN_UNLIKELY(pind))
    {
@@ -72,14 +72,14 @@ while(MDFN_LIKELY(CPUM.running_mask))
      lc.OpRead(lc.PCPBR);
      lc.IO();
      lc.ISequence(Core65816::ISEQ_IRQ);
-     CPUM.PIN_Delay = 0;
+     lc.cpum->PIN_Delay = 0;
     }
     else
     {
      if(MDFN_UNLIKELY(pind & 0x40))	// Reset
      {
       lc.Reset();
-      CPUM.PIN_Delay = 0;
+      lc.cpum->PIN_Delay = 0;
       GOTO_MXLOOPTABLE()
      }
      else if(pind & 0x01)	// NMI
@@ -87,8 +87,8 @@ while(MDFN_LIKELY(CPUM.running_mask))
       lc.OpRead(lc.PCPBR);
       lc.IO();
       lc.ISequence(Core65816::ISEQ_NMI);
-      CPUM.CombinedNIState &= ~0x01;
-      CPUM.PIN_Delay = 0;
+      lc.cpum->CombinedNIState &= ~0x01;
+      lc.cpum->PIN_Delay = 0;
      }
      else	// DMA IRQ/NMI delay kludge
      {
@@ -100,8 +100,13 @@ while(MDFN_LIKELY(CPUM.running_mask))
       //
 #define COMBINE2(a,b) a ## b
 #define COMBINE(a,b) COMBINE2(a,b)
-      if(opcode == 0xA9 && (lc.P & Core65816::M_FLAG))
-       CPUM.PIN_Delay = 0;
+      //printf("DMANMI: %zd %zd 0x%02x PCPBR=0x%06x\n", sizeof(CPULBMTYPE), sizeof(CPULBXTYPE), opcode, lc.PCPBR);
+
+      if(sizeof(CPULBMTYPE) == 1 && opcode == 0xA9)
+       lc.cpum->PIN_Delay = 0;
+
+      if(sizeof(CPULBXTYPE) == 1 && opcode == 0xA2)
+       lc.cpum->PIN_Delay = 0;
 
       goto COMBINE(CPULBMX, OpDispatch);
      }
@@ -380,7 +385,7 @@ while(MDFN_LIKELY(CPUM.running_mask))
   }
  }
 
- CPUM.EventHandler();
+ lc.cpum->EventHandler();
 }
 
 goto ExitCat;

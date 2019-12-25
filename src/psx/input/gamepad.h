@@ -26,8 +26,8 @@ namespace MDFN_IEN_PSX
 {
 
 InputDevice *Device_Gamepad_Create(void) MDFN_COLD;
-extern IDIISG Device_Gamepad_IDII;
-extern IDIISG Device_Dancepad_IDII;
+MDFN_HIDE extern IDIISG Device_Gamepad_IDII;
+MDFN_HIDE extern IDIISG Device_Dancepad_IDII;
 
 }
 #endif

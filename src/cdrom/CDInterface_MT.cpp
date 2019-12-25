@@ -22,6 +22,9 @@
 #include <mednafen/mednafen.h>
 #include "CDInterface_MT.h"
 
+namespace Mednafen
+{
+
 using namespace CDUtility;
 
 CDInterface_MT::CDInterface_Message::CDInterface_Message()
@@ -53,14 +56,14 @@ CDInterface_MT::CDInterface_Message::~CDInterface_Message()
 
 CDInterface_MT::CDInterface_Queue::CDInterface_Queue()
 {
- ze_mutex = MThreading::CreateMutex();
- ze_cond = MThreading::CreateCond();
+ ze_mutex = MThreading::Mutex_Create();
+ ze_cond = MThreading::Cond_Create();
 }
 
 CDInterface_MT::CDInterface_Queue::~CDInterface_Queue()
 {
- MThreading::DestroyMutex(ze_mutex);
- MThreading::DestroyCond(ze_cond);
+ MThreading::Mutex_Destroy(ze_mutex);
+ MThreading::Cond_Destroy(ze_cond);
 }
 
 // Returns false if message not read, true if it was read.  Will always return true if "blocking" is set.
@@ -72,13 +75,13 @@ bool CDInterface_MT::CDInterface_Queue::Read(CDInterface_Message *message, bool 
  //
  //
  //
- MThreading::LockMutex(ze_mutex);
+ MThreading::Mutex_Lock(ze_mutex);
 
  if(blocking)
  {
   while(ze_queue.size() == 0)	// while, not just if.
   {
-   MThreading::WaitCond(ze_cond, ze_mutex);
+   MThreading::Cond_Wait(ze_cond, ze_mutex);
   }
  }
 
@@ -90,7 +93,7 @@ bool CDInterface_MT::CDInterface_Queue::Read(CDInterface_Message *message, bool 
   ze_queue.pop();
  }  
 
- MThreading::UnlockMutex(ze_mutex);
+ MThreading::Mutex_Unlock(ze_mutex);
  //
  //
  //
@@ -103,7 +106,7 @@ bool CDInterface_MT::CDInterface_Queue::Read(CDInterface_Message *message, bool 
 
 void CDInterface_MT::CDInterface_Queue::Write(const CDInterface_Message &message)
 {
- MThreading::LockMutex(ze_mutex);
+ MThreading::Mutex_Lock(ze_mutex);
 
  try
  {
@@ -114,9 +117,9 @@ void CDInterface_MT::CDInterface_Queue::Write(const CDInterface_Message &message
   fprintf(stderr, "\n\nCDInterface_Message queue push failed!!!  (We now return you to your regularly unscheduled lockup)\n\n");
  }
 
- MThreading::SignalCond(ze_cond);	// Signal while the mutex is held to prevent icky race conditions.
+ MThreading::Cond_Signal(ze_cond);	// Signal while the mutex is held to prevent icky race conditions.
 
- MThreading::UnlockMutex(ze_mutex);
+ MThreading::Mutex_Unlock(ze_mutex);
 }
 
 static int ReadThreadStart_C(void* arg)
@@ -223,7 +226,7 @@ int CDInterface_MT::ReadThreadStart()
    
    //
    //
-   MThreading::LockMutex(SBMutex);
+   MThreading::Mutex_Lock(SBMutex);
 
    SectorBuffers[SBWritePos].lba = ra_lba;
    memcpy(SectorBuffers[SBWritePos].data, tmpbuf, 2352 + 96);
@@ -231,9 +234,9 @@ int CDInterface_MT::ReadThreadStart()
    SectorBuffers[SBWritePos].error = error_condition;
    SBWritePos = (SBWritePos + 1) % SBSize;
 
-   MThreading::SignalCond(SBCond);
+   MThreading::Cond_Signal(SBCond);
 
-   MThreading::UnlockMutex(SBMutex);
+   MThreading::Mutex_Unlock(SBMutex);
    //
    //
 
@@ -245,44 +248,66 @@ int CDInterface_MT::ReadThreadStart()
  return 1;
 }
 
-CDInterface_MT::CDInterface_MT(std::unique_ptr<CDAccess> cda) : disc_cdaccess(std::move(cda)), CDReadThread(NULL), SBMutex(NULL), SBCond(NULL)
+void CDInterface_MT::Cleanup(void)
 {
- try
+ bool thread_deaded_failed = false;
+
+ if(CDReadThread)
  {
-  CDInterface_Message msg;
-
-  if(!(SBMutex = MThreading::CreateMutex()))
-   throw MDFN_Error(0, _("Error creating CD read thread mutex."));
-
-  if(!(SBCond = MThreading::CreateCond()))
-   throw MDFN_Error(0, _("Error creating CD read thread condition variable."));
-
-  UnrecoverableError = false;
-
-  if(!(CDReadThread = MThreading::CreateThread(ReadThreadStart_C, this, "MDFN CD Read")))
-   throw MDFN_Error(0, _("Error creating CD read thread."));
-
-  EmuThreadQueue.Read(&msg);
+  try
+  {
+   ReadThreadQueue.Write(CDInterface_Message(CDInterface_MSG_DIEDIEDIE));
+  }
+  catch(std::exception &e)
+  {
+   MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
+   thread_deaded_failed = true;
+  }
  }
- catch(...)
+
+ if(!thread_deaded_failed)
  {
   if(CDReadThread)
   {
-   MThreading::WaitThread(CDReadThread, NULL);
+   MThreading::Thread_Wait(CDReadThread, NULL);
    CDReadThread = NULL;
   }
 
   if(SBMutex)
   {
-   MThreading::DestroyMutex(SBMutex);
+   MThreading::Mutex_Destroy(SBMutex);
    SBMutex = NULL;
   }
 
   if(SBCond)
   {
-   MThreading::DestroyCond(SBCond);
+   MThreading::Cond_Destroy(SBCond);
    SBCond = NULL;
   }
+ }
+}
+
+CDInterface_MT::CDInterface_MT(std::unique_ptr<CDAccess> cda, const uint64 affinity) : disc_cdaccess(std::move(cda)), CDReadThread(NULL), SBMutex(NULL), SBCond(NULL)
+{
+ try
+ {
+  CDInterface_Message msg;
+
+  SBMutex = MThreading::Mutex_Create();
+  SBCond = MThreading::Cond_Create();
+
+  UnrecoverableError = false;
+
+  CDReadThread = MThreading::Thread_Create(ReadThreadStart_C, this, "MDFN CD Read");
+  EmuThreadQueue.Read(&msg);
+  //
+  //
+  if(affinity)
+   MThreading::Thread_SetAffinity(CDReadThread, affinity);
+ }
+ catch(...)
+ {
+  Cleanup();
 
   throw;
  }
@@ -291,32 +316,7 @@ CDInterface_MT::CDInterface_MT(std::unique_ptr<CDAccess> cda) : disc_cdaccess(st
 
 CDInterface_MT::~CDInterface_MT()
 {
- bool thread_deaded_failed = false;
-
- try
- {
-  ReadThreadQueue.Write(CDInterface_Message(CDInterface_MSG_DIEDIEDIE));
- }
- catch(std::exception &e)
- {
-  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
-  thread_deaded_failed = true;
- }
-
- if(!thread_deaded_failed)
-  MThreading::WaitThread(CDReadThread, NULL);
-
- if(SBMutex)
- {
-  MThreading::DestroyMutex(SBMutex);
-  SBMutex = NULL;
- }
-
- if(SBCond)
- {
-  MThreading::DestroyCond(SBCond);
-  SBCond = NULL;
- }
+ Cleanup();
 }
 
 bool CDInterface_MT::ReadRawSector(uint8 *buf, int32 lba)
@@ -343,7 +343,7 @@ bool CDInterface_MT::ReadRawSector(uint8 *buf, int32 lba)
  //
  //
  //
- MThreading::LockMutex(SBMutex);
+ MThreading::Mutex_Lock(SBMutex);
 
  do
  {
@@ -360,12 +360,12 @@ bool CDInterface_MT::ReadRawSector(uint8 *buf, int32 lba)
   if(!found)
   {
    //int32 swt = MDFND_GetTime();
-   MThreading::WaitCond(SBCond, SBMutex);
+   MThreading::Cond_Wait(SBCond, SBMutex);
    //printf("SB Waited: %d\n", MDFND_GetTime() - swt);
   }
  } while(!found);
 
- MThreading::UnlockMutex(SBMutex);
+ MThreading::Mutex_Unlock(SBMutex);
  //
  //
  //
@@ -412,4 +412,6 @@ void CDInterface_MT::HintReadSector(int32 lba)
   return;
 
  ReadThreadQueue.Write(CDInterface_Message(CDInterface_MSG_READ_SECTOR, lba));
+}
+
 }

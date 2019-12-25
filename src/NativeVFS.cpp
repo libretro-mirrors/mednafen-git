@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* NativeVFS.cpp:
-**  Copyright (C) 2018 Mednafen Team
+**  Copyright (C) 2018-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -27,6 +27,7 @@
  #include <mednafen/win32-common.h>
 #else
  #include <unistd.h>
+ #include <dirent.h>
 #endif
 
 #include <sys/types.h>
@@ -217,6 +218,115 @@ bool NativeVFS::finfo(const std::string& path, FileInfo* fi, const bool throw_on
  return true;
 }
 
+void NativeVFS::readdirentries(const std::string& path, std::function<bool(const std::string&)> callb)
+{
+ if(path.find('\0') != std::string::npos)
+  throw MDFN_Error(EINVAL, _("Error reading directory entries from \"%s\": %s"), path.c_str(), _("Null character in path."));
+ //
+ //
+#ifdef WIN32
+ //
+ // TODO: drive-relative?  probably would need to change how we represent and compose paths in Mednafen...
+ //
+ HANDLE dp = nullptr;
+ bool invalid_utf8;
+ std::u16string u16path = UTF8_to_UTF16(path + preferred_path_separator + '*', &invalid_utf8, true);
+ WIN32_FIND_DATAW ded;
+
+ if(invalid_utf8)
+  throw MDFN_Error(EINVAL, _("Error reading directory entries from \"%s\": %s"), path.c_str(), _("Invalid UTF-8"));
+
+ try
+ {
+  if(!(dp = FindFirstFileW((const wchar_t*)u16path.c_str(), &ded)))
+  {
+   const uint32 ec = GetLastError();
+
+   throw MDFN_Error(0, _("Error reading directory entries from \"%s\": %s"), path.c_str(), Win32Common::ErrCodeToString(ec).c_str());
+  }
+
+  for(;;)
+  {
+   //printf("%s\n", UTF16_to_UTF8((const char16_t*)ded.cFileName, nullptr, true).c_str());
+   if(!callb(UTF16_to_UTF8((const char16_t*)ded.cFileName, nullptr, true)))
+    break;
+   //
+   if(!FindNextFileW(dp, &ded))
+   {
+    const uint32 ec = GetLastError();
+
+    if(ec == ERROR_NO_MORE_FILES)
+     break;
+    else
+     throw MDFN_Error(0, _("Error reading directory entries from \"%s\": %s"), path.c_str(), Win32Common::ErrCodeToString(ec).c_str());
+   }
+  }
+  //
+  FindClose(dp);
+  dp = nullptr;
+ }
+ catch(...)
+ {
+  if(dp)
+  {
+   FindClose(dp);
+   dp = nullptr;
+  }
+  throw;
+ }
+#else
+ DIR* dp = nullptr;
+ std::string fname;
+
+ fname.reserve(512);
+
+ try
+ {
+  if(!(dp = opendir(path.c_str())))
+  {
+   ErrnoHolder ene(errno);
+
+   throw MDFN_Error(ene.Errno(), _("Error reading directory entries from \"%s\": %s"), path.c_str(), ene.StrError());
+  }
+  //
+  for(;;)
+  {
+   struct dirent* de;
+
+   errno = 0;
+   if(!(de = readdir(dp)))
+   {
+    if(errno)
+    {
+     ErrnoHolder ene(errno);
+
+     throw MDFN_Error(ene.Errno(), _("Error reading directory entries from \"%s\": %s"), path.c_str(), ene.StrError());     
+    }    
+    break;
+   }
+   //
+   fname.clear();
+   fname += de->d_name;
+   //
+   if(!callb(fname))
+    break;
+  }
+  //
+  closedir(dp);
+  dp = nullptr;
+ }
+ catch(...)
+ {
+  if(dp)
+  {
+   closedir(dp);
+   dp = nullptr;
+  }
+  throw;
+ }
+#endif
+}
+
 // Really dumb, maybe we should use boost?
 bool NativeVFS::is_absolute_path(const std::string& path)
 {
@@ -312,6 +422,19 @@ void NativeVFS::check_firop_safe(const std::string& path)
 
  if(unsafe_reason.size() > 0)
   throw MDFN_Error(0, _("Referenced path \"%s\" (escaped) is potentially unsafe.  %s Refer to the documentation about the \"filesys.untrusted_fip_check\" setting.\n"), MDFN_strescape(path).c_str(), unsafe_reason.c_str());
+}
+
+void NativeVFS::get_file_path_components(const std::string &file_path, std::string* dir_path_out, std::string* file_base_out, std::string *file_ext_out)
+{
+#if defined(WIN32) || defined(DOS)
+ if(file_path.size() >= 3 && ((file_path[0] >= 'a' && file_path[0] <= 'z') || (file_path[0] >= 'A' && file_path[0] <= 'Z')) && file_path[1] == ':' && file_path.find_last_of(allowed_path_separators) == std::string::npos)
+ {
+  VirtualFS::get_file_path_components(file_path.substr(0, 2) + '.' + preferred_path_separator + file_path.substr(2), dir_path_out, file_base_out, file_ext_out);
+  return;
+ }
+#endif
+
+ VirtualFS::get_file_path_components(file_path, dir_path_out, file_base_out, file_ext_out);
 }
 
 }

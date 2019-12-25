@@ -36,56 +36,55 @@ static INLINE void DBG_CPUHook(uint32 PCPBR, uint8 P)
 }
 #endif
 
+#include "../Core65816.h"
+
+template<typename T>
+INLINE void Core65816::MemWrite(uint32 addr, T val)
+{
+ cpum->CPU_Write(addr, val);
+
+ if(sizeof(T) == 2)
+ {
+  addr++;
+  cpum->CPU_Write(addr, val >> 8);
+ }
+}
+
+template<typename T>
+INLINE T Core65816::MemRead(uint32 addr)
+{
+ T ret;
+
+ ret = cpum->CPU_Read(addr);
+
+ if(sizeof(T) == 2)
+ {
+  addr++;
+  ret |= cpum->CPU_Read(addr) << 8;
+ }
+
+ return ret;
+}
+
+INLINE uint16 Core65816::VecRead(uint32 addr)
+{
+ uint16 ret;
+
+ cpum->VectorPull = true;
+ ret = MemRead<uint16>(addr);
+ cpum->VectorPull = false;
+
+ return ret;
+}
+
+INLINE uint8 Core65816::OpRead(uint32 addr)
+{
+ uint8 ret = MemRead<uint8>(addr);
+
+ return ret;
+}
+
+static Core65816 core;
 #include "../cpu_hlif.inc"
-//
-//
-void CPU_ClearRWFuncs(void)
-{
- memset(CPUM.ReadFuncs, 0, sizeof(CPUM.ReadFuncs));
- memset(CPUM.WriteFuncs, 0, sizeof(CPUM.WriteFuncs));
-}
-
-void CPU_SetRWHandlers(uint32 A1, uint32 A2, readfunc read_handler, writefunc write_handler, bool special)
-{
- if(special)
- {
-  assert(!((A1 ^ A2) >> 9));
-
-  CPUM.RWIndex[A1 >> 9] = 0;
-
-  for(uint32 A = A1; A <= A2; A++)
-  {
-   const size_t am = A & 0x1FF;
-
-   //assert((!CPUM.ReadFuncs[am] && !CPUM.WriteFuncs[am]) || (CPUM.ReadFuncs[am] == read_handler && CPUM.WriteFuncs[am] == write_handler));
-
-   CPUM.ReadFuncs[am] = read_handler;
-   CPUM.WriteFuncs[am] = write_handler;
-  }
- }
- else
- {
-  assert(!(A1 & 0x1FF) && (A2 & 0x1FF) == 0x1FF);
-  assert(A1 <= A2);
-  assert((A2 >> 9) < 0x8000);
-
-  size_t index = 512;
-
-  while(index < (512 + 256) && CPUM.ReadFuncs[index] && CPUM.WriteFuncs[index] && (CPUM.ReadFuncs[index] != read_handler || CPUM.WriteFuncs[index] != write_handler))
-   index++;
-
-  assert(index < (512 + 256));
-
-  CPUM.ReadFuncs[index] = read_handler;
-  CPUM.WriteFuncs[index] = write_handler;
-
-  for(uint32 A = A1; A <= A2; A += 512)
-   CPUM.RWIndex[A >> 9] = index;
-
-  CPUM.RWIndex[0x8000] = CPUM.RWIndex[0x7FFF];
- }
-}
-//
-//
 }
 }

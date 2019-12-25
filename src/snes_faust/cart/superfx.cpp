@@ -19,6 +19,13 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#pragma GCC optimize("O2")
+
+/*
+cat superfx.cpp | sed -E "s/OPCASE_3(.)_Xn\(0x(.)0\)/OPCASE_3\1\(0x\20): OPCASE_3\1\(0x\21): OPCASE_3\1\(0x\22): OPCASE_3\1\(0x\23): OPCASE_3\1\(0x\24): OPCASE_3\1\(0x\25): OPCASE_3\1\(0x\26): OPCASE_3\1\(0x\27): OPCASE_3\1\(0x\28): OPCASE_3\1\(0x\29): OPCASE_3\1\(0x\2A): OPCASE_3\1\(0x\2B): OPCASE_3\1\(0x\2C): OPCASE_3\1\(0x\2D): OPCASE_3\1\(0x\2E): OPCASE_3\1\(0x\2F)/" | sed -E "s/OPCASE_Xn\(0x(.)0\)/OPCASE(0x\10): OPCASE(0x\11): OPCASE(0x\12): OPCASE(0x\13): OPCASE(0x\14): OPCASE(0x\15): OPCASE(0x\16): OPCASE(0x\17): OPCASE(0x\18): OPCASE(0x\19): OPCASE(0x\1A): OPCASE(0x\1B): OPCASE(0x\1C): OPCASE(0x\1D): OPCASE(0x\1E): OPCASE(0x\1F)/" | sed -E "s/OPCASE_NP_Xn\(0x(.)0\)/OPCASE_NP(0x\10): OPCASE_NP(0x\11): OPCASE_NP(0x\12): OPCASE_NP(0x\13): OPCASE_NP(0x\14): OPCASE_NP(0x\15): OPCASE_NP(0x\16): OPCASE_NP(0x\17): OPCASE_NP(0x\18): OPCASE_NP(0x\19): OPCASE_NP(0x\1A): OPCASE_NP(0x\1B): OPCASE_NP(0x\1C): OPCASE_NP(0x\1D): OPCASE_NP(0x\1E): OPCASE_NP(0x\1F)/" > superfx-adj.cpp
+*/
+
+
 /*
  TODO:
 	Correctly handle differences between MC1, GSU1, GSU2(especially in regards to memory maps).
@@ -40,69 +47,243 @@
 namespace MDFN_IEN_SNES_FAUST
 {
 
-static uint16 R[16 + 1];
-static uint8 Prefetch;
-static size_t PrefixSL8;	// 0, 1, 2, 3; << 8
-static bool PrefixB;
+static const unsigned tnoshtab_init[4] = { 4, 5, 6, 6 };
+static const uint8 wtt_init[4] = { 2 * 3, 4 * 3, 8 * 3, 8 * 3};
+static const unsigned masktab_init[4] = { 0x3, 0xF, 0xFF, 0xFF };
 
-static uint8 Rs;
-static uint8 Rd;
+#if defined(ARCH_X86_32)
+ #define SUPERFX_STATIC static
+ #define SUPERFX_SVAR(v) std::remove_reference<decltype(SuperFX::v)>::type SuperFX::v;
+#else
+ #define SUPERFX_STATIC
+ #define SUPERFX_SVAR(v)
+#endif
 
-static const uint8* ProgMemMap[0x80];
-static size_t ProgMemMapMask[0x80];
-static const uint8* PBR_Ptr;
-static size_t PBR_Ptr_Mask;
-static uint8 PBR;
-static uint16 CBR;
-static uint8 ROMBR;
-static uint8 RAMBR;
-static uint8 VCR;
-static bool ClockSelect;
-static bool MultSpeed;
-
-static uint8 SCBR;
-static uint8 SCMR;
-static uint8 POR;
-static uint8 ColorData;
-
-static struct
+static struct SuperFX
 {
- uint8 TagX;
- uint8 TagY;
- uint8 data[8];
- uint8 opaque;
-} PixelCache;
+ SUPERFX_STATIC uint16 R[16 + 1];
+ SUPERFX_STATIC size_t PrefixSL8;	// 0, 1, 2, 3; << 8
+ SUPERFX_STATIC uint8 Prefetch;
+ SUPERFX_STATIC bool PrefixB;
+
+ SUPERFX_STATIC uint8 Rs;
+ SUPERFX_STATIC uint8 Rd;
+
+ SUPERFX_STATIC const uint8* PBR_Ptr;
+ SUPERFX_STATIC size_t PBR_Ptr_Mask;
+ SUPERFX_STATIC uint8* RAM;
+ SUPERFX_STATIC size_t RAM_Mask;
+ SUPERFX_STATIC uint16 CBR;
+ SUPERFX_STATIC uint8 PBR;
+ SUPERFX_STATIC uint8 ROMBR;
+ SUPERFX_STATIC uint8 RAMBR;
+ SUPERFX_STATIC uint8 VCR;
+ SUPERFX_STATIC bool ClockSelect;
+ SUPERFX_STATIC bool MultSpeed;
+
+ SUPERFX_STATIC uint8 SCBR;
+ SUPERFX_STATIC uint8 SCMR;
+ SUPERFX_STATIC uint8 POR;
+ SUPERFX_STATIC uint8 ColorData;
+
+ SUPERFX_STATIC struct
+ {
+  uint8 TagX;
+  uint8 TagY;
+  uint8 data[8];
+  uint8 opaque;
+ } PixelCache;
+ //
+ //
+ //
+ SUPERFX_STATIC uint16 LastRAMOffset;
+ SUPERFX_STATIC uint8 ROMBuffer;
+
+ SUPERFX_STATIC bool FlagV, FlagS, FlagC, FlagZ;
+ SUPERFX_STATIC bool Running;
+ SUPERFX_STATIC bool IRQPending;
+ SUPERFX_STATIC bool IRQMask;
+
+ SUPERFX_STATIC uint8 GPRWriteLatch;
+
+ SUPERFX_STATIC uint32 superfx_timestamp;
+ SUPERFX_STATIC uint32 rom_read_finish_ts;
+ SUPERFX_STATIC uint32 ram_write_finish_ts;
+ SUPERFX_STATIC uint32 pixcache_write_finish_ts;
+
+ SUPERFX_STATIC uint32 cycles_per_op;
+ SUPERFX_STATIC uint32 cycles_per_rom_read;
+ SUPERFX_STATIC uint32 cycles_per_ram;
+ SUPERFX_STATIC uint32 cycles_per_8x8mult;
+ SUPERFX_STATIC uint32 cycles_per_16x16mult;
+
+ SUPERFX_STATIC const uint8* ProgMemMap[0x80];
+ SUPERFX_STATIC size_t ProgMemMapMask[0x80];
+
+ //
+ //
+ //
+ SUPERFX_STATIC unsigned tnoshtab[4]; 
+ SUPERFX_STATIC uint8 wtt[4];
+ SUPERFX_STATIC unsigned masktab[4];
+ //
+ //
+ //
+ SUPERFX_STATIC bool CacheValid[0x20];
+ SUPERFX_STATIC uint8 CacheData[0x200];
+ //
+ //
+ //
+ SUPERFX_STATIC uint32 last_master_timestamp;
+ SUPERFX_STATIC uint32 run_count_mod;
+ SUPERFX_STATIC uint32 clock_multiplier;
+ SUPERFX_STATIC uint32 superfx_timestamp_run_until;
+ SUPERFX_STATIC bool EnableICache;	// For save states
+ //
+ //
+ //
+ SUPERFX_STATIC void RecalcMultTiming(void);
+ SUPERFX_STATIC void SetCFGR(uint8 val);
+ SUPERFX_STATIC void SetCLSR(uint8 val);
+ SUPERFX_STATIC void SetPBR(uint8 val);
+ SUPERFX_STATIC void DoROMRead(void);
+ SUPERFX_STATIC uint8 GetROMBuffer(void);
+ SUPERFX_STATIC void WriteR(size_t w, uint16 val);
+ SUPERFX_STATIC uint16 ReadR(size_t w);
+ SUPERFX_STATIC void CMODE(void);
+ SUPERFX_STATIC void WriteColorData(uint8 tmp);
+ SUPERFX_STATIC void COLOR(void);
+ SUPERFX_STATIC void GETC(void);
+ SUPERFX_STATIC void CalcSZ(uint16 v);
+ SUPERFX_STATIC unsigned CalcTNO(unsigned x, unsigned y);
+ SUPERFX_STATIC void FlushPixelCache(void);
+
+ SUPERFX_STATIC void PLOT(void);
+ SUPERFX_STATIC void RPIX(void);
+ SUPERFX_STATIC void STOP(void);
+ template<bool EnableCache> SUPERFX_STATIC void SetCBR(uint16 val);
+ template<bool EnableCache> SUPERFX_STATIC void CACHE(void);
+ SUPERFX_STATIC void ADD(uint16 arg);
+ SUPERFX_STATIC void ADC(uint16 arg);
+ SUPERFX_STATIC void SUB(uint16 arg);
+ SUPERFX_STATIC void SBC(uint16 arg);
+ SUPERFX_STATIC void CMP(uint16 arg);
+ SUPERFX_STATIC void AND(uint16 arg);
+ SUPERFX_STATIC void BIC(uint16 arg);
+ SUPERFX_STATIC void OR(uint16 arg);
+ SUPERFX_STATIC void XOR(uint16 arg);
+ SUPERFX_STATIC void NOT(void);
+ SUPERFX_STATIC void LSR(void);
+ SUPERFX_STATIC void ASR(void);
+ SUPERFX_STATIC void ROL(void);
+ SUPERFX_STATIC void ROR(void);
+ SUPERFX_STATIC void DIV2(void);
+ SUPERFX_STATIC void INC(uint8 w);
+ SUPERFX_STATIC void DEC(uint8 w);
+ SUPERFX_STATIC void SWAP(void);
+ SUPERFX_STATIC void SEX(void);
+ SUPERFX_STATIC void LOB(void);
+ SUPERFX_STATIC void HIB(void);
+ SUPERFX_STATIC void MERGE(void);
+ SUPERFX_STATIC void FMULT(void);
+ SUPERFX_STATIC void LMULT(void);
+ SUPERFX_STATIC void MULT(uint16 arg);
+ SUPERFX_STATIC void UMULT(uint16 arg);
+ SUPERFX_STATIC void JMP(uint8 Rn);
+ template<bool EnableCache> SUPERFX_STATIC void LJMP(uint8 Rn);
+ SUPERFX_STATIC void LOOP(void);
+ SUPERFX_STATIC void LINK(uint8 arg);
+ SUPERFX_STATIC MDFN_FASTCALL void ReadOp_Part2(void);
+ SUPERFX_STATIC MDFN_FASTCALL void ReadOp_Part3(const size_t cvi, const uint16 addr);
+ template<bool EnableCache> SUPERFX_STATIC uint8 ReadOp(void);
+ template<bool EnableCache> SUPERFX_STATIC uint16 ReadOp16(void);
+ template<bool EnableCache> SUPERFX_STATIC void RelBranch(bool cond);
+ SUPERFX_STATIC uint8 ReadRAM8(uint16 offs);
+ SUPERFX_STATIC uint16 ReadRAM16(uint16 offs);
+ SUPERFX_STATIC void WriteRAM8(uint16 offs, uint8 val);
+ SUPERFX_STATIC void WriteRAM16(uint16 offs, uint16 val);
+
+ template<bool EnableCache> SUPERFX_STATIC MDFN_FASTCALL void Update(uint32 timestamp);
+} SFX;
+
+ SUPERFX_SVAR(R)
+ SUPERFX_SVAR(PrefixSL8)	// 0, 1, 2, 3; << 8
+ SUPERFX_SVAR(Prefetch)
+ SUPERFX_SVAR(PrefixB)
+
+ SUPERFX_SVAR(Rs)
+ SUPERFX_SVAR(Rd)
+
+ SUPERFX_SVAR(PBR_Ptr)
+ SUPERFX_SVAR(PBR_Ptr_Mask)
+ SUPERFX_SVAR(RAM)
+ SUPERFX_SVAR(RAM_Mask)
+ SUPERFX_SVAR(CBR)
+ SUPERFX_SVAR(PBR)
+ SUPERFX_SVAR(ROMBR)
+ SUPERFX_SVAR(RAMBR)
+ SUPERFX_SVAR(VCR)
+ SUPERFX_SVAR(ClockSelect)
+ SUPERFX_SVAR(MultSpeed)
+
+ SUPERFX_SVAR(SCBR)
+ SUPERFX_SVAR(SCMR)
+ SUPERFX_SVAR(POR)
+ SUPERFX_SVAR(ColorData)
+
+ SUPERFX_SVAR(PixelCache)
+ //
+ //
+ //
+ SUPERFX_SVAR(LastRAMOffset)
+ SUPERFX_SVAR(ROMBuffer)
+
+ SUPERFX_SVAR(FlagV)
+ SUPERFX_SVAR(FlagS)
+ SUPERFX_SVAR(FlagC)
+ SUPERFX_SVAR(FlagZ)
+ SUPERFX_SVAR(Running)
+ SUPERFX_SVAR(IRQPending)
+ SUPERFX_SVAR(IRQMask)
+
+ SUPERFX_SVAR(GPRWriteLatch)
+
+ SUPERFX_SVAR(superfx_timestamp)
+ SUPERFX_SVAR(rom_read_finish_ts)
+ SUPERFX_SVAR(ram_write_finish_ts)
+ SUPERFX_SVAR(pixcache_write_finish_ts)
+
+ SUPERFX_SVAR(cycles_per_op)
+ SUPERFX_SVAR(cycles_per_rom_read)
+ SUPERFX_SVAR(cycles_per_ram)
+ SUPERFX_SVAR(cycles_per_8x8mult)
+ SUPERFX_SVAR(cycles_per_16x16mult)
+
+ SUPERFX_SVAR(ProgMemMap)
+ SUPERFX_SVAR(ProgMemMapMask)
+
+ SUPERFX_SVAR(tnoshtab)
+ SUPERFX_SVAR(wtt)
+ SUPERFX_SVAR(masktab)
+ //
+ //
+ //
+ SUPERFX_SVAR(CacheValid)
+ SUPERFX_SVAR(CacheData)
+ //
+ //
+ //
+ SUPERFX_SVAR(last_master_timestamp)
+ SUPERFX_SVAR(run_count_mod)
+ SUPERFX_SVAR(clock_multiplier)
+ SUPERFX_SVAR(superfx_timestamp_run_until)
+ SUPERFX_SVAR(EnableICache)
+#undef SUPERFX_STATIC
+#undef SUPERFX_SVAR
 //
 //
 //
-static uint8 CacheData[0x200];
-static bool CacheValid[0x20];
-
-static uint8 ROMBuffer;
-
-static uint16 LastRAMOffset;
-
-static bool FlagV, FlagS, FlagC, FlagZ;
-static bool Running;
-static bool IRQPending;
-static bool IRQMask;
-
-static uint8 GPRWriteLatch;
-
-static uint32 superfx_timestamp;
-static uint32 rom_read_finish_ts;
-static uint32 ram_write_finish_ts;
-static uint32 pixcache_write_finish_ts;
-
-static uint32 cycles_per_op;
-static uint32 cycles_per_rom_read;
-static uint32 cycles_per_ram;
-static uint32 cycles_per_8x8mult;
-static uint32 cycles_per_16x16mult;
-//
-//
-//
-static void RecalcMultTiming(void)
+void SuperFX::RecalcMultTiming(void)
 {
  SNES_DBG("[SuperFX] Clock speed: %d, mult speed: %d\n", ClockSelect, MultSpeed);
 
@@ -119,7 +300,7 @@ static void RecalcMultTiming(void)
  }
 }
 
-static INLINE void SetCFGR(uint8 val)
+INLINE void SuperFX::SetCFGR(uint8 val)
 {
  MultSpeed = (val >> 5) & 1;
  IRQMask = val >> 7;
@@ -128,7 +309,7 @@ static INLINE void SetCFGR(uint8 val)
  RecalcMultTiming();
 }
 
-static INLINE void SetCLSR(uint8 val)
+INLINE void SuperFX::SetCLSR(uint8 val)
 {
  ClockSelect = val & 0x1;
  //
@@ -148,14 +329,14 @@ static INLINE void SetCLSR(uint8 val)
  RecalcMultTiming();
 }
 
-static INLINE void SetPBR(uint8 val)
+INLINE void SuperFX::SetPBR(uint8 val)
 {
  PBR = val;
  PBR_Ptr = ProgMemMap[val & 0x7F];
  PBR_Ptr_Mask = ProgMemMapMask[val & 0x7F];
 }
 
-static void DoROMRead(void)
+void SuperFX::DoROMRead(void)
 {
  if(superfx_timestamp < rom_read_finish_ts)
  {
@@ -166,7 +347,7 @@ static void DoROMRead(void)
  rom_read_finish_ts = superfx_timestamp + cycles_per_rom_read;
 }
 
-static uint8 GetROMBuffer(void)
+INLINE uint8 SuperFX::GetROMBuffer(void)
 {
  if(superfx_timestamp < rom_read_finish_ts)
  {
@@ -177,7 +358,7 @@ static uint8 GetROMBuffer(void)
  return ROMBuffer;
 }
 
-static INLINE void WriteR(size_t w, uint16 val)
+INLINE void SuperFX::WriteR(size_t w, uint16 val)
 {
  R[w] = val;
 
@@ -186,17 +367,17 @@ static INLINE void WriteR(size_t w, uint16 val)
 }
 
 // Only needed to be used when reg might == 15
-static INLINE uint16 ReadR(size_t w)
+INLINE uint16 SuperFX::ReadR(size_t w)
 {
  return R[w + (w == 15)];
 }
 
-static INLINE void CMODE(void)
+INLINE void SuperFX::CMODE(void)
 {
  POR = ReadR(Rs) & 0x1F;
 }
 
-static INLINE void WriteColorData(uint8 tmp)
+INLINE void SuperFX::WriteColorData(uint8 tmp)
 {
  tmp = (tmp & 0xF0) + ((tmp >> (POR & 0x4)) & 0x0F);
 
@@ -206,25 +387,25 @@ static INLINE void WriteColorData(uint8 tmp)
  ColorData = tmp;
 }
 
-static INLINE void COLOR(void)
+INLINE void SuperFX::COLOR(void)
 {
  WriteColorData(ReadR(Rs));
 }
 
-static INLINE void GETC(void)
+INLINE void SuperFX::GETC(void)
 {
  uint8 tmp = GetROMBuffer();
 
  WriteColorData(tmp);
 }
 
-static INLINE void CalcSZ(uint16 v)
+INLINE void SuperFX::CalcSZ(uint16 v)
 {
  FlagS = v >> 15;
  FlagZ = !v;
 }
 
-static INLINE unsigned CalcTNO(unsigned x, unsigned y)
+INLINE unsigned SuperFX::CalcTNO(unsigned x, unsigned y)
 {
  unsigned tno;
  const unsigned shs = ((SCMR >> 2) & 0x1) | ((SCMR >> 4) & 0x2);
@@ -245,7 +426,7 @@ static INLINE unsigned CalcTNO(unsigned x, unsigned y)
  return tno;
 }
 
-static void FlushPixelCache(void)
+void SuperFX::FlushPixelCache(void)
 {
  if(!PixelCache.opaque) // FIXME: correct?
   return;
@@ -256,18 +437,16 @@ static void FlushPixelCache(void)
  //
  //
  const unsigned bpp = SCMR & 0x3;
- static const unsigned tnoshtab[4] = { 4, 5, 6, 6 };
  const unsigned x = PixelCache.TagX;
  const unsigned y = PixelCache.TagY;
  const unsigned finey = y & 7;
  unsigned tno = CalcTNO(x, y);
  unsigned tra = (tno << tnoshtab[bpp]) + (SCBR << 10) + (finey << 1);
- uint8* p = &Cart.RAM[tra & Cart.RAM_Mask];
+ uint8* p = &RAM[tra & RAM_Mask];
 
  if(PixelCache.opaque != 0xFF)
  {
   // FIXME: time
-  static const uint8 wtt[4] = { 2 * 3, 4 * 3, 8 * 3, 8 * 3};
   pixcache_write_finish_ts += wtt[bpp];
  }
  //
@@ -321,7 +500,6 @@ static void FlushPixelCache(void)
   PixelCache.opaque >>= 1;
  }
  // FIXME: time
- static const uint8 wtt[4] = { 2 * 3, 4 * 3, 8 * 3, 8 * 3};
  pixcache_write_finish_ts += wtt[bpp];
  //
  //
@@ -329,7 +507,7 @@ static void FlushPixelCache(void)
  ram_write_finish_ts = pixcache_write_finish_ts;
 }
 
-static INLINE void PLOT(void)
+INLINE void SuperFX::PLOT(void)
 {
  const unsigned x = (uint8)R[1];
  const unsigned y = (uint8)R[2];
@@ -350,8 +528,6 @@ static INLINE void PLOT(void)
  color >>= ((((x ^ y) & 1) << 1) & POR & ~bpp) << 1;
  if(!(POR & 0x1))
  {
-  static const unsigned masktab[4] = { 0x3, 0xF, 0xFF, 0xFF };
-
   if(!(color & masktab[bpp] & ((POR & 8) ? 0xF : 0xFF)))
    visible = false;
  }
@@ -365,7 +541,7 @@ static INLINE void PLOT(void)
  WriteR(1, R[1] + 1);
 }
 
-static INLINE void RPIX(void)
+INLINE void SuperFX::RPIX(void)
 {
  FlushPixelCache();
  //
@@ -379,10 +555,9 @@ static INLINE void RPIX(void)
  unsigned tra;
 
  const unsigned bpp = SCMR & 0x3;
- static const unsigned tnoshtab[4] = { 4, 5, 6, 6 };
 
  tra = (tno << tnoshtab[bpp]) + (SCBR << 10) + (finey << 1);
- uint8* p = &Cart.RAM[tra & Cart.RAM_Mask];
+ uint8* p = &RAM[tra & RAM_Mask];
  uint8 color = 0;
  const unsigned shift = 7 - finex;
 
@@ -406,25 +581,28 @@ static INLINE void RPIX(void)
  WriteR(Rd, color);
 }
 
-static INLINE void STOP(void)
+INLINE void SuperFX::STOP(void)
 {
  Running = false;
  IRQPending = true;
  //CPU_SetIRQ(IRQPending & !IRQMask, CPU_IRQSOURCE_CART);
 }
 
-static INLINE void SetCBR(uint16 val)
+template<bool EnableCache>
+INLINE void SuperFX::SetCBR(uint16 val)
 {
  CBR = val;
- memset(CacheValid, 0, sizeof(CacheValid));
+ if(EnableCache)
+  memset(CacheValid, 0, sizeof(CacheValid));
 }
 
-static INLINE void CACHE(void)
+template<bool EnableCache>
+INLINE void SuperFX::CACHE(void)
 {
- SetCBR(ReadR(15) & 0xFFF0);
+ SetCBR<EnableCache>(ReadR(15) & 0xFFF0);
 }
 
-static INLINE void ADD(uint16 arg)
+INLINE void SuperFX::ADD(uint16 arg)
 {
  const uint32 tmp = ReadR(Rs) + arg;
 
@@ -435,7 +613,7 @@ static INLINE void ADD(uint16 arg)
  WriteR(Rd, tmp);
 }
 
-static INLINE void ADC(uint16 arg)
+INLINE void SuperFX::ADC(uint16 arg)
 {
  const uint32 tmp = ReadR(Rs) + arg + FlagC;
 
@@ -446,7 +624,7 @@ static INLINE void ADC(uint16 arg)
  WriteR(Rd, tmp);
 }
 
-static INLINE void SUB(uint16 arg)
+INLINE void SuperFX::SUB(uint16 arg)
 {
  const uint32 tmp = ReadR(Rs) - arg;
 
@@ -457,7 +635,7 @@ static INLINE void SUB(uint16 arg)
  WriteR(Rd, tmp);
 }
 
-static INLINE void SBC(uint16 arg)
+INLINE void SuperFX::SBC(uint16 arg)
 {
  const uint32 tmp = ReadR(Rs) - arg - !FlagC;
 
@@ -468,7 +646,7 @@ static INLINE void SBC(uint16 arg)
  WriteR(Rd, tmp);
 }
 
-static INLINE void CMP(uint16 arg)
+INLINE void SuperFX::CMP(uint16 arg)
 {
  const uint32 tmp = ReadR(Rs) - arg;
 
@@ -477,7 +655,7 @@ static INLINE void CMP(uint16 arg)
  CalcSZ(tmp);
 }
 
-static INLINE void AND(uint16 arg)
+INLINE void SuperFX::AND(uint16 arg)
 {
  const uint16 tmp = ReadR(Rs) & arg;
 
@@ -486,7 +664,7 @@ static INLINE void AND(uint16 arg)
  WriteR(Rd, tmp);
 }
 
-static INLINE void BIC(uint16 arg)
+INLINE void SuperFX::BIC(uint16 arg)
 {
  const uint16 tmp = ReadR(Rs) & ~arg;
 
@@ -495,7 +673,7 @@ static INLINE void BIC(uint16 arg)
  WriteR(Rd, tmp);
 }
 
-static INLINE void OR(uint16 arg)
+INLINE void SuperFX::OR(uint16 arg)
 {
  const uint16 tmp = ReadR(Rs) | arg;
 
@@ -504,7 +682,7 @@ static INLINE void OR(uint16 arg)
  WriteR(Rd, tmp);
 }
 
-static INLINE void XOR(uint16 arg)
+INLINE void SuperFX::XOR(uint16 arg)
 {
  const uint16 tmp = ReadR(Rs) ^ arg;
 
@@ -513,7 +691,7 @@ static INLINE void XOR(uint16 arg)
  WriteR(Rd, tmp);
 }
 
-static INLINE void NOT(void)
+INLINE void SuperFX::NOT(void)
 {
  const uint16 tmp = ~ReadR(Rs);
 
@@ -522,7 +700,7 @@ static INLINE void NOT(void)
  WriteR(Rd, tmp);
 }
 
-static INLINE void LSR(void)
+INLINE void SuperFX::LSR(void)
 {
  const uint16 tmp = ReadR(Rs) >> 1;
 
@@ -532,7 +710,7 @@ static INLINE void LSR(void)
  WriteR(Rd, tmp);
 }
 
-static INLINE void ASR(void)
+INLINE void SuperFX::ASR(void)
 {
  const uint16 tmp = (int16)ReadR(Rs) >> 1;
 
@@ -542,7 +720,7 @@ static INLINE void ASR(void)
  WriteR(Rd, tmp);
 }
 
-static INLINE void ROL(void)
+INLINE void SuperFX::ROL(void)
 {
  const bool NewFlagC = ReadR(Rs) >> 15;
  const uint16 tmp = (ReadR(Rs) << 1) | FlagC;
@@ -553,7 +731,7 @@ static INLINE void ROL(void)
  WriteR(Rd, tmp);
 }
 
-static INLINE void ROR(void)
+INLINE void SuperFX::ROR(void)
 {
  const bool NewFlagC = ReadR(Rs) & 1;
  const uint16 tmp = (ReadR(Rs) >> 1) | (FlagC << 15);
@@ -564,7 +742,7 @@ static INLINE void ROR(void)
  WriteR(Rd, tmp);
 }
 
-static INLINE void DIV2(void)
+INLINE void SuperFX::DIV2(void)
 {
  //const uint16 tmp = ((int16)ReadR(Rs) + (ReadR(Rs) >> 15)) >> 1;
  uint16 tmp = ((int16)ReadR(Rs) >> 1); // + (ReadR(Rs) == 0xFFFF);
@@ -578,7 +756,7 @@ static INLINE void DIV2(void)
  WriteR(Rd, tmp);
 }
 
-static INLINE void INC(uint8 w)
+INLINE void SuperFX::INC(uint8 w)
 {
  const uint16 tmp = R[w] + 1;
 
@@ -587,7 +765,7 @@ static INLINE void INC(uint8 w)
  WriteR(w, tmp);
 }
 
-static INLINE void DEC(uint8 w)
+INLINE void SuperFX::DEC(uint8 w)
 {
  const uint16 tmp = R[w] - 1;
 
@@ -596,7 +774,7 @@ static INLINE void DEC(uint8 w)
  WriteR(w, tmp);
 }
 
-static INLINE void SWAP(void)
+INLINE void SuperFX::SWAP(void)
 {
  const uint16 tmp = (ReadR(Rs) >> 8) | (ReadR(Rs) << 8);
 
@@ -605,7 +783,7 @@ static INLINE void SWAP(void)
  WriteR(Rd, tmp);
 }
 
-static INLINE void SEX(void)
+INLINE void SuperFX::SEX(void)
 {
  const uint16 tmp = (int8)ReadR(Rs);
 
@@ -614,7 +792,7 @@ static INLINE void SEX(void)
  WriteR(Rd, tmp);
 }
 
-static INLINE void LOB(void)
+INLINE void SuperFX::LOB(void)
 {
  const uint16 tmp = (uint8)ReadR(Rs);
 
@@ -624,7 +802,7 @@ static INLINE void LOB(void)
  WriteR(Rd, tmp);
 }
 
-static INLINE void HIB(void)
+INLINE void SuperFX::HIB(void)
 {
  const uint16 tmp = ReadR(Rs) >> 8;
 
@@ -634,7 +812,7 @@ static INLINE void HIB(void)
  WriteR(Rd, tmp);
 }
 
-static INLINE void MERGE(void)
+INLINE void SuperFX::MERGE(void)
 {
  const uint16 tmp = (R[7] & 0xFF00) + (R[8] >> 8);
 
@@ -646,7 +824,7 @@ static INLINE void MERGE(void)
  WriteR(Rd, tmp);
 }
 
-static INLINE void FMULT(void)
+INLINE void SuperFX::FMULT(void)
 {
  superfx_timestamp += cycles_per_16x16mult;
  //
@@ -663,7 +841,7 @@ static INLINE void FMULT(void)
  WriteR(Rd, tmp >> 16);
 }
 
-static INLINE void LMULT(void)
+INLINE void SuperFX::LMULT(void)
 {
  superfx_timestamp += cycles_per_16x16mult;
  //
@@ -681,7 +859,7 @@ static INLINE void LMULT(void)
  WriteR(4, tmp);
 }
 
-static INLINE void MULT(uint16 arg)
+INLINE void SuperFX::MULT(uint16 arg)
 {
  superfx_timestamp += cycles_per_8x8mult;
  //
@@ -692,7 +870,7 @@ static INLINE void MULT(uint16 arg)
  WriteR(Rd, tmp);
 }
 
-static INLINE void UMULT(uint16 arg)
+INLINE void SuperFX::UMULT(uint16 arg)
 {
  superfx_timestamp += cycles_per_8x8mult;
  //
@@ -705,21 +883,22 @@ static INLINE void UMULT(uint16 arg)
 //
 //
 //
-static INLINE void JMP(uint8 Rn)
+INLINE void SuperFX::JMP(uint8 Rn)
 {
  WriteR(15, R[Rn]);
 }
 
-static INLINE void LJMP(uint8 Rn)
+template<bool EnableCache>
+INLINE void SuperFX::LJMP(uint8 Rn)
 {
  const uint16 target = ReadR(Rs);
 
  WriteR(15, target);
  SetPBR(R[Rn]);
- SetCBR(target & 0xFFF0);
+ SetCBR<EnableCache>(target & 0xFFF0);
 }
 
-static INLINE void LOOP(void)
+INLINE void SuperFX::LOOP(void)
 {
  const uint16 result = R[12] - 1;
 
@@ -730,85 +909,73 @@ static INLINE void LOOP(void)
   WriteR(15, R[13]);
 }
 
-static INLINE void LINK(uint8 arg)
+INLINE void SuperFX::LINK(uint8 arg)
 {
  WriteR(11, ReadR(15) + arg);
 }
 //
 //
 //
-static uint8 ReadOp(void)
+NO_INLINE void SuperFX::ReadOp_Part2(void)
 {
- uint8 ret = Prefetch;
-
-#if 1
- Prefetch = PBR_Ptr[R[15] & PBR_Ptr_Mask];
- size_t cindex = R[15] - CBR;
- if(MDFN_UNLIKELY(cindex >= 0x200))
+ if(MDFN_LIKELY((PBR & 0x7F) < 0x60))
  {
-  if(MDFN_LIKELY((PBR & 0x7F) < 0x60))
-  {
-   superfx_timestamp = std::max<uint32>(superfx_timestamp, rom_read_finish_ts);
-   superfx_timestamp += cycles_per_rom_read;
-  }
-  else
-  {
-   superfx_timestamp = std::max<uint32>(superfx_timestamp, ram_write_finish_ts);
-   superfx_timestamp += 3;
-  }
- }
-#else
- uint16 addr = R[15];
- size_t cindex = addr - CBR;
- if(MDFN_UNLIKELY(cindex >= 0x200))
- {
-  Prefetch = PBR_Ptr[addr & PBR_Ptr_Mask];
-
-  if(MDFN_LIKELY((PBR & 0x7F) < 0x60))
-  {
-   superfx_timestamp = std::max<uint32>(superfx_timestamp, rom_read_finish_ts);
-   superfx_timestamp += cycles_per_rom_read;
-  }
-  else
-  {
-   superfx_timestamp = std::max<uint32>(superfx_timestamp, ram_write_finish_ts);
-   superfx_timestamp += 3;
-  }
+  superfx_timestamp = std::max<uint32>(superfx_timestamp, rom_read_finish_ts);
+  superfx_timestamp += cycles_per_rom_read;
  }
  else
+ {
+  superfx_timestamp = std::max<uint32>(superfx_timestamp, ram_write_finish_ts);
+  superfx_timestamp += 3;
+ }
+}
+
+NO_INLINE void SuperFX::ReadOp_Part3(const size_t cvi, const uint16 addr)
+{
+ uint8* d = &CacheData[cvi << 4];
+
+ CacheValid[cvi] = true;
+
+ if(MDFN_LIKELY((PBR & 0x7F) < 0x60))
+ {
+  superfx_timestamp = std::max<uint32>(superfx_timestamp, rom_read_finish_ts);
+  rom_read_finish_ts = superfx_timestamp;
+ }
+
+ for(unsigned i = 0; i < 0x10; i++)
+ {
+  const uint32 ra = (addr & 0xFFF0) + i;
+  if(MDFN_LIKELY((PBR & 0x7F) < 0x60))
+  {
+   rom_read_finish_ts += cycles_per_rom_read;
+
+   if(ra == addr)
+    superfx_timestamp = rom_read_finish_ts;
+  }
+
+  d[i] = PBR_Ptr[ra & PBR_Ptr_Mask];
+ }
+}
+
+template<bool EnableCache>
+INLINE uint8 SuperFX::ReadOp(void)
+{
+ const uint16 addr = R[15];
+ uint8 ret = Prefetch;
+
+ Prefetch = PBR_Ptr[addr & PBR_Ptr_Mask];
+ size_t cindex = addr - CBR;
+ if(MDFN_UNLIKELY(cindex >= 0x200))
+  ReadOp_Part2();
+ else if(EnableCache)
  {
   const size_t cvi = cindex >> 4;
 
   if(MDFN_UNLIKELY(!CacheValid[cvi]))
-  {
-   uint8* d = &CacheData[cindex & ~0xF];
+   ReadOp_Part3(cvi, addr);
 
-   CacheValid[cvi] = true;
-
-   if(MDFN_LIKELY((PBR & 0x7F) < 0x60))
-   {
-    superfx_timestamp = std::max<uint32>(superfx_timestamp, rom_read_finish_ts);
-    rom_read_finish_ts = superfx_timestamp;
-   }
-
-   for(unsigned i = 0; i < 0x10; i++)
-   {
-    const uint32 ra = (addr & 0xFFF0) + i;
-
-    if(MDFN_LIKELY((PBR & 0x7F) < 0x60))
-    {
-     rom_read_finish_ts += cycles_per_rom_read;
-
-     if(ra == addr)
-      superfx_timestamp = rom_read_finish_ts;
-    }
-
-    d[i] = PBR_Ptr[ra & PBR_Ptr_Mask];
-   }
-  }
   Prefetch = CacheData[cindex];
  }
-#endif
 
  R[16] = R[15];
  R[15]++;
@@ -817,25 +984,27 @@ static uint8 ReadOp(void)
  return ret;
 }
 
-static uint16 ReadOp16(void)
+template<bool EnableCache>
+uint16 SuperFX::ReadOp16(void)
 {
  uint16 ret;
 
- ret  = ReadOp();
- ret |= ReadOp() << 8;
+ ret  = ReadOp<EnableCache>();
+ ret |= ReadOp<EnableCache>() << 8;
 
  return ret;
 }
 
-static INLINE void RelBranch(bool cond)
+template<bool EnableCache>
+INLINE void SuperFX::RelBranch(bool cond)
 {
- int8 disp = ReadOp();
+ int8 disp = ReadOp<EnableCache>();
 
  if(cond)
   WriteR(15, ReadR(15) + disp);
 }
 
-static INLINE uint8 ReadRAM8(uint16 offs)
+INLINE uint8 SuperFX::ReadRAM8(uint16 offs)
 {
  superfx_timestamp = std::max<uint32>(superfx_timestamp, ram_write_finish_ts);
  superfx_timestamp += 4; // FIXME
@@ -845,12 +1014,12 @@ static INLINE uint8 ReadRAM8(uint16 offs)
 
  //LastRAMOffset = offs;
 
- ret = Cart.RAM[((RAMBR << 16) + offs) & Cart.RAM_Mask];
+ ret = RAM[((RAMBR << 16) + offs) & RAM_Mask];
 
  return ret;
 }
 
-static INLINE uint16 ReadRAM16(uint16 offs)
+INLINE uint16 SuperFX::ReadRAM16(uint16 offs)
 {
  superfx_timestamp = std::max<uint32>(superfx_timestamp, ram_write_finish_ts);
  superfx_timestamp += 6; // FIXME
@@ -862,13 +1031,13 @@ static INLINE uint16 ReadRAM16(uint16 offs)
 
  //LastRAMOffset = offs;
 
- ret  = Cart.RAM[((RAMBR << 16) + (offs ^ 0)) & Cart.RAM_Mask] << 0;
- ret |= Cart.RAM[((RAMBR << 16) + (offs ^ 1)) & Cart.RAM_Mask] << 8;
+ ret  = RAM[((RAMBR << 16) + (offs ^ 0)) & RAM_Mask] << 0;
+ ret |= RAM[((RAMBR << 16) + (offs ^ 1)) & RAM_Mask] << 8;
 
  return ret;
 }
 
-static INLINE void WriteRAM8(uint16 offs, uint8 val)
+INLINE void SuperFX::WriteRAM8(uint16 offs, uint8 val)
 {
  superfx_timestamp = std::max<uint32>(superfx_timestamp, ram_write_finish_ts);
  ram_write_finish_ts = superfx_timestamp + 3; // FIXME
@@ -876,10 +1045,10 @@ static INLINE void WriteRAM8(uint16 offs, uint8 val)
  //
  //LastRAMOffset = offs;
 
- Cart.RAM[((RAMBR << 16) + (offs ^ 0)) & Cart.RAM_Mask] = val;
+ RAM[((RAMBR << 16) + (offs ^ 0)) & RAM_Mask] = val;
 }
 
-static INLINE void WriteRAM16(uint16 offs, uint16 val)
+INLINE void SuperFX::WriteRAM16(uint16 offs, uint16 val)
 {
  superfx_timestamp = std::max<uint32>(superfx_timestamp, ram_write_finish_ts);
  //superfx_timestamp += whatever; // FIXME?
@@ -890,11 +1059,12 @@ static INLINE void WriteRAM16(uint16 offs, uint16 val)
 
  //LastRAMOffset = offs;
 
- Cart.RAM[((RAMBR << 16) + (offs ^ 0)) & Cart.RAM_Mask] = val >> 0;
- Cart.RAM[((RAMBR << 16) + (offs ^ 1)) & Cart.RAM_Mask] = val >> 8;
+ RAM[((RAMBR << 16) + (offs ^ 0)) & RAM_Mask] = val >> 0;
+ RAM[((RAMBR << 16) + (offs ^ 1)) & RAM_Mask] = val >> 8;
 }
 
-static void Update(uint32 timestamp)
+template<bool EnableCache>
+NO_INLINE void SuperFX::Update(uint32 timestamp)
 {
  if(MDFN_UNLIKELY(!Running))
   superfx_timestamp = timestamp;
@@ -902,30 +1072,86 @@ static void Update(uint32 timestamp)
  if((SCMR & 0x18) != 0x18)
   superfx_timestamp = timestamp;
 
- while(superfx_timestamp < timestamp)
+ while(MDFN_LIKELY(superfx_timestamp < timestamp))
  {
   uint8 opcode;
 
-  opcode = ReadOp();
+  opcode = ReadOp<EnableCache>();
 
+#if defined(__GNUC__) && defined(__arm__) && defined(__thumb2__)
+  #define OPCASE_PFX(pfx, o) Op_##pfx##_##o
+  const size_t cop = PrefixSL8 + opcode;
+
+asm volatile goto("tbh [pc, %0, lsl #1]\n\t0:\n\t" : :"r"(cop) :"cc", "memory" : pseudo0);
+pseudo0:asm volatile goto(".2byte (%l[Op_0_0x00]-0b)/2\n\t.2byte (%l[Op_0_0x01]-0b)/2\n\t.2byte (%l[Op_0_0x02]-0b)/2\n\t.2byte (%l[Op_0_0x03]-0b)/2\n\t.2byte (%l[Op_0_0x04]-0b)/2\n\t.2byte (%l[Op_0_0x05]-0b)/2\n\t.2byte (%l[Op_0_0x06]-0b)/2\n\t.2byte (%l[Op_0_0x07]-0b)/2\n\t.2byte (%l[Op_0_0x08]-0b)/2\n\t.2byte (%l[Op_0_0x09]-0b)/2\n\t.2byte (%l[Op_0_0x0A]-0b)/2\n\t.2byte (%l[Op_0_0x0B]-0b)/2\n\t.2byte (%l[Op_0_0x0C]-0b)/2\n\t.2byte (%l[Op_0_0x0D]-0b)/2\n\t.2byte (%l[Op_0_0x0E]-0b)/2\n\t.2byte (%l[Op_0_0x0F]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0x00,Op_0_0x01,Op_0_0x02,Op_0_0x03,Op_0_0x04,Op_0_0x05,Op_0_0x06,Op_0_0x07,Op_0_0x08,Op_0_0x09,Op_0_0x0A,Op_0_0x0B,Op_0_0x0C,Op_0_0x0D,Op_0_0x0E,Op_0_0x0F,pseudo1);
+pseudo1:asm volatile goto(".2byte (%l[Op_0_0x10]-0b)/2\n\t.2byte (%l[Op_0_0x11]-0b)/2\n\t.2byte (%l[Op_0_0x12]-0b)/2\n\t.2byte (%l[Op_0_0x13]-0b)/2\n\t.2byte (%l[Op_0_0x14]-0b)/2\n\t.2byte (%l[Op_0_0x15]-0b)/2\n\t.2byte (%l[Op_0_0x16]-0b)/2\n\t.2byte (%l[Op_0_0x17]-0b)/2\n\t.2byte (%l[Op_0_0x18]-0b)/2\n\t.2byte (%l[Op_0_0x19]-0b)/2\n\t.2byte (%l[Op_0_0x1A]-0b)/2\n\t.2byte (%l[Op_0_0x1B]-0b)/2\n\t.2byte (%l[Op_0_0x1C]-0b)/2\n\t.2byte (%l[Op_0_0x1D]-0b)/2\n\t.2byte (%l[Op_0_0x1E]-0b)/2\n\t.2byte (%l[Op_0_0x1F]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0x10,Op_0_0x11,Op_0_0x12,Op_0_0x13,Op_0_0x14,Op_0_0x15,Op_0_0x16,Op_0_0x17,Op_0_0x18,Op_0_0x19,Op_0_0x1A,Op_0_0x1B,Op_0_0x1C,Op_0_0x1D,Op_0_0x1E,Op_0_0x1F,pseudo2);
+pseudo2:asm volatile goto(".2byte (%l[Op_0_0x20]-0b)/2\n\t.2byte (%l[Op_0_0x21]-0b)/2\n\t.2byte (%l[Op_0_0x22]-0b)/2\n\t.2byte (%l[Op_0_0x23]-0b)/2\n\t.2byte (%l[Op_0_0x24]-0b)/2\n\t.2byte (%l[Op_0_0x25]-0b)/2\n\t.2byte (%l[Op_0_0x26]-0b)/2\n\t.2byte (%l[Op_0_0x27]-0b)/2\n\t.2byte (%l[Op_0_0x28]-0b)/2\n\t.2byte (%l[Op_0_0x29]-0b)/2\n\t.2byte (%l[Op_0_0x2A]-0b)/2\n\t.2byte (%l[Op_0_0x2B]-0b)/2\n\t.2byte (%l[Op_0_0x2C]-0b)/2\n\t.2byte (%l[Op_0_0x2D]-0b)/2\n\t.2byte (%l[Op_0_0x2E]-0b)/2\n\t.2byte (%l[Op_0_0x2F]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0x20,Op_0_0x21,Op_0_0x22,Op_0_0x23,Op_0_0x24,Op_0_0x25,Op_0_0x26,Op_0_0x27,Op_0_0x28,Op_0_0x29,Op_0_0x2A,Op_0_0x2B,Op_0_0x2C,Op_0_0x2D,Op_0_0x2E,Op_0_0x2F,pseudo3);
+pseudo3:asm volatile goto(".2byte (%l[Op_0_0x30]-0b)/2\n\t.2byte (%l[Op_0_0x31]-0b)/2\n\t.2byte (%l[Op_0_0x32]-0b)/2\n\t.2byte (%l[Op_0_0x33]-0b)/2\n\t.2byte (%l[Op_0_0x34]-0b)/2\n\t.2byte (%l[Op_0_0x35]-0b)/2\n\t.2byte (%l[Op_0_0x36]-0b)/2\n\t.2byte (%l[Op_0_0x37]-0b)/2\n\t.2byte (%l[Op_0_0x38]-0b)/2\n\t.2byte (%l[Op_0_0x39]-0b)/2\n\t.2byte (%l[Op_0_0x3A]-0b)/2\n\t.2byte (%l[Op_0_0x3B]-0b)/2\n\t.2byte (%l[Op_0_0x3C]-0b)/2\n\t.2byte (%l[Op_0_0x3D]-0b)/2\n\t.2byte (%l[Op_0_0x3E]-0b)/2\n\t.2byte (%l[Op_0_0x3F]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0x30,Op_0_0x31,Op_0_0x32,Op_0_0x33,Op_0_0x34,Op_0_0x35,Op_0_0x36,Op_0_0x37,Op_0_0x38,Op_0_0x39,Op_0_0x3A,Op_0_0x3B,Op_0_0x3C,Op_0_0x3D,Op_0_0x3E,Op_0_0x3F,pseudo4);
+pseudo4:asm volatile goto(".2byte (%l[Op_0_0x40]-0b)/2\n\t.2byte (%l[Op_0_0x41]-0b)/2\n\t.2byte (%l[Op_0_0x42]-0b)/2\n\t.2byte (%l[Op_0_0x43]-0b)/2\n\t.2byte (%l[Op_0_0x44]-0b)/2\n\t.2byte (%l[Op_0_0x45]-0b)/2\n\t.2byte (%l[Op_0_0x46]-0b)/2\n\t.2byte (%l[Op_0_0x47]-0b)/2\n\t.2byte (%l[Op_0_0x48]-0b)/2\n\t.2byte (%l[Op_0_0x49]-0b)/2\n\t.2byte (%l[Op_0_0x4A]-0b)/2\n\t.2byte (%l[Op_0_0x4B]-0b)/2\n\t.2byte (%l[Op_0_0x4C]-0b)/2\n\t.2byte (%l[Op_0_0x4D]-0b)/2\n\t.2byte (%l[Op_0_0x4E]-0b)/2\n\t.2byte (%l[Op_0_0x4F]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0x40,Op_0_0x41,Op_0_0x42,Op_0_0x43,Op_0_0x44,Op_0_0x45,Op_0_0x46,Op_0_0x47,Op_0_0x48,Op_0_0x49,Op_0_0x4A,Op_0_0x4B,Op_0_0x4C,Op_0_0x4D,Op_0_0x4E,Op_0_0x4F,pseudo5);
+pseudo5:asm volatile goto(".2byte (%l[Op_0_0x50]-0b)/2\n\t.2byte (%l[Op_0_0x51]-0b)/2\n\t.2byte (%l[Op_0_0x52]-0b)/2\n\t.2byte (%l[Op_0_0x53]-0b)/2\n\t.2byte (%l[Op_0_0x54]-0b)/2\n\t.2byte (%l[Op_0_0x55]-0b)/2\n\t.2byte (%l[Op_0_0x56]-0b)/2\n\t.2byte (%l[Op_0_0x57]-0b)/2\n\t.2byte (%l[Op_0_0x58]-0b)/2\n\t.2byte (%l[Op_0_0x59]-0b)/2\n\t.2byte (%l[Op_0_0x5A]-0b)/2\n\t.2byte (%l[Op_0_0x5B]-0b)/2\n\t.2byte (%l[Op_0_0x5C]-0b)/2\n\t.2byte (%l[Op_0_0x5D]-0b)/2\n\t.2byte (%l[Op_0_0x5E]-0b)/2\n\t.2byte (%l[Op_0_0x5F]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0x50,Op_0_0x51,Op_0_0x52,Op_0_0x53,Op_0_0x54,Op_0_0x55,Op_0_0x56,Op_0_0x57,Op_0_0x58,Op_0_0x59,Op_0_0x5A,Op_0_0x5B,Op_0_0x5C,Op_0_0x5D,Op_0_0x5E,Op_0_0x5F,pseudo6);
+pseudo6:asm volatile goto(".2byte (%l[Op_0_0x60]-0b)/2\n\t.2byte (%l[Op_0_0x61]-0b)/2\n\t.2byte (%l[Op_0_0x62]-0b)/2\n\t.2byte (%l[Op_0_0x63]-0b)/2\n\t.2byte (%l[Op_0_0x64]-0b)/2\n\t.2byte (%l[Op_0_0x65]-0b)/2\n\t.2byte (%l[Op_0_0x66]-0b)/2\n\t.2byte (%l[Op_0_0x67]-0b)/2\n\t.2byte (%l[Op_0_0x68]-0b)/2\n\t.2byte (%l[Op_0_0x69]-0b)/2\n\t.2byte (%l[Op_0_0x6A]-0b)/2\n\t.2byte (%l[Op_0_0x6B]-0b)/2\n\t.2byte (%l[Op_0_0x6C]-0b)/2\n\t.2byte (%l[Op_0_0x6D]-0b)/2\n\t.2byte (%l[Op_0_0x6E]-0b)/2\n\t.2byte (%l[Op_0_0x6F]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0x60,Op_0_0x61,Op_0_0x62,Op_0_0x63,Op_0_0x64,Op_0_0x65,Op_0_0x66,Op_0_0x67,Op_0_0x68,Op_0_0x69,Op_0_0x6A,Op_0_0x6B,Op_0_0x6C,Op_0_0x6D,Op_0_0x6E,Op_0_0x6F,pseudo7);
+pseudo7:asm volatile goto(".2byte (%l[Op_0_0x70]-0b)/2\n\t.2byte (%l[Op_0_0x71]-0b)/2\n\t.2byte (%l[Op_0_0x72]-0b)/2\n\t.2byte (%l[Op_0_0x73]-0b)/2\n\t.2byte (%l[Op_0_0x74]-0b)/2\n\t.2byte (%l[Op_0_0x75]-0b)/2\n\t.2byte (%l[Op_0_0x76]-0b)/2\n\t.2byte (%l[Op_0_0x77]-0b)/2\n\t.2byte (%l[Op_0_0x78]-0b)/2\n\t.2byte (%l[Op_0_0x79]-0b)/2\n\t.2byte (%l[Op_0_0x7A]-0b)/2\n\t.2byte (%l[Op_0_0x7B]-0b)/2\n\t.2byte (%l[Op_0_0x7C]-0b)/2\n\t.2byte (%l[Op_0_0x7D]-0b)/2\n\t.2byte (%l[Op_0_0x7E]-0b)/2\n\t.2byte (%l[Op_0_0x7F]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0x70,Op_0_0x71,Op_0_0x72,Op_0_0x73,Op_0_0x74,Op_0_0x75,Op_0_0x76,Op_0_0x77,Op_0_0x78,Op_0_0x79,Op_0_0x7A,Op_0_0x7B,Op_0_0x7C,Op_0_0x7D,Op_0_0x7E,Op_0_0x7F,pseudo8);
+pseudo8:asm volatile goto(".2byte (%l[Op_0_0x80]-0b)/2\n\t.2byte (%l[Op_0_0x81]-0b)/2\n\t.2byte (%l[Op_0_0x82]-0b)/2\n\t.2byte (%l[Op_0_0x83]-0b)/2\n\t.2byte (%l[Op_0_0x84]-0b)/2\n\t.2byte (%l[Op_0_0x85]-0b)/2\n\t.2byte (%l[Op_0_0x86]-0b)/2\n\t.2byte (%l[Op_0_0x87]-0b)/2\n\t.2byte (%l[Op_0_0x88]-0b)/2\n\t.2byte (%l[Op_0_0x89]-0b)/2\n\t.2byte (%l[Op_0_0x8A]-0b)/2\n\t.2byte (%l[Op_0_0x8B]-0b)/2\n\t.2byte (%l[Op_0_0x8C]-0b)/2\n\t.2byte (%l[Op_0_0x8D]-0b)/2\n\t.2byte (%l[Op_0_0x8E]-0b)/2\n\t.2byte (%l[Op_0_0x8F]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0x80,Op_0_0x81,Op_0_0x82,Op_0_0x83,Op_0_0x84,Op_0_0x85,Op_0_0x86,Op_0_0x87,Op_0_0x88,Op_0_0x89,Op_0_0x8A,Op_0_0x8B,Op_0_0x8C,Op_0_0x8D,Op_0_0x8E,Op_0_0x8F,pseudo9);
+pseudo9:asm volatile goto(".2byte (%l[Op_0_0x90]-0b)/2\n\t.2byte (%l[Op_0_0x91]-0b)/2\n\t.2byte (%l[Op_0_0x92]-0b)/2\n\t.2byte (%l[Op_0_0x93]-0b)/2\n\t.2byte (%l[Op_0_0x94]-0b)/2\n\t.2byte (%l[Op_0_0x95]-0b)/2\n\t.2byte (%l[Op_0_0x96]-0b)/2\n\t.2byte (%l[Op_0_0x97]-0b)/2\n\t.2byte (%l[Op_0_0x98]-0b)/2\n\t.2byte (%l[Op_0_0x99]-0b)/2\n\t.2byte (%l[Op_0_0x9A]-0b)/2\n\t.2byte (%l[Op_0_0x9B]-0b)/2\n\t.2byte (%l[Op_0_0x9C]-0b)/2\n\t.2byte (%l[Op_0_0x9D]-0b)/2\n\t.2byte (%l[Op_0_0x9E]-0b)/2\n\t.2byte (%l[Op_0_0x9F]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0x90,Op_0_0x91,Op_0_0x92,Op_0_0x93,Op_0_0x94,Op_0_0x95,Op_0_0x96,Op_0_0x97,Op_0_0x98,Op_0_0x99,Op_0_0x9A,Op_0_0x9B,Op_0_0x9C,Op_0_0x9D,Op_0_0x9E,Op_0_0x9F,pseudo10);
+pseudo10:asm volatile goto(".2byte (%l[Op_0_0xA0]-0b)/2\n\t.2byte (%l[Op_0_0xA1]-0b)/2\n\t.2byte (%l[Op_0_0xA2]-0b)/2\n\t.2byte (%l[Op_0_0xA3]-0b)/2\n\t.2byte (%l[Op_0_0xA4]-0b)/2\n\t.2byte (%l[Op_0_0xA5]-0b)/2\n\t.2byte (%l[Op_0_0xA6]-0b)/2\n\t.2byte (%l[Op_0_0xA7]-0b)/2\n\t.2byte (%l[Op_0_0xA8]-0b)/2\n\t.2byte (%l[Op_0_0xA9]-0b)/2\n\t.2byte (%l[Op_0_0xAA]-0b)/2\n\t.2byte (%l[Op_0_0xAB]-0b)/2\n\t.2byte (%l[Op_0_0xAC]-0b)/2\n\t.2byte (%l[Op_0_0xAD]-0b)/2\n\t.2byte (%l[Op_0_0xAE]-0b)/2\n\t.2byte (%l[Op_0_0xAF]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0xA0,Op_0_0xA1,Op_0_0xA2,Op_0_0xA3,Op_0_0xA4,Op_0_0xA5,Op_0_0xA6,Op_0_0xA7,Op_0_0xA8,Op_0_0xA9,Op_0_0xAA,Op_0_0xAB,Op_0_0xAC,Op_0_0xAD,Op_0_0xAE,Op_0_0xAF,pseudo11);
+pseudo11:asm volatile goto(".2byte (%l[Op_0_0xB0]-0b)/2\n\t.2byte (%l[Op_0_0xB1]-0b)/2\n\t.2byte (%l[Op_0_0xB2]-0b)/2\n\t.2byte (%l[Op_0_0xB3]-0b)/2\n\t.2byte (%l[Op_0_0xB4]-0b)/2\n\t.2byte (%l[Op_0_0xB5]-0b)/2\n\t.2byte (%l[Op_0_0xB6]-0b)/2\n\t.2byte (%l[Op_0_0xB7]-0b)/2\n\t.2byte (%l[Op_0_0xB8]-0b)/2\n\t.2byte (%l[Op_0_0xB9]-0b)/2\n\t.2byte (%l[Op_0_0xBA]-0b)/2\n\t.2byte (%l[Op_0_0xBB]-0b)/2\n\t.2byte (%l[Op_0_0xBC]-0b)/2\n\t.2byte (%l[Op_0_0xBD]-0b)/2\n\t.2byte (%l[Op_0_0xBE]-0b)/2\n\t.2byte (%l[Op_0_0xBF]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0xB0,Op_0_0xB1,Op_0_0xB2,Op_0_0xB3,Op_0_0xB4,Op_0_0xB5,Op_0_0xB6,Op_0_0xB7,Op_0_0xB8,Op_0_0xB9,Op_0_0xBA,Op_0_0xBB,Op_0_0xBC,Op_0_0xBD,Op_0_0xBE,Op_0_0xBF,pseudo12);
+pseudo12:asm volatile goto(".2byte (%l[Op_0_0xC0]-0b)/2\n\t.2byte (%l[Op_0_0xC1]-0b)/2\n\t.2byte (%l[Op_0_0xC2]-0b)/2\n\t.2byte (%l[Op_0_0xC3]-0b)/2\n\t.2byte (%l[Op_0_0xC4]-0b)/2\n\t.2byte (%l[Op_0_0xC5]-0b)/2\n\t.2byte (%l[Op_0_0xC6]-0b)/2\n\t.2byte (%l[Op_0_0xC7]-0b)/2\n\t.2byte (%l[Op_0_0xC8]-0b)/2\n\t.2byte (%l[Op_0_0xC9]-0b)/2\n\t.2byte (%l[Op_0_0xCA]-0b)/2\n\t.2byte (%l[Op_0_0xCB]-0b)/2\n\t.2byte (%l[Op_0_0xCC]-0b)/2\n\t.2byte (%l[Op_0_0xCD]-0b)/2\n\t.2byte (%l[Op_0_0xCE]-0b)/2\n\t.2byte (%l[Op_0_0xCF]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0xC0,Op_0_0xC1,Op_0_0xC2,Op_0_0xC3,Op_0_0xC4,Op_0_0xC5,Op_0_0xC6,Op_0_0xC7,Op_0_0xC8,Op_0_0xC9,Op_0_0xCA,Op_0_0xCB,Op_0_0xCC,Op_0_0xCD,Op_0_0xCE,Op_0_0xCF,pseudo13);
+pseudo13:asm volatile goto(".2byte (%l[Op_0_0xD0]-0b)/2\n\t.2byte (%l[Op_0_0xD1]-0b)/2\n\t.2byte (%l[Op_0_0xD2]-0b)/2\n\t.2byte (%l[Op_0_0xD3]-0b)/2\n\t.2byte (%l[Op_0_0xD4]-0b)/2\n\t.2byte (%l[Op_0_0xD5]-0b)/2\n\t.2byte (%l[Op_0_0xD6]-0b)/2\n\t.2byte (%l[Op_0_0xD7]-0b)/2\n\t.2byte (%l[Op_0_0xD8]-0b)/2\n\t.2byte (%l[Op_0_0xD9]-0b)/2\n\t.2byte (%l[Op_0_0xDA]-0b)/2\n\t.2byte (%l[Op_0_0xDB]-0b)/2\n\t.2byte (%l[Op_0_0xDC]-0b)/2\n\t.2byte (%l[Op_0_0xDD]-0b)/2\n\t.2byte (%l[Op_0_0xDE]-0b)/2\n\t.2byte (%l[Op_0_0xDF]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0xD0,Op_0_0xD1,Op_0_0xD2,Op_0_0xD3,Op_0_0xD4,Op_0_0xD5,Op_0_0xD6,Op_0_0xD7,Op_0_0xD8,Op_0_0xD9,Op_0_0xDA,Op_0_0xDB,Op_0_0xDC,Op_0_0xDD,Op_0_0xDE,Op_0_0xDF,pseudo14);
+pseudo14:asm volatile goto(".2byte (%l[Op_0_0xE0]-0b)/2\n\t.2byte (%l[Op_0_0xE1]-0b)/2\n\t.2byte (%l[Op_0_0xE2]-0b)/2\n\t.2byte (%l[Op_0_0xE3]-0b)/2\n\t.2byte (%l[Op_0_0xE4]-0b)/2\n\t.2byte (%l[Op_0_0xE5]-0b)/2\n\t.2byte (%l[Op_0_0xE6]-0b)/2\n\t.2byte (%l[Op_0_0xE7]-0b)/2\n\t.2byte (%l[Op_0_0xE8]-0b)/2\n\t.2byte (%l[Op_0_0xE9]-0b)/2\n\t.2byte (%l[Op_0_0xEA]-0b)/2\n\t.2byte (%l[Op_0_0xEB]-0b)/2\n\t.2byte (%l[Op_0_0xEC]-0b)/2\n\t.2byte (%l[Op_0_0xED]-0b)/2\n\t.2byte (%l[Op_0_0xEE]-0b)/2\n\t.2byte (%l[Op_0_0xEF]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0xE0,Op_0_0xE1,Op_0_0xE2,Op_0_0xE3,Op_0_0xE4,Op_0_0xE5,Op_0_0xE6,Op_0_0xE7,Op_0_0xE8,Op_0_0xE9,Op_0_0xEA,Op_0_0xEB,Op_0_0xEC,Op_0_0xED,Op_0_0xEE,Op_0_0xEF,pseudo15);
+pseudo15:asm volatile goto(".2byte (%l[Op_0_0xF0]-0b)/2\n\t.2byte (%l[Op_0_0xF1]-0b)/2\n\t.2byte (%l[Op_0_0xF2]-0b)/2\n\t.2byte (%l[Op_0_0xF3]-0b)/2\n\t.2byte (%l[Op_0_0xF4]-0b)/2\n\t.2byte (%l[Op_0_0xF5]-0b)/2\n\t.2byte (%l[Op_0_0xF6]-0b)/2\n\t.2byte (%l[Op_0_0xF7]-0b)/2\n\t.2byte (%l[Op_0_0xF8]-0b)/2\n\t.2byte (%l[Op_0_0xF9]-0b)/2\n\t.2byte (%l[Op_0_0xFA]-0b)/2\n\t.2byte (%l[Op_0_0xFB]-0b)/2\n\t.2byte (%l[Op_0_0xFC]-0b)/2\n\t.2byte (%l[Op_0_0xFD]-0b)/2\n\t.2byte (%l[Op_0_0xFE]-0b)/2\n\t.2byte (%l[Op_0_0xFF]-0b)/2\n\t"::"r"(cop):"cc":Op_0_0xF0,Op_0_0xF1,Op_0_0xF2,Op_0_0xF3,Op_0_0xF4,Op_0_0xF5,Op_0_0xF6,Op_0_0xF7,Op_0_0xF8,Op_0_0xF9,Op_0_0xFA,Op_0_0xFB,Op_0_0xFC,Op_0_0xFD,Op_0_0xFE,Op_0_0xFF,pseudo16);
+pseudo16:asm volatile goto(".2byte (%l[Op_1_0x00]-0b)/2\n\t.2byte (%l[Op_1_0x01]-0b)/2\n\t.2byte (%l[Op_1_0x02]-0b)/2\n\t.2byte (%l[Op_1_0x03]-0b)/2\n\t.2byte (%l[Op_1_0x04]-0b)/2\n\t.2byte (%l[Op_1_0x05]-0b)/2\n\t.2byte (%l[Op_1_0x06]-0b)/2\n\t.2byte (%l[Op_1_0x07]-0b)/2\n\t.2byte (%l[Op_1_0x08]-0b)/2\n\t.2byte (%l[Op_1_0x09]-0b)/2\n\t.2byte (%l[Op_1_0x0A]-0b)/2\n\t.2byte (%l[Op_1_0x0B]-0b)/2\n\t.2byte (%l[Op_1_0x0C]-0b)/2\n\t.2byte (%l[Op_1_0x0D]-0b)/2\n\t.2byte (%l[Op_1_0x0E]-0b)/2\n\t.2byte (%l[Op_1_0x0F]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0x00,Op_1_0x01,Op_1_0x02,Op_1_0x03,Op_1_0x04,Op_1_0x05,Op_1_0x06,Op_1_0x07,Op_1_0x08,Op_1_0x09,Op_1_0x0A,Op_1_0x0B,Op_1_0x0C,Op_1_0x0D,Op_1_0x0E,Op_1_0x0F,pseudo17);
+pseudo17:asm volatile goto(".2byte (%l[Op_1_0x10]-0b)/2\n\t.2byte (%l[Op_1_0x11]-0b)/2\n\t.2byte (%l[Op_1_0x12]-0b)/2\n\t.2byte (%l[Op_1_0x13]-0b)/2\n\t.2byte (%l[Op_1_0x14]-0b)/2\n\t.2byte (%l[Op_1_0x15]-0b)/2\n\t.2byte (%l[Op_1_0x16]-0b)/2\n\t.2byte (%l[Op_1_0x17]-0b)/2\n\t.2byte (%l[Op_1_0x18]-0b)/2\n\t.2byte (%l[Op_1_0x19]-0b)/2\n\t.2byte (%l[Op_1_0x1A]-0b)/2\n\t.2byte (%l[Op_1_0x1B]-0b)/2\n\t.2byte (%l[Op_1_0x1C]-0b)/2\n\t.2byte (%l[Op_1_0x1D]-0b)/2\n\t.2byte (%l[Op_1_0x1E]-0b)/2\n\t.2byte (%l[Op_1_0x1F]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0x10,Op_1_0x11,Op_1_0x12,Op_1_0x13,Op_1_0x14,Op_1_0x15,Op_1_0x16,Op_1_0x17,Op_1_0x18,Op_1_0x19,Op_1_0x1A,Op_1_0x1B,Op_1_0x1C,Op_1_0x1D,Op_1_0x1E,Op_1_0x1F,pseudo18);
+pseudo18:asm volatile goto(".2byte (%l[Op_1_0x20]-0b)/2\n\t.2byte (%l[Op_1_0x21]-0b)/2\n\t.2byte (%l[Op_1_0x22]-0b)/2\n\t.2byte (%l[Op_1_0x23]-0b)/2\n\t.2byte (%l[Op_1_0x24]-0b)/2\n\t.2byte (%l[Op_1_0x25]-0b)/2\n\t.2byte (%l[Op_1_0x26]-0b)/2\n\t.2byte (%l[Op_1_0x27]-0b)/2\n\t.2byte (%l[Op_1_0x28]-0b)/2\n\t.2byte (%l[Op_1_0x29]-0b)/2\n\t.2byte (%l[Op_1_0x2A]-0b)/2\n\t.2byte (%l[Op_1_0x2B]-0b)/2\n\t.2byte (%l[Op_1_0x2C]-0b)/2\n\t.2byte (%l[Op_1_0x2D]-0b)/2\n\t.2byte (%l[Op_1_0x2E]-0b)/2\n\t.2byte (%l[Op_1_0x2F]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0x20,Op_1_0x21,Op_1_0x22,Op_1_0x23,Op_1_0x24,Op_1_0x25,Op_1_0x26,Op_1_0x27,Op_1_0x28,Op_1_0x29,Op_1_0x2A,Op_1_0x2B,Op_1_0x2C,Op_1_0x2D,Op_1_0x2E,Op_1_0x2F,pseudo19);
+pseudo19:asm volatile goto(".2byte (%l[Op_1_0x30]-0b)/2\n\t.2byte (%l[Op_1_0x31]-0b)/2\n\t.2byte (%l[Op_1_0x32]-0b)/2\n\t.2byte (%l[Op_1_0x33]-0b)/2\n\t.2byte (%l[Op_1_0x34]-0b)/2\n\t.2byte (%l[Op_1_0x35]-0b)/2\n\t.2byte (%l[Op_1_0x36]-0b)/2\n\t.2byte (%l[Op_1_0x37]-0b)/2\n\t.2byte (%l[Op_1_0x38]-0b)/2\n\t.2byte (%l[Op_1_0x39]-0b)/2\n\t.2byte (%l[Op_1_0x3A]-0b)/2\n\t.2byte (%l[Op_1_0x3B]-0b)/2\n\t.2byte (%l[Op_1_0x3C]-0b)/2\n\t.2byte (%l[Op_1_0x3D]-0b)/2\n\t.2byte (%l[Op_1_0x3E]-0b)/2\n\t.2byte (%l[Op_1_0x3F]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0x30,Op_1_0x31,Op_1_0x32,Op_1_0x33,Op_1_0x34,Op_1_0x35,Op_1_0x36,Op_1_0x37,Op_1_0x38,Op_1_0x39,Op_1_0x3A,Op_1_0x3B,Op_1_0x3C,Op_1_0x3D,Op_1_0x3E,Op_1_0x3F,pseudo20);
+pseudo20:asm volatile goto(".2byte (%l[Op_1_0x40]-0b)/2\n\t.2byte (%l[Op_1_0x41]-0b)/2\n\t.2byte (%l[Op_1_0x42]-0b)/2\n\t.2byte (%l[Op_1_0x43]-0b)/2\n\t.2byte (%l[Op_1_0x44]-0b)/2\n\t.2byte (%l[Op_1_0x45]-0b)/2\n\t.2byte (%l[Op_1_0x46]-0b)/2\n\t.2byte (%l[Op_1_0x47]-0b)/2\n\t.2byte (%l[Op_1_0x48]-0b)/2\n\t.2byte (%l[Op_1_0x49]-0b)/2\n\t.2byte (%l[Op_1_0x4A]-0b)/2\n\t.2byte (%l[Op_1_0x4B]-0b)/2\n\t.2byte (%l[Op_1_0x4C]-0b)/2\n\t.2byte (%l[Op_1_0x4D]-0b)/2\n\t.2byte (%l[Op_1_0x4E]-0b)/2\n\t.2byte (%l[Op_1_0x4F]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0x40,Op_1_0x41,Op_1_0x42,Op_1_0x43,Op_1_0x44,Op_1_0x45,Op_1_0x46,Op_1_0x47,Op_1_0x48,Op_1_0x49,Op_1_0x4A,Op_1_0x4B,Op_1_0x4C,Op_1_0x4D,Op_1_0x4E,Op_1_0x4F,pseudo21);
+pseudo21:asm volatile goto(".2byte (%l[Op_1_0x50]-0b)/2\n\t.2byte (%l[Op_1_0x51]-0b)/2\n\t.2byte (%l[Op_1_0x52]-0b)/2\n\t.2byte (%l[Op_1_0x53]-0b)/2\n\t.2byte (%l[Op_1_0x54]-0b)/2\n\t.2byte (%l[Op_1_0x55]-0b)/2\n\t.2byte (%l[Op_1_0x56]-0b)/2\n\t.2byte (%l[Op_1_0x57]-0b)/2\n\t.2byte (%l[Op_1_0x58]-0b)/2\n\t.2byte (%l[Op_1_0x59]-0b)/2\n\t.2byte (%l[Op_1_0x5A]-0b)/2\n\t.2byte (%l[Op_1_0x5B]-0b)/2\n\t.2byte (%l[Op_1_0x5C]-0b)/2\n\t.2byte (%l[Op_1_0x5D]-0b)/2\n\t.2byte (%l[Op_1_0x5E]-0b)/2\n\t.2byte (%l[Op_1_0x5F]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0x50,Op_1_0x51,Op_1_0x52,Op_1_0x53,Op_1_0x54,Op_1_0x55,Op_1_0x56,Op_1_0x57,Op_1_0x58,Op_1_0x59,Op_1_0x5A,Op_1_0x5B,Op_1_0x5C,Op_1_0x5D,Op_1_0x5E,Op_1_0x5F,pseudo22);
+pseudo22:asm volatile goto(".2byte (%l[Op_1_0x60]-0b)/2\n\t.2byte (%l[Op_1_0x61]-0b)/2\n\t.2byte (%l[Op_1_0x62]-0b)/2\n\t.2byte (%l[Op_1_0x63]-0b)/2\n\t.2byte (%l[Op_1_0x64]-0b)/2\n\t.2byte (%l[Op_1_0x65]-0b)/2\n\t.2byte (%l[Op_1_0x66]-0b)/2\n\t.2byte (%l[Op_1_0x67]-0b)/2\n\t.2byte (%l[Op_1_0x68]-0b)/2\n\t.2byte (%l[Op_1_0x69]-0b)/2\n\t.2byte (%l[Op_1_0x6A]-0b)/2\n\t.2byte (%l[Op_1_0x6B]-0b)/2\n\t.2byte (%l[Op_1_0x6C]-0b)/2\n\t.2byte (%l[Op_1_0x6D]-0b)/2\n\t.2byte (%l[Op_1_0x6E]-0b)/2\n\t.2byte (%l[Op_1_0x6F]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0x60,Op_1_0x61,Op_1_0x62,Op_1_0x63,Op_1_0x64,Op_1_0x65,Op_1_0x66,Op_1_0x67,Op_1_0x68,Op_1_0x69,Op_1_0x6A,Op_1_0x6B,Op_1_0x6C,Op_1_0x6D,Op_1_0x6E,Op_1_0x6F,pseudo23);
+pseudo23:asm volatile goto(".2byte (%l[Op_1_0x70]-0b)/2\n\t.2byte (%l[Op_1_0x71]-0b)/2\n\t.2byte (%l[Op_1_0x72]-0b)/2\n\t.2byte (%l[Op_1_0x73]-0b)/2\n\t.2byte (%l[Op_1_0x74]-0b)/2\n\t.2byte (%l[Op_1_0x75]-0b)/2\n\t.2byte (%l[Op_1_0x76]-0b)/2\n\t.2byte (%l[Op_1_0x77]-0b)/2\n\t.2byte (%l[Op_1_0x78]-0b)/2\n\t.2byte (%l[Op_1_0x79]-0b)/2\n\t.2byte (%l[Op_1_0x7A]-0b)/2\n\t.2byte (%l[Op_1_0x7B]-0b)/2\n\t.2byte (%l[Op_1_0x7C]-0b)/2\n\t.2byte (%l[Op_1_0x7D]-0b)/2\n\t.2byte (%l[Op_1_0x7E]-0b)/2\n\t.2byte (%l[Op_1_0x7F]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0x70,Op_1_0x71,Op_1_0x72,Op_1_0x73,Op_1_0x74,Op_1_0x75,Op_1_0x76,Op_1_0x77,Op_1_0x78,Op_1_0x79,Op_1_0x7A,Op_1_0x7B,Op_1_0x7C,Op_1_0x7D,Op_1_0x7E,Op_1_0x7F,pseudo24);
+pseudo24:asm volatile goto(".2byte (%l[Op_1_0x80]-0b)/2\n\t.2byte (%l[Op_1_0x81]-0b)/2\n\t.2byte (%l[Op_1_0x82]-0b)/2\n\t.2byte (%l[Op_1_0x83]-0b)/2\n\t.2byte (%l[Op_1_0x84]-0b)/2\n\t.2byte (%l[Op_1_0x85]-0b)/2\n\t.2byte (%l[Op_1_0x86]-0b)/2\n\t.2byte (%l[Op_1_0x87]-0b)/2\n\t.2byte (%l[Op_1_0x88]-0b)/2\n\t.2byte (%l[Op_1_0x89]-0b)/2\n\t.2byte (%l[Op_1_0x8A]-0b)/2\n\t.2byte (%l[Op_1_0x8B]-0b)/2\n\t.2byte (%l[Op_1_0x8C]-0b)/2\n\t.2byte (%l[Op_1_0x8D]-0b)/2\n\t.2byte (%l[Op_1_0x8E]-0b)/2\n\t.2byte (%l[Op_1_0x8F]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0x80,Op_1_0x81,Op_1_0x82,Op_1_0x83,Op_1_0x84,Op_1_0x85,Op_1_0x86,Op_1_0x87,Op_1_0x88,Op_1_0x89,Op_1_0x8A,Op_1_0x8B,Op_1_0x8C,Op_1_0x8D,Op_1_0x8E,Op_1_0x8F,pseudo25);
+pseudo25:asm volatile goto(".2byte (%l[Op_1_0x90]-0b)/2\n\t.2byte (%l[Op_1_0x91]-0b)/2\n\t.2byte (%l[Op_1_0x92]-0b)/2\n\t.2byte (%l[Op_1_0x93]-0b)/2\n\t.2byte (%l[Op_1_0x94]-0b)/2\n\t.2byte (%l[Op_1_0x95]-0b)/2\n\t.2byte (%l[Op_1_0x96]-0b)/2\n\t.2byte (%l[Op_1_0x97]-0b)/2\n\t.2byte (%l[Op_1_0x98]-0b)/2\n\t.2byte (%l[Op_1_0x99]-0b)/2\n\t.2byte (%l[Op_1_0x9A]-0b)/2\n\t.2byte (%l[Op_1_0x9B]-0b)/2\n\t.2byte (%l[Op_1_0x9C]-0b)/2\n\t.2byte (%l[Op_1_0x9D]-0b)/2\n\t.2byte (%l[Op_1_0x9E]-0b)/2\n\t.2byte (%l[Op_1_0x9F]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0x90,Op_1_0x91,Op_1_0x92,Op_1_0x93,Op_1_0x94,Op_1_0x95,Op_1_0x96,Op_1_0x97,Op_1_0x98,Op_1_0x99,Op_1_0x9A,Op_1_0x9B,Op_1_0x9C,Op_1_0x9D,Op_1_0x9E,Op_1_0x9F,pseudo26);
+pseudo26:asm volatile goto(".2byte (%l[Op_1_0xA0]-0b)/2\n\t.2byte (%l[Op_1_0xA1]-0b)/2\n\t.2byte (%l[Op_1_0xA2]-0b)/2\n\t.2byte (%l[Op_1_0xA3]-0b)/2\n\t.2byte (%l[Op_1_0xA4]-0b)/2\n\t.2byte (%l[Op_1_0xA5]-0b)/2\n\t.2byte (%l[Op_1_0xA6]-0b)/2\n\t.2byte (%l[Op_1_0xA7]-0b)/2\n\t.2byte (%l[Op_1_0xA8]-0b)/2\n\t.2byte (%l[Op_1_0xA9]-0b)/2\n\t.2byte (%l[Op_1_0xAA]-0b)/2\n\t.2byte (%l[Op_1_0xAB]-0b)/2\n\t.2byte (%l[Op_1_0xAC]-0b)/2\n\t.2byte (%l[Op_1_0xAD]-0b)/2\n\t.2byte (%l[Op_1_0xAE]-0b)/2\n\t.2byte (%l[Op_1_0xAF]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0xA0,Op_1_0xA1,Op_1_0xA2,Op_1_0xA3,Op_1_0xA4,Op_1_0xA5,Op_1_0xA6,Op_1_0xA7,Op_1_0xA8,Op_1_0xA9,Op_1_0xAA,Op_1_0xAB,Op_1_0xAC,Op_1_0xAD,Op_1_0xAE,Op_1_0xAF,pseudo27);
+pseudo27:asm volatile goto(".2byte (%l[Op_1_0xB0]-0b)/2\n\t.2byte (%l[Op_1_0xB1]-0b)/2\n\t.2byte (%l[Op_1_0xB2]-0b)/2\n\t.2byte (%l[Op_1_0xB3]-0b)/2\n\t.2byte (%l[Op_1_0xB4]-0b)/2\n\t.2byte (%l[Op_1_0xB5]-0b)/2\n\t.2byte (%l[Op_1_0xB6]-0b)/2\n\t.2byte (%l[Op_1_0xB7]-0b)/2\n\t.2byte (%l[Op_1_0xB8]-0b)/2\n\t.2byte (%l[Op_1_0xB9]-0b)/2\n\t.2byte (%l[Op_1_0xBA]-0b)/2\n\t.2byte (%l[Op_1_0xBB]-0b)/2\n\t.2byte (%l[Op_1_0xBC]-0b)/2\n\t.2byte (%l[Op_1_0xBD]-0b)/2\n\t.2byte (%l[Op_1_0xBE]-0b)/2\n\t.2byte (%l[Op_1_0xBF]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0xB0,Op_1_0xB1,Op_1_0xB2,Op_1_0xB3,Op_1_0xB4,Op_1_0xB5,Op_1_0xB6,Op_1_0xB7,Op_1_0xB8,Op_1_0xB9,Op_1_0xBA,Op_1_0xBB,Op_1_0xBC,Op_1_0xBD,Op_1_0xBE,Op_1_0xBF,pseudo28);
+pseudo28:asm volatile goto(".2byte (%l[Op_1_0xC0]-0b)/2\n\t.2byte (%l[Op_1_0xC1]-0b)/2\n\t.2byte (%l[Op_1_0xC2]-0b)/2\n\t.2byte (%l[Op_1_0xC3]-0b)/2\n\t.2byte (%l[Op_1_0xC4]-0b)/2\n\t.2byte (%l[Op_1_0xC5]-0b)/2\n\t.2byte (%l[Op_1_0xC6]-0b)/2\n\t.2byte (%l[Op_1_0xC7]-0b)/2\n\t.2byte (%l[Op_1_0xC8]-0b)/2\n\t.2byte (%l[Op_1_0xC9]-0b)/2\n\t.2byte (%l[Op_1_0xCA]-0b)/2\n\t.2byte (%l[Op_1_0xCB]-0b)/2\n\t.2byte (%l[Op_1_0xCC]-0b)/2\n\t.2byte (%l[Op_1_0xCD]-0b)/2\n\t.2byte (%l[Op_1_0xCE]-0b)/2\n\t.2byte (%l[Op_1_0xCF]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0xC0,Op_1_0xC1,Op_1_0xC2,Op_1_0xC3,Op_1_0xC4,Op_1_0xC5,Op_1_0xC6,Op_1_0xC7,Op_1_0xC8,Op_1_0xC9,Op_1_0xCA,Op_1_0xCB,Op_1_0xCC,Op_1_0xCD,Op_1_0xCE,Op_1_0xCF,pseudo29);
+pseudo29:asm volatile goto(".2byte (%l[Op_1_0xD0]-0b)/2\n\t.2byte (%l[Op_1_0xD1]-0b)/2\n\t.2byte (%l[Op_1_0xD2]-0b)/2\n\t.2byte (%l[Op_1_0xD3]-0b)/2\n\t.2byte (%l[Op_1_0xD4]-0b)/2\n\t.2byte (%l[Op_1_0xD5]-0b)/2\n\t.2byte (%l[Op_1_0xD6]-0b)/2\n\t.2byte (%l[Op_1_0xD7]-0b)/2\n\t.2byte (%l[Op_1_0xD8]-0b)/2\n\t.2byte (%l[Op_1_0xD9]-0b)/2\n\t.2byte (%l[Op_1_0xDA]-0b)/2\n\t.2byte (%l[Op_1_0xDB]-0b)/2\n\t.2byte (%l[Op_1_0xDC]-0b)/2\n\t.2byte (%l[Op_1_0xDD]-0b)/2\n\t.2byte (%l[Op_1_0xDE]-0b)/2\n\t.2byte (%l[Op_1_0xDF]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0xD0,Op_1_0xD1,Op_1_0xD2,Op_1_0xD3,Op_1_0xD4,Op_1_0xD5,Op_1_0xD6,Op_1_0xD7,Op_1_0xD8,Op_1_0xD9,Op_1_0xDA,Op_1_0xDB,Op_1_0xDC,Op_1_0xDD,Op_1_0xDE,Op_1_0xDF,pseudo30);
+pseudo30:asm volatile goto(".2byte (%l[Op_1_0xE0]-0b)/2\n\t.2byte (%l[Op_1_0xE1]-0b)/2\n\t.2byte (%l[Op_1_0xE2]-0b)/2\n\t.2byte (%l[Op_1_0xE3]-0b)/2\n\t.2byte (%l[Op_1_0xE4]-0b)/2\n\t.2byte (%l[Op_1_0xE5]-0b)/2\n\t.2byte (%l[Op_1_0xE6]-0b)/2\n\t.2byte (%l[Op_1_0xE7]-0b)/2\n\t.2byte (%l[Op_1_0xE8]-0b)/2\n\t.2byte (%l[Op_1_0xE9]-0b)/2\n\t.2byte (%l[Op_1_0xEA]-0b)/2\n\t.2byte (%l[Op_1_0xEB]-0b)/2\n\t.2byte (%l[Op_1_0xEC]-0b)/2\n\t.2byte (%l[Op_1_0xED]-0b)/2\n\t.2byte (%l[Op_1_0xEE]-0b)/2\n\t.2byte (%l[Op_1_0xEF]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0xE0,Op_1_0xE1,Op_1_0xE2,Op_1_0xE3,Op_1_0xE4,Op_1_0xE5,Op_1_0xE6,Op_1_0xE7,Op_1_0xE8,Op_1_0xE9,Op_1_0xEA,Op_1_0xEB,Op_1_0xEC,Op_1_0xED,Op_1_0xEE,Op_1_0xEF,pseudo31);
+pseudo31:asm volatile goto(".2byte (%l[Op_1_0xF0]-0b)/2\n\t.2byte (%l[Op_1_0xF1]-0b)/2\n\t.2byte (%l[Op_1_0xF2]-0b)/2\n\t.2byte (%l[Op_1_0xF3]-0b)/2\n\t.2byte (%l[Op_1_0xF4]-0b)/2\n\t.2byte (%l[Op_1_0xF5]-0b)/2\n\t.2byte (%l[Op_1_0xF6]-0b)/2\n\t.2byte (%l[Op_1_0xF7]-0b)/2\n\t.2byte (%l[Op_1_0xF8]-0b)/2\n\t.2byte (%l[Op_1_0xF9]-0b)/2\n\t.2byte (%l[Op_1_0xFA]-0b)/2\n\t.2byte (%l[Op_1_0xFB]-0b)/2\n\t.2byte (%l[Op_1_0xFC]-0b)/2\n\t.2byte (%l[Op_1_0xFD]-0b)/2\n\t.2byte (%l[Op_1_0xFE]-0b)/2\n\t.2byte (%l[Op_1_0xFF]-0b)/2\n\t"::"r"(cop):"cc":Op_1_0xF0,Op_1_0xF1,Op_1_0xF2,Op_1_0xF3,Op_1_0xF4,Op_1_0xF5,Op_1_0xF6,Op_1_0xF7,Op_1_0xF8,Op_1_0xF9,Op_1_0xFA,Op_1_0xFB,Op_1_0xFC,Op_1_0xFD,Op_1_0xFE,Op_1_0xFF,pseudo32);
+pseudo32:asm volatile goto(".2byte (%l[Op_2_0x00]-0b)/2\n\t.2byte (%l[Op_2_0x01]-0b)/2\n\t.2byte (%l[Op_2_0x02]-0b)/2\n\t.2byte (%l[Op_2_0x03]-0b)/2\n\t.2byte (%l[Op_2_0x04]-0b)/2\n\t.2byte (%l[Op_2_0x05]-0b)/2\n\t.2byte (%l[Op_2_0x06]-0b)/2\n\t.2byte (%l[Op_2_0x07]-0b)/2\n\t.2byte (%l[Op_2_0x08]-0b)/2\n\t.2byte (%l[Op_2_0x09]-0b)/2\n\t.2byte (%l[Op_2_0x0A]-0b)/2\n\t.2byte (%l[Op_2_0x0B]-0b)/2\n\t.2byte (%l[Op_2_0x0C]-0b)/2\n\t.2byte (%l[Op_2_0x0D]-0b)/2\n\t.2byte (%l[Op_2_0x0E]-0b)/2\n\t.2byte (%l[Op_2_0x0F]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0x00,Op_2_0x01,Op_2_0x02,Op_2_0x03,Op_2_0x04,Op_2_0x05,Op_2_0x06,Op_2_0x07,Op_2_0x08,Op_2_0x09,Op_2_0x0A,Op_2_0x0B,Op_2_0x0C,Op_2_0x0D,Op_2_0x0E,Op_2_0x0F,pseudo33);
+pseudo33:asm volatile goto(".2byte (%l[Op_2_0x10]-0b)/2\n\t.2byte (%l[Op_2_0x11]-0b)/2\n\t.2byte (%l[Op_2_0x12]-0b)/2\n\t.2byte (%l[Op_2_0x13]-0b)/2\n\t.2byte (%l[Op_2_0x14]-0b)/2\n\t.2byte (%l[Op_2_0x15]-0b)/2\n\t.2byte (%l[Op_2_0x16]-0b)/2\n\t.2byte (%l[Op_2_0x17]-0b)/2\n\t.2byte (%l[Op_2_0x18]-0b)/2\n\t.2byte (%l[Op_2_0x19]-0b)/2\n\t.2byte (%l[Op_2_0x1A]-0b)/2\n\t.2byte (%l[Op_2_0x1B]-0b)/2\n\t.2byte (%l[Op_2_0x1C]-0b)/2\n\t.2byte (%l[Op_2_0x1D]-0b)/2\n\t.2byte (%l[Op_2_0x1E]-0b)/2\n\t.2byte (%l[Op_2_0x1F]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0x10,Op_2_0x11,Op_2_0x12,Op_2_0x13,Op_2_0x14,Op_2_0x15,Op_2_0x16,Op_2_0x17,Op_2_0x18,Op_2_0x19,Op_2_0x1A,Op_2_0x1B,Op_2_0x1C,Op_2_0x1D,Op_2_0x1E,Op_2_0x1F,pseudo34);
+pseudo34:asm volatile goto(".2byte (%l[Op_2_0x20]-0b)/2\n\t.2byte (%l[Op_2_0x21]-0b)/2\n\t.2byte (%l[Op_2_0x22]-0b)/2\n\t.2byte (%l[Op_2_0x23]-0b)/2\n\t.2byte (%l[Op_2_0x24]-0b)/2\n\t.2byte (%l[Op_2_0x25]-0b)/2\n\t.2byte (%l[Op_2_0x26]-0b)/2\n\t.2byte (%l[Op_2_0x27]-0b)/2\n\t.2byte (%l[Op_2_0x28]-0b)/2\n\t.2byte (%l[Op_2_0x29]-0b)/2\n\t.2byte (%l[Op_2_0x2A]-0b)/2\n\t.2byte (%l[Op_2_0x2B]-0b)/2\n\t.2byte (%l[Op_2_0x2C]-0b)/2\n\t.2byte (%l[Op_2_0x2D]-0b)/2\n\t.2byte (%l[Op_2_0x2E]-0b)/2\n\t.2byte (%l[Op_2_0x2F]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0x20,Op_2_0x21,Op_2_0x22,Op_2_0x23,Op_2_0x24,Op_2_0x25,Op_2_0x26,Op_2_0x27,Op_2_0x28,Op_2_0x29,Op_2_0x2A,Op_2_0x2B,Op_2_0x2C,Op_2_0x2D,Op_2_0x2E,Op_2_0x2F,pseudo35);
+pseudo35:asm volatile goto(".2byte (%l[Op_2_0x30]-0b)/2\n\t.2byte (%l[Op_2_0x31]-0b)/2\n\t.2byte (%l[Op_2_0x32]-0b)/2\n\t.2byte (%l[Op_2_0x33]-0b)/2\n\t.2byte (%l[Op_2_0x34]-0b)/2\n\t.2byte (%l[Op_2_0x35]-0b)/2\n\t.2byte (%l[Op_2_0x36]-0b)/2\n\t.2byte (%l[Op_2_0x37]-0b)/2\n\t.2byte (%l[Op_2_0x38]-0b)/2\n\t.2byte (%l[Op_2_0x39]-0b)/2\n\t.2byte (%l[Op_2_0x3A]-0b)/2\n\t.2byte (%l[Op_2_0x3B]-0b)/2\n\t.2byte (%l[Op_2_0x3C]-0b)/2\n\t.2byte (%l[Op_2_0x3D]-0b)/2\n\t.2byte (%l[Op_2_0x3E]-0b)/2\n\t.2byte (%l[Op_2_0x3F]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0x30,Op_2_0x31,Op_2_0x32,Op_2_0x33,Op_2_0x34,Op_2_0x35,Op_2_0x36,Op_2_0x37,Op_2_0x38,Op_2_0x39,Op_2_0x3A,Op_2_0x3B,Op_2_0x3C,Op_2_0x3D,Op_2_0x3E,Op_2_0x3F,pseudo36);
+pseudo36:asm volatile goto(".2byte (%l[Op_2_0x40]-0b)/2\n\t.2byte (%l[Op_2_0x41]-0b)/2\n\t.2byte (%l[Op_2_0x42]-0b)/2\n\t.2byte (%l[Op_2_0x43]-0b)/2\n\t.2byte (%l[Op_2_0x44]-0b)/2\n\t.2byte (%l[Op_2_0x45]-0b)/2\n\t.2byte (%l[Op_2_0x46]-0b)/2\n\t.2byte (%l[Op_2_0x47]-0b)/2\n\t.2byte (%l[Op_2_0x48]-0b)/2\n\t.2byte (%l[Op_2_0x49]-0b)/2\n\t.2byte (%l[Op_2_0x4A]-0b)/2\n\t.2byte (%l[Op_2_0x4B]-0b)/2\n\t.2byte (%l[Op_2_0x4C]-0b)/2\n\t.2byte (%l[Op_2_0x4D]-0b)/2\n\t.2byte (%l[Op_2_0x4E]-0b)/2\n\t.2byte (%l[Op_2_0x4F]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0x40,Op_2_0x41,Op_2_0x42,Op_2_0x43,Op_2_0x44,Op_2_0x45,Op_2_0x46,Op_2_0x47,Op_2_0x48,Op_2_0x49,Op_2_0x4A,Op_2_0x4B,Op_2_0x4C,Op_2_0x4D,Op_2_0x4E,Op_2_0x4F,pseudo37);
+pseudo37:asm volatile goto(".2byte (%l[Op_2_0x50]-0b)/2\n\t.2byte (%l[Op_2_0x51]-0b)/2\n\t.2byte (%l[Op_2_0x52]-0b)/2\n\t.2byte (%l[Op_2_0x53]-0b)/2\n\t.2byte (%l[Op_2_0x54]-0b)/2\n\t.2byte (%l[Op_2_0x55]-0b)/2\n\t.2byte (%l[Op_2_0x56]-0b)/2\n\t.2byte (%l[Op_2_0x57]-0b)/2\n\t.2byte (%l[Op_2_0x58]-0b)/2\n\t.2byte (%l[Op_2_0x59]-0b)/2\n\t.2byte (%l[Op_2_0x5A]-0b)/2\n\t.2byte (%l[Op_2_0x5B]-0b)/2\n\t.2byte (%l[Op_2_0x5C]-0b)/2\n\t.2byte (%l[Op_2_0x5D]-0b)/2\n\t.2byte (%l[Op_2_0x5E]-0b)/2\n\t.2byte (%l[Op_2_0x5F]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0x50,Op_2_0x51,Op_2_0x52,Op_2_0x53,Op_2_0x54,Op_2_0x55,Op_2_0x56,Op_2_0x57,Op_2_0x58,Op_2_0x59,Op_2_0x5A,Op_2_0x5B,Op_2_0x5C,Op_2_0x5D,Op_2_0x5E,Op_2_0x5F,pseudo38);
+pseudo38:asm volatile goto(".2byte (%l[Op_2_0x60]-0b)/2\n\t.2byte (%l[Op_2_0x61]-0b)/2\n\t.2byte (%l[Op_2_0x62]-0b)/2\n\t.2byte (%l[Op_2_0x63]-0b)/2\n\t.2byte (%l[Op_2_0x64]-0b)/2\n\t.2byte (%l[Op_2_0x65]-0b)/2\n\t.2byte (%l[Op_2_0x66]-0b)/2\n\t.2byte (%l[Op_2_0x67]-0b)/2\n\t.2byte (%l[Op_2_0x68]-0b)/2\n\t.2byte (%l[Op_2_0x69]-0b)/2\n\t.2byte (%l[Op_2_0x6A]-0b)/2\n\t.2byte (%l[Op_2_0x6B]-0b)/2\n\t.2byte (%l[Op_2_0x6C]-0b)/2\n\t.2byte (%l[Op_2_0x6D]-0b)/2\n\t.2byte (%l[Op_2_0x6E]-0b)/2\n\t.2byte (%l[Op_2_0x6F]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0x60,Op_2_0x61,Op_2_0x62,Op_2_0x63,Op_2_0x64,Op_2_0x65,Op_2_0x66,Op_2_0x67,Op_2_0x68,Op_2_0x69,Op_2_0x6A,Op_2_0x6B,Op_2_0x6C,Op_2_0x6D,Op_2_0x6E,Op_2_0x6F,pseudo39);
+pseudo39:asm volatile goto(".2byte (%l[Op_2_0x70]-0b)/2\n\t.2byte (%l[Op_2_0x71]-0b)/2\n\t.2byte (%l[Op_2_0x72]-0b)/2\n\t.2byte (%l[Op_2_0x73]-0b)/2\n\t.2byte (%l[Op_2_0x74]-0b)/2\n\t.2byte (%l[Op_2_0x75]-0b)/2\n\t.2byte (%l[Op_2_0x76]-0b)/2\n\t.2byte (%l[Op_2_0x77]-0b)/2\n\t.2byte (%l[Op_2_0x78]-0b)/2\n\t.2byte (%l[Op_2_0x79]-0b)/2\n\t.2byte (%l[Op_2_0x7A]-0b)/2\n\t.2byte (%l[Op_2_0x7B]-0b)/2\n\t.2byte (%l[Op_2_0x7C]-0b)/2\n\t.2byte (%l[Op_2_0x7D]-0b)/2\n\t.2byte (%l[Op_2_0x7E]-0b)/2\n\t.2byte (%l[Op_2_0x7F]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0x70,Op_2_0x71,Op_2_0x72,Op_2_0x73,Op_2_0x74,Op_2_0x75,Op_2_0x76,Op_2_0x77,Op_2_0x78,Op_2_0x79,Op_2_0x7A,Op_2_0x7B,Op_2_0x7C,Op_2_0x7D,Op_2_0x7E,Op_2_0x7F,pseudo40);
+pseudo40:asm volatile goto(".2byte (%l[Op_2_0x80]-0b)/2\n\t.2byte (%l[Op_2_0x81]-0b)/2\n\t.2byte (%l[Op_2_0x82]-0b)/2\n\t.2byte (%l[Op_2_0x83]-0b)/2\n\t.2byte (%l[Op_2_0x84]-0b)/2\n\t.2byte (%l[Op_2_0x85]-0b)/2\n\t.2byte (%l[Op_2_0x86]-0b)/2\n\t.2byte (%l[Op_2_0x87]-0b)/2\n\t.2byte (%l[Op_2_0x88]-0b)/2\n\t.2byte (%l[Op_2_0x89]-0b)/2\n\t.2byte (%l[Op_2_0x8A]-0b)/2\n\t.2byte (%l[Op_2_0x8B]-0b)/2\n\t.2byte (%l[Op_2_0x8C]-0b)/2\n\t.2byte (%l[Op_2_0x8D]-0b)/2\n\t.2byte (%l[Op_2_0x8E]-0b)/2\n\t.2byte (%l[Op_2_0x8F]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0x80,Op_2_0x81,Op_2_0x82,Op_2_0x83,Op_2_0x84,Op_2_0x85,Op_2_0x86,Op_2_0x87,Op_2_0x88,Op_2_0x89,Op_2_0x8A,Op_2_0x8B,Op_2_0x8C,Op_2_0x8D,Op_2_0x8E,Op_2_0x8F,pseudo41);
+pseudo41:asm volatile goto(".2byte (%l[Op_2_0x90]-0b)/2\n\t.2byte (%l[Op_2_0x91]-0b)/2\n\t.2byte (%l[Op_2_0x92]-0b)/2\n\t.2byte (%l[Op_2_0x93]-0b)/2\n\t.2byte (%l[Op_2_0x94]-0b)/2\n\t.2byte (%l[Op_2_0x95]-0b)/2\n\t.2byte (%l[Op_2_0x96]-0b)/2\n\t.2byte (%l[Op_2_0x97]-0b)/2\n\t.2byte (%l[Op_2_0x98]-0b)/2\n\t.2byte (%l[Op_2_0x99]-0b)/2\n\t.2byte (%l[Op_2_0x9A]-0b)/2\n\t.2byte (%l[Op_2_0x9B]-0b)/2\n\t.2byte (%l[Op_2_0x9C]-0b)/2\n\t.2byte (%l[Op_2_0x9D]-0b)/2\n\t.2byte (%l[Op_2_0x9E]-0b)/2\n\t.2byte (%l[Op_2_0x9F]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0x90,Op_2_0x91,Op_2_0x92,Op_2_0x93,Op_2_0x94,Op_2_0x95,Op_2_0x96,Op_2_0x97,Op_2_0x98,Op_2_0x99,Op_2_0x9A,Op_2_0x9B,Op_2_0x9C,Op_2_0x9D,Op_2_0x9E,Op_2_0x9F,pseudo42);
+pseudo42:asm volatile goto(".2byte (%l[Op_2_0xA0]-0b)/2\n\t.2byte (%l[Op_2_0xA1]-0b)/2\n\t.2byte (%l[Op_2_0xA2]-0b)/2\n\t.2byte (%l[Op_2_0xA3]-0b)/2\n\t.2byte (%l[Op_2_0xA4]-0b)/2\n\t.2byte (%l[Op_2_0xA5]-0b)/2\n\t.2byte (%l[Op_2_0xA6]-0b)/2\n\t.2byte (%l[Op_2_0xA7]-0b)/2\n\t.2byte (%l[Op_2_0xA8]-0b)/2\n\t.2byte (%l[Op_2_0xA9]-0b)/2\n\t.2byte (%l[Op_2_0xAA]-0b)/2\n\t.2byte (%l[Op_2_0xAB]-0b)/2\n\t.2byte (%l[Op_2_0xAC]-0b)/2\n\t.2byte (%l[Op_2_0xAD]-0b)/2\n\t.2byte (%l[Op_2_0xAE]-0b)/2\n\t.2byte (%l[Op_2_0xAF]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0xA0,Op_2_0xA1,Op_2_0xA2,Op_2_0xA3,Op_2_0xA4,Op_2_0xA5,Op_2_0xA6,Op_2_0xA7,Op_2_0xA8,Op_2_0xA9,Op_2_0xAA,Op_2_0xAB,Op_2_0xAC,Op_2_0xAD,Op_2_0xAE,Op_2_0xAF,pseudo43);
+pseudo43:asm volatile goto(".2byte (%l[Op_2_0xB0]-0b)/2\n\t.2byte (%l[Op_2_0xB1]-0b)/2\n\t.2byte (%l[Op_2_0xB2]-0b)/2\n\t.2byte (%l[Op_2_0xB3]-0b)/2\n\t.2byte (%l[Op_2_0xB4]-0b)/2\n\t.2byte (%l[Op_2_0xB5]-0b)/2\n\t.2byte (%l[Op_2_0xB6]-0b)/2\n\t.2byte (%l[Op_2_0xB7]-0b)/2\n\t.2byte (%l[Op_2_0xB8]-0b)/2\n\t.2byte (%l[Op_2_0xB9]-0b)/2\n\t.2byte (%l[Op_2_0xBA]-0b)/2\n\t.2byte (%l[Op_2_0xBB]-0b)/2\n\t.2byte (%l[Op_2_0xBC]-0b)/2\n\t.2byte (%l[Op_2_0xBD]-0b)/2\n\t.2byte (%l[Op_2_0xBE]-0b)/2\n\t.2byte (%l[Op_2_0xBF]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0xB0,Op_2_0xB1,Op_2_0xB2,Op_2_0xB3,Op_2_0xB4,Op_2_0xB5,Op_2_0xB6,Op_2_0xB7,Op_2_0xB8,Op_2_0xB9,Op_2_0xBA,Op_2_0xBB,Op_2_0xBC,Op_2_0xBD,Op_2_0xBE,Op_2_0xBF,pseudo44);
+pseudo44:asm volatile goto(".2byte (%l[Op_2_0xC0]-0b)/2\n\t.2byte (%l[Op_2_0xC1]-0b)/2\n\t.2byte (%l[Op_2_0xC2]-0b)/2\n\t.2byte (%l[Op_2_0xC3]-0b)/2\n\t.2byte (%l[Op_2_0xC4]-0b)/2\n\t.2byte (%l[Op_2_0xC5]-0b)/2\n\t.2byte (%l[Op_2_0xC6]-0b)/2\n\t.2byte (%l[Op_2_0xC7]-0b)/2\n\t.2byte (%l[Op_2_0xC8]-0b)/2\n\t.2byte (%l[Op_2_0xC9]-0b)/2\n\t.2byte (%l[Op_2_0xCA]-0b)/2\n\t.2byte (%l[Op_2_0xCB]-0b)/2\n\t.2byte (%l[Op_2_0xCC]-0b)/2\n\t.2byte (%l[Op_2_0xCD]-0b)/2\n\t.2byte (%l[Op_2_0xCE]-0b)/2\n\t.2byte (%l[Op_2_0xCF]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0xC0,Op_2_0xC1,Op_2_0xC2,Op_2_0xC3,Op_2_0xC4,Op_2_0xC5,Op_2_0xC6,Op_2_0xC7,Op_2_0xC8,Op_2_0xC9,Op_2_0xCA,Op_2_0xCB,Op_2_0xCC,Op_2_0xCD,Op_2_0xCE,Op_2_0xCF,pseudo45);
+pseudo45:asm volatile goto(".2byte (%l[Op_2_0xD0]-0b)/2\n\t.2byte (%l[Op_2_0xD1]-0b)/2\n\t.2byte (%l[Op_2_0xD2]-0b)/2\n\t.2byte (%l[Op_2_0xD3]-0b)/2\n\t.2byte (%l[Op_2_0xD4]-0b)/2\n\t.2byte (%l[Op_2_0xD5]-0b)/2\n\t.2byte (%l[Op_2_0xD6]-0b)/2\n\t.2byte (%l[Op_2_0xD7]-0b)/2\n\t.2byte (%l[Op_2_0xD8]-0b)/2\n\t.2byte (%l[Op_2_0xD9]-0b)/2\n\t.2byte (%l[Op_2_0xDA]-0b)/2\n\t.2byte (%l[Op_2_0xDB]-0b)/2\n\t.2byte (%l[Op_2_0xDC]-0b)/2\n\t.2byte (%l[Op_2_0xDD]-0b)/2\n\t.2byte (%l[Op_2_0xDE]-0b)/2\n\t.2byte (%l[Op_2_0xDF]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0xD0,Op_2_0xD1,Op_2_0xD2,Op_2_0xD3,Op_2_0xD4,Op_2_0xD5,Op_2_0xD6,Op_2_0xD7,Op_2_0xD8,Op_2_0xD9,Op_2_0xDA,Op_2_0xDB,Op_2_0xDC,Op_2_0xDD,Op_2_0xDE,Op_2_0xDF,pseudo46);
+pseudo46:asm volatile goto(".2byte (%l[Op_2_0xE0]-0b)/2\n\t.2byte (%l[Op_2_0xE1]-0b)/2\n\t.2byte (%l[Op_2_0xE2]-0b)/2\n\t.2byte (%l[Op_2_0xE3]-0b)/2\n\t.2byte (%l[Op_2_0xE4]-0b)/2\n\t.2byte (%l[Op_2_0xE5]-0b)/2\n\t.2byte (%l[Op_2_0xE6]-0b)/2\n\t.2byte (%l[Op_2_0xE7]-0b)/2\n\t.2byte (%l[Op_2_0xE8]-0b)/2\n\t.2byte (%l[Op_2_0xE9]-0b)/2\n\t.2byte (%l[Op_2_0xEA]-0b)/2\n\t.2byte (%l[Op_2_0xEB]-0b)/2\n\t.2byte (%l[Op_2_0xEC]-0b)/2\n\t.2byte (%l[Op_2_0xED]-0b)/2\n\t.2byte (%l[Op_2_0xEE]-0b)/2\n\t.2byte (%l[Op_2_0xEF]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0xE0,Op_2_0xE1,Op_2_0xE2,Op_2_0xE3,Op_2_0xE4,Op_2_0xE5,Op_2_0xE6,Op_2_0xE7,Op_2_0xE8,Op_2_0xE9,Op_2_0xEA,Op_2_0xEB,Op_2_0xEC,Op_2_0xED,Op_2_0xEE,Op_2_0xEF,pseudo47);
+pseudo47:asm volatile goto(".2byte (%l[Op_2_0xF0]-0b)/2\n\t.2byte (%l[Op_2_0xF1]-0b)/2\n\t.2byte (%l[Op_2_0xF2]-0b)/2\n\t.2byte (%l[Op_2_0xF3]-0b)/2\n\t.2byte (%l[Op_2_0xF4]-0b)/2\n\t.2byte (%l[Op_2_0xF5]-0b)/2\n\t.2byte (%l[Op_2_0xF6]-0b)/2\n\t.2byte (%l[Op_2_0xF7]-0b)/2\n\t.2byte (%l[Op_2_0xF8]-0b)/2\n\t.2byte (%l[Op_2_0xF9]-0b)/2\n\t.2byte (%l[Op_2_0xFA]-0b)/2\n\t.2byte (%l[Op_2_0xFB]-0b)/2\n\t.2byte (%l[Op_2_0xFC]-0b)/2\n\t.2byte (%l[Op_2_0xFD]-0b)/2\n\t.2byte (%l[Op_2_0xFE]-0b)/2\n\t.2byte (%l[Op_2_0xFF]-0b)/2\n\t"::"r"(cop):"cc":Op_2_0xF0,Op_2_0xF1,Op_2_0xF2,Op_2_0xF3,Op_2_0xF4,Op_2_0xF5,Op_2_0xF6,Op_2_0xF7,Op_2_0xF8,Op_2_0xF9,Op_2_0xFA,Op_2_0xFB,Op_2_0xFC,Op_2_0xFD,Op_2_0xFE,Op_2_0xFF,pseudo48);
+pseudo48:asm volatile goto(".2byte (%l[Op_3_0x00]-0b)/2\n\t.2byte (%l[Op_3_0x01]-0b)/2\n\t.2byte (%l[Op_3_0x02]-0b)/2\n\t.2byte (%l[Op_3_0x03]-0b)/2\n\t.2byte (%l[Op_3_0x04]-0b)/2\n\t.2byte (%l[Op_3_0x05]-0b)/2\n\t.2byte (%l[Op_3_0x06]-0b)/2\n\t.2byte (%l[Op_3_0x07]-0b)/2\n\t.2byte (%l[Op_3_0x08]-0b)/2\n\t.2byte (%l[Op_3_0x09]-0b)/2\n\t.2byte (%l[Op_3_0x0A]-0b)/2\n\t.2byte (%l[Op_3_0x0B]-0b)/2\n\t.2byte (%l[Op_3_0x0C]-0b)/2\n\t.2byte (%l[Op_3_0x0D]-0b)/2\n\t.2byte (%l[Op_3_0x0E]-0b)/2\n\t.2byte (%l[Op_3_0x0F]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0x00,Op_3_0x01,Op_3_0x02,Op_3_0x03,Op_3_0x04,Op_3_0x05,Op_3_0x06,Op_3_0x07,Op_3_0x08,Op_3_0x09,Op_3_0x0A,Op_3_0x0B,Op_3_0x0C,Op_3_0x0D,Op_3_0x0E,Op_3_0x0F,pseudo49);
+pseudo49:asm volatile goto(".2byte (%l[Op_3_0x10]-0b)/2\n\t.2byte (%l[Op_3_0x11]-0b)/2\n\t.2byte (%l[Op_3_0x12]-0b)/2\n\t.2byte (%l[Op_3_0x13]-0b)/2\n\t.2byte (%l[Op_3_0x14]-0b)/2\n\t.2byte (%l[Op_3_0x15]-0b)/2\n\t.2byte (%l[Op_3_0x16]-0b)/2\n\t.2byte (%l[Op_3_0x17]-0b)/2\n\t.2byte (%l[Op_3_0x18]-0b)/2\n\t.2byte (%l[Op_3_0x19]-0b)/2\n\t.2byte (%l[Op_3_0x1A]-0b)/2\n\t.2byte (%l[Op_3_0x1B]-0b)/2\n\t.2byte (%l[Op_3_0x1C]-0b)/2\n\t.2byte (%l[Op_3_0x1D]-0b)/2\n\t.2byte (%l[Op_3_0x1E]-0b)/2\n\t.2byte (%l[Op_3_0x1F]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0x10,Op_3_0x11,Op_3_0x12,Op_3_0x13,Op_3_0x14,Op_3_0x15,Op_3_0x16,Op_3_0x17,Op_3_0x18,Op_3_0x19,Op_3_0x1A,Op_3_0x1B,Op_3_0x1C,Op_3_0x1D,Op_3_0x1E,Op_3_0x1F,pseudo50);
+pseudo50:asm volatile goto(".2byte (%l[Op_3_0x20]-0b)/2\n\t.2byte (%l[Op_3_0x21]-0b)/2\n\t.2byte (%l[Op_3_0x22]-0b)/2\n\t.2byte (%l[Op_3_0x23]-0b)/2\n\t.2byte (%l[Op_3_0x24]-0b)/2\n\t.2byte (%l[Op_3_0x25]-0b)/2\n\t.2byte (%l[Op_3_0x26]-0b)/2\n\t.2byte (%l[Op_3_0x27]-0b)/2\n\t.2byte (%l[Op_3_0x28]-0b)/2\n\t.2byte (%l[Op_3_0x29]-0b)/2\n\t.2byte (%l[Op_3_0x2A]-0b)/2\n\t.2byte (%l[Op_3_0x2B]-0b)/2\n\t.2byte (%l[Op_3_0x2C]-0b)/2\n\t.2byte (%l[Op_3_0x2D]-0b)/2\n\t.2byte (%l[Op_3_0x2E]-0b)/2\n\t.2byte (%l[Op_3_0x2F]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0x20,Op_3_0x21,Op_3_0x22,Op_3_0x23,Op_3_0x24,Op_3_0x25,Op_3_0x26,Op_3_0x27,Op_3_0x28,Op_3_0x29,Op_3_0x2A,Op_3_0x2B,Op_3_0x2C,Op_3_0x2D,Op_3_0x2E,Op_3_0x2F,pseudo51);
+pseudo51:asm volatile goto(".2byte (%l[Op_3_0x30]-0b)/2\n\t.2byte (%l[Op_3_0x31]-0b)/2\n\t.2byte (%l[Op_3_0x32]-0b)/2\n\t.2byte (%l[Op_3_0x33]-0b)/2\n\t.2byte (%l[Op_3_0x34]-0b)/2\n\t.2byte (%l[Op_3_0x35]-0b)/2\n\t.2byte (%l[Op_3_0x36]-0b)/2\n\t.2byte (%l[Op_3_0x37]-0b)/2\n\t.2byte (%l[Op_3_0x38]-0b)/2\n\t.2byte (%l[Op_3_0x39]-0b)/2\n\t.2byte (%l[Op_3_0x3A]-0b)/2\n\t.2byte (%l[Op_3_0x3B]-0b)/2\n\t.2byte (%l[Op_3_0x3C]-0b)/2\n\t.2byte (%l[Op_3_0x3D]-0b)/2\n\t.2byte (%l[Op_3_0x3E]-0b)/2\n\t.2byte (%l[Op_3_0x3F]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0x30,Op_3_0x31,Op_3_0x32,Op_3_0x33,Op_3_0x34,Op_3_0x35,Op_3_0x36,Op_3_0x37,Op_3_0x38,Op_3_0x39,Op_3_0x3A,Op_3_0x3B,Op_3_0x3C,Op_3_0x3D,Op_3_0x3E,Op_3_0x3F,pseudo52);
+pseudo52:asm volatile goto(".2byte (%l[Op_3_0x40]-0b)/2\n\t.2byte (%l[Op_3_0x41]-0b)/2\n\t.2byte (%l[Op_3_0x42]-0b)/2\n\t.2byte (%l[Op_3_0x43]-0b)/2\n\t.2byte (%l[Op_3_0x44]-0b)/2\n\t.2byte (%l[Op_3_0x45]-0b)/2\n\t.2byte (%l[Op_3_0x46]-0b)/2\n\t.2byte (%l[Op_3_0x47]-0b)/2\n\t.2byte (%l[Op_3_0x48]-0b)/2\n\t.2byte (%l[Op_3_0x49]-0b)/2\n\t.2byte (%l[Op_3_0x4A]-0b)/2\n\t.2byte (%l[Op_3_0x4B]-0b)/2\n\t.2byte (%l[Op_3_0x4C]-0b)/2\n\t.2byte (%l[Op_3_0x4D]-0b)/2\n\t.2byte (%l[Op_3_0x4E]-0b)/2\n\t.2byte (%l[Op_3_0x4F]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0x40,Op_3_0x41,Op_3_0x42,Op_3_0x43,Op_3_0x44,Op_3_0x45,Op_3_0x46,Op_3_0x47,Op_3_0x48,Op_3_0x49,Op_3_0x4A,Op_3_0x4B,Op_3_0x4C,Op_3_0x4D,Op_3_0x4E,Op_3_0x4F,pseudo53);
+pseudo53:asm volatile goto(".2byte (%l[Op_3_0x50]-0b)/2\n\t.2byte (%l[Op_3_0x51]-0b)/2\n\t.2byte (%l[Op_3_0x52]-0b)/2\n\t.2byte (%l[Op_3_0x53]-0b)/2\n\t.2byte (%l[Op_3_0x54]-0b)/2\n\t.2byte (%l[Op_3_0x55]-0b)/2\n\t.2byte (%l[Op_3_0x56]-0b)/2\n\t.2byte (%l[Op_3_0x57]-0b)/2\n\t.2byte (%l[Op_3_0x58]-0b)/2\n\t.2byte (%l[Op_3_0x59]-0b)/2\n\t.2byte (%l[Op_3_0x5A]-0b)/2\n\t.2byte (%l[Op_3_0x5B]-0b)/2\n\t.2byte (%l[Op_3_0x5C]-0b)/2\n\t.2byte (%l[Op_3_0x5D]-0b)/2\n\t.2byte (%l[Op_3_0x5E]-0b)/2\n\t.2byte (%l[Op_3_0x5F]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0x50,Op_3_0x51,Op_3_0x52,Op_3_0x53,Op_3_0x54,Op_3_0x55,Op_3_0x56,Op_3_0x57,Op_3_0x58,Op_3_0x59,Op_3_0x5A,Op_3_0x5B,Op_3_0x5C,Op_3_0x5D,Op_3_0x5E,Op_3_0x5F,pseudo54);
+pseudo54:asm volatile goto(".2byte (%l[Op_3_0x60]-0b)/2\n\t.2byte (%l[Op_3_0x61]-0b)/2\n\t.2byte (%l[Op_3_0x62]-0b)/2\n\t.2byte (%l[Op_3_0x63]-0b)/2\n\t.2byte (%l[Op_3_0x64]-0b)/2\n\t.2byte (%l[Op_3_0x65]-0b)/2\n\t.2byte (%l[Op_3_0x66]-0b)/2\n\t.2byte (%l[Op_3_0x67]-0b)/2\n\t.2byte (%l[Op_3_0x68]-0b)/2\n\t.2byte (%l[Op_3_0x69]-0b)/2\n\t.2byte (%l[Op_3_0x6A]-0b)/2\n\t.2byte (%l[Op_3_0x6B]-0b)/2\n\t.2byte (%l[Op_3_0x6C]-0b)/2\n\t.2byte (%l[Op_3_0x6D]-0b)/2\n\t.2byte (%l[Op_3_0x6E]-0b)/2\n\t.2byte (%l[Op_3_0x6F]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0x60,Op_3_0x61,Op_3_0x62,Op_3_0x63,Op_3_0x64,Op_3_0x65,Op_3_0x66,Op_3_0x67,Op_3_0x68,Op_3_0x69,Op_3_0x6A,Op_3_0x6B,Op_3_0x6C,Op_3_0x6D,Op_3_0x6E,Op_3_0x6F,pseudo55);
+pseudo55:asm volatile goto(".2byte (%l[Op_3_0x70]-0b)/2\n\t.2byte (%l[Op_3_0x71]-0b)/2\n\t.2byte (%l[Op_3_0x72]-0b)/2\n\t.2byte (%l[Op_3_0x73]-0b)/2\n\t.2byte (%l[Op_3_0x74]-0b)/2\n\t.2byte (%l[Op_3_0x75]-0b)/2\n\t.2byte (%l[Op_3_0x76]-0b)/2\n\t.2byte (%l[Op_3_0x77]-0b)/2\n\t.2byte (%l[Op_3_0x78]-0b)/2\n\t.2byte (%l[Op_3_0x79]-0b)/2\n\t.2byte (%l[Op_3_0x7A]-0b)/2\n\t.2byte (%l[Op_3_0x7B]-0b)/2\n\t.2byte (%l[Op_3_0x7C]-0b)/2\n\t.2byte (%l[Op_3_0x7D]-0b)/2\n\t.2byte (%l[Op_3_0x7E]-0b)/2\n\t.2byte (%l[Op_3_0x7F]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0x70,Op_3_0x71,Op_3_0x72,Op_3_0x73,Op_3_0x74,Op_3_0x75,Op_3_0x76,Op_3_0x77,Op_3_0x78,Op_3_0x79,Op_3_0x7A,Op_3_0x7B,Op_3_0x7C,Op_3_0x7D,Op_3_0x7E,Op_3_0x7F,pseudo56);
+pseudo56:asm volatile goto(".2byte (%l[Op_3_0x80]-0b)/2\n\t.2byte (%l[Op_3_0x81]-0b)/2\n\t.2byte (%l[Op_3_0x82]-0b)/2\n\t.2byte (%l[Op_3_0x83]-0b)/2\n\t.2byte (%l[Op_3_0x84]-0b)/2\n\t.2byte (%l[Op_3_0x85]-0b)/2\n\t.2byte (%l[Op_3_0x86]-0b)/2\n\t.2byte (%l[Op_3_0x87]-0b)/2\n\t.2byte (%l[Op_3_0x88]-0b)/2\n\t.2byte (%l[Op_3_0x89]-0b)/2\n\t.2byte (%l[Op_3_0x8A]-0b)/2\n\t.2byte (%l[Op_3_0x8B]-0b)/2\n\t.2byte (%l[Op_3_0x8C]-0b)/2\n\t.2byte (%l[Op_3_0x8D]-0b)/2\n\t.2byte (%l[Op_3_0x8E]-0b)/2\n\t.2byte (%l[Op_3_0x8F]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0x80,Op_3_0x81,Op_3_0x82,Op_3_0x83,Op_3_0x84,Op_3_0x85,Op_3_0x86,Op_3_0x87,Op_3_0x88,Op_3_0x89,Op_3_0x8A,Op_3_0x8B,Op_3_0x8C,Op_3_0x8D,Op_3_0x8E,Op_3_0x8F,pseudo57);
+pseudo57:asm volatile goto(".2byte (%l[Op_3_0x90]-0b)/2\n\t.2byte (%l[Op_3_0x91]-0b)/2\n\t.2byte (%l[Op_3_0x92]-0b)/2\n\t.2byte (%l[Op_3_0x93]-0b)/2\n\t.2byte (%l[Op_3_0x94]-0b)/2\n\t.2byte (%l[Op_3_0x95]-0b)/2\n\t.2byte (%l[Op_3_0x96]-0b)/2\n\t.2byte (%l[Op_3_0x97]-0b)/2\n\t.2byte (%l[Op_3_0x98]-0b)/2\n\t.2byte (%l[Op_3_0x99]-0b)/2\n\t.2byte (%l[Op_3_0x9A]-0b)/2\n\t.2byte (%l[Op_3_0x9B]-0b)/2\n\t.2byte (%l[Op_3_0x9C]-0b)/2\n\t.2byte (%l[Op_3_0x9D]-0b)/2\n\t.2byte (%l[Op_3_0x9E]-0b)/2\n\t.2byte (%l[Op_3_0x9F]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0x90,Op_3_0x91,Op_3_0x92,Op_3_0x93,Op_3_0x94,Op_3_0x95,Op_3_0x96,Op_3_0x97,Op_3_0x98,Op_3_0x99,Op_3_0x9A,Op_3_0x9B,Op_3_0x9C,Op_3_0x9D,Op_3_0x9E,Op_3_0x9F,pseudo58);
+pseudo58:asm volatile goto(".2byte (%l[Op_3_0xA0]-0b)/2\n\t.2byte (%l[Op_3_0xA1]-0b)/2\n\t.2byte (%l[Op_3_0xA2]-0b)/2\n\t.2byte (%l[Op_3_0xA3]-0b)/2\n\t.2byte (%l[Op_3_0xA4]-0b)/2\n\t.2byte (%l[Op_3_0xA5]-0b)/2\n\t.2byte (%l[Op_3_0xA6]-0b)/2\n\t.2byte (%l[Op_3_0xA7]-0b)/2\n\t.2byte (%l[Op_3_0xA8]-0b)/2\n\t.2byte (%l[Op_3_0xA9]-0b)/2\n\t.2byte (%l[Op_3_0xAA]-0b)/2\n\t.2byte (%l[Op_3_0xAB]-0b)/2\n\t.2byte (%l[Op_3_0xAC]-0b)/2\n\t.2byte (%l[Op_3_0xAD]-0b)/2\n\t.2byte (%l[Op_3_0xAE]-0b)/2\n\t.2byte (%l[Op_3_0xAF]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0xA0,Op_3_0xA1,Op_3_0xA2,Op_3_0xA3,Op_3_0xA4,Op_3_0xA5,Op_3_0xA6,Op_3_0xA7,Op_3_0xA8,Op_3_0xA9,Op_3_0xAA,Op_3_0xAB,Op_3_0xAC,Op_3_0xAD,Op_3_0xAE,Op_3_0xAF,pseudo59);
+pseudo59:asm volatile goto(".2byte (%l[Op_3_0xB0]-0b)/2\n\t.2byte (%l[Op_3_0xB1]-0b)/2\n\t.2byte (%l[Op_3_0xB2]-0b)/2\n\t.2byte (%l[Op_3_0xB3]-0b)/2\n\t.2byte (%l[Op_3_0xB4]-0b)/2\n\t.2byte (%l[Op_3_0xB5]-0b)/2\n\t.2byte (%l[Op_3_0xB6]-0b)/2\n\t.2byte (%l[Op_3_0xB7]-0b)/2\n\t.2byte (%l[Op_3_0xB8]-0b)/2\n\t.2byte (%l[Op_3_0xB9]-0b)/2\n\t.2byte (%l[Op_3_0xBA]-0b)/2\n\t.2byte (%l[Op_3_0xBB]-0b)/2\n\t.2byte (%l[Op_3_0xBC]-0b)/2\n\t.2byte (%l[Op_3_0xBD]-0b)/2\n\t.2byte (%l[Op_3_0xBE]-0b)/2\n\t.2byte (%l[Op_3_0xBF]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0xB0,Op_3_0xB1,Op_3_0xB2,Op_3_0xB3,Op_3_0xB4,Op_3_0xB5,Op_3_0xB6,Op_3_0xB7,Op_3_0xB8,Op_3_0xB9,Op_3_0xBA,Op_3_0xBB,Op_3_0xBC,Op_3_0xBD,Op_3_0xBE,Op_3_0xBF,pseudo60);
+pseudo60:asm volatile goto(".2byte (%l[Op_3_0xC0]-0b)/2\n\t.2byte (%l[Op_3_0xC1]-0b)/2\n\t.2byte (%l[Op_3_0xC2]-0b)/2\n\t.2byte (%l[Op_3_0xC3]-0b)/2\n\t.2byte (%l[Op_3_0xC4]-0b)/2\n\t.2byte (%l[Op_3_0xC5]-0b)/2\n\t.2byte (%l[Op_3_0xC6]-0b)/2\n\t.2byte (%l[Op_3_0xC7]-0b)/2\n\t.2byte (%l[Op_3_0xC8]-0b)/2\n\t.2byte (%l[Op_3_0xC9]-0b)/2\n\t.2byte (%l[Op_3_0xCA]-0b)/2\n\t.2byte (%l[Op_3_0xCB]-0b)/2\n\t.2byte (%l[Op_3_0xCC]-0b)/2\n\t.2byte (%l[Op_3_0xCD]-0b)/2\n\t.2byte (%l[Op_3_0xCE]-0b)/2\n\t.2byte (%l[Op_3_0xCF]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0xC0,Op_3_0xC1,Op_3_0xC2,Op_3_0xC3,Op_3_0xC4,Op_3_0xC5,Op_3_0xC6,Op_3_0xC7,Op_3_0xC8,Op_3_0xC9,Op_3_0xCA,Op_3_0xCB,Op_3_0xCC,Op_3_0xCD,Op_3_0xCE,Op_3_0xCF,pseudo61);
+pseudo61:asm volatile goto(".2byte (%l[Op_3_0xD0]-0b)/2\n\t.2byte (%l[Op_3_0xD1]-0b)/2\n\t.2byte (%l[Op_3_0xD2]-0b)/2\n\t.2byte (%l[Op_3_0xD3]-0b)/2\n\t.2byte (%l[Op_3_0xD4]-0b)/2\n\t.2byte (%l[Op_3_0xD5]-0b)/2\n\t.2byte (%l[Op_3_0xD6]-0b)/2\n\t.2byte (%l[Op_3_0xD7]-0b)/2\n\t.2byte (%l[Op_3_0xD8]-0b)/2\n\t.2byte (%l[Op_3_0xD9]-0b)/2\n\t.2byte (%l[Op_3_0xDA]-0b)/2\n\t.2byte (%l[Op_3_0xDB]-0b)/2\n\t.2byte (%l[Op_3_0xDC]-0b)/2\n\t.2byte (%l[Op_3_0xDD]-0b)/2\n\t.2byte (%l[Op_3_0xDE]-0b)/2\n\t.2byte (%l[Op_3_0xDF]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0xD0,Op_3_0xD1,Op_3_0xD2,Op_3_0xD3,Op_3_0xD4,Op_3_0xD5,Op_3_0xD6,Op_3_0xD7,Op_3_0xD8,Op_3_0xD9,Op_3_0xDA,Op_3_0xDB,Op_3_0xDC,Op_3_0xDD,Op_3_0xDE,Op_3_0xDF,pseudo62);
+pseudo62:asm volatile goto(".2byte (%l[Op_3_0xE0]-0b)/2\n\t.2byte (%l[Op_3_0xE1]-0b)/2\n\t.2byte (%l[Op_3_0xE2]-0b)/2\n\t.2byte (%l[Op_3_0xE3]-0b)/2\n\t.2byte (%l[Op_3_0xE4]-0b)/2\n\t.2byte (%l[Op_3_0xE5]-0b)/2\n\t.2byte (%l[Op_3_0xE6]-0b)/2\n\t.2byte (%l[Op_3_0xE7]-0b)/2\n\t.2byte (%l[Op_3_0xE8]-0b)/2\n\t.2byte (%l[Op_3_0xE9]-0b)/2\n\t.2byte (%l[Op_3_0xEA]-0b)/2\n\t.2byte (%l[Op_3_0xEB]-0b)/2\n\t.2byte (%l[Op_3_0xEC]-0b)/2\n\t.2byte (%l[Op_3_0xED]-0b)/2\n\t.2byte (%l[Op_3_0xEE]-0b)/2\n\t.2byte (%l[Op_3_0xEF]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0xE0,Op_3_0xE1,Op_3_0xE2,Op_3_0xE3,Op_3_0xE4,Op_3_0xE5,Op_3_0xE6,Op_3_0xE7,Op_3_0xE8,Op_3_0xE9,Op_3_0xEA,Op_3_0xEB,Op_3_0xEC,Op_3_0xED,Op_3_0xEE,Op_3_0xEF,pseudo63);
+pseudo63:asm volatile goto(".2byte (%l[Op_3_0xF0]-0b)/2\n\t.2byte (%l[Op_3_0xF1]-0b)/2\n\t.2byte (%l[Op_3_0xF2]-0b)/2\n\t.2byte (%l[Op_3_0xF3]-0b)/2\n\t.2byte (%l[Op_3_0xF4]-0b)/2\n\t.2byte (%l[Op_3_0xF5]-0b)/2\n\t.2byte (%l[Op_3_0xF6]-0b)/2\n\t.2byte (%l[Op_3_0xF7]-0b)/2\n\t.2byte (%l[Op_3_0xF8]-0b)/2\n\t.2byte (%l[Op_3_0xF9]-0b)/2\n\t.2byte (%l[Op_3_0xFA]-0b)/2\n\t.2byte (%l[Op_3_0xFB]-0b)/2\n\t.2byte (%l[Op_3_0xFC]-0b)/2\n\t.2byte (%l[Op_3_0xFD]-0b)/2\n\t.2byte (%l[Op_3_0xFE]-0b)/2\n\t.2byte (%l[Op_3_0xFF]-0b)/2\n\t"::"r"(cop):"cc":Op_3_0xF0,Op_3_0xF1,Op_3_0xF2,Op_3_0xF3,Op_3_0xF4,Op_3_0xF5,Op_3_0xF6,Op_3_0xF7,Op_3_0xF8,Op_3_0xF9,Op_3_0xFA,Op_3_0xFB,Op_3_0xFC,Op_3_0xFD,Op_3_0xFE,Op_3_0xFF,pseudo64);
+pseudo64:asm volatile goto("1: .2byte ((1b-0b)*32)-1\n\t"::::Op_3_0xFF);
+{
+
+#else
   #define OPCASE_PFX(pfx, o) case ((pfx) << 8) + (o)
-  #define OPCASE(o) OPCASE_PFX(0, o): OPCASE_PFX(1, o): OPCASE_PFX(2, o): OPCASE_PFX(3, o)
-
-  #define OPCASE_NP(o) OPCASE_PFX(0, o)
-  #define OPCASE_3D(o) OPCASE_PFX(1, o)
-  #define OPCASE_3E(o) OPCASE_PFX(2, o)
-  #define OPCASE_3F(o) OPCASE_PFX(3, o)
-
-  #define OPCASE_PFX_Xn(pfx, o)	\
-	OPCASE_PFX(pfx, (o) + 0x0): OPCASE_PFX(pfx, (o) + 0x1): OPCASE_PFX(pfx, (o) + 0x2): OPCASE_PFX(pfx, (o) + 0x3): OPCASE_PFX(pfx, (o) + 0x4): OPCASE_PFX(pfx, (o) + 0x5): OPCASE_PFX(pfx, (o) + 0x6): OPCASE_PFX(pfx, (o) + 0x7):	\
-	OPCASE_PFX(pfx, (o) + 0x8): OPCASE_PFX(pfx, (o) + 0x9): OPCASE_PFX(pfx, (o) + 0xA): OPCASE_PFX(pfx, (o) + 0xB): OPCASE_PFX(pfx, (o) + 0xC): OPCASE_PFX(pfx, (o) + 0xD): OPCASE_PFX(pfx, (o) + 0xE): OPCASE_PFX(pfx, (o) + 0xF)
-
-  #define OPCASE_Xn(o) OPCASE_PFX_Xn(0, o): OPCASE_PFX_Xn(1, o): OPCASE_PFX_Xn(2, o): OPCASE_PFX_Xn(3, o)
-
-  #define OPCASE_NP_Xn(o) OPCASE_PFX_Xn(0, o)
-  #define OPCASE_3D_Xn(o) OPCASE_PFX_Xn(1, o)
-  #define OPCASE_3E_Xn(o) OPCASE_PFX_Xn(2, o)
-  #define OPCASE_3F_Xn(o) OPCASE_PFX_Xn(3, o)
 
   // 1?, 2?, 5?, 6?, 7?, 8?, 9?, C?, 
 #if 0
@@ -940,7 +1166,120 @@ static void Update(uint32 timestamp)
   {
    default:
 	SNES_DBG("[SuperFX] Unknown op 0x%03x\n", (unsigned)(PrefixSL8 + opcode));
-	break;
+	goto OpEnd;
+#endif
+
+  #define OPCASE(o) OPCASE_PFX(0, o): OPCASE_PFX(1, o): OPCASE_PFX(2, o): OPCASE_PFX(3, o)
+  #define OPCASE_NP(o) OPCASE_PFX(0, o)
+  #define OPCASE_3D(o) OPCASE_PFX(1, o)
+  #define OPCASE_3E(o) OPCASE_PFX(2, o)
+  #define OPCASE_3F(o) OPCASE_PFX(3, o)
+
+   OPCASE_PFX(1, 0xDF):
+   OPCASE_PFX(2, 0x30):
+   OPCASE_PFX(2, 0x31):
+   OPCASE_PFX(2, 0x32):
+   OPCASE_PFX(2, 0x33):
+   OPCASE_PFX(2, 0x34):
+   OPCASE_PFX(2, 0x35):
+   OPCASE_PFX(2, 0x36):
+   OPCASE_PFX(2, 0x37):
+   OPCASE_PFX(2, 0x38):
+   OPCASE_PFX(2, 0x39):
+   OPCASE_PFX(2, 0x3A):
+   OPCASE_PFX(2, 0x3B):
+   OPCASE_PFX(2, 0x40):
+   OPCASE_PFX(2, 0x41):
+   OPCASE_PFX(2, 0x42):
+   OPCASE_PFX(2, 0x43):
+   OPCASE_PFX(2, 0x44):
+   OPCASE_PFX(2, 0x45):
+   OPCASE_PFX(2, 0x46):
+   OPCASE_PFX(2, 0x47):
+   OPCASE_PFX(2, 0x48):
+   OPCASE_PFX(2, 0x49):
+   OPCASE_PFX(2, 0x4A):
+   OPCASE_PFX(2, 0x4B):
+   OPCASE_PFX(2, 0x4C):
+   OPCASE_PFX(2, 0x4E):
+   OPCASE_PFX(2, 0x96):
+   OPCASE_PFX(2, 0x98):
+   OPCASE_PFX(2, 0x99):
+   OPCASE_PFX(2, 0x9A):
+   OPCASE_PFX(2, 0x9B):
+   OPCASE_PFX(2, 0x9C):
+   OPCASE_PFX(2, 0x9D):
+   OPCASE_PFX(2, 0x9F):
+   OPCASE_PFX(3, 0x30):
+   OPCASE_PFX(3, 0x31):
+   OPCASE_PFX(3, 0x32):
+   OPCASE_PFX(3, 0x33):
+   OPCASE_PFX(3, 0x34):
+   OPCASE_PFX(3, 0x35):
+   OPCASE_PFX(3, 0x36):
+   OPCASE_PFX(3, 0x37):
+   OPCASE_PFX(3, 0x38):
+   OPCASE_PFX(3, 0x39):
+   OPCASE_PFX(3, 0x3A):
+   OPCASE_PFX(3, 0x3B):
+   OPCASE_PFX(3, 0x40):
+   OPCASE_PFX(3, 0x41):
+   OPCASE_PFX(3, 0x42):
+   OPCASE_PFX(3, 0x43):
+   OPCASE_PFX(3, 0x44):
+   OPCASE_PFX(3, 0x45):
+   OPCASE_PFX(3, 0x46):
+   OPCASE_PFX(3, 0x47):
+   OPCASE_PFX(3, 0x48):
+   OPCASE_PFX(3, 0x49):
+   OPCASE_PFX(3, 0x4A):
+   OPCASE_PFX(3, 0x4B):
+   OPCASE_PFX(3, 0x4C):
+   OPCASE_PFX(3, 0x4E):
+   OPCASE_PFX(3, 0x96):
+   OPCASE_PFX(3, 0x98):
+   OPCASE_PFX(3, 0x99):
+   OPCASE_PFX(3, 0x9A):
+   OPCASE_PFX(3, 0x9B):
+   OPCASE_PFX(3, 0x9C):
+   OPCASE_PFX(3, 0x9D):
+   OPCASE_PFX(3, 0x9F):
+   OPCASE_PFX(3, 0xA0):
+   OPCASE_PFX(3, 0xA1):
+   OPCASE_PFX(3, 0xA2):
+   OPCASE_PFX(3, 0xA3):
+   OPCASE_PFX(3, 0xA4):
+   OPCASE_PFX(3, 0xA5):
+   OPCASE_PFX(3, 0xA6):
+   OPCASE_PFX(3, 0xA7):
+   OPCASE_PFX(3, 0xA8):
+   OPCASE_PFX(3, 0xA9):
+   OPCASE_PFX(3, 0xAA):
+   OPCASE_PFX(3, 0xAB):
+   OPCASE_PFX(3, 0xAC):
+   OPCASE_PFX(3, 0xAD):
+   OPCASE_PFX(3, 0xAE):
+   OPCASE_PFX(3, 0xAF):
+   OPCASE_PFX(3, 0xF0):
+   OPCASE_PFX(3, 0xF1):
+   OPCASE_PFX(3, 0xF2):
+   OPCASE_PFX(3, 0xF3):
+   OPCASE_PFX(3, 0xF4):
+   OPCASE_PFX(3, 0xF5):
+   OPCASE_PFX(3, 0xF6):
+   OPCASE_PFX(3, 0xF7):
+   OPCASE_PFX(3, 0xF8):
+   OPCASE_PFX(3, 0xF9):
+   OPCASE_PFX(3, 0xFA):
+   OPCASE_PFX(3, 0xFB):
+   OPCASE_PFX(3, 0xFC):
+   OPCASE_PFX(3, 0xFD):
+   OPCASE_PFX(3, 0xFE):
+   OPCASE_PFX(3, 0xFF):
+   {
+
+   }
+   goto OpEnd;
 
    //
    // GETB
@@ -951,7 +1290,7 @@ static void Update(uint32 timestamp)
 
     WriteR(Rd, tmp);
    }
-   break;
+   goto OpEnd;
 
    //
    // GETBH
@@ -962,7 +1301,7 @@ static void Update(uint32 timestamp)
 
     WriteR(Rd, (ReadR(Rs) & 0x00FF) + (tmp << 8));
    }
-   break;
+   goto OpEnd;
 
    //
    // GETBL
@@ -973,7 +1312,7 @@ static void Update(uint32 timestamp)
 
     WriteR(Rd, (ReadR(Rs) & 0xFF00) + (tmp << 0));
    }
-   break;
+   goto OpEnd;
 
    //
    // GETBS
@@ -984,7 +1323,7 @@ static void Update(uint32 timestamp)
 
     WriteR(Rd, (int8)tmp);
    }
-   break;
+   goto OpEnd;
 
    //
    // LDB
@@ -1000,7 +1339,7 @@ static void Update(uint32 timestamp)
 
     WriteR(Rd, tmp);
    }
-   break;
+   goto OpEnd;
 
    //
    // LDW
@@ -1016,28 +1355,28 @@ static void Update(uint32 timestamp)
 
     WriteR(Rd, tmp);
    }
-   break;
+   goto OpEnd;
 
    //
    //  LM
    //
-   OPCASE_3D_Xn(0xF0):
+   OPCASE_3D(0xF0): OPCASE_3D(0xF1): OPCASE_3D(0xF2): OPCASE_3D(0xF3): OPCASE_3D(0xF4): OPCASE_3D(0xF5): OPCASE_3D(0xF6): OPCASE_3D(0xF7): OPCASE_3D(0xF8): OPCASE_3D(0xF9): OPCASE_3D(0xFA): OPCASE_3D(0xFB): OPCASE_3D(0xFC): OPCASE_3D(0xFD): OPCASE_3D(0xFE): OPCASE_3D(0xFF):
    {
-    const uint16 offs = ReadOp16();
+    const uint16 offs = ReadOp16<EnableCache>();
     const uint16 tmp = ReadRAM16(offs);
 
     LastRAMOffset = offs;
 
     WriteR(opcode & 0xF, tmp);
    }
-   break;
+   goto OpEnd;
 
    //
    // LMS
    //
-   OPCASE_3D_Xn(0xA0):
+   OPCASE_3D(0xA0): OPCASE_3D(0xA1): OPCASE_3D(0xA2): OPCASE_3D(0xA3): OPCASE_3D(0xA4): OPCASE_3D(0xA5): OPCASE_3D(0xA6): OPCASE_3D(0xA7): OPCASE_3D(0xA8): OPCASE_3D(0xA9): OPCASE_3D(0xAA): OPCASE_3D(0xAB): OPCASE_3D(0xAC): OPCASE_3D(0xAD): OPCASE_3D(0xAE): OPCASE_3D(0xAF):
    {
-    const uint16 offs = ReadOp() << 1;
+    const uint16 offs = ReadOp<EnableCache>() << 1;
     const uint16 tmp = ReadRAM16(offs);
 
     //printf("%04x\n", offs);
@@ -1046,7 +1385,7 @@ static void Update(uint32 timestamp)
 
     WriteR(opcode & 0xF, tmp);
    }
-   break;
+   goto OpEnd;
 
    //
    // STB
@@ -1056,7 +1395,7 @@ static void Update(uint32 timestamp)
    {
     WriteRAM8(R[opcode & 0xF], ReadR(Rs));
    }
-   break;
+   goto OpEnd;
 
    //
    // STW
@@ -1066,29 +1405,29 @@ static void Update(uint32 timestamp)
    {
     WriteRAM16(R[opcode & 0xF], ReadR(Rs));
    }
-   break;
+   goto OpEnd;
 
    //
    // SM
    //
-   OPCASE_3E_Xn(0xF0):
+   OPCASE_3E(0xF0): OPCASE_3E(0xF1): OPCASE_3E(0xF2): OPCASE_3E(0xF3): OPCASE_3E(0xF4): OPCASE_3E(0xF5): OPCASE_3E(0xF6): OPCASE_3E(0xF7): OPCASE_3E(0xF8): OPCASE_3E(0xF9): OPCASE_3E(0xFA): OPCASE_3E(0xFB): OPCASE_3E(0xFC): OPCASE_3E(0xFD): OPCASE_3E(0xFE): OPCASE_3E(0xFF):
    {
-    const uint16 offs = ReadOp16();
+    const uint16 offs = ReadOp16<EnableCache>();
 
     WriteRAM16(offs, ReadR(opcode & 0xF));
    }
-   break;
+   goto OpEnd;
 
    //
    // SMS
    //
-   OPCASE_3E_Xn(0xA0):
+   OPCASE_3E(0xA0): OPCASE_3E(0xA1): OPCASE_3E(0xA2): OPCASE_3E(0xA3): OPCASE_3E(0xA4): OPCASE_3E(0xA5): OPCASE_3E(0xA6): OPCASE_3E(0xA7): OPCASE_3E(0xA8): OPCASE_3E(0xA9): OPCASE_3E(0xAA): OPCASE_3E(0xAB): OPCASE_3E(0xAC): OPCASE_3E(0xAD): OPCASE_3E(0xAE): OPCASE_3E(0xAF):
    {
-    const uint16 offs = ReadOp() << 1;
+    const uint16 offs = ReadOp<EnableCache>() << 1;
 
     WriteRAM16(offs, ReadR(opcode & 0xF));
    }
-   break;
+   goto OpEnd;
 
    //
    // SBK
@@ -1097,29 +1436,29 @@ static void Update(uint32 timestamp)
    {
     WriteRAM16(LastRAMOffset, ReadR(Rs));
    }
-   break;
+   goto OpEnd;
 
    //
    // IBT
    //
-   OPCASE_NP_Xn(0xA0):
+   OPCASE_NP(0xA0): OPCASE_NP(0xA1): OPCASE_NP(0xA2): OPCASE_NP(0xA3): OPCASE_NP(0xA4): OPCASE_NP(0xA5): OPCASE_NP(0xA6): OPCASE_NP(0xA7): OPCASE_NP(0xA8): OPCASE_NP(0xA9): OPCASE_NP(0xAA): OPCASE_NP(0xAB): OPCASE_NP(0xAC): OPCASE_NP(0xAD): OPCASE_NP(0xAE): OPCASE_NP(0xAF):
    {
-    const uint8 imm = ReadOp();
+    const uint8 imm = ReadOp<EnableCache>();
 
     WriteR(opcode & 0xF, (int8)imm);
    }
-   break;
+   goto OpEnd;
 
    //
    // IWT
    //
-   OPCASE_NP_Xn(0xF0):
+   OPCASE_NP(0xF0): OPCASE_NP(0xF1): OPCASE_NP(0xF2): OPCASE_NP(0xF3): OPCASE_NP(0xF4): OPCASE_NP(0xF5): OPCASE_NP(0xF6): OPCASE_NP(0xF7): OPCASE_NP(0xF8): OPCASE_NP(0xF9): OPCASE_NP(0xFA): OPCASE_NP(0xFB): OPCASE_NP(0xFC): OPCASE_NP(0xFD): OPCASE_NP(0xFE): OPCASE_NP(0xFF):
    {
-    const uint16 imm = ReadOp16();
+    const uint16 imm = ReadOp16<EnableCache>();
 
     WriteR(opcode & 0xF, imm);
    }
-   break;
+   goto OpEnd;
 
    //
    // RAMB
@@ -1128,7 +1467,7 @@ static void Update(uint32 timestamp)
    {
     RAMBR = ReadR(Rs) & 0x1;
    }
-   break;
+   goto OpEnd;
 
    //
    // ROMB
@@ -1138,13 +1477,13 @@ static void Update(uint32 timestamp)
     ROMBR = ReadR(Rs) & 0xFF;
 //	assert(!(ROMBR & 0x80));
    }
-   break;
+   goto OpEnd;
 
-   OPCASE_3D(0x4E): CMODE(); break;
-   OPCASE_NP(0x4E): COLOR(); break;
-   OPCASE_NP(0xDF): GETC(); break;
-   OPCASE_NP(0x4C): PLOT(); break;
-   OPCASE_3D(0x4C): RPIX(); break;
+   OPCASE_3D(0x4E): CMODE(); goto OpEnd;
+   OPCASE_NP(0x4E): COLOR(); goto OpEnd;
+   OPCASE_NP(0xDF): GETC(); goto OpEnd;
+   OPCASE_NP(0x4C): PLOT(); goto OpEnd;
+   OPCASE_3D(0x4C): RPIX(); goto OpEnd;
 
    //
    //
@@ -1152,69 +1491,69 @@ static void Update(uint32 timestamp)
    //
    //
 
-   OPCASE(0x00): STOP(); superfx_timestamp = timestamp; break; // STOP
-   OPCASE(0x01): break; // NOP
-   OPCASE(0x02): CACHE(); break; // CACHE
+   OPCASE(0x00): STOP(); superfx_timestamp = timestamp; goto OpEnd; // STOP
+   OPCASE(0x01): goto OpEnd; // NOP
+   OPCASE(0x02): CACHE<EnableCache>(); goto OpEnd; // CACHE
 
-   OPCASE_NP_Xn(0x50): ADD(ReadR(opcode & 0xF)); break;
-   OPCASE_3E_Xn(0x50): ADD(opcode & 0xF); break;
+   OPCASE_NP(0x50): OPCASE_NP(0x51): OPCASE_NP(0x52): OPCASE_NP(0x53): OPCASE_NP(0x54): OPCASE_NP(0x55): OPCASE_NP(0x56): OPCASE_NP(0x57): OPCASE_NP(0x58): OPCASE_NP(0x59): OPCASE_NP(0x5A): OPCASE_NP(0x5B): OPCASE_NP(0x5C): OPCASE_NP(0x5D): OPCASE_NP(0x5E): OPCASE_NP(0x5F): ADD(ReadR(opcode & 0xF)); goto OpEnd;
+   OPCASE_3E(0x50): OPCASE_3E(0x51): OPCASE_3E(0x52): OPCASE_3E(0x53): OPCASE_3E(0x54): OPCASE_3E(0x55): OPCASE_3E(0x56): OPCASE_3E(0x57): OPCASE_3E(0x58): OPCASE_3E(0x59): OPCASE_3E(0x5A): OPCASE_3E(0x5B): OPCASE_3E(0x5C): OPCASE_3E(0x5D): OPCASE_3E(0x5E): OPCASE_3E(0x5F): ADD(opcode & 0xF); goto OpEnd;
 
-   OPCASE_3D_Xn(0x50): ADC(ReadR(opcode & 0xF)); break;
-   OPCASE_3F_Xn(0x50): ADC(opcode & 0xF); break;
+   OPCASE_3D(0x50): OPCASE_3D(0x51): OPCASE_3D(0x52): OPCASE_3D(0x53): OPCASE_3D(0x54): OPCASE_3D(0x55): OPCASE_3D(0x56): OPCASE_3D(0x57): OPCASE_3D(0x58): OPCASE_3D(0x59): OPCASE_3D(0x5A): OPCASE_3D(0x5B): OPCASE_3D(0x5C): OPCASE_3D(0x5D): OPCASE_3D(0x5E): OPCASE_3D(0x5F): ADC(ReadR(opcode & 0xF)); goto OpEnd;
+   OPCASE_3F(0x50): OPCASE_3F(0x51): OPCASE_3F(0x52): OPCASE_3F(0x53): OPCASE_3F(0x54): OPCASE_3F(0x55): OPCASE_3F(0x56): OPCASE_3F(0x57): OPCASE_3F(0x58): OPCASE_3F(0x59): OPCASE_3F(0x5A): OPCASE_3F(0x5B): OPCASE_3F(0x5C): OPCASE_3F(0x5D): OPCASE_3F(0x5E): OPCASE_3F(0x5F): ADC(opcode & 0xF); goto OpEnd;
 
-   OPCASE_NP_Xn(0x60): SUB(ReadR(opcode & 0xF)); break;
-   OPCASE_3E_Xn(0x60): SUB(opcode & 0xF); break;
+   OPCASE_NP(0x60): OPCASE_NP(0x61): OPCASE_NP(0x62): OPCASE_NP(0x63): OPCASE_NP(0x64): OPCASE_NP(0x65): OPCASE_NP(0x66): OPCASE_NP(0x67): OPCASE_NP(0x68): OPCASE_NP(0x69): OPCASE_NP(0x6A): OPCASE_NP(0x6B): OPCASE_NP(0x6C): OPCASE_NP(0x6D): OPCASE_NP(0x6E): OPCASE_NP(0x6F): SUB(ReadR(opcode & 0xF)); goto OpEnd;
+   OPCASE_3E(0x60): OPCASE_3E(0x61): OPCASE_3E(0x62): OPCASE_3E(0x63): OPCASE_3E(0x64): OPCASE_3E(0x65): OPCASE_3E(0x66): OPCASE_3E(0x67): OPCASE_3E(0x68): OPCASE_3E(0x69): OPCASE_3E(0x6A): OPCASE_3E(0x6B): OPCASE_3E(0x6C): OPCASE_3E(0x6D): OPCASE_3E(0x6E): OPCASE_3E(0x6F): SUB(opcode & 0xF); goto OpEnd;
 
-   OPCASE_3D_Xn(0x60): SBC(ReadR(opcode & 0xF)); break;
-   OPCASE_3F_Xn(0x60): CMP(ReadR(opcode & 0xF)); break;
+   OPCASE_3D(0x60): OPCASE_3D(0x61): OPCASE_3D(0x62): OPCASE_3D(0x63): OPCASE_3D(0x64): OPCASE_3D(0x65): OPCASE_3D(0x66): OPCASE_3D(0x67): OPCASE_3D(0x68): OPCASE_3D(0x69): OPCASE_3D(0x6A): OPCASE_3D(0x6B): OPCASE_3D(0x6C): OPCASE_3D(0x6D): OPCASE_3D(0x6E): OPCASE_3D(0x6F): SBC(ReadR(opcode & 0xF)); goto OpEnd;
+   OPCASE_3F(0x60): OPCASE_3F(0x61): OPCASE_3F(0x62): OPCASE_3F(0x63): OPCASE_3F(0x64): OPCASE_3F(0x65): OPCASE_3F(0x66): OPCASE_3F(0x67): OPCASE_3F(0x68): OPCASE_3F(0x69): OPCASE_3F(0x6A): OPCASE_3F(0x6B): OPCASE_3F(0x6C): OPCASE_3F(0x6D): OPCASE_3F(0x6E): OPCASE_3F(0x6F): CMP(ReadR(opcode & 0xF)); goto OpEnd;
 
    /* AND Rn  */ OPCASE_NP(0x71): OPCASE_NP(0x72): OPCASE_NP(0x73): OPCASE_NP(0x74): OPCASE_NP(0x75): OPCASE_NP(0x76): OPCASE_NP(0x77):
    OPCASE_NP(0x78): OPCASE_NP(0x79): OPCASE_NP(0x7A): OPCASE_NP(0x7B): OPCASE_NP(0x7C): OPCASE_NP(0x7D): OPCASE_NP(0x7E): OPCASE_NP(0x7F):
 	AND(ReadR(opcode & 0xF));
-	break;
+	goto OpEnd;
 
    /* AND #n     */ OPCASE_3E(0x71): OPCASE_3E(0x72): OPCASE_3E(0x73): OPCASE_3E(0x74): OPCASE_3E(0x75): OPCASE_3E(0x76): OPCASE_3E(0x77):
    OPCASE_3E(0x78): OPCASE_3E(0x79): OPCASE_3E(0x7A): OPCASE_3E(0x7B): OPCASE_3E(0x7C): OPCASE_3E(0x7D): OPCASE_3E(0x7E): OPCASE_3E(0x7F):
 	AND(opcode & 0xF);
-	break;
+	goto OpEnd;
 
    /* BIC Rn     */ OPCASE_3D(0x71): OPCASE_3D(0x72): OPCASE_3D(0x73): OPCASE_3D(0x74): OPCASE_3D(0x75): OPCASE_3D(0x76): OPCASE_3D(0x77):
    OPCASE_3D(0x78): OPCASE_3D(0x79): OPCASE_3D(0x7A): OPCASE_3D(0x7B): OPCASE_3D(0x7C): OPCASE_3D(0x7D): OPCASE_3D(0x7E): OPCASE_3D(0x7F):
 	BIC(ReadR(opcode & 0xF));
-	break;
+	goto OpEnd;
 
    /* BIC #n     */ OPCASE_3F(0x71): OPCASE_3F(0x72): OPCASE_3F(0x73): OPCASE_3F(0x74): OPCASE_3F(0x75): OPCASE_3F(0x76): OPCASE_3F(0x77):
    OPCASE_3F(0x78): OPCASE_3F(0x79): OPCASE_3F(0x7A): OPCASE_3F(0x7B): OPCASE_3F(0x7C): OPCASE_3F(0x7D): OPCASE_3F(0x7E): OPCASE_3F(0x7F):
 	BIC(opcode & 0xF);
-	break;
+	goto OpEnd;
 
    /*  OR Rn  */ OPCASE_NP(0xC1): OPCASE_NP(0xC2): OPCASE_NP(0xC3): OPCASE_NP(0xC4): OPCASE_NP(0xC5): OPCASE_NP(0xC6): OPCASE_NP(0xC7):
    OPCASE_NP(0xC8): OPCASE_NP(0xC9): OPCASE_NP(0xCA): OPCASE_NP(0xCB): OPCASE_NP(0xCC): OPCASE_NP(0xCD): OPCASE_NP(0xCE): OPCASE_NP(0xCF):
 	OR(ReadR(opcode & 0xF));
-	break;
+	goto OpEnd;
 
    /*  OR #n     */ OPCASE_3E(0xC1): OPCASE_3E(0xC2): OPCASE_3E(0xC3): OPCASE_3E(0xC4): OPCASE_3E(0xC5): OPCASE_3E(0xC6): OPCASE_3E(0xC7):
    OPCASE_3E(0xC8): OPCASE_3E(0xC9): OPCASE_3E(0xCA): OPCASE_3E(0xCB): OPCASE_3E(0xCC): OPCASE_3E(0xCD): OPCASE_3E(0xCE): OPCASE_3E(0xCF):
 	OR(opcode & 0xF);
-	break;
+	goto OpEnd;
 
    /* XOR Rn     */ OPCASE_3D(0xC1): OPCASE_3D(0xC2): OPCASE_3D(0xC3): OPCASE_3D(0xC4): OPCASE_3D(0xC5): OPCASE_3D(0xC6): OPCASE_3D(0xC7):
    OPCASE_3D(0xC8): OPCASE_3D(0xC9): OPCASE_3D(0xCA): OPCASE_3D(0xCB): OPCASE_3D(0xCC): OPCASE_3D(0xCD): OPCASE_3D(0xCE): OPCASE_3D(0xCF):
 	XOR(ReadR(opcode & 0xF));
-	break;
+	goto OpEnd;
 
    /* XOR #n     */ OPCASE_3F(0xC1): OPCASE_3F(0xC2): OPCASE_3F(0xC3): OPCASE_3F(0xC4): OPCASE_3F(0xC5): OPCASE_3F(0xC6): OPCASE_3F(0xC7):
    OPCASE_3F(0xC8): OPCASE_3F(0xC9): OPCASE_3F(0xCA): OPCASE_3F(0xCB): OPCASE_3F(0xCC): OPCASE_3F(0xCD): OPCASE_3F(0xCE): OPCASE_3F(0xCF):
 	XOR(opcode & 0xF);
-	break;
+	goto OpEnd;
 
-   OPCASE(0x4F): NOT(); break;
+   OPCASE(0x4F): NOT(); goto OpEnd;
 
-   OPCASE(0x03): LSR(); break; // LSR
-   OPCASE_NP(0x96): ASR(); break; // ASR
-   OPCASE(0x04): ROL(); break; // ROL
-   OPCASE(0x97): ROR(); break; // ROR
-   OPCASE_3D(0x96): DIV2(); break; // DIV2 (TODO: semantics!)
+   OPCASE(0x03): LSR(); goto OpEnd; // LSR
+   OPCASE_NP(0x96): ASR(); goto OpEnd; // ASR
+   OPCASE(0x04): ROL(); goto OpEnd; // ROL
+   OPCASE(0x97): ROR(); goto OpEnd; // ROR
+   OPCASE_3D(0x96): DIV2(); goto OpEnd; // DIV2 (TODO: semantics!)
 
    //
    // INC
@@ -1224,7 +1563,7 @@ static void Update(uint32 timestamp)
    {
     INC(opcode & 0xF);
    }
-   break;
+   goto OpEnd;
 
    //
    // DEC
@@ -1234,43 +1573,43 @@ static void Update(uint32 timestamp)
    {
     DEC(opcode & 0xF);
    }
-   break;
+   goto OpEnd;
 
-   OPCASE(0x4D): SWAP(); break; // SWAP
-   OPCASE(0x95): SEX(); break; // SEX
-   OPCASE(0x9E): LOB(); break; // LOB
-   OPCASE(0xC0): HIB(); break; // HIB
-   OPCASE(0x70): MERGE(); break; // MERGE
+   OPCASE(0x4D): SWAP(); goto OpEnd; // SWAP
+   OPCASE(0x95): SEX(); goto OpEnd; // SEX
+   OPCASE(0x9E): LOB(); goto OpEnd; // LOB
+   OPCASE(0xC0): HIB(); goto OpEnd; // HIB
+   OPCASE(0x70): MERGE(); goto OpEnd; // MERGE
 
-   OPCASE_NP(0x9F): FMULT(); break; // FMULT
-   OPCASE_3D(0x9F): LMULT(); break; // LMULT
+   OPCASE_NP(0x9F): FMULT(); goto OpEnd; // FMULT
+   OPCASE_3D(0x9F): LMULT(); goto OpEnd; // LMULT
 
-   OPCASE_NP_Xn(0x80): MULT(ReadR(opcode & 0xF)); break; // MULT Rn
-   OPCASE_3E_Xn(0x80): MULT(opcode & 0xF); break; // MULT #n
+   OPCASE_NP(0x80): OPCASE_NP(0x81): OPCASE_NP(0x82): OPCASE_NP(0x83): OPCASE_NP(0x84): OPCASE_NP(0x85): OPCASE_NP(0x86): OPCASE_NP(0x87): OPCASE_NP(0x88): OPCASE_NP(0x89): OPCASE_NP(0x8A): OPCASE_NP(0x8B): OPCASE_NP(0x8C): OPCASE_NP(0x8D): OPCASE_NP(0x8E): OPCASE_NP(0x8F): MULT(ReadR(opcode & 0xF)); goto OpEnd; // MULT Rn
+   OPCASE_3E(0x80): OPCASE_3E(0x81): OPCASE_3E(0x82): OPCASE_3E(0x83): OPCASE_3E(0x84): OPCASE_3E(0x85): OPCASE_3E(0x86): OPCASE_3E(0x87): OPCASE_3E(0x88): OPCASE_3E(0x89): OPCASE_3E(0x8A): OPCASE_3E(0x8B): OPCASE_3E(0x8C): OPCASE_3E(0x8D): OPCASE_3E(0x8E): OPCASE_3E(0x8F): MULT(opcode & 0xF); goto OpEnd; // MULT #n
 
-   OPCASE_3D_Xn(0x80): UMULT(ReadR(opcode & 0xF)); break; // UMULT Rn
-   OPCASE_3F_Xn(0x80): UMULT(opcode & 0xF); break; // UMULT #n
+   OPCASE_3D(0x80): OPCASE_3D(0x81): OPCASE_3D(0x82): OPCASE_3D(0x83): OPCASE_3D(0x84): OPCASE_3D(0x85): OPCASE_3D(0x86): OPCASE_3D(0x87): OPCASE_3D(0x88): OPCASE_3D(0x89): OPCASE_3D(0x8A): OPCASE_3D(0x8B): OPCASE_3D(0x8C): OPCASE_3D(0x8D): OPCASE_3D(0x8E): OPCASE_3D(0x8F): UMULT(ReadR(opcode & 0xF)); goto OpEnd; // UMULT Rn
+   OPCASE_3F(0x80): OPCASE_3F(0x81): OPCASE_3F(0x82): OPCASE_3F(0x83): OPCASE_3F(0x84): OPCASE_3F(0x85): OPCASE_3F(0x86): OPCASE_3F(0x87): OPCASE_3F(0x88): OPCASE_3F(0x89): OPCASE_3F(0x8A): OPCASE_3F(0x8B): OPCASE_3F(0x8C): OPCASE_3F(0x8D): OPCASE_3F(0x8E): OPCASE_3F(0x8F): UMULT(opcode & 0xF); goto OpEnd; // UMULT #n
 
    //
    // Relative branching
    //
-   OPCASE(0x05): RelBranch(true);	    goto SkipPrefixReset; // BRA
-   OPCASE(0x06): RelBranch(FlagS == FlagV); goto SkipPrefixReset; // BGE
-   OPCASE(0x07): RelBranch(FlagS != FlagV); goto SkipPrefixReset; // BLT
-   OPCASE(0x08): RelBranch(!FlagZ);	    goto SkipPrefixReset; // BNE
-   OPCASE(0x09): RelBranch( FlagZ);	    goto SkipPrefixReset; // BEQ
-   OPCASE(0x0A): RelBranch(!FlagS);	    goto SkipPrefixReset; // BPL
-   OPCASE(0x0B): RelBranch( FlagS);	    goto SkipPrefixReset; // BMI
-   OPCASE(0x0C): RelBranch(!FlagC);	    goto SkipPrefixReset; // BCC
-   OPCASE(0x0D): RelBranch( FlagC);	    goto SkipPrefixReset; // BCS
-   OPCASE(0x0E): RelBranch(!FlagV);	    goto SkipPrefixReset; // BVC
-   OPCASE(0x0F): RelBranch( FlagV);	    goto SkipPrefixReset; // BVS
+   OPCASE(0x05): RelBranch<EnableCache>(true);	    goto SkipPrefixReset; // BRA
+   OPCASE(0x06): RelBranch<EnableCache>(FlagS == FlagV); goto SkipPrefixReset; // BGE
+   OPCASE(0x07): RelBranch<EnableCache>(FlagS != FlagV); goto SkipPrefixReset; // BLT
+   OPCASE(0x08): RelBranch<EnableCache>(!FlagZ);	    goto SkipPrefixReset; // BNE
+   OPCASE(0x09): RelBranch<EnableCache>( FlagZ);	    goto SkipPrefixReset; // BEQ
+   OPCASE(0x0A): RelBranch<EnableCache>(!FlagS);	    goto SkipPrefixReset; // BPL
+   OPCASE(0x0B): RelBranch<EnableCache>( FlagS);	    goto SkipPrefixReset; // BMI
+   OPCASE(0x0C): RelBranch<EnableCache>(!FlagC);	    goto SkipPrefixReset; // BCC
+   OPCASE(0x0D): RelBranch<EnableCache>( FlagC);	    goto SkipPrefixReset; // BCS
+   OPCASE(0x0E): RelBranch<EnableCache>(!FlagV);	    goto SkipPrefixReset; // BVC
+   OPCASE(0x0F): RelBranch<EnableCache>( FlagV);	    goto SkipPrefixReset; // BVS
 
-   OPCASE_NP(0x98): OPCASE_NP(0x99): OPCASE_NP(0x9A): OPCASE_NP(0x9B): OPCASE_NP(0x9C): OPCASE_NP(0x9D): JMP(opcode & 0xF); break; // JMP
-   OPCASE_3D(0x98): OPCASE_3D(0x99): OPCASE_3D(0x9A): OPCASE_3D(0x9B): OPCASE_3D(0x9C): OPCASE_3D(0x9D): LJMP(opcode & 0xF); break; // LJMP
+   OPCASE_NP(0x98): OPCASE_NP(0x99): OPCASE_NP(0x9A): OPCASE_NP(0x9B): OPCASE_NP(0x9C): OPCASE_NP(0x9D): JMP(opcode & 0xF); goto OpEnd; // JMP
+   OPCASE_3D(0x98): OPCASE_3D(0x99): OPCASE_3D(0x9A): OPCASE_3D(0x9B): OPCASE_3D(0x9C): OPCASE_3D(0x9D): LJMP<EnableCache>(opcode & 0xF); goto OpEnd; // LJMP
 
-   OPCASE(0x3C): LOOP(); break; // LOOP
-   OPCASE(0x91): OPCASE(0x92): OPCASE(0x93): OPCASE(0x94): LINK(opcode & 0xF); break; // LINK
+   OPCASE(0x3C): LOOP(); goto OpEnd; // LOOP
+   OPCASE(0x91): OPCASE(0x92): OPCASE(0x93): OPCASE(0x94): LINK(opcode & 0xF); goto OpEnd; // LINK
 
    OPCASE(0x3D): PrefixSL8 |= 0x1 << 8; goto SkipPrefixReset; // ALT1
    OPCASE(0x3E): PrefixSL8 |= 0x2 << 8; goto SkipPrefixReset; // ALT2
@@ -1279,7 +1618,7 @@ static void Update(uint32 timestamp)
    //
    // TO/MOVE
    //
-   OPCASE_Xn(0x10):
+   OPCASE(0x10): OPCASE(0x11): OPCASE(0x12): OPCASE(0x13): OPCASE(0x14): OPCASE(0x15): OPCASE(0x16): OPCASE(0x17): OPCASE(0x18): OPCASE(0x19): OPCASE(0x1A): OPCASE(0x1B): OPCASE(0x1C): OPCASE(0x1D): OPCASE(0x1E): OPCASE(0x1F):
    {
     if(PrefixB)
     {
@@ -1298,12 +1637,12 @@ static void Update(uint32 timestamp)
      goto SkipPrefixReset;	// TO
     }
    }
-   break;
+   goto OpEnd;
 
    //
    // WITH
    //
-   OPCASE_Xn(0x20):
+   OPCASE(0x20): OPCASE(0x21): OPCASE(0x22): OPCASE(0x23): OPCASE(0x24): OPCASE(0x25): OPCASE(0x26): OPCASE(0x27): OPCASE(0x28): OPCASE(0x29): OPCASE(0x2A): OPCASE(0x2B): OPCASE(0x2C): OPCASE(0x2D): OPCASE(0x2E): OPCASE(0x2F):
    {
     Rs = Rd = opcode & 0xF;
     PrefixB = true;
@@ -1313,7 +1652,7 @@ static void Update(uint32 timestamp)
    //
    // FROM/MOVES
    //
-   OPCASE_Xn(0xB0):
+   OPCASE(0xB0): OPCASE(0xB1): OPCASE(0xB2): OPCASE(0xB3): OPCASE(0xB4): OPCASE(0xB5): OPCASE(0xB6): OPCASE(0xB7): OPCASE(0xB8): OPCASE(0xB9): OPCASE(0xBA): OPCASE(0xBB): OPCASE(0xBC): OPCASE(0xBD): OPCASE(0xBE): OPCASE(0xBF):
    {
     if(PrefixB)
     {
@@ -1336,9 +1675,10 @@ static void Update(uint32 timestamp)
      goto SkipPrefixReset;
     }
    }
-   break;
+   goto OpEnd;
   }
   //
+  OpEnd:;
   Rs = 0;
   Rd = 0;
   PrefixSL8 = 0;
@@ -1348,71 +1688,95 @@ static void Update(uint32 timestamp)
  }
 }
 
-static uint32 EventHandler(uint32 timestamp)
+template<bool EnableCache>
+static uint32 EventHandler(uint32 master_timestamp)
 {
- Update(timestamp);
+ {
+  int32 tmp;
 
- return timestamp + 128; //SNES_EVENT_MAXTS;
+  tmp = ((master_timestamp - SFX.last_master_timestamp) * SFX.clock_multiplier) + SFX.run_count_mod;
+  SFX.last_master_timestamp = master_timestamp;
+  SFX.run_count_mod  = (uint16)tmp;
+  SFX.superfx_timestamp_run_until += tmp >> 16;
+ }
+ //
+ SFX.Update<EnableCache>(SFX.superfx_timestamp_run_until);
+ //
+ return master_timestamp + (EnableCache ? 128 : 192);
 }
 
 static void AdjustTS(int32 delta)
 {
- superfx_timestamp += delta;
+/*
+ SFX.superfx_timestamp += delta;
 
- pixcache_write_finish_ts = std::max<int64>(0, (int64)pixcache_write_finish_ts + delta);
- rom_read_finish_ts = std::max<int64>(0, (int64)rom_read_finish_ts + delta);
- ram_write_finish_ts = std::max<int64>(0, (int64)ram_write_finish_ts + delta);
+ SFX.pixcache_write_finish_ts = std::max<int64>(0, (int64)SFX.pixcache_write_finish_ts + delta);
+ SFX.rom_read_finish_ts = std::max<int64>(0, (int64)SFX.rom_read_finish_ts + delta);
+ SFX.ram_write_finish_ts = std::max<int64>(0, (int64)SFX.ram_write_finish_ts + delta);
+*/
+ SFX.last_master_timestamp += delta;
+
+ SFX.pixcache_write_finish_ts = std::max<int64>(0, (int64)SFX.pixcache_write_finish_ts - SFX.superfx_timestamp_run_until);
+ SFX.rom_read_finish_ts = std::max<int64>(0, (int64)SFX.rom_read_finish_ts - SFX.superfx_timestamp_run_until);
+ SFX.ram_write_finish_ts = std::max<int64>(0, (int64)SFX.ram_write_finish_ts - SFX.superfx_timestamp_run_until);
+ assert(SFX.superfx_timestamp >= SFX.superfx_timestamp_run_until);
+ SFX.superfx_timestamp -= SFX.superfx_timestamp_run_until;
+ SFX.superfx_timestamp_run_until = 0;
 }
 
 static MDFN_COLD void Reset(bool powering_up)
 {
- Running = false;
+ SFX.Running = false;
 
- memset(R, 0, sizeof(R));
- Prefetch = 0;
- PrefixSL8 = 0;
- PrefixB = false;
- Rs = 0;
- Rd = 0;
+ memset(SFX.R, 0, sizeof(SFX.R));
+ SFX.Prefetch = 0;
+ SFX.PrefixSL8 = 0;
+ SFX.PrefixB = false;
+ SFX.Rs = 0;
+ SFX.Rd = 0;
 
- SetPBR(0x00); //PBR = 0;
- SetCBR(0x0000); //CBR = 0;
- ROMBR = 0;
- RAMBR = 0;
+ SFX.SetPBR(0x00); //PBR = 0;
+ SFX.SetCBR<true>(0x0000); //CBR = 0;
+ SFX.ROMBR = 0;
+ SFX.RAMBR = 0;
 
- SetCLSR(0x00); //ClockSelect = false;
- SetCFGR(0x00); //MultSpeed = false;
+ SFX.SetCLSR(0x00); //ClockSelect = false;
+ SFX.SetCFGR(0x00); //MultSpeed = false;
                   //IRQMask = false;
  
 
- SCBR = 0;
- SCMR = 0;
- POR = 0;
- ColorData = 0;
+ SFX.SCBR = 0;
+ SFX.SCMR = 0;
+ SFX.POR = 0;
+ SFX.ColorData = 0;
 
- memset(&PixelCache, 0, sizeof(PixelCache));
+ memset(&SFX.PixelCache, 0, sizeof(SFX.PixelCache));
 
- memset(CacheData, 0, sizeof(CacheData));
- memset(CacheValid, 0, sizeof(CacheValid));
+ memset(SFX.CacheData, 0, sizeof(SFX.CacheData));
+ memset(SFX.CacheValid, 0, sizeof(SFX.CacheValid));
 
- ROMBuffer = 0;
- LastRAMOffset = 0;
+ SFX.ROMBuffer = 0;
+ SFX.LastRAMOffset = 0;
 
- FlagV = false;
- FlagS = false;
- FlagC = false;
- FlagZ = false;
+ SFX.FlagV = false;
+ SFX.FlagS = false;
+ SFX.FlagC = false;
+ SFX.FlagZ = false;
 
- Running = false;
- IRQPending = false;
+ SFX.Running = false;
+ SFX.IRQPending = false;
 
- GPRWriteLatch = 0;
+ SFX.GPRWriteLatch = 0;
  //
  //
- superfx_timestamp = CPUM.timestamp;
- rom_read_finish_ts = superfx_timestamp;
- ram_write_finish_ts = superfx_timestamp;
- pixcache_write_finish_ts = superfx_timestamp;
+ SFX.last_master_timestamp = CPUM.timestamp;
+ SFX.run_count_mod = 0;
+ SFX.superfx_timestamp_run_until = 0;
+ //
+ SFX.superfx_timestamp = 0;
+ SFX.rom_read_finish_ts = SFX.superfx_timestamp;
+ SFX.ram_write_finish_ts = SFX.superfx_timestamp;
+ SFX.pixcache_write_finish_ts = SFX.superfx_timestamp;
 }
 
 template<signed cyc, unsigned rom_offset = 0>
@@ -1427,7 +1791,7 @@ static DEFREAD(MainCPU_ReadLoROM)
   if(cyc >= 0)
    CPUM.timestamp += cyc;
   else
-   CPUM.timestamp += MemSelect ? MEMCYC_FAST : MEMCYC_SLOW;
+   CPUM.timestamp += CPUM.MemSelectCycles;
  }
 
  return (Cart.ROM + rom_offset)[(A & 0x7FFF) | ((A >> 1) & 0x3F8000)];
@@ -1446,7 +1810,7 @@ static DEFREAD(MainCPU_ReadHiROM)
   if(cyc >= 0)
    CPUM.timestamp += cyc;
   else
-   CPUM.timestamp += MemSelect ? MEMCYC_FAST : MEMCYC_SLOW;
+   CPUM.timestamp += CPUM.MemSelectCycles;
  }
 
  return (Cart.ROM + rom_offset)[A & 0x3FFFFF];
@@ -1454,7 +1818,7 @@ static DEFREAD(MainCPU_ReadHiROM)
 
 static DEFREAD(MainCPU_ReadRAM8K)
 {
- if(Running && (SCMR & 0x18) == 0x18)
+ if(SFX.Running && (SFX.SCMR & 0x18) == 0x18)
   SNES_DBG("[SuperFX] RAM read while SuperFX is running: %06x\n", A);
 
  if(MDFN_LIKELY(!DBG_InHLRead))
@@ -1468,7 +1832,7 @@ static DEFREAD(MainCPU_ReadRAM8K)
 
 static DEFWRITE(MainCPU_WriteRAM8K)
 {
- if(Running && (SCMR & 0x18) == 0x18)
+ if(SFX.Running && (SFX.SCMR & 0x18) == 0x18)
   SNES_DBG("[SuperFX] RAM write while SuperFX is running: %06x %02x\n", A, V);
 
  CPUM.timestamp += MEMCYC_SLOW;
@@ -1481,7 +1845,7 @@ static DEFWRITE(MainCPU_WriteRAM8K)
 
 static DEFREAD(MainCPU_ReadRAM)
 {
- if(Running && (SCMR & 0x18) == 0x18)
+ if(SFX.Running && (SFX.SCMR & 0x18) == 0x18)
   SNES_DBG("[SuperFX] RAM read while SuperFX is running: %06x\n", A);
 
  if(MDFN_LIKELY(!DBG_InHLRead))
@@ -1495,7 +1859,7 @@ static DEFREAD(MainCPU_ReadRAM)
 
 static DEFWRITE(MainCPU_WriteRAM)
 {
- if(Running && (SCMR & 0x18) == 0x18)
+ if(SFX.Running && (SFX.SCMR & 0x18) == 0x18)
   SNES_DBG("[SuperFX] RAM write while SuperFX is running: %06x %02x\n", A, V);
 
  CPUM.timestamp += MEMCYC_SLOW;
@@ -1513,12 +1877,12 @@ static DEFREAD(MainCPU_ReadGPR)
   CPUM.timestamp += MEMCYC_FAST;
  //
  //
- return ne16_rbo_le<uint8>(R, A & 0x1F);
+ return ne16_rbo_le<uint8>(SFX.R, A & 0x1F);
 }
 
 static DEFWRITE(MainCPU_WriteGPR)
 {
- if(Running && (SCMR & 0x18) == 0x18)
+ if(SFX.Running && (SFX.SCMR & 0x18) == 0x18)
   SNES_DBG("[SuperFX] GPR write while SuperFX is running: %06x %02x\n", A, V);
 
  CPUM.timestamp += MEMCYC_FAST;
@@ -1528,23 +1892,23 @@ static DEFWRITE(MainCPU_WriteGPR)
  if(A & 0x1)
  {
   const size_t index = (A >> 1) & 0xF;
-  const uint16 tmp = (V << 8) + GPRWriteLatch;
+  const uint16 tmp = (V << 8) + SFX.GPRWriteLatch;
 
-  R[index] = tmp;
+  SFX.R[index] = tmp;
 
   if(index == 0xF)
   {
-   Prefetch = 0x01;
-   Running = true;
-   PrefixSL8 = 0;
-   PrefixB = 0;
-   Rs = 0;
-   Rd = 0;
+   SFX.Prefetch = 0x01;
+   SFX.Running = true;
+   SFX.PrefixSL8 = 0;
+   SFX.PrefixB = 0;
+   SFX.Rs = 0;
+   SFX.Rd = 0;
    //assert((bool)tmp == (bool)(SCMR & 0x10));
   }
  }
  else
-  GPRWriteLatch = V;
+  SFX.GPRWriteLatch = V;
 }
 
 template<unsigned T_A>
@@ -1563,40 +1927,40 @@ static DEFREAD(MainCPU_ReadIO)
 	break;
 
   case 0x0:
-	ret = (FlagZ << 1) | (FlagC << 2) | (FlagS << 3) | (FlagV << 4) | (Running << 5);
+	ret = (SFX.FlagZ << 1) | (SFX.FlagC << 2) | (SFX.FlagS << 3) | (SFX.FlagV << 4) | (SFX.Running << 5);
 	break;
 
   case 0x1:
-	ret = ((PrefixSL8 >> 8) & 0x3) | (PrefixB << 4) | (IRQPending << 7);
+	ret = ((SFX.PrefixSL8 >> 8) & 0x3) | (SFX.PrefixB << 4) | (SFX.IRQPending << 7);
 	if(MDFN_LIKELY(!DBG_InHLRead))
 	{
-	 IRQPending = false;
+	 SFX.IRQPending = false;
 	 CPU_SetIRQ(false, CPU_IRQSOURCE_CART);
 	}
 	break;
 
   case 0x4:
-	ret = PBR;
+	ret = SFX.PBR;
 	break;
 
   case 0x6:
-	ret = ROMBR;
+	ret = SFX.ROMBR;
 	break;
 
   case 0xB:
-	ret = VCR;
+	ret = SFX.VCR;
 	break;
 
   case 0xC:
-	ret = RAMBR;
+	ret = SFX.RAMBR;
 	break;
 
   case 0xE:
-	ret = CBR;
+	ret = SFX.CBR;
 	break;
 
   case 0xF:
-	ret = CBR >> 8;
+	ret = SFX.CBR >> 8;
 	break;
  }
 
@@ -1618,13 +1982,13 @@ static DEFWRITE(MainCPU_WriteIO)
 	break;
 
   case 0x0:
-	FlagZ = (bool)(V & 0x02);
-	FlagC = (bool)(V & 0x04);
-	FlagS = (bool)(V & 0x08);
-	FlagV = (bool)(V & 0x10);
-	Running = (bool)(V & 0x20);
-	if(!Running)
-	 SetCBR(0x0000);
+	SFX.FlagZ = (bool)(V & 0x02);
+	SFX.FlagC = (bool)(V & 0x04);
+	SFX.FlagS = (bool)(V & 0x08);
+	SFX.FlagV = (bool)(V & 0x10);
+	SFX.Running = (bool)(V & 0x20);
+	if(!SFX.Running)
+	 SFX.SetCBR<true>(0x0000);
 	break;
 /*
   case 0x1:
@@ -1633,23 +1997,23 @@ static DEFWRITE(MainCPU_WriteIO)
 	break;
 */
   case 0x4:
-	SetPBR(V);
+	SFX.SetPBR(V);
 	break;
 
   case 0x7:
-	SetCFGR(V);
+	SFX.SetCFGR(V);
 	break;
 
   case 0x8:
-	SCBR = V & 0x3F;
+	SFX.SCBR = V & 0x3F;
 	break;
 
   case 0x9:
-	SetCLSR(V);
+	SFX.SetCLSR(V);
 	break;
 
   case 0xA:
-	SCMR = V;
+	SFX.SCMR = V;
 	break;
  }
 }
@@ -1661,7 +2025,7 @@ static DEFREAD(MainCPU_ReadCache)
  //
  //
  SNES_DBG("[SuperFX] Cache read %06x\n", A);
- return CacheData[A & 0x1FF];
+ return SFX.CacheData[A & 0x1FF];
 }
 
 static DEFWRITE(MainCPU_WriteCache)
@@ -1672,61 +2036,67 @@ static DEFWRITE(MainCPU_WriteCache)
  SNES_DBG("[SuperFX] Cache write %06x %02x\n", A, V);
  const size_t index = A & 0x1FF;
 
- CacheData[index] = V;
- CacheValid[index >> 4] |= ((A & 0xF) == 0xF);
+ SFX.CacheData[index] = V;
+ SFX.CacheValid[index >> 4] |= ((A & 0xF) == 0xF);
 }
 
 static void StateAction(StateMem* sm, const unsigned load, const bool data_only)
 {
+ bool EnableICache = SFX.EnableICache;
+ uint16 PrefixSL8 = SFX.PrefixSL8;
+
  SFORMAT StateRegs[] =
  {
-  SFVAR(R),
-  SFVAR(Prefetch),
+  SFVARN(SFX.R, "R"),
+  SFVARN(SFX.Prefetch, "Prefetch"),
   SFVAR(PrefixSL8),
-  SFVAR(PrefixB),
+  SFVARN(SFX.PrefixB, "PrefixB"),
 
-  SFVAR(Rs),
-  SFVAR(Rd),
+  SFVARN(SFX.Rs, "Rs"),
+  SFVARN(SFX.Rd, "Rd"),
 
-  SFVAR(PBR),
-  SFVAR(CBR),
-  SFVAR(ROMBR),
-  SFVAR(RAMBR),
-  SFVAR(ClockSelect),
-  SFVAR(MultSpeed),
+  SFVARN(SFX.PBR, "PBR"),
+  SFVARN(SFX.CBR, "CBR"),
+  SFVARN(SFX.ROMBR, "ROMBR"),
+  SFVARN(SFX.RAMBR, "RAMBR"),
+  SFVARN(SFX.ClockSelect, "ClockSelect"),
+  SFVARN(SFX.MultSpeed, "MultSpeed"),
 
-  SFVAR(SCBR),
-  SFVAR(SCMR),
-  SFVAR(POR),
-  SFVAR(ColorData),
+  SFVARN(SFX.SCBR, "SCBR"),
+  SFVARN(SFX.SCMR, "SCMR"),
+  SFVARN(SFX.POR, "POR"),
+  SFVARN(SFX.ColorData, "ColorData"),
 
-  SFVAR(PixelCache.TagX),
-  SFVAR(PixelCache.TagY),
-  SFVAR(PixelCache.data),
-  SFVAR(PixelCache.opaque),
+  SFVARN(SFX.PixelCache.TagX, "PixelCache.TagX"),
+  SFVARN(SFX.PixelCache.TagY, "PixelCache.TagY"),
+  SFVARN(SFX.PixelCache.data, "PixelCache.data"),
+  SFVARN(SFX.PixelCache.opaque, "PixelCache.opaque"),
 
-  SFVAR(CacheData),
-  SFVAR(CacheValid),
+  SFVARN(SFX.CacheData, "CacheData"),
+  SFVARN(SFX.CacheValid, "CacheValid"),
 
-  SFVAR(ROMBuffer),
+  SFVARN(SFX.ROMBuffer, "ROMBuffer"),
 
-  SFVAR(LastRAMOffset),
+  SFVARN(SFX.LastRAMOffset, "LastRAMOffset"),
 
-  SFVAR(FlagV),
-  SFVAR(FlagS),
-  SFVAR(FlagC),
-  SFVAR(FlagZ),
-  SFVAR(Running),
-  SFVAR(IRQPending),
-  SFVAR(IRQMask),
+  SFVARN(SFX.FlagV, "FlagV"),
+  SFVARN(SFX.FlagS, "FlagS"),
+  SFVARN(SFX.FlagC, "FlagC"),
+  SFVARN(SFX.FlagZ, "FlagZ"),
+  SFVARN(SFX.Running, "Running"),
+  SFVARN(SFX.IRQPending, "IRQPending"),
+  SFVARN(SFX.IRQMask, "IRQMask"),
 
-  SFVAR(GPRWriteLatch),
+  SFVARN(SFX.GPRWriteLatch, "GPRWriteLatch"),
   //
   // FIXME: save states in debugger:?
-  SFVAR(superfx_timestamp),
-  SFVAR(rom_read_finish_ts),
-  SFVAR(ram_write_finish_ts),
-  SFVAR(pixcache_write_finish_ts),
+  SFVARN(SFX.run_count_mod, "run_count_mod"),
+  SFVARN(SFX.superfx_timestamp, "superfx_timestamp"),
+  SFVARN(SFX.rom_read_finish_ts, "rom_read_finish_ts"),
+  SFVARN(SFX.ram_write_finish_ts, "ram_write_finish_ts"),
+  SFVARN(SFX.pixcache_write_finish_ts, "pixcache_write_finish_ts"),
+
+  SFVAR(EnableICache),
 
   SFEND
  };
@@ -1735,21 +2105,39 @@ static void StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
  if(load)
  {
-  SetCLSR(ClockSelect);
-  SetPBR(PBR);
+  SFX.PrefixSL8 = PrefixSL8 & (0x03 << 8);
+
+  SFX.SetCLSR(SFX.ClockSelect);
+  SFX.SetPBR(SFX.PBR);
+
+  if(EnableICache != SFX.EnableICache)
+  {
+   memset(SFX.CacheValid, 0, sizeof(SFX.CacheValid));
+  }
  }
 }
 
-void CART_SuperFX_Init(const int32 master_clock, const int32 ocmultiplier)
+void CART_SuperFX_Init(const int32 master_clock, const int32 ocmultiplier, const bool enable_icache)
 {
  assert(Cart.RAM_Size);
 
- superfx_timestamp = 0;
- rom_read_finish_ts = 0;
- ram_write_finish_ts = 0;
- pixcache_write_finish_ts = 0;
+ SFX.EnableICache = enable_icache;
+ memcpy(SFX.tnoshtab, tnoshtab_init, sizeof(SFX.tnoshtab));
+ memcpy(SFX.wtt, wtt_init, sizeof(SFX.wtt));
+ memcpy(SFX.masktab, masktab_init, sizeof(SFX.masktab));
+ SFX.RAM = &Cart.RAM[0];
+ SFX.RAM_Mask = Cart.RAM_Mask;
 
- VCR = 0x04;
+ SFX.clock_multiplier = ocmultiplier;
+ SFX.last_master_timestamp = 0;
+ SFX.superfx_timestamp_run_until = 0;
+ SFX.run_count_mod = 0;
+ SFX.superfx_timestamp = 0;
+ SFX.rom_read_finish_ts = 0;
+ SFX.ram_write_finish_ts = 0;
+ SFX.pixcache_write_finish_ts = 0;
+
+ SFX.VCR = 0x04;
 
  for(unsigned bank = 0x00; bank < 0x100; bank++)
  {
@@ -1800,11 +2188,11 @@ void CART_SuperFX_Init(const int32 master_clock, const int32 ocmultiplier)
   }
   else if(bank >= 0x80 && bank < 0xC0)
   {
-   Set_A_Handlers((bank << 16) | 0x8000, (bank << 16) | 0xFFFF, MainCPU_ReadLoROM<-1, 0x200000>, OBWrite_SLOW);
+   Set_A_Handlers((bank << 16) | 0x8000, (bank << 16) | 0xFFFF, MainCPU_ReadLoROM<-1, 0x200000>, OBWrite_VAR);
   }
   else if(bank >= 0xC0)
   {
-   Set_A_Handlers((bank << 16) | 0x0000, (bank << 16) | 0xFFFF, MainCPU_ReadHiROM<-1, 0x200000>, OBWrite_SLOW);
+   Set_A_Handlers((bank << 16) | 0x0000, (bank << 16) | 0xFFFF, MainCPU_ReadHiROM<-1, 0x200000>, OBWrite_VAR);
   }
  }
  //
@@ -1834,14 +2222,14 @@ void CART_SuperFX_Init(const int32 master_clock, const int32 ocmultiplier)
     m = 0xFFFF & Cart.RAM_Mask;
    }
   }
-  ProgMemMap[bank] = p;
-  ProgMemMapMask[bank] = m;
+  SFX.ProgMemMap[bank] = p;
+  SFX.ProgMemMapMask[bank] = m;
  }
  //
  //
  //
  Cart.AdjustTS = AdjustTS;
- Cart.EventHandler = EventHandler;
+ Cart.EventHandler = enable_icache ? EventHandler<true> : EventHandler<false>;
  Cart.Reset = Reset;
  Cart.StateAction = StateAction;
 }

@@ -34,7 +34,7 @@
 namespace MDFN_IEN_SNES_FAUST
 {
 
-#include "spc700.inc"
+//#include "spc700.inc"
 
 static uint8 IPL[64];
 
@@ -42,7 +42,6 @@ static uint8 APURAM[65536];
 static uint8 IOFromSPC700[4];
 static uint8 IOToSPC700[4];
 //#include "spc700.inc"
-static SPC700 SPC_CPU;
 
 static uint8 Control;
 
@@ -81,13 +80,15 @@ static INLINE void TickT01PreDiv(void)
  }
 }
 
-#include "dsp.inc"
-
+#include "spc700.inc"
+static SPC700 SPC_CPU;
 static void (MDFN_FASTCALL *SPC_Page00_WriteTable[256])(uint16, uint8);
 static uint8 (MDFN_FASTCALL *SPC_Page00_ReadTable[256])(uint16);
 static void (MDFN_FASTCALL *SPC_PageXX_WriteTable[256])(uint16, uint8);
 static uint8 (MDFN_FASTCALL *SPC_PageXX_ReadTable[256])(uint16);
 static uint8 (MDFN_FASTCALL *SPC_PageFF_ReadTable[256])(uint16);
+
+#include "dsp.inc"
 
 template<unsigned special_base>
 static uint8 MDFN_HOT MDFN_FASTCALL SPC_Read(uint16 A)
@@ -473,7 +474,7 @@ void APU_Reset(bool powering_up)
 #endif
 }
 
-void APU_Init(const bool IsPAL)
+double APU_Init(const bool IsPAL, double master_clock)
 {
 #ifdef MDFN_SNES_FAUST_SPC700_IPL_HLE
  memset(IPL, 0xFF, sizeof(IPL));
@@ -523,6 +524,8 @@ void APU_Init(const bool IsPAL)
  SPC700_ReadMap[0] = SPC_Page00_ReadTable;
  SPC700_WriteMap[0] = SPC_Page00_WriteTable;
  SPC700_ReadMap[0xFF] = SPC_PageFF_ReadTable;
+
+ return (master_clock * clock_multiplier) / (65536.0 * 32.0);
 }
 
 void APU_SetSPC(SPCReader* s)
@@ -578,9 +581,18 @@ void APU_SetSPC(SPCReader* s)
  SPC_CPU.SetRegister(SPC700::GSREG_SP, s->SP());
 }
 
-void APU_StartFrame(double master_clock, double rate)
+bool APU_StartFrame(double master_clock, double rate, int32* apu_clock_multiplier, int32* resamp_num, int32* resamp_denom)
 {
- DSP_StartFrame((master_clock * clock_multiplier) / (65536.0 * 32.0), rate);
+ *apu_clock_multiplier = clock_multiplier;
+
+ return DSP_StartFrame((master_clock * clock_multiplier) / (65536.0 * 32.0), rate, resamp_num, resamp_denom);
+}
+
+uint32 APU_UpdateGetResampBufPos(uint32 master_timestamp)
+{
+ APU_Update(master_timestamp);
+
+ return DSP.OutputBufPos;
 }
 
 int32 APU_EndFrame(int16* SoundBuf)

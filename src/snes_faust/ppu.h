@@ -25,7 +25,14 @@
 namespace MDFN_IEN_SNES_FAUST
 {
 
-void PPU_Init(const bool IsPAL) MDFN_COLD;
+enum
+{
+ PPU_CASPECT_DISABLED = 0,
+ PPU_CASPECT_ENABLED,
+
+ PPU_CASPECT_FORCE_NTSC,
+ PPU_CASPECT_FORCE_PAL
+};
 
 enum
 {
@@ -33,36 +40,10 @@ enum
  PPU_HFILTER_512,
  PPU_HFILTER_PHR256BLEND,
  PPU_HFILTER_PHR256BLEND_512,
+ PPU_HFILTER_PHR256BLEND_AUTO512,
  PPU_HFILTER_512_BLEND
 };
-void PPU_SetGetVideoParams(MDFNGI* gi, const bool caspect, const unsigned hfilter) MDFN_COLD;
-void PPU_Kill(void) MDFN_COLD;
-void PPU_Reset(bool powering_up) MDFN_COLD;
-void PPU_ResetTS(void);
 
-void PPU_StateAction(StateMem* sm, const unsigned load, const bool data_only);
-
-void PPU_StartFrame(EmulateSpecStruct* espec);
-
-uint32 PPU_UpdateLineIRQ(uint32 timestamp) MDFN_HOT;
-uint32 PPU_Update(uint32 timestamp) MDFN_HOT;
-//
-//
-//
-uint16 PPU_PeekVRAM(uint32 addr) MDFN_COLD;
-void PPU_PokeVRAM(uint32 addr, uint16 val) MDFN_COLD;
-
-uint16 PPU_PeekCGRAM(uint32 addr) MDFN_COLD;
-void PPU_PokeCGRAM(uint32 addr, uint16 val) MDFN_COLD;
-
-uint8 PPU_PeekOAM(uint32 addr) MDFN_COLD;
-void PPU_PokeOAM(uint32 addr, uint8 val) MDFN_COLD;
-
-uint8 PPU_PeekOAMHI(uint32 addr) MDFN_COLD;
-void PPU_PokeOAMHI(uint32 addr, uint8 val) MDFN_COLD;
-//
-//
-//
 enum
 {
  PPU_GSREG_NMITIMEEN,
@@ -114,8 +95,30 @@ enum
  PPU_GSREG_SCREENMODE,
 };
 
-uint32 PPU_GetRegister(const unsigned id, char* const special, const uint32 special_len) MDFN_COLD;
-void PPU_SetRegister(const unsigned id, const uint32 value) MDFN_COLD;
+enum : unsigned
+{
+ PPU_RENDERER_ST = 0,
+ PPU_RENDERER_MT = 1
+};
+
+namespace PPU_MT
+{
+ void PPU_Init(const bool IsPAL, const bool IsPALPPUBit, const bool WantFrameBeginVBlank, const uint64 affinity) MDFN_COLD;
+ void PPU_SyncMT(void);
+
+ #include "ppu_common.h"
+}
+
+namespace PPU_ST
+{
+ void PPU_Init(const bool IsPAL, const bool IsPALPPUBit, const bool WantFrameBeginVBlank, const uint64 affinity) MDFN_COLD;
+ #include "ppu_common.h"
+}
+
+void PPU_Init(const unsigned Renderer, const bool IsPAL, const bool IsPALPPUBit, const bool WantFrameBeginVBlank, const uint64 affinity) MDFN_COLD;
+void PPU_SyncMT(void);
+
+#include "ppu_common.h"
 
 }
 

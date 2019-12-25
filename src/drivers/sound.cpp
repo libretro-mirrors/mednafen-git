@@ -296,7 +296,7 @@ bool Sound_Init(MDFNGI *gi)
 
  if(format.rate < 22050 || format.rate > 192000)
  {
-  MDFN_Notify(MDFN_NOTICE_ERROR, _("Set rate is out of range [22050-192000]"));
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("Set rate of %u is out of range [22050-192000]"), format.rate);
   Sound_Kill();
   MDFN_indent(-2);
   return false;

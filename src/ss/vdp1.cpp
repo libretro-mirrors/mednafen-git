@@ -174,7 +174,7 @@ static uint32 EraseYCounter;
 
 uint8 TVMR;
 uint8 FBCR;
-uint8 PTMR;
+static uint8 PTMR;
 static uint8 EDSR;
 
 static bool vb_status, hb_status;
@@ -431,7 +431,7 @@ static uint32 MDFN_FASTCALL TexFetch(uint32 x)
 }
 
 
-extern uint32 (MDFN_FASTCALL *const TexFetchTab[0x20])(uint32 x) =
+MDFN_HIDE extern uint32 (MDFN_FASTCALL *const TexFetchTab[0x20])(uint32 x) =
 {
  #define TF(a) (TexFetch<a>)
 

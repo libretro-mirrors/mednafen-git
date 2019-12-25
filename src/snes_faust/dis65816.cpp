@@ -480,7 +480,7 @@ void Dis65816::Disassemble(uint32& A, uint32 SpecialA, char* buf, bool CurM, boo
   if((!imxhsa && IsMXHintSet(TestA)) || TestA == SpecialA)
   {
    trio_snprintf(buf, 256, ".db $%02X", opbuf[0]);
-   A++;
+   A = (A + 1) & 0xFFFFFF;
    return;
   }
  }

@@ -22,6 +22,7 @@
 #include "snes.h"
 #include "input.h"
 #include "cart.h"
+#include "msu1.h"
 #include "apu.h"
 #include "ppu.h"
 
@@ -30,6 +31,7 @@
 #include <mednafen/SNSFLoader.h>
 #include <mednafen/player.h>
 #include <mednafen/hash/sha1.h>
+#include <mednafen/cheat_formats/snes.h>
 
 #include <bitset>
 
@@ -41,20 +43,48 @@ static bool SpecEx, SpecExSoundToo;
 static MemoryStream* SpecExSS = NULL;
 static int32 SpecExAudioExpected;
 
+struct ReadPatchInfoStruct
+{
+ bool operator<(const ReadPatchInfoStruct& o) const
+ {
+  return address < o.address;
+ }
+ ReadPatchInfoStruct() { }
+ ReadPatchInfoStruct(const uint32 a) : address(a) { }
+
+ uint32 address;
+ uint8 value;
+ int compare;
+ uint8 prev_mapping;
+};
+static std::vector<ReadPatchInfoStruct> ReadPatchInfo;
+
 static void InitEvents(void) MDFN_COLD;
 
 
 template<bool b_bus>
 static void SetHandlers(uint32 A1, uint32 A2, readfunc read_handler, writefunc write_handler)
 {
+ // entry 0xFF is reserved for game genie cheats handler
  unsigned index = 0;
 
- assert(read_handler && write_handler);
+ if(A1 != A2 || b_bus)
+ {
+  assert(read_handler && write_handler);
+ }
+ else
+ {
+  if(!read_handler)
+   read_handler = CPUM.ReadFuncs[CPUM.RWIndex[A1]];
 
- while(index < 256 && CPUM.ReadFuncs[index] && CPUM.WriteFuncs[index] && (CPUM.ReadFuncs[index] != read_handler || CPUM.WriteFuncs[index] != write_handler))
+  if(!write_handler)
+   write_handler = CPUM.WriteFuncs[CPUM.RWIndex[A1]];
+ }
+
+ while(index < 255 && CPUM.ReadFuncs[index] && CPUM.WriteFuncs[index] && (CPUM.ReadFuncs[index] != read_handler || CPUM.WriteFuncs[index] != write_handler))
   index++;
 
- assert(index < 256);
+ assert(index < 255);
 
  CPUM.ReadFuncs[index] = read_handler;
  CPUM.WriteFuncs[index] = write_handler;
@@ -100,8 +130,6 @@ void Set_B_Handlers(uint8 A1, uint8 A2, readfunc read_handler, writefunc write_h
  SetHandlers<true>(A1, A2, read_handler, write_handler);
 }
 
-bool MemSelect;
-
 template<signed cyc>
 static INLINE DEFREAD(OBRead)
 {
@@ -113,7 +141,7 @@ static INLINE DEFREAD(OBRead)
  if(cyc >= 0)
   CPUM.timestamp += cyc;
  else
-  CPUM.timestamp += MemSelect ? MEMCYC_FAST : MEMCYC_SLOW;
+  CPUM.timestamp += CPUM.MemSelectCycles;
 
  SNES_DBG("[SNES] Unknown Read: $%02x:%04x\n", A >> 16, A & 0xFFFF);
  return CPUM.mdr;
@@ -125,7 +153,7 @@ static INLINE DEFWRITE(OBWrite)
  if(cyc >= 0)
   CPUM.timestamp += cyc;
  else
-  CPUM.timestamp += MemSelect ? MEMCYC_FAST : MEMCYC_SLOW;
+  CPUM.timestamp += CPUM.MemSelectCycles;
 
  SNES_DBG("[SNES] Unknown Write: $%02x:%04x $%02x\n", A >> 16, A & 0xFFFF, V);
 }
@@ -199,7 +227,7 @@ static void ICRegsReset(bool powering_up)
 
  WMAddress = 0;
 
- MemSelect = 0;
+ CPUM.MemSelectCycles = MEMCYC_SLOW;
 }
 
 static DEFWRITE(ICRegsWrite)
@@ -236,7 +264,7 @@ static DEFWRITE(ICRegsWrite)
 		}
 		break;
 
-  case 0x420D:  MemSelect = V & 1;
+  case 0x420D:  CPUM.MemSelectCycles = (V & 1) ? MEMCYC_FAST : MEMCYC_SLOW;;
 		break;
  }
 }
@@ -346,6 +374,36 @@ static DEFREAD(Read_2180)
  return ret;
 }
 
+static INLINE ReadPatchInfoStruct FindRPie(uint32 A)
+{
+ A &= 0xFFFFFF;
+ //
+ std::vector<ReadPatchInfoStruct>::const_iterator it = std::lower_bound(ReadPatchInfo.begin(), ReadPatchInfo.end(), A);
+
+ assert(it != ReadPatchInfo.end() && it->address == A);
+
+ return *it;
+}
+
+template<bool ForceA>
+static DEFREAD_NOHOT(Read_CheatHook)
+{
+ ReadPatchInfoStruct rpie = FindRPie(A);
+ uint8 ret = (ForceA ? CPUM.ReadFuncsA : CPUM.ReadFuncs)[rpie.prev_mapping](A);
+
+ if(rpie.compare < 0 || ret == rpie.compare)
+  ret = rpie.value;
+
+ return ret;
+}
+
+template<bool ForceA>
+static DEFWRITE_NOHOT(Write_CheatHook)
+{
+ ReadPatchInfoStruct rpie = FindRPie(A);
+ (ForceA ? CPUM.WriteFuncsA : CPUM.WriteFuncs)[rpie.prev_mapping](A, V);
+}
+
 //
 //
 //
@@ -380,6 +438,7 @@ static MDFN_COLD void Reset(bool powering_up)
  APU_Reset(powering_up);
  PPU_Reset(powering_up);
  CART_Reset(powering_up);
+ MSU1_Reset(powering_up);
  INPUT_Reset(powering_up);
 
  //
@@ -409,6 +468,8 @@ static MDFN_COLD bool TestMagic(GameFile* gf)
 
 static MDFN_COLD void Cleanup(void)
 {
+ ReadPatchInfo.clear();
+
  if(SpecExSS)
  {
   delete SpecExSS;
@@ -433,8 +494,20 @@ static MDFN_COLD void Cleanup(void)
   PPU_Kill();
   INPUT_Kill();
   CART_Kill();
+  MSU1_Kill();
  }
 }
+
+enum
+{
+ REGION_AUTO = 0,
+ REGION_NTSC,
+ REGION_PAL,
+ REGION_NTSC_LIE_AUTO,
+ REGION_PAL_LIE_AUTO,
+ REGION_NTSC_LIE_PAL,
+ REGION_PAL_LIE_NTSC
+};
 
 static MDFN_COLD void LoadReal(GameFile* gf)
 {
@@ -445,7 +518,7 @@ static MDFN_COLD void LoadReal(GameFile* gf)
   EmulatedSNES_Faust.fps = (1U << 24) * 75;
   EmulatedSNES_Faust.MasterClock = MDFN_MASTERCLOCK_FIXED(21477272.7);
 
-  APU_Init(false);
+  EmulatedSNES_Faust.IdealSoundRate = APU_Init(false, (double)EmulatedSNES_Faust.MasterClock / MDFN_MASTERCLOCK_FIXED(1));
   Reset(true);
 
   return;
@@ -455,18 +528,27 @@ static MDFN_COLD void LoadReal(GameFile* gf)
  SpecExSoundToo = MDFN_GetSettingB("snes_faust.spex.sound");
  SpecExAudioExpected = -1;
 
+ MDFN_printf("SpecEx: %u\n", SpecEx);
+ MDFN_printf("SpecExSoundToo: %u\n", SpecExSoundToo);
+
  MDFNMP_Init(8192, (1U << 24) / 8192);
  MDFNMP_RegSearchable(0x7E0000, 0x20000);
 
  DBG_Init();
 
- CPU_Init();
+ CPU_Init(&CPUM);
 
  memset(CPUM.ReadFuncs, 0, sizeof(CPUM.ReadFuncs));
  memset(CPUM.WriteFuncs, 0, sizeof(CPUM.WriteFuncs));
 
  memset(CPUM.ReadFuncsA, 0, sizeof(CPUM.ReadFuncsA));
  memset(CPUM.WriteFuncsA, 0, sizeof(CPUM.WriteFuncsA));
+
+ CPUM.ReadFuncs[0xFF] = Read_CheatHook<false>;
+ CPUM.WriteFuncs[0xFF] = Write_CheatHook<false>;
+
+ CPUM.ReadFuncsA[0xFF] = Read_CheatHook<true>;
+ CPUM.WriteFuncsA[0xFF] = Write_CheatHook<true>;
 
  //
  // Map in open bus.
@@ -522,18 +604,73 @@ static MDFN_COLD void LoadReal(GameFile* gf)
   }
  }
 
+ DMA_Init();
+ //
+ //
  if(SNSFLoader::TestMagic(gf->stream))
- {
   snsf_loader = new SNSFLoader(gf->vfs, gf->dir, gf->stream);
-  Player_Init(1, snsf_loader->tags.GetTag("game"), snsf_loader->tags.GetTag("artist"), snsf_loader->tags.GetTag("copyright"), std::vector<std::string>({ snsf_loader->tags.GetTag("title") }));
- }
 
  const int32 cx4_ocmultiplier = ((MDFN_GetSettingUI("snes_faust.cx4.clock_rate") << 16) + 50) / 100;
- const int32 superfx_ocmultiplier = 1U << 16; //((MDFN_GetSettingUI("snes_faust.superfx.clock_rate") << 16) + 50) / 100;
- const bool IsPAL = CART_Init(snsf_loader ? &snsf_loader->ROM_Data : gf->stream, EmulatedSNES_Faust.MD5, cx4_ocmultiplier, superfx_ocmultiplier);
- CART_LoadNV();
+ const int32 superfx_ocmultiplier = ((MDFN_GetSettingUI("snes_faust.superfx.clock_rate") << 16) + 50) / 100;
+ const bool superfx_enable_icache = MDFN_GetSettingB("snes_faust.superfx.icache");
+ const bool CartIsPAL = CART_Init(snsf_loader ? &snsf_loader->ROM_Data : gf->stream, EmulatedSNES_Faust.MD5, cx4_ocmultiplier, superfx_ocmultiplier, superfx_enable_icache);
+ const unsigned region = MDFN_GetSettingUI("snes_faust.region");
+ bool IsPAL, IsPALPPUBit;
 
- DMA_Init();
+ if(snsf_loader)
+ {
+  uint8* const cart_ram = CART_GetRAMPointer();
+
+  if(cart_ram)
+  {
+   const size_t cart_ram_size = CART_GetRAMSize();
+   const size_t read_size = std::min<size_t>(cart_ram_size, snsf_loader->SRAM_Data.size());
+
+   memset(cart_ram, 0xFF, cart_ram_size);
+   snsf_loader->SRAM_Data.read(cart_ram, read_size);
+  }
+ }
+ else
+  CART_LoadNV();
+
+ switch(region)
+ {
+  default:
+	assert(0);
+  case REGION_AUTO:
+	IsPAL = IsPALPPUBit = CartIsPAL;
+	break;
+
+  case REGION_NTSC:
+	IsPAL = IsPALPPUBit = false;
+	break;
+
+  case REGION_PAL:
+	IsPAL = IsPALPPUBit = true;
+	break;
+
+  case REGION_NTSC_LIE_AUTO:
+	IsPAL = false;
+	IsPALPPUBit = CartIsPAL;
+	break;
+
+  case REGION_PAL_LIE_AUTO:
+	IsPAL = true;
+	IsPALPPUBit = CartIsPAL;
+	break;
+
+  case REGION_NTSC_LIE_PAL:
+	IsPAL = false;
+	IsPALPPUBit = true;
+	break;
+
+  case REGION_PAL_LIE_NTSC:
+	IsPAL = true;
+	IsPALPPUBit = false;
+	break;
+ }
+ //
+ //
  INPUT_Init();
  {
   const bool mte[2] = { MDFN_GetSettingB("snes_faust.input.sport1.multitap"), MDFN_GetSettingB("snes_faust.input.sport2.multitap") };
@@ -541,12 +678,26 @@ static MDFN_COLD void LoadReal(GameFile* gf)
  }
 
  EmulatedSNES_Faust.MasterClock = IsPAL ? MDFN_MASTERCLOCK_FIXED(21281370.0) : MDFN_MASTERCLOCK_FIXED(21477272.7);
+ EmulatedSNES_Faust.VideoSystem = IsPAL ? VIDSYS_PAL : VIDSYS_NTSC;
 
- PPU_Init(IsPAL);
- PPU_SetGetVideoParams(&EmulatedSNES_Faust, MDFN_GetSettingB("snes_faust.correct_aspect"), MDFN_GetSettingUI("snes_faust.h_filter"));
+ PPU_Init(MDFN_GetSettingUI("snes_faust.renderer"), IsPAL, IsPALPPUBit, MDFN_GetSettingB("snes_faust.frame_begin_vblank"), MDFN_GetSettingUI("snes_faust.affinity.ppu"));
+ //
+ unsigned sls = MDFN_GetSettingUI(IsPAL ? "snes_faust.slstartp" : "snes_faust.slstart");
+ unsigned sle = MDFN_GetSettingUI(IsPAL ? "snes_faust.slendp" : "snes_faust.slend");
 
- APU_Init(IsPAL);
+ if(sle < sls)
+  std::swap(sls, sle);
 
+ PPU_SetGetVideoParams(&EmulatedSNES_Faust, MDFN_GetSettingUI("snes_faust.correct_aspect"), MDFN_GetSettingUI("snes_faust.h_filter"), sls, sle);
+
+ EmulatedSNES_Faust.IdealSoundRate = APU_Init(IsPAL, (double)EmulatedSNES_Faust.MasterClock / MDFN_MASTERCLOCK_FIXED(1));
+ MSU1_Init(gf, &EmulatedSNES_Faust.IdealSoundRate, MDFN_GetSettingUI("snes_faust.affinity.msu1.audio"), MDFN_GetSettingUI("snes_faust.affinity.msu1.data"));
+ //
+ if(snsf_loader)
+  Player_Init(1, snsf_loader->tags.GetTag("game"), snsf_loader->tags.GetTag("artist"), snsf_loader->tags.GetTag("copyright"), std::vector<std::string>({ snsf_loader->tags.GetTag("title") }));
+ //
+ //
+ //
  Reset(true);
 }
 
@@ -616,6 +767,50 @@ static MDFN_COLD void CheatMemWrite(uint32 A, uint8 V)
   *p = V;
 }
 
+static MDFN_COLD void CheatInstallReadPatch(uint32 address, uint8 value, int compare)
+{
+ //printf("ReadPatch: %08x %d %d\n", address, value, compare);
+ address &= 0xFFFFFF;
+ //
+ {
+  std::vector<ReadPatchInfoStruct>::iterator it = std::lower_bound(ReadPatchInfo.begin(), ReadPatchInfo.end(), address);
+
+  if(it != ReadPatchInfo.end() && it->address == address)
+  {
+   it->value = value;
+   it->compare = compare;
+  }
+  else
+  {
+   assert(it == ReadPatchInfo.end() || it->address > address);
+   //
+   ReadPatchInfoStruct rpi;
+
+   rpi.address = address;
+   rpi.value = value;
+   rpi.compare = compare;
+   rpi.prev_mapping = CPUM.RWIndex[address];
+   assert(rpi.prev_mapping != 0xFF);
+
+   ReadPatchInfo.insert(it, rpi);
+  }
+ }
+ //
+ CPUM.RWIndex[address] = 0xFF;
+}
+
+static MDFN_COLD void CheatRemoveReadPatches(void)
+{
+ for(auto const& rpie : ReadPatchInfo)
+ {
+  assert(CPUM.RWIndex[rpie.address] == 0xFF);
+  assert(rpie.prev_mapping != 0xFF);
+  CPUM.RWIndex[rpie.address] = rpie.prev_mapping;
+ }
+
+ ReadPatchInfo.clear();
+}
+
 event_list_entry events[SNES_EVENT__COUNT];
 
 static MDFN_COLD void InitEvents(void)
@@ -633,10 +828,11 @@ static MDFN_COLD void InitEvents(void)
   events[i].next = (i < (SNES_EVENT__COUNT - 1)) ? &events[i + 1] : NULL;
  }
 
- events[SNES_EVENT_PPU].event_handler = PPU_Update;
- events[SNES_EVENT_PPU_LINEIRQ].event_handler = PPU_UpdateLineIRQ;
+ events[SNES_EVENT_PPU].event_handler = PPU_GetEventHandler();
+ events[SNES_EVENT_PPU_LINEIRQ].event_handler = PPU_GetLineIRQEventHandler();
  events[SNES_EVENT_DMA_DUMMY].event_handler = DMA_Update;
  events[SNES_EVENT_CART].event_handler = CART_GetEventHandler();
+ events[SNES_EVENT_MSU1].event_handler = MSU1_GetEventHandler();
 }
 
 static void RebaseTS(const uint32 timestamp)
@@ -648,6 +844,7 @@ static void RebaseTS(const uint32 timestamp)
  }
 
  CART_AdjustTS(-timestamp);
+ MSU1_AdjustTS(-timestamp);
 
  CPUM.next_event_ts = events[SNES_EVENT__SYNFIRST].next->event_time;
 }
@@ -742,7 +939,13 @@ void CPU_Misc::EventHandler(void)
 
 static void NO_INLINE EmulateReal(EmulateSpecStruct* espec)
 {
- APU_StartFrame((double)EmulatedSNES_Faust.MasterClock / MDFN_MASTERCLOCK_FIXED(1), espec->SoundRate);
+ int32 apu_clock_multiplier;
+ int32 resamp_num;
+ int32 resamp_denom;
+ const double master_clock = (double)EmulatedSNES_Faust.MasterClock / MDFN_MASTERCLOCK_FIXED(1);
+ const bool resamp_clear_buf = APU_StartFrame(master_clock, espec->SoundRate, &apu_clock_multiplier, &resamp_num, &resamp_denom);
+
+ MSU1_StartFrame(master_clock, espec->SoundRate, apu_clock_multiplier, resamp_num, resamp_denom, resamp_clear_buf);
 
  if(spc_reader)
   CPUM.timestamp = 286364;
@@ -750,11 +953,6 @@ static void NO_INLINE EmulateReal(EmulateSpecStruct* espec)
  {
   const bool skip_save = espec->skip;
   espec->skip |= snsf_loader != NULL;
-
-  MDFNMP_ApplyPeriodicCheats();
-
-  // Call before PPU_StartFrame(), as PPU_StartFrame() may call INPUT_AutoRead().
-  INPUT_UpdatePhysicalState();
 
   PPU_StartFrame(espec);
 
@@ -766,8 +964,9 @@ static void NO_INLINE EmulateReal(EmulateSpecStruct* espec)
    CPUM.timestamp = 0;
    const uint32 pts = CPUM.timestamp;
 
-   MemSelect = msi;
-   CPUM.ReadA(A);
+   CPUM.MemSelectCycles = msi ? MEMCYC_FAST : MEMCYC_SLOW;;
+//   CPUM.ReadA(A);
+   CPUM.WriteA(A, 0);
    //
    const uint32 td = CPUM.timestamp - pts;
    const uint8 bank = A >> 16;
@@ -794,12 +993,11 @@ static void NO_INLINE EmulateReal(EmulateSpecStruct* espec)
 
    if(td != reqtd)
    {
-    printf("0x%06x td=%d reqtd=%d\n", A, td, reqtd);
+    fprintf(stderr, "0x%06x td=%d reqtd=%d\n", A, td, reqtd);
     assert(td == reqtd);
    }
   }
  }
- printf("Done\n");
  exit(0);
 #endif
 
@@ -815,6 +1013,7 @@ static void NO_INLINE EmulateReal(EmulateSpecStruct* espec)
  espec->MasterCycles = CPUM.timestamp;
 
  espec->SoundBufSize = APU_EndFrame(espec->SoundBuf);
+ MSU1_EndFrame(espec->SoundBuf, espec->SoundBufSize);
  if(!spc_reader)
  {
   PPU_ResetTS();
@@ -830,7 +1029,11 @@ static sha1_digest doggy;
 static void Emulate(EmulateSpecStruct* espec)
 {
  if(!SpecEx || spc_reader || snsf_loader)
+ {
   EmulateReal(espec);
+  MDFN_MidSync(espec, MIDSYNC_FLAG_NONE);
+  PPU_SyncMT();
+ }
  else
  {
   EmulateSpecStruct tmp_espec = *espec;
@@ -838,7 +1041,8 @@ static void Emulate(EmulateSpecStruct* espec)
   if(espec->SoundFormatChanged || espec->NeedSoundReverse)
    SpecExAudioExpected = -1;
 
-  tmp_espec.skip = true;
+  tmp_espec.skip = -1;
+  assert(tmp_espec.skip == -1);
   tmp_espec.NeedSoundReverse = false;
   tmp_espec.VideoFormatChanged = false;
   tmp_espec.SoundFormatChanged = false;
@@ -891,19 +1095,22 @@ static void Emulate(EmulateSpecStruct* espec)
     memmove(espec->SoundBuf, espec->SoundBuf + expected_delta * 2, espec->SoundBufSize * 2 * sizeof(int16));
    }
   }
-
+  //
+  MDFN_MidSync(espec, MIDSYNC_FLAG_NONE);
+  PPU_SyncMT();
+  //
   MDFNSS_LoadSM(SpecExSS, true);
   SpecExSS->rewind();
  } 
 
- if(spc_reader || snsf_loader)
+ if(MDFN_UNLIKELY(spc_reader || snsf_loader))
  {
   espec->LineWidths[0] = ~0;
   Player_Draw(espec->surface, &espec->DisplayRect, 0, espec->SoundBuf, espec->SoundBufSize);
  }
 }
 
-static void DoSimpleCommand(int cmd)
+static MDFN_COLD void DoSimpleCommand(int cmd)
 {
  switch(cmd)
  {
@@ -920,9 +1127,11 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
   return;
  }
 
+ bool MemSelect = (CPUM.MemSelectCycles == MEMCYC_FAST);
+
  SFORMAT StateRegs[] =
  {
-  SFVAR(MemSelect),
+  SFCONDVAR(load && load <= 0x00102399, MemSelect),
   SFVAR(WRAM),
 
   SFVAR(Multiplicand),
@@ -937,13 +1146,17 @@ static void StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
  MDFNSS_StateAction(sm, load, data_only, StateRegs, "SNES");
 
+ if(load && load <= 0x00102399)
+  CPUM.MemSelectCycles = (MemSelect ? MEMCYC_FAST : MEMCYC_SLOW);
+ //
+ //
  CPU_StateAction(sm, load, data_only, "CPU", "CPUCORE");
  DMA_StateAction(sm, load, data_only);
  APU_StateAction(sm, load, data_only);
  PPU_StateAction(sm, load, data_only);
  CART_StateAction(sm, load, data_only);
+ MSU1_StateAction(sm, load, data_only);
  INPUT_StateAction(sm, load, data_only);
-
 
  if(load)
  {
@@ -959,6 +1172,12 @@ static void SetInput(unsigned port, const char *type, uint8* data)
  INPUT_Set(port, type, data);
 }
 
+MDFN_COLD uint8* GetNV(uint32* size)
+{
+ *size = CART_GetRAMSize();
+
+ return CART_GetRAMPointer();
+}
 
 uint32 SNES_GetRegister(const unsigned int id, char* special, const uint32 special_len)
 {
@@ -967,7 +1186,7 @@ uint32 SNES_GetRegister(const unsigned int id, char* special, const uint32 speci
  switch(id)
  {
   case SNES_GSREG_MEMSEL:
-	ret = MemSelect;
+	ret = (CPUM.MemSelectCycles == MEMCYC_FAST);
 	break;
 
   case SNES_GSREG_TS:
@@ -983,11 +1202,10 @@ void SNES_SetRegister(const unsigned int id, uint32 value)
  switch(id)
  {
   case SNES_GSREG_MEMSEL:
-	MemSelect = value & 0x1;
+	CPUM.MemSelectCycles = (value & 0x1) ? MEMCYC_FAST : MEMCYC_SLOW;
 	break;
  }
 }
-
 
 uint8 PeekWRAM(uint32 addr)
 {
@@ -1014,14 +1232,64 @@ static const MDFNSetting_EnumList HFilter_List[] =
  { "none", PPU_HFILTER_NONE, gettext_noop("None") },
  { "512", PPU_HFILTER_512, gettext_noop("Force 512."), gettext_noop("Double width of line if it's 256.") },
  { "phr256blend", PPU_HFILTER_PHR256BLEND, gettext_noop("Pseudo-hires halve-blend."), gettext_noop("Blend line down to 256 pixels if it's pseudo-hires.") },
+ { "phr256blend_auto512", PPU_HFILTER_PHR256BLEND_AUTO512, gettext_noop("Pseudo-hires halve-blend and force 512 if necessary."), gettext_noop("Blend line down to 256 pixels if it's pseudo-hires.  After, double width of line if any other lines use hires mode.") },
  { "phr256blend_512", PPU_HFILTER_PHR256BLEND_512, gettext_noop("Pseudo-hires halve-blend and force 512."), gettext_noop("Blend line down to 256 pixels if it's pseudo-hires.  After, double width of line if it's 256.") },
  { "512_blend", PPU_HFILTER_512_BLEND, gettext_noop("Force 512 and blend."), gettext_noop("Double width of line if it's 256.  After, blend line.") },
 
  { NULL, 0 },
 };
 
+static const MDFNSetting_EnumList Region_List[] =
+{
+ { "auto", REGION_AUTO, gettext_noop("Auto") },
+
+ { "ntsc", REGION_NTSC, gettext_noop("NTSC(North America/Japan)") },
+ { "pal", REGION_PAL, gettext_noop("PAL(Europe)") },
+
+ { "ntsc_lie_auto", REGION_NTSC_LIE_AUTO, gettext_noop("NTSC, but PPU bit as if \"auto\".") },
+ { "pal_lie_auto", REGION_PAL_LIE_AUTO, gettext_noop("PAL, but PPU bit as if \"auto\".") },
+
+ { "ntsc_lie_pal", REGION_NTSC_LIE_PAL, gettext_noop("NTSC, but PPU bit as if PAL.") },
+ { "pal_lie_ntsc", REGION_PAL_LIE_NTSC, gettext_noop("PAL, but PPU bit as if NTSC.") },
+
+ { NULL, 0 }
+};
+
+static const MDFNSetting_EnumList CAspect_List[] =
+{
+ { "0", PPU_CASPECT_DISABLED, gettext_noop("Disabled") },
+ { "1", PPU_CASPECT_ENABLED, gettext_noop("Enabled") },
+
+ { "force_ntsc", PPU_CASPECT_FORCE_NTSC, gettext_noop("Enabled, force NTSC PAR.") },
+ { "force_pal", PPU_CASPECT_FORCE_PAL, gettext_noop("Enabled, force PAL PAR.") },
+ //
+ //
+ //
+ { "disabled", PPU_CASPECT_DISABLED },
+ { "enabled", PPU_CASPECT_ENABLED },
+
+ { NULL, 0 }
+};
+
+static const MDFNSetting_EnumList Renderer_List[] =
+{
+ { "st", PPU_RENDERER_ST, gettext_noop("Single-threaded"), gettext_noop("PPU rendering is performed in the main emulation thread.") },
+ { "mt", PPU_RENDERER_MT, gettext_noop("Multi-threaded"), gettext_noop("PPU rendering is performed in a dedicated thread.") },
+
+ { NULL, 0 }
+};
+
 static const MDFNSetting Settings[] =
 {
+ { "snes_faust.renderer", MDFNSF_NOFLAGS, gettext_noop("PPU renderer."), gettext_noop("If you have only one CPU with one physical CPU core, select the single-threaded renderer for better performance."), MDFNST_ENUM, "st", NULL, NULL, NULL, NULL, Renderer_List },
+
+ { "snes_faust.affinity.ppu", MDFNSF_NOFLAGS, gettext_noop("PPU rendering thread CPU affinity mask."), gettext_noop("Set to 0 to disable changing affinity."), MDFNST_UINT, "0", "0x0000000000000000", "0xFFFFFFFFFFFFFFFF" },
+ { "snes_faust.affinity.msu1.audio", MDFNSF_NOFLAGS, gettext_noop("MSU1 audio read thread CPU affinity mask."), gettext_noop("Set to 0 to disable changing affinity."), MDFNST_UINT, "0", "0x0000000000000000", "0xFFFFFFFFFFFFFFFF" },
+ { "snes_faust.affinity.msu1.data", MDFNSF_NOFLAGS, gettext_noop("MSU1 data read thread CPU affinity mask."), gettext_noop("Set to 0 to disable changing affinity."), MDFNST_UINT, "0", "0x0000000000000000", "0xFFFFFFFFFFFFFFFF" },
+
+ { "snes_faust.frame_begin_vblank", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE | MDFNSF_SUPPRESS_DOC | MDFNSF_NONPERSISTENT, gettext_noop("Begin frame in emulated VBlank."), gettext_noop("Disabling will make the multithreaded PPU renderer more effective, but will also increase latency."), MDFNST_BOOL, "1" },
+
+ { "snes_faust.msu1.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("MSU1 sound quality."), gettext_noop("Higher values correspond to better SNR and better preservation of higher frequencies(\"brightness\"), at the cost of increased computational complexity and a negligible increase in latency.\n\nHigher values will also slightly increase the probability of sample clipping(relevant if Mednafen's volume control settings are set too high), due to increased (time-domain) ringing."), MDFNST_INT, "4", "0", "5" },
  { "snes_faust.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("Sound quality."), gettext_noop("Higher values correspond to better SNR and better preservation of higher frequencies(\"brightness\"), at the cost of increased computational complexity and a negligible increase in latency.\n\nHigher values will also slightly increase the probability of sample clipping(relevant if Mednafen's volume control settings are set too high), due to increased (time-domain) ringing."), MDFNST_INT, "3", "0", "5" },
  { "snes_faust.resamp_rate_error", MDFNSF_NOFLAGS, gettext_noop("Sound output rate tolerance."), gettext_noop("Lower values correspond to better matching of the output rate of the resampler to the actual desired output rate, at the expense of increased RAM usage and poorer CPU cache utilization."), MDFNST_FLOAT, "0.000035", "0.0000001", "0.0015" },
 
@@ -1031,25 +1299,34 @@ static const MDFNSetting Settings[] =
  { "snes_faust.input.sport1.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on SNES port 1."), NULL, MDFNST_BOOL, "0" },
  { "snes_faust.input.sport2.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on SNES port 2."), NULL, MDFNST_BOOL, "0" },
 
- { "snes_faust.correct_aspect", MDFNSF_NOFLAGS, gettext_noop("Correct aspect ratio."), NULL, MDFNST_BOOL, "1" },
+ { "snes_faust.region", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Region of SNES to emulate."), NULL, MDFNST_ENUM, "auto", NULL, NULL, NULL, NULL, Region_List },
+
+ { "snes_faust.correct_aspect", MDFNSF_NOFLAGS, gettext_noop("Correct aspect ratio."), NULL, MDFNST_ENUM, "1", NULL, NULL, NULL, NULL, CAspect_List },
+
+ { "snes_faust.slstart", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in NTSC mode."), NULL, MDFNST_INT, "0", "0", "223" },
+ { "snes_faust.slend", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in NTSC mode."), NULL, MDFNST_INT, "223", "0", "223" },
+
+ { "snes_faust.slstartp", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in PAL mode."), NULL, MDFNST_INT, "0", "0", "238" },
+ { "snes_faust.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in PAL mode."), NULL, MDFNST_INT, "238", "0", "238" },
 
  { "snes_faust.h_filter", MDFNSF_NOFLAGS, gettext_noop("Horizontal blending/doubling filter."), NULL, MDFNST_ENUM, "none", NULL, NULL, NULL, NULL, HFilter_List },
 
  { "snes_faust.cx4.clock_rate", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("CX4 clock rate, specified in percentage of normal."), gettext_noop("Overclocking the CX4 will cause or worsen attract mode desynchronization."), MDFNST_UINT, "100", "100", "500" },
- // TODO: { "snes_faust.superfx.clock_rate", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Super FX clock rate, specified in percentage of normal."), gettext_noop("Overclocking the Super FX will cause or worsen attract mode desynchronization."), MDFNST_UINT, "100", "100", "500" },
+ { "snes_faust.superfx.clock_rate", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Super FX clock rate, specified in percentage of normal."), gettext_noop("Overclocking the Super FX will cause or worsen attract mode desynchronization."), MDFNST_UINT, "100", "25", "500" },
+ { "snes_faust.superfx.icache", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable SuperFX instruction cache emulation."), gettext_noop("Enabling will likely increase CPU usage."), MDFNST_BOOL, "0" },
 
  { NULL }
 };
 
 static const CheatInfoStruct CheatInfo =
 {
- NULL,
- NULL,
+ CheatInstallReadPatch,
+ CheatRemoveReadPatches,
 
  CheatMemRead,
  CheatMemWrite,
 
- CheatFormatInfo_Empty,
+ CheatFormats_SNES,
  false
 };
 
@@ -1094,6 +1371,10 @@ MDFNGI EmulatedSNES_Faust =
  SetInput,
  NULL,
  DoSimpleCommand,
+/*
+ Reset,
+ GetNV,
+*/
  NULL,
  Settings,
  0,

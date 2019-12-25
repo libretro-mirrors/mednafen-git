@@ -50,8 +50,8 @@ namespace KBMan
   KEYS_FLAG_KEYDOWN_SEEN	= (KEYS_FLAG_KEYDOWN << 1),
  };
 
- extern uint8 keys[MKK_COUNT];
- extern uint32 mods[2][2];
+ MDFN_HIDE extern uint8 keys[MKK_COUNT];
+ MDFN_HIDE extern uint32 mods[2][2];
 
  void Init(void) MDFN_COLD;
  void Kill(void) MDFN_COLD;

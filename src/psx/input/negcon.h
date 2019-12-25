@@ -25,6 +25,6 @@
 namespace MDFN_IEN_PSX
 {
  InputDevice *Device_neGcon_Create(void) MDFN_COLD;
- extern IDIISG Device_neGcon_IDII;
+ MDFN_HIDE extern IDIISG Device_neGcon_IDII;
 }
 #endif

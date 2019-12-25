@@ -99,7 +99,7 @@ static MDFN_FASTCALL void FDSFix(int a)
   IRQCounter -= a;
   if(IRQCounter <= 0)
   {
-   //extern int scanline;
+   //MDFN_HIDE extern int scanline;
    //printf("FDS IRQ: %d\n", scanline);
 
    if(IRQControl & 1)
@@ -191,7 +191,7 @@ static DECLFR(FDSRAMRead)
 
 static DECLFW(FDSWrite)
 {
-// extern int scanline;
+// MDFN_HIDE extern int scanline;
 // if(A == 0x4020 || A == 0x4021 || A == 0x4022 || A == 0x4023)
 //  MDFN_printf("IRQ Write : $%04x:$%02x, %d %08x %08x %02x\n",A,V,scanline, IRQReload, IRQCounter, V4023);
 // else

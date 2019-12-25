@@ -58,7 +58,7 @@ struct CartInfo
  uint8 ROM[8192 * 1024];
 };
 
- extern CartInfo Cart;
+ MDFN_HIDE extern CartInfo Cart;
 }
 
 #endif

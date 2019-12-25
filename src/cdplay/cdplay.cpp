@@ -25,6 +25,7 @@
 #include <mednafen/cdrom/CDInterface.h>
 #include <trio/trio.h>
 
+using namespace Mednafen;
 using namespace CDUtility;
 
 #include <mednafen/resampler/resampler.h>

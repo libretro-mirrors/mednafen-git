@@ -17,6 +17,9 @@
 
 #include <mednafen/mednafen.h>
 #include <trio/trio.h>
+
+using namespace Mednafen;
+
 #include "pcecd_drive.h"
 #include <mednafen/cdrom/CDInterface.h>
 #include <mednafen/cdrom/SimpleFIFO.h>

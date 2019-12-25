@@ -68,7 +68,7 @@ class IODevice_JPKeyboard final : public IODevice
  int8 phase;
 };
 
-extern const IDIISG IODevice_JPKeyboard_IDII;
+MDFN_HIDE extern const IDIISG IODevice_JPKeyboard_IDII;
 }
 
 #endif

@@ -19,6 +19,8 @@
 #include <mednafen/mednafen.h>
 #include <mednafen/mempatcher.h>
 
+using namespace Mednafen;
+
 //#include "TLCS-900h/TLCS900h_disassemble.h"
 #include "TLCS-900h/TLCS900h_interpret_dst.h"
 #include "TLCS-900h/TLCS900h_interpret.h"

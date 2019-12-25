@@ -49,7 +49,7 @@ static DEFREAD(CartRead_LoROM)
  if(cyc >= 0)
   CPUM.timestamp += cyc;
  else
-  CPUM.timestamp += MemSelect ? MEMCYC_FAST : MEMCYC_SLOW;
+  CPUM.timestamp += CPUM.MemSelectCycles;
 
  return (Cart.ROM + rom_offset)[(A & 0x7FFF) | ((A >> 1) & 0x3F8000)];
 }
@@ -65,7 +65,7 @@ static DEFREAD(CartRead_HiROM)
  if(cyc >= 0)
   CPUM.timestamp += cyc;
  else
-  CPUM.timestamp += MemSelect ? MEMCYC_FAST : MEMCYC_SLOW;
+  CPUM.timestamp += CPUM.MemSelectCycles;
 
  return (Cart.ROM + rom_offset)[A & 0x3FFFFF];
 }
@@ -81,7 +81,7 @@ static DEFREAD(CartRead_SRAM_LoROM)
  if(cyc >= 0)
   CPUM.timestamp += cyc;
  else
-  CPUM.timestamp += MemSelect ? MEMCYC_FAST : MEMCYC_SLOW;
+  CPUM.timestamp += CPUM.MemSelectCycles;
 
  return Cart.RAM[((A & 0x7FFF) | ((A >> 1) &~ 0x7FFF)) & Cart.RAM_Mask];
 }
@@ -92,7 +92,7 @@ static DEFWRITE(CartWrite_SRAM_LoROM)
  if(cyc >= 0)
   CPUM.timestamp += cyc;
  else
-  CPUM.timestamp += MemSelect ? MEMCYC_FAST : MEMCYC_SLOW;
+  CPUM.timestamp += CPUM.MemSelectCycles;
 
  Cart.RAM[((A & 0x7FFF) | ((A >> 1) &~ 0x7FFF)) & Cart.RAM_Mask] = V;
 }
@@ -128,7 +128,7 @@ static MDFN_COLD uint32 DummyEventHandler(uint32 timestamp)
  return SNES_EVENT_MAXTS;
 }
 
-bool CART_Init(Stream* fp, uint8 id[16], const int32 cx4_ocmultiplier, const int32 superfx_ocmultiplier)
+bool CART_Init(Stream* fp, uint8 id[16], const int32 cx4_ocmultiplier, const int32 superfx_ocmultiplier, const bool superfx_enable_icache)
 {
  bool IsPAL = false;
  static const uint64 max_rom_size = 8192 * 1024;
@@ -368,7 +368,7 @@ bool CART_Init(Stream* fp, uint8 id[16], const int32 cx4_ocmultiplier, const int
     continue;
 
    readfunc cart_r;
-   writefunc cart_w;
+   const writefunc cart_w = (bank & 0x80) ? OBWrite_VAR : OBWrite_SLOW;
 
    if(rom_layout == ROM_LAYOUT_LOROM || rom_layout == ROM_LAYOUT_EXLOROM)
    {
@@ -376,8 +376,6 @@ bool CART_Init(Stream* fp, uint8 id[16], const int32 cx4_ocmultiplier, const int
      cart_r = ((bank >= 0x80) ? CartRead_LoROM<-1, 0x400000> : CartRead_LoROM<MEMCYC_SLOW, 0x400000>);
     else
      cart_r = ((bank >= 0x80) ? CartRead_LoROM<-1> : CartRead_LoROM<MEMCYC_SLOW>);
-
-    cart_w = OBWrite_SLOW;
 
     Set_A_Handlers((bank << 16) | 0x8000, (bank << 16) | 0xFFFF, cart_r, cart_w);
 
@@ -395,8 +393,6 @@ bool CART_Init(Stream* fp, uint8 id[16], const int32 cx4_ocmultiplier, const int
      cart_r = ((bank >= 0x80) ? CartRead_HiROM<-1, 0x400000> : CartRead_HiROM<MEMCYC_SLOW, 0x400000>);
     else
      cart_r = ((bank >= 0x80) ? CartRead_HiROM<-1> : CartRead_HiROM<MEMCYC_SLOW>);
-
-    cart_w = OBWrite_SLOW;
 
     uint16 romlb = 0x8000;
     if(((bank & 0x7F) >= 0x40 && (bank & 0x7F) <= 0x7D) || bank >= 0xFE)
@@ -456,7 +452,7 @@ bool CART_Init(Stream* fp, uint8 id[16], const int32 cx4_ocmultiplier, const int
 	break;
 
   case SPECIAL_CHIP_SUPERFX:
-	CART_SuperFX_Init(master_clock, superfx_ocmultiplier);
+	CART_SuperFX_Init(master_clock, superfx_ocmultiplier, superfx_enable_icache);
 	break;
  }
  //
@@ -467,6 +463,7 @@ bool CART_Init(Stream* fp, uint8 id[16], const int32 cx4_ocmultiplier, const int
 
 bool CART_LoadNV(void)
 {
+#ifndef MDFN_SNES_FAUST_SUPAFAUST
  if(Cart.RAM_Size)
  {
   try
@@ -489,11 +486,13 @@ bool CART_LoadNV(void)
     throw;
   }
  }
+#endif
  return false;
 }
 
 void CART_SaveNV(void)
 {
+#ifndef MDFN_SNES_FAUST_SUPAFAUST
  if(Cart.RAM_Size)
  {
   const std::string path = MDFN_MakeFName(MDFNMKF_SAV, 0, "srm");
@@ -502,6 +501,7 @@ void CART_SaveNV(void)
   fp.write(Cart.RAM, Cart.RAM_Size);
   fp.close();
  }
+#endif
 }
 
 void CART_Kill(void)
@@ -572,6 +572,11 @@ void CART_PokeRAM(uint32 addr, uint8 val)
 uint32 CART_GetRAMSize(void)
 {
  return (size_t)(Cart.RAM_Mask + 1);
+}
+
+uint8* CART_GetRAMPointer(void)
+{
+ return Cart.RAM;
 }
 
 }

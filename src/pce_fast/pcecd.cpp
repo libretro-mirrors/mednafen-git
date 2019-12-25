@@ -28,6 +28,8 @@
 #include <mednafen/cdrom/SimpleFIFO.h>
 #include <mednafen/sound/okiadpcm.h>
 
+using namespace Mednafen;
+
 #include "pcecd_drive.h"
 #include "pcecd.h"
 

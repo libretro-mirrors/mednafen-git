@@ -25,25 +25,47 @@
 namespace MDFN_IEN_SNES_FAUST
 {
 
+#include "dsp2chip.h"
+static DSP2Chip DSP;
+
+static uint32 last_master_timestamp;
+static unsigned run_count_mod;
+static unsigned clock_multiplier;
+
+static NO_INLINE void Update(uint32 master_timestamp)
+{
+ int32 tmp;
+
+ tmp = ((master_timestamp - last_master_timestamp) * clock_multiplier) + run_count_mod;
+ last_master_timestamp = master_timestamp;
+ run_count_mod  = (uint16)tmp;
+
+ DSP.Run(tmp >> 16);
+}
+
 template<signed cyc>
 static DEFREAD(MainCPU_ReadDR)
 {
  if(MDFN_LIKELY(!DBG_InHLRead))
  {
-  CPUM.timestamp += (cyc >= 0) ? cyc : (MemSelect ? MEMCYC_FAST : MEMCYC_SLOW);
+  CPUM.timestamp += (cyc >= 0) ? cyc : CPUM.MemSelectCycles;
  }
  //
  //
- return 0;
+ Update(CPUM.timestamp);
+
+ return DSP.ReadData();
 }
 
 template<signed cyc>
 static DEFWRITE(MainCPU_WriteDR)
 {
- CPUM.timestamp += (cyc >= 0) ? cyc : (MemSelect ? MEMCYC_FAST : MEMCYC_SLOW);
+ CPUM.timestamp += (cyc >= 0) ? cyc : CPUM.MemSelectCycles;
  //
  //
- SNES_DBG("[DSP2] WriteDR: %02x\n", V);
+ Update(CPUM.timestamp);
+
+ DSP.WriteData(V);
 }
 
 template<signed cyc>
@@ -51,12 +73,47 @@ static DEFREAD(MainCPU_ReadSR)
 {
  if(MDFN_LIKELY(!DBG_InHLRead))
  {
-  CPUM.timestamp += (cyc >= 0) ? cyc : (MemSelect ? MEMCYC_FAST : MEMCYC_SLOW);
+  CPUM.timestamp += (cyc >= 0) ? cyc : CPUM.MemSelectCycles;
  }
  //
  //
- //abort();
- return 0x80;
+ //
+ Update(CPUM.timestamp);
+
+ return DSP.ReadStatus();
+}
+
+static void AdjustTS(int32 delta)
+{
+
+
+}
+
+static uint32 EventHandler(uint32 timestamp)
+{
+ //DSP.
+ return timestamp + 10000;
+}
+
+static MDFN_COLD void Reset(bool powering_up)
+{
+ DSP.Reset(powering_up);
+
+ if(powering_up)
+  run_count_mod = 0;
+}
+
+static void StateAction(StateMem* sm, const unsigned load, const bool data_only)
+{
+ SFORMAT StateRegs[] =
+ {
+  SFVAR(run_count_mod),
+  SFEND
+ };
+
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, "DSP2");
+
+ DSP.StateAction(sm, load, data_only);
 }
 
 void CART_DSP2_Init(const int32 master_clock)
@@ -69,6 +126,18 @@ void CART_DSP2_Init(const int32 master_clock)
    Set_A_Handlers((bank << 16) | 0xC000, (bank << 16) | 0xFFFF, MainCPU_ReadSR<MEMCYC_SLOW>, OBWrite_SLOW);
   }
  }
+ //
+ //
+ //
+ last_master_timestamp = 0;
+ clock_multiplier = ((int64)65536 * 20000000 * 2 + master_clock) / (master_clock * 2);
+ //
+ //
+ //
+ Cart.AdjustTS = AdjustTS;
+ Cart.EventHandler = EventHandler;
+ Cart.Reset = Reset;
+ Cart.StateAction = StateAction;
 }
 
 }

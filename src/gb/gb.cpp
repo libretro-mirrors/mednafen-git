@@ -28,8 +28,8 @@
 
 #include <zlib.h>
 
-#include "gb.h"
 #include "gbGlobals.h"
+#include "gb.h"
 #include "memory.h"
 #include "sound.h"
 #include "z80.h"

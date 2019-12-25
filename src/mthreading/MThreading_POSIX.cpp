@@ -20,14 +20,13 @@
 */
 
 /*
- TODO: Monotonic time for WaitSemTimeout()
+ TODO: Monotonic time for Sem_TimedWait()
 
  TODO: Make thread ID correct for threads created outside
        of Mednafen's framework.
 */
 
-#include <mednafen/types.h>
-#include <mednafen/driver.h>
+#include <mednafen/mednafen.h>
 #include <mednafen/MThreading.h>
 //
 //
@@ -122,41 +121,33 @@ static MDFN_NOWARN_UNUSED int PTSNW(int (*fn)(const char*), pthread_t t, const c
  return fn(n);
 }
 
-Thread* CreateThread(int (*fn)(void *), void *data, const char* debug_name)
+Thread* Thread_Create(int (*fn)(void *), void *data, const char* debug_name)
 {
- try
+ std::unique_ptr<Thread> ret(new Thread());
+ int ptec;
+
+ ret->ep = fn;
+ ret->data = data;
+
+ if((ptec = pthread_create(&ret->t, nullptr, PTCEP, ret.get())))
+  throw MDFN_Error(0, _("pthread_create() failed: %d"), ptec);
+
+ if(debug_name)
  {
-  std::unique_ptr<Thread> ret(new Thread());
-  int ptec;
-
-  ret->ep = fn;
-  ret->data = data;
-
-  if((ptec = pthread_create(&ret->t, nullptr, PTCEP, ret.get())))
-   throw MDFN_Error(0, _("pthread_create() failed: %d"), ptec);
-
-  if(debug_name)
-  {
 #if defined(HAVE_PTHREAD_SETNAME_NP) && !defined(pthread_setname_np)
-   char tmp[16];
+  char tmp[16];
 
-   strncpy(tmp, debug_name, 16);
-   tmp[15] = 0;
+  strncpy(tmp, debug_name, 16);
+  tmp[15] = 0;
 
-   PTSNW(pthread_setname_np, ret->t, tmp);
+  PTSNW(pthread_setname_np, ret->t, tmp);
 #endif
-  }
+ }
 
-  return ret.release();
- }
- catch(std::exception& e)
- {
-  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
-  return nullptr;
- }
+ return ret.release();
 }
 
-void WaitThread(Thread* thread, int* status)
+void Thread_Wait(Thread* thread, int* status)
 {
  try
  {
@@ -187,11 +178,83 @@ void WaitThread(Thread* thread, int* status)
  }
 }
 
-uintptr_t ThreadID(void)
+uintptr_t Thread_ID(void)
 {
  //printf("%16llx -- %16llx -- %16llx\n", (unsigned long long)ThreadID, (unsigned long long)pthread_self(), (unsigned long long)SDL_ThreadID());
  return LocalThreadID;
 }
+
+#ifdef HAVE_PTHREAD_SETAFFINITY_NP
+static uint64 GetAffinity(Thread* thread)
+{
+ uint64 mask = 0;
+
+ int ptec;
+ cpu_set_t c;
+ pthread_t t = thread ? thread->t : pthread_self();
+
+ CPU_ZERO(&c);
+ if((ptec = pthread_getaffinity_np(t, sizeof(cpu_set_t), &c)))
+ {
+  ErrnoHolder ene(ptec);
+
+  throw MDFN_Error(ene.Errno(), _("pthread_getaffinity_np() failed: %s"), ene.StrError());
+ }
+
+ for(unsigned i = 0; i < sizeof(mask) * 8 && i < CPU_SETSIZE; i++)
+ {
+  if(CPU_ISSET(i, &c))
+   mask |= (uint64)1 << i;
+ }
+
+ //printf("GetAffinity() %016llx %08x\n", (unsigned long long)t, mask);
+
+ return mask;
+}
+
+uint64 Thread_SetAffinity(Thread* thread, uint64 mask)
+{
+ assert(mask != 0);
+ //
+ const uint64 ret = GetAffinity(thread);
+ int ptec;
+ cpu_set_t c;
+ pthread_t t = thread ? thread->t : pthread_self();
+
+ //printf("SetAffinity() %016llx %08x\n", (unsigned long long)t, mask);
+
+ CPU_ZERO(&c);
+
+ for(unsigned i = 0; i < sizeof(mask) * 8 && i < CPU_SETSIZE; i++)
+ {
+  if((mask >> i) & 1)
+   CPU_SET(i, &c);
+ }
+
+ if(CPU_SETSIZE < 64 && mask >= ((uint64)1 << CPU_SETSIZE))
+ {
+  ErrnoHolder ene(EINVAL);
+
+  throw MDFN_Error(ene.Errno(), _("Setting affinity to 0x%016llx failed: %s"), (unsigned long long)mask, ene.StrError());
+ }
+
+ if((ptec = pthread_setaffinity_np(t, sizeof(cpu_set_t), &c)))
+ {
+  ErrnoHolder ene(ptec);
+
+  throw MDFN_Error(ene.Errno(), _("Setting affinity to 0x%016llx failed: %s"), (unsigned long long)mask, ene.StrError());
+ }
+
+ return ret;
+}
+#else
+uint64 Thread_SetAffinity(Thread* thread, uint64 mask)
+{
+ assert(mask != 0);
+ //
+ throw MDFN_Error(0, _("Setting affinity to 0x%016llx failed: %s"), (unsigned long long)mask, _("pthread_setaffinity_np() not available."));
+}
+#endif
 
 static void CreateMutex(Mutex* ret)
 {
@@ -242,68 +305,53 @@ static void CreateMutex(Mutex* ret)
  }
 }
 
-Mutex* CreateMutex(void)
+Mutex* Mutex_Create(void)
 {
- try
- {
-  std::unique_ptr<Mutex> ret(new Mutex);
+ std::unique_ptr<Mutex> ret(new Mutex);
 
-  CreateMutex(ret.get());
+ CreateMutex(ret.get());
 
-  return ret.release();
- }
- catch(std::exception& e)
- {
-  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
-  return nullptr;
- }
+ return ret.release();
 }
 
-void DestroyMutex(Mutex* mutex)
+void Mutex_Destroy(Mutex* mutex) noexcept
 {
- try
+ int ptec;
+
+ if((ptec = pthread_mutex_destroy(&mutex->m)))
  {
-  int ptec;
+  ErrnoHolder ene(ptec);
 
-  if((ptec = pthread_mutex_destroy(&mutex->m)))
-  {
-   ErrnoHolder ene(ptec);
-
-   throw MDFN_Error(ene.Errno(), _("pthread_mutex_destroy() failed: %s"), ene.StrError());
-  }
-
-  delete mutex;
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("pthread_mutex_destroy() failed: %s"), ene.StrError());
  }
- catch(std::exception& e)
- {
-  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
- }
+
+ delete mutex;
 }
 
-int LockMutex(Mutex *mutex)
+bool Mutex_Lock(Mutex* mutex) noexcept
 {
  int ptec;
 
  if((ptec = pthread_mutex_lock(&mutex->m)))
  {
   fprintf(stderr, "pthread_mutex_lock() failed: %d\n", ptec);
-  return -1;
+  return false;
  }
 
- return 0;
+ return true;
 }
 
-int UnlockMutex(Mutex *mutex)
+bool Mutex_Unlock(Mutex* mutex) noexcept
 {
  int ptec;
 
  if((ptec = pthread_mutex_unlock(&mutex->m)))
  {
   fprintf(stderr, "pthread_mutex_unlock() failed: %d\n", ptec);
-  return -1;
+  return false;
  }
 
- return 0;
+ return true;
 }
 
 static void CreateCond(Cond* ret)
@@ -341,72 +389,57 @@ static void CreateCond(Cond* ret)
  pthread_condattr_destroy(&attr);
 }
 
-Cond* CreateCond(void)
+Cond* Cond_Create(void)
 {
- try
- {
-  std::unique_ptr<Cond> ret(new Cond);
+ std::unique_ptr<Cond> ret(new Cond);
 
-  CreateCond(ret.get());
+ CreateCond(ret.get());
 
-  return ret.release();
- }
- catch(std::exception& e)
- {
-  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
-  return nullptr;
- }
+ return ret.release();
 }
 
-void DestroyCond(Cond* cond)
+void Cond_Destroy(Cond* cond) noexcept
 {
- try
+ int ptec;
+
+ if((ptec = pthread_cond_destroy(&cond->c)))
  {
-  int ptec;
+  ErrnoHolder ene(ptec);
 
-  if((ptec = pthread_cond_destroy(&cond->c)))
-  {
-   ErrnoHolder ene(ptec);
-
-   throw MDFN_Error(ene.Errno(), _("pthread_cond_destroy() failed: %s"), ene.StrError());
-  }
-
-  delete cond;
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("pthread_cond_destroy() failed: %s"), ene.StrError());
  }
- catch(std::exception& e)
- {
-  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
- }
+
+ delete cond;
 }
 
-int SignalCond(Cond* cond)
+bool Cond_Signal(Cond* cond) noexcept
 {
  int ptec;
 
  if((ptec = pthread_cond_signal(&cond->c)))
  {
   fprintf(stderr, "pthread_cond_signal() failed: %d\n", ptec);
-  return -1;
+  return false;
  }
 
- return 0;
+ return true;
 }
 
-int WaitCond(Cond* cond, Mutex* mutex)
+bool Cond_Wait(Cond* cond, Mutex* mutex) noexcept
 {
  int ptec;
 
  if((ptec = pthread_cond_wait(&cond->c, &mutex->m)))
  {
   fprintf(stderr, "pthread_cond_wait() failed: %d\n", ptec);
-  return -1;
+  return false;
  }
 
- return 0;
+ return true;
 }
 
 #if !defined(MDFN_USE_COND_TIMEDWAIT_RELATIVE_NP)
-int WaitCondTimeout(Cond* cond, Mutex* mutex, unsigned ms)
+bool Cond_TimedWait(Cond* cond, Mutex* mutex, unsigned ms) noexcept
 {
  struct timespec abstime;
 
@@ -415,24 +448,24 @@ int WaitCondTimeout(Cond* cond, Mutex* mutex, unsigned ms)
  if(clock_gettime(CLOCK_MONOTONIC, &abstime))
  {
   fprintf(stderr, "clock_gettime() failed: %m\n");
-  return -1;
+  return false;
  }
 
  TimeSpec_AddNanoseconds(&abstime, (uint64)ms * 1000 * 1000);
 
  int ctw_rv = pthread_cond_timedwait(&cond->c, &mutex->m, &abstime);
  if(ctw_rv == ETIMEDOUT)
-  return COND_TIMEDOUT;
+  return false;
  else if(ctw_rv)
  {
   fprintf(stderr, "pthread_cond_timedwait() failed: %d\n", ctw_rv);
-  return -1;
+  return false;
  }
 
- return 0;
+ return true;
 }
 #else
-int WaitCondTimeout(Cond* cond, Mutex* mutex, unsigned ms)
+bool Cond_TimedWait(Cond* cond, Mutex* mutex, unsigned ms) noexcept
 {
  struct timespec reltime;
 
@@ -442,14 +475,14 @@ int WaitCondTimeout(Cond* cond, Mutex* mutex, unsigned ms)
 
  int ctw_rv = pthread_cond_timedwait_relative_np(&cond->c, &mutex->m, &reltime);
  if(ctw_rv == ETIMEDOUT)
-  return COND_TIMEDOUT;
+  return false;
  else if(ctw_rv)
  {
   fprintf(stderr, "pthread_cond_timedwait_relative_np() failed: %d\n", ctw_rv);
-  return -1;
+  return false;
  }
 
- return 0;
+ return true;
 }
 #endif
 
@@ -466,48 +499,33 @@ struct Sem
  Sem(const Sem&);
 };
 
-Sem* CreateSem(void)
+Sem* Sem_Create(void)
 {
- try
+ std::unique_ptr<Sem> ret(new Sem);
+
+ if(sem_init(&ret->s, 0, 0))
  {
-  std::unique_ptr<Sem> ret(new Sem);
+  ErrnoHolder ene(errno);
 
-  if(sem_init(&ret->s, 0, 0))
-  {
-   ErrnoHolder ene(errno);
-
-   throw MDFN_Error(ene.Errno(), _("sem_init() failed: %s"), ene.StrError());
-  }
-
-  return ret.release();
+  throw MDFN_Error(ene.Errno(), _("sem_init() failed: %s"), ene.StrError());
  }
- catch(std::exception& e)
- {
-  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
-  return nullptr;
- }
+
+ return ret.release();
 }
 
-void DestroySem(Sem* sem)
+void Sem_Destroy(Sem* sem) noexcept
 {
- try
+ if(sem_destroy(&sem->s))
  {
-  if(sem_destroy(&sem->s))
-  {
-   ErrnoHolder ene(errno);
+  ErrnoHolder ene(errno);
 
-   throw MDFN_Error(ene.Errno(), _("sem_destroy() failed: %s"), ene.StrError());
-  }
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("sem_destroy() failed: %s"), ene.StrError());
+ }
 
-  delete sem;
- }
- catch(std::exception& e)
- {
-  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
- }
+ delete sem;
 }
 
-int WaitSem(Sem* sem)
+bool Sem_Wait(Sem* sem) noexcept
 {
  tryagain:
  if(sem_wait(&sem->s))
@@ -516,13 +534,13 @@ int WaitSem(Sem* sem)
    goto tryagain;
 
   fprintf(stderr, "sem_wait() failed: %m");
-  return -1;
+  return false;
  }
 
- return 0;
+ return true;
 }
 
-int WaitSemTimeout(Sem* sem, unsigned ms)
+bool Sem_TimedWait(Sem* sem, unsigned ms) noexcept
 {
  struct timespec abstime;
 
@@ -531,7 +549,7 @@ int WaitSemTimeout(Sem* sem, unsigned ms)
  if(clock_gettime(/*CLOCK_MONOTONIC*/CLOCK_REALTIME, &abstime))
  {
   fprintf(stderr, "clock_gettime() failed: %m");
-  return -1;
+  return false;
  }
 
  TimeSpec_AddNanoseconds(&abstime, (uint64)ms * 1000 * 1000);
@@ -544,26 +562,27 @@ int WaitSemTimeout(Sem* sem, unsigned ms)
    goto tryagain;
 
   if(errno == ETIMEDOUT)
-   return SEM_TIMEDOUT;
+   return false;
   //
   fprintf(stderr, "sem_timedwait() failed: %m");
-  return -1;
+  return false;
  }
 
- return 0;
+ return true;
 }
 
-int PostSem(Sem* sem)
+bool Sem_Post(Sem* sem) noexcept
 {
  if(sem_post(&sem->s))
  { 
   fprintf(stderr, "sem_post() failed: %m");
-  return -1;
+  return false;
  }
 
- return 0;
+ return true;
 }
 #else
+#warning "Cond var semaphore"
 //
 // Semaphores via condition var.
 //
@@ -579,113 +598,93 @@ struct Sem
  Sem(const Sem&);
 };
 
-Sem* CreateSem(void)
+Sem* Sem_Create(void)
 {
- try
- {
-  std::unique_ptr<Sem> ret(new Sem);
+ std::unique_ptr<Sem> ret(new Sem);
 
-  CreateCond(&ret->c);
-  CreateMutex(&ret->m);
+ CreateCond(&ret->c);
+ CreateMutex(&ret->m);
 
-  ret->v = 0;
+ ret->v = 0;
 
-  return ret.release();
- }
- catch(std::exception& e)
- {
-  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
-  return nullptr;
- }
+ return ret.release();
 }
 
-void DestroySem(Sem* sem)
+void Sem_Destroy(Sem* sem) noexcept
 {
- try
+ int ptec;
+
+ if((ptec = pthread_cond_destroy(&sem->c.c)))
  {
-  int ptec;
+  ErrnoHolder ene(ptec);
 
-  if((ptec = pthread_cond_destroy(&sem->c.c)))
-  {
-   ErrnoHolder ene(ptec);
-
-   MDFN_Notify(MDFN_NOTICE_ERROR, _("pthread_cond_destroy() failed: %s"), ene.StrError());
-  }
-
-  if((ptec = pthread_mutex_destroy(&sem->m.m)))
-  {
-   ErrnoHolder ene(ptec);
-
-   MDFN_Notify(MDFN_NOTICE_ERROR, _("pthread_mutex_destroy() failed: %s"), ene.StrError());
-  }
-
-  delete sem;
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("pthread_cond_destroy() failed: %s"), ene.StrError());
  }
- catch(std::exception& e)
+
+ if((ptec = pthread_mutex_destroy(&sem->m.m)))
  {
-  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
+  ErrnoHolder ene(ptec);
+
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("pthread_mutex_destroy() failed: %s"), ene.StrError());
  }
+
+ delete sem;
 }
 
-int WaitSem(Sem* sem)
+bool Sem_Wait(Sem* sem) noexcept
 {
- if(LockMutex(&sem->m) < 0)
-  return -1;
+ if(!Mutex_Lock(&sem->m);
+  return false;
 
  while(!sem->v)
  {
-  if(WaitCond(&sem->c, &sem->m) < 0)
+  if(!Cond_Wait(&sem->c, &sem->m))
   {
-   UnlockMutex(&sem->m);
-   return -1;
+   Mutex_Unlock(&sem->m);
+   return false;
   }
  }
 
  sem->v--;
  assert(sem->v >= 0);
- UnlockMutex(&sem->m);
-
- return 0;
+ return Mutex_Unlock(&sem->m);
 }
 
-int WaitSemTimeout(Sem* sem, unsigned ms)
+bool Sem_TimedWait(Sem* sem, unsigned ms) noexcept
 {
- if(LockMutex(&sem->m) < 0)
-  return -1;
+ if(!Mutex_Lock(&sem->m))
+  return false;
 
  while(!sem->v)
  {
-  int wctrv = WaitCondTimeout(&sem->c, &sem->m, ms);
-
-  if(wctrv < 0 || wctrv == COND_TIMEDOUT)
+  if(!Cond_TimedWait(&sem->c, &sem->m, ms))
   {
-   UnlockMutex(&sem->m);
-   return (wctrv == COND_TIMEDOUT) ? SEM_TIMEDOUT : -1;
+   Mutex_Unlock(&sem->m);
+   return false;
   }
  }
 
  sem->v--;
  assert(sem->v >= 0);
- UnlockMutex(&sem->m);
-
- return 0;
+ return Mutex_Unlock(&sem->m);
 }
 
-int PostSem(Sem* sem)
+bool Sem_Post(Sem* sem) noexcept
 {
- if(LockMutex(&sem->m) < 0)
-  return -1;
+ if(!Mutex_Lock(&sem->m))
+  return false;
 
  if(sem->v == INT_MAX)
-  return -1;
+  return false;
 
  sem->v++;
 
- SignalCond(&sem->c);
+ bool ret = true;
 
- UnlockMutex(&sem->m);
+ ret &= SignalCond(&sem->c);
+ ret &= UnlockMutex(&sem->m);
 
- return 0;
+ return ret;
 }
 
 #endif

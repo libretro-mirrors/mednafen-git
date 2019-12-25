@@ -1951,7 +1951,7 @@ static NO_INLINE NO_CLONE void DMAInstr(void)
  }
 }
 
-extern void (*const DSP_DMAFuncTable[2][8][8])(void) =
+MDFN_HIDE extern void (*const DSP_DMAFuncTable[2][8][8])(void) =
 {
  #include "scu_dsp_dmatab.inc"
 };

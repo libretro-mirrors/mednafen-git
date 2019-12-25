@@ -63,8 +63,8 @@ static MDFN_PixelFormat format;
 static bool EnableMixedTextMonoHack;
 
 static void (*BlitLineBitBuffer)(uint32* target);
-template<unsigned which> static void BlitLineBitBuffer_RGB_Alt(uint32* target);
-static void BlitLineBitBuffer_RGB(uint32* target);
+template<bool tfr> static void BlitLineBitBuffer_RGB_Alt(uint32* target);
+template<bool tfr> static void BlitLineBitBuffer_RGB(uint32* target);
 static void BlitLineBitBuffer_Composite(uint32* target);
 
 struct Settings
@@ -84,8 +84,10 @@ struct Settings
  {
   MODE_COMPOSITE = 0,
   MODE_RGB,
-  MODE_RGB_ALT1,
-  MODE_RGB_ALT2
+  MODE_RGB_TFR,
+
+  MODE_RGB_ALT,
+  MODE_RGB_ALT_TFR
  };
 
  unsigned mode = MODE_COMPOSITE;
@@ -149,7 +151,7 @@ static void Power(void)
  NoiseLCG = 0;
 }
 
-template<unsigned which>
+template<bool tfr>
 static void BlitLineBitBuffer_RGB_Alt(uint32* target)
 {
  uint32 pdata = 0;
@@ -215,7 +217,7 @@ static void BlitLineBitBuffer_RGB_Alt(uint32* target)
    if((pdata & 0xF00) == 0x000)
     bw |= 0xF00;
 
-   if(which == 2)
+   if(tfr)
    {
     if((pdata & 0xF3C) == 0xF3C)
      halve |= 0xC0; //bw |= 0xFFC;
@@ -237,8 +239,8 @@ static void BlitLineBitBuffer_RGB_Alt(uint32* target)
 
    if(bw & 0x01)
     pat = (pdata & 0x01) ? 15 : 0;
-   else if(which == 2 && (halve & 0x01))
-    pat = 0x10 + cpd;
+   else if(tfr)
+    pat = ((halve & 0x1) << 4) + cpd;
    else if(1)
    {
     //pat = (pdata >> (ps & 1)) & 0xF;
@@ -250,12 +252,13 @@ static void BlitLineBitBuffer_RGB_Alt(uint32* target)
    //
    pdata >>= 1;
    bw >>= 1;
-   if(which == 2)
+   if(tfr)
     halve >>= 1;
   }
  }
 }
 
+template<bool tfr>
 static void BlitLineBitBuffer_RGB(uint32* target)
 {
  for(int i = 0; i < 6; i++)
@@ -292,6 +295,7 @@ static void BlitLineBitBuffer_RGB(uint32* target)
   uint32 pshift = 0;
   uint32 bw = 0;
   uint32 cpd = 0;
+  uint32 halve = 0;
 
   for(int x = 0; x < 560 + 14; x += 14)
   {
@@ -314,6 +318,12 @@ static void BlitLineBitBuffer_RGB(uint32* target)
     if((pdata & 0xF00) == 0x000)
      bw |= 0xF00;
 
+    if(tfr)
+    {
+     if((pdata & 0xF3C) == 0xF3C)
+      halve |= 0xC0;
+    }
+
     if(!(sx & 0x3))
     {
      unsigned shift = ((x & 2) ^ 2) + (pshift & 1);
@@ -323,6 +333,8 @@ static void BlitLineBitBuffer_RGB(uint32* target)
 
     if(bw & 1)
      pat = (pdata & 0x1) ? 0xF : 0x0;
+    else if(tfr)
+     pat = ((halve & 0x1) << 4) + cpd;
     else
      pat = cpd;
 
@@ -333,6 +345,8 @@ static void BlitLineBitBuffer_RGB(uint32* target)
     bw >>= 2;
     pdata >>= 2;
     pshift >>= 2;
+    if(tfr)
+     halve >>= 2;
    }
   }
  }
@@ -725,8 +739,15 @@ static INLINE void SetFormat(const MDFN_PixelFormat& f, const Settings& s, uint8
 {
  int mode = s.mode;
 
- if(CustomPalette && CustomPaletteNumEntries && mode == Settings::MODE_COMPOSITE)
-  mode = Settings::MODE_RGB;
+ if(CustomPalette && CustomPaletteNumEntries)
+ {
+  if(mode == Settings::MODE_COMPOSITE)
+   mode = (CustomPaletteNumEntries == 32) ? Settings::MODE_RGB_TFR : Settings::MODE_RGB;
+  else if(mode == Settings::MODE_RGB && CustomPaletteNumEntries == 32)
+   mode = Settings::MODE_RGB_TFR;
+  else if(mode == Settings::MODE_RGB_ALT && CustomPaletteNumEntries == 32)
+   mode = Settings::MODE_RGB_ALT_TFR;
+ }
  //
  //
  format = f;
@@ -735,7 +756,7 @@ static INLINE void SetFormat(const MDFN_PixelFormat& f, const Settings& s, uint8
  //
  surface_dr.x = 0;
  surface_dr.y = 0;
- surface_dr.w = (560 + 12*2) >> (mode == Settings::MODE_RGB); 
+ surface_dr.w = (560 + 12*2) >> (mode == Settings::MODE_RGB || mode == Settings::MODE_RGB_TFR); 
  surface_dr.h = 192;
  //
  //
@@ -744,19 +765,27 @@ static INLINE void SetFormat(const MDFN_PixelFormat& f, const Settings& s, uint8
   BlitLineBitBuffer = BlitLineBitBuffer_Composite;
  else
  {
-  if(mode == Settings::MODE_RGB_ALT1)
-   BlitLineBitBuffer = BlitLineBitBuffer_RGB_Alt<1>;
-  else if(mode == Settings::MODE_RGB_ALT2)
-   BlitLineBitBuffer = BlitLineBitBuffer_RGB_Alt<2>;
-  else
-   BlitLineBitBuffer = BlitLineBitBuffer_RGB;
+  if(mode == Settings::MODE_RGB_ALT_TFR)
+   BlitLineBitBuffer = BlitLineBitBuffer_RGB_Alt<true>;
+  else if(mode == Settings::MODE_RGB_ALT)
+   BlitLineBitBuffer = BlitLineBitBuffer_RGB_Alt<false>;
+  else if(mode == Settings::MODE_RGB_TFR)
+   BlitLineBitBuffer = BlitLineBitBuffer_RGB<true>;
+  else if(mode == Settings::MODE_RGB)
+   BlitLineBitBuffer = BlitLineBitBuffer_RGB<false>;
 
-  if(CustomPalette && CustomPaletteNumEntries == 16)
+  if(CustomPalette && (CustomPaletteNumEntries == 16 || CustomPaletteNumEntries == 32))
   {
    for(unsigned i = 0; i < 16; i++)
    {
     RGBLUT[i] = format.MakeColor(CustomPalette[i * 3 + 0], CustomPalette[i * 3 + 1], CustomPalette[i * 3 + 2]);
-    RGBLUT[16 + i] = format.MakeColor(CustomPalette[i * 3 + 0] * 3 / 4, CustomPalette[i * 3 + 1] * 3 / 4, CustomPalette[i * 3 + 2] * 3 / 4);
+    //
+    uint32 tfr_pix = format.MakeColor(CustomPalette[i * 3 + 0] * 3 / 4, CustomPalette[i * 3 + 1] * 3 / 4, CustomPalette[i * 3 + 2] * 3 / 4);
+
+    if(CustomPaletteNumEntries == 32)
+     tfr_pix = format.MakeColor(CustomPalette[(16 + i) * 3 + 0], CustomPalette[(16 + i ) * 3 + 1], CustomPalette[(16 + i) * 3 + 2]);
+
+    RGBLUT[16 + i] = tfr_pix;
    }
 
    return;

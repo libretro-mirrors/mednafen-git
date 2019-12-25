@@ -50,7 +50,7 @@ class IODevice_3DPad final : public IODevice
 };
 
 
-extern IDIISG IODevice_3DPad_IDII;
+MDFN_HIDE extern IDIISG IODevice_3DPad_IDII;
 
 }
 

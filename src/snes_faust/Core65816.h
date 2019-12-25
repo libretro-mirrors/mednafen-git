@@ -19,6 +19,8 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+class CPU_Misc;
+
 class Core65816
 {
  public:
@@ -98,13 +100,32 @@ class Core65816
  uint8 P;
  bool E;
 
- void SampleIRQ(void);
-/*
- INLINE void SampleIRQ(void)
+#ifdef ARCH_X86
+ struct
  {
-  PIN_Delay = ((P ^ I_FLAG) | 0x01) & CPUM.CombinedNIState;
- }
-*/
+  INLINE void operator=(CPU_Misc* arg)
+  {
+   MDFN_HIDE extern CPU_Misc CPUM;
+   assert(arg == &CPUM);
+  }
+
+  INLINE operator CPU_Misc*()
+  {
+   MDFN_HIDE extern CPU_Misc CPUM;
+   return &CPUM;
+  }
+
+  INLINE CPU_Misc* operator->()
+  {
+   MDFN_HIDE extern CPU_Misc CPUM;
+   return &CPUM;
+  }
+ } cpum;
+#else
+ CPU_Misc* cpum;
+#endif
+
+ void SampleIRQ(void);
 
  template<uint8 opcode, typename M_type, typename X_type>
  void RunInstruction(void);
@@ -138,6 +159,7 @@ class Core65816
 
  //private:
 
+ uint16 VecRead(uint32 addr);
  uint8 OpRead(uint32 addr);
 
  template<typename T> void SetZN(const T arg);

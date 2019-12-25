@@ -1,12 +1,12 @@
-1.23.0-UNSTABLE
+1.24.0-UNSTABLE
 apple2
 Apple II/II+
 250
 192
 1
 apple2.pal
-RGB mode 16-color palette.  The presence of a custom palette will automatically enable RGB video mode.
-16 
+RGB mode 16-color(or 32-color for TFR) palette.  The presence of a custom palette will automatically enable RGB video mode if an RGB mode is not already selected via the "apple2.video.mode" setting.  If the palette has 32 color entries, the text fringe reduction variant of an RGB mode is enabled.
+16 32 
 0
 nes
 Nintendo Entertainment System/Famicom

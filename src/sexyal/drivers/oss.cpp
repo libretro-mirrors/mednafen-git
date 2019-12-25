@@ -27,6 +27,9 @@
 #include <sched.h>
 #include <sys/soundcard.h>
 
+namespace Mednafen
+{
+
 struct SexyAL_OSS
 {
 	int fd;
@@ -383,3 +386,4 @@ SexyAL_device *SexyALI_OSS_Open(const char *id, SexyAL_format *format, SexyAL_bu
  return(device);
 }
 
+}

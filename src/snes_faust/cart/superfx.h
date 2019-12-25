@@ -25,7 +25,7 @@
 namespace MDFN_IEN_SNES_FAUST
 {
 
-void CART_SuperFX_Init(const int32 master_clock, const int32 ocmultiplier) MDFN_COLD;
+void CART_SuperFX_Init(const int32 master_clock, const int32 ocmultiplier, const bool enable_icache) MDFN_COLD;
 
 }
 #endif

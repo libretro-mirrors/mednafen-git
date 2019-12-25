@@ -34,7 +34,7 @@ namespace MDFN_IEN_SNES_FAUST
 
  void INPUT_AutoRead(void) MDFN_HOT;
 
- extern const std::vector<InputPortInfoStruct> INPUT_PortInfo;
+ MDFN_HIDE extern const std::vector<InputPortInfoStruct> INPUT_PortInfo;
 }
 
 #endif

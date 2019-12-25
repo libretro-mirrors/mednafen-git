@@ -133,6 +133,8 @@ static const MDFNSetting MednafenSettings[] =
 
   { "video.deinterlacer", MDFNSF_CAT_VIDEO, gettext_noop("Deinterlacer to use for interlaced video."), NULL, MDFNST_ENUM, "weave", NULL, NULL, NULL, SettingChanged, Deinterlacer_List },
 
+  { "affinity.cd", MDFNSF_NOFLAGS, gettext_noop("CD read threads CPU affinity mask."), gettext_noop("Set to 0 to disable changing affinity."), MDFNST_UINT, "0", "0x0000000000000000", "0xFFFFFFFFFFFFFFFF" },
+
   { NULL }
 };
 
@@ -398,83 +400,83 @@ void MDFNI_CloseGame(void)
 }
 
 #ifdef WANT_APPLE2_EMU
-extern MDFNGI EmulatedApple2;
+extern Mednafen::MDFNGI EmulatedApple2;
 #endif
 
 #ifdef WANT_NES_EMU
-extern MDFNGI EmulatedNES;
+extern Mednafen::MDFNGI EmulatedNES;
 #endif
 
 #ifdef WANT_NES_NEW_EMU
-extern MDFNGI EmulatedNES_New;
+extern Mednafen::MDFNGI EmulatedNES_New;
 #endif
 
 #ifdef WANT_SNES_EMU
-extern MDFNGI EmulatedSNES;
+extern Mednafen::MDFNGI EmulatedSNES;
 #endif
 
 #ifdef WANT_SNES_FAUST_EMU
-extern MDFNGI EmulatedSNES_Faust;
+extern Mednafen::MDFNGI EmulatedSNES_Faust;
 #endif
 
 #ifdef WANT_GBA_EMU
-extern MDFNGI EmulatedGBA;
+extern Mednafen::MDFNGI EmulatedGBA;
 #endif
 
 #ifdef WANT_GB_EMU
-extern MDFNGI EmulatedGB;
+extern Mednafen::MDFNGI EmulatedGB;
 #endif
 
 #ifdef WANT_LYNX_EMU
-extern MDFNGI EmulatedLynx;
+extern Mednafen::MDFNGI EmulatedLynx;
 #endif
 
 #ifdef WANT_MD_EMU
-extern MDFNGI EmulatedMD;
+extern Mednafen::MDFNGI EmulatedMD;
 #endif
 
 #ifdef WANT_NGP_EMU
-extern MDFNGI EmulatedNGP;
+extern Mednafen::MDFNGI EmulatedNGP;
 #endif
 
 #ifdef WANT_PCE_EMU
-extern MDFNGI EmulatedPCE;
+extern Mednafen::MDFNGI EmulatedPCE;
 #endif
 
 #ifdef WANT_PCE_FAST_EMU
-extern MDFNGI EmulatedPCE_Fast;
+extern Mednafen::MDFNGI EmulatedPCE_Fast;
 #endif
 
 #ifdef WANT_PCFX_EMU
-extern MDFNGI EmulatedPCFX;
+extern Mednafen::MDFNGI EmulatedPCFX;
 #endif
 
 #ifdef WANT_PSX_EMU
-extern MDFNGI EmulatedPSX;
+extern Mednafen::MDFNGI EmulatedPSX;
 #endif
 
 #ifdef WANT_SS_EMU
-extern MDFNGI EmulatedSS;
+extern Mednafen::MDFNGI EmulatedSS;
 #endif
 
 #ifdef WANT_SSFPLAY_EMU
-extern MDFNGI EmulatedSSFPlay;
+extern Mednafen::MDFNGI EmulatedSSFPlay;
 #endif
 
 #ifdef WANT_VB_EMU
-extern MDFNGI EmulatedVB;
+extern Mednafen::MDFNGI EmulatedVB;
 #endif
 
 #ifdef WANT_WSWAN_EMU
-extern MDFNGI EmulatedWSwan;
+extern Mednafen::MDFNGI EmulatedWSwan;
 #endif
 
 #ifdef WANT_SMS_EMU
-extern MDFNGI EmulatedSMS, EmulatedGG;
+extern Mednafen::MDFNGI EmulatedSMS, EmulatedGG;
 #endif
 
-extern MDFNGI EmulatedCDPlay;
-extern MDFNGI EmulatedDEMO;
+extern Mednafen::MDFNGI EmulatedCDPlay;
+extern Mednafen::MDFNGI EmulatedDEMO;
 
 namespace Mednafen
 {
@@ -865,6 +867,7 @@ static MDFNGI *LoadCD(const char *force_module, VirtualFS* vfs, const char *path
  {
   MDFN_AutoIndent aind(1);
   const bool image_memcache = MDFN_GetSettingB("cd.image_memcache");
+  const uint64 affinity = MDFN_GetSettingUI("affinity.cd");
 
   if(cdif)
   {
@@ -881,7 +884,7 @@ static MDFNGI *LoadCD(const char *force_module, VirtualFS* vfs, const char *path
 
    CDInterfaces.resize(file_list.size());
    for(size_t i = 0; i < file_list.size(); i++)
-    CDInterfaces[i] = CDInterface::Open(vfs, file_list[i].path, image_memcache);
+    CDInterfaces[i] = CDInterface::Open(vfs, file_list[i].path, image_memcache, affinity);
   }
 
   GetFileBase(path);
@@ -1243,7 +1246,10 @@ MDFNGI *MDFNI_LoadGame(const char *force_module, VirtualFS* vfs, const char* pat
 	LoadIPS(&mfgf, MDFN_MakeFName(MDFNMKF_IPS, 0, 0));
 
 	//
-	GameFile gf({ mfgf.active_vfs(), mfgf.active_dir_path(), mfgf.stream(), mfgf.ext, mfgf.fbase });
+	std::string outside_dir, outside_fbase;
+	vfs->get_file_path_components(path, &outside_dir, &outside_fbase);
+	//
+	GameFile gf({ mfgf.active_vfs(), mfgf.active_dir_path(), mfgf.stream(), mfgf.ext, mfgf.fbase, vfs, outside_dir, outside_fbase });
 
 	MDFNGameInfo = FindCompatibleModule(force_module, &gf);
 
@@ -1572,9 +1578,9 @@ static void ProcessAudio(EmulateSpecStruct *espec)
 
  if(espec->SoundBuf && espec->SoundBufSize)
  {
-  int16 *const SoundBuf = espec->SoundBuf + espec->SoundBufSizeALMS * MDFNGameInfo->soundchan;
-  int32 SoundBufSize = espec->SoundBufSize - espec->SoundBufSizeALMS;
-  const int32 SoundBufMaxSize = espec->SoundBufMaxSize - espec->SoundBufSizeALMS;
+  int16 *const SoundBuf = espec->SoundBuf + espec->SoundBufSize_InternalProcessed * MDFNGameInfo->soundchan;
+  int32 SoundBufSize = espec->SoundBufSize - espec->SoundBufSize_InternalProcessed;
+  const int32 SoundBufMaxSize = espec->SoundBufMaxSize - espec->SoundBufSize_InternalProcessed;
 
   //
   // Sound reverse code goes before copying sound data to SoundBufPristine.
@@ -1715,27 +1721,32 @@ static void ProcessAudio(EmulateSpecStruct *espec)
    }
   }
 
-  espec->SoundBufSize = espec->SoundBufSizeALMS + SoundBufSize;
+  espec->SoundBufSize = espec->SoundBufSize_InternalProcessed + SoundBufSize;
  } // end to:  if(espec->SoundBuf && espec->SoundBufSize)
 }
 
-void MDFN_MidSync(EmulateSpecStruct *espec)
+void MDFN_MidSync(EmulateSpecStruct *espec, const unsigned flags)
 {
+ ProcessAudio(espec);
+ espec->SoundBufSize_InternalProcessed = espec->SoundBufSize;
+ espec->MasterCycles_InternalProcessed = espec->MasterCycles;
+ //
+ // We could act as if flags = 0 during netplay, and call MDFND_MidSync(), but
+ // we'd need to fix the kludgy driver-side code that handles sound buffer underruns.
+ //
  if(!MDFNnetplay)
  {
-  ProcessAudio(espec);
-
-  MDFND_MidSync(espec);
-
-  espec->SoundBufSizeALMS = espec->SoundBufSize;
-  espec->MasterCyclesALMS = espec->MasterCycles;
-
-  if(MDFNGameInfo->TransformInput)	// Call after MDFND_MidSync, and before MDFNMOV_ProcessInput
+  MDFND_MidSync(espec, flags);
+  //
+  if((flags & MIDSYNC_FLAG_UPDATE_INPUT) && MDFNGameInfo->TransformInput)	// Call after MDFND_MidSync, and before MDFNMOV_ProcessInput
    MDFNGameInfo->TransformInput();
  }
 
- // Call even during netplay, so input-recording movies recorded during netplay will play back properly.
- MDFNMOV_ProcessInput(PortData, PortDataLen, MDFNGameInfo->PortInfo.size());
+ if(flags & MIDSYNC_FLAG_UPDATE_INPUT)
+ {
+  // Call even during netplay, so input-recording movies recorded during netplay will play back properly.
+  MDFNMOV_ProcessInput(PortData, PortDataLen, MDFNGameInfo->PortInfo.size());
+ }
 }
 
 void MDFN_MidLineUpdate(EmulateSpecStruct *espec, int y)
@@ -1745,6 +1756,52 @@ void MDFN_MidLineUpdate(EmulateSpecStruct *espec, int y)
 
 void MDFNI_Emulate(EmulateSpecStruct *espec)
 {
+#if 0
+ {
+  static unsigned osc = 0;
+  MDFN_PixelFormat nf;
+
+  osc = (osc + 1) % 3;
+
+  nf.bpp = 16;
+  nf.colorspace = MDFN_COLORSPACE_RGB;
+  if(osc == 0)
+  {
+   nf.Rshift = 10;
+   nf.Gshift = 5;
+   nf.Bshift = 0;
+   nf.Rprec = 5;
+   nf.Gprec = 5;
+   nf.Bprec = 5;
+  }
+  else if(osc == 1)
+  {
+   nf.Rshift = 11;
+   nf.Gshift = 5;
+   nf.Bshift = 0;
+   nf.Rprec = 5;
+   nf.Gprec = 6;
+   nf.Bprec = 5;
+  }
+  nf.Ashift = 16;
+  nf.Aprec = 8;
+
+  if(osc == 2)
+   nf = espec->surface->format;
+  //
+  espec->surface->SetFormat(nf, false);
+  //
+  MDFN_Notify(MDFN_NOTICE_STATUS, "%2d %d\n", nf.bpp, nf.Gprec);
+ }
+#endif
+ //
+#if 0
+ {
+  static const double rates[8] = { 22050, 22222, 44100, 45454, 48000, 64000, 96000, 192000 };
+  espec->SoundRate = rates[(rand() >> 14) & 0x7];
+ }
+#endif
+ //
  multiplier_save = 1;
  volume_save = 1;
 
@@ -1829,11 +1886,40 @@ void MDFNI_Emulate(EmulateSpecStruct *espec)
  //
  // Sanity checks
  //
- if(!espec->skip)
+ if(!espec->skip || espec->InterlaceOn)
  {
-  if(espec->DisplayRect.h == 0)
+  if(espec->DisplayRect.h <= 0)
   {
-   fprintf(stderr, "[BUG] espec->DisplayRect.h == 0\n");
+   fprintf(stderr, "[BUG] espec->DisplayRect.h <= 0: %d\n", espec->DisplayRect.h);
+  }
+
+  if(espec->DisplayRect.y < 0)
+  {
+   fprintf(stderr, "[BUG] espec->DisplayRect.y < 0: %d\n", espec->DisplayRect.y);
+  }
+
+  if(espec->LineWidths[0] == ~0)
+  {
+   if(espec->DisplayRect.w <= 0)
+   {
+    fprintf(stderr, "[BUG] espec->DisplayRect.w <= 0: %d\n", espec->DisplayRect.w);
+   }
+  }
+  else
+  {
+   for(int32 y = 0; y < espec->DisplayRect.h; y++)
+   {
+    if((y ^ espec->InterlaceField) & espec->InterlaceOn)
+     continue;
+
+    const int32& lw = espec->LineWidths[espec->DisplayRect.y + y];
+
+    if(lw <= 0)
+     fprintf(stderr, "[BUG] espec->LineWidths[%d] <= 0: %d\n", espec->DisplayRect.y + y, lw);
+#ifndef MDFN_ENABLE_DEV_BUILD
+    break;	// Only check one line unless this is a dev build, for (very minor) performance reasons.
+#endif
+   }
   }
  }
 
@@ -1842,9 +1928,9 @@ void MDFNI_Emulate(EmulateSpecStruct *espec)
   fprintf(stderr, "[BUG] espec->MasterCycles == 0\n");
  }
 
- if(espec->MasterCycles < espec->MasterCyclesALMS)
+ if(espec->MasterCycles < espec->MasterCycles_InternalProcessed)
  {
-  fprintf(stderr, "[BUG] espec->MasterCycles < espec->MasterCyclesALMS\n");
+  fprintf(stderr, "[BUG] espec->MasterCycles < espec->MasterCycles_InternalProcessed\n");
  }
 
  //

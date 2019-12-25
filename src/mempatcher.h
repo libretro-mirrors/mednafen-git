@@ -15,8 +15,8 @@ struct SUBCHEAT
 	int compare; // < 0 on no compare
 };
 
-extern std::vector<SUBCHEAT> SubCheats[8];
-extern bool SubCheatsOn;
+MDFN_HIDE extern std::vector<SUBCHEAT> SubCheats[8];
+MDFN_HIDE extern bool SubCheatsOn;
 
 
 void MDFNMP_Init(uint32 ps, uint32 numpages) MDFN_COLD;
@@ -30,7 +30,7 @@ void MDFNMP_RemoveReadPatches(void);
 
 void MDFNMP_ApplyPeriodicCheats(void);
 
-extern const MDFNSetting MDFNMP_Settings[];
+MDFN_HIDE extern const MDFNSetting MDFNMP_Settings[];
 
 }
 #endif

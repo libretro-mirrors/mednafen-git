@@ -18,6 +18,9 @@
 #include <mednafen/types.h>
 #include <mednafen/string/string.h>
 
+namespace Mednafen
+{
+
 struct SexyAL_DriverInfo
 {
 	// Pointers to statically-allocated strings, DO NOT FREE.
@@ -238,3 +241,4 @@ std::vector<SexyAL_DriverInfo> SexyAL_GetDriverList(void);
 //
 bool SexyAL_FindDriver(SexyAL_DriverInfo* out_di, const char* name);
 
+}

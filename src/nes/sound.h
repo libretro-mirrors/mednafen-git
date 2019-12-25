@@ -11,13 +11,13 @@ typedef struct __EXPSOUND {
 	   void (*Kill)(void);
 } EXPSOUND;
 
-extern std::vector<EXPSOUND> GameExpSound;
+MDFN_HIDE extern std::vector<EXPSOUND> GameExpSound;
 
 int FlushEmulateSound(int reverse, int16 *SoundBuf, int32 MaxSoundFrames);
 
-alignas(16) extern int16 WaveHiEx[2 * 40000];
+alignas(16) MDFN_HIDE extern int16 WaveHiEx[2 * 40000];
 
-extern uint32 soundtsoffs;
+MDFN_HIDE extern uint32 soundtsoffs;
 #define SOUNDTS (timestamp + soundtsoffs)
 
 int MDFNSND_Init(bool IsPAL) MDFN_COLD;

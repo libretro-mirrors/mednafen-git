@@ -19,76 +19,38 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#include "Core65816.h"
-
-template<typename T>
-INLINE void Core65816::MemWrite(uint32 addr, T val)
-{
- CPU_Write(addr, val);
-
- if(sizeof(T) == 2)
- {
-  addr++;
-  CPU_Write(addr, val >> 8);
- }
-}
-
-template<typename T>
-INLINE T Core65816::MemRead(uint32 addr)
-{
- T ret;
-
- ret = CPU_Read(addr);
-
- if(sizeof(T) == 2)
- {
-  addr++;
-  ret |= CPU_Read(addr) << 8;
- }
-
- return ret;
-}
 //static bool popread = false;
-INLINE uint8 Core65816::OpRead(uint32 addr)
-{
- uint8 ret = MemRead<uint8>(addr);
-
- //if(popread)
- // SNES_DBG("  %02x\n", ret);
-
- return ret;
-}
 
 INLINE void Core65816::IO(void)
 {
- CPU_IO();
+ cpum->CPU_IO();
 }
 
 INLINE void Core65816::Instr_STP(void)
 {
  SNES_DBG("[CPU] STP\n");
- CPUM.halted |= CPU_Misc::HALTED_STP;
+ cpum->halted |= CPU_Misc::HALTED_STP;
 
- if(CPUM.timestamp < CPUM.next_event_ts)
-  CPUM.timestamp = CPUM.next_event_ts;
+ if(cpum->timestamp < cpum->next_event_ts)
+  cpum->timestamp = cpum->next_event_ts;
 }
 
 INLINE void Core65816::Instr_WAI(void)
 {
  SampleIRQ();	// Important(to match games' expectations).
 
- if(!CPUM.CombinedNIState)
+ if(!cpum->CombinedNIState)
  {
-  CPUM.halted |= CPU_Misc::HALTED_WAI;
+  cpum->halted |= CPU_Misc::HALTED_WAI;
 
-  if(CPUM.timestamp < CPUM.next_event_ts)
-   CPUM.timestamp = CPUM.next_event_ts;
+  if(cpum->timestamp < cpum->next_event_ts)
+   cpum->timestamp = cpum->next_event_ts;
  }
 }
 
 INLINE void Core65816::SampleIRQ(void)
 {
- CPUM.PIN_Delay = ((P ^ I_FLAG) | 0x01) & CPUM.CombinedNIState;
+ cpum->PIN_Delay = ((P ^ I_FLAG) | 0x01) & cpum->CombinedNIState;
 }
 
 INLINE void Core65816::BranchOccurred(unsigned iseq)
@@ -99,9 +61,6 @@ INLINE void Core65816::BranchOccurred(unsigned iseq)
 }
 
 #include "Core65816.inc"
-
-static Core65816 core;
-CPU_Misc CPUM;
 
 void CPU_Run(void)
 {
@@ -117,7 +76,7 @@ void CPU_Run(void)
 
  Core65816 lc = core;
 
- CPUM.running_mask = ~0U;
+ lc.cpum->running_mask = ~0U;
  GOTO_MXLOOPTABLE();
 
  #define CPULBMX Loop_0
@@ -159,36 +118,42 @@ void CPU_Run(void)
 
 void CPU_Reset(bool powering_up)
 {
- CPUM.halted = 0;
- CPUM.mdr = 0x00;
+ CPU_Misc* const cpum = core.cpum;
 
- CPUM.CombinedNIState &= ~0x01;
+ cpum->halted = 0;
+ cpum->mdr = 0x00;
+
+ cpum->CombinedNIState &= ~0x01;
 
  if(powering_up)
   core.Power();
  //
- CPUM.PIN_Delay = 0x40; // Trigger reset
+ cpum->PIN_Delay = 0x40; // Trigger reset
 }
 
-void CPU_Init(void)
+void CPU_Init(CPU_Misc* cpum)
 {
- CPUM.timestamp = 0;
+ core.cpum = cpum;
 
- CPUM.PIN_Delay = 0;
- CPUM.PrevNMILineState = false;
- CPUM.CombinedNIState = 0x00;
- CPUM.MultiIRQState = 0x00;
- CPUM.NMILineState = false;
- CPUM.PrevNMILineState = false;
+ cpum->timestamp = 0;
+
+ cpum->PIN_Delay = 0;
+ cpum->PrevNMILineState = false;
+ cpum->CombinedNIState = 0x00;
+ cpum->MultiIRQState = 0x00;
+ cpum->NMILineState = false;
+ cpum->PrevNMILineState = false;
 }
 
 void CPU_StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname, const char* sname_core)
 {
+ CPU_Misc* const cpum = core.cpum;
+
  if(load && load < 0x00102300)
  {
   SFORMAT BWCStateRegs[] = 
   {
-   SFVARN(CPUM.PIN_Delay, "PIN_Delay"),
+   SFVARN(cpum->PIN_Delay, "PIN_Delay"),
    SFEND
   };
   MDFNSS_StateAction(sm, load, data_only, BWCStateRegs, sname_core);
@@ -198,13 +163,14 @@ void CPU_StateAction(StateMem* sm, const unsigned load, const bool data_only, co
  //
  SFORMAT StateRegs[] =
  {
-  SFVAR(CPUM.PIN_Delay),
-  SFVAR(CPUM.mdr),
-  SFVAR(CPUM.halted),
-  SFVAR(CPUM.CombinedNIState),
-  SFVAR(CPUM.NMILineState),
-  SFVAR(CPUM.PrevNMILineState),
-  SFVAR(CPUM.MultiIRQState),
+  SFVARN(cpum->PIN_Delay, "CPUM.PIN_Delay"),
+  SFVARN(cpum->mdr, "CPUM.mdr"),
+  SFVARN(cpum->halted, "CPUM.halted"),
+  SFVARN(cpum->CombinedNIState, "CPUM.CombinedNIState"),
+  SFVARN(cpum->NMILineState, "CPUM.NMILineState"),
+  SFVARN(cpum->PrevNMILineState, "CPUM.PrevNMILineState"),
+  SFVARN(cpum->MultiIRQState, "CPUM.MultiIRQState"),
+  SFVARN(cpum->MemSelectCycles, "CPUM.MemSelectCycles"),
   SFEND
  };
 
@@ -214,13 +180,13 @@ void CPU_StateAction(StateMem* sm, const unsigned load, const bool data_only, co
  {
   uint8 new_halted = 0;
 
-  switch(CPUM.halted)
+  switch(cpum->halted)
   {
    case 1: new_halted = CPU_Misc::HALTED_WAI; break;
    case 2: new_halted = CPU_Misc::HALTED_STP; break;
    case 3: new_halted = CPU_Misc::HALTED_DMA; break;
   }
-  CPUM.halted = new_halted;
+  cpum->halted = new_halted;
  }
 
  core.StateAction(sm, load, data_only, sname_core);

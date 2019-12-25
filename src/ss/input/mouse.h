@@ -49,7 +49,7 @@ class IODevice_Mouse final : public IODevice
 };
 
 
-extern IDIISG IODevice_Mouse_IDII;
+MDFN_HIDE extern IDIISG IODevice_Mouse_IDII;
 
 }
 

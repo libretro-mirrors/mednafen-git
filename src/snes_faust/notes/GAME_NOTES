@@ -11,6 +11,7 @@ Super Off Road: The Baja - WAI; HV IRQ shenanigans, race between CPU M7HOFS writ
 //
 //
 Mighty Morphin Power Rangers: The Fighting Edition
+Nichibutsu Arcade Classics - "Frisky Tom"
 Wild Guns 		 - 89AB DMA/NMI race condition
 //
 //
@@ -114,5 +115,5 @@ Illusion of Gaia
 N-Warp Daisakusen?
 Tales of Phantasia
 Tenchi Souzo
-Tenshi no Uta (presumably)
+Tenshi no Uta - Especially SPC700 opcode 0xFA
 Terranigma

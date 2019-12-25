@@ -18,6 +18,9 @@
 #include "sexyal.h"
 #include "convert.h"
 
+namespace Mednafen
+{
+
 /* kludge.  yay. */
 SexyAL_enumdevice *SexyALI_OSS_EnumerateDevices(void);
 SexyAL_enumdevice *SexyALI_OpenBSD_EnumerateDevices(void);
@@ -103,7 +106,7 @@ static int Write(SexyAL_device *device, void *data, uint32 frames)
    if(convert_this_iteration > device->convert_buffer_fsize)
     convert_this_iteration = device->convert_buffer_fsize;
 
-   SexiALI_Convert(&device->srcformat, &device->format, data_in, device->convert_buffer, convert_this_iteration);
+   SexyALI_Convert(&device->srcformat, &device->format, data_in, device->convert_buffer, convert_this_iteration);
 
    if(!device->RawWrite(device, device->convert_buffer, FtoB(&device->format, convert_this_iteration)))
     return(0);
@@ -218,7 +221,7 @@ SexyAL_device *SexyAL_Open(const char *id, SexyAL_format *format, SexyAL_bufferi
  SexyAL_device *ret;
  SexyAL_driver *driver;
 
- driver = ::FindDriver(type);
+ driver = FindDriver(type);
  if(!driver)
   return(0);
 
@@ -313,7 +316,7 @@ SexyAL_enumdevice* SexyAL_EnumerateDevices(int type)
 {
  SexyAL_driver *driver;
 
- driver = ::FindDriver(type);
+ driver = FindDriver(type);
 
  if(!driver)
   return(0);
@@ -324,3 +327,4 @@ SexyAL_enumdevice* SexyAL_EnumerateDevices(int type)
  return(0);
 }
 
+}

@@ -256,12 +256,15 @@ DIST_COMMON = $(srcdir)/cdplay/Makefile.am.inc \
 @WANT_SNES_EMU_TRUE@am__append_32 = libsnes.a
 @WANT_SNES_EMU_TRUE@am__append_33 = libsnes.a
 @WANT_SNES_EMU_TRUE@am__append_34 = libsnes.a
+#
 @WANT_SNES_FAUST_EMU_TRUE@am__append_35 = snes_faust/cpu.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/snes.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/apu.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/input.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu_st.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu_mt.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/dsp1.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/dsp2.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/sdd1.cpp \
@@ -269,8 +272,10 @@ DIST_COMMON = $(srcdir)/cdplay/Makefile.am.inc \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/superfx.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/sa1.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/sa1cpu.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/msu1.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/debug.cpp \
-@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/dis65816.cpp
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/dis65816.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu_mtrender.cpp
 @WANT_SS_EMU_TRUE@am__append_36 = ss/libss.a
 @WANT_SS_EMU_TRUE@am__append_37 = ss/libss.a
 @WANT_SSFPLAY_EMU_TRUE@am__append_38 = ss/libssfplay.a
@@ -496,19 +501,19 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	SNSFLoader.cpp SPCReader.cpp tests.cpp qtrecord.cpp \
 	IPSPatcher.cpp VirtualFS.cpp NativeVFS.cpp Stream.cpp \
 	MemoryStream.cpp ExtMemStream.cpp FileStream.cpp \
-	win32-common.cpp drivers/win-resource.rc cdplay/cdplay.cpp \
-	demo/demo.cpp apple2/apple2.cpp gb/gb.cpp gb/gfx.cpp \
-	gb/gbGlobals.cpp gb/memory.cpp gb/sound.cpp gb/z80.cpp \
-	gba/GBAinline.cpp gba/arm.cpp gba/thumb.cpp gba/bios.cpp \
-	gba/eeprom.cpp gba/flash.cpp gba/GBA.cpp gba/Gfx.cpp \
-	gba/Globals.cpp gba/Mode0.cpp gba/Mode1.cpp gba/Mode2.cpp \
-	gba/Mode3.cpp gba/Mode4.cpp gba/Mode5.cpp gba/RTC.cpp \
-	gba/Sound.cpp gba/sram.cpp lynx/cart.cpp lynx/c65c02.cpp \
-	lynx/memmap.cpp lynx/mikie.cpp lynx/ram.cpp lynx/rom.cpp \
-	lynx/susie.cpp lynx/system.cpp md/vdp.cpp md/genesis.cpp \
-	md/genio.cpp md/header.cpp md/mem68k.cpp md/membnk.cpp \
-	md/memvdp.cpp md/memz80.cpp md/sound.cpp md/system.cpp \
-	md/cart/cart.cpp md/cart/map_eeprom.cpp \
+	MTStreamReader.cpp win32-common.cpp drivers/win-resource.rc \
+	cdplay/cdplay.cpp demo/demo.cpp apple2/apple2.cpp gb/gb.cpp \
+	gb/gfx.cpp gb/gbGlobals.cpp gb/memory.cpp gb/sound.cpp \
+	gb/z80.cpp gba/GBAinline.cpp gba/arm.cpp gba/thumb.cpp \
+	gba/bios.cpp gba/eeprom.cpp gba/flash.cpp gba/GBA.cpp \
+	gba/Gfx.cpp gba/Globals.cpp gba/Mode0.cpp gba/Mode1.cpp \
+	gba/Mode2.cpp gba/Mode3.cpp gba/Mode4.cpp gba/Mode5.cpp \
+	gba/RTC.cpp gba/Sound.cpp gba/sram.cpp lynx/cart.cpp \
+	lynx/c65c02.cpp lynx/memmap.cpp lynx/mikie.cpp lynx/ram.cpp \
+	lynx/rom.cpp lynx/susie.cpp lynx/system.cpp md/vdp.cpp \
+	md/genesis.cpp md/genio.cpp md/header.cpp md/mem68k.cpp \
+	md/membnk.cpp md/memvdp.cpp md/memz80.cpp md/sound.cpp \
+	md/system.cpp md/cart/cart.cpp md/cart/map_eeprom.cpp \
 	md/cart/map_realtec.cpp md/cart/map_ssf2.cpp \
 	md/cart/map_ff.cpp md/cart/map_rom.cpp md/cart/map_sbb.cpp \
 	md/cart/map_yase.cpp md/cart/map_rmx3.cpp md/cart/map_sram.cpp \
@@ -583,21 +588,22 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	sms/romdb.cpp sms/sms.cpp sms/sound.cpp sms/system.cpp \
 	sms/tms.cpp sms/vdp.cpp snes_faust/cpu.cpp snes_faust/snes.cpp \
 	snes_faust/apu.cpp snes_faust/cart.cpp snes_faust/input.cpp \
-	snes_faust/ppu.cpp snes_faust/cart/dsp1.cpp \
-	snes_faust/cart/dsp2.cpp snes_faust/cart/sdd1.cpp \
-	snes_faust/cart/cx4.cpp snes_faust/cart/superfx.cpp \
-	snes_faust/cart/sa1.cpp snes_faust/cart/sa1cpu.cpp \
-	snes_faust/debug.cpp snes_faust/dis65816.cpp vb/vb.cpp \
-	vb/timer.cpp vb/input.cpp vb/vip.cpp vb/vsu.cpp vb/debug.cpp \
-	wswan/gfx.cpp wswan/main.cpp wswan/memory.cpp wswan/comm.cpp \
-	wswan/v30mz.cpp wswan/sound.cpp wswan/tcache.cpp \
-	wswan/interrupt.cpp wswan/eeprom.cpp wswan/rtc.cpp \
-	wswan/debug.cpp wswan/dis/dis_decode.cpp \
-	wswan/dis/dis_groups.cpp wswan/dis/resolve.cpp \
-	wswan/dis/syntax.cpp hw_cpu/m68k/m68k.cpp \
-	hw_cpu/z80-fuse/z80.cpp hw_cpu/z80-fuse/z80_ops.cpp \
-	hw_cpu/v810/v810_cpu.cpp hw_cpu/v810/v810_cpuD.cpp \
-	hw_cpu/v810/v810_fp_ops.cpp \
+	snes_faust/ppu.cpp snes_faust/ppu_st.cpp snes_faust/ppu_mt.cpp \
+	snes_faust/cart/dsp1.cpp snes_faust/cart/dsp2.cpp \
+	snes_faust/cart/sdd1.cpp snes_faust/cart/cx4.cpp \
+	snes_faust/cart/superfx.cpp snes_faust/cart/sa1.cpp \
+	snes_faust/cart/sa1cpu.cpp snes_faust/msu1.cpp \
+	snes_faust/debug.cpp snes_faust/dis65816.cpp \
+	snes_faust/ppu_mtrender.cpp vb/vb.cpp vb/timer.cpp \
+	vb/input.cpp vb/vip.cpp vb/vsu.cpp vb/debug.cpp wswan/gfx.cpp \
+	wswan/main.cpp wswan/memory.cpp wswan/comm.cpp wswan/v30mz.cpp \
+	wswan/sound.cpp wswan/tcache.cpp wswan/interrupt.cpp \
+	wswan/eeprom.cpp wswan/rtc.cpp wswan/debug.cpp \
+	wswan/dis/dis_decode.cpp wswan/dis/dis_groups.cpp \
+	wswan/dis/resolve.cpp wswan/dis/syntax.cpp \
+	hw_cpu/m68k/m68k.cpp hw_cpu/z80-fuse/z80.cpp \
+	hw_cpu/z80-fuse/z80_ops.cpp hw_cpu/v810/v810_cpu.cpp \
+	hw_cpu/v810/v810_cpuD.cpp hw_cpu/v810/v810_fp_ops.cpp \
 	hw_misc/arcade_card/arcade_card.cpp \
 	hw_sound/ym2413/emu2413.cpp hw_sound/ym2612/Ym2612_Emu.cpp \
 	hw_sound/gb_apu/Gb_Apu.cpp hw_sound/gb_apu/Gb_Apu_State.cpp \
@@ -861,6 +867,8 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/input.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu_st.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu_mt.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/dsp1.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/dsp2.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/sdd1.$(OBJEXT) \
@@ -868,8 +876,10 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/superfx.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/sa1.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart/sa1cpu.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/msu1.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/debug.$(OBJEXT) \
-@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/dis65816.$(OBJEXT)
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/dis65816.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu_mtrender.$(OBJEXT)
 @WANT_VB_EMU_TRUE@am__objects_20 = vb/vb.$(OBJEXT) vb/timer.$(OBJEXT) \
 @WANT_VB_EMU_TRUE@	vb/input.$(OBJEXT) vb/vip.$(OBJEXT) \
 @WANT_VB_EMU_TRUE@	vb/vsu.$(OBJEXT)
@@ -930,7 +940,8 @@ am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	SNSFLoader.$(OBJEXT) SPCReader.$(OBJEXT) tests.$(OBJEXT) \
 	qtrecord.$(OBJEXT) IPSPatcher.$(OBJEXT) VirtualFS.$(OBJEXT) \
 	NativeVFS.$(OBJEXT) Stream.$(OBJEXT) MemoryStream.$(OBJEXT) \
-	ExtMemStream.$(OBJEXT) FileStream.$(OBJEXT) $(am__objects_1) \
+	ExtMemStream.$(OBJEXT) FileStream.$(OBJEXT) \
+	MTStreamReader.$(OBJEXT) $(am__objects_1) \
 	cdplay/cdplay.$(OBJEXT) demo/demo.$(OBJEXT) $(am__objects_2) \
 	$(am__objects_3) $(am__objects_4) $(am__objects_5) \
 	$(am__objects_6) $(am__objects_7) $(am__objects_8) \
@@ -1303,30 +1314,31 @@ mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	player.cpp PSFLoader.cpp SSFLoader.cpp SNSFLoader.cpp \
 	SPCReader.cpp tests.cpp qtrecord.cpp IPSPatcher.cpp \
 	VirtualFS.cpp NativeVFS.cpp Stream.cpp MemoryStream.cpp \
-	ExtMemStream.cpp FileStream.cpp $(am__append_4) \
-	cdplay/cdplay.cpp demo/demo.cpp $(am__append_12) \
-	$(am__append_13) $(am__append_14) $(am__append_15) \
-	$(am__append_16) $(am__append_17) $(am__append_18) \
-	$(am__append_19) $(am__append_20) $(am__append_24) \
-	$(am__append_25) $(am__append_26) $(am__append_27) \
-	$(am__append_28) $(am__append_29) $(am__append_30) \
-	$(am__append_31) $(am__append_35) $(am__append_40) \
-	$(am__append_41) $(am__append_42) $(am__append_43) \
-	$(am__append_47) $(am__append_48) $(am__append_49) \
-	$(am__append_50) $(am__append_51) $(am__append_52) \
-	$(am__append_53) $(am__append_54) $(am__append_55) \
-	$(am__append_56) $(am__append_57) $(am__append_58) \
-	cdrom/crc32.cpp cdrom/galois.cpp cdrom/l-ec.cpp \
-	cdrom/recover-raw.cpp cdrom/lec.cpp cdrom/CDUtility.cpp \
-	cdrom/CDInterface.cpp cdrom/CDInterface_MT.cpp \
-	cdrom/CDInterface_ST.cpp cdrom/CDAccess.cpp \
-	cdrom/CDAccess_Image.cpp cdrom/CDAccess_CCD.cpp \
-	cdrom/CDAFReader.cpp cdrom/CDAFReader_Vorbis.cpp \
-	cdrom/CDAFReader_MPC.cpp $(am__append_59) cdrom/scsicd.cpp \
-	$(am__append_60) sound/Fir_Resampler.cpp sound/WAVRecord.cpp \
-	sound/okiadpcm.cpp sound/DSPUtility.cpp \
-	sound/SwiftResampler.cpp sound/OwlResampler.cpp net/Net.cpp \
-	$(am__append_61) $(am__append_62) compress/GZFileStream.cpp \
+	ExtMemStream.cpp FileStream.cpp MTStreamReader.cpp \
+	$(am__append_4) cdplay/cdplay.cpp demo/demo.cpp \
+	$(am__append_12) $(am__append_13) $(am__append_14) \
+	$(am__append_15) $(am__append_16) $(am__append_17) \
+	$(am__append_18) $(am__append_19) $(am__append_20) \
+	$(am__append_24) $(am__append_25) $(am__append_26) \
+	$(am__append_27) $(am__append_28) $(am__append_29) \
+	$(am__append_30) $(am__append_31) $(am__append_35) \
+	$(am__append_40) $(am__append_41) $(am__append_42) \
+	$(am__append_43) $(am__append_47) $(am__append_48) \
+	$(am__append_49) $(am__append_50) $(am__append_51) \
+	$(am__append_52) $(am__append_53) $(am__append_54) \
+	$(am__append_55) $(am__append_56) $(am__append_57) \
+	$(am__append_58) cdrom/crc32.cpp cdrom/galois.cpp \
+	cdrom/l-ec.cpp cdrom/recover-raw.cpp cdrom/lec.cpp \
+	cdrom/CDUtility.cpp cdrom/CDInterface.cpp \
+	cdrom/CDInterface_MT.cpp cdrom/CDInterface_ST.cpp \
+	cdrom/CDAccess.cpp cdrom/CDAccess_Image.cpp \
+	cdrom/CDAccess_CCD.cpp cdrom/CDAFReader.cpp \
+	cdrom/CDAFReader_Vorbis.cpp cdrom/CDAFReader_MPC.cpp \
+	$(am__append_59) cdrom/scsicd.cpp $(am__append_60) \
+	sound/Fir_Resampler.cpp sound/WAVRecord.cpp sound/okiadpcm.cpp \
+	sound/DSPUtility.cpp sound/SwiftResampler.cpp \
+	sound/OwlResampler.cpp net/Net.cpp $(am__append_61) \
+	$(am__append_62) compress/GZFileStream.cpp \
 	compress/ZLInflateFilter.cpp compress/ZIPReader.cpp \
 	hash/md5.cpp hash/sha1.cpp hash/sha256.cpp hash/crc.cpp \
 	string/escape.cpp string/string.cpp video/surface.cpp \
@@ -2553,6 +2565,10 @@ snes_faust/input.$(OBJEXT): snes_faust/$(am__dirstamp) \
 	snes_faust/$(DEPDIR)/$(am__dirstamp)
 snes_faust/ppu.$(OBJEXT): snes_faust/$(am__dirstamp) \
 	snes_faust/$(DEPDIR)/$(am__dirstamp)
+snes_faust/ppu_st.$(OBJEXT): snes_faust/$(am__dirstamp) \
+	snes_faust/$(DEPDIR)/$(am__dirstamp)
+snes_faust/ppu_mt.$(OBJEXT): snes_faust/$(am__dirstamp) \
+	snes_faust/$(DEPDIR)/$(am__dirstamp)
 snes_faust/cart/$(am__dirstamp):
 	@$(MKDIR_P) snes_faust/cart
 	@: > snes_faust/cart/$(am__dirstamp)
@@ -2573,9 +2589,13 @@ snes_faust/cart/sa1.$(OBJEXT): snes_faust/cart/$(am__dirstamp) \
 	snes_faust/cart/$(DEPDIR)/$(am__dirstamp)
 snes_faust/cart/sa1cpu.$(OBJEXT): snes_faust/cart/$(am__dirstamp) \
 	snes_faust/cart/$(DEPDIR)/$(am__dirstamp)
+snes_faust/msu1.$(OBJEXT): snes_faust/$(am__dirstamp) \
+	snes_faust/$(DEPDIR)/$(am__dirstamp)
 snes_faust/debug.$(OBJEXT): snes_faust/$(am__dirstamp) \
 	snes_faust/$(DEPDIR)/$(am__dirstamp)
 snes_faust/dis65816.$(OBJEXT): snes_faust/$(am__dirstamp) \
+	snes_faust/$(DEPDIR)/$(am__dirstamp)
+snes_faust/ppu_mtrender.$(OBJEXT): snes_faust/$(am__dirstamp) \
 	snes_faust/$(DEPDIR)/$(am__dirstamp)
 vb/$(am__dirstamp):
 	@$(MKDIR_P) vb
@@ -3012,6 +3032,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ExtMemStream.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/FileStream.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/IPSPatcher.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MTStreamReader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MemoryStream.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/NativeVFS.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/PSFLoader.Po@am__quote@
@@ -3419,7 +3440,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/debug.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/dis65816.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/input.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/msu1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/ppu.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/ppu_mt.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/ppu_mtrender.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/ppu_st.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/$(DEPDIR)/snes.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/cart/$(DEPDIR)/cx4.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/cart/$(DEPDIR)/dsp1.Po@am__quote@

@@ -196,7 +196,7 @@ class FrontIO
  uint32 chair_colors[8];
 };
 
-extern const std::vector<InputPortInfoStruct> FIO_PortInfo;
+MDFN_HIDE extern const std::vector<InputPortInfoStruct> FIO_PortInfo;
 
 }
 #endif

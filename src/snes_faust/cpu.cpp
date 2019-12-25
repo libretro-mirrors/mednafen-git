@@ -50,6 +50,8 @@
 */
 
 #include <mednafen/mednafen.h>
+using namespace Mednafen;
+
 #include "cpu.h"
 #include "snes.h"
 
@@ -58,7 +60,57 @@ namespace MDFN_IEN_SNES_FAUST
 
 void DBG_CPUHook(uint32 PCPBR, uint8 P);
 
-#include "cpu_hlif.inc"
+#include "Core65816.h"
 
+template<typename T>
+INLINE void Core65816::MemWrite(uint32 addr, T val)
+{
+ cpum->CPU_Write(addr, val);
+
+ if(sizeof(T) == 2)
+ {
+  addr++;
+  cpum->CPU_Write(addr, val >> 8);
+ }
+}
+
+template<typename T>
+INLINE T Core65816::MemRead(uint32 addr)
+{
+ T ret;
+
+ ret = cpum->CPU_Read(addr);
+
+ if(sizeof(T) == 2)
+ {
+  addr++;
+  ret |= cpum->CPU_Read(addr) << 8;
+ }
+
+ return ret;
+}
+
+INLINE uint16 Core65816::VecRead(uint32 addr)
+{
+ uint16 ret;
+
+ ret = MemRead<uint16>(addr);
+
+ return ret;
+}
+
+INLINE uint8 Core65816::OpRead(uint32 addr)
+{
+ uint8 ret = MemRead<uint8>(addr);
+
+ //if(popread)
+ // SNES_DBG("  %02x\n", ret);
+
+ return ret;
+}
+
+static Core65816 core;
+CPU_Misc CPUM;
+#include "cpu_hlif.inc"
 
 }

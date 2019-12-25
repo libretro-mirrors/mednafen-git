@@ -37,7 +37,9 @@
 
 #include <zlib.h>
 
-extern MDFNGI EmulatedSS;
+using namespace Mednafen;
+
+MDFN_HIDE extern MDFNGI EmulatedSS;
 
 #include "ss.h"
 #include "sound.h"
@@ -95,7 +97,7 @@ static int64 CartNV_SaveDelay;
 static uintptr_t SH7095_FastMap[1U << (32 - SH7095_EXT_MAP_GRAN_BITS)];
 
 int32 SH7095_mem_timestamp;
-uint32 SH7095_BusLock;
+static uint32 SH7095_BusLock;
 static uint32 SH7095_DB;
 #include "scu.inc"
 
@@ -803,7 +805,7 @@ static void Emulate(EmulateSpecStruct* espec_arg)
  int32 end_ts;
 
  espec = espec_arg;
- AllowMidSync = MDFN_GetSettingB("ss.midsync");
+ AllowMidSync = true;
  MDFNGameInfo->mouse_sensitivity = MDFN_GetSettingF("ss.input.mouse_sensitivity");
 
  cur_clock_div = SMPC_StartFrame(espec);
@@ -1274,6 +1276,7 @@ static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned
  const char* biospath_sname;
  int sls = MDFN_GetSettingI(PAL ? "ss.slstartp" : "ss.slstart");
  int sle = MDFN_GetSettingI(PAL ? "ss.slendp" : "ss.slend");
+ const uint64 vdp2_affinity = MDFN_GetSettingUI("ss.affinity.vdp2");
 
  if(PAL)
  {
@@ -1344,7 +1347,7 @@ static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned
  SCU_Init();
  SMPC_Init(smpc_area, MasterClock);
  VDP1::Init();
- VDP2::Init(PAL);
+ VDP2::Init(PAL, vdp2_affinity);
  CDB_Init();
  SOUND_Init();
 
@@ -1516,7 +1519,7 @@ static MDFN_COLD void Load(GameFile* gf)
 
    static std::vector<CDInterface*> CDInterfaces;
    CDInterfaces.clear();
-   CDInterfaces.push_back(CDInterface::Open(&NVFS, MDFN_GetSettingS("ss.dbg_exe_cdpath"), false));
+   CDInterfaces.push_back(CDInterface::Open(&NVFS, MDFN_GetSettingS("ss.dbg_exe_cdpath"), false, MDFN_GetSettingUI("affinity.cd")));
    cdifs = &CDInterfaces;
   }
   //
@@ -2177,7 +2180,7 @@ static const MDFNSetting SSSettings[] =
  { "ss.slstartp", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in PAL mode."), NULL, MDFNST_INT, "0", "-16", "271" },
  { "ss.slendp", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in PAL mode."), NULL, MDFNST_INT, "255", "-16", "271" },
 
- { "ss.midsync", MDFNSF_NOFLAGS, gettext_noop("Enable mid-frame synchronization."), gettext_noop("Mid-frame synchronization can reduce input latency, but it will increase CPU requirements."), MDFNST_BOOL, "0" },
+ { "ss.affinity.vdp2", MDFNSF_NOFLAGS, gettext_noop("VDP2 rendering thread CPU affinity mask."), gettext_noop("Set to 0 to disable changing affinity."), MDFNST_UINT, "0", "0x0000000000000000", "0xFFFFFFFFFFFFFFFF" },
 
 #ifdef MDFN_ENABLE_DEV_BUILD
  { "ss.dbg_mask", MDFNSF_SUPPRESS_DOC, gettext_noop("Debug printf mask."), NULL, MDFNST_MULTI_ENUM, "none", NULL, NULL, NULL, NULL, DBGMask_List },

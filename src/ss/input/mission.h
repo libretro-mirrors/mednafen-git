@@ -55,8 +55,8 @@ class IODevice_Mission final : public IODevice
 };
 
 
-extern IDIISG IODevice_Mission_IDII;
-extern IDIISG IODevice_DualMission_IDII;
+MDFN_HIDE extern IDIISG IODevice_Mission_IDII;
+MDFN_HIDE extern IDIISG IODevice_DualMission_IDII;
 
 }
 

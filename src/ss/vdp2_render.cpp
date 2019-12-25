@@ -3176,7 +3176,7 @@ static int RThreadEntry(void* data)
   while(MDFN_UNLIKELY(WQ_InCount.load(std::memory_order_acquire) == 0))
   {
    if(!DoBusyWait)
-    MThreading::WaitSemTimeout(WakeupSem, 1);
+    MThreading::Sem_TimedWait(WakeupSem, 1);
    else
    {
 #ifdef MDFN_SS_BUSYWAIT_PAUSE
@@ -3247,7 +3247,7 @@ static int RThreadEntry(void* data)
 //
 //
 //
-void VDP2REND_Init(const bool IsPAL)
+void VDP2REND_Init(const bool IsPAL, const uint64 affinity)
 {
  PAL = IsPAL;
  VisibleLines = PAL ? 288 : 240;
@@ -3260,11 +3260,10 @@ void VDP2REND_Init(const bool IsPAL)
  WQ_InCount.store(0, std::memory_order_release); 
  DrawCounter.store(0, std::memory_order_release);
 
- WakeupSem = MThreading::CreateSem();
- RThread = MThreading::CreateThread(RThreadEntry, NULL, "MDFN VDP2 Render");
- #ifdef MDFN_SS_VDP2_THREAD_AFFINITY
- MThreading::SetAffinity(RThread, MDFN_SS_VDP2_THREAD_AFFINITY);
- #endif
+ WakeupSem = MThreading::Sem_Create();
+ RThread = MThreading::Thread_Create(RThreadEntry, NULL, "MDFN VDP2 Render");
+ if(affinity)
+  MThreading::Thread_SetAffinity(RThread, affinity);
 }
 
 // Needed for ss.correct_aspect == 0
@@ -3329,12 +3328,12 @@ void VDP2REND_Kill(void)
  if(RThread != NULL)
  {
   WWQ(COMMAND_EXIT);
-  MThreading::WaitThread(RThread, NULL);
+  MThreading::Thread_Wait(RThread, NULL);
  }
 
  if(WakeupSem != NULL)
  {
-  MThreading::DestroySem(WakeupSem);
+  MThreading::Sem_Destroy(WakeupSem);
   WakeupSem = NULL;
  }
 }
@@ -3416,7 +3415,7 @@ void VDP2REND_DrawLine(const int vdp2_line, const uint32 crt_line, const bool fi
   if(crt_line == bwthresh)
   {
    WWQ(COMMAND_SET_BUSYWAIT, true);
-   MThreading::PostSem(WakeupSem);
+   MThreading::Sem_Post(WakeupSem);
   }
   else if(crt_line < bwthresh)
   {
@@ -3425,7 +3424,7 @@ void VDP2REND_DrawLine(const int vdp2_line, const uint32 crt_line, const bool fi
    else if((wdcq + 1) >= 64 && DoWakeupIfNecessary)
    {
     //printf("Post Wakeup: %3d --- crt_line=%3d\n", wdcq + 1, crt_line);
-    MThreading::PostSem(WakeupSem);
+    MThreading::Sem_Post(WakeupSem);
     DoWakeupIfNecessary = false;
    }
   }

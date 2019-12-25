@@ -6,9 +6,6 @@
 /* Define if we are compiling for PPC architectures. */
 #undef ARCH_POWERPC
 
-/* Define if we are compiling with AltiVec usage. */
-#undef ARCH_POWERPC_ALTIVEC
-
 /* Define if we are compiling for 32-bit or 64-bit x86 architectures. */
 #undef ARCH_X86
 

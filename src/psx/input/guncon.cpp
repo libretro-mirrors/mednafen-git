@@ -36,6 +36,7 @@ class InputDevice_GunCon final : public InputDevice
  virtual void Power(void) override MDFN_COLD;
  virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
  virtual void UpdateInput(const void *data) override;
+ virtual void TransformInput(void* data) override;
  virtual bool RequireNoFrameskip(void) override;
  virtual pscpu_timestamp_t GPULineHook(const pscpu_timestamp_t line_timestamp, bool vsync, uint32 *pixels, const MDFN_PixelFormat* const format, const unsigned width, const unsigned pix_clock_offset, const unsigned pix_clock, const unsigned pix_clock_divider) override;
 
@@ -165,6 +166,18 @@ void InputDevice_GunCon::StateAction(StateMem* sm, const unsigned load, const bo
  }
 }
 
+void InputDevice_GunCon::TransformInput(void *data)
+{
+ float gun_x_scale, gun_x_offs;
+ int32 tmp = (int16)MDFN_de16lsb((uint8*)data + 0);
+
+ GPU_GetGunXTranslation(&gun_x_scale, &gun_x_offs);
+
+ tmp = floor(0.5 + tmp * gun_x_scale + gun_x_offs);
+ tmp = std::max<int32>(-32768, std::min<int32>(32767, tmp));
+
+ MDFN_en16lsb((uint8*)data + 0, tmp);
+}
 
 void InputDevice_GunCon::UpdateInput(const void *data)
 {
@@ -201,7 +214,6 @@ pscpu_timestamp_t InputDevice_GunCon::GPULineHook(const pscpu_timestamp_t line_t
 
  if(pixels && pix_clock)
  {
-  const int avs = 16; // Not 16 for PAL, fixme.
   int32 gx;
   int32 gy;
 
@@ -210,7 +222,7 @@ pscpu_timestamp_t InputDevice_GunCon::GPULineHook(const pscpu_timestamp_t line_t
 
   for(int32 ix = gx; ix < (gx + (int32)(pix_clock / 762925)); ix++)
   {
-   if(ix >= 0 && ix < (int)width && line_counter >= (avs + gy) && line_counter < (avs + gy + 8))
+   if(ix >= 0 && ix < (int)width && line_counter >= gy && line_counter < (gy + 8))
    {
     int r, g, b, a;
 
@@ -225,7 +237,7 @@ pscpu_timestamp_t InputDevice_GunCon::GPULineHook(const pscpu_timestamp_t line_t
   }
 
   chair_x = gx;
-  chair_y = (avs + gy) - line_counter;
+  chair_y = gy - line_counter;
  }
 
  line_counter++;

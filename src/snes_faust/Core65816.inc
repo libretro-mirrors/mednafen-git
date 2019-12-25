@@ -94,7 +94,7 @@ INLINE void Core65816::ISequence(unsigned which)
 
  P = (P & ~D_FLAG) | I_FLAG;
  PBR = 0x00;
- PC = MemRead<uint16>(vecaddr);
+ PC = VecRead(vecaddr);
  BranchOccurred(which);
 
  SNES_DBG("[CPU] ISeq %u: %04x\n", which, PC);
@@ -1741,7 +1741,7 @@ void Core65816::Reset(void)
  S = 0x01FD;
  P = M_FLAG | X_FLAG | I_FLAG;
 
- PC = MemRead<uint16>(0xFFFC);
+ PC = VecRead(0xFFFC);
  BranchOccurred();
 }
 

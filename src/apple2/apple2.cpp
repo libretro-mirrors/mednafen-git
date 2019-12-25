@@ -42,6 +42,8 @@
 
 #include <mednafen/sound/SwiftResampler.h>
 
+using namespace Mednafen;
+
 #if 0
  #define APPLE2_DBG_ENABLE 1
  #define APPLE2_DBG(s, ...) printf(s, ## __VA_ARGS__)
@@ -1680,8 +1682,14 @@ static const MDFNSetting_EnumList Mode_List[] =
 {
  { "composite", Video::Settings::MODE_COMPOSITE, "Composite", gettext_noop("Internal video dimensions of 584x192.") },
  { "rgb", Video::Settings::MODE_RGB, "RGB", gettext_noop("Internal video dimensions of 292x192; suitable for use with scalers like hq2x.") },
- { "rgb_alt1", Video::Settings::MODE_RGB_ALT1, "RGB (alternate algorithm 1)", gettext_noop("Internal video dimensions of 584x192.") },
- { "rgb_alt2", Video::Settings::MODE_RGB_ALT2, "RGB (alternate algorithm 2)", gettext_noop("Internal video dimensions of 584x192.") },
+ { "rgb_tfr", Video::Settings::MODE_RGB_TFR, "RGB, with HGR text fringe reduction.", gettext_noop("Internal video dimensions of 292x192; suitable for use with scalers like hq2x.  Reduced brightness of colored pixels horizontally sandwiched between white pixels in HGR mode.") },
+
+ { "rgb_alt", Video::Settings::MODE_RGB_ALT, "RGB (alternate algorithm)", gettext_noop("Internal video dimensions of 584x192.") },
+ { "rgb_alt_tfr", Video::Settings::MODE_RGB_ALT_TFR, "RGB (alternate algorithm), with HGR text fringe reduction.", gettext_noop("Internal video dimensions of 584x192.    Reduced brightness of colored pixels horizontally sandwiched between white pixels in HGR mode.") },
+
+ // Backwards compatibility:
+ { "rgb_alt1", Video::Settings::MODE_RGB_ALT },
+ { "rgb_alt2", Video::Settings::MODE_RGB_ALT_TFR },
 
  { nullptr, 0 }
 };
@@ -1743,7 +1751,7 @@ static const CheatInfoStruct CheatInfo =
 
 static const CustomPalette_Spec CPInfo[] =
 {
- { gettext_noop("RGB mode 16-color palette.  The presence of a custom palette will automatically enable RGB video mode."), NULL, { 16, 0 } },
+ { gettext_noop("RGB mode 16-color(or 32-color for TFR) palette.  The presence of a custom palette will automatically enable RGB video mode if an RGB mode is not already selected via the \"apple2.video.mode\" setting.  If the palette has 32 color entries, the text fringe reduction variant of an RGB mode is enabled."), NULL, { 16, 32, 0 } },
 
  { NULL, NULL }
 };

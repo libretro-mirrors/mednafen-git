@@ -20,8 +20,8 @@
 #include <mednafen/state.h>
 
 #include "gb.h"
-#include "z80.h"
 #include "gbGlobals.h"
+#include "z80.h"
 #include "memory.h"
 
 namespace MDFN_IEN_GB

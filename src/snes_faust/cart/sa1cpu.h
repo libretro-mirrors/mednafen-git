@@ -32,6 +32,64 @@ class CPU65816;
 
 struct CPU_Misc
 {
+ readfunc ReadFuncs[512 + 256];
+ //
+ //
+ //
+ void RunDMA(void) MDFN_HOT;
+ void EventHandler(void) MDFN_HOT;
+ //
+ //
+ //
+ uintptr_t ROMPtr[8];
+ uint8 SA1VectorSpace[0x10];
+ uint8 SA1VectorMask[0x10];
+ uint8 MainVectors[4];
+
+ uint8 SA1CPUControl;
+ uint8 SA1CPUIRQEnable;
+ uint8 SA1CPUIRQPending;
+
+ uint8 MainCPUControl;
+ uint8 MainCPUIRQEnable;
+ uint8 MainCPUIRQPending;
+
+ uint8 DMAControl;
+ uint8 DMACharConvParam;
+ uint32 DMASourceAddr;
+ uint32 DMADestAddr;
+ uint32 DMALength;
+ uint32 DMAFinishTS;
+
+ uint32 DMACharConvSourceXTile;
+ uint32 DMACharConvSourceYTile;
+ uint32 DMACharConvCCVBWRAMCounter;
+ unsigned CharConvTileY;
+ uint8 CharConvBMRegs[0x10];
+ bool DMACharConvAutoActive;
+ uint8 ROMBank[4];
+ uint8 MainBWRAMBank;		// $2224
+ uint8 SA1BWRAMBank;		// $2225
+ bool BWRAMWriteEnable[2];	// [0]=$2226(main), [1]=$2227(SA1 CPU side)
+ uint8 BWRAMWriteProtectSize;	// $2228
+ uint8 IWRAMWriteEnable[2];	// [0]=$2229(main), [1]=$222A(SA1 CPU side)
+ bool BWRAMBitmapFormat;		// $223F(SA1 CPU)
+
+//
+ uint8 MathControl;		// $2250(SA1 CPU)
+ uint8 VarLenControl;		// $2258 (SA1 CPU)
+ uint16 MathParam[2];		// $2251...$2254
+ uint64 MathResult;
+
+ uint32 VarLenAddr;
+ uint32 VarLenCurAddr;
+ uint32 VarLenCurBitOffs;
+ uint32 VarLenBuffer;
+
+ uint32 SA1CPUBoundTS;
+ //
+ //
+ //
  uint32 timestamp;
  uint32 next_event_ts;
  uint32 running_mask;
@@ -53,78 +111,47 @@ struct CPU_Misc
  bool PrevNMILineState;
  uint8 MultiIRQState;
  enum { IRQNMISuppress = false };
+ uint8 MemSelectCycles;
+ uint8 VectorPull;
 
- readfunc ReadFuncs[512 + 256];
  writefunc WriteFuncs[512 + 256];
+
+ uint8 IRAM[0x800];
 
  // +1 so we can avoid a masking for 16-bit reads/writes(note that this
  // may result in the address passed to the read/write handlers being
  // 0x1000000 instead of 0x000000 in some cases, so code with that in mind.
  uint16 RWIndex[0x8000 + 1];	// (2**24 / 512)
- //
- //
- //
- void RunDMA(void) MDFN_HOT;
- void EventHandler(void) MDFN_HOT;
+
+ INLINE uint8 CPU_Read(uint32 A)
+ {
+  const size_t i = RWIndex[A >> 9];
+  uint8 ret = ReadFuncs[i ? i : (A & 0x1FF)](A);
+
+  mdr = ret;
+
+  return ret;
+ }
+
+ INLINE void CPU_Write(uint32 A, uint8 V)
+ {
+  const size_t i = RWIndex[A >> 9];
+  mdr = V;
+  WriteFuncs[i ? i : (A & 0x1FF)](A, V);
+ }
+
+ INLINE void CPU_IO(void)
+ {
+  timestamp += 2;
+ }
+
 };
 
-extern CPU_Misc CPUM;
-
-INLINE uint8 CPU_Read(uint32 A)
-{
- const size_t i = CPUM.RWIndex[A >> 9];
- uint8 ret = CPUM.ReadFuncs[i ? i : (A & 0x1FF)](A);
-
- CPUM.mdr = ret;
-
- return ret;
-}
-
-INLINE void CPU_Write(uint32 A, uint8 V)
-{
- const size_t i = CPUM.RWIndex[A >> 9];
- CPUM.mdr = V;
- CPUM.WriteFuncs[i ? i : (A & 0x1FF)](A, V);
-}
-
-INLINE void CPU_IO(void)
-{
- CPUM.timestamp += 2;
-}
-
-INLINE void CPU_SetIRQ(bool active)
-{
- CPUM.CombinedNIState &= ~0x04;
- CPUM.CombinedNIState |= active ? 0x04 : 0x00;
-}
-
-INLINE void CPU_SetNMI(bool active)
-{
- if((CPUM.NMILineState ^ active) & active)
-  CPUM.CombinedNIState |= 0x01;
-
- CPUM.NMILineState = active;
-}
-
-INLINE void CPU_SetIRQNMISuppress(bool active)
-{
- CPUM.CombinedNIState &= ~0x80;
- CPUM.CombinedNIState |= active ? 0x80 : 0x00;
-}
-
-void CPU_Init(void) MDFN_COLD;
+void CPU_Init(CPU_Misc* cpum) MDFN_COLD;
 void CPU_Reset(bool powering_up) MDFN_COLD;
 void CPU_StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname, const char* sname_core);
 void CPU_Run(void) MDFN_HOT;
 
-void CPU_ClearRWFuncs(void) MDFN_COLD;
-void CPU_SetRWHandlers(uint32 A1, uint32 A2, readfunc read_handler, writefunc write_handler, bool special = false) MDFN_COLD;
-
-INLINE void CPU_Exit(void)
-{
- CPUM.running_mask = 0;
- CPUM.next_event_ts = 0;
-}
 //
 //
 }

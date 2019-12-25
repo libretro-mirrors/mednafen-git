@@ -26,6 +26,7 @@
 
 namespace Net
 {
+using namespace Mednafen;
 
 class Connection
 {

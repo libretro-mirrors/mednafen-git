@@ -26,6 +26,8 @@
 #include <mednafen/hw_cpu/v810/v810_cpu.h>
 #include <trio/trio.h>
 
+using namespace Mednafen;
+
 namespace MDFN_IEN_VB
 {
 

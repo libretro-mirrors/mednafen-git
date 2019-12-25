@@ -31,6 +31,9 @@
 #include <sys/audioio.h>
 #include <sys/time.h>
 
+namespace Mednafen
+{
+
 struct SexyAL_OpenBSD
 {
  int fd;
@@ -255,3 +258,4 @@ SexyAL_device* SexyALI_OpenBSD_Open(const char* id, SexyAL_format* format, SexyA
  return device;
 }
 
+}

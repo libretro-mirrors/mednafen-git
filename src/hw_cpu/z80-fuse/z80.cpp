@@ -22,6 +22,9 @@
 */
 
 #include "z80.h"
+
+namespace Mednafen
+{
 #include "z80_macros.h"
 
 void (*z80_writebyte)(uint16, uint8);
@@ -265,3 +268,4 @@ void z80_state_action(StateMem *sm, const unsigned load, const bool data_only, c
  }
 }
 
+}

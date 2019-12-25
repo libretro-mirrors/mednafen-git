@@ -50,7 +50,7 @@ static DEFREAD(MainCPU_ReadDR)
 {
  if(MDFN_LIKELY(!DBG_InHLRead))
  {
-  CPUM.timestamp += (cyc >= 0) ? cyc : (MemSelect ? MEMCYC_FAST : MEMCYC_SLOW);
+  CPUM.timestamp += (cyc >= 0) ? cyc : CPUM.MemSelectCycles;
  }
  //
  //
@@ -62,7 +62,7 @@ static DEFREAD(MainCPU_ReadDR)
 template<signed cyc>
 static DEFWRITE(MainCPU_WriteDR)
 {
- CPUM.timestamp += (cyc >= 0) ? cyc : (MemSelect ? MEMCYC_FAST : MEMCYC_SLOW);
+ CPUM.timestamp += (cyc >= 0) ? cyc : CPUM.MemSelectCycles;
  //
  //
  Update(CPUM.timestamp);
@@ -75,7 +75,7 @@ static DEFREAD(MainCPU_ReadSR)
 {
  if(MDFN_LIKELY(!DBG_InHLRead))
  {
-  CPUM.timestamp += (cyc >= 0) ? cyc : (MemSelect ? MEMCYC_FAST : MEMCYC_SLOW);
+  CPUM.timestamp += (cyc >= 0) ? cyc : CPUM.MemSelectCycles;
  }
  //
  //

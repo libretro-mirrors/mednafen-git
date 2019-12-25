@@ -26,6 +26,8 @@
 
 #include <trio/trio.h>
 
+using namespace Mednafen;
+
 namespace MDFN_IEN_SS
 {
  enum
@@ -64,7 +66,7 @@ namespace MDFN_IEN_SS
   SS_DBG_SCSP_REGW = (1U << 29),
  };
 #ifdef MDFN_ENABLE_DEV_BUILD
- extern uint32 ss_dbg_mask;
+ MDFN_HIDE extern uint32 ss_dbg_mask;
 #else
  enum { ss_dbg_mask = 0 };
 #endif
@@ -78,7 +80,7 @@ namespace MDFN_IEN_SS
   HORRIBLEHACK_VDP1RWDRAWSLOWDOWN= (1U << 3),
   HORRIBLEHACK_VDP1INSTANT	 = (1U << 4),
  };
- extern uint32 ss_horrible_hacks;
+ MDFN_HIDE extern uint32 ss_horrible_hacks;
 #endif
 
  static INLINE void SS_DBG_Dummy(const char* format, ...) { }
@@ -104,9 +106,9 @@ namespace MDFN_IEN_SS
 
  class SH7095;
 
- extern SH7095 CPU[2];	// for smpc.cpp
+ MDFN_HIDE extern SH7095 CPU[2];	// for smpc.cpp
 
- extern int32 SH7095_mem_timestamp;
+ MDFN_HIDE extern int32 SH7095_mem_timestamp;
 
  void SS_RequestMLExit(void);
  void ForceEventUpdates(const sscpu_timestamp_t timestamp);
@@ -148,7 +150,7 @@ namespace MDFN_IEN_SS
   ss_event_handler event_handler;
  };
 
- extern event_list_entry events[SS_EVENT__COUNT];
+ MDFN_HIDE extern event_list_entry events[SS_EVENT__COUNT];
 
  #define SS_EVENT_DISABLED_TS			0x40000000
  void SS_SetEventNT(event_list_entry* e, const sscpu_timestamp_t next_timestamp);

@@ -39,8 +39,8 @@ class Deinterlacer_Blend : public Deinterlacer
  //
  private:
 
- template<bool gc, unsigned cc0s, unsigned cc1s, unsigned cc2s>
- uint32 Blend(uint32 a, uint32 b);
+ template<typename T, bool gc, unsigned cc0s, unsigned cc1s, unsigned cc2s>
+ T Blend(T a, T b);
 
  template<typename T, bool gc, unsigned cc0s, unsigned cc1s, unsigned cc2s>
  void InternalProcess(MDFN_Surface* surface, MDFN_Rect& dr, int32* LineWidths, const bool field);

@@ -3,6 +3,8 @@
 
 #include <trio/trio.h>
 
+using namespace Mednafen;
+
 namespace MDFN_IEN_PCE
 {
 class alignas(128) HuC6280

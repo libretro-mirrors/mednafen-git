@@ -21,6 +21,9 @@
 
 #include <mednafen/mednafen.h>
 
+namespace Mednafen
+{
+
 class V810_FP_Ops
 {
  public:
@@ -75,3 +78,4 @@ class V810_FP_Ops
  uint32 fpim_encode(fpim* df);
 };
 
+}

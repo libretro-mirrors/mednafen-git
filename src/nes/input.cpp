@@ -30,22 +30,22 @@
 namespace MDFN_IEN_NES
 {
 
-extern INPUTC *MDFN_InitZapper(int w);
-extern INPUTC *MDFN_InitPowerpadA(int w);
-extern INPUTC *MDFN_InitPowerpadB(int w);
-extern INPUTC *MDFN_InitArkanoid(int w);
+MDFN_HIDE extern INPUTC *MDFN_InitZapper(int w);
+MDFN_HIDE extern INPUTC *MDFN_InitPowerpadA(int w);
+MDFN_HIDE extern INPUTC *MDFN_InitPowerpadB(int w);
+MDFN_HIDE extern INPUTC *MDFN_InitArkanoid(int w);
 
-extern INPUTCFC *MDFN_InitArkanoidFC(void);
-extern INPUTCFC *MDFN_InitSpaceShadow(void);
-extern INPUTCFC *MDFN_InitFKB(void);
-extern INPUTCFC *MDFN_InitHS(void);
-extern INPUTCFC *MDFN_InitMahjong(void);
-extern INPUTCFC *MDFN_InitPartyTap(void);
-extern INPUTCFC *MDFN_InitFamilyTrainerA(void);
-extern INPUTCFC *MDFN_InitFamilyTrainerB(void);
-extern INPUTCFC *MDFN_InitOekaKids(void);
-extern INPUTCFC *MDFN_InitTopRider(void);
-extern INPUTCFC *MDFN_InitBBattler2(void);
+MDFN_HIDE extern INPUTCFC *MDFN_InitArkanoidFC(void);
+MDFN_HIDE extern INPUTCFC *MDFN_InitSpaceShadow(void);
+MDFN_HIDE extern INPUTCFC *MDFN_InitFKB(void);
+MDFN_HIDE extern INPUTCFC *MDFN_InitHS(void);
+MDFN_HIDE extern INPUTCFC *MDFN_InitMahjong(void);
+MDFN_HIDE extern INPUTCFC *MDFN_InitPartyTap(void);
+MDFN_HIDE extern INPUTCFC *MDFN_InitFamilyTrainerA(void);
+MDFN_HIDE extern INPUTCFC *MDFN_InitFamilyTrainerB(void);
+MDFN_HIDE extern INPUTCFC *MDFN_InitOekaKids(void);
+MDFN_HIDE extern INPUTCFC *MDFN_InitTopRider(void);
+MDFN_HIDE extern INPUTCFC *MDFN_InitBBattler2(void);
 
 static const IDIISG GamepadIDII =
 {
@@ -438,8 +438,7 @@ const std::vector<InputPortInfoStruct> NESPortInfo =
 };
 
 static uint8 joy_readbit[2];
-//static 
-uint8 joy[4]={0,0,0,0};
+static uint8 joy[4]={0,0,0,0};
 static uint8 LastStrobe;
 
 /* This function is a quick hack to get the NSF player to use emulated gamepad
@@ -449,7 +448,7 @@ uint8 MDFN_GetJoyJoy(void)
 {
  return(joy[0]|joy[1]|joy[2]|joy[3]);
 }
-extern uint8 coinon;
+MDFN_HIDE extern uint8 coinon;
 
 static int FSDisable=0;	/* Set to 1 if NES-style four-player adapter is disabled. */
 
@@ -646,7 +645,7 @@ void MDFN_UpdateInput(void)
 	 MDFN_VSUniSwap(&joy[0], &joy[1]);
 }
 
-extern uint8 vsdip;	// FIXME
+MDFN_HIDE extern uint8 vsdip;	// FIXME
 
 static DECLFR(VSUNIRead0)
 { 

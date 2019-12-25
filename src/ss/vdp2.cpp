@@ -884,7 +884,7 @@ void AdjustTS(const int32 delta)
 }
 
 
-void Init(const bool IsPAL)
+void Init(const bool IsPAL, const uint64 affinity)
 {
  SurfInterlaceField = -1;
  PAL = IsPAL;
@@ -896,7 +896,7 @@ void Init(const bool IsPAL)
 
  ExLatchIn = false;
 
- VDP2REND_Init(IsPAL);
+ VDP2REND_Init(IsPAL, affinity);
 }
 
 void SetGetVideoParams(MDFNGI* gi, const bool caspect, const int sls, const int sle, const bool show_h_overscan, const bool dohblend)

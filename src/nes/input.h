@@ -69,13 +69,13 @@ void NESINPUT_Init(void) MDFN_COLD;
 void NESINPUT_PaletteChanged(void) MDFN_COLD;
 void NESINPUT_StateAction(StateMem *sm, const unsigned load, const bool data_only);
 
-extern void (*PStrobe[2])(void);
-extern void (*InputScanlineHook)(uint8 *pix, uint32 linets, int final);
+MDFN_HIDE extern void (*PStrobe[2])(void);
+MDFN_HIDE extern void (*InputScanlineHook)(uint8 *pix, uint32 linets, int final);
 
 void MDFNNES_DoSimpleCommand(int cmd);
 void MDFNNES_SetInput(unsigned port, const char *type, uint8 *ptr) MDFN_COLD;
 
-extern const std::vector<InputPortInfoStruct> NESPortInfo;
+MDFN_HIDE extern const std::vector<InputPortInfoStruct> NESPortInfo;
 
 }
 

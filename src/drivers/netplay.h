@@ -14,7 +14,7 @@ bool Netplay_TryTextExit(void);
 // Returns local player mask if netplay is active, ~(uint32)0 otherwise
 uint32 Netplay_GetLPM(void);
 
-extern int MDFNDnetplay;
+MDFN_HIDE extern int MDFNDnetplay;
 
 
 //
