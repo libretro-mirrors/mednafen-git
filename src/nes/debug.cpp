@@ -136,7 +136,7 @@ uint32 NESDBG_MemPeek(uint32 A, unsigned int bsize, bool hl, bool logical)
 
 void NESDBG_MemPoke(uint32 A, uint32 V, unsigned int bsize, bool hl, bool logical)
 {
- extern uint8 *Page[32];
+ MDFN_HIDE extern uint8 *Page[32];
 
  for(unsigned int i = 0; i < bsize; i++)
  {
@@ -372,7 +372,7 @@ enum
  CPU_GSREG_TIMESTAMP
 };
 
-static RegType NESCPURegs[] =
+static const RegType NESCPURegs[] =
 {
         { CPU_GSREG_PC, "PC", "Program Counter", 2 },
         { CPU_GSREG_A, "A", "Accumulator", 1 },
@@ -464,7 +464,7 @@ static void SetRegister_CPU(const unsigned int id, uint32 value)
  }
 }
 
-static RegGroupType NESCPURegsGroup =
+static const RegGroupType NESCPURegsGroup =
 {
         "6502",
         NESCPURegs,
@@ -473,7 +473,7 @@ static RegGroupType NESCPURegsGroup =
 };
 
 
-static RegType NESPPURegs[] =
+static const RegType NESPPURegs[] =
 {
         { PPU_GSREG_PPU0, "PPU0", "PPU0", 1 },
         { PPU_GSREG_PPU1, "PPU1", "PPU1", 1 },
@@ -488,7 +488,7 @@ static RegType NESPPURegs[] =
         { 0, "", "", 0 },
 };
 
-static RegGroupType NESPPURegsGroup =
+static const RegGroupType NESPPURegsGroup =
 {
  "PPU",
  NESPPURegs,

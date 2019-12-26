@@ -2,7 +2,7 @@
 /* Mednafen Fast SNES Emulation Module                                        */
 /******************************************************************************/
 /* dma.inc:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -20,7 +20,6 @@
 */
 
 // FIXME: Be careful to reset DMACH[ch].Offset to 0 at appropriate times(like what if HDMA cancels DMA..)
-
 static uint8 DMAEnable;
 static uint8 HDMAEnable;
 static uint8 HDMAEnableMask;
@@ -68,6 +67,12 @@ TModes[8] =
  { 1, { 0, 0 } },
  { 3, { 0, 0, 1, 1 } },
 };
+
+static void DMA_UnhaltCPU(void)
+{
+ CPUM.halted &= ~CPU_Misc::HALTED_DMA;
+ CPU_TriggerIRQNMIDelayKludge();
+}
 
 // TODO: Warning message when DMA overwrites DMA registers.
 void CPU_Misc::RunDMA(void)
@@ -117,7 +122,12 @@ void CPU_Misc::RunDMA(void)
  }
 
  if(DMAEnable == 0)
-  CPUM.halted = HALTED_NOT;
+ {
+#ifdef SNES_DBG_ENABLE
+  SNES_DBG("DMA done: %u, scanline=%u\n", CPUM.timestamp, PPU_GetRegister(PPU_GSREG_SCANLINE, nullptr, 0));
+#endif
+  DMA_UnhaltCPU();
+ }
 }
 
 static uint32 DMA_Update(uint32 timestamp)
@@ -125,7 +135,7 @@ static uint32 DMA_Update(uint32 timestamp)
  if(DMAEnable != 0)
  {
   //puts("WOOTS");
-  CPUM.halted = CPU_Misc::HALTED_DMA;
+  CPUM.halted |= CPU_Misc::HALTED_DMA;
  }
 
  return SNES_EVENT_MAXTS;
@@ -135,8 +145,8 @@ void DMA_InitHDMA(void)
 {
  DMAEnable &= ~HDMAEnable;
 
- if(CPUM.halted == CPU_Misc::HALTED_DMA && DMAEnable == 0)
-  CPUM.halted = CPU_Misc::HALTED_NOT;
+ if((CPUM.halted & CPU_Misc::HALTED_DMA) && DMAEnable == 0)
+  DMA_UnhaltCPU();
  //
  //
  HDMAEnableMask = 0xFF;
@@ -167,11 +177,11 @@ void DMA_InitHDMA(void)
     DMACH[ch].DoTransfer = true;
    }
 
-   //printf("[DMA] HDMA %u Init: Control=0x%02x, LineCounter=0x%02x, TableAddr=0x%04x, IndirAddr=0x%04x --- ABank=0x%02x, IndirBank=0x%02x\n", ch, DMACH[ch].Control, DMACH[ch].LineCounter, DMACH[ch].TableAddr, DMACH[ch].IndirAddr, DMACH[ch].ABusBank, DMACH[ch].IndirBank);
+   SNES_DBG("[DMA] HDMA %u Init: Control=0x%02x, LineCounter=0x%02x, TableAddr=0x%04x, IndirAddr=0x%04x --- ABank=0x%02x, IndirBank=0x%02x\n", ch, DMACH[ch].Control, DMACH[ch].LineCounter, DMACH[ch].TableAddr, DMACH[ch].IndirAddr, DMACH[ch].ABusBank, DMACH[ch].IndirBank);
   }
  }
 }
-extern uint32 scanline;
+
 void DMA_RunHDMA(void)
 {
  for(unsigned ch = 0; ch < 8; ch++)
@@ -216,17 +226,24 @@ void DMA_RunHDMA(void)
     }
     DMACH[ch].Offset = 0;
    }
-   //
-   //
-   //
+  }
+ }
 
+ for(unsigned ch = 0; ch < 8; ch++)
+ {
+  if(HDMAEnable & HDMAEnableMask & (1U << ch))
+  {
    DMACH[ch].LineCounter--;
    DMACH[ch].DoTransfer = DMACH[ch].LineCounter & 0x80;
 
    if(!(DMACH[ch].LineCounter & 0x7F))
    {
-    DMACH[ch].LineCounter = CPUM.ReadA((DMACH[ch].ABusBank << 16) + DMACH[ch].TableAddr);
-    DMACH[ch].TableAddr++;
+    {
+     const uint32 save_timestamp = CPUM.timestamp;    
+     DMACH[ch].LineCounter = CPUM.ReadA((DMACH[ch].ABusBank << 16) + DMACH[ch].TableAddr);
+     DMACH[ch].TableAddr++;
+     CPUM.timestamp = save_timestamp + MEMCYC_SLOW;
+    }
 
     //fprintf(stderr, "HDMA %u NewLineCounter=0x%02x --- scanline=%u\n", ch, DMACH[ch].LineCounter, scanline);
 
@@ -253,14 +270,15 @@ void DMA_RunHDMA(void)
 
     DMACH[ch].DoTransfer = true;
    } // end if(!(DMACH[ch].LineCounter & 0x7F))
-
+   else
+    CPUM.timestamp += MEMCYC_SLOW;
   }
  }
 
  //
  //
- if(CPUM.halted == CPU_Misc::HALTED_DMA && DMAEnable == 0)
-  CPUM.halted = CPU_Misc::HALTED_NOT;
+ if((CPUM.halted & CPU_Misc::HALTED_DMA) && DMAEnable == 0)
+  CPUM.halted &= ~CPU_Misc::HALTED_DMA;
 }
 
 
@@ -268,9 +286,9 @@ static DEFWRITE(Write_420B)
 {
  CPUM.timestamp += MEMCYC_FAST;
 
-#if 0
+#ifdef SNES_DBG_ENABLE
  if(V)
-  fprintf(stderr, "DMA: %02x\n", V);
+  fprintf(stderr, "DMA: %02x --- %u, scanline=%u\n", V, CPUM.timestamp, PPU_GetRegister(PPU_GSREG_SCANLINE, nullptr, 0));
  for(unsigned i = 0; i < 8; i++)
  {
   if(V & (1 << i))
@@ -291,22 +309,27 @@ static DEFWRITE(Write_420C)
 
  HDMAEnable = V;
 
- //printf("[DMA] HDMAEnable: %02x --- scanline=%u\n", V, scanline);
+ SNES_DBG("[DMA] HDMAEnable: %02x --- scanline=%u\n", V, PPU_GetRegister(PPU_GSREG_SCANLINE, nullptr, 0));
 }
 
 //
 //
-static DEFWRITE(Write_43x0)
+DEFWRITE(DMA_Write_43x0)
 {
  CPUM.timestamp += MEMCYC_FAST;
 
- //printf("[DMA] CH %u Control Write, 0x%02x\n", (A >> 4) & 0x7, V);
+ SNES_DBG("[DMA] CH %u Control Write, 0x%02x\n", (A >> 4) & 0x7, V);
 
  DMACH[(A >> 4) & 0x7].Control = V;
 }
 
 static DEFREAD(Read_43x0)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return DMACH[(A >> 4) & 0x7].Control;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
 
  return DMACH[(A >> 4) & 0x7].Control;
@@ -318,24 +341,29 @@ static DEFWRITE(Write_43x1)
  CPUM.timestamp += MEMCYC_FAST;
 
  //fprintf(stderr, "*** Write BBusAddr, =0x%02x --- scanline=%u\n", V, scanline);
- //printf("[DMA] CH %u BBusAddr Write, 0x%02x\n", (A >> 4) & 0x7, V);
+ SNES_DBG("[DMA] CH %u BBusAddr Write, 0x%02x\n", (A >> 4) & 0x7, V);
 
  DMACH[(A >> 4) & 0x7].BBusAddr = V;
 }
 
 static DEFREAD(Read_43x1)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return DMACH[(A >> 4) & 0x7].BBusAddr;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
 
  return DMACH[(A >> 4) & 0x7].BBusAddr;
 }
 //
 //
-static DEFWRITE(Write_43x2)
+DEFWRITE(DMA_Write_43x2)
 {
  CPUM.timestamp += MEMCYC_FAST;
 
- //printf("[DMA] CH %u ABusAddrL Write, 0x%02x\n", (A >> 4) & 0x7, V);
+ SNES_DBG("[DMA] CH %u ABusAddrL Write, 0x%02x\n", (A >> 4) & 0x7, V);
 
  DMACH[(A >> 4) & 0x7].ABusAddr &= 0xFF00;
  DMACH[(A >> 4) & 0x7].ABusAddr |= V << 0;
@@ -343,17 +371,22 @@ static DEFWRITE(Write_43x2)
 
 static DEFREAD(Read_43x2)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return DMACH[(A >> 4) & 0x7].ABusAddr >> 0;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
 
  return DMACH[(A >> 4) & 0x7].ABusAddr >> 0;
 }
 //
 //
-static DEFWRITE(Write_43x3)
+DEFWRITE(DMA_Write_43x3)
 {
  CPUM.timestamp += MEMCYC_FAST;
 
- //printf("[DMA] CH %u ABusAddrH Write, 0x%02x\n", (A >> 4) & 0x7, V);
+ SNES_DBG("[DMA] CH %u ABusAddrH Write, 0x%02x\n", (A >> 4) & 0x7, V);
 
  DMACH[(A >> 4) & 0x7].ABusAddr &= 0x00FF;
  DMACH[(A >> 4) & 0x7].ABusAddr |= V << 8;
@@ -361,34 +394,44 @@ static DEFWRITE(Write_43x3)
 
 static DEFREAD(Read_43x3)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return DMACH[(A >> 4) & 0x7].ABusAddr >> 8;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
 
  return DMACH[(A >> 4) & 0x7].ABusAddr >> 8;
 }
 //
 //
-static DEFWRITE(Write_43x4)
+DEFWRITE(DMA_Write_43x4)
 {
  CPUM.timestamp += MEMCYC_FAST;
 
- //printf("[DMA] CH %u ABusBank Write, 0x%02x\n", (A >> 4) & 0x7, V);
+ SNES_DBG("[DMA] CH %u ABusBank Write, 0x%02x\n", (A >> 4) & 0x7, V);
 
  DMACH[(A >> 4) & 0x7].ABusBank = V;
 }
 
 static DEFREAD(Read_43x4)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return DMACH[(A >> 4) & 0x7].ABusBank;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
 
  return DMACH[(A >> 4) & 0x7].ABusBank;
 }
 //
 //
-static DEFWRITE(Write_43x5)
+DEFWRITE(DMA_Write_43x5)
 {
  CPUM.timestamp += MEMCYC_FAST;
 
- //printf("[DMA] CH %u IndirAddrL Write, 0x%02x\n", (A >> 4) & 0x7, V);
+ SNES_DBG("[DMA] CH %u IndirAddrL Write, 0x%02x\n", (A >> 4) & 0x7, V);
 
  DMACH[(A >> 4) & 0x7].IndirAddr &= 0xFF00;
  DMACH[(A >> 4) & 0x7].IndirAddr |= V << 0;
@@ -396,17 +439,22 @@ static DEFWRITE(Write_43x5)
 
 static DEFREAD(Read_43x5)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return DMACH[(A >> 4) & 0x7].IndirAddr >> 0;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
 
  return DMACH[(A >> 4) & 0x7].IndirAddr >> 0;
 }
 //
 //
-static DEFWRITE(Write_43x6)
+DEFWRITE(DMA_Write_43x6)
 {
  CPUM.timestamp += MEMCYC_FAST;
 
- //printf("[DMA] CH %u IndirAddrH Write, 0x%02x\n", (A >> 4) & 0x7, V);
+ SNES_DBG("[DMA] CH %u IndirAddrH Write, 0x%02x\n", (A >> 4) & 0x7, V);
 
  DMACH[(A >> 4) & 0x7].IndirAddr &= 0x00FF;
  DMACH[(A >> 4) & 0x7].IndirAddr |= V << 8;
@@ -414,6 +462,11 @@ static DEFWRITE(Write_43x6)
 
 static DEFREAD(Read_43x6)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return DMACH[(A >> 4) & 0x7].IndirAddr >> 8;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
 
  return DMACH[(A >> 4) & 0x7].IndirAddr >> 8;
@@ -424,13 +477,18 @@ static DEFWRITE(Write_43x7)
 {
  CPUM.timestamp += MEMCYC_FAST;
 
- //printf("[DMA] CH %u IndirBank Write, 0x%02x\n", (A >> 4) & 0x7, V);
+ SNES_DBG("[DMA] CH %u IndirBank Write, 0x%02x\n", (A >> 4) & 0x7, V);
 
  DMACH[(A >> 4) & 0x7].IndirBank = V;
 }
 
 static DEFREAD(Read_43x7)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return DMACH[(A >> 4) & 0x7].IndirBank;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
 
  return DMACH[(A >> 4) & 0x7].IndirBank;
@@ -441,7 +499,7 @@ static DEFWRITE(Write_43x8)
 {
  CPUM.timestamp += MEMCYC_FAST;
 
- //printf("[DMA] CH %u TableAddrL Write, 0x%02x\n", (A >> 4) & 0x7, V);
+ SNES_DBG("[DMA] CH %u TableAddrL Write, 0x%02x\n", (A >> 4) & 0x7, V);
 
  DMACH[(A >> 4) & 0x7].TableAddr &= 0xFF00;
  DMACH[(A >> 4) & 0x7].TableAddr |= V << 0;
@@ -449,6 +507,11 @@ static DEFWRITE(Write_43x8)
 
 static DEFREAD(Read_43x8)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return DMACH[(A >> 4) & 0x7].TableAddr >> 0;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
 
  return DMACH[(A >> 4) & 0x7].TableAddr >> 0;
@@ -459,7 +522,7 @@ static DEFWRITE(Write_43x9)
 {
  CPUM.timestamp += MEMCYC_FAST;
 
- //printf("[DMA] CH %u TableAddrH Write, 0x%02x\n", (A >> 4) & 0x7, V);
+ SNES_DBG("[DMA] CH %u TableAddrH Write, 0x%02x\n", (A >> 4) & 0x7, V);
 
  DMACH[(A >> 4) & 0x7].TableAddr &= 0x00FF;
  DMACH[(A >> 4) & 0x7].TableAddr |= V << 8;
@@ -467,6 +530,11 @@ static DEFWRITE(Write_43x9)
 
 static DEFREAD(Read_43x9)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return DMACH[(A >> 4) & 0x7].TableAddr >> 8;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
 
  return DMACH[(A >> 4) & 0x7].TableAddr >> 8;
@@ -477,13 +545,18 @@ static DEFWRITE(Write_43xA)
 {
  CPUM.timestamp += MEMCYC_FAST;
 
- //printf("[DMA] CH %u LineCounter Write, 0x%02x\n", (A >> 4) & 0x7, V);
+ SNES_DBG("[DMA] CH %u LineCounter Write, 0x%02x\n", (A >> 4) & 0x7, V);
 
  DMACH[(A >> 4) & 0x7].LineCounter = V;
 }
 
 static DEFREAD(Read_43xA)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return DMACH[(A >> 4) & 0x7].LineCounter;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
 
  return DMACH[(A >> 4) & 0x7].LineCounter;
@@ -499,6 +572,11 @@ static DEFWRITE(Write_43xB_43xF)
 
 static DEFREAD(Read_43xB_43xF)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return DMACH[(A >> 4) & 0x7].Unknown;
+ }
+
  CPUM.timestamp += MEMCYC_FAST;
 
  return DMACH[(A >> 4) & 0x7].Unknown;
@@ -510,6 +588,7 @@ static void DMA_Reset(bool powering_up)
 {
  DMAEnable = 0;
  HDMAEnable = 0;
+ HDMAEnableMask = 0;
 
  for(unsigned ch = 0; ch < 8; ch++)
  {
@@ -526,6 +605,7 @@ static void DMA_Reset(bool powering_up)
    DMACH[ch].Unknown = 0xFF;
 
    DMACH[ch].Offset = 0;
+   DMACH[ch].DoTransfer = false;
   }
  }
 }
@@ -543,13 +623,13 @@ static void DMA_Init(void)
    {
     const uint32 chba = (bank << 16) + 0x4300 + (ch << 4);
 
-    Set_A_Handlers(chba + 0x0, Read_43x0, Write_43x0);
+    Set_A_Handlers(chba + 0x0, Read_43x0, DMA_Write_43x0);
     Set_A_Handlers(chba + 0x1, Read_43x1, Write_43x1);
-    Set_A_Handlers(chba + 0x2, Read_43x2, Write_43x2);
-    Set_A_Handlers(chba + 0x3, Read_43x3, Write_43x3);
-    Set_A_Handlers(chba + 0x4, Read_43x4, Write_43x4);
-    Set_A_Handlers(chba + 0x5, Read_43x5, Write_43x5);
-    Set_A_Handlers(chba + 0x6, Read_43x6, Write_43x6);
+    Set_A_Handlers(chba + 0x2, Read_43x2, DMA_Write_43x2);
+    Set_A_Handlers(chba + 0x3, Read_43x3, DMA_Write_43x3);
+    Set_A_Handlers(chba + 0x4, Read_43x4, DMA_Write_43x4);
+    Set_A_Handlers(chba + 0x5, Read_43x5, DMA_Write_43x5);
+    Set_A_Handlers(chba + 0x6, Read_43x6, DMA_Write_43x6);
     Set_A_Handlers(chba + 0x7, Read_43x7, Write_43x7);
     Set_A_Handlers(chba + 0x8, Read_43x8, Write_43x8);
     Set_A_Handlers(chba + 0x9, Read_43x9, Write_43x9);
@@ -597,5 +677,83 @@ static void DMA_StateAction(StateMem* sm, const unsigned load, const bool data_o
  };
 
  MDFNSS_StateAction(sm, load, data_only, StateRegs, "DMA");
+}
+//
+//
+//
+
+uint32 DMA_GetRegister(const unsigned id, char* const special, const uint32 special_len)
+{
+ const unsigned ch = (id >> 8) & 0x7;
+ uint32 ret = 0xDEADBEEF;
+
+ switch(id & ~0x700)
+ {
+  case DMA_GSREG_DMAENABLE:
+	ret = DMAEnable;
+	break;
+
+  case DMA_GSREG_HDMAENABLE:
+	ret = HDMAEnable;
+	break;
+
+  case DMA_GSREG_HDMAENABLEM:
+	ret = HDMAEnableMask;
+	break;
+
+  case DMA_GSREG_CHN_CONTROL:
+	ret = DMACH[ch].Control;
+	break;
+
+  case DMA_GSREG_CHN_BBUSADDR:
+	ret = DMACH[ch].BBusAddr;
+	break;
+
+  case DMA_GSREG_CHN_ABUSADDR:
+	ret = DMACH[ch].ABusAddr;
+	break;
+
+  case DMA_GSREG_CHN_ABUSBANK:
+	ret = DMACH[ch].ABusBank;
+	break;
+
+  case DMA_GSREG_CHN_INDIRBANK:
+	ret = DMACH[ch].IndirBank;
+	break;
+
+  case DMA_GSREG_CHN_COUNT_INDIRADDR:
+	ret = DMACH[ch].IndirAddr;
+	break;
+
+  case DMA_GSREG_CHN_TABLEADDR:
+	ret = DMACH[ch].TableAddr;
+	break;
+
+  case DMA_GSREG_CHN_LINECOUNTER:
+	ret = DMACH[ch].LineCounter;
+	break;
+
+  case DMA_GSREG_CHN_UNKNOWN:
+	ret = DMACH[ch].Unknown;
+	break;
+
+  case DMA_GSREG_CHN_OFFSET:
+	ret = DMACH[ch].Offset;
+	break;
+
+  case DMA_GSREG_CHN_DOTRANSFER:
+	ret = DMACH[ch].DoTransfer;
+	break;
+ }
+
+ return ret;
+}
+
+void DMA_SetRegister(const unsigned id, const uint32 value)
+{
+ switch(id)
+ {
+  // TODO
+ }
 }
 

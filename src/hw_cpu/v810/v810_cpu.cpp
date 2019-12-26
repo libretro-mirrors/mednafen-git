@@ -54,6 +54,9 @@ found freely through public domain sources.
 #include "v810_cpu.h"
 #include "v810_cpuD.h"
 
+namespace Mednafen
+{
+
 V810::V810()
 {
  #ifdef WANT_DEBUGGER
@@ -1510,4 +1513,6 @@ void V810::StateAction(StateMem *sm, const unsigned load, const bool data_only)
 
   SetPC(PC_tmp);
  }
+}
+
 }

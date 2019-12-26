@@ -27,6 +27,9 @@
 
 #include <dsound.h>
 
+namespace Mednafen
+{
+
 struct SexyAL_DSOUND
 {
 	LPDIRECTSOUND ppDS;		/* DirectSound interface object. */
@@ -392,3 +395,4 @@ static int Close(SexyAL_device *device)
  return(0);
 }
 
+}

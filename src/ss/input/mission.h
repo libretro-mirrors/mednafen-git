@@ -33,7 +33,7 @@ class IODevice_Mission final : public IODevice
 
  virtual void Power(void) override MDFN_COLD;
  virtual void UpdateInput(const uint8* data, const int32 time_elapsed) override;
- virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
+ virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override MDFN_COLD;
 
  virtual uint8 UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted) override;
 
@@ -55,8 +55,8 @@ class IODevice_Mission final : public IODevice
 };
 
 
-extern IDIISG IODevice_Mission_IDII;
-extern IDIISG IODevice_DualMission_IDII;
+MDFN_HIDE extern IDIISG IODevice_Mission_IDII;
+MDFN_HIDE extern IDIISG IODevice_DualMission_IDII;
 
 }
 

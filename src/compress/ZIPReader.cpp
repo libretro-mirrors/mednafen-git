@@ -461,6 +461,12 @@ bool ZIPReader::finfo(const std::string& path, FileInfo* fi, const bool throw_on
  return true;
 }
 
+void ZIPReader::readdirentries(const std::string& path, std::function<bool(const std::string&)> callb)
+{
+ // TODO/FIXME:
+ throw MDFN_Error(EINVAL, _("ZIPReader::readdirentries() not implemented."));
+}
+
 bool ZIPReader::is_absolute_path(const std::string& path)
 {
  if(!path.size())

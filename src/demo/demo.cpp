@@ -22,6 +22,8 @@
 #include <mednafen/Time.h>
 #include <trio/trio.h>
 
+using namespace Mednafen;
+
 namespace MDFN_IEN_DEMO
 {
 
@@ -755,6 +757,7 @@ MDFNGI EmulatedDEMO =
  MODPRIO_INTERNAL_LOW,
  NULL,
  PortInfo,
+ NULL,
  Load,
  TestMagic,
  NULL,

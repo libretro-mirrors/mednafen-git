@@ -3,6 +3,9 @@
 
 #include <mednafen/mednafen.h>
 #include <mednafen/hw_cpu/z80-fuse/z80.h>
+
+using namespace Mednafen;
+
 #include "sms.h"
 #include "pio.h"
 #include "memz80.h"

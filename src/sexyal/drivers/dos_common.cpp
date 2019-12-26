@@ -21,6 +21,8 @@
 
 #include "dos_common.h"
 
+namespace Mednafen
+{
 /*
  PCI Notes:
 
@@ -222,4 +224,4 @@ void pci_write_config_u32(uint16 bdf, unsigned index, uint32 value)
  abort();
 }
 
-
+}

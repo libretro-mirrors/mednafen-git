@@ -2,7 +2,7 @@
 /* Mednafen Fast SNES Emulation Module                                        */
 /******************************************************************************/
 /* dsp.inc:
-**  Copyright (C) 2015-2016 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -63,7 +63,6 @@ static INLINE int16 ClampS16(int32 v)
  return v;
 }
 
-static int16 ResampHalfImp[512];
 static const int16 ResampHalfImp_Init[512] =
 {
     0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0, 
@@ -144,8 +143,6 @@ enum
  GRA_FIR7 = 0x7F,
 };
 
-static uint8 Regs[0x80];
-
 struct DSP_HGS
 {
  bool KPollCycle;
@@ -213,16 +210,16 @@ struct DSP_Voice
  uint8 RB_Pos;
  uint8 RB_In;
 
- uint8 Latch_SRCN;
  uint16 Addr;
+ uint8 Latch_SRCN;
 
  bool StartReload;
  bool LoopReload;
 
  uint8 Latch_ADSR1;
  uint8 ADSRPhase;
- uint16 ADSRLevel;
  bool ADSRBentFastNext;
+ uint16 ADSRLevel;
 
  uint8 Pending_ENVX;
  uint8 Pending_OUTX;
@@ -233,10 +230,47 @@ struct DSP_Voice
  unsigned Phase;
 };
 
-static DSP_HGS HGS;
-static DSP_Voice Voices[8];
+static struct
+{
+ DSP_Voice Voices[8];
+ DSP_HGS HGS;
 
-static int8 weights[4][2];
+ int8 weights[4][2];
+ uint16 RateMasks[32];
+ uint16 RateCompares[32];
+
+ uint8 Regs[0x80];
+
+ int16 ResampHalfImp[512];
+ //
+ //
+ //
+ int16 OutputL; // To avoid distortion, since L and R aren't updated at the same time(and the emulation frame can end between them).
+ unsigned OutputBufPos;
+ OwlResampler* Resampler;
+ double ResampLastRate;
+ OwlBuffer ResampBuf[2];
+} DSP;
+
+#define GLBVAR(x) static auto& x = DSP.x;
+ GLBVAR(Voices)
+ GLBVAR(HGS)
+ GLBVAR(weights)
+ GLBVAR(RateMasks)
+ GLBVAR(RateCompares)
+ GLBVAR(Regs)
+ GLBVAR(ResampHalfImp)
+ GLBVAR(OutputL)
+ GLBVAR(OutputBufPos)
+ GLBVAR(Resampler)
+ GLBVAR(ResampLastRate)
+ GLBVAR(ResampBuf)
+#undef GLBVAR
+
+//static uint16 sawthing;
+
+//static int KONCounter[8] = { 9, 9, 9, 9, 9, 9, 9, 9 };
+
 static const int8 weights_init[4][2] =
 {
  // i-2, i-1
@@ -246,7 +280,6 @@ static const int8 weights_init[4][2] =
  { -52, 115 },
 };
 
-static uint16 RateMasks[32];
 static const uint16 RateMasks_Init[32] =
 {
  0x0000, 0xFFE0, 0x3FF8,
@@ -263,7 +296,6 @@ static const uint16 RateMasks_Init[32] =
          0x0000
 };
 
-static uint16 RateCompares[32];
 static const uint16 RateCompares_Init[32] =
 {
  0xffff, 0x0000, 0x3e08, 
@@ -280,16 +312,6 @@ static const uint16 RateCompares_Init[32] =
 	 0x0000
 };
 
-
-static int16 OutputL; // To avoid distortion, since L and R aren't updated at the same time(and the emulation frame can end between them).
-static unsigned OutputBufPos;
-static OwlResampler* Resampler;
-static double ResampLastRate;
-static OwlBuffer ResampBuf[2];
-
-//static uint16 sawthing;
-
-//static int KONCounter[8] = { 9, 9, 9, 9, 9, 9, 9, 9 };
 
 static INLINE bool CheckRC(unsigned rate)
 {
@@ -1037,6 +1059,7 @@ static MDFN_COLD void DSP_Reset(bool powering_up)
  Regs[GRA_FLG] = 0xE0;
  HGS.EchoWriteDisable = true;
 
+ OutputL = 0;
  OutputBufPos = 0;
 
  HGS.NoiseVal = 0x4000;
@@ -1099,10 +1122,17 @@ static MDFN_COLD void DSP_Kill(void)
  }
 }
 
-static void DSP_StartFrame(double dsp_rate, double rate)
+static bool DSP_StartFrame(double dsp_rate, double rate, int32* resamp_num, int32* resamp_denom)
 {
+ bool ret = false;
+
+ *resamp_num = 0;
+ *resamp_denom = 0;
+ //
  if(ResampLastRate != rate)
  {
+  ret = true;
+  //
   if(Resampler)
   {
    delete Resampler;
@@ -1111,14 +1141,28 @@ static void DSP_StartFrame(double dsp_rate, double rate)
 
   if(rate)
   {
-   Resampler = new OwlResampler(dsp_rate, rate, MDFN_GetSettingF("snes_faust.resamp_rate_error"), 10, MDFN_GetSettingUI("snes_faust.resamp_quality"), 1.1);
+   const double resamp_rate_error = MDFN_GetSettingF("snes_faust.resamp_rate_error");
 
-   for(unsigned i = 0; i < 2; i++)
-    Resampler->ResetBufResampState(&ResampBuf[i]);
+   if(fabs(1.0 - (dsp_rate / rate)) <= resamp_rate_error)
+    MDFN_printf("Bypassing snes_faust internal resampler.\n");
+   else
+   {
+    Resampler = new OwlResampler(dsp_rate, rate, resamp_rate_error, 10, MDFN_GetSettingUI("snes_faust.resamp_quality"), 1.1);
+
+    for(unsigned i = 0; i < 2; i++)
+     Resampler->ResetBufResampState(&ResampBuf[i]);
+   }
   }
 
   ResampLastRate = rate;
  }
+ //
+ if(Resampler)
+ {
+  Resampler->GetRatio(resamp_num, resamp_denom);
+ }
+
+ return ret;
 }
 
 static int32 DSP_EndFrame(int16* SoundBuf)
@@ -1128,36 +1172,35 @@ static int32 DSP_EndFrame(int16* SoundBuf)
  //printf("%d\n", ret);
  if(SoundBuf && Resampler)
  {
-#if 0
-  ret = OutputBufPos;
-
-  for(unsigned i = 0; i < OutputBufPos * 2; i++)
-   SoundBuf[i] = (int32)(&ResampBuf[i & 1].BufPudding()->f)[i >> 1] >> 8;
-#else
   for(unsigned i = 0; i < 2; i++)
   {
-#if 0
-   for(unsigned x = 0; x < OutputBufPos; x++)
-   {
-    static double phase[2] = { 0};
-    static double phase_inc[2] = { 0 };
-    static double phase_inc_inc = 0.000003;
-
-    ResampBuf[i].BufPudding()[x].f = 256 * 32767 * 0.75 * sin(phase[i]);
-
-    phase[i] += phase_inc[i];
-    phase_inc[i] += phase_inc_inc;
-   }
-#endif
    ret = Resampler->Resample(&ResampBuf[i], OutputBufPos, SoundBuf + i, 0xFFFF);	// FIXME 0xFFFF
   }
+#if 0
+  {
+   int32 leftover;
+   uint32 InputIndex;
+   uint32 InputPhase;
+
+   ResampBuf[0].GetDebugInfo(&leftover, &InputIndex, &InputPhase);
+
+   printf("[DSP] leftover=%4d, InputIndex=%4u, InputPhase=%4u\n", leftover, InputIndex, InputPhase);
+  }
 #endif
-  //ret = OutputBufPos;
-  //memcpy(SoundBuf, OutputBuf, OutputBufPos * sizeof(int16) * 2);
-  //OutputBufPos = 0;
  }
  else
  {
+  if(SoundBuf)
+  {
+   ret = OutputBufPos;
+
+   for(size_t i = 0; i < OutputBufPos; i++)
+   {
+    SoundBuf[i * 2 + 0] = (int32)(&ResampBuf[0].BufPudding()->f)[i] >> 8;
+    SoundBuf[i * 2 + 1] = (int32)(&ResampBuf[1].BufPudding()->f)[i] >> 8;
+   }
+  }
+
   for(unsigned i = 0; i < 2; i++)
    ResampBuf[i].ResampleSkipped(OutputBufPos);
  }
@@ -1206,37 +1249,39 @@ static void DSP_StateAction(StateMem* sm, const unsigned load, const bool data_o
  DSPCPH(0x1F) 
  #undef DSPCPH
 
- SFORMAT StateRegs[] =
+ if(MDFN_UNLIKELY(load && load <= 0x00102399))
  {
-  SFVAR(Regs),
+  SFORMAT StateRegs[] =
+  {
+   SFVAR(Regs),
 
-  SFVAR(HGS.KPollCycle),
-  SFVAR(HGS.RateCounter),
-  SFVAR(HGS.NoiseVal),
-  SFVAR(HGS.Accum),
-  SFVAR(HGS.EchoAccum),
-  SFVAR(HGS.IKON),
-  SFVAR(HGS.Pending_ENDX),
-  SFVAR(HGS.Latch_IKON),
-  SFVAR(HGS.Latch_KOFF),
-  SFVAR(HGS.Latch_PMON),
-  SFVAR(HGS.Latch_NON),
-  SFVAR(HGS.Latch_EON),
-  SFVAR(HGS.Latch_DIR),
-  SFVAR(HGS.EchoWriteDisable),
-  SFVAR(HGS.Latch_EDL),
-  SFVAR(HGS.Latch_ESA),
+   SFVAR(HGS.KPollCycle),
+   SFVAR(HGS.RateCounter),
+   SFVAR(HGS.NoiseVal),
+   SFVAR(HGS.Accum),
+   SFVAR(HGS.EchoAccum),
+   SFVAR(HGS.IKON),
+   SFVAR(HGS.Pending_ENDX),
+   SFVAR(HGS.Latch_IKON),
+   SFVAR(HGS.Latch_KOFF),
+   SFVAR(HGS.Latch_PMON),
+   SFVAR(HGS.Latch_NON),
+   SFVAR(HGS.Latch_EON),
+   SFVAR(HGS.Latch_DIR),
+   SFVAR(HGS.EchoWriteDisable),
+   SFVAR(HGS.Latch_EDL),
+   SFVAR(HGS.Latch_ESA),
 
-  SFVAR(HGS.Latch_FIR),
+   SFVAR(HGS.Latch_FIR),
 
-  SFVAR(HGS.EchoFIROut),
+   SFVAR(HGS.EchoFIROut),
 
-  SFVARN(HGS.EchoFIRBuf, "&HGS.EchoFIRBuf[0][0]"),
-  SFVAR(HGS.EchoFIRBufPos),
+   SFVARN(HGS.EchoFIRBuf, "&HGS.EchoFIRBuf[0][0]"),
+   SFVAR(HGS.EchoFIRBufPos),
 
-  SFVAR(HGS.EchoBase),
-  SFVAR(HGS.EchoOffset),
-  SFVAR(HGS.EchoBound),
+   SFVAR(HGS.EchoBase),
+   SFVAR(HGS.EchoOffset),
+   SFVAR(HGS.EchoBound),
 
   #define SFVOICE(n)				\
 	SFVAR(Voices[n].BRR_Addr),		\
@@ -1260,26 +1305,93 @@ static void DSP_StateAction(StateMem* sm, const unsigned load, const bool data_o
 	SFVAR(Voices[n].Pitch),			\
 	SFVAR(Voices[n].Phase)
 
-  SFVOICE(0),
-  SFVOICE(1),
-  SFVOICE(2),
-  SFVOICE(3),
-  SFVOICE(4),
-  SFVOICE(5),
-  SFVOICE(6),
-  SFVOICE(7),
-  #undef SFVOICE
+   SFVOICE(0),
+   SFVOICE(1),
+   SFVOICE(2),
+   SFVOICE(3),
+   SFVOICE(4),
+   SFVOICE(5),
+   SFVOICE(6),
+   SFVOICE(7),
+   #undef SFVOICE
 
-  SFVAR(OutputL),
+   SFVAR(OutputL),
 
-  SFVAR(DSP_CycPhase),
+   SFVAR(DSP_CycPhase),
 
-//  SFVAR(sawthing),
+   //  SFVAR(sawthing),
 
-  SFEND
- };
+   SFEND
+  };
 
- MDFNSS_StateAction(sm, load, data_only, StateRegs, "DSP");
+  MDFNSS_StateAction(sm, load, data_only, StateRegs, "DSP");
+ }
+ else
+ {
+  SFORMAT StateRegs[] =
+  {
+   SFVAR(Regs),
+
+   SFVAR(HGS.KPollCycle),
+   SFVAR(HGS.RateCounter),
+   SFVAR(HGS.NoiseVal),
+   SFVAR(HGS.Accum),
+   SFVAR(HGS.EchoAccum),
+   SFVAR(HGS.IKON),
+   SFVAR(HGS.Pending_ENDX),
+   SFVAR(HGS.Latch_IKON),
+   SFVAR(HGS.Latch_KOFF),
+   SFVAR(HGS.Latch_PMON),
+   SFVAR(HGS.Latch_NON),
+   SFVAR(HGS.Latch_EON),
+   SFVAR(HGS.Latch_DIR),
+   SFVAR(HGS.EchoWriteDisable),
+   SFVAR(HGS.Latch_EDL),
+   SFVAR(HGS.Latch_ESA),
+
+   SFVAR(HGS.Latch_FIR),
+
+   SFVAR(HGS.EchoFIROut),
+
+   SFVARN(HGS.EchoFIRBuf, "&HGS.EchoFIRBuf[0][0]"),
+   SFVAR(HGS.EchoFIRBufPos),
+
+   SFVAR(HGS.EchoBase),
+   SFVAR(HGS.EchoOffset),
+   SFVAR(HGS.EchoBound),
+
+   SFVAR(Voices->BRR_Addr, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->BRR_Offs, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->BRR_Header, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->BRR_Data, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->RB, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->RB_Pos, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->RB_In, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->Latch_SRCN, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->Addr, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->StartReload, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->LoopReload, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->Latch_ADSR1, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->ADSRPhase, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->ADSRLevel, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->ADSRBentFastNext, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->Pending_ENVX, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->Pending_OUTX, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->CurSample, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->Pitch, 8, sizeof(*Voices), Voices),
+   SFVAR(Voices->Phase, 8, sizeof(*Voices), Voices),
+
+   SFVAR(OutputL),
+
+   SFVAR(DSP_CycPhase),
+
+  //  SFVAR(sawthing),
+
+   SFEND
+  };
+
+  MDFNSS_StateAction(sm, load, data_only, StateRegs, "DSP");
+ }
 
  if(load)
  {

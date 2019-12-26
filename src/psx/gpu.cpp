@@ -2,7 +2,7 @@
 /* Mednafen Sony PS1 Emulation Module                                         */
 /******************************************************************************/
 /* gpu.cpp:
-**  Copyright (C) 2011-2017 Mednafen Team
+**  Copyright (C) 2011-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -129,43 +129,58 @@ void GPU_Kill(void)
 
 }
 
-void GPU_SetGetVideoParams(MDFNGI* gi, const int sls, const int sle, const bool show_h_overscan)
+/*
+2640: 528.000000 660.000000 377.142853 --- 8.000000 10.000000 11.428572
+2720: 544.000000 680.000000 388.571442 --- 4.000000 5.000000 5.714286
+2800: 560.000000 700.000000 400.000000 --- 0.000000 0.000000 0.000000
+*/
+static const uint32 DotClockRatios[5] = { 10, 8, 5, 4, 7 };
+static const int32 HVisMax = 2800;
+static const int32 HVisHideOS = 2640;
+static const uint32 drxbo = 32;
+static const int32 FBWidth = 768;
+static const int32 FBWidthNCA = 896;
+
+static_assert((HVisMax / /*DotClockRatios[3]*/4) <= (FBWidth - drxbo), "bad constants");
+static_assert(((HVisMax - HVisHideOS) / /*DotClockRatios[3]*/4 / 2) <= drxbo, "bad constants");
+
+void GPU_SetGetVideoParams(MDFNGI* gi, const bool caspect, const int sls, const int sle, const bool show_h_overscan)
 {
- hide_hoverscan = !show_h_overscan;
+ ShowHOverscan = show_h_overscan;
+ CorrectAspect = caspect;
+
+ HVis = ShowHOverscan ? HVisMax : HVisHideOS;
+ HVisOffs = (HVisMax - HVis) / 2;
 
  LineVisFirst = sls;
  LineVisLast = sle;
  //
  //
  //
+ gi->lcm_width = HVis;
+ gi->lcm_height = (LineVisLast + 1 - LineVisFirst) * 2;
+
+ gi->nominal_height = LineVisLast + 1 - LineVisFirst;
+ gi->fb_width = FBWidth;
+
+ //
+ // Nominal fps values are for interlaced mode(fps will be lower in progressive mode), and will be slightly higher than actual fps
+ // due to rounding error with GPUClockRatio.
+ //
  if(HardwarePALType)
  {
-  gi->lcm_width = hide_hoverscan ? 2640 : 2800;
-  gi->lcm_height = (LineVisLast + 1 - LineVisFirst) * 2; //576;
+  gi->nominal_width = ((int64)gi->lcm_width * 14750000 / 53203425 + 1) / 2;
 
-  gi->nominal_width = hide_hoverscan ? 363 : 384;	// More like 385.stuff according to calculations derived from BT.601, but 384 is a nicer number. :p
-  gi->nominal_height = LineVisLast + 1 - LineVisFirst; //288;
-
-  gi->fb_width = 768;
   gi->fb_height = 576;
-
-  gi->fps = 836203078;
-
+  gi->fps = 838865530; // 65536*256 * 53203425 / (3405 * 312.5)
   gi->VideoSystem = VIDSYS_PAL;
  }
  else
  {
-  gi->lcm_width = hide_hoverscan ? 2640 : 2800;
-  gi->lcm_height = (LineVisLast + 1 - LineVisFirst) * 2; //480;
+  gi->nominal_width = ((int64)gi->lcm_width * 12272727 / 53693182 + 1) / 2;
 
-  gi->nominal_width = (hide_hoverscan ? 302 : 320);
-  gi->nominal_height = LineVisLast + 1 - LineVisFirst; //240;
-
-  gi->fb_width = 768;
   gi->fb_height = 480;
-
-  gi->fps = 1005643085;
-
+  gi->fps = 1005627336; // 65536*256 * 53693182 / (3412.5 * 262.5)
   gi->VideoSystem = VIDSYS_NTSC;
  }
 
@@ -174,10 +189,21 @@ void GPU_SetGetVideoParams(MDFNGI* gi, const int sls, const int sle, const bool 
  // For Justifier and Guncon.
  //
  gi->mouse_scale_x = (float)gi->lcm_width;
- gi->mouse_offs_x = (float)(2800 - gi->lcm_width) / 2;
+ gi->mouse_offs_x = 0;
 
  gi->mouse_scale_y = gi->nominal_height;
- gi->mouse_offs_y = LineVisFirst;
+ gi->mouse_offs_y = LineVisFirst + (HardwarePALType ? 20 : 16);
+ //
+ //
+ //
+ if(!CorrectAspect)
+ {
+  NCABaseW = (HVis + 6) / 7;
+  //
+  gi->nominal_width = NCABaseW;
+  gi->fb_width = FBWidthNCA;
+  gi->lcm_width = gi->nominal_width * 2;
+ }
 }
 
 static INLINE void InvalidateTexCache(void)
@@ -611,7 +637,7 @@ static void Command_IRQ(const uint32 *cb)
 
 namespace PS_GPU_INTERNAL
 {
-extern const CTEntry Commands_00_1F[0x20] =
+MDFN_HIDE extern const CTEntry Commands_00_1F[0x20] =
 {
  /* 0x00 */
  NULLCMD(),
@@ -629,7 +655,7 @@ extern const CTEntry Commands_00_1F[0x20] =
  OTHER_HELPER(1, 1, false,  Command_IRQ)
 };
 
-extern const CTEntry Commands_80_FF[0x80] =
+MDFN_HIDE extern const CTEntry Commands_80_FF[0x80] =
 {
  /* 0x80 ... 0x9F */
  OTHER_HELPER_X32(4, 2, false, Command_FBCopy),
@@ -1091,11 +1117,9 @@ static NO_INLINE void ReorderRGB(bool bpp24, const uint16 *src, uint32 *dest, co
 
 MDFN_FASTCALL pscpu_timestamp_t GPU_Update(const pscpu_timestamp_t sys_timestamp)
 {
- static const uint32 DotClockRatios[5] = { 10, 8, 5, 4, 7 };
  const uint32 dmc = (DisplayMode & 0x40) ? 4 : (DisplayMode & 0x3);
- const uint32 dmw = 2800 / DotClockRatios[dmc];	// Must be <= (768 - 32)
- const uint32 dmpa = (2800 - (hide_hoverscan ? 2640 : 2800)) / DotClockRatios[dmc] / 2;	// Must be <= 32
- const uint32 drxbo = 32;
+ const uint32 dmw = HVisMax / DotClockRatios[dmc];	// Must be <= (768 - drxbo)
+ const uint32 dmpa = HVisOffs / DotClockRatios[dmc];	// Must be <= drxbo
 
  int32 sys_clocks = sys_timestamp - lastts;
  int32 gpu_clocks;
@@ -1269,8 +1293,8 @@ MDFN_FASTCALL pscpu_timestamp_t GPU_Update(const pscpu_timestamp_t sys_timestamp
 
        for(int i = 0; i < (DisplayRect->y + DisplayRect->h); i++)
        {
-	surface->pixels[i * surface->pitch32 + 0] =
-	surface->pixels[i * surface->pitch32 + 1] = black;
+	surface->pixels[i * surface->pitch32 + drxbo + 0] =
+	surface->pixels[i * surface->pitch32 + drxbo + 1] = black;
         LineWidths[i] = 2;
        }
       }
@@ -1337,6 +1361,7 @@ MDFN_FASTCALL pscpu_timestamp_t GPU_Update(const pscpu_timestamp_t sys_timestamp
 
     if((bool)(DisplayMode & 0x08) == HardwarePALType && scanline >= FirstVisibleLine && scanline < (FirstVisibleLine + VisibleLineCount) && !skip && espec)
     {
+     const uint32 black = surface->MakeColor(0, 0, 0);
      uint32 *dest;
      int32 dest_line;
      int32 fb_x = DisplayFB_XStart * 2;
@@ -1370,10 +1395,19 @@ MDFN_FASTCALL pscpu_timestamp_t GPU_Update(const pscpu_timestamp_t sys_timestamp
       dx_start = dx_end = 0;
 
      LineWidths[dest_line] = dmw - dmpa * 2;
+     //
+     int32 nca_lw = 0, nca_dest_adj = 0;
+
+     if(!CorrectAspect)
+     {
+      nca_lw = NCABaseW << (bool)(dmc & 0x2);
+      nca_dest_adj = (nca_lw - LineWidths[dest_line]) >> 1;
+      assert(nca_dest_adj >= 0);
+      dest += nca_dest_adj;
+     }
 
      {
       const uint16 *src = GPURAM[DisplayFB_CurLineYReadout];
-      const uint32 black = surface->MakeColor(0, 0, 0);
 
       for(int32 x = 0; x < dx_start; x++)
        dest[x] = black;
@@ -1398,6 +1432,19 @@ MDFN_FASTCALL pscpu_timestamp_t GPU_Update(const pscpu_timestamp_t sys_timestamp
      // printf("%u\n", sys_timestamp - ((uint64)gpu_clocks * 65536) / GPUClockRatio);
 
      PSX_GPULineHook(sys_timestamp, sys_timestamp - ((uint64)gpu_clocks * 65536) / GPUClockRatio, scanline == 0, dest, &surface->format, dmw, (hmc_to_visible - 220) / DotClockRatios[dmc], (HardwarePALType ? 53203425 : 53693182) / DotClockRatios[dmc], DotClockRatios[dmc]);
+
+     if(!CorrectAspect)
+     {
+      dest = surface->pixels + drxbo + dest_line * surface->pitch32;
+
+      for(int32 x = 0; x < nca_dest_adj; x++)
+       dest[x] = black; //rand();
+
+      for(int32 x = nca_dest_adj + LineWidths[dest_line]; x < nca_lw; x++)
+       dest[x] = black; //rand();
+
+      LineWidths[dest_line] = nca_lw;
+     }
     }
     else
     {
@@ -1433,6 +1480,25 @@ MDFN_FASTCALL pscpu_timestamp_t GPU_Update(const pscpu_timestamp_t sys_timestamp
  }
 }
 
+void GPU_GetGunXTranslation(float* scale, float* offs)
+{
+ *scale = 1.0;
+ *offs = HVisOffs;
+
+ if(!CorrectAspect)
+ {
+  const uint32 dmc = (DisplayMode & 0x40) ? 4 : (DisplayMode & 0x3);
+  const uint32 dmw = HVisMax / DotClockRatios[dmc];	// Must be <= (768 - drxbo)
+  const uint32 dmpa = HVisOffs / DotClockRatios[dmc];	// Must be <= drxbo
+  //
+  const int32 lw = dmw - dmpa * 2;
+  const int32 nca_lw = NCABaseW << (bool)(dmc & 0x2);
+  int32 nca_dest_adj = (nca_lw - lw) >> 1;
+  *scale = (float)nca_lw / lw; //(float)(DotClockRatios[dmc] << (bool)(dmc & 0x2)) / 7;
+  *offs -= nca_dest_adj * DotClockRatios[dmc];
+  //printf("%f %d %d\n", *scale, lw, nca_lw);
+ }
+}
 void GPU_StartFrame(EmulateSpecStruct *espec_arg)
 {
  sl_zero_reached = false;

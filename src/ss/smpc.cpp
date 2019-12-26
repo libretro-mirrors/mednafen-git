@@ -367,6 +367,8 @@ void SMPC_SaveNV(Stream* s)
 
 void SMPC_SetRTC(const struct tm* ht, const uint8 lang)
 {
+ RTC.ClockAccum = 0;
+
  if(!ht)
  {
   RTC.Valid = false;
@@ -405,7 +407,9 @@ void SMPC_Init(const uint8 area_code_arg, const int32 master_clock_arg)
 {
  AreaCode = area_code_arg;
  MasterClock = master_clock_arg;
+ SMPC_ClockRatio = 0;
 
+ ResetButtonPhysStatus = false;
  ResetPending = false;
  vb = false;
  vsync = false;
@@ -473,6 +477,7 @@ void SMPC_Reset(bool powering_up)
  memset(OREG, 0, sizeof(OREG));
  PendingCommand = -1;
  ExecutingCommand = -1;
+ SR = 0x00;
  SF = 0;
 
  BusBuffer = 0x00;

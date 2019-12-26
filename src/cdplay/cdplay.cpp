@@ -25,6 +25,7 @@
 #include <mednafen/cdrom/CDInterface.h>
 #include <trio/trio.h>
 
+using namespace Mednafen;
 using namespace CDUtility;
 
 #include <mednafen/resampler/resampler.h>
@@ -553,6 +554,7 @@ MDFNGI EmulatedCDPlay =
  MODPRIO_INTERNAL_EXTRA_LOW,
  NULL,          // Debug info
  PortInfo,    //
+ NULL,
  NULL,
  NULL,
  LoadCD,

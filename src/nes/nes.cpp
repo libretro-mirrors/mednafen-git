@@ -37,7 +37,7 @@
 
 #include	<trio/trio.h>
 
-extern MDFNGI EmulatedNES;
+MDFN_HIDE extern MDFNGI EmulatedNES;
 
 namespace MDFN_IEN_NES
 {
@@ -775,6 +775,7 @@ MDFNGI EmulatedNES =
  NULL,
  #endif
  NESPortInfo,
+ NULL,
  Load,
  TestMagic,
  NULL,

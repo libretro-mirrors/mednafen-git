@@ -40,6 +40,9 @@
 
 #include "dos_common.h"
 
+namespace Mednafen
+{
+
 /*
  Interrupts *MUST* be disabled when calling the dma_*() and irq_*() functions.
 */
@@ -1218,3 +1221,4 @@ SexyAL_device *SexyALI_DOS_SB_Open(const char *id, SexyAL_format *format, SexyAL
  return(device);
 }
 
+}

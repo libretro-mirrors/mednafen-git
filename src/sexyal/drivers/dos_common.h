@@ -33,10 +33,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
-typedef uint8 uint8;
-typedef uint16 uint16;
-typedef uint32 uint32;
-typedef uint64 uint64;
+namespace Mednafen
+{
 
 struct pci_vd_pair
 {
@@ -56,4 +54,5 @@ void pci_write_config_u8(uint16 bdf, unsigned index, uint8 value);
 void pci_write_config_u16(uint16 bdf, unsigned index, uint16 value);
 void pci_write_config_u32(uint16 bdf, unsigned index, uint32 value);
 
+}
 #endif

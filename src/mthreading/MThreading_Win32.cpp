@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* MThreading_Win32.cpp:
-**  Copyright (C) 2014-2018 Mednafen Team
+**  Copyright (C) 2014-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -40,6 +40,8 @@ namespace Mednafen
 {
 namespace MThreading
 {
+
+using namespace Win32Common;
 
 #if 0
 typedef struct
@@ -132,7 +134,7 @@ static unsigned __stdcall ThreadPivot(void* data)
  return t->fn(t->data);
 }
 
-Thread *CreateThread(int (*fn)(void *), void *data, const char* debug_name)
+Thread* Thread_Create(int (*fn)(void *), void *data, const char* debug_name)
 {
  Thread* ret = NULL;
 
@@ -143,7 +145,7 @@ Thread *CreateThread(int (*fn)(void *), void *data, const char* debug_name)
 
  if(!(ret = (Thread*)calloc(1, sizeof(Thread))))
  {
-  return(NULL);
+  return NULL;
  }
 
  ret->fn = fn;
@@ -151,15 +153,17 @@ Thread *CreateThread(int (*fn)(void *), void *data, const char* debug_name)
 
  if(!(ret->thr = (HANDLE)_beginthreadex(NULL, 0, ThreadPivot, ret, 0, NULL)))
  {
-  // TODO: Check errno.
+  ErrnoHolder ene(errno);
+
   free(ret);
-  return(NULL);
+
+  throw MDFN_Error(0, _("%s failed: %s"), "_beginthreadex()", ene.StrError());
  }
 
- return(ret);
+ return ret;
 }
 
-void WaitThread(Thread *thread, int *status)
+void Thread_Wait(Thread* thread, int* status)
 {
  DWORD exc = -1;
 
@@ -173,7 +177,7 @@ void WaitThread(Thread *thread, int *status)
  free(thread);
 }
 
-uintptr_t ThreadID(void)
+uintptr_t Thread_ID(void)
 {
  return GetCurrentThreadId();
 }
@@ -182,14 +186,14 @@ uintptr_t ThreadID(void)
 //
 //
 
-Mutex *CreateMutex(void)
+Mutex *Mutex_Create(void)
 {
  Mutex* ret;
 
  if(!(ret = (Mutex*)calloc(1, sizeof(Mutex))))
  {
   fprintf(stderr, "Error allocating memory for critical section.");
-  return(NULL);
+  return NULL;
  }
 
  InitializeCriticalSection(&ret->cs);
@@ -197,29 +201,31 @@ Mutex *CreateMutex(void)
  return ret;
 }
 
-void DestroyMutex(Mutex *mutex)
+void Mutex_Destroy(Mutex* mutex) noexcept
 {
  DeleteCriticalSection(&mutex->cs);
  free(mutex);
 }
 
-int LockMutex(Mutex *mutex)
+bool Mutex_Lock(Mutex* mutex) noexcept
 {
  EnterCriticalSection(&mutex->cs);
- return(0);
+
+ return true;
 }
 
-int UnlockMutex(Mutex *mutex)
+bool Mutex_Unlock(Mutex* mutex) noexcept
 {
  LeaveCriticalSection(&mutex->cs);
- return(0);
+
+ return true;
 }
 
 //
 //
 //
 
-Cond* CreateCond(void)
+Cond* Cond_Create(void)
 {
 #if 0
  if(use_cv < 0)
@@ -230,7 +236,7 @@ Cond* CreateCond(void)
 
  if(!(ret = (Cond*)calloc(1, sizeof(Cond))))
  {
-  return(NULL);
+  return NULL;
  }
 
 #if 0
@@ -249,14 +255,15 @@ Cond* CreateCond(void)
   if(!(ret->evt = CreateEvent(NULL, FALSE, FALSE, NULL)))
   {
    free(ret);
-   return(NULL);
+
+   throw MDFN_Error(0, _("%s failed: %s"), "CreateEvent()", ErrCodeToString(GetLastError()).c_str());
   }
  }
 
- return(ret);
+ return ret;
 }
 
-void DestroyCond(Cond* cond)
+void Cond_Destroy(Cond* cond) noexcept
 {
 #if 0
  if(use_cv)
@@ -271,22 +278,22 @@ void DestroyCond(Cond* cond)
  free(cond);
 }
 
-int SignalCond(Cond* cond)
+bool Cond_Signal(Cond* cond) noexcept
 {
 #if 0
  if(use_cv)
  {
   p_WakeConditionVariable(&cond->cv);
-  return(0);
+  return true;
  }
  else
 #endif
  {
-  return(SetEvent(cond->evt) ? 0 : -1);
+  return SetEvent(cond->evt) != 0;
  }
 }
 
-int WaitCond(Cond* cond, Mutex* mutex)
+bool Cond_Wait(Cond* cond, Mutex* mutex) noexcept
 {
 #if 0
  if(use_cv)
@@ -294,10 +301,10 @@ int WaitCond(Cond* cond, Mutex* mutex)
   if(p_SleepConditionVariableCS(&cond->cv, &mutex->cs, INFINITE) == 0)
   {
    fprintf(stderr, "SleepConditionVariableCS() failed.\n");
-   return(-1);
+   return false;
   }
 
-  return(0);
+  return true;
  }
  else
 #endif
@@ -308,13 +315,13 @@ int WaitCond(Cond* cond, Mutex* mutex)
 
   EnterCriticalSection(&mutex->cs);
 
-  return(0);
+  return true;
  }
 }
 
-int WaitCondTimeout(Cond* cond, Mutex* mutex, unsigned ms)
+bool Cond_TimedWait(Cond* cond, Mutex* mutex, unsigned ms) noexcept
 {
- int ret = 0;
+ bool ret = true;
 
 #if 0
  if(use_cv)
@@ -322,8 +329,9 @@ int WaitCondTimeout(Cond* cond, Mutex* mutex, unsigned ms)
   if(p_SleepConditionVariableCS(&cond->cv, &mutex->cs, ms) == 0)
   {
    fprintf(stderr, "SleepConditionVariableCS() failed.\n");
-   ret = -1;
+   ret = false;
   }
+  return ret;
  }
  else
 #endif
@@ -334,90 +342,101 @@ int WaitCondTimeout(Cond* cond, Mutex* mutex, unsigned ms)
   switch(WaitForSingleObject(cond->evt, ms))
   {
    case WAIT_OBJECT_0:
-	ret = 0;
+	ret = true;
 	break;
 
    case WAIT_TIMEOUT:
-	ret = COND_TIMEDOUT;
+	ret = false;
 	break;
 
    default:
-	ret = -1;
+	ret = false;
 	break;
   }
 
   EnterCriticalSection(&mutex->cs);
  }
 
- return(ret);
+ return ret;
 }
 
 //
 //
 //
 
-Sem* CreateSem(void)
+Sem* Sem_Create(void)
 {
  Sem* ret;
 
  if(!(ret = (Sem*)calloc(1, sizeof(Sem))))
  {
   fprintf(stderr, "Error allocating memory for semaphore.");
-  return(NULL);
+  return NULL;
  }
 
  if(!(ret->sem = CreateSemaphore(NULL, 0, INT_MAX, NULL)))
  {
-  fprintf(stderr, "CreateSemaphore() failed.\n");
   free(ret);
-  return(NULL);
+  throw MDFN_Error(0, _("%s failed: %s"), "CreateSemaphore()", ErrCodeToString(GetLastError()).c_str());
  }
 
- return(ret);
+ return ret;
 }
 
-void DestroySem(Sem* sem)
+void Sem_Destroy(Sem* sem) noexcept
 {
  CloseHandle(sem->sem);
  sem->sem = NULL;
  free(sem);
 }
 
-int PostSem(Sem* sem)
+bool Sem_Post(Sem* sem) noexcept
 {
- if(ReleaseSemaphore(sem->sem, 1, NULL) != 0)
-  return(0);
- else
-  return(-1);
+ return ReleaseSemaphore(sem->sem, 1, NULL) != 0;
 }
 
-int WaitSem(Sem* sem)
+bool Sem_Wait(Sem* sem) noexcept
 {
- if(WaitForSingleObject(sem->sem, INFINITE) == WAIT_OBJECT_0)
-  return(0);
- else
-  return(-1);
+ return WaitForSingleObject(sem->sem, INFINITE) == WAIT_OBJECT_0;
 }
 
-int WaitSemTimeout(Sem* sem, unsigned ms)
+bool Sem_TimedWait(Sem* sem, unsigned ms) noexcept
 {
- int ret = 0;
+ bool ret;
 
  switch(WaitForSingleObject(sem->sem, ms))
  {
    case WAIT_OBJECT_0:
-	ret = 0;
+	ret = true;
 	break;
 
    case WAIT_TIMEOUT:
-	ret = SEM_TIMEDOUT;
+	ret = false;
 	break;
 
    default:
-	ret = -1;
+	ret = false;
 	break;
  }
- return(ret);
+
+ return ret;
+}
+
+uint64 Thread_SetAffinity(Thread* thread, uint64 mask)
+{
+ uint64 ret;
+
+ if(mask > ~(DWORD_PTR)0)
+ {
+  throw MDFN_Error(0, _("Setting affinity to 0x%016llx failed: %s"), (unsigned long long)mask, ErrCodeToString(ERROR_INVALID_PARAMETER).c_str());
+ }
+
+ if(!(ret = SetThreadAffinityMask(thread ? thread->thr : GetCurrentThread(), mask)))
+ {
+  throw MDFN_Error(0, _("Setting affinity to 0x%016llx failed: %s"), (unsigned long long)mask, ErrCodeToString(GetLastError()).c_str());
+ }
+
+ return ret;
 }
 
 }

@@ -234,7 +234,7 @@ static void Command_DrawSprite(const uint32 *cb)
  }
 }
 
-extern const CTEntry Commands_60_7F[0x20] =
+MDFN_HIDE extern const CTEntry Commands_60_7F[0x20] =
 {
  SPR_HELPER(0x60),
  SPR_HELPER(0x61),

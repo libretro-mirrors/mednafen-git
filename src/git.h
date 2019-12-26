@@ -174,7 +174,7 @@ struct IDIISG : public std::vector<InputDeviceInputInfoStruct>
  uint32 InputByteSize;
 };
 
-extern const IDIISG IDII_Empty;
+MDFN_HIDE extern const IDIISG IDII_Empty;
 
 static INLINE constexpr InputDeviceInputInfoStruct IDIIS_Button(const char* sname, const char* name, int16 co, const char* exn = nullptr)
 {
@@ -295,7 +295,7 @@ struct CheatFormatStruct
 										// Will return true if this is part of a multipart cheat.
 };
 
-extern const std::vector<CheatFormatStruct> CheatFormatInfo_Empty;
+MDFN_HIDE extern const std::vector<CheatFormatStruct> CheatFormatInfo_Empty;
 
 struct CheatInfoStruct
 {
@@ -315,7 +315,7 @@ struct CheatInfoStruct
  bool BigEndian;	// UI default for cheat search and new cheats.
 };
 
-extern const CheatInfoStruct CheatInfo_Empty;
+MDFN_HIDE extern const CheatInfoStruct CheatInfo_Empty;
 
 // Miscellaneous system/simple commands(power, reset, dip switch toggles, coin insert, etc.)
 // (for DoSimpleCommand() )
@@ -412,14 +412,15 @@ struct EmulateSpecStruct
 
 	// Number of frames currently in internal sound buffer.  Set by the system emulation code, to be read by the driver code.
 	int32 SoundBufSize = 0;
-	int32 SoundBufSizeALMS = 0;	// SoundBufSize value at last MidSync(), 0
-				// if mid sync isn't implemented for the emulation module in use.
+	int32 SoundBufSize_InternalProcessed = 0;	// Internal Mednafen use only.
+	int32 SoundBufSize_DriverProcessed = 0;		// Driver side(frontend) use only.
 
 	// Number of cycles that this frame consumed, using MDFNGI::MasterClock as a time base.
 	// Set by emulation code.
+	// MasterCycles value at last MidSync(), 0 if mid sync isn't implemented for the emulation module in use.
 	int64 MasterCycles = 0;
-	int64 MasterCyclesALMS = 0;	// MasterCycles value at last MidSync(), 0
-				// if mid sync isn't implemented for the emulation module in use.
+	int64 MasterCycles_InternalProcessed = 0;	// Internal Mednafen use only.
+	int64 MasterCycles_DriverProcessed = 0;		// Driver side(frontend) use only.
 
 	// Current sound volume(0.000...<=volume<=1.000...).  If, after calling Emulate(), it is still != 1, Mednafen will handle it internally.
 	// Emulation modules can handle volume themselves if they like, for speed reasons.  If they do, afterwards, they should set its value to 1.
@@ -514,6 +515,14 @@ struct GameFile
 
  const std::string ext;		// Lowercase.
  const std::string fbase;
+
+ // Outside archive.
+ struct
+ {
+  VirtualFS* const vfs;
+  const std::string dir;
+  const std::string fbase;
+ } outside;
 };
 
 struct DesiredInputType
@@ -526,6 +535,24 @@ struct DesiredInputType
 
  // Should override any *.defpos settings.
  std::map<std::string, uint32> switches;
+};
+
+struct GameDB_Entry
+{
+ std::string GameID;
+ bool GameIDIsHash = false;
+ std::string Name;
+ std::string Setting;
+ std::string Purpose;
+};
+
+struct GameDB_Database
+{
+ std::string ShortName;
+ std::string FullName;
+ std::string Description;
+
+ std::vector<GameDB_Entry> Entries;
 };
 
 typedef struct
@@ -553,6 +580,8 @@ typedef struct
  void *Debugger;
  #endif
  const std::vector<InputPortInfoStruct> &PortInfo;
+
+ void (*GetInternalDB)(std::vector<GameDB_Database>* databases);
 
  //
  // throws exception on fatal error.
@@ -676,6 +705,8 @@ typedef struct
  const char *cspecial;  /* Special cart expansion: DIP switches, barcode reader, etc. */
 
  std::vector<DesiredInputType> DesiredInput; // Desired input devices and default switch positions for the input ports
+
+ double IdealSoundRate;
 
  // For mouse relative motion.
  double mouse_sensitivity;

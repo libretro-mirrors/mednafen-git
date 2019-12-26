@@ -1255,7 +1255,7 @@ enum
  MMC3_GSREG_IRQENABLE
 };
 
-static RegType DBGMMC3Regs[] =
+static const RegType DBGMMC3Regs[] =
 {
  { MMC3_GSREG_CONTROL, "Control", "Command/Control", 1 },
  { MMC3_GSREG_MIRRORING, "Mirroring", "Mirroring", 1 },
@@ -1407,7 +1407,7 @@ static void MMC3DBG_SetRegister(const unsigned int id, uint32 value)
  FixMMC3CHR(MMC3_cmd);
 }
 
-static RegGroupType DBGMMC3RegsGroup =
+static const RegGroupType DBGMMC3RegsGroup =
 {
  "MMC3",
  DBGMMC3Regs,

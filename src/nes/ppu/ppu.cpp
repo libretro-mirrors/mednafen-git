@@ -117,7 +117,7 @@ uint8 MMC5HackSPScroll;
 uint8 MMC5HackSPPage;   
 
 
-uint8 VRAMBuffer,PPUGenLatch;
+static uint8 VRAMBuffer,PPUGenLatch;
 uint8 *vnapage[4];
 uint8 PPUNTARAM;  
 uint8 PPUCHRRAM;  
@@ -148,11 +148,11 @@ typedef struct {
         uint8 ca[2],atr,x;
 } SPRB;
 
-uint8 PPU[4];
-uint8 PPUSPL;
-uint8 NTARAM[0x800],PALRAM[0x20],PALRAMCache[0x20];
-
-uint8 SPRAM[0x100];
+static uint8 PPU[4];
+static uint8 PPUSPL;
+uint8 NTARAM[0x800];
+static uint8 PALRAM[0x20],PALRAMCache[0x20];
+static uint8 SPRAM[0x100];
 static SPRB SPRBUF[64];	// 8] if we didn't have an excess sprites option.
 
 static union

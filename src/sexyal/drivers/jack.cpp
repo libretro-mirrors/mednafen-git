@@ -26,6 +26,9 @@
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>
 
+namespace Mednafen
+{
+
 static INLINE int64 Time64(void)
 {
  return jack_get_time();
@@ -455,3 +458,4 @@ SexyAL_device *SexyALI_JACK_Open(const char *id, SexyAL_format *format, SexyAL_b
  return(device);
 }
 
+}

@@ -744,6 +744,7 @@ MDFNGI EmulatedPCE_Fast =
  MODPRIO_INTERNAL_LOW,
  NULL,
  PCEPortInfo,
+ NULL,
  Load,
  TestMagic,
  LoadCD,

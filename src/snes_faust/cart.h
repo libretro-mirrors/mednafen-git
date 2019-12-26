@@ -2,7 +2,7 @@
 /* Mednafen Fast SNES Emulation Module                                        */
 /******************************************************************************/
 /* cart.h:
-**  Copyright (C) 2015-2017 Mednafen Team
+**  Copyright (C) 2015-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -24,13 +24,29 @@
 
 namespace MDFN_IEN_SNES_FAUST
 {
- bool CART_Init(Stream* fp, uint8 id[16]) MDFN_COLD;
+//
+//
+//
+ bool CART_Init(Stream* fp, uint8 id[16], const int32 cx4_ocmultiplier, const int32 superfx_ocmultiplier, const bool superfx_enable_icache) MDFN_COLD;
  void CART_Kill(void) MDFN_COLD;
  void CART_Reset(bool powering_up) MDFN_COLD;
  void CART_StateAction(StateMem* sm, const unsigned load, const bool data_only);
 
+ void CART_AdjustTS(const int32 delta) MDFN_COLD;
+ snes_event_handler CART_GetEventHandler(void) MDFN_COLD;
+
  bool CART_LoadNV(void) MDFN_COLD;
  void CART_SaveNV(void);
+//
+//
+//
+ uint8 CART_PeekRAM(uint32 addr) MDFN_COLD;
+ void CART_PokeRAM(uint32 addr, uint8 val) MDFN_COLD;
+ uint32 CART_GetRAMSize(void) MDFN_COLD;
+ uint8* CART_GetRAMPointer(void) MDFN_COLD;
+//
+//
+//
 }
 
 #endif

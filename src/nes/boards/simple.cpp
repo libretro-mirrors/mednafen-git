@@ -215,7 +215,7 @@ int MHROM_Init(CartInfo *info)
 }
 
 #ifdef WANT_DEBUGGER
-static RegType DBGUNROMRegs[] =
+static const RegType DBGUNROMRegs[] =
 {
  { 0, "PRGBank", "PRG Bank, 16KiB @8000", 1 },
  { 0, "", "", 0 },
@@ -232,7 +232,7 @@ static void UNROMDBG_SetRegister(const unsigned int id, uint32 value)
  setprg16(0x8000, latche);
 }
 
-static RegGroupType DBGUNROMRegsGroup =
+static const RegGroupType DBGUNROMRegsGroup =
 {
  "UNROM",
  DBGUNROMRegs,

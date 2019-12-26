@@ -89,9 +89,19 @@ void SNSFLoader::HandleReserved(Stream* fp, uint32 len)
 	  throw MDFN_Error(0, _("SNSF Reserved Section SRAM block combined offset+size(=%llu) is too large."), (unsigned long long)srd_offset + srd_size);
 	 }
 
-	 MDFN_printf("SNSF SRAM Data(not implemented yet): Offset=0x%08x, Size=0x%08x\n", srd_offset, srd_size);
-	 //printf("%d\n", bSNES_v059::memory::cartram.size());
-	 fp->seek(srd_size, SEEK_CUR);
+	 MDFN_printf("SNSF SRAM Data: Offset=0x%08x, Size=0x%08x\n", srd_offset, srd_size);
+
+	 if((srd_offset + srd_size) > SRAM_Data.size())
+	 {
+	  const size_t old_size = SRAM_Data.size();
+
+	  SRAM_Data.truncate(srd_offset + srd_size);
+
+	  if(srd_offset > old_size)
+	   memset(SRAM_Data.map() + old_size, 0xFF, srd_offset - old_size);
+	 }
+
+	 fp->read(&SRAM_Data.map()[srd_offset], srd_size);
 	}
 	break;
   }
@@ -110,14 +120,25 @@ void SNSFLoader::HandleEXE(Stream* fp, bool ignore_pcsp)
 
  fp->read(raw_header, sizeof(raw_header));
 
- const uint32 header_offset = MDFN_de32lsb(&raw_header[0]);
  const uint32 header_size = MDFN_de32lsb(&raw_header[4]);
-
- MDFN_printf("SNSF ROM Data: SNSF_Offset=0x%08x Size=0x%08x\n", header_offset, header_size);
-
- if(header_offset > (1024 * 8192))
+ uint32 adj_offset;
  {
-  throw MDFN_Error(0, _("SNSF Header Field Offset(=%u) is too large."), header_offset);
+  const uint32 header_offset = MDFN_de32lsb(&raw_header[0]);
+
+  if(ROM_BaseOffset < 0)
+  {
+   ROM_BaseOffset = header_offset;
+   adj_offset = ROM_BaseOffset;
+  }
+  else
+   adj_offset = ROM_BaseOffset + header_offset;
+
+  MDFN_printf("SNSF ROM Data: SNSF_Offset=0x%08x(adjusted: 0x%08x) Size=0x%08x\n", header_offset, adj_offset, header_size);
+ }
+
+ if(adj_offset > (1024 * 8192))
+ {
+  throw MDFN_Error(0, _("SNSF Adjusted Offset(=%u) is too large."), adj_offset);
  }
 
  if(header_size > (1024 * 8192))
@@ -125,15 +146,15 @@ void SNSFLoader::HandleEXE(Stream* fp, bool ignore_pcsp)
   throw MDFN_Error(0, _("SNSF Header Field Size(=%u) is too large."), header_size);
  }
 
- if(((uint64)header_offset + header_size) > (1024 * 8192))
+ if(((uint64)adj_offset + header_size) > (1024 * 8192))
  {
-  throw MDFN_Error(0, _("SNSF Combined Header Fields Offset(=%u) + Size(=%u) is too large."), header_offset, header_size);
+  throw MDFN_Error(0, _("SNSF Combined Adjusted Offset(=%u) + Size(=%u) is too large."), adj_offset, header_size);
  }
 
- if((header_offset + header_size) > ROM_Data.size())
-  ROM_Data.truncate(header_offset + header_size);
+ if((adj_offset + header_size) > ROM_Data.size())
+  ROM_Data.truncate(adj_offset + header_size);
 
- fp->read(&ROM_Data.map()[header_offset], header_size);
+ fp->read(&ROM_Data.map()[adj_offset], header_size);
 }
 
 }

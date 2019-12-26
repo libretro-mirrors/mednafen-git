@@ -24,7 +24,8 @@
 */
 
 #include "z80.h"
-
+namespace Mednafen
+{
 #include "z80_macros.h"
 
 void z80_set_interrupt(int set)
@@ -69,4 +70,6 @@ int z80_do_opcode( void )
    //printf("PC: %04x, %02x, time=%d\n", lastpc, opcode, ret);
 
    return(ret);
+}
+
 }

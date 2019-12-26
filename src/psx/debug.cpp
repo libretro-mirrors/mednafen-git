@@ -27,7 +27,7 @@
 namespace MDFN_IEN_PSX
 {
 
-extern PS_SPU *SPU;
+MDFN_HIDE extern PS_SPU *SPU;
 
 static void RedoCPUHook(void);
 

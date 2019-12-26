@@ -12,6 +12,8 @@
 #include <SDL.h>
 #include <SDL_thread.h>
 
+using namespace Mednafen;
+
 enum
 {
  CEVT_TOGGLEGUI = 1,
@@ -42,10 +44,10 @@ void SendCEvent(unsigned int code, void *data1, void *data2, const uint16 idata1
 
 void PauseGameLoop(bool p);
 
-extern int NoWaiting;
-extern bool MDFNDHaveFocus;
+MDFN_HIDE extern int NoWaiting;
+MDFN_HIDE extern bool MDFNDHaveFocus;
 
-extern MDFNGI *CurGame;
+MDFN_HIDE extern MDFNGI *CurGame;
 int CloseGame(void);
 
 void RefreshThrottleFPS(double);
@@ -53,7 +55,7 @@ void PumpWrap(void);
 void MainRequestExit(void);
 bool MainExitPending(void);
 
-extern bool pending_save_state, pending_ssnapshot, pending_snapshot, pending_save_movie;
+MDFN_HIDE extern bool pending_save_state, pending_ssnapshot, pending_snapshot, pending_save_movie;
 
 void DoRunNormal(void);
 void DoFrameAdvance(void);
@@ -61,7 +63,7 @@ bool IsInFrameAdvance(void);
 
 void DebuggerFudge(void);
 
-extern volatile int GameThreadRun;
+MDFN_HIDE extern volatile int GameThreadRun;
 
 void GT_SetWMInputBehavior(bool CursorNeeded, bool MouseAbsNeeded, bool MouseRelNeeded, bool GrabNeeded);
 void GT_ToggleFS(void);

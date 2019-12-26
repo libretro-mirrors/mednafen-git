@@ -27,6 +27,8 @@
 
 #include "src/base.hpp"
 
+using namespace Mednafen;
+
 extern MDFNGI EmulatedSNES;
 
 static void Cleanup(void);
@@ -524,9 +526,6 @@ static void SaveLoadMemory(bool load)
 
 static bool TestMagic(GameFile* gf)
 {
- if(PSFLoader::TestMagic(0x23, gf->stream))
-  return true;
-
  if(gf->ext != "smc" && gf->ext != "swc" && gf->ext != "sfc" && gf->ext != "fig" &&
         gf->ext != "bs" && gf->ext != "st")
  {
@@ -1364,6 +1363,7 @@ MDFNGI EmulatedSNES =
  MODPRIO_INTERNAL_HIGH,
  NULL,						// Debugger
  PortInfo,
+ NULL,
  Load,
  TestMagic,
  NULL,

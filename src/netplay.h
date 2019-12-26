@@ -10,7 +10,7 @@ void Netplay_PostProcess(const uint32 PortDevIdx[], uint8* const PortData[], con
 void NetplaySendState(void);
 bool NetplaySendCommand(uint8, uint32, const void* data = NULL);
 
-extern int MDFNnetplay;
+MDFN_HIDE extern int MDFNnetplay;
 
 #define MDFNNPCMD_RESET 	MDFN_MSC_RESET
 #define MDFNNPCMD_POWER 	MDFN_MSC_POWER

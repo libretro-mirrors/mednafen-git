@@ -78,7 +78,6 @@ GLBVAR(PhaseChange)
 GLBVAR(InVBlank)
 GLBVAR(sl_zero_reached)
 GLBVAR(skip)
-GLBVAR(hide_hoverscan)
 GLBVAR(field)
 GLBVAR(field_ram_readout)
 GLBVAR(DisplayFB_CurYOffset)
@@ -99,6 +98,11 @@ GLBVAR(DisplayRect)
 GLBVAR(LineWidths)
 GLBVAR(LineVisFirst)
 GLBVAR(LineVisLast)
+GLBVAR(ShowHOverscan)
+GLBVAR(CorrectAspect)
+GLBVAR(HVis)
+GLBVAR(HVisOffs)
+GLBVAR(NCABaseW)
 GLBVAR(hmc_to_visible)
 GLBVAR(HardwarePALType)
 GLBVAR(OutputLUT)
@@ -110,11 +114,11 @@ GLBVAR(GPURAM)
 //
 //
 
-extern const CTEntry Commands_00_1F[0x20];
-extern const CTEntry Commands_20_3F[0x20];
-extern const CTEntry Commands_40_5F[0x20];
-extern const CTEntry Commands_60_7F[0x20];
-extern const CTEntry Commands_80_FF[0x80];
+MDFN_HIDE extern const CTEntry Commands_00_1F[0x20];
+MDFN_HIDE extern const CTEntry Commands_20_3F[0x20];
+MDFN_HIDE extern const CTEntry Commands_40_5F[0x20];
+MDFN_HIDE extern const CTEntry Commands_60_7F[0x20];
+MDFN_HIDE extern const CTEntry Commands_80_FF[0x80];
 
 
 template<int BlendMode, bool MaskEval_TA, bool textured>

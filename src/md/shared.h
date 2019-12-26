@@ -7,6 +7,8 @@
 #include <mednafen/hw_cpu/z80-fuse/z80.h>
 #include <mednafen/state.h>
 
+using namespace Mednafen;
+
 namespace MDFN_IEN_MD
 {
 

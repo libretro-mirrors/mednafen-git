@@ -93,8 +93,6 @@ static DECLFR(FDSSRead)
  return(X.DB);
 }
 
-bool reset_mode = 0;
-
 static INLINE int GetEnvReload(uint8 value)
 {
  int ret;
@@ -250,7 +248,6 @@ static DECLFW(FDSWaveWrite)
 
 static uint32 prev_mod_pos = 0;
 static int32 temp = 0;
-int mod_div = 0;
 
 static INLINE void ClockMod(void)
 {

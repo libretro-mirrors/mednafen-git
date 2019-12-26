@@ -26,7 +26,7 @@ namespace MDFN_IEN_PSX
 {
 
 InputDevice *Device_Justifier_Create(void) MDFN_COLD;
-extern IDIISG Device_Justifier_IDII;
+MDFN_HIDE extern IDIISG Device_Justifier_IDII;
 
 }
 #endif

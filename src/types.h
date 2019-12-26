@@ -81,13 +81,29 @@ typedef uint16_t uint16;
 typedef uint32_t uint32;
 typedef uint64_t uint64;
 
+#if !defined(ARCH_X86) && !defined(ARCH_POWERPC)
+ #if defined(_M_AMD64) || defined(__x86_64__)
+  #define ARCH_X86 1
+  #ifdef __ILP32__
+   #define ARCH_X86_X32 1
+  #else
+   #define ARCH_X86_64 1
+  #endif
+ #elif defined(__386__) || defined(__i386__) || defined(__i386) || defined(_M_IX86) || defined(_M_I386)
+  #define ARCH_X86 1
+  #define ARCH_X86_32 1
+ #elif defined(__powerpc__) || defined(__powerpc64__)
+  #define ARCH_POWERPC 1
+ #endif
+#endif
 
-#if !defined(HAVE_NATIVE64BIT) && (SIZEOF_VOID_P >= 8 || defined(__x86_64__))
+#if SIZEOF_VOID_P >= 8 || ARCH_X86_64 || ARCH_X86_X32
  #define HAVE_NATIVE64BIT 1
 #endif
 
 #if defined(__GNUC__) || defined(__clang__) || defined(__ICC) || defined(__INTEL_COMPILER)
  #define HAVE_COMPUTED_GOTO 1
+ #define HAVE_INLINEASM 1
 #endif
 
 #if defined(__MMX__)
@@ -102,10 +118,31 @@ typedef uint64_t uint64;
  #define HAVE_SSE2_INTRINSICS 1
 #endif
 
-#if defined(__ARM_NEON__) || defined(_M_ARM64)
+#if defined(__ARM_NEON__) || defined(__ARM_NEON) || defined(_M_ARM64)
  #define HAVE_NEON_INTRINSICS 1
 #endif
 
+#if defined(__ALTIVEC__)
+ #define HAVE_ALTIVEC_INTRINSICS 1
+#endif
+//
+//
+//
+//
+#if defined(ARCH_X86) && defined(MSB_FIRST)
+ #error "Bad configuration macros."
+#endif
+
+#if defined(DOS) && defined(WIN32)
+ #error "Bad configuration macros."
+#endif
+
+#if (defined(DOS) || defined(OS2) || defined(WIN32)) && (defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__))
+ #error "Bad configuration macros."
+#endif
+//
+//
+//
 #if defined(__clang__)
   //
   // Begin clang
@@ -117,7 +154,7 @@ typedef uint64_t uint64;
   #define NO_INLINE __attribute__((noinline))
   #define NO_CLONE
 
-  #if defined(__386__) || defined(__i386__) || defined(__i386) || defined(_M_IX86) || defined(_M_I386)
+  #if defined(ARCH_X86_32)
     #define MDFN_FASTCALL __attribute__((fastcall))
   #else
     #define MDFN_FASTCALL
@@ -139,6 +176,12 @@ typedef uint64_t uint64;
    #define MDFN_ASSUME_ALIGNED(p, align) ((decltype(p))__builtin_assume_aligned((p), (align)))
   #else
    #define MDFN_ASSUME_ALIGNED(p, align) (p)
+  #endif
+
+  #if defined(WIN32) || defined(DOS)
+   #define MDFN_HIDE
+  #else
+   #define MDFN_HIDE __attribute__((visibility("hidden")))
   #endif
 #elif defined(__GNUC__)
   //
@@ -169,7 +212,7 @@ typedef uint64_t uint64;
   // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=17025
   //
   #if MDFN_GCC_VERSION >= MDFN_MAKE_GCCV(4,1,0)
-   #if defined(__386__) || defined(__i386__) || defined(__i386) || defined(_M_IX86) || defined(_M_I386)
+   #if defined(ARCH_X86_32)
      #define MDFN_FASTCALL __attribute__((fastcall))
    #else
      #define MDFN_FASTCALL
@@ -200,6 +243,12 @@ typedef uint64_t uint64;
   #else
    #define MDFN_ASSUME_ALIGNED(p, align) (p)
   #endif
+
+  #if defined(WIN32) || defined(DOS)
+   #define MDFN_HIDE
+  #else
+   #define MDFN_HIDE __attribute__((visibility("hidden")))
+  #endif
 #elif defined(_MSC_VER)
   //
   // Begin MSVC
@@ -227,6 +276,7 @@ typedef uint64_t uint64;
   #define MDFN_HOT
 
   #define MDFN_ASSUME_ALIGNED(p, align) (p)
+  #define MDFN_HIDE
 #else
   #define INLINE inline
   #define NO_INLINE
@@ -249,6 +299,7 @@ typedef uint64_t uint64;
   #define MDFN_HOT
 
   #define MDFN_ASSUME_ALIGNED(p, align) (p)
+  #define MDFN_HIDE
 #endif
 
 #ifndef FALSE
@@ -291,7 +342,6 @@ template<typename T> static INLINE typename std::remove_all_extents<T>::type* MD
 #include "math_ops.h"
 #include "endian.h"
 
-using namespace Mednafen;
 #endif
 
 #endif

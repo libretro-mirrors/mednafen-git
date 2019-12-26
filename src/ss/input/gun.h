@@ -34,7 +34,7 @@ class IODevice_Gun final : public IODevice
  virtual void Power(void) override MDFN_COLD;
  virtual void TransformInput(uint8* const data, float gun_x_scale, float gun_x_offs) const override;
  virtual void UpdateInput(const uint8* data, const int32 time_elapsed) override;
- virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override;
+ virtual void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix) override MDFN_COLD;
  virtual void Draw(MDFN_Surface* surface, const MDFN_Rect& drect, const int32* lw, int ifield, float gun_x_scale, float gun_x_offs) const override;
 
  virtual uint8 UpdateBus(const sscpu_timestamp_t timestamp, const uint8 smpc_out, const uint8 smpc_out_asserted) override;
@@ -62,7 +62,7 @@ class IODevice_Gun final : public IODevice
 };
 
 
-extern IDIISG IODevice_Gun_IDII;
+MDFN_HIDE extern IDIISG IODevice_Gun_IDII;
 
 }
 

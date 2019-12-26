@@ -86,6 +86,8 @@
 #include <mednafen/sound/okiadpcm.h>
 #include <mednafen/cdrom/SimpleFIFO.h>
 
+using namespace Mednafen;
+
 #include "pcecd.h"
 
 namespace MDFN_IEN_PCE
@@ -525,14 +527,12 @@ MDFN_FASTCALL uint8 PCECD_Read(uint32 timestamp, uint32 A, int32 &next_event, co
 
  if((A & 0x18c0) == 0x18c0)
  {
-  switch (A & 0x18cf)
+  ret = 0xFF;
+  if(!(A & 0xC))
   {
-   case 0x18c1: ret = 0xaa; break;
-   case 0x18c2:	ret = 0x55; break;
-   case 0x18c3: ret = 0x00; break;
-   case 0x18c5:	ret = 0xaa; break;
-   case 0x18c6: ret = 0x55; break;
-   case 0x18c7:	ret = 0x03; break;
+   static const uint8 sig[4] = { 0x00, 0xAA, 0x55, 0x03 };
+
+   ret = sig[A & 0x3];
   }
  }
  else

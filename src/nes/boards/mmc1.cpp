@@ -149,7 +149,7 @@ enum
  MMC1_GSREG_BUFFERSHIFT
 };
 
-static RegType DBGMMC1Regs[] =
+static const RegType DBGMMC1Regs[] =
 {
  { MMC1_GSREG_CONTROL, "Control", "Control(MMC1 register 0)", 1 },
  { MMC1_GSREG_CHRBANK0, "CHRBank0", "CHR Bank Register 0(MMC1 register 1)", 1 },
@@ -250,7 +250,7 @@ static void MMC1DBG_SetRegister(const unsigned int id, uint32 value)
  MMC1PRG();
 }
 
-static RegGroupType DBGMMC1RegsGroup =
+static const RegGroupType DBGMMC1RegsGroup =
 {
  "MMC1",
  DBGMMC1Regs,

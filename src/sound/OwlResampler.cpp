@@ -24,7 +24,7 @@
 #include "DSPUtility.h"
 #include "../cputest/cputest.h"
 
-#if defined(ARCH_POWERPC_ALTIVEC) && defined(HAVE_ALTIVEC_H)
+#if defined(HAVE_ALTIVEC_INTRINSICS) && defined(HAVE_ALTIVEC_H)
  #include <altivec.h>
 #endif
 
@@ -286,7 +286,7 @@ static INLINE void DoMAC(float *wave, float *coeffs, int32 count, int32 *accum_o
  #include "OwlResampler_sse.inc"
 #endif
 
-#ifdef ARCH_POWERPC_ALTIVEC
+#ifdef HAVE_ALTIVEC_INTRINSICS
  #include "OwlResampler_altivec.inc"
 #endif
 
@@ -320,7 +320,7 @@ enum
 #endif
 #elif defined(HAVE_SSE_INTRINSICS)
  SIMD_SSE_16X,
-#elif defined(ARCH_POWERPC_ALTIVEC)
+#elif defined(HAVE_ALTIVEC_INTRINSICS)
  SIMD_ALTIVEC,
 #elif defined HAVE_NEON_INTRINSICS
  SIMD_NEON
@@ -328,7 +328,7 @@ enum
 };
 
 template<unsigned TA_SIMD_Type>
-NO_INLINE int32 OwlResampler::T_Resample(OwlBuffer* in, const uint32 in_count, int16* out, const uint32 max_out_count, const bool reverse)
+NO_INLINE int32 OwlResampler::T_Resample(OwlBuffer* in, const uint32 in_count, int16* out, const uint32 max_out_count/*(unused currently)*/, const bool reverse)
 {
 	if(reverse)
 	{
@@ -392,7 +392,7 @@ NO_INLINE int32 OwlResampler::T_Resample(OwlBuffer* in, const uint32 in_count, i
 	case SIMD_SSE_16X:
 		DoMAC_SSE_16X(wave, coeffs, coeff_count, I32Out);
 		break;
-#elif defined(ARCH_POWERPC_ALTIVEC)
+#elif defined(HAVE_ALTIVEC_INTRINSICS)
 	  case SIMD_ALTIVEC:
 		DoMAC_AltiVec(wave, coeffs, coeff_count, I32Out);
 		break;
@@ -496,7 +496,10 @@ NO_INLINE int32 OwlResampler::T_Resample(OwlBuffer* in, const uint32 in_count, i
 void OwlResampler::ResetBufResampState(OwlBuffer* buf)
 {
  memset(buf->HRBuf, 0, sizeof(buf->HRBuf[0]) * OwlBuffer::HRBUF_LEFTOVER_PADDING);
+ buf->leftover = NumCoeffs;
+ buf->InputIndex = 0;
  buf->InputPhase = 0;
+ buf->debias = 0;
 }
 
 
@@ -527,10 +530,9 @@ static float FilterDenormal(float v)
  return(v);
 }
 
-OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_error, double debias_corner, int quality, double nyq_fudge)
+OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_error, double debias_corner, int quality, double nyq_fudge, double fake_input_rate, int32 dividend_override, int32 divisor_override)
 {
  std::unique_ptr<double[]> FilterBuf;
- double ratio = (double)output_rate / input_rate;
  double cutoff;
  double required_bandwidth;
  double k_beta;
@@ -562,19 +564,29 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
 
  // Get the number of phases required, and adjust ratio.
  {
+  double ratio = (double)output_rate / input_rate;
   double s_ratio = (double)input_rate / output_rate;
   double findo = 0;
   uint32 count = 0;
   uint32 findo_i;
 
-  do
+  if(dividend_override && divisor_override)
   {
-   count++;
-   findo += s_ratio;
-  } while( fabs(1.0 - ((floor(0.5 + findo) / count) / s_ratio)) > rate_error);
+   findo_i = dividend_override;
+   count = divisor_override;
+   s_ratio = (double)findo_i / count;
+  }
+  else
+  {
+   do
+   {
+    count++;
+    findo += s_ratio;
+   } while( fabs(1.0 - ((floor(0.5 + findo) / count) / s_ratio)) > rate_error);
 
-  s_ratio = floor(0.5 + findo) / count;
-  findo_i = (uint32) floor(0.5 + findo);
+   s_ratio = floor(0.5 + findo) / count;
+   findo_i = (uint32) floor(0.5 + findo);
+  }
   ratio = 1 / s_ratio;
   NumPhases = count;
 
@@ -634,9 +646,9 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
  //
  // Note: Cutoff calculation is performed again(though slightly differently) down below after the SIMD check.
  //
- cutoff = QualityTable[quality].obw * (std::min<double>(something, std::min<double>(input_rate, output_rate)) / input_rate);
+ cutoff = QualityTable[quality].obw * (std::min<double>(something, std::min<double>(std::min<double>(fake_input_rate, input_rate), output_rate)) / input_rate);
 
- required_bandwidth = (std::min<double>(OWLRESAMP_FCALC_RATE_CLAMP, std::min<double>(input_rate, output_rate)) / input_rate) - cutoff;
+ required_bandwidth = (std::min<double>(OWLRESAMP_FCALC_RATE_CLAMP, std::min<double>(std::min<double>(fake_input_rate, input_rate), output_rate)) / input_rate) - cutoff;
 
  NumCoeffs = ceil(k_d / required_bandwidth);
 
@@ -689,7 +701,7 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
   Resample_ = &OwlResampler::T_Resample<SIMD_SSE_16X>;
  }
  #endif
- #ifdef ARCH_POWERPC_ALTIVEC
+ #ifdef HAVE_ALTIVEC_INTRINSICS
  else if(1)
  {
   SIMDTypeString = "AltiVec";
@@ -724,14 +736,14 @@ OwlResampler::OwlResampler(double input_rate, double output_rate, double rate_er
  // Don't alter NumCoeffs anymore from here on.
  //
 
- #if !defined(ARCH_X86) && !defined(HAVE_SSE_INTRINSICS) && !defined(ARCH_POWERPC_ALTIVEC) && !defined(HAVE_NEON_INTRINSICS)
+ #if !defined(ARCH_X86) && !defined(HAVE_SSE_INTRINSICS) && !defined(HAVE_ALTIVEC_INTRINSICS) && !defined(HAVE_NEON_INTRINSICS)
   #warning "OwlResampler is being compiled without SIMD support."
  #endif
 
  //
  // Adjust cutoff now that NumCoeffs may have been increased.
  //
- cutoff = std::min<double>(QualityTable[quality].obw * something / input_rate, (std::min<double>(input_rate, output_rate) / input_rate - ((double)k_d / NumCoeffs)));
+ cutoff = std::min<double>(QualityTable[quality].obw * something / input_rate, (std::min<double>(std::min<double>(fake_input_rate, input_rate), output_rate) / input_rate - ((double)k_d / NumCoeffs)));
 
  cutoff *= nyq_fudge;
  if(ceil(cutoff) > 1.0)

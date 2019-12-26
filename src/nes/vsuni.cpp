@@ -44,7 +44,7 @@ typedef struct
         int predip;
 } VSUNIENTRY;
 
-VSUNIENTRY *curvs;
+static const VSUNIENTRY *curvs;
 
 static uint8 DIPS=0;
 uint8 vsdip=0;
@@ -227,7 +227,7 @@ void MDFN_VSUniPower(void)
    Wrecking Crew
 */
 
-VSUNIENTRY VSUniGames[]	=
+static const VSUNIENTRY VSUniGames[]	=
 {
  {"Baseball",		0x691d4200ea42be45LL, 99, 2,RP2C04_001,0},
   {"Battle City",	0x8540949d74c4d0ebLL, 99, 2,RP2C04_001,0},
@@ -284,7 +284,7 @@ unsigned int MDFN_VSUniGetPaletteNum(void)
 
 void MDFN_VSUniCheck(uint64 md5partial, int *MapperNo, int *Mirroring)
 {
- VSUNIENTRY *vs = VSUniGames;
+ const VSUNIENTRY *vs = VSUniGames;
 
  while(vs->name)
  {

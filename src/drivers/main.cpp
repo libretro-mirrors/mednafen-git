@@ -66,7 +66,9 @@ static bool SuppressErrorPopups;	// Set from env variable "MEDNAFEN_NOPOPUPS"
 
 static int StateSLSTest = false;
 static int StateRCTest = false;	// Rewind consistency
-
+#if 0
+static int StatePCTest = false;	// Power(toggle) consistency
+#endif
 static WMInputBehavior NeededWMInputBehavior = { false, false, false, false };
 static bool NeededWMInputBehavior_Dirty = false;
 
@@ -152,11 +154,11 @@ static const MDFNSetting DriverSettings[] =
 					gettext_noop("Disable to reduce latency, at the cost of potentially increased video \"juddering\", with the maximum reduction in latency being about 1 video frame's time.\nWill work best with emulated systems that are not very computationally expensive to emulate, combined with running on a relatively fast CPU."),
 					MDFNST_BOOL, "1" },
 
-  { "ffspeed", MDFNSF_NOFLAGS, gettext_noop("Fast-forwarding speed multiplier."), NULL, MDFNST_FLOAT, "4", "1", "15" },
+  { "ffspeed", MDFNSF_NOFLAGS, gettext_noop("Fast-forwarding speed multiplier."), NULL, MDFNST_FLOAT, "4", "0.25", "15" },
   { "fftoggle", MDFNSF_NOFLAGS, gettext_noop("Treat the fast-forward button as a toggle."), NULL, MDFNST_BOOL, "0" },
   { "ffnosound", MDFNSF_NOFLAGS, gettext_noop("Silence sound output when fast-forwarding."), NULL, MDFNST_BOOL, "0" },
 
-  { "sfspeed", MDFNSF_NOFLAGS, gettext_noop("SLOW-forwarding speed multiplier."), NULL, MDFNST_FLOAT, "0.75", "0.25", "1" },
+  { "sfspeed", MDFNSF_NOFLAGS, gettext_noop("SLOW-forwarding speed multiplier."), NULL, MDFNST_FLOAT, "0.75", "0.25", "15" },
   { "sftoggle", MDFNSF_NOFLAGS, gettext_noop("Treat the SLOW-forward button as a toggle."), NULL, MDFNST_BOOL, "0" },
 
   { "nothrottle", MDFNSF_NOFLAGS, gettext_noop("Disable speed throttling when sound is disabled."), NULL, MDFNST_BOOL, "0"},
@@ -185,6 +187,9 @@ static const MDFNSetting DriverSettings[] =
   { "fps.bgcolor", MDFNSF_NOFLAGS, gettext_noop("FPS display background color."), gettext_noop("0xAARRGGBB"), MDFNST_UINT, "0x80000000", "0x00000000", "0xFFFFFFFF" },
 
   { "srwautoenable", MDFNSF_SUPPRESS_DOC, gettext_noop("DO NOT USE UNLESS YOU'RE A SPACE GOAT"/*"Automatically enable state rewinding functionality on game load."*/), gettext_noop("Use this setting with caution, as save state rewinding can have widely variable memory and CPU usage requirements among different games and different emulated systems."), MDFNST_BOOL, "0" },
+
+  { "affinity.emu", MDFNSF_NOFLAGS, gettext_noop("Main emulation thread CPU affinity mask."), gettext_noop("Set to 0 to disable changing affinity."), MDFNST_UINT, "0", "0x0000000000000000", "0xFFFFFFFFFFFFFFFF" },
+  { "affinity.video", MDFNSF_NOFLAGS, gettext_noop("Video blitting thread CPU affinity mask."), gettext_noop("Set to 0 to disable changing affinity."), MDFNST_UINT, "0", "0x0000000000000000", "0xFFFFFFFFFFFFFFFF" },
 };
 
 void BuildSystemSetting(MDFNSetting *setting, const char *system_name, const char *name, const char *description, const char *description_extra, MDFNSettingType type, 
@@ -409,17 +414,17 @@ void Mednafen::MDFND_OutputNotice(MDFN_NoticeType t, const char* s) noexcept
  else if(t != MDFN_NOTICE_STATUS)
  {
   if(StdoutMutex)
-   MThreading::LockMutex(StdoutMutex);
+   MThreading::Mutex_Lock(StdoutMutex);
  
   puts(s);
   fflush(stdout);
 
   if(StdoutMutex)
-   MThreading::UnlockMutex(StdoutMutex);
+   MThreading::Mutex_Unlock(StdoutMutex);
   //
   //
   //
-  if(MThreading::ThreadID() == MainThreadID && !SuppressErrorPopups)
+  if(MThreading::Thread_ID() == MainThreadID && !SuppressErrorPopups)
   {
    const char* title = "";
 
@@ -456,13 +461,13 @@ void Mednafen::MDFND_OutputInfo(const char *s) noexcept
  else
  {
   if(StdoutMutex)
-   MThreading::LockMutex(StdoutMutex);
+   MThreading::Mutex_Lock(StdoutMutex);
 
   fputs(s,stdout);
   fflush(stdout);
 
   if(StdoutMutex)
-   MThreading::UnlockMutex(StdoutMutex);
+   MThreading::Mutex_Unlock(StdoutMutex);
  }
 }
 
@@ -727,9 +732,10 @@ static void CDTest(const char* path)
  {
   CDInterface* cds[2];
   CDUtility::TOC toc[2];
+  const uint64 affinity = 0;
 
-  cds[0] = CDInterface::Open(&NVFS, path, false);
-  cds[1] = CDInterface::Open(&NVFS, path, true);
+  cds[0] = CDInterface::Open(&NVFS, path, false, affinity);
+  cds[1] = CDInterface::Open(&NVFS, path, true, affinity);
 
   for(unsigned i = 0; i < 2; i++)
    cds[0]->ReadTOC(&toc[i]);
@@ -792,6 +798,64 @@ static int DoArgs_SetSetting(const char *name, const char *value)
  return MDFNI_SetSetting(name, value);
 }
 
+static MDFN_COLD void PrintConfigMacros(void)
+{
+ #define MACROSTR2(n,x) { const char t[] = #x; if(!strcmp(n, t)) printf("#undef %s\n", n); else printf("%s: %s\n", n, t); }
+ #define MACROSTR(x) MACROSTR2(#x, x)
+ //
+ printf("\n");
+ MACROSTR(ARCH_X86)
+ MACROSTR(ARCH_X86_32)
+ MACROSTR(ARCH_X86_64)
+ MACROSTR(ARCH_X86_X32)
+ MACROSTR(ARCH_POWERPC)
+ MACROSTR(HAVE_NATIVE64BIT)
+ MACROSTR(HAVE_COMPUTED_GOTO)
+ MACROSTR(HAVE_INLINEASM)
+ MACROSTR(HAVE_INLINEASM_AVX)
+ MACROSTR(HAVE_MMX_INTRINSICS)
+ MACROSTR(HAVE_SSE_INTRINSICS)
+ MACROSTR(HAVE_SSE2_INTRINSICS)
+ MACROSTR(HAVE_NEON_INTRINSICS)
+ MACROSTR(HAVE_ALTIVEC_INTRINSICS)
+ printf("\n");
+ MACROSTR(LSB_FIRST)
+ MACROSTR(MSB_FIRST)
+ MACROSTR(MDFN_IS_BIGENDIAN)
+ printf("\n");
+ MACROSTR(DOS)
+ MACROSTR(WIN32)
+ MACROSTR(_LARGEFILE64_SOURCE)
+ MACROSTR(_LARGEFILE_SOURCE)
+ MACROSTR(ENABLE_NLS)
+#if 0
+ printf("\n");
+ MACROSTR(MDFN_ENABLE_DEV_BUILD)
+ MACROSTR(WANT_DEBUGGER)
+ MACROSTR(WANT_INTERNAL_CJK)
+ MACROSTR(WANT_FANCY_SCALERS)
+ printf("\n");
+ MACROSTR(INLINE)
+ MACROSTR(NO_INLINE)
+ MACROSTR(NO_CLONE)
+ MACROSTR(MDFN_FASTCALL)
+ MACROSTR(MDFN_FORMATSTR(a,b,c))
+ MACROSTR(MDFN_WARN_UNUSED_RESULT)
+ MACROSTR(MDFN_NOWARN_UNUSED)
+ MACROSTR(MDFN_RESTRICT)
+ MACROSTR(MDFN_UNLIKELY(n))
+ MACROSTR(MDFN_LIKELY(n))
+ MACROSTR(MDFN_COLD)
+ MACROSTR(MDFN_HOT)
+ MACROSTR(MDFN_ASSUME_ALIGNED(p, align))
+ MACROSTR(MDFN_HIDE)
+ MACROSTR(PSS_STYLE)
+#endif
+ //
+ #undef MACROSTR
+ #undef MACROSTR2
+}
+
 static int netconnect = 0;
 static char* loadcd = NULL;	// Deprecated
 static int which_medium = -2;
@@ -819,6 +883,7 @@ static bool DoArgs(int argc, char *argv[], char **filename)
 	//
 	//
 	int ShowCLHelp = 0;
+	int ShowConfigMacros = 0;
 
 	char *dsfn = NULL;
 	char *dmfn = NULL;
@@ -828,6 +893,9 @@ static bool DoArgs(int argc, char *argv[], char **filename)
 	int mtetest = 0;
 	int swiftresamptest = 0;
 	int owlresamptest = 0;
+	#ifdef WANT_SS_EMU
+	int ss_midsync;
+	#endif
 
         ARGPSTRUCT MDFNArgs[] = 
 	{
@@ -851,6 +919,8 @@ static bool DoArgs(int argc, char *argv[], char **filename)
 
 	 { "connect", _("Connect to the remote server and start network play."), &netconnect, 0, 0 },
 
+	 { "config_macros", NULL, &ShowConfigMacros, 0, 0 },
+
 	 // Largefile support test(with FileStream and GZFileStream).
 	 { "stream64test", NULL, 0, &stream64testpath, SUBSTYPE_STRING_ALLOC },
 
@@ -865,11 +935,21 @@ static bool DoArgs(int argc, char *argv[], char **filename)
 	 // Save state rewind consistency test.
 	 { "staterctest", NULL, &StateRCTest, 0, 0 },
 
+#if 0
+	 // Save state power consistency test.
+	 { "statepctest", NULL, &StatePCTest, 0, 0 },
+#endif
+
 	 // SwiftResampler test.
 	 { "swiftresamptest", NULL, &swiftresamptest, 0, 0 },
 
 	 // OwlResampler test.
 	 { "owlresamptest", NULL, &owlresamptest, 0, 0 },
+
+	 #ifdef WANT_SS_EMU
+	 // Quick kludge to avoid breaking frontends and scripts due to the setting being removed.
+	 { "ss.midsync", NULL, 0, &ss_midsync, SUBSTYPE_INTEGER },
+	 #endif
 
 	 { 0, 0, 0, 0 }
         };
@@ -903,6 +983,12 @@ static bool DoArgs(int argc, char *argv[], char **filename)
 	  printf(_("For example:\n\t%s -pce.stretch aspect -pce.shader autoipsharper \"Hyper Bonk Soldier.pce\"\n\n"), argv[0]);
 	  printf(_("Settings specified in this manner are automatically saved to the configuration file, hence they\ndo not need to be passed to future invocations of the Mednafen executable.\n"));
 	  printf("\n");
+	  return false;
+	 }
+
+	 if(ShowConfigMacros)
+	 {
+	  PrintConfigMacros();
 	  return false;
 	 }
 
@@ -961,7 +1047,7 @@ static bool autosave_load_error = false;
 
 static int LoadGame(const char *force_module, const char *path)
 {
-	assert(MThreading::ThreadID() == MainThreadID);
+	assert(MThreading::Thread_ID() == MainThreadID);
 	//
 	MDFNGI *tmp;
 
@@ -982,7 +1068,45 @@ static int LoadGame(const char *force_module, const char *path)
          if(!(tmp=MDFNI_LoadGame(force_module, &::Mednafen::NVFS, path)))
 	  return 0;
 	}
+	//
+	//
+	//
+#if 0
+	if(StatePCTest)
+	{
+	 MemoryStream state0(524288);
+	 MemoryStream state1(524288);
+	 MDFNI_Power();
+	 MDFNSS_SaveSM(&state0);
+	 state0.rewind();
+	 MDFNSS_LoadSM(&state0, false, true);
+	 MDFNI_CloseGame();
+         if(!(tmp=MDFNI_LoadGame(force_module, &::Mednafen::NVFS, path)))
+	  abort();
+	 MDFNI_Power();
+	 MDFNSS_SaveSM(&state1);
+	 state0.rewind();
+	 MDFNSS_LoadSM(&state0);
+	 MDFNI_CloseGame();
+         if(!(tmp=MDFNI_LoadGame(force_module, &::Mednafen::NVFS, path)))
+	  abort();
 
+	 if(!(state0.map_size() == state1.map_size() && !memcmp(state0.map() + 32, state1.map() + 32, state1.map_size() - 32)))
+	 {
+	  FileStream sd0("/tmp/sdump0", FileStream::MODE_WRITE);
+	  FileStream sd1("/tmp/sdump1", FileStream::MODE_WRITE);
+
+	  sd0.write(state0.map(), state0.map_size());
+	  sd1.write(state1.map(), state1.map_size());
+	  sd0.close();
+	  sd1.close();
+	  abort();
+	 }
+	}
+#endif
+	//
+	//
+	//
 	CurGame = tmp;
 	Input_GameLoaded(tmp);
 	RMDUI_Init(tmp, which_medium);
@@ -1057,7 +1181,7 @@ int CloseGame(void)
 
 	if(GameThread)
 	{
-	 MThreading::WaitThread(GameThread, NULL);
+	 MThreading::Thread_Wait(GameThread, NULL);
 	 GameThread = NULL;
 	}
 
@@ -1248,13 +1372,13 @@ static int GameLoop(void *arg)
 	  }
 	 }
 
-	 ers.AddEmuTime((espec.MasterCycles - espec.MasterCyclesALMS) / CurGameSpeed);
+	 ers.AddEmuTime((espec.MasterCycles - espec.MasterCycles_DriverProcessed) / CurGameSpeed);
 
 	 SoftFB[SoftFB_BackBuffer].rect = espec.DisplayRect;
 	 SoftFB[SoftFB_BackBuffer].field = espec.InterlaceOn ? espec.InterlaceField : -1;
 
-	 sound = espec.SoundBuf + (espec.SoundBufSizeALMS * CurGame->soundchan);
-	 ssize = espec.SoundBufSize - espec.SoundBufSizeALMS;
+	 sound = espec.SoundBuf + (espec.SoundBufSize_DriverProcessed * CurGame->soundchan);
+	 ssize = espec.SoundBufSize - espec.SoundBufSize_DriverProcessed;
 	 //
 	 //
 	 //
@@ -1372,7 +1496,7 @@ static void GameThread_HandleEvents(void)
  SDL_Event gtevents_temp[gtevents_size];
  unsigned int numevents = 0;
 
- MThreading::LockMutex(EVMutex);
+ MThreading::Mutex_Lock(EVMutex);
  while(gte_read != gte_write)
  {
   memcpy(&gtevents_temp[numevents], (void *)&gtevents[gte_read], sizeof(SDL_Event));
@@ -1380,7 +1504,7 @@ static void GameThread_HandleEvents(void)
   numevents++;
   gte_read = (gte_read + 1) & (gtevents_size - 1);
  }
- MThreading::UnlockMutex(EVMutex);
+ MThreading::Mutex_Unlock(EVMutex);
 
  for(unsigned int i = 0; i < numevents; i++)
  {
@@ -1430,21 +1554,21 @@ static void SendCEvent_to_GT(unsigned int code, void *data1, void *data2, uint16
  evt.user.data1 = data1;
  evt.user.data2 = data2;
 
- MThreading::LockMutex(EVMutex);
+ MThreading::Mutex_Lock(EVMutex);
  memcpy((void *)&gtevents[gte_write], &evt, sizeof(SDL_Event));
  gte_write = (gte_write + 1) & (gtevents_size - 1);
- MThreading::UnlockMutex(EVMutex);
+ MThreading::Mutex_Unlock(EVMutex);
 }
 
 void GT_ToggleFS(void)
 {
- // assert(MThreading::ThreadID() == GameThreadID);
- MThreading::LockMutex(VTMutex);
+ // assert(MThreading::Thread_ID() == GameThreadID);
+ MThreading::Mutex_Lock(VTMutex);
  MDFNI_SetSettingB("video.fs", !MDFN_GetSettingB("video.fs"));
  NeedVideoSync++;
- MThreading::UnlockMutex(VTMutex);
+ MThreading::Mutex_Unlock(VTMutex);
 
- MThreading::PostSem(VTWakeupSem);
+ MThreading::Sem_Post(VTWakeupSem);
  while(NeedVideoSync && GameThreadRun)
  {
   Time::SleepMS(2);
@@ -1453,12 +1577,12 @@ void GT_ToggleFS(void)
 
 bool GT_ReinitVideo(void)
 {
- // assert(MThreading::ThreadID() == GameThreadID);
- MThreading::LockMutex(VTMutex);
+ // assert(MThreading::Thread_ID() == GameThreadID);
+ MThreading::Mutex_Lock(VTMutex);
  NeedVideoSync++;
- MThreading::UnlockMutex(VTMutex);
+ MThreading::Mutex_Unlock(VTMutex);
 
- MThreading::PostSem(VTWakeupSem);
+ MThreading::Sem_Post(VTWakeupSem);
  while(NeedVideoSync && GameThreadRun)
  {
   Time::SleepMS(2);
@@ -1592,13 +1716,13 @@ void PumpWrap(void)
 
  if(numevents > 0)
  {
-  MThreading::LockMutex(EVMutex);
+  MThreading::Mutex_Lock(EVMutex);
   for(int i = 0; i < numevents; i++)
   {
    memcpy((void *)&gtevents[gte_write], &gtevents_temp[i], sizeof(SDL_Event));
    gte_write = (gte_write + 1) & (gtevents_size - 1);
   }
-  MThreading::UnlockMutex(EVMutex);
+  MThreading::Mutex_Unlock(EVMutex);
  }
 
  if(!CurGame)
@@ -1751,11 +1875,11 @@ static int CowEntry(void*)
 
  for(unsigned i = 0; i < 1000 * 1000; i++)
  {
-  MThreading::LockMutex(milk_mutex);
+  MThreading::Mutex_Lock(milk_mutex);
   cow_milk++;
 
-  MThreading::SignalCond(milk_cond);
-  MThreading::UnlockMutex(milk_mutex);
+  MThreading::Cond_Signal(milk_cond);
+  MThreading::Mutex_Unlock(milk_mutex);
 
   while(cow_milk != 0);
  }
@@ -1767,43 +1891,43 @@ static int CowEntry(void*)
 
 static int FarmerEntry(void*)
 {
- MThreading::LockMutex(milk_mutex);
+ MThreading::Mutex_Lock(milk_mutex);
  while(1)
  {
-  MThreading::WaitCond(milk_cond, milk_mutex);
+  MThreading::Cond_TimedWait(milk_cond, milk_mutex);
 
   farmer_milk += cow_milk;
   cow_milk = 0;
  }
- MThreading::UnlockMutex(milk_mutex);
+ MThreading::Mutex_Unlock(milk_mutex);
  return(0);
 }
 
 static int CalfEntry(void*)
 {
- MThreading::LockMutex(milk_mutex);
+ MThreading::Mutex_Lock(milk_mutex);
  while(1)
  {
-  MThreading::WaitCond(milk_cond, milk_mutex);
+  MThreading::Cond_Wait(milk_cond, milk_mutex);
 
   calf_milk += cow_milk;
   cow_milk = 0;
  }
- MThreading::UnlockMutex(milk_mutex);
+ MThreading::Mutex_Unlock(milk_mutex);
  return(0);
 }
 
 static int AutoMilker3000Entry(void*)
 {
- MThreading::LockMutex(milk_mutex);
+ MThreading::Mutex_Lock(milk_mutex);
  while(1)
  {
-  MThreading::WaitCond(milk_cond, milk_mutex);
+  MThreading::Cond_Wait(milk_cond, milk_mutex);
 
   am3000_milk += cow_milk;
   cow_milk = 0;
  }
- MThreading::UnlockMutex(milk_mutex);
+ MThreading::Mutex_Unlock(milk_mutex);
  return(0);
 }
 
@@ -1812,15 +1936,15 @@ static void ThreadTest(void)
  MThreading::Thread *cow_thread, *farmer_thread, *calf_thread, *am3000_thread;
  int rec;
 
- milk_mutex = MThreading::CreateMutex();
- milk_cond = MThreading::CreateCond();
+ milk_mutex = MThreading::Mutex_Create();
+ milk_cond = MThreading::Cond_Create();
 
- //farmer_thread = MThreading::CreateThread(FarmerEntry, NULL);
- //calf_thread = MThreading::CreateThread(CalfEntry, NULL);
- //am3000_thread = MThreading::CreateThread(AutoMilker3000Entry, NULL);
+ //farmer_thread = MThreading::Thread_Create(FarmerEntry, NULL);
+ //calf_thread = MThreading::Thread_Create(CalfEntry, NULL);
+ //am3000_thread = MThreading::Thread_Create(AutoMilker3000Entry, NULL);
 
- cow_thread = MThreading::CreateThread(CowEntry, NULL);
- MThreading::WaitThread(cow_thread, &rec);
+ cow_thread = MThreading::Thread_Create(CowEntry, NULL);
+ MThreading::Thread_Wait(cow_thread, &rec);
 
  printf("%8u %8u %8u --- %8u, time=%u\n", farmer_milk, calf_milk, am3000_milk, farmer_milk + calf_milk + am3000_milk, rec);
 
@@ -2014,7 +2138,7 @@ int main(int argc, char *argv[])
 	//
 	//
 	//
-	MainThreadID = MThreading::ThreadID();	// Must come before any direct or indirect calls to MDFND_OutputNotice()
+	MainThreadID = MThreading::Thread_ID();	// Must come before any direct or indirect calls to MDFND_OutputNotice()
 	//
 	//
 	//
@@ -2076,16 +2200,30 @@ int main(int argc, char *argv[])
 
         MDFN_printf(_("Base directory: %s\n"), DrBaseDirectory.c_str());
 
+	#ifdef WIN32
+	// Call to CoInitializeEx() must come before SDL_Init()
+	{
+	 HRESULT hr;
+
+	 hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+	 if(hr != S_OK && hr != S_FALSE)
+	 {
+	  MDFN_Notify(MDFN_NOTICE_ERROR, _("CoInitializeEx() failed: %s\n"), Win32Common::ErrCodeToString(hr).c_str());
+	  return -1;
+	 }
+	}
+	#endif
+
 	if(SDL_Init(SDL_INIT_VIDEO)) /* SDL_INIT_VIDEO Needed for (joystick config) event processing? */
 	{
-	 fprintf(stderr, "Could not initialize SDL: %s\n", SDL_GetError());
+	 MDFN_Notify(MDFN_NOTICE_ERROR, _("Could not initialize SDL: %s\n"), SDL_GetError());
 	 return -1;
 	}
 	SDL_JoystickEventState(SDL_IGNORE);
 	SDL_DisableScreenSaver();
 	//SDL_StopTextInput();
 
-	if(!(StdoutMutex = MThreading::CreateMutex()))
+	if(!(StdoutMutex = MThreading::Mutex_Create()))
 	{
 	 MDFN_Notify(MDFN_NOTICE_ERROR, _("Could not create mutex: %s\n"), SDL_GetError());
 	 return -1;
@@ -2180,10 +2318,10 @@ int main(int argc, char *argv[])
 	*/
 	int ret = 0;
 
-	VTMutex = MThreading::CreateMutex();
-        EVMutex = MThreading::CreateMutex();
+	VTMutex = MThreading::Mutex_Create();
+        EVMutex = MThreading::Mutex_Create();
 
-	VTWakeupSem = MThreading::CreateSem();
+	VTWakeupSem = MThreading::Sem_Create();
 	//
 	Video_Init();
 	//
@@ -2211,13 +2349,24 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 	}
 	#endif
 
+ try
+ {
         if(LoadGame(force_module_arg, needie))
         {
          NeedVideoSync = 1;	// Set to 1 before creating game thread.
 	 //
 	 //
+	 const uint64 vt_affinity = MDFN_GetSettingUI("affinity.video");
+         const uint64 gt_affinity = MDFN_GetSettingUI("affinity.emu");
+
 	 GameThreadRun = 1;
-	 GameThread = MThreading::CreateThread(GameLoop, NULL, "MDFN Emulation");
+	 GameThread = MThreading::Thread_Create(GameLoop, NULL, "MDFN Emulation");
+
+	 if(gt_affinity)
+	  MThreading::Thread_SetAffinity(GameThread, gt_affinity);
+
+	 if(vt_affinity)
+	  MThreading::Thread_SetAffinity(NULL, vt_affinity);
 	 //
 	 //
 	 //
@@ -2227,7 +2376,8 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
          for(int i = 0; i < 2; i++)
 	 {
 	  SoftFB[i].surface.reset(new MDFN_Surface(NULL, CurGame->fb_width, CurGame->fb_height, pitch32, nf));
-          SoftFB[i].lw.reset(new int32[CurGame->fb_height]);
+	  SoftFB[i].lw.reset(new int32[CurGame->fb_height]);
+	  memset(SoftFB[i].lw.get(), 0, sizeof(int32) * CurGame->fb_height);
 
 	  SoftFB[i].surface->Fill(0, 0, 0, 0);
 
@@ -2248,10 +2398,17 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 	 ret = -1;
 	 NeedExitNow = 1;
 	}
+ }
+ catch(std::exception& e)
+ {
+  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
+  ret = -1;
+  NeedExitNow = 1;
+ }
 
 	while(MDFN_LIKELY(!NeedExitNow))
 	{
-	 MThreading::LockMutex(VTMutex);	/* Lock mutex */
+	 MThreading::Mutex_Lock(VTMutex);	/* Lock mutex */
 
 	 try
 	 {
@@ -2303,21 +2460,21 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 	  MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
 	  if(FatalVideoError == 0)
 	  {
- 	   MThreading::UnlockMutex(VTMutex);   /* Unlock mutex */ 
+ 	   MThreading::Mutex_Unlock(VTMutex);   /* Unlock mutex */ 
 	   FatalVideoError = 1;
 	  }
 	  else
 	  {	  
 	   ret = -1;
            NeedExitNow = 1;
-	   MThreading::UnlockMutex(VTMutex);   /* Unlock mutex */
+	   MThreading::Mutex_Unlock(VTMutex);   /* Unlock mutex */
 	   goto VideoErrorExit;
 	  }
 	 }
 
-         MThreading::UnlockMutex(VTMutex);   /* Unlock mutex */
+         MThreading::Mutex_Unlock(VTMutex);   /* Unlock mutex */
 
-	 MThreading::WaitSemTimeout(VTWakeupSem, 1);
+	 MThreading::Sem_TimedWait(VTWakeupSem, 1);
 	}
 	VideoErrorExit:;
 	//
@@ -2335,10 +2492,10 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 } // end game load test loop
 #endif
 
-	MThreading::DestroySem(VTWakeupSem);
+	MThreading::Sem_Destroy(VTWakeupSem);
 
-	MThreading::DestroyMutex(VTMutex);
-        MThreading::DestroyMutex(EVMutex);
+	MThreading::Mutex_Destroy(VTMutex);
+        MThreading::Mutex_Destroy(EVMutex);
 
 	RemoveSignalHandlers();
 
@@ -2423,14 +2580,44 @@ static void UpdateSoundSync(int16 *Buffer, uint32 Count)
  }
 }
 
-void Mednafen::MDFND_MidSync(const EmulateSpecStruct *espec)
+void Mednafen::MDFND_MidSync(EmulateSpecStruct *espec, const unsigned flags)
 {
- ers.AddEmuTime((espec->MasterCycles - espec->MasterCyclesALMS) / CurGameSpeed, false);
+ //printf("MidSync; flags=0x%08x --- SoundBufSize_DriverProcessed=0x%08x, SoundBufSize=0x%08x\n", flags, espec->SoundBufSize_DriverProcessed, espec->SoundBufSize);
+ //
+ int16* const sbuf = espec->SoundBuf + espec->SoundBufSize_DriverProcessed * CurGame->soundchan;
+ const int32 scount = espec->SoundBufSize - espec->SoundBufSize_DriverProcessed;
 
- UpdateSoundSync(espec->SoundBuf + (espec->SoundBufSizeALMS * CurGame->soundchan), espec->SoundBufSize - espec->SoundBufSizeALMS);
+ if(flags & MIDSYNC_FLAG_SYNC_TIME)
+ {
+  ers.AddEmuTime((espec->MasterCycles - espec->MasterCycles_DriverProcessed) / CurGameSpeed, false);
+  espec->MasterCycles_DriverProcessed = espec->MasterCycles;
+  //
+  UpdateSoundSync(sbuf, scount);
+  espec->SoundBufSize_DriverProcessed += scount;
+ }
+ else
+ {
+  // TODO, needs changes.
+/*
+  const int32 eff_scount = std::min<int32>(Sound_CanWrite(), scount);
+  assert(espec->SoundBufSize_InternalProcessed >= (espec->SoundBufSize_DriverProcessed + eff_scount));
 
- GameThread_HandleEvents(); // Should be safe, but be careful about future changes.
- Input_Update(true, false);
+  printf("MDFND_MidSync() without SYNC_TIME --- %u %u\n", scount, eff_scount);
+
+  UpdateSoundSync(sbuf, eff_scount);
+  espec->SoundBufSize_DriverProcessed += eff_scount;
+*/
+ }
+
+ if(flags & MIDSYNC_FLAG_UPDATE_INPUT)
+ {
+  GameThread_HandleEvents(); // Should be safe, but be careful about future changes.
+  Input_Update(true, false);
+ }
+ //else
+ //{
+ // printf("MDFND_MidSync() without UPDATE_INPUT\n");
+ //}
 }
 
 static bool PassBlit(const int WhichVideoBuffer)
@@ -2464,7 +2651,7 @@ static bool PassBlit(const int WhichVideoBuffer)
  last_btime = Time::MonoMS();
  FPS_IncBlitted();
 
- MThreading::PostSem(VTWakeupSem);
+ MThreading::Sem_Post(VTWakeupSem);
 
  return true;
 }

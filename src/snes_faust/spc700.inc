@@ -19,6 +19,10 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#ifdef MDFN_SNES_FAUST_SKETCHYSPC700OPT
+ #warning "Compiling with sketchy SPC700 optimization."
+#endif
+
 class SPC700 final
 {
  public:
@@ -58,6 +62,8 @@ class SPC700 final
    case GSREG_PSW: return PSW;
    case GSREG_SP: return SP;
   }
+
+  return 0xDEADBEEF;
  }
 
  INLINE void SetRegister(unsigned which, unsigned value)
@@ -327,7 +333,13 @@ INLINE uint8 SPC700::ReadAtPC(void)
 #endif
 
  cycle_counter--;
+
+#ifdef MDFN_SNES_FAUST_SKETCHYSPC700OPT
+ SPC700_IOHandler();
+ return APURAM[PC];
+#else
  return SPC700_ReadMap[PC >> 8][(uint8)PC](PC);
+#endif
 }
 
 INLINE void SPC700::IO(void)
@@ -671,25 +683,40 @@ INLINE void SPC700::Instr_Reg_DirIdx(uint8* dest, const uint8 index, gen_op op)
  (this->*op)(dest, src);
 }
 
-INLINE void SPC700::Instr_Dir_Dir(gen_op const op)
-{
- uint8 ead;
- uint8 tmp;
-
- ead = GetEAD_Dir();
- const uint8 src = ReadDP(ead);
-
- ead = GetEAD_Dir();
-
- if(op != &SPC700::Op_MOV)
-  tmp = ReadDP(ead);
-
- (this->*op)(&tmp, src);
-
- if(op == &SPC700::Op_CMP)
-  IO();
- else
-  WriteDP(ead, tmp);
+#define Instr_Dir_Dir(op)		\
+{					\
+ uint8 ead;				\
+ uint8 tmp;				\
+					\
+ ead = GetEAD_Dir();			\
+ const uint8 src = ReadDP(ead);		\
+					\
+ ead = GetEAD_Dir();			\
+					\
+ if(op != &SPC700::Op_MOV)		\
+  tmp = ReadDP(ead);			\
+					\
+ (this->*op)(&tmp, src);		\
+					\
+ if(op == &SPC700::Op_MOV)		\
+ {					\
+  if(MDFN_UNLIKELY(cycle_counter < 1))			\
+  {							\
+   const uint32 faddr = ((PSW & P_FLAG) << 3) | ead;	\
+   if((faddr & 0x1FC) == 0xF4)				\
+   {							\
+    /*printf("UTA: YAS %02x %02x\n", ead, tmp);*/	\
+    opcode_saver = (ead << 8) | (tmp << 0);		\
+    Halted = 2;						\
+    return;						\
+   }							\
+  }							\
+ }				\
+				\
+ if(op == &SPC700::Op_CMP)	\
+  IO();				\
+ else				\
+  WriteDP(ead, tmp);		\
 }
 
 INLINE void SPC700::Instr_DirIdx_Reg(const uint8 index, const uint8 src, gen_op op)
@@ -1414,13 +1441,13 @@ INLINE void SPC700::Instr_NOP(void)
 
 INLINE void SPC700::Instr_SLEEP(void)
 {
- fprintf(stderr, "[SPC700] SLEEP\n");
+ SNES_DBG("[SPC700] SLEEP @ PC=%04x\n", PC);
  Halted = true;
 }
 
 INLINE void SPC700::Instr_STOP(void)
 {
- //fprintf(stderr, "[SPC700] STOP @ PC=%04x\n", PC);
+ SNES_DBG("[SPC700] STOP @ PC=%04x\n", PC);
  Halted = true;
 }
 
@@ -1502,7 +1529,7 @@ static const uint8 CycleHackyTable_Init[256] =
  0x01, 0x01, 0x03, 0x04, 0x03, 0x04, 0x03, 0x06,  0x01, 0x04, 0x05, 0x03, 0x04, 0x01, 0x01, 0x01, 
  0x01, 0x01, 0x03, 0x04, 0x04, 0x05, 0x05, 0x06,  0x03, 0x04, 0x04, 0x04, 0x01, 0x01, 0x05, 0x01, 
  0x01, 0x01, 0x03, 0x04, 0x02, 0x03, 0x02, 0x05,  0x01, 0x03, 0x04, 0x02, 0x03, 0x01, 0x01, 0x01, 
- 0x01, 0x01, 0x03, 0x04, 0x03, 0x04, 0x04, 0x05,  0x02, 0x03, 0x04, 0x03, 0x01, 0x01, 0x01, 0x01, 
+ 0x01, 0x01, 0x03, 0x04, 0x03, 0x04, 0x04, 0x05,  0x02, 0x03, 0x02, 0x03, 0x01, 0x01, 0x01, 0x01,
 };
 static uint8 CycleHackyTable[256];
 
@@ -1512,25 +1539,38 @@ INLINE void SPC700::RunReal(void)
 
  if(MDFN_UNLIKELY(Halted))
  {
-  HaltedBalted:
-
-  while(cycle_counter > 0)
+  if(Halted & 0x2)
   {
-#ifdef MDFN_SNES_FAUST_SPC700_IPL_HLE
-   if(PC >= 0xFFC0)
-   {
-    IPL_HLE();
-    if(!Halted)
-     goto HLEExit;
-   }
-   else
-    IO();
-#else
-   IO();
-#endif
-  }
+   if(cycle_counter < 1)
+    return;
 
-  return;
+   //printf("UTA: CONT %02x %02x\n", (uint8)(opcode_saver >> 8), (uint8)(opcode_saver >> 0));
+   WriteMem((uint8)(opcode_saver >> 8), (uint8)(opcode_saver >> 0));
+   //
+   Halted = false;
+   opcode_saver = -1;
+  }
+  else
+  {
+   HaltedBalted:
+
+   while(cycle_counter > 0)
+   {
+#ifdef MDFN_SNES_FAUST_SPC700_IPL_HLE
+    if(PC >= 0xFFC0)
+    {
+     IPL_HLE();
+     if(!Halted)
+      goto HLEExit;
+    }
+    else
+     IO();
+#else
+    IO();
+#endif
+   }
+   return;
+  }
  }
 
  if(MDFN_UNLIKELY(opcode_saver >= 0))
@@ -1575,6 +1615,10 @@ INLINE void SPC700::RunReal(void)
 #endif
 
   opcode = ReadAtPC();
+#ifdef MDFN_SNES_FAUST_SKETCHYSPC700OPT
+  if(MDFN_UNLIKELY(PC >= 0xFFC0) && (Control & 0x80))
+   opcode = *(IPL + PC - 0xFFC0);
+#endif
   //bazoom = opcode;
   //fprintf(stderr, "Instr: %04x, %02x --- A=0x%02x, X=0x%02x, Y=0x%02x, PSW=0x%02x, SP=0x%02x\n", PC, opcode, A, X, Y, PSW, SP);
   PC++;

@@ -28,6 +28,8 @@
 #include <mednafen/hw_cpu/v810/v810_cpu.h>
 #include <mednafen/hw_video/huc6270/vdc.h>
 
+using namespace Mednafen;
+
 namespace MDFN_IEN_PCFX
 {
 

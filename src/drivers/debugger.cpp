@@ -1227,7 +1227,6 @@ static void MDFN_COLD SetActive(bool active, unsigned which_ms)
 
     DisAddr = GetPC();
     DisCOffs = 0xFFFFFFFF;
-    //DisAddr = (*CurGame->Debugger->RegGroups)[0]->GetRegister(/*PC*/0, NULL, 0); // FIXME
 
     Regs_Init(DIS_ENTRIES * DisFontHeight);
    }
@@ -1514,6 +1513,13 @@ void Debugger_GT_Event(const SDL_Event *event)
         	          break;
 	 case SDLK_EQUALS: Debugger_GT_ModOpacity(8);
 	                   break;
+
+/*
+	 case SDLK_DELETE:
+		DisAddr = GetPC();
+		DisCOffs = 0xFFFFFFFF;
+		break;
+*/
 
 	 case SDLK_HOME:
 		if(event->key.keysym.mod & KMOD_SHIFT)

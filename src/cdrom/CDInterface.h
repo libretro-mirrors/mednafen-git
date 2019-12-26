@@ -37,7 +37,7 @@ class CDInterface
  // Creates a multi-threaded or single-threaded CD interface object, depending
  // on the value of "image_memcache", to read the CD image at "path".
  //
- static CDInterface* Open(VirtualFS* vfs, const std::string& path, bool image_memcache);
+ static CDInterface* Open(VirtualFS* vfs, const std::string& path, bool image_memcache, const uint64 affinity);
 
  CDInterface();
  virtual ~CDInterface();

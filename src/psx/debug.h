@@ -27,7 +27,7 @@
 namespace MDFN_IEN_PSX
 {
 
-extern DebuggerInfoStruct PSX_DBGInfo;
+MDFN_HIDE extern DebuggerInfoStruct PSX_DBGInfo;
 
 bool DBG_Init(void) MDFN_COLD;
 

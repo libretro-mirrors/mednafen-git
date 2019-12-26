@@ -35,8 +35,8 @@ class CDInterface_MT : public CDInterface
 {
  public:
 
- CDInterface_MT(std::unique_ptr<CDAccess> cda);
- virtual ~CDInterface_MT();
+ CDInterface_MT(std::unique_ptr<CDAccess> cda, const uint64 affinity) MDFN_COLD;
+ virtual ~CDInterface_MT() MDFN_COLD;
 
  virtual void HintReadSector(int32 lba) override;
  virtual bool ReadRawSector(uint8 *buf, int32 lba) override;
@@ -46,6 +46,8 @@ class CDInterface_MT : public CDInterface
  int ReadThreadStart(void);
 
  private:
+
+ void Cleanup(void) MDFN_COLD;
 
  std::unique_ptr<CDAccess> disc_cdaccess;
 

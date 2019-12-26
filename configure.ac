@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='1.22.2'
-MEDNAFEN_VERSION_NUMERIC=0x00102202
+MEDNAFEN_VERSION='1.24.0-UNSTABLE'
+MEDNAFEN_VERSION_NUMERIC=0x00102400
 #                        0xJJJnnnRR
 
 AC_CANONICAL_HOST
@@ -95,6 +95,13 @@ if test x$enable_libxxx_mode = xyes; then
 	ENABLE_LIBXXX_MODE=true
 fi
 
+AC_ARG_ENABLE(dev-build,
+ AC_HELP_STRING([--enable-dev-build], [enable expensive Mednafen developer features [[default=no]]]),
+                  , enable_dev_build=no)
+
+if test x$enable_dev_build = xyes; then
+                AC_DEFINE([MDFN_ENABLE_DEV_BUILD], [1], [Define if we are compiling with expensive Mednafen developer features enabled.])
+fi
 
 dnl -fno-fast-math and -fno-unsafe-math-optimizations to make sure it's disabled, as the fast-math feature on certain older
 dnl versions of gcc produces horribly broken code(and even when it's working correctly, it can have somewhat unpredictable effects).
@@ -740,7 +747,6 @@ AM_CONDITIONAL(ARCH_X86, false)
 AM_CONDITIONAL(ARCH_X86_32, false)
 AM_CONDITIONAL(ARCH_X86_64, false)
 AM_CONDITIONAL(ARCH_POWERPC, false)
-AM_CONDITIONAL(ARCH_POWERPC_ALTIVEC, false)
 
 TRIO_CFLAGS=""
 
@@ -774,9 +780,6 @@ case "$host_cpu" in
                 	AX_CFLAGS_GCC_OPTION([-faltivec], ALTIVEC_FLAGS)
 	                AX_CFLAGS_GCC_OPTION([-maltivec], ALTIVEC_FLAGS)
 	                if test "x$ALTIVEC_FLAGS" != "x"; then
-        	                AC_DEFINE([ARCH_POWERPC_ALTIVEC], [1], [Define if we are compiling with AltiVec usage.])
-                	        AM_CONDITIONAL(ARCH_POWERPC_ALTIVEC, true)
-
 				altivec_save_CPPFLAGS="$CPPFLAGS"
 				CPPFLAGS="$CPPFLAGS $ALTIVEC_FLAGS"
 				AC_CHECK_HEADER([altivec.h],

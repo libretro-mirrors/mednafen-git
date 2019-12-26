@@ -5,6 +5,8 @@
 #include <mednafen/state.h>
 #include <mednafen/general.h>
 
+using namespace Mednafen;
+
 #include "interrupt.h"
 
 namespace MDFN_IEN_WSWAN

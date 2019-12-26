@@ -16,8 +16,10 @@
  */
 
 #include "../sexyal.h"
-
 #include <mednafen/Time.h>
+
+namespace Mednafen
+{
 
 typedef struct
 {
@@ -176,3 +178,4 @@ SexyAL_device *SexyALI_Dummy_Open(const char *id, SexyAL_format *format, SexyAL_
  return(device);
 }
 
+}

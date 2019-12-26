@@ -2,7 +2,7 @@
 /* Mednafen Apple II Emulation Module                                         */
 /******************************************************************************/
 /* video.inc:
-**  Copyright (C) 2018 Mednafen Team
+**  Copyright (C) 2018-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -58,8 +58,14 @@ namespace Video
 
 enum { ColorLUT_NumPixels = 13 };
 static uint32 ColorLUT[2][4][1U << ColorLUT_NumPixels];
+static uint32 RGBLUT[16 * 2];
 static MDFN_PixelFormat format;
 static bool EnableMixedTextMonoHack;
+
+static void (*BlitLineBitBuffer)(uint32* target);
+template<bool tfr> static void BlitLineBitBuffer_RGB_Alt(uint32* target);
+template<bool tfr> static void BlitLineBitBuffer_RGB(uint32* target);
+static void BlitLineBitBuffer_Composite(uint32* target);
 
 struct Settings
 {
@@ -73,6 +79,18 @@ struct Settings
 
  int mono_lumafilter = 5;
  int color_lumafilter = -3;
+
+ enum
+ {
+  MODE_COMPOSITE = 0,
+  MODE_RGB,
+  MODE_RGB_TFR,
+
+  MODE_RGB_ALT,
+  MODE_RGB_ALT_TFR
+ };
+
+ unsigned mode = MODE_COMPOSITE;
 
  enum
  {
@@ -97,245 +115,6 @@ struct Settings
  float custom_matrix[3][2];
 };
 
-static const float matrixes[Settings::MATRIX_CUSTOM][3][2] =
-{
- //
- // Mednafen
- //
- {
-  {  1.348808,  0.504299 }, // (102.5° *  1.440) + (237.7° *  0.000) + (0.0° *  0.000),
-  { -0.242363, -0.526935 }, // (102.5° *  0.000) + (237.7° *  0.580) + (0.0° *  0.000),
-  { -1.089278,  1.677341 }, // (102.5° *  0.000) + (237.7° *  0.000) + (0.0° *  2.000),
- },
-
- //
- // LA7620
- //
- {
-  {  1.701933,  0.586023 }, // (104.0° *  1.800) + (238.0° *  0.000) + (0.0° *  0.000),
-  { -0.253571, -0.543785 }, // (104.0° *  0.000) + (238.0° *  0.600) + (0.0° *  0.000),
-  { -1.089278,  1.677341 }, // (104.0° *  0.000) + (238.0° *  0.000) + (0.0° *  2.000),
- },
-
- //
- // CXA2025 Japan
- //
- {
-  {  1.377398,  0.732376 }, // (95.0° *  1.560) + (240.0° *  0.000) + (0.0° *  0.000),
-  { -0.272394, -0.534604 }, // (95.0° *  0.000) + (240.0° *  0.600) + (0.0° *  0.000),
-  { -1.089278,  1.677341 }, // (95.0° *  0.000) + (240.0° *  0.000) + (0.0° *  2.000),
- },
-
- //
- // CXA2025 USA
- //
- {
-  {  1.629501,  0.316743 }, // (112.0° *  1.660) + (252.0° *  0.000) + (0.0° *  0.000),
-  { -0.377592, -0.466288 }, // (112.0° *  0.000) + (252.0° *  0.600) + (0.0° *  0.000),
-  { -1.089278,  1.677341 }, // (112.0° *  0.000) + (252.0° *  0.000) + (0.0° *  2.000),
- },
-
- //
- // CXA2060 Japan
- //
- {
-  {  1.377398,  0.732376 }, // (95.0° *  1.560) + (236.0° *  0.000) + (0.0° *  0.000),
-  { -0.257883, -0.607533 }, // (95.0° *  0.000) + (236.0° *  0.660) + (0.0° *  0.000),
-  { -1.089278,  1.677341 }, // (95.0° *  0.000) + (236.0° *  0.000) + (0.0° *  2.000),
- },
-
- //
- // CXA2060 USA
- //
- {
-  {  1.456385,  0.559054 }, // (102.0° *  1.560) + (236.0° *  0.000) + (0.0° *  0.000),
-  { -0.234439, -0.552303 }, // (102.0° *  0.000) + (236.0° *  0.600) + (0.0° *  0.000),
-  { -1.089278,  1.677341 }, // (102.0° *  0.000) + (236.0° *  0.000) + (0.0° *  2.000),
- },
-
- //
- // CXA2095 Japan
- //
- {
-  {  1.059537,  0.563366 }, // (95.0° *  1.200) + (236.0° *  0.000) + (0.0° *  0.000),
-  { -0.257883, -0.607533 }, // (95.0° *  0.000) + (236.0° *  0.660) + (0.0° *  0.000),
-  { -1.089278,  1.677341 }, // (95.0° *  0.000) + (236.0° *  0.000) + (0.0° *  2.000),
- },
-
- //
- // CXA2095 USA
- //
- {
-  {  1.483648,  0.482066 }, // (105.0° *  1.560) + (236.0° *  0.000) + (0.0° *  0.000),
-  { -0.257883, -0.607533 }, // (105.0° *  0.000) + (236.0° *  0.660) + (0.0° *  0.000),
-  { -1.089278,  1.677341 }, // (105.0° *  0.000) + (236.0° *  0.000) + (0.0° *  2.000),
- },
-};
-
-// tint, saturation, -1.0 to 1.0
-static INLINE void SetFormat(const MDFN_PixelFormat& f, const Settings& s)
-{
- format = f;
- EnableMixedTextMonoHack = s.mixed_text_mono;
- //
- //
- const float (&d)[3][2] = (s.matrix == Settings::MATRIX_CUSTOM) ? s.custom_matrix : matrixes[s.matrix];
- float demod_tab[2][4];
-
- for(unsigned cd_i = 0; cd_i < 2; cd_i++)
- {
-  static const float angles[2] = { 123.0, 33.0 };
-
-  for(int x = 0; x < 4; x++)
-  {
-   demod_tab[cd_i][x] = sin(((x / 4.0) - s.hue / 8.0 + angles[cd_i] / 360.0) * (M_PI * 2.0));
-   //printf("%d, %d, %f\n", cd_i, x, demod_tab[cd_i][x]);
-  }
- }
-
-
- for(unsigned cbp = 0; cbp < 2; cbp++)
- {
-  static const float coeffs[11][ColorLUT_NumPixels] =
-  {
-   /* -3 */ {  0.00172554, -0.00760881, -0.03068241, -0.01602947,  0.09901781,  0.27344111,  0.36027244,  0.27344111,  0.09901781, -0.01602947, -0.03068241, -0.00760881,  0.00172554, }, /* 1.000000 */
-   /* -2 */ { -0.00085195, -0.00688802, -0.00964609,  0.02346799,  0.11669260,  0.23333631,  0.28777829,  0.23333631,  0.11669260,  0.02346799, -0.00964609, -0.00688802, -0.00085195, }, /* 1.000000 */
-   /* -1 */ { -0.00666994, -0.01931400, -0.01700092,  0.03131011,  0.13104562,  0.23818615,  0.28488591,  0.23818615,  0.13104562,  0.03131011, -0.01700092, -0.01931400, -0.00666994, }, /* 1.000000 */
-   /*  0 */ {  0.00000000,  0.00535462,  0.02579365,  0.06746032,  0.12500000,  0.17718506,  0.19841270,  0.17718506,  0.12500000,  0.06746032,  0.02579365,  0.00535462,  0.00000000, }, /* 1.000000 */
-   /*  1 */ {  0.00000000,  0.00000000,  0.00957449,  0.04780242,  0.12137789,  0.20219758,  0.23809524,  0.20219758,  0.12137789,  0.04780242,  0.00957449,  0.00000000,  0.00000000, }, /* 1.000000 */
-   /*  2 */ {  0.00000000,  0.00000000,  0.00000000,  0.01977578,  0.10119048,  0.23022422,  0.29761904,  0.23022422,  0.10119048,  0.01977578,  0.00000000,  0.00000000,  0.00000000, }, /* 1.000000 */
-   /*  3 */ {  0.00000000,  0.00000000,  0.00000000,  0.01464626,  0.08312087,  0.23555925,  0.33334723,  0.23555925,  0.08312087,  0.01464626,  0.00000000,  0.00000000,  0.00000000, }, /* 1.000000 */
-   /*  4 */ {  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.05158730,  0.25000000,  0.39682540,  0.25000000,  0.05158730,  0.00000000,  0.00000000,  0.00000000,  0.00000000, }, /* 1.000000 */
-   /*  5 */ {  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.25000000,  0.50000000,  0.25000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000, }, /* 1.000000 */
-   /*  6 */ {  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.16666667,  0.66666669,  0.16666667,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000, }, /* 1.000000 */
-   /*  7 */ {  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  1.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000, }, /* 1.000000 */
-  };
-  const bool mono_mode = !cbp || s.force_mono;
-  static const float colordiff_coeffs[ColorLUT_NumPixels] = {  0.00329843,  0.01538324,  0.04024864,  0.07809234,  0.12141892,  0.15652442,  0.17006803,  0.15652442,  0.12141892,  0.07809234,  0.04024864,  0.01538324,  0.00329843  };
-  const float (&luma_coeffs)[ColorLUT_NumPixels] = coeffs[3 + (mono_mode ? s.mono_lumafilter : s.color_lumafilter)];
-
-#if 0
-  for(unsigned ci = 0; ci < 11; ci++)
-  {
-   float sum = 0;
-
-   printf("   /* % d */ { ", (int)ci - 3);
-
-   for(unsigned i = 0; i < ColorLUT_NumPixels; i++)
-   {
-    assert(coeffs[ci][i] == coeffs[ci][ColorLUT_NumPixels - 1 - i]);
-    sum += coeffs[ci][i];
-    printf("% .8f, ", coeffs[ci][i]);
-   }
-
-   printf("}, /* %f */\n", sum);
-  }
-#endif
-
-  for(unsigned phase = 0; phase < 4; phase++)
-  {
-   for(unsigned color = 0; color < (1U << ColorLUT_NumPixels); color++)
-   {
-    float y = 0;
-    float color_diff[2] = { 0, 0 };
-
-    for(unsigned i = 0; i < ColorLUT_NumPixels; i++)
-     y += luma_coeffs[i] * ((color >> i) & 1);
-
-    y = y * ((s.contrast * 0.50) + 1.0) + (s.brightness * 0.50);
-
-    for(unsigned cd_i = 0; cd_i < 2; cd_i++)
-    {
-     for(unsigned i = 0; i < ColorLUT_NumPixels; i++)
-     {
-      float chroma = ((color >> i) & 1);
-
-      color_diff[cd_i] += colordiff_coeffs[i] * demod_tab[cd_i][(i + phase) & 3] * chroma;
-     }
-     color_diff[cd_i] *= 1.0 + s.saturation;
-
-     if(mono_mode)
-      color_diff[cd_i] = 0;
-    }
-
-    unsigned rgb_cc[3];
-
-    for(unsigned cc_i = 0; cc_i < 3; cc_i++)
-    {
-     float eff_y = y * (s.force_mono ? (((s.force_mono >> ((2 - cc_i) << 3)) & 0xFF) / 255.0) : 1.0);
-     float t = std::max<float>(0.0, eff_y + d[cc_i][0] * color_diff[0] + d[cc_i][1] * color_diff[1]);
-
-     //t = pow(t, d.power);
-
-     //if(t > 1.10)
-     // printf("phase=%d color=0x%08x cc_i=%u t=%f\n", phase, color, cc_i, t);
-
-     rgb_cc[cc_i] = std::min<int>(1016, std::max<int>(0, floor(0.5 + 1016 * t)));
-    }
-
-    //printf("color 0x%01x: y=%f pb=%.13f pr=%.13f --- %3u %3u %3u\n", color, ySL2 / 4.0, pbSL6 / 64.0, prSL6 / 64.0, r, g, b);
-
-    ColorLUT[cbp][phase][color] = (rgb_cc[0] << 0) + (rgb_cc[1] << 10) + (rgb_cc[2] << 20);
-   }
-  }
- }
-
- if(s.color_smooth && !s.force_mono)
- { 
-  uint32 SmoothLUT[4][16];
-
-  for(unsigned phase = 0; phase < 4; phase++)
-  {
-   for(unsigned color = 0; color < 16; color++)
-   {
-    float r = 0;
-    float g = 0;
-    float b = 0;
-    int r_p, g_p, b_p;
-
-    for(unsigned i = 0; i < 4; i++)
-    {
-     unsigned pattern = (color | (color << 4) | (color << 8) | (color << 12) | (color << 16)) >> (4 + i - phase);
-     uint32 cle = ColorLUT[1][(i) & 3][pattern & 0x1FFF];
-
-     r_p = (cle >> 0) & 0x3FF;
-     g_p = (cle >> 10) & 0x3FF;
-     b_p = (cle >> 20) & 0x3FF;
-
-     r += pow(r_p / 1016.0, 2.2);
-     g += pow(g_p / 1016.0, 2.2);
-     b += pow(b_p / 1016.0, 2.2);
-    }
-
-    r /= 4;
-    g /= 4;
-    b /= 4;
-
-    r_p = std::min<int>(1016, floor(0.5 + 1016 * pow(r, 1.0 / 2.2)));
-    g_p = std::min<int>(1016, floor(0.5 + 1016 * pow(g, 1.0 / 2.2)));
-    b_p = std::min<int>(1016, floor(0.5 + 1016 * pow(b, 1.0 / 2.2)));
-
-    //printf("Phase: %d, Color: %d - 0x%02x 0x%02x 0x%02x\n", phase, color, r_p, g_p, b_p);
-
-    SmoothLUT[phase][color] = (r_p << 0) + (g_p << 10) + (b_p << 20);
-   }
-  }
-
-  for(unsigned phase = 0; phase < 4; phase++)
-  {
-   for(unsigned color = 0; color < (1U << ColorLUT_NumPixels); color++)
-   {
-    const unsigned c0 = (color >> 0) & 0x1F;
-    const unsigned c1 = (color >> 4) & 0x1F;
-    const unsigned c2 = (color >> 8) & 0x1F;
-
-    if(c1 == c0 || c1 == c2 || (((color >> 2) & 0x7) == ((color >> 6) & 0x7) && ((color >> 3) & 0x7) == ((color >> 7) & 0x7)))
-     ColorLUT[1][phase][color] = SmoothLUT[phase][c1 & 0xF];
-   }
-  }
- }
-}
-
 /*
  text/lores
   page1: 0x0400-0x07FF
@@ -353,7 +132,9 @@ static INLINE void SetFormat(const MDFN_PixelFormat& f, const Settings& s)
 
 static uint8 linebuffer[(560 + 24) / 8 + 4] = { 0 };
 static MDFN_Surface* surface;
+static MDFN_Rect surface_dr;
 static bool colorburst_present;
+static bool rgb_hires_latch;
 static uint32 HCounter, VCounter;
 static bool flashything;
 static int32 flashycounter;
@@ -370,7 +151,211 @@ static void Power(void)
  NoiseLCG = 0;
 }
 
-static NO_INLINE void BlitLineBitBuffer_Composite(uint32* target)
+template<bool tfr>
+static void BlitLineBitBuffer_RGB_Alt(uint32* target)
+{
+ uint32 pdata = 0;
+
+ if(!colorburst_present)
+ {
+  for(int x = 0; x < 584; x++)
+  {
+   pdata |= ((linebuffer[x >> 3] >> (x & 0x7)) & 1) << 12;
+   //
+   const bool C = (pdata & 1);
+   target[x] = RGBLUT[C ? 15 : 0];
+   //
+   pdata >>= 1;
+  }
+ }
+ else if(!rgb_hires_latch)
+ {
+  unsigned pat = 0;
+  unsigned dc = 1;
+
+  for(int x = 0; x < 584; x++)
+  {
+   unsigned phase = x & 3;
+   bool nb = ((linebuffer[x >> 3] >> (x & 0x7)) & 1);
+
+   pdata |= nb << 12;
+   //
+   dc++;
+   if(dc == 14)
+   {
+    pat = (pdata >> 0) & 0xF;
+    pat = ((pat << phase) | (pat >> (4 - phase))) & 0xF;
+    dc = 0;
+   }
+
+   target[x] = RGBLUT[pat];
+   //
+   pdata >>= 1;
+  }
+ }
+ else
+ {
+  unsigned pat = 0;
+  unsigned bw = 0;
+  unsigned cpd = 0;
+  unsigned dc = 0;
+  unsigned halve = 0;
+
+  for(int x = 0; x < 584; x++)
+  {
+   unsigned phase = x & 3;
+   bool nb = ((linebuffer[x >> 3] >> (x & 0x7)) & 1);
+
+   pdata |= nb << 12;
+   //
+   if((pdata & 0x1FC) == 0x070)
+    bw |= 0x070;
+
+   if((pdata & 0xF00) == 0xF00)
+    bw |= 0xF00;
+
+   if((pdata & 0xF00) == 0x000)
+    bw |= 0xF00;
+
+   if(tfr)
+   {
+    if((pdata & 0xF3C) == 0xF3C)
+     halve |= 0xC0; //bw |= 0xFFC;
+
+    if((pdata & 0xF1E) == 0xF1E)
+     halve |= 0xE0; //bw |= 0xFFE;
+   }
+
+   if((pdata & 0xF00) == 0x300) // && !(pdata & 0x400))
+    dc = 0;
+   else
+    dc = (dc + 1) & 1;
+
+   if(!dc)
+   {
+    cpd = (pdata >> 0) & 0xF;
+    cpd = ((cpd << phase) | (cpd >> (4 - phase))) & 0xF;
+   }
+
+   if(bw & 0x01)
+    pat = (pdata & 0x01) ? 15 : 0;
+   else if(tfr)
+    pat = ((halve & 0x1) << 4) + cpd;
+   else if(1)
+   {
+    //pat = (pdata >> (ps & 1)) & 0xF;
+    //pat = ((pat << phase) | (pat >> (4 - phase))) & 0xF;
+    pat = cpd;
+   }
+
+   target[x] = RGBLUT[pat];
+   //
+   pdata >>= 1;
+   bw >>= 1;
+   if(tfr)
+    halve >>= 1;
+  }
+ }
+}
+
+template<bool tfr>
+static void BlitLineBitBuffer_RGB(uint32* target)
+{
+ for(int i = 0; i < 6; i++)
+  *(target++) = RGBLUT[0];
+
+ if(!colorburst_present)
+ {
+  for(int x = 0; x < 560; x += 2)
+  {
+   const bool C = (linebuffer[x >> 3] >> (x & 0x7)) & 1;
+   target[x >> 1] = RGBLUT[C ? 15 : 0];
+  }
+  target += 560;
+ }
+ else if(!rgb_hires_latch)
+ {
+  for(int x = 0; x < 560; x += 14)
+  {
+   unsigned pat = (MDFN_de32lsb(&linebuffer[x >> 3]) >> (x & 0x7)) & 0xF;
+   unsigned phase = x & 3;
+   uint32 pix;
+
+   pat = ((pat << phase) | (pat >> (4 - phase))) & 0xF;
+   pix = RGBLUT[pat];
+
+   for(int sx = 0; sx < 7; sx++)
+    target[(x >> 1) + sx] = pix;
+  }
+  target += 560;
+ }
+ else
+ {
+  uint32 pdata = 0;
+  uint32 pshift = 0;
+  uint32 bw = 0;
+  uint32 cpd = 0;
+  uint32 halve = 0;
+
+  for(int x = 0; x < 560 + 14; x += 14)
+  {
+   uint32 tmp = MDFN_de32lsb(&linebuffer[x >> 3]) >> (x & 0x7);
+
+   if((tmp ^ (tmp >> 1)) & 0x1555)
+   {
+    tmp = ((tmp >> 1) & 0x1FFF) | (tmp & 0x2000);
+    pshift |= 0x3FFF << 14;
+   }
+   pdata |= (tmp & 0x3FFF) << 14;
+
+   for(int sx = 0; sx < 14; sx += 2)
+   {
+    uint32 pat;
+
+    if((pdata & 0xF00) == 0xF00)
+     bw |= 0xF00;
+
+    if((pdata & 0xF00) == 0x000)
+     bw |= 0xF00;
+
+    if(tfr)
+    {
+     if((pdata & 0xF3C) == 0xF3C)
+      halve |= 0xC0;
+    }
+
+    if(!(sx & 0x3))
+    {
+     unsigned shift = ((x & 2) ^ 2) + (pshift & 1);
+     cpd = pdata & 0xF;
+     cpd = ((cpd << shift) | (cpd >> (4 - shift))) & 0xF;
+    }
+
+    if(bw & 1)
+     pat = (pdata & 0x1) ? 0xF : 0x0;
+    else if(tfr)
+     pat = ((halve & 0x1) << 4) + cpd;
+    else
+     pat = cpd;
+
+    *target = RGBLUT[pat];
+    //
+    if(x >= 14)
+     target++;
+    bw >>= 2;
+    pdata >>= 2;
+    pshift >>= 2;
+    if(tfr)
+     halve >>= 2;
+   }
+  }
+ }
+
+ for(int i = 0; i < 6; i++)
+  *(target++) = RGBLUT[0];
+}
+
+static void BlitLineBitBuffer_Composite(uint32* target)
 {
  uint32 pdata = 0;
  const unsigned nb_pos = (ColorLUT_NumPixels - 1) + (12 - (ColorLUT_NumPixels / 2));
@@ -561,7 +546,7 @@ static NO_INLINE void Tick(void)
    }
 #endif
 
-   BlitLineBitBuffer_Composite(surface->pixels + vis_vc * surface->pitchinpix);
+   BlitLineBitBuffer(surface->pixels + vis_vc * surface->pitchinpix);
   }
   //
   VCounter = (VCounter + 1) & 0x1FF;
@@ -585,6 +570,8 @@ static NO_INLINE void Tick(void)
 
   if(text && EnableMixedTextMonoHack)
    colorburst_present = false;
+
+  rgb_hires_latch = hires && !text;
  }
 
  if(flashycounter <= 0)
@@ -670,6 +657,337 @@ static INLINE void Init(void)
 static INLINE void Kill(void)
 {
 
+}
+
+static const float matrixes[Settings::MATRIX_CUSTOM][3][2] =
+{
+ //
+ // Mednafen
+ //
+ {
+  {  1.348808,  0.504299 }, // (102.5° *  1.440) + (237.7° *  0.000) + (0.0° *  0.000),
+  { -0.242363, -0.526935 }, // (102.5° *  0.000) + (237.7° *  0.580) + (0.0° *  0.000),
+  { -1.089278,  1.677341 }, // (102.5° *  0.000) + (237.7° *  0.000) + (0.0° *  2.000),
+ },
+
+ //
+ // LA7620
+ //
+ {
+  {  1.701933,  0.586023 }, // (104.0° *  1.800) + (238.0° *  0.000) + (0.0° *  0.000),
+  { -0.253571, -0.543785 }, // (104.0° *  0.000) + (238.0° *  0.600) + (0.0° *  0.000),
+  { -1.089278,  1.677341 }, // (104.0° *  0.000) + (238.0° *  0.000) + (0.0° *  2.000),
+ },
+
+ //
+ // CXA2025 Japan
+ //
+ {
+  {  1.377398,  0.732376 }, // (95.0° *  1.560) + (240.0° *  0.000) + (0.0° *  0.000),
+  { -0.272394, -0.534604 }, // (95.0° *  0.000) + (240.0° *  0.600) + (0.0° *  0.000),
+  { -1.089278,  1.677341 }, // (95.0° *  0.000) + (240.0° *  0.000) + (0.0° *  2.000),
+ },
+
+ //
+ // CXA2025 USA
+ //
+ {
+  {  1.629501,  0.316743 }, // (112.0° *  1.660) + (252.0° *  0.000) + (0.0° *  0.000),
+  { -0.377592, -0.466288 }, // (112.0° *  0.000) + (252.0° *  0.600) + (0.0° *  0.000),
+  { -1.089278,  1.677341 }, // (112.0° *  0.000) + (252.0° *  0.000) + (0.0° *  2.000),
+ },
+
+ //
+ // CXA2060 Japan
+ //
+ {
+  {  1.377398,  0.732376 }, // (95.0° *  1.560) + (236.0° *  0.000) + (0.0° *  0.000),
+  { -0.257883, -0.607533 }, // (95.0° *  0.000) + (236.0° *  0.660) + (0.0° *  0.000),
+  { -1.089278,  1.677341 }, // (95.0° *  0.000) + (236.0° *  0.000) + (0.0° *  2.000),
+ },
+
+ //
+ // CXA2060 USA
+ //
+ {
+  {  1.456385,  0.559054 }, // (102.0° *  1.560) + (236.0° *  0.000) + (0.0° *  0.000),
+  { -0.234439, -0.552303 }, // (102.0° *  0.000) + (236.0° *  0.600) + (0.0° *  0.000),
+  { -1.089278,  1.677341 }, // (102.0° *  0.000) + (236.0° *  0.000) + (0.0° *  2.000),
+ },
+
+ //
+ // CXA2095 Japan
+ //
+ {
+  {  1.059537,  0.563366 }, // (95.0° *  1.200) + (236.0° *  0.000) + (0.0° *  0.000),
+  { -0.257883, -0.607533 }, // (95.0° *  0.000) + (236.0° *  0.660) + (0.0° *  0.000),
+  { -1.089278,  1.677341 }, // (95.0° *  0.000) + (236.0° *  0.000) + (0.0° *  2.000),
+ },
+
+ //
+ // CXA2095 USA
+ //
+ {
+  {  1.483648,  0.482066 }, // (105.0° *  1.560) + (236.0° *  0.000) + (0.0° *  0.000),
+  { -0.257883, -0.607533 }, // (105.0° *  0.000) + (236.0° *  0.660) + (0.0° *  0.000),
+  { -1.089278,  1.677341 }, // (105.0° *  0.000) + (236.0° *  0.000) + (0.0° *  2.000),
+ },
+};
+
+// tint, saturation, -1.0 to 1.0
+static INLINE void SetFormat(const MDFN_PixelFormat& f, const Settings& s, uint8* CustomPalette, uint32 CustomPaletteNumEntries)
+{
+ int mode = s.mode;
+
+ if(CustomPalette && CustomPaletteNumEntries)
+ {
+  if(mode == Settings::MODE_COMPOSITE)
+   mode = (CustomPaletteNumEntries == 32) ? Settings::MODE_RGB_TFR : Settings::MODE_RGB;
+  else if(mode == Settings::MODE_RGB && CustomPaletteNumEntries == 32)
+   mode = Settings::MODE_RGB_TFR;
+  else if(mode == Settings::MODE_RGB_ALT && CustomPaletteNumEntries == 32)
+   mode = Settings::MODE_RGB_ALT_TFR;
+ }
+ //
+ //
+ format = f;
+ EnableMixedTextMonoHack = (mode != Settings::MODE_COMPOSITE) ? true : s.mixed_text_mono;
+ //
+ //
+ surface_dr.x = 0;
+ surface_dr.y = 0;
+ surface_dr.w = (560 + 12*2) >> (mode == Settings::MODE_RGB || mode == Settings::MODE_RGB_TFR); 
+ surface_dr.h = 192;
+ //
+ //
+ //
+ if(mode == Settings::MODE_COMPOSITE)
+  BlitLineBitBuffer = BlitLineBitBuffer_Composite;
+ else
+ {
+  if(mode == Settings::MODE_RGB_ALT_TFR)
+   BlitLineBitBuffer = BlitLineBitBuffer_RGB_Alt<true>;
+  else if(mode == Settings::MODE_RGB_ALT)
+   BlitLineBitBuffer = BlitLineBitBuffer_RGB_Alt<false>;
+  else if(mode == Settings::MODE_RGB_TFR)
+   BlitLineBitBuffer = BlitLineBitBuffer_RGB<true>;
+  else if(mode == Settings::MODE_RGB)
+   BlitLineBitBuffer = BlitLineBitBuffer_RGB<false>;
+
+  if(CustomPalette && (CustomPaletteNumEntries == 16 || CustomPaletteNumEntries == 32))
+  {
+   for(unsigned i = 0; i < 16; i++)
+   {
+    RGBLUT[i] = format.MakeColor(CustomPalette[i * 3 + 0], CustomPalette[i * 3 + 1], CustomPalette[i * 3 + 2]);
+    //
+    uint32 tfr_pix = format.MakeColor(CustomPalette[i * 3 + 0] * 3 / 4, CustomPalette[i * 3 + 1] * 3 / 4, CustomPalette[i * 3 + 2] * 3 / 4);
+
+    if(CustomPaletteNumEntries == 32)
+     tfr_pix = format.MakeColor(CustomPalette[(16 + i) * 3 + 0], CustomPalette[(16 + i ) * 3 + 1], CustomPalette[(16 + i) * 3 + 2]);
+
+    RGBLUT[16 + i] = tfr_pix;
+   }
+
+   return;
+  }
+ }
+ //
+ //
+ //
+ const uint32 force_mono = (mode != Settings::MODE_COMPOSITE) ? 0 : s.force_mono;
+ const float (&d)[3][2] = *((s.matrix == Settings::MATRIX_CUSTOM) ? &s.custom_matrix : &matrixes[s.matrix]);
+ float demod_tab[2][4];
+
+ for(unsigned cd_i = 0; cd_i < 2; cd_i++)
+ {
+  static const float angles[2] = { 123.0, 33.0 };
+
+  for(int x = 0; x < 4; x++)
+  {
+   demod_tab[cd_i][x] = sin(((x / 4.0) - s.hue / 8.0 + angles[cd_i] / 360.0) * (M_PI * 2.0));
+   //printf("%d, %d, %f\n", cd_i, x, demod_tab[cd_i][x]);
+  }
+ }
+
+
+ for(unsigned cbp = 0; cbp < 2; cbp++)
+ {
+  static const float coeffs[11][ColorLUT_NumPixels] =
+  {
+   /* -3 */ {  0.00172554, -0.00760881, -0.03068241, -0.01602947,  0.09901781,  0.27344111,  0.36027244,  0.27344111,  0.09901781, -0.01602947, -0.03068241, -0.00760881,  0.00172554, }, /* 1.000000 */
+   /* -2 */ { -0.00085195, -0.00688802, -0.00964609,  0.02346799,  0.11669260,  0.23333631,  0.28777829,  0.23333631,  0.11669260,  0.02346799, -0.00964609, -0.00688802, -0.00085195, }, /* 1.000000 */
+   /* -1 */ { -0.00666994, -0.01931400, -0.01700092,  0.03131011,  0.13104562,  0.23818615,  0.28488591,  0.23818615,  0.13104562,  0.03131011, -0.01700092, -0.01931400, -0.00666994, }, /* 1.000000 */
+   /*  0 */ {  0.00000000,  0.00535462,  0.02579365,  0.06746032,  0.12500000,  0.17718506,  0.19841270,  0.17718506,  0.12500000,  0.06746032,  0.02579365,  0.00535462,  0.00000000, }, /* 1.000000 */
+   /*  1 */ {  0.00000000,  0.00000000,  0.00957449,  0.04780242,  0.12137789,  0.20219758,  0.23809524,  0.20219758,  0.12137789,  0.04780242,  0.00957449,  0.00000000,  0.00000000, }, /* 1.000000 */
+   /*  2 */ {  0.00000000,  0.00000000,  0.00000000,  0.01977578,  0.10119048,  0.23022422,  0.29761904,  0.23022422,  0.10119048,  0.01977578,  0.00000000,  0.00000000,  0.00000000, }, /* 1.000000 */
+   /*  3 */ {  0.00000000,  0.00000000,  0.00000000,  0.01464626,  0.08312087,  0.23555925,  0.33334723,  0.23555925,  0.08312087,  0.01464626,  0.00000000,  0.00000000,  0.00000000, }, /* 1.000000 */
+   /*  4 */ {  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.05158730,  0.25000000,  0.39682540,  0.25000000,  0.05158730,  0.00000000,  0.00000000,  0.00000000,  0.00000000, }, /* 1.000000 */
+   /*  5 */ {  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.25000000,  0.50000000,  0.25000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000, }, /* 1.000000 */
+   /*  6 */ {  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.16666667,  0.66666669,  0.16666667,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000, }, /* 1.000000 */
+   /*  7 */ {  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  1.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000,  0.00000000, }, /* 1.000000 */
+  };
+  const bool mono_mode = !cbp || force_mono;
+  static const float colordiff_coeffs[ColorLUT_NumPixels] = {  0.00329843,  0.01538324,  0.04024864,  0.07809234,  0.12141892,  0.15652442,  0.17006803,  0.15652442,  0.12141892,  0.07809234,  0.04024864,  0.01538324,  0.00329843  };
+  const float (&luma_coeffs)[ColorLUT_NumPixels] = coeffs[3 + (mono_mode ? s.mono_lumafilter : s.color_lumafilter)];
+
+#if 0
+  for(unsigned ci = 0; ci < 11; ci++)
+  {
+   float sum = 0;
+
+   printf("   /* % d */ { ", (int)ci - 3);
+
+   for(unsigned i = 0; i < ColorLUT_NumPixels; i++)
+   {
+    assert(coeffs[ci][i] == coeffs[ci][ColorLUT_NumPixels - 1 - i]);
+    sum += coeffs[ci][i];
+    printf("% .8f, ", coeffs[ci][i]);
+   }
+
+   printf("}, /* %f */\n", sum);
+  }
+#endif
+
+  for(unsigned phase = 0; phase < 4; phase++)
+  {
+   for(unsigned color = 0; color < (1U << ColorLUT_NumPixels); color++)
+   {
+    float y = 0;
+    float color_diff[2] = { 0, 0 };
+
+    for(unsigned i = 0; i < ColorLUT_NumPixels; i++)
+     y += luma_coeffs[i] * ((color >> i) & 1);
+
+    y = y * ((s.contrast * 0.50) + 1.0) + (s.brightness * 0.50);
+
+    for(unsigned cd_i = 0; cd_i < 2; cd_i++)
+    {
+     for(unsigned i = 0; i < ColorLUT_NumPixels; i++)
+     {
+      float chroma = ((color >> i) & 1);
+
+      color_diff[cd_i] += colordiff_coeffs[i] * demod_tab[cd_i][(i + phase) & 3] * chroma;
+     }
+     color_diff[cd_i] *= 1.0 + s.saturation;
+
+     if(mono_mode)
+      color_diff[cd_i] = 0;
+    }
+
+    unsigned rgb_cc[3];
+
+    for(unsigned cc_i = 0; cc_i < 3; cc_i++)
+    {
+     float eff_y = y * (force_mono ? (((force_mono >> ((2 - cc_i) << 3)) & 0xFF) / 255.0) : 1.0);
+     float t = std::max<float>(0.0, eff_y + d[cc_i][0] * color_diff[0] + d[cc_i][1] * color_diff[1]);
+
+     //t = pow(t, d.power);
+
+     //if(t > 1.10)
+     // printf("phase=%d color=0x%08x cc_i=%u t=%f\n", phase, color, cc_i, t);
+
+     rgb_cc[cc_i] = std::min<int>(1016, std::max<int>(0, floor(0.5 + 1016 * t)));
+    }
+
+    //printf("color 0x%01x: y=%f pb=%.13f pr=%.13f --- %3u %3u %3u\n", color, ySL2 / 4.0, pbSL6 / 64.0, prSL6 / 64.0, r, g, b);
+
+    ColorLUT[cbp][phase][color] = (rgb_cc[0] << 0) + (rgb_cc[1] << 10) + (rgb_cc[2] << 20);
+   }
+  }
+ }
+
+ if(s.color_smooth && !force_mono)
+ { 
+  uint32 SmoothLUT[4][16];
+
+  for(unsigned phase = 0; phase < 4; phase++)
+  {
+   for(unsigned color = 0; color < 16; color++)
+   {
+    float r = 0;
+    float g = 0;
+    float b = 0;
+    int r_p, g_p, b_p;
+
+    for(unsigned i = 0; i < 4; i++)
+    {
+     unsigned pattern = (color | (color << 4) | (color << 8) | (color << 12) | (color << 16)) >> (4 + i - phase);
+     uint32 cle = ColorLUT[1][(i) & 3][pattern & 0x1FFF];
+
+     r_p = (cle >> 0) & 0x3FF;
+     g_p = (cle >> 10) & 0x3FF;
+     b_p = (cle >> 20) & 0x3FF;
+
+     r += pow(r_p / 1016.0, 2.2);
+     g += pow(g_p / 1016.0, 2.2);
+     b += pow(b_p / 1016.0, 2.2);
+    }
+
+    r /= 4;
+    g /= 4;
+    b /= 4;
+
+    r_p = std::min<int>(1016, floor(0.5 + 1016 * pow(r, 1.0 / 2.2)));
+    g_p = std::min<int>(1016, floor(0.5 + 1016 * pow(g, 1.0 / 2.2)));
+    b_p = std::min<int>(1016, floor(0.5 + 1016 * pow(b, 1.0 / 2.2)));
+
+    //printf("Phase: %d, Color: %d - 0x%02x 0x%02x 0x%02x\n", phase, color, r_p, g_p, b_p);
+
+    SmoothLUT[phase][color] = (r_p << 0) + (g_p << 10) + (b_p << 20);
+   }
+  }
+
+  for(unsigned phase = 0; phase < 4; phase++)
+  {
+   for(unsigned color = 0; color < (1U << ColorLUT_NumPixels); color++)
+   {
+    const unsigned c0 = (color >> 0) & 0x1F;
+    const unsigned c1 = (color >> 4) & 0x1F;
+    const unsigned c2 = (color >> 8) & 0x1F;
+
+    if(c1 == c0 || c1 == c2 || (((color >> 2) & 0x7) == ((color >> 6) & 0x7) && ((color >> 3) & 0x7) == ((color >> 7) & 0x7)))
+     ColorLUT[1][phase][color] = SmoothLUT[phase][c1 & 0xF];
+   }
+  }
+ }
+
+ if(mode != Settings::MODE_COMPOSITE)
+ {
+  for(unsigned color = 0; color < 16; color++)
+  {
+   float r = 0;
+   float g = 0;
+   float b = 0;
+   int r_p, g_p, b_p;
+
+   for(unsigned i = 0; i < 4; i++)
+   {
+    unsigned pattern = (color | (color << 4) | (color << 8) | (color << 12) | (color << 16)) >> (4 + i);
+    uint32 cle = ColorLUT[1][i & 3][pattern & 0x1FFF];
+
+    r_p = (cle >> 0) & 0x3FF;
+    g_p = (cle >> 10) & 0x3FF;
+    b_p = (cle >> 20) & 0x3FF;
+
+    r += pow(r_p / 1016.0, 2.2);
+    g += pow(g_p / 1016.0, 2.2);
+    b += pow(b_p / 1016.0, 2.2);
+   }
+
+   r /= 4;
+   g /= 4;
+   b /= 4;
+
+   r_p = std::min<int>(255, floor(0.5 + 255 * pow(r, 1.0 / 2.2)));
+   g_p = std::min<int>(255, floor(0.5 + 255 * pow(g, 1.0 / 2.2)));
+   b_p = std::min<int>(255, floor(0.5 + 255 * pow(b, 1.0 / 2.2)));
+
+   //printf("Phase: %d, Color: %d - 0x%02x 0x%02x 0x%02x\n", phase, color, r_p, g_p, b_p);
+
+   RGBLUT[color] = format.MakeColor(r_p, g_p, b_p);
+   RGBLUT[16 + color] = format.MakeColor(r_p  * 3 / 4, g_p * 3 / 4, b_p * 3 / 4);
+  }
+ }
 }
 
 }

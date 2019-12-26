@@ -35,7 +35,7 @@
 
 #include <zlib.h>
 
-extern MDFNGI EmulatedPSX;
+MDFN_HIDE extern MDFNGI EmulatedPSX;
 
 namespace MDFN_IEN_PSX
 {
@@ -227,7 +227,7 @@ static int64 Memcard_SaveDelay[8];
 PS_CPU *CPU = NULL;
 PS_SPU *SPU = NULL;
 PS_CDC *CDC = NULL;
-FrontIO *FIO = NULL;
+static FrontIO *FIO = NULL;
 
 static MultiAccessSizeMem<512 * 1024, false> *BIOSROM = NULL;
 static MultiAccessSizeMem<65536, false> *PIOMem = NULL;
@@ -1110,6 +1110,20 @@ static void Emulate(EmulateSpecStruct *espec)
 
  espec->MasterCycles = timestamp;
 
+/*
+ {
+  static int frame_counter = -120;
+  static uint64 cycle_counter = 0;
+
+  frame_counter++;
+  if(frame_counter > 0)
+  {
+   cycle_counter += espec->MasterCycles;
+   printf("moo: %f %f\n", EmulatedPSX.fps / 65536.0 / 256.0, (double)44100 * 768.0 * frame_counter / cycle_counter);
+  }
+ }
+*/
+
  if(psf_loader)
  {
   if(!espec->skip)
@@ -1573,6 +1587,7 @@ static MDFN_COLD void InitCommon(std::vector<CDInterface*> *CDInterfaces, const 
 {
  unsigned region;
  int sls, sle;
+ bool correct_aspect;
 
 #if PSX_DBGPRINT_ENABLE
  psx_dbg_level = MDFN_GetSettingUI("psx.dbg_level");
@@ -1601,6 +1616,7 @@ static MDFN_COLD void InitCommon(std::vector<CDInterface*> *CDInterfaces, const 
 
  sls = MDFN_GetSettingI((region == REGION_EU) ? "psx.slstartp" : "psx.slstart");
  sle = MDFN_GetSettingI((region == REGION_EU) ? "psx.slendp" : "psx.slend");
+ correct_aspect = MDFN_GetSettingB("psx.correct_aspect");
 
  if(sls > sle)
  {
@@ -1649,7 +1665,7 @@ static MDFN_COLD void InitCommon(std::vector<CDInterface*> *CDInterfaces, const 
 
  DMA_Init();
 
- GPU_SetGetVideoParams(&EmulatedPSX, sls, sle, MDFN_GetSettingB("psx.h_overscan"));
+ GPU_SetGetVideoParams(&EmulatedPSX, correct_aspect, sls, sle, MDFN_GetSettingB("psx.h_overscan"));
 
  CDC->SetDisc(true, NULL, NULL);
 
@@ -1986,7 +2002,7 @@ static MDFN_COLD void Load(GameFile* gf)
 
    static std::vector<CDInterface*> CDInterfaces;
    CDInterfaces.clear();
-   CDInterfaces.push_back(CDInterface::Open(&NVFS, MDFN_GetSettingS("psx.dbg_exe_cdpath"), false));
+   CDInterfaces.push_back(CDInterface::Open(&NVFS, MDFN_GetSettingS("psx.dbg_exe_cdpath"), false, MDFN_GetSettingUI("affinity.cd")));
    InitCommon(&CDInterfaces, IsPSF, true);
   }
   else
@@ -2264,6 +2280,7 @@ static const MDFNSetting PSXSettings[] =
  { "psx.spu.resamp_quality", MDFNSF_NOFLAGS, gettext_noop("SPU output resampler quality."),
 	gettext_noop("0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen's output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors."), MDFNST_UINT, "5", "0", "10" },
 
+ { "psx.correct_aspect", MDFNSF_NOFLAGS, gettext_noop("Correct aspect ratio."), gettext_noop("Disabling aspect ratio correction with this setting should be considered a hack.\n\nIf disabling it to allow for sharper pixels by also separately disabling interpolation(though using Mednafen's \"autoipsharper\" OpenGL shader is usually a better option), remember to use scale factors that are multiples of 2, or else games that use high-resolution and interlaced modes will have distorted pixels.\n\nDisabling aspect ratio correction with this setting will allow for the QuickTime movie recording feature to produce much smaller files using much less CPU time."), MDFNST_BOOL, "1" },
 
  { "psx.slstart", MDFNSF_NOFLAGS, gettext_noop("First displayed scanline in NTSC mode."), NULL, MDFNST_INT, "0", "0", "239" },
  { "psx.slend", MDFNSF_NOFLAGS, gettext_noop("Last displayed scanline in NTSC mode."), NULL, MDFNST_INT, "239", "0", "239" },
@@ -2297,6 +2314,7 @@ MDFNGI EmulatedPSX =
  NULL,
  #endif
  FIO_PortInfo,
+ NULL,
  Load,
  TestMagic,
  LoadCD,

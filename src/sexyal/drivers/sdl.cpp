@@ -20,7 +20,6 @@
  stereo L/R sample pairs.
 */
 
-
 #include "../sexyal.h"
 
 #include <unistd.h>
@@ -28,6 +27,9 @@
 #include <time.h>
 
 #include <SDL.h>
+
+namespace Mednafen
+{
 
 static int64 Time64(void)
 {
@@ -428,3 +430,4 @@ SexyAL_device *SexyALI_SDL_Open(const char *id, SexyAL_format *format, SexyAL_bu
  return(device);
 }
 
+}

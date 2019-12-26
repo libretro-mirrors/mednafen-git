@@ -227,7 +227,7 @@ Stream *CDInterface::MakeStream(int32 lba, uint32 sector_count)
 }
 
 
-CDInterface* CDInterface::Open(VirtualFS* vfs, const std::string& path, bool image_memcache)
+CDInterface* CDInterface::Open(VirtualFS* vfs, const std::string& path, bool image_memcache, const uint64 affinity)
 {
  std::unique_ptr<CDAccess> cda(CDAccess_Open(vfs, path, image_memcache));
 
@@ -238,7 +238,7 @@ CDInterface* CDInterface::Open(VirtualFS* vfs, const std::string& path, bool ima
  if(image_memcache || (vfs != &NVFS))
   return new CDInterface_ST(std::move(cda));
  else
-  return new CDInterface_MT(std::move(cda));
+  return new CDInterface_MT(std::move(cda), affinity);
 }
 
 }

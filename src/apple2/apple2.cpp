@@ -2,7 +2,7 @@
 /* Mednafen Apple II Emulation Module                                         */
 /******************************************************************************/
 /* apple2.cpp:
-**  Copyright (C) 2018 Mednafen Team
+**  Copyright (C) 2018-2019 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -41,6 +41,8 @@
 #include <map>
 
 #include <mednafen/sound/SwiftResampler.h>
+
+using namespace Mednafen;
 
 #if 0
  #define APPLE2_DBG_ENABLE 1
@@ -493,6 +495,8 @@ static void Emulate(EmulateSpecStruct* espec)
   s.mono_lumafilter = MDFN_GetSettingI("apple2.video.mono_lumafilter");
   s.color_lumafilter = MDFN_GetSettingI("apple2.video.color_lumafilter");
 
+  s.mode = MDFN_GetSettingUI("apple2.video.mode");
+
   s.matrix = MDFN_GetSettingUI("apple2.video.matrix");
 
   for(unsigned cc_i = 0; cc_i < 3; cc_i++) 
@@ -512,7 +516,7 @@ static void Emulate(EmulateSpecStruct* espec)
   //
   //
   //
-  Video::SetFormat(surface->format, s);
+  Video::SetFormat(surface->format, s, espec->CustomPalette, espec->CustomPaletteNumEntries);
   //
   VideoSettingChanged = false;
  }
@@ -521,11 +525,7 @@ static void Emulate(EmulateSpecStruct* espec)
   Sound::SetParams(espec->SoundRate, 0.00004, 3);
  //
  Video::surface = espec->surface;
-
- espec->DisplayRect.x = 0;
- espec->DisplayRect.y = 0;
- espec->DisplayRect.w = 560 + 12*2;
- espec->DisplayRect.h = 192;
+ espec->DisplayRect = Video::surface_dr;
 
  MDFNMP_ApplyPeriodicCheats();
 
@@ -1678,6 +1678,22 @@ static const MDFNSetting_EnumList Matrix_List[] =
  { nullptr, 0 },
 };
 
+static const MDFNSetting_EnumList Mode_List[] =
+{
+ { "composite", Video::Settings::MODE_COMPOSITE, "Composite", gettext_noop("Internal video dimensions of 584x192.") },
+ { "rgb", Video::Settings::MODE_RGB, "RGB", gettext_noop("Internal video dimensions of 292x192; suitable for use with scalers like hq2x.") },
+ { "rgb_tfr", Video::Settings::MODE_RGB_TFR, "RGB, with HGR text fringe reduction.", gettext_noop("Internal video dimensions of 292x192; suitable for use with scalers like hq2x.  Reduced brightness of colored pixels horizontally sandwiched between white pixels in HGR mode.") },
+
+ { "rgb_alt", Video::Settings::MODE_RGB_ALT, "RGB (alternate algorithm)", gettext_noop("Internal video dimensions of 584x192.") },
+ { "rgb_alt_tfr", Video::Settings::MODE_RGB_ALT_TFR, "RGB (alternate algorithm), with HGR text fringe reduction.", gettext_noop("Internal video dimensions of 584x192.    Reduced brightness of colored pixels horizontally sandwiched between white pixels in HGR mode.") },
+
+ // Backwards compatibility:
+ { "rgb_alt1", Video::Settings::MODE_RGB_ALT },
+ { "rgb_alt2", Video::Settings::MODE_RGB_ALT_TFR },
+
+ { nullptr, 0 }
+};
+
 static const MDFNSetting Settings[] =
 {
  { "apple2.video.hue",		MDFNSF_CAT_VIDEO, gettext_noop("Color video hue/tint."),   nullptr, MDFNST_FLOAT, "0.0", "-1.0", "1.0", nullptr, VideoChangeNotif },
@@ -1700,6 +1716,8 @@ static const MDFNSetting Settings[] =
 
  { "apple2.video.matrix.blue.i", MDFNSF_CAT_VIDEO, gettext_noop("Custom color decoder matrix; blue, I."), gettext_noop("Only used if \"apple2.video.matrix\" is set to \"custom\"."), MDFNST_FLOAT, "-1.11", "-4.00", "4.00", nullptr, VideoChangeNotif  },
  { "apple2.video.matrix.blue.q", MDFNSF_CAT_VIDEO, gettext_noop("Custom color decoder matrix; blue, Q."), gettext_noop("Only used if \"apple2.video.matrix\" is set to \"custom\"."), MDFNST_FLOAT, "1.70", "-4.00", "4.00", nullptr, VideoChangeNotif  },
+
+ { "apple2.video.mode", MDFNSF_CAT_VIDEO, gettext_noop("Video rendering mode."), gettext_noop("When an RGB mode is enabled, settings \"apple2.video.force_mono\", \"apple2.video.mixed_text_mono\", \"apple2.video.mono_lumafilter\", \"apple2.video.color_lumafilter\", and \"apple2.video.color_smooth\" are effectively ignored."), MDFNST_ENUM, "composite", nullptr, nullptr, nullptr, VideoChangeNotif, Mode_List },
 
  { NULL },
 };
@@ -1731,6 +1749,13 @@ static const CheatInfoStruct CheatInfo =
  false
 };
 
+static const CustomPalette_Spec CPInfo[] =
+{
+ { gettext_noop("RGB mode 16-color(or 32-color for TFR) palette.  The presence of a custom palette will automatically enable RGB video mode if an RGB mode is not already selected via the \"apple2.video.mode\" setting.  If the palette has 32 color entries, the text fringe reduction variant of an RGB mode is enabled."), NULL, { 16, 32, 0 } },
+
+ { NULL, NULL }
+};
+
 }
 
 using namespace MDFN_IEN_APPLE2;
@@ -1747,6 +1772,7 @@ MDFNGI EmulatedApple2 =
  NULL,
  //#endif
  A2PortInfo,
+ NULL,
  Load,
  TestMagic,
  nullptr,
@@ -1759,8 +1785,8 @@ MDFNGI EmulatedApple2 =
  nullptr,
  nullptr,
 
- nullptr,
- 0,
+ CPInfo,
+ 1,
 
  CheatInfo,
 

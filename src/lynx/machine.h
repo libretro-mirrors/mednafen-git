@@ -47,6 +47,7 @@
 #define MACHINE_H
 
 #include <mednafen/mednafen.h>
+using namespace Mednafen;
 
 typedef struct
 {

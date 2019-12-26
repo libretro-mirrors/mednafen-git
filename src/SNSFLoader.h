@@ -41,8 +41,11 @@ class SNSFLoader : public PSFLoader
  virtual void HandleReserved(Stream* fp, uint32 len) override;
 
  PSFTags tags;
- 
+
+ int64 ROM_BaseOffset = -1;
+
  MemoryStream ROM_Data;
+ MemoryStream SRAM_Data;
 };
 
 }

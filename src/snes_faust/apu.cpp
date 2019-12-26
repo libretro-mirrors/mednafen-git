@@ -19,7 +19,7 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-//#define MDFN_SNES_FAUST_SPC700_IPL_HLE 1
+#define MDFN_SNES_FAUST_SPC700_IPL_HLE 1
 //#define MDFN_SNES_FAUST_SPC700_IPL_EFFECTS_ANALYZE 1
 
 #include "snes.h"
@@ -34,7 +34,7 @@
 namespace MDFN_IEN_SNES_FAUST
 {
 
-#include "spc700.inc"
+//#include "spc700.inc"
 
 static uint8 IPL[64];
 
@@ -42,7 +42,6 @@ static uint8 APURAM[65536];
 static uint8 IOFromSPC700[4];
 static uint8 IOToSPC700[4];
 //#include "spc700.inc"
-static SPC700 SPC_CPU;
 
 static uint8 Control;
 
@@ -81,13 +80,15 @@ static INLINE void TickT01PreDiv(void)
  }
 }
 
-#include "dsp.inc"
-
+#include "spc700.inc"
+static SPC700 SPC_CPU;
 static void (MDFN_FASTCALL *SPC_Page00_WriteTable[256])(uint16, uint8);
 static uint8 (MDFN_FASTCALL *SPC_Page00_ReadTable[256])(uint16);
 static void (MDFN_FASTCALL *SPC_PageXX_WriteTable[256])(uint16, uint8);
 static uint8 (MDFN_FASTCALL *SPC_PageXX_ReadTable[256])(uint16);
 static uint8 (MDFN_FASTCALL *SPC_PageFF_ReadTable[256])(uint16);
+
+#include "dsp.inc"
 
 template<unsigned special_base>
 static uint8 MDFN_HOT MDFN_FASTCALL SPC_Read(uint16 A)
@@ -236,6 +237,11 @@ static void MDFN_HOT MDFN_FASTCALL NO_INLINE APU_Update(uint32 master_timestamp)
 
 static DEFREAD(MainCPU_APUIORead)
 {
+ if(MDFN_UNLIKELY(DBG_InHLRead))
+ {
+  return IOFromSPC700[A & 0x3];
+ }
+
  CPUM.timestamp += MEMCYC_FAST / 2;
 
  APU_Update(CPUM.timestamp);
@@ -292,10 +298,23 @@ INLINE void SPC700::IPL_HLE(void)
    //if(PC != 0xFFC1)
    // printf("Begin %04x\n", PC);
 
+/*
+   if(PC == 0xFFC3)	// Not sure what effect this has.
+   {
+    // Bishoujo Senshi Sailor Moon S - Jougai Rantou! Shuyaku Soudatsusen
+    // Gaia Saver - Hero Saidai no Sakusen
+    // Kawa no Nushi Tsuri 2
+    // Umi no Nushi Tsuri
+    // Zero 4 Champ RR
+    printf("%02x %02x %02x\n", PSW, SP, A);
+    abort();
+   }
+*/
+
    if(PC == 0xFFCA)
     goto SkipMemInit;
 
-   assert(PC == 0xFFC1);
+   assert(PC == 0xFFC1 || PC == 0xFFC3);
 
    PSW = 0x00;
    SP = 0xEF;
@@ -315,6 +334,8 @@ INLINE void SPC700::IPL_HLE(void)
    HLE_SUCK(3);
    HLE_DUMMY_READ(0xF5);
    HLE_WRITE(0xF5, 0xBB);
+
+   HLE_SUCK(1);
 
    do
    {
@@ -379,7 +400,7 @@ INLINE void SPC700::IPL_HLE(void)
      {
       HLE_SUCK(4);
       HLE_READ(0xF5, A);
-      HLE_SUCK(1);
+      HLE_SUCK(2);
       HLE_READ(0xF4, HLETemp);
       HLE_WRITE(0xF4, HLETemp);
 
@@ -453,7 +474,7 @@ void APU_Reset(bool powering_up)
 #endif
 }
 
-void APU_Init(const bool IsPAL)
+double APU_Init(const bool IsPAL, double master_clock)
 {
 #ifdef MDFN_SNES_FAUST_SPC700_IPL_HLE
  memset(IPL, 0xFF, sizeof(IPL));
@@ -503,6 +524,8 @@ void APU_Init(const bool IsPAL)
  SPC700_ReadMap[0] = SPC_Page00_ReadTable;
  SPC700_WriteMap[0] = SPC_Page00_WriteTable;
  SPC700_ReadMap[0xFF] = SPC_PageFF_ReadTable;
+
+ return (master_clock * clock_multiplier) / (65536.0 * 32.0);
 }
 
 void APU_SetSPC(SPCReader* s)
@@ -558,9 +581,18 @@ void APU_SetSPC(SPCReader* s)
  SPC_CPU.SetRegister(SPC700::GSREG_SP, s->SP());
 }
 
-void APU_StartFrame(double master_clock, double rate)
+bool APU_StartFrame(double master_clock, double rate, int32* apu_clock_multiplier, int32* resamp_num, int32* resamp_denom)
 {
- DSP_StartFrame((master_clock * clock_multiplier) / (65536.0 * 32.0), rate);
+ *apu_clock_multiplier = clock_multiplier;
+
+ return DSP_StartFrame((master_clock * clock_multiplier) / (65536.0 * 32.0), rate, resamp_num, resamp_denom);
+}
+
+uint32 APU_UpdateGetResampBufPos(uint32 master_timestamp)
+{
+ APU_Update(master_timestamp);
+
+ return DSP.OutputBufPos;
 }
 
 int32 APU_EndFrame(int16* SoundBuf)
@@ -634,8 +666,28 @@ void APU_StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFEND
  };
 
- MDFNSS_StateAction(sm, load, data_only, HLE_StateRegs, "APU_IPL_HLE");
+ const bool hle_section_optional = SPC_CPU.GetRegister(SPC700::GSREG_PC) < 0xFFC0;
+
+ if(!MDFNSS_StateAction(sm, load, data_only, HLE_StateRegs, "APU_IPL_HLE", hle_section_optional))
+ {
+  HLEPhase = 0;
+  HLELoadAddr = 0;
+  HLECounter = 0;
+  HLEHS = 0;
+  HLESuckCounter = 0;
+  HLETemp = 0;
+ }
 #endif
+}
+
+void APU_PokeRAM(uint32 addr, const uint8 val)
+{
+ APURAM[addr & 0xFFFF] = val;
+}
+
+uint8 APU_PeekRAM(uint32 addr)
+{
+ return APURAM[addr & 0xFFFF];
 }
 
 }

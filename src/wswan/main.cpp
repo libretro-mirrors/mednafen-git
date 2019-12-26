@@ -664,6 +664,7 @@ MDFNGI EmulatedWSwan =
  NULL,
  #endif
  PortInfo,
+ NULL,
  Load,
  TestMagic,
  NULL,

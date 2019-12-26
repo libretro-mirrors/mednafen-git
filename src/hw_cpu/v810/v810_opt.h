@@ -7,6 +7,8 @@
 #ifndef V810_OPT_H_
 #define V810_OPT_H_  
 
+namespace Mednafen
+{
 #define sign_26(num) ((uint32)sign_x_to_s32(26, num))
 #define sign_16(num) ((uint32)(int16)(num))
 #define sign_14(num) ((uint32)sign_x_to_s32(14, num))
@@ -166,5 +168,6 @@ static const int addr_mode[80] = {
 #define         TRNC_SW                         0x0B
 #define         MPYHW                           0x0C
 
+}
 #endif //DEFINE_H
 

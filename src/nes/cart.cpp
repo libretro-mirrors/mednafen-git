@@ -35,7 +35,7 @@ namespace MDFN_IEN_NES
 {
 uint8 *Page[32],*VPage[8];
 uint8 **VPageR=VPage;
-uint8 *VPageG[8];
+static uint8 *VPageG[8];
 uint8 *MMC5SPRVPage[8];
 uint8 *MMC5BGVPage[8];
 

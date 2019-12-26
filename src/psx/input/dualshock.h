@@ -25,6 +25,6 @@
 namespace MDFN_IEN_PSX
 {
 InputDevice *Device_DualShock_Create(void) MDFN_COLD;
-extern const IDIISG Device_DualShock_IDII;
+MDFN_HIDE extern const IDIISG Device_DualShock_IDII;
 }
 #endif

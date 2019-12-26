@@ -41,7 +41,7 @@
 int ff_get_cpu_flags_ppc(void)
 {
 //#if HAVE_ALTIVEC
-#if ARCH_POWERPC_ALTIVEC
+#if HAVE_ALTIVEC_INTRINSICS
 #ifdef __AMIGAOS4__
     ULONG result = 0;
     extern struct ExecIFace *IExec;

@@ -18,6 +18,9 @@
 #include "sexyal.h"
 #include "convert.h"
 
+namespace Mednafen
+{
+
 static inline uint32 ConvertRandU32(void)
 {
  static uint32 x = 123456789;
@@ -302,7 +305,7 @@ static const struct
 };
 
 /* Only supports one input sample format right now:  SEXYAL_FMT_PCMS16 */
-void SexiALI_Convert(const SexyAL_format *srcformat, const SexyAL_format *destformat, const void *vsrc, void *vdest, uint32 frames)
+void SexyALI_Convert(const SexyAL_format *srcformat, const SexyAL_format *destformat, const void *vsrc, void *vdest, uint32 frames)
 {
  if(!frames)
   return;
@@ -347,4 +350,6 @@ void SexiALI_Convert(const SexyAL_format *srcformat, const SexyAL_format *destfo
   //puts("Convert Unspecialized");
   ConvertLoop(SEXYAL_FMT_PCMS16/*srcformat->sampformat*/, srcformat->channels, srcformat->noninterleaved, destformat->sampformat, destformat->channels, destformat->noninterleaved, vsrc, vdest, frames);
  }
+}
+
 }

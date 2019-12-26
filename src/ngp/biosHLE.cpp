@@ -321,8 +321,36 @@ void iBIOSHLE(void)
 		if (filter_bios)
 			system_debug_message("VECT_FLASHERS: bank %d, block %d (?)", rCodeB(0x30), rCodeB(0x35));
 #endif
-		//TODO
-		rCodeB(0x30) = 0;	//RA3 = SYS_SUCCESS
+		//
+		//
+		//
+		{
+		 const uint8 bank = rCodeB(0x30);
+		 const uint8 flash_block = rCodeB(0x35);
+
+		 //printf("flash erase: %d 0x%02x\n", bank, flash_block);
+
+		 if((ngpc_rom.length & ~0x1FFF) == 0x200000 && bank == 0 && flash_block == 31)
+		 {
+		  const uint32 addr = 0x3F0000;
+		  const uint32 size = 0x008000;
+
+		  flash_optimise_blocks();
+		  flash_write(addr, size);
+		  flash_optimise_blocks();
+
+		  memory_flash_error = false;
+		  memory_unlock_flash_write = true;
+		  for(uint32 i = 0; i < size; i += 4)
+		  {
+		   storeL(addr + i, 0xFFFFFFFF);
+		  }
+		  memory_unlock_flash_write = false;
+		 }
+
+		 rCodeB(0x30) = 0;	//RA3 = SYS_SUCCESS
+		 //rCodeB(0x30) = 0xFF;	//RA3 = SYS_FAILURE
+		}
 		break;
 	
 		//VECT_ALARMSET

@@ -26,6 +26,8 @@
 
 #include "dos_common.h"
 
+namespace Mednafen
+{
 /*
 static const int CMI_DMAFIFO_BYTESIZE = 0;
 static const int CMI_DMAFIFO_FETCHBYTESIZE = 0;
@@ -445,3 +447,4 @@ SexyAL_device *SexyALI_DOS_CMI8738_Open(const char *id, SexyAL_format *format, S
  return(device);
 }
 
+}

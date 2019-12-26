@@ -139,7 +139,7 @@ void Deinterlacer_Simple::InternalProcess(MDFN_Surface *surface, MDFN_Rect &Disp
    const T* src = surface->pix<T>() + ((y * 2) + field + DisplayRect.y) * surface->pitchinpix + DisplayRect.x;
    T* dest = FieldBuffer->pix<T>() + y * FieldBuffer->pitchinpix;
 
-   memcpy(dest, src, *src_lw * sizeof(uint32));
+   memcpy(dest, src, *src_lw * sizeof(T));
    LWBuffer[y] = *src_lw;
 
    StateValid = true;

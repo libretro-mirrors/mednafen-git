@@ -46,7 +46,7 @@ struct StateMem;
 // throws exceptions on errors.
 //
 void MDFNSS_SaveSM(Stream *st, bool data_only = false, const MDFN_Surface *surface = (MDFN_Surface *)NULL, const MDFN_Rect *DisplayRect = (MDFN_Rect*)NULL, const int32 *LineWidths = (int32*)NULL);
-void MDFNSS_LoadSM(Stream *st, bool data_only = false);
+void MDFNSS_LoadSM(Stream *st, bool data_only = false, const bool fuzz = false);
 
 void MDFNSS_CheckStates(void);
 
@@ -139,6 +139,17 @@ static INLINE SFORMAT SFBASE_(T* const v, const uint32 count, const char* const 
  #define SFVAR(x, ...)   SFBASE_(&(x), 1, __VA_ARGS__, #x)
 #else
  #define SFVAR(x, ...)   SFBASE_(&(x), 1, ## __VA_ARGS__, #x)
+#endif
+
+static INLINE SFORMAT SFCONDVAR_(const bool cond, const SFORMAT sf)
+{
+ return cond ? sf : SFORMAT({ sf.name, sf.data, 0, 0, 0, 0 });
+}
+
+#ifdef _MSC_VER
+ #define SFCONDVAR(cond, x, ...) SFCONDVAR_(cond, SFVAR(x, __VA_ARGS__))
+#else
+ #define SFCONDVAR(cond, x, ...) SFCONDVAR_(cond, SFVAR(x, ## __VA_ARGS__))
 #endif
 
 static_assert(sizeof(double) == 8, "sizeof(double) != 8");

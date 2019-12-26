@@ -263,15 +263,15 @@ void srcLDDR()
 //===== CPI
 void srcCPI()
 {
-	uint8 R = first & 7;
+	uint8 R_local = first & 7;
 
 	switch(size)
 	{
-	case 0: generic_SUB_B(REGA, loadB(regL(R)));
-			regL(R) ++; break;
+	case 0: generic_SUB_B(REGA, loadB(regL(R_local)));
+			regL(R_local) ++; break;
 
-	case 1:	generic_SUB_W(REGWA, loadW(regL(R)));
-			regL(R) += 2; break;
+	case 1:	generic_SUB_W(REGWA, loadW(regL(R_local)));
+			regL(R_local) += 2; break;
 	}
 
 	REGBC --;
@@ -283,7 +283,7 @@ void srcCPI()
 //===== CPIR
 void srcCPIR()
 {
-	uint8 R = first & 7;
+	uint8 R_local = first & 7;
 
 	cycles = 10;
 
@@ -292,12 +292,12 @@ void srcCPIR()
 		switch(size)
 		{
 		case 0:	if (debug_abort_memory == false)
-					generic_SUB_B(REGA, loadB(regL(R)));
-				regL(R) ++; break;
+					generic_SUB_B(REGA, loadB(regL(R_local)));
+				regL(R_local) ++; break;
 
 		case 1:	if (debug_abort_memory == false)
-					generic_SUB_W(REGWA, loadW(regL(R)));
-				regL(R) += 2; break;
+					generic_SUB_W(REGWA, loadW(regL(R_local)));
+				regL(R_local) += 2; break;
 		}
 
 		REGBC --;
@@ -311,15 +311,15 @@ void srcCPIR()
 //===== CPD
 void srcCPD()
 {
-	uint8 R = first & 7;
+	uint8 R_local = first & 7;
 
 	switch(size)
 	{
-	case 0:	generic_SUB_B(REGA, loadB(regL(R)));
-			regL(R) --;	break;
+	case 0:	generic_SUB_B(REGA, loadB(regL(R_local)));
+			regL(R_local) --;	break;
 
-	case 1:	generic_SUB_W(REGWA, loadW(regL(R)));
-			regL(R) -= 2; break;
+	case 1:	generic_SUB_W(REGWA, loadW(regL(R_local)));
+			regL(R_local) -= 2; break;
 	}
 
 	REGBC --;
@@ -331,7 +331,7 @@ void srcCPD()
 //===== CPDR
 void srcCPDR()
 {
-	uint8 R = first & 7;
+	uint8 R_local = first & 7;
 
 	cycles = 10;
 
@@ -340,12 +340,12 @@ void srcCPDR()
 		switch(size)
 		{
 		case 0:	if (debug_abort_memory == false)
-					generic_SUB_B(REGA, loadB(regL(R)));
-				regL(R) -= 1; break;
+					generic_SUB_B(REGA, loadB(regL(R_local)));
+				regL(R_local) -= 1; break;
 
 		case 1: if (debug_abort_memory == false)
-					generic_SUB_W(REGWA, loadW(regL(R)));
-				regL(R) -= 2; break;
+					generic_SUB_W(REGWA, loadW(regL(R_local)));
+				regL(R_local) -= 2; break;
 		}
 
 		REGBC --;

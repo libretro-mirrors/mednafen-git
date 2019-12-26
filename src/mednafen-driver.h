@@ -6,7 +6,7 @@
 namespace Mednafen
 {
 
-extern std::vector<MDFNGI *>MDFNSystems;
+MDFN_HIDE extern std::vector<MDFNGI *>MDFNSystems;
 
 /* Indent stdout newlines +- "indent" amount */
 void MDFN_indent(int indent);
@@ -30,19 +30,24 @@ void MDFND_OutputNotice(MDFN_NoticeType t, const char* s) noexcept;
 // Output from MDFN_printf(); fairly verbose informational messages.
 void MDFND_OutputInfo(const char* s) noexcept;
 
-// Synchronize virtual time to actual time using members of espec:
+// If MIDSYNC_FLAG_SYNC_TIME is set in 'flags', synchronize virtual time to actual time using members of espec:
 //
-//  MasterCycles and MasterCyclesALMS (coupled with MasterClock of MDFNGI)
-//   and/or
-//  SoundBuf, SoundBufSize, and SoundBufSizeALMS
+//   MasterCycles and MasterCycles_DriverProcessed (coupled with MasterClock of MDFNGI)
+//    and/or
+//   SoundBuf, SoundBufSize, and SoundBufSize_DriverProcessed
 //
-// ...and after synchronization, update the data pointed to by the pointers passed to MDFNI_SetInput().
-// DO NOT CALL MDFN_* or MDFNI_* functions from within MDFND_MidSync().
-// Calling MDFN_printf(), MDFN_DispMessage(),and MDFND_PrintError() are ok, though.
+// Otherwise, if MIDSYNC_FLAG_SYNC_TIME is not set, then simply write as much sound data as possible without blocking.
+//
+// MasterCycles_DriverProcessed and SoundBufSize_DriverProcessed may be updated from within MDFND_MidSync().
+//
+// Then, if MIDSYNC_FLAG_UPDATE_INPUT is set in 'flags', update the data pointed to by the pointers passed to MDFNI_SetInput().
+// If this flag is not set, the input MUST NOT be updated, or things will go boom in subtle ways!
+//
+// Other than MDFN_printf() and MDFN_Notify(), DO NOT CALL MDFN_* or MDFNI_* functions from within MDFND_MidSync()!
 //
 // If you do not understand how to implement this function, you can leave it empty at first, but know that doing so
 // will subtly break at least one PC Engine game(Takeda Shingen), and raise input latency on some other PC Engine games.
-void MDFND_MidSync(const EmulateSpecStruct *espec);
+void MDFND_MidSync(EmulateSpecStruct *espec, const unsigned flags);
 
 // Called from inside blocking loops on unreliable resources(e.g. netplay).
 bool MDFND_CheckNeedExit(void);

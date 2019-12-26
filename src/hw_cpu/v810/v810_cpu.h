@@ -6,6 +6,9 @@
 
 #include "v810_fp_ops.h"
 
+namespace Mednafen
+{
+
 typedef int32 v810_timestamp_t;
 
 #define V810_FAST_MAP_SHIFT	16
@@ -358,5 +361,6 @@ class V810
  uint8 DummyRegion[V810_FAST_MAP_PSIZE + V810_FAST_MAP_TRAMPOLINE_SIZE];
 };
 
+}
 #endif
 

@@ -26,7 +26,9 @@
 #include <mednafen/SSFLoader.h>
 #include <mednafen/player.h>
 
-extern MDFNGI EmulatedSSFPlay;
+using namespace Mednafen;
+
+MDFN_HIDE extern MDFNGI EmulatedSSFPlay;
 
 #define MDFN_SSFPLAY_COMPILE
 #define SS_DBG(a, ...) ((void)0)
@@ -169,6 +171,7 @@ MDFNGI EmulatedSSFPlay =
  MODPRIO_INTERNAL_HIGH,
  NULL,
  DummyPortInfo,
+ NULL,
  Load,
  TestMagic,
  NULL,

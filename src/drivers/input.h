@@ -30,7 +30,7 @@ void Input_MakeSettings(std::vector <MDFNSetting> &settings);
 
 void Input_NetplayLPMChanged(void);
 
-extern bool DNeedRewind; // Only read/write in game thread(or before creating game thread).
-extern bool RewindState; // " " " "
+MDFN_HIDE extern bool DNeedRewind; // Only read/write in game thread(or before creating game thread).
+MDFN_HIDE extern bool RewindState; // " " " "
 
 #endif

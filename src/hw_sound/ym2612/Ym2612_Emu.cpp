@@ -46,7 +46,9 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 #include <stdio.h>
 #include <math.h>
 
-const int output_bits = 14;
+namespace Mednafen
+{
+static const int output_bits = 14;
 
 #include "ym2612_opeg.inc"
 
@@ -1072,4 +1074,6 @@ void Ym2612_Emu::serialize(Mednafen::LEPacker &slizer, bool load)
    sl->eg.serialize(slizer, load);
   }
  }
+}
+
 }

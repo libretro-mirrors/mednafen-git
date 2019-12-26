@@ -45,7 +45,7 @@
 #include "SwiftResampler.h"
 #include <mednafen/cputest/cputest.h>
 
-#if defined(ARCH_POWERPC_ALTIVEC) && defined(HAVE_ALTIVEC_H)
+#if defined(HAVE_ALTIVEC_INTRINSICS) && defined(HAVE_ALTIVEC_H)
  #include <altivec.h>
 #endif
 
@@ -74,7 +74,7 @@ namespace Mednafen
  #include "SwiftResampler_sse2.inc"
 #endif
 
-#ifdef ARCH_POWERPC_ALTIVEC
+#ifdef HAVE_ALTIVEC_INTRINSICS
  #include "SwiftResampler_altivec.inc"
 #endif
 
@@ -154,7 +154,7 @@ int32 SwiftResampler::T_Resample(int16 *in, int16 *out, uint32 maxoutlen, uint32
 	 count = ResampLoop(in, I32Out, max, DoMAC_SSE2_Intrin<TA_NumFractBits>);
 	}
 	#endif
-	#ifdef ARCH_POWERPC_ALTIVEC
+	#ifdef HAVE_ALTIVEC_INTRINSICS
         else if(TA_SIMD_Type == SIMD_ALTIVEC)
 	{
 	 count = ResampLoop<0x7>(in, I32Out, max, DoMAC_AltiVec<TA_NumFractBits>);
@@ -319,7 +319,7 @@ SwiftResampler::SwiftResampler(double input_rate, double output_rate, double rat
   assert(16 <= MaxWaveOverRead);
  }
  #endif
- #if defined(ARCH_POWERPC_ALTIVEC)
+ #if defined(HAVE_ALTIVEC_INTRINSICS)
  else if(cpuext & CPUTEST_FLAG_ALTIVEC)
  {
   Resample_ = &SwiftResampler::T_Resample<SIMD_ALTIVEC, NumFractBits>;
@@ -355,7 +355,7 @@ SwiftResampler::SwiftResampler(double input_rate, double output_rate, double rat
 
  assert(NumCoeffs <= MaxLeftover);
 
- #if !defined(ARCH_X86) && !defined(HAVE_SSE2_INTRINSICS) && !defined(ARCH_POWERPC_ALTIVEC) && !defined(HAVE_NEON_INTRINSICS)
+ #if !defined(ARCH_X86) && !defined(HAVE_SSE2_INTRINSICS) && !defined(HAVE_ALTIVEC_INTRINSICS) && !defined(HAVE_NEON_INTRINSICS)
   #warning "SwiftResampler is being compiled without SIMD support."
  #endif
 
@@ -621,6 +621,30 @@ SwiftResampler::SwiftResampler(double input_rate, double output_rate, double rat
   debias_multiplier = 0;
 
  MDFN_indent(-1);
+ //
+ //
+ //
+#if 0
+ fprintf(stderr, " { ");
+
+ for(unsigned phase = 0; phase < NumPhases; phase++)
+ {
+  fprintf(stderr, "%u, ", PhaseStep[phase]);
+ }
+ fprintf(stderr, "},\n");
+ fprintf(stderr, " {{\n");
+ for(unsigned phase = 0; phase < NumPhases; phase++)
+ {
+  fprintf(stderr, "  {");
+  for(unsigned i = 0; i < NumCoeffs; i++)
+  {
+   fprintf(stderr, " %d, ", FIR_ENTRY(0, phase, i));
+  }
+  fprintf(stderr, " },\n");
+ }
+ fprintf(stderr, " }}\n");
+
+#endif
 }
 
 }

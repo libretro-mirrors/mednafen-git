@@ -33,6 +33,14 @@ function GetMTime()
  return($mt);
 }
 
+function GameDBEntriesSortCompare($a, $b)
+{
+ if($a['name'] == $b['name'])
+  return strcmp($a['id'], $b['id']);
+
+ return strcmp($a['name'], $b['name']);
+}
+
 function ReadModules()
 {
  global $mod_list, $mednafen_version;
@@ -65,7 +73,36 @@ function ReadModules()
   }
 
   asort($mod['cpinfo']);
+  //
+  //
+  //
+  $mod['dbinfo'] = array();
+  $dbicount = (int)trim(fgets($fp));
 
+  for($dbi = 0; $dbi < $dbicount; $dbi++)
+  {
+   $mod['dbinfo'][$dbi] = array();
+   $mod['dbinfo'][$dbi]['shortname'] = stripcslashes(trim(fgets($fp)));
+   $mod['dbinfo'][$dbi]['fullname'] = stripcslashes(trim(fgets($fp)));
+   $mod['dbinfo'][$dbi]['description'] = stripcslashes(trim(fgets($fp)));
+   $mod['dbinfo'][$dbi]['entries'] = array();
+ 
+   $eicount = (int)trim(fgets($fp));
+   for($ei = 0; $ei < $eicount; $ei++)
+   {
+    $mod['dbinfo'][$dbi]['entries'][$ei] = array();
+    $mod['dbinfo'][$dbi]['entries'][$ei]['name'] = stripcslashes(trim(fgets($fp)));;
+    $mod['dbinfo'][$dbi]['entries'][$ei]['id'] = stripcslashes(trim(fgets($fp)));
+    $mod['dbinfo'][$dbi]['entries'][$ei]['idishash'] = (int)trim(fgets($fp));
+    $mod['dbinfo'][$dbi]['entries'][$ei]['setting'] = stripcslashes(trim(fgets($fp)));
+    $mod['dbinfo'][$dbi]['entries'][$ei]['purpose'] = stripcslashes(trim(fgets($fp)));
+   }
+
+   usort($mod['dbinfo'][$dbi]['entries'], "GameDBEntriesSortCompare");
+  }
+  //
+  //
+  //
   $mod_list[$mod['name']] = $mod;
  }
 
@@ -307,6 +344,51 @@ function PrintCustomPalettes()
 
  if($curmod != "")
   EndSection();
+}
+
+function PrintInternalDatabases()
+{
+ global $mednafen_version, $curmod, $cursection, $ps_string, $toc_string, $section_string, $settings_g, $mod_list;
+
+ BeginSection("Internal Databases", "Section_internal_databases");
+
+ foreach($mod_list as $mod=>$mod_def)
+ {
+  if($mod != $curmod)
+   continue;
+
+  foreach($mod_def['dbinfo'] as $db)
+  {
+   BeginSection($db['fullname'], "Section_internal_databases_" . $db['shortname']);
+
+   echo(str_replace("\n", "<br>", htmlspecialchars($db['description'])));
+
+   echo('<p></p><table border><tr class="TableHeader">');
+   echo('<th>Game:</th>');
+   echo('<th width="1%">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ID:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>');
+   echo('<th>' . htmlspecialchars($db['fullname']) . ':' . '</th>');
+   echo('<th>Purpose:</th>');
+   echo('</tr>');
+
+   foreach($db['entries'] as $gdbe)
+   {
+    echo('<tr>');
+    echo('<td>' . htmlspecialchars($gdbe['name']) . '</td>');
+    if($gdbe['idishash'])
+     echo('<td><font size="-1"><i>' . htmlspecialchars($gdbe['id']) . '</i></font></td>');
+    else
+     echo('<td>' . htmlspecialchars($gdbe['id']) . '</td>');
+    echo('<td>' . htmlspecialchars($gdbe['setting']) . '</td>');
+    echo('<td>' . htmlspecialchars($gdbe['purpose']) . '</td>');
+    echo('</tr>');
+   }
+   echo('</table>');
+
+   EndSection();
+  }
+ }
+
+ EndSection();
 }
 
 function PrintSettings($section_name = "Settings Reference")

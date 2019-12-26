@@ -6,9 +6,6 @@
 /* Define if we are compiling for PPC architectures. */
 #undef ARCH_POWERPC
 
-/* Define if we are compiling with AltiVec usage. */
-#undef ARCH_POWERPC_ALTIVEC
-
 /* Define if we are compiling for 32-bit or 64-bit x86 architectures. */
 #undef ARCH_X86
 
@@ -525,6 +522,10 @@
 
 /* Define on little-endian platforms. */
 #undef LSB_FIRST
+
+/* Define if we are compiling with expensive Mednafen developer features
+   enabled. */
+#undef MDFN_ENABLE_DEV_BUILD
 
 /* Mednafen version definition. */
 #undef MEDNAFEN_VERSION

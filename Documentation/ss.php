@@ -98,6 +98,7 @@ The filenames listed below are per default ss.bios_* settings.
 
 <?php EndSection(); ?>
 
+<?php PrintInternalDatabases(); ?>
 
 <?php PrintSettings(); ?>
 

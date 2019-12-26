@@ -629,8 +629,6 @@ LIBOBJS
 AM_CXXFLAGS
 AM_CFLAGS
 TRIO_CFLAGS
-ARCH_POWERPC_ALTIVEC_FALSE
-ARCH_POWERPC_ALTIVEC_TRUE
 ARCH_POWERPC_FALSE
 ARCH_POWERPC_TRUE
 ARCH_X86_64_FALSE
@@ -934,6 +932,7 @@ with_libpth_prefix
 with_included_gettext
 with_libintl_prefix
 enable_libxxx_mode
+enable_dev_build
 enable_debugger
 enable_cjk_fonts
 enable_fancy_scalers
@@ -1627,6 +1626,8 @@ Optional Features:
                           specify multithreading API
   --disable-threads       build without multithread safety
   --enable-libxxx-mode    dev use only
+  --enable-dev-build      enable expensive Mednafen developer features
+                          [[default=no]]
   --enable-debugger       build with internal debugger [[default=yes]]
   --enable-cjk-fonts      build with internal CJK(Chinese, Japanese, Korean)
                           fonts [[default=yes]]
@@ -4365,8 +4366,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='1.22.2'
-MEDNAFEN_VERSION_NUMERIC=0x00102202
+MEDNAFEN_VERSION='1.24.0-UNSTABLE'
+MEDNAFEN_VERSION_NUMERIC=0x00102400
 #                        0xJJJnnnRR
 
 # Make sure we can run config.sub.
@@ -13211,6 +13212,19 @@ if test x$enable_libxxx_mode = xyes; then
 	ENABLE_LIBXXX_MODE=true
 fi
 
+# Check whether --enable-dev-build was given.
+if test "${enable_dev_build+set}" = set; then :
+  enableval=$enable_dev_build;
+else
+  enable_dev_build=no
+fi
+
+
+if test x$enable_dev_build = xyes; then
+
+$as_echo "#define MDFN_ENABLE_DEV_BUILD 1" >>confdefs.h
+
+fi
 
 OPTIMIZER_FLAGS=""
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking OPTIMIZER_FLAGS for gcc -fno-fast-math" >&5
@@ -18795,14 +18809,6 @@ else
   ARCH_POWERPC_FALSE=
 fi
 
- if false; then
-  ARCH_POWERPC_ALTIVEC_TRUE=
-  ARCH_POWERPC_ALTIVEC_FALSE='#'
-else
-  ARCH_POWERPC_ALTIVEC_TRUE='#'
-  ARCH_POWERPC_ALTIVEC_FALSE=
-fi
-
 
 TRIO_CFLAGS=""
 
@@ -19083,18 +19089,6 @@ case ".$var" in
 esac
 
 	                if test "x$ALTIVEC_FLAGS" != "x"; then
-
-$as_echo "#define ARCH_POWERPC_ALTIVEC 1" >>confdefs.h
-
-                	         if true; then
-  ARCH_POWERPC_ALTIVEC_TRUE=
-  ARCH_POWERPC_ALTIVEC_FALSE='#'
-else
-  ARCH_POWERPC_ALTIVEC_TRUE='#'
-  ARCH_POWERPC_ALTIVEC_FALSE=
-fi
-
-
 				altivec_save_CPPFLAGS="$CPPFLAGS"
 				CPPFLAGS="$CPPFLAGS $ALTIVEC_FLAGS"
 				ac_fn_cxx_check_header_mongrel "$LINENO" "altivec.h" "ac_cv_header_altivec_h" "$ac_includes_default"
@@ -20051,10 +20045,6 @@ if test -z "${ARCH_POWERPC_TRUE}" && test -z "${ARCH_POWERPC_FALSE}"; then
   as_fn_error $? "conditional \"ARCH_POWERPC\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${ARCH_POWERPC_ALTIVEC_TRUE}" && test -z "${ARCH_POWERPC_ALTIVEC_FALSE}"; then
-  as_fn_error $? "conditional \"ARCH_POWERPC_ALTIVEC\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
 if test -z "${ARCH_X86_TRUE}" && test -z "${ARCH_X86_FALSE}"; then
   as_fn_error $? "conditional \"ARCH_X86\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
@@ -20073,10 +20063,6 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${ARCH_POWERPC_TRUE}" && test -z "${ARCH_POWERPC_FALSE}"; then
   as_fn_error $? "conditional \"ARCH_POWERPC\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${ARCH_POWERPC_ALTIVEC_TRUE}" && test -z "${ARCH_POWERPC_ALTIVEC_FALSE}"; then
-  as_fn_error $? "conditional \"ARCH_POWERPC_ALTIVEC\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

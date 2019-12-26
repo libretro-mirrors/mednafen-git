@@ -11,7 +11,7 @@ static INLINE void DoMAC_NEON(float* wave, float* coeffs, int32 count, int32* ac
 
  do
  {
-  acc0 = vmlaq_f32(acc0, vld1q_f32(MDFN_ASSUME_ALIGNED(coeffs +  0, sizeof(float32x4_t))), vld1q_f32(wave +  0));
+  acc0 = vmlaq_f32(acc0, vld1q_f32(MDFN_ASSUME_ALIGNED(coeffs     , sizeof(float32x4_t))), vld1q_f32(wave +  0));
   acc1 = vmlaq_f32(acc1, vld1q_f32(MDFN_ASSUME_ALIGNED(coeffs +  4, sizeof(float32x4_t))), vld1q_f32(wave +  4));
   acc2 = vmlaq_f32(acc2, vld1q_f32(MDFN_ASSUME_ALIGNED(coeffs +  8, sizeof(float32x4_t))), vld1q_f32(wave +  8));
   acc3 = vmlaq_f32(acc3, vld1q_f32(MDFN_ASSUME_ALIGNED(coeffs + 12, sizeof(float32x4_t))), vld1q_f32(wave + 12));

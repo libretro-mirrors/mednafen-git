@@ -14,9 +14,6 @@ Mednafen's primary SNES emulation module is a fork of <a href="http://byuu.org/"
  <li>Modified blending behavior when in hi-res modes</li>
 </ul>
 <p>
-SNSF playback is supported to a degree; however, its implementation in Mednafen is incomplete.
-</p>
-<p>
 SPC playback is not supported, but it is supported (experimentally) by the <b><a href="snes_faust.html">snes_faust</a></b> module.
 </p>
 <p>

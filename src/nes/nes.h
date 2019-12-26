@@ -9,6 +9,8 @@
 #include <mednafen/hash/md5.h>
 #include <mednafen/video.h>
 
+using namespace Mednafen;
+
 namespace MDFN_IEN_NES
 {
 
@@ -19,24 +21,24 @@ void ResetMapping(void) MDFN_COLD;
 void ResetNES(void) MDFN_COLD;
 void PowerNES(void) MDFN_COLD;
 
-extern uint64 timestampbase;
-extern uint32 MMC5HackVROMMask;
-extern uint8 *MMC5HackExNTARAMPtr;
-extern uint32 MMC5HackCHRBank;
-extern int MMC5Hack;
-extern uint8 *MMC5HackVROMPTR;
-extern uint8 MMC5HackCHRMode;
-extern uint8 MMC5HackSPMode;
-extern uint8 MMC5HackSPScroll;
-extern uint8 MMC5HackSPPage;
+MDFN_HIDE extern uint64 timestampbase;
+MDFN_HIDE extern uint32 MMC5HackVROMMask;
+MDFN_HIDE extern uint8 *MMC5HackExNTARAMPtr;
+MDFN_HIDE extern uint32 MMC5HackCHRBank;
+MDFN_HIDE extern int MMC5Hack;
+MDFN_HIDE extern uint8 *MMC5HackVROMPTR;
+MDFN_HIDE extern uint8 MMC5HackCHRMode;
+MDFN_HIDE extern uint8 MMC5HackSPMode;
+MDFN_HIDE extern uint8 MMC5HackSPScroll;
+MDFN_HIDE extern uint8 MMC5HackSPPage;
 
-extern readfunc ARead[0x10000 + 0x100];
-extern writefunc BWrite[0x10000 + 0x100];
+MDFN_HIDE extern readfunc ARead[0x10000 + 0x100];
+MDFN_HIDE extern writefunc BWrite[0x10000 + 0x100];
 
-extern int GameAttributes;
-extern uint8 PAL;
+MDFN_HIDE extern int GameAttributes;
+MDFN_HIDE extern uint8 PAL;
 
-extern int fceuindbg;
+MDFN_HIDE extern int fceuindbg;
 void ResetGameLoaded(void);
 
 #define DECLFR(x) uint8 MDFN_FASTCALL x (uint32 A)
@@ -60,7 +62,7 @@ typedef struct
 } NESGameType;
 
 
-extern bool NESIsVSUni;
+MDFN_HIDE extern bool NESIsVSUni;
 }
 
 using namespace MDFN_IEN_NES;

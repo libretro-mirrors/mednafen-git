@@ -4,7 +4,7 @@
 namespace MDFN_IEN_NES
 {
 #ifdef INESPRIV
-extern uint32 iNESGameCRC32;
+MDFN_HIDE extern uint32 iNESGameCRC32;
 #else
 #endif
 

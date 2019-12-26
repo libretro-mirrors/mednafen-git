@@ -23,8 +23,8 @@
 
 namespace Mednafen
 {
-extern NativeVFS NVFS;
-extern MDFNGI *MDFNGameInfo;
+MDFN_HIDE extern NativeVFS NVFS;
+MDFN_HIDE extern MDFNGI *MDFNGameInfo;
 
 enum MDFN_NoticeType : uint8
 {
@@ -55,7 +55,13 @@ void MDFN_QSimpleCommand(int cmd);
 bool MDFN_UntrustedSetMedia(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx);
 void MDFN_MediaSetNotification(uint32 drive_idx, uint32 state_idx, uint32 media_idx, uint32 orientation_idx);
 
-void MDFN_MidSync(EmulateSpecStruct *espec);
+enum : unsigned
+{
+ MIDSYNC_FLAG_NONE              = 0,
+ MIDSYNC_FLAG_UPDATE_INPUT      = 1U << 0,
+ MIDSYNC_FLAG_SYNC_TIME         = 1U << 1,
+};
+void MDFN_MidSync(EmulateSpecStruct *espec, const unsigned flags = MIDSYNC_FLAG_UPDATE_INPUT | MIDSYNC_FLAG_SYNC_TIME);
 void MDFN_MidLineUpdate(EmulateSpecStruct *espec, int y);
 
 }

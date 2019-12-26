@@ -27,6 +27,9 @@
 #include <alsa/asoundlib.h>
 #include <unistd.h>
 
+namespace Mednafen
+{
+
 struct SexyAL_ALSA
 {
 	snd_pcm_t *alsa_pcm;
@@ -486,3 +489,4 @@ SexyAL_device *SexyALI_ALSA_Open(const char *id, SexyAL_format *format, SexyAL_b
  return(device);
 }
 
+}

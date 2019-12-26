@@ -26,7 +26,7 @@ namespace MDFN_IEN_PSX
 {
 
 InputDevice *Device_DualAnalog_Create(bool joystick_mode) MDFN_COLD;
-extern IDIISG Device_DualAnalog_IDII;
-extern IDIISG Device_AnalogJoy_IDII;
+MDFN_HIDE extern IDIISG Device_DualAnalog_IDII;
+MDFN_HIDE extern IDIISG Device_AnalogJoy_IDII;
 }
 #endif

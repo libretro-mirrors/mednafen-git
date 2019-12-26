@@ -1,3 +1,150 @@
+-- 1.24.0-UNSTABLE: --
+
+December 19, 2019:
+	PSX: Handle SPU CD volume as signed 16-bit instead of unsigned; fixes lowest volume setting in "Star Wars Dark Forces".
+
+December 18, 2019:
+	PSX: Tweaked PAL pixel aspect ratio, tweaked nominal FPS values, added setting "psx.correct_aspect", and fixed light gun Y positioning with PAL games.
+
+December 16, 2019:
+	SNES-Faust: Added SDD-1 emulation.
+
+November 26, 2019:
+	SNES-Faust: Allow emulation to switch away from the SPC700 during execution of opcode 0xFA, between the read and write, to fix bonkers
+	audio that leads to a hang in the "Tenshi no Uta" game.
+
+	SNES-Faust: Extended DMA NMI delay kludge to cover 8-bit LDX #imm to fix hang in "Frisky Tom" in "Nichibutsu Arcade Classics".
+
+	SNES-Faust: Added DSP-2 emulation.
+
+November 19, 2019:
+	SNES-Faust: Added MSU1 support.
+
+	SNES-Faust: Added a multithreaded PPU renderer, controlled via the new "snes_faust.renderer" setting, disabled by default.
+
+	SNES-Faust: Added SuperFX overclocking support, controlled via setting "snes_faust.superfx.clock_rate".
+
+	SNES-Faust: Added SuperFX instruction cache emulation support, controlled via setting "snes_faust.superfx.icache", disabled by default.
+
+	SNES-Faust: Added support for Game Genie cheats(entered via Mednafen's cheat system).
+
+	SNES-Faust: Added setting "snes_faust.region" to allow for overriding the automatic region detection and emulating one region while reporting the different region to the game.
+
+November 17, 2019:
+	On Windows, call CoInitializeEx() with COINIT_MULTITHREADED before calling SDL_Init(), to prevent potential initialization errors with Mednafen's
+	WASAPI sound code.
+
+November 16, 2019:
+	Using drive-relative paths on Windows should no longer make a mess due to Mednafen looking for and putting files in the wrong place.
+
+November 14, 2019:
+	SS: Removed "ss.midsync" setting; the functionality it controlled is now always enabled.
+
+	Added settings "affinity.cd", "affinity.emu", "affinity.video", and "ss.affinity.vdp2" to specify CPU thread affinity masks for the CD read threads,
+	main emulation thread, video blitting thread, and Saturn VDP2 rendering thread, respectively. Setting thread affinities properly can improve
+	Saturn emulation performance on a dual-core CPU with hyperthreading.
+
+	Cleaned up multithreading code and API.
+
+November 10, 2019:
+	Removed "using namespace Mednafen;" from types.h, and related changes.
+
+October 25, 2019:
+	SNES-Faust: Ignore frameskip if interlace mode is enabled, to avoid feeding uninitialized data into the deinterlacer which leads to a crash.
+
+September 18, 2019:
+	Implemented workaround in OwlResampler_neon.inc for a C++ parsing bug in gcc 9.x.
+
+September 13, 2019:
+	Apple2: Renamed(with backwards-compatibility aliases) video mode "rgb_alt1" to "rgb_alt" and "rgb_alt2" to "rgb_alt_tfr", and added new video mode "rgb_tfr".
+
+	Apple2: Added support for 32-color custom palettes(will automatically enable a text fringe reduction RGB mode if used).
+
+-- 1.23.0-UNSTABLE: --
+
+August 26, 2019:
+	Apple2: Added support for an RGB-style video mode, selectable with the new setting "apple2.video.mode".
+
+	SS: Added "Shunsai" to the internal database of games to use the data cache read bypass kludge with, to fix various graphical glitches.
+
+August 25, 2019:
+	Expanded and harmonized the accepted value ranges for settings "sfspeed" and "ffspeed" to 0.25 through 15, for greater versatility.
+
+	NGP: Added very incomplete emulation of BIOS system call "VECT_FLASHERS", per tip from stellarporter.  Fixes eventual hang in "The Last Blade".
+
+	NGP: Fixed TLCS-900H new IFF calculation when taking an interrupt, per tip from trinemark.  Fixes broken voice playback in
+	"Densetsu no Ogre Battle Gaiden".
+
+	NGP: Fixed potential division by zero in the TLCS-900H MINC* and MDEC* instructions emulation(the emulation of the instructions is still almost certainly wrong,
+	though), per tip from byuu.
+
+August 24, 2019:
+	PCE: Changed the Super CD-ROM^2 memory identification signature to match a Duo instead of a PCE with a system card, to fix compatibility
+	issues with some US Super CD-ROM^2 games when using a US system card image, per tip from elmer.
+
+August 22, 2019:
+	SS: Added "Ronde" to the internal database of games to use the data cache read bypass kludge with, to fix missing graphics
+	on the title screen and main menu.
+
+August 20, 2019:
+	SS: Added "Thunder Force Gold Pack 1" to the internal database of games to use the data cache read bypass kludge with,
+	to fix explosion graphic glitches in "Thunder Force III".
+
+	SS: Fixed a bug that could cause erroneous VDP1 framebuffer erasure when the lower Y coordinate for the erase window was too large.
+
+August 12, 2019:
+	SS: Added "Thunder Force Gold Pack 2" to the internal database of games to use the data cache read bypass kludge with,
+	to fix quasi-random hangs when pausing the game in "Thunder Force AC".
+
+	SS: Corrected the value the SCU DMA mode registers are initialized to on reset.
+
+June 18, 2019:
+	SS: Added "Formula Grand Prix - Team Unei Simulation" to the internal database of games to use the data cache read bypass kludge with,
+	to fix a hang after the title screen.
+
+	SS: Added "Virtual Mahjong" to the internal database of games to use the data cache read bypass kludge with, to fix graphical glitches on the character
+	select screen.
+
+June 16, 2019:
+	SS: Slowed down SCU DMA from SDRAM/SH-2 bus slightly, though I'm not sure what is the origin of the measured overhead/slowdown on a Saturn.
+	Fixes FMV flickering in "Lunar".
+
+	SS: Added partial emulation(CS0 and CS1, SH-2 non-DMA accesses and SCU DMA accesses) of the timing effects of the SCU A-bus configuration registers.
+
+	SS: Added "Tech Saturn 1997.6" to the internal database of games for which 1MiB RAM cart emulation is enabled, for its "Groove on Fight" demo.
+
+	SS: Implemented a crude simulation of the VDP1 command execution slowdown that occurs when an SH-2 CPU writes to VDP1 RAM or registers, activated
+	via the horrible hacks mechanism; fixes text flickering in "Arcade's Greatest Hits", most rescue text flickering in "Burning Rangers"(at least on the first stage),
+	graphical glitches in "Whizz", and some of the graphical glitches in "All-Star Baseball 97".
+
+	SS: Added a horrible hack to fix the hang in "Fighters Megamix" that occurred after the intro FMV played(or was interrupted).
+
+	SS: Added a horrible hack to fix the hang at the end of disc 1 of "Grandia".
+
+	SS: Added a per-game horrible hacks mechanism.
+
+	SS: Added "Albert Odyssey" to the internal database of games to use full cache emulation with, to fix battle text truncation.
+
+	SS: Added "Die Hard Trilogy", "GeGeGe no Kitarou", "Nobunaga no Yabou Shouseiroku", "Space Jam" to the internal database of games to use full
+	cache emulation with, to fix hangs/crashes.
+
+	SS: Added "Gex" and "Slam 'n Jam 96" to the internal database of games to use full cache emulation with, to fix minor FMV glitches.
+
+	SS: Added "Policenauts" to the internal database of games to use full cache emulation with, to fix screen flickering on disc 2.
+
+	SS: Full cache emulation(enabled via database) now also enables emulation of SH-2 WB/EX pipeline stalls.
+
+	SS: Tweaked the kludgey CPU instruction read/write penalty during SH-2 DMA to be higher in some circumstances; fixes major graphical glitches in the
+	later stages of "Shienryu" when on arcade mode.
+
+	SS: Added "Dragon Force II" to the internal database of games to use the data cache read bypass kludge with, to fix major game logic errors
+	during battles.
+
+March 15, 2019:
+	SNES-Faust: Added CX4, SuperFX, and SA-1 emulation.
+
+	SNES-Faust: Made various changes to try to improve game compatibility.
+
 -- 1.22.2: --
 
 April 23, 2019:

@@ -23,6 +23,7 @@
 #define __MDFN_VIRTUALFS_H
 
 #include "Stream.h"
+#include <functional>
 
 namespace Mednafen
 {
@@ -95,6 +96,8 @@ class VirtualFS
 
  virtual bool finfo(const std::string& path, FileInfo*, const bool throw_on_noent = true) = 0;
 
+ virtual void readdirentries(const std::string& path, std::function<bool(const std::string&)> callb) = 0;
+
  //
  //
  //
@@ -105,7 +108,7 @@ class VirtualFS
  //
  // Note: It IS permissible for an output to point to the same string as the file_path reference.
  //
- virtual void get_file_path_components(const std::string &file_path, std::string* dir_path_out, std::string* file_base_out = nullptr, std::string *file_ext_out = nullptr);
+ virtual void get_file_path_components(const std::string& file_path, std::string* dir_path_out, std::string* file_base_out = nullptr, std::string *file_ext_out = nullptr);
 
  // File-inclusion for-read-only path, for PSF and CUE/TOC sheet usage.
  // throws exception if not safe(and/or on other error).
@@ -118,7 +121,7 @@ class VirtualFS
  // Create any directories needed to create a file at file_path
  void create_missing_dirs(const std::string& file_path);
 
- private:
+ protected:
  
  const char preferred_path_separator;
  const std::string allowed_path_separators;

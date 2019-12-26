@@ -79,7 +79,7 @@ int Novel_Init(CartInfo *info) MDFN_COLD;
 
 namespace MDFN_IEN_NES
 {
-extern uint8 *UNIFchrrama;	// Meh.  So I can stop CHR RAM 
+MDFN_HIDE extern uint8 *UNIFchrrama;	// Meh.  So I can stop CHR RAM 
 	 			// bank switcherooing with certain boards...
 }
 

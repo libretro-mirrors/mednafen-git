@@ -27,15 +27,21 @@
 namespace MDFN_IEN_SNES_FAUST
 {
 
-void APU_Init(const bool IsPAL) MDFN_COLD;
+double APU_Init(const bool IsPAL, double master_clock) MDFN_COLD;
 void APU_Kill(void) MDFN_COLD;
 void APU_Reset(bool powering_up) MDFN_COLD;
 int32 APU_EndFrame(int16* SoundBuf);
-void APU_StartFrame(double master_clock, double rate);
+bool APU_StartFrame(double master_clock, double rate, int32* apu_clock_multiplier, int32* resamp_num, int32* resamp_denom);
+uint32 APU_UpdateGetResampBufPos(uint32 master_timestamp);	// for MSU1
+
 void APU_SetSPC(SPCReader* s) MDFN_COLD;	// Call after APU_Reset()
 
 void APU_StateAction(StateMem* sm, const unsigned load, const bool data_only);
-
+//
+//
+//
+uint8 APU_PeekRAM(uint32 addr) MDFN_COLD;
+void APU_PokeRAM(uint32 addr, const uint8 val) MDFN_COLD;
 }
 
 #endif

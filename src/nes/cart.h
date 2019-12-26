@@ -36,7 +36,7 @@ typedef struct __CartInfo {
 void MDFN_SaveGameSave(CartInfo *LocalHWInfo) MDFN_COLD;
 void MDFN_LoadGameSave(CartInfo *LocalHWInfo) MDFN_COLD;
 
-extern uint8 *Page[32],*VPage[8],*MMC5SPRVPage[8],*MMC5BGVPage[8];
+MDFN_HIDE extern uint8 *Page[32],*VPage[8],*MMC5SPRVPage[8],*MMC5BGVPage[8];
 
 void ResetCartMapping(void) MDFN_COLD;
 void SetupCartPRGMapping(int chip, uint8 *p, uint32 size, int ram) MDFN_COLD;
@@ -49,22 +49,22 @@ DECLFR(CartBROB);
 DECLFR(CartBR);
 DECLFW(CartBW);
 
-extern uint8 *PRGptr[32];
-extern uint8 *CHRptr[32];
+MDFN_HIDE extern uint8 *PRGptr[32];
+MDFN_HIDE extern uint8 *CHRptr[32];
 
-extern uint32 PRGsize[32];
-extern uint32 CHRsize[32];
+MDFN_HIDE extern uint32 PRGsize[32];
+MDFN_HIDE extern uint32 CHRsize[32];
 
-extern uint32 PRGmask2[32];
-extern uint32 PRGmask4[32];
-extern uint32 PRGmask8[32];
-extern uint32 PRGmask16[32];
-extern uint32 PRGmask32[32];
+MDFN_HIDE extern uint32 PRGmask2[32];
+MDFN_HIDE extern uint32 PRGmask4[32];
+MDFN_HIDE extern uint32 PRGmask8[32];
+MDFN_HIDE extern uint32 PRGmask16[32];
+MDFN_HIDE extern uint32 PRGmask32[32];
 
-extern uint32 CHRmask1[32];
-extern uint32 CHRmask2[32];
-extern uint32 CHRmask4[32];
-extern uint32 CHRmask8[32];
+MDFN_HIDE extern uint32 CHRmask1[32];
+MDFN_HIDE extern uint32 CHRmask2[32];
+MDFN_HIDE extern uint32 CHRmask4[32];
+MDFN_HIDE extern uint32 CHRmask8[32];
 
 void setprg2(uint32 A, uint32 V);
 void setprg4(uint32 A, uint32 V);
@@ -105,7 +105,7 @@ void setntamem(uint8 *p, int ram, uint32 b);
 #define MI_0 2
 #define MI_1 3
 
-extern uint8 geniestage;
+MDFN_HIDE extern uint8 geniestage;
 
 void Genie_Init(void) MDFN_COLD;
 void Genie_Kill(void) MDFN_COLD;

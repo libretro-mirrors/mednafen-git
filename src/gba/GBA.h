@@ -23,6 +23,8 @@
 #include <mednafen/mednafen.h>
 #include <zlib.h>
 
+using namespace Mednafen;
+
 namespace MDFN_IEN_GBA
 {
 

@@ -38,9 +38,14 @@ class OwlBuffer
  void Integrate(unsigned count, unsigned lp_shift = 0, unsigned hp_shift = 0, RavenBuffer* mixin0 = NULL, RavenBuffer* mixin1 = NULL);	// Convenience function.
  void ResampleSkipped(unsigned count);
 
- void ZeroLeftover(void);
-
  void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname_prefix, const unsigned scount);
+
+ INLINE void GetDebugInfo(int32* leftover_out, uint32* inputindex_out, uint32* inputphase_out)
+ {
+  *leftover_out = leftover;
+  *inputindex_out = InputIndex;
+  *inputphase_out = InputPhase;
+ }
 
  private:
 
@@ -103,11 +108,11 @@ class OwlResampler
 	//
         // nyq_fudge may be a tasty sleep drug.
 	//
-	OwlResampler(double input_rate, double output_rate, double rate_error, double debias_corner, int quality, double nyq_fudge = 1.0) MDFN_COLD;
+	OwlResampler(double input_rate, double output_rate, double rate_error, double debias_corner, int quality, double nyq_fudge = 1.0, double fake_input_rate = 999999999, int32 dividend_override = 0, int32 divisor_override = 0) MDFN_COLD;
 	OwlResampler(const OwlResampler &resamp) MDFN_COLD;
 	~OwlResampler() MDFN_COLD;
 
-	INLINE int32 Resample(OwlBuffer* in, const uint32 in_count, int16* out, const uint32 max_out_count, const bool reverse = false)
+	INLINE int32 Resample(OwlBuffer* in, const uint32 in_count, int16* out, const uint32 max_out_count/*(unused currently)*/, const bool reverse = false)
 	{
 	 return (this->*OwlResampler::Resample_)(in, in_count, out, max_out_count, reverse);
 	}

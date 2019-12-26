@@ -32,6 +32,9 @@
 
 #include "dos_common.h"
 
+namespace Mednafen
+{
+
 static const int ES_DMAFIFO_BYTESIZE = 64;
 static const int ES_DMAFIFO_FETCHBYTESIZE = 32;
 
@@ -468,3 +471,4 @@ SexyAL_device *SexyALI_DOS_ES1370_Open(const char *id, SexyAL_format *format, Se
  return(device);
 }
 
+}
