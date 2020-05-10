@@ -2,7 +2,7 @@
 /* Mednafen Apple II Emulation Module                                         */
 /******************************************************************************/
 /* disk2.inc:
-**  Copyright (C) 2018 Mednafen Team
+**  Copyright (C) 2018-2020 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -30,6 +30,8 @@
 
  TODO:
 	Fix track stepping speeds.
+
+	Make FloppyDisk opaque to outside code.
 */
 
 namespace Disk2
@@ -78,7 +80,7 @@ struct FloppyDisk
   bool flux_fudge = false;
  } tracks[num_tracks];
 
- uint32 angle = 0;	// index into tracks[track].data
+ uint32 angle = 0;	// when disk is inserted into a drive, >>3 for index into tracks[track].data; otherwise, full 32-bit representation of angle
  bool dirty = false;	// Disk has been modified(change of write protect, or track data) since last save.
  bool ever_modified = false;	// Disk has ever been modified(as compared to source disk image).
 };
@@ -214,10 +216,15 @@ static NO_INLINE void Tick2M(void)
   //
   //
   //
-  assert(disk->angle < (tr->length << 3));
   disk->angle++;
-  if(MDFN_UNLIKELY(disk->angle == (tr->length << 3)))
+  if(MDFN_UNLIKELY(disk->angle >= (tr->length << 3)))
   {
+   if(MDFN_UNLIKELY(disk->angle > (tr->length << 3)))
+   {
+    // Expected to happen if a bad save state is loaded, but shouldn't happen otherwise.
+    APPLE2_DBG(APPLE2_DBG_ERROR, "[ERROR] disk->angle > (tr->length << 3)\n");
+   }
+   //
    disk->angle = 0;
 
    // Baaaah
@@ -248,7 +255,7 @@ static NO_INLINE void Tick2M(void)
    new_track = drive->stepper_position >> 24;
    if(old_track != new_track)
    {
-    APPLE2_DBG("Disk II virtual track changed: %08x\n", drive->stepper_position);
+    APPLE2_DBG(APPLE2_DBG_DISK2, "[DISK2] Disk II virtual track changed: %08x\n", drive->stepper_position);
     disk->angle = (uint64)disk->angle * disk->tracks[new_track].length / disk->tracks[old_track].length;
    }
   }
@@ -454,33 +461,36 @@ static DEFRW(RW)
  //if(TA == 0xD || TA == 0xF)
  // printf("Write: %02x: %02x\n", TA, DB);
 
- switch(TA)
+ if(!InHLPeek)
  {
-  // Stepper phases off/on control
-  case 0x0: case 0x1: case 0x2: case 0x3: case 0x4: case 0x5: case 0x6: case 0x7:
+  switch(TA)
+  {
+   // Stepper phases off/on control
+   case 0x0: case 0x1: case 0x2: case 0x3: case 0x4: case 0x5: case 0x6: case 0x7:
 	Latch_Stepper &=     ~(1U << ((TA & 0x7) >> 1));
 	Latch_Stepper |= (TA & 1) << ((TA & 0x7) >> 1);
 	//printf("Stepper: %02x, %02x, %08x @ %u\n", TA, Latch_Stepper, Drives[0].stepper_position, timestamp);
 	break;
 
-  // Motor off/on control
-  case 0x8: Latch_MotorOn = false; break;
-  case 0x9: Latch_MotorOn = true; break;
+   // Motor off/on control
+   case 0x8: Latch_MotorOn = false; break;
+   case 0x9: Latch_MotorOn = true; break;
 
-  // Drive select
-  case 0xA: Latch_DriveSelect = false; break;
-  case 0xB: Latch_DriveSelect = true; break;
+   // Drive select
+   case 0xA: Latch_DriveSelect = false; break;
+   case 0xB: Latch_DriveSelect = true; break;
 
-  // Q6
-  case 0xC: Latch_Mode &= ~0x10; break;
-  case 0xD: Latch_Mode |=  0x10; break;
+   // Q6
+   case 0xC: Latch_Mode &= ~0x10; break;
+   case 0xD: Latch_Mode |=  0x10; break;
 
-  // Q7
-  case 0xE: Latch_Mode &= ~0x20; break;
-  case 0xF: Latch_Mode |=  0x20; break;
+   // Q7
+   case 0xE: Latch_Mode &= ~0x20; break;
+   case 0xF: Latch_Mode |=  0x20; break;
+  }
+  //
+  CPUTick1();
  }
- //
- CPUTick1();
  //
  if(!(TA & 1))
  {
@@ -495,7 +505,8 @@ static DEFREAD(ReadBootROM)
 {
  DB = BootROM[(uint8)A];
  //
- CPUTick1();
+ if(!InHLPeek)
+  CPUTick1();
 }
 
 class apple2_track_encoder
@@ -1841,9 +1852,17 @@ static bool GetClearDiskDirty(FloppyDisk* disk)
 static void SetDisk(unsigned drive_index, FloppyDisk* disk)
 {
  assert(drive_index < 2);
+ //
  FloppyDrive* drive = &Drives[drive_index];
+ FloppyDisk* old_disk = drive->inserted_disk;
+ FloppyDisk* new_disk = disk ? disk : &DummyDisk;
+ const unsigned tri = drive->stepper_position >> 24;
 
- drive->inserted_disk = disk ? disk : &DummyDisk;
+ old_disk->angle = (((uint64)old_disk->angle << (32 - 3)) / old_disk->tracks[tri].length);
+ new_disk->angle = (((uint64)new_disk->angle * new_disk->tracks[tri].length + (1U << (32 - 3 - 1))) >> (32 - 3)) % (new_disk->tracks[tri].length << 3);
+ drive->inserted_disk = new_disk;
+
+ APPLE2_DBG(APPLE2_DBG_DISK2, "[DISK2] Drive %u disk set; stepper_track=%u, new_disk_angle=%u\n", 1 + drive_index, tri, new_disk->angle);
  //
  assert(Drives[0].inserted_disk == &DummyDisk || Drives[0].inserted_disk != Drives[1].inserted_disk);
 }
@@ -1908,6 +1927,9 @@ static void StateAction_Disk(StateMem* sm, const unsigned load, const bool data_
 
  if(load)
  {
+  if(disk == Drives[0].inserted_disk || disk == Drives[1].inserted_disk)
+   disk->angle %= max_bits_per_track << 3;	// Incomplete sanitization, but it should be fine for now.
+
   for(unsigned t = 0; t < num_tracks; t++)
   {
    StateHelperDisk.tracks[t].length = std::min<unsigned>(max_bits_per_track, std::max<unsigned>(1, StateHelperDisk.tracks[t].length));
@@ -1923,7 +1945,7 @@ static void StateAction_Disk(StateMem* sm, const unsigned load, const bool data_
 
    if(diff)
    {
-    APPLE2_DBG("State load dirty track %u.\n", t);
+    APPLE2_DBG(APPLE2_DBG_DISK2, "[DISK2] State load dirty track %u.\n", t);
     //
     disk->tracks[t] = StateHelperDisk.tracks[t];
     disk->dirty = true;

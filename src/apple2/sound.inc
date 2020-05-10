@@ -81,9 +81,12 @@ static void DoSpeakerToggle(void)
 
 static DEFRW(RWSpeakerToggle)
 {
- DoSpeakerToggle();
- //
- CPUTick1();
+ if(!InHLPeek)
+ {
+  DoSpeakerToggle();
+  //
+  CPUTick1();
+ }
 }
 
 void SetParams(double rate, double rate_error, unsigned quality)

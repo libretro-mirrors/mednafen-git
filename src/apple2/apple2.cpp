@@ -36,20 +36,41 @@
 #include <mednafen/SimpleBitset.h>
 #include <mednafen/Time.h>
 #include <mednafen/sound/DSPUtility.h>
+#include <mednafen/sound/SwiftResampler.h>
+
+#include <trio/trio.h>
 
 #include <bitset>
 #include <map>
 
-#include <mednafen/sound/SwiftResampler.h>
+#ifdef MDFN_ENABLE_DEV_BUILD
+ #include "../nes/dis6502.h"
+#endif
 
 using namespace Mednafen;
 
-#if 0
- #define APPLE2_DBG_ENABLE 1
- #define APPLE2_DBG(s, ...) printf(s, ## __VA_ARGS__)
+#ifdef MDFN_ENABLE_DEV_BUILD
+ static uint32 apple2_dbg_mask;
 #else
- static INLINE void APPLE2_DBG(const char* format, ...) { }
+ enum { apple2_dbg_mask = 0 };
 #endif
+
+enum
+{
+ APPLE2_DBG_ERROR	=	(1U << 0),
+ APPLE2_DBG_WARNING	=	(1U << 1),
+ APPLE2_DBG_UNK_READ	=	(1U << 2),
+ APPLE2_DBG_UNK_WRITE	=	(1U << 3),
+ APPLE2_DBG_UNINITIALIZED_READ= (1U << 4),
+
+ APPLE2_DBG_DISK2	=	(1U << 16),
+ APPLE2_DBG_BIOS	=	(1U << 24),
+ APPLE2_DBG_DOS		=	(1U << 25),
+};
+
+static INLINE void APPLE2_DBG(const char* format, ...) { }
+static INLINE void APPLE2_DBG_Dummy(const char* format, ...) { }
+#define APPLE2_DBG(which, ...) ((MDFN_UNLIKELY(apple2_dbg_mask & (which))) ? (void)trio_printf(__VA_ARGS__) : APPLE2_DBG_Dummy(__VA_ARGS__))
 
 extern MDFNGI EmulatedApple2;
 
@@ -84,14 +105,9 @@ static uint8 ROM12K[2][0x3000];
 static uint8 LangRAM[0x4000];
 static bool LangRAMReadEnable, LangRAMWriteEnable, LangRAMPrevA1, LangBank2Select;
 
-#ifdef APPLE2_DBG_ENABLE
+#ifdef MDFN_ENABLE_DEV_BUILD
 static bool junkread;
 static std::bitset<sizeof(RAM48K)> RAM48K_Initialized;
-#endif
-
-#if 0
-static Stream* RWLogger;
-static MemoryStream* RWPlayer;
 #endif
 
 enum
@@ -148,39 +164,50 @@ void SetRWHandlers(uint16 A, readfunc_t rf, writefunc_t wf)
  WriteFuncs[A] = wf;
 }
 
+#include "debug.inc"
+#include "disk2.inc"
+
 static DEFREAD(ReadUnhandled)
 {
-#ifdef APPLE2_DBG_ENABLE
- if(!junkread)
-  APPLE2_DBG("Unhandled read: %04x\n", A);
+#ifdef MDFN_ENABLE_DEV_BUILD
+ if(!junkread && !InHLPeek)
+  APPLE2_DBG(APPLE2_DBG_UNK_READ, "[UNK] Unhandled read: %04x\n", A);
 #endif
  //
- CPUTick1();
+ if(!InHLPeek)
+  CPUTick1();
 }
 
 static DEFWRITE(WriteUnhandled)
 {
- APPLE2_DBG("Unhandled write: %04x %02x\n", A, DB);
+ APPLE2_DBG(APPLE2_DBG_UNK_WRITE, "[UNK] Unhandled write: %04x %02x\n", A, DB);
  //
  CPUTick1();
 }
 
 static DEFREAD(ReadRAM48K)
 {
-#ifdef APPLE2_DBG_ENABLE
- if(!junkread && !RAM48K_Initialized[A])
-  APPLE2_DBG("Read from uninitialized RAM address 0x%04x(@=0x%02x).\n", A, RAM48K[A]);
+#ifdef MDFN_ENABLE_DEV_BUILD
+ if(!junkread && !InHLPeek)
+ {
+  if(!RAM48K_Initialized[A])
+   APPLE2_DBG(APPLE2_DBG_UNINITIALIZED_READ, "[UNINIT] Read from uninitialized RAM address 0x%04x(@=0x%02x).\n", A, RAM48K[A]);
+
+  if(A >= 0x9D00 && A <= 0xBFFF && (CPU.PC < 0x9D00 || CPU.PC >= 0xC000))
+   APPLE2_DBG(APPLE2_DBG_DOS, "[DOS] Read from DOS area of RAM at address 0x%04x, PC=0x%04x\n", A, CPU.PC);
+ }
 #endif
 
  DB = RAM48K[A];
  //
- CPUTick1();
+ if(!InHLPeek)
+  CPUTick1();
 }
 
 static DEFWRITE(WriteRAM48K)
 {
  RAM48K[A] = DB;
-#ifdef APPLE2_DBG_ENABLE
+#ifdef MDFN_ENABLE_DEV_BUILD
  RAM48K_Initialized[A] = true;
 #endif
  //
@@ -189,9 +216,12 @@ static DEFWRITE(WriteRAM48K)
 
 static DEFRW(RWROMCardControl)
 {
- ROMSelect = A & 1;
- //
- CPUTick1();
+ if(!InHLPeek)
+ {
+  ROMSelect = A & 1;
+  //
+  CPUTick1();
+ }
 }
 
 static DEFREAD(ReadROM)
@@ -199,7 +229,8 @@ static DEFREAD(ReadROM)
  if(ROMPresent[ROMSelect][((size_t)A >> 11) - (0xD000 >> 11)])
   DB = ROM12K[ROMSelect][(size_t)A - 0xD000];
  //
- CPUTick1();
+ if(!InHLPeek)
+  CPUTick1();
 }
 
 static DEFREAD(ReadLangBSArea)
@@ -209,7 +240,8 @@ static DEFREAD(ReadLangBSArea)
  else if(MDFN_LIKELY(ROMPresent[1][((size_t)A >> 11) - (0xD000 >> 11)]))
   DB = ROM12K[1][(size_t)A - 0xD000];
  //
- CPUTick1();
+ if(!InHLPeek)
+  CPUTick1();
 }
 
 static DEFWRITE(WriteLangBSArea)
@@ -227,7 +259,8 @@ static DEFREAD(ReadLangStaticArea)
  else if(MDFN_LIKELY(ROMPresent[1][((size_t)A >> 11) - (0xD000 >> 11)]))
   DB = ROM12K[1][(size_t)A - 0xD000];
  //
- CPUTick1();
+ if(!InHLPeek)
+  CPUTick1();
 }
 
 static DEFWRITE(WriteLangStaticArea)
@@ -244,27 +277,31 @@ template<bool isread>
 static DEFRW(RWLangCardControl)
 {
  //printf("Lang card control: %d %08x\n", isread, A);
-
- LangBank2Select = !(A & 8);
- LangRAMReadEnable = !((bool)(A & 1) ^ (bool)(A & 2));
- LangRAMWriteEnable = ((LangRAMPrevA1 & isread) | LangRAMWriteEnable) & (bool)(A & 1);
- LangRAMPrevA1 = (bool)(A & 1) & isread;
- //
- CPUTick1();
+ if(!InHLPeek)
+ {
+  LangBank2Select = !(A & 8);
+  LangRAMReadEnable = !((bool)(A & 1) ^ (bool)(A & 2));
+  LangRAMWriteEnable = ((LangRAMPrevA1 & isread) | LangRAMWriteEnable) & (bool)(A & 1);
+  LangRAMPrevA1 = (bool)(A & 1) & isread;
+  //
+  CPUTick1();
+ }
 }
 
 
 static DEFRW(RWSoftSwitch)
 {
- const unsigned w = (A & 0xF) >> 1;
+ if(!InHLPeek)
+ {
+  const unsigned w = (A & 0xF) >> 1;
 
- SoftSwitch &= ~(1U << w);
- SoftSwitch |= (A & 1) << w;
- //
- CPUTick1();
+  SoftSwitch &= ~(1U << w);
+  SoftSwitch |= (A & 1) << w;
+  //
+  CPUTick1();
+ }
 }
 
-#include "disk2.inc"
 
 static INLINE void CPUTick0(void)
 {
@@ -275,16 +312,22 @@ static INLINE void CPUTick0(void)
   Disk2::Tick2M();	// Call after increasing timestamp
 }
 
-//static uint32 Tick1Counter;
+#ifdef MDFN_ENABLE_DEV_BUILD
+static uint32 Tick1Counter;
+#endif
 static unsigned CPUTick1Called;
 static INLINE void CPUTick1(void)
 {
+ assert(!InHLPeek);
+ //
  timestamp += 7;
  //
  if(EnableDisk2)
   Disk2::Tick2M();	// Call after increasing timestamp
  CPUTick1Called++;
- //Tick1Counter++;
+#ifdef MDFN_ENABLE_DEV_BUILD
+ Tick1Counter++;
+#endif
 }
 
 INLINE uint8 Core6502::MemRead(uint16 addr, bool junk)
@@ -305,7 +348,7 @@ INLINE uint8 Core6502::MemRead(uint16 addr, bool junk)
  //
  //
  assert(CPUTick1Called == 0);
-#ifdef APPLE2_DBG_ENABLE
+#ifdef MDFN_ENABLE_DEV_BUILD
  junkread = junk;
 #endif
  ReadFuncs[addr](addr);
@@ -364,6 +407,13 @@ INLINE bool Core6502::GetNMI(void)
  return false;
 }
 
+INLINE void Core6502::BranchTrace(uint16 vector)
+{
+#ifdef MDFN_ENABLE_DEV_BUILD
+ DBG::AddBranchTrace(PC, vector);
+#endif
+}
+
 static const bool Core6502_EnableDecimalOps = true;
 #include <mednafen/hw_cpu/6502/Core6502.inc>
 
@@ -410,68 +460,78 @@ static void AnalyzeBIOSWaitRoutine(void)
 }
 #endif
 
-#if 0
-   if(prev_PC != CPU.PC)
-   {
-    if((!LangRAMReadEnable && prev_PC < 0xD000 && CPU.PC >= 0xD000) || (prev_PC < 0xF800 && CPU.PC >= 0xF800))
-    {
-     printf("ROM call to 0x%04x from 0x%04x; A=0x%02x, P=0x%02x\n", CPU.PC, prev_PC, CPU.A, CPU.P);
-     prev_t1counter = Tick1Counter;
-    }
+#ifdef MDFN_ENABLE_DEV_BUILD
+static void LogBIOSCalls(void)
+{
+ static uint32 prev_PC = ~0U;
+ static uint32 prev_t1counter = 0x80000000;
 
-    if((!LangRAMReadEnable && CPU.PC < 0xD000 && prev_PC >= 0xD000) || (CPU.PC < 0xF800 && prev_PC >= 0xF800))
-    {
-     printf("Return from ROM at 0x%04x to 0x%04x; A=0x%02x, P=0x%02x, time taken=%u\n", prev_PC, CPU.PC, CPU.A, CPU.P, Tick1Counter - prev_t1counter);
-     prev_t1counter = 0x80000000;
-    }
-/*
-    switch(CPU.PC)
-    {
-     case 0x3D4: printf("Hm: %04x\n", prev_PC); break;
-     case 0x3D6: printf("File manager from 0x%04x\n", prev_PC); break;
-     case 0x3DC: printf("File manager locate parameter list from 0x%04x\n", prev_PC); break;
-     case 0x3D9: printf("RWTS from 0x%04x\n", prev_PC); break;
-     case 0x3E3: printf("RWTS locate IOB from 0x%04x\n", prev_PC); break;
-
-     case 0xC600: printf("Disk II; Init; from 0x%04x\n", prev_PC); break;
-     case 0xC620: printf("Disk II; Init2; from 0x%04x\n", prev_PC); break;
-     case 0xC65C: printf("Disk II; Read Sector; from 0x%04x\n", prev_PC); break;
-     case 0xC683: printf("Disk II; Handle Sector Addr; from 0x%04x\n", prev_PC); break;
-     case 0xC6A6: printf("Disk II; Handle Sector Data; from 0x%04x\n", prev_PC); break;
-    }
-*/
-    //
-    prev_PC = CPU.PC;
-   }
-#endif
-
-#if 0
-  if(MDFN_UNLIKELY(RWPlayer))
+ if(prev_PC != CPU.PC)
+ {
+  //if(CPU.PC != 0xFCA8 && CPU.PC != 0xFB1E && CPU.PC != 0xFC58 && CPU.PC != 0xFDED && CPU.PC != 0xFDF0 && CPU.PC != 0xFE2C)
+  if((/*!LangRAMReadEnable &&*/ prev_PC < 0xD000 && CPU.PC >= 0xD000) || (prev_PC < 0xF800 && CPU.PC >= 0xF800))
   {
-   while(MDFN_LIKELY(!FrameDone))
+/*
+   static const struct
    {
-    uint8 tmp[4];
-
-    if(RWPlayer->read(&tmp, sizeof(tmp)) != sizeof(tmp))
-     break;
-    //
-    const uint16 addr = MDFN_de16lsb(&tmp[2]);
-
-    if(tmp[0])
-     CPU.MemWrite(addr, tmp[1]);
-    else
-     CPU.MemRead(addr, true);
-   }
+    uint16 address;
+    const char* name;
+   } biosnames[] =
+   {
+    { 0xFCA8, "WAIT" };
+   };
+*/
+   APPLE2_DBG(APPLE2_DBG_BIOS, "[BIOS] ROM call to 0x%04x from 0x%04x; A=0x%02x, X=0x%02x, Y=0x%02x, P=0x%02x\n", CPU.PC, prev_PC, CPU.A, CPU.X, CPU.Y, CPU.P);
+   prev_t1counter = Tick1Counter;
   }
-#endif
-  //
-#if 0
-  AnalyzeBIOSWaitRoutine();
-#endif
 
-#if 0
-  static uint32 prev_PC = ~0U;
-  static uint32 prev_t1counter = 0x80000000;
+  if((/*!LangRAMReadEnable &&*/ CPU.PC < 0xD000 && prev_PC >= 0xD000) || (CPU.PC < 0xF800 && prev_PC >= 0xF800))
+  {
+   APPLE2_DBG(APPLE2_DBG_BIOS, "[BIOS]   ROM return; 0x%04x->0x%04x; A=0x%02x, X=0x%02x, Y=0x%02x, P=0x%02x, time=%5u\n", prev_PC, CPU.PC, CPU.A, CPU.X, CPU.Y, CPU.P, Tick1Counter - prev_t1counter);
+   prev_t1counter = 0x80000000;
+  }
+
+  //if((prev_PC >= 0x9D00 && prev_PC <= 0xBFFF) && !(CPU.PC >= 0x9D00 && CPU.PC <= 0xBFFF))
+  // printf("FromDOS?: 0x%04x->0x%04x; A=0x%02x, X=0x%02x, Y=0x%02x, P=0x%02x --- %c\n", prev_PC, CPU.PC, CPU.A, CPU.X, CPU.Y, CPU.P, CPU.A & 0x7F);
+
+  if((CPU.PC >= 0x9D00 && CPU.PC <= 0xBFFF) && !(prev_PC >= 0x9D00 && prev_PC <= 0xBFFF))
+   APPLE2_DBG(APPLE2_DBG_DOS, "[DOS] Call to 0x%04x from 0x%04x; A=0x%02x, X=0x%02x, Y=0x%02x, P=0x%02x --- %c\n", CPU.PC, prev_PC, CPU.A, CPU.X, CPU.Y, CPU.P, CPU.A & 0x7F);
+  else if(CPU.PC == 0x3D6 || CPU.PC == MDFN_de16lsb(&RAM48K[0x3D7]))
+   APPLE2_DBG(APPLE2_DBG_DOS, "[DOS] File manager(0x%04x) from 0x%04x\n", CPU.PC, prev_PC);
+  else if(CPU.PC == 0x3D9 || CPU.PC == MDFN_de16lsb(&RAM48K[0x3DA]))
+  {
+/*
+   const uint16 iob_addr = CPU.Y | (CPU.A << 8);
+   assert(iob_addr <= (0xC000 - 1));
+   uint8* iob = &RAM48K[iob_addr];
+   APPLE2_DBG(APPLE2_DBG_DOS, "[DOS] RWTS from 0x%04x: iob_addr=0x%04x; command=0x%02x, slot=0x%02x, drive=0x%02x, volume=0x%02x, track=0x%02x, sector=0x%02x\n", prev_PC,
+	iob_addr,
+	iob[0xC],
+	iob[0x1],
+	iob[0x2],
+	iob[0x3],
+	iob[0x4],
+	iob[0x5]);
+*/
+  }
+  else if(CPU.PC == 0x3DC || CPU.PC == MDFN_de16lsb(&RAM48K[0x3DD]))
+   APPLE2_DBG(APPLE2_DBG_DOS, "[DOS] File manager locate parameter list from 0x%04x\n", prev_PC);
+  else switch(CPU.PC)
+  {
+   case 0x3D4: APPLE2_DBG(APPLE2_DBG_DOS, "[DOS] Hm: %04x\n", prev_PC); break;
+
+   case 0x3E3: APPLE2_DBG(APPLE2_DBG_DOS, "[DOS] RWTS locate IOB from 0x%04x\n", prev_PC); break;
+   //
+   case 0xC600: APPLE2_DBG(APPLE2_DBG_BIOS, "[D2-BIOS] Disk II; Init; from 0x%04x\n", prev_PC); break;
+   case 0xC620: APPLE2_DBG(APPLE2_DBG_BIOS, "[D2-BIOS] Disk II; Init2; from 0x%04x\n", prev_PC); break;
+   case 0xC65C: APPLE2_DBG(APPLE2_DBG_BIOS, "[D2-BIOS] Disk II; Read Sector; from 0x%04x\n", prev_PC); break;
+   case 0xC683: APPLE2_DBG(APPLE2_DBG_BIOS, "[D2-BIOS] Disk II; Handle Sector Addr; from 0x%04x\n", prev_PC); break;
+   case 0xC6A6: APPLE2_DBG(APPLE2_DBG_BIOS, "[D2-BIOS] Disk II; Handle Sector Data; from 0x%04x\n", prev_PC); break;
+  }
+  //
+  prev_PC = CPU.PC;
+ }
+}
 #endif
 
 
@@ -567,6 +627,15 @@ static void Emulate(EmulateSpecStruct* espec)
     {
      while(MDFN_LIKELY(!FramePartialDone))
      {
+#ifdef MDFN_ENABLE_DEV_BUILD
+      DBG::CPUHandler();
+
+      if(ResetPending || ResetHeld || Jammed)	// Imperfect, FIXME
+       break;
+      //
+      LogBIOSCalls();
+#endif
+
       CPU.Step();
      }
     }
@@ -598,7 +667,7 @@ static void Emulate(EmulateSpecStruct* espec)
 #ifdef MDFN_APPLE2_PARTIALBIOS_HLE
 static int32 HLEPhase;
 static uint32 HLESuckCounter;
-static uint32 HLETemp;
+static uint32 HLETemp[8];
 
 enum : int { HLEPhaseBias = __COUNTER__ + 1 };
 
@@ -617,16 +686,106 @@ void Core6502::JamHandler(uint8 opcode)
 
    if(PC == 0xFCA8)
    {
-    HLETemp = A ? A : 256;
+    //
+    // WAIT
+    //
+    HLETemp[0] = A ? A : 256;
 
-    if(CPU.P & FLAG_D)
-     HLETemp = (HLETemp & 0xF) + ((HLETemp & 0xF0) >> 4) * 10 + ((HLETemp & 0xF00) >> 8) * 100;
+    if(P & FLAG_D)
+     HLETemp[0] = (HLETemp[0] & 0xF) + ((HLETemp[0] & 0xF0) >> 4) * 10 + ((HLETemp[0] & 0xF00) >> 8) * 100;
 
-    HLETemp = ((27 * HLETemp + 5 * HLETemp * HLETemp) >> 1) - (A ? 0 : 10);
-    HLE_SUCK(HLETemp);
+    HLETemp[0] = ((27 * HLETemp[0] + 5 * HLETemp[0] * HLETemp[0]) >> 1) - (A ? 0 : 10);
+    HLE_SUCK(HLETemp[0]);
 
-    CPU.A = 0x00;
-    CPU.P |= FLAG_Z | FLAG_C;
+    A = 0x00;
+    P |= FLAG_Z | FLAG_C;
+    PC++;
+   }
+   else if(PC == 0xFB1E)
+   {
+    //
+    // PREAD
+    //
+    // Minimum CPU cycles:   23 (Y: 0x00)
+    // Medium  CPU cycles: 1431 (Y: 0x80)
+    // Maximum CPU cycles: 2833 (Y: 0xFF)
+    //
+    // Inputs:
+    //  X: which paddle(0 or 1)
+    // Outputs:
+    //  A: (undefined; seems to be last value read from 0xC06n though)
+    //  Y: paddle position(0x00 through 0xFF)
+    //
+    Y = 0;
+    HLE_SUCK(3)
+    MemRead(0xC070);
+    for(;;)
+    {
+     HLE_SUCK(10)
+     if(Y == 0xFF)
+     {
+      HLE_SUCK(6)
+      break;
+     }
+     if((int8)(A = MemRead(0xC064 + X)) >= 0)
+      break;
+     Y++;
+    }
+    HLE_SUCK(1)
+    CalcZN(A);
+    PC++;
+   }
+   else if(PC == 0xFC58)
+   {
+    //
+    // HOME
+    //
+    PC++;
+   }
+   else if(PC == 0xFDED)
+   {
+    //
+    // COUT
+    //
+   }
+   else if(PC == 0xFDF0)
+   {
+    //
+    // COUT1
+    //
+   }
+   else if(PC == 0xFE2C)
+   {
+    //
+    // MOVE
+    //
+    HLETemp[0]  = MemRead((uint8)(0x3C + Y));
+    HLETemp[0] |= MemRead((uint8)(0x3D + Y)) << 8;
+    HLETemp[1]  = MemRead((uint8)(0x3E + Y));
+    HLETemp[1] |= MemRead((uint8)(0x3F + Y)) << 8;
+    HLETemp[2]  = MemRead((uint8)(0x42 + Y));
+    HLETemp[2] |= MemRead((uint8)(0x43 + Y)) << 8;
+    HLE_YIELD();
+
+    //printf("source=%04x source_end=%04x dest=%04x\n", HLETemp[0], HLETemp[1], HLETemp[2]);
+
+    for(;;)
+    {
+     MemWrite((uint16)HLETemp[2], MemRead((uint16)HLETemp[0]));
+
+     if(HLETemp[0] == HLETemp[1])
+      break;
+
+     HLETemp[0] = (uint16)(HLETemp[0] + 1);
+     HLETemp[2] = (uint16)(HLETemp[2] + 1);
+     HLE_YIELD();
+    }
+
+    MemWrite((uint8)(0x3C + Y), HLETemp[0]);
+    MemWrite((uint8)(0x3D + Y), HLETemp[0] >> 8);
+    MemWrite((uint8)(0x42 + Y), HLETemp[2]);
+    MemWrite((uint8)(0x43 + Y), HLETemp[2] >> 8);
+    
     PC++;
    }
    else
@@ -658,7 +817,7 @@ static void Power(void)
  for(unsigned i = 0, j = 1, k = 3; i < 0xC000; i++, j = j * 123456789 + 987654321, k = k * 987654321 + 123456789)
   RAM48K[i] = ((i & 2) ? 0xC6 : 0xBD) ^ (j & (j >> 8) & (j >> 16) & (j >> 24) & k & (k >> 8) & (k >> 16));
 
-#ifdef APPLE2_DBG_ENABLE
+#ifdef MDFN_ENABLE_DEV_BUILD
  RAM48K_Initialized.reset();
 #endif
 
@@ -685,7 +844,7 @@ static void Power(void)
 #ifdef MDFN_APPLE2_PARTIALBIOS_HLE
  HLEPhase = 0;
  HLESuckCounter = 0;
- HLETemp = 0;
+ memset(HLETemp, 0, sizeof(HLETemp));
 #endif
 }
 
@@ -809,6 +968,16 @@ static unsigned GetUnsigned(std::map<std::string, std::vector<std::string>>& mai
 
 static void Load(GameFile* gf)
 {
+#ifdef MDFN_ENABLE_DEV_BUILD
+ apple2_dbg_mask = APPLE2_DBG_ERROR;
+ {
+  std::vector<uint64> dms = MDFN_GetSettingMultiUI("apple2.dbg_mask");
+
+  for(uint64 dmse : dms)
+   apple2_dbg_mask |= dmse;
+ }
+#endif
+
  /*
   When loading a MAI file, always override input settings(input device type, and switch default positions) from the Mednafen config
   file with settings in the MAI file, or defined defaults for MAI.
@@ -1347,6 +1516,43 @@ static void Load(GameFile* gf)
   //
   //
   //
+#ifdef MDFN_APPLE2_PARTIALBIOS_HLE
+  {
+   {
+    static const unsigned rom_hook_addrs[] =
+    {
+     0xFB1E, 0xFC58, 0xFCA8, 0xFDED, 0xFDF0, 0xFE2C
+    };
+
+    memset(ROM12K, 0x00, sizeof(ROM12K));
+
+    for(const unsigned ha : rom_hook_addrs)
+    {
+     ROM12K[0][(ha - 0xD000) + 0] = 0x02;
+     ROM12K[0][(ha - 0xD000) + 1] = 0x60;
+    }
+    //
+    //
+    ROM12K[0][(0xFBB3 - 0xD000) + 0] = 0xEA;
+    ROM12K[0][(0xFB2F - 0xD000) + 0] = 0x60;
+    ROM12K[0][(0xFE89 - 0xD000) + 0] = 0x60;
+    ROM12K[0][(0xFE93 - 0xD000) + 0] = 0x60;
+    ROM12K[0][(0xFF58 - 0xD000) + 0] = 0x60;
+    //
+    MDFN_en16lsb(&ROM12K[0][0xFFFC - 0xD000], 0xC600);
+    MDFN_en16lsb(&ROM12K[0][0xFFFE - 0xD000], 0xFA40);
+    ROM12K[0][(0xFA40 - 0xD000) + 0] = 0x4C;
+    ROM12K[0][(0xFA40 - 0xD000) + 1] = 0x40;
+    ROM12K[0][(0xFA40 - 0xD000) + 2] = 0xFA;
+    //
+    //
+    memcpy(ROM12K[1], ROM12K[0], sizeof(ROM12K[0]));
+   }
+  }
+#endif
+  //
+  //
+  //
   assert(EmulatedApple2.DesiredInput.size() == 0 || mai_load);
   //
   //
@@ -1402,6 +1608,7 @@ static void Load(GameFile* gf)
   GameIO::Init(gio_resistance);
   Sound::Init();
 
+  DBG::Init();
   //
   //
   //
@@ -1694,6 +1901,28 @@ static const MDFNSetting_EnumList Mode_List[] =
  { nullptr, 0 }
 };
 
+#ifdef MDFN_ENABLE_DEV_BUILD
+static const MDFNSetting_EnumList DBGMask_List[] =
+{
+ { "0",		0						},
+ { "none",	0,			gettext_noop("None")	},
+
+ { "all",	~0,			gettext_noop("All")	},
+
+ { "warning",	APPLE2_DBG_WARNING,	gettext_noop("Warnings")	},
+
+ { "unk_read",	APPLE2_DBG_UNK_READ,	gettext_noop("Reads from unhandled CPU addresses")	},
+ { "unk_write",	APPLE2_DBG_UNK_WRITE,	gettext_noop("Writes to unhandled CPU addresses")	},
+ { "uninit_read", APPLE2_DBG_UNINITIALIZED_READ,	gettext_noop("Reads from uninitialized RAM") },
+
+ { "disk2", APPLE2_DBG_DISK2,		gettext_noop("Disk II")	},
+ { "bios", APPLE2_DBG_BIOS,		gettext_noop("BIOS") },
+ { "dos", APPLE2_DBG_DOS,		gettext_noop("DOS") },
+
+ { NULL, 0 }
+};
+#endif
+
 static const MDFNSetting Settings[] =
 {
  { "apple2.video.hue",		MDFNSF_CAT_VIDEO, gettext_noop("Color video hue/tint."),   nullptr, MDFNST_FLOAT, "0.0", "-1.0", "1.0", nullptr, VideoChangeNotif },
@@ -1718,6 +1947,10 @@ static const MDFNSetting Settings[] =
  { "apple2.video.matrix.blue.q", MDFNSF_CAT_VIDEO, gettext_noop("Custom color decoder matrix; blue, Q."), gettext_noop("Only used if \"apple2.video.matrix\" is set to \"custom\"."), MDFNST_FLOAT, "1.70", "-4.00", "4.00", nullptr, VideoChangeNotif  },
 
  { "apple2.video.mode", MDFNSF_CAT_VIDEO, gettext_noop("Video rendering mode."), gettext_noop("When an RGB mode is enabled, settings \"apple2.video.force_mono\", \"apple2.video.mixed_text_mono\", \"apple2.video.mono_lumafilter\", \"apple2.video.color_lumafilter\", and \"apple2.video.color_smooth\" are effectively ignored."), MDFNST_ENUM, "composite", nullptr, nullptr, nullptr, VideoChangeNotif, Mode_List },
+
+#ifdef MDFN_ENABLE_DEV_BUILD
+ { "apple2.dbg_mask", MDFNSF_SUPPRESS_DOC, gettext_noop("Debug printf mask."), NULL, MDFNST_MULTI_ENUM, "none", NULL, NULL, NULL, NULL, DBGMask_List },
+#endif
 
  { NULL },
 };
@@ -1766,11 +1999,11 @@ MDFNGI EmulatedApple2 =
  "Apple II/II+",
  KnownExtensions,
  MODPRIO_INTERNAL_HIGH,
- //#ifdef WANT_DEBUGGER
- //&Apple2DBGInfo,
- //#else
+ #ifdef MDFN_ENABLE_DEV_BUILD
+ &DBG::DBGInfo,
+ #else
  NULL,
- //#endif
+ #endif
  A2PortInfo,
  NULL,
  Load,

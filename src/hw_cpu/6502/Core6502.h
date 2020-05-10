@@ -42,6 +42,7 @@ struct Core6502
  bool GetNMI(void);
 
  void JamHandler(uint8 opcode);
+ void BranchTrace(uint16 vector = 0);
  //
  //
  //
