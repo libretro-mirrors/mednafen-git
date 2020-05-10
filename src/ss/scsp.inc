@@ -95,6 +95,15 @@ void SS_SCSP::RecalcMainInt(void)	// Main CPU interrupts
  SCSP_MainIntChanged((bool)(MCIPD & MCIEB));
 }
 
+INLINE void SS_SCSP::RecalcShortWaveMask(Slot* s)
+{
+ const unsigned lev = s->LoopEnd & 0x780;
+
+ s->ShortWaveMask = 0xFFFFFFFF;
+ if(s->ShortWave && lev)
+  s->ShortWaveMask = (1U << MDFN_tzcount16(lev)) - 1;
+}
+
 void SS_SCSP::Reset(bool powering_up)
 {
  //
@@ -112,6 +121,8 @@ void SS_SCSP::Reset(bool powering_up)
   Slots[i].EnvPhase = ENV_PHASE_RELEASE;
 
   Slots[i].LFOTimeCounter = 1;
+  //
+  RecalcShortWaveMask(&Slots[i]);
  }
 
  for(unsigned i = 0; i < 2; i++)
@@ -268,6 +279,8 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
 
     case 0x03:
 	s->LoopEnd = SRV;
+	//
+	RecalcShortWaveMask(s);
 	break;
 
     case 0x04:
@@ -306,7 +319,9 @@ INLINE void SS_SCSP::RW(uint32 A, T& DBV)
     case 0x08:
 	s->FreqNum = SRV & 0x7FF;
 	s->Octave = (SRV >> 11) & 0xF;
-	s->ShortWaveMask = (SRV & 0x8000) ? 0x7F : 0xFFFFFFFF;
+	s->ShortWave = (SRV >> 15) & 0x1;
+	//
+	RecalcShortWaveMask(s);
 	break;
 
     case 0x09:

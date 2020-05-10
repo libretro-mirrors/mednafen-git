@@ -159,9 +159,12 @@ Primal Rage
 
 
 -------------------------------------------------------------------------------
-Rely on SCSP 18-bit DAC enable
+Rely on rarely-used SCSP features
 -------------------------------------------------------------------------------
-Daytona USA
+Daytona USA - 18-bit DAC enable
+
+Sega Ages: OutRun - Enables short waveform mode for the engine sound effect
+	at high engine speeds, adding a metallic roughness to the sound.
 
 
 -------------------------------------------------------------------------------

@@ -77,7 +77,6 @@ class SS_SCSP
   uint32 StartAddr;	// 20 bits, memory address.
   uint16 LoopStart;	// 16 bits, in samples.
   uint16 LoopEnd;	// 16 bits, in samples.
-  uint32 ShortWaveMask;
   //
   bool KeyBit;
   //
@@ -140,8 +139,10 @@ class SS_SCSP
   int16 EffectVolume[2];	// 1.14 fixed point, derived from EFSDL and EFPAN
   //
   //
-  uint32 PhaseWhacker;
+  uint32 ShortWaveMask;
+  bool ShortWave;
   uint16 CurrentAddr;
+  uint32 PhaseWhacker;
   bool InLoop;
   bool LoopSub;
   bool WFAllowAccess;
@@ -154,6 +155,8 @@ class SS_SCSP
  } Slots[32];
 
  uint16 EXTS[2];
+
+ void RecalcShortWaveMask(Slot* s);
 
  void RunEG(Slot* s, const unsigned key_eg_scale);
 
