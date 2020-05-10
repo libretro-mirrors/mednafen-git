@@ -806,7 +806,10 @@ NO_INLINE void DSP1Chip::Run(int32 cycles)
  }
  else if(Command == 0x1A || Command == 0x0A)
  {
-  assert(Command != 0x1A);
+  if(Command == 0x1A)
+  {
+   SNES_DBG("[DSP1] Untested command: %02x\n", Command);
+  }
   // Mode 7 matrix calculation
   //
   // One 16-bit args, variable results

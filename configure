@@ -4366,8 +4366,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='1.24.0-UNSTABLE'
-MEDNAFEN_VERSION_NUMERIC=0x00102400
+MEDNAFEN_VERSION='1.24.1'
+MEDNAFEN_VERSION_NUMERIC=0x00102401
 #                        0xJJJnnnRR
 
 # Make sure we can run config.sub.
@@ -18108,6 +18108,9 @@ else
 $as_echo "#define PSS_STYLE 1" >>confdefs.h
 
 
+	#
+	# POSIX threads
+	#
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing pthread_create" >&5
 $as_echo_n "checking for library containing pthread_create... " >&6; }
 if ${ac_cv_search_pthread_create+:} false; then :
@@ -18178,7 +18181,7 @@ else
 fi
 done
 
-	for ac_func in sem_timedwait sem_timedwait_monotonic pthread_condattr_setclock pthread_setname_np pthread_setaffinity_np pthread_cond_timedwait_relative_np
+	for ac_func in sem_timedwait sem_timedwait_monotonic sem_clockwait sem_clockwait_np pthread_condattr_setclock pthread_setname_np pthread_set_name_np pthread_getaffinity_np pthread_setaffinity_np pthread_cond_timedwait_relative_np
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_cxx_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -18189,6 +18192,121 @@ _ACEOF
 
 fi
 done
+
+	for ac_header in pthread.h sched.h
+do :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_cxx_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
+
+	for ac_header in pthread_np.h
+do :
+  ac_fn_cxx_check_header_compile "$LINENO" "pthread_np.h" "ac_cv_header_pthread_np_h" "
+		#include <pthread.h>
+
+"
+if test "x$ac_cv_header_pthread_np_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_PTHREAD_NP_H 1
+_ACEOF
+
+fi
+
+done
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking type for pthread affinity setting" >&5
+$as_echo_n "checking type for pthread affinity setting... " >&6; }
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+			#include <pthread.h>
+
+			#if defined HAVE_SCHED_H
+ 			 #include <sched.h>
+			#endif
+
+			#if defined(HAVE_PTHREAD_NP_H)
+			 #include <pthread_np.h>
+			#endif
+
+int
+main ()
+{
+
+			cpu_set_t c;
+			int result;
+
+			CPU_ZERO(&c);
+
+			result = pthread_setaffinity_np(pthread_self(), sizeof(c), &c);
+			result = pthread_getaffinity_np(pthread_self(), sizeof(c), &c);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: cpu_set_t" >&5
+$as_echo "cpu_set_t" >&6; }
+
+$as_echo "#define PTHREAD_AFFINITY_NP cpu_set_t" >>confdefs.h
+
+
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+					#include <pthread.h>
+
+					#if defined HAVE_SCHED_H
+		 			 #include <sched.h>
+					#endif
+
+					#if defined(HAVE_PTHREAD_NP_H)
+					 #include <pthread_np.h>
+					#endif
+
+int
+main ()
+{
+
+					cpuset_t c;
+					int result;
+
+					CPU_ZERO(&c);
+
+					result = pthread_setaffinity_np(pthread_self(), sizeof(c), &c);
+					result = pthread_getaffinity_np(pthread_self(), sizeof(c), &c);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+
+					{ $as_echo "$as_me:${as_lineno-$LINENO}: result: cpuset_t" >&5
+$as_echo "cpuset_t" >&6; }
+
+$as_echo "#define PTHREAD_AFFINITY_NP cpuset_t" >>confdefs.h
+
+
+else
+
+					{ $as_echo "$as_me:${as_lineno-$LINENO}: result: unknown" >&5
+$as_echo "unknown" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
 
 	ac_fn_cxx_check_header_mongrel "$LINENO" "sys/soundcard.h" "ac_cv_header_sys_soundcard_h" "$ac_includes_default"
@@ -18206,9 +18324,51 @@ $as_echo "#define HAVE_OSSDSP 1" >>confdefs.h
 fi
 
 
-	ac_fn_cxx_check_header_mongrel "$LINENO" "linux/joystick.h" "ac_cv_header_linux_joystick_h" "$ac_includes_default"
-if test "x$ac_cv_header_linux_joystick_h" = xyes; then :
-   if true; then
+
+	#
+	# Linux joystick
+	#
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Linux joystick APIs" >&5
+$as_echo_n "checking for Linux joystick APIs... " >&6; }
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+			#ifndef __linux__
+			 #error "error"
+			#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+
+			cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+				#include <linux/joystick.h>
+				#include <linux/input.h>
+
+int
+main ()
+{
+
+				struct js_event dummy0;
+				struct ff_effect dummy1;
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+
+				{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+				 if true; then
   HAVE_LINUX_JOYSTICK_TRUE=
   HAVE_LINUX_JOYSTICK_FALSE='#'
 else
@@ -18216,11 +18376,20 @@ else
   HAVE_LINUX_JOYSTICK_FALSE=
 fi
 
+
 $as_echo "#define HAVE_LINUX_JOYSTICK 1" >>confdefs.h
 
+
+else
+  as_fn_error $? "*** Linux joystick APIs not found!" "$LINENO" 5
 fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
-
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 fi
 
 if $NEED_SDL
@@ -18945,7 +19114,7 @@ fi
 
 		;;
 
-	powerpc)
+	powerpc*)
 
 $as_echo "#define ARCH_POWERPC 1" >>confdefs.h
 

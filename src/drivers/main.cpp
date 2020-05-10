@@ -127,8 +127,8 @@ static const MDFNSetting_EnumList FontSize_List[] =
 
 static const MDFNSetting_EnumList FPSPos_List[] =
 {
- { "upper_left", 0 },
- { "upper_right", 1 },
+ { "upper_left", 0, gettext_noop("Upper left.") },
+ { "upper_right", 1, gettext_noop("Upper right.") },
 
  { NULL, 0 },
 };

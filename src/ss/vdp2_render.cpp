@@ -1704,10 +1704,18 @@ static void T_DrawNBG23(const unsigned n, uint64* bgbuf, const unsigned w, const
  //
  // Note: When/If adding new kludges, check that the NT and CG fetches for the layer each occur only in one bank, to safely handle other cases may require something more complex.
  // printf("(TA_bpp == %d && n == %d && VRAM_Mode == 0x%01x && (HRes & 0x6) == 0x%01x && MDFN_de64lsb(VCPRegs[0]) == 0x%016llxULL && MDFN_de64lsb(VCPRegs[1]) == 0x%016llxULL && MDFN_de64lsb(VCPRegs[2]) == 0x%016llxULL && MDFN_de64lsb(VCPRegs[3]) == 0x%016llxULL) || \n", TA_bpp, n, VRAM_Mode, HRes & 0x6, (unsigned long long)MDFN_de64lsb(VCPRegs[0]), (unsigned long long)MDFN_de64lsb(VCPRegs[1]), (unsigned long long)MDFN_de64lsb(VCPRegs[2]), (unsigned long long)MDFN_de64lsb(VCPRegs[3]));
+ const uint32 lok_modestuff = (VRAM_Mode << 0) | ((HRes & 0x6) << 1) | (tf.PNDSize << 4) | (tf.CharSize << 5);
+ //if(HRes & 0x6)
+ // printf("(TA_bpp == %u && n == %u && lok_modestuff == 0x%02x && MDFN_de32lsb(VCPRegs[0]) == 0x%08x && MDFN_de32lsb(VCPRegs[1]) == 0x%08x && MDFN_de32lsb(VCPRegs[2]) == 0x%08x && MDFN_de32lsb(VCPRegs[3]) == 0x%08x) || \n", TA_bpp, n, lok_modestuff, MDFN_de32lsb(VCPRegs[0]), MDFN_de32lsb(VCPRegs[1]), MDFN_de32lsb(VCPRegs[2]), MDFN_de32lsb(VCPRegs[3]));
+
  if(MDFN_UNLIKELY(
   /* Akumajou Dracula X */ (TA_bpp == 4 && n == 3 && VRAM_Mode == 0x2 && (HRes & 0x6) == 0x0 && MDFN_de64lsb(VCPRegs[0]) == 0x0f0f070406060505ULL && MDFN_de64lsb(VCPRegs[1]) == 0x0f0f0f0f0f0f0f0fULL && MDFN_de64lsb(VCPRegs[2]) == 0x0f0f03000f0f0201ULL && MDFN_de64lsb(VCPRegs[3]) == 0x0f0f0f0f0f0f0f0fULL) ||
   /* Alien Trilogy      */ (TA_bpp == 4 && n == 3 && VRAM_Mode == 0x2 && (HRes & 0x6) == 0x0 && MDFN_de64lsb(VCPRegs[0]) == 0x07050f0f0f0f0606ULL && MDFN_de64lsb(VCPRegs[1]) == 0x0f0f0f0f0f0f0f0fULL && MDFN_de64lsb(VCPRegs[2]) == 0x0f0f0f0f0f0f0f0fULL && MDFN_de64lsb(VCPRegs[3]) == 0x0f0103020f0f0f0fULL) ||
   /* Daytona USA CCE    */ (TA_bpp == 4 && n == 2 && VRAM_Mode == 0x3 && (HRes & 0x6) == 0x0 && MDFN_de64lsb(VCPRegs[0]) == 0x0f0f0f0f00000404ULL && MDFN_de64lsb(VCPRegs[1]) == 0x0f0f0f060f0f0f0fULL && MDFN_de64lsb(VCPRegs[2]) == 0x0f0f0f0f0505070fULL && MDFN_de64lsb(VCPRegs[3]) == 0x0f0f03020f010f00ULL) ||
+  /* Fighters Megamix   */ (TA_bpp == 4           && lok_modestuff == 0x17 && MDFN_de32lsb(VCPRegs[0]) == 0x0e0f0706 && MDFN_de32lsb(VCPRegs[1]) == 0x05050404 && MDFN_de32lsb(VCPRegs[2]) == 0x03020100 && MDFN_de32lsb(VCPRegs[3]) == 0x0f0f0f0f) ||
+  /* Fighters Megamix   */ (TA_bpp == 4 && n == 2 && lok_modestuff == 0x17 && MDFN_de32lsb(VCPRegs[0]) == 0x0e0e0e06 && MDFN_de32lsb(VCPRegs[1]) == 0x0e0e0404 && MDFN_de32lsb(VCPRegs[2]) == 0x0e0e0200 && MDFN_de32lsb(VCPRegs[3]) == 0x0e0e0e0e) ||
+  /* Fighters Megamix   */ (TA_bpp == 4 && n == 2 && lok_modestuff == 0x17 && MDFN_de32lsb(VCPRegs[0]) == 0x0f050506 && MDFN_de32lsb(VCPRegs[1]) == 0x0f0f0f04 && MDFN_de32lsb(VCPRegs[2]) == 0x0f020100 && MDFN_de32lsb(VCPRegs[3]) == 0x0f0f0f0f) ||
+  /* Fighters Megamix   */ (TA_bpp == 4 && n == 2 && lok_modestuff == 0x17 && MDFN_de32lsb(VCPRegs[0]) == 0x0e0f0f06 && MDFN_de32lsb(VCPRegs[1]) == 0x0e050504 && MDFN_de32lsb(VCPRegs[2]) == 0x0e020100 && MDFN_de32lsb(VCPRegs[3]) == 0x0e0f0f0f) ||
   0))
  {
   for(unsigned i = 0; i < 8; i++)

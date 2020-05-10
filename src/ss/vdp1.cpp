@@ -450,21 +450,6 @@ MDFN_HIDE extern uint32 (MDFN_FASTCALL *const TexFetchTab[0x20])(uint32 x) =
  #undef TF
 };
 
-
-
-/*
- Notes:
-	When vblank starts: Abort command processing, and if VBE=1, erase framebuffer just displayed according to set values.
-
-	When vblank ends: Abort framebuffer erase, swap framebuffer, and if (PTMR&2) start command processing.
-
-	See if EDSR and LOPR are modified or not when PTMR=0 and an auto framebuffer swap occurs.
-
-	FB erase params are latched at framebuffer swap time probably.
-
-	VBE=1 is persistent.
-*/
-
 sscpu_timestamp_t Update(sscpu_timestamp_t timestamp)
 {
  if(MDFN_UNLIKELY(timestamp < lastts))

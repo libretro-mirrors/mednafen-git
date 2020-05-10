@@ -19,146 +19,146 @@
  */
 
 case 0x00:  /* BRK */
-            _PC++;
-            PUSH(_PC>>8);
-            PUSH(_PC);
-            PUSH(_P|U_FLAG|B_FLAG);
-	    _P|=I_FLAG;
-	    _PI|=I_FLAG;
-            _PC=RdMem(0xFFFE);
-            _PC|=RdMem(0xFFFF)<<8;
-	    ADDBT(_PC);
+            CPU_PC++;
+            PUSH(CPU_PC>>8);
+            PUSH(CPU_PC);
+            PUSH(CPU_P|U_FLAG|B_FLAG);
+	    CPU_P|=I_FLAG;
+	    CPU_PI|=I_FLAG;
+            CPU_PC=RdMem(0xFFFE);
+            CPU_PC|=RdMem(0xFFFF)<<8;
+	    ADDBT(CPU_PC);
             break;
 
 case 0x40:  /* RTI */
-            _P=POP();
-	    /* _PI=_P; This is probably incorrect, so it's commented out. */
-	    _PI = _P;
-            _PC=POP();
-            _PC|=POP()<<8;
-            ADDBT(_PC);
+            CPU_P=POP();
+	    /* CPU_PI=CPU_P; This is probably incorrect, so it's commented out. */
+	    CPU_PI = CPU_P;
+            CPU_PC=POP();
+            CPU_PC|=POP()<<8;
+            ADDBT(CPU_PC);
             break;
             
 case 0x60:  /* RTS */
-            _PC=POP();
-            _PC|=POP()<<8;
-            _PC++;
-            ADDBT(_PC);
+            CPU_PC=POP();
+            CPU_PC|=POP()<<8;
+            CPU_PC++;
+            ADDBT(CPU_PC);
             break;
 
 case 0x48: /* PHA */
-           PUSH(_A);
+           PUSH(CPU_A);
            break;
 case 0x08: /* PHP */
-           PUSH(_P|U_FLAG|B_FLAG);
+           PUSH(CPU_P|U_FLAG|B_FLAG);
            break;
 case 0x68: /* PLA */
-           _A=POP();
-           X_ZN(_A);
+           CPU_A=POP();
+           X_ZN(CPU_A);
            break;
 case 0x28: /* PLP */
-           _P=POP();
+           CPU_P=POP();
            break;
 case 0x4C:
 	  {
-	   uint16 ptmp=_PC;
+	   uint16 ptmp=CPU_PC;
 	   unsigned int npc;
 
 	   npc=RdMem(ptmp);
 	   ptmp++;
 	   npc|=RdMem(ptmp)<<8;
-	   _PC=npc;
-           ADDBT(_PC);
+	   CPU_PC=npc;
+           ADDBT(CPU_PC);
 	  }
 	  break; /* JMP ABSOLUTE */
 case 0x6C: 
 	   {
 	    uint32 tmp;
 	    GetAB(tmp);
-	    _PC=RdMem(tmp);
-	    _PC|=RdMem( ((tmp+1)&0x00FF) | (tmp&0xFF00))<<8;
-            ADDBT(_PC);
+	    CPU_PC=RdMem(tmp);
+	    CPU_PC|=RdMem( ((tmp+1)&0x00FF) | (tmp&0xFF00))<<8;
+            ADDBT(CPU_PC);
 	   }
 	   break;
 case 0x20: /* JSR */
 	   {
 	    uint8 npc;
-	    npc=RdMem(_PC);
-	    _PC++;
-            PUSH(_PC>>8);
-            PUSH(_PC);
-            _PC=RdMem(_PC)<<8;
-	    _PC|=npc;
-            ADDBT(_PC);
+	    npc=RdMem(CPU_PC);
+	    CPU_PC++;
+            PUSH(CPU_PC>>8);
+            PUSH(CPU_PC);
+            CPU_PC=RdMem(CPU_PC)<<8;
+	    CPU_PC|=npc;
+            ADDBT(CPU_PC);
 	   }
            break;
 
 case 0xAA: /* TAX */
-           _X=_A;
-           X_ZN(_A);
+           CPU_X=CPU_A;
+           X_ZN(CPU_A);
            break;
 
 case 0x8A: /* TXA */
-           _A=_X;
-           X_ZN(_A);
+           CPU_A=CPU_X;
+           X_ZN(CPU_A);
            break;
 
 case 0xA8: /* TAY */
-           _Y=_A;
-           X_ZN(_A);
+           CPU_Y=CPU_A;
+           X_ZN(CPU_A);
            break;
 case 0x98: /* TYA */
-           _A=_Y;
-           X_ZN(_A);
+           CPU_A=CPU_Y;
+           X_ZN(CPU_A);
            break;
 
 case 0xBA: /* TSX */
-           _X=_S;
-           X_ZN(_X);
+           CPU_X=CPU_S;
+           X_ZN(CPU_X);
            break;
 case 0x9A: /* TXS */
-           _S=_X;
+           CPU_S=CPU_X;
            break;
 
 case 0xCA: /* DEX */
-           _X--;
-           X_ZN(_X);
+           CPU_X--;
+           X_ZN(CPU_X);
            break;
 case 0x88: /* DEY */
-           _Y--;
-           X_ZN(_Y);
+           CPU_Y--;
+           X_ZN(CPU_Y);
            break;
 
 case 0xE8: /* INX */
-           _X++;
-           X_ZN(_X);
+           CPU_X++;
+           X_ZN(CPU_X);
            break;
 case 0xC8: /* INY */
-           _Y++;
-           X_ZN(_Y);
+           CPU_Y++;
+           X_ZN(CPU_Y);
            break;
 
 case 0x18: /* CLC */
-           _P&=~C_FLAG;
+           CPU_P&=~C_FLAG;
            break;
 case 0xD8: /* CLD */
-           _P&=~D_FLAG;
+           CPU_P&=~D_FLAG;
            break;
 case 0x58: /* CLI */
-           _P&=~I_FLAG;
+           CPU_P&=~I_FLAG;
            break;
 case 0xB8: /* CLV */
-           _P&=~V_FLAG;
+           CPU_P&=~V_FLAG;
            break;
 
 case 0x38: /* SEC */
-           _P|=C_FLAG;
+           CPU_P|=C_FLAG;
            break;
 case 0xF8: /* SED */
-           _P|=D_FLAG;
+           CPU_P|=D_FLAG;
            break;
 case 0x78: /* SEI */
-           _P|=I_FLAG;
+           CPU_P|=I_FLAG;
            break;
 
 case 0xEA: /* NOP */
@@ -285,45 +285,45 @@ case 0xF9: LD_ABY(SBC);
 case 0xE1: LD_IX(SBC);
 case 0xF1: LD_IY(SBC);
 
-case 0x85: ST_ZP(_A);
-case 0x95: ST_ZPX(_A);
-case 0x8D: ST_AB(_A);
-case 0x9D: ST_ABX(_A);
-case 0x99: ST_ABY(_A);
-case 0x81: ST_IX(_A);
-case 0x91: ST_IY(_A);
+case 0x85: ST_ZP(CPU_A);
+case 0x95: ST_ZPX(CPU_A);
+case 0x8D: ST_AB(CPU_A);
+case 0x9D: ST_ABX(CPU_A);
+case 0x99: ST_ABY(CPU_A);
+case 0x81: ST_IX(CPU_A);
+case 0x91: ST_IY(CPU_A);
 
-case 0x86: ST_ZP(_X);
-case 0x96: ST_ZPY(_X);
-case 0x8E: ST_AB(_X);
+case 0x86: ST_ZP(CPU_X);
+case 0x96: ST_ZPY(CPU_X);
+case 0x8E: ST_AB(CPU_X);
 
-case 0x84: ST_ZP(_Y);
-case 0x94: ST_ZPX(_Y);
-case 0x8C: ST_AB(_Y);
+case 0x84: ST_ZP(CPU_Y);
+case 0x94: ST_ZPX(CPU_Y);
+case 0x8C: ST_AB(CPU_Y);
 
 /* BCC */
-case 0x90: JR(!(_P&C_FLAG)); break;
+case 0x90: JR(!(CPU_P&C_FLAG)); break;
 
 /* BCS */
-case 0xB0: JR(_P&C_FLAG); break;
+case 0xB0: JR(CPU_P&C_FLAG); break;
 
 /* BEQ */
-case 0xF0: JR(_P&Z_FLAG); break;
+case 0xF0: JR(CPU_P&Z_FLAG); break;
 
 /* BNE */
-case 0xD0: JR(!(_P&Z_FLAG)); break;
+case 0xD0: JR(!(CPU_P&Z_FLAG)); break;
 
 /* BMI */
-case 0x30: JR(_P&N_FLAG); break;
+case 0x30: JR(CPU_P&N_FLAG); break;
 
 /* BPL */
-case 0x10: JR(!(_P&N_FLAG)); break;
+case 0x10: JR(!(CPU_P&N_FLAG)); break;
 
 /* BVC */
-case 0x50: JR(!(_P&V_FLAG)); break;
+case 0x50: JR(!(CPU_P&V_FLAG)); break;
 
 /* BVS */
-case 0x70: JR(_P&V_FLAG); break;
+case 0x70: JR(CPU_P&V_FLAG); break;
 
 //default: printf("Bad %02x at $%04x\n",b1,X.PC);break;
 //ifdef moo
@@ -333,24 +333,24 @@ case 0x70: JR(_P&V_FLAG); break;
 
 /* AAC */
 case 0x2B:
-case 0x0B: LD_IM(AND;_P&=~C_FLAG;_P|=_A>>7);
+case 0x0B: LD_IM(AND;CPU_P&=~C_FLAG;CPU_P|=CPU_A>>7);
 
 /* AAX */
-case 0x87: ST_ZP(_A&_X);
-case 0x97: ST_ZPY(_A&_X);
-case 0x8F: ST_AB(_A&_X);
-case 0x83: ST_IX(_A&_X);
+case 0x87: ST_ZP(CPU_A&CPU_X);
+case 0x97: ST_ZPY(CPU_A&CPU_X);
+case 0x8F: ST_AB(CPU_A&CPU_X);
+case 0x83: ST_IX(CPU_A&CPU_X);
 
 /* ARR - ARGH, MATEY! */
 case 0x6B: { 
 	     uint8 arrtmp; 
-	     LD_IM(AND;_P&=~V_FLAG;_P|=(_A^(_A>>1))&0x40;arrtmp=_A>>7;_A>>=1;_A|=(_P&C_FLAG)<<7;_P&=~C_FLAG;_P|=arrtmp;X_ZN(_A));
+	     LD_IM(AND;CPU_P&=~V_FLAG;CPU_P|=(CPU_A^(CPU_A>>1))&0x40;arrtmp=CPU_A>>7;CPU_A>>=1;CPU_A|=(CPU_P&C_FLAG)<<7;CPU_P&=~C_FLAG;CPU_P|=arrtmp;X_ZN(CPU_A));
 	   }
 /* ASR */
 case 0x4B: LD_IM(AND;LSRA);
 
 /* ATX(OAL) Is this(OR with $EE) correct? */
-case 0xAB: LD_IM(_A|=0xEE;AND;_X=_A);
+case 0xAB: LD_IM(CPU_A|=0xEE;AND;CPU_X=CPU_A);
 
 /* AXS */ 
 case 0xCB: LD_IM(AXS);
@@ -375,21 +375,21 @@ case 0xF3: RMW_IY(INC;SBC);
 
 /* DOP */
 
-case 0x04: _PC++;break;
-case 0x14: _PC++;break;
-case 0x34: _PC++;break;
-case 0x44: _PC++;break;
-case 0x54: _PC++;break;
-case 0x64: _PC++;break;
-case 0x74: _PC++;break;
+case 0x04: CPU_PC++;break;
+case 0x14: CPU_PC++;break;
+case 0x34: CPU_PC++;break;
+case 0x44: CPU_PC++;break;
+case 0x54: CPU_PC++;break;
+case 0x64: CPU_PC++;break;
+case 0x74: CPU_PC++;break;
 
-case 0x80: _PC++;break;
-case 0x82: _PC++;break;
-case 0x89: _PC++;break;
-case 0xC2: _PC++;break;
-case 0xD4: _PC++;break;
-case 0xE2: _PC++;break;
-case 0xF4: _PC++;break;
+case 0x80: CPU_PC++;break;
+case 0x82: CPU_PC++;break;
+case 0x89: CPU_PC++;break;
+case 0xC2: CPU_PC++;break;
+case 0xD4: CPU_PC++;break;
+case 0xE2: CPU_PC++;break;
+case 0xF4: CPU_PC++;break;
 
 /* KIL */
 
@@ -405,12 +405,12 @@ case 0x92:
 case 0xB2:
 case 0xD2:
 case 0xF2:ADDCYC(0xFF);
-          _jammed=1;
-	  _PC--;
+          CPU_jammed=1;
+	  CPU_PC--;
 	  break;
 
 /* LAR */
-case 0xBB: RMW_ABY(_S&=x;_A=_X=_S;X_ZN(_X));
+case 0xBB: RMW_ABY(CPU_S&=x;CPU_A=CPU_X=CPU_S;X_ZN(CPU_X));
 
 /* LAX */
 case 0xA7: LD_ZP(LDA;LDX);
@@ -465,17 +465,17 @@ case 0x43: RMW_IX(LSR;EOR);
 case 0x53: RMW_IY(LSR;EOR);
 
 /* AXA - SHA */
-case 0x93: ST_IY(_A&_X&(((A-_Y)>>8)+1));
-case 0x9F: ST_ABY(_A&_X&(((A-_Y)>>8)+1));
+case 0x93: ST_IY(CPU_A&CPU_X&(((A-CPU_Y)>>8)+1));
+case 0x9F: ST_ABY(CPU_A&CPU_X&(((A-CPU_Y)>>8)+1));
 
 /* SYA */
-case 0x9C: ST_ABX(_Y&(((A-_X)>>8)+1));
+case 0x9C: ST_ABX(CPU_Y&(((A-CPU_X)>>8)+1));
 
 /* SXA */
-case 0x9E: ST_ABY(_X&(((A-_Y)>>8)+1));
+case 0x9E: ST_ABY(CPU_X&(((A-CPU_Y)>>8)+1));
 
 /* XAS */
-case 0x9B: _S=_A&_X;ST_ABY(_S& (((A-_Y)>>8)+1) );
+case 0x9B: CPU_S=CPU_A&CPU_X;ST_ABY(CPU_S& (((A-CPU_Y)>>8)+1) );
 
 /* TOP */
 case 0x0C: LD_AB(ARNOP);
@@ -487,5 +487,5 @@ case 0xDC:
 case 0xFC: LD_ABX(ARNOP);
 
 /* XAA - BIG QUESTION MARK HERE */
-case 0x8B: _A|=0xEE; _A&=_X; LD_IM(AND);
+case 0x8B: CPU_A|=0xEE; CPU_A&=CPU_X; LD_IM(AND);
 //endif

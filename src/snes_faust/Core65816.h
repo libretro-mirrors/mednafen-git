@@ -19,7 +19,7 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-class CPU_Misc;
+struct CPU_Misc;
 
 class Core65816
 {

@@ -102,14 +102,6 @@ class MTStreamReader
   need_sync = true;
  }
 
- INLINE void sync(void)
- {
-  MThreading::Sem_Wait(ack_sem);
-  //
-  pending_command = Command_NOP;
-  //
-  MThreading::Sem_Post(command_sem);
- }
  private:
 
  static int read_thread_entry_(void* data);
