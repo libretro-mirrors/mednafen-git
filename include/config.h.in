@@ -344,8 +344,17 @@
 /* Define to 1 if you have the `pthread_create' function. */
 #undef HAVE_PTHREAD_CREATE
 
+/* Define to 1 if you have the `pthread_getaffinity_np' function. */
+#undef HAVE_PTHREAD_GETAFFINITY_NP
+
+/* Define to 1 if you have the <pthread.h> header file. */
+#undef HAVE_PTHREAD_H
+
 /* Define if the <pthread.h> defines PTHREAD_MUTEX_RECURSIVE. */
 #undef HAVE_PTHREAD_MUTEX_RECURSIVE
+
+/* Define to 1 if you have the <pthread_np.h> header file. */
+#undef HAVE_PTHREAD_NP_H
 
 /* Define if the POSIX multithreading library has read/write locks. */
 #undef HAVE_PTHREAD_RWLOCK
@@ -355,6 +364,9 @@
 
 /* Define to 1 if you have the `pthread_setname_np' function. */
 #undef HAVE_PTHREAD_SETNAME_NP
+
+/* Define to 1 if you have the `pthread_set_name_np' function. */
+#undef HAVE_PTHREAD_SET_NAME_NP
 
 /* Define to 1 if you have the `putenv' function. */
 #undef HAVE_PUTENV
@@ -371,11 +383,20 @@
 /* Define to 1 if you have the `round' function. */
 #undef HAVE_ROUND
 
+/* Define to 1 if you have the <sched.h> header file. */
+#undef HAVE_SCHED_H
+
 /* Define if we are compiling with SDL. */
 #undef HAVE_SDL
 
 /* Define to 1 if you have the `select' function. */
 #undef HAVE_SELECT
+
+/* Define to 1 if you have the `sem_clockwait' function. */
+#undef HAVE_SEM_CLOCKWAIT
+
+/* Define to 1 if you have the `sem_clockwait_np' function. */
+#undef HAVE_SEM_CLOCKWAIT_NP
 
 /* Define to 1 if you have the `sem_init' function. */
 #undef HAVE_SEM_INIT
@@ -571,6 +592,10 @@
 
 /* Defines the filesystem path-separator type. */
 #undef PSS_STYLE
+
+/* Define to CPU set type if we are compiling with pthreads affinity setting
+   support. */
+#undef PTHREAD_AFFINITY_NP
 
 /* Define if the pthread_in_use() detection is hard. */
 #undef PTHREAD_IN_USE_DETECTION_HARD

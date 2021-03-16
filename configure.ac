@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='1.24.0-UNSTABLE'
-MEDNAFEN_VERSION_NUMERIC=0x00102400
+MEDNAFEN_VERSION='1.24.3'
+MEDNAFEN_VERSION_NUMERIC=0x00102403
 #                        0xJJJnnnRR
 
 AC_CANONICAL_HOST
@@ -697,12 +697,101 @@ elif expr x"$host" : 'x.*djgpp' > /dev/null; then
 else
 	AC_DEFINE([PSS_STYLE],[1], [Defines the filesystem path-separator type.])
 
+	#
+	# POSIX threads
+	#
 	AC_SEARCH_LIBS(pthread_create, [pthread])
 	AC_CHECK_FUNCS(pthread_create sem_init, [], AC_MSG_ERROR([*** pthreads not found!]))
-	AC_CHECK_FUNCS(sem_timedwait sem_timedwait_monotonic pthread_condattr_setclock pthread_setname_np pthread_setaffinity_np pthread_cond_timedwait_relative_np)
+	AC_CHECK_FUNCS(sem_timedwait sem_timedwait_monotonic sem_clockwait sem_clockwait_np pthread_condattr_setclock pthread_setname_np pthread_set_name_np pthread_getaffinity_np pthread_setaffinity_np pthread_cond_timedwait_relative_np)
+	AC_CHECK_HEADERS(pthread.h sched.h)
+	AC_CHECK_HEADERS(pthread_np.h, [], [], [
+		#include <pthread.h>
+		])
+	AC_MSG_CHECKING([type for pthread affinity setting])
+	AC_TRY_COMPILE(
+		[
+			#include <pthread.h>
+
+			#if defined HAVE_SCHED_H
+ 			 #include <sched.h>
+			#endif
+
+			#if defined(HAVE_PTHREAD_NP_H)
+			 #include <pthread_np.h>
+			#endif
+		],
+		[
+			cpu_set_t c;
+			int result;
+
+			CPU_ZERO(&c);
+
+			result = pthread_setaffinity_np(pthread_self(), sizeof(c), &c);
+			result = pthread_getaffinity_np(pthread_self(), sizeof(c), &c);
+		],
+		[
+			AC_MSG_RESULT([cpu_set_t])
+			AC_DEFINE([PTHREAD_AFFINITY_NP], [cpu_set_t], [Define to CPU set type if we are compiling with pthreads affinity setting support.])
+		],
+			AC_TRY_COMPILE(
+				[
+					#include <pthread.h>
+
+					#if defined HAVE_SCHED_H
+		 			 #include <sched.h>
+					#endif
+
+					#if defined(HAVE_PTHREAD_NP_H)
+					 #include <pthread_np.h>
+					#endif
+				],
+				[
+					cpuset_t c;
+					int result;
+
+					CPU_ZERO(&c);
+
+					result = pthread_setaffinity_np(pthread_self(), sizeof(c), &c);
+					result = pthread_getaffinity_np(pthread_self(), sizeof(c), &c);
+				],
+				[
+					AC_MSG_RESULT([cpuset_t])
+					AC_DEFINE([PTHREAD_AFFINITY_NP], [cpuset_t], [Define to CPU set type if we are compiling with pthreads affinity setting support.])
+				],
+				[
+					AC_MSG_RESULT([unknown])
+				]))
+
 
 	AC_CHECK_HEADER([sys/soundcard.h],[AM_CONDITIONAL(HAVE_OSSDSP,true) AC_DEFINE([HAVE_OSSDSP], [1], [Define if we are compiling with OSS support.])])
-	AC_CHECK_HEADER([linux/joystick.h],[AM_CONDITIONAL(HAVE_LINUX_JOYSTICK,true) AC_DEFINE([HAVE_LINUX_JOYSTICK], [1], [Define if we are compiling with Linux joystick support.])])
+
+	#
+	# Linux joystick
+	#
+	AC_MSG_CHECKING([for Linux joystick APIs])
+	AC_TRY_COMPILE([],
+		[
+			#ifndef __linux__
+			 #error "error"
+			#endif
+		],
+		[
+			AC_TRY_COMPILE([
+				#include <linux/joystick.h>
+				#include <linux/input.h>
+			],
+			[
+				struct js_event dummy0;
+				struct ff_effect dummy1;
+			],
+			[
+				AC_MSG_RESULT([yes])
+				AM_CONDITIONAL(HAVE_LINUX_JOYSTICK, true)
+				AC_DEFINE([HAVE_LINUX_JOYSTICK], [1], [Define if we are compiling with Linux joystick support.])
+			],
+			AC_MSG_ERROR([*** Linux joystick APIs not found!]))
+		],
+		[AC_MSG_RESULT([no])])
 fi
 
 if $NEED_SDL
@@ -771,7 +860,7 @@ case "$host_cpu" in
                 AM_CONDITIONAL(ARCH_X86_32, true)
 		;;
 
-	powerpc)
+	powerpc*)
 	        AC_DEFINE([ARCH_POWERPC], [1], [Define if we are compiling for PPC architectures.])
 	        AM_CONDITIONAL(ARCH_POWERPC, true)
 

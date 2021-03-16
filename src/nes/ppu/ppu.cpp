@@ -906,8 +906,6 @@ static void DoLine(MDFN_Surface *surface, int skip)
     {
      MDFN_PixelFormat nf;
 
-     memset(&nf, 0, sizeof(nf));
-
      nf.bpp = 32;
      nf.colorspace = MDFN_COLORSPACE_RGB;
      

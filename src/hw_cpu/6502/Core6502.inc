@@ -1085,6 +1085,7 @@ INLINE void Core6502::ISequence(bool hw)
  UpdateIFN();
  new_PC |= MemRead(0xFF01 | vlb) << 8;
  PC = new_PC;
+ BranchTrace(0xFF00 | vlb);
 }
 
 INLINE void Core6502::Instr_BRK(void)
@@ -1103,6 +1104,7 @@ INLINE void Core6502::Instr_JMP_ABS(void)
  UpdateIFN();
  new_PC |= OpRead(PC) << 8;
  PC = new_PC;
+ BranchTrace();
 }
 
 INLINE void Core6502::Instr_JMP_IDIR(void)
@@ -1125,6 +1127,7 @@ INLINE void Core6502::Instr_JMP_IDIR(void)
 
  new_PC |= MemRead(pea) << 8;
  PC = new_PC;
+ BranchTrace();
 }
 
 INLINE void Core6502::Instr_JSR(void)
@@ -1145,6 +1148,7 @@ INLINE void Core6502::Instr_JSR(void)
  UpdateIFN();
  new_PC |= OpRead(PC) << 8;
  PC = new_PC;
+ BranchTrace();
 }
 
 INLINE void Core6502::Instr_Bxx(bool cond)
@@ -1170,6 +1174,7 @@ INLINE void Core6502::Instr_Bxx(bool cond)
   }
 
   PC = new_PC;
+  BranchTrace();
  }
 }
 
@@ -1192,6 +1197,7 @@ INLINE void Core6502::Instr_RTI(void)
  UpdateIFN();
  new_PC |= MemRead(0x100 + SP) << 8;
  PC = new_PC;
+ BranchTrace();
 }
 
 INLINE void Core6502::Instr_RTS(void)
@@ -1212,6 +1218,7 @@ INLINE void Core6502::Instr_RTS(void)
  UpdateIFN();
  OpRead(PC, true);
  PC++;
+ BranchTrace();
 }
 
 void Core6502::Power(void)
@@ -1247,6 +1254,7 @@ void Core6502::RESETStep(void)
  UpdateIFN();
  new_PC |= MemRead(0xFFFD) << 8;
  PC = new_PC;
+ BranchTrace(0xFFFC);
 }
 
 INLINE void Core6502::Step(void)

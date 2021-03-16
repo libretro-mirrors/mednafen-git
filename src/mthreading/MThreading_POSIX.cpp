@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* MThreading_POSIX.cpp:
-**  Copyright (C) 2018-2019 Mednafen Team
+**  Copyright (C) 2018-2020 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -20,8 +20,6 @@
 */
 
 /*
- TODO: Monotonic time for Sem_TimedWait()
-
  TODO: Make thread ID correct for threads created outside
        of Mednafen's framework.
 */
@@ -35,16 +33,32 @@
  #define MDFN_USE_COND_TIMEDWAIT_RELATIVE_NP
 #endif
 
-#if !defined(HAVE_SEM_TIMEDWAIT)
+#if defined(HAVE_SEM_CLOCKWAIT)
+ #define MDFN_USE_SEM_CLOCKWAIT
+#elif defined(HAVE_SEM_CLOCKWAIT_NP)
+ #define MDFN_USE_SEM_CLOCKWAIT_NP
+#elif !defined(HAVE_SEM_TIMEDWAIT)
  #define MDFN_USE_CONDVAR_SEMAPHORES
+#else
+
 #endif
 //
 //
 //
 #include <pthread.h>
+
+#if defined HAVE_SCHED_H
+ #include <sched.h>
+#endif
+
+#if defined(HAVE_PTHREAD_NP_H)
+ #include <pthread_np.h>
+#endif
+
 #if !defined(MDFN_USE_CONDVAR_SEMAPHORES)
  #include <semaphore.h>
 #endif
+
 #include <time.h>
 
 namespace Mednafen
@@ -104,18 +118,26 @@ static void* PTCEP(void* arg)
  return &t->rv;
 }
 
+// Dummy
 template<typename T>
 static int PTSNW(T fn, pthread_t t, const char* n)
 {
- // Dummy
  return 0;
 }
 
+// NetBSD
+static MDFN_NOWARN_UNUSED int PTSNW(int (*fn)(pthread_t, const char*, void*), pthread_t t, const char* n)
+{
+ return fn(t, "%s", (void*)n);
+}
+
+// Linux
 static MDFN_NOWARN_UNUSED int PTSNW(int (*fn)(pthread_t, const char*), pthread_t t, const char* n)
 {
  return fn(t, n);
 }
 
+// Mac OS X
 static MDFN_NOWARN_UNUSED int PTSNW(int (*fn)(const char*), pthread_t t, const char* n)
 {
  return fn(n);
@@ -130,7 +152,11 @@ Thread* Thread_Create(int (*fn)(void *), void *data, const char* debug_name)
  ret->data = data;
 
  if((ptec = pthread_create(&ret->t, nullptr, PTCEP, ret.get())))
-  throw MDFN_Error(0, _("pthread_create() failed: %d"), ptec);
+ {
+  ErrnoHolder ene(ptec);
+
+  throw MDFN_Error(0, _("%s failed: %s"), "pthread_create()", ene.StrError());
+ }
 
  if(debug_name)
  {
@@ -141,6 +167,8 @@ Thread* Thread_Create(int (*fn)(void *), void *data, const char* debug_name)
   tmp[15] = 0;
 
   PTSNW(pthread_setname_np, ret->t, tmp);
+#elif defined(HAVE_PTHREAD_SET_NAME_NP)
+  pthread_set_name_np(ret->t, debug_name);
 #endif
  }
 
@@ -158,7 +186,7 @@ void Thread_Wait(Thread* thread, int* status)
   {
    ErrnoHolder ene(ptec);
 
-   throw MDFN_Error(ene.Errno(), _("pthread_join() failed: %s"), ene.StrError());
+   throw MDFN_Error(ene.Errno(), _("%s failed: %s"), "pthread_join()", ene.StrError());
   }
 
   if(vp != &thread->rv)
@@ -184,70 +212,69 @@ uintptr_t Thread_ID(void)
  return LocalThreadID;
 }
 
-#ifdef HAVE_PTHREAD_SETAFFINITY_NP
-static uint64 GetAffinity(Thread* thread)
+#if defined(PTHREAD_AFFINITY_NP)
+//template<typename T> static T MDFN_PTHREAD_NP_CPUSET_T_HELPER(int (*)(pthread_t, size_t, T*)) { T dummy; CPU_ZERO(&dummy); return dummy; }
+//typedef decltype(MDFN_PTHREAD_NP_CPUSET_T_HELPER(pthread_getaffinity_np)) MDFN_PTHREAD_NP_CPUSET_T;
+
+uint64 Thread_SetAffinity(Thread* thread, const uint64 mask)
 {
- uint64 mask = 0;
-
- int ptec;
- cpu_set_t c;
- pthread_t t = thread ? thread->t : pthread_self();
-
- CPU_ZERO(&c);
- if((ptec = pthread_getaffinity_np(t, sizeof(cpu_set_t), &c)))
+ try
  {
-  ErrnoHolder ene(ptec);
+  assert(mask != 0);
+  //
+  pthread_t const t = thread ? thread->t : pthread_self();
+  PTHREAD_AFFINITY_NP c;
+  uint64 ret = 0;
+  int ptec;
 
-  throw MDFN_Error(ene.Errno(), _("pthread_getaffinity_np() failed: %s"), ene.StrError());
+  //printf("SetAffinity() %016llx %08x\n", (unsigned long long)t, mask);
+  //
+  //
+  CPU_ZERO(&c);
+  if((ptec = pthread_getaffinity_np(t, sizeof(c), &c)))
+  {
+   ErrnoHolder ene(ptec);
+
+   throw MDFN_Error(ene.Errno(), _("%s failed: %s"), "pthread_getaffinity_np()", ene.StrError());
+  }
+
+  for(unsigned i = 0; i < sizeof(ret) * 8 && i < CPU_SETSIZE; i++)
+  {
+   if(CPU_ISSET(i, &c))
+    ret |= (uint64)1 << i;
+  }
+  //
+  //
+  CPU_ZERO(&c);
+
+  for(unsigned i = 0; i < sizeof(mask) * 8 && i < CPU_SETSIZE; i++)
+  {
+   if((mask >> i) & 1)
+    CPU_SET(i, &c);
+  }
+
+  if(CPU_SETSIZE < 64 && mask >= ((uint64)1 << CPU_SETSIZE))
+  {
+   throw MDFN_Error(EINVAL, _("Affinity mask specifies CPU beyond capacity of the CPU set."));
+  }
+
+  if((ptec = pthread_setaffinity_np(t, sizeof(c), &c)))
+  {
+   ErrnoHolder ene(ptec);
+
+   throw MDFN_Error(ene.Errno(), _("%s failed: %s"), "pthread_setaffinity_np()", ene.StrError());
+  }
+
+  return ret;
  }
-
- for(unsigned i = 0; i < sizeof(mask) * 8 && i < CPU_SETSIZE; i++)
+ catch(std::exception& e)
  {
-  if(CPU_ISSET(i, &c))
-   mask |= (uint64)1 << i;
+  throw MDFN_Error(0, _("Setting affinity to 0x%016llx failed: %s"), (unsigned long long)mask, e.what());
  }
-
- //printf("GetAffinity() %016llx %08x\n", (unsigned long long)t, mask);
-
- return mask;
-}
-
-uint64 Thread_SetAffinity(Thread* thread, uint64 mask)
-{
- assert(mask != 0);
- //
- const uint64 ret = GetAffinity(thread);
- int ptec;
- cpu_set_t c;
- pthread_t t = thread ? thread->t : pthread_self();
-
- //printf("SetAffinity() %016llx %08x\n", (unsigned long long)t, mask);
-
- CPU_ZERO(&c);
-
- for(unsigned i = 0; i < sizeof(mask) * 8 && i < CPU_SETSIZE; i++)
- {
-  if((mask >> i) & 1)
-   CPU_SET(i, &c);
- }
-
- if(CPU_SETSIZE < 64 && mask >= ((uint64)1 << CPU_SETSIZE))
- {
-  ErrnoHolder ene(EINVAL);
-
-  throw MDFN_Error(ene.Errno(), _("Setting affinity to 0x%016llx failed: %s"), (unsigned long long)mask, ene.StrError());
- }
-
- if((ptec = pthread_setaffinity_np(t, sizeof(cpu_set_t), &c)))
- {
-  ErrnoHolder ene(ptec);
-
-  throw MDFN_Error(ene.Errno(), _("Setting affinity to 0x%016llx failed: %s"), (unsigned long long)mask, ene.StrError());
- }
-
- return ret;
 }
 #else
+
+#warning "Compiling without affinity setting support."
 uint64 Thread_SetAffinity(Thread* thread, uint64 mask)
 {
  assert(mask != 0);
@@ -265,7 +292,7 @@ static void CreateMutex(Mutex* ret)
  {
   ErrnoHolder ene(ptec);
 
-  throw MDFN_Error(ene.Errno(), _("pthread_mutexattr_init() failed: %s"), ene.StrError());
+  throw MDFN_Error(ene.Errno(), _("%s failed: %s"), "pthread_mutexattr_init()", ene.StrError());
  }
 
  if((ptec = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK/*PTHREAD_MUTEX_NORMAL*/)))
@@ -274,7 +301,7 @@ static void CreateMutex(Mutex* ret)
 
   pthread_mutexattr_destroy(&attr);
 
-  throw MDFN_Error(ene.Errno(), _("pthread_mutexattr_settype() failed: %s"), ene.StrError());
+  throw MDFN_Error(ene.Errno(), _("%s failed: %s"), "pthread_mutexattr_settype()", ene.StrError());
  }
 
  if((ptec = pthread_mutex_init(&ret->m, &attr)))
@@ -283,7 +310,7 @@ static void CreateMutex(Mutex* ret)
 
   pthread_mutexattr_destroy(&attr);
 
-  throw MDFN_Error(ene.Errno(), _("pthread_mutex_init() failed: %s"), ene.StrError());
+  throw MDFN_Error(ene.Errno(), _("%s failed: %s"), "pthread_mutex_init()", ene.StrError());
  }
 
  pthread_mutexattr_destroy(&attr);
@@ -294,14 +321,14 @@ static void CreateMutex(Mutex* ret)
  {
   ErrnoHolder ene(ptec);
 
-  throw MDFN_Error(ene.Errno(), _("pthread_mutex_lock() failed: %s"), ene.StrError());
+  throw MDFN_Error(ene.Errno(), _("%s failed: %s"), "pthread_mutex_lock()", ene.StrError());
  }
 
  if((ptec = pthread_mutex_unlock(&ret->m)))
  {
   ErrnoHolder ene(ptec);
 
-  throw MDFN_Error(ene.Errno(), _("pthread_mutex_unlock() failed: %s"), ene.StrError());
+  throw MDFN_Error(ene.Errno(), _("%s failed: %s"), "pthread_mutex_unlock()", ene.StrError());
  }
 }
 
@@ -322,7 +349,7 @@ void Mutex_Destroy(Mutex* mutex) noexcept
  {
   ErrnoHolder ene(ptec);
 
-  MDFN_Notify(MDFN_NOTICE_ERROR, _("pthread_mutex_destroy() failed: %s"), ene.StrError());
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("%s failed: %s"), "pthread_mutex_destroy()", ene.StrError());
  }
 
  delete mutex;
@@ -363,7 +390,7 @@ static void CreateCond(Cond* ret)
  {
   ErrnoHolder ene(ptec);
 
-  throw MDFN_Error(ene.Errno(), _("pthread_condattr_init() failed: %s"), ene.StrError());
+  throw MDFN_Error(ene.Errno(), _("%s failed: %s"), "pthread_condattr_init()", ene.StrError());
  }
 
 #if !defined(MDFN_USE_COND_TIMEDWAIT_RELATIVE_NP)
@@ -373,7 +400,7 @@ static void CreateCond(Cond* ret)
 
   pthread_condattr_destroy(&attr);
 
-  throw MDFN_Error(ene.Errno(), _("pthread_condattr_setclock() failed: %s"), ene.StrError());
+  throw MDFN_Error(ene.Errno(), _("%s failed: %s"), "pthread_condattr_setclock()", ene.StrError());
  }
 #endif
 
@@ -383,7 +410,7 @@ static void CreateCond(Cond* ret)
 
   pthread_condattr_destroy(&attr);
 
-  throw MDFN_Error(ene.Errno(), _("pthread_cond_init() failed: %s"), ene.StrError());
+  throw MDFN_Error(ene.Errno(), _("%s failed: %s"), "pthread_cond_init()", ene.StrError());
  }
 
  pthread_condattr_destroy(&attr);
@@ -406,7 +433,7 @@ void Cond_Destroy(Cond* cond) noexcept
  {
   ErrnoHolder ene(ptec);
 
-  MDFN_Notify(MDFN_NOTICE_ERROR, _("pthread_cond_destroy() failed: %s"), ene.StrError());
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("%s failed: %s"), "pthread_cond_destroy()", ene.StrError());
  }
 
  delete cond;
@@ -507,7 +534,7 @@ Sem* Sem_Create(void)
  {
   ErrnoHolder ene(errno);
 
-  throw MDFN_Error(ene.Errno(), _("sem_init() failed: %s"), ene.StrError());
+  throw MDFN_Error(ene.Errno(), _("%s failed: %s"), "sem_init()", ene.StrError());
  }
 
  return ret.release();
@@ -519,7 +546,7 @@ void Sem_Destroy(Sem* sem) noexcept
  {
   ErrnoHolder ene(errno);
 
-  MDFN_Notify(MDFN_NOTICE_ERROR, _("sem_destroy() failed: %s"), ene.StrError());
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("%s failed: %s"), "sem_destroy()", ene.StrError());
  }
 
  delete sem;
@@ -540,13 +567,14 @@ bool Sem_Wait(Sem* sem) noexcept
  return true;
 }
 
+#if defined(MDFN_USE_SEM_CLOCKWAIT_NP)
 bool Sem_TimedWait(Sem* sem, unsigned ms) noexcept
 {
  struct timespec abstime;
 
  memset(&abstime, 0, sizeof(abstime));
 
- if(clock_gettime(/*CLOCK_MONOTONIC*/CLOCK_REALTIME, &abstime))
+ if(clock_gettime(CLOCK_MONOTONIC, &abstime))
  {
   fprintf(stderr, "clock_gettime() failed: %m");
   return false;
@@ -555,7 +583,69 @@ bool Sem_TimedWait(Sem* sem, unsigned ms) noexcept
  TimeSpec_AddNanoseconds(&abstime, (uint64)ms * 1000 * 1000);
 
  tryagain:
- /*if(sem_timedwait_monotonic(&sem->s, &abstime))*/
+ if(sem_clockwait_np(&sem->s, CLOCK_MONOTONIC, TIMER_ABSTIME, &abstime, nullptr))
+ {
+  if(errno == EINTR)
+   goto tryagain;
+
+  if(errno == ETIMEDOUT)
+   return false;
+  //
+  fprintf(stderr, "sem_clockwait_np() failed: %m");
+  return false;
+ }
+
+ return true;
+}
+#elif defined(MDFN_USE_SEM_CLOCKWAIT)
+bool Sem_TimedWait(Sem* sem, unsigned ms) noexcept
+{
+ struct timespec abstime;
+
+ memset(&abstime, 0, sizeof(abstime));
+
+ if(clock_gettime(CLOCK_MONOTONIC, &abstime))
+ {
+  fprintf(stderr, "clock_gettime() failed: %m");
+  return false;
+ }
+
+ TimeSpec_AddNanoseconds(&abstime, (uint64)ms * 1000 * 1000);
+
+ tryagain:
+ if(sem_clockwait(&sem->s, CLOCK_MONOTONIC, &abstime))
+ {
+  if(errno == EINTR)
+   goto tryagain;
+
+  if(errno == ETIMEDOUT)
+   return false;
+  //
+  fprintf(stderr, "sem_clockwait() failed: %m");
+  return false;
+ }
+
+ return true;
+}
+#else
+
+#warning "Using realtime-clock-based sem_timedwait()"
+
+bool Sem_TimedWait(Sem* sem, unsigned ms) noexcept
+{
+ struct timespec abstime;
+
+ memset(&abstime, 0, sizeof(abstime));
+
+ if(clock_gettime(CLOCK_REALTIME, &abstime))
+ {
+  fprintf(stderr, "clock_gettime() failed: %m");
+  return false;
+ }
+
+ TimeSpec_AddNanoseconds(&abstime, (uint64)ms * 1000 * 1000);
+
+ tryagain:
  if(sem_timedwait(&sem->s, &abstime))
  {
   if(errno == EINTR)
@@ -570,6 +660,7 @@ bool Sem_TimedWait(Sem* sem, unsigned ms) noexcept
 
  return true;
 }
+#endif
 
 bool Sem_Post(Sem* sem) noexcept
 {
@@ -618,14 +709,14 @@ void Sem_Destroy(Sem* sem) noexcept
  {
   ErrnoHolder ene(ptec);
 
-  MDFN_Notify(MDFN_NOTICE_ERROR, _("pthread_cond_destroy() failed: %s"), ene.StrError());
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("%s failed: %s"), "pthread_cond_destroy()", ene.StrError());
  }
 
  if((ptec = pthread_mutex_destroy(&sem->m.m)))
  {
   ErrnoHolder ene(ptec);
 
-  MDFN_Notify(MDFN_NOTICE_ERROR, _("pthread_mutex_destroy() failed: %s"), ene.StrError());
+  MDFN_Notify(MDFN_NOTICE_ERROR, _("%s failed: %s"), "pthread_mutex_destroy()", ene.StrError());
  }
 
  delete sem;
@@ -633,7 +724,7 @@ void Sem_Destroy(Sem* sem) noexcept
 
 bool Sem_Wait(Sem* sem) noexcept
 {
- if(!Mutex_Lock(&sem->m);
+ if(!Mutex_Lock(&sem->m))
   return false;
 
  while(!sem->v)
@@ -675,14 +766,17 @@ bool Sem_Post(Sem* sem) noexcept
   return false;
 
  if(sem->v == INT_MAX)
+ {
+  Mutex_Unlock(&sem->m);
   return false;
+ }
 
  sem->v++;
 
  bool ret = true;
 
- ret &= SignalCond(&sem->c);
- ret &= UnlockMutex(&sem->m);
+ ret &= Cond_Signal(&sem->c);
+ ret &= Mutex_Unlock(&sem->m);
 
  return ret;
 }

@@ -48,7 +48,8 @@ static int32 ResistanceLUT[4];
 template<unsigned w>
 static DEFREAD(ReadGameButton)
 {
- CPUTick1();
+ if(!InHLPeek)
+  CPUTick1();
  //
  DB = (DB & 0x7F) | ((ButtonStates[w] << ((SoftSwitch >> 4) & 3)) & 0x80);
 }
@@ -56,20 +57,24 @@ static DEFREAD(ReadGameButton)
 template<unsigned w>
 static DEFREAD(ReadGameAxis)
 {
- CPUTick1();
+ if(!InHLPeek)
+  CPUTick1();
  //
  DB = (DB & 0x7F) | ((timestamp < AxisCounterFinishTS[w]) ? 0x80 : 0x00);
 }
 
 static DEFRW(RWGameTimerReset)
 {
- for(unsigned i = 0; i < 4; i++)
+ if(!InHLPeek)
  {
-  if(AxisCounterFinishTS[i] == 0x7FFFFFFF || timestamp >= AxisCounterFinishTS[i])
-   AxisCounterFinishTS[i] = (AxisStates[i] == 0x7FFFFFFF) ? 0x7FFFFFFF : (timestamp + AxisStates[i]);
+  for(unsigned i = 0; i < 4; i++)
+  {
+   if(AxisCounterFinishTS[i] == 0x7FFFFFFF || timestamp >= AxisCounterFinishTS[i])
+    AxisCounterFinishTS[i] = (AxisStates[i] == 0x7FFFFFFF) ? 0x7FFFFFFF : (timestamp + AxisStates[i]);
+  }
+  //
+  CPUTick1();
  }
- //
- CPUTick1();
 }
 
 static void EndTimePeriod(void)

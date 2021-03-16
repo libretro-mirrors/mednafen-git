@@ -1132,8 +1132,12 @@ void Video_Sync(MDFNGI *gi)
 
  {
   SDL_DisplayMode mode;
+  int dindex;
 
-  if(SDL_GetCurrentDisplayMode(SDL_GetWindowDisplayIndex(window), &mode) < 0)
+  if((dindex = SDL_GetWindowDisplayIndex(window)) < 0)
+   throw MDFN_Error(0, "SDL_GetWindowDisplayIndex() failed: %s", SDL_GetError());
+
+  if(SDL_GetCurrentDisplayMode(dindex, &mode) < 0)
    throw MDFN_Error(0, "SDL_GetCurrentDisplayMode() failed: %s", SDL_GetError());
 
   if(mode.refresh_rate)
@@ -1290,18 +1294,20 @@ void Video_Init(void)
  CurWMIB.Grab = false;
  //
  IconSurface = SDL_CreateRGBSurfaceFrom((void*)icon_128x128, 128, 128, 32, 128 * 4, 0xFF, 0xFF00, 0xFF0000, 0xFF000000);
-
- for(unsigned i = (vdriver != VDRIVER_OPENGL); i < 2; i++)
+ //
+ for(unsigned i = 0; i < 2 && !window; i++)
  {
-  if(!(window = SDL_CreateWindow("Mednafen", winpos_x, winpos_y, 64, 64, SDL_WINDOW_HIDDEN | (i ? 0 : SDL_WINDOW_OPENGL))))
+  static const uint32 try_flags[2] =
   {
-   if(i == 1)
-    throw MDFN_Error(0, _("SDL_CreateWindow() failed: %s\n"), SDL_GetError());
-  }
-
-  break;
+   SDL_WINDOW_HIDDEN | SDL_WINDOW_OPENGL,
+   SDL_WINDOW_HIDDEN
+  };
+  window = SDL_CreateWindow("Mednafen", winpos_x, winpos_y, 64, 64, try_flags[i]);
  }
 
+ if(!window)
+  throw MDFN_Error(0, _("SDL_CreateWindow() failed: %s\n"), SDL_GetError());
+ //
  SDL_SetWindowIcon(window, IconSurface);
 }
 

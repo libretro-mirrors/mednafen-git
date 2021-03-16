@@ -1,3 +1,71 @@
+-- 1.24.3: --
+
+May 1, 2020:
+	SS: Implemented more complete emulation of the SCSP short waveform mode, after running further tests; fixes excessive distortion in a
+	sound effect in "Sega Ages: OutRun", a regression introduced in Mednafen 1.24.2.
+
+-- 1.24.2: --
+
+April 25, 2020:
+	Fixed broken support for systems without any usable OpenGL implementation available.
+
+April 24, 2020:
+	Apple2:  Adjust disk angle variable upon disk change, partially sanitize the disk angle variable on state load, and print out a debug error
+	message instead of triggering an assert() in the disk reading code, to prevent Mednafen from aborting out in certain circumstances involving disk
+	changing and state loading.
+
+April 21, 2020:
+	Apple2: Added missing keyboard reading variable to save states.
+
+April 7, 2020:
+	SS: Fixed a few inaccuracies with the SCSP waveform loop handling.
+
+April 6, 2020:
+	SS: Added emulation of SCSP slot short waveform mode bit.
+
+April 5, 2020:
+	SS: Implemented the buggy linear interpolation that occurs on the SCSP when FM is used.
+
+April 3, 2020:
+	SS: Added emulation of SCSP slot EG bypass bit.
+
+	SS: Implemented SCSP register mirroring.
+
+-- 1.24.1: --
+
+February 27, 2020:
+	NES: Changed some macros in the CPU emulation code to not have leading underscores.
+
+February 25, 2020:
+	Use sem_clockwait() or sem_clockwait_np() when available, instead of sem_timedwait().
+
+	NES: Don't memset() MDFN_PixelFormat object.
+
+February 23, 2020:
+	Fixed build errors on FreeBSD relating to the multithreading code.
+
+February 22, 2020:
+	Fixed broken semaphore emulation code used on non-Windows platforms when sem_timedwait() is not available(1.24.0-UNSTABLE regression).
+
+February 15, 2020:
+	Altered Linux joystick API detection in the configure script, to avoid compiling with Linux joystick support in lieu of SDL joystick support on *BSD systems
+	with Linux header files installed.
+
+February 11, 2020:
+	Fixed AltiVec-related build errors on 64-bit POWER/PPC.
+
+	SS: Added kludges to fix NBG2/NBG3 background layer offset problems in "Fighters Megamix".
+
+February 2, 2020:
+	SNES-Faust: Replaced assert() in the DSP-1 emulation code with a SNES_DBG()
+
+January 23, 2020:
+	PSX: Implemented a partial fix for missing notes/instruments in the music of "Dragon Ball GT: Final Bout".
+
+December 30, 2019:
+	PSX: Don't ignore the sample loop address set via ADPCM header when the loop address register was written only before the end of voice on startup delay.
+	Fixes sound effect glitches in "Re-Loaded: The Hardcore Sequel".
+
 -- 1.24.0-UNSTABLE: --
 
 December 19, 2019:

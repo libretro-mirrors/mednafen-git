@@ -273,18 +273,24 @@ static void EndTimePeriod(void)
 
 static DEFREAD(ReadKBData)
 {
- CPUTick1();
- //
- UpdateScanProcess();
+ if(!InHLPeek)
+ {
+  CPUTick1();
+  //
+  UpdateScanProcess();
+ }
  DB = KBOutData;
 }
 
 static DEFRW(RWClearKBStrobe)
 {
- UpdateScanProcess();
- KBOutData &= 0x7F;
- //
- CPUTick1();
+ if(!InHLPeek)
+ {
+  UpdateScanProcess();
+  KBOutData &= 0x7F;
+  //
+  CPUTick1();
+ }
 }
 
 static bool UpdateInput(void)
@@ -379,6 +385,8 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFVAR(KBScan.StrobeDelayCounter),
   SFVAR(KBScan.RepeatCounter),
   SFVAR(KBOutData),
+
+  SFVAR(KBScan.curtime),
 
   SFEND
  };

@@ -514,6 +514,17 @@ the optional "g" flag with "-+" polarity(e.g. "abs_0-+g").
    <?php EndSection(); ?>
 
   <?php EndSection(); ?>
+
+  <?php BeginSection("Environment Variables", "Section_environment_variables"); ?>
+  <table border>
+   <tr><th colspan="3">Mednafen-specific environment variables:</th></tr>
+   <tr><th>Name:</th><th>Description:</th></tr>
+   <tr><td>MEDNAFEN_HOME</td><td>Directly specifies Mednafen's <a href="#Section_base_directory">base directory</a>.</td></tr>
+   <tr><td>MEDNAFEN_ALLOWMULTI</td><td>When set to a non-zero integer, bypasses the protection against running multiple instances of Mednafen using the same base directory.</td></tr>
+   <tr><td>MEDNAFEN_NOPOPUPS</td><td>When set to a non-zero integer, on Microsoft Windows, disables popup error message dialog boxes.</td></tr>
+   <tr><td>MEDNAFEN_NOSTDREDIR</td><td>When set to a non-zero integer, on Microsoft Windows, disables the redirection of stdout and stderr to files "stdout.txt" and "stderr.txt" that normally occurs when Mednafen is not started from a console window.</td></tr>
+  </table>
+  <?php EndSection(); ?>
  <?php EndSection(); ?>
 
  <?php BeginSection("Troubleshooting and Common Solutions", "Section_troubleshooting"); ?>

@@ -2116,6 +2116,17 @@ static void ThreadSafeErrno_Test(void)
  MThreading::Sem_Wait(sem[0]);
  assert(errno != 0xDEAD);
  MThreading::Thread_Wait(thr, nullptr);
+ //
+ for(int i = 9; i >= 0; i--)
+ {
+  const uint64 st = Time::MonoUS();
+  unsigned ms = i * 10;
+
+  MThreading::Sem_TimedWait(sem[i & 1], ms);
+
+  printf("sem wait requested: %uus, actual: %lluus\n", ms * 1000, (unsigned long long)(Time::MonoUS() - st));
+ }
+ //
  MThreading::Sem_Destroy(sem[0]);
  MThreading::Sem_Destroy(sem[1]);
  //
