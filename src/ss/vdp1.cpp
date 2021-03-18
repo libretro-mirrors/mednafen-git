@@ -82,6 +82,7 @@ static sscpu_timestamp_t lastts;
 static int32 CycleCounter;
 static int32 CommandPhase;
 static uint16 CommandData[0x10];
+uint32 DTACounter;
 
 static bool vb_status, hb_status;
 static bool vbcdpending;
@@ -89,7 +90,7 @@ static bool FBManualPending;
 static bool FBVBErasePending;
 static bool FBVBEraseActive;
 static sscpu_timestamp_t FBVBEraseLastTS;
-static sscpu_timestamp_t LastRWTS; // ss_horrible_hacks
+static sscpu_timestamp_t LastRWTS;
 
 static uint16 EWDR;	// Erase/Write Data
 static uint16 EWLR;	// Erase/Write Upper Left Coordinate
@@ -303,7 +304,9 @@ void Reset(bool powering_up)
  DrawingActive = false;
  CycleCounter = 0;
  CommandPhase = 0;
+ memset(CommandData, 0, sizeof(CommandData));
  InstantDrawSanityLimit = 0;
+ DTACounter = 0;
 
  //
  // Begin registers/variables confirmed to be initialized on reset.
@@ -776,17 +779,6 @@ static INLINE void DoDrawing(void)
        if(!cycles)
         break;
 
-#if 0
-       {
-	static uint32 foocounter;
-        uint32 extra_cycles;
-        foocounter += cycles * 3;
-        extra_cycles = foocounter >> 4;
-        foocounter &= 0xF;
-        cycles += extra_cycles;
-       }
-#endif
-
        VDP1_EAT_CLOCKS(cycles);
       }
      }
@@ -1126,8 +1118,7 @@ void AdjustTS(const int32 delta)
  if(FBVBEraseActive)
   FBVBEraseLastTS += delta;
 
- if(LastRWTS >= 0)
-  LastRWTS += delta;
+ LastRWTS = std::max<sscpu_timestamp_t>(-1000000, LastRWTS + delta);
 
  VRAMUsageAddBaseTime(-delta);
 }
@@ -1222,7 +1213,7 @@ static INLINE uint16 ReadReg(const unsigned which)
 //
 MDFN_FASTCALL void Write_CheckDrawSlowdown(uint32 A, sscpu_timestamp_t time_thing)
 {
- if(DrawingActive && (ss_horrible_hacks & HORRIBLEHACK_VDP1RWDRAWSLOWDOWN))
+ if(DrawingActive && time_thing > LastRWTS && (ss_horrible_hacks & HORRIBLEHACK_VDP1RWDRAWSLOWDOWN))
  {
   const int32 count = (A & 0x100000) ? 22 : 25;
   const uint32 a = std::min<uint32>(count, time_thing - LastRWTS);
@@ -1235,7 +1226,7 @@ MDFN_FASTCALL void Write_CheckDrawSlowdown(uint32 A, sscpu_timestamp_t time_thin
 MDFN_FASTCALL void Read_CheckDrawSlowdown(uint32 A, sscpu_timestamp_t time_thing)
 {
  //printf("%08x\n", A);
- if(!(A & 0x100000) && DrawingActive && (ss_horrible_hacks & HORRIBLEHACK_VDP1RWDRAWSLOWDOWN))
+ if(!(A & 0x100000) && time_thing > LastRWTS && DrawingActive && (ss_horrible_hacks & HORRIBLEHACK_VDP1RWDRAWSLOWDOWN))
  {
   const int32 count = (A & 0x80000) ? 44 : 41;
   const uint32 a = std::min<uint32>(count, time_thing - LastRWTS);
@@ -1261,7 +1252,7 @@ MDFN_FASTCALL void Write8_DB(uint32 A, uint16 DB)
  {
   uint32 FBA = A;
 
-  SS_DBGTI(SS_DBG_VDP1_FBW, "[VDP1] Write to FB: 0x%02x->FB[%d][0x%05x]", (DB >> (((A & 1) ^ 1) << 3)) & 0xFF, FBDrawWhich, A & 0x3FFFF);
+  SS_DBGTI(SS_DBG_VDP1_FBW, "[VDP1] Write to FB: 0x%02x->FB[%d][0x%05x] CycleCounter=%d", (DB >> (((A & 1) ^ 1) << 3)) & 0xFF, FBDrawWhich, A & 0x3FFFF, CycleCounter);
 
   if((TVMR & (TVMR_8BPP | TVMR_ROTATE)) == (TVMR_8BPP | TVMR_ROTATE))
    FBA = (FBA & 0x1FF) | ((FBA << 1) & 0x3FC00) | ((FBA >> 8) & 0x200);
@@ -1290,7 +1281,7 @@ MDFN_FASTCALL void Write16_DB(uint32 A, uint16 DB)
  {
   uint32 FBA = A;
 
-  SS_DBGTI(SS_DBG_VDP1_FBW, "[VDP1] Write to FB: 0x%04x->FB[%d][0x%05x]", DB, FBDrawWhich, A & 0x3FFFF);
+  SS_DBGTI(SS_DBG_VDP1_FBW, "[VDP1] Write to FB: 0x%04x->FB[%d][0x%05x] CycleCounter=%d", DB, FBDrawWhich, A & 0x3FFFF, CycleCounter);
 
   if((TVMR & (TVMR_8BPP | TVMR_ROTATE)) == (TVMR_8BPP | TVMR_ROTATE))
    FBA = (FBA & 0x1FF) | ((FBA << 1) & 0x3FC00) | ((FBA >> 8) & 0x200);
@@ -1466,6 +1457,7 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFVAR(CycleCounter),
   SFVAR(CommandPhase),
   SFVAR(CommandData),
+  SFVAR(DTACounter),
 
   SFVAR(vbcdpending),
 
@@ -1485,6 +1477,8 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
   CurCommandAddr &= 0x3FFFF;
   if(RetCommandAddr >= 0)
    RetCommandAddr &= 0x3FFFF;
+
+  DTACounter &= 0xFF;
 
   EraseParams.fb_x_mask = EraseParams.rot8 ? 0xFF : 0x1FF;
 

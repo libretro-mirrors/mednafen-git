@@ -433,6 +433,22 @@ struct prim_data
 
 MDFN_HIDE extern prim_data PrimData;
 
+// Not sure the exact nature of this overhead, probably the combined effects of FBRAM and VRAM refresh, and something else.
+// 8bpp mode timing is best-caseish, performance is different between horizontal and vertical lines.
+//
+// Must always return 0 if 'cycles' argument is zero.
+static INLINE int32 AdjustDrawTiming(const int32 cycles)
+{
+ MDFN_HIDE extern uint32 DTACounter;
+ uint32 extra_cycles;
+
+ DTACounter += cycles * ((TVMR & TVMR_8BPP) ? 24 : 48);
+ extra_cycles = DTACounter >> 8;
+ DTACounter &= 0xFF;
+
+ return cycles + extra_cycles;
+}
+
 bool SetupDrawLine(int32* const cycle_counter, const bool AA, const bool Textured, const uint16 mode);
 
 #define PSTART							\

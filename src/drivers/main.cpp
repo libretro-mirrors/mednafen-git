@@ -2586,6 +2586,14 @@ void Mednafen::MDFND_MidSync(EmulateSpecStruct *espec, const unsigned flags)
 {
  //printf("MidSync; flags=0x%08x --- SoundBufSize_DriverProcessed=0x%08x, SoundBufSize=0x%08x\n", flags, espec->SoundBufSize_DriverProcessed, espec->SoundBufSize);
  //
+ if(MDFN_UNLIKELY(StateRCTest))
+ {
+  // TODO: Make state rewind consistency checking compatible with midsync, instead of this quick workaround.
+  //puts("MDFND_MidSync ignored");
+  return;
+ }
+ //
+ //
  int16* const sbuf = espec->SoundBuf + espec->SoundBufSize_DriverProcessed * CurGame->soundchan;
  const int32 scount = espec->SoundBufSize - espec->SoundBufSize_DriverProcessed;
 

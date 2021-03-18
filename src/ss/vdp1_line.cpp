@@ -107,7 +107,7 @@ int32 RESUME_Line(const uint16* cmd_data)
    SetupDrawLine(&ret, false, false, mode);
    //
    ResumeLine:;
-   ret += fnptr(&PrimData.need_line_resume);
+   ret += AdjustDrawTiming(fnptr(&PrimData.need_line_resume));
    if(MDFN_UNLIKELY(PrimData.need_line_resume))
     break;
   } while(++iter < num_lines && ret < VDP1_SuspendResumeThreshold);

@@ -369,6 +369,7 @@ function PrintInternalDatabases()
    echo('<th>' . htmlspecialchars($db['fullname']) . ':' . '</th>');
    echo('<th>Purpose:</th>');
    echo('</tr>');
+   echo("\n");
 
    foreach($db['entries'] as $gdbe)
    {
@@ -377,10 +378,11 @@ function PrintInternalDatabases()
     if($gdbe['idishash'])
      echo('<td><font size="-1"><i>' . htmlspecialchars($gdbe['id']) . '</i></font></td>');
     else
-     echo('<td>' . htmlspecialchars($gdbe['id']) . '</td>');
+     echo('<td>' . str_replace("\n", "<br>", htmlspecialchars($gdbe['id'])) . '</td>');
     echo('<td>' . htmlspecialchars($gdbe['setting']) . '</td>');
     echo('<td>' . htmlspecialchars($gdbe['purpose']) . '</td>');
     echo('</tr>');
+    echo("\n");
    }
    echo('</table>');
 

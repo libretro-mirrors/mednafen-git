@@ -115,7 +115,7 @@ static int32 SpriteResumeBase(const uint16* cmd_data)
     //
     //printf("%d:%d -> %d:%d\n", lp[0].x, lp[0].y, lp[1].x, lp[1].y);
     ResumeLine:;
-    ret += fnptr(&PrimData.need_line_resume);
+    ret += AdjustDrawTiming(fnptr(&PrimData.need_line_resume));
     if(MDFN_UNLIKELY(PrimData.need_line_resume))
      break;
    }

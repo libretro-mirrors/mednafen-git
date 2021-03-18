@@ -132,13 +132,19 @@ void SOUND_PokeRAM(uint32 A, uint8 V)
  ne16_wbo_be<uint8>(SCSP.GetRAMPtr(), A & 0x7FFFF, V);
 }
 
-void SOUND_ResetTS(void)
+static INLINE void ResetTS_68K(void)
 {
  next_scsp_time -= SoundCPU.timestamp;
  run_until_time -= (int64)SoundCPU.timestamp << 32;
  SoundCPU.timestamp = 0;
+}
 
- lastts = 0;
+void SOUND_AdjustTS(const int32 delta)
+{
+ ResetTS_68K();
+ //
+ //
+ lastts += delta;
 }
 
 void SOUND_Reset(bool powering_up)
