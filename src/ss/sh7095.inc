@@ -2585,7 +2585,8 @@ INLINE void SH7095::Cache_CheckReadIncoherency(CacheEntry* cent, const int way, 
 #define MemRead(IsInstr, T, region, CacheEnabled, A_, outval_, A, unmasked_A, cent, way_match)			\
 {														\
  __label__ EBRCase, MemReturn;											\
- T retval = 0;													\
+ T retval;													\
+ retval = 0;													\
  A = (A_);													\
  unmasked_A = A;												\
 														\
@@ -3218,12 +3219,14 @@ static const uint8 InstrDecodeTab[65536] =
 /* */
 #define DelayBranch(target_)						\
 {									\
- const uint32 target = (target_);					\
+ {									\
+  const uint32 target = (target_);					\
 									\
- if(DebugMode > 0)							\
-  DBG_AddBranchTrace(which, target, -1);				\
+  if(DebugMode > 0)							\
+   DBG_AddBranchTrace(which, target, -1);				\
 									\
- PC = target;								\
+  PC = target;								\
+ }									\
 									\
  /* Redecode the opcode from the 16-bit instruction to makes sure */	\
  /* exceptions won't be taken in the delay slot(due to op field   */	\
@@ -3244,21 +3247,23 @@ static const uint8 InstrDecodeTab[65536] =
   /* This discards the previously-fetched instruction after the */	\
   /* delay slot instruction.  Poor, poor instruction. */		\
   if(EmulateICache)							\
-   UCRead_IF_Kludge = false;							\
+   UCRead_IF_Kludge = false;						\
   FetchIF_ForceIBufferFill()						\
   if(EmulateICache)							\
-   timestamp -= (PC >> 1) & UCRead_IF_Kludge; /* WTFBBQ?! */			\
+   timestamp -= (PC >> 1) & UCRead_IF_Kludge; /* WTFBBQ?! */		\
  }									\
 }
 
 #define Branch(need_addbt, target_)					\
 {									\
- const uint32 target = (target_);					\
+ {									\
+  const uint32 target = (target_);					\
 									\
- if(need_addbt)								\
-  DBG_AddBranchTrace(which, target, -1);				\
+  if(need_addbt)							\
+   DBG_AddBranchTrace(which, target, -1);				\
 									\
- PC = target;								\
+  PC = target;								\
+ }									\
 									\
  if(MDFN_UNLIKELY(PC & 1))						\
  {									\
@@ -3396,6 +3401,7 @@ static const uint8 InstrDecodeTab[65536] =
 #define MemWrite16(A, V) MWFP16[(A) >> 29]((A), (V));
 #define MemWrite32(A, V) MWFP32[(A) >> 29]((A), (V));
 #define CHECK_EXIT_RESUME() { if(EmulateICache && !which) { if(DebugMode) CPU[1].RunSlaveUntil_Debug(timestamp); else CPU[1].RunSlaveUntil(timestamp); } }
+#define CONST_VAR(T, n) const T n
 #define RESUME_VAR(T, n) T n
 
 template<bool EmulateICache, bool DebugMode, bool IntPreventNext>
@@ -3450,6 +3456,7 @@ INLINE void SH7095::Step(void)
 #undef MemWrite8
 #undef MemWrite16
 #undef MemWrite32
+#undef CONST_VAR
 #undef RESUME_VAR
 //
 //
@@ -3502,6 +3509,7 @@ INLINE void SH7095::Step(void)
 #define opexec_ipr Resume_ipr
 #define opexec_exnum Resume_exnum
 #define opexec_vecnum Resume_vecnum
+#define CONST_VAR(T, n) T n; n
 #define RESUME_VAR(T, n) static_assert(std::is_same<T,decltype(n)>::value, "Resume variable type mismatch.")
 #define SH7095_NEED_RESUME_TABLE_INIT 1
 
@@ -3554,6 +3562,7 @@ NO_CLONE NO_INLINE MDFN_COLD void SH7095::RunSlaveUntil_Debug(const sscpu_timest
 #undef opexec_ipr
 #undef opexec_exnum
 #undef opexec_vecnum
+#undef CONST_VAR
 #undef RESUME_VAR
 #undef SH7095_NEED_RESUME_TABLE_INIT
 //

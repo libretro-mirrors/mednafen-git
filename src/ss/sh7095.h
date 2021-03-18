@@ -219,7 +219,7 @@ class SH7095 final
  struct CacheEntry
  {
   // Rather than have separate validity bits, we're putting an INvalidity bit(invalid when =1)
-  // in the upper bit of the Tag variables.
+  // in the lower bit of the Tag variables.
   uint32 Tag[4];
   uint8 Data[4][16];
  };

@@ -28,8 +28,8 @@ switch(Pipe_ID >> 24)
  // MOV #imm,Rn
  //
  BEGIN_OP(MOV_IMM_REG)
-	const unsigned n = instr_nyb2;
-	const uint32 imm = (int8)instr;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(uint32, imm) = (int8)instr;
 
 	WB_EX_CHECK(n)
 
@@ -41,8 +41,8 @@ switch(Pipe_ID >> 24)
  // MOV.W @(disp,PC),Rn
  //
  BEGIN_OP(MOV_W_PCREL_REG)
-	const unsigned d = (instr >> 0) & 0xff;
-	const uint32 ea = PC + (d << 1);
+	CONST_VAR(unsigned, d) = (instr >> 0) & 0xff;
+	CONST_VAR(uint32, ea) = PC + (d << 1);
 
 	WB_READ16_I(instr_nyb2, ea);
  END_OP
@@ -52,8 +52,8 @@ switch(Pipe_ID >> 24)
  // MOV.L @(disp,PC),Rn
  //
  BEGIN_OP(MOV_L_PCREL_REG)
-	const unsigned d = (instr >> 0) & 0xff;
-	const uint32 ea = (PC &~ 0x3) + (d << 2);
+	CONST_VAR(unsigned, d) = (instr >> 0) & 0xff;
+	CONST_VAR(uint32, ea) = (PC &~ 0x3) + (d << 2);
 
 	WB_READ32_I(instr_nyb2, ea);
  END_OP
@@ -63,8 +63,8 @@ switch(Pipe_ID >> 24)
  // MOV Rm,Rn
  //
  BEGIN_OP(MOV_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -77,10 +77,10 @@ switch(Pipe_ID >> 24)
  // MOV.B Rm,@Rn
  //
  BEGIN_OP(MOV_B_REG_REGINDIR)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
-	const uint32 val = R[m];
-	const uint32 ea = R[n];
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(uint32, val) = R[m];
+	CONST_VAR(uint32, ea) = R[n];
 
 	MemWrite8(ea, val);
  END_OP
@@ -90,10 +90,10 @@ switch(Pipe_ID >> 24)
  // MOV.W Rm,@Rn
  //
  BEGIN_OP(MOV_W_REG_REGINDIR)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
-	const uint32 val = R[m];
-	const uint32 ea = R[n];
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(uint32, val) = R[m];
+	CONST_VAR(uint32, ea) = R[n];
 
 	MemWrite16(ea, val);
  END_OP
@@ -103,10 +103,10 @@ switch(Pipe_ID >> 24)
  // MOV.L Rm,@Rn
  //
  BEGIN_OP(MOV_L_REG_REGINDIR)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
-	const uint32 val = R[m];
-	const uint32 ea = R[n];
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(uint32, val) = R[m];
+	CONST_VAR(uint32, ea) = R[n];
 
 	MemWrite32(ea, val);
  END_OP
@@ -116,8 +116,8 @@ switch(Pipe_ID >> 24)
  // MOV.B @Rm,Rn
  //
  BEGIN_OP(MOV_B_REGINDIR_REG)
-	const unsigned m = instr_nyb1;
-	const uint32 ea = R[m];
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(uint32, ea) = R[m];
 
 	WB_READ8(instr_nyb2, ea);
  END_OP
@@ -127,8 +127,8 @@ switch(Pipe_ID >> 24)
  // MOV.W @Rm,Rn
  //
  BEGIN_OP(MOV_W_REGINDIR_REG)
-	const unsigned m = instr_nyb1;
-	const uint32 ea = R[m];
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(uint32, ea) = R[m];
 
 	WB_READ16(instr_nyb2, ea);
  END_OP
@@ -138,8 +138,8 @@ switch(Pipe_ID >> 24)
  // MOV.L @Rm,Rn
  //
  BEGIN_OP(MOV_L_REGINDIR_REG)
-	const unsigned m = instr_nyb1;
-	const uint32 ea = R[m];
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(uint32, ea) = R[m];
 
 	WB_READ32(instr_nyb2, ea);
  END_OP
@@ -149,9 +149,9 @@ switch(Pipe_ID >> 24)
  // MOV.B Rm,@-Rn
  //
  BEGIN_OP(MOV_B_REG_REGINDIRPD)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
-	const uint32 val = R[m];
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(uint32, val) = R[m];
 	uint32 ea;
 
 	R[n] -= 1;
@@ -165,9 +165,9 @@ switch(Pipe_ID >> 24)
  // MOV.W Rm,@-Rn
  //
  BEGIN_OP(MOV_W_REG_REGINDIRPD)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
-	const uint32 val = R[m];
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(uint32, val) = R[m];
 	uint32 ea;
 
 	R[n] -= 2;
@@ -181,9 +181,9 @@ switch(Pipe_ID >> 24)
  // MOV.L Rm,@-Rn
  //
  BEGIN_OP(MOV_L_REG_REGINDIRPD)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
-	const uint32 val = R[m];
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(uint32, val) = R[m];
 	uint32 ea;
 
 	R[n] -= 4;
@@ -197,7 +197,7 @@ switch(Pipe_ID >> 24)
  // MOV.B @Rm+,Rn
  //
  BEGIN_OP(MOV_B_REGINDIRPI_REG)
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 	uint32 ea;
 
 	ea = R[m];
@@ -211,7 +211,7 @@ switch(Pipe_ID >> 24)
  // MOV.W @Rm+,Rn
  //
  BEGIN_OP(MOV_W_REGINDIRPI_REG)
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 	uint32 ea;
 
 	ea = R[m];
@@ -225,7 +225,7 @@ switch(Pipe_ID >> 24)
  // MOV.L @Rm+,Rn
  //
  BEGIN_OP(MOV_L_REGINDIRPI_REG)
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 	uint32 ea;
 
 	ea = R[m];
@@ -239,9 +239,9 @@ switch(Pipe_ID >> 24)
  // MOV.B R0,@(disp,Rn)
  //
  BEGIN_OP(MOV_B_REG0_REGINDIRDISP)
-	const unsigned n = instr_nyb1;
-	const unsigned d = (instr >> 0) & 0xf;
-	const uint32 ea = R[n] + (d << 0);
+	CONST_VAR(unsigned, n) = instr_nyb1;
+	CONST_VAR(unsigned, d) = (instr >> 0) & 0xf;
+	CONST_VAR(uint32, ea) = R[n] + (d << 0);
 
 	MemWrite8(ea, R[0]);
  END_OP
@@ -251,9 +251,9 @@ switch(Pipe_ID >> 24)
  // MOV.W R0,@(disp,Rn)
  //
  BEGIN_OP(MOV_W_REG0_REGINDIRDISP)
-	const unsigned n = instr_nyb1;
-	const unsigned d = (instr >> 0) & 0xf;
-	const uint32 ea = R[n] + (d << 1);
+	CONST_VAR(unsigned, n) = instr_nyb1;
+	CONST_VAR(unsigned, d) = (instr >> 0) & 0xf;
+	CONST_VAR(uint32, ea) = R[n] + (d << 1);
 
 	MemWrite16(ea, R[0]);
  END_OP
@@ -263,10 +263,10 @@ switch(Pipe_ID >> 24)
  // MOV.L Rm,@(disp,Rn)
  //
  BEGIN_OP(MOV_L_REG_REGINDIRDISP)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
-	const unsigned d = (instr >> 0) & 0xf;
-	const uint32 ea = R[n] + (d << 2);
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(unsigned, d) = (instr >> 0) & 0xf;
+	CONST_VAR(uint32, ea) = R[n] + (d << 2);
 
 	MemWrite32(ea, R[m]);
  END_OP
@@ -276,9 +276,9 @@ switch(Pipe_ID >> 24)
  // MOV.B @(disp,Rm),R0
  //
  BEGIN_OP(MOV_B_REGINDIRDISP_REG0)
-	const unsigned m = instr_nyb1;
-	const unsigned d = (instr >> 0) & 0xf;
-	const uint32 ea = R[m] + (d << 0);
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(unsigned, d) = (instr >> 0) & 0xf;
+	CONST_VAR(uint32, ea) = R[m] + (d << 0);
 
 	WB_READ8(0, ea);
  END_OP
@@ -288,9 +288,9 @@ switch(Pipe_ID >> 24)
  // MOV.W @(disp,Rm),R0
  //
  BEGIN_OP(MOV_W_REGINDIRDISP_REG0)
-	const unsigned m = instr_nyb1;
-	const unsigned d = (instr >> 0) & 0xf;
-	const uint32 ea = R[m] + (d << 1);
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(unsigned, d) = (instr >> 0) & 0xf;
+	CONST_VAR(uint32, ea) = R[m] + (d << 1);
 
 	WB_READ16(0, ea);
  END_OP
@@ -300,9 +300,9 @@ switch(Pipe_ID >> 24)
  // MOV.L @(disp,Rm),Rn
  //
  BEGIN_OP(MOV_L_REGINDIRDISP_REG)
-	const unsigned m = instr_nyb1;
-	const unsigned d = (instr >> 0) & 0xf;
-	const uint32 ea = R[m] + (d << 2);
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(unsigned, d) = (instr >> 0) & 0xf;
+	CONST_VAR(uint32, ea) = R[m] + (d << 2);
 
 	WB_READ32(instr_nyb2, ea);
  END_OP
@@ -312,9 +312,9 @@ switch(Pipe_ID >> 24)
  // MOV.B Rm,@(R0,Rn)
  //
  BEGIN_OP(MOV_B_REG_IDXREGINDIR)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
-	const uint32 ea = R[0] + R[n];
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(uint32, ea) = R[0] + R[n];
 
 	MemWrite8(ea, R[m]);
  END_OP
@@ -324,9 +324,9 @@ switch(Pipe_ID >> 24)
  // MOV.W Rm,@(R0,Rn)
  //
  BEGIN_OP(MOV_W_REG_IDXREGINDIR)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
-	const uint32 ea = R[0] + R[n];
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(uint32, ea) = R[0] + R[n];
 
 	MemWrite16(ea, R[m]);
  END_OP
@@ -336,9 +336,9 @@ switch(Pipe_ID >> 24)
  // MOV.L Rm,@(R0,Rn)
  //
  BEGIN_OP(MOV_L_REG_IDXREGINDIR)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
-	const uint32 ea = R[0] + R[n];
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(uint32, ea) = R[0] + R[n];
 
 	MemWrite32(ea, R[m]);
  END_OP
@@ -348,8 +348,8 @@ switch(Pipe_ID >> 24)
  // MOV.B @(R0,Rm),Rn
  //
  BEGIN_OP(MOV_B_IDXREGINDIR_REG)
-	const unsigned m = instr_nyb1;
-	const uint32 ea = R[0] + R[m];
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(uint32, ea) = R[0] + R[m];
 
 	WB_READ8(instr_nyb2, ea);
  END_OP
@@ -359,8 +359,8 @@ switch(Pipe_ID >> 24)
  // MOV.W @(R0,Rm),Rn
  //
  BEGIN_OP(MOV_W_IDXREGINDIR_REG)
-	const unsigned m = instr_nyb1;
-	const uint32 ea = R[0] + R[m];
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(uint32, ea) = R[0] + R[m];
 
 	WB_READ16(instr_nyb2, ea);
  END_OP
@@ -370,8 +370,8 @@ switch(Pipe_ID >> 24)
  // MOV.L @(R0,Rm),Rn
  //
  BEGIN_OP(MOV_L_IDXREGINDIR_REG)
-	const unsigned m = instr_nyb1;
-	const uint32 ea = R[0] + R[m];
+	CONST_VAR(unsigned, m) = instr_nyb1;
+	CONST_VAR(uint32, ea) = R[0] + R[m];
 
 	WB_READ32(instr_nyb2, ea);
  END_OP
@@ -381,8 +381,8 @@ switch(Pipe_ID >> 24)
  // MOV.B R0,@(disp,GBR)
  //
  BEGIN_OP(MOV_B_REG0_GBRINDIRDISP)
-	const unsigned d = (instr >> 0) & 0xff;
-	const uint32 ea = GBR + (d << 0);
+	CONST_VAR(unsigned, d) = (instr >> 0) & 0xff;
+	CONST_VAR(uint32, ea) = GBR + (d << 0);
 
 	MemWrite8(ea, R[0]);
  END_OP
@@ -392,8 +392,8 @@ switch(Pipe_ID >> 24)
  // MOV.W R0,@(disp,GBR)
  //
  BEGIN_OP(MOV_W_REG0_GBRINDIRDISP)
-	const unsigned d = (instr >> 0) & 0xff;
-	const uint32 ea = GBR + (d << 1);
+	CONST_VAR(unsigned, d) = (instr >> 0) & 0xff;
+	CONST_VAR(uint32, ea) = GBR + (d << 1);
 
 	MemWrite16(ea, R[0]);
  END_OP
@@ -403,8 +403,8 @@ switch(Pipe_ID >> 24)
  // MOV.L R0,@(disp,GBR)
  //
  BEGIN_OP(MOV_L_REG0_GBRINDIRDISP)
-	const unsigned d = (instr >> 0) & 0xff;
-	const uint32 ea = GBR + (d << 2);
+	CONST_VAR(unsigned, d) = (instr >> 0) & 0xff;
+	CONST_VAR(uint32, ea) = GBR + (d << 2);
 
 	MemWrite32(ea, R[0]);
  END_OP
@@ -414,8 +414,8 @@ switch(Pipe_ID >> 24)
  // MOV.B @(disp,GBR),R0
  //
  BEGIN_OP(MOV_B_GBRINDIRDISP_REG0)
-	const unsigned d = (instr >> 0) & 0xff;
-	const uint32 ea = GBR + (d << 0);
+	CONST_VAR(unsigned, d) = (instr >> 0) & 0xff;
+	CONST_VAR(uint32, ea) = GBR + (d << 0);
 
 	WB_READ8(0, ea);
  END_OP
@@ -425,8 +425,8 @@ switch(Pipe_ID >> 24)
  // MOV.W @(disp,GBR),R0
  //
  BEGIN_OP(MOV_W_GBRINDIRDISP_REG0)
-	const unsigned d = (instr >> 0) & 0xff;
-	const uint32 ea = GBR + (d << 1);
+	CONST_VAR(unsigned, d) = (instr >> 0) & 0xff;
+	CONST_VAR(uint32, ea) = GBR + (d << 1);
 
 	WB_READ16(0, ea);
  END_OP
@@ -436,8 +436,8 @@ switch(Pipe_ID >> 24)
  // MOV.L @(disp,GBR),R0
  //
  BEGIN_OP(MOV_L_GBRINDIRDISP_REG0)
-	const unsigned d = (instr >> 0) & 0xff;
-	const uint32 ea = GBR + (d << 2);
+	CONST_VAR(unsigned, d) = (instr >> 0) & 0xff;
+	CONST_VAR(uint32, ea) = GBR + (d << 2);
 
 	WB_READ32(0, ea);
  END_OP
@@ -447,8 +447,8 @@ switch(Pipe_ID >> 24)
  // MOVA @(disp,PC),R0
  //
  BEGIN_OP(MOVA_PCREL_REG0)
-	const unsigned d = (instr >> 0) & 0xff;
-	const uint32 ea = (PC &~ 0x3) + (d << 2);
+	CONST_VAR(unsigned, d) = (instr >> 0) & 0xff;
+	CONST_VAR(uint32, ea) = (PC &~ 0x3) + (d << 2);
 
 	WB_EX_CHECK(0)
 
@@ -460,7 +460,7 @@ switch(Pipe_ID >> 24)
  // MOVT Rn
  //
  BEGIN_OP(MOVT_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 
 	WB_EX_CHECK(n)
 
@@ -472,8 +472,8 @@ switch(Pipe_ID >> 24)
  // SWAP.B Rm,Rn
  //
  BEGIN_OP(SWAP_B_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -486,8 +486,8 @@ switch(Pipe_ID >> 24)
  // SWAP.W Rm,Rn
  //
  BEGIN_OP(SWAP_W_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -500,8 +500,8 @@ switch(Pipe_ID >> 24)
  // XTRCT Rm,Rn
  //
  BEGIN_OP(XTRCT_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -514,8 +514,8 @@ switch(Pipe_ID >> 24)
  // ADD Rm,Rn
  //
  BEGIN_OP(ADD_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -528,8 +528,8 @@ switch(Pipe_ID >> 24)
  // ADD #imm,Rn
  //
  BEGIN_OP(ADD_IMM_REG)
-	const unsigned n = instr_nyb2;
-	const uint32 imm = (int8)instr;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(uint32, imm) = (int8)instr;
 
 	WB_EX_CHECK(n)
 
@@ -541,8 +541,8 @@ switch(Pipe_ID >> 24)
  // ADDC Rm,Rn
  //
  BEGIN_OP(ADDC_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 	const uint64 result = (uint64)R[n] + R[m] + GetT();
 
 	WB_EX_CHECK(n)
@@ -557,8 +557,8 @@ switch(Pipe_ID >> 24)
  // ADDV Rm,Rn
  //
  BEGIN_OP(ADDV_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 	const uint32 result = R[n] + R[m];
 
 	WB_EX_CHECK(n)
@@ -573,7 +573,7 @@ switch(Pipe_ID >> 24)
  // CMP/EQ #imm,R0
  //
  BEGIN_OP(CMP_EQ_IMM_REG0)
-	const uint32 imm = (int8)instr;
+	CONST_VAR(uint32, imm) = (int8)instr;
 
 	WB_EX_CHECK(0)
 
@@ -585,8 +585,8 @@ switch(Pipe_ID >> 24)
  // CMP/EQ Rm,Rn
  //
  BEGIN_OP(CMP_EQ_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -599,8 +599,8 @@ switch(Pipe_ID >> 24)
  // CMP/HS Rm,Rn
  //
  BEGIN_OP(CMP_HS_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -613,8 +613,8 @@ switch(Pipe_ID >> 24)
  // CMP/GE Rm,Rn
  //
  BEGIN_OP(CMP_GE_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -627,8 +627,8 @@ switch(Pipe_ID >> 24)
  // CMP/HI Rm,Rn
  //
  BEGIN_OP(CMP_HI_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -641,8 +641,8 @@ switch(Pipe_ID >> 24)
  // CMP/GT Rm,Rn
  //
  BEGIN_OP(CMP_GT_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -655,7 +655,7 @@ switch(Pipe_ID >> 24)
  // CMP/PZ Rn
  //
  BEGIN_OP(CMP_PZ_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 
 	WB_EX_CHECK(n)
 
@@ -667,7 +667,7 @@ switch(Pipe_ID >> 24)
  // CMP/PL Rn
  //
  BEGIN_OP(CMP_PL_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 
 	WB_EX_CHECK(n)
 
@@ -679,8 +679,8 @@ switch(Pipe_ID >> 24)
  // CMP/STR Rm,Rn
  //
  BEGIN_OP(CMP_STR_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 	const uint32 tmp = R[n] ^ R[m];
 	unsigned new_T = 0;
 
@@ -700,8 +700,8 @@ switch(Pipe_ID >> 24)
  // DIV1 Rm,Rn
  //
  BEGIN_OP(DIV1_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 	uint32 tmp;
 	bool new_Q;
 
@@ -735,8 +735,8 @@ switch(Pipe_ID >> 24)
  // DIV0S Rm,Rn
  //
  BEGIN_OP(DIV0S_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 	const unsigned new_Q = R[n] >> 31;
 	const unsigned new_M = R[m] >> 31;
 
@@ -763,7 +763,7 @@ switch(Pipe_ID >> 24)
  // DT 
  //
  BEGIN_OP(DT)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 
 	WB_EX_CHECK(n)
 
@@ -776,8 +776,8 @@ switch(Pipe_ID >> 24)
  // EXTS.B Rm,Rn
  //
  BEGIN_OP(EXTS_B_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -790,8 +790,8 @@ switch(Pipe_ID >> 24)
  // EXTS.W Rm,Rn
  //
  BEGIN_OP(EXTS_W_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -804,8 +804,8 @@ switch(Pipe_ID >> 24)
  // EXTU.B Rm,Rn
  //
  BEGIN_OP(EXTU_B_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -818,8 +818,8 @@ switch(Pipe_ID >> 24)
  // EXTU.W Rm,Rn
  //
  BEGIN_OP(EXTU_W_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -913,8 +913,8 @@ switch(Pipe_ID >> 24)
 	 MM_until = MA_until + 4;
 	 PART_OP_NORMIDIF
 	}
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 	const uint64 result = (int64)(int32)R[n] * (int32)R[m];
 
 	MACL = result >> 0;
@@ -934,8 +934,8 @@ switch(Pipe_ID >> 24)
 	 MM_until = MA_until + 4;
 	 PART_OP_NORMIDIF
 	}
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 	const uint64 result = (uint64)R[n] * R[m];
 
 	MACL = result >> 0;
@@ -955,8 +955,8 @@ switch(Pipe_ID >> 24)
 	 MM_until = MA_until + 4;
 	 PART_OP_NORMIDIF
 	}
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	MACL = R[n] * R[m];
  END_OP
@@ -967,8 +967,8 @@ switch(Pipe_ID >> 24)
  //
  //  Pipeline: page 207
  BEGIN_OP(MULS_W_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	MA_until = std::max<sscpu_timestamp_t>(std::max<sscpu_timestamp_t>(MA_until, MM_until), timestamp + 1);
 	MM_until = MA_until + 2;
@@ -982,8 +982,8 @@ switch(Pipe_ID >> 24)
  //
  //  Pipeline: page 207
  BEGIN_OP(MULU_W_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	MA_until = std::max<sscpu_timestamp_t>(std::max<sscpu_timestamp_t>(MA_until, MM_until), timestamp + 1);
 	MM_until = MA_until + 2;
@@ -996,8 +996,8 @@ switch(Pipe_ID >> 24)
  // NEG Rm,Rn
  //
  BEGIN_OP(NEG_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -1010,8 +1010,8 @@ switch(Pipe_ID >> 24)
  // NEGC Rm,Rn
  //
  BEGIN_OP(NEGC_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 	const uint64 result = (uint64)0 - R[m] - GetT();
 
 	WB_EX_CHECK(n)
@@ -1026,8 +1026,8 @@ switch(Pipe_ID >> 24)
  // SUB Rm,Rn
  //
  BEGIN_OP(SUB_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -1040,8 +1040,8 @@ switch(Pipe_ID >> 24)
  // SUBC Rm,Rn
  //
  BEGIN_OP(SUBC_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 	const uint64 result = (uint64)R[n] - R[m] - GetT();
 
 	WB_EX_CHECK(n)
@@ -1056,8 +1056,8 @@ switch(Pipe_ID >> 24)
  // SUBV Rm,Rn
  //
  BEGIN_OP(SUBV_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 	const uint32 result = R[n] - R[m];
 
 	WB_EX_CHECK(n)
@@ -1072,8 +1072,8 @@ switch(Pipe_ID >> 24)
  // AND Rm,Rn
  //
  BEGIN_OP(AND_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -1114,8 +1114,8 @@ switch(Pipe_ID >> 24)
  // NOT Rm,Rn
  //
  BEGIN_OP(NOT_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -1128,8 +1128,8 @@ switch(Pipe_ID >> 24)
  // OR Rm,Rn
  //
  BEGIN_OP(OR_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -1196,8 +1196,8 @@ switch(Pipe_ID >> 24)
  // TST Rm,Rn
  //
  BEGIN_OP(TST_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -1222,7 +1222,7 @@ switch(Pipe_ID >> 24)
  // TST.B #imm,@(R0,GBR)
  //
  BEGIN_OP(TST_B_IMM_IDXGBRINDIR)
-	const uint32 ea = R[0] + GBR;
+	CONST_VAR(uint32, ea) = R[0] + GBR;
 	uint32 tmp;
 
 	MemRead8(ea, tmp);
@@ -1236,8 +1236,8 @@ switch(Pipe_ID >> 24)
  // XOR Rm,Rn
  //
  BEGIN_OP(XOR_REG_REG)
-	const unsigned n = instr_nyb2;
-	const unsigned m = instr_nyb1;
+	CONST_VAR(unsigned, n) = instr_nyb2;
+	CONST_VAR(unsigned, m) = instr_nyb1;
 
 	WB_EX_CHECK(n)
 	WB_EX_CHECK(m)
@@ -1278,7 +1278,7 @@ switch(Pipe_ID >> 24)
  // ROTL Rn
  //
  BEGIN_OP(ROTL_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 	const unsigned rotbit = R[n] >> 31;
 
 	WB_EX_CHECK(n)
@@ -1292,7 +1292,7 @@ switch(Pipe_ID >> 24)
  // ROTR Rn
  //
  BEGIN_OP(ROTR_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 	const unsigned rotbit = R[n] & 1;
 
 	WB_EX_CHECK(n)
@@ -1306,7 +1306,7 @@ switch(Pipe_ID >> 24)
  // ROTCL Rn
  //
  BEGIN_OP(ROTCL_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 	const unsigned rotbit = R[n] >> 31;
 
 	WB_EX_CHECK(n)
@@ -1320,7 +1320,7 @@ switch(Pipe_ID >> 24)
  // ROTCR Rn
  //
  BEGIN_OP(ROTCR_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 	const unsigned rotbit = R[n] & 1;
 
 	WB_EX_CHECK(n)
@@ -1334,7 +1334,7 @@ switch(Pipe_ID >> 24)
  // SHAR Rn
  //
  BEGIN_OP(SHAR_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 	const unsigned shbit = R[n] & 1;
 
 	WB_EX_CHECK(n)
@@ -1348,7 +1348,7 @@ switch(Pipe_ID >> 24)
  // SHLL Rn
  //
  BEGIN_OP(SHLL_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 	const unsigned shbit = R[n] >> 31;
 
 	WB_EX_CHECK(n)
@@ -1362,7 +1362,7 @@ switch(Pipe_ID >> 24)
  // SHLR Rn
  //
  BEGIN_OP(SHLR_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 	const unsigned shbit = R[n] & 1;
 
 	WB_EX_CHECK(n)
@@ -1376,7 +1376,7 @@ switch(Pipe_ID >> 24)
  // SHLL2 Rn
  //
  BEGIN_OP(SHLL2_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 
 	WB_EX_CHECK(n)
 
@@ -1388,7 +1388,7 @@ switch(Pipe_ID >> 24)
  // SHLR2 Rn
  //
  BEGIN_OP(SHLR2_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 
 	WB_EX_CHECK(n)
 
@@ -1400,7 +1400,7 @@ switch(Pipe_ID >> 24)
  // SHLL8 Rn
  //
  BEGIN_OP(SHLL8_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 
 	WB_EX_CHECK(n)
 
@@ -1412,7 +1412,7 @@ switch(Pipe_ID >> 24)
  // SHLR8 Rn
  //
  BEGIN_OP(SHLR8_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 
 	WB_EX_CHECK(n)
 
@@ -1424,7 +1424,7 @@ switch(Pipe_ID >> 24)
  // SHLL16 Rn
  //
  BEGIN_OP(SHLL16_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 
 	WB_EX_CHECK(n)
 
@@ -1436,7 +1436,7 @@ switch(Pipe_ID >> 24)
  // SHLR16 Rn
  //
  BEGIN_OP(SHLR16_REG)
-	const unsigned n = instr_nyb2;
+	CONST_VAR(unsigned, n) = instr_nyb2;
 
 	WB_EX_CHECK(n)
 
@@ -1560,7 +1560,7 @@ switch(Pipe_ID >> 24)
  //
  BEGIN_OP_DLYIDIF(LDC)
 	{
-	 const unsigned m = instr_nyb2;
+	 CONST_VAR(unsigned, m) = instr_nyb2;
 	 const unsigned cri = (instr >> 4) & 0x3;
 #ifdef MDFN_ENABLE_DEV_BUILD
 	 const uint32 old_SR = SR;
@@ -1619,7 +1619,7 @@ switch(Pipe_ID >> 24)
  //
  BEGIN_OP_DLYIDIF(LDS)
 	{
-	 const unsigned m = instr_nyb2;
+	 CONST_VAR(unsigned, m) = instr_nyb2;
 	 const unsigned sri = (instr >> 4) & 0x3;
 
 	 SysRegs[sri] = R[m];
@@ -1761,7 +1761,7 @@ switch(Pipe_ID >> 24)
  //
  BEGIN_OP_DLYIDIF(STC)
 	{
-	 const unsigned n = instr_nyb2;
+	 CONST_VAR(unsigned, n) = instr_nyb2;
 	 const unsigned cri = (instr >> 4) & 0x3;
 
 	 R[n] = CtrlRegs[cri];
@@ -1776,8 +1776,8 @@ switch(Pipe_ID >> 24)
  // pipeline: page 234
  BEGIN_OP_DLYIDIF(STC_L)
 	{
-	 const unsigned n = instr_nyb2;
-	 const unsigned cri = (instr >> 4) & 0x3;
+	 CONST_VAR(unsigned, n) = instr_nyb2;
+	 CONST_VAR(unsigned, cri) = (instr >> 4) & 0x3;
 	 uint32 ea;
 
 	 R[n] -= 4;
@@ -1795,7 +1795,7 @@ switch(Pipe_ID >> 24)
  //
  BEGIN_OP_DLYIDIF(STS)
 	{
-	 const unsigned n = instr_nyb2;
+	 CONST_VAR(unsigned, n) = instr_nyb2;
 	 const unsigned sri = (instr >> 4) & 0x3;
 
 	 R[n] = SysRegs[sri];
@@ -1809,8 +1809,8 @@ switch(Pipe_ID >> 24)
  //
  BEGIN_OP_DLYIDIF(STS_L)	// Pipeline same as ordinary store instruction
 	{
-	 const unsigned n = instr_nyb2;
-	 const unsigned sri = (instr >> 4) & 0x3;
+	 CONST_VAR(unsigned, n) = instr_nyb2;
+	 CONST_VAR(unsigned, sri) = (instr >> 4) & 0x3;
 	 uint32 ea;
 
 	 R[n] -= 4;

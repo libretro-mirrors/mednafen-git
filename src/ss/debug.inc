@@ -952,11 +952,11 @@ static DebuggerInfoStruct DBGInfo
  NULL,
 };
 #else
-template<unsigned which>
-static INLINE void DBG_CPUHandler(const sscpu_timestamp_t timestamp) { }
+static INLINE void DBG_SetEffTS(const sscpu_timestamp_t eff_ts) { }
+static INLINE bool DBG_InSlaveStep(void) { return false; }
+template<unsigned which> static INLINE void DBG_CPUHandler(void) { }
 static INLINE void DBG_AddBranchTrace(unsigned which, uint32 to, int exception, unsigned vecnum = 0) { }
 static INLINE bool DBG_NeedCPUHooks(void) { return false; } 
 static INLINE void DBG_Init(void) { }
 static INLINE void DBG_Kill(void) { }
-static INLINE bool DBG_InSlaveStep(void) { return false; }
 #endif

@@ -1,4 +1,4 @@
-1.26.0-UNSTABLE
+1.26.1
 apple2
 Apple II/II+
 250
@@ -453,7 +453,7 @@ Backup Memory
 Allows saving replay data.
 cachemode
 Cache Mode
-This database is used to automatically select cache emulation mode, to fix various logic and timing issues in games.  The default cache mode is data-only(with no high-level bypass).\n\nThe cache mode \"Data-only, with high-level bypass\" is a hack of sorts, to work around cache coherency bugs in games.  These bugs are typically masked on a real Saturn due to the effects of instruction fetches on the cache, but become a problem when only data caching is emulated.\n\nFull cache emulation is not enabled globally due to the large increase in host CPU usage, along with the potential of causing games that fully utilize both SH-2 CPUs to run significantly slower than they should due to inadequate emulation of bus sharing/contention.
+This database is used to automatically select cache emulation mode, to fix various logic and timing issues in games.  The default cache mode is data-only(with no high-level bypass).\n\nThe cache mode \"Data-only, with high-level bypass\" is a hack of sorts, to work around cache coherency bugs in games.  These bugs are typically masked on a real Saturn due to the effects of instruction fetches on the cache, but become a problem when only data caching is emulated.\n\nFull cache emulation is not enabled globally primarily due to the large increase in host CPU usage.
 92
 Area 51 (USA)
 T-9705H
@@ -917,7 +917,7 @@ Full
 Fixes FMV ending too soon.
 horriblehacks
 Horrible Hacks
-This database is used to automatically enable various horrible hacks to fix issues in certain games.\n\nNote that slowing down VDP1 command execution due to SH-2 CPU reads/writes isn't a horrible hack per-se, but it's activated on a per-game basis to avoid the likelihood of breaking some games due to overall Saturn emulation timing inaccuracies.
+This database is used to automatically enable various horrible hacks to fix issues in certain games.\n\nNote that slowing down VDP1 command execution due to SH-2 reads/writes isn't a horrible hack per-se, but it's activated on a per-game basis to avoid the likelihood of breaking some games due to overall Saturn emulation timing inaccuracies.
 30
 Fighters Megamix (Japan)
 GS-9126
