@@ -2073,6 +2073,7 @@ static const MDFNSetting_EnumList DBGMask_List[] =
  { "sh2",	SS_DBG_SH2,		gettext_noop("SH-2") 			},
  { "sh2_regw",	SS_DBG_SH2_REGW,	gettext_noop("SH-2 (peripherals) register writes") },
  { "sh2_cache",	SS_DBG_SH2_CACHE,	gettext_noop("SH-2 cache")		},
+ { "sh2_dmarace",SS_DBG_SH2_DMARACE,	gettext_noop("SH-2 DMA/CPU RW races")	},
 
  { "scu",	SS_DBG_SCU,		gettext_noop("SCU") 			},
  { "scu_regw",	SS_DBG_SCU_REGW,	gettext_noop("SCU register writes") 	},
@@ -2089,6 +2090,7 @@ static const MDFNSetting_EnumList DBGMask_List[] =
  { "vdp1_regw", SS_DBG_VDP1_REGW,	gettext_noop("VDP1 register writes")	},
  { "vdp1_vramw",SS_DBG_VDP1_VRAMW,	gettext_noop("VDP1 VRAM writes")	},
  { "vdp1_fbw",	SS_DBG_VDP1_FBW,	gettext_noop("VDP1 FB writes")		},
+ { "vdp1_race", SS_DBG_VDP1_RACE,	gettext_noop("VDP1 draw/VRAM write races") },
 
  { "vdp2",	SS_DBG_VDP2,		gettext_noop("VDP2")			},
  { "vdp2_regw", SS_DBG_VDP2_REGW,	gettext_noop("VDP2 register writes")	},

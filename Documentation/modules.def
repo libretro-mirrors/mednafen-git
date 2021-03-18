@@ -1,4 +1,4 @@
-1.24.3
+1.25.0-UNSTABLE
 apple2
 Apple II/II+
 250
@@ -454,7 +454,7 @@ Allows saving replay data.
 cachemode
 Cache Mode
 This database is used to automatically select cache emulation mode, to fix various logic and timing issues in games.  The default cache mode is data-only(with no high-level bypass).\n\nThe cache mode \"Data-only, with high-level bypass\" is a hack of sorts, to work around cache coherency bugs in games.  These bugs are typically masked on a real Saturn due to the effects of instruction fetches on the cache, but become a problem when only data caching is emulated.\n\nFull cache emulation is not enabled globally due to the large increase in host CPU usage, along with the potential of causing games that fully utilize both SH-2 CPUs to run significantly slower than they should due to inadequate emulation of bus sharing/contention.
-54
+63
 Area 51 (USA)
 T-9705H
 0
@@ -685,6 +685,16 @@ T-25416H50
 0
 Full
 Fixes game hang.
+Senken Kigyouden (Japan)
+T-37401G
+0
+Full
+Fixes dialogue text truncation.
+Xian Jian Qi Xia Zhuan (Taiwan)
+T-37401H
+0
+Full
+Fixes dialogue text truncation.
 Slam 'n Jam 96 (Japan)
 T-159056
 0
@@ -715,6 +725,41 @@ T-8125H-50
 0
 Full
 Fixes game crash.
+Virtua Fighter (Japan)
+GS-9001
+0
+Full
+Fixes graphical glitches.
+Virtua Fighter (USA)
+MK-81005
+0
+Full
+Fixes graphical glitches.
+Virtua Fighter (Europe)
+MK_8100550
+0
+Full
+Fixes graphical glitches.
+Virtua Fighter Remix (Japan)
+GS-9039
+0
+Full
+Fixes graphical glitches.
+Virtua Fighter Remix (USA)
+MK-81023
+0
+Full
+Fixes graphical glitches.
+Virtua Fighter Remix (Europe)
+MK-8102350
+0
+Full
+Fixes graphical glitches.
+Virtua Fighter Remix (SegaNet)
+SG-7103
+0
+Full
+Fixes graphical glitches.
 Whizz (Japan)
 T-36102G
 0
@@ -728,7 +773,7 @@ Fixes quasi-random hangs during startup.
 horriblehacks
 Horrible Hacks
 This database is used to automatically enable various horrible hacks to fix issues in certain games.\n\nNote that slowing down VDP1 command execution due to SH-2 CPU reads/writes isn't a horrible hack per-se, but it's activated on a per-game basis to avoid the likelihood of breaking some games due to overall Saturn emulation timing inaccuracies.
-18
+25
 Fighters Megamix (Japan)
 GS-9126
 0
@@ -809,6 +854,41 @@ T-9515H-50
 0
 SH-2 CPU reads/writes from/to VDP1 slow down command execution. 
 Fixes major graphical issues during gameplay.
+Virtua Fighter (Japan)
+GS-9001
+0
+SH-2 CPU reads/writes from/to VDP1 slow down command execution. 
+Fixes graphical glitches.
+Virtua Fighter (USA)
+MK-81005
+0
+SH-2 CPU reads/writes from/to VDP1 slow down command execution. 
+Fixes graphical glitches.
+Virtua Fighter (Europe)
+MK_8100550
+0
+SH-2 CPU reads/writes from/to VDP1 slow down command execution. 
+Fixes graphical glitches.
+Virtua Fighter Remix (Japan)
+GS-9039
+0
+SH-2 CPU reads/writes from/to VDP1 slow down command execution. 
+Fixes graphical glitches.
+Virtua Fighter Remix (USA)
+MK-81023
+0
+SH-2 CPU reads/writes from/to VDP1 slow down command execution. 
+Fixes graphical glitches.
+Virtua Fighter Remix (Europe)
+MK-8102350
+0
+SH-2 CPU reads/writes from/to VDP1 slow down command execution. 
+Fixes graphical glitches.
+Virtua Fighter Remix (SegaNet)
+SG-7103
+0
+SH-2 CPU reads/writes from/to VDP1 slow down command execution. 
+Fixes graphical glitches.
 Thunderhawk II (Japan)
 T-6006G
 0

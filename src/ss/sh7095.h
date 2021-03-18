@@ -555,6 +555,14 @@ class SH7095 final
  const char* const cpu_name;
  bool CBH_Setting;
  uint32 PC_IF, PC_ID;	// Debug-related variables.
+
+#ifdef MDFN_ENABLE_DEV_BUILD
+ void CheckDMARace(uint32 addr, uint32 size, bool write);
+ struct
+ {
+  uint32 rw[2][2];
+ } DMADebug[2];
+#endif
 };
 
 #endif

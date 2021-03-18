@@ -375,10 +375,13 @@ static MDFN_FASTCALL uint16 SoundCPU_BusReadInstr(uint32 A)
 template<typename T>
 static MDFN_FASTCALL void SoundCPU_BusWrite(uint32 A, T V)
 {
+ SoundCPU.timestamp += 2;
+
  if(MDFN_UNLIKELY(SoundCPU.timestamp >= next_scsp_time))
   RunSCSP();
 
  SoundCPU.timestamp += 2;
+
  SCSP.RW<T, true>(A & 0x1FFFFF, V);
  SoundCPU.timestamp += 2;
 }

@@ -531,6 +531,47 @@ sscpu_timestamp_t SH7095::DMA_Update(sscpu_timestamp_t et)
  return dma_lastts + ((DMA_SGCounter < 0) ? 32 : 128);
 }
 
+
+#ifdef MDFN_ENABLE_DEV_BUILD
+void SH7095::CheckDMARace(uint32 addr, uint32 size, bool write)
+{
+ for(unsigned cpu = 0; cpu < 2; cpu++)
+ {
+  for(unsigned ch = 0; ch < 2; ch++)
+  {
+   auto& dd = CPU[cpu].DMADebug[ch];
+
+   if(dd.rw[0][0] == ~0U)
+    continue;
+
+   for(uint32 A = addr; A != ((addr + size) & 0x07FFFFFF); A = (A + 1) & 0x07FFFFFF)
+   {
+    bool match = false;
+
+    if(dd.rw[1][1] < dd.rw[1][0])
+     match |= (A >= dd.rw[1][0] || A < dd.rw[1][1]);
+    else
+     match |= (A >= dd.rw[1][0] && A < dd.rw[1][1]);
+
+    if(write)
+    {
+     if(dd.rw[0][1] < dd.rw[0][0])
+      match |= (A >= dd.rw[0][0] || A < dd.rw[0][1]);
+     else
+      match |= (A >= dd.rw[0][0] && A < dd.rw[0][1]);
+    }
+
+    if(match)
+    {
+     SS_DBG(SS_DBG_SH2_DMARACE, "[%s] %u-byte %s 0x%07x races with %s DMA%u; SAR=0x%08x DAR=0x%08x, [0x%07x,0x%07x]->[0x%07x,0x%07x]\n", cpu_name, size, write ? "write to" : "read from", addr, CPU[cpu].cpu_name, ch, CPU[cpu].DMACH[ch].SAR, CPU[cpu].DMACH[ch].DAR, dd.rw[0][0], dd.rw[0][1] - 1, dd.rw[1][0], dd.rw[1][1] - 1);
+     break;
+    }
+   }
+  }
+ }
+}
+#endif
+
 // DMA_StartSG() must be paired with a DMA_Update(SH7095_mem_timestamp) somewhere before.
 void SH7095::DMA_StartSG(void)
 {
@@ -541,6 +582,9 @@ void SH7095::DMA_StartSG(void)
 }
 
 // Must be called after DMACH[0].CHCR or DMACH[1].CHCR or DMAOR changes.
+//
+// If DMA_RunCond(...) returns false, SAR and DAR and TCR for that channel
+// should not be used(due to caching of variables in DMA_DoTransfer()).
 NO_INLINE void SH7095::DMA_RecalcRunning(void)
 {
  DMA_PenaltyKludgeAmount = 0;
@@ -562,16 +606,63 @@ NO_INLINE void SH7095::DMA_RecalcRunning(void)
  //
  //
  //
- if(ss_dbg_mask & (SS_DBG_WARNING | SS_DBG_SH2))
+#ifdef MDFN_ENABLE_DEV_BUILD
+ for(unsigned ch = 0; ch < 2; ch++)
  {
-  for(unsigned ch = 0; ch < 2; ch++)
+  const bool run_cond = DMA_RunCond(ch);
+  const unsigned ts = (DMACH[ch].CHCR >> 10) & 3;
+  const unsigned sm = (DMACH[ch].CHCR >> 12) & 3;
+  const unsigned dm = (DMACH[ch].CHCR >> 14) & 3;
+  const uint32 sar = DMACH[ch].SAR;
+  const uint32 dar = DMACH[ch].DAR;
+  const uint32 count = DMACH[ch].TCR ? DMACH[ch].TCR : 0x1000000;
+
+  if(run_cond && DMADebug[ch].rw[0][0] == ~0U)
   {
-   if(DMA_RunCond(ch) && ((DMACH[ch].CHCR >> 10) & 3) == 3 && ((DMACH[ch].SAR | DMACH[ch].DAR) & 0xF))
+   auto& dd = DMADebug[ch];
+
+   if(ts == 3)
    {
-    SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] DMA channel %u, 16-byte transfer size address misalignment, SAR=0x%08x DAR=0x%08x", cpu_name, ch, DMACH[ch].SAR, DMACH[ch].DAR);
+    dd.rw[0][0] = sar & 0x07FFFFFF;
+    dd.rw[0][1] = (dd.rw[0][0] + (count << 2)) & 0x07FFFFFF;
    }
+   else
+   {
+    if(sm & 2)
+    {
+     dd.rw[0][1] = (sar + (1 << ts)) & 0x07FFFFFF;
+     dd.rw[0][0] = (dd.rw[0][1] - (count << ts)) & 0x07FFFFFF;
+    }
+    else
+    {
+     dd.rw[0][0] = sar & 0x07FFFFFF;
+     dd.rw[0][1] = (dd.rw[0][0] + ((sm ? count : 1) << ts)) & 0x07FFFFFF;
+    }
+   }
+   //
+   const unsigned ts_adj = std::min<unsigned>(2, ts);
+
+   if(dm & 2)
+   {
+    dd.rw[1][1] = (dar + (1 << ts_adj)) & 0x07FFFFFF;
+    dd.rw[1][0] = (dd.rw[1][1] - (count << ts_adj)) & 0x07FFFFFF;
+   }
+   else
+   {
+    dd.rw[1][0] = dar & 0x07FFFFFF;
+    dd.rw[1][1] = (dd.rw[1][0] + ((dm ? count : 1) << ts_adj)) & 0x07FFFFFF;
+   }
+   //printf("%u, read:[0x%07x, 0x%07x) write:[0x%07x, 0x%07x)\n", ch, dd.rw[0][0], dd.rw[0][1], dd.rw[1][0], dd.rw[1][1]);
+  }
+  else if(!run_cond)
+   DMADebug[ch].rw[0][0] = ~0U;
+
+  if(run_cond && ts == 0x3 && ((sar | dar) & 0xF))
+  {
+   SS_DBG(SS_DBG_WARNING | SS_DBG_SH2, "[%s] DMA channel %u, 16-byte transfer size address misalignment, SAR=0x%08x DAR=0x%08x", cpu_name, ch, sar, dar);
   }
  }
+#endif
 }
 
 INLINE void SH7095::DMA_BusTimingKludge(void)
@@ -1885,7 +1976,9 @@ INLINE T SH7095::ExtBusRead(uint32 A)
   DMA_PenaltyKludgeAccum += DMA_PenaltyKludgeAmount;
  }
  //
-
+#ifdef MDFN_ENABLE_DEV_BUILD
+ CheckDMARace(A, sizeof(T), false);
+#endif
  ret = SH7095_BusRead<T>(A, BurstHax, NULL);
 
  return ret;
@@ -1904,7 +1997,9 @@ INLINE void SH7095::ExtBusWrite(uint32 A, T V)
   DMA_PenaltyKludgeAccum += DMA_PenaltyKludgeAmount;
  }
  //
-
+#ifdef MDFN_ENABLE_DEV_BUILD
+ CheckDMARace(A, sizeof(T), true);
+#endif
  SH7095_BusWrite<T>(A, V, false, NULL);
 
  write_finish_timestamp = SH7095_mem_timestamp;
@@ -2373,6 +2468,11 @@ void NO_INLINE SH7095::Reset(bool power_on_reset, bool from_internal_wdt)
   BSC.RTCOR = 0x00;
  }
  //
+#ifdef MDFN_ENABLE_DEV_BUILD
+ for(unsigned ch = 0; ch < 2; ch++)
+  DMADebug[ch].rw[0][0] = ~0U;
+#endif
+
  for(unsigned ch = 0; ch < 2; ch++)
  {
   DMACH[ch].CHCR = 0x00;

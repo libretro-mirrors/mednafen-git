@@ -195,7 +195,7 @@ static const MDFNSetting DriverSettings[] =
 void BuildSystemSetting(MDFNSetting *setting, const char *system_name, const char *name, const char *description, const char *description_extra, MDFNSettingType type, 
 	const char *default_value, const char *minimum, const char *maximum,
 	bool (*validate_func)(const char *name, const char *value), void (*ChangeNotification)(const char *name), 
-        const MDFNSetting_EnumList *enum_list)
+        const MDFNSetting_EnumList *enum_list, uint32 extra_flags)
 {
  char setting_name[256];
 
@@ -204,7 +204,7 @@ void BuildSystemSetting(MDFNSetting *setting, const char *system_name, const cha
  trio_snprintf(setting_name, 256, "%s.%s", system_name, name);
 
  setting->name = strdup(setting_name);
- setting->flags = MDFNSF_COMMON_TEMPLATE;
+ setting->flags = MDFNSF_COMMON_TEMPLATE | extra_flags;
  setting->description = description;
  setting->description_extra = description_extra;
  setting->type = type;
@@ -227,11 +227,13 @@ void MakeDebugSettings(std::vector <MDFNSetting> &settings)
 
   if(!dbg)
    continue;
+  //
+  const uint32 extra_flags = dbg->SuppressDoc ? MDFNSF_SUPPRESS_DOC : 0;
 
-  BuildSystemSetting(&setting, sysname, "debugger.disfontsize", gettext_noop("Disassembly font size."), gettext_noop("Note: Setting the font size to larger than the default may cause text overlap in the debugger."), MDFNST_ENUM, "5x7", NULL, NULL, NULL, NULL, FontSize_List);
+  BuildSystemSetting(&setting, sysname, "debugger.disfontsize", gettext_noop("Disassembly font size."), gettext_noop("Note: Setting the font size to larger than the default may cause text overlap in the debugger."), MDFNST_ENUM, "5x7", NULL, NULL, NULL, NULL, FontSize_List, extra_flags);
   settings.push_back(setting);
 
-  BuildSystemSetting(&setting, sysname, "debugger.memcharenc", gettext_noop("Character encoding for the debugger's memory editor."), NULL, MDFNST_STRING, dbg->DefaultCharEnc);
+  BuildSystemSetting(&setting, sysname, "debugger.memcharenc", gettext_noop("Character encoding for the debugger's memory editor."), NULL, MDFNST_STRING, dbg->DefaultCharEnc, NULL, NULL, NULL, NULL, NULL, extra_flags);
   settings.push_back(setting);
  }
  #endif

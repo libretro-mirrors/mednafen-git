@@ -40,6 +40,7 @@ namespace MDFN_IEN_SS
   SS_DBG_SH2  	   = (1U << 4),
   SS_DBG_SH2_REGW  = (1U << 5),
   SS_DBG_SH2_CACHE = (1U << 6),
+  SS_DBG_SH2_DMARACE=(1U << 7),
 
   SS_DBG_SCU  	   = (1U << 8),
   SS_DBG_SCU_REGW  = (1U << 9),
@@ -58,9 +59,10 @@ namespace MDFN_IEN_SS
   SS_DBG_VDP1_REGW = (1U << 21),
   SS_DBG_VDP1_VRAMW= (1U << 22),
   SS_DBG_VDP1_FBW  = (1U << 23),
+  SS_DBG_VDP1_RACE = (1U << 24),
 
-  SS_DBG_VDP2 	   = (1U << 24),
-  SS_DBG_VDP2_REGW = (1U << 25),
+  SS_DBG_VDP2 	   = (1U << 25),
+  SS_DBG_VDP2_REGW = (1U << 26),
 
   SS_DBG_SCSP 	   = (1U << 28),
   SS_DBG_SCSP_REGW = (1U << 29),

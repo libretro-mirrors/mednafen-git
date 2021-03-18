@@ -883,6 +883,7 @@ static void DBG_Kill(void)
 
 static DebuggerInfoStruct DBGInfo
 {
+ false,
  "SJIS",
 
  2,
