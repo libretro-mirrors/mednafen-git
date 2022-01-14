@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* db.cpp:
-**  Copyright (C) 2016-2020 Mednafen Team
+**  Copyright (C) 2016-2021 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -257,6 +257,7 @@ static const struct
  { "T-25302G2", NULL, NULL, CPUCACHE_EMUMODE_DATA_CB,	"Mahjong Doukyuusei Special (Japan)",	gettext_noop("Fixes missing background layer on disc 2.") },
  { "T-28901G",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB, "Mujintou Monogatari R - Futari no Love Love Island (Japan)", gettext_noop("Fixes glitches when character graphics change.") },
  { "T-14415G",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB,	"Ronde (Japan)", gettext_noop("Fixes missing graphics on the title screen, main menu, and elsewhere.") },
+ { "610602002",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB,	"Saturn Super Vol. 2 (Japan)", gettext_noop("Fixes flickering title screen in the \"Golden Axe - The Duel\" demo.") },
  { "81600",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB,	"Sega Saturn Choice Cuts (USA)", gettext_noop("Fixes FMV playback hangs and playback failures.") },
  { "610680501", NULL, NULL, CPUCACHE_EMUMODE_DATA_CB,	"Segakore Sega Bible Mogitate SegaSaturn (Japan)", gettext_noop("Fixes graphical glitch on the character select screen in the \"Zero Divide\" demo.") },
  { "T-18703G",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB,	"Shunsai (Japan)", gettext_noop("Fixes various graphical glitches.") },
@@ -315,6 +316,7 @@ static const struct
  { "T-25416H50",NULL, NULL, CPUCACHE_EMUMODE_FULL, "Rampage - World Tour (Europe)", gettext_noop("Fixes game hang.") }, 
  { "T-37401G",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "Senken Kigyouden (Japan)", gettext_noop("Fixes dialogue text truncation.") },
  { "T-37401H",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "Xian Jian Qi Xia Zhuan (Taiwan)", gettext_noop("Fixes dialogue text truncation.") },
+ { "T-30902G",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "Senkutsu Katsuryu Taisen - Chaos Seed (Japan)", gettext_noop("Fixes inability to skip intro FMV.") },
  { "T-159056",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "Slam 'n Jam 96 (Japan)", gettext_noop("Fixes minor FMV glitches.") },
  { "T-159028H", NULL, NULL, CPUCACHE_EMUMODE_FULL, "Slam 'n Jam 96 (USA)",	gettext_noop("Fixes minor FMV glitches.") },
  { "T-15902H50",NULL, NULL, CPUCACHE_EMUMODE_FULL, "Slam 'n Jam 96 (Europe)", gettext_noop("Fixes minor FMV glitches.") },
@@ -444,6 +446,13 @@ static const struct
  { "T-26105G", HORRIBLEHACK_VDP1RWDRAWSLOWDOWN, "Wolf Fang SS - Kuuga 2001 (Japan)", gettext_noop("Fixes graphical glitches.") },
  { "T-28004G", HORRIBLEHACK_VDP1RWDRAWSLOWDOWN,	"Yu-No (Japan)", gettext_noop("Reduces FMV tearing.") },
 
+/*
+ // Doesn't completely fix the problem.
+ { "T-12519H", HORRIBLEHACK_SCUINTDELAY,	"Loaded (USA)", gettext_noop("Fixes hang at end of level.") },
+ { "T-12301H", HORRIBLEHACK_SCUINTDELAY,	"Loaded (Europe)", gettext_noop("Fixes hang at end of level.") },
+ { "T-12504G", HORRIBLEHACK_SCUINTDELAY,	"Blood Factory (Japan)", gettext_noop("Fixes hang at end of level.") },
+*/
+
  // Still random hangs...wtf is this game doing...
  { "T-6006G", HORRIBLEHACK_NOSH2DMALINE106 | HORRIBLEHACK_VDP1INSTANT, "Thunderhawk II (Japan)", gettext_noop("Fixes hangs just before and during gameplay.") },
  { "T-11501H00", HORRIBLEHACK_NOSH2DMALINE106 | HORRIBLEHACK_VDP1INSTANT, "Thunderstrike II (USA)", gettext_noop("Fixes hangs just before and during gameplay.") },
@@ -485,6 +494,11 @@ std::string DB_GetHHDescriptions(const uint32 hhv)
 
  if(hhv & HORRIBLEHACK_VDP1INSTANT)
   sv += "Execute VDP1 commands instantly. ";
+
+/*
+ if(hhv & HORRIBLEHACK_SCUINTDELAY)
+  sv += "Delay SCU interrupt generation after a write to SCU IMS unmasks a pending interrupt. ";
+*/
 
  return sv;
 }

@@ -2,7 +2,7 @@
 /* Mednafen Virtual Boy Emulation Module                                      */
 /******************************************************************************/
 /* vb.cpp:
-**  Copyright (C) 2010-2017 Mednafen Team
+**  Copyright (C) 2010-2021 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -902,6 +902,10 @@ static const MDFNSetting_EnumList VB3DMode_List[] =
 // { "overunder", VB3DMODE_OVERUNDER },
  { "vli", VB3DMODE_VLI, gettext_noop("Vertical Line Interlaced"), gettext_noop("Vertical lines alternate between left view and right view.") },
  { "hli", VB3DMODE_HLI, gettext_noop("Horizontal Line Interlaced"), gettext_noop("Horizontal lines alternate between left view and right view.") },
+
+ { "left", VB3DMODE_LEFT, gettext_noop("Left View Only"), gettext_noop("Show only the left view.") },
+ { "right", VB3DMODE_RIGHT, gettext_noop("Right View Only"), gettext_noop("Show only the right view.") },
+
  { NULL, 0 },
 };
 

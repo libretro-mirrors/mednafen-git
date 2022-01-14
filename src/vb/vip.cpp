@@ -2,7 +2,7 @@
 /* Mednafen Virtual Boy Emulation Module                                      */
 /******************************************************************************/
 /* vip.cpp:
-**  Copyright (C) 2010-2017 Mednafen Team
+**  Copyright (C) 2010-2021 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -54,6 +54,8 @@ static NO_INLINE void CopyFBColumnToTarget_CScope(void);
 static NO_INLINE void CopyFBColumnToTarget_SideBySide(void);
 static NO_INLINE void CopyFBColumnToTarget_VLI(void);
 static NO_INLINE void CopyFBColumnToTarget_HLI(void);
+static NO_INLINE void CopyFBColumnToTarget_LR(void);
+
 static void (*CopyFBColumnToTarget)(void) = NULL;
 static float VBLEDOnScale;
 static uint32 VB3DMode;
@@ -125,8 +127,15 @@ static void MakeColorLUT(const MDFN_PixelFormat& format, const uint8* const Cust
    const float r_prime = pow(r, 1.0 / 2.2);
    const float g_prime = pow(g, 1.0 / 2.2);
    const float b_prime = pow(b, 1.0 / 2.2);
+   const uint32 clut_color = format.MakeColor((int)(r_prime * 255), (int)(g_prime * 255), (int)(b_prime * 255), 0);
 
-   ColorLUT[lr][i] = format.MakeColor((int)(r_prime * 255), (int)(g_prime * 255), (int)(b_prime * 255), 0);
+   if(VB3DMode == VB3DMODE_LEFT || VB3DMode == VB3DMODE_RIGHT)
+   {
+    if(lr == (VB3DMode == VB3DMODE_RIGHT))
+     ColorLUT[0][i] = clut_color;
+   }
+   else
+    ColorLUT[lr][i] = clut_color;
   }
  }
 
@@ -251,6 +260,11 @@ static void Recalc3DModeStuff(bool non_rgb_output = false)
 
   case VB3DMODE_HLI:
            CopyFBColumnToTarget = CopyFBColumnToTarget_HLI;
+           break;
+
+  case VB3DMODE_LEFT:
+  case VB3DMODE_RIGHT:
+           CopyFBColumnToTarget = CopyFBColumnToTarget_LR;
            break;
  }
  RecalcBrightnessCache();
@@ -1256,6 +1270,45 @@ static void CopyFBColumnToTarget_HLI(void)
  }
 }
 
+static INLINE void CopyFBColumnToTarget_LR_BASE(const bool DisplayActive_arg, const int lr)
+{
+     const int fb = DisplayFB;
+     uint32 *target = surface->pixels + Column;
+     const int32 pitch32 = surface->pitch32;
+     const uint8 *fb_source = &FB[fb][lr][64 * Column];
+
+     for(int y = 56; y; y--)
+     {
+      uint32 source_bits = *fb_source;
+
+      for(int y_sub = 4; y_sub; y_sub--)
+      {
+       uint32 pixel = BrightCLUT[0][source_bits & 3];
+
+       if(!DisplayActive_arg)
+        pixel = 0;
+
+       *target = pixel;
+
+       source_bits >>= 2;
+       target += pitch32;
+      }
+      fb_source++;
+     }
+}
+
+static void CopyFBColumnToTarget_LR(void)
+{
+ const int lr = (DisplayRegion & 2) >> 1;
+
+ if(lr != (VB3DMode == VB3DMODE_RIGHT))
+  return;
+
+ if(!DisplayActive)
+  CopyFBColumnToTarget_LR_BASE(0, lr);
+ else
+  CopyFBColumnToTarget_LR_BASE(1, lr);
+}
 
 v810_timestamp_t MDFN_FASTCALL VIP_Update(const v810_timestamp_t timestamp)
 {

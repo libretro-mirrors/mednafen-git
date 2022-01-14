@@ -155,7 +155,6 @@ class SS_SCSP
   bool WFAllowAccess;
   uint8 EnvPhase;	// ENV_PHASE_ATTACK ... ENV_PHASE_RELEASE (0...3)
   uint32 EnvLevel;	// 0 ... 0x3FF
-  bool EnvGCBTPrev;
 
   uint8 LFOCounter;
   uint16 LFOTimeCounter;
@@ -165,7 +164,7 @@ class SS_SCSP
 
  void RecalcShortWaveMask(Slot* s);
 
- void RunEG(Slot* s, const unsigned key_eg_scale);
+ void RunEG(Slot* s, const unsigned key_eg_scale, const uint32 sc, const uint32 scxc);
 
  uint8 GetALFO(Slot* s);
  int GetPLFO(Slot* s);
@@ -198,7 +197,7 @@ class SS_SCSP
   MIDIF_OUTPUT_EMPTY= 0x08,
   MIDIF_OUTPUT_FULL = 0x10
  };
- struct
+ struct MIDIS
  {
   uint8 InputFIFO[4];
   uint8 InputRP, InputWP, InputCount;
@@ -207,49 +206,15 @@ class SS_SCSP
   uint8 OutputRP, OutputWP, OutputCount;
 
   uint8 Flags;
-
   //
-  INLINE uint8 ReadInput(void)
-  {
-   uint8 ret = InputFIFO[InputRP]; // May not be correct for InputCount == 0; test.
-
-   if(InputCount)
-   {
-    InputRP = (InputRP + 1) & 0x3;
-    InputCount--;
-    Flags &= ~MIDIF_INPUT_FULL;
-    if(!InputCount)
-     Flags |= MIDIF_INPUT_EMPTY;
-   }
-
-   return ret;
-  }
-
-  INLINE void WriteOutput(uint8 V)
-  {
-   if(OutputCount == 4)	// May not be correct; test.
-    return;
-
-   OutputFIFO[OutputWP] = V;
-   OutputWP = (OutputWP + 1) & 0x3;
-   OutputCount++;
-
-   Flags &= ~MIDIF_OUTPUT_EMPTY;
-   if(OutputCount == 4)
-    Flags |= MIDIF_OUTPUT_FULL;
-  }
-
-  void Reset(void)
-  {
-   memset(InputFIFO, 0, sizeof(InputFIFO));
-   memset(OutputFIFO, 0, sizeof(OutputFIFO));
-
-   InputRP = InputWP = InputCount = 0;
-   OutputRP = OutputWP = OutputCount = 0;
-
-   Flags = MIDIF_INPUT_EMPTY | MIDIF_OUTPUT_EMPTY;
-  }
+  uint8 SimuClockDivider;
+  uint8 TransmitBitCounter;
+  uint16 TransmitBuffer;
  } MIDI;
+ uint8 MIDI_ReadInput(void);
+ void MIDI_WriteOutput(uint8 V);
+ void MIDI_Reset(void);
+ void MIDI_Run(void);
  //
  //
  uint16 SCIEB;
@@ -265,7 +230,6 @@ class SS_SCSP
  {
   uint8 Control;
   uint8 Counter;
-  bool PrevClockIn;
   int32 Reload;
  } Timers[3];
  //

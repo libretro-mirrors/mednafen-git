@@ -1422,6 +1422,20 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
     Window[d].YIn = false;
    }
   }
+  //
+  //
+  InterlaceMode &= 0x3;
+  VRes &= 0x3;
+  HRes &= 0x7;
+
+  CRAM_Mode &= 0x3;
+  InterlaceMode &= 0x3;
+
+  HCounter &= 0x1FF;
+  VCounter &= 0x1FF;
+
+  HPhase %= HPHASE__COUNT;
+  VPhase %= VPHASE__COUNT;
  }
 
  VDP2REND_StateAction(sm, load, data_only, RawRegs, CRAM, VRAM);

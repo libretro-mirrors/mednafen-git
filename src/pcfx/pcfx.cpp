@@ -598,7 +598,7 @@ static MDFN_COLD void LoadCommon(std::vector<CDInterface*> *CDInterfaces)
   {
    { ".rom", 0, "" },
   };
-  MDFNFILE BIOSFile(&NVFS, biospath.c_str(), KnownBIOSExtensions, "BIOS");
+  MDFNFILE BIOSFile(&NVFS, biospath, KnownBIOSExtensions, "BIOS");
 
   if(BIOSFile.size() != 1024 * 1024)
    throw MDFN_Error(0, _("BIOS ROM file is incorrect size.\n"));
@@ -732,7 +732,7 @@ static MDFN_COLD void LoadCommon(std::vector<CDInterface*> *CDInterfaces)
    const uint64 fp_size_tmp = savefp.size();
 
    if(fp_size_tmp != 65536)
-    throw MDFN_Error(0, _("Save game memory file \"%s\" is an incorrect size(%llu bytes).  The correct size is %llu bytes."), save_path.c_str(), (unsigned long long)fp_size_tmp, (unsigned long long)65536);
+    throw MDFN_Error(0, _("Save game memory file \"%s\" is an incorrect size(%llu bytes).  The correct size is %llu bytes."), MDFN_strhumesc(save_path).c_str(), (unsigned long long)fp_size_tmp, (unsigned long long)65536);
 
    savefp.read(BackupRAM, 0x8000);
    savefp.read(ExBackupRAM, 0x8000);

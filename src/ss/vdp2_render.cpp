@@ -3154,7 +3154,7 @@ struct WQ_Entry
 
 static std::array<WQ_Entry, 0x80000> WQ;
 static size_t WQ_ReadPos, WQ_WritePos;
-static std::atomic_int_least32_t WQ_InCount;
+static std::atomic_uint_least32_t WQ_InCount;
 static std::atomic_int_least32_t DrawCounter;
 static bool DoBusyWait;
 static MThreading::Sem* WakeupSem;

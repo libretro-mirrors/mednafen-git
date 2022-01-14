@@ -175,8 +175,7 @@ static void NAME(Stream *fp)
 {
  assert(uchead.info <= (SIZE_MAX - 1));
 
- MDFNGameInfo->name.resize((size_t)uchead.info);
- fp->read(&MDFNGameInfo->name[0], (size_t)uchead.info);
+ fp->get_string(&MDFNGameInfo->name, (size_t)uchead.info);
  MDFN_zapctrlchars(&MDFNGameInfo->name);
 
  MDFN_printf(_("Name: %s\n"), MDFNGameInfo->name.c_str());

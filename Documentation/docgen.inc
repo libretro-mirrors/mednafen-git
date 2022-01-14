@@ -397,8 +397,8 @@ function PrintSettings($section_name = "Settings Reference")
 {
  global $mednafen_version, $curmod, $cursection, $ps_string, $toc_string, $section_string, $settings_g, $mod_list;
 
- $de_search = array("\n",	 "fname_format.txt" );
- $de_replace = array("<br>\n", '<a href="fname_format.txt">fname_format.txt</a>' );
+ $de_search = array("\n",	 "fname_format.txt", "Caution:" );
+ $de_replace = array("<br>\n", '<a href="fname_format.txt">fname_format.txt</a>', '<font color="yellow"><b>Caution:</b></font>');
 
 
  $magic_settings = array();
@@ -432,8 +432,8 @@ for($display_ct = 0; $display_ct < 2; $display_ct++)
  foreach($settings as $setting)
  {
   $name = $setting['name'];
-  $description = $setting['description'];
-  $description_extra = str_replace($de_search, $de_replace, $setting['description_extra']);
+  $description = htmlspecialchars($setting['description'], ENT_NOQUOTES);
+  $description_extra = str_replace($de_search, $de_replace, htmlspecialchars($setting['description_extra'], ENT_NOQUOTES));
   $type = $setting['type'];
   $flags = $setting['flags'];
 

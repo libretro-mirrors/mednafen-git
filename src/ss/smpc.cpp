@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* smpc.cpp - SMPC Emulation
-**  Copyright (C) 2015-2020 Mednafen Team
+**  Copyright (C) 2015-2021 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -22,6 +22,9 @@
 /*
   TODO:
 	CD On/Off
+
+	Cleaner handling of waiting on conditions(see PendingCommand, PendingVB, IR0WX, IR0WA),
+	and maybe proper handling of JR_WAIT() on JR_BS.
 */
 
 #include "ss.h"
@@ -146,6 +149,8 @@ static int32 PendingClockDivisor;
 static int32 CurrentClockDivisor;
 
 static bool PendingVB;
+
+static uint8 IR0WX, IR0WA;
 
 static int32 SubPhase;
 static int64 ClockCounter;
@@ -495,6 +500,8 @@ void SMPC_Reset(bool powering_up)
  SubPhase = 0;
  PendingVB = false;
  ClockCounter = 0;
+ IR0WX = 0;
+ IR0WA = 0;
  //
  memset(&JRS, 0, sizeof(JRS));
 }
@@ -702,6 +709,9 @@ void SMPC_Write(const sscpu_timestamp_t timestamp, uint8 A, uint8 V)
  switch(A)
  {
   case 0x00:
+	if((V ^ IR0WX) & IR0WA)	// For handling intback break and continue bits.
+	 nt = timestamp + 1;
+	// fall-through
   case 0x01:
   case 0x02:
   case 0x03:
@@ -1193,12 +1203,15 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 	   SR |= 0x80;																\
 	   SCU_SetInt(SCU_INT_SMPC, true);													\
 	   SCU_SetInt(SCU_INT_SMPC, false);													\
+	   IR0WX = (!JRS.NextContBit << 7);													\
+	   IR0WA = 0xC0;															\
 	   JR_WAIT((bool)(IREG[0] & 0x80) == JRS.NextContBit || (IREG[0] & 0x40));								\
            if(IREG[0] & 0x40)															\
            {																	\
             SS_DBGTI(SS_DBG_SMPC, "[SMPC] Big Read Break");											\
             goto AbortJR;															\
 	   }																	\
+	   IR0WA = 0;																\
 	   JRS.NextContBit = !JRS.NextContBit;													\
 	  }																	\
           if(JRS.PDCounter < 0xFF)														\
@@ -1219,6 +1232,8 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 	 UpdateIOBus(JRS.CurPort, timestamp);									\
 	}
 
+      IR0WX = 0x00;
+      IR0WA = 0x40;
       JR_WAIT(!vb || (IREG[0] & 0x40));
 
       if(IREG[0] & 0x40)
@@ -1226,16 +1241,19 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
        SS_DBGTI(SS_DBG_SMPC, "[SMPC] Break (early)");
        goto AbortJR;
       }
-
+      IR0WA = 0;
       JRS.NextContBit = true;
       if(SR & SR_NPE)
       {
+       IR0WX = (!JRS.NextContBit << 7);
+       IR0WA = 0xC0;
        JR_WAIT((bool)(IREG[0] & 0x80) == JRS.NextContBit || (IREG[0] & 0x40));
        if(IREG[0] & 0x40)
        {
         SS_DBGTI(SS_DBG_SMPC, "[SMPC] Break");
         goto AbortJR;
        }
+       IR0WA = 0;
        JRS.NextContBit = !JRS.NextContBit;
       }
 
@@ -1444,8 +1462,6 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
       if(JRS.TimeOptEn)
        JRS.OptReadTime = std::max<int32>(0, (JRS.TimeCounter >> 32) - JRS.StartTime);
      }
-     AbortJR:;
-     // TODO: Set TH TR to inputs on abort.
     }
     else if(ExecutingCommand == CMD_SETTIME)	// Warning: Execute RTC setting atomically(all values or none) in regards to emulator exit/power toggle.
     {
@@ -1499,6 +1515,17 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
     }
    }
 
+   ExecutingCommand = -1;
+   SF = false;
+   continue;
+   //
+   //
+   //
+   AbortJR:;
+
+   SMPC_EAT_CLOCKS(87); // Conservatively low, may be higher in some contexts, hard to measure since timing is variable, possibly due to timing alignment
+   IR0WA = 0;
+   // TODO: Set TH TR to inputs?
    ExecutingCommand = -1;
    SF = false;
    continue;

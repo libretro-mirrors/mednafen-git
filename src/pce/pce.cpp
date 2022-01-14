@@ -647,7 +647,7 @@ static MDFN_COLD void LoadCD(std::vector<CDInterface*> *CDInterfaces)
 
   const char *bios_sname = DetectGECD((*CDInterfaces)[0]) ? "pce.gecdbios" : "pce.cdbios";
   std::string bios_path = MDFN_MakeFName(MDFNMKF_FIRMWARE, 0, MDFN_GetSettingS(bios_sname));
-  MDFNFILE fp(&NVFS, bios_path.c_str(), KnownBIOSExtensions, _("CD BIOS"));
+  MDFNFILE fp(&NVFS, bios_path, KnownBIOSExtensions, _("CD BIOS"));
 
   bool disable_bram_cd = MDFN_GetSettingB("pce.disable_bram_cd");
 

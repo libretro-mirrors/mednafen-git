@@ -40,8 +40,13 @@ static void Debug_RW_DB(uint32 A, uint16* DB)
    if(A == 0x02100001)
    {
 #ifdef MDFN_ENABLE_DEV_BUILD
-    fputc(*DB, stderr);
-    fflush(stderr);
+    const char c = *DB;
+
+    if(c != 0x1B)
+    {
+     fputc(c, stderr);
+     fflush(stderr);
+    }
 #endif
    }
   }

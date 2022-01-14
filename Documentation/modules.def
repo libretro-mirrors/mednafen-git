@@ -1,4 +1,4 @@
-1.27.1
+1.28.0-UNSTABLE
 apple2
 Apple II/II+
 250
@@ -454,7 +454,7 @@ Allows saving replay data.
 cachemode
 Cache Mode
 This database is used to automatically select cache emulation mode, to fix various logic and timing issues in games.  The default cache mode is data-only(with no high-level bypass).\n\nThe cache mode \"Data-only, with high-level bypass\" is a hack of sorts, to work around cache coherency bugs in games.  These bugs are typically masked on a real Saturn due to the effects of instruction fetches on the cache, but become a problem when only data caching is emulated.\n\nFull cache emulation is not enabled globally primarily due to the large increase in host CPU usage.
-92
+94
 Area 51 (USA)
 T-9705H
 0
@@ -545,6 +545,11 @@ T-14415G
 0
 Data only, with high-level bypass
 Fixes missing graphics on the title screen, main menu, and elsewhere.
+Saturn Super Vol. 2 (Japan)
+610602002
+0
+Data only, with high-level bypass
+Fixes flickering title screen in the \"Golden Axe - The Duel\" demo.
 Sega Saturn Choice Cuts (USA)
 81600
 0
@@ -805,6 +810,11 @@ T-37401H
 0
 Full
 Fixes dialogue text truncation.
+Senkutsu Katsuryu Taisen - Chaos Seed (Japan)
+T-30902G
+0
+Full
+Fixes inability to skip intro FMV.
 Slam 'n Jam 96 (Japan)
 T-159056
 0

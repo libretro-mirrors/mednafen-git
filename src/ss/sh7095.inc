@@ -3317,7 +3317,7 @@ static const uint8 InstrDecodeTab[65536] =
 #define CondRelBranch(cond, disp)	\
 {					\
  if(cond)				\
-  Branch(true, PC + (disp));		\
+  Branch(DebugMode, PC + (disp));	\
 }
 
 #define CondRelDelayBranch(cond, disp)	\

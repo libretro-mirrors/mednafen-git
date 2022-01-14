@@ -200,7 +200,7 @@ static void ReadStateChunk(Stream *st, const SFORMAT *sf, const char* sname, uin
 
   sfmit = sfmap.find((char *)toa + 1);
 
-  if(sfmit != sfmap.end())
+  if(MDFN_LIKELY(sfmit != sfmap.end()))
   {
    const SFORMAT *tmp = sfmit->second;
 
@@ -286,7 +286,7 @@ static void ReadStateChunk(Stream *st, const SFORMAT *sf, const char* sname, uin
   }
   else
   {
-   printf("Unknown variable in save state section \"%s\": %s\n", sname, toa + 1);
+   printf("Unknown variable in save state section \"%s\": %s\n", sname, MDFN_strhumesc((char*)toa + 1).c_str());
    st->seek(recorded_size, SEEK_CUR);
   }
  } // while(...)

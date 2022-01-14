@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* ss.cpp - Saturn Core Emulation and Support Functions
-**  Copyright (C) 2015-2020 Mednafen Team
+**  Copyright (C) 2015-2021 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -34,8 +34,6 @@
 #include <bitset>
 
 #include <trio/trio.h>
-
-#include <zlib.h>
 
 #if defined(HAVE_SSE2_INTRINSICS)
  #include <xmmintrin.h>
@@ -179,23 +177,36 @@ static INLINE void BusRW_DB_CS0(const uint32 A, uint32& DB, const bool BurstHax,
  //
  if(A >= 0x00200000 && A <= 0x003FFFFF)
  {
-  if(A & 0x100000)
+  if(!SH2DMAHax)
+   SH7095_mem_timestamp += 7;
+  else
+   *SH2DMAHax += 7;
+
+  //
+  // VA0 and VA1 don't map DRAM in the upper 1MiB of the 2MiB region, and return 0xFFFF(~0) on reads.
+  // VA2 mirrors DRAM into the upper 1MiB for both reads and writes, which incidentally breaks "Myst" in the generator room due to
+  //	it trying to load a file that's too large to fit, wrapping around and corrupting essential data in the process.
+  // VA3+ behavior is untested.
+  //
+  // VA0/VA1 behavior is emulated here.
+  //
+  if(MDFN_UNLIKELY(A & 0x100000))
   {
    if(IsWrite)
-    SS_DBG(SS_DBG_WARNING, "[RAM] %zu-byte write of 0x%08x to mirrored address 0x%08x\n", sizeof(T), DB >> (((A & 1) ^ (2 - sizeof(T))) << 3), A);
+    SS_DBG(SS_DBG_WARNING, "[RAM] %zu-byte write of 0x%08x to revision-dependent address 0x%08x\n", sizeof(T), DB >> (((A & 1) ^ (2 - sizeof(T))) << 3), A);
    else
-    SS_DBG(SS_DBG_WARNING, "[RAM] %zu-byte read from mirrored address 0x%08x\n", sizeof(T), A);
+   {
+    SS_DBG(SS_DBG_WARNING, "[RAM] %zu-byte read from revision-dependent address 0x%08x\n", sizeof(T), A);
+    DB = DB | 0xFFFF;
+   }
+
+   return;
   }
 
   if(IsWrite)
    ne16_wbo_be<T>(WorkRAML, A & 0xFFFFF, DB >> (((A & 1) ^ (2 - sizeof(T))) << 3));
   else
    DB = (DB & 0xFFFF0000) | ne16_rbo_be<uint16>(WorkRAML, A & 0xFFFFE);
-
-  if(!SH2DMAHax)
-   SH7095_mem_timestamp += 7;
-  else
-   *SH2DMAHax += 7;
 
   return;
  }
@@ -469,6 +480,7 @@ static MDFN_COLD void InitEvents(void)
 
  events[SS_EVENT_SCU_DMA].event_handler = SCU_UpdateDMA;
  events[SS_EVENT_SCU_DSP].event_handler = SCU_UpdateDSP;
+ /*events[SS_EVENT_SCU_INT].event_handler = SCU_UpdateInt;*/
 
  events[SS_EVENT_SMPC].event_handler = SMPC_Update;
 
@@ -482,7 +494,9 @@ static MDFN_COLD void InitEvents(void)
  events[SS_EVENT_CART].event_handler = CART_GetEventHandler();
 
  events[SS_EVENT_MIDSYNC].event_handler = MidSync;
- events[SS_EVENT_MIDSYNC].event_time = SS_EVENT_DISABLED_TS;
+ //
+ //
+ SS_SetEventNT(&events[SS_EVENT_MIDSYNC], SS_EVENT_DISABLED_TS);
 }
 
 static void RebaseTS(const sscpu_timestamp_t timestamp)
@@ -560,6 +574,17 @@ void SS_SetEventNT(event_list_entry* e, const sscpu_timestamp_t next_timestamp)
 // Called from debug.cpp too.
 void ForceEventUpdates(const sscpu_timestamp_t timestamp)
 {
+#ifdef MDFN_ENABLE_DEV_BUILD
+ for(unsigned i = SS_EVENT__SYNFIRST + 1; i < SS_EVENT__SYNLAST; i++)
+ {
+  if(events[i].event_time > events[i].next->event_time)
+  {
+   printf("%u=%u, %u=%u\n", i, events[i].event_time, (unsigned)(events[i].next - events), events[i].next->event_time);
+   abort();
+  }
+ }
+#endif
+
  for(unsigned c = 0; c < 2; c++)
   CPU[c].ForceInternalEventUpdates();
 
@@ -1282,7 +1307,7 @@ static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned
   FileStream BIOSFile(biospath, FileStream::MODE_READ);
 
   if(BIOSFile.size() != 524288)
-   throw MDFN_Error(0, _("BIOS file \"%s\" is of an incorrect size."), biospath.c_str());
+   throw MDFN_Error(0, _("BIOS file \"%s\" is of an incorrect size."), MDFN_strhumesc(biospath).c_str());
 
   BIOSFile.read(BIOSROM, 512 * 1024);
   BIOS_SHA256 = sha256(BIOSROM, 512 * 1024);
@@ -1312,13 +1337,13 @@ static void MDFN_COLD InitCommon(const unsigned cpucache_emumode, const unsigned
    for(auto const& dbe : BIOSDB)
    {
     if(fn == dbe.fn && BIOS_SHA256 != dbe.hash)
-     throw MDFN_Error(0, _("The BIOS ROM data loaded from \"%s\" does not match what is expected by its filename(possibly due to erroneous file renaming by the user)."), biospath.c_str());
+     throw MDFN_Error(0, _("The BIOS ROM data loaded from \"%s\" does not match what is expected by its filename(possibly due to erroneous file renaming by the user)."), MDFN_strhumesc(biospath).c_str());
    }
 
    for(auto const& dbe : BIOSDB)
    {
     if(BIOS_SHA256 == dbe.hash && !(dbe.areas & (1U << smpc_area)))
-     throw MDFN_Error(0, _("The BIOS loaded from \"%s\" is the wrong BIOS for the region being emulated(possibly due to changing setting \"%s\" to point to the wrong file)."), biospath.c_str(), biospath_sname);
+     throw MDFN_Error(0, _("The BIOS loaded from \"%s\" is the wrong BIOS for the region being emulated(possibly due to changing setting \"%s\" to point to the wrong file)."), MDFN_strhumesc(biospath).c_str(), biospath_sname);
    }
   }
   //
@@ -1813,6 +1838,14 @@ INLINE bool EventsPacker::Restore(const unsigned state_version)
    et = SS_EVENT_DISABLED_TS;
   }
 
+/*
+  if(state_version < 0x00102800 && i == SS_EVENT_SCU_INT)
+  {
+   eo = i;
+   et = SS_EVENT_DISABLED_TS;
+  }
+*/
+
   if(eo < eventcopy_first || eo >= eventcopy_bound)
    return false;
 
@@ -1910,6 +1943,8 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
  EventsPacker ep;
  ep.Save();
 
+ /* static_assert(sizeof(ep.event_order) == 12 && (SS_EVENT_SCU_INT - (SS_EVENT__SYNFIRST + 1)) == 11, "baaah"); */
+
  SFORMAT StateRegs[] = 
  {
   // cur_clock_div
@@ -1918,6 +1953,12 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
   SFVAR(next_event_ts),
   SFVARN(ep.event_times, "event_times"),
   SFVARN(ep.event_order, "event_order"),
+/*
+  SFPTR32N(ep.event_times, 11, "event_times"),
+  SFPTR8N(ep.event_order, 11, "event_order"),
+  SFVARN(ep.event_times[11], "event_times[11]"),
+  SFVARN(ep.event_order[11], "event_order[11]"),
+*/
 
   SFVAR(SH7095_mem_timestamp),
   SFVAR(SH7095_BusLock),
@@ -1952,7 +1993,7 @@ static MDFN_COLD void StateAction(StateMem* sm, const unsigned load, const bool 
 
   if(!ep.Restore(load))
   {
-   printf("Bad state events data.");
+   printf("Bad state events data.\n");
    InitEvents();
   }
 
@@ -2096,6 +2137,7 @@ static const MDFNSetting_EnumList DBGMask_List[] =
 
  { "scsp",	SS_DBG_SCSP,		gettext_noop("SCSP")			},
  { "scsp_regw", SS_DBG_SCSP_REGW,	gettext_noop("SCSP register writes")	},
+ { "scsp_mobuf",SS_DBG_SCSP_MOBUF,	gettext_noop("SCSP MOBUF writes")	},
 
  { "bios",	SS_DBG_BIOS,		gettext_noop("BIOS")			},
 
@@ -2122,6 +2164,7 @@ static const MDFNSetting_EnumList HH_List[] =
  { "vdp1vram5000fix",	HORRIBLEHACK_VDP1VRAM5000FIX,	gettext_noop("vdp1vram5000fix")	},
  { "vdp1rwdrawslowdown",HORRIBLEHACK_VDP1RWDRAWSLOWDOWN,gettext_noop("vdp1rwdrawslowdown") },
  { "vdp1instant",	HORRIBLEHACK_VDP1INSTANT,	gettext_noop("vdp1instant") },
+ /*{ "scuintdelay",	HORRIBLEHACK_SCUINTDELAY,	gettext_noop("scuintdelay") },*/
 
  { NULL, 0 },
 };

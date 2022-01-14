@@ -62,6 +62,7 @@
 #include <mednafen/MemoryStream.h>
 #include <mednafen/string/string.h>
 #include <mednafen/file.h>
+#include <mednafen/AtomicFIFO.h>
 
 static bool SuppressErrorPopups;	// Set from env variable "MEDNAFEN_NOPOPUPS"
 
@@ -137,7 +138,6 @@ static const MDFNSetting_EnumList FPSPos_List[] =
  { NULL, 0 },
 };
 
-static std::vector <MDFNSetting> NeoDriverSettings;
 static const MDFNSetting DriverSettings[] =
 {
   { "input.joystick.global_focus", MDFNSF_NOFLAGS, gettext_noop("Update physical joystick(s) internal state in Mednafen even when Mednafen lacks OS focus."), NULL, MDFNST_BOOL, "1" },
@@ -194,39 +194,43 @@ static const MDFNSetting DriverSettings[] =
 
   { "affinity.emu", MDFNSF_NOFLAGS, gettext_noop("Main emulation thread CPU affinity mask."), gettext_noop("Set to 0 to disable changing affinity."), MDFNST_UINT, "0", "0x0000000000000000", "0xFFFFFFFFFFFFFFFF" },
   { "affinity.video", MDFNSF_NOFLAGS, gettext_noop("Video blitting thread CPU affinity mask."), gettext_noop("Set to 0 to disable changing affinity."), MDFNST_UINT, "0", "0x0000000000000000", "0xFFFFFFFFFFFFFFFF" },
+
+  { NULL }
 };
 
-void BuildSystemSetting(MDFNSetting *setting, const char *system_name, const char *name, const char *description, const char *description_extra, MDFNSettingType type, 
+void AddSystemSetting(const char *system_name, const char *name, const char *description, const char *description_extra, MDFNSettingType type, 
 	const char *default_value, const char *minimum, const char *maximum,
 	bool (*validate_func)(const char *name, const char *value), void (*ChangeNotification)(const char *name), 
         const MDFNSetting_EnumList *enum_list, uint32 extra_flags)
 {
  char setting_name[256];
+ MDFNSetting setting;
 
- memset(setting, 0, sizeof(MDFNSetting));
+ memset(&setting, 0, sizeof(MDFNSetting));
 
  trio_snprintf(setting_name, 256, "%s.%s", system_name, name);
 
- setting->name = strdup(setting_name);
- setting->flags = MDFNSF_COMMON_TEMPLATE | extra_flags;
- setting->description = description;
- setting->description_extra = description_extra;
- setting->type = type;
- setting->default_value = default_value;
- setting->minimum = minimum;
- setting->maximum = maximum;
- setting->validate_func = validate_func;
- setting->ChangeNotification = ChangeNotification;
- setting->enum_list = enum_list;
+ setting.name = strdup(setting_name);
+ setting.flags = MDFNSF_COMMON_TEMPLATE | MDFNSF_FREE_NAME | extra_flags;
+ setting.description = description;
+ setting.description_extra = description_extra;
+ setting.type = type;
+ setting.default_value = default_value;
+ setting.minimum = minimum;
+ setting.maximum = maximum;
+ setting.validate_func = validate_func;
+ setting.ChangeNotification = ChangeNotification;
+ setting.enum_list = enum_list;
+
+ MDFNI_AddSetting(setting);
 }
 
-void MakeDebugSettings(std::vector <MDFNSetting> &settings)
+void MakeDebugSettings(void)
 {
  #ifdef WANT_DEBUGGER
  for(unsigned int i = 0; i < MDFNSystems.size(); i++)
  {
   const DebuggerInfoStruct *dbg = MDFNSystems[i]->Debugger;
-  MDFNSetting setting;
   const char *sysname = MDFNSystems[i]->shortname;
 
   if(!dbg)
@@ -234,11 +238,8 @@ void MakeDebugSettings(std::vector <MDFNSetting> &settings)
   //
   const uint32 extra_flags = dbg->SuppressDoc ? MDFNSF_SUPPRESS_DOC : 0;
 
-  BuildSystemSetting(&setting, sysname, "debugger.disfontsize", gettext_noop("Disassembly font size."), gettext_noop("Note: Setting the font size to larger than the default may cause text overlap in the debugger."), MDFNST_ENUM, "5x7", NULL, NULL, NULL, NULL, FontSize_List, extra_flags);
-  settings.push_back(setting);
-
-  BuildSystemSetting(&setting, sysname, "debugger.memcharenc", gettext_noop("Character encoding for the debugger's memory editor."), NULL, MDFNST_STRING, dbg->DefaultCharEnc, NULL, NULL, NULL, NULL, NULL, extra_flags);
-  settings.push_back(setting);
+  AddSystemSetting(sysname, "debugger.disfontsize", gettext_noop("Disassembly font size."), gettext_noop("Note: Setting the font size to larger than the default may cause text overlap in the debugger."), MDFNST_ENUM, "5x7", NULL, NULL, NULL, NULL, FontSize_List, extra_flags);
+  AddSystemSetting(sysname, "debugger.memcharenc", gettext_noop("Character encoding for the debugger's memory editor."), NULL, MDFNST_STRING, dbg->DefaultCharEnc, NULL, NULL, NULL, NULL, NULL, extra_flags);
  }
  #endif
 }
@@ -837,8 +838,8 @@ static bool DoArgs(int argc, char *argv[], char **filename)
 	{
 	 const MDFNCS* sit = &(*settings)[x];
 
-	 InternalArgs[x].name = sit->name;
-	 InternalArgs[x].description = sit->desc->description ? _(sit->desc->description) : NULL;
+	 InternalArgs[x].name = sit->desc.name;
+	 InternalArgs[x].description = sit->desc.description ? _(sit->desc.description) : NULL;
 	 InternalArgs[x].var = NULL;
 	 InternalArgs[x].subs = (void *)DoArgs_SetSetting;
 	 InternalArgs[x].substype = SUBSTYPE_FUNCTION;
@@ -1471,10 +1472,7 @@ std::string GetBaseDirectory(void)
 #endif
 }
 
-static const int gtevents_size = 2048; // Must be a power of 2.
-static volatile SDL_Event gtevents[gtevents_size];
-static volatile int gte_read = 0;
-static volatile int gte_write = 0;
+static AtomicFIFO<SDL_Event, 2048> gtevents;
 
 /* This function may also be called by the main thread if a game is not loaded. */
 /*
@@ -1483,41 +1481,36 @@ static volatile int gte_write = 0;
 */
 static void GameThread_HandleEvents(void)
 {
- SDL_Event gtevents_temp[gtevents_size];
- unsigned int numevents = 0;
+ size_t numevents = gtevents.CanRead();
 
- MThreading::Mutex_Lock(EVMutex);
- while(gte_read != gte_write)
+ //if(numevents)
+ // printf("%zu\n", numevents);
+
+ for(size_t i = 0; i < numevents; i++)
  {
-  memcpy(&gtevents_temp[numevents], (void *)&gtevents[gte_read], sizeof(SDL_Event));
+  SDL_Event event = gtevents.Peek(i);
 
-  numevents++;
-  gte_read = (gte_read + 1) & (gtevents_size - 1);
- }
- MThreading::Mutex_Unlock(EVMutex);
-
- for(unsigned int i = 0; i < numevents; i++)
- {
-  SDL_Event *event = &gtevents_temp[i];
-
-  switch(event->type)
+  switch(event.type)
   {
    case SDL_USEREVENT:
-		switch(event->user.code & 0xFFFF)
+		switch(event.user.code & 0xFFFF)
 		{
 		 case CEVT_SET_INPUT_FOCUS:
-			MDFNDHaveFocus = (event->user.data1 != NULL);
+			MDFNDHaveFocus = (event.user.data1 != NULL);
 			//printf("%u\n", MDFNDHaveFocus);
 			break;
 		}
 		break;
   }
 
-  Input_Event(event);
+  Input_Event(&event);
 
   if(Debugger_IsActive())
-   Debugger_GT_Event(event);
+   Debugger_GT_Event(&event);
  }
+
+ assert(gtevents.CanRead() >= numevents);
+ gtevents.AdvanceRead(numevents);
 }
 
 void PauseGameLoop(bool p)
@@ -1544,10 +1537,7 @@ static void SendCEvent_to_GT(unsigned int code, void *data1, void *data2, uint16
  evt.user.data1 = data1;
  evt.user.data2 = data2;
 
- MThreading::Mutex_Lock(EVMutex);
- memcpy((void *)&gtevents[gte_write], &evt, sizeof(SDL_Event));
- gte_write = (gte_write + 1) & (gtevents_size - 1);
- MThreading::Mutex_Unlock(EVMutex);
+ gtevents.Write(evt);
 }
 
 void GT_ToggleFS(void)
@@ -1606,8 +1596,6 @@ void GT_SetWMInputBehavior(bool CursorNeeded, bool MouseAbsNeeded, bool MouseRel
 void PumpWrap(void)
 {
  SDL_Event event;
- SDL_Event gtevents_temp[gtevents_size];
- int numevents = 0;
 
  if(SignalSafeExitWanted)
   NeedExitNow = true;
@@ -1634,7 +1622,7 @@ void PumpWrap(void)
 		//SDL_ShowWindow(window);
 		//SDL_RestoreWindow(window);
 		//puts("Gain");
-		SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (void*)gtevents/* Dummy valid pointer*/, NULL);
+		SendCEvent_to_GT(CEVT_SET_INPUT_FOCUS, (void*)&gtevents/* Dummy valid pointer*/, NULL);
 		break;
 
 	 case SDL_WINDOWEVENT_FOCUS_LOST:
@@ -1683,11 +1671,10 @@ void PumpWrap(void)
 		Video_ShowNotice((MDFN_NoticeType)idata16, (char*)event.user.data1);
 		break;
 
-	 default: 
-		if(numevents < gtevents_size)
+	 default:
+		if(gtevents.CanWrite())
 		{
-		 memcpy(&gtevents_temp[numevents], &event, sizeof(SDL_Event));
-		 numevents++;
+		 gtevents.Write(event);
 		}
 		break;
 	}
@@ -1695,24 +1682,12 @@ void PumpWrap(void)
 	break;
 
    default: 
-	if(numevents < gtevents_size)
+	if(gtevents.CanWrite())
 	{
-	 memcpy(&gtevents_temp[numevents], &event, sizeof(SDL_Event));
-	 numevents++;
+	 gtevents.Write(event);
 	}
 	break;
   }
- }
-
- if(numevents > 0)
- {
-  MThreading::Mutex_Lock(EVMutex);
-  for(int i = 0; i < numevents; i++)
-  {
-   memcpy((void *)&gtevents[gte_write], &gtevents_temp[i], sizeof(SDL_Event));
-   gte_write = (gte_write + 1) & (gtevents_size - 1);
-  }
-  MThreading::Mutex_Unlock(EVMutex);
  }
 
  if(!CurGame)
@@ -1909,9 +1884,9 @@ static bool LoadSettings(void)
    const std::vector<MDFNCS>* cs = MDFNI_GetSettings();
    for(const MDFNCS& s : *cs)
    {
-    if(s.desc->flags & MDFNSF_CAT_PATH)
+    if(s.desc.flags & MDFNSF_CAT_PATH)
     {
-     assert(s.desc->type == MDFNST_STRING);
+     assert(s.desc.type == MDFNST_STRING);
      //
      const size_t s_value_len = strlen(s.value);
      if(s_value_len > 0)
@@ -1923,12 +1898,12 @@ static bool LoadSettings(void)
        std::unique_ptr<char16_t[]> ws(new char16_t[req]);
 
        if(MultiByteToWideChar(CP_ACP, 0, s.value, s_value_len, (wchar_t*)ws.get(), req) == req)
-        MDFNI_SetSetting(s.name, UTF16_to_UTF8(ws.get(), req));
+        MDFNI_SetSetting(s.desc.name, UTF16_to_UTF8(ws.get(), req));
        else
-        throw MDFN_Error(0, _("Error converting value of setting \"%s\" to UTF-8."), s.name);
+        throw MDFN_Error(0, _("Error converting value of setting \"%s\" to UTF-8."), s.desc.name);
       }
       else
-       throw MDFN_Error(0, _("Error converting value of setting \"%s\" to UTF-8."), s.name);
+       throw MDFN_Error(0, _("Error converting value of setting \"%s\" to UTF-8."), s.desc.name);
      }
     }
    }
@@ -2127,7 +2102,7 @@ int main(int argc, char *argv[])
         PrintLIBFLACVersion();
         MDFN_indent(-2);
 
-        MDFN_printf(_("Base directory: %s\n"), DrBaseDirectory.c_str());
+        MDFN_printf(_("Base directory: %s\n"), MDFN_strhumesc(DrBaseDirectory).c_str());
 
 	#ifdef WIN32
 	// Call to CoInitializeEx() must come before SDL_Init()
@@ -2158,17 +2133,16 @@ int main(int argc, char *argv[])
 	 return -1;
 	}
 
-	if(!MDFNI_InitializeModules())
+	if(!MDFNI_Init())
 	 return -1;
 
-	for(unsigned int x = 0; x < sizeof(DriverSettings) / sizeof(MDFNSetting); x++)
-	 NeoDriverSettings.push_back(DriverSettings[x]);
+	MDFNI_MergeSettings(DriverSettings);
 
-	MakeDebugSettings(NeoDriverSettings);
-	Video_MakeSettings(NeoDriverSettings);
-	Input_MakeSettings(NeoDriverSettings);
+	MakeDebugSettings();
+	Video_MakeSettings();
+	Input_MakeSettings();
 
-        if(!MDFNI_Initialize(DrBaseDirectory.c_str(), NeoDriverSettings))
+        if(!MDFNI_InitFinalize(DrBaseDirectory.c_str()))
          return -1;
 	//
 	//
@@ -2422,8 +2396,9 @@ for(int zgi = 1; zgi < argc; zgi++)// start game load test loop
 	//
 	//
 	//
-
 	CloseGame();
+
+	FPS_Kill();
 
 	for(int i = 0; i < 2; i++)
 	{
