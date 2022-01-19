@@ -498,6 +498,10 @@ MDFN_HIDE extern const Mednafen::MDFNGI EmulatedWSwan;
 MDFN_HIDE extern const Mednafen::MDFNGI EmulatedSMS, EmulatedGG;
 #endif
 
+#ifdef WANT_SASPLAY_EMU
+MDFN_HIDE extern const Mednafen::MDFNGI EmulatedSASPlay;
+#endif
+
 MDFN_HIDE extern const Mednafen::MDFNGI EmulatedCDPlay;
 MDFN_HIDE extern const Mednafen::MDFNGI EmulatedDEMO;
 
@@ -1476,10 +1480,14 @@ bool MDFNI_Init(void)
    &EmulatedGG,
    #endif
 
+   #ifdef WANT_SASPLAY_EMU
+   &EmulatedSASPlay,
+   #endif
+
    &EmulatedCDPlay,
    &EmulatedDEMO
   };
-  static_assert(MEDNAFEN_VERSION_NUMERIC >= 0x00102800 && MEDNAFEN_VERSION_NUMERIC < 0x00200000, "Bad MEDNAFEN_VERSION_NUMERIC");
+  static_assert(MEDNAFEN_VERSION_NUMERIC >= 0x00102900 && MEDNAFEN_VERSION_NUMERIC < 0x00200000, "Bad MEDNAFEN_VERSION_NUMERIC");
 
   for(unsigned int i = 0; i < sizeof(InternalSystems) / sizeof(MDFNGI *); i++)
    AddSystem(InternalSystems[i]);

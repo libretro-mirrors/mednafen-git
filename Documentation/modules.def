@@ -1,4 +1,4 @@
-1.28.0-UNSTABLE
+1.29.0
 apple2
 Apple II/II+
 250
@@ -1122,6 +1122,12 @@ Sega Game Gear
 gg.pal
 GG 12-bit BGR
 4096 
+0
+sasplay
+Sega Arcade SCSP Sound Player
+480
+300
+0
 0
 cdplay
 CD-DA Player

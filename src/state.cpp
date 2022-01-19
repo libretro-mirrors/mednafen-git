@@ -644,6 +644,26 @@ void MDFNSS_LoadSM(Stream *st, bool data_only, const int fuzz)
 	}
 }
 
+void MDFNSS_SaveInternal(Stream* st, void (*safunc)(StateMem*, const unsigned, const bool))
+{
+ if(!MDFNGameInfo->StateAction)
+  throw MDFN_Error(0, _("Module \"%s\" doesn't support save states."), MDFNGameInfo->shortname);
+ //
+ StateMem sm(st);
+ safunc(&sm, 0, true);
+ sm.ThrowDeferred();
+}
+
+void MDFNSS_LoadInternal(Stream* st, void (*safunc)(StateMem*, const unsigned, const bool))
+{
+ if(!MDFNGameInfo->StateAction)
+  throw MDFN_Error(0, _("Module \"%s\" doesn't support save states."), MDFNGameInfo->shortname);
+ //
+ StateMem sm(st);
+ safunc(&sm, MEDNAFEN_VERSION_NUMERIC, true);
+ sm.ThrowDeferred();
+}
+
 //
 //
 //

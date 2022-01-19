@@ -226,12 +226,13 @@ bin_PROGRAMS = mednafen$(EXEEXT)
 @WANT_PSX_EMU_TRUE@	psx/gpu_polygon.cpp psx/gpu_line.cpp \
 @WANT_PSX_EMU_TRUE@	psx/gpu_sprite.cpp
 @WANT_DEBUGGER_TRUE@@WANT_PSX_EMU_TRUE@am__append_30 = psx/debug.cpp psx/dis.cpp
-@WANT_SMS_EMU_TRUE@am__append_31 = sms/cart.cpp sms/memz80.cpp sms/pio.cpp sms/render.cpp sms/romdb.cpp sms/sms.cpp sms/sound.cpp sms/system.cpp sms/tms.cpp sms/vdp.cpp 
-@WANT_SNES_EMU_TRUE@am__append_32 = libsnes.a
+@WANT_SASPLAY_EMU_TRUE@am__append_31 = sasplay/sasplay.cpp
+@WANT_SMS_EMU_TRUE@am__append_32 = sms/cart.cpp sms/memz80.cpp sms/pio.cpp sms/render.cpp sms/romdb.cpp sms/sms.cpp sms/sound.cpp sms/system.cpp sms/tms.cpp sms/vdp.cpp 
 @WANT_SNES_EMU_TRUE@am__append_33 = libsnes.a
 @WANT_SNES_EMU_TRUE@am__append_34 = libsnes.a
+@WANT_SNES_EMU_TRUE@am__append_35 = libsnes.a
 #
-@WANT_SNES_FAUST_EMU_TRUE@am__append_35 = snes_faust/cpu.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@am__append_36 = snes_faust/cpu.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/snes.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/apu.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart.cpp \
@@ -250,57 +251,57 @@ bin_PROGRAMS = mednafen$(EXEEXT)
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/debug.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/dis65816.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu_mtrender.cpp
-@WANT_SS_EMU_TRUE@am__append_36 = ss/libss.a
 @WANT_SS_EMU_TRUE@am__append_37 = ss/libss.a
-@WANT_SSFPLAY_EMU_TRUE@am__append_38 = ss/libssfplay.a
+@WANT_SS_EMU_TRUE@am__append_38 = ss/libss.a
 @WANT_SSFPLAY_EMU_TRUE@am__append_39 = ss/libssfplay.a
-@WANT_VB_EMU_TRUE@am__append_40 = vb/vb.cpp vb/timer.cpp vb/input.cpp vb/vip.cpp vb/vsu.cpp
-@WANT_DEBUGGER_TRUE@@WANT_VB_EMU_TRUE@am__append_41 = vb/debug.cpp
-@WANT_WSWAN_EMU_TRUE@am__append_42 = wswan/gfx.cpp wswan/main.cpp wswan/memory.cpp wswan/comm.cpp wswan/v30mz.cpp wswan/sound.cpp wswan/tcache.cpp wswan/interrupt.cpp wswan/eeprom.cpp wswan/rtc.cpp
-@WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@am__append_43 = wswan/debug.cpp wswan/dis/dis_decode.cpp wswan/dis/dis_groups.cpp wswan/dis/resolve.cpp wswan/dis/syntax.cpp
-@WANT_DEBUGGER_TRUE@am__append_44 = libdesa68.a
+@WANT_SSFPLAY_EMU_TRUE@am__append_40 = ss/libssfplay.a
+@WANT_VB_EMU_TRUE@am__append_41 = vb/vb.cpp vb/timer.cpp vb/input.cpp vb/vip.cpp vb/vsu.cpp
+@WANT_DEBUGGER_TRUE@@WANT_VB_EMU_TRUE@am__append_42 = vb/debug.cpp
+@WANT_WSWAN_EMU_TRUE@am__append_43 = wswan/gfx.cpp wswan/main.cpp wswan/memory.cpp wswan/comm.cpp wswan/v30mz.cpp wswan/sound.cpp wswan/tcache.cpp wswan/interrupt.cpp wswan/eeprom.cpp wswan/rtc.cpp
+@WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@am__append_44 = wswan/debug.cpp wswan/dis/dis_decode.cpp wswan/dis/dis_groups.cpp wswan/dis/resolve.cpp wswan/dis/syntax.cpp
 @WANT_DEBUGGER_TRUE@am__append_45 = libdesa68.a
 @WANT_DEBUGGER_TRUE@am__append_46 = libdesa68.a
-@NEED_68K_EMU_TRUE@am__append_47 = hw_cpu/m68k/m68k.cpp
-@NEED_Z80_EMU_TRUE@am__append_48 = hw_cpu/z80-fuse/z80.cpp hw_cpu/z80-fuse/z80_ops.cpp
-@NEED_V810_EMU_TRUE@am__append_49 = hw_cpu/v810/v810_cpu.cpp hw_cpu/v810/v810_cpuD.cpp hw_cpu/v810/v810_fp_ops.cpp
-@NEED_ARCADE_CARD_EMU_TRUE@am__append_50 = hw_misc/arcade_card/arcade_card.cpp
-@NEED_YM2413_EMU_TRUE@am__append_51 = hw_sound/ym2413/emu2413.cpp
-@NEED_YM2612_EMU_TRUE@am__append_52 = hw_sound/ym2612/Ym2612_Emu.cpp
-@NEED_GB_APU_EMU_TRUE@am__append_53 = hw_sound/gb_apu/Gb_Apu.cpp hw_sound/gb_apu/Gb_Apu_State.cpp hw_sound/gb_apu/Gb_Oscs.cpp
-@NEED_SMS_APU_EMU_TRUE@am__append_54 = hw_sound/sms_apu/Sms_Apu.cpp
-@NEED_PCE_PSG_EMU_TRUE@am__append_55 = hw_sound/pce_psg/pce_psg.cpp
-@NEED_HUC6270_EMU_TRUE@am__append_56 = hw_video/huc6270/vdc.cpp
-@WIN32_TRUE@am__append_57 = time/Time_Win32.cpp
-@WIN32_FALSE@am__append_58 = time/Time_POSIX.cpp
-@WIN32_TRUE@am__append_59 = mthreading/MThreading_Win32.cpp
-@WIN32_FALSE@am__append_60 = mthreading/MThreading_POSIX.cpp
-@HAVE_LIBFLAC_TRUE@am__append_61 = cdrom/CDAFReader_FLAC.cpp
-@NEED_BLIP_BUFFER_TRUE@am__append_62 = sound/Blip_Buffer.cpp sound/Stereo_Buffer.cpp
-@HAVE_POSIX_SOCKETS_TRUE@am__append_63 = net/Net_POSIX.cpp
-@WIN32_TRUE@am__append_64 = net/Net_WS2.cpp
-@ARCH_X86_TRUE@am__append_65 = cputest/x86_cpu.c
-@ARCH_POWERPC_TRUE@am__append_66 = cputest/ppc_cpu.c
-@HAVE_EXTERNAL_LZO2_TRUE@am__append_67 = @LZO2_LIBS@
-@HAVE_EXTERNAL_LZO2_TRUE@am__append_68 = @LZO2_CFLAGS@
-@HAVE_EXTERNAL_LZO2_FALSE@am__append_69 = minilzo/minilzo.c
-@HAVE_EXTERNAL_LIBZSTD_TRUE@am__append_70 = @LIBZSTD_LIBS@
-@HAVE_EXTERNAL_LIBZSTD_TRUE@am__append_71 = @LIBZSTD_CFLAGS@
-@HAVE_EXTERNAL_LIBZSTD_FALSE@am__append_72 = libzstd.a
+@WANT_DEBUGGER_TRUE@am__append_47 = libdesa68.a
+@NEED_68K_EMU_TRUE@am__append_48 = hw_cpu/m68k/m68k.cpp
+@NEED_Z80_EMU_TRUE@am__append_49 = hw_cpu/z80-fuse/z80.cpp hw_cpu/z80-fuse/z80_ops.cpp
+@NEED_V810_EMU_TRUE@am__append_50 = hw_cpu/v810/v810_cpu.cpp hw_cpu/v810/v810_cpuD.cpp hw_cpu/v810/v810_fp_ops.cpp
+@NEED_ARCADE_CARD_EMU_TRUE@am__append_51 = hw_misc/arcade_card/arcade_card.cpp
+@NEED_YM2413_EMU_TRUE@am__append_52 = hw_sound/ym2413/emu2413.cpp
+@NEED_YM2612_EMU_TRUE@am__append_53 = hw_sound/ym2612/Ym2612_Emu.cpp
+@NEED_GB_APU_EMU_TRUE@am__append_54 = hw_sound/gb_apu/Gb_Apu.cpp hw_sound/gb_apu/Gb_Apu_State.cpp hw_sound/gb_apu/Gb_Oscs.cpp
+@NEED_SMS_APU_EMU_TRUE@am__append_55 = hw_sound/sms_apu/Sms_Apu.cpp
+@NEED_PCE_PSG_EMU_TRUE@am__append_56 = hw_sound/pce_psg/pce_psg.cpp
+@NEED_HUC6270_EMU_TRUE@am__append_57 = hw_video/huc6270/vdc.cpp
+@WIN32_TRUE@am__append_58 = time/Time_Win32.cpp
+@WIN32_FALSE@am__append_59 = time/Time_POSIX.cpp
+@WIN32_TRUE@am__append_60 = mthreading/MThreading_Win32.cpp
+@WIN32_FALSE@am__append_61 = mthreading/MThreading_POSIX.cpp
+@HAVE_LIBFLAC_TRUE@am__append_62 = cdrom/CDAFReader_FLAC.cpp
+@NEED_BLIP_BUFFER_TRUE@am__append_63 = sound/Blip_Buffer.cpp sound/Stereo_Buffer.cpp
+@HAVE_POSIX_SOCKETS_TRUE@am__append_64 = net/Net_POSIX.cpp
+@WIN32_TRUE@am__append_65 = net/Net_WS2.cpp
+@ARCH_X86_TRUE@am__append_66 = cputest/x86_cpu.c
+@ARCH_POWERPC_TRUE@am__append_67 = cputest/ppc_cpu.c
+@HAVE_EXTERNAL_LZO2_TRUE@am__append_68 = @LZO2_LIBS@
+@HAVE_EXTERNAL_LZO2_TRUE@am__append_69 = @LZO2_CFLAGS@
+@HAVE_EXTERNAL_LZO2_FALSE@am__append_70 = minilzo/minilzo.c
+@HAVE_EXTERNAL_LIBZSTD_TRUE@am__append_71 = @LIBZSTD_LIBS@
+@HAVE_EXTERNAL_LIBZSTD_TRUE@am__append_72 = @LIBZSTD_CFLAGS@
 @HAVE_EXTERNAL_LIBZSTD_FALSE@am__append_73 = libzstd.a
 @HAVE_EXTERNAL_LIBZSTD_FALSE@am__append_74 = libzstd.a
-@HAVE_EXTERNAL_TREMOR_TRUE@am__append_75 = @TREMOR_LIBS@
-@HAVE_EXTERNAL_TREMOR_FALSE@am__append_76 = libvorbisidec.a
+@HAVE_EXTERNAL_LIBZSTD_FALSE@am__append_75 = libzstd.a
+@HAVE_EXTERNAL_TREMOR_TRUE@am__append_76 = @TREMOR_LIBS@
 @HAVE_EXTERNAL_TREMOR_FALSE@am__append_77 = libvorbisidec.a
 @HAVE_EXTERNAL_TREMOR_FALSE@am__append_78 = libvorbisidec.a
-@HAVE_EXTERNAL_MPCDEC_TRUE@am__append_79 = @MPCDEC_LIBS@
-@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_80 = libmpcdec.a
+@HAVE_EXTERNAL_TREMOR_FALSE@am__append_79 = libvorbisidec.a
+@HAVE_EXTERNAL_MPCDEC_TRUE@am__append_80 = @MPCDEC_LIBS@
 @HAVE_EXTERNAL_MPCDEC_FALSE@am__append_81 = libmpcdec.a
 @HAVE_EXTERNAL_MPCDEC_FALSE@am__append_82 = libmpcdec.a
-@HAVE_EXTERNAL_TRIO_TRUE@am__append_83 = @TRIO_LIBS@
-@HAVE_EXTERNAL_TRIO_FALSE@am__append_84 = libtrio.a
+@HAVE_EXTERNAL_MPCDEC_FALSE@am__append_83 = libmpcdec.a
+@HAVE_EXTERNAL_TRIO_TRUE@am__append_84 = @TRIO_LIBS@
 @HAVE_EXTERNAL_TRIO_FALSE@am__append_85 = libtrio.a
 @HAVE_EXTERNAL_TRIO_FALSE@am__append_86 = libtrio.a
+@HAVE_EXTERNAL_TRIO_FALSE@am__append_87 = libtrio.a
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
@@ -585,26 +586,27 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	psx/input/mouse.cpp psx/input/negcon.cpp psx/input/guncon.cpp \
 	psx/input/justifier.cpp psx/gpu.cpp psx/gpu_polygon.cpp \
 	psx/gpu_line.cpp psx/gpu_sprite.cpp psx/debug.cpp psx/dis.cpp \
-	sms/cart.cpp sms/memz80.cpp sms/pio.cpp sms/render.cpp \
-	sms/romdb.cpp sms/sms.cpp sms/sound.cpp sms/system.cpp \
-	sms/tms.cpp sms/vdp.cpp snes_faust/cpu.cpp snes_faust/snes.cpp \
-	snes_faust/apu.cpp snes_faust/cart.cpp snes_faust/input.cpp \
-	snes_faust/ppu.cpp snes_faust/ppu_st.cpp snes_faust/ppu_mt.cpp \
-	snes_faust/cart/dsp1.cpp snes_faust/cart/dsp2.cpp \
-	snes_faust/cart/sdd1.cpp snes_faust/cart/cx4.cpp \
-	snes_faust/cart/superfx.cpp snes_faust/cart/sa1.cpp \
-	snes_faust/cart/sa1cpu.cpp snes_faust/msu1.cpp \
-	snes_faust/debug.cpp snes_faust/dis65816.cpp \
-	snes_faust/ppu_mtrender.cpp vb/vb.cpp vb/timer.cpp \
-	vb/input.cpp vb/vip.cpp vb/vsu.cpp vb/debug.cpp wswan/gfx.cpp \
-	wswan/main.cpp wswan/memory.cpp wswan/comm.cpp wswan/v30mz.cpp \
-	wswan/sound.cpp wswan/tcache.cpp wswan/interrupt.cpp \
-	wswan/eeprom.cpp wswan/rtc.cpp wswan/debug.cpp \
-	wswan/dis/dis_decode.cpp wswan/dis/dis_groups.cpp \
-	wswan/dis/resolve.cpp wswan/dis/syntax.cpp \
-	hw_cpu/m68k/m68k.cpp hw_cpu/z80-fuse/z80.cpp \
-	hw_cpu/z80-fuse/z80_ops.cpp hw_cpu/v810/v810_cpu.cpp \
-	hw_cpu/v810/v810_cpuD.cpp hw_cpu/v810/v810_fp_ops.cpp \
+	sasplay/sasplay.cpp sms/cart.cpp sms/memz80.cpp sms/pio.cpp \
+	sms/render.cpp sms/romdb.cpp sms/sms.cpp sms/sound.cpp \
+	sms/system.cpp sms/tms.cpp sms/vdp.cpp snes_faust/cpu.cpp \
+	snes_faust/snes.cpp snes_faust/apu.cpp snes_faust/cart.cpp \
+	snes_faust/input.cpp snes_faust/ppu.cpp snes_faust/ppu_st.cpp \
+	snes_faust/ppu_mt.cpp snes_faust/cart/dsp1.cpp \
+	snes_faust/cart/dsp2.cpp snes_faust/cart/sdd1.cpp \
+	snes_faust/cart/cx4.cpp snes_faust/cart/superfx.cpp \
+	snes_faust/cart/sa1.cpp snes_faust/cart/sa1cpu.cpp \
+	snes_faust/msu1.cpp snes_faust/debug.cpp \
+	snes_faust/dis65816.cpp snes_faust/ppu_mtrender.cpp vb/vb.cpp \
+	vb/timer.cpp vb/input.cpp vb/vip.cpp vb/vsu.cpp vb/debug.cpp \
+	wswan/gfx.cpp wswan/main.cpp wswan/memory.cpp wswan/comm.cpp \
+	wswan/v30mz.cpp wswan/sound.cpp wswan/tcache.cpp \
+	wswan/interrupt.cpp wswan/eeprom.cpp wswan/rtc.cpp \
+	wswan/debug.cpp wswan/dis/dis_decode.cpp \
+	wswan/dis/dis_groups.cpp wswan/dis/resolve.cpp \
+	wswan/dis/syntax.cpp hw_cpu/m68k/m68k.cpp \
+	hw_cpu/z80-fuse/z80.cpp hw_cpu/z80-fuse/z80_ops.cpp \
+	hw_cpu/v810/v810_cpu.cpp hw_cpu/v810/v810_cpuD.cpp \
+	hw_cpu/v810/v810_fp_ops.cpp \
 	hw_misc/arcade_card/arcade_card.cpp \
 	hw_sound/ym2413/emu2413.cpp hw_sound/ym2612/Ym2612_Emu.cpp \
 	hw_sound/gb_apu/Gb_Apu.cpp hw_sound/gb_apu/Gb_Apu_State.cpp \
@@ -860,13 +862,14 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 @WANT_DEBUGGER_TRUE@@WANT_PSX_EMU_TRUE@am__objects_17 =  \
 @WANT_DEBUGGER_TRUE@@WANT_PSX_EMU_TRUE@	psx/debug.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@@WANT_PSX_EMU_TRUE@	psx/dis.$(OBJEXT)
-@WANT_SMS_EMU_TRUE@am__objects_18 = sms/cart.$(OBJEXT) \
+@WANT_SASPLAY_EMU_TRUE@am__objects_18 = sasplay/sasplay.$(OBJEXT)
+@WANT_SMS_EMU_TRUE@am__objects_19 = sms/cart.$(OBJEXT) \
 @WANT_SMS_EMU_TRUE@	sms/memz80.$(OBJEXT) sms/pio.$(OBJEXT) \
 @WANT_SMS_EMU_TRUE@	sms/render.$(OBJEXT) sms/romdb.$(OBJEXT) \
 @WANT_SMS_EMU_TRUE@	sms/sms.$(OBJEXT) sms/sound.$(OBJEXT) \
 @WANT_SMS_EMU_TRUE@	sms/system.$(OBJEXT) sms/tms.$(OBJEXT) \
 @WANT_SMS_EMU_TRUE@	sms/vdp.$(OBJEXT)
-@WANT_SNES_FAUST_EMU_TRUE@am__objects_19 = snes_faust/cpu.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@am__objects_20 = snes_faust/cpu.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/snes.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/apu.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart.$(OBJEXT) \
@@ -885,12 +888,12 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/debug.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/dis65816.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu_mtrender.$(OBJEXT)
-@WANT_VB_EMU_TRUE@am__objects_20 = vb/vb.$(OBJEXT) vb/timer.$(OBJEXT) \
+@WANT_VB_EMU_TRUE@am__objects_21 = vb/vb.$(OBJEXT) vb/timer.$(OBJEXT) \
 @WANT_VB_EMU_TRUE@	vb/input.$(OBJEXT) vb/vip.$(OBJEXT) \
 @WANT_VB_EMU_TRUE@	vb/vsu.$(OBJEXT)
-@WANT_DEBUGGER_TRUE@@WANT_VB_EMU_TRUE@am__objects_21 =  \
+@WANT_DEBUGGER_TRUE@@WANT_VB_EMU_TRUE@am__objects_22 =  \
 @WANT_DEBUGGER_TRUE@@WANT_VB_EMU_TRUE@	vb/debug.$(OBJEXT)
-@WANT_WSWAN_EMU_TRUE@am__objects_22 = wswan/gfx.$(OBJEXT) \
+@WANT_WSWAN_EMU_TRUE@am__objects_23 = wswan/gfx.$(OBJEXT) \
 @WANT_WSWAN_EMU_TRUE@	wswan/main.$(OBJEXT) \
 @WANT_WSWAN_EMU_TRUE@	wswan/memory.$(OBJEXT) \
 @WANT_WSWAN_EMU_TRUE@	wswan/comm.$(OBJEXT) \
@@ -900,44 +903,44 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 @WANT_WSWAN_EMU_TRUE@	wswan/interrupt.$(OBJEXT) \
 @WANT_WSWAN_EMU_TRUE@	wswan/eeprom.$(OBJEXT) \
 @WANT_WSWAN_EMU_TRUE@	wswan/rtc.$(OBJEXT)
-@WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@am__objects_23 = wswan/debug.$(OBJEXT) \
+@WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@am__objects_24 = wswan/debug.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@	wswan/dis/dis_decode.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@	wswan/dis/dis_groups.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@	wswan/dis/resolve.$(OBJEXT) \
 @WANT_DEBUGGER_TRUE@@WANT_WSWAN_EMU_TRUE@	wswan/dis/syntax.$(OBJEXT)
-@NEED_68K_EMU_TRUE@am__objects_24 = hw_cpu/m68k/m68k.$(OBJEXT)
-@NEED_Z80_EMU_TRUE@am__objects_25 = hw_cpu/z80-fuse/z80.$(OBJEXT) \
+@NEED_68K_EMU_TRUE@am__objects_25 = hw_cpu/m68k/m68k.$(OBJEXT)
+@NEED_Z80_EMU_TRUE@am__objects_26 = hw_cpu/z80-fuse/z80.$(OBJEXT) \
 @NEED_Z80_EMU_TRUE@	hw_cpu/z80-fuse/z80_ops.$(OBJEXT)
-@NEED_V810_EMU_TRUE@am__objects_26 = hw_cpu/v810/v810_cpu.$(OBJEXT) \
+@NEED_V810_EMU_TRUE@am__objects_27 = hw_cpu/v810/v810_cpu.$(OBJEXT) \
 @NEED_V810_EMU_TRUE@	hw_cpu/v810/v810_cpuD.$(OBJEXT) \
 @NEED_V810_EMU_TRUE@	hw_cpu/v810/v810_fp_ops.$(OBJEXT)
-@NEED_ARCADE_CARD_EMU_TRUE@am__objects_27 = hw_misc/arcade_card/arcade_card.$(OBJEXT)
-@NEED_YM2413_EMU_TRUE@am__objects_28 =  \
+@NEED_ARCADE_CARD_EMU_TRUE@am__objects_28 = hw_misc/arcade_card/arcade_card.$(OBJEXT)
+@NEED_YM2413_EMU_TRUE@am__objects_29 =  \
 @NEED_YM2413_EMU_TRUE@	hw_sound/ym2413/emu2413.$(OBJEXT)
-@NEED_YM2612_EMU_TRUE@am__objects_29 =  \
+@NEED_YM2612_EMU_TRUE@am__objects_30 =  \
 @NEED_YM2612_EMU_TRUE@	hw_sound/ym2612/Ym2612_Emu.$(OBJEXT)
-@NEED_GB_APU_EMU_TRUE@am__objects_30 =  \
+@NEED_GB_APU_EMU_TRUE@am__objects_31 =  \
 @NEED_GB_APU_EMU_TRUE@	hw_sound/gb_apu/Gb_Apu.$(OBJEXT) \
 @NEED_GB_APU_EMU_TRUE@	hw_sound/gb_apu/Gb_Apu_State.$(OBJEXT) \
 @NEED_GB_APU_EMU_TRUE@	hw_sound/gb_apu/Gb_Oscs.$(OBJEXT)
-@NEED_SMS_APU_EMU_TRUE@am__objects_31 =  \
+@NEED_SMS_APU_EMU_TRUE@am__objects_32 =  \
 @NEED_SMS_APU_EMU_TRUE@	hw_sound/sms_apu/Sms_Apu.$(OBJEXT)
-@NEED_PCE_PSG_EMU_TRUE@am__objects_32 =  \
+@NEED_PCE_PSG_EMU_TRUE@am__objects_33 =  \
 @NEED_PCE_PSG_EMU_TRUE@	hw_sound/pce_psg/pce_psg.$(OBJEXT)
-@NEED_HUC6270_EMU_TRUE@am__objects_33 =  \
+@NEED_HUC6270_EMU_TRUE@am__objects_34 =  \
 @NEED_HUC6270_EMU_TRUE@	hw_video/huc6270/vdc.$(OBJEXT)
-@WIN32_TRUE@am__objects_34 = time/Time_Win32.$(OBJEXT)
-@WIN32_FALSE@am__objects_35 = time/Time_POSIX.$(OBJEXT)
-@WIN32_TRUE@am__objects_36 = mthreading/MThreading_Win32.$(OBJEXT)
-@WIN32_FALSE@am__objects_37 = mthreading/MThreading_POSIX.$(OBJEXT)
-@HAVE_LIBFLAC_TRUE@am__objects_38 = cdrom/CDAFReader_FLAC.$(OBJEXT)
-@NEED_BLIP_BUFFER_TRUE@am__objects_39 = sound/Blip_Buffer.$(OBJEXT) \
+@WIN32_TRUE@am__objects_35 = time/Time_Win32.$(OBJEXT)
+@WIN32_FALSE@am__objects_36 = time/Time_POSIX.$(OBJEXT)
+@WIN32_TRUE@am__objects_37 = mthreading/MThreading_Win32.$(OBJEXT)
+@WIN32_FALSE@am__objects_38 = mthreading/MThreading_POSIX.$(OBJEXT)
+@HAVE_LIBFLAC_TRUE@am__objects_39 = cdrom/CDAFReader_FLAC.$(OBJEXT)
+@NEED_BLIP_BUFFER_TRUE@am__objects_40 = sound/Blip_Buffer.$(OBJEXT) \
 @NEED_BLIP_BUFFER_TRUE@	sound/Stereo_Buffer.$(OBJEXT)
-@HAVE_POSIX_SOCKETS_TRUE@am__objects_40 = net/Net_POSIX.$(OBJEXT)
-@WIN32_TRUE@am__objects_41 = net/Net_WS2.$(OBJEXT)
-@ARCH_X86_TRUE@am__objects_42 = cputest/x86_cpu.$(OBJEXT)
-@ARCH_POWERPC_TRUE@am__objects_43 = cputest/ppc_cpu.$(OBJEXT)
-@HAVE_EXTERNAL_LZO2_FALSE@am__objects_44 = minilzo/minilzo.$(OBJEXT)
+@HAVE_POSIX_SOCKETS_TRUE@am__objects_41 = net/Net_POSIX.$(OBJEXT)
+@WIN32_TRUE@am__objects_42 = net/Net_WS2.$(OBJEXT)
+@ARCH_X86_TRUE@am__objects_43 = cputest/x86_cpu.$(OBJEXT)
+@ARCH_POWERPC_TRUE@am__objects_44 = cputest/ppc_cpu.$(OBJEXT)
+@HAVE_EXTERNAL_LZO2_FALSE@am__objects_45 = minilzo/minilzo.$(OBJEXT)
 am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	mempatcher.$(OBJEXT) settings.$(OBJEXT) endian.$(OBJEXT) \
 	mednafen.$(OBJEXT) git.$(OBJEXT) file.$(OBJEXT) \
@@ -961,21 +964,21 @@ am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	$(am__objects_27) $(am__objects_28) $(am__objects_29) \
 	$(am__objects_30) $(am__objects_31) $(am__objects_32) \
 	$(am__objects_33) $(am__objects_34) $(am__objects_35) \
-	$(am__objects_36) $(am__objects_37) cdrom/crc32.$(OBJEXT) \
-	cdrom/galois.$(OBJEXT) cdrom/l-ec.$(OBJEXT) \
-	cdrom/recover-raw.$(OBJEXT) cdrom/lec.$(OBJEXT) \
-	cdrom/CDUtility.$(OBJEXT) cdrom/CDInterface.$(OBJEXT) \
-	cdrom/CDInterface_MT.$(OBJEXT) cdrom/CDInterface_ST.$(OBJEXT) \
-	cdrom/CDAccess.$(OBJEXT) cdrom/CDAccess_Image.$(OBJEXT) \
-	cdrom/CDAccess_CCD.$(OBJEXT) cdrom/CDAFReader.$(OBJEXT) \
-	cdrom/CDAFReader_Vorbis.$(OBJEXT) \
-	cdrom/CDAFReader_MPC.$(OBJEXT) $(am__objects_38) \
+	$(am__objects_36) $(am__objects_37) $(am__objects_38) \
+	cdrom/crc32.$(OBJEXT) cdrom/galois.$(OBJEXT) \
+	cdrom/l-ec.$(OBJEXT) cdrom/recover-raw.$(OBJEXT) \
+	cdrom/lec.$(OBJEXT) cdrom/CDUtility.$(OBJEXT) \
+	cdrom/CDInterface.$(OBJEXT) cdrom/CDInterface_MT.$(OBJEXT) \
+	cdrom/CDInterface_ST.$(OBJEXT) cdrom/CDAccess.$(OBJEXT) \
+	cdrom/CDAccess_Image.$(OBJEXT) cdrom/CDAccess_CCD.$(OBJEXT) \
+	cdrom/CDAFReader.$(OBJEXT) cdrom/CDAFReader_Vorbis.$(OBJEXT) \
+	cdrom/CDAFReader_MPC.$(OBJEXT) $(am__objects_39) \
 	cdrom/CDAFReader_PCM.$(OBJEXT) cdrom/scsicd.$(OBJEXT) \
-	$(am__objects_39) sound/Fir_Resampler.$(OBJEXT) \
+	$(am__objects_40) sound/Fir_Resampler.$(OBJEXT) \
 	sound/WAVRecord.$(OBJEXT) sound/okiadpcm.$(OBJEXT) \
 	sound/DSPUtility.$(OBJEXT) sound/SwiftResampler.$(OBJEXT) \
 	sound/OwlResampler.$(OBJEXT) net/Net.$(OBJEXT) \
-	$(am__objects_40) $(am__objects_41) string/escape.$(OBJEXT) \
+	$(am__objects_41) $(am__objects_42) string/escape.$(OBJEXT) \
 	string/string.$(OBJEXT) video/surface.$(OBJEXT) \
 	video/convert.$(OBJEXT) video/tblur.$(OBJEXT) \
 	video/Deinterlacer.$(OBJEXT) \
@@ -985,7 +988,7 @@ am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	video/png.$(OBJEXT) video/text.$(OBJEXT) \
 	video/font-data.$(OBJEXT) video/font-data-18x18.$(OBJEXT) \
 	video/font-data-12x13.$(OBJEXT) resampler/resample.$(OBJEXT) \
-	cputest/cputest.$(OBJEXT) $(am__objects_42) $(am__objects_43) \
+	cputest/cputest.$(OBJEXT) $(am__objects_43) $(am__objects_44) \
 	cheat_formats/gb.$(OBJEXT) cheat_formats/psx.$(OBJEXT) \
 	cheat_formats/snes.$(OBJEXT) compress/ArchiveReader.$(OBJEXT) \
 	compress/ZIPReader.$(OBJEXT) compress/GZFileStream.$(OBJEXT) \
@@ -993,7 +996,7 @@ am_mednafen_OBJECTS = debug.$(OBJEXT) error.$(OBJEXT) \
 	compress/ZstdDecompressFilter.$(OBJEXT) \
 	compress/ZLInflateFilter.$(OBJEXT) hash/md5.$(OBJEXT) \
 	hash/sha1.$(OBJEXT) hash/sha256.$(OBJEXT) hash/crc.$(OBJEXT) \
-	$(am__objects_44)
+	$(am__objects_45)
 mednafen_OBJECTS = $(am_mednafen_OBJECTS)
 am__DEPENDENCIES_1 =
 AM_V_P = $(am__v_P_@AM_V@)
@@ -1226,12 +1229,13 @@ am__depfiles_remade = ./$(DEPDIR)/ExtMemStream.Po \
 	psx/input/$(DEPDIR)/memcard.Po psx/input/$(DEPDIR)/mouse.Po \
 	psx/input/$(DEPDIR)/multitap.Po psx/input/$(DEPDIR)/negcon.Po \
 	quicklz/$(DEPDIR)/libmdfnquicklz_a-quicklz.Po \
-	resampler/$(DEPDIR)/resample.Po sms/$(DEPDIR)/cart.Po \
-	sms/$(DEPDIR)/memz80.Po sms/$(DEPDIR)/pio.Po \
-	sms/$(DEPDIR)/render.Po sms/$(DEPDIR)/romdb.Po \
-	sms/$(DEPDIR)/sms.Po sms/$(DEPDIR)/sound.Po \
-	sms/$(DEPDIR)/system.Po sms/$(DEPDIR)/tms.Po \
-	sms/$(DEPDIR)/vdp.Po snes/$(DEPDIR)/libsnes_a-interface.Po \
+	resampler/$(DEPDIR)/resample.Po sasplay/$(DEPDIR)/sasplay.Po \
+	sms/$(DEPDIR)/cart.Po sms/$(DEPDIR)/memz80.Po \
+	sms/$(DEPDIR)/pio.Po sms/$(DEPDIR)/render.Po \
+	sms/$(DEPDIR)/romdb.Po sms/$(DEPDIR)/sms.Po \
+	sms/$(DEPDIR)/sound.Po sms/$(DEPDIR)/system.Po \
+	sms/$(DEPDIR)/tms.Po sms/$(DEPDIR)/vdp.Po \
+	snes/$(DEPDIR)/libsnes_a-interface.Po \
 	snes/src/cartridge/$(DEPDIR)/libsnes_a-cartridge.Po \
 	snes/src/cheat/$(DEPDIR)/libsnes_a-cheat.Po \
 	snes/src/chip/bsx/$(DEPDIR)/libsnes_a-bsx.Po \
@@ -1435,6 +1439,7 @@ am__DIST_COMMON = $(srcdir)/Makefile.in \
 	$(srcdir)/pcfx/Makefile.am.inc $(srcdir)/psx/Makefile.am.inc \
 	$(srcdir)/quicklz/Makefile.am.inc \
 	$(srcdir)/resampler/Makefile.am.inc \
+	$(srcdir)/sasplay/Makefile.am.inc \
 	$(srcdir)/sms/Makefile.am.inc $(srcdir)/snes/Makefile.am.inc \
 	$(srcdir)/snes_faust/Makefile.am.inc \
 	$(srcdir)/sound/Makefile.am.inc \
@@ -1501,7 +1506,7 @@ CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
-DEFS = @DEFS@ @FLAC_CFLAGS@ $(am__append_68) $(am__append_71)
+DEFS = @DEFS@ @FLAC_CFLAGS@ $(am__append_69) $(am__append_72)
 DEPDIR = @DEPDIR@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
@@ -1660,22 +1665,22 @@ AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_builddir)/intl
 SUBDIRS = $(am__append_1) $(am__append_5) $(am__append_8) sexyal \
 	$(SS_SUBDIRS)
-noinst_LIBRARIES = $(am__append_21) $(am__append_32) $(am__append_44) \
-	libmdfnquicklz.a $(am__append_72) $(am__append_76) \
-	$(am__append_80) $(am__append_84)
+noinst_LIBRARIES = $(am__append_21) $(am__append_33) $(am__append_45) \
+	libmdfnquicklz.a $(am__append_73) $(am__append_77) \
+	$(am__append_81) $(am__append_85)
 mednafen_LDADD = $(am__append_2) $(am__append_6) $(am__append_9) \
 	sexyal/libsexyal.a @ALSA_LIBS@ @JACK_LIBS@ $(am__append_11) \
-	$(am__append_22) $(am__append_33) $(am__append_36) \
-	$(am__append_38) $(am__append_45) libmdfnquicklz.a \
-	$(am__append_67) $(am__append_70) $(am__append_73) \
-	$(am__append_75) $(am__append_77) $(am__append_79) \
-	$(am__append_81) $(am__append_83) $(am__append_85) @FLAC_LIBS@ \
+	$(am__append_22) $(am__append_34) $(am__append_37) \
+	$(am__append_39) $(am__append_46) libmdfnquicklz.a \
+	$(am__append_68) $(am__append_71) $(am__append_74) \
+	$(am__append_76) $(am__append_78) $(am__append_80) \
+	$(am__append_82) $(am__append_84) $(am__append_86) @FLAC_LIBS@ \
 	@ZLIB_LIBS@ @LIBINTL@ @LIBICONV@ $(am__empty)
 mednafen_DEPENDENCIES = $(am__append_3) $(am__append_7) \
 	$(am__append_10) sexyal/libsexyal.a $(am__append_23) \
-	$(am__append_34) $(am__append_37) $(am__append_39) \
-	$(am__append_46) libmdfnquicklz.a $(am__append_74) \
-	$(am__append_78) $(am__append_82) $(am__append_86)
+	$(am__append_35) $(am__append_38) $(am__append_40) \
+	$(am__append_47) libmdfnquicklz.a $(am__append_75) \
+	$(am__append_79) $(am__append_83) $(am__append_87)
 mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	endian.cpp mednafen.cpp git.cpp file.cpp general.cpp \
 	memory.cpp netplay.cpp state.cpp state_rewind.cpp movie.cpp \
@@ -1690,38 +1695,38 @@ mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	$(am__append_20) $(am__append_24) $(am__append_25) \
 	$(am__append_26) $(am__append_27) $(am__append_28) \
 	$(am__append_29) $(am__append_30) $(am__append_31) \
-	$(am__append_35) $(am__append_40) $(am__append_41) \
-	$(am__append_42) $(am__append_43) $(am__append_47) \
+	$(am__append_32) $(am__append_36) $(am__append_41) \
+	$(am__append_42) $(am__append_43) $(am__append_44) \
 	$(am__append_48) $(am__append_49) $(am__append_50) \
 	$(am__append_51) $(am__append_52) $(am__append_53) \
 	$(am__append_54) $(am__append_55) $(am__append_56) \
 	$(am__append_57) $(am__append_58) $(am__append_59) \
-	$(am__append_60) cdrom/crc32.cpp cdrom/galois.cpp \
-	cdrom/l-ec.cpp cdrom/recover-raw.cpp cdrom/lec.cpp \
-	cdrom/CDUtility.cpp cdrom/CDInterface.cpp \
+	$(am__append_60) $(am__append_61) cdrom/crc32.cpp \
+	cdrom/galois.cpp cdrom/l-ec.cpp cdrom/recover-raw.cpp \
+	cdrom/lec.cpp cdrom/CDUtility.cpp cdrom/CDInterface.cpp \
 	cdrom/CDInterface_MT.cpp cdrom/CDInterface_ST.cpp \
 	cdrom/CDAccess.cpp cdrom/CDAccess_Image.cpp \
 	cdrom/CDAccess_CCD.cpp cdrom/CDAFReader.cpp \
 	cdrom/CDAFReader_Vorbis.cpp cdrom/CDAFReader_MPC.cpp \
-	$(am__append_61) cdrom/CDAFReader_PCM.cpp cdrom/scsicd.cpp \
-	$(am__append_62) sound/Fir_Resampler.cpp sound/WAVRecord.cpp \
+	$(am__append_62) cdrom/CDAFReader_PCM.cpp cdrom/scsicd.cpp \
+	$(am__append_63) sound/Fir_Resampler.cpp sound/WAVRecord.cpp \
 	sound/okiadpcm.cpp sound/DSPUtility.cpp \
 	sound/SwiftResampler.cpp sound/OwlResampler.cpp net/Net.cpp \
-	$(am__append_63) $(am__append_64) string/escape.cpp \
+	$(am__append_64) $(am__append_65) string/escape.cpp \
 	string/string.cpp video/surface.cpp video/convert.cpp \
 	video/tblur.cpp video/Deinterlacer.cpp \
 	video/Deinterlacer_Simple.cpp video/Deinterlacer_Blend.cpp \
 	video/resize.cpp video/video.cpp video/primitives.cpp \
 	video/png.cpp video/text.cpp video/font-data.cpp \
 	video/font-data-18x18.c video/font-data-12x13.c \
-	resampler/resample.c cputest/cputest.c $(am__append_65) \
-	$(am__append_66) cheat_formats/gb.cpp cheat_formats/psx.cpp \
+	resampler/resample.c cputest/cputest.c $(am__append_66) \
+	$(am__append_67) cheat_formats/gb.cpp cheat_formats/psx.cpp \
 	cheat_formats/snes.cpp compress/ArchiveReader.cpp \
 	compress/ZIPReader.cpp compress/GZFileStream.cpp \
 	compress/DecompressFilter.cpp \
 	compress/ZstdDecompressFilter.cpp compress/ZLInflateFilter.cpp \
 	hash/md5.cpp hash/sha1.cpp hash/sha256.cpp hash/crc.cpp \
-	$(am__append_69)
+	$(am__append_70)
 @WANT_NGP_EMU_TRUE@libngp_a_CFLAGS = @AM_CFLAGS@ @NO_STRICT_ALIASING_FLAGS@
 @WANT_NGP_EMU_TRUE@libngp_a_CXXFLAGS = @AM_CXXFLAGS@ @NO_STRICT_ALIASING_FLAGS@
 @WANT_NGP_EMU_TRUE@libngp_a_SOURCES = ngp/bios.cpp ngp/biosHLE.cpp ngp/dma.cpp ngp/flash.cpp ngp/gfx.cpp ngp/T6W28_Apu.cpp	\
@@ -1832,7 +1837,7 @@ all: all-recursive
 
 .SUFFIXES:
 .SUFFIXES: .c .cpp .o .obj .rc
-$(srcdir)/Makefile.in:  $(srcdir)/Makefile.am $(srcdir)/cdplay/Makefile.am.inc $(srcdir)/demo/Makefile.am.inc $(srcdir)/apple2/Makefile.am.inc $(srcdir)/gb/Makefile.am.inc $(srcdir)/gba/Makefile.am.inc $(srcdir)/lynx/Makefile.am.inc $(srcdir)/md/Makefile.am.inc $(srcdir)/nes/Makefile.am.inc $(srcdir)/nes/ppu/Makefile.am.inc $(srcdir)/nes/boards/Makefile.am.inc $(srcdir)/nes/input/Makefile.am.inc $(srcdir)/ngp/Makefile.am.inc $(srcdir)/pce/Makefile.am.inc $(srcdir)/pce_fast/Makefile.am.inc $(srcdir)/pcfx/Makefile.am.inc $(srcdir)/psx/Makefile.am.inc $(srcdir)/sms/Makefile.am.inc $(srcdir)/snes/Makefile.am.inc $(srcdir)/snes_faust/Makefile.am.inc $(srcdir)/vb/Makefile.am.inc $(srcdir)/wswan/Makefile.am.inc $(srcdir)/desa68/Makefile.am.inc $(srcdir)/hw_cpu/Makefile.am.inc $(srcdir)/hw_misc/Makefile.am.inc $(srcdir)/hw_sound/Makefile.am.inc $(srcdir)/hw_video/Makefile.am.inc $(srcdir)/time/Makefile.am.inc $(srcdir)/mthreading/Makefile.am.inc $(srcdir)/cdrom/Makefile.am.inc $(srcdir)/sound/Makefile.am.inc $(srcdir)/net/Makefile.am.inc $(srcdir)/string/Makefile.am.inc $(srcdir)/video/Makefile.am.inc $(srcdir)/resampler/Makefile.am.inc $(srcdir)/cputest/Makefile.am.inc $(srcdir)/cheat_formats/Makefile.am.inc $(srcdir)/quicklz/Makefile.am.inc $(srcdir)/compress/Makefile.am.inc $(srcdir)/hash/Makefile.am.inc $(srcdir)/minilzo/Makefile.am.inc $(srcdir)/zstd/Makefile.am.inc $(srcdir)/tremor/Makefile.am.inc $(srcdir)/mpcdec/Makefile.am.inc $(srcdir)/trio/Makefile.am.inc $(am__configure_deps)
+$(srcdir)/Makefile.in:  $(srcdir)/Makefile.am $(srcdir)/cdplay/Makefile.am.inc $(srcdir)/demo/Makefile.am.inc $(srcdir)/apple2/Makefile.am.inc $(srcdir)/gb/Makefile.am.inc $(srcdir)/gba/Makefile.am.inc $(srcdir)/lynx/Makefile.am.inc $(srcdir)/md/Makefile.am.inc $(srcdir)/nes/Makefile.am.inc $(srcdir)/nes/ppu/Makefile.am.inc $(srcdir)/nes/boards/Makefile.am.inc $(srcdir)/nes/input/Makefile.am.inc $(srcdir)/ngp/Makefile.am.inc $(srcdir)/pce/Makefile.am.inc $(srcdir)/pce_fast/Makefile.am.inc $(srcdir)/pcfx/Makefile.am.inc $(srcdir)/psx/Makefile.am.inc $(srcdir)/sasplay/Makefile.am.inc $(srcdir)/sms/Makefile.am.inc $(srcdir)/snes/Makefile.am.inc $(srcdir)/snes_faust/Makefile.am.inc $(srcdir)/vb/Makefile.am.inc $(srcdir)/wswan/Makefile.am.inc $(srcdir)/desa68/Makefile.am.inc $(srcdir)/hw_cpu/Makefile.am.inc $(srcdir)/hw_misc/Makefile.am.inc $(srcdir)/hw_sound/Makefile.am.inc $(srcdir)/hw_video/Makefile.am.inc $(srcdir)/time/Makefile.am.inc $(srcdir)/mthreading/Makefile.am.inc $(srcdir)/cdrom/Makefile.am.inc $(srcdir)/sound/Makefile.am.inc $(srcdir)/net/Makefile.am.inc $(srcdir)/string/Makefile.am.inc $(srcdir)/video/Makefile.am.inc $(srcdir)/resampler/Makefile.am.inc $(srcdir)/cputest/Makefile.am.inc $(srcdir)/cheat_formats/Makefile.am.inc $(srcdir)/quicklz/Makefile.am.inc $(srcdir)/compress/Makefile.am.inc $(srcdir)/hash/Makefile.am.inc $(srcdir)/minilzo/Makefile.am.inc $(srcdir)/zstd/Makefile.am.inc $(srcdir)/tremor/Makefile.am.inc $(srcdir)/mpcdec/Makefile.am.inc $(srcdir)/trio/Makefile.am.inc $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
 	    *$$dep*) \
@@ -1852,7 +1857,7 @@ Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	    echo ' cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__maybe_remake_depfiles)'; \
 	    cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__maybe_remake_depfiles);; \
 	esac;
-$(srcdir)/cdplay/Makefile.am.inc $(srcdir)/demo/Makefile.am.inc $(srcdir)/apple2/Makefile.am.inc $(srcdir)/gb/Makefile.am.inc $(srcdir)/gba/Makefile.am.inc $(srcdir)/lynx/Makefile.am.inc $(srcdir)/md/Makefile.am.inc $(srcdir)/nes/Makefile.am.inc $(srcdir)/nes/ppu/Makefile.am.inc $(srcdir)/nes/boards/Makefile.am.inc $(srcdir)/nes/input/Makefile.am.inc $(srcdir)/ngp/Makefile.am.inc $(srcdir)/pce/Makefile.am.inc $(srcdir)/pce_fast/Makefile.am.inc $(srcdir)/pcfx/Makefile.am.inc $(srcdir)/psx/Makefile.am.inc $(srcdir)/sms/Makefile.am.inc $(srcdir)/snes/Makefile.am.inc $(srcdir)/snes_faust/Makefile.am.inc $(srcdir)/vb/Makefile.am.inc $(srcdir)/wswan/Makefile.am.inc $(srcdir)/desa68/Makefile.am.inc $(srcdir)/hw_cpu/Makefile.am.inc $(srcdir)/hw_misc/Makefile.am.inc $(srcdir)/hw_sound/Makefile.am.inc $(srcdir)/hw_video/Makefile.am.inc $(srcdir)/time/Makefile.am.inc $(srcdir)/mthreading/Makefile.am.inc $(srcdir)/cdrom/Makefile.am.inc $(srcdir)/sound/Makefile.am.inc $(srcdir)/net/Makefile.am.inc $(srcdir)/string/Makefile.am.inc $(srcdir)/video/Makefile.am.inc $(srcdir)/resampler/Makefile.am.inc $(srcdir)/cputest/Makefile.am.inc $(srcdir)/cheat_formats/Makefile.am.inc $(srcdir)/quicklz/Makefile.am.inc $(srcdir)/compress/Makefile.am.inc $(srcdir)/hash/Makefile.am.inc $(srcdir)/minilzo/Makefile.am.inc $(srcdir)/zstd/Makefile.am.inc $(srcdir)/tremor/Makefile.am.inc $(srcdir)/mpcdec/Makefile.am.inc $(srcdir)/trio/Makefile.am.inc $(am__empty):
+$(srcdir)/cdplay/Makefile.am.inc $(srcdir)/demo/Makefile.am.inc $(srcdir)/apple2/Makefile.am.inc $(srcdir)/gb/Makefile.am.inc $(srcdir)/gba/Makefile.am.inc $(srcdir)/lynx/Makefile.am.inc $(srcdir)/md/Makefile.am.inc $(srcdir)/nes/Makefile.am.inc $(srcdir)/nes/ppu/Makefile.am.inc $(srcdir)/nes/boards/Makefile.am.inc $(srcdir)/nes/input/Makefile.am.inc $(srcdir)/ngp/Makefile.am.inc $(srcdir)/pce/Makefile.am.inc $(srcdir)/pce_fast/Makefile.am.inc $(srcdir)/pcfx/Makefile.am.inc $(srcdir)/psx/Makefile.am.inc $(srcdir)/sasplay/Makefile.am.inc $(srcdir)/sms/Makefile.am.inc $(srcdir)/snes/Makefile.am.inc $(srcdir)/snes_faust/Makefile.am.inc $(srcdir)/vb/Makefile.am.inc $(srcdir)/wswan/Makefile.am.inc $(srcdir)/desa68/Makefile.am.inc $(srcdir)/hw_cpu/Makefile.am.inc $(srcdir)/hw_misc/Makefile.am.inc $(srcdir)/hw_sound/Makefile.am.inc $(srcdir)/hw_video/Makefile.am.inc $(srcdir)/time/Makefile.am.inc $(srcdir)/mthreading/Makefile.am.inc $(srcdir)/cdrom/Makefile.am.inc $(srcdir)/sound/Makefile.am.inc $(srcdir)/net/Makefile.am.inc $(srcdir)/string/Makefile.am.inc $(srcdir)/video/Makefile.am.inc $(srcdir)/resampler/Makefile.am.inc $(srcdir)/cputest/Makefile.am.inc $(srcdir)/cheat_formats/Makefile.am.inc $(srcdir)/quicklz/Makefile.am.inc $(srcdir)/compress/Makefile.am.inc $(srcdir)/hash/Makefile.am.inc $(srcdir)/minilzo/Makefile.am.inc $(srcdir)/zstd/Makefile.am.inc $(srcdir)/tremor/Makefile.am.inc $(srcdir)/mpcdec/Makefile.am.inc $(srcdir)/trio/Makefile.am.inc $(am__empty):
 
 $(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
@@ -2947,6 +2952,14 @@ psx/gpu_sprite.$(OBJEXT): psx/$(am__dirstamp) \
 	psx/$(DEPDIR)/$(am__dirstamp)
 psx/debug.$(OBJEXT): psx/$(am__dirstamp) psx/$(DEPDIR)/$(am__dirstamp)
 psx/dis.$(OBJEXT): psx/$(am__dirstamp) psx/$(DEPDIR)/$(am__dirstamp)
+sasplay/$(am__dirstamp):
+	@$(MKDIR_P) sasplay
+	@: > sasplay/$(am__dirstamp)
+sasplay/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) sasplay/$(DEPDIR)
+	@: > sasplay/$(DEPDIR)/$(am__dirstamp)
+sasplay/sasplay.$(OBJEXT): sasplay/$(am__dirstamp) \
+	sasplay/$(DEPDIR)/$(am__dirstamp)
 sms/$(am__dirstamp):
 	@$(MKDIR_P) sms
 	@: > sms/$(am__dirstamp)
@@ -3427,6 +3440,7 @@ mostlyclean-compile:
 	-rm -f psx/input/*.$(OBJEXT)
 	-rm -f quicklz/*.$(OBJEXT)
 	-rm -f resampler/*.$(OBJEXT)
+	-rm -f sasplay/*.$(OBJEXT)
 	-rm -f sms/*.$(OBJEXT)
 	-rm -f snes/*.$(OBJEXT)
 	-rm -f snes/src/cartridge/*.$(OBJEXT)
@@ -3844,6 +3858,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@psx/input/$(DEPDIR)/negcon.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@quicklz/$(DEPDIR)/libmdfnquicklz_a-quicklz.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@resampler/$(DEPDIR)/resample.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@sasplay/$(DEPDIR)/sasplay.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@sms/$(DEPDIR)/cart.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@sms/$(DEPDIR)/memz80.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@sms/$(DEPDIR)/pio.Po@am__quote@ # am--include-marker
@@ -5487,6 +5502,8 @@ distclean-generic:
 	-rm -f quicklz/$(am__dirstamp)
 	-rm -f resampler/$(DEPDIR)/$(am__dirstamp)
 	-rm -f resampler/$(am__dirstamp)
+	-rm -f sasplay/$(DEPDIR)/$(am__dirstamp)
+	-rm -f sasplay/$(am__dirstamp)
 	-rm -f sms/$(DEPDIR)/$(am__dirstamp)
 	-rm -f sms/$(am__dirstamp)
 	-rm -f snes/$(DEPDIR)/$(am__dirstamp)
@@ -5950,6 +5967,7 @@ distclean: distclean-recursive
 	-rm -f psx/input/$(DEPDIR)/negcon.Po
 	-rm -f quicklz/$(DEPDIR)/libmdfnquicklz_a-quicklz.Po
 	-rm -f resampler/$(DEPDIR)/resample.Po
+	-rm -f sasplay/$(DEPDIR)/sasplay.Po
 	-rm -f sms/$(DEPDIR)/cart.Po
 	-rm -f sms/$(DEPDIR)/memz80.Po
 	-rm -f sms/$(DEPDIR)/pio.Po
@@ -6497,6 +6515,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f psx/input/$(DEPDIR)/negcon.Po
 	-rm -f quicklz/$(DEPDIR)/libmdfnquicklz_a-quicklz.Po
 	-rm -f resampler/$(DEPDIR)/resample.Po
+	-rm -f sasplay/$(DEPDIR)/sasplay.Po
 	-rm -f sms/$(DEPDIR)/cart.Po
 	-rm -f sms/$(DEPDIR)/memz80.Po
 	-rm -f sms/$(DEPDIR)/pio.Po

@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='1.28.0-UNSTABLE'
-MEDNAFEN_VERSION_NUMERIC=0x00102800
+MEDNAFEN_VERSION='1.29.0'
+MEDNAFEN_VERSION_NUMERIC=0x00102900
 #                        0xJJJnnnRR
 
 AC_CANONICAL_HOST
@@ -290,7 +290,6 @@ AM_CONDITIONAL(WANT_GB_EMU, false)
 AM_CONDITIONAL(WANT_GBA_EMU, false)
 AM_CONDITIONAL(WANT_LYNX_EMU, false)
 AM_CONDITIONAL(WANT_MD_EMU, false)
-AM_CONDITIONAL(WANT_SMS_EMU, false)
 AM_CONDITIONAL(WANT_NES_EMU, false)
 AM_CONDITIONAL(WANT_NES_NEW_EMU, false)
 AM_CONDITIONAL(WANT_NGP_EMU, false)
@@ -298,6 +297,7 @@ AM_CONDITIONAL(WANT_PCE_EMU, false)
 AM_CONDITIONAL(WANT_PCE_FAST_EMU, false)
 AM_CONDITIONAL(WANT_PCFX_EMU, false)
 AM_CONDITIONAL(WANT_PSX_EMU, false)
+AM_CONDITIONAL(WANT_SASPLAY_EMU, false)
 AM_CONDITIONAL(WANT_SMS_EMU, false)
 AM_CONDITIONAL(WANT_SNES_EMU, false)
 AM_CONDITIONAL(WANT_SNES_FAUST_EMU, false)
@@ -447,6 +447,16 @@ AC_ARG_ENABLE(psx,
 if test x$enable_psx = xyes; then
                 AC_DEFINE([WANT_PSX_EMU], [1], [Define if we are compiling with PlayStation emulation.])
                 AM_CONDITIONAL(WANT_PSX_EMU, true)
+fi
+
+AC_ARG_ENABLE(sasplay,
+ AC_HELP_STRING([--enable-sasplay], [build with Sega Arcade SCSP Player [[default=yes]]]),
+                  , enable_sasplay=yes)
+
+if test x$enable_sasplay = xyes; then
+                AC_DEFINE([WANT_SASPLAY_EMU], [1], [Define if we are compiling with Sega Arcade SCSP Player.])
+                AM_CONDITIONAL(WANT_SASPLAY_EMU, true)
+                AM_CONDITIONAL(NEED_68K_EMU, true)
 fi
 
 AC_ARG_ENABLE(sms,

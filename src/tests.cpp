@@ -2135,11 +2135,34 @@ NO_INLINE NO_CLONE uint64 TestMemcpySanity_Sub2(void)
  return b.yay;
 }
 
+NO_INLINE NO_CLONE uint8 TestMemcpySanity_Sub3_Copy2(uint8 v)
+{
+ return v;
+}
+
+static INLINE float TestMemcpySanity_Sub3_Copy(float v)
+{
+ uint8 i[sizeof(float)];
+ float ret;
+
+ memcpy(&i, &v, sizeof(float));
+ i[0] = TestMemcpySanity_Sub3_Copy2(i[0]);
+ memcpy(&ret, &i, sizeof(float));
+
+ return ret;
+}
+
+NO_INLINE NO_CLONE MDFN_COLD double TestMemcpySanity_Sub3(double v)
+{
+ return TestMemcpySanity_Sub3_Copy(v);
+}
+
 static void TestMemcpySanity(void)
 {
  assert(TestMemcpySanity_Sub0() == 0x2345678823456788ULL);
  assert(TestMemcpySanity_Sub1() == 0x23442344);
  assert(TestMemcpySanity_Sub2() == 0x7FF0000000000001ULL);
+ assert(TestMemcpySanity_Sub3(123.0) == 123.0);
 }
 
 static struct

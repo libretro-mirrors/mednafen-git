@@ -29,10 +29,19 @@ class SS_SCSP
  void StateAction(StateMem* sm, const unsigned load, const bool data_only, const char* sname) MDFN_COLD;
 
  void Reset(bool powering_up) MDFN_COLD;
- void RunSample(int16* outlr);
+
+ // Use int16 if the SCSP is connected to a 16-bit DAC, int32 if an 18-bit DAC
+ template<typename T_out = int16>
+ void RunSample(T_out* outlr);
 
  template<typename T, bool IsWrite>
  void RW(uint32 A, T& V); //, void (*time_sucker)();
+
+ // Caller must ensure appropriate timing.
+ INLINE void WriteMIDI(uint8 V)
+ {
+  MIDI_WriteInput(V);
+ }
 
  INLINE uint16* GetEXTSPtr(void)
  {
@@ -212,6 +221,7 @@ class SS_SCSP
   uint16 TransmitBuffer;
  } MIDI;
  uint8 MIDI_ReadInput(void);
+ void MIDI_WriteInput(uint8 V);
  void MIDI_WriteOutput(uint8 V);
  void MIDI_Reset(void);
  void MIDI_Run(void);

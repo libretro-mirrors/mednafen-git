@@ -736,6 +736,9 @@
 /* Define if we are compiling with PlayStation emulation. */
 #undef WANT_PSX_EMU
 
+/* Define if we are compiling with Sega Arcade SCSP Player. */
+#undef WANT_SASPLAY_EMU
+
 /* Define if we are compiling with SMS+GG emulation. */
 #undef WANT_SMS_EMU
 

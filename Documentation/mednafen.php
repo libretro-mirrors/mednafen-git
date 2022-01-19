@@ -208,8 +208,8 @@
  <tr><td>Pause</td><td><a name="command.pause">Pause/Unpause.</a></td><td>pause</td></tr>
  <tr><td>SHIFT + F1</td><td>Toggle frames-per-second display(from top to bottom, the display format is: virtual, rendered, blitted).</td><td>toggle_fps_view</td></tr>
  <tr><td>Backspace</td><td>Rewind emulation, if save-state rewinding functionality is enabled, up to <a href="#srwframes">600 frames</a>.</td><td>state_rewind</td></tr>
- <tr><td>F9</td><td>Save (rawish) screen snapshot.</td><td>take_snapshot</td></tr>
- <tr><td>SHIFT + F9</td><td>Save screen snapshot, taken after all scaling and special filters/shaders are applied.</td><td>take_scaled_snapshot</td></tr>
+ <tr><td>F9</td><td><a name="command.take_snapshot">Save (rawish) screen snapshot.</a></td><td>take_snapshot</td></tr>
+ <tr><td>SHIFT + F9</td><td><a name="command.take_scaled_snapshot">Save screen snapshot, taken after all scaling and special filters/shaders are applied.</a></td><td>take_scaled_snapshot</td></tr>
  <tr><td>ALT&nbsp;+&nbsp;O</td><td>Rotate the screen</td><td>rotate_screen</td></tr>
  <tr><td>ALT + Enter</td><td>Toggle fullscreen mode.</td><td>toggle_fs</td></tr>
  <tr><td nowrap>CTRL + 1<br>through<br>Ctrl + 9</td><td>Toggle layer.</td><td>"tl1" through "tl9"</td></tr>
@@ -380,6 +380,16 @@ Not all emulated systems support custom palettes.  Refer to the following list:
  <p>
         Patching is applied in a file format-agnostic way; however, dynamic patching is not done with CD images, nor with
 	firmware.
+ </p>
+ <?php EndSection(); ?>
+
+ <?php BeginSection("Screen Snapshots", "Section_screenshots"); ?>
+ Raw(ish) screenshots can be taken by pressing the <a href="#command.take_snapshot">F9</a> key.  Scaled and filtered WYSIWYG-style screenshots
+ can be taken by pressing <a href="#command.take_scaled_snapshot">SHIFT&nbsp;+&nbsp;F9</a>.
+ <p>
+ Screenshots are saved in the "<a href="#filesys.path_snap">snaps</a>" directory under the Mednafen <a href="#Section_base_directory">base directory</a>, in the
+ PNG file format.  The default file naming is like &lt;<b>FileBase</b>&gt;-&lt;<b>Counter</b>&gt;.png, e.g. "<b>Hyper Dyne LuigiFeet-0013.png</b>", but it can be
+ <a href="#filesys.fname_snap">customized</a> to an extent.
  </p>
  <?php EndSection(); ?>
  

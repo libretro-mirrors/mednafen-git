@@ -45,18 +45,23 @@ std::string MDFN_GetBaseDirectory(void)
 
 void MDFN_SetFileBase(const std::string& dir_path, const std::string& file_base, const std::string& file_ext)
 {
- FileBaseDirectory = dir_path;
- FileBase = file_base;
- FileExt = file_ext;
-
 #if 0
  printf("\nFileBaseDirectory=%s\nFileBase=%s\nFileExt=%s\n\n", MDFN_strhumesc(FileBaseDirectory).c_str(), MDFN_strhumesc(FileBase).c_str(), MDFN_strhumesc(FileExt).c_str());
 #endif
+ //
+ //
+ //assert(!NVFS.is_absolute_path(file_base + PSS));
+ //assert(!NVFS.is_absolute_path(file_ext + PSS));
+ //
+ //
+ FileBaseDirectory = dir_path;
+ FileBase = file_base;
+ FileExt = file_ext;
 }
 
 typedef std::map<char, std::string> FSMap;
 
-static std::string EvalPathFS(const std::string &fstring, /*const (won't work because entry created if char doesn't exist) */ FSMap &fmap)
+static std::string EvalPathFS(const std::string& fstring, const FSMap& fmap)
 {
  std::string ret = "";
  const char *str = fstring.c_str();
@@ -73,7 +78,12 @@ static std::string EvalPathFS(const std::string &fstring, /*const (won't work be
    if(c == '%')
     ret = ret + "%";
    else
-    ret = ret + fmap[(char)c];
+   {
+    auto const& fvi = fmap.find((char)c);
+
+    if(fvi != fmap.end())
+     ret += fvi->second;
+   }
    in_spec = false;
   }
   else
@@ -81,6 +91,22 @@ static std::string EvalPathFS(const std::string &fstring, /*const (won't work be
 
   str++;
  }
+
+ return ret;
+}
+
+static std::string GeneratePath(const std::string& fstring, const FSMap& fmap, const std::string& dir)
+{
+ const bool fstring_force_noprefix = (fstring.size() >= 2 && fstring[0] == '%' && (fstring[1] == 'd' || fstring[1] == 'b'));
+ const std::string fspath = EvalPathFS(fstring, fmap);
+ std::string ret;
+
+ if(NVFS.is_absolute_path(fspath) || fstring_force_noprefix)
+  ret = fspath;
+ else if(NVFS.is_absolute_path(dir))
+  ret = dir + PSS + fspath;
+ else
+  ret = BaseDirectory + PSS + dir + (dir.size() ? PSS : "") + fspath;
 
  return ret;
 }
@@ -175,15 +201,9 @@ std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
 	  fmap['X'] = fmap['X'].erase(fmap['X'].size() - 1) + fmap['p'];
          //
 	 //
-	 if(!NVFS.is_absolute_path(dir))
-	  dir = BaseDirectory + PSS + dir;
-
 	 for(int i = 0; i < 2; i++)
 	 {
-	  ret = EvalPathFS(fstring, fmap);
-
-	  if(!NVFS.is_absolute_path(ret))
-	   ret = dir + PSS + ret;
+	  ret = GeneratePath(fstring, fmap, dir);
 
 	  if(!NVFS.finfo(ret, nullptr, false))
 	   fmap['M'] = fmap['m'] + ".";
@@ -199,8 +219,8 @@ std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
   case MDFNMKF_SNAP_DAT:
   case MDFNMKF_SNAP:
 	{
-	 std::string dir = MDFN_GetSettingS("filesys.path_snap");
-	 std::string fstring = MDFN_GetSettingS("filesys.fname_snap");
+	 const std::string dir = MDFN_GetSettingS("filesys.path_snap");
+	 const std::string fstring = MDFN_GetSettingS("filesys.fname_snap");
 
 	 trio_snprintf(numtmp, sizeof(numtmp), "%04u", id1);
 
@@ -215,12 +235,7 @@ std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
 	  fmap['x'] = "txt";
 	 }
 
-	 if(!NVFS.is_absolute_path(dir))
-	  dir = BaseDirectory + PSS + dir;
-
-	 ret = EvalPathFS(fstring, fmap);
-	 if(!NVFS.is_absolute_path(ret))
-	  ret = dir + PSS + ret;
+	 ret = GeneratePath(fstring, fmap, dir);
 	}
 
 	NVFS.create_missing_dirs(ret);
@@ -247,9 +262,7 @@ std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
 	 if(cd1)
 	  fmap['x'] = cd1;
 
-	 ret = EvalPathFS(fstring, fmap);
-	 if(!NVFS.is_absolute_path(ret))
-	  ret = BaseDirectory + PSS + ret;
+	 ret = GeneratePath(fstring, fmap, "");
 	}
 	break;
 
@@ -322,12 +335,7 @@ std::string MDFN_MakeFName(MakeFName_Type type, int id1, const char *cd1)
 	 if(cd1)
 	  fmap['x'] = cd1;
 
-	 if(!NVFS.is_absolute_path(dir))
-	  dir = (dir.size() ? BaseDirectory + PSS + dir : BaseDirectory);
-
-	 ret = EvalPathFS(fstring, fmap);
-	 if(!NVFS.is_absolute_path(ret))
-	  ret = dir + PSS + ret;
+	 ret = GeneratePath(fstring, fmap, dir);
 	}
 	break;
  }

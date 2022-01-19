@@ -87,12 +87,12 @@ void SS_SCSP::RecalcSoundInt(void)	// Sound CPU interrupts
  out_level |= (bool)lvmasked[0];
  //
  //
- SCSP_SoundIntChanged(out_level);
+ SCSP_SoundIntChanged(this, out_level);
 }
 
 void SS_SCSP::RecalcMainInt(void)	// Main CPU interrupts
 {
- SCSP_MainIntChanged((bool)(MCIPD & MCIEB));
+ SCSP_MainIntChanged(this, (bool)(MCIPD & MCIEB));
 }
 
 INLINE void SS_SCSP::RecalcShortWaveMask(Slot* s)
@@ -202,14 +202,48 @@ INLINE uint8 SS_SCSP::MIDI_ReadInput(void)
 
  if(MIDI.InputCount)
  {
+  //printf("MIDI Read: %02x\n", ret);
+
   MIDI.InputRP = (MIDI.InputRP + 1) & 0x3;
   MIDI.InputCount--;
   MIDI.Flags &= ~MIDIF_INPUT_FULL;
+  MIDI.Flags &= ~MIDIF_INPUT_OFLOW;	// TODO: Test.
+
   if(!MIDI.InputCount)
+  {
    MIDI.Flags |= MIDIF_INPUT_EMPTY;
+
+   SCIPD &= ~0x008;
+   MCIPD &= ~0x008;
+   RecalcSoundInt();
+   RecalcMainInt();
+  }
  }
 
  return ret;
+}
+
+void SS_SCSP::MIDI_WriteInput(uint8 V)
+{
+ if(MIDI.InputCount == 4)
+ {
+  MIDI.Flags |= MIDIF_INPUT_OFLOW;
+  return;
+ }
+ //printf("MIDI Write: %02x\n", V);
+
+ MIDI.InputFIFO[MIDI.InputWP] = V;
+ MIDI.InputWP = (MIDI.InputWP + 1) & 0x3;
+ MIDI.InputCount++;
+
+ MIDI.Flags &= ~MIDIF_INPUT_EMPTY;
+ if(MIDI.InputCount == 4)
+  MIDI.Flags |= MIDIF_INPUT_FULL;
+
+ SCIPD |= 0x008;
+ MCIPD |= 0x008;
+ RecalcSoundInt();
+ RecalcMainInt();
 }
 
 INLINE void SS_SCSP::MIDI_WriteOutput(uint8 V)
@@ -1372,7 +1406,8 @@ INLINE void SS_SCSP::RunDSP(void)
 //
 //
 //
-INLINE void SS_SCSP::RunSample(int16* outlr)
+template<typename T_out>
+INLINE void SS_SCSP::RunSample(T_out* outlr)
 {
  const uint32 SampleCounter = GlobalCounter >> 5;
  const uint32 SampleCounterXC = (SampleCounter ^ (SampleCounter - 1)) & (SampleCounter ^ 1);
@@ -1652,9 +1687,7 @@ INLINE void SS_SCSP::RunSample(int16* outlr)
 
  if(DAC18bit)
  {
-  // Doesn't seem to improve precision.  Remember
-  // to extend the outlr[] types if this SCSP emulator is used
-  // in a system that actually has an 18-bit DAC.
+  // Doesn't seem to improve precision.
   out_accum[0] = (uint32)out_accum[0] << 2;
   out_accum[1] = (uint32)out_accum[1] << 2;
  }
@@ -1765,7 +1798,7 @@ void SS_SCSP::StateAction(StateMem* sm, const unsigned load, const bool data_onl
   SFEND
  };
 
- MDFNSS_StateAction(sm, load, data_only, StateRegs, "SCSP");
+ MDFNSS_StateAction(sm, load, data_only, StateRegs, sname);
 
  if(load)
  {

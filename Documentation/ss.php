@@ -4,7 +4,7 @@
 
 <?php BeginSection('Introduction', "Section_intro"); ?>
 <p>
-<font color="orange" size="+1"><b>NOTE:</b></font> The Sega Saturn emulation is currently experimental and under active development.  By default(and for the official releases for Windows), Saturn emulation is only compiled in for builds for some 64-bit architectures(x86_64, AArch64, PPC64).  The separate <a href="ssfplay.html">SSF playback module</a> does not have this limitation.
+<font color="orange" size="+1"><b>NOTE:</b></font> The Sega Saturn emulation is currently under active development.  By default(and for the official releases for Windows), Saturn emulation is only compiled in for builds for some 64-bit architectures(x86_64, AArch64, PPC64).  The separate <a href="ssfplay.html">SSF playback module</a> does not have this limitation.
 </p>
 <p>
 Mednafen's Sega Saturn emulation is extremely CPU intensive.  The minimum recommended CPU is a quad-core Intel Haswell-microarchitecture CPU with

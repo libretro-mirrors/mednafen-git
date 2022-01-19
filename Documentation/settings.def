@@ -31363,6 +31363,399 @@ MDFNST_UINT
 0
 1073741824
 0
+sasplay.enable
+MDFNSF_COMMON_TEMPLATE 
+Enable (automatic) usage of this module.
+
+MDFNST_BOOL
+1
+
+
+0
+sasplay.forcemono
+MDFNSF_CAT_SOUND MDFNSF_COMMON_TEMPLATE 
+Force monophonic sound output.
+
+MDFNST_BOOL
+0
+
+
+0
+sasplay.input.builtin.controller.next_song
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+sasplay, Built-In, Controller: Next Song
+
+MDFNST_STRING
+keyboard 0x0 7 || keyboard 0x0 79
+
+
+0
+sasplay.input.builtin.controller.next_song_10
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+sasplay, Built-In, Controller: Next Song 10
+
+MDFNST_STRING
+keyboard 0x0 26 || keyboard 0x0 82
+
+
+0
+sasplay.input.builtin.controller.previous_song
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+sasplay, Built-In, Controller: Previous Song
+
+MDFNST_STRING
+keyboard 0x0 4 || keyboard 0x0 80
+
+
+0
+sasplay.input.builtin.controller.previous_song_10
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+sasplay, Built-In, Controller: Previous Song 10
+
+MDFNST_STRING
+keyboard 0x0 22 || keyboard 0x0 81
+
+
+0
+sasplay.input.builtin.controller.restart
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+sasplay, Built-In, Controller: Restart Song
+
+MDFNST_STRING
+keyboard 0x0 40
+
+
+0
+sasplay.resamp_quality
+
+SCSP output resampler quality.
+0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen\'s output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors.
+MDFNST_UINT
+5
+0
+10
+0
+sasplay.scanlines
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+sasplay.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
+MDFNST_ENUM
+none
+
+
+11
+none
+None/Disabled
+
+autoip
+Auto Interpolation
+Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
+autoipsharper
+Sharper Auto Interpolation
+Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
+scale2x
+Scale2x
+
+sabr
+SABR v3.0
+GPU-intensive.
+ipsharper
+Sharper bilinear interpolation.
+
+ipxnoty
+Linear interpolation on X axis only.
+
+ipynotx
+Linear interpolation on Y axis only.
+
+ipxnotysharper
+Sharper version of \"ipxnoty\".
+
+ipynotxsharper
+Sharper version of \"ipynotx\".
+
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+sasplay.shader.goat.fprog
+MDFNSF_COMMON_TEMPLATE 
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen, unless it\'s set to \"blend\" or \"blend_rg\".  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
+0
+
+
+0
+sasplay.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+sasplay.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+sasplay.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+sasplay.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+sasplay.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+sasplay.special
+MDFNSF_COMMON_TEMPLATE 
+Enable specified special video scaler.
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
+MDFNST_ENUM
+none
+
+
+17
+0
+
+
+none
+None/Disabled
+
+hq2x
+hq2x
+
+hq3x
+hq3x
+
+hq4x
+hq4x
+
+scale2x
+scale2x
+
+scale3x
+scale3x
+
+scale4x
+scale4x
+
+2xsai
+2xSaI
+
+super2xsai
+Super 2xSaI
+
+supereagle
+Super Eagle
+
+nn2x
+Nearest-neighbor 2x
+
+nn3x
+Nearest-neighbor 3x
+
+nn4x
+Nearest-neighbor 4x
+
+nny2x
+Nearest-neighbor 2x, y axis only
+
+nny3x
+Nearest-neighbor 3x, y axis only
+
+nny4x
+Nearest-neighbor 4x, y axis only
+
+sasplay.stretch
+MDFNSF_COMMON_TEMPLATE 
+Stretch to fill screen.
+
+MDFNST_ENUM
+aspect_mult2
+
+
+9
+0
+Disabled
+
+off
+
+
+none
+
+
+1
+
+
+full
+Full
+Full-screen stretch, disregarding aspect ratio.
+2
+
+
+aspect
+Aspect Preserve
+Full-screen stretch as far as the aspect ratio(in this sense, the equivalent xscalefs == yscalefs) can be maintained.
+aspect_int
+Aspect Preserve + Integer Scale
+Full-screen stretch, same as \"aspect\" except that the equivalent xscalefs and yscalefs are rounded down to the nearest integer.
+aspect_mult2
+Aspect Preserve + Integer Multiple-of-2 Scale
+Full-screen stretch, same as \"aspect_int\", but rounds down to the nearest multiple of 2.
+sasplay.tblur
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Enable video temporal blur(50/50 previous/current frame by default).
+
+MDFNST_BOOL
+0
+
+
+0
+sasplay.tblur.accum
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Accumulate color data rather than discarding it.
+
+MDFNST_BOOL
+0
+
+
+0
+sasplay.tblur.accum.amount
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Blur amount in accumulation mode, specified in percentage of accumulation buffer to mix with the current frame.
+
+MDFNST_FLOAT
+50
+0
+100
+0
+sasplay.videoip
+MDFNSF_COMMON_TEMPLATE 
+Enable (bi)linear interpolation.
+
+MDFNST_ENUM
+0
+
+
+4
+0
+Disabled
+
+1
+Bilinear
+
+x
+Linear (X)
+Interpolation only on the X axis.
+y
+Linear (Y)
+Interpolation only on the Y axis.
+sasplay.xres
+MDFNSF_COMMON_TEMPLATE 
+Full-screen horizontal resolution.
+A value of \"0\" will cause the current desktop horizontal resolution to be used.
+MDFNST_UINT
+0
+0
+65536
+0
+sasplay.xscale
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the X axis in windowed mode.
+
+MDFNST_FLOAT
+2.000000
+0.01
+256
+0
+sasplay.xscalefs
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the X axis in fullscreen mode.
+For this setting to have any effect, the \"<system>.stretch\" setting must be set to \"0\".
+MDFNST_FLOAT
+1.000000
+0.01
+256
+0
+sasplay.yres
+MDFNSF_COMMON_TEMPLATE 
+Full-screen vertical resolution.
+A value of \"0\" will cause the current desktop vertical resolution to be used.
+MDFNST_UINT
+0
+0
+65536
+0
+sasplay.yscale
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the Y axis in windowed mode.
+
+MDFNST_FLOAT
+2.000000
+0.01
+256
+0
+sasplay.yscalefs
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the Y axis in fullscreen mode.
+For this setting to have any effect, the \"<system>.stretch\" setting must be set to \"0\".
+MDFNST_FLOAT
+1.000000
+0.01
+256
+0
 sfspeed
 
 SLOW-forwarding speed multiplier.

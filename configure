@@ -727,6 +727,10 @@ WANT_SNES_FAUST_EMU_FALSE
 WANT_SNES_FAUST_EMU_TRUE
 WANT_SNES_EMU_FALSE
 WANT_SNES_EMU_TRUE
+WANT_SMS_EMU_FALSE
+WANT_SMS_EMU_TRUE
+WANT_SASPLAY_EMU_FALSE
+WANT_SASPLAY_EMU_TRUE
 WANT_PSX_EMU_FALSE
 WANT_PSX_EMU_TRUE
 WANT_PCFX_EMU_FALSE
@@ -741,8 +745,6 @@ WANT_NES_NEW_EMU_FALSE
 WANT_NES_NEW_EMU_TRUE
 WANT_NES_EMU_FALSE
 WANT_NES_EMU_TRUE
-WANT_SMS_EMU_FALSE
-WANT_SMS_EMU_TRUE
 WANT_MD_EMU_FALSE
 WANT_MD_EMU_TRUE
 WANT_LYNX_EMU_FALSE
@@ -954,6 +956,7 @@ enable_pce
 enable_pce_fast
 enable_pcfx
 enable_psx
+enable_sasplay
 enable_sms
 enable_snes
 enable_snes_faust
@@ -1670,6 +1673,7 @@ Optional Features:
                           emulation [[default=yes]]
   --enable-pcfx           build with PC-FX emulation [[default=yes]]
   --enable-psx            build with PlayStation emulation [[default=yes]]
+  --enable-sasplay        build with Sega Arcade SCSP Player [[default=yes]]
   --enable-sms            build with SMS+GG emulation [[default=yes]]
   --enable-snes           build with SNES emulation [[default=yes]]
   --enable-snes-faust     build with experimental fast SNES emulation
@@ -4389,8 +4393,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='1.28.0-UNSTABLE'
-MEDNAFEN_VERSION_NUMERIC=0x00102800
+MEDNAFEN_VERSION='1.29.0'
+MEDNAFEN_VERSION_NUMERIC=0x00102900
 #                        0xJJJnnnRR
 
 # Make sure we can run config.sub.
@@ -15983,14 +15987,6 @@ else
 fi
 
  if false; then
-  WANT_SMS_EMU_TRUE=
-  WANT_SMS_EMU_FALSE='#'
-else
-  WANT_SMS_EMU_TRUE='#'
-  WANT_SMS_EMU_FALSE=
-fi
-
- if false; then
   WANT_NES_EMU_TRUE=
   WANT_NES_EMU_FALSE='#'
 else
@@ -16044,6 +16040,14 @@ fi
 else
   WANT_PSX_EMU_TRUE='#'
   WANT_PSX_EMU_FALSE=
+fi
+
+ if false; then
+  WANT_SASPLAY_EMU_TRUE=
+  WANT_SASPLAY_EMU_FALSE='#'
+else
+  WANT_SASPLAY_EMU_TRUE='#'
+  WANT_SASPLAY_EMU_FALSE=
 fi
 
  if false; then
@@ -16602,6 +16606,36 @@ $as_echo "#define WANT_PSX_EMU 1" >>confdefs.h
 else
   WANT_PSX_EMU_TRUE='#'
   WANT_PSX_EMU_FALSE=
+fi
+
+fi
+
+# Check whether --enable-sasplay was given.
+if test "${enable_sasplay+set}" = set; then :
+  enableval=$enable_sasplay;
+else
+  enable_sasplay=yes
+fi
+
+
+if test x$enable_sasplay = xyes; then
+
+$as_echo "#define WANT_SASPLAY_EMU 1" >>confdefs.h
+
+                 if true; then
+  WANT_SASPLAY_EMU_TRUE=
+  WANT_SASPLAY_EMU_FALSE='#'
+else
+  WANT_SASPLAY_EMU_TRUE='#'
+  WANT_SASPLAY_EMU_FALSE=
+fi
+
+                 if true; then
+  NEED_68K_EMU_TRUE=
+  NEED_68K_EMU_FALSE='#'
+else
+  NEED_68K_EMU_TRUE='#'
+  NEED_68K_EMU_FALSE=
 fi
 
 fi
@@ -19969,10 +20003,6 @@ if test -z "${WANT_MD_EMU_TRUE}" && test -z "${WANT_MD_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_MD_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${WANT_SMS_EMU_TRUE}" && test -z "${WANT_SMS_EMU_FALSE}"; then
-  as_fn_error $? "conditional \"WANT_SMS_EMU\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
 if test -z "${WANT_NES_EMU_TRUE}" && test -z "${WANT_NES_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_NES_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
@@ -19999,6 +20029,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_PSX_EMU_TRUE}" && test -z "${WANT_PSX_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_PSX_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${WANT_SASPLAY_EMU_TRUE}" && test -z "${WANT_SASPLAY_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"WANT_SASPLAY_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_SMS_EMU_TRUE}" && test -z "${WANT_SMS_EMU_FALSE}"; then
@@ -20195,6 +20229,14 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_PSX_EMU_TRUE}" && test -z "${WANT_PSX_EMU_FALSE}"; then
   as_fn_error $? "conditional \"WANT_PSX_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${WANT_SASPLAY_EMU_TRUE}" && test -z "${WANT_SASPLAY_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"WANT_SASPLAY_EMU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${NEED_68K_EMU_TRUE}" && test -z "${NEED_68K_EMU_FALSE}"; then
+  as_fn_error $? "conditional \"NEED_68K_EMU\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WANT_SMS_EMU_TRUE}" && test -z "${WANT_SMS_EMU_FALSE}"; then

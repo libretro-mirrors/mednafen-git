@@ -61,12 +61,12 @@ static SpeexResamplerState* resampler = NULL;
 static int last_rate;
 static uint32 last_quality;
 
-static INLINE void SCSP_SoundIntChanged(unsigned level)
+static INLINE void SCSP_SoundIntChanged(SS_SCSP* s, unsigned level)
 {
  SoundCPU.SetIPL(level);
 }
 
-static INLINE void SCSP_MainIntChanged(bool state)
+static INLINE void SCSP_MainIntChanged(SS_SCSP* s, bool state)
 {
  #ifndef MDFN_SSFPLAY_COMPILE
  SCU_SetInt(SCU_INT_SCSP, state);

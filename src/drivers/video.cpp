@@ -1441,6 +1441,7 @@ static bool BlitInternalMessage(const uint32 curtime)
  return true;
 }
 
+#ifdef WANT_FANCY_SCALERS
 template<typename T>
 static void BlitSaI(const MDFN_Surface* src, const MDFN_Rect& src_rect, MDFN_Surface* dest)
 {
@@ -1488,6 +1489,7 @@ static void BlitSaI(const MDFN_Surface* src, const MDFN_Rect& src_rect, MDFN_Sur
    SAI_SuperEagle32(spix, spitch, dpix, dpitch, src_rect.w, src_rect.h);
  }
 }
+#endif
 
 static void SubBlit(const MDFN_Surface *source_surface, const MDFN_Rect &src_rect, const MDFN_Rect &dest_rect, const int InterlaceField)
 {

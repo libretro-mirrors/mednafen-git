@@ -99,6 +99,10 @@ if WANT_PSX_EMU
 include psx/Makefile.am.inc
 endif
 
+if WANT_SASPLAY_EMU
+include	sasplay/Makefile.am.inc
+endif
+
 if WANT_SMS_EMU
 include sms/Makefile.am.inc
 endif

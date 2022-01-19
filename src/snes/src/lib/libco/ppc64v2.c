@@ -35,12 +35,13 @@ static thread_local struct ppc64_context* co_active_handle = 0;
 #define MIN_STACK_FRAME 0x20lu
 #define STACK_ALIGN     0x10lu
 
-void swap_context(struct ppc64_context* read, struct ppc64_context* write);
+void co_ppc64v2_swap(struct ppc64_context* read, struct ppc64_context* write);
 __asm__(
   ".text\n"
   ".align 4\n"
-  ".type swap_context @function\n"
-  "swap_context:\n"
+  ".globl co_ppc64v2_swap\n" 
+  ".type co_ppc64v2_swap @function\n"
+  "co_ppc64v2_swap:\n"
   ".cfi_startproc\n"
 
   /* save GPRs */
@@ -217,7 +218,7 @@ __asm__(
   "blr\n"
 
   ".cfi_endproc\n"
-  ".size swap_context, .-swap_context\n"
+  ".size co_ppc64v2_swap, .-co_ppc64v2_swap\n"
 );
 
 cothread_t co_active() {
@@ -232,7 +233,7 @@ cothread_t co_derive(void* memory, unsigned int size, void (*coentry)(void)) {
   struct ppc64_context* context = (struct ppc64_context*)memory;
 
   /* save current context into new context to initialize it */
-  swap_context(context, context);
+  co_ppc64v2_swap(context, context);
 
   /* align stack */
   sp = (uint8_t*)memory + size - STACK_ALIGN;
@@ -266,7 +267,7 @@ void co_delete(cothread_t handle) {
 void co_switch(cothread_t to) {
   struct ppc64_context* from = co_active_handle;
   co_active_handle = (struct ppc64_context*)to;
-  swap_context((struct ppc64_context*)to, from);
+  co_ppc64v2_swap((struct ppc64_context*)to, from);
 }
 
 int co_serializable() {
