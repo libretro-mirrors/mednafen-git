@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* PSFLoader.cpp:
-**  Copyright (C) 2011-2018 Mednafen Team
+**  Copyright (C) 2011-2021 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -80,6 +80,10 @@ void PSFTags::LoadTags(Stream* fp)
  char *spos;
  //const char *detected_charset = DetectCharset(data_in, size);
 
+ if(size > 65535) // Don't increase to more than a couple megabytes.
+  throw MDFN_Error(0, _("PSF tag data's size of %llu bytes exceeds sanity limit of %u bytes"), (unsigned long long)size, 65535);
+ //
+ //
  tags_heap.resize(size + 1);
  tags_heap[size] = 0;
 

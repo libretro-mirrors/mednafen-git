@@ -1716,7 +1716,7 @@ static MDFN_COLD void InitCommon(std::vector<CDInterface*> *CDInterfaces, const 
   FileStream BIOSFile(biospath, FileStream::MODE_READ);
 
   if(BIOSFile.size() != 524288)
-   throw MDFN_Error(0, _("BIOS file \"%s\" is of an incorrect size."), biospath.c_str());
+   throw MDFN_Error(0, _("BIOS file \"%s\" is of an incorrect size."), MDFN_strhumesc(biospath).c_str());
 
   BIOSFile.read(BIOSROM->data8, 512 * 1024);
   BIOS_SHA256 = sha256(BIOSROM->data8, 512 * 1024);
@@ -1730,10 +1730,10 @@ static MDFN_COLD void InitCommon(std::vector<CDInterface*> *CDInterfaces, const 
     if(BIOS_SHA256 == dbe.sd)
     {
      if(dbe.bad)
-      throw MDFN_Error(0, _("BIOS file \"%s\" is a known bad dump."), biospath.c_str());
+      throw MDFN_Error(0, _("BIOS file \"%s\" is a known bad dump."), MDFN_strhumesc(biospath).c_str());
 
      if(dbe.region != region)
-      throw MDFN_Error(0, _("BIOS file \"%s\" is not the proper BIOS for the region of PS1 being emulated."), biospath.c_str());
+      throw MDFN_Error(0, _("BIOS file \"%s\" is not the proper BIOS for the region of PS1 being emulated."), MDFN_strhumesc(biospath).c_str());
 
      bios_recognized = true;
      break;

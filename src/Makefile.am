@@ -99,6 +99,10 @@ if WANT_PSX_EMU
 include psx/Makefile.am.inc
 endif
 
+if WANT_SASPLAY_EMU
+include	sasplay/Makefile.am.inc
+endif
+
 if WANT_SMS_EMU
 include sms/Makefile.am.inc
 endif
@@ -148,20 +152,27 @@ include mthreading/Makefile.am.inc
 include cdrom/Makefile.am.inc
 include sound/Makefile.am.inc
 include net/Makefile.am.inc
-include quicklz/Makefile.am.inc
-include compress/Makefile.am.inc
-include hash/Makefile.am.inc
 include string/Makefile.am.inc
 include video/Makefile.am.inc
 include resampler/Makefile.am.inc
 include cputest/Makefile.am.inc
 include cheat_formats/Makefile.am.inc
+include quicklz/Makefile.am.inc
+include compress/Makefile.am.inc
+include hash/Makefile.am.inc
 
 if HAVE_EXTERNAL_LZO2
 mednafen_LDADD		+=	@LZO2_LIBS@
 DEFS			+=	@LZO2_CFLAGS@
 else
 include minilzo/Makefile.am.inc
+endif
+
+if HAVE_EXTERNAL_LIBZSTD
+mednafen_LDADD		+=	@LIBZSTD_LIBS@
+DEFS			+=	@LIBZSTD_CFLAGS@
+else
+include zstd/Makefile.am.inc
 endif
 
 if HAVE_EXTERNAL_TREMOR

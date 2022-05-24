@@ -365,6 +365,15 @@ static const char* const MMPlayInputConfig[] =
 	MKDEF(UP),
 };
 
+static const char* const SASPlayInputConfig[] =
+{
+	MKDEF(RETURN),
+	MKDEF2(D, RIGHT),
+	MKDEF2(A, LEFT),
+	MKDEF2(W, UP),
+	MKDEF2(S, DOWN),
+};
+
 static const char* const CDPlayInputConfig[] =
 {
         MKDEF(SPACE),
@@ -1033,6 +1042,8 @@ const std::map<const char*, DefaultSettingsMeow, cstrcomp> defset =
  DPDC("ss.input.port12.jpkeyboard", SSJPKeyboardConfig),
 
  DPDC("apple2.input.keyboard.twopiece", A2PTwopieceKeyboard),
+
+ DPDC("sasplay.input.builtin.controller", SASPlayInputConfig),
 
  DPDC("mmplay.input.builtin.controller", MMPlayInputConfig),
  DPDC("cdplay.input.builtin.controller", CDPlayInputConfig),

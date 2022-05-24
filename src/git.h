@@ -349,9 +349,9 @@ enum
 
 struct EmulateSpecStruct
 {
-	// Pitch(32-bit) must be equal to width and >= the "fb_width" specified in the MDFNGI struct for the emulated system.
-	// Height must be >= to the "fb_height" specified in the MDFNGI struct for the emulated system.
-	// The framebuffer pointed to by surface->pixels is written to by the system emulation code.
+	// The surface pixel data is the framebuffer written to by the system emulation code, and must be aligned to at least what malloc() guarantees.
+	// Pitch must either be == MDFNGI::fb_width, or a value > MDFNGI::fb_width that preserves the pixel data alignment requirement for successive rows.
+	// Height must be >= MDFNGI::fb_height
 	MDFN_Surface* surface = nullptr;
 
 	// Will be set to true if the video pixel format has changed since the last call to Emulate(), false otherwise.
@@ -656,7 +656,7 @@ struct MDFNGI
  void (*DoSimpleCommand)(int cmd);
 
  // Called when netplay starts, or the controllers controlled by local players changes during
- // an existing netplay session.  Called with ~(uint64)0 when netplay ends.
+ // an existing netplay session.  Called with (uint64)-1 when netplay ends.
  // (For future use in implementing portable console netplay)
  void (*NPControlNotif)(uint64 c);
 

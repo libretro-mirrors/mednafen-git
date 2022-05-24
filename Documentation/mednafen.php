@@ -37,17 +37,34 @@
 
  <?php BeginSection("Core Features", "Section_core_features"); ?>
  <ul>
-  <li>Physical joystick/gamepad support.</li>
-  <li>Versatile input configuration system; assign multiple physical buttons to a virtual button or action.</li>
-  <li>Multiple graphics filters and scaling modes.</li>
-  <li>Save states.</li>
-  <li>Real-time game rewinding.</li>
-  <li>Screen snapshots, saved in PNG format.</li>
-  <li>QuickTime movie recording.</li>
-  <li>MS WAV-format sound logging.</li>
-  <li>Loading games from gzip and (pk)zip compressed archives.</li>
-  <li>Network play(utilizing an external dedicated server program).</li>
+  <li>Physical joystick/gamepad support.
+  <li>Versatile input configuration system; assign multiple physical buttons to a virtual button or action.
+  <li>Multiple graphics filters and scaling modes.
+  <li>Save states.
+  <li>Real-time game rewinding.
+  <li>Screen snapshots, saved in PNG format.
+  <li>QuickTime movie recording.
+  <li>MS WAV-format sound logging.
+  <li>Loading games from <a href="#Section_compressed_game">several compressed formats</a>.
+  <li>Network play(utilizing an external dedicated server program).
 </ul>
+
+ <?php BeginSection("Compressed Games", "Section_compressed_games"); ?>
+  <p>
+   In addition to supporting uncompressed games, Mednafen supports loading games from several different compressed file formats.
+   For non-CD games, Mednafen supports loading from naked gzip- and Zstandard-compressed files, and ZIP archives.
+   For CD-based games, Mednafen supports loading from ZIP archives, but only when <a href="#cd.image_memcache">CD image memory caching</a> is enabled.<br>
+  </p>
+
+  <p>
+   Supported ZIP archive compression methods:
+   <ul>
+    <li>0 - Stored
+    <li>8 - Deflate
+    <li>93 - Zstandard <i>(note that the ZIP CRC32 value is not validated, for performance reasons)</i>
+   </ul>
+  </p>
+ <?php EndSection(); ?>
 
  <?php BeginSection("CD Emulation", "Section_cdrom_emulation"); ?>
  <p>
@@ -80,20 +97,24 @@
   be ignored)!</b>
  </p>
  <p>
-  Enabling the <a href="#cd.image_memcache">cd.image_memcache</a> option is recommended in many situations; read the setting description
-  for more details.<br><b>CAUTION:</b> When using a 32-bit build of Mednafen on Windows or a 32-bit operating system, Mednafen may run out of address
-  space(and error out, possibly in the middle of emulation) if this option is enabled when loading large disc sets(e.g. 3+ discs) via M3U files.
+  Enabling the <a href="#cd.image_memcache">cd.image_memcache</a> option is recommended in many situations, but fully read the setting description before enabling it.
  </p>
 <?php EndSection(); ?>
 
 <?php BeginSection("Multiple-CD Games", "Section_multicd_games"); ?>
  <p>
-  To play a game that consists of more than one CD, you will need to create an
-  M3U file(plain-text, ".m3u" extension), and enter the filenames of the CUE/TOC/CCD files, one per line.  Load the M3U file
-  with Mednafen instead of the CUE/TOC/CCD files, and use the F6 and F8 keys to switch among the various discs available.
-  <br>
-  <b>Note:</b> Preferably, your M3U file(s) should reference CUE/TOC/CCD files that are in the same directory as the M3U file,
+  To play a game that consists of more than one CD, you will need to create an M3U file(plain-text, ".m3u" extension), and enter the
+  filenames of the CUE/TOC/CCD files, one per line.  Load the M3U file with Mednafen instead of the CUE/TOC/CCD files,
+  and use the F6 and F8 keys to switch among the various discs available.
+  <p>
+  M3U files may also reference other M3U files, and ZIP archives containing M3U/CUE/TOC/CCD files(provided CD image memory caching is enabled).
+  <p>
+  <b>Note:</b> Preferably, your M3U file(s) should reference files that are in the same directory as the M3U file,
   otherwise you will likely need to alter the <a href="#filesys.untrusted_fip_check">filesys.untrusted_fip_check</a> setting.
+  <p>
+  <font color="yellow"><b><u>Caution:</u></b></font> Avoid using Mednafen's M3U-based multi-CD support to load discs belonging to
+  different games and switching between games during emulation, especially when using Sega Saturn emulation, as that may interfere
+  with the Saturn module's heavy use of <a href="ss.html#Section_internal_databases">internal databases</a>.
  </p>
  <?php EndSection(); ?>
 
@@ -187,8 +208,8 @@
  <tr><td>Pause</td><td><a name="command.pause">Pause/Unpause.</a></td><td>pause</td></tr>
  <tr><td>SHIFT + F1</td><td>Toggle frames-per-second display(from top to bottom, the display format is: virtual, rendered, blitted).</td><td>toggle_fps_view</td></tr>
  <tr><td>Backspace</td><td>Rewind emulation, if save-state rewinding functionality is enabled, up to <a href="#srwframes">600 frames</a>.</td><td>state_rewind</td></tr>
- <tr><td>F9</td><td>Save (rawish) screen snapshot.</td><td>take_snapshot</td></tr>
- <tr><td>SHIFT + F9</td><td>Save screen snapshot, taken after all scaling and special filters/shaders are applied.</td><td>take_scaled_snapshot</td></tr>
+ <tr><td>F9</td><td><a name="command.take_snapshot">Save (rawish) screen snapshot.</a></td><td>take_snapshot</td></tr>
+ <tr><td>SHIFT + F9</td><td><a name="command.take_scaled_snapshot">Save screen snapshot, taken after all scaling and special filters/shaders are applied.</a></td><td>take_scaled_snapshot</td></tr>
  <tr><td>ALT&nbsp;+&nbsp;O</td><td>Rotate the screen</td><td>rotate_screen</td></tr>
  <tr><td>ALT + Enter</td><td>Toggle fullscreen mode.</td><td>toggle_fs</td></tr>
  <tr><td nowrap>CTRL + 1<br>through<br>Ctrl + 9</td><td>Toggle layer.</td><td>"tl1" through "tl9"</td></tr>
@@ -306,9 +327,9 @@
   based on the current active setting value(such as toggling full-screen mode inside the emulator, for instance).  Some settings
   currently cannot be overridden properly:
   <ul>
-   <li>cd.image_memcache</li>
-   <li>filesys.untrusted_fip_check</li>
-   <li>&lt;system&gt;.enable</li>
+   <li>cd.image_memcache
+   <li>filesys.untrusted_fip_check
+   <li>&lt;system&gt;.enable
   </ul>
  </p>
 <?php EndSection(); ?>
@@ -361,6 +382,16 @@ Not all emulated systems support custom palettes.  Refer to the following list:
 	firmware.
  </p>
  <?php EndSection(); ?>
+
+ <?php BeginSection("Screen Snapshots", "Section_screenshots"); ?>
+ Raw(ish) screenshots can be taken by pressing the <a href="#command.take_snapshot">F9</a> key.  Scaled and filtered WYSIWYG-style screenshots
+ can be taken by pressing <a href="#command.take_scaled_snapshot">SHIFT&nbsp;+&nbsp;F9</a>.
+ <p>
+ Screenshots are saved in the "<a href="#filesys.path_snap">snaps</a>" directory under the Mednafen <a href="#Section_base_directory">base directory</a>, in the
+ PNG file format.  The default file naming is like &lt;<b>FileBase</b>&gt;-&lt;<b>Counter</b>&gt;.png, e.g. "<b>Hyper Dyne LuigiFeet-0013.png</b>", but it can be
+ <a href="#filesys.fname_snap">customized</a> to an extent.
+ </p>
+ <?php EndSection(); ?>
  
  <?php EndSection(); ?>
 
@@ -371,19 +402,19 @@ PCs, etc etc.
 <p>
 Miscellaneous relevant external links:
 <ul>
- <li><a href="http://www.ouma.jp/ootake/delay-solution.html">http://www.ouma.jp/ootake/delay-solution.html</a></li>
- <li><a href="http://www.ouma.jp/ootake/delay-win7vista.html">http://www.ouma.jp/ootake/delay-win7vista.html</a></li>
- <li><a href="http://www.tftcentral.co.uk/articles/input_lag.htm">TFT Central - Input Lag Testing</a></li>
- <li><a href="http://www.prad.de/en/monitore/specials/inputlag/inputlag.html">An investigation of the test process used to date for determining the response time of an LCD monitor, known as input lag</a></li>
- <li><a href="http://shoryuken.com/forum/index.php?threads/sub-1-frame-hdtv-monitor-input-lag-database.145141/">Sub 1 frame HDTV/Monitor Input Lag Database</a></li>
- <li><a href="http://www.tomshardware.com/reviews/s242hl-bid-u2412m-t24a550,3016-14.html">http://www.tomshardware.com/reviews/s242hl-bid-u2412m-t24a550,3016-14.html</a></li>
- <li><a href="http://www.tomshardware.com/reviews/ultrasharp-u2711-ds-277w-multisync-pa271w,2968-14.html">http://www.tomshardware.com/reviews/ultrasharp-u2711-ds-277w-multisync-pa271w,2968-14.html</a></li>
+ <li><a href="http://www.ouma.jp/ootake/delay-solution.html">http://www.ouma.jp/ootake/delay-solution.html</a>
+ <li><a href="http://www.ouma.jp/ootake/delay-win7vista.html">http://www.ouma.jp/ootake/delay-win7vista.html</a>
+ <li><a href="http://www.tftcentral.co.uk/articles/input_lag.htm">TFT Central - Input Lag Testing</a>
+ <li><a href="http://www.prad.de/en/monitore/specials/inputlag/inputlag.html">An investigation of the test process used to date for determining the response time of an LCD monitor, known as input lag</a>
+ <li><a href="http://shoryuken.com/forum/index.php?threads/sub-1-frame-hdtv-monitor-input-lag-database.145141/">Sub 1 frame HDTV/Monitor Input Lag Database</a>
+ <li><a href="http://www.tomshardware.com/reviews/s242hl-bid-u2412m-t24a550,3016-14.html">http://www.tomshardware.com/reviews/s242hl-bid-u2412m-t24a550,3016-14.html</a>
+ <li><a href="http://www.tomshardware.com/reviews/ultrasharp-u2711-ds-277w-multisync-pa271w,2968-14.html">http://www.tomshardware.com/reviews/ultrasharp-u2711-ds-277w-multisync-pa271w,2968-14.html</a>
 </ul>
 </p>
    <?php BeginSection("Hardware Selection", "Section_lag_hardware"); ?>
     <ul>
     <li><u><b>Video Card:</b></u><blockquote>Higher-performing discrete video cards are preferable, but anything with similar
-or better OpenGL performance to an NVidia GeForce 9500GT should be fine.</blockquote></li>
+or better OpenGL performance to an NVidia GeForce 9500GT should be fine.</blockquote>
     <li><u><b>Monitor:</b></u><blockquote>Choose a monitor with the lowest input lag(AKA display lag), as well as as a low response time(though response time isn't as an important metric to consider, since it's usually acceptably small on modern end-user PC monitors).
 Unfortunately, monitor input/display lag is not typically specified by the manufacturer, and it can even vary between
 different revisions of the same "model".<br>A monitor capable of 120Hz vertical refresh rate operation, and that also has a low
@@ -395,8 +426,8 @@ Keep in mind that sometimes the "game mode" of a modern monitor(or TV) must be s
 For the lowest possible video lag, however, obtain and use an old CRT monitor, and set up a video mode with a vertical
 refresh rate of at least 120Hz.
 </p>
-</blockquote></li>
-    <li><u><b>Sound Card:</b></u>  <i>(To be written)</i></li>
+</blockquote>
+    <li><u><b>Sound Card:</b></u>  <i>(To be written)</i>
    </ul>
    <?php EndSection(); ?>
 
@@ -497,16 +528,16 @@ The general format of an input mapping is: <b><u>DEVICE_TYPE</u></b> <b><u>DEVIC
 <b><u>SCANCODE</u></b>[<b><u>MODIFIER</u></b>]...<br>
 <p><b>Modifiers:</b> (only valid with command key mappings)
 <ul>
- <li>+ctrl</li>
- <li>+alt</li>
- <li>+shift</u></b>
+ <li>+ctrl
+ <li>+alt
+ <li>+shift
 </ul></p>
    <?php EndSection(); ?>
 
    <?php BeginSection("Mouse", "Section_ims_mouse"); ?>
 <ul>
- <li>(cursor|rel)_(x|y)(-|+|-+|+-)</li>
- <li>button_(left|middle|right|x1|x2|0| ... |31)</li>
+ <li>(cursor|rel)_(x|y)(-|+|-+|+-)
+ <li>button_(left|middle|right|x1|x2|0| ... |31)
 </ul>
    <?php EndSection(); ?>
 
@@ -514,8 +545,8 @@ The general format of an input mapping is: <b><u>DEVICE_TYPE</u></b> <b><u>DEVIC
 When manually mapping the axes of an emulated lightgun to the axes of a physical lightgun that presents itself as a joystick device, use
 the optional "g" flag with "-+" polarity(e.g. "abs_0-+g").
 <ul>
- <li>abs_(0| ... |1023)(-|+|-+|+-)[g]</li>
- <li>button_(0| ... |1023)</li>
+ <li>abs_(0| ... |1023)(-|+|-+|+-)[g]
+ <li>button_(0| ... |1023)
 </ul>
    <?php EndSection(); ?>
 
@@ -689,6 +720,22 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // released into public must be open source) or under a commercial license if such 
 // has been acquired (see http://www.quicklz.com/order.html). The commercial license 
 // does not cover derived or ported versions created by third parties under GPL.
+</pre>
+</blockquote>
+<?php EndSection(); ?>
+
+<?php BeginSection("Zstandard", "Section_legal_zstd", "https://github.com/facebook/zstd/"); ?>
+<blockquote>
+<pre>
+/*
+ * Copyright (c) Yann Collet, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under both the BSD-style license (found in the
+ * LICENSE file in the root directory of this source tree) and the GPLv2 (found
+ * in the COPYING file in the root directory of this source tree).
+ * You may select, at your option, one of the above-listed licenses.
+ */
 </pre>
 </blockquote>
 <?php EndSection(); ?>

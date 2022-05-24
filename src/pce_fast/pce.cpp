@@ -16,7 +16,6 @@
  */
 
 #include "pce.h"
-#include <zlib.h>
 #include "vdc.h"
 #include "psg.h"
 #include "input.h"

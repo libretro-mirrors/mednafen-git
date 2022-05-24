@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* settings.cpp:
-**  Copyright (C) 2005-2018 Mednafen Team
+**  Copyright (C) 2005-2021 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -28,9 +28,9 @@
 #include <locale.h>
 #include <map>
 #include "settings.h"
-#include "settings-driver.h"
 #include "string/escape.h"
 #include <mednafen/string/string.h>
+#include <mednafen/Time.h>
 #include "FileStream.h"
 #include "MemoryStream.h"
 
@@ -39,50 +39,38 @@
 namespace Mednafen
 {
 
-static bool SettingsFinalized = false;
-
-typedef struct
+SettingsManager::SettingsManager()
 {
- char *name;
- char *value;
-} UnknownSetting_t;
 
-static std::vector<MDFNCS> CurrentSettings;
-static std::vector<UnknownSetting_t> UnknownSettings;
-
-static MDFNCS *FindSetting(const char *name, bool dont_freak_out_on_fail = false);
-
-
-static bool TranslateSettingValueUI(const char *value, unsigned long long &tlated_value)
-{
- char *endptr = NULL;
-
- if(value[0] == '0' && (value[1] == 'x' || value[1] == 'X'))
-  tlated_value = strtoull(value + 2, &endptr, 16);
- else
-  tlated_value = strtoull(value, &endptr, 10);
-
- if(!endptr || *endptr != 0)
- {
-  return(false);
- }
- return(true);
 }
 
-static bool TranslateSettingValueI(const char *value, long long &tlated_value)
+SettingsManager::~SettingsManager()
 {
- char *endptr = NULL;
+ Kill();
+}
 
- if(value[0] == '0' && (value[1] == 'x' || value[1] == 'X'))
-  tlated_value = strtoll(value + 2, &endptr, 16);
- else
-  tlated_value = strtoll(value, &endptr, 10);
+static INLINE unsigned TranslateSettingValueUI(const char* v, uint64& tlated)
+{
+ unsigned error = 0;
 
- if(!endptr || *endptr != 0)
- {
-  return(false);
- }
- return(true);
+ // Backwards-compat:
+ v = MDFN_strskipspace(v);
+ //
+ tlated = MDFN_u64fromstr(v, 0, &error);
+
+ return error;
+}
+
+static INLINE unsigned TranslateSettingValueI(const char* v, int64& tlated)
+{
+ unsigned error = 0;
+
+ // Backwards-compat:
+ v = MDFN_strskipspace(v);
+ //
+ tlated = MDFN_s64fromstr(v, 0, &error);
+ 
+ return error;
 }
 
 //
@@ -137,7 +125,7 @@ static NO_INLINE bool MR_StringToDouble(const char* string_value, double* dvalue
 
  *dvalue = strtod(cpi, &endptr);
 
- if(endptr == NULL || *endptr != 0)
+ if(endptr == NULL || *endptr != 0 || !*cpi)
   return(false);
 
  return(true);
@@ -149,101 +137,119 @@ static void ValidateSetting(const char *value, const MDFNSetting *setting)
 
  if(base_type == MDFNST_UINT)
  {
-  unsigned long long ullvalue;
+  uint64 ullvalue;
 
-  if(!TranslateSettingValueUI(value, ullvalue))
+  switch(TranslateSettingValueUI(value, ullvalue))
   {
-   throw MDFN_Error(0, _("Setting \"%s\", value \"%s\", is not set to a valid unsigned integer."), setting->name, value);
+   case XFROMSTR_ERROR_NONE:
+	break;
+
+   case XFROMSTR_ERROR_UNDERFLOW:	// Shouldn't happen
+	throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is too small; the minimum acceptable value is \"%s\"."), setting->name, value, setting->minimum ? setting->minimum : "0");
+
+   case XFROMSTR_ERROR_OVERFLOW:
+	throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is too large; the maximum acceptable value is \"%s\"."), setting->name, value, setting->maximum ? setting->maximum : "18446744073709551615");
+
+   default:
+	throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is not a valid integer."), setting->name, value);
   }
+
   if(setting->minimum)
   {
-   unsigned long long minimum;
+   uint64 minimum;
 
-   TranslateSettingValueUI(setting->minimum, minimum);
-   if(ullvalue < minimum)
-   {
-    throw MDFN_Error(0, _("Setting \"%s\" is set too small(\"%s\"); the minimum acceptable value is \"%s\"."), setting->name, value, setting->minimum);
-   }
+   if(MDFN_UNLIKELY(TranslateSettingValueUI(setting->minimum, minimum)))
+    throw MDFN_Error(0, _("Minimum value \"%s\" for setting \"%s\" is invalid."), setting->minimum, setting->name);
+
+   if(MDFN_UNLIKELY(ullvalue < minimum))
+    throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is too small; the minimum acceptable value is \"%s\"."), setting->name, value, setting->minimum);
   }
+
   if(setting->maximum)
   {
-   unsigned long long maximum;
+   uint64 maximum;
 
-   TranslateSettingValueUI(setting->maximum, maximum);
-   if(ullvalue > maximum)
-   {
-    throw MDFN_Error(0, _("Setting \"%s\" is set too large(\"%s\"); the maximum acceptable value is \"%s\"."), setting->name, value, setting->maximum);
-   }
+   if(MDFN_UNLIKELY(TranslateSettingValueUI(setting->maximum, maximum)))
+    throw MDFN_Error(0, _("Maximum value \"%s\" for setting \"%s\" is invalid."), setting->maximum, setting->name);
+
+   if(MDFN_UNLIKELY(ullvalue > maximum))
+    throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is too large; the maximum acceptable value is \"%s\"."), setting->name, value, setting->maximum);
   }
  }
  else if(base_type == MDFNST_INT)
  {
-  long long llvalue;
+  int64 llvalue;
 
-  if(!TranslateSettingValueI(value, llvalue))
+  switch(TranslateSettingValueI(value, llvalue))
   {
-   throw MDFN_Error(0, _("Setting \"%s\", value \"%s\", is not set to a valid signed integer."), setting->name, value);
+   case XFROMSTR_ERROR_NONE:
+	break;
+
+   case XFROMSTR_ERROR_UNDERFLOW:
+	throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is too small; the minimum acceptable value is \"%s\"."), setting->name, value, setting->minimum ? setting->minimum : "-9223372036854775808");
+
+   case XFROMSTR_ERROR_OVERFLOW:
+	throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is too large; the maximum acceptable value is \"%s\"."), setting->name, value, setting->maximum ? setting->maximum : "9223372036854775807");
+
+   default:
+	throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is not a valid integer."), setting->name, value);
   }
+
   if(setting->minimum)
   {
-   long long minimum;
+   int64 minimum;
 
-   TranslateSettingValueI(setting->minimum, minimum);
-   if(llvalue < minimum)
-   {
-    throw MDFN_Error(0, _("Setting \"%s\" is set too small(\"%s\"); the minimum acceptable value is \"%s\"."), setting->name, value, setting->minimum);
-   }
+   if(MDFN_UNLIKELY(TranslateSettingValueI(setting->minimum, minimum)))
+    throw MDFN_Error(0, _("Minimum value \"%s\" for setting \"%s\" is invalid."), setting->minimum, setting->name);
+
+   if(MDFN_UNLIKELY(llvalue < minimum))
+    throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is too small; the minimum acceptable value is \"%s\"."), setting->name, value, setting->minimum);
   }
+
   if(setting->maximum)
   {
-   long long maximum;
+   int64 maximum;
 
-   TranslateSettingValueI(setting->maximum, maximum);
-   if(llvalue > maximum)
-   {
-    throw MDFN_Error(0, _("Setting \"%s\" is set too large(\"%s\"); the maximum acceptable value is \"%s\"."), setting->name, value, setting->maximum);
-   }
+   if(MDFN_UNLIKELY(TranslateSettingValueI(setting->maximum, maximum)))
+    throw MDFN_Error(0, _("Maximum value \"%s\" for setting \"%s\" is invalid."), setting->maximum, setting->name);
+
+   if(MDFN_UNLIKELY(llvalue > maximum))
+    throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is too large; the maximum acceptable value is \"%s\"."), setting->name, value, setting->maximum);
   }
  }
  else if(base_type == MDFNST_FLOAT)
  {
   double dvalue;
 
-  if(!MR_StringToDouble(value, &dvalue))
-  {
-   throw MDFN_Error(0, _("Setting \"%s\", value \"%s\", is not set to a floating-point(real) number."), setting->name, value);
-  }
-
-  if(std::isnan(dvalue))
-   throw MDFN_Error(0, _("Setting \"%s\", value \"%s\", is NaN!"), setting->name, value);
+  if(!MR_StringToDouble(value, &dvalue) || std::isnan(dvalue))
+   throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is not a valid real number."), setting->name, value);
 
   if(setting->minimum)
   {
    double minimum;
 
    if(MDFN_UNLIKELY(!MR_StringToDouble(setting->minimum, &minimum)))
-    throw MDFN_Error(0, _("Minimum value, \"%f\", for setting \"%s\" is not set to a floating-point(real) number."), minimum, setting->name);
+    throw MDFN_Error(0, _("Minimum value \"%s\" for setting \"%s\" is invalid."), setting->minimum, setting->name);
 
    if(MDFN_UNLIKELY(dvalue < minimum))
-    throw MDFN_Error(0, _("Setting \"%s\" is set too small(\"%s\"); the minimum acceptable value is \"%s\"."), setting->name, value, setting->minimum);
+    throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is too small; the minimum acceptable value is \"%s\"."), setting->name, value, setting->minimum);
   }
+
   if(setting->maximum)
   {
    double maximum;
 
    if(MDFN_UNLIKELY(!MR_StringToDouble(setting->maximum, &maximum)))
-    throw MDFN_Error(0, _("Maximum value, \"%f\", for setting \"%s\" is not set to a floating-point(real) number."), maximum, setting->name);
+    throw MDFN_Error(0, _("Maximum value \"%s\" for setting \"%s\" is invalid."), setting->maximum, setting->name);
 
    if(MDFN_UNLIKELY(dvalue > maximum))
-    throw MDFN_Error(0, _("Setting \"%s\" is set too large(\"%s\"); the maximum acceptable value is \"%s\"."), setting->name, value, setting->maximum);
+    throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is too large; the maximum acceptable value is \"%s\"."), setting->name, value, setting->maximum);
   }
  }
  else if(base_type == MDFNST_BOOL)
  {
-  if(strlen(value) != 1 || (value[0] != '0' && value[0] != '1'))
-  {
-   throw MDFN_Error(0, _("Setting \"%s\", value \"%s\",  is not a valid boolean value."), setting->name, value);
-  }
+  if(MDFN_UNLIKELY((value[0] != '0' && value[0] != '1') || value[1] != 0))
+   throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is not a valid boolean."), setting->name, value);
  }
  else if(base_type == MDFNST_ENUM)
  {
@@ -267,10 +273,8 @@ static void ValidateSetting(const char *value, const MDFNSetting *setting)
    enum_list++;
   }
 
-  if(!found)
-  {
-   throw MDFN_Error(0, _("Setting \"%s\", value \"%s\", is not a recognized string.  Recognized strings: %s"), setting->name, value, valid_string_list.c_str());
-  }
+  if(MDFN_UNLIKELY(!found))
+   throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is not a recognized string.  Recognized strings: %s"), setting->name, value, valid_string_list.c_str());
  }
  else if(base_type == MDFNST_MULTI_ENUM)
  {
@@ -307,17 +311,17 @@ static void ValidateSetting(const char *value, const MDFNSetting *setting)
 
      enum_list++;
     }
-    throw MDFN_Error(0, _("Setting \"%s\", value \"%s\" component \"%s\", is not a recognized string.  Recognized strings: %s"), setting->name, value, mee.c_str(), valid_string_list.c_str());
+    throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" component \"%s\" is not a recognized string.  Recognized strings: %s"), setting->name, value, mee.c_str(), valid_string_list.c_str());
    }
   }
  }
 
- if(setting->validate_func && !setting->validate_func(setting->name, value))
+ if(setting->validate_func && MDFN_UNLIKELY(!setting->validate_func(setting->name, value)))
  {
   if(base_type == MDFNST_STRING)
-   throw MDFN_Error(0, _("Setting \"%s\" is not set to a valid string: \"%s\""), setting->name, value);
+   throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is not an acceptable string."), setting->name, value);
   else
-   throw MDFN_Error(0, _("Setting \"%s\" is not set to a valid unsigned integer: \"%s\""), setting->name, value);
+   throw MDFN_Error(0, _("Setting \"%s\" value \"%s\" is not an acceptable integer."), setting->name, value);
  }
 }
 
@@ -326,39 +330,56 @@ static uint32 MakeNameHash(const char *name)
  return crc32(0, (const Bytef *)name, strlen(name));
 }
 
-static void ParseSettingLine(std::string &linebuf, size_t* valid_count, size_t* unknown_count, bool IsOverrideSetting = false)
+INLINE void SettingsManager::ParseSettingLine(char* ls, const char* lb, size_t* valid_count, size_t* unknown_count, bool IsOverrideSetting)
 {
  MDFNCS *zesetting;
- size_t spacepos;
+ char* spacep;
 
  //
  // Comment
  //
- if(linebuf[0] == ';' || linebuf[0] == '#')
+ if(ls[0] == ';' || ls[0] == '#')
   return;
 
- spacepos = linebuf.find(' ');
-
- // No name(key)
- if(spacepos == 0)
-  return;
-
- // No space present?!
- if(spacepos == std::string::npos)
+ //
+ // Search for first character that may cause MDFN_isspace() to return true
+ // (so we can later catch a line like <TAB><SPACE>texthere as being invalid)
+ //
+ spacep = ls;
+ while(spacep != lb)
  {
-  //if(linebuf.size() != 0)
-  // spacepos = linebuf.size() - 1;
-  //else
-   return;
+  if((unsigned char)*spacep <= 0x20)
+   break;
+  spacep++;
  }
- else
-  linebuf[spacepos] = 0;
 
- zesetting = FindSetting(linebuf.c_str(), true);
+ //
+ // No name(key), or no space present, or first special character isn't a space.
+ //
+ if(spacep == ls || spacep == lb || *spacep != ' ')
+ {
+  //
+  // If any character in the line isn't whitespace, throw an error, otherwise just
+  // silently ignore the line.
+  //
+  for(char* fnonws = ls; fnonws != lb; fnonws++)
+  {
+   if(MDFN_UNLIKELY(!MDFN_isspace(*fnonws)))
+   {
+    throw MDFN_Error(0, _("Misformatted setting-value pair \"%.*s\"."), (int)std::min<size_t>(INT_MAX, lb - ls), ls);
+   }
+  }
+
+  return;
+ }
+
+ *spacep = 0;
+
+ zesetting = FindSetting(ls, true);
 
  if(zesetting)
  {
-  char *nv = strdup(linebuf.c_str() + spacepos + 1);
+  char* nv = MDFN_memdupstr(spacep + 1, lb - (spacep + 1));
 
   if(IsOverrideSetting)
   {
@@ -375,40 +396,30 @@ static void ParseSettingLine(std::string &linebuf, size_t* valid_count, size_t* 
    zesetting->value = nv;
   }
 
-  ValidateSetting(nv, zesetting->desc);	// TODO: Validate later(so command line options can override invalid setting file data correctly)
+  ValidateSetting(nv, &zesetting->desc);
   (*valid_count)++;
  }
  else
  {
   if(!IsOverrideSetting)
   {
-   UnknownSetting_t unks;
+   char* tmp;
 
-   unks.name = strdup(linebuf.c_str());
-   unks.value = strdup(linebuf.c_str() + spacepos + 1);
+   *spacep = ' ';
+   tmp = MDFN_memdupstr(ls, lb - ls);
 
-   UnknownSettings.push_back(unks);
+   UnknownSettings.push_back(tmp);
   }
   (*unknown_count)++;
  }
 }
 
-static void LoadSettings(Stream *fp, size_t* valid_count, size_t* unknown_count, bool override)
-{
- std::string linebuf;
-
- linebuf.reserve(1024);
-
- while(fp->get_line(linebuf) >= 0)
-  ParseSettingLine(linebuf, valid_count, unknown_count, override);
-}
-
-bool MDFN_LoadSettings(const std::string& path, bool override)
+bool SettingsManager::Load(const std::string& path, bool override)
 {
  if(!override)
-  MDFN_printf(_("Loading settings from \"%s\"...\n"), path.c_str());
+  MDFN_printf(_("Loading settings from \"%s\"...\n"), MDFN_strhumesc(path).c_str());
  else
-  MDFN_printf(_("Loading override settings from \"%s\"...\n"), path.c_str());
+  MDFN_printf(_("Loading override settings from \"%s\"...\n"), MDFN_strhumesc(path).c_str());
 
  MDFN_AutoIndent aind(1);
 
@@ -420,11 +431,30 @@ bool MDFN_LoadSettings(const std::string& path, bool override)
   MemoryStream mp(new FileStream(path, (override ? FileStream::MODE_READ : FileStream::MODE_READ_WRITE), !override));
   size_t valid_count = 0;
   size_t unknown_count = 0;
+  uint32 line_counter = 0;
+  //const uint64 st = Time::MonoUS();
 
-  //uint32 st = MDFND_GetTime();
   mp.read_utf8_bom();
-  LoadSettings(&mp, &valid_count, &unknown_count, override);
-  //printf("%u\n", MDFND_GetTime() - st);
+  //
+  try
+  {
+   char* ls;
+   const char* lb;
+
+   while(mp.get_line_mem(&ls, &lb) >= 0)
+   {
+    if(ls != lb)
+     ParseSettingLine(ls, lb, &valid_count, &unknown_count, override);
+
+    line_counter++;
+   }
+  }
+  catch(MDFN_Error& e)
+  {
+   throw MDFN_Error(e.GetErrno(), _("Line %u: %s"), line_counter + 1, e.what());
+  }
+  //
+  //printf("%llu\n", (unsigned long long)(Time::MonoUS() - st));
 
   if(override)
    MDFN_printf(_("Loaded %zu valid settings and ignored %zu unknown settings.\n"), valid_count, unknown_count);
@@ -440,12 +470,12 @@ bool MDFN_LoadSettings(const std::string& path, bool override)
   }
   else
   {
-   throw MDFN_Error(0, _("Failed to load settings from \"%s\": %s"), path.c_str(), e.what());
+   throw MDFN_Error(0, _("Failed to load settings from \"%s\": %s"), MDFN_strhumesc(path).c_str(), e.what());
   }
  }
  catch(std::exception &e)
  {
-  throw MDFN_Error(0, _("Failed to load settings from \"%s\": %s"), path.c_str(), e.what());
+  throw MDFN_Error(0, _("Failed to load settings from \"%s\": %s"), MDFN_strhumesc(path).c_str(), e.what());
  }
 
  return true;
@@ -453,91 +483,131 @@ bool MDFN_LoadSettings(const std::string& path, bool override)
 
 static bool compare_sname(const MDFNCS* first, const MDFNCS* second)
 {
- return(strcmp(first->name, second->name) < 0);
+ return(strcmp(first->desc.name, second->desc.name) < 0);
 }
 
-static void SaveSettings(Stream *fp)
+void SettingsManager::Save(const std::string& path)
 {
- std::vector<MDFNCS>::iterator sit;
- std::list<MDFNCS*> SortedList;
- std::list<MDFNCS*>::iterator lit;
+ const size_t num_settings = CurrentSettings.size();
+ std::unique_ptr<const MDFNCS*[]> sorted_settings(new const MDFNCS*[num_settings]);
 
- fp->print_format(";VERSION %s\n", MEDNAFEN_VERSION);
+ for(size_t i = 0; i < num_settings; i++)
+  sorted_settings[i] = &CurrentSettings[i];
 
- fp->print_format(_(";Edit this file at your own risk!\n"));
- fp->print_format(_(";DO NOT EDIT THIS FILE WHILE AN INSTANCE OF MEDNAFEN THAT USES IT IS RUNNING.\n"));
- fp->print_format(_(";File format: <key><single space><value><LF or CR+LF>\n"));
- /* no gettext() for this string, must remain the correct length */ fp->print_format(";\n;Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen.;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;fs ~\n\n");
+ std::sort(sorted_settings.get(), sorted_settings.get() + num_settings, compare_sname);
+ //
+ //
+ //
+ FileStream fp(path, FileStream::MODE_WRITE, true);
 
- for(sit = CurrentSettings.begin(); sit != CurrentSettings.end(); sit++)
-  SortedList.push_back(&*sit);
+ fp.put_string(";VERSION " MEDNAFEN_VERSION "\n");
+ fp.put_string(_(";Edit this file at your own risk!\n"));
+ fp.put_string(_(";DO NOT EDIT THIS FILE WHILE AN INSTANCE OF MEDNAFEN THAT USES IT IS RUNNING.\n"));
+ fp.put_string(_(";File format: <key><single space><value><LF or CR+LF>\n"));
 
- SortedList.sort(compare_sname);
+ /* no gettext() for this string, must remain the correct length */
+ fp.put_string(";\n;Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen. Dummy guard line to prevent settings file corruption by accidentally running ancient versions of Mednafen.;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;fs ~\n\n");
 
- for(lit = SortedList.begin(); lit != SortedList.end(); lit++)
+ for(size_t i = 0; i < num_settings; i++)
  {
-  if((*lit)->desc->type == MDFNST_ALIAS)
+  const MDFNCS* lit = sorted_settings[i];
+
+  if(lit->desc.type == MDFNST_ALIAS)
    continue;
 
-  if((*lit)->desc->flags & MDFNSF_NONPERSISTENT)
+  if(lit->desc.flags & MDFNSF_NONPERSISTENT)
    continue;
 
-  fp->print_format(";%s\n%s %s\n\n", _((*lit)->desc->description), (*lit)->name, (*lit)->value);
+  fp.put_char(';');
+  fp.put_string(_(lit->desc.description));
+  fp.put_char('\n');
+  fp.put_string(lit->desc.name);
+  fp.put_char(' ');
+  fp.put_string(lit->value);
+  fp.put_char('\n');
+  fp.put_char('\n');
  }
 
  if(UnknownSettings.size())
  {
-  fp->print_format("\n;\n;Unrecognized settings follow:\n;\n\n");
-  for(unsigned int i = 0; i < UnknownSettings.size(); i++)
+  fp.put_string("\n;\n;Unrecognized settings follow:\n;\n\n");
+  for(size_t i = 0; i < UnknownSettings.size(); i++)
   {
-   fp->print_format("%s %s\n\n", UnknownSettings[i].name, UnknownSettings[i].value);
+   fp.put_string(UnknownSettings[i]);
+   fp.put_char('\n');
+   fp.put_char('\n');
   }
  }
 
- fp->close();
+ fp.close();
 }
 
-void MDFN_SaveSettings(const std::string& path)
+void SettingsManager::SaveCompact(Stream* s)
 {
- FileStream fp(path, FileStream::MODE_WRITE, true);
+ s->put_string(";VERSION " MEDNAFEN_VERSION "\n");
 
- SaveSettings(&fp);
+ for(auto const& cse : CurrentSettings)
+ {
+  s->put_string(cse.desc.name);
+  s->put_u8(' ');
+  s->put_string(cse.value);
+  s->put_u8('\n');
+ }
+
+ for(auto const& unke : UnknownSettings)
+ {
+  s->put_string(unke);
+  s->put_u8('\n');
+ }
 }
 
-
-static INLINE void MergeSettingSub(const MDFNSetting *setting)
+INLINE void SettingsManager::MergeSettingSub(const MDFNSetting& setting)
 {
  MDFNCS TempSetting;
 
- assert(setting->name);
- assert(setting->default_value);
+ assert(setting.name);
+ assert(setting.default_value);
 
- TempSetting.name = strdup(setting->name);
- TempSetting.value = strdup(setting->default_value);
- TempSetting.name_hash = MakeNameHash(setting->name);
+#ifdef MDFN_ENABLE_DEV_BUILD
+ // Ensure setting name is valid.
+ for(const char* s = setting.name; *s; s++)
+ {
+  const char c = *s;
+  bool valid = MDFN_isazlower(c) || (s != setting.name && (MDFN_isdigit(c) || c == '.' || c == '_' || c == '-'));
+
+  if(!valid)
+  {
+   printf("Bad setting name: %s\n", setting.name);
+   abort();
+  }
+ }
+#endif
+
+ TempSetting.name_hash = MakeNameHash(setting.name);
+ TempSetting.value = strdup(setting.default_value);
  TempSetting.desc = setting;
- TempSetting.ChangeNotification = setting->ChangeNotification;
  TempSetting.game_override = NULL;
  TempSetting.netplay_override = NULL;
 
  CurrentSettings.push_back(TempSetting);
 }
 
-void MDFN_MergeSettings(const MDFNSetting *setting)
-{
- while(setting->name != NULL)
- {
-  MergeSettingSub(setting);
-  setting++;
- }
-}
-
-void MDFN_MergeSettings(const std::vector<MDFNSetting> &setting)
+void SettingsManager::Add(const MDFNSetting& setting)
 {
  assert(!SettingsFinalized);
 
- for(unsigned int x = 0; x < setting.size(); x++)
-  MergeSettingSub(&setting[x]);
+ MergeSettingSub(setting);
+}
+
+void SettingsManager::Merge(const MDFNSetting *setting)
+{
+ assert(!SettingsFinalized);
+
+ while(setting->name != NULL)
+ {
+  MergeSettingSub(*setting);
+  setting++;
+ }
 }
 
 static bool CSHashSortFunc(const MDFNCS& a, const MDFNCS& b)
@@ -550,7 +620,7 @@ static bool CSHashBoundFunc(const MDFNCS& a, const uint32 b)
  return a.name_hash < b;
 }
 
-void MDFN_FinalizeSettings(void)
+void SettingsManager::Finalize(void)
 {
  std::sort(CurrentSettings.begin(), CurrentSettings.end(), CSHashSortFunc);
 
@@ -561,9 +631,9 @@ void MDFN_FinalizeSettings(void)
  {
   for(size_t j = i + 1; j < CurrentSettings.size() && CurrentSettings[j].name_hash == CurrentSettings[i].name_hash; j++)
   {
-   if(!strcmp(CurrentSettings[i].name, CurrentSettings[j].name))
+   if(!strcmp(CurrentSettings[i].desc.name, CurrentSettings[j].desc.name))
    {
-    printf("Duplicate setting name %s\n", CurrentSettings[j].name);
+    printf("Duplicate setting name %s\n", CurrentSettings[j].desc.name);
     abort();
    }
   }
@@ -573,16 +643,16 @@ void MDFN_FinalizeSettings(void)
 /*
  for(size_t i = 0; i < CurrentSettings.size(); i++)
  {
-  assert(CurrentSettings[i].desc->type == MDFNST_ALIAS || !strcmp(FindSetting(CurrentSettings[i].name)->name, CurrentSettings[i].name));
+  assert(CurrentSettings[i].desc.type == MDFNST_ALIAS || !strcmp(FindSetting(CurrentSettings[i].name)->name, CurrentSettings[i].name));
  }
 */
 }
 
-void MDFN_ClearAllOverrideSettings(void)
+void SettingsManager::ClearAllOverrides(void)
 {
  for(auto& sit : CurrentSettings)
  {
-  if(sit.desc->type == MDFNST_ALIAS)
+  if(sit.desc.type == MDFNST_ALIAS)
    continue;
 
   if(sit.game_override)
@@ -599,37 +669,77 @@ void MDFN_ClearAllOverrideSettings(void)
  }
 }
 
-void MDFN_KillSettings(void)
+void SettingsManager::Kill(void)
 {
  for(auto& sit : CurrentSettings)
  {
-  if(sit.desc->type == MDFNST_ALIAS)
-   continue;
-
-  free(sit.name);
   free(sit.value);
+
+  if(sit.desc.type == MDFNST_ALIAS)
+   continue;
 
   if(sit.game_override)
    free(sit.game_override);
 
   if(sit.netplay_override)
    free(sit.netplay_override);
+
+#if 1
+  if(sit.desc.flags & MDFNSF_FREE_NAME)
+   free((void*)sit.desc.name);
+
+  if(sit.desc.flags & MDFNSF_FREE_DESC)
+   free((void*)sit.desc.description);
+
+  if(sit.desc.flags & MDFNSF_FREE_DESC_EXTRA)
+   free((void*)sit.desc.description_extra);
+
+  if(sit.desc.flags & MDFNSF_FREE_DEFAULT)
+   free((void*)sit.desc.default_value);
+
+  if(sit.desc.flags & MDFNSF_FREE_MINIMUM)
+   free((void*)sit.desc.minimum);
+
+  if(sit.desc.flags & MDFNSF_FREE_MAXIMUM)
+   free((void*)sit.desc.maximum);
+
+  if(sit.desc.enum_list)
+  {
+   if(sit.desc.flags & (MDFNSF_FREE_ENUMLIST_STRING | MDFNSF_FREE_ENUMLIST_DESC | MDFNSF_FREE_ENUMLIST_DESC_EXTRA))
+   {
+    const MDFNSetting_EnumList* enum_list = sit.desc.enum_list;
+
+    while(enum_list->string)
+    {
+     if(sit.desc.flags & MDFNSF_FREE_ENUMLIST_STRING)
+      free((void*)enum_list->string);
+
+     if(sit.desc.flags & MDFNSF_FREE_ENUMLIST_DESC)
+      free((void*)enum_list->description);
+
+     if(sit.desc.flags & MDFNSF_FREE_ENUMLIST_DESC_EXTRA)
+      free((void*)enum_list->description_extra);
+     //
+     enum_list++;
+    }
+   }
+   if(sit.desc.flags & MDFNSF_FREE_ENUMLIST)
+    free((void*)sit.desc.enum_list);
+  }
+#endif
  }
 
  if(UnknownSettings.size())
  {
-  for(unsigned int i = 0; i < UnknownSettings.size(); i++)
-  {
-   free(UnknownSettings[i].name);
-   free(UnknownSettings[i].value);
-  }
+  for(size_t i = 0; i < UnknownSettings.size(); i++)
+   free(UnknownSettings[i]);
  }
  CurrentSettings.clear();	// Call after the list is all handled
  UnknownSettings.clear();
  SettingsFinalized = false;
 }
 
-static MDFNCS* FindSetting(const char* name, bool dont_freak_out_on_fail)
+MDFNCS* SettingsManager::FindSetting(const char* name, bool dont_freak_out_on_fail)
 {
  assert(SettingsFinalized);
  //printf("Find: %s\n", name);
@@ -640,14 +750,14 @@ static MDFNCS* FindSetting(const char* name, bool dont_freak_out_on_fail)
 
  while(it != CurrentSettings.end() && it->name_hash == name_hash)
  {
-  if(!strcmp(it->name, name))
+  if(!strcmp(it->desc.name, name))
   {
-   if(it->desc->type == MDFNST_ALIAS)
+   if(it->desc.type == MDFNST_ALIAS)
     return FindSetting(it->value, dont_freak_out_on_fail);
 
    return &*it;
   }
-  //printf("OHNOS: %s(%08x) %s(%08x)\n", name, name_hash, it->name, it->name_hash);
+  //printf("OHNOS: %s(%08x) %s(%08x)\n", name, name_hash, it->desc.name, it->name_hash);
   it++;
  }
 
@@ -676,7 +786,7 @@ static const char *GetSetting(const MDFNCS *setting)
 
 static int GetEnum(const MDFNCS *setting, const char *value)
 {
- const MDFNSetting_EnumList *enum_list = setting->desc->enum_list;
+ const MDFNSetting_EnumList *enum_list = setting->desc.enum_list;
  int ret = 0;
  bool found = false;
 
@@ -703,11 +813,11 @@ static std::vector<T> GetMultiEnum(const MDFNCS* setting, const char* value)
  std::vector<T> ret;
  std::vector<std::string> mel = MDFN_strsplit(value);
 
- assert(setting->desc->enum_list);
+ assert(setting->desc.enum_list);
 
  for(auto& mee : mel)
  {
-  const MDFNSetting_EnumList *enum_list = setting->desc->enum_list;
+  const MDFNSetting_EnumList *enum_list = setting->desc.enum_list;
   bool found = false;
 
   MDFN_trim(&mee);
@@ -729,61 +839,65 @@ static std::vector<T> GetMultiEnum(const MDFNCS* setting, const char* value)
 }
 
 
-uint64 MDFN_GetSettingUI(const char *name)
+uint64 SettingsManager::GetUI(const char *name)
 {
  const MDFNCS *setting = FindSetting(name);
  const char *value = GetSetting(setting);
 
- if(setting->desc->type == MDFNST_ENUM)
+ if(setting->desc.type == MDFNST_ENUM)
   return(GetEnum(setting, value));
  else
  {
-  unsigned long long ret;
+  uint64 ret;
+
   TranslateSettingValueUI(value, ret);
-  return(ret);
+
+  return ret;
  }
 }
 
-int64 MDFN_GetSettingI(const char *name)
+int64 SettingsManager::GetI(const char *name)
 {
  const MDFNCS *setting = FindSetting(name);
  const char *value = GetSetting(FindSetting(name));
 
 
- if(setting->desc->type == MDFNST_ENUM)
+ if(setting->desc.type == MDFNST_ENUM)
   return(GetEnum(setting, value));
  else
  {
-  long long ret;
+  int64 ret;
+
   TranslateSettingValueI(value, ret);
-  return(ret);
+
+  return ret;
  }
 }
 
-std::vector<uint64> MDFN_GetSettingMultiUI(const char *name)
+std::vector<uint64> SettingsManager::GetMultiUI(const char *name)
 {
  const MDFNCS *setting = FindSetting(name);
  const char *value = GetSetting(setting);
 
- if(setting->desc->type == MDFNST_MULTI_ENUM)
+ if(setting->desc.type == MDFNST_MULTI_ENUM)
   return GetMultiEnum<uint64>(setting, value);
  else
   abort();
 }
 
-std::vector<int64> MDFN_GetSettingMultiI(const char *name)
+std::vector<int64> SettingsManager::GetMultiI(const char *name)
 {
  const MDFNCS *setting = FindSetting(name);
  const char *value = GetSetting(setting);
 
- if(setting->desc->type == MDFNST_MULTI_ENUM)
+ if(setting->desc.type == MDFNST_MULTI_ENUM)
   return GetMultiEnum<int64>(setting, value);
  else
   abort();
 }
 
 
-double MDFN_GetSettingF(const char *name)
+double SettingsManager::GetF(const char *name)
 {
  double ret;
 
@@ -792,12 +906,12 @@ double MDFN_GetSettingF(const char *name)
  return ret;
 }
 
-bool MDFN_GetSettingB(const char *name)
+bool SettingsManager::GetB(const char *name)
 {
- return((bool)MDFN_GetSettingUI(name));
+ return (bool)GetUI(name);
 }
 
-std::string MDFN_GetSettingS(const char *name)
+std::string SettingsManager::GetS(const char *name)
 {
  const MDFNCS *setting = FindSetting(name);
  const char *value = GetSetting(setting);
@@ -805,25 +919,25 @@ std::string MDFN_GetSettingS(const char *name)
  // Even if we're getting the string value of an enum instead of the associated numeric value, we still need
  // to make sure it's a valid enum
  // (actually, not really, since it's handled in other places where the setting is actually set)
- //if(setting->desc->type == MDFNST_ENUM)
+ //if(setting->desc.type == MDFNST_ENUM)
  // GetEnum(setting, value);
 
  return(std::string(value));
 }
 
-std::string MDFNI_GetSettingDefault(const char* name)
+std::string SettingsManager::GetDefault(const char* name)
 {
  const MDFNCS *setting = FindSetting(name);
 
- return setting->desc->default_value;
+ return setting->desc.default_value;
 }
 
-const std::vector<MDFNCS>* MDFNI_GetSettings(void)
+const std::vector<MDFNCS>* SettingsManager::GetSettings(void)
 {
  return &CurrentSettings;
 }
 
-bool MDFNI_SetSetting(const char *name, const char *value, bool NetplayOverride)
+bool SettingsManager::Set(const char *name, const char *value, bool NetplayOverride)
 {
  MDFNCS *zesetting = FindSetting(name, true);
 
@@ -831,7 +945,7 @@ bool MDFNI_SetSetting(const char *name, const char *value, bool NetplayOverride)
  {
   try
   {
-   ValidateSetting(value, zesetting->desc);
+   ValidateSetting(value, &zesetting->desc);
   }
   catch(std::exception &e)
   {
@@ -862,10 +976,10 @@ bool MDFNI_SetSetting(const char *name, const char *value, bool NetplayOverride)
   }
 
   // TODO, always call driver notification function, regardless of whether a game is loaded.
-  if(zesetting->ChangeNotification)
+  if(zesetting->desc.ChangeNotification)
   {
    if(MDFNGameInfo)
-    zesetting->ChangeNotification(name);
+    zesetting->desc.ChangeNotification(name);
   }
   return(true);
  }
@@ -882,34 +996,45 @@ void MDFN_CallSettingsNotification(void)
 {
  for(unsigned int x = 0; x < CurrentSettings.size(); x++)
  {
-  if(CurrentSettings[x].ChangeNotification)
+  if(CurrentSettings[x].desc.ChangeNotification)
   {
    // TODO, always call driver notification function, regardless of whether a game is loaded.
    if(MDFNGameInfo)
-    CurrentSettings[x].ChangeNotification(CurrentSettings[x].name);
+    CurrentSettings[x].desc.ChangeNotification(CurrentSettings[x].name);
   }
  }
 }
 #endif
 
-bool MDFNI_SetSettingB(const char *name, bool value)
+bool SettingsManager::SetB(const char *name, bool value)
 {
- char tmpstr[2];
- tmpstr[0] = value ? '1' : '0';
- tmpstr[1] = 0;
+ char tmp[2];
 
- return(MDFNI_SetSetting(name, tmpstr, false));
+ tmp[0] = value ? '1' : '0';
+ tmp[1] = 0;
+
+ return Set(name, tmp, false);
 }
 
-bool MDFNI_SetSettingUI(const char *name, uint64 value)
+bool SettingsManager::SetI(const char *name, int64 value)
 {
- char tmpstr[32];
+ char tmp[32];
 
- trio_snprintf(tmpstr, 32, "%llu", (unsigned long long)value);
- return(MDFNI_SetSetting(name, tmpstr, false));
+ MDFN_sndec_s64(tmp, sizeof(tmp), value);
+
+ return Set(name, tmp, false);
 }
 
-void MDFNI_DumpSettingsDef(const char *path)
+bool SettingsManager::SetUI(const char *name, uint64 value)
+{
+ char tmp[32];
+
+ MDFN_sndec_u64(tmp, sizeof(tmp), value);
+
+ return Set(name, tmp, false);
+}
+
+void SettingsManager::DumpDef(const char *path)
 {
  FileStream fp(path, FileStream::MODE_WRITE);
  std::list<const MDFNCS *> SortedList;
@@ -948,7 +1073,7 @@ void MDFNI_DumpSettingsDef(const char *path)
 
  for(lit = SortedList.begin(); lit != SortedList.end(); lit++)
  {
-  const MDFNSetting *setting = (*lit)->desc;
+  const MDFNSetting *setting = &(*lit)->desc;
   char *desc_escaped;
   char *desc_extra_escaped;
 
@@ -959,8 +1084,12 @@ void MDFNI_DumpSettingsDef(const char *path)
 
   for(unsigned int i = 0; i < 32; i++)
   {
-   if(setting->flags & (1U << i))
-    fp.print_format("%s ", fts[1U << i]);
+   if(setting->flags & (1U << i) & ~MDFNSF_FREE__ANY)
+   {
+    const char* s = fts[1U << i];
+    assert(s);
+    fp.print_format("%s ", s);
+   }
   }
   fp.print_format("\n");
 

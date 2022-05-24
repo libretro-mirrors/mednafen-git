@@ -61,12 +61,12 @@ static SpeexResamplerState* resampler = NULL;
 static int last_rate;
 static uint32 last_quality;
 
-static INLINE void SCSP_SoundIntChanged(unsigned level)
+static INLINE void SCSP_SoundIntChanged(SS_SCSP* s, unsigned level)
 {
  SoundCPU.SetIPL(level);
 }
 
-static INLINE void SCSP_MainIntChanged(bool state)
+static INLINE void SCSP_MainIntChanged(SS_SCSP* s, bool state)
 {
  #ifndef MDFN_SSFPLAY_COMPILE
  SCU_SetInt(SCU_INT_SCSP, state);
@@ -205,6 +205,17 @@ static NO_INLINE void RunSCSP(void)
  //bp[1] = rand();
  bp[0] = (bp[0] * 27 + 16) >> 5;
  bp[1] = (bp[1] * 27 + 16) >> 5;
+
+/*
+ // TODO?  Need to measure frequency response more reliably first, ideally after capacitor
+ // replacement.  Should probably be controlled by a boolean setting, too.
+ for(unsigned lr = 0; lr < 2; lr++)
+ {
+  static int32 filt[2];
+  filt[lr] += (((int64)(int32)((uint32)bp[lr] << 16) - filt[lr]) * 60500) >> 16;
+  bp[lr] = filt[lr] >> 16;
+ }
+*/
 
  IBufferCount = (IBufferCount + 1) & 1023;
  next_scsp_time += 256;

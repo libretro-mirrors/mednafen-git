@@ -568,7 +568,7 @@ bool CART_LoadNV(void)
    const uint64 fp_size_tmp = fp.size();
 
    if(Cart.RAM_Size != fp_size_tmp) // Check before reading any data.
-    throw MDFN_Error(0, _("Save game memory file \"%s\" is an incorrect size(%llu bytes).  The correct size is %llu bytes."), path.c_str(), 
+    throw MDFN_Error(0, _("Save game memory file \"%s\" is an incorrect size(%llu bytes).  The correct size is %llu bytes."), MDFN_strhumesc(path).c_str(), 
 			(unsigned long long)fp_size_tmp, (unsigned long long)Cart.RAM_Size);
 
    fp.read(Cart.RAM, Cart.RAM_Size);

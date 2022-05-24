@@ -92,6 +92,23 @@ void VirtualFS::get_file_path_components(const std::string &file_path, std::stri
   *file_ext_out = file_ext;
 }
 
+/*
+std::string VirtualFS::get_canonical_ext(const std::string& file_path)
+{
+ std::string ret;
+
+ get_file_path_components(file_path, nullptr, nullptr, &ret);
+
+ MDFN_strazlower(&ret);
+ //
+ //
+ if(ret.size() > 0 && ret[0] == '.')
+  return ret.substr(1);
+  
+ return ret;
+}
+*/
+
 void VirtualFS::check_firop_safe(const std::string& path)
 {
 

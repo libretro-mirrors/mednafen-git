@@ -1382,7 +1382,7 @@ static INLINE bool CK_Check(CommandKey which)
 
 static INLINE bool CK_CheckActive(CommandKey which)
 {
- return CKeysActive[which];
+ return CKeysActive[which] && (CKeysPressTime[which] == 0xFFFFFFFF);
 }
 
 // Can be called from MDFND_MidSync(), so be careful.
@@ -2369,7 +2369,7 @@ struct DefaultSettingsMeow
 static std::map<const char *, const DefaultSettingsMeow *, cstrcomp> DefaultButtonSettingsMap;
 */
 
-static INLINE void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, const MDFNGI *system, const int w, const InputDeviceInfoStruct *info, const DefaultSettingsMeow* defs)
+static INLINE void MakeSettingsForDevice(const MDFNGI *system, const int w, const InputDeviceInfoStruct *info, const DefaultSettingsMeow* defs)
 {
  size_t def_butti = 0;
  bool analog_scale_made = false;
@@ -2395,10 +2395,10 @@ static INLINE void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, co
     tmp_setting.type = MDFNST_STRING;
     tmp_setting.default_value = "";
   
-    tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING;
+    tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING | MDFNSF_FREE_NAME | MDFNSF_FREE_DESC;
     tmp_setting.description_extra = NULL;
     tmp_setting.validate_func = ValidateIMSetting;
-    settings.push_back(tmp_setting);
+    MDFNI_AddSetting(tmp_setting);
    }
 
    if((info->IDII[x].Flags & IDIT_AXIS_FLAG_SQLR) && !analog_scale_made)
@@ -2409,13 +2409,14 @@ static INLINE void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, co
     tmp_setting.name = CleanSettingName(build_string(system->shortname, ".input.", system->PortInfo[w].ShortName, ".", info->ShortName, ".axis_scale"));
     tmp_setting.description = trio_aprintf(gettext_noop("Analog axis scale coefficient for %s on %s."), info->FullName, system->PortInfo[w].FullName);
     tmp_setting.description_extra = NULL;
+    tmp_setting.flags = MDFNSF_FREE_NAME | MDFNSF_FREE_DESC;
 
     tmp_setting.type = MDFNST_FLOAT;
     tmp_setting.default_value = "1.00";
     tmp_setting.minimum = "1.00";
     tmp_setting.maximum = "1.50";
 
-    settings.push_back(tmp_setting);
+    MDFNI_AddSetting(tmp_setting);
     analog_scale_made = true;
    }
   }
@@ -2439,10 +2440,10 @@ static INLINE void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, co
     tmp_setting.type = MDFNST_STRING;
     tmp_setting.default_value = default_value;
   
-    tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING;
+    tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING | MDFNSF_FREE_NAME | MDFNSF_FREE_DESC;
     tmp_setting.description_extra = NULL;
     tmp_setting.validate_func = ValidateIMSetting;
-    settings.push_back(tmp_setting);
+    MDFNI_AddSetting(tmp_setting);
     def_butti++;
    }
   }
@@ -2465,10 +2466,10 @@ static INLINE void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, co
    tmp_setting.type = MDFNST_STRING;
    tmp_setting.default_value = default_value;
   
-   tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING;
+   tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING | MDFNSF_FREE_NAME | MDFNSF_FREE_DESC;
    tmp_setting.description_extra = NULL;
    tmp_setting.validate_func = ValidateIMSetting;
-   settings.push_back(tmp_setting);
+   MDFNI_AddSetting(tmp_setting);
    def_butti++;
   }
   //printf("Maketset: %s %s\n", tmp_setting.name, tmp_setting.default_value);
@@ -2486,11 +2487,11 @@ static INLINE void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, co
 
    tmp_setting.default_value = "";
 
-   tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING;
+   tmp_setting.flags = MDFNSF_SUPPRESS_DOC | MDFNSF_CAT_INPUT_MAPPING | MDFNSF_FREE_NAME | MDFNSF_FREE_DESC;
    tmp_setting.description_extra = NULL;
    tmp_setting.validate_func = ValidateIMSetting;
 
-   settings.push_back(tmp_setting);
+   MDFNI_AddSetting(tmp_setting);
   }
   else if(info->IDII[x].Type == IDIT_SWITCH)
   {
@@ -2502,7 +2503,7 @@ static INLINE void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, co
    tmp_setting.description = trio_aprintf(gettext_noop("Default position for switch \"%s\"."), info->IDII[x].Name);
    tmp_setting.description_extra = gettext_noop("Sets the position for the switch to the value specified upon startup and virtual input device change.");
 
-   tmp_setting.flags = (info->IDII[x].Flags & IDIT_FLAG_AUX_SETTINGS_UNDOC) ? MDFNSF_SUPPRESS_DOC : 0;
+   tmp_setting.flags = ((info->IDII[x].Flags & IDIT_FLAG_AUX_SETTINGS_UNDOC) ? MDFNSF_SUPPRESS_DOC : 0) | MDFNSF_FREE_NAME | MDFNSF_FREE_DESC | MDFNSF_FREE_ENUMLIST;
    {
     MDFNSetting_EnumList* el = (MDFNSetting_EnumList*)calloc(info->IDII[x].Switch.NumPos + 1, sizeof(MDFNSetting_EnumList));
     const uint32 snp = info->IDII[x].Switch.NumPos;
@@ -2526,7 +2527,7 @@ static INLINE void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, co
     tmp_setting.default_value = el[info->IDII[x].Switch.DefPos].string;
    }
 
-   settings.push_back(tmp_setting);
+   MDFNI_AddSetting(tmp_setting);
   }
  }
  if(defs)
@@ -2537,7 +2538,7 @@ static INLINE void MakeSettingsForDevice(std::vector <MDFNSetting> &settings, co
 }
 
 template<typename T>
-static INLINE void MakeSettingsForPort(std::vector <MDFNSetting> &settings, const MDFNGI *system, const int w, const InputPortInfoStruct *info, const T& defset)
+static INLINE void MakeSettingsForPort(const MDFNGI *system, const int w, const InputPortInfoStruct *info, const T& defset)
 {
  if(info->DeviceInfo.size() > 1)
  {
@@ -2574,11 +2575,11 @@ static INLINE void MakeSettingsForPort(std::vector <MDFNSetting> &settings, cons
 
   assert(info->DefaultDevice);
 
-  tmp_setting.flags = MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE;
+  tmp_setting.flags = MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE | MDFNSF_FREE_NAME | MDFNSF_FREE_DESC | MDFNSF_FREE_ENUMLIST | MDFNSF_FREE_ENUMLIST_STRING | MDFNSF_FREE_ENUMLIST_DESC | MDFNSF_FREE_ENUMLIST_DESC_EXTRA;
   tmp_setting.description_extra = NULL;
   tmp_setting.enum_list = EnumList;
 
-  settings.push_back(tmp_setting);
+  MDFNI_AddSetting(tmp_setting);
  }
 
  for(unsigned device = 0; device < info->DeviceInfo.size(); device++)
@@ -2594,12 +2595,12 @@ static INLINE void MakeSettingsForPort(std::vector <MDFNSetting> &settings, cons
     defs = &fit->second;
   }
 
-  MakeSettingsForDevice(settings, system, w, &info->DeviceInfo[device], defs);
+  MakeSettingsForDevice(system, w, &info->DeviceInfo[device], defs);
  }
 }
 
 // Called on emulator startup
-void Input_MakeSettings(std::vector <MDFNSetting> &settings)
+void Input_MakeSettings(void)
 {
  //uint64 st = Time::MonoUS();
 
@@ -2612,7 +2613,7 @@ void Input_MakeSettings(std::vector <MDFNSetting> &settings)
    assert(MDFNSystems[x]->PortInfo.size() <= 16);
 
    for(unsigned port = 0; port < MDFNSystems[x]->PortInfo.size(); port++)
-    MakeSettingsForPort(settings, MDFNSystems[x], port, &MDFNSystems[x]->PortInfo[port], defset);
+    MakeSettingsForPort(MDFNSystems[x], port, &MDFNSystems[x]->PortInfo[port], defset);
   }
  }
 
@@ -2635,7 +2636,7 @@ void Input_MakeSettings(std::vector <MDFNSetting> &settings)
   tmp_setting.validate_func = ValidateIMSetting;
 
   tmp_setting.default_value = CKeys[x].setting_default;
-  settings.push_back(tmp_setting);
+  MDFNI_AddSetting(tmp_setting);
  }
 
 #if 0

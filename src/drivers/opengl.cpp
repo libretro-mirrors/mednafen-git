@@ -28,13 +28,21 @@ void OpenGL_Blitter::ReadPixels(MDFN_Surface *surface, const MDFN_Rect *rect)
  p_glPixelStorei(GL_UNPACK_ROW_LENGTH, surface->pitchinpix);
  p_glReadPixels(rect->x, gl_screen_h - rect->h - rect->y, rect->w, rect->h, OSDPixelFormat, OSDPixelType, surface->pixels);
 
- for(int y = 0; y < surface->h / 2; y++)
+ for(int32 y = 0; y < surface->h / 2; y++)
  {
-  uint32 tmp_buffer[surface->w];
+  enum : size_t { tmp_buffer_count = 1024 };
+  uint32 tmp_buffer[tmp_buffer_count];
 
-  memcpy(tmp_buffer, &surface->pixels[y * surface->pitchinpix], surface->pitchinpix * sizeof(uint32));
-  memcpy(&surface->pixels[y * surface->pitchinpix], &surface->pixels[(surface->h - 1 - y) * surface->pitchinpix], surface->pitchinpix * sizeof(uint32));
-  memcpy(&surface->pixels[(surface->h - 1 - y) * surface->pitchinpix], tmp_buffer, surface->pitchinpix * sizeof(uint32));
+  for(int32 x = 0; x < surface->w; )
+  {
+   const uint32 tw = std::min<int32>(surface->w - x, tmp_buffer_count);
+
+   memcpy(tmp_buffer, &surface->pixels[y * surface->pitchinpix + x], tw * sizeof(uint32));
+   memcpy(&surface->pixels[y * surface->pitchinpix + x], &surface->pixels[(surface->h - 1 - y) * surface->pitchinpix + x], tw * sizeof(uint32));
+   memcpy(&surface->pixels[(surface->h - 1 - y) * surface->pitchinpix + x], tmp_buffer, tw * sizeof(uint32));
+
+   x += tw;
+  }
  }
 }
 

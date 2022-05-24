@@ -855,7 +855,7 @@ void FrontIO::LoadMemcard(unsigned int which, const std::string& path)
    tmpbuf.resize(PossibleDevices[which].Memcard->GetNVSize());
 
    if(mf.size() != tmpbuf.size())
-    throw(MDFN_Error(0, _("Memory card file \"%s\" is an incorrect size(%d bytes).  The correct size is %d bytes."), path.c_str(), (int)mf.size(), (int)tmpbuf.size()));
+    throw(MDFN_Error(0, _("Memory card file \"%s\" is an incorrect size(%d bytes).  The correct size is %d bytes."), MDFN_strhumesc(path).c_str(), (int)mf.size(), (int)tmpbuf.size()));
 
    mf.read(&tmpbuf[0], tmpbuf.size());
 

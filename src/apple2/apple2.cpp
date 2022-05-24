@@ -30,7 +30,6 @@
 #include <mednafen/FileStream.h>
 #include <mednafen/MemoryStream.h>
 #include <mednafen/compress/GZFileStream.h>
-#include <mednafen/compress/ZLInflateFilter.h>
 #include <mednafen/mempatcher.h>
 #include <mednafen/hash/sha256.h>
 #include <mednafen/SimpleBitset.h>
@@ -1160,9 +1159,9 @@ static void Load(GameFile* gf)
        auto const& disk_cfg = mai_cfg[std::string("disk2.disks.") + ds];
 
        if(disk_cfg.size() < 1)
-        throw MDFN_Error(0, _("Disk \"%s\" not defined."), ds);
+        throw MDFN_Error(0, _("Disk \"%s\" not defined."), MDFN_strhumesc(ds).c_str());
        else if(disk_cfg.size() < 3)
-        throw MDFN_Error(0, _("Disk \"%s\" definition is incomplete."), ds);
+        throw MDFN_Error(0, _("Disk \"%s\" definition is incomplete."), MDFN_strhumesc(ds).c_str());
        //
        const std::string disk_label = disk_cfg[1];
        const std::string disk_relpath = disk_cfg[2];
@@ -1201,7 +1200,7 @@ static void Load(GameFile* gf)
        if(write_protect >= 0)
         disk.write_protect = write_protect;
 
-       MDFNGameInfo->RMD->Media.push_back(RMD_Media({disk_label, drive}));
+       MDFNGameInfo->RMD->Media.push_back(RMD_Media({MDFN_strhumesc(disk_label), drive}));
        disk_already_loaded[ds] = MDFNGameInfo->RMD->Media.size() - 1;
 
        if(default_inserted)
@@ -1317,7 +1316,7 @@ static void Load(GameFile* gf)
        calced_hash = sha256(buf, 256);
 
        if(fwinf.hash != calced_hash)
-        throw MDFN_Error(0, _("Firmware data for \"%s\" in file \"%s\" is corrupt or otherwise wrong."), fwinf.purpose, path.c_str());
+        throw MDFN_Error(0, _("Firmware data for \"%s\" in file \"%s\" is corrupt or otherwise wrong."), fwinf.purpose, MDFN_strhumesc(path).c_str());
 
        if(i)
         Disk2::SetSeqROM(buf);

@@ -25,6 +25,96 @@ MDFNST_UINT
 0x0000000000000000
 0xFFFFFFFFFFFFFFFF
 0
+apple2.dbg_mask
+MDFNSF_SUPPRESS_DOC 
+Debug printf mask.
+
+(nil)
+none
+
+
+10
+0
+
+
+none
+None
+
+all
+All
+
+warning
+Warnings
+
+unk_read
+Reads from unhandled CPU addresses
+
+unk_write
+Writes to unhandled CPU addresses
+
+uninit_read
+Reads from uninitialized RAM
+
+disk2
+Disk II
+
+bios
+BIOS
+
+dos
+DOS
+
+apple2.debugger.disfontsize
+MDFNSF_SUPPRESS_DOC MDFNSF_COMMON_TEMPLATE 
+Disassembly font size.
+Note: Setting the font size to larger than the default may cause text overlap in the debugger.
+MDFNST_ENUM
+5x7
+
+
+11
+5x7
+5x7
+
+6x9
+6x9
+
+6x12
+6x12
+
+6x13
+6x13.  CJK support.
+
+9x18
+9x18;  CJK support.
+
+xsmall
+
+
+small
+
+
+medium
+
+
+large
+
+
+0
+
+
+1
+
+
+apple2.debugger.memcharenc
+MDFNSF_SUPPRESS_DOC MDFNSF_COMMON_TEMPLATE 
+Character encoding for the debugger\'s memory editor.
+
+MDFNST_STRING
+cp437
+
+
+0
 apple2.enable
 MDFNSF_COMMON_TEMPLATE 
 Enable (automatic) usage of this module.
@@ -988,7 +1078,7 @@ MDFNST_FLOAT
 apple2.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -1396,11 +1486,29 @@ MDFNST_BOOL
 cd.image_memcache
 
 Cache entire CD images in memory.
-Reads the entire CD image(s) into memory at startup(which will cause a small delay).  Can help obviate emulation hiccups due to emulated CD access.  May cause more harm than good on low memory systems, systems with swap enabled, and/or when the disc images in question are on a fast SSD.
+Reads the entire CD image(s) into memory at startup(which will cause a small delay).  Can help obviate emulation hiccups due to emulated CD access.  May cause more harm than good on low memory systems, systems with swap enabled, and/or when the disc images in question are on a fast SSD.\n\nCaution: When using a 32-bit build of Mednafen on Windows or a 32-bit operating system, Mednafen may run out of address space(and error out, possibly in the middle of emulation) if this option is enabled when loading large disc sets(e.g. 3+ discs) via M3U files.
 MDFNST_BOOL
 0
 
 
+0
+cd.m3u.disc_limit
+
+M3U total number of disc images limit.
+
+MDFNST_UINT
+25
+1
+999
+0
+cd.m3u.recursion_limit
+
+M3U recursion limit.
+A value of 0 effectively disables recursive loading of M3U files.
+MDFNST_UINT
+9
+0
+99
 0
 cdplay.enable
 MDFNSF_COMMON_TEMPLATE 
@@ -1618,7 +1726,7 @@ MDFNST_FLOAT
 cdplay.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -3043,7 +3151,7 @@ MDFNST_FLOAT
 demo.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -3307,6 +3415,15 @@ Format string for state filename.
 See fname_format.txt for more information.  Edit at your own risk.
 MDFNST_STRING
 %f.%M%X
+
+
+0
+filesys.old_gz_naming
+MDFNSF_SUPPRESS_DOC 
+Enable old handling of .gz file extensions with respect to data file path construction.
+
+MDFNST_BOOL
+0
 
 
 0
@@ -3778,7 +3895,7 @@ MDFNST_FLOAT
 gb.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -4255,7 +4372,7 @@ MDFNST_FLOAT
 gba.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -4675,7 +4792,7 @@ MDFNST_FLOAT
 gg.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -5185,7 +5302,7 @@ MDFNST_FLOAT
 lynx.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -9190,7 +9307,7 @@ MDFNST_FLOAT
 md.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -12148,7 +12265,7 @@ MDFNST_INT
 nes.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -12703,7 +12820,7 @@ MDFNST_FLOAT
 ngp.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -15448,7 +15565,7 @@ MDFNST_UINT
 pce.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -17131,7 +17248,7 @@ MDFNST_UINT
 pce_fast.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -19525,7 +19642,7 @@ MDFNST_UINT
 pcfx.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -19846,7 +19963,7 @@ MDFNST_FLOAT
 player.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -31006,7 +31123,7 @@ MDFNST_INT
 psx.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -31245,6 +31362,399 @@ MDFNST_UINT
 384
 0
 1073741824
+0
+sasplay.enable
+MDFNSF_COMMON_TEMPLATE 
+Enable (automatic) usage of this module.
+
+MDFNST_BOOL
+1
+
+
+0
+sasplay.forcemono
+MDFNSF_CAT_SOUND MDFNSF_COMMON_TEMPLATE 
+Force monophonic sound output.
+
+MDFNST_BOOL
+0
+
+
+0
+sasplay.input.builtin.controller.next_song
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+sasplay, Built-In, Controller: Next Song
+
+MDFNST_STRING
+keyboard 0x0 7 || keyboard 0x0 79
+
+
+0
+sasplay.input.builtin.controller.next_song_10
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+sasplay, Built-In, Controller: Next Song 10
+
+MDFNST_STRING
+keyboard 0x0 26 || keyboard 0x0 82
+
+
+0
+sasplay.input.builtin.controller.previous_song
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+sasplay, Built-In, Controller: Previous Song
+
+MDFNST_STRING
+keyboard 0x0 4 || keyboard 0x0 80
+
+
+0
+sasplay.input.builtin.controller.previous_song_10
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+sasplay, Built-In, Controller: Previous Song 10
+
+MDFNST_STRING
+keyboard 0x0 22 || keyboard 0x0 81
+
+
+0
+sasplay.input.builtin.controller.restart
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+sasplay, Built-In, Controller: Restart Song
+
+MDFNST_STRING
+keyboard 0x0 40
+
+
+0
+sasplay.resamp_quality
+
+SCSP output resampler quality.
+0 is lowest quality and CPU usage, 10 is highest quality and CPU usage.  The resampler that this setting refers to is used for converting from 44.1KHz to the sampling rate of the host audio device Mednafen is using.  Changing Mednafen\'s output rate, via the \"sound.rate\" setting, to \"44100\" may bypass the resampler, which can decrease CPU usage by Mednafen, and can increase or decrease audio quality, depending on various operating system and hardware factors.
+MDFNST_UINT
+5
+0
+10
+0
+sasplay.scanlines
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines with specified opacity.
+Opacity is specified in %; IE a value of \"100\" will give entirely black scanlines.\n\nNegative values are the same as positive values for non-interlaced video, but for interlaced video will cause the scanlines to be overlaid over the previous(if the video.deinterlacer setting is set to \"weave\", the default) field\'s lines.
+MDFNST_INT
+0
+-100
+100
+0
+sasplay.shader
+MDFNSF_COMMON_TEMPLATE 
+Enable specified OpenGL shader.
+Obviously, this will only work with the OpenGL \"video.driver\" setting, and only on cards and OpenGL implementations that support shaders, otherwise you will get a black screen, or Mednafen may display an error message when starting up. When a shader is enabled, the \"<system>.videoip\" setting is ignored.
+MDFNST_ENUM
+none
+
+
+11
+none
+None/Disabled
+
+autoip
+Auto Interpolation
+Will automatically interpolate on each axis if the corresponding effective scaling factor is not an integer.
+autoipsharper
+Sharper Auto Interpolation
+Same as \"autoip\", but when interpolation is done, it is done in a manner that will reduce blurriness if possible.
+scale2x
+Scale2x
+
+sabr
+SABR v3.0
+GPU-intensive.
+ipsharper
+Sharper bilinear interpolation.
+
+ipxnoty
+Linear interpolation on X axis only.
+
+ipynotx
+Linear interpolation on Y axis only.
+
+ipxnotysharper
+Sharper version of \"ipxnoty\".
+
+ipynotxsharper
+Sharper version of \"ipynotx\".
+
+goat
+Simple approximation of a color TV CRT look.
+Intended for fullscreen modes with a vertical resolution of around 1000 to 1500 pixels.  Doesn\'t simulate halation and electron beam energy distribution nuances.
+sasplay.shader.goat.fprog
+MDFNSF_COMMON_TEMPLATE 
+Force interlaced video to be treated as progressive.
+When disabled, the default, the \"video.deinterlacer\" setting is effectively ignored with respect to what appears on the screen, unless it\'s set to \"blend\" or \"blend_rg\".  When enabled, it may be prudent to disable the scanlines effect controlled by the *.goat.slen setting, or else the scanline effect may look objectionable.
+MDFNST_BOOL
+0
+
+
+0
+sasplay.shader.goat.hdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB horizontal divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+sasplay.shader.goat.pat
+MDFNSF_COMMON_TEMPLATE 
+Mask pattern.
+
+MDFNST_ENUM
+goatron
+
+
+6
+goatron
+Goatron
+Brightest.
+goattron
+
+
+goatronprime
+
+
+goattronprime
+
+
+borg
+Borg
+Darkest.
+slenderman
+Slenderman
+Spookiest?
+sasplay.shader.goat.slen
+MDFNSF_COMMON_TEMPLATE 
+Enable scanlines effect.
+
+MDFNST_BOOL
+1
+
+
+0
+sasplay.shader.goat.tp
+MDFNSF_COMMON_TEMPLATE 
+Transparency of otherwise-opaque mask areas.
+
+MDFNST_FLOAT
+0.50
+0.00
+1.00
+0
+sasplay.shader.goat.vdiv
+MDFNSF_COMMON_TEMPLATE 
+Constant RGB vertical divergence.
+
+MDFNST_FLOAT
+0.50
+-2.00
+2.00
+0
+sasplay.special
+MDFNSF_COMMON_TEMPLATE 
+Enable specified special video scaler.
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
+MDFNST_ENUM
+none
+
+
+17
+0
+
+
+none
+None/Disabled
+
+hq2x
+hq2x
+
+hq3x
+hq3x
+
+hq4x
+hq4x
+
+scale2x
+scale2x
+
+scale3x
+scale3x
+
+scale4x
+scale4x
+
+2xsai
+2xSaI
+
+super2xsai
+Super 2xSaI
+
+supereagle
+Super Eagle
+
+nn2x
+Nearest-neighbor 2x
+
+nn3x
+Nearest-neighbor 3x
+
+nn4x
+Nearest-neighbor 4x
+
+nny2x
+Nearest-neighbor 2x, y axis only
+
+nny3x
+Nearest-neighbor 3x, y axis only
+
+nny4x
+Nearest-neighbor 4x, y axis only
+
+sasplay.stretch
+MDFNSF_COMMON_TEMPLATE 
+Stretch to fill screen.
+
+MDFNST_ENUM
+aspect_mult2
+
+
+9
+0
+Disabled
+
+off
+
+
+none
+
+
+1
+
+
+full
+Full
+Full-screen stretch, disregarding aspect ratio.
+2
+
+
+aspect
+Aspect Preserve
+Full-screen stretch as far as the aspect ratio(in this sense, the equivalent xscalefs == yscalefs) can be maintained.
+aspect_int
+Aspect Preserve + Integer Scale
+Full-screen stretch, same as \"aspect\" except that the equivalent xscalefs and yscalefs are rounded down to the nearest integer.
+aspect_mult2
+Aspect Preserve + Integer Multiple-of-2 Scale
+Full-screen stretch, same as \"aspect_int\", but rounds down to the nearest multiple of 2.
+sasplay.tblur
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Enable video temporal blur(50/50 previous/current frame by default).
+
+MDFNST_BOOL
+0
+
+
+0
+sasplay.tblur.accum
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Accumulate color data rather than discarding it.
+
+MDFNST_BOOL
+0
+
+
+0
+sasplay.tblur.accum.amount
+MDFNSF_CAT_VIDEO MDFNSF_COMMON_TEMPLATE 
+Blur amount in accumulation mode, specified in percentage of accumulation buffer to mix with the current frame.
+
+MDFNST_FLOAT
+50
+0
+100
+0
+sasplay.videoip
+MDFNSF_COMMON_TEMPLATE 
+Enable (bi)linear interpolation.
+
+MDFNST_ENUM
+0
+
+
+4
+0
+Disabled
+
+1
+Bilinear
+
+x
+Linear (X)
+Interpolation only on the X axis.
+y
+Linear (Y)
+Interpolation only on the Y axis.
+sasplay.xres
+MDFNSF_COMMON_TEMPLATE 
+Full-screen horizontal resolution.
+A value of \"0\" will cause the current desktop horizontal resolution to be used.
+MDFNST_UINT
+0
+0
+65536
+0
+sasplay.xscale
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the X axis in windowed mode.
+
+MDFNST_FLOAT
+2.000000
+0.01
+256
+0
+sasplay.xscalefs
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the X axis in fullscreen mode.
+For this setting to have any effect, the \"<system>.stretch\" setting must be set to \"0\".
+MDFNST_FLOAT
+1.000000
+0.01
+256
+0
+sasplay.yres
+MDFNSF_COMMON_TEMPLATE 
+Full-screen vertical resolution.
+A value of \"0\" will cause the current desktop vertical resolution to be used.
+MDFNST_UINT
+0
+0
+65536
+0
+sasplay.yscale
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the Y axis in windowed mode.
+
+MDFNST_FLOAT
+2.000000
+0.01
+256
+0
+sasplay.yscalefs
+MDFNSF_COMMON_TEMPLATE 
+Scaling factor for the Y axis in fullscreen mode.
+For this setting to have any effect, the \"<system>.stretch\" setting must be set to \"0\".
+MDFNST_FLOAT
+1.000000
+0.01
+256
 0
 sfspeed
 
@@ -31615,7 +32125,7 @@ MDFNST_UINT
 sms.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -33385,7 +33895,7 @@ MDFNST_FLOAT
 snes.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -33642,6 +34152,57 @@ MDFNST_UINT
 100
 100
 500
+0
+snes_faust.debugger.disfontsize
+MDFNSF_SUPPRESS_DOC MDFNSF_COMMON_TEMPLATE 
+Disassembly font size.
+Note: Setting the font size to larger than the default may cause text overlap in the debugger.
+MDFNST_ENUM
+5x7
+
+
+11
+5x7
+5x7
+
+6x9
+6x9
+
+6x12
+6x12
+
+6x13
+6x13.  CJK support.
+
+9x18
+9x18;  CJK support.
+
+xsmall
+
+
+small
+
+
+medium
+
+
+large
+
+
+0
+
+
+1
+
+
+snes_faust.debugger.memcharenc
+MDFNSF_SUPPRESS_DOC MDFNSF_COMMON_TEMPLATE 
+Character encoding for the debugger\'s memory editor.
+
+MDFNST_STRING
+cp437
+
+
 0
 snes_faust.enable
 MDFNSF_COMMON_TEMPLATE 
@@ -35221,7 +35782,7 @@ MDFNST_INT
 snes_faust.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -35757,6 +36318,105 @@ vdp1rwdrawslowdown
 
 vdp1instant
 vdp1instant
+
+ss.dbg_mask
+MDFNSF_SUPPRESS_DOC 
+Debug printf mask.
+
+(nil)
+none
+
+
+30
+0
+
+
+none
+None
+
+all
+All
+
+warning
+Warnings
+
+m68k
+M68K
+
+sh2
+SH-2
+
+sh2_regw
+SH-2 (peripherals) register writes
+
+sh2_cache
+SH-2 cache
+
+sh2_cache_noisy
+SH-2 cache, with assoc purge/addr/data array logging
+
+sh2_except
+SH-2 exceptions and interrupts
+
+sh2_dmarace
+SH-2 DMA/CPU RW races
+
+scu
+SCU
+
+scu_regw
+SCU register writes
+
+scu_int
+SCU interrupt
+
+scu_dsp
+SCU DSP
+
+smpc
+SMPC
+
+smpc_regw
+SMPC register writes
+
+cdb
+CDB
+
+cdb_regw
+CDB register writes
+
+vdp1
+VDP1
+
+vdp1_regw
+VDP1 register writes
+
+vdp1_vramw
+VDP1 VRAM writes
+
+vdp1_fbw
+VDP1 FB writes
+
+vdp1_race
+VDP1 draw/VRAM write races
+
+vdp2
+VDP2
+
+vdp2_regw
+VDP2 register writes
+
+scsp
+SCSP
+
+scsp_regw
+SCSP register writes
+
+scsp_mobuf
+SCSP MOBUF writes
+
+bios
+BIOS
 
 ss.debugger.disfontsize
 MDFNSF_COMMON_TEMPLATE 
@@ -72793,7 +73453,7 @@ italiano
 ss.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -73141,7 +73801,7 @@ MDFNST_FLOAT
 ssfplay.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -73344,7 +74004,7 @@ MDFNST_ENUM
 anaglyph
 
 
-5
+7
 anaglyph
 Anaglyph
 Used in conjunction with classic dual-lens-color glasses.
@@ -73360,6 +74020,12 @@ Vertical lines alternate between left view and right view.
 hli
 Horizontal Line Interlaced
 Horizontal lines alternate between left view and right view.
+left
+Left View Only
+Show only the left view.
+right
+Right View Only
+Show only the right view.
 vb.3dreverse
 
 Reverse left/right 3D views.
@@ -73870,7 +74536,7 @@ MDFNST_UINT
 vb.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 
@@ -74074,6 +74740,27 @@ MDFNST_BOOL
 
 
 0
+video.cursorvis
+
+Preferred window manager cursor visibility.
+The cursor will still be forcibly hidden in relative mouse mode(used automatically when emulating a mouse input device in fullscreen mode or in windowed mode and input grabbing is toggled on), and forcibly shown in the debugger.
+MDFNST_ENUM
+hidden
+
+
+4
+hidden
+Hidden
+
+visible
+Visible
+
+0
+
+
+1
+
+
 video.deinterlacer
 MDFNSF_CAT_VIDEO 
 Deinterlacer to use for interlaced video.
@@ -74137,6 +74824,15 @@ sdl
 overlay
 
 
+video.force_bbclear
+
+Force backbuffer clear before drawing.
+Enabling may result in a noticeable negative impact on performance with the \"softfb\" video driver, and with the \"opengl\" video driver on underpowered GPUs.
+MDFNST_BOOL
+0
+
+
+0
 video.frameskip
 
 Enable frameskip during emulation rendering.
@@ -74764,7 +75460,7 @@ MDFNST_FLOAT
 wswan.special
 MDFNSF_COMMON_TEMPLATE 
 Enable specified special video scaler.
-The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, at high resolutions(such as 1280x1024; nn2x(or nny2x) + bilinear interpolation + fullscreen stretching at this resolution looks quite nice).
+The destination rectangle is NOT altered by this setting, so if you have xscale and yscale set to \"2\", and try to use a 3x scaling filter like hq3x, the image is not going to look that great. The nearest-neighbor scalers are intended for use with bilinear interpolation enabled, for a sharper image, though the \"autoipsharper\" shader may provide better results.
 MDFNST_ENUM
 none
 

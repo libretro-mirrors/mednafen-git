@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='1.27.0-UNSTABLE'
-MEDNAFEN_VERSION_NUMERIC=0x00102700
+MEDNAFEN_VERSION='1.29.0'
+MEDNAFEN_VERSION_NUMERIC=0x00102900
 #                        0xJJJnnnRR
 
 AC_CANONICAL_HOST
@@ -36,7 +36,6 @@ AC_PROG_INSTALL
 gl_VISIBILITY
 
 AC_SYS_LARGEFILE
-AC_FUNC_FSEEKO
 AC_DEFINE(_LARGEFILE64_SOURCE, [1], [Define for largefile support through extra functions.])
 AC_DEFINE(_LARGEFILE_SOURCE, [1], [Define for fseeko and ftello on some hosts.])
 
@@ -55,7 +54,12 @@ AC_CHECK_SIZEOF(size_t)
 AC_CHECK_SIZEOF(ptrdiff_t)
 AC_CHECK_SIZEOF(off_t)
 AC_C_CONST
-AC_CHECK_FUNCS(memcmp memcpy memmove memset mmap munmap madvise signal sigaction siglongjmp _longjmp fork pipe dup2 fcntl getenv putenv setenv gettimeofday getpwuid getuid strerror strerror_r ftello fopen64 fseeko64 lseek64 ftello64 fstat64 ftruncate64 __mingw_get_crt_info)
+AC_CHECK_FUNCS(memcmp memcpy memmove memset)
+AC_CHECK_FUNCS(mmap munmap madvise)
+AC_CHECK_FUNCS(signal sigaction siglongjmp _longjmp fork getpwuid getuid)
+AC_CHECK_FUNCS(getenv putenv setenv)
+AC_CHECK_FUNCS(pipe dup2 fcntl lseek64 fstat64 ftruncate64)
+AC_CHECK_FUNCS(strerror strerror_r __mingw_get_crt_info)
 
 AC_SEARCH_LIBS(fmodl, [m])
 
@@ -65,7 +69,7 @@ AC_SEARCH_LIBS(fmodl, [m])
 # (posix4 is apparently used by much older versions of Solaris according to tar, pre-7, so maybe it's not necessary
 #  for Mednafen?)
 AC_SEARCH_LIBS(clock_gettime, [rt posix4])
-AC_CHECK_FUNCS(clock_gettime nanosleep usleep localtime_r gmtime_r)
+AC_CHECK_FUNCS(clock_gettime nanosleep usleep localtime_r gmtime_r gettimeofday)
 
 AC_CHECK_HEADERS(fcntl.h)
 AC_CHECK_HEADERS(stdint.h inttypes.h)
@@ -79,6 +83,9 @@ AC_CHECK_HEADERS(fenv.h)
 AC_DEFINE(MINILZO_HAVE_CONFIG_H, [1], [Define if config.h is present])
 
 AM_ICONV
+if test "x$am_cv_func_iconv" != "xyes"; then
+	AC_MSG_ERROR([*** iconv not found!])
+fi
 AM_GNU_GETTEXT
 
 AC_SUBST(LIBICONV)
@@ -123,22 +130,11 @@ AX_CFLAGS_GCC_OPTION([-fomit-frame-pointer], OPTIMIZER_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fstrict-aliasing], OPTIMIZER_FLAGS)
 
 dnl
-dnl Aggressively try to disable PIC and PIE, as it has a significant performance overhead and will
-dnl break some code(with compile-time failures or run-time assert()s triggering).
-dnl
 dnl Use -fwrapv instead of -fno-strict-overflow; -fno-strict-overflow is buggy on gcc and does not work as documented/implied.
 dnl
 dnl -mfunction-return=keep, -mindirect-branch=keep, -mno-indirect-branch-register to disable performance-murdering Spectre mitigations.
 dnl
 CODEGEN_FLAGS=""
-
-AX_CFLAGS_GCC_OPTION([-fno-pic], CODEGEN_FLAGS)
-AX_CFLAGS_GCC_OPTION([-fno-pie], CODEGEN_FLAGS)
-AX_CFLAGS_GCC_OPTION([-fno-PIC], CODEGEN_FLAGS)
-AX_CFLAGS_GCC_OPTION([-fno-PIE], CODEGEN_FLAGS)
-AX_CFLAGS_GCC_OPTION([-nopie], CODEGEN_FLAGS)
-AX_CFLAGS_GCC_OPTION([-no-pie], CODEGEN_FLAGS)
-
 AX_CFLAGS_GCC_OPTION([-fwrapv],  CODEGEN_FLAGS)
 AX_CFLAGS_GCC_OPTION([-fjump-tables], CODEGEN_FLAGS)
 AX_CFLAGS_GCC_OPTION([-mfunction-return=keep], CODEGEN_FLAGS)
@@ -159,8 +155,53 @@ AX_CFLAGS_GCC_OPTION([-Wignored-qualifiers], WARNING_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wvla], WARNING_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wvariadic-macros], WARNING_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Wdisabled-optimization], WARNING_FLAGS)
+AX_CFLAGS_GCC_OPTION([-Wstack-usage=32768], WARNING_FLAGS)
 AX_CFLAGS_GCC_OPTION([-Werror=write-strings], WARNING_FLAGS)
 AC_SUBST(WARNING_FLAGS)
+
+dnl
+dnl Aggressively try to disable PIC and PIE, as it has a significant performance overhead and may
+dnl break some 32-bit x86 inline assembly.
+dnl
+dnl A quick and dirty check is done to see if compiling and linking with PIC/PIE forcibly disabled works, and if it doesn't,
+dnl PIC/PIE-disabling flags aren't used.  Fixes linking failure on Haiku; it may not catch failures in other situations due to the
+dnl simplicity of the test program and some other compiler flag usage differences compared with compiling Mednafen itself.
+dnl
+NOPICPIE_FLAGS=""
+NOPICPIE_LDFLAGS=""
+AX_CFLAGS_GCC_OPTION([-fno-pic], NOPICPIE_FLAGS)
+AX_CFLAGS_GCC_OPTION([-fno-pie], NOPICPIE_FLAGS)
+AX_CFLAGS_GCC_OPTION([-fno-PIC], NOPICPIE_FLAGS)
+AX_CFLAGS_GCC_OPTION([-fno-PIE], NOPICPIE_FLAGS)
+AX_CHECK_LINK_FLAG([-nopie], [NOPICPIE_LDFLAGS="$NOPICPIE_LDFLAGS -nopie"])
+AX_CHECK_LINK_FLAG([-no-pie], [NOPICPIE_LDFLAGS="$NOPICPIE_LDFLAGS -no-pie"])
+
+if test "x$NOPICPIE_FLAGS" != "x" || test "x$NOPICPIE_LDFLAGS" != "x"; then
+	AC_MSG_CHECKING([if compiling and linking works with PIC/PIE-disabling flags])
+	ac_save_CFLAGS="$CFLAGS"
+	ac_save_CXXFLAGS="$CXXFLAGS"
+	ac_save_LDFLAGS="$LDFLAGS"
+	CFLAGS="$OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGEN_CFLAGS $CFLAGS"
+	CXXFLAGS="$OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGEN_CXXFLAGS $CXXFLAGS"
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdio.h>]], [[return puts("blackraspberrycobblerwithvanillaicecream");]])], [], [AC_MSG_ERROR([*** compiler broken?])])
+        dnl Put $NOPICPIE_FLAGS after $CFLAGS/$CXXFLAGS here so the check doesn't give a misleading result,
+        dnl but don't do it elsewhere.
+	CFLAGS="$CFLAGS $NOPICPIE_FLAGS"
+	CXXFLAGS="$CXXFLAGS $NOPICPIE_FLAGS"
+	LDFLAGS="$LDFLAGS $NOPICPIE_LDFLAGS"
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdio.h>]], [[return puts("blackraspberrycobblerwithvanillaicecream");]])],
+		[
+		 AC_MSG_RESULT([yes])
+		],
+		[
+		 AC_MSG_RESULT([no])
+		 NOPICPIE_FLAGS=""
+		 NOPICPIE_LDFLAGS=""
+		])
+	CFLAGS="$ac_save_CFLAGS"
+	CXXFLAGS="$ac_save_CXXFLAGS"
+	LDFLAGS="$ac_save_LDFLAGS"
+fi
 
 #################################
 #
@@ -249,7 +290,6 @@ AM_CONDITIONAL(WANT_GB_EMU, false)
 AM_CONDITIONAL(WANT_GBA_EMU, false)
 AM_CONDITIONAL(WANT_LYNX_EMU, false)
 AM_CONDITIONAL(WANT_MD_EMU, false)
-AM_CONDITIONAL(WANT_SMS_EMU, false)
 AM_CONDITIONAL(WANT_NES_EMU, false)
 AM_CONDITIONAL(WANT_NES_NEW_EMU, false)
 AM_CONDITIONAL(WANT_NGP_EMU, false)
@@ -257,6 +297,7 @@ AM_CONDITIONAL(WANT_PCE_EMU, false)
 AM_CONDITIONAL(WANT_PCE_FAST_EMU, false)
 AM_CONDITIONAL(WANT_PCFX_EMU, false)
 AM_CONDITIONAL(WANT_PSX_EMU, false)
+AM_CONDITIONAL(WANT_SASPLAY_EMU, false)
 AM_CONDITIONAL(WANT_SMS_EMU, false)
 AM_CONDITIONAL(WANT_SNES_EMU, false)
 AM_CONDITIONAL(WANT_SNES_FAUST_EMU, false)
@@ -406,6 +447,16 @@ AC_ARG_ENABLE(psx,
 if test x$enable_psx = xyes; then
                 AC_DEFINE([WANT_PSX_EMU], [1], [Define if we are compiling with PlayStation emulation.])
                 AM_CONDITIONAL(WANT_PSX_EMU, true)
+fi
+
+AC_ARG_ENABLE(sasplay,
+ AC_HELP_STRING([--enable-sasplay], [build with Sega Arcade SCSP Player [[default=yes]]]),
+                  , enable_sasplay=yes)
+
+if test x$enable_sasplay = xyes; then
+                AC_DEFINE([WANT_SASPLAY_EMU], [1], [Define if we are compiling with Sega Arcade SCSP Player.])
+                AM_CONDITIONAL(WANT_SASPLAY_EMU, true)
+                AM_CONDITIONAL(NEED_68K_EMU, true)
 fi
 
 AC_ARG_ENABLE(sms,
@@ -628,6 +679,25 @@ fi
 AC_CONFIG_LINKS([include/minilzo/minilzo.h:$minilzo_include_symsrc/minilzo.h])
 
 #
+# Zstd
+#
+AM_CONDITIONAL(HAVE_EXTERNAL_LIBZSTD, false)
+AC_ARG_WITH([external-libzstd], [AS_HELP_STRING([--with-external-libzstd], [compile and link with external libzstd @<:@default=no@:>@])],
+	[],
+	[with_external_libzstd=no])
+if test x$with_external_libzstd = xyes; then
+	PKG_CHECK_MODULES(LIBZSTD, libzstd >= 1.4.8, [], AC_MSG_ERROR([*** libzstd >= 1.4.8 not found!]))
+	AC_SUBST([LIBZSTD_LIBS])
+	AC_SUBST([LIBZSTD_CFLAGS])
+	AC_DEFINE([HAVE_EXTERNAL_LIBZSTD], [1], [Define if we are compiling and linking with external libzstd.])
+	AM_CONDITIONAL(HAVE_EXTERNAL_LIBZSTD, true)
+	libzstd_include_symsrc="include/zstd_external"
+else
+	libzstd_include_symsrc="src/zstd"
+fi
+AC_CONFIG_LINKS([include/zstd/zstd.h:$libzstd_include_symsrc/zstd.h])
+
+#
 # libFLAC
 #
 AM_CONDITIONAL(HAVE_LIBFLAC, false)
@@ -840,7 +910,7 @@ AM_CONDITIONAL(ARCH_POWERPC, false)
 TRIO_CFLAGS=""
 
 dnl OpenBSD...
-AC_TRY_COMPILE([], [asm volatile("vcvtss2si %xmm6,%ecx\n\tvhaddps %ymm7,%ymm7,%ymm7\n\tvzeroupper\n\t");],
+AC_TRY_LINK([], [asm volatile("vcvtss2si %xmm6,%ecx\n\tvhaddps %ymm7,%ymm7,%ymm7\n\tvzeroupper\n\t");],
 	AC_DEFINE([HAVE_INLINEASM_AVX], [1], [Define if GNU-style AVX inline assembly is supported.]),
 	[])
 
@@ -892,8 +962,9 @@ AC_C_BIGENDIAN([AC_DEFINE([MSB_FIRST],[1],[Define on big-endian platforms.])],
 AC_DEFINE_UNQUOTED([MEDNAFEN_VERSION],"$MEDNAFEN_VERSION", [Mednafen version definition.])
 AC_DEFINE_UNQUOTED([MEDNAFEN_VERSION_NUMERIC],$MEDNAFEN_VERSION_NUMERIC, [Mednafen version numeric.])
 
-AC_SUBST([AM_CFLAGS], "$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGEN_CFLAGS")
-AC_SUBST([AM_CXXFLAGS], "$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGEN_CXXFLAGS")
+AC_SUBST([AM_CFLAGS], "$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGEN_CFLAGS $NOPICPIE_FLAGS")
+AC_SUBST([AM_CXXFLAGS], "$ALTIVEC_FLAGS $OPTIMIZER_FLAGS $WARNING_FLAGS $CODEGEN_FLAGS $CODEGEN_CXXFLAGS $NOPICPIE_FLAGS")
+AC_SUBST([AM_LDFLAGS], "$NOPICPIE_LDFLAGS")
 
 dnl Output Makefiles
 AC_OUTPUT([Makefile po/Makefile.in intl/Makefile src/Makefile src/drivers/Makefile src/drivers_libxxx/Makefile src/drivers_dos/Makefile src/sexyal/Makefile src/ss/Makefile])
