@@ -470,6 +470,8 @@ static const RegType DBG_Regs_PPU[] =
  { (1 << 16) | PPU_GSREG_WOBJLOG, "WOBJLOG", "WOBJLOG", 1 },
  { (1 << 16) | PPU_GSREG_TM, "TM", "TM", 1 },
  { (1 << 16) | PPU_GSREG_TS, "TS", "TS", 1 },
+ { (1 << 16) | PPU_GSREG_TMW, "TMW", "TMW", 1 },
+ { (1 << 16) | PPU_GSREG_TSW, "TSW", "TSW", 1 },
  { (1 << 16) | PPU_GSREG_CGWSEL, "CGWSEL", "CGWSEL", 1 },
  { (1 << 16) | PPU_GSREG_CGADSUB, "CGADSUB", "CGADSUB", 1 },
  { 0, "------", "", 0xFFFF },

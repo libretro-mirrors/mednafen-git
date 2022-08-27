@@ -2374,6 +2374,21 @@ static void TestMiscString(void)
  assert(MDFN_strazicmp("`", "@") > 0 && MDFN_strazicmp("@", "`") < 0);
  assert(MDFN_strazicmp("{", "[") > 0 && MDFN_strazicmp("]", "}") < 0);
 
+ assert(!MDFN_strazicmp(std::string(""), ""));
+ assert(!MDFN_strazicmp(std::string(""), std::string("")));
+
+ assert(MDFN_strazicmp(std::string("A"), "") > 0 && MDFN_strazicmp(std::string(""), "A") < 0);
+ assert(MDFN_strazicmp(std::string("A"), std::string("")) > 0 && MDFN_strazicmp(std::string(""), std::string("A")) < 0);
+
+ assert(MDFN_strazicmp(std::string(1, '\0'), "") > 0 && MDFN_strazicmp("", std::string(1, '\0')) < 0);
+ assert(MDFN_strazicmp(std::string(1, '\0'), std::string("")) > 0 && MDFN_strazicmp(std::string(""), std::string(1, '\0')) < 0);
+
+ assert(MDFN_strazicmp(std::string(2, '\0'), "]") > 0 && MDFN_strazicmp("]", std::string(2, '\0')) < 0);
+ assert(MDFN_strazicmp(std::string(2, '\0'), std::string("]")) > 0 && MDFN_strazicmp(std::string("]"), std::string(2, '\0')) < 0);
+
+ assert(MDFN_strazicmp(std::string("A"), "\xFF") < 0 && MDFN_strazicmp(std::string("\xFF"), "A") > 0);
+ assert(MDFN_strazicmp(std::string("A"), std::string("\xFF")) < 0 && MDFN_strazicmp(std::string("\xFF"), std::string("A")) > 0);
+
  assert(!MDFN_memazicmp("", "", 0));
  assert(!MDFN_memazicmp("abc0", "ABC1", 3) && !MDFN_memazicmp("ABC0", "abc1", 3));
  assert(MDFN_memazicmp("a", "[", 1) > 0 && MDFN_memazicmp("A", "[", 1) > 0);

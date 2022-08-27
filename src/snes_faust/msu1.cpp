@@ -121,8 +121,8 @@ static uint32 NO_INLINE Update(uint32 master_timestamp)
    const float imp_b = Impulse[phase_index + 1][i];
    const float imp = imp_a + (imp_b - imp_a) * phase_ip;
 
-   accum[0] += imp * MDFN_densb<int16>(&inbuf[(i << 2) + 0]);
-   accum[1] += imp * MDFN_densb<int16>(&inbuf[(i << 2) + 2]);
+   accum[0] += imp * MDFN_delsb<int16>(&inbuf[(i << 2) + 0]);
+   accum[1] += imp * MDFN_delsb<int16>(&inbuf[(i << 2) + 2]);
   }
 
   (&ResampBuf[0].BufPudding()->f)[ResampBufPos] = accum[0] * eff_volume;

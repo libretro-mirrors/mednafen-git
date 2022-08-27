@@ -192,7 +192,7 @@ bool CART_Init(Stream* fp, uint8 id[16], const int32 cx4_ocmultiplier, const int
  else
   rom_layout = ROM_LAYOUT_LOROM;
 
- for(unsigned s = 0; s < 4 && header_found <= 0; s++)
+ for(unsigned s = (maybe_exrom ? 2 : 0), hfc = 4; hfc && header_found <= 0; s = (s + 1) & 3, hfc--)
  {
   uint8* tmp = &Cart.ROM[(s & 1) * 0x8000 + ((s & 2) ? 0x400000 : 0x000000)];
 
@@ -274,15 +274,13 @@ bool CART_Init(Stream* fp, uint8 id[16], const int32 cx4_ocmultiplier, const int
 	// For "Derby Stallion 96", "RPG Tsukuru 2", and "Sound Novel Tsukuru"
 	if(header_developer == 0x33 && tmp[0x7FB0] == 0x42 && tmp[0x7FB1] == 0x31 && tmp[0x7FB2] == 0x5A && tmp[0x7FB3] > 0x20 && tmp[0x7FB4] > 0x20 && tmp[0x7FB5] > 0x20)
 	 rom_layout = ROM_LAYOUT_LOROM_SPECIAL;
+	else if(maybe_exrom && (s & 2))
+	 rom_layout = ROM_LAYOUT_EXLOROM;
 	break;
 
     case 0x31:
     case 0x21:
 	rom_layout = ROM_LAYOUT_HIROM;
-	break;
-
-    case 0x32:
-	rom_layout = ROM_LAYOUT_EXLOROM;
 	break;
 
     case 0x35:
@@ -438,7 +436,7 @@ bool CART_Init(Stream* fp, uint8 id[16], const int32 cx4_ocmultiplier, const int
 
    if(rom_layout == ROM_LAYOUT_LOROM || rom_layout == ROM_LAYOUT_EXLOROM || rom_layout == ROM_LAYOUT_LOROM_SRAM8000MIRROR)
    {
-    if(rom_layout == ROM_LAYOUT_EXLOROM && bank < 0xC0)
+    if(rom_layout == ROM_LAYOUT_EXLOROM && bank < 0x80)
      cart_r = ((bank >= 0x80) ? CartRead_LoROM<-1, 0x400000> : CartRead_LoROM<MEMCYC_SLOW, 0x400000>);
     else
      cart_r = ((bank >= 0x80) ? CartRead_LoROM<-1> : CartRead_LoROM<MEMCYC_SLOW>);

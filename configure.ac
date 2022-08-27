@@ -6,8 +6,8 @@ AC_CONFIG_MACRO_DIR([m4])
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='1.29.0'
-MEDNAFEN_VERSION_NUMERIC=0x00102900
+MEDNAFEN_VERSION='1.31.0-UNSTABLE'
+MEDNAFEN_VERSION_NUMERIC=0x00103100
 #                        0xJJJnnnRR
 
 AC_CANONICAL_HOST
@@ -643,12 +643,18 @@ AC_ARG_WITH([external-trio], [AS_HELP_STRING([--with-external-trio], [compile an
 	[],
 	[with_external_trio=no])
 if test x$with_external_trio = xyes; then
-	AC_CHECK_LIB([trio], [trio_printf], [], AC_MSG_ERROR([*** libtrio not found!]))
-	AC_CHECK_HEADER([trio.h], [], AC_MSG_ERROR([*** libtrio not found!]))
+	PKG_CHECK_MODULES(TRIO, libtrio, [], [
+		AC_CHECK_LIB([trio], [trio_printf], [], AC_MSG_ERROR([*** libtrio not found!]))
+		AC_CHECK_HEADER([trio.h], [], AC_MSG_ERROR([*** libtrio not found!]))
+		TRIO_LIBS="-ltrio"
+		TRIO_CFLAGS=""
+	])
+
+	AC_SUBST([TRIO_LIBS])
+	AC_SUBST([TRIO_CFLAGS])
 
 	AC_DEFINE([HAVE_EXTERNAL_TRIO], [1], [Define if we are compiling and linking with external trio.])
 	AM_CONDITIONAL(HAVE_EXTERNAL_TRIO, true)
-	AC_SUBST([TRIO_LIBS], ["-ltrio"])
 	trio_include_symsrc="include/trio_external"
 else
 	trio_include_symsrc="src/trio"
@@ -907,7 +913,7 @@ AM_CONDITIONAL(ARCH_X86_32, false)
 AM_CONDITIONAL(ARCH_X86_64, false)
 AM_CONDITIONAL(ARCH_POWERPC, false)
 
-TRIO_CFLAGS=""
+TRIO_BUILD_CFLAGS=""
 
 dnl OpenBSD...
 AC_TRY_LINK([], [asm volatile("vcvtss2si %xmm6,%ecx\n\tvhaddps %ymm7,%ymm7,%ymm7\n\tvzeroupper\n\t");],
@@ -950,10 +956,10 @@ case "$host_cpu" in
 		;;
 
 	alpha*)
-		AX_CFLAGS_GCC_OPTION([-mieee], TRIO_CFLAGS)
+		AX_CFLAGS_GCC_OPTION([-mieee], TRIO_BUILD_CFLAGS)
 		;;
 esac
-AC_SUBST(TRIO_CFLAGS)
+AC_SUBST(TRIO_BUILD_CFLAGS)
 
 AC_C_BIGENDIAN([AC_DEFINE([MSB_FIRST],[1],[Define on big-endian platforms.])], 
 [

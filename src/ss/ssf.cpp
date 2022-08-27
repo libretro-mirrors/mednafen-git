@@ -109,7 +109,7 @@ static MDFN_COLD void Load(GameFile* gf)
   SongNames.push_back(ssf_loader->tags.GetTag("title"));
   Player_Init(1, ssf_loader->tags.GetTag("game"), ssf_loader->tags.GetTag("artist"), ssf_loader->tags.GetTag("copyright"), SongNames, false);
 
-  SOUND_Init();
+  SOUND_Init(false);
 
   MDFNGameInfo->fps = 75 * 65536 * 256;
   MDFNGameInfo->MasterClock = MDFN_MASTERCLOCK_FIXED(44100 * 256);

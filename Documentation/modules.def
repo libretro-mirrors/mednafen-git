@@ -1,4 +1,4 @@
-1.29.0
+1.31.0-UNSTABLE
 apple2
 Apple II/II+
 250
@@ -195,7 +195,7 @@ Europe
 cart
 Cart
 This database is used to automatically select the type of cart to emulate when the \"ss.cart\" setting is set to \"auto\", the default.  If a game is not found in the database when auto selection is enabled, then the cart used is specified by the \"ss.cart.auto_default\" setting, default \"backup\"(a backup memory cart).
-51
+52
 Daytona USA CCE Net Link Edition
 MK-81218
 0
@@ -336,6 +336,11 @@ T-3105G
 0
 1MiB Extended RAM
 Game requirement.
+Real Bout Garou Densetsu Demo (Japan)
+T-99901G\nREAL BOUT
+0
+1MiB Extended RAM
+Game requirement.
 Real Bout Garou Densetsu Special (Japan)
 T-3119G
 0
@@ -453,8 +458,8 @@ Backup Memory
 Allows saving replay data.
 cachemode
 Cache Mode
-This database is used to automatically select cache emulation mode, to fix various logic and timing issues in games.  The default cache mode is data-only(with no high-level bypass).\n\nThe cache mode \"Data-only, with high-level bypass\" is a hack of sorts, to work around cache coherency bugs in games.  These bugs are typically masked on a real Saturn due to the effects of instruction fetches on the cache, but become a problem when only data caching is emulated.\n\nFull cache emulation is not enabled globally primarily due to the large increase in host CPU usage.
-94
+This database is used to automatically select cache emulation mode, to fix various logic and timing issues in games.  The default cache mode is data-only(with no high-level bypass).\n\nThe cache mode \"Data-only, with high-level bypass\" is a hack of sorts, to work around cache coherency bugs in games.  These bugs are typically masked on a real Saturn due to the effects of instruction fetches on the cache, but become a problem when only data caching is emulated.\n\nFull cache emulation is not enabled globally primarily due to the large increase in host CPU usage.\n\nFor ST-V games, this database is not used, and instead full cache emulation is always enabled.
+96
 Area 51 (USA)
 T-9705H
 0
@@ -800,6 +805,16 @@ T-25416H50
 0
 Full
 Fixes game hang.
+Real Bout Garou Densetsu Demo (Japan)
+T-99901G\nREAL BOUT
+0
+Full
+
+Real Bout Garou Densetsu (Japan)
+T-3105G
+0
+Full
+Fixes game hang.
 Senken Kigyouden (Japan)
 T-37401G
 0
@@ -927,7 +942,7 @@ Full
 Fixes FMV ending too soon.
 horriblehacks
 Horrible Hacks
-This database is used to automatically enable various horrible hacks to fix issues in certain games.\n\nNote that slowing down VDP1 command execution due to SH-2 reads/writes isn't a horrible hack per-se, but it's activated on a per-game basis to avoid the likelihood of breaking some games due to overall Saturn emulation timing inaccuracies.
+This database is used to automatically enable various horrible hacks to fix issues in certain games.\n\nNote that slowing down VDP1 command execution due to SH-2 reads/writes isn't a horrible hack per-se, but it's activated on a per-game basis to avoid the likelihood of breaking some games due to overall Saturn emulation timing inaccuracies.\n\nFor ST-V games, this database is not used, and instead VDP1 command slowdown on SH-2 reads/writes is always enabled.
 31
 Fighters Megamix (Japan)
 GS-9126

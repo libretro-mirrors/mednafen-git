@@ -1599,10 +1599,18 @@ uint32 PPU_GetRegister(const unsigned id, char* const special, const uint32 spec
 	break;
 
   case PPU_GSREG_TM:
-	ret = WMMainEnable;
+	ret = MSEnable;
 	break;
 
   case PPU_GSREG_TS:
+	ret = SSEnable;
+	break;
+
+  case PPU_GSREG_TMW:
+	ret = WMMainEnable;
+	break;
+
+  case PPU_GSREG_TSW:
 	ret = WMSubEnable;
 	break;
 

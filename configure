@@ -629,7 +629,7 @@ LIBOBJS
 AM_LDFLAGS
 AM_CXXFLAGS
 AM_CFLAGS
-TRIO_CFLAGS
+TRIO_BUILD_CFLAGS
 ARCH_POWERPC_FALSE
 ARCH_POWERPC_TRUE
 ARCH_X86_64_FALSE
@@ -675,6 +675,7 @@ LZO2_CFLAGS
 HAVE_EXTERNAL_LZO2_FALSE
 HAVE_EXTERNAL_LZO2_TRUE
 TRIO_LIBS
+TRIO_CFLAGS
 HAVE_EXTERNAL_TRIO_FALSE
 HAVE_EXTERNAL_TRIO_TRUE
 TREMOR_LIBS
@@ -1000,6 +1001,8 @@ PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
 JACK_CFLAGS
 JACK_LIBS
+TRIO_CFLAGS
+TRIO_LIBS
 LZO2_CFLAGS
 LZO2_LIBS
 LIBZSTD_CFLAGS
@@ -1733,6 +1736,8 @@ Some influential environment variables:
               path overriding pkg-config's built-in search path
   JACK_CFLAGS C compiler flags for JACK, overriding pkg-config
   JACK_LIBS   linker flags for JACK, overriding pkg-config
+  TRIO_CFLAGS C compiler flags for TRIO, overriding pkg-config
+  TRIO_LIBS   linker flags for TRIO, overriding pkg-config
   LZO2_CFLAGS C compiler flags for LZO2, overriding pkg-config
   LZO2_LIBS   linker flags for LZO2, overriding pkg-config
   LIBZSTD_CFLAGS
@@ -4393,8 +4398,8 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 #
 # Avoid trailing and leading zeroes in the decimal version components to avoid confusing not-so-learned people.
 #
-MEDNAFEN_VERSION='1.29.0'
-MEDNAFEN_VERSION_NUMERIC=0x00102900
+MEDNAFEN_VERSION='1.31.0-UNSTABLE'
+MEDNAFEN_VERSION_NUMERIC=0x00103100
 #                        0xJJJnnnRR
 
 # Make sure we can run config.sub.
@@ -17483,7 +17488,67 @@ else
 fi
 
 if test x$with_external_trio = xyes; then
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for trio_printf in -ltrio" >&5
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for TRIO" >&5
+$as_echo_n "checking for TRIO... " >&6; }
+
+if test -n "$TRIO_CFLAGS"; then
+    pkg_cv_TRIO_CFLAGS="$TRIO_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libtrio\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libtrio") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_TRIO_CFLAGS=`$PKG_CONFIG --cflags "libtrio" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$TRIO_LIBS"; then
+    pkg_cv_TRIO_LIBS="$TRIO_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libtrio\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libtrio") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_TRIO_LIBS=`$PKG_CONFIG --libs "libtrio" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        TRIO_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libtrio" 2>&1`
+        else
+	        TRIO_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libtrio" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$TRIO_PKG_ERRORS" >&5
+
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for trio_printf in -ltrio" >&5
 $as_echo_n "checking for trio_printf in -ltrio... " >&6; }
 if ${ac_cv_lib_trio_trio_printf+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -17530,12 +17595,87 @@ else
   as_fn_error $? "*** libtrio not found!" "$LINENO" 5
 fi
 
-	ac_fn_cxx_check_header_mongrel "$LINENO" "trio.h" "ac_cv_header_trio_h" "$ac_includes_default"
+		ac_fn_cxx_check_header_mongrel "$LINENO" "trio.h" "ac_cv_header_trio_h" "$ac_includes_default"
 if test "x$ac_cv_header_trio_h" = xyes; then :
 
 else
   as_fn_error $? "*** libtrio not found!" "$LINENO" 5
 fi
+
+
+		TRIO_LIBS="-ltrio"
+		TRIO_CFLAGS=""
+
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for trio_printf in -ltrio" >&5
+$as_echo_n "checking for trio_printf in -ltrio... " >&6; }
+if ${ac_cv_lib_trio_trio_printf+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ltrio  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char trio_printf ();
+int
+main ()
+{
+return trio_printf ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_trio_trio_printf=yes
+else
+  ac_cv_lib_trio_trio_printf=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_trio_trio_printf" >&5
+$as_echo "$ac_cv_lib_trio_trio_printf" >&6; }
+if test "x$ac_cv_lib_trio_trio_printf" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBTRIO 1
+_ACEOF
+
+  LIBS="-ltrio $LIBS"
+
+else
+  as_fn_error $? "*** libtrio not found!" "$LINENO" 5
+fi
+
+		ac_fn_cxx_check_header_mongrel "$LINENO" "trio.h" "ac_cv_header_trio_h" "$ac_includes_default"
+if test "x$ac_cv_header_trio_h" = xyes; then :
+
+else
+  as_fn_error $? "*** libtrio not found!" "$LINENO" 5
+fi
+
+
+		TRIO_LIBS="-ltrio"
+		TRIO_CFLAGS=""
+
+else
+	TRIO_CFLAGS=$pkg_cv_TRIO_CFLAGS
+	TRIO_LIBS=$pkg_cv_TRIO_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+fi
+
 
 
 
@@ -17549,8 +17689,6 @@ else
   HAVE_EXTERNAL_TRIO_TRUE='#'
   HAVE_EXTERNAL_TRIO_FALSE=
 fi
-
-	TRIO_LIBS="-ltrio"
 
 	trio_include_symsrc="include/trio_external"
 else
@@ -19213,7 +19351,7 @@ else
 fi
 
 
-TRIO_CFLAGS=""
+TRIO_BUILD_CFLAGS=""
 
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -19509,8 +19647,8 @@ fi
 		;;
 
 	alpha*)
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking TRIO_CFLAGS for gcc -mieee" >&5
-$as_echo_n "checking TRIO_CFLAGS for gcc -mieee... " >&6; }
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking TRIO_BUILD_CFLAGS for gcc -mieee" >&5
+$as_echo_n "checking TRIO_BUILD_CFLAGS for gcc -mieee... " >&6; }
 if ${ax_cv_cflags_gcc_option__mieee+:} false; then :
   $as_echo_n "(cached) " >&6
 else
@@ -19557,18 +19695,18 @@ case ".$var" in
      .ok|.ok,*)  ;;
    .|.no|.no,*)  ;;
    *)
-   if echo " $TRIO_CFLAGS " | grep " $var " 2>&1 >/dev/null
-   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : TRIO_CFLAGS does contain \$var"; } >&5
-  (: TRIO_CFLAGS does contain $var) 2>&5
+   if echo " $TRIO_BUILD_CFLAGS " | grep " $var " 2>&1 >/dev/null
+   then { { $as_echo "$as_me:${as_lineno-$LINENO}: : TRIO_BUILD_CFLAGS does contain \$var"; } >&5
+  (: TRIO_BUILD_CFLAGS does contain $var) 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }
-   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : TRIO_CFLAGS=\"\$TRIO_CFLAGS \$var\""; } >&5
-  (: TRIO_CFLAGS="$TRIO_CFLAGS $var") 2>&5
+   else { { $as_echo "$as_me:${as_lineno-$LINENO}: : TRIO_BUILD_CFLAGS=\"\$TRIO_BUILD_CFLAGS \$var\""; } >&5
+  (: TRIO_BUILD_CFLAGS="$TRIO_BUILD_CFLAGS $var") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }
-                      TRIO_CFLAGS="$TRIO_CFLAGS $var"
+                      TRIO_BUILD_CFLAGS="$TRIO_BUILD_CFLAGS $var"
    fi
  ;;
 esac

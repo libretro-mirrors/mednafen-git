@@ -189,6 +189,7 @@ endif
 
 if HAVE_EXTERNAL_TRIO
 mednafen_LDADD		+=	@TRIO_LIBS@
+DEFS			+=	@TRIO_CFLAGS@
 else
 include trio/Makefile.am.inc
 endif

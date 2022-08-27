@@ -407,6 +407,14 @@ static const char* const MDMegaMouseConfig[] =
  MKDEF(RETURN),
 };
 
+static const char* const SSMiscConfig[] =
+{
+ "", // SMPC reset
+ MKDEF(KP_MINUS) " && " MKDEF(KP_DIVIDE), // ST-V Test
+ MKDEF(KP_MINUS) " && " MKDEF(KP_PLUS), // ST-V Service
+ MKDEF(KP_MINUS) " && " MKDEF(KP_ENTER), // ST-V Pause
+};
+
 static const char* const SSPadConfig[] =
 {
  MKDEF(KP_6),
@@ -957,7 +965,14 @@ const std::map<const char*, DefaultSettingsMeow, cstrcomp> defset =
 
  //
  DPDC("snes_faust.input.port1.gamepad", SNESPadConfig),
-
+ DPDC("snes_faust.input.port1.mouse", SNESMouseConfig),
+ DPDC("snes_faust.input.port2.mouse", SNESMouseConfig),
+ DPDC("snes_faust.input.port3.mouse", SNESMouseConfig),
+ DPDC("snes_faust.input.port4.mouse", SNESMouseConfig),
+ DPDC("snes_faust.input.port5.mouse", SNESMouseConfig),
+ DPDC("snes_faust.input.port6.mouse", SNESMouseConfig),
+ DPDC("snes_faust.input.port7.mouse", SNESMouseConfig),
+ DPDC("snes_faust.input.port8.mouse", SNESMouseConfig),
  //
  DPDC("psx.input.port1.gamepad", PSXPadConfig),
 
@@ -987,6 +1002,8 @@ const std::map<const char*, DefaultSettingsMeow, cstrcomp> defset =
  //{ "vb.input.builtin.gamepad", VBPadConfig),
 
  //
+ DPDC("ss.input.builtin.builtin", SSMiscConfig),
+
  DPDC("ss.input.port1.gamepad", SSPadConfig),
 
  DPDC("ss.input.port1.mouse", SSMouseConfig),

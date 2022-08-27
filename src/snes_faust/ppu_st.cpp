@@ -373,6 +373,26 @@ void PPU_SetRegister(const unsigned id, const uint32 value)
   //
   //
   //
+  case PPU_GSREG_TM:
+	MSEnable = value & 0xFF;
+	break;
+
+  case PPU_GSREG_TS:
+	SSEnable = value & 0xFF;
+	break;
+
+  case PPU_GSREG_TMW:
+	WMMainEnable = value & 0xFF;
+	break;
+
+  case PPU_GSREG_TSW:
+	WMSubEnable = value & 0xFF;
+	break;
+
+  case PPU_GSREG_CGWSEL:
+	CGWSEL = value & 0xFF;
+	break;
+
   case PPU_GSREG_CGADSUB:
 	CGADSUB = value & 0xFF;
 	break;

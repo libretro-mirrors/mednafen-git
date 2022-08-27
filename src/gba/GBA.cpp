@@ -3323,7 +3323,7 @@ static const FileExtensionSpecStruct KnownExtensions[] =
  { ".minigsf", -20, gettext_noop("MiniGSF Rip") },
  { ".gba",   0, gettext_noop("GameBoy Advance ROM Image") },
  { ".agb",   0, gettext_noop("GameBoy Advance ROM Image") },
- { ".bin", -80, gettext_noop("GameBoy Advance ROM Image") },
+ { ".bin", -1000, gettext_noop("GameBoy Advance ROM Image") },
  { NULL, 0, NULL }
 };
 

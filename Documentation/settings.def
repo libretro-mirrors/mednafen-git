@@ -2083,6 +2083,15 @@ keyboard 0x0 90+ctrl+shift
 
 
 0
+command.device_select13
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+Select virtual device on virtual input port 13
+
+MDFNST_STRING
+keyboard 0x0 91+ctrl+shift
+
+
+0
 command.device_select2
 MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
 Select virtual device on virtual input port 2
@@ -2206,6 +2215,15 @@ Configure buttons on virtual port 12
 
 MDFNST_STRING
 keyboard 0x0 90+alt+shift
+
+
+0
+command.input_config13
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+Configure buttons on virtual port 13
+
+MDFNST_STRING
+keyboard 0x0 91+alt+shift
 
 
 0
@@ -34258,6 +34276,15 @@ Blend line down to 256 pixels if it\'s pseudo-hires.  After, double width of lin
 512_blend
 Force 512 and blend.
 Double width of line if it\'s 256.  After, blend line.
+snes_faust.input.mouse_sensitivity
+
+Emulated mouse sensitivity.
+
+MDFNST_FLOAT
+0.50
+
+
+0
 snes_faust.input.port1
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 Input device for Virtual Port 1
@@ -34266,12 +34293,15 @@ MDFNST_ENUM
 gamepad
 
 
-2
+3
 none
 none
 
 gamepad
 Gamepad
+
+mouse
+Mouse
 
 snes_faust.input.port1.gamepad.a
 MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
@@ -34417,6 +34447,60 @@ keyboard 0x0 92
 
 
 0
+snes_faust.input.port1.mouse.left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 1, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0x0 button_left
+
+
+0
+snes_faust.input.port1.mouse.motion_down
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 1, Mouse: Motion Down
+
+MDFNST_STRING
+mouse 0x0 rel_y+
+
+
+0
+snes_faust.input.port1.mouse.motion_left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 1, Mouse: Motion Left
+
+MDFNST_STRING
+mouse 0x0 rel_x-
+
+
+0
+snes_faust.input.port1.mouse.motion_right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 1, Mouse: Motion Right
+
+MDFNST_STRING
+mouse 0x0 rel_x+
+
+
+0
+snes_faust.input.port1.mouse.motion_up
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 1, Mouse: Motion Up
+
+MDFNST_STRING
+mouse 0x0 rel_y-
+
+
+0
+snes_faust.input.port1.mouse.right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 1, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0x0 button_right
+
+
+0
 snes_faust.input.port2
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 Input device for Virtual Port 2
@@ -34425,12 +34509,15 @@ MDFNST_ENUM
 gamepad
 
 
-2
+3
 none
 none
 
 gamepad
 Gamepad
+
+mouse
+Mouse
 
 snes_faust.input.port2.gamepad.a
 MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
@@ -34576,6 +34663,60 @@ MDFNST_STRING
 
 
 0
+snes_faust.input.port2.mouse.left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 2, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0x0 button_left
+
+
+0
+snes_faust.input.port2.mouse.motion_down
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 2, Mouse: Motion Down
+
+MDFNST_STRING
+mouse 0x0 rel_y+
+
+
+0
+snes_faust.input.port2.mouse.motion_left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 2, Mouse: Motion Left
+
+MDFNST_STRING
+mouse 0x0 rel_x-
+
+
+0
+snes_faust.input.port2.mouse.motion_right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 2, Mouse: Motion Right
+
+MDFNST_STRING
+mouse 0x0 rel_x+
+
+
+0
+snes_faust.input.port2.mouse.motion_up
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 2, Mouse: Motion Up
+
+MDFNST_STRING
+mouse 0x0 rel_y-
+
+
+0
+snes_faust.input.port2.mouse.right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 2, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0x0 button_right
+
+
+0
 snes_faust.input.port3
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 Input device for Virtual Port 3
@@ -34584,12 +34725,15 @@ MDFNST_ENUM
 gamepad
 
 
-2
+3
 none
 none
 
 gamepad
 Gamepad
+
+mouse
+Mouse
 
 snes_faust.input.port3.gamepad.a
 MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
@@ -34735,6 +34879,60 @@ MDFNST_STRING
 
 
 0
+snes_faust.input.port3.mouse.left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0x0 button_left
+
+
+0
+snes_faust.input.port3.mouse.motion_down
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Mouse: Motion Down
+
+MDFNST_STRING
+mouse 0x0 rel_y+
+
+
+0
+snes_faust.input.port3.mouse.motion_left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Mouse: Motion Left
+
+MDFNST_STRING
+mouse 0x0 rel_x-
+
+
+0
+snes_faust.input.port3.mouse.motion_right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Mouse: Motion Right
+
+MDFNST_STRING
+mouse 0x0 rel_x+
+
+
+0
+snes_faust.input.port3.mouse.motion_up
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Mouse: Motion Up
+
+MDFNST_STRING
+mouse 0x0 rel_y-
+
+
+0
+snes_faust.input.port3.mouse.right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 3, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0x0 button_right
+
+
+0
 snes_faust.input.port4
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 Input device for Virtual Port 4
@@ -34743,12 +34941,15 @@ MDFNST_ENUM
 gamepad
 
 
-2
+3
 none
 none
 
 gamepad
 Gamepad
+
+mouse
+Mouse
 
 snes_faust.input.port4.gamepad.a
 MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
@@ -34894,6 +35095,60 @@ MDFNST_STRING
 
 
 0
+snes_faust.input.port4.mouse.left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0x0 button_left
+
+
+0
+snes_faust.input.port4.mouse.motion_down
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Mouse: Motion Down
+
+MDFNST_STRING
+mouse 0x0 rel_y+
+
+
+0
+snes_faust.input.port4.mouse.motion_left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Mouse: Motion Left
+
+MDFNST_STRING
+mouse 0x0 rel_x-
+
+
+0
+snes_faust.input.port4.mouse.motion_right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Mouse: Motion Right
+
+MDFNST_STRING
+mouse 0x0 rel_x+
+
+
+0
+snes_faust.input.port4.mouse.motion_up
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Mouse: Motion Up
+
+MDFNST_STRING
+mouse 0x0 rel_y-
+
+
+0
+snes_faust.input.port4.mouse.right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 4, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0x0 button_right
+
+
+0
 snes_faust.input.port5
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 Input device for Virtual Port 5
@@ -34902,12 +35157,15 @@ MDFNST_ENUM
 gamepad
 
 
-2
+3
 none
 none
 
 gamepad
 Gamepad
+
+mouse
+Mouse
 
 snes_faust.input.port5.gamepad.a
 MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
@@ -35053,6 +35311,60 @@ MDFNST_STRING
 
 
 0
+snes_faust.input.port5.mouse.left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0x0 button_left
+
+
+0
+snes_faust.input.port5.mouse.motion_down
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Mouse: Motion Down
+
+MDFNST_STRING
+mouse 0x0 rel_y+
+
+
+0
+snes_faust.input.port5.mouse.motion_left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Mouse: Motion Left
+
+MDFNST_STRING
+mouse 0x0 rel_x-
+
+
+0
+snes_faust.input.port5.mouse.motion_right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Mouse: Motion Right
+
+MDFNST_STRING
+mouse 0x0 rel_x+
+
+
+0
+snes_faust.input.port5.mouse.motion_up
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Mouse: Motion Up
+
+MDFNST_STRING
+mouse 0x0 rel_y-
+
+
+0
+snes_faust.input.port5.mouse.right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 5, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0x0 button_right
+
+
+0
 snes_faust.input.port6
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 Input device for Virtual Port 6
@@ -35061,12 +35373,15 @@ MDFNST_ENUM
 gamepad
 
 
-2
+3
 none
 none
 
 gamepad
 Gamepad
+
+mouse
+Mouse
 
 snes_faust.input.port6.gamepad.a
 MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
@@ -35212,6 +35527,60 @@ MDFNST_STRING
 
 
 0
+snes_faust.input.port6.mouse.left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0x0 button_left
+
+
+0
+snes_faust.input.port6.mouse.motion_down
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Mouse: Motion Down
+
+MDFNST_STRING
+mouse 0x0 rel_y+
+
+
+0
+snes_faust.input.port6.mouse.motion_left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Mouse: Motion Left
+
+MDFNST_STRING
+mouse 0x0 rel_x-
+
+
+0
+snes_faust.input.port6.mouse.motion_right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Mouse: Motion Right
+
+MDFNST_STRING
+mouse 0x0 rel_x+
+
+
+0
+snes_faust.input.port6.mouse.motion_up
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Mouse: Motion Up
+
+MDFNST_STRING
+mouse 0x0 rel_y-
+
+
+0
+snes_faust.input.port6.mouse.right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 6, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0x0 button_right
+
+
+0
 snes_faust.input.port7
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 Input device for Virtual Port 7
@@ -35220,12 +35589,15 @@ MDFNST_ENUM
 gamepad
 
 
-2
+3
 none
 none
 
 gamepad
 Gamepad
+
+mouse
+Mouse
 
 snes_faust.input.port7.gamepad.a
 MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
@@ -35371,6 +35743,60 @@ MDFNST_STRING
 
 
 0
+snes_faust.input.port7.mouse.left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0x0 button_left
+
+
+0
+snes_faust.input.port7.mouse.motion_down
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Mouse: Motion Down
+
+MDFNST_STRING
+mouse 0x0 rel_y+
+
+
+0
+snes_faust.input.port7.mouse.motion_left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Mouse: Motion Left
+
+MDFNST_STRING
+mouse 0x0 rel_x-
+
+
+0
+snes_faust.input.port7.mouse.motion_right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Mouse: Motion Right
+
+MDFNST_STRING
+mouse 0x0 rel_x+
+
+
+0
+snes_faust.input.port7.mouse.motion_up
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Mouse: Motion Up
+
+MDFNST_STRING
+mouse 0x0 rel_y-
+
+
+0
+snes_faust.input.port7.mouse.right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 7, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0x0 button_right
+
+
+0
 snes_faust.input.port8
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 Input device for Virtual Port 8
@@ -35379,12 +35805,15 @@ MDFNST_ENUM
 gamepad
 
 
-2
+3
 none
 none
 
 gamepad
 Gamepad
+
+mouse
+Mouse
 
 snes_faust.input.port8.gamepad.a
 MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
@@ -35527,6 +35956,60 @@ snes_faust, Virtual Port 8, Gamepad: Y (left)
 
 MDFNST_STRING
 
+
+
+0
+snes_faust.input.port8.mouse.left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Mouse: Left Button
+
+MDFNST_STRING
+mouse 0x0 button_left
+
+
+0
+snes_faust.input.port8.mouse.motion_down
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Mouse: Motion Down
+
+MDFNST_STRING
+mouse 0x0 rel_y+
+
+
+0
+snes_faust.input.port8.mouse.motion_left
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Mouse: Motion Left
+
+MDFNST_STRING
+mouse 0x0 rel_x-
+
+
+0
+snes_faust.input.port8.mouse.motion_right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Mouse: Motion Right
+
+MDFNST_STRING
+mouse 0x0 rel_x+
+
+
+0
+snes_faust.input.port8.mouse.motion_up
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Mouse: Motion Up
+
+MDFNST_STRING
+mouse 0x0 rel_y-
+
+
+0
+snes_faust.input.port8.mouse.right
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+snes_faust, Virtual Port 8, Mouse: Right Button
+
+MDFNST_STRING
+mouse 0x0 button_right
 
 
 0
@@ -36160,6 +36643,33 @@ MDFNST_BOOL
 
 
 0
+ss.bios_stv_eu
+MDFNSF_CAT_PATH MDFNSF_EMU_STATE 
+Path to the Europe ST-V ROM BIOS
+
+MDFNST_STRING
+epr-17954a.ic8
+
+
+0
+ss.bios_stv_jp
+MDFNSF_CAT_PATH MDFNSF_EMU_STATE 
+Path to the Japan ST-V ROM BIOS
+
+MDFNST_STRING
+epr-20091.ic8
+
+
+0
+ss.bios_stv_na
+MDFNSF_CAT_PATH MDFNSF_EMU_STATE 
+Path to the North America ST-V ROM BIOS
+
+MDFNST_STRING
+epr-17952a.ic8
+
+
+0
 ss.cart
 MDFNSF_EMU_STATE MDFNSF_UNTRUSTED_SAFE 
 Expansion cart.
@@ -36511,6 +37021,33 @@ ss, Builtin, builtin: SMPC Reset
 
 MDFNST_STRING
 
+
+
+0
+ss.input.builtin.builtin.stv_pause
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+ss, Builtin, builtin: ST-V Pause
+
+MDFNST_STRING
+keyboard 0x0 86 && keyboard 0x0 88
+
+
+0
+ss.input.builtin.builtin.stv_service
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+ss, Builtin, builtin: ST-V Service
+
+MDFNST_STRING
+keyboard 0x0 86 && keyboard 0x0 87
+
+
+0
+ss.input.builtin.builtin.stv_test
+MDFNSF_CAT_INPUT_MAPPING MDFNSF_SUPPRESS_DOC 
+ss, Builtin, builtin: ST-V Test
+
+MDFNST_STRING
+keyboard 0x0 86 && keyboard 0x0 84
 
 
 0

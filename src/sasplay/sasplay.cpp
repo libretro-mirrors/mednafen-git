@@ -628,6 +628,8 @@ static MDFN_FASTCALL void SoundCPU_BusRMW(uint32 A, uint8 (MDFN_FASTCALL *cb)(M6
 
 static MDFN_FASTCALL unsigned SoundCPU_BusIntAck(uint8 level)
 {
+ SoundCPU.timestamp += 10;
+
  return M68K::BUS_INT_ACK_AUTO;
 }
 
@@ -813,7 +815,7 @@ static const SMXGameInfo* FindSGI(const std::string& fname)
    if(!rle.fname)
     break;
 
-   if(fname == rle.fname)
+   if(!MDFN_strazicmp(fname, rle.fname))
    {
     ret = &sgie;
     break;
@@ -1020,11 +1022,11 @@ static void StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { "epr-18824a.30", -74, "ROM" }, // Manx TT Superbike, hacky, FIXME
- { ".21", -75, "ROM" },
- { ".31", -76, "ROM" },
- { ".30", -77, "ROM" },
- { ".sd0", -78, "ROM" },
+ { "epr-18824a.30", -80, "ROM" }, // Manx TT Superbike
+ { ".21", -81, "ROM" },
+ { ".31", -82, "ROM" },
+ { ".30", -83, "ROM" },
+ { ".sd0", -84, "ROM" },
 
  { NULL, 0, NULL }
 };

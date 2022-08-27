@@ -4,6 +4,23 @@
 static SMXGameInfo SMXGI[] =
 {
  {
+  "Air Walkers",
+  "",
+  "",
+  nullptr, 40,
+  1000,
+  SYSTEM_MODEL2,
+  {
+   { SPACE_PROGRAM, 0x000000, 0x080000, "10-18_ic30_30f2.30" },
+
+   { SPACE_SAMPLES, 0x800000, 0x200000, "mpr-19243.31" },
+   { SPACE_SAMPLES, 0xA00000, 0x200000, "mpr-19242.32" },
+   { SPACE_SAMPLES, 0xC00000, 0x200000, "mpr-19241.36" },
+   { SPACE_SAMPLES, 0xE00000, 0x200000, "mpr-19240.37" },
+  }
+ },
+
+ {
   "Behind Enemy Lines",
   "",
   "",

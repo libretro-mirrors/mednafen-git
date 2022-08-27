@@ -224,7 +224,8 @@
  <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
  <tr><td>SHIFT + F6</td><td>Select drive.</td><td>select_drive</td></tr>
  <tr><td>F6</td><td>Select medium(CD, floppy disk, etc.) for selected drive.</td><td>select_disk</td></tr>
- <tr><td>F8</td><td>Insert/Eject medium(CD, floppy disk, etc.) for selected drive.</td><td>insert_eject_disk</td></tr>
+ <tr><td>F8</td><td><a name="command.insert_eject_disk">Insert/Eject medium(CD, floppy disk, etc.) for selected drive.</a></td><td>insert_eject_disk</td></tr>
+ <tr><td>F8</td><td><a name="command.insert_coin">Insert Coin</a></td><td>insert_coin</td></tr>
  <tr><td>F10</td><td>Reset.</td><td>reset</td></tr>
  <tr><td>F11</td><td>Hard reset(toggle power switch).</td><td>power</td></tr>
  <tr><td>Escape/F12</td><td>Exit(the emulator, or netplay chat mode).</td><td>exit</td></tr>
@@ -526,6 +527,10 @@ The general format of an input mapping is: <b><u>DEVICE_TYPE</u></b> <b><u>DEVIC
 
    <?php BeginSection("Keyboard", "Section_ims_keyboard"); ?>
 <b><u>SCANCODE</u></b>[<b><u>MODIFIER</u></b>]...<br>
+
+<p><b>Scancode:</b> Numeric decimal value, 0 through 511, representing physical key position.  Refer to the <a href="https://raw.githubusercontent.com/libsdl-org/SDL/2f924020e8a9b7c46c820a1bbb55a05a66711062/include/SDL_scancode.h">SDL2 scancode header file</a>
+for a full list, or section 10 "<b>Keyboard/Keypad Page (0x07)</b>" of the <a href="https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf">USB HID Usage Tables</a> document for a more basic list.
+
 <p><b>Modifiers:</b> (only valid with command key mappings)
 <ul>
  <li>+ctrl
@@ -1399,6 +1404,28 @@ Cygne is distributed under the terms of the GNU GPL Version 2, 1991.<br>Copyrigh
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+</pre>
+</blockquote>
+<?php EndSection(); ?>
+
+<?php BeginSection("libco", "Section_legal_libco"); ?>
+<blockquote>
+<pre>
+ISC License (ISC)
+
+Copyright byuu and the higan team
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
 </pre>
 </blockquote>
 <?php EndSection(); ?>

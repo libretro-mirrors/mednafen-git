@@ -19,7 +19,8 @@ namespace Mednafen
 
 struct FileExtensionSpecStruct
 {
- const char *extension; // Example ".nes"
+ const char *extension; // Example ".nes" for case-insensitive extension matching,
+			// or "whatever.ext"(no leading .) for case-insensitive filename matching.
 
  /*
   Priorities used in heuristics to determine which file to load from a multi-file archive:
@@ -33,7 +34,7 @@ struct FileExtensionSpecStruct
    -50 = ccd
    -60 = cue
    -70 = toc (not guaranteed to be cdrdao format, so prefer ccd or cue)
-   -80 = bin (lower than everything due to be overused)
+   -1000 = bin (lower than everything due to being overused)
  */
  int priority;
 
@@ -612,7 +613,7 @@ struct MDFNGI
  bool (*TestMagic)(GameFile* gf);
 
  //
- // (*CDInterfaces).size() is guaranteed to be >= 1.
+ // CDInterfaces->size() is guaranteed to be >= 1 for TestMagicCD(), but may be == 0 for LoadCD().
  void (*LoadCD)(std::vector<CDInterface*> *CDInterfaces);
  bool (*TestMagicCD)(std::vector<CDInterface*> *CDInterfaces);
 

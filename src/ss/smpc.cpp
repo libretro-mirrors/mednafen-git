@@ -92,6 +92,7 @@ enum
  CMD_RESDISA = 0x1A
 };
 
+static bool BlockSoundCPUControl;
 static uint8 AreaCode;
 static int32 MasterClock;
 
@@ -236,6 +237,7 @@ static uint8* MiscInputPtr;
 IODevice::IODevice() { }
 IODevice::~IODevice() { }
 void IODevice::Power(void) { }
+void IODevice::SetTSFreq(const int32 rate) { }
 void IODevice::TransformInput(uint8* const data, float gun_x_scale, float gun_x_offs) const { }
 void IODevice::UpdateInput(const uint8* data, const int32 time_elapsed) { }
 void IODevice::UpdateOutput(uint8* data) { }
@@ -251,7 +253,10 @@ void IODevice::LineHook(const sscpu_timestamp_t timestamp, int32 out_line, int32
 static void UpdateIOBus(unsigned port, const sscpu_timestamp_t timestamp)
 {
  IOBusState[port] = IOPorts[port]->UpdateBus(timestamp, (DataOut[port][DirectModeEn[port]] | ~DataDir[port][DirectModeEn[port]]) & 0x7F, DataDir[port][DirectModeEn[port]]);
- assert(!(IOBusState[port] & 0x80));
+
+#ifdef MDFN_ENABLE_DEV_BUILD
+ assert(!((IOBusState[0] | IOBusState[1]) & 0x80));
+#endif
 
  {
   bool tmp = (!(IOBusState[0] & 0x40) & ExLatchEn[0]) | (!(IOBusState[1] & 0x40) & ExLatchEn[1]);
@@ -340,6 +345,11 @@ void SMPC_SetInput(unsigned port, const char* type, uint8* ptr)
   nd = &PossibleDevices[port].keyboard;
  else if(!strcmp(type, "jpkeyboard"))
   nd = &PossibleDevices[port].jpkeyboard;
+ else if(!strcmp(type, "extern"))
+ {
+  nd = (IODevice*)ptr;
+  ptr = nullptr;
+ }
  else
   abort();
 
@@ -409,11 +419,12 @@ void SMPC_SetRTC(const struct tm* ht, const uint8 lang)
  }
 }
 
-void SMPC_Init(const uint8 area_code_arg, const int32 master_clock_arg)
+void SMPC_Init(const uint8 area_code_arg, const int32 master_clock_arg, bool block_soundcpu_control)
 {
  AreaCode = area_code_arg;
  MasterClock = master_clock_arg;
  SMPC_ClockRatio = 0;
+ BlockSoundCPUControl = block_soundcpu_control;
 
  SlaveSH2Pending = false;
 
@@ -437,16 +448,24 @@ void SMPC_Init(const uint8 area_code_arg, const int32 master_clock_arg)
 
 static void TurnSoundCPUOn(void)
 {
- SOUND_Reset68K();
+ if(!BlockSoundCPUControl)
+  SOUND_Reset68K();
+
  SoundCPUOn = true;
- SOUND_Set68KActive(true);
+
+ if(!BlockSoundCPUControl)
+  SOUND_Set68KActive(true);
 }
 
 static void TurnSoundCPUOff(void)
 {
- SOUND_Reset68K();
+ if(!BlockSoundCPUControl)
+  SOUND_Reset68K();
+
  SoundCPUOn = false;
- SOUND_Set68KActive(false);
+
+ if(!BlockSoundCPUControl)
+  SOUND_Set68KActive(false);
 }
 
 void SMPC_Reset(bool powering_up)
@@ -532,6 +551,9 @@ void SMPC_StateAction(StateMem* sm, const unsigned load, const bool data_only)
 
   SFVAR(PendingVB),
 
+  SFVAR(IR0WX),
+  SFVAR(IR0WA),
+
   SFVAR(SubPhase),
   SFVAR(ClockCounter),
   SFVAR(SMPC_ClockRatio),
@@ -610,6 +632,30 @@ void SMPC_StateAction(StateMem* sm, const unsigned load, const bool data_only)
    else
     p->NextEventTS = std::max<sscpu_timestamp_t>(0, p->NextEventTS);
   }
+
+  if(load < 0x00103100)
+  {
+   //printf("%u --- %u\n", SubPhase, SubPhase + 1); //SubPhaseBias);
+
+   switch(SubPhase)
+   {
+    case 29:
+    case 27:
+	JRS.NextContBit = true;
+	if(SR & SR_NPE)
+	{
+	 IR0WX = (!JRS.NextContBit << 7);
+	 IR0WA = 0xC0;
+	 SubPhase = 27;
+	}
+	else
+	{
+	 IR0WA = 0;
+	 SubPhase = 29;
+	}
+	break;
+   }
+  }
  }
 }
 
@@ -638,7 +684,12 @@ void SMPC_ProcessSlaveOffOn(void)
 int32 SMPC_StartFrame(EmulateSpecStruct* espec)
 {
  if(ResetPending)
+ {
   SS_Reset(false);
+
+  // TODO: Fix SMPC_Reset(false) instead ?
+  OREG[0x1F] = CMD_SYSRES;
+ }
 
  if(PendingClockDivisor > 0)
  {
@@ -649,6 +700,13 @@ int32 SMPC_StartFrame(EmulateSpecStruct* espec)
  SMPC_ClockRatio = (1ULL << 32) * 4000000 * CurrentClockDivisor / MasterClock;
  SOUND_SetClockRatio((1ULL << 32) * 11289600 * CurrentClockDivisor / MasterClock);
  CDB_SetClockRatio((1ULL << 32) * 11289600 * CurrentClockDivisor / MasterClock);
+
+ {
+  const int32 ts_freq = (2 * (int64)MasterClock + CurrentClockDivisor) / (2 * CurrentClockDivisor);
+
+  for(unsigned vp = 0; vp < 12; vp++)
+   VirtualPorts[vp]->SetTSFreq(ts_freq);
+ }
 
  return CurrentClockDivisor;
 }
@@ -841,10 +899,14 @@ uint8 SMPC_Read(const sscpu_timestamp_t timestamp, uint8 A)
 	break;
 
   case 0x3A:
+	UpdateIOBus(0, SH7095_mem_timestamp);
+
 	ret = (ret & 0x80) | IOBusState[0];
 	break;
 
   case 0x3B:
+	UpdateIOBus(1, SH7095_mem_timestamp);
+
 	ret = (ret & 0x80) | IOBusState[1];
 	break;
 
@@ -1185,8 +1247,6 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
       SCU_SetInt(SCU_INT_SMPC, false);
      }
 
-     // Wait for !vb, wait until (IREG[0] & 0x80), time-optimization wait.
-
      if(IREG[1] & 0x8)
      {
       #define JR_WAIT(cond)	{ SMPC_WAIT_UNTIL_COND((cond) || PendingVB); if(PendingVB) { SS_DBGTI(SS_DBG_SMPC, "[SMPC] abortjr wait"); goto AbortJR; } }
@@ -1232,23 +1292,17 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
 	 UpdateIOBus(JRS.CurPort, timestamp);									\
 	}
 
-      IR0WX = 0x00;
-      IR0WA = 0x40;
-      JR_WAIT(!vb || (IREG[0] & 0x40));
+      // Wait until Continue or Break condition(if having previously returned SMPC status).
+      // Wait until end of vblank.
+      // Time optimization wait.
 
-      if(IREG[0] & 0x40)
-      {
-       SS_DBGTI(SS_DBG_SMPC, "[SMPC] Break (early)");
-       goto AbortJR;
-      }
-      IR0WA = 0;
       JRS.NextContBit = true;
       if(SR & SR_NPE)
       {
        IR0WX = (!JRS.NextContBit << 7);
        IR0WA = 0xC0;
        JR_WAIT((bool)(IREG[0] & 0x80) == JRS.NextContBit || (IREG[0] & 0x40));
-       if(IREG[0] & 0x40)
+       if((IREG[0] & 0x40) && (bool)(IREG[0] & 0x80) != JRS.NextContBit)
        {
         SS_DBGTI(SS_DBG_SMPC, "[SMPC] Break");
         goto AbortJR;
@@ -1256,7 +1310,11 @@ sscpu_timestamp_t SMPC_Update(sscpu_timestamp_t timestamp)
        IR0WA = 0;
        JRS.NextContBit = !JRS.NextContBit;
       }
-
+      //
+      JR_WAIT(!vb);
+      //
+      //
+      //
       JRS.PDCounter = 0;
       JRS.TimeOptEn = !(IREG[1] & 0x2);
       JRS.Mode[0] = (IREG[1] >> 4) & 0x3;
@@ -1541,7 +1599,12 @@ void SMPC_SetVBVS(sscpu_timestamp_t event_timestamp, bool vb_status, bool vsync_
  if(vb ^ vb_status)
  {
   if(vb_status)	// Going into vblank
+  {
    PendingVB = true;
+
+   if(events[SS_EVENT_MIDSYNC].event_time == SS_EVENT_DISABLED_TS)
+    SS_SetEventNT(&events[SS_EVENT_MIDSYNC], event_timestamp + 1);
+  }
 
   SS_SetEventNT(&events[SS_EVENT_SMPC], event_timestamp + 1);
  }
@@ -1650,6 +1713,9 @@ static IDIISG IDII_Builtin =
 {
  IDIIS_ResetButton(),
  IDIIS_Button("smpc_reset", "SMPC Reset", -1),
+ IDIIS_Button("stv_test", "ST-V Test", -1), //0),
+ IDIIS_Button("stv_service", "ST-V Service", -1), //1),
+ IDIIS_Button("stv_pause", "ST-V Pause", -1), //2)
 };
 
 static const std::vector<InputDeviceInfoStruct> InputDeviceInfoBuiltin =
