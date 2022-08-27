@@ -768,7 +768,7 @@ static const MDFNSetting MDSettings[] =
 
 static const FileExtensionSpecStruct KnownExtensions[] =
 {
- { ".bin", -80, gettext_noop("Super Magic Drive binary ROM Image") },
+ { ".bin", -1000, gettext_noop("Super Magic Drive binary ROM Image") },
  { ".smd", -10, gettext_noop("Super Magic Drive interleaved format ROM Image") },
  { ".md", 0, gettext_noop("Multi Game Doctor format ROM Image") },
 

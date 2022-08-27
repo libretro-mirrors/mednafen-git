@@ -1150,6 +1150,7 @@ enum CommandKey
         CK_INPUT_CONFIG10,
         CK_INPUT_CONFIG11,
         CK_INPUT_CONFIG12,
+        CK_INPUT_CONFIG13,
         CK_INPUT_CONFIGC,
 	CK_INPUT_CONFIGC_AM,
 	CK_INPUT_CONFIG_ABD,
@@ -1183,6 +1184,7 @@ enum CommandKey
         CK_DEVICE_SELECT10,
         CK_DEVICE_SELECT11,
         CK_DEVICE_SELECT12,
+        CK_DEVICE_SELECT13,
 
 	_CK_COUNT
 };
@@ -1272,6 +1274,7 @@ static const COKE CKeys[_CK_COUNT]	=
         CKEYDEF( "input_config10", "Configure buttons on virtual port 10", CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(0) ),
         CKEYDEF( "input_config11", "Configure buttons on virtual port 11", CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(KP_1) ),
         CKEYDEF( "input_config12", "Configure buttons on virtual port 12", CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(KP_2) ),
+        CKEYDEF( "input_config13", "Configure buttons on virtual port 13", CKEYDEF_DANGEROUS, MK_CK_ALT_SHIFT(KP_3) ),
 
         CKEYDEF( "input_configc", "Configure command key", 				       CKEYDEF_DANGEROUS, MK_CK(F2) ),
         CKEYDEF( "input_configc_am", "Configure command key, for all-pressed-to-trigger mode", CKEYDEF_DANGEROUS, MK_CK_SHIFT(F2) ),
@@ -1310,6 +1313,7 @@ static const COKE CKeys[_CK_COUNT]	=
         CKEYDEF( "device_select10", "Select virtual device on virtual input port 10", 0, MK_CK_CTRL_SHIFT(0) ),
         CKEYDEF( "device_select11", "Select virtual device on virtual input port 11", 0, MK_CK_CTRL_SHIFT(KP_1) ),
         CKEYDEF( "device_select12", "Select virtual device on virtual input port 12", 0, MK_CK_CTRL_SHIFT(KP_2) ),
+        CKEYDEF( "device_select13", "Select virtual device on virtual input port 13", 0, MK_CK_CTRL_SHIFT(KP_3) ),
 };
 #undef CKEYDEF_BYPASSKEYZEROING
 #undef CKEYDEF_DANGEROUS
@@ -1564,7 +1568,7 @@ static void ReinitJoysticks(void)
 
 static void CheckCommandKeys(void)
 {
-  if(IConfig >= Port1 && IConfig <= Port12)
+  if(IConfig >= Port1 && IConfig <= Port13)
   {
    const unsigned i = IConfig - Port1;
 
@@ -1723,7 +1727,7 @@ static void CheckCommandKeys(void)
 
   if(!Debugger_IsActive()) // We don't want to start button configuration when the debugger is active!
   {
-   for(unsigned i = 0; i < 12; i++)
+   for(unsigned i = 0; i < 13; i++)
    {
     if(CK_Check((CommandKey)(CK_INPUT_CONFIG1 + i)))
     {
@@ -1829,7 +1833,7 @@ static void CheckCommandKeys(void)
 
   if(CurGame->GameType != GMT_PLAYER)
   {
-   for(int i = 0; i < 12; i++)
+   for(int i = 0; i < 13; i++)
    {
     if(CK_Check((CommandKey)(CK_DEVICE_SELECT1 + i)))
      IncSelectedDevice(i);
@@ -1903,9 +1907,12 @@ static void CheckCommandKeys(void)
 
   if(CurGame->GameType == GMT_ARCADE)
   {
-	if(CK_Check(CK_INSERT_COIN))
-		MDFNI_InsertCoin();
+   if(CK_Check(CK_INSERT_COIN))
+    MDFNI_InsertCoin();
+  }
 
+  if(CurGame->GameType == GMT_ARCADE && !strcmp(CurGame->shortname, "nes"))
+  {
 	if(CK_Check(CK_TOGGLE_DIPVIEW))
         {
 	 ViewDIPSwitches = !ViewDIPSwitches;

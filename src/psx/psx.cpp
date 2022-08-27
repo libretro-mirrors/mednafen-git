@@ -2233,7 +2233,8 @@ static const FileExtensionSpecStruct KnownExtensions[] =
  { ".psf", -20, gettext_noop("PSF1 Rip") },
  { ".minipsf", -20, gettext_noop("MiniPSF1 Rip") },
  { ".psx",   0, gettext_noop("PS-X Executable") },
- { ".exe", -80, gettext_noop("PS-X Executable") },
+ { ".exe", -1000, gettext_noop("PS-X Executable") },
+
  { NULL, 0, NULL }
 };
 

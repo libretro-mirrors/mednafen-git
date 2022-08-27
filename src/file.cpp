@@ -110,10 +110,21 @@ VirtualFS* MDFN_OpenArchive(VirtualFS* vfs, const std::string& path, const std::
     continue;
 
    const std::string* zf_path = zr->get_file_path(i);
+   std::string zf_ext, zf_fname;
+
+   zr->get_file_path_components(*zf_path, nullptr, &zf_fname, &zf_ext);
+   zf_fname = zf_fname + zf_ext;
 
    for(FileExtensionSpecStruct const& ex : known_ext)
    {
-    if(zr->test_ext(*zf_path, ex.extension))
+    bool match = false;
+
+    if(ex.extension[0] == '.')
+     match = zr->test_ext(*zf_path, ex.extension);
+    else
+     match = !MDFN_strazicmp(zf_fname, ex.extension);
+
+    if(match)
     {
      //printf("%s, %s %d, %d\n", zf_path, ex.extension, ex.priority, priority);
 

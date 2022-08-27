@@ -874,6 +874,22 @@ static const RegType DBG_Regs_VDP2[] =
  { (3 << 16) | VDP2::GSREG_ZMCTL, "ZMCTL", "ZMCTL", 2 },
  { (3 << 16) | VDP2::GSREG_SCRCTL, "SCRCTL", "SCRCTL", 2 },
 
+ { 0, "------", "", 0xFFFF },
+ { (3 << 16) | VDP2::GSREG_RPMD, "RPMD", "RPMD", 1 },
+ { (3 << 16) | VDP2::GSREG_RPRCTL, "RPRCTL", "RPRCTL", 2 },
+ { (3 << 16) | VDP2::GSREG_KTCTL, "KTCTL", "KTCTL", 2 },
+ { (3 << 16) | VDP2::GSREG_KTAOF, "KTAOF", "KTAOF", 2 },
+ { (3 << 16) | VDP2::GSREG_OVPNRA, "OVPNRA", "OVPNRA", 2 },
+ { (3 << 16) | VDP2::GSREG_OVPNRB, "OVPNRB", "OVPNRB", 2 },
+ { (3 << 16) | VDP2::GSREG_RPTA, "RPTA", "RPTA", 0x100 | 19 },
+
+
+ { 0, "------", "", 0xFFFF },
+ { (3 << 16) | VDP2::GSREG_PRINA, "PRINA", "PRINA", 2 },
+ { (3 << 16) | VDP2::GSREG_PRINB, "PRINB", "PRINB", 2 },
+ { (3 << 16) | VDP2::GSREG_PRIR, "PRIR", "PRIR", 2 },
+
+
  { 0, "", "", 0 },
 };
 

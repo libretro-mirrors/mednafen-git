@@ -25,12 +25,13 @@
 namespace MDFN_IEN_SS
 {
 
-void SOUND_Init(void) MDFN_COLD;
+void SOUND_Init(bool stv_mapping) MDFN_COLD;
 void SOUND_Reset(bool powering_up) MDFN_COLD;
 void SOUND_Kill(void) MDFN_COLD;
 
 void SOUND_Set68KActive(bool active);
 void SOUND_Reset68K(void);
+void SOUND_ResetSCSP(void);
 
 void SOUND_SetClockRatio(uint32 ratio); // Ratio between SH-2 clock and 68K clock (sound clock / 2)
 sscpu_timestamp_t SOUND_Update(sscpu_timestamp_t timestamp);

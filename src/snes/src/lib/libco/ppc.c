@@ -393,7 +393,7 @@ void co_delete(cothread_t t) {
 }
 
 static void co_init_(void) {
-  #if LIBCO_MPROTECT
+  #ifdef LIBCO_MPROTECT
   long page_size = sysconf(_SC_PAGESIZE);
   if(page_size > 0) {
     uintptr_t align = page_size;

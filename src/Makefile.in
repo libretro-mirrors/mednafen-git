@@ -237,6 +237,9 @@ bin_PROGRAMS = mednafen$(EXEEXT)
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/apu.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/input.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/input/multitap.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/input/gamepad.cpp \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/input/mouse.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu_st.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu_mt.cpp \
@@ -299,9 +302,10 @@ bin_PROGRAMS = mednafen$(EXEEXT)
 @HAVE_EXTERNAL_MPCDEC_FALSE@am__append_82 = libmpcdec.a
 @HAVE_EXTERNAL_MPCDEC_FALSE@am__append_83 = libmpcdec.a
 @HAVE_EXTERNAL_TRIO_TRUE@am__append_84 = @TRIO_LIBS@
-@HAVE_EXTERNAL_TRIO_FALSE@am__append_85 = libtrio.a
+@HAVE_EXTERNAL_TRIO_TRUE@am__append_85 = @TRIO_CFLAGS@
 @HAVE_EXTERNAL_TRIO_FALSE@am__append_86 = libtrio.a
 @HAVE_EXTERNAL_TRIO_FALSE@am__append_87 = libtrio.a
+@HAVE_EXTERNAL_TRIO_FALSE@am__append_88 = libtrio.a
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
@@ -590,23 +594,24 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 	sms/render.cpp sms/romdb.cpp sms/sms.cpp sms/sound.cpp \
 	sms/system.cpp sms/tms.cpp sms/vdp.cpp snes_faust/cpu.cpp \
 	snes_faust/snes.cpp snes_faust/apu.cpp snes_faust/cart.cpp \
-	snes_faust/input.cpp snes_faust/ppu.cpp snes_faust/ppu_st.cpp \
-	snes_faust/ppu_mt.cpp snes_faust/cart/dsp1.cpp \
-	snes_faust/cart/dsp2.cpp snes_faust/cart/sdd1.cpp \
-	snes_faust/cart/cx4.cpp snes_faust/cart/superfx.cpp \
-	snes_faust/cart/sa1.cpp snes_faust/cart/sa1cpu.cpp \
-	snes_faust/msu1.cpp snes_faust/debug.cpp \
-	snes_faust/dis65816.cpp snes_faust/ppu_mtrender.cpp vb/vb.cpp \
-	vb/timer.cpp vb/input.cpp vb/vip.cpp vb/vsu.cpp vb/debug.cpp \
-	wswan/gfx.cpp wswan/main.cpp wswan/memory.cpp wswan/comm.cpp \
-	wswan/v30mz.cpp wswan/sound.cpp wswan/tcache.cpp \
-	wswan/interrupt.cpp wswan/eeprom.cpp wswan/rtc.cpp \
-	wswan/debug.cpp wswan/dis/dis_decode.cpp \
-	wswan/dis/dis_groups.cpp wswan/dis/resolve.cpp \
-	wswan/dis/syntax.cpp hw_cpu/m68k/m68k.cpp \
-	hw_cpu/z80-fuse/z80.cpp hw_cpu/z80-fuse/z80_ops.cpp \
-	hw_cpu/v810/v810_cpu.cpp hw_cpu/v810/v810_cpuD.cpp \
-	hw_cpu/v810/v810_fp_ops.cpp \
+	snes_faust/input.cpp snes_faust/input/multitap.cpp \
+	snes_faust/input/gamepad.cpp snes_faust/input/mouse.cpp \
+	snes_faust/ppu.cpp snes_faust/ppu_st.cpp snes_faust/ppu_mt.cpp \
+	snes_faust/cart/dsp1.cpp snes_faust/cart/dsp2.cpp \
+	snes_faust/cart/sdd1.cpp snes_faust/cart/cx4.cpp \
+	snes_faust/cart/superfx.cpp snes_faust/cart/sa1.cpp \
+	snes_faust/cart/sa1cpu.cpp snes_faust/msu1.cpp \
+	snes_faust/debug.cpp snes_faust/dis65816.cpp \
+	snes_faust/ppu_mtrender.cpp vb/vb.cpp vb/timer.cpp \
+	vb/input.cpp vb/vip.cpp vb/vsu.cpp vb/debug.cpp wswan/gfx.cpp \
+	wswan/main.cpp wswan/memory.cpp wswan/comm.cpp wswan/v30mz.cpp \
+	wswan/sound.cpp wswan/tcache.cpp wswan/interrupt.cpp \
+	wswan/eeprom.cpp wswan/rtc.cpp wswan/debug.cpp \
+	wswan/dis/dis_decode.cpp wswan/dis/dis_groups.cpp \
+	wswan/dis/resolve.cpp wswan/dis/syntax.cpp \
+	hw_cpu/m68k/m68k.cpp hw_cpu/z80-fuse/z80.cpp \
+	hw_cpu/z80-fuse/z80_ops.cpp hw_cpu/v810/v810_cpu.cpp \
+	hw_cpu/v810/v810_cpuD.cpp hw_cpu/v810/v810_fp_ops.cpp \
 	hw_misc/arcade_card/arcade_card.cpp \
 	hw_sound/ym2413/emu2413.cpp hw_sound/ym2612/Ym2612_Emu.cpp \
 	hw_sound/gb_apu/Gb_Apu.cpp hw_sound/gb_apu/Gb_Apu_State.cpp \
@@ -874,6 +879,9 @@ am__mednafen_SOURCES_DIST = debug.cpp error.cpp mempatcher.cpp \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/apu.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/cart.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/input.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/input/multitap.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/input/gamepad.$(OBJEXT) \
+@WANT_SNES_FAUST_EMU_TRUE@	snes_faust/input/mouse.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu_st.$(OBJEXT) \
 @WANT_SNES_FAUST_EMU_TRUE@	snes_faust/ppu_mt.$(OBJEXT) \
@@ -1275,6 +1283,9 @@ am__depfiles_remade = ./$(DEPDIR)/ExtMemStream.Po \
 	snes_faust/cart/$(DEPDIR)/sa1cpu.Po \
 	snes_faust/cart/$(DEPDIR)/sdd1.Po \
 	snes_faust/cart/$(DEPDIR)/superfx.Po \
+	snes_faust/input/$(DEPDIR)/gamepad.Po \
+	snes_faust/input/$(DEPDIR)/mouse.Po \
+	snes_faust/input/$(DEPDIR)/multitap.Po \
 	sound/$(DEPDIR)/Blip_Buffer.Po sound/$(DEPDIR)/DSPUtility.Po \
 	sound/$(DEPDIR)/Fir_Resampler.Po \
 	sound/$(DEPDIR)/OwlResampler.Po \
@@ -1506,7 +1517,8 @@ CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
-DEFS = @DEFS@ @FLAC_CFLAGS@ $(am__append_69) $(am__append_72)
+DEFS = @DEFS@ @FLAC_CFLAGS@ $(am__append_69) $(am__append_72) \
+	$(am__append_85)
 DEPDIR = @DEPDIR@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
@@ -1596,6 +1608,7 @@ SNES_EXTRA_FLAGS = @SNES_EXTRA_FLAGS@
 SS_EXTRA_FLAGS = @SS_EXTRA_FLAGS@
 STRIP = @STRIP@
 TREMOR_LIBS = @TREMOR_LIBS@
+TRIO_BUILD_CFLAGS = @TRIO_BUILD_CFLAGS@
 TRIO_CFLAGS = @TRIO_CFLAGS@
 TRIO_LIBS = @TRIO_LIBS@
 USE_INCLUDED_LIBINTL = @USE_INCLUDED_LIBINTL@
@@ -1667,20 +1680,20 @@ SUBDIRS = $(am__append_1) $(am__append_5) $(am__append_8) sexyal \
 	$(SS_SUBDIRS)
 noinst_LIBRARIES = $(am__append_21) $(am__append_33) $(am__append_45) \
 	libmdfnquicklz.a $(am__append_73) $(am__append_77) \
-	$(am__append_81) $(am__append_85)
+	$(am__append_81) $(am__append_86)
 mednafen_LDADD = $(am__append_2) $(am__append_6) $(am__append_9) \
 	sexyal/libsexyal.a @ALSA_LIBS@ @JACK_LIBS@ $(am__append_11) \
 	$(am__append_22) $(am__append_34) $(am__append_37) \
 	$(am__append_39) $(am__append_46) libmdfnquicklz.a \
 	$(am__append_68) $(am__append_71) $(am__append_74) \
 	$(am__append_76) $(am__append_78) $(am__append_80) \
-	$(am__append_82) $(am__append_84) $(am__append_86) @FLAC_LIBS@ \
+	$(am__append_82) $(am__append_84) $(am__append_87) @FLAC_LIBS@ \
 	@ZLIB_LIBS@ @LIBINTL@ @LIBICONV@ $(am__empty)
 mednafen_DEPENDENCIES = $(am__append_3) $(am__append_7) \
 	$(am__append_10) sexyal/libsexyal.a $(am__append_23) \
 	$(am__append_35) $(am__append_38) $(am__append_40) \
 	$(am__append_47) libmdfnquicklz.a $(am__append_75) \
-	$(am__append_79) $(am__append_83) $(am__append_87)
+	$(am__append_79) $(am__append_83) $(am__append_88)
 mednafen_SOURCES = debug.cpp error.cpp mempatcher.cpp settings.cpp \
 	endian.cpp mednafen.cpp git.cpp file.cpp general.cpp \
 	memory.cpp netplay.cpp state.cpp state_rewind.cpp movie.cpp \
@@ -1831,7 +1844,7 @@ libmdfnquicklz_a_SOURCES = quicklz/quicklz.c
 @HAVE_EXTERNAL_MPCDEC_FALSE@        mpcdec/requant.c mpcdec/streaminfo.c mpcdec/synth_filter.c mpcdec/mpc_bits_reader.c mpcdec/mpc_demux.c \
 @HAVE_EXTERNAL_MPCDEC_FALSE@	mpcdec/crc32.c
 
-@HAVE_EXTERNAL_TRIO_FALSE@libtrio_a_CFLAGS = @AM_CFLAGS@ @TRIO_CFLAGS@ @CFLAG_VISIBILITY@
+@HAVE_EXTERNAL_TRIO_FALSE@libtrio_a_CFLAGS = @AM_CFLAGS@ @TRIO_BUILD_CFLAGS@ @CFLAG_VISIBILITY@
 @HAVE_EXTERNAL_TRIO_FALSE@libtrio_a_SOURCES = trio/trio.c trio/trionan.c trio/triostr.c
 all: all-recursive
 
@@ -2995,6 +3008,18 @@ snes_faust/cart.$(OBJEXT): snes_faust/$(am__dirstamp) \
 	snes_faust/$(DEPDIR)/$(am__dirstamp)
 snes_faust/input.$(OBJEXT): snes_faust/$(am__dirstamp) \
 	snes_faust/$(DEPDIR)/$(am__dirstamp)
+snes_faust/input/$(am__dirstamp):
+	@$(MKDIR_P) snes_faust/input
+	@: > snes_faust/input/$(am__dirstamp)
+snes_faust/input/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) snes_faust/input/$(DEPDIR)
+	@: > snes_faust/input/$(DEPDIR)/$(am__dirstamp)
+snes_faust/input/multitap.$(OBJEXT): snes_faust/input/$(am__dirstamp) \
+	snes_faust/input/$(DEPDIR)/$(am__dirstamp)
+snes_faust/input/gamepad.$(OBJEXT): snes_faust/input/$(am__dirstamp) \
+	snes_faust/input/$(DEPDIR)/$(am__dirstamp)
+snes_faust/input/mouse.$(OBJEXT): snes_faust/input/$(am__dirstamp) \
+	snes_faust/input/$(DEPDIR)/$(am__dirstamp)
 snes_faust/ppu.$(OBJEXT): snes_faust/$(am__dirstamp) \
 	snes_faust/$(DEPDIR)/$(am__dirstamp)
 snes_faust/ppu_st.$(OBJEXT): snes_faust/$(am__dirstamp) \
@@ -3470,6 +3495,7 @@ mostlyclean-compile:
 	-rm -f snes/src/system/*.$(OBJEXT)
 	-rm -f snes_faust/*.$(OBJEXT)
 	-rm -f snes_faust/cart/*.$(OBJEXT)
+	-rm -f snes_faust/input/*.$(OBJEXT)
 	-rm -f sound/*.$(OBJEXT)
 	-rm -f string/*.$(OBJEXT)
 	-rm -f time/*.$(OBJEXT)
@@ -3914,6 +3940,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/cart/$(DEPDIR)/sa1cpu.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/cart/$(DEPDIR)/sdd1.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@snes_faust/cart/$(DEPDIR)/superfx.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/input/$(DEPDIR)/gamepad.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/input/$(DEPDIR)/mouse.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@snes_faust/input/$(DEPDIR)/multitap.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@sound/$(DEPDIR)/Blip_Buffer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@sound/$(DEPDIR)/DSPUtility.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@sound/$(DEPDIR)/Fir_Resampler.Po@am__quote@ # am--include-marker
@@ -5562,6 +5591,8 @@ distclean-generic:
 	-rm -f snes_faust/$(am__dirstamp)
 	-rm -f snes_faust/cart/$(DEPDIR)/$(am__dirstamp)
 	-rm -f snes_faust/cart/$(am__dirstamp)
+	-rm -f snes_faust/input/$(DEPDIR)/$(am__dirstamp)
+	-rm -f snes_faust/input/$(am__dirstamp)
 	-rm -f sound/$(DEPDIR)/$(am__dirstamp)
 	-rm -f sound/$(am__dirstamp)
 	-rm -f string/$(DEPDIR)/$(am__dirstamp)
@@ -6023,6 +6054,9 @@ distclean: distclean-recursive
 	-rm -f snes_faust/cart/$(DEPDIR)/sa1cpu.Po
 	-rm -f snes_faust/cart/$(DEPDIR)/sdd1.Po
 	-rm -f snes_faust/cart/$(DEPDIR)/superfx.Po
+	-rm -f snes_faust/input/$(DEPDIR)/gamepad.Po
+	-rm -f snes_faust/input/$(DEPDIR)/mouse.Po
+	-rm -f snes_faust/input/$(DEPDIR)/multitap.Po
 	-rm -f sound/$(DEPDIR)/Blip_Buffer.Po
 	-rm -f sound/$(DEPDIR)/DSPUtility.Po
 	-rm -f sound/$(DEPDIR)/Fir_Resampler.Po
@@ -6571,6 +6605,9 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f snes_faust/cart/$(DEPDIR)/sa1cpu.Po
 	-rm -f snes_faust/cart/$(DEPDIR)/sdd1.Po
 	-rm -f snes_faust/cart/$(DEPDIR)/superfx.Po
+	-rm -f snes_faust/input/$(DEPDIR)/gamepad.Po
+	-rm -f snes_faust/input/$(DEPDIR)/mouse.Po
+	-rm -f snes_faust/input/$(DEPDIR)/multitap.Po
 	-rm -f sound/$(DEPDIR)/Blip_Buffer.Po
 	-rm -f sound/$(DEPDIR)/DSPUtility.Po
 	-rm -f sound/$(DEPDIR)/Fir_Resampler.Po

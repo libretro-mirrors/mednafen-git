@@ -1034,6 +1034,9 @@ static sha1_digest doggy;
 
 static void Emulate(EmulateSpecStruct* espec)
 {
+ if(!spc_reader && !snsf_loader)
+  MDFNGameInfo->mouse_sensitivity = MDFN_GetSettingF("snes_faust.input.mouse_sensitivity");
+
  if(!SpecEx || spc_reader || snsf_loader)
  {
   EmulateReal(espec);
@@ -1302,6 +1305,7 @@ static const MDFNSetting Settings[] =
  { "snes_faust.spex", MDFNSF_NOFLAGS, gettext_noop("Enable 1-frame speculative execution for video output."), gettext_noop("Hack to reduce input->output video latency by 1 frame.  Enabling will increase CPU usage, and may cause video glitches(such as \"jerkiness\") in some oddball games, but most commercially-released games should be fine."), MDFNST_BOOL, "0" },
  { "snes_faust.spex.sound", MDFNSF_NOFLAGS, gettext_noop("Enable speculative execution for sound output too."), gettext_noop("Only has an effect when speculative-execution for video output is enabled.  Will cause minor sound glitches in some games."), MDFNST_BOOL, "1" },
 
+ { "snes_faust.input.mouse_sensitivity", MDFNSF_NOFLAGS, gettext_noop("Emulated mouse sensitivity."), NULL, MDFNST_FLOAT, "0.50", NULL, NULL },
  { "snes_faust.input.sport1.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on SNES port 1."), NULL, MDFNST_BOOL, "0" },
  { "snes_faust.input.sport2.multitap", MDFNSF_EMU_STATE | MDFNSF_UNTRUSTED_SAFE, gettext_noop("Enable multitap on SNES port 2."), NULL, MDFNST_BOOL, "0" },
 

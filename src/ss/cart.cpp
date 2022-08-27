@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* cart.cpp - Expansion cart emulation
-**  Copyright (C) 2016-2017 Mednafen Team
+**  Copyright (C) 2016-2022 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -32,6 +32,7 @@
 //#include "cart/nlmodem.h"
 #include "cart/rom.h"
 #include "cart/ar4mp.h"
+#include "cart/stv.h"
 
 namespace MDFN_IEN_SS
 {
@@ -129,7 +130,7 @@ void CartInfo::CS2M_SetRW8W16(uint8 Ostart, uint8 Oend, void (*r16)(uint32 A, ui
 }
 
 
-void CART_Init(const int cart_type, Stream* rom_stream)
+void CART_Init(const int cart_type, Stream* rom_stream, GameFile* gf, const STVGameInfo* sgi)
 {
  Cart.CS01_SetRW8W16(0x02000000, 0x04FFFFFF, DummyRead<uint16>, DummyWrite<uint8>, DummyWrite<uint16>);
  Cart.CS2M_SetRW8W16(0x00, 0x3F, DummyRead<uint16>, DummyWrite<uint8>, DummyWrite<uint16>);
@@ -169,6 +170,10 @@ void CART_Init(const int cart_type, Stream* rom_stream)
 
   case CART_CS1RAM_16M:
 	CART_CS1RAM_Init(&Cart);
+	break;
+
+  case CART_STV:
+	CART_STV_Init(&Cart, gf, sgi);
 	break;
 
   case CART_MDFN_DEBUG:

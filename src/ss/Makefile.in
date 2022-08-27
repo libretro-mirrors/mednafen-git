@@ -128,18 +128,20 @@ am__v_AR_1 =
 libss_a_AR = $(AR) $(ARFLAGS)
 libss_a_LIBADD =
 am__dirstamp = $(am__leading_dot)dirstamp
-am_libss_a_OBJECTS = db.$(OBJEXT) cdb.$(OBJEXT) sound.$(OBJEXT) \
-	cart.$(OBJEXT) cart/backup.$(OBJEXT) cart/cs1ram.$(OBJEXT) \
+am_libss_a_OBJECTS = db.$(OBJEXT) stvio.$(OBJEXT) ak93c45.$(OBJEXT) \
+	cdb.$(OBJEXT) sound.$(OBJEXT) cart.$(OBJEXT) \
+	cart/backup.$(OBJEXT) cart/cs1ram.$(OBJEXT) \
 	cart/debug.$(OBJEXT) cart/extram.$(OBJEXT) cart/rom.$(OBJEXT) \
-	cart/ar4mp.$(OBJEXT) ss.$(OBJEXT) scu_dsp_gen.$(OBJEXT) \
-	scu_dsp_mvi.$(OBJEXT) scu_dsp_jmp.$(OBJEXT) \
-	scu_dsp_misc.$(OBJEXT) vdp1.$(OBJEXT) vdp1_line.$(OBJEXT) \
-	vdp1_sprite.$(OBJEXT) vdp1_poly.$(OBJEXT) vdp2.$(OBJEXT) \
-	vdp2_render.$(OBJEXT) smpc.$(OBJEXT) input/multitap.$(OBJEXT) \
-	input/gamepad.$(OBJEXT) input/3dpad.$(OBJEXT) \
-	input/mouse.$(OBJEXT) input/wheel.$(OBJEXT) \
-	input/mission.$(OBJEXT) input/gun.$(OBJEXT) \
-	input/keyboard.$(OBJEXT) input/jpkeyboard.$(OBJEXT)
+	cart/ar4mp.$(OBJEXT) cart/stv.$(OBJEXT) ss.$(OBJEXT) \
+	scu_dsp_gen.$(OBJEXT) scu_dsp_mvi.$(OBJEXT) \
+	scu_dsp_jmp.$(OBJEXT) scu_dsp_misc.$(OBJEXT) vdp1.$(OBJEXT) \
+	vdp1_line.$(OBJEXT) vdp1_sprite.$(OBJEXT) vdp1_poly.$(OBJEXT) \
+	vdp2.$(OBJEXT) vdp2_render.$(OBJEXT) smpc.$(OBJEXT) \
+	input/multitap.$(OBJEXT) input/gamepad.$(OBJEXT) \
+	input/3dpad.$(OBJEXT) input/mouse.$(OBJEXT) \
+	input/wheel.$(OBJEXT) input/mission.$(OBJEXT) \
+	input/gun.$(OBJEXT) input/keyboard.$(OBJEXT) \
+	input/jpkeyboard.$(OBJEXT)
 libss_a_OBJECTS = $(am_libss_a_OBJECTS)
 libssfplay_a_AR = $(AR) $(ARFLAGS)
 libssfplay_a_LIBADD =
@@ -159,17 +161,18 @@ am__v_at_0 = @
 am__v_at_1 = 
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/cart.Po ./$(DEPDIR)/cdb.Po \
-	./$(DEPDIR)/db.Po ./$(DEPDIR)/scu_dsp_gen.Po \
-	./$(DEPDIR)/scu_dsp_jmp.Po ./$(DEPDIR)/scu_dsp_misc.Po \
-	./$(DEPDIR)/scu_dsp_mvi.Po ./$(DEPDIR)/smpc.Po \
-	./$(DEPDIR)/sound.Po ./$(DEPDIR)/ss.Po ./$(DEPDIR)/ssf.Po \
-	./$(DEPDIR)/vdp1.Po ./$(DEPDIR)/vdp1_line.Po \
-	./$(DEPDIR)/vdp1_poly.Po ./$(DEPDIR)/vdp1_sprite.Po \
-	./$(DEPDIR)/vdp2.Po ./$(DEPDIR)/vdp2_render.Po \
-	cart/$(DEPDIR)/ar4mp.Po cart/$(DEPDIR)/backup.Po \
-	cart/$(DEPDIR)/cs1ram.Po cart/$(DEPDIR)/debug.Po \
-	cart/$(DEPDIR)/extram.Po cart/$(DEPDIR)/rom.Po \
+am__depfiles_remade = ./$(DEPDIR)/ak93c45.Po ./$(DEPDIR)/cart.Po \
+	./$(DEPDIR)/cdb.Po ./$(DEPDIR)/db.Po \
+	./$(DEPDIR)/scu_dsp_gen.Po ./$(DEPDIR)/scu_dsp_jmp.Po \
+	./$(DEPDIR)/scu_dsp_misc.Po ./$(DEPDIR)/scu_dsp_mvi.Po \
+	./$(DEPDIR)/smpc.Po ./$(DEPDIR)/sound.Po ./$(DEPDIR)/ss.Po \
+	./$(DEPDIR)/ssf.Po ./$(DEPDIR)/stvio.Po ./$(DEPDIR)/vdp1.Po \
+	./$(DEPDIR)/vdp1_line.Po ./$(DEPDIR)/vdp1_poly.Po \
+	./$(DEPDIR)/vdp1_sprite.Po ./$(DEPDIR)/vdp2.Po \
+	./$(DEPDIR)/vdp2_render.Po cart/$(DEPDIR)/ar4mp.Po \
+	cart/$(DEPDIR)/backup.Po cart/$(DEPDIR)/cs1ram.Po \
+	cart/$(DEPDIR)/debug.Po cart/$(DEPDIR)/extram.Po \
+	cart/$(DEPDIR)/rom.Po cart/$(DEPDIR)/stv.Po \
 	input/$(DEPDIR)/3dpad.Po input/$(DEPDIR)/gamepad.Po \
 	input/$(DEPDIR)/gun.Po input/$(DEPDIR)/jpkeyboard.Po \
 	input/$(DEPDIR)/keyboard.Po input/$(DEPDIR)/mission.Po \
@@ -338,6 +341,7 @@ SNES_EXTRA_FLAGS = @SNES_EXTRA_FLAGS@
 SS_EXTRA_FLAGS = @SS_EXTRA_FLAGS@
 STRIP = @STRIP@
 TREMOR_LIBS = @TREMOR_LIBS@
+TRIO_BUILD_CFLAGS = @TRIO_BUILD_CFLAGS@
 TRIO_CFLAGS = @TRIO_CFLAGS@
 TRIO_LIBS = @TRIO_LIBS@
 USE_INCLUDED_LIBINTL = @USE_INCLUDED_LIBINTL@
@@ -407,12 +411,13 @@ AUTOMAKE_OPTIONS = subdir-objects
 # -Wpedantic
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_builddir)/intl
 noinst_LIBRARIES = $(am__append_1) $(am__append_2)
-libss_a_SOURCES = db.cpp cdb.cpp sound.cpp cart.cpp cart/backup.cpp \
-	cart/cs1ram.cpp cart/debug.cpp cart/extram.cpp cart/rom.cpp \
-	cart/ar4mp.cpp ss.cpp scu_dsp_gen.cpp scu_dsp_mvi.cpp \
-	scu_dsp_jmp.cpp scu_dsp_misc.cpp vdp1.cpp vdp1_line.cpp \
-	vdp1_sprite.cpp vdp1_poly.cpp vdp2.cpp vdp2_render.cpp \
-	smpc.cpp input/multitap.cpp input/gamepad.cpp input/3dpad.cpp \
+libss_a_SOURCES = db.cpp stvio.cpp ak93c45.cpp cdb.cpp sound.cpp \
+	cart.cpp cart/backup.cpp cart/cs1ram.cpp cart/debug.cpp \
+	cart/extram.cpp cart/rom.cpp cart/ar4mp.cpp cart/stv.cpp \
+	ss.cpp scu_dsp_gen.cpp scu_dsp_mvi.cpp scu_dsp_jmp.cpp \
+	scu_dsp_misc.cpp vdp1.cpp vdp1_line.cpp vdp1_sprite.cpp \
+	vdp1_poly.cpp vdp2.cpp vdp2_render.cpp smpc.cpp \
+	input/multitap.cpp input/gamepad.cpp input/3dpad.cpp \
 	input/mouse.cpp input/wheel.cpp input/mission.cpp \
 	input/gun.cpp input/keyboard.cpp input/jpkeyboard.cpp
 libssfplay_a_SOURCES = ssf.cpp
@@ -470,6 +475,8 @@ cart/rom.$(OBJEXT): cart/$(am__dirstamp) \
 	cart/$(DEPDIR)/$(am__dirstamp)
 cart/ar4mp.$(OBJEXT): cart/$(am__dirstamp) \
 	cart/$(DEPDIR)/$(am__dirstamp)
+cart/stv.$(OBJEXT): cart/$(am__dirstamp) \
+	cart/$(DEPDIR)/$(am__dirstamp)
 input/$(am__dirstamp):
 	@$(MKDIR_P) input
 	@: > input/$(am__dirstamp)
@@ -513,6 +520,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ak93c45.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cart.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdb.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/db.Po@am__quote@ # am--include-marker
@@ -524,6 +532,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sound.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ss.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ssf.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stvio.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdp1.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdp1_line.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdp1_poly.Po@am__quote@ # am--include-marker
@@ -536,6 +545,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/debug.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/extram.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/rom.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/stv.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/3dpad.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/gamepad.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@input/$(DEPDIR)/gun.Po@am__quote@ # am--include-marker
@@ -696,7 +706,8 @@ clean: clean-am
 clean-am: clean-generic clean-noinstLIBRARIES mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/cart.Po
+		-rm -f ./$(DEPDIR)/ak93c45.Po
+	-rm -f ./$(DEPDIR)/cart.Po
 	-rm -f ./$(DEPDIR)/cdb.Po
 	-rm -f ./$(DEPDIR)/db.Po
 	-rm -f ./$(DEPDIR)/scu_dsp_gen.Po
@@ -707,6 +718,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/sound.Po
 	-rm -f ./$(DEPDIR)/ss.Po
 	-rm -f ./$(DEPDIR)/ssf.Po
+	-rm -f ./$(DEPDIR)/stvio.Po
 	-rm -f ./$(DEPDIR)/vdp1.Po
 	-rm -f ./$(DEPDIR)/vdp1_line.Po
 	-rm -f ./$(DEPDIR)/vdp1_poly.Po
@@ -719,6 +731,7 @@ distclean: distclean-am
 	-rm -f cart/$(DEPDIR)/debug.Po
 	-rm -f cart/$(DEPDIR)/extram.Po
 	-rm -f cart/$(DEPDIR)/rom.Po
+	-rm -f cart/$(DEPDIR)/stv.Po
 	-rm -f input/$(DEPDIR)/3dpad.Po
 	-rm -f input/$(DEPDIR)/gamepad.Po
 	-rm -f input/$(DEPDIR)/gun.Po
@@ -773,7 +786,8 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/cart.Po
+		-rm -f ./$(DEPDIR)/ak93c45.Po
+	-rm -f ./$(DEPDIR)/cart.Po
 	-rm -f ./$(DEPDIR)/cdb.Po
 	-rm -f ./$(DEPDIR)/db.Po
 	-rm -f ./$(DEPDIR)/scu_dsp_gen.Po
@@ -784,6 +798,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/sound.Po
 	-rm -f ./$(DEPDIR)/ss.Po
 	-rm -f ./$(DEPDIR)/ssf.Po
+	-rm -f ./$(DEPDIR)/stvio.Po
 	-rm -f ./$(DEPDIR)/vdp1.Po
 	-rm -f ./$(DEPDIR)/vdp1_line.Po
 	-rm -f ./$(DEPDIR)/vdp1_poly.Po
@@ -796,6 +811,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f cart/$(DEPDIR)/debug.Po
 	-rm -f cart/$(DEPDIR)/extram.Po
 	-rm -f cart/$(DEPDIR)/rom.Po
+	-rm -f cart/$(DEPDIR)/stv.Po
 	-rm -f input/$(DEPDIR)/3dpad.Po
 	-rm -f input/$(DEPDIR)/gamepad.Po
 	-rm -f input/$(DEPDIR)/gun.Po

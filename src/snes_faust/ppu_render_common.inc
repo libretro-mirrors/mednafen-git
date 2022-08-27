@@ -848,12 +848,12 @@ static MDFN_HOT MDFN_FASTCALL void DoWindow(unsigned layernum, uint32* MDFN_REST
  {
   if(WMMainEnable & (1U << layernum))
   {
-   masker[1] &= ~0x00FF;
+   masker[1] &= 0xFFFFFF02;
   }
 
   if(WMSubEnable & (1U << layernum))
   {
-   masker[1] &= ~0xFF00;
+   masker[1] &= 0xFFFF00FF;
   }
 
   if(!((WMMainEnable | WMSubEnable) & (1U << layernum)))

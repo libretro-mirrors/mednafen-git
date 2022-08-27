@@ -348,6 +348,8 @@ The following software is known to be compatible with one or more Atari joystick
 
 <?php BeginSection('Apple II/II+ Keyboard', 'Section_keyboard'); ?>
  Mednafen emulates the later II/II+ two-piece keyboard that uses the AY-5-3600 encoder.
+ <p>
+ Note that emulated keyboard key state is not updated unless <a href="mednafen.html#Section_input_grabbing">input grabbing</a>(by default, mapped to CTRL+SHIFT+Menu) is toggled on.
  <?php BeginSection('Default Mappings', 'Section_default_keys_keyboard'); ?>
   <p>
   <table border>

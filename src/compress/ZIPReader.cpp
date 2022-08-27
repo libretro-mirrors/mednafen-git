@@ -754,6 +754,8 @@ bool ZIPReader::finfo(const std::string& path, FileInfo* fi, const bool throw_on
   FileInfo new_fi;
 
   new_fi.size = entries[which].uncomp_size;
+  new_fi.check = entries[which].crc32;
+  new_fi.check_type = FileInfo::CHECK_TYPE_CRC32;
 
   // TODO/FIXME:
   new_fi.mtime_us = 0;
