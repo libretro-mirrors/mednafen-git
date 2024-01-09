@@ -96,7 +96,7 @@ enum
 
  CART_STV	 = 0xE00,
 
- CART_MDFN_DEBUG = 0xF00
+ CART_BOOTROM	 = 0xF00
 };
 
 struct STVGameInfo;

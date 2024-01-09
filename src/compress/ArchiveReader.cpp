@@ -66,10 +66,10 @@ ArchiveReader::~ArchiveReader()
 Stream* ArchiveReader::open(const std::string& path, const uint32 mode, const int do_lock, const bool throw_on_noent, const CanaryType canary)
 {
  if(mode != MODE_READ)
-  throw MDFN_Error(EINVAL, _("Error opening file %s: %s"), this->get_human_path(path).c_str(), _("Specified mode is unsupported"));
+  throw MDFN_Error(EINVAL, _("Error opening file %s %s: %s"), this->get_human_path(path).c_str(), VirtualFS::get_human_mode(mode).c_str(), _("Specified mode is unsupported"));
 
  if(do_lock != 0)
-  throw MDFN_Error(EINVAL, _("Error opening file %s: %s"), this->get_human_path(path).c_str(), _("Locking requested but is unsupported"));
+  throw MDFN_Error(EINVAL, _("Error opening file %s %s: %s"), this->get_human_path(path).c_str(), VirtualFS::get_human_mode(mode).c_str(), _("Locking requested but is unsupported"));
 
  size_t which = find_by_path(path);
 
@@ -77,7 +77,7 @@ Stream* ArchiveReader::open(const std::string& path, const uint32 mode, const in
  {
   ErrnoHolder ene(ENOENT);
 
-  throw MDFN_Error(ene.Errno(), _("Error opening file %s: %s"), this->get_human_path(path).c_str(), ene.StrError());
+  throw MDFN_Error(ene.Errno(), _("Error opening file %s %s: %s"), this->get_human_path(path).c_str(), VirtualFS::get_human_mode(mode).c_str(), ene.StrError());
  }
 
  try
@@ -86,11 +86,11 @@ Stream* ArchiveReader::open(const std::string& path, const uint32 mode, const in
  }
  catch(const MDFN_Error& e)
  {
-  throw MDFN_Error(e.GetErrno(), _("Error opening file %s: %s"), this->get_human_path(path).c_str(), e.what());
+  throw MDFN_Error(e.GetErrno(), _("Error opening file %s %s: %s"), this->get_human_path(path).c_str(), VirtualFS::get_human_mode(mode).c_str(), e.what());
  }
 }
 
-bool ArchiveReader::mkdir(const std::string& path, const bool throw_on_exist)
+int ArchiveReader::mkdir(const std::string& path, const bool throw_on_exist, const bool throw_on_noent)
 {
  throw MDFN_Error(EINVAL, _("Error creating directory %s: %s"), this->get_human_path(path).c_str(), _("mkdir() not implemented"));
 }

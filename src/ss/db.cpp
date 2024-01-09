@@ -2,7 +2,7 @@
 /* Mednafen Sega Saturn Emulation Module                                      */
 /******************************************************************************/
 /* db.cpp:
-**  Copyright (C) 2016-2021 Mednafen Team
+**  Copyright (C) 2016-2022 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -28,8 +28,7 @@
 
 #include <mednafen/mednafen.h>
 #include <mednafen/FileStream.h>
-
-#include <zlib.h>	// for crc32()
+#include <mednafen/hash/crc.h>
 
 #include "ss.h"
 #include "smpc.h"
@@ -246,6 +245,7 @@ static const struct
  { "T-9705H",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB, "Area 51 (USA)", gettext_noop("Fixes game hang.") },
  { "T-25408H",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB, "Area 51 (Europe)", gettext_noop("Fixes game hang.") },
  { "MK-81036",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB, "Clockwork Knight 2 (USA)", gettext_noop("Fixes game hang that occurred when some FMVs were played.") },
+ { "T-01304H",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB, "Creature Shock - Special Edition (USA)", gettext_noop("Fixes game crash when trying to start a level.") },
  { "T-30304G",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB, "DeJig - Lassen Art Collection (Japan)", gettext_noop("Fixes graphical glitches.") },
  { "T-19801G",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB, "Doraemon - Nobita to Fukkatsu no Hoshi (Japan)", gettext_noop("Fixes blank Game Over screen.") },
  { "GS-9184",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB, "Dragon Force II (Japan)", gettext_noop("Fixes math and game logic errors during battles.") },
@@ -256,9 +256,12 @@ static const struct
  { "MK-81045",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB, "Golden Axe - The Duel (Europe/USA)", gettext_noop("Fixes flickering title screen.") },
  { "GS-9041",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB, "Golden Axe - The Duel (Japan)", gettext_noop("Fixes flickering title screen.") },
  { "GS-9173",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB,	"House of the Dead (Japan)", gettext_noop("Fixes game crash on lightgun calibration screen.") },
+ { "GS-9017",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB, "Kanzen Chuukei Pro Yakyuu Greatest Nine (Japan)", gettext_noop("Fixes game hang.") },
  { "GS-9055",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB,	"Linkle Liver Story (Japan)", gettext_noop("Fixes game crash when going to the world map.") },
+ { "T-5006H",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB, "Magic Carpet (Europe)", gettext_noop("Fixes game hang.") },
  { "T-25302G1", NULL, NULL, CPUCACHE_EMUMODE_DATA_CB,	"Mahjong Doukyuusei Special (Japan)",	gettext_noop("Fixes missing background layer on disc 2.") },
  { "T-25302G2", NULL, NULL, CPUCACHE_EMUMODE_DATA_CB,	"Mahjong Doukyuusei Special (Japan)",	gettext_noop("Fixes missing background layer on disc 2.") },
+ { "MK-81210",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB, "Manx TT SuperBike (Europe)", gettext_noop("Fixes game crash during optional intro movie.") },
  { "T-28901G",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB, "Mujintou Monogatari R - Futari no Love Love Island (Japan)", gettext_noop("Fixes glitches when character graphics change.") },
  { "T-14415G",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB,	"Ronde (Japan)", gettext_noop("Fixes missing graphics on the title screen, main menu, and elsewhere.") },
  { "610602002",	NULL, NULL, CPUCACHE_EMUMODE_DATA_CB,	"Saturn Super Vol. 2 (Japan)", gettext_noop("Fixes flickering title screen in the \"Golden Axe - The Duel\" demo.") },
@@ -300,6 +303,8 @@ static const struct
  { "GS-9123",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "Die Hard Trilogy (Japan)", gettext_noop("Fixes game hang.") },
  { "T-16103H",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "Die Hard Trilogy (Europe/USA)", gettext_noop("Fixes game hang.") },
  // Not needed in 1.26.0, and actually causes a game hang, probably due to lack of SCI emulation messing up game timing: { "T-13331G",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "Digital Monster Version S (Japan)", gettext_noop("Fixes game hang.") },
+ { "T-29101G",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "Gal Jan (Japan)", gettext_noop("Fixes game hang after game ends.") },
+ { "T-4504G",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "Gambler Jiko Chuushinha - Tokyo Mahjongland", gettext_noop("Fixes flickering octopus screen.") },
  { "T-13310G",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "GeGeGe no Kitarou (Japan)", gettext_noop("Fixes game hang.") },
  { "T-15904G",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "Gex (Japan)",		gettext_noop("Fixes minor FMV glitches.")  },
  { "T-15904H",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "Gex (USA)",		gettext_noop("Fixes minor FMV glitches.") },
@@ -320,6 +325,8 @@ static const struct
  { "T-25416H50",NULL, NULL, CPUCACHE_EMUMODE_FULL, "Rampage - World Tour (Europe)", gettext_noop("Fixes game hang.") }, 
  { "T-99901G", "REAL BOUT", NULL, CPUCACHE_EMUMODE_FULL, "Real Bout Garou Densetsu Demo (Japan)", gettext_noop("") },
  { "T-3105G",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "Real Bout Garou Densetsu (Japan)", gettext_noop("Fixes game hang.") },
+ { "T-8107H-50",NULL, NULL, CPUCACHE_EMUMODE_FULL, "Revolution X - Music Is the Weapon (Europe)", gettext_noop("Fixes game hang.") },
+ { "T-8107H-18",NULL, NULL, CPUCACHE_EMUMODE_FULL, "Revolution X - Music Is the Weapon (Germany)", gettext_noop("Fixes game hang.") },
  { "T-37401G",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "Senken Kigyouden (Japan)", gettext_noop("Fixes dialogue text truncation.") },
  { "T-37401H",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "Xian Jian Qi Xia Zhuan (Taiwan)", gettext_noop("Fixes dialogue text truncation.") },
  { "T-30902G",	NULL, NULL, CPUCACHE_EMUMODE_FULL, "Senkutsu Katsuryu Taisen - Chaos Seed (Japan)", gettext_noop("Fixes inability to skip intro FMV.") },
@@ -1776,7 +1783,7 @@ const STVGameInfo* DB_LookupSTV(const std::string& fname, Stream* s)
 
  s->rewind();
 
- head_crc32 = crc32(0, tmp, dr);
+ head_crc32 = crc32_zip(0, tmp, dr);
 
  //printf("%s 0x%08X\n", fname.c_str(), head_crc32);
 
@@ -1831,7 +1838,7 @@ void DB_GetInternalDB(std::vector<GameDB_Database>* databases)
  databases->push_back({
 	"region",
 	gettext_noop("Region"),
-	gettext_noop("This database is used in conjunction with a game's internal header and the \"ss.region_default\" setting to automatically select the region of Saturn to emulate when the \"ss.region_autodetect\" setting is set to \"1\", the default.")
+	gettext_noop("This database is used in conjunction with a game's internal header and the \"\5ss.region_default\" setting to automatically select the region of Saturn to emulate when the \"\5ss.region_autodetect\" setting is set to \"1\", the default.")
 	});
 
  for(auto& re : regiondb)
@@ -1867,7 +1874,7 @@ void DB_GetInternalDB(std::vector<GameDB_Database>* databases)
  databases->push_back({
 	"cart",
 	gettext_noop("Cart"),
-	gettext_noop("This database is used to automatically select the type of cart to emulate when the \"ss.cart\" setting is set to \"auto\", the default.  If a game is not found in the database when auto selection is enabled, then the cart used is specified by the \"ss.cart.auto_default\" setting, default \"backup\"(a backup memory cart).")
+	gettext_noop("This database is used to automatically select the type of cart to emulate when the \"\5ss.cart\" setting is set to \"auto\", the default.  If a game is not found in the database when auto selection is enabled, then the cart used is specified by the \"\5ss.cart.auto_default\" setting, default \"backup\"(a backup memory cart).")
 	});
 
  for(auto& ca : cartdb)

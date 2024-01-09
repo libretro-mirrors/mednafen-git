@@ -32,7 +32,7 @@ class SS_SCSP
 
  // Use int16 if the SCSP is connected to a 16-bit DAC, int32 if an 18-bit DAC
  template<typename T_out = int16>
- void RunSample(T_out* outlr);
+ void RunSample(T_out* outlr, void (*midi_out)(uint8) = nullptr);
 
  template<typename T, bool IsWrite>
  void RW(uint32 A, T& V); //, void (*time_sucker)();
@@ -52,6 +52,13 @@ class SS_SCSP
  {
   return RAM;
  }
+
+ INLINE uint64 PeekMPROG(uint32 A)	  { assert(A < 0x80); return DSP.MPROG[A]; }
+ INLINE void PokeMPROG(uint32 A, uint64 V) { assert(A < 0x80); DSP.MPROG[A] = V; }
+ INLINE uint32 PeekMEMS(uint32 A)	  { assert(A < 0x20); return DSP.MEMS[A]; }
+ INLINE void PokeMEMS(uint32 A, uint32 V)  { assert(A < 0x20); DSP.MEMS[A] = V & 0x00FFFFFF; }
+ INLINE uint32 PeekTEMPRel(uint32 A)	  { assert(A < 0x80); return DSP.TEMP[(DSP.MDEC_CT + A) & 0x7F]; }
+ INLINE void PokeTEMPRel(uint32 A, uint32 V)  { assert(A < 0x80); DSP.TEMP[(DSP.MDEC_CT + A) & 0x7F] = V & 0x00FFFFFF; }
 
  enum
  {
@@ -224,7 +231,7 @@ class SS_SCSP
  void MIDI_WriteInput(uint8 V);
  void MIDI_WriteOutput(uint8 V);
  void MIDI_Reset(void);
- void MIDI_Run(void);
+ void MIDI_Run(void (*midi_out)(uint8));
  //
  //
  uint16 SCIEB;

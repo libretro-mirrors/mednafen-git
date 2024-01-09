@@ -48,7 +48,9 @@
 
 #include <tuple>
 
-#pragma GCC optimize ("no-crossjumping,no-gcse")
+#if defined(__GNUC__) && !defined(__clang__)
+ #pragma GCC optimize ("no-crossjumping,no-gcse")
+#endif
 
 namespace Mednafen
 {

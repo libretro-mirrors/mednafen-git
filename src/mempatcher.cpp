@@ -249,7 +249,6 @@ static bool SeekToOurSection(Stream* fp)
 void MDFN_LoadGameCheats(Stream* override)
 {
  Stream* fp = NULL;
- int tc = 0;
  std::string fn = MDFN_MakeFName(MDFNMKF_CHEAT,0,0);
 
  //
@@ -394,7 +393,6 @@ void MDFN_LoadGameCheats(Stream* override)
 
      cheats.push_back(temp);
     }
-    tc++;
    }
   }
 

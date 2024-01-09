@@ -119,7 +119,7 @@ FileStream::FileStream(const std::string& path, const uint32 mode, const int do_
  #endif
 
  if(path.find('\0') != std::string::npos)
-  throw MDFN_Error(EINVAL, _("Error opening file \"%s\": %s"), path_humesc.c_str(), _("Null character in path."));
+  throw MDFN_Error(EINVAL, _("Error opening file \"%s\" %s: %s"), path_humesc.c_str(), VirtualFS::get_human_mode(mode).c_str(), _("Null character in path."));
 
  #ifdef WIN32
  {
@@ -127,7 +127,7 @@ FileStream::FileStream(const std::string& path, const uint32 mode, const int do_
   auto tpath = Win32Common::UTF8_to_T(path, &invalid_utf8, true);
 
   if(invalid_utf8)
-   throw MDFN_Error(EINVAL, _("Error opening file \"%s\": %s"), path_humesc.c_str(), _("Invalid UTF-8 in path."));
+   throw MDFN_Error(EINVAL, _("Error opening file \"%s\" %s: %s"), path_humesc.c_str(), VirtualFS::get_human_mode(mode).c_str(), _("Invalid UTF-8 in path."));
 
   fd = ::_topen((const TCHAR*)tpath.c_str(), open_flags, perm_mode);
  }
@@ -139,7 +139,7 @@ FileStream::FileStream(const std::string& path, const uint32 mode, const int do_
  {
   ErrnoHolder ene(errno);
 
-  throw MDFN_Error(ene.Errno(), _("Error opening file \"%s\": %s"), path_humesc.c_str(), ene.StrError());
+  throw MDFN_Error(ene.Errno(), _("Error opening file \"%s\" %s: %s"), path_humesc.c_str(), VirtualFS::get_human_mode(mode).c_str(), ene.StrError());
  }
 
  //

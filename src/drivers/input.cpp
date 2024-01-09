@@ -35,6 +35,8 @@
 
 int NoWaiting = 0;
 
+static bool HaveFocus = false;
+
 static bool ViewDIPSwitches = false;
 static bool InputGrab = false;
 static bool EmuKeyboardKeysGrabbed = false;
@@ -90,7 +92,9 @@ static void ConfigDeviceAbort(void);
 static void subcon_begin(void);
 static bool subcon(const char *text, std::vector<ButtConfig> &bc, const bool commandkey, const bool AND_Mode);
 
-static void CalcWMInputBehavior(void);
+static void CalcDevicesInputNeeds(void);
+static void SyncWMInputBehavior(bool force_update = false);
+static void CalcNeedsSyncWMInputBehavior(bool force_update = false);
 
 static bool DTestButton(const std::vector<ButtConfig>& bc, const bool bypass_key_masking)
 {
@@ -578,7 +582,7 @@ static bool StringToBCG(std::vector<ButtConfig>* bcg, const char* s, const char*
    {
     if(!KBMan::StringToBN(bnstr, &bc.ButtonNum))
     {
-     printf("Bad keyboard bn string\n");
+     printf("Bad keyboard bn string: %s\n", MDFN_strhumesc(bnstr).c_str());
      return false;
     }
 
@@ -747,6 +751,8 @@ struct PortInfoCache
  std::vector<unsigned> BCC; // Button config cache
 
  float AxisScale = 0;
+
+ uint8* PaddingANDOR = NULL;
 };
 
 static PortInfoCache PIDC[16];
@@ -766,6 +772,9 @@ static void KillPortInfo(unsigned int port)
  PIDC[port].SIC.clear();
  PIDC[port].RIC.clear();
  PIDC[port].BCC.clear();
+
+ free(PIDC[port].PaddingANDOR);
+ PIDC[port].PaddingANDOR = NULL;
 }
 
 
@@ -826,6 +835,9 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
    else
    {
     char tmp_setting_name[512];
+
+    assert(!(gi->PortInfo[port].Flags & InputPortInfoStruct::FLAG_NO_USER_SELECT));
+
     trio_snprintf(tmp_setting_name, 512, "%s.input.%s", gi->shortname, gi->PortInfo[port].ShortName);
     port_device_name = strdup(MDFN_GetSettingS(tmp_setting_name).c_str());
    }
@@ -1022,6 +1034,49 @@ static void BuildPortInfo(MDFNGI *gi, const unsigned int port)
  PIDC[port].Data = MDFNI_SetInput(port, device);
 
  //
+ // Padding bits
+ //
+ {
+  const uint32 ibs = zedevice->IDII.InputByteSize;
+  uint8* andptr;
+  uint8* orptr;
+
+  PIDC[port].PaddingANDOR = (uint8*)calloc(2, std::max<size_t>(1, ibs));
+  andptr = PIDC[port].PaddingANDOR + 0 * ibs;
+   orptr = PIDC[port].PaddingANDOR + 1 * ibs;
+
+  memset(andptr, 0xFF, ibs);
+  memset(orptr, 0x00, ibs);
+
+  for(auto const& idii : PIDC[port].Device->IDII)
+  {
+   if(idii.Type == IDIT_PADDING0 || idii.Type == IDIT_PADDING1)
+   {
+    const bool value = (idii.Type == IDIT_PADDING1);
+
+    for(size_t i = 0; i < idii.BitSize; i++)
+    {
+     const uint32 bo = idii.BitOffset + i;
+     const size_t byob = bo >> 3;
+     const unsigned sob = bo & 0x7;
+
+     andptr[byob] &= ~(1U << sob);
+      orptr[byob] |= (value << sob);
+    }
+   }
+  }
+
+  for(uint32 i = 0; i < ibs; i++)
+   PIDC[port].Data[i] = (PIDC[port].Data[i] & andptr[i]) | orptr[i];
+
+#if 0
+  printf("%u:\n", ibs);
+  for(uint32 i = 0; i < ibs; i++)
+   printf("0x%02x 0x%02x\n", andptr[i], orptr[i]);
+#endif
+ }
+
+ //
  // Set default switch positions.
  //
  size_t switches_defov_found = 0;
@@ -1065,7 +1120,7 @@ static void IncSelectedDevice(unsigned int port)
  }
  else if(port >= CurGame->PortInfo.size())
   MDFN_Notify(MDFN_NOTICE_STATUS, _("Port %u does not exist."), port + 1);
- else if(CurGame->PortInfo[port].DeviceInfo.size() <= 1)
+ else if(CurGame->PortInfo[port].DeviceInfo.size() <= 1 || (CurGame->PortInfo[port].Flags & InputPortInfoStruct::FLAG_NO_USER_SELECT))
   MDFN_Notify(MDFN_NOTICE_STATUS, _("Port %u device not selectable."), port + 1);
  else if(IConfig == (Port1 + port))
   MDFN_Notify(MDFN_NOTICE_STATUS, _("Port %u device change blocked by active button mapping process."), port + 1);
@@ -1085,7 +1140,7 @@ static void IncSelectedDevice(unsigned int port)
   KillPortInfo(port);
   MDFNI_SetSetting(tmp_setting_name, devname);
   BuildPortInfo(CurGame, port);
-  CalcWMInputBehavior();
+  CalcNeedsSyncWMInputBehavior();
 
   MDFN_Notify(MDFN_NOTICE_STATUS, _("%s selected on port %d"), CurGame->PortInfo[port].DeviceInfo[PIDC[port].CurrentDeviceIndex].FullName, port + 1);
  }
@@ -1159,6 +1214,7 @@ enum CommandKey
 	CK_RESET,
 	CK_POWER,
 	CK_EXIT,
+	CK_CLOSE_POPUP,
 	CK_STATE_REWIND,
 	CK_ROTATESCREEN,
 	CK_TOGGLENETVIEW,
@@ -1285,7 +1341,8 @@ static const COKE CKeys[_CK_COUNT]	=
 
 	CKEYDEF( "reset", "Reset", CKEYDEF_DANGEROUS, MK_CK(F10) ),
 	CKEYDEF( "power", "Power toggle", CKEYDEF_DANGEROUS, MK_CK(F11) ),
-	CKEYDEF( "exit", "Exit", CKEYDEF_BYPASSKEYZEROING | CKEYDEF_DANGEROUS, MK_CK2(F12, ESCAPE) ),
+	CKEYDEF( "exit", "Exit", CKEYDEF_BYPASSKEYZEROING | CKEYDEF_DANGEROUS, MK_CK(F12) ),
+	CKEYDEF( "close_popup", "Close netplay console/text popup.", CKEYDEF_BYPASSKEYZEROING, MK_CK(ESCAPE) ),
 	CKEYDEF( "state_rewind", "Rewind", 0, MK_CK(BACKSPACE) ),
 	CKEYDEF( "rotate_screen", "Rotate screen", 0, MK_CK_ALT(O) ),
 
@@ -1321,7 +1378,7 @@ static const COKE CKeys[_CK_COUNT]	=
 #undef CKEYDEF
 
 static std::vector<ButtConfig> CKeysConfig[_CK_COUNT];
-static uint32 CKeysPressTime[_CK_COUNT];
+static uint32 CKeysPressTime[_CK_COUNT];	// 0x00000000 ... 0x7FFFFFFF, and 0xFFFFFFFF
 static bool CKeysActive[_CK_COUNT];
 static bool CKeysTrigger[_CK_COUNT];
 static uint32 CurTicks = 0;	// Optimization, Time::MonoMS() might be slow on some platforms?
@@ -1356,7 +1413,7 @@ static void CK_UpdateState(bool skipckd_tc)
  {
   const bool prev_state = CKeysActive[i];
   const bool cur_state = DTestButtonCombo(CKeysConfig[i], (CKeys[i].BypassKeyZeroing && (!EmuKeyboardKeysGrabbed || i == CK_TOGGLE_GRAB)), CKeys[i].TextInputExit);
-  unsigned tmp_ckdelay = ckdelay;
+  uint32 tmp_ckdelay = ckdelay;
 
   if(CKeys[i].SkipCKDelay || skipckd_tc)
    tmp_ckdelay = 0;
@@ -1364,16 +1421,21 @@ static void CK_UpdateState(bool skipckd_tc)
   if(cur_state)
   {
    if(!prev_state)
-    CKeysPressTime[i] = CurTicks;
+    CKeysPressTime[i] = CurTicks & 0x7FFFFFFF;
+   //
+   if(CKeysPressTime[i] != 0xFFFFFFFF)
+   {
+    const uint32 dt = (CurTicks - CKeysPressTime[i]) & 0x7FFFFFFF;
+
+    if(dt >= tmp_ckdelay && dt < 0x70000000)
+    {
+     CKeysTrigger[i] = true;
+     CKeysPressTime[i] = 0xFFFFFFFF;
+    }
+   }
   }
   else
    CKeysPressTime[i] = 0xFFFFFFFF;
-
-  if(CurTicks >= ((uint64)CKeysPressTime[i] + tmp_ckdelay))
-  {
-   CKeysTrigger[i] = true;
-   CKeysPressTime[i] = 0xFFFFFFFF;
-  }
 
   CKeysActive[i] = cur_state;
  }
@@ -1408,6 +1470,11 @@ void Input_Event(const SDL_Event *event)
  }
 }
 
+void Input_SetFocus(bool have)
+{
+ HaveFocus = have;
+}
+
 /*
  Note: Don't call this function frivolously or any more than needed, or else the logic to prevent lost key and mouse button
  presses won't work properly in regards to emulated input devices(has particular significance with the "Pause" key and the emulated
@@ -1418,7 +1485,7 @@ static void UpdatePhysicalDeviceState(void)
  MouseMan::UpdateMice();
  KBMan::UpdateKeyboards();
 
- if(MDFNDHaveFocus || MDFN_GetSettingB("input.joystick.global_focus"))
+ if(HaveFocus || MDFN_GetSettingB("input.joystick.global_focus"))
   JoystickManager::UpdateJoysticks();
 
  CurTicks = Time::MonoMS();
@@ -1577,14 +1644,14 @@ static void CheckCommandKeys(void)
     CK_PostRemapUpdate((CommandKey)(CK_INPUT_CONFIG1 + i));	// Kind of abusing that function if going by its name, but meh.
 
     ConfigDeviceAbort();
-    CalcWMInputBehavior();
+    CalcNeedsSyncWMInputBehavior();
     IConfig = none;
 
     MDFN_Notify(MDFN_NOTICE_STATUS, _("Configuration aborted."));
    }
    else if(ConfigDevice())
    {
-    CalcWMInputBehavior();
+    CalcNeedsSyncWMInputBehavior();
     ICDeadDelay = CurTicks + 300;
     IConfig = none;
    }
@@ -1604,7 +1671,7 @@ static void CheckCommandKeys(void)
 
      // Prevent accidentally triggering the command
      CK_PostRemapUpdate((CommandKey)ICLatch);
-     CalcWMInputBehavior();
+     CalcNeedsSyncWMInputBehavior();
     }
    }
    else
@@ -1629,7 +1696,6 @@ static void CheckCommandKeys(void)
   if(CK_Check(CK_TOGGLE_GRAB))
   {
    InputGrab = !InputGrab;
-   CalcWMInputBehavior();
 
    MDFN_Notify(MDFN_NOTICE_STATUS, _("Input grabbing: %s"), InputGrab ? _("On") : _("Off"));
   }
@@ -1641,7 +1707,6 @@ static void CheckCommandKeys(void)
     if(CK_Check(CK_TOGGLE_DEBUGGER))
     {
      Debugger_GT_Toggle();
-     CalcWMInputBehavior();
     }
    }
 
@@ -1654,10 +1719,32 @@ static void CheckCommandKeys(void)
    }
   }
 
-  if(CK_Check(CK_EXIT))
+  //
+  //
+  //
+  if(CK_CheckActive(CK_CLOSE_POPUP) && CK_CheckActive(CK_EXIT))
   {
-   SendCEvent(CEVT_WANT_EXIT, NULL, NULL);
+   // Backwards-compatibility
+   if(CK_Check(CK_EXIT))
+   {
+    SendCEvent(CEVT_WANT_OLD_EXIT, NULL, NULL);
+   }
   }
+  else
+  {
+   if(CK_Check(CK_CLOSE_POPUP))
+   {
+    SendCEvent(CEVT_CLOSE_POPUP, NULL, NULL);
+   }
+
+   if(CK_Check(CK_EXIT))
+   {
+    SendCEvent(CEVT_WANT_EXIT, NULL, NULL);
+   }
+  }
+  //
+  //
+  //
 
   if(CK_Check(CK_TOGGLE_HELP))
    Help_Toggle();
@@ -1934,43 +2021,57 @@ static void CheckCommandKeys(void)
   else
   {
    #ifdef WANT_NES_EMU
-   static uint8 bbuf[32];
-   static int bbuft;
-   static int barcoder = 0;
+   static uint8 bbuf[13 + 1];
+   static size_t bbuft = 0;
+   static bool barcoder = false;
 
    if(!strcmp(CurGame->shortname, "nes") && (!strcmp(PIDC[4].Device->ShortName, "bworld") || (CurGame->cspecial && !MDFN_strazicmp(CurGame->cspecial, "datach"))))
    {
     if(CK_Check(CK_ACTIVATE_BARCODE))
     {
-     barcoder ^= 1;
+     barcoder = !barcoder;
      if(!barcoder)
      {
       if(!strcmp(PIDC[4].Device->ShortName, "bworld"))
       {
-       BarcodeWorldData[0] = 1;
-       memset(BarcodeWorldData + 1, 0, 13);
-
-       strncpy((char *)BarcodeWorldData + 1, (char *)bbuf, 13);
+       BarcodeWorldData[0] = 0x01;
+       memcpy(BarcodeWorldData + 1, bbuf, 13);
       }
       else
+      {
        MDFNI_DatachSet(bbuf);
+      }
       MDFN_Notify(MDFN_NOTICE_STATUS, _("Barcode Entered"));
      } 
-     else { bbuft = 0; MDFN_Notify(MDFN_NOTICE_STATUS, _("Enter Barcode"));}
+     else
+     {
+      bbuft = 0;
+      memset(bbuf, 0, sizeof(bbuf));
+
+      MDFN_Notify(MDFN_NOTICE_STATUS, _("Enter Barcode"));
+     }
     }
    } 
    else 
-    barcoder = 0;
-
-   #define SSM(x) { if(bbuft < 13) {bbuf[bbuft++] = '0' + x; bbuf[bbuft] = 0;} MDFN_Notify(MDFN_NOTICE_STATUS, _("Barcode: %s"),bbuf); }
+    barcoder = false;
 
    DIPSless:
 
    if(barcoder)
    {
     for(unsigned i = 0; i < 10; i++)
+    {
      if(CK_Check((CommandKey)(CK_0 + i)))
-      SSM(i);
+     {
+      if(bbuft < 13)
+      {
+       bbuf[bbuft++] = '0' + i;
+       bbuf[bbuft] = 0;
+      }
+
+      MDFN_Notify(MDFN_NOTICE_STATUS, _("Barcode: %s"), bbuf);
+     }
+    }
    }
    else
    #else
@@ -2008,6 +2109,10 @@ void Input_Update(bool VirtualDevicesOnly, bool UpdateRapidFire)
   CheckCommandKeys();
   CK_ClearTriggers();
  }
+
+ // Call SyncWMInputBehavior() after CheckCommandKeys(), unconditionally in order to
+ // handle asynchronous netplay text input interface jankiness.
+ SyncWMInputBehavior();
 
  if(UpdateRapidFire)
   rapid = (rapid + 1) % (autofirefreq + 1);
@@ -2135,7 +2240,10 @@ void Input_Update(bool VirtualDevicesOnly, bool UpdateRapidFire)
 	  fprintf(stderr, "[BUG] cv(%u) >= bic.Switch.NumPos(%u)\n", cv, bic.Switch.NumPos);
 	 else if(MDFN_UNLIKELY(cv != bic.Switch.LastPos))
 	 {
-	  MDFN_Notify(MDFN_NOTICE_STATUS, _("%s %u: %s: %s selected."), PIDC[x].Device->FullName, x + 1, bic.IDII->Name, bic.IDII->Switch.Pos[cv].Name);
+	  if(PIDC[x].Device->Flags & InputDeviceInfoStruct::FLAG_UNIQUE)
+	   MDFN_Notify(MDFN_NOTICE_STATUS, _("%s: %s: %s selected."), PIDC[x].Device->FullName, bic.IDII->Name, bic.IDII->Switch.Pos[cv].Name);
+	  else
+	   MDFN_Notify(MDFN_NOTICE_STATUS, _("%s %u: %s: %s selected."), PIDC[x].Device->FullName, x + 1, bic.IDII->Name, bic.IDII->Switch.Pos[cv].Name);
 	  bic.Switch.LastPos = cv;
 	 }
 
@@ -2191,13 +2299,16 @@ void Input_Update(bool VirtualDevicesOnly, bool UpdateRapidFire)
   //
   for(size_t tmi = 0; tmi < PIDC[x].Device->IDII.size(); tmi++)
   {
-   switch(PIDC[x].Device->IDII[tmi].Type)
+   auto const& idii = PIDC[x].Device->IDII[tmi];
+
+   switch(idii.Type)
    {
-    default: break;
+    default:
+	break;
 
     case IDIT_RESET_BUTTON:
 	{
-	 const uint32 bo = PIDC[x].Device->IDII[tmi].BitOffset;
+	 const uint32 bo = idii.BitOffset;
 	 uint8* const btptr = PIDC[x].Data + (bo >> 3);
 	 const unsigned sob = bo & 0x7;
 
@@ -2210,6 +2321,18 @@ void Input_Update(bool VirtualDevicesOnly, bool UpdateRapidFire)
 	PIDC[x].Data[tmi] = BarcodeWorldData[tmi];
 	break;
    }
+  }
+
+  //
+  // Padding
+  //
+  {
+   const uint32 ibs = PIDC[x].Device->IDII.InputByteSize;
+   const uint8* andptr = PIDC[x].PaddingANDOR + 0 * ibs;
+   const uint8* orptr = PIDC[x].PaddingANDOR + 1 * ibs;
+
+   for(uint32 i = 0; i < ibs; i++)
+    PIDC[x].Data[i] = (PIDC[x].Data[i] & andptr[i]) | orptr[i];
   }
  }
 
@@ -2237,7 +2360,7 @@ void Input_GameLoaded(MDFNGI *gi)
  }
  //
  //
- CalcWMInputBehavior();
+ CalcNeedsSyncWMInputBehavior(true);
 }
 
 static std::vector<ButtConfig> subcon_bcg;
@@ -2468,7 +2591,10 @@ static INLINE void MakeSettingsForDevice(const MDFNGI *system, const int w, cons
    }
 
    tmp_setting.name = CleanSettingName(build_string(system->shortname, ".input.", system->PortInfo[w].ShortName, ".", info->ShortName, ".", info->IDII[x].SettingName));
-   tmp_setting.description = build_string(system->shortname, ", ", system->PortInfo[w].FullName, ", ", info->FullName, ": ", info->IDII[x].Name);
+   if(info->Flags & InputDeviceInfoStruct::FLAG_UNIQUE)
+    tmp_setting.description = build_string(system->shortname, ", ", info->FullName, ": ", info->IDII[x].Name);
+   else
+    tmp_setting.description = build_string(system->shortname, ", ", system->PortInfo[w].FullName, ", ", info->FullName, ": ", info->IDII[x].Name);
 
    tmp_setting.type = MDFNST_STRING;
    tmp_setting.default_value = default_value;
@@ -2547,7 +2673,7 @@ static INLINE void MakeSettingsForDevice(const MDFNGI *system, const int w, cons
 template<typename T>
 static INLINE void MakeSettingsForPort(const MDFNGI *system, const int w, const InputPortInfoStruct *info, const T& defset)
 {
- if(info->DeviceInfo.size() > 1)
+ if(info->DeviceInfo.size() > 1 && !(info->Flags & InputPortInfoStruct::FLAG_NO_USER_SELECT))
  {
   MDFNSetting tmp_setting;
   MDFNSetting_EnumList *EnumList;
@@ -2670,7 +2796,7 @@ void Input_GameClosed(void)
  for(size_t p = 0; p < CurGame->PortInfo.size(); p++)
   KillPortInfo(p);
  //
- CalcWMInputBehavior();
+ CalcNeedsSyncWMInputBehavior(true);
 }
 
 // TODO: multiple mice support
@@ -2691,26 +2817,39 @@ static void CalcWMInputBehavior_Sub(const InputMappingType IMType, const ButtCon
   *MouseRelNeeded = true;
 }
 
-static void CalcWMInputBehavior(void)
+static struct
+{
+ bool keyboard;
+ bool cursor;
+ bool mouse_abs;
+ bool mouse_rel;
+} InputNeeds;
+
+static void CalcDevicesInputNeeds(void)
 {
  const uint32 lpm = Netplay_GetLPM();
- bool CursorNeeded = false;
- bool MouseAbsNeeded = false;
- bool MouseRelNeeded = false;
- bool GrabNeeded = InputGrab;
+
+ InputNeeds.keyboard = false;
+ InputNeeds.cursor = false;
+ InputNeeds.mouse_abs = false;
+ InputNeeds.mouse_rel = false;
+ //
+ //
 
  for(size_t p = 0; p < (CurGame ? CurGame->PortInfo.size() : 0); p++)
  {
   if(!(lpm & (1U << p)))
    continue;
-
   //
   auto const& pic = PIDC[p];
   for(auto const& bic : pic.BIC)
   {
    for(auto const& bc : bic.BC)
    {
-    CalcWMInputBehavior_Sub(bic.IMType, bc, &CursorNeeded, &MouseAbsNeeded, &MouseRelNeeded);
+    CalcWMInputBehavior_Sub(bic.IMType, bc, &InputNeeds.cursor, &InputNeeds.mouse_abs, &InputNeeds.mouse_rel);
+
+    if((pic.Device->Flags & InputDeviceInfoStruct::FLAG_KEYBOARD) && bc.DeviceType == BUTTC_KEYBOARD)
+     InputNeeds.keyboard = true;
    }
   }
  }
@@ -2719,23 +2858,89 @@ static void CalcWMInputBehavior(void)
  {
   for(auto const& bc : CKeysConfig[x])
   {
-   CalcWMInputBehavior_Sub(IMTYPE_BUTTON, bc, &CursorNeeded, &MouseAbsNeeded, &MouseRelNeeded);
+   CalcWMInputBehavior_Sub(IMTYPE_BUTTON, bc, &InputNeeds.cursor, &InputNeeds.mouse_abs, &InputNeeds.mouse_rel);
   }
  }
+}
 
- if(Debugger_IsActive())
+static void SyncWMInputBehavior(bool force_update)
+{
+ static bool PrevCursorNeeded, PrevMouseAbsNeeded, PrevMouseRelNeeded, PrevKeyboardNeeded, PrevKeyboardGrabNeeded, PrevMouseGrabNeeded;
+ //
+ const bool debugger_isactive = Debugger_IsActive();
+ const bool maybe_text_input = debugger_isactive | Netplay_IsTextInput() | CheatIF_Active();
+ //
+ const bool CursorNeeded = InputNeeds.cursor | debugger_isactive;
+ const bool MouseAbsNeeded = InputNeeds.mouse_abs | debugger_isactive;
+ const bool MouseRelNeeded = InputNeeds.mouse_rel;
+ const bool KeyboardNeeded = InputNeeds.keyboard;
+ //
+ const bool KeyboardGrabNeeded = (maybe_text_input ? false : InputGrab);
+ const bool MouseGrabNeeded = InputGrab;
+
+ //
+ //
+ //
+ if(force_update || PrevCursorNeeded != CursorNeeded || PrevMouseAbsNeeded != MouseAbsNeeded ||
+	PrevMouseRelNeeded != MouseRelNeeded || KeyboardNeeded != PrevKeyboardNeeded ||
+	PrevKeyboardGrabNeeded != KeyboardGrabNeeded || PrevMouseGrabNeeded != MouseGrabNeeded)
  {
-  MouseAbsNeeded = true;
-  CursorNeeded = true;
+  WMInputBehavior wmib;
+
+  wmib.Cursor = CursorNeeded;
+  wmib.MouseAbs = MouseAbsNeeded;
+  wmib.MouseRel = MouseRelNeeded;
+
+  wmib.Grab_Keyboard = KeyboardGrabNeeded;
+  wmib.Grab_Mouse = MouseGrabNeeded;
+
+  switch(MDFN_GetSettingUI("input.grab.strategy"))
+  {
+   default:
+	assert(0);
+	break;
+
+   case INPUTGRAB_STRAT_FULL:
+	break;
+
+   case INPUTGRAB_STRAT_AUTO:
+	wmib.Grab_Keyboard &= KeyboardNeeded;
+	wmib.Grab_Mouse &= MouseRelNeeded;
+	break;
+
+   case INPUTGRAB_STRAT_KB_AUTO:
+	wmib.Grab_Keyboard &= KeyboardNeeded;
+	break;
+
+   case INPUTGRAB_STRAT_MOUSE_AUTO:
+	wmib.Grab_Mouse &= MouseRelNeeded;
+	break;
+  }
+
+#ifdef MDFN_ENABLE_DEV_BUILD
+  printf("SyncWMInputBehavior(): Cursor=%d, MouseAbs=%d, MouseRel=%d, Grab_Keyboard=%d, Grab_Mouse=%d (KeyboardGrabNeeded=%d, MouseGrabNeeded=%d)\n", wmib.Cursor, wmib.MouseAbs, wmib.MouseRel, wmib.Grab_Keyboard, wmib.Grab_Mouse, KeyboardGrabNeeded, MouseGrabNeeded);
+#endif
+  //
+  GT_SetWMInputBehavior(wmib);
+  //
+  //
+  PrevCursorNeeded = CursorNeeded;
+  PrevMouseAbsNeeded = MouseAbsNeeded;
+  PrevMouseRelNeeded = MouseRelNeeded;
+  PrevKeyboardNeeded = KeyboardNeeded;
+  PrevKeyboardGrabNeeded = KeyboardGrabNeeded;
+  PrevMouseGrabNeeded = MouseGrabNeeded;
  }
- //
- //
- //
- GT_SetWMInputBehavior(CursorNeeded, MouseAbsNeeded, MouseRelNeeded, GrabNeeded);
+}
+
+void CalcNeedsSyncWMInputBehavior(bool force_update)
+{
+ CalcDevicesInputNeeds();
+ SyncWMInputBehavior(force_update);
 }
 
 void Input_NetplayLPMChanged(void)
 {
- CalcWMInputBehavior();
+ CalcNeedsSyncWMInputBehavior();
 }
 

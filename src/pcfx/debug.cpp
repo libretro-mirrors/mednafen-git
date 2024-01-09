@@ -486,8 +486,6 @@ static void RedoCPUHook(void)
 
 static void PCFXDBG_FlushBreakPoints(int type)
 {
- std::vector<PCFX_BPOINT>::iterator bpit;
-
  if(type == BPOINT_READ)
   BreakPointsRead.clear();
  else if(type == BPOINT_WRITE)

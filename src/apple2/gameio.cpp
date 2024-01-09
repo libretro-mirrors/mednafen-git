@@ -1,8 +1,8 @@
 /******************************************************************************/
 /* Mednafen Apple II Emulation Module                                         */
 /******************************************************************************/
-/* gameio.inc:
-**  Copyright (C) 2018 Mednafen Team
+/* gameio.cpp:
+**  Copyright (C) 2018-2023 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,12 +19,21 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "apple2.h"
+#include "gameio.h"
+
 //
 // TODO: alter AxisCounterFinishTS when axis position changes before expiration
 //
 
+namespace MDFN_IEN_APPLE2
+{
 namespace GameIO
 {
+
+static auto const& SoftSwitch = A2G.SoftSwitch;
+//
+//
 
 enum
 {
@@ -77,7 +86,7 @@ static DEFRW(RWGameTimerReset)
  }
 }
 
-static void EndTimePeriod(void)
+void EndTimePeriod(void)
 {
  for(unsigned i = 0; i < 4; i++)
  {
@@ -86,7 +95,7 @@ static void EndTimePeriod(void)
  }
 }
 
-static void Init(uint32* resistance)
+void Init(uint32* resistance)
 {
  for(unsigned i = 0; i < 4; i++)
  {
@@ -111,18 +120,18 @@ static void Init(uint32* resistance)
   SetRWHandlers(A, RWGameTimerReset, RWGameTimerReset);
 }
 
-static void Power(void)
+void Power(void)
 {
  for(unsigned i = 0; i < 4; i++)
   AxisCounterFinishTS[i] = timestamp;
 }
 
-static void Kill(void)
+void Kill(void)
 {
 
 }
 
-static void SetInput(unsigned port, const char* type, uint8* ptr)
+void SetInput(unsigned port, const char* type, uint8* ptr)
 {
  assert(port < 2);
 
@@ -145,7 +154,7 @@ static void SetInput(unsigned port, const char* type, uint8* ptr)
  InputData[port] = ptr;
 }
 
-static void UpdateInput(void)
+void UpdateInput(uint8 kb_pb)
 {
  if(InputTypes[0] == DEVID_ATARI)
  {
@@ -232,6 +241,11 @@ static void UpdateInput(void)
     AxisCounterFinishTS[axis] = 0x7FFFFFFF;
   }
  }
+
+ for(unsigned button = 0; button < 3; button++)
+  ButtonStates[button] |= ((kb_pb >> button) & 1) ? 0xFF : 0x00;
+
+ //printf("%02x %02x %02x\n", ButtonStates[0], ButtonStates[1], ButtonStates[2]);
 }
 
 void StateAction(StateMem* sm, const unsigned load, const bool data_only)
@@ -338,11 +352,11 @@ static const InputDeviceInfoStruct IDIS_Atari =
 {
  "atari",
  gettext_noop("Atari Joystick"),
- gettext_noop("Atari joyport digital joystick.  Only usable on virtual port 2 if it's also selected on virtual port 1.  Limited compatibility with software."),
+ gettext_noop("Atari joyport digital joystick.  Only usable on virtual port 2 if it's also selected on virtual port 1.  Limited compatibility with software.\n\nNote: Incompatible with Apple IIe, due to conflicts with the Open Apple and Closed Apple keys.  As a partial workaround, hold the first emulated joystick's D-pad in the left position upon power-on."),
  IODevice_GIO_Atari_IDII,
 };
 
-static const std::vector<InputDeviceInfoStruct> InputDeviceInfoGIOVPort1 =
+const std::vector<InputDeviceInfoStruct> InputDeviceInfoGIOVPort1 =
 {
  // 0
  {
@@ -358,10 +372,13 @@ static const std::vector<InputDeviceInfoStruct> InputDeviceInfoGIOVPort1 =
  IDIS_Atari,
 };
 
-static const std::vector<InputDeviceInfoStruct> InputDeviceInfoGIOVPort2 =
+const std::vector<InputDeviceInfoStruct> InputDeviceInfoGIOVPort2 =
 {
  IDIS_Paddle,
  IDIS_Atari,
 };
 
+//
+//
+}
 }

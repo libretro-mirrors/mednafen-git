@@ -26,6 +26,7 @@ namespace MDFN_IEN_SS
 {
 
 void SOUND_Init(bool stv_mapping) MDFN_COLD;
+void SOUND_SetMIDIOutput(void (*p)(uint8)) MDFN_COLD;
 void SOUND_Reset(bool powering_up) MDFN_COLD;
 void SOUND_Kill(void) MDFN_COLD;
 
@@ -46,6 +47,15 @@ void SOUND_Write16(uint32 A, uint16 V);
 
 uint8 SOUND_PeekRAM(uint32 A);
 void SOUND_PokeRAM(uint32 A, uint8 V);
+
+uint64 SOUND_PeekMPROG(uint32 A);
+void SOUND_PokeMPROG(uint32 A, uint64 V);
+
+uint32 SOUND_PeekMEMS(uint32 A);
+void SOUND_PokeMEMS(uint32 A, uint32 V);
+
+uint32 SOUND_PeekTEMPRel(uint32 A);
+void SOUND_PokeTEMPRel(uint32 A, uint32 V);
 
 uint32 SOUND_GetSCSPRegister(const unsigned id, char* const special, const uint32 special_len) MDFN_COLD;
 void SOUND_SetSCSPRegister(const unsigned id, const uint32 value) MDFN_COLD;

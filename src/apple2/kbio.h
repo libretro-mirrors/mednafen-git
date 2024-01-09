@@ -1,8 +1,8 @@
 /******************************************************************************/
-/* Mednafen Sega Saturn Emulation Module                                      */
+/* Mednafen Apple II Emulation Module                                         */
 /******************************************************************************/
-/* debug.h - Mednafen debug cart emulation
-**  Copyright (C) 2017 Mednafen Team
+/* kbio.h:
+**  Copyright (C) 2018-2023 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,12 +19,38 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef __MDFN_SS_CART_DEBUG_H
-#define __MDFN_SS_CART_DEBUG_H
+#ifndef __MDFN_APPLE2_KBIO_H
+#define __MDFN_APPLE2_KBIO_H
 
-namespace MDFN_IEN_SS
+namespace MDFN_IEN_APPLE2
 {
-void CART_Debug_Init(CartInfo* c, Stream* str = nullptr) MDFN_COLD;
-}
+namespace KBIO
+{
+//
+//
 
+void Init(const bool emulate_iie);
+void SetKeyGhosting(bool enabled);
+void SetAutoKeyRepeat(bool enabled);
+void SetDecodeROM(uint8* p, bool iie);
+void SetInput(const char* type, uint8* p);
+void TransformInput(void);
+void Power(void);
+void Kill(void);
+
+bool UpdateInput(uint8* kb_pb);
+void EndTimePeriod(void);
+
+void StateAction(StateMem* sm, const unsigned load, const bool data_only);
+
+void ClockARDelay(void);
+void ClockAR(void);
+
+MDFN_HOT void Read_C011_C01F_IIE(void);
+
+MDFN_HIDE extern const std::vector<InputDeviceInfoStruct> InputDeviceInfoA2KBPort;
+//
+//
+}
+}
 #endif

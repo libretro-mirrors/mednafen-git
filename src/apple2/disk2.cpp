@@ -1,8 +1,8 @@
 /******************************************************************************/
 /* Mednafen Apple II Emulation Module                                         */
 /******************************************************************************/
-/* disk2.inc:
-**  Copyright (C) 2018-2020 Mednafen Team
+/* disk2.cpp:
+**  Copyright (C) 2018-2023 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,6 +19,9 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "apple2.h"
+#include "disk2.h"
+
 //#define MDFN_APPLE2_DISK2SEQ_HLE 1
 
 /*
@@ -34,13 +37,10 @@
 	Make FloppyDisk opaque to outside code.
 */
 
+namespace MDFN_IEN_APPLE2
+{
 namespace Disk2
 {
-
-enum : unsigned { num_tracks = 160 };
-//enum : unsigned { samples_per_track = 1431818 };
-enum : unsigned { min_bits_per_track = 46000 };
-enum : unsigned { max_bits_per_track = 56048 };
 
 static uint8 BootROM[256];
 static uint8 SequencerROM[256];
@@ -68,22 +68,6 @@ static struct
  uint32 qa_delay;
 } SeqHLE;
 #endif
-
-struct FloppyDisk
-{
- bool write_protect = false;
-
- struct Track
- {
-  SimpleBitset<65536> data;
-  uint32 length = 51024;
-  bool flux_fudge = false;
- } tracks[num_tracks];
-
- uint32 angle = 0;	// when disk is inserted into a drive, >>3 for index into tracks[track].data; otherwise, full 32-bit representation of angle
- bool dirty = false;	// Disk has been modified(change of write protect, or track data) since last save.
- bool ever_modified = false;	// Disk has ever been modified(as compared to source disk image).
-};
 
 static FloppyDisk DummyDisk;	// TODO: Check disk absence write protect signal
 static FloppyDisk* StateHelperDisk = nullptr;
@@ -145,7 +129,7 @@ static INLINE void ClampStepperPosition(FloppyDrive* drive)
   drive->stepper_position = ((num_tracks - 1) << 24) | 0x00800000;
 }
 
-static NO_INLINE void Tick2M(void)
+void Tick2M(void)
 {
  unsigned flux_change = 0x40;	// 0x40 = no flux change, 0x00 = flux change
  FloppyDrive* drive = &Drives[Latch_DriveSelect];
@@ -193,14 +177,20 @@ static NO_INLINE void Tick2M(void)
    drive->m_history <<= 1;
    drive->m_history |= m;
 
-   mchange = (drive->m_history ^ (drive->m_history >> 1)) & 1;
+   // Delay vs. random bits is needed for "Congo Bongo":
+   mchange = (drive->m_history ^ (drive->m_history >> 1)) & 0x100;
 
    if(MDFN_UNLIKELY((drive->m_history & 0xFFFFFFFFFFFFFULL) == 0 || ((~drive->m_history) & 0xFFFFFFFFFFFFFULL) == 0))
    {
-    mchange = !((lcg_state >> 28) & 0xF);
+    mchange = !((lcg_state >> 28) & 0xF); // & (bool)(lcg_state & (0x3 << 26));
     //printf("MWA: %zu %d\n", tri, mchange);
    }
 
+   //
+   // Disable delay_flux_change stuff for now, WOZ dumps of "Test Drive" and
+   // "Wizardry" seem to be overly fragile:
+   //
+#if 0
    flux_change &= drive->delay_flux_change;
    drive->delay_flux_change = 0xFF;
 
@@ -211,6 +201,10 @@ static NO_INLINE void Tick2M(void)
     else
      flux_change = 0;
    }
+#else
+   if(mchange)
+    flux_change = 0;
+#endif
   }
 
   //
@@ -401,10 +395,18 @@ static NO_INLINE void Tick2M(void)
  }
 }
 
-static INLINE void EndTimePeriod(void)
+void EndTimePeriod(void)
 {
  //printf("%d %d\n", lastts, timestamp);
  // lastts -= timestamp;
+}
+
+void Reset(void)
+{
+ Latch_Stepper = 0x00;
+ Latch_MotorOn = false;
+ Latch_DriveSelect = false;
+ Latch_Mode = 0x00;
 }
 
 void Power(void)
@@ -900,6 +902,8 @@ static void LoadWOZ(Stream* sp, FloppyDisk* disk)
  uint8 optimal_bit_timing = 32;
  uint16 compat_hw = 0;
  uint16 req_ram = 0;
+ uint16 flux_block = 0;
+ uint16 largest_flux_track = 0;
  //
  uint8 chunk_header[8];
  unsigned required_chunks = 0;
@@ -944,6 +948,12 @@ static void LoadWOZ(Stream* sp, FloppyDisk* disk)
     optimal_bit_timing = info[39];
     compat_hw = MDFN_de16lsb(&info[40]);
     req_ram = MDFN_de16lsb(&info[42]);
+
+    if(info_version >= 3)
+    {
+     flux_block = MDFN_de16lsb(&info[46]);
+     largest_flux_track = MDFN_de16lsb(&info[48]);
+    }
    }
 
    if(disk_type == 0x02)
@@ -951,6 +961,9 @@ static void LoadWOZ(Stream* sp, FloppyDisk* disk)
 
    if(disk_type != 0x01)
     throw MDFN_Error(0, _("Unknown disk type: 0x%02x"), disk_type);
+
+   if(flux_block && largest_flux_track)
+    throw MDFN_Error(0, _("WOZ 2.1 FLUX chunk not currently supported."));
 
    disk->write_protect = (bool)write_protected;
 
@@ -1472,7 +1485,7 @@ void Init(void)
  //lastts = 0;
 }
 
-static void LoadDisk(Stream* sp, const std::string& ext, FloppyDisk* disk)
+void LoadDisk(Stream* sp, const std::string& ext, FloppyDisk* disk)
 {
  assert(sp && disk);
 
@@ -1514,7 +1527,7 @@ static void LoadDisk(Stream* sp, const std::string& ext, FloppyDisk* disk)
  }
 }
 
-static void HashDisk(sha256_hasher* h, const FloppyDisk* disk)
+void HashDisk(sha256_hasher* h, const FloppyDisk* disk)
 {
  for(auto const& t : disk->tracks)
  {
@@ -1616,7 +1629,7 @@ static void SaveDisk(Stream* sp, const FloppyDisk* disk)
 }
 #endif
 
-static void SaveDisk(Stream* sp, const FloppyDisk* disk)
+void SaveDisk(Stream* sp, const FloppyDisk* disk)
 {
  uint8 header[16] = { 'M', 'D', 'F', 'N', 'A', 'F', 'D', MDFN_IS_BIGENDIAN };
  MDFN_en32lsb(&header[8], MEDNAFEN_VERSION_NUMERIC);
@@ -1636,7 +1649,7 @@ static void SaveDisk(Stream* sp, const FloppyDisk* disk)
  }
 }
 
-static bool DetectDOS32(FloppyDisk* disk)
+bool DetectDOS32(FloppyDisk* disk)
 {
  std::vector<uint8> buf(65536 / 8 * 2);
  const FloppyDisk::Track* tr = &disk->tracks[0];
@@ -1832,17 +1845,17 @@ static void AnalyzeDisk(FloppyDisk* disk)
 }
 #endif
 
-static bool GetEverModified(FloppyDisk* disk)
+bool GetEverModified(FloppyDisk* disk)
 {
  return disk->ever_modified;
 }
 
-static void SetEverModified(FloppyDisk* disk)
+void SetEverModified(FloppyDisk* disk)
 {
  disk->ever_modified = true;
 }
 
-static MDFN_NOWARN_UNUSED bool GetClearDiskDirty(FloppyDisk* disk)
+MDFN_NOWARN_UNUSED bool GetClearDiskDirty(FloppyDisk* disk)
 {
  bool ret = disk->dirty;
 
@@ -1851,7 +1864,7 @@ static MDFN_NOWARN_UNUSED bool GetClearDiskDirty(FloppyDisk* disk)
  return ret;
 }
 
-static void SetDisk(unsigned drive_index, FloppyDisk* disk)
+void SetDisk(unsigned drive_index, FloppyDisk* disk)
 {
  assert(drive_index < 2);
  //
@@ -1869,7 +1882,7 @@ static void SetDisk(unsigned drive_index, FloppyDisk* disk)
  assert(Drives[0].inserted_disk == &DummyDisk || Drives[0].inserted_disk != Drives[1].inserted_disk);
 }
 
-static void StateAction(StateMem* sm, const unsigned load, const bool data_only)
+void StateAction(StateMem* sm, const unsigned load, const bool data_only)
 {
  SFORMAT StateRegs[] =
  {
@@ -1903,12 +1916,14 @@ static void StateAction(StateMem* sm, const unsigned load, const bool data_only)
  {
   for(unsigned di = 0; di < 2; di++)
   {
-   ClampStepperPosition(&Drives[di]);
+   FloppyDrive* drive = &Drives[di];
+
+   ClampStepperPosition(drive);
   }
  }
 }
 
-static void StateAction_Disk(StateMem* sm, const unsigned load, const bool data_only, FloppyDisk* disk, const char* sname)
+void StateAction_Disk(StateMem* sm, const unsigned load, const bool data_only, FloppyDisk* disk, const char* sname)
 {
  *StateHelperDisk = *disk;
 
@@ -1957,7 +1972,45 @@ static void StateAction_Disk(StateMem* sm, const unsigned load, const bool data_
  }
 }
 
-static void Kill(void)
+void StateAction_PostLoad(const unsigned load)
+{
+ assert(load);
+
+ if(load < 0x00103200)
+ {
+  FloppyDrive* drive = &Drives[Latch_DriveSelect];
+  FloppyDisk* disk = drive->inserted_disk;
+  const bool write_mode = !disk->write_protect && !(Latch_Stepper & 0x2) && (Latch_Mode & 0x20);
+
+  if(motoroff_delay_counter && !write_mode)
+  {
+   const size_t tri = drive->stepper_position >> 24;
+   FloppyDisk::Track* tr = &disk->tracks[tri];
+   const unsigned fill_count = 8 - (bool)!drive->delay_flux_change;
+
+   //printf("%u 0x%016llx", fill_count, (unsigned long long)drive->m_history);
+
+   for(unsigned i = 0; i < fill_count; i++)
+   {
+    const size_t td_index = disk->angle >> 3;
+    const bool m = tr->data[td_index];
+
+    drive->m_history = (drive->m_history << 1) | m;
+
+    disk->angle++;
+    if(MDFN_UNLIKELY(disk->angle >= (tr->length << 3)))
+    {
+     disk->angle = 0;
+     if(tr->flux_fudge)
+      drive->m_history = ~drive->m_history;
+    }
+   }
+   //printf(" 0x%016llx\n", (unsigned long long)drive->m_history);
+  }
+ }
+}
+
+void Kill(void)
 {
  if(StateHelperDisk)
  {
@@ -1966,5 +2019,56 @@ static void Kill(void)
  }
 }
 
+uint32 GetRegister(const unsigned id, char* const special, const uint32 special_len)
+{
+ uint32 ret = 0xDEADBEEF;
+
+ switch(id)
+ {
+  case GSREG_STEPPHASE:
+	ret = Latch_Stepper;
+	break;
+
+  case GSREG_MOTORON:
+	ret = Latch_MotorOn;
+	break;
+
+  case GSREG_DRIVESEL:
+	ret = Latch_DriveSelect;
+	break;
+
+  case GSREG_MODE:
+	ret = Latch_Mode >> 4;
+	break;
+ }
+
+ return ret;
 }
 
+void SetRegister(const unsigned id, const uint32 value)
+{
+ switch(id)
+ {
+  case GSREG_STEPPHASE:
+	Latch_Stepper = value & 0xF;
+	break;
+
+  case GSREG_MOTORON:
+	Latch_MotorOn = value & 0x1;
+	break;
+
+  case GSREG_DRIVESEL:
+	Latch_DriveSelect = value & 0x1;
+	break;
+
+  case GSREG_MODE:
+	Latch_Mode = (value & 0x3) << 4;
+	break;
+ }
+}
+
+
+//
+//
+}
+}

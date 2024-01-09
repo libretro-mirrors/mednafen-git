@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* settings.cpp:
-**  Copyright (C) 2005-2021 Mednafen Team
+**  Copyright (C) 2005-2023 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -24,17 +24,13 @@
 */
 
 #include "mednafen.h"
-#include <trio/trio.h>
-#include <locale.h>
-#include <map>
-#include "settings.h"
-#include "string/escape.h"
 #include <mednafen/string/string.h>
 #include <mednafen/Time.h>
-#include "FileStream.h"
-#include "MemoryStream.h"
+#include <mednafen/FileStream.h>
+#include <mednafen/MemoryStream.h>
+#include "settings.h"
 
-#include <zlib.h>
+#include <locale.h>
 
 namespace Mednafen
 {
@@ -86,7 +82,7 @@ static NO_INLINE bool MR_StringToDouble(const char* string_value, double* dvalue
  char cpi_array[256 + 1];
  std::unique_ptr<char[]> cpi_heap;
  char* cpi = cpi_array;
- char* endptr = NULL;
+ char* endptr = nullptr;
 
  if(slen > 256)
  {
@@ -107,7 +103,7 @@ static NO_INLINE bool MR_StringToDouble(const char* string_value, double* dvalue
   else
   {
    lconv* l = localeconv();
-   assert(l != NULL);
+   assert(l != nullptr);
    MR_Radix = *(l->decimal_point);
   }
  }
@@ -125,10 +121,10 @@ static NO_INLINE bool MR_StringToDouble(const char* string_value, double* dvalue
 
  *dvalue = strtod(cpi, &endptr);
 
- if(endptr == NULL || *endptr != 0 || !*cpi)
-  return(false);
+ if(endptr == nullptr || *endptr != 0 || !*cpi)
+  return false;
 
- return(true);
+ return true;
 }
 
 static void ValidateSetting(const char *value, const MDFNSetting *setting)
@@ -325,12 +321,17 @@ static void ValidateSetting(const char *value, const MDFNSetting *setting)
  }
 }
 
-static uint32 MakeNameHash(const char *name)
+static uint32 MakeNameHash(const char* name)
 {
- return crc32(0, (const Bytef *)name, strlen(name));
+ uint32 ret = 0;
+
+ for(size_t i = 0; name[i]; i++)
+  ret = (ret << 7) - ret + (uint8)name[i]; 
+
+ return ret;
 }
 
-INLINE void SettingsManager::ParseSettingLine(char* ls, const char* lb, size_t* valid_count, size_t* unknown_count, bool IsOverrideSetting)
+INLINE void SettingsManager::ParseSettingLine(char* ls, const char* lb, size_t* valid_count, size_t* unknown_count, unsigned override)
 {
  MDFNCS *zesetting;
  char* spacep;
@@ -381,27 +382,21 @@ INLINE void SettingsManager::ParseSettingLine(char* ls, const char* lb, size_t* 
  {
   char* nv = MDFN_memdupstr(spacep + 1, lb - (spacep + 1));
 
-  if(IsOverrideSetting)
-  {
-   if(zesetting->game_override)
-    free(zesetting->game_override);
-
-   zesetting->game_override = nv;
-  }
-  else
-  {
-   if(zesetting->value)
-    free(zesetting->value);
-
-   zesetting->value = nv;
-  }
+  if(!nv)
+   throw MDFN_Error(ErrnoHolder(ENOMEM));
 
   ValidateSetting(nv, &zesetting->desc);
+  //
+  //
+  if(zesetting->value[override])
+   free(zesetting->value[override]);
+
+  zesetting->value[override] = nv;
   (*valid_count)++;
  }
  else
  {
-  if(!IsOverrideSetting)
+  if(!override)
   {
    char* tmp;
 
@@ -414,7 +409,7 @@ INLINE void SettingsManager::ParseSettingLine(char* ls, const char* lb, size_t* 
  }
 }
 
-bool SettingsManager::Load(const std::string& path, bool override)
+bool SettingsManager::Load(const std::string& path, unsigned override)
 {
  if(!override)
   MDFN_printf(_("Loading settings from \"%s\"...\n"), MDFN_strhumesc(path).c_str());
@@ -483,7 +478,7 @@ bool SettingsManager::Load(const std::string& path, bool override)
 
 static bool compare_sname(const MDFNCS* first, const MDFNCS* second)
 {
- return(strcmp(first->desc.name, second->desc.name) < 0);
+ return strcmp(first->desc.name, second->desc.name) < 0;
 }
 
 void SettingsManager::Save(const std::string& path)
@@ -523,7 +518,7 @@ void SettingsManager::Save(const std::string& path)
   fp.put_char('\n');
   fp.put_string(lit->desc.name);
   fp.put_char(' ');
-  fp.put_string(lit->value);
+  fp.put_string(lit->value[0]);
   fp.put_char('\n');
   fp.put_char('\n');
  }
@@ -550,7 +545,7 @@ void SettingsManager::SaveCompact(Stream* s)
  {
   s->put_string(cse.desc.name);
   s->put_u8(' ');
-  s->put_string(cse.value);
+  s->put_string(cse.value[0]);
   s->put_u8('\n');
  }
 
@@ -583,11 +578,17 @@ INLINE void SettingsManager::MergeSettingSub(const MDFNSetting& setting)
  }
 #endif
 
+
  TempSetting.name_hash = MakeNameHash(setting.name);
- TempSetting.value = strdup(setting.default_value);
  TempSetting.desc = setting;
- TempSetting.game_override = NULL;
- TempSetting.netplay_override = NULL;
+
+ TempSetting.value[0] = strdup(setting.default_value);
+ if(!TempSetting.value[0])
+  throw MDFN_Error(ErrnoHolder(ENOMEM));
+
+ TempSetting.value[1] = nullptr;
+ TempSetting.value[2] = nullptr;
+ TempSetting.value[3] = nullptr;
 
  CurrentSettings.push_back(TempSetting);
 }
@@ -603,7 +604,7 @@ void SettingsManager::Merge(const MDFNSetting *setting)
 {
  assert(!SettingsFinalized);
 
- while(setting->name != NULL)
+ while(setting->name != nullptr)
  {
   MergeSettingSub(*setting);
   setting++;
@@ -631,6 +632,10 @@ void SettingsManager::Finalize(void)
  {
   for(size_t j = i + 1; j < CurrentSettings.size() && CurrentSettings[j].name_hash == CurrentSettings[i].name_hash; j++)
   {
+#ifdef MDFN_ENABLE_DEV_BUILD
+   MDFN_Notify(MDFN_NOTICE_WARNING, "Setting hash collision: %s %s\n", CurrentSettings[i].desc.name, CurrentSettings[j].desc.name);
+#endif
+
    if(!strcmp(CurrentSettings[i].desc.name, CurrentSettings[j].desc.name))
    {
     printf("Duplicate setting name %s\n", CurrentSettings[j].desc.name);
@@ -648,23 +653,22 @@ void SettingsManager::Finalize(void)
 */
 }
 
-void SettingsManager::ClearAllOverrides(void)
+void SettingsManager::ClearOverridesAbove(unsigned clear_above)
 {
+ assert(clear_above < 4);
+
  for(auto& sit : CurrentSettings)
  {
   if(sit.desc.type == MDFNST_ALIAS)
    continue;
 
-  if(sit.game_override)
+  for(unsigned i = clear_above + 1; i < 4; i++)
   {
-   free(sit.game_override);
-   sit.game_override = NULL;
-  }
-
-  if(sit.netplay_override)
-  {
-   free(sit.netplay_override);
-   sit.netplay_override = NULL;
+   if(sit.value[i])
+   {
+    free(sit.value[i]);
+    sit.value[i] = nullptr;
+   }
   }
  }
 }
@@ -673,16 +677,16 @@ void SettingsManager::Kill(void)
 {
  for(auto& sit : CurrentSettings)
  {
-  free(sit.value);
+  free(sit.value[0]);
 
   if(sit.desc.type == MDFNST_ALIAS)
    continue;
 
-  if(sit.game_override)
-   free(sit.game_override);
-
-  if(sit.netplay_override)
-   free(sit.netplay_override);
+  for(unsigned i = 1; i < 4; i++)
+  {
+   if(sit.value[i])
+    free(sit.value[i]);
+  }
 
 #if 1
   if(sit.desc.flags & MDFNSF_FREE_NAME)
@@ -753,7 +757,7 @@ MDFNCS* SettingsManager::FindSetting(const char* name, bool dont_freak_out_on_fa
   if(!strcmp(it->desc.name, name))
   {
    if(it->desc.type == MDFNST_ALIAS)
-    return FindSetting(it->value, dont_freak_out_on_fail);
+    return FindSetting(it->value[0], dont_freak_out_on_fail);
 
    return &*it;
   }
@@ -767,21 +771,23 @@ MDFNCS* SettingsManager::FindSetting(const char* name, bool dont_freak_out_on_fa
   exit(1);
  }
 
- return NULL;
+ return nullptr;
 }
 
 static const char *GetSetting(const MDFNCS *setting)
 {
- const char *value;
+ const char* value;
 
- if(setting->netplay_override)
-  value = setting->netplay_override;
- else if(setting->game_override)
-  value = setting->game_override;
+ if(setting->value[3])
+  value = setting->value[3];
+ else if(setting->value[2])
+  value = setting->value[2];
+ else if(setting->value[1])
+  value = setting->value[1];
  else
-  value = setting->value;
+  value = setting->value[0];
 
- return(value);
+ return value;
 }
 
 static int GetEnum(const MDFNCS *setting, const char *value)
@@ -804,7 +810,7 @@ static int GetEnum(const MDFNCS *setting, const char *value)
  }
 
  assert(found);
- return(ret);
+ return ret;
 }
 
 template<typename T>
@@ -845,7 +851,9 @@ uint64 SettingsManager::GetUI(const char *name)
  const char *value = GetSetting(setting);
 
  if(setting->desc.type == MDFNST_ENUM)
-  return(GetEnum(setting, value));
+  return GetEnum(setting, value);
+ else if(setting->desc.type == MDFNST_MULTI_ENUM)
+  abort();
  else
  {
   uint64 ret;
@@ -861,9 +869,10 @@ int64 SettingsManager::GetI(const char *name)
  const MDFNCS *setting = FindSetting(name);
  const char *value = GetSetting(FindSetting(name));
 
-
  if(setting->desc.type == MDFNST_ENUM)
-  return(GetEnum(setting, value));
+  return GetEnum(setting, value);
+ else if(setting->desc.type == MDFNST_MULTI_ENUM)
+  abort();
  else
  {
   int64 ret;
@@ -896,12 +905,35 @@ std::vector<int64> SettingsManager::GetMultiI(const char *name)
   abort();
 }
 
+uint64 SettingsManager::GetMultiM(const char *name)
+{
+ const MDFNCS *setting = FindSetting(name);
+ const char *value = GetSetting(setting);
+ uint64 ret = 0;
+
+ if(setting->desc.type == MDFNST_MULTI_ENUM)
+ {
+  std::vector<uint64> tmp = GetMultiEnum<uint64>(setting, value);
+
+  for(uint64 e : tmp)
+   ret |= e;
+ }
+ else
+  abort();
+
+ return ret;
+}
 
 double SettingsManager::GetF(const char *name)
 {
- double ret;
+ const MDFNCS *setting = FindSetting(name);
+ const char *value = GetSetting(setting);
+ double ret = 0;
 
- MR_StringToDouble(GetSetting(FindSetting(name)), &ret);
+ if(setting->desc.type == MDFNST_MULTI_ENUM)
+  abort();
+ else
+  MR_StringToDouble(value, &ret);
 
  return ret;
 }
@@ -922,7 +954,7 @@ std::string SettingsManager::GetS(const char *name)
  //if(setting->desc.type == MDFNST_ENUM)
  // GetEnum(setting, value);
 
- return(std::string(value));
+ return std::string(value);
 }
 
 std::string SettingsManager::GetDefault(const char* name)
@@ -937,9 +969,9 @@ const std::vector<MDFNCS>* SettingsManager::GetSettings(void)
  return &CurrentSettings;
 }
 
-bool SettingsManager::Set(const char *name, const char *value, bool NetplayOverride)
+bool SettingsManager::Set(const char *name, const char *value, unsigned override)
 {
- MDFNCS *zesetting = FindSetting(name, true);
+ MDFNCS* zesetting = FindSetting(name, true);
 
  if(zesetting)
  {
@@ -950,29 +982,35 @@ bool SettingsManager::Set(const char *name, const char *value, bool NetplayOverr
   catch(std::exception &e)
   {
    MDFND_OutputNotice(MDFN_NOTICE_ERROR, e.what());
-   return(0);
+   return false;
   }
 
-  // TODO:  When NetplayOverride is set, make sure the setting is an emulation-related setting, 
-  // and that it is safe to change it(changing paths to BIOSes and such is not safe :b).
-  if(NetplayOverride)
+  char* new_value = strdup(value);
+
+  if(!new_value)
   {
-   if(zesetting->netplay_override)
-    free(zesetting->netplay_override);
-   zesetting->netplay_override = strdup(value);
+   MDFN_Notify(MDFN_NOTICE_ERROR, _("Error allocating memory for setting \"%s\" value."), name);
+   return false;
   }
-  else
+
+  if(zesetting->value[override])
   {
-   // Overriding the per-game override.  Poetic.  Though not really.
-   if(zesetting->game_override)
+   free(zesetting->value[override]);
+   zesetting->value[override] = nullptr;
+  }
+
+  zesetting->value[override] = new_value;
+
+  if(!override)
+  {
+   for(unsigned i = 1; i < 4; i++)
    {
-    free(zesetting->game_override);
-    zesetting->game_override = NULL;
+    if(zesetting->value[i])
+    {
+     free(zesetting->value[i]);
+     zesetting->value[i] = nullptr;
+    }
    }
-
-   if(zesetting->value)
-    free(zesetting->value);
-   zesetting->value = strdup(value);
   }
 
   // TODO, always call driver notification function, regardless of whether a game is loaded.
@@ -981,12 +1019,12 @@ bool SettingsManager::Set(const char *name, const char *value, bool NetplayOverr
    if(MDFNGameInfo)
     zesetting->desc.ChangeNotification(name);
   }
-  return(true);
+  return true;
  }
  else
  {
   MDFN_Notify(MDFN_NOTICE_ERROR, _("Unknown setting \"%s\""), name);
-  return(false);
+  return false;
  }
 }
 
@@ -1041,6 +1079,7 @@ void SettingsManager::DumpDef(const char *path)
  std::list<const MDFNCS *>::iterator lit;
  std::map<int, const char *> tts;
  std::map<uint32, const char *>fts;
+ std::map<const char*, std::vector<const char*>> aliases;
 
  tts[MDFNST_INT] = "MDFNST_INT";
  tts[MDFNST_UINT] = "MDFNST_UINT";
@@ -1048,6 +1087,7 @@ void SettingsManager::DumpDef(const char *path)
  tts[MDFNST_FLOAT] = "MDFNST_FLOAT";
  tts[MDFNST_STRING] = "MDFNST_STRING";
  tts[MDFNST_ENUM] = "MDFNST_ENUM";
+ tts[MDFNST_MULTI_ENUM] = "MDFNST_MULTI_ENUM";
 
  fts[MDFNSF_CAT_INPUT] = "MDFNSF_CAT_INPUT";
  fts[MDFNSF_CAT_SOUND] = "MDFNSF_CAT_SOUND";
@@ -1067,18 +1107,22 @@ void SettingsManager::DumpDef(const char *path)
 
 
  for(const auto& sit : CurrentSettings)
-  SortedList.push_back(&sit);
+ {
+  if(sit.desc.type == MDFNST_ALIAS)
+  {
+   const MDFNCS* c = FindSetting(sit.desc.default_value);
+
+   aliases[c->desc.name].push_back(sit.desc.name);
+  }
+  else
+   SortedList.push_back(&sit);
+ }
 
  SortedList.sort(compare_sname);
 
  for(lit = SortedList.begin(); lit != SortedList.end(); lit++)
  {
   const MDFNSetting *setting = &(*lit)->desc;
-  char *desc_escaped;
-  char *desc_extra_escaped;
-
-  if(setting->type == MDFNST_ALIAS)
-   continue;
 
   fp.print_format("%s\n", setting->name);
 
@@ -1093,15 +1137,8 @@ void SettingsManager::DumpDef(const char *path)
   }
   fp.print_format("\n");
 
-  desc_escaped = escape_string(setting->description ? setting->description : "");
-  desc_extra_escaped = escape_string(setting->description_extra ? setting->description_extra : "");
-
-
-  fp.print_format("%s\n", desc_escaped);
-  fp.print_format("%s\n", desc_extra_escaped);
-
-  free(desc_escaped);
-  free(desc_extra_escaped);
+  fp.print_format("%s\n", MDFN_strescape(setting->description ? setting->description : "").c_str());
+  fp.print_format("%s\n", MDFN_strescape(setting->description_extra ? setting->description_extra : "").c_str());
 
   fp.print_format("%s\n", tts[setting->type]);
   fp.print_format("%s\n", setting->default_value ? setting->default_value : "");
@@ -1126,19 +1163,17 @@ void SettingsManager::DumpDef(const char *path)
    el = setting->enum_list;
    while(el->string)
    {
-    desc_escaped = escape_string(el->description ? el->description : "");
-    desc_extra_escaped = escape_string(el->description_extra ? el->description_extra : "");
-
     fp.print_format("%s\n", el->string);
-    fp.print_format("%s\n", desc_escaped);
-    fp.print_format("%s\n", desc_extra_escaped);
-
-    free(desc_escaped);
-    free(desc_extra_escaped);
+    fp.print_format("%s\n", MDFN_strescape(el->description ? el->description : "").c_str());
+    fp.print_format("%s\n", MDFN_strescape(el->description_extra ? el->description_extra : "").c_str());
 
     el++;
    }
   }
+
+  fp.print_format("%zu\n", aliases[setting->name].size());
+  for(const char* al : aliases[setting->name])
+   fp.print_format("%s\n", al);
  }
 
  fp.close();

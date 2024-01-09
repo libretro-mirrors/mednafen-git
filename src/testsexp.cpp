@@ -2,7 +2,7 @@
 /* Mednafen - Multi-system Emulator                                           */
 /******************************************************************************/
 /* testsexp.cpp - Expensive tests
-**  Copyright (C) 2014-2021 Mednafen Team
+**  Copyright (C) 2014-2023 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -175,6 +175,7 @@ void MDFNI_RunOwlResamplerTest(void)
  }
 }
 
+#if 0
 static void TestMTStreamReader(void)
 {
  for(uint32 pzb = 0; pzb < 256; pzb = (pzb * 3) + 1)
@@ -240,6 +241,7 @@ static void TestMTStreamReader(void)
   }
  }
 }
+#endif
 
 static void Stream64Test(const char* path)
 {
@@ -316,6 +318,12 @@ static void Stream64Test(const char* path)
    tmp = fp.get_LE<uint32>(); 
    assert(tmp == 0xBEBAFECA);  
    assert(fp.tell() == (uint64)8192 * 1024 * 1024 + 4);
+  }
+
+  {
+   VirtualFS::FileInfo fi;
+
+   assert(NVFS.finfo(path, &fi, false) && fi.size == ((uint64)8192 * 1024 * 1024 + 4) && fi.is_regular && !fi.is_directory);
   }
  }
  catch(std::exception& e)
@@ -586,6 +594,70 @@ static void StreamBufTest(const char* path)
  }
 }
 
+static void NVFSTest(const std::string& path)
+{
+ try
+ {
+  int64 stus, etus;
+  int64 omt;
+  std::unique_ptr<Stream> s;
+  std::string bpath;
+  std::string longpath;
+  std::string lobpath;
+  VirtualFS::FileInfo fi;
+  char tmp[64] = { 0 };
+
+  MDFN_snhex_u64(tmp, sizeof(tmp), Time::EpochTime());
+  bpath = path + MDFN_PSS + tmp;
+  longpath = bpath + MDFN_PSS + "this" + MDFN_PSS + "is" + MDFN_PSS + "a" + MDFN_PSS + "path";
+  lobpath = longpath + MDFN_PSS + "lobster.exe";
+
+  stus = (Time::EpochTime() - 2) * 1000 * 1000;
+  NVFS.create_missing_dirs(lobpath);
+  assert(!NVFS.finfo(lobpath, nullptr, false));
+
+  s.reset(NVFS.open(lobpath, VirtualFS::MODE_READ, false, false));
+  assert(!s);
+
+  s.reset(NVFS.open(lobpath, VirtualFS::MODE_WRITE));
+  s->write(tmp, sizeof(tmp));
+  s.reset(nullptr);
+  etus = (Time::EpochTime() + 2) * 1000 * 1000;
+
+  assert(NVFS.finfo(lobpath, &fi, true) && fi.is_regular && !fi.is_directory && fi.mtime_us >= stus && fi.mtime_us <= etus);
+  omt = fi.mtime_us;
+  assert(NVFS.finfo(longpath, &fi, true) && !fi.is_regular && fi.is_directory && fi.mtime_us >= stus && fi.mtime_us <= etus);
+  Time::SleepMS(4500);
+
+  assert(NVFS.finfo(lobpath, &fi, true) && fi.is_regular && !fi.is_directory && fi.mtime_us == omt && fi.mtime_us >= stus && fi.mtime_us <= etus);
+  s.reset(NVFS.open(lobpath, VirtualFS::MODE_READ_WRITE));
+  s->write(tmp, sizeof(tmp));
+  s.reset(nullptr);
+  etus = (Time::EpochTime() + 2) * 1000 * 1000;
+  assert(NVFS.finfo(lobpath, &fi, true) && fi.is_regular && !fi.is_directory && fi.mtime_us > omt && fi.mtime_us >= stus && fi.mtime_us <= etus);
+
+#ifdef WIN32
+  {
+   static const char* tvp[] = { "C:\\", "C:\\.", "C:/", "C:/." };
+
+   for(auto const& e : tvp)
+   {
+    NVFS.create_missing_dirs(e);
+    assert(NVFS.finfo(e, &fi, true) && !fi.is_regular && fi.is_directory);
+   }
+  }
+#endif
+ }
+ catch(std::exception& e)
+ {
+  printf("%s\n", e.what());
+  abort();
+ }
+
+ printf("NVFSTest done.\n");
+}
+
+
 static void NO_INLINE NO_CLONE ExceptionTestSub(int v, int n, int* y)
 {
  if(n)
@@ -840,6 +912,7 @@ static void TestSurface(void)
   MDFN_PixelFormat::RGBA32_8888,
   MDFN_PixelFormat::BGRA32_8888,
   MDFN_PixelFormat::IRGB16_1555,
+  MDFN_PixelFormat::RGBI16_5551,
   MDFN_PixelFormat::RGB16_565,
   MDFN_PixelFormat::ARGB16_4444
  };
@@ -1096,32 +1169,52 @@ static void TestSettings(const std::string& path)
   s.Load(path);
   assert(s.GetS("qisf") == (t ? "" : "no"));
  }
-}
-
-// TODO, VFS tests?
-#if 0
- const char *test_paths[] = { "/meow", "/meow/cow", "\\meow", "\\meow\\cow", "\\\\meow", "\\\\meow\\cow",
-			      "/meow.", "/me.ow/cow.", "\\meow.", "\\me.ow\\cow.", "\\\\meow.", "\\\\meow\\cow.",
-			      "/meow.txt", "/me.ow/cow.txt", "\\meow.txt", "\\me.ow\\cow.txt", "\\\\meow.txt", "\\\\meow\\cow.txt"
-
-			      "/meow", "/meow\\cow", "\\meow", "\\meow/cow", "\\\\meow", "\\\\meow/cow",
-			      "/meow.", "\\me.ow/cow.", "\\meow.", "/me.ow\\cow.", "\\\\meow.", "\\\\meow/cow.",
-			      "/meow.txt", "/me.ow\\cow.txt", "\\meow.txt", "\\me.ow/cow.txt", "\\\\meow.txt", "\\\\meow/cow.txt",
-			      "/bark///dog", "\\bark\\\\\\dog" };
-
- for(unsigned i = 0; i < sizeof(test_paths) / sizeof(const char *); i++)
+ //
  {
-  std::string file_path = std::string(test_paths[i]);
-  std::string dir_path;
-  std::string file_base;
-  std::string file_ext;
+  std::unique_ptr<FileStream> cfgs(new FileStream(path, FileStream::MODE_WRITE));
 
-  MDFN_GetFilePathComponents(file_path, &dir_path, &file_base, &file_ext);
+  cfgs->put_string("qisf jinkies\n");
+  cfgs->close();
+  cfgs.reset(nullptr);
 
-  printf("%s ------ dir=%s --- base=%s --- ext=%s\n", file_path.c_str(), dir_path.c_str(), file_base.c_str(), file_ext.c_str());
+  assert(s.GetS("qisf") == "");
+  s.Load(path, 1);
+  assert(s.GetS("qisf") == "jinkies");
 
+  cfgs.reset(new FileStream(path, FileStream::MODE_WRITE));
+  cfgs->put_string("qisf cheese\n");
+  cfgs->close();
+  cfgs.reset(nullptr);
+
+  s.Load(path, 2);
+  assert(s.GetS("qisf") == "cheese");
+  s.ClearOverridesAbove(1);
+  assert(s.GetS("qisf") == "jinkies");
+  s.ClearOverridesAbove(0);
+  assert(s.GetS("qisf") == "");
+
+  cfgs.reset(new FileStream(path, FileStream::MODE_WRITE));
+  cfgs->put_string("qisf puppies\n");
+  cfgs->close();
+  cfgs.reset(nullptr);
+
+  s.Load(path, 3);
+  assert(s.GetS("qisf") == "puppies");
+  s.ClearOverridesAbove(3);
+  assert(s.GetS("qisf") == "puppies");
+  s.ClearOverridesAbove(0);
+  assert(s.GetS("qisf") == "");
+
+  s.Load(path, 2);
+  assert(s.GetS("qisf") == "puppies");
+  s.Set("qisf", "kiwi");
+  assert(s.GetS("qisf") == "kiwi");
+  s.Set("qisf", "avocado", 3);
+  assert(s.GetS("qisf") == "avocado");
+  s.ClearOverridesAbove(0);
+  assert(s.GetS("qisf") == "kiwi");
  }
-#endif
+}
 
 static void TestZLInflate(void)
 {
@@ -1297,10 +1390,12 @@ void MDFNI_RunExpensiveTests(const char* dirpath)
 
  Testsnhex();
 
- TestSettings(std::string(dirpath) + PSS + "cfgtest.cfg");
+ TestSettings(std::string(dirpath) + MDFN_PSS + "cfgtest.cfg");
+
+ NVFSTest(dirpath);
 
  {
-  const std::string path = std::string(dirpath) + PSS + "streamtest.bin";
+  const std::string path = std::string(dirpath) + MDFN_PSS + "streamtest.bin";
 
   #if defined(WIN32) && !defined(UNICODE)
   if(!(GetVersion() & 0x80000000))

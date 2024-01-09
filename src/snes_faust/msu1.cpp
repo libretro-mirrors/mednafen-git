@@ -316,7 +316,7 @@ static DEFWRITE(MSU1_WriteDataSeek)
  //
  Update(CPUM.timestamp);
  //
- SNES_DBG("[MSU1] Write data seek: %06x %02x\n", A, V);
+ SNES_DBG(SNES_DBG_MSU1, "[MSU1] Write data seek: %06x %02x\n", A, V);
 
  const unsigned shift = (A & 0x3) << 3;
  pending_data_seek_pos &= ~(0xFF << shift);
@@ -338,7 +338,7 @@ static DEFWRITE(MSU1_WriteTrack)
  //
  Update(CPUM.timestamp);
  //
- SNES_DBG("[MSU1] Write track: %06x %02x\n", A, V);
+ SNES_DBG(SNES_DBG_MSU1, "[MSU1] Write track: %06x %02x\n", A, V);
 
  const unsigned shift = (A & 0x1) << 3;
  pending_track &= ~(0xFF << shift);
@@ -374,7 +374,7 @@ static DEFWRITE(MSU1_WriteVolume)
  //
  Update(CPUM.timestamp);
  //
- SNES_DBG("[MSU1] Write volume: %02x\n", V);
+ SNES_DBG(SNES_DBG_MSU1, "[MSU1] Write volume: %02x\n", V);
 
  volume = V;
 }
@@ -385,7 +385,7 @@ static DEFWRITE(MSU1_WriteControl)
  //
  Update(CPUM.timestamp);
  //
- SNES_DBG("[MSU1] Write control: %02x\n", V);
+ SNES_DBG(SNES_DBG_MSU1, "[MSU1] Write control: %02x\n", V);
 
  if(!(status & 0x40))
  {

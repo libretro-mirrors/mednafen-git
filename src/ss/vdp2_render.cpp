@@ -1328,8 +1328,10 @@ static void ApplyWin(const unsigned wlayer, uint64* buf)
  }
 }
 
-#pragma GCC push_options
-#pragma GCC optimize("no-unroll-loops,no-peel-loops,no-crossjumping")
+#if defined(__GNUC__) && !defined(__clang__)
+ #pragma GCC push_options
+ #pragma GCC optimize("no-unroll-loops,no-peel-loops,no-crossjumping")
+#endif
 static NO_INLINE void ApplyHMosaic(const unsigned layer, uint64* buf, const unsigned w)
 {
  if(!(MZCTL & (1U << layer)))
@@ -1363,7 +1365,9 @@ static NO_INLINE void ApplyHMosaic(const unsigned layer, uint64* buf, const unsi
  for(auto b = buf[x]; x < w; x++)
   buf[x] = b;
 }
-#pragma GCC pop_options
+#if defined(__GNUC__) && !defined(__clang__)
+ #pragma GCC pop_options
+#endif
 
 //
 // NBG0(HRES=0x1):
@@ -2368,7 +2372,9 @@ enum
  MIXIT_SPECIAL_EXCC_CRAM0 = 0x2,
  MIXIT_SPECIAL_EXCC_CRAM12 = 0x3,
  MIXIT_SPECIAL_EXCC_LINE_CRAM0 = 0x4,
- MIXIT_SPECIAL_EXCC_LINE_CRAM12 = 0x5
+ MIXIT_SPECIAL_EXCC_LINE_CRAM12 = 0x5,
+ //
+ MIXIT_SPECIAL_HIRES_CRAM12 = 0x6
 };
 
 template<bool TA_rbgdualen, unsigned TA_Special, bool TA_CCRTMD, bool TA_CCMD>
@@ -2445,6 +2451,15 @@ static void T_MixIt(uint32* target, const unsigned vdp2_line, const unsigned w, 
    pix = tmp_pix[st & 0x7];
    pix |= (1U << PIX_DOSHAD_SHIFT);
   }
+
+  //
+  // Prevent blending with a transparent sprite shadow pixel beneath the topmost layer:
+  //
+  //if(tmp_pix[5] & (1U << PIX_DOSHAD_SHIFT))
+  // pt &= ~0x2020202020202020ULL;
+  static_assert((1U << PIX_DOSHAD_SHIFT) == 0x40, "PIX_DOSHAD_SHIFT is wrong value.");
+  pt &= ~((((tmp_pix[5] >> 1) & 0x20) << (uint8)(tmp_pix[5] >> PIX_PRIO_TEST_SHIFT)));
+
 
   if(TA_Special == MIXIT_SPECIAL_GRAD)
   {
@@ -2539,6 +2554,9 @@ static void T_MixIt(uint32* target, const unsigned vdp2_line, const unsigned w, 
    uint32 sec_rgb = pix2 >> PIX_RGB_SHIFT;
    uint32 new_rgb;
 
+   if(TA_Special == MIXIT_SPECIAL_HIRES_CRAM12 && !(pix2 & (1U << PIX_ISRGB_SHIFT)))
+    sec_rgb = fore_rgb;
+
    if(TA_CCMD)	// Ignore ratio, add as-is.
    {
     new_rgb =  std::min<unsigned>(0x0000FF, (fore_rgb & 0x0000FF) + (sec_rgb & 0x0000FF));
@@ -2592,10 +2610,10 @@ static void T_MixIt(uint32* target, const unsigned vdp2_line, const unsigned w, 
 }
 
 //template<bool TA_rbgdualen, unsigned TA_Special, bool TA_CCRTMD, bool TA_CCMD>
-static void (*MixIt[2][6][2][2])(uint32* target, const unsigned vdp2_line, const unsigned w, const uint32 back_rgb24, const uint64* blursrc) =
+static void (*MixIt[2][7][2][2])(uint32* target, const unsigned vdp2_line, const unsigned w, const uint32 back_rgb24, const uint64* blursrc) =
 {
- {  {  { T_MixIt<0, 0, 0, 0>, T_MixIt<0, 0, 0, 1>,  },  { T_MixIt<0, 0, 1, 0>, T_MixIt<0, 0, 1, 1>,  },  },  {  { T_MixIt<0, 1, 0, 0>, T_MixIt<0, 1, 0, 1>,  },  { T_MixIt<0, 1, 1, 0>, T_MixIt<0, 1, 1, 1>,  },  },  {  { T_MixIt<0, 2, 0, 0>, T_MixIt<0, 2, 0, 1>,  },  { T_MixIt<0, 2, 1, 0>, T_MixIt<0, 2, 1, 1>,  },  },  {  { T_MixIt<0, 3, 0, 0>, T_MixIt<0, 3, 0, 1>,  },  { T_MixIt<0, 3, 1, 0>, T_MixIt<0, 3, 1, 1>,  },  },  {  { T_MixIt<0, 4, 0, 0>, T_MixIt<0, 4, 0, 1>,  },  { T_MixIt<0, 4, 1, 0>, T_MixIt<0, 4, 1, 1>,  },  },  {  { T_MixIt<0, 5, 0, 0>, T_MixIt<0, 5, 0, 1>,  },  { T_MixIt<0, 5, 1, 0>, T_MixIt<0, 5, 1, 1>,  },  },  },
- {  {  { T_MixIt<1, 0, 0, 0>, T_MixIt<1, 0, 0, 1>,  },  { T_MixIt<1, 0, 1, 0>, T_MixIt<1, 0, 1, 1>,  },  },  {  { T_MixIt<1, 1, 0, 0>, T_MixIt<1, 1, 0, 1>,  },  { T_MixIt<1, 1, 1, 0>, T_MixIt<1, 1, 1, 1>,  },  },  {  { T_MixIt<1, 2, 0, 0>, T_MixIt<1, 2, 0, 1>,  },  { T_MixIt<1, 2, 1, 0>, T_MixIt<1, 2, 1, 1>,  },  },  {  { T_MixIt<1, 3, 0, 0>, T_MixIt<1, 3, 0, 1>,  },  { T_MixIt<1, 3, 1, 0>, T_MixIt<1, 3, 1, 1>,  },  },  {  { T_MixIt<1, 4, 0, 0>, T_MixIt<1, 4, 0, 1>,  },  { T_MixIt<1, 4, 1, 0>, T_MixIt<1, 4, 1, 1>,  },  },  {  { T_MixIt<1, 5, 0, 0>, T_MixIt<1, 5, 0, 1>,  },  { T_MixIt<1, 5, 1, 0>, T_MixIt<1, 5, 1, 1>,  },  },  },
+ {  {  { T_MixIt<0, 0, 0, 0>, T_MixIt<0, 0, 0, 1>,  },  { T_MixIt<0, 0, 1, 0>, T_MixIt<0, 0, 1, 1>,  },  },  {  { T_MixIt<0, 1, 0, 0>, T_MixIt<0, 1, 0, 1>,  },  { T_MixIt<0, 1, 1, 0>, T_MixIt<0, 1, 1, 1>,  },  },  {  { T_MixIt<0, 2, 0, 0>, T_MixIt<0, 2, 0, 1>,  },  { T_MixIt<0, 2, 1, 0>, T_MixIt<0, 2, 1, 1>,  },  },  {  { T_MixIt<0, 3, 0, 0>, T_MixIt<0, 3, 0, 1>,  },  { T_MixIt<0, 3, 1, 0>, T_MixIt<0, 3, 1, 1>,  },  },  {  { T_MixIt<0, 4, 0, 0>, T_MixIt<0, 4, 0, 1>,  },  { T_MixIt<0, 4, 1, 0>, T_MixIt<0, 4, 1, 1>,  },  },  {  { T_MixIt<0, 5, 0, 0>, T_MixIt<0, 5, 0, 1>,  },  { T_MixIt<0, 5, 1, 0>, T_MixIt<0, 5, 1, 1>,  },  },  {  { T_MixIt<0, 6, 0, 0>, T_MixIt<0, 6, 0, 1>,  },  { T_MixIt<0, 6, 1, 0>, T_MixIt<0, 6, 1, 1>,  },  },  },
+ {  {  { T_MixIt<1, 0, 0, 0>, T_MixIt<1, 0, 0, 1>,  },  { T_MixIt<1, 0, 1, 0>, T_MixIt<1, 0, 1, 1>,  },  },  {  { T_MixIt<1, 1, 0, 0>, T_MixIt<1, 1, 0, 1>,  },  { T_MixIt<1, 1, 1, 0>, T_MixIt<1, 1, 1, 1>,  },  },  {  { T_MixIt<1, 2, 0, 0>, T_MixIt<1, 2, 0, 1>,  },  { T_MixIt<1, 2, 1, 0>, T_MixIt<1, 2, 1, 1>,  },  },  {  { T_MixIt<1, 3, 0, 0>, T_MixIt<1, 3, 0, 1>,  },  { T_MixIt<1, 3, 1, 0>, T_MixIt<1, 3, 1, 1>,  },  },  {  { T_MixIt<1, 4, 0, 0>, T_MixIt<1, 4, 0, 1>,  },  { T_MixIt<1, 4, 1, 0>, T_MixIt<1, 4, 1, 1>,  },  },  {  { T_MixIt<1, 5, 0, 0>, T_MixIt<1, 5, 0, 1>,  },  { T_MixIt<1, 5, 1, 0>, T_MixIt<1, 5, 1, 1>,  },  },  {  { T_MixIt<1, 6, 0, 0>, T_MixIt<1, 6, 0, 1>,  },  { T_MixIt<1, 6, 1, 0>, T_MixIt<1, 6, 1, 1>,  },  },  },
 };
 
 static int32 ApplyHBlend(uint32* const target, int32 w)
@@ -3122,6 +3140,12 @@ static NO_INLINE void DrawLine(const uint16 out_line, const uint16 vdp2_line, co
      special += (CCCTL >> 4) & 0x2;
     }
    }
+   else
+   {
+    if(CRAM_Mode)
+     special = MIXIT_SPECIAL_HIRES_CRAM12;
+   }
+
    MixIt[rbgdualen][special][CCRTMD][CCMD](target + tvxo, vdp2_line, w, back_rgb24, blursrc);
    ReorderRGB(target + tvxo, w, espec->surface->format.Rshift, espec->surface->format.Gshift, espec->surface->format.Bshift);
   }
