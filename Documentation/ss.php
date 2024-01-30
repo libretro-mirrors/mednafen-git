@@ -190,6 +190,14 @@ The following ST-V games are currently broken due to missing emulation of the de
 </p>
 <?php EndSection(); ?>
 
+<?php BeginSection('Bootable ROM Cart', 'Section_bootromcart'); ?>
+Mednafen supports bootable cart ROM images up to 48MiB in size, with a filename extension of "ss".
+<p>
+The first 32MiB is mapped into A-bus CS0, and the ROM data beyond 32MiB is mapped into A-bus CS1; both are mapped as 16-bit ROM.
+If the ROM image is 32MiB or smaller, a standard 512KiB of non-volatile cart backup memory will be provided in the A-bus CS1 area instead
+of ROM data.
+<?php EndSection(); ?>
+
 <?php PrintInternalDatabases(); ?>
 
 <?php PrintSettings(); ?>

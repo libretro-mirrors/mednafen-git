@@ -199,6 +199,7 @@
  <tr><td>LALT&nbsp;+&nbsp;C</td><td>Toggle cheat console.<br><b>Note</b>: Will not respond to RALT/AltGr even if remapped.</td><td>togglecheatview</td></tr>
  <tr><td>ALT&nbsp;+&nbsp;T</td><td>Toggle cheats active.</td><td>togglecheatactive</td></tr>
  <tr><td>T</td><td>Enable network play console input.</td><td>togglenetview</td></tr>
+ <tr><td>Escape</td><td>Close netplay console/text popup.</td><td>close_popup</td></tr>
  <tr><td>LALT&nbsp;+&nbsp;D</td><td>Toggle <a href="debugger.html">debugger</a>.<br><b>Note</b>: Will not respond to RALT/AltGr even if remapped.</td><td>toggle_debugger</td></tr>
  <tr><th>Key(s):</th><th>Action:</th><th>Configuration String:</th></tr>
  <tr><td>`</td><td>Fast-forward.</td><td>fast_forward</td></tr>
@@ -228,7 +229,7 @@
  <tr><td>F8</td><td><a name="command.insert_coin">Insert Coin</a></td><td>insert_coin</td></tr>
  <tr><td>F10</td><td>Reset.</td><td>reset</td></tr>
  <tr><td>F11</td><td>Hard reset(toggle power switch).</td><td>power</td></tr>
- <tr><td>Escape/F12</td><td>Exit(the emulator, or netplay chat mode).</td><td>exit</td></tr>
+ <tr><td>F12</td><td>Exit.</td><td>exit</td></tr>
  </table>
 
  <?php EndSection(); ?>
@@ -246,6 +247,10 @@
  <p>
   Emulated mice mapped to the system mouse will only function properly when input grabbing is enabled or when in a fullscreen video mode, the debugger is inactive, and no
   other emulated input devices that rely on absolute mouse coordinates(e.g. lightguns) are active and mapped to the system mouse.
+ </p>
+ <p>
+  The setting "<a href="#input.grab.strategy">input.grab.strategy</a>" controls when and if OS input is actually grabbed when
+  input grabbing is toggled on within Mednafen.
  </p>
  <?php EndSection(); ?>
 
@@ -301,6 +306,7 @@
    <tr><td>-connect</td><td><i>(n/a)</i></td><td>Trigger to connect to remote host after the game is loaded.</td></tr>
    <tr><td nowrap>-soundrecord x</td><td>string</td><td>Record sound output to the specified filename in the MS WAV format.</td></tr>
    <tr><td nowrap>-qtrecord x</td><td>string</td><td>Record video and audio output to the specified filename in the QuickTime format.</td></tr>
+   <tr><td nowrap>-ovconfig x</td><td>string</td><td>Load global override settings from specified file.</td></tr>
   </table>
  <?php EndSection(); ?>
 
@@ -310,8 +316,13 @@
   <a href="#Section_base_directory">base directory</a>.  This file is created and written to when Mednafen shuts down.
  </p>
  <p>
-  Mednafen loads override settings from optional per-module override configuration files, also located directly under the
-  Mednafen <a href="#Section_base_directory">base directory</a>.  The general pattern for the naming of these user-created
+  When the command-line option "-ovconfig" is used, global override settings will be loaded from the specified file.  Note
+  that settings loaded from the per-module and per-game override configuration files, as described below, will override any global
+  override settings.
+ </p>
+ <p>
+  Mednafen automatically loads override settings from optional per-module override configuration files, also located
+  directly under the Mednafen <a href="#Section_base_directory">base directory</a>.  The general pattern for the naming of these user-created
   files is "&lt;<b>system</b>&gt;<b>.cfg</b>"; e.g. "<b>nes.cfg</b>", "<b>pce.cfg</b>", "<b>gba.cfg</b>", "<b>psx.cfg</b>", etc.  This allows for overriding global settings
   on a per-module basis.
  </p>
@@ -323,10 +334,10 @@
  </p>
 
  <p>
-  The aforementioned per-module and per-game configuration override files will <b>NOT</b> be written to by Mednafen, and they will generally not
+  The aforementioned global, per-module, and per-game configuration override files will <b>NOT</b> be written to by Mednafen, and they will generally not
   alter the contents of the primary configuration file, unless a user action occurs that causes new setting values to be generated
   based on the current active setting value(such as toggling full-screen mode inside the emulator, for instance).  Some settings
-  currently cannot be overridden properly:
+  currently cannot be overridden properly by per-module and per-game override files:
   <ul>
    <li>cd.image_memcache
    <li>filesys.untrusted_fip_check
@@ -1525,7 +1536,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 <blockquote>
 <pre>
 Simple DirectMedia Layer
-Copyright (C) 1997-2018 Sam Lantinga &lt;slouken@libsdl.org&gt;
+Copyright (C) 1997-2023 Sam Lantinga &lt;slouken@libsdl.org&gt;
 
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages
@@ -1551,7 +1562,7 @@ freely, subject to the following restrictions:
 <pre>
 Copyright notice:
 
- (C) 1995-2013 Jean-loup Gailly and Mark Adler
+ (C) 1995-2022 Jean-loup Gailly and Mark Adler
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -1575,7 +1586,10 @@ Copyright notice:
 If you use the zlib library in a product, we would appreciate *not* receiving
 lengthy legal documents to sign.  The sources are provided for free but without
 warranty of any kind.  The library has been entirely written by Jean-loup
-Gailly and Mark Adler; it does not include third-party code.
+Gailly and Mark Adler; it does not include third-party code.  We make all
+contributions to and distributions of this project solely in our personal
+capacity, and are not conveying any rights to any intellectual property of
+any third parties.
 
 If you redistribute modified sources, we would appreciate that you include in
 the file ChangeLog history information documenting your changes.  Please read

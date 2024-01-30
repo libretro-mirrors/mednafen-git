@@ -545,6 +545,9 @@
    enabled. */
 #undef MDFN_ENABLE_DEV_BUILD
 
+/* Defines the filesystem path-separator type. */
+#undef MDFN_PSS_STYLE
+
 /* Mednafen version definition. */
 #undef MEDNAFEN_VERSION
 
@@ -586,9 +589,6 @@
 
 /* Define if <inttypes.h> exists and defines unusable PRI* macros. */
 #undef PRI_MACROS_BROKEN
-
-/* Defines the filesystem path-separator type. */
-#undef PSS_STYLE
 
 /* Define to CPU set type if we are compiling with pthreads affinity setting
    support. */

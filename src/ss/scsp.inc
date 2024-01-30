@@ -265,7 +265,7 @@ INLINE void SS_SCSP::MIDI_WriteOutput(uint8 V)
  RecalcMainInt();
 }
 
-INLINE void SS_SCSP::MIDI_Run(void)
+INLINE void SS_SCSP::MIDI_Run(void (*midi_out)(uint8))
 {
  MIDI.SimuClockDivider += 32;
  if(MIDI.SimuClockDivider >= 45)
@@ -294,6 +294,9 @@ INLINE void SS_SCSP::MIDI_Run(void)
     }
    }
   }
+
+  if(MIDI.TransmitBitCounter == 1 && midi_out)
+   midi_out((uint8)(MIDI.TransmitBuffer >> 1));
 
   MIDI.TransmitBitCounter -= (bool)MIDI.TransmitBitCounter;
  }
@@ -1407,13 +1410,13 @@ INLINE void SS_SCSP::RunDSP(void)
 //
 //
 template<typename T_out>
-INLINE void SS_SCSP::RunSample(T_out* outlr)
+INLINE void SS_SCSP::RunSample(T_out* outlr, void (*midi_out)(uint8))
 {
  const uint32 SampleCounter = GlobalCounter >> 5;
  const uint32 SampleCounterXC = (SampleCounter ^ (SampleCounter - 1)) & (SampleCounter ^ 1);
  int32 out_accum[2] = { 0, 0 };
 
- MIDI_Run();
+ MIDI_Run(midi_out);
 
  for(unsigned i = 0; i < 3; i++)
  {

@@ -13,6 +13,8 @@
 
 using namespace Mednafen;
 
+#include "video.h"
+
 enum
 {
  CEVT_TOGGLEGUI = 1,
@@ -27,7 +29,10 @@ enum
  CEVT_SET_STATE_STATUS,
  CEVT_SET_MOVIE_STATUS,
 
- CEVT_WANT_EXIT,	// Emulator exit or GUI exit or bust!
+ CEVT_WANT_EXIT,	// Emulator exit
+ CEVT_WANT_OLD_EXIT,	// Emulator exit or close netplay console/popup
+
+ CEVT_CLOSE_POPUP,
 
  CEVT_NP_DISPLAY_TEXT,
  CEVT_NP_TOGGLE_TT,
@@ -44,7 +49,6 @@ void SendCEvent(unsigned int code, void *data1, void *data2, const uint16 idata1
 void PauseGameLoop(bool p);
 
 MDFN_HIDE extern int NoWaiting;
-MDFN_HIDE extern bool MDFNDHaveFocus;
 
 MDFN_HIDE extern MDFNGI *CurGame;
 
@@ -59,11 +63,9 @@ void DoRunNormal(void);
 void DoFrameAdvance(void);
 bool IsInFrameAdvance(void);
 
-void DebuggerFudge(void);
+bool DebuggerFudge(void);
 
-MDFN_HIDE extern volatile int GameThreadRun;
-
-void GT_SetWMInputBehavior(bool CursorNeeded, bool MouseAbsNeeded, bool MouseRelNeeded, bool GrabNeeded);
+void GT_SetWMInputBehavior(const WMInputBehavior& wmib);
 void GT_ToggleFS(void);
 bool GT_ReinitVideo(void);
 bool GT_ReinitSound(void);

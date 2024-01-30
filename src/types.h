@@ -183,6 +183,8 @@ typedef uint64_t uint64;
   #else
    #define MDFN_HIDE __attribute__((visibility("hidden")))
   #endif
+
+  #define MDFN_UNDEFINED(cond) ((cond) ? (void)__builtin_unreachable() : (void)0)
 #elif defined(__GNUC__)
   //
   // Begin gcc
@@ -249,6 +251,8 @@ typedef uint64_t uint64;
   #else
    #define MDFN_HIDE __attribute__((visibility("hidden")))
   #endif
+
+  #define MDFN_UNDEFINED(cond) ((cond) ? (void)__builtin_unreachable() : (void)0)
 #elif defined(_MSC_VER)
   //
   // Begin MSVC
@@ -277,6 +281,7 @@ typedef uint64_t uint64;
 
   #define MDFN_ASSUME_ALIGNED(p, align) (p)
   #define MDFN_HIDE
+  #define MDFN_UNDEFINED(cond) ((void)__assume(!(cond)))
 #else
   #define INLINE inline
   #define NO_INLINE
@@ -300,6 +305,7 @@ typedef uint64_t uint64;
 
   #define MDFN_ASSUME_ALIGNED(p, align) (p)
   #define MDFN_HIDE
+  #define MDFN_UNDEFINED(cond) ((void)(cond))
 #endif
 
 #ifndef FALSE

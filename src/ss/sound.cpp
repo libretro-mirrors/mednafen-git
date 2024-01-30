@@ -45,6 +45,7 @@ namespace MDFN_IEN_SSFPLAY
 #include "scsp.h"
 
 static SS_SCSP SCSP;
+static void (*MIDI_Out)(uint8);
 
 static M68K SoundCPU(true);
 static int64 run_until_time;	// 32.32
@@ -92,6 +93,10 @@ static MDFN_FASTCALL unsigned SoundCPU_BusIntAck(uint8 level);
 static MDFN_FASTCALL void SoundCPU_BusRESET(bool state);
 //
 //
+void SOUND_SetMIDIOutput(void (*p)(uint8))
+{
+ MIDI_Out = p;
+}
 
 void SOUND_Init(bool stv_mapping)
 {
@@ -104,6 +109,8 @@ void SOUND_Init(bool stv_mapping)
  run_until_time = 0;
  next_scsp_time = 0;
  lastts = 0;
+
+ MIDI_Out = nullptr;
 
  if(stv_mapping)
  {
@@ -151,6 +158,37 @@ void SOUND_PokeRAM(uint32 A, uint8 V)
 {
  ne16_wbo_be<uint8>(SCSP.GetRAMPtr(), A & 0x7FFFF, V);
 }
+
+uint64 SOUND_PeekMPROG(uint32 A)
+{
+ return SCSP.PeekMPROG(A);
+}
+
+void SOUND_PokeMPROG(uint32 A, uint64 V)
+{
+ SCSP.PokeMPROG(A, V);
+}
+
+uint32 SOUND_PeekTEMPRel(uint32 A)
+{
+ return SCSP.PeekTEMPRel(A);
+}
+
+void SOUND_PokeTEMPRel(uint32 A, uint32 V)
+{
+ SCSP.PokeTEMPRel(A, V);
+}
+
+uint32 SOUND_PeekMEMS(uint32 A)
+{
+ return SCSP.PeekMEMS(A);
+}
+
+void SOUND_PokeMEMS(uint32 A, uint32 V)
+{
+ SCSP.PokeMEMS(A, V);
+}
+
 
 static INLINE void ResetTS_68K(void)
 {
@@ -222,7 +260,7 @@ static NO_INLINE void RunSCSP(void)
  //
  //
  int16* const bp = IBuffer[IBufferCount];
- SCSP.RunSample(bp);
+ SCSP.RunSample(bp, MIDI_Out);
  //bp[0] = rand();
  //bp[1] = rand();
  bp[0] = (bp[0] * 27 + 16) >> 5;

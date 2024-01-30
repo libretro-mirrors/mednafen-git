@@ -92,8 +92,11 @@ host_triplet = @host@
 @WANT_SSFPLAY_EMU_TRUE@am__append_2 = libssfplay.a
 subdir = src/ss
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cflags_gcc_option.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/m4/ax_append_compile_flags.m4 \
+	$(top_srcdir)/m4/ax_append_flag.m4 \
+	$(top_srcdir)/m4/ax_check_compile_flag.m4 \
 	$(top_srcdir)/m4/ax_check_link_flag.m4 \
+	$(top_srcdir)/m4/ax_require_defined.m4 \
 	$(top_srcdir)/m4/codeset.m4 $(top_srcdir)/m4/fcntl-o.m4 \
 	$(top_srcdir)/m4/gettext.m4 $(top_srcdir)/m4/glibc2.m4 \
 	$(top_srcdir)/m4/glibc21.m4 $(top_srcdir)/m4/iconv.m4 \
@@ -131,9 +134,9 @@ am__dirstamp = $(am__leading_dot)dirstamp
 am_libss_a_OBJECTS = db.$(OBJEXT) stvio.$(OBJEXT) ak93c45.$(OBJEXT) \
 	cdb.$(OBJEXT) sound.$(OBJEXT) cart.$(OBJEXT) \
 	cart/backup.$(OBJEXT) cart/cs1ram.$(OBJEXT) \
-	cart/debug.$(OBJEXT) cart/extram.$(OBJEXT) cart/rom.$(OBJEXT) \
-	cart/ar4mp.$(OBJEXT) cart/stv.$(OBJEXT) ss.$(OBJEXT) \
-	scu_dsp_gen.$(OBJEXT) scu_dsp_mvi.$(OBJEXT) \
+	cart/bootrom.$(OBJEXT) cart/extram.$(OBJEXT) \
+	cart/rom.$(OBJEXT) cart/ar4mp.$(OBJEXT) cart/stv.$(OBJEXT) \
+	ss.$(OBJEXT) scu_dsp_gen.$(OBJEXT) scu_dsp_mvi.$(OBJEXT) \
 	scu_dsp_jmp.$(OBJEXT) scu_dsp_misc.$(OBJEXT) vdp1.$(OBJEXT) \
 	vdp1_line.$(OBJEXT) vdp1_sprite.$(OBJEXT) vdp1_poly.$(OBJEXT) \
 	vdp2.$(OBJEXT) vdp2_render.$(OBJEXT) smpc.$(OBJEXT) \
@@ -170,8 +173,8 @@ am__depfiles_remade = ./$(DEPDIR)/ak93c45.Po ./$(DEPDIR)/cart.Po \
 	./$(DEPDIR)/vdp1_line.Po ./$(DEPDIR)/vdp1_poly.Po \
 	./$(DEPDIR)/vdp1_sprite.Po ./$(DEPDIR)/vdp2.Po \
 	./$(DEPDIR)/vdp2_render.Po cart/$(DEPDIR)/ar4mp.Po \
-	cart/$(DEPDIR)/backup.Po cart/$(DEPDIR)/cs1ram.Po \
-	cart/$(DEPDIR)/debug.Po cart/$(DEPDIR)/extram.Po \
+	cart/$(DEPDIR)/backup.Po cart/$(DEPDIR)/bootrom.Po \
+	cart/$(DEPDIR)/cs1ram.Po cart/$(DEPDIR)/extram.Po \
 	cart/$(DEPDIR)/rom.Po cart/$(DEPDIR)/stv.Po \
 	input/$(DEPDIR)/3dpad.Po input/$(DEPDIR)/gamepad.Po \
 	input/$(DEPDIR)/gun.Po input/$(DEPDIR)/jpkeyboard.Po \
@@ -412,7 +415,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 DEFAULT_INCLUDES = -I$(top_builddir)/include -I$(top_srcdir)/include -I$(top_builddir)/intl
 noinst_LIBRARIES = $(am__append_1) $(am__append_2)
 libss_a_SOURCES = db.cpp stvio.cpp ak93c45.cpp cdb.cpp sound.cpp \
-	cart.cpp cart/backup.cpp cart/cs1ram.cpp cart/debug.cpp \
+	cart.cpp cart/backup.cpp cart/cs1ram.cpp cart/bootrom.cpp \
 	cart/extram.cpp cart/rom.cpp cart/ar4mp.cpp cart/stv.cpp \
 	ss.cpp scu_dsp_gen.cpp scu_dsp_mvi.cpp scu_dsp_jmp.cpp \
 	scu_dsp_misc.cpp vdp1.cpp vdp1_line.cpp vdp1_sprite.cpp \
@@ -467,7 +470,7 @@ cart/backup.$(OBJEXT): cart/$(am__dirstamp) \
 	cart/$(DEPDIR)/$(am__dirstamp)
 cart/cs1ram.$(OBJEXT): cart/$(am__dirstamp) \
 	cart/$(DEPDIR)/$(am__dirstamp)
-cart/debug.$(OBJEXT): cart/$(am__dirstamp) \
+cart/bootrom.$(OBJEXT): cart/$(am__dirstamp) \
 	cart/$(DEPDIR)/$(am__dirstamp)
 cart/extram.$(OBJEXT): cart/$(am__dirstamp) \
 	cart/$(DEPDIR)/$(am__dirstamp)
@@ -541,8 +544,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdp2_render.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/ar4mp.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/backup.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/bootrom.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/cs1ram.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/debug.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/extram.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/rom.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@cart/$(DEPDIR)/stv.Po@am__quote@ # am--include-marker
@@ -727,8 +730,8 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/vdp2_render.Po
 	-rm -f cart/$(DEPDIR)/ar4mp.Po
 	-rm -f cart/$(DEPDIR)/backup.Po
+	-rm -f cart/$(DEPDIR)/bootrom.Po
 	-rm -f cart/$(DEPDIR)/cs1ram.Po
-	-rm -f cart/$(DEPDIR)/debug.Po
 	-rm -f cart/$(DEPDIR)/extram.Po
 	-rm -f cart/$(DEPDIR)/rom.Po
 	-rm -f cart/$(DEPDIR)/stv.Po
@@ -807,8 +810,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/vdp2_render.Po
 	-rm -f cart/$(DEPDIR)/ar4mp.Po
 	-rm -f cart/$(DEPDIR)/backup.Po
+	-rm -f cart/$(DEPDIR)/bootrom.Po
 	-rm -f cart/$(DEPDIR)/cs1ram.Po
-	-rm -f cart/$(DEPDIR)/debug.Po
 	-rm -f cart/$(DEPDIR)/extram.Po
 	-rm -f cart/$(DEPDIR)/rom.Po
 	-rm -f cart/$(DEPDIR)/stv.Po

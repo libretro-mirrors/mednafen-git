@@ -741,6 +741,218 @@ static const char* const A2PTwopieceKeyboard[] =
  MKDEF(INSERT),
 };
 
+static const char* const A2EKeyboard[] =
+{
+ MKDEF(ESCAPE),
+ MKDEF(TAB),
+ MKDEF(A),
+ MKDEF(Z),
+
+// MKDEF(),
+
+ MKDEF(1),
+ MKDEF(Q),
+ MKDEF(D),
+ MKDEF(X),
+
+ MKDEF(2),
+ MKDEF(W),
+ MKDEF(S),
+ MKDEF(C),
+
+ MKDEF(3),
+ MKDEF(E),
+ MKDEF(H),
+ MKDEF(V),
+
+ MKDEF(4),
+ MKDEF(R),
+ MKDEF(F),
+ MKDEF(B),
+
+ MKDEF(6),
+ MKDEF(Y),
+ MKDEF(G),
+ MKDEF(N),
+
+ MKDEF(5),
+ MKDEF(T),
+ MKDEF(J),
+ MKDEF(M),
+ MKDEF(BACKSLASH),
+ MKDEF(GRAVE),
+ MKDEF(RETURN),
+ MKDEF(BACKSPACE),
+
+ MKDEF(7),
+ MKDEF(U),
+ MKDEF(K),
+ MKDEF(COMMA),
+ MKDEF(EQUALS),
+ MKDEF(P),
+ MKDEF(UP),
+ MKDEF(DOWN),
+
+ MKDEF(8),
+ MKDEF(I),
+ MKDEF(SEMICOLON),
+ MKDEF(PERIOD),
+ MKDEF(0),
+ MKDEF(LEFTBRACKET),
+ MKDEF(SPACE),
+ MKDEF(LEFT),
+
+ MKDEF(9),
+ MKDEF(O),
+ MKDEF(L),
+ MKDEF(SLASH),
+ MKDEF(MINUS),
+ MKDEF(RIGHTBRACKET),
+ MKDEF(APOSTROPHE),
+ MKDEF(RIGHT),
+
+ MKDEF(LSHIFT),
+ MKDEF(RSHIFT),
+ MKDEF2(LCTRL, RCTRL),
+ MKDEF(INSERT),
+
+ MKDEF2(LALT, LGUI),
+ MKDEF2(RALT, RGUI),
+ MKDEF(CAPSLOCK)
+};
+
+//
+//
+//
+static const char* const DemoKeyboard[] =
+{
+ MKDEF(ESCAPE),
+
+ MKDEF(F1),
+ MKDEF(F2),
+ MKDEF(F3),
+ MKDEF(F4),
+ MKDEF(F5),
+ MKDEF(F6),
+ MKDEF(F7),
+ MKDEF(F8),
+ MKDEF(F9),
+ MKDEF(F10),
+ MKDEF(F11),
+ MKDEF(F12),
+
+ MKDEF(PRINTSCREEN),
+ MKDEF(SCROLLLOCK),
+ MKDEF(PAUSE),
+
+ MKDEF(GRAVE),
+ MKDEF(1),
+ MKDEF(2),
+ MKDEF(3),
+ MKDEF(4),
+ MKDEF(5),
+ MKDEF(6),
+ MKDEF(7),
+ MKDEF(8),
+ MKDEF(9),
+ MKDEF(0),
+ MKDEF(MINUS),
+ MKDEF(EQUALS),
+ MKDEF(BACKSPACE),
+
+ MKDEF(INSERT),
+ MKDEF(HOME),
+ MKDEF(PAGEUP),
+
+ MKDEF(NUMLOCKCLEAR),
+ MKDEF(KP_DIVIDE),
+ MKDEF(KP_MULTIPLY),
+ MKDEF(KP_MINUS),
+
+ MKDEF(TAB),
+ MKDEF(Q),
+ MKDEF(W),
+ MKDEF(E),
+ MKDEF(R),
+ MKDEF(T),
+ MKDEF(Y),
+ MKDEF(U),
+ MKDEF(I),
+ MKDEF(O),
+ MKDEF(P),
+ MKDEF(LEFTBRACKET),
+ MKDEF(RIGHTBRACKET),
+ MKDEF(BACKSLASH),
+
+ MKDEF(DELETE),
+ MKDEF(END),
+ MKDEF(PAGEDOWN),
+
+ MKDEF(KP_7),
+ MKDEF(KP_8),
+ MKDEF(KP_9),
+ MKDEF(KP_PLUS),
+
+ MKDEF(CAPSLOCK),
+ MKDEF(A),
+ MKDEF(S),
+ MKDEF(D),
+ MKDEF(F),
+ MKDEF(G),
+ MKDEF(H),
+ MKDEF(J),
+ MKDEF(K),
+ MKDEF(L),
+ MKDEF(SEMICOLON),
+ MKDEF(APOSTROPHE),
+ MKDEF(RETURN),
+
+ MKDEF(KP_4),
+ MKDEF(KP_5),
+ MKDEF(KP_6),
+
+ MKDEF(LSHIFT),
+ MKDEF(Z),
+ MKDEF(X),
+ MKDEF(C),
+ MKDEF(V),
+ MKDEF(B),
+ MKDEF(N),
+ MKDEF(M),
+ MKDEF(COMMA),
+ MKDEF(PERIOD),
+ MKDEF(SLASH),
+ MKDEF(RSHIFT),
+
+ MKDEF(UP),
+
+ MKDEF(KP_1),
+ MKDEF(KP_2),
+ MKDEF(KP_3),
+ MKDEF(KP_ENTER),
+
+ MKDEF(LCTRL),
+ MKDEF2(LALT, LGUI),
+ MKDEF(SPACE),
+ MKDEF2(RALT, RGUI),
+ MKDEF(RCTRL),
+
+ MKDEF(LEFT),
+ MKDEF(DOWN),
+ MKDEF(RIGHT),
+
+ MKDEF(KP_0),
+
+ MKDEF(KP_PERIOD),
+ //
+ //
+ //
+ MKDEF(INTERNATIONAL3), // yen
+ MKDEF(INTERNATIONAL1), // _ish thingy
+ MKDEF(INTERNATIONAL5), // nonconv
+ MKDEF(INTERNATIONAL4), // conv
+ MKDEF(INTERNATIONAL2), // hkr
+};
 //
 //
 //
@@ -815,6 +1027,23 @@ static const char* const PSXDancePadConfig[] =
  MKDEF(KP_9),
  MKDEF(KP_7),
  MKDEF(KP_3),
+};
+
+static const char* const PSXPopnMusicConfig[] =
+{
+ MKDEF(TAB),
+ MKDEF(RETURN),
+
+ MKDEF(G),
+ MKDEF(B),
+ MKDEF(V),
+ MKDEF(C),
+ MKDEF(X),
+
+ MKDEF(Z),
+ MKDEF(S),
+ MKDEF(D),
+ MKDEF(F),
 };
 
 static const char* const PSXMouseConfig[] =
@@ -978,6 +1207,8 @@ const std::map<const char*, DefaultSettingsMeow, cstrcomp> defset =
 
  DPDC("psx.input.port1.dancepad", PSXDancePadConfig),
 
+ DPDC("psx.input.port1.popnmusic", PSXPopnMusicConfig),
+
  DPDC("psx.input.port1.mouse", PSXMouseConfig),
  DPDC("psx.input.port2.mouse", PSXMouseConfig),
  DPDC("psx.input.port3.mouse", PSXMouseConfig),
@@ -1058,7 +1289,10 @@ const std::map<const char*, DefaultSettingsMeow, cstrcomp> defset =
  DPDC("ss.input.port11.jpkeyboard", SSJPKeyboardConfig),
  DPDC("ss.input.port12.jpkeyboard", SSJPKeyboardConfig),
 
- DPDC("apple2.input.keyboard.twopiece", A2PTwopieceKeyboard),
+ DPDC("apple2.input.kb.iip", A2PTwopieceKeyboard),
+ DPDC("apple2.input.kb.iie", A2EKeyboard),
+
+ DPDC("demo.input.keyboard.keyboard", DemoKeyboard),
 
  DPDC("sasplay.input.builtin.controller", SASPlayInputConfig),
 

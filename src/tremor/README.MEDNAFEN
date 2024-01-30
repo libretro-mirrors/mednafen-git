@@ -6,3 +6,6 @@ perl -p -i -e "s/<ogg\/ogg.h>/\"ogg.h\"/g" ./* && perl -p -i -e "s/<ogg\/os_type
 
 Jan 20, 2013:
 Mednafen-specific modifications to os_types.h, os.h, and misc.h - config_types.h was removed.
+
+March 6, 2023:
+static const LOOKUP_T -> static LOOKUP_T (redundant const removed)

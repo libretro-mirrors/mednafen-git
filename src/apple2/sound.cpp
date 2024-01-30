@@ -1,8 +1,8 @@
 /******************************************************************************/
 /* Mednafen Apple II Emulation Module                                         */
 /******************************************************************************/
-/* sound.inc:
-**  Copyright (C) 2018 Mednafen Team
+/* sound.cpp:
+**  Copyright (C) 2018-2023 Mednafen Team
 **
 ** This program is free software; you can redistribute it and/or
 ** modify it under the terms of the GNU General Public License
@@ -19,6 +19,12 @@
 ** 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+#include "apple2.h"
+#include "sound.h"
+
+#include <mednafen/sound/DSPUtility.h>
+#include <mednafen/sound/SwiftResampler.h>
+
 /*
  TODO: Highpass filter, speaker frequency response, reverb.
 
@@ -27,6 +33,8 @@
  TODO: SC-01 and SSI-263 spech chip support someday?  Slot 4
 */
 
+namespace MDFN_IEN_APPLE2
+{
 namespace Sound
 {
 
@@ -188,7 +196,7 @@ uint32 EndTimePeriod(int16* OutSoundBuf, const int32 OutSoundBufMaxSize, const b
  return ret;
 }
 
-static INLINE void Power(void)
+void Power(void)
 {
  if(SpeakerOut)
  {
@@ -197,7 +205,7 @@ static INLINE void Power(void)
  }
 }
 
-static INLINE void Init(void)
+void Init(void)
 {
  memset(SoundBuffer, 0, sizeof(SoundBuffer));
  SoundBuffer_Accum = 0;
@@ -210,7 +218,7 @@ static INLINE void Init(void)
   SetRWHandlers(A, RWSpeakerToggle, RWSpeakerToggle);
 }
 
-static INLINE void Kill(void)
+void Kill(void)
 {
  resamp.reset(nullptr);
 }
@@ -224,6 +232,7 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
   SFPTR16(&SoundBuffer[((SoundBuffer_Ofs + timestamp) >> 3) & 0xFFFF], ImpulseLength),
   SFVAR(LPFilter),
   SFVAR(HPFilter),
+
   SFEND
  };
 
@@ -238,4 +247,5 @@ void StateAction(StateMem* sm, const unsigned load, const bool data_only)
 }
 
 
+}
 }

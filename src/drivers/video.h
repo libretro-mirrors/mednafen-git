@@ -14,7 +14,9 @@ struct WMInputBehavior
  bool Cursor;
  bool MouseAbs;
  bool MouseRel;
- bool Grab;
+
+ bool Grab_Keyboard;
+ bool Grab_Mouse;
 };
 
 //

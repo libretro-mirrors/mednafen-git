@@ -770,8 +770,28 @@ bool ZIPReader::finfo(const std::string& path, FileInfo* fi, const bool throw_on
 
 void ZIPReader::readdirentries(const std::string& path, std::function<bool(const std::string&)> callb)
 {
- // TODO/FIXME:
- throw MDFN_Error(EINVAL, _("ZIPReader::readdirentries() not implemented."));
+ const std::string canpath = canonicalize_zip_path(path + '/');
+
+ //printf("Path: %s\n", MDFN_strhumesc(canpath).c_str());
+
+ for(auto const& e : entries)
+ {
+  if(e.name.size() <= canpath.size())
+   continue;
+
+  if(memcmp(e.name.data(), canpath.data(), canpath.size()))
+   continue;
+
+  if(e.name.find('/', canpath.size()) != std::string::npos)
+   continue;
+  //
+  std::string tmp = e.name.substr(canpath.size());
+
+  //printf("File: %s\n", MDFN_strhumesc(tmp).c_str());
+
+  if(!callb(tmp))
+   break;
+ }
 }
 
 std::string ZIPReader::get_human_path(const std::string& path)

@@ -286,8 +286,8 @@ static INLINE int32 PlotPixel(int32 x, int32 y, uint16 pix, bool transparent, Go
      {
       if(GouraudEn)
        pix = g->Apply(pix);
-      else
-       pix = pix;
+      //else
+      // pix = pix;
      }
      else
      {
